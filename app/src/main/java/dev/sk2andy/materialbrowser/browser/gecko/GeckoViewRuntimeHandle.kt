@@ -50,6 +50,7 @@ import dev.sk2andy.materialbrowser.browser.credentials.AndroidCredentialPromptHo
 import dev.sk2andy.materialbrowser.browser.credentials.CredentialPromptHost
 import dev.sk2andy.materialbrowser.browser.credentials.CredentialPromptIdentity
 import dev.sk2andy.materialbrowser.browser.credentials.CredentialPromptRules
+import dev.sk2andy.materialbrowser.browser.engine.BrowserEngineContentKind
 import dev.sk2andy.materialbrowser.browser.engine.BrowserWebContentColorScheme
 import dev.sk2andy.materialbrowser.browser.integration.BrowserUriPolicy
 import dev.sk2andy.materialbrowser.browser.permissions.SitePermission
@@ -928,6 +929,7 @@ private class GeckoViewBrowserSession(
     private var privacyBound = false
     private var privacyFailureDescription: String? = null
     private val privacyBinding: GeckoPrivacyBinding
+    private var toppingBinding: GeckoToppingSessionBinding = GeckoToppingSessionBinding.None
     init {
         if (BuildConfig.ENABLE_PERFORMANCE_DIAGNOSTICS) {
             GeckoPerformanceDiagnostics.registerSession(session, isPrivate)
@@ -2313,6 +2315,18 @@ private class GeckoViewBrowserSession(
     }
 
     @UiThread
+    override fun bindToppingSession(tabId: String, contentKind: BrowserEngineContentKind) {
+        check(!closed) { "Cannot bind a closed Gecko session" }
+        toppingBinding.close()
+        toppingBinding = toppingHost.bindSession(
+            session = session,
+            tabId = tabId,
+            isPrivate = isPrivate,
+            contentKind = contentKind,
+        )
+    }
+
+    @UiThread
     override fun setBackdropCaptureEnabled(enabled: Boolean) {
         if (backdropCaptureEnabled == enabled) return
         backdropCaptureEnabled = enabled
@@ -2695,6 +2709,8 @@ private class GeckoViewBrowserSession(
         pendingInitialUrl = null
         cookieBehavior.remove(cookieBehaviorOwner)
         trackingPermissions.remove(trackingPermissionOwner)
+        toppingBinding.close()
+        toppingBinding = GeckoToppingSessionBinding.None
         privacyBinding.close()
         session.close()
         if (BuildConfig.ENABLE_PERFORMANCE_DIAGNOSTICS) {

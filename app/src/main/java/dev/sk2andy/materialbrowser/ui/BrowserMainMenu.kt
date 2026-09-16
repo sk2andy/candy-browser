@@ -381,7 +381,8 @@ internal fun BrowserMainMenu(
                 BrowserFeatureMenuAction.InvokeToppingCommand -> {
                     userScriptMenuCommands.firstOrNull { command ->
                         command.scriptId == item.toppingScriptId &&
-                            command.commandId == item.toppingCommandId
+                            command.commandId == item.toppingCommandId &&
+                            command.documentId == item.toppingDocumentId
                     }?.let(onUserScriptMenuCommand)
                 }
             }
@@ -409,6 +410,7 @@ private fun UserScriptMenuCommand.sharedMenuCommand() = BrowserToppingMenuComman
     commandId = commandId,
     caption = caption,
     scriptName = scriptName,
+    documentId = documentId,
 )
 
 @StringRes

@@ -1,6 +1,7 @@
 package dev.sk2andy.materialbrowser.ui
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -30,6 +31,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
@@ -55,6 +57,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.sk2andy.materialbrowser.R
+import dev.sk2andy.materialbrowser.shared.topping.ToppingFrameScope
 import kotlinx.coroutines.launch
 
 internal data class UserscriptUiItem(
@@ -64,6 +67,8 @@ internal data class UserscriptUiItem(
     val enabled: Boolean,
     val runAtLabel: String,
     val urlPatterns: List<String>,
+    val declaredFrameScope: ToppingFrameScope = ToppingFrameScope.Top,
+    val allowedFrameScope: ToppingFrameScope = ToppingFrameScope.Top,
 )
 
 internal object UserscriptManagementTestTags {
@@ -79,11 +84,15 @@ internal object UserscriptManagementTestTags {
     const val ActionError = "userscript_management_action_error"
     const val DeleteConfirmation = "userscript_management_delete_confirmation"
     const val DeleteConfirm = "userscript_management_delete_confirm"
+    const val FrameScopeDialog = "userscript_management_frame_scope_dialog"
 
     fun script(id: String) = "userscript_management_script_$id"
     fun toggle(id: String) = "userscript_management_toggle_$id"
     fun edit(id: String) = "userscript_management_edit_$id"
     fun delete(id: String) = "userscript_management_delete_$id"
+    fun frameScope(id: String) = "userscript_management_frame_scope_$id"
+    fun frameScopeOption(id: String, scope: ToppingFrameScope) =
+        "userscript_management_frame_scope_${id}_${scope.wireValue}"
 }
 
 @Composable
@@ -91,6 +100,11 @@ internal fun UserscriptManagementScreen(
     scripts: List<UserscriptUiItem>,
     isRuntimeSupported: Boolean = true,
     onToggle: (id: String, enabled: Boolean, onResult: (String?) -> Unit) -> Unit,
+    onSetFrameScope: (
+        id: String,
+        scope: ToppingFrameScope,
+        onResult: (String?) -> Unit,
+    ) -> Unit = { _, _, onResult -> onResult(null) },
     onSave: (id: String?, source: String, onResult: (String?) -> Unit) -> Unit,
     onDelete: (id: String, onResult: (String?) -> Unit) -> Unit,
     onImport: () -> Unit,
@@ -103,6 +117,7 @@ internal fun UserscriptManagementScreen(
     var editorId by remember { mutableStateOf<String?>(null) }
     var editorInitialSource by remember { mutableStateOf("") }
     var pendingDelete by remember { mutableStateOf<UserscriptUiItem?>(null) }
+    var pendingFrameScope by remember { mutableStateOf<UserscriptUiItem?>(null) }
     var busyScriptIds by remember { mutableStateOf(emptySet<String>()) }
     var deleteError by remember { mutableStateOf<String?>(null) }
     var deleteSaving by remember { mutableStateOf(false) }
@@ -252,6 +267,7 @@ internal fun UserscriptManagementScreen(
                                 }
                             },
                             onEdit = { openEditor(script.id, script.source) },
+                            onFrameScope = { pendingFrameScope = script },
                             onDelete = {
                                 deleteError = null
                                 pendingDelete = script
@@ -326,6 +342,55 @@ internal fun UserscriptManagementScreen(
                     onClick = { pendingDelete = null },
                     enabled = !deleteSaving,
                 ) {
+                    Text(stringResource(R.string.action_cancel))
+                }
+            },
+        )
+    }
+
+    pendingFrameScope?.let { script ->
+        AlertDialog(
+            onDismissRequest = { pendingFrameScope = null },
+            modifier = Modifier.testTag(UserscriptManagementTestTags.FrameScopeDialog),
+            title = { Text(stringResource(R.string.userscript_frame_scope_title)) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(
+                        stringResource(R.string.userscript_frame_scope_explanation),
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                    script.declaredFrameScope.allowedChoices().forEach { scope ->
+                        val selectScope = {
+                            onSetFrameScope(script.id, scope) { error ->
+                                if (error == null) {
+                                    pendingFrameScope = null
+                                } else {
+                                    coroutineScope.launch {
+                                        snackbarHostState.showSnackbar(error)
+                                    }
+                                }
+                            }
+                        }
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable(onClick = selectScope)
+                                .testTag(
+                                    UserscriptManagementTestTags.frameScopeOption(script.id, scope),
+                                ),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            RadioButton(
+                                selected = script.allowedFrameScope == scope,
+                                onClick = selectScope,
+                            )
+                            Text(frameScopeLabel(scope))
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { pendingFrameScope = null }) {
                     Text(stringResource(R.string.action_cancel))
                 }
             },
@@ -422,6 +487,7 @@ private fun UserscriptCard(
     script: UserscriptUiItem,
     enabled: Boolean,
     onToggle: (Boolean) -> Unit,
+    onFrameScope: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
 ) {
@@ -461,6 +527,26 @@ private fun UserscriptCard(
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
+                Text(
+                    stringResource(
+                        R.string.userscript_frame_scope_requested,
+                        frameScopeLabel(script.declaredFrameScope),
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                TextButton(
+                    onClick = onFrameScope,
+                    enabled = enabled && script.declaredFrameScope != ToppingFrameScope.Top,
+                    modifier = Modifier.testTag(UserscriptManagementTestTags.frameScope(script.id)),
+                ) {
+                    Text(
+                        stringResource(
+                            R.string.userscript_frame_scope_allowed,
+                            frameScopeLabel(script.allowedFrameScope),
+                        ),
+                    )
+                }
             }
             Switch(
                 checked = script.enabled,
@@ -581,10 +667,20 @@ private fun userscriptPatternSummary(patterns: List<String>): String = when {
     else -> patterns.take(2).joinToString(separator = "\n") + "  +${patterns.size - 2}"
 }
 
+@Composable
+private fun frameScopeLabel(scope: ToppingFrameScope): String = stringResource(
+    when (scope) {
+        ToppingFrameScope.Top -> R.string.userscript_frame_scope_top
+        ToppingFrameScope.SameOrigin -> R.string.userscript_frame_scope_same_origin
+        ToppingFrameScope.AllMatching -> R.string.userscript_frame_scope_all_matching
+    },
+)
+
 private fun userscriptTemplate(name: String): String = """
     // ==UserScript==
     // @name $name
     // @match https://example.com/*
+    // @candy-frames top
     // @run-at document-end
     // ==/UserScript==
 

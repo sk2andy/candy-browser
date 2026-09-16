@@ -85,12 +85,19 @@ internal interface AndroidBrowserEngineFactory {
         profileId: String,
         isolationEnabled: Boolean = false,
         isPrivate: Boolean,
+        contentKind: BrowserEngineContentKind,
         privacyPolicy: GeckoPrivacyPolicy = GeckoPrivacyPolicy.Disabled,
         privacyEventSink: GeckoPrivacyEventSink = GeckoPrivacyEventSink { },
         trailHistoryEventSink: GeckoCandyTrailHistoryEventSink =
             GeckoCandyTrailHistoryEventSink { _, _ -> },
         eventSink: BrowserEngineEventSink,
     ): AndroidBrowserEngineSessionPort
+}
+
+internal enum class BrowserEngineContentKind {
+    RegularTab,
+    LinkPeek,
+    ExternalPreview,
 }
 
 internal enum class BrowserWebContentColorScheme {

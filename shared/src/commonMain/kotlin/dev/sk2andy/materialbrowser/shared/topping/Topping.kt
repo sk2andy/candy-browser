@@ -26,13 +26,21 @@ data class ToppingScript(
     val runAt: ToppingRunAt,
     val requires: List<ToppingRequire> = emptyList(),
     val resources: List<ToppingResource> = emptyList(),
-    val forMainFrameOnly: Boolean = true,
-)
+    val declaredFrameScope: ToppingFrameScope = ToppingFrameScope.Top,
+    val allowedFrameScope: ToppingFrameScope = declaredFrameScope,
+) {
+    val effectiveFrameScope: ToppingFrameScope
+        get() = allowedFrameScope.restrictedTo(declaredFrameScope)
+
+    val forMainFrameOnly: Boolean
+        get() = effectiveFrameScope == ToppingFrameScope.Top
+}
 
 data class ToppingInjectionPlan(
     val id: String,
     val source: String,
     val runAt: ToppingRunAt,
+    val frameScope: ToppingFrameScope,
     val forMainFrameOnly: Boolean,
     val contentWorldName: String,
 )
@@ -92,6 +100,28 @@ object ToppingRules {
             "document-start" -> ToppingRunAt.DocumentStart
             else -> return rejected("invalid_run_at")
         }
+        val candyFrameValues = values["candy-frames"].orEmpty()
+        val noFramesValues = values["noframes"].orEmpty()
+        if (
+            candyFrameValues.size > 1 ||
+            noFramesValues.size > 1 ||
+            noFramesValues.any(String::isNotBlank)
+        ) return rejected("invalid_frame_scope")
+        val requestedFrameScope = when (candyFrameValues.singleOrNull()) {
+            null -> ToppingFrameScope.Top
+            ToppingFrameScope.Top.wireValue -> ToppingFrameScope.Top
+            ToppingFrameScope.SameOrigin.wireValue -> ToppingFrameScope.SameOrigin
+            ToppingFrameScope.AllMatching.wireValue -> ToppingFrameScope.AllMatching
+            else -> return rejected("invalid_frame_scope")
+        }
+        if (noFramesValues.isNotEmpty() && requestedFrameScope != ToppingFrameScope.Top) {
+            return rejected("invalid_frame_scope")
+        }
+        val declaredFrameScope = if (noFramesValues.isNotEmpty()) {
+            ToppingFrameScope.Top
+        } else {
+            requestedFrameScope
+        }
         val requireValues = values["require"].orEmpty()
         val resourceValues = values["resource"].orEmpty()
         if (requireValues.size > MAX_REQUIRE_COUNT || resourceValues.size > MAX_RESOURCE_COUNT) {
@@ -126,6 +156,8 @@ object ToppingRules {
                 runAt = runAt,
                 requires = requires,
                 resources = resources,
+                declaredFrameScope = declaredFrameScope,
+                allowedFrameScope = declaredFrameScope,
             ),
         )
     }
@@ -140,15 +172,16 @@ object ToppingRules {
         id = script.id,
         source = guardedSource(script),
         runAt = script.runAt,
+        frameScope = script.effectiveFrameScope,
         forMainFrameOnly = script.forMainFrameOnly,
         contentWorldName = "candy.topping.${script.id}",
     )
 
     fun matchesUrl(script: ToppingScript, url: String): Boolean {
         val parsed = parseWebUrl(url) ?: return false
-        val matches = script.matchPatterns.isEmpty() || script.matchPatterns.any { matchPattern(it, parsed) }
-        val includes = script.includePatterns.isEmpty() || script.includePatterns.any { globMatches(it, url) }
-        return matches && includes && script.excludePatterns.none { globMatches(it, url) }
+        val included = script.matchPatterns.any { matchPattern(it, parsed) } ||
+            script.includePatterns.any { globMatches(it, url) }
+        return included && script.excludePatterns.none { globMatches(it, url) }
     }
 
     fun isTrustedDependencyHost(host: String): Boolean = host.lowercase() in trustedDependencyHosts
@@ -164,25 +197,60 @@ object ToppingRules {
     }
 
     private fun guardedSource(script: ToppingScript): String {
-        val matches = script.matchPatterns.javascriptArray()
-        val includes = script.includePatterns.javascriptArray()
-        val excludes = script.excludePatterns.javascriptArray()
+        val matches = script.matchPatterns.mapNotNull(::matchJavascriptRegex).javascriptArray()
+        val includes = script.includePatterns.map(::globJavascriptRegex).javascriptArray()
+        val excludes = script.excludePatterns.map(::globJavascriptRegex).javascriptArray()
+        val frameScope = script.effectiveFrameScope.wireValue
         return """
             (() => {
               'use strict';
               const matchPatterns = [$matches];
               const includePatterns = [$includes];
               const excludePatterns = [$excludes];
-              const globRegex = value => new RegExp('^' + value
-                .replace(/[.+?^${'$'}()|[\]\\]/g, '\\${'$'}&')
-                .replace(/\\\*/g, '.*') + '${'$'}');
-              const matches = value => globRegex(value).test(location.href);
-              const included = (matchPatterns.length === 0 || matchPatterns.some(matches)) &&
-                (includePatterns.length === 0 || includePatterns.some(matches));
-              if (!included || excludePatterns.some(matches) || window.top !== window) return;
+              const matchUrl = String(location.href).split('#', 1)[0];
+              const matchesMatch = value => new RegExp(value).test(matchUrl);
+              const matchesFull = value => new RegExp(value).test(String(location.href));
+              const included = matchPatterns.some(matchesMatch) || includePatterns.some(matchesFull);
+              const frameScope = "$frameScope";
+              const frameAllowed = frameScope === "all-matching" || window.top === window ||
+                (frameScope === "same-origin" && (() => {
+                  try { return window.top.location.origin === location.origin; }
+                  catch (_) { return false; }
+                })());
+              if (!included || excludePatterns.some(matchesFull) || !frameAllowed || !/^https?:${'$'}/.test(location.protocol)) return;
               ${script.source}
             })();
         """.trimIndent()
+    }
+
+    private fun matchJavascriptRegex(value: String): String? {
+        if (value == "<all_urls>") return "^https?://[^/]+/.*${'$'}"
+        val parsed = parsePattern(value) ?: return null
+        val scheme = if (parsed.scheme == "*") "https?" else regexEscape(parsed.scheme)
+        val host = when {
+            parsed.host == "*" -> "[^/:]+"
+            parsed.host.startsWith("*.") -> {
+                val base = regexEscape(parsed.host.removePrefix("*."))
+                "(?:[^./:]+\\.)*$base"
+            }
+            else -> regexEscape(parsed.host)
+        }
+        return "^$scheme://$host${globRegexBody(parsed.path)}${'$'}"
+    }
+
+    private fun globJavascriptRegex(value: String): String = "^${globRegexBody(value)}${'$'}"
+
+    private fun globRegexBody(value: String): String = buildString {
+        value.forEach { char ->
+            if (char == '*') append(".*") else append(regexEscape(char.toString()))
+        }
+    }
+
+    private fun regexEscape(value: String): String = buildString {
+        value.forEach { char ->
+            if (char in ".^${'$'}*+?()[]{}|\\") append('\\')
+            append(char)
+        }
     }
 
     private fun parseDependencyUrl(value: String): Pair<String, String?>? {

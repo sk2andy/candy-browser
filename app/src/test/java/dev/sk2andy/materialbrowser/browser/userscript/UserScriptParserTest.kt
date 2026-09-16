@@ -1,5 +1,6 @@
 package dev.sk2andy.materialbrowser.browser.userscript
 
+import dev.sk2andy.materialbrowser.shared.topping.ToppingFrameScope
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -28,6 +29,8 @@ class UserScriptParserTest {
         assertEquals(listOf("http://localhost:8080/*"), result.script.includePatterns)
         assertEquals(listOf("https://ads.example.com/*"), result.script.excludePatterns)
         assertEquals(UserScriptRunAt.DocumentEnd, result.script.runAt)
+        assertEquals(ToppingFrameScope.Top, result.script.declaredFrameScope)
+        assertEquals(ToppingFrameScope.Top, result.script.allowedFrameScope)
         assertEquals(false, result.script.enabled)
         assertEquals(42L, result.script.updatedAtMillis)
     }
@@ -43,6 +46,36 @@ class UserScriptParserTest {
         ) as UserScriptParseResult.Accepted
 
         assertEquals(UserScriptRunAt.DocumentStart, result.script.runAt)
+    }
+
+    @Test
+    fun `frame scope is explicit bounded and noframes compatible`() {
+        val sameOrigin = parse(
+            "// @name Frames\n// @match https://example.com/*\n// @candy-frames same-origin",
+        ) as UserScriptParseResult.Accepted
+        val allMatching = parse(
+            "// @name Frames\n// @match https://example.com/*\n// @candy-frames all-matching",
+        ) as UserScriptParseResult.Accepted
+        val noFrames = parse(
+            "// @name Frames\n// @match https://example.com/*\n// @noframes",
+        ) as UserScriptParseResult.Accepted
+
+        assertEquals(ToppingFrameScope.SameOrigin, sameOrigin.script.declaredFrameScope)
+        assertEquals(ToppingFrameScope.SameOrigin, sameOrigin.script.allowedFrameScope)
+        assertEquals(ToppingFrameScope.AllMatching, allMatching.script.declaredFrameScope)
+        assertEquals(ToppingFrameScope.Top, noFrames.script.declaredFrameScope)
+        assertRejected(
+            "// @name Bad\n// @match https://example.com/*\n// @candy-frames everywhere",
+            UserScriptRejectionReason.InvalidFrameScope,
+        )
+        assertRejected(
+            "// @name Bad\n// @match https://example.com/*\n// @noframes yes",
+            UserScriptRejectionReason.InvalidFrameScope,
+        )
+        assertRejected(
+            "// @name Bad\n// @match https://example.com/*\n// @noframes\n// @candy-frames all-matching",
+            UserScriptRejectionReason.InvalidFrameScope,
+        )
     }
 
     @Test

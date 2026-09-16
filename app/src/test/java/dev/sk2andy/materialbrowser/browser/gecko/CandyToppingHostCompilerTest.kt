@@ -30,6 +30,7 @@ class CandyToppingHostCompilerTest {
         assertEquals(listOf("https://example.net/articles/*"), registration.includeGlobs)
         assertEquals(listOf("https://example.com/private/*"), registration.excludeGlobs)
         assertEquals("document_start", registration.runAt)
+        assertFalse(registration.allFrames)
         assertTrue(registration.id.startsWith("candy-"))
         assertFalse(registration.id.startsWith("_"))
         assertTrue(registration.worldId.startsWith("candy.topping."))
@@ -39,6 +40,54 @@ class CandyToppingHostCompilerTest {
                 source.contains("body { color: red; }")
             },
         )
+    }
+
+    @Test
+    fun `compiler registers non-top scopes in all Gecko frames`() {
+        val script = parse(
+            id = "frames",
+            metadata = "// @match https://example.com/*\n// @grant none",
+        )
+
+        val top = CandyToppingHostCompiler.compile(listOf(script)).registrations.single()
+        val sameOrigin = CandyToppingHostCompiler.compile(
+            listOf(
+                parse(
+                    id = "same-origin-frames",
+                    metadata = "// @match https://example.com/*\n" +
+                        "// @candy-frames same-origin\n// @grant none",
+                ),
+            ),
+        ).registrations.single()
+        val allMatching = CandyToppingHostCompiler.compile(
+            listOf(
+                parse(
+                    id = "all-frames",
+                    metadata = "// @match https://example.com/*\n" +
+                        "// @candy-frames all-matching\n// @grant none",
+                ),
+            ),
+        ).registrations.single()
+
+        assertFalse(top.allFrames)
+        assertTrue(sameOrigin.allFrames)
+        assertTrue(allMatching.allFrames)
+        assertFalse(top.worldId == sameOrigin.worldId)
+        assertFalse(sameOrigin.worldId == allMatching.worldId)
+    }
+
+    @Test
+    fun `bridge is installed only after session authorization`() {
+        val script = parse(
+            id = "bridge-gate",
+            metadata = "// @match https://example.com/*\n// @grant GM_setValue",
+        )
+
+        val source = CandyToppingHostCompiler.compile(listOf(script)).registrations.single()
+            .javascriptSources.last()
+
+        assertTrue(source.indexOf("private-check") < source.indexOf("runtime.connect"))
+        assertTrue(source.indexOf("allowed !== true") < source.indexOf("GM_setValue"))
     }
 
     @Test

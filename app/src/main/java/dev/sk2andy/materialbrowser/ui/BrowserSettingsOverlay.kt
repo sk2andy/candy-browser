@@ -214,6 +214,8 @@ internal fun BrowserSettingsOverlay(
                         },
                     ),
                     urlPatterns = script.matchPatterns + script.includePatterns,
+                    declaredFrameScope = script.declaredFrameScope,
+                    allowedFrameScope = script.allowedFrameScope,
                 )
             },
             toppingCatalogState = toppingCatalogState,
@@ -290,6 +292,14 @@ internal fun BrowserSettingsOverlay(
             onDeleteCapsule = onDeleteCapsule,
             onToggleUserScript = { id, enabled, onResult ->
                 controller.setUserScriptEnabled(id, enabled) { saved ->
+                    onResult(
+                        if (saved) null
+                        else context.getString(R.string.userscript_error_generic),
+                    )
+                }
+            },
+            onSetUserScriptFrameScope = { id, scope, onResult ->
+                controller.setUserScriptFrameScope(id, scope) { saved ->
                     onResult(
                         if (saved) null
                         else context.getString(R.string.userscript_error_generic),

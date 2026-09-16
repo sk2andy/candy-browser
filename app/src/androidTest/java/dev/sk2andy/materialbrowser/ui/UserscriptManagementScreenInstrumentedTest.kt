@@ -9,6 +9,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import dev.sk2andy.materialbrowser.shared.topping.ToppingFrameScope
 import dev.sk2andy.materialbrowser.ui.theme.MaterialBrowserTheme
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -126,6 +127,54 @@ class UserscriptManagementScreenInstrumentedTest {
         composeRule.onNodeWithTag(UserscriptManagementTestTags.DeleteConfirm).performClick()
         composeRule.onNodeWithTag(UserscriptManagementTestTags.DeleteConfirmation).assertExists()
         composeRule.onNodeWithText("Delete failed").assertExists()
+    }
+
+    @Test
+    fun frameAllowanceCanOnlyBeSelectedWithinDeclaredScope() {
+        val changes = mutableListOf<Pair<String, ToppingFrameScope>>()
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                UserscriptManagementScreen(
+                    scripts = listOf(
+                        testScript().copy(
+                            declaredFrameScope = ToppingFrameScope.SameOrigin,
+                            allowedFrameScope = ToppingFrameScope.Top,
+                        ),
+                    ),
+                    onToggle = { _, _, onResult -> onResult(null) },
+                    onSave = { _, _, onResult -> onResult(null) },
+                    onDelete = { _, onResult -> onResult(null) },
+                    onSetFrameScope = { id, scope, onResult ->
+                        changes += id to scope
+                        onResult(null)
+                    },
+                    onImport = {},
+                    onDismiss = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(UserscriptManagementTestTags.frameScope("reader-theme"))
+            .performClick()
+        composeRule.onNodeWithTag(UserscriptManagementTestTags.FrameScopeDialog).assertExists()
+        composeRule.onNodeWithTag(
+            UserscriptManagementTestTags.frameScopeOption(
+                "reader-theme",
+                ToppingFrameScope.AllMatching,
+            ),
+        ).assertDoesNotExist()
+        composeRule.onNodeWithTag(
+            UserscriptManagementTestTags.frameScopeOption(
+                "reader-theme",
+                ToppingFrameScope.SameOrigin,
+            ),
+        ).performClick()
+
+        assertEquals(
+            listOf("reader-theme" to ToppingFrameScope.SameOrigin),
+            changes,
+        )
+        composeRule.onNodeWithTag(UserscriptManagementTestTags.FrameScopeDialog).assertDoesNotExist()
     }
 
     private fun testScript() = UserscriptUiItem(

@@ -72,6 +72,7 @@ import dev.sk2andy.materialbrowser.browser.WebContentTopInsetMode
 import dev.sk2andy.materialbrowser.browser.WebContentTopInsetRules
 import dev.sk2andy.materialbrowser.browser.WebContentTopInsetScript
 import dev.sk2andy.materialbrowser.browser.engine.AndroidBrowserEngineFactory
+import dev.sk2andy.materialbrowser.browser.engine.BrowserEngineContentKind
 import dev.sk2andy.materialbrowser.browser.integration.BrowserUriPolicy
 import dev.sk2andy.materialbrowser.browser.systemwebview.credentials.SystemWebViewCredentials
 import dev.sk2andy.materialbrowser.browser.systemwebview.commands.WebViewProfileCookies
@@ -254,6 +255,7 @@ internal class SystemWebViewBrowserEngineFactory(
         profileId: String,
         isolationEnabled: Boolean,
         isPrivate: Boolean,
+        contentKind: BrowserEngineContentKind,
         privacyPolicy: GeckoPrivacyPolicy,
         privacyEventSink: GeckoPrivacyEventSink,
         trailHistoryEventSink: GeckoCandyTrailHistoryEventSink,
@@ -264,6 +266,7 @@ internal class SystemWebViewBrowserEngineFactory(
         profileId = profileId,
         isolationEnabled = isolationEnabled,
         isPrivate = isPrivate,
+        allowsToppings = contentKind != BrowserEngineContentKind.LinkPeek,
         incognitoProfileName = incognitoProfileName,
         multiProfileSupported = supportsMultiProfile(),
         contentBlocker = contentBlocker,
@@ -339,6 +342,7 @@ private class SystemWebViewBrowserEngineSession(
     profileId: String,
     isolationEnabled: Boolean,
     private val isPrivate: Boolean,
+    private val allowsToppings: Boolean,
     incognitoProfileName: String,
     multiProfileSupported: Boolean,
     private val contentBlocker: ContentBlocker,
@@ -815,7 +819,14 @@ private class SystemWebViewBrowserEngineSession(
     }
 
     fun installToppings(scripts: List<UserScript>) {
-        if (!closed) toppingRuntime.install(tabId, webView, scripts, isPrivate)
+        if (!closed) {
+            toppingRuntime.install(
+                tabId = tabId,
+                webView = webView,
+                scripts = scripts,
+                isPrivate = isPrivate || !allowsToppings,
+            )
+        }
     }
 
     fun setGlobalThirdPartyCookieBlocking(blocked: Boolean) {

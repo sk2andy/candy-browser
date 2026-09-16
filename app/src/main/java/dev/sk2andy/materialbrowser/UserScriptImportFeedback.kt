@@ -19,6 +19,7 @@ internal enum class UserScriptImportFeedback {
     TooManyMetadataValues,
     InvalidScope,
     InvalidRunAt,
+    InvalidFrameScope,
     UnsupportedGrant,
     InvalidDependency,
     TooManyDependencies,
@@ -75,6 +76,7 @@ internal object UserScriptImportFeedbackRules {
         UserScriptRejectionReason.InvalidExcludePattern,
         -> UserScriptImportFeedback.InvalidScope
         UserScriptRejectionReason.InvalidRunAt -> UserScriptImportFeedback.InvalidRunAt
+        UserScriptRejectionReason.InvalidFrameScope -> UserScriptImportFeedback.InvalidFrameScope
         UserScriptRejectionReason.InvalidRequire,
         UserScriptRejectionReason.InvalidResource,
         -> UserScriptImportFeedback.InvalidDependency

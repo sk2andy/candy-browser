@@ -129,6 +129,7 @@ import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuLayout
 import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuLocation
 import dev.sk2andy.materialbrowser.shared.browser.BrowserFeatureMenuLabelKey
 import dev.sk2andy.materialbrowser.shared.browser.BrowserFeatureMenuSection
+import dev.sk2andy.materialbrowser.shared.topping.ToppingFrameScope
 import dev.sk2andy.materialbrowser.shared.ui.settings.CandySettingsHome
 import dev.sk2andy.materialbrowser.shared.ui.settings.SyncSettingsActionSink
 import dev.sk2andy.materialbrowser.shared.ui.settings.SyncSettingsUiState
@@ -151,6 +152,8 @@ data class BrowserViewportTopping(
     val id: String,
     val name: String,
     val enabled: Boolean,
+    val declaredFrameScope: ToppingFrameScope = ToppingFrameScope.Top,
+    val allowedFrameScope: ToppingFrameScope = ToppingFrameScope.Top,
 )
 
 data class BrowserReaderSnapshot(
@@ -279,6 +282,11 @@ interface BrowserViewportActionSink : SyncSettingsActionSink {
         enabled: Boolean,
     )
 
+    fun setToppingFrameScope(
+        id: String,
+        scope: ToppingFrameScope,
+    )
+
     fun deleteTopping(id: String)
 
     fun retryReader()
@@ -384,6 +392,7 @@ fun CandyBrowserApp(
                 onSaveTopping = actionSink::saveTopping,
                 toppingSource = actionSink::toppingSource,
                 onSetToppingEnabled = actionSink::setToppingEnabled,
+                onSetToppingFrameScope = actionSink::setToppingFrameScope,
                 onDeleteTopping = actionSink::deleteTopping,
                 onDismiss = actionSink::dismissSettings,
                 syncState = snapshot.syncSettings,

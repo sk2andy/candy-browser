@@ -7,6 +7,7 @@ import android.view.ViewGroup
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import dev.sk2andy.materialbrowser.browser.engine.BrowserEngineContentKind
 import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineCommands
 import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineEvent
 import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineEventType
@@ -105,6 +106,7 @@ class GeckoSessionRestoreInstrumentedTest {
                 tabId = REGULAR_TAB_ID,
                 profileId = "kill-${UUID.randomUUID()}",
                 isPrivate = false,
+                contentKind = BrowserEngineContentKind.RegularTab,
                 eventSink = events::add,
             )
             geckoView = engineSession.createView(context).findGeckoView()
@@ -128,6 +130,7 @@ class GeckoSessionRestoreInstrumentedTest {
         tabId = tabId,
         profileId = profileId,
         isPrivate = isPrivate,
+        contentKind = BrowserEngineContentKind.RegularTab,
         eventSink = BrowserEngineEventSink { },
     )
 

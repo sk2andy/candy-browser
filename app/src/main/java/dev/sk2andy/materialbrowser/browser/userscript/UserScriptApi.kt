@@ -407,6 +407,13 @@ internal object UserScriptApi {
                     }
                 """.trimIndent(),
             )
+            functions += """
+                addEventListener("pagehide", (event) => {
+                    if (!event.persisted) {
+                        __candyBridge.postMessage(JSON.stringify({ type: "dispose-document" }));
+                    }
+                }, { once: true });
+            """.trimIndent()
         }
         if (UserScriptGrant.UnregisterMenuCommand in grants) {
             functions += defineFunction(

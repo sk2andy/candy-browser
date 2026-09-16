@@ -25,6 +25,7 @@ import dev.sk2andy.materialbrowser.data.TabOverviewMode
 import dev.sk2andy.materialbrowser.browser.PageTranslationProvider
 import dev.sk2andy.materialbrowser.browser.SearchEngine
 import dev.sk2andy.materialbrowser.shared.ui.BrowserViewportTopping
+import dev.sk2andy.materialbrowser.shared.topping.ToppingFrameScope
 import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuEntry
 import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuLayout
 import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuLocation
@@ -126,6 +127,7 @@ internal fun CandySettingsHome(
     onSaveTopping: (id: String?, source: String) -> Unit,
     toppingSource: (id: String) -> String?,
     onSetToppingEnabled: (id: String, enabled: Boolean) -> Unit,
+    onSetToppingFrameScope: (id: String, scope: ToppingFrameScope) -> Unit,
     onDeleteTopping: (id: String) -> Unit,
     onDismiss: () -> Unit,
     syncState: SyncSettingsUiState = SyncSettingsUiState(),
@@ -184,6 +186,7 @@ internal fun CandySettingsHome(
                 onSave = onSaveTopping,
                 toppingSource = toppingSource,
                 onSetEnabled = onSetToppingEnabled,
+                onSetFrameScope = onSetToppingFrameScope,
                 onDelete = onDeleteTopping,
                 onBack = { destination = SettingsDestination.Home },
             )

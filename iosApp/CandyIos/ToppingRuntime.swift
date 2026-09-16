@@ -7,8 +7,15 @@ struct ToppingMenuCommand: Equatable {
     let tabId: String
     let scriptId: String
     let scriptName: String
+    let documentId: String
     let commandId: String
     let caption: String
+}
+
+enum ToppingSessionKind {
+    case regular
+    case privateBrowsing
+    case preview
 }
 
 @MainActor
@@ -42,12 +49,16 @@ final class ToppingRuntime {
         self.resolver = resolver
     }
 
-    func attach(_ controller: WKUserContentController, tabId: String, isPrivate: Bool) {
+    func attach(
+        _ controller: WKUserContentController,
+        tabId: String,
+        sessionKind: ToppingSessionKind
+    ) {
         registrations.removeAll { $0.controller == nil || $0.controller === controller }
         let registration = ToppingControllerRegistration(
             controller: controller,
             tabId: tabId,
-            isPrivate: isPrivate
+            sessionKind: sessionKind
         )
         registrations.append(registration)
         reconcile(registration)
@@ -60,7 +71,8 @@ final class ToppingRuntime {
 
     func navigationStarted(tabId: String) {
         guard let registration = registrations.first(where: { $0.tabId == tabId }) else { return }
-        registration.documentURL = nil
+        registration.navigationGeneration &+= 1
+        registration.documents.removeAll()
         registration.menuCommands.removeAll()
         publishCommands(registration)
     }
@@ -85,6 +97,11 @@ final class ToppingRuntime {
         reconcileRegularControllers()
     }
 
+    func setAllowedFrameScope(_ scope: ToppingFrameScope, id: String) throws {
+        try store.setAllowedFrameScope(scope, id: id)
+        reconcileRegularControllers()
+    }
+
     func delete(id: String) throws {
         try store.delete(id: id)
         values.deleteScript(id: id)
@@ -94,25 +111,41 @@ final class ToppingRuntime {
     func records() -> [StoredTopping] { store.records() }
 
     func commands(tabId: String) -> [ToppingMenuCommand] {
-        registrations.first(where: { $0.tabId == tabId })?.menuCommands.values.sorted {
-            if $0.scriptName == $1.scriptName { return $0.commandId < $1.commandId }
+        registrations.first(where: { $0.tabId == tabId })?.menuCommands.values.map(\.command).sorted {
+            if $0.scriptName == $1.scriptName {
+                if $0.commandId == $1.commandId { return $0.documentId < $1.documentId }
+                return $0.commandId < $1.commandId
+            }
             return $0.scriptName < $1.scriptName
         } ?? []
     }
 
-    func invoke(tabId: String, scriptId: String, commandId: String) {
+    func invoke(tabId: String, scriptId: String, documentId: String, commandId: String) {
+        guard let documentUUID = UUID(uuidString: documentId) else { return }
+        let routeKey = Self.commandRouteKey(documentId: documentUUID, commandId: commandId)
         guard
-            let registration = registrations.first(where: { $0.tabId == tabId && !$0.isPrivate }),
+            let registration = registrations.first(where: {
+                $0.tabId == tabId && $0.sessionKind == .regular
+            }),
             let webView = registration.webView,
-            let installed = registration.installed[scriptId],
-            registration.menuCommands["\(scriptId):\(commandId)"] != nil
+            let route = registration.menuCommands[routeKey],
+            route.command.scriptId == scriptId,
+            route.command.documentId == documentId.lowercased(),
+            let document = registration.documents[route.documentId],
+            document.scriptId == scriptId,
+            document.navigationGeneration == registration.navigationGeneration,
+            let installed = registration.installed[scriptId]
         else { return }
-        let encoded = Self.jsonString(commandId)
+        let encodedDocumentId = Self.jsonString(route.documentId.uuidString.lowercased())
+        let encodedCommandId = Self.jsonString(route.sourceCommandId)
         webView.evaluateJavaScript(
-            "globalThis.\(installed.invocationFunction)(\(encoded));",
-            in: nil,
+            "globalThis.\(installed.invocationFunction)(\(encodedDocumentId), \(encodedCommandId));",
+            in: document.frameInfo,
             in: installed.world
-        ) { _ in }
+        ) { [weak self, weak registration] result in
+            guard case .failure = result, let registration else { return }
+            self?.removeDocument(route.documentId, from: registration)
+        }
     }
 
     fileprivate func receive(
@@ -123,28 +156,75 @@ final class ToppingRuntime {
         reply: @escaping @MainActor @Sendable (Any?, String?) -> Void
     ) {
         guard
-            message.frameInfo.isMainFrame,
+            let body = message.body as? [String: Any],
+            let type = body["type"] as? String,
             let sourceURL = message.frameInfo.request.url,
-            let registration = registrations.first(where: { $0.tabId == tabId && !$0.isPrivate }),
+            let registration = registrations.first(where: {
+                $0.tabId == tabId && $0.sessionKind == .regular
+            }),
+            let webView = registration.webView,
+            message.webView === webView,
             let installed = registration.installed[scriptId],
             installed.revision == revision,
             sourceURL.scheme == "http" || sourceURL.scheme == "https",
             ToppingRules.shared.matchesUrl(script: installed.installation.script, url: sourceURL.absoluteString),
-            let body = message.body as? [String: Any],
-            let type = body["type"] as? String,
+            let frameOrigin = ToppingFrameOrigin(
+                scheme: message.frameInfo.securityOrigin.protocol,
+                host: message.frameInfo.securityOrigin.host,
+                port: message.frameInfo.securityOrigin.port
+            ),
+            ToppingFrameAuthorizationRules.allows(
+                scope: installed.installation.effectiveFrameScope,
+                isMainFrame: message.frameInfo.isMainFrame,
+                frameOrigin: frameOrigin,
+                topOrigin: webView.url.flatMap { ToppingFrameOrigin(url: $0) }
+            ),
+            !message.frameInfo.isMainFrame || Self.sameDocument(sourceURL, webView.url),
             registration.rateWindow.accept()
         else {
             reply(nil, "Topping request rejected")
             return
         }
-        if registration.documentURL != sourceURL.absoluteString {
-            registration.documentURL = sourceURL.absoluteString
-            registration.menuCommands = registration.menuCommands.filter { !$0.key.hasPrefix("\(scriptId):") }
-            publishCommands(registration)
+        if type == "authorize" {
+            guard registration.documents.count < 256,
+                  registration.documentCount(scriptId: scriptId) < 128,
+                  let frameInfo = message.frameInfo.copy() as? WKFrameInfo else {
+                reply(nil, "Too many Topping documents")
+                return
+            }
+            let documentId = UUID()
+            registration.documents[documentId] = ToppingDocumentRegistration(
+                id: documentId,
+                scriptId: scriptId,
+                navigationGeneration: registration.navigationGeneration,
+                frameInfo: frameInfo,
+                frameURL: sourceURL,
+                isMainFrame: message.frameInfo.isMainFrame
+            )
+            var response: [String: Any] = [
+                "ok": true,
+                "documentId": documentId.uuidString.lowercased(),
+            ]
+            if installed.hasValueGrant {
+                response["valueSnapshot"] = ToppingValueRules.snapshot(
+                    values.values(scriptId: scriptId)
+                ) ?? "{}"
+            }
+            reply(response, nil)
+            return
         }
+
+        guard let documentIdValue = body["documentId"] as? String,
+              let documentId = UUID(uuidString: documentIdValue),
+              let document = registration.documents[documentId],
+              document.scriptId == scriptId,
+              document.navigationGeneration == registration.navigationGeneration,
+              document.matches(frameInfo: message.frameInfo, sourceURL: sourceURL) else {
+            reply(nil, "Stale Topping document")
+            return
+        }
+        document.lastSeen = Date()
         switch type {
-        case "authorize":
-            reply(["ok": true], nil)
         case "set-value":
             guard installed.hasGrant(.setvalue),
                   let key = body["key"] as? String,
@@ -154,6 +234,7 @@ final class ToppingRuntime {
                 return
             }
             reply(["ok": true, "snapshot": snapshot], nil)
+            broadcastValues(snapshot, scriptId: scriptId, registration: registration)
         case "delete-value":
             guard installed.hasGrant(.deletevalue),
                   let key = body["key"] as? String,
@@ -162,22 +243,33 @@ final class ToppingRuntime {
                 return
             }
             reply(["ok": true, "snapshot": snapshot], nil)
+            broadcastValues(snapshot, scriptId: scriptId, registration: registration)
         case "register-menu":
             guard installed.hasGrant(.registermenucommand),
                   let commandId = Self.validCommandId(body["commandId"]),
                   let caption = Self.validCaption(body["caption"]),
-                  registration.commandCount(scriptId: scriptId) < 32,
+                  document.commandIds[commandId] != nil || document.commandIds.count < 32,
+                  document.commandIds[commandId] != nil || registration.commandCount(scriptId: scriptId) < 32,
                   registration.menuCommands.count < 128 else {
                 reply(nil, "Invalid Topping menu command")
                 return
             }
-            registration.menuCommands["\(scriptId):\(commandId)"] = ToppingMenuCommand(
-                tabId: tabId,
-                scriptId: scriptId,
-                scriptName: installed.installation.script.name,
-                commandId: commandId,
-                caption: caption
+            let routeKey = Self.commandRouteKey(documentId: documentId, commandId: commandId)
+            let scriptName = message.frameInfo.isMainFrame ? installed.installation.script.name :
+                "\(installed.installation.script.name) · \(sourceURL.host ?? "Frame")"
+            registration.menuCommands[routeKey] = ToppingCommandRegistration(
+                documentId: documentId,
+                sourceCommandId: commandId,
+                command: ToppingMenuCommand(
+                    tabId: tabId,
+                    scriptId: scriptId,
+                    scriptName: scriptName,
+                    documentId: documentId.uuidString.lowercased(),
+                    commandId: commandId,
+                    caption: caption
+                )
             )
+            document.commandIds[commandId] = routeKey
             publishCommands(registration)
             reply(["ok": true], nil)
         case "unregister-menu":
@@ -186,7 +278,9 @@ final class ToppingRuntime {
                 reply(nil, "Invalid Topping menu command")
                 return
             }
-            registration.menuCommands.removeValue(forKey: "\(scriptId):\(commandId)")
+            if let routeKey = document.commandIds.removeValue(forKey: commandId) {
+                registration.menuCommands.removeValue(forKey: routeKey)
+            }
             publishCommands(registration)
             reply(["ok": true], nil)
         case "open-tab":
@@ -207,8 +301,47 @@ final class ToppingRuntime {
                 active: body["active"] as? Bool ?? true
             )
             reply(["ok": true], nil)
+        case "dispose":
+            removeDocument(documentId, from: registration)
+            reply(["ok": true], nil)
         default:
             reply(nil, "Unknown Topping request")
+        }
+    }
+
+    private func broadcastValues(
+        _ snapshot: String,
+        scriptId: String,
+        registration: ToppingControllerRegistration
+    ) {
+        guard let webView = registration.webView,
+              let installed = registration.installed[scriptId],
+              installed.hasValueGrant else { return }
+        let encodedSnapshot = Self.jsonString(snapshot)
+        let documents = registration.documents.values.filter { $0.scriptId == scriptId }
+        for document in documents {
+            let encodedDocumentId = Self.jsonString(document.id.uuidString.lowercased())
+            webView.evaluateJavaScript(
+                "globalThis.\(installed.valueSyncFunction)(\(encodedDocumentId), \(encodedSnapshot));",
+                in: document.frameInfo,
+                in: installed.world
+            ) { [weak self, weak registration] result in
+                guard case .failure = result, let registration else { return }
+                self?.removeDocument(document.id, from: registration)
+            }
+        }
+    }
+
+    private func removeDocument(
+        _ documentId: UUID,
+        from registration: ToppingControllerRegistration
+    ) {
+        guard let document = registration.documents.removeValue(forKey: documentId) else { return }
+        let removedCommand = document.commandIds.values.reduce(false) { removed, routeKey in
+            registration.menuCommands.removeValue(forKey: routeKey) != nil || removed
+        }
+        if removedCommand {
+            publishCommands(registration)
         }
     }
 
@@ -224,9 +357,10 @@ final class ToppingRuntime {
         }
         registration.handlers.removeAll()
         registration.installed.removeAll()
+        registration.documents.removeAll()
         registration.menuCommands.removeAll()
         publishCommands(registration)
-        guard !registration.isPrivate else { return }
+        guard registration.sessionKind == .regular else { return }
         store.installations().forEach { installation in
             let revision = Self.revision(installation.record)
             let handlerName = ToppingInstaller.handlerName(scriptId: "\(installation.script.id)_\(revision)")
@@ -289,6 +423,19 @@ final class ToppingRuntime {
         return value
     }
 
+    private static func commandRouteKey(documentId: UUID, commandId: String) -> String {
+        "\(documentId.uuidString.lowercased()):\(commandId)"
+    }
+
+    private static func sameDocument(_ frameURL: URL, _ webViewURL: URL?) -> Bool {
+        guard let webViewURL else { return false }
+        var frameComponents = URLComponents(url: frameURL, resolvingAgainstBaseURL: false)
+        var webViewComponents = URLComponents(url: webViewURL, resolvingAgainstBaseURL: false)
+        frameComponents?.fragment = nil
+        webViewComponents?.fragment = nil
+        return frameComponents?.url == webViewComponents?.url
+    }
+
     private static func jsonString(_ value: String) -> String {
         let data = try? JSONSerialization.data(withJSONObject: value, options: [.fragmentsAllowed])
         return data.flatMap { String(data: $0, encoding: .utf8) } ?? "\"\""
@@ -335,24 +482,83 @@ private final class ToppingControllerRegistration {
     weak var controller: WKUserContentController?
     weak var webView: WKWebView?
     let tabId: String
-    let isPrivate: Bool
-    var documentURL: String?
+    let sessionKind: ToppingSessionKind
+    var navigationGeneration: UInt64 = 0
     var handlers: [(name: String, world: WKContentWorld, owner: ToppingBridgeHandler)] = []
     var knownScripts: [String: ToppingInstalledScript] = [:]
     var installed: [String: InstalledRegistration] = [:]
-    var menuCommands: [String: ToppingMenuCommand] = [:]
-    let rateWindow = ToppingRateWindow(maximum: 128, seconds: 1)
+    var documents: [UUID: ToppingDocumentRegistration] = [:]
+    var menuCommands: [String: ToppingCommandRegistration] = [:]
+    let rateWindow = ToppingRateWindow(maximum: 512, seconds: 1)
     let openTabRateWindow = ToppingRateWindow(maximum: 4, seconds: 10)
 
-    init(controller: WKUserContentController, tabId: String, isPrivate: Bool) {
+    init(controller: WKUserContentController, tabId: String, sessionKind: ToppingSessionKind) {
         self.controller = controller
         self.tabId = tabId
-        self.isPrivate = isPrivate
+        self.sessionKind = sessionKind
+    }
+
+    func documentCount(scriptId: String) -> Int {
+        documents.values.lazy.filter { $0.scriptId == scriptId }.count
     }
 
     func commandCount(scriptId: String) -> Int {
-        menuCommands.keys.lazy.filter { $0.hasPrefix("\(scriptId):") }.count
+        menuCommands.values.lazy.filter { $0.command.scriptId == scriptId }.count
     }
+}
+
+@MainActor
+private final class ToppingDocumentRegistration {
+    let id: UUID
+    let scriptId: String
+    let navigationGeneration: UInt64
+    var frameInfo: WKFrameInfo
+    var frameURL: URL
+    let isMainFrame: Bool
+    var lastSeen = Date()
+    var commandIds: [String: String] = [:]
+
+    init(
+        id: UUID,
+        scriptId: String,
+        navigationGeneration: UInt64,
+        frameInfo: WKFrameInfo,
+        frameURL: URL,
+        isMainFrame: Bool
+    ) {
+        self.id = id
+        self.scriptId = scriptId
+        self.navigationGeneration = navigationGeneration
+        self.frameInfo = frameInfo
+        self.frameURL = frameURL
+        self.isMainFrame = isMainFrame
+    }
+
+    func matches(frameInfo: WKFrameInfo, sourceURL: URL) -> Bool {
+        guard isMainFrame == frameInfo.isMainFrame,
+              Self.documentURL(frameURL) == Self.documentURL(sourceURL),
+              let storedOrigin = ToppingFrameOrigin(url: frameURL),
+              let messageOrigin = ToppingFrameOrigin(
+                  scheme: frameInfo.securityOrigin.protocol,
+                  host: frameInfo.securityOrigin.host,
+                  port: frameInfo.securityOrigin.port
+              ) else {
+            return false
+        }
+        return storedOrigin == messageOrigin
+    }
+
+    private static func documentURL(_ url: URL) -> URL? {
+        var components = URLComponents(url: url, resolvingAgainstBaseURL: false)
+        components?.fragment = nil
+        return components?.url
+    }
+}
+
+private struct ToppingCommandRegistration {
+    let documentId: UUID
+    let sourceCommandId: String
+    let command: ToppingMenuCommand
 }
 
 private struct InstalledRegistration {
@@ -362,6 +568,13 @@ private struct InstalledRegistration {
 
     var world: WKContentWorld { script.world }
     var invocationFunction: String { script.invocationFunction }
+    var valueSyncFunction: String { script.valueSyncFunction }
+    var hasValueGrant: Bool {
+        installation.script.grants.contains(.getvalue) ||
+            installation.script.grants.contains(.setvalue) ||
+            installation.script.grants.contains(.deletevalue) ||
+            installation.script.grants.contains(.listvalues)
+    }
     func hasGrant(_ grant: ToppingGrant) -> Bool { installation.script.grants.contains(grant) }
 }
 

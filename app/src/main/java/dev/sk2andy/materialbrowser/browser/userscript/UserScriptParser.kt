@@ -1,5 +1,6 @@
 package dev.sk2andy.materialbrowser.browser.userscript
 
+import dev.sk2andy.materialbrowser.shared.topping.ToppingFrameScope
 import java.net.URI
 
 internal object UserScriptParser {
@@ -78,6 +79,25 @@ internal object UserScriptParser {
             "document-start" -> UserScriptRunAt.DocumentStart
             else -> return rejected(UserScriptRejectionReason.InvalidRunAt)
         }
+        val candyFrameValues = values["candy-frames"].orEmpty()
+        val noFramesValues = values["noframes"].orEmpty()
+        if (
+            candyFrameValues.size > 1 ||
+            noFramesValues.size > 1 ||
+            noFramesValues.any(String::isNotBlank)
+        ) return rejected(UserScriptRejectionReason.InvalidFrameScope)
+        val requestedFrameScope = candyFrameValues.singleOrNull()?.let { value ->
+            ToppingFrameScope.fromWireValue(value.lowercase())
+                ?: return rejected(UserScriptRejectionReason.InvalidFrameScope)
+        } ?: ToppingFrameScope.Top
+        if (noFramesValues.isNotEmpty() && requestedFrameScope != ToppingFrameScope.Top) {
+            return rejected(UserScriptRejectionReason.InvalidFrameScope)
+        }
+        val declaredFrameScope = if (noFramesValues.isNotEmpty()) {
+            ToppingFrameScope.Top
+        } else {
+            requestedFrameScope
+        }
 
         val requireValues = values["require"].orEmpty()
         val resourceValues = values["resource"].orEmpty()
@@ -121,6 +141,8 @@ internal object UserScriptParser {
                 runAt = runAt,
                 requires = requires,
                 resources = resources,
+                declaredFrameScope = declaredFrameScope,
+                allowedFrameScope = declaredFrameScope,
                 updatedAtMillis = updatedAtMillis,
             ),
         )
