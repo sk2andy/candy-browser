@@ -4,6 +4,7 @@ internal data class GeckoMainFrameResponse(
     val url: String,
     val statusCode: Int,
     val navigationGeneration: Int,
+    val isCloudflareChallenge: Boolean = false,
 )
 
 internal object GeckoMainFrameResponseRules {
@@ -11,6 +12,7 @@ internal object GeckoMainFrameResponseRules {
         url: String,
         statusCode: Int,
         navigationGeneration: Int,
+        isCloudflareChallenge: Boolean = false,
     ): GeckoMainFrameResponse? {
         val safeUrl = url.take(MAX_URL_CHARS)
         if (!safeUrl.startsWith("http://") && !safeUrl.startsWith("https://")) return null
@@ -20,6 +22,7 @@ internal object GeckoMainFrameResponseRules {
             url = safeUrl,
             statusCode = statusCode,
             navigationGeneration = navigationGeneration,
+            isCloudflareChallenge = isCloudflareChallenge && safeUrl.startsWith("https://"),
         )
     }
 

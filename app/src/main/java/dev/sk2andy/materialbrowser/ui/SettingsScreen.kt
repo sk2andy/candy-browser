@@ -8,10 +8,12 @@ import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.blocking.BlockerSettings
 import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineKind
 import dev.sk2andy.materialbrowser.browser.BrowserProfile
+import dev.sk2andy.materialbrowser.browser.ExternalAppLinkHandling
 import dev.sk2andy.materialbrowser.browser.FavoriteAnimationSpeed
 import dev.sk2andy.materialbrowser.browser.PageTranslationProvider
 import dev.sk2andy.materialbrowser.browser.SearchEngine
 import dev.sk2andy.materialbrowser.browser.SearxngSettings
+import dev.sk2andy.materialbrowser.browser.StartupAddressFocusMode
 import dev.sk2andy.materialbrowser.browser.WebRtcProtectionMode
 import dev.sk2andy.materialbrowser.browser.isSynced
 import dev.sk2andy.materialbrowser.browser.actions.ExternalDownloadManagerApp
@@ -72,8 +74,10 @@ internal fun SettingsScreen(
     browserMenuLayout: BrowserMenuLayout = BrowserMenuLayout.Default,
     isAddressBarDockingEnabled: Boolean,
     isExternalLinkPreviewEnabled: Boolean = false,
+    externalAppLinkHandling: ExternalAppLinkHandling = ExternalAppLinkHandling.Default,
     isFullImmersiveModeEnabled: Boolean,
     isStartupAnimationEnabled: Boolean,
+    startupAddressFocusMode: StartupAddressFocusMode = StartupAddressFocusMode.Default,
     isHttpPasswordAutofillEnabled: Boolean = false,
     isHttpPasswordAutofillSupported: Boolean = false,
     isFavoriteLaunchAnimationEnabled: Boolean = true,
@@ -123,8 +127,10 @@ internal fun SettingsScreen(
     onBrowserMenuLocationChanged: (BrowserMenuEntry, BrowserMenuLocation) -> Unit = { _, _ -> },
     onAddressBarDockingEnabledChanged: (Boolean) -> Unit,
     onExternalLinkPreviewEnabledChanged: (Boolean) -> Unit = {},
+    onExternalAppLinkHandlingChanged: (ExternalAppLinkHandling) -> Unit = {},
     onFullImmersiveModeEnabledChanged: (Boolean) -> Unit,
     onStartupAnimationEnabledChanged: (Boolean) -> Unit,
+    onStartupAddressFocusModeChanged: (StartupAddressFocusMode) -> Unit = {},
     onHttpPasswordAutofillEnabledChanged: (Boolean) -> Unit = {},
     onFavoriteLaunchAnimationEnabledChanged: (Boolean) -> Unit = {},
     onFavoriteAnimationSpeedChanged: (FavoriteAnimationSpeed) -> Unit = {},
@@ -306,8 +312,10 @@ internal fun SettingsScreen(
                     browserEngineKind = browserEngineKind,
                     pageTranslationProvider = pageTranslationProvider,
                     isExternalLinkPreviewEnabled = isExternalLinkPreviewEnabled,
+                    externalAppLinkHandling = externalAppLinkHandling,
                     isFullImmersiveModeEnabled = isFullImmersiveModeEnabled,
                     isStartupAnimationEnabled = isStartupAnimationEnabled,
+                    startupAddressFocusMode = startupAddressFocusMode,
                     isFavoriteLaunchAnimationEnabled = isFavoriteLaunchAnimationEnabled,
                     favoriteAnimationSpeed = favoriteAnimationSpeed,
                     isOpenHomeOnStartupEnabled = isOpenHomeOnStartupEnabled,
@@ -318,8 +326,10 @@ internal fun SettingsScreen(
                     onBrowserEngineKindChanged = onBrowserEngineKindChanged,
                     onExternalLinkPreviewEnabledChanged =
                         onExternalLinkPreviewEnabledChanged,
+                    onExternalAppLinkHandlingChanged = onExternalAppLinkHandlingChanged,
                     onFullImmersiveModeEnabledChanged = onFullImmersiveModeEnabledChanged,
                     onStartupAnimationEnabledChanged = onStartupAnimationEnabledChanged,
+                    onStartupAddressFocusModeChanged = onStartupAddressFocusModeChanged,
                     onFavoriteLaunchAnimationEnabledChanged =
                         onFavoriteLaunchAnimationEnabledChanged,
                     onFavoriteAnimationSpeedChanged = onFavoriteAnimationSpeedChanged,
@@ -374,6 +384,7 @@ internal fun SettingsScreen(
                     onConfigure = onConfigureSync,
                     onEnroll = onEnrollSync,
                     onRefresh = onRefreshSync,
+                    onOpenDocumentation = onOpenLegalUrl,
                     onBack = { onDestinationChanged(SettingsDestination.Home) },
                 )
 

@@ -2,16 +2,28 @@ package dev.sk2andy.materialbrowser.browser.integration
 
 import android.content.Intent
 
-data class IncomingBrowserRequest(val url: String)
+data class IncomingBrowserRequest(
+    val url: String,
+    val kind: IncomingBrowserRequestKind,
+)
+
+enum class IncomingBrowserRequestKind {
+    View,
+    Share,
+}
 
 object IncomingBrowserIntent {
     fun from(intent: Intent): IncomingBrowserRequest? {
-        val url = when (intent.action) {
-            Intent.ACTION_VIEW -> BrowserUriPolicy.normalizeHttpUrl(intent.dataString)
-            Intent.ACTION_SEND -> sharedWebUrl(intent)
+        val kind = when (intent.action) {
+            Intent.ACTION_VIEW -> IncomingBrowserRequestKind.View
+            Intent.ACTION_SEND -> IncomingBrowserRequestKind.Share
             else -> null
         } ?: return null
-        return IncomingBrowserRequest(url)
+        val url = when (kind) {
+            IncomingBrowserRequestKind.View -> BrowserUriPolicy.normalizeHttpUrl(intent.dataString)
+            IncomingBrowserRequestKind.Share -> sharedWebUrl(intent)
+        } ?: return null
+        return IncomingBrowserRequest(url = url, kind = kind)
     }
 
     private fun sharedWebUrl(intent: Intent): String? {

@@ -284,7 +284,7 @@ landscape-oriented previews in Coverflow and the compact grid layout.
   for supported APIs and exact platform boundaries.
 
 Pinned source URLs, versions, hashes, licenses, and delivery modes live in
-`app/src/main/assets/gecko_default_extensions/catalog.json`. Maintainers verify local assets with
+`app/src/gecko/assets/gecko_default_extensions/catalog.json`. Maintainers verify local assets with
 `python3 scripts/generate_gecko_default_extensions.py verify`, audit both upstream files with
 `python3 scripts/generate_gecko_default_extensions.py audit-remote`, and refresh the bundled XPI
 only with `python3 scripts/generate_gecko_default_extensions.py refresh`.
@@ -348,21 +348,23 @@ and cannot become versions of the new package. Submission files and maintainer s
 so F-Droid can verify its source build and preserve update compatibility with the upstream signing
 key.
 
-Releases contain three APK channels plus an architecture-optimized standard APK:
+Releases contain four APK channels plus an architecture-optimized standard APK:
 
 | APK suffix | Certificate trust | Intended use |
 | --- | --- | --- |
 | `-release.apk` | Android system CAs only | Universal compatibility fallback |
 | `-arm64-v8a-release.apk` | Android system CAs only | Recommended smaller APK for ARM64 devices |
+| `-systemwebview-release.apk` | Android system CAs only | Small, separately installed build using only Android System WebView |
 | `-foss-release.apk` | Android system CAs only | F-Droid reproducible-build reference without proprietary Google integrations |
 | `-ca-release.apk` | System CAs plus every CA in Android's user store | Explicit opt-in for HTTPS filtering/proxy tools such as AdGuard |
 
-Both standard APKs use `dev.sk2andy.materialbrowser` and the same release signature. The FOSS build uses
+Both standard APKs use `dev.sk2andy.materialbrowser` and the same release signature. The System
+WebView-only build uses `dev.sk2andy.materialbrowser.systemwebview`, the FOSS build uses
 `dev.sk2andy.materialbrowser.foss`, and the User CA build uses
-`dev.sk2andy.materialbrowser.ca`. Android therefore installs all three side by side with isolated
-app data. Their launcher labels and badged icons distinguish the channels; the warning under
+`dev.sk2andy.materialbrowser.ca`. Android therefore installs all four channels side by side with
+isolated app data. Their launcher labels distinguish the channels; the warning under
 **Settings → Protection & data** additionally identifies the User CA build's broader trust policy.
-Updates stay on the installed channel.
+Updates stay on the installed channel. The System WebView build never downloads a GeckoView APK.
 
 Releases through v0.36 used the standard application ID for all three APKs. Android cannot migrate
 an installed package to a different application ID, so the isolated FOSS and CA channels start with
@@ -390,6 +392,14 @@ To verify the F-Droid-compatible build:
 
 ```bash
 ./gradlew testFossDebugUnitTest lintFossDebug assembleFossDebug
+```
+
+To verify the small System WebView-only build:
+
+```bash
+./gradlew testSystemwebviewDebugUnitTest lintSystemwebviewDebug assembleSystemwebviewDebug
+./gradlew assembleSystemwebviewRelease
+python3 scripts/test_systemwebview_apk.py
 ```
 
 To build the explicit User CA development variant:
@@ -444,8 +454,9 @@ Signed local APK: `app/build/outputs/apk/full/localRelease/app-full-localRelease
 `localRelease` installs beside the GitHub build as `dev.sk2andy.materialbrowser.local` and uses a
 separate launcher icon and the label `Candy Browser Local`. GitHub update prompts are disabled for
 this side-by-side build because production APKs cannot update its package. The GitHub release
-workflow uses `assembleFullRelease`, `assembleFossRelease`, and `assembleFullUserCaRelease`; those
-outputs use the standard, `.foss`, and `.ca` application IDs and matching launcher identities. A
+workflow uses `assembleFullRelease`, `assembleFossRelease`, `assembleSystemwebviewRelease`, and
+`assembleFullUserCaRelease`; those outputs use the standard, `.foss`, `.systemwebview`, and `.ca`
+application IDs and matching launcher identities. A
 separate workflow signs and publishes the FOSS output from explicitly allowlisted release tags.
 
 For current edge-to-edge experiments, use the separate **Candy Edge** package consistently:
@@ -466,8 +477,9 @@ identities unchanged. Device commands must use the explicitly selected serial.
 ### GitHub releases
 
 The manual `Release Android APK` workflow tests the selected source revision, builds the FOSS flavor,
-builds and verifies the signed universal standard, ARM64 standard, and User CA APKs, creates a
-`v<version>` source tag, and publishes the three signed APKs plus their SHA-256 checksums. Add four
+builds and verifies the signed universal standard, ARM64 standard, System WebView-only, and User CA
+APKs, creates a `v<version>` source tag, and publishes the four signed GitHub APKs plus their SHA-256
+checksums. Add four
 repository secrets once:
 
 ```bash

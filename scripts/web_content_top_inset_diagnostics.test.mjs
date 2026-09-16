@@ -13,7 +13,7 @@ const generatedScript = kotlinSource
   .replaceAll("${'$'}", '$')
   .replaceAll('$bridgeName', 'CandyContentTopInset');
 const bridgeScript = readFileSync(new URL(
-  '../app/src/main/assets/candy_privacy/content_top_inset_bridge.js',
+  '../app/src/gecko/assets/candy_privacy/content_top_inset_bridge.js',
   import.meta.url,
 ), 'utf8');
 
@@ -215,7 +215,7 @@ test('bridge diagnostics require explicit true and stop after recording policy t
 
 test('background content policy does not coerce truthy diagnostic input', () => {
   const source = readFileSync(new URL(
-    '../app/src/main/assets/candy_privacy/background.js', import.meta.url,
+    '../app/src/gecko/assets/candy_privacy/background.js', import.meta.url,
   ), 'utf8');
   const contentPolicy = source.split('function contentPolicy(policy) {')[1]
     .split('function publishContentPolicy')[0];
@@ -297,7 +297,7 @@ test('diagnostic state messages require current revision without triggering reco
 
 test('background diagnostic state preserves existing policy and rejects stale revisions', () => {
   const source = readFileSync(new URL(
-    '../app/src/main/assets/candy_privacy/background.js', import.meta.url,
+    '../app/src/gecko/assets/candy_privacy/background.js', import.meta.url,
   ), 'utf8');
   const helper = source.split('function publishPerformanceDiagnosticsState(message) {')[1]
     .split('function publishPerformanceDiagnosticsGap')[0];
@@ -364,7 +364,7 @@ test('gap markers require enabled ready current policy and clear only their own 
 
 test('background gap relay contains only static type and current revision', () => {
   const source = readFileSync(new URL(
-    '../app/src/main/assets/candy_privacy/background.js', import.meta.url,
+    '../app/src/gecko/assets/candy_privacy/background.js', import.meta.url,
   ), 'utf8');
   const helper = source.split('function publishPerformanceDiagnosticsGap(message) {')[1]
     .split('function scheduleContentPolicy')[0];

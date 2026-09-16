@@ -46,6 +46,10 @@ call-site cutover are not complete.
 - Existing and new installs default to GeckoView. The Browser settings page can switch the whole
   Android app to System WebView; Candy checkpoints tab URLs, commits the choice and restarts into a
   fresh process so the inactive runtime does not remain in RAM.
+- The separately installed `systemwebview` distribution fixes the engine to Android System WebView,
+  removes the engine selector and ships no GeckoView runtime, Gecko native libraries, Privacy host,
+  or bundled Firefox extensions. It uses package `dev.sk2andy.materialbrowser.systemwebview` and a
+  dedicated GitHub release/update asset.
 - Tabs, bookmarks, history, profiles and Candy settings remain shared. Cookies, logins, native
   back-forward lists and engine-owned session state intentionally stay separate.
 - `AndroidBrowserEngineFactory` is the process-level seam. Concrete implementations live under
@@ -110,16 +114,18 @@ Camera and microphone permissions remain separate and continue through Candy's p
   to CSS `env(safe-area-inset-*)` without shrinking the renderer. Normal Gecko tabs and Link Peek
   receive no legacy Candy document inset, and the Gecko-only bridge skips shared DOM repair
   installation before its observers, hooks or timers are created. A separate bounded Gecko CSS
-  layer protects suitable body flow and viewport-bound fixed/sticky anchors once with CSS `max()`
-  and native `env(safe-area-inset-top)`. Link Peek inside Compose safe-drawing hosts keeps this
-  correction disabled to avoid duplicating the host inset. Ordinary scrolling cancels obsolete work but never schedules
+  layer protects suitable body flow and viewport-bound fixed/sticky anchors once. Documents with
+  `viewport-fit=cover` bypass that complete compatibility layer and use only Gecko's native
+  `env(safe-area-inset-top)` values, avoiding duplicate offsets in full-height and IME layouts.
+  Link Peek inside Compose safe-drawing hosts also keeps this correction disabled to avoid duplicating
+  the host inset. Ordinary scrolling cancels obsolete work but never schedules
   geometry reads. Relevant additions/attribute changes are interaction-gated by default; developer
   controls can tune or disable that layer live. Classification has explicit node/time/ancestor
   bounds, so it is not a universal layout-protection guarantee. Verified unsupported overlaps retain
   the navigation-scoped emergency native top fallback; explicit native overrides remain available.
   Privacy, scroll metrics and optional live blur are unchanged.
-  System WebView retains the document-start compatibility repair described below.
-  Candy owns its normal-tab top safe area because `viewport-fit=cover` only opts into the
+  System WebView retains the document-start compatibility repair described below. There, Candy owns
+  its normal-tab top safe area because `viewport-fit=cover` only opts into the
   viewport and does not prove that a page consumes `env(safe-area-inset-top)`. The renderer top
   safe area is therefore zero while side and bottom CSS safe-area values remain available.
   Every page receives a document-start compatibility inset: normal flow starts below the protected

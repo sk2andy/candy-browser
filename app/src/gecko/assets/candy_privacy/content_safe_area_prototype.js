@@ -10,7 +10,7 @@
   const knownTopSelectors = hostname === "amazon.de" || hostname.endsWith(".amazon.de") ?
     [":root #btf-sub-nav-top-navigation-bar.persistent-header"] :
     ["google.com", "google.de"].some((host) => hostname === host || hostname.endsWith(`.${host}`)) ?
-      [":root #tsf .A7Yvie.emcav"] : [];
+      [":root #navd", ":root #tsf .A7Yvie.emcav"] : [];
   const knownTopMatcher = knownTopSelectors.join(", ");
   const markerPrefix = `data-candy-safe-area-${Math.random().toString(36).slice(2)}`;
   let layerEpoch = 0;
@@ -51,6 +51,12 @@
   let redditFlowProtected = false;
   let refreshBodyAtReady = false;
   let cssTurn = true;
+
+  function viewportFitCoversSafeArea() {
+    const content = document.querySelector('meta[name="viewport" i]')?.getAttribute("content");
+    return typeof content === "string" &&
+      /(?:^|[\s,;])viewport-fit\s*=\s*cover(?=$|[\s,;])/i.test(content);
+  }
 
   function pixels(value) {
     if (typeof value !== "string" || !/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)px$/.test(value.trim())) return null;
@@ -453,6 +459,10 @@
 
   function protectBody() {
     if (!configuration?.active || cleanup.length || !document.body || !document.documentElement) return;
+    if (viewportFitCoversSafeArea()) {
+      configure();
+      return;
+    }
     bodyPending = false;
     apply(document.documentElement, "--candy-safe-area-inset-top", `${inset}px`);
     const flowProtected = globalThis.CandyRedditSafeArea?.flowProtected() === true;
@@ -588,7 +598,8 @@
     const scale = Number.isFinite(globalThis.devicePixelRatio) && globalThis.devicePixelRatio > 0 ? globalThis.devicePixelRatio : 1;
     const nextInset = Number.isFinite(incoming.cssSafeAreaTopInsetPx) ? Math.min(10000, Math.max(0, incoming.cssSafeAreaTopInsetPx)) / scale : 0;
     const bounded = (value, minimum, maximum, fallback) => Number.isSafeInteger(value) ? Math.min(maximum, Math.max(minimum, value)) : fallback;
-    const next = { active: incoming.ready === true && incoming.enabled === true && nextInset > 0,
+    const next = { active: incoming.ready === true && incoming.enabled === true && nextInset > 0 &&
+      !viewportFitCoversSafeArea(),
       recheckAddedElements: incoming.recheckAddedElements === true,
       recheckChangedElements: incoming.recheckChangedElements === true,
       requireInteractionForUpdates: incoming.requireInteractionForUpdates !== false,
@@ -671,6 +682,7 @@
   globalThis.__candyConfigureCssSafeArea = configure;
   document.addEventListener("DOMContentLoaded", () => {
     globalThis.CandyRedditSafeArea?.sync();
+    configure();
     observe();
     startSelectorScan();
     if (configuration?.active && (protectedBody !== document.body || refreshBodyAtReady)) {

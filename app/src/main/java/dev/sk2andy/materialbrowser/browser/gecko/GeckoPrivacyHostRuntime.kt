@@ -6,6 +6,8 @@ import android.util.Log
 import dev.sk2andy.materialbrowser.BuildConfig
 import dev.sk2andy.materialbrowser.browser.BrowserEngineScrollMetrics
 import dev.sk2andy.materialbrowser.browser.BrowserViewportRect
+import dev.sk2andy.materialbrowser.browser.TextInputOcclusionProbeMode
+import dev.sk2andy.materialbrowser.browser.TextInputOcclusionProbeResult
 import dev.sk2andy.materialbrowser.browser.WebRtcProtectionMode
 import dev.sk2andy.materialbrowser.browser.WebRtcProtectionRules
 import java.util.UUID
@@ -22,7 +24,8 @@ internal interface GeckoPrivacyBinding {
 
     fun probeTextInputOcclusion(
         viewportRect: BrowserViewportRect,
-        onResult: (Boolean) -> Unit,
+        mode: TextInputOcclusionProbeMode,
+        onResult: (TextInputOcclusionProbeResult) -> Unit,
     )
 
     fun probeDom(onResult: (String?) -> Unit)
@@ -217,21 +220,22 @@ internal class GeckoViewPrivacyHostRuntime(
 
             override fun probeTextInputOcclusion(
                 viewportRect: BrowserViewportRect,
-                onResult: (Boolean) -> Unit,
+                mode: TextInputOcclusionProbeMode,
+                onResult: (TextInputOcclusionProbeResult) -> Unit,
             ) {
                 if (
                     bindings[token] !== binding ||
                     failureDescription != null
                 ) {
-                    onResult(false)
+                    onResult(TextInputOcclusionProbeResult.NoFocusedTextInput)
                     return
                 }
                 runWhenReady(binding) {
                     if (binding.handshake.isCurrentPolicyAcknowledged) {
-                        requestTextInputOcclusion(binding, viewportRect, onResult)
+                        requestTextInputOcclusion(binding, viewportRect, mode, onResult)
                     } else {
                         binding.policyReadyCallbacks += {
-                            requestTextInputOcclusion(binding, viewportRect, onResult)
+                            requestTextInputOcclusion(binding, viewportRect, mode, onResult)
                         }
                     }
                 }
@@ -507,7 +511,8 @@ internal class GeckoViewPrivacyHostRuntime(
     private fun requestTextInputOcclusion(
         binding: Binding,
         viewportRect: BrowserViewportRect,
-        onResult: (Boolean) -> Unit,
+        mode: TextInputOcclusionProbeMode,
+        onResult: (TextInputOcclusionProbeResult) -> Unit,
     ) {
         val connectedPort = port
         if (
@@ -515,7 +520,7 @@ internal class GeckoViewPrivacyHostRuntime(
             connectedPort == null ||
             !binding.handshake.isCurrentPolicyAcknowledged
         ) {
-            onResult(false)
+            onResult(TextInputOcclusionProbeResult.NoFocusedTextInput)
             return
         }
         binding.textInputOcclusionProbe.start(
@@ -523,6 +528,7 @@ internal class GeckoViewPrivacyHostRuntime(
             revision = binding.handshake.publishedRevision,
             navigationGeneration = binding.policy.navigationGeneration,
             viewportRect = viewportRect,
+            mode = mode,
             post = connectedPort::postMessage,
             onResult = onResult,
         )
@@ -586,8 +592,22 @@ internal class GeckoViewPrivacyHostRuntime(
             url = value.optString("url"),
             statusCode = value.optInt("statusCode", -1),
             navigationGeneration = value.optInt("navigationGeneration", -1),
+            isCloudflareChallenge = value.optBoolean("cloudflareChallenge", false),
         ) ?: return
         if (response.navigationGeneration != binding.policy.navigationGeneration) return
+        if (response.isCloudflareChallenge) {
+            binding.sink.onEvent(
+                GeckoPrivacyEvent(
+                    requestUrl = response.url,
+                    pageUrl = response.url,
+                    ruleId = null,
+                    wasBlocked = false,
+                    isBuiltIn = false,
+                    isCompatibilityObservation = false,
+                    isCloudflareChallengeResponse = true,
+                ),
+            )
+        }
         binding.onMainFrameResponse(response)
     }
 
@@ -834,8 +854,9 @@ private fun closedBinding(): GeckoPrivacyBinding = object : GeckoPrivacyBinding 
 
     override fun probeTextInputOcclusion(
         viewportRect: BrowserViewportRect,
-        onResult: (Boolean) -> Unit,
-    ) = onResult(false)
+        mode: TextInputOcclusionProbeMode,
+        onResult: (TextInputOcclusionProbeResult) -> Unit,
+    ) = onResult(TextInputOcclusionProbeResult.NoFocusedTextInput)
 
     override fun probeDom(onResult: (String?) -> Unit) = onResult(null)
 

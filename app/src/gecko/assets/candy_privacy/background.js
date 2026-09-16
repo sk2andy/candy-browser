@@ -209,6 +209,12 @@ browser.webRequest.onHeadersReceived.addListener((details) => {
   const request = mainFrameRequestsById.get(details.requestId);
   mainFrameRequestsById.delete(details.requestId);
   if (!request) return;
+  const cloudflareChallenge = (details.responseHeaders || []).some((header) =>
+    typeof header.name === "string" &&
+    header.name.toLowerCase() === "cf-mitigated" &&
+    typeof header.value === "string" &&
+    header.value.trim().toLowerCase() === "challenge"
+  );
   nativePort.postMessage({
     type: "main-frame-response",
     protocolVersion: PROTOCOL_VERSION,
@@ -217,8 +223,9 @@ browser.webRequest.onHeadersReceived.addListener((details) => {
     navigationGeneration: request.navigationGeneration,
     url: details.url,
     statusCode: details.statusCode,
+    ...(cloudflareChallenge ? { cloudflareChallenge: true } : {}),
   });
-}, { urls: ["http://*/*", "https://*/*"] });
+}, { urls: ["http://*/*", "https://*/*"] }, ["responseHeaders"]);
 
 browser.webRequest.onErrorOccurred.addListener((details) => {
   if (details.type === "main_frame") mainFrameRequestsById.delete(details.requestId);
@@ -394,7 +401,7 @@ function probeTextInputOcclusion(message) {
       !Number.isSafeInteger(message.requestId) || !viewportRect) return;
   const tabEntry = Array.from(tokenByTab.entries()).find(([, token]) => token === message.token);
   if (!tabEntry) return;
-  const postResult = (occluded) => {
+  const postResult = (result) => {
     const current = policiesByToken.get(message.token);
     if (!nativePort || current?.revision !== message.revision ||
         current.navigationGeneration !== message.navigationGeneration ||
@@ -406,12 +413,13 @@ function probeTextInputOcclusion(message) {
       revision: message.revision,
       navigationGeneration: message.navigationGeneration,
       requestId: message.requestId,
-      occluded: occluded === true,
+      result: Number.isInteger(result) && result >= 0 && result <= 2 ? result : 0,
     });
   };
   browser.tabs.sendMessage(tabEntry[0], {
     type: "text-input-occlusion-probe",
     viewportRect,
+    focusedOnly: message.focusedOnly === true,
   }, { frameId: 0 }).then(postResult, () => postResult(false));
 }
 

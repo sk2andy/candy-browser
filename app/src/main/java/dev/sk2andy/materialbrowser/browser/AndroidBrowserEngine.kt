@@ -37,6 +37,20 @@ internal data class AndroidBrowserEngineCapabilities(
 }
 
 internal object AndroidBrowserEngineRules {
+    fun persistedKind(
+        stableId: String?,
+        systemWebViewOnly: Boolean,
+    ): AndroidBrowserEngineKind = if (systemWebViewOnly) {
+        AndroidBrowserEngineKind.SystemWebView
+    } else {
+        AndroidBrowserEngineKind.fromStableId(stableId)
+    }
+
+    fun canSelect(
+        kind: AndroidBrowserEngineKind,
+        systemWebViewOnly: Boolean,
+    ): Boolean = !systemWebViewOnly || kind == AndroidBrowserEngineKind.SystemWebView
+
     fun capabilities(kind: AndroidBrowserEngineKind): AndroidBrowserEngineCapabilities =
         when (kind) {
             AndroidBrowserEngineKind.GeckoView -> AndroidBrowserEngineCapabilities.GeckoView

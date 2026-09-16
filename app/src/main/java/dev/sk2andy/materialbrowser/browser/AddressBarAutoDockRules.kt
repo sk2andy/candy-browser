@@ -7,7 +7,31 @@ internal data class BrowserViewportRect(
     val bottomFraction: Float,
 )
 
+internal enum class TextInputOcclusionProbeMode {
+    AllEditors,
+    FocusedTextInput,
+}
+
+internal enum class TextInputOcclusionProbeResult(val wireValue: Int) {
+    NoFocusedTextInput(0),
+    FocusedTextInputClear(1),
+    Occluded(2),
+    ;
+
+    companion object {
+        fun fromWireValue(value: Int): TextInputOcclusionProbeResult =
+            entries.firstOrNull { result -> result.wireValue == value } ?: NoFocusedTextInput
+    }
+}
+
 internal object AddressBarAutoDockRules {
+    private val focusedProbeRetryDelaysMillis = listOf(150L, 200L, 350L, 500L)
+
+    fun shouldProbeForImeState(
+        isImeVisible: Boolean,
+        browserChromeOwnsIme: Boolean,
+    ): Boolean = isImeVisible && !browserChromeOwnsIme
+
     fun viewportRect(
         leftPx: Float,
         topPx: Float,
@@ -51,8 +75,7 @@ internal object AddressBarAutoDockRules {
         !isPrivatePage &&
         hasViewportRect
 
-    fun shouldApplyResult(
-        occluded: Boolean,
+    fun isProbeContextCurrent(
         dockingEnabled: Boolean,
         addressBarDocked: Boolean,
         selectedTabMatches: Boolean,
@@ -61,7 +84,7 @@ internal object AddressBarAutoDockRules {
         urlMatches: Boolean,
         viewportRectMatches: Boolean,
         isPrivatePage: Boolean,
-    ): Boolean = occluded &&
+    ): Boolean =
         dockingEnabled &&
         !addressBarDocked &&
         selectedTabMatches &&
@@ -70,4 +93,10 @@ internal object AddressBarAutoDockRules {
         urlMatches &&
         viewportRectMatches &&
         !isPrivatePage
+
+    fun focusedProbeRetryDelayMillis(completedRetryCount: Int): Long? =
+        focusedProbeRetryDelaysMillis.getOrNull(completedRetryCount)
+
+    fun shouldRetryFocusedProbe(result: TextInputOcclusionProbeResult): Boolean =
+        result == TextInputOcclusionProbeResult.FocusedTextInputClear
 }

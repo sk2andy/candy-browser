@@ -134,6 +134,40 @@ class SyncSettingsPageInstrumentedTest {
     }
 
     @Test
+    fun setupGuideOpensMatchingDocumentationSections() {
+        val openedUrl = AtomicReference<String>()
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                SyncSettingsPage(
+                    state = unconfiguredState(),
+                    iconCatalog = catalog(),
+                    onConfigure = { true },
+                    onEnroll = { _, _, _ -> },
+                    onRefresh = {},
+                    onOpenDocumentation = openedUrl::set,
+                    onBack = {},
+                )
+            }
+        }
+
+        listOf(
+            SyncSettingsTestTags.ServerGuide to
+                "https://github.com/sk2andy/candy-browser/blob/main/docs/sync/server.md#quick-start",
+            SyncSettingsTestTags.ExtensionGuide to
+                "https://github.com/sk2andy/candy-browser/blob/main/docs/sync/extension.md#build-and-load",
+            SyncSettingsTestTags.WorkspaceGuide to
+                "https://github.com/sk2andy/candy-browser/blob/main/docs/sync/extension.md#setup-flow",
+            SyncSettingsTestTags.AndroidGuide to
+                "https://github.com/sk2andy/candy-browser/blob/main/docs/sync/app-integration.md#setup-and-secrets",
+            SyncSettingsTestTags.Documentation to
+                "https://github.com/sk2andy/candy-browser/blob/main/docs/sync/README.md#documentation",
+        ).forEach { (tag, expectedUrl) ->
+            composeRule.onNodeWithTag(tag).performScrollTo().performClick()
+            assertEquals(expectedUrl, openedUrl.get())
+        }
+    }
+
+    @Test
     fun setupCanBindAnExistingLocalProfile() {
         val configured = AtomicReference<SyncConnectionSettings>()
         composeRule.setContent {
@@ -157,7 +191,9 @@ class SyncSettingsPageInstrumentedTest {
             }
         }
 
-        composeRule.onNodeWithTag(SyncSettingsTestTags.LocalProfile).performClick()
+        composeRule.onNodeWithTag(SyncSettingsTestTags.LocalProfile)
+            .performScrollTo()
+            .performClick()
         composeRule.onNodeWithText(
             "💼  ${context.getString(R.string.sync_local_profile_existing)}",
         ).performClick()
@@ -199,7 +235,10 @@ class SyncSettingsPageInstrumentedTest {
         val passwordVisibility = composeRule.onNodeWithTag(
             SyncSettingsTestTags.PasswordVisibility,
         )
-        passwordVisibility.assertContentDescriptionEquals(showPassword).performClick()
+        passwordVisibility
+            .performScrollTo()
+            .assertContentDescriptionEquals(showPassword)
+            .performClick()
         passwordVisibility.assertContentDescriptionEquals(hidePassword)
 
         composeRule.onNodeWithTag(SyncSettingsTestTags.PassphraseVisibility)

@@ -412,7 +412,10 @@ browser.runtime.onMessage.addListener((message) => {
   }
   if (self === top && message.type === "text-input-occlusion-probe") {
     return Promise.resolve(
-      globalThis.CandyTextInputOcclusion?.probe(message.viewportRect) === true,
+      globalThis.CandyTextInputOcclusion?.probe(
+        message.viewportRect,
+        message.focusedOnly === true,
+      ) || 0,
     );
   }
   if (self === top && message.type === "dom-probe" &&

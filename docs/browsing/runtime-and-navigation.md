@@ -22,7 +22,7 @@
 | Address text | `AddressSubmissionRules` → `AddressResolver` → controller | Unknown input becomes HTTPS host navigation or selected-engine search |
 | Android intent | `IncomingBrowserIntent` → controller | Accept normalized HTTP(S) URLs from `ACTION_VIEW` data or the complete `EXTRA_TEXT` value of `ACTION_SEND` `text/plain` and `text/html` shares. Incoming URLs stay in Candy without automatically handing the initial URL or its redirects back to another app; a subsequent user tap can authorize a handoff. The optional external-link preview keeps a transient Gecko session outside the tab/session store until **Open in Candy** creates a regular tab in the chosen profile; when disabled, the immediate-tab path remains. Root Back returns to the calling app. |
 | Explicit special-scheme address | `BrowserUriPolicy` → `ExternalAppLauncher` | Treat typed, pasted or scanned safe schemes as user-authorized app handoffs; keep internal schemes blocked |
-| App link or special scheme | `ExternalNavigationPolicy` → `BrowserUriPolicy` → `ExternalAppLauncher` | Keep a tapped same-site HTTP(S) redirector in the engine so its server redirect can resolve; route documented `play.google.com/store/` links explicitly to Google Play with web fallback; offer other cross-site targets and the remaining bounded redirect chain, including external-preview navigation, only to a direct non-browser default handler; keep unavailable or ambiguous links in the engine; allow safe main-frame special-scheme handoffs; block unsafe/internal schemes and subframes |
+| App link or special scheme | `ExternalNavigationPolicy` → `BrowserUriPolicy` → `ExternalAppLauncher` | Keep a tapped same-site HTTP(S) redirector in the engine so its server redirect can resolve; route documented `play.google.com/store/` links explicitly to Google Play with web fallback; offer other cross-site targets and the remaining bounded redirect chain, including new-window and external-preview navigation, only to a direct non-browser default handler; either launch automatically or require confirmation according to the persisted browser setting; stop a redirected handoff before Android opens and restore only the validated source history entry; reopen an immediately returned same-site web link in its source Candy tab or existing external preview instead of creating another navigation surface; keep unavailable or ambiguous links in the engine; allow safe main-frame special-scheme handoffs; block unsafe/internal schemes and subframes |
 | APK link or redirect | `ApkDownloadNavigationRules` → browser download pipeline | Route a tapped main-frame APK link and its authorized redirect chain directly to the selected download manager instead of rendering a blank engine page |
 | Link Peek | `LinkPeekPreviewNavigationPolicy` → transient Gecko session | Keep only HTTP(S); do not hand off preview navigation |
 | Site Capsule | `CapsuleIntentRules` → capsule runtime | Apply capsule-specific navigation boundary before normal routing |
@@ -105,6 +105,21 @@
   unavailable or ambiguous app links continue in the current engine session. A same-registrable-site
   redirector such as a search result's intermediate URL also stays in that session; its bounded
   user-navigation grant remains available to the cross-site server redirect that follows.
+- Persist the browser-wide external-app handling mode as `Automatic` by default or `Always ask`.
+  In ask mode, resolve HTTP(S) app-link availability without launching, show one current-source-bound
+  confirmation, and never launch before confirmation. Cancellation leaves the source in place;
+  links without a direct app handler continue in Candy without a misleading prompt. Explicit
+  user-invoked **Open in app** actions remain already confirmed. Apply the same navigation policy
+  before creating a `target=_blank` or `window.open` tab so app links cannot bypass the handoff path.
+- Remember the normalized source URL before that redirect chain. After Android accepts a redirected
+  app handoff, return the engine's deny decision before posting the Android launch, stop the redirect,
+  and retry source recovery both before and after Activity resume. The normal path therefore never
+  commits the intermediary. If an engine race already committed it, go Back only when the same session
+  still exposes the exact source as its previous entry, then replace the restored entry to discard the
+  forward `302 Moved` branch. This rare recovery can reload the source but never skips to an unrelated
+  document. Keep one short-lived, memory-only record of the handed-off target and source surface.
+  If the receiving app immediately returns the same registrable-site web link to Candy, consume that
+  record once and continue in the source tab or existing preview instead of creating another preview.
 - Route documented HTTPS `play.google.com/store/` links directly to `com.android.vending` without
   generic app-link resolution flags. If Google Play is unavailable or rejects the launch, let the
   originating engine session continue the normalized HTTPS request as Candy's browser fallback.
@@ -130,8 +145,9 @@
 - Keep pull-to-refresh state transient and scoped to the selected engine view. Gecko scroll metrics stay
   enabled only for the selected tab, or for every tab when Candy's page scrollbar needs them, so both
   browser engines use the same top-of-document admission rule without background-tab scroll IPC.
-  Missing metrics fail closed. Normal navigation does not show the pull indicator, and the existing menu
-  reload remains the accessible non-gesture action.
+  Missing metrics fail closed. Offset the native refresh indicator below the top safe-drawing inset so it
+  stays clear of display cutouts. Normal navigation does not show the pull indicator, and the existing
+  menu reload remains the accessible non-gesture action.
 - Treat Android connectivity as a process-local observable effect. A default network counts as online
   only with both `NET_CAPABILITY_INTERNET` and `NET_CAPABILITY_VALIDATED`; close the registered callback
   with `BrowserController`. Do not issue Candy-owned probe requests or replace an already usable page
@@ -204,8 +220,11 @@
   `GeckoViewInsetRules` forwards all native safe areas to CSS, including the top edge, without
   native margins. Normal Gecko tabs and Link Peek disable the legacy document repair at the
   Gecko-only bridge before installing any of its observers or hooks. Gecko's separate bounded CSS
-  layer classifies suitable body flow and viewport-bound top anchors, then applies CSS `max()` safe
-  area protection once. It does not repeatedly measure correctly protected headers while scrolling.
+  layer stays inactive when the document declares `viewport-fit=cover`; Gecko remains the sole owner
+  of `env(safe-area-inset-*)`, and Candy does not add body or positioned-element offsets that could
+  distort the page's full-height or IME scroll geometry. Other documents classify suitable body flow
+  and viewport-bound top anchors, then add the inset to their original top positions once. It does not
+  repeatedly measure correctly protected headers while scrolling.
   Only authorized relevant mutations and configured resize/configuration changes reclassify.
   Unknown layouts retain verified emergency native top fallback rather than speculative CSS changes.
   Fullscreen and Compose safe-drawing hosts retain their duplicate-inset exclusions.
@@ -331,6 +350,7 @@ together. This prototype is not a compatibility claim for the layouts described 
 | Rule | Prototype behavior |
 | --- | --- |
 | Inset source | Existing native policy inset divided by device-pixel ratio, exposed as `--candy-safe-area-inset-top` |
+| `viewport-fit=cover` | Skip the complete Candy CSS layer, including body, fixed/sticky, known-site and Reddit rules; keep Gecko's native renderer safe-area delivery |
 | Normal page flow | A per-document stylesheet raises body top padding to at least the inset; larger initial padding is preserved |
 | Fixed / sticky | Bounded per-element stylesheet rules apply `originalTop + inset` to every discovered finite resolved CSS-pixel top, without an upper threshold; no positioned-element padding or inline top is added |
 | Predeclared selectors | Initial and event-driven CSS-source scans protect full selectors with literal `fixed`/`sticky` and a finite pixel `top` in the same CSS declaration block, even before any element matches that state |
@@ -415,12 +435,13 @@ slot, prevents duplicate element-top protection and follows the same enable/inse
 There is no extra observer, network request, scroll scan or separate per-site setting.
 Source-discovery, opaque-CSS and LINK-race experiments are not included in this smaller follow-up.
 
-For google.com/google.de and their subdomains, the observed expanded-search state
-`:root #tsf .A7Yvie.emcav` receives the same early important zero-top-plus-inset rule.
-The stylesheet exists before a later focus changes the container from static to fixed; browser
-selector matching supplies protection without a delayed Candy repair. Normal static search layout
-is not offset by this state rule. The rule reserves a slot and skips duplicate element protection,
-using the same enable/inset/cleanup lifecycle. Other Google layout variants are not inferred.
+For google.com/google.de and their subdomains, the observed absolute compact-menu container
+`:root #navd` and expanded-search state `:root #tsf .A7Yvie.emcav` receive the same early important
+zero-top-plus-inset rule. The menu rule moves its hamburger below the status bar without shifting
+unrelated page flow. The stylesheet also exists before a later focus changes the search container
+from static to fixed; browser selector matching supplies protection without a delayed Candy repair.
+The rules reserve slots and skip duplicate element protection, using the same
+enable/inset/cleanup lifecycle. Other Google layout variants are not inferred.
 
 For reddit.com and its subdomains, `content_safe_area_reddit.js` owns one stylesheet per relevant
 scope: document rules are restricted to `shreddit-app`; open app roots receive local rules and
@@ -524,15 +545,18 @@ before the retained emergency fallback. No scroll event starts a new discovery o
 | Build | Application ID | Trust anchors | Release asset |
 | --- | --- | --- | --- |
 | Standard | `dev.sk2andy.materialbrowser` | Gecko built-in roots for page/engine requests; Android system roots for Android networking | `CandyBrowser-v<version>-release.apk` |
+| System WebView | `dev.sk2andy.materialbrowser.systemwebview` | Android system roots for page and app networking | `CandyBrowser-v<version>-systemwebview-release.apk` |
 | User CA | `dev.sk2andy.materialbrowser.ca` | Standard roots plus user-installed Android CA roots | `CandyBrowser-v<version>-ca-release.apk` |
 
 - The build channel controls trust for both networking stacks: Android Network Security Config
   controls Android requests; `GeckoRuntimeSettingsFactory` passes `BuildConfig.TRUST_USER_CERTIFICATES`
   to Gecko's `enterpriseRootsEnabled`. Gecko owns a separate root store, so the XML configuration
   alone is insufficient. Broader trust requires installing the explicitly labeled User CA APK.
-- Separate application IDs isolate app data and allow both channels to stay installed. Update
+- Separate application IDs isolate app data and allow all channels to stay installed. Update
   selection preserves the installed channel and rejects a release that contains only the other
   channel's asset.
+- The System WebView channel is fixed to Android's installed WebView provider and contains no
+  GeckoView runtime or Firefox extensions.
 - User CA trust applies to all app HTTPS connections, not only rendered pages or a selected profile.
   The settings warning must remain visible in User CA builds.
 - Gecko validates certificate chains; Candy does not bypass certificate errors. Only errors bound
@@ -569,11 +593,16 @@ before the retained emergency fallback. No scroll event starts a new discovery o
   memory-only. A profile grant is persisted for the exact host and applies to matching regular tabs.
   Private tabs never expose or persist the profile grant. Privacy X-Ray shows the resulting cookie
   policy and provides a host-scoped action to revoke the grant.
-- A detected cross-site Cloudflare, Google reCAPTCHA/Enterprise, or hCaptcha client first produces
-  the same Snackbar-to-dialog consent flow. Detection requires HTTPS plus a recognized provider host
-  and path; lookalike, first-party, malformed, and generic vendor requests do not prompt. CAPTCHA
-  grants use the same exact-host tab/profile/private boundaries, but affect only third-party-cookie
-  policy. They never enable federated-login user-agent or popup compatibility.
+- A main-frame HTTPS response carrying the exact case-insensitive `cf-mitigated: challenge` signal
+  enters the same Snackbar-to-dialog consent flow as embedded CAPTCHA clients. A tab-scoped grant is
+  memory-only for the exact current tab and page host, then reloads; the profile choice remains an
+  explicit persistent decision. An external-link preview carrying this signal moves into a normal
+  tab first so the same consent flow owns the exception. Embedded Cloudflare Turnstile, Google
+  reCAPTCHA/Enterprise, and hCaptcha clients keep this consent flow. Their detection requires HTTPS
+  plus a recognized provider host and path; lookalike,
+  first-party, malformed, and generic vendor requests do not receive compatibility.
+  CAPTCHA grants affect only third-party-cookie policy. They never enable federated-login user-agent
+  or popup compatibility.
 - Federated-login popup exceptions require all three conditions: a user gesture, an active grant on
   the opener site, and a recognized HTTPS provider authentication path. The compatibility identity
   used for the provider user agent is removed when the popup leaves the provider. Its separate

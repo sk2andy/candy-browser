@@ -44,13 +44,23 @@ class GeckoBrowserEngineAdapterTest {
         )
 
         adapter.execute(BrowserEngineCommands.load("https://example.com"))
+        adapter.execute(BrowserEngineCommands.replaceHistory("https://example.com/source"))
         adapter.execute(BrowserEngineCommands.back())
         adapter.execute(BrowserEngineCommands.forward())
         adapter.execute(BrowserEngineCommands.reload())
         adapter.execute(BrowserEngineCommands.stop())
 
         assertEquals("https://example.com", session.loadedUrl)
-        assertEquals(listOf("back", "forward", "reload", "stop"), session.actions)
+        assertEquals(
+            listOf(
+                "replace:https://example.com/source",
+                "back",
+                "forward",
+                "reload",
+                "stop",
+            ),
+            session.actions,
+        )
     }
 
     @Test
@@ -728,6 +738,11 @@ private class FakeGeckoBrowserSession(
 
     override fun loadUrl(url: String): Boolean {
         loadedUrl = url
+        return loadAccepted
+    }
+
+    override fun replaceHistoryUrl(url: String): Boolean {
+        actions += "replace:$url"
         return loadAccepted
     }
 

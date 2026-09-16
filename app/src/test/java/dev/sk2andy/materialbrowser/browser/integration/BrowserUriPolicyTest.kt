@@ -257,12 +257,14 @@ class BrowserUriPolicyTest {
 
     @Test
     fun `external navigation grant ignores stale terminal callback`() {
+        val sourceUrl = "https://example.com/search?q=app"
         val initialUrl = "https://example.com/start"
         val redirectUrl = "https://example.com/redirected"
         val started = requireNotNull(
             ExternalNavigationGrantRules.start(
                 url = initialUrl,
                 nowElapsedRealtime = 1_000L,
+                sourceUrl = sourceUrl,
             ),
         )
         val redirected = requireNotNull(
@@ -274,6 +276,8 @@ class BrowserUriPolicyTest {
                 nowElapsedRealtime = 1_001L,
             ),
         )
+
+        assertEquals(sourceUrl, redirected.sourceUrl)
 
         assertFalse(
             ExternalNavigationGrantRules.shouldClearForMainFrameCallback(
@@ -289,6 +293,86 @@ class BrowserUriPolicyTest {
                 callbackUrl = redirectUrl,
                 currentBrowserUrl = redirectUrl,
                 nowElapsedRealtime = 1_002L,
+            ),
+        )
+    }
+
+    @Test
+    fun `external app handoff accepts immediate same site return`() {
+        val handoff = requireNotNull(
+            ExternalAppHandoffRules.start(
+                targetUrl = "https://chatgpt.com/share/one",
+                nowElapsedRealtime = 1_000L,
+            ),
+        )
+
+        assertEquals(
+            "https://chatgpt.com/share/two",
+            ExternalAppHandoffRules.returnedUrl(
+                handoff = handoff,
+                url = "https://chatgpt.com/share/two",
+                nowElapsedRealtime = 1_001L,
+            ),
+        )
+    }
+
+    @Test
+    fun `external app handoff rejects unrelated and expired returns`() {
+        val handoff = requireNotNull(
+            ExternalAppHandoffRules.start(
+                targetUrl = "https://chatgpt.com/",
+                nowElapsedRealtime = 1_000L,
+            ),
+        )
+
+        assertNull(
+            ExternalAppHandoffRules.returnedUrl(
+                handoff = handoff,
+                url = "https://example.com/",
+                nowElapsedRealtime = 1_001L,
+            ),
+        )
+        assertNull(
+            ExternalAppHandoffRules.returnedUrl(
+                handoff = handoff,
+                url = "https://chatgpt.com/",
+                nowElapsedRealtime = 16_001L,
+            ),
+        )
+    }
+
+    @Test
+    fun `external navigation rollback requires exact safe previous URL`() {
+        val sourceUrl = "https://www.google.com/search?q=chatgpt"
+
+        assertTrue(
+            ExternalNavigationRollbackRules.isAtSource(
+                sourceUrl = sourceUrl,
+                currentUrl = sourceUrl,
+            ),
+        )
+        assertFalse(
+            ExternalNavigationRollbackRules.isAtSource(
+                sourceUrl = sourceUrl,
+                currentUrl = "https://www.google.com/redirect",
+            ),
+        )
+        assertTrue(
+            ExternalNavigationRollbackRules.canGoBackToSource(
+                sourceUrl = sourceUrl,
+                previousUrl = sourceUrl,
+            ),
+        )
+        assertFalse(
+            ExternalNavigationRollbackRules.canGoBackToSource(
+                sourceUrl = sourceUrl,
+                previousUrl = "https://www.google.com/earlier",
+            ),
+        )
+        assertFalse(
+            ExternalNavigationRollbackRules.canGoBackToSource(
+                sourceUrl = sourceUrl,
+                previousUrl = "javascript:history.back()",
             ),
         )
     }

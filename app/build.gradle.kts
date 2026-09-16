@@ -83,6 +83,38 @@ abstract class GenerateGeckoContentTopInsetScript : DefaultTask() {
     }
 }
 
+abstract class GenerateSystemWebViewThirdPartyNotices : DefaultTask() {
+    @get:InputFile
+    abstract val sourceFile: RegularFileProperty
+
+    @get:OutputFile
+    abstract val outputFile: RegularFileProperty
+
+    @TaskAction
+    fun generate() {
+        val source = sourceFile.get().asFile.readText(Charsets.UTF_8)
+        val geckoSectionStart = "\nGecko default extensions\n------------------------\n"
+        val apacheLicenseStart = "\n\n                                 Apache License"
+        val startIndex = source.indexOf(geckoSectionStart)
+        val endIndex = source.indexOf(apacheLicenseStart, startIndex + geckoSectionStart.length)
+        check(startIndex >= 0 && endIndex > startIndex) {
+            "Gecko extension notice section boundaries were not found."
+        }
+        val generated = source
+            .removeRange(startIndex, endIndex)
+            .replace(
+                "This inventory reflects the full release runtime classpath for Candy Browser.",
+                "This inventory reflects the System WebView release runtime classpath for Candy Browser.",
+            )
+        check("Gecko default extensions" !in generated && ".xpi" !in generated.lowercase()) {
+            "System WebView notices still describe Gecko extension packages."
+        }
+        val destination = outputFile.get().asFile
+        destination.parentFile.mkdirs()
+        destination.writeText(generated, Charsets.UTF_8)
+    }
+}
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -184,6 +216,7 @@ android {
         manifestPlaceholders["networkSecurityConfig"] = "@xml/network_security_config"
         buildConfigField("boolean", "ENABLE_GITHUB_UPDATES", "false")
         buildConfigField("boolean", "FOSS_DISTRIBUTION", "false")
+        buildConfigField("boolean", "SYSTEM_WEBVIEW_ONLY", "false")
         buildConfigField("boolean", "TRUST_USER_CERTIFICATES", "false")
         buildConfigField(
             "boolean",
@@ -215,6 +248,14 @@ android {
             manifestPlaceholders["appLabel"] = "Candy FOSS"
             buildConfigField("boolean", "FOSS_DISTRIBUTION", "true")
             proguardFile("proguard-foss-rules.pro")
+        }
+
+        create("systemwebview") {
+            dimension = "distribution"
+            applicationIdSuffix = ".systemwebview"
+            manifestPlaceholders["appLabel"] = "Candy System WebView"
+            manifestPlaceholders["performanceDiagnosticsEnabled"] = "false"
+            buildConfigField("boolean", "SYSTEM_WEBVIEW_ONLY", "true")
         }
     }
 
@@ -285,8 +326,17 @@ android {
         getByName("main").assets.srcDir(
             layout.buildDirectory.dir("generated/releaseNotes/assets").get().asFile,
         )
-        getByName("main").assets.srcDir(
+        getByName("full").assets.srcDir(
             layout.buildDirectory.dir("generated/geckoPrivacy/assets").get().asFile,
+        )
+        getByName("foss").assets.srcDir(
+            layout.buildDirectory.dir("generated/geckoPrivacy/assets").get().asFile,
+        )
+        getByName("full").assets.srcDir("src/gecko/assets")
+        getByName("foss").assets.srcDir("src/gecko/assets")
+        getByName("systemwebview").java.srcDir("src/full/java")
+        getByName("systemwebview").assets.srcDir(
+            layout.buildDirectory.dir("generated/systemWebViewNotices/assets").get().asFile,
         )
         getByName("userCaDebug").res.srcDir("src/userCa/res")
         getByName("userCaRelease").res.srcDir("src/userCa/res")
@@ -338,6 +388,23 @@ val generateCandySyncDeviceIconAsset by tasks.registering(Copy::class) {
     duplicatesStrategy = DuplicatesStrategy.FAIL
 }
 
+val generateSystemWebViewThirdPartyNotices by tasks.registering(
+    GenerateSystemWebViewThirdPartyNotices::class,
+) {
+    sourceFile.set(layout.projectDirectory.file("src/full/assets/third_party_notices.txt"))
+    outputFile.set(
+        layout.buildDirectory.file(
+            "generated/systemWebViewNotices/assets/third_party_notices.txt",
+        ),
+    )
+}
+
+tasks.matching { task ->
+    task.name.endsWith("Build") && task.name.startsWith("preSystemwebview")
+}.configureEach {
+    dependsOn(generateSystemWebViewThirdPartyNotices)
+}
+
 val generateGeckoPrivacyRuleAssets by tasks.registering(Sync::class) {
     val ruleAssets = listOf("candy_default_rules.txt")
     from(ruleAssets.map { fileName -> layout.projectDirectory.file("src/main/assets/$fileName") })
@@ -370,16 +437,19 @@ val verifyGeckoDefaultExtensionAssets by tasks.registering(Exec::class) {
         "verify",
     )
     inputs.file(
-        layout.projectDirectory.file("src/main/assets/gecko_default_extensions/catalog.json"),
+        layout.projectDirectory.file("src/gecko/assets/gecko_default_extensions/catalog.json"),
     )
     inputs.files(
-        fileTree(layout.projectDirectory.dir("src/main/assets/gecko_default_extensions")) {
+        fileTree(layout.projectDirectory.dir("src/gecko/assets/gecko_default_extensions")) {
             include("*.xpi")
         },
     )
 }
 
-tasks.matching { it.name == "preBuild" }.configureEach {
+tasks.matching { task ->
+    task.name.endsWith("Build") &&
+        (task.name.startsWith("preFull") || task.name.startsWith("preFoss"))
+}.configureEach {
     dependsOn(generateGeckoPrivacyRuleAssets)
     dependsOn(generateGeckoContentTopInsetScript)
     dependsOn(verifyGeckoDefaultExtensionAssets)
@@ -500,9 +570,35 @@ val validateReleaseSigning by tasks.registering {
 tasks.matching {
     it.name == "preFullReleaseBuild" ||
         it.name == "preFullLocalReleaseBuild" ||
-        it.name == "preFullUserCaReleaseBuild"
+        it.name == "preFullUserCaReleaseBuild" ||
+        it.name == "preSystemwebviewReleaseBuild"
 }.configureEach {
     dependsOn(validateReleaseSigning)
+}
+
+val verifySystemWebViewReleaseDependencies by tasks.registering {
+    group = "verification"
+    description = "Rejects GeckoView from the System WebView-only release runtime."
+
+    doLast {
+        val violations = configurations.getByName("systemwebviewReleaseRuntimeClasspath")
+            .incoming
+            .resolutionResult
+            .allComponents
+            .mapNotNull { it.moduleVersion }
+            .filter { module -> module.group == "org.mozilla.geckoview" }
+            .map { it.toString() }
+            .sorted()
+
+        check(violations.isEmpty()) {
+            "System WebView release contains GeckoView runtime dependencies: " +
+                violations.joinToString()
+        }
+    }
+}
+
+tasks.matching { it.name == "preSystemwebviewReleaseBuild" }.configureEach {
+    dependsOn(verifySystemWebViewReleaseDependencies)
 }
 
 val verifyFossReleaseDependencies by tasks.registering {
@@ -566,6 +662,7 @@ dependencies {
     "fossImplementation"(geckoViewDependency) {
         exclude(group = "com.google.android.gms", module = "play-services-fido")
     }
+    "systemwebviewCompileOnly"(geckoViewDependency)
     implementation(platform("androidx.compose:compose-bom:2024.12.01"))
     implementation("androidx.compose.foundation:foundation")
     implementation("androidx.compose.material:material-icons-core")
@@ -577,14 +674,21 @@ dependencies {
     "fullImplementation"("com.google.android.gms:play-services-cast-framework:21.4.0") {
         exclude(group = "org.jetbrains.kotlin", module = "kotlin-stdlib")
     }
+    "systemwebviewImplementation"("com.google.android.gms:play-services-code-scanner:16.1.0")
+    "systemwebviewImplementation"("androidx.credentials:credentials-play-services-auth:1.5.0")
+    "systemwebviewImplementation"("com.google.android.gms:play-services-cast-framework:21.4.0") {
+        exclude(group = "org.jetbrains.kotlin", module = "kotlin-stdlib")
+    }
 
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.json:json:20240303")
+    testImplementation(geckoViewDependency)
 
     androidTestImplementation("androidx.test.ext:junit:1.3.0")
     androidTestImplementation("androidx.test:runner:1.7.0")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.7.0")
     androidTestImplementation("androidx.test.uiautomator:uiautomator:2.3.0")
+    androidTestImplementation(geckoViewDependency)
     androidTestImplementation(platform("androidx.compose:compose-bom:2024.12.01"))
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
 

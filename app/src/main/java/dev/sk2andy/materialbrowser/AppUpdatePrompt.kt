@@ -44,8 +44,9 @@ internal fun AppUpdatePrompt(
     LaunchedEffect(updateCheckCompleted) {
         if (updateCheckCompleted) return@LaunchedEffect
         if (BuildConfig.ENABLE_GITHUB_UPDATES && !BuildConfig.FOSS_DISTRIBUTION) {
-            val releaseChannel = AppReleaseChannel.forUserCertificateTrust(
-                BuildConfig.TRUST_USER_CERTIFICATES,
+            val releaseChannel = AppReleaseChannel.forBuild(
+                systemWebViewOnly = BuildConfig.SYSTEM_WEBVIEW_ONLY,
+                trustsUserCertificates = BuildConfig.TRUST_USER_CERTIFICATES,
             )
             updateChecker.findAvailableUpdate(
                 currentVersionName = BuildConfig.VERSION_NAME,

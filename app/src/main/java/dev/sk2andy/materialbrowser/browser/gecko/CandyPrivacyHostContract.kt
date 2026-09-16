@@ -139,6 +139,7 @@ internal data class GeckoPrivacyEvent(
     val isBuiltIn: Boolean,
     val isCompatibilityObservation: Boolean,
     val safeAreaFallbackNavigationGeneration: Int? = null,
+    val isCloudflareChallengeResponse: Boolean = false,
 )
 
 internal fun interface GeckoPrivacyEventSink {

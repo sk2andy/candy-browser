@@ -155,6 +155,7 @@ fun SharedProfileEmojiPickerSheet(
     onCreate: (String, Boolean) -> Unit,
     onSelect: (String) -> Unit,
     onDismiss: () -> Unit,
+    creationOptions: (@Composable () -> Unit)? = null,
     containerColor: Color = MaterialTheme.colorScheme.surfaceContainerLow,
 ) {
     if (!visible) return
@@ -177,7 +178,7 @@ fun SharedProfileEmojiPickerSheet(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .then(if (creatingProfile) Modifier.fillMaxHeight(0.66f) else Modifier)
+                .then(if (creatingProfile) Modifier.fillMaxHeight(0.9f) else Modifier)
                 .navigationBarsPadding()
                 .padding(start = 20.dp, end = 20.dp, bottom = 24.dp),
         ) {
@@ -190,80 +191,40 @@ fun SharedProfileEmojiPickerSheet(
                 ) {
                     BottomSheetDefaults.DragHandle()
                 }
-                Box(modifier = Modifier.testTag(ProfileCreationTestTags.Isolation)) {
-                    SettingsSwitch(
-                        title = copy.isolationTitle,
-                        subtitle = if (isolationSupported) {
-                            copy.isolationSubtitle
-                        } else {
-                            copy.isolationUnsupported
-                        },
-                        checked = draftIsolationEnabled && isolationSupported,
-                        enabled = isolationSupported,
-                        onCheckedChange = { draftIsolationEnabled = it },
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                        .verticalScroll(rememberScrollState())
+                        .testTag(ProfileCreationTestTags.IconScroll),
+                ) {
+                    Box(modifier = Modifier.testTag(ProfileCreationTestTags.Isolation)) {
+                        SettingsSwitch(
+                            title = copy.isolationTitle,
+                            subtitle = if (isolationSupported) {
+                                copy.isolationSubtitle
+                            } else {
+                                copy.isolationUnsupported
+                            },
+                            checked = draftIsolationEnabled && isolationSupported,
+                            enabled = isolationSupported,
+                            onCheckedChange = { draftIsolationEnabled = it },
+                        )
+                    }
+                    creationOptions?.invoke()
+                    Spacer(Modifier.height(12.dp))
+                    Text(
+                        copy.addProfileTitle,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    ProfileEmojiGrid(
+                        emojis = emojis,
+                        selectedEmoji = draftEmoji,
+                        onSelect = { draftEmoji = it },
                     )
                 }
-                Spacer(Modifier.height(12.dp))
-            }
-            Text(
-                if (creatingProfile) copy.addProfileTitle else copy.changeIconTitle,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.SemiBold,
-            )
-            Spacer(Modifier.height(12.dp))
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .then(if (creatingProfile) Modifier.weight(1f) else Modifier)
-                    .verticalScroll(rememberScrollState())
-                    .testTag(ProfileCreationTestTags.IconScroll),
-            ) {
-                emojis.chunked(PROFILE_ICON_COLUMNS).forEach { rowEmojis ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                    ) {
-                        rowEmojis.forEach { emoji ->
-                            val isSelected = emoji == draftEmoji
-                            Surface(
-                                modifier = Modifier
-                                    .padding(vertical = 4.dp)
-                                    .size(48.dp)
-                                    .semantics { contentDescription = emoji }
-                                    .clickable(
-                                        role = Role.Button,
-                                        onClick = {
-                                            if (creatingProfile) {
-                                                draftEmoji = emoji
-                                            } else {
-                                                onSelect(emoji)
-                                            }
-                                        },
-                                    ),
-                                shape = CircleShape,
-                                color = if (isSelected) {
-                                    MaterialTheme.colorScheme.primaryContainer
-                                } else {
-                                    MaterialTheme.colorScheme.surfaceContainerHigh
-                                },
-                                tonalElevation = if (isSelected) 5.dp else 0.dp,
-                            ) {
-                                Box(contentAlignment = Alignment.Center) {
-                                    PlatformProfileEmoji(
-                                        emoji = emoji,
-                                        fontSize = 23.sp,
-                                        modifier = Modifier.size(32.dp),
-                                    )
-                                }
-                            }
-                        }
-                        repeat(PROFILE_ICON_COLUMNS - rowEmojis.size) {
-                            Spacer(Modifier.size(48.dp))
-                        }
-                    }
-                }
-            }
-            if (creatingProfile) {
                 Spacer(Modifier.height(12.dp))
                 Button(
                     onClick = {
@@ -276,6 +237,71 @@ fun SharedProfileEmojiPickerSheet(
                 ) {
                     Text(copy.createProfile)
                 }
+            } else {
+                Text(
+                    copy.changeIconTitle,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Spacer(Modifier.height(12.dp))
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState())
+                        .testTag(ProfileCreationTestTags.IconScroll),
+                ) {
+                    ProfileEmojiGrid(
+                        emojis = emojis,
+                        selectedEmoji = draftEmoji,
+                        onSelect = onSelect,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ProfileEmojiGrid(
+    emojis: List<String>,
+    selectedEmoji: String?,
+    onSelect: (String) -> Unit,
+) {
+    emojis.chunked(PROFILE_ICON_COLUMNS).forEach { rowEmojis ->
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            rowEmojis.forEach { emoji ->
+                val isSelected = emoji == selectedEmoji
+                Surface(
+                    modifier = Modifier
+                        .padding(vertical = 4.dp)
+                        .size(48.dp)
+                        .semantics { contentDescription = emoji }
+                        .clickable(
+                            role = Role.Button,
+                            onClick = { onSelect(emoji) },
+                        ),
+                    shape = CircleShape,
+                    color = if (isSelected) {
+                        MaterialTheme.colorScheme.primaryContainer
+                    } else {
+                        MaterialTheme.colorScheme.surfaceContainerHigh
+                    },
+                    tonalElevation = if (isSelected) 5.dp else 0.dp,
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        PlatformProfileEmoji(
+                            emoji = emoji,
+                            fontSize = 23.sp,
+                            modifier = Modifier.size(32.dp),
+                        )
+                    }
+                }
+            }
+            repeat(PROFILE_ICON_COLUMNS - rowEmojis.size) {
+                Spacer(Modifier.size(48.dp))
             }
         }
     }

@@ -48,6 +48,22 @@ class ExternalAppLauncherInstrumentedTest {
     }
 
     @Test
+    fun webLinkAvailabilityUsesTheSameHardenedIntentWithoutLaunchingIt() {
+        var resolvedIntent: Intent? = null
+        val resolvingLauncher = ExternalAppLauncher(context) { target ->
+            resolvedIntent = Intent(target)
+            true
+        }
+
+        assertTrue(resolvingLauncher.canOpenWebUrlExternally("https://example.com/article"))
+        assertNull(context.lastIntent)
+        val target = requireNotNull(resolvedIntent)
+        assertEquals("https://example.com/article", target.dataString)
+        assertTrue(target.flags and Intent.FLAG_ACTIVITY_REQUIRE_NON_BROWSER != 0)
+        assertTrue(target.flags and Intent.FLAG_ACTIVITY_REQUIRE_DEFAULT != 0)
+    }
+
+    @Test
     fun googlePlayLinksTargetPlayStoreWithoutGenericResolutionFlags() {
         assertEquals(
             ExternalLaunchResult.Launched,
@@ -135,6 +151,10 @@ class ExternalAppLauncherInstrumentedTest {
 
     @Test
     fun namedHttpsIntentTriesInstalledAppBeforePlayStoreFallback() {
+        assertEquals(
+            "https://www.twitch.tv/candy",
+            launcher.webTargetUrl(Uri.parse(TWITCH_INTENT)),
+        )
         assertEquals(ExternalLaunchResult.Launched, launcher.open(Uri.parse(TWITCH_INTENT)))
 
         val launchedIntent = requireNotNull(context.lastIntent)

@@ -151,6 +151,10 @@ The small sync badge is local UI state and is not part of user-controlled encryp
 
 ## Setup and secrets
 
+The Sync settings page starts with a four-step self-hosting guide. Each step links directly to the
+matching server quick start, extension build, first-client setup, or Android setup section before
+the connection form. Documentation links open in a new Candy tab so setup context remains available.
+
 The Sync settings page requests:
 
 - the exact self-hosted endpoint;

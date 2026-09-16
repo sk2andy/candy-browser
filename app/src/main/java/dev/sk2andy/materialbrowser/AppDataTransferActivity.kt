@@ -11,6 +11,7 @@ import android.provider.DocumentsContract
 import android.view.Gravity
 import android.window.OnBackInvokedDispatcher
 import android.widget.TextView
+import dev.sk2andy.materialbrowser.browser.systemwebview.currentSystemWebViewIdentity
 import dev.sk2andy.materialbrowser.data.AppDataArchiveCodec
 import dev.sk2andy.materialbrowser.data.AppDataArchiveManifest
 import dev.sk2andy.materialbrowser.data.AppDataArchiveRestore
@@ -79,7 +80,11 @@ internal object AppDataTransferContract {
 
 /** Engine identity recorded with an archive so restore can reject incompatible Gecko state. */
 internal fun currentBrowserEngineIdentity(): String =
-    "org.mozilla.geckoview@${org.mozilla.geckoview.BuildConfig.MOZ_APP_VERSION}"
+    if (BuildConfig.SYSTEM_WEBVIEW_ONLY) {
+        currentSystemWebViewIdentity()
+    } else {
+        "org.mozilla.geckoview@${org.mozilla.geckoview.BuildConfig.MOZ_APP_VERSION}"
+    }
 
 class AppDataTransferActivity : Activity() {
     private lateinit var statusView: TextView
