@@ -11,7 +11,7 @@ import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoDownloadCancellation
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoDownloadFailure
-import dev.sk2andy.materialbrowser.browser.gecko.GeckoDownloadNotifier
+import dev.sk2andy.materialbrowser.browser.downloads.CandyDownloadNotifier
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoDownloadStreamEntry
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoDownloadStreamSink
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoDownloadTransferListener
@@ -32,7 +32,7 @@ internal class SystemWebViewBlobDownloadTransfer(
     context: Context,
     private val webView: WebView,
     private val sink: GeckoDownloadStreamSink = MediaStoreDownloadStreamSink(context),
-    private val notifier: GeckoDownloadNotifier = GeckoDownloadNotifier(context),
+    private val notifier: CandyDownloadNotifier = CandyDownloadNotifier(context),
 ) : AutoCloseable {
     private data class Operation(
         val id: Int,
@@ -273,7 +273,7 @@ internal class SystemWebViewBlobDownloadTransfer(
             cancel = { cancel(operation.id, GeckoDownloadFailure.Cancelled) },
         )
         dispatch { operation.listener.onStarted(start) }
-        notifier.started(start)
+        notifier.started(start.id)
     }
 
     private fun append(
@@ -308,7 +308,7 @@ internal class SystemWebViewBlobDownloadTransfer(
             updatedAt = System.currentTimeMillis(),
         )
         dispatch { operation.listener.onProgress(operation.receivedBytes, start.totalBytes) }
-        notifier.progress(start, operation.receivedBytes)
+        notifier.progress(start.id)
     }
 
     private fun finish(
@@ -332,7 +332,12 @@ internal class SystemWebViewBlobDownloadTransfer(
         clearTimeout(operation)
         DownloadRuntimeRegistry.completed(operation.id)
         dispatch { operation.listener.onComplete(operation.receivedBytes) }
-        notifier.complete(start, entry.uri)
+        notifier.complete(
+            transferId = start.id,
+            fileName = start.fileName,
+            mimeType = start.mimeType,
+            uri = entry.uri,
+        )
     }
 
     private fun cancel(id: Int, reason: GeckoDownloadFailure) {

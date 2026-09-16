@@ -65,6 +65,7 @@ import dev.sk2andy.materialbrowser.browser.ReleaseNotesPresentationRules
 import dev.sk2andy.materialbrowser.browser.StartupPresentationRules
 import dev.sk2andy.materialbrowser.browser.cast.CastSessionController
 import dev.sk2andy.materialbrowser.browser.cast.CastUiState
+import dev.sk2andy.materialbrowser.browser.downloads.CandyDownloadNotifier
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoActivityIntegration
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoExtensionManagementContext
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoExtensionManagerCoordinator
@@ -161,7 +162,9 @@ class MainActivity : AppCompatActivity() {
     }
     private val notificationPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission(),
-    ) {}
+    ) { granted ->
+        CandyDownloadNotifier(this).onPermissionResult(granted)
+    }
     private val fileChooserLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult(),
     ) { result ->
@@ -290,6 +293,22 @@ class MainActivity : AppCompatActivity() {
             ?.getBoolean(STATE_RELEASE_NOTES_VISIBLE)
             ?: releaseNotesRequired
         val snoozeWakeNotifier = SnoozeWakeNotifier(this).also { it.ensureChannel() }
+        val downloadNotifier = CandyDownloadNotifier(this).also {
+            it.ensureChannel()
+            it.reconcileOrphanedActiveNotifications()
+        }
+        val requestNotificationPermission = {
+            if (
+                !snoozeWakeNotifier.hasPostNotificationPermission() &&
+                downloadNotifier.beginPermissionRequest()
+            ) {
+                runCatching {
+                    notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                }.onFailure {
+                    downloadNotifier.onPermissionResult(granted = false)
+                }
+            }
+        }
         val browserEngineKind = BrowserSessionStore(this).loadAndroidBrowserEngineKind()
         if (
             !BuildConfig.SYSTEM_WEBVIEW_ONLY &&
@@ -323,11 +342,8 @@ class MainActivity : AppCompatActivity() {
                 webPermissionLauncher.launch(permissions.toTypedArray())
             },
             launchFileChooser = fileChooserLauncher::launch,
-            requestSnoozeNotificationPermission = {
-                if (!snoozeWakeNotifier.hasPostNotificationPermission()) {
-                    notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                }
-            },
+            requestSnoozeNotificationPermission = requestNotificationPermission,
+            requestDownloadNotificationPermission = requestNotificationPermission,
             onFullImmersiveModeChanged = { applyBrowserSystemUi() },
             onMediaStateChanged = {
                 if (!activityDestroyed) {

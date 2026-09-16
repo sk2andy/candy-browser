@@ -40,12 +40,38 @@ class DownloadRuntimeRegistryTest {
     }
 
     @Test
+    fun `notification controls target active transfer identity`() {
+        var cancelled = false
+        start(
+            cancel = { cancelled = true },
+            pause = {
+                DownloadRuntimeRegistry.paused(id, paused = true, updatedAt = 20L)
+                true
+            },
+            resume = {
+                DownloadRuntimeRegistry.paused(id, paused = false, updatedAt = 30L)
+                true
+            },
+        )
+
+        assertEquals(-43L, requireNotNull(DownloadRuntimeRegistry.entryForTransfer(id)).id)
+        assertTrue(DownloadRuntimeRegistry.togglePauseTransfer(id))
+        assertEquals(DownloadStatus.Paused, DownloadRuntimeRegistry.entryForTransfer(id)?.status)
+        assertTrue(DownloadRuntimeRegistry.togglePauseTransfer(id))
+        assertEquals(DownloadStatus.Running, DownloadRuntimeRegistry.entryForTransfer(id)?.status)
+        assertTrue(DownloadRuntimeRegistry.cancelTransfer(id))
+        assertTrue(cancelled)
+    }
+
+    @Test
     fun `terminal and completed transfers reject stale controls`() {
         var cancelled = false
         start(cancel = { cancelled = true })
         DownloadRuntimeRegistry.failed(id, cancelled = false, updatedAt = 20L)
         assertFalse(DownloadRuntimeRegistry.cancel(-43L))
+        assertFalse(DownloadRuntimeRegistry.cancelTransfer(id))
         assertFalse(DownloadRuntimeRegistry.togglePause(-43L))
+        assertFalse(DownloadRuntimeRegistry.togglePauseTransfer(id))
         assertFalse(cancelled)
         DownloadRuntimeRegistry.completed(id)
         assertFalse(DownloadRuntimeRegistry.cancel(-43L))

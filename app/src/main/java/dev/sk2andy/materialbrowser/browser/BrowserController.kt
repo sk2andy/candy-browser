@@ -468,6 +468,7 @@ class BrowserController(
         activity.startActivityForResult(intent, FILE_CHOOSER_REQUEST_CODE)
     },
     private val requestSnoozeNotificationPermission: () -> Unit = {},
+    private val requestDownloadNotificationPermission: () -> Unit = {},
     private val onFullImmersiveModeChanged: (Boolean) -> Unit = {},
     private val onMediaStateChanged: () -> Unit = {},
     private val onBrowserEngineChangeRequested: (AndroidBrowserEngineKind) -> Unit = {},
@@ -9452,6 +9453,7 @@ class BrowserController(
         }
         val request = BrowserEngineDownloadRules.request(response.metadata, referrerFor(tabId))
         if (request == null) {
+            runCatching(requestDownloadNotificationPermission)
             startBuiltInDownloadResponse(response)
             return
         }
@@ -11531,20 +11533,24 @@ class BrowserController(
         builtInDownload: () -> DownloadActionResult? = { downloadManager.enqueue(request) },
         releaseResponse: (() -> Unit)? = null,
         isSourceCurrent: (() -> Boolean)? = null,
-    ): DownloadActionResult? =
-        when (downloadSettings.managerMode) {
-            DownloadManagerMode.BuiltIn -> builtInDownload()
+    ): DownloadActionResult? {
+        val startBuiltInDownload = {
+            runCatching(requestDownloadNotificationPermission)
+            builtInDownload()
+        }
+        return when (downloadSettings.managerMode) {
+            DownloadManagerMode.BuiltIn -> startBuiltInDownload()
             DownloadManagerMode.AskEveryTime -> {
                 val apps = discoverExternalDownloadManagers(request)
                 if (apps.isEmpty()) {
-                    builtInDownload()
+                    startBuiltInDownload()
                 } else {
                     enqueueDownloadChoice(
                         PendingDownloadChoice(
                             request = request,
                             apps = apps,
                             isIncognito = tabs.firstOrNull { it.id == tabId }?.isIncognito == true,
-                            builtInDownload = builtInDownload,
+                            builtInDownload = startBuiltInDownload,
                             releaseResponse = releaseResponse,
                             isSourceCurrent = isSourceCurrent,
                         ),
@@ -11557,18 +11563,19 @@ class BrowserController(
                     it.id == downloadSettings.externalManagerId
                 }
                 if (app == null) {
-                    builtInDownload()
+                    startBuiltInDownload()
                 } else {
                     launchExternallyOrFallback(
                         request = request,
                         app = app,
                         isIncognito = tabs.firstOrNull { it.id == tabId }?.isIncognito == true,
-                        builtInDownload = builtInDownload,
+                        builtInDownload = startBuiltInDownload,
                         releaseResponse = releaseResponse,
                     )
                 }
             }
         }
+    }
 
     private fun enqueueDownloadChoice(choice: PendingDownloadChoice) {
         if (pendingDownloadChoice == null) {

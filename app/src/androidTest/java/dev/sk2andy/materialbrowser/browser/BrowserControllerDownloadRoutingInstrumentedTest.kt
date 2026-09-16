@@ -73,6 +73,26 @@ class BrowserControllerDownloadRoutingInstrumentedTest {
     }
 
     @Test
+    fun builtInDownloadRequestsNotificationPermissionAtDecisionTime() {
+        activityRule.scenario.onActivity { activity ->
+            var notificationPermissionRequests = 0
+            val browser = BrowserController(
+                activity = activity,
+                requestDownloadNotificationPermission = { notificationPermissionRequests++ },
+            ).also { controller = it }
+            browser.onStart()
+            browser.updateDownloadSettings(
+                BrowserDownloadSettings(managerMode = DownloadManagerMode.BuiltIn),
+            )
+
+            browser.dispatchSelectedDownloadResponseForTesting(response())
+
+            assertEquals(1, started)
+            assertEquals(1, notificationPermissionRequests)
+        }
+    }
+
+    @Test
     fun dismissingChoiceReleasesOriginalResponseWithoutDownloading() {
         activityRule.scenario.onActivity { activity ->
             val browser = BrowserController(activity).also { controller = it }
