@@ -13,6 +13,7 @@ import dev.sk2andy.materialbrowser.browser.BrowserEngineNavigationTarget
 import dev.sk2andy.materialbrowser.browser.BrowserEngineWebPromptRequest
 import dev.sk2andy.materialbrowser.browser.BrowserEngineScrollListener
 import dev.sk2andy.materialbrowser.browser.BrowserEngineScrollMetrics
+import dev.sk2andy.materialbrowser.browser.BrowserBackdropBlurRegion
 import dev.sk2andy.materialbrowser.browser.BrowserViewportRect
 import dev.sk2andy.materialbrowser.browser.TextInputOcclusionProbeMode
 import dev.sk2andy.materialbrowser.browser.TextInputOcclusionProbeResult
@@ -271,8 +272,8 @@ internal interface GeckoBrowserSession {
     /** Binds Topping authorization to this exact renderer session and content purpose. */
     fun bindToppingSession(tabId: String, contentKind: BrowserEngineContentKind) = Unit
 
-    /** Uses a capture-compatible renderer only while Candy chrome needs backdrop blur. */
-    fun setBackdropCaptureEnabled(enabled: Boolean) = Unit
+    /** Applies a compositor-owned backdrop region without replacing Gecko's SurfaceView. */
+    fun setBackdropBlurRegion(region: BrowserBackdropBlurRegion?) = Unit
 
     /** Creates and binds the one View currently rendering this session. */
     fun createView(context: Context): View
