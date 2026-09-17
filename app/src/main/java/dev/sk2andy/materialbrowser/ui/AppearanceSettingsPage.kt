@@ -4,6 +4,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import dev.sk2andy.materialbrowser.R
+import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineKind
 import dev.sk2andy.materialbrowser.data.AppearanceSettings
 import dev.sk2andy.materialbrowser.data.BrowserAddressBarStyle
 import dev.sk2andy.materialbrowser.data.BrowserAppearanceMode
@@ -34,6 +35,7 @@ internal fun AppearanceSettingsPage(
     onSettingsChanged: (AppearanceSettings) -> Unit,
     onBack: () -> Unit,
     forceDarkWebsitesAvailable: Boolean = true,
+    browserEngineKind: AndroidBrowserEngineKind = AndroidBrowserEngineKind.GeckoView,
 ) {
     SharedAppearanceSettingsPage(
         settings = settings,
@@ -61,6 +63,14 @@ internal fun AppearanceSettingsPage(
                 R.string.settings_frosted_address_bar_transparency,
             ),
             frostedBlur = stringResource(R.string.settings_frosted_blur),
+            frostedBlurSummary = stringResource(
+                when (browserEngineKind) {
+                    AndroidBrowserEngineKind.GeckoView ->
+                        R.string.settings_frosted_blur_summary_gecko
+                    AndroidBrowserEngineKind.SystemWebView ->
+                        R.string.settings_frosted_blur_summary_system_webview
+                },
+            ),
             shapeStyle = stringResource(R.string.settings_shape_style),
             shapeStyleNames = BrowserShapeStyle.entries.associateWith { it.displayName() },
             addressBarStyle = stringResource(R.string.settings_address_bar_style),

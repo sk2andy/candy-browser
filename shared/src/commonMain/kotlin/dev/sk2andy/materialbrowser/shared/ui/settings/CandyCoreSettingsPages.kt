@@ -52,6 +52,8 @@ private val candyAppearanceStrings = AppearanceSettingsStrings(
     frostedTransparency = "Transparenz",
     frostedAddressBarTransparency = "Adressleisten-Transparenz",
     frostedBlur = "Weichzeichnungsgrad",
+    frostedBlurSummary =
+        "Website-Blur hängt von Android-Version und Browser-Engine ab.",
     shapeStyle = "Form",
     shapeStyleNames = mapOf(
         BrowserShapeStyle.Angular to "Kantig",

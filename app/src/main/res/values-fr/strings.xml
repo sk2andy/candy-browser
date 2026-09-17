@@ -335,12 +335,14 @@
     <string name="color_palette_candy">Candy</string>
     <string name="color_palette_neutral">Neutre</string>
     <string name="settings_surface_style">Surfaces</string>
-    <string name="settings_surface_style_summary">Nette utilise des surfaces opaques. Frosted utilise des surfaces transparentes avec flou d’arrière-plan.</string>
+    <string name="settings_surface_style_summary">Nette utilise des surfaces opaques. Frosted utilise des surfaces translucides à l’aspect verre.</string>
     <string name="surface_style_clear">Nette</string>
     <string name="surface_style_frosted">Frosted</string>
     <string name="settings_frosted_transparency">Transparence</string>
     <string name="settings_frosted_address_bar_transparency">Transparence de la barre d’adresse</string>
     <string name="settings_frosted_blur">Intensité du flou</string>
+    <string name="settings_frosted_blur_summary_gecko">Avec GeckoView, le flou du site web derrière la barre d’adresse est disponible à partir d’Android 17. Sous Android 13, 14, 15 et 16, Frosted reste disponible sans flou du site web.</string>
+    <string name="settings_frosted_blur_summary_system_webview">Avec Android System WebView, le flou du site web derrière la barre d’adresse est disponible à partir d’Android 13.</string>
     <string name="settings_shape_style">Forme</string>
     <string name="shape_style_angular">Anguleuse</string>
     <string name="shape_style_rounded">Arrondie</string>

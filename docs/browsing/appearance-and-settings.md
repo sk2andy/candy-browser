@@ -77,7 +77,7 @@ not get copied.
 | Surface | Browser chrome treatment |
 | --- | --- |
 | Clear | Opaque neutral containers with standard elevation |
-| Frosted | Light translucent chrome with a live blur of browser content behind it |
+| Frosted | Light translucent glass chrome; live website blur depends on engine and Android version |
 
 Frosted exposes three persisted controls while selected:
 
@@ -108,7 +108,10 @@ Frosted exposes three persisted controls while selected:
   find-in-page chrome retain their existing geometry.
 - AMOLED keeps root surfaces black. Frosted transparency does not override AMOLED black chrome.
 - Frosted changes only Candy browser chrome. It does not inject styles into websites or claim backdrop refraction.
-- Frosted uses WebView blur sources while browsing and Compose-backed blur sources on the new-tab page and tab overview.
+- Frosted uses view-hierarchy capture for Android System WebView on Android 13 and newer,
+  native `SurfaceView` blur regions for GeckoView on Android 17 and newer, and Compose-backed blur
+  sources on the new-tab page and tab overview. GeckoView on Android 13, 14, 15 and 16 keeps its
+  performant `SurfaceView` and renders the glass treatment without website blur.
 - The status-bar protection is a static surface-tint fade drawn above page content. It never samples
   or continuously invalidates the browser engine; the optional Frosted address chrome keeps its
   separate live blur source.

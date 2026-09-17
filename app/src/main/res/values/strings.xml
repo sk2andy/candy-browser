@@ -353,12 +353,14 @@
     <string name="color_palette_candy">Candy</string>
     <string name="color_palette_neutral">Neutral</string>
     <string name="settings_surface_style">Surfaces</string>
-    <string name="settings_surface_style_summary">Clear uses opaque surfaces. Frosted uses transparent surfaces with background blur.</string>
+    <string name="settings_surface_style_summary">Clear uses opaque surfaces. Frosted uses translucent glass surfaces.</string>
     <string name="surface_style_clear">Clear</string>
     <string name="surface_style_frosted">Frosted</string>
     <string name="settings_frosted_transparency">Transparency</string>
     <string name="settings_frosted_address_bar_transparency">Address bar transparency</string>
     <string name="settings_frosted_blur">Blur strength</string>
+    <string name="settings_frosted_blur_summary_gecko">With GeckoView, website blur behind the address bar is available from Android 17. On Android 13, 14, 15, and 16, Frosted remains available without website blur.</string>
+    <string name="settings_frosted_blur_summary_system_webview">With Android System WebView, website blur behind the address bar is available from Android 13.</string>
     <string name="settings_shape_style">Shape</string>
     <string name="shape_style_angular">Angular</string>
     <string name="shape_style_rounded">Rounded</string>

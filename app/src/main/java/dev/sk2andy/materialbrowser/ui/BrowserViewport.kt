@@ -12,6 +12,7 @@ import dev.sk2andy.materialbrowser.shared.ui.TabSwitchPreviewLayoutRules
 import android.graphics.Bitmap
 import android.content.ClipData
 import android.content.ClipboardManager
+import android.os.Build
 import android.view.View
 import android.widget.FrameLayout
 import android.widget.Toast
@@ -84,6 +85,8 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.browser.BLANK_URL
+import dev.sk2andy.materialbrowser.browser.BrowserBackdropBlurMode
+import dev.sk2andy.materialbrowser.browser.BrowserBackdropBlurRules
 import dev.sk2andy.materialbrowser.browser.BrowserController
 import dev.sk2andy.materialbrowser.browser.BrowserProfile
 import dev.sk2andy.materialbrowser.browser.BrowserPullToRefreshRules
@@ -233,6 +236,9 @@ private fun ExternalLinkPreviewChrome(
         onDesktopViewChange = { enabled ->
             controller.setExternalLinkPreviewDesktopView(state.sessionId, enabled)
         },
+        onBackdropBlurRegionChanged = { region ->
+            controller.setExternalLinkPreviewBackdropBlurRegion(state.sessionId, region)
+        },
         modifier = Modifier.zIndex(10f),
     )
 }
@@ -243,7 +249,11 @@ private fun ExternalLinkPreviewViewport(
     onBlurTargetAttached: (BlurTarget) -> Unit,
     onBlurTargetReleased: (BlurTarget) -> Unit,
 ) {
-    val browserContentBlurEnabled = browserContentBackdropCaptureEnabled()
+    val browserContentBlurEnabled = browserContentBackdropCaptureEnabled() &&
+        BrowserBackdropBlurRules.mode(
+            engineKind = controller.browserEngineKind,
+            sdkInt = Build.VERSION.SDK_INT,
+        ) == BrowserBackdropBlurMode.ViewHierarchyCapture
     val density = LocalDensity.current
     val geometry = StatusBarStaticOverlayRules.geometry(
         statusBarHeightPx = WindowInsets.statusBars.getTop(density),
@@ -567,7 +577,11 @@ private fun ActiveBrowserEngineView(
     onBlurTargetReleased: (BlurTarget) -> Unit,
     contentObscured: Boolean,
 ) {
-    val browserContentBlurEnabled = browserContentBackdropCaptureEnabled()
+    val browserContentBlurEnabled = browserContentBackdropCaptureEnabled() &&
+        BrowserBackdropBlurRules.mode(
+            engineKind = controller.browserEngineKind,
+            sdkInt = Build.VERSION.SDK_INT,
+        ) == BrowserBackdropBlurMode.ViewHierarchyCapture
     val density = LocalDensity.current
     val statusBarGeometry = StatusBarStaticOverlayRules.geometry(
         statusBarHeightPx = WindowInsets.statusBars.getTop(density),

@@ -335,12 +335,14 @@
     <string name="color_palette_candy">Candy</string>
     <string name="color_palette_neutral">Neutra</string>
     <string name="settings_surface_style">Superfícies</string>
-    <string name="settings_surface_style_summary">Nítida usa superfícies opacas. Frosted usa superfícies transparentes com desfoque do fundo.</string>
+    <string name="settings_surface_style_summary">Nítida usa superfícies opacas. Frosted usa superfícies translúcidas com aparência de vidro.</string>
     <string name="surface_style_clear">Nítida</string>
     <string name="surface_style_frosted">Frosted</string>
     <string name="settings_frosted_transparency">Transparência</string>
     <string name="settings_frosted_address_bar_transparency">Transparência da barra de endereço</string>
     <string name="settings_frosted_blur">Intensidade do desfoque</string>
+    <string name="settings_frosted_blur_summary_gecko">Com o GeckoView, o desfoque do site atrás da barra de endereço está disponível a partir do Android 17. No Android 13, 14, 15 e 16, o Frosted continua disponível sem desfoque do site.</string>
+    <string name="settings_frosted_blur_summary_system_webview">Com o Android System WebView, o desfoque do site atrás da barra de endereço está disponível a partir do Android 13.</string>
     <string name="settings_shape_style">Forma</string>
     <string name="shape_style_angular">Angular</string>
     <string name="shape_style_rounded">Arredondada</string>
