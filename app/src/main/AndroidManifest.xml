@@ -284,5 +284,9 @@
         <receiver
             android:name=".browser.downloads.CandyDownloadNotificationReceiver"
             android:exported="false" />
+
+        <receiver
+            android:name=".browser.PrivateTabsNotificationReceiver"
+            android:exported="false" />
     </application>
 </manifest>
