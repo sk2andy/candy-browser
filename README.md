@@ -81,8 +81,12 @@ cd sync/server
 cp .env.example .env
 # Set a unique username, password, public URL, and TLS host in .env.
 # Never put the E2EE passphrase in server configuration.
-docker compose up --build -d
+docker compose pull candy-sync
+docker compose up -d
 ```
+
+The public `sk2andy/candy-sync:latest` image supports Linux AMD64 and ARM64. Contributors can still
+build the server locally with `docker compose up --build -d`.
 
 Build and load the WebExtension from `sync/extension/`, open its browser-managed Options Page, and
 enter the endpoint plus an E2EE passphrase. In Candy Browser, open **Settings → Synchronization**
@@ -95,7 +99,7 @@ loading, Android setup, backups, protocol details, and the full security model.
 
 - [ ] Add multi-user support
 - [ ] Publish the extension to the Chrome Web Store and Mozilla Add-ons
-- [ ] Publish a prebuilt server image to Docker Hub or a similar registry
+- [x] Publish a prebuilt server image to Docker Hub
 - [ ] Offer a hosted solution for people who do not want to self-host
 
 ## See Candy in motion

@@ -1,0 +1,182 @@
+name: Publish Candy Sync image
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "v[0-9]*"
+    paths:
+      - .github/workflows/publish-candy-sync-image.yml
+      - sync/server/**
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: candy-sync-docker-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    name: Build and publish server image
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      DOCKER_BUILD_RECORD_UPLOAD: false
+      DOCKERHUB_USERNAME: ${{ vars.DOCKERHUB_USERNAME }}
+      IMAGE_NAME: ${{ vars.DOCKERHUB_USERNAME }}/candy-sync
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Validate Docker Hub configuration
+        shell: bash
+        env:
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          if [[ -z "$DOCKERHUB_USERNAME" || -z "$DOCKERHUB_TOKEN" ]]; then
+            echo "Missing DOCKERHUB_USERNAME variable or DOCKERHUB_TOKEN secret." >&2
+            exit 1
+          fi
+
+          if [[ "$GITHUB_EVENT_NAME" == 'workflow_dispatch' && "$GITHUB_REF" != 'refs/heads/main' ]]; then
+            echo "Manual publishing is allowed only from main." >&2
+            exit 1
+          fi
+
+          if [[ "$GITHUB_REF_TYPE" == 'tag' ]] &&
+            [[ ! "$GITHUB_REF_NAME" =~ ^v[0-9]+\.[0-9]+(\.[0-9]+)?(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$ ]]; then
+            echo "Release tag must be semantic, for example v1.2.3 or v1.2.3-rc.1." >&2
+            exit 1
+          fi
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - name: Test server image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: sync/server
+          file: sync/server/Dockerfile
+          target: test
+          push: false
+          provenance: false
+          sbom: false
+
+      - name: Generate image metadata
+        id: metadata
+        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
+        with:
+          images: ${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+            type=ref,event=tag
+          labels: |
+            org.opencontainers.image.title=Candy Sync
+            org.opencontainers.image.description=Self-hosted end-to-end encrypted Candy Browser tab sync server
+            org.opencontainers.image.licenses=MPL-2.0
+
+      - name: Build and push image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: sync/server
+          file: sync/server/Dockerfile
+          target: runtime
+          platforms: linux/amd64,linux/arm64
+          push: true
+          provenance: false
+          sbom: false
+          tags: ${{ steps.metadata.outputs.tags }}
+          labels: ${{ steps.metadata.outputs.labels }}
+          build-args: |
+            VERSION=${{ github.ref_type == 'tag' && github.ref_name || github.sha }}
+
+      - name: Keep only five release tags
+        shell: bash
+        env:
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          auth_payload="$({
+            jq -cn \
+              --arg username "$DOCKERHUB_USERNAME" \
+              --arg password "$DOCKERHUB_TOKEN" \
+              '{identifier: $username, secret: $password}'
+          })"
+          hub_token="$({
+            curl \
+              --fail-with-body \
+              --silent \
+              --show-error \
+              --request POST \
+              --header 'Content-Type: application/json' \
+              --data "$auth_payload" \
+              https://hub.docker.com/v2/auth/token \
+              | jq -er '.access_token'
+          })"
+          echo "::add-mask::$hub_token"
+
+          tags='[]'
+          tags_endpoint="https://hub.docker.com/v2/namespaces/${DOCKERHUB_USERNAME}/repositories/candy-sync/tags"
+          next_page="${tags_endpoint}?page_size=100"
+          while [[ -n "$next_page" ]]; do
+            if [[ "$next_page" != "${tags_endpoint}"* ]]; then
+              echo "Docker Hub returned an unexpected pagination URL." >&2
+              exit 1
+            fi
+            page="$({
+              curl \
+                --fail-with-body \
+                --silent \
+                --show-error \
+                --header "Authorization: Bearer $hub_token" \
+                "$next_page"
+            })"
+            tags="$({
+              jq -cn \
+                --argjson accumulated "$tags" \
+                --argjson page "$page" \
+                '$accumulated + ($page.results // [])'
+            })"
+            next_page="$(printf '%s' "$page" | jq -r '.next // empty')"
+          done
+
+          release_pattern='^v[0-9]+\.[0-9]+(\.[0-9]+)?(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$'
+          old_release_tags="$({
+            printf '%s' "$tags" \
+              | jq -r \
+                --arg release_pattern "$release_pattern" \
+                '[.[] | select(.name | test($release_pattern))]
+                | sort_by(.tag_last_pushed // .last_updated)
+                | reverse
+                | .[5:][]?.name'
+          })"
+
+          while IFS= read -r tag; do
+            if [[ -z "$tag" ]]; then
+              continue
+            fi
+            echo "Deleting expired Docker Hub tag: $tag"
+            curl \
+              --fail-with-body \
+              --silent \
+              --show-error \
+              --request DELETE \
+              --header "Authorization: Bearer $hub_token" \
+              "https://hub.docker.com/v2/namespaces/${DOCKERHUB_USERNAME}/repositories/candy-sync/tags/${tag}"
+          done <<< "$old_release_tags"
