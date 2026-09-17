@@ -317,6 +317,7 @@ internal fun SettingsScreen(
                     onBack = { onDestinationChanged(SettingsDestination.Home) },
                     forceDarkWebsitesAvailable =
                         browserEngineKind == AndroidBrowserEngineKind.SystemWebView,
+                    browserEngineKind = browserEngineKind,
                 )
 
                 SettingsDestination.Browser -> BrowserSettingsPage(

@@ -44,6 +44,7 @@ data class AppearanceSettingsStrings(
     val frostedTransparency: String,
     val frostedAddressBarTransparency: String,
     val frostedBlur: String,
+    val frostedBlurSummary: String,
     val shapeStyle: String,
     val shapeStyleNames: Map<BrowserShapeStyle, String>,
     val addressBarStyle: String,
@@ -251,6 +252,12 @@ fun AppearanceSettingsPage(
                     onSettingsChanged(settings.copy(frostedBlurPercent = value.roundToInt()))
                 },
                 testTag = SharedAppearanceSettingsTestTags.FROSTED_BLUR,
+            )
+            Text(
+                strings.frostedBlurSummary,
+                modifier = Modifier.padding(start = 18.dp, top = 6.dp, end = 18.dp),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
         SettingsPageSpacer()

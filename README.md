@@ -212,7 +212,7 @@ landscape-oriented previews in Coverflow and the compact grid layout.
 - System, light, dark, and AMOLED appearances with Material You, Candy, or neutral color palettes
 - Clear or frosted browser surfaces plus angular, rounded, or extra-rounded shapes
 - Independent transparency controls for general browser chrome and the address bar, with adjustable
-  live background blur over loaded pages
+  live background blur where the selected Android engine and version support it
 
 <p align="center">
   <img src="docs/screenshots/candy-frosted-address-bar.png" width="42%" alt="Candy Browser frosted transparent address bar over a loaded page">

@@ -4,19 +4,28 @@ import android.content.Context
 import android.content.res.Configuration
 import android.annotation.SuppressLint
 import android.graphics.Bitmap
+import android.graphics.RectF
 import android.graphics.Region
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.view.KeyEvent
 import android.view.MotionEvent
+import android.view.RoundedRectBlurRegion
+import android.view.SurfaceView
 import android.view.View
+import android.view.ViewGroup
 import android.widget.FrameLayout
+import androidx.annotation.RequiresApi
 import androidx.annotation.UiThread
 import androidx.annotation.VisibleForTesting
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import dev.sk2andy.materialbrowser.BuildConfig
 import dev.sk2andy.materialbrowser.browser.BrowserPerformanceTrace
+import dev.sk2andy.materialbrowser.browser.BrowserBackdropBlurRegion
+import dev.sk2andy.materialbrowser.browser.BrowserBackdropBlurRules
+import dev.sk2andy.materialbrowser.browser.BrowserSurfaceBackdropBlurRegion
 import dev.sk2andy.materialbrowser.browser.BrowserEngineAndroidPermissionRequest
 import dev.sk2andy.materialbrowser.browser.BrowserEngineAuthPromptRequest
 import dev.sk2andy.materialbrowser.browser.BrowserEngineAuthPromptResponse
@@ -910,7 +919,7 @@ private class GeckoViewBrowserSession(
     private var scrollListener: BrowserEngineScrollListener? = null
 
     private var boundView: CandyGeckoView? = null
-    private var backdropCaptureEnabled = false
+    private var backdropBlurRegion: BrowserBackdropBlurRegion? = null
     private val contentPresentationGate = GeckoContentPresentationGate()
     private var activeMediaSession: MediaSession? = null
     private var videoAutoplayBlocked = false
@@ -2344,10 +2353,10 @@ private class GeckoViewBrowserSession(
     }
 
     @UiThread
-    override fun setBackdropCaptureEnabled(enabled: Boolean) {
-        if (backdropCaptureEnabled == enabled) return
-        backdropCaptureEnabled = enabled
-        boundView?.setBackdropCaptureEnabled(enabled)
+    override fun setBackdropBlurRegion(region: BrowserBackdropBlurRegion?) {
+        if (backdropBlurRegion == region) return
+        backdropBlurRegion = region
+        boundView?.setBackdropBlurRegion(region)
     }
 
     @UiThread
@@ -2355,7 +2364,7 @@ private class GeckoViewBrowserSession(
         check(!closed) { "Cannot bind a closed Gecko session" }
         check(boundView == null) { "Gecko session already has a bound View" }
         return CandyGeckoView(context).also { view ->
-            view.setBackdropCaptureEnabled(backdropCaptureEnabled)
+            view.setBackdropBlurRegion(backdropBlurRegion)
             view.configureAutofill(isPrivate)
             AndroidCredentialPromptHost.activityContext(context)?.let { activityContext ->
                 view.setActivityContextDelegate { activityContext }
@@ -2892,8 +2901,8 @@ internal class CandyGeckoView(context: Context) : FrameLayout(context), GeckoVie
         configureEngineView(engineView)
     }
 
-    fun setBackdropCaptureEnabled(enabled: Boolean) {
-        engineView.setBackdropCaptureEnabled(enabled)
+    fun setBackdropBlurRegion(region: BrowserBackdropBlurRegion?) {
+        engineView.setBackdropBlurRegion(region)
     }
 
     fun setActivityContextDelegate(delegate: GeckoView.ActivityContextDelegate?) {
@@ -3006,20 +3015,54 @@ internal class CandyGeckoView(context: Context) : FrameLayout(context), GeckoVie
 }
 
 private class CandyGeckoEngineView(context: Context) : CandyGeckoViewSafeAreaBridge(context) {
-    private var backdropCaptureEnabled = false
+    private var backdropBlurRegion: BrowserBackdropBlurRegion? = null
+    private var appliedBackdropSurface: SurfaceView? = null
+    private var appliedBackdropRegion: BrowserSurfaceBackdropBlurRegion? = null
+    private var hasAppliedBackdropRegion = false
     private var gestureState = GeckoContentGestureState()
     private var latestTouchEvent: MotionEvent? = null
     private var rendererSafeAreaOverride: GeckoViewInsets? = null
     private var windowInsets: WindowInsetsCompat? = null
 
-    fun setBackdropCaptureEnabled(enabled: Boolean) {
-        if (backdropCaptureEnabled == enabled) return
-        backdropCaptureEnabled = enabled
-        BrowserPerformanceTrace.section(BrowserPerformanceTrace.Phase.GeckoBackendSwitch) {
-            setViewBackend(
-                if (enabled) GeckoView.BACKEND_TEXTURE_VIEW else GeckoView.BACKEND_SURFACE_VIEW,
+    fun setBackdropBlurRegion(region: BrowserBackdropBlurRegion?) {
+        if (backdropBlurRegion == region) return
+        backdropBlurRegion = region
+        applyBackdropBlurRegion()
+    }
+
+    override fun onLayout(changed: Boolean, left: Int, top: Int, right: Int, bottom: Int) {
+        super.onLayout(changed, left, top, right, bottom)
+        applyBackdropBlurRegion()
+    }
+
+    private fun applyBackdropBlurRegion() {
+        if (Build.VERSION.SDK_INT < BrowserBackdropBlurRules.NATIVE_SURFACE_BLUR_MIN_SDK) return
+        val surfaceView = findSurfaceView() ?: return
+        val locationInWindow = IntArray(2)
+        surfaceView.getLocationInWindow(locationInWindow)
+        val localRegion = backdropBlurRegion?.let { region ->
+            BrowserBackdropBlurRules.regionInSurface(
+                region = region,
+                surfaceLeftInWindowPx = locationInWindow[0],
+                surfaceTopInWindowPx = locationInWindow[1],
+                surfaceWidthPx = surfaceView.width,
+                surfaceHeightPx = surfaceView.height,
             )
         }
+        if (
+            hasAppliedBackdropRegion &&
+            appliedBackdropSurface === surfaceView &&
+            appliedBackdropRegion == localRegion
+        ) {
+            return
+        }
+        appliedBackdropSurface
+            ?.takeIf { previous -> previous !== surfaceView }
+            ?.let(GeckoSurfaceBackdropBlurApi37::clear)
+        GeckoSurfaceBackdropBlurApi37.apply(surfaceView, localRegion)
+        appliedBackdropSurface = surfaceView
+        appliedBackdropRegion = localRegion
+        hasAppliedBackdropRegion = true
     }
 
     override fun dispatchTouchEvent(event: MotionEvent): Boolean {
@@ -3104,10 +3147,17 @@ private class CandyGeckoEngineView(context: Context) : CandyGeckoViewSafeAreaBri
         super.onAttachedToWindow()
         windowInsets?.let(::dispatchCandyWindowInsets)
         dispatchRendererSafeAreaOverride()
+        post(::applyBackdropBlurRegion)
     }
 
     override fun onDetachedFromWindow() {
         cancelActiveTouch()
+        if (Build.VERSION.SDK_INT >= BrowserBackdropBlurRules.NATIVE_SURFACE_BLUR_MIN_SDK) {
+            appliedBackdropSurface?.let(GeckoSurfaceBackdropBlurApi37::clear)
+        }
+        appliedBackdropSurface = null
+        appliedBackdropRegion = null
+        hasAppliedBackdropRegion = false
         super.onDetachedFromWindow()
     }
 
@@ -3157,6 +3207,41 @@ private class CandyGeckoEngineView(context: Context) : CandyGeckoViewSafeAreaBri
     private companion object {
         val SAFE_AREA_INSET_TYPES =
             WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout()
+    }
+}
+
+private fun View.findSurfaceView(): SurfaceView? = when (this) {
+    is SurfaceView -> this
+    is ViewGroup -> (0 until childCount).firstNotNullOfOrNull { index ->
+        getChildAt(index).findSurfaceView()
+    }
+    else -> null
+}
+
+@RequiresApi(37)
+private object GeckoSurfaceBackdropBlurApi37 {
+    fun apply(
+        surfaceView: SurfaceView,
+        region: BrowserSurfaceBackdropBlurRegion?,
+    ) {
+        if (region == null) {
+            clear(surfaceView)
+            return
+        }
+        surfaceView.setBlurRegions(
+            listOf(
+                RoundedRectBlurRegion(
+                    RectF(region.leftPx, region.topPx, region.rightPx, region.bottomPx),
+                    FloatArray(8) { region.cornerRadiusPx },
+                    1f,
+                    region.blurRadiusPx,
+                ),
+            ),
+        )
+    }
+
+    fun clear(surfaceView: SurfaceView) {
+        surfaceView.setBlurRegions(emptyList())
     }
 }
 

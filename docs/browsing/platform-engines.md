@@ -141,7 +141,7 @@ Camera and microphone permissions remain separate and continue through Candy's p
   controls can tune or disable that layer live. Classification has explicit node/time/ancestor
   bounds, so it is not a universal layout-protection guarantee. Verified unsupported overlaps retain
   the navigation-scoped emergency native top fallback; explicit native overrides remain available.
-  Privacy, scroll metrics and optional live blur are unchanged.
+  Privacy and scroll metrics are unchanged.
   System WebView retains the document-start compatibility repair described below. There, Candy owns
   its normal-tab top safe area because `viewport-fit=cover` only opts into the
   viewport and does not prove that a page consumes `env(safe-area-inset-top)`. The renderer top
@@ -160,12 +160,11 @@ Camera and microphone permissions remain separate and continue through Candy's p
   The explicit per-site **Force safe area** override moves every edge into native margins.
   Fullscreen remains truly edge to edge, while Compose safe-drawing hosts clear duplicate renderer
   insets.
-  Candy keeps GeckoView's default `SurfaceView` backend while browser chrome does not need backdrop
-  capture, so normal page frames go directly to Android's compositor. When Frosted chrome has both
-  non-zero blur and transparency, the selected or external-preview Gecko session switches to
-  `TextureView`; this keeps page pixels in Candy's window so `BlurView` can capture them and the
-  transparent Android navigation bar can composite page content behind its gesture region. Turning
-  backdrop capture off restores `SurfaceView`.
+  Candy always keeps GeckoView's default `SurfaceView` backend so page frames go directly to
+  Android's compositor. On Android 17 and newer, Frosted address chrome maps its measured rounded
+  bounds to a native `SurfaceView` blur region. Android 13, 14, 15 and 16 keep the same translucent
+  glass overlay without website blur. System WebView remains in the ordinary View hierarchy and
+  therefore retains live Frosted blur on every supported version from Android 13 onward.
 - System WebView's shared safe-area compatibility script gives stable viewport-sticky elements a CSS `max()` top
   anchor with owned inline styling for Shadow DOM. Window scrolling does not read their geometry
   or rewrite their styling; relevant semantic mutations, viewport changes and policy reconfiguration
@@ -253,8 +252,8 @@ Camera and microphone permissions remain separate and continue through Candy's p
   pill-collapse `ScrollDelegate` ownership.
 - The status-bar treatment is a small static native sibling above the Gecko content container. It is
   limited to the status-bar height plus an 8dp fade tail and never uses a live blur. Clear chrome does
-  not create a full-screen `BlurTarget`; frosted chrome may still wrap the page in one solely as the
-  explicit backdrop source for browser chrome.
+  not create a full-screen `BlurTarget`. Gecko Frosted chrome also never wraps the page in one;
+  System WebView uses that explicit backdrop source for browser chrome.
 - Android builds launch the normal `MainActivity`, `BrowserScreen`, address bar,
   gestures, menus and tab overview. `BrowserController` binds a `GeckoSession` renderer to each tab.
   Gecko content-process crashes and Android low-memory kills are both terminal session events. Candy

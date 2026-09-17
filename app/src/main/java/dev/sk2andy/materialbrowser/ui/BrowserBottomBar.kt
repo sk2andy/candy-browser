@@ -53,6 +53,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.FloatState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -95,6 +96,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.browser.AddressResolver
+import dev.sk2andy.materialbrowser.browser.BLANK_URL
+import dev.sk2andy.materialbrowser.browser.BrowserBackdropBlurRegion
+import dev.sk2andy.materialbrowser.browser.BrowserBackdropBlurRules
 import dev.sk2andy.materialbrowser.browser.BrowserTab
 import dev.sk2andy.materialbrowser.browser.PageTranslationProvider
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoExtensionActionKey
@@ -225,6 +229,8 @@ internal fun BrowserBottomBar(
     onOverviewGestureStarted: () -> Unit,
     onOverviewGestureCancelled: () -> Unit,
     onBarPositioned: (boundsInRoot: Rect, topInWindowPx: Int) -> Unit,
+    backdropBlurRegionEnabled: Boolean = true,
+    onBackdropBlurRegionChanged: (BrowserBackdropBlurRegion?) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val docked = dockState.placement != null
@@ -262,6 +268,8 @@ internal fun BrowserBottomBar(
         chromeTokens.cornerRadius
     }
     val motionScheme = LocalCandyMotionScheme.current
+    val currentOnBackdropBlurRegionChanged by rememberUpdatedState(onBackdropBlurRegionChanged)
+    var barBoundsInWindow by remember { mutableStateOf<Rect?>(null) }
     LaunchedEffect(addressBarPulseNonce, motionScheme) {
         if (addressBarPulseNonce == 0) return@LaunchedEffect
         pulseScale.snapTo(1f)
@@ -388,6 +396,35 @@ internal fun BrowserBottomBar(
             },
             label = "Adresspille Widerstand",
         )
+        val backdropBlurRegion = barBoundsInWindow
+            ?.takeIf {
+                tab.url != BLANK_URL &&
+                    backdropBlurRegionEnabled &&
+                    !showingTabOverview &&
+                    !visualOnly &&
+                    commandFeedback == null &&
+                    chromeTokens.backdropBlurEnabled &&
+                    (pulseScale.value - 1f).absoluteValue < 0.001f &&
+                    dockStretchProgress.absoluteValue < 0.001f &&
+                    (dockRepositionFeedbackScale.x - 1f).absoluteValue < 0.001f &&
+                    (dockRepositionFeedbackScale.y - 1f).absoluteValue < 0.001f
+            }
+            ?.let { bounds ->
+                BrowserBackdropBlurRules.regionInWindow(
+                    leftPx = bounds.left,
+                    topPx = bounds.top,
+                    rightPx = bounds.right,
+                    bottomPx = bounds.bottom,
+                    cornerRadiusPx = with(density) { barCornerRadius.toPx() },
+                    blurRadiusPx = chromeTokens.blurRadiusPx,
+                )
+            }
+        LaunchedEffect(backdropBlurRegion) {
+            currentOnBackdropBlurRegionChanged(backdropBlurRegion)
+        }
+        DisposableEffect(Unit) {
+            onDispose { currentOnBackdropBlurRegionChanged(null) }
+        }
         val motion = rememberAddressBarMotionState(
             presentation = presentation,
             compactWidth = compactWidth,
@@ -442,9 +479,10 @@ internal fun BrowserBottomBar(
                     )
                     .onGloballyPositioned { coordinates ->
                         val boundsInRoot = coordinates.boundsInRoot()
+                        barBoundsInWindow = coordinates.boundsInWindow()
                         onBarPositioned(
                             boundsInRoot,
-                            coordinates.boundsInWindow().top.roundToInt(),
+                            barBoundsInWindow?.top?.roundToInt() ?: 0,
                         )
                     }
                     .graphicsLayer {

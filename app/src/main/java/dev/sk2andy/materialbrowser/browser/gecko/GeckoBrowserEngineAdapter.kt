@@ -11,6 +11,7 @@ import androidx.annotation.UiThread
 import androidx.annotation.VisibleForTesting
 import dev.sk2andy.materialbrowser.browser.BrowserEngineScrollListener
 import dev.sk2andy.materialbrowser.browser.BrowserEngineScrollMetrics
+import dev.sk2andy.materialbrowser.browser.BrowserBackdropBlurRegion
 import dev.sk2andy.materialbrowser.browser.BrowserViewportRect
 import dev.sk2andy.materialbrowser.browser.TextInputOcclusionProbeMode
 import dev.sk2andy.materialbrowser.browser.TextInputOcclusionProbeResult
@@ -37,6 +38,8 @@ import org.mozilla.geckoview.GeckoView
 /** Android view-host edge kept separate from the engine-neutral shared session port. */
 internal interface BrowserEngineViewPort {
     fun setBackdropCaptureEnabled(enabled: Boolean) = Unit
+
+    fun setBackdropBlurRegion(region: BrowserBackdropBlurRegion?) = Unit
 
     fun createView(context: Context): View
 
@@ -431,8 +434,8 @@ internal class GeckoBrowserEngineSessionAdapter(
     }
 
     @UiThread
-    override fun setBackdropCaptureEnabled(enabled: Boolean) {
-        if (!closed) session.setBackdropCaptureEnabled(enabled)
+    override fun setBackdropBlurRegion(region: BrowserBackdropBlurRegion?) {
+        if (!closed) session.setBackdropBlurRegion(region)
     }
 
     @UiThread
