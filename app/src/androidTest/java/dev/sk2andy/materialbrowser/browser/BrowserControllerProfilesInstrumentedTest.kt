@@ -359,6 +359,37 @@ class BrowserControllerProfilesInstrumentedTest {
     }
 
     @Test
+    fun closeAllPrivateTabsClosesPinnedPrivateTabsAcrossProfiles() {
+        activityRule.scenario.onActivity { activity ->
+            val profiles = profiles()
+            resetAndSeed(activity, profiles, profiles.last().id)
+            val controller = BrowserController(activity).also { this.controller = it }
+            assumeTrue(controller.isProfileIsolationSupported)
+            val workPrivateTabId = controller.createTab(
+                initialUrl = "https://private.example/work",
+                isIncognito = true,
+            )
+            assertTrue(controller.setTabPinned(workPrivateTabId, true))
+            assertTrue(controller.selectProfile(profiles.first().id))
+            val homePrivateTabId = controller.createTab(
+                initialUrl = "https://private.example/home",
+                isIncognito = true,
+            )
+
+            assertEquals(2, controller.closeAllPrivateTabs())
+
+            assertTrue(controller.tabs.none(BrowserTab::isIncognito))
+            assertTrue(controller.tabs.none { it.id == workPrivateTabId })
+            assertTrue(controller.tabs.none { it.id == homePrivateTabId })
+            assertEquals("home-tab", controller.selectedTabId)
+            assertEquals(
+                setOf("home-tab", "work-tab"),
+                controller.tabs.mapTo(hashSetOf()) { it.id },
+            )
+        }
+    }
+
+    @Test
     fun duplicateSelectedTabKeepsProfileBeyondFiftyTabs() {
         activityRule.scenario.onActivity { activity ->
             val profiles = profiles()

@@ -977,6 +977,13 @@
     <string name="snooze_notification_channel_description">Alertes lorsque les onglets en veille sont prêts</string>
     <string name="snooze_notification_title">L’onglet en veille est prêt</string>
     <string name="snooze_notification_open_app">Appuyez pour ouvrir Candy Browser</string>
+    <string name="private_tabs_notification_channel_name">Onglets privés</string>
+    <string name="private_tabs_notification_channel_description">Indique quand des onglets privés sont ouverts</string>
+    <string name="private_tabs_notification_close">Appuyez pour fermer tous les onglets privés</string>
+    <plurals name="private_tabs_notification_title">
+        <item quantity="one">%1$d onglet privé ouvert</item>
+        <item quantity="other">%1$d onglets privés ouverts</item>
+    </plurals>
     <plurals name="snooze_notification_title_count">
         <item quantity="one">%1$d onglet en veille est prêt</item>
         <item quantity="other">%1$d onglets en veille sont prêts</item>

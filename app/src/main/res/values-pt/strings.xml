@@ -977,6 +977,13 @@
     <string name="snooze_notification_channel_description">Avisos quando os separadores adiados estão prontos</string>
     <string name="snooze_notification_title">O separador adiado está pronto</string>
     <string name="snooze_notification_open_app">Toque para abrir o Candy Browser</string>
+    <string name="private_tabs_notification_channel_name">Separadores privados</string>
+    <string name="private_tabs_notification_channel_description">Mostra quando existem separadores privados abertos</string>
+    <string name="private_tabs_notification_close">Toque para fechar todos os separadores privados</string>
+    <plurals name="private_tabs_notification_title">
+        <item quantity="one">%1$d separador privado aberto</item>
+        <item quantity="other">%1$d separadores privados abertos</item>
+    </plurals>
     <plurals name="snooze_notification_title_count">
         <item quantity="one">%1$d separador adiado está pronto</item>
         <item quantity="other">%1$d separadores adiados estão prontos</item>
