@@ -972,6 +972,13 @@
     <string name="snooze_notification_channel_description">Benachrichtigungen, wenn zurückgestellte Tabs bereit sind</string>
     <string name="snooze_notification_title">Zurückgestellter Tab ist bereit</string>
     <string name="snooze_notification_open_app">Tippen, um Candy Browser zu öffnen</string>
+    <string name="private_tabs_notification_channel_name">Private Tabs</string>
+    <string name="private_tabs_notification_channel_description">Zeigt an, wenn private Tabs geöffnet sind</string>
+    <string name="private_tabs_notification_close">Tippen, um alle privaten Tabs zu schließen</string>
+    <plurals name="private_tabs_notification_title">
+        <item quantity="one">%1$d privater Tab geöffnet</item>
+        <item quantity="other">%1$d private Tabs geöffnet</item>
+    </plurals>
     <plurals name="snooze_notification_title_count">
         <item quantity="one">%1$d zurückgestellter Tab ist bereit</item>
         <item quantity="other">%1$d zurückgestellte Tabs sind bereit</item>

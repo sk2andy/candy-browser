@@ -996,6 +996,13 @@
     <string name="snooze_notification_channel_description">Alerts when snoozed tabs are ready</string>
     <string name="snooze_notification_title">Snoozed tab is ready</string>
     <string name="snooze_notification_open_app">Tap to open Candy Browser</string>
+    <string name="private_tabs_notification_channel_name">Private tabs</string>
+    <string name="private_tabs_notification_channel_description">Shows when private tabs are open</string>
+    <string name="private_tabs_notification_close">Tap to close all private tabs</string>
+    <plurals name="private_tabs_notification_title">
+        <item quantity="one">%1$d private tab open</item>
+        <item quantity="other">%1$d private tabs open</item>
+    </plurals>
     <plurals name="snooze_notification_title_count">
         <item quantity="one">%1$d snoozed tab is ready</item>
         <item quantity="other">%1$d snoozed tabs are ready</item>
