@@ -521,6 +521,8 @@ internal fun BoxScope.BrowserAddressChrome(
                 controller.setPreviewContentBottomInWindowPx(topInWindowPx)
             }
         },
+        backdropBlurRegionEnabled = browserDragOffset.floatValue == 0f && !settingsVisible,
+        onBackdropBlurRegionChanged = controller::setSelectedBrowserBackdropBlurRegion,
         modifier = Modifier
             .fillMaxSize()
             .zIndex(

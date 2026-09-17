@@ -807,6 +807,10 @@ class BrowserController(
         .firstOrNull { binding -> binding.tabId == selectedTabId }
         ?.view
 
+    @VisibleForTesting
+    internal fun selectedBrowserBackdropBlurRegionForTesting(): BrowserBackdropBlurRegion? =
+        selectedBrowserBackdropBlurRegion
+
     /** Returns the selected renderer even before Compose has attached its host. */
     @VisibleForTesting
     internal fun selectedBrowserEngineViewForTesting(): View? =
@@ -1095,6 +1099,7 @@ class BrowserController(
     private var destroyed = false
     private var previewContentBottomInWindowPx: Int? = null
     private var addressBarViewportRect: BrowserViewportRect? = null
+    private var selectedBrowserBackdropBlurRegion: BrowserBackdropBlurRegion? = null
     private var pendingAddressBarAutoDockProbe: Runnable? = null
     private var pendingAddressBarAutoDockTabId: String? = null
     private var addressBarAutoDockProbeGeneration = 0L
@@ -2396,7 +2401,10 @@ class BrowserController(
         current
             ?.takeIf { binding -> binding.tabId == selectedTabId }
             ?.session
-            ?.setBackdropCaptureEnabled(backdropCaptureEnabled)
+            ?.let { session ->
+                session.setBackdropCaptureEnabled(backdropCaptureEnabled)
+                session.setBackdropBlurRegion(selectedBrowserBackdropBlurRegion)
+            }
         if (current?.tabId == selectedTabId && current.view.parent === container) {
             awaitContent(current)
             return current.view
@@ -2463,6 +2471,7 @@ class BrowserController(
         val tabId = selectedTabId
         val engineSession = browserEngineSessionFor(tabId)
         engineSession.setBackdropCaptureEnabled(backdropCaptureEnabled)
+        engineSession.setBackdropBlurRegion(selectedBrowserBackdropBlurRegion)
         val transferable = geckoViewBindings.entries.firstOrNull { (host, binding) ->
             host !== container &&
                 binding.tabId == tabId &&
@@ -3203,6 +3212,7 @@ class BrowserController(
             return
         }
         runtime.geckoBinding.session.setBackdropCaptureEnabled(backdropCaptureEnabled)
+        runtime.geckoBinding.session.setBackdropBlurRegion(runtime.backdropBlurRegion)
         val view = runtime.binding.view
         if (view.parent === container && container.childCount == 1) return
         (view.parent as? ViewGroup)?.removeView(view)
@@ -3784,6 +3794,7 @@ class BrowserController(
         }
         runtime?.geckoBinding?.let { binding ->
             (binding.view.parent as? ViewGroup)?.removeView(binding.view)
+            binding.session.setBackdropBlurRegion(null)
             binding.session.setActive(false)
             releaseGeckoView(binding.session, binding.view)
             binding.session.execute(BrowserEngineCommands.close())
@@ -8280,6 +8291,24 @@ class BrowserController(
 
     fun setPreviewContentBottomInWindowPx(bottomPx: Int) {
         previewContentBottomInWindowPx = bottomPx.takeIf { it > 0 }
+    }
+
+    internal fun setSelectedBrowserBackdropBlurRegion(region: BrowserBackdropBlurRegion?) {
+        if (selectedBrowserBackdropBlurRegion == region) return
+        selectedBrowserBackdropBlurRegion = region
+        browserEngineSessions[selectedTabId]?.setBackdropBlurRegion(region)
+    }
+
+    internal fun setExternalLinkPreviewBackdropBlurRegion(
+        sessionId: Long,
+        region: BrowserBackdropBlurRegion?,
+    ) {
+        val runtime = externalLinkPreviewRuntime
+            ?.takeIf { candidate -> candidate.sessionId == sessionId }
+            ?: return
+        if (runtime.backdropBlurRegion == region) return
+        runtime.backdropBlurRegion = region
+        runtime.geckoBinding.session.setBackdropBlurRegion(region)
     }
 
     fun setAddressBarBoundsInViewport(
@@ -13780,6 +13809,7 @@ class BrowserController(
         var downloadGrant: ExternalPreviewDownloadGrant? = null,
         var pendingInternalNavigationUrl: String? = null,
         var downloadNavigationRevision: Int = 0,
+        var backdropBlurRegion: BrowserBackdropBlurRegion? = null,
     ) {
         val geckoBinding: ExternalLinkPreviewEngineBinding.Gecko
             get() = binding as ExternalLinkPreviewEngineBinding.Gecko

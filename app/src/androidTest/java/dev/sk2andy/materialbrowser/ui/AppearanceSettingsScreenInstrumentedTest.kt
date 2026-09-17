@@ -14,6 +14,7 @@ import androidx.compose.ui.semantics.SemanticsActions
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import dev.sk2andy.materialbrowser.R
+import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineKind
 import dev.sk2andy.materialbrowser.data.AppearanceSettings
 import dev.sk2andy.materialbrowser.data.BrowserAddressBarStyle
 import dev.sk2andy.materialbrowser.data.BrowserAppearanceMode
@@ -84,6 +85,9 @@ class AppearanceSettingsScreenInstrumentedTest {
             .performSemanticsAction(SemanticsActions.SetProgress) { setProgress ->
                 setProgress(90f)
             }
+        composeRule.onNodeWithText(
+            context.getString(R.string.settings_frosted_blur_summary_gecko),
+        ).assertExists()
 
         composeRule.onNodeWithTag(AppearanceSettingsTestTags.ShapeStyle)
             .performScrollTo()
@@ -129,6 +133,26 @@ class AppearanceSettingsScreenInstrumentedTest {
             .assertIsNotEnabled()
         composeRule.onNodeWithText(
             context.getString(R.string.settings_force_dark_websites_system_webview_only),
+        ).assertExists()
+    }
+
+    @Test
+    fun frostedSummaryDescribesSystemWebViewSupportFromAndroid13() {
+        composeRule.setContent {
+            MaterialBrowserTheme(
+                settings = AppearanceSettings(surfaceStyle = BrowserSurfaceStyle.Frosted),
+            ) {
+                AppearanceSettingsPage(
+                    settings = AppearanceSettings(surfaceStyle = BrowserSurfaceStyle.Frosted),
+                    onSettingsChanged = {},
+                    onBack = {},
+                    browserEngineKind = AndroidBrowserEngineKind.SystemWebView,
+                )
+            }
+        }
+
+        composeRule.onNodeWithText(
+            context.getString(R.string.settings_frosted_blur_summary_system_webview),
         ).assertExists()
     }
 }
