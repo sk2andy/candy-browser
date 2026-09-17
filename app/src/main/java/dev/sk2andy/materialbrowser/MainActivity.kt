@@ -40,6 +40,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -61,6 +62,7 @@ import dev.sk2andy.materialbrowser.browser.BrowserMediaSystemSession
 import dev.sk2andy.materialbrowser.browser.BrowserMouseButton
 import dev.sk2andy.materialbrowser.browser.FullscreenVideoRules
 import dev.sk2andy.materialbrowser.browser.ProfileBiometricAuthenticator
+import dev.sk2andy.materialbrowser.browser.PrivateTabsNotifier
 import dev.sk2andy.materialbrowser.browser.ReleaseNotesPresentationRules
 import dev.sk2andy.materialbrowser.browser.StartupPresentationRules
 import dev.sk2andy.materialbrowser.browser.cast.CastSessionController
@@ -103,6 +105,7 @@ import dev.sk2andy.materialbrowser.ui.ReleaseNotesScreen
 import dev.sk2andy.materialbrowser.ui.theme.CandyTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -154,6 +157,7 @@ class MainActivity : AppCompatActivity() {
     private var lastMouseNavigationFingerprint: MouseNavigationFingerprint? = null
     private var geckoWebAuthnActivityIdentity: BrowserActivityResultIdentity? = null
     private var activityDestroyed = false
+    private val privateTabsNotifier by lazy { PrivateTabsNotifier(this) }
     private var appliedNightConfiguration = Configuration.UI_MODE_NIGHT_UNDEFINED
     private val webPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions(),
@@ -164,6 +168,9 @@ class MainActivity : AppCompatActivity() {
         ActivityResultContracts.RequestPermission(),
     ) { granted ->
         CandyDownloadNotifier(this).onPermissionResult(granted)
+        if (::browserController.isInitialized) {
+            privateTabsNotifier.update(browserController.tabs.count { it.isIncognito })
+        }
     }
     private val fileChooserLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult(),
@@ -293,6 +300,8 @@ class MainActivity : AppCompatActivity() {
             ?.getBoolean(STATE_RELEASE_NOTES_VISIBLE)
             ?: releaseNotesRequired
         val snoozeWakeNotifier = SnoozeWakeNotifier(this).also { it.ensureChannel() }
+        privateTabsNotifier.ensureChannel()
+        if (isColdStart) privateTabsNotifier.cancel()
         val downloadNotifier = CandyDownloadNotifier(this).also {
             it.ensureChannel()
             it.reconcileOrphanedActiveNotifications()
@@ -363,6 +372,19 @@ class MainActivity : AppCompatActivity() {
             profileProtectionSupported = { profileBiometricAuthenticator.isAvailable },
             authenticateProfile = profileBiometricAuthenticator::authenticate,
         )
+        lifecycleScope.launch {
+            snapshotFlow { browserController.tabs.count { it.isIncognito } }
+                .distinctUntilChanged()
+                .collect { privateTabCount ->
+                    if (
+                        privateTabCount > 0 &&
+                        !privateTabsNotifier.hasPostNotificationPermission()
+                    ) {
+                        requestNotificationPermission()
+                    }
+                    privateTabsNotifier.update(privateTabCount)
+                }
+        }
         ProcessLifecycleOwner.get().lifecycle.addObserver(profileProcessLifecycleObserver)
         pictureInPictureController = MainActivityPictureInPictureController(
             activity = this,
@@ -1068,12 +1090,16 @@ class MainActivity : AppCompatActivity() {
             pictureInPictureController.reconcileStateOnResume()
         }
         if (::browserController.isInitialized) browserController.onResume()
+        if (::browserController.isInitialized) {
+            privateTabsNotifier.update(browserController.tabs.count { it.isIncognito })
+        }
         geckoActivityIntegration?.onHostResumed()
         updatePictureInPictureParams()
     }
 
     override fun onDestroy() {
         activityDestroyed = true
+        if (!isChangingConfigurations) privateTabsNotifier.cancel()
         if (!BuildConfig.SYSTEM_WEBVIEW_ONLY) firefoxExtensionManager?.close()
         firefoxExtensionManager = null
         geckoActivityIntegration?.close()

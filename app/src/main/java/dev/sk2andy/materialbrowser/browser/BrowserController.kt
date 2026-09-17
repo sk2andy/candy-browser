@@ -481,6 +481,8 @@ class BrowserController(
     ) -> Unit = { _, onResult -> onResult(false) },
     private val externalApps: ExternalAppLauncher = ExternalAppLauncher(activity),
 ) {
+    private val closeAllPrivateTabsCallback: () -> Int = ::closeAllPrivateTabs
+
     val browserEngineKind: AndroidBrowserEngineKind =
         BrowserSessionStore(activity.applicationContext).loadAndroidBrowserEngineKind()
 
@@ -2246,6 +2248,7 @@ class BrowserController(
         restorePersistedFavicons()
         restorePersistedCandyTrails()
         SnoozeRuntimeRegistry.register(snoozeRestoreCallback)
+        PrivateTabsRuntimeRegistry.register(closeAllPrivateTabsCallback)
         snoozeScheduler.schedule(snoozedTabs, nowMillis)
         syncObservation = syncRepository.observe { state ->
             mainHandler.post {
@@ -6977,6 +6980,20 @@ class BrowserController(
         return tabIds.size
     }
 
+    internal fun closeAllPrivateTabs(): Int {
+        val tabIds = tabs.asSequence()
+            .filter(BrowserTab::isIncognito)
+            .mapTo(linkedSetOf(), BrowserTab::id)
+        if (tabIds.isEmpty()) return 0
+        dismissClosedTabUndo()
+        removeTabs(
+            tabIds = tabIds,
+            nowMillis = System.currentTimeMillis(),
+            persistChanges = true,
+        )
+        return tabIds.size
+    }
+
     internal val selectedRootTabBackDecision: RootTabBackDecision
         get() = RootTabBackRules.decide(
             tabs = activeTabs,
@@ -9028,6 +9045,7 @@ class BrowserController(
             GeckoToppingInteractionDelegate.None,
         )
         SnoozeRuntimeRegistry.unregister(snoozeRestoreCallback)
+        PrivateTabsRuntimeRegistry.unregister(closeAllPrivateTabsCallback)
         mainHandler.removeCallbacks(syncRefreshRunnable)
         pendingSyncNavigationRunnables.values.forEach(mainHandler::removeCallbacks)
         pendingSyncNavigationRunnables.clear()

@@ -32,6 +32,14 @@ Link Peek can snooze its committed preview URL without first creating an active 
 adds one regular local-profile tab directly to the atomic snoozed snapshot; cancellation leaves no
 tab, history or Gecko session state. Private, synced and ephemeral sources cannot persist snoozed links.
 
+## Private-tab notification
+
+Android posts one ongoing, privacy-safe notification while any private tab exists in memory. Its
+dedicated `private_tabs` notification channel is independent from snoozed-tab alerts. Tapping the
+notification closes every private tab across profiles without opening the activity; no private
+title or URL enters notification state. `PrivateTabsNotifier` owns the Android notification edge,
+while `BrowserController.closeAllPrivateTabs` owns tab cleanup and regular-tab replacement.
+
 ## Profiles and Gecko storage
 
 | Case | Gecko context |
