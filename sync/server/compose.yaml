@@ -1,5 +1,6 @@
 services:
   candy-sync:
+    image: sk2andy/candy-sync:latest
     build:
       context: .
       target: runtime

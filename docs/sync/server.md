@@ -7,7 +7,7 @@ WebSockets. It is intentionally not a decryption endpoint.
 
 ## Quick start
 
-From `sync/server/`:
+From `sync/server/`, pull the public Linux AMD64/ARM64 server image:
 
 ```sh
 cp .env.example .env
@@ -17,9 +17,13 @@ Set a unique username and a random server-authentication password of at least 16
 the service:
 
 ```sh
-docker compose up --build -d
+docker compose pull candy-sync
+docker compose up -d
 docker compose ps
 ```
+
+The Compose file uses `sk2andy/candy-sync:latest`. Contributors can force a local source build with
+`docker compose up --build -d`.
 
 Compose includes a Caddy gateway with two independent ports:
 
