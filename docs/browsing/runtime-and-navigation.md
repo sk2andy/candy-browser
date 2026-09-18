@@ -44,6 +44,11 @@
   receive explicit callbacks and must not become independent lifecycle owners. Keep browser state in
   `BrowserController`, transient root UI state in `BrowserScreen`, and focused composables stateless
   except for their existing local presentation state.
+- Keep the selected Gecko session active while the Activity remains started and visible behind a
+  translucent system surface such as Android Sharesheet. Pause interaction-sensitive work on
+  `onPause`, but mark Gecko inactive only after `onStop`; otherwise its `SurfaceView` drops the
+  visible page frame during the system transition. System WebView still receives `onPause` and
+  `onResume` with the Activity because those calls suspend and resume its renderer processing.
 - Keep separate browser intent filters for untyped HTTP(S) links and HTTP(S) links carrying the
   `text/html` MIME type. Adding a MIME type to the untyped filter makes ordinary links ineligible.
 - Register shares only for `ACTION_SEND` `text/plain` and `text/html`. Treat `EXTRA_TEXT` as the
