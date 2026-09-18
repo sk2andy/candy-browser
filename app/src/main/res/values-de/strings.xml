@@ -333,6 +333,16 @@
     <string name="color_palette_dynamic">Material You</string>
     <string name="color_palette_candy">Candy</string>
     <string name="color_palette_neutral">Neutral</string>
+    <string name="settings_address_bar_color">Adressleistenfarbe</string>
+    <string name="address_bar_color_theme">Theme</string>
+    <string name="address_bar_color_dimmed">Gedimmt</string>
+    <string name="address_bar_color_graphite">Graphit</string>
+    <string name="address_bar_color_black">Schwarz</string>
+    <string name="address_bar_color_custom">Benutzerdefiniert</string>
+    <string name="settings_address_bar_color_reset">Auf Theme-Farbe zurücksetzen</string>
+    <string name="settings_address_bar_custom_color_title">Eigene Adressleistenfarbe</string>
+    <string name="settings_address_bar_custom_color_label">Hex-Farbe</string>
+    <string name="settings_address_bar_custom_color_invalid">#RGB oder #RRGGBB eingeben.</string>
     <string name="settings_surface_style">Oberflächen</string>
     <string name="settings_surface_style_summary">Klar nutzt deckende Flächen. Frosted nutzt transparente Flächen im Glas-Look.</string>
     <string name="surface_style_clear">Klar</string>

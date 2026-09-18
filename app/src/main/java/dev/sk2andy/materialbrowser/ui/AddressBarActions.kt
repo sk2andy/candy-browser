@@ -23,6 +23,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -237,6 +238,10 @@ private fun AddressBarToggleActionButton(
     modifier: Modifier,
     content: @Composable () -> Unit,
 ) {
+    val contentColor = LocalContentColor.current
+    val accentColor = LocalCandyChromeAccentColor.current.let { color ->
+        if (color == Color.Unspecified) MaterialTheme.colorScheme.primary else color
+    }
     IconToggleButton(
         checked = checked,
         onCheckedChange = onCheckedChange,
@@ -253,9 +258,9 @@ private fun AddressBarToggleActionButton(
         ) {
             CompositionLocalProvider(
                 LocalContentColor provides when {
-                    !enabled -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                    checked -> MaterialTheme.colorScheme.primary
-                    else -> MaterialTheme.colorScheme.onSurfaceVariant
+                    !enabled -> contentColor.copy(alpha = 0.38f)
+                    checked -> accentColor
+                    else -> contentColor.copy(alpha = 0.78f)
                 },
             ) {
                 Box(modifier = Modifier.size(24.dp), contentAlignment = Alignment.Center) {
@@ -276,10 +281,14 @@ internal fun AddressBarActionGlyph(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
 ) {
+    val contentColor = LocalContentColor.current
+    val accentColor = LocalCandyChromeAccentColor.current.let { color ->
+        if (color == Color.Unspecified) MaterialTheme.colorScheme.primary else color
+    }
     val tint = when {
-        !enabled -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-        selected -> MaterialTheme.colorScheme.primary
-        else -> MaterialTheme.colorScheme.onSurfaceVariant
+        !enabled -> contentColor.copy(alpha = 0.38f)
+        selected -> accentColor
+        else -> contentColor.copy(alpha = 0.78f)
     }
     when (action) {
         AddressBarAction.Tabs -> AddressBarTabCounterGlyph(
@@ -352,7 +361,7 @@ internal fun AddressBarTabCounterGlyph(
             .size(25.dp)
             .border(
                 width = 2.dp,
-                color = MaterialTheme.colorScheme.onSurface,
+                color = LocalContentColor.current,
                 shape = RoundedCornerShape(6.dp),
             )
             .clearAndSetSemantics { },

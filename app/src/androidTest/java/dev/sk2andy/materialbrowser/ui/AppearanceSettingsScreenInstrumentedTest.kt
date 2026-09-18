@@ -4,18 +4,22 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performSemanticsAction
+import androidx.compose.ui.test.performTextClearance
+import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineKind
 import dev.sk2andy.materialbrowser.data.AppearanceSettings
+import dev.sk2andy.materialbrowser.data.BrowserAddressBarColorPreset
 import dev.sk2andy.materialbrowser.data.BrowserAddressBarStyle
 import dev.sk2andy.materialbrowser.data.BrowserAppearanceMode
 import dev.sk2andy.materialbrowser.data.BrowserColorPalette
@@ -154,5 +158,70 @@ class AppearanceSettingsScreenInstrumentedTest {
         composeRule.onNodeWithText(
             context.getString(R.string.settings_frosted_blur_summary_system_webview),
         ).assertExists()
+    }
+
+    @Test
+    fun addressBarColorPresetCanBeResetToTheme() {
+        var settings by mutableStateOf(AppearanceSettings())
+        composeRule.setContent {
+            MaterialBrowserTheme(settings = settings) {
+                AppearanceSettingsPage(
+                    settings = settings,
+                    onSettingsChanged = { settings = it },
+                    onBack = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(AppearanceSettingsTestTags.AddressBarColor)
+            .performScrollTo()
+            .performClick()
+        composeRule.onNodeWithText(context.getString(R.string.address_bar_color_graphite))
+            .performClick()
+        assertEquals(BrowserAddressBarColorPreset.Graphite, settings.addressBarColorPreset)
+
+        composeRule.onNodeWithTag(AppearanceSettingsTestTags.AddressBarColorReset)
+            .performClick()
+
+        assertEquals(BrowserAddressBarColorPreset.Theme, settings.addressBarColorPreset)
+        assertEquals("", settings.addressBarCustomColorHex)
+        composeRule.onNodeWithTag(AppearanceSettingsTestTags.AddressBarColorReset)
+            .assertIsNotEnabled()
+    }
+
+    @Test
+    fun customAddressBarColorRejectsInvalidHexAndSavesNormalizedColor() {
+        var settings by mutableStateOf(AppearanceSettings())
+        composeRule.setContent {
+            MaterialBrowserTheme(settings = settings) {
+                AppearanceSettingsPage(
+                    settings = settings,
+                    onSettingsChanged = { settings = it },
+                    onBack = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(AppearanceSettingsTestTags.AddressBarColor)
+            .performScrollTo()
+            .performClick()
+        composeRule.onNodeWithText(context.getString(R.string.address_bar_color_custom))
+            .performClick()
+        composeRule.onNodeWithTag(AppearanceSettingsTestTags.AddressBarCustomColorSave)
+            .assertIsNotEnabled()
+        composeRule.onNodeWithTag(AppearanceSettingsTestTags.AddressBarCustomColor)
+            .performTextInput("#12xz")
+        composeRule.onNodeWithTag(AppearanceSettingsTestTags.AddressBarCustomColorSave)
+            .assertIsNotEnabled()
+        composeRule.onNodeWithTag(AppearanceSettingsTestTags.AddressBarCustomColor)
+            .performTextClearance()
+        composeRule.onNodeWithTag(AppearanceSettingsTestTags.AddressBarCustomColor)
+            .performTextInput("#1a2b3c")
+        composeRule.onNodeWithTag(AppearanceSettingsTestTags.AddressBarCustomColorSave)
+            .assertIsEnabled()
+            .performClick()
+
+        assertEquals(BrowserAddressBarColorPreset.Custom, settings.addressBarColorPreset)
+        assertEquals("#1A2B3C", settings.addressBarCustomColorHex)
     }
 }

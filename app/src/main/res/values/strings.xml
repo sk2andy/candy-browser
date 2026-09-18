@@ -354,6 +354,16 @@
     <string name="color_palette_dynamic">Material You</string>
     <string name="color_palette_candy">Candy</string>
     <string name="color_palette_neutral">Neutral</string>
+    <string name="settings_address_bar_color">Address bar color</string>
+    <string name="address_bar_color_theme">Theme</string>
+    <string name="address_bar_color_dimmed">Dimmed</string>
+    <string name="address_bar_color_graphite">Graphite</string>
+    <string name="address_bar_color_black">Black</string>
+    <string name="address_bar_color_custom">Custom</string>
+    <string name="settings_address_bar_color_reset">Reset to theme color</string>
+    <string name="settings_address_bar_custom_color_title">Custom address bar color</string>
+    <string name="settings_address_bar_custom_color_label">Hex color</string>
+    <string name="settings_address_bar_custom_color_invalid">Enter #RGB or #RRGGBB.</string>
     <string name="settings_surface_style">Surfaces</string>
     <string name="settings_surface_style_summary">Clear uses opaque surfaces. Frosted uses translucent glass surfaces.</string>
     <string name="surface_style_clear">Clear</string>

@@ -658,6 +658,8 @@ class BrowserSessionStoreInstrumentedTest {
             .putString("surface_style", "unknown")
             .putString("shape_style", "extra_rounded")
             .putString("address_bar_style", "unknown")
+            .putString("address_bar_color_preset", "unknown")
+            .putString("address_bar_custom_color_hex", "not-a-color")
             .putInt("frosted_transparency_percent", 200)
             .putInt("frosted_address_bar_transparency_percent", -1)
             .putString("frosted_blur_percent", "invalid")
@@ -671,12 +673,47 @@ class BrowserSessionStoreInstrumentedTest {
                 surfaceStyle = BrowserSurfaceStyle.Clear,
                 shapeStyle = BrowserShapeStyle.ExtraRounded,
                 addressBarStyle = BrowserAddressBarStyle.Classic,
+                addressBarColorPreset = BrowserAddressBarColorPreset.Theme,
+                addressBarCustomColorHex = "",
                 frostedTransparencyPercent = 80,
                 frostedAddressBarTransparencyPercent = 0,
                 frostedBlurPercent = AppearanceSettings.DEFAULT_FROSTED_BLUR_PERCENT,
             ),
             BrowserSessionStore(context).loadAppearanceSettings(),
         )
+    }
+
+    @Test
+    fun addressBarColorSettingsRoundTripWithNormalizedHex() {
+        val store = BrowserSessionStore(context)
+
+        store.saveAppearanceSettings(
+            AppearanceSettings(
+                addressBarColorPreset = BrowserAddressBarColorPreset.Custom,
+                addressBarCustomColorHex = "#1a2b3c",
+            ),
+        )
+
+        assertEquals(
+            AppearanceSettings(
+                addressBarColorPreset = BrowserAddressBarColorPreset.Custom,
+                addressBarCustomColorHex = "#1A2B3C",
+            ),
+            store.loadAppearanceSettings(),
+        )
+    }
+
+    @Test
+    fun invalidPersistedCustomAddressBarColorFallsBackToTheme() {
+        preferences.edit()
+            .putString("address_bar_color_preset", "custom")
+            .putString("address_bar_custom_color_hex", "invalid")
+            .commit()
+
+        val settings = BrowserSessionStore(context).loadAppearanceSettings()
+
+        assertEquals(BrowserAddressBarColorPreset.Theme, settings.addressBarColorPreset)
+        assertEquals("", settings.addressBarCustomColorHex)
     }
 
     @Test

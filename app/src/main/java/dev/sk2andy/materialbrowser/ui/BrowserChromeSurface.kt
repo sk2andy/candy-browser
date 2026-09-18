@@ -140,6 +140,7 @@ internal object AndroidCandyChromeSurfaceRenderer : CandyChromeSurfaceRenderer {
             modifier = modifier,
             shape = shape,
             color = if (drawsBackdropBlur) Color.Transparent else containerColor,
+            contentColor = tokens.contentColor,
             tonalElevation = tokens.tonalElevation,
             shadowElevation = tokens.shadowElevation,
         ) {
