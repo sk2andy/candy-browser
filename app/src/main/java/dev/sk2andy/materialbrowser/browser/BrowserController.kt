@@ -741,6 +741,9 @@ class BrowserController(
     val isBottomBarCompact: Boolean
         get() = bottomBarCompactStates[selectedTabId] == true
 
+    internal val selectedWebContentTopBarState: WebContentTopBarState?
+        get() = webContentTopBarStates[selectedTabId]
+
     internal val canMinimizeFullscreenVideo: Boolean
         get() = presentationIsPrivate() == false
 
@@ -992,6 +995,7 @@ class BrowserController(
     private var nextExternalLinkPreviewSessionId = 0L
     private val navigationGenerations = mutableMapOf<String, Int>()
     private val automaticNativeTopSafeAreaTabIds = mutableSetOf<String>()
+    private val webContentTopBarStates = mutableStateMapOf<String, WebContentTopBarState>()
     private val firefoxExtensionOptionsTabs =
         mutableMapOf<String, FirefoxExtensionOptionsTabChrome>()
     private val committedRecallPages = mutableMapOf<String, RecallExtractionIdentity>()
@@ -3874,11 +3878,15 @@ class BrowserController(
         } else {
             isExternalLinkPreviewSafeAreaForced(view)
         }
+        val forceNativeTopSafeArea = tabId != null && (
+            tabId in automaticNativeTopSafeAreaTabIds ||
+                webContentTopBarStates.containsKey(tabId)
+        )
         val layout = GeckoViewInsetRules.resolve(
             safeArea = safeArea,
             forceNativeSafeArea = forceNativeSafeArea,
             forceNativeTopSafeArea = developerSettings.forceSafeAreaFallback ||
-                (tabId != null && tabId in automaticNativeTopSafeAreaTabIds),
+                forceNativeTopSafeArea,
             isFullscreenContent = isFullscreenContent,
             isInsideSafeDrawingHost = isInsideSafeDrawingHost ||
                 (isFullscreenContent && fullscreenVideoInsideSafeDrawingHost),
@@ -8412,7 +8420,8 @@ class BrowserController(
     fun previewTopInsetPx(tabId: String): Int = if (
         !developerSettings.forceSafeAreaFallback &&
         !isSafeAreaForced(tabId) &&
-        tabId !in automaticNativeTopSafeAreaTabIds
+        tabId !in automaticNativeTopSafeAreaTabIds &&
+        !webContentTopBarStates.containsKey(tabId)
     ) {
         0
     } else {
@@ -9239,6 +9248,7 @@ class BrowserController(
         pendingConsentCssUrls.clear()
         navigationGenerations.clear()
         automaticNativeTopSafeAreaTabIds.clear()
+        webContentTopBarStates.clear()
         firefoxExtensionOptionsTabs.clear()
         committedRecallPages.clear()
         externalNavigationGrants.clear()
@@ -10203,6 +10213,7 @@ class BrowserController(
             developerSettings.forceSafeAreaFallback ||
             usesNativeSafeArea(tabId) ||
             tabId in automaticNativeTopSafeAreaTabIds ||
+            webContentTopBarStates.containsKey(tabId) ||
             tabId in browserEngineContentFullscreenTabIds
         ) {
             return 0
@@ -10217,6 +10228,7 @@ class BrowserController(
             usesNativeSafeArea(tab.id) ||
             PrivacyRequestSanitizer.webHost(pageUrl)?.let { host -> isSafeAreaForced(tab, host) } == true ||
             tab.id in automaticNativeTopSafeAreaTabIds ||
+            webContentTopBarStates.containsKey(tab.id) ||
             tab.id in browserEngineContentFullscreenTabIds
         ) {
             0
@@ -10311,7 +10323,15 @@ class BrowserController(
 
     private fun onGeckoPrivacyEvent(tabId: String, event: GeckoPrivacyEvent) {
         event.safeAreaFallbackNavigationGeneration?.let { navigationGeneration ->
-            enableAutomaticNativeTopSafeArea(tabId, navigationGeneration)
+            if (event.safeAreaFallbackIsTopHeader) {
+                enableNativeTopHeaderSafeArea(
+                    tabId = tabId,
+                    navigationGeneration = navigationGeneration,
+                    reportedThemeColor = event.safeAreaFallbackThemeColor,
+                )
+            } else {
+                enableAutomaticNativeTopSafeArea(tabId, navigationGeneration)
+            }
             return
         }
         val context = protectionRequestContexts[tabId] ?: return
@@ -10386,6 +10406,30 @@ class BrowserController(
         }
     }
 
+    private fun enableNativeTopHeaderSafeArea(
+        tabId: String,
+        navigationGeneration: Int,
+        reportedThemeColor: String?,
+    ) {
+        if (navigationGenerations[tabId] != navigationGeneration) return
+        val nextState = WebContentTopBarState(
+            statusBarAppearance = WebContentStatusBarAppearanceRules.fromReportedColor(
+                reportedThemeColor,
+            ),
+        )
+        if (webContentTopBarStates.put(tabId, nextState) == nextState) return
+        lastWindowInsets?.let { insets ->
+            geckoViewBindings.values
+                .filter { binding -> binding.tabId == tabId }
+                .forEach { binding ->
+                    applyGeckoWindowInsets(binding.view, binding.tabId, insets)
+                }
+        }
+        browserEngineSessions[tabId]?.let { session ->
+            geckoPrivacyPolicyFor(tabId)?.let(session::updatePrivacyPolicy)
+        }
+    }
+
     private fun onGeckoEngineEvent(event: BrowserEngineEvent) {
         if (destroyed || browserEngineSessions[event.tabId] == null) return
         if (ignoreSupersededRemoteNavigationEvent(event)) {
@@ -10402,8 +10446,10 @@ class BrowserController(
                 fun isCurrentNavigation(): Boolean = !destroyed &&
                     browserEngineSessions[event.tabId] === navigatingSession &&
                     navigationGenerations[event.tabId] == nextNavigationGeneration
+                val clearedTopHeaderSafeArea = webContentTopBarStates.remove(event.tabId) != null
                 val restoreDocumentTopSafeArea =
-                    event.tabId in automaticNativeTopSafeAreaTabIds
+                    event.tabId in automaticNativeTopSafeAreaTabIds ||
+                        clearedTopHeaderSafeArea
                 clearPermissionActivity(event.tabId)
                 if (contentActions.sourceTabId == event.tabId) contentActions.dismiss()
                 resetBrowserChromeScroll(event.tabId)
@@ -10424,10 +10470,13 @@ class BrowserController(
                         policy = policy,
                         reloadOnCookiePermissionChange = true,
                         onReady = {
-                            if (
+                            val automaticFallbackRemoved =
                                 restoreDocumentTopSafeArea &&
+                                    isCurrentNavigation() &&
+                                    automaticNativeTopSafeAreaTabIds.remove(event.tabId)
+                            if (
                                 isCurrentNavigation() &&
-                                automaticNativeTopSafeAreaTabIds.remove(event.tabId)
+                                (automaticFallbackRemoved || clearedTopHeaderSafeArea)
                             ) {
                                 lastWindowInsets?.let { insets ->
                                     geckoViewBindings.values
@@ -10440,6 +10489,8 @@ class BrowserController(
                                             )
                                         }
                                 }
+                            }
+                            if (automaticFallbackRemoved) {
                                 // The first policy still excluded the outgoing navigation's
                                 // native fallback. Re-enable CSS protection only after its margin
                                 // has been removed for this fresh document.
@@ -13086,6 +13137,7 @@ class BrowserController(
         residentSessionAccessOrder.remove(tabId)
         navigationGenerations.remove(tabId)
         automaticNativeTopSafeAreaTabIds.remove(tabId)
+        webContentTopBarStates.remove(tabId)
         firefoxExtensionOptionsTabs.remove(tabId)
         clearExternalNavigationAuthorization(tabId)
         pageUrls.remove(tabId)

@@ -45,17 +45,103 @@
   let observer = null;
   let interactionUntil = 0;
   let bodyPending = false;
-  let semanticSeeded = false;
+  let semanticCheckPending = false;
+  let semanticChecks = 0;
   let initialDomSeeded = false;
   let protectedBody = null;
   let redditFlowProtected = false;
   let refreshBodyAtReady = false;
   let cssTurn = true;
+  let nativeFallbackRequested = false;
+  let fixedHeaderCandidates = new WeakMap();
+  const semanticSelector = 'header, nav, [role="banner"], [role="navigation"]';
+  const maxSemanticChecks = 256;
 
   function viewportFitCoversSafeArea() {
     const content = document.querySelector('meta[name="viewport" i]')?.getAttribute("content");
     return typeof content === "string" &&
       /(?:^|[\s,;])viewport-fit\s*=\s*cover(?=$|[\s,;])/i.test(content);
+  }
+
+  function normalizedOpaqueColor(value) {
+    if (typeof value !== "string") return null;
+    const color = value.trim().toLowerCase();
+    const shortHex = /^#([0-9a-f]{3})$/.exec(color);
+    if (shortHex) return `#${[...shortHex[1]].map((channel) => channel + channel).join("")}`;
+    if (/^#[0-9a-f]{6}$/.test(color)) return color;
+    const rgb = /^rgba?\(\s*([\d.]+)(?:\s*,\s*|\s+)([\d.]+)(?:\s*,\s*|\s+)([\d.]+)(?:\s*[,/]\s*([\d.]+)(%)?)?\s*\)$/.exec(color);
+    if (!rgb) return null;
+    if (rgb[4] !== undefined && (rgb[5] ? Number(rgb[4]) < 100 : Number(rgb[4]) < 1)) return null;
+    const values = rgb.slice(1, 4).map(Number);
+    if (values.some((channel) => !Number.isFinite(channel))) return null;
+    const channels = values.map((channel) =>
+      Math.min(255, Math.max(0, Math.round(channel))).toString(16).padStart(2, "0"));
+    return `#${channels.join("")}`;
+  }
+
+  function activeThemeColor() {
+    const candidates = document.querySelectorAll?.('meta[name="theme-color" i]') || [];
+    for (const candidate of candidates) {
+      const media = candidate.getAttribute("media");
+      if (media && globalThis.matchMedia && !globalThis.matchMedia(media).matches) continue;
+      const color = normalizedOpaqueColor(candidate.getAttribute("content"));
+      if (color) return color;
+    }
+    return null;
+  }
+
+  function headerThemeColor(element, style) {
+    const declared = activeThemeColor();
+    if (declared) return declared;
+    for (let current = element; current; current = current.parentElement) {
+      const color = normalizedOpaqueColor(current === element ? style.backgroundColor : getComputedStyle(current).backgroundColor);
+      if (color) return color;
+      if (current === document.body || current === document.documentElement) break;
+    }
+    return (document.body ? normalizedOpaqueColor(getComputedStyle(document.body).backgroundColor) : null) ||
+      normalizedOpaqueColor(getComputedStyle(document.documentElement).backgroundColor);
+  }
+
+  function requestNativeFallbackForHeader(element, style) {
+    if (nativeFallbackRequested || !configuration?.active) return false;
+    if (style.position !== "fixed" && style.position !== "sticky") return false;
+    const opacity = Number.parseFloat(style.opacity);
+    if (style.display === "none" || style.visibility === "hidden" ||
+        style.visibility === "collapse" || (Number.isFinite(opacity) && opacity <= 0.01)) {
+      if (style.position === "fixed") fixedHeaderCandidates.delete(element);
+      return false;
+    }
+    const top = pixels(style.top);
+    if (top === null || top < -0.5 || top > inset + 0.5) return false;
+    const headerLikeTag = /(?:^|-)(?:header|topbar|navbar)(?:-|$)/.test(element.localName || "");
+    if (!headerLikeTag && !element.matches(semanticSelector) &&
+        !element.querySelector?.(semanticSelector)) return false;
+    const rect = element.getBoundingClientRect();
+    const viewportWidth = Math.max(1, globalThis.innerWidth || document.documentElement.clientWidth || 0);
+    const viewportHeight = Math.max(1, globalThis.innerHeight || document.documentElement.clientHeight || 0);
+    if (rect.width < viewportWidth * 0.5 || rect.height <= 1 || rect.height > viewportHeight * 0.5 ||
+        rect.top < -0.5 || rect.top > inset + 0.5) {
+      if (style.position === "fixed") fixedHeaderCandidates.delete(element);
+      return false;
+    }
+    if (style.position === "fixed") {
+      const scrollY = Number(globalThis.scrollY) || 0;
+      const candidate = fixedHeaderCandidates.get(element);
+      if (!candidate || scrollY <= candidate.scrollY) {
+        fixedHeaderCandidates.set(element, { scrollY });
+        return false;
+      }
+      if (scrollY - candidate.scrollY < Math.max(rect.height, inset)) return false;
+    }
+    nativeFallbackRequested = true;
+    document.documentElement.setAttribute("data-candy-browser-native-top-header", "true");
+    globalThis.CandyContentTopInset?.fallbackToNative?.(
+      configuration.navigationGeneration,
+      configuration.revision,
+      headerThemeColor(element, style),
+      true,
+    );
+    return true;
   }
 
   function pixels(value) {
@@ -390,13 +476,15 @@
     sourceDiscovery = null;
     selectorBuild?.staging?.remove();
     selectorBuild = null;
+    semanticCheckPending = false;
     interactionUntil = 0;
   }
 
   function schedule(delay = 0) {
     if (timer || (!cleanup.length && !bodyPending && !jobs.length && !selectorScan &&
-        !selectorBuild && !sourceDiscovery && !sourceQueue.length)) return;
-    if (!cleanup.length && !bodyPending && !jobs.length && !selectorScan && !selectorBuild && !sourceDiscovery && sourceQueue.length) {
+        !selectorBuild && !sourceDiscovery && !sourceQueue.length && !semanticCheckPending)) return;
+    if (!cleanup.length && !bodyPending && !jobs.length && !selectorScan && !selectorBuild &&
+        !sourceDiscovery && !semanticCheckPending && sourceQueue.length) {
       delay = Math.max(delay, Math.max(0, Math.min(...sourceQueue.map((source) => source.due)) - performance.now()));
     }
     const epoch = timerEpoch;
@@ -418,14 +506,32 @@
     return job;
   }
 
-  function seedSemanticHeader() {
-    if (semanticSeeded || !configuration?.active || !document.body || document.readyState === "loading") return;
-    semanticSeeded = true;
-    let current = document.querySelector("header") ?? document.querySelector("nav") ?? document.querySelector('[role="banner"]');
-    for (let depth = 0; current && current !== document.body &&
-        current !== document.documentElement && depth < 8; depth++, current = current.parentElement) {
-      enqueue(current, true, true);
+  function composedParent(element) {
+    return element?.parentElement || element?.getRootNode?.().host || null;
+  }
+
+  function seedSemanticHeaders() {
+    if (!configuration?.active || !document.body || document.readyState === "loading" ||
+        nativeFallbackRequested || semanticChecks >= maxSemanticChecks) return;
+    semanticChecks++;
+    const candidates = Array.from(document.querySelectorAll(semanticSelector)).slice(0, 8);
+    const visited = new Set();
+    for (const candidate of candidates) {
+      let current = candidate;
+      for (let depth = 0; current && current !== document.body &&
+          current !== document.documentElement && depth < 8; depth++, current = composedParent(current)) {
+        if (visited.has(current)) continue;
+        visited.add(current);
+        classify(current, getComputedStyle(current));
+        if (nativeFallbackRequested) return;
+      }
     }
+  }
+
+  function requestSemanticHeaderCheck(delay = 0) {
+    if (!configuration?.active || nativeFallbackRequested || semanticChecks >= maxSemanticChecks) return;
+    semanticCheckPending = true;
+    schedule(delay);
   }
 
   function nextElement(element, root) {
@@ -437,6 +543,9 @@
   }
 
   function classify(element, style) {
+    const topHeaderChecked = style !== undefined;
+    if (topHeaderChecked && (style.position === "fixed" || style.position === "sticky") &&
+        requestNativeFallbackForHeader(element, style)) return;
     if (selectorOwns(element)) { releaseElementTop(element); return; }
     const entry = rules.get(element);
     if (entry && layer?.isConnected && element.getAttribute(entry.attribute) === entry.id &&
@@ -444,6 +553,7 @@
     if (entry && (!layer?.isConnected || element.getAttribute(entry.attribute) !== entry.id)) releaseRule(element);
     style ??= getComputedStyle(element);
     if (style.position !== "fixed" && style.position !== "sticky") return;
+    if (!topHeaderChecked && requestNativeFallbackForHeader(element, style)) return;
     const top = pixels(style.top);
     if (top !== null) applyRule(element, "top", `${top + inset}px`);
   }
@@ -451,7 +561,7 @@
   function seedInitialDom() {
     if (initialDomSeeded || !configuration?.active || document.readyState === "loading" || !document.body) return;
     initialDomSeeded = true;
-    seedSemanticHeader();
+    requestSemanticHeaderCheck();
     const job = enqueue(document.body, true);
     // Body plus eight reserved shallow checks share the original DOM node cap.
     if (job) { job.next = nextElement(document.body, document.body); job.remaining -= 9; }
@@ -494,6 +604,12 @@
         continue;
       }
       if (!configuration.active) break;
+      if (semanticCheckPending) {
+        semanticCheckPending = false;
+        seedSemanticHeaders();
+        count++;
+        continue;
+      }
       if (bodyPending) {
         if (document.body) {
           protectBody();
@@ -539,6 +655,20 @@
         }
       }
     }
+    const semanticMutation = records.slice(0, 64).some((record) => {
+      if (record.type === "attributes") {
+        return record.target?.matches?.(semanticSelector) ||
+          !!record.target?.querySelector?.(semanticSelector);
+      }
+      if (record.type !== "childList") return false;
+      if (record.target?.matches?.(semanticSelector) ||
+          (record.target !== document.body && record.target !== document.documentElement &&
+            !!record.target?.querySelector?.(semanticSelector))) return true;
+      return Array.from(record.addedNodes || []).slice(0, 16).some((node) =>
+        node?.nodeType === 1 &&
+        (node.matches?.(semanticSelector) || !!node.querySelector?.(semanticSelector)));
+    });
+    if (semanticMutation) requestSemanticHeaderCheck();
     // Source events are independent of the trusted DOM-discovery interaction window.
     let remaining = 64;
     for (let index = 0; index < Math.min(records.length, 128) && remaining > 0; index++) {
@@ -589,7 +719,7 @@
     observer = new MutationObserver(mutations);
     observer.observe(document.documentElement, { childList: true, subtree: true,
       characterData: true, attributes: true, attributeOldValue: true,
-      attributeFilter: ["class", "style", "hidden", "href", "rel", "media", "disabled"] });
+      attributeFilter: ["class", "style", "hidden", "role", "href", "rel", "media", "disabled"] });
   }
 
   function configure(resize = false) {
@@ -597,9 +727,14 @@
     if (!incoming) return;
     const scale = Number.isFinite(globalThis.devicePixelRatio) && globalThis.devicePixelRatio > 0 ? globalThis.devicePixelRatio : 1;
     const nextInset = Number.isFinite(incoming.cssSafeAreaTopInsetPx) ? Math.min(10000, Math.max(0, incoming.cssSafeAreaTopInsetPx)) / scale : 0;
+    const redditActive = incoming.ready === true && incoming.enabled === true && nextInset > 0 &&
+      !!globalThis.CandyRedditSafeArea;
     const bounded = (value, minimum, maximum, fallback) => Number.isSafeInteger(value) ? Math.min(maximum, Math.max(minimum, value)) : fallback;
     const next = { active: incoming.ready === true && incoming.enabled === true && nextInset > 0 &&
       !viewportFitCoversSafeArea(),
+      navigationGeneration: Number.isSafeInteger(incoming.navigationGeneration) ?
+        Math.max(0, incoming.navigationGeneration) : 0,
+      revision: Number.isSafeInteger(incoming.revision) ? Math.max(0, incoming.revision) : 0,
       recheckAddedElements: incoming.recheckAddedElements === true,
       recheckChangedElements: incoming.recheckChangedElements === true,
       requireInteractionForUpdates: incoming.requireInteractionForUpdates !== false,
@@ -609,7 +744,7 @@
       maxElementsPerBatch: bounded(incoming.maxElementsPerBatch, 4, 64, 16),
       maxBatchDurationMillis: bounded(incoming.maxBatchDurationMillis, 1, 8, 4),
       maxInitialElements: bounded(incoming.maxInitialElements, 64, 2048, 512) };
-    const key = JSON.stringify([next, nextInset, incoming.navigationGeneration]);
+    const key = JSON.stringify([next, nextInset, redditActive, incoming.navigationGeneration]);
     if (key === configurationKey) {
       if (resize && next.active) { enqueue(document.body, true); schedule(); }
       return;
@@ -642,24 +777,28 @@
     inset = nextInset;
     if (next.active && !firstInitialization) firstInitialization = { readyState: document.readyState, atMillis: performance.now() };
     bodyPending = next.active && !!document.body;
-    semanticSeeded = false;
+    semanticCheckPending = false;
+    semanticChecks = 0;
     initialDomSeeded = false;
     protectedBody = null;
     redditFlowProtected = false;
     refreshBodyAtReady = false;
     cssTurn = true;
-    if (next.active && !cleanup.length && document.documentElement) {
+    nativeFallbackRequested = false;
+    fixedHeaderCandidates = new WeakMap();
+    if ((next.active || redditActive) && !cleanup.length && document.documentElement) {
       apply(document.documentElement, "--candy-safe-area-inset-top", `${inset}px`);
-      protectBody();
+      if (next.active) protectBody();
     }
     startSelectorScan();
     observe();
-    globalThis.CandyRedditSafeArea?.configure(next.active, () => {
+    globalThis.CandyRedditSafeArea?.configure(redditActive, () => {
       if (!configuration?.active) return;
       bodyPending = true;
       protectBody();
       schedule();
     });
+    requestSemanticHeaderCheck();
     schedule();
   }
 
@@ -671,11 +810,13 @@
       enqueue(event.target);
       schedule(configuration.mutationDebounceMillis);
     }
+    requestSemanticHeaderCheck();
   }
 
   function scroll() {
     cancel();
     bodyPending = false;
+    requestSemanticHeaderCheck(Math.min(100, configuration?.mutationDebounceMillis || 100));
     if (cleanup.length) schedule();
   }
 
@@ -690,14 +831,25 @@
       protectBody();
     }
     seedInitialDom();
+    requestSemanticHeaderCheck();
     schedule();
   }, { once: true });
   document.addEventListener("click", interaction, true);
   document.addEventListener("drop", interaction, true);
   document.addEventListener("load", (event) => {
-    if (configuration?.active && event.target?.localName === "link") { sourceNode(event.target); schedule(); }
+    if (configuration?.active && event.target?.localName === "link") {
+      sourceNode(event.target);
+      requestSemanticHeaderCheck();
+      schedule();
+    }
   }, true);
-  globalThis.addEventListener("load", () => { globalThis.CandyRedditSafeArea?.sync(); startSelectorScan(); seedInitialDom(); seedSemanticHeader(); schedule(); }, { once: true });
+  globalThis.addEventListener("load", () => {
+    globalThis.CandyRedditSafeArea?.sync();
+    startSelectorScan();
+    seedInitialDom();
+    requestSemanticHeaderCheck();
+    schedule();
+  }, { once: true });
   document.addEventListener("scroll", scroll, { capture: true, passive: true });
   globalThis.addEventListener("scroll", scroll, { passive: true });
   globalThis.addEventListener("resize", () => { if (configuration?.recheckOnResize) configure(true); }, { passive: true });
@@ -707,7 +859,8 @@
       active: configuration?.active === true, initialized: firstInitialization !== null,
       firstReadyState: firstInitialization?.readyState || "other", firstAtMillis: firstInitialization?.atMillis ?? null,
       ownedCount: rules.size + owned.size, unknownCount: 0, bodyPending,
-      pendingJobCount: jobs.length, dirtyRootCount: 0, interactionActive: performance.now() < interactionUntil,
+      pendingJobCount: jobs.length + (semanticCheckPending ? 1 : 0), dirtyRootCount: 0,
+      interactionActive: performance.now() < interactionUntil,
       cssSourceCount: Math.min(65535, sources.size), cssLateSourceCount: Math.min(65535, cssCounts.late),
       cssRulesVisited: Math.min(65535, cssCounts.rules), cssRulesApplied: Math.min(65535, selectorRules.size),
       cssSecurityErrors: Math.min(65535, cssCounts.errors), cssUnsupportedRules: Math.min(65535, cssCounts.unsupported),

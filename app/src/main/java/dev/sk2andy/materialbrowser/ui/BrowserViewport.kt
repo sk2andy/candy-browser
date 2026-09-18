@@ -23,6 +23,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -45,6 +46,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.FloatState
@@ -78,12 +81,13 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.clearAndSetSemantics
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import dev.sk2andy.materialbrowser.R
+import dev.sk2andy.materialbrowser.applyStatusBarIconAppearance
 import dev.sk2andy.materialbrowser.browser.BLANK_URL
 import dev.sk2andy.materialbrowser.browser.BrowserBackdropBlurMode
 import dev.sk2andy.materialbrowser.browser.BrowserBackdropBlurRules
@@ -343,6 +347,11 @@ internal fun BrowserViewport(
         isWebPage = selectedTab.url.startsWith("http://") ||
             selectedTab.url.startsWith("https://"),
     ).state
+    val webContentTopBarState = controller.selectedWebContentTopBarState
+    val webContentStatusBarAppearance = webContentTopBarState?.statusBarAppearance
+    val defaultStatusBarUsesDarkIcons = !controller.appearanceSettings.usesDarkColors(
+        isSystemInDarkTheme(),
+    )
     val pageErrorFeedbackHolder = remember(selectedTab.id) {
         pageErrorFeedbackByTab.getOrPut(selectedTab.id) {
             mutableStateOf(initialPageErrorFeedback)
@@ -447,7 +456,11 @@ internal fun BrowserViewport(
                 showStatusBarOverlay = !videoOnlyPresentation &&
                     !tabOverviewVisible &&
                     controller.selectedFirefoxExtensionOptionsTitle == null,
-                statusBarTint = MaterialTheme.colorScheme.surface.toArgb(),
+                statusBarTint = webContentStatusBarAppearance?.colorArgb
+                    ?: MaterialTheme.colorScheme.surface.toArgb(),
+                solidStatusBarOverlay = webContentTopBarState != null,
+                statusBarUsesDarkIcons = webContentStatusBarAppearance?.useDarkIcons,
+                defaultStatusBarUsesDarkIcons = defaultStatusBarUsesDarkIcons,
                 onRefresh = controller::reload,
                 onLiveFrame = onLiveFrame,
                 onBlurTargetAttached = onBlurTargetAttached,
@@ -571,12 +584,34 @@ private fun ActiveBrowserEngineView(
     pullToRefreshEnabled: Boolean,
     showStatusBarOverlay: Boolean,
     statusBarTint: Int,
+    solidStatusBarOverlay: Boolean,
+    statusBarUsesDarkIcons: Boolean?,
+    defaultStatusBarUsesDarkIcons: Boolean,
     onRefresh: () -> Unit,
     onLiveFrame: (String) -> Unit,
     onBlurTargetAttached: (BlurTarget) -> Unit,
     onBlurTargetReleased: (BlurTarget) -> Unit,
     contentObscured: Boolean,
 ) {
+    val rootView = LocalView.current
+    val useWebsiteStatusBarAppearance = showStatusBarOverlay &&
+        solidStatusBarOverlay &&
+        visible &&
+        !contentObscured
+    SideEffect {
+        rootView.applyStatusBarIconAppearance(
+            if (useWebsiteStatusBarAppearance) {
+                statusBarUsesDarkIcons ?: defaultStatusBarUsesDarkIcons
+            } else {
+                defaultStatusBarUsesDarkIcons
+            },
+        )
+    }
+    DisposableEffect(rootView, defaultStatusBarUsesDarkIcons) {
+        onDispose {
+            rootView.applyStatusBarIconAppearance(defaultStatusBarUsesDarkIcons)
+        }
+    }
     val browserContentBlurEnabled = browserContentBackdropCaptureEnabled() &&
         BrowserBackdropBlurRules.mode(
             engineKind = controller.browserEngineKind,
@@ -624,6 +659,7 @@ private fun ActiveBrowserEngineView(
                     geometry = statusBarGeometry,
                     tint = statusBarTint,
                     visible = showStatusBarOverlay,
+                    solid = solidStatusBarOverlay,
                 )
                 hostView.updatePullToRefresh(
                     enabled = visible &&

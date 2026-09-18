@@ -10,12 +10,21 @@ const source = readFileSync(new URL(
 const helpers = source.split('const frame =')[1].split('const headerClass =')[0];
 assert.ok(helpers.includes('const candyPolicyReady ='));
 
-function readinessFixture({ rootInset = '32px', safeAreaPadding = null, readyAfterFrames = 0 } = {}) {
+function readinessFixture({
+  rootInset = '32px',
+  safeAreaPadding = null,
+  readyAfterFrames = 0,
+  nativeTopHeader = false,
+} = {}) {
   let frames = 0;
   const delays = [];
   const context = vm.createContext({
     document: {
       documentElement: {
+        getAttribute(name) {
+          assert.equal(name, 'data-candy-browser-native-top-header');
+          return nativeTopHeader ? 'true' : null;
+        },
         style: {
           getPropertyValue(name) {
             assert.equal(name, '--candy-browser-content-top-inset');
@@ -60,6 +69,13 @@ test('readiness waits for actual DOM policy and retains four stabilization frame
 
 test('genuine engine safe-area padding is ready without Candy root CSS ownership', async () => {
   const fixture = readinessFixture({ rootInset: '', safeAreaPadding: '32px' });
+  await fixture.context.fixture.settleCandyLayout();
+  assert.equal(fixture.frames, 4);
+  assert.equal(fixture.context.fixture.candyPolicyReady(), true);
+});
+
+test('native top-header mode is ready without Candy root CSS ownership', async () => {
+  const fixture = readinessFixture({ rootInset: '', nativeTopHeader: true });
   await fixture.context.fixture.settleCandyLayout();
   assert.equal(fixture.frames, 4);
   assert.equal(fixture.context.fixture.candyPolicyReady(), true);

@@ -113,6 +113,74 @@ class WebContentTopInsetScriptInstrumentedTest {
     }
 
     @Test
+    fun semanticStickyHeaderRequestsNativeTopArea() {
+        val fallbackReceived = CountDownLatch(1)
+        val view = loadPage(
+            bridge = TopInsetBridge(
+                fallbackReceived = fallbackReceived,
+                nativeTopHeaderEnabled = true,
+            ),
+            html = """
+                <html><head>
+                <meta name="theme-color" content="#123456">
+                <style>
+                  html, body { margin: 0; }
+                  header { position: sticky; top: 0; width: 100%; height: 56px; background: #123456; }
+                  main { height: 200vh; }
+                </style></head><body><header>Menu</header><main>Content</main></body></html>
+            """.trimIndent(),
+        )
+
+        evaluate(view, WebContentTopInsetScript.installScript)
+
+        assertTrue(
+            "Semantic sticky header did not request native top protection",
+            fallbackReceived.await(NO_FALLBACK_WINDOW_MILLIS, TimeUnit.MILLISECONDS),
+        )
+        assertEquals(
+            "true",
+            evaluate(
+                view,
+                "document.documentElement.getAttribute(" +
+                    "'data-candy-browser-native-top-header') === 'true'",
+            ),
+        )
+    }
+
+    @Test
+    fun fixedHeaderRequiresNewMeaningfulScrollBeforeNativeTopArea() {
+        val fallbackReceived = CountDownLatch(1)
+        val view = loadPage(
+            bridge = TopInsetBridge(
+                fallbackReceived = fallbackReceived,
+                layoutQuietPeriodMillis = 100,
+                nativeTopHeaderEnabled = true,
+            ),
+            html = """
+                <html><head>
+                <meta name="theme-color" content="#234567">
+                <style>
+                  html, body { margin: 0; }
+                  header { position: fixed; top: 0; width: 100%; height: 56px; background: #234567; }
+                  main { height: 300vh; }
+                </style></head><body><header>Menu</header><main>Content</main></body></html>
+            """.trimIndent(),
+        )
+
+        evaluate(view, WebContentTopInsetScript.installScript)
+
+        assertFalse(
+            "Initial fixed declaration disabled edge-to-edge before persistence was proven",
+            fallbackReceived.await(NO_FALLBACK_WINDOW_MILLIS, TimeUnit.MILLISECONDS),
+        )
+        evaluate(view, "scrollTo(0, 160)")
+        assertTrue(
+            "Fixed header that remained pinned after meaningful scroll was not promoted",
+            fallbackReceived.await(PAGE_TIMEOUT_SECONDS, TimeUnit.SECONDS),
+        )
+    }
+
+    @Test
     fun continuedScrollDiscoversOldControlAtTrailingInsetRow() {
         val fallbackReceived = CountDownLatch(1)
         val view = loadPage(
@@ -1584,6 +1652,7 @@ class WebContentTopInsetScriptInstrumentedTest {
         private val requiredFailureCount: Int = 3,
         private val viewportCoverAllowed: Boolean = false,
         private val performanceDiagnosticsEnabled: Boolean = false,
+        private val nativeTopHeaderEnabled: Boolean = false,
     ) {
         @JavascriptInterface
         fun topInsetPx(): Int = TOP_INSET_PX
@@ -1607,9 +1676,14 @@ class WebContentTopInsetScriptInstrumentedTest {
         fun safeAreaRequiredFailureCount(): Int = requiredFailureCount
 
         @JavascriptInterface
+        fun nativeTopHeaderEnabled(): Boolean = nativeTopHeaderEnabled
+
+        @JavascriptInterface
         fun fallbackToNative(
             generation: Int,
             revision: Long,
+            themeColor: String?,
+            isTopHeader: Boolean,
         ) {
             if (generation == NAVIGATION_GENERATION && revision == POLICY_REVISION) {
                 fallbackReceived.countDown()
