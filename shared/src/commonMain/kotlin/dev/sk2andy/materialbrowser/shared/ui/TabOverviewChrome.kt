@@ -42,6 +42,7 @@ fun TabOverviewBottomChrome(
     onNewTab: () -> Unit,
     onMore: () -> Unit,
     containerColor: Color,
+    contentColor: Color = MaterialTheme.colorScheme.onSurface,
     tonalElevation: Dp,
     shadowElevation: Dp,
     bottomInset: Dp = 0.dp,
@@ -77,6 +78,7 @@ fun TabOverviewBottomChrome(
                 ),
             shape = MaterialTheme.shapes.extraLarge,
             color = containerColor,
+            contentColor = contentColor,
             tonalElevation = tonalElevation,
             shadowElevation = shadowElevation,
         ) {

@@ -45,6 +45,7 @@ import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
@@ -169,7 +170,7 @@ internal fun PrivacyXRayBadge(
         },
         shape = RoundedCornerShape(16.dp),
         color = Color.Transparent,
-        contentColor = MaterialTheme.colorScheme.onSurface,
+        contentColor = LocalContentColor.current,
     ) {
         Box(
             modifier = Modifier.padding(horizontal = 10.dp),

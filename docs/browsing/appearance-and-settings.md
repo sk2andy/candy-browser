@@ -27,6 +27,7 @@
 | Force dark mode on websites | Off, on | Off |
 | Website font size | 50–200% in 5% steps | 100% |
 | Color palette | Material You, Candy, neutral | Material You |
+| Address-bar color | Theme, dimmed, graphite, black, custom RGB hex | Theme |
 | Surfaces | Clear, frosted | Clear |
 | Shape | Angular, rounded, extra rounded | Rounded |
 | Address bar style | Classic, segmented | Classic |
@@ -102,11 +103,20 @@ Frosted exposes three persisted controls while selected:
   blank tab in the active profile is reused. External links, launcher shortcuts, Site Capsules, and
   activity recreation keep their own destinations.
 - Unknown stored values fall back per field; one corrupt value does not discard valid choices.
+- Address-bar colors override only address chrome. Theme preserves the selected Material You, Candy,
+  or neutral surface roles; Reset selects Theme and removes the stored custom color. Custom colors
+  accept `#RGB` or `#RRGGBB`, normalize to uppercase `#RRGGBB`, and fall back to Theme when invalid.
+  Presets derive a distinct inner-field tone plus black-or-white content and accent roles. Frosted
+  applies its existing transparency and blur after resolving the opaque preset color. For an
+  override, it raises the tint opacity only as far as needed to keep text contrast safe against
+  either a light or dark website backdrop. AMOLED
+  keeps the selected address color opaque and disables blur.
 - Address-bar style is global. Segmented groups expanded actions and the address field into one
   primary pill, keeps the fixed trailing action in a separate pill, and replaces that action with
   editor dismissal while focused. Compact, parked, overview, command-feedback, external-preview and
   find-in-page chrome retain their existing geometry.
-- AMOLED keeps root surfaces black. Frosted transparency does not override AMOLED black chrome.
+- AMOLED keeps root surfaces black. An explicit address-bar color may color address chrome, but it
+  stays opaque; Frosted transparency and blur do not override AMOLED chrome.
 - Frosted changes only Candy browser chrome. It does not inject styles into websites or claim backdrop refraction.
 - Frosted uses view-hierarchy capture for Android System WebView on Android 13 and newer,
   native `SurfaceView` blur regions for GeckoView on Android 17 and newer, and Compose-backed blur
