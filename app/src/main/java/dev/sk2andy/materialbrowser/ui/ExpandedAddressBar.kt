@@ -40,6 +40,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconToggleButton
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -106,7 +107,6 @@ import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuLayout
 import dev.sk2andy.materialbrowser.shared.ui.AddressBarFieldContent
 import dev.sk2andy.materialbrowser.ui.theme.BrowserChromeSurfaceRole
 import dev.sk2andy.materialbrowser.ui.theme.LocalCandyMotionScheme
-import dev.sk2andy.materialbrowser.ui.theme.addressFieldContainerColor
 import dev.sk2andy.materialbrowser.ui.theme.browserChromeSurfaceTokens
 
 internal object SegmentedAddressBarGeometry {
@@ -240,7 +240,7 @@ internal fun ExpandedBottomBarContent(
     } else {
         addressChromeTokens.cornerRadius
     }
-    val fieldContainerColor = addressFieldContainerColor()
+    val fieldContainerColor = addressChromeTokens.fieldContainerColor
     val tabDragState = rememberDraggableState(onTabDrag)
     val keyboard = LocalSoftwareKeyboardController.current
     val windowInfo = LocalWindowInfo.current
@@ -387,8 +387,9 @@ internal fun ExpandedBottomBarContent(
                     ),
                 shape = RoundedCornerShape(fieldCornerRadius),
                 color = if (segmentedAddressBar) Color.Transparent else fieldContainerColor,
+                contentColor = addressChromeTokens.fieldContentColor,
                 border = if (segmentedEditorFocused) {
-                    BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
+                    BorderStroke(2.dp, addressChromeTokens.accentColor)
                 } else {
                     null
                 },
@@ -406,6 +407,9 @@ internal fun ExpandedBottomBarContent(
                     },
                     onSubmitAddress = onSubmitAddress,
                     submissionText = AddressEditorCompletionRules::submissionText,
+                    contentColor = addressChromeTokens.fieldContentColor,
+                    secondaryContentColor = addressChromeTokens.fieldSecondaryContentColor,
+                    cursorColor = addressChromeTokens.accentColor,
                     editorModifier = Modifier
                         .testTag(AddressBarTestTags.Editor)
                         .onPreviewKeyEvent { event ->
@@ -463,7 +467,7 @@ internal fun ExpandedBottomBarContent(
                                 modifier = Modifier
                                     .padding(start = 8.dp)
                                     .size(24.dp),
-                                tint = MaterialTheme.colorScheme.primary,
+                                tint = addressChromeTokens.accentColor,
                             )
                         }
                     },
@@ -700,9 +704,15 @@ internal fun AddressAiModeToggle(
     modifier: Modifier = Modifier,
 ) {
     val motionScheme = LocalCandyMotionScheme.current
+    val accentColor = LocalCandyChromeAccentColor.current.let { color ->
+        if (color == Color.Unspecified) MaterialTheme.colorScheme.primary else color
+    }
+    val onAccentColor = LocalCandyChromeOnAccentColor.current.let { color ->
+        if (color == Color.Unspecified) MaterialTheme.colorScheme.onPrimary else color
+    }
     val containerColor by animateColorAsState(
         targetValue = if (selected) {
-            MaterialTheme.colorScheme.primary
+            accentColor
         } else {
             Color.Transparent
         },
@@ -711,9 +721,9 @@ internal fun AddressAiModeToggle(
     )
     val contentColor by animateColorAsState(
         targetValue = if (selected) {
-            MaterialTheme.colorScheme.onPrimary
+            onAccentColor
         } else {
-            MaterialTheme.colorScheme.onSurfaceVariant
+            LocalContentColor.current.copy(alpha = 0.78f)
         },
         animationSpec = tween(motionScheme.addressBarToggleColorMillis),
         label = "Address AI mode content color",

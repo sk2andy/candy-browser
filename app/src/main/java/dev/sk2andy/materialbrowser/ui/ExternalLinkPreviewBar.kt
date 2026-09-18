@@ -180,7 +180,7 @@ internal fun ExternalLinkPreviewBar(
                         .testTag(ExternalLinkPreviewTestTags.Host)
                         .semantics { contentDescription = state.currentUrl },
                     style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onSurface,
+                    color = chromeTokens.contentColor,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -189,7 +189,7 @@ internal fun ExternalLinkPreviewBar(
                         .height(48.dp)
                         .border(
                             width = 1.dp,
-                            color = MaterialTheme.colorScheme.outline,
+                            color = chromeTokens.outlineColor,
                             shape = CircleShape,
                         ),
                     verticalAlignment = Alignment.CenterVertically,
@@ -203,7 +203,7 @@ internal fun ExternalLinkPreviewBar(
                         Icon(
                             painter = painterResource(R.drawable.ic_symbol_add),
                             contentDescription = openDescription,
-                            tint = MaterialTheme.colorScheme.onSurface,
+                            tint = chromeTokens.contentColor,
                         )
                     }
                     if (profiles.size > 1) {
@@ -211,7 +211,7 @@ internal fun ExternalLinkPreviewBar(
                             modifier = Modifier
                                 .height(24.dp)
                                 .width(1.dp),
-                            color = MaterialTheme.colorScheme.outlineVariant,
+                            color = chromeTokens.outlineVariantColor,
                         )
                         Box {
                             IconButton(
@@ -224,13 +224,13 @@ internal fun ExternalLinkPreviewBar(
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Text(
                                         text = targetProfile?.emoji.orEmpty(),
-                                        color = MaterialTheme.colorScheme.onSurface,
+                                        color = chromeTokens.contentColor,
                                         style = MaterialTheme.typography.titleMedium,
                                     )
                                     Icon(
                                         imageVector = Icons.Default.ArrowDropDown,
                                         contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.onSurface,
+                                        tint = chromeTokens.contentColor,
                                         modifier = Modifier.size(18.dp),
                                     )
                                 }

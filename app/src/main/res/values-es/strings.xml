@@ -336,6 +336,16 @@
     <string name="color_palette_dynamic">Material You</string>
     <string name="color_palette_candy">Candy</string>
     <string name="color_palette_neutral">Neutra</string>
+    <string name="settings_address_bar_color">Color de la barra de direcciones</string>
+    <string name="address_bar_color_theme">Tema</string>
+    <string name="address_bar_color_dimmed">Atenuado</string>
+    <string name="address_bar_color_graphite">Grafito</string>
+    <string name="address_bar_color_black">Negro</string>
+    <string name="address_bar_color_custom">Personalizado</string>
+    <string name="settings_address_bar_color_reset">Restablecer al color del tema</string>
+    <string name="settings_address_bar_custom_color_title">Color personalizado de la barra de direcciones</string>
+    <string name="settings_address_bar_custom_color_label">Color hexadecimal</string>
+    <string name="settings_address_bar_custom_color_invalid">Introduce #RGB o #RRGGBB.</string>
     <string name="settings_surface_style">Superficies</string>
     <string name="settings_surface_style_summary">Nítida usa superficies opacas. Frosted usa superficies translúcidas con aspecto de vidrio.</string>
     <string name="surface_style_clear">Nítida</string>

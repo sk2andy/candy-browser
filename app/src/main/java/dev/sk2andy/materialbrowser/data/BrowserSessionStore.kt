@@ -1232,6 +1232,13 @@ class BrowserSessionStore internal constructor(
             addressBarStyle = BrowserAddressBarStyle.fromStableId(
                 preferences.getString(KEY_ADDRESS_BAR_STYLE, null),
             ),
+            addressBarColorPreset = BrowserAddressBarColorPreset.fromStableId(
+                preferences.getString(KEY_ADDRESS_BAR_COLOR_PRESET, null),
+            ),
+            addressBarCustomColorHex = preferences.getString(
+                KEY_ADDRESS_BAR_CUSTOM_COLOR_HEX,
+                null,
+            ).orEmpty(),
             frostedTransparencyPercent = frostedTransparencyPercent,
             frostedAddressBarTransparencyPercent = loadBoundedInt(
                 key = KEY_FROSTED_ADDRESS_BAR_TRANSPARENCY_PERCENT,
@@ -1258,6 +1265,8 @@ class BrowserSessionStore internal constructor(
             .putString(KEY_SURFACE_STYLE, normalized.surfaceStyle.stableId)
             .putString(KEY_SHAPE_STYLE, normalized.shapeStyle.stableId)
             .putString(KEY_ADDRESS_BAR_STYLE, normalized.addressBarStyle.stableId)
+            .putString(KEY_ADDRESS_BAR_COLOR_PRESET, normalized.addressBarColorPreset.stableId)
+            .putString(KEY_ADDRESS_BAR_CUSTOM_COLOR_HEX, normalized.addressBarCustomColorHex)
             .putInt(
                 KEY_FROSTED_TRANSPARENCY_PERCENT,
                 normalized.frostedTransparencyPercent,
@@ -1480,6 +1489,8 @@ class BrowserSessionStore internal constructor(
         const val KEY_SURFACE_STYLE = "surface_style"
         const val KEY_SHAPE_STYLE = "shape_style"
         const val KEY_ADDRESS_BAR_STYLE = "address_bar_style"
+        const val KEY_ADDRESS_BAR_COLOR_PRESET = "address_bar_color_preset"
+        const val KEY_ADDRESS_BAR_CUSTOM_COLOR_HEX = "address_bar_custom_color_hex"
         const val KEY_FROSTED_TRANSPARENCY_PERCENT = "frosted_transparency_percent"
         const val KEY_FROSTED_ADDRESS_BAR_TRANSPARENCY_PERCENT =
             "frosted_address_bar_transparency_percent"

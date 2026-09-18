@@ -336,6 +336,16 @@
     <string name="color_palette_dynamic">Material You</string>
     <string name="color_palette_candy">Candy</string>
     <string name="color_palette_neutral">Neutre</string>
+    <string name="settings_address_bar_color">Couleur de la barre d’adresse</string>
+    <string name="address_bar_color_theme">Thème</string>
+    <string name="address_bar_color_dimmed">Atténuée</string>
+    <string name="address_bar_color_graphite">Graphite</string>
+    <string name="address_bar_color_black">Noire</string>
+    <string name="address_bar_color_custom">Personnalisée</string>
+    <string name="settings_address_bar_color_reset">Rétablir la couleur du thème</string>
+    <string name="settings_address_bar_custom_color_title">Couleur personnalisée de la barre d’adresse</string>
+    <string name="settings_address_bar_custom_color_label">Couleur hexadécimale</string>
+    <string name="settings_address_bar_custom_color_invalid">Saisissez #RGB ou #RRGGBB.</string>
     <string name="settings_surface_style">Surfaces</string>
     <string name="settings_surface_style_summary">Nette utilise des surfaces opaques. Frosted utilise des surfaces translucides à l’aspect verre.</string>
     <string name="surface_style_clear">Nette</string>

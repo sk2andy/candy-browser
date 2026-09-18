@@ -50,6 +50,7 @@ import androidx.compose.ui.unit.dp
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.browser.actions.ExternalDownloadManagerApp
 import dev.sk2andy.materialbrowser.browser.suggestions.SearchSuggestionProvider
+import dev.sk2andy.materialbrowser.data.BrowserAddressBarColorPreset
 import dev.sk2andy.materialbrowser.data.BrowserAppearanceMode
 import dev.sk2andy.materialbrowser.data.BrowserAddressBarStyle
 import dev.sk2andy.materialbrowser.data.BrowserColorPalette
@@ -171,6 +172,15 @@ internal fun BrowserColorPalette.displayName(): String = when (this) {
     BrowserColorPalette.Dynamic -> stringResource(R.string.color_palette_dynamic)
     BrowserColorPalette.Candy -> stringResource(R.string.color_palette_candy)
     BrowserColorPalette.Neutral -> stringResource(R.string.color_palette_neutral)
+}
+
+@Composable
+internal fun BrowserAddressBarColorPreset.displayName(): String = when (this) {
+    BrowserAddressBarColorPreset.Theme -> stringResource(R.string.address_bar_color_theme)
+    BrowserAddressBarColorPreset.Dimmed -> stringResource(R.string.address_bar_color_dimmed)
+    BrowserAddressBarColorPreset.Graphite -> stringResource(R.string.address_bar_color_graphite)
+    BrowserAddressBarColorPreset.Black -> stringResource(R.string.address_bar_color_black)
+    BrowserAddressBarColorPreset.Custom -> stringResource(R.string.address_bar_color_custom)
 }
 
 @Composable
