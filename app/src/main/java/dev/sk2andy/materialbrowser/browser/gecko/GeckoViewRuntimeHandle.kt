@@ -907,7 +907,19 @@ private class GeckoViewBrowserSession(
     private var webPromptListener: GeckoWebPromptListener? = null
 
     @Volatile
+    private var nativeMediaState = GeckoMediaSessionState()
+
+    @Volatile
     private var mediaState = GeckoMediaSessionState()
+
+    private var inlineVideoState = GeckoInlineVideoState(
+        isActive = false,
+        isPlaying = false,
+        width = 0,
+        height = 0,
+        documentNonce = null,
+        elementNonce = null,
+    )
 
     @Volatile
     private var mediaStateListener: GeckoMediaSessionStateListener? = null
@@ -1757,6 +1769,14 @@ private class GeckoViewBrowserSession(
                 currentPageUrl = url
                 invalidateCredentialPrompts(recreateHost = true)
                 activeMediaSession = null
+                inlineVideoState = GeckoInlineVideoState(
+                    isActive = false,
+                    isPlaying = false,
+                    width = 0,
+                    height = 0,
+                    documentNonce = null,
+                    elementNonce = null,
+                )
                 updateMediaState { GeckoMediaSessionState() }
                 updateState { current ->
                     current.copy(
@@ -1811,6 +1831,7 @@ private class GeckoViewBrowserSession(
                     updateState { current -> current.copy(httpStatusCode = response.statusCode) }
                 }
             },
+            onInlineVideoState = ::updateInlineVideoState,
             onBound = {
                 privacyBound = true
                 loadPendingUrlIfReady()
@@ -2292,6 +2313,23 @@ private class GeckoViewBrowserSession(
         privacyBinding.setPictureInPicturePlaybackExpected(expected)
     }
 
+    @UiThread
+    override fun setInlineVideoPresentation(
+        identity: GeckoInlineVideoIdentity?,
+        expected: Boolean,
+        onResult: (Boolean) -> Unit,
+    ) {
+        if (closed) {
+            onResult(false)
+            return
+        }
+        privacyBinding.setInlineVideoPresentation(
+            identity = identity,
+            expected = expected,
+            onResult = onResult,
+        )
+    }
+
     override fun setFullscreenStateListener(listener: GeckoFullscreenStateListener?) {
         fullscreenStateListener = listener
     }
@@ -2766,10 +2804,26 @@ private class GeckoViewBrowserSession(
     }
 
     private fun updateMediaState(transform: (GeckoMediaSessionState) -> GeckoMediaSessionState) {
-        val updated = transform(mediaState)
+        nativeMediaState = transform(nativeMediaState)
+        val inline = inlineVideoState
+        val updated = nativeMediaState.copy(
+            isActive = nativeMediaState.isActive || inline.isActive,
+            hasInlineVideo = inline.isActive,
+            isInlineVideoPlaying = inline.isPlaying,
+            inlineVideoWidth = inline.width,
+            inlineVideoHeight = inline.height,
+            inlineVideoDocumentNonce = inline.documentNonce,
+            inlineVideoElementNonce = inline.elementNonce,
+        )
         if (updated == mediaState) return
         mediaState = updated
         mediaStateListener?.onStateChanged(updated)
+    }
+
+    private fun updateInlineVideoState(state: GeckoInlineVideoState) {
+        if (inlineVideoState == state) return
+        inlineVideoState = state
+        updateMediaState { it }
     }
 
     private fun Double.toBoundedMediaMillis(): Long? = takeIf { value ->

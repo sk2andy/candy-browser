@@ -83,6 +83,7 @@ class CandyPrivacyHostContractTest {
             topInsetPx = 96,
             navigationGeneration = 4,
             scrollMetricsEnabled = true,
+            inlineMediaPlayerEnabled = true,
             safeAreaLayoutQuietPeriodMillis = 250,
             safeAreaRequiredFailureCount = 4,
         )
@@ -98,6 +99,7 @@ class CandyPrivacyHostContractTest {
         assertEquals(96, policy.topInsetPx)
         assertEquals(4, policy.navigationGeneration)
         assertTrue(policy.scrollMetricsEnabled)
+        assertTrue(policy.inlineMediaPlayerEnabled)
         assertEquals(250, policy.safeAreaLayoutQuietPeriodMillis)
         assertEquals(4, policy.safeAreaRequiredFailureCount)
     }
@@ -247,6 +249,7 @@ class CandyPrivacyHostContractTest {
         assertFalse(message.has("viewportCoverAllowed"))
         assertEquals(0, message.getInt("navigationGeneration"))
         assertFalse(message.getBoolean("scrollMetricsEnabled"))
+        assertFalse(message.getBoolean("inlineMediaPlayerEnabled"))
         assertEquals(400, message.getInt("safeAreaLayoutQuietPeriodMillis"))
         assertEquals(3, message.getInt("safeAreaRequiredFailureCount"))
         assertEquals(
@@ -311,6 +314,64 @@ class CandyPrivacyHostContractTest {
         assertEquals("session-token", message.getString("token"))
         assertEquals(7, message.getLong("revision"))
         assertTrue(message.getBoolean("expected"))
+    }
+
+    @Test
+    fun `inline video state accepts current bounded top frame candidate`() {
+        val state = geckoInlineVideoStateFromMessage(
+            message = JSONObject()
+                .put("revision", 7)
+                .put("navigationGeneration", 3)
+                .put("active", true)
+                .put("playing", true)
+                .put("videoWidth", 1_920)
+                .put("videoHeight", 1_080)
+                .put("documentNonce", "a".repeat(32))
+                .put("elementNonce", "b".repeat(32)),
+            currentRevision = 7,
+            currentNavigationGeneration = 3,
+        )
+
+        assertEquals(
+            GeckoInlineVideoState(
+                isActive = true,
+                isPlaying = true,
+                width = 1_920,
+                height = 1_080,
+                documentNonce = "a".repeat(32),
+                elementNonce = "b".repeat(32),
+            ),
+            state,
+        )
+    }
+
+    @Test
+    fun `inline video state rejects stale malformed and unbounded candidates`() {
+        fun message(
+            revision: Long = 7,
+            navigationGeneration: Int = 3,
+            width: Int = 1_920,
+            documentNonce: String = "a".repeat(32),
+        ) = JSONObject()
+            .put("revision", revision)
+            .put("navigationGeneration", navigationGeneration)
+            .put("active", true)
+            .put("playing", true)
+            .put("videoWidth", width)
+            .put("videoHeight", 1_080)
+            .put("documentNonce", documentNonce)
+            .put("elementNonce", "b".repeat(32))
+
+        assertEquals(null, geckoInlineVideoStateFromMessage(message(revision = 6), 7, 3))
+        assertEquals(
+            null,
+            geckoInlineVideoStateFromMessage(message(navigationGeneration = 2), 7, 3),
+        )
+        assertEquals(null, geckoInlineVideoStateFromMessage(message(width = 16_385), 7, 3))
+        assertEquals(
+            null,
+            geckoInlineVideoStateFromMessage(message(documentNonce = "invalid"), 7, 3),
+        )
     }
 
     @Test

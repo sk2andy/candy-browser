@@ -523,6 +523,10 @@
     <string name="settings_video_autoplay_title">Prevent video autoplay</string>
     <string name="settings_video_autoplay_subtitle">Videos start only when you play them. Turning this off can significantly increase CPU/GPU usage, battery drain, and page load.</string>
     <string name="settings_video_autoplay_unsupported">Requires a newer Gecko engine version.</string>
+    <string name="settings_inline_media_player_title">Candy Player (experimental)</string>
+    <string name="settings_inline_media_player_subtitle">Shows an action for detected top-level videos. Embedded videos are not supported yet.</string>
+    <string name="settings_inline_media_player_unsupported">Currently available only with GeckoView.</string>
+    <string name="action_open_candy_player">Open in Candy Player</string>
     <string name="settings_default_browser">Default browser</string>
     <string name="settings_default_browser_active">Candy Browser is your default browser</string>
     <string name="settings_make_default_browser">Make Candy Browser the default</string>

@@ -17,12 +17,21 @@ if (candyUsesBackgroundVideoVisibilityFix) {
 const candyPictureInPicturePlayback = {
   candidates: new Set(),
   expected: false,
+  inlinePresentationExpected: false,
+  inlineMediaPlayerEnabled: false,
+  inlineMediaPolicyRevision: 0,
+  inlineMediaNavigationGeneration: 0,
   generation: 0,
   presentedVideo: null,
   alignmentFrame: null,
   layoutObserver: null,
   resizeObserver: null,
+  inlineStateObserver: null,
+  inlineStateFrame: null,
 };
+const candyInlineVideoDocumentNonce = candyInlineVideoNonce();
+const candyInlineVideoElementNonces = new WeakMap();
+const candyInlineVideoOriginalControls = new WeakMap();
 
 const CANDY_PICTURE_IN_PICTURE_ROOT_ATTRIBUTE = "data-candy-picture-in-picture";
 const CANDY_PICTURE_IN_PICTURE_VIDEO_ATTRIBUTE = "data-candy-picture-in-picture-video";
@@ -30,10 +39,37 @@ const CANDY_PICTURE_IN_PICTURE_STYLE_ATTRIBUTE = "data-candy-picture-in-picture-
 const CANDY_PICTURE_IN_PICTURE_OFFSET_X = "--candy-picture-in-picture-offset-x";
 const CANDY_PICTURE_IN_PICTURE_OFFSET_Y = "--candy-picture-in-picture-offset-y";
 
+function candyInlineVideoNonce() {
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, (value) => value.toString(16).padStart(2, "0")).join("");
+}
+
+function candyInlineVideoElementNonce(video) {
+  let nonce = candyInlineVideoElementNonces.get(video);
+  if (!nonce) {
+    nonce = candyInlineVideoNonce();
+    candyInlineVideoElementNonces.set(video, nonce);
+  }
+  return nonce;
+}
+
+function candyVideoPresentationExpected() {
+  return candyPictureInPicturePlayback.expected ||
+    candyPictureInPicturePlayback.inlinePresentationExpected;
+}
+
+function clearCandyInlineVideoControls(video) {
+  if (!video || !candyInlineVideoOriginalControls.has(video)) return;
+  video.controls = candyInlineVideoOriginalControls.get(video);
+  candyInlineVideoOriginalControls.delete(video);
+}
+
 function clearCandyPictureInPictureVideoPresentation(video) {
   video?.removeAttribute(CANDY_PICTURE_IN_PICTURE_VIDEO_ATTRIBUTE);
   video?.style.removeProperty(CANDY_PICTURE_IN_PICTURE_OFFSET_X);
   video?.style.removeProperty(CANDY_PICTURE_IN_PICTURE_OFFSET_Y);
+  clearCandyInlineVideoControls(video);
 }
 
 function clearCandyPictureInPicturePresentation() {
@@ -57,7 +93,22 @@ function clearCandyPictureInPicturePresentation() {
 
 function currentCandyPictureInPictureVideo() {
   return Array.from(candyPictureInPicturePlayback.candidates)
-    .filter((video) => video.isConnected && !video.ended)
+    .filter((video) => {
+      if (!video.isConnected || video.ended) return false;
+      const style = getComputedStyle(video);
+      if (
+        style.display === "none" ||
+        style.visibility === "hidden" ||
+        style.opacity === "0" ||
+        style.contentVisibility === "hidden"
+      ) return false;
+      const bounds = video.getBoundingClientRect();
+      return bounds.width * bounds.height >= 4096 &&
+        bounds.right > 0 &&
+        bounds.bottom > 0 &&
+        bounds.left < innerWidth &&
+        bounds.top < innerHeight;
+    })
     .sort((first, second) => {
       const playbackDifference = Number(first.paused) - Number(second.paused);
       if (playbackDifference !== 0) return playbackDifference;
@@ -65,16 +116,125 @@ function currentCandyPictureInPictureVideo() {
     })[0] || null;
 }
 
+function reportCandyInlineVideoState() {
+  if (!candyPictureInPicturePlayback.inlineMediaPlayerEnabled) return;
+  const video = currentCandyPictureInPictureVideo();
+  const width = video ? Math.max(0, Math.round(video.videoWidth || video.clientWidth || 0)) : 0;
+  const height = video ? Math.max(0, Math.round(video.videoHeight || video.clientHeight || 0)) : 0;
+  const area = video ? Math.max(0, Math.round(video.clientWidth * video.clientHeight)) : 0;
+  browser.runtime.sendMessage({
+    type: "inline-video-state",
+    revision: candyPictureInPicturePlayback.inlineMediaPolicyRevision,
+    navigationGeneration: candyPictureInPicturePlayback.inlineMediaNavigationGeneration,
+    active: Boolean(video),
+    playing: Boolean(video && !video.paused && !video.ended),
+    videoWidth: width,
+    videoHeight: height,
+    area,
+    documentNonce: candyInlineVideoDocumentNonce,
+    elementNonce: video ? candyInlineVideoElementNonce(video) : "",
+  }).catch(() => {});
+}
+
+function clearCandyInlineVideoState() {
+  browser.runtime.sendMessage({
+    type: "inline-video-state",
+    revision: candyPictureInPicturePlayback.inlineMediaPolicyRevision,
+    navigationGeneration: candyPictureInPicturePlayback.inlineMediaNavigationGeneration,
+    active: false,
+    playing: false,
+    videoWidth: 0,
+    videoHeight: 0,
+    area: 0,
+    documentNonce: "",
+    elementNonce: "",
+  }).catch(() => {});
+}
+
+function scheduleCandyInlineVideoStateReport() {
+  if (
+    !candyPictureInPicturePlayback.inlineMediaPlayerEnabled ||
+    candyPictureInPicturePlayback.inlineStateFrame !== null
+  ) return;
+  candyPictureInPicturePlayback.inlineStateFrame = requestAnimationFrame(() => {
+    candyPictureInPicturePlayback.inlineStateFrame = null;
+    candyPictureInPicturePlayback.candidates.forEach((video) => {
+      if (!video.isConnected || video.ended) {
+        candyPictureInPicturePlayback.candidates.delete(video);
+      }
+    });
+    rememberCandyPictureInPictureVideos();
+    reportCandyInlineVideoState();
+  });
+}
+
+function stopCandyInlineVideoStateObservation() {
+  if (candyPictureInPicturePlayback.inlineStateFrame !== null) {
+    cancelAnimationFrame(candyPictureInPicturePlayback.inlineStateFrame);
+    candyPictureInPicturePlayback.inlineStateFrame = null;
+  }
+  candyPictureInPicturePlayback.inlineStateObserver?.disconnect();
+  candyPictureInPicturePlayback.inlineStateObserver = null;
+}
+
+function startCandyInlineVideoStateObservation() {
+  stopCandyInlineVideoStateObservation();
+  if (!candyPictureInPicturePlayback.inlineMediaPlayerEnabled) return;
+  candyPictureInPicturePlayback.inlineStateObserver = new MutationObserver(
+    scheduleCandyInlineVideoStateReport,
+  );
+  candyPictureInPicturePlayback.inlineStateObserver.observe(document, {
+    childList: true,
+    subtree: true,
+  });
+}
+
+function reconcileCandyInlineVideoState() {
+  scheduleCandyInlineVideoStateReport();
+  [100, 400].forEach((delayMillis) => {
+    setTimeout(scheduleCandyInlineVideoStateReport, delayMillis);
+  });
+}
+
+function updateCandyInlineMediaPlayerEnabled(enabled, revision, navigationGeneration) {
+  const normalized = enabled === true && self === top;
+  candyPictureInPicturePlayback.inlineMediaPolicyRevision =
+    Number.isSafeInteger(revision) ? Math.max(0, revision) : 0;
+  candyPictureInPicturePlayback.inlineMediaNavigationGeneration =
+    Number.isSafeInteger(navigationGeneration) ? Math.max(0, navigationGeneration) : 0;
+  if (candyPictureInPicturePlayback.inlineMediaPlayerEnabled === normalized) {
+    if (normalized) {
+      startCandyInlineVideoStateObservation();
+      reconcileCandyInlineVideoState();
+    }
+    return;
+  }
+  candyPictureInPicturePlayback.inlineMediaPlayerEnabled = normalized;
+  if (!normalized) {
+    stopCandyInlineVideoStateObservation();
+    candyPictureInPicturePlayback.inlinePresentationExpected = false;
+    if (!candyVideoPresentationExpected()) {
+      candyPictureInPicturePlayback.candidates.clear();
+      clearCandyPictureInPicturePresentation();
+    }
+    clearCandyInlineVideoState();
+    return;
+  }
+  startCandyInlineVideoStateObservation();
+  rememberCandyPictureInPictureVideos();
+  reportCandyInlineVideoState();
+}
+
 function scheduleCandyPictureInPictureAlignment() {
   const video = candyPictureInPicturePlayback.presentedVideo;
-  if (!candyPictureInPicturePlayback.expected || !video?.isConnected) return;
+  if (!candyVideoPresentationExpected() || !video?.isConnected) return;
   if (candyPictureInPicturePlayback.alignmentFrame !== null) {
     cancelAnimationFrame(candyPictureInPicturePlayback.alignmentFrame);
   }
   candyPictureInPicturePlayback.alignmentFrame = requestAnimationFrame(() => {
     candyPictureInPicturePlayback.alignmentFrame = null;
     if (
-      !candyPictureInPicturePlayback.expected ||
+      !candyVideoPresentationExpected() ||
       candyPictureInPicturePlayback.presentedVideo !== video ||
       !video.isConnected
     ) return;
@@ -88,7 +248,7 @@ function scheduleCandyPictureInPictureAlignment() {
 
 function presentCandyPictureInPictureVideo() {
   if (
-    !candyPictureInPicturePlayback.expected ||
+    !candyVideoPresentationExpected() ||
     !document.documentElement ||
     !document.body
   ) return;
@@ -107,18 +267,43 @@ function presentCandyPictureInPictureVideo() {
       scheduleCandyPictureInPictureAlignment,
     );
     candyPictureInPicturePlayback.resizeObserver.observe(video);
-    candyPictureInPicturePlayback.layoutObserver = new MutationObserver(
-      scheduleCandyPictureInPictureAlignment,
-    );
+    candyPictureInPicturePlayback.layoutObserver = new MutationObserver(() => {
+      if (!video.isConnected) {
+        candyPictureInPicturePlayback.candidates.delete(video);
+        candyPictureInPicturePlayback.inlinePresentationExpected = false;
+        clearCandyPictureInPicturePresentation();
+        reportCandyInlineVideoState();
+        return;
+      }
+      if (
+        candyPictureInPicturePlayback.inlinePresentationExpected &&
+        candyPictureInPicturePlayback.presentedVideo === video &&
+        !video.controls
+      ) {
+        video.controls = true;
+      }
+      scheduleCandyPictureInPictureAlignment();
+    });
+    candyPictureInPicturePlayback.layoutObserver.observe(video, {
+      attributes: true,
+      attributeFilter: ["controls"],
+    });
     for (let ancestor = video.parentElement; ancestor; ancestor = ancestor.parentElement) {
       candyPictureInPicturePlayback.resizeObserver.observe(ancestor);
       candyPictureInPicturePlayback.layoutObserver.observe(ancestor, {
         attributes: true,
+        childList: true,
         attributeFilter: ["class", "style"],
       });
     }
   }
   candyPictureInPicturePlayback.presentedVideo = video;
+  if (candyPictureInPicturePlayback.inlinePresentationExpected) {
+    if (!candyInlineVideoOriginalControls.has(video)) {
+      candyInlineVideoOriginalControls.set(video, video.controls);
+    }
+    video.controls = true;
+  }
   video.setAttribute(CANDY_PICTURE_IN_PICTURE_VIDEO_ATTRIBUTE, "");
   document.documentElement.setAttribute(CANDY_PICTURE_IN_PICTURE_ROOT_ATTRIBUTE, "");
   if (!document.querySelector(`style[${CANDY_PICTURE_IN_PICTURE_STYLE_ATTRIBUTE}]`)) {
@@ -194,8 +379,7 @@ function updateCandyPictureInPicturePlayback(expected) {
   candyPictureInPicturePlayback.generation += 1;
   candyPictureInPicturePlayback.expected = expected;
   if (!expected) {
-    clearCandyPictureInPicturePresentation();
-    candyPictureInPicturePlayback.candidates.clear();
+    if (!candyVideoPresentationExpected()) clearCandyPictureInPicturePresentation();
     return;
   }
   rememberCandyPictureInPictureVideos();
@@ -203,24 +387,85 @@ function updateCandyPictureInPicturePlayback(expected) {
   scheduleCandyPictureInPicturePlayback();
 }
 
-document.addEventListener("play", (event) => {
+function updateCandyInlineVideoPresentation(message) {
+  if (message.expected !== true) {
+    candyPictureInPicturePlayback.inlinePresentationExpected = false;
+    clearCandyInlineVideoControls(candyPictureInPicturePlayback.presentedVideo);
+    if (!candyVideoPresentationExpected()) clearCandyPictureInPicturePresentation();
+    reconcileCandyInlineVideoState();
+    return { accepted: true };
+  }
+  const video = currentCandyPictureInPictureVideo();
   if (
-    candyPictureInPicturePlayback.expected &&
-    event.target instanceof HTMLVideoElement
+    !candyPictureInPicturePlayback.inlineMediaPlayerEnabled ||
+    !video ||
+    message.documentNonce !== candyInlineVideoDocumentNonce ||
+    message.elementNonce !== candyInlineVideoElementNonce(video)
   ) {
-    candyPictureInPicturePlayback.candidates.add(event.target);
+    return { accepted: false };
+  }
+  candyPictureInPicturePlayback.inlinePresentationExpected = true;
+  presentCandyPictureInPictureVideo();
+  return { accepted: candyPictureInPicturePlayback.presentedVideo === video };
+}
+
+document.addEventListener("play", (event) => {
+  if (!(event.target instanceof HTMLVideoElement)) return;
+  if (!candyPictureInPicturePlayback.inlineMediaPlayerEnabled &&
+      !candyVideoPresentationExpected()) return;
+  candyPictureInPicturePlayback.candidates.add(event.target);
+  reportCandyInlineVideoState();
+  if (candyVideoPresentationExpected()) {
     presentCandyPictureInPictureVideo();
   }
 }, true);
 document.addEventListener("pause", (event) => {
+  if (!(event.target instanceof HTMLVideoElement)) return;
+  if (candyPictureInPicturePlayback.candidates.has(event.target)) {
+    reportCandyInlineVideoState();
+  }
   if (
     candyPictureInPicturePlayback.expected &&
-    event.target instanceof HTMLVideoElement &&
     candyPictureInPicturePlayback.candidates.has(event.target)
   ) {
     scheduleCandyPictureInPicturePlayback();
   }
 }, true);
+for (const eventName of ["loadedmetadata", "durationchange", "resize"]) {
+  document.addEventListener(eventName, (event) => {
+    if (
+      event.target instanceof HTMLVideoElement &&
+      candyPictureInPicturePlayback.candidates.has(event.target)
+    ) {
+      reportCandyInlineVideoState();
+    }
+  }, true);
+}
+for (const eventName of ["ended", "emptied"]) {
+  document.addEventListener(eventName, (event) => {
+    if (!(event.target instanceof HTMLVideoElement)) return;
+    if (
+      candyPictureInPicturePlayback.inlinePresentationExpected &&
+      candyPictureInPicturePlayback.presentedVideo === event.target
+    ) {
+      candyPictureInPicturePlayback.inlinePresentationExpected = false;
+      if (!candyVideoPresentationExpected()) clearCandyPictureInPicturePresentation();
+    }
+    candyPictureInPicturePlayback.candidates.delete(event.target);
+    reportCandyInlineVideoState();
+  }, true);
+}
+window.addEventListener("pagehide", () => {
+  stopCandyInlineVideoStateObservation();
+  candyPictureInPicturePlayback.candidates.clear();
+  reportCandyInlineVideoState();
+}, true);
+window.addEventListener("pageshow", () => {
+  startCandyInlineVideoStateObservation();
+  scheduleCandyInlineVideoStateReport();
+}, true);
+window.addEventListener("scroll", scheduleCandyInlineVideoStateReport, true);
+window.addEventListener("resize", scheduleCandyInlineVideoStateReport, true);
 document.addEventListener("visibilitychange", scheduleCandyPictureInPicturePlayback, true);
 document.addEventListener("fullscreenchange", scheduleCandyPictureInPictureAlignment, true);
 document.addEventListener("transitionend", scheduleCandyPictureInPictureAlignment, true);
@@ -403,9 +648,20 @@ function extractCandyReaderPayload() {
 
 browser.runtime.onMessage.addListener((message) => {
   if (!message) return undefined;
+  if (message.type === "content-policy") {
+    updateCandyInlineMediaPlayerEnabled(
+      message.inlineMediaPlayerEnabled,
+      message.revision,
+      message.navigationGeneration,
+    );
+    return undefined;
+  }
   if (message.type === "picture-in-picture-playback" && typeof message.expected === "boolean") {
     updateCandyPictureInPicturePlayback(message.expected);
     return undefined;
+  }
+  if (message.type === "inline-video-presentation" && typeof message.expected === "boolean") {
+    return Promise.resolve(updateCandyInlineVideoPresentation(message));
   }
   if (self === top && message.type === "reader-extract") {
     return Promise.resolve(extractCandyReaderPayload());
@@ -426,3 +682,13 @@ browser.runtime.onMessage.addListener((message) => {
   }
   return undefined;
 });
+
+if (self === top) {
+  browser.runtime.sendMessage({ type: "content-policy-request" }).then((policy) => {
+    updateCandyInlineMediaPlayerEnabled(
+      policy?.inlineMediaPlayerEnabled,
+      policy?.revision,
+      policy?.navigationGeneration,
+    );
+  }).catch(() => {});
+}

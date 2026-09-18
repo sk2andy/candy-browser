@@ -1028,6 +1028,13 @@ class BrowserSessionStore internal constructor(
         preferences.edit().putBoolean(KEY_SCROLL_BAR_ENABLED, enabled).apply()
     }
 
+    fun loadInlineMediaPlayerEnabled(): Boolean =
+        preferences.getBoolean(KEY_INLINE_MEDIA_PLAYER_ENABLED, false)
+
+    fun saveInlineMediaPlayerEnabled(enabled: Boolean) {
+        preferences.edit().putBoolean(KEY_INLINE_MEDIA_PLAYER_ENABLED, enabled).apply()
+    }
+
     fun loadDeveloperOptionsUnlocked(): Boolean =
         preferences.getBoolean(KEY_DEVELOPER_OPTIONS_UNLOCKED, false)
 
@@ -1444,6 +1451,7 @@ class BrowserSessionStore internal constructor(
         const val KEY_FAVORITE_ANIMATION_SPEED = "favorite_animation_speed"
         const val KEY_OPEN_HOME_ON_STARTUP_ENABLED = "open_home_on_startup_enabled"
         const val KEY_SCROLL_BAR_ENABLED = "scroll_bar_enabled"
+        const val KEY_INLINE_MEDIA_PLAYER_ENABLED = "inline_media_player_enabled"
         const val KEY_DEVELOPER_OPTIONS_UNLOCKED = "developer_options_unlocked"
         const val KEY_DEVELOPER_BROWSER_CHROME_SCROLL_DISPATCH_MODE =
             "developer_browser_chrome_scroll_dispatch_mode"

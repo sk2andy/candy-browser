@@ -158,6 +158,12 @@ internal interface AndroidBrowserEngineSessionPort :
 
     fun setPictureInPicturePlaybackExpected(expected: Boolean) = Unit
 
+    fun setInlineVideoPresentation(
+        identity: GeckoInlineVideoIdentity?,
+        expected: Boolean,
+        onResult: (Boolean) -> Unit,
+    ) = onResult(false)
+
     fun exitFullscreen() = Unit
 
     fun goToHistoryIndex(index: Int)
@@ -594,6 +600,19 @@ internal class GeckoBrowserEngineSessionAdapter(
     @UiThread
     override fun setPictureInPicturePlaybackExpected(expected: Boolean) {
         if (!closed) session.setPictureInPicturePlaybackExpected(expected)
+    }
+
+    @UiThread
+    override fun setInlineVideoPresentation(
+        identity: GeckoInlineVideoIdentity?,
+        expected: Boolean,
+        onResult: (Boolean) -> Unit,
+    ) {
+        if (closed) onResult(false) else session.setInlineVideoPresentation(
+            identity = identity,
+            expected = expected,
+            onResult = onResult,
+        )
     }
 
     @UiThread

@@ -68,6 +68,7 @@ internal data class GeckoPrivacyPolicy(
     val topInsetPx: Int = 0,
     val navigationGeneration: Int = 0,
     val scrollMetricsEnabled: Boolean = false,
+    val inlineMediaPlayerEnabled: Boolean = false,
     val cssSafeAreaTopInsetPx: Int = 0,
     val geckoSafeAreaSettings: GeckoSafeAreaSettings = GeckoSafeAreaSettings(),
     val safeAreaLayoutQuietPeriodMillis: Int =
@@ -101,6 +102,7 @@ internal object GeckoPrivacyPolicyRules {
         topInsetPx: Int = 0,
         navigationGeneration: Int = 0,
         scrollMetricsEnabled: Boolean = false,
+        inlineMediaPlayerEnabled: Boolean = false,
         cssSafeAreaTopInsetPx: Int = 0,
         geckoSafeAreaSettings: GeckoSafeAreaSettings = GeckoSafeAreaSettings(),
         safeAreaLayoutQuietPeriodMillis: Int =
@@ -122,6 +124,7 @@ internal object GeckoPrivacyPolicyRules {
             topInsetPx = topInsetPx.coerceAtLeast(0),
             navigationGeneration = navigationGeneration.coerceAtLeast(0),
             scrollMetricsEnabled = scrollMetricsEnabled,
+            inlineMediaPlayerEnabled = inlineMediaPlayerEnabled,
             cssSafeAreaTopInsetPx = cssSafeAreaTopInsetPx.coerceAtLeast(0),
             geckoSafeAreaSettings = geckoSafeAreaSettings.normalized(),
             safeAreaLayoutQuietPeriodMillis =
@@ -158,6 +161,7 @@ internal fun GeckoPrivacyPolicy.toMessage(token: String, revision: Long): JSONOb
     .put("topInsetPx", topInsetPx)
     .put("navigationGeneration", navigationGeneration)
     .put("scrollMetricsEnabled", scrollMetricsEnabled)
+    .put("inlineMediaPlayerEnabled", inlineMediaPlayerEnabled)
     .put("cssSafeAreaTopInsetPx", cssSafeAreaTopInsetPx)
     .put("geckoSafeAreaEnabled", geckoSafeAreaSettings.enabled)
     .put("recheckAddedElements", geckoSafeAreaSettings.recheckAddedElements)
@@ -230,6 +234,67 @@ internal fun pictureInPicturePlaybackMessage(
     .put("revision", revision)
     .put("expected", expected)
 
+internal fun inlineVideoPresentationMessage(
+    token: String,
+    revision: Long,
+    navigationGeneration: Int,
+    requestId: Long,
+    identity: GeckoInlineVideoIdentity?,
+    expected: Boolean,
+): JSONObject = JSONObject()
+    .put("type", "inline-video-presentation")
+    .put("protocolVersion", CandyPrivacyHostContract.PROTOCOL_VERSION)
+    .put("token", token)
+    .put("revision", revision)
+    .put("navigationGeneration", navigationGeneration)
+    .put("requestId", requestId)
+    .put("expected", expected)
+    .put("documentNonce", identity?.documentNonce.orEmpty())
+    .put("elementNonce", identity?.elementNonce.orEmpty())
+
+internal data class GeckoInlineVideoState(
+    val isActive: Boolean,
+    val isPlaying: Boolean,
+    val width: Int,
+    val height: Int,
+    val documentNonce: String?,
+    val elementNonce: String?,
+)
+
+internal fun geckoInlineVideoStateFromMessage(
+    message: JSONObject,
+    currentRevision: Long,
+    currentNavigationGeneration: Int,
+): GeckoInlineVideoState? {
+    if (
+        message.optLong("revision", -1) != currentRevision ||
+        message.optInt("navigationGeneration", -1) != currentNavigationGeneration
+    ) {
+        return null
+    }
+    val width = message.optInt("videoWidth", -1)
+    val height = message.optInt("videoHeight", -1)
+    if (width !in 0..MAX_INLINE_VIDEO_DIMENSION || height !in 0..MAX_INLINE_VIDEO_DIMENSION) {
+        return null
+    }
+    val active = message.optBoolean("active", false)
+    val documentNonce = message.optString("documentNonce")
+    val elementNonce = message.optString("elementNonce")
+    if (active && (!INLINE_VIDEO_NONCE.matches(documentNonce) ||
+            !INLINE_VIDEO_NONCE.matches(elementNonce))
+    ) {
+        return null
+    }
+    return GeckoInlineVideoState(
+        isActive = active,
+        isPlaying = active && message.optBoolean("playing", false),
+        width = width.takeIf { active } ?: 0,
+        height = height.takeIf { active } ?: 0,
+        documentNonce = documentNonce.takeIf { active },
+        elementNonce = elementNonce.takeIf { active },
+    )
+}
+
 internal fun geckoScrollMetricsFromMessage(
     message: JSONObject,
     currentRevision: Long,
@@ -251,3 +316,6 @@ internal fun geckoScrollMetricsFromMessage(
         rangePx = rangePx.toInt(),
     )
 }
+
+private const val MAX_INLINE_VIDEO_DIMENSION = 16_384
+private val INLINE_VIDEO_NONCE = Regex("[a-f0-9]{32}")
