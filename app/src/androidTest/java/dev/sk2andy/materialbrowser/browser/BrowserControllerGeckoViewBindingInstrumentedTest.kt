@@ -12,6 +12,7 @@ import androidx.core.graphics.Insets
 import androidx.core.view.WindowInsetsCompat
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.SdkSuppress
+import dev.sk2andy.materialbrowser.BuildConfig
 import dev.sk2andy.materialbrowser.browser.actions.BrowserContentTargetListener
 import dev.sk2andy.materialbrowser.browser.gecko.AndroidBrowserEngineSessionPort
 import dev.sk2andy.materialbrowser.browser.gecko.BrowserEnginePreviewCapture
@@ -250,6 +251,56 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
         composeRule.runOnIdle {
             assertEquals(1, session.textInputOcclusionProbeCount)
             assertFalse(requireNotNull(controller).isAddressBarDocked)
+        }
+    }
+
+    @Test
+    fun engineLifecycleMatchesRendererVisibilityContract() {
+        lateinit var session: ReentrantAttachSession
+        composeRule.runOnIdle {
+            val store = BrowserSessionStore(composeRule.activity)
+            originalEngineKind = store.loadAndroidBrowserEngineKind()
+            if (!BuildConfig.SYSTEM_WEBVIEW_ONLY) {
+                assertTrue(store.saveAndroidBrowserEngineKind(AndroidBrowserEngineKind.GeckoView))
+            }
+            val browserController = BrowserController(composeRule.activity)
+            controller = browserController
+            session = ReentrantAttachSession(
+                tabId = browserController.selectedTabId,
+                onFirstAttach = {},
+            )
+            browserController.installGeckoEngineSessionForTesting(session)
+            browserController.onStart()
+            browserController.onResume()
+            session.activeStates.clear()
+
+            browserController.onPause()
+
+            when (browserController.browserEngineKind) {
+                AndroidBrowserEngineKind.GeckoView -> {
+                    assertTrue(session.activeStates.isEmpty())
+
+                    browserController.onStop()
+
+                    assertEquals(listOf(false), session.activeStates)
+
+                    browserController.onStart()
+
+                    assertEquals(listOf(false, true), session.activeStates)
+                }
+                AndroidBrowserEngineKind.SystemWebView -> {
+                    assertEquals(listOf(false), session.activeStates)
+
+                    browserController.onStop()
+                    browserController.onStart()
+
+                    assertEquals(listOf(false), session.activeStates)
+
+                    browserController.onResume()
+
+                    assertEquals(listOf(false, true), session.activeStates)
+                }
+            }
         }
     }
 
@@ -1421,6 +1472,7 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
             textInputOcclusionProbeResults.toMutableList()
         val commands = mutableListOf<BrowserEngineCommand>()
         val privacyPolicies = mutableListOf<GeckoPrivacyPolicy>()
+        val activeStates = mutableListOf<Boolean>()
         var deferPolicyReadyCallbacks = false
         val policyReadyCallbacks = mutableListOf<() -> Unit>()
         val backdropCaptureRequirements = mutableListOf<Boolean>()
@@ -1440,6 +1492,7 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
         private var attachDispatched = false
         private var detachDispatched = false
         private var releaseDispatched = false
+        private var active = false
 
         override fun setBackdropCaptureEnabled(enabled: Boolean) {
             backdropCaptureRequirements += enabled
@@ -1499,7 +1552,11 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
 
         override fun setDesktopMode(enabled: Boolean) = Unit
 
-        override fun setActive(active: Boolean) = Unit
+        override fun setActive(active: Boolean) {
+            if (this.active == active) return
+            this.active = active
+            activeStates += active
+        }
 
         override fun setMediaStateListener(listener: GeckoMediaSessionStateListener?) = Unit
 

@@ -8893,14 +8893,18 @@ class BrowserController(
             ?.let { clearGeckoMediaPresentation() }
         touchTab(selectedTabId, System.currentTimeMillis())
         browserEngineSessions.forEach(::persistBrowserEngineSessionState)
-        if (
-            geckoMediaPresentation == null &&
-            !pictureInPictureTransitionPending &&
-            !isInPictureInPicture
-        ) {
-            browserEngineSessions[selectedTabId]?.setActive(false)
+        // Gecko active state represents visibility, while System WebView maps this call to
+        // WebView.onPause(). A paused Activity can remain visible behind Android Sharesheet.
+        if (!usesGeckoEngine) {
+            if (
+                geckoMediaPresentation == null &&
+                !pictureInPictureTransitionPending &&
+                !isInPictureInPicture
+            ) {
+                browserEngineSessions[selectedTabId]?.setActive(false)
+            }
+            externalLinkPreviewRuntime?.geckoBinding?.session?.setActive(false)
         }
-        externalLinkPreviewRuntime?.geckoBinding?.session?.setActive(false)
         persist()
     }
 
@@ -8965,6 +8969,15 @@ class BrowserController(
 
     fun onStart() {
         isActivityStarted = true
+        if (usesGeckoEngine && !isActiveProfileLocked) {
+            if (externalLinkPreviewState == null) {
+                browserEngineSessions[selectedTabId]?.setActive(true)
+            }
+            externalLinkPreviewRuntime?.geckoBinding
+                ?.takeIf { binding -> binding.view.isAttachedToWindow }
+                ?.session
+                ?.setActive(true)
+        }
         syncRepository.startRealtime()
         mainHandler.removeCallbacks(syncRefreshRunnable)
         mainHandler.post(syncRefreshRunnable)
@@ -8984,6 +8997,10 @@ class BrowserController(
         val keepsPictureInPictureMedia = isInPictureInPictureMode ||
             isInPictureInPicture ||
             pictureInPictureTransitionPending
+        if (usesGeckoEngine && !keepsPictureInPictureMedia) {
+            browserEngineSessions[selectedTabId]?.setActive(false)
+        }
+        externalLinkPreviewRuntime?.geckoBinding?.session?.setActive(false)
         if (!keepsPictureInPictureMedia) {
             stopPictureInPictureMedia()
         } else if (!isInPictureInPictureMode && !isInPictureInPicture) {
