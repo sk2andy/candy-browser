@@ -502,6 +502,10 @@
     <string name="settings_video_autoplay_title">Automatische Videowiedergabe verhindern</string>
     <string name="settings_video_autoplay_subtitle">Videos starten nur, wenn du sie selbst abspielst. Das Ausschalten kann CPU-/GPU-Last, Akkuverbrauch und Seitenlast deutlich erhöhen.</string>
     <string name="settings_video_autoplay_unsupported">Erfordert eine neuere Gecko-Engine-Version.</string>
+    <string name="settings_inline_media_player_title">Candy Player (experimentell)</string>
+    <string name="settings_inline_media_player_subtitle">Zeigt eine Aktion für erkannte Videos im Hauptdokument. Eingebettete Videos werden noch nicht unterstützt.</string>
+    <string name="settings_inline_media_player_unsupported">Derzeit nur mit GeckoView verfügbar.</string>
+    <string name="action_open_candy_player">Im Candy Player öffnen</string>
     <string name="settings_default_browser">Standardbrowser</string>
     <string name="settings_default_browser_active">Candy Browser ist dein Standardbrowser</string>
     <string name="settings_make_default_browser">Candy Browser als Standardbrowser festlegen</string>

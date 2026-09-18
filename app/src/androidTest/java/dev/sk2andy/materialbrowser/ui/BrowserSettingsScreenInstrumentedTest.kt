@@ -106,6 +106,40 @@ class BrowserSettingsScreenInstrumentedTest {
     }
 
     @Test
+    fun inlineMediaPlayerSwitchUpdatesSetting() {
+        var enabled by mutableStateOf(false)
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                BrowserSettingsPage(
+                    pageTranslationProvider = PageTranslationProvider.Google,
+                    isFullImmersiveModeEnabled = false,
+                    isStartupAnimationEnabled = true,
+                    isScrollBarEnabled = false,
+                    isVideoAutoplayBlocked = false,
+                    isVideoAutoplayBlockingSupported = true,
+                    isInlineMediaPlayerEnabled = enabled,
+                    isInlineMediaPlayerSupported = true,
+                    isDefaultBrowser = false,
+                    onFullImmersiveModeEnabledChanged = {},
+                    onStartupAnimationEnabledChanged = {},
+                    onScrollBarEnabledChanged = {},
+                    onVideoAutoplayBlockedChanged = {},
+                    onInlineMediaPlayerEnabledChanged = { enabled = it },
+                    onPageTranslationProviderChanged = {},
+                    onOpenDefaultBrowserSettings = {},
+                    onBack = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(BrowserSettingsTestTags.InlineMediaPlayer)
+            .performScrollTo()
+            .performClick()
+
+        assertTrue(enabled)
+    }
+
+    @Test
     fun startupAnimationSwitchUpdatesSetting() {
         var enabled by mutableStateOf(true)
         composeRule.setContent {

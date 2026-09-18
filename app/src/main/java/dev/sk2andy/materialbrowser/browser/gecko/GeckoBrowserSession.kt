@@ -166,11 +166,22 @@ internal data class GeckoMediaSessionState(
     val videoHeight: Int = 0,
     val audioTrackCount: Int = 0,
     val videoTrackCount: Int = 0,
+    val hasInlineVideo: Boolean = false,
+    val isInlineVideoPlaying: Boolean = false,
+    val inlineVideoWidth: Int = 0,
+    val inlineVideoHeight: Int = 0,
+    val inlineVideoDocumentNonce: String? = null,
+    val inlineVideoElementNonce: String? = null,
 )
 
 internal fun interface GeckoMediaSessionStateListener {
     fun onStateChanged(state: GeckoMediaSessionState)
 }
+
+internal data class GeckoInlineVideoIdentity(
+    val documentNonce: String,
+    val elementNonce: String,
+)
 
 internal fun interface GeckoFullscreenStateListener {
     fun onStateChanged(fullscreen: Boolean)
@@ -259,6 +270,12 @@ internal interface GeckoBrowserSession {
 
     /** Keeps page media aligned with the user's PiP play or pause intent. */
     fun setPictureInPicturePlaybackExpected(expected: Boolean)
+
+    fun setInlineVideoPresentation(
+        identity: GeckoInlineVideoIdentity?,
+        expected: Boolean,
+        onResult: (Boolean) -> Unit,
+    ) = onResult(false)
 
     /** Requests that Gecko leave DOM fullscreen through its public session API. */
     fun exitFullscreen() = Unit

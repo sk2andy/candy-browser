@@ -42,6 +42,7 @@ internal object BrowserSettingsTestTags {
     const val ExternalLinkPreview = "browser_settings_external_link_preview"
     const val ExternalAppLinks = "browser_settings_external_app_links"
     const val BrowserEngine = "browser_settings_engine"
+    const val InlineMediaPlayer = "browser_settings_inline_media_player"
 }
 
 @Composable
@@ -59,6 +60,8 @@ internal fun BrowserSettingsPage(
     isScrollBarEnabled: Boolean,
     isVideoAutoplayBlocked: Boolean,
     isVideoAutoplayBlockingSupported: Boolean,
+    isInlineMediaPlayerEnabled: Boolean = false,
+    isInlineMediaPlayerSupported: Boolean = true,
     isDefaultBrowser: Boolean,
     onBrowserEngineKindChanged: (AndroidBrowserEngineKind) -> Unit = {},
     onExternalLinkPreviewEnabledChanged: (Boolean) -> Unit = {},
@@ -72,6 +75,7 @@ internal fun BrowserSettingsPage(
     onOpenHomeOnStartupEnabledChanged: (Boolean) -> Unit = {},
     onScrollBarEnabledChanged: (Boolean) -> Unit,
     onVideoAutoplayBlockedChanged: (Boolean) -> Unit,
+    onInlineMediaPlayerEnabledChanged: (Boolean) -> Unit = {},
     onPageTranslationProviderChanged: (PageTranslationProvider) -> Unit,
     onOpenDefaultBrowserSettings: () -> Unit,
     onBack: () -> Unit,
@@ -248,6 +252,21 @@ internal fun BrowserSettingsPage(
             checked = isVideoAutoplayBlocked,
             enabled = isVideoAutoplayBlockingSupported,
             onCheckedChange = onVideoAutoplayBlockedChanged,
+        )
+        Spacer(Modifier.height(8.dp))
+        SettingsSwitch(
+            title = stringResource(R.string.settings_inline_media_player_title),
+            subtitle = stringResource(
+                if (isInlineMediaPlayerSupported) {
+                    R.string.settings_inline_media_player_subtitle
+                } else {
+                    R.string.settings_inline_media_player_unsupported
+                },
+            ),
+            checked = isInlineMediaPlayerEnabled,
+            enabled = isInlineMediaPlayerSupported,
+            onCheckedChange = onInlineMediaPlayerEnabledChanged,
+            modifier = Modifier.testTag(BrowserSettingsTestTags.InlineMediaPlayer),
         )
         Spacer(Modifier.height(8.dp))
         TranslationProviderSettings(

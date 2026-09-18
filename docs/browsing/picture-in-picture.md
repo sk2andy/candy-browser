@@ -10,6 +10,7 @@ Android picture-in-picture. The shorter product-level contract remains in
 | --- | --- | --- |
 | Gecko fullscreen video enters Android PiP | Selected regular Gecko tab with active, playing video | Gecko fullscreen callbacks → original browser-hosted GeckoView → Android PiP |
 | User switches tabs while Gecko fullscreen video plays | Selected regular Gecko tab | Same GeckoView stays in Candy's mini-player host |
+| Experimental Candy Player opens an inline video | Selected regular Gecko tab, enabled setting, recognized top-frame HTML video | Trusted candidate → acknowledged video-only presentation → same GeckoView |
 
 Canvas-only players, unsupported DRM surfaces and hostile player scripts remain best-effort.
 
@@ -67,8 +68,20 @@ supported release. Preparation preserves the original host and playback intent, 
 Android's later mode callback tells Gecko that PiP is active.
 
 GeckoView 155 does not expose element geometry for ordinary inline video through its native media
-session API. Automatic background PiP and the in-app mini-player therefore remain limited to Gecko
-video that has entered fullscreen. Do not infer inline-video eligibility from page-level state.
+session API. The optional experimental Candy Player therefore obtains only bounded top-frame video
+identity and dimensions from the bundled trusted content host. The background host stamps the bound
+token, policy revision, navigation generation and frame identity; native code rejects stale or
+private candidates. Opening Candy Player sends the document/element nonce back to frame zero and
+waits for an acknowledgement before publishing a presentation. Cross-origin iframe, Shadow DOM,
+canvas and unsupported DRM players remain out of scope for this spike. Android PiP becomes eligible
+for an inline video only after this acknowledged Candy presentation is active; detection alone never
+grants PiP eligibility.
+
+The open action follows the current recognized candidate even while playback is paused; Android PiP
+still requires active playback. Candy temporarily enables the HTML video's native controls only for
+the inline presentation and restores the page's original controls state on exit. Closing the player
+reconciles the current candidate so the open action can return immediately. Reloads publish a fresh
+revision/navigation-bound candidate; delayed messages from the replaced document cannot clear it.
 
 ## Ownership map
 
@@ -101,8 +114,9 @@ Preserve these invariants:
   an in-app mini-player, a media notification or persistent state.
 - Gecko media state is memory-only, scoped to the exact tab session, and discarded on navigation,
   deactivation, crash, close or session replacement.
-- Android PiP requires a current selected regular tab, an active playing fullscreen Gecko video,
-  non-zero dimensions and a video track.
+- Android PiP requires a current selected regular tab and either an active playing fullscreen Gecko
+  video or an acknowledged Candy inline presentation with a current playing candidate and non-zero
+  dimensions.
 - Keep the same session, view, backend, display and browser-host identity for PiP. Never create a
   replacement renderer, switch backend or reparent the view during entry or return.
 - Keep Gecko media state and presentation ownership memory-only.
@@ -113,6 +127,7 @@ Preserve these invariants:
 | --- | --- | --- |
 | Gecko media state | Gecko session adapter | Navigation, deactivation, crash, close or replacement |
 | Gecko fullscreen presentation | Controller and Compose host | Media ends, host dismisses, navigation, PiP exit or session replacement |
+| Candy inline presentation | Controller and trusted content host | Candidate replacement, host dismisses, navigation, setting off, close or replacement |
 | Android PiP transition | Activity and controller | Mode callback, cancellation, stop or return-layout completion |
 
 Repeated mode, navigation and cleanup callbacks stay idempotent.
@@ -122,6 +137,7 @@ Repeated mode, navigation and cleanup callbacks stay idempotent.
 | Change | Required companion work |
 | --- | --- |
 | Change Gecko eligibility | Update `GeckoPictureInPictureRules`; cover private, stale, paused, audio and zero-size states |
+| Change inline detection or presentation | Cover top-frame enforcement, nonce/revision/navigation identity, acknowledgement and cleanup |
 | Change Activity PiP entry | Cover accepted, rejected and missing/late mode callbacks in the Gecko instrumentation suite |
 | Change presentation host | Preserve exact Gecko session/view identity; test overview→mini→expanded transitions |
 | Change cleanup | Cover navigation, tab close, session replacement and PiP return |

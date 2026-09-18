@@ -624,6 +624,7 @@ Agent implementation, security and debugging guide:
 | Transition | Behavior |
 | --- | --- |
 | HTML media appears or starts | Gecko's native `MediaSession.Delegate` publishes playback, position and bounded element metadata for the exact Gecko session |
+| Experimental Candy Player detects inline video | When enabled, the trusted content host reports a bounded, top-frame candidate; Candy shows an explicit open action and publishes presentation state only after the exact document/element identity acknowledges video-only mode |
 | Web page enters or exits fullscreen | `ContentDelegate.onFullScreen` owns the DOM-fullscreen lifecycle; media fullscreen metadata independently identifies the video and its dimensions |
 | User selects another regular tab | The current eligible video may move into the draggable in-app mini-player; this is the only presentation path that reparents GeckoView |
 | App leaves the foreground | The active eligible regular video is pinned in its original browser viewport before Activity PiP. The GeckoView, SurfaceView backend, GeckoDisplay and GeckoSession are not replaced or reparented |
@@ -638,6 +639,8 @@ Agent implementation, security and debugging guide:
   order. Candy merges only callbacks from the current native media-session identity; stale ad/player
   sessions cannot overwrite the active YouTube state.
 - Media metadata, presentation state and mini-player position are memory-only and never persisted.
+- The experimental inline-player preference persists, defaults off and currently supports only
+  top-frame HTML video in GeckoView. Cross-origin embeds remain unsupported in this spike.
 - Repeated lifecycle callbacks for one PiP transition are idempotent. They do not switch the GeckoView
   backend, release its display, reparent its view or resend the same Gecko PiP state.
 - PiP source bounds and Android aspect ratio use Gecko's video dimensions, fall back to 16:9 for

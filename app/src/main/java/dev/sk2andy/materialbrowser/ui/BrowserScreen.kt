@@ -1554,6 +1554,19 @@ internal fun BrowserScreen(
             )
         }
 
+        BrowserInlineMediaPlayerAction(
+            controller = controller,
+            chromeAllowsAction =
+                firefoxExtensionOptionsTitle == null &&
+                !hideBrowserChrome &&
+                !addressEditorVisible &&
+                !tabOverviewVisible &&
+                !settingsVisible,
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .zIndex(24f),
+        )
+
         readerStudioSession?.let { session ->
             ReaderStudioScreen(
                 result = readerStudioResult,

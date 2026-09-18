@@ -110,6 +110,49 @@ class GeckoMediaRulesTest {
     }
 
     @Test
+    fun `inline picture in picture requires an active Candy presentation`() {
+        val inline = GeckoMediaSessionState(
+            isActive = true,
+            hasInlineVideo = true,
+            isInlineVideoPlaying = true,
+            inlineVideoWidth = 1_280,
+            inlineVideoHeight = 720,
+        )
+
+        assertFalse(
+            GeckoPictureInPictureRules.isEligible(
+                state = inline,
+                isPrivate = false,
+                isSelectedTab = true,
+            ),
+        )
+        assertTrue(
+            GeckoPictureInPictureRules.isEligible(
+                state = inline,
+                isPrivate = false,
+                isSelectedTab = true,
+                inlinePresentationActive = true,
+            ),
+        )
+        assertFalse(
+            GeckoPictureInPictureRules.isEligible(
+                state = inline.copy(isInlineVideoPlaying = false),
+                isPrivate = false,
+                isSelectedTab = true,
+                inlinePresentationActive = true,
+            ),
+        )
+        assertFalse(
+            GeckoPictureInPictureRules.isEligible(
+                state = inline,
+                isPrivate = true,
+                isSelectedTab = true,
+                inlinePresentationActive = true,
+            ),
+        )
+    }
+
+    @Test
     fun `fullscreen presentation rejects non video fullscreen content`() {
         val video = GeckoMediaSessionState(
             isActive = true,

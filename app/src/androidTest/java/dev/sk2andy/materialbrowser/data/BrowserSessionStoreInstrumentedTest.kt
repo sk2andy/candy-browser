@@ -1204,6 +1204,17 @@ class BrowserSessionStoreInstrumentedTest {
     }
 
     @Test
+    fun inlineMediaPlayerDefaultsOffAndRoundTrips() {
+        val store = BrowserSessionStore(context)
+
+        assertFalse(store.loadInlineMediaPlayerEnabled())
+        store.saveInlineMediaPlayerEnabled(true)
+        assertTrue(store.loadInlineMediaPlayerEnabled())
+        store.saveInlineMediaPlayerEnabled(false)
+        assertFalse(store.loadInlineMediaPlayerEnabled())
+    }
+
+    @Test
     fun webRtcProtectionDefaultsToProtectedAndRoundTrips() {
         val store = BrowserSessionStore(context)
 
