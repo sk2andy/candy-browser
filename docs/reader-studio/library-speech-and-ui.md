@@ -21,6 +21,11 @@ document directly for offline reading. The extraction remains bound to the previ
 content revision, committed URL and source tab; stale results are rejected. Private previews never
 write reader snapshots.
 
+The configurable Android address-bar long press can save the selected page through the same
+repository without opening Reader Studio. Its extraction is bound to the selected tab, committed URL,
+navigation generation and engine session; the sanitized document URL must still match the requested
+page before persistence. Private tabs never expose this action.
+
 ## Speech
 
 | Piece | Responsibility |

@@ -112,9 +112,11 @@ import dev.sk2andy.materialbrowser.capsule.SiteCapsuleEditorRequest
 import dev.sk2andy.materialbrowser.data.AddressSuggestion
 import dev.sk2andy.materialbrowser.data.FavoriteMutation
 import dev.sk2andy.materialbrowser.reader.ReaderExtractionResult
+import dev.sk2andy.materialbrowser.reader.ReaderExtractionFailure
 import dev.sk2andy.materialbrowser.reader.ReaderLibraryRepository
 import dev.sk2andy.materialbrowser.reader.ReaderStudioSession
 import dev.sk2andy.materialbrowser.reader.ReaderStudioSessionRules
+import dev.sk2andy.materialbrowser.shared.browser.AddressBarLongPressAction
 import dev.sk2andy.materialbrowser.recall.RecallMatch
 import eightbitlab.com.blurview.BlurTarget
 import kotlinx.coroutines.delay
@@ -269,6 +271,7 @@ internal fun BrowserScreen(
     var settingsDestination by rememberSaveable { mutableStateOf(SettingsDestination.Home) }
     var snoozedTabsVisible by rememberSaveable { mutableStateOf(false) }
     var snoozeTabId by remember { mutableStateOf<String?>(null) }
+    var moveTabToProfileId by remember { mutableStateOf<String?>(null) }
     var pendingLinkSnooze by remember { mutableStateOf<PendingLinkSnooze?>(null) }
     var privacyXRayTabId by remember { mutableStateOf<String?>(null) }
     var permissionRadarTabId by remember { mutableStateOf<String?>(null) }
@@ -733,9 +736,9 @@ internal fun BrowserScreen(
         if (emitHaptic) rootView.performConfirmHaptic()
         return true
     }
-    val openNewTabAndEdit: () -> Unit = {
+    fun openNewTabAndEdit(isIncognito: Boolean = false) {
         val createAndEdit = {
-            if (createTabAndConfirm(isIncognito = false, emitHaptic = true)) {
+            if (createTabAndConfirm(isIncognito = isIncognito, emitHaptic = true)) {
                 addressValue = TextFieldValue()
                 addressEditorVisible = true
                 highlightedSuggestionIndex = -1
@@ -746,6 +749,67 @@ internal fun BrowserScreen(
             createAndEdit()
         } else {
             controller.refreshSelectedTabPreview(createAndEdit)
+        }
+    }
+    fun openReaderStudio() {
+        readerStudioResult = null
+        val requestId = ++readerStudioRequestId
+        readerStudioSession = ReaderStudioSession(
+            tabId = selectedTab.id,
+            sourceUrl = selectedTab.url,
+            isPrivate = selectedTab.isIncognito,
+            requestId = requestId,
+        )
+        controller.extractSelectedPageForReader { result ->
+            if (ReaderStudioSessionRules.acceptsResult(readerStudioSession, requestId)) {
+                readerStudioResult = result
+            }
+        }
+    }
+    fun performAddressBarLongPress(action: AddressBarLongPressAction) {
+        when (action) {
+            AddressBarLongPressAction.OpenReader -> openReaderStudio()
+            AddressBarLongPressAction.SaveReaderOffline -> {
+                controller.saveSelectedPageToReader { result ->
+                    Toast.makeText(
+                        context,
+                        result.readerActionMessageRes(),
+                        Toast.LENGTH_SHORT,
+                    ).show()
+                }
+            }
+            AddressBarLongPressAction.FindInPage -> controller.openFindInPage()
+            AddressBarLongPressAction.TranslatePage -> controller.translateSelectedPage()
+            AddressBarLongPressAction.ToggleDesktopView ->
+                controller.setSelectedDesktopView(!controller.isSelectedDesktopView)
+            AddressBarLongPressAction.CopyUrl -> controller.copyLink(selectedTab.url)
+            AddressBarLongPressAction.ShareUrl -> controller.shareSelectedPage()
+            AddressBarLongPressAction.Print -> controller.printSelectedPage()
+            AddressBarLongPressAction.SendToAssistant ->
+                controller.summarizeSelectedPageWithAssistant()
+            AddressBarLongPressAction.ToggleFavorite ->
+                toggleFavoriteWithFeedback(selectedTab.id)
+            AddressBarLongPressAction.TogglePinned -> {
+                if (controller.setTabPinned(selectedTab.id, !selectedTab.isPinned)) {
+                    rootView.performConfirmHaptic()
+                }
+            }
+            AddressBarLongPressAction.Reload -> controller.reload()
+            AddressBarLongPressAction.GoBack -> controller.goBack()
+            AddressBarLongPressAction.DuplicateTab -> controller.duplicateSelectedTab()
+            AddressBarLongPressAction.SnoozeTab -> snoozeTabId = selectedTab.id
+            AddressBarLongPressAction.MoveToProfile -> moveTabToProfileId = selectedTab.id
+            AddressBarLongPressAction.NewTab -> openNewTabAndEdit()
+            AddressBarLongPressAction.NewPrivateTab -> openNewTabAndEdit(isIncognito = true)
+            AddressBarLongPressAction.OpenHistory -> onOpenHistory()
+            AddressBarLongPressAction.ParkAddressBar -> controller.parkAddressBarOnRight()
+            AddressBarLongPressAction.OpenCandyTrail -> {
+                candyTrailSourceBounds = null
+                candyTrailTabId = selectedTab.id
+                rootView.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+            }
+            AddressBarLongPressAction.CreateSiteCapsule ->
+                openSiteCapsuleEditor(existing = null, sourceTab = selectedTab)
         }
     }
     LaunchedEffect(
@@ -1160,6 +1224,7 @@ internal fun BrowserScreen(
                 BrowserBackTarget.SettingsSubpage -> {
                     settingsDestination = when (settingsDestination) {
                         SettingsDestination.ToppingCatalog -> SettingsDestination.Userscripts
+                        SettingsDestination.AddressBarLongPressActions,
                         SettingsDestination.AddressBarActions ->
                             SettingsDestination.TabsAndGestures
                         SettingsDestination.MenuActions ->
@@ -1460,7 +1525,7 @@ internal fun BrowserScreen(
             },
             onOverviewGestureStarted = { overviewGestureSettleJob?.cancel() },
             onOverviewGestureCancelled = settleOverviewGesture,
-            openNewTabAndEdit = openNewTabAndEdit,
+            openNewTabAndEdit = { openNewTabAndEdit() },
             toggleFavoriteWithFeedback = toggleFavoriteWithFeedback,
             onBlankTabModeRevealOriginChanged = { blankTabModeRevealOrigin = it },
             onSnoozedTabs = { snoozedTabsVisible = true },
@@ -1477,30 +1542,15 @@ internal fun BrowserScreen(
                 permissionRadarOrigin = null
             },
             onNewTabButtonBoundsChanged = { addressNewTabButtonBounds = it },
-            onReaderStudio = {
-                readerStudioResult = null
-                val requestId = ++readerStudioRequestId
-                readerStudioSession = ReaderStudioSession(
-                    tabId = selectedTab.id,
-                    sourceUrl = selectedTab.url,
-                    isPrivate = selectedTab.isIncognito,
-                    requestId = requestId,
-                )
-                controller.extractSelectedPageForReader { result ->
-                    if (ReaderStudioSessionRules.acceptsResult(readerStudioSession, requestId)) {
-                        readerStudioResult = result
-                    }
-                }
-            },
+            onReaderStudio = { performAddressBarLongPress(AddressBarLongPressAction.OpenReader) },
             onOpenCandyTrail = {
-                candyTrailSourceBounds = null
-                candyTrailTabId = selectedTab.id
-                rootView.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                performAddressBarLongPress(AddressBarLongPressAction.OpenCandyTrail)
             },
             onSnooze = { snoozeTabId = selectedTab.id },
             onAddSiteCapsule = {
-                openSiteCapsuleEditor(existing = null, sourceTab = selectedTab)
+                performAddressBarLongPress(AddressBarLongPressAction.CreateSiteCapsule)
             },
+            onAddressBarLongPressAction = ::performAddressBarLongPress,
             )
         }
 
@@ -1677,6 +1727,23 @@ internal fun BrowserScreen(
             },
         )
 
+        MoveTabToProfileDialog(
+            tab = moveTabToProfileId?.let { tabId ->
+                controller.tabs.firstOrNull { tab -> tab.id == tabId }
+            },
+            profiles = moveTabToProfileId
+                ?.let(controller::compatibleMoveTargetProfiles)
+                .orEmpty(),
+            onMove = { profileId ->
+                val tabId = moveTabToProfileId ?: return@MoveTabToProfileDialog
+                moveTabToProfileId = null
+                if (controller.moveTabToProfile(tabId, profileId)) {
+                    rootView.performConfirmHaptic()
+                }
+            },
+            onDismiss = { moveTabToProfileId = null },
+        )
+
         BrowserSettingsOverlay(
             controller = controller,
             visible = settingsVisible,
@@ -1785,4 +1852,13 @@ internal fun BrowserScreen(
         },
     )
     FirefoxExtensionChrome(controller)
+}
+
+private fun ReaderExtractionResult.readerActionMessageRes(): Int = when (this) {
+    is ReaderExtractionResult.Success -> R.string.reader_saved_offline_confirmation
+    is ReaderExtractionResult.Failure -> when (reason) {
+        ReaderExtractionFailure.UnsupportedPage -> R.string.reader_extraction_unsupported
+        ReaderExtractionFailure.EmptyArticle -> R.string.reader_extraction_empty
+        ReaderExtractionFailure.InvalidResponse -> R.string.reader_extraction_invalid
+    }
 }

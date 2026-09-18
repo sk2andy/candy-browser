@@ -171,11 +171,13 @@
     <string name="action_park_address_pill_right">Placer la pilule d’adresse à droite</string>
     <string name="action_mute_domain">Couper le son de ce site</string>
     <string name="action_desktop_view">Version pour ordinateur</string>
+    <string name="action_mobile_view">Version mobile</string>
     <string name="action_desktop_view_description">Demander la version pour ordinateur pour ce domaine</string>
     <string name="action_always_block_popups">Toujours bloquer les fenêtres pop-up</string>
     <string name="action_always_block_popups_description">Bloquer sans confirmation toutes les fenêtres pop-up ouvertes par ce domaine</string>
     <string name="browser_menu_title">Menu</string>
     <string name="browser_menu_page_group">Page</string>
+    <string name="browser_menu_navigation_group">Navigation</string>
     <string name="browser_menu_browser_group">Navigateur</string>
     <string name="action_favorite">Favori</string>
     <string name="action_open_in_app">Ouvrir dans l’application</string>
@@ -511,6 +513,8 @@
     <string name="settings_make_default_browser">Définir Candy Browser comme navigateur par défaut</string>
     <string name="settings_section_gestures">Gestes</string>
     <string name="settings_link_long_press_action">Action lors d’un appui prolongé sur un lien</string>
+    <string name="settings_address_bar_long_press_title">Action lors d’un appui prolongé sur la barre d’adresse</string>
+    <string name="settings_address_bar_long_press_summary">Choisissez l’action exécutée en maintenant la barre d’adresse</string>
     <string name="settings_link_peek_actions_title">Boutons Link Peek</string>
     <string name="settings_link_peek_actions_summary">Choisir et organiser jusqu’à trois actions rapides</string>
     <string name="settings_link_peek_actions_instructions">Appuyez longuement sur les actions et faites-les glisser dans des emplacements vides. Faites-en glisser une vers Actions disponibles pour laisser son emplacement vide. Le + pulsant reste toujours au troisième emplacement et ouvre un onglet en arrière-plan.</string>

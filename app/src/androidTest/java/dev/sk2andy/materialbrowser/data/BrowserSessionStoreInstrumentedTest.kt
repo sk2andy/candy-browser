@@ -34,6 +34,7 @@ import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuEntry
 import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuLayout
 import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuLayoutRules
 import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuLocation
+import dev.sk2andy.materialbrowser.shared.browser.AddressBarLongPressAction
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -1126,6 +1127,28 @@ class BrowserSessionStoreInstrumentedTest {
 
         preferences.edit().putString("link_long_press_action", "broken").commit()
         assertEquals(LinkLongPressAction.LinkPeek, store.loadLinkLongPressAction())
+    }
+
+    @Test
+    fun addressBarLongPressActionDefaultsToReaderAndRoundTrips() {
+        val store = BrowserSessionStore(context)
+        assertEquals(
+            AddressBarLongPressAction.OpenReader,
+            store.loadAddressBarLongPressAction(),
+        )
+
+        AddressBarLongPressAction.entries.forEach { action ->
+            store.saveAddressBarLongPressAction(action)
+            assertEquals(action, store.loadAddressBarLongPressAction())
+        }
+
+        preferences.edit()
+            .putString(BrowserSessionStore.KEY_ADDRESS_BAR_LONG_PRESS_ACTION, "broken")
+            .commit()
+        assertEquals(
+            AddressBarLongPressAction.OpenReader,
+            store.loadAddressBarLongPressAction(),
+        )
     }
 
     @Test

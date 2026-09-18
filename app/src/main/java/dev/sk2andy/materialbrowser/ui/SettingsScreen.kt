@@ -37,6 +37,7 @@ import dev.sk2andy.materialbrowser.shared.topping.ToppingFrameScope
 import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuEntry
 import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuLayout
 import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuLocation
+import dev.sk2andy.materialbrowser.shared.browser.AddressBarLongPressAction
 import dev.sk2andy.materialbrowser.sync.SyncConnectionSettings
 import dev.sk2andy.materialbrowser.sync.SyncDeviceIconCatalog
 import dev.sk2andy.materialbrowser.sync.SyncEnrollmentOutcome
@@ -57,6 +58,7 @@ internal fun SettingsScreen(
     residentTabLimit: Int,
     searchEngine: SearchEngine,
     pageTranslationProvider: PageTranslationProvider,
+    addressBarLongPressAction: AddressBarLongPressAction = AddressBarLongPressAction.Default,
     linkLongPressAction: LinkLongPressAction = LinkLongPressAction.LinkPeek,
     linkPeekActionLayout: LinkPeekActionLayout = LinkPeekActionLayout.Default,
     searxngSettings: SearxngSettings,
@@ -114,6 +116,7 @@ internal fun SettingsScreen(
     onResidentTabLimitChanged: (Int) -> Unit,
     onSearchEngineChanged: (SearchEngine) -> Unit,
     onPageTranslationProviderChanged: (PageTranslationProvider) -> Unit,
+    onAddressBarLongPressActionChanged: (AddressBarLongPressAction) -> Unit = {},
     onLinkLongPressActionChanged: (LinkLongPressAction) -> Unit = {},
     onLinkPeekActionLayoutChanged: (LinkPeekActionLayout) -> Unit = {},
     onSearxngSettingsChanged: (SearxngSettings) -> Unit,
@@ -219,6 +222,7 @@ internal fun SettingsScreen(
                     dismissResistancePercent = dismissResistancePercent,
                     profilesEnabled = profilesEnabled,
                     isAddressBarDockingEnabled = isAddressBarDockingEnabled,
+                    addressBarLongPressAction = addressBarLongPressAction,
                     linkLongPressAction = linkLongPressAction,
                     onInactiveTabLifetimeChanged = onInactiveTabLifetimeChanged,
                     onResidentTabLimitChanged = onResidentTabLimitChanged,
@@ -231,6 +235,9 @@ internal fun SettingsScreen(
                     onDismissResistancePercentChanged = onDismissResistancePercentChanged,
                     onProfilesEnabledChanged = onProfilesEnabledChanged,
                     onAddressBarDockingEnabledChanged = onAddressBarDockingEnabledChanged,
+                    onAddressBarLongPressActions = {
+                        onDestinationChanged(SettingsDestination.AddressBarLongPressActions)
+                    },
                     onLinkLongPressActionChanged = onLinkLongPressActionChanged,
                     onLinkPeekActions = {
                         onDestinationChanged(SettingsDestination.LinkPeekActions)
@@ -243,6 +250,15 @@ internal fun SettingsScreen(
                     },
                     onBack = { onDestinationChanged(SettingsDestination.Home) },
                 )
+
+                SettingsDestination.AddressBarLongPressActions ->
+                    AddressBarLongPressSettingsPage(
+                        selectedAction = addressBarLongPressAction,
+                        onActionSelected = onAddressBarLongPressActionChanged,
+                        onBack = {
+                            onDestinationChanged(SettingsDestination.TabsAndGestures)
+                        },
+                    )
 
                 SettingsDestination.AddressBarActions -> {
                     val actionLabels = AddressBarAction.entries.associateWith { action ->

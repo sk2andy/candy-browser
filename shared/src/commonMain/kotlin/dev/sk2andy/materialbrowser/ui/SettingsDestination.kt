@@ -4,6 +4,7 @@ enum class SettingsDestination {
     Home,
     Search,
     TabsAndGestures,
+    AddressBarLongPressActions,
     AddressBarActions,
     MenuActions,
     LinkPeekActions,
