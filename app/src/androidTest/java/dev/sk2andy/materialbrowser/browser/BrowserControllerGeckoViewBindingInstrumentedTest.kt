@@ -846,6 +846,69 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
     }
 
     @Test
+    fun topHeaderFallbackKeepsThemeColorUntilNextNavigation() {
+        composeRule.runOnIdle {
+            val store = BrowserSessionStore(composeRule.activity)
+            originalEngineKind = store.loadAndroidBrowserEngineKind()
+            assertTrue(store.saveAndroidBrowserEngineKind(AndroidBrowserEngineKind.GeckoView))
+            val browserController = BrowserController(composeRule.activity)
+            controller = browserController
+            val tabId = browserController.selectedTabId
+            val session = ReentrantAttachSession(tabId = tabId, onFirstAttach = {})
+            browserController.installGeckoEngineSessionForTesting(session)
+            browserController.updateDeveloperSettings(DeveloperSettings())
+            browserController.onWindowInsetsChanged(
+                WindowInsetsCompat.Builder()
+                    .setInsets(WindowInsetsCompat.Type.statusBars(), Insets.of(0, 96, 0, 0))
+                    .build(),
+            )
+            fun navigate(path: String) {
+                browserController.dispatchGeckoEngineEventForTesting(
+                    BrowserEngineEvent(
+                        tabId = tabId,
+                        type = BrowserEngineEventType.NavigationStarted,
+                        address = "https://example.com/$path",
+                        title = null,
+                        canGoBack = false,
+                        canGoForward = false,
+                        failureDescription = null,
+                    ),
+                )
+            }
+
+            navigate("first")
+            session.privacyPolicies.clear()
+            browserController.dispatchSelectedGeckoPrivacyEventForTesting(
+                GeckoPrivacyEvent(
+                    requestUrl = "",
+                    pageUrl = "https://example.com/first",
+                    ruleId = null,
+                    wasBlocked = false,
+                    isBuiltIn = false,
+                    isCompatibilityObservation = false,
+                    safeAreaFallbackNavigationGeneration = 1,
+                    safeAreaFallbackThemeColor = "#123456",
+                    safeAreaFallbackIsTopHeader = true,
+                ),
+            )
+
+            assertEquals(
+                0xFF123456.toInt(),
+                browserController.selectedWebContentTopBarState
+                    ?.statusBarAppearance
+                    ?.colorArgb,
+            )
+            assertEquals(0, session.privacyPolicies.single().cssSafeAreaTopInsetPx)
+
+            session.privacyPolicies.clear()
+            navigate("second")
+
+            assertEquals(null, browserController.selectedWebContentTopBarState)
+            assertEquals(96, session.privacyPolicies.last().cssSafeAreaTopInsetPx)
+        }
+    }
+
+    @Test
     fun staleFallbackRestorationCannotClearNewerNavigationFallback() {
         composeRule.runOnIdle {
             val store = BrowserSessionStore(composeRule.activity)

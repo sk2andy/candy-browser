@@ -5,10 +5,10 @@ import vm from 'node:vm';
 
 const source = readFileSync(new URL('../app/src/gecko/assets/candy_privacy/content_safe_area_prototype.js', import.meta.url), 'utf8');
 
-function fixture({ density = 3, nativeTop = 96, normalizePixels = false, reparseStyles = false, prototypeSource = source, hostname = '', viewportContent = null } = {}) {
+function fixture({ density = 3, nativeTop = 96, normalizePixels = false, reparseStyles = false, prototypeSource = source, hostname = '', viewportContent = null, themeColor = null } = {}) {
   let clock = 0; let timerId = 0; let observer;
   const timers = new Map(); const listeners = new Map(); const mutations = []; const registrations = [];
-  const reads = { style: 0, rect: 0, selector: 0 }; let writes = 0;
+  const reads = { style: 0, rect: 0, selector: 0 }; const fallbacks = []; let writes = 0;
   let ruleWrites = 0;
   const normalize = (value) => normalizePixels && /^[+-]?[\d.]+px$/.test(value) ? `${Number(Number(value.slice(0, -2)).toFixed(4))}px` : value;
   const sheets = [];
@@ -21,7 +21,7 @@ function fixture({ density = 3, nativeTop = 96, normalizePixels = false, reparse
   }
   class Element {
     constructor(position = 'static', top = 'auto', tag = 'div') {
-      this.localName = tag; this.parentElement = null; this.children = [];
+      this.localName = tag; this.nodeType = 1; this.parentElement = null; this.children = [];
       this.content = '';
       this.isConnected = true; this.computed = { position, top }; this.properties = new Map();
       this.attributes = new Map();
@@ -73,7 +73,11 @@ function fixture({ density = 3, nativeTop = 96, normalizePixels = false, reparse
       const siblings = this.parentElement?.children || [];
       return siblings[siblings.indexOf(this) + 1] || null;
     }
-    getAttribute(name) { return name === 'style' ? (this.properties.size ? JSON.stringify([...this.properties]) : null) : this.attributes.get(name) ?? null; }
+    getAttribute(name) {
+      if (name === 'style') return this.properties.size ? JSON.stringify([...this.properties]) : null;
+      if (name === 'role' && this.role) return this.role;
+      return this.attributes.get(name) ?? null;
+    }
     setAttribute(name, value) { this.attributes.set(name, value); if (name === 'media') this.reparse(); }
     removeAttribute(name) { this.attributes.delete(name); if (name === 'media') this.reparse(); }
     set textContent(value) { this.content = value; this.reparse(); }
@@ -94,12 +98,26 @@ function fixture({ density = 3, nativeTop = 96, normalizePixels = false, reparse
           (id || classes.length || value === this.localName);
       });
     }
-    getBoundingClientRect() { reads.rect++; return { top: 0, left: 0, width: 360, height: 40, right: 360, bottom: 40 }; }
+    querySelectorAll(selector) {
+      const result = [];
+      const pending = [...this.children];
+      while (pending.length) {
+        const element = pending.shift();
+        if (element.matches(selector)) result.push(element);
+        pending.unshift(...element.children);
+      }
+      return result;
+    }
+    querySelector(selector) { return this.querySelectorAll(selector)[0] || null; }
+    getBoundingClientRect() { reads.rect++; return this.rect || { top: 0, left: 0, width: 360, height: 40, right: 360, bottom: 40 }; }
   }
   const root = new Element('static', 'auto', 'html');
   const viewport = viewportContent === null ? null : root.append(new Element('static', 'auto', 'meta'));
   viewport?.setAttribute('name', 'viewport');
   viewport?.setAttribute('content', viewportContent);
+  const theme = themeColor === null ? null : root.append(new Element('static', 'auto', 'meta'));
+  theme?.setAttribute('name', 'theme-color');
+  theme?.setAttribute('content', themeColor);
   const body = root.append(new Element('static', 'auto', 'body'));
   const config = { ready: true, enabled: true, cssSafeAreaTopInsetPx: nativeTop, navigationGeneration: 1, revision: 1,
     recheckAddedElements: true, recheckChangedElements: true, recheckOnResize: true,
@@ -128,12 +146,18 @@ function fixture({ density = 3, nativeTop = 96, normalizePixels = false, reparse
       }
       return null;
     },
+    querySelectorAll: (selector) => {
+      if (selector === 'meta[name="theme-color" i]') return theme ? [theme] : [];
+      if (selector !== 'header, nav, [role="banner"], [role="navigation"]') return [];
+      reads.selector++;
+      return root.querySelectorAll(selector);
+    },
     addEventListener: (type, callback, options) => {
       listeners.set(`document:${type}`, callback); registrations.push({ target: 'document', type, options });
     },
   };
   function computed(element) {
-    const result = { display: 'block', visibility: 'visible', paddingTop: '0px', ...element.computed };
+    const result = { display: 'block', visibility: 'visible', paddingTop: '0px', backgroundColor: 'rgba(0, 0, 0, 0)', ...element.computed };
     const accessible = (sheet) => { try { return sheet.cssRules; } catch { return []; } };
     for (const sheet of document.styleSheets) {
       if (sheet.disabled || (sheet.media?.mediaText && sheet.media.mediaText !== 'all')) continue;
@@ -162,8 +186,15 @@ function fixture({ density = 3, nativeTop = 96, normalizePixels = false, reparse
   const windowProxy = {};
   const context = vm.createContext({ Element, document, self: windowProxy, top: windowProxy,
     location: { hostname },
+    innerWidth: 800,
+    innerHeight: 800,
+    scrollY: 0,
     devicePixelRatio: density,
-    CandyContentTopInset: { cssSafeAreaConfiguration: () => ({ ...config }), domDiagnosticsEnabled: () => true },
+    CandyContentTopInset: {
+      cssSafeAreaConfiguration: () => ({ ...config }),
+      domDiagnosticsEnabled: () => true,
+      fallbackToNative: (...args) => fallbacks.push(args),
+    },
     getComputedStyle: (element) => {
       reads.style++;
       return computed(element);
@@ -192,7 +223,7 @@ function fixture({ density = 3, nativeTop = 96, normalizePixels = false, reparse
     }
     assert.fail('Prototype work or own-style mutation loop did not terminate');
   };
-  return { body, context, config, reads, timers, registrations, flush, computed, sheets,
+  return { body, context, config, reads, timers, registrations, flush, computed, sheets, fallbacks,
     writes: () => writes, ruleWrites: () => ruleWrites,
     element: (position, top, tag) => body.append(new Element(position, top, tag)),
     sheet(definitions, options = {}) {
@@ -208,6 +239,7 @@ function fixture({ density = 3, nativeTop = 96, normalizePixels = false, reparse
     },
     start(drain = true) { vm.runInContext(prototypeSource, context); if (drain) flush(); },
     configure(next) { Object.assign(config, next); context.__candyConfigureCssSafeArea(); flush(); },
+    scrollTo(y) { context.scrollY = y; },
     event(type, target = ['scroll', 'resize'].includes(type) ? 'window' : 'document', node) {
       const listener = listeners.get(`${target}:${type}`);
       assert.equal(typeof listener, 'function', `Actual ${target} ${type} listener must exist`);
@@ -215,6 +247,10 @@ function fixture({ density = 3, nativeTop = 96, normalizePixels = false, reparse
     },
     mutate(element, attributeName) { observer.callback([{ type: 'attributes', target: element, attributeName }]); },
     added(element) { observer.callback([{ type: 'childList', target: body, addedNodes: [element], removedNodes: [] }]); },
+    childAdded(parent, element) {
+      parent.append(element);
+      observer.callback([{ type: 'childList', target: parent, addedNodes: [element], removedNodes: [] }]);
+    },
     textChanged(element) { observer.callback([{ type: 'characterData', target: { parentElement: element } }]); },
     removed(element) { element.remove(); observer.callback([{ type: 'childList', target: body, addedNodes: [], removedNodes: [element] }]); },
     step() {
@@ -237,6 +273,157 @@ test('viewport-fit cover leaves safe-area layout to Gecko', () => {
   assert.equal(f.computed(fixed).top, '8px');
   assert.equal(f.context.document.documentElement.style.getPropertyValue('--candy-safe-area-inset-top'), '');
   assert.equal(f.sheets.filter((sheet) => sheet.isConnected).length, 0);
+});
+
+test('Reddit helper remains active for viewport cover and receives the bounded native inset', () => {
+  const f = fixture({ hostname: 'www.reddit.com', viewportContent: 'viewport-fit=cover' });
+  const configured = [];
+  f.context.CandyRedditSafeArea = {
+    owns: () => false,
+    ownsSource: () => false,
+    added: () => {},
+    sync: () => {},
+    flowProtected: () => true,
+    configure: (active) => configured.push(active),
+  };
+
+  f.start();
+
+  assert.equal(f.diagnostics().active, false, 'Generic CSS layer still respects viewport cover');
+  assert.equal(configured.at(-1), true);
+  assert.equal(
+    f.context.document.documentElement.style.getPropertyValue('--candy-safe-area-inset-top'),
+    '32px',
+  );
+  f.configure({ enabled: false });
+  assert.equal(configured.at(-1), false);
+  assert.equal(f.context.document.documentElement.style.getPropertyValue('--candy-safe-area-inset-top'), '');
+});
+
+test('sticky headers switch immediately while fixed headers must remain pinned after scrolling', () => {
+  const sticky = fixture({ themeColor: '#123AbC' });
+  const stickyHeader = sticky.element('sticky', '0px', 'header');
+  stickyHeader.rect = { top: 0, left: 0, width: 800, height: 56, right: 800, bottom: 56 };
+  sticky.start();
+  assert.deepEqual(sticky.fallbacks, [[1, 1, '#123abc', true]]);
+
+  const fixed = fixture({ themeColor: '#234AbC' });
+  const fixedHeader = fixed.element('fixed', '0px', 'header');
+  fixedHeader.rect = { top: 0, left: 0, width: 800, height: 56, right: 800, bottom: 56 };
+  fixed.start();
+  assert.deepEqual(fixed.fallbacks, [], 'Initial fixed positioning retains edge-to-edge');
+  fixed.scrollTo(80);
+  fixed.event('scroll');
+  fixed.flush();
+  assert.deepEqual(fixed.fallbacks, [[1, 1, '#234abc', true]]);
+
+  const scrollingAway = fixture({ themeColor: '#345AbC' });
+  const transientHeader = scrollingAway.element('fixed', '0px', 'header');
+  transientHeader.rect = { top: 0, left: 0, width: 800, height: 56, right: 800, bottom: 56 };
+  scrollingAway.start();
+  scrollingAway.scrollTo(80);
+  transientHeader.rect = { top: -56, left: 0, width: 800, height: 56, right: 800, bottom: 0 };
+  scrollingAway.event('scroll');
+  scrollingAway.flush();
+  assert.deepEqual(scrollingAway.fallbacks, [], 'A fixed declaration that scrolls away stays edge-to-edge');
+
+  const restored = fixture({ themeColor: '#456AbC' });
+  restored.scrollTo(500);
+  const restoredHeader = restored.element('fixed', '0px', 'header');
+  restoredHeader.rect = { top: 0, left: 0, width: 800, height: 56, right: 800, bottom: 56 };
+  restored.start();
+  assert.deepEqual(restored.fallbacks, [], 'Restored scroll position is only a new baseline');
+  restored.event('scroll');
+  restored.flush();
+  assert.deepEqual(restored.fallbacks, []);
+  restored.scrollTo(580);
+  restored.event('scroll');
+  restored.flush();
+  assert.deepEqual(restored.fallbacks, [[1, 1, '#456abc', true]]);
+});
+
+test('semantic checks cover later candidates, hydrated custom topbars and scroll transitions', () => {
+  const multiple = fixture({ themeColor: '#123456' });
+  multiple.element('static', 'auto', 'header');
+  const second = multiple.element('sticky', '0px', 'nav');
+  second.rect = { top: 0, left: 0, width: 800, height: 56, right: 800, bottom: 56 };
+  multiple.start();
+  assert.deepEqual(multiple.fallbacks, [[1, 1, '#123456', true]]);
+
+  const hydrated = fixture({ themeColor: '#234567' });
+  hydrated.start();
+  const topbar = hydrated.element('fixed', '0px', 'ytm-mobile-topbar-renderer');
+  topbar.rect = { top: 0, left: 0, width: 800, height: 48, right: 800, bottom: 48 };
+  const header = hydrated.element('static', 'auto', 'header');
+  hydrated.body.children.splice(hydrated.body.children.indexOf(header), 1);
+  topbar.append(header);
+  hydrated.added(topbar);
+  hydrated.flush();
+  assert.deepEqual(hydrated.fallbacks, []);
+  hydrated.scrollTo(80);
+  hydrated.event('scroll');
+  hydrated.flush();
+  assert.deepEqual(hydrated.fallbacks, [[1, 1, '#234567', true]]);
+
+  const scrolled = fixture({ themeColor: '#345678' });
+  const changing = scrolled.element('static', 'auto', 'header');
+  changing.rect = { top: 0, left: 0, width: 800, height: 64, right: 800, bottom: 64 };
+  scrolled.start();
+  assert.deepEqual(scrolled.fallbacks, []);
+  Object.assign(changing.computed, { position: 'sticky', top: '0px' });
+  scrolled.event('scroll');
+  scrolled.flush();
+  assert.deepEqual(scrolled.fallbacks, [[1, 1, '#345678', true]]);
+
+  const promoted = fixture({ themeColor: '#456789', reparseStyles: true });
+  const owned = promoted.element('fixed', '0px');
+  owned.classes = ['owned-topbar'];
+  owned.rect = { top: 0, left: 0, width: 800, height: 48, right: 800, bottom: 48 };
+  const style = promoted.context.document.createElement('style');
+  style.textContent = '.owned-topbar { top: 0px !important; }';
+  promoted.context.document.documentElement.append(style);
+  promoted.start();
+  assert.deepEqual(promoted.fallbacks, []);
+  owned.role = 'navigation';
+  promoted.mutate(owned, 'role');
+  promoted.flush();
+  assert.deepEqual(promoted.fallbacks, []);
+  promoted.scrollTo(80);
+  promoted.event('scroll');
+  promoted.flush();
+  assert.deepEqual(promoted.fallbacks, [[1, 1, '#456789', true]]);
+
+  const filled = fixture({ themeColor: '#56789a' });
+  const earlyHeader = filled.element('static', 'auto', 'header');
+  earlyHeader.rect = { top: 0, left: 0, width: 800, height: 0, right: 800, bottom: 0 };
+  filled.start();
+  assert.deepEqual(filled.fallbacks, []);
+  Object.assign(earlyHeader.computed, { position: 'sticky', top: '0px' });
+  earlyHeader.rect = { top: 0, left: 0, width: 800, height: 70, right: 800, bottom: 70 };
+  filled.childAdded(earlyHeader, new filled.context.Element());
+  filled.flush();
+  assert.deepEqual(filled.fallbacks, [[1, 1, '#56789a', true]]);
+});
+
+test('top header falls back to its opaque computed background color', () => {
+  const f = fixture();
+  const header = f.element('sticky', '0px', 'nav');
+  header.computed.backgroundColor = 'rgb(18, 52, 86)';
+  header.rect = { top: 0, left: 0, width: 800, height: 56, right: 800, bottom: 56 };
+
+  f.start();
+
+  assert.deepEqual(f.fallbacks, [[1, 1, '#123456', true]]);
+});
+
+test('narrow sticky controls keep CSS protection without native fallback', () => {
+  const f = fixture();
+  const control = f.element('sticky', '0px');
+
+  f.start();
+
+  assert.deepEqual(f.fallbacks, []);
+  assert.equal(f.computed(control).top, '32px');
 });
 
 test('known Google menu and focus CSS are seeded before activation and removed when disabled', () => {
@@ -388,9 +575,9 @@ test('readiness, reserved late semantic seed, trusted discovery and nested scrol
   assert.equal(streamed.reads.selector, 1, 'Semantic discovery starts after parsing, not final subresource load');
   streamed.context.document.readyState = 'complete'; streamed.event('load', 'window'); streamed.flush();
   assert.equal(streamed.computed(wrapper).top, '32px');
-  assert.equal(streamed.computed(nav).top, '0px');
-  assert.equal(streamed.reads.selector, 1); assert.equal(streamed.reads.rect, 0);
-  streamed.event('load', 'window'); streamed.flush(); assert.equal(streamed.reads.selector, 1);
+  assert.equal(streamed.computed(nav).top, '32px');
+  assert.equal(streamed.reads.selector, 2);
+  streamed.event('load', 'window'); streamed.flush(); assert.equal(streamed.reads.selector, 3);
   const f = fixture(); const late = f.element('static', 'auto'); f.start();
   Object.assign(late.computed, { position: 'fixed', top: '0px' });
   f.mutate(late, 'class'); f.flush(); assert.equal(f.computed(late).top, '0px');
@@ -403,7 +590,11 @@ test('readiness, reserved late semantic seed, trusted discovery and nested scrol
   const capture = f.registrations.find((entry) => entry.target === 'document' && entry.type === 'scroll');
   assert.equal(capture.options.capture, true); assert.equal(capture.options.passive, true);
   for (const target of ['document', 'window']) { f.event('scroll', target); f.flush(); }
-  assert.deepEqual({ reads: { ...f.reads }, writes: f.writes(), rules: f.ruleWrites() }, before);
+  assert.deepEqual(
+    { style: f.reads.style, rect: f.reads.rect, writes: f.writes(), rules: f.ruleWrites() },
+    { style: before.reads.style, rect: before.reads.rect, writes: before.writes, rules: before.rules },
+  );
+  assert.equal(f.reads.selector, before.reads.selector + 2, 'Each quiet scroll event gets one semantic query');
 });
 
 test('full selector rules protect passive class activation and new matching nodes without double ownership', () => {
@@ -417,7 +608,12 @@ test('full selector rules protect passive class activation and new matching node
   latent.classes = ['persistent-header'];
   const added = f.element('static', 'auto'); added.id = 'new-latent'; added.classes = ['persistent-header'];
   f.event('scroll'); f.mutate(latent, 'class'); f.added(added); f.flush();
-  assert.deepEqual({ reads: { ...f.reads }, writes: f.writes(), rules: f.ruleWrites() }, before, 'Passive activation and scroll do no repair');
+  assert.deepEqual(
+    { style: f.reads.style, rect: f.reads.rect, writes: f.writes(), rules: f.ruleWrites() },
+    { style: before.reads.style, rect: before.reads.rect, writes: before.writes, rules: before.rules },
+    'Passive activation and scroll do no broad repair',
+  );
+  assert.equal(f.reads.selector, before.reads.selector + 1);
   assert.equal(f.computed(latent).top, '40px'); assert.equal(f.computed(added).top, '32px');
   assert.equal(latent.style.getPropertyValue('top'), '');
   assert.equal(f.computed(ordinary).top, '112px', 'Unmatched DOM protection remains');
@@ -657,7 +853,13 @@ test('body bootstrap runs synchronously on arrival and preserves parser author p
   f.context.document.readyState = 'interactive'; f.event('DOMContentLoaded');
   assert.equal(f.computed(f.body).paddingTop, '100px', 'Own early padding is removed/read/replaced within readiness task');
   f.flush(); const before = { ...f.reads };
-  f.event('load', 'window'); f.flush(); assert.deepEqual(f.reads, before, 'Author padding recapture happens only once');
+  f.event('load', 'window'); f.flush();
+  assert.deepEqual(
+    { style: f.reads.style, rect: f.reads.rect },
+    { style: before.style, rect: before.rect },
+    'Author padding recapture happens only once',
+  );
+  assert.equal(f.reads.selector, before.selector + 1);
   f.body.style.setProperty('padding-top', '120px'); f.flush(); f.configure({ enabled: false });
   assert.equal(f.computed(f.body).paddingTop, '120px', 'Disable exposes latest author inline padding');
   const existing = fixture(); existing.body.computed.paddingTop = '100px'; existing.start(false);

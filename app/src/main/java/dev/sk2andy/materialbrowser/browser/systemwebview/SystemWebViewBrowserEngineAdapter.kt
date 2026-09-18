@@ -1592,6 +1592,8 @@ private class SystemWebViewBrowserEngineSession(
     private fun onSafeAreaFallback(
         navigationGeneration: Int,
         revision: Long,
+        themeColor: String?,
+        isTopHeader: Boolean,
     ) {
         val policy = privacyPolicy
         if (
@@ -1609,6 +1611,8 @@ private class SystemWebViewBrowserEngineSession(
                 isBuiltIn = true,
                 isCompatibilityObservation = false,
                 safeAreaFallbackNavigationGeneration = navigationGeneration,
+                safeAreaFallbackThemeColor = themeColor,
+                safeAreaFallbackIsTopHeader = isTopHeader,
             ),
         )
     }
@@ -1725,7 +1729,7 @@ private class SystemWebViewBrowserEngineSession(
 
 private class SystemWebViewHost(
     context: Context,
-    private val onFallback: (Int, Long) -> Unit,
+    private val onFallback: (Int, Long, String?, Boolean) -> Unit,
 ) : WebView(context), GeckoViewInsetHost {
     private var topInsetPx = 0
     private var layoutTopInsetPx = 0
@@ -1765,10 +1769,15 @@ private class SystemWebViewHost(
                 fun safeAreaRequiredFailureCount(): Int = safeAreaRequiredFailureCount
 
                 @android.webkit.JavascriptInterface
+                fun nativeTopHeaderEnabled(): Boolean = true
+
+                @android.webkit.JavascriptInterface
                 fun fallbackToNative(
                     generation: Int,
                     revision: Long,
-                ) = post { onFallback(generation, revision) }
+                    themeColor: String?,
+                    isTopHeader: Boolean,
+                ) = post { onFallback(generation, revision, themeColor, isTopHeader) }
             },
             WebContentTopInsetScript.bridgeName,
         )

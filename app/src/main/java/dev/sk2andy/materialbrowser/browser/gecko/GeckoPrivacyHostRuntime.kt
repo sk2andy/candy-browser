@@ -630,6 +630,11 @@ internal class GeckoViewPrivacyHostRuntime(
                 isBuiltIn = false,
                 isCompatibilityObservation = false,
                 safeAreaFallbackNavigationGeneration = navigationGeneration,
+                safeAreaFallbackThemeColor = value.optString("themeColor")
+                    .takeIf { color ->
+                        color.isNotBlank() && color.length <= MAX_THEME_COLOR_LENGTH
+                    },
+                safeAreaFallbackIsTopHeader = value.optBoolean("topHeader", false),
             ),
         )
     }
@@ -838,6 +843,7 @@ internal class GeckoViewPrivacyHostRuntime(
         const val TAG = "CandyPrivacyHost"
         const val MAX_EVENTS_PER_BATCH = 512
         const val MAX_URL_CHARS = 8 * 1_024
+        const val MAX_THEME_COLOR_LENGTH = 32
         const val MAX_FAILURE_DESCRIPTION_CHARS = 256
         const val INITIALIZATION_TIMEOUT_MILLIS = 15_000L
         const val BINDING_TIMEOUT_MILLIS = 15_000L

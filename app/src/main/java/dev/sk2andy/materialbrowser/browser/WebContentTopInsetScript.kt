@@ -167,6 +167,8 @@ internal object WebContentTopInsetScript {
               let suspendedLayoutRecoveryKey = null;
               let localOffsetCollisionDetected = false;
               let nativeFallbackRequested = false;
+              let nativeTopHeaderRequested = false;
+              let fixedTopHeaderCandidates = new WeakMap();
               let scrollLayoutCheckFrame = 0;
               let quietLayoutCheckFrame = 0;
               let quietLayoutCheckGeneration = 0;
@@ -434,6 +436,7 @@ internal object WebContentTopInsetScript {
               };
               const resetFailuresForPolicy = (policyKey, force = false) => {
                 if (!force && activePolicyKey === policyKey) return;
+                if (activePolicyKey !== policyKey) fixedTopHeaderCandidates = new WeakMap();
                 activePolicyKey = policyKey;
                 deferredLayoutChecks = 0;
                 consecutiveLayoutFailures = 0;
@@ -522,7 +525,7 @@ internal object WebContentTopInsetScript {
                 const revision = Number(
                   globalThis.$bridgeName?.policyRevision?.(),
                 ) || 0;
-                globalThis.$bridgeName?.fallbackToNative?.(generation, revision);
+                globalThis.$bridgeName?.fallbackToNative?.(generation, revision, null, false);
               };
               const suspendLayoutRecovery = (reason = 'unknown') => {
                 if (document.documentElement) {
@@ -880,6 +883,7 @@ internal object WebContentTopInsetScript {
                     if (Number.isFinite(originalTop) && originalTop >= -0.5 &&
                         style.display !== 'none' && style.visibility !== 'hidden' &&
                         style.visibility !== 'collapse' && Number.parseFloat(style.opacity) > 0.01) {
+                      if (requestNativeFallbackForTopHeader(current, style)) return true;
                       applyStickyTopAnchor(current, originalTop, cssPixels);
                     }
                     break;
@@ -917,6 +921,12 @@ internal object WebContentTopInsetScript {
                 const isViewportWide = rect.width >= readViewportSize().width * 0.8;
                 const isViewportTall = rect.height >= readViewportSize().height * 0.8;
                 if (isViewportWide && isViewportTall) {
+                  return null;
+                }
+                if (
+                  (style.position === 'fixed' || style.position === 'sticky') &&
+                  requestNativeFallbackForTopHeader(element, style)
+                ) {
                   return null;
                 }
                 const previousOffset = isOwned
@@ -1992,6 +2002,30 @@ internal object WebContentTopInsetScript {
                 !color || color === 'transparent' ||
                 (color.startsWith('rgba(') &&
                   Number.parseFloat(color.slice(color.lastIndexOf(',') + 1)) === 0);
+              const normalizedOpaqueColor = (value) => {
+                if (typeof value !== 'string') return null;
+                const color = value.trim().toLowerCase();
+                const shortHex = /^#([0-9a-f]{3})$/.exec(color);
+                if (shortHex) {
+                  return `#${'$'}{[...shortHex[1]].map((channel) => channel + channel).join('')}`;
+                }
+                if (/^#[0-9a-f]{6}$/.test(color)) return color;
+                const rgb = /^rgba?\(\s*([\d.]+)(?:\s*,\s*|\s+)([\d.]+)(?:\s*,\s*|\s+)([\d.]+)(?:\s*[,/]\s*([\d.]+)(%)?)?\s*\)$/
+                  .exec(color);
+                if (!rgb) return null;
+                if (
+                  rgb[4] !== undefined &&
+                  (rgb[5] ? Number(rgb[4]) < 100 : Number(rgb[4]) < 1)
+                ) {
+                  return null;
+                }
+                const values = rgb.slice(1, 4).map(Number);
+                if (values.some((channel) => !Number.isFinite(channel))) return null;
+                return `#${'$'}{values.map((channel) =>
+                  Math.min(255, Math.max(0, Math.round(channel)))
+                    .toString(16)
+                    .padStart(2, '0')).join('')}`;
+              };
               const paintedBackground = (style) => {
                 const image = style.backgroundImage;
                 if (image && image !== 'none' && !image.includes('url(')) {
@@ -2019,10 +2053,95 @@ internal object WebContentTopInsetScript {
                     (!media || globalThis.matchMedia?.(media).matches) &&
                     globalThis.CSS?.supports?.('color', color)
                   ) {
-                    return color;
+                    const normalized = normalizedOpaqueColor(color);
+                    if (normalized) return normalized;
                   }
                 }
                 return null;
+              };
+              const authorDeclaresViewportCover = () => {
+                const content = document.querySelector('meta[name="viewport" i]')
+                  ?.getAttribute('content');
+                return typeof content === 'string' &&
+                  /(?:^|[\s,;])viewport-fit\s*=\s*cover(?=${'$'}|[\s,;])/i.test(content);
+              };
+              const requestNativeFallbackForTopHeader = (element, style) => {
+                if (nativeTopHeaderRequested) return true;
+                if (globalThis.$bridgeName?.nativeTopHeaderEnabled?.() !== true) return false;
+                if (authorDeclaresViewportCover()) return false;
+                if (style.position !== 'fixed' && style.position !== 'sticky') return false;
+                const opacity = Number.parseFloat(style.opacity);
+                if (
+                  style.display === 'none' ||
+                  style.visibility === 'hidden' ||
+                  style.visibility === 'collapse' ||
+                  (Number.isFinite(opacity) && opacity <= 0.01)
+                ) {
+                  if (style.position === 'fixed') fixedTopHeaderCandidates.delete(element);
+                  return false;
+                }
+                const originalTop = Number.parseFloat(style.top);
+                const physicalPixels = Number(globalThis.$bridgeName?.topInsetPx?.()) || 0;
+                const density = Number(globalThis.devicePixelRatio) || 1;
+                const cssPixels = physicalPixels / density;
+                if (
+                  !Number.isFinite(originalTop) ||
+                  originalTop < -0.5 ||
+                  originalTop > cssPixels + 0.5
+                ) {
+                  return false;
+                }
+                const semanticSelector =
+                  'header, nav, [role="banner"], [role="navigation"]';
+                if (
+                  !element.matches(semanticSelector) &&
+                  !element.querySelector(semanticSelector)
+                ) {
+                  return false;
+                }
+                const rect = readElementRect(element);
+                const viewport = readViewportSize();
+                if (
+                  rect.width < viewport.width * 0.5 ||
+                  rect.height <= 1 ||
+                  rect.height > viewport.height * 0.5 ||
+                  rect.top < -0.5 ||
+                  rect.top > cssPixels + 0.5
+                ) {
+                  if (style.position === 'fixed') fixedTopHeaderCandidates.delete(element);
+                  return false;
+                }
+                if (style.position === 'fixed') {
+                  const scrollY = Number(globalThis.scrollY) || 0;
+                  const candidate = fixedTopHeaderCandidates.get(element);
+                  if (!candidate || scrollY <= candidate.scrollY) {
+                    fixedTopHeaderCandidates.set(element, { scrollY });
+                    return false;
+                  }
+                  if (scrollY - candidate.scrollY < Math.max(rect.height, cssPixels)) {
+                    return false;
+                  }
+                }
+                const themeColor = activeThemeColor() ||
+                  normalizedOpaqueColor(paintedBackground(style)) ||
+                  normalizedOpaqueColor(canvasBackground(document.documentElement));
+                const generation = Number(globalThis.$bridgeName?.navigationGeneration?.());
+                const revision = Number(globalThis.$bridgeName?.policyRevision?.());
+                if (!Number.isFinite(generation) || !Number.isFinite(revision)) return false;
+                nativeFallbackRequested = true;
+                nativeTopHeaderRequested = true;
+                setOwnedAttribute(
+                  document.documentElement,
+                  'data-candy-browser-native-top-header',
+                  'true',
+                );
+                globalThis.$bridgeName?.fallbackToNative?.(
+                  generation,
+                  revision,
+                  themeColor,
+                  true,
+                );
+                return true;
               };
               const topContentBackground = (root, cssPixels) => {
                 const viewportWidth = readViewportSize().width;
