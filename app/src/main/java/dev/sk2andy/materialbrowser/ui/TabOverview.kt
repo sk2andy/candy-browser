@@ -1430,6 +1430,7 @@ internal fun TabOverview(
                     }
                 },
                 containerColor = overviewChromeTokens.containerColor,
+                contentColor = overviewChromeTokens.contentColor,
                 tonalElevation = overviewChromeTokens.tonalElevation,
                 shadowElevation = overviewChromeTokens.shadowElevation,
                 newTabIcon = {

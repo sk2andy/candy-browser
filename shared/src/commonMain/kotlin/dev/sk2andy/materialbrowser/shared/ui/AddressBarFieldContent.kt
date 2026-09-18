@@ -48,6 +48,9 @@ fun AddressBarFieldContent(
     editorLeadingContent: @Composable () -> Unit = {},
     editorTrailingContent: @Composable () -> Unit = {},
     displayTrailingContent: @Composable () -> Unit = {},
+    contentColor: Color = MaterialTheme.colorScheme.onSurface,
+    secondaryContentColor: Color = MaterialTheme.colorScheme.onSurfaceVariant,
+    cursorColor: Color = MaterialTheme.colorScheme.primary,
 ) {
     Box(modifier = modifier.height(fieldHeight)) {
         if (editing) {
@@ -64,9 +67,9 @@ fun AddressBarFieldContent(
                         .fillMaxHeight(),
                     singleLine = true,
                     textStyle = MaterialTheme.typography.bodyLarge.copy(
-                        color = MaterialTheme.colorScheme.onSurface,
+                        color = contentColor,
                     ),
-                    cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                    cursorBrush = SolidColor(cursorColor),
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
                     keyboardActions = KeyboardActions(
                         onGo = {
@@ -83,7 +86,7 @@ fun AddressBarFieldContent(
                             if (editValue.text.isEmpty()) {
                                 Text(
                                     placeholder,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    color = secondaryContentColor,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis,
                                 )
@@ -97,8 +100,7 @@ fun AddressBarFieldContent(
                                     )
                                     Text(
                                         ghostCompletion.drop(editValue.text.length),
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                            .copy(alpha = 0.58f),
+                                        color = secondaryContentColor.copy(alpha = 0.58f),
                                         maxLines = 1,
                                         overflow = TextOverflow.Clip,
                                         style = MaterialTheme.typography.bodyLarge,
