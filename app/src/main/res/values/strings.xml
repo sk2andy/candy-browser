@@ -179,11 +179,13 @@
     <string name="action_park_address_pill_right">Park address pill right</string>
     <string name="action_mute_domain">Mute this site</string>
     <string name="action_desktop_view">Desktop view</string>
+    <string name="action_mobile_view">Mobile view</string>
     <string name="action_desktop_view_description">Request the desktop version for this domain</string>
     <string name="action_always_block_popups">Always block pop-ups</string>
     <string name="action_always_block_popups_description">Silently block every pop-up opened by this domain</string>
     <string name="browser_menu_title">Menu</string>
     <string name="browser_menu_page_group">Page</string>
+    <string name="browser_menu_navigation_group">Navigation</string>
     <string name="browser_menu_browser_group">Browser</string>
     <string name="action_favorite">Favorite</string>
     <string name="action_open_in_app">Open in app</string>
@@ -526,6 +528,8 @@
     <string name="settings_make_default_browser">Make Candy Browser the default</string>
     <string name="settings_section_gestures">Gestures</string>
     <string name="settings_link_long_press_action">Long-press link action</string>
+    <string name="settings_address_bar_long_press_title">Long-press address bar action</string>
+    <string name="settings_address_bar_long_press_summary">Choose what happens when you touch and hold the address bar</string>
     <string name="settings_link_peek_actions_title">Link Peek buttons</string>
     <string name="settings_link_peek_actions_summary">Choose and arrange up to three quick actions</string>
     <string name="settings_link_peek_actions_instructions">Long-press and drag actions into empty slots. Drag one back to Available actions to leave its slot empty. The pulsing + always stays in the third slot and opens a background tab.</string>

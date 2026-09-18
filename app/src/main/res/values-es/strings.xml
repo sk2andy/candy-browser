@@ -171,11 +171,13 @@
     <string name="action_park_address_pill_right">Aparcar la píldora de dirección a la derecha</string>
     <string name="action_mute_domain">Silenciar este sitio</string>
     <string name="action_desktop_view">Vista de escritorio</string>
+    <string name="action_mobile_view">Vista móvil</string>
     <string name="action_desktop_view_description">Solicitar la versión de escritorio para este dominio</string>
     <string name="action_always_block_popups">Bloquear siempre las ventanas emergentes</string>
     <string name="action_always_block_popups_description">Bloquear sin preguntar todas las ventanas emergentes que abra este dominio</string>
     <string name="browser_menu_title">Menú</string>
     <string name="browser_menu_page_group">Página</string>
+    <string name="browser_menu_navigation_group">Navegación</string>
     <string name="browser_menu_browser_group">Navegador</string>
     <string name="action_favorite">Favorito</string>
     <string name="action_open_in_app">Abrir en la aplicación</string>
@@ -511,6 +513,8 @@
     <string name="settings_make_default_browser">Establecer Candy Browser como navegador predeterminado</string>
     <string name="settings_section_gestures">Gestos</string>
     <string name="settings_link_long_press_action">Acción al mantener pulsado un enlace</string>
+    <string name="settings_address_bar_long_press_title">Acción al mantener pulsada la barra de direcciones</string>
+    <string name="settings_address_bar_long_press_summary">Elige qué ocurre al mantener pulsada la barra de direcciones</string>
     <string name="settings_link_peek_actions_title">Botones de Link Peek</string>
     <string name="settings_link_peek_actions_summary">Elige y ordena hasta tres acciones rápidas</string>
     <string name="settings_link_peek_actions_instructions">Mantén pulsadas las acciones y arrástralas a ranuras vacías. Arrastra una de vuelta a Acciones disponibles para dejar su ranura vacía. El + pulsante permanece siempre en la tercera ranura y abre una pestaña en segundo plano.</string>

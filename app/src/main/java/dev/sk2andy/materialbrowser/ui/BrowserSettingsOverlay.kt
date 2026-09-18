@@ -156,6 +156,7 @@ internal fun BrowserSettingsOverlay(
             residentTabLimit = controller.residentTabLimit,
             searchEngine = controller.searchEngine,
             pageTranslationProvider = controller.pageTranslationProvider,
+            addressBarLongPressAction = controller.addressBarLongPressAction,
             linkLongPressAction = controller.linkLongPressAction,
             linkPeekActionLayout = controller.linkPeekActionLayout,
             searxngSettings = controller.searxngSettings,
@@ -234,6 +235,8 @@ internal fun BrowserSettingsOverlay(
             onResidentTabLimitChanged = controller::updateResidentTabLimit,
             onSearchEngineChanged = controller::updateSearchEngine,
             onPageTranslationProviderChanged = controller::updatePageTranslationProvider,
+            onAddressBarLongPressActionChanged =
+                controller::updateAddressBarLongPressAction,
             onLinkLongPressActionChanged = controller::updateLinkLongPressAction,
             onLinkPeekActionLayoutChanged = controller::updateLinkPeekActionLayout,
             onSearxngSettingsChanged = controller::updateSearxngSettings,

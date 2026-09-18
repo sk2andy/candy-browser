@@ -171,11 +171,13 @@
     <string name="action_park_address_pill_right">Fixar a pílula de endereço à direita</string>
     <string name="action_mute_domain">Silenciar este site</string>
     <string name="action_desktop_view">Vista para computador</string>
+    <string name="action_mobile_view">Vista móvel</string>
     <string name="action_desktop_view_description">Pedir a versão para computador neste domínio</string>
     <string name="action_always_block_popups">Bloquear sempre pop-ups</string>
     <string name="action_always_block_popups_description">Bloquear sem perguntar todos os pop-ups abertos por este domínio</string>
     <string name="browser_menu_title">Menu</string>
     <string name="browser_menu_page_group">Página</string>
+    <string name="browser_menu_navigation_group">Navegação</string>
     <string name="browser_menu_browser_group">Navegador</string>
     <string name="action_favorite">Favorito</string>
     <string name="action_open_in_app">Abrir na aplicação</string>
@@ -511,6 +513,8 @@
     <string name="settings_make_default_browser">Definir o Candy Browser como navegador predefinido</string>
     <string name="settings_section_gestures">Gestos</string>
     <string name="settings_link_long_press_action">Ação ao premir uma ligação sem soltar</string>
+    <string name="settings_address_bar_long_press_title">Ação ao manter premida a barra de endereço</string>
+    <string name="settings_address_bar_long_press_summary">Escolha o que acontece ao manter premida a barra de endereço</string>
     <string name="settings_link_peek_actions_title">Botões do Link Peek</string>
     <string name="settings_link_peek_actions_summary">Escolha e organize até três ações rápidas</string>
     <string name="settings_link_peek_actions_instructions">Prima sem soltar e arraste ações para espaços vazios. Arraste uma de volta para Ações disponíveis para deixar o espaço vazio. O + pulsante permanece sempre no terceiro espaço e abre um separador em segundo plano.</string>

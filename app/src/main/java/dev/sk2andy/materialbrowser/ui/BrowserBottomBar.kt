@@ -108,7 +108,6 @@ import dev.sk2andy.materialbrowser.data.AddressBarActionLayout
 import dev.sk2andy.materialbrowser.data.AddressBarDockEdge
 import dev.sk2andy.materialbrowser.data.AddressBarDockPlacement
 import dev.sk2andy.materialbrowser.data.BrowserAddressBarStyle
-import dev.sk2andy.materialbrowser.reader.ReaderStudioSessionRules
 import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuLayout
 import dev.sk2andy.materialbrowser.shared.ui.OverviewAddressBarContent
 import dev.sk2andy.materialbrowser.shared.ui.TabOverviewChromeTestTags
@@ -140,6 +139,9 @@ internal fun BrowserBottomBar(
     onBack: () -> Unit,
     onForward: () -> Unit,
     onAddress: () -> Unit,
+    addressBarLongPressEnabled: Boolean,
+    addressBarLongPressLabel: String,
+    onAddressBarLongPress: () -> Unit,
     editValue: TextFieldValue,
     onEditValueChange: (TextFieldValue) -> Unit,
     ghostCompletion: String?,
@@ -248,8 +250,6 @@ internal fun BrowserBottomBar(
     val pulseScale = remember { Animatable(1f) }
     val newTabPulseScale = remember { Animatable(1f) }
     val domain = AddressResolver.displayText(tab.url)
-    val readerSupported = ReaderStudioSessionRules.isSupportedSource(tab.url)
-    val readerOpenLabel = stringResource(R.string.reader_open_action)
     val feedbackText = commandFeedback?.localizedText().orEmpty()
     val textMeasurer = rememberTextMeasurer()
     val density = LocalDensity.current
@@ -548,11 +548,11 @@ internal fun BrowserBottomBar(
                                                 onTabDragStopped(velocity)
                                             },
                                         )
-                                        .addressBarReaderActions(
-                                            readerEnabled = readerSupported,
+                                        .addressBarPressActions(
+                                            longPressEnabled = addressBarLongPressEnabled,
                                             onClick = onExpand,
-                                            onReaderStudio = onReaderStudio,
-                                            readerLabel = readerOpenLabel,
+                                            onLongPress = onAddressBarLongPress,
+                                            longPressLabel = addressBarLongPressLabel,
                                         ),
                                     color = Color.Transparent,
                                 ) {
@@ -580,6 +580,9 @@ internal fun BrowserBottomBar(
                                 onBack = onBack,
                                 onForward = onForward,
                                 onAddress = onAddress,
+                                addressBarLongPressEnabled = addressBarLongPressEnabled,
+                                addressBarLongPressLabel = addressBarLongPressLabel,
+                                onAddressBarLongPress = onAddressBarLongPress,
                                 editing = editing,
                                 addressBarStyle = addressBarStyle,
                                 editValue = editValue,
@@ -993,16 +996,16 @@ private fun AddressCommandFeedback.localizedText(): String = when (message) {
         stringResource(R.string.command_feedback_rejected)
 }
 
-internal fun Modifier.addressBarReaderActions(
-    readerEnabled: Boolean,
+internal fun Modifier.addressBarPressActions(
+    longPressEnabled: Boolean,
     onClick: () -> Unit,
-    onReaderStudio: () -> Unit,
-    readerLabel: String,
+    onLongPress: () -> Unit,
+    longPressLabel: String,
 ): Modifier = combinedClickable(
     role = Role.Button,
     onClick = onClick,
-    onLongClick = onReaderStudio.takeIf { readerEnabled },
-    onLongClickLabel = readerLabel.takeIf { readerEnabled },
+    onLongClick = onLongPress.takeIf { longPressEnabled },
+    onLongClickLabel = longPressLabel.takeIf { longPressEnabled },
 )
 
 @Composable

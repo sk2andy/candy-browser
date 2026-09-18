@@ -171,11 +171,13 @@
     <string name="action_park_address_pill_right">Pille rechts parken</string>
     <string name="action_mute_domain">Diese Website stummschalten</string>
     <string name="action_desktop_view">Desktop-Ansicht</string>
+    <string name="action_mobile_view">Mobile Ansicht</string>
     <string name="action_desktop_view_description">Desktop-Version für diese Domain anfordern</string>
     <string name="action_always_block_popups">Pop-ups immer blockieren</string>
     <string name="action_always_block_popups_description">Alle von dieser Domain geöffneten Pop-ups ohne Nachfrage blockieren</string>
     <string name="browser_menu_title">Menü</string>
     <string name="browser_menu_page_group">Seite</string>
+    <string name="browser_menu_navigation_group">Navigation</string>
     <string name="browser_menu_browser_group">Browser</string>
     <string name="action_favorite">Favorit</string>
     <string name="action_open_in_app">In App öffnen</string>
@@ -505,6 +507,8 @@
     <string name="settings_make_default_browser">Candy Browser als Standardbrowser festlegen</string>
     <string name="settings_section_gestures">Gesten</string>
     <string name="settings_link_long_press_action">Aktion bei langem Drücken auf Links</string>
+    <string name="settings_address_bar_long_press_title">Aktion bei langem Drücken auf die Adressleiste</string>
+    <string name="settings_address_bar_long_press_summary">Lege fest, was beim Berühren und Halten der Adressleiste passiert</string>
     <string name="settings_link_peek_actions_title">Link-Peek-Schaltflächen</string>
     <string name="settings_link_peek_actions_summary">Bis zu drei Schnellaktionen auswählen und anordnen</string>
     <string name="settings_link_peek_actions_instructions">Aktionen lange drücken und in freie Slots ziehen. Eine Aktion zurück zu „Verfügbare Aktionen“ ziehen, um ihren Slot freizulassen. Das pulsierende + bleibt immer im dritten Slot und öffnet einen Hintergrund-Tab.</string>

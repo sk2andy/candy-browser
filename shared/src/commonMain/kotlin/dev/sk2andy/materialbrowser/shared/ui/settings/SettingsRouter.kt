@@ -34,6 +34,8 @@ fun SettingsRouter(
                     targetState == SettingsDestination.Home ||
                     initialState == SettingsDestination.ToppingCatalog &&
                     targetState == SettingsDestination.Userscripts ||
+                    initialState == SettingsDestination.AddressBarLongPressActions &&
+                    targetState == SettingsDestination.TabsAndGestures ||
                     initialState == SettingsDestination.AddressBarActions &&
                     targetState == SettingsDestination.TabsAndGestures ||
                     initialState == SettingsDestination.MenuActions &&

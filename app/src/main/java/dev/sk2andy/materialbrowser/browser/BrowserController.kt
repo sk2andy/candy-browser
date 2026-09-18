@@ -268,6 +268,7 @@ import dev.sk2andy.materialbrowser.reader.ReaderExtractionResult
 import dev.sk2andy.materialbrowser.reader.ReaderLibraryRepository
 import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineCommands
 import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineEvent
+import dev.sk2andy.materialbrowser.shared.browser.AddressBarLongPressAction
 import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineEventType
 import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuEntry
 import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuLayout
@@ -582,6 +583,8 @@ class BrowserController(
     var pageTranslationProvider by mutableStateOf(PageTranslationProvider.Google)
         private set
     var linkLongPressAction by mutableStateOf(LinkLongPressAction.LinkPeek)
+        private set
+    var addressBarLongPressAction by mutableStateOf(AddressBarLongPressAction.Default)
         private set
     var searxngSettings by mutableStateOf(SearxngSettings())
         private set
@@ -1299,6 +1302,17 @@ class BrowserController(
 
     val isSelectedDesktopView: Boolean
         get() = isDesktopView(selectedTabId)
+
+    val canCreatePrivateTabInActiveProfile: Boolean
+        get() = !isSyncedProfile(activeProfileId)
+
+    val canSnoozeSelectedTab: Boolean
+        get() = selectedTab.let { tab ->
+            tab.url != BLANK_URL &&
+                !tab.isIncognito &&
+                !isSyncedProfile(tab.profileId) &&
+                !isSessionEphemeralTab(tab.id)
+        }
 
     fun canToggleDomainMute(tabId: String): Boolean {
         val tab = tabs.firstOrNull { it.id == tabId } ?: return false
@@ -2059,6 +2073,7 @@ class BrowserController(
         searchEngine = store.loadSearchEngine()
         pageTranslationProvider = store.loadPageTranslationProvider()
         linkLongPressAction = store.loadLinkLongPressAction()
+        addressBarLongPressAction = store.loadAddressBarLongPressAction()
         linkPeekActionLayout = store.loadLinkPeekActionLayout()
         browserMenuLayout = store.loadBrowserMenuLayout()
         isAiModeToggleVisible = store.loadAiModeToggleVisible()
@@ -5519,7 +5534,11 @@ class BrowserController(
         if (!profilesEnabled) return false
         val sourceTab = tabs.firstOrNull { it.id == tabId } ?: return false
         if (isSessionEphemeralTab(tabId)) return false
-        if (sourceTab.profileId == profileId || profiles.none { it.id == profileId }) return false
+        if (
+            sourceTab.profileId == profileId ||
+            profileId in lockedProfileIds ||
+            profiles.none { it.id == profileId }
+        ) return false
         val targetIsSynced = isSyncedProfile(profileId)
         val targetSyncs = isSyncTargetProfile(profileId)
         if (sourceTab.isIncognito && targetIsSynced) return false
@@ -5574,6 +5593,16 @@ class BrowserController(
         reconcileCandyTrailForks(System.currentTimeMillis())
         persist()
         return true
+    }
+
+    fun compatibleMoveTargetProfiles(tabId: String): List<BrowserProfile> {
+        if (!profilesEnabled || isSessionEphemeralTab(tabId)) return emptyList()
+        val sourceTab = tabs.firstOrNull { tab -> tab.id == tabId } ?: return emptyList()
+        return profiles.filter { profile ->
+            profile.id != sourceTab.profileId &&
+                profile.id !in lockedProfileIds &&
+                (!sourceTab.isIncognito || !profile.isSynced)
+        }
     }
 
     fun downloadContextImage() {
@@ -6430,6 +6459,38 @@ class BrowserController(
                 )
             } else {
                 onResult(ReaderExtractionParser.parseJson(result))
+            }
+        }
+    }
+
+    fun saveSelectedPageToReader(onResult: (ReaderExtractionResult) -> Unit) {
+        val expectedUrl = BrowserUriPolicy.normalizeHttpUrl(selectedTab.url)
+        if (selectedTab.isIncognito || expectedUrl == null) {
+            onResult(ReaderExtractionResult.Failure(ReaderExtractionFailure.UnsupportedPage))
+            return
+        }
+        extractSelectedPageForReader { result ->
+            val document = (result as? ReaderExtractionResult.Success)?.document
+            if (document == null) {
+                onResult(result)
+                return@extractSelectedPageForReader
+            }
+            if (BrowserUriPolicy.normalizeHttpUrl(document.sourceUrl) != expectedUrl) {
+                onResult(ReaderExtractionResult.Failure(ReaderExtractionFailure.InvalidResponse))
+                return@extractSelectedPageForReader
+            }
+            ReaderLibraryRepository.get(activity).saveSnapshotWithResult(
+                document = document,
+                progress = 0f,
+                isPrivate = false,
+            ) { snapshot ->
+                onResult(
+                    if (snapshot == null) {
+                        ReaderExtractionResult.Failure(ReaderExtractionFailure.InvalidResponse)
+                    } else {
+                        result
+                    },
+                )
             }
         }
     }
@@ -7986,6 +8047,12 @@ class BrowserController(
         if (linkLongPressAction == action) return
         linkLongPressAction = action
         store.saveLinkLongPressAction(action)
+    }
+
+    fun updateAddressBarLongPressAction(action: AddressBarLongPressAction) {
+        if (addressBarLongPressAction == action) return
+        addressBarLongPressAction = action
+        store.saveAddressBarLongPressAction(action)
     }
 
     fun updateAddressBarActionLayout(layout: AddressBarActionLayout) {

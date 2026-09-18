@@ -142,6 +142,9 @@ internal fun ExpandedBottomBarContent(
     onBack: () -> Unit,
     onForward: () -> Unit,
     onAddress: () -> Unit,
+    addressBarLongPressEnabled: Boolean,
+    addressBarLongPressLabel: String,
+    onAddressBarLongPress: () -> Unit,
     editing: Boolean,
     addressBarStyle: BrowserAddressBarStyle,
     editValue: TextFieldValue,
@@ -446,11 +449,11 @@ internal fun ExpandedBottomBarContent(
                                 }
                         .focusRequester(focusRequester)
                         .onFocusChanged { addressFieldFocused = it.isFocused },
-                    displayTextModifier = Modifier.addressBarReaderActions(
-                        readerEnabled = ReaderStudioSessionRules.isSupportedSource(tab.url),
+                    displayTextModifier = Modifier.addressBarPressActions(
+                        longPressEnabled = addressBarLongPressEnabled,
                         onClick = onAddress,
-                        onReaderStudio = onReaderStudio,
-                        readerLabel = stringResource(R.string.reader_open_action),
+                        onLongPress = onAddressBarLongPress,
+                        longPressLabel = addressBarLongPressLabel,
                     ),
                     editorLeadingContent = {
                         if (segmentedAddressBar) {
