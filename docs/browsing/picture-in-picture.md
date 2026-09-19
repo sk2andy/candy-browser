@@ -65,7 +65,10 @@ explicit entry request because those releases cannot notify Candy early enough t
 before auto-enter captures the Activity. Android 15+ may use its early transition callback with
 prepared auto-enter. `onPictureInPictureRequested` handles an explicit system request on every
 supported release. Preparation preserves the original host and playback intent, while only
-Android's later mode callback tells Gecko that PiP is active.
+Android's later mode callback tells Gecko that PiP is active. The transition source rectangle is
+entry-only: Candy stops publishing PiP parameters while the compact task or its return layout is
+active, so Android cannot repeatedly offset the window-coordinate source rectangle when media
+eligibility changes during the transition.
 
 GeckoView 155 does not expose element geometry for ordinary inline video through its native media
 session API. The optional experimental Candy Player therefore obtains only bounded top-frame video
@@ -102,7 +105,9 @@ and document/element nonces. After the video-only styles have rendered, Candy ma
 bounded video/viewport rectangle through the unchanged Gecko host into Android window coordinates;
 stale, private, malformed or replaced-video replies cancel entry instead of reusing an old window
 crop. Android Back exits selected DOM fullscreen before web history navigation. Exiting Candy's DOM
-fullscreen preserves the acknowledged inline presentation and returns to its inline controls.
+fullscreen preserves the acknowledged inline presentation and returns to its inline controls. The
+retained presentation may remain `Expanded`, but only active DOM fullscreen or video-only PiP
+preparation hides browser chrome and Android system bars.
 While the Candy presentation is expanded, vertical gestures use three stable screen regions: the
 left region adjusts a per-window brightness override, the center drags the live video down to leave
 fullscreen, and the right region changes the global media stream volume. The center drag moves,

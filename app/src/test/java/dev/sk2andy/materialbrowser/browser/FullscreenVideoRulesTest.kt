@@ -26,7 +26,7 @@ class FullscreenVideoRulesTest {
     }
 
     @Test
-    fun `mini player restores browser chrome while DOM remains fullscreen`() {
+    fun `media presentation only hides chrome while DOM remains fullscreen`() {
         assertFalse(
             FullscreenVideoRules.hidesBrowserChrome(
                 isWebContentFullscreen = true,
@@ -34,9 +34,16 @@ class FullscreenVideoRulesTest {
                 videoOnlyPresentation = false,
             ),
         )
-        assertTrue(
+        assertFalse(
             FullscreenVideoRules.hidesBrowserChrome(
                 isWebContentFullscreen = false,
+                placement = FullscreenVideoPlacement.Expanded,
+                videoOnlyPresentation = false,
+            ),
+        )
+        assertTrue(
+            FullscreenVideoRules.hidesBrowserChrome(
+                isWebContentFullscreen = true,
                 placement = FullscreenVideoPlacement.Expanded,
                 videoOnlyPresentation = false,
             ),
@@ -58,6 +65,34 @@ class FullscreenVideoRulesTest {
     fun `prepared auto enter requires the Android 15 transition callback`() {
         assertFalse(FullscreenVideoRules.supportsPreparedAutoEnter(sdkInt = 34))
         assertTrue(FullscreenVideoRules.supportsPreparedAutoEnter(sdkInt = 35))
+    }
+
+    @Test
+    fun `prepared auto enter stops inside picture in picture and during return`() {
+        assertTrue(
+            FullscreenVideoRules.enablesPreparedAutoEnter(
+                isEligible = true,
+                isInPictureInPicture = false,
+                returnInProgress = false,
+                sdkInt = 35,
+            ),
+        )
+        assertFalse(
+            FullscreenVideoRules.enablesPreparedAutoEnter(
+                isEligible = true,
+                isInPictureInPicture = true,
+                returnInProgress = false,
+                sdkInt = 35,
+            ),
+        )
+        assertFalse(
+            FullscreenVideoRules.enablesPreparedAutoEnter(
+                isEligible = true,
+                isInPictureInPicture = false,
+                returnInProgress = true,
+                sdkInt = 35,
+            ),
+        )
     }
 
     @Test

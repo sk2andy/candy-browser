@@ -55,6 +55,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.zIndex
 import androidx.compose.ui.layout.boundsInWindow
@@ -1397,7 +1398,17 @@ internal fun BrowserScreen(
                         onBack = controller::goBack,
                     )
                 }
-                Box(modifier = Modifier.weight(1f)) {
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .background(
+                            if (fullscreenVideoGestureState != null) {
+                                Color.Black
+                            } else {
+                                Color.Transparent
+                            },
+                        ),
+                ) {
                     BrowserViewport(
                         controller = controller,
                         fullscreenVideoGestureState = fullscreenVideoGestureState,

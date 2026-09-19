@@ -27,13 +27,21 @@ internal object FullscreenVideoRules {
         isWebContentFullscreen: Boolean,
         placement: FullscreenVideoPlacement?,
         videoOnlyPresentation: Boolean,
-    ): Boolean = videoOnlyPresentation || when (placement) {
-        FullscreenVideoPlacement.Expanded -> true
-        FullscreenVideoPlacement.MiniPlayer -> false
-        null -> isWebContentFullscreen
-    }
+    ): Boolean = videoOnlyPresentation ||
+        (isWebContentFullscreen && placement != FullscreenVideoPlacement.MiniPlayer)
 
     fun supportsPreparedAutoEnter(sdkInt: Int): Boolean = sdkInt >= 35
+
+    fun enablesPreparedAutoEnter(
+        isEligible: Boolean,
+        isInPictureInPicture: Boolean,
+        returnInProgress: Boolean,
+        sdkInt: Int,
+    ): Boolean =
+        isEligible &&
+            !isInPictureInPicture &&
+            !returnInProgress &&
+            supportsPreparedAutoEnter(sdkInt)
 
     fun pictureInPictureAspectRatio(
         videoWidth: Int,

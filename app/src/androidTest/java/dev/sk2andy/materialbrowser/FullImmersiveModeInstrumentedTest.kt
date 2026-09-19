@@ -10,6 +10,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -86,6 +87,41 @@ class FullImmersiveModeInstrumentedTest {
                 )
             }
             assertTrue(awaitSystemBarsVisibility(scenario, expectedVisible = true))
+        }
+    }
+
+    @Test
+    fun webContentFullscreenExitRestoresSystemBars() {
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            assertTrue(awaitSystemBarsVisibility(scenario, expectedVisible = true))
+
+            scenario.onActivity { activity ->
+                activity.browserControllerForTesting()
+                    .reportSelectedBrowserEngineFullscreenStateForTesting(true)
+                assertEquals(
+                    WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE,
+                    WindowCompat.getInsetsController(
+                        activity.window,
+                        activity.window.decorView,
+                    ).systemBarsBehavior,
+                )
+            }
+            assertTrue(awaitSystemBarsVisibility(scenario, expectedVisible = false))
+
+            scenario.onActivity { activity ->
+                activity.browserControllerForTesting()
+                    .reportSelectedBrowserEngineFullscreenStateForTesting(false)
+            }
+            assertTrue(awaitSystemBarsVisibility(scenario, expectedVisible = true))
+            scenario.onActivity { activity ->
+                assertEquals(
+                    WindowInsetsControllerCompat.BEHAVIOR_DEFAULT,
+                    WindowCompat.getInsetsController(
+                        activity.window,
+                        activity.window.decorView,
+                    ).systemBarsBehavior,
+                )
+            }
         }
     }
 

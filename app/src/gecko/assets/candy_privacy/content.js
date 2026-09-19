@@ -64,9 +64,9 @@ const CANDY_INLINE_VIDEO_ACTION_ATTRIBUTE = "data-candy-inline-video-action";
 const CANDY_INLINE_VIDEO_CONTROLS_ATTRIBUTE = "data-candy-inline-video-controls";
 const CANDY_INLINE_VIDEO_SITE_PLAYER_ATTRIBUTE = "data-candy-inline-video-site-player";
 const CANDY_INLINE_VIDEO_SITE_STYLE_ATTRIBUTE = "data-candy-inline-video-site-style";
-const CANDY_INLINE_VIDEO_ACTION_SIZE_PX = 64;
-const CANDY_INLINE_VIDEO_ACTION_INSET_PX = 12;
-const CANDY_INLINE_VIDEO_CONTROLS_HEIGHT_PX = 76;
+const CANDY_INLINE_VIDEO_ACTION_SIZE_PX = 56;
+const CANDY_INLINE_VIDEO_ACTION_INSET_PX = 16;
+const CANDY_INLINE_VIDEO_CONTROLS_HEIGHT_PX = 88;
 const CANDY_INLINE_MEDIA_PLAYER_MODES = new Set([
   "button_fullscreen",
   "button_inline_and_fullscreen",
@@ -276,10 +276,10 @@ function createCandyInlineVideoControlsOverlay(video) {
   left: 0;
   box-sizing: border-box;
   display: grid;
-  grid-template-rows: 28px 48px;
+  grid-template-rows: 30px 44px;
   width: 100%;
   height: ${CANDY_INLINE_VIDEO_CONTROLS_HEIGHT_PX}px;
-  padding: 0 10px 6px;
+  padding: 0 16px 14px;
   background: linear-gradient(transparent, rgba(7, 5, 14, 0.92));
   pointer-events: none;
 }
@@ -354,15 +354,19 @@ button {
   place-items: center;
   width: 40px;
   height: 40px;
+  border: 0;
   border-radius: 20px;
+  outline: none;
   color: white;
   cursor: pointer;
   font: 750 19px/1 system-ui, sans-serif;
+  appearance: none;
+  -webkit-appearance: none;
   transition: transform 180ms cubic-bezier(.2, 1.4, .4, 1), background 180ms ease;
   pointer-events: auto;
 }
 button:active { background: rgba(255, 255, 255, 0.22); transform: scale(0.86) rotate(-3deg); }
-button:focus-visible { outline: 2px solid white; outline-offset: -2px; }
+button:focus-visible { outline: 3px solid white; outline-offset: 3px; }
 .play-pause::before,
 .hero-play::after {
   content: "";
@@ -379,8 +383,12 @@ button:focus-visible { outline: 2px solid white; outline-offset: -2px; }
 .play-pause[data-state="pause"]::before {
   width: 12px;
   height: 16px;
-  border-right: 4px solid white;
-  border-left: 4px solid white;
+  background: linear-gradient(
+    90deg,
+    white 0 4px,
+    transparent 4px 8px,
+    white 8px 12px
+  );
 }
 .time {
   min-width: 82px;
@@ -396,14 +404,14 @@ button:focus-visible { outline: 2px solid white; outline-offset: -2px; }
   top: 50%;
   left: 50%;
   width: 78px;
-  height: 74px;
-  border-radius: 46% 54% 43% 57% / 58% 44% 56% 42%;
+  height: 78px;
+  border-radius: 50%;
   background:
     radial-gradient(circle at 34% 24%, rgba(255,255,255,.22), transparent 30%),
     linear-gradient(145deg, #ff397f 0 54%, #7148e7 55% 100%);
-  box-shadow: 0 12px 34px rgba(11, 5, 28, 0.46), 0 0 0 1px rgba(255,255,255,.24) inset;
+  box-shadow: 0 12px 34px rgba(11, 5, 28, 0.46);
   transform: translate(-50%, -50%);
-  animation: candy-hero-breathe 2.8s ease-in-out infinite, candy-hero-morph 5.4s ease-in-out infinite;
+  animation: candy-hero-breathe 2.8s ease-in-out infinite;
   pointer-events: auto;
 }
 .hero-play::after {
@@ -417,16 +425,28 @@ button:focus-visible { outline: 2px solid white; outline-offset: -2px; }
 }
 .hero-play[hidden] { display: none; }
 .hero-play:active { transform: translate(-50%, -50%) scale(0.88) rotate(-4deg); }
-@keyframes candy-hero-breathe {
-  0%, 100% { box-shadow: 0 12px 34px rgba(11,5,28,.46), 0 0 0 1px rgba(255,255,255,.24) inset; }
-  50% { box-shadow: 0 16px 44px rgba(255,47,124,.34), 0 0 0 1px rgba(255,255,255,.34) inset; }
+.hero-play[data-activating="true"] {
+  animation: candy-hero-launch 620ms cubic-bezier(.18, .89, .32, 1.28);
 }
-@keyframes candy-hero-morph {
-  0%, 100% { border-radius: 46% 54% 43% 57% / 58% 44% 56% 42%; }
-  50% { border-radius: 58% 42% 55% 45% / 43% 58% 42% 57%; }
+@keyframes candy-hero-breathe {
+  0%, 100% { box-shadow: 0 12px 34px rgba(11,5,28,.46); }
+  50% { box-shadow: 0 16px 44px rgba(255,47,124,.34); }
+}
+@keyframes candy-hero-launch {
+  0% { transform: translate(-50%, -50%) scale(1) rotate(0); }
+  22% { transform: translate(-50%, -50%) scale(.82) rotate(-10deg); }
+  52% {
+    box-shadow: 0 0 0 18px rgba(255,57,127,.18), 0 18px 48px rgba(113,72,231,.55);
+    transform: translate(-50%, -50%) scale(1.24) rotate(7deg);
+  }
+  76% { transform: translate(-50%, -50%) scale(.94) rotate(-3deg); }
+  100% { transform: translate(-50%, -50%) scale(1) rotate(0); }
 }
 @media (prefers-reduced-motion: reduce) {
-  button, .hero-play { animation: none; transition: none; }
+  button, .hero-play, .hero-play[data-activating="true"] {
+    animation: none;
+    transition: none;
+  }
 }
 `;
   const stage = document.createElement("div");
@@ -484,10 +504,11 @@ button:focus-visible { outline: 2px solid white; outline-offset: -2px; }
   transport.className = "pill transport";
   const utility = document.createElement("div");
   utility.className = "pill utility";
+  let heroActivationTimer = null;
   const update = () => {
     const playing = !video.paused && !video.ended;
     playPause.dataset.state = playing ? "pause" : "play";
-    heroPlay.hidden = playing;
+    heroPlay.hidden = playing && heroPlay.dataset.activating !== "true";
     playPause.setAttribute(
       "aria-label",
       playing ? candyPictureInPicturePlayback.inlineMediaPlayerPauseLabel :
@@ -509,6 +530,12 @@ button:focus-visible { outline: 2px solid white; outline-offset: -2px; }
         candyPictureInPicturePlayback.inlineMediaPlayerEnterFullscreenLabel,
     );
   };
+  const finishHeroActivation = () => {
+    if (heroActivationTimer !== null) clearTimeout(heroActivationTimer);
+    heroActivationTimer = null;
+    delete heroPlay.dataset.activating;
+    update();
+  };
   playPause.addEventListener("click", (event) => {
     event.stopPropagation();
     if (video.paused || video.ended) Promise.resolve(video.play()).catch(() => {});
@@ -516,7 +543,17 @@ button:focus-visible { outline: 2px solid white; outline-offset: -2px; }
   });
   heroPlay.addEventListener("click", (event) => {
     event.stopPropagation();
-    if (video.paused || video.ended) Promise.resolve(video.play()).catch(() => {});
+    if (video.paused || video.ended) {
+      heroPlay.dataset.activating = "true";
+      heroActivationTimer = setTimeout(finishHeroActivation, 700);
+      Promise.resolve(video.play()).catch(() => {
+        finishHeroActivation();
+      });
+    }
+  });
+  heroPlay.addEventListener("animationend", (event) => {
+    if (event.animationName !== "candy-hero-launch") return;
+    finishHeroActivation();
   });
   const seekVideo = (event) => {
     event.stopPropagation();
@@ -551,6 +588,7 @@ button:focus-visible { outline: 2px solid white; outline-offset: -2px; }
   mediaEvents.forEach((eventName) => video.addEventListener(eventName, update));
   document.addEventListener("fullscreenchange", update);
   candyPictureInPicturePlayback.inlineControlsCleanup = () => {
+    if (heroActivationTimer !== null) clearTimeout(heroActivationTimer);
     mediaEvents.forEach((eventName) => video.removeEventListener(eventName, update));
     document.removeEventListener("fullscreenchange", update);
   };
@@ -821,31 +859,32 @@ function createCandyInlineVideoAction(video) {
     ["transform", "none"],
     ["pointer-events", "auto"],
     ["isolation", "isolate"],
-    ["contain", "strict"],
     ["z-index", "2147483647"],
   ].forEach(([property, value]) => setCandyInlineActionStyle(host, property, value));
   const shadow = host.attachShadow({ mode: "closed" });
   const style = document.createElement("style");
   style.textContent = `
-:host { all: initial; }
+:host { all: initial; overflow: visible; }
 button {
   all: initial;
   box-sizing: border-box;
   display: grid;
   place-items: center;
-  width: ${CANDY_INLINE_VIDEO_ACTION_SIZE_PX}px;
-  height: ${CANDY_INLINE_VIDEO_ACTION_SIZE_PX}px;
-  border: 1px solid rgba(255, 255, 255, 0.36);
-  border-radius: 46% 54% 43% 57% / 58% 44% 56% 42%;
+  width: 52px;
+  height: 52px;
+  margin: 2px;
+  border: 0;
+  border-radius: 17px;
+  outline: none;
   background:
     radial-gradient(circle at 34% 24%, rgba(255,255,255,.24), transparent 30%),
     linear-gradient(145deg, #ff397f 0 54%, #7148e7 55% 100%);
   color: white;
-  box-shadow: 0 8px 24px rgba(25, 5, 52, 0.48), 0 0 0 1px rgba(255,255,255,.14) inset;
+  box-shadow: 0 7px 16px rgba(25, 5, 52, 0.42);
   cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
   -webkit-tap-highlight-color: transparent;
-  animation: candy-action-float 2.8s ease-in-out infinite,
-    candy-action-morph 5.2s ease-in-out infinite;
   transition: transform 180ms cubic-bezier(.2, 1.4, .4, 1), filter 180ms ease;
 }
 button::after {
@@ -859,7 +898,7 @@ button::after {
   filter: drop-shadow(0 2px 2px rgba(42, 12, 72, 0.24));
 }
 button:active { transform: scale(0.84) rotate(-4deg); filter: saturate(1.2); }
-button:focus-visible { outline: 2px solid white; outline-offset: 2px; }
+button:focus-visible { outline: 3px solid white; outline-offset: 3px; }
 button:disabled { cursor: wait; opacity: 0.72; }
 button[data-loading="true"]::after {
   width: 18px;
@@ -869,14 +908,6 @@ button[data-loading="true"]::after {
   border-top-color: white;
   border-radius: 50%;
   animation: candy-action-spin .7s linear infinite;
-}
-@keyframes candy-action-float {
-  0%, 100% { translate: 0 0; }
-  50% { translate: 0 -3px; }
-}
-@keyframes candy-action-morph {
-  0%, 100% { border-radius: 46% 54% 43% 57% / 58% 44% 56% 42%; }
-  50% { border-radius: 58% 42% 55% 45% / 43% 58% 42% 57%; }
 }
 @keyframes candy-action-spin { to { rotate: 360deg; } }
 @media (prefers-reduced-motion: reduce) {
