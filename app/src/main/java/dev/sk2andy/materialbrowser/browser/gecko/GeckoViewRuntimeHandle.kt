@@ -929,6 +929,9 @@ private class GeckoViewBrowserSession(
     private var inlineVideoOpenRequestListener: GeckoInlineVideoOpenRequestListener? = null
 
     @Volatile
+    private var inlineVideoGestureHapticListener: GeckoInlineVideoGestureHapticListener? = null
+
+    @Volatile
     private var fullscreenStateListener: GeckoFullscreenStateListener? = null
 
     @Volatile
@@ -1840,6 +1843,9 @@ private class GeckoViewBrowserSession(
             onInlineVideoOpenRequest = { request ->
                 inlineVideoOpenRequestListener?.onOpenRequested(request)
             },
+            onInlineVideoGestureHaptic = { haptic ->
+                inlineVideoGestureHapticListener?.onHapticRequested(haptic)
+            },
             onBound = {
                 privacyBound = true
                 loadPendingUrlIfReady()
@@ -2039,6 +2045,12 @@ private class GeckoViewBrowserSession(
         listener: GeckoInlineVideoOpenRequestListener?,
     ) {
         inlineVideoOpenRequestListener = listener
+    }
+
+    override fun setInlineVideoGestureHapticListener(
+        listener: GeckoInlineVideoGestureHapticListener?,
+    ) {
+        inlineVideoGestureHapticListener = listener
     }
 
     override fun setScrollListener(listener: BrowserEngineScrollListener?) {
@@ -2340,6 +2352,16 @@ private class GeckoViewBrowserSession(
             identity = identity,
             onResult = onResult,
         )
+    }
+
+    @UiThread
+    override fun restorePictureInPicturePresentation(onResult: (Boolean) -> Unit) {
+        if (closed) {
+            onResult(false)
+            return
+        }
+        pictureInPicturePlaybackExpected = false
+        privacyBinding.restorePictureInPicturePresentation(onResult)
     }
 
     @UiThread
@@ -2795,6 +2817,7 @@ private class GeckoViewBrowserSession(
         webPromptListener = null
         mediaStateListener = null
         inlineVideoOpenRequestListener = null
+        inlineVideoGestureHapticListener = null
         fullscreenStateListener = null
         scrollListener = null
         activeMediaSession = null

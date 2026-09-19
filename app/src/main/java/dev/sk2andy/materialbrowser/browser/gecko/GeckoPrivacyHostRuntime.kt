@@ -41,6 +41,8 @@ internal interface GeckoPrivacyBinding {
         onResult: (GeckoPictureInPicturePreparation?) -> Unit,
     )
 
+    fun restorePictureInPicturePresentation(onResult: (Boolean) -> Unit)
+
     fun setInlineVideoPresentation(
         identity: GeckoInlineVideoIdentity?,
         expected: Boolean,
@@ -71,10 +73,14 @@ internal class GeckoViewPrivacyHostRuntime(
         val domProbe: GeckoDomProbeRequest,
         val textInputOcclusionProbe: GeckoTextInputOcclusionRequest,
         var pictureInPicturePlaybackExpected: Boolean = false,
+        var pictureInPicturePlaybackRequestGeneration: Long = 0,
         var pictureInPicturePreparationRequestId: Long? = null,
         var pictureInPicturePreparationIdentity: GeckoInlineVideoIdentity? = null,
         var pictureInPicturePreparationResult: ((GeckoPictureInPicturePreparation?) -> Unit)? = null,
         var pictureInPicturePreparationTimeout: Runnable? = null,
+        var pictureInPictureRestorationRequestId: Long? = null,
+        var pictureInPictureRestorationResult: ((Boolean) -> Unit)? = null,
+        var pictureInPictureRestorationTimeout: Runnable? = null,
         var inlineVideoPresentationRequestId: Long? = null,
         var inlineVideoPresentationResult: ((Boolean) -> Unit)? = null,
         var inlineVideoPresentationTimeout: Runnable? = null,
@@ -88,6 +94,7 @@ internal class GeckoViewPrivacyHostRuntime(
         val onMainFrameResponse: (GeckoMainFrameResponse) -> Unit,
         val onInlineVideoState: (GeckoInlineVideoState) -> Unit,
         val onInlineVideoOpenRequest: (GeckoInlineVideoOpenRequest) -> Unit,
+        val onInlineVideoGestureHaptic: (GeckoInlineVideoGestureHaptic) -> Unit,
     )
 
     private val bindings = linkedMapOf<String, Binding>()
@@ -190,6 +197,7 @@ internal class GeckoViewPrivacyHostRuntime(
         onMainFrameResponse: (GeckoMainFrameResponse) -> Unit,
         onInlineVideoState: (GeckoInlineVideoState) -> Unit,
         onInlineVideoOpenRequest: (GeckoInlineVideoOpenRequest) -> Unit,
+        onInlineVideoGestureHaptic: (GeckoInlineVideoGestureHaptic) -> Unit,
         onBound: () -> Unit,
         onFailure: (String) -> Unit,
     ): GeckoPrivacyBinding {
@@ -204,6 +212,7 @@ internal class GeckoViewPrivacyHostRuntime(
             onMainFrameResponse = onMainFrameResponse,
             onInlineVideoState = onInlineVideoState,
             onInlineVideoOpenRequest = onInlineVideoOpenRequest,
+            onInlineVideoGestureHaptic = onInlineVideoGestureHaptic,
             bound = onBound,
             failed = onFailure,
         )
@@ -294,7 +303,12 @@ internal class GeckoViewPrivacyHostRuntime(
 
             override fun setPictureInPicturePlaybackExpected(expected: Boolean) {
                 binding.pictureInPicturePlaybackExpected = expected
-                if (!expected) clearPictureInPicturePreparationRequest(binding)?.invoke(null)
+                if (expected) {
+                    binding.pictureInPicturePlaybackRequestGeneration++
+                    clearPictureInPictureRestorationRequest(binding)?.invoke(false)
+                } else {
+                    clearPictureInPicturePreparationRequest(binding)?.invoke(null)
+                }
                 runWhenReady(binding) {
                     if (
                         bindings[token] === binding &&
@@ -309,11 +323,29 @@ internal class GeckoViewPrivacyHostRuntime(
                 identity: GeckoInlineVideoIdentity,
                 onResult: (GeckoPictureInPicturePreparation?) -> Unit,
             ) {
+                binding.pictureInPicturePlaybackRequestGeneration++
+                clearPictureInPictureRestorationRequest(binding)?.invoke(false)
                 requestPictureInPicturePreparation(
                     binding = binding,
                     identity = identity,
                     onResult = onResult,
                 )
+            }
+
+            override fun restorePictureInPicturePresentation(onResult: (Boolean) -> Unit) {
+                binding.pictureInPicturePlaybackExpected = false
+                clearPictureInPicturePreparationRequest(binding)?.invoke(null)
+                val requestGeneration = ++binding.pictureInPicturePlaybackRequestGeneration
+                runWhenReady(binding) {
+                    if (
+                        binding.pictureInPicturePlaybackRequestGeneration == requestGeneration &&
+                        !binding.pictureInPicturePlaybackExpected
+                    ) {
+                        requestPictureInPictureRestoration(binding, onResult)
+                    } else {
+                        onResult(false)
+                    }
+                }
             }
 
             override fun setInlineVideoPresentation(
@@ -341,6 +373,7 @@ internal class GeckoViewPrivacyHostRuntime(
                 binding.domProbe.cancel()
                 binding.textInputOcclusionProbe.cancel()
                 clearPictureInPicturePreparationRequest(binding)?.invoke(null)
+                clearPictureInPictureRestorationRequest(binding)?.invoke(false)
                 clearInlineVideoPresentationRequest(binding)?.invoke(false)
                 clearDeferredInlineVideoPresentationResult(binding)?.invoke(false)
                 if (BuildConfig.ENABLE_PERFORMANCE_DIAGNOSTICS && bindings.isEmpty()) {
@@ -424,6 +457,8 @@ internal class GeckoViewPrivacyHostRuntime(
         val readerResult = clearReaderRequest(binding)
         val pictureInPicturePreparationResult =
             clearPictureInPicturePreparationRequest(binding)
+        val pictureInPictureRestorationResult =
+            clearPictureInPictureRestorationRequest(binding)
         val inlineVideoPresentationResult = clearInlineVideoPresentationRequest(binding)
         if (inlineVideoPresentationResult != null) {
             clearDeferredInlineVideoPresentationResult(binding)?.invoke(false)
@@ -446,6 +481,7 @@ internal class GeckoViewPrivacyHostRuntime(
         )
         readerResult?.invoke(null)
         pictureInPicturePreparationResult?.invoke(null)
+        pictureInPictureRestorationResult?.invoke(false)
     }
 
     private fun onPortMessage(message: Any, sourcePort: WebExtension.Port) {
@@ -502,9 +538,10 @@ internal class GeckoViewPrivacyHostRuntime(
             "scroll-metrics" -> acceptScrollMetrics(value)
             "inline-video-state" -> acceptInlineVideoState(value)
             "inline-video-open-request" -> acceptInlineVideoOpenRequest(value)
+            "inline-video-gesture-haptic" -> acceptInlineVideoGestureHaptic(value)
             "inline-video-presentation-result" -> acceptInlineVideoPresentationResult(value)
             "picture-in-picture-playback-result" ->
-                acceptPictureInPicturePreparationResult(value)
+                acceptPictureInPicturePlaybackResult(value)
             "reader-result" -> acceptReaderResult(value)
             "text-input-occlusion-result" -> {
                 val binding = bindings[value.optString("token")] ?: return
@@ -760,6 +797,24 @@ internal class GeckoViewPrivacyHostRuntime(
         binding.onInlineVideoOpenRequest(request)
     }
 
+    private fun acceptInlineVideoGestureHaptic(value: JSONObject) {
+        val binding = bindings[value.optString("token")] ?: return
+        if (
+            binding.session.settings.usePrivateMode ||
+            !binding.policy.inlineMediaPlayerEnabled ||
+            !binding.handshake.isCurrentPolicyAcknowledged ||
+            !binding.inlineVideoPresented
+        ) {
+            return
+        }
+        val haptic = geckoInlineVideoGestureHapticFromMessage(
+            message = value,
+            currentRevision = binding.handshake.publishedRevision,
+            currentNavigationGeneration = binding.policy.navigationGeneration,
+        ) ?: return
+        binding.onInlineVideoGestureHaptic(haptic)
+    }
+
     private fun publishDesiredPictureInPicturePlayback(binding: Binding) {
         if (
             bindings[binding.token] !== binding ||
@@ -792,6 +847,7 @@ internal class GeckoViewPrivacyHostRuntime(
             onResult(null)
             return
         }
+        clearPictureInPictureRestorationRequest(binding)?.invoke(false)
         clearPictureInPicturePreparationRequest(binding)?.invoke(null)
         nextPictureInPicturePreparationRequestId =
             if (nextPictureInPicturePreparationRequestId >= MAX_SAFE_JAVASCRIPT_INTEGER) {
@@ -821,26 +877,94 @@ internal class GeckoViewPrivacyHostRuntime(
         )
     }
 
-    private fun acceptPictureInPicturePreparationResult(value: JSONObject) {
-        val binding = bindings[value.optString("token")] ?: return
-        val requestId = binding.pictureInPicturePreparationRequestId ?: return
-        val identity = binding.pictureInPicturePreparationIdentity ?: return
+    private fun requestPictureInPictureRestoration(
+        binding: Binding,
+        onResult: (Boolean) -> Unit,
+    ) {
+        val connectedPort = port
         if (
-            binding.handshake.publishedRevision != value.optLong("revision", -1) ||
-            binding.policy.navigationGeneration !=
-            value.optInt("navigationGeneration", -1) ||
-            requestId != value.optLong("requestId", -1)
+            bindings[binding.token] !== binding ||
+            binding.session.settings.usePrivateMode ||
+            connectedPort == null ||
+            !binding.handshake.isCurrentPolicyAcknowledged
         ) {
+            onResult(false)
             return
         }
-        val preparation = geckoPictureInPicturePreparationFromMessage(
-            message = value,
-            currentRevision = binding.handshake.publishedRevision,
-            currentNavigationGeneration = binding.policy.navigationGeneration,
-            expectedRequestId = requestId,
-            expectedIdentity = identity,
+        clearPictureInPictureRestorationRequest(binding)?.invoke(false)
+        nextPictureInPicturePreparationRequestId =
+            if (nextPictureInPicturePreparationRequestId >= MAX_SAFE_JAVASCRIPT_INTEGER) {
+                1L
+            } else {
+                nextPictureInPicturePreparationRequestId + 1L
+            }
+        val requestId = nextPictureInPicturePreparationRequestId
+        binding.pictureInPictureRestorationRequestId = requestId
+        binding.pictureInPictureRestorationResult = onResult
+        binding.pictureInPictureRestorationTimeout = Runnable {
+            if (binding.pictureInPictureRestorationRequestId == requestId) {
+                clearPictureInPictureRestorationRequest(binding)?.invoke(false)
+            }
+        }.also { timeout ->
+            mainHandler.postDelayed(timeout, PICTURE_IN_PICTURE_PREPARATION_TIMEOUT_MILLIS)
+        }
+        connectedPort.postMessage(
+            pictureInPictureRestorationMessage(
+                token = binding.token,
+                revision = binding.handshake.publishedRevision,
+                navigationGeneration = binding.policy.navigationGeneration,
+                requestId = requestId,
+            ),
         )
-        clearPictureInPicturePreparationRequest(binding)?.invoke(preparation)
+    }
+
+    private fun acceptPictureInPicturePlaybackResult(value: JSONObject) {
+        val binding = bindings[value.optString("token")] ?: return
+        when (
+            geckoPictureInPicturePlaybackResultRoute(
+                message = value,
+                preparationRequestId = binding.pictureInPicturePreparationRequestId,
+                restorationRequestId = binding.pictureInPictureRestorationRequestId,
+            )
+        ) {
+            GeckoPictureInPicturePlaybackResultRoute.Restoration -> {
+                val requestId = binding.pictureInPictureRestorationRequestId ?: return
+                if (
+                    isGeckoPictureInPictureRestorationResult(
+                        message = value,
+                        currentRevision = binding.handshake.publishedRevision,
+                        currentNavigationGeneration = binding.policy.navigationGeneration,
+                        expectedRequestId = requestId,
+                    )
+                ) {
+                    clearPictureInPictureRestorationRequest(binding)?.invoke(true)
+                }
+            }
+            GeckoPictureInPicturePlaybackResultRoute.Preparation -> {
+                val requestId = binding.pictureInPicturePreparationRequestId ?: return
+                val identity = binding.pictureInPicturePreparationIdentity ?: return
+                val preparation = geckoPictureInPicturePreparationFromMessage(
+                    message = value,
+                    currentRevision = binding.handshake.publishedRevision,
+                    currentNavigationGeneration = binding.policy.navigationGeneration,
+                    expectedRequestId = requestId,
+                    expectedIdentity = identity,
+                )
+                clearPictureInPicturePreparationRequest(binding)?.invoke(preparation)
+            }
+            GeckoPictureInPicturePlaybackResultRoute.Stale -> Unit
+        }
+    }
+
+    private fun clearPictureInPictureRestorationRequest(
+        binding: Binding,
+    ): ((Boolean) -> Unit)? {
+        binding.pictureInPictureRestorationTimeout?.let(mainHandler::removeCallbacks)
+        binding.pictureInPictureRestorationTimeout = null
+        binding.pictureInPictureRestorationRequestId = null
+        return binding.pictureInPictureRestorationResult.also {
+            binding.pictureInPictureRestorationResult = null
+        }
     }
 
     private fun clearPictureInPicturePreparationRequest(
@@ -1176,6 +1300,9 @@ private fun closedBinding(): GeckoPrivacyBinding = object : GeckoPrivacyBinding 
         identity: GeckoInlineVideoIdentity,
         onResult: (GeckoPictureInPicturePreparation?) -> Unit,
     ) = onResult(null)
+
+    override fun restorePictureInPicturePresentation(onResult: (Boolean) -> Unit) =
+        onResult(false)
 
     override fun setInlineVideoPresentation(
         identity: GeckoInlineVideoIdentity?,

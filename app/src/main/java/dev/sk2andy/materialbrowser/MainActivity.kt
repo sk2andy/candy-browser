@@ -53,6 +53,7 @@ import dev.sk2andy.materialbrowser.browser.BLANK_URL
 import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineKind
 import dev.sk2andy.materialbrowser.browser.BrowserActivityResultIdentity
 import dev.sk2andy.materialbrowser.browser.BrowserController
+import dev.sk2andy.materialbrowser.browser.BrowserGestureHapticFeedback
 import dev.sk2andy.materialbrowser.browser.BrowserHardwareInputAction
 import dev.sk2andy.materialbrowser.browser.BrowserHardwareInputRules
 import dev.sk2andy.materialbrowser.browser.BrowserHardwareKey
@@ -103,7 +104,10 @@ import dev.sk2andy.materialbrowser.ui.FullscreenVideoSystemControls
 import dev.sk2andy.materialbrowser.ui.GestureOnboardingScreen
 import dev.sk2andy.materialbrowser.ui.ProfileLockedOverlay
 import dev.sk2andy.materialbrowser.ui.ReleaseNotesScreen
+import dev.sk2andy.materialbrowser.ui.performConfirmHaptic
 import dev.sk2andy.materialbrowser.ui.rememberFullscreenVideoGestureState
+import dev.sk2andy.materialbrowser.ui.startRubberbandHaptic
+import dev.sk2andy.materialbrowser.ui.stopRubberbandHaptic
 import dev.sk2andy.materialbrowser.ui.theme.CandyTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -139,6 +143,7 @@ class MainActivity : AppCompatActivity() {
     }
     private var releaseNotesContent: ReleaseNotesContent? = null
     private var videoOnlyPresentation by mutableStateOf(false)
+    private var pictureInPictureReturnRestorationPending by mutableStateOf(false)
     private var isTabOverviewPortraitLocked = false
     private var incomingBrowserNavigationRequestId by mutableIntStateOf(0)
     private var launcherAddressEditorRequestId by mutableIntStateOf(0)
@@ -372,6 +377,18 @@ class MainActivity : AppCompatActivity() {
                     updatePictureInPictureParams()
                 }
             },
+            onInlineVideoGestureHaptic = { haptic ->
+                when (haptic) {
+                    BrowserGestureHapticFeedback.RubberbandStart ->
+                        window.decorView.startRubberbandHaptic()
+                    BrowserGestureHapticFeedback.RubberbandStop ->
+                        window.decorView.stopRubberbandHaptic()
+                    BrowserGestureHapticFeedback.Confirm -> {
+                        window.decorView.stopRubberbandHaptic()
+                        window.decorView.performConfirmHaptic()
+                    }
+                }
+            },
             onBrowserEngineChangeRequested = {
                 BrowserEngineProcessRestart.restart(this)
             },
@@ -397,6 +414,9 @@ class MainActivity : AppCompatActivity() {
             browserController = browserController,
             isVideoOnlyPresentation = { videoOnlyPresentation },
             setVideoOnlyPresentation = { videoOnlyPresentation = it },
+            setReturnRestorationPending = {
+                pictureInPictureReturnRestorationPending = it
+            },
             applyBrowserSystemUi = ::applyBrowserSystemUi,
         )
         userScriptImporter = UserScriptImporter(
@@ -692,6 +712,12 @@ class MainActivity : AppCompatActivity() {
                             .takeIf { fullscreenVideoGesturesActive },
                         onBoundsChanged = ::onFullscreenVideoBoundsChanged,
                     )
+                    if (
+                        pictureInPictureReturnRestorationPending ||
+                        browserController.isMediaLayoutRestorationPending
+                    ) {
+                        Box(modifier = Modifier.fillMaxSize().background(Color.Black))
+                    }
                     if (!videoOnlyPresentation && onboardingVisible) {
                         GestureOnboardingScreen(
                             onCompleted = {
@@ -1031,6 +1057,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onPause() {
+        window.decorView.stopRubberbandHaptic()
         if (!::browserController.isInitialized || appDataTransferActive) {
             super.onPause()
             return
@@ -1136,6 +1163,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         activityDestroyed = true
+        window.decorView.stopRubberbandHaptic()
         if (::browserController.isInitialized) fullscreenVideoSystemControls.close()
         if (!isChangingConfigurations) privateTabsNotifier.cancel()
         if (!BuildConfig.SYSTEM_WEBVIEW_ONLY) firefoxExtensionManager?.close()

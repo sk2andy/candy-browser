@@ -205,4 +205,44 @@ class GeckoMediaRulesTest {
             ),
         )
     }
+
+    @Test
+    fun `picture in picture playback publication masks only transient owner pauses`() {
+        assertTrue(
+            GeckoPictureInPictureRules.publishedPlaybackIsPlaying(
+                reportedIsPlaying = false,
+                playbackExpected = true,
+                transitionPending = false,
+                inPictureInPicture = true,
+                isPictureInPictureOwner = true,
+            ),
+        )
+        assertFalse(
+            GeckoPictureInPictureRules.publishedPlaybackIsPlaying(
+                reportedIsPlaying = false,
+                playbackExpected = false,
+                transitionPending = false,
+                inPictureInPicture = true,
+                isPictureInPictureOwner = true,
+            ),
+        )
+        assertFalse(
+            GeckoPictureInPictureRules.publishedPlaybackIsPlaying(
+                reportedIsPlaying = false,
+                playbackExpected = true,
+                transitionPending = false,
+                inPictureInPicture = true,
+                isPictureInPictureOwner = false,
+            ),
+        )
+        assertFalse(
+            GeckoPictureInPictureRules.publishedPlaybackIsPlaying(
+                reportedIsPlaying = false,
+                playbackExpected = true,
+                transitionPending = false,
+                inPictureInPicture = false,
+                isPictureInPictureOwner = true,
+            ),
+        )
+    }
 }

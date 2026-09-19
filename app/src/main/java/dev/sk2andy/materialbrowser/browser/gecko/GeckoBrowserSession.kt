@@ -194,6 +194,22 @@ internal fun interface GeckoInlineVideoOpenRequestListener {
     fun onOpenRequested(request: GeckoInlineVideoOpenRequest)
 }
 
+internal enum class GeckoInlineVideoGestureHapticPhase(val stableId: String) {
+    RubberbandStart("rubberband-start"),
+    RubberbandStop("rubberband-stop"),
+    Confirm("confirm"),
+}
+
+internal data class GeckoInlineVideoGestureHaptic(
+    val identity: GeckoInlineVideoIdentity,
+    val navigationGeneration: Int,
+    val phase: GeckoInlineVideoGestureHapticPhase,
+)
+
+internal fun interface GeckoInlineVideoGestureHapticListener {
+    fun onHapticRequested(haptic: GeckoInlineVideoGestureHaptic)
+}
+
 internal fun interface GeckoFullscreenStateListener {
     fun onStateChanged(fullscreen: Boolean)
 }
@@ -252,6 +268,10 @@ internal interface GeckoBrowserSession {
 
     fun setInlineVideoOpenRequestListener(listener: GeckoInlineVideoOpenRequestListener?) = Unit
 
+    fun setInlineVideoGestureHapticListener(
+        listener: GeckoInlineVideoGestureHapticListener?,
+    ) = Unit
+
     /** Reports the page fullscreen lifecycle independently from media metadata updates. */
     fun setFullscreenStateListener(listener: GeckoFullscreenStateListener?) = Unit
 
@@ -288,6 +308,8 @@ internal interface GeckoBrowserSession {
         identity: GeckoInlineVideoIdentity,
         onResult: (GeckoPictureInPicturePreparation?) -> Unit,
     ) = onResult(null)
+
+    fun restorePictureInPicturePresentation(onResult: (Boolean) -> Unit) = onResult(false)
 
     fun setInlineVideoPresentation(
         identity: GeckoInlineVideoIdentity?,

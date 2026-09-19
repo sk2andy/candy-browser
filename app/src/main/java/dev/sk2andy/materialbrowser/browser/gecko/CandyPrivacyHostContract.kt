@@ -288,6 +288,19 @@ internal fun pictureInPicturePreparationMessage(
     .put("documentNonce", identity.documentNonce)
     .put("elementNonce", identity.elementNonce)
 
+internal fun pictureInPictureRestorationMessage(
+    token: String,
+    revision: Long,
+    navigationGeneration: Int,
+    requestId: Long,
+): JSONObject = pictureInPicturePlaybackMessage(
+    token = token,
+    revision = revision,
+    expected = false,
+)
+    .put("navigationGeneration", navigationGeneration)
+    .put("requestId", requestId)
+
 internal fun inlineVideoPresentationMessage(
     token: String,
     revision: Long,
@@ -375,6 +388,33 @@ internal fun geckoPictureInPicturePreparationFromMessage(
     )
 }
 
+internal fun isGeckoPictureInPictureRestorationResult(
+    message: JSONObject,
+    currentRevision: Long,
+    currentNavigationGeneration: Int,
+    expectedRequestId: Long,
+): Boolean =
+    message.optLong("revision", -1) == currentRevision &&
+        message.optInt("navigationGeneration", -1) == currentNavigationGeneration &&
+        message.optLong("requestId", -1) == expectedRequestId &&
+        message.optBoolean("prepared", false)
+
+internal enum class GeckoPictureInPicturePlaybackResultRoute {
+    Preparation,
+    Restoration,
+    Stale,
+}
+
+internal fun geckoPictureInPicturePlaybackResultRoute(
+    message: JSONObject,
+    preparationRequestId: Long?,
+    restorationRequestId: Long?,
+): GeckoPictureInPicturePlaybackResultRoute = when (message.optLong("requestId", -1)) {
+    preparationRequestId -> GeckoPictureInPicturePlaybackResultRoute.Preparation
+    restorationRequestId -> GeckoPictureInPicturePlaybackResultRoute.Restoration
+    else -> GeckoPictureInPicturePlaybackResultRoute.Stale
+}
+
 internal fun shouldClearInlineVideoPresentationDesire(
     wasPresented: Boolean,
     isPresented: Boolean,
@@ -439,6 +479,35 @@ internal fun geckoInlineVideoOpenRequestFromMessage(
         ),
         navigationGeneration = currentNavigationGeneration,
         expected = message.optBoolean("expected", true),
+    )
+}
+
+internal fun geckoInlineVideoGestureHapticFromMessage(
+    message: JSONObject,
+    currentRevision: Long,
+    currentNavigationGeneration: Int,
+): GeckoInlineVideoGestureHaptic? {
+    if (
+        message.optLong("revision", -1) != currentRevision ||
+        message.optInt("navigationGeneration", -1) != currentNavigationGeneration
+    ) {
+        return null
+    }
+    val documentNonce = message.optString("documentNonce")
+    val elementNonce = message.optString("elementNonce")
+    if (!INLINE_VIDEO_NONCE.matches(documentNonce) || !INLINE_VIDEO_NONCE.matches(elementNonce)) {
+        return null
+    }
+    val phase = GeckoInlineVideoGestureHapticPhase.entries.firstOrNull { candidate ->
+        candidate.stableId == message.optString("phase")
+    } ?: return null
+    return GeckoInlineVideoGestureHaptic(
+        identity = GeckoInlineVideoIdentity(
+            documentNonce = documentNonce,
+            elementNonce = elementNonce,
+        ),
+        navigationGeneration = currentNavigationGeneration,
+        phase = phase,
     )
 }
 

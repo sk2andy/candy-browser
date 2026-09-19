@@ -91,6 +91,19 @@ internal object GeckoPictureInPictureRules {
     } else {
         mediaIsPlaying
     }
+
+    fun publishedPlaybackIsPlaying(
+        reportedIsPlaying: Boolean,
+        playbackExpected: Boolean,
+        transitionPending: Boolean,
+        inPictureInPicture: Boolean,
+        isPictureInPictureOwner: Boolean,
+    ): Boolean = reportedIsPlaying ||
+        (
+            playbackExpected &&
+                isPictureInPictureOwner &&
+                (transitionPending || inPictureInPicture)
+            )
 }
 
 internal object GeckoMediaSessionRules {

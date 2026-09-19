@@ -22,6 +22,31 @@ internal data class FullscreenVideoAspectRatio(
     val height: Int,
 )
 
+internal class MediaLayoutRestorationGate {
+    class Request internal constructor(
+        internal val onCancelled: () -> Unit,
+    )
+
+    private var current: Request? = null
+
+    fun begin(onCancelled: () -> Unit): Request {
+        cancel()
+        return Request(onCancelled = onCancelled).also { current = it }
+    }
+
+    fun complete(request: Request): Boolean {
+        if (current !== request) return false
+        current = null
+        return true
+    }
+
+    fun cancel() {
+        val request = current ?: return
+        current = null
+        request.onCancelled()
+    }
+}
+
 internal object FullscreenVideoRules {
     fun hidesBrowserChrome(
         isWebContentFullscreen: Boolean,
@@ -31,6 +56,12 @@ internal object FullscreenVideoRules {
         (isWebContentFullscreen && placement != FullscreenVideoPlacement.MiniPlayer)
 
     fun supportsPreparedAutoEnter(sdkInt: Int): Boolean = sdkInt >= 35
+
+    fun isMediaLayoutRestorationInsetReady(
+        isImeVisible: Boolean,
+        isStatusBarVisible: Boolean,
+        statusBarTopInset: Int,
+    ): Boolean = !isImeVisible && isStatusBarVisible && statusBarTopInset > 0
 
     fun enablesPreparedAutoEnter(
         isEligible: Boolean,

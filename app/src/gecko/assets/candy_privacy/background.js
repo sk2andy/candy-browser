@@ -10,6 +10,11 @@ const pendingEvents = new Map();
 const mainFrameRequestsById = new Map();
 const contentPolicyTimersByTab = new Map();
 const inlineVideosByTab = new Map();
+const inlineVideoGestureHapticPhases = new Set([
+  "rubberband-start",
+  "rubberband-stop",
+  "confirm",
+]);
 const contentPolicyRetryDelaysMillis = [25, 50, 100, 200, 400, 800, 1200];
 let nativePort = null;
 let cookieRules = null;
@@ -265,6 +270,35 @@ function requestInlineVideoOpen(message, sender) {
   return true;
 }
 
+function forwardInlineVideoGestureHaptic(message, sender) {
+  const tabId = sender.tab?.id;
+  if (!Number.isInteger(tabId) || sender.frameId !== 0 || !nativePort) return false;
+  const token = tokenByTab.get(tabId);
+  const policy = token && policiesByToken.get(token);
+  const candidate = inlineVideosByTab.get(tabId)?.get(0);
+  if (
+    !policy ||
+    policy.inlineMediaPlayerEnabled !== true ||
+    message.revision !== policy.revision ||
+    message.navigationGeneration !== policy.navigationGeneration ||
+    !inlineVideoGestureHapticPhases.has(message.phase) ||
+    candidate?.presented !== true ||
+    message.documentNonce !== candidate.documentNonce ||
+    message.elementNonce !== candidate.elementNonce
+  ) return false;
+  nativePort.postMessage({
+    type: "inline-video-gesture-haptic",
+    protocolVersion: PROTOCOL_VERSION,
+    token,
+    revision: policy.revision,
+    navigationGeneration: policy.navigationGeneration,
+    documentNonce: candidate.documentNonce,
+    elementNonce: candidate.elementNonce,
+    phase: message.phase,
+  });
+  return true;
+}
+
 function scheduleContentPolicy(tabId) {
   const previousTimers = contentPolicyTimersByTab.get(tabId) || [];
   previousTimers.forEach(clearTimeout);
@@ -407,6 +441,11 @@ browser.runtime.onMessage.addListener((message, sender) => {
   if (message.type === "inline-video-open-request") {
     return Promise.resolve({
       forwarded: requestInlineVideoOpen(message, sender),
+    });
+  }
+  if (message.type === "inline-video-gesture-haptic") {
+    return Promise.resolve({
+      forwarded: forwardInlineVideoGestureHaptic(message, sender),
     });
   }
   if (
@@ -586,10 +625,14 @@ function updatePictureInPicturePlayback(message) {
   if (
     preparationRequested &&
     (
-      message.expected !== true ||
       policy.navigationGeneration !== message.navigationGeneration ||
-      !/^[a-f0-9]{32}$/.test(message.documentNonce) ||
-      !/^[a-f0-9]{32}$/.test(message.elementNonce)
+      (
+        message.expected === true &&
+        (
+          !/^[a-f0-9]{32}$/.test(message.documentNonce) ||
+          !/^[a-f0-9]{32}$/.test(message.elementNonce)
+        )
+      )
     )
   ) return;
   const payload = {

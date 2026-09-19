@@ -161,7 +161,13 @@ class GeckoPictureInPictureInstrumentedTest {
                 assertSame(initialEngineView, restoredEngineView)
                 assertNotNull(restoredEngineView.findDescendant(SurfaceView::class.java))
                 activity.browserControllerForTesting().completePictureInPictureReturn()
-                assertNull(activity.browserControllerForTesting().fullscreenVideoState)
+            }
+            awaitCondition {
+                var restored = false
+                scenario.onActivity { activity ->
+                    restored = activity.browserControllerForTesting().fullscreenVideoState == null
+                }
+                restored
             }
         }
     }
@@ -219,6 +225,41 @@ class GeckoPictureInPictureInstrumentedTest {
                 controller.reportSelectedGeckoMediaStateForTesting(eligibleMediaState())
                 assertFalse(controller.isPictureInPictureEligible)
                 assertFalse(activity.isPictureInPictureEligibleForTesting())
+            }
+        }
+    }
+
+    @Test
+    fun transientGeckoPauseDoesNotFlipPictureInPicturePlaybackAction() {
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity { activity ->
+                val controller = activity.browserControllerForTesting()
+                assertTrue(controller.openUrl("https://media.example/"))
+            }
+            awaitCondition {
+                var attached = false
+                scenario.onActivity { activity ->
+                    attached = activity.browserControllerForTesting()
+                        .selectedGeckoViewForTesting()
+                        ?.isAttachedToWindow == true
+                }
+                attached
+            }
+            scenario.onActivity { activity ->
+                val controller = activity.browserControllerForTesting()
+                controller.reportSelectedGeckoMediaStateForTesting(eligibleMediaState())
+                controller.reportSelectedGeckoFullscreenStateForTesting(true)
+                controller.prepareForPictureInPicture()
+                controller.onPictureInPictureModeChanged(true)
+                controller.reportSelectedGeckoMediaStateForTesting(
+                    eligibleMediaState().copy(isPlaying = false),
+                )
+
+                assertTrue(controller.systemMediaState?.isPlaying == true)
+
+                controller.pauseActiveMedia()
+
+                assertFalse(controller.systemMediaState?.isPlaying == true)
             }
         }
     }
@@ -293,6 +334,7 @@ class GeckoPictureInPictureInstrumentedTest {
                     inlineActionGeometry.startsWith(INLINE_ACTION_GEOMETRY_PREFIX)
                 }
                 val inlineActionTapPoint = FloatArray(2)
+                val inlineVideoSwipe = FloatArray(4)
                 scenario.onActivity { activity ->
                     val host = requireNotNull(
                         activity.browserControllerForTesting().selectedGeckoViewForTesting(),
@@ -308,6 +350,11 @@ class GeckoPictureInPictureInstrumentedTest {
                     host.getLocationOnScreen(location)
                     inlineActionTapPoint[0] = location[0] + (left + width / 2f) * webScale
                     inlineActionTapPoint[1] = location[1] + (top + height / 2f) * webScale
+                    val videoHeight = host.width * 9f / 16f
+                    inlineVideoSwipe[0] = location[0] + host.width / 2f
+                    inlineVideoSwipe[1] = location[1] + 48f * webScale + videoHeight / 2f
+                    inlineVideoSwipe[2] = inlineVideoSwipe[0]
+                    inlineVideoSwipe[3] = inlineVideoSwipe[1] - 140f * webScale
                 }
                 tap(x = inlineActionTapPoint[0], y = inlineActionTapPoint[1])
                 scenario.onActivity { activity ->
@@ -333,6 +380,50 @@ class GeckoPictureInPictureInstrumentedTest {
                     assertNull(controller.fullscreenVideoState)
                     assertFalse(controller.canOpenInlineMediaPlayer)
                 }
+                swipe(
+                    startX = inlineVideoSwipe[0],
+                    startY = inlineVideoSwipe[1],
+                    endX = inlineVideoSwipe[2],
+                    endY = inlineVideoSwipe[3],
+                )
+                awaitCondition(
+                    description = { "Inline swipe-up did not enter web-content fullscreen" },
+                ) {
+                    var fullscreen = false
+                    scenario.onActivity { activity ->
+                        fullscreen = activity.browserControllerForTesting()
+                            .isSelectedWebContentFullscreen
+                    }
+                    fullscreen
+                }
+                awaitCondition(
+                    description = { "Inline swipe moved controls without the video frame" },
+                ) {
+                    var draggedTogether = false
+                    scenario.onActivity { activity ->
+                        draggedTogether = activity.browserControllerForTesting()
+                            .selectedTab.title == INLINE_DRAGGED_TITLE
+                    }
+                    draggedTogether
+                }
+                scenario.onActivity { activity ->
+                    assertTrue(
+                        activity.browserControllerForTesting()
+                            .exitSelectedWebContentFullscreen(),
+                    )
+                }
+                awaitCondition(
+                    description = { "Swipe fullscreen exit did not restore inline geometry" },
+                ) {
+                    var restored = false
+                    scenario.onActivity { activity ->
+                        val controller = activity.browserControllerForTesting()
+                        restored = !controller.isSelectedWebContentFullscreen &&
+                            !controller.isMediaLayoutRestorationPending &&
+                            controller.selectedTab.title == INLINE_ACTIVE_TITLE
+                    }
+                    restored
+                }
                 awaitCondition(
                     description = { "Playing inline video did not become PiP eligible" },
                 ) {
@@ -357,6 +448,16 @@ class GeckoPictureInPictureInstrumentedTest {
                     }
                     prepared
                 }
+                awaitCondition(
+                    description = { "Video-only DOM layout was not presented before PiP return" },
+                ) {
+                    var presented = false
+                    scenario.onActivity { activity ->
+                        presented = activity.browserControllerForTesting()
+                            .selectedTab.title == INLINE_PRESENTED_TITLE
+                    }
+                    presented
+                }
                 scenario.onActivity { activity ->
                     val controller = activity.browserControllerForTesting()
                     controller.onPictureInPictureModeChanged(true)
@@ -365,9 +466,25 @@ class GeckoPictureInPictureInstrumentedTest {
                         FullscreenVideoHost.BrowserViewport,
                         controller.fullscreenVideoState?.host,
                     )
-                    controller.completePictureInPictureReturn()
-                    assertNull(controller.fullscreenVideoState)
-                    assertTrue(controller.isPictureInPictureEligible)
+                }
+                SystemClock.sleep(250)
+                scenario.onActivity { activity ->
+                    assertEquals(
+                        INLINE_PRESENTED_TITLE,
+                        activity.browserControllerForTesting().selectedTab.title,
+                    )
+                    activity.browserControllerForTesting().completePictureInPictureReturn()
+                }
+                awaitCondition(
+                    description = { "PiP return layout acknowledgement did not complete" },
+                ) {
+                    var restored = false
+                    scenario.onActivity { activity ->
+                        val controller = activity.browserControllerForTesting()
+                        restored = controller.fullscreenVideoState == null &&
+                            controller.isPictureInPictureEligible
+                    }
+                    restored
                 }
                 var restoredInlineTitle = ""
                 awaitCondition(
@@ -545,9 +662,13 @@ class GeckoPictureInPictureInstrumentedTest {
                 awaitCondition(description = { restoredTitle }) {
                     var restored = false
                     scenario.onActivity { activity ->
-                        restoredTitle = activity.browserControllerForTesting().selectedTab.title
-                        restored = restoredTitle == INLINE_RESTORED_TITLE ||
-                            restoredTitle.startsWith(INLINE_ACTION_GEOMETRY_PREFIX)
+                        val controller = activity.browserControllerForTesting()
+                        restoredTitle = controller.selectedTab.title
+                        restored = !controller.isMediaLayoutRestorationPending &&
+                            (
+                                restoredTitle == INLINE_RESTORED_TITLE ||
+                                    restoredTitle.startsWith(INLINE_ACTION_GEOMETRY_PREFIX)
+                            )
                     }
                     restored
                 }
@@ -744,6 +865,19 @@ class GeckoPictureInPictureInstrumentedTest {
         instrumentation.waitForIdleSync()
     }
 
+    private fun swipe(startX: Float, startY: Float, endX: Float, endY: Float) {
+        assertTrue(
+            UiDevice.getInstance(instrumentation).swipe(
+                startX.toInt(),
+                startY.toInt(),
+                endX.toInt(),
+                endY.toInt(),
+                12,
+            ),
+        )
+        instrumentation.waitForIdleSync()
+    }
+
     private fun awaitCondition(
         timeoutMillis: Long = 30_000,
         description: () -> String = { "Condition not met" },
@@ -829,6 +963,7 @@ class GeckoPictureInPictureInstrumentedTest {
         const val INLINE_LOADED_TITLE = "inline-loaded"
         const val INLINE_READY_TITLE = "inline-ready"
         const val INLINE_ACTIVE_TITLE = "inline-active"
+        const val INLINE_DRAGGED_TITLE = "inline-dragged-together"
         const val INLINE_PRESENTED_TITLE = "inline-presented"
         const val INLINE_REALIGNED_TITLE = "inline-realigned"
         const val INLINE_RESTORED_TITLE = "inline-restored"
@@ -872,6 +1007,7 @@ class GeckoPictureInPictureInstrumentedTest {
                 const requiresControls = false;
                 let originalVideoBounds = null;
                 let inlinePresentationObserved = false;
+                let inlineGestureMovedTogether = false;
                 video.defaultMuted = true;
                 video.muted = true;
                 video.src = 'data:video/webm;base64,' + encodedVideo;
@@ -881,6 +1017,39 @@ class GeckoPictureInPictureInstrumentedTest {
                 });
                 video.addEventListener('play', () => {
                   document.title = '$INLINE_READY_TITLE';
+                });
+                new MutationObserver(() => {
+                  if (video.hasAttribute('data-candy-picture-in-picture-video')) return;
+                  const controls = document.documentElement.querySelector(
+                    '[data-candy-inline-video-controls]'
+                  );
+                  if (!controls || !originalVideoBounds) return;
+                  const videoBounds = video.getBoundingClientRect();
+                  const controlsBounds = controls.getBoundingClientRect();
+                  const moved = originalVideoBounds.top - videoBounds.top;
+                  if (moved > 3 && Math.abs(controlsBounds.top - videoBounds.top) < 2) {
+                    inlineGestureMovedTogether = true;
+                  }
+                }).observe(video, { attributes:true, attributeFilter:['style'] });
+                document.addEventListener('fullscreenchange', () => {
+                  if (document.fullscreenElement) {
+                    document.title = inlineGestureMovedTogether ?
+                      '$INLINE_DRAGGED_TITLE' : 'inline-drag-failed';
+                    return;
+                  }
+                  if (!inlineGestureMovedTogether) return;
+                  document.title = 'inline-return-pending';
+                  setTimeout(() => requestAnimationFrame(() => requestAnimationFrame(() => {
+                    const bounds = video.getBoundingClientRect();
+                    const original = originalVideoBounds || bounds;
+                    const restored = Math.abs(bounds.left - original.left) < 1 &&
+                      Math.abs(bounds.top - original.top) < 1 &&
+                      Math.abs(bounds.width - original.width) < 1 &&
+                      Math.abs(bounds.height - original.height) < 1 &&
+                      getComputedStyle(header).visibility === 'visible';
+                    document.title = restored ? '$INLINE_ACTIVE_TITLE' :
+                      `inline-fullscreen-return-failed:${'$'}{bounds.top}`;
+                  })), 250);
                 });
                 document.addEventListener('click', () => {
                   video.play();
@@ -959,7 +1128,12 @@ class GeckoPictureInPictureInstrumentedTest {
                     ) return;
                     const bounds = video.getBoundingClientRect();
                     if (!presented) {
-                      const restored = bounds.top > 1 &&
+                      const original = originalVideoBounds || bounds;
+                      const restored =
+                        Math.abs(bounds.left - original.left) < 1 &&
+                        Math.abs(bounds.top - original.top) < 1 &&
+                        Math.abs(bounds.width - original.width) < 1 &&
+                        Math.abs(bounds.height - original.height) < 1 &&
                         getComputedStyle(header).visibility === 'visible' &&
                         !video.controls &&
                         !document.documentElement.hasAttribute('data-candy-picture-in-picture') &&

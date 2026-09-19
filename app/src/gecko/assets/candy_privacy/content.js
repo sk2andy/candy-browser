@@ -50,10 +50,12 @@ const candyPictureInPicturePlayback = {
   inlineControlsCleanup: null,
   inlineSitePlayer: null,
   inlineSiteStyle: null,
+  inlineFullscreenReturnBox: null,
 };
 const candyInlineVideoDocumentNonce = candyInlineVideoNonce();
 const candyInlineVideoElementNonces = new WeakMap();
 const candyInlineVideoOriginalControls = new WeakMap();
+const candyPictureInPictureOriginalControls = new WeakMap();
 
 const CANDY_PICTURE_IN_PICTURE_ROOT_ATTRIBUTE = "data-candy-picture-in-picture";
 const CANDY_PICTURE_IN_PICTURE_VIDEO_ATTRIBUTE = "data-candy-picture-in-picture-video";
@@ -67,12 +69,50 @@ const CANDY_INLINE_VIDEO_SITE_STYLE_ATTRIBUTE = "data-candy-inline-video-site-st
 const CANDY_INLINE_VIDEO_ACTION_SIZE_PX = 56;
 const CANDY_INLINE_VIDEO_ACTION_INSET_PX = 16;
 const CANDY_INLINE_VIDEO_CONTROLS_HEIGHT_PX = 88;
+const CANDY_INLINE_FULLSCREEN_GESTURE_TOUCH_SLOP_PX = 10;
+const CANDY_INLINE_FULLSCREEN_GESTURE_MIN_THRESHOLD_PX = 48;
+const CANDY_INLINE_FULLSCREEN_GESTURE_MAX_THRESHOLD_PX = 96;
+const CANDY_INLINE_FULLSCREEN_GESTURE_THRESHOLD_FRACTION = 0.13;
+const CANDY_INLINE_FULLSCREEN_GESTURE_STICKY_FRACTION = 0.18;
 const CANDY_INLINE_MEDIA_PLAYER_MODES = new Set([
   "button_fullscreen",
   "button_inline_and_fullscreen",
   "always_for_fullscreen",
   "automatic",
 ]);
+
+function candyInlineFullscreenGestureDirection(deltaX, deltaY, touchSlop) {
+  if (![deltaX, deltaY, touchSlop].every(Number.isFinite) || touchSlop < 0) {
+    return "rejected";
+  }
+  if (Math.hypot(deltaX, deltaY) < touchSlop) return "pending";
+  if (deltaY >= 0 || Math.abs(deltaY) <= Math.abs(deltaX) * 1.15) return "rejected";
+  return "up";
+}
+
+function candyInlineFullscreenGestureUpdate(upwardDistance, viewportHeight) {
+  if (!Number.isFinite(viewportHeight) || viewportHeight <= 0) {
+    return { distance: 0, threshold: 0, offset: 0, shouldCommit: false };
+  }
+  const distance = Number.isFinite(upwardDistance) ? Math.max(0, upwardDistance) : 0;
+  const threshold = Math.max(
+    CANDY_INLINE_FULLSCREEN_GESTURE_MIN_THRESHOLD_PX,
+    Math.min(
+      CANDY_INLINE_FULLSCREEN_GESTURE_MAX_THRESHOLD_PX,
+      viewportHeight * CANDY_INLINE_FULLSCREEN_GESTURE_THRESHOLD_FRACTION,
+    ),
+  );
+  const stickyOffset = threshold * CANDY_INLINE_FULLSCREEN_GESTURE_STICKY_FRACTION;
+  const progress = Math.min(1, distance / threshold);
+  const rubberbandProgress = 1 - (1 - progress) * (1 - progress);
+  return {
+    distance,
+    threshold,
+    offset: distance >= threshold ? stickyOffset + distance - threshold :
+      stickyOffset * rubberbandProgress,
+    shouldCommit: distance >= threshold,
+  };
+}
 
 function candyInlineMediaPlayerShowsButton() {
   return candyPictureInPicturePlayback.inlineMediaPlayerMode === "button_fullscreen" ||
@@ -202,6 +242,42 @@ function candyInlineVideoControlsParent(video) {
   return document.documentElement;
 }
 
+function setCandyInlineFullscreenGestureOffset(gesture, host, offset) {
+  if (!gesture?.video?.isConnected || !host?.isConnected) return;
+  const boundedOffset = Math.max(0, Number.isFinite(offset) ? offset : 0);
+  host.dataset.fullscreenGestureOffset = String(boundedOffset);
+  gesture.video.style.setProperty(
+    "transform",
+    `translate3d(0, ${-boundedOffset.toFixed(2)}px, 0) ${gesture.baseTransform}`,
+    "important",
+  );
+  host.style.setProperty(
+    "transform",
+    `translate3d(0, ${-boundedOffset.toFixed(2)}px, 0)`,
+    "important",
+  );
+}
+
+function clearCandyInlineFullscreenGestureOffset(gesture, host) {
+  if (!gesture) return;
+  const video = gesture.video;
+  if (video?.style) {
+    if (gesture.originalTransform) {
+      video.style.setProperty(
+        "transform",
+        gesture.originalTransform,
+        gesture.originalTransformPriority,
+      );
+    } else {
+      video.style.removeProperty("transform");
+    }
+  }
+  if (host) {
+    delete host.dataset.fullscreenGestureOffset;
+    host.style.setProperty("transform", "none", "important");
+  }
+}
+
 function removeCandyInlineVideoControlsOverlay() {
   candyPictureInPicturePlayback.inlineControlsCleanup?.();
   candyPictureInPicturePlayback.inlineControlsCleanup = null;
@@ -213,10 +289,11 @@ function removeCandyInlineVideoControlsOverlay() {
 function positionCandyInlineVideoControls(video, host) {
   if (!video?.isConnected || !host?.isConnected) return;
   const bounds = video.getBoundingClientRect();
+  const gestureOffset = Number(host.dataset.fullscreenGestureOffset) || 0;
   const left = Math.max(0, bounds.left);
   const right = Math.min(innerWidth, bounds.right);
-  const top = Math.max(0, bounds.top);
-  const bottom = Math.min(innerHeight, bounds.bottom);
+  const top = Math.max(0, bounds.top + gestureOffset);
+  const bottom = Math.min(innerHeight, bounds.bottom + gestureOffset);
   const width = Math.max(0, right - left);
   const height = Math.max(0, bottom - top);
   if (
@@ -269,6 +346,13 @@ function createCandyInlineVideoControlsOverlay(video) {
   pointer-events: none;
   -webkit-tap-highlight-color: transparent;
 }
+.fullscreen-gesture {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  touch-action: none;
+  pointer-events: auto;
+}
 .controls {
   position: absolute;
   right: 0;
@@ -282,6 +366,7 @@ function createCandyInlineVideoControlsOverlay(video) {
   padding: 0 16px 14px;
   background: linear-gradient(transparent, rgba(7, 5, 14, 0.92));
   pointer-events: none;
+  z-index: 2;
 }
 .timeline {
   position: relative;
@@ -345,7 +430,10 @@ function createCandyInlineVideoControlsOverlay(video) {
   backdrop-filter: blur(14px) saturate(1.25);
   pointer-events: auto;
 }
-.transport { background: linear-gradient(135deg, rgba(255, 47, 124, 0.9), rgba(111, 70, 225, 0.88)); }
+.transport {
+  border: 0;
+  background: linear-gradient(135deg, rgba(255, 47, 124, 0.9), rgba(111, 70, 225, 0.88));
+}
 .utility { margin-left: auto; }
 button {
   all: initial;
@@ -413,6 +501,7 @@ button:focus-visible { outline: 3px solid white; outline-offset: 3px; }
   transform: translate(-50%, -50%);
   animation: candy-hero-breathe 2.8s ease-in-out infinite;
   pointer-events: auto;
+  z-index: 1;
 }
 .hero-play::after {
   width: 0;
@@ -451,6 +540,9 @@ button:focus-visible { outline: 3px solid white; outline-offset: 3px; }
 `;
   const stage = document.createElement("div");
   stage.className = "stage";
+  const fullscreenGesture = document.createElement("div");
+  fullscreenGesture.className = "fullscreen-gesture";
+  fullscreenGesture.setAttribute("aria-hidden", "true");
   const heroPlay = document.createElement("button");
   heroPlay.type = "button";
   heroPlay.className = "hero-play";
@@ -505,6 +597,7 @@ button:focus-visible { outline: 3px solid white; outline-offset: 3px; }
   const utility = document.createElement("div");
   utility.className = "pill utility";
   let heroActivationTimer = null;
+  let activeFullscreenGesture = null;
   const update = () => {
     const playing = !video.paused && !video.ended;
     playPause.dataset.state = playing ? "pause" : "play";
@@ -571,8 +664,7 @@ button:focus-visible { outline: 3px solid white; outline-offset: 3px; }
       if (document.fullscreenElement?.contains(video)) {
         await document.exitFullscreen();
       } else {
-        const target = candyInlineVideoSitePlayer(video) || video.parentElement;
-        await target?.requestFullscreen();
+        await requestCandyInlineVideoFullscreen(video);
       }
     } catch (_) { }
   });
@@ -584,11 +676,120 @@ button:focus-visible { outline: 3px solid white; outline-offset: 3px; }
   ["pointerdown", "pointerup", "click"].forEach((eventName) => {
     controls.addEventListener(eventName, (event) => event.stopPropagation());
   });
+  const finishFullscreenGesture = (stopHaptic = true) => {
+    const gesture = activeFullscreenGesture;
+    activeFullscreenGesture = null;
+    clearCandyInlineFullscreenGestureOffset(gesture, host);
+    if (stopHaptic && gesture?.rubberbandActive) {
+      reportCandyInlineVideoGestureHaptic(video, "rubberband-stop");
+    }
+  };
+  const updateFullscreenGesture = (event, emitHaptic = true) => {
+    const gesture = activeFullscreenGesture;
+    if (!gesture || gesture.pointerId !== event.pointerId) return null;
+    if (gesture.direction === "pending") {
+      gesture.direction = candyInlineFullscreenGestureDirection(
+        event.clientX - gesture.startX,
+        event.clientY - gesture.startY,
+        CANDY_INLINE_FULLSCREEN_GESTURE_TOUCH_SLOP_PX,
+      );
+      if (gesture.direction === "rejected") {
+        finishFullscreenGesture();
+        return null;
+      }
+    }
+    if (gesture.direction !== "up") return null;
+    event.preventDefault();
+    event.stopPropagation();
+    const update = candyInlineFullscreenGestureUpdate(
+      gesture.startY - event.clientY,
+      host.getBoundingClientRect().height,
+    );
+    setCandyInlineFullscreenGestureOffset(gesture, host, update.offset);
+    const thresholdChanged = gesture.thresholdReached !== update.shouldCommit;
+    gesture.thresholdReached = update.shouldCommit;
+    if (emitHaptic && thresholdChanged && update.shouldCommit) {
+      if (gesture.rubberbandActive) {
+        reportCandyInlineVideoGestureHaptic(video, "rubberband-stop");
+      }
+      reportCandyInlineVideoGestureHaptic(video, "confirm");
+      gesture.rubberbandActive = false;
+    } else if (
+      emitHaptic &&
+      !update.shouldCommit &&
+      !gesture.rubberbandActive
+    ) {
+      reportCandyInlineVideoGestureHaptic(video, "rubberband-start");
+      gesture.rubberbandActive = true;
+    }
+    return { update, thresholdChanged };
+  };
+  fullscreenGesture.addEventListener("pointerdown", (event) => {
+    if (
+      !event.isTrusted ||
+      event.isPrimary === false ||
+      event.pointerType === "mouse" ||
+      document.fullscreenElement ||
+      !candyPictureInPicturePlayback.inlinePresentationExpected ||
+      candyPictureInPicturePlayback.presentedVideo !== video
+    ) return;
+    finishFullscreenGesture();
+    const computedTransform = getComputedStyle(video).transform;
+    activeFullscreenGesture = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      video,
+      baseTransform: computedTransform === "none" ? "" : computedTransform,
+      originalTransform: video.style.getPropertyValue("transform"),
+      originalTransformPriority: video.style.getPropertyPriority("transform"),
+      direction: "pending",
+      thresholdReached: false,
+      rubberbandActive: false,
+    };
+    fullscreenGesture.setPointerCapture?.(event.pointerId);
+  });
+  fullscreenGesture.addEventListener("pointermove", (event) => {
+    updateFullscreenGesture(event);
+  }, { passive: false });
+  fullscreenGesture.addEventListener("pointerup", (event) => {
+    const gesture = activeFullscreenGesture;
+    const resolution = updateFullscreenGesture(event, false);
+    const shouldCommit = Boolean(
+      event.isTrusted &&
+      gesture &&
+      resolution?.update.shouldCommit,
+    );
+    let fullscreenRequest = null;
+    if (shouldCommit) {
+      try {
+        // Keep this invocation in the trusted pointer event. Awaiting the native bridge first
+        // would lose the transient user activation required by the Fullscreen API.
+        fullscreenRequest = requestCandyInlineVideoFullscreen(video);
+      } catch (_) { }
+      if (resolution.thresholdChanged) {
+        if (gesture.rubberbandActive) {
+          reportCandyInlineVideoGestureHaptic(video, "rubberband-stop");
+          gesture.rubberbandActive = false;
+        }
+        reportCandyInlineVideoGestureHaptic(video, "confirm");
+      }
+    }
+    finishFullscreenGesture();
+    if (fullscreenRequest) {
+      Promise.resolve(fullscreenRequest).catch(() => {
+        reportCandyInlineVideoGestureHaptic(video, "rubberband-stop");
+      });
+    }
+  }, { passive: false });
+  fullscreenGesture.addEventListener("pointercancel", () => finishFullscreenGesture());
+  fullscreenGesture.addEventListener("lostpointercapture", () => finishFullscreenGesture());
   const mediaEvents = ["durationchange", "ended", "loadedmetadata", "pause", "play", "timeupdate"];
   mediaEvents.forEach((eventName) => video.addEventListener(eventName, update));
   document.addEventListener("fullscreenchange", update);
   candyPictureInPicturePlayback.inlineControlsCleanup = () => {
     if (heroActivationTimer !== null) clearTimeout(heroActivationTimer);
+    finishFullscreenGesture();
     mediaEvents.forEach((eventName) => video.removeEventListener(eventName, update));
     document.removeEventListener("fullscreenchange", update);
   };
@@ -597,7 +798,7 @@ button:focus-visible { outline: 3px solid white; outline-offset: 3px; }
   utility.append(fullscreen, close);
   actions.append(transport, utility);
   controls.append(timeline, actions);
-  stage.append(heroPlay, controls);
+  stage.append(fullscreenGesture, heroPlay, controls);
   shadow.append(style, stage);
   candyInlineVideoControlsParent(video)?.appendChild(host);
   candyPictureInPicturePlayback.inlineControlsHost = host;
@@ -633,10 +834,25 @@ function updateCandyInlineVideoControlsOverlay(video) {
   );
 }
 
+function updateCandyPictureInPictureVideoControls(video, expected) {
+  if (!video) return;
+  if (expected) {
+    if (!candyPictureInPictureOriginalControls.has(video)) {
+      candyPictureInPictureOriginalControls.set(video, video.controls);
+    }
+    video.controls = false;
+    return;
+  }
+  if (!candyPictureInPictureOriginalControls.has(video)) return;
+  video.controls = candyPictureInPictureOriginalControls.get(video);
+  candyPictureInPictureOriginalControls.delete(video);
+}
+
 function clearCandyPictureInPictureVideoPresentation(video) {
   video?.removeAttribute(CANDY_PICTURE_IN_PICTURE_VIDEO_ATTRIBUTE);
   video?.style.removeProperty(CANDY_PICTURE_IN_PICTURE_OFFSET_X);
   video?.style.removeProperty(CANDY_PICTURE_IN_PICTURE_OFFSET_Y);
+  updateCandyPictureInPictureVideoControls(video, false);
 }
 
 function clearCandyPictureInPicturePresentation() {
@@ -648,9 +864,13 @@ function clearCandyPictureInPicturePresentation() {
   candyPictureInPicturePlayback.layoutObserver = null;
   candyPictureInPicturePlayback.resizeObserver?.disconnect();
   candyPictureInPicturePlayback.resizeObserver = null;
-  clearCandyPictureInPictureVideoPresentation(
-    candyPictureInPicturePlayback.presentedVideo,
-  );
+  const presentedVideos = new Set(document.querySelectorAll(
+    `video[${CANDY_PICTURE_IN_PICTURE_VIDEO_ATTRIBUTE}]`,
+  ));
+  if (candyPictureInPicturePlayback.presentedVideo) {
+    presentedVideos.add(candyPictureInPicturePlayback.presentedVideo);
+  }
+  presentedVideos.forEach(clearCandyPictureInPictureVideoPresentation);
   if (!candyPictureInPicturePlayback.inlinePresentationExpected) {
     candyPictureInPicturePlayback.presentedVideo = null;
   }
@@ -773,6 +993,70 @@ function clearCandyInlineVideoOpenRequest() {
   candyPictureInPicturePlayback.inlineOpenRequestKey = null;
 }
 
+function requestCandyInlineVideoFullscreen(video) {
+  if (!video || document.fullscreenElement?.contains(video)) return null;
+  const bounds = (candyInlineVideoSitePlayer(video) || video).getBoundingClientRect();
+  if (bounds.width > 0 && bounds.height > 0) {
+    candyPictureInPicturePlayback.inlineFullscreenReturnBox = {
+      left: bounds.left,
+      top: bounds.top,
+      width: bounds.width,
+      height: bounds.height,
+    };
+  }
+  const target = candyInlineVideoSitePlayer(video) || video.parentElement || video;
+  if (typeof target.requestFullscreen !== "function") return null;
+  return target.requestFullscreen();
+}
+
+function restoreCandyInlineVideoBoxAfterFullscreen(video) {
+  const target = candyPictureInPicturePlayback.inlineFullscreenReturnBox;
+  if (!target || !video?.isConnected) return;
+  const videoBounds = video.getBoundingClientRect();
+  if (
+    videoBounds.width > 0 &&
+    videoBounds.height > 0
+  ) {
+    const scaleX = target.width / videoBounds.width;
+    const scaleY = target.height / videoBounds.height;
+    video.style.setProperty("transform-origin", "top left", "important");
+    video.style.setProperty(
+      "transform",
+      `translate3d(${target.left - videoBounds.left}px, ${target.top - videoBounds.top}px, 0) scale(${scaleX}, ${scaleY})`,
+      "important",
+    );
+  }
+}
+
+function scheduleCandyInlineVideoBoxRestore(video) {
+  [0, 16, 50, 150, 400, 900].forEach((delay) => {
+    setTimeout(() => {
+      if (
+        !document.fullscreenElement &&
+        video?.isConnected
+      ) {
+        restoreCandyInlineVideoBoxAfterFullscreen(video);
+      }
+    }, delay);
+  });
+}
+
+function reportCandyInlineVideoGestureHaptic(video, phase) {
+  if (
+    !candyPictureInPicturePlayback.inlineMediaPlayerEnabled ||
+    !candyPictureInPicturePlayback.inlinePresentationExpected ||
+    candyPictureInPicturePlayback.presentedVideo !== video
+  ) return;
+  browser.runtime.sendMessage({
+    type: "inline-video-gesture-haptic",
+    phase,
+    revision: candyPictureInPicturePlayback.inlineMediaPolicyRevision,
+    navigationGeneration: candyPictureInPicturePlayback.inlineMediaNavigationGeneration,
+    documentNonce: candyInlineVideoDocumentNonce,
+    elementNonce: candyInlineVideoElementNonce(video),
+  }).catch(() => {});
+}
+
 async function requestCandyInlineVideoOpen(video, enterFullscreen = false) {
   if (
     !candyPictureInPicturePlayback.inlineMediaPlayerEnabled ||
@@ -785,9 +1069,9 @@ async function requestCandyInlineVideoOpen(video, enterFullscreen = false) {
   candyPictureInPicturePlayback.inlineOpenRequestKey = requestKey;
   try {
     if (enterFullscreen && !document.fullscreenElement) {
-      const target = candyInlineVideoSitePlayer(video) || video.parentElement || video;
-      if (typeof target.requestFullscreen !== "function") throw new Error("fullscreen unavailable");
-      await target.requestFullscreen();
+      const fullscreenRequest = requestCandyInlineVideoFullscreen(video);
+      if (!fullscreenRequest) throw new Error("fullscreen unavailable");
+      await fullscreenRequest;
     }
     await reportCandyInlineVideoState(video);
     const response = await browser.runtime.sendMessage({
@@ -1297,13 +1581,7 @@ function presentCandyPictureInPictureVideo(preferredVideo = null) {
         reportCandyInlineVideoState();
         return;
       }
-      if (
-        candyPictureInPicturePlayback.inlinePresentationExpected &&
-        candyPictureInPicturePlayback.presentedVideo === video &&
-        video.controls
-      ) {
-        video.controls = false;
-      }
+      updateCandyPictureInPictureVideoControls(video, true);
       scheduleCandyPictureInPictureAlignment();
     });
     candyPictureInPicturePlayback.layoutObserver.observe(video, {
@@ -1320,6 +1598,7 @@ function presentCandyPictureInPictureVideo(preferredVideo = null) {
     }
   }
   candyPictureInPicturePlayback.presentedVideo = video;
+  updateCandyPictureInPictureVideoControls(video, true);
   video.setAttribute(CANDY_PICTURE_IN_PICTURE_VIDEO_ATTRIBUTE, "");
   document.documentElement.setAttribute(CANDY_PICTURE_IN_PICTURE_ROOT_ATTRIBUTE, "");
   if (!document.querySelector(`style[${CANDY_PICTURE_IN_PICTURE_STYLE_ATTRIBUTE}]`)) {
@@ -1336,6 +1615,10 @@ html[${CANDY_PICTURE_IN_PICTURE_ROOT_ATTRIBUTE}] body {
   background: #000 !important;
 }
 html[${CANDY_PICTURE_IN_PICTURE_ROOT_ATTRIBUTE}] body * {
+  visibility: hidden !important;
+}
+html[${CANDY_PICTURE_IN_PICTURE_ROOT_ATTRIBUTE}] [${CANDY_INLINE_VIDEO_CONTROLS_ATTRIBUTE}] {
+  display: none !important;
   visibility: hidden !important;
 }
 html[${CANDY_PICTURE_IN_PICTURE_ROOT_ATTRIBUTE}] video[${CANDY_PICTURE_IN_PICTURE_VIDEO_ATTRIBUTE}] {
@@ -1403,6 +1686,14 @@ function updateCandyPictureInPicturePlayback(expected) {
   candyPictureInPicturePlayback.expected = expected;
   if (!expected) {
     clearCandyPictureInPicturePresentation();
+    if (
+      candyPictureInPicturePlayback.inlinePresentationExpected &&
+      candyPictureInPicturePlayback.presentedVideo?.isConnected
+    ) {
+      scheduleCandyInlineVideoBoxRestore(
+        candyPictureInPicturePlayback.presentedVideo,
+      );
+    }
     updateCandyInlineVideoControlsOverlay(
       candyPictureInPicturePlayback.presentedVideo,
     );
@@ -1421,6 +1712,11 @@ function nextCandyAnimationFrame() {
 async function prepareCandyPictureInPicturePlayback(message) {
   if (message.expected !== true) {
     updateCandyPictureInPicturePlayback(false);
+    await nextCandyAnimationFrame();
+    await nextCandyAnimationFrame();
+    updateCandyInlineVideoControlsOverlay(
+      candyPictureInPicturePlayback.presentedVideo,
+    );
     return { prepared: true };
   }
   const video = candyInlineVideoForIdentity(
@@ -1559,6 +1855,21 @@ window.addEventListener("resize", scheduleCandyInlineVideoStateReport, true);
 document.addEventListener("visibilitychange", scheduleCandyPictureInPicturePlayback, true);
 document.addEventListener("fullscreenchange", () => {
   scheduleCandyPictureInPictureAlignment();
+  if (
+    !document.fullscreenElement &&
+    candyPictureInPicturePlayback.inlinePresentationExpected &&
+    candyPictureInPicturePlayback.presentedVideo?.isConnected
+  ) {
+    scheduleCandyInlineVideoBoxRestore(
+      candyPictureInPicturePlayback.presentedVideo,
+    );
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      window.dispatchEvent(new Event("resize"));
+      updateCandyInlineVideoControlsOverlay(
+        candyPictureInPicturePlayback.presentedVideo,
+      );
+    }));
+  }
   if (
     !document.fullscreenElement &&
     candyPictureInPicturePlayback.inlinePresentationExpected &&
