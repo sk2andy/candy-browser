@@ -51,7 +51,9 @@ import dev.sk2andy.materialbrowser.browser.BrowserViewportRect
 import dev.sk2andy.materialbrowser.browser.DnsOverHttpsSettings
 import dev.sk2andy.materialbrowser.browser.TextInputOcclusionProbeMode
 import dev.sk2andy.materialbrowser.browser.TextInputOcclusionProbeResult
+import dev.sk2andy.materialbrowser.browser.WebContentTopInsetTransitionRules
 import dev.sk2andy.materialbrowser.browser.WebRtcProtectionMode
+import dev.sk2andy.materialbrowser.browser.smoothWebContentTopInsetChange
 import dev.sk2andy.materialbrowser.browser.actions.BrowserContentTargetKind
 import dev.sk2andy.materialbrowser.browser.actions.BrowserContentTargetListener
 import dev.sk2andy.materialbrowser.browser.actions.BrowserContentTargetRules
@@ -2960,9 +2962,13 @@ internal class CandyGeckoView(context: Context) : FrameLayout(context), GeckoVie
         if (BuildConfig.ENABLE_PERFORMANCE_DIAGNOSTICS &&
             (insetLayout != layout || this.windowInsets != windowInsets)
         ) domDiagnosticGeneration++
+        val animateTopInsetChange = WebContentTopInsetTransitionRules.shouldAnimate(
+            previousState = insetLayout.topInsetTransitionState,
+            nextState = layout.topInsetTransitionState,
+        )
         insetLayout = layout
         this.windowInsets = windowInsets
-        applyInsets(engineView)
+        applyInsets(engineView, animateTopInsetChange)
     }
 
     override fun onSizeChanged(width: Int, height: Int, oldWidth: Int, oldHeight: Int) {
@@ -2994,10 +3000,14 @@ internal class CandyGeckoView(context: Context) : FrameLayout(context), GeckoVie
         view.updateRendererSafeAreaOverride(insetLayout.rendererSafeAreaOverride)
     }
 
-    private fun applyInsets(view: CandyGeckoEngineView) {
+    private fun applyInsets(
+        view: CandyGeckoEngineView,
+        animateTopInsetChange: Boolean,
+    ) {
         BrowserPerformanceTrace.section(BrowserPerformanceTrace.Phase.GeckoInsets) {
             val margins = insetLayout.margins
             (view.layoutParams as? LayoutParams)?.let { layoutParams ->
+                val previousTopMargin = layoutParams.topMargin
                 if (
                     layoutParams.leftMargin != margins.left ||
                     layoutParams.topMargin != margins.top ||
@@ -3006,6 +3016,11 @@ internal class CandyGeckoView(context: Context) : FrameLayout(context), GeckoVie
                 ) {
                     layoutParams.setMargins(margins.left, margins.top, margins.right, margins.bottom)
                     view.layoutParams = layoutParams
+                    view.smoothWebContentTopInsetChange(
+                        previousTopInsetPx = previousTopMargin,
+                        nextTopInsetPx = margins.top,
+                        animateChange = animateTopInsetChange,
+                    )
                 }
             }
             windowInsets?.let(view::updateWindowInsets)

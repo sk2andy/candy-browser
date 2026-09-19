@@ -1,5 +1,6 @@
 package dev.sk2andy.materialbrowser.browser.gecko
 
+import dev.sk2andy.materialbrowser.browser.WebContentTopInsetTransitionState
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -179,6 +180,35 @@ class GeckoViewInsetRulesTest {
             layout.rendererSafeAreaOverride,
         )
         assertEquals(0, layout.scrollableTopInsetPx)
+        assertEquals(WebContentTopInsetTransitionState.Other, layout.topInsetTransitionState)
+    }
+
+    @Test
+    fun `website header marks native top margin as smooth transition owner`() {
+        val layout = GeckoViewInsetRules.resolve(
+            safeArea = GeckoViewInsets(left = 8, top = 72, right = 6, bottom = 48),
+            forceNativeSafeArea = false,
+            forceNativeTopSafeArea = true,
+            isFullscreenContent = false,
+            isInsideSafeDrawingHost = false,
+            nativeTopHeaderSafeArea = true,
+        )
+
+        assertEquals(WebContentTopInsetTransitionState.WebContentHeader, layout.topInsetTransitionState)
+    }
+
+    @Test
+    fun `fullscreen suppresses website header transition ownership`() {
+        val layout = GeckoViewInsetRules.resolve(
+            safeArea = GeckoViewInsets(left = 8, top = 72, right = 6, bottom = 48),
+            forceNativeSafeArea = false,
+            forceNativeTopSafeArea = true,
+            isFullscreenContent = true,
+            isInsideSafeDrawingHost = false,
+            nativeTopHeaderSafeArea = true,
+        )
+
+        assertEquals(WebContentTopInsetTransitionState.Other, layout.topInsetTransitionState)
     }
 
     @Test

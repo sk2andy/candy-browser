@@ -71,6 +71,8 @@ import dev.sk2andy.materialbrowser.browser.WebRtcProtectionRules
 import dev.sk2andy.materialbrowser.browser.WebContentTopInsetMode
 import dev.sk2andy.materialbrowser.browser.WebContentTopInsetRules
 import dev.sk2andy.materialbrowser.browser.WebContentTopInsetScript
+import dev.sk2andy.materialbrowser.browser.WebContentTopInsetTransitionRules
+import dev.sk2andy.materialbrowser.browser.smoothWebContentTopInsetChange
 import dev.sk2andy.materialbrowser.browser.engine.AndroidBrowserEngineFactory
 import dev.sk2andy.materialbrowser.browser.engine.BrowserEngineContentKind
 import dev.sk2andy.materialbrowser.browser.integration.BrowserUriPolicy
@@ -1814,11 +1816,15 @@ private class SystemWebViewHost(
         layout: GeckoViewInsetLayout,
         windowInsets: WindowInsetsCompat,
     ) {
+        val animateTopInsetChange = WebContentTopInsetTransitionRules.shouldAnimate(
+            previousState = currentLayout.topInsetTransitionState,
+            nextState = layout.topInsetTransitionState,
+        )
         currentLayout = layout
         layoutTopInsetPx = layout.scrollableTopInsetPx
         val previousTopInset = topInsetPx
         val previousBottomPadding = paddingBottom
-        applyCurrentLayout()
+        applyCurrentLayout(animateTopInsetChange)
         val rendererInsets = layout.rendererSafeAreaOverride
             ?.let(windowInsets::withSafeAreaOverride)
             ?: windowInsets
@@ -1828,7 +1834,7 @@ private class SystemWebViewHost(
         }
     }
 
-    private fun applyCurrentLayout() {
+    private fun applyCurrentLayout(animateTopInsetChange: Boolean = false) {
         val layout = currentLayout
         val mode = WebContentTopInsetRules.resolve(
             drawsEdgeToEdge = layout.margins.top == 0 && layout.scrollableTopInsetPx == 0,
@@ -1843,6 +1849,7 @@ private class SystemWebViewHost(
             -> layout.margins.top
         }
         (layoutParams as? ViewGroup.MarginLayoutParams)?.let { params ->
+            val previousTopMargin = params.topMargin
             if (
                 params.leftMargin != layout.margins.left ||
                 params.topMargin != nativeTopInset ||
@@ -1856,6 +1863,11 @@ private class SystemWebViewHost(
                     layout.margins.bottom,
                 )
                 layoutParams = params
+                smoothWebContentTopInsetChange(
+                    previousTopInsetPx = previousTopMargin,
+                    nextTopInsetPx = nativeTopInset,
+                    animateChange = animateTopInsetChange,
+                )
             }
         }
         topInsetPx = if (mode == WebContentTopInsetMode.ScrollableDocument) layoutTopInsetPx else 0

@@ -1,6 +1,7 @@
 package dev.sk2andy.materialbrowser.browser.gecko
 
 import androidx.core.view.WindowInsetsCompat
+import dev.sk2andy.materialbrowser.browser.WebContentTopInsetTransitionState
 
 internal data class GeckoViewInsets(
     val left: Int,
@@ -17,6 +18,8 @@ internal data class GeckoViewInsetLayout(
     val margins: GeckoViewInsets,
     val rendererSafeAreaOverride: GeckoViewInsets?,
     val scrollableTopInsetPx: Int,
+    val topInsetTransitionState: WebContentTopInsetTransitionState =
+        WebContentTopInsetTransitionState.Document,
 )
 
 /** Assigns every safe-area edge to either Candy's native host or Gecko, never both. */
@@ -29,7 +32,16 @@ internal object GeckoViewInsetRules {
         isInsideSafeDrawingHost: Boolean,
         useNativeCssSafeArea: Boolean = true,
         keyboardBottomInsetPx: Int = 0,
+        nativeTopHeaderSafeArea: Boolean = false,
     ): GeckoViewInsetLayout {
+        val topInsetTransitionState = when {
+            isInsideSafeDrawingHost || isFullscreenContent || forceNativeSafeArea ->
+                WebContentTopInsetTransitionState.Other
+            forceNativeTopSafeArea && nativeTopHeaderSafeArea ->
+                WebContentTopInsetTransitionState.WebContentHeader
+            forceNativeTopSafeArea -> WebContentTopInsetTransitionState.Other
+            else -> WebContentTopInsetTransitionState.Document
+        }
         val layout = if (isInsideSafeDrawingHost) {
             GeckoViewInsetLayout(
                 margins = GeckoViewInsets.Zero,
@@ -74,12 +86,15 @@ internal object GeckoViewInsetRules {
             }
         }
         val keyboardBottomInset = keyboardBottomInsetPx.coerceAtLeast(0)
-        if (isInsideSafeDrawingHost || keyboardBottomInset == 0) return layout
-        return layout.copy(
-            margins = layout.margins.copy(
+        val classifiedLayout = layout.copy(topInsetTransitionState = topInsetTransitionState)
+        if (isInsideSafeDrawingHost || keyboardBottomInset == 0) return classifiedLayout
+        return classifiedLayout.copy(
+            margins = classifiedLayout.margins.copy(
                 bottom = maxOf(layout.margins.bottom, keyboardBottomInset),
             ),
-            rendererSafeAreaOverride = (layout.rendererSafeAreaOverride ?: safeArea.coerceAtLeastZero())
+            rendererSafeAreaOverride = (
+                classifiedLayout.rendererSafeAreaOverride ?: safeArea.coerceAtLeastZero()
+                )
                 .copy(bottom = 0),
         )
     }
