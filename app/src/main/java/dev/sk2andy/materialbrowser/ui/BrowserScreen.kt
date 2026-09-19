@@ -1418,7 +1418,7 @@ internal fun BrowserScreen(
                         },
                         blankTabModeProgress = blankTabModeProgress,
                         blankTabModeRevealOrigin = blankTabModeRevealOrigin,
-                        onRetry = controller::reload,
+                        onRetry = controller::retryFailedPage,
                         onBlurTargetAttached = { target -> browserContentBlurTarget = target },
                         onBlurTargetReleased = { target ->
                             if (browserContentBlurTarget === target) browserContentBlurTarget = null

@@ -266,6 +266,7 @@ import dev.sk2andy.materialbrowser.reader.ReaderExtractionFailure
 import dev.sk2andy.materialbrowser.reader.ReaderExtractionParser
 import dev.sk2andy.materialbrowser.reader.ReaderExtractionResult
 import dev.sk2andy.materialbrowser.reader.ReaderLibraryRepository
+import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineCommand
 import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineCommands
 import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineEvent
 import dev.sk2andy.materialbrowser.shared.browser.AddressBarLongPressAction
@@ -7669,12 +7670,9 @@ class BrowserController(
 
     fun retryFailedPage(): Boolean {
         val tabId = selectedTabId
-        if (
-            (selectedTab.error == null && selectedTab.httpStatusCode == null) ||
-            selectedTab.isLoading
-        ) {
-            return false
-        }
+        val existingSession = browserEngineSessions[tabId]
+        val failedTab = selectedTab
+        val command = FailedPageRetryRules.commandFor(failedTab) ?: return false
         updateTab(tabId) {
             it.copy(
                 isLoading = true,
@@ -7684,7 +7682,11 @@ class BrowserController(
                 httpStatusCode = null,
             )
         }
-        browserEngineSessionFor(tabId).execute(BrowserEngineCommands.reload())
+        if (existingSession == null) {
+            browserEngineSessionFor(tabId, commandOnCreate = command)
+        } else {
+            existingSession.execute(command)
+        }
         return true
 
     }
@@ -9282,7 +9284,10 @@ class BrowserController(
         candyTrailGenerations.clear()
     }
 
-    private fun browserEngineSessionFor(tabId: String): AndroidBrowserEngineSessionPort =
+    private fun browserEngineSessionFor(
+        tabId: String,
+        commandOnCreate: BrowserEngineCommand? = null,
+    ): AndroidBrowserEngineSessionPort =
         browserEngineSessions.getOrPut(tabId) {
             val tab = tabs.first { candidate -> candidate.id == tabId }
             BrowserInputDiagnostics.engineCreated(tab.id, browserEngineKind.stableId)
@@ -9393,7 +9398,11 @@ class BrowserController(
                     } else if (!usesGeckoEngine) {
                         webViewStateRepository.delete(tab.id)
                     }
-                    session.execute(BrowserEngineCommands.load(tab.url))
+                }
+                when {
+                    commandOnCreate != null -> session.execute(commandOnCreate)
+                    !restored && tab.url != BLANK_URL ->
+                        session.execute(BrowserEngineCommands.load(tab.url))
                 }
             }
         }.also {

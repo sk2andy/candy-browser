@@ -317,7 +317,7 @@ internal fun BrowserViewport(
     onFavorite: (String) -> Unit,
     blankTabModeProgress: Float,
     blankTabModeRevealOrigin: Offset,
-    onRetry: () -> Unit,
+    onRetry: () -> Boolean,
     onBlurTargetAttached: (BlurTarget) -> Unit,
     onBlurTargetReleased: (BlurTarget) -> Unit,
 ) {
@@ -516,8 +516,20 @@ internal fun BrowserViewport(
                     val transition = PageErrorFeedbackRules.requestRetry(pageErrorFeedback)
                     if (!transition.shouldReload) return@retry
                     pageErrorFeedback = transition.state
-                    onRetry()
-                    if (transition.emitConfirmHaptic) hapticView.performConfirmHaptic()
+                    if (onRetry()) {
+                        if (transition.emitConfirmHaptic) hapticView.performConfirmHaptic()
+                    } else {
+                        pageErrorFeedback = PageErrorFeedbackRules.observe(
+                            current = pageErrorFeedback,
+                            error = selectedTab.error,
+                            httpStatusCode = selectedTab.httpStatusCode,
+                            isLoading = selectedTab.isLoading,
+                            isOnline = controller.isOnline,
+                            failureKind = selectedTab.failureKind,
+                            isWebPage = selectedTab.url.startsWith("http://") ||
+                                selectedTab.url.startsWith("https://"),
+                        ).state
+                    }
                 },
                 onGameChange = { game ->
                     val offline = pageErrorFeedback as? PageErrorFeedbackState.Offline

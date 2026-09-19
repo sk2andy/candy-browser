@@ -27,9 +27,11 @@ import dev.sk2andy.materialbrowser.browser.gecko.GeckoPrivacyEvent
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoPrivacyPolicy
 import dev.sk2andy.materialbrowser.browser.integration.ExternalAppLauncher
 import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineCommand
+import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineCommands
 import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineCommandType
 import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineEvent
 import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineEventType
+import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineFailureKind
 import dev.sk2andy.materialbrowser.data.BrowserSessionStore
 import dev.sk2andy.materialbrowser.data.DeveloperSettings
 import dev.sk2andy.materialbrowser.data.GeckoSafeAreaSettings
@@ -980,9 +982,8 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
             val browserController = BrowserController(composeRule.activity)
             controller = browserController
             val tabId = browserController.selectedTabId
-            browserController.installGeckoEngineSessionForTesting(
-                ReentrantAttachSession(tabId = tabId, onFirstAttach = {}),
-            )
+            val session = ReentrantAttachSession(tabId = tabId, onFirstAttach = {})
+            browserController.installGeckoEngineSessionForTesting(session)
             val missingUrl = "https://example.com/missing"
 
             browserController.dispatchGeckoEngineEventForTesting(
@@ -1014,6 +1015,57 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
             assertEquals(404, browserController.selectedTab.httpStatusCode)
             assertNull(browserController.selectedTab.error)
             assertEquals(true, browserController.selectedTab.canGoBack)
+
+            assertTrue(browserController.retryFailedPage())
+            assertEquals(
+                listOf(BrowserEngineCommands.retryFailedPage(missingUrl)),
+                session.commands,
+            )
+        }
+    }
+
+    @Test
+    fun offlineNavigationRetryLoadsExactAddressInsteadOfReloadingHistory() {
+        composeRule.runOnIdle {
+            val browserController = BrowserController(composeRule.activity)
+            controller = browserController
+            val tabId = browserController.selectedTabId
+            val session = ReentrantAttachSession(tabId = tabId, onFirstAttach = {})
+            browserController.installGeckoEngineSessionForTesting(session)
+            val failedUrl = "https://example.com/offline"
+
+            browserController.dispatchGeckoEngineEventForTesting(
+                BrowserEngineEvent(
+                    tabId = tabId,
+                    type = BrowserEngineEventType.NavigationStarted,
+                    address = failedUrl,
+                    title = null,
+                    canGoBack = false,
+                    canGoForward = false,
+                    failureDescription = null,
+                ),
+            )
+            browserController.dispatchGeckoEngineEventForTesting(
+                BrowserEngineEvent(
+                    tabId = tabId,
+                    type = BrowserEngineEventType.NavigationFailed,
+                    address = failedUrl,
+                    title = null,
+                    canGoBack = false,
+                    canGoForward = false,
+                    failureDescription = "Network unavailable",
+                    failureKind = BrowserEngineFailureKind.Offline,
+                ),
+            )
+
+            assertTrue(browserController.retryFailedPage())
+            assertEquals(
+                listOf(BrowserEngineCommands.retryFailedPage(failedUrl)),
+                session.commands,
+            )
+            assertTrue(browserController.selectedTab.isLoading)
+            assertNull(browserController.selectedTab.error)
+            assertNull(browserController.selectedTab.failureKind)
         }
     }
 
