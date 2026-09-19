@@ -113,8 +113,8 @@ Frosted exposes three persisted controls while selected:
   keeps the selected address color opaque and disables blur.
 - Address-bar style is global. Segmented groups expanded actions and the address field into one
   primary pill, keeps the fixed trailing action in a separate pill, and replaces that action with
-  editor dismissal while focused. Compact, parked, overview, command-feedback, external-preview and
-  find-in-page chrome retain their existing geometry.
+  editor dismissal while focused. The focused input stays borderless. Compact, parked, overview,
+  command-feedback, external-preview and find-in-page chrome retain their existing geometry.
 - AMOLED keeps root surfaces black. An explicit address-bar color may color address chrome, but it
   stays opaque; Frosted transparency and blur do not override AMOLED chrome.
 - Frosted changes only Candy browser chrome. It does not inject styles into websites or claim backdrop refraction.
