@@ -181,6 +181,48 @@ class WebContentTopInsetScriptInstrumentedTest {
     }
 
     @Test
+    fun fixedCustomHeaderUsesCachedCandidateAfterScrollQuiet() {
+        val fallbackReceived = CountDownLatch(1)
+        val view = loadPage(
+            bridge = TopInsetBridge(
+                fallbackReceived = fallbackReceived,
+                layoutQuietPeriodMillis = 150,
+                nativeTopHeaderEnabled = true,
+            ),
+            html = """
+                <html><head>
+                <meta name="theme-color" content="#ff4500">
+                <style>
+                  html, body { margin: 0; }
+                  reddit-header-large {
+                    position: fixed;
+                    top: 0;
+                    display: block;
+                    width: 100%;
+                    height: 56px;
+                    background: #ff4500;
+                  }
+                  main { display: block; height: 300vh; }
+                </style></head><body>
+                <reddit-header-large>Menu</reddit-header-large><main>Content</main>
+                </body></html>
+            """.trimIndent(),
+        )
+
+        evaluate(view, WebContentTopInsetScript.installScript)
+
+        assertFalse(
+            "Initial custom fixed declaration disabled edge-to-edge before persistence was proven",
+            fallbackReceived.await(NO_FALLBACK_WINDOW_MILLIS, TimeUnit.MILLISECONDS),
+        )
+        evaluate(view, "scrollTo(0, 160)")
+        assertTrue(
+            "Cached custom fixed header was not promoted after scroll quiet",
+            fallbackReceived.await(PAGE_TIMEOUT_SECONDS, TimeUnit.SECONDS),
+        )
+    }
+
+    @Test
     fun continuedScrollDiscoversOldControlAtTrailingInsetRow() {
         val fallbackReceived = CountDownLatch(1)
         val view = loadPage(

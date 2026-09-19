@@ -180,8 +180,11 @@ class WebContentTopInsetScriptTest {
         assertTrue(request.contains("style.position === 'fixed'"))
         assertTrue(request.contains("Number(globalThis.scrollY)"))
         assertTrue(request.contains("fixedTopHeaderCandidates.get(element)"))
-        assertTrue(request.contains("scrollY - candidate.scrollY"))
-        assertTrue(request.contains("Math.max(rect.height, cssPixels)"))
+        assertTrue(request.contains("fixedTopHeaderHasMeaningfulScroll(candidate, scrollY)"))
+        assertTrue(WebContentTopInsetScript.installScript.contains("scrollY - candidate.scrollY"))
+        assertTrue(WebContentTopInsetScript.installScript.contains("candidate.anchorTop -"))
+        assertTrue(WebContentTopInsetScript.installScript.contains("Math.max(rect.height, cssPixels)"))
+        assertTrue(WebContentTopInsetScript.installScript.contains("new Map()"))
     }
 
     @Test

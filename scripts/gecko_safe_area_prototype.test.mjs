@@ -148,7 +148,8 @@ function fixture({ density = 3, nativeTop = 96, normalizePixels = false, reparse
     },
     querySelectorAll: (selector) => {
       if (selector === 'meta[name="theme-color" i]') return theme ? [theme] : [];
-      if (selector !== 'header, nav, [role="banner"], [role="navigation"]') return [];
+      if (!["header, nav, [role=\"banner\"], [role=\"navigation\"]",
+        'reddit-header-small, reddit-header-large, shreddit-header'].includes(selector)) return [];
       reads.selector++;
       return root.querySelectorAll(selector);
     },
@@ -340,6 +341,52 @@ test('sticky headers switch immediately while fixed headers must remain pinned a
   restored.event('scroll');
   restored.flush();
   assert.deepEqual(restored.fallbacks, [[1, 1, '#456abc', true]]);
+});
+
+test('cached Reddit custom headers coalesce scroll work and accept nested content movement', () => {
+  const f = fixture({ hostname: 'www.reddit.com', themeColor: '#ff4500' });
+  for (let index = 0; index < 12; index++) f.element('static', 'auto', 'header');
+  const customHeader = f.element('fixed', '0px', 'reddit-header-large');
+  customHeader.rect = { top: 0, left: 0, width: 800, height: 56, right: 800, bottom: 56 };
+  const content = f.element('static', 'auto', 'main');
+  content.rect = { top: 56, left: 0, width: 800, height: 1600, right: 800, bottom: 1656 };
+  f.start();
+  assert.deepEqual(f.fallbacks, []);
+
+  const beforeScroll = { ...f.reads };
+  for (let index = 0; index < 100; index++) f.event('scroll', index % 2 ? 'document' : 'window');
+  assert.deepEqual(f.reads, beforeScroll, 'Scroll events must not read style, geometry or selectors');
+  assert.equal(f.timers.size, 1, 'A scroll burst must retain one quiet worker');
+  content.rect = { ...content.rect, top: -80, bottom: 1520 };
+  f.flush();
+
+  assert.deepEqual(f.fallbacks, [[1, 1, '#ff4500', true]]);
+  assert.equal(f.reads.selector, beforeScroll.selector, 'Quiet verification must use cached candidates');
+});
+
+test('fixed header position changes reset persistence proof before a later scroll', () => {
+  const f = fixture({ hostname: 'www.reddit.com', themeColor: '#123456' });
+  const header = f.element('fixed', '0px', 'shreddit-header');
+  header.rect = { top: 0, left: 0, width: 800, height: 56, right: 800, bottom: 56 };
+  f.element('static', 'auto', 'main').rect =
+    { top: 56, left: 0, width: 800, height: 1600, right: 800, bottom: 1656 };
+  f.start();
+
+  f.scrollTo(80);
+  f.event('scroll');
+  Object.assign(header.computed, { position: 'static', top: 'auto' });
+  f.mutate(header, 'class');
+  f.flush();
+  assert.deepEqual(f.fallbacks, [], 'A stale fixed baseline must not survive a static phase');
+
+  Object.assign(header.computed, { position: 'fixed', top: '0px' });
+  f.mutate(header, 'class');
+  f.flush();
+  assert.deepEqual(f.fallbacks, [], 'Returning to fixed starts a new baseline');
+  f.scrollTo(160);
+  f.event('scroll');
+  f.flush();
+  assert.deepEqual(f.fallbacks, [[1, 1, '#123456', true]]);
 });
 
 test('semantic checks cover later candidates, hydrated custom topbars and scroll transitions', () => {
@@ -594,7 +641,7 @@ test('readiness, reserved late semantic seed, trusted discovery and nested scrol
     { style: f.reads.style, rect: f.reads.rect, writes: f.writes(), rules: f.ruleWrites() },
     { style: before.reads.style, rect: before.reads.rect, writes: before.writes, rules: before.rules },
   );
-  assert.equal(f.reads.selector, before.reads.selector + 2, 'Each quiet scroll event gets one semantic query');
+  assert.equal(f.reads.selector, before.reads.selector, 'Quiet scroll checks use cached candidates');
 });
 
 test('full selector rules protect passive class activation and new matching nodes without double ownership', () => {
@@ -613,7 +660,7 @@ test('full selector rules protect passive class activation and new matching node
     { style: before.reads.style, rect: before.reads.rect, writes: before.writes, rules: before.rules },
     'Passive activation and scroll do no broad repair',
   );
-  assert.equal(f.reads.selector, before.reads.selector + 1);
+  assert.equal(f.reads.selector, before.reads.selector, 'Scroll does not restart semantic discovery');
   assert.equal(f.computed(latent).top, '40px'); assert.equal(f.computed(added).top, '32px');
   assert.equal(latent.style.getPropertyValue('top'), '');
   assert.equal(f.computed(ordinary).top, '112px', 'Unmatched DOM protection remains');
