@@ -457,6 +457,16 @@ private class SystemWebViewBrowserEngineSession(
                     null,
                 )
             }
+            BrowserEngineCommandType.RetryFailedPage -> {
+                val safeUrl = BrowserUriPolicy.normalizeHttpUrl(
+                    requireNotNull(command.address),
+                ) ?: return
+                if (BrowserUriPolicy.normalizeHttpUrl(historyUrlAtOffset(0)) == safeUrl) {
+                    webView.reload()
+                } else {
+                    webView.loadUrl(safeUrl)
+                }
+            }
             BrowserEngineCommandType.Back -> if (webView.canGoBack()) webView.goBack()
             BrowserEngineCommandType.Forward -> if (webView.canGoForward()) webView.goForward()
             BrowserEngineCommandType.Reload -> webView.reload()

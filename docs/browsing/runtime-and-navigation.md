@@ -35,7 +35,7 @@
 | Gecko permissions and prompts | `PermissionRequestRules` / `BrowserWebPromptRules` → controller → existing Candy dialogs and Android permission presenter | Preserve profile/private permission scope, deny stale prompts, and fail closed for unsupported sensitive prompt classes |
 | Local userscript | `UserScriptRules` → Gecko Topping document-start bridge | Require an explicit HTTP(S) pattern, top frame and regular tab; apply full URL exclusions before source runs |
 | Main-frame 404 | engine HTTP status → tab state → `PageErrorFeedbackRules` | Keep the navigation committed, preserve URL/title/history side effects, and cover the page with Candy's native not-found surface |
-| Offline page | failed main-frame navigation + `BrowserConnectivityMonitor` → controller → `PageErrorFeedbackRules` | Require Android's validated default internet capability, never cover an already loaded page merely because connectivity drops, auto-reload on reconnect only before the game starts, and preserve the game behind an explicit reload banner afterward |
+| Offline page | failed main-frame navigation + `BrowserConnectivityMonitor` → controller → `PageErrorFeedbackRules` | Require Android's validated default internet capability, never cover an already loaded page merely because connectivity drops, preserve the game when connectivity returns, and retry only after the explicit **Load page** action |
 | Pull to refresh | `BrowserPullToRefreshLayout` → `BrowserPullGestureRules` / `BrowserPullToRefreshRules` → `BrowserController.reload()` | Admit a downward-dominant gesture only for a visible, idle web page whose engine-reported document offset is at the top; keep blank, obscured, Find-in-page, overview and video-only surfaces out of the gesture path |
 
 ## Invariants
@@ -172,7 +172,9 @@
   stagger; score and move semantics update from the reducer result without waiting for motion. Open the
   puzzle immediately with no intermediate play prompt. If connectivity
   returns, keep game state and morph the offline pill into a polite **Back online** banner. Its button
-  plays the page exit motion before performing the only reload.
+  plays the page exit motion before performing the only retry. Load the exact failed URL when the engine
+  has no matching committed history entry; retain normal reload semantics when history already points at
+  the target, including committed HTTP failures such as 404.
 - Treat a main-frame HTTP 404 as a committed response, not a failed navigation. System WebView reports it
   from `onReceivedHttpError`; Gecko's authenticated internal Privacy WebExtension reports the main-frame
   response status because GeckoView's session delegate exposes transport errors but not HTTP response

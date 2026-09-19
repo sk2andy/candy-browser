@@ -416,6 +416,9 @@ internal class GeckoBrowserEngineSessionAdapter(
             BrowserEngineCommandType.ReplaceHistory -> replaceHistory(
                 requireNotNull(command.address),
             )
+            BrowserEngineCommandType.RetryFailedPage -> retryFailedPage(
+                requireNotNull(command.address),
+            )
             BrowserEngineCommandType.Back -> session.goBack()
             BrowserEngineCommandType.Forward -> session.goForward()
             BrowserEngineCommandType.Reload -> session.reload()
@@ -699,6 +702,11 @@ internal class GeckoBrowserEngineSessionAdapter(
 
     private fun replaceHistory(address: String) {
         if (session.replaceHistoryUrl(address)) return
+        reportInvalidAddress()
+    }
+
+    private fun retryFailedPage(address: String) {
+        if (session.retryFailedPage(address)) return
         reportInvalidAddress()
     }
 
