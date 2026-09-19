@@ -354,7 +354,25 @@ test("content presentation requires exact document and element identity", () => 
   assert.match(source, /inlinePresentationLayoutObserver\.observe\(element/);
   assert.match(source, /inlinePresentationResizeObserver\.observe\(video\)/);
   assert.match(source, /data-candy-inline-video-controls/);
-  assert.match(source, /candy-hero-morph/);
+  assert.match(source, /border-radius: 50%/);
+  assert.match(source, /button \{[\s\S]*?border: 0;[\s\S]*?outline: none;/);
+  assert.match(source, /button:focus-visible \{ outline: 3px solid white; outline-offset: 3px; \}/);
+  assert.doesNotMatch(source, /rgba\(255,255,255,\.24\) inset/);
+  assert.match(source, /candy-hero-launch/);
+  assert.match(source, /heroPlay\.dataset\.activating = "true"/);
+  assert.match(source, /heroActivationTimer = setTimeout\(finishHeroActivation, 700\)/);
+  assert.match(source, /\.hero-play\[data-activating="true"\][^{]*\{\s*animation: none;/s);
+  assert.match(source, /padding: 0 16px 14px/);
+  assert.match(source, /transparent 4px 8px/);
+  const actionSource = source
+    .split("function createCandyInlineVideoAction(video) {")[1]
+    .split("function candyInlineVideoActionPosition(video) {")[0];
+  assert.match(actionSource, /border-radius: 17px/);
+  assert.match(actionSource, /border: 0;/);
+  assert.doesNotMatch(actionSource, /border: 1px solid/);
+  assert.doesNotMatch(actionSource, /rgba\(255,255,255,\.14\) inset/);
+  assert.doesNotMatch(actionSource, /candy-action-float|candy-action-morph/);
+  assert.doesNotMatch(actionSource, /\["contain", "strict"\]/);
   assert.match(source, /candyWobblyProgressPath\(seekValue\)/);
   assert.match(source, /data-candy-inline-video-site-player/);
   assert.match(source, /#movie_player, \.html5-video-player, ytm-player/);

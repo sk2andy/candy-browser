@@ -359,6 +359,7 @@ class MainActivity : AppCompatActivity() {
             requestSnoozeNotificationPermission = requestNotificationPermission,
             requestDownloadNotificationPermission = requestNotificationPermission,
             onFullImmersiveModeChanged = { applyBrowserSystemUi() },
+            onWebContentFullscreenChanged = ::onWebContentFullscreenChanged,
             onMediaStateChanged = {
                 if (!activityDestroyed) {
                     ensureMediaControllers()
@@ -1650,6 +1651,15 @@ class MainActivity : AppCompatActivity() {
             BrowserRequestedOrientation.Unspecified -> ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
         }
         if (requestedOrientation != orientation) requestedOrientation = orientation
+    }
+
+    private fun onWebContentFullscreenChanged(fullscreen: Boolean) {
+        applyBrowserSystemUi()
+        if (!fullscreen) {
+            window.decorView.postOnAnimation {
+                if (!activityDestroyed) applyBrowserSystemUi()
+            }
+        }
     }
 
     private companion object {

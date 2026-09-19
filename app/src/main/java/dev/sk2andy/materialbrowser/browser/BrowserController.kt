@@ -477,6 +477,7 @@ class BrowserController(
     private val requestSnoozeNotificationPermission: () -> Unit = {},
     private val requestDownloadNotificationPermission: () -> Unit = {},
     private val onFullImmersiveModeChanged: (Boolean) -> Unit = {},
+    private val onWebContentFullscreenChanged: (Boolean) -> Unit = {},
     private val onMediaStateChanged: () -> Unit = {},
     private val onBrowserEngineChangeRequested: (AndroidBrowserEngineKind) -> Unit = {},
     private val profileProtectionSupported: () -> Boolean = { false },
@@ -10322,6 +10323,7 @@ class BrowserController(
         fullscreen: Boolean,
     ) {
         if (destroyed || browserEngineSessions[tabId] !== session) return
+        val wasFullscreen = tabId in browserEngineContentFullscreenTabIds
         if (fullscreen) {
             browserEngineContentFullscreenTabIds[tabId] = Unit
             val state = geckoMediaStates[tabId]
@@ -10348,6 +10350,7 @@ class BrowserController(
                 clearGeckoMediaPresentation()
             }
         }
+        if (fullscreen != wasFullscreen) onWebContentFullscreenChanged(fullscreen)
     }
 
     private fun startGeckoMediaPresentation(

@@ -33,6 +33,7 @@ internal class MainActivityPictureInPictureController(
         if (!canEnterPictureInPicture()) return false
         if (immediate) {
             prepareForTransition()
+            appliedState = null
             val entered = runCatching {
                 activity.enterPictureInPictureMode(
                     buildParams(
@@ -58,6 +59,7 @@ internal class MainActivityPictureInPictureController(
             }
             sourceRectHint = preparedBounds.toAndroidRect()
             updateParams()
+            appliedState = null
             val entered = runCatching {
                 activity.enterPictureInPictureMode(
                     buildParams(
@@ -86,9 +88,7 @@ internal class MainActivityPictureInPictureController(
         if (isInPictureInPictureMode) {
             returnInProgress = false
             cancelReturnLayoutWait()
-            if (startedFullscreen) {
-                sourceRectHint = null
-            }
+            sourceRectHint = null
         } else {
             returnInProgress = true
             completeReturnAfterLayout(newConfig)
@@ -107,7 +107,7 @@ internal class MainActivityPictureInPictureController(
     }
 
     fun onConfigurationChanged() {
-        if (activity.isInPictureInPictureMode && startedFullscreen) {
+        if (activity.isInPictureInPictureMode) {
             sourceRectHint = null
             updateParams()
         }
@@ -167,10 +167,21 @@ internal class MainActivityPictureInPictureController(
     }
 
     fun updateParams() {
-        if (!supportsPictureInPicture()) return
+        if (
+            !supportsPictureInPicture() ||
+            activity.isInPictureInPictureMode ||
+            returnInProgress
+        ) {
+            return
+        }
         val pictureInPictureEligible = canEnterPictureInPicture()
-        val autoEnterEnabled = pictureInPictureEligible && supportsPreparedAutoEnter()
-        val nextSourceRectHint = eligibleSourceRect(pictureInPictureEligible)
+        val autoEnterEnabled = FullscreenVideoRules.enablesPreparedAutoEnter(
+            isEligible = pictureInPictureEligible,
+            isInPictureInPicture = activity.isInPictureInPictureMode,
+            returnInProgress = returnInProgress,
+            sdkInt = Build.VERSION.SDK_INT,
+        )
+        val nextSourceRectHint = eligibleSourceRect(autoEnterEnabled)
         val nextState = AppliedPictureInPictureState(
             autoEnterEnabled = autoEnterEnabled,
             sourceRectHint = nextSourceRectHint,
