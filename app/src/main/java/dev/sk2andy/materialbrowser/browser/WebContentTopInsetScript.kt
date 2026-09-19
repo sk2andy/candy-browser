@@ -168,7 +168,7 @@ internal object WebContentTopInsetScript {
               let localOffsetCollisionDetected = false;
               let nativeFallbackRequested = false;
               let nativeTopHeaderRequested = false;
-              let fixedTopHeaderCandidates = new WeakMap();
+              let fixedTopHeaderCandidates = new Map();
               let scrollLayoutCheckFrame = 0;
               let quietLayoutCheckFrame = 0;
               let quietLayoutCheckGeneration = 0;
@@ -178,6 +178,7 @@ internal object WebContentTopInsetScript {
               let scrollVerificationFailures = 0;
               let scrollVerificationPolicyKey = null;
               let observeDiscoveredShadowRoot = () => {};
+              const maximumFixedTopHeaderCandidates = 8;
               const beginCandyPerformancePhase = (name) => {
                 try {
                   if (globalThis.$bridgeName?.performanceDiagnosticsEnabled?.() !== true) {
@@ -436,7 +437,7 @@ internal object WebContentTopInsetScript {
               };
               const resetFailuresForPolicy = (policyKey, force = false) => {
                 if (!force && activePolicyKey === policyKey) return;
-                if (activePolicyKey !== policyKey) fixedTopHeaderCandidates = new WeakMap();
+                if (activePolicyKey !== policyKey) fixedTopHeaderCandidates = new Map();
                 activePolicyKey = policyKey;
                 deferredLayoutChecks = 0;
                 consecutiveLayoutFailures = 0;
@@ -1940,6 +1941,7 @@ internal object WebContentTopInsetScript {
                           generation !== scrollGeneration || deferredLayoutCheckRequest ||
                           root !== document.documentElement || policyKey !== currentPolicyKey()) return;
                       quietLayoutCheckFrame = 0;
+                      if (withLayoutReadCache(verifyFixedTopHeaderCandidates)) return;
                       const physicalPixels = Number(
                         globalThis.$bridgeName?.topInsetPx?.(),
                       ) || 0;
@@ -2065,6 +2067,51 @@ internal object WebContentTopInsetScript {
                 return typeof content === 'string' &&
                   /(?:^|[\s,;])viewport-fit\s*=\s*cover(?=${'$'}|[\s,;])/i.test(content);
               };
+              const nextTopHeaderContentAnchor = (element) => {
+                for (
+                  let current = element;
+                  current && current !== document.body && current !== document.documentElement;
+                  current = parentElementOrShadowHost(current)
+                ) {
+                  for (
+                    let sibling = current.nextElementSibling;
+                    sibling;
+                    sibling = sibling.nextElementSibling
+                  ) {
+                    if (!['link', 'meta', 'script', 'style'].includes(sibling.localName)) {
+                      return sibling;
+                    }
+                  }
+                }
+                return null;
+              };
+              const rememberFixedTopHeaderCandidate = (element, rect, scrollY, cssPixels) => {
+                if (
+                  !fixedTopHeaderCandidates.has(element) &&
+                  fixedTopHeaderCandidates.size >= maximumFixedTopHeaderCandidates
+                ) {
+                  return null;
+                }
+                const anchor = nextTopHeaderContentAnchor(element);
+                const candidate = {
+                  anchor,
+                  anchorTop: anchor ? readElementRect(anchor).top : null,
+                  minimumScrollDelta: Math.max(rect.height, cssPixels),
+                  scrollGeneration,
+                  scrollY,
+                };
+                fixedTopHeaderCandidates.set(element, candidate);
+                return candidate;
+              };
+              const fixedTopHeaderHasMeaningfulScroll = (candidate, scrollY) => {
+                if (scrollGeneration <= candidate.scrollGeneration) return false;
+                if (scrollY - candidate.scrollY >= candidate.minimumScrollDelta) return true;
+                if (!candidate.anchor?.isConnected || !Number.isFinite(candidate.anchorTop)) {
+                  return false;
+                }
+                return candidate.anchorTop - readElementRect(candidate.anchor).top >=
+                  candidate.minimumScrollDelta;
+              };
               const requestNativeFallbackForTopHeader = (element, style) => {
                 if (nativeTopHeaderRequested) return true;
                 if (globalThis.$bridgeName?.nativeTopHeaderEnabled?.() !== true) return false;
@@ -2093,8 +2140,10 @@ internal object WebContentTopInsetScript {
                 }
                 const semanticSelector =
                   'header, nav, [role="banner"], [role="navigation"]';
+                const headerLikeTag =
+                  /(?:^|-)(?:header|topbar|navbar)(?:-|${'$'})/.test(element.localName || '');
                 if (
-                  !element.matches(semanticSelector) &&
+                  !headerLikeTag && !element.matches(semanticSelector) &&
                   !element.querySelector(semanticSelector)
                 ) {
                   return false;
@@ -2113,12 +2162,20 @@ internal object WebContentTopInsetScript {
                 }
                 if (style.position === 'fixed') {
                   const scrollY = Number(globalThis.scrollY) || 0;
-                  const candidate = fixedTopHeaderCandidates.get(element);
-                  if (!candidate || scrollY <= candidate.scrollY) {
-                    fixedTopHeaderCandidates.set(element, { scrollY });
+                  let candidate = fixedTopHeaderCandidates.get(element);
+                  if (!candidate) {
+                    rememberFixedTopHeaderCandidate(element, rect, scrollY, cssPixels);
                     return false;
                   }
-                  if (scrollY - candidate.scrollY < Math.max(rect.height, cssPixels)) {
+                  if (!fixedTopHeaderHasMeaningfulScroll(candidate, scrollY)) {
+                    if (scrollY < candidate.scrollY) {
+                      candidate = rememberFixedTopHeaderCandidate(
+                        element,
+                        rect,
+                        scrollY,
+                        cssPixels,
+                      );
+                    }
                     return false;
                   }
                 }
@@ -2142,6 +2199,27 @@ internal object WebContentTopInsetScript {
                   true,
                 );
                 return true;
+              };
+              const verifyFixedTopHeaderCandidates = () => {
+                for (const [element] of fixedTopHeaderCandidates) {
+                  if (!element.isConnected) {
+                    fixedTopHeaderCandidates.delete(element);
+                    continue;
+                  }
+                  const style = readComputedStyle(element);
+                  if (style.position !== 'fixed') {
+                    fixedTopHeaderCandidates.delete(element);
+                    if (
+                      style.position === 'sticky' &&
+                      requestNativeFallbackForTopHeader(element, style)
+                    ) {
+                      return true;
+                    }
+                    continue;
+                  }
+                  if (requestNativeFallbackForTopHeader(element, style)) return true;
+                }
+                return false;
               };
               const topContentBackground = (root, cssPixels) => {
                 const viewportWidth = readViewportSize().width;
