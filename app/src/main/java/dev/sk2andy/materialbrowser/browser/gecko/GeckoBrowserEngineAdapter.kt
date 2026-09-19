@@ -107,6 +107,10 @@ internal interface AndroidBrowserEngineSessionPort :
 
     fun setInlineVideoOpenRequestListener(listener: GeckoInlineVideoOpenRequestListener?) = Unit
 
+    fun setInlineVideoGestureHapticListener(
+        listener: GeckoInlineVideoGestureHapticListener?,
+    ) = Unit
+
     fun setFullscreenStateListener(listener: GeckoFullscreenStateListener?) = Unit
 
     fun setScrollListener(listener: BrowserEngineScrollListener?)
@@ -164,6 +168,8 @@ internal interface AndroidBrowserEngineSessionPort :
         identity: GeckoInlineVideoIdentity,
         onResult: (GeckoPictureInPicturePreparation?) -> Unit,
     ) = onResult(null)
+
+    fun restorePictureInPicturePresentation(onResult: (Boolean) -> Unit) = onResult(false)
 
     fun setInlineVideoPresentation(
         identity: GeckoInlineVideoIdentity?,
@@ -625,6 +631,11 @@ internal class GeckoBrowserEngineSessionAdapter(
             identity = identity,
             onResult = onResult,
         )
+    }
+
+    @UiThread
+    override fun restorePictureInPicturePresentation(onResult: (Boolean) -> Unit) {
+        if (closed) onResult(false) else session.restorePictureInPicturePresentation(onResult)
     }
 
     @UiThread

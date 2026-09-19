@@ -423,6 +423,89 @@ class CandyPrivacyHostContractTest {
     }
 
     @Test
+    fun `picture in picture restoration acknowledgement rejects stale return layouts`() {
+        val request = pictureInPictureRestorationMessage(
+            token = "session-token",
+            revision = 7,
+            navigationGeneration = 3,
+            requestId = 11,
+        )
+        val result = JSONObject()
+            .put("revision", 7)
+            .put("navigationGeneration", 3)
+            .put("requestId", 11)
+            .put("prepared", true)
+
+        assertFalse(request.getBoolean("expected"))
+        assertTrue(
+            isGeckoPictureInPictureRestorationResult(
+                message = result,
+                currentRevision = 7,
+                currentNavigationGeneration = 3,
+                expectedRequestId = 11,
+            ),
+        )
+        assertFalse(
+            isGeckoPictureInPictureRestorationResult(
+                message = JSONObject(result.toString()).put("navigationGeneration", 4),
+                currentRevision = 7,
+                currentNavigationGeneration = 3,
+                expectedRequestId = 11,
+            ),
+        )
+    }
+
+    @Test
+    fun `new preparation acknowledgement wins over an older restoration request`() {
+        val identity = GeckoInlineVideoIdentity(
+            documentNonce = "a".repeat(32),
+            elementNonce = "b".repeat(32),
+        )
+        val preparationResult = JSONObject()
+            .put("revision", 7)
+            .put("navigationGeneration", 3)
+            .put("requestId", 12)
+            .put("prepared", true)
+            .put("documentNonce", identity.documentNonce)
+            .put("elementNonce", identity.elementNonce)
+            .put("videoLeft", 0)
+            .put("videoTop", 0)
+            .put("videoRight", 1_920)
+            .put("videoBottom", 1_080)
+            .put("viewportWidth", 1_920)
+            .put("viewportHeight", 1_080)
+        val staleRestorationResult = JSONObject(preparationResult.toString())
+            .put("requestId", 11)
+
+        assertEquals(
+            GeckoPictureInPicturePlaybackResultRoute.Preparation,
+            geckoPictureInPicturePlaybackResultRoute(
+                message = preparationResult,
+                preparationRequestId = 12,
+                restorationRequestId = 11,
+            ),
+        )
+        assertEquals(
+            identity,
+            geckoPictureInPicturePreparationFromMessage(
+                message = preparationResult,
+                currentRevision = 7,
+                currentNavigationGeneration = 3,
+                expectedRequestId = 12,
+                expectedIdentity = identity,
+            )?.identity,
+        )
+        assertEquals(
+            GeckoPictureInPicturePlaybackResultRoute.Stale,
+            geckoPictureInPicturePlaybackResultRoute(
+                message = staleRestorationResult,
+                preparationRequestId = 12,
+                restorationRequestId = null,
+            ),
+        )
+    }
+
+    @Test
     fun `inline video state accepts current bounded top frame candidate`() {
         val state = geckoInlineVideoStateFromMessage(
             message = JSONObject()
@@ -564,6 +647,52 @@ class CandyPrivacyHostContractTest {
                 3,
             ),
         )
+    }
+
+    @Test
+    fun `inline video gesture haptic accepts only current identity and semantic phase`() {
+        val current = JSONObject()
+            .put("revision", 7)
+            .put("navigationGeneration", 3)
+            .put("documentNonce", "a".repeat(32))
+            .put("elementNonce", "b".repeat(32))
+            .put("phase", "rubberband-start")
+
+        assertEquals(
+            GeckoInlineVideoGestureHaptic(
+                identity = GeckoInlineVideoIdentity(
+                    documentNonce = "a".repeat(32),
+                    elementNonce = "b".repeat(32),
+                ),
+                navigationGeneration = 3,
+                phase = GeckoInlineVideoGestureHapticPhase.RubberbandStart,
+            ),
+            geckoInlineVideoGestureHapticFromMessage(current, 7, 3),
+        )
+        assertEquals(
+            GeckoInlineVideoGestureHapticPhase.RubberbandStop,
+            geckoInlineVideoGestureHapticFromMessage(
+                JSONObject(current.toString()).put("phase", "rubberband-stop"),
+                7,
+                3,
+            )?.phase,
+        )
+        assertEquals(
+            GeckoInlineVideoGestureHapticPhase.Confirm,
+            geckoInlineVideoGestureHapticFromMessage(
+                JSONObject(current.toString()).put("phase", "confirm"),
+                7,
+                3,
+            )?.phase,
+        )
+        listOf(
+            JSONObject(current.toString()).put("revision", 6),
+            JSONObject(current.toString()).put("navigationGeneration", 2),
+            JSONObject(current.toString()).put("elementNonce", "page-controlled"),
+            JSONObject(current.toString()).put("phase", "pointer-delta"),
+        ).forEach { invalid ->
+            assertEquals(null, geckoInlineVideoGestureHapticFromMessage(invalid, 7, 3))
+        }
     }
 
     @Test

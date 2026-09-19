@@ -62,6 +62,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.TransformOrigin
@@ -433,7 +434,13 @@ internal fun BrowserViewport(
             }
             .fullscreenVideoGestureTransform(fullscreenVideoGestureState)
             .fullscreenVideoGestures(fullscreenVideoGestureState)
-            .background(MaterialTheme.colorScheme.surface),
+            .background(
+                if (fullscreenVideoGestureState != null) {
+                    Color.Black
+                } else {
+                    MaterialTheme.colorScheme.surface
+                },
+            ),
     ) {
         if (selectedTab.url != BLANK_URL) {
             ActiveBrowserEngineView(

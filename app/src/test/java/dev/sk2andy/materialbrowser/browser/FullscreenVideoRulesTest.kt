@@ -96,6 +96,72 @@ class FullscreenVideoRulesTest {
     }
 
     @Test
+    fun `layout restoration waits for a visible status bar instead of a cutout`() {
+        assertFalse(
+            FullscreenVideoRules.isMediaLayoutRestorationInsetReady(
+                isImeVisible = false,
+                isStatusBarVisible = false,
+                statusBarTopInset = 0,
+            ),
+        )
+        assertTrue(
+            FullscreenVideoRules.isMediaLayoutRestorationInsetReady(
+                isImeVisible = false,
+                isStatusBarVisible = true,
+                statusBarTopInset = 72,
+            ),
+        )
+        assertFalse(
+            FullscreenVideoRules.isMediaLayoutRestorationInsetReady(
+                isImeVisible = true,
+                isStatusBarVisible = true,
+                statusBarTopInset = 72,
+            ),
+        )
+    }
+
+    @Test
+    fun `new picture in picture preparation closes restoration before its stale acknowledgement`() {
+        val gate = MediaLayoutRestorationGate()
+        var firstCallbackCount = 0
+        var firstCallbackMutationCount = 0
+        var secondCallbackCount = 0
+        var activityRestorationGeneration = 1
+        var owner = "first"
+        var transitionPending = true
+        var presentation = "first"
+        val firstRestorationGeneration = activityRestorationGeneration
+        val first = gate.begin {
+            firstCallbackCount++
+            if (activityRestorationGeneration == firstRestorationGeneration) {
+                firstCallbackMutationCount++
+                transitionPending = false
+            }
+        }
+
+        activityRestorationGeneration++
+        gate.cancel()
+        val second = gate.begin { secondCallbackCount++ }
+        owner = "second"
+        presentation = "second"
+        if (gate.complete(first)) {
+            owner = ""
+            transitionPending = false
+            presentation = ""
+        }
+
+        assertEquals(1, firstCallbackCount)
+        assertEquals(0, firstCallbackMutationCount)
+        assertEquals(0, secondCallbackCount)
+        assertEquals("second", owner)
+        assertTrue(transitionPending)
+        assertEquals("second", presentation)
+        assertTrue(gate.complete(second))
+        gate.cancel()
+        assertEquals(0, secondCallbackCount)
+    }
+
+    @Test
     fun `only explicit overlay presentation reparents Gecko`() {
         assertTrue(
             FullscreenVideoRules.hostsSourceInOverlay(

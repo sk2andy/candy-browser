@@ -32,18 +32,35 @@ During Android's video-only presentation, the bundled content bridge hides non-v
 sizes the browser viewport to the media aspect ratio and moves the selected playing video to the
 viewport origin. The measured offset correction is required for players such as YouTube whose
 transformed player container remains below a fixed site header. Every temporary attribute, style
-and offset is removed when PiP preparation is cancelled or PiP returns. Compose removes browser
-chrome from the video-only tree, including a parked address pill, until the expanded return layout
-is ready; this prevents chrome from being composited through the resizing Gecko SurfaceView.
+and offset is removed when PiP preparation is cancelled or PiP returns. Return and cancellation
+switch to normal browser geometry and restore system bars first, while Compose covers the resizing
+Gecko SurfaceView with a black restoration layer. After final non-IME window insets reach the stable
+host, the trusted content bridge removes the video-only DOM layout, waits two rendered frames and
+acknowledges the reset. Candy then reapplies insets, requests host layout and keeps the restoration
+layer through two additional host draws before the third animation callback, with a bounded fallback
+if the window stops drawing. Leaving DOM fullscreen follows the same ordered
+reset. This prevents stale full-viewport or
+zero-inset video geometry from flashing at the old position. A visible status bar with a positive
+status-bar inset marks normal geometry ready; a display cutout alone does not. Browser immersive
+mode therefore proceeds only through the bounded restoration timeout.
+Preparation and restoration share one extension result channel but never share ownership: native
+code routes each acknowledgement by its exact request ID. A new PiP entry invalidates an open or
+queued restoration first, so a late return-layout acknowledgement cannot consume the new
+preparation or mutate its owner.
 
 Android's confirmed PiP mode callback is forwarded to Gecko's `CompositorController` exactly once
-per state change for the owning session. Preparation never sends this signal: Gecko documents it as
+per state change for the owning session. On return or a cancelled transition with a live
+presentation, that compositor signal does not clear the DOM video-only layout; stable insets and
+the acknowledged content-bridge restoration do that later.
+Preparation never sends this signal: Gecko documents it as
 the notification that Android has already changed mode and uses it to apply its Android-PiP media
 layout. A rejected transition therefore needs no compositor rollback. Candy keeps only the owning
 session active while the Activity pauses, retries the expected playback command across the first
 two seconds of the transition, and keeps the transition alive for five seconds so loaded emulators
 cannot tear down the renderer prematurely. User-initiated Play/Pause commands remain authoritative
-and cancel pending retries.
+and cancel pending retries. While playback remains expected, transient Gecko pause callbacks during
+the Android transition do not replace PiP's Pause action with Play; an explicit user Pause clears
+that expectation immediately.
 
 Candy keeps GeckoView's default SurfaceView backend so frames reach Android's compositor directly.
 The browser host, outer Candy Gecko host, inner GeckoView, SurfaceView backend, GeckoDisplay,
@@ -98,7 +115,9 @@ fullscreen element so it remains in the fullscreen top layer. Candy restores the
 controls state and YouTube chrome when the inline presentation ends. Only Android PiP preparation
 temporarily applies the video-only layout; it synchronously aligns the video before the first PiP
 frame, while later layout changes remain observer-driven. Returning from or cancelling PiP restores
-the same inline video and its Candy controls.
+the same inline video and its Candy controls. An inline upward fullscreen gesture transforms the
+actual video frame and separate control host by the same bounded rubber-band offset. It preserves
+the video's original CSS transform and clears both temporary transforms on cancellation or entry.
 Direct Android PiP entry waits for a render-ready acknowledgement from that exact inline video.
 The acknowledgement remains bound to the extension token, policy revision, navigation generation
 and document/element nonces. After the video-only styles have rendered, Candy maps the returned
@@ -111,12 +130,14 @@ preparation hides browser chrome and Android system bars.
 While the Candy presentation is expanded, vertical gestures use three stable screen regions: the
 left region adjusts a per-window brightness override, the center drags the live video down to leave
 fullscreen, and the right region changes the global media stream volume. The center drag moves,
-scales and rounds the video, then either crosses a deterministic dismissal threshold or springs
-back. Brightness is remembered only in Activity memory, restored when fullscreen or the app is
-left, and reapplied when that Activity returns to fullscreen. Android does not allow an app to
-disable the system Quick Settings brightness slider; the active window override instead keeps
-system brightness changes from affecting Candy until fullscreen ends. Media volume intentionally
-uses Android's global media stream and is not restored.
+scales and rounds the video, but stays rubber-banded near its starting anchor until it crosses the
+13-percent dismissal threshold. Crossing that threshold emits a confirmation haptic; releasing
+before it springs the video back. Brightness and volume emit value-dependent ticks whose strength
+and density increase toward the maximum. Brightness is remembered only in Activity memory, restored
+when fullscreen or the app is left, and reapplied when that Activity returns to fullscreen. Android
+does not allow an app to disable the system Quick Settings brightness slider; the active window
+override instead keeps system brightness changes from affecting Candy until fullscreen ends. Media
+volume intentionally uses Android's global media stream and is not restored.
 Navigation synchronously closes an active or pending inline presentation. Reloads publish a fresh
 revision/navigation-bound candidate; delayed messages from the replaced document cannot clear or
 open it.
