@@ -509,9 +509,16 @@
     <string name="settings_video_autoplay_subtitle">Os vídeos só começam quando você os reproduz. Desativar esta opção pode aumentar significativamente o uso de CPU/GPU, o consumo de bateria e a carga da página.</string>
     <string name="settings_video_autoplay_unsupported">Requer uma versão mais recente do motor Gecko.</string>
     <string name="settings_inline_media_player_title">Candy Player (experimental)</string>
-    <string name="settings_inline_media_player_subtitle">Mostra uma ação para vídeos detetados no documento principal. Vídeos incorporados ainda não são suportados.</string>
+    <string name="settings_inline_media_player_subtitle">O Candy Player também oferece imagem em imagem melhorada diretamente a partir da página, sem entrar primeiro no ecrã inteiro. Vídeos incorporados ainda não são suportados.</string>
     <string name="settings_inline_media_player_unsupported">Atualmente disponível apenas com GeckoView.</string>
+    <string name="settings_inline_media_player_mode_button_fullscreen">O botão abre o leitor em ecrã inteiro</string>
+    <string name="settings_inline_media_player_mode_button_inline_fullscreen">O botão abre o leitor incorporado ou em ecrã inteiro</string>
+    <string name="settings_inline_media_player_mode_always_fullscreen">Usar sempre o Candy Player no ecrã inteiro</string>
+    <string name="settings_inline_media_player_mode_automatic">Iniciar o Candy Player ao detetar um vídeo</string>
     <string name="action_open_candy_player">Abrir no Candy Player</string>
+    <string name="action_candy_player_play">Reproduzir</string>
+    <string name="action_candy_player_pause">Pausar</string>
+    <string name="action_candy_player_seek">Posição da reprodução</string>
     <string name="settings_default_browser">Navegador predefinido</string>
     <string name="settings_default_browser_active">O Candy Browser é o seu navegador predefinido</string>
     <string name="settings_make_default_browser">Definir o Candy Browser como navegador predefinido</string>

@@ -15,6 +15,7 @@ import dev.sk2andy.materialbrowser.browser.DnsOverHttpsRules
 import dev.sk2andy.materialbrowser.browser.DnsOverHttpsSettings
 import dev.sk2andy.materialbrowser.browser.ExternalAppLinkHandling
 import dev.sk2andy.materialbrowser.browser.FavoriteAnimationSpeed
+import dev.sk2andy.materialbrowser.browser.InlineMediaPlayerMode
 import dev.sk2andy.materialbrowser.browser.PageTranslationProvider
 import dev.sk2andy.materialbrowser.browser.ProfileWallpaper
 import dev.sk2andy.materialbrowser.browser.ProfileLockTrigger
@@ -1204,14 +1205,33 @@ class BrowserSessionStoreInstrumentedTest {
     }
 
     @Test
-    fun inlineMediaPlayerDefaultsOffAndRoundTrips() {
+    fun inlineMediaPlayerModeDefaultsAndRoundTrips() {
         val store = BrowserSessionStore(context)
 
-        assertFalse(store.loadInlineMediaPlayerEnabled())
-        store.saveInlineMediaPlayerEnabled(true)
-        assertTrue(store.loadInlineMediaPlayerEnabled())
-        store.saveInlineMediaPlayerEnabled(false)
-        assertFalse(store.loadInlineMediaPlayerEnabled())
+        assertEquals(InlineMediaPlayerMode.ButtonFullscreen, store.loadInlineMediaPlayerMode())
+        InlineMediaPlayerMode.entries.forEach { mode ->
+            store.saveInlineMediaPlayerMode(mode)
+            assertEquals(mode, store.loadInlineMediaPlayerMode())
+        }
+
+        preferences.edit()
+            .putString(BrowserSessionStore.KEY_INLINE_MEDIA_PLAYER_MODE, "future-mode")
+            .commit()
+        assertEquals(InlineMediaPlayerMode.ButtonFullscreen, store.loadInlineMediaPlayerMode())
+    }
+
+    @Test
+    fun legacyInlineMediaPlayerSettingMigratesToMatchingButtonMode() {
+        val store = BrowserSessionStore(context)
+
+        preferences.edit().putBoolean("inline_media_player_enabled", true).commit()
+        assertEquals(
+            InlineMediaPlayerMode.ButtonInlineAndFullscreen,
+            store.loadInlineMediaPlayerMode(),
+        )
+
+        preferences.edit().clear().putBoolean("inline_media_player_enabled", false).commit()
+        assertEquals(InlineMediaPlayerMode.ButtonFullscreen, store.loadInlineMediaPlayerMode())
     }
 
     @Test

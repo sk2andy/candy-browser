@@ -63,13 +63,12 @@ internal object GeckoPictureInPictureRules {
         state: GeckoMediaSessionState?,
         isPrivate: Boolean,
         isSelectedTab: Boolean,
-        inlinePresentationActive: Boolean = false,
     ): Boolean = state?.let { media ->
         !isPrivate &&
             isSelectedTab &&
             (
                 (media.isPlaying && isFullscreenVideo(media)) ||
-                    (inlinePresentationActive && isPlayingInlineVideo(media))
+                    (media.isInlineVideoPresented && isPlayingInlineVideo(media))
             )
     } == true
 

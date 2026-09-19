@@ -297,6 +297,7 @@ private fun ExternalLinkPreviewViewport(
 @Composable
 internal fun BrowserViewport(
     controller: BrowserController,
+    fullscreenVideoGestureState: FullscreenVideoGestureState? = null,
     webViewVideoOnlyPresentation: Boolean,
     videoOnlyPresentation: Boolean = webViewVideoOnlyPresentation,
     selectedTab: BrowserTab,
@@ -430,6 +431,8 @@ internal fun BrowserViewport(
                 clip = cardProgress > 0f
                 shadowElevation = with(density) { (8f * cardProgress).dp.toPx() }
             }
+            .fullscreenVideoGestureTransform(fullscreenVideoGestureState)
+            .fullscreenVideoGestures(fullscreenVideoGestureState)
             .background(MaterialTheme.colorScheme.surface),
     ) {
         if (selectedTab.url != BLANK_URL) {

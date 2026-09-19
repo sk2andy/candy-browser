@@ -25,6 +25,7 @@ import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineKind
 import dev.sk2andy.materialbrowser.browser.ExternalAppLinkHandling
 import dev.sk2andy.materialbrowser.browser.FavoriteAnimationSpeed
+import dev.sk2andy.materialbrowser.browser.InlineMediaPlayerMode
 import dev.sk2andy.materialbrowser.browser.PageTranslationProvider
 import dev.sk2andy.materialbrowser.browser.StartupAddressFocusMode
 import dev.sk2andy.materialbrowser.shared.ui.settings.TranslationProviderSettings
@@ -60,7 +61,7 @@ internal fun BrowserSettingsPage(
     isScrollBarEnabled: Boolean,
     isVideoAutoplayBlocked: Boolean,
     isVideoAutoplayBlockingSupported: Boolean,
-    isInlineMediaPlayerEnabled: Boolean = false,
+    inlineMediaPlayerMode: InlineMediaPlayerMode = InlineMediaPlayerMode.Default,
     isInlineMediaPlayerSupported: Boolean = true,
     isDefaultBrowser: Boolean,
     onBrowserEngineKindChanged: (AndroidBrowserEngineKind) -> Unit = {},
@@ -75,7 +76,7 @@ internal fun BrowserSettingsPage(
     onOpenHomeOnStartupEnabledChanged: (Boolean) -> Unit = {},
     onScrollBarEnabledChanged: (Boolean) -> Unit,
     onVideoAutoplayBlockedChanged: (Boolean) -> Unit,
-    onInlineMediaPlayerEnabledChanged: (Boolean) -> Unit = {},
+    onInlineMediaPlayerModeChanged: (InlineMediaPlayerMode) -> Unit = {},
     onPageTranslationProviderChanged: (PageTranslationProvider) -> Unit,
     onOpenDefaultBrowserSettings: () -> Unit,
     onBack: () -> Unit,
@@ -84,6 +85,7 @@ internal fun BrowserSettingsPage(
     var startupAddressFocusMenuExpanded by remember { mutableStateOf(false) }
     var favoriteSpeedMenuExpanded by remember { mutableStateOf(false) }
     var externalAppLinksMenuExpanded by remember { mutableStateOf(false) }
+    var inlineMediaPlayerMenuExpanded by remember { mutableStateOf(false) }
     SettingsPage(
         title = stringResource(R.string.settings_section_browser),
         onBack = onBack,
@@ -254,19 +256,44 @@ internal fun BrowserSettingsPage(
             onCheckedChange = onVideoAutoplayBlockedChanged,
         )
         Spacer(Modifier.height(8.dp))
-        SettingsSwitch(
-            title = stringResource(R.string.settings_inline_media_player_title),
-            subtitle = stringResource(
+        Box {
+            SettingsChoice(
+                title = stringResource(R.string.settings_inline_media_player_title),
+                value = inlineMediaPlayerMode.displayName(),
+                expanded = inlineMediaPlayerMenuExpanded,
+                onClick = { inlineMediaPlayerMenuExpanded = true },
+                enabled = isInlineMediaPlayerSupported,
+                modifier = Modifier.testTag(BrowserSettingsTestTags.InlineMediaPlayer),
+            )
+            SettingsDropdown(
+                expanded = inlineMediaPlayerMenuExpanded,
+                onDismissRequest = { inlineMediaPlayerMenuExpanded = false },
+            ) {
+                InlineMediaPlayerMode.entries.forEach { mode ->
+                    SettingsDropdownItem(
+                        label = mode.displayName(),
+                        selected = mode == inlineMediaPlayerMode,
+                        onClick = {
+                            inlineMediaPlayerMenuExpanded = false
+                            if (mode != inlineMediaPlayerMode) {
+                                onInlineMediaPlayerModeChanged(mode)
+                            }
+                        },
+                    )
+                }
+            }
+        }
+        Text(
+            text = stringResource(
                 if (isInlineMediaPlayerSupported) {
                     R.string.settings_inline_media_player_subtitle
                 } else {
                     R.string.settings_inline_media_player_unsupported
                 },
             ),
-            checked = isInlineMediaPlayerEnabled,
-            enabled = isInlineMediaPlayerSupported,
-            onCheckedChange = onInlineMediaPlayerEnabledChanged,
-            modifier = Modifier.testTag(BrowserSettingsTestTags.InlineMediaPlayer),
+            modifier = Modifier.padding(start = 18.dp, top = 8.dp, end = 18.dp),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Spacer(Modifier.height(8.dp))
         TranslationProviderSettings(
@@ -398,4 +425,16 @@ private fun ExternalAppLinkHandling.displayName(): String = when (this) {
         stringResource(R.string.settings_external_app_links_automatic)
     ExternalAppLinkHandling.AskEveryTime ->
         stringResource(R.string.settings_external_app_links_ask_every_time)
+}
+
+@Composable
+private fun InlineMediaPlayerMode.displayName(): String = when (this) {
+    InlineMediaPlayerMode.ButtonFullscreen ->
+        stringResource(R.string.settings_inline_media_player_mode_button_fullscreen)
+    InlineMediaPlayerMode.ButtonInlineAndFullscreen ->
+        stringResource(R.string.settings_inline_media_player_mode_button_inline_fullscreen)
+    InlineMediaPlayerMode.AlwaysForFullscreen ->
+        stringResource(R.string.settings_inline_media_player_mode_always_fullscreen)
+    InlineMediaPlayerMode.Automatic ->
+        stringResource(R.string.settings_inline_media_player_mode_automatic)
 }

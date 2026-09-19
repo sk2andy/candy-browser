@@ -105,6 +105,8 @@ internal interface AndroidBrowserEngineSessionPort :
 
     fun setMediaStateListener(listener: GeckoMediaSessionStateListener?)
 
+    fun setInlineVideoOpenRequestListener(listener: GeckoInlineVideoOpenRequestListener?) = Unit
+
     fun setFullscreenStateListener(listener: GeckoFullscreenStateListener?) = Unit
 
     fun setScrollListener(listener: BrowserEngineScrollListener?)
@@ -157,6 +159,11 @@ internal interface AndroidBrowserEngineSessionPort :
     fun notifyPictureInPictureModeChanged(inPictureInPicture: Boolean) = Unit
 
     fun setPictureInPicturePlaybackExpected(expected: Boolean) = Unit
+
+    fun preparePictureInPicturePlayback(
+        identity: GeckoInlineVideoIdentity,
+        onResult: (GeckoPictureInPicturePreparation?) -> Unit,
+    ) = onResult(null)
 
     fun setInlineVideoPresentation(
         identity: GeckoInlineVideoIdentity?,
@@ -468,6 +475,13 @@ internal class GeckoBrowserEngineSessionAdapter(
     }
 
     @UiThread
+    override fun setInlineVideoOpenRequestListener(
+        listener: GeckoInlineVideoOpenRequestListener?,
+    ) {
+        session.setInlineVideoOpenRequestListener(if (closed) null else listener)
+    }
+
+    @UiThread
     override fun setFullscreenStateListener(listener: GeckoFullscreenStateListener?) {
         session.setFullscreenStateListener(if (closed) null else listener)
     }
@@ -600,6 +614,17 @@ internal class GeckoBrowserEngineSessionAdapter(
     @UiThread
     override fun setPictureInPicturePlaybackExpected(expected: Boolean) {
         if (!closed) session.setPictureInPicturePlaybackExpected(expected)
+    }
+
+    @UiThread
+    override fun preparePictureInPicturePlayback(
+        identity: GeckoInlineVideoIdentity,
+        onResult: (GeckoPictureInPicturePreparation?) -> Unit,
+    ) {
+        if (closed) onResult(null) else session.preparePictureInPicturePlayback(
+            identity = identity,
+            onResult = onResult,
+        )
     }
 
     @UiThread
@@ -737,6 +762,7 @@ internal class GeckoBrowserEngineSessionAdapter(
         session.setStateListener(null)
         session.setHistoryStateListener(null)
         session.setMediaStateListener(null)
+        session.setInlineVideoOpenRequestListener(null)
         session.setFullscreenStateListener(null)
         session.setScrollListener(null)
         session.setContentTargetListener(null)
@@ -767,6 +793,7 @@ internal class GeckoBrowserEngineSessionAdapter(
             session.setStateListener(null)
             session.setHistoryStateListener(null)
             session.setMediaStateListener(null)
+            session.setInlineVideoOpenRequestListener(null)
             session.setFullscreenStateListener(null)
             session.setScrollListener(null)
             session.setContentTargetListener(null)

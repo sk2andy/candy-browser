@@ -99,9 +99,11 @@ import dev.sk2andy.materialbrowser.ui.BrowserScreen
 import dev.sk2andy.materialbrowser.ui.CandySplashScreen
 import dev.sk2andy.materialbrowser.ui.FirefoxExtensionManagerOverlay
 import dev.sk2andy.materialbrowser.ui.FullscreenVideoOverlay
+import dev.sk2andy.materialbrowser.ui.FullscreenVideoSystemControls
 import dev.sk2andy.materialbrowser.ui.GestureOnboardingScreen
 import dev.sk2andy.materialbrowser.ui.ProfileLockedOverlay
 import dev.sk2andy.materialbrowser.ui.ReleaseNotesScreen
+import dev.sk2andy.materialbrowser.ui.rememberFullscreenVideoGestureState
 import dev.sk2andy.materialbrowser.ui.theme.CandyTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -157,6 +159,9 @@ class MainActivity : AppCompatActivity() {
     private var lastMouseNavigationFingerprint: MouseNavigationFingerprint? = null
     private var geckoWebAuthnActivityIdentity: BrowserActivityResultIdentity? = null
     private var activityDestroyed = false
+    private val fullscreenVideoSystemControls by lazy {
+        FullscreenVideoSystemControls(this)
+    }
     private val privateTabsNotifier by lazy { PrivateTabsNotifier(this) }
     private var appliedNightConfiguration = Configuration.UI_MODE_NIGHT_UNDEFINED
     private val webPermissionLauncher = registerForActivityResult(
@@ -488,6 +493,18 @@ class MainActivity : AppCompatActivity() {
                 val fullscreenVideoState = browserController.fullscreenVideoState
                 val webContentFullscreen = browserController.isSelectedWebContentFullscreen
                 val selectedTabId = browserController.selectedTabId
+                val fullscreenVideoGesturesActive =
+                    browserController.isInlineMediaPlayerPresented &&
+                        webContentFullscreen &&
+                        !videoOnlyPresentation
+                val fullscreenVideoGestureState = rememberFullscreenVideoGestureState(
+                    systemControls = fullscreenVideoSystemControls,
+                    onDismissFullscreen = {
+                        if (!browserController.exitSelectedWebContentFullscreen()) {
+                            browserController.exitFullscreenVideo()
+                        }
+                    },
+                )
                 val webViewVideoOnlyPresentation = videoOnlyPresentation &&
                     fullscreenVideoState?.let { state ->
                         !FullscreenVideoRules.hostsSourceInOverlay(
@@ -538,6 +555,12 @@ class MainActivity : AppCompatActivity() {
                         moveTaskToBack(true)
                     }
                 }
+                LaunchedEffect(fullscreenVideoGesturesActive) {
+                    fullscreenVideoSystemControls.setFullscreenActive(
+                        fullscreenVideoGesturesActive,
+                    )
+                    fullscreenVideoGestureState.setEnabled(fullscreenVideoGesturesActive)
+                }
                 Box(modifier = Modifier.fillMaxSize()) {
                     val castController = if (::castSessionController.isInitialized) {
                         castSessionController
@@ -553,6 +576,8 @@ class MainActivity : AppCompatActivity() {
                         onDisconnectCast = { castController?.disconnect() },
                         webViewVideoOnlyPresentation = webViewVideoOnlyPresentation,
                         videoOnlyPresentation = videoOnlyPresentation,
+                        fullscreenVideoGestureState = fullscreenVideoGestureState
+                            .takeIf { fullscreenVideoGesturesActive },
                         incomingBrowserNavigationRequestId =
                             incomingBrowserNavigationRequestId,
                         externalLaunchTabId = externalLaunchTabId,
@@ -662,6 +687,8 @@ class MainActivity : AppCompatActivity() {
                     FullscreenVideoOverlay(
                         controller = browserController,
                         videoOnlyPresentation = videoOnlyPresentation,
+                        gestureState = fullscreenVideoGestureState
+                            .takeIf { fullscreenVideoGesturesActive },
                         onBoundsChanged = ::onFullscreenVideoBoundsChanged,
                     )
                     if (!videoOnlyPresentation && onboardingVisible) {
@@ -1008,6 +1035,7 @@ class MainActivity : AppCompatActivity() {
             return
         }
         geckoActivityIntegration?.onHostPaused()
+        fullscreenVideoSystemControls.onAppPaused()
         browserController.onPause()
         super.onPause()
     }
@@ -1017,7 +1045,14 @@ class MainActivity : AppCompatActivity() {
             browserController.dismissExternalLinkPreview()
             if (
                 ::pictureInPictureController.isInitialized &&
-                pictureInPictureController.requestPictureInPicture()
+                pictureInPictureController.prepareAutomaticEntry()
+            ) {
+                super.onUserLeaveHint()
+                return
+            }
+            if (
+                ::pictureInPictureController.isInitialized &&
+                pictureInPictureController.requestPictureInPicture(immediate = true)
             ) {
                 return
             }
@@ -1086,6 +1121,7 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         if (appDataTransferActive) return
+        fullscreenVideoSystemControls.onAppResumed()
         if (::pictureInPictureController.isInitialized) {
             pictureInPictureController.reconcileStateOnResume()
         }
@@ -1099,6 +1135,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         activityDestroyed = true
+        if (::browserController.isInitialized) fullscreenVideoSystemControls.close()
         if (!isChangingConfigurations) privateTabsNotifier.cancel()
         if (!BuildConfig.SYSTEM_WEBVIEW_ONLY) firefoxExtensionManager?.close()
         firefoxExtensionManager = null
@@ -1433,6 +1470,7 @@ class MainActivity : AppCompatActivity() {
                 externalPreview != null -> browserController.goBackInExternalLinkPreview(
                     externalPreview.sessionId,
                 )
+                browserController.exitSelectedWebContentFullscreen() -> true
                 browserController.selectedTab.canGoBack -> {
                     browserController.goBack()
                     true

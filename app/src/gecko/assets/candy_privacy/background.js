@@ -62,6 +62,14 @@ function isPaused(policy, pageHost) {
 }
 
 function contentPolicy(policy) {
+  const inlineMediaPlayerModes = new Set([
+    "button_fullscreen",
+    "button_inline_and_fullscreen",
+    "always_for_fullscreen",
+    "automatic",
+  ]);
+  const inlineMediaPlayerMode = inlineMediaPlayerModes.has(policy?.inlineMediaPlayerMode) ?
+    policy.inlineMediaPlayerMode : "button_fullscreen";
   return {
     type: "content-policy",
     ready: Boolean(policy),
@@ -83,6 +91,28 @@ function contentPolicy(policy) {
       Math.max(0, policy.navigationGeneration) : 0,
     scrollMetricsEnabled: policy?.scrollMetricsEnabled === true,
     inlineMediaPlayerEnabled: policy?.inlineMediaPlayerEnabled === true,
+    inlineMediaPlayerMode,
+    inlineMediaPlayerActionLabel:
+      typeof policy?.inlineMediaPlayerActionLabel === "string" ?
+        policy.inlineMediaPlayerActionLabel.slice(0, 80) : "Open in Candy Player",
+    inlineMediaPlayerPlayLabel:
+      typeof policy?.inlineMediaPlayerPlayLabel === "string" ?
+        policy.inlineMediaPlayerPlayLabel.slice(0, 80) : "Play",
+    inlineMediaPlayerPauseLabel:
+      typeof policy?.inlineMediaPlayerPauseLabel === "string" ?
+        policy.inlineMediaPlayerPauseLabel.slice(0, 80) : "Pause",
+    inlineMediaPlayerSeekLabel:
+      typeof policy?.inlineMediaPlayerSeekLabel === "string" ?
+        policy.inlineMediaPlayerSeekLabel.slice(0, 80) : "Seek",
+    inlineMediaPlayerEnterFullscreenLabel:
+      typeof policy?.inlineMediaPlayerEnterFullscreenLabel === "string" ?
+        policy.inlineMediaPlayerEnterFullscreenLabel.slice(0, 80) : "Enter fullscreen",
+    inlineMediaPlayerExitFullscreenLabel:
+      typeof policy?.inlineMediaPlayerExitFullscreenLabel === "string" ?
+        policy.inlineMediaPlayerExitFullscreenLabel.slice(0, 80) : "Exit fullscreen",
+    inlineMediaPlayerCloseLabel:
+      typeof policy?.inlineMediaPlayerCloseLabel === "string" ?
+        policy.inlineMediaPlayerCloseLabel.slice(0, 80) : "Close Candy Player",
     performanceDiagnosticsEnabled: policy?.performanceDiagnosticsEnabled === true,
     domDiagnosticsEnabled: policy?.domDiagnosticsEnabled === true,
     safeAreaLayoutQuietPeriodMillis:
@@ -150,6 +180,7 @@ function publishInlineVideoState(tabId) {
     navigationGeneration: policy.navigationGeneration,
     active: Boolean(selected),
     playing: selected?.playing === true,
+    presented: selected?.presented === true,
     videoWidth: selected?.videoWidth || 0,
     videoHeight: selected?.videoHeight || 0,
     documentNonce: selected?.documentNonce || "",
@@ -190,6 +221,7 @@ function updateInlineVideoState(message, sender) {
     frames.set(frameId, {
       active: true,
       playing: message.playing === true,
+      presented: message.presented === true,
       videoWidth: message.videoWidth,
       videoHeight: message.videoHeight,
       area: message.area,
@@ -203,6 +235,34 @@ function updateInlineVideoState(message, sender) {
     else inlineVideosByTab.delete(tabId);
   }
   publishInlineVideoState(tabId);
+}
+
+function requestInlineVideoOpen(message, sender) {
+  const tabId = sender.tab?.id;
+  if (!Number.isInteger(tabId) || sender.frameId !== 0 || !nativePort) return false;
+  const token = tokenByTab.get(tabId);
+  const policy = token && policiesByToken.get(token);
+  const candidate = inlineVideosByTab.get(tabId)?.get(0);
+  if (
+    !policy ||
+    policy.inlineMediaPlayerEnabled !== true ||
+    message.revision !== policy.revision ||
+    message.navigationGeneration !== policy.navigationGeneration ||
+    !candidate?.active ||
+    message.documentNonce !== candidate.documentNonce ||
+    message.elementNonce !== candidate.elementNonce
+  ) return false;
+  nativePort.postMessage({
+    type: "inline-video-open-request",
+    protocolVersion: PROTOCOL_VERSION,
+    token,
+    revision: policy.revision,
+    navigationGeneration: policy.navigationGeneration,
+    documentNonce: candidate.documentNonce,
+    elementNonce: candidate.elementNonce,
+    expected: message.expected !== false,
+  });
+  return true;
 }
 
 function scheduleContentPolicy(tabId) {
@@ -343,6 +403,11 @@ browser.runtime.onMessage.addListener((message, sender) => {
   if (message.type === "inline-video-state") {
     updateInlineVideoState(message, sender);
     return undefined;
+  }
+  if (message.type === "inline-video-open-request") {
+    return Promise.resolve({
+      forwarded: requestInlineVideoOpen(message, sender),
+    });
   }
   if (
     message.type === "safe-area-fallback" &&
@@ -508,15 +573,66 @@ function probeTextInputOcclusion(message) {
 
 function updatePictureInPicturePlayback(message) {
   const policy = policiesByToken.get(message.token);
-  if (!policy || policy.revision !== message.revision || typeof message.expected !== "boolean") {
+  if (
+    !policy ||
+    policy.revision !== message.revision ||
+    typeof message.expected !== "boolean"
+  ) {
     return;
   }
   const tabEntry = Array.from(tokenByTab.entries()).find(([, token]) => token === message.token);
   if (!tabEntry) return;
-  browser.tabs.sendMessage(tabEntry[0], {
+  const preparationRequested = Number.isSafeInteger(message.requestId);
+  if (
+    preparationRequested &&
+    (
+      message.expected !== true ||
+      policy.navigationGeneration !== message.navigationGeneration ||
+      !/^[a-f0-9]{32}$/.test(message.documentNonce) ||
+      !/^[a-f0-9]{32}$/.test(message.elementNonce)
+    )
+  ) return;
+  const payload = {
     type: "picture-in-picture-playback",
     expected: message.expected,
-  }).catch(() => {});
+    requestId: preparationRequested ? message.requestId : undefined,
+    documentNonce: preparationRequested ? message.documentNonce : undefined,
+    elementNonce: preparationRequested ? message.elementNonce : undefined,
+  };
+  if (!preparationRequested) {
+    browser.tabs.sendMessage(tabEntry[0], payload, { frameId: 0 }).catch(() => {});
+    return;
+  }
+  const postResult = (result) => {
+    const current = policiesByToken.get(message.token);
+    if (
+      !nativePort ||
+      current?.revision !== message.revision ||
+      current.navigationGeneration !== message.navigationGeneration ||
+      tokenByTab.get(tabEntry[0]) !== message.token
+    ) return;
+    nativePort.postMessage({
+      type: "picture-in-picture-playback-result",
+      protocolVersion: PROTOCOL_VERSION,
+      token: message.token,
+      revision: message.revision,
+      navigationGeneration: message.navigationGeneration,
+      requestId: message.requestId,
+      prepared: result?.prepared === true,
+      documentNonce: result?.documentNonce || "",
+      elementNonce: result?.elementNonce || "",
+      videoLeft: result?.videoLeft,
+      videoTop: result?.videoTop,
+      videoRight: result?.videoRight,
+      videoBottom: result?.videoBottom,
+      viewportWidth: result?.viewportWidth,
+      viewportHeight: result?.viewportHeight,
+    });
+  };
+  browser.tabs.sendMessage(tabEntry[0], payload, { frameId: 0 }).then(
+    postResult,
+    () => postResult(null),
+  );
 }
 
 function updateInlineVideoPresentation(message) {

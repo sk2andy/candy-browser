@@ -168,6 +168,7 @@ internal data class GeckoMediaSessionState(
     val videoTrackCount: Int = 0,
     val hasInlineVideo: Boolean = false,
     val isInlineVideoPlaying: Boolean = false,
+    val isInlineVideoPresented: Boolean = false,
     val inlineVideoWidth: Int = 0,
     val inlineVideoHeight: Int = 0,
     val inlineVideoDocumentNonce: String? = null,
@@ -182,6 +183,16 @@ internal data class GeckoInlineVideoIdentity(
     val documentNonce: String,
     val elementNonce: String,
 )
+
+internal data class GeckoInlineVideoOpenRequest(
+    val identity: GeckoInlineVideoIdentity,
+    val navigationGeneration: Int,
+    val expected: Boolean = true,
+)
+
+internal fun interface GeckoInlineVideoOpenRequestListener {
+    fun onOpenRequested(request: GeckoInlineVideoOpenRequest)
+}
 
 internal fun interface GeckoFullscreenStateListener {
     fun onStateChanged(fullscreen: Boolean)
@@ -239,6 +250,8 @@ internal interface GeckoBrowserSession {
 
     fun setMediaStateListener(listener: GeckoMediaSessionStateListener?)
 
+    fun setInlineVideoOpenRequestListener(listener: GeckoInlineVideoOpenRequestListener?) = Unit
+
     /** Reports the page fullscreen lifecycle independently from media metadata updates. */
     fun setFullscreenStateListener(listener: GeckoFullscreenStateListener?) = Unit
 
@@ -270,6 +283,11 @@ internal interface GeckoBrowserSession {
 
     /** Keeps page media aligned with the user's PiP play or pause intent. */
     fun setPictureInPicturePlaybackExpected(expected: Boolean)
+
+    fun preparePictureInPicturePlayback(
+        identity: GeckoInlineVideoIdentity,
+        onResult: (GeckoPictureInPicturePreparation?) -> Unit,
+    ) = onResult(null)
 
     fun setInlineVideoPresentation(
         identity: GeckoInlineVideoIdentity?,

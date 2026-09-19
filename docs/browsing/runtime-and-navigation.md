@@ -624,14 +624,14 @@ Agent implementation, security and debugging guide:
 | Transition | Behavior |
 | --- | --- |
 | HTML media appears or starts | Gecko's native `MediaSession.Delegate` publishes playback, position and bounded element metadata for the exact Gecko session |
-| Experimental Candy Player detects inline video | When enabled, the trusted content host reports a bounded, top-frame candidate; Candy shows an explicit open action and publishes presentation state only after the exact document/element identity acknowledges video-only mode |
+| Experimental Candy Player detects inline video | The trusted content host reports a bounded top-frame candidate. The persisted Candy Player mode decides whether a button opens fullscreen, offers inline and fullscreen presentation, website fullscreen is replaced automatically, or detection starts Candy Player automatically |
 | Web page enters or exits fullscreen | `ContentDelegate.onFullScreen` owns the DOM-fullscreen lifecycle; media fullscreen metadata independently identifies the video and its dimensions |
 | User selects another regular tab | The current eligible video may move into the draggable in-app mini-player; this is the only presentation path that reparents GeckoView |
 | App leaves the foreground | The active eligible regular video is pinned in its original browser viewport before Activity PiP. The GeckoView, SurfaceView backend, GeckoDisplay and GeckoSession are not replaced or reparented |
 | Android confirms PiP mode | The exact owning session receives one `CompositorController.onPipModeChanged` notification; preparation never pre-arms Gecko with an unconfirmed state |
 | System media control is used | The app-owned Android `MediaSession` sends play, pause, stop or seek through Gecko's active native media session |
 | Audible audio continues in background | A `mediaPlayback` foreground service owns the visible media notification while the Activity-owned Gecko session remains alive |
-| PiP expands back into the app | Android expands the unchanged browser-hosted Gecko surface through a centered source rectangle matching Gecko's reported video aspect ratio; normal chrome returns after the expanded layout is ready |
+| PiP expands back into the app | Android expands the unchanged browser-hosted Gecko surface through a centered source rectangle matching Gecko's reported video aspect ratio; normal chrome returns after the expanded layout is ready, and an acknowledged inline Candy Player remains active in its original page box |
 | Fullscreen closes | Candy requests `GeckoSession.exitFullScreen()` and restores normal chrome without stopping unrelated media |
 | Media ends, page navigates, crashes, closes, snoozes or is destroyed | Gecko session identity invalidates the endpoint; view, notification and session cleanup is idempotent |
 
@@ -639,8 +639,13 @@ Agent implementation, security and debugging guide:
   order. Candy merges only callbacks from the current native media-session identity; stale ad/player
   sessions cannot overwrite the active YouTube state.
 - Media metadata, presentation state and mini-player position are memory-only and never persisted.
-- The experimental inline-player preference persists, defaults off and currently supports only
-  top-frame HTML video in GeckoView. Cross-origin embeds remain unsupported in this spike.
+- The experimental Candy Player mode persists and defaults to the least automatic option: a button
+  opens the player in fullscreen. The other modes add an inline button path, replace website
+  fullscreen, or start Candy Player when a video is detected. A legacy enabled switch migrates to
+  the inline-and-fullscreen button mode; a legacy disabled switch migrates to the fullscreen-button
+  default. Only top-frame HTML video in GeckoView is supported; cross-origin embeds remain unsupported.
+- Candy Player provides direct Android picture-in-picture from a recognized inline video; users do
+  not need to enter fullscreen first.
 - Repeated lifecycle callbacks for one PiP transition are idempotent. They do not switch the GeckoView
   backend, release its display, reparent its view or resend the same Gecko PiP state.
 - PiP source bounds and Android aspect ratio use Gecko's video dimensions, fall back to 16:9 for

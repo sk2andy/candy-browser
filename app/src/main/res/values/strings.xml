@@ -524,9 +524,16 @@
     <string name="settings_video_autoplay_subtitle">Videos start only when you play them. Turning this off can significantly increase CPU/GPU usage, battery drain, and page load.</string>
     <string name="settings_video_autoplay_unsupported">Requires a newer Gecko engine version.</string>
     <string name="settings_inline_media_player_title">Candy Player (experimental)</string>
-    <string name="settings_inline_media_player_subtitle">Shows an action for detected top-level videos. Embedded videos are not supported yet.</string>
+    <string name="settings_inline_media_player_subtitle">Candy Player also provides improved picture-in-picture directly from the page, without entering fullscreen first. Embedded videos are not supported yet.</string>
     <string name="settings_inline_media_player_unsupported">Currently available only with GeckoView.</string>
+    <string name="settings_inline_media_player_mode_button_fullscreen">Button opens player in fullscreen</string>
+    <string name="settings_inline_media_player_mode_button_inline_fullscreen">Button opens player inline or in fullscreen</string>
+    <string name="settings_inline_media_player_mode_always_fullscreen">Always use Candy Player for fullscreen</string>
+    <string name="settings_inline_media_player_mode_automatic">Start Candy Player when a video is detected</string>
     <string name="action_open_candy_player">Open in Candy Player</string>
+    <string name="action_candy_player_play">Play</string>
+    <string name="action_candy_player_pause">Pause</string>
+    <string name="action_candy_player_seek">Seek</string>
     <string name="settings_default_browser">Default browser</string>
     <string name="settings_default_browser_active">Candy Browser is your default browser</string>
     <string name="settings_make_default_browser">Make Candy Browser the default</string>

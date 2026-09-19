@@ -915,6 +915,7 @@ private class GeckoViewBrowserSession(
     private var inlineVideoState = GeckoInlineVideoState(
         isActive = false,
         isPlaying = false,
+        isPresented = false,
         width = 0,
         height = 0,
         documentNonce = null,
@@ -923,6 +924,9 @@ private class GeckoViewBrowserSession(
 
     @Volatile
     private var mediaStateListener: GeckoMediaSessionStateListener? = null
+
+    @Volatile
+    private var inlineVideoOpenRequestListener: GeckoInlineVideoOpenRequestListener? = null
 
     @Volatile
     private var fullscreenStateListener: GeckoFullscreenStateListener? = null
@@ -1772,6 +1776,7 @@ private class GeckoViewBrowserSession(
                 inlineVideoState = GeckoInlineVideoState(
                     isActive = false,
                     isPlaying = false,
+                    isPresented = false,
                     width = 0,
                     height = 0,
                     documentNonce = null,
@@ -1832,6 +1837,9 @@ private class GeckoViewBrowserSession(
                 }
             },
             onInlineVideoState = ::updateInlineVideoState,
+            onInlineVideoOpenRequest = { request ->
+                inlineVideoOpenRequestListener?.onOpenRequested(request)
+            },
             onBound = {
                 privacyBound = true
                 loadPendingUrlIfReady()
@@ -2025,6 +2033,12 @@ private class GeckoViewBrowserSession(
     override fun setMediaStateListener(listener: GeckoMediaSessionStateListener?) {
         mediaStateListener = listener
         listener?.onStateChanged(mediaState)
+    }
+
+    override fun setInlineVideoOpenRequestListener(
+        listener: GeckoInlineVideoOpenRequestListener?,
+    ) {
+        inlineVideoOpenRequestListener = listener
     }
 
     override fun setScrollListener(listener: BrowserEngineScrollListener?) {
@@ -2311,6 +2325,21 @@ private class GeckoViewBrowserSession(
         if (closed) return
         pictureInPicturePlaybackExpected = expected
         privacyBinding.setPictureInPicturePlaybackExpected(expected)
+    }
+
+    @UiThread
+    override fun preparePictureInPicturePlayback(
+        identity: GeckoInlineVideoIdentity,
+        onResult: (GeckoPictureInPicturePreparation?) -> Unit,
+    ) {
+        if (closed || !pictureInPicturePlaybackExpected) {
+            onResult(null)
+            return
+        }
+        privacyBinding.preparePictureInPicturePlayback(
+            identity = identity,
+            onResult = onResult,
+        )
     }
 
     @UiThread
@@ -2765,6 +2794,7 @@ private class GeckoViewBrowserSession(
         authPromptListener = null
         webPromptListener = null
         mediaStateListener = null
+        inlineVideoOpenRequestListener = null
         fullscreenStateListener = null
         scrollListener = null
         activeMediaSession = null
@@ -2810,6 +2840,7 @@ private class GeckoViewBrowserSession(
             isActive = nativeMediaState.isActive || inline.isActive,
             hasInlineVideo = inline.isActive,
             isInlineVideoPlaying = inline.isPlaying,
+            isInlineVideoPresented = inline.isPresented,
             inlineVideoWidth = inline.width,
             inlineVideoHeight = inline.height,
             inlineVideoDocumentNonce = inline.documentNonce,
