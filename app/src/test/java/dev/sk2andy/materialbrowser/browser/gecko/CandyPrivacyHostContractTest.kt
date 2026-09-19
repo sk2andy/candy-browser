@@ -3,6 +3,8 @@ package dev.sk2andy.materialbrowser.browser.gecko
 import dev.sk2andy.materialbrowser.blocking.CandyRule
 import dev.sk2andy.materialbrowser.blocking.CandyRuleAction
 import dev.sk2andy.materialbrowser.blocking.CandyRuleKind
+import dev.sk2andy.materialbrowser.browser.BrowserViewportRect
+import dev.sk2andy.materialbrowser.browser.InlineMediaPlayerMode
 import dev.sk2andy.materialbrowser.data.GeckoSafeAreaSettings
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
@@ -84,6 +86,13 @@ class CandyPrivacyHostContractTest {
             navigationGeneration = 4,
             scrollMetricsEnabled = true,
             inlineMediaPlayerEnabled = true,
+            inlineMediaPlayerMode = InlineMediaPlayerMode.Automatic.stableId,
+            inlineMediaPlayerActionLabel = "Im Candy Player öffnen",
+            inlineMediaPlayerPlayLabel = "Abspielen",
+            inlineMediaPlayerPauseLabel = "Pausieren",
+            inlineMediaPlayerSeekLabel = "Wiedergabeposition",
+            inlineMediaPlayerEnterFullscreenLabel = "Video vergrößern",
+            inlineMediaPlayerExitFullscreenLabel = "Video minimieren",
             safeAreaLayoutQuietPeriodMillis = 250,
             safeAreaRequiredFailureCount = 4,
         )
@@ -100,6 +109,43 @@ class CandyPrivacyHostContractTest {
         assertEquals(4, policy.navigationGeneration)
         assertTrue(policy.scrollMetricsEnabled)
         assertTrue(policy.inlineMediaPlayerEnabled)
+        assertEquals(InlineMediaPlayerMode.Automatic.stableId, policy.inlineMediaPlayerMode)
+        assertEquals("Im Candy Player öffnen", policy.inlineMediaPlayerActionLabel)
+        assertEquals("Abspielen", policy.inlineMediaPlayerPlayLabel)
+        assertEquals("Pausieren", policy.inlineMediaPlayerPauseLabel)
+        assertEquals("Wiedergabeposition", policy.inlineMediaPlayerSeekLabel)
+        assertEquals("Video vergrößern", policy.inlineMediaPlayerEnterFullscreenLabel)
+        assertEquals("Video minimieren", policy.inlineMediaPlayerExitFullscreenLabel)
+        assertEquals(
+            "Im Candy Player öffnen",
+            policy.toMessage("session-token", 1).getString("inlineMediaPlayerActionLabel"),
+        )
+        assertEquals(
+            InlineMediaPlayerMode.Automatic.stableId,
+            policy.toMessage("session-token", 1).getString("inlineMediaPlayerMode"),
+        )
+        assertEquals(
+            "Abspielen",
+            policy.toMessage("session-token", 1).getString("inlineMediaPlayerPlayLabel"),
+        )
+        assertEquals(
+            "Pausieren",
+            policy.toMessage("session-token", 1).getString("inlineMediaPlayerPauseLabel"),
+        )
+        assertEquals(
+            "Wiedergabeposition",
+            policy.toMessage("session-token", 1).getString("inlineMediaPlayerSeekLabel"),
+        )
+        assertEquals(
+            "Video vergrößern",
+            policy.toMessage("session-token", 1)
+                .getString("inlineMediaPlayerEnterFullscreenLabel"),
+        )
+        assertEquals(
+            "Video minimieren",
+            policy.toMessage("session-token", 1)
+                .getString("inlineMediaPlayerExitFullscreenLabel"),
+        )
         assertEquals(250, policy.safeAreaLayoutQuietPeriodMillis)
         assertEquals(4, policy.safeAreaRequiredFailureCount)
     }
@@ -317,6 +363,66 @@ class CandyPrivacyHostContractTest {
     }
 
     @Test
+    fun `picture in picture preparation accepts only current identity bound geometry`() {
+        val identity = GeckoInlineVideoIdentity(
+            documentNonce = "a".repeat(32),
+            elementNonce = "b".repeat(32),
+        )
+        val message = JSONObject()
+            .put("revision", 7)
+            .put("navigationGeneration", 3)
+            .put("requestId", 11)
+            .put("prepared", true)
+            .put("documentNonce", identity.documentNonce)
+            .put("elementNonce", identity.elementNonce)
+            .put("videoLeft", 20.0)
+            .put("videoTop", 10.0)
+            .put("videoRight", 380.0)
+            .put("videoBottom", 210.0)
+            .put("viewportWidth", 400.0)
+            .put("viewportHeight", 240.0)
+
+        assertEquals(
+            GeckoPictureInPicturePreparation(
+                identity = identity,
+                videoRect = BrowserViewportRect(
+                    leftFraction = 0.05f,
+                    topFraction = 1f / 24f,
+                    rightFraction = 0.95f,
+                    bottomFraction = 0.875f,
+                ),
+            ),
+            geckoPictureInPicturePreparationFromMessage(
+                message = message,
+                currentRevision = 7,
+                currentNavigationGeneration = 3,
+                expectedRequestId = 11,
+                expectedIdentity = identity,
+            ),
+        )
+        assertEquals(
+            null,
+            geckoPictureInPicturePreparationFromMessage(
+                message = JSONObject(message.toString()).put("requestId", 12),
+                currentRevision = 7,
+                currentNavigationGeneration = 3,
+                expectedRequestId = 11,
+                expectedIdentity = identity,
+            ),
+        )
+        assertEquals(
+            null,
+            geckoPictureInPicturePreparationFromMessage(
+                message = JSONObject(message.toString()).put("videoTop", -1),
+                currentRevision = 7,
+                currentNavigationGeneration = 3,
+                expectedRequestId = 11,
+                expectedIdentity = identity,
+            ),
+        )
+    }
+
+    @Test
     fun `inline video state accepts current bounded top frame candidate`() {
         val state = geckoInlineVideoStateFromMessage(
             message = JSONObject()
@@ -324,6 +430,7 @@ class CandyPrivacyHostContractTest {
                 .put("navigationGeneration", 3)
                 .put("active", true)
                 .put("playing", true)
+                .put("presented", true)
                 .put("videoWidth", 1_920)
                 .put("videoHeight", 1_080)
                 .put("documentNonce", "a".repeat(32))
@@ -336,6 +443,7 @@ class CandyPrivacyHostContractTest {
             GeckoInlineVideoState(
                 isActive = true,
                 isPlaying = true,
+                isPresented = true,
                 width = 1_920,
                 height = 1_080,
                 documentNonce = "a".repeat(32),
@@ -371,6 +479,90 @@ class CandyPrivacyHostContractTest {
         assertEquals(
             null,
             geckoInlineVideoStateFromMessage(message(documentNonce = "invalid"), 7, 3),
+        )
+    }
+
+    @Test
+    fun `inline presentation desire clears only after presented video disappears`() {
+        assertTrue(
+            shouldClearInlineVideoPresentationDesire(
+                wasPresented = true,
+                isPresented = false,
+                presentationDesired = true,
+            ),
+        )
+        assertFalse(
+            shouldClearInlineVideoPresentationDesire(
+                wasPresented = false,
+                isPresented = false,
+                presentationDesired = true,
+            ),
+        )
+        assertFalse(
+            shouldClearInlineVideoPresentationDesire(
+                wasPresented = true,
+                isPresented = true,
+                presentationDesired = true,
+            ),
+        )
+        assertFalse(
+            shouldClearInlineVideoPresentationDesire(
+                wasPresented = true,
+                isPresented = false,
+                presentationDesired = false,
+            ),
+        )
+    }
+
+    @Test
+    fun `inline video open request accepts only current bounded identity`() {
+        val current = JSONObject()
+            .put("revision", 7)
+            .put("navigationGeneration", 3)
+            .put("documentNonce", "a".repeat(32))
+            .put("elementNonce", "b".repeat(32))
+
+        assertEquals(
+            GeckoInlineVideoOpenRequest(
+                identity = GeckoInlineVideoIdentity(
+                    documentNonce = "a".repeat(32),
+                    elementNonce = "b".repeat(32),
+                ),
+                navigationGeneration = 3,
+            ),
+            geckoInlineVideoOpenRequestFromMessage(current, 7, 3),
+        )
+        assertEquals(
+            null,
+            geckoInlineVideoOpenRequestFromMessage(
+                JSONObject(current.toString()).put("revision", 6),
+                7,
+                3,
+            ),
+        )
+        assertEquals(
+            false,
+            geckoInlineVideoOpenRequestFromMessage(
+                JSONObject(current.toString()).put("expected", false),
+                7,
+                3,
+            )?.expected,
+        )
+        assertEquals(
+            null,
+            geckoInlineVideoOpenRequestFromMessage(
+                JSONObject(current.toString()).put("navigationGeneration", 2),
+                7,
+                3,
+            ),
+        )
+        assertEquals(
+            null,
+            geckoInlineVideoOpenRequestFromMessage(
+                JSONObject(current.toString()).put("elementNonce", "page-controlled"),
+                7,
+                3,
+            ),
         )
     }
 

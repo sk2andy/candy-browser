@@ -118,6 +118,7 @@ class GeckoMediaRulesTest {
             inlineVideoWidth = 1_280,
             inlineVideoHeight = 720,
         )
+        val presentedInline = inline.copy(isInlineVideoPresented = true)
 
         assertFalse(
             GeckoPictureInPictureRules.isEligible(
@@ -128,26 +129,23 @@ class GeckoMediaRulesTest {
         )
         assertTrue(
             GeckoPictureInPictureRules.isEligible(
-                state = inline,
+                state = presentedInline,
                 isPrivate = false,
                 isSelectedTab = true,
-                inlinePresentationActive = true,
             ),
         )
         assertFalse(
             GeckoPictureInPictureRules.isEligible(
-                state = inline.copy(isInlineVideoPlaying = false),
+                state = presentedInline.copy(isInlineVideoPlaying = false),
                 isPrivate = false,
                 isSelectedTab = true,
-                inlinePresentationActive = true,
             ),
         )
         assertFalse(
             GeckoPictureInPictureRules.isEligible(
-                state = inline,
+                state = presentedInline,
                 isPrivate = true,
                 isSelectedTab = true,
-                inlinePresentationActive = true,
             ),
         )
     }

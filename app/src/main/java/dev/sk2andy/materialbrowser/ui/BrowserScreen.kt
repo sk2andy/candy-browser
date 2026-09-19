@@ -138,6 +138,7 @@ private enum class BrowserBackTarget {
     FindInPage,
     CandyTrail,
     TabOverview,
+    WebContentFullscreen,
     WebHistory,
     ExternalApp,
     RootTab,
@@ -204,6 +205,7 @@ private val PendingProfileConfigurationSaver =
 @Composable
 internal fun BrowserScreen(
     controller: BrowserController,
+    fullscreenVideoGestureState: FullscreenVideoGestureState? = null,
     castUiState: CastUiState = CastUiState(),
     onToggleCastPlayback: () -> Unit = {},
     onSeekCast: (Long) -> Unit = {},
@@ -1194,6 +1196,7 @@ internal fun BrowserScreen(
             controller.findInPageState != null -> BrowserBackTarget.FindInPage
             candyTrailTabId != null -> BrowserBackTarget.CandyTrail
             tabOverviewVisible || tabOverviewOpening -> BrowserBackTarget.TabOverview
+            controller.isSelectedWebContentFullscreen -> BrowserBackTarget.WebContentFullscreen
             selectedTab.canGoBack -> BrowserBackTarget.WebHistory
             selectedTab.id == externalLaunchTabId -> BrowserBackTarget.ExternalApp
             controller.selectedRootTabBackDecision ==
@@ -1268,6 +1271,8 @@ internal fun BrowserScreen(
                     candyTrailSourceBounds = null
                 }
                 BrowserBackTarget.TabOverview -> closeTabOverview()
+                BrowserBackTarget.WebContentFullscreen ->
+                    controller.exitSelectedWebContentFullscreen()
                 BrowserBackTarget.WebHistory -> controller.goBack()
                 BrowserBackTarget.ExternalApp -> onReturnToExternalApp()
                 BrowserBackTarget.RootTab -> {
@@ -1395,6 +1400,7 @@ internal fun BrowserScreen(
                 Box(modifier = Modifier.weight(1f)) {
                     BrowserViewport(
                         controller = controller,
+                        fullscreenVideoGestureState = fullscreenVideoGestureState,
                         webViewVideoOnlyPresentation = webViewVideoOnlyPresentation,
                         videoOnlyPresentation = hideBrowserChrome,
                         selectedTab = selectedTab,
@@ -1553,19 +1559,6 @@ internal fun BrowserScreen(
             onAddressBarLongPressAction = ::performAddressBarLongPress,
             )
         }
-
-        BrowserInlineMediaPlayerAction(
-            controller = controller,
-            chromeAllowsAction =
-                firefoxExtensionOptionsTitle == null &&
-                !hideBrowserChrome &&
-                !addressEditorVisible &&
-                !tabOverviewVisible &&
-                !settingsVisible,
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .zIndex(24f),
-        )
 
         readerStudioSession?.let { session ->
             ReaderStudioScreen(

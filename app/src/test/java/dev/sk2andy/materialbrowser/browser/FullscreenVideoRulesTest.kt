@@ -159,9 +159,9 @@ class FullscreenVideoRulesTest {
     }
 
     @Test
-    fun `picture in picture source is top aligned in portrait and matches video aspect`() {
+    fun `picture in picture source is centered and matches video aspect`() {
         assertEquals(
-            FullscreenVideoBounds(left = 0, top = 0, right = 1_080, bottom = 607),
+            FullscreenVideoBounds(left = 0, top = 896, right = 1_080, bottom = 1_503),
             FullscreenVideoRules.pictureInPictureSourceBounds(
                 windowBounds = FullscreenVideoBounds(0, 0, 1_080, 2_400),
                 aspectWidth = 16,
@@ -193,6 +193,23 @@ class FullscreenVideoRulesTest {
                 windowBounds = FullscreenVideoBounds(0, 0, 0, 100),
                 aspectWidth = 16,
                 aspectHeight = 9,
+            ),
+        )
+    }
+
+    @Test
+    fun `identity bound viewport rect maps into current renderer bounds`() {
+        assertEquals(
+            FullscreenVideoBounds(left = 50, top = 220, right = 950, bottom = 1_820),
+            FullscreenVideoRules.viewportRectBounds(
+                viewportBounds = FullscreenVideoBounds(0, 100, 1_000, 2_100),
+                rect = BrowserViewportRect(0.05f, 0.06f, 0.95f, 0.86f),
+            ),
+        )
+        assertNull(
+            FullscreenVideoRules.viewportRectBounds(
+                viewportBounds = FullscreenVideoBounds(0, 0, 1_000, 2_000),
+                rect = BrowserViewportRect(-0.1f, 0f, 1f, 1f),
             ),
         )
     }

@@ -192,7 +192,7 @@ internal fun BrowserSettingsOverlay(
             isScrollBarEnabled = controller.isScrollBarEnabled,
             isVideoAutoplayBlocked = controller.isVideoAutoplayBlocked,
             isVideoAutoplayBlockingSupported = controller.isVideoAutoplayBlockingSupported,
-            isInlineMediaPlayerEnabled = controller.isInlineMediaPlayerEnabled,
+            inlineMediaPlayerMode = controller.inlineMediaPlayerMode,
             isInlineMediaPlayerSupported = controller.isInlineMediaPlayerSupported,
             developerSettings = controller.developerSettings,
             isDeveloperOptionsUnlocked = controller.isDeveloperOptionsUnlocked,
@@ -279,8 +279,7 @@ internal fun BrowserSettingsOverlay(
                 controller::updateOpenHomeOnStartupEnabled,
             onScrollBarEnabledChanged = controller::updateScrollBarEnabled,
             onVideoAutoplayBlockedChanged = controller::updateVideoAutoplayBlocked,
-            onInlineMediaPlayerEnabledChanged =
-                controller::updateInlineMediaPlayerEnabled,
+            onInlineMediaPlayerModeChanged = controller::updateInlineMediaPlayerMode,
             onDeveloperSettingsChanged = controller::updateDeveloperSettings,
             onInputDiagnosticsEnabledChanged = controller::updateInputDiagnosticsEnabled,
             onCopyDeveloperDiagnostics = controller::copyDeveloperDiagnostics,

@@ -27,18 +27,54 @@ internal class MainActivityPictureInPictureController(
     private var returnInProgress = false
     private var startedFullscreen = false
     private var modeEntered = false
+    private var entryRequestGeneration = 0
 
-    fun requestPictureInPicture(): Boolean {
+    fun requestPictureInPicture(immediate: Boolean = false): Boolean {
         if (!canEnterPictureInPicture()) return false
+        if (immediate) {
+            prepareForTransition()
+            val entered = runCatching {
+                activity.enterPictureInPictureMode(
+                    buildParams(
+                        autoEnterEnabled = false,
+                        sourceRectHint = eligibleSourceRect(true),
+                    ),
+                )
+            }.getOrDefault(false)
+            if (!entered) cancelTransition()
+            return entered
+        }
+        val requestGeneration = ++entryRequestGeneration
+        prepareForTransition { preparedBounds ->
+            if (
+                requestGeneration != entryRequestGeneration ||
+                activity.isInPictureInPictureMode
+            ) {
+                return@prepareForTransition
+            }
+            if (preparedBounds == null || !canEnterPictureInPicture()) {
+                cancelTransition()
+                return@prepareForTransition
+            }
+            sourceRectHint = preparedBounds.toAndroidRect()
+            updateParams()
+            val entered = runCatching {
+                activity.enterPictureInPictureMode(
+                    buildParams(
+                        autoEnterEnabled = false,
+                        sourceRectHint = eligibleSourceRect(true),
+                    ),
+                )
+            }.getOrDefault(false)
+            if (!entered) cancelTransition()
+        }
+        return true
+    }
+
+    fun prepareAutomaticEntry(): Boolean {
+        if (!canEnterPictureInPicture() || !supportsPreparedAutoEnter()) return false
         prepareForTransition()
-        val entered = activity.enterPictureInPictureMode(
-            buildParams(
-                autoEnterEnabled = false,
-                sourceRectHint = eligibleSourceRect(true),
-            ),
-        )
-        if (!entered) cancelTransition()
-        return entered
+        return true
     }
 
     fun onModeChanged(isInPictureInPictureMode: Boolean, newConfig: Configuration) {
@@ -78,6 +114,7 @@ internal class MainActivityPictureInPictureController(
     }
 
     fun onDestroy() {
+        entryRequestGeneration++
         cancelReturnLayoutWait()
     }
 
@@ -90,18 +127,24 @@ internal class MainActivityPictureInPictureController(
         updateParams()
     }
 
-    fun prepareForTransition() {
-        if (!canEnterPictureInPicture()) return
+    fun prepareForTransition(
+        onPrepared: ((FullscreenVideoBounds?) -> Unit)? = null,
+    ) {
+        if (!canEnterPictureInPicture()) {
+            onPrepared?.invoke(null)
+            return
+        }
         if (!isVideoOnlyPresentation()) {
             startedFullscreen = isCurrentWindowFullscreen()
-            sourceRectHint = currentSourceRect()
+            sourceRectHint = if (onPrepared == null) currentSourceRect() else null
         }
         setVideoOnlyPresentation(true)
-        browserController.prepareForPictureInPicture()
+        browserController.prepareForPictureInPicture(onPrepared)
         updateParams()
     }
 
     fun cancelTransition() {
+        entryRequestGeneration++
         returnInProgress = false
         startedFullscreen = false
         modeEntered = false
@@ -260,6 +303,8 @@ internal class MainActivityPictureInPictureController(
             sourceBounds.bottom,
         )
     }
+
+    private fun FullscreenVideoBounds.toAndroidRect(): Rect = Rect(left, top, right, bottom)
 
     private fun isCurrentWindowFullscreen(): Boolean {
         val visibleBounds = Rect()

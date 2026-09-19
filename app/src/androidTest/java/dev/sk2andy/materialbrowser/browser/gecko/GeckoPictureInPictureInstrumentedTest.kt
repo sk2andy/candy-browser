@@ -160,6 +160,7 @@ class GeckoPictureInPictureInstrumentedTest {
                 assertSame(initialBrowserContainer, parentOf(stableGeckoHost))
                 assertSame(initialEngineView, restoredEngineView)
                 assertNotNull(restoredEngineView.findDescendant(SurfaceView::class.java))
+                activity.browserControllerForTesting().completePictureInPictureReturn()
                 assertNull(activity.browserControllerForTesting().fullscreenVideoState)
             }
         }
@@ -229,13 +230,15 @@ class GeckoPictureInPictureInstrumentedTest {
                 scenario.onActivity { activity ->
                     val controller = activity.browserControllerForTesting()
                     controller.updateVideoAutoplayBlocked(false)
+                    controller.updateInlineMediaPlayerEnabled(false)
                     assertTrue(controller.openUrl(server.url))
                 }
                 awaitCondition {
                     var loaded = false
                     scenario.onActivity { activity ->
-                        loaded = activity.browserControllerForTesting().selectedTab.title in
-                            setOf(INLINE_LOADED_TITLE, INLINE_READY_TITLE)
+                        val title = activity.browserControllerForTesting().selectedTab.title
+                        loaded = title in setOf(INLINE_LOADED_TITLE, INLINE_READY_TITLE) ||
+                            title.startsWith(INLINE_ACTION_GEOMETRY_PREFIX)
                     }
                     loaded
                 }
@@ -263,15 +266,16 @@ class GeckoPictureInPictureInstrumentedTest {
                 awaitCondition {
                     var ready = false
                     scenario.onActivity { activity ->
-                        ready = activity.browserControllerForTesting().selectedTab.title ==
-                            INLINE_READY_TITLE
+                        val title = activity.browserControllerForTesting().selectedTab.title
+                        ready = title == INLINE_READY_TITLE ||
+                            title.startsWith(INLINE_ACTION_GEOMETRY_PREFIX)
                     }
                     ready
                 }
                 scenario.onActivity { activity ->
                     val controller = activity.browserControllerForTesting()
                     assertFalse(controller.isInlineMediaPlayerEnabled)
-                    assertFalse(controller.canOpenInlineMediaPlayer)
+                    assertTrue(controller.canOpenInlineMediaPlayer)
                     controller.updateInlineMediaPlayerEnabled(true)
                 }
                 awaitCondition {
@@ -281,67 +285,188 @@ class GeckoPictureInPictureInstrumentedTest {
                     }
                     canOpen
                 }
+                var inlineActionGeometry = ""
+                awaitCondition {
+                    scenario.onActivity { activity ->
+                        inlineActionGeometry = activity.browserControllerForTesting().selectedTab.title
+                    }
+                    inlineActionGeometry.startsWith(INLINE_ACTION_GEOMETRY_PREFIX)
+                }
+                val inlineActionTapPoint = FloatArray(2)
+                scenario.onActivity { activity ->
+                    val host = requireNotNull(
+                        activity.browserControllerForTesting().selectedGeckoViewForTesting(),
+                    )
+                    val location = IntArray(2)
+                    val geometry = inlineActionGeometry
+                        .removePrefix(INLINE_ACTION_GEOMETRY_PREFIX)
+                        .split(':')
+                        .map(String::toFloat)
+                    assertEquals(5, geometry.size)
+                    val (left, top, width, height, viewportWidth) = geometry
+                    val webScale = host.width / viewportWidth
+                    host.getLocationOnScreen(location)
+                    inlineActionTapPoint[0] = location[0] + (left + width / 2f) * webScale
+                    inlineActionTapPoint[1] = location[1] + (top + height / 2f) * webScale
+                }
+                tap(x = inlineActionTapPoint[0], y = inlineActionTapPoint[1])
                 scenario.onActivity { activity ->
                     val controller = activity.browserControllerForTesting()
                     assertFalse(controller.isSelectedWebContentFullscreen)
-                    controller.openInlineMediaPlayer()
-                    assertFalse(controller.canOpenInlineMediaPlayer)
-                    controller.openInlineMediaPlayer()
                 }
-                awaitCondition {
+                var presentationTitle = ""
+                awaitCondition(
+                    description = { "Inline action did not replace player; title=$presentationTitle" },
+                ) {
                     var presented = false
                     scenario.onActivity { activity ->
                         val controller = activity.browserControllerForTesting()
-                        presented = controller.selectedTab.title == INLINE_PRESENTED_TITLE &&
-                            controller.fullscreenVideoState?.host ==
-                            FullscreenVideoHost.BrowserViewport
+                        presentationTitle = controller.selectedTab.title
+                        presented = controller.selectedTab.title == INLINE_ACTIVE_TITLE &&
+                            controller.fullscreenVideoState == null
                     }
                     presented
                 }
                 scenario.onActivity { activity ->
                     val controller = activity.browserControllerForTesting()
                     assertFalse(controller.isSelectedWebContentFullscreen)
-                    assertTrue(controller.isPictureInPictureEligible)
-                    controller.exitFullscreenVideo()
                     assertNull(controller.fullscreenVideoState)
+                    assertFalse(controller.canOpenInlineMediaPlayer)
                 }
-                awaitCondition {
-                    var restored = false
+                awaitCondition(
+                    description = { "Playing inline video did not become PiP eligible" },
+                ) {
+                    var eligible = false
                     scenario.onActivity { activity ->
-                        restored = activity.browserControllerForTesting().selectedTab.title ==
-                            INLINE_RESTORED_TITLE
+                        eligible = activity.browserControllerForTesting().isPictureInPictureEligible
                     }
-                    restored
+                    eligible
                 }
-                awaitCondition {
-                    var canReopen = false
+                scenario.onActivity { activity ->
+                    val controller = activity.browserControllerForTesting()
+                    controller.prepareForPictureInPicture()
+                }
+                awaitCondition(
+                    description = { "Inline player did not enter video-only PiP preparation" },
+                ) {
+                    var prepared = false
                     scenario.onActivity { activity ->
-                        canReopen = activity.browserControllerForTesting().canOpenInlineMediaPlayer
+                        val controller = activity.browserControllerForTesting()
+                        prepared = controller.fullscreenVideoState?.host ==
+                            FullscreenVideoHost.BrowserViewport
                     }
-                    canReopen
+                    prepared
+                }
+                scenario.onActivity { activity ->
+                    val controller = activity.browserControllerForTesting()
+                    controller.onPictureInPictureModeChanged(true)
+                    controller.onPictureInPictureModeChanged(false)
+                    assertEquals(
+                        FullscreenVideoHost.BrowserViewport,
+                        controller.fullscreenVideoState?.host,
+                    )
+                    controller.completePictureInPictureReturn()
+                    assertNull(controller.fullscreenVideoState)
+                    assertTrue(controller.isPictureInPictureEligible)
+                }
+                var restoredInlineTitle = ""
+                awaitCondition(
+                    description = {
+                        "PiP return did not restore the inline Candy Player; " +
+                            "title=$restoredInlineTitle"
+                    },
+                ) {
+                    var restoredInline = false
+                    scenario.onActivity { activity ->
+                        restoredInlineTitle =
+                            activity.browserControllerForTesting().selectedTab.title
+                        restoredInline = restoredInlineTitle == INLINE_ACTIVE_TITLE
+                    }
+                    restoredInline
+                }
+                scenario.onActivity { activity ->
+                    activity.browserControllerForTesting().updateInlineMediaPlayerEnabled(false)
+                }
+                awaitCondition(
+                    description = { "Disabling Candy Player did not restore site controls" },
+                ) {
+                    var restoredSitePlayer = false
+                    scenario.onActivity { activity ->
+                        val controller = activity.browserControllerForTesting()
+                        restoredSitePlayer = controller.selectedTab.title ==
+                            INLINE_RESTORED_TITLE &&
+                            !controller.isPictureInPictureEligible
+                    }
+                    restoredSitePlayer
+                }
+                scenario.onActivity { activity ->
+                    activity.browserControllerForTesting().updateInlineMediaPlayerEnabled(true)
+                }
+                awaitCondition(
+                    description = { "Re-enabling Candy Player silently reused stale presentation" },
+                ) {
+                    var canOpenAgain = false
+                    scenario.onActivity { activity ->
+                        canOpenAgain = activity.browserControllerForTesting().canOpenInlineMediaPlayer
+                    }
+                    canOpenAgain
                 }
                 scenario.onActivity { activity ->
                     activity.browserControllerForTesting().openInlineMediaPlayer()
                 }
-                awaitCondition {
-                    var reopened = false
+                awaitCondition(
+                    description = { "Candy Player did not reopen after explicit request" },
+                ) {
+                    var reopenedInline = false
                     scenario.onActivity { activity ->
-                        val controller = activity.browserControllerForTesting()
-                        reopened = controller.fullscreenVideoState?.host ==
-                            FullscreenVideoHost.BrowserViewport
+                        reopenedInline = activity.browserControllerForTesting().selectedTab.title ==
+                            INLINE_ACTIVE_TITLE
                     }
-                    reopened
+                    reopenedInline
                 }
                 scenario.onActivity { activity ->
-                    activity.browserControllerForTesting().exitFullscreenVideo()
+                    activity.browserControllerForTesting().reload()
                 }
                 awaitCondition {
-                    var restored = false
+                    var clearedForReload = false
                     scenario.onActivity { activity ->
-                        restored = activity.browserControllerForTesting().selectedTab.title ==
-                            INLINE_RESTORED_TITLE
+                        clearedForReload =
+                            activity.browserControllerForTesting().fullscreenVideoState == null
                     }
-                    restored
+                    clearedForReload
+                }
+                var reloadedTitle = ""
+                awaitCondition(description = { "Reload did not finish; title=$reloadedTitle" }) {
+                    scenario.onActivity { activity ->
+                        reloadedTitle = activity.browserControllerForTesting().selectedTab.title
+                    }
+                    reloadedTitle in setOf(INLINE_LOADED_TITLE, INLINE_READY_TITLE) ||
+                        reloadedTitle.startsWith(INLINE_ACTION_GEOMETRY_PREFIX)
+                }
+                if (reloadedTitle != INLINE_READY_TITLE) {
+                    repeat(3) {
+                        tap(x = tapPoint[0], y = tapPoint[1])
+                        SystemClock.sleep(250)
+                    }
+                }
+                var reloadActionTitle = ""
+                var canOpenAfterReload = false
+                var pictureInPictureEligibleAfterReload = false
+                awaitCondition(
+                    description = {
+                        "Reload did not expose inline action; title=$reloadActionTitle, " +
+                            "canOpen=$canOpenAfterReload, " +
+                            "pipEligible=$pictureInPictureEligibleAfterReload"
+                    },
+                ) {
+                    scenario.onActivity { activity ->
+                        val controller = activity.browserControllerForTesting()
+                        reloadActionTitle = controller.selectedTab.title
+                        canOpenAfterReload = controller.canOpenInlineMediaPlayer
+                        pictureInPictureEligibleAfterReload =
+                            controller.isPictureInPictureEligible
+                    }
+                    canOpenAfterReload
                 }
                 scenario.onActivity { activity ->
                     val controller = activity.browserControllerForTesting()
@@ -388,7 +513,8 @@ class GeckoPictureInPictureInstrumentedTest {
                     var ready = false
                     scenario.onActivity { activity ->
                         readyTitle = activity.browserControllerForTesting().selectedTab.title
-                        ready = readyTitle == INLINE_READY_TITLE
+                        ready = readyTitle == INLINE_READY_TITLE ||
+                            readyTitle.startsWith(INLINE_ACTION_GEOMETRY_PREFIX)
                     }
                     ready
                 }
@@ -420,7 +546,8 @@ class GeckoPictureInPictureInstrumentedTest {
                     var restored = false
                     scenario.onActivity { activity ->
                         restoredTitle = activity.browserControllerForTesting().selectedTab.title
-                        restored = restoredTitle == INLINE_RESTORED_TITLE
+                        restored = restoredTitle == INLINE_RESTORED_TITLE ||
+                            restoredTitle.startsWith(INLINE_ACTION_GEOMETRY_PREFIX)
                     }
                     restored
                 }
@@ -447,7 +574,8 @@ class GeckoPictureInPictureInstrumentedTest {
                     var restored = false
                     scenario.onActivity { activity ->
                         restoredTitle = activity.browserControllerForTesting().selectedTab.title
-                        restored = restoredTitle == INLINE_RESTORED_TITLE
+                        restored = restoredTitle == INLINE_RESTORED_TITLE ||
+                            restoredTitle.startsWith(INLINE_ACTION_GEOMETRY_PREFIX)
                     }
                     restored
                 }
@@ -700,9 +828,11 @@ class GeckoPictureInPictureInstrumentedTest {
         const val EXITED_TITLE = "exited"
         const val INLINE_LOADED_TITLE = "inline-loaded"
         const val INLINE_READY_TITLE = "inline-ready"
+        const val INLINE_ACTIVE_TITLE = "inline-active"
         const val INLINE_PRESENTED_TITLE = "inline-presented"
         const val INLINE_REALIGNED_TITLE = "inline-realigned"
         const val INLINE_RESTORED_TITLE = "inline-restored"
+        const val INLINE_ACTION_GEOMETRY_PREFIX = "inline-action:"
         val INLINE_PLAYER_HTML by lazy {
             INLINE_OFFSET_HTML.replace(
                 "const requiresControls = false;",
@@ -740,10 +870,13 @@ class GeckoPictureInPictureInstrumentedTest {
                 const header = document.querySelector('header');
                 const player = document.querySelector('#player');
                 const requiresControls = false;
+                let originalVideoBounds = null;
+                let inlinePresentationObserved = false;
                 video.defaultMuted = true;
                 video.muted = true;
                 video.src = 'data:video/webm;base64,' + encodedVideo;
                 video.addEventListener('loadedmetadata', () => {
+                  originalVideoBounds = video.getBoundingClientRect();
                   document.title = '$INLINE_LOADED_TITLE';
                 });
                 video.addEventListener('play', () => {
@@ -753,12 +886,77 @@ class GeckoPictureInPictureInstrumentedTest {
                   video.play();
                 }, { once:true });
                 new MutationObserver(() => {
+                  const action = document.documentElement.querySelector(
+                    '[data-candy-inline-video-action]'
+                  );
+                  if (!action || action.hasAttribute('data-fixture-reported')) return;
+                  action.setAttribute('data-fixture-reported', '');
+                  if (requiresControls) video.pause();
+                  setTimeout(() => {
+                    if (!action.isConnected) return;
+                    const bounds = action.getBoundingClientRect();
+                    document.title = '$INLINE_ACTION_GEOMETRY_PREFIX' + [
+                      bounds.left,
+                      bounds.top,
+                      bounds.width,
+                      bounds.height,
+                      document.documentElement.clientWidth
+                    ].join(':');
+                  }, 250);
+                }).observe(document.documentElement, { childList:true });
+                new MutationObserver(() => {
+                  if (video.hasAttribute('data-candy-picture-in-picture-video')) return;
+                  const hasCandyControls = Boolean(document.documentElement.querySelector(
+                    '[data-candy-inline-video-controls]'
+                  ));
+                  if (hasCandyControls === inlinePresentationObserved) return;
+                  requestAnimationFrame(() => requestAnimationFrame(() => {
+                    if (video.hasAttribute('data-candy-picture-in-picture-video')) return;
+                    const bounds = video.getBoundingClientRect();
+                    const original = originalVideoBounds || bounds;
+                    const unchanged = Math.abs(bounds.left - original.left) < 1 &&
+                      Math.abs(bounds.top - original.top) < 1 &&
+                      Math.abs(bounds.width - original.width) < 1 &&
+                      Math.abs(bounds.height - original.height) < 1;
+                    const pageRemainsVisible =
+                      getComputedStyle(header).visibility === 'visible';
+                    const hasNoVideoOnlyLayout =
+                      !document.documentElement.hasAttribute('data-candy-picture-in-picture') &&
+                      !video.hasAttribute('data-candy-picture-in-picture-video') &&
+                      !video.style.getPropertyValue('--candy-picture-in-picture-offset-x') &&
+                      !video.style.getPropertyValue('--candy-picture-in-picture-offset-y');
+                    const controlsStillPresent = Boolean(document.documentElement.querySelector(
+                      '[data-candy-inline-video-controls]'
+                    ));
+                    if (controlsStillPresent) {
+                      inlinePresentationObserved = true;
+                      document.title = unchanged && pageRemainsVisible &&
+                        hasNoVideoOnlyLayout && !video.controls ?
+                        '$INLINE_ACTIVE_TITLE' :
+                        `inline-active-failed:${'$'}{bounds.left},${'$'}{bounds.top}:` +
+                        `${'$'}{bounds.width},${'$'}{bounds.height}:` +
+                        `${'$'}{getComputedStyle(header).visibility}:` +
+                        `${'$'}{video.controls}`;
+                      return;
+                    }
+                    inlinePresentationObserved = false;
+                    document.title = unchanged && pageRemainsVisible &&
+                      hasNoVideoOnlyLayout && !video.controls ?
+                      '$INLINE_RESTORED_TITLE' :
+                      `inline-restore-failed:${'$'}{bounds.left},${'$'}{bounds.top}:` +
+                      `${'$'}{getComputedStyle(header).visibility}`;
+                  }));
+                }).observe(document.documentElement, { childList:true });
+                new MutationObserver(() => {
                   const presented = video.hasAttribute('data-candy-picture-in-picture-video');
                   if (!presented && ![
                     '$INLINE_PRESENTED_TITLE',
                     '$INLINE_REALIGNED_TITLE'
                   ].includes(document.title)) return;
                   requestAnimationFrame(() => requestAnimationFrame(() => {
+                    if (
+                      video.hasAttribute('data-candy-picture-in-picture-video') !== presented
+                    ) return;
                     const bounds = video.getBoundingClientRect();
                     if (!presented) {
                       const restored = bounds.top > 1 &&
@@ -767,19 +965,24 @@ class GeckoPictureInPictureInstrumentedTest {
                         !document.documentElement.hasAttribute('data-candy-picture-in-picture') &&
                         !video.style.getPropertyValue('--candy-picture-in-picture-offset-x') &&
                         !video.style.getPropertyValue('--candy-picture-in-picture-offset-y');
-                      document.title = restored ? '$INLINE_RESTORED_TITLE' :
+                      document.title = restored ?
+                        (inlinePresentationObserved ?
+                          '$INLINE_ACTIVE_TITLE' : '$INLINE_RESTORED_TITLE') :
                         `restore-failed:${'$'}{bounds.top}:` +
                         `${'$'}{getComputedStyle(header).visibility}`;
                       return;
                     }
                     const aligned = Math.abs(bounds.left) < 1 && Math.abs(bounds.top) < 1;
                     const headerHidden = getComputedStyle(header).visibility === 'hidden';
-                    const controlsMatch = !requiresControls || video.controls;
+                    const controlsMatch = !requiresControls || !video.controls;
                     document.title = aligned && headerHidden && controlsMatch ?
                       (player.dataset.shifted ? '$INLINE_REALIGNED_TITLE' : '$INLINE_PRESENTED_TITLE') :
                       `inline-failed:${'$'}{bounds.left},${'$'}{bounds.top}:` +
                       `${'$'}{getComputedStyle(header).visibility}:${'$'}{video.controls}`;
-                    if (aligned && headerHidden && controlsMatch && !player.dataset.shifted) {
+                    if (
+                      aligned && headerHidden && controlsMatch &&
+                      !player.dataset.shifted && !requiresControls
+                    ) {
                       player.dataset.shifted = 'true';
                       setTimeout(() => {
                         player.style.transform = 'translateY(32px)';
