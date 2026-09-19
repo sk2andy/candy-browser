@@ -241,6 +241,10 @@
   semantic-header check so class-driven sticky transitions cannot move behind the status bar.
   Relevant semantic mutations, trusted clicks, stylesheet load, DOM readiness and final load request
   the same coalesced check; other DOM discovery retains its existing interaction gate.
+  Native top-header activation and removal set the final engine margin immediately, then ease the
+  previous top edge into place with a temporary visual offset. The renderer receives its final
+  viewport in one layout pass instead of jumping the top edge or repeatedly relaying out the WebView.
+  Fullscreen, safe-drawing hosts, forced fallbacks and changed system insets always snap.
   Unknown layouts retain verified emergency native top fallback rather than speculative CSS changes.
   Fullscreen and Compose safe-drawing hosts retain their duplicate-inset exclusions.
   System WebView retains shared document repair: Candy owns its status-bar and cutout top edge because a

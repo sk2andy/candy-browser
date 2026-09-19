@@ -3878,9 +3878,11 @@ class BrowserController(
         } else {
             isExternalLinkPreviewSafeAreaForced(view)
         }
+        val nativeTopHeaderSafeArea = tabId != null &&
+            webContentTopBarStates.containsKey(tabId)
         val forceNativeTopSafeArea = tabId != null && (
             tabId in automaticNativeTopSafeAreaTabIds ||
-                webContentTopBarStates.containsKey(tabId)
+                nativeTopHeaderSafeArea
         )
         val layout = GeckoViewInsetRules.resolve(
             safeArea = safeArea,
@@ -3896,6 +3898,7 @@ class BrowserController(
             } else {
                 0
             },
+            nativeTopHeaderSafeArea = nativeTopHeaderSafeArea,
         )
         (view.layoutParams as? FrameLayout.LayoutParams)?.let { layoutParams ->
             if (
