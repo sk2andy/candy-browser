@@ -13,7 +13,6 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -251,7 +250,6 @@ internal fun ExpandedBottomBarContent(
         imeVisible = WindowInsets.isImeVisible,
     )
     val segmentedEditorActive = segmentedAddressBar && editing
-    val segmentedEditorFocused = segmentedEditorActive && addressFieldFocused
     val dynamicSlotCount = maxOf(
         if (showCastButton) 1 else 0,
         if (editing && tab.url == BLANK_URL) 1 else 0,
@@ -388,11 +386,6 @@ internal fun ExpandedBottomBarContent(
                 shape = RoundedCornerShape(fieldCornerRadius),
                 color = if (segmentedAddressBar) Color.Transparent else fieldContainerColor,
                 contentColor = addressChromeTokens.fieldContentColor,
-                border = if (segmentedEditorFocused) {
-                    BorderStroke(2.dp, addressChromeTokens.accentColor)
-                } else {
-                    null
-                },
             ) {
                 AddressBarFieldContent(
                     editing = editing,
