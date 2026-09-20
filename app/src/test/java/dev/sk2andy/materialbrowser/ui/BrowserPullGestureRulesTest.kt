@@ -1,9 +1,37 @@
 package dev.sk2andy.materialbrowser.ui
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class BrowserPullGestureRulesTest {
+    @Test
+    fun `pull starts only near top of visible page`() {
+        assertTrue(
+            BrowserPullGestureRules.canStartInTopZone(
+                touchY = 95f,
+                topInsetPx = 32,
+                zoneHeightPx = 64,
+            ),
+        )
+        assertFalse(
+            BrowserPullGestureRules.canStartInTopZone(
+                touchY = 97f,
+                topInsetPx = 32,
+                zoneHeightPx = 64,
+            ),
+        )
+    }
+
+    @Test
+    fun `invalid touch geometry cannot start a pull`() {
+        assertFalse(BrowserPullGestureRules.canStartInTopZone(Float.NaN, 0, 64))
+        assertFalse(BrowserPullGestureRules.canStartInTopZone(-1f, 0, 64))
+        assertFalse(BrowserPullGestureRules.canStartInTopZone(1f, -1, 64))
+        assertFalse(BrowserPullGestureRules.canStartInTopZone(1f, 0, 0))
+    }
+
     @Test
     fun `movement inside touch slop stays undecided`() {
         assertEquals(
