@@ -114,7 +114,9 @@ selected player's site chrome without hiding captions. The Candy control host mo
 fullscreen element so it remains in the fullscreen top layer. Candy restores the page's original
 controls state and YouTube chrome when the inline presentation ends. Only Android PiP preparation
 temporarily applies the video-only layout; it synchronously aligns the video before the first PiP
-frame, while later layout changes remain observer-driven. Returning from or cancelling PiP restores
+frame, while observers and a bounded post-entry frame check correct later movement. On YouTube,
+PiP-only styles also remove clipping and transformed containing blocks from the selected video's
+ancestors; those styles are removed on return. Returning from or cancelling PiP restores
 the same inline video and its Candy controls. An inline upward fullscreen gesture transforms the
 actual video frame and separate control host by the same bounded rubber-band offset. It preserves
 the video's original CSS transform and clears both temporary transforms on cancellation or entry.
@@ -127,6 +129,15 @@ crop. Android Back exits selected DOM fullscreen before web history navigation. 
 fullscreen preserves the acknowledged inline presentation and returns to its inline controls. The
 retained presentation may remain `Expanded`, but only active DOM fullscreen or video-only PiP
 preparation hides browser chrome and Android system bars.
+On YouTube, Candy continuously remembers both the actual video's and the selected player's
+visible rectangles during ordinary inline presentation. The first fullscreen or PiP transition
+freezes that stable snapshot before the video-only layout or Android viewport resize; repeated
+preparation cannot replace it with transitional geometry. After returning, Candy compares the
+actual video and player rectangles with that snapshot through delayed page reflow and corrects
+their positions independently, including movement of the player's parent. It follows page
+scrolling, waits while viewport or player dimensions are mismatched, and never applies the
+correction inside fullscreen or video-only PiP. The scoped correction survives closing Candy
+controls and is released on navigation, media end, mode disable or page unload.
 While the Candy presentation is expanded, vertical gestures use three stable screen regions: the
 left region adjusts a per-window brightness override, the center drags the live video down to leave
 fullscreen, and the right region changes the global media stream volume. The center drag moves,
