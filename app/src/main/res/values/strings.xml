@@ -317,6 +317,22 @@
     <string name="favorites_empty">No favorites yet</string>
     <string name="favorites_no_matches">No matching favorites</string>
     <string name="favorites_save_failed">Favorites couldn’t be saved</string>
+    <string name="favorites_create_folder">Create folder</string>
+    <string name="favorites_rename">Rename</string>
+    <string name="favorites_name">Name</string>
+    <string name="favorites_actions">Actions for %1$s</string>
+    <string name="favorites_move">Move</string>
+    <string name="favorites_move_here">Move here</string>
+    <string name="favorites_move_up">Move earlier</string>
+    <string name="favorites_move_down">Move later</string>
+    <string name="favorites_parent">Parent folder</string>
+    <string name="favorites_folder_empty">This folder is empty</string>
+    <string name="favorites_folder_icon">Folder icon</string>
+    <string name="favorites_folder_emoji">Emoji (optional)</string>
+    <string name="favorites_upload_icon">Choose image</string>
+    <string name="favorites_reset_icon">Use favicon preview</string>
+    <string name="favorites_icon_failed">This image couldn’t be loaded</string>
+
     <string name="content_actions_title">Page content</string>
     <string name="action_open_link_background_tab">Open link in new background tab</string>
     <string name="action_open_link_foreground_tab">Open link in new foreground tab</string>

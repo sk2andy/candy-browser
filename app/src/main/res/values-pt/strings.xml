@@ -1270,4 +1270,19 @@
     <string name="settings_menu_location_both">Em ambos</string>
     <string name="settings_menu_entry_topping_commands">Comandos de toppings</string>
     <string name="settings_menu_entry_firefox_page_actions">Ações das extensões do Firefox</string>
+    <string name="favorites_create_folder">Criar pasta</string>
+    <string name="favorites_rename">Renomear</string>
+    <string name="favorites_name">Nome</string>
+    <string name="favorites_actions">Ações para %1$s</string>
+    <string name="favorites_move">Mover</string>
+    <string name="favorites_move_here">Mover para aqui</string>
+    <string name="favorites_move_up">Mover para cima</string>
+    <string name="favorites_move_down">Mover para baixo</string>
+    <string name="favorites_parent">Pasta superior</string>
+    <string name="favorites_folder_empty">Esta pasta está vazia</string>
+    <string name="favorites_folder_icon">Ícone da pasta</string>
+    <string name="favorites_folder_emoji">Emoji (opcional)</string>
+    <string name="favorites_upload_icon">Escolher imagem</string>
+    <string name="favorites_reset_icon">Usar prévia dos favicons</string>
+    <string name="favorites_icon_failed">Não foi possível carregar esta imagem</string>
 </resources>

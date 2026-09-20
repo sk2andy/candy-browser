@@ -1416,6 +1416,8 @@ internal fun BrowserScreen(
                             addressEditorVisible = false
                             controller.submitAddress(url)
                         },
+                        onOpenFavorites = onOpenFavorites,
+                        onReorderFavorite = controller::reorderFavorite,
                         blankTabModeProgress = blankTabModeProgress,
                         blankTabModeRevealOrigin = blankTabModeRevealOrigin,
                         onRetry = controller::retryFailedPage,

@@ -1,6 +1,7 @@
 package dev.sk2andy.materialbrowser.ui
 
 import androidx.compose.ui.geometry.Offset
+import dev.sk2andy.materialbrowser.browser.FavoriteAnimationSpeed
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -28,39 +29,61 @@ class NewTabFavoriteGridRulesTest {
     }
 
     @Test
-    fun `visible favorites receive stable unique start shapes`() {
+    fun `folder navigation reserves a slot for parent shortcut`() {
+        val oneRowHeight = NewTabFavoriteGridRules.CELL_HEIGHT_DP +
+            NewTabFavoriteGridRules.VERTICAL_CONTENT_PADDING_DP * 2
+
+        assertEquals(
+            oneRowHeight,
+            NewTabFavoriteGridRules.containerHeightDp(
+                itemCount = 3,
+                hasUpNavigation = true,
+            ),
+        )
+        assertEquals(
+            NewTabFavoriteGridRules.CELL_HEIGHT_DP * 2 +
+                NewTabFavoriteGridRules.VERTICAL_CONTENT_PADDING_DP * 2,
+            NewTabFavoriteGridRules.containerHeightDp(
+                itemCount = 4,
+                hasUpNavigation = true,
+            ),
+        )
+    }
+
+    @Test
+    fun `visible favorites always use circles`() {
         val urls = (1..20).map { index -> "https://favorite-$index.example/" }
         val first = NewTabFavoriteShapeRules.startVariants(urls)
         val second = NewTabFavoriteShapeRules.startVariants(urls)
 
         assertEquals(first, second)
-        assertEquals(NewTabFavoriteShapeVariant.entries.toSet(), first.toSet())
+        assertEquals(List(urls.size) { NewTabFavoriteShapeVariant.Circle }, first)
     }
 
     @Test
-    fun `morph phase advances from each assigned start shape`() {
+    fun `shape phase keeps the icon circular`() {
         val start = NewTabFavoriteShapeVariant.Arch
 
         assertEquals(
             NewTabFavoriteMorphState(
-                from = NewTabFavoriteShapeVariant.Arch,
-                to = NewTabFavoriteShapeVariant.Fan,
+                from = NewTabFavoriteShapeVariant.Circle,
+                to = NewTabFavoriteShapeVariant.Circle,
                 progress = 0f,
             ),
             NewTabFavoriteShapeRules.morphState(start, 0f),
         )
         assertEquals(
             NewTabFavoriteMorphState(
-                from = NewTabFavoriteShapeVariant.Fan,
-                to = NewTabFavoriteShapeVariant.Triangle,
-                progress = 0.25f,
+                from = NewTabFavoriteShapeVariant.Circle,
+                to = NewTabFavoriteShapeVariant.Circle,
+                progress = 0f,
             ),
             NewTabFavoriteShapeRules.morphState(start, 1.25f),
         )
         assertEquals(
             NewTabFavoriteMorphState(
-                from = NewTabFavoriteShapeVariant.Arch,
-                to = NewTabFavoriteShapeVariant.Fan,
+                from = NewTabFavoriteShapeVariant.Circle,
+                to = NewTabFavoriteShapeVariant.Circle,
                 progress = 0f,
             ),
             NewTabFavoriteShapeRules.morphState(start, Float.NaN),
@@ -73,6 +96,13 @@ class NewTabFavoriteGridRulesTest {
         assertEquals(0.5f, NewTabFavoriteShapeRules.morphProgress(1_800L, 3_600), 0.001f)
         assertEquals(1f, NewTabFavoriteShapeRules.morphProgress(9_600L, 3_600), 0.001f)
         assertEquals(1f, NewTabFavoriteShapeRules.morphProgress(0L, 0), 0.001f)
+    }
+
+    @Test
+    fun `animation speed controls circular favorite launch`() {
+        assertEquals(780, NewTabFavoriteLaunchMotionRules.durationMillis(FavoriteAnimationSpeed.Relaxed))
+        assertEquals(620, NewTabFavoriteLaunchMotionRules.durationMillis(FavoriteAnimationSpeed.Normal))
+        assertEquals(480, NewTabFavoriteLaunchMotionRules.durationMillis(FavoriteAnimationSpeed.Fast))
     }
 
     @Test

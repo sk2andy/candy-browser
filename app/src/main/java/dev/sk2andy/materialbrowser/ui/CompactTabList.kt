@@ -78,6 +78,7 @@ import dev.sk2andy.materialbrowser.browser.AddressResolver
 import dev.sk2andy.materialbrowser.browser.BLANK_URL
 import dev.sk2andy.materialbrowser.browser.BrowserTab
 import dev.sk2andy.materialbrowser.data.FavoriteEntry
+import dev.sk2andy.materialbrowser.data.FavoriteLibrary
 
 @Composable
 internal fun TabFavicon(
@@ -130,12 +131,14 @@ internal fun TabPreviewContent(
     preview: Bitmap?,
     favicon: Bitmap?,
     favorites: List<FavoriteEntry> = emptyList(),
+    favoriteLibrary: FavoriteLibrary? = null,
     favoriteFavicons: Map<String, Bitmap> = emptyMap(),
 ) {
     when {
         tab.isIncognito -> IncognitoTabPlaceholder()
         tab.url == BLANK_URL -> BlankTabPreview(
             favorites = favorites,
+            favoriteLibrary = favoriteLibrary,
             favoriteFavicons = favoriteFavicons,
             favoritesAlpha = { 0f },
         )
