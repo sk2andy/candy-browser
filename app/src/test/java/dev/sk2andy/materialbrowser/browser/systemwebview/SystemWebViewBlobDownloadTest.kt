@@ -8,6 +8,27 @@ import org.junit.Test
 
 class SystemWebViewBlobDownloadTest {
     @Test
+    fun `popup blob download requires gesture and opener origin`() {
+        val blobUrl = "blob:https://gemini.google.com/93a7a1f2-7405-4f27-a3bc-4335cc9a3bfd"
+
+        assertTrue(SystemWebViewBlobDownloadRules.isPopupBlobDownload(
+            blobUrl,
+            "https://gemini.google.com/app/123",
+            hasUserGesture = true,
+        ))
+        assertFalse(SystemWebViewBlobDownloadRules.isPopupBlobDownload(
+            blobUrl,
+            "https://gemini.google.com/app/123",
+            hasUserGesture = false,
+        ))
+        assertFalse(SystemWebViewBlobDownloadRules.isPopupBlobDownload(
+            blobUrl,
+            "https://chatgpt.com/c/123",
+            hasUserGesture = true,
+        ))
+    }
+
+    @Test
     fun `accepts HTTP blob owned by current page origin`() {
         assertTrue(
             SystemWebViewBlobDownloadRules.isSameOriginBlob(
