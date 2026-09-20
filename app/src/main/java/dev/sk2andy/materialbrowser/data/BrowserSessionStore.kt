@@ -394,54 +394,78 @@ class BrowserSessionStore internal constructor(
         preferences.edit().putBoolean(KEY_HISTORY_SESSION_ACTIVE, active).commit()
 
     @Synchronized
-    fun loadFavorites(): List<FavoriteEntry> = loadArray(KEY_FAVORITES) { item ->
-        FavoriteEntry(
-            url = item.getString("url"),
-            title = item.optString("title"),
-            addedAt = item.optLong("addedAt"),
-        )
+    fun loadFavorites(): List<FavoriteEntry> = loadFavoriteLibrary().favorites
+
+    @Synchronized
+    fun loadFavoriteLibrary(): FavoriteLibrary {
+        val raw = preferences.getString(KEY_FAVORITES, null) ?: return FavoriteLibrary()
+        val array = runCatching { JSONArray(raw) }.getOrNull() ?: return FavoriteLibrary()
+        val entries = buildList {
+            for (index in 0 until array.length()) {
+                array.optJSONObject(index)?.let(::readFavoriteLibraryEntry)?.let(::add)
+            }
+        }
+        return BrowsingFavoritesRules.normalizeLibrary(FavoriteLibrary(entries))
     }
 
     @Synchronized
-    fun saveFavorites(favorites: List<FavoriteEntry>) = saveArray(
-        key = KEY_FAVORITES,
-        values = favorites,
-    ) { entry ->
-        JSONObject()
-            .put("url", entry.url)
-            .put("title", entry.title)
-            .put("addedAt", entry.addedAt)
+    fun saveFavorites(favorites: List<FavoriteEntry>) {
+        saveFavoriteLibrary(FavoriteLibrary(favorites))
+    }
+
+    @Synchronized
+    fun saveFavoriteLibrary(library: FavoriteLibrary) {
+        saveArray(
+            key = KEY_FAVORITES,
+            values = BrowsingFavoritesRules.normalizeLibrary(library).entries,
+            write = ::writeFavoriteLibraryEntry,
+        )
     }
 
     internal fun saveFavoritesCommitted(
         favorites: List<FavoriteEntry>,
         expectedCurrent: List<FavoriteEntry>? = null,
+    ): Boolean = saveFavoriteLibraryCommitted(
+        library = FavoriteLibrary(favorites),
+        expectedCurrent = expectedCurrent?.let(::FavoriteLibrary),
+    )
+
+    internal fun saveFavoriteLibraryCommitted(
+        library: FavoriteLibrary,
+        expectedCurrent: FavoriteLibrary? = null,
     ): Boolean =
         synchronized(FAVORITES_COMMIT_LOCK) {
             synchronized(this) favoriteWrite@{
-                if (expectedCurrent != null && loadFavorites() != expectedCurrent) {
+                if (expectedCurrent != null && loadFavoriteLibrary() != expectedCurrent) {
                     return@favoriteWrite false
                 }
                 saveArrayCommitted(
                     key = KEY_FAVORITES,
-                    values = favorites,
-                ) { entry ->
-                    JSONObject()
-                        .put("url", entry.url)
-                        .put("title", entry.title)
-                        .put("addedAt", entry.addedAt)
-                }
+                    values = BrowsingFavoritesRules.normalizeLibrary(library).entries,
+                    write = ::writeFavoriteLibraryEntry,
+                )
             }
         }
 
     internal fun mergeImportedFavoritesCommitted(
         imported: List<FavoriteEntry>,
     ): FavoriteBookmarkMergeResult? = synchronized(FAVORITES_COMMIT_LOCK) {
+        val current = loadFavoriteLibrary()
         val result = FavoriteBookmarkImportRules.merge(
-            current = loadFavorites(),
+            current = current.favorites,
             imported = imported,
         )
-        if (result.importedCount == 0 || saveFavoritesCommitted(result.favorites)) {
+        val importedRootEntries = result.favorites.take(result.importedCount)
+        val merged = FavoriteLibrary(
+            entries = importedRootEntries + current.entries,
+        )
+        if (
+            result.importedCount == 0 ||
+            saveFavoriteLibraryCommitted(
+                library = merged,
+                expectedCurrent = current,
+            )
+        ) {
             result
         } else {
             null
@@ -1546,3 +1570,56 @@ private fun ProfileProtection?.toJson(): Any = this
             .put("cooldownMinutes", protection.cooldownMinutes)
     }
     ?: JSONObject.NULL
+
+private fun writeFavoriteLibraryEntry(entry: FavoriteLibraryEntry): JSONObject = when (entry) {
+    is FavoriteEntry -> JSONObject()
+        .put("type", "favorite")
+        .put("id", entry.id)
+        .put("url", entry.url)
+        .put("title", entry.title)
+        .put("addedAt", entry.addedAt)
+        .put("parentFolderId", entry.parentFolderId)
+    is FavoriteFolder -> JSONObject()
+        .put("type", "folder")
+        .put("id", entry.id)
+        .put("title", entry.title)
+        .put("parentFolderId", entry.parentFolderId)
+        .put("icon", entry.icon.toJson())
+}
+
+private fun readFavoriteLibraryEntry(item: JSONObject): FavoriteLibraryEntry? = runCatching {
+    when (item.optString("type")) {
+        "folder" -> FavoriteFolder(
+            id = item.optString("id"),
+            title = item.optString("title"),
+            parentFolderId = item.optString("parentFolderId").takeIf(String::isNotBlank),
+            icon = readFavoriteFolderIcon(item),
+        )
+        else -> {
+            val url = item.getString("url")
+            FavoriteEntry(
+                url = url,
+                title = item.optString("title"),
+                addedAt = item.optLong("addedAt"),
+                id = item.optString("id").ifBlank { favoriteEntryId(url) },
+                parentFolderId = item.optString("parentFolderId").takeIf(String::isNotBlank),
+            )
+        }
+    }
+}.getOrNull()
+
+private fun readFavoriteFolderIcon(item: JSONObject): FavoriteFolderIcon? {
+    val icon = item.optJSONObject("icon") ?: return null
+    return when (icon.optString("type")) {
+        "emoji" -> icon.optString("value").takeIf(String::isNotBlank)
+            ?.let(FavoriteFolderIcon::Emoji)
+        "custom" -> FavoriteFolderIcon.Custom
+        else -> null
+    }
+}
+
+private fun FavoriteFolderIcon?.toJson(): Any = when (this) {
+    null -> JSONObject.NULL
+    is FavoriteFolderIcon.Emoji -> JSONObject().put("type", "emoji").put("value", value)
+    FavoriteFolderIcon.Custom -> JSONObject().put("type", "custom")
+}

@@ -99,6 +99,7 @@ import dev.sk2andy.materialbrowser.browser.FindInPageRules
 import dev.sk2andy.materialbrowser.browser.ExternalLinkPreviewCommitResult
 import dev.sk2andy.materialbrowser.browser.ExternalLinkPreviewState
 import dev.sk2andy.materialbrowser.data.FavoriteEntry
+import dev.sk2andy.materialbrowser.data.FavoriteLibrary
 import dev.sk2andy.materialbrowser.ui.theme.browserChromeSurfaceTokens
 import eightbitlab.com.blurview.BlurTarget
 import kotlin.math.absoluteValue
@@ -315,6 +316,8 @@ internal fun BrowserViewport(
     onLiveFrame: (String) -> Unit,
     onSearch: () -> Unit,
     onFavorite: (String) -> Unit,
+    onOpenFavorites: () -> Unit = {},
+    onReorderFavorite: (String, Int) -> Unit = { _, _ -> },
     blankTabModeProgress: Float,
     blankTabModeRevealOrigin: Offset,
     onRetry: () -> Boolean,
@@ -389,6 +392,7 @@ internal fun BrowserViewport(
             preview = controller.previews[tab.id],
             favicon = controller.favicons[tab.id],
             favorites = controller.favorites,
+            favoriteLibrary = controller.favoriteLibrary,
             favoriteFavicons = controller.favoriteFavicons,
             dragOffset = dragOffset,
             dragDirection = dragDirection,
@@ -495,12 +499,16 @@ internal fun BrowserViewport(
                 key(selectedTab.id) {
                     NewTabPage(
                         favorites = controller.favorites,
+                        favoriteLibrary = controller.favoriteLibrary,
                         favicons = controller.favoriteFavicons,
+                        folderIcons = controller.favoriteFolderIcons,
                         incognito = selectedTab.isIncognito,
                         modeProgress = blankTabModeProgress,
                         revealOriginInRoot = blankTabModeRevealOrigin,
                         onSearch = onSearch,
                         onFavorite = onFavorite,
+                        onOpenFavorites = onOpenFavorites,
+                        onReorderFavorite = onReorderFavorite,
                         favoriteLaunchAnimationEnabled =
                             controller.isFavoriteLaunchAnimationEnabled,
                         favoriteAnimationSpeed = controller.favoriteAnimationSpeed,
@@ -557,6 +565,7 @@ internal fun BrowserViewport(
         TabHandoffOverlay(
             handoff = currentHandoff,
             favorites = controller.favorites,
+            favoriteLibrary = controller.favoriteLibrary,
             favoriteFavicons = controller.favoriteFavicons,
             alpha = if (TabHandoffRules.shouldRevealLiveContent(
                     handoff = currentHandoff,
@@ -822,6 +831,7 @@ private class BrowserEngineViewHostState(val container: FrameLayout) {
 private fun TabHandoffOverlay(
     handoff: TabHandoff,
     favorites: List<FavoriteEntry>,
+    favoriteLibrary: FavoriteLibrary? = null,
     favoriteFavicons: Map<String, Bitmap>,
     alpha: Float,
     rootHeightPx: Float,
@@ -838,6 +848,7 @@ private fun TabHandoffOverlay(
             preview = handoff.preview,
             favicon = handoff.favicon,
             favorites = favorites,
+            favoriteLibrary = favoriteLibrary,
             favoriteFavicons = favoriteFavicons,
             rootHeightPx = rootHeightPx,
             previewTopInsetPx = handoff.previewTopInsetPx,
@@ -852,6 +863,7 @@ private fun TabSwitchPreview(
     preview: Bitmap?,
     favicon: Bitmap?,
     favorites: List<FavoriteEntry>,
+    favoriteLibrary: FavoriteLibrary? = null,
     favoriteFavicons: Map<String, Bitmap>,
     dragOffset: MutableFloatState,
     dragDirection: Int,
@@ -884,6 +896,7 @@ private fun TabSwitchPreview(
             preview = preview,
             favicon = favicon,
             favorites = favorites,
+            favoriteLibrary = favoriteLibrary,
             favoriteFavicons = favoriteFavicons,
             rootHeightPx = rootHeightPx,
             previewTopInsetPx = previewTopInsetPx,
@@ -901,6 +914,7 @@ internal fun FullscreenTabPreviewContent(
     previewTopInsetPx: Int,
     bottomBarTopPx: FloatState,
     favorites: List<FavoriteEntry>,
+    favoriteLibrary: FavoriteLibrary? = null,
     favoriteFavicons: Map<String, Bitmap> = emptyMap(),
     blankFavoritesAlpha: () -> Float = { 1f },
 ) {
@@ -927,6 +941,7 @@ internal fun FullscreenTabPreviewContent(
             tab.isIncognito -> IncognitoTabPlaceholder()
             tab.url == BLANK_URL -> BlankTabPreview(
                 favorites = favorites,
+                favoriteLibrary = favoriteLibrary,
                 favoriteFavicons = favoriteFavicons,
                 favoritesAlpha = blankFavoritesAlpha,
             )
@@ -977,6 +992,7 @@ private fun rootSafeDrawingPadding(rootView: View): PaddingValues {
 @Composable
 internal fun BlankTabPreview(
     favorites: List<FavoriteEntry>,
+    favoriteLibrary: FavoriteLibrary? = null,
     favoriteFavicons: Map<String, Bitmap> = emptyMap(),
     favoritesAlpha: () -> Float,
 ) {
@@ -1022,6 +1038,7 @@ internal fun BlankTabPreview(
         ) {
             NewTabPage(
                 favorites = favorites,
+                favoriteLibrary = favoriteLibrary,
                 favicons = favoriteFavicons,
                 incognito = false,
                 modeProgress = 0f,
