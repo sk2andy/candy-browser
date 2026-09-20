@@ -355,6 +355,17 @@
 
     <!-- Settings -->
     <string name="settings_title">Settings</string>
+    <string name="settings_home_group_browsing">Browsing</string>
+    <string name="settings_home_group_personalization">Personalization</string>
+    <string name="settings_home_group_privacy_data">Privacy &amp; data</string>
+    <string name="settings_home_group_about">More information</string>
+    <string name="settings_browser_group_general">Browser setup</string>
+    <string name="settings_browser_group_startup">Startup</string>
+    <string name="settings_browser_group_favorites">Favorites</string>
+    <string name="settings_browser_group_websites">Web pages</string>
+    <string name="settings_browser_group_links">Links &amp; apps</string>
+    <string name="settings_protection_group_tools">Privacy tools</string>
+    <string name="settings_protection_group_app_data">App data</string>
     <string name="settings_appearance_title">Appearance</string>
     <string name="settings_home_appearance_summary">Colors, website text, surfaces, and shape</string>
     <string name="settings_appearance_mode">Appearance</string>
@@ -399,7 +410,7 @@
     <string name="settings_home_search_summary">Search engine and suggestions</string>
     <string name="settings_tabs_gestures_title">Tabs &amp; gestures</string>
     <string name="settings_home_tabs_gestures_summary">Tab layout, lifetime, profiles, and controls</string>
-    <string name="settings_home_browser_summary">Interface and default-browser behavior</string>
+    <string name="settings_home_browser_summary">Startup, favorites, web pages, links, and default browser</string>
     <string name="settings_downloads_title">Downloads</string>
     <string name="settings_home_capsules_summary">Manage saved Site Capsules and shortcuts</string>
     <string name="settings_protection_data_title">Protection &amp; data</string>

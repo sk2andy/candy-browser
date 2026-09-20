@@ -9,24 +9,33 @@ import kotlin.test.assertTrue
 
 class SettingsHomeRulesTest {
     @Test
-    fun androidHomeKeepsExistingDestinationOrder() {
+    fun androidHomeGroupsDestinationsByTask() {
         val items = SettingsHomeRules.items(hasFirefoxExtensions = true)
 
         assertEquals(
             listOf(
                 SettingsDestination.Search,
-                SettingsDestination.Sync,
                 SettingsDestination.TabsAndGestures,
-                SettingsDestination.Appearance,
                 SettingsDestination.Browser,
                 SettingsDestination.Downloads,
+                SettingsDestination.Appearance,
+                SettingsDestination.SiteCapsules,
                 SettingsDestination.Userscripts,
                 null,
-                SettingsDestination.SiteCapsules,
                 SettingsDestination.ProtectionAndData,
+                SettingsDestination.Sync,
                 SettingsDestination.AboutLegal,
             ),
             items.map(SettingsHomeItem::destination),
+        )
+        assertEquals(
+            listOf(
+                SettingsHomeGroup.Browsing,
+                SettingsHomeGroup.Personalization,
+                SettingsHomeGroup.PrivacyData,
+                SettingsHomeGroup.About,
+            ),
+            items.map(SettingsHomeItem::group).distinct(),
         )
         assertTrue(items.single { it.destination == null }.isFirefoxExtensionsAction)
     }

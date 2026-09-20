@@ -97,6 +97,8 @@ internal fun ProtectionAndDataSettingsPage(
         title = stringResource(R.string.settings_protection_data_title),
         onBack = onBack,
     ) {
+        SettingsSectionTitle(stringResource(R.string.settings_protection_group_tools))
+        Spacer(Modifier.height(8.dp))
         Surface(
             onClick = onPermissionRadar,
             modifier = Modifier
@@ -160,6 +162,8 @@ internal fun ProtectionAndDataSettingsPage(
             UserCaTrustWarning()
         }
         Spacer(Modifier.height(18.dp))
+        SettingsSectionTitle(stringResource(R.string.settings_section_protection))
+        Spacer(Modifier.height(8.dp))
         SettingsSwitch(
             title = stringResource(R.string.settings_block_ads_title),
             subtitle = stringResource(R.string.settings_block_ads_subtitle),
@@ -324,6 +328,8 @@ internal fun ProtectionAndDataSettingsPage(
             modifier = Modifier.testTag(ProtectionSettingsTestTags.Recall),
         )
         Spacer(Modifier.height(16.dp))
+        SettingsSectionTitle(stringResource(R.string.settings_protection_group_app_data))
+        Spacer(Modifier.height(8.dp))
         DataArchiveAction(
             title = stringResource(R.string.data_archive_export_title),
             summary = stringResource(R.string.data_archive_export_summary),

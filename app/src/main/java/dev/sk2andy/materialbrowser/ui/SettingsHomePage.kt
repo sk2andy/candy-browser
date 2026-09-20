@@ -61,6 +61,11 @@ private object AndroidSettingsHomeResources : SettingsHomeResources {
         when (label) {
             SettingsHomeLabel.Title -> R.string.settings_title
             SettingsHomeLabel.Back -> R.string.action_back
+            SettingsHomeLabel.BrowsingGroup -> R.string.settings_home_group_browsing
+            SettingsHomeLabel.PersonalizationGroup ->
+                R.string.settings_home_group_personalization
+            SettingsHomeLabel.PrivacyDataGroup -> R.string.settings_home_group_privacy_data
+            SettingsHomeLabel.AboutGroup -> R.string.settings_home_group_about
             SettingsHomeLabel.SearchTitle -> R.string.settings_section_search
             SettingsHomeLabel.SearchSummary -> R.string.settings_home_search_summary
             SettingsHomeLabel.SyncTitle -> R.string.sync_settings_title
