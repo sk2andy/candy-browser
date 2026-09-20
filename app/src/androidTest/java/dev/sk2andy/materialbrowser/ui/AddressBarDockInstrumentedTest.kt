@@ -518,7 +518,16 @@ class AddressBarDockInstrumentedTest {
             composeRule.activity.getString(R.string.cd_more_options),
         ).assertIsDisplayed()
 
-        composeRule.onNodeWithText("example.test").performClick()
+        if (
+            composeRule.onAllNodesWithTag(WideAddressTabStripTestTags.Strip)
+                .fetchSemanticsNodes().isNotEmpty()
+        ) {
+            composeRule.onNodeWithTag(
+                WideAddressTabStripTestTags.TabPrefix + "segmented-address-tab",
+            ).performClick()
+        } else {
+            composeRule.onNodeWithText("example.test").performClick()
+        }
         composeRule.onNodeWithTag(AddressBarTestTags.Editor).assertIsFocused()
         composeRule.onNodeWithContentDescription(
             composeRule.activity.getString(R.string.cd_close_address_input),

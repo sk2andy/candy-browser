@@ -52,4 +52,12 @@ class AddressBarGestureRulesTest {
             ),
         )
     }
+
+    @Test
+    fun `wide tab strip starts at 600 dp`() {
+        assertEquals(false, AddressBarWideLayoutRules.usesTabStrip(599f))
+        assertEquals(true, AddressBarWideLayoutRules.usesTabStrip(600f))
+        assertEquals(true, AddressBarWideLayoutRules.usesTabStrip(840f))
+        assertEquals(false, AddressBarWideLayoutRules.usesTabStrip(Float.NaN))
+    }
 }
