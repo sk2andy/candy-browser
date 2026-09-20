@@ -128,6 +128,7 @@ import dev.sk2andy.materialbrowser.browser.gecko.GeckoExtensionSessionIdentity
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoExtensionUpdateTabRequest
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoMediaCommand
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoFullscreenStateListener
+import dev.sk2andy.materialbrowser.browser.gecko.GeckoFileUploadStager
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoMainFrameNavigationRequest
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoNewSessionRequest
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoMediaSessionState
@@ -1068,6 +1069,7 @@ class BrowserController(
         }
     }
     private val fileChooserValidationExecutor = Executors.newSingleThreadExecutor()
+    private val geckoFileUploadStager = GeckoFileUploadStager(activity.applicationContext)
     private val profileWallpaperExecutor = Executors.newSingleThreadExecutor { task ->
         Thread(task, "profile-wallpaper")
     }
@@ -1591,6 +1593,7 @@ class BrowserController(
         } else {
             emptyList()
         }
+        val shouldStageForGecko = usesGeckoEngine
         runCatching {
             fileChooserValidationExecutor.execute {
                 val safeUris = FileChooserRules.sanitizedUris(parsed, pending.allowMultiple)
@@ -1598,19 +1601,29 @@ class BrowserController(
                     .filter { uri -> isSafeFileChooserResult(uri, pending.acceptTypes) }
                     .toTypedArray()
                     .takeIf(Array<Uri>::isNotEmpty)
+                val stagedUpload = if (shouldStageForGecko && safeUris != null) {
+                    geckoFileUploadStager.stage(safeUris)
+                } else {
+                    null
+                }
+                val deliverUris = if (shouldStageForGecko) stagedUpload?.uris else safeUris
                 mainHandler.post {
                     if (
                         pendingFileChooser !== pending ||
                         !isFileChooserCurrent(pending.identity)
                     ) {
                         if (pendingFileChooser === pending) pendingFileChooser = null
+                        stagedUpload?.delete()
                         finalizeFileCapture(pending.captureOutput, keep = false)
                         pending.delivery.complete(null)
                         scheduleResidentSessionTrim()
                     } else {
                         pendingFileChooser = null
-                        finalizeFileCapture(pending.captureOutput, keep = safeUris != null)
-                        pending.delivery.complete(safeUris)
+                        if (stagedUpload != null) {
+                            geckoFileUploadStager.retain(pending.identity.tabId, stagedUpload)
+                        }
+                        finalizeFileCapture(pending.captureOutput, keep = deliverUris != null)
+                        pending.delivery.complete(deliverUris)
                         scheduleResidentSessionTrim()
                     }
                 }
@@ -1925,6 +1938,7 @@ class BrowserController(
         semanticRuleKey(left) == semanticRuleKey(right)
 
     init {
+        fileChooserValidationExecutor.execute(geckoFileUploadStager::clearOrphans)
         filterRules += candyRuleRepository.load()
         userScripts += userScriptRepository.load()
         browserEngineSessionFactory.setBlockThirdPartyCookies(
@@ -9216,6 +9230,7 @@ class BrowserController(
         cancelPendingWebPrompt()
         cancelPendingFileChooser()
         fileChooserValidationExecutor.shutdownNow()
+        geckoFileUploadStager.releaseAll()
         profileWallpaperLoadGeneration++
         profileTabSwitcherWallpaperLoadGeneration++
         profileWallpaperExecutor.shutdownNow()
@@ -11046,6 +11061,7 @@ class BrowserController(
             persistBrowserEngineSessionState(tabId, session)
             session.execute(BrowserEngineCommands.close())
         }
+        geckoFileUploadStager.release(tabId)
     }
 
     private fun persistBrowserEngineSessionState(
