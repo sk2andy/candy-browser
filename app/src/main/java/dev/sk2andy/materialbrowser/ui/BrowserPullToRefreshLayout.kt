@@ -7,6 +7,7 @@ import android.view.ViewConfiguration
 import android.view.ViewGroup
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import kotlin.math.absoluteValue
+import kotlin.math.roundToInt
 
 /** Native gesture bridge for browser engine views hosted through Compose AndroidView. */
 internal class BrowserPullToRefreshLayout(
@@ -21,6 +22,7 @@ internal class BrowserPullToRefreshLayout(
     private val defaultIndicatorStartOffsetPx = progressViewStartOffset
     private val defaultIndicatorEndOffsetPx = progressViewEndOffset
     private var indicatorTopInsetPx = 0
+    private val pullZoneHeightPx = (PULL_ZONE_HEIGHT_DP * resources.displayMetrics.density).roundToInt()
     private val touchSlop = ViewConfiguration.get(context).scaledTouchSlop.toFloat()
     private var downX = 0f
     private var downY = 0f
@@ -47,7 +49,17 @@ internal class BrowserPullToRefreshLayout(
             MotionEvent.ACTION_DOWN -> {
                 downX = event.x
                 downY = event.y
-                gestureDirection = BrowserPullGestureDirection.Undecided
+                gestureDirection = if (
+                    BrowserPullGestureRules.canStartInTopZone(
+                        touchY = downY,
+                        topInsetPx = indicatorTopInsetPx,
+                        zoneHeightPx = pullZoneHeightPx,
+                    )
+                ) {
+                    BrowserPullGestureDirection.Undecided
+                } else {
+                    BrowserPullGestureDirection.PassThrough
+                }
                 gestureOnRefresh = onRefresh
             }
 
@@ -129,6 +141,17 @@ internal enum class BrowserPullGestureDirection {
 }
 
 internal object BrowserPullGestureRules {
+    fun canStartInTopZone(
+        touchY: Float,
+        topInsetPx: Int,
+        zoneHeightPx: Int,
+    ): Boolean =
+        touchY.isFinite() &&
+            touchY >= 0f &&
+            topInsetPx >= 0 &&
+            zoneHeightPx > 0 &&
+            touchY.toDouble() <= topInsetPx.toDouble() + zoneHeightPx
+
     fun resolve(
         current: BrowserPullGestureDirection,
         deltaX: Float,
@@ -149,3 +172,5 @@ internal object BrowserPullGestureRules {
         }
     }
 }
+
+private const val PULL_ZONE_HEIGHT_DP = 64f

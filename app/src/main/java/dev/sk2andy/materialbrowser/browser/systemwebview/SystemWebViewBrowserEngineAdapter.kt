@@ -936,39 +936,49 @@ private class SystemWebViewBrowserEngineSession(
         webView.webViewClient = browserClient()
         webView.webChromeClient = chromeClient()
         webView.setDownloadListener { url, _, contentDisposition, mimeType, _ ->
-            val metadata = dev.sk2andy.materialbrowser.browser.BrowserEngineDownloadResponse(
-                url = url,
-                contentDisposition = contentDisposition,
-                mimeType = mimeType,
-            )
-            downloadResponseListener?.onDownloadResponse(
-                GeckoExternalDownloadResponse(
-                    metadata = metadata,
-                    startTransfer = { listener ->
-                        if (
-                            SystemWebViewBlobDownloadRules.isSameOriginBlob(
-                                url,
-                                webView.url.orEmpty(),
-                            )
-                        ) {
-                            blobDownloadTransfer.start(
-                                blobUrl = url,
-                                pageUrl = webView.url,
-                                contentDisposition = contentDisposition,
-                                mimeType = mimeType,
-                                referrer = webView.url,
-                                listener = listener,
-                            )
-                        } else {
-                            startDownload(url, contentDisposition, mimeType, listener)
-                        }
-                    },
-                    discard = {},
-                ),
-            )
+            dispatchDownloadResponse(url, contentDisposition, mimeType)
         }
         installMediaBridge()
         installAutoplayPolicy()
+    }
+
+    private fun dispatchDownloadResponse(
+        url: String,
+        contentDisposition: String?,
+        mimeType: String?,
+    ) {
+        if (closed) return
+        val pageUrl = webView.url
+        val metadata = dev.sk2andy.materialbrowser.browser.BrowserEngineDownloadResponse(
+            url = url,
+            contentDisposition = contentDisposition,
+            mimeType = mimeType,
+        )
+        downloadResponseListener?.onDownloadResponse(
+            GeckoExternalDownloadResponse(
+                metadata = metadata,
+                startTransfer = { listener ->
+                    if (
+                        SystemWebViewBlobDownloadRules.isSameOriginBlob(
+                            url,
+                            pageUrl.orEmpty(),
+                        )
+                    ) {
+                        blobDownloadTransfer.start(
+                            blobUrl = url,
+                            pageUrl = pageUrl,
+                            contentDisposition = contentDisposition,
+                            mimeType = mimeType,
+                            referrer = pageUrl,
+                            listener = listener,
+                        )
+                    } else {
+                        startDownload(url, contentDisposition, mimeType, listener)
+                    }
+                },
+                discard = {},
+            ),
+        )
     }
 
     private fun dispatchContentTargetFromHitTest(): Boolean {
@@ -1193,7 +1203,11 @@ private class SystemWebViewBrowserEngineSession(
             if (isPrivate) {
                 popup.importantForAutofill = View.IMPORTANT_FOR_AUTOFILL_NO_EXCLUDE_DESCENDANTS
             }
+            val popupHandled = AtomicBoolean(false)
+            val popupDestroyed = AtomicBoolean(false)
             val destroyPopup = Runnable {
+                popupHandled.set(true)
+                if (!popupDestroyed.compareAndSet(false, true)) return@Runnable
                 runCatching { popup.stopLoading() }
                 runCatching { popup.destroy() }
             }
@@ -1202,17 +1216,27 @@ private class SystemWebViewBrowserEngineSession(
                     popupView: WebView,
                     request: WebResourceRequest,
                 ): Boolean {
+                    if (!popupHandled.compareAndSet(false, true)) return true
                     val targetUrl = request.url.toString()
                     if (!contentBlocker.shouldBlockPopup(targetUrl, currentPageUrl)) {
-                        navigationRequestListener?.onNavigationRequest(
-                            GeckoMainFrameNavigationRequest(
-                                url = targetUrl,
-                                isRedirect = request.isRedirect,
+                        if (SystemWebViewBlobDownloadRules.isPopupBlobDownload(
+                                blobUrl = targetUrl,
+                                pageUrl = webView.url.orEmpty(),
                                 hasUserGesture = isUserGesture || request.hasGesture(),
-                                isDirectNavigation = !request.isRedirect,
-                                target = BrowserEngineNavigationTarget.New,
-                            ),
-                        )
+                            )
+                        ) {
+                            dispatchDownloadResponse(targetUrl, null, null)
+                        } else {
+                            navigationRequestListener?.onNavigationRequest(
+                                GeckoMainFrameNavigationRequest(
+                                    url = targetUrl,
+                                    isRedirect = request.isRedirect,
+                                    hasUserGesture = isUserGesture || request.hasGesture(),
+                                    isDirectNavigation = !request.isRedirect,
+                                    target = BrowserEngineNavigationTarget.New,
+                                ),
+                            )
+                        }
                     } else {
                         privacyEventSink.onEvent(
                             GeckoPrivacyEvent(
@@ -1229,6 +1253,17 @@ private class SystemWebViewBrowserEngineSession(
                     destroyPopup.run()
                     return true
                 }
+            }
+            popup.setDownloadListener { url, _, contentDisposition, mimeType, _ ->
+                if (
+                    popupHandled.compareAndSet(false, true) &&
+                    isUserGesture &&
+                    !contentBlocker.shouldBlockPopup(url, currentPageUrl)
+                ) {
+                    dispatchDownloadResponse(url, contentDisposition, mimeType)
+                }
+                popup.removeCallbacks(destroyPopup)
+                destroyPopup.run()
             }
             popup.postDelayed(destroyPopup, POPUP_CAPTURE_TIMEOUT_MILLIS)
             transport.webView = popup
@@ -1621,7 +1656,10 @@ private class SystemWebViewBrowserEngineSession(
     ): GeckoDownloadCancellation? {
         val safeUri = runCatching { Uri.parse(url) }.getOrNull()
             ?.takeIf { it.scheme == "http" || it.scheme == "https" }
-            ?: return null
+            ?: run {
+                listener.onFailed(GeckoDownloadFailure.InvalidRequest)
+                return null
+            }
         val downloadRequest = BrowserDownloadRequestFactory.create(
             url = url,
             contentDisposition = contentDisposition,

@@ -36,7 +36,7 @@
 | Local userscript | `UserScriptRules` → Gecko Topping document-start bridge | Require an explicit HTTP(S) pattern, top frame and regular tab; apply full URL exclusions before source runs |
 | Main-frame 404 | engine HTTP status → tab state → `PageErrorFeedbackRules` | Keep the navigation committed, preserve URL/title/history side effects, and cover the page with Candy's native not-found surface |
 | Offline page | failed main-frame navigation + `BrowserConnectivityMonitor` → controller → `PageErrorFeedbackRules` | Require Android's validated default internet capability, never cover an already loaded page merely because connectivity drops, auto-reload on reconnect only before the game starts, and preserve the game behind an explicit reload banner afterward |
-| Pull to refresh | `BrowserPullToRefreshLayout` → `BrowserPullGestureRules` / `BrowserPullToRefreshRules` → `BrowserController.reload()` | Admit a downward-dominant gesture only for a visible, idle web page whose engine-reported document offset is at the top; keep blank, obscured, Find-in-page, overview and video-only surfaces out of the gesture path |
+| Pull to refresh | `BrowserPullToRefreshLayout` → `BrowserPullGestureRules` / `BrowserPullToRefreshRules` → `BrowserController.reload()` | Admit a downward-dominant gesture starting within 64 dp below the top safe inset only for a visible, idle web page whose engine-reported document offset is at the top; keep gestures starting in the page body with nested scrollers, plus blank, obscured, Find-in-page, overview and video-only surfaces, out of the gesture path |
 
 ## Invariants
 
