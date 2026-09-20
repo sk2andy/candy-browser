@@ -3011,12 +3011,20 @@ class BrowserController(
                 presentation.tabId == tab.id &&
                 presentation.inlineVideoIdentity == null &&
                 tab.id in browserEngineContentFullscreenTabIds
+            val compatibleInlinePresentation = presentation != null &&
+                presentation.tabId == tab.id &&
+                presentation.session === session &&
+                presentation.inlineVideoIdentity == identity
             val stillCurrent = accepted &&
                 selectedTabId == tab.id &&
                 browserEngineSessions[tab.id] === session &&
                 navigationGenerations[tab.id] == navigationGeneration &&
                 isInlineMediaPlayerSupported &&
-                (presentation == null || compatibleFullscreenPresentation) &&
+                (
+                    presentation == null ||
+                        compatibleFullscreenPresentation ||
+                        compatibleInlinePresentation
+                    ) &&
                 isActivityResumed &&
                 externalLinkPreviewState == null &&
                 !isActiveProfileLocked &&

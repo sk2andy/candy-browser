@@ -74,7 +74,7 @@ function contentPolicy(policy) {
     "automatic",
   ]);
   const inlineMediaPlayerMode = inlineMediaPlayerModes.has(policy?.inlineMediaPlayerMode) ?
-    policy.inlineMediaPlayerMode : "button_fullscreen";
+    policy.inlineMediaPlayerMode : "button_inline_and_fullscreen";
   return {
     type: "content-policy",
     ready: Boolean(policy),
@@ -253,6 +253,7 @@ function requestInlineVideoOpen(message, sender) {
     policy.inlineMediaPlayerEnabled !== true ||
     message.revision !== policy.revision ||
     message.navigationGeneration !== policy.navigationGeneration ||
+    (message.expected !== false && message.mode !== policy.inlineMediaPlayerMode) ||
     !candidate?.active ||
     message.documentNonce !== candidate.documentNonce ||
     message.elementNonce !== candidate.elementNonce
@@ -265,9 +266,34 @@ function requestInlineVideoOpen(message, sender) {
     navigationGeneration: policy.navigationGeneration,
     documentNonce: candidate.documentNonce,
     elementNonce: candidate.elementNonce,
+    ...(message.expected !== false ? { mode: policy.inlineMediaPlayerMode } : {}),
     expected: message.expected !== false,
   });
   return true;
+}
+
+function inlineVideoOpenResponse(message, sender) {
+  const forwarded = requestInlineVideoOpen(message, sender);
+  if (forwarded || message.expected === false) return { forwarded };
+  const tabId = sender.tab?.id;
+  const policy = policiesByToken.get(tokenByTab.get(tabId));
+  const candidate = inlineVideosByTab.get(tabId)?.get(0);
+  if (
+    !Number.isInteger(tabId) ||
+    sender.frameId !== 0 ||
+    !nativePort ||
+    policy?.inlineMediaPlayerEnabled !== true ||
+    !Number.isSafeInteger(message.revision) ||
+    message.revision >= policy.revision ||
+    message.navigationGeneration !== policy.navigationGeneration ||
+    message.mode !== policy.inlineMediaPlayerMode ||
+    !candidate?.active ||
+    message.documentNonce !== candidate.documentNonce ||
+    message.elementNonce !== candidate.elementNonce
+  ) return { forwarded: false };
+  // Insets can publish a new revision while a trusted click is in transit.
+  // Revalidation still requires a fresh candidate report and exact current revision.
+  return { forwarded: false, retryPolicy: contentPolicy(policy) };
 }
 
 function forwardInlineVideoGestureHaptic(message, sender) {
@@ -439,9 +465,7 @@ browser.runtime.onMessage.addListener((message, sender) => {
     return undefined;
   }
   if (message.type === "inline-video-open-request") {
-    return Promise.resolve({
-      forwarded: requestInlineVideoOpen(message, sender),
-    });
+    return Promise.resolve(inlineVideoOpenResponse(message, sender));
   }
   if (message.type === "inline-video-gesture-haptic") {
     return Promise.resolve({

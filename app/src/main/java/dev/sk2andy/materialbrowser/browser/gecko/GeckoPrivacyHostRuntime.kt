@@ -2,6 +2,7 @@ package dev.sk2andy.materialbrowser.browser.gecko
 
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.util.Log
 import dev.sk2andy.materialbrowser.BuildConfig
 import dev.sk2andy.materialbrowser.browser.BrowserEngineScrollMetrics
@@ -89,6 +90,9 @@ internal class GeckoViewPrivacyHostRuntime(
         var inlineVideoPresentationDesiredSet: Boolean = false,
         var inlineVideoPresentationDeferredResult: ((Boolean) -> Unit)? = null,
         var inlineVideoPresented: Boolean = false,
+        val inlineVideoOpenGate: GeckoInlineVideoOpenRequestGate =
+            GeckoInlineVideoOpenRequestGate(SystemClock::uptimeMillis),
+        var inlineVideoOpenTimeout: Runnable? = null,
         var scrollMetrics: BrowserEngineScrollMetrics? = null,
         val onScrollMetrics: (BrowserEngineScrollMetrics) -> Unit,
         val onMainFrameResponse: (GeckoMainFrameResponse) -> Unit,
@@ -238,6 +242,8 @@ internal class GeckoViewPrivacyHostRuntime(
         }
         return object : GeckoPrivacyBinding {
             override fun update(policy: GeckoPrivacyPolicy, onReady: () -> Unit) {
+                binding.inlineVideoOpenGate.invalidatePolicy(policy, session.settings.usePrivateMode)
+                refreshInlineVideoOpenTimeout(binding)
                 binding.policy = policy
                 runWhenReady(binding) { publish(binding, policy, onReady) }
             }
@@ -353,6 +359,7 @@ internal class GeckoViewPrivacyHostRuntime(
                 expected: Boolean,
                 onResult: (Boolean) -> Unit,
             ) {
+                if (!expected) cancelPendingInlineVideoOpen(binding)
                 if (bindings[token] !== binding || binding.session.settings.usePrivateMode) {
                     onResult(false)
                     return
@@ -369,6 +376,7 @@ internal class GeckoViewPrivacyHostRuntime(
             }
 
             override fun close() {
+                cancelPendingInlineVideoOpen(binding)
                 bindings.remove(token)
                 binding.domProbe.cancel()
                 binding.textInputOcclusionProbe.cancel()
@@ -467,6 +475,12 @@ internal class GeckoViewPrivacyHostRuntime(
         binding.policy = policy
         binding.scrollMetrics = null
         binding.handshake = GeckoPrivacyBindingHandshakeRules.publish(binding.handshake)
+        binding.inlineVideoOpenGate.publish(
+            next = policy,
+            revision = binding.handshake.publishedRevision,
+            isPrivate = binding.session.settings.usePrivateMode,
+        )
+        refreshInlineVideoOpenTimeout(binding)
         onReady?.let(binding.policyReadyCallbacks::add)
         refreshTimeout(binding)
         port?.postMessage(
@@ -509,6 +523,7 @@ internal class GeckoViewPrivacyHostRuntime(
                 )
                 if (!transition.accepted) return
                 binding.handshake = transition.state
+                binding.inlineVideoOpenGate.acknowledge(value.optLong("revision", -1))
                 if (transition.startBootstrap) startBootstrap(binding)
                 if (binding.handshake.isCurrentPolicyAcknowledged) {
                     publishPerformanceDiagnosticsState(binding)
@@ -517,6 +532,7 @@ internal class GeckoViewPrivacyHostRuntime(
                     callbacks.forEach { callback -> callback() }
                     publishDesiredPictureInPicturePlayback(binding)
                     dispatchDesiredInlineVideoPresentation(binding)
+                    dispatchPendingInlineVideoOpen(binding)
                 }
                 refreshTimeout(binding)
                 completeBindingIfReady(binding)
@@ -777,24 +793,63 @@ internal class GeckoViewPrivacyHostRuntime(
             binding.inlineVideoPresentationDesiredSet = true
         }
         binding.inlineVideoPresented = state.isPresented
+        binding.inlineVideoOpenGate.updateCandidate(value.optLong("revision", -1), state)
         binding.onInlineVideoState(state)
+        dispatchPendingInlineVideoOpen(binding)
     }
 
     private fun acceptInlineVideoOpenRequest(value: JSONObject) {
         val binding = bindings[value.optString("token")] ?: return
         if (
             binding.session.settings.usePrivateMode ||
-            !binding.policy.inlineMediaPlayerEnabled ||
-            !binding.handshake.isCurrentPolicyAcknowledged
+            !binding.policy.inlineMediaPlayerEnabled
         ) {
+            cancelPendingInlineVideoOpen(binding)
             return
         }
+        val revision = value.optLong("revision", -1)
         val request = geckoInlineVideoOpenRequestFromMessage(
             message = value,
-            currentRevision = binding.handshake.publishedRevision,
+            currentRevision = if (revision == binding.handshake.publishedRevision) {
+                binding.handshake.publishedRevision
+            } else {
+                binding.handshake.acknowledgedRevision
+            },
             currentNavigationGeneration = binding.policy.navigationGeneration,
         ) ?: return
-        binding.onInlineVideoOpenRequest(request)
+        val accepted = binding.inlineVideoOpenGate.accept(
+            request = request,
+            revision = revision,
+            mode = value.optString("mode").takeIf(String::isNotEmpty),
+        )
+        refreshInlineVideoOpenTimeout(binding)
+        accepted?.let(binding.onInlineVideoOpenRequest)
+    }
+
+    private fun dispatchPendingInlineVideoOpen(binding: Binding) {
+        val request = binding.inlineVideoOpenGate.takeReady()
+        refreshInlineVideoOpenTimeout(binding)
+        if (bindings[binding.token] === binding) request?.let(binding.onInlineVideoOpenRequest)
+    }
+
+    private fun cancelPendingInlineVideoOpen(binding: Binding) {
+        binding.inlineVideoOpenGate.cancel()
+        refreshInlineVideoOpenTimeout(binding)
+    }
+
+    private fun refreshInlineVideoOpenTimeout(binding: Binding) {
+        binding.inlineVideoOpenTimeout?.let(mainHandler::removeCallbacks)
+        binding.inlineVideoOpenTimeout = null
+        val deadline = binding.inlineVideoOpenGate.pendingDeadlineMillis ?: return
+        binding.inlineVideoOpenTimeout = Runnable {
+            if (bindings[binding.token] === binding &&
+                binding.inlineVideoOpenGate.pendingDeadlineMillis == deadline
+            ) {
+                cancelPendingInlineVideoOpen(binding)
+            }
+        }.also { timeout ->
+            mainHandler.postDelayed(timeout, (deadline - SystemClock.uptimeMillis()).coerceAtLeast(0))
+        }
     }
 
     private fun acceptInlineVideoGestureHaptic(value: JSONObject) {
@@ -1181,6 +1236,7 @@ internal class GeckoViewPrivacyHostRuntime(
         initializationCallbacks.clear()
         callbacks.forEach { callback -> callback(false) }
         val readerResults = bindings.values.mapNotNull { binding ->
+            cancelPendingInlineVideoOpen(binding)
             binding.domProbe.cancel()
             binding.textInputOcclusionProbe.cancel()
             cancelTimeout(binding)

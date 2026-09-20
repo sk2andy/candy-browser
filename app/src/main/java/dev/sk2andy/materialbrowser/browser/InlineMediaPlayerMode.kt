@@ -8,7 +8,7 @@ enum class InlineMediaPlayerMode(val stableId: String) {
     ;
 
     companion object {
-        val Default = ButtonFullscreen
+        val Default = ButtonInlineAndFullscreen
 
         fun fromStableId(value: String?): InlineMediaPlayerMode =
             entries.firstOrNull { mode -> mode.stableId == value } ?: Default

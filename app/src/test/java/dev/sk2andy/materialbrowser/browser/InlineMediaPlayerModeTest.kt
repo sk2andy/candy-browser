@@ -7,17 +7,17 @@ import org.junit.Test
 
 class InlineMediaPlayerModeTest {
     @Test
-    fun `stable ids round trip and unknown values use button fullscreen`() {
+    fun `stable ids round trip and absent or unknown values use inline button mode`() {
         InlineMediaPlayerMode.entries.forEach { mode ->
             assertEquals(mode, InlineMediaPlayerMode.fromStableId(mode.stableId))
         }
 
         assertEquals(
-            InlineMediaPlayerMode.ButtonFullscreen,
+            InlineMediaPlayerMode.ButtonInlineAndFullscreen,
             InlineMediaPlayerMode.fromStableId("future-mode"),
         )
         assertEquals(
-            InlineMediaPlayerMode.ButtonFullscreen,
+            InlineMediaPlayerMode.ButtonInlineAndFullscreen,
             InlineMediaPlayerMode.fromStableId(null),
         )
     }
