@@ -104,7 +104,20 @@ user click while its geometry still matches the visible video. That click starts
 refreshes the exact clicked candidate and then requests the inline presentation. Video/ancestor
 size, class and style changes reconcile placement. The background host validates that click against
 its exact current candidate before native code carries the revision-bound navigation identity and
-nonces to the controller. The clicked video remains in its original page box and keeps the
+nonces to the controller. If an inset update changes the policy revision while that open request
+is in transit, the bridge permits one retry within three seconds. It requires the same navigation,
+enabled mode and exact current video, reapplies the newer policy and reports the candidate again;
+the background still rejects requests that do not match its current revision. Navigation, mode
+changes or a replaced candidate cancel the retry.
+Native policy publication can also overtake a request already forwarded by the background host.
+The native binding retains one open from its exact last acknowledged revision across compatible
+policy changes. It replays only after the current revision is acknowledged and a fresh candidate
+report for that revision confirms the same document and video. Either callback may arrive first.
+The first pending click owns a fixed three-second deadline; another click cannot replace it or
+extend that deadline. Navigation, mode or privacy changes, explicit close, inactive/replaced
+candidates and binding teardown cancel the pending open. The background validates and stamps the
+source mode, and native parsing still rejects revisions outside the current/last-acknowledged pair.
+The clicked video remains in its original page box and keeps the
 surrounding page and browser chrome visible; Candy does not publish fullscreen state or apply the
 video-only layout. A
 second autoplaying video cannot replace it. Android PiP still requires active playback. Candy hides
@@ -138,6 +151,15 @@ their positions independently, including movement of the player's parent. It fol
 scrolling, waits while viewport or player dimensions are mismatched, and never applies the
 correction inside fullscreen or video-only PiP. The scoped correction survives closing Candy
 controls and is released on navigation, media end, mode disable or page unload.
+After the bounded return reflow window, that origin keeps a scoped ancestor observer for
+class, hidden and style changes plus scroll/resize. Its callbacks coalesce into one rendered-frame
+reconciliation, never observe Candy's player writes, preserve site transforms and disconnect with
+the origin cleanup. CSS transition or animation completion/cancellation on that origin's player,
+video or observed ancestor schedules the same reconciliation, so a late interpolated transform
+cannot outlive the bounded return polling window.
+When Button fullscreen preserves an origin before its fullscreen request, first acknowledgement
+of that same video and its following PiP cycle retain both snapshots; a different video still
+releases them.
 While the Candy presentation is expanded, vertical gestures use three stable screen regions: the
 left region adjusts a per-window brightness override, the center drags the live video down to leave
 fullscreen, and the right region changes the global media stream volume. The center drag moves,
@@ -154,6 +176,9 @@ revision/navigation-bound candidate; delayed messages from the replaced document
 open it.
 
 The persisted Candy Player mode is explicit:
+
+Absent or invalid persisted values use **Button inline and fullscreen**. **Button fullscreen**
+remains an explicit user choice. The extension content-policy sanitizer uses the same fallback.
 
 | Mode | Trigger and presentation |
 | --- | --- |
@@ -240,10 +265,17 @@ commands below.
 | Gecko PiP lifecycle | Run `GeckoPictureInPictureInstrumentedTest` on the same API 34+ session emulator |
 | Fullscreen/overlay placement | Covered by `GeckoPictureInPictureInstrumentedTest` on the same API 34+ emulator |
 | Inline player offset isolation | Local transformed-player fixture in `GeckoPictureInPictureInstrumentedTest` |
+| Delayed transformed-return regression | Android 17 / API 37 only; fresh single-method fixture process on a dedicated emulator |
 | Android integration | `./gradlew lintFullDebug lintFossDebug assembleFullDebug assembleFossDebug` |
 
 Run deterministic tests first. Treat live checks on YouTube, `anichi.to` and `reanime.cz` as
 compatibility smoke tests because their player hosts and markup can change independently of Candy.
+
+Run the Android 17 / API 37 transformed-return fixture only as its own fresh instrumentation process:
+
+```sh
+ANDROID_SERIAL=<dedicated-api-37-serial> ./gradlew connectedFullDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=dev.sk2andy.materialbrowser.browser.gecko.GeckoPictureInPictureInstrumentedTest#youtubePlayerKeepsVideoGeometryThroughDelayedSystemPictureInPictureReturn
+```
 
 ## Debug lookup
 

@@ -17,6 +17,7 @@ import dev.sk2andy.materialbrowser.browser.actions.BrowserContentTargetListener
 import dev.sk2andy.materialbrowser.browser.gecko.AndroidBrowserEngineSessionPort
 import dev.sk2andy.materialbrowser.browser.gecko.BrowserEnginePreviewCapture
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoFindResult
+import dev.sk2andy.materialbrowser.browser.gecko.GeckoInlineVideoIdentity
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoMainFrameNavigationRequest
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoMediaCommand
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoMediaSessionState
@@ -1442,6 +1443,69 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
         }
     }
 
+    @Test
+    fun inlinePresentationAcknowledgementKeepsMatchingPresentedVideo() {
+        composeRule.runOnIdle {
+            val store = BrowserSessionStore(composeRule.activity)
+            originalEngineKind = store.loadAndroidBrowserEngineKind()
+            if (!BuildConfig.SYSTEM_WEBVIEW_ONLY) {
+                assertTrue(store.saveAndroidBrowserEngineKind(AndroidBrowserEngineKind.GeckoView))
+            }
+            val browserController = BrowserController(composeRule.activity)
+            controller = browserController
+            browserController.updateInlineMediaPlayerMode(
+                InlineMediaPlayerMode.ButtonInlineAndFullscreen,
+            )
+            val host = FrameLayout(composeRule.activity)
+            composeRule.activity.addContentView(host, matchParentLayoutParams())
+            val session = ReentrantAttachSession(
+                tabId = browserController.selectedTabId,
+                onFirstAttach = {},
+            )
+            browserController.installGeckoEngineSessionForTesting(session)
+            browserController.attachSelectedBrowserEngineView(host)
+            browserController.onStart()
+            browserController.onResume()
+            browserController.dispatchGeckoEngineEventForTesting(
+                BrowserEngineEvent(
+                    tabId = browserController.selectedTabId,
+                    type = BrowserEngineEventType.NavigationStarted,
+                    address = "https://media.example/",
+                    title = null,
+                    canGoBack = false,
+                    canGoForward = false,
+                    failureDescription = null,
+                ),
+            )
+            val identity = GeckoInlineVideoIdentity(
+                documentNonce = "document-nonce",
+                elementNonce = "element-nonce",
+            )
+            val candidate = inlineMediaState(identity, isPresented = false)
+            browserController.reportSelectedGeckoMediaStateForTesting(candidate)
+            browserController.reportSelectedGeckoFullscreenStateForTesting(true)
+
+            assertTrue(browserController.usesGeckoEngine)
+            assertTrue(browserController.isInlineMediaPlayerEnabled)
+            assertTrue(browserController.canOpenInlineMediaPlayer)
+
+            session.inlineVideoPresentationRequests.clear()
+            browserController.openInlineMediaPlayer()
+            assertEquals(listOf(identity to true), session.inlineVideoPresentationRequests)
+
+            browserController.reportSelectedGeckoMediaStateForTesting(
+                candidate.copy(isInlineVideoPresented = true),
+            )
+            session.acknowledgeInlineVideoPresentation(accepted = true)
+
+            assertEquals(listOf(identity to true), session.inlineVideoPresentationRequests)
+            assertEquals(
+                FullscreenVideoSource.GeckoView,
+                browserController.fullscreenVideoState?.source,
+            )
+        }
+    }
+
     private fun eligibleMediaState() =
         GeckoMediaSessionState(
             isActive = true,
@@ -1452,6 +1516,21 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
             videoHeight = 720,
             videoTrackCount = 1,
         )
+
+    private fun inlineMediaState(
+        identity: GeckoInlineVideoIdentity,
+        isPresented: Boolean,
+    ) = GeckoMediaSessionState(
+        isActive = true,
+        isPlaying = true,
+        hasInlineVideo = true,
+        isInlineVideoPlaying = true,
+        isInlineVideoPresented = isPresented,
+        inlineVideoWidth = 1_280,
+        inlineVideoHeight = 720,
+        inlineVideoDocumentNonce = identity.documentNonce,
+        inlineVideoElementNonce = identity.elementNonce,
+    )
 
     private fun matchParentLayoutParams() = FrameLayout.LayoutParams(
         FrameLayout.LayoutParams.MATCH_PARENT,
@@ -1473,6 +1552,7 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
         val commands = mutableListOf<BrowserEngineCommand>()
         val privacyPolicies = mutableListOf<GeckoPrivacyPolicy>()
         val activeStates = mutableListOf<Boolean>()
+        val inlineVideoPresentationRequests = mutableListOf<Pair<GeckoInlineVideoIdentity?, Boolean>>()
         var deferPolicyReadyCallbacks = false
         val policyReadyCallbacks = mutableListOf<() -> Unit>()
         val backdropCaptureRequirements = mutableListOf<Boolean>()
@@ -1493,6 +1573,7 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
         private var detachDispatched = false
         private var releaseDispatched = false
         private var active = false
+        private var inlineVideoPresentationCallback: ((Boolean) -> Unit)? = null
 
         override fun setBackdropCaptureEnabled(enabled: Boolean) {
             backdropCaptureRequirements += enabled
@@ -1559,6 +1640,25 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
         }
 
         override fun setMediaStateListener(listener: GeckoMediaSessionStateListener?) = Unit
+
+        override fun setInlineVideoPresentation(
+            identity: GeckoInlineVideoIdentity?,
+            expected: Boolean,
+            onResult: (Boolean) -> Unit,
+        ) {
+            inlineVideoPresentationRequests += identity to expected
+            if (expected) {
+                inlineVideoPresentationCallback = onResult
+            } else {
+                onResult(true)
+            }
+        }
+
+        fun acknowledgeInlineVideoPresentation(accepted: Boolean) {
+            val callback = requireNotNull(inlineVideoPresentationCallback)
+            inlineVideoPresentationCallback = null
+            callback(accepted)
+        }
 
         override fun setScrollListener(listener: BrowserEngineScrollListener?) = Unit
 

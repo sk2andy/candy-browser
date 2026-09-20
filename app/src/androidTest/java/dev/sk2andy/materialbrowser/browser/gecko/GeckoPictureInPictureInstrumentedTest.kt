@@ -2,22 +2,35 @@ package dev.sk2andy.materialbrowser.browser.gecko
 
 import android.content.Context
 import android.content.res.Configuration
+import android.os.ParcelFileDescriptor
 import android.os.SystemClock
+import android.util.Base64
+import android.util.Log
+import android.view.KeyEvent
 import android.view.SurfaceView
 import android.view.View
 import android.view.ViewGroup
+import androidx.lifecycle.Lifecycle
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.filters.SdkSuppress
 import androidx.test.platform.app.InstrumentationRegistry
+import androidx.test.uiautomator.By
 import androidx.test.uiautomator.UiDevice
+import androidx.test.uiautomator.Until
 import dev.sk2andy.materialbrowser.MainActivity
-import dev.sk2andy.materialbrowser.browser.FullscreenVideoSource
 import dev.sk2andy.materialbrowser.browser.FullscreenVideoHost
+import dev.sk2andy.materialbrowser.browser.FullscreenVideoSource
+import dev.sk2andy.materialbrowser.browser.InlineMediaPlayerMode
 import dev.sk2andy.materialbrowser.data.BrowserSessionStore
 import dev.sk2andy.materialbrowser.data.GestureOnboardingStore
+import java.io.ByteArrayOutputStream
 import java.io.Closeable
 import java.net.InetAddress
 import java.net.ServerSocket
+import java.net.URLDecoder
+import java.nio.file.Files
+import org.json.JSONObject
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -25,6 +38,7 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
+import org.junit.Assume.assumeTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -595,6 +609,183 @@ class GeckoPictureInPictureInstrumentedTest {
         }
     }
 
+    /**
+     * Manual, isolated Android 17 regression; not covered by a whole-class CI run.
+     * Select this exact method with android.testInstrumentationRunnerArguments.class in a fresh
+     * instrumentation process on a dedicated API 37 emulator (ANDROID_SERIAL must be explicit).
+     * Startup DNS prefs use a disposable Gecko profile; no external DNS setup is required.
+     */
+    @Test
+    @SdkSuppress(minSdkVersion = 37, maxSdkVersion = 37)
+    fun youtubePlayerKeepsVideoGeometryThroughDelayedSystemPictureInPictureReturn() {
+        prepareIsolatedYoutubeFixtureRuntime()
+        FixtureServer(YOUTUBE_RETURN_HTML, "pip-fixture.youtube.com").use { server ->
+            ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+                lateinit var stableGeckoHost: View
+                lateinit var stableEngineView: View
+                lateinit var stableBrowserContainer: ViewGroup
+                lateinit var videoTabId: String
+                scenario.onActivity { activity ->
+                    val controller = activity.browserControllerForTesting()
+                    controller.updateVideoAutoplayBlocked(false)
+                    controller.updateInlineMediaPlayerMode(InlineMediaPlayerMode.ButtonFullscreen)
+                    assertTrue(controller.openUrl(server.url))
+                }
+                var loadingState = ""
+                awaitCondition(description = { "YouTube fixture baseline missing: $loadingState; ${server.geometry}" }) {
+                    var candidateReady = false
+                    scenario.onActivity { activity ->
+                        val controller = activity.browserControllerForTesting()
+                        candidateReady = controller.canOpenInlineMediaPlayer
+                        loadingState = "title=${controller.selectedTab.title}; url=${controller.selectedTab.url}; " +
+                            "canOpen=${controller.canOpenInlineMediaPlayer}"
+                    }
+                    candidateReady && server.geometry.any { it.getString("phase") == "baseline" }
+                }
+                val baseline = server.geometry.first { it.getString("phase") == "baseline" }
+                val fullscreenTapPoint = FloatArray(2)
+                scenario.onActivity { activity ->
+                    val controller = activity.browserControllerForTesting()
+                    videoTabId = controller.selectedTab.id
+                    stableGeckoHost = requireNotNull(controller.selectedGeckoViewForTesting())
+                    stableEngineView = requireNotNull((stableGeckoHost as ViewGroup).singleChild())
+                    stableBrowserContainer = requireNotNull(parentOf(stableGeckoHost) as? ViewGroup)
+                    val location = IntArray(2)
+                    stableGeckoHost.getLocationOnScreen(location)
+                    val bounds = baseline.getJSONArray("action")
+                    val scale = stableGeckoHost.width / baseline.getDouble("viewportWidth")
+                    fullscreenTapPoint[0] =
+                        (location[0] + (bounds.getDouble(0) + bounds.getDouble(2) / 2) * scale).toFloat()
+                    fullscreenTapPoint[1] =
+                        (location[1] + (bounds.getDouble(1) + bounds.getDouble(3) / 2) * scale).toFloat()
+                }
+                tap(fullscreenTapPoint[0], fullscreenTapPoint[1])
+                var fullscreenState = ""
+                awaitCondition(description = { "Fixture did not enter Candy fullscreen: $fullscreenState; ${server.geometry}" }) {
+                    var ready = false
+                    scenario.onActivity { activity ->
+                        val controller = activity.browserControllerForTesting()
+                        fullscreenState = controller.geckoFullscreenDebugStateForTesting(videoTabId) +
+                            "; presented=${controller.isInlineMediaPlayerPresented}" +
+                            "; pipEligible=${controller.isPictureInPictureEligible}"
+                        ready = controller.isSelectedWebContentFullscreen &&
+                            controller.isInlineMediaPlayerPresented && controller.isPictureInPictureEligible
+                    }
+                    ready && server.geometry.any {
+                        it.getString("phase") == "fullscreen-controls" && it.getBoolean("controls")
+                    }
+                }
+                val fullscreen = server.geometry.first { it.getString("phase") == "fullscreen-controls" }
+                assertTrue("YouTube player policy missing: $fullscreen", fullscreen.getBoolean("sitePlayer"))
+                assertTrue("Fullscreen lost frozen origin: $fullscreen", fullscreen.getBoolean("originStyle"))
+                val device = UiDevice.getInstance(instrumentation)
+                scenario.onActivity { activity ->
+                    assertTrue(activity.browserControllerForTesting().isSelectedWebContentFullscreen)
+                    assertTrue(activity.onPictureInPictureRequested())
+                }
+                awaitCondition(description = { "Android did not enter system PiP: ${server.geometry}" }) {
+                    var entered = false
+                    scenario.onActivity { activity -> entered = activity.isInPictureInPictureMode }
+                    entered && server.geometry.any { it.getString("phase") == "pip" }
+                }
+                device.waitForIdle()
+                val pipTapPoint = IntArray(2)
+                scenario.onActivity { activity ->
+                    val decor = activity.window.decorView
+                    decor.getLocationOnScreen(pipTapPoint)
+                    pipTapPoint[0] += decor.width / 2
+                    pipTapPoint[1] += decor.height / 2
+                }
+                device.click(pipTapPoint[0], pipTapPoint[1])
+                val expand = device.wait(
+                    Until.findObject(By.res("com.android.systemui", "expand_button")),
+                    5_000,
+                ) ?: device.findObject(By.desc("Full screen"))
+                val hierarchy = ByteArrayOutputStream()
+                device.dumpWindowHierarchy(hierarchy)
+                Log.i("CandyPipGeometry", "PiP menu: $hierarchy; tap=${pipTapPoint.toList()}")
+                assertNotNull("System PiP expand action missing: $hierarchy", expand)
+                expand?.click()
+                awaitCondition(description = { "Android did not return from system PiP" }) {
+                    var returned = false
+                    scenario.onActivity { activity -> returned = !activity.isInPictureInPictureMode }
+                    returned
+                }
+                scenario.onActivity { activity -> logReturnState(activity, "android-return") }
+                server.requestProbe("android-return")
+                awaitCondition(description = { "Android return DOM probe missing: ${server.geometry}" }) {
+                    server.geometry.any { it.getString("phase") == "android-return" }
+                }
+                val androidReturn = server.geometry.first { it.getString("phase") == "android-return" }
+                // System Expand returns the Activity, not necessarily the document to inline mode.
+                // Keep this phase separate: Back must never precede the actual Android PiP return.
+                if (androidReturn.getBoolean("fullscreen")) {
+                    Log.i("CandyPipGeometry", "Android return retained DOM fullscreen; pressing Back")
+                    var backReadiness = ""
+                    awaitCondition(description = { "Returned Activity not ready for Back: $backReadiness" }) {
+                        var ready = false
+                        scenario.onActivity { activity ->
+                            val controller = activity.browserControllerForTesting()
+                            backReadiness = "lifecycle=${activity.lifecycle.currentState}; " +
+                                "focus=${activity.hasWindowFocus()}; " +
+                                "restorePending=${controller.isMediaLayoutRestorationPending}; " +
+                                "androidPip=${activity.isInPictureInPictureMode}"
+                            ready = activity.lifecycle.currentState == Lifecycle.State.RESUMED &&
+                                activity.hasWindowFocus() && !controller.isMediaLayoutRestorationPending &&
+                                !activity.isInPictureInPictureMode
+                        }
+                        ready
+                    }
+                    Log.i("CandyPipGeometry", "Back ready: $backReadiness")
+                    val downTime = SystemClock.uptimeMillis()
+                    val backDown = instrumentation.uiAutomation.injectInputEvent(
+                        KeyEvent(downTime, downTime, KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_BACK, 0),
+                        true,
+                    )
+                    val backUp = instrumentation.uiAutomation.injectInputEvent(
+                        KeyEvent(downTime, SystemClock.uptimeMillis(), KeyEvent.ACTION_UP, KeyEvent.KEYCODE_BACK, 0),
+                        true,
+                    )
+                    Log.i("CandyPipGeometry", "Back injection accepted: down=$backDown; up=$backUp")
+                    awaitCondition(description = { "Post-return Back did not leave fullscreen: ${server.geometry}" }) {
+                        var fullscreenExited = false
+                        scenario.onActivity { activity ->
+                            fullscreenExited = activity.lifecycle.currentState == Lifecycle.State.RESUMED &&
+                                !activity.browserControllerForTesting().isSelectedWebContentFullscreen
+                        }
+                        fullscreenExited && server.geometry.any { it.getString("phase") == "fullscreen-exit" }
+                    }
+                } else {
+                    Log.i("CandyPipGeometry", "Android return already inline; no Back needed")
+                }
+                scenario.onActivity { activity -> logReturnState(activity, "inline-return-start") }
+                server.requestProbe("inline-return")
+                awaitCondition(description = { "Return geometry timeline incomplete: ${server.geometry}" }) {
+                    server.geometry.any { it.getString("phase") == "late" }
+                }
+                var title = ""
+                scenario.onActivity { activity ->
+                    val controller = activity.browserControllerForTesting()
+                    logReturnState(activity, "inline-return-late")
+                    title = controller.selectedTab.title
+                    assertEquals(videoTabId, controller.selectedTab.id)
+                    assertSame(stableGeckoHost, controller.selectedGeckoViewForTesting())
+                    assertSame(stableBrowserContainer, parentOf(stableGeckoHost))
+                    assertSame(stableEngineView, (stableGeckoHost as ViewGroup).singleChild())
+                    assertNotNull(stableEngineView.findDescendant(SurfaceView::class.java))
+                }
+                val timeline = server.geometry
+                val evidence = "title=$title; timeline=${timeline.joinToString()}"
+                Log.i("CandyPipGeometry", evidence)
+                listOf("immediate", "delayed", "late").forEach { phase ->
+                    val samples = timeline.filter { it.getString("phase") == phase }
+                    assertEquals("Missing or repeated $phase sample: $evidence", 1, samples.size)
+                    assertStableInlineGeometry(baseline, samples.single())
+                }
+            }
+        }
+    }
+
     @Test
     fun videoOnlyPresentationAlignsAnOffsetInlineVideoWithTheViewport() {
         FixtureServer(INLINE_OFFSET_HTML).use { server ->
@@ -865,6 +1056,123 @@ class GeckoPictureInPictureInstrumentedTest {
         instrumentation.waitForIdleSync()
     }
 
+    private fun prepareIsolatedYoutubeFixtureRuntime() {
+        val selectedTest = "${javaClass.name}#" +
+            "youtubePlayerKeepsVideoGeometryThroughDelayedSystemPictureInPictureReturn"
+        assumeTrue(
+            "YouTube-host fixture requires an isolated single-method instrumentation run",
+            InstrumentationRegistry.getArguments().getString("class") == selectedTest,
+        )
+        assumeTrue(
+            "YouTube-host fixture requires a fresh Gecko runtime to apply local DNS",
+            !GeckoRuntimeOwner.hasRuntimeForTesting(),
+        )
+        // Gecko documents startup prefs and --profile in its automation configuration:
+        // https://firefox-source-docs.mozilla.org/mobile/android/geckoview/consumer/automation.html
+        // Keep the disposable profile in app cache until package data cleanup: Gecko may still
+        // write after Activity close. The normal profile never receives these fixture prefs.
+        val profile = Files.createTempDirectory(context.cacheDir.toPath(), "candy-pip-profile-")
+        val configPath = "/data/local/tmp/${context.packageName}-geckoview-config.yaml"
+        val backupPath = "/data/local/tmp/${profile.fileName}.yaml"
+        val quotedConfig = shellQuote(configPath)
+        val quotedBackup = shellQuote(backupPath)
+        val fingerprintCommand =
+            "if [ -e $quotedConfig ] || [ -L $quotedConfig ]; then " +
+                "sha256sum $quotedConfig; else printf absent; fi"
+        val original = shell(fingerprintCommand).trim()
+        check(original == "absent" || original.matches(Regex("[a-f0-9]{64}  .+"))) {
+            "Could not fingerprint Gecko debug config: $original"
+        }
+        val configuration = """
+            args:
+              - --profile
+              - "$profile"
+            prefs:
+              network.dns.localDomains: "pip-fixture.youtube.com"
+              network.stricttransportsecurity.preloadlist: false
+              dom.security.https_first: false
+              dom.security.https_only_mode: false
+        """.trimIndent()
+        val encoded = Base64.encodeToString(configuration.toByteArray(), Base64.NO_WRAP)
+        try {
+            if (original != "absent") {
+                check(shell("mv $quotedConfig $quotedBackup && printf preserved").trim() == "preserved") {
+                    "Could not preserve Gecko debug config"
+                }
+            }
+            check(
+                shell(
+                    "printf '%s' ${shellQuote(encoded)} | base64 -d > $quotedConfig && " +
+                        "chmod 644 $quotedConfig && printf ready",
+                ).trim() == "ready",
+            ) { "Could not install isolated Gecko fixture configuration" }
+            instrumentation.runOnMainSync { GeckoRuntimeOwner.getOrCreate(context) }
+        } finally {
+            // Gecko reads the file during synchronous runtime creation. Restore it immediately,
+            // before launching the Activity or running any assertions, including failing ones.
+            val restore = if (original != "absent") {
+                "if [ -e $quotedBackup ] || [ -L $quotedBackup ]; then " +
+                    "mv -f $quotedBackup $quotedConfig; fi"
+            } else {
+                "rm -f $quotedConfig"
+            }
+            check(shell("$restore && printf restored").trim() == "restored") {
+                "Could not restore previous Gecko debug configuration"
+            }
+            assertEquals("Gecko debug config changed after restoration", original, shell(fingerprintCommand).trim())
+            Log.i("CandyPipGeometry", "Gecko startup config restored: $original")
+        }
+    }
+
+    private fun shellQuote(value: String): String = "'" + value.replace("'", "'\"'\"'") + "'"
+
+    private fun shell(command: String): String {
+        // executeShellCommand tokenizes its string without shell quoting. Send the quoted sh -c
+        // invocation through stdin instead, so compound commands and paths remain one argument.
+        val descriptors = instrumentation.uiAutomation.executeShellCommandRw("sh")
+        try {
+            ParcelFileDescriptor.AutoCloseOutputStream(descriptors[1]).bufferedWriter().use { input ->
+                input.write("exec sh -c ${shellQuote(command)} 2>&1\n")
+            }
+            return ParcelFileDescriptor.AutoCloseInputStream(descriptors[0]).bufferedReader().use { it.readText() }
+        } finally {
+            descriptors.forEach { it.close() }
+        }
+    }
+
+    private fun assertStableInlineGeometry(baseline: JSONObject, sample: JSONObject) {
+        val evidence = "baseline=$baseline; sample=$sample"
+        val bounds = sample.getJSONArray("video")
+        val original = baseline.getJSONArray("video")
+        (0..3).forEach { index ->
+            assertEquals(
+                "Video rectangle component $index changed: $evidence",
+                original.getDouble(index),
+                bounds.getDouble(index),
+                2.0,
+            )
+        }
+        assertTrue("Candy controls missing: $evidence", sample.getBoolean("controls"))
+        assertTrue("YouTube policy missing: $evidence", sample.getBoolean("sitePlayer"))
+        assertTrue("Frozen origin missing: $evidence", sample.getBoolean("originStyle"))
+        assertFalse("Still fullscreen: $evidence", sample.getBoolean("fullscreen"))
+        assertFalse("Stale PiP attributes: $evidence", sample.getBoolean("pipAttributes"))
+        assertFalse("Stale PiP style: $evidence", sample.getBoolean("pipStyle"))
+        assertFalse("Stale PiP offsets: $evidence", sample.getBoolean("pipOffsets"))
+    }
+
+    private fun logReturnState(activity: MainActivity, phase: String) {
+        val controller = activity.browserControllerForTesting()
+        Log.i(
+            "CandyPipGeometry",
+            "$phase native: androidPip=${activity.isInPictureInPictureMode}; " +
+                "contentFullscreen=${controller.isSelectedWebContentFullscreen}; " +
+                "restorePending=${controller.isMediaLayoutRestorationPending}; " +
+                "candyPresented=${controller.isInlineMediaPlayerPresented}; " +
+                "title=${controller.selectedTab.title}",
+        )
+    }
+
     private fun swipe(startX: Float, startY: Float, endX: Float, endY: Float) {
         assertTrue(
             UiDevice.getInstance(instrumentation).swipe(
@@ -917,9 +1225,21 @@ class GeckoPictureInPictureInstrumentedTest {
         return null
     }
 
-    private class FixtureServer(private val html: String = HTML) : Closeable {
+    private class FixtureServer(
+        private val html: String = HTML,
+        hostname: String = "127.0.0.1",
+    ) : Closeable {
         private val socket = ServerSocket(0, 4, InetAddress.getByName("127.0.0.1"))
-        val url = "http://127.0.0.1:${socket.localPort}/"
+        val url = "http://$hostname:${socket.localPort}/"
+        @Volatile
+        private var requestedProbe = ""
+
+        fun requestProbe(phase: String) {
+            requestedProbe = phase
+        }
+        private val recordedGeometry = mutableListOf<JSONObject>()
+        val geometry: List<JSONObject>
+            get() = synchronized(recordedGeometry) { recordedGeometry.toList() }
         private val thread = Thread(::serve, "gecko-pip-fixture").apply {
             isDaemon = true
             start()
@@ -930,13 +1250,19 @@ class GeckoPictureInPictureInstrumentedTest {
                 val client = runCatching { socket.accept() }.getOrNull() ?: return
                 client.use { connection ->
                     runCatching {
+                        var request = ""
                         connection.getInputStream().bufferedReader().apply {
-                            readLine()
+                            request = readLine().orEmpty().split(' ').getOrNull(1).orEmpty()
+                            if (request.startsWith("/geometry?")) {
+                                val sample = JSONObject(URLDecoder.decode(request.substringAfter('?'), "UTF-8"))
+                                synchronized(recordedGeometry) { recordedGeometry.add(sample) }
+                                Log.i("CandyPipGeometry", sample.toString())
+                            }
                             while (!readLine().isNullOrEmpty()) {
                                 // Drain request headers before writing the local response.
                             }
                         }
-                        val body = html.toByteArray()
+                        val body = if (request == "/probe") requestedProbe.toByteArray() else html.toByteArray()
                         connection.getOutputStream().buffered().use { output ->
                             output.write(
                                 "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n".toByteArray(),
@@ -968,6 +1294,152 @@ class GeckoPictureInPictureInstrumentedTest {
         const val INLINE_REALIGNED_TITLE = "inline-realigned"
         const val INLINE_RESTORED_TITLE = "inline-restored"
         const val INLINE_ACTION_GEOMETRY_PREFIX = "inline-action:"
+        val YOUTUBE_RETURN_HTML by lazy {
+            """
+            <!doctype html>
+            <html><head><meta name="viewport" content="width=device-width,initial-scale=1">
+            <title>youtube-return-loading</title><style>
+              html,body { margin:0; width:100%; height:100%; background:#111; }
+              header { height:56px; background:#b00; }
+              #player-parent { transform:translate3d(0,0,0); }
+              #movie_player { position:relative; top:0; left:0; width:100%; aspect-ratio:16/9; }
+              video { display:block; width:100%; height:100%; background:#080; }
+            </style></head><body><header></header>
+            <div id="player-parent"><div id="movie_player" class="html5-video-player">
+              <video autoplay muted playsinline loop></video><div class="ytp-chrome-bottom"></div>
+            </div></div><script>
+              const encodedVideo = [
+                'GkXfo59ChoEBQveBAULygQRC84EIQoKEd2VibUKHgQJChYECGFOAZwEAAAAAAAIXEU2bdLpNu4tTq4QV',
+                'SalmU6yBoU27i1OrhBZUrmtTrIHWTbuMU6uEElTDZ1OsggEyTbuMU6uEHFO7a1OsggIB7AEAAAAAAABZ',
+                'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
+                'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAVSalmsCrXsYMPQkBNgIxMYXZmNjMuMS4xMDFXQYxM',
+                'YXZmNjMuMS4xMDFEiYhAj0AAAAAAABZUrmvXrgEAAAAAAABO14EBc8WIDxQnt/iyoUGcgQAitZyDdW5k',
+                'iIEAhoVWX1ZQOIOBASPjg4QdzWUA4JCwgUC6gSSagQJVsIRVuYEBVe6BAOwBAAAAAAAAAgAAElTDZ/pz',
+                'c59jwIBnyJlFo4dFTkNPREVSRIeMTGF2ZjYzLjEuMTAxc3PVY8CLY8WIDxQnt/iyoUFnyKBFo4dFTkNP',
+                'REVSRIeTTGF2YzYzLjEuMTAxIGxpYnZweGfIoUWjiERVUkFUSU9ORIeTMDA6MDA6MDEuMDAwMDAwMDAw',
+                'AB9DtnXL54EAo6iBAACAsAIAnQEqQAAkAABHCIWFiJmEiAICAAaOT8zHm/FYAP7/q1CAo5yBAfQAEQIA',
+                'ARAQABgAGk/0DAAB1f/4AP7/q1CAHFO7a5G7j7OBALeK94EB8YIBsfCBAw=='
+              ].join('');
+              const video = document.querySelector('video');
+              const player = document.querySelector('#movie_player');
+              const parent = document.querySelector('#player-parent');
+              let trustedClicks = 0;
+              let baselineRecorded = false;
+              let fullscreenControlsRecorded = false;
+              let pipObserved = false;
+              let pipCleanupRecorded = false;
+              let returnedAt = null;
+              let lastProbe = '';
+              let probePending = false;
+              const rect = element => {
+                const bounds = element.getBoundingClientRect();
+                return [bounds.left, bounds.top, bounds.width, bounds.height];
+              };
+              const sample = phase => {
+                const controls = document.querySelector('[data-candy-inline-video-controls]');
+                const action = document.querySelector('[data-candy-inline-video-action]');
+                const geometry = {
+                  phase, elapsed:returnedAt === null ? 0 : Math.round(performance.now() - returnedAt),
+                  video:rect(video), player:rect(player), parent:rect(parent),
+                  action:action ? rect(action) : null,
+                  viewportWidth:innerWidth, viewportHeight:innerHeight,
+                  paused:video.paused, readyState:video.readyState,
+                  trustedClicks,
+                  currentTime:video.currentTime, mediaError:video.error?.code || null,
+                  controls:Boolean(controls && getComputedStyle(controls).display !== 'none'),
+                  sitePlayer:player.hasAttribute('data-candy-inline-video-site-player'),
+                  originStyle:Boolean(document.querySelector('[data-candy-inline-video-fullscreen-origin-style]')),
+                  originPlayer:player.hasAttribute('data-candy-inline-video-fullscreen-origin'),
+                  pipRoot:document.documentElement.hasAttribute('data-candy-picture-in-picture'),
+                  pipStyle:Boolean(document.querySelector('[data-candy-picture-in-picture-style]')),
+                  pipOffsets:Boolean(
+                    video.style.getPropertyValue('--candy-picture-in-picture-offset-x') ||
+                    video.style.getPropertyValue('--candy-picture-in-picture-offset-y')
+                  ),
+                  pipAttributes:Boolean(document.querySelector(
+                    '[data-candy-picture-in-picture], [data-candy-picture-in-picture-video], ' +
+                    '[data-candy-picture-in-picture-ancestor]'
+                  )),
+                  fullscreen:Boolean(document.fullscreenElement)
+                };
+                document.title = 'youtube-return-' + phase + ':' + geometry.video.join(',');
+                fetch('/geometry?' + encodeURIComponent(JSON.stringify(geometry)));
+              };
+              const observe = () => {
+                const pip = video.hasAttribute('data-candy-picture-in-picture-video');
+                if (pip && !pipObserved) { pipObserved = true; sample('pip'); }
+                if (pipObserved && !pipCleanupRecorded && !document.querySelector(
+                    '[data-candy-picture-in-picture], [data-candy-picture-in-picture-video], ' +
+                    '[data-candy-picture-in-picture-ancestor]')) {
+                  pipCleanupRecorded = true;
+                  sample('pip-attributes-removed');
+                }
+                if (document.fullscreenElement && !fullscreenControlsRecorded &&
+                    document.querySelector('[data-candy-inline-video-controls]')) {
+                  fullscreenControlsRecorded = true;
+                  requestAnimationFrame(() => requestAnimationFrame(() => sample('fullscreen-controls')));
+                }
+                if (!baselineRecorded && !pip && !document.fullscreenElement &&
+                    document.querySelector('[data-candy-inline-video-action]')) {
+                  baselineRecorded = true;
+                  requestAnimationFrame(() => requestAnimationFrame(() => sample('baseline')));
+                }
+              };
+              const startInlineTimeline = () => {
+                if (returnedAt !== null) return;
+                returnedAt = performance.now();
+                sample('inline-return-start');
+                setTimeout(() => sample('immediate'), 100);
+                setTimeout(() => { parent.style.transform = 'translate3d(0,32px,0)'; }, 1200);
+                setTimeout(() => sample('delayed'), 1800);
+                // A second site reflow follows the bridge's five-second frame reconciliation.
+                setTimeout(() => { parent.style.transform = 'translate3d(0,64px,0)'; }, 5600);
+                setTimeout(() => sample('late'), 6500);
+              };
+              // Native test progress only requests measurements, never media/fullscreen state.
+              // Polling remains independent of PiP attribute removal and fullscreenchange.
+              setInterval(async () => {
+                if (!pipObserved || probePending) return;
+                probePending = true;
+                try {
+                  const probe = await (await fetch('/probe', {cache:'no-store'})).text();
+                  if (probe && probe !== lastProbe) {
+                    lastProbe = probe;
+                    if (probe === 'inline-return') startInlineTimeline();
+                    else sample(probe);
+                  }
+                } finally {
+                  probePending = false;
+                }
+              }, 50);
+              new MutationObserver(observe).observe(document.documentElement, {
+                subtree:true, childList:true, attributes:true,
+                attributeFilter:[
+                  'data-candy-picture-in-picture', 'data-candy-picture-in-picture-video',
+                  'data-candy-picture-in-picture-ancestor'
+                ]
+              });
+              document.addEventListener('fullscreenchange', () => {
+                sample(document.fullscreenElement ? 'fullscreen' : 'fullscreen-exit');
+                if (document.fullscreenElement) {
+                  video.play().catch(() => sample('play-rejected'));
+                  setTimeout(() => sample('fullscreen-settled'), 1000);
+                }
+                observe();
+              });
+              video.addEventListener('loadedmetadata', () => sample('loaded'));
+              document.addEventListener('click', event => {
+                if (event.isTrusted) trustedClicks++;
+                sample('click-capture');
+              }, true);
+              video.addEventListener('error', () => sample('media-error'));
+              video.defaultMuted = true;
+              video.muted = true;
+              video.src = 'data:video/webm;base64,' + encodedVideo;
+              video.load();
+            </script></body></html>
+            """.trimIndent()
+        }
         val INLINE_PLAYER_HTML by lazy {
             INLINE_OFFSET_HTML.replace(
                 "const requiresControls = false;",

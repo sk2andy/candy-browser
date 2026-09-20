@@ -1208,7 +1208,7 @@ class BrowserSessionStoreInstrumentedTest {
     fun inlineMediaPlayerModeDefaultsAndRoundTrips() {
         val store = BrowserSessionStore(context)
 
-        assertEquals(InlineMediaPlayerMode.ButtonFullscreen, store.loadInlineMediaPlayerMode())
+        assertEquals(InlineMediaPlayerMode.ButtonInlineAndFullscreen, store.loadInlineMediaPlayerMode())
         InlineMediaPlayerMode.entries.forEach { mode ->
             store.saveInlineMediaPlayerMode(mode)
             assertEquals(mode, store.loadInlineMediaPlayerMode())
@@ -1217,7 +1217,7 @@ class BrowserSessionStoreInstrumentedTest {
         preferences.edit()
             .putString(BrowserSessionStore.KEY_INLINE_MEDIA_PLAYER_MODE, "future-mode")
             .commit()
-        assertEquals(InlineMediaPlayerMode.ButtonFullscreen, store.loadInlineMediaPlayerMode())
+        assertEquals(InlineMediaPlayerMode.ButtonInlineAndFullscreen, store.loadInlineMediaPlayerMode())
     }
 
     @Test
@@ -1231,7 +1231,7 @@ class BrowserSessionStoreInstrumentedTest {
         )
 
         preferences.edit().clear().putBoolean("inline_media_player_enabled", false).commit()
-        assertEquals(InlineMediaPlayerMode.ButtonFullscreen, store.loadInlineMediaPlayerMode())
+        assertEquals(InlineMediaPlayerMode.ButtonInlineAndFullscreen, store.loadInlineMediaPlayerMode())
     }
 
     @Test
