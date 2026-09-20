@@ -321,6 +321,17 @@
     <string name="download_notification_paused_unknown">En pausa · %1$s</string>
     <string name="download_notification_complete">Descarga completada</string>
     <string name="settings_title">Ajustes</string>
+    <string name="settings_home_group_browsing">Navegación</string>
+    <string name="settings_home_group_personalization">Personalización</string>
+    <string name="settings_home_group_privacy_data">Privacidad y datos</string>
+    <string name="settings_home_group_about">Más información</string>
+    <string name="settings_browser_group_general">Configuración del navegador</string>
+    <string name="settings_browser_group_startup">Inicio</string>
+    <string name="settings_browser_group_favorites">Favoritos</string>
+    <string name="settings_browser_group_websites">Páginas web</string>
+    <string name="settings_browser_group_links">Enlaces y aplicaciones</string>
+    <string name="settings_protection_group_tools">Herramientas de privacidad</string>
+    <string name="settings_protection_group_app_data">Datos de la aplicación</string>
     <string name="settings_appearance_title">Apariencia</string>
     <string name="settings_home_appearance_summary">Colores, texto web, superficies y formas</string>
     <string name="settings_appearance_mode">Apariencia</string>
@@ -365,7 +376,7 @@
     <string name="settings_home_search_summary">Motor de búsqueda y sugerencias</string>
     <string name="settings_tabs_gestures_title">Pestañas y gestos</string>
     <string name="settings_home_tabs_gestures_summary">Diseño, duración, perfiles y controles de pestañas</string>
-    <string name="settings_home_browser_summary">Interfaz y comportamiento del navegador predeterminado</string>
+    <string name="settings_home_browser_summary">Inicio, favoritos, páginas web, enlaces y navegador predeterminado</string>
     <string name="settings_downloads_title">Descargas</string>
     <string name="settings_home_capsules_summary">Gestionar Site Capsules y accesos directos guardados</string>
     <string name="settings_protection_data_title">Protección y datos</string>

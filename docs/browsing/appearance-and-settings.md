@@ -46,7 +46,11 @@
 ## Cross-platform settings migration
 
 Android and iOS compile the same settings destination model, transition, page shell, controls, home
-ordering and core page renderers from `shared/src/commonMain`. Android resolves existing localized
+ordering and core page renderers from `shared/src/commonMain`. The shared settings home groups
+destinations by task: Browsing, Personalization, Privacy & data, and More information. Android's
+Browser page labels Browser setup, Startup, Favorites, Web pages, and Links & apps; Protection & data labels its
+privacy tools, protection controls, history, and app-data actions. These are navigation labels only;
+setting ownership and persistence do not change. Android resolves existing localized
 resources, drawable icons, frosted container color and persisted state through thin adapters. Appearance
 is fully shared; Tabs & Gestures shares overview-mode and dismiss-resistance controls; Browser shares the
 translation-provider control. iOS routes to those shared pages without SwiftUI replacements. Its existing
