@@ -34,6 +34,8 @@ const candyPictureInPicturePlayback = {
   generation: 0,
   presentedVideo: null,
   alignmentFrame: null,
+  alignmentMonitorFrame: null,
+  pictureInPictureAncestors: [],
   layoutObserver: null,
   resizeObserver: null,
   inlineStateObserver: null,
@@ -50,7 +52,8 @@ const candyPictureInPicturePlayback = {
   inlineControlsCleanup: null,
   inlineSitePlayer: null,
   inlineSiteStyle: null,
-  inlineFullscreenReturnBox: null,
+  inlineStableOrigin: null,
+  inlineFullscreenOrigin: null,
 };
 const candyInlineVideoDocumentNonce = candyInlineVideoNonce();
 const candyInlineVideoElementNonces = new WeakMap();
@@ -60,12 +63,23 @@ const candyPictureInPictureOriginalControls = new WeakMap();
 const CANDY_PICTURE_IN_PICTURE_ROOT_ATTRIBUTE = "data-candy-picture-in-picture";
 const CANDY_PICTURE_IN_PICTURE_VIDEO_ATTRIBUTE = "data-candy-picture-in-picture-video";
 const CANDY_PICTURE_IN_PICTURE_STYLE_ATTRIBUTE = "data-candy-picture-in-picture-style";
+const CANDY_PICTURE_IN_PICTURE_ANCESTOR_ATTRIBUTE = "data-candy-picture-in-picture-ancestor";
 const CANDY_PICTURE_IN_PICTURE_OFFSET_X = "--candy-picture-in-picture-offset-x";
 const CANDY_PICTURE_IN_PICTURE_OFFSET_Y = "--candy-picture-in-picture-offset-y";
 const CANDY_INLINE_VIDEO_ACTION_ATTRIBUTE = "data-candy-inline-video-action";
 const CANDY_INLINE_VIDEO_CONTROLS_ATTRIBUTE = "data-candy-inline-video-controls";
 const CANDY_INLINE_VIDEO_SITE_PLAYER_ATTRIBUTE = "data-candy-inline-video-site-player";
 const CANDY_INLINE_VIDEO_SITE_STYLE_ATTRIBUTE = "data-candy-inline-video-site-style";
+const CANDY_INLINE_VIDEO_FULLSCREEN_ORIGIN_ATTRIBUTE = "data-candy-inline-video-fullscreen-origin";
+const CANDY_INLINE_VIDEO_FULLSCREEN_ORIGIN_STYLE_ATTRIBUTE =
+  "data-candy-inline-video-fullscreen-origin-style";
+const CANDY_INLINE_VIDEO_FULLSCREEN_ORIGIN_TOP = "--candy-inline-video-fullscreen-origin-top";
+const CANDY_INLINE_VIDEO_FULLSCREEN_ORIGIN_LEFT = "--candy-inline-video-fullscreen-origin-left";
+const CANDY_INLINE_VIDEO_ORIGIN_ATTRIBUTE = "data-candy-inline-video-origin";
+const CANDY_INLINE_VIDEO_ORIGIN_X = "--candy-inline-video-origin-x";
+const CANDY_INLINE_VIDEO_ORIGIN_Y = "--candy-inline-video-origin-y";
+const CANDY_INLINE_VIDEO_ORIGIN_SCALE_X = "--candy-inline-video-origin-scale-x";
+const CANDY_INLINE_VIDEO_ORIGIN_SCALE_Y = "--candy-inline-video-origin-scale-y";
 const CANDY_INLINE_VIDEO_ACTION_SIZE_PX = 56;
 const CANDY_INLINE_VIDEO_ACTION_INSET_PX = 16;
 const CANDY_INLINE_VIDEO_CONTROLS_HEIGHT_PX = 88;
@@ -201,6 +215,52 @@ function candyInlineVideoSitePlayer(video) {
   return video.closest("#movie_player, .html5-video-player, ytm-player");
 }
 
+function rememberCandyInlineVideoStableOrigin(video) {
+  if (!candyPictureInPicturePlayback.inlinePresentationExpected ||
+      candyPictureInPicturePlayback.presentedVideo !== video ||
+      candyPictureInPicturePlayback.expected || document.fullscreenElement ||
+      candyPictureInPicturePlayback.inlineFullscreenOrigin) return;
+  const player = candyInlineVideoSitePlayer(video);
+  if (!player) return;
+  const previous = candyPictureInPicturePlayback.inlineStableOrigin;
+  if (previous?.video === video && previous.player === player &&
+      previous.url === location.href &&
+      (previous.viewportWidth !== innerWidth ||
+        Math.abs(previous.viewportHeight - innerHeight) >
+          Math.max(200, previous.viewportHeight * 0.2))) return;
+  const videoBounds = video.getBoundingClientRect();
+  const playerBounds = player.getBoundingClientRect();
+  const parent = player.parentElement;
+  const parentBounds = parent?.getBoundingClientRect();
+  const playerStyle = getComputedStyle(player);
+  if (videoBounds.width <= 0 || videoBounds.height <= 0 ||
+      playerBounds.width <= 0 || playerBounds.height <= 0) return;
+  candyPictureInPicturePlayback.inlineStableOrigin = {
+    video,
+    player,
+    parent,
+    url: location.href,
+    videoBounds: {
+      left: videoBounds.left, top: videoBounds.top,
+      width: videoBounds.width, height: videoBounds.height,
+    },
+    playerBounds: {
+      left: playerBounds.left, top: playerBounds.top,
+      width: playerBounds.width, height: playerBounds.height,
+    },
+    parentBounds: parentBounds ? {
+      left: parentBounds.left, top: parentBounds.top,
+      width: parentBounds.width, height: parentBounds.height,
+    } : null,
+    viewportWidth: innerWidth,
+    viewportHeight: innerHeight,
+    scrollX,
+    scrollY,
+    top: Number.parseFloat(playerStyle.top),
+    left: Number.parseFloat(playerStyle.left),
+  };
+}
+
 function clearCandyInlineVideoSiteControls() {
   candyPictureInPicturePlayback.inlineSitePlayer?.removeAttribute(
     CANDY_INLINE_VIDEO_SITE_PLAYER_ATTRIBUTE,
@@ -305,6 +365,7 @@ function removeCandyInlineVideoControlsOverlay() {
 function positionCandyInlineVideoControls(video, host) {
   if (!video?.isConnected || !host?.isConnected) return;
   const bounds = video.getBoundingClientRect();
+  rememberCandyInlineVideoStableOrigin(video);
   const gestureOffset = Number(host.dataset.fullscreenGestureOffset) || 0;
   const left = Math.max(0, bounds.left);
   const right = Math.min(innerWidth, bounds.right);
@@ -876,10 +937,18 @@ function clearCandyPictureInPicturePresentation() {
     cancelAnimationFrame(candyPictureInPicturePlayback.alignmentFrame);
     candyPictureInPicturePlayback.alignmentFrame = null;
   }
+  if (candyPictureInPicturePlayback.alignmentMonitorFrame !== null) {
+    cancelAnimationFrame(candyPictureInPicturePlayback.alignmentMonitorFrame);
+    candyPictureInPicturePlayback.alignmentMonitorFrame = null;
+  }
   candyPictureInPicturePlayback.layoutObserver?.disconnect();
   candyPictureInPicturePlayback.layoutObserver = null;
   candyPictureInPicturePlayback.resizeObserver?.disconnect();
   candyPictureInPicturePlayback.resizeObserver = null;
+  candyPictureInPicturePlayback.pictureInPictureAncestors.forEach((element) => {
+    element.removeAttribute(CANDY_PICTURE_IN_PICTURE_ANCESTOR_ATTRIBUTE);
+  });
+  candyPictureInPicturePlayback.pictureInPictureAncestors = [];
   const presentedVideos = new Set(document.querySelectorAll(
     `video[${CANDY_PICTURE_IN_PICTURE_VIDEO_ATTRIBUTE}]`,
   ));
@@ -916,7 +985,11 @@ function presentCandyInlineVideo(video) {
   if (!isCandyInlineVideoCandidate(video)) return false;
   clearCandyInlineVideoOpenRequest();
   const previousVideo = candyPictureInPicturePlayback.presentedVideo;
-  if (previousVideo !== video) clearCandyInlineVideoControls(previousVideo);
+  if (previousVideo !== video) {
+    clearCandyInlineVideoControls(previousVideo);
+    clearCandyInlineVideoFullscreenOrigin();
+    candyPictureInPicturePlayback.inlineStableOrigin = null;
+  }
   candyPictureInPicturePlayback.inlineControlsObserver?.disconnect();
   candyPictureInPicturePlayback.presentedVideo = video;
   candyPictureInPicturePlayback.inlinePresentationExpected = true;
@@ -1009,52 +1082,257 @@ function clearCandyInlineVideoOpenRequest() {
   candyPictureInPicturePlayback.inlineOpenRequestKey = null;
 }
 
+function clearCandyInlineVideoFullscreenOrigin() {
+  const origin = candyPictureInPicturePlayback.inlineFullscreenOrigin;
+  if (!origin) return;
+  if (origin.frame !== null) cancelAnimationFrame(origin.frame);
+  if (origin.mismatchTimer !== null) clearTimeout(origin.mismatchTimer);
+  origin.resizeObserver?.disconnect();
+  origin.player.removeAttribute(CANDY_INLINE_VIDEO_FULLSCREEN_ORIGIN_ATTRIBUTE);
+  origin.player.style.removeProperty(CANDY_INLINE_VIDEO_FULLSCREEN_ORIGIN_TOP);
+  origin.player.style.removeProperty(CANDY_INLINE_VIDEO_FULLSCREEN_ORIGIN_LEFT);
+  origin.video.removeAttribute(CANDY_INLINE_VIDEO_ORIGIN_ATTRIBUTE);
+  origin.video.style.removeProperty(CANDY_INLINE_VIDEO_ORIGIN_X);
+  origin.video.style.removeProperty(CANDY_INLINE_VIDEO_ORIGIN_Y);
+  origin.video.style.removeProperty(CANDY_INLINE_VIDEO_ORIGIN_SCALE_X);
+  origin.video.style.removeProperty(CANDY_INLINE_VIDEO_ORIGIN_SCALE_Y);
+  origin.style.remove();
+  candyPictureInPicturePlayback.inlineFullscreenOrigin = null;
+}
+
+function updateCandyInlineVideoFullscreenOriginVisibility() {
+  const origin = candyPictureInPicturePlayback.inlineFullscreenOrigin;
+  if (!origin) return;
+  if (document.fullscreenElement || candyPictureInPicturePlayback.expected) {
+    origin.player.removeAttribute(CANDY_INLINE_VIDEO_FULLSCREEN_ORIGIN_ATTRIBUTE);
+    origin.video.removeAttribute(CANDY_INLINE_VIDEO_ORIGIN_ATTRIBUTE);
+  } else {
+    origin.player.setAttribute(CANDY_INLINE_VIDEO_FULLSCREEN_ORIGIN_ATTRIBUTE, "");
+    if (origin.videoAdjusted) origin.video.setAttribute(CANDY_INLINE_VIDEO_ORIGIN_ATTRIBUTE, "");
+  }
+}
+
+function candyInlineVideoOriginLayoutMatches(origin) {
+  const bounds = origin.player.getBoundingClientRect();
+  const parentBounds = origin.parent?.getBoundingClientRect();
+  return Math.abs(innerWidth - origin.viewportWidth) <= 2 &&
+    Math.abs(innerHeight - origin.viewportHeight) <= 96 &&
+    bounds.width > 0 && bounds.height > 0 &&
+    Math.abs(bounds.width - origin.bounds.width) <= 2 &&
+    Math.abs(bounds.height - origin.bounds.height) <= 2 &&
+    (!origin.parentBounds || !parentBounds || (
+      Math.abs(parentBounds.width - origin.parentBounds.width) <= 2 &&
+      Math.abs(parentBounds.height - origin.parentBounds.height) <= 2
+    ));
+}
+
+function reconcileCandyInlineVideoFullscreenOrigin() {
+  const origin = candyPictureInPicturePlayback.inlineFullscreenOrigin;
+  if (!origin || document.fullscreenElement || candyPictureInPicturePlayback.expected) return;
+  if (!origin.player.isConnected || origin.url !== location.href ||
+      origin.player.parentElement !== origin.parent) {
+    clearCandyInlineVideoFullscreenOrigin();
+    return;
+  }
+  const playerLayoutMatches = candyInlineVideoOriginLayoutMatches(origin);
+  if (!playerLayoutMatches) {
+    origin.player.removeAttribute(CANDY_INLINE_VIDEO_FULLSCREEN_ORIGIN_ATTRIBUTE);
+    origin.video.removeAttribute(CANDY_INLINE_VIDEO_ORIGIN_ATTRIBUTE);
+    if (origin.mismatchTimer === null) {
+      origin.mismatchTimer = setTimeout(() => {
+        origin.mismatchTimer = null;
+        if (candyPictureInPicturePlayback.inlineFullscreenOrigin === origin &&
+            !candyPictureInPicturePlayback.expected && !document.fullscreenElement &&
+            !candyInlineVideoOriginLayoutMatches(origin)) clearCandyInlineVideoFullscreenOrigin();
+      }, 5_000);
+    }
+    return;
+  } else if (origin.mismatchTimer !== null) {
+    clearTimeout(origin.mismatchTimer);
+    origin.mismatchTimer = null;
+  }
+  updateCandyInlineVideoFullscreenOriginVisibility();
+  if (playerLayoutMatches) {
+    const bounds = origin.player.getBoundingClientRect();
+    const scaleY = bounds.height / origin.player.offsetHeight;
+    const scaleX = bounds.width / origin.player.offsetWidth;
+    if (Number.isFinite(scaleY) && scaleY > 0 && origin.top !== null) {
+      const deltaY = (origin.bounds.top + origin.scrollY - scrollY - bounds.top) / scaleY;
+      if (Math.abs(deltaY) >= 0.5) {
+        origin.top += deltaY;
+        origin.player.style.setProperty(
+          CANDY_INLINE_VIDEO_FULLSCREEN_ORIGIN_TOP, `${origin.top}px`,
+        );
+      }
+    }
+    if (Number.isFinite(scaleX) && scaleX > 0 && origin.left !== null) {
+      const deltaX = (origin.bounds.left + origin.scrollX - scrollX - bounds.left) / scaleX;
+      if (Math.abs(deltaX) >= 0.5) {
+        origin.left += deltaX;
+        origin.player.style.setProperty(
+          CANDY_INLINE_VIDEO_FULLSCREEN_ORIGIN_LEFT, `${origin.left}px`,
+        );
+      }
+    }
+  }
+  if (Math.abs(innerWidth - origin.viewportWidth) > 2 ||
+      Math.abs(innerHeight - origin.viewportHeight) > 96 ||
+      !origin.video.isConnected) return;
+  const target = origin.videoBounds;
+  let videoBounds = origin.video.getBoundingClientRect();
+  if (videoBounds.width <= 0 || videoBounds.height <= 0) return;
+  const targetLeft = target.left + origin.scrollX - scrollX;
+  const targetTop = target.top + origin.scrollY - scrollY;
+  if ([targetLeft - videoBounds.left, targetTop - videoBounds.top,
+    target.width - videoBounds.width, target.height - videoBounds.height]
+    .every((delta) => Math.abs(delta) < 0.5)) return;
+  if (!origin.videoAdjusted) {
+    origin.videoAdjusted = true;
+    origin.video.style.setProperty(CANDY_INLINE_VIDEO_ORIGIN_X, "0px");
+    origin.video.style.setProperty(CANDY_INLINE_VIDEO_ORIGIN_Y, "0px");
+    origin.video.style.setProperty(CANDY_INLINE_VIDEO_ORIGIN_SCALE_X, "1");
+    origin.video.style.setProperty(CANDY_INLINE_VIDEO_ORIGIN_SCALE_Y, "1");
+    origin.video.setAttribute(CANDY_INLINE_VIDEO_ORIGIN_ATTRIBUTE, "");
+    videoBounds = origin.video.getBoundingClientRect();
+  }
+  if (Math.abs(target.width - videoBounds.width) >= 0.5) {
+    origin.videoScaleX *= target.width / videoBounds.width;
+    origin.video.style.setProperty(CANDY_INLINE_VIDEO_ORIGIN_SCALE_X, String(origin.videoScaleX));
+  }
+  if (Math.abs(target.height - videoBounds.height) >= 0.5) {
+    origin.videoScaleY *= target.height / videoBounds.height;
+    origin.video.style.setProperty(CANDY_INLINE_VIDEO_ORIGIN_SCALE_Y, String(origin.videoScaleY));
+  }
+  videoBounds = origin.video.getBoundingClientRect();
+  const videoScaleX = videoBounds.width / (origin.video.offsetWidth * origin.videoScaleX);
+  const videoScaleY = videoBounds.height / (origin.video.offsetHeight * origin.videoScaleY);
+  if (Number.isFinite(videoScaleX) && videoScaleX > 0) {
+    const deltaX = (targetLeft - videoBounds.left) / videoScaleX;
+    if (Math.abs(deltaX) >= 0.5) {
+      origin.videoX += deltaX;
+      origin.video.style.setProperty(CANDY_INLINE_VIDEO_ORIGIN_X, `${origin.videoX}px`);
+    }
+  }
+  if (Number.isFinite(videoScaleY) && videoScaleY > 0) {
+    const deltaY = (targetTop - videoBounds.top) / videoScaleY;
+    if (Math.abs(deltaY) >= 0.5) {
+      origin.videoY += deltaY;
+      origin.video.style.setProperty(
+        CANDY_INLINE_VIDEO_ORIGIN_Y, `${origin.videoY}px`,
+      );
+    }
+  }
+}
+
+function restoreCandyInlineVideoFullscreenOrigin() {
+  const origin = candyPictureInPicturePlayback.inlineFullscreenOrigin;
+  if (!origin) return;
+  updateCandyInlineVideoFullscreenOriginVisibility();
+  if (origin.frame !== null) cancelAnimationFrame(origin.frame);
+  const deadline = performance.now() + 5_000;
+  const reconcile = () => {
+    if (candyPictureInPicturePlayback.inlineFullscreenOrigin !== origin) return;
+    origin.frame = null;
+    reconcileCandyInlineVideoFullscreenOrigin();
+    if (performance.now() < deadline &&
+        candyPictureInPicturePlayback.inlineFullscreenOrigin === origin) {
+      origin.frame = requestAnimationFrame(reconcile);
+    }
+  };
+  reconcile();
+}
+
+function preserveCandyInlineVideoFullscreenOrigin(video, player) {
+  if (!candyUsesBackgroundVideoVisibilityFix || !player?.isConnected ||
+      candyPictureInPicturePlayback.expected || document.fullscreenElement) return;
+  const previous = candyPictureInPicturePlayback.inlineFullscreenOrigin;
+  if (previous?.player === player && previous.video === video &&
+      previous.url === location.href && previous.parent === player.parentElement) {
+    return;
+  }
+  clearCandyInlineVideoFullscreenOrigin();
+  const stable = candyPictureInPicturePlayback.inlineStableOrigin;
+  const snapshot = stable?.video === video && stable.player === player &&
+      stable.parent === player.parentElement && stable.url === location.href ? stable : null;
+  const style = getComputedStyle(player);
+  const top = snapshot?.top ?? Number.parseFloat(style.top);
+  const left = snapshot?.left ?? Number.parseFloat(style.left);
+  const bounds = snapshot?.playerBounds || player.getBoundingClientRect();
+  const videoBounds = snapshot?.videoBounds || video.getBoundingClientRect();
+  if (bounds.width <= 0 || bounds.height <= 0 ||
+      videoBounds.width <= 0 || videoBounds.height <= 0 ||
+      !document.documentElement) return;
+  if (Number.isFinite(top)) {
+    player.style.setProperty(CANDY_INLINE_VIDEO_FULLSCREEN_ORIGIN_TOP, `${top}px`);
+  }
+  if (Number.isFinite(left)) {
+    player.style.setProperty(CANDY_INLINE_VIDEO_FULLSCREEN_ORIGIN_LEFT, `${left}px`);
+  }
+  player.setAttribute(CANDY_INLINE_VIDEO_FULLSCREEN_ORIGIN_ATTRIBUTE, "");
+  const originStyle = document.createElement("style");
+  originStyle.setAttribute(CANDY_INLINE_VIDEO_FULLSCREEN_ORIGIN_STYLE_ATTRIBUTE, "");
+  // Keep the visible player box in place even when YouTube moves its parent later.
+  originStyle.textContent = `
+[${CANDY_INLINE_VIDEO_FULLSCREEN_ORIGIN_ATTRIBUTE}]:not(:fullscreen) {
+  top: var(${CANDY_INLINE_VIDEO_FULLSCREEN_ORIGIN_TOP}) !important;
+  left: var(${CANDY_INLINE_VIDEO_FULLSCREEN_ORIGIN_LEFT}) !important;
+}
+video[${CANDY_INLINE_VIDEO_ORIGIN_ATTRIBUTE}] {
+  translate: var(${CANDY_INLINE_VIDEO_ORIGIN_X}) var(${CANDY_INLINE_VIDEO_ORIGIN_Y}) !important;
+  scale: var(${CANDY_INLINE_VIDEO_ORIGIN_SCALE_X}) var(${CANDY_INLINE_VIDEO_ORIGIN_SCALE_Y}) !important;
+  transform-origin: top left !important;
+}`;
+  document.documentElement.appendChild(originStyle);
+  candyPictureInPicturePlayback.inlineFullscreenOrigin = {
+    video,
+    player,
+    style: originStyle,
+    url: location.href,
+    bounds: { left: bounds.left, top: bounds.top, width: bounds.width, height: bounds.height },
+    videoBounds: {
+      left: videoBounds.left, top: videoBounds.top,
+      width: videoBounds.width, height: videoBounds.height,
+    },
+    parent: player.parentElement,
+    parentBounds: snapshot?.parentBounds || player.parentElement?.getBoundingClientRect() || null,
+    viewportWidth: snapshot?.viewportWidth ?? innerWidth,
+    viewportHeight: snapshot?.viewportHeight ?? innerHeight,
+    scrollX: snapshot?.scrollX ?? scrollX,
+    scrollY: snapshot?.scrollY ?? scrollY,
+    top: Number.isFinite(top) ? top : null,
+    left: Number.isFinite(left) ? left : null,
+    videoX: 0,
+    videoY: 0,
+    videoScaleX: 1,
+    videoScaleY: 1,
+    videoAdjusted: false,
+    frame: null,
+    mismatchTimer: null,
+    resizeObserver: null,
+  };
+  if (typeof ResizeObserver === "function") {
+    const origin = candyPictureInPicturePlayback.inlineFullscreenOrigin;
+    origin.resizeObserver = new ResizeObserver(reconcileCandyInlineVideoFullscreenOrigin);
+    origin.resizeObserver.observe(player);
+    if (origin.parent) origin.resizeObserver.observe(origin.parent);
+  }
+}
+
 function requestCandyInlineVideoFullscreen(video) {
   if (!video || document.fullscreenElement?.contains(video)) return null;
-  const bounds = (candyInlineVideoSitePlayer(video) || video).getBoundingClientRect();
-  if (bounds.width > 0 && bounds.height > 0) {
-    candyPictureInPicturePlayback.inlineFullscreenReturnBox = {
-      left: bounds.left,
-      top: bounds.top,
-      width: bounds.width,
-      height: bounds.height,
-    };
-  }
-  const target = candyInlineVideoSitePlayer(video) || video.parentElement || video;
+  const sitePlayer = candyInlineVideoSitePlayer(video);
+  const target = sitePlayer || video.parentElement || video;
   if (typeof target.requestFullscreen !== "function") return null;
-  return target.requestFullscreen();
-}
-
-function restoreCandyInlineVideoBoxAfterFullscreen(video) {
-  const target = candyPictureInPicturePlayback.inlineFullscreenReturnBox;
-  if (!target || !video?.isConnected) return;
-  const videoBounds = video.getBoundingClientRect();
-  if (
-    videoBounds.width > 0 &&
-    videoBounds.height > 0
-  ) {
-    const scaleX = target.width / videoBounds.width;
-    const scaleY = target.height / videoBounds.height;
-    video.style.setProperty("transform-origin", "top left", "important");
-    video.style.setProperty(
-      "transform",
-      `translate3d(${target.left - videoBounds.left}px, ${target.top - videoBounds.top}px, 0) scale(${scaleX}, ${scaleY})`,
-      "important",
-    );
+  if (sitePlayer) preserveCandyInlineVideoFullscreenOrigin(video, sitePlayer);
+  try {
+    return Promise.resolve(target.requestFullscreen()).catch((error) => {
+      if (!document.fullscreenElement) clearCandyInlineVideoFullscreenOrigin();
+      throw error;
+    });
+  } catch (error) {
+    clearCandyInlineVideoFullscreenOrigin();
+    throw error;
   }
-}
-
-function scheduleCandyInlineVideoBoxRestore(video) {
-  [0, 16, 50, 150, 400, 900].forEach((delay) => {
-    setTimeout(() => {
-      if (
-        !document.fullscreenElement &&
-        video?.isConnected
-      ) {
-        restoreCandyInlineVideoBoxAfterFullscreen(video);
-      }
-    }, delay);
-  });
 }
 
 function reportCandyInlineVideoGestureHaptic(video, phase) {
@@ -1390,6 +1668,10 @@ function scheduleCandyInlineVideoStateReport() {
   ) return;
   candyPictureInPicturePlayback.inlineStateFrame = requestAnimationFrame(() => {
     candyPictureInPicturePlayback.inlineStateFrame = null;
+    const origin = candyPictureInPicturePlayback.inlineFullscreenOrigin;
+    if (origin && (!origin.player.isConnected || origin.url !== location.href)) {
+      clearCandyInlineVideoFullscreenOrigin();
+    }
     candyPictureInPicturePlayback.candidates.forEach((video) => {
       if (!video.isConnected || video.ended) {
         candyPictureInPicturePlayback.candidates.delete(video);
@@ -1397,7 +1679,8 @@ function scheduleCandyInlineVideoStateReport() {
     });
     if (
       candyPictureInPicturePlayback.inlinePresentationExpected &&
-      !isCandyInlineVideoCandidate(candyPictureInPicturePlayback.presentedVideo)
+      (!candyPictureInPicturePlayback.presentedVideo?.isConnected ||
+        candyPictureInPicturePlayback.presentedVideo.ended)
     ) {
       clearCandyInlineVideoPresentation();
     }
@@ -1513,6 +1796,8 @@ function updateCandyInlineMediaPlayerEnabled(
     stopCandyInlineVideoStateObservation();
     removeCandyInlineVideoAction();
     clearCandyInlineVideoPresentation();
+    clearCandyInlineVideoFullscreenOrigin();
+    candyPictureInPicturePlayback.inlineStableOrigin = null;
     if (!candyPictureInPicturePlayback.expected) {
       candyPictureInPicturePlayback.candidates.clear();
       clearCandyPictureInPicturePresentation();
@@ -1530,9 +1815,19 @@ function alignCandyPictureInPictureVideo(video) {
   if (candyPictureInPicturePlayback.presentedVideo !== video) return;
   video.style.setProperty(CANDY_PICTURE_IN_PICTURE_OFFSET_X, "0px");
   video.style.setProperty(CANDY_PICTURE_IN_PICTURE_OFFSET_Y, "0px");
-  const bounds = video.getBoundingClientRect();
-  video.style.setProperty(CANDY_PICTURE_IN_PICTURE_OFFSET_X, `${-bounds.left}px`);
-  video.style.setProperty(CANDY_PICTURE_IN_PICTURE_OFFSET_Y, `${-bounds.top}px`);
+  let offsetX = 0;
+  let offsetY = 0;
+  for (let pass = 0; pass < 2; pass += 1) {
+    const bounds = video.getBoundingClientRect();
+    const scaleX = bounds.width / video.offsetWidth;
+    const scaleY = bounds.height / video.offsetHeight;
+    if (!Number.isFinite(scaleX) || scaleX <= 0 ||
+        !Number.isFinite(scaleY) || scaleY <= 0) return;
+    offsetX -= bounds.left / scaleX;
+    offsetY -= bounds.top / scaleY;
+    video.style.setProperty(CANDY_PICTURE_IN_PICTURE_OFFSET_X, `${offsetX}px`);
+    video.style.setProperty(CANDY_PICTURE_IN_PICTURE_OFFSET_Y, `${offsetY}px`);
+  }
 }
 
 function scheduleCandyPictureInPictureAlignment() {
@@ -1550,6 +1845,28 @@ function scheduleCandyPictureInPictureAlignment() {
     ) return;
     alignCandyPictureInPictureVideo(video);
   });
+}
+
+function monitorCandyPictureInPictureAlignment(video) {
+  if (candyPictureInPicturePlayback.alignmentMonitorFrame !== null) {
+    cancelAnimationFrame(candyPictureInPicturePlayback.alignmentMonitorFrame);
+  }
+  const generation = candyPictureInPicturePlayback.generation;
+  const deadline = performance.now() + 5_000;
+  const check = () => {
+    candyPictureInPicturePlayback.alignmentMonitorFrame = null;
+    if (!candyPictureInPicturePlayback.expected ||
+        candyPictureInPicturePlayback.generation !== generation ||
+        candyPictureInPicturePlayback.presentedVideo !== video || !video?.isConnected) return;
+    const bounds = video.getBoundingClientRect();
+    if (Math.abs(bounds.left) >= 0.5 || Math.abs(bounds.top) >= 0.5) {
+      alignCandyPictureInPictureVideo(video);
+    }
+    if (performance.now() < deadline) {
+      candyPictureInPicturePlayback.alignmentMonitorFrame = requestAnimationFrame(check);
+    }
+  };
+  candyPictureInPicturePlayback.alignmentMonitorFrame = requestAnimationFrame(check);
 }
 
 function candyPictureInPictureVideoToPresent(preferredVideo = null) {
@@ -1615,6 +1932,31 @@ function presentCandyPictureInPictureVideo(preferredVideo = null) {
   }
   candyPictureInPicturePlayback.presentedVideo = video;
   updateCandyPictureInPictureVideoControls(video, true);
+  if (candyUsesBackgroundVideoVisibilityFix) {
+    const ancestors = [];
+    for (let ancestor = video.parentElement;
+      ancestor && ancestor !== document.body && ancestor !== document.documentElement;
+      ancestor = ancestor.parentElement) {
+      const style = getComputedStyle(ancestor);
+      const clipsOrContainsVideo = [
+        style.transform, style.translate, style.scale, style.filter,
+        style.perspective, style.clipPath, style.mask, style.contain,
+      ].some((value) => value && value !== "none") ||
+        [style.overflowX, style.overflowY].some((value) => value && value !== "visible");
+      if (clipsOrContainsVideo) ancestors.push(ancestor);
+    }
+    const previous = candyPictureInPicturePlayback.pictureInPictureAncestors;
+    if (ancestors.length !== previous.length ||
+        ancestors.some((ancestor, index) => ancestor !== previous[index])) {
+      previous.forEach((element) => {
+        element.removeAttribute(CANDY_PICTURE_IN_PICTURE_ANCESTOR_ATTRIBUTE);
+      });
+      ancestors.forEach((element) => {
+        element.setAttribute(CANDY_PICTURE_IN_PICTURE_ANCESTOR_ATTRIBUTE, "");
+      });
+      candyPictureInPicturePlayback.pictureInPictureAncestors = ancestors;
+    }
+  }
   video.setAttribute(CANDY_PICTURE_IN_PICTURE_VIDEO_ATTRIBUTE, "");
   document.documentElement.setAttribute(CANDY_PICTURE_IN_PICTURE_ROOT_ATTRIBUTE, "");
   if (!document.querySelector(`style[${CANDY_PICTURE_IN_PICTURE_STYLE_ATTRIBUTE}]`)) {
@@ -1636,6 +1978,19 @@ html[${CANDY_PICTURE_IN_PICTURE_ROOT_ATTRIBUTE}] body * {
 html[${CANDY_PICTURE_IN_PICTURE_ROOT_ATTRIBUTE}] [${CANDY_INLINE_VIDEO_CONTROLS_ATTRIBUTE}] {
   display: none !important;
   visibility: hidden !important;
+}
+html[${CANDY_PICTURE_IN_PICTURE_ROOT_ATTRIBUTE}] [${CANDY_PICTURE_IN_PICTURE_ANCESTOR_ATTRIBUTE}] {
+  overflow: visible !important;
+  clip-path: none !important;
+  contain: none !important;
+  transform: none !important;
+  translate: none !important;
+  scale: none !important;
+  filter: none !important;
+  perspective: none !important;
+  border-radius: 0 !important;
+  mask: none !important;
+  will-change: auto !important;
 }
 html[${CANDY_PICTURE_IN_PICTURE_ROOT_ATTRIBUTE}] video[${CANDY_PICTURE_IN_PICTURE_VIDEO_ATTRIBUTE}] {
   visibility: visible !important;
@@ -1698,26 +2053,27 @@ function scheduleCandyPictureInPicturePlayback() {
 }
 
 function updateCandyPictureInPicturePlayback(expected) {
+  if (expected && !candyPictureInPicturePlayback.expected &&
+      candyPictureInPicturePlayback.inlinePresentationExpected) {
+    const video = candyPictureInPicturePlayback.presentedVideo;
+    const sitePlayer = candyInlineVideoSitePlayer(video);
+    if (sitePlayer) preserveCandyInlineVideoFullscreenOrigin(video, sitePlayer);
+  }
   candyPictureInPicturePlayback.generation += 1;
   candyPictureInPicturePlayback.expected = expected;
   if (!expected) {
     clearCandyPictureInPicturePresentation();
-    if (
-      candyPictureInPicturePlayback.inlinePresentationExpected &&
-      candyPictureInPicturePlayback.presentedVideo?.isConnected
-    ) {
-      scheduleCandyInlineVideoBoxRestore(
-        candyPictureInPicturePlayback.presentedVideo,
-      );
-    }
+    restoreCandyInlineVideoFullscreenOrigin();
     updateCandyInlineVideoControlsOverlay(
       candyPictureInPicturePlayback.presentedVideo,
     );
     return;
   }
+  updateCandyInlineVideoFullscreenOriginVisibility();
   removeCandyInlineVideoControlsOverlay();
   rememberCandyPictureInPictureVideos();
   presentCandyPictureInPictureVideo();
+  monitorCandyPictureInPictureAlignment(candyPictureInPicturePlayback.presentedVideo);
   scheduleCandyPictureInPicturePlayback();
 }
 
@@ -1740,6 +2096,10 @@ async function prepareCandyPictureInPicturePlayback(message) {
     message.elementNonce,
   );
   if (!video) return { prepared: false };
+  if (!document.fullscreenElement) {
+    const sitePlayer = candyInlineVideoSitePlayer(video);
+    if (sitePlayer) preserveCandyInlineVideoFullscreenOrigin(video, sitePlayer);
+  }
   candyPictureInPicturePlayback.candidates.add(video);
   updateCandyPictureInPicturePlayback(true);
   presentCandyPictureInPictureVideo(video);
@@ -1784,6 +2144,7 @@ async function prepareCandyPictureInPicturePlayback(message) {
 function updateCandyInlineVideoPresentation(message) {
   if (message.expected !== true) {
     clearCandyInlineVideoPresentation();
+    // The page can reflow after controls close, so retain its original video box.
     if (!candyPictureInPicturePlayback.expected) clearCandyPictureInPicturePresentation();
     reconcileCandyInlineVideoState();
     return { accepted: true };
@@ -1837,6 +2198,12 @@ for (const eventName of ["loadedmetadata", "durationchange", "resize"]) {
 }
 document.addEventListener("ended", (event) => {
   if (!(event.target instanceof HTMLVideoElement)) return;
+  if (candyPictureInPicturePlayback.inlineFullscreenOrigin?.video === event.target) {
+    clearCandyInlineVideoFullscreenOrigin();
+  }
+  if (candyPictureInPicturePlayback.inlineStableOrigin?.video === event.target) {
+    candyPictureInPicturePlayback.inlineStableOrigin = null;
+  }
   if (
     candyPictureInPicturePlayback.inlinePresentationExpected &&
     candyPictureInPicturePlayback.presentedVideo === event.target
@@ -1858,6 +2225,8 @@ window.addEventListener("pagehide", () => {
   stopCandyInlineVideoStateObservation();
   removeCandyInlineVideoAction();
   clearCandyInlineVideoPresentation();
+  clearCandyInlineVideoFullscreenOrigin();
+  candyPictureInPicturePlayback.inlineStableOrigin = null;
   clearCandyPictureInPicturePresentation();
   candyPictureInPicturePlayback.candidates.clear();
   reportCandyInlineVideoState();
@@ -1868,17 +2237,17 @@ window.addEventListener("pageshow", () => {
 }, true);
 window.addEventListener("scroll", scheduleCandyInlineVideoStateReport, true);
 window.addEventListener("resize", scheduleCandyInlineVideoStateReport, true);
+window.addEventListener("resize", reconcileCandyInlineVideoFullscreenOrigin, true);
 document.addEventListener("visibilitychange", scheduleCandyPictureInPicturePlayback, true);
 document.addEventListener("fullscreenchange", () => {
+  updateCandyInlineVideoFullscreenOriginVisibility();
+  if (!document.fullscreenElement) restoreCandyInlineVideoFullscreenOrigin();
   scheduleCandyPictureInPictureAlignment();
   if (
     !document.fullscreenElement &&
     candyPictureInPicturePlayback.inlinePresentationExpected &&
     candyPictureInPicturePlayback.presentedVideo?.isConnected
   ) {
-    scheduleCandyInlineVideoBoxRestore(
-      candyPictureInPicturePlayback.presentedVideo,
-    );
     requestAnimationFrame(() => requestAnimationFrame(() => {
       window.dispatchEvent(new Event("resize"));
       updateCandyInlineVideoControlsOverlay(

@@ -377,7 +377,7 @@ test("expressive progress path stays bounded and becomes wobbly", () => {
 
   assert.equal(context.candyWobblyProgressPath(-20), "M 0 16");
   assert.equal(context.candyWobblyProgressPath(0), "M 0 16");
-  assert.match(context.candyWobblyProgressPath(500), /^M 0 16 L /);
+  assert.match(context.candyWobblyProgressPath(500), /^M 0 16 C /);
   assert.match(context.candyWobblyProgressPath(500), /500\.00 /);
   assert.match(context.candyWobblyProgressPath(500), /1[2-9]\.\d{2}/);
   assert.match(context.candyWobblyProgressPath(5_000), /1000\.00 /);
@@ -464,6 +464,7 @@ test("inline fullscreen drag moves video and controls together and restores styl
   context.innerHeight = 800;
   context.CANDY_INLINE_VIDEO_ACTION_SIZE_PX = 56;
   context.CANDY_INLINE_VIDEO_CONTROLS_HEIGHT_PX = 88;
+  context.rememberCandyInlineVideoStableOrigin = () => {};
   context.setCandyInlineActionStyle = (element, name, value) => {
     element.style.setProperty(name, value);
   };
@@ -542,13 +543,18 @@ test("picture in picture cleanup removes offsets from every marked video", () =>
   const context = vm.createContext({
     candyPictureInPicturePlayback: {
       alignmentFrame: null,
+      alignmentMonitorFrame: null,
       layoutObserver: null,
       resizeObserver: null,
+      pictureInPictureAncestors: [{
+        removeAttribute: (name) => removedAttributes.push(["ancestor", name]),
+      }],
       inlinePresentationExpected: true,
       presentedVideo: currentVideo,
     },
     CANDY_PICTURE_IN_PICTURE_ROOT_ATTRIBUTE: "data-candy-picture-in-picture",
     CANDY_PICTURE_IN_PICTURE_VIDEO_ATTRIBUTE: "data-candy-picture-in-picture-video",
+    CANDY_PICTURE_IN_PICTURE_ANCESTOR_ATTRIBUTE: "data-candy-picture-in-picture-ancestor",
     CANDY_PICTURE_IN_PICTURE_STYLE_ATTRIBUTE: "data-candy-picture-in-picture-style",
     CANDY_PICTURE_IN_PICTURE_OFFSET_X: "--candy-picture-in-picture-offset-x",
     CANDY_PICTURE_IN_PICTURE_OFFSET_Y: "--candy-picture-in-picture-offset-y",
@@ -577,6 +583,7 @@ test("picture in picture cleanup removes offsets from every marked video", () =>
   assert.deepEqual(
     JSON.parse(JSON.stringify(removedAttributes)),
     [
+      ["ancestor", "data-candy-picture-in-picture-ancestor"],
       ["stale", "data-candy-picture-in-picture-video"],
       ["current", "data-candy-picture-in-picture-video"],
     ],
@@ -621,6 +628,257 @@ test("picture in picture restoration acknowledges after two rendered frames", as
   frames.shift()();
   assert.equal((await restoration).prepared, true);
   assert.deepEqual(overlayUpdates, [presentedVideo]);
+});
+
+test("PiP return keeps original player box through a delayed parent shift", () => {
+  const properties = new Map();
+  const videoProperties = new Map();
+  const videoAttributes = new Set();
+  const frames = [];
+  const timeouts = [];
+  const attributes = new Set();
+  let siteTop = 100;
+  let siteWidth = 400;
+  let videoLocalTop = 0;
+  let clock = 0;
+  const player = {
+    isConnected: true,
+    offsetWidth: 400,
+    offsetHeight: 225,
+    style: {
+      setProperty: (name, value) => properties.set(name, value),
+      removeProperty: (name) => properties.delete(name),
+    },
+    setAttribute: (name) => attributes.add(name),
+    removeAttribute: (name) => attributes.delete(name),
+    getBoundingClientRect: () => ({
+      left: 0,
+      top: siteTop + (attributes.has("data-candy-inline-video-fullscreen-origin") ?
+        Number.parseFloat(properties.get("--candy-inline-video-fullscreen-origin-top") || "0") :
+        0),
+      width: siteWidth,
+      height: 225,
+    }),
+  };
+  const video = {
+    isConnected: true,
+    offsetWidth: 400,
+    offsetHeight: 225,
+    style: {
+      setProperty: (name, value) => videoProperties.set(name, value),
+      removeProperty: (name) => videoProperties.delete(name),
+    },
+    setAttribute: (name) => videoAttributes.add(name),
+    removeAttribute: (name) => videoAttributes.delete(name),
+    getBoundingClientRect: () => ({
+      left: videoAttributes.has("data-candy-inline-video-origin") ?
+        Number.parseFloat(videoProperties.get("--candy-inline-video-origin-x") || "0") : 0,
+      top: player.getBoundingClientRect().top + videoLocalTop +
+        (videoAttributes.has("data-candy-inline-video-origin") ?
+          Number.parseFloat(videoProperties.get("--candy-inline-video-origin-y") || "0") : 0),
+      width: 400 * (videoAttributes.has("data-candy-inline-video-origin") ?
+        Number(videoProperties.get("--candy-inline-video-origin-scale-x") || 1) : 1),
+      height: 225 * (videoAttributes.has("data-candy-inline-video-origin") ?
+        Number(videoProperties.get("--candy-inline-video-origin-scale-y") || 1) : 1),
+    }),
+  };
+  const context = vm.createContext({
+    candyPictureInPicturePlayback: { inlineFullscreenOrigin: null, expected: false },
+    candyUsesBackgroundVideoVisibilityFix: true,
+    CANDY_INLINE_VIDEO_FULLSCREEN_ORIGIN_ATTRIBUTE: "data-candy-inline-video-fullscreen-origin",
+    CANDY_INLINE_VIDEO_FULLSCREEN_ORIGIN_TOP: "--candy-inline-video-fullscreen-origin-top",
+    CANDY_INLINE_VIDEO_FULLSCREEN_ORIGIN_LEFT: "--candy-inline-video-fullscreen-origin-left",
+    CANDY_INLINE_VIDEO_FULLSCREEN_ORIGIN_STYLE_ATTRIBUTE:
+      "data-candy-inline-video-fullscreen-origin-style",
+    CANDY_INLINE_VIDEO_ORIGIN_ATTRIBUTE: "data-candy-inline-video-origin",
+    CANDY_INLINE_VIDEO_ORIGIN_X: "--candy-inline-video-origin-x",
+    CANDY_INLINE_VIDEO_ORIGIN_Y: "--candy-inline-video-origin-y",
+    CANDY_INLINE_VIDEO_ORIGIN_SCALE_X: "--candy-inline-video-origin-scale-x",
+    CANDY_INLINE_VIDEO_ORIGIN_SCALE_Y: "--candy-inline-video-origin-scale-y",
+    document: {
+      fullscreenElement: null,
+      documentElement: { appendChild: () => {} },
+      createElement: () => ({ setAttribute: () => {}, remove: () => {} }),
+    },
+    getComputedStyle: () => ({ top: "0px", left: "0px" }),
+    innerWidth: 400,
+    innerHeight: 800,
+    scrollX: 0,
+    scrollY: 0,
+    location: { href: "https://m.youtube.com/watch?v=test" },
+    performance: { now: () => clock },
+    requestAnimationFrame: (callback) => { frames.push(callback); return frames.length; },
+    cancelAnimationFrame: () => {},
+    setTimeout: (callback) => { timeouts.push(callback); return timeouts.length; },
+    clearTimeout: () => {},
+  });
+  const source = asset("content.js")
+    .split("function clearCandyInlineVideoFullscreenOrigin() {")[1]
+    .split("function requestCandyInlineVideoFullscreen(video) {")[0];
+  vm.runInContext(`function clearCandyInlineVideoFullscreenOrigin() {${source}`, context);
+  context.preserveCandyInlineVideoFullscreenOrigin(video, player);
+  assert.equal(player.getBoundingClientRect().top, 100);
+  assert.equal(attributes.has("data-candy-inline-video-fullscreen-origin"), true);
+  context.candyPictureInPicturePlayback.expected = true;
+  context.updateCandyInlineVideoFullscreenOriginVisibility();
+  assert.equal(attributes.has("data-candy-inline-video-fullscreen-origin"), false);
+  siteTop = 150;
+  context.preserveCandyInlineVideoFullscreenOrigin(video, player);
+  assert.equal(context.candyPictureInPicturePlayback.inlineFullscreenOrigin.bounds.top, 100);
+  context.restoreCandyInlineVideoFullscreenOrigin();
+  assert.equal(player.getBoundingClientRect().top, 150);
+
+  context.candyPictureInPicturePlayback.expected = false;
+  context.restoreCandyInlineVideoFullscreenOrigin();
+  assert.equal(attributes.has("data-candy-inline-video-fullscreen-origin"), true);
+  assert.equal(player.getBoundingClientRect().top, 100);
+  const alreadyAlignedTop = properties.get("--candy-inline-video-fullscreen-origin-top");
+  frames.shift()();
+  assert.equal(properties.get("--candy-inline-video-fullscreen-origin-top"), alreadyAlignedTop);
+  clock = 1_200;
+  siteTop = 185;
+  frames.shift()();
+  assert.equal(player.getBoundingClientRect().top, 100);
+  assert.equal(properties.get("--candy-inline-video-fullscreen-origin-top"), "-85px");
+  assert.equal(video.getBoundingClientRect().top, 100);
+
+  videoLocalTop = 40;
+  frames.shift()();
+  assert.equal(video.getBoundingClientRect().top, 100);
+  assert.equal(videoProperties.get("--candy-inline-video-origin-y"), "-40px");
+
+  context.scrollY = 40;
+  siteTop = 145;
+  frames.shift()();
+  assert.equal(player.getBoundingClientRect().top, 60);
+  context.preserveCandyInlineVideoFullscreenOrigin(video, player);
+  assert.equal(context.candyPictureInPicturePlayback.inlineFullscreenOrigin.bounds.top, 100);
+  siteTop = 200;
+  context.restoreCandyInlineVideoFullscreenOrigin();
+  assert.equal(player.getBoundingClientRect().top, 60);
+  context.document.fullscreenElement = {};
+  context.updateCandyInlineVideoFullscreenOriginVisibility();
+  assert.equal(attributes.has("data-candy-inline-video-fullscreen-origin"), false);
+  context.document.fullscreenElement = null;
+  context.restoreCandyInlineVideoFullscreenOrigin();
+  assert.equal(attributes.has("data-candy-inline-video-fullscreen-origin"), true);
+
+  siteWidth = 320;
+  context.reconcileCandyInlineVideoFullscreenOrigin();
+  timeouts.shift()();
+  assert.equal(context.candyPictureInPicturePlayback.inlineFullscreenOrigin, null);
+
+  context.clearCandyInlineVideoFullscreenOrigin();
+  assert.equal(properties.has("--candy-inline-video-fullscreen-origin-top"), false);
+  assert.equal(attributes.has("data-candy-inline-video-fullscreen-origin"), false);
+});
+
+test("first PiP expected message captures origin before video-only layout", () => {
+  const calls = [];
+  const video = { isConnected: true };
+  const player = { isConnected: true };
+  const context = vm.createContext({
+    candyPictureInPicturePlayback: {
+      expected: false,
+      inlinePresentationExpected: true,
+      presentedVideo: video,
+      generation: 0,
+    },
+    candyInlineVideoSitePlayer: () => player,
+    preserveCandyInlineVideoFullscreenOrigin: () => calls.push("capture"),
+    updateCandyInlineVideoFullscreenOriginVisibility: () => calls.push("hide-origin"),
+    removeCandyInlineVideoControlsOverlay: () => {},
+    rememberCandyPictureInPictureVideos: () => {},
+    presentCandyPictureInPictureVideo: () => calls.push("video-only"),
+    monitorCandyPictureInPictureAlignment: () => {},
+    scheduleCandyPictureInPicturePlayback: () => {},
+  });
+  const source = asset("content.js")
+    .split("function updateCandyPictureInPicturePlayback(expected) {")[1]
+    .split("function nextCandyAnimationFrame() {")[0];
+  vm.runInContext(`function updateCandyPictureInPicturePlayback(expected) {${source}`, context);
+
+  context.updateCandyPictureInPicturePlayback(true);
+  context.updateCandyPictureInPicturePlayback(true);
+  assert.deepEqual(calls, ["capture", "hide-origin", "video-only", "hide-origin", "video-only"]);
+});
+
+test("inline video remembers its visible box before PiP host resize", () => {
+  let top = 100;
+  const player = {
+    getBoundingClientRect: () => ({ left: 0, top, width: 400, height: 225 }),
+    parentElement: null,
+  };
+  const video = {
+    getBoundingClientRect: () => ({ left: 0, top, width: 400, height: 225 }),
+  };
+  const context = vm.createContext({
+    candyPictureInPicturePlayback: {
+      inlinePresentationExpected: true,
+      presentedVideo: video,
+      expected: false,
+      inlineFullscreenOrigin: null,
+      inlineStableOrigin: null,
+    },
+    candyInlineVideoSitePlayer: () => player,
+    document: { fullscreenElement: null },
+    getComputedStyle: () => ({ top: "0px", left: "0px" }),
+    location: { href: "https://m.youtube.com/watch?v=test" },
+    innerWidth: 400,
+    innerHeight: 800,
+    scrollX: 0,
+    scrollY: 0,
+  });
+  const source = asset("content.js")
+    .split("function rememberCandyInlineVideoStableOrigin(video) {")[1]
+    .split("function clearCandyInlineVideoSiteControls() {")[0];
+  vm.runInContext(`function rememberCandyInlineVideoStableOrigin(video) {${source}`, context);
+
+  context.rememberCandyInlineVideoStableOrigin(video);
+  const initial = context.candyPictureInPicturePlayback.inlineStableOrigin;
+  assert.deepEqual(
+    [initial.videoBounds.left, initial.videoBounds.top,
+      initial.videoBounds.width, initial.videoBounds.height],
+    [0, 100, 400, 225],
+  );
+  context.innerHeight = 400;
+  top = 180;
+  context.rememberCandyInlineVideoStableOrigin(video);
+  assert.equal(context.candyPictureInPicturePlayback.inlineStableOrigin, initial);
+});
+
+test("PiP aligns a video inside a scaled YouTube player", () => {
+  const properties = new Map();
+  const scale = 0.75;
+  const video = {
+    isConnected: true,
+    offsetWidth: 400,
+    offsetHeight: 225,
+    style: { setProperty: (name, value) => properties.set(name, value) },
+    getBoundingClientRect: () => ({
+      left: 50 + scale * Number.parseFloat(
+        properties.get("--candy-picture-in-picture-offset-x") || "0",
+      ),
+      top: 100 + scale * Number.parseFloat(
+        properties.get("--candy-picture-in-picture-offset-y") || "0",
+      ),
+      width: 400 * scale,
+      height: 225 * scale,
+    }),
+  };
+  const context = vm.createContext({
+    candyPictureInPicturePlayback: { expected: true, presentedVideo: video },
+    CANDY_PICTURE_IN_PICTURE_OFFSET_X: "--candy-picture-in-picture-offset-x",
+    CANDY_PICTURE_IN_PICTURE_OFFSET_Y: "--candy-picture-in-picture-offset-y",
+  });
+  const source = asset("content.js")
+    .split("function alignCandyPictureInPictureVideo(video) {")[1]
+    .split("function scheduleCandyPictureInPictureAlignment() {")[0];
+  vm.runInContext(`function alignCandyPictureInPictureVideo(video) {${source}`, context);
+
+  context.alignCandyPictureInPictureVideo(video);
+  assert.ok(Math.abs(video.getBoundingClientRect().left) < 0.5);
+  assert.ok(Math.abs(video.getBoundingClientRect().top) < 0.5);
 });
 
 test("content presentation requires exact document and element identity", () => {
@@ -691,7 +949,7 @@ test("content presentation requires exact document and element identity", () => 
   assert.match(source, /if \(video\.paused \|\| video\.ended\)/);
   assert.match(source, /else video\.pause\(\)/);
   assert.match(source, /video\.currentTime = Number\(seek\.value\)/);
-  assert.match(source, /return target\.requestFullscreen\(\)/);
+  assert.match(source, /Promise\.resolve\(target\.requestFullscreen\(\)\)/);
   assert.match(source, /function candyInlineFullscreenGestureUpdate\(/);
   assert.match(source, /type: "inline-video-gesture-haptic"/);
   assert.match(source, /requestCandyInlineVideoFullscreen\(video\)/);
@@ -701,7 +959,7 @@ test("content presentation requires exact document and element identity", () => 
   assert.match(source, /removeCandyInlineVideoControlsOverlay\(\)/);
   assert.match(
     source,
-    /!isCandyInlineVideoCandidate\(candyPictureInPicturePlayback\.presentedVideo\)/,
+    /!candyPictureInPicturePlayback\.presentedVideo\?\.isConnected/,
   );
   assert.match(source, /type: "inline-video-open-request"/);
   assert.match(source, /function requestCandyInlineVideoClose\(video\)/);
