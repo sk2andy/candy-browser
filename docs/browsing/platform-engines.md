@@ -380,11 +380,11 @@ Camera and microphone permissions remain separate and continue through Candy's p
   signature validation to GeckoView. The user must explicitly approve requested permissions;
   dismissal and lifecycle failure deny access.
 - Android's Gecko runtime provisions two normal, deinstallable defaults through
-  `WebExtensionController.install(..., INSTALLATION_METHOD_ONBOARDING)`. uBlock Origin `1.74.0`
+  `WebExtensionController.install(..., INSTALLATION_METHOD_ONBOARDING)`. uBlock Origin `1.75.0`
   ships as the original Mozilla-signed AMO XPI, so a clean profile gets it without network access.
   `I still don't care about cookies` `1.1.9` ships the same way from its original Mozilla-signed AMO
   XPI. Both extensions therefore install on the first offline start. Their corresponding sources
-  and licenses are pinned to Git commits `6dd2d95e50d134a477a4e183343c0b26e9147123` and
+  and licenses are pinned to Git commits `21f0e686506bb21b514b451c8c6cb9bf8c82d232` and
   `e763f24f79c5803774d28730649aef9aae3998ca`.
 - Default permission approval exists only while Candy installs the exact catalog ID and version.
   Gecko still validates Mozilla's signature; bundled bytes must also match their pinned SHA-256.
