@@ -4,7 +4,7 @@
 
 | Piece | Responsibility |
 | --- | --- |
-| `TabPreviewCaptureRules` | Bound capture geometry and reject likely failed PixelCopy results |
+| `TabPreviewCaptureRules` | Match capture width to the Hero card on windows at least 600 dp wide, capped at 1,280 px and 2.5 million output pixels; compact windows retain 480 px. Never upscale the source. Reject likely failed PixelCopy results. |
 | `GeckoPreviewCaptureRules` / `TabSwitchPreviewLayoutRules` | Crop Gecko compositor captures to Candy's visible viewport, then reconstruct the same safe-area top inset and captured height during Hero/Grid/List handoffs. A captured height is immutable for the transition and therefore does not follow the moving address bar. |
 | `GeckoContentPresentationGate` | Keep the preview over a GeckoView until Gecko has reported both a real first composite and valid content paint. `onPaintStatusReset` revokes page readiness until the next contentful paint; rebinding a detached surface retains that page paint but still requires a fresh composite. Android `OnDraw` is not treated as Gecko content readiness. |
 | `BrowserController` | Own Gecko `capturePixels` timing, reject stale captures by tab/session/navigation generation, and validate the selected renderer binding again before reporting live content to Compose. |
@@ -17,6 +17,10 @@
 Hero and Grid use the same shared `TabCardHeroContent` interpolation on entry and exit. Android
 supplies platform bitmaps and renderer readiness at the edge; the transition geometry, durations and
 card crop stay in shared Compose so iOS and Android do not fork the tab-overview animation.
+Android captures the selected tab again before opening the overview, so existing lower-resolution
+stored previews are replaced when that tab becomes active. The larger capture keeps the existing
+selected-renderer and navigation-generation checks and still skips private and ephemeral tabs;
+regular-tab previews alone enter the bounded repository.
 
 ## Snoozing
 

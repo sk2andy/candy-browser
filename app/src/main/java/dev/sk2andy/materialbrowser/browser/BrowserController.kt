@@ -12116,7 +12116,6 @@ class BrowserController(
 
     private fun captureVisiblePreview(
         tabId: String,
-        width: Int = 480,
         onComplete: () -> Unit = {},
         acceptAfterDeparture: Boolean = false,
     ) {
@@ -12126,7 +12125,6 @@ class BrowserController(
         }
         captureVisibleGeckoPreview(
             tabId = tabId,
-            width = width,
             onComplete = onComplete,
             acceptAfterDeparture = acceptAfterDeparture,
         )
@@ -12134,7 +12132,6 @@ class BrowserController(
 
     private fun captureVisibleGeckoPreview(
         tabId: String,
-        width: Int,
         onComplete: () -> Unit,
         acceptAfterDeparture: Boolean,
     ) {
@@ -12172,6 +12169,17 @@ class BrowserController(
             onComplete()
             return
         }
+        val decorView = activity.window.decorView
+        val targetWidthPx = TabPreviewCaptureRules.targetWidthPx(
+            sourceWidthPx = sourceRect.width(),
+            viewportWidthPx = decorView.width,
+            viewportHeightPx = decorView.height,
+            density = activity.resources.displayMetrics.density,
+        )
+        if (targetWidthPx <= 0) {
+            onComplete()
+            return
+        }
         val request = PendingGeckoPreviewCapture(
             tabId = tabId,
             session = binding.session,
@@ -12195,9 +12203,9 @@ class BrowserController(
             mainHandler.postDelayed(timeout, GECKO_PREVIEW_CAPTURE_TIMEOUT_MS)
         }
         request.capture = binding.session.capturePreview(
-            targetWidthPx = width,
+            targetWidthPx = targetWidthPx,
             visibleViewHeightPx = sourceRect.height(),
-            maximumTargetHeightPx = width * 3,
+            maximumTargetHeightPx = TabPreviewCaptureRules.maximumTargetHeightPx(targetWidthPx),
             onComplete = captureComplete@{ bitmap ->
                 if (pendingGeckoPreviewCaptures[tabId] !== request) {
                     bitmap?.takeUnless(Bitmap::isRecycled)?.recycle()
