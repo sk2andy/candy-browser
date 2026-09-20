@@ -142,6 +142,11 @@ crop. Android Back exits selected DOM fullscreen before web history navigation. 
 fullscreen preserves the acknowledged inline presentation and returns to its inline controls. The
 retained presentation may remain `Expanded`, but only active DOM fullscreen or video-only PiP
 preparation hides browser chrome and Android system bars.
+When DOM fullscreen exits outside an active PiP transition, the controller republishes that
+session's effective CSS safe-area policy even if Android's status-bar inset has not changed.
+Android may already have restored its bars while the document was still fullscreen, when the
+effective CSS inset was zero. Inline geometry restoration waits for the new policy acknowledgement
+and ignores replies for replaced sessions, navigations or media presentations.
 On YouTube, Candy continuously remembers both the actual video's and the selected player's
 visible rectangles during ordinary inline presentation. The first fullscreen or PiP transition
 freezes that stable snapshot before the video-only layout or Android viewport resize; repeated
