@@ -10718,22 +10718,41 @@ class BrowserController(
             current.tabId == tabId &&
                 current.session === session &&
                 current.inlineVideoIdentity != null
-        } ?: return
-        scheduleMediaLayoutRestoration(view = presentation.view) { acceptCompletion ->
-            session.restorePictureInPicturePresentation restorationResult@{ restored ->
-                if (!acceptCompletion()) return@restorationResult
-                if (!restored) {
-                    session.setPictureInPicturePlaybackExpected(false)
-                }
-                if (
-                    browserEngineSessions[tabId] === session &&
-                    geckoMediaPresentation === presentation &&
-                    tabId !in browserEngineContentFullscreenTabIds
-                ) {
-                    requestMediaHostLayout(presentation)
+        }
+        val navigationGeneration = navigationGenerations[tabId]
+        val restoreAfterPolicy: () -> Unit = {
+            if (
+                !destroyed &&
+                presentation != null &&
+                browserEngineSessions[tabId] === session &&
+                navigationGenerations[tabId] == navigationGeneration &&
+                geckoMediaPresentation === presentation &&
+                tabId !in browserEngineContentFullscreenTabIds &&
+                !pictureInPictureTransitionPending &&
+                !isInPictureInPicture
+            ) {
+                scheduleMediaLayoutRestoration(view = presentation.view) { acceptCompletion ->
+                    session.restorePictureInPicturePresentation restorationResult@{ restored ->
+                        if (!acceptCompletion()) return@restorationResult
+                        if (!restored) {
+                            session.setPictureInPicturePlaybackExpected(false)
+                        }
+                        if (
+                            browserEngineSessions[tabId] === session &&
+                            geckoMediaPresentation === presentation &&
+                            tabId !in browserEngineContentFullscreenTabIds
+                        ) {
+                            requestMediaHostLayout(presentation)
+                        }
+                    }
                 }
             }
         }
+        // Android can restore the same status-bar inset before DOM fullscreen exits. Republish
+        // its effective CSS policy now, then restore geometry against the acknowledged revision.
+        val policy = geckoPrivacyPolicyFor(tabId)
+        if (policy != null) session.updatePrivacyPolicy(policy, onReady = restoreAfterPolicy)
+        else restoreAfterPolicy()
     }
 
     private fun startGeckoMediaPresentation(

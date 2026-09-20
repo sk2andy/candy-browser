@@ -717,6 +717,80 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
     }
 
     @Test
+    fun fullscreenExitRefreshesSafeAreaPolicyWithoutAnotherInsetChange() {
+        composeRule.runOnIdle {
+            val session = prepareFullscreenInlineSession()
+            val browserController = requireNotNull(controller)
+            assertEquals(0, session.privacyPolicies.last().cssSafeAreaTopInsetPx)
+            session.privacyPolicies.clear()
+            session.commands.clear()
+
+            browserController.reportSelectedGeckoFullscreenStateForTesting(false)
+
+            assertEquals(listOf(96), session.privacyPolicies.map { it.cssSafeAreaTopInsetPx })
+            browserController.reportSelectedGeckoFullscreenStateForTesting(false)
+            assertEquals(1, session.privacyPolicies.size)
+            assertTrue(session.commands.isEmpty())
+        }
+    }
+
+    @Test
+    fun fullscreenExitRestoresMediaOnlyAfterUpdatedPolicyAcknowledgement() {
+        lateinit var session: ReentrantAttachSession
+        composeRule.runOnIdle {
+            session = prepareFullscreenInlineSession()
+            session.deferPolicyReadyCallbacks = true
+            requireNotNull(controller).reportSelectedGeckoFullscreenStateForTesting(false)
+
+            assertFalse(requireNotNull(controller).isMediaLayoutRestorationPending)
+            assertEquals(0, session.mediaRestorationCount)
+            assertEquals(1, session.policyReadyCallbacks.size)
+            session.policyReadyCallbacks.removeAt(0).invoke()
+            assertTrue(requireNotNull(controller).isMediaLayoutRestorationPending)
+        }
+        composeRule.waitUntil(timeoutMillis = 5_000L) { session.mediaRestorationCount == 1 }
+    }
+
+    @Test
+    fun fullscreenExitPolicyAcknowledgementIgnoresReplacedVideo() {
+        composeRule.runOnIdle {
+            val session = prepareFullscreenInlineSession()
+            val browserController = requireNotNull(controller)
+            session.deferPolicyReadyCallbacks = true
+            browserController.reportSelectedGeckoFullscreenStateForTesting(false)
+            browserController.reportSelectedGeckoMediaStateForTesting(
+                inlineMediaState(
+                    GeckoInlineVideoIdentity("replacement-document", "replacement-video"),
+                    isPresented = true,
+                ),
+            )
+
+            session.policyReadyCallbacks.removeAt(0).invoke()
+
+            assertFalse(browserController.isMediaLayoutRestorationPending)
+            assertEquals(0, session.mediaRestorationCount)
+        }
+    }
+
+    @Test
+    fun fullscreenExitPolicyAcknowledgementIgnoresReplacedSession() {
+        composeRule.runOnIdle {
+            val session = prepareFullscreenInlineSession()
+            val browserController = requireNotNull(controller)
+            session.deferPolicyReadyCallbacks = true
+            browserController.reportSelectedGeckoFullscreenStateForTesting(false)
+            browserController.installGeckoEngineSessionForTesting(
+                ReentrantAttachSession(tabId = session.tabId, onFirstAttach = {}),
+            )
+
+            session.policyReadyCallbacks.removeAt(0).invoke()
+
+            assertFalse(browserController.isMediaLayoutRestorationPending)
+            assertEquals(0, session.mediaRestorationCount)
+        }
+    }
+
+    @Test
     fun safeAreaFallbackUpdatesPolicyWithoutReloadingCurrentNavigation() {
         composeRule.runOnIdle {
             val store = BrowserSessionStore(composeRule.activity)
@@ -1506,6 +1580,49 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
         }
     }
 
+    private fun prepareFullscreenInlineSession(): ReentrantAttachSession {
+        val store = BrowserSessionStore(composeRule.activity)
+        originalEngineKind = store.loadAndroidBrowserEngineKind()
+        assertTrue(store.saveAndroidBrowserEngineKind(AndroidBrowserEngineKind.GeckoView))
+        val browserController = BrowserController(composeRule.activity)
+        controller = browserController
+        browserController.updateDeveloperSettings(DeveloperSettings())
+        val session = ReentrantAttachSession(
+            tabId = browserController.selectedTabId,
+            onFirstAttach = {},
+        )
+        browserController.installGeckoEngineSessionForTesting(session)
+        val host = FrameLayout(composeRule.activity)
+        composeRule.activity.addContentView(host, matchParentLayoutParams())
+        browserController.attachSelectedBrowserEngineView(host)
+        browserController.dispatchGeckoEngineEventForTesting(
+            BrowserEngineEvent(
+                tabId = session.tabId,
+                type = BrowserEngineEventType.NavigationStarted,
+                address = "https://media.example/",
+                title = null,
+                canGoBack = false,
+                canGoForward = false,
+                failureDescription = null,
+            ),
+        )
+        browserController.reportSelectedGeckoMediaStateForTesting(
+            inlineMediaState(
+                GeckoInlineVideoIdentity("document-nonce", "element-nonce"),
+                isPresented = true,
+            ),
+        )
+        browserController.reportSelectedGeckoFullscreenStateForTesting(true)
+        browserController.onWindowInsetsChanged(WindowInsetsCompat.Builder().build())
+        browserController.onWindowInsetsChanged(
+            WindowInsetsCompat.Builder()
+                .setInsets(WindowInsetsCompat.Type.statusBars(), Insets.of(0, 96, 0, 0))
+                .setVisible(WindowInsetsCompat.Type.statusBars(), true)
+                .build(),
+        )
+        return session
+    }
+
     private fun eligibleMediaState() =
         GeckoMediaSessionState(
             isActive = true,
@@ -1555,6 +1672,9 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
         val inlineVideoPresentationRequests = mutableListOf<Pair<GeckoInlineVideoIdentity?, Boolean>>()
         var deferPolicyReadyCallbacks = false
         val policyReadyCallbacks = mutableListOf<() -> Unit>()
+        @Volatile
+        var mediaRestorationCount = 0
+            private set
         val backdropCaptureRequirements = mutableListOf<Boolean>()
         var createCount = 0
             private set
@@ -1669,6 +1789,11 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
         override fun setVideoAutoplayBlocked(blocked: Boolean) = Unit
 
         override fun setAudioMuted(muted: Boolean) = Unit
+
+        override fun restorePictureInPicturePresentation(onResult: (Boolean) -> Unit) {
+            mediaRestorationCount++
+            onResult(true)
+        }
 
         override fun executeMediaCommand(command: GeckoMediaCommand) = Unit
 
