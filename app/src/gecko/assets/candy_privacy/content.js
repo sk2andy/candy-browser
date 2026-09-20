@@ -169,15 +169,31 @@ function candyInlineVideoTime(seconds) {
 function candyWobblyProgressPath(value) {
   const progress = Math.min(1000, Math.max(0, Number(value) || 0));
   if (progress <= 0) return "M 0 16";
-  const points = ["M 0 16"];
+  const points = [{ x: 0, y: 16 }];
   const segments = Math.max(4, Math.ceil(progress / 42));
+  const amplitude = Math.min(4.5, 1.6 + progress / 320);
   for (let index = 1; index <= segments; index += 1) {
     const x = progress * index / segments;
-    const amplitude = Math.min(4.5, 1.6 + progress / 320);
     const y = 16 + Math.sin(index * 1.45) * amplitude;
-    points.push(`L ${x.toFixed(2)} ${y.toFixed(2)}`);
+    points.push({ x, y });
   }
-  return points.join(" ");
+  const path = ["M 0 16"];
+  for (let index = 0; index < segments; index += 1) {
+    const previous = points[Math.max(0, index - 1)];
+    const start = points[index];
+    const end = points[index + 1];
+    const next = points[Math.min(segments, index + 2)];
+    const firstControlX = start.x + (end.x - previous.x) / 6;
+    const firstControlY = start.y + (end.y - previous.y) / 6;
+    const secondControlX = end.x - (next.x - start.x) / 6;
+    const secondControlY = end.y - (next.y - start.y) / 6;
+    path.push(
+      `C ${firstControlX.toFixed(2)} ${firstControlY.toFixed(2)} ` +
+      `${secondControlX.toFixed(2)} ${secondControlY.toFixed(2)} ` +
+      `${end.x.toFixed(2)} ${end.y.toFixed(2)}`,
+    );
+  }
+  return path.join(" ");
 }
 
 function candyInlineVideoSitePlayer(video) {
