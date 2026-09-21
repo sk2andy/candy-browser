@@ -1437,6 +1437,8 @@ class GeckoPictureInPictureInstrumentedTest {
             var longestDarkRun = 0
             var cyanPixels = 0
             var sampledPixels = 0
+            var lowerCyanPixels = 0
+            var lowerSampledPixels = 0
             var cyanLeft = screenshot.width
             var cyanTop = screenshot.height
             var cyanRight = -1
@@ -1471,17 +1473,42 @@ class GeckoPictureInPictureInstrumentedTest {
                 darkRun = if (dark) darkRun + 1 else 0
                 longestDarkRun = maxOf(longestDarkRun, darkRun)
             }
+            val lowerLeft = (location[0] + (video.getDouble(0) + video.getDouble(2) * 0.42) * scale)
+                .toInt().coerceIn(0, screenshot.width - 1)
+            val lowerRight = (location[0] + (video.getDouble(0) + video.getDouble(2) * 0.58) * scale)
+                .toInt().coerceIn(lowerLeft + 1, screenshot.width)
+            val lowerTop = (location[1] + (video.getDouble(1) + video.getDouble(3) * 0.85) * scale)
+                .toInt().coerceIn(0, screenshot.height - 1)
+            val lowerBottom = (location[1] + (video.getDouble(1) + video.getDouble(3) * 0.94) * scale)
+                .toInt().coerceIn(lowerTop + 1, screenshot.height)
+            for (y in lowerTop until lowerBottom step 2) {
+                for (x in lowerLeft until lowerRight step 2) {
+                    val pixel = screenshot.getPixel(x, y)
+                    if (Color.red(pixel) < 40 && Color.green(pixel) > 140 && Color.blue(pixel) > 140) {
+                        lowerCyanPixels++
+                    }
+                    lowerSampledPixels++
+                }
+            }
             Log.i(
                 "CandyPipGeometry",
                 "pixels phase=$phase; longestDarkBandPx=$longestDarkRun; " +
                     "longestDarkBandCss=${longestDarkRun / scale}; host=${location.toList()}; " +
-                    "decodedCyanPixels=$cyanPixels/$sampledPixels; screenshot=${target.absolutePath}; sample=$sample",
+                    "decodedCyanPixels=$cyanPixels/$sampledPixels; " +
+                    "lowerDecodedCyanPixels=$lowerCyanPixels/$lowerSampledPixels; " +
+                    "screenshot=${target.absolutePath}; sample=$sample",
             )
             if (verifyDecodedFrame) {
                 assertTrue(
                     "Decoded cyan video missing at $phase: cyan=$cyanPixels/$sampledPixels; " +
                         "darkBandPx=$longestDarkRun; screenshot=${target.absolutePath}; sample=$sample",
                     cyanPixels >= sampledPixels * 0.9,
+                )
+                assertTrue(
+                    "Decoded video hidden behind Candy controls at $phase: " +
+                        "cyan=$lowerCyanPixels/$lowerSampledPixels; screenshot=${target.absolutePath}; " +
+                        "sample=$sample",
+                    lowerCyanPixels >= lowerSampledPixels * 0.9,
                 )
             }
         } finally {
