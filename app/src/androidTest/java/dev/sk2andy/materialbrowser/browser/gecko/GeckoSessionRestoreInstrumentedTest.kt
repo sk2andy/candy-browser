@@ -152,6 +152,66 @@ class GeckoSessionRestoreInstrumentedTest {
     }
 
     @Test
+    fun newerNavigationQueuedDuringSessionRestoreRemainsCurrent() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val server = FixtureServer()
+        val profileId = "restore-newer-navigation-${UUID.randomUUID()}"
+        lateinit var original: AndroidBrowserEngineSessionPort
+        lateinit var originalView: View
+
+        instrumentation.runOnMainSync {
+            original = session(
+                context,
+                tabId = REGULAR_TAB_ID,
+                profileId = profileId,
+                isPrivate = false,
+            )
+            originalView = original.createView(context)
+        }
+        try {
+            val snapshot = try {
+                execute(original, BrowserEngineCommands.load(server.url("first")))
+                assertTrue(await { original.historyUrlAtOffset(0) == server.url("first") })
+                execute(original, BrowserEngineCommands.load(server.url("restored")))
+                assertTrue(await { original.historyUrlAtOffset(-1) == server.url("first") })
+                requireNotNull(original.sessionStateSnapshot())
+            } finally {
+                instrumentation.runOnMainSync {
+                    original.releaseView(originalView)
+                    original.execute(BrowserEngineCommands.close())
+                }
+            }
+
+            lateinit var restored: AndroidBrowserEngineSessionPort
+            lateinit var restoredView: View
+            instrumentation.runOnMainSync {
+                restored = session(
+                    context,
+                    tabId = REGULAR_TAB_ID,
+                    profileId = profileId,
+                    isPrivate = false,
+                )
+                restoredView = restored.createView(context)
+                assertTrue(restored.restoreSessionState(snapshot))
+                restored.execute(BrowserEngineCommands.load(server.url("newer")))
+            }
+            try {
+                assertTrue(await { restored.historyUrlAtOffset(0) == server.url("newer") })
+                assertEquals(server.url("restored"), restored.historyUrlAtOffset(-1))
+                SystemClock.sleep(STALE_RESTORE_OBSERVATION_MILLIS)
+                assertEquals(server.url("newer"), restored.historyUrlAtOffset(0))
+            } finally {
+                instrumentation.runOnMainSync {
+                    restored.releaseView(restoredView)
+                    restored.execute(BrowserEngineCommands.close())
+                }
+            }
+        } finally {
+            server.close()
+        }
+    }
+
+    @Test
     fun failedPageRetryReloadsMatchingRestoredEntryWithoutDuplicatingHistory() {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val server = FixtureServer()
@@ -311,6 +371,7 @@ class GeckoSessionRestoreInstrumentedTest {
         const val PRIVATE_TAB_ID = "00000000-0000-0000-0000-000000000982"
         const val POLL_MILLIS = 25L
         const val REQUEST_BACKLOG = 4
+        const val STALE_RESTORE_OBSERVATION_MILLIS = 1_000L
         const val TIMEOUT_MILLIS = 30_000L
     }
 }
