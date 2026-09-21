@@ -110,6 +110,37 @@ jobs:
             :app:connectedFullDebugAndroidTest \
             -Pandroid.testInstrumentationRunnerArguments.class=dev.sk2andy.materialbrowser.ui.CastControlsInstrumentedTest
 
+      - name: Show Android test results after failure
+        if: failure()
+        shell: bash
+        run: |
+          set -euo pipefail
+          results_dir="app/build/outputs/androidTest-results/connected/debug/flavors/full"
+          if [[ ! -d "$results_dir" ]]; then
+            echo "Android test results are unavailable."
+            exit 0
+          fi
+
+          while IFS= read -r result; do
+            echo "===== ${result} ====="
+            sed -n '1,240p' "$result"
+          done < <(
+            find "$results_dir" -type f \
+              \( -name '*.xml' -o -name 'test-result-exit-code.txt' \) \
+              | sort
+          )
+
+      - name: Store Android test diagnostics after failure
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: google-cast-android-test-results-${{ github.run_attempt }}
+          path: |
+            app/build/outputs/androidTest-results/connected/debug/flavors/full
+            app/build/reports/androidTests/connected/debug/flavors/full
+          if-no-files-found: warn
+          retention-days: 3
+
       - name: Show emulator log after failure
         if: failure()
         shell: bash
