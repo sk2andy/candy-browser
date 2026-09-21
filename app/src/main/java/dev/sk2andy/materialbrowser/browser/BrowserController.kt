@@ -2647,7 +2647,12 @@ class BrowserController(
     private fun dispatchWindowInsetsToAttachedEngineViews(insets: WindowInsetsCompat) {
         geckoViewBindings.values.forEach { binding ->
             if (binding.view.isAttachedToWindow) {
-                applyGeckoWindowInsets(binding.view, binding.tabId, insets)
+                applyGeckoWindowInsets(
+                    view = binding.view,
+                    tabId = binding.tabId,
+                    insets = insets,
+                    isInsideSafeDrawingHost = isFullscreenVideoInsideSafeDrawingHost(binding.view),
+                )
             }
         }
         geckoLinkPeekBindings.values.forEach { binding ->
@@ -3940,6 +3945,9 @@ class BrowserController(
         // GeckoView 155's current root safe area or native margins for the keyboard/site override.
         (view as? GeckoViewInsetHost)?.updateInsets(layout, effectiveInsets)
     }
+
+    private fun isFullscreenVideoInsideSafeDrawingHost(view: View): Boolean =
+        fullscreenVideoInsideSafeDrawingHost && geckoMediaPresentation?.view === view
 
     private fun Insets.toGeckoViewInsets(): GeckoViewInsets = GeckoViewInsets(
         left = left,
@@ -10059,6 +10067,9 @@ class BrowserController(
         fullscreen: Boolean,
     ) {
         if (destroyed || browserEngineSessions[tabId] !== session) return
+        val wasFullscreen = tabId in browserEngineContentFullscreenTabIds
+        val safeDrawingPresentationView = geckoMediaPresentation?.view
+            ?.takeIf { fullscreenVideoInsideSafeDrawingHost }
         if (fullscreen) {
             browserEngineContentFullscreenTabIds[tabId] = Unit
             if (GeckoPictureInPictureRules.isFullscreenVideo(geckoMediaStates[tabId])) {
@@ -10073,6 +10084,22 @@ class BrowserController(
             ) {
                 clearGeckoMediaPresentation()
             }
+        }
+        if (wasFullscreen != fullscreen) {
+            lastWindowInsets?.let { insets ->
+                geckoViewBindings.values
+                    .filter { binding -> binding.tabId == tabId }
+                    .forEach { binding ->
+                        applyGeckoWindowInsets(
+                            view = binding.view,
+                            tabId = binding.tabId,
+                            insets = insets,
+                            isInsideSafeDrawingHost = binding.view === safeDrawingPresentationView ||
+                                isFullscreenVideoInsideSafeDrawingHost(binding.view),
+                        )
+                    }
+            }
+            geckoPrivacyPolicyFor(tabId)?.let(session::updatePrivacyPolicy)
         }
     }
 
