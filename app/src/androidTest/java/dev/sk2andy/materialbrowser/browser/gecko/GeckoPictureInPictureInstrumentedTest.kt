@@ -75,7 +75,6 @@ class GeckoPictureInPictureInstrumentedTest {
     fun selectedRegularFullscreenGeckoVideoSurvivesPictureInPictureLifecycle() {
         lateinit var stableGeckoHost: View
         lateinit var initialEngineView: View
-        lateinit var initialBrowserContainer: ViewGroup
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
                 val controller = activity.browserControllerForTesting()
@@ -98,7 +97,6 @@ class GeckoPictureInPictureInstrumentedTest {
                 initialEngineView = requireNotNull(
                     (stableGeckoHost as ViewGroup).singleChild(),
                 )
-                initialBrowserContainer = requireNotNull(stableGeckoHost.parent as? ViewGroup)
                 assertNotNull(
                     initialEngineView.findDescendant(SurfaceView::class.java),
                 )
@@ -128,7 +126,6 @@ class GeckoPictureInPictureInstrumentedTest {
                     stableGeckoHost,
                     activity.browserControllerForTesting().selectedGeckoViewForTesting(),
                 )
-                assertSame(initialBrowserContainer, parentOf(stableGeckoHost))
                 assertSame(initialEngineView, unchangedEngineView)
                 assertNotNull(unchangedEngineView.findDescendant(SurfaceView::class.java))
                 activity.browserControllerForTesting().onStop(
@@ -149,6 +146,18 @@ class GeckoPictureInPictureInstrumentedTest {
             }
             scenario.onActivity { activity ->
                 assertNotNull(activity.browserControllerForTesting().fullscreenVideoState)
+                val pictureInPictureEngineView = requireNotNull(
+                    (stableGeckoHost as ViewGroup).singleChild(),
+                )
+                assertSame(
+                    stableGeckoHost,
+                    activity.browserControllerForTesting().selectedGeckoViewForTesting(),
+                )
+                assertSame(initialEngineView, pictureInPictureEngineView)
+                assertNotNull(parentOf(stableGeckoHost))
+                assertNotNull(
+                    pictureInPictureEngineView.findDescendant(SurfaceView::class.java),
+                )
                 val rotatedConfiguration = Configuration(activity.resources.configuration).apply {
                     orientation = if (orientation == Configuration.ORIENTATION_LANDSCAPE) {
                         Configuration.ORIENTATION_PORTRAIT
@@ -180,7 +189,6 @@ class GeckoPictureInPictureInstrumentedTest {
                     stableGeckoHost,
                     activity.browserControllerForTesting().selectedGeckoViewForTesting(),
                 )
-                assertSame(initialBrowserContainer, parentOf(stableGeckoHost))
                 assertSame(initialEngineView, restoredEngineView)
                 assertNotNull(restoredEngineView.findDescendant(SurfaceView::class.java))
                 activity.browserControllerForTesting().completePictureInPictureReturn()
@@ -191,6 +199,20 @@ class GeckoPictureInPictureInstrumentedTest {
                     restored = activity.browserControllerForTesting().fullscreenVideoState == null
                 }
                 restored
+            }
+            awaitCondition {
+                var rendererAttached = false
+                scenario.onActivity { activity ->
+                    val currentEngineView = (stableGeckoHost as ViewGroup).singleChild()
+                    val surface = currentEngineView?.findDescendant(SurfaceView::class.java)
+                    rendererAttached =
+                        activity.browserControllerForTesting().selectedGeckoViewForTesting() ===
+                        stableGeckoHost &&
+                        currentEngineView === initialEngineView &&
+                        parentOf(stableGeckoHost) != null &&
+                        surface?.isAttachedToWindow == true
+                }
+                rendererAttached
             }
         }
     }
@@ -294,7 +316,9 @@ class GeckoPictureInPictureInstrumentedTest {
                 scenario.onActivity { activity ->
                     val controller = activity.browserControllerForTesting()
                     controller.updateVideoAutoplayBlocked(false)
-                    controller.updateInlineMediaPlayerEnabled(false)
+                    controller.updateInlineMediaPlayerMode(
+                        InlineMediaPlayerMode.ButtonInlineAndFullscreen,
+                    )
                     assertTrue(controller.openUrl(server.url))
                 }
                 awaitCondition {
@@ -338,9 +362,8 @@ class GeckoPictureInPictureInstrumentedTest {
                 }
                 scenario.onActivity { activity ->
                     val controller = activity.browserControllerForTesting()
-                    assertFalse(controller.isInlineMediaPlayerEnabled)
+                    assertTrue(controller.isInlineMediaPlayerEnabled)
                     assertTrue(controller.canOpenInlineMediaPlayer)
-                    controller.updateInlineMediaPlayerEnabled(true)
                 }
                 awaitCondition {
                     var canOpen = false

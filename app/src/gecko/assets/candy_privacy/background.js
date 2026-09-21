@@ -118,6 +118,12 @@ function contentPolicy(policy) {
     inlineMediaPlayerCloseLabel:
       typeof policy?.inlineMediaPlayerCloseLabel === "string" ?
         policy.inlineMediaPlayerCloseLabel.slice(0, 80) : "Close Candy Player",
+    inlineMediaPlayerShowControlsLabel:
+      typeof policy?.inlineMediaPlayerShowControlsLabel === "string" ?
+        policy.inlineMediaPlayerShowControlsLabel.slice(0, 80) : "Show controls",
+    inlineMediaPlayerHideControlsLabel:
+      typeof policy?.inlineMediaPlayerHideControlsLabel === "string" ?
+        policy.inlineMediaPlayerHideControlsLabel.slice(0, 80) : "Hide controls",
     performanceDiagnosticsEnabled: policy?.performanceDiagnosticsEnabled === true,
     domDiagnosticsEnabled: policy?.domDiagnosticsEnabled === true,
     safeAreaLayoutQuietPeriodMillis:

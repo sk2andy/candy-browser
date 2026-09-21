@@ -21,10 +21,10 @@ while Android PiP is active until the confirmed return callback. Candy exits pag
 through GeckoSession's public `exitFullScreen()` API. Media-session callbacks from a
 replaced YouTube ad/main session are ignored once that native media-session identity is stale.
 Candy only offers PiP after Gecko has reported an active, playing, fullscreen video with non-zero
-dimensions and at least one video track. The existing GeckoView and GeckoSession stay in the browser
-viewport for expanded fullscreen and Android PiP. Candy never creates a second renderer or a second
-address bar. Reparenting is reserved for the user-requested in-app mini-player, outside the Android
-PiP transition.
+dimensions and at least one video track. The existing GeckoView and GeckoSession remain the sole
+renderer during expanded fullscreen and Android PiP. Compose may transfer that same GeckoView
+between its normal and video-only content containers as the window changes size; Candy never creates
+a second renderer or a second address bar.
 
 Android PiP aspect ratio and transition source bounds follow Gecko's reported video dimensions.
 Invalid dimensions fall back to 16:9; extreme values are clamped to Android's supported PiP range.
@@ -146,7 +146,22 @@ the exact HTML video's site-controlled native controls and adds isolated Candy p
 time and fullscreen controls over the video's lower edge. For YouTube, Candy also suppresses the
 selected player's site chrome without hiding captions. The Candy control host moves into the DOM
 fullscreen element so it remains in the fullscreen top layer. Candy restores the page's original
-controls state and YouTube chrome when the inline presentation ends. Only Android PiP preparation
+controls state and YouTube chrome when the inline presentation ends. A trusted primary touch tap
+of at most 350 ms on the free video surface toggles Candy controls, including while DOM fullscreen
+is active; controls, seek, mouse, pen, empty-pointer, long-press, drag/swipe, cancelled and
+untrusted gestures never toggle them. Visibility is presentation-local and survives PiP entry,
+return and policy refresh for the same video, then resets when that
+presentation is replaced or closed. The close action is hidden and removed from keyboard focus in
+Automatic and Always for fullscreen modes because those policies immediately reopen the presentation;
+button modes retain it. The gesture layer remains keyboard-focusable with Show/Hide controls
+semantics; Enter or Space restores hidden controls without intercepting the transport controls.
+These labels use the app's localized string resources through the existing native host and
+extension policy, independently of the website language. Hidden transport controls are inert and
+removed from layout/accessibility; the free-surface toggle remains available. Completed touches
+suppress compatibility clicks, key repeats are ignored, and unrelated pointer releases cannot
+finish another pointer's gesture. Policy refresh updates close visibility in place without
+replacing the presented video or restarting an open request.
+Only Android PiP preparation
 temporarily applies the video-only layout; it synchronously aligns the video before the first PiP
 frame, while observers and a bounded post-entry frame check correct later movement. On YouTube,
 PiP-only styles also remove clipping and transformed containing blocks from the selected video's
@@ -232,10 +247,39 @@ Candy presentation; entering DOM fullscreen first is not required.
 | Trusted content host | Candidate selection, video-local action placement and exact element acknowledgement | [`content.js`](../../app/src/gecko/assets/candy_privacy/content.js) |
 | Compose hosts | Browser viewport for stable fullscreen/PiP; overlay only for the in-app mini-player | [`BrowserViewport.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/BrowserViewport.kt), [`FullscreenVideoOverlay.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/FullscreenVideoOverlay.kt) |
 | Fullscreen gesture controls | Pure gesture regions/motion, live surface transform and Activity-scoped brightness/volume bridge | [`FullscreenVideoGestureRules.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/FullscreenVideoGestureRules.kt), [`FullscreenVideoGestures.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/FullscreenVideoGestures.kt), [`FullscreenVideoSystemControls.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/FullscreenVideoSystemControls.kt) |
-| Background playback | Android media session, controls and foreground service | [`BrowserMediaPlaybackService.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/browser/BrowserMediaPlaybackService.kt) |
+| Background playback | Android media session, bounded controls/metadata and foreground-service lifecycle | [`BrowserMediaPlaybackService.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/browser/BrowserMediaPlaybackService.kt), [`GeckoMedia3Playback.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/browser/GeckoMedia3Playback.kt) |
 
 Keep `MainActivity` and `BrowserController` as orchestration. Put new deterministic eligibility or
 state decisions in focused rules and unit-test them without Android when possible.
+
+## Android system controls and background playback
+
+The Android system-media boundary has one Media3 `MediaSessionService` and one notification. The
+service is an adapter over the already-running Gecko session: Gecko remains the sole decoder and
+renderer. The adapter creates no second media source, renderer, URI, artwork fetch, durable URL or
+process-death resume state. Audio and video use the same boundary when an eligible existing engine
+session is already playing.
+
+BrowserController publishes a bounded, memory-only snapshot containing sanitized title/origin,
+position, finite duration when known, playback rate and an owner identity consisting of tab,
+engine-session and navigation generation. A foreground-tab selection change alone cannot retarget
+an active background publication. An explicit PiP owner preempts that captured owner for the one
+system session; leaving PiP restores the captured background owner only if its exact session and
+navigation identity remains live. PiP therefore changes ownership precedence, not decoder or
+renderer ownership.
+
+System controls advertise only play/pause and stop, plus seek when finite duration is available.
+Commands return through the exact captured owner and are rejected after navigation, session
+replacement, close, media end or any privacy boundary. Private tabs, locked profiles and app-data
+transfer publish no system metadata and reject commands. Task removal, teardown and service
+shutdown must clear the publication, command sink and underlying engine playback; no stale
+notification or owner may survive those boundaries.
+
+Background playback means keeping that eligible, existing Gecko session alive after Home or screen
+lock. It does not promise playback recovery after the Gecko session or process is gone, and it does
+not persist playback state. Final API 37 release-gate evidence below covers live audio controls and
+service teardown. Real-video SystemUI expand/return remained unavailable in that environment, so
+this guide does not claim that path passed.
 
 ## Identity and trust boundaries
 
@@ -256,8 +300,9 @@ Preserve these invariants:
 - Android PiP requires a current selected regular tab and either an active playing fullscreen Gecko
   video or an acknowledged Candy inline presentation with a current playing candidate and non-zero
   dimensions.
-- Keep the same session, view, backend, display and browser-host identity for PiP. Never create a
-  replacement renderer, switch backend or reparent the view during entry or return.
+- Keep the same session, GeckoView, backend and display identity for PiP. Compose may transfer that
+  exact view between content containers, but must attach, lay out and draw it before acknowledging a
+  restored browser layout. Never create a replacement renderer or switch backend.
 - Keep Gecko media state and presentation ownership memory-only.
 
 ## Lifecycle states
@@ -293,6 +338,7 @@ commands below.
 | Layer | Minimum check |
 | --- | --- |
 | Contract and pure rules | `./gradlew testFullDebugUnitTest testFossDebugUnitTest` |
+| Candy control events and lifetime | `node --test scripts/gecko_inline_media.test.mjs`: execute production shadow-overlay handlers with EventTarget events, actual background/content policy refresh for all four modes, localized accessibility labels, pointer cancellation/drag-return, touch compatibility click, keyboard/AT, and PiP recreation/presentation reset. DOM/CSS rendering and trusted device input remain instrumentation responsibilities. |
 | Gecko PiP lifecycle | Run `GeckoPictureInPictureInstrumentedTest` on the same API 34+ session emulator |
 | Fullscreen/overlay placement | Covered by `GeckoPictureInPictureInstrumentedTest` on the same API 34+ emulator |
 | Inline player offset isolation | Local transformed-player fixture in `GeckoPictureInPictureInstrumentedTest` |
@@ -300,6 +346,19 @@ commands below.
 | Delayed transformed-return regression | Android 17 / API 37 only; fresh single-method fixture process on a dedicated emulator |
 | Decoded fullscreen-return pixels | Android 17 / API 37 with a renderer that visibly displays the VP8 fixture (verified with `-gpu swiftshader_indirect`): isolated clipped-player direct and first-swipe methods in `GeckoPictureInPictureInstrumentedTest`; assert real cyan pixels without a dark upper band after return |
 | Android integration | `./gradlew lintFullDebug lintFossDebug assembleFullDebug assembleFossDebug` |
+
+### Recorded API 37 release-gate evidence
+
+These results are recorded evidence from the final API 37 pass. They supplement minimum checks above;
+they do not turn unavailable SystemUI actions into passing results.
+
+| Area | Result | Scope and limit |
+| --- | --- | --- |
+| Live Gecko audio background playback | PASS | Home, system-controller pause/play/seek, screen lock/wake, and task removal. Task removal stopped Gecko playback and cleared publication, notification, and service. |
+| Media3 service/player checks | PASS (7 + 2) | Focused service and player instrumentation, including controller authorization, exact owner/generation routing, privacy cleanup, task removal, seek/state projection, and identity invalidation. |
+| Real video Android PiP | PASS (entry only) | Real video entered PiP. SystemUI expand/return was unavailable in test environment; no live pass is claimed for that path. |
+| Decoded fullscreen/PiP return | PASS | API 37 compositor checks observed decoded pixels after fullscreen/PiP return. |
+| Media3 owner replacement | PASS | Service atomic owner replacement retained one active service/session without an idle gap. |
 
 Run deterministic tests first. Treat live checks on YouTube, `anichi.to` and `reanime.cz` as
 compatibility smoke tests because their player hosts and markup can change independently of Candy.
@@ -328,7 +387,7 @@ system Back-gesture delivery. Keep a separate live YouTube smoke check for site-
 | PiP shows a logo or stale page frame | Verify no backend switch or view reparent occurred and that the confirmed mode callback reached the exact owning session |
 | Player stays fullscreen after return | Inspect same-session host reattachment and return-layout completion |
 | Notification survives media end | Inspect inactive Gecko media state and BrowserMedia system-session publication |
-| App crashes after rapid Play/Pause | Foreground playback service must promote itself in `onCreate` before validating or stopping a queued start |
+| App crashes after rapid Play/Pause | Inspect Media3 notification-manager refresh and `hasPublishedMedia` ordering before changing service start/stop behavior; promotion is owned by `MediaSessionService` after playback becomes eligible |
 
 Useful device checks, always with the session's explicit emulator serial:
 

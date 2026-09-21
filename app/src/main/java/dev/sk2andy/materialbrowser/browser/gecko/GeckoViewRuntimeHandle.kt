@@ -942,6 +942,7 @@ private class GeckoViewBrowserSession(
     private var backdropBlurRegion: BrowserBackdropBlurRegion? = null
     private val contentPresentationGate = GeckoContentPresentationGate()
     private var activeMediaSession: MediaSession? = null
+    private var deactivatedMediaSession: MediaSession? = null
     private var videoAutoplayBlocked = false
     private var audioMuted = false
     private var httpPasswordManagerSelectionEnabled = false
@@ -1677,6 +1678,7 @@ private class GeckoViewBrowserSession(
         session.mediaSessionDelegate = object : MediaSession.Delegate {
             override fun onActivated(session: GeckoSession, mediaSession: MediaSession) {
                 activeMediaSession = mediaSession
+                deactivatedMediaSession = null
                 mediaSession.muteAudio(audioMuted)
                 updateMediaState { GeckoMediaSessionRules.activatedState() }
             }
@@ -1684,7 +1686,8 @@ private class GeckoViewBrowserSession(
             override fun onDeactivated(session: GeckoSession, mediaSession: MediaSession) {
                 if (activeMediaSession !== mediaSession) return
                 activeMediaSession = null
-                updateMediaState { GeckoMediaSessionState() }
+                deactivatedMediaSession = mediaSession
+                updateMediaState(GeckoMediaSessionRules::deactivatedState)
             }
 
             override fun onMetadata(
@@ -1692,26 +1695,30 @@ private class GeckoViewBrowserSession(
                 mediaSession: MediaSession,
                 meta: MediaSession.Metadata,
             ) {
-                if (activeMediaSession !== mediaSession) return
+                if (!ownsMediaSession(mediaSession)) return
                 updateMediaState { current ->
                     current.copy(title = meta.title, artist = meta.artist)
                 }
             }
 
             override fun onPlay(session: GeckoSession, mediaSession: MediaSession) {
-                if (activeMediaSession !== mediaSession) return
+                if (!ownsMediaSession(mediaSession)) return
+                activeMediaSession = mediaSession
+                deactivatedMediaSession = null
                 BrowserPerformanceTrace.event(BrowserPerformanceTrace.Phase.GeckoMediaPlay)
                 updateMediaState { current -> current.copy(isActive = true, isPlaying = true) }
             }
 
             override fun onPause(session: GeckoSession, mediaSession: MediaSession) {
-                if (activeMediaSession !== mediaSession) return
+                if (!ownsMediaSession(mediaSession)) return
                 BrowserPerformanceTrace.event(BrowserPerformanceTrace.Phase.GeckoMediaPause)
                 updateMediaState { current -> current.copy(isPlaying = false) }
             }
 
             override fun onStop(session: GeckoSession, mediaSession: MediaSession) {
-                if (activeMediaSession !== mediaSession) return
+                if (!ownsMediaSession(mediaSession)) return
+                activeMediaSession = null
+                deactivatedMediaSession = null
                 BrowserPerformanceTrace.event(BrowserPerformanceTrace.Phase.GeckoMediaStop)
                 updateMediaState { GeckoMediaSessionRules.stoppedState() }
             }
@@ -1721,7 +1728,7 @@ private class GeckoViewBrowserSession(
                 mediaSession: MediaSession,
                 positionState: MediaSession.PositionState,
             ) {
-                if (activeMediaSession !== mediaSession) return
+                if (!ownsMediaSession(mediaSession)) return
                 updateMediaState { current ->
                     current.copy(
                         currentPositionMillis = positionState.position.toBoundedMediaMillis() ?: 0,
@@ -1741,7 +1748,7 @@ private class GeckoViewBrowserSession(
                 enabled: Boolean,
                 meta: MediaSession.ElementMetadata?,
             ) {
-                if (activeMediaSession !== mediaSession) return
+                if (!ownsMediaSession(mediaSession)) return
                 updateMediaState { current ->
                     current.copy(
                         isFullscreen = enabled,
@@ -1777,6 +1784,7 @@ private class GeckoViewBrowserSession(
                 currentPageUrl = url
                 invalidateCredentialPrompts(recreateHost = true)
                 activeMediaSession = null
+                deactivatedMediaSession = null
                 inlineVideoState = GeckoInlineVideoState(
                     isActive = false,
                     isPlaying = false,
@@ -2307,8 +2315,14 @@ private class GeckoViewBrowserSession(
             permission = permission,
         )
 
+    private fun ownsMediaSession(mediaSession: MediaSession): Boolean =
+        activeMediaSession === mediaSession || deactivatedMediaSession === mediaSession
+
+    private fun mediaSessionForCommand(): MediaSession? =
+        activeMediaSession?.takeIf(MediaSession::isActive) ?: deactivatedMediaSession
+
     override fun executeMediaCommand(command: GeckoMediaCommand) {
-        val mediaSession = activeMediaSession?.takeIf(MediaSession::isActive) ?: return
+        val mediaSession = mediaSessionForCommand() ?: return
         when (command) {
             GeckoMediaCommand.Play -> mediaSession.play()
             GeckoMediaCommand.Pause -> mediaSession.pause()
@@ -2318,11 +2332,11 @@ private class GeckoViewBrowserSession(
 
     override fun setAudioMuted(muted: Boolean) {
         audioMuted = muted
-        activeMediaSession?.takeIf(MediaSession::isActive)?.muteAudio(muted)
+        mediaSessionForCommand()?.muteAudio(muted)
     }
 
     override fun seekMedia(positionMillis: Long) {
-        val mediaSession = activeMediaSession?.takeIf(MediaSession::isActive) ?: return
+        val mediaSession = mediaSessionForCommand() ?: return
         mediaSession.seekTo(positionMillis.coerceAtLeast(0L) / 1_000.0, true)
     }
 
@@ -2862,6 +2876,7 @@ private class GeckoViewBrowserSession(
         fullscreenStateListener = null
         scrollListener = null
         activeMediaSession = null
+        deactivatedMediaSession = null
         inPictureInPicture = false
         pictureInPicturePlaybackExpected = false
         pendingInitialUrl = null

@@ -79,6 +79,8 @@ internal data class GeckoPrivacyPolicy(
     val inlineMediaPlayerEnterFullscreenLabel: String = "Enter fullscreen",
     val inlineMediaPlayerExitFullscreenLabel: String = "Exit fullscreen",
     val inlineMediaPlayerCloseLabel: String = "Close Candy Player",
+    val inlineMediaPlayerShowControlsLabel: String = "Show controls",
+    val inlineMediaPlayerHideControlsLabel: String = "Hide controls",
     val cssSafeAreaTopInsetPx: Int = 0,
     val geckoSafeAreaSettings: GeckoSafeAreaSettings = GeckoSafeAreaSettings(),
     val safeAreaLayoutQuietPeriodMillis: Int =
@@ -121,6 +123,8 @@ internal object GeckoPrivacyPolicyRules {
         inlineMediaPlayerEnterFullscreenLabel: String = "Enter fullscreen",
         inlineMediaPlayerExitFullscreenLabel: String = "Exit fullscreen",
         inlineMediaPlayerCloseLabel: String = "Close Candy Player",
+        inlineMediaPlayerShowControlsLabel: String = "Show controls",
+        inlineMediaPlayerHideControlsLabel: String = "Hide controls",
         cssSafeAreaTopInsetPx: Int = 0,
         geckoSafeAreaSettings: GeckoSafeAreaSettings = GeckoSafeAreaSettings(),
         safeAreaLayoutQuietPeriodMillis: Int =
@@ -155,6 +159,8 @@ internal object GeckoPrivacyPolicyRules {
             inlineMediaPlayerExitFullscreenLabel =
                 inlineMediaPlayerExitFullscreenLabel.take(80),
             inlineMediaPlayerCloseLabel = inlineMediaPlayerCloseLabel.take(80),
+            inlineMediaPlayerShowControlsLabel = inlineMediaPlayerShowControlsLabel.take(80),
+            inlineMediaPlayerHideControlsLabel = inlineMediaPlayerHideControlsLabel.take(80),
             cssSafeAreaTopInsetPx = cssSafeAreaTopInsetPx.coerceAtLeast(0),
             geckoSafeAreaSettings = geckoSafeAreaSettings.normalized(),
             safeAreaLayoutQuietPeriodMillis =
@@ -200,6 +206,8 @@ internal fun GeckoPrivacyPolicy.toMessage(token: String, revision: Long): JSONOb
     .put("inlineMediaPlayerEnterFullscreenLabel", inlineMediaPlayerEnterFullscreenLabel)
     .put("inlineMediaPlayerExitFullscreenLabel", inlineMediaPlayerExitFullscreenLabel)
     .put("inlineMediaPlayerCloseLabel", inlineMediaPlayerCloseLabel)
+    .put("inlineMediaPlayerShowControlsLabel", inlineMediaPlayerShowControlsLabel)
+    .put("inlineMediaPlayerHideControlsLabel", inlineMediaPlayerHideControlsLabel)
     .put("cssSafeAreaTopInsetPx", cssSafeAreaTopInsetPx)
     .put("geckoSafeAreaEnabled", geckoSafeAreaSettings.enabled)
     .put("recheckAddedElements", geckoSafeAreaSettings.recheckAddedElements)

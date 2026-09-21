@@ -534,6 +534,8 @@
     <string name="action_candy_player_play">Play</string>
     <string name="action_candy_player_pause">Pause</string>
     <string name="action_candy_player_seek">Seek</string>
+    <string name="action_candy_player_show_controls">Show controls</string>
+    <string name="action_candy_player_hide_controls">Hide controls</string>
     <string name="settings_default_browser">Default browser</string>
     <string name="settings_default_browser_active">Candy Browser is your default browser</string>
     <string name="settings_make_default_browser">Make Candy Browser the default</string>

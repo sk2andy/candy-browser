@@ -403,6 +403,7 @@ test("automatic inline opening waits for playback and a decoded video frame", as
     currentCandyPictureInPictureVideo: () => video,
     updateCandyInlineVideoAction: () => {},
     updateCandyInlineVideoControlsOverlay: () => {},
+    candyInlineVideoControlsVisibilityLabel: () => "controls",
     requestCandyInlineVideoOpen: (value) => { opened.push(value); },
     browser: { runtime: { sendMessage: (message) => {
       reports.push(message);
@@ -608,7 +609,9 @@ test("repeated enabled policy reconciles inline state with new navigation identi
     clearCandyInlineVideoState: () => {},
     removeCandyInlineVideoAction: () => {},
     removeCandyInlineVideoControlsOverlay: () => {},
+    resetCandyInlineVideoControlsVisibility: () => {},
     updateCandyInlineVideoControlsOverlay: () => {},
+    candyInlineVideoControlsVisibilityLabel: () => "controls",
     clearCandyInlineVideoOpenRequest: () => {},
     CANDY_INLINE_MEDIA_PLAYER_MODES: new Set([
       "button_fullscreen",
@@ -873,6 +876,7 @@ for (const rememberBeforeDrag of [true, false]) {
       cancelAnimationFrame: () => {},
       clearTimeout: () => {},
       setCandyInlineActionStyle: (element, name, value) => element.style.setProperty(name, value),
+      candyInlineVideoTapIsEligible: () => false,
       rememberCandyPictureInPictureVideos: () => {},
       reportCandyInlineVideoGestureHaptic: () => {},
       updateFullscreenGesture: () => ({ update: { shouldCommit: true }, thresholdChanged: false }),
@@ -1599,6 +1603,7 @@ test("first PiP expected message captures origin before video-only layout", () =
     preserveCandyInlineVideoFullscreenOrigin: () => calls.push("capture"),
     updateCandyInlineVideoFullscreenOriginVisibility: () => calls.push("hide-origin"),
     removeCandyInlineVideoControlsOverlay: () => {},
+    resetCandyInlineVideoControlsVisibility: () => {},
     rememberCandyPictureInPictureVideos: () => {},
     presentCandyPictureInPictureVideo: () => calls.push("video-only"),
     monitorCandyPictureInPictureAlignment: () => {},
@@ -1667,6 +1672,7 @@ test("fullscreen button keeps its origin through first presentation and PiP retu
     updateCandyInlineVideoControlsOverlay: () => {},
     updateCandyInlineVideoFullscreenOriginVisibility: () => {},
     removeCandyInlineVideoControlsOverlay: () => {},
+    resetCandyInlineVideoControlsVisibility: () => {},
     rememberCandyPictureInPictureVideos: () => {},
     presentCandyPictureInPictureVideo: () => {},
     monitorCandyPictureInPictureAlignment: () => {},
@@ -1775,6 +1781,488 @@ test("PiP aligns a video inside a scaled YouTube player", () => {
   context.alignCandyPictureInPictureVideo(video);
   assert.ok(Math.abs(video.getBoundingClientRect().left) < 0.5);
   assert.ok(Math.abs(video.getBoundingClientRect().top) < 0.5);
+});
+
+// Run the production shadow-overlay listeners with a minimal DOM backed by Node EventTarget.
+// Geometry/observers are platform fakes; gesture classification, visibility, policy updates,
+// presentation lifetime and every event listener below are the real content.js functions.
+function inlineControlsHarness({ fullscreen = false, paused = true } = {}) {
+  class Element extends EventTarget {
+    constructor(tagName) {
+      super();
+      this.tagName = tagName;
+      this.children = [];
+      this.dataset = {};
+      this.attributes = new Map();
+      this.properties = new Map();
+      this.style = {
+        setProperty: (key, value) => this.properties.set(key, value),
+        getPropertyValue: (key) => this.properties.get(key) || "",
+        getPropertyPriority: () => "",
+        removeProperty: (key) => this.properties.delete(key),
+      };
+      this.hidden = false;
+      this.inert = false;
+    }
+    get isConnected() { return this === document.documentElement || Boolean(this.parentElement?.isConnected); }
+    setAttribute(key, value) { this.attributes.set(key, String(value)); }
+    getAttribute(key) { return this.attributes.get(key) ?? null; }
+    removeAttribute(key) { this.attributes.delete(key); }
+    append(...children) { children.forEach((child) => this.appendChild(child)); }
+    appendChild(child) { child.remove(); child.parentElement = this; this.children.push(child); }
+    remove() {
+      if (this.parentElement) {
+        this.parentElement.children = this.parentElement.children.filter((child) => child !== this);
+      }
+      this.parentElement = null;
+    }
+    attachShadow() { this.testShadow = new Element("shadow-root"); this.append(this.testShadow); return this.testShadow; }
+    contains(element) { return element === this || this.children.some((child) => child.contains(element)); }
+    getBoundingClientRect() { return { left: 0, top: 100, right: 400, bottom: 325, width: 400, height: 225 }; }
+    setPointerCapture() {}
+    closest() { return null; }
+    querySelector(selector) {
+      const className = selector.slice(1);
+      for (const child of this.children) {
+        if (child.className?.split(" ").includes(className)) return child;
+        const found = child.querySelector(selector);
+        if (found) return found;
+      }
+      return null;
+    }
+  }
+  const document = new EventTarget();
+  document.documentElement = new Element("html");
+  document.createElement = (tag) => new Element(tag);
+  document.createElementNS = (_namespace, tag) => new Element(tag);
+  const video = new Element("video");
+  Object.assign(video, { paused, ended: false, currentTime: 20, duration: 100, controls: true });
+  const playbackCommands = [];
+  video.play = () => { playbackCommands.push("play"); video.paused = false; video.dispatchEvent(new Event("play")); return Promise.resolve(); };
+  video.pause = () => { playbackCommands.push("pause"); video.paused = true; video.dispatchEvent(new Event("pause")); };
+  document.documentElement.append(video);
+  document.fullscreenElement = fullscreen ? document.documentElement : null;
+  let now = 1_000;
+  const requests = [];
+  const state = {
+    expected: false,
+    inlineMediaPlayerEnabled: true,
+    inlineMediaPlayerMode: "button_inline_and_fullscreen",
+    inlinePresentationExpected: true,
+    presentedVideo: video,
+    inlineControlsVisible: true,
+    inlineControlsLastTouchToggleAt: -Infinity,
+    inlineOpenRequest: { identity: "pending-existing-request" },
+  };
+  const labels = {
+    inlineMediaPlayerActionLabel: "Open in Candy Player",
+    inlineMediaPlayerPlayLabel: "Play",
+    inlineMediaPlayerPauseLabel: "Pause",
+    inlineMediaPlayerSeekLabel: "Seek",
+    inlineMediaPlayerEnterFullscreenLabel: "Enter fullscreen",
+    inlineMediaPlayerExitFullscreenLabel: "Exit fullscreen",
+    inlineMediaPlayerCloseLabel: "Close Candy Player",
+    inlineMediaPlayerShowControlsLabel: "Show controls",
+    inlineMediaPlayerHideControlsLabel: "Hide controls",
+  };
+  Object.assign(state, labels);
+  class Observer { observe() {} disconnect() {} }
+  const frame = {};
+  const context = vm.createContext({
+    document, performance: { now: () => now }, self: frame, top: frame,
+    boundedSafeAreaInteger: (_value, _minimum, _maximum, fallback) => fallback,
+    innerWidth: 400, innerHeight: 800,
+    getComputedStyle: () => ({ transform: "none" }),
+    setTimeout: () => 1, clearTimeout: () => {},
+    MutationObserver: Observer, ResizeObserver: Observer,
+    candyPictureInPicturePlayback: state,
+    candyInlineVideoOriginalControls: new WeakMap(),
+    CANDY_INLINE_MEDIA_PLAYER_MODES: new Set([
+      "button_fullscreen", "button_inline_and_fullscreen", "always_for_fullscreen", "automatic",
+    ]),
+    CANDY_INLINE_VIDEO_CONTROLS_HEIGHT_PX: 88,
+    CANDY_INLINE_VIDEO_CONTROLS_ATTRIBUTE: "data-candy-inline-controls",
+    CANDY_INLINE_VIDEO_ACTION_SIZE_PX: 56,
+    CANDY_INLINE_CONTROLS_TAP_MAX_DURATION_MS: 350,
+    CANDY_INLINE_FULLSCREEN_GESTURE_TOUCH_SLOP_PX: 10,
+    CANDY_INLINE_FULLSCREEN_GESTURE_MIN_THRESHOLD_PX: 48,
+    CANDY_INLINE_FULLSCREEN_GESTURE_MAX_THRESHOLD_PX: 96,
+    CANDY_INLINE_FULLSCREEN_GESTURE_THRESHOLD_FRACTION: 0.13,
+    setCandyInlineActionStyle: (element, key, value) => element.style.setProperty(key, value),
+    CANDY_INLINE_FULLSCREEN_GESTURE_STICKY_FRACTION: 0.18,
+    rememberCandyInlineVideoStableOrigin: () => {},
+    reportCandyInlineVideoGestureHaptic: () => {},
+    requestCandyInlineVideoFullscreen: () => { requests.push("fullscreen"); return Promise.resolve(); },
+    requestCandyInlineVideoClose: () => requests.push("close"),
+    clearCandyInlineVideoOpenRequest: () => { state.inlineOpenRequest = null; },
+    removeCandyInlineVideoAction: () => {},
+    suppressCandyInlineVideoSiteControls: () => {},
+    clearCandyInlineVideoSiteControls: () => {},
+    clearCandyInlineVideoFullscreenOrigin: () => {},
+    startCandyInlineVideoStateObservation: () => {},
+    reconcileCandyInlineVideoState: () => {},
+    scheduleCandyInlineVideoStateReport: () => {},
+    reportCandyInlineVideoState: () => {},
+    isCandyInlineVideoCandidate: (element) => element?.isConnected,
+  });
+  const source = asset("content.js");
+  for (const name of [
+    "candyInlineFullscreenGestureDirection", "candyInlineFullscreenGestureUpdate",
+    "candyInlineVideoCloseIsHiddenForMode", "candyInlineVideoCloseIsHidden",
+    "candyInlineVideoTapIsEligible", "candyInlineVideoControlsVisibilityLabel",
+    "candyInlineVideoControlsGestureMovement", "candyInlineVideoControlsClickIsActivation",
+    "candyInlineVideoTime", "candyWobblyProgressPath", "candyInlineVideoControlsParent",
+    "setCandyInlineFullscreenGestureOffset", "clearCandyInlineFullscreenGestureOffset",
+    "removeCandyInlineVideoControlsOverlay", "resetCandyInlineVideoControlsVisibility",
+    "positionCandyInlineVideoControls", "createCandyInlineVideoControlsOverlay",
+    "updateCandyInlineVideoControlsOverlay", "updateCandyInlineMediaPlayerPolicy",
+    "updateCandyInlineMediaPlayerEnabled", "clearCandyInlineVideoControls",
+    "clearCandyInlineVideoPresentation", "presentCandyInlineVideo",
+  ]) {
+    const start = source.indexOf(`function ${name}(`);
+    assert.ok(start >= 0, `production function ${name} exists`);
+    const end = source.indexOf("\nfunction ", start + 1);
+    vm.runInContext(source.slice(start, end), context);
+  }
+  context.createCandyInlineVideoControlsOverlay(video);
+  const backgroundPolicy = asset("background.js")
+    .split("function contentPolicy(policy) {")[1]
+    .split("function publishContentPolicy(token, policy) {")[0];
+  vm.runInContext(`function contentPolicy(policy) {${backgroundPolicy}`, context);
+  function dispatch(element, type, properties = {}) {
+    const event = new Event(type, { bubbles: true, cancelable: true });
+    for (const [key, value] of Object.entries({
+      isTrusted: true, isPrimary: true, pointerType: "touch", pointerId: 7,
+      clientX: 200, clientY: 180, detail: 0, ...properties,
+    })) Object.defineProperty(event, key, { value });
+    for (let target = element; target; target = target.parentElement) {
+      target.dispatchEvent(event);
+      if (event.cancelBubble) break;
+    }
+    return event;
+  }
+  const element = (className) => state.inlineControlsHost.testShadow.querySelector(`.${className}`);
+  const tap = () => {
+    dispatch(element("fullscreen-gesture"), "pointerdown");
+    now += 40;
+    dispatch(element("fullscreen-gesture"), "pointerup");
+  };
+  return {
+    context, document, state, video, playbackCommands, requests, element, dispatch, tap,
+    advance: (millis) => { now += millis; },
+    policy: (mode, overrides = {}) => context.updateCandyInlineMediaPlayerPolicy(context.contentPolicy({
+      inlineMediaPlayerEnabled: true, inlineMediaPlayerMode: mode,
+      revision: 4, navigationGeneration: 2, ...labels, ...overrides,
+    })),
+    newVideo: () => {
+      const next = new Element("video");
+      Object.assign(next, { paused: true, ended: false, currentTime: 0, duration: 60, controls: true });
+      document.documentElement.append(next);
+      return next;
+    },
+  };
+}
+
+for (const fullscreen of [false, true]) {
+  test(`actual ${fullscreen ? "fullscreen" : "inline"} overlay tap toggles controls and hero without changing playback`, () => {
+    const h = inlineControlsHarness({ fullscreen });
+    assert.equal(h.element("hero-play").hidden, false);
+    h.tap();
+    assert.equal(h.state.inlineControlsVisible, false);
+    assert.equal(h.element("controls").hidden, true);
+    assert.equal(h.element("controls").inert, true);
+    assert.equal(h.element("hero-play").hidden, true);
+    assert.equal(h.element("stage").dataset.controlsHidden, "true");
+    h.dispatch(h.element("fullscreen-gesture"), "click", { detail: 1 });
+    h.dispatch(h.element("fullscreen-gesture"), "click", { detail: 0 });
+    assert.equal(h.state.inlineControlsVisible, false, "touch compatibility clicks cannot toggle twice");
+    h.tap();
+    assert.equal(h.state.inlineControlsVisible, true);
+    assert.equal(h.element("controls").hidden, false);
+    assert.equal(h.element("controls").inert, false);
+    assert.equal(h.element("hero-play").hidden, false);
+    assert.equal(h.video.paused, true);
+    assert.equal(h.video.currentTime, 20);
+    assert.deepEqual(h.playbackCommands, []);
+    assert.deepEqual(h.requests, []);
+  });
+}
+
+test("actual overlay AT and keyboard activation toggles visibility with localized labels", () => {
+  const h = inlineControlsHarness();
+  h.policy("button_inline_and_fullscreen", {
+    inlineMediaPlayerShowControlsLabel: "Steuerelemente anzeigen",
+    inlineMediaPlayerHideControlsLabel: "Steuerelemente ausblenden",
+  });
+  assert.equal(h.element("fullscreen-gesture").getAttribute("aria-label"), "Steuerelemente ausblenden");
+  h.dispatch(h.element("fullscreen-gesture"), "click", { detail: 0 });
+  assert.equal(h.element("controls").hidden, true);
+  assert.equal(h.element("fullscreen-gesture").getAttribute("aria-label"), "Steuerelemente anzeigen");
+  h.dispatch(h.element("fullscreen-gesture"), "keydown", { key: "Enter" });
+  assert.equal(h.element("controls").hidden, false);
+  h.dispatch(h.element("fullscreen-gesture"), "keydown", { key: " ", repeat: true });
+  assert.equal(h.element("controls").hidden, false, "held key cannot flicker controls");
+  h.dispatch(h.element("fullscreen-gesture"), "keydown", { key: " " });
+  assert.equal(h.element("controls").hidden, true);
+  h.dispatch(h.element("fullscreen-gesture"), "keydown", { key: "Enter", isTrusted: false });
+  h.dispatch(h.element("fullscreen-gesture"), "click", { isTrusted: false });
+  assert.equal(h.element("controls").hidden, true);
+  assert.deepEqual(h.playbackCommands, []);
+});
+
+test("actual overlay rejects cancelled pointers, foreign pointers, long taps and drag-return in fullscreen", () => {
+  for (const kind of ["pointercancel", "lostpointercapture", "foreign", "long", "drag", "untrusted"]) {
+    const h = inlineControlsHarness({ fullscreen: true });
+    const surface = h.element("fullscreen-gesture");
+    h.dispatch(surface, "pointerdown");
+    if (kind === "pointercancel" || kind === "lostpointercapture") h.dispatch(surface, kind);
+    if (kind === "long") h.advance(351);
+    if (kind === "drag") {
+      h.dispatch(surface, "pointermove", { clientY: 250 });
+      h.dispatch(surface, "pointermove", { clientY: 180 });
+    }
+    h.dispatch(surface, "pointerup", {
+      pointerId: kind === "foreign" ? 8 : 7,
+      isTrusted: kind !== "untrusted",
+    });
+    assert.equal(h.state.inlineControlsVisible, true, kind);
+    assert.equal(h.element("controls").hidden, false, kind);
+    assert.deepEqual(h.playbackCommands, [], kind);
+    assert.deepEqual(h.requests, [], kind);
+  }
+});
+
+test("actual overlay rejects nonprimary and non-touch streams while playing", () => {
+  const h = inlineControlsHarness({ paused: false });
+  const surface = h.element("fullscreen-gesture");
+  for (const properties of [
+    { isTrusted: false }, { isPrimary: false }, { pointerType: "mouse" },
+    { pointerType: "pen" }, { pointerType: "" },
+  ]) {
+    h.dispatch(surface, "pointerdown", properties);
+    h.dispatch(surface, "pointerup", properties);
+    assert.equal(h.state.inlineControlsVisible, true);
+    assert.equal(h.element("controls").hidden, false);
+  }
+  h.tap();
+  assert.equal(h.element("controls").hidden, true);
+  h.tap();
+  assert.equal(h.element("controls").hidden, false);
+  assert.equal(h.element("hero-play").hidden, true);
+  assert.equal(h.video.paused, false);
+  assert.equal(h.video.currentTime, 20);
+  assert.deepEqual(h.playbackCommands, []);
+});
+
+test("actual buttons, seek and fullscreen swipe act without free-surface toggles", () => {
+  const h = inlineControlsHarness();
+  for (const name of ["play-pause", "hero-play", "fullscreen", "close", "timeline"]) {
+    h.dispatch(h.element(name), "pointerdown");
+    h.dispatch(h.element(name), "pointerup");
+    assert.equal(h.state.inlineControlsVisible, true, name);
+  }
+  h.dispatch(h.element("play-pause"), "click");
+  assert.equal(h.video.paused, false);
+  assert.equal(h.state.inlineControlsVisible, true);
+  const seek = h.element("timeline").children.find((child) => child.tagName === "input");
+  seek.value = "650";
+  h.dispatch(seek, "input");
+  assert.equal(h.video.currentTime, 65);
+  assert.equal(h.state.inlineControlsVisible, true);
+  const surface = h.element("fullscreen-gesture");
+  h.dispatch(surface, "pointerdown");
+  h.dispatch(surface, "pointermove", { clientY: 50 });
+  h.dispatch(surface, "pointerup", { clientY: 50 });
+  assert.deepEqual(h.requests, ["fullscreen"]);
+  assert.equal(h.state.inlineControlsVisible, true);
+  assert.equal(h.video.style.getPropertyValue("transform"), "");
+});
+
+test("production policy refresh applies every close mode without reopening or replacing presentation", () => {
+  const h = inlineControlsHarness();
+  const initialHost = h.state.inlineControlsHost;
+  const request = h.state.inlineOpenRequest;
+  for (const [mode, hidden] of [
+    ["automatic", true], ["button_fullscreen", false],
+    ["always_for_fullscreen", true], ["button_inline_and_fullscreen", false],
+  ]) {
+    h.policy(mode);
+    const close = h.element("close");
+    assert.equal(close.hidden, hidden, mode);
+    assert.equal(close.style.getPropertyValue("display"), hidden ? "none" : "grid", mode);
+    assert.equal(close.tabIndex, hidden ? -1 : 0, mode);
+    assert.equal(close.getAttribute("aria-hidden"), String(hidden), mode);
+    assert.equal(h.element("fullscreen").hidden, false, "fullscreen exit stays available");
+    assert.equal(h.state.inlineControlsHost, initialHost);
+    assert.equal(h.state.presentedVideo, h.video);
+    assert.equal(h.state.inlineOpenRequest, request);
+    assert.deepEqual(h.requests, []);
+  }
+});
+
+test("PiP overlay recreation and policy refresh retain visibility; presentation cleanup and replacement reset it", () => {
+  const h = inlineControlsHarness();
+  h.tap();
+  const firstHost = h.state.inlineControlsHost;
+  h.state.expected = true;
+  h.context.updateCandyInlineVideoControlsOverlay(h.video);
+  assert.equal(h.state.inlineControlsHost, null);
+  assert.equal(firstHost.isConnected, false);
+  assert.equal(h.state.inlineControlsVisible, false);
+  h.state.expected = false;
+  h.context.updateCandyInlineVideoControlsOverlay(h.video);
+  assert.notEqual(h.state.inlineControlsHost, firstHost);
+  assert.equal(h.element("controls").hidden, true);
+  h.policy("automatic");
+  assert.equal(h.element("controls").hidden, true);
+  assert.equal(h.element("close").hidden, true);
+  h.policy("automatic", { inlineMediaPlayerPlayLabel: "Abspielen" });
+  assert.equal(h.element("controls").hidden, true, "localized overlay recreation keeps choice");
+  h.context.clearCandyInlineVideoPresentation();
+  assert.equal(h.state.inlineControlsVisible, true);
+  assert.equal(h.state.presentedVideo, null);
+  h.context.presentCandyInlineVideo(h.video);
+  assert.equal(h.element("controls").hidden, false);
+  h.tap();
+  const replacement = h.newVideo();
+  h.context.presentCandyInlineVideo(replacement);
+  assert.equal(h.state.presentedVideo, replacement);
+  assert.equal(h.element("controls").hidden, false);
+  assert.equal(h.element("hero-play").hidden, false);
+});
+
+test("inline free-surface tap toggles controls only for trusted primary touch", () => {
+  const context = vm.createContext({ performance: { now: () => 100 } });
+  const assetSource = asset("content.js");
+  const source = assetSource
+    .split("function candyInlineVideoTapIsEligible(event, gesture) {")[1]
+    .split("function candyInlineVideoNonce()")[0];
+  const movementSource = assetSource
+    .split("function candyInlineVideoControlsGestureMovement(gesture, event) {")[1]
+    .split("function candyInlineVideoNonce()")[0];
+  vm.runInContext(
+    `const CANDY_INLINE_CONTROLS_TAP_MAX_DURATION_MS = 350;\n` +
+      `const CANDY_INLINE_FULLSCREEN_GESTURE_TOUCH_SLOP_PX = 10;\n` +
+      `function candyInlineVideoTapIsEligible(event, gesture) {${source}` +
+      `function candyInlineVideoControlsGestureMovement(gesture, event) {${movementSource}`,
+    context,
+  );
+  const pending = {
+    direction: "pending", startedAt: 0, startX: 10, startY: 20, maxMovement: 0,
+  };
+  const trustedTouch = {
+    isTrusted: true, isPrimary: true, pointerType: "touch", clientX: 12, clientY: 22,
+  };
+  assert.equal(context.candyInlineVideoTapIsEligible(trustedTouch, pending), true);
+  assert.equal(
+    context.candyInlineVideoTapIsEligible({ ...trustedTouch, isTrusted: false }, pending),
+    false,
+  );
+  assert.equal(
+    context.candyInlineVideoTapIsEligible({ ...trustedTouch, isPrimary: false }, pending),
+    false,
+  );
+  assert.equal(
+    context.candyInlineVideoTapIsEligible({ ...trustedTouch, pointerType: "mouse" }, pending),
+    false,
+  );
+  assert.equal(
+    context.candyInlineVideoTapIsEligible(trustedTouch, { direction: "up" }),
+    false,
+  );
+  assert.equal(
+    context.candyInlineVideoTapIsEligible(trustedTouch, { ...pending, startedAt: -351 }),
+    false,
+  );
+  const moved = { ...pending };
+  context.candyInlineVideoControlsGestureMovement(moved, { clientX: 21, clientY: 20 });
+  assert.equal(moved.maxMovement, 11);
+  assert.equal(context.candyInlineVideoTapIsEligible(trustedTouch, moved), false);
+  const clickSource = assetSource
+    .split("function candyInlineVideoControlsClickIsActivation(event, now, lastTouchToggleAt) {")[1]
+    .split("function candyInlineVideoNonce()")[0];
+  vm.runInContext(
+    `function candyInlineVideoControlsClickIsActivation(event, now, lastTouchToggleAt) {${clickSource}`,
+    context,
+  );
+  assert.equal(
+    context.candyInlineVideoControlsClickIsActivation({ isTrusted: true, detail: 0 }, 1_000, 0),
+    true,
+    "assistive technology click activates controls",
+  );
+  assert.equal(
+    context.candyInlineVideoControlsClickIsActivation({ isTrusted: true, detail: 0 }, 200, 0),
+    false,
+    "synthetic click immediately following touch is suppressed",
+  );
+  assert.equal(
+    context.candyInlineVideoControlsClickIsActivation({ isTrusted: true, detail: 1 }, 1_000, 0),
+    false,
+  );
+});
+
+test("inline controls hide close for modes that immediately reopen", () => {
+  const source = asset("content.js");
+  const context = vm.createContext({});
+  const closeSource = source
+    .split("function candyInlineVideoCloseIsHiddenForMode(mode) {")[1]
+    .split("function candyInlineVideoCloseIsHidden() {")[0];
+  vm.runInContext(
+    `function candyInlineVideoCloseIsHiddenForMode(mode) {${closeSource}` +
+      `function candyInlineVideoCloseIsHidden() {` +
+      source.split("function candyInlineVideoCloseIsHidden() {")[1]
+        .split("function candyInlineVideoTapIsEligible")[0],
+    context,
+  );
+  context.candyPictureInPicturePlayback = { inlineMediaPlayerMode: "button_fullscreen" };
+  for (const [mode, hidden] of [
+    ["button_fullscreen", false],
+    ["button_inline_and_fullscreen", false],
+    ["always_for_fullscreen", true],
+    ["automatic", true],
+  ]) {
+    assert.equal(context.candyInlineVideoCloseIsHiddenForMode(mode), hidden);
+    context.candyPictureInPicturePlayback.inlineMediaPlayerMode = mode;
+    assert.equal(context.candyInlineVideoCloseIsHidden(), hidden);
+  }
+});
+
+test("inline gesture state rejects drag-return, cancellation, and long touch", () => {
+  const source = asset("content.js");
+  const context = vm.createContext({ performance: { now: () => 350 } });
+  const tapSource = source
+    .split("function candyInlineVideoTapIsEligible(event, gesture) {")[1]
+    .split("function candyInlineVideoNonce()")[0];
+  const movementSource = source
+    .split("function candyInlineVideoControlsGestureMovement(gesture, event) {")[1]
+    .split("function candyInlineVideoNonce()")[0];
+  vm.runInContext(
+    `const CANDY_INLINE_CONTROLS_TAP_MAX_DURATION_MS = 350;\n` +
+      `const CANDY_INLINE_FULLSCREEN_GESTURE_TOUCH_SLOP_PX = 10;\n` +
+      `function candyInlineVideoTapIsEligible(event, gesture) {${tapSource}` +
+      `function candyInlineVideoControlsGestureMovement(gesture, event) {${movementSource}`,
+    context,
+  );
+  const event = { isTrusted: true, isPrimary: true, pointerType: "touch", clientX: 0, clientY: 0 };
+  const gesture = { direction: "pending", startedAt: 0, startX: 0, startY: 0, maxMovement: 0 };
+  context.candyInlineVideoControlsGestureMovement(gesture, { clientX: 11, clientY: 0 });
+  context.candyInlineVideoControlsGestureMovement(gesture, { clientX: 1, clientY: 0 });
+  assert.equal(gesture.maxMovement, 11, "drag returning to origin stays a drag");
+  assert.equal(context.candyInlineVideoTapIsEligible(event, gesture), false);
+  gesture.maxMovement = 0;
+  assert.equal(context.candyInlineVideoTapIsEligible(event, gesture), true);
+  gesture.direction = "cancelled";
+  assert.equal(context.candyInlineVideoTapIsEligible(event, gesture), false);
+  gesture.direction = "pending";
+  context.performance.now = () => 351;
+  assert.equal(context.candyInlineVideoTapIsEligible(event, gesture), false);
+  for (const pointerType of ["pen", ""]) {
+    context.performance.now = () => 100;
+    assert.equal(
+      context.candyInlineVideoTapIsEligible({ ...event, pointerType }, gesture),
+      false,
+    );
+  }
 });
 
 test("content presentation requires exact document and element identity", () => {

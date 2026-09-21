@@ -215,6 +215,7 @@ import dev.sk2andy.materialbrowser.data.AppearanceSettings
 import dev.sk2andy.materialbrowser.data.BrowserAppearanceMode
 import dev.sk2andy.materialbrowser.data.AddressBarDockPlacement
 import dev.sk2andy.materialbrowser.data.BrowserSessionStore
+import dev.sk2andy.materialbrowser.data.AppDataTransferLock
 import dev.sk2andy.materialbrowser.data.BrowsingLibraryRules
 import dev.sk2andy.materialbrowser.data.BrowsingHistoryRepository
 import dev.sk2andy.materialbrowser.data.CandyTrailRepository
@@ -845,6 +846,160 @@ class BrowserController(
                 ?.let(lockedProfileIds::contains) == true
         }
 
+    /**
+     * Current memory-only Media3 publication. A captured background owner remains selected until
+     * it ends or is invalidated; a PiP owner may explicitly preempt it.
+     */
+    internal fun media3Publication(
+        traceSource: String = "BrowserController.media3Publication",
+    ): GeckoMediaPlaybackPublication? {
+        if (media3InvalidationPending) {
+            media3InvalidationPending = false
+            BrowserMediaLifecycleTrace.record(
+                source = traceSource,
+                action = "publication-null:invalidation-pending",
+            )
+            return null
+        }
+        val pictureInPictureTabId = pictureInPictureOwnerTabId
+            ?.takeIf { isInPictureInPicture || pictureInPictureTransitionPending }
+        if (pictureInPictureTabId == null && media3PictureInPictureActive) {
+            media3PictureInPictureActive = false
+            media3CapturedOwner = media3BackgroundOwner?.takeIf(::isCurrentMedia3Owner)
+            media3BackgroundOwner = null
+            media3PictureInPictureRestorePending = true
+        }
+        val owner = when {
+            pictureInPictureTabId != null -> {
+                val pictureInPictureOwner = media3OwnerFor(pictureInPictureTabId)
+                if (pictureInPictureOwner != null && pictureInPictureOwner != media3CapturedOwner) {
+                    media3BackgroundOwner = media3CapturedOwner?.takeIf(::isCurrentMedia3Owner)
+                }
+                media3PictureInPictureActive = true
+                pictureInPictureOwner
+            }
+            media3CapturedOwner?.let(::isCurrentMedia3Owner) == true -> media3CapturedOwner
+            else -> media3OwnerFor(selectedTabId)
+        } ?: run {
+            media3CapturedOwner = null
+            BrowserMediaLifecycleTrace.record(
+                source = traceSource,
+                action = "publication-null:no-current-owner",
+            )
+            return null
+        }
+        val tab = tabs.firstOrNull { candidate -> candidate.id == owner.tabId } ?: run {
+            BrowserMediaLifecycleTrace.record(
+                source = traceSource,
+                action = "publication-null:owner-tab-missing",
+                owner = owner,
+            )
+            return null
+        }
+        val state = geckoMediaStates[owner.tabId]?.takeIf(GeckoMediaSessionState::isActive)
+            ?: run {
+                if (media3CapturedOwner == owner) media3CapturedOwner = null
+                BrowserMediaLifecycleTrace.record(
+                    source = traceSource,
+                    action = "publication-null:media-inactive",
+                    owner = owner,
+                )
+                return null
+            }
+        val systemState = geckoMediaStateForSystem(owner.tabId, state) ?: run {
+            BrowserMediaLifecycleTrace.record(
+                source = traceSource,
+                action = "publication-null:system-state-rejected",
+                owner = owner,
+            )
+            return null
+        }
+        val snapshot = GeckoMediaPlaybackRules.snapshot(
+            state = systemState,
+            owner = owner,
+        ) ?: run {
+            BrowserMediaLifecycleTrace.record(
+                source = traceSource,
+                action = "publication-null:snapshot-rejected",
+                owner = owner,
+            )
+            return null
+        }
+        media3CapturedOwner = owner
+        return GeckoMediaPlaybackPublication(
+            snapshot = snapshot,
+            isPrivate = tab.isIncognito,
+            isProfileLocked = tab.profileId in lockedProfileIds,
+            isAppDataTransferActive = AppDataTransferLock.isActive(activity),
+            isPictureInPictureOwner = pictureInPictureTabId == owner.tabId,
+        ).also { publication ->
+            BrowserMediaLifecycleTrace.record(
+                source = traceSource,
+                action = "publication",
+                publication = publication,
+            )
+        }
+    }
+
+    internal fun consumeMedia3PictureInPictureRestore(): Boolean =
+        media3PictureInPictureRestorePending.also { media3PictureInPictureRestorePending = false }
+
+    internal fun consumeMedia3NavigationReplace(): Boolean =
+        media3NavigationReplacePending.also { media3NavigationReplacePending = false }
+
+    internal val mayStartMedia3Service: Boolean
+        get() = isActivityResumed && !destroyed
+
+    /** Routes a Media3 transport request only to its exact, still-live Gecko owner. */
+    internal fun executeMedia3Command(
+        owner: GeckoMediaPlaybackOwner,
+        command: GeckoMediaPlaybackCommand,
+    ) {
+        val pictureInPictureOwner = pictureInPictureOwnerTabId
+            ?.takeIf { isInPictureInPicture || pictureInPictureTransitionPending }
+            ?.let(::media3OwnerFor)
+        if (
+            !isCurrentMedia3Owner(owner) ||
+            !BrowserMedia3CommandOwnerRules.accepts(
+                owner = owner,
+                capturedOwner = media3CapturedOwner,
+                pictureInPictureOwner = pictureInPictureOwner,
+            )
+        ) {
+            return
+        }
+        val state = geckoMediaStates[owner.tabId]?.takeIf(GeckoMediaSessionState::isActive) ?: return
+        val session = browserEngineSessions[owner.tabId] ?: return
+        when (command) {
+            GeckoMediaPlaybackCommand.Play -> {
+                if (pictureInPictureOwnerTabId == owner.tabId && isInPictureInPicture) {
+                    pictureInPicturePlaybackExpected = true
+                    resumePictureInPicturePlayback()
+                } else {
+                    session.executeMediaCommand(GeckoMediaCommand.Play)
+                }
+            }
+
+            GeckoMediaPlaybackCommand.Pause -> {
+                pictureInPicturePlaybackExpected = false
+                pictureInPicturePlaybackRetryGeneration++
+                session.setPictureInPicturePlaybackExpected(false)
+                session.executeMediaCommand(GeckoMediaCommand.Pause)
+            }
+
+            GeckoMediaPlaybackCommand.Stop -> {
+                pictureInPicturePlaybackExpected = false
+                pictureInPicturePlaybackRetryGeneration++
+                session.setPictureInPicturePlaybackExpected(false)
+                session.executeMediaCommand(GeckoMediaCommand.Stop)
+            }
+
+            is GeckoMediaPlaybackCommand.Seek -> state.durationMillis?.let { duration ->
+                session.seekMedia(command.positionMillis.coerceIn(0L, duration))
+            }
+        }
+    }
+
     @VisibleForTesting
     internal fun reportSelectedGeckoMediaStateForTesting(state: GeckoMediaSessionState) {
         check(usesGeckoEngine)
@@ -1026,6 +1181,13 @@ class BrowserController(
     }
 
     private val browserEngineSessions = mutableMapOf<String, AndroidBrowserEngineSessionPort>()
+    private val browserEngineMediaSessionIds = GeckoMediaSessionIdentityRegistry()
+    private var media3CapturedOwner: GeckoMediaPlaybackOwner? = null
+    private var media3BackgroundOwner: GeckoMediaPlaybackOwner? = null
+    private var media3PictureInPictureActive = false
+    private var media3PictureInPictureRestorePending = false
+    private var media3NavigationReplacePending = false
+    private var media3InvalidationPending = false
     private val transientPlatformViewStates = mutableMapOf<String, Bundle>()
     private val geckoViewBindings = mutableMapOf<FrameLayout, GeckoViewBinding>()
     private val geckoViewMutationHosts = mutableSetOf<FrameLayout>()
@@ -3240,6 +3402,7 @@ class BrowserController(
             }
             pictureInPictureTransitionPending = false
             pictureInPictureOwnerTabId = null
+            notifyMediaStateChanged()
             if (!isActivityResumed) ownerSession?.setActive(false)
             if (geckoMediaPresentation?.inlineVideoIdentity != null) {
                 clearGeckoMediaPresentation(preserveInlinePresentation = true)
@@ -3291,6 +3454,7 @@ class BrowserController(
             pictureInPicturePlaybackRetryGeneration++
             pictureInPictureTransitionPending = true
         }
+        notifyMediaStateChanged()
         scheduleResidentSessionTrim()
     }
 
@@ -3384,6 +3548,7 @@ class BrowserController(
             }
             pictureInPictureTransitionPending = false
             pictureInPictureOwnerTabId = null
+            notifyMediaStateChanged()
             if (presentation?.inlineVideoIdentity != null) {
                 clearGeckoMediaPresentation(preserveInlinePresentation = true)
             } else if (
@@ -9643,11 +9808,14 @@ class BrowserController(
         val keepsPictureInPictureMedia = isInPictureInPictureMode ||
             isInPictureInPicture ||
             pictureInPictureTransitionPending
-        if (usesGeckoEngine && !keepsPictureInPictureMedia) {
+        val keepsBackgroundMedia = media3Publication(
+            traceSource = "BrowserController.onStop",
+        )?.snapshot?.isPlaying == true
+        if (usesGeckoEngine && !keepsPictureInPictureMedia && !keepsBackgroundMedia) {
             browserEngineSessions[selectedTabId]?.setActive(false)
         }
         externalLinkPreviewRuntime?.geckoBinding?.session?.setActive(false)
-        if (!keepsPictureInPictureMedia) {
+        if (!keepsPictureInPictureMedia && !keepsBackgroundMedia) {
             stopPictureInPictureMedia()
         } else if (!isInPictureInPictureMode && !isInPictureInPicture) {
             val transitionGeneration = pictureInPictureTransitionGeneration
@@ -9671,7 +9839,8 @@ class BrowserController(
         }
         if (
             shouldCloseTabsWhenHidden &&
-            !keepsPictureInPictureMedia
+            !keepsPictureInPictureMedia &&
+            !keepsBackgroundMedia
         ) {
             closeTabsOnBackground(protectedTabIds = protectedTabIds)
         }
@@ -11055,6 +11224,10 @@ class BrowserController(
                 activity.getString(R.string.cd_minimize_fullscreen_video),
             inlineMediaPlayerCloseLabel =
                 activity.getString(R.string.cd_close_fullscreen_video),
+            inlineMediaPlayerShowControlsLabel =
+                activity.getString(R.string.action_candy_player_show_controls),
+            inlineMediaPlayerHideControlsLabel =
+                activity.getString(R.string.action_candy_player_hide_controls),
             cssSafeAreaTopInsetPx = cssSafeAreaTopInsetPx,
             geckoSafeAreaSettings = developerSettings.geckoSafeAreaSettings,
             safeAreaLayoutQuietPeriodMillis =
@@ -11288,6 +11461,12 @@ class BrowserController(
                 }
                 val nextNavigationGeneration =
                     navigationGenerations.getOrDefault(event.tabId, 0) + 1
+                val replaceActiveMediaOwner = BrowserMediaNavigationRules.mayReplaceActiveMediaOwner(
+                    currentDocumentUrl = pageUrls[event.tabId]
+                        ?: tabs.firstOrNull { tab -> tab.id == event.tabId }?.url,
+                    navigationAddress = event.address,
+                    mediaIsActive = geckoMediaStates[event.tabId]?.isActive == true,
+                )
                 fun isCurrentNavigation(): Boolean = !destroyed &&
                     browserEngineSessions[event.tabId] === navigatingSession &&
                     navigationGenerations[event.tabId] == nextNavigationGeneration
@@ -11297,6 +11476,10 @@ class BrowserController(
                 if (contentActions.sourceTabId == event.tabId) contentActions.dismiss()
                 resetBrowserChromeScroll(event.tabId)
                 navigationGenerations[event.tabId] = nextNavigationGeneration
+                invalidateMedia3OwnerFor(
+                    event.tabId,
+                    replaceForNavigation = replaceActiveMediaOwner,
+                )
                 reconcileInlineVideoGestureHapticOwner()
                 event.address?.let { address -> pageUrls[event.tabId] = address }
                 refreshDomainMuteForTab(event.tabId)
@@ -11460,7 +11643,7 @@ class BrowserController(
                     releaseGeckoView(binding.session, binding.view)
                     (binding.view.parent as? ViewGroup)?.removeView(binding.view)
                 }
-                browserEngineSessions.remove(event.tabId)
+                browserEngineSessions.remove(event.tabId)?.let(browserEngineMediaSessionIds::remove)
                 reconcileInlineVideoGestureHapticOwner()
                 updateTab(event.tabId) { tab ->
                     tab.copy(
@@ -11482,7 +11665,7 @@ class BrowserController(
                 geckoMediaStates.remove(event.tabId)
                 inlineMediaPlayerReadyTabIds.remove(event.tabId)
                 browserEngineContentFullscreenTabIds.remove(event.tabId)
-                browserEngineSessions.remove(event.tabId)
+                browserEngineSessions.remove(event.tabId)?.let(browserEngineMediaSessionIds::remove)
                 reconcileInlineVideoGestureHapticOwner()
             }
         }
@@ -11862,6 +12045,7 @@ class BrowserController(
     }
 
     private fun closeBrowserEngineSession(tabId: String) {
+        invalidateMedia3OwnerFor(tabId)
         cancelAddressBarAutoDockProbe(tabId)
         cancelPendingGeckoPreviewCapture(tabId)
         pageTranslationAttempts.remove(tabId)
@@ -11877,6 +12061,7 @@ class BrowserController(
             (binding.view.parent as? ViewGroup)?.removeView(binding.view)
         }
         browserEngineSessions.remove(tabId)?.let { session ->
+            browserEngineMediaSessionIds.remove(session)
             persistBrowserEngineSessionState(tabId, session)
             session.execute(BrowserEngineCommands.close())
         }
@@ -12106,6 +12291,63 @@ class BrowserController(
         val pictureInPictureTabId = pictureInPictureOwnerTabId
             ?.takeIf { isInPictureInPicture || pictureInPictureTransitionPending }
         return browserEngineSessions[pictureInPictureTabId ?: selectedTabId]
+    }
+
+    private fun media3OwnerFor(tabId: String): GeckoMediaPlaybackOwner? {
+        val session = browserEngineSessions[tabId] ?: return null
+        val navigationGeneration = navigationGenerations[tabId] ?: return null
+        val engineSessionId = browserEngineMediaSessionIds.identityFor(session)
+        return GeckoMediaPlaybackOwner(tabId, engineSessionId, navigationGeneration)
+    }
+
+    private fun isCurrentMedia3Owner(owner: GeckoMediaPlaybackOwner): Boolean =
+        media3OwnerFor(owner.tabId) == owner &&
+            tabs.firstOrNull { tab -> tab.id == owner.tabId }?.let { tab ->
+                !tab.isIncognito && tab.profileId !in lockedProfileIds
+            } == true &&
+            !AppDataTransferLock.isActive(activity)
+
+    private fun invalidateMedia3OwnerFor(
+        tabId: String,
+        replaceForNavigation: Boolean = false,
+    ) {
+        if (!BrowserMedia3OwnerInvalidationRules.matches(
+                capturedOwner = media3CapturedOwner,
+                backgroundOwner = media3BackgroundOwner,
+                tabId = tabId,
+            )
+        ) {
+            BrowserMediaLifecycleTrace.record(
+                source = "BrowserController.invalidateMedia3OwnerFor",
+                action = "ignored:no-matching-owner",
+            )
+            return
+        }
+        val invalidatedOwner = media3CapturedOwner ?: media3BackgroundOwner
+        // A PiP publication can retain a second, preempted background owner. Once either owner
+        // becomes stale, discard the complete handoff so neither can receive a later transport.
+        media3CapturedOwner = null
+        media3BackgroundOwner = null
+        media3PictureInPictureActive = false
+        media3PictureInPictureRestorePending = false
+        if (replaceForNavigation && geckoMediaStates[tabId]?.isActive == true) {
+            media3InvalidationPending = false
+            media3NavigationReplacePending = true
+            BrowserMediaLifecycleTrace.record(
+                source = "BrowserController.invalidateMedia3OwnerFor",
+                action = "replace:same-document-navigation",
+                owner = invalidatedOwner,
+            )
+        } else {
+            media3NavigationReplacePending = false
+            media3InvalidationPending = true
+            BrowserMediaLifecycleTrace.record(
+                source = "BrowserController.invalidateMedia3OwnerFor",
+                action = "clear:owner-invalidated",
+                owner = invalidatedOwner,
+            )
+        }
+        notifyMediaStateChanged()
     }
     private fun presentationTabId(): String? =
         geckoMediaPresentation?.tabId
@@ -13389,6 +13631,8 @@ class BrowserController(
         if (profileIds.isEmpty()) return
         ProfileProtectionSession.lock(profileIds)
         lockedProfileIds += profileIds
+        tabs.filter { tab -> tab.profileId in profileIds }
+            .forEach { tab -> invalidateMedia3OwnerFor(tab.id) }
         tabs.asSequence()
             .filter { tab -> tab.profileId in profileIds }
             .mapNotNull { tab -> browserEngineSessions[tab.id] }

@@ -513,6 +513,8 @@
     <string name="action_candy_player_play">Abspielen</string>
     <string name="action_candy_player_pause">Pausieren</string>
     <string name="action_candy_player_seek">Wiedergabeposition</string>
+    <string name="action_candy_player_show_controls">Steuerelemente anzeigen</string>
+    <string name="action_candy_player_hide_controls">Steuerelemente ausblenden</string>
     <string name="settings_default_browser">Standardbrowser</string>
     <string name="settings_default_browser_active">Candy Browser ist dein Standardbrowser</string>
     <string name="settings_make_default_browser">Candy Browser als Standardbrowser festlegen</string>

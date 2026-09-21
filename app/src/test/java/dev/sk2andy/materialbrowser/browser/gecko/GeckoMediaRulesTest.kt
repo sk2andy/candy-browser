@@ -179,6 +179,26 @@ class GeckoMediaRulesTest {
     }
 
     @Test
+    fun `deactivation retains paused media while explicit stop clears it`() {
+        val playing = GeckoMediaSessionState(
+            isActive = true,
+            isPlaying = true,
+            title = "Track",
+            currentPositionMillis = 1_000L,
+            durationMillis = 20_000L,
+        )
+
+        assertEquals(
+            playing.copy(isPlaying = false),
+            GeckoMediaSessionRules.deactivatedState(playing),
+        )
+        assertEquals(
+            GeckoMediaSessionRules.stoppedState(),
+            GeckoMediaSessionRules.deactivatedState(GeckoMediaSessionRules.stoppedState()),
+        )
+    }
+
+    @Test
     fun `picture in picture preserves playback intent after gecko pauses during transition`() {
         assertTrue(
             GeckoPictureInPictureRules.playbackExpectedDuringTransition(
