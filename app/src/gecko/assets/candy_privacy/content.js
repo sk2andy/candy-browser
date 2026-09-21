@@ -214,7 +214,9 @@ function rememberCandyInlineVideoStableOrigin(video) {
   if (!candyPictureInPicturePlayback.inlinePresentationExpected ||
       candyPictureInPicturePlayback.presentedVideo !== video ||
       candyPictureInPicturePlayback.expected || document.fullscreenElement ||
-      candyPictureInPicturePlayback.inlineFullscreenOrigin) return;
+      candyPictureInPicturePlayback.inlineFullscreenOrigin ||
+      candyPictureInPicturePlayback.inlineControlsHost?.dataset.fullscreenGestureOffset !==
+        undefined) return;
   const player = candyInlineVideoSitePlayer(video);
   if (!player) return;
   const previous = candyPictureInPicturePlayback.inlineStableOrigin;
@@ -834,6 +836,8 @@ button:focus-visible { outline: 3px solid white; outline-offset: 3px; }
     );
     let fullscreenRequest = null;
     if (shouldCommit) {
+      // Origin capture must see the page's video box, not the temporary swipe transform.
+      clearCandyInlineFullscreenGestureOffset(gesture, host);
       try {
         // Keep this invocation in the trusted pointer event. Awaiting the native bridge first
         // would lose the transient user activation required by the Fullscreen API.
@@ -1412,6 +1416,7 @@ async function requestCandyInlineVideoOpen(video, enterFullscreen = false) {
     candyPictureInPicturePlayback.inlineMediaPlayerEnabled &&
     candyPictureInPicturePlayback.inlineMediaPlayerMode === mode &&
     candyPictureInPicturePlayback.inlineMediaNavigationGeneration === navigationGeneration &&
+    (mode !== "automatic" || !video.paused) &&
     !candyVideoPresentationExpected() &&
     isCandyInlineVideoCandidate(video) &&
     candyInlineVideoForIdentity(candyInlineVideoDocumentNonce, elementNonce) === video;
@@ -1711,10 +1716,14 @@ function reportCandyInlineVideoState(preferredVideo = null) {
   if (
     video &&
     candyInlineMediaPlayerStartsAutomatically() &&
+    !video.paused &&
+    video.readyState >= 2 &&
+    video.videoWidth > 0 &&
+    video.videoHeight > 0 &&
     !candyVideoPresentationExpected() &&
     candyPictureInPicturePlayback.inlineOpenRequestKey === null
   ) {
-    return report.then(() => requestCandyInlineVideoOpen(video));
+    return report.then(() => !video.paused && requestCandyInlineVideoOpen(video));
   }
   return report;
 }
@@ -2171,15 +2180,88 @@ function nextCandyAnimationFrame() {
   return new Promise((resolve) => requestAnimationFrame(resolve));
 }
 
+function candyPictureInPictureRestorationMatches(video, origin, allowFullscreen) {
+  if (document.documentElement?.hasAttribute(CANDY_PICTURE_IN_PICTURE_ROOT_ATTRIBUTE) ||
+      document.querySelector(`style[${CANDY_PICTURE_IN_PICTURE_STYLE_ATTRIBUTE}]`) ||
+      video?.hasAttribute(CANDY_PICTURE_IN_PICTURE_VIDEO_ATTRIBUTE)) return false;
+  if (document.fullscreenElement) return allowFullscreen;
+  if (!origin) return true;
+  if (!candyInlineVideoOriginLayoutMatches(origin)) return false;
+  const bounds = video?.getBoundingClientRect();
+  const target = origin.videoBounds;
+  if (!bounds || [
+    bounds.left - target.left - origin.scrollX + scrollX,
+    bounds.top - target.top - origin.scrollY + scrollY,
+    bounds.width - target.width,
+    bounds.height - target.height,
+  ].some((delta) => !Number.isFinite(delta) || Math.abs(delta) >= 0.5)) return false;
+  if (!candyPictureInPicturePlayback.inlinePresentationExpected) return true;
+  const host = candyPictureInPicturePlayback.inlineControlsHost;
+  if (!host?.isConnected || candyPictureInPicturePlayback.inlineControlsVideo !== video) return false;
+  const controls = host.getBoundingClientRect();
+  const left = Math.max(0, bounds.left);
+  const top = Math.max(0, bounds.top);
+  return [
+    controls.left - Math.round(left),
+    controls.top - Math.round(top),
+    controls.width - Math.round(Math.max(0, Math.min(innerWidth, bounds.right) - left)),
+    controls.height - Math.round(Math.max(0, Math.min(innerHeight, bounds.bottom) - top)),
+  ].every((delta) => Number.isFinite(delta) && Math.abs(delta) < 0.5);
+}
+
+function waitForCandyPictureInPictureRestoration(allowFullscreen) {
+  const state = candyPictureInPicturePlayback;
+  const generation = state.generation;
+  const navigationGeneration = state.inlineMediaNavigationGeneration;
+  const video = state.presentedVideo;
+  const origin = state.inlineFullscreenOrigin;
+  const inlineExpected = state.inlinePresentationExpected;
+  const url = location.href;
+  const deadline = performance.now() + 2_000;
+  return new Promise((resolve) => {
+    let frame = null;
+    let stableFrames = 0;
+    let previousGeometry = null;
+    const finish = (prepared) => {
+      if (frame !== null) cancelAnimationFrame(frame);
+      clearTimeout(timeout);
+      resolve({ prepared });
+    };
+    // A suspended document may stop rendering; RAF alone cannot bound the acknowledgement.
+    const timeout = setTimeout(() => finish(false), 2_000);
+    const check = () => {
+      frame = null;
+      if (performance.now() >= deadline || state.expected || state.generation !== generation ||
+          state.inlineMediaNavigationGeneration !== navigationGeneration || location.href !== url ||
+          state.presentedVideo !== video || (video && !video.isConnected) ||
+          state.inlinePresentationExpected !== inlineExpected || state.inlineFullscreenOrigin !== origin ||
+          (origin && (!origin.player.isConnected || origin.player.parentElement !== origin.parent))) {
+        finish(false);
+        return;
+      }
+      reconcileCandyInlineVideoFullscreenOrigin();
+      updateCandyInlineVideoControlsOverlay(video);
+      const bounds = video?.getBoundingClientRect();
+      const geometry = [innerWidth, innerHeight, scrollX, scrollY,
+        bounds?.left || 0, bounds?.top || 0, bounds?.width || 0, bounds?.height || 0];
+      const matches = candyPictureInPictureRestorationMatches(video, origin, allowFullscreen);
+      const unchanged = previousGeometry?.every((value, index) => Math.abs(value - geometry[index]) < 0.5);
+      stableFrames = matches ? (unchanged ? stableFrames + 1 : 1) : 0;
+      previousGeometry = matches ? geometry : null;
+      if (stableFrames >= 2) finish(true);
+      else frame = requestAnimationFrame(check);
+    };
+    frame = requestAnimationFrame(check);
+  });
+}
+
 async function prepareCandyPictureInPicturePlayback(message) {
   if (message.expected !== true) {
+    // Only an actual PiP return may restore into DOM fullscreen. A direct fullscreen exit
+    // must wait until the page exits fullscreen before acknowledging inline geometry.
+    const allowFullscreen = candyPictureInPicturePlayback.expected;
     updateCandyPictureInPicturePlayback(false);
-    await nextCandyAnimationFrame();
-    await nextCandyAnimationFrame();
-    updateCandyInlineVideoControlsOverlay(
-      candyPictureInPicturePlayback.presentedVideo,
-    );
-    return { prepared: true };
+    return waitForCandyPictureInPictureRestoration(allowFullscreen);
   }
   const video = candyInlineVideoForIdentity(
     message.documentNonce,
@@ -2276,7 +2358,7 @@ document.addEventListener("pause", (event) => {
     scheduleCandyPictureInPicturePlayback();
   }
 }, true);
-for (const eventName of ["loadedmetadata", "durationchange", "resize"]) {
+for (const eventName of ["loadedmetadata", "loadeddata", "durationchange", "resize"]) {
   document.addEventListener(eventName, (event) => {
     if (
       event.target instanceof HTMLVideoElement &&

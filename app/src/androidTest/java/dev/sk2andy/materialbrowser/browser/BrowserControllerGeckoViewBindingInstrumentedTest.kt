@@ -24,6 +24,8 @@ import dev.sk2andy.materialbrowser.browser.gecko.GeckoMediaSessionState
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoMediaSessionStateListener
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoNavigationRequestDecision
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoNavigationRequestListener
+import dev.sk2andy.materialbrowser.browser.gecko.GeckoPrivacyBindingHandshake
+import dev.sk2andy.materialbrowser.browser.gecko.GeckoPrivacyBindingHandshakeRules
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoPrivacyEvent
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoPrivacyPolicy
 import dev.sk2andy.materialbrowser.browser.integration.ExternalAppLauncher
@@ -36,6 +38,7 @@ import dev.sk2andy.materialbrowser.data.DeveloperSettings
 import dev.sk2andy.materialbrowser.data.GeckoSafeAreaSettings
 import dev.sk2andy.materialbrowser.data.HistoryEntry
 import dev.sk2andy.materialbrowser.data.HistoryRecordingMode
+import java.util.concurrent.CountDownLatch
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -718,17 +721,20 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
 
     @Test
     fun fullscreenExitRefreshesSafeAreaPolicyWithoutAnotherInsetChange() {
+        lateinit var session: ReentrantAttachSession
         composeRule.runOnIdle {
-            val session = prepareFullscreenInlineSession()
+            session = prepareFullscreenInlineSession()
             val browserController = requireNotNull(controller)
             assertEquals(0, session.privacyPolicies.last().cssSafeAreaTopInsetPx)
             session.privacyPolicies.clear()
             session.commands.clear()
 
             browserController.reportSelectedGeckoFullscreenStateForTesting(false)
-
+        }
+        composeRule.waitUntil(timeoutMillis = 5_000L) { session.mediaRestorationCount == 1 }
+        composeRule.runOnIdle {
             assertEquals(listOf(96), session.privacyPolicies.map { it.cssSafeAreaTopInsetPx })
-            browserController.reportSelectedGeckoFullscreenStateForTesting(false)
+            requireNotNull(controller).reportSelectedGeckoFullscreenStateForTesting(false)
             assertEquals(1, session.privacyPolicies.size)
             assertTrue(session.commands.isEmpty())
         }
@@ -741,23 +747,328 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
             session = prepareFullscreenInlineSession()
             session.deferPolicyReadyCallbacks = true
             requireNotNull(controller).reportSelectedGeckoFullscreenStateForTesting(false)
-
-            assertFalse(requireNotNull(controller).isMediaLayoutRestorationPending)
+            assertTrue(requireNotNull(controller).isMediaLayoutRestorationPending)
+        }
+        composeRule.waitUntil(timeoutMillis = 5_000L) { session.policyReadyCallbacks.isNotEmpty() }
+        composeRule.runOnUiThread {
             assertEquals(0, session.mediaRestorationCount)
             assertEquals(1, session.policyReadyCallbacks.size)
-            session.policyReadyCallbacks.removeAt(0).invoke()
             assertTrue(requireNotNull(controller).isMediaLayoutRestorationPending)
+            session.acknowledgePrivacyPolicies()
         }
         composeRule.waitUntil(timeoutMillis = 5_000L) { session.mediaRestorationCount == 1 }
     }
 
     @Test
-    fun fullscreenExitPolicyAcknowledgementIgnoresReplacedVideo() {
+    fun fullscreenExitWaitsForRestoredInsetPolicyAcknowledgement() {
+        lateinit var session: ReentrantAttachSession
+        val hostFrames = CountDownLatch(1)
         composeRule.runOnIdle {
-            val session = prepareFullscreenInlineSession()
+            session = prepareFullscreenInlineSession()
+            val browserController = requireNotNull(controller)
+            browserController.onWindowInsetsChanged(
+                WindowInsetsCompat.Builder()
+                    .setInsets(WindowInsetsCompat.Type.statusBars(), Insets.NONE)
+                    .setVisible(WindowInsetsCompat.Type.statusBars(), false)
+                    .build(),
+            )
+            session.privacyPolicies.clear()
+            session.deferPolicyReadyCallbacks = true
+
+            browserController.reportSelectedGeckoFullscreenStateForTesting(false)
+
+            // A policy published before the inset arrives cannot authorize content restoration.
+            // A direct return may instead defer its first publication until layout is ready.
+            assertTrue(session.privacyPolicies.all { it.cssSafeAreaTopInsetPx == 0 })
+            session.acknowledgePrivacyPolicies()
+            assertTrue(browserController.isMediaLayoutRestorationPending)
+
+            // The status bar can return after fullscreen's first policy acknowledgement.
+            // Keep the new policy unacknowledged beyond the two host layout frames.
+            browserController.onWindowInsetsChanged(
+                WindowInsetsCompat.Builder()
+                    .setInsets(WindowInsetsCompat.Type.statusBars(), Insets.of(0, 96, 0, 0))
+                    .setVisible(WindowInsetsCompat.Type.statusBars(), true)
+                    .build(),
+            )
+            assertEquals(96, session.privacyPolicies.last().cssSafeAreaTopInsetPx)
+            val view = requireNotNull(session.createdView)
+            fun awaitHostFrames(remaining: Int) {
+                if (remaining == 0) hostFrames.countDown()
+                else view.postOnAnimation { awaitHostFrames(remaining - 1) }
+            }
+            awaitHostFrames(4)
+        }
+        composeRule.waitUntil(timeoutMillis = 5_000L) { hostFrames.count == 0L }
+        composeRule.runOnUiThread {
+            assertEquals(
+                "Content restoration must wait for the policy containing the restored status-bar inset",
+                0,
+                session.mediaRestorationCount,
+            )
+            assertTrue(session.policyReadyCallbacks.isNotEmpty())
+            assertTrue(requireNotNull(controller).isMediaLayoutRestorationPending)
+            session.acknowledgePrivacyPolicies()
+        }
+        composeRule.waitUntil(timeoutMillis = 5_000L) { session.mediaRestorationCount == 1 }
+    }
+
+    @Test
+    fun pictureInPictureReturnWaitsForRestoredInsetPolicyAcknowledgement() {
+        lateinit var session: ReentrantAttachSession
+        val hostFrames = CountDownLatch(1)
+        var returnCompletionCount = 0
+        composeRule.runOnIdle {
+            session = preparePictureInPictureReturnWithPendingPolicy { returnCompletionCount++ }
+            val view = requireNotNull(session.createdView)
+            fun awaitHostFrames(remaining: Int) {
+                if (remaining == 0) hostFrames.countDown()
+                else view.postOnAnimation { awaitHostFrames(remaining - 1) }
+            }
+            awaitHostFrames(6)
+        }
+        composeRule.waitUntil(timeoutMillis = 5_000L) { hostFrames.count == 0L }
+        composeRule.runOnUiThread {
+            val pending = requireNotNull(controller).isMediaLayoutRestorationPending
+            assertEquals(
+                "PiP must wait for restored-inset policy B: " +
+                    "restoreRequests=${session.mediaRestorationCount}, " +
+                    "returnCompletions=$returnCompletionCount, coverPending=$pending",
+                0,
+                session.mediaRestorationCount,
+            )
+            assertEquals(0, returnCompletionCount)
+            assertTrue(pending)
+            session.acknowledgePrivacyPolicies()
+        }
+        composeRule.waitUntil(timeoutMillis = 5_000L) { session.mediaRestorationCount == 1 }
+        composeRule.waitUntil(timeoutMillis = 5_000L) {
+            requireNotNull(controller).isMediaLayoutRestorationPending.not()
+        }
+        composeRule.runOnUiThread { assertEquals(1, returnCompletionCount) }
+    }
+
+    @Test
+    fun pictureInPictureReturnWaitsForSupersedingPolicyAcknowledgement() {
+        lateinit var session: ReentrantAttachSession
+        composeRule.runOnIdle {
+            session = preparePictureInPictureReturnWithPendingPolicy()
+        }
+        composeRule.waitUntil(timeoutMillis = 5_000L) { session.policyReadyCallbacks.size >= 2 }
+        composeRule.runOnUiThread {
+            val returnRevision = session.privacyPolicyRevision
+            requireNotNull(controller).onWindowInsetsChanged(
+                WindowInsetsCompat.Builder()
+                    .setInsets(WindowInsetsCompat.Type.statusBars(), Insets.of(0, 128, 0, 0))
+                    .setVisible(WindowInsetsCompat.Type.statusBars(), true)
+                    .build(),
+            )
+            session.acknowledgePrivacyPolicies(returnRevision)
+            assertEquals(0, session.mediaRestorationCount)
+            assertTrue(requireNotNull(controller).isMediaLayoutRestorationPending)
+            session.acknowledgePrivacyPolicies()
+            assertEquals(1, session.mediaRestorationCount)
+        }
+    }
+
+    @Test
+    fun pictureInPictureReturnPolicyAcknowledgementIgnoresReplacedSession() {
+        lateinit var session: ReentrantAttachSession
+        var returnCompletionCount = 0
+        composeRule.runOnIdle {
+            session = preparePictureInPictureReturnWithPendingPolicy { returnCompletionCount++ }
+        }
+        composeRule.waitUntil(timeoutMillis = 5_000L) { session.policyReadyCallbacks.size >= 2 }
+        composeRule.runOnUiThread {
+            val browserController = requireNotNull(controller)
+            browserController.installGeckoEngineSessionForTesting(
+                ReentrantAttachSession(tabId = session.tabId, onFirstAttach = {}),
+            )
+            session.acknowledgePrivacyPolicies()
+            assertEquals(0, session.mediaRestorationCount)
+            assertFalse(browserController.isMediaLayoutRestorationPending)
+            assertEquals(1, returnCompletionCount)
+        }
+    }
+
+    @Test
+    fun pictureInPictureReturnMissingPolicyAcknowledgementReleasesOnlyItsCover() {
+        lateinit var session: ReentrantAttachSession
+        var returnCompletionCount = 0
+        composeRule.runOnIdle {
+            session = preparePictureInPictureReturnWithPendingPolicy { returnCompletionCount++ }
+        }
+        composeRule.waitUntil(timeoutMillis = 5_000L) { session.policyReadyCallbacks.size >= 2 }
+        composeRule.waitUntil(timeoutMillis = 5_000L) {
+            requireNotNull(controller).isMediaLayoutRestorationPending.not()
+        }
+        composeRule.runOnUiThread {
+            assertEquals(0, session.mediaRestorationCount)
+            assertEquals(1, returnCompletionCount)
+            assertEquals(false, session.pictureInPicturePlaybackExpectations.last())
+            session.acknowledgePrivacyPolicies()
+            assertEquals(0, session.mediaRestorationCount)
+            assertEquals(1, returnCompletionCount)
+        }
+    }
+
+    @Test
+    fun pictureInPictureReentryRejectsPendingReturnPolicyAcknowledgement() {
+        lateinit var session: ReentrantAttachSession
+        var returnCompletionCount = 0
+        composeRule.runOnIdle {
+            session = preparePictureInPictureReturnWithPendingPolicy { returnCompletionCount++ }
+        }
+        composeRule.waitUntil(timeoutMillis = 5_000L) { session.policyReadyCallbacks.size >= 2 }
+        composeRule.runOnUiThread {
+            val browserController = requireNotNull(controller)
+            browserController.prepareForPictureInPicture()
+            browserController.onPictureInPictureModeChanged(true)
+            val reentryPlaybackExpectations = session.pictureInPicturePlaybackExpectations.toList()
+            session.acknowledgePrivacyPolicies()
+            assertEquals(0, session.mediaRestorationCount)
+            assertFalse(browserController.isMediaLayoutRestorationPending)
+            assertEquals(1, returnCompletionCount)
+            assertEquals(reentryPlaybackExpectations, session.pictureInPicturePlaybackExpectations)
+        }
+    }
+
+    @Test
+    fun pictureInPictureReturnKeepsCoverWhenPolicyChangesAfterRestoreDispatch() {
+        lateinit var session: ReentrantAttachSession
+        var returnCompletionCount = 0
+        composeRule.runOnIdle {
+            session = preparePictureInPictureReturnWithPendingPolicy { returnCompletionCount++ }
+            session.deferMediaRestorationCallbacks = true
+        }
+        composeRule.waitUntil(timeoutMillis = 5_000L) { session.policyReadyCallbacks.size >= 2 }
+        composeRule.runOnUiThread {
+            session.acknowledgePrivacyPolicies()
+            assertEquals(1, session.mediaRestorationCount)
+            val browserController = requireNotNull(controller)
+            browserController.onWindowInsetsChanged(
+                WindowInsetsCompat.Builder()
+                    .setInsets(WindowInsetsCompat.Type.statusBars(), Insets.of(0, 128, 0, 0))
+                    .setVisible(WindowInsetsCompat.Type.statusBars(), true)
+                    .build(),
+            )
+            assertEquals("A superseding policy rejects the old restore, not the return", 0, returnCompletionCount)
+            assertTrue(browserController.isMediaLayoutRestorationPending)
+        }
+        composeRule.waitUntil(timeoutMillis = 5_000L) { session.policyReadyCallbacks.size >= 2 }
+        composeRule.runOnUiThread {
+            assertEquals(1, session.mediaRestorationCount)
+            session.acknowledgePrivacyPolicies()
+            assertEquals(2, session.mediaRestorationCount)
+            assertEquals(0, returnCompletionCount)
+            session.completeMediaRestoration(true)
+            assertEquals(1, returnCompletionCount)
+        }
+    }
+
+    @Test
+    fun pictureInPictureReturnMissingRestoreAcknowledgementReleasesOnlyItsCover() {
+        lateinit var session: ReentrantAttachSession
+        var returnCompletionCount = 0
+        composeRule.runOnIdle {
+            session = preparePictureInPictureReturnWithPendingPolicy { returnCompletionCount++ }
+            session.deferMediaRestorationCallbacks = true
+        }
+        composeRule.waitUntil(timeoutMillis = 5_000L) { session.policyReadyCallbacks.size >= 2 }
+        composeRule.runOnUiThread { session.acknowledgePrivacyPolicies() }
+        composeRule.waitUntil(timeoutMillis = 5_000L) {
+            requireNotNull(controller).isMediaLayoutRestorationPending.not()
+        }
+        composeRule.runOnUiThread {
+            assertEquals(1, returnCompletionCount)
+            session.completeMediaRestoration(true)
+            assertEquals(1, returnCompletionCount)
+            assertFalse(requireNotNull(controller).isMediaLayoutRestorationPending)
+        }
+    }
+
+    @Test
+    fun fullscreenExitSupersededLayoutDoesNotPublishPolicy() {
+        lateinit var session: ReentrantAttachSession
+        composeRule.runOnIdle {
+            session = prepareFullscreenInlineSession()
+            session.deferPolicyReadyCallbacks = true
+            session.privacyPolicies.clear()
+            val browserController = requireNotNull(controller)
+            browserController.reportSelectedGeckoFullscreenStateForTesting(false)
+            browserController.reportSelectedGeckoFullscreenStateForTesting(true)
+            browserController.reportSelectedGeckoFullscreenStateForTesting(false)
+        }
+        composeRule.waitUntil(timeoutMillis = 5_000L) { session.policyReadyCallbacks.isNotEmpty() }
+        composeRule.runOnUiThread {
+            assertEquals(listOf(96), session.privacyPolicies.map { it.cssSafeAreaTopInsetPx })
+            assertTrue(requireNotNull(controller).isMediaLayoutRestorationPending)
+            session.acknowledgePrivacyPolicies()
+            assertEquals(1, session.mediaRestorationCount)
+        }
+    }
+
+    @Test
+    fun fullscreenExitWaitsForPolicyThatSupersedesReturnAcknowledgement() {
+        lateinit var session: ReentrantAttachSession
+        composeRule.runOnIdle {
+            session = prepareFullscreenInlineSession()
+            session.deferPolicyReadyCallbacks = true
+            requireNotNull(controller).reportSelectedGeckoFullscreenStateForTesting(false)
+        }
+        composeRule.waitUntil(timeoutMillis = 5_000L) { session.policyReadyCallbacks.isNotEmpty() }
+        composeRule.runOnUiThread {
+            val returnRevision = session.privacyPolicyRevision
+            requireNotNull(controller).onWindowInsetsChanged(
+                WindowInsetsCompat.Builder()
+                    .setInsets(WindowInsetsCompat.Type.statusBars(), Insets.of(0, 128, 0, 0))
+                    .setVisible(WindowInsetsCompat.Type.statusBars(), true)
+                    .build(),
+            )
+            assertEquals(128, session.privacyPolicies.last().cssSafeAreaTopInsetPx)
+
+            session.acknowledgePrivacyPolicies(returnRevision)
+
+            assertEquals(0, session.mediaRestorationCount)
+            assertTrue(requireNotNull(controller).isMediaLayoutRestorationPending)
+            session.acknowledgePrivacyPolicies()
+            assertEquals(1, session.mediaRestorationCount)
+        }
+    }
+
+    @Test
+    fun fullscreenExitMissingPolicyAcknowledgementReleasesPendingLayout() {
+        lateinit var session: ReentrantAttachSession
+        composeRule.runOnIdle {
+            session = prepareFullscreenInlineSession()
+            session.deferPolicyReadyCallbacks = true
+            requireNotNull(controller).reportSelectedGeckoFullscreenStateForTesting(false)
+        }
+        composeRule.waitUntil(timeoutMillis = 5_000L) { session.policyReadyCallbacks.isNotEmpty() }
+        composeRule.waitUntil(timeoutMillis = 5_000L) {
+            requireNotNull(controller).isMediaLayoutRestorationPending.not()
+        }
+        composeRule.runOnIdle {
+            assertEquals(0, session.mediaRestorationCount)
+            session.acknowledgePrivacyPolicies()
+            assertEquals(0, session.mediaRestorationCount)
+            assertFalse(requireNotNull(controller).isMediaLayoutRestorationPending)
+        }
+    }
+
+    @Test
+    fun fullscreenExitPolicyAcknowledgementIgnoresReplacedVideo() {
+        lateinit var session: ReentrantAttachSession
+        composeRule.runOnIdle {
+            session = prepareFullscreenInlineSession()
             val browserController = requireNotNull(controller)
             session.deferPolicyReadyCallbacks = true
             browserController.reportSelectedGeckoFullscreenStateForTesting(false)
+        }
+        composeRule.waitUntil(timeoutMillis = 5_000L) { session.policyReadyCallbacks.isNotEmpty() }
+        composeRule.runOnUiThread {
+            val browserController = requireNotNull(controller)
+            assertTrue(browserController.isMediaLayoutRestorationPending)
             browserController.reportSelectedGeckoMediaStateForTesting(
                 inlineMediaState(
                     GeckoInlineVideoIdentity("replacement-document", "replacement-video"),
@@ -765,7 +1076,7 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
                 ),
             )
 
-            session.policyReadyCallbacks.removeAt(0).invoke()
+            session.acknowledgePrivacyPolicies()
 
             assertFalse(browserController.isMediaLayoutRestorationPending)
             assertEquals(0, session.mediaRestorationCount)
@@ -774,16 +1085,22 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
 
     @Test
     fun fullscreenExitPolicyAcknowledgementIgnoresReplacedSession() {
+        lateinit var session: ReentrantAttachSession
         composeRule.runOnIdle {
-            val session = prepareFullscreenInlineSession()
+            session = prepareFullscreenInlineSession()
             val browserController = requireNotNull(controller)
             session.deferPolicyReadyCallbacks = true
             browserController.reportSelectedGeckoFullscreenStateForTesting(false)
+        }
+        composeRule.waitUntil(timeoutMillis = 5_000L) { session.policyReadyCallbacks.isNotEmpty() }
+        composeRule.runOnUiThread {
+            val browserController = requireNotNull(controller)
+            assertTrue(browserController.isMediaLayoutRestorationPending)
             browserController.installGeckoEngineSessionForTesting(
                 ReentrantAttachSession(tabId = session.tabId, onFirstAttach = {}),
             )
 
-            session.policyReadyCallbacks.removeAt(0).invoke()
+            session.acknowledgePrivacyPolicies()
 
             assertFalse(browserController.isMediaLayoutRestorationPending)
             assertEquals(0, session.mediaRestorationCount)
@@ -1580,6 +1897,38 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
         }
     }
 
+    private fun preparePictureInPictureReturnWithPendingPolicy(
+        onPresentationRestored: () -> Unit = {},
+    ): ReentrantAttachSession {
+        val session = prepareFullscreenInlineSession()
+        val browserController = requireNotNull(controller)
+        browserController.prepareForPictureInPicture()
+        browserController.onPictureInPictureModeChanged(true)
+        browserController.reportSelectedGeckoFullscreenStateForTesting(false)
+        browserController.onWindowInsetsChanged(
+            WindowInsetsCompat.Builder()
+                .setInsets(WindowInsetsCompat.Type.statusBars(), Insets.NONE)
+                .setVisible(WindowInsetsCompat.Type.statusBars(), false)
+                .build(),
+        )
+        session.acknowledgePrivacyPolicies()
+        session.deferPolicyReadyCallbacks = true
+        session.rejectMediaRestorationUntilPolicyAcknowledged = true
+        browserController.onPictureInPictureModeChanged(false)
+        browserController.completePictureInPictureReturn(onPresentationRestored)
+        assertTrue(browserController.isMediaLayoutRestorationPending)
+        // The acknowledged PiP policy A cannot authorize restoration against the new inset B.
+        browserController.onWindowInsetsChanged(
+            WindowInsetsCompat.Builder()
+                .setInsets(WindowInsetsCompat.Type.statusBars(), Insets.of(0, 96, 0, 0))
+                .setVisible(WindowInsetsCompat.Type.statusBars(), true)
+                .build(),
+        )
+        assertEquals(96, session.privacyPolicies.last().cssSafeAreaTopInsetPx)
+        assertTrue(session.policyReadyCallbacks.isNotEmpty())
+        return session
+    }
+
     private fun prepareFullscreenInlineSession(): ReentrantAttachSession {
         val store = BrowserSessionStore(composeRule.activity)
         originalEngineKind = store.loadAndroidBrowserEngineKind()
@@ -1671,7 +2020,14 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
         val activeStates = mutableListOf<Boolean>()
         val inlineVideoPresentationRequests = mutableListOf<Pair<GeckoInlineVideoIdentity?, Boolean>>()
         var deferPolicyReadyCallbacks = false
+        var rejectMediaRestorationUntilPolicyAcknowledged = false
+        var deferMediaRestorationCallbacks = false
+        private var mediaRestorationCallback: ((Boolean) -> Unit)? = null
+        val pictureInPicturePlaybackExpectations = mutableListOf<Boolean>()
         val policyReadyCallbacks = mutableListOf<() -> Unit>()
+        private var privacyHandshake = GeckoPrivacyBindingHandshake()
+        val privacyPolicyRevision: Long
+            get() = privacyHandshake.publishedRevision
         @Volatile
         var mediaRestorationCount = 0
             private set
@@ -1790,9 +2146,26 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
 
         override fun setAudioMuted(muted: Boolean) = Unit
 
+        override fun setPictureInPicturePlaybackExpected(expected: Boolean) {
+            pictureInPicturePlaybackExpectations += expected
+        }
+
         override fun restorePictureInPicturePresentation(onResult: (Boolean) -> Unit) {
             mediaRestorationCount++
-            onResult(true)
+            if (deferMediaRestorationCallbacks) {
+                mediaRestorationCallback = onResult
+                return
+            }
+            onResult(
+                !rejectMediaRestorationUntilPolicyAcknowledged ||
+                    privacyHandshake.isCurrentPolicyAcknowledged,
+            )
+        }
+
+        fun completeMediaRestoration(restored: Boolean) {
+            val callback = mediaRestorationCallback
+            mediaRestorationCallback = null
+            callback?.invoke(restored)
         }
 
         override fun executeMediaCommand(command: GeckoMediaCommand) = Unit
@@ -1832,7 +2205,21 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
             onReady: () -> Unit,
         ) {
             privacyPolicies += policy
+            privacyHandshake = GeckoPrivacyBindingHandshakeRules.publish(privacyHandshake)
             if (deferPolicyReadyCallbacks) policyReadyCallbacks += onReady else onReady()
+            // Native publication cancels the previous revision's in-flight restore request.
+            completeMediaRestoration(false)
+        }
+
+        fun acknowledgePrivacyPolicies(revision: Long = privacyPolicyRevision) {
+            privacyHandshake = GeckoPrivacyBindingHandshakeRules.acknowledgePolicy(
+                privacyHandshake,
+                revision,
+            ).state
+            if (!privacyHandshake.isCurrentPolicyAcknowledged) return
+            val callbacks = policyReadyCallbacks.toList()
+            policyReadyCallbacks.clear()
+            callbacks.forEach { it() }
         }
     }
 

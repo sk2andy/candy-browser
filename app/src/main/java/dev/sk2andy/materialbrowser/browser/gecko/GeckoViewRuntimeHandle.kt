@@ -861,6 +861,7 @@ private class GeckoViewBrowserSession(
 
     private val storageController = runtime.storageController
     private val mainHandler = Handler(Looper.getMainLooper())
+    private val mediaRestorationReadback = GeckoMediaRestorationReadback(mainHandler)
     private val cookieBehaviorOwner = Any()
     private val trackingPermissionOwner = Any()
 
@@ -2329,6 +2330,7 @@ private class GeckoViewBrowserSession(
     override fun notifyPictureInPictureModeChanged(inPictureInPicture: Boolean) {
         if (closed || this.inPictureInPicture == inPictureInPicture) return
         this.inPictureInPicture = inPictureInPicture
+        if (inPictureInPicture) mediaRestorationReadback.cancel()
         session.compositorController.onPipModeChanged(inPictureInPicture)
     }
 
@@ -2336,6 +2338,7 @@ private class GeckoViewBrowserSession(
     override fun setPictureInPicturePlaybackExpected(expected: Boolean) {
         if (closed) return
         pictureInPicturePlaybackExpected = expected
+        if (expected) mediaRestorationReadback.cancel()
         privacyBinding.setPictureInPicturePlaybackExpected(expected)
     }
 
@@ -2360,8 +2363,43 @@ private class GeckoViewBrowserSession(
             onResult(false)
             return
         }
+        mediaRestorationReadback.cancel()
         pictureInPicturePlaybackExpected = false
-        privacyBinding.restorePictureInPicturePresentation(onResult)
+        val view = boundView
+        val policy = privacyPolicy
+        privacyBinding.restorePictureInPicturePresentation restoration@{ restored ->
+            if (!restored || view == null) {
+                onResult(false)
+                return@restoration
+            }
+            mediaRestorationReadback.start(
+                isCurrent = {
+                    !closed && boundView === view && view.isAttachedToWindow &&
+                        privacyPolicy === policy && !inPictureInPicture &&
+                        !pictureInPicturePlaybackExpected
+                },
+                capture = { complete ->
+                    val result = try {
+                        view.capturePixels()
+                    } catch (_: IllegalStateException) {
+                        null
+                    }
+                    if (result == null) {
+                        complete(false)
+                    } else {
+                        result.withHandler(mainHandler).accept(
+                            { bitmap ->
+                                val captured = bitmap != null
+                                bitmap?.takeUnless(Bitmap::isRecycled)?.recycle()
+                                complete(captured)
+                            },
+                            { complete(false) },
+                        )
+                    }
+                },
+                onResult = onResult,
+            )
+        }
     }
 
     @UiThread
@@ -2490,6 +2528,7 @@ private class GeckoViewBrowserSession(
     override fun releaseView(view: View) {
         val geckoView = view as? CandyGeckoView ?: return
         if (geckoView !== boundView) return
+        mediaRestorationReadback.cancel()
         invalidateDomProbe()
         // Clear ownership before releaseSession or prompt cancellation can synchronously re-enter
         // Compose and ask the controller to attach this session again.
@@ -2732,6 +2771,7 @@ private class GeckoViewBrowserSession(
         reloadOnCookiePermissionChange: Boolean,
         onReady: () -> Unit,
     ) {
+        mediaRestorationReadback.cancel()
         privacyPolicy = policy
         val cookieBehaviorChanged = cookieBehavior.update(
             owner = cookieBehaviorOwner,
@@ -2793,6 +2833,7 @@ private class GeckoViewBrowserSession(
     override fun close() {
         if (closed) return
         closed = true
+        mediaRestorationReadback.cancel()
         if (BuildConfig.ENABLE_PERFORMANCE_DIAGNOSTICS) GeckoDomDiagnostics.unregisterSession(session)
         if (active) extensionController.setTabActive(session, false)
         downloadTransfers.cancelOwner(session)

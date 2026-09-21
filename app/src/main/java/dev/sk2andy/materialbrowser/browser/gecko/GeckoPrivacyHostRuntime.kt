@@ -873,7 +873,10 @@ internal class GeckoViewPrivacyHostRuntime(
     private fun publishDesiredPictureInPicturePlayback(binding: Binding) {
         if (
             bindings[binding.token] !== binding ||
-            !binding.handshake.isCurrentPolicyAcknowledged
+            !binding.handshake.isCurrentPolicyAcknowledged ||
+            // A policy-ready callback may already own a request-bound restoration. Sending
+            // another expected=false would invalidate its content-side frame acknowledgement.
+            binding.pictureInPictureRestorationRequestId != null
         ) {
             return
         }
