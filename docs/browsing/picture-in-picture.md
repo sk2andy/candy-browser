@@ -151,7 +151,9 @@ temporarily applies the video-only layout; it synchronously aligns the video bef
 frame, while observers and a bounded post-entry frame check correct later movement. On YouTube,
 PiP-only styles also remove clipping and transformed containing blocks from the selected video's
 ancestors; those styles are removed on return. Returning from or cancelling PiP restores
-the same inline video and its Candy controls. An inline upward fullscreen gesture transforms the
+the same inline video and its Candy controls. The control stage remains transparent, with contrast
+provided by the individual control pills, so the decoded video remains visible behind the lower
+controls after fullscreen or PiP return. An inline upward fullscreen gesture transforms the
 actual video frame and separate control host by the same bounded rubber-band offset. It preserves
 the video's original CSS transform and clears both temporary transforms on cancellation or entry.
 Swipe and button entry freeze the same unshifted inline origin: gesture transforms never update

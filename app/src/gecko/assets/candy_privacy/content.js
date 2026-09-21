@@ -438,7 +438,7 @@ function createCandyInlineVideoControlsOverlay(video) {
   width: 100%;
   height: ${CANDY_INLINE_VIDEO_CONTROLS_HEIGHT_PX}px;
   padding: 0 16px 14px;
-  background: linear-gradient(transparent, rgba(7, 5, 14, 0.92));
+  background: transparent;
   pointer-events: none;
   z-index: 2;
 }
