@@ -154,11 +154,37 @@ class WebContentTopInsetScriptTest {
     }
 
     @Test
-    fun `viewport cover cannot disable Candy top protection`() {
+    fun `viewport cover keeps author owned top headers edge to edge without disabling repair`() {
         assertTrue(WebContentTopInsetScript.installScript.contains("topInsetPx"))
-        assertFalse(WebContentTopInsetScript.installScript.contains("viewportFitsCover"))
+        assertTrue(WebContentTopInsetScript.installScript.contains("authorDeclaresViewportCover"))
+        assertTrue(WebContentTopInsetScript.installScript.contains("viewport-fit"))
         assertFalse(WebContentTopInsetScript.installScript.contains("viewportCoverAllowed"))
-        assertFalse(WebContentTopInsetScript.installScript.contains("viewport-fit"))
+        assertTrue(WebContentTopInsetScript.installScript.contains("html::before"))
+    }
+
+    @Test
+    fun `semantic top header can upgrade an earlier emergency native fallback`() {
+        val request = WebContentTopInsetScript.installScript
+            .substringAfter("const requestNativeFallbackForTopHeader =")
+            .substringBefore("const topContentBackground =")
+
+        assertTrue(WebContentTopInsetScript.installScript.contains("let nativeTopHeaderRequested = false"))
+        assertTrue(request.contains("if (nativeTopHeaderRequested) return true"))
+        assertFalse(request.contains("if (nativeFallbackRequested)"))
+        assertTrue(request.contains("nativeFallbackRequested = true"))
+        assertTrue(request.contains("nativeTopHeaderRequested = true"))
+        assertTrue(request.contains("themeColor"))
+        assertTrue(request.contains("true,"))
+        assertTrue(request.contains("rect.top < -0.5"))
+        assertTrue(request.contains("rect.top > cssPixels + 0.5"))
+        assertTrue(request.contains("style.position === 'fixed'"))
+        assertTrue(request.contains("Number(globalThis.scrollY)"))
+        assertTrue(request.contains("fixedTopHeaderCandidates.get(element)"))
+        assertTrue(request.contains("fixedTopHeaderHasMeaningfulScroll(candidate, scrollY)"))
+        assertTrue(WebContentTopInsetScript.installScript.contains("scrollY - candidate.scrollY"))
+        assertTrue(WebContentTopInsetScript.installScript.contains("candidate.anchorTop -"))
+        assertTrue(WebContentTopInsetScript.installScript.contains("Math.max(rect.height, cssPixels)"))
+        assertTrue(WebContentTopInsetScript.installScript.contains("new Map()"))
     }
 
     @Test

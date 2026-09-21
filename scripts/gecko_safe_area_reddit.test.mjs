@@ -60,11 +60,11 @@ function fixture({ hostname = 'reddit.com', topFrame = true } = {}) {
       const callbacks = [...timers.values()]; timers.clear(); callbacks.forEach((callback) => callback());
     }
   };
-  const app = (shadow = false) => {
+  const app = (shadow = false, headerTag = 'reddit-header-small') => {
     const host = body.appendChild(new Node('shreddit-app'));
     const scope = shadow ? host.openShadow() : host;
     const main = scope.appendChild(new Node('div', ['main-container']));
-    const header = scope.appendChild(new Node('reddit-header-small'));
+    const header = scope.appendChild(new Node(headerTag));
     return { host, scope, main, header };
   };
   return { root, body, Node, app, flush, timers, observers, definitions, helper: context.CandyRedditSafeArea };
@@ -74,16 +74,18 @@ test('preseeds document CSS and scopes open app/header roots independently', () 
   const f = fixture({ hostname: 'WWW.Reddit.com.' });
   f.helper.configure(true);
   const documentStyle = f.root.querySelector('style');
-  assert.match(documentStyle.textContent, /:root shreddit-app \{ padding-top: calc\(var\(--page-y-padding, 0px\) \+ var\(--candy-safe-area-inset-top, 0px\)\)/);
+  assert.match(documentStyle.textContent, /:root shreddit-app \{ padding-top: calc\(var\(--page-y-padding, 0px\) \+ max\(var\(--candy-safe-area-inset-top, 0px\), env\(safe-area-inset-top, 0px\)\)\)/);
   assert.doesNotMatch(documentStyle.textContent, /\.main-container/);
   assert.match(documentStyle.textContent, /reddit-header-small\[hidden-by-scroll\] header \{ padding-top:/);
+  assert.match(documentStyle.textContent, /reddit-header-large \{ top: max\(/);
+  assert.match(documentStyle.textContent, /shreddit-header \{ top: max\(/);
   assert.doesNotMatch(documentStyle.textContent, /subreddit-banner-img/);
   assert.equal(f.helper.flowProtected(), false);
   const app = f.app(true); const headerRoot = app.header.openShadow();
   f.helper.added(app.host); f.flush();
-  assert.match(app.scope.querySelector('style').textContent, /^reddit-header-small \{ top:/);
+  assert.match(app.scope.querySelector('style').textContent, /^reddit-header-small \{ top: max\(/);
   assert.doesNotMatch(app.scope.querySelector('style').textContent, /:root|shreddit-app/);
-  assert.match(app.scope.querySelector('style').textContent, /:host \{ padding-top: calc\(var\(--page-y-padding, 0px\) \+ var\(--candy-safe-area-inset-top, 0px\)\)/);
+  assert.match(app.scope.querySelector('style').textContent, /:host \{ padding-top: calc\(var\(--page-y-padding, 0px\) \+ max\(var\(--candy-safe-area-inset-top, 0px\), env\(safe-area-inset-top, 0px\)\)\)/);
   assert.doesNotMatch(app.scope.querySelector('style').textContent, /subreddit-banner-img|\.main-container/);
   assert.match(headerRoot.querySelector('style').textContent, /^:host \{ top:/);
   assert.match(headerRoot.querySelector('style').textContent, /:host\(\.relative\) \{ top: calc\(0px - var\(--page-y-padding, 0px\)\)/);
@@ -94,10 +96,14 @@ test('preseeds document CSS and scopes open app/header roots independently', () 
 
 test('owns only app headers and repeated synchronization retains style identity', () => {
   const f = fixture(); const light = f.app(); const shadow = f.app(true);
+  const large = light.host.appendChild(new f.Node('reddit-header-large'));
+  const renamed = light.host.appendChild(new f.Node('shreddit-header'));
   f.helper.configure(true);
   const styles = [f.root.querySelector('style'), shadow.scope.querySelector('style')];
   assert.equal(f.helper.owns(light.header), true);
   assert.equal(f.helper.owns(shadow.header), true);
+  assert.equal(f.helper.owns(large), true);
+  assert.equal(f.helper.owns(renamed), true);
   assert.equal(f.helper.owns(light.main), false);
   assert.equal(f.helper.owns(f.body.appendChild(new f.Node('reddit-header-small'))), false);
   for (let count = 0; count < 4; count++) f.helper.sync();

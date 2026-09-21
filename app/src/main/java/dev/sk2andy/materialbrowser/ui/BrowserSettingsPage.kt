@@ -84,6 +84,8 @@ internal fun BrowserSettingsPage(
         title = stringResource(R.string.settings_section_browser),
         onBack = onBack,
     ) {
+        SettingsSectionTitle(stringResource(R.string.settings_browser_group_general))
+        Spacer(Modifier.height(8.dp))
         if (!BuildConfig.SYSTEM_WEBVIEW_ONLY) {
             Box {
                 SettingsChoice(
@@ -130,6 +132,37 @@ internal fun BrowserSettingsPage(
             )
             Spacer(Modifier.height(8.dp))
         }
+        Surface(
+            onClick = onOpenDefaultBrowserSettings,
+            modifier = Modifier.fillMaxWidth(),
+            shape = MaterialTheme.shapes.large,
+            color = browserChromeColor(MaterialTheme.colorScheme.surfaceContainerHigh),
+        ) {
+            Column(modifier = Modifier.padding(horizontal = 18.dp, vertical = 14.dp)) {
+                Text(
+                    stringResource(R.string.settings_default_browser),
+                    style = MaterialTheme.typography.titleSmall,
+                )
+                Text(
+                    stringResource(
+                        if (isDefaultBrowser) {
+                            R.string.settings_default_browser_active
+                        } else {
+                            R.string.settings_make_default_browser
+                        },
+                    ),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = if (isDefaultBrowser) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+                )
+            }
+        }
+        Spacer(Modifier.height(18.dp))
+        SettingsSectionTitle(stringResource(R.string.settings_browser_group_startup))
+        Spacer(Modifier.height(8.dp))
         SettingsSwitch(
             title = stringResource(R.string.settings_startup_animation_title),
             subtitle = stringResource(R.string.settings_startup_animation_subtitle),
@@ -172,6 +205,16 @@ internal fun BrowserSettingsPage(
         )
         Spacer(Modifier.height(8.dp))
         SettingsSwitch(
+            title = stringResource(R.string.settings_open_home_on_startup_title),
+            subtitle = stringResource(R.string.settings_open_home_on_startup_subtitle),
+            checked = isOpenHomeOnStartupEnabled,
+            onCheckedChange = onOpenHomeOnStartupEnabledChanged,
+            modifier = Modifier.testTag(BrowserSettingsTestTags.OpenHomeOnStartup),
+        )
+        Spacer(Modifier.height(18.dp))
+        SettingsSectionTitle(stringResource(R.string.settings_browser_group_favorites))
+        Spacer(Modifier.height(8.dp))
+        SettingsSwitch(
             title = stringResource(R.string.settings_favorite_launch_animation_title),
             subtitle = stringResource(R.string.settings_favorite_launch_animation_subtitle),
             checked = isFavoriteLaunchAnimationEnabled,
@@ -212,14 +255,8 @@ internal fun BrowserSettingsPage(
             subtitle = stringResource(R.string.settings_favorite_bookmark_import_summary),
             onClick = onImportFavoriteBookmarks,
         )
-        Spacer(Modifier.height(8.dp))
-        SettingsSwitch(
-            title = stringResource(R.string.settings_open_home_on_startup_title),
-            subtitle = stringResource(R.string.settings_open_home_on_startup_subtitle),
-            checked = isOpenHomeOnStartupEnabled,
-            onCheckedChange = onOpenHomeOnStartupEnabledChanged,
-            modifier = Modifier.testTag(BrowserSettingsTestTags.OpenHomeOnStartup),
-        )
+        Spacer(Modifier.height(18.dp))
+        SettingsSectionTitle(stringResource(R.string.settings_browser_group_websites))
         Spacer(Modifier.height(8.dp))
         SettingsSwitch(
             title = stringResource(R.string.settings_full_immersive_mode_title),
@@ -272,6 +309,8 @@ internal fun BrowserSettingsPage(
             onProviderChanged = onPageTranslationProviderChanged,
             modifier = Modifier.testTag(BrowserSettingsTestTags.TranslationProvider),
         )
+        Spacer(Modifier.height(18.dp))
+        SettingsSectionTitle(stringResource(R.string.settings_browser_group_links))
         Spacer(Modifier.height(8.dp))
         Box {
             SettingsChoice(
@@ -313,35 +352,6 @@ internal fun BrowserSettingsPage(
             onCheckedChange = onExternalLinkPreviewEnabledChanged,
             modifier = Modifier.testTag(BrowserSettingsTestTags.ExternalLinkPreview),
         )
-        Spacer(Modifier.height(8.dp))
-        Surface(
-            onClick = onOpenDefaultBrowserSettings,
-            modifier = Modifier.fillMaxWidth(),
-            shape = MaterialTheme.shapes.large,
-            color = browserChromeColor(MaterialTheme.colorScheme.surfaceContainerHigh),
-        ) {
-            Column(modifier = Modifier.padding(horizontal = 18.dp, vertical = 14.dp)) {
-                Text(
-                    stringResource(R.string.settings_default_browser),
-                    style = MaterialTheme.typography.titleSmall,
-                )
-                Text(
-                    stringResource(
-                        if (isDefaultBrowser) {
-                            R.string.settings_default_browser_active
-                        } else {
-                            R.string.settings_make_default_browser
-                        },
-                    ),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = if (isDefaultBrowser) {
-                        MaterialTheme.colorScheme.primary
-                    } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                    },
-                )
-            }
-        }
     }
 }
 

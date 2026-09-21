@@ -318,6 +318,17 @@
     <string name="download_notification_paused_unknown">Pausiert · %1$s</string>
     <string name="download_notification_complete">Download abgeschlossen</string>
     <string name="settings_title">Einstellungen</string>
+    <string name="settings_home_group_browsing">Surfen</string>
+    <string name="settings_home_group_personalization">Personalisierung</string>
+    <string name="settings_home_group_privacy_data">Datenschutz &amp; Daten</string>
+    <string name="settings_home_group_about">Weitere Informationen</string>
+    <string name="settings_browser_group_general">Browser einrichten</string>
+    <string name="settings_browser_group_startup">Startverhalten</string>
+    <string name="settings_browser_group_favorites">Favoriten</string>
+    <string name="settings_browser_group_websites">Webseiten</string>
+    <string name="settings_browser_group_links">Links &amp; Apps</string>
+    <string name="settings_protection_group_tools">Datenschutz-Werkzeuge</string>
+    <string name="settings_protection_group_app_data">App-Daten</string>
     <string name="settings_appearance_title">Darstellung</string>
     <string name="settings_home_appearance_summary">Farben, Website-Schrift, Oberflächen und Form</string>
     <string name="settings_appearance_mode">Erscheinungsbild</string>
@@ -362,7 +373,7 @@
     <string name="settings_home_search_summary">Suchmaschine und Vorschläge</string>
     <string name="settings_tabs_gestures_title">Tabs &amp; Gesten</string>
     <string name="settings_home_tabs_gestures_summary">Tab-Layout, Aufbewahrung, Profile und Bedienelemente</string>
-    <string name="settings_home_browser_summary">Oberfläche und Standardbrowser-Verhalten</string>
+    <string name="settings_home_browser_summary">Start, Favoriten, Webseiten, Links und Standardbrowser</string>
     <string name="settings_downloads_title">Downloads</string>
     <string name="settings_home_capsules_summary">Gespeicherte Site Capsules und Verknüpfungen verwalten</string>
     <string name="settings_protection_data_title">Schutz &amp; Daten</string>
@@ -1265,4 +1276,19 @@
     <string name="settings_menu_location_both">Beide Menüs</string>
     <string name="settings_menu_entry_topping_commands">Topping-Befehle</string>
     <string name="settings_menu_entry_firefox_page_actions">Firefox-Seitenaktionen</string>
+    <string name="favorites_create_folder">Ordner erstellen</string>
+    <string name="favorites_rename">Umbenennen</string>
+    <string name="favorites_name">Name</string>
+    <string name="favorites_actions">Aktionen für %1$s</string>
+    <string name="favorites_move">Verschieben</string>
+    <string name="favorites_move_here">Hierher verschieben</string>
+    <string name="favorites_move_up">Nach oben verschieben</string>
+    <string name="favorites_move_down">Nach unten verschieben</string>
+    <string name="favorites_parent">Übergeordneter Ordner</string>
+    <string name="favorites_folder_empty">Dieser Ordner ist leer</string>
+    <string name="favorites_folder_icon">Ordnersymbol</string>
+    <string name="favorites_folder_emoji">Emoji (optional)</string>
+    <string name="favorites_upload_icon">Bild auswählen</string>
+    <string name="favorites_reset_icon">Favicon-Vorschau verwenden</string>
+    <string name="favorites_icon_failed">Dieses Bild konnte nicht geladen werden</string>
 </resources>

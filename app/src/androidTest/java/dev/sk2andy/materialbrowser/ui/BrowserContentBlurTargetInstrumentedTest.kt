@@ -65,6 +65,17 @@ class BrowserContentBlurTargetInstrumentedTest {
         assertSame(overlay, clearHost.getChildAt(1))
         assertTrue(overlay.layoutParams.height == 88)
 
+        clearHost.updateOverlay(
+            geometry = StatusBarStaticOverlayGeometry(
+                statusBarHeightPx = 72,
+                overlayHeightPx = 88,
+            ),
+            tint = android.graphics.Color.rgb(18, 52, 86),
+            visible = true,
+            solid = true,
+        )
+        assertTrue(overlay.layoutParams.height == 72)
+
         val frostedHost = StatusBarStaticOverlayHost(
             context = context,
             browserContentBlurEnabled = true,

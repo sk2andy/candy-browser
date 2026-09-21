@@ -281,6 +281,8 @@ browser.runtime.onMessage.addListener((message, sender) => {
         token,
         revision: message.revision,
         navigationGeneration: message.navigationGeneration,
+        themeColor: typeof message.themeColor === "string" ? message.themeColor : null,
+        topHeader: message.topHeader === true,
       });
     }
     return undefined;

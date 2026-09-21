@@ -139,6 +139,8 @@ internal data class GeckoPrivacyEvent(
     val isBuiltIn: Boolean,
     val isCompatibilityObservation: Boolean,
     val safeAreaFallbackNavigationGeneration: Int? = null,
+    val safeAreaFallbackThemeColor: String? = null,
+    val safeAreaFallbackIsTopHeader: Boolean = false,
     val isCloudflareChallengeResponse: Boolean = false,
 )
 

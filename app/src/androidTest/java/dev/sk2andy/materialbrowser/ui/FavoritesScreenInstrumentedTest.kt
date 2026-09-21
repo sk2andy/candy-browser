@@ -17,6 +17,8 @@ import androidx.test.platform.app.InstrumentationRegistry
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.data.BrowsingFavoritesRules
 import dev.sk2andy.materialbrowser.data.FavoriteEntry
+import dev.sk2andy.materialbrowser.data.FavoriteFolder
+import dev.sk2andy.materialbrowser.data.FavoriteLibrary
 import dev.sk2andy.materialbrowser.data.FavoriteMutation
 import dev.sk2andy.materialbrowser.data.FavoriteUndoRules
 import dev.sk2andy.materialbrowser.ui.theme.MaterialBrowserTheme
@@ -86,6 +88,110 @@ class FavoritesScreenInstrumentedTest {
 
         composeRule.onNodeWithTag(FavoritesScreenTestTags.SearchField).performTextClearance()
         composeRule.onNodeWithText(alpha.title).assertIsDisplayed()
+    }
+
+    @Test
+    fun recursiveNavigationKeepsEmptyFoldersEmptyAndSearchFindsNestedFavorite() {
+        val child = FavoriteFolder("child", "Child", parentFolderId = "parent")
+        val parent = FavoriteFolder("parent", "Parent")
+        val nested = favorite("https://nested.example/", "Nested").copy(parentFolderId = child.id)
+        val empty = FavoriteFolder("empty", "Empty", parentFolderId = child.id)
+        val source = FavoriteLibrary(listOf(parent, child, nested, empty))
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                FavoritesScreen(
+                    favorites = source.favorites,
+                    library = source,
+                    onDeleteFavorite = { _, done -> done(null) },
+                    onUndoDelete = {},
+                    onOpenFavorite = {},
+                    onBack = {},
+                )
+            }
+        }
+        composeRule.onNodeWithText("Nested").assertDoesNotExist()
+        composeRule.onNodeWithTag("favorites_folder:parent").performClick()
+        composeRule.onNodeWithTag("favorites_folder:child").performClick()
+        composeRule.onNodeWithText("Nested").assertIsDisplayed()
+        composeRule.onNodeWithTag("favorites_folder:empty").performClick()
+        composeRule.onNodeWithTag(FavoritesScreenTestTags.favorite(nested.url)).assertDoesNotExist()
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        composeRule.onNodeWithText(context.getString(R.string.favorites_folder_empty)).assertIsDisplayed()
+        composeRule.onNodeWithTag("favorites_parent").performClick()
+        composeRule.onNodeWithText("Nested").assertIsDisplayed()
+        composeRule.onNodeWithTag("favorites_parent").performClick()
+        composeRule.onNodeWithTag(FavoritesScreenTestTags.SearchField).performTextInput("nested")
+        composeRule.onNodeWithText("Nested").assertIsDisplayed()
+    }
+
+    @Test
+    fun managerReordersRenamesAndMovesFavoriteIntoFolderAndBack() {
+        val alpha = favorite("https://alpha.example/", "Alpha")
+        val beta = favorite("https://beta.example/", "Beta")
+        val folder = FavoriteFolder("folder", "Folder")
+        val latest = AtomicReference(FavoriteLibrary(listOf(alpha, beta, folder)))
+        composeRule.setContent {
+            var library by remember { mutableStateOf(latest.get()) }
+            fun update(value: FavoriteLibrary) { library = value; latest.set(value) }
+            MaterialBrowserTheme {
+                FavoritesScreen(
+                    favorites = library.favorites,
+                    library = library,
+                    onDeleteFavorite = { _, done -> done(null) },
+                    onUndoDelete = {},
+                    onOpenFavorite = {},
+                    onBack = {},
+                    onRenameEntry = { entry, title -> update(BrowsingFavoritesRules.rename(library, entry.id, title)) },
+                    onMoveEntry = { entry, parent -> update(BrowsingFavoritesRules.move(library, entry.id, parent)) },
+                    onReorderEntry = { entry, index -> update(BrowsingFavoritesRules.reorder(library, entry.id, index)) },
+                )
+            }
+        }
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        composeRule.onNodeWithTag("favorites_actions:${beta.id}").performClick()
+        composeRule.onNodeWithText(context.getString(R.string.favorites_move_up)).performClick()
+        composeRule.runOnIdle { assertEquals(beta.id, latest.get().entries.first().id) }
+        composeRule.onNodeWithTag("favorites_actions:${beta.id}").performClick()
+        composeRule.onNodeWithText(context.getString(R.string.favorites_rename)).performClick()
+        composeRule.onNodeWithTag("favorites_name").performTextClearance()
+        composeRule.onNodeWithTag("favorites_name").performTextInput("Renamed")
+        composeRule.onNodeWithText(context.getString(android.R.string.ok)).performClick()
+        composeRule.onNodeWithText("Renamed").assertIsDisplayed()
+        composeRule.onNodeWithTag("favorites_actions:${beta.id}").performClick()
+        composeRule.onNodeWithText(context.getString(R.string.favorites_move)).performClick()
+        composeRule.onNodeWithTag("favorites_destination:folder").performClick()
+        composeRule.onNodeWithText(context.getString(R.string.favorites_move_here)).performClick()
+        composeRule.onNodeWithText("Renamed").assertDoesNotExist()
+        composeRule.onNodeWithTag("favorites_folder:folder").performClick()
+        composeRule.onNodeWithText("Renamed").assertIsDisplayed()
+        composeRule.onNodeWithTag("favorites_actions:${beta.id}").performClick()
+        composeRule.onNodeWithText(context.getString(R.string.favorites_move)).performClick()
+        composeRule.onNodeWithTag("favorites_move_parent").performClick()
+        composeRule.onNodeWithText("Renamed").assertDoesNotExist()
+        composeRule.runOnIdle { assertEquals(null, latest.get().favorites.first { it.id == beta.id }.parentFolderId) }
+    }
+
+    @Test
+    fun folderCannotSelectItselfOrItsDescendantsAsMoveDestination() {
+        val parent = FavoriteFolder("parent", "Parent")
+        val child = FavoriteFolder("child", "Child", parentFolderId = parent.id)
+        val sibling = FavoriteFolder("sibling", "Sibling")
+        val library = FavoriteLibrary(listOf(parent, child, sibling))
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                FavoritesScreen(
+                    favorites = emptyList(), library = library,
+                    onDeleteFavorite = { _, done -> done(null) }, onUndoDelete = {},
+                    onOpenFavorite = {}, onBack = {},
+                )
+            }
+        }
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        composeRule.onNodeWithTag("favorites_actions:parent").performClick()
+        composeRule.onNodeWithText(context.getString(R.string.favorites_move)).performClick()
+        composeRule.onNodeWithTag("favorites_destination:parent").assertDoesNotExist()
+        composeRule.onNodeWithTag("favorites_destination:child").assertDoesNotExist()
+        composeRule.onNodeWithTag("favorites_destination:sibling").assertIsDisplayed()
     }
 
     private fun favorite(url: String, title: String) = FavoriteEntry(

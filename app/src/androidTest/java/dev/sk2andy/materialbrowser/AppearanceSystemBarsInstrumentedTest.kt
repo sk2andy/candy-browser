@@ -51,6 +51,24 @@ class AppearanceSystemBarsInstrumentedTest {
         }
     }
 
+    @Test
+    fun websiteStatusColorOnlyOverridesStatusBarIconContrast() {
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity { activity ->
+                activity.applyAppearanceSystemBars(
+                    dark = true,
+                    statusBarUsesDarkIcons = true,
+                )
+                val controller = WindowInsetsControllerCompat(
+                    activity.window,
+                    activity.window.decorView,
+                )
+                assertTrue(controller.isAppearanceLightStatusBars)
+                assertTrue(!controller.isAppearanceLightNavigationBars)
+            }
+        }
+    }
+
     private fun awaitLightSystemBarIcons(
         scenario: ActivityScenario<MainActivity>,
         expectedLight: Boolean,

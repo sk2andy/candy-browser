@@ -51,7 +51,9 @@ import dev.sk2andy.materialbrowser.browser.BrowserViewportRect
 import dev.sk2andy.materialbrowser.browser.DnsOverHttpsSettings
 import dev.sk2andy.materialbrowser.browser.TextInputOcclusionProbeMode
 import dev.sk2andy.materialbrowser.browser.TextInputOcclusionProbeResult
+import dev.sk2andy.materialbrowser.browser.WebContentTopInsetTransitionRules
 import dev.sk2andy.materialbrowser.browser.WebRtcProtectionMode
+import dev.sk2andy.materialbrowser.browser.smoothWebContentTopInsetChange
 import dev.sk2andy.materialbrowser.browser.actions.BrowserContentTargetKind
 import dev.sk2andy.materialbrowser.browser.actions.BrowserContentTargetListener
 import dev.sk2andy.materialbrowser.browser.actions.BrowserContentTargetRules
@@ -947,8 +949,11 @@ private class GeckoViewBrowserSession(
     private var toppingHostWaitRegistered = false
     private var trackingPermissionWaitRegistered = false
     private var pendingInitialUrl: String? = null
+    private var pendingFailedPageRetryUrl: String? = null
     private var latestSessionState: GeckoSession.SessionState? = null
     private var pendingRestoredSessionState: GeckoSession.SessionState? = null
+    private var pendingRestoredHistoryState: GeckoBrowserHistoryState? = null
+    private var restoredHistoryPending = false
     private var privacyPolicy = initialPrivacyPolicy
     private var currentPageUrl: String? = null
     private var trackingPermission: GeckoSession.PermissionDelegate.ContentPermission? = null
@@ -1173,14 +1178,14 @@ private class GeckoViewBrowserSession(
                 (historyList as? GeckoSession.SessionState)?.let { nativeState ->
                     latestSessionState = GeckoSession.SessionState(nativeState)
                 }
-                val currentIndex = historyList.currentIndex
-                val updated = GeckoBrowserHistoryState(
-                    urls = historyList.map { item -> item.uri.orEmpty() },
-                    currentIndex = currentIndex,
-                    currentTitle = historyList.getOrNull(currentIndex)?.title,
-                )
+                val updated = historyList.toBrowserHistoryState()
                 historyState = updated
+                if (updated.matches(pendingRestoredHistoryState)) {
+                    pendingRestoredHistoryState = null
+                    restoredHistoryPending = false
+                }
                 historyStateListener?.onHistoryStateChanged(updated)
+                runPendingFailedPageRetryIfReady()
             }
         }
         session.scrollDelegate = object : GeckoSession.ScrollDelegate {
@@ -2560,6 +2565,7 @@ private class GeckoViewBrowserSession(
             ?: return false
         latestSessionState = GeckoSession.SessionState(restored)
         pendingRestoredSessionState = restored
+        pendingRestoredHistoryState = restored.toBrowserHistoryState()
         restorePendingStateIfReady()
         return true
     }
@@ -2589,6 +2595,20 @@ private class GeckoViewBrowserSession(
         return loadValidatedUrl(safeUrl)
     }
 
+    override fun retryFailedPage(url: String): Boolean {
+        if (closed) return false
+        val safeUrl = BrowserUriPolicy.normalizeHttpUrl(url) ?: return false
+        invalidateCredentialPrompts(recreateHost = false)
+        privacyFailureDescription?.let { description ->
+            failPrivacyGate(description)
+            return true
+        }
+        pendingInitialUrl = null
+        pendingFailedPageRetryUrl = safeUrl
+        if (!runPendingFailedPageRetryIfReady()) awaitNavigationReadiness()
+        return true
+    }
+
     override fun loadExtensionUrl(url: String): Boolean {
         if (closed) return false
         val parsed = runCatching { URI(url) }.getOrNull() ?: return false
@@ -2604,6 +2624,7 @@ private class GeckoViewBrowserSession(
 
     private fun loadValidatedUrl(safeUrl: String): Boolean {
         invalidateCredentialPrompts(recreateHost = false)
+        pendingFailedPageRetryUrl = null
         privacyFailureDescription?.let { description ->
             failPrivacyGate(description)
             return true
@@ -2617,6 +2638,11 @@ private class GeckoViewBrowserSession(
             return true
         }
         pendingInitialUrl = safeUrl
+        awaitNavigationReadiness()
+        return true
+    }
+
+    private fun awaitNavigationReadiness() {
         if (!toppingHostWaitRegistered) {
             toppingHostWaitRegistered = true
             toppingHost.runAfterInitialization {
@@ -2635,7 +2661,6 @@ private class GeckoViewBrowserSession(
                 }
             }
         }
-        return true
     }
 
     override fun updatePrivacyPolicy(
@@ -2695,6 +2720,7 @@ private class GeckoViewBrowserSession(
 
     override fun stop() {
         if (!closed) {
+            pendingFailedPageRetryUrl = null
             invalidateCredentialPrompts(recreateHost = true)
             session.stop()
         }
@@ -2733,6 +2759,9 @@ private class GeckoViewBrowserSession(
         inPictureInPicture = false
         pictureInPicturePlaybackExpected = false
         pendingInitialUrl = null
+        pendingFailedPageRetryUrl = null
+        pendingRestoredHistoryState = null
+        restoredHistoryPending = false
         cookieBehavior.remove(cookieBehaviorOwner)
         trackingPermissions.remove(trackingPermissionOwner)
         toppingBinding.close()
@@ -2751,7 +2780,8 @@ private class GeckoViewBrowserSession(
             !trackingPermissions.isReady ||
             !privacyBound
         ) return
-        if (restorePendingStateIfReady()) return
+        restorePendingStateIfReady()
+        if (runPendingFailedPageRetryIfReady() || pendingFailedPageRetryUrl != null) return
         val pendingUrl = pendingInitialUrl ?: return
         pendingInitialUrl = null
         session.loadUri(pendingUrl)
@@ -2761,8 +2791,48 @@ private class GeckoViewBrowserSession(
         if (closed || !privacyBound) return false
         val restored = pendingRestoredSessionState ?: return false
         pendingRestoredSessionState = null
+        restoredHistoryPending = true
         session.restoreState(restored)
         return true
+    }
+
+    private fun runPendingFailedPageRetryIfReady(): Boolean {
+        if (
+            closed ||
+            toppingHost.state == GeckoToppingHostState.Initializing ||
+            !trackingPermissions.isReady ||
+            !privacyBound ||
+            restoredHistoryPending ||
+            pendingRestoredSessionState != null
+        ) return false
+        val retryUrl = pendingFailedPageRetryUrl ?: return false
+        pendingFailedPageRetryUrl = null
+        val currentIndex = historyState?.currentIndex
+        val currentUrl = currentIndex?.let { index -> historyState?.urls?.getOrNull(index) }
+        if (BrowserUriPolicy.normalizeHttpUrl(currentUrl) == retryUrl) {
+            session.reload()
+        } else {
+            session.loadUri(retryUrl)
+        }
+        return true
+    }
+
+    private fun GeckoSession.HistoryDelegate.HistoryList.toBrowserHistoryState(): GeckoBrowserHistoryState {
+        val selectedIndex = currentIndex
+        return GeckoBrowserHistoryState(
+            urls = map { item -> item.uri.orEmpty() },
+            currentIndex = selectedIndex,
+            currentTitle = getOrNull(selectedIndex)?.title,
+        )
+    }
+
+    private fun GeckoBrowserHistoryState.matches(expected: GeckoBrowserHistoryState?): Boolean {
+        expected ?: return false
+        val currentUrl = urls.getOrNull(currentIndex)
+        val expectedUrl = expected.urls.getOrNull(expected.currentIndex)
+        val normalizedExpectedUrl = BrowserUriPolicy.normalizeHttpUrl(expectedUrl)
+            ?: return currentUrl == expectedUrl
+        return BrowserUriPolicy.normalizeHttpUrl(currentUrl) == normalizedExpectedUrl
     }
 
     private fun updateMediaState(transform: (GeckoMediaSessionState) -> GeckoMediaSessionState) {
@@ -2783,6 +2853,9 @@ private class GeckoViewBrowserSession(
         privacyBound = false
         privacyFailureDescription = description
         pendingInitialUrl = null
+        pendingFailedPageRetryUrl = null
+        pendingRestoredHistoryState = null
+        restoredHistoryPending = false
         session.stop()
         updateState { current -> current.copy(isLoading = true, lastNavigationSucceeded = null) }
         updateState { current ->
@@ -2960,9 +3033,13 @@ internal class CandyGeckoView(context: Context) : FrameLayout(context), GeckoVie
         if (BuildConfig.ENABLE_PERFORMANCE_DIAGNOSTICS &&
             (insetLayout != layout || this.windowInsets != windowInsets)
         ) domDiagnosticGeneration++
+        val animateTopInsetChange = WebContentTopInsetTransitionRules.shouldAnimate(
+            previousState = insetLayout.topInsetTransitionState,
+            nextState = layout.topInsetTransitionState,
+        )
         insetLayout = layout
         this.windowInsets = windowInsets
-        applyInsets(engineView)
+        applyInsets(engineView, animateTopInsetChange)
     }
 
     override fun onSizeChanged(width: Int, height: Int, oldWidth: Int, oldHeight: Int) {
@@ -2994,10 +3071,14 @@ internal class CandyGeckoView(context: Context) : FrameLayout(context), GeckoVie
         view.updateRendererSafeAreaOverride(insetLayout.rendererSafeAreaOverride)
     }
 
-    private fun applyInsets(view: CandyGeckoEngineView) {
+    private fun applyInsets(
+        view: CandyGeckoEngineView,
+        animateTopInsetChange: Boolean,
+    ) {
         BrowserPerformanceTrace.section(BrowserPerformanceTrace.Phase.GeckoInsets) {
             val margins = insetLayout.margins
             (view.layoutParams as? LayoutParams)?.let { layoutParams ->
+                val previousTopMargin = layoutParams.topMargin
                 if (
                     layoutParams.leftMargin != margins.left ||
                     layoutParams.topMargin != margins.top ||
@@ -3006,6 +3087,11 @@ internal class CandyGeckoView(context: Context) : FrameLayout(context), GeckoVie
                 ) {
                     layoutParams.setMargins(margins.left, margins.top, margins.right, margins.bottom)
                     view.layoutParams = layoutParams
+                    view.smoothWebContentTopInsetChange(
+                        previousTopInsetPx = previousTopMargin,
+                        nextTopInsetPx = margins.top,
+                        animateChange = animateTopInsetChange,
+                    )
                 }
             }
             windowInsets?.let(view::updateWindowInsets)

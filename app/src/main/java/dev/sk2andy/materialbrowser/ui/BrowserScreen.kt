@@ -1416,9 +1416,11 @@ internal fun BrowserScreen(
                             addressEditorVisible = false
                             controller.submitAddress(url)
                         },
+                        onOpenFavorites = onOpenFavorites,
+                        onReorderFavorite = controller::reorderFavorite,
                         blankTabModeProgress = blankTabModeProgress,
                         blankTabModeRevealOrigin = blankTabModeRevealOrigin,
-                        onRetry = controller::reload,
+                        onRetry = controller::retryFailedPage,
                         onBlurTargetAttached = { target -> browserContentBlurTarget = target },
                         onBlurTargetReleased = { target ->
                             if (browserContentBlurTarget === target) browserContentBlurTarget = null

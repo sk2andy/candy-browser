@@ -22,6 +22,9 @@ import dev.sk2andy.materialbrowser.data.AddressBarAction
 import dev.sk2andy.materialbrowser.data.BrowserSessionStore
 import dev.sk2andy.materialbrowser.data.FavoriteEntry
 import dev.sk2andy.materialbrowser.data.FavoriteFaviconStore
+import dev.sk2andy.materialbrowser.data.FavoriteFolder
+import dev.sk2andy.materialbrowser.data.FavoriteLibrary
+import dev.sk2andy.materialbrowser.data.FavoriteMutation
 import dev.sk2andy.materialbrowser.data.HistoryEntry
 import dev.sk2andy.materialbrowser.shared.ui.TabOverviewChromeTestTags
 import dev.sk2andy.materialbrowser.ui.theme.MaterialBrowserTheme
@@ -177,6 +180,31 @@ class NewTabFavoriteInstrumentedTest {
     }
 
     @Test
+    fun committedReorderInvalidatesOlderFavoriteUndo() {
+        val first = FavoriteEntry("https://first.example/", "First", 1L)
+        val second = FavoriteEntry("https://second.example/", "Second", 2L)
+        val third = FavoriteEntry("https://third.example/", "Third", 3L)
+        val browserController = createController(FavoriteLibrary(listOf(first, second, third)))
+        lateinit var mutation: FavoriteMutation
+
+        composeRule.runOnIdle {
+            assertTrue(browserController.openUrl(first.url))
+            mutation = requireNotNull(browserController.toggleFavorite())
+            assertTrue(browserController.reorderFavorite(second.id, destinationIndex = 1))
+        }
+        composeRule.waitUntil(timeoutMillis = 5_000L) {
+            browserController.favorites.map(FavoriteEntry::id) == listOf(third.id, second.id)
+        }
+        composeRule.runOnIdle {
+            assertFalse(browserController.undoFavorite(mutation))
+            assertEquals(
+                listOf(third.id, second.id),
+                browserController.favorites.map(FavoriteEntry::id),
+            )
+        }
+    }
+
+    @Test
     fun storedFavoriteFaviconLoadsIntoNewTabState() {
         val favorite = FavoriteEntry(
             url = "https://favorite.example/",
@@ -202,13 +230,45 @@ class NewTabFavoriteInstrumentedTest {
         assertEquals(16, browserController.favoriteFavicons[favorite.url]?.width)
     }
 
-    private fun createController(favorite: FavoriteEntry): BrowserController {
+    @Test
+    fun nestedFolderNavigatesFromNewTabQuickPicker() {
+        val outer = FavoriteFolder(id = "outer", title = "Outer")
+        val nested = FavoriteFolder(id = "nested", title = "Nested", parentFolderId = outer.id)
+        val favorite = FavoriteEntry(
+            url = "https://nested.example/",
+            title = "Nested favorite",
+            addedAt = 1L,
+            parentFolderId = nested.id,
+        )
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                NewTabPage(
+                    favorites = emptyList(),
+                    favoriteLibrary = FavoriteLibrary(listOf(outer, nested, favorite)),
+                    incognito = false,
+                    modeProgress = 0f,
+                    revealOriginInRoot = androidx.compose.ui.geometry.Offset.Zero,
+                    onSearch = {},
+                    onFavorite = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(NewTabFavoritesTestTags.folder(outer.id)).performClick()
+        composeRule.onNodeWithTag(NewTabFavoritesTestTags.folder(nested.id)).performClick()
+        composeRule.onNodeWithTag(NewTabFavoritesTestTags.favorite(favorite.url)).assertIsDisplayed()
+    }
+
+    private fun createController(favorite: FavoriteEntry): BrowserController =
+        createController(FavoriteLibrary(listOf(favorite)))
+
+    private fun createController(favoriteLibrary: FavoriteLibrary): BrowserController {
         lateinit var browserController: BrowserController
         composeRule.runOnIdle {
             clearSession()
             BrowserSessionStore(composeRule.activity).apply {
                 saveFavoriteLaunchAnimationEnabled(false)
-                saveFavorites(listOf(favorite))
+                saveFavoriteLibrary(favoriteLibrary)
                 saveHistory(
                     listOf(
                         HistoryEntry(

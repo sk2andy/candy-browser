@@ -1,8 +1,11 @@
 package dev.sk2andy.materialbrowser.shared.ui.settings
 
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
 import dev.sk2andy.materialbrowser.ui.SettingsDestination
 
 enum class SettingsHomeIcon {
@@ -23,6 +26,10 @@ enum class SettingsHomeIcon {
 enum class SettingsHomeLabel {
     Title,
     Back,
+    BrowsingGroup,
+    PersonalizationGroup,
+    PrivacyDataGroup,
+    AboutGroup,
     SearchTitle,
     SearchSummary,
     SyncTitle,
@@ -49,12 +56,20 @@ enum class SettingsHomeLabel {
     AboutLegalSummary,
 }
 
+enum class SettingsHomeGroup(val label: SettingsHomeLabel) {
+    Browsing(SettingsHomeLabel.BrowsingGroup),
+    Personalization(SettingsHomeLabel.PersonalizationGroup),
+    PrivacyData(SettingsHomeLabel.PrivacyDataGroup),
+    About(SettingsHomeLabel.AboutGroup),
+}
+
 interface SettingsHomeResources {
     @Composable
     fun text(label: SettingsHomeLabel): String
 }
 
 data class SettingsHomeItem(
+    val group: SettingsHomeGroup,
     val destination: SettingsDestination?,
     val icon: SettingsHomeIcon,
     val title: SettingsHomeLabel,
@@ -67,16 +82,17 @@ object SettingsHomeRules {
         hasFirefoxExtensions: Boolean,
         hasDeveloperOptions: Boolean = false,
     ): List<SettingsHomeItem> = buildList {
-        add(item(SettingsDestination.Search, SettingsHomeIcon.Search, SettingsHomeLabel.SearchTitle, SettingsHomeLabel.SearchSummary))
-        add(item(SettingsDestination.Sync, SettingsHomeIcon.Sync, SettingsHomeLabel.SyncTitle, SettingsHomeLabel.SyncSummary))
-        add(item(SettingsDestination.TabsAndGestures, SettingsHomeIcon.TabsAndGestures, SettingsHomeLabel.TabsAndGesturesTitle, SettingsHomeLabel.TabsAndGesturesSummary))
-        add(item(SettingsDestination.Appearance, SettingsHomeIcon.Appearance, SettingsHomeLabel.AppearanceTitle, SettingsHomeLabel.AppearanceSummary))
-        add(item(SettingsDestination.Browser, SettingsHomeIcon.Browser, SettingsHomeLabel.BrowserTitle, SettingsHomeLabel.BrowserSummary))
-        add(item(SettingsDestination.Downloads, SettingsHomeIcon.Downloads, SettingsHomeLabel.DownloadsTitle, null))
-        add(item(SettingsDestination.Userscripts, SettingsHomeIcon.Userscripts, SettingsHomeLabel.UserscriptsTitle, SettingsHomeLabel.UserscriptsSummary))
+        add(item(SettingsHomeGroup.Browsing, SettingsDestination.Search, SettingsHomeIcon.Search, SettingsHomeLabel.SearchTitle, SettingsHomeLabel.SearchSummary))
+        add(item(SettingsHomeGroup.Browsing, SettingsDestination.TabsAndGestures, SettingsHomeIcon.TabsAndGestures, SettingsHomeLabel.TabsAndGesturesTitle, SettingsHomeLabel.TabsAndGesturesSummary))
+        add(item(SettingsHomeGroup.Browsing, SettingsDestination.Browser, SettingsHomeIcon.Browser, SettingsHomeLabel.BrowserTitle, SettingsHomeLabel.BrowserSummary))
+        add(item(SettingsHomeGroup.Browsing, SettingsDestination.Downloads, SettingsHomeIcon.Downloads, SettingsHomeLabel.DownloadsTitle, null))
+        add(item(SettingsHomeGroup.Personalization, SettingsDestination.Appearance, SettingsHomeIcon.Appearance, SettingsHomeLabel.AppearanceTitle, SettingsHomeLabel.AppearanceSummary))
+        add(item(SettingsHomeGroup.Personalization, SettingsDestination.SiteCapsules, SettingsHomeIcon.SiteCapsules, SettingsHomeLabel.SiteCapsulesTitle, SettingsHomeLabel.SiteCapsulesSummary))
+        add(item(SettingsHomeGroup.Personalization, SettingsDestination.Userscripts, SettingsHomeIcon.Userscripts, SettingsHomeLabel.UserscriptsTitle, SettingsHomeLabel.UserscriptsSummary))
         if (hasFirefoxExtensions) {
             add(
                 SettingsHomeItem(
+                    group = SettingsHomeGroup.Personalization,
                     destination = null,
                     icon = SettingsHomeIcon.FirefoxExtensions,
                     title = SettingsHomeLabel.FirefoxExtensionsTitle,
@@ -85,20 +101,22 @@ object SettingsHomeRules {
                 ),
             )
         }
-        add(item(SettingsDestination.SiteCapsules, SettingsHomeIcon.SiteCapsules, SettingsHomeLabel.SiteCapsulesTitle, SettingsHomeLabel.SiteCapsulesSummary))
-        add(item(SettingsDestination.ProtectionAndData, SettingsHomeIcon.ProtectionAndData, SettingsHomeLabel.ProtectionAndDataTitle, SettingsHomeLabel.ProtectionAndDataSummary))
+        add(item(SettingsHomeGroup.PrivacyData, SettingsDestination.ProtectionAndData, SettingsHomeIcon.ProtectionAndData, SettingsHomeLabel.ProtectionAndDataTitle, SettingsHomeLabel.ProtectionAndDataSummary))
+        add(item(SettingsHomeGroup.PrivacyData, SettingsDestination.Sync, SettingsHomeIcon.Sync, SettingsHomeLabel.SyncTitle, SettingsHomeLabel.SyncSummary))
         if (hasDeveloperOptions) {
-            add(item(SettingsDestination.DeveloperOptions, SettingsHomeIcon.DeveloperOptions, SettingsHomeLabel.DeveloperOptionsTitle, SettingsHomeLabel.DeveloperOptionsSummary))
+            add(item(SettingsHomeGroup.About, SettingsDestination.DeveloperOptions, SettingsHomeIcon.DeveloperOptions, SettingsHomeLabel.DeveloperOptionsTitle, SettingsHomeLabel.DeveloperOptionsSummary))
         }
-        add(item(SettingsDestination.AboutLegal, SettingsHomeIcon.AboutLegal, SettingsHomeLabel.AboutLegalTitle, SettingsHomeLabel.AboutLegalSummary))
+        add(item(SettingsHomeGroup.About, SettingsDestination.AboutLegal, SettingsHomeIcon.AboutLegal, SettingsHomeLabel.AboutLegalTitle, SettingsHomeLabel.AboutLegalSummary))
     }
 
     private fun item(
+        group: SettingsHomeGroup,
         destination: SettingsDestination,
         icon: SettingsHomeIcon,
         title: SettingsHomeLabel,
         summary: SettingsHomeLabel?,
     ): SettingsHomeItem = SettingsHomeItem(
+        group = group,
         destination = destination,
         icon = icon,
         title = title,
@@ -129,6 +147,11 @@ fun SettingsHomePage(
             hasDeveloperOptions = developerOptionsUnlocked,
         )
         items.forEachIndexed { index, item ->
+            if (index == 0 || item.group != items[index - 1].group) {
+                if (index != 0) Spacer(Modifier.height(20.dp))
+                SettingsSectionTitle(resources.text(item.group.label))
+                Spacer(Modifier.height(8.dp))
+            }
             val summary = item.summary
             val destination = item.destination
             SettingsLink(
@@ -159,7 +182,9 @@ fun SettingsHomePage(
                     }
                 },
             )
-            if (index != items.lastIndex) SettingsPageSpacer()
+            if (index != items.lastIndex && item.group == items[index + 1].group) {
+                SettingsPageSpacer()
+            }
         }
     }
 }

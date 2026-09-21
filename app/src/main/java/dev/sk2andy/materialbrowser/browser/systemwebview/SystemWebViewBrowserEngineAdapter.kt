@@ -71,6 +71,8 @@ import dev.sk2andy.materialbrowser.browser.WebRtcProtectionRules
 import dev.sk2andy.materialbrowser.browser.WebContentTopInsetMode
 import dev.sk2andy.materialbrowser.browser.WebContentTopInsetRules
 import dev.sk2andy.materialbrowser.browser.WebContentTopInsetScript
+import dev.sk2andy.materialbrowser.browser.WebContentTopInsetTransitionRules
+import dev.sk2andy.materialbrowser.browser.smoothWebContentTopInsetChange
 import dev.sk2andy.materialbrowser.browser.engine.AndroidBrowserEngineFactory
 import dev.sk2andy.materialbrowser.browser.engine.BrowserEngineContentKind
 import dev.sk2andy.materialbrowser.browser.integration.BrowserUriPolicy
@@ -386,6 +388,7 @@ private class SystemWebViewBrowserEngineSession(
     private var authPromptListener: GeckoAuthPromptListener? = null
     private var webPromptListener: GeckoWebPromptListener? = null
     private var mediaStateListener: GeckoMediaSessionStateListener? = null
+    private var faviconListener: ((String?, Bitmap) -> Unit)? = null
     private var fullscreenStateListener: GeckoFullscreenStateListener? = null
     private var scrollListener: BrowserEngineScrollListener? = null
     private var contentTargetListener: dev.sk2andy.materialbrowser.browser.actions.BrowserContentTargetListener? = null
@@ -455,6 +458,16 @@ private class SystemWebViewBrowserEngineSession(
                     null,
                 )
             }
+            BrowserEngineCommandType.RetryFailedPage -> {
+                val safeUrl = BrowserUriPolicy.normalizeHttpUrl(
+                    requireNotNull(command.address),
+                ) ?: return
+                if (BrowserUriPolicy.normalizeHttpUrl(historyUrlAtOffset(0)) == safeUrl) {
+                    webView.reload()
+                } else {
+                    webView.loadUrl(safeUrl)
+                }
+            }
             BrowserEngineCommandType.Back -> if (webView.canGoBack()) webView.goBack()
             BrowserEngineCommandType.Forward -> if (webView.canGoForward()) webView.goForward()
             BrowserEngineCommandType.Reload -> webView.reload()
@@ -481,6 +494,10 @@ private class SystemWebViewBrowserEngineSession(
         if (closed || this.active == active) return
         this.active = active
         if (active) webView.onResume() else webView.onPause()
+    }
+
+    override fun setFaviconListener(listener: ((String?, Bitmap) -> Unit)?) {
+        faviconListener = listener
     }
 
     override fun setMediaStateListener(listener: GeckoMediaSessionStateListener?) {
@@ -1168,6 +1185,12 @@ private class SystemWebViewBrowserEngineSession(
             publish(BrowserEngineEventType.StateChanged, title = title)
         }
 
+        override fun onReceivedIcon(view: WebView, icon: Bitmap?) {
+            if (!closed && icon != null && !icon.isRecycled) {
+                faviconListener?.invoke(view.url, icon)
+            }
+        }
+
         override fun onShowCustomView(view: View, callback: CustomViewCallback) {
             if (customFullscreenView != null) {
                 callback.onCustomViewHidden()
@@ -1627,6 +1650,8 @@ private class SystemWebViewBrowserEngineSession(
     private fun onSafeAreaFallback(
         navigationGeneration: Int,
         revision: Long,
+        themeColor: String?,
+        isTopHeader: Boolean,
     ) {
         val policy = privacyPolicy
         if (
@@ -1644,6 +1669,8 @@ private class SystemWebViewBrowserEngineSession(
                 isBuiltIn = true,
                 isCompatibilityObservation = false,
                 safeAreaFallbackNavigationGeneration = navigationGeneration,
+                safeAreaFallbackThemeColor = themeColor,
+                safeAreaFallbackIsTopHeader = isTopHeader,
             ),
         )
     }
@@ -1763,7 +1790,7 @@ private class SystemWebViewBrowserEngineSession(
 
 private class SystemWebViewHost(
     context: Context,
-    private val onFallback: (Int, Long) -> Unit,
+    private val onFallback: (Int, Long, String?, Boolean) -> Unit,
 ) : WebView(context), GeckoViewInsetHost {
     private var topInsetPx = 0
     private var layoutTopInsetPx = 0
@@ -1803,10 +1830,15 @@ private class SystemWebViewHost(
                 fun safeAreaRequiredFailureCount(): Int = safeAreaRequiredFailureCount
 
                 @android.webkit.JavascriptInterface
+                fun nativeTopHeaderEnabled(): Boolean = true
+
+                @android.webkit.JavascriptInterface
                 fun fallbackToNative(
                     generation: Int,
                     revision: Long,
-                ) = post { onFallback(generation, revision) }
+                    themeColor: String?,
+                    isTopHeader: Boolean,
+                ) = post { onFallback(generation, revision, themeColor, isTopHeader) }
             },
             WebContentTopInsetScript.bridgeName,
         )
@@ -1843,11 +1875,15 @@ private class SystemWebViewHost(
         layout: GeckoViewInsetLayout,
         windowInsets: WindowInsetsCompat,
     ) {
+        val animateTopInsetChange = WebContentTopInsetTransitionRules.shouldAnimate(
+            previousState = currentLayout.topInsetTransitionState,
+            nextState = layout.topInsetTransitionState,
+        )
         currentLayout = layout
         layoutTopInsetPx = layout.scrollableTopInsetPx
         val previousTopInset = topInsetPx
         val previousBottomPadding = paddingBottom
-        applyCurrentLayout()
+        applyCurrentLayout(animateTopInsetChange)
         val rendererInsets = layout.rendererSafeAreaOverride
             ?.let(windowInsets::withSafeAreaOverride)
             ?: windowInsets
@@ -1857,7 +1893,7 @@ private class SystemWebViewHost(
         }
     }
 
-    private fun applyCurrentLayout() {
+    private fun applyCurrentLayout(animateTopInsetChange: Boolean = false) {
         val layout = currentLayout
         val mode = WebContentTopInsetRules.resolve(
             drawsEdgeToEdge = layout.margins.top == 0 && layout.scrollableTopInsetPx == 0,
@@ -1872,6 +1908,7 @@ private class SystemWebViewHost(
             -> layout.margins.top
         }
         (layoutParams as? ViewGroup.MarginLayoutParams)?.let { params ->
+            val previousTopMargin = params.topMargin
             if (
                 params.leftMargin != layout.margins.left ||
                 params.topMargin != nativeTopInset ||
@@ -1885,6 +1922,11 @@ private class SystemWebViewHost(
                     layout.margins.bottom,
                 )
                 layoutParams = params
+                smoothWebContentTopInsetChange(
+                    previousTopInsetPx = previousTopMargin,
+                    nextTopInsetPx = nativeTopInset,
+                    animateChange = animateTopInsetChange,
+                )
             }
         }
         topInsetPx = if (mode == WebContentTopInsetMode.ScrollableDocument) layoutTopInsetPx else 0
