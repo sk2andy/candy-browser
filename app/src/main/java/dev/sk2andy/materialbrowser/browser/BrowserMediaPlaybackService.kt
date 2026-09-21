@@ -356,6 +356,7 @@ private object BrowserMediaServiceRegistry {
     private var invalidatedOwner: GeckoMediaPlaybackOwner? = null
     private var clearReason: ClearReason? = null
     private var commandSink: ((GeckoMediaPlaybackOwner, GeckoMediaPlaybackCommand) -> Unit)? = null
+    private var stopAndClearInProgress = false
 
     @Synchronized
     fun publish(
@@ -496,18 +497,47 @@ private object BrowserMediaServiceRegistry {
     }
 
     fun stopAndClear() {
+        var reentrant = false
         val pendingStop = synchronized(this) {
-            val owner = publication?.snapshot?.owner
-            val sink = commandSink
-            publication = null
-            invalidatedOwner = null
-            clearReason = null
-            commandSink = null
-            trace(action = "stop-and-clear", owner = owner)
-            owner?.let { currentOwner -> sink?.let { currentSink -> currentSink to currentOwner } }
+            if (stopAndClearInProgress) {
+                reentrant = true
+                publication = null
+                invalidatedOwner = null
+                clearReason = null
+                commandSink = null
+                trace(action = "stop-and-clear:reentrant")
+                null
+            } else {
+                stopAndClearInProgress = true
+                val owner = publication?.snapshot?.owner
+                val sink = commandSink
+                publication = null
+                invalidatedOwner = null
+                clearReason = null
+                commandSink = null
+                trace(action = "stop-and-clear", owner = owner)
+                owner?.let { currentOwner ->
+                    sink?.let { currentSink -> currentSink to currentOwner }
+                }
+            }
         }
-        pendingStop?.let { (sink, owner) -> sink(owner, GeckoMediaPlaybackCommand.Stop) }
-        service?.clearPlayback()
+        if (reentrant) return
+        try {
+            pendingStop?.let { (sink, owner) ->
+                trace(action = "dispatch:Stop", owner = owner)
+                sink(owner, GeckoMediaPlaybackCommand.Stop)
+            }
+        } finally {
+            val attachedService = synchronized(this) {
+                publication = null
+                invalidatedOwner = null
+                clearReason = null
+                commandSink = null
+                stopAndClearInProgress = false
+                service
+            }
+            attachedService?.clearPlayback()
+        }
     }
 
     @VisibleForTesting
