@@ -19,6 +19,9 @@ Candy opens a video presentation only after both independent states agree and re
 while Android PiP is active until the confirmed return callback. Candy exits page fullscreen
 through GeckoSession's public `exitFullScreen()` API. Media-session callbacks from a
 replaced YouTube ad/main session are ignored once that native media-session identity is stale.
+Each fullscreen-state change also reapplies the affected GeckoView's last known window insets and
+CSS safe-area policy immediately; returning to the page must not depend on a new Android inset
+callback to restore its normal layout.
 Candy only offers PiP after Gecko has reported an active, playing, fullscreen video with non-zero
 dimensions and at least one video track. The existing GeckoView and GeckoSession stay in the browser
 viewport for expanded fullscreen and Android PiP. Candy never creates a second renderer or a second

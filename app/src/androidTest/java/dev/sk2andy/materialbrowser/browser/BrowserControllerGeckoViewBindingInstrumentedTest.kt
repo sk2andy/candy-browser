@@ -718,6 +718,48 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
     }
 
     @Test
+    fun leavingFullscreenRestoresCssSafeAreaPolicyWithoutAnotherInsetCallback() {
+        composeRule.runOnIdle {
+            val store = BrowserSessionStore(composeRule.activity)
+            originalEngineKind = store.loadAndroidBrowserEngineKind()
+            assertTrue(store.saveAndroidBrowserEngineKind(AndroidBrowserEngineKind.GeckoView))
+            val browserController = BrowserController(composeRule.activity)
+            controller = browserController
+            val tabId = browserController.selectedTabId
+            val session = ReentrantAttachSession(tabId = tabId, onFirstAttach = {})
+            browserController.installGeckoEngineSessionForTesting(session)
+            browserController.onWindowInsetsChanged(
+                WindowInsetsCompat.Builder()
+                    .setInsets(
+                        WindowInsetsCompat.Type.statusBars(),
+                        Insets.of(0, 96, 0, 0),
+                    )
+                    .build(),
+            )
+            browserController.dispatchGeckoEngineEventForTesting(
+                BrowserEngineEvent(
+                    tabId = tabId,
+                    type = BrowserEngineEventType.NavigationStarted,
+                    address = "https://m.youtube.com/watch?v=test",
+                    title = null,
+                    canGoBack = false,
+                    canGoForward = false,
+                    failureDescription = null,
+                ),
+            )
+            assertEquals(96, session.privacyPolicies.last().cssSafeAreaTopInsetPx)
+            session.privacyPolicies.clear()
+
+            browserController.reportSelectedGeckoFullscreenStateForTesting(true)
+            assertEquals(0, session.privacyPolicies.single().cssSafeAreaTopInsetPx)
+            session.privacyPolicies.clear()
+
+            browserController.reportSelectedGeckoFullscreenStateForTesting(false)
+            assertEquals(96, session.privacyPolicies.single().cssSafeAreaTopInsetPx)
+        }
+    }
+
+    @Test
     fun safeAreaFallbackUpdatesPolicyWithoutReloadingCurrentNavigation() {
         composeRule.runOnIdle {
             val store = BrowserSessionStore(composeRule.activity)
