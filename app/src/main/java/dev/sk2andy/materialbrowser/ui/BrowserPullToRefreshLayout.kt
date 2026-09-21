@@ -173,4 +173,4 @@ internal object BrowserPullGestureRules {
     }
 }
 
-private const val PULL_ZONE_HEIGHT_DP = 64f
+private const val PULL_ZONE_HEIGHT_DP = 160f

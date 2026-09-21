@@ -53,8 +53,9 @@ upgrading the Cast SDK; never suppress Kotlin metadata compatibility checks.
 
 Pull requests and pushes to `main` run the Cast rule tests plus `GeckoCastInstrumentedTest`,
 `CastRouteButtonInstrumentedTest` and `CastControlsInstrumentedTest` on a dedicated API 35 emulator
-through `.github/workflows/google-cast.yml`. Run the Gecko regression locally with an explicit API
-34+ emulator serial:
+through `.github/workflows/google-cast.yml`. Failed device runs print their JUnit XML and retain the
+Android test results and rendered report as a short-lived workflow artifact. Run the Gecko regression
+locally with an explicit API 34+ emulator serial:
 
 ```bash
 ANDROID_SERIAL=<serial> ./gradlew :app:connectedFullDebugAndroidTest \

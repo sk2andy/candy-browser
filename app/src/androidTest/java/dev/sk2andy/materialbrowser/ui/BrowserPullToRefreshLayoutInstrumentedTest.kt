@@ -232,7 +232,7 @@ class BrowserPullToRefreshLayoutInstrumentedTest {
     }
 
     @Test
-    fun topZoneSwipeStillStartsRefresh() {
+    fun pullInsideExpandedTopZoneStartsRefresh() {
         var refreshCount = 0
         lateinit var refreshLayout: BrowserPullToRefreshLayout
         composeRule.runOnIdle {
@@ -269,17 +269,20 @@ class BrowserPullToRefreshLayoutInstrumentedTest {
                 ),
             )
         }
-        composeRule.waitUntil(timeoutMillis = 10_000L) { refreshLayout.height > 600 }
+        composeRule.waitUntil(timeoutMillis = 10_000L) {
+            refreshLayout.height > 240f * refreshLayout.resources.displayMetrics.density
+        }
         composeRule.runOnIdle {
             val downTime = SystemClock.uptimeMillis()
             val x = refreshLayout.width / 2f
+            val density = refreshLayout.resources.displayMetrics.density
             listOf(
-                MotionEvent.ACTION_DOWN to 32f,
-                MotionEvent.ACTION_MOVE to 160f,
-                MotionEvent.ACTION_MOVE to 560f,
-                MotionEvent.ACTION_UP to 560f,
-            ).forEachIndexed { index, (action, y) ->
-                MotionEvent.obtain(downTime, downTime + index * 16L, action, x, y, 0).also {
+                MotionEvent.ACTION_DOWN to 80f * density,
+                MotionEvent.ACTION_MOVE to 150f * density,
+                MotionEvent.ACTION_MOVE to 220f * density,
+                MotionEvent.ACTION_UP to 220f * density,
+            ).forEachIndexed { index, (action, eventY) ->
+                MotionEvent.obtain(downTime, downTime + index * 16L, action, x, eventY, 0).also {
                     refreshLayout.dispatchTouchEvent(it)
                     it.recycle()
                 }

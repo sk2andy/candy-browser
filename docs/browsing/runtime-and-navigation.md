@@ -36,7 +36,7 @@
 | Local userscript | `UserScriptRules` → Gecko Topping document-start bridge | Require an explicit HTTP(S) pattern, top frame and regular tab; apply full URL exclusions before source runs |
 | Main-frame 404 | engine HTTP status → tab state → `PageErrorFeedbackRules` | Keep the navigation committed, preserve URL/title/history side effects, and cover the page with Candy's native not-found surface |
 | Offline page | failed main-frame navigation + `BrowserConnectivityMonitor` → controller → `PageErrorFeedbackRules` | Require Android's validated default internet capability, never cover an already loaded page merely because connectivity drops, auto-reload on reconnect only before the game starts, and preserve the game behind an explicit reload banner afterward |
-| Pull to refresh | `BrowserPullToRefreshLayout` → `BrowserPullGestureRules` / `BrowserPullToRefreshRules` → `BrowserController.reload()` | Admit a downward-dominant gesture starting within 64 dp below the top safe inset only for a visible, idle web page whose engine-reported document offset is at the top; keep gestures starting in the page body with nested scrollers, plus blank, obscured, Find-in-page, overview and video-only surfaces, out of the gesture path |
+| Pull to refresh | `BrowserPullToRefreshLayout` → `BrowserPullGestureRules` / `BrowserPullToRefreshRules` → `BrowserController.reload()` | Admit a downward-dominant gesture starting within 160 dp below the top safe inset only for a visible, idle web page whose engine-reported document offset is at the top; keep gestures starting lower in the page body with nested scrollers, plus blank, obscured, Find-in-page, overview and video-only surfaces, out of the gesture path |
 
 ## Invariants
 
@@ -74,6 +74,10 @@
   Address editing and Find in page retain chrome-owned
   IME suppression, so their keyboards do not resize the underlying website.
 - Route untrusted URLs through existing normalizers. Do not add a second permissive parser.
+- Before System WebView replaces an explicit destination, stop its active load. Gecko serializes a
+  newer explicit load behind any accepted native history restore before replacing the previous
+  document. In both engines, delayed privacy-policy callbacks apply only to their still-current
+  request, so an older completion cannot replace a newer user destination.
 - Keep the external-app return marker memory-only and scoped to the tab opened by the latest accepted
   `ACTION_VIEW` or `ACTION_SEND`. Engine history consumes Back first. A root tab with an active opener
   closes and returns to that opener; a deletable root tab with another active-profile sibling closes
@@ -226,6 +230,9 @@
   traversal. Never replay a committed navigation or convert POST to GET. Reload matching open tabs
   only when the user explicitly changes the domain preference.
 - Keep the engine view's measured frame stable at the full window while pages scroll.
+  A selected Gecko tab's first navigation waits until its renderer view is attached, measured and
+  has received the current native insets. This preserves author `initial-scale` viewport directives
+  on the first load; background sessions and later navigations keep their existing load behavior.
   `GeckoViewInsetRules` forwards all native safe areas to CSS, including the top edge, without
   native margins. Normal Gecko tabs and Link Peek disable the legacy document repair at the
   Gecko-only bridge before installing any of its observers or hooks. Gecko's separate bounded CSS
