@@ -41,8 +41,10 @@
   managed popup transitions are protected. The limit may be exceeded temporarily while they remain
   protected.
 - Regular Gecko tabs restore their persisted Gecko session history on demand when tab/profile/version
-  validation succeeds. Private tabs never write Gecko or Gecko session state to disk and therefore reload
-  only their current in-memory URL after eviction.
+  validation succeeds. A newer explicit navigation waits for an accepted native restore to publish its
+  history before loading, so a late restore cannot replace the newer page. A bounded restore wait cancels
+  a stuck native restore before the newer page starts. Private tabs never write Gecko or Gecko session
+  state to disk and therefore reload only their current in-memory URL after eviction.
 - Federated-login popup tabs keep their live Gecko session across normal background/foreground transitions
   but never write tab summaries, Gecko session state, previews, History, Recall, or Candy Trails. If the
   process dies, only their persistent opener is restored.

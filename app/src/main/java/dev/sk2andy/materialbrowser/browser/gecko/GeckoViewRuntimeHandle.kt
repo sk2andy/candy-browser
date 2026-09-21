@@ -983,6 +983,7 @@ private class GeckoViewBrowserSession(
     private var pendingRestoredSessionState: GeckoSession.SessionState? = null
     private var pendingRestoredHistoryState: GeckoBrowserHistoryState? = null
     private var restoredHistoryPending = false
+    private var restoredHistoryTimeout: Runnable? = null
     // Gecko's cookie mode is runtime-wide, so the matching host claim must exist before Gecko
     // starts a queued main-frame load or native restore, even while the Activity is inactive.
     private var navigationTargetUrl: String? = null
@@ -1210,11 +1211,10 @@ private class GeckoViewBrowserSession(
                 val updated = historyList.toBrowserHistoryState()
                 historyState = updated
                 if (updated.matches(pendingRestoredHistoryState)) {
-                    pendingRestoredHistoryState = null
-                    restoredHistoryPending = false
+                    finishRestoredHistoryWait()
                 }
                 historyStateListener?.onHistoryStateChanged(updated)
-                runPendingFailedPageRetryIfReady()
+                loadPendingUrlIfReady()
             }
         }
         session.scrollDelegate = object : GeckoSession.ScrollDelegate {
@@ -2784,7 +2784,9 @@ private class GeckoViewBrowserSession(
         if (
             toppingHost.state != GeckoToppingHostState.Initializing &&
             trackingPermissions.isReady &&
-            privacyBound
+            privacyBound &&
+            pendingRestoredSessionState == null &&
+            !restoredHistoryPending
         ) {
             session.loadUri(safeUrl)
             return true
@@ -2874,8 +2876,7 @@ private class GeckoViewBrowserSession(
             pendingInitialUrl = null
             pendingFailedPageRetryUrl = null
             pendingRestoredSessionState = null
-            pendingRestoredHistoryState = null
-            restoredHistoryPending = false
+            finishRestoredHistoryWait()
             finishNavigation()
             invalidateCredentialPrompts(recreateHost = true)
             session.stop()
@@ -2920,8 +2921,8 @@ private class GeckoViewBrowserSession(
         pictureInPicturePlaybackExpected = false
         pendingInitialUrl = null
         pendingFailedPageRetryUrl = null
-        pendingRestoredHistoryState = null
-        restoredHistoryPending = false
+        pendingRestoredSessionState = null
+        finishRestoredHistoryWait()
         navigationTargetUrl = null
         pendingNavigationAttempts.clear()
         startedNavigationAttempts.clear()
@@ -2943,7 +2944,7 @@ private class GeckoViewBrowserSession(
             !trackingPermissions.isReady ||
             !privacyBound
         ) return
-        restorePendingStateIfReady()
+        if (restorePendingStateIfReady() || restoredHistoryPending) return
         if (runPendingFailedPageRetryIfReady() || pendingFailedPageRetryUrl != null) return
         val pendingUrl = pendingInitialUrl ?: return
         pendingInitialUrl = null
@@ -2956,9 +2957,31 @@ private class GeckoViewBrowserSession(
         val restored = pendingRestoredSessionState ?: return false
         pendingRestoredSessionState = null
         restoredHistoryPending = true
+        scheduleRestoredHistoryTimeout()
         pendingRestoredHistoryState?.currentUrl()?.let(::ensureNavigation)
         session.restoreState(restored)
         return true
+    }
+
+    private fun scheduleRestoredHistoryTimeout() {
+        restoredHistoryTimeout?.let(mainHandler::removeCallbacks)
+        val timeout = Runnable {
+            restoredHistoryTimeout = null
+            if (!restoredHistoryPending || closed) return@Runnable
+            pendingRestoredHistoryState = null
+            restoredHistoryPending = false
+            if (pendingInitialUrl != null || pendingFailedPageRetryUrl != null) session.stop()
+            loadPendingUrlIfReady()
+        }
+        restoredHistoryTimeout = timeout
+        mainHandler.postDelayed(timeout, RESTORED_HISTORY_TIMEOUT_MILLIS)
+    }
+
+    private fun finishRestoredHistoryWait() {
+        restoredHistoryTimeout?.let(mainHandler::removeCallbacks)
+        restoredHistoryTimeout = null
+        pendingRestoredHistoryState = null
+        restoredHistoryPending = false
     }
 
     private fun runPendingFailedPageRetryIfReady(): Boolean {
@@ -3124,8 +3147,7 @@ private class GeckoViewBrowserSession(
         pendingInitialUrl = null
         pendingFailedPageRetryUrl = null
         pendingRestoredSessionState = null
-        pendingRestoredHistoryState = null
-        restoredHistoryPending = false
+        finishRestoredHistoryWait()
         navigationTargetUrl = null
         pendingNavigationAttempts.clear()
         startedNavigationAttempts.clear()
@@ -3154,8 +3176,7 @@ private class GeckoViewBrowserSession(
         pendingInitialUrl = null
         pendingFailedPageRetryUrl = null
         pendingRestoredSessionState = null
-        pendingRestoredHistoryState = null
-        restoredHistoryPending = false
+        finishRestoredHistoryWait()
         navigationTargetUrl = null
         pendingNavigationAttempts.clear()
         startedNavigationAttempts.clear()
@@ -3215,6 +3236,7 @@ private class GeckoViewBrowserSession(
         const val CHOICE_VALUE_SEPARATOR = "\u001F"
         const val MAX_EXTENSION_URL_LENGTH = 4_096
         const val MAX_MEDIA_TIME_MILLIS = 604_800_000L
+        const val RESTORED_HISTORY_TIMEOUT_MILLIS = 5_000L
         const val TRACKING_PERMISSION_CLEANUP_FAILURE =
             "Gecko tracking permission cleanup failed"
 

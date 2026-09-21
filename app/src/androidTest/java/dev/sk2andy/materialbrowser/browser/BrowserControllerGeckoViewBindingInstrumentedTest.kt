@@ -64,6 +64,71 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
     private var originalExternalAppLinkHandling: ExternalAppLinkHandling? = null
 
     @Test
+    fun newerAddressSubmissionRejectsStalePolicyCallback() {
+        lateinit var session: ReentrantAttachSession
+        composeRule.runOnIdle {
+            val store = BrowserSessionStore(composeRule.activity)
+            originalEngineKind = store.loadAndroidBrowserEngineKind()
+            if (!BuildConfig.SYSTEM_WEBVIEW_ONLY) {
+                assertTrue(store.saveAndroidBrowserEngineKind(AndroidBrowserEngineKind.GeckoView))
+            }
+            val browserController = BrowserController(composeRule.activity)
+            controller = browserController
+            session = ReentrantAttachSession(
+                tabId = browserController.selectedTabId,
+                onFirstAttach = {},
+            ).apply {
+                deferPolicyReadyCallbacks = true
+            }
+            browserController.installGeckoEngineSessionForTesting(session)
+
+            browserController.submitAddress("https://newer-b.test/")
+            assertTrue(session.commands.isEmpty())
+            val staleCallback = session.policyReadyCallbacks.removeAt(0)
+
+            browserController.submitAddress("https://newest-c.test/")
+            assertTrue(session.commands.isEmpty())
+            val currentCallback = session.policyReadyCallbacks.removeAt(0)
+
+            currentCallback()
+            staleCallback()
+
+            assertEquals(
+                listOf(BrowserEngineCommands.load("https://newest-c.test/")),
+                session.commands,
+            )
+        }
+    }
+
+    @Test
+    fun stopLoadingInvalidatesPendingAddressSubmission() {
+        lateinit var session: ReentrantAttachSession
+        composeRule.runOnIdle {
+            val store = BrowserSessionStore(composeRule.activity)
+            originalEngineKind = store.loadAndroidBrowserEngineKind()
+            if (!BuildConfig.SYSTEM_WEBVIEW_ONLY) {
+                assertTrue(store.saveAndroidBrowserEngineKind(AndroidBrowserEngineKind.GeckoView))
+            }
+            val browserController = BrowserController(composeRule.activity)
+            controller = browserController
+            session = ReentrantAttachSession(
+                tabId = browserController.selectedTabId,
+                onFirstAttach = {},
+            ).apply {
+                deferPolicyReadyCallbacks = true
+            }
+            browserController.installGeckoEngineSessionForTesting(session)
+
+            browserController.submitAddress("https://pending.test/")
+            val staleCallback = session.policyReadyCallbacks.removeAt(0)
+            browserController.stopLoading()
+            staleCallback()
+
+            assertEquals(listOf(BrowserEngineCommands.stop()), session.commands)
+        }
+    }
+
+    @Test
     fun webpageImeOpeningReprobesAndParksOccludingAddressBar() {
         lateinit var session: ReentrantAttachSession
         composeRule.runOnIdle {

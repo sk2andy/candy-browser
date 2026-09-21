@@ -74,6 +74,10 @@
   Address editing and Find in page retain chrome-owned
   IME suppression, so their keyboards do not resize the underlying website.
 - Route untrusted URLs through existing normalizers. Do not add a second permissive parser.
+- Before System WebView replaces an explicit destination, stop its active load. Gecko serializes a
+  newer explicit load behind any accepted native history restore before replacing the previous
+  document. In both engines, delayed privacy-policy callbacks apply only to their still-current
+  request, so an older completion cannot replace a newer user destination.
 - Keep the external-app return marker memory-only and scoped to the tab opened by the latest accepted
   `ACTION_VIEW` or `ACTION_SEND`. Engine history consumes Back first. A root tab with an active opener
   closes and returns to that opener; a deletable root tab with another active-profile sibling closes
