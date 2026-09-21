@@ -47,6 +47,10 @@ internal object CandySettingsHomeResources : SettingsHomeResources {
     override fun text(label: SettingsHomeLabel): String = when (label) {
         SettingsHomeLabel.Title -> "Einstellungen"
         SettingsHomeLabel.Back -> "Zurück"
+        SettingsHomeLabel.BrowsingGroup -> "Surfen"
+        SettingsHomeLabel.PersonalizationGroup -> "Personalisierung"
+        SettingsHomeLabel.PrivacyDataGroup -> "Datenschutz & Daten"
+        SettingsHomeLabel.AboutGroup -> "Weitere Informationen"
         SettingsHomeLabel.SearchTitle -> "Suche"
         SettingsHomeLabel.SearchSummary -> "Suchmaschine und Vorschläge"
         SettingsHomeLabel.SyncTitle -> "Synchronisierung"
@@ -58,7 +62,8 @@ internal object CandySettingsHomeResources : SettingsHomeResources {
         SettingsHomeLabel.AppearanceTitle -> "Darstellung"
         SettingsHomeLabel.AppearanceSummary -> "Farben, Oberflächen und Form"
         SettingsHomeLabel.BrowserTitle -> "Browser"
-        SettingsHomeLabel.BrowserSummary -> "Oberfläche und Standardbrowser-Verhalten"
+        SettingsHomeLabel.BrowserSummary ->
+            "Seitenübersetzung; weitere Browseroptionen in Vorbereitung"
         SettingsHomeLabel.DownloadsTitle -> "Downloads"
         SettingsHomeLabel.UserscriptsTitle -> "Toppings"
         SettingsHomeLabel.UserscriptsSummary -> "Passende Seiten mit Toppings anpassen"

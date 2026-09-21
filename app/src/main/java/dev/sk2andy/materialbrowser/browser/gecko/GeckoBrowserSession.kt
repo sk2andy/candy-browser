@@ -331,6 +331,9 @@ internal interface GeckoBrowserSession {
     /** Replaces the current history entry with a validated HTTP(S) URL. */
     fun replaceHistoryUrl(url: String): Boolean = loadUrl(url)
 
+    /** Retries a failed URL without duplicating a matching committed history entry. */
+    fun retryFailedPage(url: String): Boolean = loadUrl(url)
+
     /** Loads an already host-validated moz-extension options URL through startup gates. */
     fun loadExtensionUrl(url: String): Boolean = false
 

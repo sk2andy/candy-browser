@@ -130,6 +130,11 @@ internal fun BrowserBottomBar(
     showCastButton: Boolean,
     showQrScanner: Boolean,
     tabCount: Int,
+    wideTabs: List<WideAddressTabItem>,
+    wideTabStripEnabled: Boolean,
+    tabSwipeEnabled: Boolean,
+    onWideTabSelected: (String) -> Unit,
+    onWideTabClosed: (String) -> Unit,
     userScriptMenuCommands: List<UserScriptMenuCommand>,
     onUserScriptMenuCommand: (UserScriptMenuCommand) -> Unit,
     commandFeedback: AddressCommandFeedback?,
@@ -543,7 +548,7 @@ internal fun BrowserBottomBar(
                                         .draggable(
                                             state = tabDragState,
                                             orientation = Orientation.Horizontal,
-                                            enabled = !editing,
+                                            enabled = !editing && tabSwipeEnabled,
                                             onDragStopped = { velocity ->
                                                 onTabDragStopped(velocity)
                                             },
@@ -573,6 +578,11 @@ internal fun BrowserBottomBar(
                                 showCastButton = showCastButton,
                                 showQrScanner = showQrScanner,
                                 tabCount = tabCount,
+                                wideTabs = wideTabs,
+                                wideTabStripEnabled = wideTabStripEnabled,
+                                tabSwipeEnabled = tabSwipeEnabled,
+                                onWideTabSelected = onWideTabSelected,
+                                onWideTabClosed = onWideTabClosed,
                                 userScriptMenuCommands = userScriptMenuCommands,
                                 onUserScriptMenuCommand = onUserScriptMenuCommand,
                                 menuExpanded = menuExpanded,
@@ -701,6 +711,7 @@ internal fun BrowserBottomBar(
                                         feedback = feedback,
                                         text = feedbackText,
                                         gesturesEnabled = feedbackGesturesEnabled,
+                                        tabSwipeEnabled = tabSwipeEnabled,
                                         onAddress = if (compact) onExpand else onAddress,
                                         onTabDrag = onTabDrag,
                                         onTabDragStopped = onTabDragStopped,
@@ -902,6 +913,7 @@ private fun AddressCommandFeedbackContent(
     feedback: AddressCommandFeedback,
     text: String,
     gesturesEnabled: Boolean,
+    tabSwipeEnabled: Boolean,
     onAddress: () -> Unit,
     onTabDrag: (Float) -> Unit,
     onTabDragStopped: suspend (Float) -> Unit,
@@ -924,7 +936,7 @@ private fun AddressCommandFeedbackContent(
             .draggable(
                 state = tabDragState,
                 orientation = Orientation.Horizontal,
-                enabled = gesturesEnabled,
+                enabled = gesturesEnabled && tabSwipeEnabled,
                 onDragStopped = { velocity -> onTabDragStopped(velocity) },
             )
             .semantics(mergeDescendants = true) {

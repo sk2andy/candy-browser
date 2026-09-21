@@ -140,6 +140,18 @@ internal fun Modifier.blankTabModeBackground(
     onDrawBehind {
         if (wallpaper == null) {
             drawRect(regularBrush)
+            // Keep Blank Tab visually calm while giving it same oversized, soft
+            // color fields as Candy's home surface.
+            drawCircle(
+                color = lerp(regularCenterColor, edgeColor, 0.42f).copy(alpha = 0.56f),
+                radius = size.minDimension * 0.68f,
+                center = Offset(size.width * 1.12f, -size.height * 0.04f),
+            )
+            drawCircle(
+                color = lerp(regularCenterColor, edgeColor, 0.70f).copy(alpha = 0.44f),
+                radius = size.minDimension * 0.82f,
+                center = Offset(-size.width * 0.18f, size.height * 0.82f),
+            )
         } else {
             drawProfileWallpaper(
                 bitmap = wallpaper.bitmap,

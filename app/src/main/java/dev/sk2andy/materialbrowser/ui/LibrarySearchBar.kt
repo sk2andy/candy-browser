@@ -1,5 +1,6 @@
 package dev.sk2andy.materialbrowser.ui
 
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -50,8 +51,9 @@ internal fun LibrarySearchBar(
         },
         expanded = false,
         onExpandedChange = {},
+        windowInsets = WindowInsets(0, 0, 0, 0),
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .padding(horizontal = 16.dp),
     ) {}
 }

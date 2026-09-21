@@ -84,6 +84,7 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
@@ -140,7 +141,14 @@ internal fun GestureOnboardingScreen(
     onCompleted: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val steps = GestureOnboardingStep.entries
+    val wideTabStripEnabled = AddressBarWideLayoutRules.usesTabStrip(
+        LocalConfiguration.current.screenWidthDp.toFloat(),
+    )
+    val steps = if (wideTabStripEnabled) {
+        GestureOnboardingStep.entries.filterNot { it == GestureOnboardingStep.SwitchTabs }
+    } else {
+        GestureOnboardingStep.entries
+    }
     var welcomeVisible by rememberSaveable { mutableStateOf(true) }
     var celebrationVisible by rememberSaveable { mutableStateOf(false) }
     var stepIndex by rememberSaveable { mutableIntStateOf(0) }
@@ -149,7 +157,8 @@ internal fun GestureOnboardingScreen(
     var practiceWidthPx by remember { mutableFloatStateOf(0f) }
     var rootWidthPx by remember { mutableFloatStateOf(0f) }
     val lessonScrollState = rememberScrollState()
-    val step = steps[stepIndex]
+    val currentStepIndex = stepIndex.coerceIn(0, steps.lastIndex)
+    val step = steps[currentStepIndex]
     val density = LocalDensity.current
     val threshold = with(density) {
         when (step) {
@@ -183,10 +192,10 @@ internal fun GestureOnboardingScreen(
         dragX = 0f
         dragY = 0f
         view.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
-        if (stepIndex == steps.lastIndex) {
+        if (currentStepIndex == steps.lastIndex) {
             celebrationVisible = true
         } else {
-            stepIndex++
+            stepIndex = currentStepIndex + 1
         }
     }
 
@@ -313,7 +322,7 @@ internal fun GestureOnboardingScreen(
                     Text(
                         text = stringResource(
                             R.string.onboarding_progress,
-                            stepIndex + 1,
+                            currentStepIndex + 1,
                             steps.size,
                         ),
                         style = MaterialTheme.typography.labelLarge,
@@ -333,7 +342,7 @@ internal fun GestureOnboardingScreen(
             }
             Spacer(Modifier.height(10.dp))
             LinearProgressIndicator(
-                progress = { (stepIndex + 1f) / steps.size },
+                progress = { (currentStepIndex + 1f) / steps.size },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(6.dp)

@@ -27,9 +27,11 @@ import dev.sk2andy.materialbrowser.browser.gecko.GeckoPrivacyEvent
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoPrivacyPolicy
 import dev.sk2andy.materialbrowser.browser.integration.ExternalAppLauncher
 import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineCommand
+import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineCommands
 import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineCommandType
 import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineEvent
 import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineEventType
+import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineFailureKind
 import dev.sk2andy.materialbrowser.data.BrowserSessionStore
 import dev.sk2andy.materialbrowser.data.DeveloperSettings
 import dev.sk2andy.materialbrowser.data.GeckoSafeAreaSettings
@@ -716,6 +718,48 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
     }
 
     @Test
+    fun leavingFullscreenRestoresCssSafeAreaPolicyWithoutAnotherInsetCallback() {
+        composeRule.runOnIdle {
+            val store = BrowserSessionStore(composeRule.activity)
+            originalEngineKind = store.loadAndroidBrowserEngineKind()
+            assertTrue(store.saveAndroidBrowserEngineKind(AndroidBrowserEngineKind.GeckoView))
+            val browserController = BrowserController(composeRule.activity)
+            controller = browserController
+            val tabId = browserController.selectedTabId
+            val session = ReentrantAttachSession(tabId = tabId, onFirstAttach = {})
+            browserController.installGeckoEngineSessionForTesting(session)
+            browserController.onWindowInsetsChanged(
+                WindowInsetsCompat.Builder()
+                    .setInsets(
+                        WindowInsetsCompat.Type.statusBars(),
+                        Insets.of(0, 96, 0, 0),
+                    )
+                    .build(),
+            )
+            browserController.dispatchGeckoEngineEventForTesting(
+                BrowserEngineEvent(
+                    tabId = tabId,
+                    type = BrowserEngineEventType.NavigationStarted,
+                    address = "https://m.youtube.com/watch?v=test",
+                    title = null,
+                    canGoBack = false,
+                    canGoForward = false,
+                    failureDescription = null,
+                ),
+            )
+            assertEquals(96, session.privacyPolicies.last().cssSafeAreaTopInsetPx)
+            session.privacyPolicies.clear()
+
+            browserController.reportSelectedGeckoFullscreenStateForTesting(true)
+            assertEquals(0, session.privacyPolicies.single().cssSafeAreaTopInsetPx)
+            session.privacyPolicies.clear()
+
+            browserController.reportSelectedGeckoFullscreenStateForTesting(false)
+            assertEquals(96, session.privacyPolicies.single().cssSafeAreaTopInsetPx)
+        }
+    }
+
+    @Test
     fun safeAreaFallbackUpdatesPolicyWithoutReloadingCurrentNavigation() {
         composeRule.runOnIdle {
             val store = BrowserSessionStore(composeRule.activity)
@@ -846,6 +890,69 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
     }
 
     @Test
+    fun topHeaderFallbackKeepsThemeColorUntilNextNavigation() {
+        composeRule.runOnIdle {
+            val store = BrowserSessionStore(composeRule.activity)
+            originalEngineKind = store.loadAndroidBrowserEngineKind()
+            assertTrue(store.saveAndroidBrowserEngineKind(AndroidBrowserEngineKind.GeckoView))
+            val browserController = BrowserController(composeRule.activity)
+            controller = browserController
+            val tabId = browserController.selectedTabId
+            val session = ReentrantAttachSession(tabId = tabId, onFirstAttach = {})
+            browserController.installGeckoEngineSessionForTesting(session)
+            browserController.updateDeveloperSettings(DeveloperSettings())
+            browserController.onWindowInsetsChanged(
+                WindowInsetsCompat.Builder()
+                    .setInsets(WindowInsetsCompat.Type.statusBars(), Insets.of(0, 96, 0, 0))
+                    .build(),
+            )
+            fun navigate(path: String) {
+                browserController.dispatchGeckoEngineEventForTesting(
+                    BrowserEngineEvent(
+                        tabId = tabId,
+                        type = BrowserEngineEventType.NavigationStarted,
+                        address = "https://example.com/$path",
+                        title = null,
+                        canGoBack = false,
+                        canGoForward = false,
+                        failureDescription = null,
+                    ),
+                )
+            }
+
+            navigate("first")
+            session.privacyPolicies.clear()
+            browserController.dispatchSelectedGeckoPrivacyEventForTesting(
+                GeckoPrivacyEvent(
+                    requestUrl = "",
+                    pageUrl = "https://example.com/first",
+                    ruleId = null,
+                    wasBlocked = false,
+                    isBuiltIn = false,
+                    isCompatibilityObservation = false,
+                    safeAreaFallbackNavigationGeneration = 1,
+                    safeAreaFallbackThemeColor = "#123456",
+                    safeAreaFallbackIsTopHeader = true,
+                ),
+            )
+
+            assertEquals(
+                0xFF123456.toInt(),
+                browserController.selectedWebContentTopBarState
+                    ?.statusBarAppearance
+                    ?.colorArgb,
+            )
+            assertEquals(0, session.privacyPolicies.single().cssSafeAreaTopInsetPx)
+
+            session.privacyPolicies.clear()
+            navigate("second")
+
+            assertEquals(null, browserController.selectedWebContentTopBarState)
+            assertEquals(96, session.privacyPolicies.last().cssSafeAreaTopInsetPx)
+        }
+    }
+
+    @Test
     fun staleFallbackRestorationCannotClearNewerNavigationFallback() {
         composeRule.runOnIdle {
             val store = BrowserSessionStore(composeRule.activity)
@@ -917,9 +1024,8 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
             val browserController = BrowserController(composeRule.activity)
             controller = browserController
             val tabId = browserController.selectedTabId
-            browserController.installGeckoEngineSessionForTesting(
-                ReentrantAttachSession(tabId = tabId, onFirstAttach = {}),
-            )
+            val session = ReentrantAttachSession(tabId = tabId, onFirstAttach = {})
+            browserController.installGeckoEngineSessionForTesting(session)
             val missingUrl = "https://example.com/missing"
 
             browserController.dispatchGeckoEngineEventForTesting(
@@ -951,6 +1057,57 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
             assertEquals(404, browserController.selectedTab.httpStatusCode)
             assertNull(browserController.selectedTab.error)
             assertEquals(true, browserController.selectedTab.canGoBack)
+
+            assertTrue(browserController.retryFailedPage())
+            assertEquals(
+                listOf(BrowserEngineCommands.retryFailedPage(missingUrl)),
+                session.commands,
+            )
+        }
+    }
+
+    @Test
+    fun offlineNavigationRetryLoadsExactAddressInsteadOfReloadingHistory() {
+        composeRule.runOnIdle {
+            val browserController = BrowserController(composeRule.activity)
+            controller = browserController
+            val tabId = browserController.selectedTabId
+            val session = ReentrantAttachSession(tabId = tabId, onFirstAttach = {})
+            browserController.installGeckoEngineSessionForTesting(session)
+            val failedUrl = "https://example.com/offline"
+
+            browserController.dispatchGeckoEngineEventForTesting(
+                BrowserEngineEvent(
+                    tabId = tabId,
+                    type = BrowserEngineEventType.NavigationStarted,
+                    address = failedUrl,
+                    title = null,
+                    canGoBack = false,
+                    canGoForward = false,
+                    failureDescription = null,
+                ),
+            )
+            browserController.dispatchGeckoEngineEventForTesting(
+                BrowserEngineEvent(
+                    tabId = tabId,
+                    type = BrowserEngineEventType.NavigationFailed,
+                    address = failedUrl,
+                    title = null,
+                    canGoBack = false,
+                    canGoForward = false,
+                    failureDescription = "Network unavailable",
+                    failureKind = BrowserEngineFailureKind.Offline,
+                ),
+            )
+
+            assertTrue(browserController.retryFailedPage())
+            assertEquals(
+                listOf(BrowserEngineCommands.retryFailedPage(failedUrl)),
+                session.commands,
+            )
+            assertTrue(browserController.selectedTab.isLoading)
+            assertNull(browserController.selectedTab.error)
+            assertNull(browserController.selectedTab.failureKind)
         }
     }
 

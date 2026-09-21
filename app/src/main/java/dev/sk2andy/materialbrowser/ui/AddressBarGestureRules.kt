@@ -22,3 +22,10 @@ internal object AddressBarTabSwitchRules {
     fun hasReachedDistance(dragDistance: Float, viewportWidth: Float): Boolean =
         viewportWidth > 0f && dragDistance >= viewportWidth * DISTANCE_FRACTION
 }
+
+internal object AddressBarWideLayoutRules {
+    const val MIN_WINDOW_WIDTH_DP = 600f
+
+    fun usesTabStrip(windowWidthDp: Float): Boolean =
+        windowWidthDp.isFinite() && windowWidthDp >= MIN_WINDOW_WIDTH_DP
+}

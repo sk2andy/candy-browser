@@ -19,6 +19,7 @@ class FaviconRulesTest {
                 newUrl = "https://example.com/next",
             ),
         )
+        assertFalse(FaviconRules.changedSite("https://example.com", "https://example.com:443"))
     }
 
     @Test
@@ -29,6 +30,8 @@ class FaviconRulesTest {
                 newUrl = "https://developer.android.com",
             ),
         )
+        assertTrue(FaviconRules.changedSite("https://example.com", "http://example.com"))
+        assertTrue(FaviconRules.changedSite("https://example.com", "https://example.com:8443"))
     }
 
     @Test
@@ -37,5 +40,27 @@ class FaviconRulesTest {
         assertFalse(FaviconRules.changedSite("not a url", "https://example.com"))
         assertTrue(FaviconRules.changedSite("https://example.com", BLANK_URL))
         assertTrue(FaviconRules.changedSite("https://example.com", "not a url"))
+    }
+
+    @Test
+    fun acceptsIconOnlyForCurrentDocument() {
+        assertTrue(FaviconRules.belongsToDocument(
+            "https://example.com/article#section",
+            "https://example.com/article#another-section",
+        ))
+        assertFalse(FaviconRules.belongsToDocument(
+            "https://example.com/next",
+            "https://example.com/article",
+        ))
+        assertFalse(FaviconRules.belongsToDocument(
+            "https://example.com/article?version=2",
+            "https://example.com/article?version=1",
+        ))
+        assertFalse(FaviconRules.belongsToDocument(
+            "https://example.com/article",
+            "https://other.example.com/article",
+        ))
+        assertFalse(FaviconRules.belongsToDocument(BLANK_URL, "https://example.com/article"))
+        assertFalse(FaviconRules.belongsToDocument("https://example.com/article", null))
     }
 }

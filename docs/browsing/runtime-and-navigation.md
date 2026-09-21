@@ -31,7 +31,7 @@
 | Federated login | `FederatedLoginRules` → controller → Snackbar and `AlertDialog` | Detect only known cross-site identity SDK endpoints; change cookie, user-agent and popup policy only after explicit consent |
 | CAPTCHA compatibility | `CaptchaCompatibilityRules` → controller → Snackbar and `AlertDialog` | Detect strict cross-site Cloudflare, Google reCAPTCHA, or hCaptcha endpoints; allow third-party cookies only after explicit consent |
 | HTTP Basic authentication | `HttpAuthPromptRules` → `BrowserController` → `HttpAuthPromptDialog` | Prompt only for a selected, resumed tab when challenge host matches current top-level HTTP(S) host; keep credentials memory-only and warn on cleartext HTTP |
-| Gecko downloads and uploads | `BrowserEngineDownloadRules` / `FileChooserRules` → controller → Android download/file presenters | Accept bounded HTTP(S) downloads and readable `content://` file results only; reject stale session/navigation/activity results |
+| Gecko downloads and uploads | `BrowserEngineDownloadRules` / `FileChooserRules` → controller → Android download/file presenters | Accept bounded HTTP(S) downloads and readable `content://` file results only; stage selected documents in app cache for GeckoView's path-based file prompt, cap staged content at 1 GiB, remove it when the session ends and clear orphaned files at next startup; reject stale session/navigation/activity results |
 | Gecko permissions and prompts | `PermissionRequestRules` / `BrowserWebPromptRules` → controller → existing Candy dialogs and Android permission presenter | Preserve profile/private permission scope, deny stale prompts, and fail closed for unsupported sensitive prompt classes |
 | Local userscript | `UserScriptRules` → Gecko Topping document-start bridge | Require an explicit HTTP(S) pattern, top frame and regular tab; apply full URL exclusions before source runs |
 | Main-frame 404 | engine HTTP status → tab state → `PageErrorFeedbackRules` | Keep the navigation committed, preserve URL/title/history side effects, and cover the page with Candy's native not-found surface |
@@ -172,7 +172,9 @@
   stagger; score and move semantics update from the reducer result without waiting for motion. Open the
   puzzle immediately with no intermediate play prompt. If connectivity
   returns, keep game state and morph the offline pill into a polite **Back online** banner. Its button
-  plays the page exit motion before performing the only reload.
+  plays the page exit motion before performing the only retry. Load the exact failed URL when the engine
+  has no matching committed history entry; retain normal reload semantics when history already points at
+  the target, including committed HTTP failures such as 404.
 - Treat a main-frame HTTP 404 as a committed response, not a failed navigation. System WebView reports it
   from `onReceivedHttpError`; Gecko's authenticated internal Privacy WebExtension reports the main-frame
   response status because GeckoView's session delegate exposes transport errors but not HTTP response
@@ -229,14 +231,31 @@
   Gecko-only bridge before installing any of its observers or hooks. Gecko's separate bounded CSS
   layer stays inactive when the document declares `viewport-fit=cover`; Gecko remains the sole owner
   of `env(safe-area-inset-*)`, and Candy does not add body or positioned-element offsets that could
-  distort the page's full-height or IME scroll geometry. Other documents classify suitable body flow
+  distort the page's full-height or IME scroll geometry. A wide semantic sticky top header in another
+  document switches only the top edge to Candy's native margin. A `fixed` declaration alone is not
+  enough: each fixed header records its own baseline and qualifies only after a later downward document
+  scroll, or movement of its cached following content anchor, of at least its height while its same
+  rendered box still occupies the top safe-area band. Restored scroll positions cannot satisfy that
+  proof. Fixed menus that move away with Google-like page
+  chrome therefore keep the WebView edge to edge. The tab keeps the reported website status-bar
+  appearance until its next navigation. Other documents classify suitable body flow
   and viewport-bound top anchors, then add the inset to their original top positions once. It does not
-  repeatedly measure correctly protected headers while scrolling.
-  Only authorized relevant mutations and configured resize/configuration changes reclassify.
+  repeatedly run broad layout repair while scrolling. Scroll events only advance a generation and
+  rearm one worker. After at least 150 ms of scroll quiet, Candy verifies only cached bounded header
+  candidates; it performs no selector query or DOM discovery on the hot or quiet scroll path.
+  Relevant semantic mutations, trusted clicks, stylesheet load, DOM readiness and final load request
+  the same coalesced check; other DOM discovery retains its existing interaction gate.
+  Native top-header activation and removal set the final engine margin immediately, then ease the
+  previous top edge into place with a temporary visual offset. The renderer receives its final
+  viewport in one layout pass instead of jumping the top edge or repeatedly relaying out the WebView.
+  Fullscreen, safe-drawing hosts, forced fallbacks and changed system insets always snap.
   Unknown layouts retain verified emergency native top fallback rather than speculative CSS changes.
   Fullscreen and Compose safe-drawing hosts retain their duplicate-inset exclusions.
   System WebView retains shared document repair: Candy owns its status-bar and cutout top edge because a
   `viewport-fit=cover` declaration does not guarantee use of `env(safe-area-inset-top)`.
+  Its semantic top-header path uses the same persistence check, native-margin and website-color contract,
+  while a document
+  declaring `viewport-fit=cover` stays on the existing repair/renderer path rather than forcing a margin.
   The document-start compatibility inset protects normal flow and top-positioned content.
   Top-anchored fixed, sticky, absolute, and focused containers are shifted once into the safe area.
   Stable viewport-sticky headers use an inherited CSS `max(originalTop, topInset)` anchor, including
@@ -357,19 +376,20 @@ together. This prototype is not a compatibility claim for the layouts described 
 | Rule | Prototype behavior |
 | --- | --- |
 | Inset source | Existing native policy inset divided by device-pixel ratio, exposed as `--candy-safe-area-inset-top` |
-| `viewport-fit=cover` | Skip the complete Candy CSS layer, including body, fixed/sticky, known-site and Reddit rules; keep Gecko's native renderer safe-area delivery |
+| `viewport-fit=cover` | Skip the generic Candy CSS layer, including body, fixed/sticky and known-site rules; keep Gecko's native renderer safe-area delivery. Reddit's scoped component helper remains active because current mobile markup declares cover without applying the renderer inset to its header flow. |
 | Normal page flow | A per-document stylesheet raises body top padding to at least the inset; larger initial padding is preserved |
-| Fixed / sticky | Bounded per-element stylesheet rules apply `originalTop + inset` to every discovered finite resolved CSS-pixel top, without an upper threshold; no positioned-element padding or inline top is added |
+| Semantic top header | A visible viewport-wide `header`, `nav`, `[role=banner]`, or `[role=navigation]` with `position: fixed/sticky` and a nonnegative top anchor requests a navigation-scoped native top margin. Reddit discovery prioritizes its known `reddit-header-small`, `reddit-header-large`, and `shreddit-header` hosts. Candy paints the status-bar sibling with the active `theme-color`, then the resolved opaque header/page background, and selects contrasting status icons. `viewport-fit=cover` retains Gecko-owned edge-to-edge layout. |
+| Other fixed / sticky | Bounded per-element stylesheet rules apply `originalTop + inset` to every other discovered finite resolved CSS-pixel top, without an upper threshold; no positioned-element padding or inline top is added |
 | Predeclared selectors | Initial and event-driven CSS-source scans protect full selectors with literal `fixed`/`sticky` and a finite pixel `top` in the same CSS declaration block, even before any element matches that state |
 | Selector ownership | Elements matching a protected selector do not receive a second element-level top addition; body padding and unmatched element protection remain separate |
 | Retained anchors | Existing rule identities are checked before reading computed style; normal author inline resets do not remove the rule or add another inset |
 | Other top values | Literal `auto` and unresolved values are not changed; all finite resolved CSS-pixel values, including negative and above-inset tops, are included |
-| Initial discovery | Protect the first available body without waiting for the worker; one bounded body traversal plus a single semantic seed when the DOM becomes interactive, without waiting for all subresources; first `header` preferred, `nav` then `[role="banner"]` used only as fallbacks (at most three fixed queries); at most eight shallow header/ancestor checks are reserved from the initial traversal cap |
-| Later discovery | DOM subtrees retain trusted click/drop gates; newly loaded links, style insertion/text changes and source attributes use a separate CSS queue without an interaction requirement |
-| Scroll | Cancels pending work; does not start style/geometry reads or repair |
+| Initial discovery | Protect the first available body without waiting for the worker; one bounded body traversal plus a coalesced semantic check when the DOM becomes interactive and again at final load; at most eight semantic candidates, 32 cached candidate/ancestor identities and eight fixed-header proofs are retained |
+| Later discovery | DOM subtrees retain trusted click/drop gates. Relevant semantic additions/class changes, trusted clicks and stylesheet loads also request the bounded semantic check, allowing late SPA hydration without a reload. CSS-source changes retain their separate queue without an interaction requirement. |
+| Scroll | Cancels pending broad work, advances a generation and rearms one worker. After at least 150 ms of quiet, only cached candidates are verified; the scroll handler performs no style, geometry or selector reads, and scroll never starts a DOM query. |
 | Settings | Existing enable, DOM mutation/interaction, batch and resize controls remain; CSS sources reuse worker batch/time limits with fixed prototype source limits; only post-load sources use the 500-ms cooldown |
-| Native / privacy | Full-window renderer, native inset delivery, existing fallback bridge and private-session boundaries remain unchanged |
-| Reddit component exception | `content_safe_area_reddit.js` supplies scoped app-flow/header rules in the document and observed open component roots; scroll-state attributes are matched by CSS, not JavaScript repair |
+| Native / privacy | The outer host remains full-window. Top-header and emergency fallback state is memory-only, tab/navigation-scoped, revision-validated, and cleared on navigation or tab removal. |
+| Reddit component exception | `content_safe_area_reddit.js` supplies scoped app-flow/header rules in the document and observed open component roots, including `reddit-header-small`, `reddit-header-large`, and `shreddit-header`. It uses the greater of Gecko's `env(safe-area-inset-top)` and Candy's bounded inset; scroll-state attributes remain CSS-only. |
 
 This iteration tests approach A: persistent author-origin CSS, not periodic mutation repair. Each
 document owns separate element and selector stylesheets and bounded element markers. Rules persist while that document and
@@ -452,10 +472,11 @@ enable/inset/cleanup lifecycle. Other Google layout variants are not inferred.
 
 For reddit.com and its subdomains, `content_safe_area_reddit.js` owns one stylesheet per relevant
 scope: document rules are restricted to `shreddit-app`; open app roots receive local rules and
-open `reddit-header-small` roots receive host-relative rules. The app gets its author
-`--page-y-padding` plus the inset as top padding, rather than adding the inset later at
-`.main-container`. Fixed `reddit-header-small` gets inset top; the `.relative` variant subtracts
-the author page-padding reserve from its top offset. Its internal `header` gets inset top padding
+open `reddit-header-small`, `reddit-header-large`, or `shreddit-header` roots receive host-relative
+rules. The app gets its author `--page-y-padding` plus the greater of renderer and Candy inset as
+top padding, rather than adding the inset later at `.main-container`. Fixed Reddit header variants
+get inset top; each `.relative` variant subtracts the author page-padding reserve from its top
+offset. Its internal `header` gets inset top padding
 only while the host has `hidden-by-scroll`. Observed Reddit layouts put the target nodes in light
 DOM despite owning additional open shadow roots, so document and shadow scopes remain distinct.
 The app-level flow reserve also moves the normal-flow subreddit banner below the header;
@@ -545,7 +566,8 @@ Sticky eligibility uses the declared top anchor and containing-block path, not o
 rectangle: a header initially below the viewport can still receive its CSS anchor before sticking.
 An element simply being near the status bar is insufficient. Nested scrollers, transformed
 containing blocks, tall panels and otherwise unsupported layouts require bounded overlap validation
-before the retained emergency fallback. No scroll event starts a new discovery or validation pass.
+before the retained emergency fallback. No scroll event starts discovery; quiet validation reads only
+the bounded candidates cached by load, mutation or interaction discovery.
 
 ## TLS trust channels
 

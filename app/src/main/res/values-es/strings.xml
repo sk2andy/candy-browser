@@ -321,6 +321,17 @@
     <string name="download_notification_paused_unknown">En pausa · %1$s</string>
     <string name="download_notification_complete">Descarga completada</string>
     <string name="settings_title">Ajustes</string>
+    <string name="settings_home_group_browsing">Navegación</string>
+    <string name="settings_home_group_personalization">Personalización</string>
+    <string name="settings_home_group_privacy_data">Privacidad y datos</string>
+    <string name="settings_home_group_about">Más información</string>
+    <string name="settings_browser_group_general">Configuración del navegador</string>
+    <string name="settings_browser_group_startup">Inicio</string>
+    <string name="settings_browser_group_favorites">Favoritos</string>
+    <string name="settings_browser_group_websites">Páginas web</string>
+    <string name="settings_browser_group_links">Enlaces y aplicaciones</string>
+    <string name="settings_protection_group_tools">Herramientas de privacidad</string>
+    <string name="settings_protection_group_app_data">Datos de la aplicación</string>
     <string name="settings_appearance_title">Apariencia</string>
     <string name="settings_home_appearance_summary">Colores, texto web, superficies y formas</string>
     <string name="settings_appearance_mode">Apariencia</string>
@@ -365,7 +376,7 @@
     <string name="settings_home_search_summary">Motor de búsqueda y sugerencias</string>
     <string name="settings_tabs_gestures_title">Pestañas y gestos</string>
     <string name="settings_home_tabs_gestures_summary">Diseño, duración, perfiles y controles de pestañas</string>
-    <string name="settings_home_browser_summary">Interfaz y comportamiento del navegador predeterminado</string>
+    <string name="settings_home_browser_summary">Inicio, favoritos, páginas web, enlaces y navegador predeterminado</string>
     <string name="settings_downloads_title">Descargas</string>
     <string name="settings_home_capsules_summary">Gestionar Site Capsules y accesos directos guardados</string>
     <string name="settings_protection_data_title">Protección y datos</string>
@@ -1270,4 +1281,19 @@
     <string name="settings_menu_location_both">En ambos</string>
     <string name="settings_menu_entry_topping_commands">Comandos de toppings</string>
     <string name="settings_menu_entry_firefox_page_actions">Acciones de extensiones de Firefox</string>
+    <string name="favorites_create_folder">Crear carpeta</string>
+    <string name="favorites_rename">Cambiar nombre</string>
+    <string name="favorites_name">Nombre</string>
+    <string name="favorites_actions">Acciones para %1$s</string>
+    <string name="favorites_move">Mover</string>
+    <string name="favorites_move_here">Mover aquí</string>
+    <string name="favorites_move_up">Mover antes</string>
+    <string name="favorites_move_down">Mover después</string>
+    <string name="favorites_parent">Carpeta superior</string>
+    <string name="favorites_folder_empty">Esta carpeta está vacía</string>
+    <string name="favorites_folder_icon">Icono de carpeta</string>
+    <string name="favorites_folder_emoji">Emoji (opcional)</string>
+    <string name="favorites_upload_icon">Elegir imagen</string>
+    <string name="favorites_reset_icon">Usar vista previa de iconos</string>
+    <string name="favorites_icon_failed">No se pudo cargar esta imagen</string>
 </resources>

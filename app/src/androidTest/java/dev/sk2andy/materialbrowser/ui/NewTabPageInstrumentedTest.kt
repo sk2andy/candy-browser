@@ -13,20 +13,27 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.cancel
+import androidx.compose.ui.test.down
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.moveBy
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.up
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import dev.sk2andy.materialbrowser.R
+import dev.sk2andy.materialbrowser.data.BrowsingFavoritesRules
 import dev.sk2andy.materialbrowser.data.FavoriteEntry
+import dev.sk2andy.materialbrowser.data.FavoriteLibrary
 import dev.sk2andy.materialbrowser.ui.theme.MaterialBrowserTheme
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -60,6 +67,106 @@ class NewTabPageInstrumentedTest {
             .boundsInRoot
 
         assertTrue(headingBounds.bottom < gridBounds.top)
+    }
+
+    @Test
+    fun longPressDragReordersFavoritesAndCommitsDestination() {
+        val first = favorite(1)
+        val second = favorite(2)
+        var library by mutableStateOf(FavoriteLibrary(listOf(first, second)))
+        val reorders = mutableListOf<Pair<String, Int>>()
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                NewTabPage(
+                    favorites = emptyList(),
+                    favoriteLibrary = library,
+                    incognito = false,
+                    modeProgress = 0f,
+                    revealOriginInRoot = Offset.Zero,
+                    onSearch = {},
+                    onFavorite = {},
+                    onReorderFavorite = { entryId, destinationIndex ->
+                        reorders += entryId to destinationIndex
+                        library = BrowsingFavoritesRules.reorder(
+                            library,
+                            entryId,
+                            destinationIndex,
+                        )
+                    },
+                )
+            }
+        }
+        composeRule.waitForIdle()
+
+        val source = composeRule.onNodeWithTag(NewTabFavoritesTestTags.favorite(first.url))
+        val sourceCenter = source.fetchSemanticsNode().boundsInRoot.center
+        val destinationCenter = composeRule
+            .onNodeWithTag(NewTabFavoritesTestTags.favorite(second.url))
+            .fetchSemanticsNode().boundsInRoot.center
+
+        source.performTouchInput {
+            down(center)
+            advanceEventTime(700L)
+            moveBy(destinationCenter - sourceCenter)
+            up()
+        }
+        composeRule.waitForIdle()
+
+        assertEquals(listOf(first.id to 1), reorders)
+        assertEquals(
+            listOf(second.id, first.id),
+            BrowsingFavoritesRules.children(library, parentFolderId = null).map { it.id },
+        )
+    }
+
+    @Test
+    fun canceledLongPressDragLeavesFavoritesInPlace() {
+        val first = favorite(1)
+        val second = favorite(2)
+        var library by mutableStateOf(FavoriteLibrary(listOf(first, second)))
+        val reorders = mutableListOf<Pair<String, Int>>()
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                NewTabPage(
+                    favorites = emptyList(),
+                    favoriteLibrary = library,
+                    incognito = false,
+                    modeProgress = 0f,
+                    revealOriginInRoot = Offset.Zero,
+                    onSearch = {},
+                    onFavorite = {},
+                    onReorderFavorite = { entryId, destinationIndex ->
+                        reorders += entryId to destinationIndex
+                        library = BrowsingFavoritesRules.reorder(
+                            library,
+                            entryId,
+                            destinationIndex,
+                        )
+                    },
+                )
+            }
+        }
+        composeRule.waitForIdle()
+
+        val source = composeRule.onNodeWithTag(NewTabFavoritesTestTags.favorite(first.url))
+        val sourceCenter = source.fetchSemanticsNode().boundsInRoot.center
+        val destinationCenter = composeRule
+            .onNodeWithTag(NewTabFavoritesTestTags.favorite(second.url))
+            .fetchSemanticsNode().boundsInRoot.center
+
+        source.performTouchInput {
+            down(center)
+            advanceEventTime(700L)
+            moveBy(destinationCenter - sourceCenter)
+            cancel()
+        }
+        composeRule.waitForIdle()
+
+        assertTrue(reorders.isEmpty())
+        assertEquals(
+            listOf(first.id, second.id),
+            BrowsingFavoritesRules.children(library, parentFolderId = null).map { it.id },
+        )
     }
 
     @Test
