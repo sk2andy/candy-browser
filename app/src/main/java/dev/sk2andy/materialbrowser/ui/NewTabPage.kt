@@ -33,6 +33,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -54,21 +55,27 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.browser.FavoriteAnimationSpeed
 import dev.sk2andy.materialbrowser.data.FavoriteEntry
+import dev.sk2andy.materialbrowser.data.FavoriteLibrary
 
 @Composable
 internal fun NewTabPage(
     favorites: List<FavoriteEntry>,
+    favoriteLibrary: FavoriteLibrary? = null,
     favicons: Map<String, Bitmap> = emptyMap(),
+    folderIcons: Map<String, Bitmap> = emptyMap(),
     incognito: Boolean,
     modeProgress: Float,
     revealOriginInRoot: Offset,
     onSearch: () -> Unit,
     onFavorite: (String) -> Unit,
+    onOpenFavorites: () -> Unit = {},
+    onReorderFavorite: (String, Int) -> Unit = { _, _ -> },
     favoriteLaunchAnimationEnabled: Boolean = true,
     favoriteAnimationSpeed: FavoriteAnimationSpeed = FavoriteAnimationSpeed.Default,
     interactive: Boolean = true,
@@ -148,7 +155,7 @@ internal fun NewTabPage(
                     shape = RoundedCornerShape(
                         BlankTabModeMorphRules.heroCornerRadiusDp(boundedProgress).dp,
                     ),
-                    color = lerp(colors.primary, colors.inverseSurface, boundedProgress),
+                    color = lerp(NewTabHeroRegularColor, colors.inverseSurface, boundedProgress),
                     shadowElevation = BlankTabModeMorphRules.HERO_SHADOW_ELEVATION_DP.dp,
                 ) {
                     Box(
@@ -181,7 +188,7 @@ internal fun NewTabPage(
                         )
                     }
                 }
-                if (!incognito && favorites.isNotEmpty()) {
+                if (!incognito && (favoriteLibrary?.entries?.isNotEmpty() == true || favorites.isNotEmpty())) {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -191,25 +198,6 @@ internal fun NewTabPage(
                             },
                     ) {
                         Spacer(Modifier.height(24.dp))
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(start = 6.dp, end = 6.dp, bottom = 10.dp),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(8.dp)
-                                    .background(colors.primary, CircleShape),
-                            )
-                            Text(
-                                text = stringResource(R.string.favorites_title),
-                                color = colors.onSurfaceVariant,
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.SemiBold,
-                            )
-                        }
                         Surface(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -222,29 +210,60 @@ internal fun NewTabPage(
                                 color = colors.outlineVariant.copy(alpha = 0.32f),
                             ),
                         ) {
-                            NewTabFavoriteGrid(
-                                favorites = favorites,
-                                favicons = favicons,
-                                enabled = contentEnabled,
-                                animateShapes = interactive && favoriteLaunchAnimationEnabled,
-                                animationSpeed = favoriteAnimationSpeed,
-                                onFavorite = { favorite, startCenterInWindow, shapeState ->
-                                    if (
-                                        !favoriteLaunchAnimationEnabled ||
-                                        !startCenterInWindow.isUsable() ||
-                                        !rootOriginInWindow.isUsable() ||
-                                        !heroCenterInWindow.isUsable()
+                            Column {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(start = 20.dp, end = 8.dp, top = 10.dp, bottom = 2.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Text(
+                                        text = stringResource(R.string.favorites_title),
+                                        color = colors.onSurfaceVariant,
+                                        style = MaterialTheme.typography.titleSmall,
+                                        fontWeight = FontWeight.SemiBold,
+                                    )
+                                    Spacer(Modifier.weight(1f))
+                                    IconButton(
+                                        onClick = onOpenFavorites,
+                                        enabled = contentEnabled,
+                                        modifier = Modifier.testTag(NewTabFavoritesTestTags.Manage),
                                     ) {
-                                        onFavorite(favorite.url)
-                                    } else {
-                                        launchRequest = NewTabFavoriteLaunchRequest(
-                                            favorite = favorite,
-                                            startCenterInWindow = startCenterInWindow,
-                                            shapeState = shapeState,
+                                        Icon(
+                                            painter = painterResource(R.drawable.ic_symbol_favorite),
+                                            contentDescription = stringResource(R.string.favorites_title),
+                                            tint = colors.onSurfaceVariant,
                                         )
                                     }
-                                },
-                            )
+                                }
+                                NewTabFavoriteGrid(
+                                    favorites = favorites,
+                                    library = favoriteLibrary,
+                                    favicons = favicons,
+                                    folderIcons = folderIcons,
+                                    enabled = contentEnabled,
+                                    animateShapes = interactive && favoriteLaunchAnimationEnabled,
+                                    animationSpeed = favoriteAnimationSpeed,
+                                    onFavorite = { favorite, startCenterInWindow, shapeState ->
+                                        if (
+                                            !favoriteLaunchAnimationEnabled ||
+                                            !startCenterInWindow.isUsable() ||
+                                            !rootOriginInWindow.isUsable() ||
+                                            !heroCenterInWindow.isUsable()
+                                        ) {
+                                            onFavorite(favorite.url)
+                                        } else {
+                                            launchRequest = NewTabFavoriteLaunchRequest(
+                                                favorite = favorite,
+                                                startCenterInWindow = startCenterInWindow,
+                                                shapeState = shapeState,
+                                            )
+                                        }
+                                    },
+                                    onReorderFavorite = onReorderFavorite,
+                                )
+                            }
                         }
                     }
                 }
@@ -254,6 +273,7 @@ internal fun NewTabPage(
             NewTabFavoriteLaunchOverlay(
                 request = request,
                 favicon = favicons[request.favorite.url],
+                animationSpeed = favoriteAnimationSpeed,
                 rootOriginInWindow = rootOriginInWindow,
                 targetCenterInWindow = heroCenterInWindow,
                 onFinished = { favorite ->
@@ -264,5 +284,7 @@ internal fun NewTabPage(
         }
     }
 }
+
+private val NewTabHeroRegularColor = Color(0xFF17171D)
 
 private fun Offset.isUsable(): Boolean = x.isFinite() && y.isFinite()

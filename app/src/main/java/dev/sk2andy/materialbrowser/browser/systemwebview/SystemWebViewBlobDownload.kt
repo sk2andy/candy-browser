@@ -377,6 +377,12 @@ internal class SystemWebViewBlobDownloadTransfer(
 }
 
 internal object SystemWebViewBlobDownloadRules {
+    fun isPopupBlobDownload(
+        blobUrl: String,
+        pageUrl: String,
+        hasUserGesture: Boolean,
+    ): Boolean = hasUserGesture && isSameOriginBlob(blobUrl, pageUrl)
+
     fun isSameOriginBlob(blobUrl: String, pageUrl: String): Boolean {
         val nested = runCatching {
             val blob = URI(blobUrl.trim())

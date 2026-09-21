@@ -26,6 +26,13 @@
     <string name="userscript_run_at_document_start">início do documento</string>
     <string name="userscript_run_at_document_end">fim do documento</string>
     <string name="userscript_matches">Corresponde a: %1$s</string>
+    <string name="userscript_frame_scope_title">Acesso a frames incorporados</string>
+    <string name="userscript_frame_scope_explanation">Pode restringir este Topping, mas nunca conceder mais acesso do que o solicitado. Cada frame deve continuar a corresponder às suas próprias regras de URL.</string>
+    <string name="userscript_frame_scope_requested">Solicitado: %1$s</string>
+    <string name="userscript_frame_scope_allowed">Permitido: %1$s</string>
+    <string name="userscript_frame_scope_top">apenas página principal</string>
+    <string name="userscript_frame_scope_same_origin">frames correspondentes da mesma origem</string>
+    <string name="userscript_frame_scope_all_matching">todos os frames correspondentes, incluindo outros sites</string>
     <string name="userscript_no_patterns">Nenhum padrão de URL positivo</string>
     <string name="userscript_enable_description">Ativar %1$s</string>
     <string name="userscript_disable_description">Desativar %1$s</string>
@@ -51,6 +58,7 @@
     <string name="userscript_import_error_too_many_metadata_values">Use no máximo %1$d padrões de URL de cada tipo.</string>
     <string name="userscript_import_error_invalid_scope">Um dos padrões de URL @match, @include ou @exclude é inválido.</string>
     <string name="userscript_import_error_invalid_run_at">@run-at deve ser document-start ou document-end.</string>
+    <string name="userscript_import_error_invalid_frame_scope">@candy-frames deve ser top, same-origin ou all-matching e não pode entrar em conflito com @noframes.</string>
     <string name="userscript_import_error_unsupported_grant">Este Topping solicita uma permissão @grant ou @connect incompatível.</string>
     <string name="userscript_import_error_invalid_dependency">Uma dependência @require ou @resource tem nome, URL HTTPS ou hash de integridade inválido.</string>
     <string name="userscript_import_error_too_many_dependencies">Este Topping declara dependências @require ou @resource demais.</string>

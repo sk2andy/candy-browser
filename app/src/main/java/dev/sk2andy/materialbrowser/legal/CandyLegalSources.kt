@@ -28,7 +28,7 @@ object CandyLegalSources {
         "https://github.com/uBlockOrigin/uAssets/blob/$UASSETS_REVISION/filters/filters.txt"
     const val UASSETS_LICENSE_URL =
         "https://github.com/uBlockOrigin/uAssets/blob/$UASSETS_REVISION/LICENSE"
-    const val UBLOCK_ORIGIN_REVISION = "6dd2d95e50d134a477a4e183343c0b26e9147123"
+    const val UBLOCK_ORIGIN_REVISION = "21f0e686506bb21b514b451c8c6cb9bf8c82d232"
     const val UBLOCK_ORIGIN_SOURCE_URL =
         "https://github.com/gorhill/uBlock/tree/$UBLOCK_ORIGIN_REVISION"
     const val UBLOCK_ORIGIN_LICENSE_URL =

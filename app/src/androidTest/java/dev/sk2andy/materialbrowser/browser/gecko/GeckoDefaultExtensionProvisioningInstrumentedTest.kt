@@ -73,7 +73,7 @@ class GeckoDefaultExtensionProvisioningInstrumentedTest {
 
     private companion object {
         const val U_BLOCK_ID = "uBlock0@raymondhill.net"
-        const val U_BLOCK_VERSION = "1.74.0"
+        const val U_BLOCK_VERSION = "1.75.0"
         const val COOKIE_EXTENSION_ID = "idcac-pub@guus.ninja"
         const val COOKIE_EXTENSION_VERSION = "1.1.9"
     }

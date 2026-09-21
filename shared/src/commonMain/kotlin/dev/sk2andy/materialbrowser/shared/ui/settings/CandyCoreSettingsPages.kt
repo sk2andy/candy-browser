@@ -11,6 +11,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import dev.sk2andy.materialbrowser.browser.PageTranslationProvider
 import dev.sk2andy.materialbrowser.data.AppearanceSettings
+import dev.sk2andy.materialbrowser.data.BrowserAddressBarColorPreset
+import dev.sk2andy.materialbrowser.data.BrowserAddressBarStyle
 import dev.sk2andy.materialbrowser.data.BrowserAppearanceMode
 import dev.sk2andy.materialbrowser.data.BrowserColorPalette
 import dev.sk2andy.materialbrowser.data.BrowserShapeStyle
@@ -41,6 +43,20 @@ private val candyAppearanceStrings = AppearanceSettingsStrings(
         BrowserColorPalette.Candy to "Candy",
         BrowserColorPalette.Neutral to "Neutral",
     ),
+    addressBarColor = "Adressleistenfarbe",
+    addressBarColorPresetNames = mapOf(
+        BrowserAddressBarColorPreset.Theme to "Theme",
+        BrowserAddressBarColorPreset.Dimmed to "Gedimmt",
+        BrowserAddressBarColorPreset.Graphite to "Graphit",
+        BrowserAddressBarColorPreset.Black to "Schwarz",
+        BrowserAddressBarColorPreset.Custom to "Benutzerdefiniert",
+    ),
+    addressBarColorReset = "Auf Theme-Farbe zurücksetzen",
+    customAddressBarColorTitle = "Eigene Adressleistenfarbe",
+    customAddressBarColorLabel = "Hex-Farbe",
+    customAddressBarColorInvalid = "#RGB oder #RRGGBB eingeben.",
+    cancel = "Abbrechen",
+    save = "Speichern",
     surfaceStyle = "Oberflächen",
     surfaceStyleSummary =
         "Klar nutzt deckende Flächen. Frosted nutzt transparente Flächen mit Hintergrund-Blur.",
@@ -51,11 +67,18 @@ private val candyAppearanceStrings = AppearanceSettingsStrings(
     frostedTransparency = "Transparenz",
     frostedAddressBarTransparency = "Adressleisten-Transparenz",
     frostedBlur = "Weichzeichnungsgrad",
+    frostedBlurSummary =
+        "Website-Blur hängt von Android-Version und Browser-Engine ab.",
     shapeStyle = "Form",
     shapeStyleNames = mapOf(
         BrowserShapeStyle.Angular to "Kantig",
         BrowserShapeStyle.Rounded to "Rund",
         BrowserShapeStyle.ExtraRounded to "Extra rund",
+    ),
+    addressBarStyle = "Stil der Adressleiste",
+    addressBarStyleNames = mapOf(
+        BrowserAddressBarStyle.Classic to "Klassisch",
+        BrowserAddressBarStyle.Segmented to "Segmentiert",
     ),
 )
 

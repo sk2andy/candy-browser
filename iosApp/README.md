@@ -122,15 +122,20 @@ still future storage work.
 `ToppingDependencyResolver` resolves bounded `@require` and `@resource` declarations only during
 explicit import/update, using public allowlisted HTTPS endpoints, bounded redirects, DNS/private-IP
 checks and optional SHA-256. `ToppingInstaller` then installs the persisted local payload as a
-top-frame-only `WKUserScript` in a per-Topping named `WKContentWorld`. A revision-scoped
-`WKScriptMessageHandlerWithReply` authorizes the live URL before source execution and implements
-bounded, grant-checked GM values, dynamic menu commands and `GM_openInTab`; private tabs attach no
-scripts or bridge. This is not a Safari Web Extension host and does not promise WebExtension API
+frame-scoped `WKUserScript` in a per-Topping named `WKContentWorld`. Missing frame metadata and
+all v1/v2 records migrate to top-frame-only execution. Explicit broader requests remain capped by
+the user's persisted permission. A revision-scoped `WKScriptMessageHandlerWithReply` authorizes
+each frame's own HTTP(S) URL and assigns a native document UUID before source execution. Menu
+commands route back through that UUID and WebKit frame target; main navigation, `pagehide` and
+invalid frame targets remove stale routes. Back/forward-cache restores obtain a fresh UUID and
+re-register their live menu commands. Private and ephemeral preview sessions attach no scripts
+or bridge. This is not a Safari Web Extension host and does not promise WebExtension API
 compatibility beyond the documented Candy Topping contract.
 
 Topping management is rendered by shared Compose, not SwiftUI. The Swift bridge publishes only small
-ID/name/enabled records; full source is requested lazily for edit. Save preserves an existing Topping's
-enabled state, while new Toppings start enabled. Store reads are cached for the launch/viewport path;
+ID/name/enabled/frame-scope records; full source is requested lazily for edit. Save preserves an existing Topping's
+enabled state and narrowed frame allowance, while new Toppings start enabled with their declared allowance.
+Store reads are cached for the launch/viewport path;
 successful mutations reconcile the active WKWebView runtimes through the existing native adapter.
 
 `CandyContentBlockerCompiler` emits one escaped host per WebKit rule and never uses regex
@@ -202,6 +207,12 @@ xcrun swiftc \
 /tmp/candy-ios-topping-value-tests
 
 xcrun swiftc \
+  iosApp/CandyIos/ToppingFrameRules.swift \
+  iosApp/Tests/ToppingFrameRulesTests.swift \
+  -o /tmp/candy-ios-topping-frame-tests
+/tmp/candy-ios-topping-frame-tests
+
+xcrun swiftc \
   iosApp/CandyIos/BrowserTranslationProviderPreference.swift \
   iosApp/Tests/BrowserTranslationProviderPreferenceTests.swift \
   -o /tmp/candy-ios-translation-provider-tests
@@ -226,7 +237,7 @@ xcrun swiftc \
 /tmp/candy-ios-menu-layout-preference-tests
 ```
 
-The eight platform-edge executables above are the current iOS standalone test
+The nine platform-edge executables above are the current iOS standalone test
 gate. Run them all from the repository root with:
 
 ```bash
@@ -235,6 +246,7 @@ xcrun swiftc iosApp/CandyIos/BrowserTabSnapshotRules.swift iosApp/Tests/BrowserT
 xcrun swiftc iosApp/CandyIos/BrowserTabOverviewMode.swift iosApp/Tests/BrowserTabOverviewModeTests.swift -o /tmp/candy-ios-overview-mode-tests && /tmp/candy-ios-overview-mode-tests
 xcrun swiftc iosApp/CandyIos/BrowserPageExtractionRules.swift iosApp/Tests/BrowserPageExtractionRulesTests.swift -o /tmp/candy-ios-page-extraction-tests && /tmp/candy-ios-page-extraction-tests
 xcrun swiftc iosApp/CandyIos/ToppingValueRules.swift iosApp/Tests/ToppingValueRulesTests.swift -o /tmp/candy-ios-topping-value-tests && /tmp/candy-ios-topping-value-tests
+xcrun swiftc iosApp/CandyIos/ToppingFrameRules.swift iosApp/Tests/ToppingFrameRulesTests.swift -o /tmp/candy-ios-topping-frame-tests && /tmp/candy-ios-topping-frame-tests
 xcrun swiftc iosApp/CandyIos/BrowserTranslationProviderPreference.swift iosApp/Tests/BrowserTranslationProviderPreferenceTests.swift -o /tmp/candy-ios-translation-provider-tests && /tmp/candy-ios-translation-provider-tests
 xcrun swiftc iosApp/CandyIos/LiquidGlassPresentationRules.swift iosApp/Tests/LiquidGlassPresentationRulesTests.swift -o /tmp/candy-ios-liquid-glass-tests && /tmp/candy-ios-liquid-glass-tests
 xcrun swiftc iosApp/CandyIos/BrowserFavoritesRules.swift iosApp/Tests/BrowserFavoritesRulesTests.swift -o /tmp/candy-ios-favorites-rules-tests && /tmp/candy-ios-favorites-rules-tests

@@ -2,14 +2,28 @@ package dev.sk2andy.materialbrowser.data
 
 import android.content.Context
 import android.graphics.Bitmap
+import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import java.util.concurrent.RejectedExecutionException
+import java.util.concurrent.ThreadPoolExecutor
+import java.util.concurrent.TimeUnit
 
 class FaviconRepository private constructor(context: Context) {
     private val store = FaviconStore(context.applicationContext)
+    private val client = FaviconClient()
     private val executor: ExecutorService = Executors.newSingleThreadExecutor { task ->
         Thread(task, "tab-favicon-io")
     }
+    private val fetchExecutor: ExecutorService = ThreadPoolExecutor(
+        2,
+        2,
+        0L,
+        TimeUnit.MILLISECONDS,
+        ArrayBlockingQueue(8),
+        { task -> Thread(task, "tab-favicon-fetch") },
+        ThreadPoolExecutor.AbortPolicy(),
+    )
 
     fun restore(validTabIds: Set<String>, onLoaded: (String, Bitmap) -> Unit) {
         executor.execute {
@@ -34,6 +48,17 @@ class FaviconRepository private constructor(context: Context) {
                 snapshot.recycle()
             }
         }
+    }
+
+    fun fetch(
+        pageUrl: String,
+        shouldFetch: () -> Boolean,
+        onLoaded: (Bitmap?) -> Unit,
+    ): Boolean = try {
+        fetchExecutor.execute { onLoaded(if (shouldFetch()) client.fetch(pageUrl) else null) }
+        true
+    } catch (_: RejectedExecutionException) {
+        false
     }
 
     fun delete(tabId: String) {

@@ -108,6 +108,9 @@ private fun UserScriptImportFeedback.message(
     UserScriptImportFeedback.InvalidRunAt -> context.getString(
         R.string.userscript_import_error_invalid_run_at,
     )
+    UserScriptImportFeedback.InvalidFrameScope -> context.getString(
+        R.string.userscript_import_error_invalid_frame_scope,
+    )
     UserScriptImportFeedback.UnsupportedGrant -> context.getString(
         R.string.userscript_import_error_unsupported_grant,
     )

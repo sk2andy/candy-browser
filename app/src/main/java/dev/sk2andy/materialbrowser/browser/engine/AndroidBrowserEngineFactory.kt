@@ -5,6 +5,7 @@ import android.content.res.Configuration
 import android.view.View
 import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineCapabilities
 import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineKind
+import dev.sk2andy.materialbrowser.browser.DnsOverHttpsSettings
 import dev.sk2andy.materialbrowser.browser.WebRtcProtectionMode
 import dev.sk2andy.materialbrowser.browser.gecko.AndroidBrowserEngineSessionPort
 import dev.sk2andy.materialbrowser.browser.gecko.BrowserEngineEventSink
@@ -68,6 +69,8 @@ internal interface AndroidBrowserEngineFactory {
 
     fun setWebRtcProtectionMode(mode: WebRtcProtectionMode)
 
+    fun setDnsOverHttpsSettings(settings: DnsOverHttpsSettings) = Unit
+
     fun setWebContentFontSizeFactor(factor: Float)
 
     fun setWebContentColorScheme(colorScheme: BrowserWebContentColorScheme) = Unit
@@ -85,12 +88,19 @@ internal interface AndroidBrowserEngineFactory {
         profileId: String,
         isolationEnabled: Boolean = false,
         isPrivate: Boolean,
+        contentKind: BrowserEngineContentKind,
         privacyPolicy: GeckoPrivacyPolicy = GeckoPrivacyPolicy.Disabled,
         privacyEventSink: GeckoPrivacyEventSink = GeckoPrivacyEventSink { },
         trailHistoryEventSink: GeckoCandyTrailHistoryEventSink =
             GeckoCandyTrailHistoryEventSink { _, _ -> },
         eventSink: BrowserEngineEventSink,
     ): AndroidBrowserEngineSessionPort
+}
+
+internal enum class BrowserEngineContentKind {
+    RegularTab,
+    LinkPeek,
+    ExternalPreview,
 }
 
 internal enum class BrowserWebContentColorScheme {

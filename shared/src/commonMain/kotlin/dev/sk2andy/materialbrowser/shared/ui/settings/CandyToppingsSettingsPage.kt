@@ -1,5 +1,6 @@
 package dev.sk2andy.materialbrowser.shared.ui.settings
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -26,6 +27,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -43,6 +45,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.sk2andy.materialbrowser.shared.ui.BrowserViewportTopping
+import dev.sk2andy.materialbrowser.shared.topping.ToppingFrameScope
 
 internal object CandyToppingsSettingsTestTags {
     const val Screen = "candy_toppings_settings"
@@ -51,11 +54,14 @@ internal object CandyToppingsSettingsTestTags {
     const val EditorSource = "candy_toppings_editor_source"
     const val EditorSave = "candy_toppings_editor_save"
     const val DeleteConfirmation = "candy_toppings_delete_confirmation"
+    const val FrameScopeDialog = "candy_toppings_frame_scope_dialog"
 
     fun topping(id: String) = "candy_toppings_item:$id"
     fun toggle(id: String) = "candy_toppings_toggle:$id"
     fun edit(id: String) = "candy_toppings_edit:$id"
     fun delete(id: String) = "candy_toppings_delete:$id"
+    fun frameScope(id: String) = "candy_toppings_frame_scope:$id"
+    fun frameScopeOption(scope: ToppingFrameScope) = "candy_toppings_frame_scope_option:${scope.wireValue}"
 }
 
 @Composable
@@ -64,12 +70,14 @@ internal fun CandyToppingsSettingsPage(
     onSave: (id: String?, source: String) -> Unit,
     toppingSource: (id: String) -> String?,
     onSetEnabled: (id: String, enabled: Boolean) -> Unit,
+    onSetFrameScope: (id: String, scope: ToppingFrameScope) -> Unit,
     onDelete: (id: String) -> Unit,
     onBack: () -> Unit,
 ) {
     var editor by remember { mutableStateOf<EditableTopping?>(null) }
     var isAdding by remember { mutableStateOf(false) }
     var pendingDelete by remember { mutableStateOf<BrowserViewportTopping?>(null) }
+    var pendingFrameScope by remember { mutableStateOf<BrowserViewportTopping?>(null) }
 
     Surface(
         modifier = Modifier
@@ -147,6 +155,7 @@ internal fun CandyToppingsSettingsPage(
                         ToppingCard(
                             topping = topping,
                             onSetEnabled = onSetEnabled,
+                            onFrameScope = { pendingFrameScope = topping },
                             onEdit = {
                                 toppingSource(topping.id)?.let { source ->
                                     editor = topping.copyWithSource(source)
@@ -205,6 +214,45 @@ internal fun CandyToppingsSettingsPage(
             },
         )
     }
+    pendingFrameScope?.let { topping ->
+        AlertDialog(
+            onDismissRequest = { pendingFrameScope = null },
+            modifier = Modifier.testTag(CandyToppingsSettingsTestTags.FrameScopeDialog),
+            title = { Text("Frames erlauben") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(
+                        "Das Topping fordert ${topping.declaredFrameScope.label()}. Du kannst die Freigabe nur einschränken.",
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                    topping.declaredFrameScope.allowedChoices().forEach { scope ->
+                        val selectScope = {
+                            onSetFrameScope(topping.id, scope)
+                            pendingFrameScope = null
+                        }
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable(onClick = selectScope)
+                                .testTag(CandyToppingsSettingsTestTags.frameScopeOption(scope)),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            RadioButton(
+                                selected = topping.allowedFrameScope == scope,
+                                onClick = selectScope,
+                            )
+                            Text(scope.label())
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { pendingFrameScope = null }) {
+                    Text("Schließen")
+                }
+            },
+        )
+    }
 }
 
 private data class EditableTopping(
@@ -247,6 +295,7 @@ private fun ToppingSafetyCard() {
 private fun ToppingCard(
     topping: BrowserViewportTopping,
     onSetEnabled: (id: String, enabled: Boolean) -> Unit,
+    onFrameScope: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
 ) {
@@ -276,6 +325,14 @@ private fun ToppingCard(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
+                TextButton(
+                    onClick = onFrameScope,
+                    enabled = topping.declaredFrameScope != ToppingFrameScope.Top,
+                    modifier = Modifier.testTag(CandyToppingsSettingsTestTags.frameScope(topping.id)),
+                    contentPadding = PaddingValues(horizontal = 0.dp, vertical = 2.dp),
+                ) {
+                    Text("Frames: ${topping.allowedFrameScope.label()}")
+                }
             }
             Switch(
                 checked = topping.enabled,
@@ -348,6 +405,7 @@ private val newToppingTemplate = """
     // ==UserScript==
     // @name Neues Topping
     // @match https://example.com/*
+    // @candy-frames top
     // @run-at document-end
     // ==/UserScript==
 
@@ -355,3 +413,9 @@ private val newToppingTemplate = """
       'use strict';
     })();
 """.trimIndent()
+
+private fun ToppingFrameScope.label(): String = when (this) {
+    ToppingFrameScope.Top -> "nur Hauptseite"
+    ToppingFrameScope.SameOrigin -> "gleiche Herkunft"
+    ToppingFrameScope.AllMatching -> "alle passenden Frames"
+}

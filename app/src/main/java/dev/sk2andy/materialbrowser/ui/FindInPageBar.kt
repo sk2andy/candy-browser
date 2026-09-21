@@ -96,9 +96,9 @@ internal fun FindInPageBar(
                     .testTag(FindInPageBarTestTags.Query),
                 singleLine = true,
                 textStyle = MaterialTheme.typography.bodyLarge.copy(
-                    color = MaterialTheme.colorScheme.onSurface,
+                    color = chromeTokens.contentColor,
                 ),
-                cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                cursorBrush = SolidColor(chromeTokens.accentColor),
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                 keyboardActions = KeyboardActions(
                     onSearch = { if (canNavigate) onNextMatch() },
@@ -111,7 +111,7 @@ internal fun FindInPageBar(
                         if (query.isEmpty()) {
                             Text(
                                 text = placeholder,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                color = chromeTokens.secondaryContentColor,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                             )
@@ -135,6 +135,7 @@ internal fun FindInPageBar(
                             }
                             .testTag(FindInPageBarTestTags.Progress),
                         strokeWidth = 2.dp,
+                        color = chromeTokens.accentColor,
                     )
                 } else {
                     Text(
@@ -142,7 +143,7 @@ internal fun FindInPageBar(
                         modifier = Modifier
                             .semantics { liveRegion = LiveRegionMode.Polite }
                             .testTag(FindInPageBarTestTags.MatchCount),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = chromeTokens.secondaryContentColor,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         style = MaterialTheme.typography.labelMedium,

@@ -25,7 +25,7 @@ flowchart TD
 | Browser chrome behavior | Tabs, session commands/events, menu and gesture decisions; production main menu, Hero pager, Grid/List overview, overview bottom chrome, address-load rainbow and morph math | Calls the shared production composables with Android resources, images, haptics and blur effects | Calls the same composables from `CandyBrowserApp` with WebKit state and UIKit preview adapters |
 | Settings core | Destination/router/home, common controls, Search provider catalog and URL routing, Appearance page, Tabs overview/dismiss controls, Browser translation-provider control and Toppings management | Supplies localized resources, chrome colors and persisted state | Uses the same pages; persists only stable search-provider settings before shared routing emits the generic WebKit load command; Toppings CRUD is bound to the validated WebKit runtime, unavailable backend settings are disabled |
 | Web engine | No engine type crosses the boundary | `BrowserController` owns an engine port per tab; Settings selects GeckoView or Android System WebView for the next process | `BrowserViewModel` owns a WebKit adapter per tab |
-| Customization | `Topping` metadata and injection plans | GeckoView supplies Firefox WebExtensions plus Toppings; System WebView supplies Toppings and Candy privacy rules | Main-frame `WKUserScript` in a named content world |
+| Customization | `Topping` metadata, frame-scope policy and injection plans | GeckoView supplies Firefox WebExtensions plus scoped Toppings; System WebView supplies scoped Toppings and Candy privacy rules | Scoped `WKUserScript` in a named content world |
 | Visual language | Shared production menu/overview structure and semantic actions | Existing Candy Material theme, metrics, effects and resource resolution | Apple-style semantic colors, typography, compact metrics and native glass supplied through platform style/effect seams; no separate SwiftUI browser, menu or tab renderer |
 
 The executable iOS target started as a vertical slice. Menu and tab-overview parity now comes from moving
@@ -66,6 +66,24 @@ call-site cutover are not complete.
   user choice because autoplay can increase page CPU/GPU work and battery use.
 - WKWebView remains the fixed iOS adapter, making the product's three adapters GeckoView, Android
   System WebView and WKWebView while only Android presents an engine selector.
+
+### Encrypted DNS
+
+- Protection settings expose process-wide DNS-over-HTTPS choices for GeckoView: Android system DNS,
+  Cloudflare, Google, Quad9, or a validated custom HTTPS endpoint such as a profile-specific NextDNS
+  URL. The selected policy applies equally to regular and private tabs; private navigation never
+  persists separate resolver state.
+- Every configured HTTPS resolver uses GeckoView's strict `TRR_MODE_ONLY`. Page name lookups do not
+  silently fall back to native DNS when the resolver fails. Resolver-host bootstrap and Android
+  network services remain platform-owned and can still use system DNS. Choosing **System default**
+  explicitly selects `TRR_MODE_DISABLED` and restores native DNS resolution.
+- Persisted resolver policy is sanitized and installed while Candy creates its single Gecko runtime,
+  before the first session can navigate. A malformed persisted custom endpoint is reset to **System
+  default**. Live changes update the runtime for later resolutions without reloading open pages;
+  existing connections are not terminated.
+- Android System WebView exposes no supported per-WebView DNS configuration API. Candy therefore
+  keeps the encrypted-DNS control visible but disabled in that engine and explains that System
+  WebView continues to use Android system DNS.
 
 ### WebRTC protection
 
@@ -123,7 +141,7 @@ Camera and microphone permissions remain separate and continue through Candy's p
   controls can tune or disable that layer live. Classification has explicit node/time/ancestor
   bounds, so it is not a universal layout-protection guarantee. Verified unsupported overlaps retain
   the navigation-scoped emergency native top fallback; explicit native overrides remain available.
-  Privacy, scroll metrics and optional live blur are unchanged.
+  Privacy and scroll metrics are unchanged.
   System WebView retains the document-start compatibility repair described below. There, Candy owns
   its normal-tab top safe area because `viewport-fit=cover` only opts into the
   viewport and does not prove that a page consumes `env(safe-area-inset-top)`. The renderer top
@@ -142,12 +160,11 @@ Camera and microphone permissions remain separate and continue through Candy's p
   The explicit per-site **Force safe area** override moves every edge into native margins.
   Fullscreen remains truly edge to edge, while Compose safe-drawing hosts clear duplicate renderer
   insets.
-  Candy keeps GeckoView's default `SurfaceView` backend while browser chrome does not need backdrop
-  capture, so normal page frames go directly to Android's compositor. When Frosted chrome has both
-  non-zero blur and transparency, the selected or external-preview Gecko session switches to
-  `TextureView`; this keeps page pixels in Candy's window so `BlurView` can capture them and the
-  transparent Android navigation bar can composite page content behind its gesture region. Turning
-  backdrop capture off restores `SurfaceView`.
+  Candy always keeps GeckoView's default `SurfaceView` backend so page frames go directly to
+  Android's compositor. On Android 17 and newer, Frosted address chrome maps its measured rounded
+  bounds to a native `SurfaceView` blur region. Android 13, 14, 15 and 16 keep the same translucent
+  glass overlay without website blur. System WebView remains in the ordinary View hierarchy and
+  therefore retains live Frosted blur on every supported version from Android 13 onward.
 - System WebView's shared safe-area compatibility script gives stable viewport-sticky elements a CSS `max()` top
   anchor with owned inline styling for Shadow DOM. Window scrolling does not read their geometry
   or rewrite their styling; relevant semantic mutations, viewport changes and policy reconfiguration
@@ -235,8 +252,8 @@ Camera and microphone permissions remain separate and continue through Candy's p
   pill-collapse `ScrollDelegate` ownership.
 - The status-bar treatment is a small static native sibling above the Gecko content container. It is
   limited to the status-bar height plus an 8dp fade tail and never uses a live blur. Clear chrome does
-  not create a full-screen `BlurTarget`; frosted chrome may still wrap the page in one solely as the
-  explicit backdrop source for browser chrome.
+  not create a full-screen `BlurTarget`. Gecko Frosted chrome also never wraps the page in one;
+  System WebView uses that explicit backdrop source for browser chrome.
 - Android builds launch the normal `MainActivity`, `BrowserScreen`, address bar,
   gestures, menus and tab overview. `BrowserController` binds a `GeckoSession` renderer to each tab.
   Gecko content-process crashes and Android low-memory kills are both terminal session events. Candy
@@ -363,11 +380,11 @@ Camera and microphone permissions remain separate and continue through Candy's p
   signature validation to GeckoView. The user must explicitly approve requested permissions;
   dismissal and lifecycle failure deny access.
 - Android's Gecko runtime provisions two normal, deinstallable defaults through
-  `WebExtensionController.install(..., INSTALLATION_METHOD_ONBOARDING)`. uBlock Origin `1.74.0`
+  `WebExtensionController.install(..., INSTALLATION_METHOD_ONBOARDING)`. uBlock Origin `1.75.0`
   ships as the original Mozilla-signed AMO XPI, so a clean profile gets it without network access.
   `I still don't care about cookies` `1.1.9` ships the same way from its original Mozilla-signed AMO
   XPI. Both extensions therefore install on the first offline start. Their corresponding sources
-  and licenses are pinned to Git commits `6dd2d95e50d134a477a4e183343c0b26e9147123` and
+  and licenses are pinned to Git commits `21f0e686506bb21b514b451c8c6cb9bf8c82d232` and
   `e763f24f79c5803774d28730649aef9aae3998ca`.
 - Default permission approval exists only while Candy installs the exact catalog ID and version.
   Gecko still validates Mozilla's signature; bundled bytes must also match their pinned SHA-256.

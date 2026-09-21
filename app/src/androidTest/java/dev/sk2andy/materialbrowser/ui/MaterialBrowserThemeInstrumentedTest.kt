@@ -13,6 +13,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import dev.sk2andy.materialbrowser.data.AppearanceSettings
+import dev.sk2andy.materialbrowser.data.BrowserAddressBarColorPreset
 import dev.sk2andy.materialbrowser.data.BrowserAppearanceMode
 import dev.sk2andy.materialbrowser.data.BrowserColorPalette
 import dev.sk2andy.materialbrowser.data.BrowserShapeStyle
@@ -23,12 +24,13 @@ import dev.sk2andy.materialbrowser.ui.theme.CandyDesignLanguage
 import dev.sk2andy.materialbrowser.ui.theme.CandyTheme
 import dev.sk2andy.materialbrowser.ui.theme.LocalCandyDesignLanguage
 import dev.sk2andy.materialbrowser.ui.theme.MaterialBrowserTheme
-import dev.sk2andy.materialbrowser.ui.theme.addressFieldContainerColor
 import dev.sk2andy.materialbrowser.ui.theme.browserChromeColor
 import dev.sk2andy.materialbrowser.ui.theme.browserChromeSurfaceTokens
+import dev.sk2andy.materialbrowser.ui.theme.BrowserChromeSurfaceTokens
 import java.util.concurrent.atomic.AtomicReference
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -170,6 +172,71 @@ class MaterialBrowserThemeInstrumentedTest {
     }
 
     @Test
+    fun customAddressBarColorPreservesClearFrostedAndAmoledTreatments() {
+        val clear = AtomicReference<BrowserChromeSurfaceTokens>()
+        val frosted = AtomicReference<BrowserChromeSurfaceTokens>()
+        val amoled = AtomicReference<BrowserChromeSurfaceTokens>()
+        val colorSettings = AppearanceSettings(
+            addressBarColorPreset = BrowserAddressBarColorPreset.Custom,
+            addressBarCustomColorHex = "#123456",
+        )
+
+        composeRule.setContent {
+            MaterialBrowserTheme(settings = colorSettings) {
+                clear.set(browserChromeSurfaceTokens(BrowserChromeSurfaceRole.AddressBar))
+            }
+            MaterialBrowserTheme(
+                settings = colorSettings.copy(
+                    surfaceStyle = BrowserSurfaceStyle.Frosted,
+                    frostedAddressBarTransparencyPercent = 50,
+                ),
+            ) {
+                frosted.set(browserChromeSurfaceTokens(BrowserChromeSurfaceRole.AddressBar))
+            }
+            MaterialBrowserTheme(
+                settings = colorSettings.copy(
+                    appearanceMode = BrowserAppearanceMode.Amoled,
+                    surfaceStyle = BrowserSurfaceStyle.Frosted,
+                ),
+            ) {
+                amoled.set(browserChromeSurfaceTokens(BrowserChromeSurfaceRole.AddressBar))
+            }
+        }
+        composeRule.waitForIdle()
+
+        assertEquals(Color(0xFF123456), clear.get().containerColor)
+        assertEquals(1f, clear.get().containerColor.alpha, 0f)
+        assertTrue(frosted.get().containerColor.alpha >= 0.5f)
+        assertTrue(frosted.get().fieldContainerColor.alpha >= 0.183f)
+        assertNotEquals(0f, frosted.get().blurRadiusPx)
+        assertEquals(1f, amoled.get().containerColor.alpha, 0f)
+        assertEquals(0f, amoled.get().blurRadiusPx, 0f)
+    }
+
+    @Test
+    fun resetThemePresetUsesExistingAddressBarTokens() {
+        val defaultTokens = AtomicReference<BrowserChromeSurfaceTokens>()
+        val resetTokens = AtomicReference<BrowserChromeSurfaceTokens>()
+
+        composeRule.setContent {
+            MaterialBrowserTheme(settings = AppearanceSettings()) {
+                defaultTokens.set(browserChromeSurfaceTokens(BrowserChromeSurfaceRole.AddressBar))
+            }
+            MaterialBrowserTheme(
+                settings = AppearanceSettings(
+                    addressBarColorPreset = BrowserAddressBarColorPreset.Theme,
+                    addressBarCustomColorHex = "",
+                ),
+            ) {
+                resetTokens.set(browserChromeSurfaceTokens(BrowserChromeSurfaceRole.AddressBar))
+            }
+        }
+        composeRule.waitForIdle()
+
+        assertEquals(defaultTokens.get(), resetTokens.get())
+    }
+
+    @Test
     fun candyThemeProvidesLiquidGlassTokensWithoutChangingComponentApi() {
         val designLanguage = AtomicReference<CandyDesignLanguage>()
         val treatment = AtomicReference<CandyChromeTreatment>()
@@ -202,7 +269,7 @@ class MaterialBrowserThemeInstrumentedTest {
                 designLanguage.set(LocalCandyDesignLanguage.current)
                 val tokens = browserChromeSurfaceTokens(BrowserChromeSurfaceRole.AddressBar)
                 treatment.set(tokens.treatment)
-                addressFieldColor.set(addressFieldContainerColor())
+                addressFieldColor.set(tokens.fieldContainerColor)
                 CandyChromeSurface(
                     backdropSource = null,
                     tokens = tokens,

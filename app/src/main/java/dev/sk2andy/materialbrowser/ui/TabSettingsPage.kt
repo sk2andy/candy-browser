@@ -28,6 +28,7 @@ import dev.sk2andy.materialbrowser.browser.BrowserSessionResidencyRules
 import dev.sk2andy.materialbrowser.browser.LinkLongPressAction
 import dev.sk2andy.materialbrowser.data.InactiveTabLifetime
 import dev.sk2andy.materialbrowser.data.TabOverviewMode
+import dev.sk2andy.materialbrowser.shared.browser.AddressBarLongPressAction
 import dev.sk2andy.materialbrowser.shared.ui.settings.TabDismissResistanceSettings
 import dev.sk2andy.materialbrowser.shared.ui.settings.TabOverviewSettings
 import dev.sk2andy.materialbrowser.shared.ui.settings.TabOverviewSettingsStrings
@@ -41,6 +42,7 @@ internal object TabSettingsTestTags {
     const val AutomaticSorting = "tab_settings_automatic_sorting"
     const val ClosedTabUndo = "tab_settings_closed_tab_undo"
     const val AddressBarDocking = "tab_settings_address_bar_docking"
+    const val AddressBarLongPressAction = "tab_settings_address_bar_long_press_action"
     const val LinkLongPressAction = "tab_settings_link_long_press_action"
 }
 
@@ -56,6 +58,7 @@ internal fun TabsAndGesturesSettingsPage(
     dismissResistancePercent: Int,
     profilesEnabled: Boolean,
     isAddressBarDockingEnabled: Boolean,
+    addressBarLongPressAction: AddressBarLongPressAction = AddressBarLongPressAction.Default,
     linkLongPressAction: LinkLongPressAction = LinkLongPressAction.LinkPeek,
     onInactiveTabLifetimeChanged: (InactiveTabLifetime) -> Unit,
     onResidentTabLimitChanged: (Int) -> Unit,
@@ -67,6 +70,7 @@ internal fun TabsAndGesturesSettingsPage(
     onDismissResistancePercentChanged: (Int) -> Unit,
     onProfilesEnabledChanged: (Boolean) -> Unit,
     onAddressBarDockingEnabledChanged: (Boolean) -> Unit,
+    onAddressBarLongPressActions: () -> Unit = {},
     onLinkLongPressActionChanged: (LinkLongPressAction) -> Unit = {},
     onLinkPeekActions: () -> Unit = {},
     onAddressBarActions: () -> Unit,
@@ -212,6 +216,15 @@ internal fun TabsAndGesturesSettingsPage(
         )
         Spacer(Modifier.height(14.dp))
         SettingsSectionTitle(stringResource(R.string.settings_section_gestures))
+        Spacer(Modifier.height(2.dp))
+        Box(modifier = Modifier.testTag(TabSettingsTestTags.AddressBarLongPressAction)) {
+            SettingsLink(
+                icon = ImageVector.vectorResource(R.drawable.ic_symbol_route),
+                title = stringResource(R.string.settings_address_bar_long_press_title),
+                subtitle = stringResource(addressBarLongPressAction.labelRes()),
+                onClick = onAddressBarLongPressActions,
+            )
+        }
         Spacer(Modifier.height(2.dp))
         Box(modifier = Modifier.testTag(TabSettingsTestTags.LinkLongPressAction)) {
             SettingsChoice(

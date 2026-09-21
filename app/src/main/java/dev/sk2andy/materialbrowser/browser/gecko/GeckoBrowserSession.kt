@@ -13,11 +13,13 @@ import dev.sk2andy.materialbrowser.browser.BrowserEngineNavigationTarget
 import dev.sk2andy.materialbrowser.browser.BrowserEngineWebPromptRequest
 import dev.sk2andy.materialbrowser.browser.BrowserEngineScrollListener
 import dev.sk2andy.materialbrowser.browser.BrowserEngineScrollMetrics
+import dev.sk2andy.materialbrowser.browser.BrowserBackdropBlurRegion
 import dev.sk2andy.materialbrowser.browser.BrowserViewportRect
 import dev.sk2andy.materialbrowser.browser.TextInputOcclusionProbeMode
 import dev.sk2andy.materialbrowser.browser.TextInputOcclusionProbeResult
 import dev.sk2andy.materialbrowser.browser.actions.BrowserContentTargetListener
 import dev.sk2andy.materialbrowser.browser.actions.WebContentTarget
+import dev.sk2andy.materialbrowser.browser.engine.BrowserEngineContentKind
 import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineFailureKind
 import org.mozilla.geckoview.GeckoSession
 import org.mozilla.geckoview.WebRequestError
@@ -164,10 +166,48 @@ internal data class GeckoMediaSessionState(
     val videoHeight: Int = 0,
     val audioTrackCount: Int = 0,
     val videoTrackCount: Int = 0,
+    val hasInlineVideo: Boolean = false,
+    val isInlineVideoPlaying: Boolean = false,
+    val isInlineVideoPresented: Boolean = false,
+    val inlineVideoWidth: Int = 0,
+    val inlineVideoHeight: Int = 0,
+    val inlineVideoDocumentNonce: String? = null,
+    val inlineVideoElementNonce: String? = null,
 )
 
 internal fun interface GeckoMediaSessionStateListener {
     fun onStateChanged(state: GeckoMediaSessionState)
+}
+
+internal data class GeckoInlineVideoIdentity(
+    val documentNonce: String,
+    val elementNonce: String,
+)
+
+internal data class GeckoInlineVideoOpenRequest(
+    val identity: GeckoInlineVideoIdentity,
+    val navigationGeneration: Int,
+    val expected: Boolean = true,
+)
+
+internal fun interface GeckoInlineVideoOpenRequestListener {
+    fun onOpenRequested(request: GeckoInlineVideoOpenRequest)
+}
+
+internal enum class GeckoInlineVideoGestureHapticPhase(val stableId: String) {
+    RubberbandStart("rubberband-start"),
+    RubberbandStop("rubberband-stop"),
+    Confirm("confirm"),
+}
+
+internal data class GeckoInlineVideoGestureHaptic(
+    val identity: GeckoInlineVideoIdentity,
+    val navigationGeneration: Int,
+    val phase: GeckoInlineVideoGestureHapticPhase,
+)
+
+internal fun interface GeckoInlineVideoGestureHapticListener {
+    fun onHapticRequested(haptic: GeckoInlineVideoGestureHaptic)
 }
 
 internal fun interface GeckoFullscreenStateListener {
@@ -226,6 +266,12 @@ internal interface GeckoBrowserSession {
 
     fun setMediaStateListener(listener: GeckoMediaSessionStateListener?)
 
+    fun setInlineVideoOpenRequestListener(listener: GeckoInlineVideoOpenRequestListener?) = Unit
+
+    fun setInlineVideoGestureHapticListener(
+        listener: GeckoInlineVideoGestureHapticListener?,
+    ) = Unit
+
     /** Reports the page fullscreen lifecycle independently from media metadata updates. */
     fun setFullscreenStateListener(listener: GeckoFullscreenStateListener?) = Unit
 
@@ -258,6 +304,19 @@ internal interface GeckoBrowserSession {
     /** Keeps page media aligned with the user's PiP play or pause intent. */
     fun setPictureInPicturePlaybackExpected(expected: Boolean)
 
+    fun preparePictureInPicturePlayback(
+        identity: GeckoInlineVideoIdentity,
+        onResult: (GeckoPictureInPicturePreparation?) -> Unit,
+    ) = onResult(null)
+
+    fun restorePictureInPicturePresentation(onResult: (Boolean) -> Unit) = onResult(false)
+
+    fun setInlineVideoPresentation(
+        identity: GeckoInlineVideoIdentity?,
+        expected: Boolean,
+        onResult: (Boolean) -> Unit,
+    ) = onResult(false)
+
     /** Requests that Gecko leave DOM fullscreen through its public session API. */
     fun exitFullscreen() = Unit
 
@@ -267,8 +326,11 @@ internal interface GeckoBrowserSession {
     /** Binds Gecko's session delegates to Candy's stable tab identity. */
     fun bindExtensionTab(tabId: String, generation: Long) = Unit
 
-    /** Uses a capture-compatible renderer only while Candy chrome needs backdrop blur. */
-    fun setBackdropCaptureEnabled(enabled: Boolean) = Unit
+    /** Binds Topping authorization to this exact renderer session and content purpose. */
+    fun bindToppingSession(tabId: String, contentKind: BrowserEngineContentKind) = Unit
+
+    /** Applies a compositor-owned backdrop region without replacing Gecko's SurfaceView. */
+    fun setBackdropBlurRegion(region: BrowserBackdropBlurRegion?) = Unit
 
     /** Creates and binds the one View currently rendering this session. */
     fun createView(context: Context): View
@@ -325,6 +387,9 @@ internal interface GeckoBrowserSession {
 
     /** Replaces the current history entry with a validated HTTP(S) URL. */
     fun replaceHistoryUrl(url: String): Boolean = loadUrl(url)
+
+    /** Retries a failed URL without duplicating a matching committed history entry. */
+    fun retryFailedPage(url: String): Boolean = loadUrl(url)
 
     /** Loads an already host-validated moz-extension options URL through startup gates. */
     fun loadExtensionUrl(url: String): Boolean = false

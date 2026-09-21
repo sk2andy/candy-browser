@@ -5,6 +5,7 @@ import android.view.View
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import dev.sk2andy.materialbrowser.browser.engine.BrowserEngineContentKind
 import dev.sk2andy.materialbrowser.browser.userscript.UserScript
 import dev.sk2andy.materialbrowser.browser.userscript.UserScriptMenuCommand
 import dev.sk2andy.materialbrowser.browser.userscript.UserScriptOpenTabRequest
@@ -41,6 +42,7 @@ class CandyToppingHostInstrumentedTest {
         )
         assertTrue(manifest.getJSONArray("optional_permissions").contains("userScripts"))
         assertFalse(manifest.getJSONArray("permissions").contains("userScripts"))
+        assertTrue(manifest.getJSONArray("permissions").contains("nativeMessagingFromContent"))
 
         lateinit var runtime: GeckoRuntimeHandle
         val ready = CountDownLatch(1)
@@ -92,18 +94,21 @@ class CandyToppingHostInstrumentedTest {
         lateinit var privateView: View
         InstrumentationRegistry.getInstrumentation().runOnMainSync {
             regularSession = runtime.createSession(profileId = "regular", isPrivate = false)
+            regularSession.bindToppingSession(CANDY_TAB_ID, BrowserEngineContentKind.RegularTab)
             regularView = regularSession.createView(context)
             regularSession.setStateListener { state ->
                 if (state.title == INJECTED_TITLE) regularInjected.countDown()
                 if (state.title == MENU_INVOKED_TITLE) menuInvoked.countDown()
             }
             excludedSession = runtime.createSession(profileId = "excluded", isPrivate = false)
+            excludedSession.bindToppingSession("excluded-tab", BrowserEngineContentKind.RegularTab)
             excludedView = excludedSession.createView(context)
             excludedSession.setStateListener { state ->
                 excludedTitle.set(state.title)
                 if (state.lastNavigationSucceeded == true) excludedStopped.countDown()
             }
             privateSession = runtime.createSession(profileId = "private", isPrivate = true)
+            privateSession.bindToppingSession("private-tab", BrowserEngineContentKind.RegularTab)
             privateView = privateSession.createView(context)
             privateSession.setStateListener { state ->
                 privateTitle.set(state.title)
@@ -135,16 +140,13 @@ class CandyToppingHostInstrumentedTest {
                 "Active Gecko tab did not publish its Topping menu command",
                 menuPublished.await(20, TimeUnit.SECONDS),
             )
-            assertEquals(
-                UserScriptMenuCommand(
-                    tabId = CANDY_TAB_ID,
-                    scriptId = SCRIPT_ID,
-                    scriptName = SCRIPT_NAME,
-                    commandId = "1",
-                    caption = MENU_CAPTION,
-                ),
-                menuCommand.get(),
-            )
+            val publishedMenuCommand = checkNotNull(menuCommand.get())
+            assertEquals(CANDY_TAB_ID, publishedMenuCommand.tabId)
+            assertEquals(SCRIPT_ID, publishedMenuCommand.scriptId)
+            assertEquals(SCRIPT_NAME, publishedMenuCommand.scriptName)
+            assertEquals("1", publishedMenuCommand.commandId)
+            assertEquals(MENU_CAPTION, publishedMenuCommand.caption)
+            assertTrue(publishedMenuCommand.documentId.isNotBlank())
             assertTrue(
                 "GM_openInTab did not reach the active Candy tab delegate",
                 openedTab.await(20, TimeUnit.SECONDS),

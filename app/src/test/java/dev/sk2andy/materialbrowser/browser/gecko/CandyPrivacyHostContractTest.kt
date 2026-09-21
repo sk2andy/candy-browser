@@ -3,6 +3,8 @@ package dev.sk2andy.materialbrowser.browser.gecko
 import dev.sk2andy.materialbrowser.blocking.CandyRule
 import dev.sk2andy.materialbrowser.blocking.CandyRuleAction
 import dev.sk2andy.materialbrowser.blocking.CandyRuleKind
+import dev.sk2andy.materialbrowser.browser.BrowserViewportRect
+import dev.sk2andy.materialbrowser.browser.InlineMediaPlayerMode
 import dev.sk2andy.materialbrowser.data.GeckoSafeAreaSettings
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
@@ -83,6 +85,16 @@ class CandyPrivacyHostContractTest {
             topInsetPx = 96,
             navigationGeneration = 4,
             scrollMetricsEnabled = true,
+            inlineMediaPlayerEnabled = true,
+            inlineMediaPlayerMode = InlineMediaPlayerMode.Automatic.stableId,
+            inlineMediaPlayerActionLabel = "Im Candy Player öffnen",
+            inlineMediaPlayerPlayLabel = "Abspielen",
+            inlineMediaPlayerPauseLabel = "Pausieren",
+            inlineMediaPlayerSeekLabel = "Wiedergabeposition",
+            inlineMediaPlayerEnterFullscreenLabel = "Video vergrößern",
+            inlineMediaPlayerExitFullscreenLabel = "Video minimieren",
+            inlineMediaPlayerShowControlsLabel = "Steuerelemente anzeigen",
+            inlineMediaPlayerHideControlsLabel = "Steuerelemente ausblenden",
             safeAreaLayoutQuietPeriodMillis = 250,
             safeAreaRequiredFailureCount = 4,
         )
@@ -98,6 +110,54 @@ class CandyPrivacyHostContractTest {
         assertEquals(96, policy.topInsetPx)
         assertEquals(4, policy.navigationGeneration)
         assertTrue(policy.scrollMetricsEnabled)
+        assertTrue(policy.inlineMediaPlayerEnabled)
+        assertEquals(InlineMediaPlayerMode.Automatic.stableId, policy.inlineMediaPlayerMode)
+        assertEquals("Im Candy Player öffnen", policy.inlineMediaPlayerActionLabel)
+        assertEquals("Abspielen", policy.inlineMediaPlayerPlayLabel)
+        assertEquals("Pausieren", policy.inlineMediaPlayerPauseLabel)
+        assertEquals("Wiedergabeposition", policy.inlineMediaPlayerSeekLabel)
+        assertEquals("Video vergrößern", policy.inlineMediaPlayerEnterFullscreenLabel)
+        assertEquals("Video minimieren", policy.inlineMediaPlayerExitFullscreenLabel)
+        assertEquals("Steuerelemente anzeigen", policy.inlineMediaPlayerShowControlsLabel)
+        assertEquals("Steuerelemente ausblenden", policy.inlineMediaPlayerHideControlsLabel)
+        assertEquals(
+            "Steuerelemente anzeigen",
+            policy.toMessage("session-token", 1).getString("inlineMediaPlayerShowControlsLabel"),
+        )
+        assertEquals(
+            "Steuerelemente ausblenden",
+            policy.toMessage("session-token", 1).getString("inlineMediaPlayerHideControlsLabel"),
+        )
+        assertEquals(
+            "Im Candy Player öffnen",
+            policy.toMessage("session-token", 1).getString("inlineMediaPlayerActionLabel"),
+        )
+        assertEquals(
+            InlineMediaPlayerMode.Automatic.stableId,
+            policy.toMessage("session-token", 1).getString("inlineMediaPlayerMode"),
+        )
+        assertEquals(
+            "Abspielen",
+            policy.toMessage("session-token", 1).getString("inlineMediaPlayerPlayLabel"),
+        )
+        assertEquals(
+            "Pausieren",
+            policy.toMessage("session-token", 1).getString("inlineMediaPlayerPauseLabel"),
+        )
+        assertEquals(
+            "Wiedergabeposition",
+            policy.toMessage("session-token", 1).getString("inlineMediaPlayerSeekLabel"),
+        )
+        assertEquals(
+            "Video vergrößern",
+            policy.toMessage("session-token", 1)
+                .getString("inlineMediaPlayerEnterFullscreenLabel"),
+        )
+        assertEquals(
+            "Video minimieren",
+            policy.toMessage("session-token", 1)
+                .getString("inlineMediaPlayerExitFullscreenLabel"),
+        )
         assertEquals(250, policy.safeAreaLayoutQuietPeriodMillis)
         assertEquals(4, policy.safeAreaRequiredFailureCount)
     }
@@ -247,6 +307,7 @@ class CandyPrivacyHostContractTest {
         assertFalse(message.has("viewportCoverAllowed"))
         assertEquals(0, message.getInt("navigationGeneration"))
         assertFalse(message.getBoolean("scrollMetricsEnabled"))
+        assertFalse(message.getBoolean("inlineMediaPlayerEnabled"))
         assertEquals(400, message.getInt("safeAreaLayoutQuietPeriodMillis"))
         assertEquals(3, message.getInt("safeAreaRequiredFailureCount"))
         assertEquals(
@@ -311,6 +372,339 @@ class CandyPrivacyHostContractTest {
         assertEquals("session-token", message.getString("token"))
         assertEquals(7, message.getLong("revision"))
         assertTrue(message.getBoolean("expected"))
+    }
+
+    @Test
+    fun `picture in picture preparation accepts only current identity bound geometry`() {
+        val identity = GeckoInlineVideoIdentity(
+            documentNonce = "a".repeat(32),
+            elementNonce = "b".repeat(32),
+        )
+        val message = JSONObject()
+            .put("revision", 7)
+            .put("navigationGeneration", 3)
+            .put("requestId", 11)
+            .put("prepared", true)
+            .put("documentNonce", identity.documentNonce)
+            .put("elementNonce", identity.elementNonce)
+            .put("videoLeft", 20.0)
+            .put("videoTop", 10.0)
+            .put("videoRight", 380.0)
+            .put("videoBottom", 210.0)
+            .put("viewportWidth", 400.0)
+            .put("viewportHeight", 240.0)
+
+        assertEquals(
+            GeckoPictureInPicturePreparation(
+                identity = identity,
+                videoRect = BrowserViewportRect(
+                    leftFraction = 0.05f,
+                    topFraction = 1f / 24f,
+                    rightFraction = 0.95f,
+                    bottomFraction = 0.875f,
+                ),
+            ),
+            geckoPictureInPicturePreparationFromMessage(
+                message = message,
+                currentRevision = 7,
+                currentNavigationGeneration = 3,
+                expectedRequestId = 11,
+                expectedIdentity = identity,
+            ),
+        )
+        assertEquals(
+            null,
+            geckoPictureInPicturePreparationFromMessage(
+                message = JSONObject(message.toString()).put("requestId", 12),
+                currentRevision = 7,
+                currentNavigationGeneration = 3,
+                expectedRequestId = 11,
+                expectedIdentity = identity,
+            ),
+        )
+        assertEquals(
+            null,
+            geckoPictureInPicturePreparationFromMessage(
+                message = JSONObject(message.toString()).put("videoTop", -1),
+                currentRevision = 7,
+                currentNavigationGeneration = 3,
+                expectedRequestId = 11,
+                expectedIdentity = identity,
+            ),
+        )
+    }
+
+    @Test
+    fun `picture in picture restoration acknowledgement rejects stale return layouts`() {
+        val request = pictureInPictureRestorationMessage(
+            token = "session-token",
+            revision = 7,
+            navigationGeneration = 3,
+            requestId = 11,
+        )
+        val result = JSONObject()
+            .put("revision", 7)
+            .put("navigationGeneration", 3)
+            .put("requestId", 11)
+            .put("prepared", true)
+
+        assertFalse(request.getBoolean("expected"))
+        assertTrue(
+            isGeckoPictureInPictureRestorationResult(
+                message = result,
+                currentRevision = 7,
+                currentNavigationGeneration = 3,
+                expectedRequestId = 11,
+            ),
+        )
+        assertFalse(
+            isGeckoPictureInPictureRestorationResult(
+                message = JSONObject(result.toString()).put("navigationGeneration", 4),
+                currentRevision = 7,
+                currentNavigationGeneration = 3,
+                expectedRequestId = 11,
+            ),
+        )
+    }
+
+    @Test
+    fun `new preparation acknowledgement wins over an older restoration request`() {
+        val identity = GeckoInlineVideoIdentity(
+            documentNonce = "a".repeat(32),
+            elementNonce = "b".repeat(32),
+        )
+        val preparationResult = JSONObject()
+            .put("revision", 7)
+            .put("navigationGeneration", 3)
+            .put("requestId", 12)
+            .put("prepared", true)
+            .put("documentNonce", identity.documentNonce)
+            .put("elementNonce", identity.elementNonce)
+            .put("videoLeft", 0)
+            .put("videoTop", 0)
+            .put("videoRight", 1_920)
+            .put("videoBottom", 1_080)
+            .put("viewportWidth", 1_920)
+            .put("viewportHeight", 1_080)
+        val staleRestorationResult = JSONObject(preparationResult.toString())
+            .put("requestId", 11)
+
+        assertEquals(
+            GeckoPictureInPicturePlaybackResultRoute.Preparation,
+            geckoPictureInPicturePlaybackResultRoute(
+                message = preparationResult,
+                preparationRequestId = 12,
+                restorationRequestId = 11,
+            ),
+        )
+        assertEquals(
+            identity,
+            geckoPictureInPicturePreparationFromMessage(
+                message = preparationResult,
+                currentRevision = 7,
+                currentNavigationGeneration = 3,
+                expectedRequestId = 12,
+                expectedIdentity = identity,
+            )?.identity,
+        )
+        assertEquals(
+            GeckoPictureInPicturePlaybackResultRoute.Stale,
+            geckoPictureInPicturePlaybackResultRoute(
+                message = staleRestorationResult,
+                preparationRequestId = 12,
+                restorationRequestId = null,
+            ),
+        )
+    }
+
+    @Test
+    fun `inline video state accepts current bounded top frame candidate`() {
+        val state = geckoInlineVideoStateFromMessage(
+            message = JSONObject()
+                .put("revision", 7)
+                .put("navigationGeneration", 3)
+                .put("active", true)
+                .put("playing", true)
+                .put("presented", true)
+                .put("videoWidth", 1_920)
+                .put("videoHeight", 1_080)
+                .put("documentNonce", "a".repeat(32))
+                .put("elementNonce", "b".repeat(32)),
+            currentRevision = 7,
+            currentNavigationGeneration = 3,
+        )
+
+        assertEquals(
+            GeckoInlineVideoState(
+                isActive = true,
+                isPlaying = true,
+                isPresented = true,
+                width = 1_920,
+                height = 1_080,
+                documentNonce = "a".repeat(32),
+                elementNonce = "b".repeat(32),
+            ),
+            state,
+        )
+    }
+
+    @Test
+    fun `inline video state rejects stale malformed and unbounded candidates`() {
+        fun message(
+            revision: Long = 7,
+            navigationGeneration: Int = 3,
+            width: Int = 1_920,
+            documentNonce: String = "a".repeat(32),
+        ) = JSONObject()
+            .put("revision", revision)
+            .put("navigationGeneration", navigationGeneration)
+            .put("active", true)
+            .put("playing", true)
+            .put("videoWidth", width)
+            .put("videoHeight", 1_080)
+            .put("documentNonce", documentNonce)
+            .put("elementNonce", "b".repeat(32))
+
+        assertEquals(null, geckoInlineVideoStateFromMessage(message(revision = 6), 7, 3))
+        assertEquals(
+            null,
+            geckoInlineVideoStateFromMessage(message(navigationGeneration = 2), 7, 3),
+        )
+        assertEquals(null, geckoInlineVideoStateFromMessage(message(width = 16_385), 7, 3))
+        assertEquals(
+            null,
+            geckoInlineVideoStateFromMessage(message(documentNonce = "invalid"), 7, 3),
+        )
+    }
+
+    @Test
+    fun `inline presentation desire clears only after presented video disappears`() {
+        assertTrue(
+            shouldClearInlineVideoPresentationDesire(
+                wasPresented = true,
+                isPresented = false,
+                presentationDesired = true,
+            ),
+        )
+        assertFalse(
+            shouldClearInlineVideoPresentationDesire(
+                wasPresented = false,
+                isPresented = false,
+                presentationDesired = true,
+            ),
+        )
+        assertFalse(
+            shouldClearInlineVideoPresentationDesire(
+                wasPresented = true,
+                isPresented = true,
+                presentationDesired = true,
+            ),
+        )
+        assertFalse(
+            shouldClearInlineVideoPresentationDesire(
+                wasPresented = true,
+                isPresented = false,
+                presentationDesired = false,
+            ),
+        )
+    }
+
+    @Test
+    fun `inline video open request accepts only current bounded identity`() {
+        val current = JSONObject()
+            .put("revision", 7)
+            .put("navigationGeneration", 3)
+            .put("documentNonce", "a".repeat(32))
+            .put("elementNonce", "b".repeat(32))
+
+        assertEquals(
+            GeckoInlineVideoOpenRequest(
+                identity = GeckoInlineVideoIdentity(
+                    documentNonce = "a".repeat(32),
+                    elementNonce = "b".repeat(32),
+                ),
+                navigationGeneration = 3,
+            ),
+            geckoInlineVideoOpenRequestFromMessage(current, 7, 3),
+        )
+        assertEquals(
+            null,
+            geckoInlineVideoOpenRequestFromMessage(
+                JSONObject(current.toString()).put("revision", 6),
+                7,
+                3,
+            ),
+        )
+        assertEquals(
+            false,
+            geckoInlineVideoOpenRequestFromMessage(
+                JSONObject(current.toString()).put("expected", false),
+                7,
+                3,
+            )?.expected,
+        )
+        assertEquals(
+            null,
+            geckoInlineVideoOpenRequestFromMessage(
+                JSONObject(current.toString()).put("navigationGeneration", 2),
+                7,
+                3,
+            ),
+        )
+        assertEquals(
+            null,
+            geckoInlineVideoOpenRequestFromMessage(
+                JSONObject(current.toString()).put("elementNonce", "page-controlled"),
+                7,
+                3,
+            ),
+        )
+    }
+
+    @Test
+    fun `inline video gesture haptic accepts only current identity and semantic phase`() {
+        val current = JSONObject()
+            .put("revision", 7)
+            .put("navigationGeneration", 3)
+            .put("documentNonce", "a".repeat(32))
+            .put("elementNonce", "b".repeat(32))
+            .put("phase", "rubberband-start")
+
+        assertEquals(
+            GeckoInlineVideoGestureHaptic(
+                identity = GeckoInlineVideoIdentity(
+                    documentNonce = "a".repeat(32),
+                    elementNonce = "b".repeat(32),
+                ),
+                navigationGeneration = 3,
+                phase = GeckoInlineVideoGestureHapticPhase.RubberbandStart,
+            ),
+            geckoInlineVideoGestureHapticFromMessage(current, 7, 3),
+        )
+        assertEquals(
+            GeckoInlineVideoGestureHapticPhase.RubberbandStop,
+            geckoInlineVideoGestureHapticFromMessage(
+                JSONObject(current.toString()).put("phase", "rubberband-stop"),
+                7,
+                3,
+            )?.phase,
+        )
+        assertEquals(
+            GeckoInlineVideoGestureHapticPhase.Confirm,
+            geckoInlineVideoGestureHapticFromMessage(
+                JSONObject(current.toString()).put("phase", "confirm"),
+                7,
+                3,
+            )?.phase,
+        )
+        listOf(
+            JSONObject(current.toString()).put("revision", 6),
+            JSONObject(current.toString()).put("navigationGeneration", 2),
+            JSONObject(current.toString()).put("elementNonce", "page-controlled"),
+            JSONObject(current.toString()).put("phase", "pointer-delta"),
+        ).forEach { invalid ->
+            assertEquals(null, geckoInlineVideoGestureHapticFromMessage(invalid, 7, 3))
+        }
     }
 
     @Test

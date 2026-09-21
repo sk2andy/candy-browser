@@ -28,13 +28,20 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -44,6 +51,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.browser.AddressResolver
+import dev.sk2andy.materialbrowser.browser.BrowserBackdropBlurRegion
+import dev.sk2andy.materialbrowser.browser.BrowserBackdropBlurRules
 import dev.sk2andy.materialbrowser.browser.BrowserProfile
 import dev.sk2andy.materialbrowser.browser.ExternalLinkPreviewState
 import dev.sk2andy.materialbrowser.ui.theme.BrowserChromeSurfaceRole
@@ -78,6 +87,7 @@ internal fun ExternalLinkPreviewBar(
     onCopyLink: () -> Unit,
     onFindInPage: () -> Unit,
     onDesktopViewChange: (Boolean) -> Unit,
+    onBackdropBlurRegionChanged: (BrowserBackdropBlurRegion?) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     var profileMenuExpanded by remember(state.sessionId) { mutableStateOf(false) }
@@ -90,6 +100,31 @@ internal fun ExternalLinkPreviewBar(
         .bounds
         .height()
     val chromeTokens = browserChromeSurfaceTokens(BrowserChromeSurfaceRole.AddressBar)
+    val density = LocalDensity.current
+    val currentOnBackdropBlurRegionChanged by rememberUpdatedState(onBackdropBlurRegionChanged)
+    var barBoundsInWindow by remember(state.sessionId) { mutableStateOf<Rect?>(null) }
+    val backdropBlurRegion = barBoundsInWindow
+        ?.takeIf {
+            !profileMenuExpanded &&
+                !overflowMenuExpanded &&
+                chromeTokens.backdropBlurEnabled
+        }
+        ?.let { bounds ->
+            BrowserBackdropBlurRules.regionInWindow(
+                leftPx = bounds.left,
+                topPx = bounds.top,
+                rightPx = bounds.right,
+                bottomPx = bounds.bottom,
+                cornerRadiusPx = with(density) { chromeTokens.cornerRadius.toPx() },
+                blurRadiusPx = chromeTokens.blurRadiusPx,
+            )
+        }
+    LaunchedEffect(backdropBlurRegion) {
+        currentOnBackdropBlurRegionChanged(backdropBlurRegion)
+    }
+    DisposableEffect(Unit) {
+        onDispose { currentOnBackdropBlurRegionChanged(null) }
+    }
     val openDescription = stringResource(
         R.string.external_link_preview_open_description,
         targetProfile?.emoji.orEmpty(),
@@ -116,7 +151,10 @@ internal fun ExternalLinkPreviewBar(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp)
-                .testTag(ExternalLinkPreviewTestTags.Bar),
+                .testTag(ExternalLinkPreviewTestTags.Bar)
+                .onGloballyPositioned { coordinates ->
+                    barBoundsInWindow = coordinates.boundsInWindow()
+                },
             shape = MaterialTheme.shapes.extraLarge,
             backdropBlurEnabled = !profileMenuExpanded && !overflowMenuExpanded,
         ) {
@@ -142,7 +180,7 @@ internal fun ExternalLinkPreviewBar(
                         .testTag(ExternalLinkPreviewTestTags.Host)
                         .semantics { contentDescription = state.currentUrl },
                     style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onSurface,
+                    color = chromeTokens.contentColor,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -151,7 +189,7 @@ internal fun ExternalLinkPreviewBar(
                         .height(48.dp)
                         .border(
                             width = 1.dp,
-                            color = MaterialTheme.colorScheme.outline,
+                            color = chromeTokens.outlineColor,
                             shape = CircleShape,
                         ),
                     verticalAlignment = Alignment.CenterVertically,
@@ -165,7 +203,7 @@ internal fun ExternalLinkPreviewBar(
                         Icon(
                             painter = painterResource(R.drawable.ic_symbol_add),
                             contentDescription = openDescription,
-                            tint = MaterialTheme.colorScheme.onSurface,
+                            tint = chromeTokens.contentColor,
                         )
                     }
                     if (profiles.size > 1) {
@@ -173,7 +211,7 @@ internal fun ExternalLinkPreviewBar(
                             modifier = Modifier
                                 .height(24.dp)
                                 .width(1.dp),
-                            color = MaterialTheme.colorScheme.outlineVariant,
+                            color = chromeTokens.outlineVariantColor,
                         )
                         Box {
                             IconButton(
@@ -186,13 +224,13 @@ internal fun ExternalLinkPreviewBar(
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Text(
                                         text = targetProfile?.emoji.orEmpty(),
-                                        color = MaterialTheme.colorScheme.onSurface,
+                                        color = chromeTokens.contentColor,
                                         style = MaterialTheme.typography.titleMedium,
                                     )
                                     Icon(
                                         imageVector = Icons.Default.ArrowDropDown,
                                         contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.onSurface,
+                                        tint = chromeTokens.contentColor,
                                         modifier = Modifier.size(18.dp),
                                     )
                                 }

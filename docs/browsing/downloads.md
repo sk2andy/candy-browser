@@ -27,6 +27,7 @@
 - **Clear** requires confirmation, deletes completed and failed files from both local backends, and never cancels pending, running or paused downloads.
 - When Candy’s built-in downloader is selected, Download settings can choose a nested folder below the public Downloads directory. The setting is applied to Android `DownloadManager`, System WebView and Gecko `MediaStore` transfers; unsupported locations are rejected and Downloads remains the safe default.
 - System WebView resolves same-origin `blob:` downloads inside the page that created them, then streams bounded chunks into scoped `MediaStore` storage. This supports generated images and files whose temporary URL cannot be handed to Android `DownloadManager`.
+- A user-opened System WebView popup pointing to a same-origin `blob:` URL enters that same transfer path before the temporary popup closes. Popup download responses also reach the normal download routing once; unsupported URL schemes report a failed download instead of silently doing nothing.
 
 ## Privacy
 

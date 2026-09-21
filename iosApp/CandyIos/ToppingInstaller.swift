@@ -6,6 +6,7 @@ struct ToppingInstalledScript {
     let installation: ToppingInstallation
     let handlerName: String
     let invocationFunction: String
+    let valueSyncFunction: String
     let world: WKContentWorld
 }
 
@@ -19,18 +20,20 @@ enum ToppingInstaller {
     ) -> ToppingInstalledScript {
         let world = WKContentWorld.world(name: installation.plan.contentWorldName)
         let invocationFunction = "__candyInvoke_\(safeIdentifier(installation.script.id))"
+        let valueSyncFunction = "__candySyncValues_\(safeIdentifier(installation.script.id))"
         controller.addUserScript(
             WKUserScript(
                 source: source(
                     installation: installation,
                     values: values,
                     handlerName: handlerName,
-                    invocationFunction: invocationFunction
+                    invocationFunction: invocationFunction,
+                    valueSyncFunction: valueSyncFunction
                 ),
                 injectionTime: installation.script.runAt == .documentstart
                     ? .atDocumentStart
                     : .atDocumentEnd,
-                forMainFrameOnly: true,
+                forMainFrameOnly: installation.effectiveFrameScope == .top,
                 in: world
             )
         )
@@ -38,6 +41,7 @@ enum ToppingInstaller {
             installation: installation,
             handlerName: handlerName,
             invocationFunction: invocationFunction,
+            valueSyncFunction: valueSyncFunction,
             world: world
         )
     }
@@ -50,7 +54,8 @@ enum ToppingInstaller {
         installation: ToppingInstallation,
         values: [String: String],
         handlerName: String,
-        invocationFunction: String
+        invocationFunction: String,
+        valueSyncFunction: String
     ) -> String {
         let script = installation.script
         let grants = Set(script.grants)
@@ -68,7 +73,6 @@ enum ToppingInstaller {
         })
         let requireSources = installation.record.requires.map(\.source).joined(separator: "\n;\n")
         var definitions: [String] = [
-            "const __candyPost = message => webkit.messageHandlers[\(json(handlerName))].postMessage(message);",
             define("GM_info", expression: json(info)),
             "const __candyGM = { info: globalThis.GM_info };",
         ]
@@ -113,7 +117,13 @@ enum ToppingInstaller {
         }
         if grants.contains(.getvalue) || grants.contains(.setvalue) ||
             grants.contains(.deletevalue) || grants.contains(.listvalues) {
-            definitions.append(valueAPI(values: values, grants: grants))
+            definitions.append(
+                valueAPI(
+                    values: values,
+                    grants: grants,
+                    valueSyncFunction: valueSyncFunction
+                )
+            )
         }
         if grants.contains(.registermenucommand) || grants.contains(.unregistermenucommand) ||
             grants.contains(.openintab) {
@@ -128,18 +138,48 @@ enum ToppingInstaller {
         return """
             (async () => {
               'use strict';
-              if (window.top !== window || !/^https?:$/.test(location.protocol)) return;
-              const __candyAuthorization = await webkit.messageHandlers[\(json(handlerName))]
-                .postMessage({type:'authorize'});
-              if (!__candyAuthorization || __candyAuthorization.ok !== true) return;
-              \(definitions.joined(separator: "\n"))
-              \(requireSources)
-              \(script.source)
+              try {
+                if (!/^https?:$/.test(location.protocol)) return;
+                const __candyReady = await (async () => {
+                  const __candyBridge = webkit.messageHandlers[\(json(handlerName))];
+                  const __candyRestoreCallbacks = [];
+                  let __candyDocumentId = '';
+                  const __candyAuthorize = async () => {
+                    const authorization = await __candyBridge.postMessage({type:'authorize'});
+                    if (!authorization || authorization.ok !== true ||
+                        typeof authorization.documentId !== 'string') return false;
+                    __candyDocumentId = authorization.documentId;
+                    __candyRestoreCallbacks.forEach(callback => {
+                      try { callback(authorization); } catch (_) {}
+                    });
+                    return true;
+                  };
+                  if (!await __candyAuthorize()) return false;
+                  const __candyPost = message => __candyBridge.postMessage(
+                    Object.assign({}, message, {documentId:__candyDocumentId})
+                  );
+                  addEventListener('pagehide', event => {
+                    if (!event.persisted) void __candyPost({type:'dispose'});
+                  });
+                  addEventListener('pageshow', event => {
+                    if (event.persisted) void __candyAuthorize();
+                  });
+                  \(definitions.joined(separator: "\n"))
+                  return true;
+                })();
+                if (!__candyReady) return;
+                \(requireSources)
+                \(script.source)
+              } catch (_) {}
             })();
             """
     }
 
-    private static func valueAPI(values: [String: String], grants: Set<ToppingGrant>) -> String {
+    private static func valueAPI(
+        values: [String: String],
+        grants: Set<ToppingGrant>,
+        valueSyncFunction: String
+    ) -> String {
         var valuesAPI: [String] = [
             "const __candyValues = Object.assign(Object.create(null), \(json(values)));",
             """
@@ -152,6 +192,23 @@ enum ToppingInstaller {
               if (encoded === undefined) return fallback;
               try { return JSON.parse(encoded); } catch (_) { return fallback; }
             };
+            """,
+            define(valueSyncFunction, expression: """
+                (documentId, snapshot) => {
+                  if (String(documentId) !== __candyDocumentId || typeof snapshot !== 'string') return false;
+                  const value = JSON.parse(snapshot);
+                  Object.keys(__candyValues).forEach(key => delete __candyValues[key]);
+                  Object.assign(__candyValues, value);
+                  return true;
+                }
+                """),
+            """
+            __candyRestoreCallbacks.push(authorization => {
+              if (typeof authorization.valueSnapshot !== 'string') return;
+              const value = JSON.parse(authorization.valueSnapshot);
+              Object.keys(__candyValues).forEach(key => delete __candyValues[key]);
+              Object.assign(__candyValues, value);
+            });
             """,
         ]
         if grants.contains(.getvalue) {
@@ -207,7 +264,14 @@ enum ToppingInstaller {
         var api = [
             "const __candyMenuCallbacks = new Map();",
             "let __candyMenuSequence = 0;",
-            define(invocationFunction, expression: "commandId => { const callback = __candyMenuCallbacks.get(String(commandId)); if (callback) callback(); }"),
+            define(invocationFunction, expression: "(documentId, commandId) => { if (String(documentId) !== __candyDocumentId) return; const entry = __candyMenuCallbacks.get(String(commandId)); if (entry) entry.callback(); }"),
+            """
+            __candyRestoreCallbacks.push(() => {
+              __candyMenuCallbacks.forEach((entry, commandId) => {
+                void __candyPost({type:'register-menu', commandId, caption:entry.caption});
+              });
+            });
+            """,
         ]
         if grants.contains(.registermenucommand) {
             api.append(define("GM_registerMenuCommand", expression: """
@@ -217,7 +281,7 @@ enum ToppingInstaller {
                     throw new TypeError('Invalid userscript menu command');
                   }
                   const id = String(__candyMenuSequence = (__candyMenuSequence % 2147483647) + 1);
-                  __candyMenuCallbacks.set(id, callback);
+                  __candyMenuCallbacks.set(id, {caption:value, callback});
                   void __candyPost({type:'register-menu', commandId:id, caption:value});
                   return id;
                 }

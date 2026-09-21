@@ -1,18 +1,21 @@
 package dev.sk2andy.materialbrowser.browser.gecko
 
+import dev.sk2andy.materialbrowser.browser.engine.BrowserEngineContentKind
 import dev.sk2andy.materialbrowser.browser.userscript.UserScript
 import dev.sk2andy.materialbrowser.browser.userscript.UserScriptGrant
 import dev.sk2andy.materialbrowser.browser.userscript.UserScriptInjection
 import dev.sk2andy.materialbrowser.browser.userscript.UserScriptInjectionSources
 import dev.sk2andy.materialbrowser.browser.userscript.UserScriptRules
 import dev.sk2andy.materialbrowser.browser.userscript.UserScriptRunAt
+import dev.sk2andy.materialbrowser.shared.topping.ToppingFrameScope
+import org.mozilla.geckoview.GeckoSession
 
 internal object CandyToppingHostContract {
     const val EXTENSION_ID = "candy-topping-host@sk2andy.dev"
     const val EXTENSION_LOCATION = "resource://android/assets/candy_toppings/"
     const val NATIVE_APP = "dev.sk2andy.materialbrowser.toppings"
     const val OPTIONAL_PERMISSION = "userScripts"
-    const val PROTOCOL_VERSION = 2
+    const val PROTOCOL_VERSION = 3
 }
 
 internal data class GeckoToppingRegistration(
@@ -24,6 +27,7 @@ internal data class GeckoToppingRegistration(
     val includeGlobs: List<String>,
     val excludeGlobs: List<String>,
     val runAt: String,
+    val allFrames: Boolean,
 )
 
 internal enum class GeckoToppingUnsupportedReason {
@@ -90,6 +94,8 @@ internal object CandyToppingHostCompiler {
             append('\u0000')
             append(script.runAt.name)
             append('\u0000')
+            append(script.effectiveFrameScope.wireValue)
+            append('\u0000')
             append(script.requires.joinToString("\u0000") { require -> require.source.orEmpty() })
             append('\u0000')
             append(script.resources.joinToString("\u0000") { resource ->
@@ -106,29 +112,28 @@ internal object CandyToppingHostCompiler {
             id = "candy-$registrationRevision",
             scriptId = script.id,
             worldId = worldId,
-            javascriptSources = buildList {
-                add(sources.guardSource)
-                if (script.grants.any(BRIDGE_GRANTS::contains)) {
-                    add(bridgeSource(script))
-                }
-                add(
-                    buildString {
-                        append("(async () => {\n")
-                        append("const __candyRuntime = globalThis.browser?.runtime;\n")
-                        append("if (!__candyRuntime) return;\n")
-                        append("const __candyAccess = await __candyRuntime.sendMessage({")
-                        append("type: 'private-check', protocolVersion: ")
-                        append(CandyToppingHostContract.PROTOCOL_VERSION)
-                        append(", scriptId: '")
-                        append(script.id.javascriptSingleQuoted())
-                        append("'});\n")
-                        append("if (__candyAccess?.allowed !== true) return;\n")
-                        append("{ const browser = undefined; const chrome = undefined;\n")
-                        append(sources.userSource)
-                        append("\n}\n})();")
-                    },
-                )
-            },
+            javascriptSources = listOf(
+                sources.guardSource,
+                buildString {
+                    append("(async () => {\n")
+                    append("const __candyRuntime = globalThis.browser?.runtime;\n")
+                    append("if (!__candyRuntime) return;\n")
+                    append("const __candyAccess = await __candyRuntime.sendMessage({")
+                    append("type: 'private-check', protocolVersion: ")
+                    append(CandyToppingHostContract.PROTOCOL_VERSION)
+                    append(", scriptId: '")
+                    append(script.id.javascriptSingleQuoted())
+                    append("'});\n")
+                    append("if (__candyAccess?.allowed !== true) return;\n")
+                    if (script.grants.any(BRIDGE_GRANTS::contains)) {
+                        append(bridgeSource(script))
+                        append('\n')
+                    }
+                    append("{ const browser = undefined; const chrome = undefined;\n")
+                    append(sources.userSource)
+                    append("\n}\n})();")
+                },
+            ),
             matchPatterns = script.matchPatterns.flatMap { pattern ->
                 if (pattern == "<all_urls>") {
                     listOf("http://*/*", "https://*/*")
@@ -146,6 +151,7 @@ internal object CandyToppingHostCompiler {
                 UserScriptRunAt.DocumentStart -> "document_start"
                 UserScriptRunAt.DocumentEnd -> "document_end"
             },
+            allFrames = script.effectiveFrameScope != ToppingFrameScope.Top,
         )
     }
 
@@ -271,6 +277,21 @@ internal interface GeckoToppingHostRuntime {
     fun invokeMenuCommand(command: dev.sk2andy.materialbrowser.browser.userscript.UserScriptMenuCommand) = Unit
 
     fun clearValues(scriptId: String) = Unit
+
+    fun bindSession(
+        session: GeckoSession,
+        tabId: String,
+        isPrivate: Boolean,
+        contentKind: BrowserEngineContentKind,
+    ): GeckoToppingSessionBinding = GeckoToppingSessionBinding.None
+}
+
+internal fun interface GeckoToppingSessionBinding {
+    fun close()
+
+    companion object {
+        val None = GeckoToppingSessionBinding {}
+    }
 }
 
 internal interface GeckoToppingInteractionDelegate {

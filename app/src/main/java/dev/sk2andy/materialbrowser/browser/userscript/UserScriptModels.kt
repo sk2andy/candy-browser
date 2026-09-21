@@ -1,5 +1,7 @@
 package dev.sk2andy.materialbrowser.browser.userscript
 
+import dev.sk2andy.materialbrowser.shared.topping.ToppingFrameScope
+
 internal enum class UserScriptRunAt {
     DocumentStart,
     DocumentEnd,
@@ -17,8 +19,13 @@ internal data class UserScript(
     val runAt: UserScriptRunAt,
     val requires: List<UserScriptRequire> = emptyList(),
     val resources: List<UserScriptResource> = emptyList(),
+    val declaredFrameScope: ToppingFrameScope = ToppingFrameScope.Top,
+    val allowedFrameScope: ToppingFrameScope = declaredFrameScope,
     val updatedAtMillis: Long = 0L,
-)
+) {
+    val effectiveFrameScope: ToppingFrameScope
+        get() = allowedFrameScope.restrictedTo(declaredFrameScope)
+}
 
 internal data class UserScriptRequire(
     val url: String,
@@ -65,6 +72,7 @@ internal data class UserScriptMenuCommand(
     val scriptName: String,
     val commandId: String,
     val caption: String,
+    val documentId: String = "",
 )
 
 internal data class UserScriptOpenTabRequest(
@@ -87,6 +95,7 @@ internal enum class UserScriptRejectionReason {
     InvalidIncludePattern,
     InvalidExcludePattern,
     InvalidRunAt,
+    InvalidFrameScope,
     InvalidRequire,
     InvalidResource,
     TooManyDependencies,

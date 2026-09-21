@@ -20,6 +20,7 @@ import dev.sk2andy.materialbrowser.browser.AddressResolver
 import dev.sk2andy.materialbrowser.browser.BLANK_URL
 import dev.sk2andy.materialbrowser.browser.BrowserTab
 import dev.sk2andy.materialbrowser.data.FavoriteEntry
+import dev.sk2andy.materialbrowser.data.FavoriteLibrary
 import dev.sk2andy.materialbrowser.shared.ui.TabCardHeroContent
 import dev.sk2andy.materialbrowser.shared.ui.TabListHeroContent
 import dev.sk2andy.materialbrowser.shared.ui.TabOverviewHeroVisuals
@@ -103,6 +104,7 @@ internal fun AndroidTabCardHeroContent(
     preview: Bitmap?,
     favicon: Bitmap?,
     favorites: List<FavoriteEntry>,
+    favoriteLibrary: FavoriteLibrary? = null,
     favoriteFavicons: Map<String, Bitmap>,
     targetBounds: Rect,
     rootWidthPx: Float,
@@ -129,6 +131,7 @@ internal fun AndroidTabCardHeroContent(
                 preview = preview,
                 favicon = favicon,
                 favorites = favorites,
+                favoriteLibrary = favoriteLibrary,
                 favoriteFavicons = favoriteFavicons,
                 rootHeightPx = rootHeightPx,
                 previewTopInsetPx = previewTopInsetPx,
@@ -154,6 +157,7 @@ internal fun AndroidTabListHeroContent(
     preview: Bitmap?,
     favicon: Bitmap?,
     favorites: List<FavoriteEntry>,
+    favoriteLibrary: FavoriteLibrary? = null,
     favoriteFavicons: Map<String, Bitmap>,
     targetBounds: Rect,
     rootWidthPx: Float,
@@ -175,6 +179,7 @@ internal fun AndroidTabListHeroContent(
                 preview = preview,
                 favicon = favicon,
                 favorites = favorites,
+                favoriteLibrary = favoriteLibrary,
                 favoriteFavicons = favoriteFavicons,
                 rootHeightPx = rootHeightPx,
                 previewTopInsetPx = previewTopInsetPx,

@@ -26,6 +26,13 @@
     <string name="userscript_run_at_document_start">document start</string>
     <string name="userscript_run_at_document_end">document end</string>
     <string name="userscript_matches">Matches: %1$s</string>
+    <string name="userscript_frame_scope_title">Embedded-frame access</string>
+    <string name="userscript_frame_scope_explanation">You can restrict this Topping, but never grant more access than its metadata requests. Every frame must still match its own URL rules.</string>
+    <string name="userscript_frame_scope_requested">Requested: %1$s</string>
+    <string name="userscript_frame_scope_allowed">Allowed: %1$s</string>
+    <string name="userscript_frame_scope_top">main page only</string>
+    <string name="userscript_frame_scope_same_origin">matching frames from the same origin</string>
+    <string name="userscript_frame_scope_all_matching">all matching frames, including other sites</string>
     <string name="userscript_no_patterns">No positive URL pattern</string>
     <string name="userscript_enable_description">Enable %1$s</string>
     <string name="userscript_disable_description">Disable %1$s</string>
@@ -51,6 +58,7 @@
     <string name="userscript_import_error_too_many_metadata_values">Use no more than %1$d URL patterns of each type.</string>
     <string name="userscript_import_error_invalid_scope">One of the @match, @include, or @exclude URL patterns is invalid.</string>
     <string name="userscript_import_error_invalid_run_at">@run-at must be document-start or document-end.</string>
+    <string name="userscript_import_error_invalid_frame_scope">@candy-frames must be top, same-origin, or all-matching and must not conflict with @noframes.</string>
     <string name="userscript_import_error_unsupported_grant">This Topping requests an unsupported @grant or @connect permission.</string>
     <string name="userscript_import_error_invalid_dependency">An @require or @resource dependency has an invalid name, HTTPS URL, or integrity hash.</string>
     <string name="userscript_import_error_too_many_dependencies">This Topping declares too many @require or @resource dependencies.</string>

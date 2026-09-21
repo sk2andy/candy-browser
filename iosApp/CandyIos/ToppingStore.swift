@@ -20,6 +20,7 @@ struct StoredTopping: Codable, Equatable, Identifiable {
     let id: String
     let source: String
     var enabled: Bool
+    var allowedFrameScope: StoredToppingFrameScope
     let requires: [StoredToppingRequire]
     let resources: [StoredToppingResource]
 
@@ -27,18 +28,20 @@ struct StoredTopping: Codable, Equatable, Identifiable {
         id: String,
         source: String,
         enabled: Bool,
+        allowedFrameScope: StoredToppingFrameScope = .top,
         requires: [StoredToppingRequire] = [],
         resources: [StoredToppingResource] = []
     ) {
         self.id = id
         self.source = source
         self.enabled = enabled
+        self.allowedFrameScope = allowedFrameScope
         self.requires = requires
         self.resources = resources
     }
 
     private enum CodingKeys: String, CodingKey {
-        case id, source, enabled, requires, resources
+        case id, source, enabled, allowedFrameScope, requires, resources
     }
 
     init(from decoder: Decoder) throws {
@@ -46,6 +49,7 @@ struct StoredTopping: Codable, Equatable, Identifiable {
         id = try values.decode(String.self, forKey: .id)
         source = try values.decode(String.self, forKey: .source)
         enabled = try values.decode(Bool.self, forKey: .enabled)
+        allowedFrameScope = try values.decode(StoredToppingFrameScope.self, forKey: .allowedFrameScope)
         requires = try values.decodeIfPresent([StoredToppingRequire].self, forKey: .requires) ?? []
         resources = try values.decodeIfPresent([StoredToppingResource].self, forKey: .resources) ?? []
     }
@@ -69,6 +73,12 @@ struct ToppingInstallation {
     let record: StoredTopping
     let script: ToppingScript
     let plan: ToppingInjectionPlan
+
+    var effectiveFrameScope: StoredToppingFrameScope {
+        record.allowedFrameScope.restricted(
+            to: StoredToppingFrameScope(rawValue: script.declaredFrameScope.wireValue) ?? .top
+        )
+    }
 }
 
 @MainActor
@@ -79,7 +89,7 @@ final class ToppingStore {
     private let storageKey: String
     private var cachedRecords: [StoredTopping]?
 
-    init(preferences: UserDefaults = .standard, storageKey: String = "candy.ios.toppings.v2") {
+    init(preferences: UserDefaults = .standard, storageKey: String = "candy.ios.toppings.v3") {
         self.preferences = preferences
         self.storageKey = storageKey
     }
@@ -88,15 +98,16 @@ final class ToppingStore {
         if let cachedRecords {
             return cachedRecords
         }
-        guard
-            let data = preferences.data(forKey: storageKey),
-            let decoded = try? JSONDecoder().decode([StoredTopping].self, from: data)
-        else {
-            return migrateVersionOneRecords()
+        if let data = preferences.data(forKey: storageKey) {
+            guard let decoded = try? JSONDecoder().decode([StoredTopping].self, from: data) else {
+                cachedRecords = []
+                return []
+            }
+            let records = decoded.filter(isCanonical).sorted { $0.id < $1.id }
+            cachedRecords = records
+            return records
         }
-        let records = decoded.filter(isCanonical).sorted { $0.id < $1.id }
-        cachedRecords = records
-        return records
+        return migrateLegacyRecords()
     }
 
     @discardableResult
@@ -106,7 +117,14 @@ final class ToppingStore {
             throw ToppingStoreError.unresolvedDependencies
         }
         return try save(
-            StoredTopping(id: id, source: source, enabled: enabled),
+            StoredTopping(
+                id: id,
+                source: source,
+                enabled: enabled,
+                allowedFrameScope: StoredToppingFrameScope(
+                    rawValue: script.declaredFrameScope.wireValue
+                ) ?? .top
+            ),
             parsedScript: script
         )
     }
@@ -126,6 +144,25 @@ final class ToppingStore {
             throw ToppingStoreError.invalidScript("unknown_id")
         }
         current[index].enabled = enabled
+        try persist(current)
+    }
+
+    func setAllowedFrameScope(_ scope: ToppingFrameScope, id: String) throws {
+        var current = records()
+        guard let index = current.firstIndex(where: { $0.id == id }) else {
+            throw ToppingStoreError.invalidScript("unknown_id")
+        }
+        let script = try parse(
+            id: current[index].id,
+            source: current[index].source,
+            enabled: current[index].enabled
+        )
+        let requested = StoredToppingFrameScope(rawValue: scope.wireValue) ?? .top
+        let declared = StoredToppingFrameScope(rawValue: script.declaredFrameScope.wireValue) ?? .top
+        guard requested.isWithin(declared) else {
+            throw ToppingStoreError.invalidScript("invalid_frame_scope")
+        }
+        current[index].allowedFrameScope = requested
         try persist(current)
     }
 
@@ -159,16 +196,25 @@ final class ToppingStore {
             throw ToppingStoreError.unresolvedDependencies
         }
         var current = records()
+        var normalized = record
+        let declaredScope = StoredToppingFrameScope(
+            rawValue: parsedScript.declaredFrameScope.wireValue
+        ) ?? .top
         if let index = current.firstIndex(where: { $0.id == record.id }) {
-            current[index] = record
+            normalized.allowedFrameScope = ToppingStoredScopeRules.scopeForSave(
+                existing: current[index].allowedFrameScope,
+                declared: declaredScope
+            )
+            current[index] = normalized
         } else {
             guard current.count < Self.maximumScriptCount else {
                 throw ToppingStoreError.tooManyScripts
             }
-            current.append(record)
+            normalized.allowedFrameScope = record.allowedFrameScope.restricted(to: declaredScope)
+            current.append(normalized)
         }
         try persist(current)
-        return record
+        return normalized
     }
 
     private func parse(id: String, source: String, enabled: Bool) throws -> ToppingScript {
@@ -191,7 +237,11 @@ final class ToppingStore {
         else {
             return false
         }
-        return dependenciesMatch(record: record, script: result.script)
+        let declaredScope = StoredToppingFrameScope(
+            rawValue: result.script.declaredFrameScope.wireValue
+        ) ?? .top
+        return record.allowedFrameScope.isWithin(declaredScope) &&
+            dependenciesMatch(record: record, script: result.script)
     }
 
     private func dependenciesMatch(record: StoredTopping, script: ToppingScript) -> Bool {
@@ -231,16 +281,31 @@ final class ToppingStore {
         cachedRecords = sortedRecords
     }
 
-    private func migrateVersionOneRecords() -> [StoredTopping] {
-        struct LegacyRecord: Codable { let id: String; let source: String; let enabled: Bool }
-        guard
-            let data = preferences.data(forKey: "candy.ios.toppings.v1"),
-            let legacy = try? JSONDecoder().decode([LegacyRecord].self, from: data)
-        else {
+    private func migrateLegacyRecords() -> [StoredTopping] {
+        if let data = preferences.data(forKey: "candy.ios.toppings.v2") {
+            guard let legacy = try? JSONDecoder().decode([LegacyVersionTwoRecord].self, from: data) else {
+                cachedRecords = []
+                return []
+            }
+            let migrated = legacy.map(\.versionThreeRecord).filter(isCanonical)
+            try? persist(migrated)
+            return migrated.sorted { $0.id < $1.id }
+        }
+
+        struct LegacyVersionOneRecord: Codable { let id: String; let source: String; let enabled: Bool }
+        guard let data = preferences.data(forKey: "candy.ios.toppings.v1"),
+              let legacy = try? JSONDecoder().decode([LegacyVersionOneRecord].self, from: data) else {
             cachedRecords = []
             return []
         }
-        let migrated = legacy.map { StoredTopping(id: $0.id, source: $0.source, enabled: $0.enabled) }
+        let migrated = legacy.map {
+            StoredTopping(
+                id: $0.id,
+                source: $0.source,
+                enabled: $0.enabled,
+                allowedFrameScope: .top
+            )
+        }
             .filter(isCanonical)
         try? persist(migrated)
         return migrated.sorted { $0.id < $1.id }
@@ -257,5 +322,37 @@ final class ToppingStore {
             of: #"^[a-z0-9][a-z0-9!#$&^_.+\-]*/[a-z0-9][a-z0-9!#$&^_.+\-]*$"#,
             options: .regularExpression
         ) != nil
+    }
+}
+
+private struct LegacyVersionTwoRecord: Codable {
+    let id: String
+    let source: String
+    let enabled: Bool
+    let requires: [StoredToppingRequire]
+    let resources: [StoredToppingResource]
+
+    private enum CodingKeys: String, CodingKey {
+        case id, source, enabled, requires, resources
+    }
+
+    init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        id = try values.decode(String.self, forKey: .id)
+        source = try values.decode(String.self, forKey: .source)
+        enabled = try values.decode(Bool.self, forKey: .enabled)
+        requires = try values.decodeIfPresent([StoredToppingRequire].self, forKey: .requires) ?? []
+        resources = try values.decodeIfPresent([StoredToppingResource].self, forKey: .resources) ?? []
+    }
+
+    var versionThreeRecord: StoredTopping {
+        StoredTopping(
+            id: id,
+            source: source,
+            enabled: enabled,
+            allowedFrameScope: .top,
+            requires: requires,
+            resources: resources
+        )
     }
 }

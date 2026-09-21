@@ -49,10 +49,17 @@ import androidx.compose.ui.unit.dp
 import dev.sk2andy.materialbrowser.BuildConfig
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.browser.BLANK_URL
+import dev.sk2andy.materialbrowser.browser.AddressResolver
 import dev.sk2andy.materialbrowser.browser.BrowserController
 import dev.sk2andy.materialbrowser.browser.BrowserTab
 import dev.sk2andy.materialbrowser.browser.cast.CastUiState
 import dev.sk2andy.materialbrowser.browser.commands.AddressSuggestionItem
+import dev.sk2andy.materialbrowser.browser.integration.BrowserUriPolicy
+import dev.sk2andy.materialbrowser.data.TabDeletionRules
+import dev.sk2andy.materialbrowser.reader.ReaderStudioSessionRules
+import dev.sk2andy.materialbrowser.shared.browser.AddressBarLongPressAction
+import dev.sk2andy.materialbrowser.shared.browser.AddressBarLongPressActionRules
+import dev.sk2andy.materialbrowser.shared.browser.AddressBarLongPressContext
 import eightbitlab.com.blurview.BlurTarget
 import kotlin.math.absoluteValue
 
@@ -121,9 +128,33 @@ internal fun BoxScope.BrowserAddressChrome(
     onOpenCandyTrail: () -> Unit,
     onSnooze: () -> Unit,
     onAddSiteCapsule: () -> Unit,
+    onAddressBarLongPressAction: (AddressBarLongPressAction) -> Unit,
 ) {
     val context = LocalContext.current
     val density = LocalDensity.current
+    val wideWindow = AddressBarWideLayoutRules.usesTabStrip(
+        windowWidthDp = browserWidthPx / density.density,
+    )
+    val wideTabStripEnabled = wideWindow && !linkPeekAddressBarExpanded
+    val tabSwipeEnabled = !wideWindow
+    val blankTabTitle = stringResource(R.string.new_tab_title)
+    val wideTabs = if (wideTabStripEnabled) {
+        controller.activeTabs.map { tab ->
+            WideAddressTabItem(
+                id = tab.id,
+                title = tab.title.ifBlank {
+                    if (tab.url == BLANK_URL) blankTabTitle else AddressResolver.displayText(tab.url)
+                },
+                favicon = controller.favicons[tab.id],
+                canClose = TabDeletionRules.canDelete(tab),
+            )
+        }
+    } else {
+        emptyList()
+    }
+    LaunchedEffect(tabSwipeEnabled) {
+        if (!tabSwipeEnabled) browserDragOffset.floatValue = 0f
+    }
     val rootView = LocalView.current
     val longPressActionHapticNonce = controller.contentActions.longPressActionHapticNonce
     LaunchedEffect(longPressActionHapticNonce) {
@@ -183,6 +214,34 @@ internal fun BoxScope.BrowserAddressChrome(
     )
     val effectiveAddressBarDockPlacement = controller.addressBarDockPlacement
         .takeIf { addressBarDockingAvailable && !linkPeekAddressBarExpanded }
+    val addressBarLongPressAction = controller.addressBarLongPressAction
+    val hasHttpPage = BrowserUriPolicy.normalizeHttpUrl(selectedTab.url) != null
+    val addressBarLongPressEnabled = AddressBarLongPressActionRules.isAvailable(
+        action = addressBarLongPressAction,
+        context = AddressBarLongPressContext(
+            hasPage = selectedTab.url != BLANK_URL,
+            hasHttpPage = hasHttpPage,
+            isPrivate = selectedTab.isIncognito,
+            canGoBack = selectedTab.canGoBack,
+            canOpenReader = ReaderStudioSessionRules.isSupportedSource(selectedTab.url),
+            canToggleFavorite = selectedTab.url != BLANK_URL && !selectedTab.isIncognito,
+            canToggleDesktopView = controller.canToggleSelectedDesktopView,
+            canParkAddressBar = addressBarDockingAvailable,
+            canCreateSiteCapsule = controller.canCreateSiteCapsule &&
+                !selectedTab.isIncognito &&
+                hasHttpPage,
+            canCreatePrivateTab = controller.canCreatePrivateTabInActiveProfile,
+            canSnoozeTab = controller.canSnoozeSelectedTab,
+            hasMoveTargetProfile = controller.compatibleMoveTargetProfiles(selectedTab.id).isNotEmpty(),
+        ),
+    )
+    val addressBarLongPressLabel = stringResource(
+        addressBarLongPressAction.runtimeLabelRes(
+            isFavorite = controller.isSelectedTabFavorite,
+            isPinned = selectedTab.isPinned,
+            isDesktopView = controller.isSelectedDesktopView,
+        ),
+    )
     var addressBarBoundsInRoot by remember { mutableStateOf<Rect?>(null) }
     val autoDockGeometryAvailable = addressBarDockingAvailable &&
         effectiveAddressBarDockPlacement == null &&
@@ -218,18 +277,26 @@ internal fun BoxScope.BrowserAddressChrome(
     BrowserBottomBar(
         tab = selectedTab,
         pageTranslationProvider = controller.pageTranslationProvider,
-        compact = controller.isBottomBarCompact && !linkPeekAddressBarExpanded,
+        compact = controller.isBottomBarCompact &&
+            !linkPeekAddressBarExpanded &&
+            !wideWindow,
         dockState = AddressBarDockState(
             enabled = addressBarDockingAvailable,
             placement = effectiveAddressBarDockPlacement,
         ),
         dockTargetEdge = controller.lastAddressBarDockEdge,
         editing = addressEditorVisible,
+        addressBarStyle = controller.appearanceSettings.addressBarStyle,
         actionLayout = controller.addressBarActionLayout,
         showCastButton = !BuildConfig.FOSS_DISTRIBUTION &&
             (controller.castMediaCandidate != null || castUiState.isConnected),
         showQrScanner = !BuildConfig.FOSS_DISTRIBUTION,
         tabCount = controller.activeTabs.size,
+        wideTabs = wideTabs,
+        wideTabStripEnabled = wideTabStripEnabled,
+        tabSwipeEnabled = tabSwipeEnabled,
+        onWideTabSelected = controller::selectTab,
+        onWideTabClosed = { tabId -> controller.closeTabFromUser(tabId) },
         userScriptMenuCommands = if (controller.isUserScriptSupported) {
             controller.selectedUserScriptMenuCommands
         } else {
@@ -244,6 +311,11 @@ internal fun BoxScope.BrowserAddressChrome(
         onBack = controller::goBack,
         onForward = controller::goForward,
         onAddress = openAddressEditor,
+        addressBarLongPressEnabled = addressBarLongPressEnabled,
+        addressBarLongPressLabel = addressBarLongPressLabel,
+        onAddressBarLongPress = {
+            onAddressBarLongPressAction(addressBarLongPressAction)
+        },
         editValue = addressValue,
         onEditValueChange = onAddressValueChanged,
         ghostCompletion = domainCompletion,
@@ -316,7 +388,7 @@ internal fun BoxScope.BrowserAddressChrome(
         onDockPlacementChanged = controller::updateAddressBarDockPlacement,
         onRestoreDock = { controller.updateAddressBarDocked(false) },
         onTabDrag = { delta ->
-            if (!addressEditorVisible && !tabOverviewVisible) {
+            if (tabSwipeEnabled && !addressEditorVisible && !tabOverviewVisible) {
                 if (browserDragOffset.floatValue == 0f && delta != 0f) {
                     controller.refreshSelectedTabPreviewBeforeDeparture()
                 }
@@ -347,7 +419,7 @@ internal fun BoxScope.BrowserAddressChrome(
             val fastEnough = browserDragOffset.floatValue.absoluteValue >= minTravel &&
                 velocity.absoluteValue >= with(density) { 900.dp.toPx() } &&
                 velocity.compareTo(0f) == direction
-            val shouldSwitch = targetTab != null &&
+            val shouldSwitch = tabSwipeEnabled && targetTab != null &&
                 (
                     AddressBarTabSwitchRules.hasReachedDistance(
                         dragDistance = browserDragOffset.floatValue.absoluteValue,
@@ -520,6 +592,8 @@ internal fun BoxScope.BrowserAddressChrome(
                 controller.setPreviewContentBottomInWindowPx(topInWindowPx)
             }
         },
+        backdropBlurRegionEnabled = browserDragOffset.floatValue == 0f && !settingsVisible,
+        onBackdropBlurRegionChanged = controller::setSelectedBrowserBackdropBlurRegion,
         modifier = Modifier
             .fillMaxSize()
             .zIndex(

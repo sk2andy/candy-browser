@@ -31,12 +31,12 @@
 | Federated login | `FederatedLoginRules` → controller → Snackbar and `AlertDialog` | Detect only known cross-site identity SDK endpoints; change cookie, user-agent and popup policy only after explicit consent |
 | CAPTCHA compatibility | `CaptchaCompatibilityRules` → controller → Snackbar and `AlertDialog` | Detect strict cross-site Cloudflare, Google reCAPTCHA, or hCaptcha endpoints; allow third-party cookies only after explicit consent |
 | HTTP Basic authentication | `HttpAuthPromptRules` → `BrowserController` → `HttpAuthPromptDialog` | Prompt only for a selected, resumed tab when challenge host matches current top-level HTTP(S) host; keep credentials memory-only and warn on cleartext HTTP |
-| Gecko downloads and uploads | `BrowserEngineDownloadRules` / `FileChooserRules` → controller → Android download/file presenters | Accept bounded HTTP(S) downloads and readable `content://` file results only; reject stale session/navigation/activity results |
+| Gecko downloads and uploads | `BrowserEngineDownloadRules` / `FileChooserRules` → controller → Android download/file presenters | Accept bounded HTTP(S) downloads and readable `content://` file results only; stage selected documents in app cache for GeckoView's path-based file prompt, cap staged content at 1 GiB, remove it when the session ends and clear orphaned files at next startup; reject stale session/navigation/activity results |
 | Gecko permissions and prompts | `PermissionRequestRules` / `BrowserWebPromptRules` → controller → existing Candy dialogs and Android permission presenter | Preserve profile/private permission scope, deny stale prompts, and fail closed for unsupported sensitive prompt classes |
 | Local userscript | `UserScriptRules` → Gecko Topping document-start bridge | Require an explicit HTTP(S) pattern, top frame and regular tab; apply full URL exclusions before source runs |
 | Main-frame 404 | engine HTTP status → tab state → `PageErrorFeedbackRules` | Keep the navigation committed, preserve URL/title/history side effects, and cover the page with Candy's native not-found surface |
 | Offline page | failed main-frame navigation + `BrowserConnectivityMonitor` → controller → `PageErrorFeedbackRules` | Require Android's validated default internet capability, never cover an already loaded page merely because connectivity drops, auto-reload on reconnect only before the game starts, and preserve the game behind an explicit reload banner afterward |
-| Pull to refresh | `BrowserPullToRefreshLayout` → `BrowserPullGestureRules` / `BrowserPullToRefreshRules` → `BrowserController.reload()` | Admit a downward-dominant gesture only for a visible, idle web page whose engine-reported document offset is at the top; keep blank, obscured, Find-in-page, overview and video-only surfaces out of the gesture path |
+| Pull to refresh | `BrowserPullToRefreshLayout` → `BrowserPullGestureRules` / `BrowserPullToRefreshRules` → `BrowserController.reload()` | Admit a downward-dominant gesture starting within 64 dp below the top safe inset only for a visible, idle web page whose engine-reported document offset is at the top; keep gestures starting in the page body with nested scrollers, plus blank, obscured, Find-in-page, overview and video-only surfaces, out of the gesture path |
 
 ## Invariants
 
@@ -44,13 +44,20 @@
   receive explicit callbacks and must not become independent lifecycle owners. Keep browser state in
   `BrowserController`, transient root UI state in `BrowserScreen`, and focused composables stateless
   except for their existing local presentation state.
+- Keep the selected Gecko session active while the Activity remains started and visible behind a
+  translucent system surface such as Android Sharesheet. Pause interaction-sensitive work on
+  `onPause`, but mark Gecko inactive only after `onStop`; otherwise its `SurfaceView` drops the
+  visible page frame during the system transition. System WebView still receives `onPause` and
+  `onResume` with the Activity because those calls suspend and resume its renderer processing.
 - Keep separate browser intent filters for untyped HTTP(S) links and HTTP(S) links carrying the
   `text/html` MIME type. Adding a MIME type to the untyped filter makes ordinary links ineligible.
 - Register shares only for `ACTION_SEND` `text/plain` and `text/html`. Treat `EXTRA_TEXT` as the
   canonical literal payload for both types, require the complete value to normalize as one HTTP(S)
   URL within 32,768 characters, and never select a URL from prose, `EXTRA_HTML_TEXT`, or
   `ACTION_SEND_MULTIPLE`.
-- Show Gecko fullscreen content above browser chrome and enable sensor rotation for its lifetime.
+- Show GeckoView and System WebView fullscreen content with Candy's address, tab, find and status
+  chrome hidden, and enable sensor rotation for its lifetime. In-app mini-player placement restores
+  normal browser chrome.
   Web-content fullscreen takes orientation priority over the tab overview portrait lock; exiting restores
   the current browser orientation, system-bar policy and soft-input adjustment. While system bars
   are hidden, keep the Activity at full height and let Compose IME insets move browser chrome above
@@ -165,7 +172,9 @@
   stagger; score and move semantics update from the reducer result without waiting for motion. Open the
   puzzle immediately with no intermediate play prompt. If connectivity
   returns, keep game state and morph the offline pill into a polite **Back online** banner. Its button
-  plays the page exit motion before performing the only reload.
+  plays the page exit motion before performing the only retry. Load the exact failed URL when the engine
+  has no matching committed history entry; retain normal reload semantics when history already points at
+  the target, including committed HTTP failures such as 404.
 - Treat a main-frame HTTP 404 as a committed response, not a failed navigation. System WebView reports it
   from `onReceivedHttpError`; Gecko's authenticated internal Privacy WebExtension reports the main-frame
   response status because GeckoView's session delegate exposes transport errors but not HTTP response
@@ -222,14 +231,31 @@
   Gecko-only bridge before installing any of its observers or hooks. Gecko's separate bounded CSS
   layer stays inactive when the document declares `viewport-fit=cover`; Gecko remains the sole owner
   of `env(safe-area-inset-*)`, and Candy does not add body or positioned-element offsets that could
-  distort the page's full-height or IME scroll geometry. Other documents classify suitable body flow
+  distort the page's full-height or IME scroll geometry. A wide semantic sticky top header in another
+  document switches only the top edge to Candy's native margin. A `fixed` declaration alone is not
+  enough: each fixed header records its own baseline and qualifies only after a later downward document
+  scroll, or movement of its cached following content anchor, of at least its height while its same
+  rendered box still occupies the top safe-area band. Restored scroll positions cannot satisfy that
+  proof. Fixed menus that move away with Google-like page
+  chrome therefore keep the WebView edge to edge. The tab keeps the reported website status-bar
+  appearance until its next navigation. Other documents classify suitable body flow
   and viewport-bound top anchors, then add the inset to their original top positions once. It does not
-  repeatedly measure correctly protected headers while scrolling.
-  Only authorized relevant mutations and configured resize/configuration changes reclassify.
+  repeatedly run broad layout repair while scrolling. Scroll events only advance a generation and
+  rearm one worker. After at least 150 ms of scroll quiet, Candy verifies only cached bounded header
+  candidates; it performs no selector query or DOM discovery on the hot or quiet scroll path.
+  Relevant semantic mutations, trusted clicks, stylesheet load, DOM readiness and final load request
+  the same coalesced check; other DOM discovery retains its existing interaction gate.
+  Native top-header activation and removal set the final engine margin immediately, then ease the
+  previous top edge into place with a temporary visual offset. The renderer receives its final
+  viewport in one layout pass instead of jumping the top edge or repeatedly relaying out the WebView.
+  Fullscreen, safe-drawing hosts, forced fallbacks and changed system insets always snap.
   Unknown layouts retain verified emergency native top fallback rather than speculative CSS changes.
   Fullscreen and Compose safe-drawing hosts retain their duplicate-inset exclusions.
   System WebView retains shared document repair: Candy owns its status-bar and cutout top edge because a
   `viewport-fit=cover` declaration does not guarantee use of `env(safe-area-inset-top)`.
+  Its semantic top-header path uses the same persistence check, native-margin and website-color contract,
+  while a document
+  declaring `viewport-fit=cover` stays on the existing repair/renderer path rather than forcing a margin.
   The document-start compatibility inset protects normal flow and top-positioned content.
   Top-anchored fixed, sticky, absolute, and focused containers are shifted once into the safe area.
   Stable viewport-sticky headers use an inherited CSS `max(originalTop, topInset)` anchor, including
@@ -260,9 +286,9 @@
   the top edge into a navigation-scoped native fallback margin. The explicit
   per-site **Force safe area** override still moves every edge into native safe-area margins.
   Fullscreen keeps the renderer edge to edge.
-  GeckoView keeps its default SurfaceView backend when no backdrop capture is needed, so frames
-  reach Android's compositor directly. Frosted chrome with non-zero blur and transparency switches
-  the renderer to TextureView for live page capture; turning blur off restores SurfaceView.
+  GeckoView always keeps its default SurfaceView backend so frames reach Android's compositor
+  directly. Android 17 and newer apply Frosted blur through a rounded native SurfaceView region;
+  Android 13 through 16 keep the translucent glass treatment without website blur.
   PiP, clipping and tab motion preserve the same browser host, GeckoView, surface, display and
   session. The static status-bar overlay remains outside the renderer and keeps system icons legible.
 - System WebView's shared safe-area read caches, including Light-/Shadow-DOM parent paths and null parents, are scoped to
@@ -350,19 +376,20 @@ together. This prototype is not a compatibility claim for the layouts described 
 | Rule | Prototype behavior |
 | --- | --- |
 | Inset source | Existing native policy inset divided by device-pixel ratio, exposed as `--candy-safe-area-inset-top` |
-| `viewport-fit=cover` | Skip the complete Candy CSS layer, including body, fixed/sticky, known-site and Reddit rules; keep Gecko's native renderer safe-area delivery |
+| `viewport-fit=cover` | Skip the generic Candy CSS layer, including body, fixed/sticky and known-site rules; keep Gecko's native renderer safe-area delivery. Reddit's scoped component helper remains active because current mobile markup declares cover without applying the renderer inset to its header flow. |
 | Normal page flow | A per-document stylesheet raises body top padding to at least the inset; larger initial padding is preserved |
-| Fixed / sticky | Bounded per-element stylesheet rules apply `originalTop + inset` to every discovered finite resolved CSS-pixel top, without an upper threshold; no positioned-element padding or inline top is added |
+| Semantic top header | A visible viewport-wide `header`, `nav`, `[role=banner]`, or `[role=navigation]` with `position: fixed/sticky` and a nonnegative top anchor requests a navigation-scoped native top margin. Reddit discovery prioritizes its known `reddit-header-small`, `reddit-header-large`, and `shreddit-header` hosts. Candy paints the status-bar sibling with the active `theme-color`, then the resolved opaque header/page background, and selects contrasting status icons. `viewport-fit=cover` retains Gecko-owned edge-to-edge layout. |
+| Other fixed / sticky | Bounded per-element stylesheet rules apply `originalTop + inset` to every other discovered finite resolved CSS-pixel top, without an upper threshold; no positioned-element padding or inline top is added |
 | Predeclared selectors | Initial and event-driven CSS-source scans protect full selectors with literal `fixed`/`sticky` and a finite pixel `top` in the same CSS declaration block, even before any element matches that state |
 | Selector ownership | Elements matching a protected selector do not receive a second element-level top addition; body padding and unmatched element protection remain separate |
 | Retained anchors | Existing rule identities are checked before reading computed style; normal author inline resets do not remove the rule or add another inset |
 | Other top values | Literal `auto` and unresolved values are not changed; all finite resolved CSS-pixel values, including negative and above-inset tops, are included |
-| Initial discovery | Protect the first available body without waiting for the worker; one bounded body traversal plus a single semantic seed when the DOM becomes interactive, without waiting for all subresources; first `header` preferred, `nav` then `[role="banner"]` used only as fallbacks (at most three fixed queries); at most eight shallow header/ancestor checks are reserved from the initial traversal cap |
-| Later discovery | DOM subtrees retain trusted click/drop gates; newly loaded links, style insertion/text changes and source attributes use a separate CSS queue without an interaction requirement |
-| Scroll | Cancels pending work; does not start style/geometry reads or repair |
+| Initial discovery | Protect the first available body without waiting for the worker; one bounded body traversal plus a coalesced semantic check when the DOM becomes interactive and again at final load; at most eight semantic candidates, 32 cached candidate/ancestor identities and eight fixed-header proofs are retained |
+| Later discovery | DOM subtrees retain trusted click/drop gates. Relevant semantic additions/class changes, trusted clicks and stylesheet loads also request the bounded semantic check, allowing late SPA hydration without a reload. CSS-source changes retain their separate queue without an interaction requirement. |
+| Scroll | Cancels pending broad work, advances a generation and rearms one worker. After at least 150 ms of quiet, only cached candidates are verified; the scroll handler performs no style, geometry or selector reads, and scroll never starts a DOM query. |
 | Settings | Existing enable, DOM mutation/interaction, batch and resize controls remain; CSS sources reuse worker batch/time limits with fixed prototype source limits; only post-load sources use the 500-ms cooldown |
-| Native / privacy | Full-window renderer, native inset delivery, existing fallback bridge and private-session boundaries remain unchanged |
-| Reddit component exception | `content_safe_area_reddit.js` supplies scoped app-flow/header rules in the document and observed open component roots; scroll-state attributes are matched by CSS, not JavaScript repair |
+| Native / privacy | The outer host remains full-window. Top-header and emergency fallback state is memory-only, tab/navigation-scoped, revision-validated, and cleared on navigation or tab removal. |
+| Reddit component exception | `content_safe_area_reddit.js` supplies scoped app-flow/header rules in the document and observed open component roots, including `reddit-header-small`, `reddit-header-large`, and `shreddit-header`. It uses the greater of Gecko's `env(safe-area-inset-top)` and Candy's bounded inset; scroll-state attributes remain CSS-only. |
 
 This iteration tests approach A: persistent author-origin CSS, not periodic mutation repair. Each
 document owns separate element and selector stylesheets and bounded element markers. Rules persist while that document and
@@ -445,10 +472,11 @@ enable/inset/cleanup lifecycle. Other Google layout variants are not inferred.
 
 For reddit.com and its subdomains, `content_safe_area_reddit.js` owns one stylesheet per relevant
 scope: document rules are restricted to `shreddit-app`; open app roots receive local rules and
-open `reddit-header-small` roots receive host-relative rules. The app gets its author
-`--page-y-padding` plus the inset as top padding, rather than adding the inset later at
-`.main-container`. Fixed `reddit-header-small` gets inset top; the `.relative` variant subtracts
-the author page-padding reserve from its top offset. Its internal `header` gets inset top padding
+open `reddit-header-small`, `reddit-header-large`, or `shreddit-header` roots receive host-relative
+rules. The app gets its author `--page-y-padding` plus the greater of renderer and Candy inset as
+top padding, rather than adding the inset later at `.main-container`. Fixed Reddit header variants
+get inset top; each `.relative` variant subtracts the author page-padding reserve from its top
+offset. Its internal `header` gets inset top padding
 only while the host has `hidden-by-scroll`. Observed Reddit layouts put the target nodes in light
 DOM despite owning additional open shadow roots, so document and shadow scopes remain distinct.
 The app-level flow reserve also moves the normal-flow subreddit banner below the header;
@@ -538,7 +566,8 @@ Sticky eligibility uses the declared top anchor and containing-block path, not o
 rectangle: a header initially below the viewport can still receive its CSS anchor before sticking.
 An element simply being near the status bar is insufficient. Nested scrollers, transformed
 containing blocks, tall panels and otherwise unsupported layouts require bounded overlap validation
-before the retained emergency fallback. No scroll event starts a new discovery or validation pass.
+before the retained emergency fallback. No scroll event starts discovery; quiet validation reads only
+the bounded candidates cached by load, mutation or interaction discovery.
 
 ## TLS trust channels
 
@@ -617,13 +646,14 @@ Agent implementation, security and debugging guide:
 | Transition | Behavior |
 | --- | --- |
 | HTML media appears or starts | Gecko's native `MediaSession.Delegate` publishes playback, position and bounded element metadata for the exact Gecko session |
+| Experimental Candy Player detects inline video | The trusted content host reports a bounded top-frame candidate. The persisted Candy Player mode decides whether a button opens fullscreen, offers inline and fullscreen presentation, website fullscreen is replaced automatically, or detection starts Candy Player automatically |
 | Web page enters or exits fullscreen | `ContentDelegate.onFullScreen` owns the DOM-fullscreen lifecycle; media fullscreen metadata independently identifies the video and its dimensions |
 | User selects another regular tab | The current eligible video may move into the draggable in-app mini-player; this is the only presentation path that reparents GeckoView |
 | App leaves the foreground | The active eligible regular video is pinned in its original browser viewport before Activity PiP. The GeckoView, SurfaceView backend, GeckoDisplay and GeckoSession are not replaced or reparented |
 | Android confirms PiP mode | The exact owning session receives one `CompositorController.onPipModeChanged` notification; preparation never pre-arms Gecko with an unconfirmed state |
 | System media control is used | The app-owned Android `MediaSession` sends play, pause, stop or seek through Gecko's active native media session |
 | Audible audio continues in background | A `mediaPlayback` foreground service owns the visible media notification while the Activity-owned Gecko session remains alive |
-| PiP expands back into the app | Android expands the unchanged browser-hosted Gecko surface through a centered source rectangle matching Gecko's reported video aspect ratio; normal chrome returns after the expanded layout is ready |
+| PiP expands back into the app | Android expands the unchanged browser-hosted Gecko surface through a centered source rectangle matching Gecko's reported video aspect ratio; normal chrome returns after the expanded layout is ready, and an acknowledged inline Candy Player remains active in its original page box |
 | Fullscreen closes | Candy requests `GeckoSession.exitFullScreen()` and restores normal chrome without stopping unrelated media |
 | Media ends, page navigates, crashes, closes, snoozes or is destroyed | Gecko session identity invalidates the endpoint; view, notification and session cleanup is idempotent |
 
@@ -631,6 +661,13 @@ Agent implementation, security and debugging guide:
   order. Candy merges only callbacks from the current native media-session identity; stale ad/player
   sessions cannot overwrite the active YouTube state.
 - Media metadata, presentation state and mini-player position are memory-only and never persisted.
+- The experimental Candy Player mode persists and defaults to the least automatic option: a button
+  opens the player in fullscreen. The other modes add an inline button path, replace website
+  fullscreen, or start Candy Player when a video is detected. A legacy enabled switch migrates to
+  the inline-and-fullscreen button mode; a legacy disabled switch migrates to the fullscreen-button
+  default. Only top-frame HTML video in GeckoView is supported; cross-origin embeds remain unsupported.
+- Candy Player provides direct Android picture-in-picture from a recognized inline video; users do
+  not need to enter fullscreen first.
 - Repeated lifecycle callbacks for one PiP transition are idempotent. They do not switch the GeckoView
   backend, release its display, reparent its view or resend the same Gecko PiP state.
 - PiP source bounds and Android aspect ratio use Gecko's video dimensions, fall back to 16:9 for
@@ -667,6 +704,7 @@ WebView request state.
 | WebView reverse-flick momentum | `BrowserMomentumRecoveryRulesTest` plus `BrowserScrollInstrumentedTest#busyLongPageKeepsEveryRapidAlternatingFlick` on the affected WebView version |
 | Draggable page scrollbar | `BrowserScrollBarRulesTest`, `CandyPrivacyHostContractTest`, `BrowserScrollBarInstrumentedTest`, and `GeckoBottomBarScrollInstrumentedTest#realGeckoScrollbarPortReadsAndMovesLongDocument` on API 34+ |
 | Pull to refresh | `BrowserPullGestureRulesTest`, `BrowserPullToRefreshRulesTest`, and `BrowserPullToRefreshLayoutInstrumentedTest` on an API 34+ emulator |
+| Android web-content fullscreen chrome | `FullscreenVideoRulesTest` plus `FullscreenVideoChromeInstrumentedTest` in the Full and System WebView builds on a dedicated API 34+ emulator |
 | Edge-to-edge window, safe web viewport, focused search, and representative site layouts | `SystemWebViewEdgeToEdgeInstrumentedTest` and `GeckoEdgeToEdgeInstrumentedTest` run deterministic layout profiles derived from YouTube, Google, ESPN, NYTimes, CNN, Reddit, Facebook, IKEA, GitHub, Discord, Instagram, TapTap, Vimeo, Wikipedia, Stack Overflow, and DuckDuckGo on API 34+; the TapTap profile asserts safety immediately in the scroll task so delayed post-scroll repair cannot mask a jumping sticky header; live sites remain manual/nightly smoke targets rather than merge gates |
 | Gecko media, fullscreen and PiP policy | `GeckoMediaRulesTest`, `FullscreenVideoRulesTest`, `GeckoBrowserEngineAdapterTest` and `GeckoPictureInPictureInstrumentedTest` on a dedicated API 34+ emulator |
 | Android intent routing | `IncomingBrowserIntentInstrumentedTest`, `ExternalAppLauncherInstrumentedTest`, and `MainActivityIncomingNavigationInstrumentedTest` for cold/warm incoming links, initial redirects, and subsequent tapped handoffs |

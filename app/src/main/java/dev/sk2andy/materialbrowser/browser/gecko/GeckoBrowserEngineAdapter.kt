@@ -11,6 +11,7 @@ import androidx.annotation.UiThread
 import androidx.annotation.VisibleForTesting
 import dev.sk2andy.materialbrowser.browser.BrowserEngineScrollListener
 import dev.sk2andy.materialbrowser.browser.BrowserEngineScrollMetrics
+import dev.sk2andy.materialbrowser.browser.BrowserBackdropBlurRegion
 import dev.sk2andy.materialbrowser.browser.BrowserViewportRect
 import dev.sk2andy.materialbrowser.browser.TextInputOcclusionProbeMode
 import dev.sk2andy.materialbrowser.browser.TextInputOcclusionProbeResult
@@ -20,8 +21,10 @@ import dev.sk2andy.materialbrowser.browser.userscript.UserScript
 import dev.sk2andy.materialbrowser.browser.userscript.UserScriptMenuCommand
 import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineCapabilities
 import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineKind
+import dev.sk2andy.materialbrowser.browser.DnsOverHttpsSettings
 import dev.sk2andy.materialbrowser.browser.WebRtcProtectionMode
 import dev.sk2andy.materialbrowser.browser.engine.AndroidBrowserEngineFactory
+import dev.sk2andy.materialbrowser.browser.engine.BrowserEngineContentKind
 import dev.sk2andy.materialbrowser.browser.engine.BrowserWebContentColorScheme
 import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineCommand
 import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineCommands
@@ -35,6 +38,8 @@ import org.mozilla.geckoview.GeckoView
 /** Android view-host edge kept separate from the engine-neutral shared session port. */
 internal interface BrowserEngineViewPort {
     fun setBackdropCaptureEnabled(enabled: Boolean) = Unit
+
+    fun setBackdropBlurRegion(region: BrowserBackdropBlurRegion?) = Unit
 
     fun createView(context: Context): View
 
@@ -98,7 +103,16 @@ internal interface AndroidBrowserEngineSessionPort :
     BrowserEngineViewPort {
     fun setActive(active: Boolean)
 
+    /** Existing page icon from an engine callback; GeckoView does not expose one. */
+    fun setFaviconListener(listener: ((String?, Bitmap) -> Unit)?) = Unit
+
     fun setMediaStateListener(listener: GeckoMediaSessionStateListener?)
+
+    fun setInlineVideoOpenRequestListener(listener: GeckoInlineVideoOpenRequestListener?) = Unit
+
+    fun setInlineVideoGestureHapticListener(
+        listener: GeckoInlineVideoGestureHapticListener?,
+    ) = Unit
 
     fun setFullscreenStateListener(listener: GeckoFullscreenStateListener?) = Unit
 
@@ -152,6 +166,19 @@ internal interface AndroidBrowserEngineSessionPort :
     fun notifyPictureInPictureModeChanged(inPictureInPicture: Boolean) = Unit
 
     fun setPictureInPicturePlaybackExpected(expected: Boolean) = Unit
+
+    fun preparePictureInPicturePlayback(
+        identity: GeckoInlineVideoIdentity,
+        onResult: (GeckoPictureInPicturePreparation?) -> Unit,
+    ) = onResult(null)
+
+    fun restorePictureInPicturePresentation(onResult: (Boolean) -> Unit) = onResult(false)
+
+    fun setInlineVideoPresentation(
+        identity: GeckoInlineVideoIdentity?,
+        expected: Boolean,
+        onResult: (Boolean) -> Unit,
+    ) = onResult(false)
 
     fun exitFullscreen() = Unit
 
@@ -244,6 +271,11 @@ internal class GeckoBrowserEngineSessionFactory(
     }
 
     @UiThread
+    override fun setDnsOverHttpsSettings(settings: DnsOverHttpsSettings) {
+        runtime.setDnsOverHttpsSettings(settings)
+    }
+
+    @UiThread
     override fun setWebContentFontSizeFactor(factor: Float) {
         runtime.setWebContentFontSizeFactor(factor)
     }
@@ -317,6 +349,7 @@ internal class GeckoBrowserEngineSessionFactory(
         profileId: String,
         isolationEnabled: Boolean,
         isPrivate: Boolean,
+        contentKind: BrowserEngineContentKind,
         privacyPolicy: GeckoPrivacyPolicy,
         privacyEventSink: GeckoPrivacyEventSink,
         trailHistoryEventSink: GeckoCandyTrailHistoryEventSink,
@@ -353,6 +386,7 @@ internal class GeckoBrowserEngineSessionFactory(
             )
             extensionSessionIdentities[tabId] = identity
             created.bindExtensionTab(tabId, generation)
+            created.bindToppingSession(tabId, contentKind)
         }
         return GeckoBrowserEngineSessionAdapter(
             tabId = tabId,
@@ -404,6 +438,9 @@ internal class GeckoBrowserEngineSessionAdapter(
             BrowserEngineCommandType.ReplaceHistory -> replaceHistory(
                 requireNotNull(command.address),
             )
+            BrowserEngineCommandType.RetryFailedPage -> retryFailedPage(
+                requireNotNull(command.address),
+            )
             BrowserEngineCommandType.Back -> session.goBack()
             BrowserEngineCommandType.Forward -> session.goForward()
             BrowserEngineCommandType.Reload -> session.reload()
@@ -422,8 +459,8 @@ internal class GeckoBrowserEngineSessionAdapter(
     }
 
     @UiThread
-    override fun setBackdropCaptureEnabled(enabled: Boolean) {
-        if (!closed) session.setBackdropCaptureEnabled(enabled)
+    override fun setBackdropBlurRegion(region: BrowserBackdropBlurRegion?) {
+        if (!closed) session.setBackdropBlurRegion(region)
     }
 
     @UiThread
@@ -447,6 +484,13 @@ internal class GeckoBrowserEngineSessionAdapter(
     @UiThread
     override fun setMediaStateListener(listener: GeckoMediaSessionStateListener?) {
         session.setMediaStateListener(if (closed) null else listener)
+    }
+
+    @UiThread
+    override fun setInlineVideoOpenRequestListener(
+        listener: GeckoInlineVideoOpenRequestListener?,
+    ) {
+        session.setInlineVideoOpenRequestListener(if (closed) null else listener)
     }
 
     @UiThread
@@ -585,6 +629,35 @@ internal class GeckoBrowserEngineSessionAdapter(
     }
 
     @UiThread
+    override fun preparePictureInPicturePlayback(
+        identity: GeckoInlineVideoIdentity,
+        onResult: (GeckoPictureInPicturePreparation?) -> Unit,
+    ) {
+        if (closed) onResult(null) else session.preparePictureInPicturePlayback(
+            identity = identity,
+            onResult = onResult,
+        )
+    }
+
+    @UiThread
+    override fun restorePictureInPicturePresentation(onResult: (Boolean) -> Unit) {
+        if (closed) onResult(false) else session.restorePictureInPicturePresentation(onResult)
+    }
+
+    @UiThread
+    override fun setInlineVideoPresentation(
+        identity: GeckoInlineVideoIdentity?,
+        expected: Boolean,
+        onResult: (Boolean) -> Unit,
+    ) {
+        if (closed) onResult(false) else session.setInlineVideoPresentation(
+            identity = identity,
+            expected = expected,
+            onResult = onResult,
+        )
+    }
+
+    @UiThread
     override fun exitFullscreen() {
         if (!closed) session.exitFullscreen()
     }
@@ -690,6 +763,11 @@ internal class GeckoBrowserEngineSessionAdapter(
         reportInvalidAddress()
     }
 
+    private fun retryFailedPage(address: String) {
+        if (session.retryFailedPage(address)) return
+        reportInvalidAddress()
+    }
+
     private fun reportInvalidAddress() {
         eventSink.onEngineEvent(
             previousState.toEngineEvent(
@@ -706,6 +784,7 @@ internal class GeckoBrowserEngineSessionAdapter(
         session.setStateListener(null)
         session.setHistoryStateListener(null)
         session.setMediaStateListener(null)
+        session.setInlineVideoOpenRequestListener(null)
         session.setFullscreenStateListener(null)
         session.setScrollListener(null)
         session.setContentTargetListener(null)
@@ -736,6 +815,7 @@ internal class GeckoBrowserEngineSessionAdapter(
             session.setStateListener(null)
             session.setHistoryStateListener(null)
             session.setMediaStateListener(null)
+            session.setInlineVideoOpenRequestListener(null)
             session.setFullscreenStateListener(null)
             session.setScrollListener(null)
             session.setContentTargetListener(null)

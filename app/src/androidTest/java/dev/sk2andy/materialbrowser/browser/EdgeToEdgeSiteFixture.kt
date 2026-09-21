@@ -90,6 +90,11 @@ internal object EdgeToEdgeSiteMatrix {
                       )
                     ) || 0;
                     if (rootInset > 0) return true;
+                    if (
+                      document.documentElement.getAttribute(
+                        'data-candy-browser-native-top-header'
+                      ) === 'true'
+                    ) return true;
                     const header = document.querySelector('#header.safe-area');
                     return header && Number.parseFloat(getComputedStyle(header).paddingTop) > 0;
                   };
@@ -258,18 +263,23 @@ internal object EdgeToEdgeSiteMatrix {
                       const candyCompatibilityApplied = Boolean(
                         document.querySelector('style[data-candy-browser-owned="true"]')
                       );
+                      const usesNativeTopHeader = document.documentElement.getAttribute(
+                        'data-candy-browser-native-top-header'
+                      ) === 'true';
                       const usesEngineSafeArea = site.layout === 'CoverWithSafeArea' &&
                         !candyCompatibilityApplied && safeAreaPaddingTop > 0;
-                      const protectionModeValid = usesEngineSafeArea ||
+                      const protectionModeValid = usesNativeTopHeader || usesEngineSafeArea ||
                         (candyCompatibilityApplied && candyTopInset > 0);
-                      const ownedProtectionValid = site.layout === 'Flow' ||
+                      const ownedProtectionValid = usesNativeTopHeader || site.layout === 'Flow' ||
                         protectedOwned === 'true' &&
                         protectedOffset.endsWith('px') ||
                         protectedStickyOwned === 'true' &&
                         protectedStickyTop.length > 0 &&
                         CSS.supports('top', protectedStickyTop) &&
                         Number.isFinite(computedStickyTop);
-                      const requiredTop = usesEngineSafeArea ? 0 : candyTopInset;
+                      const requiredTop = usesNativeTopHeader || usesEngineSafeArea
+                        ? 0
+                        : candyTopInset;
                       results.push({
                         name: site.name,
                         beforeFocusTop,
@@ -286,6 +296,7 @@ internal object EdgeToEdgeSiteMatrix {
                         focused,
                         candyTopInset,
                         candyCompatibilityApplied,
+                        usesNativeTopHeader,
                         protectionModeValid,
                         failureReason: document.documentElement.getAttribute(
                           'data-candy-browser-top-inset-failure'

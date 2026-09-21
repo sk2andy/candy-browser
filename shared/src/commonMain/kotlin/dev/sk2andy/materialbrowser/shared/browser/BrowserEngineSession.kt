@@ -15,6 +15,7 @@ interface BrowserEngineSessionPort {
 enum class BrowserEngineCommandType {
     Load,
     ReplaceHistory,
+    RetryFailedPage,
     Back,
     Forward,
     Reload,
@@ -28,7 +29,8 @@ data class BrowserEngineCommand(
 ) {
     init {
         val requiresAddress = type == BrowserEngineCommandType.Load ||
-            type == BrowserEngineCommandType.ReplaceHistory
+            type == BrowserEngineCommandType.ReplaceHistory ||
+            type == BrowserEngineCommandType.RetryFailedPage
         require(requiresAddress == (address != null))
     }
 }
@@ -41,6 +43,11 @@ object BrowserEngineCommands {
 
     fun replaceHistory(address: String): BrowserEngineCommand = BrowserEngineCommand(
         type = BrowserEngineCommandType.ReplaceHistory,
+        address = address,
+    )
+
+    fun retryFailedPage(address: String): BrowserEngineCommand = BrowserEngineCommand(
+        type = BrowserEngineCommandType.RetryFailedPage,
         address = address,
     )
 

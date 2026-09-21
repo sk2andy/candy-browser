@@ -22,8 +22,57 @@ internal data class FullscreenVideoAspectRatio(
     val height: Int,
 )
 
+internal class MediaLayoutRestorationGate {
+    class Request internal constructor(
+        internal val onCancelled: () -> Unit,
+    )
+
+    private var current: Request? = null
+
+    fun begin(onCancelled: () -> Unit): Request {
+        cancel()
+        return Request(onCancelled = onCancelled).also { current = it }
+    }
+
+    fun complete(request: Request): Boolean {
+        if (current !== request) return false
+        current = null
+        return true
+    }
+
+    fun cancel() {
+        val request = current ?: return
+        current = null
+        request.onCancelled()
+    }
+}
+
 internal object FullscreenVideoRules {
+    fun hidesBrowserChrome(
+        isWebContentFullscreen: Boolean,
+        placement: FullscreenVideoPlacement?,
+        videoOnlyPresentation: Boolean,
+    ): Boolean = videoOnlyPresentation ||
+        (isWebContentFullscreen && placement != FullscreenVideoPlacement.MiniPlayer)
+
     fun supportsPreparedAutoEnter(sdkInt: Int): Boolean = sdkInt >= 35
+
+    fun isMediaLayoutRestorationInsetReady(
+        isImeVisible: Boolean,
+        isStatusBarVisible: Boolean,
+        statusBarTopInset: Int,
+    ): Boolean = !isImeVisible && isStatusBarVisible && statusBarTopInset > 0
+
+    fun enablesPreparedAutoEnter(
+        isEligible: Boolean,
+        isInPictureInPicture: Boolean,
+        returnInProgress: Boolean,
+        sdkInt: Int,
+    ): Boolean =
+        isEligible &&
+            !isInPictureInPicture &&
+            !returnInProgress &&
+            supportsPreparedAutoEnter(sdkInt)
 
     fun pictureInPictureAspectRatio(
         videoWidth: Int,
@@ -91,17 +140,42 @@ internal object FullscreenVideoRules {
                 .coerceAtLeast(1)
         }
         val left = windowBounds.left + (windowWidth - sourceWidth) / 2
-        val top = if (fitsByWidth) {
-            windowBounds.top
-        } else {
-            windowBounds.top + (windowHeight - sourceHeight) / 2
-        }
+        val top = windowBounds.top + (windowHeight - sourceHeight) / 2
         return FullscreenVideoBounds(
             left = left,
             top = top,
             right = left + sourceWidth,
             bottom = top + sourceHeight,
         )
+    }
+
+    fun viewportRectBounds(
+        viewportBounds: FullscreenVideoBounds,
+        rect: BrowserViewportRect,
+    ): FullscreenVideoBounds? {
+        val viewportWidth = viewportBounds.right - viewportBounds.left
+        val viewportHeight = viewportBounds.bottom - viewportBounds.top
+        val fractions = listOf(
+            rect.leftFraction,
+            rect.topFraction,
+            rect.rightFraction,
+            rect.bottomFraction,
+        )
+        if (
+            viewportWidth <= 0 ||
+            viewportHeight <= 0 ||
+            fractions.any { fraction -> !fraction.isFinite() || fraction !in 0f..1f } ||
+            rect.rightFraction <= rect.leftFraction ||
+            rect.bottomFraction <= rect.topFraction
+        ) {
+            return null
+        }
+        val left = viewportBounds.left + (viewportWidth * rect.leftFraction).toInt()
+        val top = viewportBounds.top + (viewportHeight * rect.topFraction).toInt()
+        val right = viewportBounds.left + (viewportWidth * rect.rightFraction).toInt()
+        val bottom = viewportBounds.top + (viewportHeight * rect.bottomFraction).toInt()
+        if (right <= left || bottom <= top) return null
+        return FullscreenVideoBounds(left = left, top = top, right = right, bottom = bottom)
     }
 
     fun isPictureInPictureReturnLayoutReady(

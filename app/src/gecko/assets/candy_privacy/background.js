@@ -9,6 +9,12 @@ const tokenByTab = new Map();
 const pendingEvents = new Map();
 const mainFrameRequestsById = new Map();
 const contentPolicyTimersByTab = new Map();
+const inlineVideosByTab = new Map();
+const inlineVideoGestureHapticPhases = new Set([
+  "rubberband-start",
+  "rubberband-stop",
+  "confirm",
+]);
 const contentPolicyRetryDelaysMillis = [25, 50, 100, 200, 400, 800, 1200];
 let nativePort = null;
 let cookieRules = null;
@@ -61,6 +67,14 @@ function isPaused(policy, pageHost) {
 }
 
 function contentPolicy(policy) {
+  const inlineMediaPlayerModes = new Set([
+    "button_fullscreen",
+    "button_inline_and_fullscreen",
+    "always_for_fullscreen",
+    "automatic",
+  ]);
+  const inlineMediaPlayerMode = inlineMediaPlayerModes.has(policy?.inlineMediaPlayerMode) ?
+    policy.inlineMediaPlayerMode : "button_inline_and_fullscreen";
   return {
     type: "content-policy",
     ready: Boolean(policy),
@@ -81,6 +95,35 @@ function contentPolicy(policy) {
     navigationGeneration: Number.isSafeInteger(policy?.navigationGeneration) ?
       Math.max(0, policy.navigationGeneration) : 0,
     scrollMetricsEnabled: policy?.scrollMetricsEnabled === true,
+    inlineMediaPlayerEnabled: policy?.inlineMediaPlayerEnabled === true,
+    inlineMediaPlayerMode,
+    inlineMediaPlayerActionLabel:
+      typeof policy?.inlineMediaPlayerActionLabel === "string" ?
+        policy.inlineMediaPlayerActionLabel.slice(0, 80) : "Open in Candy Player",
+    inlineMediaPlayerPlayLabel:
+      typeof policy?.inlineMediaPlayerPlayLabel === "string" ?
+        policy.inlineMediaPlayerPlayLabel.slice(0, 80) : "Play",
+    inlineMediaPlayerPauseLabel:
+      typeof policy?.inlineMediaPlayerPauseLabel === "string" ?
+        policy.inlineMediaPlayerPauseLabel.slice(0, 80) : "Pause",
+    inlineMediaPlayerSeekLabel:
+      typeof policy?.inlineMediaPlayerSeekLabel === "string" ?
+        policy.inlineMediaPlayerSeekLabel.slice(0, 80) : "Seek",
+    inlineMediaPlayerEnterFullscreenLabel:
+      typeof policy?.inlineMediaPlayerEnterFullscreenLabel === "string" ?
+        policy.inlineMediaPlayerEnterFullscreenLabel.slice(0, 80) : "Enter fullscreen",
+    inlineMediaPlayerExitFullscreenLabel:
+      typeof policy?.inlineMediaPlayerExitFullscreenLabel === "string" ?
+        policy.inlineMediaPlayerExitFullscreenLabel.slice(0, 80) : "Exit fullscreen",
+    inlineMediaPlayerCloseLabel:
+      typeof policy?.inlineMediaPlayerCloseLabel === "string" ?
+        policy.inlineMediaPlayerCloseLabel.slice(0, 80) : "Close Candy Player",
+    inlineMediaPlayerShowControlsLabel:
+      typeof policy?.inlineMediaPlayerShowControlsLabel === "string" ?
+        policy.inlineMediaPlayerShowControlsLabel.slice(0, 80) : "Show controls",
+    inlineMediaPlayerHideControlsLabel:
+      typeof policy?.inlineMediaPlayerHideControlsLabel === "string" ?
+        policy.inlineMediaPlayerHideControlsLabel.slice(0, 80) : "Hide controls",
     performanceDiagnosticsEnabled: policy?.performanceDiagnosticsEnabled === true,
     domDiagnosticsEnabled: policy?.domDiagnosticsEnabled === true,
     safeAreaLayoutQuietPeriodMillis:
@@ -129,6 +172,165 @@ function publishPerformanceDiagnosticsGap(message) {
   }).catch(() => {});
 }
 
+function publishInlineVideoState(tabId) {
+  const token = tokenByTab.get(tabId);
+  const policy = token && policiesByToken.get(token);
+  if (!nativePort || !policy) return;
+  const candidates = Array.from(inlineVideosByTab.get(tabId)?.values() || [])
+    .filter((candidate) => candidate.active)
+    .sort((first, second) => {
+      const playbackDifference = Number(second.playing) - Number(first.playing);
+      return playbackDifference || second.area - first.area;
+    });
+  const selected = candidates[0];
+  nativePort.postMessage({
+    type: "inline-video-state",
+    protocolVersion: PROTOCOL_VERSION,
+    token,
+    revision: policy.revision,
+    navigationGeneration: policy.navigationGeneration,
+    active: Boolean(selected),
+    playing: selected?.playing === true,
+    presented: selected?.presented === true,
+    videoWidth: selected?.videoWidth || 0,
+    videoHeight: selected?.videoHeight || 0,
+    documentNonce: selected?.documentNonce || "",
+    elementNonce: selected?.elementNonce || "",
+  });
+}
+
+function updateInlineVideoState(message, sender) {
+  const tabId = sender.tab?.id;
+  const frameId = sender.frameId;
+  if (!Number.isInteger(tabId) || frameId !== 0) return;
+  const token = tokenByTab.get(tabId);
+  const policy = token && policiesByToken.get(token);
+  if (
+    !policy ||
+    message.revision !== policy.revision ||
+    message.navigationGeneration !== policy.navigationGeneration
+  ) return;
+  if (policy?.inlineMediaPlayerEnabled !== true) {
+    inlineVideosByTab.delete(tabId);
+    publishInlineVideoState(tabId);
+    return;
+  }
+  const noncePattern = /^[a-f0-9]{32}$/;
+  if (
+    message.active === true &&
+    (
+      ![message.videoWidth, message.videoHeight]
+        .every((value) => Number.isSafeInteger(value) && value > 0 && value <= 16384) ||
+      !Number.isSafeInteger(message.area) ||
+      message.area < 4096 ||
+      !noncePattern.test(message.documentNonce) ||
+      !noncePattern.test(message.elementNonce)
+    )
+  ) return;
+  const frames = inlineVideosByTab.get(tabId) || new Map();
+  if (message.active === true) {
+    frames.set(frameId, {
+      active: true,
+      playing: message.playing === true,
+      presented: message.presented === true,
+      videoWidth: message.videoWidth,
+      videoHeight: message.videoHeight,
+      area: message.area,
+      documentNonce: message.documentNonce,
+      elementNonce: message.elementNonce,
+    });
+    inlineVideosByTab.set(tabId, frames);
+  } else {
+    frames.delete(frameId);
+    if (frames.size) inlineVideosByTab.set(tabId, frames);
+    else inlineVideosByTab.delete(tabId);
+  }
+  publishInlineVideoState(tabId);
+}
+
+function requestInlineVideoOpen(message, sender) {
+  const tabId = sender.tab?.id;
+  if (!Number.isInteger(tabId) || sender.frameId !== 0 || !nativePort) return false;
+  const token = tokenByTab.get(tabId);
+  const policy = token && policiesByToken.get(token);
+  const candidate = inlineVideosByTab.get(tabId)?.get(0);
+  if (
+    !policy ||
+    policy.inlineMediaPlayerEnabled !== true ||
+    message.revision !== policy.revision ||
+    message.navigationGeneration !== policy.navigationGeneration ||
+    (message.expected !== false && message.mode !== policy.inlineMediaPlayerMode) ||
+    !candidate?.active ||
+    message.documentNonce !== candidate.documentNonce ||
+    message.elementNonce !== candidate.elementNonce
+  ) return false;
+  nativePort.postMessage({
+    type: "inline-video-open-request",
+    protocolVersion: PROTOCOL_VERSION,
+    token,
+    revision: policy.revision,
+    navigationGeneration: policy.navigationGeneration,
+    documentNonce: candidate.documentNonce,
+    elementNonce: candidate.elementNonce,
+    ...(message.expected !== false ? { mode: policy.inlineMediaPlayerMode } : {}),
+    expected: message.expected !== false,
+  });
+  return true;
+}
+
+function inlineVideoOpenResponse(message, sender) {
+  const forwarded = requestInlineVideoOpen(message, sender);
+  if (forwarded || message.expected === false) return { forwarded };
+  const tabId = sender.tab?.id;
+  const policy = policiesByToken.get(tokenByTab.get(tabId));
+  const candidate = inlineVideosByTab.get(tabId)?.get(0);
+  if (
+    !Number.isInteger(tabId) ||
+    sender.frameId !== 0 ||
+    !nativePort ||
+    policy?.inlineMediaPlayerEnabled !== true ||
+    !Number.isSafeInteger(message.revision) ||
+    message.revision >= policy.revision ||
+    message.navigationGeneration !== policy.navigationGeneration ||
+    message.mode !== policy.inlineMediaPlayerMode ||
+    !candidate?.active ||
+    message.documentNonce !== candidate.documentNonce ||
+    message.elementNonce !== candidate.elementNonce
+  ) return { forwarded: false };
+  // Insets can publish a new revision while a trusted click is in transit.
+  // Revalidation still requires a fresh candidate report and exact current revision.
+  return { forwarded: false, retryPolicy: contentPolicy(policy) };
+}
+
+function forwardInlineVideoGestureHaptic(message, sender) {
+  const tabId = sender.tab?.id;
+  if (!Number.isInteger(tabId) || sender.frameId !== 0 || !nativePort) return false;
+  const token = tokenByTab.get(tabId);
+  const policy = token && policiesByToken.get(token);
+  const candidate = inlineVideosByTab.get(tabId)?.get(0);
+  if (
+    !policy ||
+    policy.inlineMediaPlayerEnabled !== true ||
+    message.revision !== policy.revision ||
+    message.navigationGeneration !== policy.navigationGeneration ||
+    !inlineVideoGestureHapticPhases.has(message.phase) ||
+    candidate?.presented !== true ||
+    message.documentNonce !== candidate.documentNonce ||
+    message.elementNonce !== candidate.elementNonce
+  ) return false;
+  nativePort.postMessage({
+    type: "inline-video-gesture-haptic",
+    protocolVersion: PROTOCOL_VERSION,
+    token,
+    revision: policy.revision,
+    navigationGeneration: policy.navigationGeneration,
+    documentNonce: candidate.documentNonce,
+    elementNonce: candidate.elementNonce,
+    phase: message.phase,
+  });
+  return true;
+}
+
 function scheduleContentPolicy(tabId) {
   const previousTimers = contentPolicyTimersByTab.get(tabId) || [];
   previousTimers.forEach(clearTimeout);
@@ -161,6 +363,8 @@ browser.webRequest.onBeforeRequest.addListener((details) => {
   const token = tokenByTab.get(details.tabId);
   const policy = token && policiesByToken.get(token);
   if (details.type === "main_frame") {
+    inlineVideosByTab.delete(details.tabId);
+    publishInlineVideoState(details.tabId);
     if (policy) {
       policy.pageHost = hostFromUrl(details.url);
       if (typeof details.requestId === "string") {
@@ -262,6 +466,18 @@ browser.runtime.onMessage.addListener((message, sender) => {
     const policy = token && policiesByToken.get(token);
     return Promise.resolve(contentPolicy(policy));
   }
+  if (message.type === "inline-video-state") {
+    updateInlineVideoState(message, sender);
+    return undefined;
+  }
+  if (message.type === "inline-video-open-request") {
+    return Promise.resolve(inlineVideoOpenResponse(message, sender));
+  }
+  if (message.type === "inline-video-gesture-haptic") {
+    return Promise.resolve({
+      forwarded: forwardInlineVideoGestureHaptic(message, sender),
+    });
+  }
   if (
     message.type === "safe-area-fallback" &&
     Number.isSafeInteger(message.navigationGeneration) &&
@@ -281,6 +497,8 @@ browser.runtime.onMessage.addListener((message, sender) => {
         token,
         revision: message.revision,
         navigationGeneration: message.navigationGeneration,
+        themeColor: typeof message.themeColor === "string" ? message.themeColor : null,
+        topHeader: message.topHeader === true,
       });
     }
     return undefined;
@@ -327,6 +545,7 @@ browser.tabs.onRemoved.addListener((tabId) => {
   contentPolicyTimersByTab.delete(tabId);
   const token = tokenByTab.get(tabId);
   tokenByTab.delete(tabId);
+  inlineVideosByTab.delete(tabId);
   if (token) {
     policiesByToken.delete(token);
     latestPolicyRevisionByToken.delete(token);
@@ -425,15 +644,119 @@ function probeTextInputOcclusion(message) {
 
 function updatePictureInPicturePlayback(message) {
   const policy = policiesByToken.get(message.token);
-  if (!policy || policy.revision !== message.revision || typeof message.expected !== "boolean") {
+  if (
+    !policy ||
+    policy.revision !== message.revision ||
+    typeof message.expected !== "boolean"
+  ) {
     return;
   }
   const tabEntry = Array.from(tokenByTab.entries()).find(([, token]) => token === message.token);
   if (!tabEntry) return;
-  browser.tabs.sendMessage(tabEntry[0], {
+  const preparationRequested = Number.isSafeInteger(message.requestId);
+  if (
+    preparationRequested &&
+    (
+      policy.navigationGeneration !== message.navigationGeneration ||
+      (
+        message.expected === true &&
+        (
+          !/^[a-f0-9]{32}$/.test(message.documentNonce) ||
+          !/^[a-f0-9]{32}$/.test(message.elementNonce)
+        )
+      )
+    )
+  ) return;
+  const payload = {
     type: "picture-in-picture-playback",
     expected: message.expected,
-  }).catch(() => {});
+    requestId: preparationRequested ? message.requestId : undefined,
+    documentNonce: preparationRequested ? message.documentNonce : undefined,
+    elementNonce: preparationRequested ? message.elementNonce : undefined,
+  };
+  if (!preparationRequested) {
+    browser.tabs.sendMessage(tabEntry[0], payload, { frameId: 0 }).catch(() => {});
+    return;
+  }
+  const postResult = (result) => {
+    const current = policiesByToken.get(message.token);
+    if (
+      !nativePort ||
+      current?.revision !== message.revision ||
+      current.navigationGeneration !== message.navigationGeneration ||
+      tokenByTab.get(tabEntry[0]) !== message.token
+    ) return;
+    nativePort.postMessage({
+      type: "picture-in-picture-playback-result",
+      protocolVersion: PROTOCOL_VERSION,
+      token: message.token,
+      revision: message.revision,
+      navigationGeneration: message.navigationGeneration,
+      requestId: message.requestId,
+      prepared: result?.prepared === true,
+      documentNonce: result?.documentNonce || "",
+      elementNonce: result?.elementNonce || "",
+      videoLeft: result?.videoLeft,
+      videoTop: result?.videoTop,
+      videoRight: result?.videoRight,
+      videoBottom: result?.videoBottom,
+      viewportWidth: result?.viewportWidth,
+      viewportHeight: result?.viewportHeight,
+    });
+  };
+  browser.tabs.sendMessage(tabEntry[0], payload, { frameId: 0 }).then(
+    postResult,
+    () => postResult(null),
+  );
+}
+
+function updateInlineVideoPresentation(message) {
+  const policy = policiesByToken.get(message.token);
+  if (
+    !policy ||
+    policy.revision !== message.revision ||
+    policy.navigationGeneration !== message.navigationGeneration ||
+    typeof message.expected !== "boolean" ||
+    !Number.isSafeInteger(message.requestId) ||
+    (
+      message.expected &&
+      (
+        policy.inlineMediaPlayerEnabled !== true ||
+        !/^[a-f0-9]{32}$/.test(message.documentNonce) ||
+        !/^[a-f0-9]{32}$/.test(message.elementNonce)
+      )
+    )
+  ) return;
+  const tabEntry = Array.from(tokenByTab.entries()).find(([, token]) => token === message.token);
+  if (!tabEntry) return;
+  const payload = {
+    type: "inline-video-presentation",
+    expected: message.expected,
+    documentNonce: message.documentNonce,
+    elementNonce: message.elementNonce,
+  };
+  const postResult = (accepted) => {
+    const current = policiesByToken.get(message.token);
+    if (
+      !nativePort ||
+      current?.revision !== message.revision ||
+      current.navigationGeneration !== message.navigationGeneration ||
+      tokenByTab.get(tabEntry[0]) !== message.token
+    ) return;
+    nativePort.postMessage({
+      type: "inline-video-presentation-result",
+      protocolVersion: PROTOCOL_VERSION,
+      token: message.token,
+      revision: message.revision,
+      navigationGeneration: message.navigationGeneration,
+      requestId: message.requestId,
+      accepted: accepted === true,
+    });
+  };
+  browser.tabs.sendMessage(tabEntry[0], payload, { frameId: 0 }).then(
+    (result) => postResult(result?.accepted === true),
+    () => postResult(false),
+  );
 }
 
 async function applyWebRtcPolicy(message) {
@@ -529,6 +852,12 @@ function connectNative() {
           return;
         }
         policiesByToken.set(message.token, message);
+        const tabEntry = Array.from(tokenByTab.entries())
+          .find(([, token]) => token === message.token);
+        if (message.inlineMediaPlayerEnabled !== true && tabEntry) {
+          inlineVideosByTab.delete(tabEntry[0]);
+          publishInlineVideoState(tabEntry[0]);
+        }
         publishContentPolicy(message.token, message);
         acknowledgePolicy();
       };
@@ -550,7 +879,12 @@ function connectNative() {
     } else if (message.type === "remove" && typeof message.token === "string") {
       policiesByToken.delete(message.token);
       latestPolicyRevisionByToken.delete(message.token);
-      for (const [tabId, token] of tokenByTab) if (token === message.token) tokenByTab.delete(tabId);
+      for (const [tabId, token] of tokenByTab) {
+        if (token === message.token) {
+          tokenByTab.delete(tabId);
+          inlineVideosByTab.delete(tabId);
+        }
+      }
     } else if (message.type === "reader-extract" && typeof message.token === "string") {
       extractReader(message);
     } else if (
@@ -565,6 +899,11 @@ function connectNative() {
       typeof message.token === "string"
     ) {
       updatePictureInPicturePlayback(message);
+    } else if (
+      message.type === "inline-video-presentation" &&
+      typeof message.token === "string"
+    ) {
+      updateInlineVideoPresentation(message);
     }
   });
   nativePort.onDisconnect.addListener(() => { nativePort = null; });

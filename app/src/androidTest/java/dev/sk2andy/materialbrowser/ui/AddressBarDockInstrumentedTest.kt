@@ -15,9 +15,11 @@ import androidx.compose.ui.test.assertHeightIsEqualTo
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertWidthIsEqualTo
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -38,6 +40,8 @@ import dev.sk2andy.materialbrowser.data.AddressBarAction
 import dev.sk2andy.materialbrowser.data.AddressBarActionLayout
 import dev.sk2andy.materialbrowser.data.AddressBarDockEdge
 import dev.sk2andy.materialbrowser.data.AddressBarDockPlacement
+import dev.sk2andy.materialbrowser.data.AppearanceSettings
+import dev.sk2andy.materialbrowser.data.BrowserAddressBarStyle
 import dev.sk2andy.materialbrowser.data.BrowserSessionStore
 import dev.sk2andy.materialbrowser.ui.theme.MaterialBrowserTheme
 import java.util.concurrent.atomic.AtomicInteger
@@ -474,6 +478,75 @@ class AddressBarDockInstrumentedTest {
         }
         composeRule.onNodeWithTag(AddressBarTestTags.TabButton).assertIsDisplayed()
         composeRule.onNodeWithTag(AddressBarTestTags.Editor).assertDoesNotExist()
+    }
+
+    @Test
+    fun segmentedExpandedBarKeepsSeparateActionPillWhileEditing() {
+        lateinit var browserController: BrowserController
+        composeRule.runOnIdle {
+            clearSession()
+            val tab = BrowserTab(
+                id = "segmented-address-tab",
+                lastAccessedAt = 1L,
+                title = "Example",
+                url = "https://example.test/page",
+            )
+            BrowserSessionStore(composeRule.activity).apply {
+                saveTabsImmediately(listOf(tab), tab.id)
+                saveAppearanceSettings(
+                    AppearanceSettings(addressBarStyle = BrowserAddressBarStyle.Segmented),
+                )
+            }
+            browserController = BrowserController(composeRule.activity)
+            controller = browserController
+        }
+        composeRule.setContent {
+            MaterialBrowserTheme(settings = browserController.appearanceSettings) {
+                BrowserScreen(browserController)
+            }
+        }
+
+        composeRule.onNodeWithTag(AddressBarTestTags.SegmentedContainer)
+            .assertIsDisplayed()
+            .assertHeightIsEqualTo(64.dp)
+        composeRule.onNodeWithTag(AddressBarTestTags.SegmentedPrimary).assertIsDisplayed()
+        composeRule.onNodeWithTag(AddressBarTestTags.SegmentedSecondary)
+            .assertIsDisplayed()
+            .assertWidthIsEqualTo(48.dp)
+            .assertHeightIsEqualTo(48.dp)
+        composeRule.onNodeWithContentDescription(
+            composeRule.activity.getString(R.string.cd_more_options),
+        ).assertIsDisplayed()
+
+        if (
+            composeRule.onAllNodesWithTag(WideAddressTabStripTestTags.Strip)
+                .fetchSemanticsNodes().isNotEmpty()
+        ) {
+            composeRule.onNodeWithTag(
+                WideAddressTabStripTestTags.TabPrefix + "segmented-address-tab",
+            ).performClick()
+        } else {
+            composeRule.onNodeWithText("example.test").performClick()
+        }
+        composeRule.onNodeWithTag(AddressBarTestTags.Editor).assertIsFocused()
+        composeRule.onNodeWithContentDescription(
+            composeRule.activity.getString(R.string.cd_close_address_input),
+        ).assertIsDisplayed()
+        composeRule.onNodeWithContentDescription(
+            composeRule.activity.getString(R.string.cd_more_options),
+        ).assertDoesNotExist()
+        composeRule.waitUntil(timeoutMillis = 5_000) {
+            val bounds = composeRule.onNodeWithTag(AddressBarTestTags.SegmentedSecondary)
+                .getUnclippedBoundsInRoot()
+            (bounds.right - bounds.left).value >= 47.5f
+        }
+        val primaryBounds = composeRule.onNodeWithTag(AddressBarTestTags.SegmentedPrimary)
+            .getUnclippedBoundsInRoot()
+        val secondaryBounds = composeRule.onNodeWithTag(AddressBarTestTags.SegmentedSecondary)
+            .assertWidthIsEqualTo(48.dp)
+            .assertHeightIsEqualTo(48.dp)
+            .getUnclippedBoundsInRoot()
+        assertEquals(8f, secondaryBounds.left.value - primaryBounds.right.value, 0.5f)
     }
 
     @Test

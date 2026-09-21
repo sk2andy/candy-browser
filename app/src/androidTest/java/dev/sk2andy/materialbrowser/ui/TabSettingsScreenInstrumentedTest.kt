@@ -124,8 +124,9 @@ class TabSettingsScreenInstrumentedTest {
     }
 
     @Test
-    fun linkPeekActionEditorEntryInvokesCallback() {
-        val opened = AtomicBoolean()
+    fun actionEditorEntriesInvokeCallbacks() {
+        val linkPeekOpened = AtomicBoolean()
+        val addressBarLongPressOpened = AtomicBoolean()
         composeRule.setContent {
             MaterialBrowserTheme {
                 TabsAndGesturesSettingsPage(
@@ -147,7 +148,8 @@ class TabSettingsScreenInstrumentedTest {
                     onDismissResistancePercentChanged = {},
                     onProfilesEnabledChanged = {},
                     onAddressBarDockingEnabledChanged = {},
-                    onLinkPeekActions = { opened.set(true) },
+                    onAddressBarLongPressActions = { addressBarLongPressOpened.set(true) },
+                    onLinkPeekActions = { linkPeekOpened.set(true) },
                     onAddressBarActions = {},
                     onBack = {},
                 )
@@ -158,7 +160,14 @@ class TabSettingsScreenInstrumentedTest {
             .performScrollTo()
             .performClick()
 
-        assertTrue(opened.get())
+        assertTrue(linkPeekOpened.get())
+        composeRule.onNodeWithText(
+            context.getString(R.string.settings_address_bar_long_press_title),
+        )
+            .performScrollTo()
+            .performClick()
+
+        assertTrue(addressBarLongPressOpened.get())
     }
 
     @Test

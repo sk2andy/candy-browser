@@ -388,6 +388,10 @@ private struct CandyComposeControllerHost: UIViewControllerRepresentable {
             browser.setToppingEnabled(id: id, enabled: enabled)
         }
 
+        func setToppingFrameScope(id: String, scope: ToppingFrameScope) {
+            browser.setToppingFrameScope(id: id, scope: scope)
+        }
+
         func deleteTopping(id: String) {
             browser.deleteTopping(id: id)
         }
@@ -439,12 +443,24 @@ private extension BrowserTabOverviewMode {
 private extension StoredTopping {
     var sharedViewportTopping: BrowserViewportTopping {
         let parsed = ToppingRules.shared.parse(id: id, source: source, enabled: enabled)
-        let name = (parsed as? ToppingParseResultAccepted)?.script.name ?? id
+        let script = (parsed as? ToppingParseResultAccepted)?.script
         return BrowserViewportTopping(
             id: id,
-            name: name,
-            enabled: enabled
+            name: script?.name ?? id,
+            enabled: enabled,
+            declaredFrameScope: script?.declaredFrameScope ?? .top,
+            allowedFrameScope: allowedFrameScope.sharedScope
         )
+    }
+}
+
+private extension StoredToppingFrameScope {
+    var sharedScope: ToppingFrameScope {
+        switch self {
+        case .top: .top
+        case .sameOrigin: .sameorigin
+        case .allMatching: .allmatching
+        }
     }
 }
 

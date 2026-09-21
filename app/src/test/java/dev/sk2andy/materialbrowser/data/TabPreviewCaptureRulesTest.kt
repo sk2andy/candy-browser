@@ -5,6 +5,73 @@ import org.junit.Test
 
 class TabPreviewCaptureRulesTest {
     @Test
+    fun `compact viewport keeps existing 480 pixel capture`() {
+        assertEquals(
+            480,
+            TabPreviewCaptureRules.targetWidthPx(
+                sourceWidthPx = 1_080,
+                viewportWidthPx = 1_080,
+                viewportHeightPx = 2_400,
+                density = 3f,
+            ),
+        )
+    }
+
+    @Test
+    fun `tablet hero capture follows display size within memory bounds`() {
+        assertEquals(
+            1_280,
+            TabPreviewCaptureRules.targetWidthPx(
+                sourceWidthPx = 2_560,
+                viewportWidthPx = 2_560,
+                viewportHeightPx = 1_600,
+                density = 2f,
+            ),
+        )
+        assertEquals(1_953, TabPreviewCaptureRules.maximumTargetHeightPx(1_280))
+        assertEquals(
+            720,
+            TabPreviewCaptureRules.targetWidthPx(
+                sourceWidthPx = 1_600,
+                viewportWidthPx = 1_600,
+                viewportHeightPx = 2_560,
+                density = 2f,
+            ),
+        )
+    }
+
+    @Test
+    fun `capture never upscales source and rejects missing geometry`() {
+        assertEquals(
+            420,
+            TabPreviewCaptureRules.targetWidthPx(
+                sourceWidthPx = 420,
+                viewportWidthPx = 2_560,
+                viewportHeightPx = 1_600,
+                density = 2f,
+            ),
+        )
+        assertEquals(
+            0,
+            TabPreviewCaptureRules.targetWidthPx(
+                sourceWidthPx = 0,
+                viewportWidthPx = 2_560,
+                viewportHeightPx = 1_600,
+                density = 2f,
+            ),
+        )
+        assertEquals(
+            0,
+            TabPreviewCaptureRules.targetWidthPx(
+                sourceWidthPx = 2_560,
+                viewportWidthPx = 2_560,
+                viewportHeightPx = 1_600,
+                density = Float.NaN,
+            ),
+        )
+    }
+
+    @Test
     fun `capture ends before compose bottom bar`() {
         assertEquals(
             2_080,

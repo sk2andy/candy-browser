@@ -50,7 +50,9 @@ import androidx.compose.ui.unit.dp
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.browser.actions.ExternalDownloadManagerApp
 import dev.sk2andy.materialbrowser.browser.suggestions.SearchSuggestionProvider
+import dev.sk2andy.materialbrowser.data.BrowserAddressBarColorPreset
 import dev.sk2andy.materialbrowser.data.BrowserAppearanceMode
+import dev.sk2andy.materialbrowser.data.BrowserAddressBarStyle
 import dev.sk2andy.materialbrowser.data.BrowserColorPalette
 import dev.sk2andy.materialbrowser.data.BrowserDownloadSettings
 import dev.sk2andy.materialbrowser.data.BrowserShapeStyle
@@ -173,6 +175,15 @@ internal fun BrowserColorPalette.displayName(): String = when (this) {
 }
 
 @Composable
+internal fun BrowserAddressBarColorPreset.displayName(): String = when (this) {
+    BrowserAddressBarColorPreset.Theme -> stringResource(R.string.address_bar_color_theme)
+    BrowserAddressBarColorPreset.Dimmed -> stringResource(R.string.address_bar_color_dimmed)
+    BrowserAddressBarColorPreset.Graphite -> stringResource(R.string.address_bar_color_graphite)
+    BrowserAddressBarColorPreset.Black -> stringResource(R.string.address_bar_color_black)
+    BrowserAddressBarColorPreset.Custom -> stringResource(R.string.address_bar_color_custom)
+}
+
+@Composable
 internal fun BrowserSurfaceStyle.displayName(): String = when (this) {
     BrowserSurfaceStyle.Clear -> stringResource(R.string.surface_style_clear)
     BrowserSurfaceStyle.Frosted -> stringResource(R.string.surface_style_frosted)
@@ -183,6 +194,12 @@ internal fun BrowserShapeStyle.displayName(): String = when (this) {
     BrowserShapeStyle.Angular -> stringResource(R.string.shape_style_angular)
     BrowserShapeStyle.Rounded -> stringResource(R.string.shape_style_rounded)
     BrowserShapeStyle.ExtraRounded -> stringResource(R.string.shape_style_extra_rounded)
+}
+
+@Composable
+internal fun BrowserAddressBarStyle.displayName(): String = when (this) {
+    BrowserAddressBarStyle.Classic -> stringResource(R.string.address_bar_style_classic)
+    BrowserAddressBarStyle.Segmented -> stringResource(R.string.address_bar_style_segmented)
 }
 
 @Composable
@@ -197,6 +214,7 @@ internal fun SettingsChoice(
     expanded: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    enabled: Boolean = true,
 ) {
     dev.sk2andy.materialbrowser.shared.ui.settings.SettingsChoice(
         title = title,
@@ -205,6 +223,7 @@ internal fun SettingsChoice(
         onClick = onClick,
         containerColor = browserChromeColor(MaterialTheme.colorScheme.surfaceContainerHigh),
         modifier = modifier,
+        enabled = enabled,
     )
 }
 

@@ -3,7 +3,7 @@
 Toppings are the cross-platform lightweight customization model. Android's Gecko runtime uses a
 private bundled MV3 host extension. Android has no WebView fallback.
 The iOS runtime consumes the shared metadata and URL policy, resolves dependencies during explicit
-imports and installs each script as a main-frame `WKUserScript` in a named `WKContentWorld`. Android Gecko separately
+imports and installs each script as a scoped `WKUserScript` in a named `WKContentWorld`. Android Gecko separately
 supports Mozilla-signed Firefox WebExtensions. See [`platform-engines.md`](platform-engines.md) for
 the engine boundary; WebExtensions and Toppings intentionally remain different capability models.
 Firefox WebExtension action, popup, options, tab and download conformance is tracked in the
@@ -44,6 +44,10 @@ none of those privileged delegates are exposed to Toppings.
 | `@exclude` | Matching exclusions win over positive patterns |
 | `@run-at document-start` | Runs before page JavaScript; the DOM may not exist yet |
 | `@run-at document-end` | Runs once at `DOMContentLoaded`, or immediately if that event already passed |
+| `@candy-frames top` | Runs only in the top-level document; this is the default when no frame metadata exists |
+| `@candy-frames same-origin` | May also run in matching frames whose origin equals the top-level document origin |
+| `@candy-frames all-matching` | May run in every frame whose own URL matches the Topping's URL declarations |
+| `@noframes` | Standard-compatible alias for top-level-only execution; combining it with a broader `@candy-frames` value is rejected |
 | `@grant none` | Accepted without privileged native APIs; Tampermonkey-compatible `GM_info`/`GM.info` metadata remains available |
 | `@grant GM_info` or `GM.info` | Explicit metadata grant; metadata is also available with `none` |
 | `@grant GM_addStyle` or `GM.addStyle` | Adds a style element to the matching document |
@@ -65,15 +69,25 @@ none of those privileged delegates are exposed to Toppings.
   dependency hosts. `@connect` and unsupported grants remain rejected. Scripts receive only
   explicitly granted local APIs and no general cross-origin permission. Each runs in its own
   Candy-isolated JavaScript world with ordinary DOM access. The world-scoped native bridge accepts
-  only bounded, grant-checked value mutations from the matching top-level origin, merges them
+  only bounded, grant-checked value mutations from an authorized matching document, merges them
   atomically across tabs and acknowledges the canonical persisted state. Page-world
   JavaScript and other Toppings cannot access it. Native event injection executes source directly,
   so page Content Security Policy cannot block a Topping as string eval.
-- Only the top-level HTTP(S) document is eligible. Iframes, `file:`, `content:`, `data:`, Link Peek
-  previews and private tabs never run userscripts.
+- The declared frame scope is a maximum. Topping settings expose an independent user allowance;
+  effective access is the narrower of both values, so a Topping cannot grant itself more access than
+  the user allowed and the user cannot exceed its declaration. New installs start with the declared
+  value. Existing v1/v2 persisted Toppings migrate to `top`, even when their source contains newly
+  recognized frame metadata; edits and catalog updates preserve the existing restriction.
+- Every eligible frame must independently match `@match` or `@include`, must not match `@exclude`,
+  and must use HTTP(S). `same-origin` additionally compares the frame origin with the top-level
+  origin. `file:`, `content:`, `data:`, Link Peek previews and private tabs never run Toppings.
 - A userscript can read and change matching page content and act through the signed-in page session.
   Import only trusted source. Source and collection bounds limit storage and startup cost, but cannot
   prevent trusted code from blocking or crashing a renderer.
+- `top` keeps the previous injection behavior. Broader scopes add work only for matching enabled
+  Toppings and eligible frames; each candidate runs a bounded local URL/scope guard before source.
+  No remote lookup is added to navigation. Sites with many frames and heavy third-party Toppings can
+  still consume more renderer CPU and memory, which is why the user allowance can narrow the scope.
 
 ## Lifecycle and boundaries
 
@@ -81,7 +95,8 @@ none of those privileged delegates are exposed to Toppings.
   grants its optional `userScripts` permission and reconciles enabled persisted Toppings through a
   revisioned native-messaging port. The first regular navigation waits for a successful registration
   acknowledgement or a bounded initialization failure, preserving `document-start` on cold start.
-- Gecko registrations use a dedicated `USER_SCRIPT` world, `allFrames=false`, Candy's exact
+- Gecko registrations use a dedicated `USER_SCRIPT` world, enable `allFrames` only for an effective
+  non-`top` scope, and retain Candy's exact
   `@match`/`@include`/`@exclude` scopes and `document-start`/`document-end` timing. GeckoView 155 has
   no CSS member on `RegisteredUserScript`; CSS in this slice is supported through the local
   `GM_addStyle`/`GM.addStyle` bootstrap. `GM_info`/`GM.info` is also local.
@@ -99,7 +114,9 @@ none of those privileged delegates are exposed to Toppings.
   before all source handlers and before navigation, then removed on script mutation, renderer loss,
   WebView recreation and controller destruction.
 - Native allowed-origin rules provide the first origin boundary; the isolated-world guard then
-  checks the complete URL, exclusions and top-frame identity before executing source.
+  checks the complete frame URL, exclusions and effective frame scope before executing source.
+  Bridge and menu state is keyed by a native document identity, so equally named commands in two
+  frames cannot target one another.
 - Android Gecko catalog changes are guaranteed after the next app/runtime start. GeckoView 155 does
   not reliably expose a changed dynamic registration to an already-created session, even after the
   extension API acknowledges it; rebuilding live sessions without losing history remains a parity
@@ -109,7 +126,8 @@ none of those privileged delegates are exposed to Toppings.
   copied into private runtime or private persistence.
 - Site Capsules use normal tab WebViews, so regular Capsule pages follow the same matching rules.
 - iOS registers a distinct named `WKContentWorld` and `WKScriptMessageHandlerWithReply` for every
-  Topping revision. The first statement asks native code to authorize the current top-frame URL;
+  Topping revision. The first statement asks native code to authorize the current frame URL and
+  document identity;
   disabled, replaced, private, non-HTTP(S), mismatched and stale-revision scripts fail before
   `@require` or user source runs. Save, toggle and delete reconcile live controllers without removing
   Candy Blocking scripts. Old immutable `WKUserScript` registrations remain inert because their
@@ -120,7 +138,8 @@ none of those privileged delegates are exposed to Toppings.
   The resolved bytes are stored with the Topping and normal navigation performs no dependency
   network request. Persisted dependency bytes and integrity are revalidated before registration.
 - iOS GM values use a bounded script-ID-partitioned `UserDefaults` store. The world bridge checks
-  current grant, top frame, current URL scope, revision and message rate before an atomic mutation,
+  current grant, document identity, frame scope, current URL scope, revision and message rate before
+  an atomic mutation,
   then replies with the canonical merged snapshot. Menu callbacks live only in the script world;
   native stores only IDs/captions and removes them on navigation. `GM_openInTab` accepts at most four
   credential-free HTTP(S) requests per ten seconds and never runs in private tabs.
@@ -137,8 +156,7 @@ none of those privileged delegates are exposed to Toppings.
 | Settings semantics and actions | `UserscriptManagementScreenInstrumentedTest` |
 | Catalog schema, integrity and cache | `ToppingCatalogParserTest`, `ToppingVerifierTest`, `ToppingCatalogStoreInstrumentedTest` |
 | Discovery semantics and actions | `ToppingCatalogScreenInstrumentedTest` |
-| WebView timing, CSP, origin and top-frame boundary | `UserScriptInjectionInstrumentedTest` on API 34+ |
-| GM world isolation and private-registration boundary | `UserScriptRuntimeInstrumentedTest` |
+| WebView URL/frame guard and document-scoped bridge lifecycle | `UserScriptInjectionTest`, `UserScriptApiTest`, `UserScriptBridgeContractTest` |
 | Shared iOS metadata/grants/dependency and URL policy | `shared:ToppingRulesTest` |
 | iOS compiler and WebKit contract | `swiftc -typecheck` over `iosApp/CandyIos/*.swift`; `CandyIos` simulator build/smoke |
 | GeckoView 155 host readiness, world validation, resolved `@require`/`@resource`, values, active-tab binding, menu callback, `GM_openInTab`, exclude and private rejection | `CandyToppingHostInstrumentedTest` on the dedicated API 34+ emulator |

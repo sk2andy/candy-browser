@@ -144,16 +144,19 @@ internal fun BrowserSettingsOverlay(
     ) {
         SettingsScreen(
             browserEngineKind = controller.browserEngineKind,
-                destination = destination,
+            isDnsOverHttpsSupported = controller.isDnsOverHttpsSupported,
+            destination = destination,
             appearanceSettings = controller.appearanceSettings,
             downloadSettings = controller.downloadSettings,
             externalDownloadManagers = controller.externalDownloadManagers,
             blockerSettings = controller.blockerSettings,
             webRtcProtectionMode = controller.webRtcProtectionMode,
+            dnsOverHttpsSettings = controller.dnsOverHttpsSettings,
             inactiveTabLifetime = controller.inactiveTabLifetime,
             residentTabLimit = controller.residentTabLimit,
             searchEngine = controller.searchEngine,
             pageTranslationProvider = controller.pageTranslationProvider,
+            addressBarLongPressAction = controller.addressBarLongPressAction,
             linkLongPressAction = controller.linkLongPressAction,
             linkPeekActionLayout = controller.linkPeekActionLayout,
             searxngSettings = controller.searxngSettings,
@@ -189,6 +192,8 @@ internal fun BrowserSettingsOverlay(
             isScrollBarEnabled = controller.isScrollBarEnabled,
             isVideoAutoplayBlocked = controller.isVideoAutoplayBlocked,
             isVideoAutoplayBlockingSupported = controller.isVideoAutoplayBlockingSupported,
+            inlineMediaPlayerMode = controller.inlineMediaPlayerMode,
+            isInlineMediaPlayerSupported = controller.isInlineMediaPlayerSupported,
             developerSettings = controller.developerSettings,
             isDeveloperOptionsUnlocked = controller.isDeveloperOptionsUnlocked,
             isInputDiagnosticsEnabled = controller.isInputDiagnosticsEnabled,
@@ -214,6 +219,8 @@ internal fun BrowserSettingsOverlay(
                         },
                     ),
                     urlPatterns = script.matchPatterns + script.includePatterns,
+                    declaredFrameScope = script.declaredFrameScope,
+                    allowedFrameScope = script.allowedFrameScope,
                 )
             },
             toppingCatalogState = toppingCatalogState,
@@ -225,10 +232,13 @@ internal fun BrowserSettingsOverlay(
             onDownloadSettingsChanged = controller::updateDownloadSettings,
             onBlockerSettingsChanged = controller::updateBlockerSettings,
             onWebRtcProtectionModeChanged = controller::updateWebRtcProtectionMode,
+            onDnsOverHttpsSettingsChanged = controller::updateDnsOverHttpsSettings,
             onInactiveTabLifetimeChanged = controller::updateInactiveTabLifetime,
             onResidentTabLimitChanged = controller::updateResidentTabLimit,
             onSearchEngineChanged = controller::updateSearchEngine,
             onPageTranslationProviderChanged = controller::updatePageTranslationProvider,
+            onAddressBarLongPressActionChanged =
+                controller::updateAddressBarLongPressAction,
             onLinkLongPressActionChanged = controller::updateLinkLongPressAction,
             onLinkPeekActionLayoutChanged = controller::updateLinkPeekActionLayout,
             onSearxngSettingsChanged = controller::updateSearxngSettings,
@@ -269,6 +279,7 @@ internal fun BrowserSettingsOverlay(
                 controller::updateOpenHomeOnStartupEnabled,
             onScrollBarEnabledChanged = controller::updateScrollBarEnabled,
             onVideoAutoplayBlockedChanged = controller::updateVideoAutoplayBlocked,
+            onInlineMediaPlayerModeChanged = controller::updateInlineMediaPlayerMode,
             onDeveloperSettingsChanged = controller::updateDeveloperSettings,
             onInputDiagnosticsEnabledChanged = controller::updateInputDiagnosticsEnabled,
             onCopyDeveloperDiagnostics = controller::copyDeveloperDiagnostics,
@@ -290,6 +301,14 @@ internal fun BrowserSettingsOverlay(
             onDeleteCapsule = onDeleteCapsule,
             onToggleUserScript = { id, enabled, onResult ->
                 controller.setUserScriptEnabled(id, enabled) { saved ->
+                    onResult(
+                        if (saved) null
+                        else context.getString(R.string.userscript_error_generic),
+                    )
+                }
+            },
+            onSetUserScriptFrameScope = { id, scope, onResult ->
+                controller.setUserScriptFrameScope(id, scope) { saved ->
                     onResult(
                         if (saved) null
                         else context.getString(R.string.userscript_error_generic),

@@ -5,6 +5,7 @@ import dev.sk2andy.materialbrowser.browser.userscript.UserScript
 import dev.sk2andy.materialbrowser.browser.userscript.UserScriptParseResult
 import dev.sk2andy.materialbrowser.browser.userscript.UserScriptParser
 import dev.sk2andy.materialbrowser.browser.userscript.UserScriptRules
+import dev.sk2andy.materialbrowser.shared.topping.ToppingFrameScope
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.FileNotFoundException
@@ -28,7 +29,7 @@ internal class UserScriptStore(context: Context) {
             }
             val root = JSONObject(bytes.toString(StandardCharsets.UTF_8))
             val version = root.optInt("version", -1)
-            check(version == LEGACY_FORMAT_VERSION || version == FORMAT_VERSION)
+            check(version in setOf(LEGACY_FORMAT_VERSION, DEPENDENCY_FORMAT_VERSION, FORMAT_VERSION))
             val values = root.getJSONArray("scripts")
             check(values.length() <= UserScriptParser.MAX_SCRIPTS)
             val scripts = buildList {
@@ -45,7 +46,22 @@ internal class UserScriptStore(context: Context) {
                         version == LEGACY_FORMAT_VERSION &&
                         (parsed.requires.isNotEmpty() || parsed.resources.isNotEmpty())
                     ) continue
-                    add(if (version == FORMAT_VERSION) parsed.withDependencies(item) else parsed)
+                    val withScope = if (version == FORMAT_VERSION) {
+                        val allowedFrameScope = ToppingFrameScope.fromWireValue(
+                            item.getString("allowedFrameScope"),
+                        ) ?: error("Invalid frame scope")
+                        check(allowedFrameScope.isWithin(parsed.declaredFrameScope))
+                        parsed.copy(allowedFrameScope = allowedFrameScope)
+                    } else {
+                        parsed.copy(allowedFrameScope = ToppingFrameScope.Top)
+                    }
+                    add(
+                        if (version >= DEPENDENCY_FORMAT_VERSION) {
+                            withScope.withDependencies(item)
+                        } else {
+                            withScope
+                        },
+                    )
                 }
             }
             check(UserScriptRules.isWithinCollectionBounds(scripts))
@@ -77,6 +93,7 @@ internal class UserScriptStore(context: Context) {
                                 .put("source", script.source)
                                 .put("enabled", script.enabled)
                                 .put("updatedAtMillis", script.updatedAtMillis)
+                                .put("allowedFrameScope", script.allowedFrameScope.wireValue)
                                 .put(
                                     "requires",
                                     JSONArray().also { requires ->
@@ -155,8 +172,9 @@ internal class UserScriptStore(context: Context) {
 
     internal companion object {
         const val FILE_NAME = "user_scripts.json"
-        const val FORMAT_VERSION = 2
+        const val FORMAT_VERSION = 3
         private const val LEGACY_FORMAT_VERSION = 1
+        private const val DEPENDENCY_FORMAT_VERSION = 2
         // Keeps synchronous startup recovery bounded; unusually escape-heavy JSON fails closed.
         const val MAX_FILE_BYTES = 8 * 1_024 * 1_024
     }

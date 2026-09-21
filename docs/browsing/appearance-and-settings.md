@@ -27,8 +27,10 @@
 | Force dark mode on websites | Off, on | Off |
 | Website font size | 50–200% in 5% steps | 100% |
 | Color palette | Material You, Candy, neutral | Material You |
+| Address-bar color | Theme, dimmed, graphite, black, custom RGB hex | Theme |
 | Surfaces | Clear, frosted | Clear |
 | Shape | Angular, rounded, extra rounded | Rounded |
+| Address bar style | Classic, segmented | Classic |
 | Startup animation | Off, on | On |
 | Address focus on launch | When startup animation is off, every launch, never | When startup animation is off |
 | Open home page on startup | Off, on | Off |
@@ -44,7 +46,11 @@
 ## Cross-platform settings migration
 
 Android and iOS compile the same settings destination model, transition, page shell, controls, home
-ordering and core page renderers from `shared/src/commonMain`. Android resolves existing localized
+ordering and core page renderers from `shared/src/commonMain`. The shared settings home groups
+destinations by task: Browsing, Personalization, Privacy & data, and More information. Android's
+Browser page labels Browser setup, Startup, Favorites, Web pages, and Links & apps; Protection & data labels its
+privacy tools, protection controls, history, and app-data actions. These are navigation labels only;
+setting ownership and persistence do not change. Android resolves existing localized
 resources, drawable icons, frosted container color and persisted state through thin adapters. Appearance
 is fully shared; Tabs & Gestures shares overview-mode and dismiss-resistance controls; Browser shares the
 translation-provider control. iOS routes to those shared pages without SwiftUI replacements. Its existing
@@ -76,7 +82,7 @@ not get copied.
 | Surface | Browser chrome treatment |
 | --- | --- |
 | Clear | Opaque neutral containers with standard elevation |
-| Frosted | Light translucent chrome with a live blur of browser content behind it |
+| Frosted | Light translucent glass chrome; live website blur depends on engine and Android version |
 
 Frosted exposes three persisted controls while selected:
 
@@ -101,9 +107,25 @@ Frosted exposes three persisted controls while selected:
   blank tab in the active profile is reused. External links, launcher shortcuts, Site Capsules, and
   activity recreation keep their own destinations.
 - Unknown stored values fall back per field; one corrupt value does not discard valid choices.
-- AMOLED keeps root surfaces black. Frosted transparency does not override AMOLED black chrome.
+- Address-bar colors override only address chrome. Theme preserves the selected Material You, Candy,
+  or neutral surface roles; Reset selects Theme and removes the stored custom color. Custom colors
+  accept `#RGB` or `#RRGGBB`, normalize to uppercase `#RRGGBB`, and fall back to Theme when invalid.
+  Presets derive a distinct inner-field tone plus black-or-white content and accent roles. Frosted
+  applies its existing transparency and blur after resolving the opaque preset color. For an
+  override, it raises the tint opacity only as far as needed to keep text contrast safe against
+  either a light or dark website backdrop. AMOLED
+  keeps the selected address color opaque and disables blur.
+- Address-bar style is global. Segmented groups expanded actions and the address field into one
+  primary pill, keeps the fixed trailing action in a separate pill, and replaces that action with
+  editor dismissal while focused. The focused input stays borderless. Compact, parked, overview,
+  command-feedback, external-preview and find-in-page chrome retain their existing geometry.
+- AMOLED keeps root surfaces black. An explicit address-bar color may color address chrome, but it
+  stays opaque; Frosted transparency and blur do not override AMOLED chrome.
 - Frosted changes only Candy browser chrome. It does not inject styles into websites or claim backdrop refraction.
-- Frosted uses WebView blur sources while browsing and Compose-backed blur sources on the new-tab page and tab overview.
+- Frosted uses view-hierarchy capture for Android System WebView on Android 13 and newer,
+  native `SurfaceView` blur regions for GeckoView on Android 17 and newer, and Compose-backed blur
+  sources on the new-tab page and tab overview. GeckoView on Android 13, 14, 15 and 16 keeps its
+  performant `SurfaceView` and renders the glass treatment without website blur.
 - The status-bar protection is a static surface-tint fade drawn above page content. It never samples
   or continuously invalidates the browser engine; the optional Frosted address chrome keeps its
   separate live blur source.

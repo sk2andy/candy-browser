@@ -110,6 +110,47 @@ class GeckoMediaRulesTest {
     }
 
     @Test
+    fun `inline picture in picture requires an active Candy presentation`() {
+        val inline = GeckoMediaSessionState(
+            isActive = true,
+            hasInlineVideo = true,
+            isInlineVideoPlaying = true,
+            inlineVideoWidth = 1_280,
+            inlineVideoHeight = 720,
+        )
+        val presentedInline = inline.copy(isInlineVideoPresented = true)
+
+        assertFalse(
+            GeckoPictureInPictureRules.isEligible(
+                state = inline,
+                isPrivate = false,
+                isSelectedTab = true,
+            ),
+        )
+        assertTrue(
+            GeckoPictureInPictureRules.isEligible(
+                state = presentedInline,
+                isPrivate = false,
+                isSelectedTab = true,
+            ),
+        )
+        assertFalse(
+            GeckoPictureInPictureRules.isEligible(
+                state = presentedInline.copy(isInlineVideoPlaying = false),
+                isPrivate = false,
+                isSelectedTab = true,
+            ),
+        )
+        assertFalse(
+            GeckoPictureInPictureRules.isEligible(
+                state = presentedInline,
+                isPrivate = true,
+                isSelectedTab = true,
+            ),
+        )
+    }
+
+    @Test
     fun `fullscreen presentation rejects non video fullscreen content`() {
         val video = GeckoMediaSessionState(
             isActive = true,
@@ -138,6 +179,26 @@ class GeckoMediaRulesTest {
     }
 
     @Test
+    fun `deactivation retains paused media while explicit stop clears it`() {
+        val playing = GeckoMediaSessionState(
+            isActive = true,
+            isPlaying = true,
+            title = "Track",
+            currentPositionMillis = 1_000L,
+            durationMillis = 20_000L,
+        )
+
+        assertEquals(
+            playing.copy(isPlaying = false),
+            GeckoMediaSessionRules.deactivatedState(playing),
+        )
+        assertEquals(
+            GeckoMediaSessionRules.stoppedState(),
+            GeckoMediaSessionRules.deactivatedState(GeckoMediaSessionRules.stoppedState()),
+        )
+    }
+
+    @Test
     fun `picture in picture preserves playback intent after gecko pauses during transition`() {
         assertTrue(
             GeckoPictureInPictureRules.playbackExpectedDuringTransition(
@@ -161,6 +222,46 @@ class GeckoMediaRulesTest {
                 transitionPending = false,
                 inPictureInPicture = false,
                 mediaIsPlaying = false,
+            ),
+        )
+    }
+
+    @Test
+    fun `picture in picture playback publication masks only transient owner pauses`() {
+        assertTrue(
+            GeckoPictureInPictureRules.publishedPlaybackIsPlaying(
+                reportedIsPlaying = false,
+                playbackExpected = true,
+                transitionPending = false,
+                inPictureInPicture = true,
+                isPictureInPictureOwner = true,
+            ),
+        )
+        assertFalse(
+            GeckoPictureInPictureRules.publishedPlaybackIsPlaying(
+                reportedIsPlaying = false,
+                playbackExpected = false,
+                transitionPending = false,
+                inPictureInPicture = true,
+                isPictureInPictureOwner = true,
+            ),
+        )
+        assertFalse(
+            GeckoPictureInPictureRules.publishedPlaybackIsPlaying(
+                reportedIsPlaying = false,
+                playbackExpected = true,
+                transitionPending = false,
+                inPictureInPicture = true,
+                isPictureInPictureOwner = false,
+            ),
+        )
+        assertFalse(
+            GeckoPictureInPictureRules.publishedPlaybackIsPlaying(
+                reportedIsPlaying = false,
+                playbackExpected = true,
+                transitionPending = false,
+                inPictureInPicture = false,
+                isPictureInPictureOwner = true,
             ),
         )
     }

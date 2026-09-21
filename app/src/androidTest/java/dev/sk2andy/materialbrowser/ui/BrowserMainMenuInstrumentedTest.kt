@@ -369,6 +369,7 @@ class BrowserMainMenuInstrumentedTest {
         assertTrue(historyTop < settingsTop)
         val firefoxExtensionsTop = composeRule
             .onNodeWithTag(FirefoxExtensionChromeTestTags.SectionTitle)
+            .performScrollTo()
             .assertIsDisplayed()
             .fetchSemanticsNode().boundsInRoot.top
         assertTrue(firefoxExtensionsTop < historyTop)
@@ -381,20 +382,21 @@ class BrowserMainMenuInstrumentedTest {
 
         assertEquals(1, dismissals.get())
         assertEquals(1, dockActions.get())
-        composeRule.mainClock.advanceTimeBy(
-            BrowserMainMenuMotion.EXIT_DURATION_MILLIS.toLong() / 2L,
-        )
+        composeRule.mainClock.advanceTimeByFrame()
         composeRule.onNodeWithTag(BrowserMainMenuTestTags.Menu).assertExists()
         assertEquals(1, dockActions.get())
-        composeRule.mainClock.advanceTimeBy(
-            BrowserMainMenuMotion.EXIT_DURATION_MILLIS.toLong() / 2L + 32L,
-        )
+        composeRule.runOnUiThread { setMenuExpanded(true) }
+        composeRule.mainClock.advanceTimeBy(5_000L)
+        composeRule.mainClock.advanceTimeByFrame()
+        composeRule.onNodeWithTag(BrowserMainMenuTestTags.Menu).assertIsDisplayed()
+        composeRule.runOnUiThread { setMenuExpanded(false) }
+        composeRule.mainClock.advanceTimeBy(5_000L)
         composeRule.mainClock.advanceTimeByFrame()
         composeRule.onNodeWithTag(BrowserMainMenuTestTags.Menu).assertDoesNotExist()
         assertEquals(1, dockActions.get())
+        composeRule.mainClock.autoAdvance = true
 
         composeRule.runOnIdle { setMenuExpanded(true) }
-        composeRule.mainClock.advanceTimeBy(200L)
         composeRule.onNodeWithTag(BrowserMainMenuTestTags.DuplicateTab)
             .assertIsDisplayed()
             .performClick()
@@ -404,7 +406,6 @@ class BrowserMainMenuInstrumentedTest {
         assertEquals(null, firefoxExtensionAction.get())
 
         composeRule.runOnIdle { setMenuExpanded(true) }
-        composeRule.mainClock.advanceTimeBy(200L)
         composeRule.onNodeWithTag(
             FirefoxExtensionChromeTestTags.action(extensionActionKey.saveableId),
         ).performScrollTo().performClick()

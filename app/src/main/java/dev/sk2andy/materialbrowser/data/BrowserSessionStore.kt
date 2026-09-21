@@ -14,9 +14,13 @@ import dev.sk2andy.materialbrowser.browser.BrowserTab
 import dev.sk2andy.materialbrowser.browser.DEFAULT_BROWSER_PROFILE
 import dev.sk2andy.materialbrowser.browser.DEFAULT_PROFILE_ID
 import dev.sk2andy.materialbrowser.browser.DesktopSiteRules
+import dev.sk2andy.materialbrowser.browser.DnsOverHttpsProvider
+import dev.sk2andy.materialbrowser.browser.DnsOverHttpsRules
+import dev.sk2andy.materialbrowser.browser.DnsOverHttpsSettings
 import dev.sk2andy.materialbrowser.browser.DomainMuteRules
 import dev.sk2andy.materialbrowser.browser.ExternalAppLinkHandling
 import dev.sk2andy.materialbrowser.browser.FavoriteAnimationSpeed
+import dev.sk2andy.materialbrowser.browser.InlineMediaPlayerMode
 import dev.sk2andy.materialbrowser.browser.PageTranslationProvider
 import dev.sk2andy.materialbrowser.browser.PopupSiteRules
 import dev.sk2andy.materialbrowser.browser.ProfileWallpaper
@@ -36,6 +40,7 @@ import dev.sk2andy.materialbrowser.browser.LinkLongPressAction
 import dev.sk2andy.materialbrowser.browser.LinkPeekActionLayout
 import dev.sk2andy.materialbrowser.browser.LinkPeekActionLayoutRules
 import dev.sk2andy.materialbrowser.browser.suggestions.SearchSuggestionProvider
+import dev.sk2andy.materialbrowser.shared.browser.AddressBarLongPressAction
 import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuLayout
 import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuLayoutRules
 import dev.sk2andy.materialbrowser.sync.SyncTabRules
@@ -390,54 +395,78 @@ class BrowserSessionStore internal constructor(
         preferences.edit().putBoolean(KEY_HISTORY_SESSION_ACTIVE, active).commit()
 
     @Synchronized
-    fun loadFavorites(): List<FavoriteEntry> = loadArray(KEY_FAVORITES) { item ->
-        FavoriteEntry(
-            url = item.getString("url"),
-            title = item.optString("title"),
-            addedAt = item.optLong("addedAt"),
-        )
+    fun loadFavorites(): List<FavoriteEntry> = loadFavoriteLibrary().favorites
+
+    @Synchronized
+    fun loadFavoriteLibrary(): FavoriteLibrary {
+        val raw = preferences.getString(KEY_FAVORITES, null) ?: return FavoriteLibrary()
+        val array = runCatching { JSONArray(raw) }.getOrNull() ?: return FavoriteLibrary()
+        val entries = buildList {
+            for (index in 0 until array.length()) {
+                array.optJSONObject(index)?.let(::readFavoriteLibraryEntry)?.let(::add)
+            }
+        }
+        return BrowsingFavoritesRules.normalizeLibrary(FavoriteLibrary(entries))
     }
 
     @Synchronized
-    fun saveFavorites(favorites: List<FavoriteEntry>) = saveArray(
-        key = KEY_FAVORITES,
-        values = favorites,
-    ) { entry ->
-        JSONObject()
-            .put("url", entry.url)
-            .put("title", entry.title)
-            .put("addedAt", entry.addedAt)
+    fun saveFavorites(favorites: List<FavoriteEntry>) {
+        saveFavoriteLibrary(FavoriteLibrary(favorites))
+    }
+
+    @Synchronized
+    fun saveFavoriteLibrary(library: FavoriteLibrary) {
+        saveArray(
+            key = KEY_FAVORITES,
+            values = BrowsingFavoritesRules.normalizeLibrary(library).entries,
+            write = ::writeFavoriteLibraryEntry,
+        )
     }
 
     internal fun saveFavoritesCommitted(
         favorites: List<FavoriteEntry>,
         expectedCurrent: List<FavoriteEntry>? = null,
+    ): Boolean = saveFavoriteLibraryCommitted(
+        library = FavoriteLibrary(favorites),
+        expectedCurrent = expectedCurrent?.let(::FavoriteLibrary),
+    )
+
+    internal fun saveFavoriteLibraryCommitted(
+        library: FavoriteLibrary,
+        expectedCurrent: FavoriteLibrary? = null,
     ): Boolean =
         synchronized(FAVORITES_COMMIT_LOCK) {
             synchronized(this) favoriteWrite@{
-                if (expectedCurrent != null && loadFavorites() != expectedCurrent) {
+                if (expectedCurrent != null && loadFavoriteLibrary() != expectedCurrent) {
                     return@favoriteWrite false
                 }
                 saveArrayCommitted(
                     key = KEY_FAVORITES,
-                    values = favorites,
-                ) { entry ->
-                    JSONObject()
-                        .put("url", entry.url)
-                        .put("title", entry.title)
-                        .put("addedAt", entry.addedAt)
-                }
+                    values = BrowsingFavoritesRules.normalizeLibrary(library).entries,
+                    write = ::writeFavoriteLibraryEntry,
+                )
             }
         }
 
     internal fun mergeImportedFavoritesCommitted(
         imported: List<FavoriteEntry>,
     ): FavoriteBookmarkMergeResult? = synchronized(FAVORITES_COMMIT_LOCK) {
+        val current = loadFavoriteLibrary()
         val result = FavoriteBookmarkImportRules.merge(
-            current = loadFavorites(),
+            current = current.favorites,
             imported = imported,
         )
-        if (result.importedCount == 0 || saveFavoritesCommitted(result.favorites)) {
+        val importedRootEntries = result.favorites.take(result.importedCount)
+        val merged = FavoriteLibrary(
+            entries = importedRootEntries + current.entries,
+        )
+        if (
+            result.importedCount == 0 ||
+            saveFavoriteLibraryCommitted(
+                library = merged,
+                expectedCurrent = current,
+            )
+        ) {
             result
         } else {
             null
@@ -878,6 +907,15 @@ class BrowserSessionStore internal constructor(
         preferences.edit().putString(KEY_LINK_LONG_PRESS_ACTION, action.stableId).apply()
     }
 
+    fun loadAddressBarLongPressAction(): AddressBarLongPressAction =
+        AddressBarLongPressAction.fromStableId(
+            preferences.getString(KEY_ADDRESS_BAR_LONG_PRESS_ACTION, null),
+        )
+
+    fun saveAddressBarLongPressAction(action: AddressBarLongPressAction) {
+        preferences.edit().putString(KEY_ADDRESS_BAR_LONG_PRESS_ACTION, action.stableId).apply()
+    }
+
     fun loadLinkPeekActionLayout(): LinkPeekActionLayout {
         val stored = preferences.getString(KEY_LINK_PEEK_ACTION_LAYOUT, null)
             ?: return LinkPeekActionLayout.Default
@@ -1013,6 +1051,23 @@ class BrowserSessionStore internal constructor(
 
     fun saveScrollBarEnabled(enabled: Boolean) {
         preferences.edit().putBoolean(KEY_SCROLL_BAR_ENABLED, enabled).apply()
+    }
+
+    fun loadInlineMediaPlayerMode(): InlineMediaPlayerMode {
+        val storedMode = preferences.getString(KEY_INLINE_MEDIA_PLAYER_MODE, null)
+        if (storedMode != null) return InlineMediaPlayerMode.fromStableId(storedMode)
+        return if (preferences.getBoolean(KEY_INLINE_MEDIA_PLAYER_ENABLED, false)) {
+            InlineMediaPlayerMode.ButtonInlineAndFullscreen
+        } else {
+            InlineMediaPlayerMode.Default
+        }
+    }
+
+    fun saveInlineMediaPlayerMode(mode: InlineMediaPlayerMode) {
+        preferences.edit()
+            .putString(KEY_INLINE_MEDIA_PLAYER_MODE, mode.stableId)
+            .remove(KEY_INLINE_MEDIA_PLAYER_ENABLED)
+            .apply()
     }
 
     fun loadDeveloperOptionsUnlocked(): Boolean =
@@ -1158,6 +1213,24 @@ class BrowserSessionStore internal constructor(
         preferences.edit().putString(KEY_WEBRTC_PROTECTION_MODE, mode.stableId).apply()
     }
 
+    fun loadDnsOverHttpsSettings(): DnsOverHttpsSettings = DnsOverHttpsRules.sanitize(
+        DnsOverHttpsSettings(
+            provider = DnsOverHttpsProvider.fromStableId(
+                preferences.getString(KEY_DNS_OVER_HTTPS_PROVIDER, null),
+            ),
+            customEndpoint = preferences.getString(KEY_DNS_OVER_HTTPS_CUSTOM_ENDPOINT, "")
+                .orEmpty(),
+        ),
+    )
+
+    fun saveDnsOverHttpsSettings(settings: DnsOverHttpsSettings) {
+        val sanitized = DnsOverHttpsRules.sanitize(settings)
+        preferences.edit()
+            .putString(KEY_DNS_OVER_HTTPS_PROVIDER, sanitized.provider.stableId)
+            .putString(KEY_DNS_OVER_HTTPS_CUSTOM_ENDPOINT, sanitized.customEndpoint)
+            .apply()
+    }
+
     fun loadAndroidBrowserEngineKind(): AndroidBrowserEngineKind =
         AndroidBrowserEngineRules.persistedKind(
             stableId = preferences.getString(KEY_ANDROID_BROWSER_ENGINE, null),
@@ -1198,6 +1271,16 @@ class BrowserSessionStore internal constructor(
             shapeStyle = BrowserShapeStyle.fromStableId(
                 preferences.getString(KEY_SHAPE_STYLE, null),
             ),
+            addressBarStyle = BrowserAddressBarStyle.fromStableId(
+                preferences.getString(KEY_ADDRESS_BAR_STYLE, null),
+            ),
+            addressBarColorPreset = BrowserAddressBarColorPreset.fromStableId(
+                preferences.getString(KEY_ADDRESS_BAR_COLOR_PRESET, null),
+            ),
+            addressBarCustomColorHex = preferences.getString(
+                KEY_ADDRESS_BAR_CUSTOM_COLOR_HEX,
+                null,
+            ).orEmpty(),
             frostedTransparencyPercent = frostedTransparencyPercent,
             frostedAddressBarTransparencyPercent = loadBoundedInt(
                 key = KEY_FROSTED_ADDRESS_BAR_TRANSPARENCY_PERCENT,
@@ -1223,6 +1306,9 @@ class BrowserSessionStore internal constructor(
             .putString(KEY_COLOR_PALETTE, normalized.colorPalette.stableId)
             .putString(KEY_SURFACE_STYLE, normalized.surfaceStyle.stableId)
             .putString(KEY_SHAPE_STYLE, normalized.shapeStyle.stableId)
+            .putString(KEY_ADDRESS_BAR_STYLE, normalized.addressBarStyle.stableId)
+            .putString(KEY_ADDRESS_BAR_COLOR_PRESET, normalized.addressBarColorPreset.stableId)
+            .putString(KEY_ADDRESS_BAR_CUSTOM_COLOR_HEX, normalized.addressBarCustomColorHex)
             .putInt(
                 KEY_FROSTED_TRANSPARENCY_PERCENT,
                 normalized.frostedTransparencyPercent,
@@ -1395,6 +1481,7 @@ class BrowserSessionStore internal constructor(
         const val KEY_EXTERNAL_LINK_PREVIEW_ENABLED = "external_link_preview_enabled"
         const val KEY_EXTERNAL_APP_LINK_HANDLING = "external_app_link_handling"
         const val KEY_LINK_LONG_PRESS_ACTION = "link_long_press_action"
+        const val KEY_ADDRESS_BAR_LONG_PRESS_ACTION = "address_bar_long_press_action"
         const val KEY_LINK_PEEK_ACTION_LAYOUT = "link_peek_action_layout"
         const val KEY_ADDRESS_BAR_ACTION_LAYOUT = "address_bar_action_layout"
         const val KEY_BROWSER_MENU_LAYOUT = "browser_menu_layout"
@@ -1408,6 +1495,8 @@ class BrowserSessionStore internal constructor(
         const val KEY_FAVORITE_ANIMATION_SPEED = "favorite_animation_speed"
         const val KEY_OPEN_HOME_ON_STARTUP_ENABLED = "open_home_on_startup_enabled"
         const val KEY_SCROLL_BAR_ENABLED = "scroll_bar_enabled"
+        const val KEY_INLINE_MEDIA_PLAYER_ENABLED = "inline_media_player_enabled"
+        const val KEY_INLINE_MEDIA_PLAYER_MODE = "inline_media_player_mode"
         const val KEY_DEVELOPER_OPTIONS_UNLOCKED = "developer_options_unlocked"
         const val KEY_DEVELOPER_BROWSER_CHROME_SCROLL_DISPATCH_MODE =
             "developer_browser_chrome_scroll_dispatch_mode"
@@ -1434,6 +1523,8 @@ class BrowserSessionStore internal constructor(
         const val KEY_GECKO_SAFE_AREA_MAX_INITIAL_ELEMENTS = "gecko_safe_area_max_initial_elements"
         const val KEY_VIDEO_AUTOPLAY_BLOCKED = "video_autoplay_blocked"
         const val KEY_WEBRTC_PROTECTION_MODE = "webrtc_protection_mode"
+        const val KEY_DNS_OVER_HTTPS_PROVIDER = "dns_over_https_provider"
+        const val KEY_DNS_OVER_HTTPS_CUSTOM_ENDPOINT = "dns_over_https_custom_endpoint"
         const val KEY_ANDROID_BROWSER_ENGINE = "android_browser_engine"
         const val KEY_APPEARANCE_MODE = "appearance_mode"
         const val KEY_FORCE_DARK_WEBSITES = "force_dark_websites"
@@ -1441,6 +1532,9 @@ class BrowserSessionStore internal constructor(
         const val KEY_COLOR_PALETTE = "color_palette"
         const val KEY_SURFACE_STYLE = "surface_style"
         const val KEY_SHAPE_STYLE = "shape_style"
+        const val KEY_ADDRESS_BAR_STYLE = "address_bar_style"
+        const val KEY_ADDRESS_BAR_COLOR_PRESET = "address_bar_color_preset"
+        const val KEY_ADDRESS_BAR_CUSTOM_COLOR_HEX = "address_bar_custom_color_hex"
         const val KEY_FROSTED_TRANSPARENCY_PERCENT = "frosted_transparency_percent"
         const val KEY_FROSTED_ADDRESS_BAR_TRANSPARENCY_PERCENT =
             "frosted_address_bar_transparency_percent"
@@ -1496,3 +1590,56 @@ private fun ProfileProtection?.toJson(): Any = this
             .put("cooldownMinutes", protection.cooldownMinutes)
     }
     ?: JSONObject.NULL
+
+private fun writeFavoriteLibraryEntry(entry: FavoriteLibraryEntry): JSONObject = when (entry) {
+    is FavoriteEntry -> JSONObject()
+        .put("type", "favorite")
+        .put("id", entry.id)
+        .put("url", entry.url)
+        .put("title", entry.title)
+        .put("addedAt", entry.addedAt)
+        .put("parentFolderId", entry.parentFolderId)
+    is FavoriteFolder -> JSONObject()
+        .put("type", "folder")
+        .put("id", entry.id)
+        .put("title", entry.title)
+        .put("parentFolderId", entry.parentFolderId)
+        .put("icon", entry.icon.toJson())
+}
+
+private fun readFavoriteLibraryEntry(item: JSONObject): FavoriteLibraryEntry? = runCatching {
+    when (item.optString("type")) {
+        "folder" -> FavoriteFolder(
+            id = item.optString("id"),
+            title = item.optString("title"),
+            parentFolderId = item.optString("parentFolderId").takeIf(String::isNotBlank),
+            icon = readFavoriteFolderIcon(item),
+        )
+        else -> {
+            val url = item.getString("url")
+            FavoriteEntry(
+                url = url,
+                title = item.optString("title"),
+                addedAt = item.optLong("addedAt"),
+                id = item.optString("id").ifBlank { favoriteEntryId(url) },
+                parentFolderId = item.optString("parentFolderId").takeIf(String::isNotBlank),
+            )
+        }
+    }
+}.getOrNull()
+
+private fun readFavoriteFolderIcon(item: JSONObject): FavoriteFolderIcon? {
+    val icon = item.optJSONObject("icon") ?: return null
+    return when (icon.optString("type")) {
+        "emoji" -> icon.optString("value").takeIf(String::isNotBlank)
+            ?.let(FavoriteFolderIcon::Emoji)
+        "custom" -> FavoriteFolderIcon.Custom
+        else -> null
+    }
+}
+
+private fun FavoriteFolderIcon?.toJson(): Any = when (this) {
+    null -> JSONObject.NULL
+    is FavoriteFolderIcon.Emoji -> JSONObject().put("type", "emoji").put("value", value)
+    FavoriteFolderIcon.Custom -> JSONObject().put("type", "custom")
+}

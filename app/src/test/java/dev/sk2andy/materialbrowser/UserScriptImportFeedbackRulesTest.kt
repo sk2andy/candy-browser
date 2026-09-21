@@ -58,6 +58,8 @@ class UserScriptImportFeedbackRulesTest {
             UserScriptRejectionReason.InvalidIncludePattern to UserScriptImportFeedback.InvalidScope,
             UserScriptRejectionReason.InvalidExcludePattern to UserScriptImportFeedback.InvalidScope,
             UserScriptRejectionReason.InvalidRunAt to UserScriptImportFeedback.InvalidRunAt,
+            UserScriptRejectionReason.InvalidFrameScope to
+                UserScriptImportFeedback.InvalidFrameScope,
             UserScriptRejectionReason.InvalidRequire to UserScriptImportFeedback.InvalidDependency,
             UserScriptRejectionReason.InvalidResource to UserScriptImportFeedback.InvalidDependency,
             UserScriptRejectionReason.TooManyDependencies to

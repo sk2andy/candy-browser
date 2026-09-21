@@ -7,9 +7,12 @@ import dev.sk2andy.materialbrowser.BuildConfig
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.blocking.BlockerSettings
 import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineKind
+import dev.sk2andy.materialbrowser.browser.DnsOverHttpsRules
+import dev.sk2andy.materialbrowser.browser.DnsOverHttpsSettings
 import dev.sk2andy.materialbrowser.browser.BrowserProfile
 import dev.sk2andy.materialbrowser.browser.ExternalAppLinkHandling
 import dev.sk2andy.materialbrowser.browser.FavoriteAnimationSpeed
+import dev.sk2andy.materialbrowser.browser.InlineMediaPlayerMode
 import dev.sk2andy.materialbrowser.browser.PageTranslationProvider
 import dev.sk2andy.materialbrowser.browser.SearchEngine
 import dev.sk2andy.materialbrowser.browser.SearxngSettings
@@ -31,9 +34,11 @@ import dev.sk2andy.materialbrowser.browser.LinkPeekAction
 import dev.sk2andy.materialbrowser.browser.LinkPeekActionLayout
 import dev.sk2andy.materialbrowser.data.TabOverviewMode
 import dev.sk2andy.materialbrowser.shared.ui.settings.SettingsRouter
+import dev.sk2andy.materialbrowser.shared.topping.ToppingFrameScope
 import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuEntry
 import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuLayout
 import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuLocation
+import dev.sk2andy.materialbrowser.shared.browser.AddressBarLongPressAction
 import dev.sk2andy.materialbrowser.sync.SyncConnectionSettings
 import dev.sk2andy.materialbrowser.sync.SyncDeviceIconCatalog
 import dev.sk2andy.materialbrowser.sync.SyncEnrollmentOutcome
@@ -43,15 +48,18 @@ import dev.sk2andy.materialbrowser.sync.SyncRepositoryState
 internal fun SettingsScreen(
     destination: SettingsDestination,
     browserEngineKind: AndroidBrowserEngineKind = AndroidBrowserEngineKind.GeckoView,
+    isDnsOverHttpsSupported: Boolean = browserEngineKind == AndroidBrowserEngineKind.GeckoView,
     appearanceSettings: AppearanceSettings,
     downloadSettings: BrowserDownloadSettings,
     externalDownloadManagers: List<ExternalDownloadManagerApp>,
     blockerSettings: BlockerSettings,
     webRtcProtectionMode: WebRtcProtectionMode = WebRtcProtectionMode.Default,
+    dnsOverHttpsSettings: DnsOverHttpsSettings = DnsOverHttpsRules.Default,
     inactiveTabLifetime: InactiveTabLifetime,
     residentTabLimit: Int,
     searchEngine: SearchEngine,
     pageTranslationProvider: PageTranslationProvider,
+    addressBarLongPressAction: AddressBarLongPressAction = AddressBarLongPressAction.Default,
     linkLongPressAction: LinkLongPressAction = LinkLongPressAction.LinkPeek,
     linkPeekActionLayout: LinkPeekActionLayout = LinkPeekActionLayout.Default,
     searxngSettings: SearxngSettings,
@@ -86,6 +94,8 @@ internal fun SettingsScreen(
     isScrollBarEnabled: Boolean,
     isVideoAutoplayBlocked: Boolean,
     isVideoAutoplayBlockingSupported: Boolean,
+    inlineMediaPlayerMode: InlineMediaPlayerMode = InlineMediaPlayerMode.Default,
+    isInlineMediaPlayerSupported: Boolean = true,
     developerSettings: DeveloperSettings = DeveloperSettings(),
     isDeveloperOptionsUnlocked: Boolean = false,
     isInputDiagnosticsEnabled: Boolean = false,
@@ -104,10 +114,12 @@ internal fun SettingsScreen(
     onDownloadSettingsChanged: (BrowserDownloadSettings) -> Unit,
     onBlockerSettingsChanged: (BlockerSettings) -> Unit,
     onWebRtcProtectionModeChanged: (WebRtcProtectionMode) -> Unit = {},
+    onDnsOverHttpsSettingsChanged: (DnsOverHttpsSettings) -> Unit = {},
     onInactiveTabLifetimeChanged: (InactiveTabLifetime) -> Unit,
     onResidentTabLimitChanged: (Int) -> Unit,
     onSearchEngineChanged: (SearchEngine) -> Unit,
     onPageTranslationProviderChanged: (PageTranslationProvider) -> Unit,
+    onAddressBarLongPressActionChanged: (AddressBarLongPressAction) -> Unit = {},
     onLinkLongPressActionChanged: (LinkLongPressAction) -> Unit = {},
     onLinkPeekActionLayoutChanged: (LinkPeekActionLayout) -> Unit = {},
     onSearxngSettingsChanged: (SearxngSettings) -> Unit,
@@ -138,6 +150,7 @@ internal fun SettingsScreen(
     onOpenHomeOnStartupEnabledChanged: (Boolean) -> Unit = {},
     onScrollBarEnabledChanged: (Boolean) -> Unit,
     onVideoAutoplayBlockedChanged: (Boolean) -> Unit,
+    onInlineMediaPlayerModeChanged: (InlineMediaPlayerMode) -> Unit = {},
     onDeveloperSettingsChanged: (DeveloperSettings) -> Unit = {},
     onInputDiagnosticsEnabledChanged: (Boolean) -> Unit = {},
     onCopyDeveloperDiagnostics: () -> Unit = {},
@@ -150,6 +163,11 @@ internal fun SettingsScreen(
     onEditCapsule: (SiteCapsule) -> Unit,
     onDeleteCapsule: (SiteCapsule) -> Unit,
     onToggleUserScript: (id: String, enabled: Boolean, onResult: (String?) -> Unit) -> Unit,
+    onSetUserScriptFrameScope: (
+        id: String,
+        scope: ToppingFrameScope,
+        onResult: (String?) -> Unit,
+    ) -> Unit = { _, _, onResult -> onResult(null) },
     onSaveUserScript: (id: String?, source: String, onResult: (String?) -> Unit) -> Unit,
     onDeleteUserScript: (id: String, onResult: (String?) -> Unit) -> Unit,
     onImportUserScript: () -> Unit,
@@ -208,6 +226,7 @@ internal fun SettingsScreen(
                     dismissResistancePercent = dismissResistancePercent,
                     profilesEnabled = profilesEnabled,
                     isAddressBarDockingEnabled = isAddressBarDockingEnabled,
+                    addressBarLongPressAction = addressBarLongPressAction,
                     linkLongPressAction = linkLongPressAction,
                     onInactiveTabLifetimeChanged = onInactiveTabLifetimeChanged,
                     onResidentTabLimitChanged = onResidentTabLimitChanged,
@@ -220,6 +239,9 @@ internal fun SettingsScreen(
                     onDismissResistancePercentChanged = onDismissResistancePercentChanged,
                     onProfilesEnabledChanged = onProfilesEnabledChanged,
                     onAddressBarDockingEnabledChanged = onAddressBarDockingEnabledChanged,
+                    onAddressBarLongPressActions = {
+                        onDestinationChanged(SettingsDestination.AddressBarLongPressActions)
+                    },
                     onLinkLongPressActionChanged = onLinkLongPressActionChanged,
                     onLinkPeekActions = {
                         onDestinationChanged(SettingsDestination.LinkPeekActions)
@@ -232,6 +254,15 @@ internal fun SettingsScreen(
                     },
                     onBack = { onDestinationChanged(SettingsDestination.Home) },
                 )
+
+                SettingsDestination.AddressBarLongPressActions ->
+                    AddressBarLongPressSettingsPage(
+                        selectedAction = addressBarLongPressAction,
+                        onActionSelected = onAddressBarLongPressActionChanged,
+                        onBack = {
+                            onDestinationChanged(SettingsDestination.TabsAndGestures)
+                        },
+                    )
 
                 SettingsDestination.AddressBarActions -> {
                     val actionLabels = AddressBarAction.entries.associateWith { action ->
@@ -306,6 +337,7 @@ internal fun SettingsScreen(
                     onBack = { onDestinationChanged(SettingsDestination.Home) },
                     forceDarkWebsitesAvailable =
                         browserEngineKind == AndroidBrowserEngineKind.SystemWebView,
+                    browserEngineKind = browserEngineKind,
                 )
 
                 SettingsDestination.Browser -> BrowserSettingsPage(
@@ -322,6 +354,8 @@ internal fun SettingsScreen(
                     isScrollBarEnabled = isScrollBarEnabled,
                     isVideoAutoplayBlocked = isVideoAutoplayBlocked,
                     isVideoAutoplayBlockingSupported = isVideoAutoplayBlockingSupported,
+                    inlineMediaPlayerMode = inlineMediaPlayerMode,
+                    isInlineMediaPlayerSupported = isInlineMediaPlayerSupported,
                     isDefaultBrowser = isDefaultBrowser,
                     onBrowserEngineKindChanged = onBrowserEngineKindChanged,
                     onExternalLinkPreviewEnabledChanged =
@@ -338,6 +372,7 @@ internal fun SettingsScreen(
                         onOpenHomeOnStartupEnabledChanged,
                     onScrollBarEnabledChanged = onScrollBarEnabledChanged,
                     onVideoAutoplayBlockedChanged = onVideoAutoplayBlockedChanged,
+                    onInlineMediaPlayerModeChanged = onInlineMediaPlayerModeChanged,
                     onPageTranslationProviderChanged = onPageTranslationProviderChanged,
                     onOpenDefaultBrowserSettings = onOpenDefaultBrowserSettings,
                     onBack = { onDestinationChanged(SettingsDestination.Home) },
@@ -354,6 +389,7 @@ internal fun SettingsScreen(
                     scripts = userScripts,
                     isRuntimeSupported = isUserScriptSupported,
                     onToggle = onToggleUserScript,
+                    onSetFrameScope = onSetUserScriptFrameScope,
                     onSave = onSaveUserScript,
                     onDelete = onDeleteUserScript,
                     onImport = onImportUserScript,
@@ -392,12 +428,15 @@ internal fun SettingsScreen(
                     blockerSettings = blockerSettings,
                     blockedCount = blockedCount,
                     browserEngineKind = browserEngineKind,
+                    isDnsOverHttpsSupported = isDnsOverHttpsSupported,
                     webRtcProtectionMode = webRtcProtectionMode,
+                    dnsOverHttpsSettings = dnsOverHttpsSettings,
                     isRecallEnabled = isRecallEnabled,
                     historyRecordingMode = historyRecordingMode,
                     trustsUserCertificates = trustsUserCertificates,
                     onBlockerSettingsChanged = onBlockerSettingsChanged,
                     onWebRtcProtectionModeChanged = onWebRtcProtectionModeChanged,
+                    onDnsOverHttpsSettingsChanged = onDnsOverHttpsSettingsChanged,
                     onRecallEnabledChanged = onRecallEnabledChanged,
                     onHistoryRecordingModeChanged = onHistoryRecordingModeChanged,
                     onPrivacyXRay = onPrivacyXRay,
