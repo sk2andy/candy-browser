@@ -67,6 +67,8 @@ internal object WideAddressTabStripTestTags {
     const val Strip = "wide_address_tab_strip"
     const val TabPrefix = "wide_address_tab_"
     const val ClosePrefix = "wide_address_tab_close_"
+    const val FaviconPrefix = "wide_address_tab_favicon_"
+    const val FallbackPrefix = "wide_address_tab_fallback_"
 }
 
 @Composable
@@ -202,7 +204,9 @@ private fun WideAddressTab(
             Image(
                 bitmap = tab.favicon.asImageBitmap(),
                 contentDescription = null,
-                modifier = Modifier.size(20.dp),
+                modifier = Modifier
+                    .size(20.dp)
+                    .testTag(WideAddressTabStripTestTags.FaviconPrefix + tab.id),
                 contentScale = ContentScale.Fit,
             )
         } else {
@@ -210,7 +214,8 @@ private fun WideAddressTab(
                 modifier = Modifier
                     .size(20.dp)
                     .clip(RoundedCornerShape(6.dp))
-                    .background(contentColor),
+                    .background(contentColor)
+                    .testTag(WideAddressTabStripTestTags.FallbackPrefix + tab.id),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(

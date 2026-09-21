@@ -1,5 +1,7 @@
 package dev.sk2andy.materialbrowser.ui
 
+import android.graphics.Bitmap
+import android.graphics.Color
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.mutableStateOf
@@ -77,6 +79,66 @@ class WideAddressTabStripInstrumentedTest {
             assertEquals(listOf("regular"), closedTabs)
             assertEquals(emptyList<String>(), openedTabs)
             assertEquals(0, addressEditorOpens)
+        }
+    }
+
+    @Test
+    fun websiteFaviconReplacesInitialOnSelectedAndInactiveTabs() {
+        val favicon = solidFavicon()
+        setStrip(
+            tabs = listOf(
+                tab("selected").copy(favicon = favicon),
+                tab("inactive").copy(favicon = favicon),
+            ),
+            selectedTabId = "selected",
+            onTabClick = {},
+            onCurrentTabClick = {},
+        )
+
+        listOf("selected", "inactive").forEach { id ->
+            composeRule.onNodeWithTag(tabTag(id)).assertIsDisplayed()
+            composeRule.onNodeWithTag(faviconTag(id), useUnmergedTree = true).assertExists()
+            composeRule.onNodeWithTag(fallbackTag(id), useUnmergedTree = true).assertDoesNotExist()
+        }
+    }
+
+    @Test
+    fun faviconArrivingAfterCompositionReplacesInitialWithoutChangingTab() {
+        val tabs = mutableStateOf(listOf(tab("current")))
+        setStrip(
+            tabs = tabs.value,
+            selectedTabId = "current",
+            onTabClick = {},
+            onCurrentTabClick = {},
+            tabsState = tabs,
+        )
+        composeRule.onNodeWithTag(tabTag("current")).assertIsDisplayed()
+        composeRule.onNodeWithTag(fallbackTag("current"), useUnmergedTree = true).assertExists()
+        composeRule.onNodeWithTag(faviconTag("current"), useUnmergedTree = true).assertDoesNotExist()
+
+        composeRule.runOnIdle {
+            tabs.value = listOf(tab("current").copy(favicon = solidFavicon()))
+        }
+
+        composeRule.onNodeWithTag(faviconTag("current"), useUnmergedTree = true).assertExists()
+        composeRule.onNodeWithTag(fallbackTag("current"), useUnmergedTree = true).assertDoesNotExist()
+        composeRule.onNodeWithTag(tabTag("current")).assertIsSelected()
+    }
+
+    @Test
+    fun missingOrRecycledFaviconKeepsInitialFallback() {
+        val recycled = solidFavicon().apply { recycle() }
+        setStrip(
+            tabs = listOf(tab("missing"), tab("recycled").copy(favicon = recycled)),
+            selectedTabId = "missing",
+            onTabClick = {},
+            onCurrentTabClick = {},
+        )
+
+        listOf("missing", "recycled").forEach { id ->
+            composeRule.onNodeWithTag(tabTag(id)).assertIsDisplayed()
+            composeRule.onNodeWithTag(fallbackTag(id), useUnmergedTree = true).assertExists()
+            composeRule.onNodeWithTag(faviconTag(id), useUnmergedTree = true).assertDoesNotExist()
         }
     }
 
@@ -235,4 +297,12 @@ class WideAddressTabStripInstrumentedTest {
     private fun tabTag(id: String) = WideAddressTabStripTestTags.TabPrefix + id
 
     private fun closeTag(id: String) = WideAddressTabStripTestTags.ClosePrefix + id
+
+    private fun faviconTag(id: String) = WideAddressTabStripTestTags.FaviconPrefix + id
+
+    private fun fallbackTag(id: String) = WideAddressTabStripTestTags.FallbackPrefix + id
+
+    private fun solidFavicon() = Bitmap.createBitmap(24, 24, Bitmap.Config.ARGB_8888).apply {
+        eraseColor(Color.BLUE)
+    }
 }

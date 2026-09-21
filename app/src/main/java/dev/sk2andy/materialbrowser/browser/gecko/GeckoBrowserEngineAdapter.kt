@@ -103,6 +103,9 @@ internal interface AndroidBrowserEngineSessionPort :
     BrowserEngineViewPort {
     fun setActive(active: Boolean)
 
+    /** Existing page icon from an engine callback; GeckoView does not expose one. */
+    fun setFaviconListener(listener: ((String?, Bitmap) -> Unit)?) = Unit
+
     fun setMediaStateListener(listener: GeckoMediaSessionStateListener?)
 
     fun setFullscreenStateListener(listener: GeckoFullscreenStateListener?) = Unit
