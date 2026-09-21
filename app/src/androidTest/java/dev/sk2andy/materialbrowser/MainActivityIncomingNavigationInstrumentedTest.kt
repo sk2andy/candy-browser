@@ -6,12 +6,15 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.SystemClock
+import android.view.View
+import androidx.lifecycle.Lifecycle
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.SdkSuppress
 import androidx.test.platform.app.InstrumentationRegistry
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoMainFrameNavigationRequest
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoNavigationRequestDecision
+import dev.sk2andy.materialbrowser.browser.integration.LauncherShortcutRules
 import dev.sk2andy.materialbrowser.data.BrowserSessionStore
 import dev.sk2andy.materialbrowser.data.GestureOnboardingStore
 import dev.sk2andy.materialbrowser.data.ReleaseNotesStore
@@ -19,6 +22,7 @@ import java.util.concurrent.CopyOnWriteArrayList
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -145,11 +149,75 @@ class MainActivityIncomingNavigationInstrumentedTest {
         }
     }
 
+    @Test
+    fun userDepartureKeepsPreviewForPasswordManagerReturn() {
+        BrowserSessionStore(context).saveExternalLinkPreviewEnabled(true)
+        ActivityScenario.launch<MainActivity>(incomingIntent(INCOMING_URL)).use { scenario ->
+            var previewSessionId = -1L
+            lateinit var previewEngineView: View
+            scenario.onActivity { activity ->
+                val controller = activity.browserControllerForTesting()
+                previewSessionId = requireNotNull(controller.externalLinkPreviewState).sessionId
+                assertTrue(controller.prepareExternalLinkPreview(previewSessionId))
+                previewEngineView = requireNotNull(
+                    controller.externalLinkPreviewEngineViewForTesting(),
+                )
+                instrumentation.callActivityOnUserLeaving(activity)
+            }
+            scenario.moveToState(Lifecycle.State.CREATED)
+            scenario.moveToState(Lifecycle.State.RESUMED)
+            scenario.onActivity { activity ->
+                val controller = activity.browserControllerForTesting()
+
+                assertEquals(
+                    INCOMING_URL,
+                    controller.externalLinkPreviewState?.currentUrl,
+                )
+                assertEquals(previewSessionId, controller.externalLinkPreviewState?.sessionId)
+                assertSame(previewEngineView, controller.externalLinkPreviewEngineViewForTesting())
+            }
+        }
+    }
+
+    @Test
+    fun warmAppIconLaunchDismissesPreview() {
+        assertWarmLaunchDismissesPreview(Intent.ACTION_MAIN)
+    }
+
+    @Test
+    fun warmWidgetLaunchDismissesPreview() {
+        assertWarmLaunchDismissesPreview(LauncherShortcutRules.ACTION_OPEN_APP)
+    }
+
     private fun incomingIntent(url: String): Intent =
         Intent(context, MainActivity::class.java)
             .setAction(Intent.ACTION_VIEW)
             .setData(Uri.parse(url))
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+
+    private fun assertWarmLaunchDismissesPreview(action: String) {
+        BrowserSessionStore(context).saveExternalLinkPreviewEnabled(true)
+        ActivityScenario.launch<MainActivity>(incomingIntent(INCOMING_URL)).use { scenario ->
+            lateinit var originalIntent: Intent
+            scenario.onActivity { activity ->
+                originalIntent = activity.intent
+                activity.startActivity(
+                    Intent(activity, MainActivity::class.java)
+                        .setAction(action)
+                        .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP),
+                )
+            }
+            instrumentation.waitForIdleSync()
+            scenario.onActivity { activity ->
+                try {
+                    assertNull(activity.browserControllerForTesting().externalLinkPreviewState)
+                } finally {
+                    // ActivityScenario matches lifecycle events against its original launch intent.
+                    activity.intent = originalIntent
+                }
+            }
+        }
+    }
 
     private fun awaitIncomingTab(scenario: ActivityScenario<MainActivity>) {
         val deadline = SystemClock.elapsedRealtime() + 30_000L

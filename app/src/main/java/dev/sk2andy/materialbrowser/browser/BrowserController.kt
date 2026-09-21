@@ -392,6 +392,33 @@ private data class GeckoViewBinding(
     val view: View,
 )
 
+private class PendingInitialBrowserEngineNavigation(
+    val session: AndroidBrowserEngineSessionPort,
+    val command: BrowserEngineCommand?,
+) {
+    private var observedView: View? = null
+    private var layoutListener: View.OnLayoutChangeListener? = null
+
+    fun observeLayout(view: View, onLayout: (View) -> Unit) {
+        stopObservingLayout()
+        val listener = View.OnLayoutChangeListener { changedView, _, _, _, _, _, _, _, _ ->
+            onLayout(changedView)
+        }
+        observedView = view
+        layoutListener = listener
+        view.addOnLayoutChangeListener(listener)
+        if (view.isLaidOut && !view.isLayoutRequested) onLayout(view)
+    }
+
+    fun stopObservingLayout() {
+        val view = observedView
+        val listener = layoutListener
+        if (view != null && listener != null) view.removeOnLayoutChangeListener(listener)
+        observedView = null
+        layoutListener = null
+    }
+}
+
 private data class TabFaviconFetchAttempt(
     val session: AndroidBrowserEngineSessionPort,
     val pageUrl: String,
@@ -1199,11 +1226,22 @@ class BrowserController(
     @VisibleForTesting
     internal fun installGeckoEngineSessionForTesting(session: AndroidBrowserEngineSessionPort) {
         require(tabs.any { tab -> tab.id == session.tabId })
+        removePendingInitialBrowserEngineNavigation(session.tabId)
         browserEngineSessions.put(session.tabId, session)?.execute(BrowserEngineCommands.close())
         connectBrowserEngineScrollListener(session.tabId, session)
     }
 
+    @VisibleForTesting
+    internal fun isInitialNavigationWaitingForRendererForTesting(
+        tabId: String = selectedTabId,
+    ): Boolean {
+        val pending = pendingInitialBrowserEngineNavigations[tabId] ?: return false
+        return browserEngineSessions[tabId] === pending.session
+    }
+
     private val browserEngineSessions = mutableMapOf<String, AndroidBrowserEngineSessionPort>()
+    private val pendingInitialBrowserEngineNavigations =
+        mutableMapOf<String, PendingInitialBrowserEngineNavigation>()
     private val browserEngineMediaSessionIds = GeckoMediaSessionIdentityRegistry()
     private var media3CapturedOwner: GeckoMediaPlaybackOwner? = null
     private var media3BackgroundOwner: GeckoMediaPlaybackOwner? = null
@@ -1257,6 +1295,8 @@ class BrowserController(
     private var externalLinkPreviewRuntime: ExternalLinkPreviewRuntime? = null
     private var nextExternalLinkPreviewSessionId = 0L
     private val navigationGenerations = mutableMapOf<String, Int>()
+    private val pendingBrowserEngineLoadRequests = mutableMapOf<String, Long>()
+    private var nextBrowserEngineLoadRequestId = 0L
     private val automaticNativeTopSafeAreaTabIds = mutableSetOf<String>()
     private val webContentTopBarStates = mutableStateMapOf<String, WebContentTopBarState>()
     private val firefoxExtensionOptionsTabs =
@@ -2704,6 +2744,7 @@ class BrowserController(
                 session.setBackdropBlurRegion(selectedBrowserBackdropBlurRegion)
             }
         if (current?.tabId == selectedTabId && current.view.parent === container) {
+            runPendingInitialNavigationWhenViewReady(current)
             awaitContent(current)
             return current.view
         }
@@ -2750,6 +2791,7 @@ class BrowserController(
                 )
                 geckoViewBindings[container] = binding
                 dispatchCurrentWindowInsets(binding.view, binding.tabId)
+                runPendingInitialNavigationWhenViewReady(binding)
                 awaitContent(binding)
                 return binding.view
             }
@@ -2758,6 +2800,7 @@ class BrowserController(
             container.removeAllViews()
             attachGeckoViewBinding(container, current)
             dispatchCurrentWindowInsets(current.view, current.tabId)
+            runPendingInitialNavigationWhenViewReady(current)
             awaitContent(current)
             return current.view
         }
@@ -2784,6 +2827,7 @@ class BrowserController(
             geckoViewBindings.remove(sourceContainer)
             attachGeckoViewBinding(container, binding)
             dispatchCurrentWindowInsets(binding.view, binding.tabId)
+            runPendingInitialNavigationWhenViewReady(binding)
             awaitContent(binding)
             return binding.view
         }
@@ -2805,9 +2849,48 @@ class BrowserController(
         )
         attachGeckoViewBinding(container, binding)
         dispatchCurrentWindowInsets(view, tabId)
+        runPendingInitialNavigationWhenViewReady(binding)
         awaitContent(binding)
         return view
     }
+
+    private fun runPendingInitialNavigationWhenViewReady(binding: GeckoViewBinding) {
+        val pending = pendingInitialBrowserEngineNavigations[binding.tabId]
+            ?.takeIf { candidate -> candidate.session === binding.session }
+            ?: return
+        val command = pending.command ?: return
+        pending.observeLayout(binding.view) { view ->
+            if (
+                pendingInitialBrowserEngineNavigations[binding.tabId] !== pending ||
+                browserEngineSessions[binding.tabId] !== binding.session
+            ) {
+                pending.stopObservingLayout()
+                return@observeLayout
+            }
+            if (
+                !view.isAttachedToWindow ||
+                view.width <= 0 ||
+                view.height <= 0 ||
+                geckoViewBindings.values.none { candidate -> candidate === binding }
+            ) return@observeLayout
+            removePendingInitialBrowserEngineNavigation(binding.tabId)
+            pending.session.execute(command)
+        }
+    }
+
+    private fun setPendingInitialBrowserEngineNavigation(
+        tabId: String,
+        pending: PendingInitialBrowserEngineNavigation,
+    ) {
+        pendingInitialBrowserEngineNavigations.put(tabId, pending)?.stopObservingLayout()
+    }
+
+    private fun removePendingInitialBrowserEngineNavigation(
+        tabId: String,
+    ): PendingInitialBrowserEngineNavigation? =
+        pendingInitialBrowserEngineNavigations.remove(tabId)?.also { pending ->
+            pending.stopObservingLayout()
+        }
 
     /** Registers ownership before addView can synchronously re-enter Compose's AndroidView update. */
     private fun attachGeckoViewBinding(
@@ -8364,6 +8447,7 @@ class BrowserController(
         if (existingSession == null) {
             browserEngineSessionFor(tabId)
         } else if (targetIndex != null && targetIndex != binding.currentIndex) {
+            pendingBrowserEngineLoadRequests.remove(tabId)
             existingSession.goToHistoryIndex(targetIndex)
         } else if (targetIndex == binding.currentIndex && pageUrls[tabId] == node.url) {
             pendingCandyTrailTargets.remove(tabId)
@@ -8382,6 +8466,7 @@ class BrowserController(
         }
         if (!selectedTab.canGoBack) return
         val session = browserEngineSessions[selectedTabId] ?: return
+        pendingBrowserEngineLoadRequests.remove(selectedTabId)
         val capsule = activeCapsuleForTab(selectedTabId)
         val targetUrl = session.historyUrlAtOffset(-1)
         if (
@@ -8396,6 +8481,7 @@ class BrowserController(
     }
     fun goForward() {
         if (!selectedTab.canGoForward) return
+        pendingBrowserEngineLoadRequests.remove(selectedTabId)
         val binding = candyTrailHistoryBindings[selectedTabId]
         binding?.entries?.getOrNull(binding.currentIndex + 1)?.nodeId?.let { targetNodeId ->
             pendingCandyTrailTargets[selectedTabId] = targetNodeId
@@ -8403,6 +8489,7 @@ class BrowserController(
         browserEngineSessions[selectedTabId]?.execute(BrowserEngineCommands.forward())
     }
     fun reload() {
+        pendingBrowserEngineLoadRequests.remove(selectedTabId)
         updateTab(selectedTabId) {
             it.copy(
                 isLoading = true,
@@ -8412,11 +8499,14 @@ class BrowserController(
                 httpStatusCode = null,
             )
         }
-        browserEngineSessionFor(selectedTabId).execute(BrowserEngineCommands.reload())
+        val session = browserEngineSessionFor(selectedTabId)
+        val pending = pendingInitialBrowserEngineNavigations[selectedTabId]
+        if (pending?.session !== session) session.execute(BrowserEngineCommands.reload())
     }
 
     internal fun reloadSelectedPageAfterExtensionChange() {
         if (!usesGeckoEngine) return
+        pendingBrowserEngineLoadRequests.remove(selectedTabId)
         browserEngineSessions[selectedTabId]?.execute(BrowserEngineCommands.reload())
     }
 
@@ -8437,6 +8527,7 @@ class BrowserController(
         if (existingSession == null) {
             browserEngineSessionFor(tabId, commandOnCreate = command)
         } else {
+            pendingBrowserEngineLoadRequests.remove(tabId)
             existingSession.execute(command)
         }
         return true
@@ -8444,6 +8535,8 @@ class BrowserController(
     }
 
     fun stopLoading() {
+        removePendingInitialBrowserEngineNavigation(selectedTabId)
+        pendingBrowserEngineLoadRequests.remove(selectedTabId)
         browserEngineSessions[selectedTabId]?.execute(BrowserEngineCommands.stop())
         updateTab(selectedTabId) { it.copy(isLoading = false) }
     }
@@ -10246,10 +10339,27 @@ class BrowserController(
                         webViewStateRepository.delete(tab.id)
                     }
                 }
-                when {
-                    commandOnCreate != null -> session.execute(commandOnCreate)
-                    !restored && tab.url != BLANK_URL ->
-                        session.execute(BrowserEngineCommands.load(tab.url))
+                val initialCommand = commandOnCreate
+                    ?: if (!restored && tab.url != BLANK_URL) {
+                        BrowserEngineCommands.load(tab.url)
+                    } else {
+                        null
+                    }
+                if (initialCommand != null) {
+                    val waitsForViewport = usesGeckoEngine &&
+                        tab.id == selectedTabId &&
+                        geckoViewBindings.values.none { binding -> binding.session === session }
+                    if (waitsForViewport) {
+                        setPendingInitialBrowserEngineNavigation(
+                            tab.id,
+                            PendingInitialBrowserEngineNavigation(
+                                session = session,
+                                command = initialCommand,
+                            ),
+                        )
+                    } else {
+                        session.execute(initialCommand)
+                    }
                 }
             }
         }.also {
@@ -10338,6 +10448,7 @@ class BrowserController(
         if (destroyed || browserEngineSessions[tabId] !== session) {
             return GeckoNavigationRequestDecision.Allow
         }
+        if (request.hasUserGesture) pendingBrowserEngineLoadRequests.remove(tabId)
         val scheme = runCatching { Uri.parse(request.url).scheme }.getOrNull()?.lowercase()
         val safeHttpUrl = BrowserUriPolicy.normalizeHttpUrl(request.url)
         if (isQuarantinedPopup(tabId)) return GeckoNavigationRequestDecision.Deny
@@ -11280,8 +11391,47 @@ class BrowserController(
         pageUrls[tabId] = url
         updateProtectionRequestContext(tabId, url)
         val policy = geckoPrivacyPolicyFor(tabId) ?: return
+        val pending = pendingInitialBrowserEngineNavigations[tabId]
+            ?.takeIf { candidate -> candidate.session === session }
+        val waitingForPolicy = pending?.let {
+            PendingInitialBrowserEngineNavigation(
+                session = session,
+                command = null,
+            ).also { waiting ->
+                setPendingInitialBrowserEngineNavigation(tabId, waiting)
+            }
+        }
+        val requestId = ++nextBrowserEngineLoadRequestId
+        pendingBrowserEngineLoadRequests[tabId] = requestId
+        if (!usesGeckoEngine) session.execute(BrowserEngineCommands.stop())
         session.updatePrivacyPolicy(policy) {
-            session.execute(BrowserEngineCommands.load(url))
+            if (
+                destroyed ||
+                browserEngineSessions[tabId] !== session ||
+                pendingBrowserEngineLoadRequests[tabId] != requestId
+            ) {
+                return@updatePrivacyPolicy
+            }
+            if (
+                waitingForPolicy != null &&
+                pendingInitialBrowserEngineNavigations[tabId] !== waitingForPolicy
+            ) {
+                pendingBrowserEngineLoadRequests.remove(tabId)
+                return@updatePrivacyPolicy
+            }
+            pendingBrowserEngineLoadRequests.remove(tabId)
+            if (waitingForPolicy == null) {
+                session.execute(BrowserEngineCommands.load(url))
+                return@updatePrivacyPolicy
+            }
+            val ready = PendingInitialBrowserEngineNavigation(
+                session = session,
+                command = BrowserEngineCommands.load(url),
+            )
+            setPendingInitialBrowserEngineNavigation(tabId, ready)
+            geckoViewBindings.values
+                .firstOrNull { binding -> binding.session === session }
+                ?.let(::runPendingInitialNavigationWhenViewReady)
         }
     }
 
@@ -11810,6 +11960,7 @@ class BrowserController(
                 }
             }
             BrowserEngineEventType.Crashed -> {
+                removePendingInitialBrowserEngineNavigation(event.tabId)
                 browserEngineSessions[event.tabId]?.let(::cancelPendingInlineMediaPlayerOpen)
                 cancelPendingGeckoPreviewCapture(event.tabId)
                 pendingLocalSyncNavigationUrls.remove(event.tabId)
@@ -11840,6 +11991,7 @@ class BrowserController(
                 }
             }
             BrowserEngineEventType.Closed -> {
+                removePendingInitialBrowserEngineNavigation(event.tabId)
                 browserEngineSessions[event.tabId]?.let(::cancelPendingInlineMediaPlayerOpen)
                 pendingLocalSyncNavigationUrls.remove(event.tabId)
                 clearRemoteSyncNavigationTracking(event.tabId)
@@ -12229,6 +12381,8 @@ class BrowserController(
     }
 
     private fun closeBrowserEngineSession(tabId: String) {
+        removePendingInitialBrowserEngineNavigation(tabId)
+        pendingBrowserEngineLoadRequests.remove(tabId)
         invalidateMedia3OwnerFor(tabId)
         cancelAddressBarAutoDockProbe(tabId)
         cancelPendingGeckoPreviewCapture(tabId)

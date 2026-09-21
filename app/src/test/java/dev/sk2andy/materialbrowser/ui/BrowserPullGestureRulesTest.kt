@@ -7,28 +7,28 @@ import org.junit.Test
 
 class BrowserPullGestureRulesTest {
     @Test
-    fun `pull starts only near top of visible page`() {
+    fun `pull starts throughout expanded top zone`() {
         assertTrue(
             BrowserPullGestureRules.canStartInTopZone(
-                touchY = 95f,
+                touchY = 191f,
                 topInsetPx = 32,
-                zoneHeightPx = 64,
+                zoneHeightPx = 160,
             ),
         )
         assertFalse(
             BrowserPullGestureRules.canStartInTopZone(
-                touchY = 97f,
+                touchY = 193f,
                 topInsetPx = 32,
-                zoneHeightPx = 64,
+                zoneHeightPx = 160,
             ),
         )
     }
 
     @Test
     fun `invalid touch geometry cannot start a pull`() {
-        assertFalse(BrowserPullGestureRules.canStartInTopZone(Float.NaN, 0, 64))
-        assertFalse(BrowserPullGestureRules.canStartInTopZone(-1f, 0, 64))
-        assertFalse(BrowserPullGestureRules.canStartInTopZone(1f, -1, 64))
+        assertFalse(BrowserPullGestureRules.canStartInTopZone(Float.NaN, 0, 160))
+        assertFalse(BrowserPullGestureRules.canStartInTopZone(-1f, 0, 160))
+        assertFalse(BrowserPullGestureRules.canStartInTopZone(1f, -1, 160))
         assertFalse(BrowserPullGestureRules.canStartInTopZone(1f, 0, 0))
     }
 
