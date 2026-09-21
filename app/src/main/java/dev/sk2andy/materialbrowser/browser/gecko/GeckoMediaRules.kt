@@ -66,9 +66,20 @@ internal object GeckoPictureInPictureRules {
     ): Boolean = state?.let { media ->
         !isPrivate &&
             isSelectedTab &&
-            media.isPlaying &&
-            isFullscreenVideo(media)
+            (
+                (media.isPlaying && isFullscreenVideo(media)) ||
+                    (media.isInlineVideoPresented && isPlayingInlineVideo(media))
+            )
     } == true
+
+    fun isInlineVideo(state: GeckoMediaSessionState?): Boolean = state?.let { media ->
+        media.hasInlineVideo &&
+            media.inlineVideoWidth > 0 &&
+            media.inlineVideoHeight > 0
+    } == true
+
+    fun isPlayingInlineVideo(state: GeckoMediaSessionState?): Boolean =
+        state?.isInlineVideoPlaying == true && isInlineVideo(state)
 
     fun playbackExpectedDuringTransition(
         currentExpected: Boolean,
@@ -80,10 +91,29 @@ internal object GeckoPictureInPictureRules {
     } else {
         mediaIsPlaying
     }
+
+    fun publishedPlaybackIsPlaying(
+        reportedIsPlaying: Boolean,
+        playbackExpected: Boolean,
+        transitionPending: Boolean,
+        inPictureInPicture: Boolean,
+        isPictureInPictureOwner: Boolean,
+    ): Boolean = reportedIsPlaying ||
+        (
+            playbackExpected &&
+                isPictureInPictureOwner &&
+                (transitionPending || inPictureInPicture)
+            )
 }
 
 internal object GeckoMediaSessionRules {
     fun activatedState(): GeckoMediaSessionState = GeckoMediaSessionState(isActive = true)
+
+    /** A delegate deactivation is a paused handoff, not proof that media ended. */
+    fun deactivatedState(current: GeckoMediaSessionState): GeckoMediaSessionState =
+        current.takeIf(GeckoMediaSessionState::isActive)
+            ?.copy(isPlaying = false)
+            ?: stoppedState()
 
     fun stoppedState(): GeckoMediaSessionState = GeckoMediaSessionState()
 }

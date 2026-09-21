@@ -38,6 +38,7 @@ internal fun Activity.applyFullImmersiveMode(
                 WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
             hide(WindowInsetsCompat.Type.systemBars())
         } else {
+            systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_DEFAULT
             show(WindowInsetsCompat.Type.systemBars())
         }
     }

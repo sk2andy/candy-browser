@@ -863,6 +863,7 @@ private class GeckoViewBrowserSession(
 
     private val storageController = runtime.storageController
     private val mainHandler = Handler(Looper.getMainLooper())
+    private val mediaRestorationReadback = GeckoMediaRestorationReadback(mainHandler)
     private val cookieBehaviorOwner = Any()
     private val trackingPermissionOwner = Any()
 
@@ -909,10 +910,29 @@ private class GeckoViewBrowserSession(
     private var webPromptListener: GeckoWebPromptListener? = null
 
     @Volatile
+    private var nativeMediaState = GeckoMediaSessionState()
+
+    @Volatile
     private var mediaState = GeckoMediaSessionState()
+
+    private var inlineVideoState = GeckoInlineVideoState(
+        isActive = false,
+        isPlaying = false,
+        isPresented = false,
+        width = 0,
+        height = 0,
+        documentNonce = null,
+        elementNonce = null,
+    )
 
     @Volatile
     private var mediaStateListener: GeckoMediaSessionStateListener? = null
+
+    @Volatile
+    private var inlineVideoOpenRequestListener: GeckoInlineVideoOpenRequestListener? = null
+
+    @Volatile
+    private var inlineVideoGestureHapticListener: GeckoInlineVideoGestureHapticListener? = null
 
     @Volatile
     private var fullscreenStateListener: GeckoFullscreenStateListener? = null
@@ -924,6 +944,7 @@ private class GeckoViewBrowserSession(
     private var backdropBlurRegion: BrowserBackdropBlurRegion? = null
     private val contentPresentationGate = GeckoContentPresentationGate()
     private var activeMediaSession: MediaSession? = null
+    private var deactivatedMediaSession: MediaSession? = null
     private var videoAutoplayBlocked = false
     private var audioMuted = false
     private var httpPasswordManagerSelectionEnabled = false
@@ -1662,6 +1683,7 @@ private class GeckoViewBrowserSession(
         session.mediaSessionDelegate = object : MediaSession.Delegate {
             override fun onActivated(session: GeckoSession, mediaSession: MediaSession) {
                 activeMediaSession = mediaSession
+                deactivatedMediaSession = null
                 mediaSession.muteAudio(audioMuted)
                 updateMediaState { GeckoMediaSessionRules.activatedState() }
             }
@@ -1669,7 +1691,8 @@ private class GeckoViewBrowserSession(
             override fun onDeactivated(session: GeckoSession, mediaSession: MediaSession) {
                 if (activeMediaSession !== mediaSession) return
                 activeMediaSession = null
-                updateMediaState { GeckoMediaSessionState() }
+                deactivatedMediaSession = mediaSession
+                updateMediaState(GeckoMediaSessionRules::deactivatedState)
             }
 
             override fun onMetadata(
@@ -1677,26 +1700,30 @@ private class GeckoViewBrowserSession(
                 mediaSession: MediaSession,
                 meta: MediaSession.Metadata,
             ) {
-                if (activeMediaSession !== mediaSession) return
+                if (!ownsMediaSession(mediaSession)) return
                 updateMediaState { current ->
                     current.copy(title = meta.title, artist = meta.artist)
                 }
             }
 
             override fun onPlay(session: GeckoSession, mediaSession: MediaSession) {
-                if (activeMediaSession !== mediaSession) return
+                if (!ownsMediaSession(mediaSession)) return
+                activeMediaSession = mediaSession
+                deactivatedMediaSession = null
                 BrowserPerformanceTrace.event(BrowserPerformanceTrace.Phase.GeckoMediaPlay)
                 updateMediaState { current -> current.copy(isActive = true, isPlaying = true) }
             }
 
             override fun onPause(session: GeckoSession, mediaSession: MediaSession) {
-                if (activeMediaSession !== mediaSession) return
+                if (!ownsMediaSession(mediaSession)) return
                 BrowserPerformanceTrace.event(BrowserPerformanceTrace.Phase.GeckoMediaPause)
                 updateMediaState { current -> current.copy(isPlaying = false) }
             }
 
             override fun onStop(session: GeckoSession, mediaSession: MediaSession) {
-                if (activeMediaSession !== mediaSession) return
+                if (!ownsMediaSession(mediaSession)) return
+                activeMediaSession = null
+                deactivatedMediaSession = null
                 BrowserPerformanceTrace.event(BrowserPerformanceTrace.Phase.GeckoMediaStop)
                 updateMediaState { GeckoMediaSessionRules.stoppedState() }
             }
@@ -1706,7 +1733,7 @@ private class GeckoViewBrowserSession(
                 mediaSession: MediaSession,
                 positionState: MediaSession.PositionState,
             ) {
-                if (activeMediaSession !== mediaSession) return
+                if (!ownsMediaSession(mediaSession)) return
                 updateMediaState { current ->
                     current.copy(
                         currentPositionMillis = positionState.position.toBoundedMediaMillis() ?: 0,
@@ -1726,7 +1753,7 @@ private class GeckoViewBrowserSession(
                 enabled: Boolean,
                 meta: MediaSession.ElementMetadata?,
             ) {
-                if (activeMediaSession !== mediaSession) return
+                if (!ownsMediaSession(mediaSession)) return
                 updateMediaState { current ->
                     current.copy(
                         isFullscreen = enabled,
@@ -1762,6 +1789,16 @@ private class GeckoViewBrowserSession(
                 currentPageUrl = url
                 invalidateCredentialPrompts(recreateHost = true)
                 activeMediaSession = null
+                deactivatedMediaSession = null
+                inlineVideoState = GeckoInlineVideoState(
+                    isActive = false,
+                    isPlaying = false,
+                    isPresented = false,
+                    width = 0,
+                    height = 0,
+                    documentNonce = null,
+                    elementNonce = null,
+                )
                 updateMediaState { GeckoMediaSessionState() }
                 updateState { current ->
                     current.copy(
@@ -1815,6 +1852,13 @@ private class GeckoViewBrowserSession(
                 if (responseUrl != null && responseUrl == pageUrl) {
                     updateState { current -> current.copy(httpStatusCode = response.statusCode) }
                 }
+            },
+            onInlineVideoState = ::updateInlineVideoState,
+            onInlineVideoOpenRequest = { request ->
+                inlineVideoOpenRequestListener?.onOpenRequested(request)
+            },
+            onInlineVideoGestureHaptic = { haptic ->
+                inlineVideoGestureHapticListener?.onHapticRequested(haptic)
             },
             onBound = {
                 privacyBound = true
@@ -2009,6 +2053,18 @@ private class GeckoViewBrowserSession(
     override fun setMediaStateListener(listener: GeckoMediaSessionStateListener?) {
         mediaStateListener = listener
         listener?.onStateChanged(mediaState)
+    }
+
+    override fun setInlineVideoOpenRequestListener(
+        listener: GeckoInlineVideoOpenRequestListener?,
+    ) {
+        inlineVideoOpenRequestListener = listener
+    }
+
+    override fun setInlineVideoGestureHapticListener(
+        listener: GeckoInlineVideoGestureHapticListener?,
+    ) {
+        inlineVideoGestureHapticListener = listener
     }
 
     override fun setScrollListener(listener: BrowserEngineScrollListener?) {
@@ -2264,8 +2320,14 @@ private class GeckoViewBrowserSession(
             permission = permission,
         )
 
+    private fun ownsMediaSession(mediaSession: MediaSession): Boolean =
+        activeMediaSession === mediaSession || deactivatedMediaSession === mediaSession
+
+    private fun mediaSessionForCommand(): MediaSession? =
+        activeMediaSession?.takeIf(MediaSession::isActive) ?: deactivatedMediaSession
+
     override fun executeMediaCommand(command: GeckoMediaCommand) {
-        val mediaSession = activeMediaSession?.takeIf(MediaSession::isActive) ?: return
+        val mediaSession = mediaSessionForCommand() ?: return
         when (command) {
             GeckoMediaCommand.Play -> mediaSession.play()
             GeckoMediaCommand.Pause -> mediaSession.pause()
@@ -2275,11 +2337,11 @@ private class GeckoViewBrowserSession(
 
     override fun setAudioMuted(muted: Boolean) {
         audioMuted = muted
-        activeMediaSession?.takeIf(MediaSession::isActive)?.muteAudio(muted)
+        mediaSessionForCommand()?.muteAudio(muted)
     }
 
     override fun seekMedia(positionMillis: Long) {
-        val mediaSession = activeMediaSession?.takeIf(MediaSession::isActive) ?: return
+        val mediaSession = mediaSessionForCommand() ?: return
         mediaSession.seekTo(positionMillis.coerceAtLeast(0L) / 1_000.0, true)
     }
 
@@ -2287,6 +2349,7 @@ private class GeckoViewBrowserSession(
     override fun notifyPictureInPictureModeChanged(inPictureInPicture: Boolean) {
         if (closed || this.inPictureInPicture == inPictureInPicture) return
         this.inPictureInPicture = inPictureInPicture
+        if (inPictureInPicture) mediaRestorationReadback.cancel()
         session.compositorController.onPipModeChanged(inPictureInPicture)
     }
 
@@ -2294,7 +2357,85 @@ private class GeckoViewBrowserSession(
     override fun setPictureInPicturePlaybackExpected(expected: Boolean) {
         if (closed) return
         pictureInPicturePlaybackExpected = expected
+        if (expected) mediaRestorationReadback.cancel()
         privacyBinding.setPictureInPicturePlaybackExpected(expected)
+    }
+
+    @UiThread
+    override fun preparePictureInPicturePlayback(
+        identity: GeckoInlineVideoIdentity,
+        onResult: (GeckoPictureInPicturePreparation?) -> Unit,
+    ) {
+        if (closed || !pictureInPicturePlaybackExpected) {
+            onResult(null)
+            return
+        }
+        privacyBinding.preparePictureInPicturePlayback(
+            identity = identity,
+            onResult = onResult,
+        )
+    }
+
+    @UiThread
+    override fun restorePictureInPicturePresentation(onResult: (Boolean) -> Unit) {
+        if (closed) {
+            onResult(false)
+            return
+        }
+        mediaRestorationReadback.cancel()
+        pictureInPicturePlaybackExpected = false
+        val view = boundView
+        val policy = privacyPolicy
+        privacyBinding.restorePictureInPicturePresentation restoration@{ restored ->
+            if (!restored || view == null) {
+                onResult(false)
+                return@restoration
+            }
+            mediaRestorationReadback.start(
+                isCurrent = {
+                    !closed && boundView === view && view.isAttachedToWindow &&
+                        privacyPolicy === policy && !inPictureInPicture &&
+                        !pictureInPicturePlaybackExpected
+                },
+                capture = { complete ->
+                    val result = try {
+                        view.capturePixels()
+                    } catch (_: IllegalStateException) {
+                        null
+                    }
+                    if (result == null) {
+                        complete(false)
+                    } else {
+                        result.withHandler(mainHandler).accept(
+                            { bitmap ->
+                                val captured = bitmap != null
+                                bitmap?.takeUnless(Bitmap::isRecycled)?.recycle()
+                                complete(captured)
+                            },
+                            { complete(false) },
+                        )
+                    }
+                },
+                onResult = onResult,
+            )
+        }
+    }
+
+    @UiThread
+    override fun setInlineVideoPresentation(
+        identity: GeckoInlineVideoIdentity?,
+        expected: Boolean,
+        onResult: (Boolean) -> Unit,
+    ) {
+        if (closed) {
+            onResult(false)
+            return
+        }
+        privacyBinding.setInlineVideoPresentation(
+            identity = identity,
+            expected = expected,
+            onResult = onResult,
+        )
     }
 
     override fun setFullscreenStateListener(listener: GeckoFullscreenStateListener?) {
@@ -2406,6 +2547,7 @@ private class GeckoViewBrowserSession(
     override fun releaseView(view: View) {
         val geckoView = view as? CandyGeckoView ?: return
         if (geckoView !== boundView) return
+        mediaRestorationReadback.cancel()
         invalidateDomProbe()
         // Clear ownership before releaseSession or prompt cancellation can synchronously re-enter
         // Compose and ask the controller to attach this session again.
@@ -2668,6 +2810,7 @@ private class GeckoViewBrowserSession(
         reloadOnCookiePermissionChange: Boolean,
         onReady: () -> Unit,
     ) {
+        mediaRestorationReadback.cancel()
         privacyPolicy = policy
         val cookieBehaviorChanged = cookieBehavior.update(
             owner = cookieBehaviorOwner,
@@ -2730,6 +2873,7 @@ private class GeckoViewBrowserSession(
     override fun close() {
         if (closed) return
         closed = true
+        mediaRestorationReadback.cancel()
         if (BuildConfig.ENABLE_PERFORMANCE_DIAGNOSTICS) GeckoDomDiagnostics.unregisterSession(session)
         if (active) extensionController.setTabActive(session, false)
         downloadTransfers.cancelOwner(session)
@@ -2753,9 +2897,12 @@ private class GeckoViewBrowserSession(
         authPromptListener = null
         webPromptListener = null
         mediaStateListener = null
+        inlineVideoOpenRequestListener = null
+        inlineVideoGestureHapticListener = null
         fullscreenStateListener = null
         scrollListener = null
         activeMediaSession = null
+        deactivatedMediaSession = null
         inPictureInPicture = false
         pictureInPicturePlaybackExpected = false
         pendingInitialUrl = null
@@ -2836,10 +2983,27 @@ private class GeckoViewBrowserSession(
     }
 
     private fun updateMediaState(transform: (GeckoMediaSessionState) -> GeckoMediaSessionState) {
-        val updated = transform(mediaState)
+        nativeMediaState = transform(nativeMediaState)
+        val inline = inlineVideoState
+        val updated = nativeMediaState.copy(
+            isActive = nativeMediaState.isActive || inline.isActive,
+            hasInlineVideo = inline.isActive,
+            isInlineVideoPlaying = inline.isPlaying,
+            isInlineVideoPresented = inline.isPresented,
+            inlineVideoWidth = inline.width,
+            inlineVideoHeight = inline.height,
+            inlineVideoDocumentNonce = inline.documentNonce,
+            inlineVideoElementNonce = inline.elementNonce,
+        )
         if (updated == mediaState) return
         mediaState = updated
         mediaStateListener?.onStateChanged(updated)
+    }
+
+    private fun updateInlineVideoState(state: GeckoInlineVideoState) {
+        if (inlineVideoState == state) return
+        inlineVideoState = state
+        updateMediaState { it }
     }
 
     private fun Double.toBoundedMediaMillis(): Long? = takeIf { value ->

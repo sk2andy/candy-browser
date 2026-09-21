@@ -20,6 +20,7 @@ import dev.sk2andy.materialbrowser.browser.DnsOverHttpsSettings
 import dev.sk2andy.materialbrowser.browser.DomainMuteRules
 import dev.sk2andy.materialbrowser.browser.ExternalAppLinkHandling
 import dev.sk2andy.materialbrowser.browser.FavoriteAnimationSpeed
+import dev.sk2andy.materialbrowser.browser.InlineMediaPlayerMode
 import dev.sk2andy.materialbrowser.browser.PageTranslationProvider
 import dev.sk2andy.materialbrowser.browser.PopupSiteRules
 import dev.sk2andy.materialbrowser.browser.ProfileWallpaper
@@ -1052,6 +1053,23 @@ class BrowserSessionStore internal constructor(
         preferences.edit().putBoolean(KEY_SCROLL_BAR_ENABLED, enabled).apply()
     }
 
+    fun loadInlineMediaPlayerMode(): InlineMediaPlayerMode {
+        val storedMode = preferences.getString(KEY_INLINE_MEDIA_PLAYER_MODE, null)
+        if (storedMode != null) return InlineMediaPlayerMode.fromStableId(storedMode)
+        return if (preferences.getBoolean(KEY_INLINE_MEDIA_PLAYER_ENABLED, false)) {
+            InlineMediaPlayerMode.ButtonInlineAndFullscreen
+        } else {
+            InlineMediaPlayerMode.Default
+        }
+    }
+
+    fun saveInlineMediaPlayerMode(mode: InlineMediaPlayerMode) {
+        preferences.edit()
+            .putString(KEY_INLINE_MEDIA_PLAYER_MODE, mode.stableId)
+            .remove(KEY_INLINE_MEDIA_PLAYER_ENABLED)
+            .apply()
+    }
+
     fun loadDeveloperOptionsUnlocked(): Boolean =
         preferences.getBoolean(KEY_DEVELOPER_OPTIONS_UNLOCKED, false)
 
@@ -1477,6 +1495,8 @@ class BrowserSessionStore internal constructor(
         const val KEY_FAVORITE_ANIMATION_SPEED = "favorite_animation_speed"
         const val KEY_OPEN_HOME_ON_STARTUP_ENABLED = "open_home_on_startup_enabled"
         const val KEY_SCROLL_BAR_ENABLED = "scroll_bar_enabled"
+        const val KEY_INLINE_MEDIA_PLAYER_ENABLED = "inline_media_player_enabled"
+        const val KEY_INLINE_MEDIA_PLAYER_MODE = "inline_media_player_mode"
         const val KEY_DEVELOPER_OPTIONS_UNLOCKED = "developer_options_unlocked"
         const val KEY_DEVELOPER_BROWSER_CHROME_SCROLL_DISPATCH_MODE =
             "developer_browser_chrome_scroll_dispatch_mode"
