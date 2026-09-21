@@ -353,6 +353,99 @@ test("queued inline open retries at most once across repeated policy changes", a
   assert.equal(harness.nativeOpens().length, 0);
 });
 
+test("queued automatic open stops when playback pauses before a policy retry", async () => {
+  const harness = queuedInlineOpenHarness();
+  harness.policy.inlineMediaPlayerMode = "automatic";
+  harness.state.inlineMediaPlayerMode = "automatic";
+  harness.video.paused = false;
+  const opened = harness.content.requestCandyInlineVideoOpen(harness.video);
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(harness.sent.length, 1);
+
+  harness.policy.revision = 4;
+  harness.video.paused = true;
+  await harness.deliver();
+
+  assert.equal(await opened, false);
+  assert.equal(harness.sent.length, 1);
+  assert.equal(harness.nativeOpens().length, 0);
+});
+
+test("automatic inline opening waits for playback and a decoded video frame", async () => {
+  const video = {
+    readyState: 0,
+    videoWidth: 0,
+    videoHeight: 0,
+    clientWidth: 400,
+    clientHeight: 225,
+    duration: 537,
+    currentTime: 0,
+    paused: true,
+    ended: false,
+  };
+  const opened = [];
+  const reports = [];
+  const context = vm.createContext({
+    candyPictureInPicturePlayback: {
+      inlineMediaPlayerEnabled: true,
+      inlineMediaPlayerMode: "automatic",
+      inlinePresentationExpected: false,
+      inlineOpenRequestKey: null,
+      inlineMediaPolicyRevision: 3,
+      inlineMediaNavigationGeneration: 2,
+      presentedVideo: null,
+    },
+    candyInlineVideoDocumentNonce: candidate.documentNonce,
+    candyInlineVideoElementNonce: () => candidate.elementNonce,
+    candyInlineMediaPlayerStartsAutomatically: () => true,
+    candyVideoPresentationExpected: () => false,
+    isCandyInlineVideoCandidate: (value) => value === video,
+    currentCandyPictureInPictureVideo: () => video,
+    updateCandyInlineVideoAction: () => {},
+    updateCandyInlineVideoControlsOverlay: () => {},
+    requestCandyInlineVideoOpen: (value) => { opened.push(value); },
+    browser: { runtime: { sendMessage: (message) => {
+      reports.push(message);
+      return Promise.resolve();
+    } } },
+  });
+  const source = asset("content.js")
+    .split("function reportCandyInlineVideoState(preferredVideo = null) {")[1]
+    .split("function clearCandyInlineVideoState() {")[0];
+  vm.runInContext(`function reportCandyInlineVideoState(preferredVideo = null) {${source}`, context);
+
+  await context.reportCandyInlineVideoState();
+  assert.equal(reports.at(-1).active, true);
+  assert.equal(opened.length, 0, "thumbnail-only video must not open Candy controls");
+
+  video.readyState = 1;
+  video.videoWidth = 1280;
+  video.videoHeight = 720;
+  await context.reportCandyInlineVideoState();
+  assert.equal(opened.length, 0, "metadata and intrinsic dimensions are not a decoded frame");
+
+  video.readyState = 2;
+  video.videoWidth = 0;
+  await context.reportCandyInlineVideoState();
+  assert.equal(opened.length, 0, "current data without intrinsic video width must not open");
+
+  video.videoWidth = 1280;
+  await context.reportCandyInlineVideoState();
+  assert.equal(opened.length, 0, "preloaded paused YouTube video must keep its site thumbnail");
+
+  video.paused = false;
+  await context.reportCandyInlineVideoState();
+  assert.deepEqual(opened, [video]);
+
+  context.candyPictureInPicturePlayback.inlinePresentationExpected = true;
+  context.candyPictureInPicturePlayback.presentedVideo = video;
+  video.paused = true;
+  await context.reportCandyInlineVideoState();
+  assert.equal(reports.at(-1).presented, true, "pausing an open Candy player keeps it presented");
+  assert.deepEqual(opened, [video]);
+  assert.match(asset("content.js"), /"loadeddata"/);
+});
+
 test("inline gesture haptics require exact presented top-frame video identity", () => {
   const harness = candidateHarness();
   const sender = { tab: { id: 7 }, frameId: 0 };
@@ -694,6 +787,138 @@ test("inline fullscreen drag moves video and controls together and restores styl
   assert.equal(hostProperties.get("top"), "100px");
 });
 
+for (const rememberBeforeDrag of [true, false]) {
+  test(`first swipe fullscreen return restores unshifted video and controls (snapshot=${rememberBeforeDrag})`, () => {
+    const videoProperties = new Map();
+    const videoAttributes = new Set();
+    const hostProperties = new Map();
+    const frames = [];
+    const bounds = (top, height = 225) => ({
+      left: 0, right: 400, top, bottom: top + height, width: 400, height,
+    });
+    const player = {
+      isConnected: true,
+      parentElement: null,
+      offsetWidth: 400,
+      offsetHeight: 225,
+      getBoundingClientRect: () => bounds(100),
+      style: { setProperty: () => {}, removeProperty: () => {} },
+      setAttribute: () => {},
+      removeAttribute: () => {},
+      requestFullscreen: () => {
+        context.document.fullscreenElement = player;
+        return Promise.resolve();
+      },
+    };
+    const video = {
+      isConnected: true,
+      offsetWidth: 400,
+      offsetHeight: 225,
+      getBoundingClientRect: () => {
+        const transform = videoProperties.get("transform") || "";
+        const drag = Number(transform.match(/translate3d\(0, (-?[\d.]+)px/)?.[1] || 0);
+        const originY = videoAttributes.has("data-candy-inline-video-origin") ?
+          Number.parseFloat(videoProperties.get("--candy-inline-video-origin-y") || "0") : 0;
+        return bounds(100 + drag + originY);
+      },
+      style: {
+        getPropertyValue: (name) => videoProperties.get(name) || "",
+        getPropertyPriority: () => "",
+        setProperty: (name, value) => videoProperties.set(name, value),
+        removeProperty: (name) => videoProperties.delete(name),
+      },
+      setAttribute: (name) => videoAttributes.add(name),
+      removeAttribute: (name) => videoAttributes.delete(name),
+    };
+    const host = {
+      isConnected: true,
+      dataset: {},
+      style: { setProperty: (name, value) => hostProperties.set(name, value) },
+    };
+    const context = vm.createContext({
+      video, host,
+      candyPictureInPicturePlayback: {
+        inlineMediaPlayerEnabled: true,
+        inlinePresentationExpected: true,
+        presentedVideo: video,
+        inlineControlsHost: host,
+        inlineFullscreenOrigin: null,
+        inlineStableOrigin: null,
+        inlineStateFrame: null,
+        candidates: new Set([video]),
+        expected: false,
+      },
+      candyUsesBackgroundVideoVisibilityFix: true,
+      candyInlineVideoSitePlayer: () => player,
+      CANDY_INLINE_VIDEO_FULLSCREEN_ORIGIN_ATTRIBUTE: "data-candy-inline-video-fullscreen-origin",
+      CANDY_INLINE_VIDEO_FULLSCREEN_ORIGIN_TOP: "--candy-inline-video-fullscreen-origin-top",
+      CANDY_INLINE_VIDEO_FULLSCREEN_ORIGIN_LEFT: "--candy-inline-video-fullscreen-origin-left",
+      CANDY_INLINE_VIDEO_FULLSCREEN_ORIGIN_STYLE_ATTRIBUTE: "data-candy-inline-video-fullscreen-origin-style",
+      CANDY_INLINE_VIDEO_ORIGIN_ATTRIBUTE: "data-candy-inline-video-origin",
+      CANDY_INLINE_VIDEO_ORIGIN_X: "--candy-inline-video-origin-x",
+      CANDY_INLINE_VIDEO_ORIGIN_Y: "--candy-inline-video-origin-y",
+      CANDY_INLINE_VIDEO_ORIGIN_SCALE_X: "--candy-inline-video-origin-scale-x",
+      CANDY_INLINE_VIDEO_ORIGIN_SCALE_Y: "--candy-inline-video-origin-scale-y",
+      CANDY_INLINE_VIDEO_ACTION_SIZE_PX: 56,
+      CANDY_INLINE_VIDEO_CONTROLS_HEIGHT_PX: 88,
+      document: {
+        fullscreenElement: null,
+        documentElement: { appendChild: () => {} },
+        createElement: () => ({ setAttribute: () => {}, remove: () => {} }),
+      },
+      getComputedStyle: () => ({ top: "0px", left: "0px" }),
+      innerWidth: 400, innerHeight: 800, scrollX: 0, scrollY: 0,
+      location: { href: "https://m.youtube.com/watch?v=first-swipe" },
+      requestAnimationFrame: (callback) => { frames.push(callback); return frames.length; },
+      cancelAnimationFrame: () => {},
+      clearTimeout: () => {},
+      setCandyInlineActionStyle: (element, name, value) => element.style.setProperty(name, value),
+      rememberCandyPictureInPictureVideos: () => {},
+      reportCandyInlineVideoGestureHaptic: () => {},
+      updateFullscreenGesture: () => ({ update: { shouldCommit: true }, thresholdChanged: false }),
+    });
+    const source = asset("content.js");
+    const load = (start, end) => vm.runInContext(
+      start + source.split(start)[1].split(end)[0], context,
+    );
+    load("function rememberCandyInlineVideoStableOrigin(video) {", "function clearCandyInlineVideoSiteControls() {");
+    load("function setCandyInlineFullscreenGestureOffset(gesture, host, offset) {", "function removeCandyInlineVideoControlsOverlay() {");
+    load("function positionCandyInlineVideoControls(video, host) {", "function createCandyInlineVideoControlsOverlay(video) {");
+    load("function clearCandyInlineVideoFullscreenOrigin() {", "function reportCandyInlineVideoGestureHaptic(video, phase) {");
+    load("function scheduleCandyInlineVideoStateReport() {", "function stopCandyInlineVideoStateObservation() {");
+    load("const finishFullscreenGesture = (stopHaptic = true) => {", "  const updateFullscreenGesture = ");
+    const pointerUp = source.split('fullscreenGesture.addEventListener("pointerup", (event) => {')[1]
+      .split('  }, { passive: false });')[0];
+    vm.runInContext(`function pointerUp(event) {${pointerUp}}`, context);
+    context.reportCandyInlineVideoState = () => context.positionCandyInlineVideoControls(video, host);
+    context.activeFullscreenGesture = {
+      video, baseTransform: "", originalTransform: "", originalTransformPriority: "",
+      rubberbandActive: false,
+    };
+    if (rememberBeforeDrag) context.positionCandyInlineVideoControls(video, host);
+    context.setCandyInlineFullscreenGestureOffset(context.activeFullscreenGesture, host, 85);
+    if (rememberBeforeDrag) {
+      // The inline layout observer sees the gesture's video.style mutation before pointerup.
+      context.scheduleCandyInlineVideoStateReport();
+      frames.shift()();
+    }
+    assert.equal(video.getBoundingClientRect().top, 15);
+
+    context.pointerUp({ isTrusted: true });
+    context.document.fullscreenElement = null;
+    context.reconcileCandyInlineVideoFullscreenOrigin();
+    context.positionCandyInlineVideoControls(video, host);
+
+    assert.equal(context.candyPictureInPicturePlayback.inlineFullscreenOrigin.videoBounds.top, 100);
+    assert.deepEqual(video.getBoundingClientRect(), bounds(100));
+    assert.equal(hostProperties.get("top"), "100px");
+    assert.equal(hostProperties.get("height"), "225px");
+    assert.equal(Number.parseFloat(hostProperties.get("top")) +
+      Number.parseFloat(hostProperties.get("height")), 325);
+    assert.equal(videoProperties.has("transform"), false);
+  });
+}
+
 test("picture in picture suppresses and restores native video controls", () => {
   const context = vm.createContext({
     candyPictureInPictureOriginalControls: new WeakMap(),
@@ -788,42 +1013,289 @@ test("picture in picture cleanup removes offsets from every marked video", () =>
 });
 
 test("picture in picture restoration acknowledges after two rendered frames", async () => {
-  const frames = [];
-  const playbackUpdates = [];
-  const overlayUpdates = [];
-  const presentedVideo = {};
-  const context = vm.createContext({
-    candyPictureInPicturePlayback: { presentedVideo },
-    updateCandyPictureInPicturePlayback: (expected) => playbackUpdates.push(expected),
-    nextCandyAnimationFrame: () => new Promise((resolve) => frames.push(resolve)),
-    updateCandyInlineVideoControlsOverlay: (video) => overlayUpdates.push(video),
-  });
-  const source = asset("content.js")
-    .split("async function prepareCandyPictureInPicturePlayback(message) {")[1]
-    .split("function updateCandyInlineVideoPresentation(message) {")[0];
-  vm.runInContext(
-    `async function prepareCandyPictureInPicturePlayback(message) {${source}`,
-    context,
-  );
-
+  const { context, renderFrame } = restorationHarness();
   let completed = false;
   const restoration = context.prepareCandyPictureInPicturePlayback({ expected: false })
     .then((result) => {
       completed = true;
       return result;
     });
-  assert.deepEqual(playbackUpdates, [false]);
   assert.equal(completed, false);
-  assert.equal(frames.length, 1);
-
-  frames.shift()();
-  await new Promise((resolve) => setImmediate(resolve));
+  await renderFrame();
   assert.equal(completed, false);
-  assert.equal(frames.length, 1);
-
-  frames.shift()();
+  await renderFrame();
   assert.equal((await restoration).prepared, true);
-  assert.deepEqual(overlayUpdates, [presentedVideo]);
+});
+
+function restorationHarness() {
+  const frames = new Map();
+  const timers = new Map();
+  const overlayBounds = [];
+  let nextCallbackId = 0;
+  let clock = 0;
+  let siteTop = 100;
+  let siteWidth = 400;
+  const element = () => {
+    const attributes = new Set();
+    const properties = new Map();
+    return {
+      isConnected: true,
+      parentElement: null,
+      offsetWidth: 400,
+      offsetHeight: 225,
+      setAttribute: (name) => attributes.add(name),
+      removeAttribute: (name) => attributes.delete(name),
+      hasAttribute: (name) => attributes.has(name),
+      style: {
+        setProperty: (name, value) => properties.set(name, value),
+        removeProperty: (name) => properties.delete(name),
+        getPropertyValue: (name) => properties.get(name) || "",
+      },
+      remove: () => {},
+    };
+  };
+  const player = element();
+  const video = element();
+  const root = element();
+  const pipStyle = element();
+  let pipStyleRemoved = false;
+  pipStyle.remove = () => { pipStyleRemoved = true; };
+  player.getBoundingClientRect = () => ({
+    left: 0,
+    top: siteTop + (player.hasAttribute("data-candy-inline-video-fullscreen-origin") ?
+      Number.parseFloat(player.style.getPropertyValue("--candy-inline-video-fullscreen-origin-top")) : 0),
+    width: siteWidth,
+    height: 225,
+  });
+  video.getBoundingClientRect = () => {
+    const bounds = player.getBoundingClientRect();
+    return { ...bounds, right: bounds.left + bounds.width, bottom: bounds.top + bounds.height };
+  };
+  const host = element();
+  host.getBoundingClientRect = () => video.getBoundingClientRect();
+  const playback = {
+    generation: 4,
+    expected: false,
+    inlinePresentationExpected: true,
+    inlineMediaNavigationGeneration: 2,
+    presentedVideo: video,
+    inlineFullscreenOrigin: null,
+    inlineControlsHost: host,
+    inlineControlsVideo: video,
+    alignmentFrame: null,
+    alignmentMonitorFrame: null,
+    pictureInPictureAncestors: [],
+  };
+  const context = vm.createContext({
+    candyPictureInPicturePlayback: playback,
+    candyPictureInPictureOriginalControls: new WeakMap(),
+    candyInlineVideoDocumentNonce: candidate.documentNonce,
+    candyInlineVideoElementNonces: new WeakMap([[video, candidate.elementNonce]]),
+    candyUsesBackgroundVideoVisibilityFix: true,
+    document: {
+      fullscreenElement: null,
+      documentElement: Object.assign(root, { appendChild: () => {} }),
+      createElement: element,
+      querySelectorAll: () => [video],
+      querySelector: () => pipStyleRemoved ? null : pipStyle,
+    },
+    getComputedStyle: () => ({ top: "0px", left: "0px" }),
+    innerWidth: 400, innerHeight: 800, scrollX: 0, scrollY: 0,
+    location: { href: "https://m.youtube.com/watch?v=restore-readiness" },
+    performance: { now: () => clock },
+    requestAnimationFrame: (callback) => {
+      frames.set(++nextCallbackId, callback);
+      return nextCallbackId;
+    },
+    cancelAnimationFrame: (id) => frames.delete(id),
+    setTimeout: (callback, delay) => {
+      timers.set(++nextCallbackId, { callback, deadline: clock + delay });
+      return nextCallbackId;
+    },
+    clearTimeout: (id) => timers.delete(id),
+    updateCandyInlineVideoControlsOverlay: (currentVideo) => {
+      assert.equal(currentVideo, video);
+      overlayBounds.push(currentVideo.getBoundingClientRect());
+    },
+  });
+  const source = asset("content.js");
+  const load = (start, end) => vm.runInContext(
+    start + source.split(start)[1].split(end)[0], context,
+  );
+  load("const CANDY_PICTURE_IN_PICTURE_ROOT_ATTRIBUTE =", "const CANDY_INLINE_MEDIA_PLAYER_MODES =");
+  load("function updateCandyPictureInPictureVideoControls(video, expected) {", "function clearCandyInlineVideoPresentation() {");
+  load("function clearCandyInlineVideoFullscreenOrigin() {", "function requestCandyInlineVideoFullscreen(video) {");
+  load("function updateCandyPictureInPicturePlayback(expected) {", "function updateCandyInlineVideoPresentation(message) {");
+  const renderFrame = async () => {
+    clock += 16;
+    const callbacks = Array.from(frames.values());
+    frames.clear();
+    callbacks.forEach((callback) => callback(clock));
+    await new Promise((resolve) => setImmediate(resolve));
+  };
+  return {
+    context, playback, player, video, root, frames, timers, renderFrame, overlayBounds, host,
+    pipStyleRemoved: () => pipStyleRemoved,
+    setLayout: (top, width) => { siteTop = top; siteWidth = width; },
+    advanceClock: (value) => { clock = value; },
+  };
+}
+
+test("PiP restoration waits for matching origin geometry and two stable frames", async () => {
+  const { context, playback, player, video, root, renderFrame, overlayBounds,
+    pipStyleRemoved, setLayout, advanceClock } = restorationHarness();
+  context.preserveCandyInlineVideoFullscreenOrigin(video, player);
+  const origin = playback.inlineFullscreenOrigin;
+  playback.expected = true;
+  context.updateCandyInlineVideoFullscreenOriginVisibility();
+  root.setAttribute("data-candy-picture-in-picture");
+  video.setAttribute("data-candy-picture-in-picture-video");
+  setLayout(50, 320);
+  let result;
+  context.prepareCandyPictureInPicturePlayback({
+    expected: false,
+    documentNonce: candidate.documentNonce,
+    elementNonce: candidate.elementNonce,
+  }).then((value) => { result = value; });
+  assert.equal(playback.generation, 5);
+  assert.equal(pipStyleRemoved(), true);
+  assert.equal(root.hasAttribute("data-candy-picture-in-picture"), false);
+  assert.equal(video.hasAttribute("data-candy-picture-in-picture-video"), false);
+  await renderFrame();
+  await renderFrame();
+  assert.equal(context.candyInlineVideoOriginLayoutMatches(origin), false);
+  assert.equal(video.getBoundingClientRect().top, 50);
+  assert.equal(result, undefined, "two frames must not acknowledge mismatching origin geometry");
+
+  advanceClock(1_000);
+  setLayout(50, 400);
+  await renderFrame();
+  assert.equal(video.getBoundingClientRect().top, 100);
+  assert.equal(result, undefined, "one matching frame must not acknowledge restored geometry");
+  await renderFrame();
+  assert.equal(result?.prepared, true);
+  assert.equal(overlayBounds.at(-1).top, origin.videoBounds.top);
+  assert.equal(overlayBounds.at(-1).height, origin.videoBounds.height);
+  assert.equal(playback.presentedVideo, video);
+  assert.equal(playback.inlineFullscreenOrigin, origin);
+  assert.equal(playback.inlineMediaNavigationGeneration, 2);
+  assert.equal(playback.generation, 5);
+});
+
+test("PiP restoration preserves DOM fullscreen without applying the inline snapshot", async () => {
+  const { context, playback, player, video, setLayout, renderFrame } = restorationHarness();
+  context.preserveCandyInlineVideoFullscreenOrigin(video, player);
+  playback.expected = true;
+  context.document.fullscreenElement = player;
+  setLayout(0, 800);
+  const restoration = context.prepareCandyPictureInPicturePlayback({ expected: false });
+  await renderFrame();
+  await renderFrame();
+  assert.equal((await restoration).prepared, true);
+  assert.equal(video.getBoundingClientRect().top, 0);
+});
+
+test("direct fullscreen exit cannot acknowledge while DOM fullscreen remains active", async () => {
+  const { context, player, video, setLayout, renderFrame } = restorationHarness();
+  context.preserveCandyInlineVideoFullscreenOrigin(video, player);
+  context.document.fullscreenElement = player;
+  setLayout(0, 800);
+  let result;
+  context.prepareCandyPictureInPicturePlayback({ expected: false })
+    .then((value) => { result = value; });
+
+  await renderFrame();
+  await renderFrame();
+  assert.equal(result, undefined, "direct return must wait for DOM fullscreen to exit");
+
+  context.document.fullscreenElement = null;
+  setLayout(100, 400);
+  await renderFrame();
+  await renderFrame();
+  assert.equal(result?.prepared, true);
+  assert.equal(video.getBoundingClientRect().top, 100);
+});
+
+for (const surface of ["video", "controls"]) {
+  test(`PiP restoration waits for the actual ${surface} rectangle after player layout matches`, async () => {
+    const { context, player, video, host, renderFrame } = restorationHarness();
+    context.preserveCandyInlineVideoFullscreenOrigin(video, player);
+    const target = surface === "video" ? video : host;
+    const originalBounds = target.getBoundingClientRect;
+    target.getBoundingClientRect = () => {
+      const bounds = originalBounds();
+      return { ...bounds, top: bounds.top - 30, bottom: bounds.bottom - 30 };
+    };
+    let result;
+    context.prepareCandyPictureInPicturePlayback({ expected: false })
+      .then((value) => { result = value; });
+    await renderFrame();
+    await renderFrame();
+    assert.equal(context.candyInlineVideoOriginLayoutMatches(
+      context.candyPictureInPicturePlayback.inlineFullscreenOrigin,
+    ), true);
+    assert.equal(result, undefined);
+    target.getBoundingClientRect = originalBounds;
+    await renderFrame();
+    assert.equal(result, undefined);
+    await renderFrame();
+    assert.equal(result?.prepared, true);
+  });
+}
+
+for (const [reason, change] of [
+  ["navigation generation", ({ playback }) => { playback.inlineMediaNavigationGeneration++; }],
+  ["document URL", ({ context }) => { context.location.href += "&next=1"; }],
+  ["video replacement", ({ playback }) => { playback.presentedVideo = {}; }],
+  ["video detachment", ({ video }) => { video.isConnected = false; }],
+  ["new PiP entry", ({ playback }) => { playback.expected = true; playback.generation++; }],
+  ["superseding restore", ({ playback }) => { playback.generation++; }],
+  ["closed inline presentation", ({ playback }) => { playback.inlinePresentationExpected = false; }],
+]) {
+  test(`PiP restoration cancels on ${reason}`, async () => {
+    const harness = restorationHarness();
+    const restoration = harness.context.prepareCandyPictureInPicturePlayback({ expected: false });
+    await harness.renderFrame();
+    change(harness);
+    await harness.renderFrame();
+    assert.equal((await restoration).prepared, false);
+    assert.equal(harness.timers.size, 0);
+  });
+}
+
+test("PiP restoration times out without animation frames and cancels its own work", async () => {
+  const { context, frames, timers, advanceClock } = restorationHarness();
+  const restoration = context.prepareCandyPictureInPicturePlayback({ expected: false });
+  assert.equal(frames.size, 1);
+  advanceClock(2_000);
+  for (const timer of Array.from(timers.values())) {
+    if (timer.deadline <= 2_000) timer.callback();
+  }
+  assert.equal((await restoration).prepared, false);
+  assert.equal(frames.size, 0);
+  assert.equal(timers.size, 0);
+});
+
+test("PiP restoration cannot succeed when a late frame runs before the timeout task", async () => {
+  const { context, renderFrame, advanceClock } = restorationHarness();
+  const restoration = context.prepareCandyPictureInPicturePlayback({ expected: false });
+  await renderFrame();
+  advanceClock(2_000);
+  await renderFrame();
+  assert.equal((await restoration).prepared, false);
+});
+
+test("PiP restoration requires consecutive stable frames after a second layout shift", async () => {
+  const { context, renderFrame, setLayout } = restorationHarness();
+  let result;
+  context.prepareCandyPictureInPicturePlayback({ expected: false })
+    .then((value) => { result = value; });
+  await renderFrame();
+  setLayout(130, 400);
+  await renderFrame();
+  assert.equal(result, undefined);
+  await renderFrame();
+  assert.equal(result?.prepared, true);
 });
 
 test("PiP return keeps original player box through a delayed parent shift", () => {

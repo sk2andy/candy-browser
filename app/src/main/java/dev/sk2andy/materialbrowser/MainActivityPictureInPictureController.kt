@@ -90,6 +90,8 @@ internal class MainActivityPictureInPictureController(
             setReturnRestorationPending(false)
             modeEntered = true
             setVideoOnlyPresentation(true)
+        } else {
+            setReturnRestorationPending(true)
         }
         browserController.onPictureInPictureModeChanged(isInPictureInPictureMode)
         if (isInPictureInPictureMode) {
