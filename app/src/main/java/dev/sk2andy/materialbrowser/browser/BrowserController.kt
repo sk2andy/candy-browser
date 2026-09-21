@@ -368,6 +368,15 @@ private data class GeckoViewBinding(
     val view: View,
 )
 
+private data class TabFaviconFetchAttempt(
+    val session: AndroidBrowserEngineSessionPort,
+    val pageUrl: String,
+    val navigationGeneration: Int,
+    val faviconEpoch: Int,
+) {
+    val cancelled = AtomicBoolean(false)
+}
+
 private data class PendingGeckoViewAttach(
     val token: Any,
     val onContentPresented: ((String) -> Unit)?,
@@ -1131,6 +1140,7 @@ class BrowserController(
     private var previewEpoch = 0
     private var faviconEpoch = 0
     private val faviconGenerations = mutableMapOf<String, Int>()
+    private val faviconFetchAttempts = mutableMapOf<String, TabFaviconFetchAttempt>()
     private val candyTrailHistoryBindings = mutableMapOf<String, CandyTrailHistoryBinding>()
     private val pendingCandyTrailTargets = mutableMapOf<String, String>()
     private val candyTrailGenerations = mutableMapOf<String, Int>()
@@ -8995,6 +9005,8 @@ class BrowserController(
         previewRepository.clear()
         faviconEpoch++
         faviconGenerations.clear()
+        faviconFetchAttempts.values.forEach { it.cancelled.set(true) }
+        faviconFetchAttempts.clear()
         favicons.clear()
         faviconRepository.clear()
         candyTrailEpoch++
@@ -9328,6 +9340,8 @@ class BrowserController(
         retiredFavoriteFavicons.clear()
         privacySnapshots.clear()
         faviconGenerations.clear()
+        faviconFetchAttempts.values.forEach { it.cancelled.set(true) }
+        faviconFetchAttempts.clear()
         candyTrailEpoch++
         candyTrailHistoryBindings.clear()
         pendingCandyTrailTargets.clear()
@@ -9361,6 +9375,11 @@ class BrowserController(
                 trailHistoryEventSink = ::onGeckoTrailHistoryEvent,
                 eventSink = ::onGeckoEngineEvent,
             ).also { session ->
+                session.setFaviconListener { pageUrl, bitmap ->
+                    mainHandler.post {
+                        onEngineFavicon(tab.id, session, pageUrl, bitmap)
+                    }
+                }
                 session.setVideoAutoplayBlocked(isVideoAutoplayBlocked)
                 session.setHttpPasswordManagerSelectionEnabled(isHttpPasswordAutofillEnabled)
                 session.setAudioMuted(isTabAudioMuted(tab, tab.url))
@@ -10527,6 +10546,12 @@ class BrowserController(
                 invalidateExternalAppPromptForNavigation(event.tabId)
                 cancelAddressBarAutoDockProbe(event.tabId)
                 val navigatingSession = browserEngineSessions[event.tabId] ?: return
+                val previousUrl = tabs.firstOrNull { it.id == event.tabId }?.url
+                event.address?.let { address ->
+                    if (previousUrl != null && FaviconRules.changedSite(previousUrl, address)) {
+                        invalidateFavicon(event.tabId)
+                    }
+                }
                 val nextNavigationGeneration =
                     navigationGenerations.getOrDefault(event.tabId, 0) + 1
                 fun isCurrentNavigation(): Boolean = !destroyed &&
@@ -10603,6 +10628,12 @@ class BrowserController(
                 markLocalSyncNavigationPending(event.tabId, event.address)
             }
             BrowserEngineEventType.NavigationCommitted -> {
+                val previousUrl = tabs.firstOrNull { it.id == event.tabId }?.url
+                event.address?.let { address ->
+                    if (previousUrl != null && FaviconRules.changedSite(previousUrl, address)) {
+                        invalidateFavicon(event.tabId)
+                    }
+                }
                 event.address?.let { address -> pageUrls[event.tabId] = address }
                 refreshDomainMuteForTab(event.tabId)
                 val currentTab = tabs.firstOrNull { tab -> tab.id == event.tabId }
@@ -10637,6 +10668,7 @@ class BrowserController(
                 persist()
                 committedUrl?.let { url ->
                     scheduleAddressBarAutoDockProbe(event.tabId, url)
+                    scheduleGeckoFaviconFetch(event.tabId, url)
                 }
             }
             BrowserEngineEventType.NavigationFailed -> {
@@ -10659,6 +10691,11 @@ class BrowserController(
                 event.address?.let { address -> pageUrls[event.tabId] = address }
                 refreshDomainMuteForTab(event.tabId)
                 val currentTab = tabs.firstOrNull { tab -> tab.id == event.tabId }
+                event.address?.let { address ->
+                    if (currentTab != null && FaviconRules.changedSite(currentTab.url, address)) {
+                        invalidateFavicon(event.tabId)
+                    }
+                }
                 val previousUrl = currentTab?.url?.let(BrowserUriPolicy::normalizeHttpUrl)
                 val normalizedChangedUrl = event.address?.let(BrowserUriPolicy::normalizeHttpUrl)
                 updateTab(event.tabId) { tab ->
@@ -12592,8 +12629,68 @@ class BrowserController(
         }
     }
 
+    private fun onEngineFavicon(
+        tabId: String,
+        session: AndroidBrowserEngineSessionPort,
+        pageUrl: String?,
+        bitmap: Bitmap,
+    ) {
+        if (destroyed || browserEngineSessions[tabId] !== session || bitmap.isRecycled) return
+        val tab = tabs.firstOrNull { it.id == tabId } ?: return
+        if (!FaviconRules.belongsToDocument(tab.url, pageUrl)) return
+        storeFavicon(tabId, bitmap)
+    }
+
+    private fun scheduleGeckoFaviconFetch(tabId: String, pageUrl: String) {
+        if (!usesGeckoEngine || favicons[tabId] != null) return
+        val safeUrl = BrowserUriPolicy.normalizeHttpUrl(pageUrl) ?: return
+        val tab = tabs.firstOrNull { it.id == tabId } ?: return
+        if (tab.isIncognito || isSessionEphemeralTab(tabId) ||
+            !FaviconRules.belongsToDocument(tab.url, safeUrl)
+        ) return
+        val session = browserEngineSessions[tabId] ?: return
+        val attempt = TabFaviconFetchAttempt(
+            session = session,
+            pageUrl = safeUrl,
+            navigationGeneration = navigationGenerations.getOrDefault(tabId, 0),
+            faviconEpoch = faviconEpoch,
+        )
+        if (faviconFetchAttempts[tabId] == attempt) return
+        faviconFetchAttempts.put(tabId, attempt)?.cancelled?.set(true)
+        val accepted = faviconRepository.fetch(
+            pageUrl = safeUrl,
+            shouldFetch = { !attempt.cancelled.get() },
+        ) { bitmap ->
+            mainHandler.post {
+                val currentTab = tabs.firstOrNull { it.id == tabId }
+                if (
+                    bitmap != null &&
+                    !bitmap.isRecycled &&
+                    !destroyed &&
+                    faviconFetchAttempts[tabId] == attempt &&
+                    browserEngineSessions[tabId] === session &&
+                    navigationGenerations.getOrDefault(tabId, 0) == attempt.navigationGeneration &&
+                    faviconEpoch == attempt.faviconEpoch &&
+                    currentTab != null &&
+                    !currentTab.isIncognito &&
+                    !isSessionEphemeralTab(tabId) &&
+                    favicons[tabId] == null &&
+                    FaviconRules.belongsToDocument(currentTab.url, safeUrl)
+                ) {
+                    storeFavicon(tabId, bitmap)
+                } else {
+                    bitmap?.takeUnless(Bitmap::isRecycled)?.recycle()
+                }
+            }
+        }
+        if (!accepted && faviconFetchAttempts[tabId] == attempt) {
+            faviconFetchAttempts.remove(tabId)
+        }
+    }
+
     private fun invalidateFavicon(tabId: String) {
         faviconGenerations[tabId] = faviconGenerations.getOrDefault(tabId, 0) + 1
+        faviconFetchAttempts.remove(tabId)?.cancelled?.set(true)
         favicons.remove(tabId)
         faviconRepository.delete(tabId)
     }

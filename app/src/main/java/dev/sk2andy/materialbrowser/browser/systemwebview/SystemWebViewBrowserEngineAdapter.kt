@@ -388,6 +388,7 @@ private class SystemWebViewBrowserEngineSession(
     private var authPromptListener: GeckoAuthPromptListener? = null
     private var webPromptListener: GeckoWebPromptListener? = null
     private var mediaStateListener: GeckoMediaSessionStateListener? = null
+    private var faviconListener: ((String?, Bitmap) -> Unit)? = null
     private var fullscreenStateListener: GeckoFullscreenStateListener? = null
     private var scrollListener: BrowserEngineScrollListener? = null
     private var contentTargetListener: dev.sk2andy.materialbrowser.browser.actions.BrowserContentTargetListener? = null
@@ -493,6 +494,10 @@ private class SystemWebViewBrowserEngineSession(
         if (closed || this.active == active) return
         this.active = active
         if (active) webView.onResume() else webView.onPause()
+    }
+
+    override fun setFaviconListener(listener: ((String?, Bitmap) -> Unit)?) {
+        faviconListener = listener
     }
 
     override fun setMediaStateListener(listener: GeckoMediaSessionStateListener?) {
@@ -1178,6 +1183,12 @@ private class SystemWebViewBrowserEngineSession(
     private fun chromeClient() = object : WebChromeClient() {
         override fun onReceivedTitle(view: WebView, title: String?) {
             publish(BrowserEngineEventType.StateChanged, title = title)
+        }
+
+        override fun onReceivedIcon(view: WebView, icon: Bitmap?) {
+            if (!closed && icon != null && !icon.isRecycled) {
+                faviconListener?.invoke(view.url, icon)
+            }
         }
 
         override fun onShowCustomView(view: View, callback: CustomViewCallback) {
