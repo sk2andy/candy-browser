@@ -1097,7 +1097,6 @@ class MainActivity : AppCompatActivity() {
 
     override fun onUserLeaveHint() {
         if (!appDataTransferActive) {
-            browserController.dismissExternalLinkPreview()
             if (
                 ::pictureInPictureController.isInitialized &&
                 pictureInPictureController.prepareAutomaticEntry()
@@ -1398,10 +1397,6 @@ class MainActivity : AppCompatActivity() {
         File(applicationInfo.dataDir, AppDataArchiveRules.TRANSFER_STATE_DIRECTORY_NAME)
 
     private fun openIntent(intent: Intent) {
-        if (
-            intent.action == LauncherShortcutRules.ACTION_OPEN_APP &&
-            launcherShortcutIntentHandler.open(intent)
-        ) return
         externalLaunchTabId = null
         val incomingRequest = IncomingBrowserIntent.from(intent)
         if (incomingRequest == null) browserController.dismissExternalLinkPreview()
