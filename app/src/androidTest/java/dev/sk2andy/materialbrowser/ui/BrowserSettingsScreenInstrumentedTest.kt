@@ -18,6 +18,7 @@ import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineKind
 import dev.sk2andy.materialbrowser.browser.ExternalAppLinkHandling
 import dev.sk2andy.materialbrowser.browser.FavoriteAnimationSpeed
+import dev.sk2andy.materialbrowser.browser.InlineMediaPlayerMode
 import dev.sk2andy.materialbrowser.browser.PageTranslationProvider
 import dev.sk2andy.materialbrowser.browser.StartupAddressFocusMode
 import dev.sk2andy.materialbrowser.ui.theme.MaterialBrowserTheme
@@ -103,6 +104,48 @@ class BrowserSettingsScreenInstrumentedTest {
             .performClick()
 
         assertTrue(enabled)
+    }
+
+    @Test
+    fun inlineMediaPlayerChoiceUpdatesModeAndExplainsDirectPictureInPicture() {
+        var mode by mutableStateOf(InlineMediaPlayerMode.ButtonFullscreen)
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                BrowserSettingsPage(
+                    pageTranslationProvider = PageTranslationProvider.Google,
+                    isFullImmersiveModeEnabled = false,
+                    isStartupAnimationEnabled = true,
+                    isScrollBarEnabled = false,
+                    isVideoAutoplayBlocked = false,
+                    isVideoAutoplayBlockingSupported = true,
+                    inlineMediaPlayerMode = mode,
+                    isInlineMediaPlayerSupported = true,
+                    isDefaultBrowser = false,
+                    onFullImmersiveModeEnabledChanged = {},
+                    onStartupAnimationEnabledChanged = {},
+                    onScrollBarEnabledChanged = {},
+                    onVideoAutoplayBlockedChanged = {},
+                    onInlineMediaPlayerModeChanged = { mode = it },
+                    onPageTranslationProviderChanged = {},
+                    onOpenDefaultBrowserSettings = {},
+                    onBack = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(BrowserSettingsTestTags.InlineMediaPlayer)
+            .performScrollTo()
+            .performClick()
+        composeRule.onNodeWithText(
+            context.getString(
+                R.string.settings_inline_media_player_mode_button_inline_fullscreen,
+            ),
+        ).performClick()
+
+        assertEquals(InlineMediaPlayerMode.ButtonInlineAndFullscreen, mode)
+        composeRule.onNodeWithText(
+            context.getString(R.string.settings_inline_media_player_subtitle),
+        ).performScrollTo().assertIsDisplayed()
     }
 
     @Test

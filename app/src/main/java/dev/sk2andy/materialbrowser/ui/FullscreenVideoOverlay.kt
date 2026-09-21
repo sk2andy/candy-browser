@@ -66,12 +66,14 @@ internal object FullscreenVideoTestTags {
     const val Minimize = "fullscreen_video_minimize"
     const val Expand = "fullscreen_video_expand"
     const val Close = "fullscreen_video_close"
+    const val GestureIndicator = "fullscreen_video_gesture_indicator"
 }
 
 @Composable
 internal fun FullscreenVideoOverlay(
     controller: BrowserController,
     videoOnlyPresentation: Boolean,
+    gestureState: FullscreenVideoGestureState? = null,
     onBoundsChanged: (Rect) -> Unit,
 ) {
     val state = controller.fullscreenVideoState ?: return
@@ -90,6 +92,7 @@ internal fun FullscreenVideoOverlay(
             placement = placement,
             videoOnlyPresentation = videoOnlyPresentation,
             canMinimize = controller.canMinimizeFullscreenVideo,
+            gestureState = gestureState,
             onBoundsChanged = onBoundsChanged,
         )
         return
@@ -100,6 +103,7 @@ internal fun FullscreenVideoOverlay(
         placement = placement,
         videoOnlyPresentation = videoOnlyPresentation,
         canMinimize = controller.canMinimizeFullscreenVideo,
+        gestureState = gestureState,
         onBoundsChanged = onBoundsChanged,
     )
 }
@@ -110,6 +114,7 @@ private fun BrowserViewportVideoControls(
     placement: FullscreenVideoPlacement,
     videoOnlyPresentation: Boolean,
     canMinimize: Boolean,
+    gestureState: FullscreenVideoGestureState?,
     onBoundsChanged: (Rect) -> Unit,
 ) {
     if (placement != FullscreenVideoPlacement.Expanded) return
@@ -136,6 +141,13 @@ private fun BrowserViewportVideoControls(
                 )
             }
         }
+        FullscreenVideoGestureIndicator(
+            state = gestureState,
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .windowInsetsPadding(WindowInsets.safeDrawing)
+                .padding(top = 18.dp),
+        )
     }
 }
 
@@ -146,6 +158,7 @@ private fun StableFullscreenVideoHost(
     placement: FullscreenVideoPlacement,
     videoOnlyPresentation: Boolean,
     canMinimize: Boolean,
+    gestureState: FullscreenVideoGestureState?,
     onBoundsChanged: (Rect) -> Unit,
 ) {
     val isMiniPlayer = placement == FullscreenVideoPlacement.MiniPlayer
@@ -209,6 +222,12 @@ private fun StableFullscreenVideoHost(
             }
             Surface(
                 modifier = playerModifier
+                    .fullscreenVideoGestureTransform(
+                        gestureState.takeUnless { isMiniPlayer },
+                    )
+                    .fullscreenVideoGestures(
+                        gestureState.takeUnless { isMiniPlayer },
+                    )
                     .onVideoBoundsChanged(onBoundsChanged)
                     .background(ComposeColor.Black),
                 shape = if (isMiniPlayer) RoundedCornerShape(18.dp) else RectangleShape,
@@ -325,6 +344,13 @@ private fun StableFullscreenVideoHost(
                     }
                 }
             }
+            FullscreenVideoGestureIndicator(
+                state = gestureState.takeUnless { isMiniPlayer },
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .windowInsetsPadding(WindowInsets.safeDrawing)
+                    .padding(top = 18.dp),
+            )
         }
     }
 }

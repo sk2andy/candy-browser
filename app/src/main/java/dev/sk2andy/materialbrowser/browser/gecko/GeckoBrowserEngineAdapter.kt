@@ -108,6 +108,12 @@ internal interface AndroidBrowserEngineSessionPort :
 
     fun setMediaStateListener(listener: GeckoMediaSessionStateListener?)
 
+    fun setInlineVideoOpenRequestListener(listener: GeckoInlineVideoOpenRequestListener?) = Unit
+
+    fun setInlineVideoGestureHapticListener(
+        listener: GeckoInlineVideoGestureHapticListener?,
+    ) = Unit
+
     fun setFullscreenStateListener(listener: GeckoFullscreenStateListener?) = Unit
 
     fun setScrollListener(listener: BrowserEngineScrollListener?)
@@ -160,6 +166,19 @@ internal interface AndroidBrowserEngineSessionPort :
     fun notifyPictureInPictureModeChanged(inPictureInPicture: Boolean) = Unit
 
     fun setPictureInPicturePlaybackExpected(expected: Boolean) = Unit
+
+    fun preparePictureInPicturePlayback(
+        identity: GeckoInlineVideoIdentity,
+        onResult: (GeckoPictureInPicturePreparation?) -> Unit,
+    ) = onResult(null)
+
+    fun restorePictureInPicturePresentation(onResult: (Boolean) -> Unit) = onResult(false)
+
+    fun setInlineVideoPresentation(
+        identity: GeckoInlineVideoIdentity?,
+        expected: Boolean,
+        onResult: (Boolean) -> Unit,
+    ) = onResult(false)
 
     fun exitFullscreen() = Unit
 
@@ -468,6 +487,13 @@ internal class GeckoBrowserEngineSessionAdapter(
     }
 
     @UiThread
+    override fun setInlineVideoOpenRequestListener(
+        listener: GeckoInlineVideoOpenRequestListener?,
+    ) {
+        session.setInlineVideoOpenRequestListener(if (closed) null else listener)
+    }
+
+    @UiThread
     override fun setFullscreenStateListener(listener: GeckoFullscreenStateListener?) {
         session.setFullscreenStateListener(if (closed) null else listener)
     }
@@ -603,6 +629,35 @@ internal class GeckoBrowserEngineSessionAdapter(
     }
 
     @UiThread
+    override fun preparePictureInPicturePlayback(
+        identity: GeckoInlineVideoIdentity,
+        onResult: (GeckoPictureInPicturePreparation?) -> Unit,
+    ) {
+        if (closed) onResult(null) else session.preparePictureInPicturePlayback(
+            identity = identity,
+            onResult = onResult,
+        )
+    }
+
+    @UiThread
+    override fun restorePictureInPicturePresentation(onResult: (Boolean) -> Unit) {
+        if (closed) onResult(false) else session.restorePictureInPicturePresentation(onResult)
+    }
+
+    @UiThread
+    override fun setInlineVideoPresentation(
+        identity: GeckoInlineVideoIdentity?,
+        expected: Boolean,
+        onResult: (Boolean) -> Unit,
+    ) {
+        if (closed) onResult(false) else session.setInlineVideoPresentation(
+            identity = identity,
+            expected = expected,
+            onResult = onResult,
+        )
+    }
+
+    @UiThread
     override fun exitFullscreen() {
         if (!closed) session.exitFullscreen()
     }
@@ -729,6 +784,7 @@ internal class GeckoBrowserEngineSessionAdapter(
         session.setStateListener(null)
         session.setHistoryStateListener(null)
         session.setMediaStateListener(null)
+        session.setInlineVideoOpenRequestListener(null)
         session.setFullscreenStateListener(null)
         session.setScrollListener(null)
         session.setContentTargetListener(null)
@@ -759,6 +815,7 @@ internal class GeckoBrowserEngineSessionAdapter(
             session.setStateListener(null)
             session.setHistoryStateListener(null)
             session.setMediaStateListener(null)
+            session.setInlineVideoOpenRequestListener(null)
             session.setFullscreenStateListener(null)
             session.setScrollListener(null)
             session.setContentTargetListener(null)

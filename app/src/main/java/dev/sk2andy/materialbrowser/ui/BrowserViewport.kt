@@ -65,6 +65,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.TransformOrigin
@@ -302,6 +303,7 @@ private fun ExternalLinkPreviewViewport(
 @Composable
 internal fun BrowserViewport(
     controller: BrowserController,
+    fullscreenVideoGestureState: FullscreenVideoGestureState? = null,
     webViewVideoOnlyPresentation: Boolean,
     videoOnlyPresentation: Boolean = webViewVideoOnlyPresentation,
     selectedTab: BrowserTab,
@@ -443,7 +445,15 @@ internal fun BrowserViewport(
                 clip = cardProgress > 0f
                 shadowElevation = with(density) { (8f * cardProgress).dp.toPx() }
             }
-            .background(MaterialTheme.colorScheme.surface),
+            .fullscreenVideoGestureTransform(fullscreenVideoGestureState)
+            .fullscreenVideoGestures(fullscreenVideoGestureState)
+            .background(
+                if (fullscreenVideoGestureState != null) {
+                    Color.Black
+                } else {
+                    MaterialTheme.colorScheme.surface
+                },
+            ),
     ) {
         if (selectedTab.url != BLANK_URL) {
             ActiveBrowserEngineView(

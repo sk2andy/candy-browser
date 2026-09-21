@@ -55,6 +55,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.zIndex
 import androidx.compose.ui.layout.boundsInWindow
@@ -138,6 +139,7 @@ private enum class BrowserBackTarget {
     FindInPage,
     CandyTrail,
     TabOverview,
+    WebContentFullscreen,
     WebHistory,
     ExternalApp,
     RootTab,
@@ -204,6 +206,7 @@ private val PendingProfileConfigurationSaver =
 @Composable
 internal fun BrowserScreen(
     controller: BrowserController,
+    fullscreenVideoGestureState: FullscreenVideoGestureState? = null,
     castUiState: CastUiState = CastUiState(),
     onToggleCastPlayback: () -> Unit = {},
     onSeekCast: (Long) -> Unit = {},
@@ -1194,6 +1197,7 @@ internal fun BrowserScreen(
             controller.findInPageState != null -> BrowserBackTarget.FindInPage
             candyTrailTabId != null -> BrowserBackTarget.CandyTrail
             tabOverviewVisible || tabOverviewOpening -> BrowserBackTarget.TabOverview
+            controller.isSelectedWebContentFullscreen -> BrowserBackTarget.WebContentFullscreen
             selectedTab.canGoBack -> BrowserBackTarget.WebHistory
             selectedTab.id == externalLaunchTabId -> BrowserBackTarget.ExternalApp
             controller.selectedRootTabBackDecision ==
@@ -1268,6 +1272,8 @@ internal fun BrowserScreen(
                     candyTrailSourceBounds = null
                 }
                 BrowserBackTarget.TabOverview -> closeTabOverview()
+                BrowserBackTarget.WebContentFullscreen ->
+                    controller.exitSelectedWebContentFullscreen()
                 BrowserBackTarget.WebHistory -> controller.goBack()
                 BrowserBackTarget.ExternalApp -> onReturnToExternalApp()
                 BrowserBackTarget.RootTab -> {
@@ -1392,9 +1398,20 @@ internal fun BrowserScreen(
                         onBack = controller::goBack,
                     )
                 }
-                Box(modifier = Modifier.weight(1f)) {
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .background(
+                            if (fullscreenVideoGestureState != null) {
+                                Color.Black
+                            } else {
+                                Color.Transparent
+                            },
+                        ),
+                ) {
                     BrowserViewport(
                         controller = controller,
+                        fullscreenVideoGestureState = fullscreenVideoGestureState,
                         webViewVideoOnlyPresentation = webViewVideoOnlyPresentation,
                         videoOnlyPresentation = hideBrowserChrome,
                         selectedTab = selectedTab,
