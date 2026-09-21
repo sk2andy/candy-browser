@@ -207,8 +207,9 @@ The visual tab overview also adapts its previews and grid to larger screens.
 - **External Link Preview:** optionally open links from other apps in a temporary Candy preview
   instead of creating a tab immediately. A compact bottom pill keeps the current host visible,
   combines the outlined **Open in Candy** action with its profile picker, and offers share, copy,
-  find-in-page, and desktop-site actions before the page is promoted to a real tab. Leaving Candy
-  discards the temporary preview.
+  find-in-page, and desktop-site actions before the page is promoted to a real tab. Temporary app
+  switches keep the preview; explicitly opening Candy from its app icon, widget, or launcher
+  shortcut discards it.
 
 <p align="center">
   <img src="docs/screenshots/candy-link-peek.png" width="32%" alt="Candy Browser Link Peek live preview">
