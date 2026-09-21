@@ -370,12 +370,14 @@ Camera and microphone permissions remain separate and continue through Candy's p
   runtime cookie behavior for both normal and private sessions. It uses `ACCEPT_FIRST_PARTY` while
   blocking is enabled. Because GeckoView 155 exposes no site-scoped override for that hard cookie
   policy, a confirmed SSO, CAPTCHA, or paused-site exception temporarily switches the shared runtime
-  to `ACCEPT_ALL` only while the matching session is selected and its current host still matches the
-  exception. Normal and private cookie modes are coordinated separately. Candy restores
-  `ACCEPT_FIRST_PARTY` before cross-host main-frame navigation and when that session becomes
-  inactive, loses the exception, or closes. Same-mode sibling sessions share Gecko's runtime setting
-  and therefore see the temporary runtime setting too. Candy marks them inactive with Gecko's
-  session lifecycle, but GeckoView does not document inactivity as a complete network suspension.
+  to `ACCEPT_ALL` before the matching main-frame load or native session restore starts. A queued load
+  keeps that claim while the Activity is inactive, so bookmark results and unloaded tabs cannot begin
+  under the stricter runtime default. Normal and private cookie modes are coordinated separately.
+  Candy restores `ACCEPT_FIRST_PARTY` before cross-host main-frame navigation and when an inactive
+  session finishes or cancels its pending navigation, loses the exception, or closes. Same-mode
+  sibling sessions share Gecko's runtime setting and therefore see the temporary runtime setting too.
+  Candy marks them inactive with Gecko's session lifecycle, but GeckoView does not document
+  inactivity as a complete network suspension.
 - Manual extension installation accepts only direct HTTPS URLs and delegates XPI parsing and Mozilla
   signature validation to GeckoView. The user must explicitly approve requested permissions;
   dismissal and lifecycle failure deny access.

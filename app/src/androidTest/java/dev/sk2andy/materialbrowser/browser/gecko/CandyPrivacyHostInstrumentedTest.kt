@@ -20,6 +20,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.mozilla.geckoview.ContentBlocking
 
 @RunWith(AndroidJUnit4::class)
 class CandyPrivacyHostInstrumentedTest {
@@ -143,6 +144,266 @@ class CandyPrivacyHostInstrumentedTest {
         } finally {
             InstrumentationRegistry.getInstrumentation().runOnMainSync {
                 runtime.setBlockThirdPartyCookies(true)
+            }
+            server.close()
+        }
+    }
+
+    @Test
+    fun allowedSiteCookieBehaviorIsAppliedBeforeInitialNavigation() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val server = FixtureServer()
+        val loadingStarted = CountDownLatch(1)
+        val navigationFinished = CountDownLatch(1)
+        val loadedPage = CountDownLatch(1)
+        lateinit var runtime: GeckoViewRuntimeHandle
+        lateinit var session: GeckoBrowserSession
+        lateinit var view: View
+
+        try {
+            InstrumentationRegistry.getInstrumentation().runOnMainSync {
+                runtime = GeckoRuntimeOwner.getOrCreate(context) as GeckoViewRuntimeHandle
+                runtime.setBlockThirdPartyCookies(true)
+                session = runtime.createSession(
+                    profileId = "privacy-cookie-initial-navigation",
+                    isPrivate = false,
+                    privacyPolicy = GeckoPrivacyPolicy.Disabled.copy(
+                        pageHost = COOKIE_PAGE_HOST,
+                        blockThirdPartyCookies = true,
+                        allowThirdPartyCookiesForSite = true,
+                    ),
+                )
+                view = session.createView(context)
+                session.setStateListener { state ->
+                    if (state.url == server.slowCookiePageUrl() && state.isLoading) {
+                        loadingStarted.countDown()
+                    }
+                    if (
+                        state.url == server.slowCookiePageUrl() &&
+                        state.title == COOKIE_ALLOWED_TITLE &&
+                        !state.isLoading &&
+                        state.lastNavigationSucceeded != null
+                    ) {
+                        navigationFinished.countDown()
+                    }
+                    if (state.title == COOKIE_ALLOWED_TITLE) loadedPage.countDown()
+                }
+
+                assertEquals(
+                    ContentBlocking.CookieBehavior.ACCEPT_FIRST_PARTY,
+                    runtime.normalCookieBehaviorForTesting(),
+                )
+                assertTrue(session.loadUrl(server.cookiePageUrl()))
+                assertEquals(
+                    ContentBlocking.CookieBehavior.ACCEPT_ALL,
+                    runtime.normalCookieBehaviorForTesting(),
+                )
+                session.stop()
+                assertEquals(
+                    ContentBlocking.CookieBehavior.ACCEPT_FIRST_PARTY,
+                    runtime.normalCookieBehaviorForTesting(),
+                )
+                session.releaseView(view)
+                session.close()
+
+                session = runtime.createSession(
+                    profileId = "privacy-cookie-inactive-navigation",
+                    isPrivate = false,
+                    privacyPolicy = GeckoPrivacyPolicy.Disabled.copy(
+                        pageHost = COOKIE_PAGE_HOST,
+                        blockThirdPartyCookies = true,
+                        allowThirdPartyCookiesForSite = true,
+                    ),
+                )
+                view = session.createView(context)
+                session.setStateListener { state ->
+                    if (state.url == server.slowCookiePageUrl() && state.isLoading) {
+                        loadingStarted.countDown()
+                    }
+                    if (
+                        state.url == server.slowCookiePageUrl() &&
+                        state.title == COOKIE_ALLOWED_TITLE &&
+                        !state.isLoading &&
+                        state.lastNavigationSucceeded != null
+                    ) {
+                        navigationFinished.countDown()
+                    }
+                    if (state.title == COOKIE_ALLOWED_TITLE) loadedPage.countDown()
+                }
+                assertTrue(session.loadUrl(server.slowCookiePageUrl()))
+                assertEquals(
+                    ContentBlocking.CookieBehavior.ACCEPT_ALL,
+                    runtime.normalCookieBehaviorForTesting(),
+                )
+                session.setActive(true)
+            }
+            assertTrue(
+                "Inactive cookie navigation did not start",
+                loadingStarted.await(20, TimeUnit.SECONDS),
+            )
+            InstrumentationRegistry.getInstrumentation().runOnMainSync {
+                session.setActive(false)
+                assertEquals(
+                    ContentBlocking.CookieBehavior.ACCEPT_ALL,
+                    runtime.normalCookieBehaviorForTesting(),
+                )
+            }
+            server.releaseSlowCookiePage()
+
+            assertTrue(
+                "Allowed cookie page did not load after inactive navigation",
+                loadedPage.await(20, TimeUnit.SECONDS),
+            )
+            assertTrue(
+                "Inactive cookie navigation did not finish",
+                navigationFinished.await(20, TimeUnit.SECONDS),
+            )
+            InstrumentationRegistry.getInstrumentation().runOnMainSync {
+                assertEquals(
+                    ContentBlocking.CookieBehavior.ACCEPT_FIRST_PARTY,
+                    runtime.normalCookieBehaviorForTesting(),
+                )
+            }
+        } finally {
+            server.releaseSlowCookiePage()
+            InstrumentationRegistry.getInstrumentation().runOnMainSync {
+                session.releaseView(view)
+                session.setActive(false)
+                session.close()
+            }
+            server.close()
+        }
+    }
+
+    @Test
+    fun allowedSiteCookieBehaviorIsAppliedBeforeSessionRestore() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val server = FixtureServer()
+        val initialPageLoaded = CountDownLatch(1)
+        val restoreLoadingStarted = CountDownLatch(1)
+        val restoreNavigationFinished = CountDownLatch(1)
+        val restoredPageLoaded = CountDownLatch(1)
+        val policy = GeckoPrivacyPolicy.Disabled.copy(
+            pageHost = COOKIE_PAGE_HOST,
+            blockThirdPartyCookies = true,
+            allowThirdPartyCookiesForSite = true,
+        )
+        lateinit var runtime: GeckoViewRuntimeHandle
+        lateinit var session: GeckoBrowserSession
+        lateinit var view: View
+        var restoreGate: FixtureServer.ResponseGate? = null
+
+        try {
+            InstrumentationRegistry.getInstrumentation().runOnMainSync {
+                runtime = GeckoRuntimeOwner.getOrCreate(context) as GeckoViewRuntimeHandle
+                runtime.setBlockThirdPartyCookies(true)
+                session = runtime.createSession(
+                    profileId = "privacy-cookie-session-restore",
+                    isPrivate = false,
+                    privacyPolicy = policy,
+                )
+                view = session.createView(context)
+                session.setStateListener { state ->
+                    if (state.title == COOKIE_ALLOWED_TITLE) initialPageLoaded.countDown()
+                }
+                session.setActive(true)
+                assertTrue(session.loadUrl(server.cookiePageUrl()))
+            }
+            assertTrue(
+                "Initial allowed cookie page did not load",
+                initialPageLoaded.await(20, TimeUnit.SECONDS),
+            )
+            val historyDeadline = SystemClock.elapsedRealtime() + 20_000L
+            while (
+                session.historyUrlAtOffset(0) != server.cookiePageUrl() &&
+                SystemClock.elapsedRealtime() < historyDeadline
+            ) {
+                SystemClock.sleep(25L)
+            }
+            assertEquals(server.cookiePageUrl(), session.historyUrlAtOffset(0))
+
+            lateinit var snapshot: String
+            InstrumentationRegistry.getInstrumentation().runOnMainSync {
+                snapshot = requireNotNull(session.sessionStateSnapshot())
+                session.releaseView(view)
+                session.setActive(false)
+                session.close()
+                assertEquals(
+                    ContentBlocking.CookieBehavior.ACCEPT_FIRST_PARTY,
+                    runtime.normalCookieBehaviorForTesting(),
+                )
+
+                session = runtime.createSession(
+                    profileId = "privacy-cookie-session-restore",
+                    isPrivate = false,
+                    privacyPolicy = policy,
+                )
+                view = session.createView(context)
+                session.setStateListener { state ->
+                    if (state.url == server.cookiePageUrl() && state.isLoading) {
+                        restoreLoadingStarted.countDown()
+                    }
+                    if (
+                        state.url == server.cookiePageUrl() &&
+                        state.title == COOKIE_ALLOWED_TITLE &&
+                        !state.isLoading &&
+                        state.lastNavigationSucceeded != null
+                    ) {
+                        restoreNavigationFinished.countDown()
+                    }
+                    if (state.title == COOKIE_ALLOWED_TITLE) restoredPageLoaded.countDown()
+                }
+                restoreGate = server.blockNextCookiePage()
+                assertTrue(session.restoreSessionState(snapshot))
+                assertEquals(
+                    ContentBlocking.CookieBehavior.ACCEPT_ALL,
+                    runtime.normalCookieBehaviorForTesting(),
+                )
+            }
+            InstrumentationRegistry.getInstrumentation().runOnMainSync {
+                assertEquals(
+                    ContentBlocking.CookieBehavior.ACCEPT_ALL,
+                    runtime.normalCookieBehaviorForTesting(),
+                )
+                session.setActive(true)
+            }
+            assertTrue(
+                "Restored cookie navigation did not start",
+                restoreLoadingStarted.await(20, TimeUnit.SECONDS),
+            )
+            assertTrue(
+                "Restored cookie fixture was not requested",
+                requireNotNull(restoreGate).started.await(20, TimeUnit.SECONDS),
+            )
+            InstrumentationRegistry.getInstrumentation().runOnMainSync {
+                session.setActive(false)
+                assertEquals(
+                    ContentBlocking.CookieBehavior.ACCEPT_ALL,
+                    runtime.normalCookieBehaviorForTesting(),
+                )
+            }
+            requireNotNull(restoreGate).release.countDown()
+
+            assertTrue(
+                "Allowed cookie page did not load after session restore",
+                restoredPageLoaded.await(20, TimeUnit.SECONDS),
+            )
+            assertTrue(
+                "Restored cookie navigation did not finish",
+                restoreNavigationFinished.await(20, TimeUnit.SECONDS),
+            )
+            InstrumentationRegistry.getInstrumentation().runOnMainSync {
+                assertEquals(
+                    ContentBlocking.CookieBehavior.ACCEPT_FIRST_PARTY,
+                    runtime.normalCookieBehaviorForTesting(),
+                )
+            }
+        } finally {
+            restoreGate?.release?.countDown()
+            InstrumentationRegistry.getInstrumentation().runOnMainSync {
+                session.releaseView(view)
+                session.setActive(false)
+                session.close()
             }
             server.close()
         }
@@ -467,8 +728,15 @@ class CandyPrivacyHostInstrumentedTest {
     }
 
     private class FixtureServer : AutoCloseable {
+        data class ResponseGate(
+            val started: CountDownLatch = CountDownLatch(1),
+            val release: CountDownLatch = CountDownLatch(1),
+        )
+
         private val socket = ServerSocket(0, 8, InetAddress.getByName("127.0.0.1"))
         private val developerDocumentCount = AtomicInteger()
+        private val slowCookiePageRelease = CountDownLatch(1)
+        private val nextCookiePageGate = AtomicReference<ResponseGate?>()
         val scriptUrl = "http://$TRACKER_HOST:${socket.localPort}/probe.js"
         private val thread = Thread({ serve() }, "gecko-privacy-fixture").apply {
             isDaemon = true
@@ -478,6 +746,14 @@ class CandyPrivacyHostInstrumentedTest {
         fun pageUrl(host: String) = "http://$host:${socket.localPort}/"
 
         fun cookiePageUrl() = "http://$COOKIE_PAGE_HOST:${socket.localPort}/cookie-page"
+
+        fun slowCookiePageUrl() = "http://$COOKIE_PAGE_HOST:${socket.localPort}/slow-cookie-page"
+
+        fun releaseSlowCookiePage() = slowCookiePageRelease.countDown()
+
+        fun blockNextCookiePage(): ResponseGate = ResponseGate().also { gate ->
+            check(nextCookiePageGate.compareAndSet(null, gate))
+        }
 
         fun safeAreaPageUrl() = "http://$COOKIE_PAGE_HOST:${socket.localPort}/safe-area"
 
@@ -503,10 +779,14 @@ class CandyPrivacyHostInstrumentedTest {
                         }
                         val isScript = requestLine.contains(" /probe.js ")
                         val isCookieFrame = requestLine.contains(" /cookie-frame ")
+                        val isSlowCookiePage = requestLine.contains(" /slow-cookie-page ")
+                        val isCookiePage = requestLine.contains(" /cookie-page ")
+                        val responseGate = if (isCookiePage) nextCookiePageGate.getAndSet(null) else null
                         val body = when {
                             isScript -> "document.title='$ALLOWED_TITLE';"
                             isCookieFrame -> cookieFrame()
-                            requestLine.contains(" /cookie-page ") -> cookiePage()
+                            isSlowCookiePage -> cookiePage()
+                            isCookiePage -> cookiePage()
                             requestLine.contains(" /developer-safe-area") ->
                                 developerSafeAreaPage(developerDocumentCount.incrementAndGet())
                             requestLine.contains(" /dynamic-safe-area ") -> dynamicSafeAreaPage()
@@ -521,6 +801,12 @@ class CandyPrivacyHostInstrumentedTest {
                             )
                             write("Content-Length: ${body.size}\r\n".toByteArray())
                             write("Connection: close\r\n\r\n".toByteArray())
+                            flush()
+                            responseGate?.started?.countDown()
+                            responseGate?.release?.await(20, TimeUnit.SECONDS)
+                            if (isSlowCookiePage) {
+                                slowCookiePageRelease.await(20, TimeUnit.SECONDS)
+                            }
                             write(body)
                             flush()
                         }
