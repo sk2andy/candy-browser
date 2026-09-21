@@ -254,6 +254,9 @@ internal class GeckoViewRuntimeHandle private constructor(
         runtime.activityDelegate
 
     @VisibleForTesting
+    fun normalCookieBehaviorForTesting(): Int = runtime.settings.contentBlocking.cookieBehavior
+
+    @VisibleForTesting
     fun ensureBuiltInExtensionFixture(): GeckoResult<WebExtension> =
         runtime.webExtensionController.ensureBuiltIn(
             TEST_EXTENSION_FIXTURE_LOCATION,
@@ -329,7 +332,7 @@ internal class GeckoViewRuntimeHandle private constructor(
 
 /**
  * GeckoView 155 exposes cookie behavior only on the shared runtime. Keep that runtime strict unless
- * the selected session has a confirmed, host-matched compatibility exception.
+ * an active session or queued navigation has a confirmed, host-matched compatibility exception.
  */
 private class GeckoCookieBehaviorCoordinator(
     private val settings: ContentBlocking.Settings,
@@ -854,6 +857,11 @@ private class GeckoViewBrowserSession(
     ),
     openSession: Boolean = true,
 ) : GeckoBrowserSession {
+    private data class CookieNavigationAttempt(
+        val generation: Long,
+        val url: String,
+    )
+
     private data class AutoplayPermissionKey(
         val uri: String,
         val contextId: String?,
@@ -975,6 +983,12 @@ private class GeckoViewBrowserSession(
     private var pendingRestoredSessionState: GeckoSession.SessionState? = null
     private var pendingRestoredHistoryState: GeckoBrowserHistoryState? = null
     private var restoredHistoryPending = false
+    // Gecko's cookie mode is runtime-wide, so the matching host claim must exist before Gecko
+    // starts a queued main-frame load or native restore, even while the Activity is inactive.
+    private var navigationTargetUrl: String? = null
+    private var navigationGeneration = 0L
+    private val pendingNavigationAttempts = ArrayDeque<CookieNavigationAttempt>()
+    private val startedNavigationAttempts = ArrayDeque<CookieNavigationAttempt>()
     private var privacyPolicy = initialPrivacyPolicy
     private var currentPageUrl: String? = null
     private var trackingPermission: GeckoSession.PermissionDelegate.ContentPermission? = null
@@ -1076,6 +1090,7 @@ private class GeckoViewBrowserSession(
                 error: WebRequestError,
             ): GeckoResult<String>? {
                 invalidateDomProbe()
+                uri?.let(::finishFailedNavigation)
                 updateState { current ->
                     current.copy(
                         failureDescription = GECKO_NAVIGATION_FAILURE,
@@ -1115,15 +1130,13 @@ private class GeckoViewBrowserSession(
                 ) ?: GeckoNavigationRequestDecision.Allow
                 return when (decision) {
                     GeckoNavigationRequestDecision.Allow -> {
-                        cookieBehavior.update(
-                            owner = cookieBehaviorOwner,
-                            active = active,
-                            allow = privacyPolicy.allowsThirdPartyCookiesForPage(request.uri),
-                            privateMode = isPrivate,
-                        )
+                        ensureNavigation(request.uri)
                         GeckoResult.allow()
                     }
-                    GeckoNavigationRequestDecision.Deny -> GeckoResult.deny()
+                    GeckoNavigationRequestDecision.Deny -> {
+                        finishNavigation(request.uri)
+                        GeckoResult.deny()
+                    }
                 }
             }
 
@@ -1147,12 +1160,7 @@ private class GeckoViewBrowserSession(
                 if (privacyHost.isBootstrapNavigation(session, url)) return
                 invalidateDomProbe()
                 currentPageUrl = url
-                val cookieBehaviorChanged = cookieBehavior.update(
-                    owner = cookieBehaviorOwner,
-                    active = active,
-                    allow = privacyPolicy.allowsThirdPartyCookiesForPage(url),
-                    privateMode = isPrivate,
-                )
+                val cookieBehaviorChanged = reconcileCookieBehavior()
                 if (autoplayLocationUrl != url) {
                     autoplayLocationUrl = url
                     appliedAutoplayValues.clear()
@@ -1174,14 +1182,14 @@ private class GeckoViewBrowserSession(
                         permission = permission,
                         allow = privacyPolicy.allowsThirdPartyCookiesForSite(permission),
                         reloadOwnerOnChange = !cookieBehaviorChanged,
-                        reload = session::reload,
+                        reload = ::reloadCurrentPage,
                     )
                 }
                 updateState { current -> current.copy(url = url) }
                 if (autoplayPermissionChanged) {
                     beginAutoplayPermissionSync(url)
                 } else if (cookieBehaviorChanged) {
-                    session.reload()
+                    reloadCurrentPage()
                 }
             }
 
@@ -1785,6 +1793,8 @@ private class GeckoViewBrowserSession(
         session.progressDelegate = object : GeckoSession.ProgressDelegate {
             override fun onPageStart(session: GeckoSession, url: String) {
                 if (privacyHost.isBootstrapNavigation(session, url)) return
+                if (navigationTargetUrl == null) beginNavigation(url)
+                markNavigationStarted(url)
                 invalidateDomProbe()
                 currentPageUrl = url
                 invalidateCredentialPrompts(recreateHost = true)
@@ -1818,6 +1828,7 @@ private class GeckoViewBrowserSession(
                 updateState { current -> current.copy(progress = progress.coerceIn(0, 100)) }
 
             override fun onPageStop(session: GeckoSession, success: Boolean) {
+                finishStartedNavigation()
                 updateState { current ->
                     current.copy(
                         isLoading = false,
@@ -2254,7 +2265,7 @@ private class GeckoViewBrowserSession(
         // permission observer. Give it one bounded propagation turn before creating a new document.
         mainHandler.postDelayed(
             {
-                if (isCurrentAutoplayPolicy(revision, blocked, currentUrl)) session.reload()
+                if (isCurrentAutoplayPolicy(revision, blocked, currentUrl)) reloadCurrentPage()
             },
             GeckoAutoplayPermissionSyncRules.PROPAGATION_DELAY_MILLIS,
         )
@@ -2460,13 +2471,8 @@ private class GeckoViewBrowserSession(
         }
         invalidateCredentialPrompts(recreateHost = active)
         if (active) extensionRuntime.onSelectedChromeSessionChanged()
-        val cookieBehaviorChanged = cookieBehavior.update(
-            owner = cookieBehaviorOwner,
-            active = active,
-            allow = privacyPolicy.allowsThirdPartyCookiesForPage(currentPageUrl),
-            privateMode = isPrivate,
-        )
-        if (cookieBehaviorChanged && active && currentPageUrl != null) session.reload()
+        val cookieBehaviorChanged = reconcileCookieBehavior()
+        if (cookieBehaviorChanged && active && currentPageUrl != null) reloadCurrentPage()
     }
 
     @UiThread
@@ -2708,6 +2714,7 @@ private class GeckoViewBrowserSession(
         latestSessionState = GeckoSession.SessionState(restored)
         pendingRestoredSessionState = restored
         pendingRestoredHistoryState = restored.toBrowserHistoryState()
+        pendingRestoredHistoryState?.currentUrl()?.let(::beginNavigation)
         restorePendingStateIfReady()
         return true
     }
@@ -2722,6 +2729,7 @@ private class GeckoViewBrowserSession(
         if (closed) return false
         val safeUrl = BrowserUriPolicy.normalizeHttpUrl(url) ?: return false
         invalidateCredentialPrompts(recreateHost = false)
+        beginNavigation(safeUrl)
         if (
             toppingHost.state != GeckoToppingHostState.Initializing &&
             trackingPermissions.isReady &&
@@ -2747,6 +2755,7 @@ private class GeckoViewBrowserSession(
         }
         pendingInitialUrl = null
         pendingFailedPageRetryUrl = safeUrl
+        beginNavigation(safeUrl)
         if (!runPendingFailedPageRetryIfReady()) awaitNavigationReadiness()
         return true
     }
@@ -2771,6 +2780,7 @@ private class GeckoViewBrowserSession(
             failPrivacyGate(description)
             return true
         }
+        beginNavigation(safeUrl)
         if (
             toppingHost.state != GeckoToppingHostState.Initializing &&
             trackingPermissions.isReady &&
@@ -2812,24 +2822,20 @@ private class GeckoViewBrowserSession(
     ) {
         mediaRestorationReadback.cancel()
         privacyPolicy = policy
-        val cookieBehaviorChanged = cookieBehavior.update(
-            owner = cookieBehaviorOwner,
-            active = active,
-            allow = policy.allowsThirdPartyCookiesForPage(currentPageUrl),
-            privateMode = isPrivate,
-        )
+        val cookieBehaviorChanged = reconcileCookieBehavior()
         trackingPermissions.updateClaim(
             owner = trackingPermissionOwner,
             allow = trackingPermission?.let(policy::allowsThirdPartyCookiesForSite) == true,
             reloadOwnerOnChange = reloadOnCookiePermissionChange && !cookieBehaviorChanged,
         )
-        if (cookieBehaviorChanged && reloadOnCookiePermissionChange) session.reload()
+        if (cookieBehaviorChanged && reloadOnCookiePermissionChange) reloadCurrentPage()
         privacyBinding.update(policy, onReady)
     }
 
     override fun goBack() {
         if (!closed && privacyBound && state.canGoBack) {
             invalidateCredentialPrompts(recreateHost = false)
+            historyUrlAtOffset(-1)?.let(::beginNavigation)
             session.goBack()
         }
     }
@@ -2837,6 +2843,7 @@ private class GeckoViewBrowserSession(
     override fun goForward() {
         if (!closed && privacyBound && state.canGoForward) {
             invalidateCredentialPrompts(recreateHost = false)
+            historyUrlAtOffset(1)?.let(::beginNavigation)
             session.goForward()
         }
     }
@@ -2844,6 +2851,7 @@ private class GeckoViewBrowserSession(
     override fun goToHistoryIndex(index: Int) {
         if (!closed && privacyBound && index >= 0) {
             invalidateCredentialPrompts(recreateHost = false)
+            historyState?.urls?.getOrNull(index)?.let(::beginNavigation)
             session.gotoHistoryIndex(index)
         }
     }
@@ -2857,13 +2865,18 @@ private class GeckoViewBrowserSession(
     override fun reload() {
         if (!closed && privacyBound) {
             invalidateCredentialPrompts(recreateHost = false)
-            session.reload()
+            reloadCurrentPage()
         }
     }
 
     override fun stop() {
         if (!closed) {
+            pendingInitialUrl = null
             pendingFailedPageRetryUrl = null
+            pendingRestoredSessionState = null
+            pendingRestoredHistoryState = null
+            restoredHistoryPending = false
+            finishNavigation()
             invalidateCredentialPrompts(recreateHost = true)
             session.stop()
         }
@@ -2909,6 +2922,9 @@ private class GeckoViewBrowserSession(
         pendingFailedPageRetryUrl = null
         pendingRestoredHistoryState = null
         restoredHistoryPending = false
+        navigationTargetUrl = null
+        pendingNavigationAttempts.clear()
+        startedNavigationAttempts.clear()
         cookieBehavior.remove(cookieBehaviorOwner)
         trackingPermissions.remove(trackingPermissionOwner)
         toppingBinding.close()
@@ -2931,6 +2947,7 @@ private class GeckoViewBrowserSession(
         if (runPendingFailedPageRetryIfReady() || pendingFailedPageRetryUrl != null) return
         val pendingUrl = pendingInitialUrl ?: return
         pendingInitialUrl = null
+        ensureNavigation(pendingUrl)
         session.loadUri(pendingUrl)
     }
 
@@ -2939,6 +2956,7 @@ private class GeckoViewBrowserSession(
         val restored = pendingRestoredSessionState ?: return false
         pendingRestoredSessionState = null
         restoredHistoryPending = true
+        pendingRestoredHistoryState?.currentUrl()?.let(::ensureNavigation)
         session.restoreState(restored)
         return true
     }
@@ -2954,6 +2972,7 @@ private class GeckoViewBrowserSession(
         ) return false
         val retryUrl = pendingFailedPageRetryUrl ?: return false
         pendingFailedPageRetryUrl = null
+        ensureNavigation(retryUrl)
         val currentIndex = historyState?.currentIndex
         val currentUrl = currentIndex?.let { index -> historyState?.urls?.getOrNull(index) }
         if (BrowserUriPolicy.normalizeHttpUrl(currentUrl) == retryUrl) {
@@ -2963,6 +2982,92 @@ private class GeckoViewBrowserSession(
         }
         return true
     }
+
+    private fun beginNavigation(url: String) {
+        prepareNavigation(url, forceNewGeneration = true)
+    }
+
+    private fun ensureNavigation(url: String) {
+        prepareNavigation(url, forceNewGeneration = false)
+    }
+
+    private fun prepareNavigation(url: String, forceNewGeneration: Boolean) {
+        if (closed) return
+        if (forceNewGeneration || !sameNavigationUrl(navigationTargetUrl, url)) {
+            navigationGeneration += 1
+            navigationTargetUrl = url
+            pendingNavigationAttempts.addLast(
+                CookieNavigationAttempt(generation = navigationGeneration, url = url),
+            )
+        }
+        reconcileCookieBehavior(url)
+    }
+
+    private fun finishNavigation(expectedUrl: String? = null) {
+        if (expectedUrl != null && !sameNavigationUrl(navigationTargetUrl, expectedUrl)) return
+        navigationTargetUrl = null
+        pendingNavigationAttempts.clear()
+        startedNavigationAttempts.clear()
+        reconcileCookieBehavior()
+    }
+
+    private fun markNavigationStarted(url: String) {
+        val pendingIndex = pendingNavigationAttempts.indexOfFirst { attempt ->
+            sameNavigationUrl(attempt.url, url)
+        }
+        if (pendingIndex < 0) return
+        startedNavigationAttempts.addLast(pendingNavigationAttempts.removeAt(pendingIndex))
+    }
+
+    private fun finishStartedNavigation() {
+        val finishedAttempt = startedNavigationAttempts.removeFirstOrNull() ?: return
+        if (finishedAttempt.generation == navigationGeneration) finishNavigation()
+    }
+
+    private fun finishFailedNavigation(url: String) {
+        val startedIndex = startedNavigationAttempts.indexOfFirst { attempt ->
+            sameNavigationUrl(attempt.url, url)
+        }
+        val failedAttempt = if (startedIndex >= 0) {
+            startedNavigationAttempts.removeAt(startedIndex)
+        } else {
+            val pendingIndex = pendingNavigationAttempts.indexOfFirst { attempt ->
+                sameNavigationUrl(attempt.url, url)
+            }
+            if (pendingIndex >= 0) pendingNavigationAttempts.removeAt(pendingIndex) else null
+        }
+        if (failedAttempt?.generation == navigationGeneration) finishNavigation()
+    }
+
+    private fun reloadCurrentPage() {
+        currentPageUrl?.let(::beginNavigation)
+        session.reload()
+    }
+
+    private fun sameNavigationUrl(first: String?, second: String?): Boolean {
+        if (first == null || second == null) return first == second
+        val normalizedFirst = BrowserUriPolicy.normalizeHttpUrl(first)
+        val normalizedSecond = BrowserUriPolicy.normalizeHttpUrl(second)
+        return if (normalizedFirst != null && normalizedSecond != null) {
+            normalizedFirst == normalizedSecond
+        } else {
+            first == second
+        }
+    }
+
+    private fun reconcileCookieBehavior(
+        targetUrl: String? = navigationTargetUrl ?: currentPageUrl,
+    ): Boolean {
+        if (closed) return false
+        return cookieBehavior.update(
+            owner = cookieBehaviorOwner,
+            active = active || navigationTargetUrl != null,
+            allow = privacyPolicy.allowsThirdPartyCookiesForPage(targetUrl),
+            privateMode = isPrivate,
+        )
+    }
+
+    private fun GeckoBrowserHistoryState.currentUrl(): String? = urls.getOrNull(currentIndex)
 
     private fun GeckoSession.HistoryDelegate.HistoryList.toBrowserHistoryState(): GeckoBrowserHistoryState {
         val selectedIndex = currentIndex
@@ -3018,8 +3123,13 @@ private class GeckoViewBrowserSession(
         privacyFailureDescription = description
         pendingInitialUrl = null
         pendingFailedPageRetryUrl = null
+        pendingRestoredSessionState = null
         pendingRestoredHistoryState = null
         restoredHistoryPending = false
+        navigationTargetUrl = null
+        pendingNavigationAttempts.clear()
+        startedNavigationAttempts.clear()
+        cookieBehavior.remove(cookieBehaviorOwner)
         session.stop()
         updateState { current -> current.copy(isLoading = true, lastNavigationSucceeded = null) }
         updateState { current ->
@@ -3041,6 +3151,15 @@ private class GeckoViewBrowserSession(
 
     private fun onContentProcessTerminated() {
         invalidateDomProbe()
+        pendingInitialUrl = null
+        pendingFailedPageRetryUrl = null
+        pendingRestoredSessionState = null
+        pendingRestoredHistoryState = null
+        restoredHistoryPending = false
+        navigationTargetUrl = null
+        pendingNavigationAttempts.clear()
+        startedNavigationAttempts.clear()
+        cookieBehavior.remove(cookieBehaviorOwner)
         updateState { current ->
             current.copy(
                 isLoading = false,
