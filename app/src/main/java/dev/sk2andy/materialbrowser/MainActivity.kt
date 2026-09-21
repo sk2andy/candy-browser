@@ -60,6 +60,8 @@ import dev.sk2andy.materialbrowser.browser.BrowserHardwareKey
 import dev.sk2andy.materialbrowser.browser.BrowserHardwareKeyStroke
 import dev.sk2andy.materialbrowser.browser.BrowserInputDiagnostics
 import dev.sk2andy.materialbrowser.browser.BrowserMediaSystemSession
+import dev.sk2andy.materialbrowser.browser.BrowserMediaPlaybackService
+import dev.sk2andy.materialbrowser.browser.BrowserMediaLifecycleTrace
 import dev.sk2andy.materialbrowser.browser.BrowserMouseButton
 import dev.sk2andy.materialbrowser.browser.FullscreenVideoRules
 import dev.sk2andy.materialbrowser.browser.ProfileBiometricAuthenticator
@@ -261,6 +263,7 @@ class MainActivity : AppCompatActivity() {
             val lockToken = AppDataTransferLock.activate(this, Process.myPid())
             if (lockToken != null) {
                 appDataTransferActive = true
+                BrowserMediaPlaybackService.clearForAppDataTransfer(applicationContext)
                 val started = runCatching {
                     startActivity(
                         AppDataTransferContract.recoveryIntent(
@@ -369,7 +372,31 @@ class MainActivity : AppCompatActivity() {
                 if (!activityDestroyed) {
                     ensureMediaControllers()
                     if (::browserMediaSystemSession.isInitialized) {
-                        browserMediaSystemSession.publish(browserController.systemMediaState)
+                        val publication = browserController.media3Publication(
+                            traceSource = "MainActivity.onMediaStateChanged",
+                        )
+                        if (browserController.consumeMedia3PictureInPictureRestore()) {
+                            BrowserMediaLifecycleTrace.record(
+                                source = "MainActivity.onMediaStateChanged",
+                                action = "effect:restore-picture-in-picture",
+                                publication = publication,
+                            )
+                            browserMediaSystemSession.restoreAfterPictureInPicture(publication)
+                        } else if (browserController.consumeMedia3NavigationReplace()) {
+                            BrowserMediaLifecycleTrace.record(
+                                source = "MainActivity.onMediaStateChanged",
+                                action = "effect:replace-navigation",
+                                publication = publication,
+                            )
+                            browserMediaSystemSession.replacePublication(publication)
+                        } else {
+                            BrowserMediaLifecycleTrace.record(
+                                source = "MainActivity.onMediaStateChanged",
+                                action = "effect:publish",
+                                publication = publication,
+                            )
+                            browserMediaSystemSession.publish(publication)
+                        }
                     }
                     if (::castSessionController.isInitialized) {
                         castSessionController.updateCandidate(browserController.castMediaCandidate)
@@ -1177,6 +1204,9 @@ class MainActivity : AppCompatActivity() {
         if (::pictureInPictureController.isInitialized) pictureInPictureController.onDestroy()
         if (::castSessionController.isInitialized) castSessionController.release()
         ProcessLifecycleOwner.get().lifecycle.removeObserver(profileProcessLifecycleObserver)
+        if (!isChangingConfigurations && ::browserMediaSystemSession.isInitialized) {
+            browserMediaSystemSession.stopAndClear()
+        }
         if (::browserController.isInitialized) {
             browserController.destroy(lockClosedProfiles = !isChangingConfigurations)
         }
@@ -1263,6 +1293,11 @@ class MainActivity : AppCompatActivity() {
             return
         }
         appDataTransferActive = true
+        if (::browserMediaSystemSession.isInitialized) {
+            browserMediaSystemSession.clearForAppDataTransfer()
+        } else {
+            BrowserMediaPlaybackService.clearForAppDataTransfer(applicationContext)
+        }
         val preparing = runCatching {
             browserController.prepareForAppDataTransfer { ready ->
                 val canStartNow = ready && canStart()
@@ -1641,10 +1676,8 @@ class MainActivity : AppCompatActivity() {
         if (!::browserMediaSystemSession.isInitialized) {
             browserMediaSystemSession = BrowserMediaSystemSession(
                 context = this,
-                onPlay = browserController::playActiveMedia,
-                onPause = browserController::pauseActiveMedia,
-                onStop = browserController::stopActiveMedia,
-                onSeekTo = browserController::seekActiveMedia,
+                onCommand = browserController::executeMedia3Command,
+                mayStartService = { browserController.mayStartMedia3Service },
             )
         }
     }

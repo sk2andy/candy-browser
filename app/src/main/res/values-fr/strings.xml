@@ -519,6 +519,8 @@
     <string name="action_candy_player_play">Lire</string>
     <string name="action_candy_player_pause">Mettre en pause</string>
     <string name="action_candy_player_seek">Position de lecture</string>
+    <string name="action_candy_player_show_controls">Afficher les commandes</string>
+    <string name="action_candy_player_hide_controls">Masquer les commandes</string>
     <string name="settings_default_browser">Navigateur par défaut</string>
     <string name="settings_default_browser_active">Candy Browser est votre navigateur par défaut</string>
     <string name="settings_make_default_browser">Définir Candy Browser comme navigateur par défaut</string>

@@ -109,5 +109,11 @@ internal object GeckoPictureInPictureRules {
 internal object GeckoMediaSessionRules {
     fun activatedState(): GeckoMediaSessionState = GeckoMediaSessionState(isActive = true)
 
+    /** A delegate deactivation is a paused handoff, not proof that media ended. */
+    fun deactivatedState(current: GeckoMediaSessionState): GeckoMediaSessionState =
+        current.takeIf(GeckoMediaSessionState::isActive)
+            ?.copy(isPlaying = false)
+            ?: stoppedState()
+
     fun stoppedState(): GeckoMediaSessionState = GeckoMediaSessionState()
 }

@@ -519,6 +519,8 @@
     <string name="action_candy_player_play">Reproducir</string>
     <string name="action_candy_player_pause">Pausar</string>
     <string name="action_candy_player_seek">Posición de reproducción</string>
+    <string name="action_candy_player_show_controls">Mostrar controles</string>
+    <string name="action_candy_player_hide_controls">Ocultar controles</string>
     <string name="settings_default_browser">Navegador predeterminado</string>
     <string name="settings_default_browser_active">Candy Browser es tu navegador predeterminado</string>
     <string name="settings_make_default_browser">Establecer Candy Browser como navegador predeterminado</string>
