@@ -65,7 +65,8 @@ final class WKWebViewBrowserSessionAdapter: NSObject, @preconcurrency BrowserEng
         ToppingRuntime.shared.attach(
             configuration.userContentController,
             tabId: tabId,
-            isPrivate: isPrivate
+            sessionKind: isPrivate ? .privateBrowsing :
+                (isSessionEphemeral ? .preview : .regular)
         )
         webView = WKWebView(frame: .zero, configuration: configuration)
 
@@ -283,7 +284,6 @@ extension WKWebViewBrowserSessionAdapter: WKNavigationDelegate {
         didStartProvisionalNavigation navigation: WKNavigation?
     ) {
         activeNavigation = navigation
-        ToppingRuntime.shared.navigationStarted(tabId: tabId)
         emit(type: .navigationstarted)
     }
 
@@ -291,6 +291,7 @@ extension WKWebViewBrowserSessionAdapter: WKNavigationDelegate {
         guard navigation === activeNavigation else {
             return
         }
+        ToppingRuntime.shared.navigationStarted(tabId: tabId)
         emit(type: .statechanged)
     }
 
@@ -332,6 +333,7 @@ extension WKWebViewBrowserSessionAdapter: WKNavigationDelegate {
     }
 
     func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
+        ToppingRuntime.shared.navigationStarted(tabId: tabId)
         emit(
             type: .crashed,
             failureDescription: "Der Web-Inhaltsprozess wurde beendet."

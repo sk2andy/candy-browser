@@ -8,6 +8,7 @@ import android.graphics.Rect
 import android.os.Build
 import android.util.Rational
 import android.view.View
+import androidx.core.view.ViewCompat
 import dev.sk2andy.materialbrowser.browser.BrowserController
 import dev.sk2andy.materialbrowser.browser.FullscreenVideoAspectRatio
 import dev.sk2andy.materialbrowser.browser.FullscreenVideoBounds
@@ -18,6 +19,7 @@ internal class MainActivityPictureInPictureController(
     private val browserController: BrowserController,
     private val isVideoOnlyPresentation: () -> Boolean,
     private val setVideoOnlyPresentation: (Boolean) -> Unit,
+    private val setReturnRestorationPending: (Boolean) -> Unit,
     private val applyBrowserSystemUi: () -> Unit,
 ) {
     private var fullscreenVideoBounds: Rect? = null
@@ -25,34 +27,77 @@ internal class MainActivityPictureInPictureController(
     private var appliedState: AppliedPictureInPictureState? = null
     private var returnLayoutListener: View.OnLayoutChangeListener? = null
     private var returnInProgress = false
+    private var returnRestorationPending = false
+    private var returnRestorationGeneration = 0
     private var startedFullscreen = false
     private var modeEntered = false
+    private var entryRequestGeneration = 0
 
-    fun requestPictureInPicture(): Boolean {
+    fun requestPictureInPicture(immediate: Boolean = false): Boolean {
         if (!canEnterPictureInPicture()) return false
+        if (immediate) {
+            prepareForTransition()
+            appliedState = null
+            val entered = runCatching {
+                activity.enterPictureInPictureMode(
+                    buildParams(
+                        autoEnterEnabled = false,
+                        sourceRectHint = eligibleSourceRect(true),
+                    ),
+                )
+            }.getOrDefault(false)
+            if (!entered) cancelTransition()
+            return entered
+        }
+        val requestGeneration = ++entryRequestGeneration
+        prepareForTransition { preparedBounds ->
+            if (
+                requestGeneration != entryRequestGeneration ||
+                activity.isInPictureInPictureMode
+            ) {
+                return@prepareForTransition
+            }
+            if (preparedBounds == null || !canEnterPictureInPicture()) {
+                cancelTransition()
+                return@prepareForTransition
+            }
+            sourceRectHint = preparedBounds.toAndroidRect()
+            updateParams()
+            appliedState = null
+            val entered = runCatching {
+                activity.enterPictureInPictureMode(
+                    buildParams(
+                        autoEnterEnabled = false,
+                        sourceRectHint = eligibleSourceRect(true),
+                    ),
+                )
+            }.getOrDefault(false)
+            if (!entered) cancelTransition()
+        }
+        return true
+    }
+
+    fun prepareAutomaticEntry(): Boolean {
+        if (!canEnterPictureInPicture() || !supportsPreparedAutoEnter()) return false
         prepareForTransition()
-        val entered = activity.enterPictureInPictureMode(
-            buildParams(
-                autoEnterEnabled = false,
-                sourceRectHint = eligibleSourceRect(true),
-            ),
-        )
-        if (!entered) cancelTransition()
-        return entered
+        return true
     }
 
     fun onModeChanged(isInPictureInPictureMode: Boolean, newConfig: Configuration) {
         if (isInPictureInPictureMode) {
+            returnRestorationGeneration++
+            returnRestorationPending = false
+            setReturnRestorationPending(false)
             modeEntered = true
             setVideoOnlyPresentation(true)
+        } else {
+            setReturnRestorationPending(true)
         }
         browserController.onPictureInPictureModeChanged(isInPictureInPictureMode)
         if (isInPictureInPictureMode) {
             returnInProgress = false
             cancelReturnLayoutWait()
-            if (startedFullscreen) {
-                sourceRectHint = null
-            }
+            sourceRectHint = null
         } else {
             returnInProgress = true
             completeReturnAfterLayout(newConfig)
@@ -71,13 +116,15 @@ internal class MainActivityPictureInPictureController(
     }
 
     fun onConfigurationChanged() {
-        if (activity.isInPictureInPictureMode && startedFullscreen) {
+        if (activity.isInPictureInPictureMode) {
             sourceRectHint = null
             updateParams()
         }
     }
 
     fun onDestroy() {
+        entryRequestGeneration++
+        returnRestorationGeneration++
         cancelReturnLayoutWait()
     }
 
@@ -90,26 +137,50 @@ internal class MainActivityPictureInPictureController(
         updateParams()
     }
 
-    fun prepareForTransition() {
-        if (!canEnterPictureInPicture()) return
+    fun prepareForTransition(
+        onPrepared: ((FullscreenVideoBounds?) -> Unit)? = null,
+    ) {
+        if (!canEnterPictureInPicture()) {
+            onPrepared?.invoke(null)
+            return
+        }
+        returnRestorationGeneration++
+        returnRestorationPending = false
+        setReturnRestorationPending(false)
         if (!isVideoOnlyPresentation()) {
             startedFullscreen = isCurrentWindowFullscreen()
-            sourceRectHint = currentSourceRect()
+            sourceRectHint = if (onPrepared == null) currentSourceRect() else null
         }
         setVideoOnlyPresentation(true)
-        browserController.prepareForPictureInPicture()
+        browserController.prepareForPictureInPicture(onPrepared)
         updateParams()
     }
 
     fun cancelTransition() {
+        entryRequestGeneration++
+        val restorationGeneration = ++returnRestorationGeneration
+        returnRestorationPending = true
         returnInProgress = false
         startedFullscreen = false
         modeEntered = false
         cancelReturnLayoutWait()
         setVideoOnlyPresentation(false)
+        setReturnRestorationPending(true)
+        applyBrowserSystemUi()
+        ViewCompat.requestApplyInsets(activity.window.decorView)
         sourceRectHint = null
-        browserController.cancelPictureInPictureTransition()
-        updateParams()
+        browserController.cancelPictureInPictureTransition {
+            if (
+                restorationGeneration != returnRestorationGeneration ||
+                activity.isInPictureInPictureMode
+            ) {
+                return@cancelPictureInPictureTransition
+            }
+            returnRestorationPending = false
+            setReturnRestorationPending(false)
+            applyBrowserSystemUi()
+            updateParams()
+        }
     }
 
     fun reconcileStateOnResume() {
@@ -124,10 +195,21 @@ internal class MainActivityPictureInPictureController(
     }
 
     fun updateParams() {
-        if (!supportsPictureInPicture()) return
+        if (
+            !supportsPictureInPicture() ||
+            activity.isInPictureInPictureMode ||
+            returnInProgress
+        ) {
+            return
+        }
         val pictureInPictureEligible = canEnterPictureInPicture()
-        val autoEnterEnabled = pictureInPictureEligible && supportsPreparedAutoEnter()
-        val nextSourceRectHint = eligibleSourceRect(pictureInPictureEligible)
+        val autoEnterEnabled = FullscreenVideoRules.enablesPreparedAutoEnter(
+            isEligible = pictureInPictureEligible,
+            isInPictureInPicture = activity.isInPictureInPictureMode,
+            returnInProgress = returnInProgress,
+            sdkInt = Build.VERSION.SDK_INT,
+        )
+        val nextSourceRectHint = eligibleSourceRect(autoEnterEnabled)
         val nextState = AppliedPictureInPictureState(
             autoEnterEnabled = autoEnterEnabled,
             sourceRectHint = nextSourceRectHint,
@@ -195,14 +277,30 @@ internal class MainActivityPictureInPictureController(
     }
 
     private fun finishReturn() {
-        returnInProgress = false
-        startedFullscreen = false
-        modeEntered = false
-        setVideoOnlyPresentation(false)
+        if (!returnInProgress || returnRestorationPending) return
+        returnRestorationPending = true
+        val restorationGeneration = ++returnRestorationGeneration
         sourceRectHint = null
-        browserController.completePictureInPictureReturn()
+        setVideoOnlyPresentation(false)
+        setReturnRestorationPending(true)
         applyBrowserSystemUi()
-        updateParams()
+        ViewCompat.requestApplyInsets(activity.window.decorView)
+        browserController.completePictureInPictureReturn {
+            if (
+                restorationGeneration != returnRestorationGeneration ||
+                activity.isInPictureInPictureMode ||
+                !returnRestorationPending
+            ) {
+                return@completePictureInPictureReturn
+            }
+            returnRestorationPending = false
+            returnInProgress = false
+            startedFullscreen = false
+            modeEntered = false
+            setReturnRestorationPending(false)
+            applyBrowserSystemUi()
+            updateParams()
+        }
     }
 
     private fun buildParams(
@@ -260,6 +358,8 @@ internal class MainActivityPictureInPictureController(
             sourceBounds.bottom,
         )
     }
+
+    private fun FullscreenVideoBounds.toAndroidRect(): Rect = Rect(left, top, right, bottom)
 
     private fun isCurrentWindowFullscreen(): Boolean {
         val visibleBounds = Rect()

@@ -2,7 +2,11 @@ package dev.sk2andy.materialbrowser.ui
 
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
+import androidx.compose.animation.core.FiniteAnimationSpec
 import androidx.compose.material3.Icon
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MotionScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -182,6 +186,24 @@ private class AndroidBrowserMainMenuEffects(
         role: BrowserMainMenuContainerRole,
     ): Color =
         browserChromeColor(color, frostedAlpha)
+
+    @OptIn(ExperimentalMaterial3ExpressiveApi::class)
+    @Composable
+    override fun spatialAnimationSpec(expanding: Boolean): FiniteAnimationSpec<Float> =
+        if (expanding) {
+            MotionScheme.expressive().slowSpatialSpec()
+        } else {
+            MaterialTheme.motionScheme.fastSpatialSpec()
+        }
+
+    @OptIn(ExperimentalMaterial3ExpressiveApi::class)
+    @Composable
+    override fun effectsAnimationSpec(expanding: Boolean): FiniteAnimationSpec<Float> =
+        if (expanding) {
+            MotionScheme.expressive().defaultEffectsSpec()
+        } else {
+            MaterialTheme.motionScheme.fastEffectsSpec()
+        }
 
     override fun popupState(expanded: Boolean, visible: Boolean) {
         BrowserInputDiagnostics.popupState(expanded, visible)
@@ -381,7 +403,8 @@ internal fun BrowserMainMenu(
                 BrowserFeatureMenuAction.InvokeToppingCommand -> {
                     userScriptMenuCommands.firstOrNull { command ->
                         command.scriptId == item.toppingScriptId &&
-                            command.commandId == item.toppingCommandId
+                            command.commandId == item.toppingCommandId &&
+                            command.documentId == item.toppingDocumentId
                     }?.let(onUserScriptMenuCommand)
                 }
             }
@@ -409,6 +432,7 @@ private fun UserScriptMenuCommand.sharedMenuCommand() = BrowserToppingMenuComman
     commandId = commandId,
     caption = caption,
     scriptName = scriptName,
+    documentId = documentId,
 )
 
 @StringRes

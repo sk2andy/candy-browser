@@ -2,13 +2,16 @@ package dev.sk2andy.materialbrowser.browser.gecko
 
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.os.SystemClock
 import android.view.InputDevice
 import android.view.MotionEvent
+import android.view.RoundedRectBlurRegion
 import android.view.SurfaceView
 import android.view.TextureView
 import android.view.View
 import android.view.ViewGroup
+import androidx.annotation.RequiresApi
 import androidx.core.graphics.Insets
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
@@ -18,6 +21,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import dev.sk2andy.materialbrowser.BuildConfig
 import dev.sk2andy.materialbrowser.MainActivity
+import dev.sk2andy.materialbrowser.browser.BrowserBackdropBlurRules
 import dev.sk2andy.materialbrowser.browser.BrowserTab
 import dev.sk2andy.materialbrowser.browser.EdgeToEdgeSiteFixtureServer
 import dev.sk2andy.materialbrowser.browser.EdgeToEdgeSiteMatrix
@@ -26,7 +30,6 @@ import dev.sk2andy.materialbrowser.data.BrowserSessionStore
 import dev.sk2andy.materialbrowser.data.BrowserSurfaceStyle
 import dev.sk2andy.materialbrowser.data.GestureOnboardingStore
 import dev.sk2andy.materialbrowser.data.ReleaseNotesStore
-import eightbitlab.com.blurview.BlurTarget
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -118,7 +121,7 @@ class GeckoEdgeToEdgeInstrumentedTest {
     }
 
     @Test
-    fun frostedGeckoSwitchesToCaptureCompatibleTextureViewAcrossNavigationBar() {
+    fun frostedGeckoKeepsDirectSurfaceViewAcrossNavigationBar() {
         val fixtureTitle = "Gecko backdrop fixture"
         EdgeToEdgeSiteFixtureServer {
             """
@@ -169,29 +172,66 @@ class GeckoEdgeToEdgeInstrumentedTest {
                             .build(),
                     )
                 }
-                awaitViewReady(scenario, expectBackdropCapture = true)
+                awaitViewReady(scenario)
                 instrumentation.waitForIdleSync()
+                val nativeBlurRegion = if (Build.VERSION.SDK_INT >= 37) {
+                    awaitNativeBlurRegion(scenario)
+                } else {
+                    null
+                }
 
                 scenario.onActivity { activity ->
-                    val view = requireNotNull(
-                        activity.browserControllerForTesting().selectedGeckoViewForTesting(),
-                    )
-                    val textureView = requireNotNull(view.findTextureView())
+                    val controller = activity.browserControllerForTesting()
+                    val view = requireNotNull(controller.selectedGeckoViewForTesting())
                     assertTrue(
-                        "Frosted GeckoView must provide page pixels to its live blur target",
-                        view.parent is BlurTarget,
+                        "Frosted GeckoView must not use a full-screen backdrop target",
+                        view.parent !is eightbitlab.com.blurview.BlurTarget,
                     )
                     assertTrue(
-                        "Frosted GeckoView must avoid a separate compositor surface",
-                        !view.hasSurfaceView(),
+                        "Frosted GeckoView must keep the direct compositor surface",
+                        view.hasSurfaceView(),
                     )
-                    assertWindowTop(textureView, expectedTop = 0)
-                    assertWindowBottom(textureView, expectedBottom = activity.window.decorView.height)
+                    assertTrue(
+                        "Frosted GeckoView must never fall back to TextureView",
+                        view.findTextureView() == null,
+                    )
+                    val surfaceView = requireNotNull(view.findSurfaceView())
+                    assertWindowTop(surfaceView, expectedTop = 0)
+                    assertWindowBottom(surfaceView, expectedBottom = activity.window.decorView.height)
+                    if (Build.VERSION.SDK_INT >= 37) {
+                        val region = requireNotNull(nativeBlurRegion)
+                        val requestedRegion = requireNotNull(
+                            controller.selectedBrowserBackdropBlurRegionForTesting(),
+                        )
+                        val locationInWindow = IntArray(2)
+                        surfaceView.getLocationInWindow(locationInWindow)
+                        val expectedRegion = requireNotNull(
+                            BrowserBackdropBlurRules.regionInSurface(
+                                region = requestedRegion,
+                                surfaceLeftInWindowPx = locationInWindow[0],
+                                surfaceTopInWindowPx = locationInWindow[1],
+                                surfaceWidthPx = surfaceView.width,
+                                surfaceHeightPx = surfaceView.height,
+                            ),
+                        )
+                        assertEquals(expectedRegion.leftPx, region.bounds.left, 0.01f)
+                        assertEquals(expectedRegion.topPx, region.bounds.top, 0.01f)
+                        assertEquals(expectedRegion.rightPx, region.bounds.right, 0.01f)
+                        assertEquals(expectedRegion.bottomPx, region.bounds.bottom, 0.01f)
+                        assertEquals(expectedRegion.cornerRadiusPx, region.cornerRadii[0], 0.01f)
+                        assertEquals(expectedRegion.blurRadiusPx, region.blurRadius, 0.01f)
+                        assertTrue(region.bounds.width() > 0f)
+                        assertTrue(region.bounds.height() > 0f)
+                        assertTrue(region.blurRadius > 0f)
+                    }
                     activity.browserControllerForTesting().updateAppearanceSettings(
                         AppearanceSettings(),
                     )
                 }
                 awaitViewReady(scenario)
+                if (Build.VERSION.SDK_INT >= 37) {
+                    awaitNativeBlurRegionCleared(scenario)
+                }
 
                 scenario.onActivity { activity ->
                     val view = requireNotNull(
@@ -201,6 +241,9 @@ class GeckoEdgeToEdgeInstrumentedTest {
                         "Non-frosted GeckoView must restore the direct compositor surface",
                         view.hasSurfaceView(),
                     )
+                    if (Build.VERSION.SDK_INT >= 37) {
+                        assertTrue(requireNotNull(view.findSurfaceView()).blurRegions.isEmpty())
+                    }
                 }
             }
         }
@@ -398,7 +441,6 @@ class GeckoEdgeToEdgeInstrumentedTest {
 
     private fun awaitViewReady(
         scenario: ActivityScenario<MainActivity>,
-        expectBackdropCapture: Boolean = false,
     ) {
         val deadline = SystemClock.elapsedRealtime() + TIMEOUT_MILLIS
         while (SystemClock.elapsedRealtime() < deadline) {
@@ -411,24 +453,64 @@ class GeckoEdgeToEdgeInstrumentedTest {
                         view.isAttachedToWindow &&
                             view.width > 0 &&
                             view.height > 0 &&
-                            if (expectBackdropCapture) {
-                                view.findTextureView()?.isAvailable == true
-                            } else {
-                                view.hasSurfaceView()
-                            }
+                            view.hasSurfaceView()
                     } == true
             }
             if (ready) return
             SystemClock.sleep(POLL_MILLIS)
         }
         assertTrue(
-            if (expectBackdropCapture) {
-                "Gecko TextureView did not become ready"
-            } else {
-                "Gecko SurfaceView did not become ready"
-            },
+            "Gecko SurfaceView did not become ready",
             false,
         )
+    }
+
+    @RequiresApi(37)
+    private fun awaitNativeBlurRegion(
+        scenario: ActivityScenario<MainActivity>,
+    ): RoundedRectBlurRegion {
+        val deadline = SystemClock.elapsedRealtime() + TIMEOUT_MILLIS
+        var lastRequestedRegion = "null"
+        while (SystemClock.elapsedRealtime() < deadline) {
+            instrumentation.waitForIdleSync()
+            var observedRegion: RoundedRectBlurRegion? = null
+            scenario.onActivity { activity ->
+                val controller = activity.browserControllerForTesting()
+                lastRequestedRegion = controller
+                    .selectedBrowserBackdropBlurRegionForTesting()
+                    .toString()
+                observedRegion = controller.selectedGeckoViewForTesting()
+                    ?.findSurfaceView()
+                    ?.blurRegions
+                    ?.singleOrNull() as? RoundedRectBlurRegion
+            }
+            observedRegion?.let { return it }
+            SystemClock.sleep(POLL_MILLIS)
+        }
+        throw AssertionError(
+            "Gecko SurfaceView did not receive a blur region; requested=$lastRequestedRegion",
+        )
+    }
+
+    @RequiresApi(37)
+    private fun awaitNativeBlurRegionCleared(
+        scenario: ActivityScenario<MainActivity>,
+    ) {
+        val deadline = SystemClock.elapsedRealtime() + TIMEOUT_MILLIS
+        while (SystemClock.elapsedRealtime() < deadline) {
+            instrumentation.waitForIdleSync()
+            var cleared = false
+            scenario.onActivity { activity ->
+                cleared = activity.browserControllerForTesting()
+                    .selectedGeckoViewForTesting()
+                    ?.findSurfaceView()
+                    ?.blurRegions
+                    ?.isEmpty() == true
+            }
+            if (cleared) return
+            SystemClock.sleep(POLL_MILLIS)
+        }
+        throw AssertionError("Gecko SurfaceView did not clear its blur region")
     }
 
     private fun awaitSelectedTabTitle(

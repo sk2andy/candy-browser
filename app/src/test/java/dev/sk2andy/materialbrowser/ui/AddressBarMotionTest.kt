@@ -80,6 +80,40 @@ class AddressBarMotionTest {
     }
 
     @Test
+    fun `segmented expanded chrome can use a taller container`() {
+        assertEquals(
+            64.dp,
+            AddressBarMotion.heightTarget(
+                presentation = AddressBarPresentation.Expanded,
+                expandedHeight = SegmentedAddressBarGeometry.EXPANDED_HEIGHT,
+            ),
+        )
+        assertEquals(
+            48.dp,
+            AddressBarMotion.heightTarget(
+                presentation = AddressBarPresentation.Compact,
+                expandedHeight = SegmentedAddressBarGeometry.EXPANDED_HEIGHT,
+            ),
+        )
+        assertEquals(
+            32.dp,
+            SegmentedAddressBarGeometry.outerCornerRadius(configuredCornerRadius = 28.dp),
+        )
+        assertEquals(
+            24.dp,
+            SegmentedAddressBarGeometry.innerCornerRadius(configuredCornerRadius = 28.dp),
+        )
+        assertEquals(
+            24.dp,
+            SegmentedAddressBarGeometry.outerCornerRadius(configuredCornerRadius = 16.dp),
+        )
+        assertEquals(
+            SegmentedAddressBarGeometry.INSET,
+            SegmentedAddressBarGeometry.SEGMENT_GAP,
+        )
+    }
+
+    @Test
     fun `scroll and overview transitions use non-overlapping fade through`() {
         assertTrue(
             AddressBarMotion.usesFadeThrough(

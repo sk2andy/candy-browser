@@ -81,8 +81,12 @@ cd sync/server
 cp .env.example .env
 # Set a unique username, password, public URL, and TLS host in .env.
 # Never put the E2EE passphrase in server configuration.
-docker compose up --build -d
+docker compose pull candy-sync
+docker compose up -d
 ```
+
+The public `sk2andy/candy-sync:latest` image supports Linux AMD64 and ARM64. Contributors can still
+build the server locally with `docker compose up --build -d`.
 
 Build and load the WebExtension from `sync/extension/`, open its browser-managed Options Page, and
 enter the endpoint plus an E2EE passphrase. In Candy Browser, open **Settings → Synchronization**
@@ -95,7 +99,7 @@ loading, Android setup, backups, protocol details, and the full security model.
 
 - [ ] Add multi-user support
 - [ ] Publish the extension to the Chrome Web Store and Mozilla Add-ons
-- [ ] Publish a prebuilt server image to Docker Hub or a similar registry
+- [x] Publish a prebuilt server image to Docker Hub
 - [ ] Offer a hosted solution for people who do not want to self-host
 
 ## See Candy in motion
@@ -118,8 +122,9 @@ kinetic typography, and camera motion are generated entirely from repository-own
 
 ## Why Candy?
 
-- **Made for gestures.** Switch tabs from the address bar, swipe into the visual overview, and
-  dismiss cards with spring motion and haptic feedback.
+- **Made for gestures.** Switch tabs from the address bar on phones, use a scrollable tab strip on
+  wider screens, swipe into the visual overview, and dismiss cards with spring motion and haptic
+  feedback.
 - **Private by design.** Filtering, history, favorites, profiles, and privacy telemetry stay local.
 - **Cross-device without surrendering your data.** Self-hosted E2EE sync exposes desktop and Android
   tab lists as writable device profiles while the server never sees their contents in plaintext.
@@ -165,21 +170,29 @@ Implementation boundaries, invariants, and the current parity status are documen
 [Platform engines](docs/browsing/platform-engines.md) and
 [Platform feature parity](docs/browsing/platform-feature-parity.md).
 
-## Tablet support
+## Tablet and Foldable support
 
-Candy adapts its fullscreen browsing and visual tab overviews to larger screens, including
-landscape-oriented previews in Coverflow and the compact grid layout.
+At 600 dp and wider, the floating address bar shows a horizontally scrollable tab strip. Tap
+another tab to open it, or tap the current tab to edit its address. Configurable actions and the
+More menu stay in place. Horizontal swipes scroll the strip; the upward overview gesture remains.
+The visual tab overview also adapts its previews and grid to larger screens.
 
 <p align="center">
-  <img src="docs/screenshots/candy-tablet.png" width="90%" alt="Candy Browser running fullscreen on an Android tablet in landscape">
+  <img src="docs/screenshots/candy-tablet-tabs.png" width="90%" alt="Candy Browser floating tab strip with website favicons on a landscape Android tablet"><br>
+  <em>Tablet browsing with floating, scrollable tabs and website favicons.</em>
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/candy-foldable-tabs.png" width="90%" alt="Candy Browser floating tab strip on an unfolded Android foldable in landscape"><br>
+  <em>Unfolded foldable layout with the same tab strip and fixed browser actions.</em>
 </p>
 
 ## Features
 
 ### Browsing and gestures
 
-- Floating chrome over edge-to-edge browser-engine content, with configurable actions around the fixed
-  address field and a docked edge mode
+- Floating chrome over edge-to-edge browser-engine content, with configurable actions around the
+  address field or wide-screen tab strip and a docked edge mode
 - Pull to refresh, direct URL navigation, QR scanning, local domain completion, and optional
   provider-backed search suggestions (disabled in private tabs)
 - Google, DuckDuckGo, Bing, Brave, Ecosia, Startpage, Qwant, Kagi, Perplexity, ChatGPT, and configurable SearXNG search
@@ -208,7 +221,7 @@ landscape-oriented previews in Coverflow and the compact grid layout.
 - System, light, dark, and AMOLED appearances with Material You, Candy, or neutral color palettes
 - Clear or frosted browser surfaces plus angular, rounded, or extra-rounded shapes
 - Independent transparency controls for general browser chrome and the address bar, with adjustable
-  live background blur over loaded pages
+  live background blur where the selected Android engine and version support it
 
 <p align="center">
   <img src="docs/screenshots/candy-frosted-address-bar.png" width="42%" alt="Candy Browser frosted transparent address bar over a loaded page">

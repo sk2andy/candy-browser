@@ -27,12 +27,6 @@ internal data class HistoryClearRequest(
     val untilExclusiveMillis: Long,
 )
 
-data class FavoriteEntry(
-    val url: String,
-    val title: String,
-    val addedAt: Long,
-)
-
 data class AddressSuggestion(
     val url: String,
     val title: String,

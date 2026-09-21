@@ -10,6 +10,7 @@ Android picture-in-picture. The shorter product-level contract remains in
 | --- | --- | --- |
 | Gecko fullscreen video enters Android PiP | Selected regular Gecko tab with active, playing video | Gecko fullscreen callbacks → original browser-hosted GeckoView → Android PiP |
 | User switches tabs while Gecko fullscreen video plays | Selected regular Gecko tab | Same GeckoView stays in Candy's mini-player host |
+| Experimental Candy Player opens a video | Selected regular Gecko tab, recognized top-frame HTML video and matching persisted mode | Trusted candidate → mode-selected fullscreen, inline or automatic presentation → same GeckoView |
 
 Canvas-only players, unsupported DRM surfaces and hostile player scripts remain best-effort.
 
@@ -19,11 +20,14 @@ Candy opens a video presentation only after both independent states agree and re
 while Android PiP is active until the confirmed return callback. Candy exits page fullscreen
 through GeckoSession's public `exitFullScreen()` API. Media-session callbacks from a
 replaced YouTube ad/main session are ignored once that native media-session identity is stale.
+Each fullscreen-state change also reapplies the affected GeckoView's last known window insets and
+CSS safe-area policy immediately; returning to the page must not depend on a new Android inset
+callback to restore its normal layout.
 Candy only offers PiP after Gecko has reported an active, playing, fullscreen video with non-zero
-dimensions and at least one video track. The existing GeckoView and GeckoSession stay in the browser
-viewport for expanded fullscreen and Android PiP. Candy never creates a second renderer or a second
-address bar. Reparenting is reserved for the user-requested in-app mini-player, outside the Android
-PiP transition.
+dimensions and at least one video track. The existing GeckoView and GeckoSession remain the sole
+renderer during expanded fullscreen and Android PiP. Compose may transfer that same GeckoView
+between its normal and video-only content containers as the window changes size; Candy never creates
+a second renderer or a second address bar.
 
 Android PiP aspect ratio and transition source bounds follow Gecko's reported video dimensions.
 Invalid dimensions fall back to 16:9; extreme values are clamped to Android's supported PiP range.
@@ -31,18 +35,56 @@ During Android's video-only presentation, the bundled content bridge hides non-v
 sizes the browser viewport to the media aspect ratio and moves the selected playing video to the
 viewport origin. The measured offset correction is required for players such as YouTube whose
 transformed player container remains below a fixed site header. Every temporary attribute, style
-and offset is removed when PiP preparation is cancelled or PiP returns. Compose removes browser
-chrome from the video-only tree, including a parked address pill, until the expanded return layout
-is ready; this prevents chrome from being composited through the resizing Gecko SurfaceView.
+and offset is removed when PiP preparation is cancelled or PiP returns. Return and cancellation
+switch to normal browser geometry and restore system bars first, while Compose covers the resizing
+Gecko SurfaceView with a black restoration layer. After final non-IME window insets reach the stable
+host, the trusted content bridge removes the video-only DOM layout and acknowledges only after two
+consecutive stable rendered frames. For a frozen inline origin, the player/parent layout must match
+the snapshot, the actual video rectangle must match its scroll-adjusted origin, and Candy controls
+must cover the restored visible video box. DOM fullscreen and pages without a frozen origin retain
+their normal layout. Navigation, video replacement, detachment or a newer presentation generation
+rejects the pending acknowledgement; a two-second timer also bounds documents that stop rendering.
+Candy then reapplies insets, requests host layout and keeps the restoration
+layer through two additional host draws before the third animation callback, with a bounded fallback
+if the window stops drawing. Leaving DOM fullscreen follows the same ordered
+reset. This prevents stale full-viewport or
+zero-inset video geometry from flashing at the old position. A visible status bar with a positive
+status-bar inset marks normal geometry ready; a display cutout alone does not. Browser immersive
+mode therefore proceeds only through the bounded restoration timeout.
+Preparation and restoration share one extension result channel but never share ownership: native
+code routes each acknowledgement by its exact request ID. A new PiP entry invalidates an open or
+queued restoration first, so a late return-layout acknowledgement cannot consume the new
+preparation or mutate its owner.
+
+On confirmed PiP return, Candy enables the restoration cover before forwarding
+`CompositorController.onPipModeChanged(false)`. Return proceeds through inset/host layout → current
+policy acknowledgement → content restoration acknowledgement → one Gecko compositor readback →
+host frames. The readback uses the unchanged bound GeckoView's `capturePixels()` and immediately
+recycles its bitmap; it adds neither a surface replacement nor polling or a fixed delay. Its
+request-bound callback rejects stale owners and PiP re-entry; late bitmaps are only recycled.
+DOM acknowledgement and readback share the existing two-second PiP-return deadline: slow or missing
+completion releases the cover through the bounded best-effort fallback, without extending that budget.
+A policy change during
+restoration retries against the latest revision within the same fixed two-second deadline; PiP
+re-entry or a stale owner cancels that return instead of extending its deadline or releasing a newer
+presentation's cover.
+The policy-acknowledgement callback may start that bound restoration synchronously. Automatic
+playback publication after the callback must not send a second `expected=false` while its request
+is pending: the duplicate would invalidate the content waiter's generation before it acknowledges.
 
 Android's confirmed PiP mode callback is forwarded to Gecko's `CompositorController` exactly once
-per state change for the owning session. Preparation never sends this signal: Gecko documents it as
+per state change for the owning session. On return or a cancelled transition with a live
+presentation, that compositor signal does not clear the DOM video-only layout; stable insets and
+the acknowledged content-bridge restoration do that later.
+Preparation never sends this signal: Gecko documents it as
 the notification that Android has already changed mode and uses it to apply its Android-PiP media
 layout. A rejected transition therefore needs no compositor rollback. Candy keeps only the owning
 session active while the Activity pauses, retries the expected playback command across the first
 two seconds of the transition, and keeps the transition alive for five seconds so loaded emulators
 cannot tear down the renderer prematurely. User-initiated Play/Pause commands remain authoritative
-and cancel pending retries.
+and cancel pending retries. While playback remains expected, transient Gecko pause callbacks during
+the Android transition do not replace PiP's Pause action with Play; an explicit user Pause clears
+that expectation immediately.
 
 Candy keeps GeckoView's default SurfaceView backend so frames reach Android's compositor directly.
 The browser host, outer Candy Gecko host, inner GeckoView, SurfaceView backend, GeckoDisplay,
@@ -64,11 +106,137 @@ explicit entry request because those releases cannot notify Candy early enough t
 before auto-enter captures the Activity. Android 15+ may use its early transition callback with
 prepared auto-enter. `onPictureInPictureRequested` handles an explicit system request on every
 supported release. Preparation preserves the original host and playback intent, while only
-Android's later mode callback tells Gecko that PiP is active.
+Android's later mode callback tells Gecko that PiP is active. The transition source rectangle is
+entry-only: Candy stops publishing PiP parameters while the compact task or its return layout is
+active, so Android cannot repeatedly offset the window-coordinate source rectangle when media
+eligibility changes during the transition.
 
 GeckoView 155 does not expose element geometry for ordinary inline video through its native media
-session API. Automatic background PiP and the in-app mini-player therefore remain limited to Gecko
-video that has entered fullscreen. Do not infer inline-video eligibility from page-level state.
+session API. The optional experimental Candy Player therefore obtains only bounded top-frame video
+identity and dimensions from the bundled trusted content host. The background host stamps the bound
+token, policy revision, navigation generation and frame identity; native code rejects stale or
+private candidates. Opening Candy Player sends the document/element nonce back to frame zero and
+waits for an acknowledgement before publishing the inline presentation. Cross-origin iframe, Shadow DOM,
+canvas and unsupported DRM players remain out of scope for this spike. Android PiP becomes eligible
+for an inline video only after this acknowledged Candy presentation is active; detection alone never
+grants PiP eligibility.
+
+The trusted content host renders the open action directly over the current recognized top-frame
+video, even while playback is paused; page fullscreen is not required. The action lives in a closed
+shadow root for style isolation, uses the localized Android action label and accepts only a trusted
+user click while its geometry still matches the visible video. That click starts a paused video,
+refreshes the exact clicked candidate and then requests the inline presentation. Video/ancestor
+size, class and style changes reconcile placement. The background host validates that click against
+its exact current candidate before native code carries the revision-bound navigation identity and
+nonces to the controller. If an inset update changes the policy revision while that open request
+is in transit, the bridge permits one retry within three seconds. It requires the same navigation,
+enabled mode and exact current video, reapplies the newer policy and reports the candidate again;
+the background still rejects requests that do not match its current revision. Navigation, mode
+changes or a replaced candidate cancel the retry.
+Native policy publication can also overtake a request already forwarded by the background host.
+The native binding retains one open from its exact last acknowledged revision across compatible
+policy changes. It replays only after the current revision is acknowledged and a fresh candidate
+report for that revision confirms the same document and video. Either callback may arrive first.
+The first pending click owns a fixed three-second deadline; another click cannot replace it or
+extend that deadline. Navigation, mode or privacy changes, explicit close, inactive/replaced
+candidates and binding teardown cancel the pending open. The background validates and stamps the
+source mode, and native parsing still rejects revisions outside the current/last-acknowledged pair.
+The clicked video remains in its original page box and keeps the
+surrounding page and browser chrome visible; Candy does not publish fullscreen state or apply the
+video-only layout. A
+second autoplaying video cannot replace it. Android PiP still requires active playback. Candy hides
+the exact HTML video's site-controlled native controls and adds isolated Candy play/pause, seek,
+time and fullscreen controls over the video's lower edge. For YouTube, Candy also suppresses the
+selected player's site chrome without hiding captions. The Candy control host moves into the DOM
+fullscreen element so it remains in the fullscreen top layer. Candy restores the page's original
+controls state and YouTube chrome when the inline presentation ends. A trusted primary touch tap
+of at most 350 ms on the free video surface toggles Candy controls, including while DOM fullscreen
+is active; controls, seek, mouse, pen, empty-pointer, long-press, drag/swipe, cancelled and
+untrusted gestures never toggle them. Visibility is presentation-local and survives PiP entry,
+return and policy refresh for the same video, then resets when that
+presentation is replaced or closed. The close action is hidden and removed from keyboard focus in
+Automatic and Always for fullscreen modes because those policies immediately reopen the presentation;
+button modes retain it. The gesture layer remains keyboard-focusable with Show/Hide controls
+semantics; Enter or Space restores hidden controls without intercepting the transport controls.
+These labels use the app's localized string resources through the existing native host and
+extension policy, independently of the website language. Hidden transport controls are inert and
+removed from layout/accessibility; the free-surface toggle remains available. Completed touches
+suppress compatibility clicks, key repeats are ignored, and unrelated pointer releases cannot
+finish another pointer's gesture. Policy refresh updates close visibility in place without
+replacing the presented video or restarting an open request.
+Only Android PiP preparation
+temporarily applies the video-only layout; it synchronously aligns the video before the first PiP
+frame, while observers and a bounded post-entry frame check correct later movement. On YouTube,
+PiP-only styles also remove clipping and transformed containing blocks from the selected video's
+ancestors; those styles are removed on return. Returning from or cancelling PiP restores
+the same inline video and its Candy controls. The control stage remains transparent, with contrast
+provided by the individual control pills, so the decoded video remains visible behind the lower
+controls after fullscreen or PiP return. An inline upward fullscreen gesture transforms the
+actual video frame and separate control host by the same bounded rubber-band offset. It preserves
+the video's original CSS transform and clears both temporary transforms on cancellation or entry.
+Swipe and button entry freeze the same unshifted inline origin: gesture transforms never update
+the stable snapshot, and swipe cleanup runs synchronously before fullscreen captures its origin.
+Direct Android PiP entry waits for a render-ready acknowledgement from that exact inline video.
+The acknowledgement remains bound to the extension token, policy revision, navigation generation
+and document/element nonces. After the video-only styles have rendered, Candy maps the returned
+bounded video/viewport rectangle through the unchanged Gecko host into Android window coordinates;
+stale, private, malformed or replaced-video replies cancel entry instead of reusing an old window
+crop. Android Back exits selected DOM fullscreen before web history navigation. Exiting Candy's DOM
+fullscreen preserves the acknowledged inline presentation and returns to its inline controls. The
+retained presentation may remain `Expanded`, but only active DOM fullscreen or video-only PiP
+preparation hides browser chrome and Android system bars.
+When DOM fullscreen exits outside an active PiP transition, the controller republishes that
+session's effective CSS safe-area policy even if Android's status-bar inset has not changed.
+Android may already have restored its bars while the document was still fullscreen, when the
+effective CSS inset was zero. Inline geometry restoration waits for the new policy acknowledgement
+and ignores replies for replaced sessions, navigations or media presentations.
+On YouTube, Candy continuously remembers both the actual video's and the selected player's
+visible rectangles during ordinary inline presentation. The first fullscreen or PiP transition
+freezes that stable snapshot before the video-only layout or Android viewport resize; repeated
+preparation cannot replace it with transitional geometry. After returning, Candy compares the
+actual video and player rectangles with that snapshot through delayed page reflow and corrects
+their positions independently, including movement of the player's parent. It follows page
+scrolling, waits while viewport or player dimensions are mismatched, and never applies the
+correction inside fullscreen or video-only PiP. The scoped correction survives closing Candy
+controls and is released on navigation, media end, mode disable or page unload.
+After the bounded return reflow window, that origin keeps a scoped ancestor observer for
+class, hidden and style changes plus scroll/resize. Its callbacks coalesce into one rendered-frame
+reconciliation, never observe Candy's player writes, preserve site transforms and disconnect with
+the origin cleanup. CSS transition or animation completion/cancellation on that origin's player,
+video or observed ancestor schedules the same reconciliation, so a late interpolated transform
+cannot outlive the bounded return polling window.
+When Button fullscreen preserves an origin before its fullscreen request, first acknowledgement
+of that same video and its following PiP cycle retain both snapshots; a different video still
+releases them.
+While the Candy presentation is expanded, vertical gestures use three stable screen regions: the
+left region adjusts a per-window brightness override, the center drags the live video down to leave
+fullscreen, and the right region changes the global media stream volume. The center drag moves,
+scales and rounds the video, but stays rubber-banded near its starting anchor until it crosses the
+13-percent dismissal threshold. Crossing that threshold emits a confirmation haptic; releasing
+before it springs the video back. Brightness and volume emit value-dependent ticks whose strength
+and density increase toward the maximum. Brightness is remembered only in Activity memory, restored
+when fullscreen or the app is left, and reapplied when that Activity returns to fullscreen. Android
+does not allow an app to disable the system Quick Settings brightness slider; the active window
+override instead keeps system brightness changes from affecting Candy until fullscreen ends. Media
+volume intentionally uses Android's global media stream and is not restored.
+Navigation synchronously closes an active or pending inline presentation. Reloads publish a fresh
+revision/navigation-bound candidate; delayed messages from the replaced document cannot clear or
+open it.
+
+The persisted Candy Player mode is explicit:
+
+Absent or invalid persisted values use **Button inline and fullscreen**. **Button fullscreen**
+remains an explicit user choice. The extension content-policy sanitizer uses the same fallback.
+
+| Mode | Trigger and presentation |
+| --- | --- |
+| Button fullscreen | The trusted video action requests DOM fullscreen during the user click, then enables Candy controls for the exact video. |
+| Button inline and fullscreen | The trusted video action enables Candy controls in place; their fullscreen action remains available. |
+| Always for fullscreen | A website fullscreen transition enables Candy controls for the fullscreen video automatically. |
+| Automatic | A visible top-frame video enables Candy controls only after playback starts and it has current frame data with non-zero intrinsic dimensions. Preloaded but paused YouTube videos keep their site thumbnail until Play. Pausing an already opened Candy presentation leaves its controls available. |
+
+All four modes keep direct improved Android PiP available for an actively playing, acknowledged
+Candy presentation; entering DOM fullscreen first is not required.
 
 ## Ownership map
 
@@ -79,11 +247,42 @@ video that has entered fullscreen. Do not infer inline-video eligibility from pa
 | Browser controller | Gecko session identity, eligibility, same-view presentation, lifecycle cleanup and media publication | [`BrowserController.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/browser/BrowserController.kt) |
 | Fullscreen policy | Gecko-view placement and Android PiP eligibility | [`FullscreenVideoRules.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/browser/FullscreenVideoRules.kt) |
 | Gecko media policy | Autoplay permission and fullscreen-video PiP eligibility | [`GeckoMediaRules.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/browser/gecko/GeckoMediaRules.kt) |
+| Trusted content host | Candidate selection, video-local action placement and exact element acknowledgement | [`content.js`](../../app/src/gecko/assets/candy_privacy/content.js) |
 | Compose hosts | Browser viewport for stable fullscreen/PiP; overlay only for the in-app mini-player | [`BrowserViewport.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/BrowserViewport.kt), [`FullscreenVideoOverlay.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/FullscreenVideoOverlay.kt) |
-| Background playback | Android media session, controls and foreground service | [`BrowserMediaPlaybackService.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/browser/BrowserMediaPlaybackService.kt) |
+| Fullscreen gesture controls | Pure gesture regions/motion, live surface transform and Activity-scoped brightness/volume bridge | [`FullscreenVideoGestureRules.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/FullscreenVideoGestureRules.kt), [`FullscreenVideoGestures.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/FullscreenVideoGestures.kt), [`FullscreenVideoSystemControls.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/FullscreenVideoSystemControls.kt) |
+| Background playback | Android media session, bounded controls/metadata and foreground-service lifecycle | [`BrowserMediaPlaybackService.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/browser/BrowserMediaPlaybackService.kt), [`GeckoMedia3Playback.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/browser/GeckoMedia3Playback.kt) |
 
 Keep `MainActivity` and `BrowserController` as orchestration. Put new deterministic eligibility or
 state decisions in focused rules and unit-test them without Android when possible.
+
+## Android system controls and background playback
+
+The Android system-media boundary has one Media3 `MediaSessionService` and one notification. The
+service is an adapter over the already-running Gecko session: Gecko remains the sole decoder and
+renderer. The adapter creates no second media source, renderer, URI, artwork fetch, durable URL or
+process-death resume state. Audio and video use the same boundary when an eligible existing engine
+session is already playing.
+
+BrowserController publishes a bounded, memory-only snapshot containing sanitized title/origin,
+position, finite duration when known, playback rate and an owner identity consisting of tab,
+engine-session and navigation generation. A foreground-tab selection change alone cannot retarget
+an active background publication. An explicit PiP owner preempts that captured owner for the one
+system session; leaving PiP restores the captured background owner only if its exact session and
+navigation identity remains live. PiP therefore changes ownership precedence, not decoder or
+renderer ownership.
+
+System controls advertise only play/pause and stop, plus seek when finite duration is available.
+Commands return through the exact captured owner and are rejected after navigation, session
+replacement, close, media end or any privacy boundary. Private tabs, locked profiles and app-data
+transfer publish no system metadata and reject commands. Task removal, teardown and service
+shutdown must clear the publication, command sink and underlying engine playback; no stale
+notification or owner may survive those boundaries.
+
+Background playback means keeping that eligible, existing Gecko session alive after Home or screen
+lock. It does not promise playback recovery after the Gecko session or process is gone, and it does
+not persist playback state. Final API 37 release-gate evidence below covers live audio controls and
+service teardown. Real-video SystemUI expand/return remained unavailable in that environment, so
+this guide does not claim that path passed.
 
 ## Identity and trust boundaries
 
@@ -101,10 +300,12 @@ Preserve these invariants:
   an in-app mini-player, a media notification or persistent state.
 - Gecko media state is memory-only, scoped to the exact tab session, and discarded on navigation,
   deactivation, crash, close or session replacement.
-- Android PiP requires a current selected regular tab, an active playing fullscreen Gecko video,
-  non-zero dimensions and a video track.
-- Keep the same session, view, backend, display and browser-host identity for PiP. Never create a
-  replacement renderer, switch backend or reparent the view during entry or return.
+- Android PiP requires a current selected regular tab and either an active playing fullscreen Gecko
+  video or an acknowledged Candy inline presentation with a current playing candidate and non-zero
+  dimensions.
+- Keep the same session, GeckoView, backend and display identity for PiP. Compose may transfer that
+  exact view between content containers, but must attach, lay out and draw it before acknowledging a
+  restored browser layout. Never create a replacement renderer or switch backend.
 - Keep Gecko media state and presentation ownership memory-only.
 
 ## Lifecycle states
@@ -113,6 +314,8 @@ Preserve these invariants:
 | --- | --- | --- |
 | Gecko media state | Gecko session adapter | Navigation, deactivation, crash, close or replacement |
 | Gecko fullscreen presentation | Controller and Compose host | Media ends, host dismisses, navigation, PiP exit or session replacement |
+| Candy inline presentation | Controller and trusted content host | Candidate replacement, host dismisses, navigation, mode change, close or replacement |
+| Direct DOM fullscreen return | Controller; separate from Android PiP return | Inset/host-layout gate → publish current safe-area policy → latest policy acknowledgement → inline geometry restore. Content acknowledges only after DOM fullscreen has ended and the inline box is stable; PiP return may acknowledge while DOM fullscreen remains active. Missing policy acknowledgement releases only this return's layout cover after two seconds; stale acknowledgements cannot restart it. |
 | Android PiP transition | Activity and controller | Mode callback, cancellation, stop or return-layout completion |
 
 Repeated mode, navigation and cleanup callbacks stay idempotent.
@@ -122,6 +325,7 @@ Repeated mode, navigation and cleanup callbacks stay idempotent.
 | Change | Required companion work |
 | --- | --- |
 | Change Gecko eligibility | Update `GeckoPictureInPictureRules`; cover private, stale, paused, audio and zero-size states |
+| Change inline detection or presentation | Cover top-frame enforcement, nonce/revision/navigation identity, acknowledgement and cleanup |
 | Change Activity PiP entry | Cover accepted, rejected and missing/late mode callbacks in the Gecko instrumentation suite |
 | Change presentation host | Preserve exact Gecko session/view identity; test overview→mini→expanded transitions |
 | Change cleanup | Cover navigation, tab close, session replacement and PiP return |
@@ -137,13 +341,44 @@ commands below.
 | Layer | Minimum check |
 | --- | --- |
 | Contract and pure rules | `./gradlew testFullDebugUnitTest testFossDebugUnitTest` |
+| Candy control events and lifetime | `node --test scripts/gecko_inline_media.test.mjs`: execute production shadow-overlay handlers with EventTarget events, actual background/content policy refresh for all four modes, localized accessibility labels, pointer cancellation/drag-return, touch compatibility click, keyboard/AT, and PiP recreation/presentation reset. DOM/CSS rendering and trusted device input remain instrumentation responsibilities. |
 | Gecko PiP lifecycle | Run `GeckoPictureInPictureInstrumentedTest` on the same API 34+ session emulator |
 | Fullscreen/overlay placement | Covered by `GeckoPictureInPictureInstrumentedTest` on the same API 34+ emulator |
 | Inline player offset isolation | Local transformed-player fixture in `GeckoPictureInPictureInstrumentedTest` |
+| Automatic mode | `GeckoAutomaticInlinePlayerE2eInstrumentedTest`: persisted mode, settled paused thumbnail, trusted site tap, `loadeddata`, then Candy controls |
+| Delayed transformed-return regression | Android 17 / API 37 only; fresh single-method fixture process on a dedicated emulator |
+| Decoded fullscreen-return pixels | Android 17 / API 37 with a renderer that visibly displays the VP8 fixture (verified with `-gpu swiftshader_indirect`): isolated clipped-player direct and first-swipe methods in `GeckoPictureInPictureInstrumentedTest`; assert real cyan pixels without a dark upper band after return |
 | Android integration | `./gradlew lintFullDebug lintFossDebug assembleFullDebug assembleFossDebug` |
+
+### Recorded API 37 release-gate evidence
+
+These results are recorded evidence from the final API 37 pass. They supplement minimum checks above;
+they do not turn unavailable SystemUI actions into passing results.
+
+| Area | Result | Scope and limit |
+| --- | --- | --- |
+| Live Gecko audio background playback | PASS | Home, system-controller pause/play/seek, screen lock/wake, and task removal. Task removal stopped Gecko playback and cleared publication, notification, and service. |
+| Media3 service/player checks | PASS (7 + 2) | Focused service and player instrumentation, including controller authorization, exact owner/generation routing, privacy cleanup, task removal, seek/state projection, and identity invalidation. |
+| Real video Android PiP | PASS (entry only) | Real video entered PiP. SystemUI expand/return was unavailable in test environment; no live pass is claimed for that path. |
+| Decoded fullscreen/PiP return | PASS | API 37 compositor checks observed decoded pixels after fullscreen/PiP return. |
+| Media3 owner replacement | PASS | Service atomic owner replacement retained one active service/session without an idle gap. |
 
 Run deterministic tests first. Treat live checks on YouTube, `anichi.to` and `reanime.cz` as
 compatibility smoke tests because their player hosts and markup can change independently of Candy.
+
+Run the Android 17 / API 37 transformed-return fixture only as its own fresh instrumentation process:
+
+```sh
+ANDROID_SERIAL=<dedicated-api-37-serial> ./gradlew connectedFullDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=dev.sk2andy.materialbrowser.browser.gecko.GeckoPictureInPictureInstrumentedTest#youtubePlayerKeepsVideoGeometryThroughDelayedSystemPictureInPictureReturn
+```
+
+Run each clipped-player pixel test separately with the same runner argument, substituting
+`youtubeClippedPlayerKeepsDecodedVideoThroughDirectFullscreenReturn` or
+`youtubeClippedPlayerKeepsDecodedVideoThroughFirstSwipeFullscreenReturn` as the method name.
+The test must first observe cyan decoded pixels at baseline; a green CSS fallback is an invalid
+rendering environment, not a passing geometry result. The tests invoke the same controller exit
+used by the app's Back handler so the return rendering is deterministic; they do not verify Android's
+system Back-gesture delivery. Keep a separate live YouTube smoke check for site-specific layout.
 
 ## Debug lookup
 
@@ -155,7 +390,7 @@ compatibility smoke tests because their player hosts and markup can change indep
 | PiP shows a logo or stale page frame | Verify no backend switch or view reparent occurred and that the confirmed mode callback reached the exact owning session |
 | Player stays fullscreen after return | Inspect same-session host reattachment and return-layout completion |
 | Notification survives media end | Inspect inactive Gecko media state and BrowserMedia system-session publication |
-| App crashes after rapid Play/Pause | Foreground playback service must promote itself in `onCreate` before validating or stopping a queued start |
+| App crashes after rapid Play/Pause | Inspect Media3 notification-manager refresh and `hasPublishedMedia` ordering before changing service start/stop behavior; promotion is owned by `MediaSessionService` after playback becomes eligible |
 
 Useful device checks, always with the session's explicit emulator serial:
 

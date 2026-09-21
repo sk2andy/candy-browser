@@ -6,6 +6,7 @@ import androidx.test.platform.app.InstrumentationRegistry
 import dev.sk2andy.materialbrowser.browser.userscript.UserScript
 import dev.sk2andy.materialbrowser.browser.userscript.UserScriptParseResult
 import dev.sk2andy.materialbrowser.browser.userscript.UserScriptParser
+import dev.sk2andy.materialbrowser.shared.topping.ToppingFrameScope
 import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
@@ -62,11 +63,59 @@ class UserScriptStoreInstrumentedTest {
     }
 
     @Test
+    fun atomicallyRoundTripsNarrowedFrameAllowance() {
+        val store = UserScriptStore(context)
+        store.clear()
+        val source = source("frames", "document-end").replace(
+            "// @run-at document-end",
+            "// @run-at document-end\n// @candy-frames all-matching",
+        )
+        val parsed = (UserScriptParser.parse("frames", source) as UserScriptParseResult.Accepted).script
+        val narrowed = parsed.copy(allowedFrameScope = ToppingFrameScope.SameOrigin)
+
+        assertTrue(store.save(listOf(narrowed)))
+        assertEquals(listOf(narrowed), store.load())
+        store.clear()
+    }
+
+    @Test
+    fun migratesVersionTwoFrameMetadataToTopOnly() {
+        val store = UserScriptStore(context)
+        store.clear()
+        val source = source("legacy-frames", "document-end").replace(
+            "// @run-at document-end",
+            "// @run-at document-end\n// @candy-frames all-matching",
+        )
+        val target = File(context.filesDir, UserScriptStore.FILE_NAME)
+        target.writeText(
+            JSONObject()
+                .put("version", 2)
+                .put(
+                    "scripts",
+                    JSONArray().put(
+                        JSONObject()
+                            .put("id", "legacy-frames")
+                            .put("source", source)
+                            .put("enabled", true)
+                            .put("updatedAtMillis", 0L)
+                            .put("requires", JSONArray())
+                            .put("resources", JSONArray()),
+                    ),
+                ).toString(),
+        )
+
+        val loaded = store.load().single()
+        assertEquals(ToppingFrameScope.AllMatching, loaded.declaredFrameScope)
+        assertEquals(ToppingFrameScope.Top, loaded.allowedFrameScope)
+        store.clear()
+    }
+
+    @Test
     fun loadsLegacySnapshotWithoutDependencies() {
         val store = UserScriptStore(context)
         store.clear()
         val legacy = script(id = "legacy", runAt = "document-end", enabled = true)
-        val target = File(context.noBackupFilesDir, UserScriptStore.FILE_NAME)
+        val target = File(context.filesDir, UserScriptStore.FILE_NAME)
         target.writeText(
             JSONObject()
                 .put("version", 1)
@@ -99,7 +148,7 @@ class UserScriptStoreInstrumentedTest {
             // ==/UserScript==
             window.main = true;
         """.trimIndent()
-        val target = File(context.noBackupFilesDir, UserScriptStore.FILE_NAME)
+        val target = File(context.filesDir, UserScriptStore.FILE_NAME)
         target.writeText(
             JSONObject()
                 .put("version", 1)
@@ -143,7 +192,7 @@ class UserScriptStoreInstrumentedTest {
         val parsed = (UserScriptParser.parse("integrity", source) as UserScriptParseResult.Accepted).script
         val resolved = parsed.copy(requires = parsed.requires.map { it.copy(source = "hi") })
         assertTrue(store.save(listOf(resolved)))
-        val target = File(context.noBackupFilesDir, UserScriptStore.FILE_NAME)
+        val target = File(context.filesDir, UserScriptStore.FILE_NAME)
         val root = JSONObject(target.readText())
         root.getJSONArray("scripts").getJSONObject(0)
             .getJSONArray("requires").getJSONObject(0)
@@ -160,7 +209,7 @@ class UserScriptStoreInstrumentedTest {
         store.clear()
         val scripts = listOf(script(id = "stable", runAt = "document-end", enabled = true))
         assertTrue(store.save(scripts))
-        val target = File(context.noBackupFilesDir, UserScriptStore.FILE_NAME)
+        val target = File(context.filesDir, UserScriptStore.FILE_NAME)
         AtomicFile(target).startWrite().also { output ->
             output.write("partial".toByteArray())
             output.close()
@@ -177,7 +226,7 @@ class UserScriptStoreInstrumentedTest {
         val canonical = script(id = "local", runAt = "document-end", enabled = true)
         assertFalse(store.save(listOf(canonical.copy(name = "forged"))))
 
-        val target = File(context.noBackupFilesDir, UserScriptStore.FILE_NAME)
+        val target = File(context.filesDir, UserScriptStore.FILE_NAME)
         target.writeText(
             JSONObject()
                 .put("version", UserScriptStore.FORMAT_VERSION)
@@ -211,7 +260,7 @@ class UserScriptStoreInstrumentedTest {
     fun deletesOversizeStateWithoutReadingIt() {
         val store = UserScriptStore(context)
         store.clear()
-        val target = File(context.noBackupFilesDir, UserScriptStore.FILE_NAME)
+        val target = File(context.filesDir, UserScriptStore.FILE_NAME)
         RandomAccessFile(target, "rw").use { file ->
             file.setLength(UserScriptStore.MAX_FILE_BYTES + 1L)
         }

@@ -57,11 +57,11 @@ class AddressBarVerticalGestureInstrumentedTest {
                         modifier = Modifier
                             .fillMaxSize()
                             .testTag(AddressBarTag)
-                            .addressBarReaderActions(
-                                readerEnabled = true,
+                            .addressBarPressActions(
+                                longPressEnabled = true,
                                 onClick = taps::incrementAndGet,
-                                onReaderStudio = readerOpens::incrementAndGet,
-                                readerLabel = "Open Reader Studio",
+                                onLongPress = readerOpens::incrementAndGet,
+                                longPressLabel = "Open Reader Studio",
                             ),
                     )
                 }

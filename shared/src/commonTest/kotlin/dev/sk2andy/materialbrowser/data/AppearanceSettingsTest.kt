@@ -16,6 +16,9 @@ class AppearanceSettingsTest {
         assertEquals(BrowserColorPalette.Dynamic, settings.colorPalette)
         assertEquals(BrowserSurfaceStyle.Clear, settings.surfaceStyle)
         assertEquals(BrowserShapeStyle.Rounded, settings.shapeStyle)
+        assertEquals(BrowserAddressBarStyle.Classic, settings.addressBarStyle)
+        assertEquals(BrowserAddressBarColorPreset.Theme, settings.addressBarColorPreset)
+        assertEquals("", settings.addressBarCustomColorHex)
         assertEquals(40, settings.frostedTransparencyPercent)
         assertEquals(40, settings.frostedAddressBarTransparencyPercent)
         assertEquals(60, settings.frostedBlurPercent)
@@ -35,11 +38,25 @@ class AppearanceSettingsTest {
         BrowserShapeStyle.entries.forEach { style ->
             assertEquals(style, BrowserShapeStyle.fromStableId(style.stableId))
         }
+        BrowserAddressBarStyle.entries.forEach { style ->
+            assertEquals(style, BrowserAddressBarStyle.fromStableId(style.stableId))
+        }
+        BrowserAddressBarColorPreset.entries.forEach { preset ->
+            assertEquals(preset, BrowserAddressBarColorPreset.fromStableId(preset.stableId))
+        }
 
         assertEquals(BrowserAppearanceMode.System, BrowserAppearanceMode.fromStableId("unknown"))
         assertEquals(BrowserColorPalette.Dynamic, BrowserColorPalette.fromStableId("unknown"))
         assertEquals(BrowserSurfaceStyle.Clear, BrowserSurfaceStyle.fromStableId("unknown"))
         assertEquals(BrowserShapeStyle.Rounded, BrowserShapeStyle.fromStableId("unknown"))
+        assertEquals(
+            BrowserAddressBarStyle.Classic,
+            BrowserAddressBarStyle.fromStableId("unknown"),
+        )
+        assertEquals(
+            BrowserAddressBarColorPreset.Theme,
+            BrowserAddressBarColorPreset.fromStableId("unknown"),
+        )
     }
 
     @Test
@@ -92,5 +109,23 @@ class AppearanceSettingsTest {
                 .normalized()
                 .webContentFontSizePercent,
         )
+    }
+
+    @Test
+    fun `custom address bar colors normalize supported hex forms`() {
+        assertEquals("#AABBCC", AddressBarColorRules.normalizeHex(" #abc "))
+        assertEquals("#12ABEF", AddressBarColorRules.normalizeHex("12abef"))
+        assertEquals(0xFF12ABEFL, AddressBarColorRules.colorArgb("#12abef"))
+    }
+
+    @Test
+    fun `invalid custom address bar color falls back to theme`() {
+        val normalized = AppearanceSettings(
+            addressBarColorPreset = BrowserAddressBarColorPreset.Custom,
+            addressBarCustomColorHex = "not-a-color",
+        ).normalized()
+
+        assertEquals(BrowserAddressBarColorPreset.Theme, normalized.addressBarColorPreset)
+        assertEquals("", normalized.addressBarCustomColorHex)
     }
 }

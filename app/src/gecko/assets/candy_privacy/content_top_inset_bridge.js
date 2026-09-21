@@ -164,7 +164,7 @@ globalThis.CandyContentTopInset = Object.freeze({
   safeAreaRequiredFailureCount: () => state.safeAreaRequiredFailureCount,
   performanceDiagnosticsEnabled: () => state.performanceDiagnosticsEnabled,
   domDiagnosticsEnabled: () => state.domDiagnosticsEnabled,
-  fallbackToNative: (navigationGeneration, revision) => {
+  fallbackToNative: (navigationGeneration, revision, themeColor = null, topHeader = false) => {
     if (
       navigationGeneration !== state.navigationGeneration ||
       revision !== state.revision
@@ -173,6 +173,8 @@ globalThis.CandyContentTopInset = Object.freeze({
       type: "safe-area-fallback",
       navigationGeneration,
       revision,
+      themeColor: typeof themeColor === "string" ? themeColor : null,
+      topHeader: topHeader === true,
     }).catch(() => {});
   },
 });

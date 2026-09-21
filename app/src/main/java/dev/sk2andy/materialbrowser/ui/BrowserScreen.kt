@@ -55,6 +55,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.zIndex
 import androidx.compose.ui.layout.boundsInWindow
@@ -77,6 +78,7 @@ import dev.sk2andy.materialbrowser.browser.BrowserController
 import dev.sk2andy.materialbrowser.browser.BrowserProfile
 import dev.sk2andy.materialbrowser.browser.BrowserTab
 import dev.sk2andy.materialbrowser.browser.FindInPageRules
+import dev.sk2andy.materialbrowser.browser.FullscreenVideoRules
 import dev.sk2andy.materialbrowser.browser.cast.CastUiState
 import dev.sk2andy.materialbrowser.browser.CapsuleSaveResult
 import dev.sk2andy.materialbrowser.browser.MAX_PROFILES
@@ -111,9 +113,11 @@ import dev.sk2andy.materialbrowser.capsule.SiteCapsuleEditorRequest
 import dev.sk2andy.materialbrowser.data.AddressSuggestion
 import dev.sk2andy.materialbrowser.data.FavoriteMutation
 import dev.sk2andy.materialbrowser.reader.ReaderExtractionResult
+import dev.sk2andy.materialbrowser.reader.ReaderExtractionFailure
 import dev.sk2andy.materialbrowser.reader.ReaderLibraryRepository
 import dev.sk2andy.materialbrowser.reader.ReaderStudioSession
 import dev.sk2andy.materialbrowser.reader.ReaderStudioSessionRules
+import dev.sk2andy.materialbrowser.shared.browser.AddressBarLongPressAction
 import dev.sk2andy.materialbrowser.recall.RecallMatch
 import eightbitlab.com.blurview.BlurTarget
 import kotlinx.coroutines.delay
@@ -135,6 +139,7 @@ private enum class BrowserBackTarget {
     FindInPage,
     CandyTrail,
     TabOverview,
+    WebContentFullscreen,
     WebHistory,
     ExternalApp,
     RootTab,
@@ -201,6 +206,7 @@ private val PendingProfileConfigurationSaver =
 @Composable
 internal fun BrowserScreen(
     controller: BrowserController,
+    fullscreenVideoGestureState: FullscreenVideoGestureState? = null,
     castUiState: CastUiState = CastUiState(),
     onToggleCastPlayback: () -> Unit = {},
     onSeekCast: (Long) -> Unit = {},
@@ -228,6 +234,11 @@ internal fun BrowserScreen(
     hardwareTabChangeRequestId: Int = 0,
 ) {
     if (controller.isActiveProfileLocked) return
+    val hideBrowserChrome = FullscreenVideoRules.hidesBrowserChrome(
+        isWebContentFullscreen = controller.isSelectedWebContentFullscreen,
+        placement = controller.fullscreenVideoPlacement(videoOnlyPresentation),
+        videoOnlyPresentation = videoOnlyPresentation,
+    )
     val currentTabOverviewPortraitLockChanged by rememberUpdatedState(
         onTabOverviewPortraitLockChanged,
     )
@@ -239,7 +250,7 @@ internal fun BrowserScreen(
             controller = controller,
             capsule = capsule,
             webViewVideoOnlyPresentation = webViewVideoOnlyPresentation,
-            videoOnlyPresentation = videoOnlyPresentation,
+            videoOnlyPresentation = hideBrowserChrome,
         )
         return
     }
@@ -263,6 +274,7 @@ internal fun BrowserScreen(
     var settingsDestination by rememberSaveable { mutableStateOf(SettingsDestination.Home) }
     var snoozedTabsVisible by rememberSaveable { mutableStateOf(false) }
     var snoozeTabId by remember { mutableStateOf<String?>(null) }
+    var moveTabToProfileId by remember { mutableStateOf<String?>(null) }
     var pendingLinkSnooze by remember { mutableStateOf<PendingLinkSnooze?>(null) }
     var privacyXRayTabId by remember { mutableStateOf<String?>(null) }
     var permissionRadarTabId by remember { mutableStateOf<String?>(null) }
@@ -727,9 +739,9 @@ internal fun BrowserScreen(
         if (emitHaptic) rootView.performConfirmHaptic()
         return true
     }
-    val openNewTabAndEdit: () -> Unit = {
+    fun openNewTabAndEdit(isIncognito: Boolean = false) {
         val createAndEdit = {
-            if (createTabAndConfirm(isIncognito = false, emitHaptic = true)) {
+            if (createTabAndConfirm(isIncognito = isIncognito, emitHaptic = true)) {
                 addressValue = TextFieldValue()
                 addressEditorVisible = true
                 highlightedSuggestionIndex = -1
@@ -740,6 +752,67 @@ internal fun BrowserScreen(
             createAndEdit()
         } else {
             controller.refreshSelectedTabPreview(createAndEdit)
+        }
+    }
+    fun openReaderStudio() {
+        readerStudioResult = null
+        val requestId = ++readerStudioRequestId
+        readerStudioSession = ReaderStudioSession(
+            tabId = selectedTab.id,
+            sourceUrl = selectedTab.url,
+            isPrivate = selectedTab.isIncognito,
+            requestId = requestId,
+        )
+        controller.extractSelectedPageForReader { result ->
+            if (ReaderStudioSessionRules.acceptsResult(readerStudioSession, requestId)) {
+                readerStudioResult = result
+            }
+        }
+    }
+    fun performAddressBarLongPress(action: AddressBarLongPressAction) {
+        when (action) {
+            AddressBarLongPressAction.OpenReader -> openReaderStudio()
+            AddressBarLongPressAction.SaveReaderOffline -> {
+                controller.saveSelectedPageToReader { result ->
+                    Toast.makeText(
+                        context,
+                        result.readerActionMessageRes(),
+                        Toast.LENGTH_SHORT,
+                    ).show()
+                }
+            }
+            AddressBarLongPressAction.FindInPage -> controller.openFindInPage()
+            AddressBarLongPressAction.TranslatePage -> controller.translateSelectedPage()
+            AddressBarLongPressAction.ToggleDesktopView ->
+                controller.setSelectedDesktopView(!controller.isSelectedDesktopView)
+            AddressBarLongPressAction.CopyUrl -> controller.copyLink(selectedTab.url)
+            AddressBarLongPressAction.ShareUrl -> controller.shareSelectedPage()
+            AddressBarLongPressAction.Print -> controller.printSelectedPage()
+            AddressBarLongPressAction.SendToAssistant ->
+                controller.summarizeSelectedPageWithAssistant()
+            AddressBarLongPressAction.ToggleFavorite ->
+                toggleFavoriteWithFeedback(selectedTab.id)
+            AddressBarLongPressAction.TogglePinned -> {
+                if (controller.setTabPinned(selectedTab.id, !selectedTab.isPinned)) {
+                    rootView.performConfirmHaptic()
+                }
+            }
+            AddressBarLongPressAction.Reload -> controller.reload()
+            AddressBarLongPressAction.GoBack -> controller.goBack()
+            AddressBarLongPressAction.DuplicateTab -> controller.duplicateSelectedTab()
+            AddressBarLongPressAction.SnoozeTab -> snoozeTabId = selectedTab.id
+            AddressBarLongPressAction.MoveToProfile -> moveTabToProfileId = selectedTab.id
+            AddressBarLongPressAction.NewTab -> openNewTabAndEdit()
+            AddressBarLongPressAction.NewPrivateTab -> openNewTabAndEdit(isIncognito = true)
+            AddressBarLongPressAction.OpenHistory -> onOpenHistory()
+            AddressBarLongPressAction.ParkAddressBar -> controller.parkAddressBarOnRight()
+            AddressBarLongPressAction.OpenCandyTrail -> {
+                candyTrailSourceBounds = null
+                candyTrailTabId = selectedTab.id
+                rootView.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+            }
+            AddressBarLongPressAction.CreateSiteCapsule ->
+                openSiteCapsuleEditor(existing = null, sourceTab = selectedTab)
         }
     }
     LaunchedEffect(
@@ -1124,6 +1197,7 @@ internal fun BrowserScreen(
             controller.findInPageState != null -> BrowserBackTarget.FindInPage
             candyTrailTabId != null -> BrowserBackTarget.CandyTrail
             tabOverviewVisible || tabOverviewOpening -> BrowserBackTarget.TabOverview
+            controller.isSelectedWebContentFullscreen -> BrowserBackTarget.WebContentFullscreen
             selectedTab.canGoBack -> BrowserBackTarget.WebHistory
             selectedTab.id == externalLaunchTabId -> BrowserBackTarget.ExternalApp
             controller.selectedRootTabBackDecision ==
@@ -1154,6 +1228,7 @@ internal fun BrowserScreen(
                 BrowserBackTarget.SettingsSubpage -> {
                     settingsDestination = when (settingsDestination) {
                         SettingsDestination.ToppingCatalog -> SettingsDestination.Userscripts
+                        SettingsDestination.AddressBarLongPressActions,
                         SettingsDestination.AddressBarActions ->
                             SettingsDestination.TabsAndGestures
                         SettingsDestination.MenuActions ->
@@ -1197,6 +1272,8 @@ internal fun BrowserScreen(
                     candyTrailSourceBounds = null
                 }
                 BrowserBackTarget.TabOverview -> closeTabOverview()
+                BrowserBackTarget.WebContentFullscreen ->
+                    controller.exitSelectedWebContentFullscreen()
                 BrowserBackTarget.WebHistory -> controller.goBack()
                 BrowserBackTarget.ExternalApp -> onReturnToExternalApp()
                 BrowserBackTarget.RootTab -> {
@@ -1281,7 +1358,7 @@ internal fun BrowserScreen(
         }
     }
     val showFirefoxExtensionOptionsChrome =
-        firefoxExtensionOptionsTitle != null && !videoOnlyPresentation
+        firefoxExtensionOptionsTitle != null && !hideBrowserChrome
     val showInteractiveBlankStart = addressEditorVisible &&
         selectedTab.url == BLANK_URL &&
         addressValue.text.isEmpty() &&
@@ -1321,11 +1398,22 @@ internal fun BrowserScreen(
                         onBack = controller::goBack,
                     )
                 }
-                Box(modifier = Modifier.weight(1f)) {
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .background(
+                            if (fullscreenVideoGestureState != null) {
+                                Color.Black
+                            } else {
+                                Color.Transparent
+                            },
+                        ),
+                ) {
                     BrowserViewport(
                         controller = controller,
+                        fullscreenVideoGestureState = fullscreenVideoGestureState,
                         webViewVideoOnlyPresentation = webViewVideoOnlyPresentation,
-                        videoOnlyPresentation = videoOnlyPresentation,
+                        videoOnlyPresentation = hideBrowserChrome,
                         selectedTab = selectedTab,
                         dragOffset = browserDragOffset,
                         travelDistance = tabSwitchTravelPx,
@@ -1345,9 +1433,11 @@ internal fun BrowserScreen(
                             addressEditorVisible = false
                             controller.submitAddress(url)
                         },
+                        onOpenFavorites = onOpenFavorites,
+                        onReorderFavorite = controller::reorderFavorite,
                         blankTabModeProgress = blankTabModeProgress,
                         blankTabModeRevealOrigin = blankTabModeRevealOrigin,
-                        onRetry = controller::reload,
+                        onRetry = controller::retryFailedPage,
                         onBlurTargetAttached = { target -> browserContentBlurTarget = target },
                         onBlurTargetReleased = { target ->
                             if (browserContentBlurTarget === target) browserContentBlurTarget = null
@@ -1358,7 +1448,7 @@ internal fun BrowserScreen(
         }
 
         controller.findInPageState
-            ?.takeIf { firefoxExtensionOptionsTitle == null && !videoOnlyPresentation }
+            ?.takeIf { firefoxExtensionOptionsTitle == null && !hideBrowserChrome }
             ?.let { findState ->
             val matchPosition = FindInPageRules.displayPosition(findState)
             FindInPageBar(
@@ -1393,7 +1483,7 @@ internal fun BrowserScreen(
             )
         }
 
-        if (firefoxExtensionOptionsTitle == null && !videoOnlyPresentation) {
+        if (firefoxExtensionOptionsTitle == null && !hideBrowserChrome) {
             BrowserAddressChrome(
             controller = controller,
             selectedTab = selectedTab,
@@ -1454,7 +1544,7 @@ internal fun BrowserScreen(
             },
             onOverviewGestureStarted = { overviewGestureSettleJob?.cancel() },
             onOverviewGestureCancelled = settleOverviewGesture,
-            openNewTabAndEdit = openNewTabAndEdit,
+            openNewTabAndEdit = { openNewTabAndEdit() },
             toggleFavoriteWithFeedback = toggleFavoriteWithFeedback,
             onBlankTabModeRevealOriginChanged = { blankTabModeRevealOrigin = it },
             onSnoozedTabs = { snoozedTabsVisible = true },
@@ -1471,30 +1561,15 @@ internal fun BrowserScreen(
                 permissionRadarOrigin = null
             },
             onNewTabButtonBoundsChanged = { addressNewTabButtonBounds = it },
-            onReaderStudio = {
-                readerStudioResult = null
-                val requestId = ++readerStudioRequestId
-                readerStudioSession = ReaderStudioSession(
-                    tabId = selectedTab.id,
-                    sourceUrl = selectedTab.url,
-                    isPrivate = selectedTab.isIncognito,
-                    requestId = requestId,
-                )
-                controller.extractSelectedPageForReader { result ->
-                    if (ReaderStudioSessionRules.acceptsResult(readerStudioSession, requestId)) {
-                        readerStudioResult = result
-                    }
-                }
-            },
+            onReaderStudio = { performAddressBarLongPress(AddressBarLongPressAction.OpenReader) },
             onOpenCandyTrail = {
-                candyTrailSourceBounds = null
-                candyTrailTabId = selectedTab.id
-                rootView.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                performAddressBarLongPress(AddressBarLongPressAction.OpenCandyTrail)
             },
             onSnooze = { snoozeTabId = selectedTab.id },
             onAddSiteCapsule = {
-                openSiteCapsuleEditor(existing = null, sourceTab = selectedTab)
+                performAddressBarLongPress(AddressBarLongPressAction.CreateSiteCapsule)
             },
+            onAddressBarLongPressAction = ::performAddressBarLongPress,
             )
         }
 
@@ -1671,6 +1746,23 @@ internal fun BrowserScreen(
             },
         )
 
+        MoveTabToProfileDialog(
+            tab = moveTabToProfileId?.let { tabId ->
+                controller.tabs.firstOrNull { tab -> tab.id == tabId }
+            },
+            profiles = moveTabToProfileId
+                ?.let(controller::compatibleMoveTargetProfiles)
+                .orEmpty(),
+            onMove = { profileId ->
+                val tabId = moveTabToProfileId ?: return@MoveTabToProfileDialog
+                moveTabToProfileId = null
+                if (controller.moveTabToProfile(tabId, profileId)) {
+                    rootView.performConfirmHaptic()
+                }
+            },
+            onDismiss = { moveTabToProfileId = null },
+        )
+
         BrowserSettingsOverlay(
             controller = controller,
             visible = settingsVisible,
@@ -1779,4 +1871,13 @@ internal fun BrowserScreen(
         },
     )
     FirefoxExtensionChrome(controller)
+}
+
+private fun ReaderExtractionResult.readerActionMessageRes(): Int = when (this) {
+    is ReaderExtractionResult.Success -> R.string.reader_saved_offline_confirmation
+    is ReaderExtractionResult.Failure -> when (reason) {
+        ReaderExtractionFailure.UnsupportedPage -> R.string.reader_extraction_unsupported
+        ReaderExtractionFailure.EmptyArticle -> R.string.reader_extraction_empty
+        ReaderExtractionFailure.InvalidResponse -> R.string.reader_extraction_invalid
+    }
 }

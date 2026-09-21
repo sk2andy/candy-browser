@@ -4,19 +4,28 @@ import android.content.Context
 import android.content.res.Configuration
 import android.annotation.SuppressLint
 import android.graphics.Bitmap
+import android.graphics.RectF
 import android.graphics.Region
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.view.KeyEvent
 import android.view.MotionEvent
+import android.view.RoundedRectBlurRegion
+import android.view.SurfaceView
 import android.view.View
+import android.view.ViewGroup
 import android.widget.FrameLayout
+import androidx.annotation.RequiresApi
 import androidx.annotation.UiThread
 import androidx.annotation.VisibleForTesting
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import dev.sk2andy.materialbrowser.BuildConfig
 import dev.sk2andy.materialbrowser.browser.BrowserPerformanceTrace
+import dev.sk2andy.materialbrowser.browser.BrowserBackdropBlurRegion
+import dev.sk2andy.materialbrowser.browser.BrowserBackdropBlurRules
+import dev.sk2andy.materialbrowser.browser.BrowserSurfaceBackdropBlurRegion
 import dev.sk2andy.materialbrowser.browser.BrowserEngineAndroidPermissionRequest
 import dev.sk2andy.materialbrowser.browser.BrowserEngineAuthPromptRequest
 import dev.sk2andy.materialbrowser.browser.BrowserEngineAuthPromptResponse
@@ -39,9 +48,12 @@ import dev.sk2andy.materialbrowser.browser.BrowserEngineScrollEventSource
 import dev.sk2andy.materialbrowser.browser.BrowserEngineScrollListener
 import dev.sk2andy.materialbrowser.browser.BrowserEngineScrollMetrics
 import dev.sk2andy.materialbrowser.browser.BrowserViewportRect
+import dev.sk2andy.materialbrowser.browser.DnsOverHttpsSettings
 import dev.sk2andy.materialbrowser.browser.TextInputOcclusionProbeMode
 import dev.sk2andy.materialbrowser.browser.TextInputOcclusionProbeResult
+import dev.sk2andy.materialbrowser.browser.WebContentTopInsetTransitionRules
 import dev.sk2andy.materialbrowser.browser.WebRtcProtectionMode
+import dev.sk2andy.materialbrowser.browser.smoothWebContentTopInsetChange
 import dev.sk2andy.materialbrowser.browser.actions.BrowserContentTargetKind
 import dev.sk2andy.materialbrowser.browser.actions.BrowserContentTargetListener
 import dev.sk2andy.materialbrowser.browser.actions.BrowserContentTargetRules
@@ -50,10 +62,12 @@ import dev.sk2andy.materialbrowser.browser.credentials.AndroidCredentialPromptHo
 import dev.sk2andy.materialbrowser.browser.credentials.CredentialPromptHost
 import dev.sk2andy.materialbrowser.browser.credentials.CredentialPromptIdentity
 import dev.sk2andy.materialbrowser.browser.credentials.CredentialPromptRules
+import dev.sk2andy.materialbrowser.browser.engine.BrowserEngineContentKind
 import dev.sk2andy.materialbrowser.browser.engine.BrowserWebContentColorScheme
 import dev.sk2andy.materialbrowser.browser.integration.BrowserUriPolicy
 import dev.sk2andy.materialbrowser.browser.permissions.SitePermission
 import dev.sk2andy.materialbrowser.data.UserScriptValueStore
+import dev.sk2andy.materialbrowser.data.BrowserSessionStore
 import java.net.URI
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -191,6 +205,11 @@ internal class GeckoViewRuntimeHandle private constructor(
     }
 
     @UiThread
+    override fun setDnsOverHttpsSettings(settings: DnsOverHttpsSettings) {
+        runtime.settings.applyDnsOverHttpsSettings(settings)
+    }
+
+    @UiThread
     override fun setWebContentFontSizeFactor(factor: Float) {
         runtime.settings.automaticFontSizeAdjustment = false
         runtime.settings.fontSizeFactor = factor
@@ -224,6 +243,13 @@ internal class GeckoViewRuntimeHandle private constructor(
     fun preferredColorSchemeForTesting(): Int = runtime.settings.preferredColorScheme
 
     @VisibleForTesting
+    fun dnsOverHttpsModeForTesting(): Int = runtime.settings.getTrustedRecusiveResolverMode()
+
+    @VisibleForTesting
+    fun dnsOverHttpsEndpointForTesting(): String =
+        runtime.settings.trustedRecursiveResolverUri
+
+    @VisibleForTesting
     fun webAuthnActivityDelegateForTesting(): GeckoRuntime.ActivityDelegate? =
         runtime.activityDelegate
 
@@ -253,7 +279,10 @@ internal class GeckoViewRuntimeHandle private constructor(
                     ContentBlocking.CookieBehavior.ACCEPT_FIRST_PARTY,
                 )
                 .build()
-            val runtimeSettings = GeckoRuntimeSettingsFactory.create(contentBlocking)
+            val runtimeSettings = GeckoRuntimeSettingsFactory.create(
+                contentBlocking = contentBlocking,
+                dnsOverHttpsSettings = BrowserSessionStore(appContext).loadDnsOverHttpsSettings(),
+            )
             val runtime = GeckoRuntime.create(appContext, runtimeSettings)
             val extensionController = runtime.webExtensionController
             val toppingHost = GeckoViewToppingHostRuntime(
@@ -834,6 +863,7 @@ private class GeckoViewBrowserSession(
 
     private val storageController = runtime.storageController
     private val mainHandler = Handler(Looper.getMainLooper())
+    private val mediaRestorationReadback = GeckoMediaRestorationReadback(mainHandler)
     private val cookieBehaviorOwner = Any()
     private val trackingPermissionOwner = Any()
 
@@ -880,10 +910,29 @@ private class GeckoViewBrowserSession(
     private var webPromptListener: GeckoWebPromptListener? = null
 
     @Volatile
+    private var nativeMediaState = GeckoMediaSessionState()
+
+    @Volatile
     private var mediaState = GeckoMediaSessionState()
+
+    private var inlineVideoState = GeckoInlineVideoState(
+        isActive = false,
+        isPlaying = false,
+        isPresented = false,
+        width = 0,
+        height = 0,
+        documentNonce = null,
+        elementNonce = null,
+    )
 
     @Volatile
     private var mediaStateListener: GeckoMediaSessionStateListener? = null
+
+    @Volatile
+    private var inlineVideoOpenRequestListener: GeckoInlineVideoOpenRequestListener? = null
+
+    @Volatile
+    private var inlineVideoGestureHapticListener: GeckoInlineVideoGestureHapticListener? = null
 
     @Volatile
     private var fullscreenStateListener: GeckoFullscreenStateListener? = null
@@ -892,9 +941,10 @@ private class GeckoViewBrowserSession(
     private var scrollListener: BrowserEngineScrollListener? = null
 
     private var boundView: CandyGeckoView? = null
-    private var backdropCaptureEnabled = false
+    private var backdropBlurRegion: BrowserBackdropBlurRegion? = null
     private val contentPresentationGate = GeckoContentPresentationGate()
     private var activeMediaSession: MediaSession? = null
+    private var deactivatedMediaSession: MediaSession? = null
     private var videoAutoplayBlocked = false
     private var audioMuted = false
     private var httpPasswordManagerSelectionEnabled = false
@@ -920,14 +970,18 @@ private class GeckoViewBrowserSession(
     private var toppingHostWaitRegistered = false
     private var trackingPermissionWaitRegistered = false
     private var pendingInitialUrl: String? = null
+    private var pendingFailedPageRetryUrl: String? = null
     private var latestSessionState: GeckoSession.SessionState? = null
     private var pendingRestoredSessionState: GeckoSession.SessionState? = null
+    private var pendingRestoredHistoryState: GeckoBrowserHistoryState? = null
+    private var restoredHistoryPending = false
     private var privacyPolicy = initialPrivacyPolicy
     private var currentPageUrl: String? = null
     private var trackingPermission: GeckoSession.PermissionDelegate.ContentPermission? = null
     private var privacyBound = false
     private var privacyFailureDescription: String? = null
     private val privacyBinding: GeckoPrivacyBinding
+    private var toppingBinding: GeckoToppingSessionBinding = GeckoToppingSessionBinding.None
     init {
         if (BuildConfig.ENABLE_PERFORMANCE_DIAGNOSTICS) {
             GeckoPerformanceDiagnostics.registerSession(session, isPrivate)
@@ -1145,14 +1199,14 @@ private class GeckoViewBrowserSession(
                 (historyList as? GeckoSession.SessionState)?.let { nativeState ->
                     latestSessionState = GeckoSession.SessionState(nativeState)
                 }
-                val currentIndex = historyList.currentIndex
-                val updated = GeckoBrowserHistoryState(
-                    urls = historyList.map { item -> item.uri.orEmpty() },
-                    currentIndex = currentIndex,
-                    currentTitle = historyList.getOrNull(currentIndex)?.title,
-                )
+                val updated = historyList.toBrowserHistoryState()
                 historyState = updated
+                if (updated.matches(pendingRestoredHistoryState)) {
+                    pendingRestoredHistoryState = null
+                    restoredHistoryPending = false
+                }
                 historyStateListener?.onHistoryStateChanged(updated)
+                runPendingFailedPageRetryIfReady()
             }
         }
         session.scrollDelegate = object : GeckoSession.ScrollDelegate {
@@ -1629,6 +1683,7 @@ private class GeckoViewBrowserSession(
         session.mediaSessionDelegate = object : MediaSession.Delegate {
             override fun onActivated(session: GeckoSession, mediaSession: MediaSession) {
                 activeMediaSession = mediaSession
+                deactivatedMediaSession = null
                 mediaSession.muteAudio(audioMuted)
                 updateMediaState { GeckoMediaSessionRules.activatedState() }
             }
@@ -1636,7 +1691,8 @@ private class GeckoViewBrowserSession(
             override fun onDeactivated(session: GeckoSession, mediaSession: MediaSession) {
                 if (activeMediaSession !== mediaSession) return
                 activeMediaSession = null
-                updateMediaState { GeckoMediaSessionState() }
+                deactivatedMediaSession = mediaSession
+                updateMediaState(GeckoMediaSessionRules::deactivatedState)
             }
 
             override fun onMetadata(
@@ -1644,26 +1700,30 @@ private class GeckoViewBrowserSession(
                 mediaSession: MediaSession,
                 meta: MediaSession.Metadata,
             ) {
-                if (activeMediaSession !== mediaSession) return
+                if (!ownsMediaSession(mediaSession)) return
                 updateMediaState { current ->
                     current.copy(title = meta.title, artist = meta.artist)
                 }
             }
 
             override fun onPlay(session: GeckoSession, mediaSession: MediaSession) {
-                if (activeMediaSession !== mediaSession) return
+                if (!ownsMediaSession(mediaSession)) return
+                activeMediaSession = mediaSession
+                deactivatedMediaSession = null
                 BrowserPerformanceTrace.event(BrowserPerformanceTrace.Phase.GeckoMediaPlay)
                 updateMediaState { current -> current.copy(isActive = true, isPlaying = true) }
             }
 
             override fun onPause(session: GeckoSession, mediaSession: MediaSession) {
-                if (activeMediaSession !== mediaSession) return
+                if (!ownsMediaSession(mediaSession)) return
                 BrowserPerformanceTrace.event(BrowserPerformanceTrace.Phase.GeckoMediaPause)
                 updateMediaState { current -> current.copy(isPlaying = false) }
             }
 
             override fun onStop(session: GeckoSession, mediaSession: MediaSession) {
-                if (activeMediaSession !== mediaSession) return
+                if (!ownsMediaSession(mediaSession)) return
+                activeMediaSession = null
+                deactivatedMediaSession = null
                 BrowserPerformanceTrace.event(BrowserPerformanceTrace.Phase.GeckoMediaStop)
                 updateMediaState { GeckoMediaSessionRules.stoppedState() }
             }
@@ -1673,7 +1733,7 @@ private class GeckoViewBrowserSession(
                 mediaSession: MediaSession,
                 positionState: MediaSession.PositionState,
             ) {
-                if (activeMediaSession !== mediaSession) return
+                if (!ownsMediaSession(mediaSession)) return
                 updateMediaState { current ->
                     current.copy(
                         currentPositionMillis = positionState.position.toBoundedMediaMillis() ?: 0,
@@ -1693,7 +1753,7 @@ private class GeckoViewBrowserSession(
                 enabled: Boolean,
                 meta: MediaSession.ElementMetadata?,
             ) {
-                if (activeMediaSession !== mediaSession) return
+                if (!ownsMediaSession(mediaSession)) return
                 updateMediaState { current ->
                     current.copy(
                         isFullscreen = enabled,
@@ -1729,6 +1789,16 @@ private class GeckoViewBrowserSession(
                 currentPageUrl = url
                 invalidateCredentialPrompts(recreateHost = true)
                 activeMediaSession = null
+                deactivatedMediaSession = null
+                inlineVideoState = GeckoInlineVideoState(
+                    isActive = false,
+                    isPlaying = false,
+                    isPresented = false,
+                    width = 0,
+                    height = 0,
+                    documentNonce = null,
+                    elementNonce = null,
+                )
                 updateMediaState { GeckoMediaSessionState() }
                 updateState { current ->
                     current.copy(
@@ -1782,6 +1852,13 @@ private class GeckoViewBrowserSession(
                 if (responseUrl != null && responseUrl == pageUrl) {
                     updateState { current -> current.copy(httpStatusCode = response.statusCode) }
                 }
+            },
+            onInlineVideoState = ::updateInlineVideoState,
+            onInlineVideoOpenRequest = { request ->
+                inlineVideoOpenRequestListener?.onOpenRequested(request)
+            },
+            onInlineVideoGestureHaptic = { haptic ->
+                inlineVideoGestureHapticListener?.onHapticRequested(haptic)
             },
             onBound = {
                 privacyBound = true
@@ -1976,6 +2053,18 @@ private class GeckoViewBrowserSession(
     override fun setMediaStateListener(listener: GeckoMediaSessionStateListener?) {
         mediaStateListener = listener
         listener?.onStateChanged(mediaState)
+    }
+
+    override fun setInlineVideoOpenRequestListener(
+        listener: GeckoInlineVideoOpenRequestListener?,
+    ) {
+        inlineVideoOpenRequestListener = listener
+    }
+
+    override fun setInlineVideoGestureHapticListener(
+        listener: GeckoInlineVideoGestureHapticListener?,
+    ) {
+        inlineVideoGestureHapticListener = listener
     }
 
     override fun setScrollListener(listener: BrowserEngineScrollListener?) {
@@ -2231,8 +2320,14 @@ private class GeckoViewBrowserSession(
             permission = permission,
         )
 
+    private fun ownsMediaSession(mediaSession: MediaSession): Boolean =
+        activeMediaSession === mediaSession || deactivatedMediaSession === mediaSession
+
+    private fun mediaSessionForCommand(): MediaSession? =
+        activeMediaSession?.takeIf(MediaSession::isActive) ?: deactivatedMediaSession
+
     override fun executeMediaCommand(command: GeckoMediaCommand) {
-        val mediaSession = activeMediaSession?.takeIf(MediaSession::isActive) ?: return
+        val mediaSession = mediaSessionForCommand() ?: return
         when (command) {
             GeckoMediaCommand.Play -> mediaSession.play()
             GeckoMediaCommand.Pause -> mediaSession.pause()
@@ -2242,11 +2337,11 @@ private class GeckoViewBrowserSession(
 
     override fun setAudioMuted(muted: Boolean) {
         audioMuted = muted
-        activeMediaSession?.takeIf(MediaSession::isActive)?.muteAudio(muted)
+        mediaSessionForCommand()?.muteAudio(muted)
     }
 
     override fun seekMedia(positionMillis: Long) {
-        val mediaSession = activeMediaSession?.takeIf(MediaSession::isActive) ?: return
+        val mediaSession = mediaSessionForCommand() ?: return
         mediaSession.seekTo(positionMillis.coerceAtLeast(0L) / 1_000.0, true)
     }
 
@@ -2254,6 +2349,7 @@ private class GeckoViewBrowserSession(
     override fun notifyPictureInPictureModeChanged(inPictureInPicture: Boolean) {
         if (closed || this.inPictureInPicture == inPictureInPicture) return
         this.inPictureInPicture = inPictureInPicture
+        if (inPictureInPicture) mediaRestorationReadback.cancel()
         session.compositorController.onPipModeChanged(inPictureInPicture)
     }
 
@@ -2261,7 +2357,85 @@ private class GeckoViewBrowserSession(
     override fun setPictureInPicturePlaybackExpected(expected: Boolean) {
         if (closed) return
         pictureInPicturePlaybackExpected = expected
+        if (expected) mediaRestorationReadback.cancel()
         privacyBinding.setPictureInPicturePlaybackExpected(expected)
+    }
+
+    @UiThread
+    override fun preparePictureInPicturePlayback(
+        identity: GeckoInlineVideoIdentity,
+        onResult: (GeckoPictureInPicturePreparation?) -> Unit,
+    ) {
+        if (closed || !pictureInPicturePlaybackExpected) {
+            onResult(null)
+            return
+        }
+        privacyBinding.preparePictureInPicturePlayback(
+            identity = identity,
+            onResult = onResult,
+        )
+    }
+
+    @UiThread
+    override fun restorePictureInPicturePresentation(onResult: (Boolean) -> Unit) {
+        if (closed) {
+            onResult(false)
+            return
+        }
+        mediaRestorationReadback.cancel()
+        pictureInPicturePlaybackExpected = false
+        val view = boundView
+        val policy = privacyPolicy
+        privacyBinding.restorePictureInPicturePresentation restoration@{ restored ->
+            if (!restored || view == null) {
+                onResult(false)
+                return@restoration
+            }
+            mediaRestorationReadback.start(
+                isCurrent = {
+                    !closed && boundView === view && view.isAttachedToWindow &&
+                        privacyPolicy === policy && !inPictureInPicture &&
+                        !pictureInPicturePlaybackExpected
+                },
+                capture = { complete ->
+                    val result = try {
+                        view.capturePixels()
+                    } catch (_: IllegalStateException) {
+                        null
+                    }
+                    if (result == null) {
+                        complete(false)
+                    } else {
+                        result.withHandler(mainHandler).accept(
+                            { bitmap ->
+                                val captured = bitmap != null
+                                bitmap?.takeUnless(Bitmap::isRecycled)?.recycle()
+                                complete(captured)
+                            },
+                            { complete(false) },
+                        )
+                    }
+                },
+                onResult = onResult,
+            )
+        }
+    }
+
+    @UiThread
+    override fun setInlineVideoPresentation(
+        identity: GeckoInlineVideoIdentity?,
+        expected: Boolean,
+        onResult: (Boolean) -> Unit,
+    ) {
+        if (closed) {
+            onResult(false)
+            return
+        }
+        privacyBinding.setInlineVideoPresentation(
+            identity = identity,
+            expected = expected,
+            onResult = onResult,
+        )
     }
 
     override fun setFullscreenStateListener(listener: GeckoFullscreenStateListener?) {
@@ -2313,10 +2487,22 @@ private class GeckoViewBrowserSession(
     }
 
     @UiThread
-    override fun setBackdropCaptureEnabled(enabled: Boolean) {
-        if (backdropCaptureEnabled == enabled) return
-        backdropCaptureEnabled = enabled
-        boundView?.setBackdropCaptureEnabled(enabled)
+    override fun bindToppingSession(tabId: String, contentKind: BrowserEngineContentKind) {
+        check(!closed) { "Cannot bind a closed Gecko session" }
+        toppingBinding.close()
+        toppingBinding = toppingHost.bindSession(
+            session = session,
+            tabId = tabId,
+            isPrivate = isPrivate,
+            contentKind = contentKind,
+        )
+    }
+
+    @UiThread
+    override fun setBackdropBlurRegion(region: BrowserBackdropBlurRegion?) {
+        if (backdropBlurRegion == region) return
+        backdropBlurRegion = region
+        boundView?.setBackdropBlurRegion(region)
     }
 
     @UiThread
@@ -2324,7 +2510,7 @@ private class GeckoViewBrowserSession(
         check(!closed) { "Cannot bind a closed Gecko session" }
         check(boundView == null) { "Gecko session already has a bound View" }
         return CandyGeckoView(context).also { view ->
-            view.setBackdropCaptureEnabled(backdropCaptureEnabled)
+            view.setBackdropBlurRegion(backdropBlurRegion)
             view.configureAutofill(isPrivate)
             AndroidCredentialPromptHost.activityContext(context)?.let { activityContext ->
                 view.setActivityContextDelegate { activityContext }
@@ -2361,6 +2547,7 @@ private class GeckoViewBrowserSession(
     override fun releaseView(view: View) {
         val geckoView = view as? CandyGeckoView ?: return
         if (geckoView !== boundView) return
+        mediaRestorationReadback.cancel()
         invalidateDomProbe()
         // Clear ownership before releaseSession or prompt cancellation can synchronously re-enter
         // Compose and ask the controller to attach this session again.
@@ -2520,6 +2707,7 @@ private class GeckoViewBrowserSession(
             ?: return false
         latestSessionState = GeckoSession.SessionState(restored)
         pendingRestoredSessionState = restored
+        pendingRestoredHistoryState = restored.toBrowserHistoryState()
         restorePendingStateIfReady()
         return true
     }
@@ -2549,6 +2737,20 @@ private class GeckoViewBrowserSession(
         return loadValidatedUrl(safeUrl)
     }
 
+    override fun retryFailedPage(url: String): Boolean {
+        if (closed) return false
+        val safeUrl = BrowserUriPolicy.normalizeHttpUrl(url) ?: return false
+        invalidateCredentialPrompts(recreateHost = false)
+        privacyFailureDescription?.let { description ->
+            failPrivacyGate(description)
+            return true
+        }
+        pendingInitialUrl = null
+        pendingFailedPageRetryUrl = safeUrl
+        if (!runPendingFailedPageRetryIfReady()) awaitNavigationReadiness()
+        return true
+    }
+
     override fun loadExtensionUrl(url: String): Boolean {
         if (closed) return false
         val parsed = runCatching { URI(url) }.getOrNull() ?: return false
@@ -2564,6 +2766,7 @@ private class GeckoViewBrowserSession(
 
     private fun loadValidatedUrl(safeUrl: String): Boolean {
         invalidateCredentialPrompts(recreateHost = false)
+        pendingFailedPageRetryUrl = null
         privacyFailureDescription?.let { description ->
             failPrivacyGate(description)
             return true
@@ -2577,6 +2780,11 @@ private class GeckoViewBrowserSession(
             return true
         }
         pendingInitialUrl = safeUrl
+        awaitNavigationReadiness()
+        return true
+    }
+
+    private fun awaitNavigationReadiness() {
         if (!toppingHostWaitRegistered) {
             toppingHostWaitRegistered = true
             toppingHost.runAfterInitialization {
@@ -2595,7 +2803,6 @@ private class GeckoViewBrowserSession(
                 }
             }
         }
-        return true
     }
 
     override fun updatePrivacyPolicy(
@@ -2603,6 +2810,7 @@ private class GeckoViewBrowserSession(
         reloadOnCookiePermissionChange: Boolean,
         onReady: () -> Unit,
     ) {
+        mediaRestorationReadback.cancel()
         privacyPolicy = policy
         val cookieBehaviorChanged = cookieBehavior.update(
             owner = cookieBehaviorOwner,
@@ -2655,6 +2863,7 @@ private class GeckoViewBrowserSession(
 
     override fun stop() {
         if (!closed) {
+            pendingFailedPageRetryUrl = null
             invalidateCredentialPrompts(recreateHost = true)
             session.stop()
         }
@@ -2664,6 +2873,7 @@ private class GeckoViewBrowserSession(
     override fun close() {
         if (closed) return
         closed = true
+        mediaRestorationReadback.cancel()
         if (BuildConfig.ENABLE_PERFORMANCE_DIAGNOSTICS) GeckoDomDiagnostics.unregisterSession(session)
         if (active) extensionController.setTabActive(session, false)
         downloadTransfers.cancelOwner(session)
@@ -2687,14 +2897,22 @@ private class GeckoViewBrowserSession(
         authPromptListener = null
         webPromptListener = null
         mediaStateListener = null
+        inlineVideoOpenRequestListener = null
+        inlineVideoGestureHapticListener = null
         fullscreenStateListener = null
         scrollListener = null
         activeMediaSession = null
+        deactivatedMediaSession = null
         inPictureInPicture = false
         pictureInPicturePlaybackExpected = false
         pendingInitialUrl = null
+        pendingFailedPageRetryUrl = null
+        pendingRestoredHistoryState = null
+        restoredHistoryPending = false
         cookieBehavior.remove(cookieBehaviorOwner)
         trackingPermissions.remove(trackingPermissionOwner)
+        toppingBinding.close()
+        toppingBinding = GeckoToppingSessionBinding.None
         privacyBinding.close()
         session.close()
         if (BuildConfig.ENABLE_PERFORMANCE_DIAGNOSTICS) {
@@ -2709,7 +2927,8 @@ private class GeckoViewBrowserSession(
             !trackingPermissions.isReady ||
             !privacyBound
         ) return
-        if (restorePendingStateIfReady()) return
+        restorePendingStateIfReady()
+        if (runPendingFailedPageRetryIfReady() || pendingFailedPageRetryUrl != null) return
         val pendingUrl = pendingInitialUrl ?: return
         pendingInitialUrl = null
         session.loadUri(pendingUrl)
@@ -2719,15 +2938,72 @@ private class GeckoViewBrowserSession(
         if (closed || !privacyBound) return false
         val restored = pendingRestoredSessionState ?: return false
         pendingRestoredSessionState = null
+        restoredHistoryPending = true
         session.restoreState(restored)
         return true
     }
 
+    private fun runPendingFailedPageRetryIfReady(): Boolean {
+        if (
+            closed ||
+            toppingHost.state == GeckoToppingHostState.Initializing ||
+            !trackingPermissions.isReady ||
+            !privacyBound ||
+            restoredHistoryPending ||
+            pendingRestoredSessionState != null
+        ) return false
+        val retryUrl = pendingFailedPageRetryUrl ?: return false
+        pendingFailedPageRetryUrl = null
+        val currentIndex = historyState?.currentIndex
+        val currentUrl = currentIndex?.let { index -> historyState?.urls?.getOrNull(index) }
+        if (BrowserUriPolicy.normalizeHttpUrl(currentUrl) == retryUrl) {
+            session.reload()
+        } else {
+            session.loadUri(retryUrl)
+        }
+        return true
+    }
+
+    private fun GeckoSession.HistoryDelegate.HistoryList.toBrowserHistoryState(): GeckoBrowserHistoryState {
+        val selectedIndex = currentIndex
+        return GeckoBrowserHistoryState(
+            urls = map { item -> item.uri.orEmpty() },
+            currentIndex = selectedIndex,
+            currentTitle = getOrNull(selectedIndex)?.title,
+        )
+    }
+
+    private fun GeckoBrowserHistoryState.matches(expected: GeckoBrowserHistoryState?): Boolean {
+        expected ?: return false
+        val currentUrl = urls.getOrNull(currentIndex)
+        val expectedUrl = expected.urls.getOrNull(expected.currentIndex)
+        val normalizedExpectedUrl = BrowserUriPolicy.normalizeHttpUrl(expectedUrl)
+            ?: return currentUrl == expectedUrl
+        return BrowserUriPolicy.normalizeHttpUrl(currentUrl) == normalizedExpectedUrl
+    }
+
     private fun updateMediaState(transform: (GeckoMediaSessionState) -> GeckoMediaSessionState) {
-        val updated = transform(mediaState)
+        nativeMediaState = transform(nativeMediaState)
+        val inline = inlineVideoState
+        val updated = nativeMediaState.copy(
+            isActive = nativeMediaState.isActive || inline.isActive,
+            hasInlineVideo = inline.isActive,
+            isInlineVideoPlaying = inline.isPlaying,
+            isInlineVideoPresented = inline.isPresented,
+            inlineVideoWidth = inline.width,
+            inlineVideoHeight = inline.height,
+            inlineVideoDocumentNonce = inline.documentNonce,
+            inlineVideoElementNonce = inline.elementNonce,
+        )
         if (updated == mediaState) return
         mediaState = updated
         mediaStateListener?.onStateChanged(updated)
+    }
+
+    private fun updateInlineVideoState(state: GeckoInlineVideoState) {
+        if (inlineVideoState == state) return
+        inlineVideoState = state
+        updateMediaState { it }
     }
 
     private fun Double.toBoundedMediaMillis(): Long? = takeIf { value ->
@@ -2741,6 +3017,9 @@ private class GeckoViewBrowserSession(
         privacyBound = false
         privacyFailureDescription = description
         pendingInitialUrl = null
+        pendingFailedPageRetryUrl = null
+        pendingRestoredHistoryState = null
+        restoredHistoryPending = false
         session.stop()
         updateState { current -> current.copy(isLoading = true, lastNavigationSucceeded = null) }
         updateState { current ->
@@ -2859,8 +3138,8 @@ internal class CandyGeckoView(context: Context) : FrameLayout(context), GeckoVie
         configureEngineView(engineView)
     }
 
-    fun setBackdropCaptureEnabled(enabled: Boolean) {
-        engineView.setBackdropCaptureEnabled(enabled)
+    fun setBackdropBlurRegion(region: BrowserBackdropBlurRegion?) {
+        engineView.setBackdropBlurRegion(region)
     }
 
     fun setActivityContextDelegate(delegate: GeckoView.ActivityContextDelegate?) {
@@ -2918,9 +3197,13 @@ internal class CandyGeckoView(context: Context) : FrameLayout(context), GeckoVie
         if (BuildConfig.ENABLE_PERFORMANCE_DIAGNOSTICS &&
             (insetLayout != layout || this.windowInsets != windowInsets)
         ) domDiagnosticGeneration++
+        val animateTopInsetChange = WebContentTopInsetTransitionRules.shouldAnimate(
+            previousState = insetLayout.topInsetTransitionState,
+            nextState = layout.topInsetTransitionState,
+        )
         insetLayout = layout
         this.windowInsets = windowInsets
-        applyInsets(engineView)
+        applyInsets(engineView, animateTopInsetChange)
     }
 
     override fun onSizeChanged(width: Int, height: Int, oldWidth: Int, oldHeight: Int) {
@@ -2952,10 +3235,14 @@ internal class CandyGeckoView(context: Context) : FrameLayout(context), GeckoVie
         view.updateRendererSafeAreaOverride(insetLayout.rendererSafeAreaOverride)
     }
 
-    private fun applyInsets(view: CandyGeckoEngineView) {
+    private fun applyInsets(
+        view: CandyGeckoEngineView,
+        animateTopInsetChange: Boolean,
+    ) {
         BrowserPerformanceTrace.section(BrowserPerformanceTrace.Phase.GeckoInsets) {
             val margins = insetLayout.margins
             (view.layoutParams as? LayoutParams)?.let { layoutParams ->
+                val previousTopMargin = layoutParams.topMargin
                 if (
                     layoutParams.leftMargin != margins.left ||
                     layoutParams.topMargin != margins.top ||
@@ -2964,6 +3251,11 @@ internal class CandyGeckoView(context: Context) : FrameLayout(context), GeckoVie
                 ) {
                     layoutParams.setMargins(margins.left, margins.top, margins.right, margins.bottom)
                     view.layoutParams = layoutParams
+                    view.smoothWebContentTopInsetChange(
+                        previousTopInsetPx = previousTopMargin,
+                        nextTopInsetPx = margins.top,
+                        animateChange = animateTopInsetChange,
+                    )
                 }
             }
             windowInsets?.let(view::updateWindowInsets)
@@ -2973,20 +3265,54 @@ internal class CandyGeckoView(context: Context) : FrameLayout(context), GeckoVie
 }
 
 private class CandyGeckoEngineView(context: Context) : CandyGeckoViewSafeAreaBridge(context) {
-    private var backdropCaptureEnabled = false
+    private var backdropBlurRegion: BrowserBackdropBlurRegion? = null
+    private var appliedBackdropSurface: SurfaceView? = null
+    private var appliedBackdropRegion: BrowserSurfaceBackdropBlurRegion? = null
+    private var hasAppliedBackdropRegion = false
     private var gestureState = GeckoContentGestureState()
     private var latestTouchEvent: MotionEvent? = null
     private var rendererSafeAreaOverride: GeckoViewInsets? = null
     private var windowInsets: WindowInsetsCompat? = null
 
-    fun setBackdropCaptureEnabled(enabled: Boolean) {
-        if (backdropCaptureEnabled == enabled) return
-        backdropCaptureEnabled = enabled
-        BrowserPerformanceTrace.section(BrowserPerformanceTrace.Phase.GeckoBackendSwitch) {
-            setViewBackend(
-                if (enabled) GeckoView.BACKEND_TEXTURE_VIEW else GeckoView.BACKEND_SURFACE_VIEW,
+    fun setBackdropBlurRegion(region: BrowserBackdropBlurRegion?) {
+        if (backdropBlurRegion == region) return
+        backdropBlurRegion = region
+        applyBackdropBlurRegion()
+    }
+
+    override fun onLayout(changed: Boolean, left: Int, top: Int, right: Int, bottom: Int) {
+        super.onLayout(changed, left, top, right, bottom)
+        applyBackdropBlurRegion()
+    }
+
+    private fun applyBackdropBlurRegion() {
+        if (Build.VERSION.SDK_INT < BrowserBackdropBlurRules.NATIVE_SURFACE_BLUR_MIN_SDK) return
+        val surfaceView = findSurfaceView() ?: return
+        val locationInWindow = IntArray(2)
+        surfaceView.getLocationInWindow(locationInWindow)
+        val localRegion = backdropBlurRegion?.let { region ->
+            BrowserBackdropBlurRules.regionInSurface(
+                region = region,
+                surfaceLeftInWindowPx = locationInWindow[0],
+                surfaceTopInWindowPx = locationInWindow[1],
+                surfaceWidthPx = surfaceView.width,
+                surfaceHeightPx = surfaceView.height,
             )
         }
+        if (
+            hasAppliedBackdropRegion &&
+            appliedBackdropSurface === surfaceView &&
+            appliedBackdropRegion == localRegion
+        ) {
+            return
+        }
+        appliedBackdropSurface
+            ?.takeIf { previous -> previous !== surfaceView }
+            ?.let(GeckoSurfaceBackdropBlurApi37::clear)
+        GeckoSurfaceBackdropBlurApi37.apply(surfaceView, localRegion)
+        appliedBackdropSurface = surfaceView
+        appliedBackdropRegion = localRegion
+        hasAppliedBackdropRegion = true
     }
 
     override fun dispatchTouchEvent(event: MotionEvent): Boolean {
@@ -3071,10 +3397,17 @@ private class CandyGeckoEngineView(context: Context) : CandyGeckoViewSafeAreaBri
         super.onAttachedToWindow()
         windowInsets?.let(::dispatchCandyWindowInsets)
         dispatchRendererSafeAreaOverride()
+        post(::applyBackdropBlurRegion)
     }
 
     override fun onDetachedFromWindow() {
         cancelActiveTouch()
+        if (Build.VERSION.SDK_INT >= BrowserBackdropBlurRules.NATIVE_SURFACE_BLUR_MIN_SDK) {
+            appliedBackdropSurface?.let(GeckoSurfaceBackdropBlurApi37::clear)
+        }
+        appliedBackdropSurface = null
+        appliedBackdropRegion = null
+        hasAppliedBackdropRegion = false
         super.onDetachedFromWindow()
     }
 
@@ -3124,6 +3457,41 @@ private class CandyGeckoEngineView(context: Context) : CandyGeckoViewSafeAreaBri
     private companion object {
         val SAFE_AREA_INSET_TYPES =
             WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout()
+    }
+}
+
+private fun View.findSurfaceView(): SurfaceView? = when (this) {
+    is SurfaceView -> this
+    is ViewGroup -> (0 until childCount).firstNotNullOfOrNull { index ->
+        getChildAt(index).findSurfaceView()
+    }
+    else -> null
+}
+
+@RequiresApi(37)
+private object GeckoSurfaceBackdropBlurApi37 {
+    fun apply(
+        surfaceView: SurfaceView,
+        region: BrowserSurfaceBackdropBlurRegion?,
+    ) {
+        if (region == null) {
+            clear(surfaceView)
+            return
+        }
+        surfaceView.setBlurRegions(
+            listOf(
+                RoundedRectBlurRegion(
+                    RectF(region.leftPx, region.topPx, region.rightPx, region.bottomPx),
+                    FloatArray(8) { region.cornerRadiusPx },
+                    1f,
+                    region.blurRadiusPx,
+                ),
+            ),
+        )
+    }
+
+    fun clear(surfaceView: SurfaceView) {
+        surfaceView.setBlurRegions(emptyList())
     }
 }
 

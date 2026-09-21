@@ -40,6 +40,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -52,15 +53,19 @@ import dev.sk2andy.materialbrowser.browser.BLANK_URL
 import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineKind
 import dev.sk2andy.materialbrowser.browser.BrowserActivityResultIdentity
 import dev.sk2andy.materialbrowser.browser.BrowserController
+import dev.sk2andy.materialbrowser.browser.BrowserGestureHapticFeedback
 import dev.sk2andy.materialbrowser.browser.BrowserHardwareInputAction
 import dev.sk2andy.materialbrowser.browser.BrowserHardwareInputRules
 import dev.sk2andy.materialbrowser.browser.BrowserHardwareKey
 import dev.sk2andy.materialbrowser.browser.BrowserHardwareKeyStroke
 import dev.sk2andy.materialbrowser.browser.BrowserInputDiagnostics
 import dev.sk2andy.materialbrowser.browser.BrowserMediaSystemSession
+import dev.sk2andy.materialbrowser.browser.BrowserMediaPlaybackService
+import dev.sk2andy.materialbrowser.browser.BrowserMediaLifecycleTrace
 import dev.sk2andy.materialbrowser.browser.BrowserMouseButton
 import dev.sk2andy.materialbrowser.browser.FullscreenVideoRules
 import dev.sk2andy.materialbrowser.browser.ProfileBiometricAuthenticator
+import dev.sk2andy.materialbrowser.browser.PrivateTabsNotifier
 import dev.sk2andy.materialbrowser.browser.ReleaseNotesPresentationRules
 import dev.sk2andy.materialbrowser.browser.StartupPresentationRules
 import dev.sk2andy.materialbrowser.browser.cast.CastSessionController
@@ -97,12 +102,18 @@ import dev.sk2andy.materialbrowser.ui.BrowserScreen
 import dev.sk2andy.materialbrowser.ui.CandySplashScreen
 import dev.sk2andy.materialbrowser.ui.FirefoxExtensionManagerOverlay
 import dev.sk2andy.materialbrowser.ui.FullscreenVideoOverlay
+import dev.sk2andy.materialbrowser.ui.FullscreenVideoSystemControls
 import dev.sk2andy.materialbrowser.ui.GestureOnboardingScreen
 import dev.sk2andy.materialbrowser.ui.ProfileLockedOverlay
 import dev.sk2andy.materialbrowser.ui.ReleaseNotesScreen
+import dev.sk2andy.materialbrowser.ui.performConfirmHaptic
+import dev.sk2andy.materialbrowser.ui.rememberFullscreenVideoGestureState
+import dev.sk2andy.materialbrowser.ui.startRubberbandHaptic
+import dev.sk2andy.materialbrowser.ui.stopRubberbandHaptic
 import dev.sk2andy.materialbrowser.ui.theme.CandyTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -134,6 +145,7 @@ class MainActivity : AppCompatActivity() {
     }
     private var releaseNotesContent: ReleaseNotesContent? = null
     private var videoOnlyPresentation by mutableStateOf(false)
+    private var pictureInPictureReturnRestorationPending by mutableStateOf(false)
     private var isTabOverviewPortraitLocked = false
     private var incomingBrowserNavigationRequestId by mutableIntStateOf(0)
     private var launcherAddressEditorRequestId by mutableIntStateOf(0)
@@ -154,6 +166,10 @@ class MainActivity : AppCompatActivity() {
     private var lastMouseNavigationFingerprint: MouseNavigationFingerprint? = null
     private var geckoWebAuthnActivityIdentity: BrowserActivityResultIdentity? = null
     private var activityDestroyed = false
+    private val fullscreenVideoSystemControls by lazy {
+        FullscreenVideoSystemControls(this)
+    }
+    private val privateTabsNotifier by lazy { PrivateTabsNotifier(this) }
     private var appliedNightConfiguration = Configuration.UI_MODE_NIGHT_UNDEFINED
     private val webPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions(),
@@ -164,6 +180,9 @@ class MainActivity : AppCompatActivity() {
         ActivityResultContracts.RequestPermission(),
     ) { granted ->
         CandyDownloadNotifier(this).onPermissionResult(granted)
+        if (::browserController.isInitialized) {
+            privateTabsNotifier.update(browserController.tabs.count { it.isIncognito })
+        }
     }
     private val fileChooserLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult(),
@@ -244,6 +263,7 @@ class MainActivity : AppCompatActivity() {
             val lockToken = AppDataTransferLock.activate(this, Process.myPid())
             if (lockToken != null) {
                 appDataTransferActive = true
+                BrowserMediaPlaybackService.clearForAppDataTransfer(applicationContext)
                 val started = runCatching {
                     startActivity(
                         AppDataTransferContract.recoveryIntent(
@@ -293,6 +313,8 @@ class MainActivity : AppCompatActivity() {
             ?.getBoolean(STATE_RELEASE_NOTES_VISIBLE)
             ?: releaseNotesRequired
         val snoozeWakeNotifier = SnoozeWakeNotifier(this).also { it.ensureChannel() }
+        privateTabsNotifier.ensureChannel()
+        if (isColdStart) privateTabsNotifier.cancel()
         val downloadNotifier = CandyDownloadNotifier(this).also {
             it.ensureChannel()
             it.reconcileOrphanedActiveNotifications()
@@ -345,16 +367,53 @@ class MainActivity : AppCompatActivity() {
             requestSnoozeNotificationPermission = requestNotificationPermission,
             requestDownloadNotificationPermission = requestNotificationPermission,
             onFullImmersiveModeChanged = { applyBrowserSystemUi() },
+            onWebContentFullscreenChanged = ::onWebContentFullscreenChanged,
             onMediaStateChanged = {
                 if (!activityDestroyed) {
                     ensureMediaControllers()
                     if (::browserMediaSystemSession.isInitialized) {
-                        browserMediaSystemSession.publish(browserController.systemMediaState)
+                        val publication = browserController.media3Publication(
+                            traceSource = "MainActivity.onMediaStateChanged",
+                        )
+                        if (browserController.consumeMedia3PictureInPictureRestore()) {
+                            BrowserMediaLifecycleTrace.record(
+                                source = "MainActivity.onMediaStateChanged",
+                                action = "effect:restore-picture-in-picture",
+                                publication = publication,
+                            )
+                            browserMediaSystemSession.restoreAfterPictureInPicture(publication)
+                        } else if (browserController.consumeMedia3NavigationReplace()) {
+                            BrowserMediaLifecycleTrace.record(
+                                source = "MainActivity.onMediaStateChanged",
+                                action = "effect:replace-navigation",
+                                publication = publication,
+                            )
+                            browserMediaSystemSession.replacePublication(publication)
+                        } else {
+                            BrowserMediaLifecycleTrace.record(
+                                source = "MainActivity.onMediaStateChanged",
+                                action = "effect:publish",
+                                publication = publication,
+                            )
+                            browserMediaSystemSession.publish(publication)
+                        }
                     }
                     if (::castSessionController.isInitialized) {
                         castSessionController.updateCandidate(browserController.castMediaCandidate)
                     }
                     updatePictureInPictureParams()
+                }
+            },
+            onInlineVideoGestureHaptic = { haptic ->
+                when (haptic) {
+                    BrowserGestureHapticFeedback.RubberbandStart ->
+                        window.decorView.startRubberbandHaptic()
+                    BrowserGestureHapticFeedback.RubberbandStop ->
+                        window.decorView.stopRubberbandHaptic()
+                    BrowserGestureHapticFeedback.Confirm -> {
+                        window.decorView.stopRubberbandHaptic()
+                        window.decorView.performConfirmHaptic()
+                    }
                 }
             },
             onBrowserEngineChangeRequested = {
@@ -363,12 +422,28 @@ class MainActivity : AppCompatActivity() {
             profileProtectionSupported = { profileBiometricAuthenticator.isAvailable },
             authenticateProfile = profileBiometricAuthenticator::authenticate,
         )
+        lifecycleScope.launch {
+            snapshotFlow { browserController.tabs.count { it.isIncognito } }
+                .distinctUntilChanged()
+                .collect { privateTabCount ->
+                    if (
+                        privateTabCount > 0 &&
+                        !privateTabsNotifier.hasPostNotificationPermission()
+                    ) {
+                        requestNotificationPermission()
+                    }
+                    privateTabsNotifier.update(privateTabCount)
+                }
+        }
         ProcessLifecycleOwner.get().lifecycle.addObserver(profileProcessLifecycleObserver)
         pictureInPictureController = MainActivityPictureInPictureController(
             activity = this,
             browserController = browserController,
             isVideoOnlyPresentation = { videoOnlyPresentation },
             setVideoOnlyPresentation = { videoOnlyPresentation = it },
+            setReturnRestorationPending = {
+                pictureInPictureReturnRestorationPending = it
+            },
             applyBrowserSystemUi = ::applyBrowserSystemUi,
         )
         userScriptImporter = UserScriptImporter(
@@ -464,7 +539,20 @@ class MainActivity : AppCompatActivity() {
                     mutableStateOf(startupPresentation.showSplash)
                 }
                 val fullscreenVideoState = browserController.fullscreenVideoState
+                val webContentFullscreen = browserController.isSelectedWebContentFullscreen
                 val selectedTabId = browserController.selectedTabId
+                val fullscreenVideoGesturesActive =
+                    browserController.isInlineMediaPlayerPresented &&
+                        webContentFullscreen &&
+                        !videoOnlyPresentation
+                val fullscreenVideoGestureState = rememberFullscreenVideoGestureState(
+                    systemControls = fullscreenVideoSystemControls,
+                    onDismissFullscreen = {
+                        if (!browserController.exitSelectedWebContentFullscreen()) {
+                            browserController.exitFullscreenVideo()
+                        }
+                    },
+                )
                 val webViewVideoOnlyPresentation = videoOnlyPresentation &&
                     fullscreenVideoState?.let { state ->
                         !FullscreenVideoRules.hostsSourceInOverlay(
@@ -501,6 +589,7 @@ class MainActivity : AppCompatActivity() {
                 }
                 LaunchedEffect(
                     fullscreenVideoState,
+                    webContentFullscreen,
                     browserController.systemMediaState,
                     selectedTabId,
                     videoOnlyPresentation,
@@ -513,6 +602,12 @@ class MainActivity : AppCompatActivity() {
                     ) {
                         moveTaskToBack(true)
                     }
+                }
+                LaunchedEffect(fullscreenVideoGesturesActive) {
+                    fullscreenVideoSystemControls.setFullscreenActive(
+                        fullscreenVideoGesturesActive,
+                    )
+                    fullscreenVideoGestureState.setEnabled(fullscreenVideoGesturesActive)
                 }
                 Box(modifier = Modifier.fillMaxSize()) {
                     val castController = if (::castSessionController.isInitialized) {
@@ -529,6 +624,8 @@ class MainActivity : AppCompatActivity() {
                         onDisconnectCast = { castController?.disconnect() },
                         webViewVideoOnlyPresentation = webViewVideoOnlyPresentation,
                         videoOnlyPresentation = videoOnlyPresentation,
+                        fullscreenVideoGestureState = fullscreenVideoGestureState
+                            .takeIf { fullscreenVideoGesturesActive },
                         incomingBrowserNavigationRequestId =
                             incomingBrowserNavigationRequestId,
                         externalLaunchTabId = externalLaunchTabId,
@@ -638,8 +735,16 @@ class MainActivity : AppCompatActivity() {
                     FullscreenVideoOverlay(
                         controller = browserController,
                         videoOnlyPresentation = videoOnlyPresentation,
+                        gestureState = fullscreenVideoGestureState
+                            .takeIf { fullscreenVideoGesturesActive },
                         onBoundsChanged = ::onFullscreenVideoBoundsChanged,
                     )
+                    if (
+                        pictureInPictureReturnRestorationPending ||
+                        browserController.isMediaLayoutRestorationPending
+                    ) {
+                        Box(modifier = Modifier.fillMaxSize().background(Color.Black))
+                    }
                     if (!videoOnlyPresentation && onboardingVisible) {
                         GestureOnboardingScreen(
                             onCompleted = {
@@ -979,11 +1084,13 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onPause() {
+        window.decorView.stopRubberbandHaptic()
         if (!::browserController.isInitialized || appDataTransferActive) {
             super.onPause()
             return
         }
         geckoActivityIntegration?.onHostPaused()
+        fullscreenVideoSystemControls.onAppPaused()
         browserController.onPause()
         super.onPause()
     }
@@ -993,7 +1100,14 @@ class MainActivity : AppCompatActivity() {
             browserController.dismissExternalLinkPreview()
             if (
                 ::pictureInPictureController.isInitialized &&
-                pictureInPictureController.requestPictureInPicture()
+                pictureInPictureController.prepareAutomaticEntry()
+            ) {
+                super.onUserLeaveHint()
+                return
+            }
+            if (
+                ::pictureInPictureController.isInitialized &&
+                pictureInPictureController.requestPictureInPicture(immediate = true)
             ) {
                 return
             }
@@ -1062,16 +1176,23 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         if (appDataTransferActive) return
+        fullscreenVideoSystemControls.onAppResumed()
         if (::pictureInPictureController.isInitialized) {
             pictureInPictureController.reconcileStateOnResume()
         }
         if (::browserController.isInitialized) browserController.onResume()
+        if (::browserController.isInitialized) {
+            privateTabsNotifier.update(browserController.tabs.count { it.isIncognito })
+        }
         geckoActivityIntegration?.onHostResumed()
         updatePictureInPictureParams()
     }
 
     override fun onDestroy() {
         activityDestroyed = true
+        window.decorView.stopRubberbandHaptic()
+        if (::browserController.isInitialized) fullscreenVideoSystemControls.close()
+        if (!isChangingConfigurations) privateTabsNotifier.cancel()
         if (!BuildConfig.SYSTEM_WEBVIEW_ONLY) firefoxExtensionManager?.close()
         firefoxExtensionManager = null
         geckoActivityIntegration?.close()
@@ -1083,6 +1204,9 @@ class MainActivity : AppCompatActivity() {
         if (::pictureInPictureController.isInitialized) pictureInPictureController.onDestroy()
         if (::castSessionController.isInitialized) castSessionController.release()
         ProcessLifecycleOwner.get().lifecycle.removeObserver(profileProcessLifecycleObserver)
+        if (!isChangingConfigurations && ::browserMediaSystemSession.isInitialized) {
+            browserMediaSystemSession.stopAndClear()
+        }
         if (::browserController.isInitialized) {
             browserController.destroy(lockClosedProfiles = !isChangingConfigurations)
         }
@@ -1169,6 +1293,11 @@ class MainActivity : AppCompatActivity() {
             return
         }
         appDataTransferActive = true
+        if (::browserMediaSystemSession.isInitialized) {
+            browserMediaSystemSession.clearForAppDataTransfer()
+        } else {
+            BrowserMediaPlaybackService.clearForAppDataTransfer(applicationContext)
+        }
         val preparing = runCatching {
             browserController.prepareForAppDataTransfer { ready ->
                 val canStartNow = ready && canStart()
@@ -1405,6 +1534,7 @@ class MainActivity : AppCompatActivity() {
                 externalPreview != null -> browserController.goBackInExternalLinkPreview(
                     externalPreview.sessionId,
                 )
+                browserController.exitSelectedWebContentFullscreen() -> true
                 browserController.selectedTab.canGoBack -> {
                     browserController.goBack()
                     true
@@ -1546,21 +1676,25 @@ class MainActivity : AppCompatActivity() {
         if (!::browserMediaSystemSession.isInitialized) {
             browserMediaSystemSession = BrowserMediaSystemSession(
                 context = this,
-                onPlay = browserController::playActiveMedia,
-                onPause = browserController::pauseActiveMedia,
-                onStop = browserController::stopActiveMedia,
-                onSeekTo = browserController::seekActiveMedia,
+                onCommand = browserController::executeMedia3Command,
+                mayStartService = { browserController.mayStartMedia3Service },
             )
         }
     }
 
     private fun applyBrowserSystemUi() {
-        val fullscreenVideoExpanded = ::browserController.isInitialized &&
-            browserController.isFullscreenVideoExpanded
+        val hideBrowserChrome = ::browserController.isInitialized &&
+            FullscreenVideoRules.hidesBrowserChrome(
+                isWebContentFullscreen = browserController.isSelectedWebContentFullscreen,
+                placement = browserController.fullscreenVideoPlacement(
+                    videoOnlyPresentation = videoOnlyPresentation,
+                ),
+                videoOnlyPresentation = videoOnlyPresentation,
+            )
         val browserImmersive = ::browserController.isInitialized &&
             browserController.isFullImmersiveModeEnabled
         val state = BrowserWindowStateRules.resolve(
-            isWebContentFullscreen = fullscreenVideoExpanded || videoOnlyPresentation,
+            isWebContentFullscreen = hideBrowserChrome,
             isBrowserFullscreen = browserImmersive,
             isTabOverviewPortraitLocked = isTabOverviewPortraitLocked,
             supportsTabOverviewPortraitLock =
@@ -1578,6 +1712,15 @@ class MainActivity : AppCompatActivity() {
             BrowserRequestedOrientation.Unspecified -> ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
         }
         if (requestedOrientation != orientation) requestedOrientation = orientation
+    }
+
+    private fun onWebContentFullscreenChanged(fullscreen: Boolean) {
+        applyBrowserSystemUi()
+        if (!fullscreen) {
+            window.decorView.postOnAnimation {
+                if (!activityDestroyed) applyBrowserSystemUi()
+            }
+        }
     }
 
     private companion object {

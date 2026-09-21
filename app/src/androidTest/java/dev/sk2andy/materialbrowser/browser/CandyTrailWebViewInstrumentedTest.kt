@@ -8,6 +8,7 @@ import android.widget.FrameLayout
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import dev.sk2andy.materialbrowser.MainActivity
+import dev.sk2andy.materialbrowser.browser.engine.BrowserEngineContentKind
 import dev.sk2andy.materialbrowser.browser.gecko.AndroidBrowserEngineSessionPort
 import dev.sk2andy.materialbrowser.browser.gecko.BrowserEngineEventSink
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoCandyTrailHistoryEvent
@@ -47,6 +48,7 @@ class CandyTrailWebViewInstrumentedTest {
                 tabId = TAB_ID,
                 profileId = PROFILE_ID,
                 isPrivate = false,
+                contentKind = BrowserEngineContentKind.RegularTab,
                 trailHistoryEventSink = GeckoCandyTrailHistoryEventSink { _, event ->
                     events.offer(event)
                 },

@@ -8,9 +8,157 @@ import org.junit.Test
 
 class FullscreenVideoRulesTest {
     @Test
+    fun `web content fullscreen hides browser chrome without media presentation`() {
+        assertTrue(
+            FullscreenVideoRules.hidesBrowserChrome(
+                isWebContentFullscreen = true,
+                placement = null,
+                videoOnlyPresentation = false,
+            ),
+        )
+        assertFalse(
+            FullscreenVideoRules.hidesBrowserChrome(
+                isWebContentFullscreen = false,
+                placement = null,
+                videoOnlyPresentation = false,
+            ),
+        )
+    }
+
+    @Test
+    fun `media presentation only hides chrome while DOM remains fullscreen`() {
+        assertFalse(
+            FullscreenVideoRules.hidesBrowserChrome(
+                isWebContentFullscreen = true,
+                placement = FullscreenVideoPlacement.MiniPlayer,
+                videoOnlyPresentation = false,
+            ),
+        )
+        assertFalse(
+            FullscreenVideoRules.hidesBrowserChrome(
+                isWebContentFullscreen = false,
+                placement = FullscreenVideoPlacement.Expanded,
+                videoOnlyPresentation = false,
+            ),
+        )
+        assertTrue(
+            FullscreenVideoRules.hidesBrowserChrome(
+                isWebContentFullscreen = true,
+                placement = FullscreenVideoPlacement.Expanded,
+                videoOnlyPresentation = false,
+            ),
+        )
+    }
+
+    @Test
+    fun `video only presentation hides browser chrome while state settles`() {
+        assertTrue(
+            FullscreenVideoRules.hidesBrowserChrome(
+                isWebContentFullscreen = false,
+                placement = null,
+                videoOnlyPresentation = true,
+            ),
+        )
+    }
+
+    @Test
     fun `prepared auto enter requires the Android 15 transition callback`() {
         assertFalse(FullscreenVideoRules.supportsPreparedAutoEnter(sdkInt = 34))
         assertTrue(FullscreenVideoRules.supportsPreparedAutoEnter(sdkInt = 35))
+    }
+
+    @Test
+    fun `prepared auto enter stops inside picture in picture and during return`() {
+        assertTrue(
+            FullscreenVideoRules.enablesPreparedAutoEnter(
+                isEligible = true,
+                isInPictureInPicture = false,
+                returnInProgress = false,
+                sdkInt = 35,
+            ),
+        )
+        assertFalse(
+            FullscreenVideoRules.enablesPreparedAutoEnter(
+                isEligible = true,
+                isInPictureInPicture = true,
+                returnInProgress = false,
+                sdkInt = 35,
+            ),
+        )
+        assertFalse(
+            FullscreenVideoRules.enablesPreparedAutoEnter(
+                isEligible = true,
+                isInPictureInPicture = false,
+                returnInProgress = true,
+                sdkInt = 35,
+            ),
+        )
+    }
+
+    @Test
+    fun `layout restoration waits for a visible status bar instead of a cutout`() {
+        assertFalse(
+            FullscreenVideoRules.isMediaLayoutRestorationInsetReady(
+                isImeVisible = false,
+                isStatusBarVisible = false,
+                statusBarTopInset = 0,
+            ),
+        )
+        assertTrue(
+            FullscreenVideoRules.isMediaLayoutRestorationInsetReady(
+                isImeVisible = false,
+                isStatusBarVisible = true,
+                statusBarTopInset = 72,
+            ),
+        )
+        assertFalse(
+            FullscreenVideoRules.isMediaLayoutRestorationInsetReady(
+                isImeVisible = true,
+                isStatusBarVisible = true,
+                statusBarTopInset = 72,
+            ),
+        )
+    }
+
+    @Test
+    fun `new picture in picture preparation closes restoration before its stale acknowledgement`() {
+        val gate = MediaLayoutRestorationGate()
+        var firstCallbackCount = 0
+        var firstCallbackMutationCount = 0
+        var secondCallbackCount = 0
+        var activityRestorationGeneration = 1
+        var owner = "first"
+        var transitionPending = true
+        var presentation = "first"
+        val firstRestorationGeneration = activityRestorationGeneration
+        val first = gate.begin {
+            firstCallbackCount++
+            if (activityRestorationGeneration == firstRestorationGeneration) {
+                firstCallbackMutationCount++
+                transitionPending = false
+            }
+        }
+
+        activityRestorationGeneration++
+        gate.cancel()
+        val second = gate.begin { secondCallbackCount++ }
+        owner = "second"
+        presentation = "second"
+        if (gate.complete(first)) {
+            owner = ""
+            transitionPending = false
+            presentation = ""
+        }
+
+        assertEquals(1, firstCallbackCount)
+        assertEquals(0, firstCallbackMutationCount)
+        assertEquals(0, secondCallbackCount)
+        assertEquals("second", owner)
+        assertTrue(transitionPending)
+        assertEquals("second", presentation)
+        assertTrue(gate.complete(second))
+        gate.cancel()
+        assertEquals(0, secondCallbackCount)
     }
 
     @Test
@@ -112,9 +260,9 @@ class FullscreenVideoRulesTest {
     }
 
     @Test
-    fun `picture in picture source is top aligned in portrait and matches video aspect`() {
+    fun `picture in picture source is centered and matches video aspect`() {
         assertEquals(
-            FullscreenVideoBounds(left = 0, top = 0, right = 1_080, bottom = 607),
+            FullscreenVideoBounds(left = 0, top = 896, right = 1_080, bottom = 1_503),
             FullscreenVideoRules.pictureInPictureSourceBounds(
                 windowBounds = FullscreenVideoBounds(0, 0, 1_080, 2_400),
                 aspectWidth = 16,
@@ -146,6 +294,23 @@ class FullscreenVideoRulesTest {
                 windowBounds = FullscreenVideoBounds(0, 0, 0, 100),
                 aspectWidth = 16,
                 aspectHeight = 9,
+            ),
+        )
+    }
+
+    @Test
+    fun `identity bound viewport rect maps into current renderer bounds`() {
+        assertEquals(
+            FullscreenVideoBounds(left = 50, top = 220, right = 950, bottom = 1_820),
+            FullscreenVideoRules.viewportRectBounds(
+                viewportBounds = FullscreenVideoBounds(0, 100, 1_000, 2_100),
+                rect = BrowserViewportRect(0.05f, 0.06f, 0.95f, 0.86f),
+            ),
+        )
+        assertNull(
+            FullscreenVideoRules.viewportRectBounds(
+                viewportBounds = FullscreenVideoBounds(0, 0, 1_000, 2_000),
+                rect = BrowserViewportRect(-0.1f, 0f, 1f, 1f),
             ),
         )
     }

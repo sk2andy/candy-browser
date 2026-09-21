@@ -38,6 +38,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
@@ -52,6 +53,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.FloatState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -94,6 +96,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.browser.AddressResolver
+import dev.sk2andy.materialbrowser.browser.BLANK_URL
+import dev.sk2andy.materialbrowser.browser.BrowserBackdropBlurRegion
+import dev.sk2andy.materialbrowser.browser.BrowserBackdropBlurRules
 import dev.sk2andy.materialbrowser.browser.BrowserTab
 import dev.sk2andy.materialbrowser.browser.PageTranslationProvider
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoExtensionActionKey
@@ -102,7 +107,7 @@ import dev.sk2andy.materialbrowser.browser.userscript.UserScriptMenuCommand
 import dev.sk2andy.materialbrowser.data.AddressBarActionLayout
 import dev.sk2andy.materialbrowser.data.AddressBarDockEdge
 import dev.sk2andy.materialbrowser.data.AddressBarDockPlacement
-import dev.sk2andy.materialbrowser.reader.ReaderStudioSessionRules
+import dev.sk2andy.materialbrowser.data.BrowserAddressBarStyle
 import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuLayout
 import dev.sk2andy.materialbrowser.shared.ui.OverviewAddressBarContent
 import dev.sk2andy.materialbrowser.shared.ui.TabOverviewChromeTestTags
@@ -120,10 +125,16 @@ internal fun BrowserBottomBar(
     dockState: AddressBarDockState,
     dockTargetEdge: AddressBarDockEdge,
     editing: Boolean,
+    addressBarStyle: BrowserAddressBarStyle,
     actionLayout: AddressBarActionLayout,
     showCastButton: Boolean,
     showQrScanner: Boolean,
     tabCount: Int,
+    wideTabs: List<WideAddressTabItem>,
+    wideTabStripEnabled: Boolean,
+    tabSwipeEnabled: Boolean,
+    onWideTabSelected: (String) -> Unit,
+    onWideTabClosed: (String) -> Unit,
     userScriptMenuCommands: List<UserScriptMenuCommand>,
     onUserScriptMenuCommand: (UserScriptMenuCommand) -> Unit,
     commandFeedback: AddressCommandFeedback?,
@@ -133,6 +144,9 @@ internal fun BrowserBottomBar(
     onBack: () -> Unit,
     onForward: () -> Unit,
     onAddress: () -> Unit,
+    addressBarLongPressEnabled: Boolean,
+    addressBarLongPressLabel: String,
+    onAddressBarLongPress: () -> Unit,
     editValue: TextFieldValue,
     onEditValueChange: (TextFieldValue) -> Unit,
     ghostCompletion: String?,
@@ -222,6 +236,8 @@ internal fun BrowserBottomBar(
     onOverviewGestureStarted: () -> Unit,
     onOverviewGestureCancelled: () -> Unit,
     onBarPositioned: (boundsInRoot: Rect, topInWindowPx: Int) -> Unit,
+    backdropBlurRegionEnabled: Boolean = true,
+    onBackdropBlurRegionChanged: (BrowserBackdropBlurRegion?) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val docked = dockState.placement != null
@@ -239,8 +255,6 @@ internal fun BrowserBottomBar(
     val pulseScale = remember { Animatable(1f) }
     val newTabPulseScale = remember { Animatable(1f) }
     val domain = AddressResolver.displayText(tab.url)
-    val readerSupported = ReaderStudioSessionRules.isSupportedSource(tab.url)
-    val readerOpenLabel = stringResource(R.string.reader_open_action)
     val feedbackText = commandFeedback?.localizedText().orEmpty()
     val textMeasurer = rememberTextMeasurer()
     val density = LocalDensity.current
@@ -250,7 +264,17 @@ internal fun BrowserBottomBar(
         .bounds
         .height()
     val chromeTokens = browserChromeSurfaceTokens(BrowserChromeSurfaceRole.AddressBar)
+    val barCornerRadius = if (
+        addressBarStyle == BrowserAddressBarStyle.Segmented &&
+        presentation == AddressBarPresentation.Expanded
+    ) {
+        SegmentedAddressBarGeometry.outerCornerRadius(chromeTokens.cornerRadius)
+    } else {
+        chromeTokens.cornerRadius
+    }
     val motionScheme = LocalCandyMotionScheme.current
+    val currentOnBackdropBlurRegionChanged by rememberUpdatedState(onBackdropBlurRegionChanged)
+    var barBoundsInWindow by remember { mutableStateOf<Rect?>(null) }
     LaunchedEffect(addressBarPulseNonce, motionScheme) {
         if (addressBarPulseNonce == 0) return@LaunchedEffect
         pulseScale.snapTo(1f)
@@ -377,12 +401,46 @@ internal fun BrowserBottomBar(
             },
             label = "Adresspille Widerstand",
         )
+        val backdropBlurRegion = barBoundsInWindow
+            ?.takeIf {
+                tab.url != BLANK_URL &&
+                    backdropBlurRegionEnabled &&
+                    !showingTabOverview &&
+                    !visualOnly &&
+                    commandFeedback == null &&
+                    chromeTokens.backdropBlurEnabled &&
+                    (pulseScale.value - 1f).absoluteValue < 0.001f &&
+                    dockStretchProgress.absoluteValue < 0.001f &&
+                    (dockRepositionFeedbackScale.x - 1f).absoluteValue < 0.001f &&
+                    (dockRepositionFeedbackScale.y - 1f).absoluteValue < 0.001f
+            }
+            ?.let { bounds ->
+                BrowserBackdropBlurRules.regionInWindow(
+                    leftPx = bounds.left,
+                    topPx = bounds.top,
+                    rightPx = bounds.right,
+                    bottomPx = bounds.bottom,
+                    cornerRadiusPx = with(density) { barCornerRadius.toPx() },
+                    blurRadiusPx = chromeTokens.blurRadiusPx,
+                )
+            }
+        LaunchedEffect(backdropBlurRegion) {
+            currentOnBackdropBlurRegionChanged(backdropBlurRegion)
+        }
+        DisposableEffect(Unit) {
+            onDispose { currentOnBackdropBlurRegionChanged(null) }
+        }
         val motion = rememberAddressBarMotionState(
             presentation = presentation,
             compactWidth = compactWidth,
             maxWidth = maxWidth,
             feedbackWidth = feedbackWidth,
             edgeTabWidth = edgeTabWidth,
+            expandedHeight = if (addressBarStyle == BrowserAddressBarStyle.Segmented) {
+                SegmentedAddressBarGeometry.EXPANDED_HEIGHT
+            } else {
+                AddressBarMotion.EXPANDED_HEIGHT
+            },
             verticalTravel = verticalTravel,
             dockPosition = dockInteraction.position,
         )
@@ -396,6 +454,8 @@ internal fun BrowserBottomBar(
             CandyChromeSurface(
                 backdropSource = backdropSource,
                 tokens = chromeTokens,
+                shape = RoundedCornerShape(barCornerRadius),
+                blurCornerRadius = barCornerRadius,
                 modifier = Modifier
                     .offset(x = dockOffset.x, y = dockOffset.y)
                     .width(animatedBarWidth)
@@ -424,9 +484,10 @@ internal fun BrowserBottomBar(
                     )
                     .onGloballyPositioned { coordinates ->
                         val boundsInRoot = coordinates.boundsInRoot()
+                        barBoundsInWindow = coordinates.boundsInWindow()
                         onBarPositioned(
                             boundsInRoot,
-                            coordinates.boundsInWindow().top.roundToInt(),
+                            barBoundsInWindow?.top?.roundToInt() ?: 0,
                         )
                     }
                     .graphicsLayer {
@@ -445,7 +506,6 @@ internal fun BrowserBottomBar(
                 containerColor = barColor,
                 backdropBlurEnabled = commandFeedback == null &&
                     blurSourceVisible &&
-                    !menuExpanded &&
                     chromeTokens.backdropBlurEnabled,
             ) {
                 Box {
@@ -488,16 +548,16 @@ internal fun BrowserBottomBar(
                                         .draggable(
                                             state = tabDragState,
                                             orientation = Orientation.Horizontal,
-                                            enabled = !editing,
+                                            enabled = !editing && tabSwipeEnabled,
                                             onDragStopped = { velocity ->
                                                 onTabDragStopped(velocity)
                                             },
                                         )
-                                        .addressBarReaderActions(
-                                            readerEnabled = readerSupported,
+                                        .addressBarPressActions(
+                                            longPressEnabled = addressBarLongPressEnabled,
                                             onClick = onExpand,
-                                            onReaderStudio = onReaderStudio,
-                                            readerLabel = readerOpenLabel,
+                                            onLongPress = onAddressBarLongPress,
+                                            longPressLabel = addressBarLongPressLabel,
                                         ),
                                     color = Color.Transparent,
                                 ) {
@@ -518,6 +578,11 @@ internal fun BrowserBottomBar(
                                 showCastButton = showCastButton,
                                 showQrScanner = showQrScanner,
                                 tabCount = tabCount,
+                                wideTabs = wideTabs,
+                                wideTabStripEnabled = wideTabStripEnabled,
+                                tabSwipeEnabled = tabSwipeEnabled,
+                                onWideTabSelected = onWideTabSelected,
+                                onWideTabClosed = onWideTabClosed,
                                 userScriptMenuCommands = userScriptMenuCommands,
                                 onUserScriptMenuCommand = onUserScriptMenuCommand,
                                 menuExpanded = menuExpanded,
@@ -525,7 +590,11 @@ internal fun BrowserBottomBar(
                                 onBack = onBack,
                                 onForward = onForward,
                                 onAddress = onAddress,
+                                addressBarLongPressEnabled = addressBarLongPressEnabled,
+                                addressBarLongPressLabel = addressBarLongPressLabel,
+                                onAddressBarLongPress = onAddressBarLongPress,
                                 editing = editing,
+                                addressBarStyle = addressBarStyle,
                                 editValue = editValue,
                                 onEditValueChange = onEditValueChange,
                                 ghostCompletion = ghostCompletion,
@@ -642,6 +711,7 @@ internal fun BrowserBottomBar(
                                         feedback = feedback,
                                         text = feedbackText,
                                         gesturesEnabled = feedbackGesturesEnabled,
+                                        tabSwipeEnabled = tabSwipeEnabled,
                                         onAddress = if (compact) onExpand else onAddress,
                                         onTabDrag = onTabDrag,
                                         onTabDragStopped = onTabDragStopped,
@@ -658,9 +728,7 @@ internal fun BrowserBottomBar(
                             progressPercent = tab.progress,
                             morphProgress = 0f,
                             morphTargetSizePx = with(density) { 56.dp.toPx() },
-                            sourceCornerRadiusPx = with(density) {
-                                chromeTokens.cornerRadius.toPx()
-                            },
+                            sourceCornerRadiusPx = with(density) { barCornerRadius.toPx() },
                             modifier = Modifier.matchParentSize(),
                         )
                     }
@@ -845,6 +913,7 @@ private fun AddressCommandFeedbackContent(
     feedback: AddressCommandFeedback,
     text: String,
     gesturesEnabled: Boolean,
+    tabSwipeEnabled: Boolean,
     onAddress: () -> Unit,
     onTabDrag: (Float) -> Unit,
     onTabDragStopped: suspend (Float) -> Unit,
@@ -867,7 +936,7 @@ private fun AddressCommandFeedbackContent(
             .draggable(
                 state = tabDragState,
                 orientation = Orientation.Horizontal,
-                enabled = gesturesEnabled,
+                enabled = gesturesEnabled && tabSwipeEnabled,
                 onDragStopped = { velocity -> onTabDragStopped(velocity) },
             )
             .semantics(mergeDescendants = true) {
@@ -939,16 +1008,16 @@ private fun AddressCommandFeedback.localizedText(): String = when (message) {
         stringResource(R.string.command_feedback_rejected)
 }
 
-internal fun Modifier.addressBarReaderActions(
-    readerEnabled: Boolean,
+internal fun Modifier.addressBarPressActions(
+    longPressEnabled: Boolean,
     onClick: () -> Unit,
-    onReaderStudio: () -> Unit,
-    readerLabel: String,
+    onLongPress: () -> Unit,
+    longPressLabel: String,
 ): Modifier = combinedClickable(
     role = Role.Button,
     onClick = onClick,
-    onLongClick = onReaderStudio.takeIf { readerEnabled },
-    onLongClickLabel = readerLabel.takeIf { readerEnabled },
+    onLongClick = onLongPress.takeIf { longPressEnabled },
+    onLongClickLabel = longPressLabel.takeIf { longPressEnabled },
 )
 
 @Composable

@@ -1,6 +1,8 @@
 package dev.sk2andy.materialbrowser.browser.gecko
 
 import android.content.res.Configuration
+import dev.sk2andy.materialbrowser.browser.DnsOverHttpsProvider
+import dev.sk2andy.materialbrowser.browser.DnsOverHttpsSettings
 import dev.sk2andy.materialbrowser.browser.WebRtcProtectionMode
 import dev.sk2andy.materialbrowser.browser.engine.BrowserWebContentColorScheme
 import dev.sk2andy.materialbrowser.browser.userscript.UserScript
@@ -60,6 +62,17 @@ class GeckoRuntimeOwnerTest {
     }
 
     @Test
+    fun `session factory forwards encrypted DNS settings`() {
+        val runtime = FakeRuntimeHandle()
+        val factory = GeckoBrowserEngineSessionFactory(runtime)
+        val settings = DnsOverHttpsSettings(DnsOverHttpsProvider.Quad9)
+
+        factory.setDnsOverHttpsSettings(settings)
+
+        assertEquals(settings, runtime.recordedDnsOverHttpsSettings)
+    }
+
+    @Test
     fun `session factory forwards web content color scheme`() {
         val runtime = FakeRuntimeHandle()
         val factory = GeckoBrowserEngineSessionFactory(runtime)
@@ -84,6 +97,7 @@ class GeckoRuntimeOwnerTest {
         override val extensions = FakeExtensionRuntime()
         override val toppings = FakeToppingHostRuntime()
         var thirdPartyCookiesBlocked = true
+        var recordedDnsOverHttpsSettings = DnsOverHttpsSettings()
         var recordedWebContentFontSizeFactor = 1f
         var recordedWebContentColorScheme = BrowserWebContentColorScheme.System
         var recordedConfiguration: Configuration? = null
@@ -107,6 +121,10 @@ class GeckoRuntimeOwnerTest {
 
         override fun setWebRtcProtectionMode(mode: WebRtcProtectionMode, onReady: () -> Unit) {
             onReady()
+        }
+
+        override fun setDnsOverHttpsSettings(settings: DnsOverHttpsSettings) {
+            recordedDnsOverHttpsSettings = settings
         }
 
         override fun setWebContentFontSizeFactor(factor: Float) {

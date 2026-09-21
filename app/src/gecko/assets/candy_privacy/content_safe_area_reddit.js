@@ -6,7 +6,9 @@
   const hostname = globalThis.location?.hostname?.toLowerCase().replace(/\.$/, "") || "";
   if (hostname !== "reddit.com" && !hostname.endsWith(".reddit.com")) return;
   const appTag = "shreddit-app";
-  const inset = "var(--candy-safe-area-inset-top, 0px)";
+  const headerTags = ["reddit-header-small", "reddit-header-large", "shreddit-header"];
+  const headerTagSet = new Set(headerTags);
+  const inset = "max(var(--candy-safe-area-inset-top, 0px), env(safe-area-inset-top, 0px))";
   const pagePadding = "var(--page-y-padding, 0px)";
   const layers = new Map();
   const observers = new Map();
@@ -26,9 +28,11 @@
   }
 
   function css(prefix) {
-    return `${prefix}reddit-header-small { top: ${inset} !important; }\n` +
-      `${prefix}reddit-header-small.relative { top: calc(0px - ${pagePadding}) !important; }\n` +
-      `${prefix}reddit-header-small[hidden-by-scroll] header { padding-top: ${inset} !important; }`;
+    return headerTags.map((tag) =>
+      `${prefix}${tag} { top: ${inset} !important; }\n` +
+      `${prefix}${tag}.relative { top: calc(0px - ${pagePadding}) !important; }\n` +
+      `${prefix}${tag}[hidden-by-scroll] header { padding-top: ${inset} !important; }`,
+    ).join("\n");
   }
 
   function protect(root, text) {
@@ -89,7 +93,8 @@
       for (const scope of scopes) {
         const main = scope.querySelector(".main-container");
         if (main) observe(main.parentElement, desired);
-        for (const header of Array.from(scope.querySelectorAll("reddit-header-small")).slice(0, 4)) {
+        const headers = headerTags.flatMap((tag) => Array.from(scope.querySelectorAll(tag))).slice(0, 4);
+        for (const header of headers) {
           observe(header, desired);
           if (header.shadowRoot) {
             protect(header.shadowRoot, `:host { top: ${inset} !important; }\n` +
@@ -112,7 +117,7 @@
   }
 
   function owns(element) {
-    return active && element?.localName === "reddit-header-small" && inApp(element);
+    return active && headerTagSet.has(element?.localName) && inApp(element);
   }
 
   function ownsSource(owner) {
@@ -122,7 +127,7 @@
   function added(node) {
     if (!active || node?.nodeType !== 1 || ownsSource(node)) return;
     if (!apps.size || node.localName === appTag ||
-        (inApp(node) && (node.localName === "reddit-header-small" || node.classList?.contains("main-container")))) {
+        (inApp(node) && (headerTagSet.has(node.localName) || node.classList?.contains("main-container")))) {
       schedule();
     }
   }
@@ -145,7 +150,7 @@
     }
     structuralEvents = 0;
     sync();
-    for (const tag of [appTag, "reddit-header-small"]) {
+    for (const tag of [appTag, ...headerTags]) {
       if (definitions.has(tag) || !globalThis.customElements?.whenDefined) continue;
       definitions.add(tag);
       globalThis.customElements.whenDefined(tag).then(() => {

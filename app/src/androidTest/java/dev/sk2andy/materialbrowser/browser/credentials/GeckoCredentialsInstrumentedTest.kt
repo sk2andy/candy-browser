@@ -16,6 +16,7 @@ import androidx.test.platform.app.InstrumentationRegistry
 import dev.sk2andy.materialbrowser.BuildConfig
 import dev.sk2andy.materialbrowser.MainActivity
 import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineKind
+import dev.sk2andy.materialbrowser.browser.engine.BrowserEngineContentKind
 import dev.sk2andy.materialbrowser.browser.gecko.BrowserEngineEventSink
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoBrowserEngineSessionFactory
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoCredentialPromptBridge
@@ -117,6 +118,7 @@ class GeckoCredentialsInstrumentedTest {
                     tabId = "credential-regular-tab",
                     profileId = "local",
                     isPrivate = false,
+                    contentKind = BrowserEngineContentKind.RegularTab,
                     eventSink = BrowserEngineEventSink { },
                 )
                 val root = session.createView(activity)
@@ -140,6 +142,7 @@ class GeckoCredentialsInstrumentedTest {
                     tabId = "credential-private-tab",
                     profileId = "private",
                     isPrivate = true,
+                    contentKind = BrowserEngineContentKind.RegularTab,
                     eventSink = BrowserEngineEventSink { },
                 )
                 val root = session.createView(activity)

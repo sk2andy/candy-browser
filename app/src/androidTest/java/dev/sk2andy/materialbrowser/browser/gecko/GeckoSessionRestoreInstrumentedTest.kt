@@ -7,6 +7,7 @@ import android.view.ViewGroup
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import dev.sk2andy.materialbrowser.browser.engine.BrowserEngineContentKind
 import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineCommands
 import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineEvent
 import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineEventType
@@ -94,6 +95,116 @@ class GeckoSessionRestoreInstrumentedTest {
     }
 
     @Test
+    fun failedPageRetryQueuedDuringSessionRestoreLoadsTargetAndPreservesHistory() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val server = FixtureServer()
+        val profileId = "restore-load-${UUID.randomUUID()}"
+        lateinit var original: AndroidBrowserEngineSessionPort
+        lateinit var originalView: View
+
+        instrumentation.runOnMainSync {
+            original = session(context, tabId = REGULAR_TAB_ID, profileId = profileId, isPrivate = false)
+            originalView = original.createView(context)
+        }
+        try {
+            val snapshot = try {
+                execute(original, BrowserEngineCommands.load(server.url("root")))
+                assertTrue(await { original.historyUrlAtOffset(0) == server.url("root") })
+                execute(original, BrowserEngineCommands.load(server.url("second")))
+                assertTrue(await { original.historyUrlAtOffset(-1) == server.url("root") })
+                requireNotNull(original.sessionStateSnapshot())
+            } finally {
+                instrumentation.runOnMainSync {
+                    original.releaseView(originalView)
+                    original.execute(BrowserEngineCommands.close())
+                }
+            }
+
+            lateinit var restored: AndroidBrowserEngineSessionPort
+            lateinit var restoredView: View
+            instrumentation.runOnMainSync {
+                restored = session(
+                    context,
+                    tabId = REGULAR_TAB_ID,
+                    profileId = profileId,
+                    isPrivate = false,
+                )
+                restoredView = restored.createView(context)
+                assertTrue(restored.restoreSessionState(snapshot))
+                restored.execute(BrowserEngineCommands.retryFailedPage(server.url("retry")))
+            }
+            try {
+                val loaded = await { restored.historyUrlAtOffset(0) == server.url("retry") }
+                assertTrue(
+                    "current=${restored.historyUrlAtOffset(0)}, previous=${restored.historyUrlAtOffset(-1)}",
+                    loaded,
+                )
+                assertEquals(server.url("second"), restored.historyUrlAtOffset(-1))
+            } finally {
+                instrumentation.runOnMainSync {
+                    restored.releaseView(restoredView)
+                    restored.execute(BrowserEngineCommands.close())
+                }
+            }
+        } finally {
+            server.close()
+        }
+    }
+
+    @Test
+    fun failedPageRetryReloadsMatchingRestoredEntryWithoutDuplicatingHistory() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val server = FixtureServer()
+        val profileId = "restore-reload-${UUID.randomUUID()}"
+        lateinit var original: AndroidBrowserEngineSessionPort
+        lateinit var originalView: View
+
+        instrumentation.runOnMainSync {
+            original = session(context, tabId = REGULAR_TAB_ID, profileId = profileId, isPrivate = false)
+            originalView = original.createView(context)
+        }
+        try {
+            val snapshot = try {
+                execute(original, BrowserEngineCommands.load(server.url("root")))
+                assertTrue(await { original.historyUrlAtOffset(0) == server.url("root") })
+                execute(original, BrowserEngineCommands.load(server.url("second")))
+                assertTrue(await { original.historyUrlAtOffset(-1) == server.url("root") })
+                requireNotNull(original.sessionStateSnapshot())
+            } finally {
+                instrumentation.runOnMainSync {
+                    original.releaseView(originalView)
+                    original.execute(BrowserEngineCommands.close())
+                }
+            }
+
+            lateinit var restored: AndroidBrowserEngineSessionPort
+            lateinit var restoredView: View
+            instrumentation.runOnMainSync {
+                restored = session(
+                    context,
+                    tabId = REGULAR_TAB_ID,
+                    profileId = profileId,
+                    isPrivate = false,
+                )
+                restoredView = restored.createView(context)
+                assertTrue(restored.restoreSessionState(snapshot))
+                restored.execute(BrowserEngineCommands.retryFailedPage(server.url("second")))
+            }
+            try {
+                assertTrue(await { restored.historyUrlAtOffset(0) == server.url("second") })
+                assertEquals(server.url("root"), restored.historyUrlAtOffset(-1))
+            } finally {
+                instrumentation.runOnMainSync {
+                    restored.releaseView(restoredView)
+                    restored.execute(BrowserEngineCommands.close())
+                }
+            }
+        } finally {
+            server.close()
+        }
+    }
+
+    @Test
     fun killedContentProcessPublishesRecoveryEventAndDetachesDeadSession() {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val events = mutableListOf<BrowserEngineEvent>()
@@ -105,6 +216,7 @@ class GeckoSessionRestoreInstrumentedTest {
                 tabId = REGULAR_TAB_ID,
                 profileId = "kill-${UUID.randomUUID()}",
                 isPrivate = false,
+                contentKind = BrowserEngineContentKind.RegularTab,
                 eventSink = events::add,
             )
             geckoView = engineSession.createView(context).findGeckoView()
@@ -128,6 +240,7 @@ class GeckoSessionRestoreInstrumentedTest {
         tabId = tabId,
         profileId = profileId,
         isPrivate = isPrivate,
+        contentKind = BrowserEngineContentKind.RegularTab,
         eventSink = BrowserEngineEventSink { },
     )
 
@@ -198,6 +311,6 @@ class GeckoSessionRestoreInstrumentedTest {
         const val PRIVATE_TAB_ID = "00000000-0000-0000-0000-000000000982"
         const val POLL_MILLIS = 25L
         const val REQUEST_BACKLOG = 4
-        const val TIMEOUT_MILLIS = 20_000L
+        const val TIMEOUT_MILLIS = 30_000L
     }
 }

@@ -2,6 +2,8 @@ package dev.sk2andy.materialbrowser.ui
 
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -29,6 +31,9 @@ internal val LocalCandyChromeSurfaceRenderer = staticCompositionLocalOf<CandyChr
     error("CandyChromeSurfaceRenderer must be provided by the platform theme.")
 }
 
+internal val LocalCandyChromeAccentColor = compositionLocalOf { Color.Unspecified }
+internal val LocalCandyChromeOnAccentColor = compositionLocalOf { Color.Unspecified }
+
 @Composable
 internal fun CandyChromeSurface(
     backdropSource: CandyChromeBackdropSource?,
@@ -40,14 +45,19 @@ internal fun CandyChromeSurface(
     backdropBlurEnabled: Boolean = tokens.backdropBlurEnabled,
     content: @Composable () -> Unit,
 ) {
-    LocalCandyChromeSurfaceRenderer.current.render(
-        backdropSource = backdropSource,
-        tokens = tokens,
-        modifier = modifier,
-        shape = shape,
-        blurCornerRadius = blurCornerRadius,
-        containerColor = containerColor,
-        backdropBlurEnabled = backdropBlurEnabled,
-        content = content,
-    )
+    CompositionLocalProvider(
+        LocalCandyChromeAccentColor provides tokens.accentColor,
+        LocalCandyChromeOnAccentColor provides tokens.onAccentColor,
+    ) {
+        LocalCandyChromeSurfaceRenderer.current.render(
+            backdropSource = backdropSource,
+            tokens = tokens,
+            modifier = modifier,
+            shape = shape,
+            blurCornerRadius = blurCornerRadius,
+            containerColor = containerColor,
+            backdropBlurEnabled = backdropBlurEnabled,
+            content = content,
+        )
+    }
 }

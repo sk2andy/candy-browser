@@ -12,6 +12,7 @@ import dev.sk2andy.materialbrowser.shared.ui.TabSwitchPreviewLayoutRules
 import android.graphics.Bitmap
 import android.content.ClipData
 import android.content.ClipboardManager
+import android.os.Build
 import android.view.View
 import android.widget.FrameLayout
 import android.widget.Toast
@@ -22,6 +23,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -44,6 +46,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.FloatState
@@ -61,6 +65,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.TransformOrigin
@@ -77,13 +82,16 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.clearAndSetSemantics
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import dev.sk2andy.materialbrowser.R
+import dev.sk2andy.materialbrowser.applyStatusBarIconAppearance
 import dev.sk2andy.materialbrowser.browser.BLANK_URL
+import dev.sk2andy.materialbrowser.browser.BrowserBackdropBlurMode
+import dev.sk2andy.materialbrowser.browser.BrowserBackdropBlurRules
 import dev.sk2andy.materialbrowser.browser.BrowserController
 import dev.sk2andy.materialbrowser.browser.BrowserProfile
 import dev.sk2andy.materialbrowser.browser.BrowserPullToRefreshRules
@@ -92,6 +100,7 @@ import dev.sk2andy.materialbrowser.browser.FindInPageRules
 import dev.sk2andy.materialbrowser.browser.ExternalLinkPreviewCommitResult
 import dev.sk2andy.materialbrowser.browser.ExternalLinkPreviewState
 import dev.sk2andy.materialbrowser.data.FavoriteEntry
+import dev.sk2andy.materialbrowser.data.FavoriteLibrary
 import dev.sk2andy.materialbrowser.ui.theme.browserChromeSurfaceTokens
 import eightbitlab.com.blurview.BlurTarget
 import kotlin.math.absoluteValue
@@ -233,6 +242,9 @@ private fun ExternalLinkPreviewChrome(
         onDesktopViewChange = { enabled ->
             controller.setExternalLinkPreviewDesktopView(state.sessionId, enabled)
         },
+        onBackdropBlurRegionChanged = { region ->
+            controller.setExternalLinkPreviewBackdropBlurRegion(state.sessionId, region)
+        },
         modifier = Modifier.zIndex(10f),
     )
 }
@@ -243,7 +255,11 @@ private fun ExternalLinkPreviewViewport(
     onBlurTargetAttached: (BlurTarget) -> Unit,
     onBlurTargetReleased: (BlurTarget) -> Unit,
 ) {
-    val browserContentBlurEnabled = browserContentBackdropCaptureEnabled()
+    val browserContentBlurEnabled = browserContentBackdropCaptureEnabled() &&
+        BrowserBackdropBlurRules.mode(
+            engineKind = controller.browserEngineKind,
+            sdkInt = Build.VERSION.SDK_INT,
+        ) == BrowserBackdropBlurMode.ViewHierarchyCapture
     val density = LocalDensity.current
     val geometry = StatusBarStaticOverlayRules.geometry(
         statusBarHeightPx = WindowInsets.statusBars.getTop(density),
@@ -287,6 +303,7 @@ private fun ExternalLinkPreviewViewport(
 @Composable
 internal fun BrowserViewport(
     controller: BrowserController,
+    fullscreenVideoGestureState: FullscreenVideoGestureState? = null,
     webViewVideoOnlyPresentation: Boolean,
     videoOnlyPresentation: Boolean = webViewVideoOnlyPresentation,
     selectedTab: BrowserTab,
@@ -301,9 +318,11 @@ internal fun BrowserViewport(
     onLiveFrame: (String) -> Unit,
     onSearch: () -> Unit,
     onFavorite: (String) -> Unit,
+    onOpenFavorites: () -> Unit = {},
+    onReorderFavorite: (String, Int) -> Unit = { _, _ -> },
     blankTabModeProgress: Float,
     blankTabModeRevealOrigin: Offset,
-    onRetry: () -> Unit,
+    onRetry: () -> Boolean,
     onBlurTargetAttached: (BlurTarget) -> Unit,
     onBlurTargetReleased: (BlurTarget) -> Unit,
 ) {
@@ -333,6 +352,11 @@ internal fun BrowserViewport(
         isWebPage = selectedTab.url.startsWith("http://") ||
             selectedTab.url.startsWith("https://"),
     ).state
+    val webContentTopBarState = controller.selectedWebContentTopBarState
+    val webContentStatusBarAppearance = webContentTopBarState?.statusBarAppearance
+    val defaultStatusBarUsesDarkIcons = !controller.appearanceSettings.usesDarkColors(
+        isSystemInDarkTheme(),
+    )
     val pageErrorFeedbackHolder = remember(selectedTab.id) {
         pageErrorFeedbackByTab.getOrPut(selectedTab.id) {
             mutableStateOf(initialPageErrorFeedback)
@@ -370,6 +394,7 @@ internal fun BrowserViewport(
             preview = controller.previews[tab.id],
             favicon = controller.favicons[tab.id],
             favorites = controller.favorites,
+            favoriteLibrary = controller.favoriteLibrary,
             favoriteFavicons = controller.favoriteFavicons,
             dragOffset = dragOffset,
             dragDirection = dragDirection,
@@ -420,7 +445,15 @@ internal fun BrowserViewport(
                 clip = cardProgress > 0f
                 shadowElevation = with(density) { (8f * cardProgress).dp.toPx() }
             }
-            .background(MaterialTheme.colorScheme.surface),
+            .fullscreenVideoGestureTransform(fullscreenVideoGestureState)
+            .fullscreenVideoGestures(fullscreenVideoGestureState)
+            .background(
+                if (fullscreenVideoGestureState != null) {
+                    Color.Black
+                } else {
+                    MaterialTheme.colorScheme.surface
+                },
+            ),
     ) {
         if (selectedTab.url != BLANK_URL) {
             ActiveBrowserEngineView(
@@ -437,7 +470,11 @@ internal fun BrowserViewport(
                 showStatusBarOverlay = !videoOnlyPresentation &&
                     !tabOverviewVisible &&
                     controller.selectedFirefoxExtensionOptionsTitle == null,
-                statusBarTint = MaterialTheme.colorScheme.surface.toArgb(),
+                statusBarTint = webContentStatusBarAppearance?.colorArgb
+                    ?: MaterialTheme.colorScheme.surface.toArgb(),
+                solidStatusBarOverlay = webContentTopBarState != null,
+                statusBarUsesDarkIcons = webContentStatusBarAppearance?.useDarkIcons,
+                defaultStatusBarUsesDarkIcons = defaultStatusBarUsesDarkIcons,
                 onRefresh = controller::reload,
                 onLiveFrame = onLiveFrame,
                 onBlurTargetAttached = onBlurTargetAttached,
@@ -472,12 +509,16 @@ internal fun BrowserViewport(
                 key(selectedTab.id) {
                     NewTabPage(
                         favorites = controller.favorites,
+                        favoriteLibrary = controller.favoriteLibrary,
                         favicons = controller.favoriteFavicons,
+                        folderIcons = controller.favoriteFolderIcons,
                         incognito = selectedTab.isIncognito,
                         modeProgress = blankTabModeProgress,
                         revealOriginInRoot = blankTabModeRevealOrigin,
                         onSearch = onSearch,
                         onFavorite = onFavorite,
+                        onOpenFavorites = onOpenFavorites,
+                        onReorderFavorite = onReorderFavorite,
                         favoriteLaunchAnimationEnabled =
                             controller.isFavoriteLaunchAnimationEnabled,
                         favoriteAnimationSpeed = controller.favoriteAnimationSpeed,
@@ -493,8 +534,20 @@ internal fun BrowserViewport(
                     val transition = PageErrorFeedbackRules.requestRetry(pageErrorFeedback)
                     if (!transition.shouldReload) return@retry
                     pageErrorFeedback = transition.state
-                    onRetry()
-                    if (transition.emitConfirmHaptic) hapticView.performConfirmHaptic()
+                    if (onRetry()) {
+                        if (transition.emitConfirmHaptic) hapticView.performConfirmHaptic()
+                    } else {
+                        pageErrorFeedback = PageErrorFeedbackRules.observe(
+                            current = pageErrorFeedback,
+                            error = selectedTab.error,
+                            httpStatusCode = selectedTab.httpStatusCode,
+                            isLoading = selectedTab.isLoading,
+                            isOnline = controller.isOnline,
+                            failureKind = selectedTab.failureKind,
+                            isWebPage = selectedTab.url.startsWith("http://") ||
+                                selectedTab.url.startsWith("https://"),
+                        ).state
+                    }
                 },
                 onGameChange = { game ->
                     val offline = pageErrorFeedback as? PageErrorFeedbackState.Offline
@@ -522,6 +575,7 @@ internal fun BrowserViewport(
         TabHandoffOverlay(
             handoff = currentHandoff,
             favorites = controller.favorites,
+            favoriteLibrary = controller.favoriteLibrary,
             favoriteFavicons = controller.favoriteFavicons,
             alpha = if (TabHandoffRules.shouldRevealLiveContent(
                     handoff = currentHandoff,
@@ -561,13 +615,39 @@ private fun ActiveBrowserEngineView(
     pullToRefreshEnabled: Boolean,
     showStatusBarOverlay: Boolean,
     statusBarTint: Int,
+    solidStatusBarOverlay: Boolean,
+    statusBarUsesDarkIcons: Boolean?,
+    defaultStatusBarUsesDarkIcons: Boolean,
     onRefresh: () -> Unit,
     onLiveFrame: (String) -> Unit,
     onBlurTargetAttached: (BlurTarget) -> Unit,
     onBlurTargetReleased: (BlurTarget) -> Unit,
     contentObscured: Boolean,
 ) {
-    val browserContentBlurEnabled = browserContentBackdropCaptureEnabled()
+    val rootView = LocalView.current
+    val useWebsiteStatusBarAppearance = showStatusBarOverlay &&
+        solidStatusBarOverlay &&
+        visible &&
+        !contentObscured
+    SideEffect {
+        rootView.applyStatusBarIconAppearance(
+            if (useWebsiteStatusBarAppearance) {
+                statusBarUsesDarkIcons ?: defaultStatusBarUsesDarkIcons
+            } else {
+                defaultStatusBarUsesDarkIcons
+            },
+        )
+    }
+    DisposableEffect(rootView, defaultStatusBarUsesDarkIcons) {
+        onDispose {
+            rootView.applyStatusBarIconAppearance(defaultStatusBarUsesDarkIcons)
+        }
+    }
+    val browserContentBlurEnabled = browserContentBackdropCaptureEnabled() &&
+        BrowserBackdropBlurRules.mode(
+            engineKind = controller.browserEngineKind,
+            sdkInt = Build.VERSION.SDK_INT,
+        ) == BrowserBackdropBlurMode.ViewHierarchyCapture
     val density = LocalDensity.current
     val statusBarGeometry = StatusBarStaticOverlayRules.geometry(
         statusBarHeightPx = WindowInsets.statusBars.getTop(density),
@@ -610,6 +690,7 @@ private fun ActiveBrowserEngineView(
                     geometry = statusBarGeometry,
                     tint = statusBarTint,
                     visible = showStatusBarOverlay,
+                    solid = solidStatusBarOverlay,
                 )
                 hostView.updatePullToRefresh(
                     enabled = visible &&
@@ -760,6 +841,7 @@ private class BrowserEngineViewHostState(val container: FrameLayout) {
 private fun TabHandoffOverlay(
     handoff: TabHandoff,
     favorites: List<FavoriteEntry>,
+    favoriteLibrary: FavoriteLibrary? = null,
     favoriteFavicons: Map<String, Bitmap>,
     alpha: Float,
     rootHeightPx: Float,
@@ -776,6 +858,7 @@ private fun TabHandoffOverlay(
             preview = handoff.preview,
             favicon = handoff.favicon,
             favorites = favorites,
+            favoriteLibrary = favoriteLibrary,
             favoriteFavicons = favoriteFavicons,
             rootHeightPx = rootHeightPx,
             previewTopInsetPx = handoff.previewTopInsetPx,
@@ -790,6 +873,7 @@ private fun TabSwitchPreview(
     preview: Bitmap?,
     favicon: Bitmap?,
     favorites: List<FavoriteEntry>,
+    favoriteLibrary: FavoriteLibrary? = null,
     favoriteFavicons: Map<String, Bitmap>,
     dragOffset: MutableFloatState,
     dragDirection: Int,
@@ -822,6 +906,7 @@ private fun TabSwitchPreview(
             preview = preview,
             favicon = favicon,
             favorites = favorites,
+            favoriteLibrary = favoriteLibrary,
             favoriteFavicons = favoriteFavicons,
             rootHeightPx = rootHeightPx,
             previewTopInsetPx = previewTopInsetPx,
@@ -839,6 +924,7 @@ internal fun FullscreenTabPreviewContent(
     previewTopInsetPx: Int,
     bottomBarTopPx: FloatState,
     favorites: List<FavoriteEntry>,
+    favoriteLibrary: FavoriteLibrary? = null,
     favoriteFavicons: Map<String, Bitmap> = emptyMap(),
     blankFavoritesAlpha: () -> Float = { 1f },
 ) {
@@ -865,6 +951,7 @@ internal fun FullscreenTabPreviewContent(
             tab.isIncognito -> IncognitoTabPlaceholder()
             tab.url == BLANK_URL -> BlankTabPreview(
                 favorites = favorites,
+                favoriteLibrary = favoriteLibrary,
                 favoriteFavicons = favoriteFavicons,
                 favoritesAlpha = blankFavoritesAlpha,
             )
@@ -915,6 +1002,7 @@ private fun rootSafeDrawingPadding(rootView: View): PaddingValues {
 @Composable
 internal fun BlankTabPreview(
     favorites: List<FavoriteEntry>,
+    favoriteLibrary: FavoriteLibrary? = null,
     favoriteFavicons: Map<String, Bitmap> = emptyMap(),
     favoritesAlpha: () -> Float,
 ) {
@@ -960,6 +1048,7 @@ internal fun BlankTabPreview(
         ) {
             NewTabPage(
                 favorites = favorites,
+                favoriteLibrary = favoriteLibrary,
                 favicons = favoriteFavicons,
                 incognito = false,
                 modeProgress = 0f,

@@ -25,9 +25,18 @@ access but cannot remove plaintext already copied to that device.
 Copy `.env.example` to an ignored `.env`, replace both credentials, then run:
 
 ```sh
-docker compose up --build -d
+docker compose pull candy-sync
+docker compose up -d
 docker compose ps
 ```
+
+The public `sk2andy/candy-sync:latest` image supports Linux AMD64 and ARM64. To build the server from
+the current checkout instead, run `docker compose up --build -d`.
+
+The [publishing workflow](../../.github/workflows/publish-candy-sync-image.yml) republishes `latest`
+from `main` and creates exact release tags from semantic `v*` Git tags. It disables persistent build
+records and registry caches, then keeps only the five most recently pushed release tags to bound
+Docker Hub storage.
 
 Compose starts the Go service behind a Caddy gateway. The gateway exposes HTTPS on
 `https://localhost:8443` and keeps HTTP on `http://localhost:8080` for explicit local-development

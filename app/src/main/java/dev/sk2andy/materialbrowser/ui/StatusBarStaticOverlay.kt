@@ -70,14 +70,16 @@ internal class StatusBarStaticOverlayHost(
         geometry: StatusBarStaticOverlayGeometry,
         tint: Int,
         visible: Boolean,
+        solid: Boolean = false,
     ) {
         val showOverlay = visible && geometry.overlayHeightPx > 0
         overlayView.visibility = if (showOverlay) View.VISIBLE else View.GONE
         if (!showOverlay) return
-        overlayView.updateFade(geometry, tint)
+        overlayView.updateFill(geometry, tint, solid)
         val layoutParams = overlayView.layoutParams
-        if (layoutParams.height != geometry.overlayHeightPx) {
-            layoutParams.height = geometry.overlayHeightPx
+        val overlayHeight = if (solid) geometry.statusBarHeightPx else geometry.overlayHeightPx
+        if (layoutParams.height != overlayHeight) {
+            layoutParams.height = overlayHeight
             overlayView.layoutParams = layoutParams
         }
     }
@@ -87,17 +89,20 @@ private class StatusBarStaticOverlayView(context: Context) : View(context) {
     private val tintPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private var geometry = StatusBarStaticOverlayGeometry()
     private var tint = android.graphics.Color.TRANSPARENT
+    private var solid = false
     private var gradientHeight = 0
 
     override fun onTouchEvent(event: MotionEvent): Boolean = false
 
-    fun updateFade(
+    fun updateFill(
         geometry: StatusBarStaticOverlayGeometry,
         tint: Int,
+        solid: Boolean,
     ) {
-        if (this.geometry == geometry && this.tint == tint) return
+        if (this.geometry == geometry && this.tint == tint && this.solid == solid) return
         this.geometry = geometry
         this.tint = tint
+        this.solid = solid
         gradientHeight = 0
         invalidate()
     }
@@ -115,6 +120,12 @@ private class StatusBarStaticOverlayView(context: Context) : View(context) {
 
     private fun updateGradients() {
         if (gradientHeight == height) return
+        if (solid) {
+            tintPaint.shader = null
+            tintPaint.color = tint
+            gradientHeight = height
+            return
+        }
         val safeBlurHeight = geometry.statusBarHeightPx.coerceAtLeast(1).toFloat()
         val tintStops = floatArrayOf(
             0f,

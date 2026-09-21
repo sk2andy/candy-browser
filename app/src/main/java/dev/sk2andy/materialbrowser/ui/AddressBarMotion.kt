@@ -33,6 +33,7 @@ internal data class AddressBarMotionState(
 
 internal object AddressBarMotion {
     val OVERVIEW_WIDTH = 112.dp
+    val EXPANDED_HEIGHT = 56.dp
     const val DOCK_REPOSITION_FEEDBACK_MILLIS = 260
 
     fun containerAnimationSpec(motionScheme: CandyMotionScheme): SpringSpec<Dp> =
@@ -83,11 +84,14 @@ internal object AddressBarMotion {
             .coerceAtMost(maxWidth)
     }
 
-    fun heightTarget(presentation: AddressBarPresentation): Dp = when (presentation) {
+    fun heightTarget(
+        presentation: AddressBarPresentation,
+        expandedHeight: Dp = EXPANDED_HEIGHT,
+    ): Dp = when (presentation) {
         AddressBarPresentation.Docked,
         AddressBarPresentation.Compact,
         -> 48.dp
-        AddressBarPresentation.Expanded -> 56.dp
+        AddressBarPresentation.Expanded -> expandedHeight
         AddressBarPresentation.Overview -> 56.dp
         AddressBarPresentation.CommandFeedback -> 46.dp
     }
@@ -154,6 +158,7 @@ internal fun rememberAddressBarMotionState(
     maxWidth: Dp,
     feedbackWidth: Dp,
     edgeTabWidth: Dp,
+    expandedHeight: Dp = AddressBarMotion.EXPANDED_HEIGHT,
     verticalTravel: Dp,
     dockPosition: Offset,
 ): AddressBarMotionState {
@@ -170,7 +175,10 @@ internal fun rememberAddressBarMotionState(
         label = "Adressleistenbreite beim Scrollen und Parken",
     )
     val height by animateDpAsState(
-        targetValue = AddressBarMotion.heightTarget(presentation),
+        targetValue = AddressBarMotion.heightTarget(
+            presentation = presentation,
+            expandedHeight = expandedHeight,
+        ),
         animationSpec = AddressBarMotion.containerAnimationSpec(motionScheme),
         label = "Adressleistenhöhe beim Parken",
     )

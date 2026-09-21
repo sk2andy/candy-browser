@@ -25,6 +25,7 @@ import dev.sk2andy.materialbrowser.data.TabOverviewMode
 import dev.sk2andy.materialbrowser.browser.PageTranslationProvider
 import dev.sk2andy.materialbrowser.browser.SearchEngine
 import dev.sk2andy.materialbrowser.shared.ui.BrowserViewportTopping
+import dev.sk2andy.materialbrowser.shared.topping.ToppingFrameScope
 import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuEntry
 import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuLayout
 import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuLocation
@@ -46,6 +47,10 @@ internal object CandySettingsHomeResources : SettingsHomeResources {
     override fun text(label: SettingsHomeLabel): String = when (label) {
         SettingsHomeLabel.Title -> "Einstellungen"
         SettingsHomeLabel.Back -> "Zurück"
+        SettingsHomeLabel.BrowsingGroup -> "Surfen"
+        SettingsHomeLabel.PersonalizationGroup -> "Personalisierung"
+        SettingsHomeLabel.PrivacyDataGroup -> "Datenschutz & Daten"
+        SettingsHomeLabel.AboutGroup -> "Weitere Informationen"
         SettingsHomeLabel.SearchTitle -> "Suche"
         SettingsHomeLabel.SearchSummary -> "Suchmaschine und Vorschläge"
         SettingsHomeLabel.SyncTitle -> "Synchronisierung"
@@ -57,7 +62,8 @@ internal object CandySettingsHomeResources : SettingsHomeResources {
         SettingsHomeLabel.AppearanceTitle -> "Darstellung"
         SettingsHomeLabel.AppearanceSummary -> "Farben, Oberflächen und Form"
         SettingsHomeLabel.BrowserTitle -> "Browser"
-        SettingsHomeLabel.BrowserSummary -> "Oberfläche und Standardbrowser-Verhalten"
+        SettingsHomeLabel.BrowserSummary ->
+            "Seitenübersetzung; weitere Browseroptionen in Vorbereitung"
         SettingsHomeLabel.DownloadsTitle -> "Downloads"
         SettingsHomeLabel.UserscriptsTitle -> "Toppings"
         SettingsHomeLabel.UserscriptsSummary -> "Passende Seiten mit Toppings anpassen"
@@ -126,6 +132,7 @@ internal fun CandySettingsHome(
     onSaveTopping: (id: String?, source: String) -> Unit,
     toppingSource: (id: String) -> String?,
     onSetToppingEnabled: (id: String, enabled: Boolean) -> Unit,
+    onSetToppingFrameScope: (id: String, scope: ToppingFrameScope) -> Unit,
     onDeleteTopping: (id: String) -> Unit,
     onDismiss: () -> Unit,
     syncState: SyncSettingsUiState = SyncSettingsUiState(),
@@ -184,6 +191,7 @@ internal fun CandySettingsHome(
                 onSave = onSaveTopping,
                 toppingSource = toppingSource,
                 onSetEnabled = onSetToppingEnabled,
+                onSetFrameScope = onSetToppingFrameScope,
                 onDelete = onDeleteTopping,
                 onBack = { destination = SettingsDestination.Home },
             )

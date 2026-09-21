@@ -623,13 +623,16 @@ final class BrowserViewModel: NSObject, ObservableObject {
 
     func performMenu(_ item: BrowserFeatureMenuItem) {
         if item.action == .invoketoppingcommand {
-            guard let scriptId = item.toppingScriptId, let commandId = item.toppingCommandId else {
+            guard let scriptId = item.toppingScriptId,
+                  let documentId = item.toppingDocumentId,
+                  let commandId = item.toppingCommandId else {
                 errorMessage = "Dieser Topping-Befehl ist nicht mehr verfügbar."
                 return
             }
             ToppingRuntime.shared.invoke(
                 tabId: selectedTabId,
                 scriptId: scriptId,
+                documentId: documentId,
                 commandId: commandId
             )
             return
@@ -863,6 +866,16 @@ final class BrowserViewModel: NSObject, ObservableObject {
     func setToppingEnabled(id: String, enabled: Bool) {
         do {
             try ToppingRuntime.shared.setEnabled(enabled, id: id)
+            errorMessage = nil
+            publishToppings()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    func setToppingFrameScope(id: String, scope: ToppingFrameScope) {
+        do {
+            try ToppingRuntime.shared.setAllowedFrameScope(scope, id: id)
             errorMessage = nil
             publishToppings()
         } catch {
@@ -1339,7 +1352,8 @@ final class BrowserViewModel: NSObject, ObservableObject {
                     scriptId: command.scriptId,
                     commandId: command.commandId,
                     caption: command.caption,
-                    scriptName: command.scriptName
+                    scriptName: command.scriptName,
+                    documentId: command.documentId
                 )
             }
         )

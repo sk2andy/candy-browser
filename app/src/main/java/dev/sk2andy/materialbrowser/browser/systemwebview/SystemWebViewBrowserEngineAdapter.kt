@@ -71,7 +71,10 @@ import dev.sk2andy.materialbrowser.browser.WebRtcProtectionRules
 import dev.sk2andy.materialbrowser.browser.WebContentTopInsetMode
 import dev.sk2andy.materialbrowser.browser.WebContentTopInsetRules
 import dev.sk2andy.materialbrowser.browser.WebContentTopInsetScript
+import dev.sk2andy.materialbrowser.browser.WebContentTopInsetTransitionRules
+import dev.sk2andy.materialbrowser.browser.smoothWebContentTopInsetChange
 import dev.sk2andy.materialbrowser.browser.engine.AndroidBrowserEngineFactory
+import dev.sk2andy.materialbrowser.browser.engine.BrowserEngineContentKind
 import dev.sk2andy.materialbrowser.browser.integration.BrowserUriPolicy
 import dev.sk2andy.materialbrowser.browser.systemwebview.credentials.SystemWebViewCredentials
 import dev.sk2andy.materialbrowser.browser.systemwebview.commands.WebViewProfileCookies
@@ -254,6 +257,7 @@ internal class SystemWebViewBrowserEngineFactory(
         profileId: String,
         isolationEnabled: Boolean,
         isPrivate: Boolean,
+        contentKind: BrowserEngineContentKind,
         privacyPolicy: GeckoPrivacyPolicy,
         privacyEventSink: GeckoPrivacyEventSink,
         trailHistoryEventSink: GeckoCandyTrailHistoryEventSink,
@@ -264,6 +268,7 @@ internal class SystemWebViewBrowserEngineFactory(
         profileId = profileId,
         isolationEnabled = isolationEnabled,
         isPrivate = isPrivate,
+        allowsToppings = contentKind != BrowserEngineContentKind.LinkPeek,
         incognitoProfileName = incognitoProfileName,
         multiProfileSupported = supportsMultiProfile(),
         contentBlocker = contentBlocker,
@@ -339,6 +344,7 @@ private class SystemWebViewBrowserEngineSession(
     profileId: String,
     isolationEnabled: Boolean,
     private val isPrivate: Boolean,
+    private val allowsToppings: Boolean,
     incognitoProfileName: String,
     multiProfileSupported: Boolean,
     private val contentBlocker: ContentBlocker,
@@ -382,6 +388,7 @@ private class SystemWebViewBrowserEngineSession(
     private var authPromptListener: GeckoAuthPromptListener? = null
     private var webPromptListener: GeckoWebPromptListener? = null
     private var mediaStateListener: GeckoMediaSessionStateListener? = null
+    private var faviconListener: ((String?, Bitmap) -> Unit)? = null
     private var fullscreenStateListener: GeckoFullscreenStateListener? = null
     private var scrollListener: BrowserEngineScrollListener? = null
     private var contentTargetListener: dev.sk2andy.materialbrowser.browser.actions.BrowserContentTargetListener? = null
@@ -451,6 +458,16 @@ private class SystemWebViewBrowserEngineSession(
                     null,
                 )
             }
+            BrowserEngineCommandType.RetryFailedPage -> {
+                val safeUrl = BrowserUriPolicy.normalizeHttpUrl(
+                    requireNotNull(command.address),
+                ) ?: return
+                if (BrowserUriPolicy.normalizeHttpUrl(historyUrlAtOffset(0)) == safeUrl) {
+                    webView.reload()
+                } else {
+                    webView.loadUrl(safeUrl)
+                }
+            }
             BrowserEngineCommandType.Back -> if (webView.canGoBack()) webView.goBack()
             BrowserEngineCommandType.Forward -> if (webView.canGoForward()) webView.goForward()
             BrowserEngineCommandType.Reload -> webView.reload()
@@ -477,6 +494,10 @@ private class SystemWebViewBrowserEngineSession(
         if (closed || this.active == active) return
         this.active = active
         if (active) webView.onResume() else webView.onPause()
+    }
+
+    override fun setFaviconListener(listener: ((String?, Bitmap) -> Unit)?) {
+        faviconListener = listener
     }
 
     override fun setMediaStateListener(listener: GeckoMediaSessionStateListener?) {
@@ -815,7 +836,14 @@ private class SystemWebViewBrowserEngineSession(
     }
 
     fun installToppings(scripts: List<UserScript>) {
-        if (!closed) toppingRuntime.install(tabId, webView, scripts, isPrivate)
+        if (!closed) {
+            toppingRuntime.install(
+                tabId = tabId,
+                webView = webView,
+                scripts = scripts,
+                isPrivate = isPrivate || !allowsToppings,
+            )
+        }
     }
 
     fun setGlobalThirdPartyCookieBlocking(blocked: Boolean) {
@@ -925,39 +953,49 @@ private class SystemWebViewBrowserEngineSession(
         webView.webViewClient = browserClient()
         webView.webChromeClient = chromeClient()
         webView.setDownloadListener { url, _, contentDisposition, mimeType, _ ->
-            val metadata = dev.sk2andy.materialbrowser.browser.BrowserEngineDownloadResponse(
-                url = url,
-                contentDisposition = contentDisposition,
-                mimeType = mimeType,
-            )
-            downloadResponseListener?.onDownloadResponse(
-                GeckoExternalDownloadResponse(
-                    metadata = metadata,
-                    startTransfer = { listener ->
-                        if (
-                            SystemWebViewBlobDownloadRules.isSameOriginBlob(
-                                url,
-                                webView.url.orEmpty(),
-                            )
-                        ) {
-                            blobDownloadTransfer.start(
-                                blobUrl = url,
-                                pageUrl = webView.url,
-                                contentDisposition = contentDisposition,
-                                mimeType = mimeType,
-                                referrer = webView.url,
-                                listener = listener,
-                            )
-                        } else {
-                            startDownload(url, contentDisposition, mimeType, listener)
-                        }
-                    },
-                    discard = {},
-                ),
-            )
+            dispatchDownloadResponse(url, contentDisposition, mimeType)
         }
         installMediaBridge()
         installAutoplayPolicy()
+    }
+
+    private fun dispatchDownloadResponse(
+        url: String,
+        contentDisposition: String?,
+        mimeType: String?,
+    ) {
+        if (closed) return
+        val pageUrl = webView.url
+        val metadata = dev.sk2andy.materialbrowser.browser.BrowserEngineDownloadResponse(
+            url = url,
+            contentDisposition = contentDisposition,
+            mimeType = mimeType,
+        )
+        downloadResponseListener?.onDownloadResponse(
+            GeckoExternalDownloadResponse(
+                metadata = metadata,
+                startTransfer = { listener ->
+                    if (
+                        SystemWebViewBlobDownloadRules.isSameOriginBlob(
+                            url,
+                            pageUrl.orEmpty(),
+                        )
+                    ) {
+                        blobDownloadTransfer.start(
+                            blobUrl = url,
+                            pageUrl = pageUrl,
+                            contentDisposition = contentDisposition,
+                            mimeType = mimeType,
+                            referrer = pageUrl,
+                            listener = listener,
+                        )
+                    } else {
+                        startDownload(url, contentDisposition, mimeType, listener)
+                    }
+                },
+                discard = {},
+            ),
+        )
     }
 
     private fun dispatchContentTargetFromHitTest(): Boolean {
@@ -1147,6 +1185,12 @@ private class SystemWebViewBrowserEngineSession(
             publish(BrowserEngineEventType.StateChanged, title = title)
         }
 
+        override fun onReceivedIcon(view: WebView, icon: Bitmap?) {
+            if (!closed && icon != null && !icon.isRecycled) {
+                faviconListener?.invoke(view.url, icon)
+            }
+        }
+
         override fun onShowCustomView(view: View, callback: CustomViewCallback) {
             if (customFullscreenView != null) {
                 callback.onCustomViewHidden()
@@ -1182,7 +1226,11 @@ private class SystemWebViewBrowserEngineSession(
             if (isPrivate) {
                 popup.importantForAutofill = View.IMPORTANT_FOR_AUTOFILL_NO_EXCLUDE_DESCENDANTS
             }
+            val popupHandled = AtomicBoolean(false)
+            val popupDestroyed = AtomicBoolean(false)
             val destroyPopup = Runnable {
+                popupHandled.set(true)
+                if (!popupDestroyed.compareAndSet(false, true)) return@Runnable
                 runCatching { popup.stopLoading() }
                 runCatching { popup.destroy() }
             }
@@ -1191,17 +1239,27 @@ private class SystemWebViewBrowserEngineSession(
                     popupView: WebView,
                     request: WebResourceRequest,
                 ): Boolean {
+                    if (!popupHandled.compareAndSet(false, true)) return true
                     val targetUrl = request.url.toString()
                     if (!contentBlocker.shouldBlockPopup(targetUrl, currentPageUrl)) {
-                        navigationRequestListener?.onNavigationRequest(
-                            GeckoMainFrameNavigationRequest(
-                                url = targetUrl,
-                                isRedirect = request.isRedirect,
+                        if (SystemWebViewBlobDownloadRules.isPopupBlobDownload(
+                                blobUrl = targetUrl,
+                                pageUrl = webView.url.orEmpty(),
                                 hasUserGesture = isUserGesture || request.hasGesture(),
-                                isDirectNavigation = !request.isRedirect,
-                                target = BrowserEngineNavigationTarget.New,
-                            ),
-                        )
+                            )
+                        ) {
+                            dispatchDownloadResponse(targetUrl, null, null)
+                        } else {
+                            navigationRequestListener?.onNavigationRequest(
+                                GeckoMainFrameNavigationRequest(
+                                    url = targetUrl,
+                                    isRedirect = request.isRedirect,
+                                    hasUserGesture = isUserGesture || request.hasGesture(),
+                                    isDirectNavigation = !request.isRedirect,
+                                    target = BrowserEngineNavigationTarget.New,
+                                ),
+                            )
+                        }
                     } else {
                         privacyEventSink.onEvent(
                             GeckoPrivacyEvent(
@@ -1218,6 +1276,17 @@ private class SystemWebViewBrowserEngineSession(
                     destroyPopup.run()
                     return true
                 }
+            }
+            popup.setDownloadListener { url, _, contentDisposition, mimeType, _ ->
+                if (
+                    popupHandled.compareAndSet(false, true) &&
+                    isUserGesture &&
+                    !contentBlocker.shouldBlockPopup(url, currentPageUrl)
+                ) {
+                    dispatchDownloadResponse(url, contentDisposition, mimeType)
+                }
+                popup.removeCallbacks(destroyPopup)
+                destroyPopup.run()
             }
             popup.postDelayed(destroyPopup, POPUP_CAPTURE_TIMEOUT_MILLIS)
             transport.webView = popup
@@ -1581,6 +1650,8 @@ private class SystemWebViewBrowserEngineSession(
     private fun onSafeAreaFallback(
         navigationGeneration: Int,
         revision: Long,
+        themeColor: String?,
+        isTopHeader: Boolean,
     ) {
         val policy = privacyPolicy
         if (
@@ -1598,6 +1669,8 @@ private class SystemWebViewBrowserEngineSession(
                 isBuiltIn = true,
                 isCompatibilityObservation = false,
                 safeAreaFallbackNavigationGeneration = navigationGeneration,
+                safeAreaFallbackThemeColor = themeColor,
+                safeAreaFallbackIsTopHeader = isTopHeader,
             ),
         )
     }
@@ -1610,7 +1683,10 @@ private class SystemWebViewBrowserEngineSession(
     ): GeckoDownloadCancellation? {
         val safeUri = runCatching { Uri.parse(url) }.getOrNull()
             ?.takeIf { it.scheme == "http" || it.scheme == "https" }
-            ?: return null
+            ?: run {
+                listener.onFailed(GeckoDownloadFailure.InvalidRequest)
+                return null
+            }
         val downloadRequest = BrowserDownloadRequestFactory.create(
             url = url,
             contentDisposition = contentDisposition,
@@ -1714,7 +1790,7 @@ private class SystemWebViewBrowserEngineSession(
 
 private class SystemWebViewHost(
     context: Context,
-    private val onFallback: (Int, Long) -> Unit,
+    private val onFallback: (Int, Long, String?, Boolean) -> Unit,
 ) : WebView(context), GeckoViewInsetHost {
     private var topInsetPx = 0
     private var layoutTopInsetPx = 0
@@ -1754,10 +1830,15 @@ private class SystemWebViewHost(
                 fun safeAreaRequiredFailureCount(): Int = safeAreaRequiredFailureCount
 
                 @android.webkit.JavascriptInterface
+                fun nativeTopHeaderEnabled(): Boolean = true
+
+                @android.webkit.JavascriptInterface
                 fun fallbackToNative(
                     generation: Int,
                     revision: Long,
-                ) = post { onFallback(generation, revision) }
+                    themeColor: String?,
+                    isTopHeader: Boolean,
+                ) = post { onFallback(generation, revision, themeColor, isTopHeader) }
             },
             WebContentTopInsetScript.bridgeName,
         )
@@ -1794,11 +1875,15 @@ private class SystemWebViewHost(
         layout: GeckoViewInsetLayout,
         windowInsets: WindowInsetsCompat,
     ) {
+        val animateTopInsetChange = WebContentTopInsetTransitionRules.shouldAnimate(
+            previousState = currentLayout.topInsetTransitionState,
+            nextState = layout.topInsetTransitionState,
+        )
         currentLayout = layout
         layoutTopInsetPx = layout.scrollableTopInsetPx
         val previousTopInset = topInsetPx
         val previousBottomPadding = paddingBottom
-        applyCurrentLayout()
+        applyCurrentLayout(animateTopInsetChange)
         val rendererInsets = layout.rendererSafeAreaOverride
             ?.let(windowInsets::withSafeAreaOverride)
             ?: windowInsets
@@ -1808,7 +1893,7 @@ private class SystemWebViewHost(
         }
     }
 
-    private fun applyCurrentLayout() {
+    private fun applyCurrentLayout(animateTopInsetChange: Boolean = false) {
         val layout = currentLayout
         val mode = WebContentTopInsetRules.resolve(
             drawsEdgeToEdge = layout.margins.top == 0 && layout.scrollableTopInsetPx == 0,
@@ -1823,6 +1908,7 @@ private class SystemWebViewHost(
             -> layout.margins.top
         }
         (layoutParams as? ViewGroup.MarginLayoutParams)?.let { params ->
+            val previousTopMargin = params.topMargin
             if (
                 params.leftMargin != layout.margins.left ||
                 params.topMargin != nativeTopInset ||
@@ -1836,6 +1922,11 @@ private class SystemWebViewHost(
                     layout.margins.bottom,
                 )
                 layoutParams = params
+                smoothWebContentTopInsetChange(
+                    previousTopInsetPx = previousTopMargin,
+                    nextTopInsetPx = nativeTopInset,
+                    animateChange = animateTopInsetChange,
+                )
             }
         }
         topInsetPx = if (mode == WebContentTopInsetMode.ScrollableDocument) layoutTopInsetPx else 0

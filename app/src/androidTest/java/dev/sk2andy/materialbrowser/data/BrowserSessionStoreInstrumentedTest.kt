@@ -10,8 +10,12 @@ import dev.sk2andy.materialbrowser.browser.BrowserTab
 import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineKind
 import dev.sk2andy.materialbrowser.browser.BrowserProfile
 import dev.sk2andy.materialbrowser.browser.DEFAULT_PROFILE_ID
+import dev.sk2andy.materialbrowser.browser.DnsOverHttpsProvider
+import dev.sk2andy.materialbrowser.browser.DnsOverHttpsRules
+import dev.sk2andy.materialbrowser.browser.DnsOverHttpsSettings
 import dev.sk2andy.materialbrowser.browser.ExternalAppLinkHandling
 import dev.sk2andy.materialbrowser.browser.FavoriteAnimationSpeed
+import dev.sk2andy.materialbrowser.browser.InlineMediaPlayerMode
 import dev.sk2andy.materialbrowser.browser.PageTranslationProvider
 import dev.sk2andy.materialbrowser.browser.ProfileWallpaper
 import dev.sk2andy.materialbrowser.browser.ProfileLockTrigger
@@ -31,6 +35,7 @@ import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuEntry
 import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuLayout
 import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuLayoutRules
 import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuLocation
+import dev.sk2andy.materialbrowser.shared.browser.AddressBarLongPressAction
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -476,6 +481,7 @@ class BrowserSessionStoreInstrumentedTest {
             colorPalette = BrowserColorPalette.Candy,
             surfaceStyle = BrowserSurfaceStyle.Frosted,
             shapeStyle = BrowserShapeStyle.Angular,
+            addressBarStyle = BrowserAddressBarStyle.Segmented,
             frostedTransparencyPercent = 70,
             frostedAddressBarTransparencyPercent = 50,
             frostedBlurPercent = 90,
@@ -652,6 +658,9 @@ class BrowserSessionStoreInstrumentedTest {
             .putString("color_palette", "candy")
             .putString("surface_style", "unknown")
             .putString("shape_style", "extra_rounded")
+            .putString("address_bar_style", "unknown")
+            .putString("address_bar_color_preset", "unknown")
+            .putString("address_bar_custom_color_hex", "not-a-color")
             .putInt("frosted_transparency_percent", 200)
             .putInt("frosted_address_bar_transparency_percent", -1)
             .putString("frosted_blur_percent", "invalid")
@@ -664,12 +673,48 @@ class BrowserSessionStoreInstrumentedTest {
                 colorPalette = BrowserColorPalette.Candy,
                 surfaceStyle = BrowserSurfaceStyle.Clear,
                 shapeStyle = BrowserShapeStyle.ExtraRounded,
+                addressBarStyle = BrowserAddressBarStyle.Classic,
+                addressBarColorPreset = BrowserAddressBarColorPreset.Theme,
+                addressBarCustomColorHex = "",
                 frostedTransparencyPercent = 80,
                 frostedAddressBarTransparencyPercent = 0,
                 frostedBlurPercent = AppearanceSettings.DEFAULT_FROSTED_BLUR_PERCENT,
             ),
             BrowserSessionStore(context).loadAppearanceSettings(),
         )
+    }
+
+    @Test
+    fun addressBarColorSettingsRoundTripWithNormalizedHex() {
+        val store = BrowserSessionStore(context)
+
+        store.saveAppearanceSettings(
+            AppearanceSettings(
+                addressBarColorPreset = BrowserAddressBarColorPreset.Custom,
+                addressBarCustomColorHex = "#1a2b3c",
+            ),
+        )
+
+        assertEquals(
+            AppearanceSettings(
+                addressBarColorPreset = BrowserAddressBarColorPreset.Custom,
+                addressBarCustomColorHex = "#1A2B3C",
+            ),
+            store.loadAppearanceSettings(),
+        )
+    }
+
+    @Test
+    fun invalidPersistedCustomAddressBarColorFallsBackToTheme() {
+        preferences.edit()
+            .putString("address_bar_color_preset", "custom")
+            .putString("address_bar_custom_color_hex", "invalid")
+            .commit()
+
+        val settings = BrowserSessionStore(context).loadAppearanceSettings()
+
+        assertEquals(BrowserAddressBarColorPreset.Theme, settings.addressBarColorPreset)
+        assertEquals("", settings.addressBarCustomColorHex)
     }
 
     @Test
@@ -1123,6 +1168,28 @@ class BrowserSessionStoreInstrumentedTest {
     }
 
     @Test
+    fun addressBarLongPressActionDefaultsToReaderAndRoundTrips() {
+        val store = BrowserSessionStore(context)
+        assertEquals(
+            AddressBarLongPressAction.OpenReader,
+            store.loadAddressBarLongPressAction(),
+        )
+
+        AddressBarLongPressAction.entries.forEach { action ->
+            store.saveAddressBarLongPressAction(action)
+            assertEquals(action, store.loadAddressBarLongPressAction())
+        }
+
+        preferences.edit()
+            .putString(BrowserSessionStore.KEY_ADDRESS_BAR_LONG_PRESS_ACTION, "broken")
+            .commit()
+        assertEquals(
+            AddressBarLongPressAction.OpenReader,
+            store.loadAddressBarLongPressAction(),
+        )
+    }
+
+    @Test
     fun linkPeekActionLayoutDefaultsRoundTripsAndNormalizesStoredValues() {
         val store = BrowserSessionStore(context)
         assertEquals(LinkPeekActionLayout.Default, store.loadLinkPeekActionLayout())
@@ -1175,6 +1242,36 @@ class BrowserSessionStoreInstrumentedTest {
     }
 
     @Test
+    fun inlineMediaPlayerModeDefaultsAndRoundTrips() {
+        val store = BrowserSessionStore(context)
+
+        assertEquals(InlineMediaPlayerMode.ButtonInlineAndFullscreen, store.loadInlineMediaPlayerMode())
+        InlineMediaPlayerMode.entries.forEach { mode ->
+            store.saveInlineMediaPlayerMode(mode)
+            assertEquals(mode, store.loadInlineMediaPlayerMode())
+        }
+
+        preferences.edit()
+            .putString(BrowserSessionStore.KEY_INLINE_MEDIA_PLAYER_MODE, "future-mode")
+            .commit()
+        assertEquals(InlineMediaPlayerMode.ButtonInlineAndFullscreen, store.loadInlineMediaPlayerMode())
+    }
+
+    @Test
+    fun legacyInlineMediaPlayerSettingMigratesToMatchingButtonMode() {
+        val store = BrowserSessionStore(context)
+
+        preferences.edit().putBoolean("inline_media_player_enabled", true).commit()
+        assertEquals(
+            InlineMediaPlayerMode.ButtonInlineAndFullscreen,
+            store.loadInlineMediaPlayerMode(),
+        )
+
+        preferences.edit().clear().putBoolean("inline_media_player_enabled", false).commit()
+        assertEquals(InlineMediaPlayerMode.ButtonInlineAndFullscreen, store.loadInlineMediaPlayerMode())
+    }
+
+    @Test
     fun webRtcProtectionDefaultsToProtectedAndRoundTrips() {
         val store = BrowserSessionStore(context)
 
@@ -1188,6 +1285,52 @@ class BrowserSessionStoreInstrumentedTest {
             "future-mode",
         ).commit()
         assertEquals(WebRtcProtectionMode.ProtectIpAddresses, store.loadWebRtcProtectionMode())
+    }
+
+    @Test
+    fun dnsOverHttpsDefaultsToSystemAndSanitizesPersistedSettings() {
+        val store = BrowserSessionStore(context)
+        assertEquals(DnsOverHttpsRules.Default, store.loadDnsOverHttpsSettings())
+
+        DnsOverHttpsProvider.entries
+            .filterNot { provider -> provider == DnsOverHttpsProvider.Custom }
+            .forEach { provider ->
+                val settings = DnsOverHttpsSettings(provider)
+                store.saveDnsOverHttpsSettings(settings)
+                assertEquals(settings, store.loadDnsOverHttpsSettings())
+            }
+
+        val custom = DnsOverHttpsSettings(
+            provider = DnsOverHttpsProvider.Custom,
+            customEndpoint = " HTTPS://DNS.NextDNS.IO/abc123 ",
+        )
+        store.saveDnsOverHttpsSettings(custom)
+        assertEquals(
+            custom.copy(customEndpoint = "https://dns.nextdns.io/abc123"),
+            store.loadDnsOverHttpsSettings(),
+        )
+
+        val presetWithRememberedCustomEndpoint = store.loadDnsOverHttpsSettings().copy(
+            provider = DnsOverHttpsProvider.Quad9,
+        )
+        store.saveDnsOverHttpsSettings(presetWithRememberedCustomEndpoint)
+        assertEquals(presetWithRememberedCustomEndpoint, store.loadDnsOverHttpsSettings())
+        store.saveDnsOverHttpsSettings(
+            store.loadDnsOverHttpsSettings().copy(provider = DnsOverHttpsProvider.Custom),
+        )
+        assertEquals(
+            custom.copy(customEndpoint = "https://dns.nextdns.io/abc123"),
+            store.loadDnsOverHttpsSettings(),
+        )
+
+        preferences.edit()
+            .putString(BrowserSessionStore.KEY_DNS_OVER_HTTPS_PROVIDER, "custom")
+            .putString(
+                BrowserSessionStore.KEY_DNS_OVER_HTTPS_CUSTOM_ENDPOINT,
+                "http://dns.example/dns-query",
+            )
+            .commit()
+        assertEquals(DnsOverHttpsRules.Default, store.loadDnsOverHttpsSettings())
     }
 
     @Test

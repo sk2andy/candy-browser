@@ -543,7 +543,11 @@ test('skipped scroll recovery still requests bounded native fallback for a real 
   assert.deepEqual(fallbacks, [], 'One failed verification is not enough');
   fixture.advance(400);
   assert.equal(fixture.verificationCount(), 2);
-  assert.deepEqual(fallbacks, [[7, 11]], 'Fallback retains exact navigation and policy identity');
+  assert.deepEqual(
+    fallbacks,
+    [[7, 11, null, false]],
+    'Fallback retains exact navigation and policy identity',
+  );
 });
 
 test('successful merged recovery does not reopen discovery after its own clean result', () => {

@@ -80,7 +80,8 @@ internal object UserScriptRules {
             enabled = script.enabled,
             updatedAtMillis = script.updatedAtMillis,
         ) as? UserScriptParseResult.Accepted)?.script ?: return false
-        return parsed == script.copy(
+        if (!script.allowedFrameScope.isWithin(script.declaredFrameScope)) return false
+        return parsed.copy(allowedFrameScope = script.allowedFrameScope) == script.copy(
             requires = script.requires.map { dependency -> dependency.copy(source = null) },
             resources = script.resources.map { dependency ->
                 dependency.copy(encodedContent = null, mimeType = null)

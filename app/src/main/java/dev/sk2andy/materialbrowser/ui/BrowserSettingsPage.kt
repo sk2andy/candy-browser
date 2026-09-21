@@ -25,6 +25,7 @@ import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineKind
 import dev.sk2andy.materialbrowser.browser.ExternalAppLinkHandling
 import dev.sk2andy.materialbrowser.browser.FavoriteAnimationSpeed
+import dev.sk2andy.materialbrowser.browser.InlineMediaPlayerMode
 import dev.sk2andy.materialbrowser.browser.PageTranslationProvider
 import dev.sk2andy.materialbrowser.browser.StartupAddressFocusMode
 import dev.sk2andy.materialbrowser.shared.ui.settings.TranslationProviderSettings
@@ -42,6 +43,7 @@ internal object BrowserSettingsTestTags {
     const val ExternalLinkPreview = "browser_settings_external_link_preview"
     const val ExternalAppLinks = "browser_settings_external_app_links"
     const val BrowserEngine = "browser_settings_engine"
+    const val InlineMediaPlayer = "browser_settings_inline_media_player"
 }
 
 @Composable
@@ -59,6 +61,8 @@ internal fun BrowserSettingsPage(
     isScrollBarEnabled: Boolean,
     isVideoAutoplayBlocked: Boolean,
     isVideoAutoplayBlockingSupported: Boolean,
+    inlineMediaPlayerMode: InlineMediaPlayerMode = InlineMediaPlayerMode.Default,
+    isInlineMediaPlayerSupported: Boolean = true,
     isDefaultBrowser: Boolean,
     onBrowserEngineKindChanged: (AndroidBrowserEngineKind) -> Unit = {},
     onExternalLinkPreviewEnabledChanged: (Boolean) -> Unit = {},
@@ -72,6 +76,7 @@ internal fun BrowserSettingsPage(
     onOpenHomeOnStartupEnabledChanged: (Boolean) -> Unit = {},
     onScrollBarEnabledChanged: (Boolean) -> Unit,
     onVideoAutoplayBlockedChanged: (Boolean) -> Unit,
+    onInlineMediaPlayerModeChanged: (InlineMediaPlayerMode) -> Unit = {},
     onPageTranslationProviderChanged: (PageTranslationProvider) -> Unit,
     onOpenDefaultBrowserSettings: () -> Unit,
     onBack: () -> Unit,
@@ -80,10 +85,13 @@ internal fun BrowserSettingsPage(
     var startupAddressFocusMenuExpanded by remember { mutableStateOf(false) }
     var favoriteSpeedMenuExpanded by remember { mutableStateOf(false) }
     var externalAppLinksMenuExpanded by remember { mutableStateOf(false) }
+    var inlineMediaPlayerMenuExpanded by remember { mutableStateOf(false) }
     SettingsPage(
         title = stringResource(R.string.settings_section_browser),
         onBack = onBack,
     ) {
+        SettingsSectionTitle(stringResource(R.string.settings_browser_group_general))
+        Spacer(Modifier.height(8.dp))
         if (!BuildConfig.SYSTEM_WEBVIEW_ONLY) {
             Box {
                 SettingsChoice(
@@ -130,6 +138,37 @@ internal fun BrowserSettingsPage(
             )
             Spacer(Modifier.height(8.dp))
         }
+        Surface(
+            onClick = onOpenDefaultBrowserSettings,
+            modifier = Modifier.fillMaxWidth(),
+            shape = MaterialTheme.shapes.large,
+            color = browserChromeColor(MaterialTheme.colorScheme.surfaceContainerHigh),
+        ) {
+            Column(modifier = Modifier.padding(horizontal = 18.dp, vertical = 14.dp)) {
+                Text(
+                    stringResource(R.string.settings_default_browser),
+                    style = MaterialTheme.typography.titleSmall,
+                )
+                Text(
+                    stringResource(
+                        if (isDefaultBrowser) {
+                            R.string.settings_default_browser_active
+                        } else {
+                            R.string.settings_make_default_browser
+                        },
+                    ),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = if (isDefaultBrowser) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+                )
+            }
+        }
+        Spacer(Modifier.height(18.dp))
+        SettingsSectionTitle(stringResource(R.string.settings_browser_group_startup))
+        Spacer(Modifier.height(8.dp))
         SettingsSwitch(
             title = stringResource(R.string.settings_startup_animation_title),
             subtitle = stringResource(R.string.settings_startup_animation_subtitle),
@@ -172,6 +211,16 @@ internal fun BrowserSettingsPage(
         )
         Spacer(Modifier.height(8.dp))
         SettingsSwitch(
+            title = stringResource(R.string.settings_open_home_on_startup_title),
+            subtitle = stringResource(R.string.settings_open_home_on_startup_subtitle),
+            checked = isOpenHomeOnStartupEnabled,
+            onCheckedChange = onOpenHomeOnStartupEnabledChanged,
+            modifier = Modifier.testTag(BrowserSettingsTestTags.OpenHomeOnStartup),
+        )
+        Spacer(Modifier.height(18.dp))
+        SettingsSectionTitle(stringResource(R.string.settings_browser_group_favorites))
+        Spacer(Modifier.height(8.dp))
+        SettingsSwitch(
             title = stringResource(R.string.settings_favorite_launch_animation_title),
             subtitle = stringResource(R.string.settings_favorite_launch_animation_subtitle),
             checked = isFavoriteLaunchAnimationEnabled,
@@ -212,14 +261,8 @@ internal fun BrowserSettingsPage(
             subtitle = stringResource(R.string.settings_favorite_bookmark_import_summary),
             onClick = onImportFavoriteBookmarks,
         )
-        Spacer(Modifier.height(8.dp))
-        SettingsSwitch(
-            title = stringResource(R.string.settings_open_home_on_startup_title),
-            subtitle = stringResource(R.string.settings_open_home_on_startup_subtitle),
-            checked = isOpenHomeOnStartupEnabled,
-            onCheckedChange = onOpenHomeOnStartupEnabledChanged,
-            modifier = Modifier.testTag(BrowserSettingsTestTags.OpenHomeOnStartup),
-        )
+        Spacer(Modifier.height(18.dp))
+        SettingsSectionTitle(stringResource(R.string.settings_browser_group_websites))
         Spacer(Modifier.height(8.dp))
         SettingsSwitch(
             title = stringResource(R.string.settings_full_immersive_mode_title),
@@ -250,6 +293,46 @@ internal fun BrowserSettingsPage(
             onCheckedChange = onVideoAutoplayBlockedChanged,
         )
         Spacer(Modifier.height(8.dp))
+        Box {
+            SettingsChoice(
+                title = stringResource(R.string.settings_inline_media_player_title),
+                value = inlineMediaPlayerMode.displayName(),
+                expanded = inlineMediaPlayerMenuExpanded,
+                onClick = { inlineMediaPlayerMenuExpanded = true },
+                enabled = isInlineMediaPlayerSupported,
+                modifier = Modifier.testTag(BrowserSettingsTestTags.InlineMediaPlayer),
+            )
+            SettingsDropdown(
+                expanded = inlineMediaPlayerMenuExpanded,
+                onDismissRequest = { inlineMediaPlayerMenuExpanded = false },
+            ) {
+                InlineMediaPlayerMode.entries.forEach { mode ->
+                    SettingsDropdownItem(
+                        label = mode.displayName(),
+                        selected = mode == inlineMediaPlayerMode,
+                        onClick = {
+                            inlineMediaPlayerMenuExpanded = false
+                            if (mode != inlineMediaPlayerMode) {
+                                onInlineMediaPlayerModeChanged(mode)
+                            }
+                        },
+                    )
+                }
+            }
+        }
+        Text(
+            text = stringResource(
+                if (isInlineMediaPlayerSupported) {
+                    R.string.settings_inline_media_player_subtitle
+                } else {
+                    R.string.settings_inline_media_player_unsupported
+                },
+            ),
+            modifier = Modifier.padding(start = 18.dp, top = 8.dp, end = 18.dp),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.height(8.dp))
         TranslationProviderSettings(
             provider = pageTranslationProvider,
             strings = TranslationProviderSettingsStrings(
@@ -272,6 +355,8 @@ internal fun BrowserSettingsPage(
             onProviderChanged = onPageTranslationProviderChanged,
             modifier = Modifier.testTag(BrowserSettingsTestTags.TranslationProvider),
         )
+        Spacer(Modifier.height(18.dp))
+        SettingsSectionTitle(stringResource(R.string.settings_browser_group_links))
         Spacer(Modifier.height(8.dp))
         Box {
             SettingsChoice(
@@ -313,35 +398,6 @@ internal fun BrowserSettingsPage(
             onCheckedChange = onExternalLinkPreviewEnabledChanged,
             modifier = Modifier.testTag(BrowserSettingsTestTags.ExternalLinkPreview),
         )
-        Spacer(Modifier.height(8.dp))
-        Surface(
-            onClick = onOpenDefaultBrowserSettings,
-            modifier = Modifier.fillMaxWidth(),
-            shape = MaterialTheme.shapes.large,
-            color = browserChromeColor(MaterialTheme.colorScheme.surfaceContainerHigh),
-        ) {
-            Column(modifier = Modifier.padding(horizontal = 18.dp, vertical = 14.dp)) {
-                Text(
-                    stringResource(R.string.settings_default_browser),
-                    style = MaterialTheme.typography.titleSmall,
-                )
-                Text(
-                    stringResource(
-                        if (isDefaultBrowser) {
-                            R.string.settings_default_browser_active
-                        } else {
-                            R.string.settings_make_default_browser
-                        },
-                    ),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = if (isDefaultBrowser) {
-                        MaterialTheme.colorScheme.primary
-                    } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                    },
-                )
-            }
-        }
     }
 }
 
@@ -379,4 +435,16 @@ private fun ExternalAppLinkHandling.displayName(): String = when (this) {
         stringResource(R.string.settings_external_app_links_automatic)
     ExternalAppLinkHandling.AskEveryTime ->
         stringResource(R.string.settings_external_app_links_ask_every_time)
+}
+
+@Composable
+private fun InlineMediaPlayerMode.displayName(): String = when (this) {
+    InlineMediaPlayerMode.ButtonFullscreen ->
+        stringResource(R.string.settings_inline_media_player_mode_button_fullscreen)
+    InlineMediaPlayerMode.ButtonInlineAndFullscreen ->
+        stringResource(R.string.settings_inline_media_player_mode_button_inline_fullscreen)
+    InlineMediaPlayerMode.AlwaysForFullscreen ->
+        stringResource(R.string.settings_inline_media_player_mode_always_fullscreen)
+    InlineMediaPlayerMode.Automatic ->
+        stringResource(R.string.settings_inline_media_player_mode_automatic)
 }

@@ -1,5 +1,6 @@
 package dev.sk2andy.materialbrowser.browser.userscript
 
+import dev.sk2andy.materialbrowser.shared.topping.ToppingFrameScope
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
@@ -24,6 +25,16 @@ class UserScriptInjectionTest {
     }
 
     @Test
+    fun `frame validation reads url and immutable guard marker in sender world`() {
+        val source = UserScriptInjection.frameValidationSource("script-a")
+
+        assertTrue(source.startsWith("JSON.stringify({url:String(location.href)"))
+        assertTrue(source.contains("__candy_userscript_allowed:script-a"))
+        assertTrue(source.contains("allowed:globalThis["))
+        assertTrue(source.endsWith("]===true})"))
+    }
+
+    @Test
     fun `guard checks main frame protocol path and excludes before page scripts`() {
         val sources = requireNotNull(
             UserScriptInjection.sources(
@@ -32,6 +43,7 @@ class UserScriptInjectionTest {
         )
 
         assertTrue(sources.guardSource.contains("window.top === window.self"))
+        assertTrue(sources.guardSource.contains("const __candyFrameScope = \"top\""))
         assertTrue(sources.guardSource.contains("window.location.protocol === \"http:\""))
         assertTrue(sources.guardSource.contains("const __candyMatchUrl = __candyUrl.split(\"#\", 1)[0];"))
         assertTrue(sources.guardSource.contains("some(__candyTestMatch)"))
@@ -44,6 +56,30 @@ class UserScriptInjectionTest {
         assertFalse(sources.guardSource.contains("window.started = true;"))
         assertFalse(sources.userSource.contains("eval"))
         assertFalse(sources.userSource.contains("DOMContentLoaded"))
+    }
+
+    @Test
+    fun `guard carries effective same origin and all matching scope`() {
+        val sameOrigin = script(body = "window.same = true;").copy(
+            declaredFrameScope = ToppingFrameScope.SameOrigin,
+            allowedFrameScope = ToppingFrameScope.SameOrigin,
+            source = script(body = "window.same = true;").source.replace(
+                "// @run-at document-start",
+                "// @run-at document-start\n// @candy-frames same-origin",
+            ),
+        )
+        val canonicalSameOrigin = (UserScriptParser.parse(sameOrigin.id, sameOrigin.source) as
+            UserScriptParseResult.Accepted).script
+        val allSource = sameOrigin.source.replace("same-origin", "all-matching")
+        val allMatching = (UserScriptParser.parse("all", allSource) as
+            UserScriptParseResult.Accepted).script
+
+        val sameGuard = requireNotNull(UserScriptInjection.sources(canonicalSameOrigin)).guardSource
+        val allGuard = requireNotNull(UserScriptInjection.sources(allMatching)).guardSource
+
+        assertTrue(sameGuard.contains("const __candyFrameScope = \"same-origin\""))
+        assertTrue(sameGuard.contains("window.top.location.origin === window.location.origin"))
+        assertTrue(allGuard.contains("const __candyFrameScope = \"all-matching\""))
     }
 
     @Test

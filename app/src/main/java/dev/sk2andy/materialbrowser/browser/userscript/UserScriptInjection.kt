@@ -30,6 +30,11 @@ internal object UserScriptInjection {
         return "candy.topping.$digest"
     }
 
+    internal fun frameValidationSource(scriptId: String): String {
+        val marker = jsString(guardMarker(scriptId))
+        return "JSON.stringify({url:String(location.href),allowed:globalThis[$marker]===true})"
+    }
+
     private fun buildSources(
         script: UserScript,
         encodedValues: Map<String, String>,
@@ -40,7 +45,8 @@ internal object UserScriptInjection {
         val matchArray = matchPatterns.joinToString(prefix = "[", postfix = "]", transform = ::jsString)
         val includeArray = includePatterns.joinToString(prefix = "[", postfix = "]", transform = ::jsString)
         val excludeArray = excludePatterns.joinToString(prefix = "[", postfix = "]", transform = ::jsString)
-        val marker = jsString("__candy_userscript_allowed:${script.id}")
+        val marker = jsString(guardMarker(script.id))
+        val frameScope = jsString(script.effectiveFrameScope.wireValue)
         val guardSource = """
             (() => {
                 "use strict";
@@ -48,8 +54,16 @@ internal object UserScriptInjection {
                 const __candyMatchUrl = __candyUrl.split("#", 1)[0];
                 const __candyTestMatch = (__candyPattern) => new RegExp(__candyPattern).test(__candyMatchUrl);
                 const __candyTestFullUrl = (__candyPattern) => new RegExp(__candyPattern).test(__candyUrl);
+                const __candyFrameScope = $frameScope;
+                const __candyFrameAllowed =
+                    __candyFrameScope === "all-matching" ||
+                    window.top === window.self ||
+                    (__candyFrameScope === "same-origin" && (() => {
+                        try { return window.top.location.origin === window.location.origin; }
+                        catch (_) { return false; }
+                    })());
                 const __candyAllowed =
-                    window.top === window.self &&
+                    __candyFrameAllowed &&
                     (window.location.protocol === "http:" || window.location.protocol === "https:") &&
                     ($matchArray.some(__candyTestMatch) || $includeArray.some(__candyTestFullUrl)) &&
                     !$excludeArray.some(__candyTestFullUrl);
@@ -79,6 +93,9 @@ internal object UserScriptInjection {
         }
         return UserScriptInjectionSources(guardSource = guardSource, userSource = userSource)
     }
+
+    private fun guardMarker(scriptId: String): String =
+        "__candy_userscript_allowed:$scriptId"
 
     private fun jsString(value: String): String = buildString(value.length + 2) {
         append('"')

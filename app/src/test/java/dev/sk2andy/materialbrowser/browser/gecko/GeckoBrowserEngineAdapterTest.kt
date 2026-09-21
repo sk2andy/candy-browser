@@ -249,6 +249,24 @@ class GeckoBrowserEngineAdapterTest {
     }
 
     @Test
+    fun `picture in picture restoration acknowledgement stays behind live session`() {
+        val session = FakeGeckoBrowserSession()
+        val adapter = GeckoBrowserEngineSessionAdapter(
+            tabId = "tab-1",
+            session = session,
+            eventSink = BrowserEngineEventSink { },
+        )
+        val results = mutableListOf<Boolean>()
+
+        adapter.restorePictureInPicturePresentation(results::add)
+        adapter.execute(BrowserEngineCommands.close())
+        adapter.restorePictureInPicturePresentation(results::add)
+
+        assertEquals(listOf(true, false), results)
+        assertEquals(1, session.pictureInPictureRestorationCount)
+    }
+
+    @Test
     fun `fullscreen lifecycle stays behind Gecko session port until close`() {
         val session = FakeGeckoBrowserSession()
         val adapter = GeckoBrowserEngineSessionAdapter(
@@ -602,6 +620,7 @@ private class FakeGeckoBrowserSession(
     val activeStates = mutableListOf<Boolean>()
     val pictureInPictureStates = mutableListOf<Boolean>()
     val pictureInPicturePlaybackStates = mutableListOf<Boolean>()
+    var pictureInPictureRestorationCount = 0
     var exitFullscreenCount = 0
     private var listener: GeckoBrowserSessionStateListener? = null
     private var historyListener: GeckoBrowserHistoryStateListener? = null
@@ -659,6 +678,11 @@ private class FakeGeckoBrowserSession(
 
     override fun setPictureInPicturePlaybackExpected(expected: Boolean) {
         pictureInPicturePlaybackStates += expected
+    }
+
+    override fun restorePictureInPicturePresentation(onResult: (Boolean) -> Unit) {
+        pictureInPictureRestorationCount++
+        onResult(true)
     }
 
     override fun exitFullscreen() {

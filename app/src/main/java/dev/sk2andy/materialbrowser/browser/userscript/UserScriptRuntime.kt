@@ -10,7 +10,10 @@ import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
 import androidx.webkit.WebViewOutcomeReceiver
 import dev.sk2andy.materialbrowser.data.UserScriptValueStore
+import dev.sk2andy.materialbrowser.shared.topping.ToppingFrameScope
 import java.net.URI
+import java.util.IdentityHashMap
+import java.util.UUID
 import org.json.JSONTokener
 import org.json.JSONObject
 
@@ -124,32 +127,39 @@ internal class UserScriptRuntime(
     fun clearMenuCommands(webView: WebView) {
         val registrations = installed[webView].orEmpty()
         registrations.forEach { registration ->
-            registration.replyProxy = null
-            registration.documentUrl = null
-            registration.menuCommands.clear()
+            registration.generation++
+            registration.documents.clear()
+            registration.proxyGenerations.clear()
         }
         registrations.map(InstalledRegistration::tabId).distinct().forEach(::publishCommands)
     }
 
     fun invokeMenuCommand(command: UserScriptMenuCommand) {
-        val registration = installed.values.firstNotNullOfOrNull { registrations ->
-            registrations.firstOrNull { candidate ->
-                candidate.tabId == command.tabId &&
-                    candidate.script.id == command.scriptId &&
-                    candidate.menuCommands[command.commandId] == command.caption &&
-                    candidate.documentUrl?.let { url ->
-                        UserScriptRules.matches(candidate.script, url)
-                    } == true
+        val target = installed.values.asSequence()
+            .flatten()
+            .filter { registration ->
+                registration.tabId == command.tabId &&
+                    registration.script.id == command.scriptId
             }
-        } ?: return
-        val replyProxy = registration.replyProxy ?: return
-        runCatching {
-            replyProxy.postMessage(
+            .firstNotNullOfOrNull { registration ->
+                registration.documents.values.firstOrNull { document ->
+                    document.documentId == command.documentId &&
+                        document.menuCommands[command.commandId] == command.caption &&
+                        UserScriptRules.matches(registration.script, document.url)
+                }?.let { document -> registration to document }
+            } ?: return
+        val (registration, document) = target
+        val delivered = runCatching {
+            document.replyProxy.postMessage(
                 JSONObject()
                     .put("type", "menu-invoke")
                     .put("commandId", command.commandId)
                     .toString(),
             )
+        }.isSuccess
+        if (!delivered) {
+            registration.documents.remove(document.replyProxy)
+            publishCommands(registration.tabId)
         }
     }
 
@@ -191,35 +201,44 @@ internal class UserScriptRuntime(
     ) {
         if (
             sourceView !== expectedView ||
-            !isMainFrame ||
             rawMessage == null ||
-            installed[sourceView]?.any { candidate -> candidate === registration } != true
+            installed[sourceView]?.any { candidate -> candidate === registration } != true ||
+            (registration.script.effectiveFrameScope == ToppingFrameScope.Top && !isMainFrame)
         ) return
         if (sourceOrigin.scheme?.lowercase() !in WEB_SCHEMES) return
         val request = UserScriptBridgeContract.parse(rawMessage) ?: return
-        if (!registration.rateWindow.accept(System.currentTimeMillis())) {
+        if (
+            request !is UserScriptBridgeRequest.DisposeDocument &&
+            !registration.rateWindow.accept(System.currentTimeMillis())
+        ) {
             request.requestId()?.let { requestId ->
                 reply(replyProxy, requestId, succeeded = false)
             }
             return
         }
+        val registrationGeneration = registration.generation
+        val proxyGeneration = registration.proxyGenerations[replyProxy] ?: 0L
         runCatching {
             replyProxy.executeJavaScript(
-                "String(location.href)",
+                UserScriptInjection.frameValidationSource(registration.script.id),
                 object : WebViewOutcomeReceiver<String, JavaScriptExecutionException> {
                     override fun onResult(result: String) {
-                        val sourceUrl = runCatching {
-                            JSONTokener(result).nextValue() as? String
-                        }.getOrNull() ?: result
+                        val frame = parseFrameValidation(result) ?: return
                         if (
                             installed[sourceView]?.any { candidate ->
                                 candidate === registration
                             } != true ||
-                            !sameOrigin(sourceUrl, sourceOrigin) ||
-                            !UserScriptRules.matches(registration.script, sourceUrl)
+                            registration.generation != registrationGeneration ||
+                            (registration.proxyGenerations[replyProxy] ?: 0L) != proxyGeneration ||
+                            !frame.allowed ||
+                            !sameOrigin(frame.url, sourceOrigin) ||
+                            !UserScriptRules.matches(registration.script, frame.url)
                         ) return
-                        bindDocument(registration, replyProxy, sourceUrl)
-                        val succeeded = applyMessage(registration, request)
+                        val document = bindDocument(registration, replyProxy, frame.url)
+                        val succeeded = applyMessage(registration, document, request)
+                        if (document.menuCommands.isEmpty()) {
+                            registration.documents.remove(replyProxy)
+                        }
                         request.requestId()?.let { requestId ->
                             reply(
                                 replyProxy = replyProxy,
@@ -240,6 +259,7 @@ internal class UserScriptRuntime(
 
     private fun applyMessage(
         registration: InstalledRegistration,
+        document: InstalledDocument,
         request: UserScriptBridgeRequest,
     ): Boolean = when (request) {
         is UserScriptBridgeRequest.SetValue -> {
@@ -256,12 +276,18 @@ internal class UserScriptRuntime(
         }
         is UserScriptBridgeRequest.RegisterMenu -> {
             val scriptLimitReached =
-                request.commandId !in registration.menuCommands &&
-                registration.menuCommands.size >= MAX_MENU_COMMANDS_PER_SCRIPT
+                request.commandId !in document.menuCommands &&
+                registration.documents.values.sumOf { candidate ->
+                    candidate.menuCommands.size
+                } >= MAX_MENU_COMMANDS_PER_SCRIPT
             val tabCommandCount = installed.values.flatten()
                 .filter { candidate -> candidate.tabId == registration.tabId }
-                .sumOf { candidate -> candidate.menuCommands.size }
-            val tabLimitReached = request.commandId !in registration.menuCommands &&
+                .sumOf { candidate ->
+                    candidate.documents.values.sumOf { document ->
+                        document.menuCommands.size
+                    }
+                }
+            val tabLimitReached = request.commandId !in document.menuCommands &&
                 tabCommandCount >= MAX_MENU_COMMANDS_PER_TAB
             if (
                 UserScriptGrant.RegisterMenuCommand !in registration.script.grants ||
@@ -270,14 +296,21 @@ internal class UserScriptRuntime(
             ) {
                 false
             } else {
-                registration.menuCommands[request.commandId] = request.caption
+                document.menuCommands[request.commandId] = request.caption
                 publishCommands(registration.tabId)
                 true
             }
         }
+        UserScriptBridgeRequest.DisposeDocument -> {
+            registration.documents.remove(document.replyProxy)
+            registration.proxyGenerations[document.replyProxy] =
+                (registration.proxyGenerations[document.replyProxy] ?: 0L) + 1L
+            publishCommands(registration.tabId)
+            true
+        }
         is UserScriptBridgeRequest.UnregisterMenu -> {
             UserScriptGrant.UnregisterMenuCommand in registration.script.grants &&
-                (registration.menuCommands.remove(request.commandId) != null).also {
+                (document.menuCommands.remove(request.commandId) != null).also {
                     publishCommands(registration.tabId)
                 }
         }
@@ -305,28 +338,38 @@ internal class UserScriptRuntime(
         registration: InstalledRegistration,
         replyProxy: JavaScriptReplyProxy,
         sourceUrl: String,
-    ) {
-        registration.replyProxy = replyProxy
-        if (registration.documentUrl == sourceUrl) return
-        registration.documentUrl = sourceUrl
-        if (registration.menuCommands.isNotEmpty()) {
-            registration.menuCommands.clear()
+    ): InstalledDocument {
+        val existing = registration.documents[replyProxy]
+        if (existing == null) {
+            return InstalledDocument(
+                documentId = UUID.randomUUID().toString(),
+                replyProxy = replyProxy,
+                url = sourceUrl,
+            ).also { document -> registration.documents[replyProxy] = document }
+        }
+        if (existing.url != sourceUrl) {
+            existing.url = sourceUrl
+            existing.menuCommands.clear()
             publishCommands(registration.tabId)
         }
+        return existing
     }
 
     private fun publishCommands(tabId: String) {
         val commands = installed.values.flatten()
             .filter { registration -> registration.tabId == tabId }
             .flatMap { registration ->
-                registration.menuCommands.map { (commandId, caption) ->
-                    UserScriptMenuCommand(
-                        tabId = tabId,
-                        scriptId = registration.script.id,
-                        scriptName = registration.script.name,
-                        commandId = commandId,
-                        caption = caption,
-                    )
+                registration.documents.values.flatMap { document ->
+                    document.menuCommands.map { (commandId, caption) ->
+                        UserScriptMenuCommand(
+                            tabId = tabId,
+                            scriptId = registration.script.id,
+                            scriptName = registration.script.name,
+                            commandId = commandId,
+                            caption = caption,
+                            documentId = document.documentId,
+                        )
+                    }
                 }
             }
         onMenuCommandsChanged(tabId, commands)
@@ -357,10 +400,14 @@ internal class UserScriptRuntime(
         is UserScriptBridgeRequest.RegisterMenu,
         is UserScriptBridgeRequest.UnregisterMenu,
         is UserScriptBridgeRequest.OpenTab,
+        UserScriptBridgeRequest.DisposeDocument,
         -> null
     }
 
     private fun remove(webView: WebView, registration: InstalledRegistration) {
+        registration.documents.clear()
+        registration.proxyGenerations.clear()
+        registration.generation++
         registration.handlers.forEach { handler -> runCatching(handler::remove) }
         registration.handlers.clear()
         if (registration.bridgeInstalled) {
@@ -388,6 +435,17 @@ internal class UserScriptRuntime(
             port == originPort
     }
 
+    private fun parseFrameValidation(result: String): FrameValidation? {
+        val decoded = runCatching {
+            JSONTokener(result).nextValue() as? String
+        }.getOrNull() ?: result
+        val value = runCatching { JSONObject(decoded) }.getOrNull() ?: return null
+        if (value.length() != 2) return null
+        val url = value.opt("url") as? String ?: return null
+        val allowed = value.opt("allowed") as? Boolean ?: return null
+        return FrameValidation(url = url, allowed = allowed)
+    }
+
     private fun defaultPort(scheme: String?): Int = when (scheme) {
         "http" -> 80
         "https" -> 443
@@ -407,10 +465,22 @@ internal class UserScriptRuntime(
             maxMessages = MAX_OPEN_TABS_PER_WINDOW,
             windowMillis = OPEN_TAB_RATE_WINDOW_MILLIS,
         ),
-        val menuCommands: LinkedHashMap<String, String> = linkedMapOf(),
-        var replyProxy: JavaScriptReplyProxy? = null,
-        var documentUrl: String? = null,
+        val documents: MutableMap<JavaScriptReplyProxy, InstalledDocument> = IdentityHashMap(),
+        val proxyGenerations: MutableMap<JavaScriptReplyProxy, Long> = IdentityHashMap(),
+        var generation: Long = 0L,
         var bridgeInstalled: Boolean = false,
+    )
+
+    private class InstalledDocument(
+        val documentId: String,
+        val replyProxy: JavaScriptReplyProxy,
+        var url: String,
+        val menuCommands: LinkedHashMap<String, String> = linkedMapOf(),
+    )
+
+    private data class FrameValidation(
+        val url: String,
+        val allowed: Boolean,
     )
 
     private class MessageRateWindow(
