@@ -129,6 +129,38 @@ class BrowserMediaPlaybackServiceInstrumentedTest {
     }
 
     @Test
+    fun rejectedServiceStartIgnoresReentrantPublicationFromExactOwnerStop() {
+        val commands = mutableListOf<Pair<GeckoMediaPlaybackOwner, GeckoMediaPlaybackCommand>>()
+        val owner = owner()
+        val publication = publication(owner)
+
+        instrumentation.runOnMainSync {
+            BrowserMediaPlaybackService.publish(
+                context = context,
+                publication = publication,
+                onCommand = { commandOwner, command ->
+                    commands += commandOwner to command
+                    BrowserMediaPlaybackService.replacePublication(
+                        context = context,
+                        publication = publication,
+                        onCommand = { nestedOwner, nestedCommand ->
+                            commands += nestedOwner to nestedCommand
+                        },
+                        mayStartService = false,
+                    )
+                },
+                mayStartService = false,
+            )
+            val state = BrowserMediaPlaybackService.serviceStateForTesting()
+            assertNull(state.publication)
+            assertFalse(state.hasCommandSink)
+            assertNull(state.serviceInstanceId)
+        }
+
+        assertEquals(listOf(owner to GeckoMediaPlaybackCommand.Stop), commands)
+    }
+
+    @Test
     fun unexpectedServiceDetachStopsExactOwnerAndAtomicallyClearsRegistry() {
         val commands = mutableListOf<Pair<GeckoMediaPlaybackOwner, GeckoMediaPlaybackCommand>>()
         val owner = owner()

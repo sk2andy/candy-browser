@@ -221,7 +221,7 @@ class GeckoPictureInPictureInstrumentedTest {
     fun systemPictureInPictureKeepsGeckoRenderHostAttached() {
         lateinit var stableGeckoHost: View
         lateinit var stableEngineView: View
-        lateinit var stableBrowserContainer: ViewGroup
+        lateinit var stableSurfaceView: SurfaceView
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
             scenario.onActivity { activity ->
                 val controller = activity.browserControllerForTesting()
@@ -240,7 +240,9 @@ class GeckoPictureInPictureInstrumentedTest {
                 val controller = activity.browserControllerForTesting()
                 stableGeckoHost = requireNotNull(controller.selectedGeckoViewForTesting())
                 stableEngineView = requireNotNull((stableGeckoHost as ViewGroup).singleChild())
-                stableBrowserContainer = requireNotNull(parentOf(stableGeckoHost) as? ViewGroup)
+                stableSurfaceView = requireNotNull(
+                    stableEngineView.findDescendant(SurfaceView::class.java),
+                )
                 controller.reportSelectedGeckoMediaStateForTesting(eligibleMediaState())
                 controller.reportSelectedGeckoFullscreenStateForTesting(true)
                 assertTrue(activity.onPictureInPictureRequested())
@@ -250,13 +252,37 @@ class GeckoPictureInPictureInstrumentedTest {
                 scenario.onActivity { activity -> entered = activity.isInPictureInPictureMode }
                 entered
             }
+            awaitCondition(
+                description = { "PiP did not retain and attach the original Gecko renderer" },
+            ) {
+                var rendererAttached = false
+                scenario.onActivity { activity ->
+                    val controller = activity.browserControllerForTesting()
+                    val currentEngineView = (stableGeckoHost as ViewGroup).singleChild()
+                    val currentSurface = currentEngineView
+                        ?.findDescendant(SurfaceView::class.java)
+                    rendererAttached =
+                        activity.isInPictureInPictureMode &&
+                        controller.selectedGeckoViewForTesting() === stableGeckoHost &&
+                        currentEngineView === stableEngineView &&
+                        currentSurface === stableSurfaceView &&
+                        parentOf(stableGeckoHost) != null &&
+                        stableGeckoHost.isAttachedToWindow &&
+                        stableSurfaceView.isAttachedToWindow
+                }
+                rendererAttached
+            }
             scenario.onActivity { activity ->
                 val controller = activity.browserControllerForTesting()
                 assertSame(stableGeckoHost, controller.selectedGeckoViewForTesting())
-                assertSame(stableBrowserContainer, parentOf(stableGeckoHost))
                 assertSame(stableEngineView, (stableGeckoHost as ViewGroup).singleChild())
+                assertSame(
+                    stableSurfaceView,
+                    stableEngineView.findDescendant(SurfaceView::class.java),
+                )
+                assertNotNull(parentOf(stableGeckoHost))
                 assertTrue(stableGeckoHost.isAttachedToWindow)
-                assertNotNull(stableEngineView.findDescendant(SurfaceView::class.java))
+                assertTrue(stableSurfaceView.isAttachedToWindow)
             }
         }
     }

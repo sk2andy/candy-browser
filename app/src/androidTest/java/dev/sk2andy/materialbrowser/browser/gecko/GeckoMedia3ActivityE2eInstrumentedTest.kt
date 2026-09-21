@@ -8,6 +8,7 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.os.SystemClock
 import android.view.View
+import androidx.lifecycle.Lifecycle
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
@@ -18,6 +19,7 @@ import androidx.test.uiautomator.UiDevice
 import dev.sk2andy.materialbrowser.BuildConfig
 import dev.sk2andy.materialbrowser.MainActivity
 import dev.sk2andy.materialbrowser.browser.BrowserMediaPlaybackService
+import dev.sk2andy.materialbrowser.browser.BrowserMediaTraceOwner
 import dev.sk2andy.materialbrowser.data.BrowserSessionStore
 import dev.sk2andy.materialbrowser.data.GestureOnboardingStore
 import dev.sk2andy.materialbrowser.data.ReleaseNotesStore
@@ -174,14 +176,41 @@ class GeckoMedia3ActivityE2eInstrumentedTest {
                     instrumentation.runOnMainSync { controller.release() }
                 }
 
-                val pausesBeforeTaskRemoval = server.samples.count { it.optString("phase") == "pause" }
-                scenario.onActivity { activity -> activity.finishAndRemoveTask() }
-                await("task removal stops the exact real Gecko owner") {
-                    server.samples.count { it.optString("phase") == "pause" } > pausesBeforeTaskRemoval
+                lateinit var expectedTraceOwner: BrowserMediaTraceOwner
+                instrumentation.runOnMainSync {
+                    val expectedOwner = requireNotNull(
+                        BrowserMediaPlaybackService.serviceStateForTesting()
+                            .publication
+                            ?.snapshot
+                            ?.owner,
+                    )
+                    expectedTraceOwner = requireNotNull(
+                        BrowserMediaPlaybackService.lifecycleTraceForTesting()
+                            .lastOrNull { event ->
+                                event.owner?.engineSessionId == expectedOwner.engineSessionId &&
+                                    event.owner.navigationGeneration ==
+                                    expectedOwner.navigationGeneration
+                            }
+                            ?.owner,
+                    )
                 }
-                await("task removal clears the Media3 publication") { hasNoMediaPublication() }
+                scenario.onActivity { activity -> activity.finishAndRemoveTask() }
+                await("task removal dispatches Stop to the exact real Gecko owner") {
+                    BrowserMediaPlaybackService.lifecycleTraceForTesting().any { event ->
+                        event.source == "BrowserMediaServiceRegistry" &&
+                            event.action == "dispatch:Stop" &&
+                            event.owner == expectedTraceOwner
+                    }
+                }
+                await("task removal closes the Activity and underlying Gecko session") {
+                    scenario.state == Lifecycle.State.DESTROYED
+                }
+                await("task removal clears publication, route, session, and service state") {
+                    hasNoMediaServiceState()
+                }
                 await("task removal removes the media notification") { !hasMediaNotification() }
                 await("task removal stops the media service") { !isMediaServiceRunning() }
+                assertExactStopPrecedesTeardown(expectedTraceOwner)
             }
         }
     }
@@ -225,14 +254,43 @@ class GeckoMedia3ActivityE2eInstrumentedTest {
         return published
     }
 
-    private fun hasNoMediaPublication(): Boolean {
+    private fun hasNoMediaServiceState(): Boolean {
         var cleared = false
         instrumentation.runOnMainSync {
             BrowserMediaPlaybackService.serviceStateForTesting().let { state ->
-                cleared = state.publication == null && !state.hasCommandSink
+                cleared = state.publication == null &&
+                    !state.hasCommandSink &&
+                    state.playbackState == null &&
+                    state.sessionCount == null &&
+                    state.serviceInstanceId == null
             }
         }
         return cleared
+    }
+
+    private fun assertExactStopPrecedesTeardown(expectedOwner: BrowserMediaTraceOwner) {
+        val trace = BrowserMediaPlaybackService.lifecycleTraceForTesting()
+        val stop = requireNotNull(
+            trace.firstOrNull { event ->
+                event.source == "BrowserMediaServiceRegistry" &&
+                    event.action == "dispatch:Stop" &&
+                    event.owner == expectedOwner
+            },
+        ) { "Exact-owner Stop missing from lifecycle trace: $trace" }
+        val teardown = trace.filter { event ->
+            when (event.source) {
+                "BrowserMediaSystemSession" -> event.action == "release"
+                "BrowserMediaServiceRegistry" ->
+                    event.action == "clear:All" || event.action == "detach-and-clear"
+                "BrowserMediaPlaybackService" -> event.action == "lifecycle:on-destroy"
+                else -> false
+            }
+        }
+        assertTrue("No Activity/registry teardown in lifecycle trace: $trace", teardown.isNotEmpty())
+        assertTrue(
+            "Exact-owner Stop must precede Activity/registry teardown: $trace",
+            teardown.all { event -> stop.sequence < event.sequence },
+        )
     }
 
     @Suppress("DEPRECATION")
