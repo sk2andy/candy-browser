@@ -10995,6 +10995,12 @@ class BrowserController(
         val wasFullscreen = tabId in browserEngineContentFullscreenTabIds
         val safeDrawingPresentationView = geckoMediaPresentation?.view
             ?.takeIf { fullscreenVideoInsideSafeDrawingHost }
+        val supersedesPendingLayoutRestoration = fullscreen &&
+            geckoMediaPresentation?.let { presentation ->
+                presentation.tabId == tabId &&
+                    presentation.session === session &&
+                    pendingMediaLayoutRestoration?.view === presentation.view
+            } == true
         if (fullscreen) {
             cancelPendingMediaLayoutRestoration()
             browserEngineContentFullscreenTabIds[tabId] = Unit
@@ -11045,7 +11051,11 @@ class BrowserController(
             !isInPictureInPicture
         ) {
             restoreInlineMediaLayoutAfterFullscreenExit(tabId, session)
-        } else if (fullscreen && !wasFullscreen) {
+        } else if (
+            fullscreen &&
+            !wasFullscreen &&
+            !supersedesPendingLayoutRestoration
+        ) {
             geckoPrivacyPolicyFor(tabId)?.let(session::updatePrivacyPolicy)
         }
     }
