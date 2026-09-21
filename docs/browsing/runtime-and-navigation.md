@@ -226,6 +226,9 @@
   traversal. Never replay a committed navigation or convert POST to GET. Reload matching open tabs
   only when the user explicitly changes the domain preference.
 - Keep the engine view's measured frame stable at the full window while pages scroll.
+  A selected Gecko tab's first navigation waits until its renderer view is attached, measured and
+  has received the current native insets. This preserves author `initial-scale` viewport directives
+  on the first load; background sessions and later navigations keep their existing load behavior.
   `GeckoViewInsetRules` forwards all native safe areas to CSS, including the top edge, without
   native margins. Normal Gecko tabs and Link Peek disable the legacy document repair at the
   Gecko-only bridge before installing any of its observers or hooks. Gecko's separate bounded CSS
