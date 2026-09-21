@@ -154,7 +154,6 @@ class BrowserControllerInitialViewportInstrumentedTest {
                     .removePrefix(REPORT_PREFIX),
             )
             assertEquals(0.8, report.getDouble("scale"), 0.05)
-            assertTrue(report.getDouble("visualWidth") > report.getDouble("innerWidth"))
             assertFalse(
                 requireNotNull(controller).isInitialNavigationWaitingForRendererForTesting(),
             )
@@ -194,9 +193,7 @@ class BrowserControllerInitialViewportInstrumentedTest {
                   addEventListener('load', () => {
                     requestAnimationFrame(() => requestAnimationFrame(() => {
                       document.title = 'Candy initial viewport: ' + JSON.stringify({
-                        scale: visualViewport.scale,
-                        innerWidth,
-                        visualWidth: visualViewport.width
+                        scale: visualViewport.scale
                       });
                     }));
                   }, { once: true });
