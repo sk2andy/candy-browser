@@ -207,6 +207,7 @@ test("WebRTC policies use fail-closed ordering and acknowledge verified settings
     setTimeout,
     clearTimeout,
     CandyPrivacyRules: {},
+    CandyPrivacySignals: { requestHeaders: (headers) => headers || [] },
     browser: {
       privacy: {
         network: {
@@ -229,6 +230,7 @@ test("WebRTC policies use fail-closed ordering and acknowledge verified settings
       },
       webRequest: {
         onBeforeRequest: { addListener: () => {} },
+        onBeforeSendHeaders: { addListener: () => {} },
         onHeadersReceived: { addListener: () => {} },
         onErrorOccurred: { addListener: () => {} },
       },
@@ -257,6 +259,28 @@ test("WebRTC policies use fail-closed ordering and acknowledge verified settings
     type: "webrtc-policy",
     protocolVersion: 2,
     revision: 2,
+    peerConnectionsEnabled: true,
+    ipHandlingPolicy: "default_public_interface_only",
+  });
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.deepEqual(operations, ["ip:set:default_public_interface_only", "peer:clear"]);
+
+  operations.length = 0;
+  nativeMessageListener({
+    type: "webrtc-policy",
+    protocolVersion: 2,
+    revision: 3,
+    peerConnectionsEnabled: true,
+    ipHandlingPolicy: "disable_non_proxied_udp",
+  });
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.deepEqual(operations, ["ip:set:disable_non_proxied_udp", "peer:clear"]);
+
+  operations.length = 0;
+  nativeMessageListener({
+    type: "webrtc-policy",
+    protocolVersion: 2,
+    revision: 4,
     peerConnectionsEnabled: false,
     ipHandlingPolicy: null,
   });
@@ -267,7 +291,7 @@ test("WebRTC policies use fail-closed ordering and acknowledge verified settings
   nativeMessageListener({
     type: "webrtc-policy",
     protocolVersion: 2,
-    revision: 3,
+    revision: 5,
     peerConnectionsEnabled: true,
     ipHandlingPolicy: null,
   });
@@ -277,7 +301,7 @@ test("WebRTC policies use fail-closed ordering and acknowledge verified settings
     postedNativeMessages
       .filter((message) => message.type === "webrtc-policy-ready")
       .map((message) => message.revision),
-    [1, 2, 3],
+    [1, 2, 3, 4, 5],
   );
 });
 
@@ -285,10 +309,14 @@ test("newer privacy policy wins while older cookie rules are still loading", asy
   let resolveCookieAsset;
   let nativeMessageListener;
   let beforeRequestListener;
+  let beforeSendHeadersListener;
   let headersReceivedListener;
   let headersReceivedExtraInfoSpec;
   const runtimeMessageListeners = [];
   const postedNativeMessages = [];
+  const privacyOrdering = [];
+  const privacyRegistrationAttempts = [];
+  const privacyRegistrations = [];
   const backgroundContext = vm.createContext({
     URL,
     Map,
@@ -305,12 +333,28 @@ test("newer privacy policy wins while older cookie rules are still loading", asy
       hostMatches: () => false,
       cosmeticPayload: () => ({ selectors: [], procedural: [] }),
     },
+    CandyPrivacySignals: {
+      registrationCode: (_settings, revision) => `/* privacy revision ${revision} */`,
+      requestHeaders: (headers, policy) => {
+        const filtered = (headers || []).filter((header) =>
+          !["dnt", "sec-gpc"].includes(header.name.toLowerCase()),
+        );
+        if (policy.doNotTrackEnabled) filtered.push({ name: "DNT", value: "1" });
+        if (policy.globalPrivacyControlEnabled) {
+          filtered.push({ name: "Sec-GPC", value: "1" });
+        }
+        return filtered;
+      },
+    },
     fetch: () => new Promise((resolve) => { resolveCookieAsset = resolve; }),
     browser: {
       runtime: {
         getURL: (path) => path,
         connectNative: () => ({
-          postMessage: (message) => postedNativeMessages.push(message),
+          postMessage: (message) => {
+            postedNativeMessages.push(message);
+            if (message.type === "policy-ready") privacyOrdering.push("policy-ready");
+          },
           onMessage: { addListener: (listener) => { nativeMessageListener = listener; } },
           onDisconnect: { addListener: () => {} },
         }),
@@ -320,9 +364,33 @@ test("newer privacy policy wins while older cookie rules are still loading", asy
         sendMessage: () => Promise.resolve(),
         onRemoved: { addListener: () => {} },
       },
+      contentScripts: {
+        register: async (options) => {
+          privacyOrdering.push(
+            options.matchOriginAsFallback === true ? "register-primary" : "register-fallback",
+          );
+          privacyRegistrationAttempts.push(options);
+          if (
+            privacyRegistrationAttempts.length === 1 &&
+            options.matchOriginAsFallback === true
+          ) {
+            throw new Error("matchOriginAsFallback is unsupported");
+          }
+          const registration = {
+            options,
+            unregistered: false,
+            unregister: async () => { registration.unregistered = true; },
+          };
+          privacyRegistrations.push(registration);
+          return registration;
+        },
+      },
       webRequest: {
         onBeforeRequest: {
           addListener: (listener) => { beforeRequestListener = listener; },
+        },
+        onBeforeSendHeaders: {
+          addListener: (listener) => { beforeSendHeadersListener = listener; },
         },
         onHeadersReceived: {
           addListener: (listener, _filter, extraInfoSpec) => {
@@ -348,6 +416,9 @@ test("newer privacy policy wins while older cookie rules are still loading", asy
     protocolVersion: 2,
     token: "tab-token",
     revision: 1,
+    privacySignalRevision: 1,
+    doNotTrackEnabled: true,
+    globalPrivacyControlEnabled: true,
     navigationGeneration: 0,
     hideConsent: true,
   });
@@ -356,13 +427,29 @@ test("newer privacy policy wins while older cookie rules are still loading", asy
     protocolVersion: 2,
     token: "tab-token",
     revision: 2,
+    privacySignalRevision: 1,
+    doNotTrackEnabled: true,
+    globalPrivacyControlEnabled: true,
     navigationGeneration: 0,
     hideConsent: false,
     safeAreaLayoutQuietPeriodMillis: 5000,
     safeAreaRequiredFailureCount: 0,
   });
+  await new Promise((resolve) => setImmediate(resolve));
   resolveCookieAsset({ ok: true, text: () => Promise.resolve("") });
   await new Promise((resolve) => setImmediate(resolve));
+
+  assert.equal(privacyRegistrations.length, 1);
+  assert.equal(privacyRegistrationAttempts.length, 2);
+  assert.equal(privacyRegistrationAttempts[0].matchOriginAsFallback, true);
+  assert.equal(privacyRegistrations[0].options.runAt, "document_start");
+  assert.equal(privacyRegistrations[0].options.allFrames, true);
+  assert.equal(privacyRegistrations[0].options.matchAboutBlank, true);
+  assert.equal(privacyRegistrations[0].options.matchOriginAsFallback, undefined);
+  assert.ok(
+    privacyOrdering.indexOf("register-fallback") < privacyOrdering.indexOf("policy-ready"),
+  );
+  assert.ok(postedNativeMessages.some((message) => message.type === "policy-ready"));
 
   const sendRuntimeMessage = async (message, sender) => {
     for (const listener of runtimeMessageListeners) {
@@ -464,8 +551,49 @@ test("newer privacy policy wins while older cookie rules are still loading", asy
     postedNativeMessages.filter((message) => message.type === "safe-area-fallback").at(-1).revision,
     2,
   );
-  assert.equal(
-    postedNativeMessages.filter((message) => message.type === "policy-ready").at(-1).revision,
-    1,
+  assert.ok(
+    postedNativeMessages.some((message) =>
+      message.type === "policy-ready" &&
+      message.token === "tab-token" &&
+      message.revision === 1,
+    ),
   );
+
+  nativeMessageListener({
+    type: "policy",
+    protocolVersion: 2,
+    token: "new-signals",
+    revision: 1,
+    privacySignalRevision: 2,
+    doNotTrackEnabled: false,
+    globalPrivacyControlEnabled: false,
+    navigationGeneration: 0,
+    hideConsent: false,
+  });
+  nativeMessageListener({
+    type: "policy",
+    protocolVersion: 2,
+    token: "stale-signals",
+    revision: 1,
+    privacySignalRevision: 1,
+    doNotTrackEnabled: true,
+    globalPrivacyControlEnabled: true,
+    navigationGeneration: 0,
+    hideConsent: false,
+  });
+  await new Promise((resolve) => setImmediate(resolve));
+  await sendRuntimeMessage(
+    { type: "bind", token: "stale-signals" },
+    { tab: { id: 8 } },
+  );
+  const staleRequestResult = beforeSendHeadersListener({
+    tabId: 8,
+    requestHeaders: [{ name: "DNT", value: "0" }, { name: "Sec-GPC", value: "0" }],
+  });
+  assert.deepEqual(JSON.parse(JSON.stringify(staleRequestResult.requestHeaders)), []);
+  assert.equal(privacyRegistrations.length, 2);
+  assert.equal(privacyRegistrationAttempts.length, 3);
+  assert.equal(privacyRegistrationAttempts[2].matchOriginAsFallback, undefined);
+  assert.equal(privacyRegistrations[0].unregistered, true);
+  assert.match(privacyRegistrations[1].options.js[0].code, /privacy revision 2/);
 });

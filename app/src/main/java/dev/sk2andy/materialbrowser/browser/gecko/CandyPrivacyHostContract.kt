@@ -64,6 +64,9 @@ internal data class GeckoPrivacyPolicy(
     val cookieBannerRemovalDisabled: Boolean,
     val pausedHosts: Set<String>,
     val candyRules: List<CandyRule>,
+    val doNotTrackEnabled: Boolean = true,
+    val globalPrivacyControlEnabled: Boolean = true,
+    val privacySignalRevision: Long = 0L,
     val blockThirdPartyCookies: Boolean = true,
     val allowThirdPartyCookiesForSite: Boolean = false,
     val compatibilityRequestHosts: Set<String> = DEFAULT_COMPATIBILITY_REQUEST_HOSTS,
@@ -111,6 +114,9 @@ internal object GeckoPrivacyPolicyRules {
         cookieBannerRemovalDisabled: Boolean,
         blockThirdPartyCookies: Boolean,
         allowThirdPartyCookiesForSite: Boolean,
+        doNotTrackEnabled: Boolean = true,
+        globalPrivacyControlEnabled: Boolean = true,
+        privacySignalRevision: Long = 0L,
         topInsetPx: Int = 0,
         navigationGeneration: Int = 0,
         scrollMetricsEnabled: Boolean = false,
@@ -141,6 +147,9 @@ internal object GeckoPrivacyPolicyRules {
             pausedHosts = pausedHosts,
             hideCookieConsent = hideCookieConsent,
             cookieBannerRemovalDisabled = cookieBannerRemovalDisabled,
+            doNotTrackEnabled = doNotTrackEnabled,
+            globalPrivacyControlEnabled = globalPrivacyControlEnabled,
+            privacySignalRevision = privacySignalRevision.coerceAtLeast(0L),
             blockThirdPartyCookies = blockThirdPartyCookies,
             allowThirdPartyCookiesForSite = allowThirdPartyCookiesForSite,
             topInsetPx = topInsetPx.coerceAtLeast(0),
@@ -196,6 +205,9 @@ internal fun GeckoPrivacyPolicy.toMessage(token: String, revision: Long): JSONOb
     .put("blockAds", blockAdsAndTrackers)
     .put("hideConsent", hideCookieConsent)
     .put("cookieBannerRemovalDisabled", cookieBannerRemovalDisabled)
+    .put("doNotTrackEnabled", doNotTrackEnabled)
+    .put("globalPrivacyControlEnabled", globalPrivacyControlEnabled)
+    .put("privacySignalRevision", privacySignalRevision)
     .put("topInsetPx", topInsetPx)
     .put("navigationGeneration", navigationGeneration)
     .put("scrollMetricsEnabled", scrollMetricsEnabled)

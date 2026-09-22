@@ -22,6 +22,114 @@ let cookieRulesPromise = null;
 let flushTimer = null;
 let latestWebRtcPolicyRevision = 0;
 let webRtcPolicyQueue = Promise.resolve();
+let latestPrivacySignalRevision = -1;
+let latestPrivacySignalSettings = null;
+let activePrivacySignalRevision = -1;
+let privacySignalRegistration = null;
+let privacySignalRegistrationQueue = Promise.resolve();
+let privacySignalMatchOriginAsFallbackSupported = null;
+
+function privacySignalSettings(policy) {
+  return {
+    doNotTrackEnabled: policy?.doNotTrackEnabled === true,
+    globalPrivacyControlEnabled: policy?.globalPrivacyControlEnabled === true,
+  };
+}
+
+function samePrivacySignalSettings(left, right) {
+  return left?.doNotTrackEnabled === right?.doNotTrackEnabled &&
+    left?.globalPrivacyControlEnabled === right?.globalPrivacyControlEnabled;
+}
+
+function observePrivacySignalPolicy(policy) {
+  if (!Number.isSafeInteger(policy?.privacySignalRevision) ||
+      policy.privacySignalRevision < 0) {
+    throw new Error("Invalid privacy signal revision");
+  }
+  const revision = policy.privacySignalRevision;
+  const settings = privacySignalSettings(policy);
+  if (revision < latestPrivacySignalRevision) return;
+  if (revision === latestPrivacySignalRevision) {
+    if (!samePrivacySignalSettings(settings, latestPrivacySignalSettings)) {
+      throw new Error("Conflicting privacy signal policy revision");
+    }
+    return;
+  }
+  latestPrivacySignalRevision = revision;
+  latestPrivacySignalSettings = settings;
+}
+
+function privacySignalRegistrationOptions(settings, revision) {
+  const options = {
+    matches: ["http://*/*", "https://*/*"],
+    js: [{ code: CandyPrivacySignals.registrationCode(settings, revision) }],
+    runAt: "document_start",
+    allFrames: true,
+    matchAboutBlank: true,
+  };
+  if (privacySignalMatchOriginAsFallbackSupported !== false) {
+    options.matchOriginAsFallback = true;
+  }
+  return options;
+}
+
+function matchOriginAsFallbackIsUnsupported(error) {
+  const reason = String(error);
+  return reason.includes("matchOriginAsFallback") ||
+    /unexpected property|unsupported property/i.test(reason);
+}
+
+async function registerPrivacySignalScript(settings, revision) {
+  const options = privacySignalRegistrationOptions(settings, revision);
+  try {
+    const registration = await browser.contentScripts.register(options);
+    if (options.matchOriginAsFallback === true) {
+      privacySignalMatchOriginAsFallbackSupported = true;
+    }
+    return registration;
+  } catch (error) {
+    if (options.matchOriginAsFallback !== true) throw error;
+    if (!matchOriginAsFallbackIsUnsupported(error)) throw error;
+    privacySignalMatchOriginAsFallbackSupported = false;
+    const fallbackOptions = { ...options };
+    delete fallbackOptions.matchOriginAsFallback;
+    return browser.contentScripts.register(fallbackOptions);
+  }
+}
+
+function ensurePrivacySignalRegistration(policy) {
+  observePrivacySignalPolicy(policy);
+  privacySignalRegistrationQueue = privacySignalRegistrationQueue
+    .catch(() => {})
+    .then(async () => {
+      if (activePrivacySignalRevision === latestPrivacySignalRevision) return;
+      const revision = latestPrivacySignalRevision;
+      const settings = latestPrivacySignalSettings;
+      const registration = await registerPrivacySignalScript(settings, revision);
+      if (
+        revision !== latestPrivacySignalRevision ||
+        !samePrivacySignalSettings(settings, latestPrivacySignalSettings)
+      ) {
+        await registration.unregister();
+        return;
+      }
+      const previousRegistration = privacySignalRegistration;
+      privacySignalRegistration = registration;
+      activePrivacySignalRevision = revision;
+      await previousRegistration?.unregister();
+    });
+  const scheduled = privacySignalRegistrationQueue;
+  return scheduled.then(() => {
+    if (activePrivacySignalRevision !== latestPrivacySignalRevision) {
+      return ensurePrivacySignalRegistration(policy);
+    }
+    return {
+      ...policy,
+      ...latestPrivacySignalSettings,
+      privacySignalRevision: latestPrivacySignalRevision,
+    };
+  });
+}
 
 async function loadText(fileName) {
   const response = await fetch(browser.runtime.getURL(`rules/${fileName}`));
@@ -96,6 +204,10 @@ function contentPolicy(policy) {
       Math.max(0, policy.navigationGeneration) : 0,
     scrollMetricsEnabled: policy?.scrollMetricsEnabled === true,
     inlineMediaPlayerEnabled: policy?.inlineMediaPlayerEnabled === true,
+    doNotTrackEnabled: policy?.doNotTrackEnabled === true,
+    globalPrivacyControlEnabled: policy?.globalPrivacyControlEnabled === true,
+    privacySignalRevision: Number.isSafeInteger(policy?.privacySignalRevision) ?
+      Math.max(0, policy.privacySignalRevision) : 0,
     inlineMediaPlayerMode,
     inlineMediaPlayerActionLabel:
       typeof policy?.inlineMediaPlayerActionLabel === "string" ?
@@ -405,6 +517,15 @@ browser.webRequest.onBeforeRequest.addListener((details) => {
   }
   return {};
 }, { urls: ["http://*/*", "https://*/*"] }, ["blocking"]);
+
+browser.webRequest.onBeforeSendHeaders.addListener((details) => {
+  const token = tokenByTab.get(details.tabId);
+  const policy = token && policiesByToken.get(token);
+  if (!policy) return {};
+  return {
+    requestHeaders: CandyPrivacySignals.requestHeaders(details.requestHeaders, policy),
+  };
+}, { urls: ["http://*/*", "https://*/*"] }, ["blocking", "requestHeaders"]);
 
 browser.webRequest.onHeadersReceived.addListener((details) => {
   if (details.type !== "main_frame" || !nativePort || !Number.isInteger(details.statusCode)) {
@@ -841,41 +962,58 @@ function connectNative() {
           revision: message.revision,
         });
       };
-      if (message.revision < latestRevision) {
-        acknowledgePolicy();
+      let privacySignalsReady;
+      try {
+        privacySignalsReady = ensurePrivacySignalRegistration(message);
+      } catch (error) {
+        nativePort?.postMessage({
+          type: "failed",
+          protocolVersion: PROTOCOL_VERSION,
+          reason: String(error).slice(0, 512),
+        });
         return;
       }
-      latestPolicyRevisionByToken.set(message.token, message.revision);
-      const publishPolicy = () => {
-        if (latestPolicyRevisionByToken.get(message.token) !== message.revision) {
-          acknowledgePolicy();
-          return;
-        }
-        policiesByToken.set(message.token, message);
-        const tabEntry = Array.from(tokenByTab.entries())
-          .find(([, token]) => token === message.token);
-        if (message.inlineMediaPlayerEnabled !== true && tabEntry) {
-          inlineVideosByTab.delete(tabEntry[0]);
-          publishInlineVideoState(tabEntry[0]);
-        }
-        publishContentPolicy(message.token, message);
-        acknowledgePolicy();
-      };
-      if (message.hideConsent) {
-        ensureCookieRules().then(publishPolicy).catch((error) => {
-          if (latestPolicyRevisionByToken.get(message.token) !== message.revision) {
-            acknowledgePolicy();
-            return;
-          }
+      if (message.revision < latestRevision) {
+        privacySignalsReady.then(acknowledgePolicy).catch((error) => {
           nativePort?.postMessage({
             type: "failed",
             protocolVersion: PROTOCOL_VERSION,
             reason: String(error).slice(0, 512),
           });
         });
-      } else {
-        publishPolicy();
+        return;
       }
+      latestPolicyRevisionByToken.set(message.token, message.revision);
+      const publishPolicy = (readyPolicy) => {
+        if (latestPolicyRevisionByToken.get(message.token) !== message.revision) {
+          acknowledgePolicy();
+          return;
+        }
+        policiesByToken.set(message.token, readyPolicy);
+        const tabEntry = Array.from(tokenByTab.entries())
+          .find(([, token]) => token === message.token);
+        if (readyPolicy.inlineMediaPlayerEnabled !== true && tabEntry) {
+          inlineVideosByTab.delete(tabEntry[0]);
+          publishInlineVideoState(tabEntry[0]);
+        }
+        publishContentPolicy(message.token, readyPolicy);
+        acknowledgePolicy();
+      };
+      const policyReady = privacySignalsReady.then(async (readyPolicy) => {
+        if (readyPolicy.hideConsent) await ensureCookieRules();
+        return readyPolicy;
+      });
+      policyReady.then(publishPolicy).catch((error) => {
+        if (latestPolicyRevisionByToken.get(message.token) !== message.revision) {
+          acknowledgePolicy();
+          return;
+        }
+        nativePort?.postMessage({
+          type: "failed",
+          protocolVersion: PROTOCOL_VERSION,
+          reason: String(error).slice(0, 512),
+        });
+      });
     } else if (message.type === "remove" && typeof message.token === "string") {
       policiesByToken.delete(message.token);
       latestPolicyRevisionByToken.delete(message.token);

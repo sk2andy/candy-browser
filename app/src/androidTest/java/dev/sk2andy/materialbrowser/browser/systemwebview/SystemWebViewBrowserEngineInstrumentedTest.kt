@@ -15,6 +15,7 @@ import dev.sk2andy.materialbrowser.browser.BrowserController
 import dev.sk2andy.materialbrowser.browser.BrowserViewportRect
 import dev.sk2andy.materialbrowser.browser.PageTranslationContentOutcome
 import dev.sk2andy.materialbrowser.browser.PageTranslationRecoveryRules
+import dev.sk2andy.materialbrowser.browser.PrivacySignalSettings
 import dev.sk2andy.materialbrowser.browser.TextInputOcclusionProbeMode
 import dev.sk2andy.materialbrowser.browser.TextInputOcclusionProbeResult
 import dev.sk2andy.materialbrowser.browser.TextInputOcclusionScript
@@ -184,6 +185,55 @@ class SystemWebViewBrowserEngineInstrumentedTest {
         }
         composeRule.waitUntil(timeoutMillis = 10_000L) {
             browserController.selectedTab.title == "WebRTC available"
+        }
+    }
+
+    @Test
+    fun privacySignalsReachMainFrameRequestAndDocumentAndCanBeDisabled() {
+        PrivacySignalServer().use { server ->
+            lateinit var browserController: BrowserController
+            composeRule.runOnIdle {
+                browserController = createControllerWithView().first
+                controller = browserController
+                browserController.submitAddress(server.url)
+            }
+
+            composeRule.waitUntil(timeoutMillis = 10_000L) {
+                browserController.selectedTab.title == "1|true"
+            }
+            assertTrue(server.awaitRequests(1))
+            assertEquals("1", server.headersAt(0)["dnt"])
+            assertEquals("1", server.headersAt(0)["sec-gpc"])
+
+            composeRule.runOnIdle {
+                browserController.updatePrivacySignalSettings(
+                    PrivacySignalSettings(
+                        doNotTrackEnabled = false,
+                        globalPrivacyControlEnabled = false,
+                    ),
+                )
+            }
+            composeRule.waitUntil(timeoutMillis = 10_000L) {
+                browserController.selectedTab.title == "null|false"
+            }
+            assertTrue(server.awaitRequests(2))
+            assertFalse(server.headersAt(1).containsKey("dnt"))
+            assertFalse(server.headersAt(1).containsKey("sec-gpc"))
+
+            composeRule.runOnIdle {
+                browserController.updatePrivacySignalSettings(PrivacySignalSettings.Default)
+            }
+            composeRule.waitUntil(timeoutMillis = 10_000L) {
+                browserController.selectedTab.title == "1|true"
+            }
+            assertTrue(server.awaitRequests(3))
+            assertEquals("1", server.headersAt(2)["dnt"])
+            assertEquals("1", server.headersAt(2)["sec-gpc"])
+
+            composeRule.runOnIdle { browserController.reload() }
+            assertTrue(server.awaitRequests(4))
+            assertEquals("1", server.headersAt(3)["dnt"])
+            assertEquals("1", server.headersAt(3)["sec-gpc"])
         }
     }
 
@@ -420,6 +470,81 @@ class SystemWebViewBrowserEngineInstrumentedTest {
                         connection.getOutputStream().buffered().use { output ->
                             output.write(
                                 "HTTP/1.1 404 Not Found\r\nContent-Type: text/html; charset=utf-8\r\n"
+                                    .toByteArray(),
+                            )
+                            output.write(
+                                "Content-Length: ${body.size}\r\nConnection: close\r\n\r\n"
+                                    .toByteArray(),
+                            )
+                            output.write(body)
+                        }
+                    }
+                }
+            }
+        }
+
+        override fun close() {
+            server.close()
+            thread.join(1_000L)
+        }
+    }
+
+    private class PrivacySignalServer : Closeable {
+        private val server = ServerSocket(0, 4, InetAddress.getByName("127.0.0.1"))
+        private val rootHeaders = mutableListOf<Map<String, String>>()
+        private val thread = Thread(::serve, "system-webview-privacy-signals-fixture").apply {
+            isDaemon = true
+            start()
+        }
+        val url = "http://127.0.0.1:${server.localPort}/"
+
+        @Synchronized
+        fun headersAt(index: Int): Map<String, String> = rootHeaders[index]
+
+        fun awaitRequests(expected: Int): Boolean {
+            val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5)
+            while (System.nanoTime() < deadline) {
+                if (requestCount() >= expected) return true
+                Thread.yield()
+            }
+            return requestCount() >= expected
+        }
+
+        @Synchronized
+        private fun requestCount(): Int = rootHeaders.size
+
+        private fun serve() {
+            while (!server.isClosed) {
+                val socket = runCatching { server.accept() }.getOrNull() ?: return
+                socket.use { connection ->
+                    runCatching {
+                        val reader = connection.getInputStream().bufferedReader()
+                        val requestLine = reader.readLine().orEmpty()
+                        val headers = buildMap {
+                            while (true) {
+                                val line = reader.readLine() ?: break
+                                if (line.isEmpty()) break
+                                val separator = line.indexOf(':')
+                                if (separator > 0) {
+                                    put(
+                                        line.substring(0, separator).lowercase(),
+                                        line.substring(separator + 1).trim(),
+                                    )
+                                }
+                            }
+                        }
+                        if (requestLine.substringAfter(' ').substringBefore(' ') == "/") {
+                            synchronized(this) { rootHeaders += headers }
+                        }
+                        val body = """
+                            <html><head><script>
+                            document.title = String(navigator.doNotTrack) + '|' +
+                              String(navigator.globalPrivacyControl);
+                            </script></head><body>privacy signals</body></html>
+                        """.trimIndent().toByteArray()
+                        connection.getOutputStream().buffered().use { output ->
+                            output.write(
+                                "HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\n"
                                     .toByteArray(),
                             )
                             output.write(

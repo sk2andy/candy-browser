@@ -20,7 +20,11 @@ internal object GeckoRuntimeSettingsFactory {
         // Gecko owns its CA store; Android Network Security Config alone cannot opt it in.
         .enterpriseRootsEnabled(trustUserCertificates)
         .build()
-        .apply { applyDnsOverHttpsSettings(dnsOverHttpsSettings) }
+        .apply {
+            setFingerprintingProtection(true)
+            setFingerprintingProtectionPrivateBrowsing(true)
+            applyDnsOverHttpsSettings(dnsOverHttpsSettings)
+        }
 }
 
 @UiThread

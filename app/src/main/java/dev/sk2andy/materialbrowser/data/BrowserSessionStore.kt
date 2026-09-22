@@ -28,6 +28,7 @@ import dev.sk2andy.materialbrowser.browser.ProfileWallpaperRules
 import dev.sk2andy.materialbrowser.browser.ProfileLockTrigger
 import dev.sk2andy.materialbrowser.browser.ProfileProtection
 import dev.sk2andy.materialbrowser.browser.ProfileProtectionRules
+import dev.sk2andy.materialbrowser.browser.PrivacySignalSettings
 import dev.sk2andy.materialbrowser.browser.SearchEngine
 import dev.sk2andy.materialbrowser.browser.StartupAddressFocusMode
 import dev.sk2andy.materialbrowser.browser.SearxngRules
@@ -1221,6 +1222,31 @@ class BrowserSessionStore internal constructor(
         preferences.edit().putString(KEY_WEBRTC_PROTECTION_MODE, mode.stableId).apply()
     }
 
+    fun loadPrivacySignalSettings(): PrivacySignalSettings = PrivacySignalSettings(
+        doNotTrackEnabled = preferences.getBoolean(KEY_DO_NOT_TRACK_ENABLED, true),
+        globalPrivacyControlEnabled = preferences.getBoolean(
+            KEY_GLOBAL_PRIVACY_CONTROL_ENABLED,
+            true,
+        ),
+    )
+
+    fun savePrivacySignalSettings(settings: PrivacySignalSettings) {
+        preferences.edit()
+            .putBoolean(KEY_DO_NOT_TRACK_ENABLED, settings.doNotTrackEnabled)
+            .putBoolean(
+                KEY_GLOBAL_PRIVACY_CONTROL_ENABLED,
+                settings.globalPrivacyControlEnabled,
+            )
+            .apply()
+    }
+
+    fun loadAutoDeAmpEnabled(): Boolean =
+        preferences.getBoolean(KEY_AUTO_DE_AMP_ENABLED, true)
+
+    fun saveAutoDeAmpEnabled(enabled: Boolean) {
+        preferences.edit().putBoolean(KEY_AUTO_DE_AMP_ENABLED, enabled).apply()
+    }
+
     fun loadDnsOverHttpsSettings(): DnsOverHttpsSettings = DnsOverHttpsRules.sanitize(
         DnsOverHttpsSettings(
             provider = DnsOverHttpsProvider.fromStableId(
@@ -1534,6 +1560,9 @@ class BrowserSessionStore internal constructor(
         const val KEY_GECKO_SAFE_AREA_MAX_INITIAL_ELEMENTS = "gecko_safe_area_max_initial_elements"
         const val KEY_VIDEO_AUTOPLAY_BLOCKED = "video_autoplay_blocked"
         const val KEY_WEBRTC_PROTECTION_MODE = "webrtc_protection_mode"
+        const val KEY_DO_NOT_TRACK_ENABLED = "do_not_track_enabled"
+        const val KEY_GLOBAL_PRIVACY_CONTROL_ENABLED = "global_privacy_control_enabled"
+        const val KEY_AUTO_DE_AMP_ENABLED = "auto_de_amp_enabled"
         const val KEY_DNS_OVER_HTTPS_PROVIDER = "dns_over_https_provider"
         const val KEY_DNS_OVER_HTTPS_CUSTOM_ENDPOINT = "dns_over_https_custom_endpoint"
         const val KEY_ANDROID_BROWSER_ENGINE = "android_browser_engine"

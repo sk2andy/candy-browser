@@ -14,6 +14,19 @@ import org.junit.Test
 
 class CandyPrivacyHostContractTest {
     @Test
+    fun `privacy signals cross authenticated policy independently`() {
+        val message = GeckoPrivacyPolicy.Disabled.copy(
+            doNotTrackEnabled = false,
+            globalPrivacyControlEnabled = true,
+            privacySignalRevision = 7,
+        ).toMessage(token = "session-token", revision = 4)
+
+        assertFalse(message.getBoolean("doNotTrackEnabled"))
+        assertTrue(message.getBoolean("globalPrivacyControlEnabled"))
+        assertEquals(7L, message.getLong("privacySignalRevision"))
+    }
+
+    @Test
     fun `bounded css safe area settings normalize independently from legacy inset`() {
         val policy = GeckoPrivacyPolicyRules.extensionOwnedAdFilteringWithCandyCookieDefaults(
             pageHost = null,

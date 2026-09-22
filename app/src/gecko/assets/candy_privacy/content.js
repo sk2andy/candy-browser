@@ -2792,7 +2792,8 @@ function extractCandyReaderPayload() {
 browser.runtime.onMessage.addListener((message) => {
   if (!message) return undefined;
   if (message.type === "content-policy") {
-    updateCandyInlineMediaPlayerPolicy(message);
+    CandyPrivacySignals.installDocumentSignals(globalThis.wrappedJSObject || globalThis, message);
+    if (self === top) updateCandyInlineMediaPlayerPolicy(message);
     return undefined;
   }
   if (message.type === "picture-in-picture-playback" && typeof message.expected === "boolean") {
@@ -2825,8 +2826,6 @@ browser.runtime.onMessage.addListener((message) => {
   return undefined;
 });
 
-if (self === top) {
-  browser.runtime.sendMessage({ type: "content-policy-request" }).then((policy) => {
-    updateCandyInlineMediaPlayerPolicy(policy);
-  }).catch(() => {});
-}
+browser.runtime.sendMessage({ type: "content-policy-request" }).then((policy) => {
+  if (self === top) updateCandyInlineMediaPlayerPolicy(policy);
+}).catch(() => {});

@@ -38,4 +38,16 @@ class GeckoRuntimeSettingsInstrumentedTest {
             assertEquals(1.55f, settings.fontSizeFactor, 0f)
         }
     }
+
+    @Test
+    fun fingerprintingProtectionCoversRegularAndPrivateBrowsing() {
+        InstrumentationRegistry.getInstrumentation().runOnMainSync {
+            val settings = GeckoRuntimeSettingsFactory.create(
+                ContentBlocking.Settings.Builder().build(),
+            )
+
+            assertEquals(true, settings.fingerprintingProtection)
+            assertEquals(true, settings.fingerprintingProtectionPrivateBrowsing)
+        }
+    }
 }

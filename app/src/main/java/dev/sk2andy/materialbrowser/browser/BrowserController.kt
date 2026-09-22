@@ -280,6 +280,7 @@ import dev.sk2andy.materialbrowser.reader.ReaderExtractionParser
 import dev.sk2andy.materialbrowser.reader.ReaderExtractionResult
 import dev.sk2andy.materialbrowser.reader.ReaderLibraryRepository
 import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineCommand
+import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineCommandType
 import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineCommands
 import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineEvent
 import dev.sk2andy.materialbrowser.shared.browser.AddressBarLongPressAction
@@ -304,6 +305,7 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.atomic.AtomicReference
 
 private class PendingGeckoPreviewCapture(
@@ -486,6 +488,11 @@ private data class ExternalNavigationRollback(
     val navigationGeneration: Int,
     val sourceUrl: String,
     var restoringSource: Boolean = false,
+)
+
+private data class AutoDeAmpReplacementGuard(
+    val publisherUrl: String,
+    val expiresAtElapsedRealtime: Long,
 )
 
 private sealed interface ExternalAppHandoffSource {
@@ -750,6 +757,10 @@ class BrowserController(
     private var inlineMediaPlayerOpenGeneration = 0L
     private var inlineMediaPlayerOpenSession: AndroidBrowserEngineSessionPort? = null
     var webRtcProtectionMode by mutableStateOf(WebRtcProtectionMode.Default)
+        private set
+    var privacySignalSettings by mutableStateOf(PrivacySignalSettings.Default)
+        private set
+    var isAutoDeAmpEnabled by mutableStateOf(true)
         private set
     var dnsOverHttpsSettings by mutableStateOf(DnsOverHttpsRules.Default)
         private set
@@ -1294,7 +1305,10 @@ class BrowserController(
     private var nextGeckoLinkPeekId = 0L
     private var externalLinkPreviewRuntime: ExternalLinkPreviewRuntime? = null
     private var nextExternalLinkPreviewSessionId = 0L
+    private var privacySignalRevision = PRIVACY_SIGNAL_REVISIONS.incrementAndGet()
     private val navigationGenerations = mutableMapOf<String, Int>()
+    private val autoDeAmpNavigationRequestGenerations = mutableMapOf<String, Long>()
+    private val autoDeAmpReplacementGuards = mutableMapOf<String, AutoDeAmpReplacementGuard>()
     private val pendingBrowserEngineLoadRequests = mutableMapOf<String, Long>()
     private var nextBrowserEngineLoadRequestId = 0L
     private val automaticNativeTopSafeAreaTabIds = mutableSetOf<String>()
@@ -2249,6 +2263,8 @@ class BrowserController(
         )
         webRtcProtectionMode = store.loadWebRtcProtectionMode()
         browserEngineSessionFactory.setWebRtcProtectionMode(webRtcProtectionMode)
+        privacySignalSettings = store.loadPrivacySignalSettings()
+        isAutoDeAmpEnabled = store.loadAutoDeAmpEnabled()
         dnsOverHttpsSettings = store.loadDnsOverHttpsSettings()
         browserEngineSessionFactory.setDnsOverHttpsSettings(dnsOverHttpsSettings)
         if (!BuildConfig.SYSTEM_WEBVIEW_ONLY && usesGeckoEngine) {
@@ -9132,6 +9148,71 @@ class BrowserController(
         browserEngineSessionFactory.setWebRtcProtectionMode(mode)
     }
 
+    fun updatePrivacySignalSettings(settings: PrivacySignalSettings) {
+        if (privacySignalSettings == settings) return
+        privacySignalRevision = PRIVACY_SIGNAL_REVISIONS.incrementAndGet()
+        privacySignalSettings = settings
+        store.savePrivacySignalSettings(settings)
+        browserEngineSessions.forEach { (tabId, session) ->
+            val policy = geckoPrivacyPolicyFor(tabId) ?: return@forEach
+            session.updatePrivacyPolicy(policy) {
+                if (
+                    browserEngineSessions[tabId] === session &&
+                    BrowserUriPolicy.normalizeHttpUrl(pageUrls[tabId]) != null
+                ) {
+                    session.execute(BrowserEngineCommands.reload())
+                }
+            }
+        }
+        geckoLinkPeekBindings.forEach { (view, binding) ->
+            val sourceTab = tabs.firstOrNull { tab -> tab.id == binding.sourceTabId }
+                ?: return@forEach
+            val pageUrl = BrowserUriPolicy.normalizeHttpUrl(binding.committedUrl)
+                ?: return@forEach
+            binding.session.updatePrivacyPolicy(
+                geckoPrivacyPolicyFor(
+                    tab = sourceTab,
+                    pageUrl = pageUrl,
+                    context = protectionRequestContextFor(sourceTab, pageUrl),
+                    cssSafeAreaTopInsetPx = 0,
+                ),
+            ) {
+                if (geckoLinkPeekBindings[view] === binding) {
+                    binding.session.execute(BrowserEngineCommands.reload())
+                }
+            }
+        }
+        val previewRuntime = externalLinkPreviewRuntime
+        val previewState = externalLinkPreviewState
+        if (previewRuntime != null && previewState?.sessionId == previewRuntime.sessionId) {
+            val pageUrl = ExternalLinkPreviewRules.safeCurrentUrl(previewState.currentUrl)
+            if (pageUrl != null) {
+                previewRuntime.geckoBinding.session.updatePrivacyPolicy(
+                    geckoPrivacyPolicyFor(
+                        tab = previewRuntime.policyTab,
+                        pageUrl = pageUrl,
+                        context = protectionRequestContextFor(previewRuntime.policyTab, pageUrl),
+                        topInsetPx = externalLinkPreviewContentTopInsetPx(),
+                        navigationGeneration = previewRuntime.generation,
+                    ),
+                ) {
+                    if (
+                        externalLinkPreviewRuntime === previewRuntime &&
+                        externalLinkPreviewState?.sessionId == previewRuntime.sessionId
+                    ) {
+                        previewRuntime.geckoBinding.session.execute(BrowserEngineCommands.reload())
+                    }
+                }
+            }
+        }
+    }
+
+    fun updateAutoDeAmpEnabled(enabled: Boolean) {
+        if (isAutoDeAmpEnabled == enabled) return
+        isAutoDeAmpEnabled = enabled
+        store.saveAutoDeAmpEnabled(enabled)
+    }
+
     fun updateDnsOverHttpsSettings(settings: DnsOverHttpsSettings) {
         if (!isDnsOverHttpsSupported) return
         val sanitized = DnsOverHttpsRules.sanitize(settings)
@@ -10329,7 +10410,11 @@ class BrowserController(
                         externalLinkPreviewState == null &&
                         tab.id == selectedTabId,
                 )
-                val restored = if (usesGeckoEngine) {
+                val replacesInitialAmpUrl = isAutoDeAmpEnabled &&
+                    AutoDeAmpRules.publisherUrlFor(tab.url) != null
+                val restored = if (replacesInitialAmpUrl) {
+                    false
+                } else if (usesGeckoEngine) {
                     val restoreDecision = GeckoSessionStateSnapshotRules.restoreDecision(
                         snapshot = geckoSessionStateStore.load(tab.id),
                         tabId = tab.id,
@@ -10370,6 +10455,7 @@ class BrowserController(
                         null
                     }
                 if (initialCommand != null) {
+                    val effectiveCommand = autoDeAmpLoadCommand(tab.id, initialCommand)
                     val waitsForViewport = usesGeckoEngine &&
                         tab.id == selectedTabId &&
                         geckoViewBindings.values.none { binding -> binding.session === session }
@@ -10378,11 +10464,11 @@ class BrowserController(
                             tab.id,
                             PendingInitialBrowserEngineNavigation(
                                 session = session,
-                                command = initialCommand,
+                                command = effectiveCommand,
                             ),
                         )
                     } else {
-                        session.execute(initialCommand)
+                        session.execute(effectiveCommand)
                     }
                 }
             }
@@ -10472,6 +10558,9 @@ class BrowserController(
         if (destroyed || browserEngineSessions[tabId] !== session) {
             return GeckoNavigationRequestDecision.Allow
         }
+        val autoDeAmpRequestGeneration =
+            autoDeAmpNavigationRequestGenerations.getOrDefault(tabId, 0L) + 1L
+        autoDeAmpNavigationRequestGenerations[tabId] = autoDeAmpRequestGeneration
         if (request.hasUserGesture) pendingBrowserEngineLoadRequests.remove(tabId)
         val scheme = runCatching { Uri.parse(request.url).scheme }.getOrNull()?.lowercase()
         val safeHttpUrl = BrowserUriPolicy.normalizeHttpUrl(request.url)
@@ -10480,6 +10569,36 @@ class BrowserController(
             return GeckoNavigationRequestDecision.Deny
         }
         if (handlePendingPopunderOpenerNavigation(tabId, session, request.url)) {
+            return GeckoNavigationRequestDecision.Deny
+        }
+        val publisherUrl = if (
+            isAutoDeAmpEnabled && request.target == BrowserEngineNavigationTarget.Current
+        ) {
+            AutoDeAmpRules.publisherUrlFor(request.url)
+        } else {
+            null
+        }
+        if (publisherUrl != null) {
+            val nowElapsedRealtime = SystemClock.elapsedRealtime()
+            val replacementGuard = autoDeAmpReplacementGuards[tabId]
+            if (
+                !request.hasUserGesture &&
+                replacementGuard?.publisherUrl == publisherUrl &&
+                replacementGuard.expiresAtElapsedRealtime >= nowElapsedRealtime
+            ) {
+                return GeckoNavigationRequestDecision.Deny
+            }
+            rememberAutoDeAmpReplacement(tabId, publisherUrl, nowElapsedRealtime)
+            mainHandler.post {
+                if (
+                    !destroyed &&
+                    isAutoDeAmpEnabled &&
+                    autoDeAmpNavigationRequestGenerations[tabId] == autoDeAmpRequestGeneration &&
+                    browserEngineSessions[tabId] === session
+                ) {
+                    session.execute(BrowserEngineCommands.load(publisherUrl))
+                }
+            }
             return GeckoNavigationRequestDecision.Deny
         }
         val nowElapsedRealtime = SystemClock.elapsedRealtime()
@@ -11407,13 +11526,45 @@ class BrowserController(
         }
     }
 
+    private fun autoDeAmpLoadCommand(
+        tabId: String,
+        command: BrowserEngineCommand,
+    ): BrowserEngineCommand {
+        if (command.type != BrowserEngineCommandType.Load) return command
+        val publisherUrl = autoDeAmpPublisherUrl(tabId, command.address) ?: return command
+        return BrowserEngineCommands.load(publisherUrl)
+    }
+
+    private fun autoDeAmpPublisherUrl(tabId: String, url: String?): String? {
+        if (!isAutoDeAmpEnabled) return null
+        val publisherUrl = AutoDeAmpRules.publisherUrlFor(url) ?: return null
+        rememberAutoDeAmpReplacement(
+            tabId = tabId,
+            publisherUrl = publisherUrl,
+            nowElapsedRealtime = SystemClock.elapsedRealtime(),
+        )
+        return publisherUrl
+    }
+
+    private fun rememberAutoDeAmpReplacement(
+        tabId: String,
+        publisherUrl: String,
+        nowElapsedRealtime: Long,
+    ) {
+        autoDeAmpReplacementGuards[tabId] = AutoDeAmpReplacementGuard(
+            publisherUrl = publisherUrl,
+            expiresAtElapsedRealtime = nowElapsedRealtime + AUTO_DE_AMP_LOOP_GUARD_MILLIS,
+        )
+    }
+
     private fun loadGeckoWithPrivacy(
         tabId: String,
         session: AndroidBrowserEngineSessionPort,
         url: String,
     ) {
-        pageUrls[tabId] = url
-        updateProtectionRequestContext(tabId, url)
+        val targetUrl = autoDeAmpPublisherUrl(tabId, url) ?: url
+        pageUrls[tabId] = targetUrl
+        updateProtectionRequestContext(tabId, targetUrl)
         val policy = geckoPrivacyPolicyFor(tabId) ?: return
         val pending = pendingInitialBrowserEngineNavigations[tabId]
             ?.takeIf { candidate -> candidate.session === session }
@@ -11445,12 +11596,12 @@ class BrowserController(
             }
             pendingBrowserEngineLoadRequests.remove(tabId)
             if (waitingForPolicy == null) {
-                session.execute(BrowserEngineCommands.load(url))
+                session.execute(BrowserEngineCommands.load(targetUrl))
                 return@updatePrivacyPolicy
             }
             val ready = PendingInitialBrowserEngineNavigation(
                 session = session,
-                command = BrowserEngineCommands.load(url),
+                command = BrowserEngineCommands.load(targetUrl),
             )
             setPendingInitialBrowserEngineNavigation(tabId, ready)
             geckoViewBindings.values
@@ -11495,6 +11646,9 @@ class BrowserController(
             pausedHosts = siteExceptionHostsForTab(tab.id),
             hideCookieConsent = workerSettings.hideCookieConsent && !siteProtectionPaused,
             cookieBannerRemovalDisabled = context.cookieBannerRemovalDisabled,
+            doNotTrackEnabled = privacySignalSettings.doNotTrackEnabled,
+            globalPrivacyControlEnabled = privacySignalSettings.globalPrivacyControlEnabled,
+            privacySignalRevision = privacySignalRevision,
             blockThirdPartyCookies = workerSettings.blockThirdPartyCookies,
             allowThirdPartyCookiesForSite =
                 siteProtectionPaused ||
@@ -12406,6 +12560,8 @@ class BrowserController(
 
     private fun closeBrowserEngineSession(tabId: String) {
         removePendingInitialBrowserEngineNavigation(tabId)
+        autoDeAmpNavigationRequestGenerations.remove(tabId)
+        autoDeAmpReplacementGuards.remove(tabId)
         pendingBrowserEngineLoadRequests.remove(tabId)
         invalidateMedia3OwnerFor(tabId)
         cancelAddressBarAutoDockProbe(tabId)
@@ -15390,6 +15546,7 @@ class BrowserController(
     }
 
     private companion object {
+        val PRIVACY_SIGNAL_REVISIONS = AtomicLong(0L)
         val ALL_WEB_ORIGINS = setOf("*")
         val WEB_SCHEMES = setOf("http", "https")
         val SAFE_AREA_INSET_TYPES =
@@ -15431,6 +15588,7 @@ class BrowserController(
         const val MAX_RETIRED_WEB_MEDIA_DOCUMENTS = 64
         const val MAX_WEB_MEDIA_MESSAGES_PER_WINDOW = 128
         const val WEB_MEDIA_RATE_WINDOW_MILLIS = 1_000L
+        const val AUTO_DE_AMP_LOOP_GUARD_MILLIS = 15_000L
         const val PICTURE_IN_PICTURE_FALLBACK_GRACE_MILLIS = 900L
         const val PICTURE_IN_PICTURE_EXIT_GUARD_DELAY_MILLIS = 350L
         const val MEDIA_LAYOUT_RESTORATION_INSET_TIMEOUT_MILLIS = 350L

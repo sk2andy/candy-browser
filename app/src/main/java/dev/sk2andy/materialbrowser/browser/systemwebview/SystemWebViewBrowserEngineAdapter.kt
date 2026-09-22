@@ -43,6 +43,8 @@ import dev.sk2andy.materialbrowser.blocking.CandyDecisionAction
 import dev.sk2andy.materialbrowser.blocking.CandyMatcherSnapshot
 import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineCapabilities
 import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineKind
+import dev.sk2andy.materialbrowser.browser.AntiFingerprintingRules
+import dev.sk2andy.materialbrowser.browser.AntiFingerprintingScript
 import dev.sk2andy.materialbrowser.browser.BrowserEngineAuthPromptRequest
 import dev.sk2andy.materialbrowser.browser.BrowserEngineAuthPromptResponse
 import dev.sk2andy.materialbrowser.browser.BrowserEngineBooleanResponse
@@ -56,6 +58,8 @@ import dev.sk2andy.materialbrowser.browser.BrowserEnginePermissionSetResponse
 import dev.sk2andy.materialbrowser.browser.BrowserEngineScrollListener
 import dev.sk2andy.materialbrowser.browser.BrowserEngineScrollMetrics
 import dev.sk2andy.materialbrowser.browser.BrowserViewportRect
+import dev.sk2andy.materialbrowser.browser.PrivacySignalDocumentScript
+import dev.sk2andy.materialbrowser.browser.PrivacySignalSettings
 import dev.sk2andy.materialbrowser.browser.TextInputOcclusionProbeMode
 import dev.sk2andy.materialbrowser.browser.TextInputOcclusionProbeResult
 import dev.sk2andy.materialbrowser.browser.TextInputOcclusionScript
@@ -392,11 +396,15 @@ private class SystemWebViewBrowserEngineSession(
     private var fullscreenStateListener: GeckoFullscreenStateListener? = null
     private var scrollListener: BrowserEngineScrollListener? = null
     private var contentTargetListener: dev.sk2andy.materialbrowser.browser.actions.BrowserContentTargetListener? = null
+    private var antiFingerprintingScriptHandler: ScriptHandler? = null
+    private var privacySignalScriptHandler: ScriptHandler? = null
+    private var privacySignalHeaderRefreshPending = false
     private var autoplayScriptHandler: ScriptHandler? = null
     private var webRtcScriptHandler: ScriptHandler? = null
     private var topInsetScriptHandler: ScriptHandler? = null
     private var mediaScriptHandler: ScriptHandler? = null
     private var desktopViewportScriptHandler: ScriptHandler? = null
+    private val antiFingerprintingSeed = UUID.randomUUID().toString().replace("-", "")
     private val mediaBridgeToken = UUID.randomUUID().toString().replace("-", "")
     private var customFullscreenView: View? = null
     private var customFullscreenCallback: WebChromeClient.CustomViewCallback? = null
@@ -432,11 +440,13 @@ private class SystemWebViewBrowserEngineSession(
         } else {
             assignedProfileName = null
         }
-        defaultUserAgent = webView.settings.userAgentString
+        defaultUserAgent = AntiFingerprintingRules.reduceUserAgent(webView.settings.userAgentString)
         configureWebView(
             fontSizeFactor = fontSizeFactor,
             forceDarkWebsites = forceDarkWebsites,
         )
+        installAntiFingerprintingPolicy()
+        installPrivacySignalPolicy()
         installWebRtcPolicy()
         installTopInsetScript()
         installToppings(initialScripts)
@@ -448,7 +458,9 @@ private class SystemWebViewBrowserEngineSession(
     override fun execute(command: BrowserEngineCommand) {
         if (closed) return
         when (command.type) {
-            BrowserEngineCommandType.Load -> webView.loadUrl(requireNotNull(command.address))
+            BrowserEngineCommandType.Load -> loadUrlWithPrivacySignals(
+                requireNotNull(command.address),
+            )
             BrowserEngineCommandType.ReplaceHistory -> {
                 val safeUrl = BrowserUriPolicy.normalizeHttpUrl(
                     requireNotNull(command.address),
@@ -463,14 +475,14 @@ private class SystemWebViewBrowserEngineSession(
                     requireNotNull(command.address),
                 ) ?: return
                 if (BrowserUriPolicy.normalizeHttpUrl(historyUrlAtOffset(0)) == safeUrl) {
-                    webView.reload()
+                    reloadWithPrivacySignals()
                 } else {
-                    webView.loadUrl(safeUrl)
+                    loadUrlWithPrivacySignals(safeUrl)
                 }
             }
             BrowserEngineCommandType.Back -> if (webView.canGoBack()) webView.goBack()
             BrowserEngineCommandType.Forward -> if (webView.canGoForward()) webView.goForward()
-            BrowserEngineCommandType.Reload -> webView.reload()
+            BrowserEngineCommandType.Reload -> reloadWithPrivacySignals()
             BrowserEngineCommandType.Stop -> webView.stopLoading()
             BrowserEngineCommandType.Close -> close()
         }
@@ -822,6 +834,9 @@ private class SystemWebViewBrowserEngineSession(
         if (closed) return
         val cookiePolicyChanged = privacyPolicy.blockThirdPartyCookies != policy.blockThirdPartyCookies ||
             privacyPolicy.allowThirdPartyCookiesForSite != policy.allowThirdPartyCookiesForSite
+        val privacySignalsChanged =
+            privacyPolicy.doNotTrackEnabled != policy.doNotTrackEnabled ||
+                privacyPolicy.globalPrivacyControlEnabled != policy.globalPrivacyControlEnabled
         val matcher = if (privacyPolicy.candyRules == policy.candyRules) {
             requestPrivacyState.candyMatcher
         } else {
@@ -830,8 +845,16 @@ private class SystemWebViewBrowserEngineSession(
         privacyPolicy = policy
         requestPrivacyState = SystemWebViewRequestPrivacyState(policy, matcher)
         policyRevision++
+        if (privacySignalsChanged) {
+            privacySignalHeaderRefreshPending = true
+            installPrivacySignalPolicy()
+            webView.evaluateJavascript(
+                PrivacySignalDocumentScript.installScript(privacySignalSettings()),
+                null,
+            )
+        }
         applyPrivacyPolicy()
-        if (reloadOnCookiePermissionChange && cookiePolicyChanged) webView.reload()
+        if (reloadOnCookiePermissionChange && cookiePolicyChanged) reloadWithPrivacySignals()
         onReady()
     }
 
@@ -894,6 +917,8 @@ private class SystemWebViewBrowserEngineSession(
         }
         closed = true
         toppingRuntime.remove(webView)
+        antiFingerprintingScriptHandler?.remove()
+        privacySignalScriptHandler?.remove()
         autoplayScriptHandler?.remove()
         webRtcScriptHandler?.remove()
         topInsetScriptHandler?.remove()
@@ -916,6 +941,7 @@ private class SystemWebViewBrowserEngineSession(
     ) {
         webView.settings.apply {
             javaScriptEnabled = true
+            userAgentString = defaultUserAgent
             domStorageEnabled = true
             allowFileAccess = false
             allowContentAccess = false
@@ -1008,6 +1034,7 @@ private class SystemWebViewBrowserEngineSession(
     private fun browserClient() = object : WebViewClient() {
         override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
             if (closed) return true
+            if (!request.isForMainFrame) return false
             val url = request.url.toString()
             val decision = navigationRequestListener?.onNavigationRequest(
                 GeckoMainFrameNavigationRequest(
@@ -1088,6 +1115,12 @@ private class SystemWebViewBrowserEngineSession(
         }
 
         override fun onPageCommitVisible(view: WebView, url: String?) {
+            if (privacySignalScriptHandler == null) {
+                view.evaluateJavascript(
+                    PrivacySignalDocumentScript.installScript(privacySignalSettings()),
+                    null,
+                )
+            }
             if (topInsetScriptHandler == null) {
                 view.evaluateJavascript(WebContentTopInsetScript.installScript, null)
             }
@@ -1525,6 +1558,43 @@ private class SystemWebViewBrowserEngineSession(
 
     private fun installTopInsetScript() {
         topInsetScriptHandler = addDocumentStartScript(WebContentTopInsetScript.installScript)
+    }
+
+    private fun installAntiFingerprintingPolicy() {
+        antiFingerprintingScriptHandler = addDocumentStartScript(
+            AntiFingerprintingScript.create(antiFingerprintingSeed),
+        )
+    }
+
+    private fun installPrivacySignalPolicy() {
+        privacySignalScriptHandler?.remove()
+        privacySignalScriptHandler = addDocumentStartScript(
+            PrivacySignalDocumentScript.installScript(privacySignalSettings()),
+        )
+    }
+
+    private fun privacySignalSettings() = PrivacySignalSettings(
+        doNotTrackEnabled = privacyPolicy.doNotTrackEnabled,
+        globalPrivacyControlEnabled = privacyPolicy.globalPrivacyControlEnabled,
+    )
+
+    private fun loadUrlWithPrivacySignals(url: String) {
+        privacySignalHeaderRefreshPending = false
+        webView.loadUrl(url, privacySignalSettings().requestHeaders())
+    }
+
+    private fun reloadWithPrivacySignals() {
+        if (!privacySignalHeaderRefreshPending) {
+            webView.reload()
+            return
+        }
+        privacySignalHeaderRefreshPending = false
+        val safeUrl = BrowserUriPolicy.normalizeHttpUrl(webView.url ?: currentPageUrl)
+        if (safeUrl == null) {
+            webView.reload()
+        } else {
+            loadUrlWithPrivacySignals(safeUrl)
+        }
     }
 
     private fun installAutoplayPolicy() {
