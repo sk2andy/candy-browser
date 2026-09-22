@@ -275,6 +275,93 @@ class GeckoExtensionManagerCoordinatorTest {
     }
 
     @Test
+    fun `Gecko install failures map to focused manager messages`() = runBlocking {
+        val expected = mapOf(
+            GeckoExtensionInstallFailure.NetworkFailure to
+                GeckoExtensionManagerMessage.InstallNetworkFailure,
+            GeckoExtensionInstallFailure.IncorrectHash to
+                GeckoExtensionManagerMessage.InstallIncorrectHash,
+            GeckoExtensionInstallFailure.CorruptFile to
+                GeckoExtensionManagerMessage.InstallCorruptFile,
+            GeckoExtensionInstallFailure.FileAccess to
+                GeckoExtensionManagerMessage.InstallFileAccess,
+            GeckoExtensionInstallFailure.Unsigned to
+                GeckoExtensionManagerMessage.InstallUnsigned,
+            GeckoExtensionInstallFailure.UnexpectedType to
+                GeckoExtensionManagerMessage.InstallUnexpectedType,
+            GeckoExtensionInstallFailure.UnexpectedVersion to
+                GeckoExtensionManagerMessage.InstallUnexpectedVersion,
+            GeckoExtensionInstallFailure.IncorrectId to
+                GeckoExtensionManagerMessage.InstallIncorrectId,
+            GeckoExtensionInstallFailure.InvalidDomain to
+                GeckoExtensionManagerMessage.InstallInvalidDomain,
+            GeckoExtensionInstallFailure.Blocklisted to
+                GeckoExtensionManagerMessage.InstallBlocklisted,
+            GeckoExtensionInstallFailure.Incompatible to
+                GeckoExtensionManagerMessage.InstallIncompatible,
+            GeckoExtensionInstallFailure.UnsupportedType to
+                GeckoExtensionManagerMessage.InstallUnsupportedType,
+            GeckoExtensionInstallFailure.AdminOnly to
+                GeckoExtensionManagerMessage.InstallAdminOnly,
+            GeckoExtensionInstallFailure.SoftBlocked to
+                GeckoExtensionManagerMessage.InstallSoftBlocked,
+            GeckoExtensionInstallFailure.Cancelled to
+                GeckoExtensionManagerMessage.InstallCancelled,
+            GeckoExtensionInstallFailure.Postponed to
+                GeckoExtensionManagerMessage.InstallPostponed,
+        )
+
+        expected.forEach { (failure, message) ->
+            val runtime = FakeExtensionRuntime(
+                installFailure = GeckoExtensionInstallException(
+                    failure = failure,
+                    cause = IllegalStateException("Gecko install failed"),
+                ),
+            )
+            val coordinator = coordinator(runtime)
+            coordinator.open(regularContext)?.join()
+
+            coordinator.install("https://example.com/addon.xpi")?.join()
+
+            assertEquals(message, coordinator.state.message)
+        }
+    }
+
+    @Test
+    fun `unknown runtime failure keeps generic manager message`() = runBlocking {
+        val runtime = FakeExtensionRuntime(
+            installFailure = IllegalStateException("Unexpected failure"),
+        )
+        val coordinator = coordinator(runtime)
+        coordinator.open(regularContext)?.join()
+
+        coordinator.install("https://example.com/addon.xpi")?.join()
+
+        assertEquals(GeckoExtensionManagerMessage.ActionFailed, coordinator.state.message)
+    }
+
+    @Test
+    fun `Gecko update failure keeps focused manager message`() = runBlocking {
+        val installed = extension()
+        val runtime = FakeExtensionRuntime(
+            installed = linkedMapOf(installed.id to installed),
+            updateFailure = GeckoExtensionInstallException(
+                failure = GeckoExtensionInstallFailure.UnexpectedVersion,
+                cause = IllegalStateException("Gecko update failed"),
+            ),
+        )
+        val coordinator = coordinator(runtime)
+        coordinator.open(regularContext)?.join()
+
+        coordinator.update(installed)?.join()
+
+        assertEquals(
+            GeckoExtensionManagerMessage.InstallUnexpectedVersion,
+            coordinator.state.message,
+        )
+    }
+
+    @Test
     fun `page reload is requested after an extension runtime mutation`() = runBlocking {
         val runtime = FakeExtensionRuntime(
             installed = linkedMapOf("addon@example.com" to extension()),
@@ -334,6 +421,8 @@ class GeckoExtensionManagerCoordinatorTest {
     private class FakeExtensionRuntime(
         private val installed: LinkedHashMap<String, GeckoExtension> = linkedMapOf(),
         private val listInstalledGate: CompletableDeferred<Unit>? = null,
+        private val installFailure: Throwable? = null,
+        private val updateFailure: Throwable? = null,
     ) : GeckoExtensionRuntime {
         private lateinit var prompt: GeckoExtensionPermissionPrompt
         var enableCount = 0
@@ -354,6 +443,7 @@ class GeckoExtensionManagerCoordinatorTest {
             uri: String,
             installationMethod: String,
         ): GeckoExtension {
+            installFailure?.let { throw it }
             lastPermissionDecision = prompt.decide(
                 GeckoExtensionPermissionRequest(
                     kind = GeckoExtensionPermissionRequestKind.Install,
@@ -378,10 +468,12 @@ class GeckoExtensionManagerCoordinatorTest {
                 installed[extensionId] = it
             }
 
-        override suspend fun update(extensionId: String): GeckoExtension =
-            requireExtension(extensionId).copy(version = "2.0").also {
+        override suspend fun update(extensionId: String): GeckoExtension {
+            updateFailure?.let { throw it }
+            return requireExtension(extensionId).copy(version = "2.0").also {
                 installed[extensionId] = it
             }
+        }
 
         override suspend fun setAllowedInPrivateBrowsing(
             extensionId: String,

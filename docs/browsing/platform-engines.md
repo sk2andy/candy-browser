@@ -462,6 +462,30 @@ Camera and microphone permissions remain separate and continue through Candy's p
   progress/completion/interruption through Gecko's public `DownloadInitData`. This delegate does not
   expose page cookies or private session data.
 
+### Firefox WebExtension installation failures
+
+Candy translates every public GeckoView 155 `WebExtension.InstallException` code at the Gecko
+adapter boundary. The extension manager keeps these user-visible causes distinct:
+
+| GeckoView failure | Candy guidance |
+| --- | --- |
+| Network | Check the connection and direct XPI address, then retry |
+| Incorrect hash or corrupt package | Use an intact package from the expected source |
+| File access | Check available device storage, then retry |
+| Missing Mozilla signature | Use a Mozilla-signed XPI |
+| Unexpected type, version or ID | Verify that the direct download matches the intended add-on |
+| Disallowed install domain | Use a download source allowed by the extension publisher |
+| Incompatible | The add-on does not declare compatibility with Candy's Android Firefox version |
+| Unsupported add-on type | The Android Firefox engine cannot run that package type |
+| Hard or soft blocklist | Mozilla blocked or flagged the extension |
+| Enterprise-only | Candy cannot provide Firefox enterprise-policy installation |
+| Cancelled | The user or Firefox cancelled the install |
+| Postponed | Restart Candy so Firefox can continue the install |
+| Unknown | Keep the generic action-failed fallback |
+
+GeckoView reports a category and optional add-on metadata, not the name of a particular unsupported
+Firefox API. Candy therefore does not claim that a missing API caused an incompatibility result.
+
 ### Firefox WebExtension capability matrix (GeckoView 155)
 
 This table is a tested embedder contract, not a claim that arbitrary Firefox extensions are
