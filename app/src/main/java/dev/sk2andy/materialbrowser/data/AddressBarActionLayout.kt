@@ -11,6 +11,7 @@ enum class AddressBarAction(val wireValue: String) {
     Share("share"),
     Print("print"),
     NewTab("new_tab"),
+    Home("home"),
     Reload("reload"),
     CloseTab("close_tab"),
     Back("back"),

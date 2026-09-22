@@ -308,6 +308,7 @@ class BrowserSessionStore internal constructor(
             profileId = item.optString("profileId", DEFAULT_PROFILE_ID)
                 .takeIf(String::isNotBlank)
                 ?: DEFAULT_PROFILE_ID,
+            visitId = item.optString("visitId"),
         )
     }
 
@@ -690,6 +691,13 @@ class BrowserSessionStore internal constructor(
     fun saveInactiveTabLifetime(lifetime: InactiveTabLifetime) {
         preferences.edit().putString(KEY_INACTIVE_TAB_LIFETIME, lifetime.wireValue).apply()
     }
+
+    fun loadPendingTabClearOnTaskRemoval(): Boolean =
+        preferences.getBoolean(KEY_PENDING_TAB_CLEAR_ON_TASK_REMOVAL, false)
+
+    fun savePendingTabClearOnTaskRemoval(pending: Boolean): Boolean = preferences.edit()
+        .putBoolean(KEY_PENDING_TAB_CLEAR_ON_TASK_REMOVAL, pending)
+        .commit()
 
     fun loadResidentTabLimit(): Int = runCatching {
         preferences.getInt(
@@ -1414,7 +1422,8 @@ class BrowserSessionStore internal constructor(
                     .put("url", entry.url)
                     .put("title", entry.title)
                     .put("lastVisitedAt", entry.lastVisitedAt)
-                    .put("profileId", entry.profileId),
+                    .put("profileId", entry.profileId)
+                    .put("visitId", entry.visitId),
             )
         }
         return array.toString()
@@ -1458,6 +1467,8 @@ class BrowserSessionStore internal constructor(
         const val KEY_FAVORITES = "favorites"
         private val FAVORITES_COMMIT_LOCK = Any()
         const val KEY_INACTIVE_TAB_LIFETIME = "inactive_tab_lifetime"
+        const val KEY_PENDING_TAB_CLEAR_ON_TASK_REMOVAL =
+            "pending_tab_clear_on_task_removal"
         const val KEY_RESIDENT_TAB_LIMIT = "resident_tab_limit"
         const val KEY_SEARCH_ENGINE = "search_engine"
         const val KEY_PAGE_TRANSLATION_PROVIDER = "page_translation_provider"

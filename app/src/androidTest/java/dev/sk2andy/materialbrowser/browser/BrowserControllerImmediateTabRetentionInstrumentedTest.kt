@@ -86,6 +86,53 @@ class BrowserControllerImmediateTabRetentionInstrumentedTest {
     }
 
     @Test
+    fun whenAppClosesLifetimeKeepsTabsOnStopAndClearsThemOnTaskRemoval() {
+        activityRule.scenario.onActivity { activity ->
+            val store = BrowserSessionStore(activity)
+            val browserController = BrowserController(activity).also { controller = it }
+            val originalTabId = browserController.selectedTabId
+            browserController.updateInactiveTabLifetime(InactiveTabLifetime.WhenAppCloses)
+            browserController.onStart()
+
+            browserController.onStop(isInPictureInPictureMode = false)
+
+            assertTrue(browserController.tabs.any { it.id == originalTabId })
+            assertTrue(store.loadPendingTabClearOnTaskRemoval())
+
+            browserController.onTaskRemoved()
+
+            assertFalse(browserController.tabs.any { it.id == originalTabId })
+            assertTrue(browserController.tabs.single().isFreshBlankTab)
+            assertFalse(store.loadPendingTabClearOnTaskRemoval())
+        }
+    }
+
+    @Test
+    fun pendingWhenAppClosesClearRunsOnlyForFreshTask() {
+        activityRule.scenario.onActivity { activity ->
+            val store = BrowserSessionStore(activity)
+            val browserController = BrowserController(activity).also { controller = it }
+            val originalTabId = browserController.selectedTabId
+            browserController.updateInactiveTabLifetime(InactiveTabLifetime.WhenAppCloses)
+            browserController.onStart()
+            browserController.onStop(isInPictureInPictureMode = false)
+
+            browserController.reconcilePendingTaskRemoval(isRestoredTask = true)
+
+            assertTrue(browserController.tabs.any { it.id == originalTabId })
+            assertFalse(store.loadPendingTabClearOnTaskRemoval())
+
+            browserController.onStart()
+            browserController.onStop(isInPictureInPictureMode = false)
+            browserController.reconcilePendingTaskRemoval(isRestoredTask = false)
+
+            assertFalse(browserController.tabs.any { it.id == originalTabId })
+            assertTrue(browserController.tabs.single().isFreshBlankTab)
+            assertFalse(store.loadPendingTabClearOnTaskRemoval())
+        }
+    }
+
+    @Test
     fun immediateLifetimeKeepsTabsDuringPictureInPictureStop() {
         activityRule.scenario.onActivity { activity ->
             val browserController = BrowserController(activity).also { controller = it }
@@ -121,7 +168,7 @@ class BrowserControllerImmediateTabRetentionInstrumentedTest {
     }
 
     @Test
-    fun immediateLifetimeLeavesActiveCapsuleBeforeClearingItsTab() {
+    fun whenAppClosesLifetimeLeavesActiveCapsuleBeforeClearingItsTab() {
         activityRule.scenario.onActivity { activity ->
             val browserController = BrowserController(activity).also { controller = it }
             val capsule = SiteCapsule(
@@ -134,10 +181,10 @@ class BrowserControllerImmediateTabRetentionInstrumentedTest {
             )
             browserController.siteCapsules += capsule
             assertTrue(browserController.openSiteCapsule(capsule.id, navigateToStart = false))
-            browserController.updateInactiveTabLifetime(InactiveTabLifetime.Immediately)
+            browserController.updateInactiveTabLifetime(InactiveTabLifetime.WhenAppCloses)
             browserController.onStart()
 
-            browserController.onStop(isInPictureInPictureMode = false)
+            browserController.onTaskRemoved()
 
             assertNull(browserController.activeCapsuleId)
             assertNull(browserController.activeCapsuleTabId)

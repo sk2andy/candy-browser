@@ -11,17 +11,17 @@ import org.junit.Test
 
 class BrowsingLibraryRulesTest {
     @Test
-    fun `history deduplicates canonical URL and keeps latest title`() {
+    fun `history keeps repeated visits to canonical URL`() {
         val old = HistoryEntry("https://Example.com:443/page#old", "Old", 10)
         val latest = HistoryEntry("https://example.com/page#new", "Latest", 20)
 
         val history = BrowsingLibraryRules.addHistory(listOf(old), latest)
 
-        assertEquals(listOf(latest), history)
+        assertEquals(listOf(latest, old), history)
     }
 
     @Test
-    fun `same canonical URL is retained once per profile`() {
+    fun `same canonical URL visits remain isolated by profile`() {
         val personal = HistoryEntry(
             "https://example.com/page#personal",
             "Personal",
@@ -67,6 +67,35 @@ class BrowsingLibraryRulesTest {
     }
 
     @Test
+    fun `distinct history keeps newest canonical URL visit per profile`() {
+        val olderPersonal = HistoryEntry(
+            "https://Example.com:443/page#a-older",
+            "Older personal",
+            30,
+            "personal",
+        )
+        val newestPersonal = HistoryEntry(
+            "https://example.com/page#z-newest",
+            "Newest personal",
+            30,
+            "personal",
+        )
+        val work = HistoryEntry(
+            "https://example.com/page#work",
+            "Work",
+            20,
+            "work",
+        )
+
+        assertEquals(
+            listOf(newestPersonal, work),
+            BrowsingHistoryRules.distinctEntries(
+                listOf(newestPersonal, olderPersonal, work),
+            ),
+        )
+    }
+
+    @Test
     fun `history sections use local dates and newest day first`() {
         val berlin = ZoneId.of("Europe/Berlin")
         val older = LocalDate.of(2026, 8, 25).atTime(23, 30).atZone(berlin).toInstant()
@@ -94,6 +123,23 @@ class BrowsingLibraryRulesTest {
         assertEquals(
             listOf(work),
             BrowsingHistoryRules.removeEntries(listOf(personal, work), listOf(personal)),
+        )
+    }
+
+    @Test
+    fun `history deletion distinguishes same millisecond visits by persisted identity`() {
+        val first = HistoryEntry(
+            url = "https://example.com/",
+            title = "First",
+            lastVisitedAt = 10,
+            profileId = "personal",
+            visitId = "visit-1",
+        )
+        val second = first.copy(title = "Second", visitId = "visit-2")
+
+        assertEquals(
+            listOf(second),
+            BrowsingHistoryRules.removeEntries(listOf(first, second), listOf(first)),
         )
     }
 
