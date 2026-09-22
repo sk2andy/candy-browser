@@ -14,6 +14,7 @@ data class HistoryEntry(
     val title: String,
     val lastVisitedAt: Long,
     val profileId: String = DEFAULT_PROFILE_ID,
+    val visitId: String = "",
 )
 
 internal data class HistoryDaySection(
@@ -42,15 +43,12 @@ internal object BrowsingLibraryRules {
         entry: HistoryEntry,
         limit: Int = MAX_HISTORY_ENTRIES,
     ): List<HistoryEntry> {
-        val key = historyKey(entry) ?: return current
+        if (historyKey(entry) == null) return current
         if (entry.profileId.isBlank()) return current
         val safeTitle = entry.title.trim().ifEmpty { displayHost(entry.url) }
-        return buildList {
-            add(entry.copy(title = safeTitle))
-            current.forEach { existing ->
-                if (historyKey(existing) != key) add(existing)
-            }
-        }.sortedByDescending(HistoryEntry::lastVisitedAt).take(limit.coerceAtLeast(0))
+        return (listOf(entry.copy(title = safeTitle)) + current)
+            .sortedByDescending(HistoryEntry::lastVisitedAt)
+            .take(limit.coerceAtLeast(0))
     }
 
     fun suggestions(
@@ -218,6 +216,8 @@ internal object BrowsingLibraryRules {
 }
 
 internal object BrowsingHistoryRules {
+    private val newestFirst = compareByDescending(HistoryEntry::lastVisitedAt)
+
     fun visibleEntries(
         history: List<HistoryEntry>,
         selectedProfileIds: Set<String>,
@@ -236,13 +236,15 @@ internal object BrowsingHistoryRules {
                     entry.url.lowercase(Locale.ROOT).contains(normalizedQuery) ||
                     displayHost(entry.url).lowercase(Locale.ROOT).contains(normalizedQuery)
             }
-            .sortedWith(
-                compareByDescending(HistoryEntry::lastVisitedAt)
-                    .thenBy(HistoryEntry::profileId)
-                    .thenBy(HistoryEntry::url),
-            )
+            .sortedWith(newestFirst)
             .toList()
     }
+
+    fun distinctEntries(entries: List<HistoryEntry>): List<HistoryEntry> = entries
+        .sortedWith(newestFirst)
+        .distinctBy { entry ->
+            entry.profileId to (CanonicalWebUrl.key(entry.url) ?: entryKey(entry))
+        }
 
     fun sections(
         entries: List<HistoryEntry>,
@@ -292,6 +294,10 @@ internal object BrowsingHistoryRules {
     }
 
     fun entryKey(entry: HistoryEntry): String = buildString {
+        if (entry.visitId.isNotBlank()) {
+            append(entry.visitId)
+            return@buildString
+        }
         append(entry.profileId)
         append('\u0000')
         append(CanonicalWebUrl.key(entry.url).orEmpty())

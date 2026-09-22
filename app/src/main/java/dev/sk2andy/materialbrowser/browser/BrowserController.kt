@@ -9921,6 +9921,9 @@ class BrowserController(
     }
 
     fun onResume() {
+        if (store.loadPendingTabClearOnTaskRemoval()) {
+            store.savePendingTabClearOnTaskRemoval(pending = false)
+        }
         reloadHistory()
         applyCandyTrailRedactions(store.loadPendingCandyTrailRedactions())
         candyTrailRepository.processPendingRedactions()
@@ -9972,6 +9975,12 @@ class BrowserController(
         dismissClosedTabUndo()
         val wasActivityStarted = isActivityStarted
         val shouldCloseTabsWhenHidden = wasActivityStarted && !activity.isChangingConfigurations
+        if (
+            shouldCloseTabsWhenHidden &&
+            inactiveTabLifetime == InactiveTabLifetime.WhenAppCloses
+        ) {
+            store.savePendingTabClearOnTaskRemoval(pending = true)
+        }
         isActivityStarted = false
         syncRepository.stopRealtime()
         mainHandler.removeCallbacks(syncRefreshRunnable)
@@ -10022,6 +10031,21 @@ class BrowserController(
         activePermissions.clear()
         permissionRevision++
         browserEngineSessions.forEach(::persistBrowserEngineSessionState)
+    }
+
+    fun onTaskRemoved(protectedTabIds: Set<String> = emptySet()) {
+        closeTabsOnTaskRemoval(protectedTabIds = protectedTabIds)
+        store.savePendingTabClearOnTaskRemoval(pending = false)
+        store.flush()
+    }
+
+    fun reconcilePendingTaskRemoval(isRestoredTask: Boolean) {
+        if (!store.loadPendingTabClearOnTaskRemoval()) return
+        if (!isRestoredTask && inactiveTabLifetime == InactiveTabLifetime.WhenAppCloses) {
+            closeTabsOnTaskRemoval()
+        }
+        store.savePendingTabClearOnTaskRemoval(pending = false)
+        store.flush()
     }
 
     fun onAppBackgrounded(nowElapsedRealtime: Long = SystemClock.elapsedRealtime()) {
@@ -13436,6 +13460,7 @@ class BrowserController(
                 title = title,
                 lastVisitedAt = System.currentTimeMillis(),
                 profileId = tab.profileId,
+                visitId = UUID.randomUUID().toString(),
             ),
         )
         val updated = result.history
@@ -14605,6 +14630,21 @@ class BrowserController(
         protectedTabIds: Set<String> = emptySet(),
     ): Boolean {
         val closeIds = TabRetentionRules.tabIdsToCloseOnBackground(
+            tabs = tabs,
+            lifetime = inactiveTabLifetime,
+        ) - activeFederatedLoginFlowTabIds() - protectedTabIds
+        return removeTabs(
+            tabIds = closeIds,
+            nowMillis = nowMillis,
+            persistChanges = true,
+        )
+    }
+
+    private fun closeTabsOnTaskRemoval(
+        nowMillis: Long = System.currentTimeMillis(),
+        protectedTabIds: Set<String> = emptySet(),
+    ): Boolean {
+        val closeIds = TabRetentionRules.tabIdsToCloseOnTaskRemoval(
             tabs = tabs,
             lifetime = inactiveTabLifetime,
         ) - activeFederatedLoginFlowTabIds() - protectedTabIds

@@ -827,6 +827,7 @@ class BrowserSessionStoreInstrumentedTest {
             title = "Work",
             lastVisitedAt = 42L,
             profileId = "work",
+            visitId = "visit-42",
         )
 
         store.saveHistory(listOf(entry))
@@ -853,6 +854,7 @@ class BrowserSessionStoreInstrumentedTest {
         val store = BrowserSessionStore(context)
 
         assertEquals(DEFAULT_PROFILE_ID, store.loadHistory().single().profileId)
+        assertEquals("", store.loadHistory().single().visitId)
         assertEquals(HistoryRecordingMode.Disabled, store.loadHistoryRecordingMode())
     }
 
@@ -935,11 +937,22 @@ class BrowserSessionStoreInstrumentedTest {
     @Test
     fun inactiveTabLifetimeRoundTripsAndUnknownValueFallsBackToNever() {
         val store = BrowserSessionStore(context)
-        store.saveInactiveTabLifetime(InactiveTabLifetime.SevenDays)
-        assertEquals(InactiveTabLifetime.SevenDays, store.loadInactiveTabLifetime())
+        store.saveInactiveTabLifetime(InactiveTabLifetime.WhenAppCloses)
+        assertEquals(InactiveTabLifetime.WhenAppCloses, store.loadInactiveTabLifetime())
 
         preferences.edit().putString("inactive_tab_lifetime", "unknown").commit()
         assertEquals(InactiveTabLifetime.Never, store.loadInactiveTabLifetime())
+    }
+
+    @Test
+    fun pendingTabClearOnTaskRemovalRoundTripsSynchronously() {
+        val store = BrowserSessionStore(context)
+
+        assertEquals(false, store.loadPendingTabClearOnTaskRemoval())
+        assertEquals(true, store.savePendingTabClearOnTaskRemoval(pending = true))
+        assertEquals(true, store.loadPendingTabClearOnTaskRemoval())
+        assertEquals(true, store.savePendingTabClearOnTaskRemoval(pending = false))
+        assertEquals(false, store.loadPendingTabClearOnTaskRemoval())
     }
 
     @Test

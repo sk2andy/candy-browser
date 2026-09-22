@@ -29,6 +29,52 @@ class HistoryScreenInstrumentedTest {
     val composeRule = createComposeRule()
 
     @Test
+    fun distinctFilterKeepsNewestVisitPerCanonicalUrlAndCanBeDisabled() {
+        val now = System.currentTimeMillis()
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                HistoryScreen(
+                    profiles = listOf(BrowserProfile(id = "personal", emoji = "🏠")),
+                    activeProfileId = "personal",
+                    history = listOf(
+                        HistoryEntry(
+                            url = "https://example.com/page#newest",
+                            title = "Newest visit",
+                            lastVisitedAt = now,
+                            profileId = "personal",
+                            visitId = "newest",
+                        ),
+                        HistoryEntry(
+                            url = "https://example.com/page#older",
+                            title = "Older visit",
+                            lastVisitedAt = now - 1,
+                            profileId = "personal",
+                            visitId = "older",
+                        ),
+                    ),
+                    onDeleteEntries = {},
+                    onClearHistory = {},
+                    onOpenEntry = {},
+                    onBack = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("Newest visit").assertIsDisplayed()
+        composeRule.onNodeWithText("Older visit").assertIsDisplayed()
+
+        composeRule.onNodeWithTag(HistoryScreenTestTags.Distinct)
+            .assertIsNotSelected()
+            .performClick()
+            .assertIsSelected()
+        composeRule.onNodeWithText("Newest visit").assertIsDisplayed()
+        composeRule.onNodeWithText("Older visit").assertDoesNotExist()
+
+        composeRule.onNodeWithTag(HistoryScreenTestTags.Distinct).performClick()
+        composeRule.onNodeWithText("Older visit").assertIsDisplayed()
+    }
+
+    @Test
     fun profileChipsSupportMultipleProfilesAndSearchCombinedHistory() {
         val now = System.currentTimeMillis()
         val profiles = listOf(
