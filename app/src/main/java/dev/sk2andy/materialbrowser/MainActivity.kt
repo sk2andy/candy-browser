@@ -422,6 +422,9 @@ class MainActivity : AppCompatActivity() {
             profileProtectionSupported = { profileBiometricAuthenticator.isAvailable },
             authenticateProfile = profileBiometricAuthenticator::authenticate,
         )
+        browserController.reconcilePendingTaskRemoval(
+            isRestoredTask = savedInstanceState != null,
+        )
         lifecycleScope.launch {
             snapshotFlow { browserController.tabs.count { it.isIncognito } }
                 .distinctUntilChanged()
@@ -1207,6 +1210,11 @@ class MainActivity : AppCompatActivity() {
             browserMediaSystemSession.stopAndClear()
         }
         if (::browserController.isInitialized) {
+            if (isFinishing && !isChangingConfigurations) {
+                browserController.onTaskRemoved(
+                    protectedTabIds = setOfNotNull(geckoWebAuthnActivityIdentity?.tabId),
+                )
+            }
             browserController.destroy(lockClosedProfiles = !isChangingConfigurations)
         }
         if (::browserMediaSystemSession.isInitialized) browserMediaSystemSession.release()

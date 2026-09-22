@@ -471,6 +471,7 @@ internal fun BoxScope.BrowserAddressChrome(
         onReload = controller::reload,
         onStop = controller::stopLoading,
         onNewTab = openNewTabAndEdit,
+        onHome = { controller.openNormalHome() },
         onDuplicateTab = { controller.duplicateSelectedTab() },
         onFindInPage = {
             onAddressEditorDismiss()

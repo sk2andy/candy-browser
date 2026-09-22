@@ -8,6 +8,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -68,6 +69,7 @@ internal data class AddressBarActionCallbacks(
     val onShare: () -> Unit,
     val onPrint: () -> Unit,
     val onNewTab: () -> Unit,
+    val onHome: () -> Unit,
     val onReloadOrStop: () -> Unit,
     val onCloseTab: () -> Unit,
     val onBack: () -> Unit,
@@ -178,6 +180,7 @@ private fun AddressBarRegularActionButton(
         AddressBarAction.Share -> callbacks.onShare
         AddressBarAction.Print -> callbacks.onPrint
         AddressBarAction.NewTab -> callbacks.onNewTab
+        AddressBarAction.Home -> callbacks.onHome
         AddressBarAction.Reload -> callbacks.onReloadOrStop
         AddressBarAction.CloseTab -> callbacks.onCloseTab
         AddressBarAction.Back -> callbacks.onBack
@@ -191,6 +194,7 @@ private fun AddressBarRegularActionButton(
         AddressBarAction.Share -> stringResource(R.string.action_share)
         AddressBarAction.Print -> stringResource(R.string.action_print)
         AddressBarAction.NewTab -> stringResource(R.string.cd_new_tab)
+        AddressBarAction.Home -> stringResource(R.string.action_home)
         AddressBarAction.Reload -> stringResource(
             if (state.isLoading) R.string.action_stop_loading else R.string.action_reload,
         )
@@ -313,6 +317,12 @@ internal fun AddressBarActionGlyph(
             modifier = modifier,
             tint = tint,
         )
+        AddressBarAction.Home -> Icon(
+            Icons.Default.Home,
+            contentDescription = contentDescription,
+            modifier = modifier,
+            tint = tint,
+        )
         else -> Icon(
             painter = painterResource(
                 when (action) {
@@ -340,6 +350,7 @@ internal fun AddressBarActionGlyph(
                     AddressBarAction.FindInPage,
                     AddressBarAction.NewTab,
                     AddressBarAction.CloseTab,
+                    AddressBarAction.Home,
                     AddressBarAction.Tabs,
                     -> error("Vector icon handled above")
                 },
@@ -391,6 +402,7 @@ internal fun AddressBarAction.labelRes(): Int = when (this) {
     AddressBarAction.Share -> R.string.action_share
     AddressBarAction.Print -> R.string.action_print
     AddressBarAction.NewTab -> R.string.cd_new_tab
+    AddressBarAction.Home -> R.string.action_home
     AddressBarAction.Reload -> R.string.action_reload
     AddressBarAction.CloseTab -> R.string.cd_close_tab
     AddressBarAction.Back -> R.string.action_back

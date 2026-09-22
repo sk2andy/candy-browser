@@ -9,6 +9,7 @@ class InactiveTabLifetimeTest {
     fun durationsUseLongMillisecondValues() {
         assertNull(InactiveTabLifetime.Never.maxAgeMillis)
         assertNull(InactiveTabLifetime.Immediately.maxAgeMillis)
+        assertNull(InactiveTabLifetime.WhenAppCloses.maxAgeMillis)
         assertEquals(21_600_000L, InactiveTabLifetime.SixHours.maxAgeMillis)
         assertEquals(86_400_000L, InactiveTabLifetime.OneDay.maxAgeMillis)
         assertEquals(259_200_000L, InactiveTabLifetime.ThreeDays.maxAgeMillis)
@@ -23,10 +24,14 @@ class InactiveTabLifetimeTest {
     }
 
     @Test
-    fun immediateWireValueRoundTrips() {
+    fun eventLifetimeWireValuesRoundTrip() {
         assertEquals(
             InactiveTabLifetime.Immediately,
             InactiveTabLifetime.fromWireValue(InactiveTabLifetime.Immediately.wireValue),
+        )
+        assertEquals(
+            InactiveTabLifetime.WhenAppCloses,
+            InactiveTabLifetime.fromWireValue(InactiveTabLifetime.WhenAppCloses.wireValue),
         )
     }
 }
