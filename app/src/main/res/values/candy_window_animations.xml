@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="CandyWindowAnimationNone">
+        <item name="android:activityOpenEnterAnimation">@anim/candy_no_animation</item>
+        <item name="android:activityOpenExitAnimation">@anim/candy_no_animation</item>
+        <item name="android:activityCloseEnterAnimation">@anim/candy_no_animation</item>
+        <item name="android:activityCloseExitAnimation">@anim/candy_no_animation</item>
+    </style>
+</resources>

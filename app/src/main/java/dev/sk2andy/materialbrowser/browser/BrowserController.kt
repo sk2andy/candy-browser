@@ -1306,6 +1306,7 @@ class BrowserController(
     private var externalLinkPreviewRuntime: ExternalLinkPreviewRuntime? = null
     private var nextExternalLinkPreviewSessionId = 0L
     private var privacySignalRevision = PRIVACY_SIGNAL_REVISIONS.incrementAndGet()
+    private var animationPolicyRevision = ANIMATION_POLICY_REVISIONS.incrementAndGet()
     private val navigationGenerations = mutableMapOf<String, Int>()
     private val autoDeAmpNavigationRequestGenerations = mutableMapOf<String, Long>()
     private val autoDeAmpReplacementGuards = mutableMapOf<String, AutoDeAmpReplacementGuard>()
@@ -9234,19 +9235,78 @@ class BrowserController(
     fun updateAppearanceSettings(settings: AppearanceSettings) {
         val normalized = settings.normalized()
         if (appearanceSettings == normalized) return
+        val animationsChanged = appearanceSettings.animationsEnabled != normalized.animationsEnabled
         val fontSizeChanged =
             appearanceSettings.webContentFontSizePercent != normalized.webContentFontSizePercent
         val webContentAppearanceChanged =
             appearanceSettings.appearanceMode != normalized.appearanceMode ||
                 appearanceSettings.forceDarkWebsites != normalized.forceDarkWebsites
+        if (animationsChanged) {
+            animationPolicyRevision = ANIMATION_POLICY_REVISIONS.incrementAndGet()
+        }
         appearanceSettings = normalized
         store.saveAppearanceSettings(normalized)
+        if (animationsChanged) applyAnimationPolicyToActiveSessions()
         if (webContentAppearanceChanged) applyWebContentAppearance(normalized)
         if (fontSizeChanged) {
             browserEngineSessionFactory.setWebContentFontSizeFactor(
                 normalized.webContentFontSizePercent / 100f,
             )
             browserEngineSessions[selectedTabId]?.execute(BrowserEngineCommands.reload())
+        }
+    }
+
+    private fun applyAnimationPolicyToActiveSessions() {
+        browserEngineSessions.forEach { (tabId, session) ->
+            val policy = geckoPrivacyPolicyFor(tabId) ?: return@forEach
+            session.updatePrivacyPolicy(policy) {
+                if (
+                    browserEngineSessions[tabId] === session &&
+                    BrowserUriPolicy.normalizeHttpUrl(pageUrls[tabId]) != null
+                ) {
+                    session.execute(BrowserEngineCommands.reload())
+                }
+            }
+        }
+        geckoLinkPeekBindings.forEach { (view, binding) ->
+            val sourceTab = tabs.firstOrNull { tab -> tab.id == binding.sourceTabId }
+                ?: return@forEach
+            val pageUrl = BrowserUriPolicy.normalizeHttpUrl(binding.committedUrl)
+                ?: return@forEach
+            binding.session.updatePrivacyPolicy(
+                geckoPrivacyPolicyFor(
+                    tab = sourceTab,
+                    pageUrl = pageUrl,
+                    context = protectionRequestContextFor(sourceTab, pageUrl),
+                    cssSafeAreaTopInsetPx = 0,
+                ),
+            ) {
+                if (geckoLinkPeekBindings[view] === binding) {
+                    binding.session.execute(BrowserEngineCommands.reload())
+                }
+            }
+        }
+        val previewRuntime = externalLinkPreviewRuntime
+        val previewState = externalLinkPreviewState
+        if (previewRuntime != null && previewState?.sessionId == previewRuntime.sessionId) {
+            val pageUrl = ExternalLinkPreviewRules.safeCurrentUrl(previewState.currentUrl)
+                ?: return
+            previewRuntime.geckoBinding.session.updatePrivacyPolicy(
+                geckoPrivacyPolicyFor(
+                    tab = previewRuntime.policyTab,
+                    pageUrl = pageUrl,
+                    context = protectionRequestContextFor(previewRuntime.policyTab, pageUrl),
+                    topInsetPx = externalLinkPreviewContentTopInsetPx(),
+                    navigationGeneration = previewRuntime.generation,
+                ),
+            ) {
+                if (
+                    externalLinkPreviewRuntime === previewRuntime &&
+                    externalLinkPreviewState?.sessionId == previewRuntime.sessionId
+                ) {
+                    previewRuntime.geckoBinding.session.execute(BrowserEngineCommands.reload())
+                }
+            }
         }
     }
 
@@ -11649,6 +11709,8 @@ class BrowserController(
             doNotTrackEnabled = privacySignalSettings.doNotTrackEnabled,
             globalPrivacyControlEnabled = privacySignalSettings.globalPrivacyControlEnabled,
             privacySignalRevision = privacySignalRevision,
+            animationsEnabled = appearanceSettings.animationsEnabled,
+            animationPolicyRevision = animationPolicyRevision,
             blockThirdPartyCookies = workerSettings.blockThirdPartyCookies,
             allowThirdPartyCookiesForSite =
                 siteProtectionPaused ||
@@ -15546,6 +15608,7 @@ class BrowserController(
     }
 
     private companion object {
+        val ANIMATION_POLICY_REVISIONS = AtomicLong(0L)
         val PRIVACY_SIGNAL_REVISIONS = AtomicLong(0L)
         val ALL_WEB_ORIGINS = setOf("*")
         val WEB_SCHEMES = setOf("http", "https")

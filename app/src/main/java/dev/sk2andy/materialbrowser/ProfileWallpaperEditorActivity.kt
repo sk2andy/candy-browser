@@ -5,7 +5,6 @@ import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.os.Bundle
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -26,6 +25,7 @@ import dev.sk2andy.materialbrowser.data.BrowserSessionStore
 import dev.sk2andy.materialbrowser.data.ProfileWallpaperStore
 import dev.sk2andy.materialbrowser.ui.ProfileWallpaperEditorScreen
 import dev.sk2andy.materialbrowser.ui.theme.CandyTheme
+import dev.sk2andy.materialbrowser.ui.theme.setCandyContent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -97,7 +97,7 @@ class ProfileWallpaperEditorActivity : ComponentActivity() {
         isFullImmersiveModeEnabled = sessionStore.loadFullImmersiveModeEnabled()
         applyFullImmersiveMode(isFullImmersiveModeEnabled)
         val appearanceSettings = sessionStore.loadAppearanceSettings()
-        setContent {
+        setCandyContent(animationsEnabled = appearanceSettings.animationsEnabled) {
             val appearanceDark = appearanceSettings.usesDarkColors(isSystemInDarkTheme())
             val imageBitmap = remember(bitmap) { bitmap?.asImageBitmap() }
             SideEffect { applyAppearanceSystemBars(appearanceDark) }

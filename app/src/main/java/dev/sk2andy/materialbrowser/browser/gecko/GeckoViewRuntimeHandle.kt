@@ -2525,6 +2525,7 @@ private class GeckoViewBrowserSession(
         check(boundView == null) { "Gecko session already has a bound View" }
         return CandyGeckoView(context).also { view ->
             view.setBackdropBlurRegion(backdropBlurRegion)
+            view.setAnimationsEnabled(privacyPolicy.animationsEnabled)
             view.configureAutofill(isPrivate)
             AndroidCredentialPromptHost.activityContext(context)?.let { activityContext ->
                 view.setActivityContextDelegate { activityContext }
@@ -2832,6 +2833,7 @@ private class GeckoViewBrowserSession(
     ) {
         mediaRestorationReadback.cancel()
         privacyPolicy = policy
+        boundView?.setAnimationsEnabled(policy.animationsEnabled)
         val cookieBehaviorChanged = reconcileCookieBehavior()
         trackingPermissions.updateClaim(
             owner = trackingPermissionOwner,
@@ -3263,6 +3265,7 @@ private class GeckoViewBrowserSession(
  */
 internal class CandyGeckoView(context: Context) : FrameLayout(context), GeckoViewInsetHost {
     private var autofillEnabled = true
+    private var animationsEnabled = true
     private var activityContextDelegate: GeckoView.ActivityContextDelegate? = null
     private var insetLayout = GeckoViewInsetLayout(
         margins = GeckoViewInsets.Zero,
@@ -3289,6 +3292,10 @@ internal class CandyGeckoView(context: Context) : FrameLayout(context), GeckoVie
 
     fun setBackdropBlurRegion(region: BrowserBackdropBlurRegion?) {
         engineView.setBackdropBlurRegion(region)
+    }
+
+    fun setAnimationsEnabled(enabled: Boolean) {
+        animationsEnabled = enabled
     }
 
     fun setActivityContextDelegate(delegate: GeckoView.ActivityContextDelegate?) {
@@ -3346,10 +3353,11 @@ internal class CandyGeckoView(context: Context) : FrameLayout(context), GeckoVie
         if (BuildConfig.ENABLE_PERFORMANCE_DIAGNOSTICS &&
             (insetLayout != layout || this.windowInsets != windowInsets)
         ) domDiagnosticGeneration++
-        val animateTopInsetChange = WebContentTopInsetTransitionRules.shouldAnimate(
-            previousState = insetLayout.topInsetTransitionState,
-            nextState = layout.topInsetTransitionState,
-        )
+        val animateTopInsetChange = animationsEnabled &&
+            WebContentTopInsetTransitionRules.shouldAnimate(
+                previousState = insetLayout.topInsetTransitionState,
+                nextState = layout.topInsetTransitionState,
+            )
         insetLayout = layout
         this.windowInsets = windowInsets
         applyInsets(engineView, animateTopInsetChange)

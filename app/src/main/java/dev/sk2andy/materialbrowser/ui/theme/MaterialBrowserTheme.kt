@@ -10,7 +10,10 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.MotionDurationScale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.lerp
@@ -43,7 +46,15 @@ internal fun CandyTheme(
         androidCandyChromeSurfaceRenderer(designLanguage),
     content: @Composable () -> Unit,
 ) {
+    val effectMotionDurationScale = rememberCoroutineScope()
+        .coroutineContext[MotionDurationScale]
     val context = LocalContext.current
+    val activity = context.findCandyActivity()
+    SideEffect {
+        (effectMotionDurationScale as? CandyMotionDurationScale)
+            ?.updateAnimationsEnabled(settings.animationsEnabled)
+        activity?.let { CandyActivityMotionPolicy.apply(it, settings.animationsEnabled) }
+    }
     val systemDark = isSystemInDarkTheme()
     val dark = settings.usesDarkColors(systemDark)
     val baseColors = when (settings.colorPalette) {

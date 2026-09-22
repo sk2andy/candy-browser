@@ -6,7 +6,6 @@ import android.net.Uri
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -29,6 +28,7 @@ import dev.sk2andy.materialbrowser.data.FavoriteMutation
 import dev.sk2andy.materialbrowser.data.FavoriteUndoRules
 import dev.sk2andy.materialbrowser.ui.FavoritesScreen
 import dev.sk2andy.materialbrowser.ui.theme.CandyTheme
+import dev.sk2andy.materialbrowser.ui.theme.setCandyContent
 import java.util.UUID
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
@@ -115,7 +115,7 @@ class FavoritesActivity : ComponentActivity() {
         applyFullImmersiveMode(isFullImmersiveModeEnabled)
         favoriteLibrary = store.loadFavoriteLibrary()
         val appearanceSettings = store.loadAppearanceSettings()
-        setContent {
+        setCandyContent(animationsEnabled = appearanceSettings.animationsEnabled) {
             val appearanceDark = appearanceSettings.usesDarkColors(isSystemInDarkTheme())
             SideEffect { applyAppearanceSystemBars(appearanceDark) }
             CandyTheme(settings = appearanceSettings) {

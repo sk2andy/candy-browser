@@ -72,6 +72,7 @@ import dev.sk2andy.materialbrowser.browser.VideoAutoplayBlockerScript
 import dev.sk2andy.materialbrowser.browser.WebRtcBlockerScript
 import dev.sk2andy.materialbrowser.browser.WebRtcProtectionMode
 import dev.sk2andy.materialbrowser.browser.WebRtcProtectionRules
+import dev.sk2andy.materialbrowser.browser.WebContentAnimationPolicyScript
 import dev.sk2andy.materialbrowser.browser.WebContentTopInsetMode
 import dev.sk2andy.materialbrowser.browser.WebContentTopInsetRules
 import dev.sk2andy.materialbrowser.browser.WebContentTopInsetScript
@@ -397,6 +398,7 @@ private class SystemWebViewBrowserEngineSession(
     private var scrollListener: BrowserEngineScrollListener? = null
     private var contentTargetListener: dev.sk2andy.materialbrowser.browser.actions.BrowserContentTargetListener? = null
     private var antiFingerprintingScriptHandler: ScriptHandler? = null
+    private var animationPolicyScriptHandler: ScriptHandler? = null
     private var privacySignalScriptHandler: ScriptHandler? = null
     private var privacySignalHeaderRefreshPending = false
     private var autoplayScriptHandler: ScriptHandler? = null
@@ -446,6 +448,7 @@ private class SystemWebViewBrowserEngineSession(
             forceDarkWebsites = forceDarkWebsites,
         )
         installAntiFingerprintingPolicy()
+        installAnimationPolicy()
         installPrivacySignalPolicy()
         installWebRtcPolicy()
         installTopInsetScript()
@@ -837,6 +840,7 @@ private class SystemWebViewBrowserEngineSession(
         val privacySignalsChanged =
             privacyPolicy.doNotTrackEnabled != policy.doNotTrackEnabled ||
                 privacyPolicy.globalPrivacyControlEnabled != policy.globalPrivacyControlEnabled
+        val animationPolicyChanged = privacyPolicy.animationsEnabled != policy.animationsEnabled
         val matcher = if (privacyPolicy.candyRules == policy.candyRules) {
             requestPrivacyState.candyMatcher
         } else {
@@ -850,6 +854,13 @@ private class SystemWebViewBrowserEngineSession(
             installPrivacySignalPolicy()
             webView.evaluateJavascript(
                 PrivacySignalDocumentScript.installScript(privacySignalSettings()),
+                null,
+            )
+        }
+        if (animationPolicyChanged) {
+            installAnimationPolicy()
+            webView.evaluateJavascript(
+                WebContentAnimationPolicyScript.script(policy.animationsEnabled),
                 null,
             )
         }
@@ -918,6 +929,7 @@ private class SystemWebViewBrowserEngineSession(
         closed = true
         toppingRuntime.remove(webView)
         antiFingerprintingScriptHandler?.remove()
+        animationPolicyScriptHandler?.remove()
         privacySignalScriptHandler?.remove()
         autoplayScriptHandler?.remove()
         webRtcScriptHandler?.remove()
@@ -1118,6 +1130,12 @@ private class SystemWebViewBrowserEngineSession(
             if (privacySignalScriptHandler == null) {
                 view.evaluateJavascript(
                     PrivacySignalDocumentScript.installScript(privacySignalSettings()),
+                    null,
+                )
+            }
+            if (animationPolicyScriptHandler == null) {
+                view.evaluateJavascript(
+                    WebContentAnimationPolicyScript.script(privacyPolicy.animationsEnabled),
                     null,
                 )
             }
@@ -1493,6 +1511,7 @@ private class SystemWebViewBrowserEngineSession(
         setGlobalThirdPartyCookieBlocking(privacyPolicy.blockThirdPartyCookies)
         host.updatePolicy(
             topInsetEnabled = privacyPolicy.topInsetPx > 0,
+            animationsEnabled = privacyPolicy.animationsEnabled,
             navigationGeneration = privacyPolicy.navigationGeneration,
             policyRevision = policyRevision,
             safeAreaLayoutQuietPeriodMillis = privacyPolicy.safeAreaLayoutQuietPeriodMillis,
@@ -1563,6 +1582,13 @@ private class SystemWebViewBrowserEngineSession(
     private fun installAntiFingerprintingPolicy() {
         antiFingerprintingScriptHandler = addDocumentStartScript(
             AntiFingerprintingScript.create(antiFingerprintingSeed),
+        )
+    }
+
+    private fun installAnimationPolicy() {
+        animationPolicyScriptHandler?.remove()
+        animationPolicyScriptHandler = addDocumentStartScript(
+            WebContentAnimationPolicyScript.script(privacyPolicy.animationsEnabled),
         )
     }
 
@@ -1867,6 +1893,7 @@ private class SystemWebViewHost(
     private var navigationGeneration = 0
     private var policyRevision = 0L
     private var topInsetEnabled = false
+    private var animationsEnabled = true
     private var safeAreaLayoutQuietPeriodMillis = 400
     private var safeAreaRequiredFailureCount = 3
     private val viewportCoverAllowed = SystemWebViewSafeAreaRules.supportsCssSafeAreaInsets(
@@ -1918,6 +1945,7 @@ private class SystemWebViewHost(
 
     fun updatePolicy(
         topInsetEnabled: Boolean,
+        animationsEnabled: Boolean,
         navigationGeneration: Int,
         policyRevision: Long,
         safeAreaLayoutQuietPeriodMillis: Int,
@@ -1928,6 +1956,7 @@ private class SystemWebViewHost(
             this.safeAreaLayoutQuietPeriodMillis != safeAreaLayoutQuietPeriodMillis ||
                 this.safeAreaRequiredFailureCount != safeAreaRequiredFailureCount
         this.topInsetEnabled = topInsetEnabled
+        this.animationsEnabled = animationsEnabled
         this.navigationGeneration = navigationGeneration
         this.safeAreaLayoutQuietPeriodMillis = safeAreaLayoutQuietPeriodMillis
         this.safeAreaRequiredFailureCount = safeAreaRequiredFailureCount
@@ -1945,10 +1974,11 @@ private class SystemWebViewHost(
         layout: GeckoViewInsetLayout,
         windowInsets: WindowInsetsCompat,
     ) {
-        val animateTopInsetChange = WebContentTopInsetTransitionRules.shouldAnimate(
-            previousState = currentLayout.topInsetTransitionState,
-            nextState = layout.topInsetTransitionState,
-        )
+        val animateTopInsetChange = animationsEnabled &&
+            WebContentTopInsetTransitionRules.shouldAnimate(
+                previousState = currentLayout.topInsetTransitionState,
+                nextState = layout.topInsetTransitionState,
+            )
         currentLayout = layout
         layoutTopInsetPx = layout.scrollableTopInsetPx
         val previousTopInset = topInsetPx

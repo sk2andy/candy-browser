@@ -2793,6 +2793,7 @@ browser.runtime.onMessage.addListener((message) => {
   if (!message) return undefined;
   if (message.type === "content-policy") {
     CandyPrivacySignals.installDocumentSignals(globalThis.wrappedJSObject || globalThis, message);
+    CandyAnimationPolicy.installContentPolicy(globalThis, message.animationsEnabled);
     if (self === top) updateCandyInlineMediaPlayerPolicy(message);
     return undefined;
   }
@@ -2827,5 +2828,6 @@ browser.runtime.onMessage.addListener((message) => {
 });
 
 browser.runtime.sendMessage({ type: "content-policy-request" }).then((policy) => {
+  CandyAnimationPolicy.installContentPolicy(globalThis, policy?.animationsEnabled);
   if (self === top) updateCandyInlineMediaPlayerPolicy(policy);
 }).catch(() => {});

@@ -476,6 +476,7 @@ class BrowserSessionStoreInstrumentedTest {
 
         val settings = AppearanceSettings(
             appearanceMode = BrowserAppearanceMode.Amoled,
+            animationsEnabled = false,
             forceDarkWebsites = true,
             webContentFontSizePercent = 155,
             colorPalette = BrowserColorPalette.Candy,

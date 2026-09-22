@@ -67,6 +67,8 @@ internal data class GeckoPrivacyPolicy(
     val doNotTrackEnabled: Boolean = true,
     val globalPrivacyControlEnabled: Boolean = true,
     val privacySignalRevision: Long = 0L,
+    val animationsEnabled: Boolean = true,
+    val animationPolicyRevision: Long = 0L,
     val blockThirdPartyCookies: Boolean = true,
     val allowThirdPartyCookiesForSite: Boolean = false,
     val compatibilityRequestHosts: Set<String> = DEFAULT_COMPATIBILITY_REQUEST_HOSTS,
@@ -117,6 +119,8 @@ internal object GeckoPrivacyPolicyRules {
         doNotTrackEnabled: Boolean = true,
         globalPrivacyControlEnabled: Boolean = true,
         privacySignalRevision: Long = 0L,
+        animationsEnabled: Boolean = true,
+        animationPolicyRevision: Long = 0L,
         topInsetPx: Int = 0,
         navigationGeneration: Int = 0,
         scrollMetricsEnabled: Boolean = false,
@@ -150,6 +154,8 @@ internal object GeckoPrivacyPolicyRules {
             doNotTrackEnabled = doNotTrackEnabled,
             globalPrivacyControlEnabled = globalPrivacyControlEnabled,
             privacySignalRevision = privacySignalRevision.coerceAtLeast(0L),
+            animationsEnabled = animationsEnabled,
+            animationPolicyRevision = animationPolicyRevision.coerceAtLeast(0L),
             blockThirdPartyCookies = blockThirdPartyCookies,
             allowThirdPartyCookiesForSite = allowThirdPartyCookiesForSite,
             topInsetPx = topInsetPx.coerceAtLeast(0),
@@ -208,6 +214,8 @@ internal fun GeckoPrivacyPolicy.toMessage(token: String, revision: Long): JSONOb
     .put("doNotTrackEnabled", doNotTrackEnabled)
     .put("globalPrivacyControlEnabled", globalPrivacyControlEnabled)
     .put("privacySignalRevision", privacySignalRevision)
+    .put("animationsEnabled", animationsEnabled)
+    .put("animationPolicyRevision", animationPolicyRevision)
     .put("topInsetPx", topInsetPx)
     .put("navigationGeneration", navigationGeneration)
     .put("scrollMetricsEnabled", scrollMetricsEnabled)

@@ -2,6 +2,7 @@ package dev.sk2andy.materialbrowser.data
 
 data class AppearanceSettings(
     val appearanceMode: BrowserAppearanceMode = BrowserAppearanceMode.System,
+    val animationsEnabled: Boolean = true,
     val forceDarkWebsites: Boolean = false,
     val webContentFontSizePercent: Int = DEFAULT_WEB_CONTENT_FONT_SIZE_PERCENT,
     val colorPalette: BrowserColorPalette = BrowserColorPalette.Dynamic,

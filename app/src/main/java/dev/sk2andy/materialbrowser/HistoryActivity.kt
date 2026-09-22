@@ -4,7 +4,6 @@ import android.app.Activity
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.SideEffect
@@ -24,6 +23,7 @@ import dev.sk2andy.materialbrowser.data.RecallRepository
 import dev.sk2andy.materialbrowser.data.SnoozedTabStore
 import dev.sk2andy.materialbrowser.ui.HistoryScreen
 import dev.sk2andy.materialbrowser.ui.theme.CandyTheme
+import dev.sk2andy.materialbrowser.ui.theme.setCandyContent
 import dev.sk2andy.materialbrowser.recall.RecallMatch
 import dev.sk2andy.materialbrowser.recall.RecallRules
 import kotlinx.coroutines.Dispatchers
@@ -77,7 +77,7 @@ class HistoryActivity : ComponentActivity() {
         val appearanceSettings = store.loadAppearanceSettings()
         val recallEnabled = store.loadRecallEnabled()
 
-        setContent {
+        setCandyContent(animationsEnabled = appearanceSettings.animationsEnabled) {
             val appearanceDark = appearanceSettings.usesDarkColors(isSystemInDarkTheme())
             SideEffect { applyAppearanceSystemBars(appearanceDark) }
             CandyTheme(settings = appearanceSettings) {

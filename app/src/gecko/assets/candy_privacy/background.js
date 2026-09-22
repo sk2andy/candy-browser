@@ -28,6 +28,11 @@ let activePrivacySignalRevision = -1;
 let privacySignalRegistration = null;
 let privacySignalRegistrationQueue = Promise.resolve();
 let privacySignalMatchOriginAsFallbackSupported = null;
+let latestAnimationPolicyRevision = -1;
+let latestAnimationPolicySettings = null;
+let activeAnimationPolicyRevision = -1;
+let animationPolicyRegistration = null;
+let animationPolicyRegistrationQueue = Promise.resolve();
 
 function privacySignalSettings(policy) {
   return {
@@ -131,6 +136,101 @@ function ensurePrivacySignalRegistration(policy) {
   });
 }
 
+function animationPolicySettings(policy) {
+  return { animationsEnabled: policy?.animationsEnabled !== false };
+}
+
+function sameAnimationPolicySettings(left, right) {
+  return left?.animationsEnabled === right?.animationsEnabled;
+}
+
+function observeAnimationPolicy(policy) {
+  if (!Number.isSafeInteger(policy?.animationPolicyRevision) ||
+      policy.animationPolicyRevision < 0) {
+    throw new Error("Invalid animation policy revision");
+  }
+  const revision = policy.animationPolicyRevision;
+  const settings = animationPolicySettings(policy);
+  if (revision < latestAnimationPolicyRevision) return;
+  if (revision === latestAnimationPolicyRevision) {
+    if (!sameAnimationPolicySettings(settings, latestAnimationPolicySettings)) {
+      throw new Error("Conflicting animation policy revision");
+    }
+    return;
+  }
+  latestAnimationPolicyRevision = revision;
+  latestAnimationPolicySettings = settings;
+}
+
+function animationPolicyRegistrationOptions(revision) {
+  const options = {
+    matches: ["http://*/*", "https://*/*"],
+    js: [{ code: CandyAnimationPolicy.registrationCode(revision) }],
+    css: [{ code: CandyAnimationPolicy.stylesheet }],
+    cssOrigin: "user",
+    runAt: "document_start",
+    allFrames: true,
+    matchAboutBlank: true,
+  };
+  if (privacySignalMatchOriginAsFallbackSupported !== false) {
+    options.matchOriginAsFallback = true;
+  }
+  return options;
+}
+
+async function registerAnimationPolicy(revision) {
+  const options = animationPolicyRegistrationOptions(revision);
+  try {
+    const registration = await browser.contentScripts.register(options);
+    if (options.matchOriginAsFallback === true) {
+      privacySignalMatchOriginAsFallbackSupported = true;
+    }
+    return registration;
+  } catch (error) {
+    if (options.matchOriginAsFallback !== true) throw error;
+    if (!matchOriginAsFallbackIsUnsupported(error)) throw error;
+    privacySignalMatchOriginAsFallbackSupported = false;
+    const fallbackOptions = { ...options };
+    delete fallbackOptions.matchOriginAsFallback;
+    return browser.contentScripts.register(fallbackOptions);
+  }
+}
+
+function ensureAnimationPolicyRegistration(policy) {
+  observeAnimationPolicy(policy);
+  animationPolicyRegistrationQueue = animationPolicyRegistrationQueue
+    .catch(() => {})
+    .then(async () => {
+      if (activeAnimationPolicyRevision === latestAnimationPolicyRevision) return;
+      const revision = latestAnimationPolicyRevision;
+      const settings = latestAnimationPolicySettings;
+      const registration = settings.animationsEnabled ?
+        null : await registerAnimationPolicy(revision);
+      if (
+        revision !== latestAnimationPolicyRevision ||
+        !sameAnimationPolicySettings(settings, latestAnimationPolicySettings)
+      ) {
+        await registration?.unregister();
+        return;
+      }
+      const previousRegistration = animationPolicyRegistration;
+      animationPolicyRegistration = registration;
+      activeAnimationPolicyRevision = revision;
+      await previousRegistration?.unregister();
+    });
+  const scheduled = animationPolicyRegistrationQueue;
+  return scheduled.then(() => {
+    if (activeAnimationPolicyRevision !== latestAnimationPolicyRevision) {
+      return ensureAnimationPolicyRegistration(policy);
+    }
+    return {
+      ...policy,
+      ...latestAnimationPolicySettings,
+      animationPolicyRevision: latestAnimationPolicyRevision,
+    };
+  });
+}
+
 async function loadText(fileName) {
   const response = await fetch(browser.runtime.getURL(`rules/${fileName}`));
   if (!response.ok) throw new Error(`Candy rule asset unavailable: ${fileName}`);
@@ -208,6 +308,9 @@ function contentPolicy(policy) {
     globalPrivacyControlEnabled: policy?.globalPrivacyControlEnabled === true,
     privacySignalRevision: Number.isSafeInteger(policy?.privacySignalRevision) ?
       Math.max(0, policy.privacySignalRevision) : 0,
+    animationsEnabled: policy?.animationsEnabled !== false,
+    animationPolicyRevision: Number.isSafeInteger(policy?.animationPolicyRevision) ?
+      Math.max(0, policy.animationPolicyRevision) : 0,
     inlineMediaPlayerMode,
     inlineMediaPlayerActionLabel:
       typeof policy?.inlineMediaPlayerActionLabel === "string" ?
@@ -962,9 +1065,10 @@ function connectNative() {
           revision: message.revision,
         });
       };
-      let privacySignalsReady;
+      let documentPoliciesReady;
       try {
-        privacySignalsReady = ensurePrivacySignalRegistration(message);
+        documentPoliciesReady = ensurePrivacySignalRegistration(message)
+          .then(ensureAnimationPolicyRegistration);
       } catch (error) {
         nativePort?.postMessage({
           type: "failed",
@@ -974,7 +1078,7 @@ function connectNative() {
         return;
       }
       if (message.revision < latestRevision) {
-        privacySignalsReady.then(acknowledgePolicy).catch((error) => {
+        documentPoliciesReady.then(acknowledgePolicy).catch((error) => {
           nativePort?.postMessage({
             type: "failed",
             protocolVersion: PROTOCOL_VERSION,
@@ -999,7 +1103,7 @@ function connectNative() {
         publishContentPolicy(message.token, readyPolicy);
         acknowledgePolicy();
       };
-      const policyReady = privacySignalsReady.then(async (readyPolicy) => {
+      const policyReady = documentPoliciesReady.then(async (readyPolicy) => {
         if (readyPolicy.hideConsent) await ensureCookieRules();
         return readyPolicy;
       });

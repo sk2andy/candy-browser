@@ -22,7 +22,6 @@ import android.view.ViewConfiguration
 import android.widget.Toast
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.annotation.VisibleForTesting
 import androidx.appcompat.app.AppCompatActivity
@@ -99,6 +98,7 @@ import dev.sk2andy.materialbrowser.ui.AppDataExportWarningDialog
 import dev.sk2andy.materialbrowser.ui.AppDataImportConfirmationDialog
 import dev.sk2andy.materialbrowser.ui.AppDataImportPreview
 import dev.sk2andy.materialbrowser.ui.BrowserScreen
+import dev.sk2andy.materialbrowser.ui.CandyAnimationRules
 import dev.sk2andy.materialbrowser.ui.CandySplashScreen
 import dev.sk2andy.materialbrowser.ui.FirefoxExtensionManagerOverlay
 import dev.sk2andy.materialbrowser.ui.FullscreenVideoOverlay
@@ -111,6 +111,7 @@ import dev.sk2andy.materialbrowser.ui.rememberFullscreenVideoGestureState
 import dev.sk2andy.materialbrowser.ui.startRubberbandHaptic
 import dev.sk2andy.materialbrowser.ui.stopRubberbandHaptic
 import dev.sk2andy.materialbrowser.ui.theme.CandyTheme
+import dev.sk2andy.materialbrowser.ui.theme.setCandyContent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -509,12 +510,17 @@ class MainActivity : AppCompatActivity() {
         val startupPresentation = StartupPresentationRules.resolve(
             isColdStart = savedInstanceState == null,
             isLauncherLaunch = intent.action == Intent.ACTION_MAIN,
-            isStartupAnimationEnabled = browserController.isStartupAnimationEnabled,
+            isStartupAnimationEnabled = CandyAnimationRules.startupAnimationEnabled(
+                animationsEnabled = browserController.appearanceSettings.animationsEnabled,
+                startupAnimationEnabled = browserController.isStartupAnimationEnabled,
+            ),
             startupAddressFocusMode = browserController.startupAddressFocusMode,
             isOnboardingRequired = onboardingRequired,
             isReleaseNotesRequired = releaseNotesRequired,
         )
-        setContent {
+        setCandyContent(
+            animationsEnabled = browserController.appearanceSettings.animationsEnabled,
+        ) {
             val appearanceSettings = browserController.appearanceSettings
             val appearanceDark = appearanceSettings.usesDarkColors(
                 isSystemInDarkTheme(),
@@ -861,7 +867,10 @@ class MainActivity : AppCompatActivity() {
         if (
             StartupPresentationRules.shouldOpenAddressEditor(
                 isLauncherLaunch = intent.action == Intent.ACTION_MAIN,
-                isStartupAnimationEnabled = browserController.isStartupAnimationEnabled,
+                isStartupAnimationEnabled = CandyAnimationRules.startupAnimationEnabled(
+                    animationsEnabled = browserController.appearanceSettings.animationsEnabled,
+                    startupAnimationEnabled = browserController.isStartupAnimationEnabled,
+                ),
                 startupAddressFocusMode = browserController.startupAddressFocusMode,
                 isOnboardingRequired = onboardingVisible,
                 isReleaseNotesRequired = releaseNotesVisible,

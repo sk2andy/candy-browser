@@ -4,7 +4,6 @@ import android.app.Activity
 import android.graphics.Bitmap
 import android.os.Bundle
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.SideEffect
@@ -20,6 +19,7 @@ import dev.sk2andy.materialbrowser.data.AppDataTransferLock
 import dev.sk2andy.materialbrowser.data.BrowserSessionStore
 import dev.sk2andy.materialbrowser.ui.SiteCapsuleEditorScreen
 import dev.sk2andy.materialbrowser.ui.theme.CandyTheme
+import dev.sk2andy.materialbrowser.ui.theme.setCandyContent
 
 class SiteCapsuleEditorActivity : ComponentActivity() {
     private var customIcon by mutableStateOf<Bitmap?>(null)
@@ -76,7 +76,7 @@ class SiteCapsuleEditorActivity : ComponentActivity() {
         customIcon = restoredCustomIcon ?: request.customIcon
         if (customIcon == null) customIconRevision = 0
         val appearanceSettings = BrowserSessionStore(this).loadAppearanceSettings()
-        setContent {
+        setCandyContent(animationsEnabled = appearanceSettings.animationsEnabled) {
             val appearanceDark = appearanceSettings.usesDarkColors(isSystemInDarkTheme())
             SideEffect { applyAppearanceSystemBars(appearanceDark) }
             CandyTheme(settings = appearanceSettings) {

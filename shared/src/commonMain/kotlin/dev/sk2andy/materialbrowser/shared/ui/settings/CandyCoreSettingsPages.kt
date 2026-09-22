@@ -33,6 +33,9 @@ private val candyAppearanceStrings = AppearanceSettingsStrings(
         BrowserAppearanceMode.Dark to "Dunkel",
         BrowserAppearanceMode.Amoled to "AMOLED",
     ),
+    animations = "Animationen",
+    animationsSummary =
+        "Animationen in Candy und auf unterstützten Websites anzeigen. Ausschalten, um Bewegungen zu überspringen.",
     forceDarkWebsites = "Dunkelmodus auf Websites erzwingen",
     forceDarkWebsitesSummary =
         "Bei dunkler Browserdarstellung werden Websites ohne eigenes dunkles Design automatisch abgedunkelt. Kann zu Darstellungsfehlern führen.",
