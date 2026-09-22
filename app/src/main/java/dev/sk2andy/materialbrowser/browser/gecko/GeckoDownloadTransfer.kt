@@ -68,6 +68,17 @@ internal enum class GeckoDownloadFailure {
     Cancelled,
 }
 
+internal object GeckoDownloadResponseRules {
+    fun shouldRejectStatus(
+        uri: String,
+        statusCode: Int,
+        allowHttpErrors: Boolean,
+    ): Boolean {
+        if (allowHttpErrors || statusCode in 200..299) return false
+        return statusCode != 0 || !uri.startsWith("blob:", ignoreCase = true)
+    }
+}
+
 internal fun interface GeckoDownloadCancellation {
     fun cancel()
 }
@@ -272,7 +283,13 @@ internal class GeckoDownloadTransferManager(
             operations.remove(id, operation)
             return
         }
-        if (!allowHttpErrors && response.statusCode !in 200..299) {
+        if (
+            GeckoDownloadResponseRules.shouldRejectStatus(
+                uri = response.uri,
+                statusCode = response.statusCode,
+                allowHttpErrors = allowHttpErrors,
+            )
+        ) {
             runCatching(body::close)
             fail(id, operation, listener, GeckoDownloadFailure.Http)
             return
