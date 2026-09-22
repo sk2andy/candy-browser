@@ -287,6 +287,9 @@ The visual tab overview also adapts its previews and grid to larger screens.
 - Android can install Mozilla-signed Firefox extensions directly from an HTTPS XPI URL. Candy uses
   GeckoView for signature validation, permission approval, installation, updates, enable/disable,
   uninstall, and explicit private-browsing access.
+- Failed installs retain GeckoView's reason: Candy distinguishes download, package integrity,
+  storage, signature, identity, compatibility, platform support, Mozilla blocklist, enterprise-only,
+  cancellation, and restart-required failures instead of showing one generic error.
 - Supported extension UI stays inside Candy's shared browser chrome: browser/page actions, popups,
   and options pages do not introduce a second address bar, menu system, or tab switcher.
 - Candy supports the public WebExtension APIs exposed by the pinned GeckoView 155 runtime. This is

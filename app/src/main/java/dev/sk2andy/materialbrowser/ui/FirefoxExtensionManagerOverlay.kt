@@ -107,6 +107,38 @@ internal fun FirefoxExtensionManagerOverlay(
                     when (message) {
                         GeckoExtensionManagerMessage.InvalidSignedXpi ->
                             R.string.gecko_extension_invalid_xpi
+                        GeckoExtensionManagerMessage.InstallNetworkFailure ->
+                            R.string.gecko_extension_install_network_failure
+                        GeckoExtensionManagerMessage.InstallIncorrectHash ->
+                            R.string.gecko_extension_install_incorrect_hash
+                        GeckoExtensionManagerMessage.InstallCorruptFile ->
+                            R.string.gecko_extension_install_corrupt_file
+                        GeckoExtensionManagerMessage.InstallFileAccess ->
+                            R.string.gecko_extension_install_file_access
+                        GeckoExtensionManagerMessage.InstallUnsigned ->
+                            R.string.gecko_extension_install_unsigned
+                        GeckoExtensionManagerMessage.InstallUnexpectedType ->
+                            R.string.gecko_extension_install_unexpected_type
+                        GeckoExtensionManagerMessage.InstallUnexpectedVersion ->
+                            R.string.gecko_extension_install_unexpected_version
+                        GeckoExtensionManagerMessage.InstallIncorrectId ->
+                            R.string.gecko_extension_install_incorrect_id
+                        GeckoExtensionManagerMessage.InstallInvalidDomain ->
+                            R.string.gecko_extension_install_invalid_domain
+                        GeckoExtensionManagerMessage.InstallBlocklisted ->
+                            R.string.gecko_extension_install_blocklisted
+                        GeckoExtensionManagerMessage.InstallIncompatible ->
+                            R.string.gecko_extension_install_incompatible
+                        GeckoExtensionManagerMessage.InstallUnsupportedType ->
+                            R.string.gecko_extension_install_unsupported_type
+                        GeckoExtensionManagerMessage.InstallAdminOnly ->
+                            R.string.gecko_extension_install_admin_only
+                        GeckoExtensionManagerMessage.InstallSoftBlocked ->
+                            R.string.gecko_extension_install_soft_blocked
+                        GeckoExtensionManagerMessage.InstallCancelled ->
+                            R.string.gecko_extension_install_cancelled
+                        GeckoExtensionManagerMessage.InstallPostponed ->
+                            R.string.gecko_extension_install_postponed
                         GeckoExtensionManagerMessage.ActionRejected ->
                             R.string.gecko_extension_action_rejected
                         GeckoExtensionManagerMessage.ActionFailed ->

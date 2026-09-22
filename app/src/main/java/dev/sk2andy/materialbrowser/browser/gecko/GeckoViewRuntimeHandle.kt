@@ -659,10 +659,14 @@ internal class GeckoViewExtensionRuntime(
         require(installationMethod == WebExtensionController.INSTALLATION_METHOD_MANAGER) {
             "Signed user extensions must use the add-on manager installation method"
         }
-        val installed = controller.install(
-            uri,
-            WebExtensionController.INSTALLATION_METHOD_MANAGER,
-        ).await()
+        val installed = try {
+            controller.install(
+                uri,
+                WebExtensionController.INSTALLATION_METHOD_MANAGER,
+            ).await()
+        } catch (error: WebExtension.InstallException) {
+            throw error.toCandyInstallException()
+        }
         if (!defaultExtensionStartup.markUserInstallSucceeded(installed.id)) {
             controller.uninstall(installed).awaitCompletion()
             error("Default extension installation state could not be persisted")
@@ -688,7 +692,11 @@ internal class GeckoViewExtensionRuntime(
 
     override suspend fun update(extensionId: String): GeckoExtension {
         val installed = requireInstalled(extensionId)
-        return (controller.update(installed).awaitNullable() ?: installed).toCandyExtension()
+        return try {
+            (controller.update(installed).awaitNullable() ?: installed).toCandyExtension()
+        } catch (error: WebExtension.InstallException) {
+            throw error.toCandyInstallException()
+        }
     }
 
     override suspend fun setAllowedInPrivateBrowsing(
@@ -3701,6 +3709,12 @@ private fun WebExtension.toCandyExtension() = GeckoExtension(
     optionsPageUrl = metaData.optionsPageUrl,
     opensOptionsPageInTab = metaData.openOptionsPageInTab,
 )
+
+private fun WebExtension.InstallException.toCandyInstallException() =
+    GeckoExtensionInstallException(
+        failure = GeckoExtensionInstallFailureRules.fromGeckoErrorCode(code),
+        cause = this,
+    )
 
 private fun GeckoExtensionPermissionDecision.toAllowOrDeny(): AllowOrDeny =
     if (grantPermissions) AllowOrDeny.ALLOW else AllowOrDeny.DENY

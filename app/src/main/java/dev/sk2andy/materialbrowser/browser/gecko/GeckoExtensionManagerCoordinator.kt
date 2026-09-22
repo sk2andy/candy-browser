@@ -11,6 +11,22 @@ import kotlinx.coroutines.launch
 
 internal enum class GeckoExtensionManagerMessage {
     InvalidSignedXpi,
+    InstallNetworkFailure,
+    InstallIncorrectHash,
+    InstallCorruptFile,
+    InstallFileAccess,
+    InstallUnsigned,
+    InstallUnexpectedType,
+    InstallUnexpectedVersion,
+    InstallIncorrectId,
+    InstallInvalidDomain,
+    InstallBlocklisted,
+    InstallIncompatible,
+    InstallUnsupportedType,
+    InstallAdminOnly,
+    InstallSoftBlocked,
+    InstallCancelled,
+    InstallPostponed,
     ActionRejected,
     ActionFailed,
 }
@@ -206,7 +222,7 @@ internal class GeckoExtensionManagerCoordinator(
                 )
                 is GeckoExtensionMutationResult.Failed -> state.copy(
                     busy = false,
-                    message = GeckoExtensionManagerMessage.ActionFailed,
+                    message = GeckoExtensionInstallFailureRules.managerMessage(result.error),
                 )
             }
         }
