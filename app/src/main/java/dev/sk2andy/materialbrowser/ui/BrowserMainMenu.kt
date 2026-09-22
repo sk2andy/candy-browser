@@ -127,8 +127,6 @@ private val AndroidBrowserMainMenuResources = object : BrowserMainMenuResources 
             )
         }
         BrowserFeatureMenuAction.InvokeToppingCommand -> item.supportingText
-        BrowserFeatureMenuAction.DuplicateTab ->
-            stringResource(R.string.duplicate_tab_url_only_disclaimer)
         else -> null
     }
 
@@ -155,7 +153,10 @@ private class AndroidBrowserMainMenuEffects(
     private val backdropSource: CandyChromeBackdropSource?,
 ) : BrowserMainMenuEffects {
     override val style = BrowserMainMenuStyle(
+        menuMaxWidth = 320.dp,
         toolbarLabelFontSize = 12.sp,
+        toolbarMinHeight = 48.dp,
+        showToolbarLabels = false,
         rowMinHeight = 48.dp,
         rowLabelFontSize = 16.sp,
         rowSupportingTextFontSize = 12.sp,

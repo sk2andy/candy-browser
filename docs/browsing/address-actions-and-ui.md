@@ -92,6 +92,9 @@ Default layout preserves prior surfaces. Existing shared actions such as favorit
 Candy Trail remain in both menus; tab-only browser/navigation actions and switcher-only profile,
 stack and close-all actions remain where they were until the user changes them.
 
+On Android, the tab menu is capped at 320dp wide. Its top navigation actions use icon-only,
+48dp circular buttons; their localized labels remain available as accessibility descriptions.
+
 ## Find in page
 
 | Layer | Source | Boundary |
