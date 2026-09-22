@@ -1,13 +1,15 @@
-Candy Browser ist ein gestenorientierter Browser für Android 13 und neuer. Er nutzt Android System WebView und speichert Tabs, Verlauf, Favoriten, Profile, Website-Berechtigungen, Leselisten und Datenschutzdaten lokal auf deinem Gerät.
+Candy Browser ist ein gestenorientierter Material 3 Expressive Browser für Android 13 und neuer. Er nutzt standardmäßig GeckoView, unterstützt kompatible, von Mozilla signierte Firefox-Add-ons und speichert Tabs, Verlauf, Favoriten, Profile, Website-Berechtigungen, Leselisten und Datenschutzdaten lokal auf deinem Gerät.
 
 Highlights:
 • Wechsle per Wischgeste zwischen Tabs und nutze Cover-Flow-, Raster- oder Listenansicht.
-• Blockiere bekannte Werbung, Tracker und Cookie-Banner mit lokalen Filterdaten.
+• Installiere kompatible Firefox-Add-ons und verwalte sie direkt in Candy.
+• Blockiere Werbung, Tracker und Cookie-Banner mit uBlock Origin und Candys lokalem Schutz.
 • Prüfe blockierte Anfragen und Website-Berechtigungen mit Privacy X-Ray und Permission Radar.
 • Nutze private Tabs, deren Sitzungs- und Navigationsdaten nur im Arbeitsspeicher bleiben.
 • Lies und speichere Artikel lokal mit Reader Studio und Text-to-Speech.
 • Organisiere das Browsen mit Profilen, Candy Trails, Favoriten, Schlummer-Tabs und Site Capsules.
 • Passe kompatible Websites mit geprüften, ausdrücklich installierten Toppings an.
+• Wechsle zu Android System WebView, wenn du die vom System verwaltete Engine bevorzugst.
 • Wähle zwischen mehreren Suchmaschinen oder konfiguriere eine SearXNG-Instanz.
 
-Der F-Droid-Build enthält keine Google Play-Dienste. Google Cast und der Google Code Scanner stehen darin deshalb nicht zur Verfügung. Externe Suchvorschläge sind standardmäßig deaktiviert und können in den Einstellungen ausdrücklich aktiviert werden.
+Externe Suchvorschläge sind standardmäßig deaktiviert und können in den Einstellungen ausdrücklich aktiviert werden. Candy ist unter der Mozilla Public License 2.0 quelloffen.

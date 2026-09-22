@@ -1,1 +1,1 @@
-Gesten-Browser für Android mit lokalen Datenschutzwerkzeugen
+Gesten-Browser mit Firefox-Add-ons und starkem Werbeblocker

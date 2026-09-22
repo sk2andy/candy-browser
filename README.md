@@ -399,7 +399,7 @@ Advanced users who intentionally need this channel can use the
 
 ## Build from source
 
-Requirements: Android SDK 35 and JDK 17. Point `JAVA_HOME` to your JDK 17 installation.
+Requirements: Android SDK 37.1 and JDK 17. Point `JAVA_HOME` to your JDK 17 installation.
 
 ```bash
 ./gradlew testFullDebugUnitTest lintFullDebug assembleFullDebug
@@ -544,6 +544,73 @@ gh workflow run release.yml \
   -f changelog=release-notes/0.33.md \
   -f prerelease=false
 ```
+
+### Google Play releases
+
+The Play build uses the standard application ID `dev.sk2andy.materialbrowser`, targets API 36,
+and disables Candy's GitHub update prompt. `bundleFullPlayRelease` produces one Android App Bundle
+containing ARM64, ARMv7, x86, and x86_64 libraries; Google Play generates and serves only the
+configuration APKs needed by each device.
+
+Candy's Google Play developer account ID is `6525963931496038407`. This ID identifies the account
+but is not a publishing credential. The Android Publisher API authenticates a narrowly permissioned
+service account through GitHub's short-lived Workload Identity Federation credentials.
+
+For seamless updates between existing GitHub installations and Google Play, configure Play App
+Signing with the existing Candy release key as the **app signing key**. Do not let Play generate an
+unrelated app signing key. Create a separate upload key for the GitHub workflow:
+
+```bash
+mkdir -p .signing
+keytool -genkeypair \
+  -keystore .signing/candy-play-upload.keystore \
+  -storetype PKCS12 \
+  -alias candy-play-upload \
+  -keyalg RSA \
+  -keysize 4096 \
+  -validity 10000
+```
+
+The `google-play` GitHub environment supplies four secrets and three variables:
+
+| Kind | Name | Purpose |
+| --- | --- | --- |
+| Secret | `CANDY_PLAY_UPLOAD_KEYSTORE_BASE64` | Base64-encoded Play upload keystore |
+| Secret | `CANDY_PLAY_UPLOAD_STORE_PASSWORD` | Upload keystore password |
+| Secret | `CANDY_PLAY_UPLOAD_KEY_ALIAS` | Upload key alias |
+| Secret | `CANDY_PLAY_UPLOAD_KEY_PASSWORD` | Upload key password |
+| Variable | `CANDY_PLAY_UPLOAD_CERTIFICATE_SHA256` | Pinned upload certificate digest |
+| Variable | `GCP_WORKLOAD_IDENTITY_PROVIDER` | Full Google Cloud WIF provider name |
+| Variable | `GCP_PLAY_SERVICE_ACCOUNT` | Play publisher service-account email |
+
+Restrict the WIF attribute condition to repository `sk2andy/candy-browser`, environment
+`google-play`, and workflow reference
+`sk2andy/candy-browser/.github/workflows/publish-google-play.yml@refs/heads/main`. Grant the service
+account access only to Candy in Play Console. Configure the `google-play` GitHub environment for
+`main` only, require a reviewer, and prevent self-review. The workflow builds without Google or
+signing credentials; only the separate, reviewer-gated publish job can sign the AAB and request a
+short-lived Google credential. No service-account JSON key is stored in GitHub.
+
+The account must be verified and the app, declarations, Play App Signing, upload key, service
+account access, and first internal release must be created once in Play Console. After that, publish
+an existing GitHub release tag with:
+
+```bash
+gh workflow run publish-google-play.yml \
+  -f version=0.42 \
+  -f track=internal \
+  -f status=completed
+```
+
+The workflow runs only when dispatched from `main`, checks out the fully qualified `v<version>` tag,
+and requires a corresponding published GitHub Release. It also requires matching English and German files at
+`fastlane/metadata/android/<locale>/changelogs/<versionCode>.txt`, verifies their Play length limit,
+the upload-key certificate, all four ABIs, the signed AAB, and the R8 mapping file. It defaults to a
+draft internal release. Publish and test that exact version internally before production. Production
+additionally requires `-f production_confirmation=PROMOTE-TESTED-TO-PRODUCTION` and remains protected
+by an environment reviewer. The release workflow intentionally does not overwrite the Store listing.
+Store descriptions and artwork in `fastlane/metadata/android` remain the canonical source for the
+one-time Play Console setup and explicit later listing updates.
 
 Publish a FOSS reference APK from an allowlisted release tag with:
 

@@ -7,12 +7,23 @@ class BuildVariantContractTest {
     @Test
     fun `user certificate trust matches build type`() {
         val expected = when (BuildConfig.BUILD_TYPE) {
-            "debug", "release", "localRelease" -> false
+            "debug", "release", "localRelease", "playRelease" -> false
             "userCaDebug", "userCaRelease" -> true
             else -> error("Unknown build type: ${BuildConfig.BUILD_TYPE}")
         }
 
         assertEquals(expected, BuildConfig.TRUST_USER_CERTIFICATES)
+    }
+
+    @Test
+    fun `github updater is enabled only for github release channels`() {
+        val expected = when (BuildConfig.BUILD_TYPE) {
+            "release", "userCaRelease" -> true
+            "debug", "localRelease", "playRelease", "userCaDebug" -> false
+            else -> error("Unknown build type: ${BuildConfig.BUILD_TYPE}")
+        }
+
+        assertEquals(expected, BuildConfig.ENABLE_GITHUB_UPDATES)
     }
 
     @Test
@@ -37,7 +48,7 @@ class BuildVariantContractTest {
             else -> error("Unknown flavor: ${BuildConfig.FLAVOR}")
         }
         val buildTypeSuffix = when (BuildConfig.BUILD_TYPE) {
-            "release" -> ""
+            "release", "playRelease" -> ""
             "userCaRelease" -> ".ca"
             "debug", "localRelease", "userCaDebug" -> return
             else -> error("Unknown build type: ${BuildConfig.BUILD_TYPE}")

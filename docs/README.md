@@ -27,4 +27,4 @@
 | Candy Sync architecture and operations | [`sync/README.md`](sync/README.md) |
 | Promotional artwork and video | [`promo/`](promo/), [`promo/video/README.md`](promo/video/README.md), and the `generate_*promo*` scripts in [`../scripts/`](../scripts/) |
 | Release notes and What’s New | [`releases/README.md`](releases/README.md), [`../.agents/skills/release-changelog/SKILL.md`](../.agents/skills/release-changelog/SKILL.md) |
-| Release implementation | [`../.github/workflows/release.yml`](../.github/workflows/release.yml) |
+| Release implementation | [`../.github/workflows/release.yml`](../.github/workflows/release.yml) and [`../.github/workflows/publish-google-play.yml`](../.github/workflows/publish-google-play.yml) |
