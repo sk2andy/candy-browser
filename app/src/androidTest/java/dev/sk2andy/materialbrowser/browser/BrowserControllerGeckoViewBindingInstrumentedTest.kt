@@ -62,6 +62,164 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
     private var originalHistory: List<HistoryEntry>? = null
     private var originalHistoryRecordingMode: HistoryRecordingMode? = null
     private var originalExternalAppLinkHandling: ExternalAppLinkHandling? = null
+    private var originalAutoDeAmpEnabled: Boolean? = null
+
+    @Test
+    fun autoDeAmpPostsOnlyCurrentEnabledPublisherReplacement() {
+        lateinit var session: ReentrantAttachSession
+        composeRule.runOnIdle {
+            val store = BrowserSessionStore(composeRule.activity)
+            originalEngineKind = store.loadAndroidBrowserEngineKind()
+            originalAutoDeAmpEnabled = store.loadAutoDeAmpEnabled()
+            assertTrue(store.saveAndroidBrowserEngineKind(AndroidBrowserEngineKind.GeckoView))
+            store.saveAutoDeAmpEnabled(true)
+            val browserController = BrowserController(composeRule.activity)
+            controller = browserController
+            session = ReentrantAttachSession(
+                tabId = browserController.selectedTabId,
+                onFirstAttach = {},
+            )
+            browserController.installGeckoEngineSessionForTesting(session)
+            session.commands.clear()
+
+            assertEquals(
+                GeckoNavigationRequestDecision.Deny,
+                browserController.dispatchSelectedGeckoNavigationRequestForTesting(
+                    GeckoMainFrameNavigationRequest(
+                        url = "https://www.google.com/amp/s/news.example.com/stale",
+                        isRedirect = false,
+                        hasUserGesture = true,
+                        isDirectNavigation = true,
+                    ),
+                ),
+            )
+            assertEquals(
+                GeckoNavigationRequestDecision.Allow,
+                browserController.dispatchSelectedGeckoNavigationRequestForTesting(
+                    GeckoMainFrameNavigationRequest(
+                        url = "https://latest.example.com/",
+                        isRedirect = false,
+                        hasUserGesture = true,
+                        isDirectNavigation = true,
+                    ),
+                ),
+            )
+            assertEquals(
+                GeckoNavigationRequestDecision.Deny,
+                browserController.dispatchSelectedGeckoNavigationRequestForTesting(
+                    GeckoMainFrameNavigationRequest(
+                        url = "https://www.google.com/amp/s/news.example.com/story?edition=de",
+                        isRedirect = false,
+                        hasUserGesture = true,
+                        isDirectNavigation = true,
+                    ),
+                ),
+            )
+        }
+
+        composeRule.waitForIdle()
+        composeRule.runOnIdle {
+            assertEquals(
+                listOf(
+                    BrowserEngineCommands.load(
+                        "https://news.example.com/story?edition=de",
+                    ),
+                ),
+                session.commands,
+            )
+            val browserController = requireNotNull(controller)
+            session.commands.clear()
+            assertEquals(
+                GeckoNavigationRequestDecision.Allow,
+                browserController.dispatchSelectedGeckoNavigationRequestForTesting(
+                    GeckoMainFrameNavigationRequest(
+                        url = "https://news.example.com/story?edition=de",
+                        isRedirect = false,
+                        hasUserGesture = false,
+                        isDirectNavigation = true,
+                    ),
+                ),
+            )
+            assertTrue(session.commands.isEmpty())
+
+            assertEquals(
+                GeckoNavigationRequestDecision.Deny,
+                browserController.dispatchSelectedGeckoNavigationRequestForTesting(
+                    GeckoMainFrameNavigationRequest(
+                        url = "https://www.google.com/amp/s/news.example.com/story?edition=de",
+                        isRedirect = true,
+                        hasUserGesture = false,
+                        isDirectNavigation = false,
+                    ),
+                ),
+            )
+            assertTrue(session.commands.isEmpty())
+
+            browserController.updateAutoDeAmpEnabled(false)
+            session.commands.clear()
+
+            assertEquals(
+                GeckoNavigationRequestDecision.Allow,
+                browserController.dispatchSelectedGeckoNavigationRequestForTesting(
+                    GeckoMainFrameNavigationRequest(
+                        url = "https://www.google.com/amp/s/news.example.com/disabled",
+                        isRedirect = false,
+                        hasUserGesture = true,
+                        isDirectNavigation = true,
+                    ),
+                ),
+            )
+            assertTrue(session.commands.isEmpty())
+
+            browserController.updateAutoDeAmpEnabled(true)
+            assertEquals(
+                GeckoNavigationRequestDecision.Deny,
+                browserController.dispatchSelectedGeckoNavigationRequestForTesting(
+                    GeckoMainFrameNavigationRequest(
+                        url = "https://www.google.com/amp/s/news.example.com/cancelled",
+                        isRedirect = false,
+                        hasUserGesture = true,
+                        isDirectNavigation = true,
+                    ),
+                ),
+            )
+            browserController.updateAutoDeAmpEnabled(false)
+        }
+
+        composeRule.waitForIdle()
+        composeRule.runOnIdle { assertTrue(session.commands.isEmpty()) }
+    }
+
+    @Test
+    fun autoDeAmpRewritesControllerOwnedSystemWebViewLoad() {
+        composeRule.runOnIdle {
+            val store = BrowserSessionStore(composeRule.activity)
+            originalEngineKind = store.loadAndroidBrowserEngineKind()
+            originalAutoDeAmpEnabled = store.loadAutoDeAmpEnabled()
+            assertTrue(store.saveAndroidBrowserEngineKind(AndroidBrowserEngineKind.SystemWebView))
+            store.saveAutoDeAmpEnabled(true)
+            val browserController = BrowserController(composeRule.activity)
+            controller = browserController
+            val session = ReentrantAttachSession(
+                tabId = browserController.selectedTabId,
+                onFirstAttach = {},
+            )
+            browserController.installGeckoEngineSessionForTesting(session)
+            session.commands.clear()
+
+            browserController.submitAddress(
+                "https://www.google.com/amp/s/news.example.com/system-webview",
+            )
+
+            assertEquals(
+                listOf(
+                    BrowserEngineCommands.stop(),
+                    BrowserEngineCommands.load("https://news.example.com/system-webview"),
+                ),
+                session.commands,
+            )
+        }
+    }
 
     @Test
     fun newerAddressSubmissionRejectsStalePolicyCallback() {
@@ -417,6 +575,7 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
                     assertTrue(store.commitHistory(history))
                 }
                 originalExternalAppLinkHandling?.let(store::saveExternalAppLinkHandling)
+                originalAutoDeAmpEnabled?.let(store::saveAutoDeAmpEnabled)
             }
         }
     }

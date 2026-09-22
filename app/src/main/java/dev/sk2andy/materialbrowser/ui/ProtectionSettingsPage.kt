@@ -35,6 +35,7 @@ import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineKind
 import dev.sk2andy.materialbrowser.browser.DnsOverHttpsProvider
 import dev.sk2andy.materialbrowser.browser.DnsOverHttpsRules
 import dev.sk2andy.materialbrowser.browser.DnsOverHttpsSettings
+import dev.sk2andy.materialbrowser.browser.PrivacySignalSettings
 import dev.sk2andy.materialbrowser.browser.WebRtcProtectionMode
 import dev.sk2andy.materialbrowser.data.HistoryRecordingMode
 import dev.sk2andy.materialbrowser.ui.theme.browserChromeColor
@@ -46,6 +47,9 @@ internal object ProtectionSettingsTestTags {
     const val Recall = "protection_settings_recall"
     const val SaveHistory = "protection_settings_save_history"
     const val ClearHistoryOnExit = "protection_settings_clear_history_on_exit"
+    const val DoNotTrack = "protection_settings_do_not_track"
+    const val GlobalPrivacyControl = "protection_settings_global_privacy_control"
+    const val AutoDeAmp = "protection_settings_auto_de_amp"
     const val WebRtcProtection = "protection_settings_webrtc_protection"
     const val DnsOverHttps = "protection_settings_dns_over_https"
     const val CustomDnsEndpoint = "protection_settings_custom_dns_endpoint"
@@ -58,12 +62,16 @@ internal fun ProtectionAndDataSettingsPage(
     browserEngineKind: AndroidBrowserEngineKind = AndroidBrowserEngineKind.GeckoView,
     isDnsOverHttpsSupported: Boolean = browserEngineKind == AndroidBrowserEngineKind.GeckoView,
     webRtcProtectionMode: WebRtcProtectionMode = WebRtcProtectionMode.Default,
+    privacySignalSettings: PrivacySignalSettings = PrivacySignalSettings.Default,
+    isAutoDeAmpEnabled: Boolean = true,
     dnsOverHttpsSettings: DnsOverHttpsSettings = DnsOverHttpsRules.Default,
     isRecallEnabled: Boolean = false,
     historyRecordingMode: HistoryRecordingMode = HistoryRecordingMode.Enabled,
     trustsUserCertificates: Boolean,
     onBlockerSettingsChanged: (BlockerSettings) -> Unit,
     onWebRtcProtectionModeChanged: (WebRtcProtectionMode) -> Unit = {},
+    onPrivacySignalSettingsChanged: (PrivacySignalSettings) -> Unit = {},
+    onAutoDeAmpEnabledChanged: (Boolean) -> Unit = {},
     onDnsOverHttpsSettingsChanged: (DnsOverHttpsSettings) -> Unit = {},
     onRecallEnabledChanged: (Boolean) -> Unit = {},
     onHistoryRecordingModeChanged: (HistoryRecordingMode) -> Unit = {},
@@ -188,6 +196,35 @@ internal fun ProtectionAndDataSettingsPage(
                 onBlockerSettingsChanged(blockerSettings.copy(blockThirdPartyCookies = it))
             },
         )
+        SettingsSwitch(
+            title = stringResource(R.string.settings_do_not_track_title),
+            subtitle = stringResource(R.string.settings_do_not_track_summary),
+            checked = privacySignalSettings.doNotTrackEnabled,
+            onCheckedChange = { enabled ->
+                onPrivacySignalSettingsChanged(
+                    privacySignalSettings.copy(doNotTrackEnabled = enabled),
+                )
+            },
+            modifier = Modifier.testTag(ProtectionSettingsTestTags.DoNotTrack),
+        )
+        SettingsSwitch(
+            title = stringResource(R.string.settings_global_privacy_control_title),
+            subtitle = stringResource(R.string.settings_global_privacy_control_summary),
+            checked = privacySignalSettings.globalPrivacyControlEnabled,
+            onCheckedChange = { enabled ->
+                onPrivacySignalSettingsChanged(
+                    privacySignalSettings.copy(globalPrivacyControlEnabled = enabled),
+                )
+            },
+            modifier = Modifier.testTag(ProtectionSettingsTestTags.GlobalPrivacyControl),
+        )
+        SettingsSwitch(
+            title = stringResource(R.string.settings_auto_de_amp_title),
+            subtitle = stringResource(R.string.settings_auto_de_amp_summary),
+            checked = isAutoDeAmpEnabled,
+            onCheckedChange = onAutoDeAmpEnabledChanged,
+            modifier = Modifier.testTag(ProtectionSettingsTestTags.AutoDeAmp),
+        )
         Spacer(Modifier.height(8.dp))
         Box {
             SettingsChoice(
@@ -271,6 +308,18 @@ internal fun ProtectionAndDataSettingsPage(
             text = stringResource(
                 when (webRtcProtectionMode) {
                     WebRtcProtectionMode.Standard -> R.string.settings_webrtc_standard_summary
+                    WebRtcProtectionMode.HideLocalNetworkIp -> when (browserEngineKind) {
+                        AndroidBrowserEngineKind.GeckoView ->
+                            R.string.settings_webrtc_hide_local_ip_gecko_summary
+                        AndroidBrowserEngineKind.SystemWebView ->
+                            R.string.settings_webrtc_policy_system_summary
+                    }
+                    WebRtcProtectionMode.DisableNonProxiedUdp -> when (browserEngineKind) {
+                        AndroidBrowserEngineKind.GeckoView ->
+                            R.string.settings_webrtc_disable_non_proxied_udp_gecko_summary
+                        AndroidBrowserEngineKind.SystemWebView ->
+                            R.string.settings_webrtc_policy_system_summary
+                    }
                     WebRtcProtectionMode.ProtectIpAddresses -> when (browserEngineKind) {
                         AndroidBrowserEngineKind.GeckoView ->
                             R.string.settings_webrtc_protect_gecko_summary
@@ -423,6 +472,10 @@ private fun CustomDnsEndpointDialog(
 private fun WebRtcProtectionMode.displayName(): String = stringResource(
     when (this) {
         WebRtcProtectionMode.Standard -> R.string.settings_webrtc_mode_standard
+        WebRtcProtectionMode.HideLocalNetworkIp ->
+            R.string.settings_webrtc_mode_hide_local_network_ip
+        WebRtcProtectionMode.DisableNonProxiedUdp ->
+            R.string.settings_webrtc_mode_disable_non_proxied_udp
         WebRtcProtectionMode.ProtectIpAddresses -> R.string.settings_webrtc_mode_protect
         WebRtcProtectionMode.Block -> R.string.settings_webrtc_mode_block
     },

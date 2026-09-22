@@ -20,6 +20,7 @@
 | --- | --- | --- |
 | External keyboard or mouse | `MainActivity` → `BrowserHardwareInputRules` → controller | Consume documented browser chords and auxiliary Back/Forward buttons; hand unmatched hardware keys to the selected engine unless browser chrome owns the IME; keep pointer wheels on normal Android dispatch and normalize only non-pointer vertical wheel reports before using the engine's relative-scroll fallback |
 | Address text | `AddressSubmissionRules` → `AddressResolver` → controller | Unknown input becomes HTTPS host navigation or selected-engine search |
+| Trusted Google AMP URL | `AutoDeAmpRules` → shared main-frame navigation listener → controller-owned replacement load | When the default-on setting is enabled, unwrap only `google.com`/`www.google.com` `/amp/[s/]…` viewer URLs and reversible one-label `*.cdn.ampproject.org` `/c[/s]/…` or `/v[/s]/…` document-cache URLs; deny the wrapper before posting one publisher load |
 | Android intent | `IncomingBrowserIntent` → controller | Accept normalized HTTP(S) URLs from `ACTION_VIEW` data or the complete `EXTRA_TEXT` value of `ACTION_SEND` `text/plain` and `text/html` shares. Incoming URLs stay in Candy without automatically handing the initial URL or its redirects back to another app; a subsequent user tap can authorize a handoff. The optional external-link preview keeps a transient Gecko session outside the tab/session store until **Open in Candy** creates a regular tab in the chosen profile; when disabled, the immediate-tab path remains. Root Back returns to the calling app. |
 | Explicit special-scheme address | `BrowserUriPolicy` → `ExternalAppLauncher` | Treat typed, pasted or scanned safe schemes as user-authorized app handoffs; keep internal schemes blocked |
 | App link or special scheme | `ExternalNavigationPolicy` → `BrowserUriPolicy` → `ExternalAppLauncher` | Keep a tapped same-site HTTP(S) redirector in the engine so its server redirect can resolve; route documented `play.google.com/store/` links explicitly to Google Play with web fallback; offer other cross-site targets and the remaining bounded redirect chain, including new-window and external-preview navigation, only to a direct non-browser default handler; either launch automatically or require confirmation according to the persisted browser setting; stop a redirected handoff before Android opens and restore only the validated source history entry; reopen an immediately returned same-site web link in its source Candy tab or existing external preview instead of creating another navigation surface; keep unavailable or ambiguous links in the engine; allow safe main-frame special-scheme handoffs; block unsafe/internal schemes and subframes |
@@ -74,6 +75,16 @@
   Address editing and Find in page retain chrome-owned
   IME suppression, so their keyboards do not resize the underlying website.
 - Route untrusted URLs through existing normalizers. Do not add a second permissive parser.
+- Keep Auto De-AMP browser-wide, persisted and enabled by default. Both GeckoView and System WebView
+  enter the same main-frame listener. Rewrite only trusted Google viewer/cache document shapes whose
+  publisher host can be validated without ambiguity; reject user info, custom ports, local/IP targets,
+  irreversible cache-host hashes and nested wrappers. Preserve `/c` document-cache query and fragment
+  data as publisher-owned; for Google and `/v` viewer URLs, strip known viewer-only query and fragment
+  metadata while preserving the remaining publisher data. Deny the wrapper navigation, then
+  post exactly one publisher load so the AMP URL never becomes an extra history entry. Cancel that
+  posted replacement if the setting changes or a newer request reaches the same engine session, and
+  deny a repeated no-gesture replacement to the same publisher within the bounded redirect-loop guard.
+  New-window targets keep their existing popup policy.
 - Before System WebView replaces an explicit destination, stop its active load. Gecko serializes a
   newer explicit load behind any accepted native history restore before replacing the previous
   document. In both engines, delayed privacy-policy callbacks apply only to their still-current

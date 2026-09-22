@@ -19,7 +19,7 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class GeckoWebRtcProtectionInstrumentedTest {
     @Test
-    fun protectedModesPreventDirectIceCandidatesAndPeerConnections() {
+    fun explicitModesReachVerifiedRuntimePolicyAndKeepStrictModesProtected() {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val server = WebRtcFixtureServer()
         lateinit var runtime: GeckoRuntimeHandle
@@ -28,6 +28,24 @@ class GeckoWebRtcProtectionInstrumentedTest {
         }
 
         try {
+            setMode(runtime, WebRtcProtectionMode.HideLocalNetworkIp)
+            assertPageTitle(
+                context = context,
+                runtime = runtime,
+                server = server,
+                path = "/availability",
+                expectedTitle = AVAILABLE_TITLE,
+                profileId = "webrtc-public-interface-only",
+            )
+            setMode(runtime, WebRtcProtectionMode.DisableNonProxiedUdp)
+            assertPageTitle(
+                context = context,
+                runtime = runtime,
+                server = server,
+                path = "/availability",
+                expectedTitle = AVAILABLE_TITLE,
+                profileId = "webrtc-disable-non-proxied-udp",
+            )
             setMode(runtime, WebRtcProtectionMode.ProtectIpAddresses)
             assertPageTitle(
                 context = context,
@@ -62,9 +80,14 @@ class GeckoWebRtcProtectionInstrumentedTest {
     }
 
     private fun setMode(runtime: GeckoRuntimeHandle, mode: WebRtcProtectionMode) {
+        val ready = CountDownLatch(1)
         InstrumentationRegistry.getInstrumentation().runOnMainSync {
-            runtime.setWebRtcProtectionMode(mode)
+            runtime.setWebRtcProtectionMode(mode, ready::countDown)
         }
+        assertTrue(
+            "WebRTC mode $mode was not verified by the Privacy host",
+            ready.await(10, TimeUnit.SECONDS),
+        )
     }
 
     private fun assertPageTitle(

@@ -2,6 +2,8 @@ package dev.sk2andy.materialbrowser.browser
 
 enum class WebRtcProtectionMode(val stableId: String) {
     Standard("standard"),
+    HideLocalNetworkIp("hide_local_network_ip"),
+    DisableNonProxiedUdp("disable_non_proxied_udp"),
     ProtectIpAddresses("protect_ip_addresses"),
     Block("block"),
     ;
@@ -24,6 +26,14 @@ internal object WebRtcProtectionRules {
         WebRtcProtectionMode.Standard -> GeckoWebRtcPolicy(
             peerConnectionsEnabled = true,
             ipHandlingPolicy = null,
+        )
+        WebRtcProtectionMode.HideLocalNetworkIp -> GeckoWebRtcPolicy(
+            peerConnectionsEnabled = true,
+            ipHandlingPolicy = "default_public_interface_only",
+        )
+        WebRtcProtectionMode.DisableNonProxiedUdp -> GeckoWebRtcPolicy(
+            peerConnectionsEnabled = true,
+            ipHandlingPolicy = "disable_non_proxied_udp",
         )
         WebRtcProtectionMode.ProtectIpAddresses -> GeckoWebRtcPolicy(
             peerConnectionsEnabled = true,

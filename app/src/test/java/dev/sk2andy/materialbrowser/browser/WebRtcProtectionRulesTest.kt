@@ -26,6 +26,26 @@ class WebRtcProtectionRulesTest {
     }
 
     @Test
+    fun `Gecko local address protection keeps only default public interface`() {
+        val policy = WebRtcProtectionRules.geckoPolicy(
+            WebRtcProtectionMode.HideLocalNetworkIp,
+        )
+
+        assertTrue(policy.peerConnectionsEnabled)
+        assertEquals("default_public_interface_only", policy.ipHandlingPolicy)
+    }
+
+    @Test
+    fun `Gecko non-proxied UDP protection uses matching engine policy`() {
+        val policy = WebRtcProtectionRules.geckoPolicy(
+            WebRtcProtectionMode.DisableNonProxiedUdp,
+        )
+
+        assertTrue(policy.peerConnectionsEnabled)
+        assertEquals("disable_non_proxied_udp", policy.ipHandlingPolicy)
+    }
+
+    @Test
     fun `Gecko strict mode disables peer connections`() {
         val policy = WebRtcProtectionRules.geckoPolicy(WebRtcProtectionMode.Block)
 
@@ -34,10 +54,20 @@ class WebRtcProtectionRulesTest {
     }
 
     @Test
-    fun `System WebView blocks both protected modes`() {
+    fun `System WebView blocks every protected mode`() {
         assertFalse(
             WebRtcProtectionRules.blocksSystemWebViewPeerConnections(
                 WebRtcProtectionMode.Standard,
+            ),
+        )
+        assertTrue(
+            WebRtcProtectionRules.blocksSystemWebViewPeerConnections(
+                WebRtcProtectionMode.HideLocalNetworkIp,
+            ),
+        )
+        assertTrue(
+            WebRtcProtectionRules.blocksSystemWebViewPeerConnections(
+                WebRtcProtectionMode.DisableNonProxiedUdp,
             ),
         )
         assertTrue(

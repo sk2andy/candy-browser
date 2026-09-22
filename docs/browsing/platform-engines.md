@@ -67,6 +67,51 @@ call-site cutover are not complete.
 - WKWebView remains the fixed iOS adapter, making the product's three adapters GeckoView, Android
   System WebView and WKWebView while only Android presents an engine selector.
 
+### Anti-fingerprinting
+
+- Anti-fingerprinting is always active for regular and private Android browsing. It has no profile
+  store and does not persist a private-mode or per-site identifier.
+- GeckoView uses Gecko's native fingerprinting protection in both regular and private sessions. The
+  process-wide setting is applied while the runtime is created, before its first session navigates.
+- System WebView reduces its HTTP and JavaScript user agent to Android's common reduced form, hiding
+  the device model, exact Android release and Chrome build. At document start in every frame, a
+  process-memory-only session seed and the page host partition bounded deterministic canvas readback
+  noise; the same script buckets screen dimensions, standardizes color depth, CPU/memory/touch values
+  and WebGL vendor strings, and removes model, architecture and OS-version values from high-entropy
+  User Agent Client Hints exposed to JavaScript.
+- System WebView has no public native equivalent to Gecko fingerprinting protection. Its defenses are
+  best effort: font, audio, oversized-canvas and provider-internal surfaces remain engine-owned, and
+  an old provider without document-start injection receives only user-agent reduction. Candy does
+  not disable page JavaScript for this compatibility fallback.
+
+### Privacy signals
+
+- Protection settings expose independent **Do Not Track** and **Global Privacy Control** switches.
+  Both default on and apply to regular and private browsing; private tabs do not create or persist a
+  separate value. Changing either switch republishes the authenticated engine policy and reloads
+  open HTTP(S) tabs so the next main document observes one coherent request/document policy.
+- GeckoView's Candy Privacy host replaces any existing signal headers on every HTTP(S) request:
+  enabled DNT sends `DNT: 1`, while enabled GPC sends `Sec-GPC: 1`. Before acknowledging the first
+  authenticated policy, its persistent background registers literal, non-callable Navigator data
+  descriptors at `document_start` for every frame. A browser-wide monotonic settings revision keeps
+  concurrent tab policies from reinstalling stale values; existing documents still receive the live
+  policy update before Candy reloads them.
+- The Gecko registration requests both inherited `about:blank` matching and origin-fallback matching
+  for eligible `about:`, `data:` and `blob:` descendants. If the running Firefox API rejects
+  `matchOriginAsFallback`, Candy explicitly retries without that option. In that compatibility mode,
+  opaque-origin descendants are not guaranteed the signals; Firefox also injects into an initially
+  empty `about:blank` frame no earlier than `document_end`, despite a `document_start` request.
+- Android System WebView exposes no supported hook for rewriting arbitrary subresource request
+  headers. Candy supplies both headers on app-initiated main-frame loads and installs the matching
+  Navigator values at document start in every frame. A live signal change performs one explicit
+  same-URL header refresh; subsequent manual reloads and same-URL retries retain the current header
+  set while using native reload semantics. Redirects, back/forward entries and engine-created
+  subresources remain provider-owned; this is an explicit System WebView limitation. On an old
+  provider without document-start injection, the JavaScript fallback runs only in the top frame at
+  `onPageCommitVisible`, after page scripts may already have observed the provider's native values.
+- DNT is advisory and sites may ignore it. GPC is a separate opt-out signal intended for legal
+  sale/share requests; Candy does not claim that either signal alone blocks tracking.
+
 ### Encrypted DNS
 
 - Protection settings expose process-wide DNS-over-HTTPS choices for GeckoView: Android system DNS,
@@ -93,15 +138,19 @@ addresses**; unknown stored values fail back to that protected mode.
 
 | Choice | GeckoView | Android System WebView |
 | --- | --- | --- |
-| Standard | Clears Candy's WebRTC overrides | Does not install a blocker |
+| Expose IP address | Clears Candy's WebRTC overrides | Does not install a blocker |
+| Hide local network IP | Uses only the default public interface (`default_public_interface_only`) | Blocks `RTCPeerConnection`, because WebView has no public ICE-routing policy |
+| Disable non-proxied UDP | Selects `disable_non_proxied_udp`: TCP uses the public-facing interface; UDP requires support from a configured proxy | Blocks `RTCPeerConnection`, because WebView has no public ICE-routing policy |
 | Protect IP addresses | Allows WebRTC only through a compatible proxy (`proxy_only`) | Blocks `RTCPeerConnection`, because WebView has no public proxy-only ICE policy |
 | Disable WebRTC | Disables peer connections through Gecko's global privacy setting | Blocks `RTCPeerConnection` |
 
 Gecko applies and verifies its global WebExtension browser settings before the Privacy host releases
-the first page navigation. Policy transitions use fail-closed ordering: proxy-only is established
-before peer connections are re-enabled, and peer connections are disabled before an obsolete IP
-override is cleared. A setting controlled by another extension fails the Privacy host instead of
-claiming protection.
+the first page navigation. The explicit IP-routing choices map to Mozilla's
+[`privacy.network.webRTCIPHandlingPolicy`](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/privacy/network)
+values. Policy transitions use fail-closed ordering: the requested IP policy is established before
+peer connections are re-enabled, and peer connections are disabled before an obsolete IP override
+is cleared. A setting controlled by another extension fails the Privacy host instead of claiming
+protection.
 
 System WebView installs the blocker in the page JavaScript world at document start for every frame,
 before a page script can capture the constructor. Changing the mode installs or removes the handler

@@ -14,6 +14,7 @@ import dev.sk2andy.materialbrowser.browser.ExternalAppLinkHandling
 import dev.sk2andy.materialbrowser.browser.FavoriteAnimationSpeed
 import dev.sk2andy.materialbrowser.browser.InlineMediaPlayerMode
 import dev.sk2andy.materialbrowser.browser.PageTranslationProvider
+import dev.sk2andy.materialbrowser.browser.PrivacySignalSettings
 import dev.sk2andy.materialbrowser.browser.SearchEngine
 import dev.sk2andy.materialbrowser.browser.SearxngSettings
 import dev.sk2andy.materialbrowser.browser.StartupAddressFocusMode
@@ -54,6 +55,8 @@ internal fun SettingsScreen(
     externalDownloadManagers: List<ExternalDownloadManagerApp>,
     blockerSettings: BlockerSettings,
     webRtcProtectionMode: WebRtcProtectionMode = WebRtcProtectionMode.Default,
+    privacySignalSettings: PrivacySignalSettings = PrivacySignalSettings.Default,
+    isAutoDeAmpEnabled: Boolean = true,
     dnsOverHttpsSettings: DnsOverHttpsSettings = DnsOverHttpsRules.Default,
     inactiveTabLifetime: InactiveTabLifetime,
     residentTabLimit: Int,
@@ -114,6 +117,8 @@ internal fun SettingsScreen(
     onDownloadSettingsChanged: (BrowserDownloadSettings) -> Unit,
     onBlockerSettingsChanged: (BlockerSettings) -> Unit,
     onWebRtcProtectionModeChanged: (WebRtcProtectionMode) -> Unit = {},
+    onPrivacySignalSettingsChanged: (PrivacySignalSettings) -> Unit = {},
+    onAutoDeAmpEnabledChanged: (Boolean) -> Unit = {},
     onDnsOverHttpsSettingsChanged: (DnsOverHttpsSettings) -> Unit = {},
     onInactiveTabLifetimeChanged: (InactiveTabLifetime) -> Unit,
     onResidentTabLimitChanged: (Int) -> Unit,
@@ -430,12 +435,16 @@ internal fun SettingsScreen(
                     browserEngineKind = browserEngineKind,
                     isDnsOverHttpsSupported = isDnsOverHttpsSupported,
                     webRtcProtectionMode = webRtcProtectionMode,
+                    privacySignalSettings = privacySignalSettings,
+                    isAutoDeAmpEnabled = isAutoDeAmpEnabled,
                     dnsOverHttpsSettings = dnsOverHttpsSettings,
                     isRecallEnabled = isRecallEnabled,
                     historyRecordingMode = historyRecordingMode,
                     trustsUserCertificates = trustsUserCertificates,
                     onBlockerSettingsChanged = onBlockerSettingsChanged,
                     onWebRtcProtectionModeChanged = onWebRtcProtectionModeChanged,
+                    onPrivacySignalSettingsChanged = onPrivacySignalSettingsChanged,
+                    onAutoDeAmpEnabledChanged = onAutoDeAmpEnabledChanged,
                     onDnsOverHttpsSettingsChanged = onDnsOverHttpsSettingsChanged,
                     onRecallEnabledChanged = onRecallEnabledChanged,
                     onHistoryRecordingModeChanged = onHistoryRecordingModeChanged,
