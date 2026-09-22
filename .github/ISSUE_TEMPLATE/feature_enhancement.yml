@@ -1,6 +1,5 @@
 name: Feature Enhancement
 description: Suggest an improvement to an existing feature
-title: ""
 labels:
   - enhancement
 body:

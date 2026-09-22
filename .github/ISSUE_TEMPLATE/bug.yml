@@ -1,6 +1,5 @@
 name: Bug
 description: Report unexpected or incorrect behavior
-title: ""
 labels:
   - bug
 body:
