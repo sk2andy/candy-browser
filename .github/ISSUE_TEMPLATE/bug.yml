@@ -1,0 +1,52 @@
+name: Bug
+description: Report unexpected or incorrect behavior
+title: ""
+labels:
+  - bug
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: Describe the problem and its impact.
+      placeholder: What happened, and what did you expect instead?
+    validations:
+      required: true
+
+  - type: input
+    id: phone-model
+    attributes:
+      label: Phone Model
+      placeholder: Google Pixel 11 Pro
+    validations:
+      required: true
+
+  - type: input
+    id: android-version
+    attributes:
+      label: Android Version
+      placeholder: Android 17
+    validations:
+      required: true
+
+  - type: dropdown
+    id: webview
+    attributes:
+      label: Used WebView
+      options:
+        - Gecko
+        - System WebView
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction-steps
+    attributes:
+      label: Reproduction Steps
+      description: List the steps needed to reproduce the bug.
+      placeholder: |
+        1. Open ...
+        2. Tap ...
+        3. Observe ...
+    validations:
+      required: true

@@ -1,0 +1,32 @@
+name: Feature Enhancement
+description: Suggest an improvement to an existing feature
+title: ""
+labels:
+  - enhancement
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: Describe the existing feature and proposed change.
+      placeholder: What would you like to improve?
+    validations:
+      required: true
+
+  - type: textarea
+    id: change-motivation
+    attributes:
+      label: Motivation for Change
+      description: Explain why the existing behavior should change.
+      placeholder: What problem would this change solve?
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected-behavior
+    attributes:
+      label: How It Should Work
+      description: Describe the expected behavior or user flow.
+      placeholder: How should the enhanced feature work?
+    validations:
+      required: true
