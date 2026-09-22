@@ -16,8 +16,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.GenericShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -134,6 +135,7 @@ enum class BrowserMainMenuContainerRole {
 
 data class BrowserMainMenuStyle(
     val showHeader: Boolean = true,
+    val menuMaxWidth: Dp = 400.dp,
     val menuCornerRadius: Dp = 16.dp,
     val groupCornerRadius: Dp = 12.dp,
     val groupInnerCornerRadius: Dp = 4.dp,
@@ -142,6 +144,8 @@ data class BrowserMainMenuStyle(
     val toolbarSpacing: Dp = 4.dp,
     val toolbarMinHeight: Dp = 64.dp,
     val toolbarIconSize: Dp = 22.dp,
+    val toolbarButtonSize: Dp = 48.dp,
+    val showToolbarLabels: Boolean = true,
     val groupItemSpacing: Dp = 2.dp,
     val rowMinHeight: Dp = 44.dp,
     val rowHorizontalPadding: Dp = 16.dp,
@@ -276,8 +280,14 @@ fun BrowserMainMenu(
         bottomEnd = outerCorners.bottomEnd,
         bottomStart = outerCorners.bottomStart,
     )
-    val menuWidth = minOf(400.dp, screenSize.width - 24.dp)
-    val compactToolbar = menuWidth < 340.dp
+    val menuWidth = minOf(style.menuMaxWidth, screenSize.width - 24.dp)
+    val toolbarSingleRowMinWidth = style.contentHorizontalPadding * 2 +
+        style.toolbarButtonSize * 5 + style.toolbarSpacing * 4
+    val compactToolbar = if (style.showToolbarLabels) {
+        menuWidth < 340.dp
+    } else {
+        menuWidth < toolbarSingleRowMinWidth
+    }
     val menuMaxHeight = screenSize.height * effects.maxHeightFraction()
     val menuScrollState = rememberScrollState()
     val density = LocalDensity.current
@@ -643,16 +653,33 @@ private fun BrowserMainMenuToolbarRow(
     effects: BrowserMainMenuEffects,
     onClick: (BrowserFeatureMenuItem) -> Unit,
 ) {
-    Row(horizontalArrangement = Arrangement.spacedBy(effects.style.toolbarSpacing)) {
+    val style = effects.style
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = if (style.showToolbarLabels) {
+            Arrangement.spacedBy(style.toolbarSpacing)
+        } else {
+            Arrangement.SpaceBetween
+        },
+    ) {
         items.forEach { item ->
+            val label = resources.label(item, toolbar = true)
             BrowserMenuToolbarAction(
-                label = resources.label(item, toolbar = true),
-                icon = { resources.icon(item, Modifier.size(effects.style.toolbarIconSize)) },
+                label = label,
+                icon = { resources.icon(item, Modifier.size(style.toolbarIconSize)) },
                 enabled = item.enabled || item.action in RELOAD_ACTIONS,
                 selected = item.checked == true,
-                accessibilityLabel = resources.accessibilityLabel(item),
-                minHeight = effects.style.toolbarMinHeight,
-                verticalLabelFontSize = effects.style.toolbarLabelFontSize,
+                accessibilityLabel = resources.accessibilityLabel(item) ?: label.takeUnless {
+                    style.showToolbarLabels
+                },
+                minHeight = style.toolbarMinHeight,
+                verticalLabelFontSize = style.toolbarLabelFontSize,
+                showLabel = style.showToolbarLabels,
+                shape = if (style.showToolbarLabels) {
+                    MaterialTheme.shapes.large
+                } else {
+                    CircleShape
+                },
                 containerColor = effects.containerColor(
                     if (item.checked == true) {
                         MaterialTheme.colorScheme.primaryContainer
@@ -666,9 +693,15 @@ private fun BrowserMainMenuToolbarRow(
                     },
                 ),
                 onClick = { onClick(item) },
-                modifier = Modifier
-                    .weight(1f)
-                    .then(item.testTagModifier()),
+                modifier = if (style.showToolbarLabels) {
+                    Modifier
+                        .weight(1f)
+                        .then(item.testTagModifier())
+                } else {
+                    Modifier
+                        .size(style.toolbarButtonSize)
+                        .then(item.testTagModifier())
+                },
             )
         }
     }

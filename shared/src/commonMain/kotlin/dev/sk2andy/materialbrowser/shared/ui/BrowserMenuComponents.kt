@@ -5,9 +5,11 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -66,8 +68,10 @@ fun BrowserMenuToolbarAction(
     selected: Boolean = false,
     accessibilityLabel: String? = null,
     horizontalContent: Boolean = false,
+    showLabel: Boolean = true,
     minHeight: Dp = 64.dp,
     verticalLabelFontSize: TextUnit = 11.sp,
+    shape: Shape = MaterialTheme.shapes.large,
     containerColor: Color = if (selected) {
         MaterialTheme.colorScheme.primaryContainer
     } else {
@@ -92,7 +96,7 @@ fun BrowserMenuToolbarAction(
             .heightIn(min = minHeight)
             .then(accessibilityModifier),
         enabled = enabled,
-        shape = MaterialTheme.shapes.large,
+        shape = shape,
         color = containerColor,
         contentColor = contentColor,
     ) {
@@ -112,7 +116,7 @@ fun BrowserMenuToolbarAction(
                     style = MaterialTheme.typography.labelMedium,
                 )
             }
-        } else {
+        } else if (showLabel) {
             Column(
                 modifier = Modifier.padding(horizontal = 4.dp, vertical = 6.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -127,6 +131,13 @@ fun BrowserMenuToolbarAction(
                     style = MaterialTheme.typography.labelSmall,
                     fontSize = verticalLabelFontSize,
                 )
+            }
+        } else {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center,
+            ) {
+                icon()
             }
         }
     }
