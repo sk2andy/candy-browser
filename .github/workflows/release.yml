@@ -397,3 +397,16 @@ jobs:
         if: always()
         shell: bash
         run: rm -f -- "$RUNNER_TEMP/candy-release.jks"
+
+  publish-google-play:
+    name: Publish GitHub release to Google Play
+    needs: release
+    permissions:
+      contents: read
+      id-token: write
+    uses: ./.github/workflows/publish-google-play.yml
+    with:
+      version: ${{ inputs.version }}
+      track: ${{ inputs.prerelease && 'beta' || 'production' }}
+      status: completed
+      automatic_release: true

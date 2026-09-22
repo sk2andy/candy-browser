@@ -1,6 +1,27 @@
 name: Publish Google Play release
 
 on:
+  release:
+    types:
+      - published
+  workflow_call:
+    inputs:
+      version:
+        description: Existing GitHub release version without leading v
+        required: true
+        type: string
+      track:
+        description: Google Play track selected by the release workflow
+        required: true
+        type: string
+      status:
+        description: Google Play release status selected by the release workflow
+        required: true
+        type: string
+      automatic_release:
+        description: Allow the trusted release workflow to publish production without manual input
+        required: true
+        type: boolean
   workflow_dispatch:
     inputs:
       version:
@@ -40,52 +61,98 @@ concurrency:
 jobs:
   build:
     name: Build signed Play bundle
-    if: github.ref == 'refs/heads/main'
+    if: github.event_name == 'release' || github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 45
     permissions:
       contents: read
+    outputs:
+      release_status: ${{ steps.metadata.outputs.release_status }}
+      release_track: ${{ steps.metadata.outputs.release_track }}
+      release_version: ${{ steps.metadata.outputs.release_version }}
     env:
-      INPUT_VERSION: ${{ inputs.version }}
-      INPUT_TRACK: ${{ inputs.track }}
-      INPUT_STATUS: ${{ inputs.status }}
+      EVENT_NAME: ${{ github.event_name }}
+      RELEASE_PRERELEASE: ${{ github.event.release.prerelease }}
+      RELEASE_TAG_NAME: ${{ github.event.release.tag_name }}
+      MANUAL_VERSION: ${{ inputs.version }}
+      MANUAL_TRACK: ${{ inputs.track }}
+      MANUAL_STATUS: ${{ inputs.status }}
+      AUTOMATIC_RELEASE: ${{ inputs.automatic_release }}
       PRODUCTION_CONFIRMATION: ${{ inputs.production_confirmation }}
 
     steps:
       - name: Check out release tag
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: refs/tags/v${{ inputs.version }}
+          ref: ${{ github.event_name == 'release' && format('refs/tags/{0}', github.event.release.tag_name) || format('refs/tags/v{0}', inputs.version) }}
           fetch-depth: 1
 
       - name: Validate Play release metadata
+        id: metadata
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
 
+          if [[ "$EVENT_NAME" == 'release' ]]; then
+            if [[ ! "$RELEASE_TAG_NAME" =~ ^v[0-9] ]]; then
+              echo "Published GitHub releases must use a v-prefixed tag." >&2
+              exit 1
+            fi
+            input_version="${RELEASE_TAG_NAME#v}"
+            if [[ "$RELEASE_PRERELEASE" == 'true' ]]; then
+              release_track='beta'
+            else
+              release_track='production'
+            fi
+            release_status='completed'
+          elif [[ "$AUTOMATIC_RELEASE" == 'true' ]]; then
+            input_version="$MANUAL_VERSION"
+            release_track="$MANUAL_TRACK"
+            release_status="$MANUAL_STATUS"
+          else
+            input_version="$MANUAL_VERSION"
+            release_track="$MANUAL_TRACK"
+            release_status="$MANUAL_STATUS"
+          fi
+
+          case "$release_track" in
+            internal|alpha|beta|production) ;;
+            *)
+              echo "Unsupported Google Play track: ${release_track}" >&2
+              exit 1
+              ;;
+          esac
+          case "$release_status" in
+            draft|completed) ;;
+            *)
+              echo "Unsupported Google Play release status: ${release_status}" >&2
+              exit 1
+              ;;
+          esac
+
           project_version="$(sed -n 's/^candy\.versionName=//p' gradle.properties)"
           version_code="$(sed -n 's/^candy\.versionCode=//p' gradle.properties)"
 
-          if [[ ! "$INPUT_VERSION" =~ ^[0-9]+(\.[0-9]+){1,2}(-[0-9A-Za-z.-]+)?$ ]]; then
+          if [[ ! "$input_version" =~ ^[0-9]+(\.[0-9]+){1,2}(-[0-9A-Za-z.-]+)?$ ]]; then
             echo "Version must look like 0.42, 1.0.0, or 1.0.0-rc.1." >&2
             exit 1
           fi
 
-          if [[ "$INPUT_VERSION" != "$project_version" ]]; then
-            echo "Workflow version ${INPUT_VERSION} does not match ${project_version}." >&2
+          if [[ "$input_version" != "$project_version" ]]; then
+            echo "Workflow version ${input_version} does not match ${project_version}." >&2
             exit 1
           fi
 
           release_is_draft="$(
-            gh release view "v${INPUT_VERSION}" \
+            gh release view "v${input_version}" \
               --repo "$GITHUB_REPOSITORY" \
               --json isDraft \
               --jq .isDraft
           )"
           if [[ "$release_is_draft" != 'false' ]]; then
-            echo "v${INPUT_VERSION} must be a published GitHub release." >&2
+            echo "v${input_version} must be a published GitHub release." >&2
             exit 1
           fi
 
@@ -106,16 +173,23 @@ jobs:
             fi
           done
 
-          if [[ "$INPUT_TRACK" == 'production' ]] && \
+          if [[ "$AUTOMATIC_RELEASE" != 'true' ]] && \
+            [[ "$EVENT_NAME" == 'workflow_dispatch' ]] && \
+            [[ "$release_track" == 'production' ]] && \
             [[ "$PRODUCTION_CONFIRMATION" != 'PROMOTE-TESTED-TO-PRODUCTION' ]]; then
             echo "Production requires PROMOTE-TESTED-TO-PRODUCTION." >&2
             exit 1
           fi
 
           {
-            echo "RELEASE_VERSION=${INPUT_VERSION}"
+            echo "RELEASE_VERSION=${input_version}"
             echo "RELEASE_VERSION_CODE=${version_code}"
           } >> "$GITHUB_ENV"
+          {
+            echo "release_status=${release_status}"
+            echo "release_track=${release_track}"
+            echo "release_version=${input_version}"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Set up JDK 17
         uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
@@ -204,13 +278,13 @@ jobs:
       - name: Upload tested Play artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: candy-google-play-${{ inputs.version }}
+          name: candy-google-play-${{ github.run_id }}
           path: distribution/
           if-no-files-found: error
           retention-days: 14
 
   publish:
-    name: Publish to ${{ inputs.track }}
+    name: Publish to ${{ needs.build.outputs.release_track }}
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -223,7 +297,7 @@ jobs:
       - name: Download verified Play artifact
         uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
         with:
-          name: candy-google-play-${{ inputs.version }}
+          name: candy-google-play-${{ github.run_id }}
           path: distribution
 
       - name: Verify artifact checksums
@@ -262,7 +336,7 @@ jobs:
           done
 
           keystore_path="$RUNNER_TEMP/candy-play-upload.jks"
-          bundle="distribution/CandyBrowser-v${{ inputs.version }}-play.aab"
+          bundle="distribution/CandyBrowser-v${{ needs.build.outputs.release_version }}-play.aab"
           printf '%s' "$CANDY_PLAY_UPLOAD_KEYSTORE_BASE64" | base64 --decode > "$keystore_path"
           chmod 600 "$keystore_path"
 
@@ -326,10 +400,10 @@ jobs:
         with:
           serviceAccountJson: ${{ steps.google_auth.outputs.credentials_file_path }}
           packageName: dev.sk2andy.materialbrowser
-          releaseFiles: distribution/CandyBrowser-v${{ inputs.version }}-play.aab
-          tracks: ${{ inputs.track }}
-          status: ${{ inputs.status }}
-          releaseName: v${{ inputs.version }}
+          releaseFiles: distribution/CandyBrowser-v${{ needs.build.outputs.release_version }}-play.aab
+          tracks: ${{ needs.build.outputs.release_track }}
+          status: ${{ needs.build.outputs.release_status }}
+          releaseName: v${{ needs.build.outputs.release_version }}
           whatsNewDirectory: distribution/whatsnew
           mappingFile: distribution/mapping.txt
 

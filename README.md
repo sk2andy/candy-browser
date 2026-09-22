@@ -583,13 +583,14 @@ The `google-play` GitHub environment supplies four secrets and three variables:
 | Variable | `GCP_WORKLOAD_IDENTITY_PROVIDER` | Full Google Cloud WIF provider name |
 | Variable | `GCP_PLAY_SERVICE_ACCOUNT` | Play publisher service-account email |
 
-Restrict the WIF attribute condition to repository `sk2andy/candy-browser`, environment
-`google-play`, and workflow reference
-`sk2andy/candy-browser/.github/workflows/publish-google-play.yml@refs/heads/main`. Grant the service
-account access only to Candy in Play Console. Configure the `google-play` GitHub environment for
-`main` only, require a reviewer, and prevent self-review. The workflow builds without Google or
-signing credentials; only the separate, reviewer-gated publish job can sign the AAB and request a
-short-lived Google credential. No service-account JSON key is stored in GitHub.
+Restrict the WIF attribute condition to repository `sk2andy/candy-browser` and environment
+`google-play`. Allow either the reusable `job_workflow_ref` identity at `refs/heads/main` or the
+direct `workflow_ref` identity for `publish-google-play.yml` on `main` and release tags matching
+`v*`. Grant the service account access only to Candy in Play Console. Configure the `google-play`
+GitHub environment to accept `main` and `v*` release tags. Automatic release publication must not
+require a reviewer. The workflow builds without Google or signing credentials; only the separate
+publish job can sign the AAB and request a short-lived Google credential. No service-account JSON
+key is stored in GitHub.
 
 The account must be verified and the app, declarations, Play App Signing, upload key, service
 account access, and first internal release must be created once in Play Console. After that, publish
@@ -602,13 +603,19 @@ gh workflow run publish-google-play.yml \
   -f status=completed
 ```
 
-The workflow runs only when dispatched from `main`, checks out the fully qualified `v<version>` tag,
-and requires a corresponding published GitHub Release. It also requires matching English and German files at
+The Android release workflow directly invokes the reusable Play workflow after creating each GitHub
+Release; this avoids GitHub's protection against recursively triggering workflows with
+`GITHUB_TOKEN`. Stable releases publish to Play production and prereleases publish to Play beta. A
+manually created GitHub Release also triggers the Play workflow. Manual dispatch from `main` remains
+available for drafts and first uploads to internal test tracks. All paths check out the fully
+qualified `v<version>` tag and require a corresponding published GitHub Release. The workflow also
+requires matching English and German files at
 `fastlane/metadata/android/<locale>/changelogs/<versionCode>.txt`, verifies their Play length limit,
 the upload-key certificate, all four ABIs, the signed AAB, and the R8 mapping file. It defaults to a
-draft internal release. Publish and test that exact version internally before production. Production
-additionally requires `-f production_confirmation=PROMOTE-TESTED-TO-PRODUCTION` and remains protected
-by an environment reviewer. The release workflow intentionally does not overwrite the Store listing.
+draft internal release when dispatched manually. Manual production publication additionally requires
+`-f production_confirmation=PROMOTE-TESTED-TO-PRODUCTION`. Each automatic release needs a new
+`versionCode`; rerunning an already uploaded version can be rejected by Play. The release workflow
+intentionally does not overwrite the Store listing.
 Store descriptions and artwork in `fastlane/metadata/android` remain the canonical source for the
 one-time Play Console setup and explicit later listing updates.
 
