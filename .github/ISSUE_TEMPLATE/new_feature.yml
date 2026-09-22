@@ -1,0 +1,32 @@
+name: New Feature
+description: Suggest a new capability for Candy Browser
+title: ""
+labels:
+  - enhancement
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: Describe the new feature.
+      placeholder: What would you like Candy Browser to support?
+    validations:
+      required: true
+
+  - type: textarea
+    id: feature-motivation
+    attributes:
+      label: Feature Motivation
+      description: Explain the problem or need behind this feature.
+      placeholder: Why would this feature be useful?
+    validations:
+      required: true
+
+  - type: textarea
+    id: possible-implementation
+    attributes:
+      label: How It Could Work
+      description: Describe your preferred behavior or user flow.
+      placeholder: How could this feature work?
+    validations:
+      required: true
