@@ -1,1 +1,1 @@
-Gesture-first Android browser with local privacy tools
+Gesture-first browser with Firefox add-ons and powerful ad blocking

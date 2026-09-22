@@ -155,6 +155,23 @@ val releaseSigningValues = mapOf(
 )
 val missingReleaseSigningValues = releaseSigningValues.filterValues { it == null }.keys
 val hasReleaseSigning = missingReleaseSigningValues.isEmpty()
+val playUploadSigningValues = mapOf(
+    "storeFile" to releaseSigningValue(
+        "playStoreFile",
+        "CANDY_PLAY_UPLOAD_KEYSTORE_PATH",
+    ),
+    "storePassword" to releaseSigningValue(
+        "playStorePassword",
+        "CANDY_PLAY_UPLOAD_STORE_PASSWORD",
+    ),
+    "keyAlias" to releaseSigningValue("playKeyAlias", "CANDY_PLAY_UPLOAD_KEY_ALIAS"),
+    "keyPassword" to releaseSigningValue(
+        "playKeyPassword",
+        "CANDY_PLAY_UPLOAD_KEY_PASSWORD",
+    ),
+)
+val missingPlayUploadSigningValues = playUploadSigningValues.filterValues { it == null }.keys
+val hasPlayUploadSigning = missingPlayUploadSigningValues.isEmpty()
 val candyVersionCode = providers.gradleProperty("candy.versionCode").orElse("1")
 val candyVersionName = providers.gradleProperty("candy.versionName").orElse("0.1")
 val candyReleaseNotesFile = providers.gradleProperty("candy.releaseNotesFile")
@@ -209,7 +226,7 @@ android {
     defaultConfig {
         applicationId = "dev.sk2andy.materialbrowser"
         minSdk = 33
-        targetSdk = 35
+        targetSdk = 36
         versionCode = candyVersionCode.get().toInt()
         versionName = candyVersionName.get()
         manifestPlaceholders["appLabel"] = "@string/app_name"
@@ -268,6 +285,14 @@ android {
                 keyPassword = requireNotNull(releaseSigningValues["keyPassword"])
             }
         }
+        if (hasPlayUploadSigning) {
+            create("playUpload") {
+                storeFile = rootProject.file(requireNotNull(playUploadSigningValues["storeFile"]))
+                storePassword = requireNotNull(playUploadSigningValues["storePassword"])
+                keyAlias = requireNotNull(playUploadSigningValues["keyAlias"])
+                keyPassword = requireNotNull(playUploadSigningValues["keyPassword"])
+            }
+        }
     }
 
     buildTypes {
@@ -295,6 +320,13 @@ android {
             versionNameSuffix = "-local"
             manifestPlaceholders["appLabel"] = localReleaseAppLabel.get()
             buildConfigField("boolean", "ENABLE_GITHUB_UPDATES", "false")
+            matchingFallbacks += listOf("release")
+        }
+
+        create("playRelease") {
+            initWith(getByName("release"))
+            buildConfigField("boolean", "ENABLE_GITHUB_UPDATES", "false")
+            signingConfig = signingConfigs.findByName("playUpload")
             matchingFallbacks += listOf("release")
         }
 
@@ -365,6 +397,10 @@ android {
 }
 
 androidComponents {
+    beforeVariants(selector().withBuildType("playRelease")) { variant ->
+        variant.enable = variant.productFlavors.toMap()["distribution"] == "full"
+    }
+
     onVariants { variant ->
         val capitalizedVariantName = variant.name.replaceFirstChar(Char::uppercaseChar)
         val generateLauncherShortcuts = tasks.register<GenerateLauncherShortcutResources>(

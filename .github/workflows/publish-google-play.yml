@@ -1,0 +1,339 @@
+name: Publish Google Play release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Existing GitHub release version without leading v (for example, 0.42)
+        required: true
+        type: string
+      track:
+        description: Google Play track
+        required: true
+        default: internal
+        type: choice
+        options:
+          - internal
+          - alpha
+          - beta
+          - production
+      status:
+        description: Leave the Play release as a draft or publish it on the selected track
+        required: true
+        default: draft
+        type: choice
+        options:
+          - draft
+          - completed
+      production_confirmation:
+        description: Enter PROMOTE-TESTED-TO-PRODUCTION for a tested internal version
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: google-play-publish
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build signed Play bundle
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    env:
+      INPUT_VERSION: ${{ inputs.version }}
+      INPUT_TRACK: ${{ inputs.track }}
+      INPUT_STATUS: ${{ inputs.status }}
+      PRODUCTION_CONFIRMATION: ${{ inputs.production_confirmation }}
+
+    steps:
+      - name: Check out release tag
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: refs/tags/v${{ inputs.version }}
+          fetch-depth: 1
+
+      - name: Validate Play release metadata
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          project_version="$(sed -n 's/^candy\.versionName=//p' gradle.properties)"
+          version_code="$(sed -n 's/^candy\.versionCode=//p' gradle.properties)"
+
+          if [[ ! "$INPUT_VERSION" =~ ^[0-9]+(\.[0-9]+){1,2}(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "Version must look like 0.42, 1.0.0, or 1.0.0-rc.1." >&2
+            exit 1
+          fi
+
+          if [[ "$INPUT_VERSION" != "$project_version" ]]; then
+            echo "Workflow version ${INPUT_VERSION} does not match ${project_version}." >&2
+            exit 1
+          fi
+
+          release_is_draft="$(
+            gh release view "v${INPUT_VERSION}" \
+              --repo "$GITHUB_REPOSITORY" \
+              --json isDraft \
+              --jq .isDraft
+          )"
+          if [[ "$release_is_draft" != 'false' ]]; then
+            echo "v${INPUT_VERSION} must be a published GitHub release." >&2
+            exit 1
+          fi
+
+          if [[ ! "$version_code" =~ ^[1-9][0-9]*$ ]] || (( version_code > 2100000000 )); then
+            echo "Version code must be between 1 and 2100000000." >&2
+            exit 1
+          fi
+
+          for locale in en-US de-DE; do
+            changelog="fastlane/metadata/android/${locale}/changelogs/${version_code}.txt"
+            if [[ ! -s "$changelog" ]]; then
+              echo "Missing Play changelog: ${changelog}" >&2
+              exit 1
+            fi
+            if (( $(wc -m < "$changelog") > 500 )); then
+              echo "Play changelog exceeds 500 characters: ${changelog}" >&2
+              exit 1
+            fi
+          done
+
+          if [[ "$INPUT_TRACK" == 'production' ]] && \
+            [[ "$PRODUCTION_CONFIRMATION" != 'PROMOTE-TESTED-TO-PRODUCTION' ]]; then
+            echo "Production requires PROMOTE-TESTED-TO-PRODUCTION." >&2
+            exit 1
+          fi
+
+          {
+            echo "RELEASE_VERSION=${INPUT_VERSION}"
+            echo "RELEASE_VERSION_CODE=${version_code}"
+          } >> "$GITHUB_ENV"
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@40fd30fb8d7440372e1316f5d1809ec01dcd3699 # v4.0.1
+        with:
+          packages: platform-tools
+
+      - name: Install Android SDK platform 37.1
+        shell: bash
+        run: sdkmanager "platforms;android-37.1"
+
+      - name: Test and build Play bundle
+        shell: bash
+        run: |
+          ./gradlew --no-daemon --max-workers=1 \
+            -Pcandy.releaseNotesFile="release-notes/${RELEASE_VERSION}.md" \
+            testFullDebugUnitTest \
+            lintFullPlayRelease \
+            bundleFullPlayRelease
+
+      - name: Verify and stage Play bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          shopt -s nullglob
+          bundles=(app/build/outputs/bundle/fullPlayRelease/*.aab)
+          if (( ${#bundles[@]} != 1 )); then
+            echo "Expected exactly one Play bundle, found ${#bundles[@]}." >&2
+            exit 1
+          fi
+          bundle="${bundles[0]}"
+          mapping="app/build/outputs/mapping/fullPlayRelease/mapping.txt"
+          manifest_directory="app/build/intermediates/merged_manifests/fullPlayRelease"
+          manifest="${manifest_directory}/processFullPlayReleaseManifest/AndroidManifest.xml"
+          if [[ ! -s "$bundle" || ! -s "$mapping" || ! -s "$manifest" ]]; then
+            echo "Expected Play bundle, manifest, or R8 mapping file is missing." >&2
+            exit 1
+          fi
+
+          if ! grep -Fq 'package="dev.sk2andy.materialbrowser"' "$manifest" || \
+            ! grep -Fq "android:versionCode=\"${RELEASE_VERSION_CODE}\"" "$manifest" || \
+            ! grep -Fq "android:versionName=\"${RELEASE_VERSION}\"" "$manifest" || \
+            ! grep -Fq 'android:targetSdkVersion="36"' "$manifest"; then
+            echo "Play manifest identity, version, or target SDK is incorrect." >&2
+            exit 1
+          fi
+
+          expected_abis=$'arm64-v8a\narmeabi-v7a\nx86\nx86_64'
+          actual_abis="$(
+            unzip -Z1 "$bundle" \
+              | sed -nE 's#^base/lib/([^/]+)/.*#\1#p' \
+              | sort -u
+          )"
+          if [[ "$actual_abis" != "$expected_abis" ]]; then
+            echo "Play bundle ABI set is incomplete or unexpected:" >&2
+            printf '%s\n' "$actual_abis" >&2
+            exit 1
+          fi
+
+          mkdir -p distribution/whatsnew
+          cp "$bundle" "distribution/CandyBrowser-v${RELEASE_VERSION}-play.aab"
+          cp "$mapping" distribution/mapping.txt
+          cp \
+            "fastlane/metadata/android/en-US/changelogs/${RELEASE_VERSION_CODE}.txt" \
+            distribution/whatsnew/whatsnew-en-US
+          cp \
+            "fastlane/metadata/android/de-DE/changelogs/${RELEASE_VERSION_CODE}.txt" \
+            distribution/whatsnew/whatsnew-de-DE
+          (
+            cd distribution
+            sha256sum \
+              "CandyBrowser-v${RELEASE_VERSION}-play.aab" \
+              mapping.txt \
+              whatsnew/whatsnew-en-US \
+              whatsnew/whatsnew-de-DE \
+              > SHA256SUMS
+          )
+
+      - name: Upload tested Play artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: candy-google-play-${{ inputs.version }}
+          path: distribution/
+          if-no-files-found: error
+          retention-days: 14
+
+  publish:
+    name: Publish to ${{ inputs.track }}
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: google-play
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Download verified Play artifact
+        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
+        with:
+          name: candy-google-play-${{ inputs.version }}
+          path: distribution
+
+      - name: Verify artifact checksums
+        shell: bash
+        run: cd distribution && sha256sum --check SHA256SUMS
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Sign and verify Play bundle
+        shell: bash
+        env:
+          CANDY_PLAY_UPLOAD_KEYSTORE_BASE64: ${{ secrets.CANDY_PLAY_UPLOAD_KEYSTORE_BASE64 }}
+          CANDY_PLAY_UPLOAD_STORE_PASSWORD: ${{ secrets.CANDY_PLAY_UPLOAD_STORE_PASSWORD }}
+          CANDY_PLAY_UPLOAD_KEY_ALIAS: ${{ secrets.CANDY_PLAY_UPLOAD_KEY_ALIAS }}
+          CANDY_PLAY_UPLOAD_KEY_PASSWORD: ${{ secrets.CANDY_PLAY_UPLOAD_KEY_PASSWORD }}
+          CANDY_PLAY_UPLOAD_CERTIFICATE_SHA256: ${{ vars.CANDY_PLAY_UPLOAD_CERTIFICATE_SHA256 }}
+        run: |
+          set -euo pipefail
+
+          required_variables=(
+            CANDY_PLAY_UPLOAD_KEYSTORE_BASE64
+            CANDY_PLAY_UPLOAD_STORE_PASSWORD
+            CANDY_PLAY_UPLOAD_KEY_ALIAS
+            CANDY_PLAY_UPLOAD_KEY_PASSWORD
+            CANDY_PLAY_UPLOAD_CERTIFICATE_SHA256
+          )
+          for variable in "${required_variables[@]}"; do
+            if [[ -z "${!variable:-}" ]]; then
+              echo "Missing Play signing configuration: ${variable}" >&2
+              exit 1
+            fi
+          done
+
+          keystore_path="$RUNNER_TEMP/candy-play-upload.jks"
+          bundle="distribution/CandyBrowser-v${{ inputs.version }}-play.aab"
+          printf '%s' "$CANDY_PLAY_UPLOAD_KEYSTORE_BASE64" | base64 --decode > "$keystore_path"
+          chmod 600 "$keystore_path"
+
+          expected_certificate="${CANDY_PLAY_UPLOAD_CERTIFICATE_SHA256//:/}"
+          expected_certificate="${expected_certificate,,}"
+          if [[ ! "$expected_certificate" =~ ^[0-9a-f]{64}$ ]]; then
+            echo "CANDY_PLAY_UPLOAD_CERTIFICATE_SHA256 must be a SHA-256 digest." >&2
+            exit 1
+          fi
+
+          keytool -list \
+            -keystore "$keystore_path" \
+            -storepass:env CANDY_PLAY_UPLOAD_STORE_PASSWORD \
+            -alias "$CANDY_PLAY_UPLOAD_KEY_ALIAS" \
+            >/dev/null
+          actual_keystore_certificate="$(
+            keytool -exportcert \
+              -keystore "$keystore_path" \
+              -storepass:env CANDY_PLAY_UPLOAD_STORE_PASSWORD \
+              -alias "$CANDY_PLAY_UPLOAD_KEY_ALIAS" \
+              | sha256sum \
+              | cut -d ' ' -f 1
+          )"
+          if [[ "$actual_keystore_certificate" != "$expected_certificate" ]]; then
+            echo "Play upload certificate does not match the pinned fingerprint." >&2
+            exit 1
+          fi
+
+          jarsigner \
+            -keystore "$keystore_path" \
+            -storepass:env CANDY_PLAY_UPLOAD_STORE_PASSWORD \
+            -keypass:env CANDY_PLAY_UPLOAD_KEY_PASSWORD \
+            -sigalg SHA256withRSA \
+            -digestalg SHA-256 \
+            "$bundle" \
+            "$CANDY_PLAY_UPLOAD_KEY_ALIAS"
+          # Android upload certificates are self-signed, so verify integrity and pin the digest
+          # separately instead of requiring a public PKIX trust chain with jarsigner -strict.
+          jarsigner -verify "$bundle"
+
+          actual_bundle_certificate="$(
+            LC_ALL=C keytool -printcert -jarfile "$bundle" \
+              | sed -n 's/^[[:space:]]*SHA256: //p' \
+              | tr -d ':' \
+              | tr '[:upper:]' '[:lower:]'
+          )"
+          if [[ "$actual_bundle_certificate" != "$expected_certificate" ]]; then
+            echo "Signed bundle does not use the pinned Play upload certificate." >&2
+            exit 1
+          fi
+
+      - name: Authenticate to Google Cloud
+        id: google_auth
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_PLAY_SERVICE_ACCOUNT }}
+
+      - name: Upload release to Google Play
+        uses: r0adkll/upload-google-play@e738b9dd8f2476ea806d921b64aacd24f34515a5 # v1.1.5
+        with:
+          serviceAccountJson: ${{ steps.google_auth.outputs.credentials_file_path }}
+          packageName: dev.sk2andy.materialbrowser
+          releaseFiles: distribution/CandyBrowser-v${{ inputs.version }}-play.aab
+          tracks: ${{ inputs.track }}
+          status: ${{ inputs.status }}
+          releaseName: v${{ inputs.version }}
+          whatsNewDirectory: distribution/whatsnew
+          mappingFile: distribution/mapping.txt
+
+      - name: Remove Play upload keystore
+        if: always()
+        shell: bash
+        run: rm -f -- "$RUNNER_TEMP/candy-play-upload.jks"

@@ -1,0 +1,1 @@
+Zuverlässigeres Laden von Seiten, Pull-to-refresh und externe Link-Vorschauen. Candy Player arbeitet jetzt mit Androids Mediensteuerung. Adressleiste, Tabs auf großen Displays, verschlüsseltes DNS, Downloads und Datenschutz wurden weiter verbessert. uBlock Origin wurde auf 1.75.0 aktualisiert.
