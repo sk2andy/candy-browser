@@ -24,7 +24,9 @@ import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onChildren
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -213,6 +215,16 @@ class BrowserMainMenuInstrumentedTest {
         val pinBounds = composeRule.onNodeWithTag(BrowserMainMenuTestTags.Pin)
             .assertIsDisplayed()
             .fetchSemanticsNode().boundsInRoot
+        val backBounds = composeRule.onNodeWithContentDescription(
+            context.getString(R.string.action_back),
+        ).assertIsDisplayed().fetchSemanticsNode().boundsInRoot
+        val density = context.resources.displayMetrics.density
+        assertTrue(menuBounds.width <= 320f * density + 1f)
+        assertEquals(favoriteBounds.width, favoriteBounds.height, 1f)
+        assertEquals(pinBounds.width, pinBounds.height, 1f)
+        assertEquals(backBounds.center.y, favoriteBounds.center.y, 1f)
+        composeRule.onAllNodesWithText(context.getString(R.string.action_back))
+            .assertCountEquals(0)
         assertTrue(favoriteBounds.left >= menuBounds.left)
         assertTrue(pinBounds.left >= favoriteBounds.right)
         assertTrue(pinBounds.right <= menuBounds.right)

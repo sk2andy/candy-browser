@@ -10,9 +10,12 @@ class AddressBarMorphRulesTest {
     fun `default platform styles preserve Android chrome geometry`() {
         assertEquals(64.dp, CandyBrowserChromeMetrics().addressMinHeight)
         assertEquals(48.dp, CandyBrowserChromeMetrics().actionSize)
+        assertEquals(400.dp, BrowserMainMenuStyle().menuMaxWidth)
         assertEquals(64.dp, BrowserMainMenuStyle().toolbarMinHeight)
+        assertEquals(48.dp, BrowserMainMenuStyle().toolbarButtonSize)
         assertEquals(2.dp, BrowserMainMenuStyle().groupItemSpacing)
         assertTrue(BrowserMainMenuStyle().showHeader)
+        assertTrue(BrowserMainMenuStyle().showToolbarLabels)
     }
 
     @Test
