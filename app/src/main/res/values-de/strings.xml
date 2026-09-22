@@ -338,6 +338,8 @@
     <string name="appearance_mode_light">Hell</string>
     <string name="appearance_mode_dark">Dunkel</string>
     <string name="appearance_mode_amoled">AMOLED</string>
+    <string name="settings_animations">Animationen</string>
+    <string name="settings_animations_summary">Animationen in Candy und auf unterstützten Websites anzeigen. Ausschalten, um Bewegungen zu überspringen.</string>
     <string name="settings_force_dark_websites">Dunkelmodus auf Websites erzwingen</string>
     <string name="settings_force_dark_websites_summary">Bei dunkler Browserdarstellung werden Websites ohne eigenes dunkles Design automatisch abgedunkelt. Kann zu Darstellungsfehlern führen.</string>
     <string name="settings_force_dark_websites_system_webview_only">Nur mit der System-WebView-Engine verfügbar.</string>

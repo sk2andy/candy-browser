@@ -84,6 +84,22 @@ call-site cutover are not complete.
   an old provider without document-start injection receives only user-agent reduction. Candy does
   not disable page JavaScript for this compatibility fallback.
 
+### Animation suppression
+
+- Appearance settings expose one default-on animation switch. Turning it off republishes a
+  browser-wide, monotonic engine policy and reloads every open HTTP(S) tab, Link Peek, and external
+  preview only after the engine confirms that the new document-start policy is ready.
+- GeckoView registers user-origin CSS at `document_start` for every frame, including eligible
+  inherited-origin descendants. System WebView installs the equivalent main-world script at
+  document start and falls back to `onPageCommitVisible` on old providers. Both suppress CSS
+  animations, transitions, view transitions, and smooth scrolling, and finish or cancel current Web
+  Animations. Re-enabling unregisters the Gecko policy and reloads current documents so no injected
+  user CSS survives.
+- Candy UI motion and native content-inset transitions use the same setting. Candy deliberately does
+  not disable `requestAnimationFrame`, timers, video, animated images, or canvas drawing because
+  those primitives also drive required page behavior; sites implementing motion exclusively through
+  those paths remain engine-owned.
+
 ### Privacy signals
 
 - Protection settings expose independent **Do Not Track** and **Global Privacy Control** switches.

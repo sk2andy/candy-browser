@@ -27,6 +27,26 @@ class CandyPrivacyHostContractTest {
     }
 
     @Test
+    fun `animation policy crosses authenticated policy with bounded revision`() {
+        val policy = GeckoPrivacyPolicyRules.extensionOwnedAdFilteringWithCandyCookieDefaults(
+            pageHost = null,
+            pausedHosts = emptySet(),
+            hideCookieConsent = false,
+            cookieBannerRemovalDisabled = false,
+            blockThirdPartyCookies = true,
+            allowThirdPartyCookiesForSite = false,
+            animationsEnabled = false,
+            animationPolicyRevision = -7,
+        )
+        val message = policy.toMessage(token = "session-token", revision = 5)
+
+        assertFalse(policy.animationsEnabled)
+        assertEquals(0L, policy.animationPolicyRevision)
+        assertFalse(message.getBoolean("animationsEnabled"))
+        assertEquals(0L, message.getLong("animationPolicyRevision"))
+    }
+
+    @Test
     fun `bounded css safe area settings normalize independently from legacy inset`() {
         val policy = GeckoPrivacyPolicyRules.extensionOwnedAdFilteringWithCandyCookieDefaults(
             pageHost = null,

@@ -346,6 +346,10 @@ test("newer privacy policy wins while older cookie rules are still loading", asy
         return filtered;
       },
     },
+    CandyAnimationPolicy: {
+      registrationCode: (revision) => `/* animation revision ${revision} */`,
+      stylesheet: "* { animation-duration: 0s !important; }",
+    },
     fetch: () => new Promise((resolve) => { resolveCookieAsset = resolve; }),
     browser: {
       runtime: {
@@ -417,6 +421,8 @@ test("newer privacy policy wins while older cookie rules are still loading", asy
     token: "tab-token",
     revision: 1,
     privacySignalRevision: 1,
+    animationPolicyRevision: 1,
+    animationsEnabled: true,
     doNotTrackEnabled: true,
     globalPrivacyControlEnabled: true,
     navigationGeneration: 0,
@@ -428,6 +434,8 @@ test("newer privacy policy wins while older cookie rules are still loading", asy
     token: "tab-token",
     revision: 2,
     privacySignalRevision: 1,
+    animationPolicyRevision: 1,
+    animationsEnabled: true,
     doNotTrackEnabled: true,
     globalPrivacyControlEnabled: true,
     navigationGeneration: 0,
@@ -565,6 +573,8 @@ test("newer privacy policy wins while older cookie rules are still loading", asy
     token: "new-signals",
     revision: 1,
     privacySignalRevision: 2,
+    animationPolicyRevision: 1,
+    animationsEnabled: true,
     doNotTrackEnabled: false,
     globalPrivacyControlEnabled: false,
     navigationGeneration: 0,
@@ -576,6 +586,8 @@ test("newer privacy policy wins while older cookie rules are still loading", asy
     token: "stale-signals",
     revision: 1,
     privacySignalRevision: 1,
+    animationPolicyRevision: 1,
+    animationsEnabled: true,
     doNotTrackEnabled: true,
     globalPrivacyControlEnabled: true,
     navigationGeneration: 0,
@@ -596,4 +608,44 @@ test("newer privacy policy wins while older cookie rules are still loading", asy
   assert.equal(privacyRegistrationAttempts[2].matchOriginAsFallback, undefined);
   assert.equal(privacyRegistrations[0].unregistered, true);
   assert.match(privacyRegistrations[1].options.js[0].code, /privacy revision 2/);
+
+  nativeMessageListener({
+    type: "policy",
+    protocolVersion: 2,
+    token: "animations-disabled",
+    revision: 1,
+    privacySignalRevision: 2,
+    doNotTrackEnabled: false,
+    globalPrivacyControlEnabled: false,
+    animationPolicyRevision: 2,
+    animationsEnabled: false,
+    navigationGeneration: 0,
+    hideConsent: false,
+  });
+  await new Promise((resolve) => setImmediate(resolve));
+  await new Promise((resolve) => setImmediate(resolve));
+  const animationRegistration = privacyRegistrations.at(-1);
+  assert.equal(privacyRegistrations.length, 3);
+  assert.equal(animationRegistration.options.cssOrigin, "user");
+  assert.equal(animationRegistration.options.runAt, "document_start");
+  assert.equal(animationRegistration.options.allFrames, true);
+  assert.match(animationRegistration.options.js[0].code, /animation revision 2/);
+
+  nativeMessageListener({
+    type: "policy",
+    protocolVersion: 2,
+    token: "animations-enabled",
+    revision: 1,
+    privacySignalRevision: 2,
+    doNotTrackEnabled: false,
+    globalPrivacyControlEnabled: false,
+    animationPolicyRevision: 3,
+    animationsEnabled: true,
+    navigationGeneration: 0,
+    hideConsent: false,
+  });
+  await new Promise((resolve) => setImmediate(resolve));
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(animationRegistration.unregistered, true);
+  assert.equal(privacyRegistrations.length, 3);
 });

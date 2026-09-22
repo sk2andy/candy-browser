@@ -1287,6 +1287,7 @@ class BrowserSessionStore internal constructor(
             appearanceMode = BrowserAppearanceMode.fromStableId(
                 preferences.getString(KEY_APPEARANCE_MODE, null),
             ),
+            animationsEnabled = loadBoolean(KEY_ANIMATIONS_ENABLED, true),
             forceDarkWebsites = runCatching {
                 preferences.getBoolean(KEY_FORCE_DARK_WEBSITES, false)
             }.getOrDefault(false),
@@ -1335,6 +1336,7 @@ class BrowserSessionStore internal constructor(
         val normalized = settings.normalized()
         preferences.edit()
             .putString(KEY_APPEARANCE_MODE, normalized.appearanceMode.stableId)
+            .putBoolean(KEY_ANIMATIONS_ENABLED, normalized.animationsEnabled)
             .putBoolean(KEY_FORCE_DARK_WEBSITES, normalized.forceDarkWebsites)
             .putInt(KEY_WEB_CONTENT_FONT_SIZE_PERCENT, normalized.webContentFontSizePercent)
             .putString(KEY_COLOR_PALETTE, normalized.colorPalette.stableId)
@@ -1567,6 +1569,7 @@ class BrowserSessionStore internal constructor(
         const val KEY_DNS_OVER_HTTPS_CUSTOM_ENDPOINT = "dns_over_https_custom_endpoint"
         const val KEY_ANDROID_BROWSER_ENGINE = "android_browser_engine"
         const val KEY_APPEARANCE_MODE = "appearance_mode"
+        const val KEY_ANIMATIONS_ENABLED = "appearance_animations_enabled"
         const val KEY_FORCE_DARK_WEBSITES = "force_dark_websites"
         const val KEY_WEB_CONTENT_FONT_SIZE_PERCENT = "web_content_font_size_percent"
         const val KEY_COLOR_PALETTE = "color_palette"

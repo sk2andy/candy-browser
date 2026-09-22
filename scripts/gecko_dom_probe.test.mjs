@@ -305,7 +305,12 @@ test('content routing refuses non-diagnostic stale and iframe requests', async (
     self: top, top,
     CandyContentTopInset: { domDiagnosticsEnabled: () => false, policyRevision: () => 3, navigationGeneration: () => 2 },
     CandyDomProbe: { sample: () => { sampleCalls++; return { version: 1 }; } },
-    browser: { runtime: { onMessage: { addListener: (value) => { listener = value; } } } },
+    browser: {
+      runtime: {
+        onMessage: { addListener: (value) => { listener = value; } },
+        sendMessage: () => Promise.resolve(null),
+      },
+    },
   });
   const source = asset('content.js').split('browser.runtime.onMessage.addListener((message) => {')[1];
   vm.runInContext(`browser.runtime.onMessage.addListener((message) => {${source}`, context);

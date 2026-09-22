@@ -27,6 +27,7 @@ import dev.sk2andy.materialbrowser.data.BrowserShapeStyle
 import dev.sk2andy.materialbrowser.data.BrowserSurfaceStyle
 import dev.sk2andy.materialbrowser.ui.theme.MaterialBrowserTheme
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -55,6 +56,9 @@ class AppearanceSettingsScreenInstrumentedTest {
         composeRule.onNodeWithTag(AppearanceSettingsTestTags.AppearanceMode).performClick()
         composeRule.onNodeWithText(context.getString(R.string.appearance_mode_dark)).performClick()
         assertEquals(BrowserAppearanceMode.Dark, settings.appearanceMode)
+
+        composeRule.onNodeWithTag(AppearanceSettingsTestTags.Animations).performClick()
+        assertFalse(settings.animationsEnabled)
 
         composeRule.onNodeWithTag(AppearanceSettingsTestTags.ForceDarkWebsites).performClick()
         assertTrue(settings.forceDarkWebsites)
@@ -106,6 +110,7 @@ class AppearanceSettingsScreenInstrumentedTest {
         assertEquals(
             AppearanceSettings(
                 appearanceMode = BrowserAppearanceMode.Dark,
+                animationsEnabled = false,
                 forceDarkWebsites = true,
                 webContentFontSizePercent = 150,
                 colorPalette = BrowserColorPalette.Candy,

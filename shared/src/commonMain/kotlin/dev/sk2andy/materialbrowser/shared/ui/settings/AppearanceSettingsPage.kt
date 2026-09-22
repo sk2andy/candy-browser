@@ -40,6 +40,8 @@ data class AppearanceSettingsStrings(
     val back: String,
     val appearanceMode: String,
     val appearanceModeNames: Map<BrowserAppearanceMode, String>,
+    val animations: String,
+    val animationsSummary: String,
     val forceDarkWebsites: String,
     val forceDarkWebsitesSummary: String,
     val webContentFontSize: String,
@@ -68,6 +70,7 @@ data class AppearanceSettingsStrings(
 
 object SharedAppearanceSettingsTestTags {
     const val APPEARANCE_MODE = "appearance_settings_mode"
+    const val ANIMATIONS = "appearance_settings_animations"
     const val FORCE_DARK_WEBSITES = "appearance_settings_force_dark_websites"
     const val WEB_CONTENT_FONT_SIZE = "appearance_settings_web_content_font_size"
     const val COLOR_PALETTE = "appearance_settings_palette"
@@ -139,6 +142,17 @@ fun AppearanceSettingsPage(
                 }
             }
         }
+        SettingsPageSpacer()
+        SettingsSwitch(
+            title = strings.animations,
+            subtitle = strings.animationsSummary,
+            checked = settings.animationsEnabled,
+            enabled = enabled,
+            onCheckedChange = { value ->
+                onSettingsChanged(settings.copy(animationsEnabled = value))
+            },
+            modifier = Modifier.testTag(SharedAppearanceSettingsTestTags.ANIMATIONS),
+        )
         SettingsPageSpacer()
         SettingsSwitch(
             title = strings.forceDarkWebsites,

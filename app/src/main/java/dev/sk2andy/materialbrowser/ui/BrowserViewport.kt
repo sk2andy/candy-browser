@@ -520,7 +520,12 @@ internal fun BrowserViewport(
                         onOpenFavorites = onOpenFavorites,
                         onReorderFavorite = onReorderFavorite,
                         favoriteLaunchAnimationEnabled =
-                            controller.isFavoriteLaunchAnimationEnabled,
+                            CandyAnimationRules.favoriteLaunchAnimationEnabled(
+                                animationsEnabled =
+                                    controller.appearanceSettings.animationsEnabled,
+                                favoriteLaunchAnimationEnabled =
+                                    controller.isFavoriteLaunchAnimationEnabled,
+                            ),
                         favoriteAnimationSpeed = controller.favoriteAnimationSpeed,
                     )
                 }

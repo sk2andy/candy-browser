@@ -24,6 +24,7 @@
 | Setting | Values | Default |
 | --- | --- | --- |
 | Appearance | System, light, dark, AMOLED | System |
+| Animations | Off, on | On |
 | Force dark mode on websites | Off, on | Off |
 | Website font size | 50–200% in 5% steps | 100% |
 | Color palette | Material You, Candy, neutral | Material You |
@@ -95,6 +96,11 @@ Frosted exposes three persisted controls while selected:
 ## Invariants
 
 - Appearance settings are global and persist across normal and private browsing.
+- Animations are global and enabled by default. Disabling them supplies a zero
+  `MotionDurationScale` to each Android Compose root, skips Candy's startup and favorite-launch
+  animations, and removes app-owned Activity window transitions. The setting applies live to the
+  main browser; standalone Candy activities read it when they open. Gesture-driven position changes
+  remain direct manipulation rather than timed animation.
 - Startup animation is global and enabled by default. Disabling it skips Candy's custom animation
   on a cold launcher start. Address focus on launch is global and preserves the previous behavior
   by default: cold and warm launcher starts open the address editor only while the startup animation
