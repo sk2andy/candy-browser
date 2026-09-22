@@ -64,6 +64,22 @@ class AddressBarActionEditorInstrumentedTest {
     }
 
     @Test
+    fun homeActionCanBeAddedFromPalette() {
+        var layout by mutableStateOf(AddressBarActionLayout.Default)
+        setEditorContent(layout = { layout }, onLayoutChanged = { layout = it })
+
+        performCustomAction(AddressBarAction.Home, index = 0)
+
+        composeRule.runOnIdle {
+            assertEquals(
+                listOf(AddressBarAction.Tabs, AddressBarAction.Home),
+                layout.beforeAddress,
+            )
+            assertEquals(listOf(AddressBarAction.NewTab), layout.afterAddress)
+        }
+    }
+
+    @Test
     fun fullToolbarRejectsAdditionalPaletteActionAndAnnouncesReason() {
         var layout by mutableStateOf(
             AddressBarActionLayout(

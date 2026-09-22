@@ -112,6 +112,7 @@ internal fun HistoryScreen(
     }
     var selectedEntryKeys by rememberSaveable { mutableStateOf(arrayListOf<String>()) }
     var query by rememberSaveable { mutableStateOf("") }
+    var distinctEntries by rememberSaveable { mutableStateOf(false) }
     var clearConfirmationVisible by rememberSaveable { mutableStateOf(false) }
     val selectedProfiles = selectedProfileIds.toSet()
     LaunchedEffect(query, selectedProfiles) {
@@ -120,7 +121,13 @@ internal fun HistoryScreen(
     val recallSnapshot = remember(history, selectedProfileIds, query, recallMatches) {
         HistoryRecallRules.merge(history, selectedProfiles, query, recallMatches)
     }
-    val visibleEntries = recallSnapshot.entries
+    val visibleEntries = remember(recallSnapshot.entries, distinctEntries) {
+        if (distinctEntries) {
+            BrowsingHistoryRules.distinctEntries(recallSnapshot.entries)
+        } else {
+            recallSnapshot.entries
+        }
+    }
     val clearableHistory = remember(history, recallMatches) {
         (history + recallMatches.map { match ->
             HistoryEntry(
@@ -216,6 +223,24 @@ internal fun HistoryScreen(
                         query = it.take(RecallRules.MAX_QUERY_CHARS)
                     },
                 )
+            }
+
+            item(key = "distinct") {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 4.dp),
+                ) {
+                    FilterChip(
+                        selected = distinctEntries,
+                        onClick = {
+                            distinctEntries = !distinctEntries
+                            selectedEntryKeys = arrayListOf()
+                        },
+                        label = { Text(stringResource(R.string.history_distinct)) },
+                        modifier = Modifier.testTag(HistoryScreenTestTags.Distinct),
+                    )
+                }
             }
 
             if (profiles.size > 1) {
@@ -788,6 +813,7 @@ private fun HistoryEmptyState(
 internal object HistoryScreenTestTags {
     const val List = "history_list"
     const val SearchField = "history_search_field"
+    const val Distinct = "history_distinct"
     const val Clear = "history_clear"
     const val ClearDialog = "history_clear_dialog"
     const val ClearSince = "history_clear_since"

@@ -48,4 +48,28 @@ class HistoryRecallRulesTest {
         assertTrue(cleared.entries.isEmpty())
         assertTrue(cleared.excerptsByEntryKey.isEmpty())
     }
+
+    @Test
+    fun `metadata search preserves repeated visits while recall joins latest visit`() {
+        val older = HistoryEntry("https://example.com/page", "Candy page", 10L, "personal")
+        val latest = older.copy(title = "Latest Candy page", lastVisitedAt = 20L)
+        val match = RecallMatch(
+            profileId = "personal",
+            url = latest.url,
+            title = latest.title,
+            excerpt = "[candy] browser text",
+            visitedAt = latest.lastVisitedAt,
+            score = 4.0,
+        )
+
+        val result = HistoryRecallRules.merge(
+            history = listOf(latest, older),
+            selectedProfileIds = setOf("personal"),
+            query = "candy",
+            recallMatches = listOf(match),
+        )
+
+        assertEquals(listOf(latest, older), result.entries)
+        assertEquals("[candy] browser text", result.excerptsByEntryKey.values.single())
+    }
 }

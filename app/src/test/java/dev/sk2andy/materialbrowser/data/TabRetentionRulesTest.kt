@@ -29,9 +29,34 @@ class TabRetentionRulesTest {
     }
 
     @Test
-    fun timedLifetimeDoesNotCloseTabsMerelyForBackgrounding() {
+    fun whenAppClosesKeepsTabsOnBackgroundAndClosesThemOnTaskRemoval() {
+        val tabs = listOf(tab("selected", now), oldTab("old"))
+
         assertTrue(
             TabRetentionRules.tabIdsToCloseOnBackground(
+                tabs = tabs,
+                lifetime = InactiveTabLifetime.WhenAppCloses,
+            ).isEmpty(),
+        )
+        assertEquals(
+            tabs.mapTo(linkedSetOf(), BrowserTab::id),
+            TabRetentionRules.tabIdsToCloseOnTaskRemoval(
+                tabs = tabs,
+                lifetime = InactiveTabLifetime.WhenAppCloses,
+            ),
+        )
+    }
+
+    @Test
+    fun timedLifetimeDoesNotCloseTabsOnBackgroundOrTaskRemoval() {
+        assertTrue(
+            TabRetentionRules.tabIdsToCloseOnBackground(
+                tabs = listOf(oldTab()),
+                lifetime = InactiveTabLifetime.SixHours,
+            ).isEmpty(),
+        )
+        assertTrue(
+            TabRetentionRules.tabIdsToCloseOnTaskRemoval(
                 tabs = listOf(oldTab()),
                 lifetime = InactiveTabLifetime.SixHours,
             ).isEmpty(),

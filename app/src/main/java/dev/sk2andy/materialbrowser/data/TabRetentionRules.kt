@@ -12,6 +12,20 @@ internal object TabRetentionRules {
             .mapTo(linkedSetOf(), BrowserTab::id)
     }
 
+    fun tabIdsToCloseOnTaskRemoval(
+        tabs: List<BrowserTab>,
+        lifetime: InactiveTabLifetime,
+    ): Set<String> {
+        if (
+            lifetime != InactiveTabLifetime.Immediately &&
+            lifetime != InactiveTabLifetime.WhenAppCloses
+        ) {
+            return emptySet()
+        }
+        return tabs.asSequence()
+            .mapTo(linkedSetOf(), BrowserTab::id)
+    }
+
     fun expiredTabIds(
         tabs: List<BrowserTab>,
         selectedTabId: String?,
