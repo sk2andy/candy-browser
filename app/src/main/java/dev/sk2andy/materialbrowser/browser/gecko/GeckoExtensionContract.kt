@@ -97,6 +97,8 @@ internal sealed interface GeckoExtensionMutationResult {
  *
  * installSignedXpi must call GeckoView's normal install API. It must never route untrusted input
  * through installBuiltIn: Gecko remains the authority that validates the XPI and Mozilla signature.
+ * Install and update adapters translate WebExtension.InstallException codes into
+ * GeckoExtensionInstallException before the error reaches manager state.
  */
 internal interface GeckoExtensionRuntime {
     fun setPermissionPrompt(prompt: GeckoExtensionPermissionPrompt)
