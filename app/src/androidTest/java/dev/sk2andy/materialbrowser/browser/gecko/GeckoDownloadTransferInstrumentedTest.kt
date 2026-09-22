@@ -156,7 +156,7 @@ class GeckoDownloadTransferInstrumentedTest {
             manager.startResponse(
                 owner = GeckoDownloadOwner("test-profile", isPrivate = true, sessionKey = this),
                 response = WebResponse.Builder("blob:https://example.com/candy-download")
-                    .statusCode(200)
+                    .statusCode(0)
                     .header("Content-Type", "application/octet-stream")
                     .header(
                         "Content-Disposition",
