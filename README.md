@@ -542,7 +542,8 @@ Then dispatch a release from GitHub Actions or with GitHub CLI:
 gh workflow run release.yml \
   -f version=0.33 \
   -f changelog=release-notes/0.33.md \
-  -f prerelease=false
+  -f prerelease=false \
+  -f play_track=alpha
 ```
 
 ### Google Play releases
@@ -605,9 +606,11 @@ gh workflow run publish-google-play.yml \
 
 The Android release workflow directly invokes the reusable Play workflow after creating each GitHub
 Release; this avoids GitHub's protection against recursively triggering workflows with
-`GITHUB_TOKEN`. Stable releases publish to Play production and prereleases publish to Play beta. A
-manually created GitHub Release also triggers the Play workflow. Manual dispatch from `main` remains
-available for drafts and first uploads to internal test tracks. All paths check out the fully
+`GITHUB_TOKEN`. Its `play_track` input defaults to the closed alpha track and can target internal,
+beta, or production explicitly. A manually created stable GitHub Release also publishes to closed
+alpha, while a manually created prerelease publishes to Play beta. After production access is
+approved, select production when dispatching the release workflow. Manual dispatch from `main`
+remains available for drafts and existing releases. All paths check out the fully
 qualified `v<version>` tag and require a corresponding published GitHub Release. The workflow also
 requires matching English and German files at
 `fastlane/metadata/android/<locale>/changelogs/<versionCode>.txt`, verifies their Play length limit,

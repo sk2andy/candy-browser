@@ -45,7 +45,8 @@ Then provide that exact file when dispatching the release workflow:
 gh workflow run release.yml \
   -f version=<version> \
   -f changelog=release-notes/<version>.md \
-  -f prerelease=false
+  -f prerelease=false \
+  -f play_track=alpha
 ```
 
 The workflow publishes the same file with `gh release create --notes-file`; no second release summary

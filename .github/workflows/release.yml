@@ -16,6 +16,16 @@ on:
         required: true
         default: false
         type: boolean
+      play_track:
+        description: Google Play track for this release
+        required: true
+        default: alpha
+        type: choice
+        options:
+          - internal
+          - alpha
+          - beta
+          - production
 
 permissions:
   contents: write
@@ -407,6 +417,6 @@ jobs:
     uses: ./.github/workflows/publish-google-play.yml
     with:
       version: ${{ inputs.version }}
-      track: ${{ inputs.prerelease && 'beta' || 'production' }}
+      track: ${{ inputs.play_track }}
       status: completed
       automatic_release: true

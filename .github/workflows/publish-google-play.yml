@@ -104,7 +104,7 @@ jobs:
             if [[ "$RELEASE_PRERELEASE" == 'true' ]]; then
               release_track='beta'
             else
-              release_track='production'
+              release_track='alpha'
             fi
             release_status='completed'
           elif [[ "$AUTOMATIC_RELEASE" == 'true' ]]; then
