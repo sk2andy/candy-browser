@@ -1,0 +1,79 @@
+name: Export Play app-signing key
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  export:
+    name: Export encrypted signing key
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: release
+    steps:
+      - name: Export key for Google Play
+        shell: bash
+        env:
+          CANDY_RELEASE_KEYSTORE_BASE64: ${{ secrets.CANDY_RELEASE_KEYSTORE_BASE64 }}
+          CANDY_RELEASE_STORE_PASSWORD: ${{ secrets.CANDY_RELEASE_STORE_PASSWORD }}
+          CANDY_RELEASE_KEY_ALIAS: ${{ secrets.CANDY_RELEASE_KEY_ALIAS }}
+          CANDY_RELEASE_KEY_PASSWORD: ${{ secrets.CANDY_RELEASE_KEY_PASSWORD }}
+          PLAY_ENCRYPTION_PUBLIC_KEY_BASE64: ${{ vars.PLAY_ENCRYPTION_PUBLIC_KEY_BASE64 }}
+        run: |
+          set -euo pipefail
+
+          required_variables=(
+            CANDY_RELEASE_KEYSTORE_BASE64
+            CANDY_RELEASE_STORE_PASSWORD
+            CANDY_RELEASE_KEY_ALIAS
+            CANDY_RELEASE_KEY_PASSWORD
+            PLAY_ENCRYPTION_PUBLIC_KEY_BASE64
+          )
+          for variable in "${required_variables[@]}"; do
+            if [[ -z "${!variable:-}" ]]; then
+              echo "Missing export configuration: ${variable}" >&2
+              exit 1
+            fi
+          done
+
+          printf '%s' "$CANDY_RELEASE_KEYSTORE_BASE64" \
+            | base64 --decode > "$RUNNER_TEMP/candy-release.jks"
+          printf '%s' "$PLAY_ENCRYPTION_PUBLIC_KEY_BASE64" \
+            | base64 --decode > "$RUNNER_TEMP/encryption_public_key.pem"
+          curl --fail --silent --show-error --location \
+            --output "$RUNNER_TEMP/pepk.jar" \
+            https://www.gstatic.com/play-apps-publisher-rapid/signing-tool/prod/pepk.jar
+          echo \
+            "aaccc0774b240aa5304bdad2a49865e92f229ca73209ecb6eaafe75dc858e24e  $RUNNER_TEMP/pepk.jar" \
+            | sha256sum --check
+
+          java -jar "$RUNNER_TEMP/pepk.jar" \
+            --keystore="$RUNNER_TEMP/candy-release.jks" \
+            --alias="$CANDY_RELEASE_KEY_ALIAS" \
+            --keystore-pass="$CANDY_RELEASE_STORE_PASSWORD" \
+            --key-pass="$CANDY_RELEASE_KEY_PASSWORD" \
+            --output="$RUNNER_TEMP/play-app-signing-key.zip" \
+            --include-cert \
+            --rsa-aes-encryption \
+            --encryption-key-path="$RUNNER_TEMP/encryption_public_key.pem"
+          test -s "$RUNNER_TEMP/play-app-signing-key.zip"
+
+      - name: Upload encrypted key
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: play-app-signing-key
+          path: ${{ runner.temp }}/play-app-signing-key.zip
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Remove signing material
+        if: always()
+        shell: bash
+        run: |
+          rm -f -- \
+            "$RUNNER_TEMP/candy-release.jks" \
+            "$RUNNER_TEMP/encryption_public_key.pem" \
+            "$RUNNER_TEMP/pepk.jar" \
+            "$RUNNER_TEMP/play-app-signing-key.zip"
