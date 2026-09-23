@@ -77,3 +77,73 @@ jobs:
             "$RUNNER_TEMP/encryption_public_key.pem" \
             "$RUNNER_TEMP/pepk.jar" \
             "$RUNNER_TEMP/play-app-signing-key.zip"
+
+  export-upload-certificate:
+    name: Export upload certificate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: google-play
+    steps:
+      - name: Export and verify upload certificate
+        shell: bash
+        env:
+          CANDY_PLAY_UPLOAD_KEYSTORE_BASE64: ${{ secrets.CANDY_PLAY_UPLOAD_KEYSTORE_BASE64 }}
+          CANDY_PLAY_UPLOAD_STORE_PASSWORD: ${{ secrets.CANDY_PLAY_UPLOAD_STORE_PASSWORD }}
+          CANDY_PLAY_UPLOAD_KEY_ALIAS: ${{ secrets.CANDY_PLAY_UPLOAD_KEY_ALIAS }}
+          CANDY_PLAY_UPLOAD_CERTIFICATE_SHA256: ${{ vars.CANDY_PLAY_UPLOAD_CERTIFICATE_SHA256 }}
+        run: |
+          set -euo pipefail
+
+          required_variables=(
+            CANDY_PLAY_UPLOAD_KEYSTORE_BASE64
+            CANDY_PLAY_UPLOAD_STORE_PASSWORD
+            CANDY_PLAY_UPLOAD_KEY_ALIAS
+            CANDY_PLAY_UPLOAD_CERTIFICATE_SHA256
+          )
+          for variable in "${required_variables[@]}"; do
+            if [[ -z "${!variable:-}" ]]; then
+              echo "Missing upload-certificate configuration: ${variable}" >&2
+              exit 1
+            fi
+          done
+
+          keystore="$RUNNER_TEMP/candy-play-upload.jks"
+          certificate="$RUNNER_TEMP/candy-play-upload-certificate.pem"
+          printf '%s' "$CANDY_PLAY_UPLOAD_KEYSTORE_BASE64" \
+            | base64 --decode > "$keystore"
+          keytool -exportcert -rfc \
+            -keystore "$keystore" \
+            -storepass:env CANDY_PLAY_UPLOAD_STORE_PASSWORD \
+            -alias "$CANDY_PLAY_UPLOAD_KEY_ALIAS" \
+            -file "$certificate"
+
+          actual_certificate="$(
+            keytool -exportcert \
+              -keystore "$keystore" \
+              -storepass:env CANDY_PLAY_UPLOAD_STORE_PASSWORD \
+              -alias "$CANDY_PLAY_UPLOAD_KEY_ALIAS" \
+              | sha256sum \
+              | cut -d ' ' -f 1
+          )"
+          expected_certificate="${CANDY_PLAY_UPLOAD_CERTIFICATE_SHA256//:/}"
+          expected_certificate="${expected_certificate,,}"
+          if [[ "$actual_certificate" != "$expected_certificate" ]]; then
+            echo "Upload certificate does not match the pinned fingerprint." >&2
+            exit 1
+          fi
+
+      - name: Upload public certificate
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: play-upload-certificate
+          path: ${{ runner.temp }}/candy-play-upload-certificate.pem
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Remove signing material
+        if: always()
+        shell: bash
+        run: |
+          rm -f -- \
+            "$RUNNER_TEMP/candy-play-upload.jks" \
+            "$RUNNER_TEMP/candy-play-upload-certificate.pem"
