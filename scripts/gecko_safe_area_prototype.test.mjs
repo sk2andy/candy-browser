@@ -561,6 +561,20 @@ test('persistent body and finite fixed/sticky rules do not accumulate on authori
   assert.equal(f.reads.rect, 0);
 });
 
+test('bottom-anchored fixed navigation keeps its resolved top and bottom', () => {
+  const f = fixture();
+  const navigation = f.element('fixed', '752px', 'ytm-pivot-bar-renderer');
+  navigation.computed.bottom = '0px';
+  const tallPanel = f.element('fixed', '100px');
+  tallPanel.computed.bottom = '0px';
+  f.start();
+
+  assert.equal(f.computed(navigation).top, '752px');
+  assert.equal(f.computed(navigation).bottom, '0px');
+  assert.equal(navigation.style.getPropertyValue('top'), '');
+  assert.equal(f.computed(tallPanel).top, '100px');
+});
+
 test('passive normal resets stay protected without repairs; important authors and cleanup keep latest styles', () => {
   const f = fixture({ density: 2.608695652173913, nativeTop: 136, normalizePixels: true });
   f.body.style.setProperty('padding-top', '4px');

@@ -404,11 +404,11 @@ together. This prototype is not a compatibility claim for the layouts described 
 | `viewport-fit=cover` | Skip the generic Candy CSS layer, including body, fixed/sticky and known-site rules; keep Gecko's native renderer safe-area delivery. Reddit's scoped component helper remains active because current mobile markup declares cover without applying the renderer inset to its header flow. |
 | Normal page flow | A per-document stylesheet raises body top padding to at least the inset; larger initial padding is preserved |
 | Semantic top header | A visible viewport-wide `header`, `nav`, `[role=banner]`, or `[role=navigation]` with `position: fixed/sticky` and a nonnegative top anchor requests a navigation-scoped native top margin. Reddit discovery prioritizes its known `reddit-header-small`, `reddit-header-large`, and `shreddit-header` hosts. Candy paints the status-bar sibling with the active `theme-color`, then the resolved opaque header/page background, and selects contrasting status icons. `viewport-fit=cover` retains Gecko-owned edge-to-edge layout. |
-| Other fixed / sticky | Bounded per-element stylesheet rules apply `originalTop + inset` to every other discovered finite resolved CSS-pixel top, without an upper threshold; no positioned-element padding or inline top is added |
+| Other fixed / sticky | Bounded per-element stylesheet rules apply `originalTop + inset` to discovered finite resolved CSS-pixel tops; fixed boxes extending into the lower half of the viewport are excluded because CSSOM can resolve an undeclared top on a bottom-anchored box; no positioned-element padding or inline top is added |
 | Predeclared selectors | Initial and event-driven CSS-source scans protect full selectors with literal `fixed`/`sticky` and a finite pixel `top` in the same CSS declaration block, even before any element matches that state |
 | Selector ownership | Elements matching a protected selector do not receive a second element-level top addition; body padding and unmatched element protection remain separate |
 | Retained anchors | Existing rule identities are checked before reading computed style; normal author inline resets do not remove the rule or add another inset |
-| Other top values | Literal `auto` and unresolved values are not changed; all finite resolved CSS-pixel values, including negative and above-inset tops, are included |
+| Other top values | Literal `auto` and unresolved values are not changed; finite resolved CSS-pixel values, including negative and above-inset tops, are included subject to the lower-half fixed-box guard |
 | Initial discovery | Protect the first available body without waiting for the worker; one bounded body traversal plus a coalesced semantic check when the DOM becomes interactive and again at final load; at most eight semantic candidates, 32 cached candidate/ancestor identities and eight fixed-header proofs are retained |
 | Later discovery | DOM subtrees retain trusted click/drop gates. Relevant semantic additions/class changes, trusted clicks and stylesheet loads also request the bounded semantic check, allowing late SPA hydration without a reload. CSS-source changes retain their separate queue without an interaction requirement. |
 | Scroll | Cancels pending broad work, advances a generation and rearms one worker. After at least 150 ms of quiet, only cached candidates are verified; the scroll handler performs no style, geometry or selector reads, and scroll never starts a DOM query. |
@@ -547,9 +547,11 @@ used pixel value for a positioned visible box; the prototype filters the returne
 stylesheet declarations. The bounded selector scan reads explicit declaration pairs only; it does
 not reconstruct the cascade of arbitrary split declarations.
 
-Removing the top threshold deliberately widens this experimental rule: a lower or bottom-anchored
-fixed box can also move if CSSOM resolves its top into pixels. This is not a universal layout-safety
-proof, and the existing bounded discovery cap still applies.
+The lower-half guard leaves bottom-anchored fixed controls and taller bottom panels alone when
+CSSOM resolves an undeclared `top` into pixels. It can also leave an explicitly top-anchored
+control extending into that region alone; the existing bounded discovery cap still applies.
+Candy's floating address bar remains a separate
+overlay above the full-window GeckoView and can cover a site's bottom navigation.
 
 Known limitations are intentionally left for manual testing: iframe contents, absolute descendants,
 nested positioning/scrolling containers, full-height fixed panels, larger DOMs beyond the traversal

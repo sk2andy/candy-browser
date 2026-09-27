@@ -29,6 +29,56 @@ class GeckoSafeAreaPrototypeInstrumentedTest {
     private val instrumentation = InstrumentationRegistry.getInstrumentation()
 
     @Test
+    fun bottomAnchoredFixedNavigationKeepsItsPositionWhenTopProtectionStarts() {
+        val title = AtomicReference<String?>(null)
+        val policy = GeckoPrivacyPolicy.Disabled.copy(cssSafeAreaTopInsetPx = NATIVE_TOP_PX)
+        EdgeToEdgeSiteFixtureServer { _ -> BOTTOM_NAVIGATION_HTML }.use { server ->
+            ActivityScenario.launch(GeckoScrollTestActivity::class.java).use { scenario ->
+                lateinit var session: GeckoBrowserSession
+                lateinit var view: View
+                scenario.onActivity { activity ->
+                    WindowCompat.setDecorFitsSystemWindows(activity.window, false)
+                    session = GeckoRuntimeOwner.getOrCreate(activity).createSession(
+                        profileId = "safe-area-bottom-${UUID.randomUUID()}",
+                        isPrivate = false,
+                        privacyPolicy = policy.copy(geckoSafeAreaSettings = GeckoSafeAreaSettings(enabled = false)),
+                    )
+                    session.bindExtensionTab("safe-area-bottom-${UUID.randomUUID()}", 1)
+                    session.setStateListener { state -> title.set(state.title) }
+                    view = session.createView(activity)
+                    activity.setContentView(view)
+                    session.setActive(true)
+                    assertTrue(session.loadUrl(server.fixtureUrl("/site-matrix/bottom-navigation")))
+                }
+                try {
+                    awaitReport(title) { it.getBoolean("loaded") }
+                    scenario.onActivity { updateNativeTop(view) }
+                    val original = awaitReport(title) {
+                        it.getDouble("env") > 0 && it.getDouble("navigationBottom") == 0.0
+                    }
+                    val ready = CountDownLatch(1)
+                    scenario.onActivity { session.updatePrivacyPolicy(policy, onReady = ready::countDown) }
+                    assertTrue("Prototype policy acknowledgement", ready.await(30, TimeUnit.SECONDS))
+                    val protected = awaitReport(title) {
+                        abs(it.getDouble("headerTop") - it.getDouble("env") - 8) < 0.5
+                    }
+                    assertEquals(original.getDouble("navigationTop"), protected.getDouble("navigationTop"), 0.5)
+                    assertEquals(0.0, protected.getDouble("navigationBottom"), 0.5)
+                    assertEquals(original.getDouble("navigationRectBottom"), protected.getDouble("navigationRectBottom"), 0.5)
+                    assertEquals(original.getDouble("panelTop"), protected.getDouble("panelTop"), 0.5)
+                    assertEquals("", protected.getString("navigationInlineTop"))
+                } finally {
+                    scenario.onActivity {
+                        session.releaseView(view)
+                        session.setActive(false)
+                        session.close()
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
     fun initialBodyAndHeaderRemainStableAcrossHeldDocumentLoad() {
         val title = AtomicReference<String?>(null)
         val releaseLoad = CountDownLatch(1)
@@ -274,6 +324,32 @@ class GeckoSafeAreaPrototypeInstrumentedTest {
     private companion object {
         const val NATIVE_TOP_PX = 137
         const val REPORT_PREFIX = "Candy prototype: "
+        val BOTTOM_NAVIGATION_HTML = """
+            <!doctype html><meta name="viewport" content="width=device-width,initial-scale=1">
+            <style>
+              html,body { margin:0; }
+              #probe { position:absolute; padding-top:env(safe-area-inset-top); visibility:hidden; }
+              #header { position:fixed; top:8px; height:24px; }
+              #navigation { position:fixed; bottom:0; height:48px; left:0; right:0; }
+              #panel { position:fixed; bottom:0; height:calc(100vh - 100px); width:8px; }
+            </style>
+            <div id="probe"></div><div id="header">Header</div><nav id="navigation">Navigation</nav><div id="panel"></div>
+            <script>
+              setInterval(() => {
+                const navigation = document.getElementById('navigation');
+                const style = getComputedStyle(navigation);
+                document.title = '${REPORT_PREFIX}' + JSON.stringify({
+                  loaded:document.readyState === 'complete',
+                  env:parseFloat(getComputedStyle(document.getElementById('probe')).paddingTop),
+                  headerTop:parseFloat(getComputedStyle(document.getElementById('header')).top),
+                  navigationTop:parseFloat(style.top), navigationBottom:parseFloat(style.bottom),
+                  navigationRectBottom:navigation.getBoundingClientRect().bottom,
+                  panelTop:parseFloat(getComputedStyle(document.getElementById('panel')).top),
+                  navigationInlineTop:navigation.style.top,
+                });
+              }, 50);
+            </script>
+        """.trimIndent()
         const val LATE_LINK_CSS = "#late-link.late-source {position:fixed;top:20px;display:block;}"
         val INITIAL_BOOTSTRAP_HTML = """
             <!doctype html><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">

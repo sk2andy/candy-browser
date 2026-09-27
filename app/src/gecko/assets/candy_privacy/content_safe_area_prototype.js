@@ -652,6 +652,11 @@
     if (style.position !== "fixed" && style.position !== "sticky") return;
     if (!topHeaderChecked && requestNativeFallbackForHeader(element, style)) return;
     const top = pixels(style.top);
+    // CSSOM can resolve an auto top to pixels for a bottom-anchored fixed box.
+    // Keep fixed boxes extending into the lower half out of top-inset rules.
+    const bottom = style.position === "fixed" ? pixels(style.bottom) : null;
+    if (style.position === "fixed" && top !== null &&
+        (top >= globalThis.innerHeight / 2 || (bottom !== null && bottom <= globalThis.innerHeight / 2))) return;
     if (top !== null) applyRule(element, "top", `${top + inset}px`);
   }
 
