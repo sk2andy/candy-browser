@@ -1,7 +1,7 @@
 package dev.sk2andy.materialbrowser.ui
 
 import android.view.WindowManager
-import androidx.compose.foundation.border
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -26,7 +26,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -184,35 +183,28 @@ internal fun ExternalLinkPreviewBar(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-                Row(
-                    modifier = Modifier
-                        .height(48.dp)
-                        .border(
-                            width = 1.dp,
-                            color = chromeTokens.outlineColor,
-                            shape = CircleShape,
-                        ),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     IconButton(
                         onClick = onOpenInCandy,
                         modifier = Modifier
                             .size(48.dp)
                             .testTag(ExternalLinkPreviewTestTags.Open),
                     ) {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_symbol_add),
-                            contentDescription = openDescription,
-                            tint = chromeTokens.contentColor,
-                        )
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_symbol_add),
+                                contentDescription = openDescription,
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                            )
+                        }
                     }
                     if (profiles.size > 1) {
-                        VerticalDivider(
-                            modifier = Modifier
-                                .height(24.dp)
-                                .width(1.dp),
-                            color = chromeTokens.outlineVariantColor,
-                        )
+                        Spacer(Modifier.width(4.dp))
                         Box {
                             IconButton(
                                 onClick = { profileMenuExpanded = true },

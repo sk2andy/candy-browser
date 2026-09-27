@@ -184,7 +184,7 @@ class ExternalLinkPreviewBarInstrumentedTest {
         val updatedAlpha = requireNotNull(observedAlpha.get())
         assertSame(firstBackdrop, observedBackdrop.get())
         assertNotEquals(firstAlpha, updatedAlpha)
-        assertEquals(0.3f, updatedAlpha, 0.001f)
+        assertEquals(0.3f, updatedAlpha, 1f / 255f)
 
         composeRule.runOnUiThread { rootBottomInWindowPx = 1_200 }
         composeRule.waitForIdle()

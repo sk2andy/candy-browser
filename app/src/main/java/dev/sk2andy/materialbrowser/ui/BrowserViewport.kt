@@ -255,6 +255,7 @@ private fun ExternalLinkPreviewViewport(
     onBlurTargetAttached: (BlurTarget) -> Unit,
     onBlurTargetReleased: (BlurTarget) -> Unit,
 ) {
+    val isContentReady = controller.externalLinkPreviewState?.isContentReady == true
     val browserContentBlurEnabled = browserContentBackdropCaptureEnabled() &&
         BrowserBackdropBlurRules.mode(
             engineKind = controller.browserEngineKind,
@@ -280,7 +281,7 @@ private fun ExternalLinkPreviewViewport(
                     tint = statusBarTint,
                     visible = true,
                 )
-                if (controller.externalLinkPreviewState?.isContentReady == true) {
+                if (isContentReady) {
                     controller.attachExternalLinkPreview(
                         container = host.contentContainer,
                         backdropCaptureEnabled = browserContentBlurEnabled,

@@ -4,6 +4,7 @@ import android.app.Activity
 import android.app.Instrumentation
 import android.content.Context
 import android.content.Intent
+import android.graphics.Color
 import android.net.Uri
 import android.os.SystemClock
 import android.view.View
@@ -18,7 +19,10 @@ import dev.sk2andy.materialbrowser.browser.integration.LauncherShortcutRules
 import dev.sk2andy.materialbrowser.data.BrowserSessionStore
 import dev.sk2andy.materialbrowser.data.GestureOnboardingStore
 import dev.sk2andy.materialbrowser.data.ReleaseNotesStore
+import java.net.InetAddress
+import java.net.ServerSocket
 import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.atomic.AtomicInteger
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -118,6 +122,39 @@ class MainActivityIncomingNavigationInstrumentedTest {
                     ),
                 )
                 assertEquals(APP_URL, handoffs.single().dataString)
+            }
+        }
+    }
+
+    @Test
+    fun coldIncomingViewLoadsExternalPreviewPage() {
+        BrowserSessionStore(context).saveExternalLinkPreviewEnabled(true)
+        IncomingPageServer().use { server ->
+            ActivityScenario.launch<MainActivity>(incomingIntent(server.url)).use { scenario ->
+                var activity: MainActivity? = null
+                scenario.onActivity { activity = it }
+                awaitIncomingPreviewPage(requireNotNull(activity), server)
+            }
+        }
+    }
+
+    @Test
+    fun warmIncomingViewLoadsExternalPreviewPage() {
+        BrowserSessionStore(context).saveExternalLinkPreviewEnabled(true)
+        IncomingPageServer().use { server ->
+            val activity = instrumentation.startActivitySync(
+                Intent(context, MainActivity::class.java)
+                    .setAction(Intent.ACTION_MAIN)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK),
+            ) as MainActivity
+            try {
+                instrumentation.runOnMainSync {
+                    instrumentation.callActivityOnNewIntent(activity, incomingIntent(server.url))
+                }
+                awaitIncomingPreviewPage(activity, server)
+            } finally {
+                instrumentation.runOnMainSync { activity.finish() }
+                instrumentation.waitForIdleSync()
             }
         }
     }
@@ -232,8 +269,83 @@ class MainActivityIncomingNavigationInstrumentedTest {
         assertTrue("Incoming tab did not load; current URL: $currentUrl", currentUrl == INCOMING_URL)
     }
 
+    private fun awaitIncomingPreviewPage(activity: MainActivity, server: IncomingPageServer) {
+        val deadline = SystemClock.elapsedRealtime() + 30_000L
+        var currentUrl: String? = null
+        var isLoading = true
+        var contentVisible = false
+        while (SystemClock.elapsedRealtime() < deadline) {
+            instrumentation.runOnMainSync {
+                val preview = activity.browserControllerForTesting().externalLinkPreviewState
+                currentUrl = preview?.currentUrl
+                isLoading = preview?.isLoading != false
+            }
+            if (currentUrl == server.url && !isLoading && server.requests.get() > 0) {
+                val screenshot = instrumentation.uiAutomation.takeScreenshot()
+                if (screenshot != null) {
+                    val center = screenshot.getPixel(screenshot.width / 2, screenshot.height / 2)
+                    contentVisible = Color.red(center) > 180 &&
+                        Color.green(center) < 100 &&
+                        Color.blue(center) < 140
+                    screenshot.recycle()
+                }
+                if (contentVisible) break
+            }
+            SystemClock.sleep(50L)
+        }
+        assertEquals(server.url, currentUrl)
+        assertTrue("Incoming preview did not finish loading", !isLoading)
+        assertTrue("Incoming preview was not requested", server.requests.get() > 0)
+        assertTrue("Incoming preview page was not visible", contentVisible)
+    }
+
     private companion object {
         const val INCOMING_URL = "https://youtube.candy.test/redirect?q=https%3A%2F%2Fgithub.com"
         const val APP_URL = "candy-fixture://return-to-app"
+    }
+
+    private class IncomingPageServer : AutoCloseable {
+        private val socket = ServerSocket(0, 8, InetAddress.getByName("127.0.0.1"))
+        private val thread = Thread(::serve, "incoming-page-fixture").apply {
+            isDaemon = true
+            start()
+        }
+
+        val url = "http://127.0.0.1:${socket.localPort}/incoming"
+        val requests = AtomicInteger()
+
+        private fun serve() {
+            while (!socket.isClosed) {
+                val connection = runCatching { socket.accept() }.getOrNull() ?: return
+                connection.use {
+                    runCatching {
+                        val reader = connection.getInputStream().bufferedReader()
+                        val request = reader.readLine().orEmpty()
+                        while (!reader.readLine().isNullOrEmpty()) {
+                            // Drain request headers.
+                        }
+                        if (request.contains(" /incoming ")) requests.incrementAndGet()
+                        val body = (
+                            "<!doctype html><title>Incoming page</title>" +
+                                "<style>html,body{margin:0;min-height:100%;background:#ed273b}</style>" +
+                                "<body>Incoming page</body>"
+                            ).toByteArray()
+                        connection.getOutputStream().apply {
+                            write("HTTP/1.1 200 OK\r\n".toByteArray())
+                            write("Content-Type: text/html; charset=utf-8\r\n".toByteArray())
+                            write("Content-Length: ${body.size}\r\n".toByteArray())
+                            write("Connection: close\r\n\r\n".toByteArray())
+                            write(body)
+                            flush()
+                        }
+                    }
+                }
+            }
+        }
+
+        override fun close() {
+            socket.close()
+            thread.join(1_000L)
+        }
     }
 }

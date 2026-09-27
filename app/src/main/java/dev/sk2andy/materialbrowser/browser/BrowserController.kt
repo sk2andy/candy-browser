@@ -4277,7 +4277,7 @@ class BrowserController(
         }
         session.setDesktopMode(isDesktopView(policyTab, state.currentUrl))
         val view = session.createView(activity)
-        externalLinkPreviewRuntime = ExternalLinkPreviewRuntime(
+        val runtime = ExternalLinkPreviewRuntime(
             sessionId = state.sessionId,
             generation = state.generation,
             policyTab = policyTab,
@@ -4286,7 +4286,9 @@ class BrowserController(
                 view = view,
             ),
         )
+        externalLinkPreviewRuntime = runtime
         externalLinkPreviewState = state.copy(isContentReady = true)
+        view.doOnAttach { startExternalLinkPreviewIfReady(runtime) }
     }
 
     private fun routeExternalPreviewDownload(
