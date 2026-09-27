@@ -1,6 +1,8 @@
 package dev.sk2andy.materialbrowser.browser.gecko
 
 import android.Manifest
+import android.app.Notification
+import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
 import android.os.ParcelFileDescriptor
@@ -16,7 +18,9 @@ import dev.sk2andy.materialbrowser.browser.BrowserController
 import dev.sk2andy.materialbrowser.browser.BrowserTab
 import dev.sk2andy.materialbrowser.browser.permissions.PermissionPrompt
 import dev.sk2andy.materialbrowser.browser.permissions.PermissionPromptChoice
+import dev.sk2andy.materialbrowser.browser.permissions.PermissionOrigin
 import dev.sk2andy.materialbrowser.browser.permissions.SitePermission
+import dev.sk2andy.materialbrowser.browser.permissions.SitePermissionDecision
 import dev.sk2andy.materialbrowser.data.GestureOnboardingStore
 import dev.sk2andy.materialbrowser.data.BrowserSessionStore
 import dev.sk2andy.materialbrowser.data.PermissionRadarStore
@@ -138,6 +142,153 @@ class GeckoIoPromptsInstrumentedTest {
                         PermissionPromptChoice.Block,
                     )
                 }
+            }
+        }
+    }
+
+    @Test
+    fun websiteNotificationRequestsPermissionAndAppearsInAndroid() {
+        grantRuntimePermission(Manifest.permission.POST_NOTIFICATIONS)
+        FixtureServer().use { server ->
+            seedSelectedTab("about:blank")
+            launchMainActivity().use { scenario ->
+                navigateAndAwaitView(scenario, server.localhostUrl("/notification"))
+                tapAttachedGeckoView()
+
+                val prompt = awaitValue("Gecko notification permission prompt") {
+                    scenario.value(BrowserController::permissionPrompt)
+                }
+                assertEquals(setOf(SitePermission.Notifications), prompt?.permissions)
+                scenario.onActivity { activity ->
+                    activity.browserControllerForTesting().respondToPermissionPrompt(
+                        requireNotNull(prompt).id,
+                        PermissionPromptChoice.AllowAlways,
+                    )
+                }
+
+                assertEquals(
+                    "notification-granted",
+                    awaitValue("notification permission result") {
+                        scenario.value { controller ->
+                            controller.selectedTab.title.takeIf { it == "notification-granted" }
+                        }
+                    },
+                )
+                val manager = context.getSystemService(NotificationManager::class.java)
+                val posted = awaitValue("Android website notification") {
+                    manager.activeNotifications.firstOrNull { status ->
+                        status.notification.extras.getString(Notification.EXTRA_TITLE) ==
+                            "Candy test notification"
+                    }
+                }
+                assertNotNull(posted)
+                requireNotNull(posted).notification.contentIntent.send()
+                assertEquals(
+                    "notification-clicked",
+                    awaitValue("website notification click") {
+                        scenario.value { controller ->
+                            controller.selectedTab.title.takeIf { it == "notification-clicked" }
+                        }
+                    },
+                )
+                manager.cancel(posted.tag, posted.id)
+            }
+        }
+    }
+
+    @Test
+    fun notificationRadarRevocationPersistsAcrossActivityRestart() {
+        grantRuntimePermission(Manifest.permission.POST_NOTIFICATIONS)
+        FixtureServer().use { server ->
+            val pageUrl = server.localhostUrl("/notification")
+            val stateUrl = server.localhostUrl("/notification-state")
+            val origin = requireNotNull(PermissionOrigin.normalize(pageUrl))
+            seedSelectedTab("about:blank")
+            launchMainActivity().use { scenario ->
+                navigateAndAwaitView(scenario, pageUrl)
+                tapAttachedGeckoView()
+                val promptOrGrant = awaitValue<Any>("Gecko notification grant") {
+                    scenario.value { controller ->
+                        controller.permissionPrompt ?: true.takeIf {
+                            controller.selectedTab.title == "notification-granted"
+                        }
+                    }
+                }
+                if (promptOrGrant is PermissionPrompt) {
+                    scenario.onActivity { activity ->
+                        activity.browserControllerForTesting().respondToPermissionPrompt(
+                            promptOrGrant.id,
+                            PermissionPromptChoice.AllowAlways,
+                        )
+                    }
+                }
+                awaitValue("notification grant") {
+                    scenario.value { it.selectedTab.title.takeIf { title ->
+                        title == "notification-granted"
+                    } }
+                }
+                scenario.onActivity { activity ->
+                    assertTrue(activity.browserControllerForTesting().setSitePermissionDecision(
+                        "gecko-io-fixture", origin, SitePermission.Notifications,
+                        SitePermissionDecision.Block,
+                    ))
+                }
+                awaitValue("Gecko reload after notification block") {
+                    scenario.value { controller ->
+                        controller.selectedTab.title.takeIf { title ->
+                            title == "notification-ready" && !controller.selectedTab.isLoading
+                        }
+                    }
+                }
+                navigateAndAwaitView(scenario, stateUrl)
+                assertEquals("notification-state-denied", awaitValue("revoked Gecko grant") {
+                    scenario.value { it.selectedTab.title.takeIf { title ->
+                        title == "notification-state-denied"
+                    } }
+                })
+            }
+            launchMainActivity().use { scenario ->
+                navigateAndAwaitView(scenario, stateUrl)
+                assertEquals("notification-state-denied", awaitValue("persisted Gecko block") {
+                    scenario.value { it.selectedTab.title.takeIf { title ->
+                        title == "notification-state-denied"
+                    } }
+                })
+                scenario.onActivity { activity ->
+                    assertTrue(activity.browserControllerForTesting().setSitePermissionDecision(
+                        "gecko-io-fixture", origin, SitePermission.Notifications,
+                        SitePermissionDecision.Ask,
+                    ))
+                }
+                navigateAndAwaitView(scenario, pageUrl)
+                navigateAndAwaitView(scenario, stateUrl)
+                assertEquals("notification-state-default", awaitValue("reset Gecko permission") {
+                    scenario.value { it.selectedTab.title.takeIf { title ->
+                        title == "notification-state-default"
+                    } }
+                })
+            }
+        }
+    }
+
+    @Test
+    fun privatePageNotificationRequestIsDeniedWithoutPrompt() {
+        FixtureServer().use { server ->
+            seedSelectedTab("about:blank")
+            launchMainActivity().use { scenario ->
+                scenario.onActivity { activity ->
+                    assertTrue(activity.browserControllerForTesting().openLinkInPrivate(
+                        server.localhostUrl("/blank"),
+                    ))
+                }
+                navigateAndAwaitView(scenario, server.localhostUrl("/notification"))
+                tapAttachedGeckoView()
+                assertEquals("notification-denied", awaitValue("private notification denial") {
+                    scenario.value { it.selectedTab.title.takeIf { title ->
+                        title == "notification-denied"
+                    } }
+                })
+                assertEquals(null, scenario.value(BrowserController::permissionPrompt))
             }
         }
     }
@@ -337,6 +488,10 @@ class GeckoIoPromptsInstrumentedTest {
                     )
                     "/upload" -> write(connection, "200 OK", "text/html", UPLOAD_HTML)
                     "/media" -> write(connection, "200 OK", "text/html", MEDIA_HTML)
+                    "/notification" -> write(connection, "200 OK", "text/html", NOTIFICATION_HTML)
+                    "/notification-state" -> write(
+                        connection, "200 OK", "text/html", NOTIFICATION_STATE_HTML,
+                    )
                     "/blank" -> write(connection, "200 OK", "text/html", BLANK_HTML)
                     else -> write(connection, "200 OK", "text/html", "<title>ready</title>")
                 }
@@ -377,6 +532,13 @@ class GeckoIoPromptsInstrumentedTest {
             const val MEDIA_HTML = """
                 <!doctype html><meta name="viewport" content="width=device-width"><title>media-ready</title>
                 <button aria-label="Candy media request" style="position:fixed;inset:0;width:100%;height:100%" onclick="document.title='media-requested';navigator.mediaDevices.getUserMedia({video:true,audio:true}).then(()=>document.title='media-granted').catch(error=>document.title='media-'+error.name)">media</button>
+            """
+            const val NOTIFICATION_HTML = """
+                <!doctype html><meta name="viewport" content="width=device-width"><title>notification-ready</title>
+                <button style="position:fixed;inset:0;width:100%;height:100%" onclick="document.title='notification-requested';Notification.requestPermission().then(result=>{document.title='notification-'+result;if(result==='granted'){const notice=new Notification('Candy test notification',{body:'Gecko notification'});notice.onclick=()=>document.title='notification-clicked';}})">notify</button>
+            """
+            const val NOTIFICATION_STATE_HTML = """
+                <!doctype html><script>document.title='notification-state-'+Notification.permission</script>
             """
             const val BLANK_HTML = """
                 <!doctype html><meta name="viewport" content="width=device-width">

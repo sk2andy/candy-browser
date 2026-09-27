@@ -1036,9 +1036,14 @@
     <string name="permission_radar_block">Block</string>
     <string name="permission_radar_settings_summary">Camera, microphone, location, and other site permissions</string>
     <string name="permission_radar_site_action">Site permissions</string>
+    <string name="permission_site_https">HTTPS address</string>
+    <string name="permission_site_http">HTTP address · not encrypted</string>
     <string name="permission_camera">Camera</string>
     <string name="permission_microphone">Microphone</string>
     <string name="permission_location">Location</string>
+    <string name="permission_notifications">Notifications</string>
+    <string name="permission_notifications_private_unavailable">Unavailable in private browsing</string>
+    <string name="web_notification_channel_name">Website notifications</string>
     <string name="permission_midi">MIDI system messages</string>
     <string name="permission_protected_media">Protected media ID</string>
     <string name="permission_decision_ask">Ask</string>

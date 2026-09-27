@@ -130,6 +130,7 @@ internal fun BoxScope.BrowserModalSurfaces(
         PermissionPromptDialog(
             prompt = prompt,
             onChoice = { choice -> controller.respondToPermissionPrompt(prompt.id, choice) },
+            onShown = { controller.onPermissionPromptShown(prompt.id) },
         )
     }
 

@@ -19,6 +19,16 @@
 | Decision | `PermissionRadarRepository` | Separate persistent, private and allow-once state |
 | Android grant | `runtimePermissions`, `PermissionResponseDelivery` | Web permission is granted only after required Android runtime permissions |
 | Storage | `PermissionRadarStore` | Persist only non-private, non-`Ask` decisions |
+| Website info | Address-bar lock/warning button and `PermissionRadarSheet` | Show the current HTTP(S) scheme and open per-site decisions even without an active request |
+| Website notifications | Gecko content permission, Android `POST_NOTIFICATIONS`, `GeckoWebNotificationPresenter` | Ask through Permission Radar, align persistent decisions with Gecko storage, then publish permitted page notifications through Android; private notifications are denied |
+
+Notification grants are persistent site decisions because Gecko stores the result of a content
+permission request. Permission Radar does not offer a session-only notification grant. Denying the
+Android notification permission records a site block so Candy and Gecko keep the same decision.
+
+Gecko's page notification API is separate from background Web Push subscriptions. Background
+delivery needs a push transport and `WebPushDelegate`; the page notification path does not create
+or receive push subscriptions.
 
 ## Generated assets and audits
 

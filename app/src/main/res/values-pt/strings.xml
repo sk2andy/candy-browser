@@ -1001,9 +1001,14 @@
     <string name="permission_radar_block">Bloquear</string>
     <string name="permission_radar_settings_summary">Câmara, microfone, localização e outras permissões de sites</string>
     <string name="permission_radar_site_action">Permissões do site</string>
+    <string name="permission_site_https">Endereço HTTPS</string>
+    <string name="permission_site_http">Endereço HTTP · não encriptado</string>
     <string name="permission_camera">Câmara</string>
     <string name="permission_microphone">Microfone</string>
     <string name="permission_location">Localização</string>
+    <string name="permission_notifications">Notificações</string>
+    <string name="permission_notifications_private_unavailable">Indisponível na navegação privada</string>
+    <string name="web_notification_channel_name">Notificações de sites</string>
     <string name="permission_midi">Mensagens do sistema MIDI</string>
     <string name="permission_protected_media">ID de conteúdo protegido</string>
     <string name="permission_decision_ask">Perguntar</string>

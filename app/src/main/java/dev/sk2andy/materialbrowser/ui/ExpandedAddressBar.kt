@@ -109,6 +109,7 @@ import dev.sk2andy.materialbrowser.browser.PageTranslationProvider
 import dev.sk2andy.materialbrowser.browser.PageTranslationRules
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoExtensionActionKey
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoExtensionActionState
+import dev.sk2andy.materialbrowser.browser.permissions.PermissionOrigin
 import dev.sk2andy.materialbrowser.browser.userscript.UserScriptMenuCommand
 import dev.sk2andy.materialbrowser.data.AddressBarAction
 import dev.sk2andy.materialbrowser.data.AddressBarActionLayout
@@ -587,7 +588,9 @@ internal fun ExpandedBottomBarContent(
                                         tabId = tab.id,
                                     )
                                     PermissionRadarBadge(
-                                        visible = permissionActivityVisible,
+                                        siteAvailable = PermissionOrigin.normalize(tab.url) != null,
+                                        activityVisible = permissionActivityVisible,
+                                        isHttps = tab.url.startsWith("https://", ignoreCase = true),
                                         onClick = onPermissionRadar,
                                         modifier = Modifier.padding(end = 2.dp),
                                     )

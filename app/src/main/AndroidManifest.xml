@@ -292,5 +292,9 @@
         <receiver
             android:name=".browser.PrivateTabsNotificationReceiver"
             android:exported="false" />
+
+        <receiver
+            android:name=".browser.gecko.GeckoWebNotificationReceiver"
+            android:exported="false" />
     </application>
 </manifest>
