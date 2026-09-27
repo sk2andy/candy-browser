@@ -66,6 +66,8 @@ import dev.sk2andy.materialbrowser.browser.engine.BrowserEngineContentKind
 import dev.sk2andy.materialbrowser.browser.engine.BrowserWebContentColorScheme
 import dev.sk2andy.materialbrowser.browser.integration.BrowserUriPolicy
 import dev.sk2andy.materialbrowser.browser.permissions.SitePermission
+import dev.sk2andy.materialbrowser.browser.permissions.PermissionOrigin
+import dev.sk2andy.materialbrowser.browser.permissions.SitePermissionDecision
 import dev.sk2andy.materialbrowser.data.UserScriptValueStore
 import dev.sk2andy.materialbrowser.data.BrowserSessionStore
 import java.net.URI
@@ -80,6 +82,7 @@ import org.mozilla.geckoview.AllowOrDeny
 import org.mozilla.geckoview.Autocomplete
 import org.mozilla.geckoview.CandyGeckoViewSafeAreaBridge
 import org.mozilla.geckoview.ContentBlocking
+import org.mozilla.geckoview.ExperimentalGeckoViewApi
 import org.mozilla.geckoview.GeckoResult
 import org.mozilla.geckoview.GeckoRuntime
 import org.mozilla.geckoview.GeckoRuntimeSettings
@@ -287,6 +290,7 @@ internal class GeckoViewRuntimeHandle private constructor(
                 dnsOverHttpsSettings = BrowserSessionStore(appContext).loadDnsOverHttpsSettings(),
             )
             val runtime = GeckoRuntime.create(appContext, runtimeSettings)
+            runtime.webNotificationDelegate = GeckoWebNotificationPresenter(appContext)
             val extensionController = runtime.webExtensionController
             val toppingHost = GeckoViewToppingHostRuntime(
                 controller = extensionController,
@@ -1001,6 +1005,8 @@ private class GeckoViewBrowserSession(
     private var privacyPolicy = initialPrivacyPolicy
     private var currentPageUrl: String? = null
     private var trackingPermission: GeckoSession.PermissionDelegate.ContentPermission? = null
+    private var notificationPermissionDecisionProvider: ((String) -> SitePermissionDecision)? = null
+    private val notificationPermissionRevisions = mutableMapOf<String, Int>()
     private var privacyBound = false
     private var privacyFailureDescription: String? = null
     private val privacyBinding: GeckoPrivacyBinding
@@ -1169,6 +1175,20 @@ private class GeckoViewBrowserSession(
                 if (privacyHost.isBootstrapNavigation(session, url)) return
                 invalidateDomProbe()
                 currentPageUrl = url
+                if (!isPrivate) {
+                    PermissionOrigin.normalize(url)?.let { origin ->
+                        notificationPermissionDecisionProvider?.invoke(origin)?.let { decision ->
+                            val revision = nextNotificationPermissionRevision(origin)
+                            reconcileNotificationPermission(
+                                origin,
+                                decision,
+                                perms,
+                                revision,
+                                onChanged = { session.reload() },
+                            )
+                        }
+                    }
+                }
                 val cookieBehaviorChanged = reconcileCookieBehavior()
                 if (autoplayLocationUrl != url) {
                     autoplayLocationUrl = url
@@ -1255,10 +1275,19 @@ private class GeckoViewBrowserSession(
                 )
             }
 
+            @ExperimentalGeckoViewApi
             override fun onContentPermissionRequest(
                 session: GeckoSession,
                 perm: GeckoSession.PermissionDelegate.ContentPermission,
             ): GeckoResult<Int>? {
+                if (
+                    isPrivate &&
+                    perm.permission == GeckoSession.PermissionDelegate.PERMISSION_DESKTOP_NOTIFICATION
+                ) {
+                    return GeckoResult.fromValue(
+                        GeckoSession.PermissionDelegate.ContentPermission.VALUE_DENY,
+                    )
+                }
                 val permission = when (perm.permission) {
                     GeckoSession.PermissionDelegate.PERMISSION_AUTOPLAY_AUDIBLE ->
                         GeckoAutoplayPermission.Audible
@@ -1275,6 +1304,8 @@ private class GeckoViewBrowserSession(
                         val sitePermission = when (perm.permission) {
                             GeckoSession.PermissionDelegate.PERMISSION_GEOLOCATION ->
                                 SitePermission.Location
+                            GeckoSession.PermissionDelegate.PERMISSION_DESKTOP_NOTIFICATION ->
+                                SitePermission.Notifications
                             GeckoSession.PermissionDelegate.PERMISSION_MEDIA_KEY_SYSTEM_ACCESS ->
                                 SitePermission.ProtectedMedia
                             else -> return null
@@ -1297,6 +1328,7 @@ private class GeckoViewBrowserSession(
                                         },
                                     )
                                 },
+                                onPromptShown = perm::notifyShown,
                             ),
                         )
                         return result
@@ -1983,6 +2015,110 @@ private class GeckoViewBrowserSession(
         listener: GeckoContentPermissionRequestListener?,
     ) {
         contentPermissionRequestListener = listener
+    }
+
+    override fun setNotificationPermission(
+        origin: String,
+        decision: SitePermissionDecision,
+        onComplete: (() -> Unit)?,
+    ) {
+        if (closed || isPrivate || PermissionOrigin.normalize(origin) != origin) {
+            onComplete?.invoke()
+            return
+        }
+        val revision = nextNotificationPermissionRevision(origin)
+        storageController.getPermissions(origin, session.settings.contextId, false)
+            .withHandler(mainHandler)
+            .accept(
+                { permissions ->
+                    if (closed || notificationPermissionRevisions[origin] != revision) return@accept
+                    reconcileNotificationPermission(
+                        origin,
+                        decision,
+                        permissions.orEmpty(),
+                        revision,
+                        onComplete = onComplete,
+                    )
+                },
+                { },
+            )
+    }
+
+    private fun nextNotificationPermissionRevision(origin: String): Int =
+        ((notificationPermissionRevisions[origin] ?: 0) + 1).also { revision ->
+            notificationPermissionRevisions[origin] = revision
+        }
+
+    override fun setNotificationPermissionDecisionProvider(
+        provider: ((String) -> SitePermissionDecision)?,
+    ) {
+        notificationPermissionDecisionProvider = provider
+    }
+
+    private fun reconcileNotificationPermission(
+        origin: String,
+        decision: SitePermissionDecision,
+        permissions: List<GeckoSession.PermissionDelegate.ContentPermission>,
+        revision: Int,
+        onComplete: (() -> Unit)? = null,
+        onChanged: (() -> Unit)? = null,
+    ) {
+        val value = when (decision) {
+            SitePermissionDecision.Ask ->
+                GeckoSession.PermissionDelegate.ContentPermission.VALUE_PROMPT
+            SitePermissionDecision.Allow ->
+                GeckoSession.PermissionDelegate.ContentPermission.VALUE_ALLOW
+            SitePermissionDecision.Block ->
+                GeckoSession.PermissionDelegate.ContentPermission.VALUE_DENY
+        }
+        val notificationPermissions = permissions.filter { permission ->
+            permission.permission == GeckoSession.PermissionDelegate.PERMISSION_DESKTOP_NOTIFICATION &&
+                PermissionOrigin.normalize(permission.uri) == origin
+        }
+        val stalePermissions = notificationPermissions.filter { it.value != value }
+        if (stalePermissions.isEmpty()) {
+            onComplete?.invoke()
+            return
+        }
+        stalePermissions.forEach { permission -> storageController.setPermission(permission, value) }
+        verifyNotificationPermission(origin, value, revision, 0) {
+            onComplete?.invoke()
+            onChanged?.invoke()
+        }
+    }
+
+    private fun verifyNotificationPermission(
+        origin: String,
+        value: Int,
+        revision: Int,
+        attempt: Int,
+        onComplete: () -> Unit,
+    ) {
+        if (closed || notificationPermissionRevisions[origin] != revision) return
+        storageController.getPermissions(origin, session.settings.contextId, false)
+            .withHandler(mainHandler)
+            .accept(
+                { permissions ->
+                    if (closed || notificationPermissionRevisions[origin] != revision) return@accept
+                    val settled = permissions.orEmpty().filter { permission ->
+                        permission.permission ==
+                            GeckoSession.PermissionDelegate.PERMISSION_DESKTOP_NOTIFICATION &&
+                            PermissionOrigin.normalize(permission.uri) == origin
+                    }.all { it.value == value }
+                    when {
+                        settled -> onComplete()
+                        attempt < 20 -> mainHandler.postDelayed(
+                            {
+                                verifyNotificationPermission(
+                                    origin, value, revision, attempt + 1, onComplete,
+                                )
+                            },
+                            100L,
+                        )
+                    }
+                },
+                { },
+            )
     }
 
     override fun setMediaPermissionRequestListener(listener: GeckoMediaPermissionRequestListener?) {

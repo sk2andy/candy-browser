@@ -25,6 +25,7 @@ import dev.sk2andy.materialbrowser.browser.DnsOverHttpsSettings
 import dev.sk2andy.materialbrowser.browser.WebRtcProtectionMode
 import dev.sk2andy.materialbrowser.browser.engine.AndroidBrowserEngineFactory
 import dev.sk2andy.materialbrowser.browser.engine.BrowserEngineContentKind
+import dev.sk2andy.materialbrowser.browser.permissions.SitePermissionDecision
 import dev.sk2andy.materialbrowser.browser.engine.BrowserWebContentColorScheme
 import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineCommand
 import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineCommands
@@ -145,6 +146,18 @@ internal interface AndroidBrowserEngineSessionPort :
 
     fun setContentPermissionRequestListener(
         listener: GeckoContentPermissionRequestListener?,
+    ) = Unit
+
+    fun setNotificationPermission(
+        origin: String,
+        decision: SitePermissionDecision,
+        onComplete: (() -> Unit)? = null,
+    ) {
+        onComplete?.invoke()
+    }
+
+    fun setNotificationPermissionDecisionProvider(
+        provider: ((String) -> SitePermissionDecision)?,
     ) = Unit
 
     fun setMediaPermissionRequestListener(listener: GeckoMediaPermissionRequestListener?) = Unit
@@ -574,6 +587,23 @@ internal class GeckoBrowserEngineSessionAdapter(
         listener: GeckoContentPermissionRequestListener?,
     ) {
         session.setContentPermissionRequestListener(if (closed) null else listener)
+    }
+
+    @UiThread
+    override fun setNotificationPermission(
+        origin: String,
+        decision: SitePermissionDecision,
+        onComplete: (() -> Unit)?,
+    ) {
+        if (closed) onComplete?.invoke()
+        else session.setNotificationPermission(origin, decision, onComplete)
+    }
+
+    @UiThread
+    override fun setNotificationPermissionDecisionProvider(
+        provider: ((String) -> SitePermissionDecision)?,
+    ) {
+        session.setNotificationPermissionDecisionProvider(if (closed) null else provider)
     }
 
     @UiThread

@@ -7,6 +7,7 @@ enum class SitePermission {
     Camera,
     Microphone,
     Location,
+    Notifications,
     MidiSysex,
     ProtectedMedia,
 }
@@ -190,6 +191,7 @@ val SitePermission.runtimePermissions: Set<String>
             "android.permission.ACCESS_COARSE_LOCATION",
             "android.permission.ACCESS_FINE_LOCATION",
         )
+        SitePermission.Notifications -> setOf("android.permission.POST_NOTIFICATIONS")
         SitePermission.MidiSysex,
         SitePermission.ProtectedMedia,
         -> emptySet()

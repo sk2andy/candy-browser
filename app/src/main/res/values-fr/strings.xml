@@ -1001,9 +1001,15 @@
     <string name="permission_radar_block">Bloquer</string>
     <string name="permission_radar_settings_summary">Caméra, microphone, position et autres autorisations de sites</string>
     <string name="permission_radar_site_action">Autorisations du site</string>
+    <string name="permission_site_https">Adresse HTTPS</string>
+    <string name="permission_site_http">Adresse HTTP · non chiffrée</string>
     <string name="permission_camera">Caméra</string>
     <string name="permission_microphone">Microphone</string>
     <string name="permission_location">Position</string>
+    <string name="permission_notifications">Notifications</string>
+    <string name="permission_notifications_private_unavailable">Indisponible en navigation privée</string>
+    <string name="permission_notifications_system_webview_unavailable">Android System WebView ne prend pas en charge les notifications de sites web ni Web Push.</string>
+    <string name="web_notification_channel_name">Notifications des sites web</string>
     <string name="permission_midi">Messages système MIDI</string>
     <string name="permission_protected_media">Identifiant de média protégé</string>
     <string name="permission_decision_ask">Demander</string>

@@ -1,5 +1,6 @@
 package dev.sk2andy.materialbrowser.browser
 
+import android.Manifest
 import android.app.Activity
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -1418,6 +1419,7 @@ class BrowserController(
     private val permissionRepository = PermissionRadarRepository(permissionStore)
     private val activePermissions = ActivePermissionLedger()
     private var pendingPermissionAccess: PendingPermissionAccess? = null
+    private var shownPermissionPromptId: Long? = null
     private var pendingGeckoAndroidPermissionRequest: PendingGeckoAndroidPermissionRequest? = null
     private var pendingFileChooser: PendingFileChooser? = null
     private var permissionPromptSequence = 0L
@@ -1744,14 +1746,20 @@ class BrowserController(
         if (normalizedOrigin != origin) return false
         val site = PermissionSiteKey(tab.profileId, normalizedOrigin)
         permissionRepository.setDecision(site, permission, decision, tab.isIncognito)
+        val reload = activePermissions.has(tabId, site, permission)
+        if (permission == SitePermission.Notifications) {
+            browserEngineSessions[tabId]?.setNotificationPermission(normalizedOrigin, decision) {
+                if (reload) browserEngineSessions[tabId]?.execute(BrowserEngineCommands.reload())
+            }
+        }
         permissionRevision++
-        if (
-            activePermissions.has(tabId, site, permission)
-        ) {
+        if (reload) {
             cancelPendingPermissionAccess(tabId)
             removeActivePermissionsForTab(tabId)
             clearExternalNavigationAuthorization(tabId)
-            browserEngineSessions[tabId]?.execute(BrowserEngineCommands.reload())
+            if (permission != SitePermission.Notifications) {
+                browserEngineSessions[tabId]?.execute(BrowserEngineCommands.reload())
+            }
         } else if (
             pendingPermissionAccess?.let { access ->
                 access.site == site && permission in access.requested
@@ -1769,12 +1777,18 @@ class BrowserController(
         if (normalizedOrigin != origin) return false
         val site = PermissionSiteKey(tab.profileId, normalizedOrigin)
         permissionRepository.resetSite(site, tab.isIncognito)
+        val reload = activePermissions.hasSite(tabId, site)
+        browserEngineSessions[tabId]?.setNotificationPermission(
+            normalizedOrigin,
+            SitePermissionDecision.Ask,
+        ) {
+            if (reload) browserEngineSessions[tabId]?.execute(BrowserEngineCommands.reload())
+        }
         permissionRevision++
         if (pendingPermissionAccess?.site == site) cancelPendingPermissionAccess(tabId)
-        if (activePermissions.hasSite(tabId, site)) {
+        if (reload) {
             removeActivePermissionsForTab(tabId)
             clearExternalNavigationAuthorization(tabId)
-            browserEngineSessions[tabId]?.execute(BrowserEngineCommands.reload())
         }
         return true
     }
@@ -1786,7 +1800,10 @@ class BrowserController(
             return
         }
         val prompted = pending.prompted
-        when (choice) {
+        val effectiveChoice = if (
+            SitePermission.Notifications in prompted && choice == PermissionPromptChoice.AllowOnce
+        ) PermissionPromptChoice.AllowAlways else choice
+        when (effectiveChoice) {
             PermissionPromptChoice.AllowOnce -> permissionRepository.allowOnce(
                 pending.site,
                 prompted,
@@ -1811,12 +1828,19 @@ class BrowserController(
         }
         permissionPrompt = null
         permissionRevision++
-        val allowed = if (choice == PermissionPromptChoice.Block) {
+        val allowed = if (effectiveChoice == PermissionPromptChoice.Block) {
             pending.allowed
         } else {
             pending.allowed + prompted
         }
         continuePermissionAccess(pending.copy(allowed = allowed, prompted = emptySet()))
+    }
+
+    fun onPermissionPromptShown(promptId: Long) {
+        val pending = pendingPermissionAccess?.takeIf { it.promptId == promptId } ?: return
+        if (shownPermissionPromptId == promptId) return
+        shownPermissionPromptId = promptId
+        pending.onPromptShown?.let { callback -> runCatching(callback) }
     }
 
     fun respondToHttpAuthPrompt(promptId: Long, username: String, password: String) {
@@ -10469,6 +10493,13 @@ class BrowserController(
                 session.setContentPermissionRequestListener { request ->
                     onGeckoContentPermissionRequest(tab.id, session, request)
                 }
+                session.setNotificationPermissionDecisionProvider { origin ->
+                    permissionRepository.decision(
+                        PermissionSiteKey(tab.profileId, origin),
+                        SitePermission.Notifications,
+                        tab.isIncognito,
+                    )
+                }
                 session.setMediaPermissionRequestListener { request ->
                     onGeckoMediaPermissionRequest(tab.id, session, request)
                 }
@@ -10973,6 +11004,7 @@ class BrowserController(
             origin = request.origin,
             requested = setOf(request.permission),
             requestToken = request.response,
+            onPromptShown = request.onPromptShown,
             grant = { allowed -> request.response.complete(request.permission in allowed) },
             deny = { request.response.complete(false) },
         )
@@ -11000,6 +11032,7 @@ class BrowserController(
         origin: String,
         requested: Set<SitePermission>,
         requestToken: Any,
+        onPromptShown: (() -> Unit)? = null,
         grant: (Set<SitePermission>) -> Unit,
         deny: () -> Unit,
     ) {
@@ -11028,6 +11061,7 @@ class BrowserController(
             requested = requested,
             kind = PendingPermissionKind.Gecko,
             requestToken = requestToken,
+            onPromptShown = onPromptShown,
             grant = grant,
             deny = deny,
         )
@@ -12957,6 +12991,7 @@ class BrowserController(
         requested: Set<SitePermission>,
         kind: PendingPermissionKind,
         requestToken: Any,
+        onPromptShown: (() -> Unit)? = null,
         grant: (Set<SitePermission>) -> Unit,
         deny: () -> Unit,
     ) {
@@ -12978,6 +13013,7 @@ class BrowserController(
             prompted = matrix.pending,
             kind = kind,
             requestToken = requestToken,
+            onPromptShown = onPromptShown,
             promptId = promptId,
             awaitingRuntime = false,
             delivery = PermissionResponseDelivery(grant, deny),
@@ -13036,6 +13072,21 @@ class BrowserController(
         }
         pendingPermissionAccess = null
         permissionPrompt = null
+        if (
+            SitePermission.Notifications in pending.allowed &&
+            SitePermission.Notifications !in granted
+        ) {
+            permissionRepository.setDecision(
+                pending.site,
+                SitePermission.Notifications,
+                SitePermissionDecision.Block,
+                pending.identity.isPrivate,
+            )
+            browserEngineSessions[pending.identity.tabId]?.setNotificationPermission(
+                pending.site.origin,
+                SitePermissionDecision.Block,
+            )
+        }
         if (granted.isEmpty()) {
             runCatching { pending.delivery.deny() }
         } else {
@@ -13178,7 +13229,9 @@ class BrowserController(
     }
 
     private fun hasRuntimePermission(permission: String): Boolean =
-        ContextCompat.checkSelfPermission(activity, permission) == PackageManager.PERMISSION_GRANTED
+        permission == Manifest.permission.POST_NOTIFICATIONS &&
+            Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+            ContextCompat.checkSelfPermission(activity, permission) == PackageManager.PERMISSION_GRANTED
 
     private fun hasRuntimePermissionFor(permission: SitePermission): Boolean = when (permission) {
         SitePermission.Location -> permission.runtimePermissions.any(::hasRuntimePermission)
@@ -15689,6 +15742,7 @@ class BrowserController(
         val prompted: Set<SitePermission>,
         val kind: PendingPermissionKind,
         val requestToken: Any,
+        val onPromptShown: (() -> Unit)?,
         val promptId: Long?,
         val awaitingRuntime: Boolean,
         val delivery: PermissionResponseDelivery,

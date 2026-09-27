@@ -49,6 +49,7 @@ internal data class BrowserEngineContentPermissionRequest(
     val origin: String,
     val permission: SitePermission,
     val response: BrowserEngineBooleanResponse,
+    val onPromptShown: (() -> Unit)? = null,
 )
 
 internal data class BrowserEngineMediaPermissionRequest(

@@ -20,6 +20,7 @@ import dev.sk2andy.materialbrowser.browser.TextInputOcclusionProbeResult
 import dev.sk2andy.materialbrowser.browser.actions.BrowserContentTargetListener
 import dev.sk2andy.materialbrowser.browser.actions.WebContentTarget
 import dev.sk2andy.materialbrowser.browser.engine.BrowserEngineContentKind
+import dev.sk2andy.materialbrowser.browser.permissions.SitePermissionDecision
 import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineFailureKind
 import org.mozilla.geckoview.GeckoSession
 import org.mozilla.geckoview.WebRequestError
@@ -252,6 +253,19 @@ internal interface GeckoBrowserSession {
 
     fun setContentPermissionRequestListener(
         listener: GeckoContentPermissionRequestListener?,
+    ) = Unit
+
+    /** Keeps Gecko's stored notification decision aligned with Permission Radar. */
+    fun setNotificationPermission(
+        origin: String,
+        decision: SitePermissionDecision,
+        onComplete: (() -> Unit)? = null,
+    ) {
+        onComplete?.invoke()
+    }
+
+    fun setNotificationPermissionDecisionProvider(
+        provider: ((String) -> SitePermissionDecision)?,
     ) = Unit
 
     fun setMediaPermissionRequestListener(listener: GeckoMediaPermissionRequestListener?) = Unit

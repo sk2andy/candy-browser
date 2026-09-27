@@ -19,6 +19,7 @@ import dev.sk2andy.materialbrowser.browser.permissions.SitePermissionDecision
 import dev.sk2andy.materialbrowser.ui.theme.MaterialBrowserTheme
 import java.util.concurrent.atomic.AtomicReference
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -51,6 +52,7 @@ class PermissionRadarSheetInstrumentedTest {
                         ),
                     ),
                     profileEmoji = "🍬",
+                    websiteNotificationsSupported = true,
                     onOriginSelected = {},
                     onDecisionChanged = { permission, decision ->
                         changed.set(permission to decision)
@@ -97,5 +99,118 @@ class PermissionRadarSheetInstrumentedTest {
             .performClick()
 
         assertEquals(PermissionPromptChoice.AllowOnce, selected.get())
+    }
+
+    @Test
+    fun siteInfoButtonRemainsAvailableWithoutPermissionActivity() {
+        var opened = false
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                PermissionRadarBadge(
+                    siteAvailable = true,
+                    activityVisible = false,
+                    isHttps = true,
+                    onClick = { opened = true },
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(PermissionRadarTestTags.ActivityBadge)
+            .assertHasClickAction()
+            .performClick()
+        assertTrue(opened)
+    }
+
+    @Test
+    fun privateNotificationDecisionIsUnavailable() {
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                PermissionRadarSheet(
+                    snapshot = PermissionRadarSnapshot(
+                        site = site,
+                        isPrivate = true,
+                        knownOrigins = listOf(site.origin),
+                        entries = listOf(
+                            PermissionRadarEntry(
+                                permission = SitePermission.Notifications,
+                                decision = SitePermissionDecision.Ask,
+                                allowedForSession = false,
+                                activity = SitePermissionActivity.Idle,
+                            ),
+                        ),
+                    ),
+                    profileEmoji = "🍬",
+                    websiteNotificationsSupported = true,
+                    onOriginSelected = {},
+                    onDecisionChanged = { _, _ -> error("Private notifications cannot be changed") },
+                    onResetSite = {},
+                    onDismiss = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText(
+            context.getString(R.string.permission_notifications_private_unavailable),
+        ).assertExists()
+    }
+
+    @Test
+    fun systemWebViewExplainsUnsupportedNotificationsWithoutOfferingGrant() {
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                PermissionRadarSheet(
+                    snapshot = PermissionRadarSnapshot(
+                        site = site,
+                        isPrivate = false,
+                        knownOrigins = listOf(site.origin),
+                        entries = listOf(
+                            PermissionRadarEntry(
+                                permission = SitePermission.Notifications,
+                                decision = SitePermissionDecision.Ask,
+                                allowedForSession = false,
+                                activity = SitePermissionActivity.Idle,
+                            ),
+                        ),
+                    ),
+                    profileEmoji = "🍬",
+                    websiteNotificationsSupported = false,
+                    onOriginSelected = {},
+                    onDecisionChanged = { _, _ -> error("System WebView cannot grant notifications") },
+                    onResetSite = {},
+                    onDismiss = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText(
+            context.getString(R.string.permission_notifications_system_webview_unavailable),
+        ).assertExists()
+        composeRule.onNodeWithText(context.getString(R.string.permission_decision_allow))
+            .assertDoesNotExist()
+    }
+
+    @Test
+    fun notificationPromptOffersPersistentGrantOnly() {
+        val selected = AtomicReference<PermissionPromptChoice?>()
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                PermissionPromptDialog(
+                    prompt = PermissionPrompt(
+                        id = 2L,
+                        tabId = "tab-a",
+                        site = site,
+                        permissions = setOf(SitePermission.Notifications),
+                        isPrivate = false,
+                    ),
+                    onChoice = selected::set,
+                )
+            }
+        }
+
+        composeRule.onNodeWithText(context.getString(R.string.permission_radar_allow_once))
+            .assertDoesNotExist()
+        composeRule.onNodeWithText(context.getString(R.string.permission_radar_allow_always))
+            .performClick()
+        assertEquals(PermissionPromptChoice.AllowAlways, selected.get())
     }
 }

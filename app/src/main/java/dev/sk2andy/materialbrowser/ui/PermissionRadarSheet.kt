@@ -16,15 +16,20 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -49,6 +54,7 @@ import dev.sk2andy.materialbrowser.ui.theme.browserChromeColor
 internal fun PermissionRadarSheet(
     snapshot: PermissionRadarSnapshot,
     profileEmoji: String,
+    websiteNotificationsSupported: Boolean,
     onOriginSelected: (String) -> Unit,
     onDecisionChanged: (SitePermission, SitePermissionDecision) -> Unit,
     onResetSite: () -> Unit,
@@ -132,9 +138,33 @@ internal fun PermissionRadarSheet(
                     overflow = TextOverflow.Ellipsis,
                     style = MaterialTheme.typography.titleMedium,
                 )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    val isHttps = site.origin.startsWith("https://")
+                    Icon(
+                        if (isHttps) Icons.Default.Lock else Icons.Default.Warning,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Text(
+                        stringResource(
+                            if (isHttps) R.string.permission_site_https
+                            else R.string.permission_site_http,
+                        ),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
                 Spacer(Modifier.height(10.dp))
                 snapshot.entries.forEach { entry ->
-                    PermissionRadarRow(entry, onDecisionChanged)
+                    PermissionRadarRow(
+                        entry,
+                        snapshot.isPrivate,
+                        websiteNotificationsSupported,
+                        onDecisionChanged,
+                    )
                     Spacer(Modifier.height(8.dp))
                 }
                 TextButton(
@@ -151,8 +181,12 @@ internal fun PermissionRadarSheet(
 @Composable
 private fun PermissionRadarRow(
     entry: PermissionRadarEntry,
+    isPrivate: Boolean,
+    websiteNotificationsSupported: Boolean,
     onDecisionChanged: (SitePermission, SitePermissionDecision) -> Unit,
 ) {
+    val notificationsUnavailable =
+        entry.permission == SitePermission.Notifications && !websiteNotificationsSupported
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(22.dp),
@@ -177,6 +211,10 @@ private fun PermissionRadarRow(
                     )
                     Text(
                         when {
+                            notificationsUnavailable ->
+                                stringResource(
+                                    R.string.permission_notifications_system_webview_unavailable,
+                                )
                             entry.activity == SitePermissionActivity.Active ->
                                 stringResource(R.string.permission_radar_active)
                             entry.activity == SitePermissionActivity.Pending ->
@@ -189,20 +227,30 @@ private fun PermissionRadarRow(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-                PermissionActivityDot(entry.activity)
+                if (!notificationsUnavailable) PermissionActivityDot(entry.activity)
             }
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            if (isPrivate && entry.permission == SitePermission.Notifications &&
+                !notificationsUnavailable
             ) {
-                SitePermissionDecision.entries.forEach { decision ->
-                    FilterChip(
-                        selected = entry.decision == decision && !entry.allowedForSession,
-                        onClick = { onDecisionChanged(entry.permission, decision) },
-                        label = { Text(decision.displayName()) },
-                    )
+                Text(
+                    stringResource(R.string.permission_notifications_private_unavailable),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            } else if (!notificationsUnavailable) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    SitePermissionDecision.entries.forEach { decision ->
+                        FilterChip(
+                            selected = entry.decision == decision && !entry.allowedForSession,
+                            onClick = { onDecisionChanged(entry.permission, decision) },
+                            label = { Text(decision.displayName()) },
+                        )
+                    }
                 }
             }
         }
@@ -234,12 +282,17 @@ private fun PermissionActivityDot(activity: SitePermissionActivity) {
 
 @Composable
 internal fun PermissionRadarBadge(
-    visible: Boolean,
+    siteAvailable: Boolean,
+    activityVisible: Boolean,
+    isHttps: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    if (!visible) return
-    val description = stringResource(R.string.permission_radar_activity_cd)
+    if (!siteAvailable) return
+    val description = stringResource(
+        if (activityVisible) R.string.permission_radar_activity_cd
+        else R.string.permission_radar_site_action,
+    )
     Surface(
         onClick = onClick,
         modifier = modifier
@@ -248,11 +301,18 @@ internal fun PermissionRadarBadge(
             .semantics { contentDescription = description }
             .testTag(PermissionRadarTestTags.ActivityBadge),
         shape = CircleShape,
-        color = MaterialTheme.colorScheme.tertiaryContainer,
+        color = if (activityVisible) MaterialTheme.colorScheme.tertiaryContainer
+        else MaterialTheme.colorScheme.surfaceContainerHigh,
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Spacer(Modifier.weight(1f))
-            Text("◉", color = MaterialTheme.colorScheme.onTertiaryContainer)
+            Icon(
+                if (isHttps) Icons.Default.Lock else Icons.Default.Warning,
+                contentDescription = null,
+                modifier = Modifier.size(20.dp),
+                tint = if (activityVisible) MaterialTheme.colorScheme.onTertiaryContainer
+                else MaterialTheme.colorScheme.onSurfaceVariant,
+            )
             Spacer(Modifier.weight(1f))
         }
     }
@@ -262,11 +322,15 @@ internal fun PermissionRadarBadge(
 internal fun PermissionPromptDialog(
     prompt: PermissionPrompt,
     onChoice: (PermissionPromptChoice) -> Unit,
+    onShown: () -> Unit = {},
 ) {
+    LaunchedEffect(prompt.id) { onShown() }
+    val persistentNotificationPermission = SitePermission.Notifications in prompt.permissions
     val permissionNamesByType = mapOf(
         SitePermission.Camera to stringResource(R.string.permission_camera),
         SitePermission.Microphone to stringResource(R.string.permission_microphone),
         SitePermission.Location to stringResource(R.string.permission_location),
+        SitePermission.Notifications to stringResource(R.string.permission_notifications),
         SitePermission.MidiSysex to stringResource(R.string.permission_midi),
         SitePermission.ProtectedMedia to stringResource(R.string.permission_protected_media),
     )
@@ -293,22 +357,34 @@ internal fun PermissionPromptDialog(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-                TextButton(onClick = { onChoice(PermissionPromptChoice.AllowAlways) }) {
-                    Text(
-                        stringResource(
-                            if (prompt.isPrivate) {
-                                R.string.permission_radar_allow_private
-                            } else {
-                                R.string.permission_radar_allow_always
-                            },
-                        ),
-                    )
+                if (!persistentNotificationPermission) {
+                    TextButton(onClick = { onChoice(PermissionPromptChoice.AllowAlways) }) {
+                        Text(
+                            stringResource(
+                                if (prompt.isPrivate) {
+                                    R.string.permission_radar_allow_private
+                                } else {
+                                    R.string.permission_radar_allow_always
+                                },
+                            ),
+                        )
+                    }
                 }
             }
         },
         confirmButton = {
-            Button(onClick = { onChoice(PermissionPromptChoice.AllowOnce) }) {
-                Text(stringResource(R.string.permission_radar_allow_once))
+            Button(onClick = {
+                onChoice(
+                    if (persistentNotificationPermission) PermissionPromptChoice.AllowAlways
+                    else PermissionPromptChoice.AllowOnce,
+                )
+            }) {
+                Text(
+                    stringResource(
+                        if (persistentNotificationPermission) R.string.permission_radar_allow_always
+                        else R.string.permission_radar_allow_once,
+                    ),
+                )
             }
         },
         dismissButton = {
@@ -324,6 +400,7 @@ private fun SitePermission.displayName(): String = when (this) {
     SitePermission.Camera -> stringResource(R.string.permission_camera)
     SitePermission.Microphone -> stringResource(R.string.permission_microphone)
     SitePermission.Location -> stringResource(R.string.permission_location)
+    SitePermission.Notifications -> stringResource(R.string.permission_notifications)
     SitePermission.MidiSysex -> stringResource(R.string.permission_midi)
     SitePermission.ProtectedMedia -> stringResource(R.string.permission_protected_media)
 }
@@ -332,6 +409,7 @@ private fun SitePermission.symbol(): String = when (this) {
     SitePermission.Camera -> "◉"
     SitePermission.Microphone -> "●"
     SitePermission.Location -> "⌖"
+    SitePermission.Notifications -> "●"
     SitePermission.MidiSysex -> "♫"
     SitePermission.ProtectedMedia -> "◆"
 }
