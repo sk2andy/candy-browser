@@ -42,6 +42,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -386,33 +387,39 @@ internal fun PermissionRadarBadge(
             .semantics { contentDescription = description }
             .testTag(PermissionRadarTestTags.ActivityBadge),
         shape = RoundedCornerShape(24.dp),
-        color = if (activityVisible) MaterialTheme.colorScheme.tertiaryContainer
-        else MaterialTheme.colorScheme.surfaceContainerHigh,
+        color = Color.Transparent,
     ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
+        Surface(
+            modifier = Modifier.padding(4.dp),
+            shape = RoundedCornerShape(20.dp),
+            color = if (activityVisible) MaterialTheme.colorScheme.tertiaryContainer
+            else MaterialTheme.colorScheme.surfaceContainerHigh,
         ) {
-            Icon(
-                when (connectionKind) {
-                    SiteConnectionKind.Https -> Icons.Default.Lock
-                    SiteConnectionKind.Http -> Icons.Default.Warning
-                    SiteConnectionKind.Unavailable, SiteConnectionKind.Other -> Icons.Default.Info
-                },
-                contentDescription = null,
-                modifier = Modifier.size(20.dp),
-                tint = if (activityVisible) MaterialTheme.colorScheme.onTertiaryContainer
-                else MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            if (blockedCount > 0) {
-                Text(
-                    blockedCount.toString(),
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = if (activityVisible) MaterialTheme.colorScheme.onTertiaryContainer
+            Row(
+                modifier = Modifier.height(40.dp).padding(horizontal = 11.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                Icon(
+                    when (connectionKind) {
+                        SiteConnectionKind.Https -> Icons.Default.Lock
+                        SiteConnectionKind.Http -> Icons.Default.Warning
+                        SiteConnectionKind.Unavailable, SiteConnectionKind.Other -> Icons.Default.Info
+                    },
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                    tint = if (activityVisible) MaterialTheme.colorScheme.onTertiaryContainer
                     else MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                if (blockedCount > 0) {
+                    Text(
+                        blockedCount.toString(),
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = if (activityVisible) MaterialTheme.colorScheme.onTertiaryContainer
+                        else MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
         }
     }

@@ -588,7 +588,6 @@ internal fun ExpandedBottomBarContent(
                                         ),
                                         blockedCount = tab.blockedCount,
                                         onClick = onPrivacyXRay,
-                                        modifier = Modifier.padding(end = 2.dp),
                                         tabId = tab.id,
                                     )
                             },
