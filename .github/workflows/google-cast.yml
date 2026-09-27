@@ -75,6 +75,9 @@ jobs:
               sleep 2
             done
           '
+          # Keep unrelated emulator app failures from covering the Cast gesture target.
+          adb -s "$ANDROID_SERIAL" shell settings put global hide_error_dialogs 1
+          [[ "$(adb -s "$ANDROID_SERIAL" shell settings get global hide_error_dialogs | tr -d '\r')" == "1" ]]
           adb -s "$ANDROID_SERIAL" shell input keyevent 82
 
       - name: Run Cast rule regressions

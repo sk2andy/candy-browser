@@ -59,6 +59,11 @@ call-site cutover are not complete.
   supports it, previews, Reader extraction, find, printing, media/fullscreen reporting and
   engine-local back-forward state. Firefox WebExtensions and their uBO filtering exist only in
   GeckoView mode.
+- System WebView enables Payment Request when the installed provider exposes it, declares Android
+  payment-app discovery intents, and appends Google's required token to its reduced user agent.
+  Google Pay additionally depends on a recent WebView/Play Services and Google's app integration
+  approval; enabling the API alone does not guarantee a live checkout. GeckoView does not expose
+  AndroidX WebKit's Payment Request setting or native Google Pay handoff.
 - System WebView uses profile-scoped cookie managers for page loads, downloads and data deletion.
   Private profiles disable credential/autofill integration, use one process-local AndroidX WebKit
   profile and are removed on clean shutdown or before the next System-WebView process starts.
@@ -423,6 +428,11 @@ Camera and microphone permissions remain separate and continue through Candy's p
   loads enter a Candy-managed tab in the opener's exact profile/private context, while uBlock Origin
   owns filter-list popup and popunder blocking. GeckoView's unopened
   `NavigationDelegate.onNewSession` result is adopted into that Candy tab before Gecko opens it.
+  Candy allows eligible new-window requests through to `onNewSession` so payment and sign-in
+  popups retain their browser-managed connection to the opener. User-opened `about:blank`
+  pre-opened windows can be adopted, then Gecko performs the first navigation; Candy does not
+  start a duplicate load in the unopened session. Candy gives these initially blank windows up
+  to 30 seconds to navigate before discarding the unused popup.
   The explicit per-site **Always block pop-ups** override remains Candy-owned. Normal Gecko tabs and
   external previews apply the same bounded external-app grant rules; unsafe/internal schemes,
   subframes and passive app redirects remain blocked.

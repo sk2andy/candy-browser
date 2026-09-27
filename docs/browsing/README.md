@@ -11,6 +11,7 @@
 | Current Candy Edge persistent-CSS body-padding / fixed-sticky-top and event-driven stylesheet prototype | [`runtime-and-navigation.md`](runtime-and-navigation.md#current-candy-edge-prototype) | `content_safe_area_prototype.js`, Reddit component helper `content_safe_area_reddit.js`; larger classifier retained but not selected |
 | Opt-in Gecko sampling, manual DOM probe and scroll/blur diagnostics | [`performance-diagnostics.md`](performance-diagnostics.md) | `GeckoPerformanceDiagnostics`, `GeckoDomDiagnostics`, `BrowserPerformanceTrace`, `GeckoPrivacyHostRuntime`, `WebContentTopInsetScript` |
 | Android/iOS feature-parity contract and completion gates | [`platform-feature-parity.md`](platform-feature-parity.md) | Shared semantic models, platform engine adapters and native renderers |
+| Payment Request and checkout popups | [`platform-engines.md`](platform-engines.md#android-engine-selection) | `SystemWebViewBrowserEngineAdapter`, `BrowserController`, `PopupNavigationRules` |
 | Fullscreen video, website/Android PiP and background media controls | [`picture-in-picture.md`](picture-in-picture.md) | `MainActivityPictureInPictureController`, `BrowserController`, `BrowserMediaPlaybackService`, `GeckoMedia3Playback`, `WebMediaContract`, `WebMediaBridgeScript`, `FullscreenVideoOverlay` |
 | Google Cast remote video playback | [`google-cast.md`](google-cast.md) | `CastMediaRules`, `CastSessionController`, `CastControls` |
 | GeckoView website push delivery | [`web-push.md`](web-push.md) | `GeckoWebPushCoordinator`, `FossWebPushTransport`, `FossWebPushStore` |
@@ -39,6 +40,7 @@
 | Gestures and motion | `ui/Address*Test`, `ui/Address*InstrumentedTest` |
 | Gecko keyboard viewport, focused input and chrome-owned IME | `GeckoViewInsetRulesTest`, `GeckoKeyboardInsetsInstrumentedTest`, `FullImmersiveModeInstrumentedTest` |
 | WebView runtime, Basic authentication and Link Peek | `browser/*InstrumentedTest`, `BrowserControllerHttpAuthInstrumentedTest`, `ui/HttpAuthPromptDialogInstrumentedTest`, `ui/LinkPeekOverlayInstrumentedTest` |
+| Payment Request and checkout popup routing | `SystemWebViewBrowserEngineInstrumentedTest`, `BrowserControllerGeckoViewBindingInstrumentedTest` |
 | Topping parsing, catalog integrity, storage and UI | `browser/userscript/*Test`, `*Topping*InstrumentedTest`, `UserscriptManagementScreenInstrumentedTest` |
 | Shared browser behavior and Gecko extension policy | `shared/src/commonTest`, `browser/gecko/*Test` |
 | Gecko website appearance and nested AppCompat night overrides | `GeckoAppearanceInstrumentedTest`, `GeckoWebContentThemeInstrumentedTest`; the cold-start method requires system dark before a fresh, isolated instrumentation process |

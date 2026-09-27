@@ -10956,15 +10956,10 @@ class BrowserController(
             }
         }
         if (request.target == BrowserEngineNavigationTarget.New) {
-            if (safeHttpUrl == null || !request.hasUserGesture) {
+            if ((safeHttpUrl == null && request.url != BLANK_URL) || !request.hasUserGesture) {
                 return GeckoNavigationRequestDecision.Deny
             }
-            mainHandler.post {
-                if (!destroyed && browserEngineSessions[tabId] === session) {
-                    createGeckoPopup(tabId, safeHttpUrl)
-                }
-            }
-            return GeckoNavigationRequestDecision.Deny
+            return GeckoNavigationRequestDecision.Allow
         }
         val capsule = activeCapsuleForTab(tabId) ?: return GeckoNavigationRequestDecision.Allow
         if (
@@ -10987,29 +10982,32 @@ class BrowserController(
         request: GeckoNewSessionRequest,
     ): Boolean {
         if (destroyed || browserEngineSessions[openerTabId] !== openerSession) return false
-        val safeUrl = BrowserUriPolicy.normalizeHttpUrl(request.url) ?: return false
-        return createGeckoPopup(openerTabId, safeUrl, request.session)
+        if (request.url != BLANK_URL && BrowserUriPolicy.normalizeHttpUrl(request.url) == null) {
+            return false
+        }
+        return createGeckoPopup(
+            openerTabId = openerTabId,
+            preparedSession = request.session,
+            preopenedBlank = request.url == BLANK_URL,
+        )
     }
 
     private fun createGeckoPopup(
         openerTabId: String,
-        targetUrl: String,
-        preparedSession: BrowserEnginePreparedSession? = null,
+        preparedSession: BrowserEnginePreparedSession,
+        preopenedBlank: Boolean,
     ): Boolean {
         val opener = tabs.firstOrNull { it.id == openerTabId } ?: return false
         val openerUrl = pageUrls[openerTabId] ?: opener.url
         val sitePaused = isSiteProtectionPaused(openerTabId, openerUrl)
         if (isAlwaysBlockPopupsEnabled(opener, openerUrl)) return false
         val popupTabId = createBackgroundTab(
-            initialUrl = targetUrl,
+            initialUrl = BLANK_URL,
             openerTabId = openerTabId,
             isIncognito = opener.isIncognito,
             transientPopup = true,
         ) ?: return false
-        if (
-            preparedSession != null &&
-            !browserEngineSessionFactory.prepareSession(popupTabId, preparedSession)
-        ) {
+        if (!browserEngineSessionFactory.prepareSession(popupTabId, preparedSession)) {
             closeTab(popupTabId)
             return false
         }
@@ -11032,7 +11030,7 @@ class BrowserController(
                 if (popupTabId in transientPopupTabIds) discardTransientPopup(popupTabId)
                 scheduleResidentSessionTrim()
             }
-        }, PopupNavigationRules.PENDING_TIMEOUT_MILLIS)
+        }, PopupNavigationRules.pendingTimeoutMillis(preopenedBlank))
         return true
     }
 

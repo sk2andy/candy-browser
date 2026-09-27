@@ -14,6 +14,12 @@ class PopupNavigationRulesTest {
     )
 
     @Test
+    fun `preopened blank popup gets time for asynchronous checkout navigation`() {
+        assertEquals(30_000L, PopupNavigationRules.pendingTimeoutMillis(preopenedBlank = true))
+        assertEquals(5_000L, PopupNavigationRules.pendingTimeoutMillis(preopenedBlank = false))
+    }
+
+    @Test
     fun `non web targets keep pending decision`() {
         assertEquals(
             PopupNavigationDecision.KeepPending,

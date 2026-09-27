@@ -35,6 +35,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.webkit.JavaScriptExecutionWorld
 import androidx.webkit.ProfileStore
 import androidx.webkit.ScriptHandler
+import androidx.webkit.WebSettingsCompat
 import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
 import dev.sk2andy.materialbrowser.blocking.ContentBlocker
@@ -419,6 +420,8 @@ private class SystemWebViewBrowserEngineSession(
     private var lastMainFrameHttpResponse: Pair<String, Int>? = null
     @Volatile
     private var currentPageUrl: String? = initialPrivacyPolicy.pageHost
+    private val paymentRequestSupported =
+        WebViewFeature.isFeatureSupported(WebViewFeature.PAYMENT_REQUEST)
     private val defaultUserAgent: String
     private val assignedProfileName: String?
     private val trailHistoryTracker = GeckoCandyTrailHistoryTracker(tabId) { event ->
@@ -443,6 +446,9 @@ private class SystemWebViewBrowserEngineSession(
             assignedProfileName = null
         }
         defaultUserAgent = AntiFingerprintingRules.reduceUserAgent(webView.settings.userAgentString)
+            .let { userAgent ->
+                if (paymentRequestSupported) "$userAgent GOOGLE_PAY_SUPPORTED" else userAgent
+            }
         configureWebView(
             fontSizeFactor = fontSizeFactor,
             forceDarkWebsites = forceDarkWebsites,
@@ -953,6 +959,9 @@ private class SystemWebViewBrowserEngineSession(
     ) {
         webView.settings.apply {
             javaScriptEnabled = true
+            if (paymentRequestSupported) {
+                WebSettingsCompat.setPaymentRequestEnabled(this, true)
+            }
             userAgentString = defaultUserAgent
             domStorageEnabled = true
             allowFileAccess = false
