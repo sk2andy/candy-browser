@@ -43,6 +43,7 @@
   let coverNeedsProtection = false;
   let coverEnvProbe = null;
   let coverEnvWatchGeneration = 0;
+  let coverEnvRecheckedInset = null;
   let inset = 0;
   let jobs = [];
   let cleanup = [];
@@ -53,6 +54,7 @@
   let bodyPending = false;
   let semanticCheckPending = false;
   let semanticChecks = 0;
+  let coverSemanticSeeded = false;
   let initialDomSeeded = false;
   let protectedBody = null;
   let redditFlowProtected = false;
@@ -60,11 +62,19 @@
   let cssTurn = true;
   let nativeFallbackRequested = false;
   let statusBarBackdropHeaderConfirmed = false;
+  let statusBarBackdropHeader = null;
   let reportedStatusBarBackdropColor = null;
+  let reportedStatusBarBackdropRevision = null;
   let statusBarBackdropPending = false;
   const themeMediaWatchers = new Map();
   let fixedHeaderCandidates = new Map();
   let semanticHeaderCandidates = new Set();
+  let backdropPriorityCandidates = [];
+  let backdropActivationStates = new WeakMap();
+  let coverLayoutMutationStates = new WeakMap();
+  let coverLayoutPending = false;
+  let coverLayoutDue = 0;
+  let scrollListenersAttached = false;
   let headerVerificationPending = false;
   let scrollGeneration = 0;
   const semanticSelector = 'header, nav, [role="banner"], [role="navigation"]';
@@ -76,6 +86,8 @@
     : semanticSelector;
   const maxFixedHeaderCandidates = 8;
   const maxSemanticHeaderCandidates = 32;
+  const maxBackdropStyleChecks = 24;
+  const maxBackdropPriorityCandidates = 8;
   const minimumHeaderVerificationQuietMillis = 150;
   const maxSemanticChecks = 256;
 
@@ -307,29 +319,34 @@
   }
 
   function reportStatusBarBackdrop() {
-    if (nativeFallbackRequested || !configuration?.safeAreaEnabled ||
-        scrollGeneration === 0) return;
+    if (nativeFallbackRequested || !configuration?.safeAreaEnabled) return;
+    if (statusBarBackdropHeaderConfirmed && !statusBarBackdropHeader?.isConnected) {
+      statusBarBackdropHeaderConfirmed = false;
+      statusBarBackdropHeader = null;
+      publishStatusBarBackdrop(null);
+    }
     watchThemeColorMedia();
     const themeColor = activeThemeColor();
     if (statusBarBackdropHeaderConfirmed) {
-      if (themeColor !== reportedStatusBarBackdropColor) {
-        reportedStatusBarBackdropColor = themeColor;
-        globalThis.CandyContentTopInset?.statusBarBackdrop?.(
-          configuration.navigationGeneration, configuration.revision, themeColor);
-      }
+      publishStatusBarBackdrop(themeColor);
       return;
     }
-    if (!themeColor) return;
+    if (!themeColor) {
+      publishStatusBarBackdrop(null);
+      return;
+    }
     const viewportWidth = Math.max(1, globalThis.innerWidth || document.documentElement.clientWidth || 0);
     const viewportHeight = Math.max(1, globalThis.innerHeight || document.documentElement.clientHeight || 0);
-    const candidates = [...(globalThis.CandyRedditSafeArea?.headerCandidates?.() || []),
+    const candidates = [...backdropPriorityCandidates,
+      ...(globalThis.CandyRedditSafeArea?.headerCandidates?.() || []),
       ...semanticHeaderCandidates];
     const visited = new Set();
-    for (const candidate of candidates) {
+    candidateLoop: for (const candidate of candidates) {
       for (let element = candidate, depth = 0; element && depth < 8;
           element = composedParent(element), depth++) {
-        if (visited.has(element) || element === document.body ||
+        if (!element.isConnected || visited.has(element) || element === document.body ||
             element === document.documentElement) continue;
+        if (visited.size >= maxBackdropStyleChecks) break candidateLoop;
         visited.add(element);
         const style = getComputedStyle(element);
         if (style.position !== "fixed" && style.position !== "sticky") continue;
@@ -340,14 +357,29 @@
         const rect = element.getBoundingClientRect();
         if (rect.width < viewportWidth * 0.5 || rect.height <= 1 ||
             rect.height > viewportHeight * 0.5 || rect.top < inset - 2 ||
-            rect.top > inset + 2) continue;
+            rect.top > (style.position === "sticky" ? viewportHeight * 0.5 : inset + 2)) continue;
         statusBarBackdropHeaderConfirmed = true;
-        reportedStatusBarBackdropColor = themeColor;
-        globalThis.CandyContentTopInset?.statusBarBackdrop?.(
-          configuration.navigationGeneration, configuration.revision, themeColor);
+        statusBarBackdropHeader = element;
+        backdropPriorityCandidates = [];
+        coverLayoutMutationStates.set(element, `class:${element.getAttribute("class") || ""}`);
+        publishStatusBarBackdrop(themeColor);
         return;
       }
     }
+    publishStatusBarBackdrop(null);
+  }
+
+  function publishStatusBarBackdrop(color, policy = configuration) {
+    const revision = `${policy.navigationGeneration}:${policy.revision}`;
+    if (color === null && reportedStatusBarBackdropColor === null) {
+      reportedStatusBarBackdropRevision = revision;
+      return;
+    }
+    if (color === reportedStatusBarBackdropColor && revision === reportedStatusBarBackdropRevision) return;
+    reportedStatusBarBackdropColor = color;
+    reportedStatusBarBackdropRevision = revision;
+    globalThis.CandyContentTopInset?.statusBarBackdrop?.(
+      policy.navigationGeneration, policy.revision, color);
   }
 
   function pixels(value) {
@@ -530,11 +562,19 @@
       if (++frames % 4 !== 0) { globalThis.requestAnimationFrame(sample); return; }
       const nativeInset = pixels(getComputedStyle(coverEnvProbe).paddingTop) || 0;
       if (lastNativeInset !== null && Math.abs(nativeInset - lastNativeInset) > 0.5) {
+        coverEnvRecheckedInset = inset;
         coverLayoutRevision++;
         configure();
         return;
       }
       lastNativeInset = nativeInset;
+      if (coverNeedsProtection && nativeInset >= inset - 0.5 && coverEnvRecheckedInset !== inset) {
+        // The first author-layout check may have run before Gecko delivered env().
+        coverEnvRecheckedInset = inset;
+        coverLayoutRevision++;
+        configure();
+        return;
+      }
       if (nativeInset < inset - 0.5 && performance.now() < deadline) globalThis.requestAnimationFrame(sample);
     };
     globalThis.requestAnimationFrame(sample);
@@ -720,16 +760,22 @@
     semanticCheckPending = false;
     headerVerificationPending = false;
     statusBarBackdropPending = false;
+    coverLayoutPending = false;
     interactionUntil = 0;
   }
 
   function schedule(delay = 0) {
     if (timer || (!cleanup.length && !bodyPending && !jobs.length && !selectorScan &&
         !selectorBuild && !sourceDiscovery && !sourceQueue.length && !semanticCheckPending &&
-        !headerVerificationPending && !statusBarBackdropPending)) return;
+        !headerVerificationPending && !statusBarBackdropPending && !coverLayoutPending)) return;
+    if (coverLayoutPending && !cleanup.length && !bodyPending && !jobs.length && !selectorScan &&
+        !selectorBuild && !sourceDiscovery && !sourceQueue.length && !semanticCheckPending &&
+        !headerVerificationPending && !statusBarBackdropPending) {
+      delay = Math.max(delay, coverLayoutDue - performance.now());
+    }
     if (!cleanup.length && !bodyPending && !jobs.length && !selectorScan && !selectorBuild &&
         !sourceDiscovery && !semanticCheckPending && !headerVerificationPending &&
-        !statusBarBackdropPending &&
+        !statusBarBackdropPending && !coverLayoutPending &&
         sourceQueue.length) {
       delay = Math.max(delay, Math.max(0, Math.min(...sourceQueue.map((source) => source.due)) - performance.now()));
     }
@@ -756,10 +802,56 @@
     return element?.parentElement || element?.getRootNode?.().host || null;
   }
 
+  function rememberBackdropHeaderCandidate(candidate) {
+    backdropPriorityCandidates = backdropPriorityCandidates.filter((element) => element !== candidate);
+    backdropPriorityCandidates.push(candidate);
+    if (backdropPriorityCandidates.length > maxBackdropPriorityCandidates) {
+      backdropPriorityCandidates.shift();
+    }
+    for (let element = candidate, depth = 0; element && depth < 8;
+        element = composedParent(element), depth++) {
+      if (semanticHeaderCandidates.size >= maxSemanticHeaderCandidates) break;
+      semanticHeaderCandidates.add(element);
+    }
+  }
+
+  function changedAttributeState(states, element, attributeName) {
+    const state = `${attributeName}:${element.getAttribute(attributeName) || ""}`;
+    if (states.get(element) === state) return false;
+    states.set(element, state);
+    return true;
+  }
+
+  function isCoverLayoutAnchor(element) {
+    if (element === document.body) return true;
+    if (["header", "nav", "main", "reddit-header-small", "reddit-header-large",
+        "shreddit-header"].includes(element?.localName)) return true;
+    const role = element?.getAttribute?.("role");
+    return role === "banner" || role === "navigation";
+  }
+
+  function containsRelevantAddedNode(nodes, selector) {
+    const queue = Array.from(nodes || []).slice(0, 8).map((element) => ({ element, depth: 0 }));
+    let remaining = 64;
+    while (queue.length && remaining-- > 0) {
+      const { element, depth } = queue.shift();
+      if (element?.nodeType !== 1 || isOwnSource(element)) continue;
+      if (element.matches?.(selector)) return true;
+      if (depth >= 4) continue;
+      for (let child = element.firstElementChild, checked = 0; child && checked < 8;
+          child = child.nextElementSibling, checked++) {
+        queue.push({ element: child, depth: depth + 1 });
+      }
+    }
+    return false;
+  }
+
   function seedSemanticHeaders() {
     if (!configuration?.safeAreaEnabled || !document.body || document.readyState === "loading" ||
-        nativeFallbackRequested || semanticChecks >= maxSemanticChecks) return;
+        nativeFallbackRequested || semanticChecks >= maxSemanticChecks ||
+        (configuration.cover && coverSemanticSeeded)) return;
     semanticChecks++;
+    if (configuration.cover) coverSemanticSeeded = true;
     const candidates = [];
     if (knownNativeHeaderSelector) {
       candidates.push(...Array.from(document.querySelectorAll(knownNativeHeaderSelector)).slice(0, 4));
@@ -787,7 +879,8 @@
   function requestSemanticHeaderCheck(delay = 0) {
     if (!configuration?.safeAreaEnabled || nativeFallbackRequested ||
         semanticChecks >= maxSemanticChecks) return;
-    semanticCheckPending = true;
+    if (!configuration.cover || !coverSemanticSeeded) semanticCheckPending = true;
+    if (!statusBarBackdropHeaderConfirmed) statusBarBackdropPending = true;
     schedule(delay);
   }
 
@@ -879,6 +972,12 @@
     let count = 0;
     while (count < configuration.maxElementsPerBatch &&
         performance.now() - started < configuration.maxBatchDurationMillis) {
+      if (coverLayoutPending && performance.now() >= coverLayoutDue) {
+        coverLayoutPending = false;
+        coverLayoutRevision++;
+        configure();
+        return;
+      }
       if (cleanup.length) {
         const [element, entries] = cleanup.shift();
         restore(element, entries);
@@ -935,6 +1034,7 @@
 
   function mutations(records) {
     const wasCover = configuration?.cover === true;
+    let coverAttributeChanged = false;
     const changedCoverLayout = records.slice(0, 32).some((record) => {
       const target = record.target;
       if (isOwnSource(target)) return false;
@@ -942,27 +1042,35 @@
         if (record.type === "attributes") {
           return record.attributeName === "content" && target?.matches?.('meta[name="viewport" i]');
         }
-        return record.type === "childList" && [...Array.from(record.addedNodes || []).slice(0, 8),
-          ...Array.from(record.removedNodes || []).slice(0, 8)].some((node) =>
-          node?.matches?.('meta[name="viewport" i]') || node?.querySelector?.('meta[name="viewport" i]'));
+        return record.type === "childList" &&
+          (containsRelevantAddedNode(record.addedNodes, 'meta[name="viewport" i]') ||
+            containsRelevantAddedNode(record.removedNodes, 'meta[name="viewport" i]'));
       }
       if (record.type === "attributes") {
+        if (["class", "style"].includes(record.attributeName)) {
+          if (isCoverLayoutAnchor(target) &&
+              changedAttributeState(coverLayoutMutationStates, target, record.attributeName)) {
+            coverAttributeChanged = true;
+          }
+          return false;
+        }
         return (target?.matches?.('meta[name="viewport" i]') && record.attributeName === "content") ||
           (["href", "rel", "media", "disabled"].includes(record.attributeName) &&
-            ["style", "link"].includes(target?.localName)) ||
-          (["class", "style"].includes(record.attributeName) &&
-            (target === document.body || target?.matches?.(`${semanticSelector}, main`)));
+            ["style", "link"].includes(target?.localName));
       }
       if (record.type === "characterData") return target?.parentElement?.localName === "style";
       if (record.type !== "childList") return false;
-      return [...Array.from(record.addedNodes || []).slice(0, 8),
-        ...Array.from(record.removedNodes || []).slice(0, 8)].some((node) =>
-        !isOwnSource(node) && (node?.matches?.(`${semanticSelector}, main, meta[name="viewport" i], style, link`) ||
-          node?.querySelector?.(`${semanticSelector}, main, meta[name="viewport" i], style, link`)));
+      const selector = `${semanticSelector}, main, meta[name="viewport" i], style, link`;
+      return containsRelevantAddedNode(record.addedNodes, selector) ||
+        containsRelevantAddedNode(record.removedNodes, selector);
     });
     if (changedCoverLayout && (wasCover || viewportFitCoversSafeArea())) {
       coverLayoutRevision++;
       configure();
+    } else if (coverAttributeChanged && wasCover) {
+      coverLayoutPending = true;
+      coverLayoutDue = performance.now() + minimumHeaderVerificationQuietMillis;
+      schedule(minimumHeaderVerificationQuietMillis);
     }
     const themeChanged = records.slice(0, 64).some((record) => {
       if (record.type === "attributes") {
@@ -970,28 +1078,74 @@
           record.target?.matches?.('meta[name="theme-color" i]');
       }
       if (record.type !== "childList") return false;
+      if (record.target !== document.head && record.target !== document.documentElement &&
+          record.target?.localName !== "head") return false;
       return [...Array.from(record.addedNodes || []).slice(0, 8),
         ...Array.from(record.removedNodes || []).slice(0, 8)].some((node) =>
         node?.matches?.('meta[name="theme-color" i]'));
     });
-    if (themeChanged && statusBarBackdropHeaderConfirmed) {
+    if (themeChanged && configuration?.safeAreaEnabled) {
       statusBarBackdropPending = true;
       schedule();
     }
-    const semanticMutation = records.slice(0, 64).some((record) => {
-      if (record.type === "attributes") {
-        return record.target?.matches?.(semanticHeaderSelector) ||
-          !!record.target?.querySelector?.(semanticSelector);
+    if (configuration.cover && !configuration.active) {
+      if (statusBarBackdropHeaderConfirmed) {
+        if (!statusBarBackdropHeader?.isConnected) {
+          statusBarBackdropPending = true;
+          schedule();
+        }
+      } else {
+        let changedHeader = false;
+        let remainingNodes = 64;
+        for (const record of records.slice(0, 16)) {
+          if (record.type === "attributes") {
+            const target = record.target;
+            if (["class", "style"].includes(record.attributeName) &&
+                (semanticHeaderCandidates.has(target) || target?.matches?.(semanticHeaderSelector)) &&
+                changedAttributeState(backdropActivationStates, target, record.attributeName)) {
+              rememberBackdropHeaderCandidate(target);
+              changedHeader = true;
+            }
+            continue;
+          }
+          if (record.type !== "childList") continue;
+          const queue = Array.from(record.addedNodes || []).slice(0, 8)
+            .map((element) => ({ element, depth: 0 }));
+          while (queue.length && remainingNodes-- > 0) {
+            const { element, depth } = queue.shift();
+            if (element?.nodeType !== 1) continue;
+            if (element.matches?.(semanticHeaderSelector)) {
+              rememberBackdropHeaderCandidate(element);
+              changedHeader = true;
+            }
+            if (depth >= 4) continue;
+            for (let child = element.firstElementChild, checked = 0; child && checked < 8;
+                child = child.nextElementSibling, checked++) {
+              queue.push({ element: child, depth: depth + 1 });
+            }
+          }
+        }
+        if (changedHeader) {
+          statusBarBackdropPending = true;
+          schedule();
+        }
       }
-      if (record.type !== "childList") return false;
-      if (record.target?.matches?.(semanticHeaderSelector) ||
-          (record.target !== document.body && record.target !== document.documentElement &&
-            !!record.target?.querySelector?.(semanticSelector))) return true;
-      return Array.from(record.addedNodes || []).slice(0, 16).some((node) =>
-        node?.nodeType === 1 &&
-        (node.matches?.(semanticHeaderSelector) || !!node.querySelector?.(semanticSelector)));
-    });
-    if (semanticMutation) requestSemanticHeaderCheck();
+    } else {
+      const semanticMutation = records.slice(0, 64).some((record) => {
+        if (record.type === "attributes") {
+          return record.target?.matches?.(semanticHeaderSelector) ||
+            !!record.target?.querySelector?.(semanticSelector);
+        }
+        if (record.type !== "childList") return false;
+        if (record.target?.matches?.(semanticHeaderSelector) ||
+            (record.target !== document.body && record.target !== document.documentElement &&
+              !!record.target?.querySelector?.(semanticSelector))) return true;
+        return Array.from(record.addedNodes || []).slice(0, 16).some((node) =>
+          node?.nodeType === 1 &&
+          (node.matches?.(semanticHeaderSelector) || !!node.querySelector?.(semanticSelector)));
+      });
+      if (semanticMutation) requestSemanticHeaderCheck();
+    }
     if (!configuration.active) return;
     if (document.body && protectedBody !== document.body) {
       bodyPending = true;
@@ -1060,6 +1214,19 @@
       attributeFilter: ["class", "style", "hidden", "role", "href", "rel", "media", "disabled", "content"] });
   }
 
+  function updateScrollListeners() {
+    const needed = configuration?.active === true;
+    if (needed === scrollListenersAttached) return;
+    if (needed) {
+      document.addEventListener("scroll", scroll, { capture: true, passive: true });
+      globalThis.addEventListener("scroll", scroll, { passive: true });
+    } else {
+      document.removeEventListener("scroll", scroll, true);
+      globalThis.removeEventListener("scroll", scroll);
+    }
+    scrollListenersAttached = needed;
+  }
+
   function configure(resize = false) {
     const incoming = globalThis.CandyContentTopInset?.cssSafeAreaConfiguration?.();
     if (!incoming) return;
@@ -1098,9 +1265,16 @@
       if (resize && next.active) { enqueue(document.body, true); schedule(); }
       return;
     }
-    if (!next.safeAreaEnabled && reportedStatusBarBackdropColor) {
-      globalThis.CandyContentTopInset?.statusBarBackdrop?.(
-        next.navigationGeneration, next.revision, null);
+    if (configuration?.navigationGeneration !== next.navigationGeneration) {
+      coverEnvRecheckedInset = null;
+      coverLayoutMutationStates = new WeakMap();
+      backdropActivationStates = new WeakMap();
+      backdropPriorityCandidates = [];
+    }
+    if ((!next.safeAreaEnabled ||
+        (statusBarBackdropHeaderConfirmed && !statusBarBackdropHeader?.isConnected)) &&
+        reportedStatusBarBackdropColor) {
+      publishStatusBarBackdrop(null, next);
     }
     cancel();
     observer?.disconnect();
@@ -1127,11 +1301,13 @@
     owned.clear();
     configuration = next;
     configurationKey = key;
+    updateScrollListeners();
     inset = nextInset;
     if (next.active && !firstInitialization) firstInitialization = { readyState: document.readyState, atMillis: performance.now() };
     bodyPending = next.active && !!document.body;
     semanticCheckPending = false;
     semanticChecks = 0;
+    coverSemanticSeeded = false;
     initialDomSeeded = false;
     protectedBody = null;
     redditFlowProtected = false;
@@ -1139,7 +1315,7 @@
     cssTurn = true;
     nativeFallbackRequested = false;
     statusBarBackdropHeaderConfirmed = false;
-    reportedStatusBarBackdropColor = null;
+    statusBarBackdropHeader = null;
     statusBarBackdropPending = false;
     for (const { query, changed } of themeMediaWatchers.values()) {
       query.removeEventListener?.("change", changed);
@@ -1157,6 +1333,11 @@
     observe();
     watchCoverNativeInset();
     globalThis.CandyRedditSafeArea?.configure(redditActive, () => {
+      for (const candidate of globalThis.CandyRedditSafeArea?.headerCandidates?.() || []) {
+        rememberBackdropHeaderCandidate(candidate);
+      }
+      statusBarBackdropPending = true;
+      schedule();
       if (!configuration?.active) return;
       bodyPending = true;
       protectBody();
@@ -1179,11 +1360,18 @@
 
   function scroll() {
     scrollGeneration++;
+    const semanticWasPending = semanticCheckPending;
+    const backdropWasPending = statusBarBackdropPending;
+    const coverLayoutWasPending = coverLayoutPending;
     cancel();
     bodyPending = false;
-    statusBarBackdropPending = configuration?.safeAreaEnabled === true;
-    headerVerificationPending = fixedHeaderCandidates.size > 0 || semanticHeaderCandidates.size > 0;
-    if (headerVerificationPending || statusBarBackdropPending) {
+    semanticCheckPending = semanticWasPending;
+    statusBarBackdropPending = backdropWasPending;
+    coverLayoutPending = coverLayoutWasPending;
+    if (coverLayoutPending) coverLayoutDue = performance.now() + minimumHeaderVerificationQuietMillis;
+    headerVerificationPending = configuration?.active === true && !configuration.cover &&
+      (fixedHeaderCandidates.size > 0 || semanticHeaderCandidates.size > 0);
+    if (headerVerificationPending || statusBarBackdropPending || semanticCheckPending || coverLayoutPending) {
       schedule(Math.max(
         minimumHeaderVerificationQuietMillis,
         configuration?.mutationDebounceMillis || minimumHeaderVerificationQuietMillis,
@@ -1229,8 +1417,6 @@
     requestSemanticHeaderCheck();
     schedule();
   }, { once: true });
-  document.addEventListener("scroll", scroll, { capture: true, passive: true });
-  globalThis.addEventListener("scroll", scroll, { passive: true });
   globalThis.addEventListener("resize", () => {
     if (configuration?.cover) coverLayoutRevision++;
     if (configuration?.recheckOnResize || configuration?.cover) configure(true);

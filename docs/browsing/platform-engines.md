@@ -211,10 +211,13 @@ Camera and microphone permissions remain separate and continue through Candy's p
   bounds, so it is not a universal layout-protection guarantee. Verified unsupported overlaps retain
   the navigation-scoped emergency native top fallback; explicit native overrides remain available.
   Privacy and scroll metrics are unchanged.
-  When a pinned semantic header remains below the top safe inset during scrolling, Candy can
+  When a protected semantic header anchors below the top safe inset, Candy can
   cover the otherwise transparent status-bar strip with the page's active opaque `theme-color`.
   This status-bar backdrop is separate from native top-margin fallback and does not move page
-  content. It is scoped to the current navigation and removed when that navigation ends.
+  content. Header discovery and theme changes update it; cover pages that already handle their
+  safe area register no scroll listener.
+  It is scoped
+  to the current navigation and removed when that navigation ends.
   System WebView retains the document-start compatibility repair described below. There, Candy owns
   its normal-tab top safe area because `viewport-fit=cover` only opts into the
   viewport and does not prove that a page consumes `env(safe-area-inset-top)`. The renderer top

@@ -6,10 +6,15 @@ import vm from 'node:vm';
 const source = readFileSync(new URL('../app/src/gecko/assets/candy_privacy/content_safe_area_prototype.js', import.meta.url), 'utf8');
 const redditSource = readFileSync(new URL('../app/src/gecko/assets/candy_privacy/content_safe_area_reddit.js', import.meta.url), 'utf8');
 
-function fixture({ density = 3, nativeTop = 96, normalizePixels = false, reparseStyles = false, prototypeSource = source, hostname = '', viewportContent = null, themeColor = null } = {}) {
+function fixture({ density = 3, nativeTop = 96, envTop = nativeTop, simulateAnimationFrames = false,
+  normalizePixels = false, reparseStyles = false, prototypeSource = source, hostname = '',
+  viewportContent = null, themeColor = null } = {}) {
   let clock = 0; let timerId = 0; let observer;
+  let deliveredEnvTop = envTop;
+  const frameCallbacks = [];
   const timers = new Map(); const listeners = new Map(); const mutations = []; const registrations = [];
   const reads = { style: 0, rect: 0, selector: 0 }; const fallbacks = []; const backdrops = []; let writes = 0;
+  let selectorMatches = 0;
   let ruleWrites = 0;
   const normalize = (value) => normalizePixels && /^[+-]?[\d.]+px$/.test(value) ? `${Number(Number(value.slice(0, -2)).toFixed(4))}px` : value;
   const sheets = [];
@@ -100,6 +105,7 @@ function fixture({ density = 3, nativeTop = 96, normalizePixels = false, reparse
       for (const match of this.content.matchAll(/([^{}]+)\{([^{}]+)\}/g)) this.sheet.insertRule(`${match[1]} {${match[2]}}`, this.sheet.cssRules.length);
     }
     matches(selector) {
+      selectorMatches++;
       return selector.split(',').some((part) => {
         const marker = /\[([^=]+)="([^"]+)"\]/.exec(part);
         if (marker) return this.getAttribute(marker[1]) === marker[2];
@@ -172,6 +178,9 @@ function fixture({ density = 3, nativeTop = 96, normalizePixels = false, reparse
     addEventListener: (type, callback, options) => {
       listeners.set(`document:${type}`, callback); registrations.push({ target: 'document', type, options });
     },
+    removeEventListener: (type, callback) => {
+      if (listeners.get(`document:${type}`) === callback) listeners.delete(`document:${type}`);
+    },
   };
   function computed(element) {
     const result = { display: 'block', visibility: 'visible', paddingTop: '0px', backgroundColor: 'rgba(0, 0, 0, 0)', ...element.computed };
@@ -199,7 +208,8 @@ function fixture({ density = 3, nativeTop = 96, normalizePixels = false, reparse
       }
     }
     for (const name of ['top', 'paddingTop']) {
-      if (result[name] === 'env(safe-area-inset-top)') result[name] = `${nativeTop / density}px`;
+      if (result[name] === 'env(safe-area-inset-top)') result[name] = `${deliveredEnvTop / density}px`;
+      if (result[name] === 'env(safe-area-inset-top, 0px)') result[name] = `${deliveredEnvTop / density}px`;
     }
     return result;
   }
@@ -221,6 +231,7 @@ function fixture({ density = 3, nativeTop = 96, normalizePixels = false, reparse
       return computed(element);
     },
     performance: { now: () => clock },
+    requestAnimationFrame: simulateAnimationFrames ? (callback) => frameCallbacks.push(callback) : undefined,
     setTimeout: (callback, delay = 0) => {
       const id = ++timerId; timers.set(id, { callback, at: clock + delay });
       assert.ok(timers.size <= 1, 'Only one prototype worker may be pending'); return id;
@@ -228,6 +239,9 @@ function fixture({ density = 3, nativeTop = 96, normalizePixels = false, reparse
     clearTimeout: (id) => timers.delete(id),
     addEventListener: (type, callback, options) => {
       listeners.set(`window:${type}`, callback); registrations.push({ target: 'window', type, options });
+    },
+    removeEventListener: (type, callback) => {
+      if (listeners.get(`window:${type}`) === callback) listeners.delete(`window:${type}`);
     },
     MutationObserver: class {
       constructor(callback) { this.callback = callback; observer = this; }
@@ -245,6 +259,12 @@ function fixture({ density = 3, nativeTop = 96, normalizePixels = false, reparse
     assert.fail('Prototype work or own-style mutation loop did not terminate');
   };
   return { body, viewport, theme, context, config, reads, timers, registrations, flush, computed, sheets, fallbacks, backdrops,
+    matches: () => selectorMatches,
+    setEnvTop: (value) => { deliveredEnvTop = value; },
+    frame(count = 1) {
+      for (let index = 0; index < count; index++) frameCallbacks.shift()?.();
+    },
+    hasListener: (type, target = 'window') => listeners.has(`${target}:${type}`),
     writes: () => writes, ruleWrites: () => ruleWrites,
     element: (position, top, tag) => body.append(new Element(position, top, tag)),
     sheet(definitions, options = {}) {
@@ -263,6 +283,7 @@ function fixture({ density = 3, nativeTop = 96, normalizePixels = false, reparse
     scrollTo(y) { context.scrollY = y; },
     event(type, target = ['scroll', 'resize'].includes(type) ? 'window' : 'document', node) {
       const listener = listeners.get(`${target}:${type}`);
+      if (type === 'scroll' && !listener) return;
       assert.equal(typeof listener, 'function', `Actual ${target} ${type} listener must exist`);
       listener({ type, isTrusted: true, target: node });
     },
@@ -303,6 +324,13 @@ test('viewport-fit cover without effective safe-area use receives CSS protection
   hiddenProbe.style.setProperty('padding-top', 'env(safe-area-inset-top)');
   f.start();
   assert.equal(f.diagnostics().active, true);
+  assert.equal(f.hasListener('scroll'), true, 'Active cover repair still cancels broad work on scroll');
+  const beforeScroll = { ...f.reads };
+  const matchesBeforeScroll = f.matches();
+  for (let index = 0; index < 100; index++) f.event('scroll');
+  f.flush();
+  assert.deepEqual(f.reads, beforeScroll);
+  assert.equal(f.matches(), matchesBeforeScroll);
   assert.equal(f.computed(f.body).paddingTop, '32px');
   assert.equal(f.computed(header).top, '40px');
   assert.equal(f.computed(bottomNavigation).top, '600px');
@@ -364,6 +392,28 @@ test('viewport-fit cover with effective safe-area padding and top keeps author g
   assert.equal(f.computed(header).top, '32px');
 });
 
+test('late native env delivery rechecks an initially protected cover page once', () => {
+  const f = fixture({ viewportContent: 'viewport-fit=cover', envTop: 0,
+    simulateAnimationFrames: true });
+  f.body.style.setProperty('padding-top', 'env(safe-area-inset-top)');
+  const header = f.element('fixed', 'auto', 'header');
+  header.style.setProperty('top', 'env(safe-area-inset-top)');
+  header.rect = { top: 0, left: 0, width: 800, height: 56, right: 800, bottom: 56 };
+  const main = f.element('static', 'auto', 'main');
+  main.content = 'Protected page content';
+  main.rect = { top: 0, left: 0, width: 800, height: 400, right: 800, bottom: 400 };
+  f.start();
+  assert.equal(f.diagnostics().active, true);
+  f.setEnvTop(96);
+  header.rect.top = 32; header.rect.bottom = 88;
+  main.rect.top = 32; main.rect.bottom = 432;
+  f.frame(4);
+  f.flush();
+  assert.equal(f.diagnostics().active, false);
+  assert.equal(f.computed(header).top, '32px');
+  assert.equal(f.computed(f.body).paddingTop, '32px');
+});
+
 test('viewport-fit cover protects only an unaware fixed anchor on a mixed page', () => {
   const f = fixture({ viewportContent: 'viewport-fit=cover' });
   f.body.style.setProperty('padding-top', 'env(safe-area-inset-top)');
@@ -419,6 +469,7 @@ test('viewport meta change rechecks cover protection without a policy update', (
   main.rect = { top: 32, left: 0, width: 800, height: 400, right: 800, bottom: 432 };
   f.start();
   assert.equal(f.computed(header).top, '32px');
+  assert.equal(f.hasListener('scroll'), false);
 
   f.body.style.setProperty('padding-top', '4px');
   header.style.setProperty('top', '8px');
@@ -429,6 +480,7 @@ test('viewport meta change rechecks cover protection without a policy update', (
   f.flush();
 
   assert.equal(f.diagnostics().active, true);
+  assert.equal(f.hasListener('scroll'), true);
   assert.equal(f.computed(f.body).paddingTop, '32px');
   assert.equal(f.computed(header).top, '40px');
 });
@@ -484,23 +536,27 @@ test('Reddit helper remains active for viewport cover and receives the bounded n
   assert.equal(f.context.document.documentElement.style.getPropertyValue('--candy-safe-area-inset-top'), '');
 });
 
-test('viewport-cover sticky header gets a theme-color backdrop after scroll without a native fallback', () => {
+test('viewport-cover sticky header gets a theme-color backdrop before scroll without recurring work', () => {
   const f = fixture({ viewportContent: 'width=device-width, viewport-fit=cover', themeColor: '#ff4500' });
   const header = f.element('sticky', '32px', 'header');
   header.rect = { top: 32, left: 0, width: 800, height: 56, right: 800, bottom: 88 };
   f.start();
   assert.equal(f.diagnostics().active, false);
-  assert.deepEqual(f.backdrops, []);
+  assert.equal(f.hasListener('scroll'), false);
+  assert.equal(f.hasListener('scroll', 'document'), false);
+  assert.deepEqual(f.backdrops, [[1, 1, '#ff4500']]);
   const beforeScroll = { ...f.reads };
-  f.scrollTo(120);
-  f.event('scroll');
-  assert.deepEqual(f.reads, beforeScroll, 'Scroll callback does not inspect the DOM');
+  const matchesBeforeScroll = f.matches();
+  for (let index = 0; index < 100; index++) {
+    f.scrollTo(index * 12);
+    f.event('scroll', index % 2 ? 'document' : 'window');
+  }
   f.flush();
+  assert.deepEqual(f.reads, beforeScroll, 'Stable scrolling does not inspect styles, geometry or selectors');
+  assert.equal(f.matches(), matchesBeforeScroll);
+  assert.equal(f.timers.size, 0);
   assert.deepEqual(f.backdrops, [[1, 1, '#ff4500']]);
   assert.deepEqual(f.fallbacks, []);
-  f.event('scroll');
-  f.flush();
-  assert.equal(f.backdrops.length, 1);
 });
 
 test('status backdrop requires an opaque theme color and a pinned header below the inset', () => {
@@ -508,17 +564,21 @@ test('status backdrop requires an opaque theme color and a pinned header below t
   noTheme.element('sticky', '32px', 'header').rect =
     { top: 32, left: 0, width: 800, height: 56, right: 800, bottom: 88 };
   noTheme.start();
+  const noThemeReads = { ...noTheme.reads };
   noTheme.event('scroll');
   noTheme.flush();
   assert.deepEqual(noTheme.backdrops, []);
+  assert.deepEqual(noTheme.reads, noThemeReads);
 
   const wrongPosition = fixture({ viewportContent: 'viewport-fit=cover', themeColor: '#abcdef' });
   wrongPosition.element('static', 'auto', 'header').rect =
     { top: 32, left: 0, width: 800, height: 56, right: 800, bottom: 88 };
   wrongPosition.start();
+  const wrongPositionReads = { ...wrongPosition.reads };
   wrongPosition.event('scroll');
   wrongPosition.flush();
   assert.deepEqual(wrongPosition.backdrops, []);
+  assert.deepEqual(wrongPosition.reads, wrongPositionReads);
 });
 
 test('Reddit backdrop prioritizes its custom header after earlier semantic elements', () => {
@@ -535,6 +595,15 @@ test('Reddit backdrop prioritizes its custom header after earlier semantic eleme
   f.event('scroll');
   f.flush();
   assert.deepEqual(f.backdrops, [[1, 1, '#ff4500']]);
+  const beforeScroll = { ...f.reads };
+  const matchesBeforeScroll = f.matches();
+  for (let index = 0; index < 100; index++) {
+    f.event('scroll');
+    f.mutate(header, 'class');
+  }
+  f.flush();
+  assert.deepEqual(f.reads, beforeScroll, 'Reddit scroll-state classes do not trigger backdrop discovery');
+  assert.equal(f.matches(), matchesBeforeScroll);
 });
 
 test('Reddit backdrop finds a protected header in its open app shadow root', () => {
@@ -548,6 +617,166 @@ test('Reddit backdrop finds a protected header in its open app shadow root', () 
   vm.runInContext(redditSource, f.context);
   f.start();
   f.event('scroll');
+  f.flush();
+  assert.deepEqual(f.backdrops, [[1, 1, '#ff4500']]);
+});
+
+test('late cover header is detected from a structural change without scrolling', () => {
+  const f = fixture({ viewportContent: 'viewport-fit=cover', themeColor: '#123456' });
+  f.start();
+  assert.deepEqual(f.backdrops, []);
+  const header = f.element('sticky', '32px', 'header');
+  header.rect = { top: 32, left: 0, width: 800, height: 56, right: 800, bottom: 88 };
+  f.added(header);
+  f.flush();
+  assert.deepEqual(f.backdrops, [[1, 1, '#123456']]);
+});
+
+test('late cover header takes priority when earlier candidates fill the scan budget', () => {
+  const f = fixture({ viewportContent: 'viewport-fit=cover', themeColor: '#123456' });
+  for (let index = 0; index < 40; index++) f.element('static', 'auto', 'header');
+  f.start();
+  assert.deepEqual(f.backdrops, []);
+  const header = f.element('sticky', '32px', 'header');
+  header.rect = { top: 32, left: 0, width: 800, height: 56, right: 800, bottom: 88 };
+  f.added(header);
+  f.added(f.element('static', 'auto', 'header'));
+  f.flush();
+  assert.deepEqual(f.backdrops, [[1, 1, '#123456']]);
+});
+
+test('late cover wrapper exposes its nested header without a document scan', () => {
+  const f = fixture({ viewportContent: 'viewport-fit=cover', themeColor: '#123456' });
+  f.start();
+  const wrapper = f.element('static', 'auto', 'div');
+  const header = f.element('sticky', '32px', 'header');
+  header.rect = { top: 32, left: 0, width: 800, height: 56, right: 800, bottom: 88 };
+  wrapper.append(header);
+  const selectorReads = f.reads.selector;
+  f.added(wrapper);
+  f.flush();
+  assert.deepEqual(f.backdrops, [[1, 1, '#123456']]);
+  assert.equal(f.reads.selector, selectorReads + 2, 'Only theme metadata is read during reporting');
+});
+
+test('cover header becoming sticky before scrolling enables the backdrop', () => {
+  const f = fixture({ viewportContent: 'viewport-fit=cover', themeColor: '#123456' });
+  const header = f.element('static', 'auto', 'header');
+  header.rect = { top: 32, left: 0, width: 800, height: 56, right: 800, bottom: 88 };
+  f.start();
+  assert.deepEqual(f.backdrops, []);
+  Object.assign(header.computed, { position: 'sticky', top: '32px' });
+  f.mutate(header, 'class');
+  f.flush();
+  assert.deepEqual(f.backdrops, [[1, 1, '#123456']]);
+});
+
+test('cover header becoming sticky after scrolling gets one quiet, bounded check', () => {
+  const f = fixture({ viewportContent: 'viewport-fit=cover', themeColor: '#123456' });
+  const header = f.element('static', 'auto', 'header');
+  header.rect = { top: 32, left: 0, width: 800, height: 56, right: 800, bottom: 88 };
+  f.start();
+  f.event('scroll');
+  f.flush();
+  header.setAttribute('class', 'waiting');
+  f.mutate(header, 'class');
+  f.flush();
+  const beforeRepeat = { ...f.reads };
+  const matchesBeforeRepeat = f.matches();
+  for (let index = 0; index < 100; index++) {
+    f.event('scroll');
+    f.mutate(header, 'class');
+  }
+  f.flush();
+  assert.deepEqual(f.reads, beforeRepeat, 'Repeated scroll-state class has no layout probes');
+  assert.equal(f.matches(), matchesBeforeRepeat);
+  assert.equal(f.timers.size, 0);
+  Object.assign(header.computed, { position: 'sticky', top: '32px' });
+  header.setAttribute('class', 'is-sticky');
+  f.mutate(header, 'class');
+  f.flush();
+  assert.deepEqual(f.backdrops, [[1, 1, '#123456']]);
+});
+
+test('late sticky state remains detectable after more than eight class changes', () => {
+  const f = fixture({ viewportContent: 'viewport-fit=cover', themeColor: '#123456' });
+  const header = f.element('static', 'auto', 'header');
+  header.rect = { top: 32, left: 0, width: 800, height: 56, right: 800, bottom: 88 };
+  f.start();
+  f.event('scroll');
+  for (let index = 0; index < 9; index++) {
+    header.setAttribute('class', `state-${index}`);
+    if (index === 8) Object.assign(header.computed, { position: 'sticky', top: '32px' });
+    f.mutate(header, 'class');
+    f.flush();
+  }
+  assert.deepEqual(f.backdrops, [[1, 1, '#123456']]);
+});
+
+test('backdrop clears when a connected cover header stops being sticky', () => {
+  const f = fixture({ viewportContent: 'viewport-fit=cover', themeColor: '#123456' });
+  const header = f.element('sticky', '32px', 'header');
+  header.rect = { top: 32, left: 0, width: 800, height: 56, right: 800, bottom: 88 };
+  f.start();
+  Object.assign(header.computed, { position: 'static', top: 'auto' });
+  header.setAttribute('class', 'unpinned');
+  f.mutate(header, 'class');
+  f.flush();
+  assert.deepEqual(f.backdrops, [[1, 1, '#123456'], [1, 1, null]]);
+});
+
+test('cover page rechecks author padding after a body class change following scroll', () => {
+  const f = fixture({ viewportContent: 'viewport-fit=cover' });
+  f.body.style.setProperty('padding-top', 'env(safe-area-inset-top)');
+  const main = f.element('static', 'auto', 'main');
+  main.content = 'Protected content';
+  main.rect = { top: 32, left: 0, width: 800, height: 400, right: 800, bottom: 432 };
+  f.start();
+  assert.equal(f.diagnostics().active, false);
+  f.event('scroll');
+  f.body.style.setProperty('padding-top', '0px');
+  main.rect.top = 0;
+  f.body.setAttribute('class', 'no-safe-padding');
+  f.mutate(f.body, 'class');
+  f.flush();
+  assert.equal(f.diagnostics().active, true);
+  assert.equal(f.computed(f.body).paddingTop, '32px');
+});
+
+test('confirmed cover header skips lazy-load discovery and clears after removal', () => {
+  const f = fixture({ viewportContent: 'viewport-fit=cover', themeColor: '#123456' });
+  const header = f.element('sticky', '32px', 'header');
+  header.rect = { top: 32, left: 0, width: 800, height: 56, right: 800, bottom: 88 };
+  f.start();
+  const beforeLazyLoad = { ...f.reads };
+  const matchesBeforeLazyLoad = f.matches();
+  for (let index = 0; index < 100; index++) f.added(f.element('static', 'auto', 'article'));
+  f.flush();
+  assert.deepEqual(
+    { style: f.reads.style, rect: f.reads.rect, selector: f.reads.selector },
+    { style: beforeLazyLoad.style, rect: beforeLazyLoad.rect, selector: beforeLazyLoad.selector },
+  );
+  assert.ok(f.matches() - matchesBeforeLazyLoad <= 200,
+    'Each new article receives at most two direct metadata/layout selector checks');
+  assert.equal(f.timers.size, 0);
+  header.remove();
+  f.mutate(f.body, 'class');
+  f.flush();
+  assert.deepEqual(f.backdrops, [[1, 1, '#123456'], [1, 1, null]]);
+});
+
+test('late Reddit shadow header is detected by its helper without scrolling', () => {
+  const f = fixture({ hostname: 'www.reddit.com', viewportContent: 'viewport-fit=cover', themeColor: '#ff4500' });
+  const app = f.element('static', 'auto', 'shreddit-app');
+  app.shadowRoot = f.context.document.createElement('shadow-root');
+  vm.runInContext(redditSource, f.context);
+  f.start();
+  assert.deepEqual(f.backdrops, []);
+  const header = f.context.document.createElement('reddit-header-small');
+  header.computed = { position: 'sticky', top: '32px' };
+  header.rect = { top: 32, left: 0, width: 800, height: 56, right: 800, bottom: 88 };
+  app.shadowRoot.append(header);
+  f.context.CandyRedditSafeArea.sync();
   f.flush();
   assert.deepEqual(f.backdrops, [[1, 1, '#ff4500']]);
 });

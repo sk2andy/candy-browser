@@ -108,12 +108,16 @@
         }
       }
     }
+    const headersChanged = headers.size !== currentHeaders.size ||
+      Array.from(currentHeaders).some((header) => !headers.has(header));
+    const flowWasChanged = protectedFlow !== flow;
     apps = currentApps;
     headers = currentHeaders;
     for (const [target, observer] of observers) {
       if (!desired.has(target)) { observer.disconnect(); observers.delete(target); }
     }
     reportFlow(flow);
+    if (headersChanged && !flowWasChanged) flowChanged?.(flow);
   }
 
   function inApp(element) {
