@@ -851,9 +851,19 @@
     <string name="capsule_delete_with_profile">Capsule + profile data</string>
     <string name="capsule_shortcut_deleted">This Site Capsule was deleted in Candy</string>
     <!-- Privacy X-Ray -->
+    <string name="site_info_title">Site information and Privacy X-Ray</string>
+    <string name="site_info_badge_cd">%1$s. %2$d requests blocked. Open site information and Privacy X-Ray</string>
+    <string name="site_connection_title">Connection</string>
+    <string name="site_connection_https">HTTPS address</string>
+    <string name="site_connection_http">HTTP address</string>
+    <string name="site_connection_unavailable">Connection status unavailable</string>
+    <string name="site_connection_other">No website connection</string>
+    <string name="site_connection_https_description">This page address uses HTTPS. The browser checks the connection when the page loads.</string>
+    <string name="site_connection_http_description">This address uses unencrypted HTTP. Information you send may be visible to others.</string>
+    <string name="site_connection_unavailable_description">The page is still loading or could not be loaded. Its connection status is not yet available.</string>
+    <string name="site_connection_other_description">Connection details are unavailable for this page.</string>
     <string name="privacy_xray_title">Privacy X-Ray</string>
     <string name="privacy_xray_subtitle">Live view for %1$s</string>
-    <string name="privacy_xray_counter_cd">Blocked requests: %1$d. Open Privacy X-Ray</string>
     <string name="privacy_xray_total_label">Tab blocks</string>
     <string name="privacy_xray_live_note">Live updates are grouped to keep browsing smooth</string>
     <string name="privacy_xray_scope_note">Only blocks reliably assigned to this tab are counted; service-worker requests are not attributed.</string>

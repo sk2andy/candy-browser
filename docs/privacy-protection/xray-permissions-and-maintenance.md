@@ -8,7 +8,8 @@
 | `PrivacyRequestClassifier` / `PrivacyPartyClassifier` | Classify category and first/third-party relation |
 | `PrivacyRetention` / `PrivacyAggregation` | Bound retained per-tab observations and summaries |
 | `PrivacyXRayRepository` | Own live snapshots, rule decisions and site exceptions |
-| `PrivacyXRaySheet` | Render snapshot and emit rule/override actions; Frosted mode blurs the active browser-content source behind the sheet |
+| Address-bar connection badge | Opens one site sheet with Privacy X-Ray and Permission Radar tabs, including when no requests were blocked; shows the blocked count and uses distinct HTTPS, HTTP and unavailable indicators |
+| `PrivacyXRaySheet` | Shows the page address connection type and switches between the live X-Ray snapshot and site permissions; Frosted mode blurs the active browser-content source behind the sheet |
 
 ## Permission Radar
 

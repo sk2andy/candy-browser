@@ -4,11 +4,9 @@ package dev.sk2andy.materialbrowser.ui
 
 import dev.sk2andy.materialbrowser.shared.ui.TabOverviewContrastRules
 
-import android.os.SystemClock
 import android.view.HapticFeedbackConstants
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
@@ -39,13 +37,16 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.Button
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
@@ -57,8 +58,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -67,6 +66,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.TransformOrigin
@@ -75,7 +75,6 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.paneTitle
 import androidx.compose.ui.semantics.role
@@ -92,12 +91,15 @@ import dev.sk2andy.materialbrowser.blocking.PrivacyRequestCategory
 import dev.sk2andy.materialbrowser.blocking.PrivacyRuleDecisionAction
 import dev.sk2andy.materialbrowser.blocking.PrivacyXRaySnapshot
 import dev.sk2andy.materialbrowser.blocking.SiteProtectionState
+import dev.sk2andy.materialbrowser.browser.SiteConnectionKind
+import dev.sk2andy.materialbrowser.browser.SiteConnectionRules
+import dev.sk2andy.materialbrowser.browser.permissions.PermissionRadarSnapshot
+import dev.sk2andy.materialbrowser.browser.permissions.SitePermission
+import dev.sk2andy.materialbrowser.browser.permissions.SitePermissionDecision
 import dev.sk2andy.materialbrowser.ui.theme.browserChromeColor
 import dev.sk2andy.materialbrowser.ui.theme.browserChromeSurfaceTokens
-import kotlinx.coroutines.delay
 
 internal object PrivacyXRayTestTags {
-    const val Counter = "privacy_xray_counter"
     const val SettingsCounter = "privacy_xray_settings_counter"
     const val Sheet = "privacy_xray_sheet"
     const val Total = "privacy_xray_total"
@@ -108,88 +110,23 @@ internal object PrivacyXRayTestTags {
     const val PauseTemporary = "privacy_xray_pause_temporary"
     const val PausePersistent = "privacy_xray_pause_persistent"
     const val XRayTitle = "privacy_xray_title"
+    const val Connection = "site_connection"
+    const val XRayTab = "site_info_xray_tab"
+    const val PermissionsTab = "site_info_permissions_tab"
 }
 
-@Composable
-internal fun PrivacyXRayBadge(
-    blockedCount: Int,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    tabId: String? = null,
-) {
-    val currentBlockedCount by rememberUpdatedState(blockedCount)
-    val initialBlockedCount = remember(tabId) { blockedCount }
-    val pulseScale = remember(tabId) { Animatable(1f) }
-    LaunchedEffect(tabId) {
-        var previousCount = initialBlockedCount
-        var lastPulseCompletedAtMillis: Long? = null
-        snapshotFlow { currentBlockedCount }.collect { count ->
-            val previous = previousCount
-            previousCount = count
-            val now = SystemClock.uptimeMillis()
-            val elapsedSinceLastPulse = lastPulseCompletedAtMillis?.let { now - it }
-                ?: Long.MAX_VALUE
-            val pulseDelay = PrivacyXRayMotionRules.badgePulseDelayMillis(
-                previousCount = previous,
-                currentCount = count,
-                elapsedSinceLastPulseMillis = elapsedSinceLastPulse,
-            ) ?: return@collect
-
-            delay(pulseDelay)
-            val batchedCount = currentBlockedCount
-            previousCount = batchedCount
-            if (!PrivacyXRayMotionRules.shouldRunBatchedPulse(count, batchedCount)) {
-                return@collect
-            }
-            pulseScale.animateTo(
-                targetValue = 1.1f,
-                animationSpec = tween(110, easing = FastOutSlowInEasing),
-            )
-            pulseScale.animateTo(
-                targetValue = 1f,
-                animationSpec = tween(190, easing = FastOutSlowInEasing),
-            )
-            lastPulseCompletedAtMillis = SystemClock.uptimeMillis()
-        }
-    }
-    if (blockedCount <= 0) return
-
-    val description = stringResource(R.string.privacy_xray_counter_cd, blockedCount)
-    Surface(
-        onClick = onClick,
-        modifier = modifier
-            .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
-            .graphicsLayer {
-                scaleX = pulseScale.value
-                scaleY = pulseScale.value
-            }
-            .testTag(PrivacyXRayTestTags.Counter)
-            .semantics {
-                contentDescription = description
-                role = Role.Button
-        },
-        shape = RoundedCornerShape(16.dp),
-        color = Color.Transparent,
-        contentColor = LocalContentColor.current,
-    ) {
-        Box(
-            modifier = Modifier.padding(horizontal = 10.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                text = "◈ $blockedCount",
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.Bold,
-            )
-        }
-    }
-}
+private enum class SiteInfoSection { Privacy, Permissions }
 
 @Composable
 internal fun PrivacyXRaySheet(
+    pageUrl: String,
+    connectionKind: SiteConnectionKind,
     snapshot: PrivacyXRaySnapshot,
     blockerSettings: BlockerSettings,
     siteState: SiteProtectionState,
+    permissionSnapshot: PermissionRadarSnapshot,
+    profileEmoji: String,
+    websiteNotificationsSupported: Boolean,
     backdropSource: CandyChromeBackdropSource? = null,
     onPause: (persistently: Boolean) -> Unit,
     onResume: () -> Unit,
@@ -197,9 +134,13 @@ internal fun PrivacyXRaySheet(
     onRuleAction: (domain: String, action: CandyRuleAction, siteScoped: Boolean) -> Unit =
         { _, _, _ -> },
     onOpenStudio: (ruleId: String?) -> Unit = {},
+    onPermissionOriginSelected: (String) -> Unit,
+    onPermissionDecisionChanged: (SitePermission, SitePermissionDecision) -> Unit,
+    onResetSitePermissions: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    val title = stringResource(R.string.privacy_xray_title)
+    val title = stringResource(R.string.site_info_title)
+    var selectedSection by remember(pageUrl) { mutableStateOf(SiteInfoSection.Privacy) }
     var pauseWarningVisible by remember(siteState.host) { mutableStateOf(false) }
     val view = LocalView.current
     val chromeTokens = browserChromeSurfaceTokens().copy(
@@ -238,19 +179,57 @@ internal fun PrivacyXRaySheet(
             shape = RectangleShape,
             blurCornerRadius = 0.dp,
         ) {
-            PrivacyXRayContent(
-                snapshot = snapshot,
-                blockerSettings = blockerSettings,
-                siteState = siteState,
-                onPauseClick = { pauseWarningVisible = true },
-                onResumeClick = {
-                    view.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
-                    onResume()
-                },
-                onRevokeThirdPartyCookieCompatibility = onRevokeThirdPartyCookieCompatibility,
-                onRuleAction = onRuleAction,
-                onOpenStudio = onOpenStudio,
-            )
+            Column {
+                Row(
+                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    FilterChip(
+                        selected = selectedSection == SiteInfoSection.Privacy,
+                        onClick = { selectedSection = SiteInfoSection.Privacy },
+                        label = { Text(stringResource(R.string.privacy_xray_title)) },
+                        modifier = Modifier.testTag(PrivacyXRayTestTags.XRayTab),
+                    )
+                    FilterChip(
+                        selected = selectedSection == SiteInfoSection.Permissions,
+                        onClick = { selectedSection = SiteInfoSection.Permissions },
+                        label = { Text(stringResource(R.string.permission_radar_title)) },
+                        modifier = Modifier.testTag(PrivacyXRayTestTags.PermissionsTab),
+                    )
+                }
+                if (selectedSection == SiteInfoSection.Privacy) {
+                    PrivacyXRayContent(
+                        pageUrl = pageUrl,
+                        connectionKind = connectionKind,
+                        snapshot = snapshot,
+                        blockerSettings = blockerSettings,
+                        siteState = siteState,
+                        onPauseClick = { pauseWarningVisible = true },
+                        onResumeClick = {
+                            view.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
+                            onResume()
+                        },
+                        onRevokeThirdPartyCookieCompatibility =
+                            onRevokeThirdPartyCookieCompatibility,
+                        onRuleAction = onRuleAction,
+                        onOpenStudio = onOpenStudio,
+                    )
+                } else {
+                    PermissionRadarContent(
+                        snapshot = permissionSnapshot,
+                        profileEmoji = profileEmoji,
+                        websiteNotificationsSupported = websiteNotificationsSupported,
+                        onOriginSelected = onPermissionOriginSelected,
+                        onDecisionChanged = onPermissionDecisionChanged,
+                        onResetSite = onResetSitePermissions,
+                        modifier = Modifier
+                            .heightIn(max = 720.dp)
+                            .verticalScroll(rememberScrollState())
+                            .navigationBarsPadding()
+                            .padding(start = 20.dp, end = 20.dp, bottom = 28.dp),
+                    )
+                }
+            }
         }
     }
 
@@ -303,7 +282,80 @@ internal fun PrivacyXRaySheet(
 }
 
 @Composable
+private fun SiteConnectionCard(pageUrl: String, kind: SiteConnectionKind) {
+    val host = SiteConnectionRules.host(pageUrl)
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag(PrivacyXRayTestTags.Connection),
+        shape = RoundedCornerShape(20.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            SectionTitle(stringResource(R.string.site_connection_title))
+            Spacer(Modifier.height(10.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = siteConnectionIcon(kind),
+                    contentDescription = null,
+                    modifier = Modifier.size(24.dp),
+                )
+                Spacer(Modifier.width(10.dp))
+                Text(
+                    text = siteConnectionLabel(kind),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
+            if (host.isNotEmpty()) {
+                Text(
+                    text = host,
+                    modifier = Modifier.padding(top = 6.dp),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            Text(
+                text = stringResource(
+                    when (kind) {
+                        SiteConnectionKind.Https -> R.string.site_connection_https_description
+                        SiteConnectionKind.Http -> R.string.site_connection_http_description
+                        SiteConnectionKind.Unavailable ->
+                            R.string.site_connection_unavailable_description
+                        SiteConnectionKind.Other -> R.string.site_connection_other_description
+                    },
+                ),
+                modifier = Modifier.padding(top = 8.dp),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+@Composable
+private fun siteConnectionLabel(kind: SiteConnectionKind): String = stringResource(
+    when (kind) {
+        SiteConnectionKind.Https -> R.string.site_connection_https
+        SiteConnectionKind.Http -> R.string.site_connection_http
+        SiteConnectionKind.Unavailable -> R.string.site_connection_unavailable
+        SiteConnectionKind.Other -> R.string.site_connection_other
+    },
+)
+
+private fun siteConnectionIcon(kind: SiteConnectionKind): ImageVector = when (kind) {
+    SiteConnectionKind.Https -> Icons.Default.Lock
+    SiteConnectionKind.Http -> Icons.Default.Warning
+    SiteConnectionKind.Unavailable -> Icons.Default.Info
+    SiteConnectionKind.Other -> Icons.Default.Info
+}
+
+@Composable
 internal fun PrivacyXRayContent(
+    pageUrl: String,
+    connectionKind: SiteConnectionKind,
     snapshot: PrivacyXRaySnapshot,
     blockerSettings: BlockerSettings,
     siteState: SiteProtectionState,
@@ -330,6 +382,8 @@ internal fun PrivacyXRayContent(
             .navigationBarsPadding()
             .padding(start = 20.dp, end = 20.dp, bottom = 28.dp),
     ) {
+        SiteConnectionCard(pageUrl, connectionKind)
+        Spacer(Modifier.height(20.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
             PrivacySheetHeadline(
                 text = stringResource(R.string.privacy_xray_title),

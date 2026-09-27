@@ -122,7 +122,6 @@ internal fun BoxScope.BrowserAddressChrome(
     onOpenHistory: () -> Unit,
     onSettings: () -> Unit,
     onPrivacyXRay: () -> Unit,
-    onPermissionRadar: () -> Unit,
     onNewTabButtonBoundsChanged: (Rect?) -> Unit,
     onReaderStudio: () -> Unit,
     onOpenCandyTrail: () -> Unit,
@@ -563,10 +562,6 @@ internal fun BoxScope.BrowserAddressChrome(
             rootView.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
         },
         permissionActivityVisible = permissionActivityVisible,
-        onPermissionRadar = {
-            onPermissionRadar()
-            rootView.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
-        },
         addressBarPulseNonce = controller.contentActions.addressBarPulseNonce,
         newTabPulseNonce = controller.contentActions.linkPeekNewTabPulseNonce,
         onNewTabButtonBounds = onNewTabButtonBoundsChanged,

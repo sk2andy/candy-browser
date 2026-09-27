@@ -13,7 +13,6 @@ import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertHeightIsAtLeast
-import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -22,17 +21,27 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
+import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.blocking.BlockerSettings
 import dev.sk2andy.materialbrowser.blocking.PrivacyDomainSummary
 import dev.sk2andy.materialbrowser.blocking.PrivacyPartyRelation
 import dev.sk2andy.materialbrowser.blocking.PrivacyRequestCategory
 import dev.sk2andy.materialbrowser.blocking.PrivacyXRaySnapshot
 import dev.sk2andy.materialbrowser.blocking.SiteProtectionState
+import dev.sk2andy.materialbrowser.browser.SiteConnectionKind
+import dev.sk2andy.materialbrowser.browser.permissions.PermissionRadarEntry
+import dev.sk2andy.materialbrowser.browser.permissions.PermissionRadarSnapshot
+import dev.sk2andy.materialbrowser.browser.permissions.PermissionSiteKey
+import dev.sk2andy.materialbrowser.browser.permissions.SitePermission
+import dev.sk2andy.materialbrowser.browser.permissions.SitePermissionActivity
+import dev.sk2andy.materialbrowser.browser.permissions.SitePermissionDecision
 import dev.sk2andy.materialbrowser.data.AppearanceSettings
 import dev.sk2andy.materialbrowser.data.BrowserSurfaceStyle
 import dev.sk2andy.materialbrowser.ui.theme.MaterialBrowserTheme
 import eightbitlab.com.blurview.BlurTarget
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicReference
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -42,24 +51,6 @@ import org.junit.runner.RunWith
 class PrivacyXRaySheetInstrumentedTest {
     @get:Rule
     val composeRule = createComposeRule()
-
-    @Test
-    fun counterHasAccessibleTouchTarget() {
-        val clicks = AtomicInteger()
-        composeRule.setContent {
-            MaterialBrowserTheme {
-                PrivacyXRayBadge(blockedCount = 7, onClick = clicks::incrementAndGet)
-            }
-        }
-
-        composeRule.onNodeWithTag(PrivacyXRayTestTags.Counter)
-            .assertExists()
-            .assertHasClickAction()
-            .assertHeightIsAtLeast(48.dp)
-            .performClick()
-
-        assertEquals(1, clicks.get())
-    }
 
     @Test
     fun settingsCounterConsumesTapAndRoutesPrivacyXRay() {
@@ -96,6 +87,8 @@ class PrivacyXRaySheetInstrumentedTest {
         composeRule.setContent {
             MaterialBrowserTheme {
                 PrivacyXRayContent(
+                    pageUrl = "https://news.example/article",
+                    connectionKind = SiteConnectionKind.Https,
                     snapshot = sampleSnapshot(),
                     blockerSettings = BlockerSettings(),
                     siteState = SiteProtectionState(
@@ -108,6 +101,12 @@ class PrivacyXRaySheetInstrumentedTest {
             }
         }
 
+        composeRule.onNodeWithTag(PrivacyXRayTestTags.Connection).assertExists()
+        composeRule.onNodeWithText(
+            InstrumentationRegistry.getInstrumentation().targetContext.getString(
+                R.string.site_connection_https,
+            ),
+        ).assertExists()
         composeRule.onNodeWithTag(PrivacyXRayTestTags.Total).assertExists()
         composeRule.onNodeWithText("four.example").assertDoesNotExist()
         composeRule.onNodeWithTag(PrivacyXRayTestTags.ToggleDetails)
@@ -120,6 +119,57 @@ class PrivacyXRaySheetInstrumentedTest {
         composeRule.waitForIdle()
 
         assertEquals(1, pauses.get())
+    }
+
+    @Test
+    fun siteSheetKeepsPrivacyAndPermissionsBehindOneEntry() {
+        val changed = AtomicReference<Pair<SitePermission, SitePermissionDecision>?>()
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                PrivacyXRaySheet(
+                    pageUrl = "https://news.example/article",
+                    connectionKind = SiteConnectionKind.Https,
+                    snapshot = sampleSnapshot(),
+                    blockerSettings = BlockerSettings(),
+                    siteState = SiteProtectionState(host = "news.example"),
+                    permissionSnapshot = PermissionRadarSnapshot(
+                        site = PermissionSiteKey("personal", "https://news.example"),
+                        isPrivate = false,
+                        knownOrigins = listOf("https://news.example"),
+                        entries = listOf(
+                            PermissionRadarEntry(
+                                permission = SitePermission.Camera,
+                                decision = SitePermissionDecision.Ask,
+                                allowedForSession = false,
+                                activity = SitePermissionActivity.Idle,
+                            ),
+                        ),
+                    ),
+                    profileEmoji = "🍬",
+                    websiteNotificationsSupported = true,
+                    onPause = {},
+                    onResume = {},
+                    onPermissionOriginSelected = {},
+                    onPermissionDecisionChanged = { permission, decision ->
+                        changed.set(permission to decision)
+                    },
+                    onResetSitePermissions = {},
+                    onDismiss = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(PrivacyXRayTestTags.Total).assertExists()
+        composeRule.onNodeWithTag(PrivacyXRayTestTags.PermissionsTab).performClick()
+        composeRule.onNodeWithText("https://news.example").assertExists()
+        composeRule.onNodeWithText(
+            InstrumentationRegistry.getInstrumentation().targetContext.getString(
+                R.string.permission_decision_allow,
+            ),
+        ).performScrollTo().performClick()
+        assertEquals(SitePermission.Camera to SitePermissionDecision.Allow, changed.get())
+        composeRule.onNodeWithTag(PrivacyXRayTestTags.XRayTab).performClick()
+        composeRule.onNodeWithTag(PrivacyXRayTestTags.Total).assertExists()
     }
 
     @Test
@@ -138,17 +188,25 @@ class PrivacyXRaySheetInstrumentedTest {
                         modifier = Modifier.fillMaxSize(),
                     ) {}
                     PrivacyXRaySheet(
+                        pageUrl = "https://private.example",
+                        connectionKind = SiteConnectionKind.Https,
                         snapshot = sampleSnapshot(),
                         blockerSettings = BlockerSettings(),
                         siteState = SiteProtectionState(
                             host = "private.example",
                             canPersist = false,
                         ),
+                        permissionSnapshot = PermissionRadarSnapshot.Empty,
+                        profileEmoji = "🍬",
+                        websiteNotificationsSupported = true,
                         backdropSource = blurTarget.asCandyChromeBackdropSource(),
                         onPause = { persistently ->
                             if (!persistently) temporaryPauses.incrementAndGet()
                         },
                         onResume = {},
+                        onPermissionOriginSelected = {},
+                        onPermissionDecisionChanged = { _, _ -> },
+                        onResetSitePermissions = {},
                         onDismiss = {},
                     )
                 }

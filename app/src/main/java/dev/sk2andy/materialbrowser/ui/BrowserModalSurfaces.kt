@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineKind
 import dev.sk2andy.materialbrowser.browser.BrowserController
 import dev.sk2andy.materialbrowser.browser.BrowserProfile
+import dev.sk2andy.materialbrowser.browser.SiteConnectionRules
 import dev.sk2andy.materialbrowser.browser.FederatedLoginOffer
 import dev.sk2andy.materialbrowser.browser.CaptchaCompatibilityOffer
 import dev.sk2andy.materialbrowser.data.SnoozedTab
@@ -66,10 +67,25 @@ internal fun BoxScope.BrowserModalSurfaces(
     privacyXRayTabId?.let { tabId ->
         val xRayTab = controller.tabs.firstOrNull { it.id == tabId }
         if (xRayTab != null) {
+            val permissionSnapshot = controller.permissionRadarSnapshot(tabId, permissionRadarOrigin)
+            val profileEmoji = controller.profiles
+                .firstOrNull { it.id == xRayTab.profileId }
+                ?.emoji
+                .orEmpty()
             PrivacyXRaySheet(
+                pageUrl = xRayTab.url,
+                connectionKind = SiteConnectionRules.kind(
+                    pageUrl = xRayTab.url,
+                    isLoading = xRayTab.isLoading,
+                    hasError = xRayTab.error != null || xRayTab.failureKind != null,
+                ),
                 snapshot = controller.privacySnapshot(tabId),
                 blockerSettings = controller.blockerSettings,
                 siteState = controller.siteProtectionState(tabId),
+                permissionSnapshot = permissionSnapshot,
+                profileEmoji = profileEmoji,
+                websiteNotificationsSupported =
+                    controller.browserEngineKind == AndroidBrowserEngineKind.GeckoView,
                 backdropSource = browserContentBlurTarget.asCandyChromeBackdropSource(),
                 onPause = { persistently ->
                     controller.pauseSiteProtection(tabId, persistently)
@@ -90,6 +106,22 @@ internal fun BoxScope.BrowserModalSurfaces(
                     }
                 },
                 onOpenStudio = onOpenFilterStudio,
+                onPermissionOriginSelected = onPermissionOriginSelected,
+                onPermissionDecisionChanged = { permission, decision ->
+                    permissionSnapshot.site?.let { site ->
+                        controller.setSitePermissionDecision(
+                            tabId = tabId,
+                            origin = site.origin,
+                            permission = permission,
+                            decision = decision,
+                        )
+                    }
+                },
+                onResetSitePermissions = {
+                    permissionSnapshot.site?.let { site ->
+                        controller.resetSitePermissions(tabId, site.origin)
+                    }
+                },
                 onDismiss = onPrivacyXRayDismiss,
             )
         }

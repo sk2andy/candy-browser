@@ -1555,9 +1555,8 @@ internal fun BrowserScreen(
                 settingsDestination = SettingsDestination.Home
                 settingsVisible = true
             },
-            onPrivacyXRay = { privacyXRayTabId = selectedTab.id },
-            onPermissionRadar = {
-                permissionRadarTabId = selectedTab.id
+            onPrivacyXRay = {
+                privacyXRayTabId = selectedTab.id
                 permissionRadarOrigin = null
             },
             onNewTabButtonBoundsChanged = { addressNewTabButtonBounds = it },

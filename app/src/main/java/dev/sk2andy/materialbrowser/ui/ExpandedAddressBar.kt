@@ -85,7 +85,6 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.lerp
-import androidx.compose.ui.zIndex
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalWindowInfo
@@ -107,6 +106,7 @@ import dev.sk2andy.materialbrowser.browser.BLANK_URL
 import dev.sk2andy.materialbrowser.browser.BrowserTab
 import dev.sk2andy.materialbrowser.browser.PageTranslationProvider
 import dev.sk2andy.materialbrowser.browser.PageTranslationRules
+import dev.sk2andy.materialbrowser.browser.SiteConnectionRules
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoExtensionActionKey
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoExtensionActionState
 import dev.sk2andy.materialbrowser.browser.permissions.PermissionOrigin
@@ -232,7 +232,6 @@ internal fun ExpandedBottomBarContent(
     onSettings: () -> Unit,
     onPrivacyXRay: () -> Unit,
     permissionActivityVisible: Boolean,
-    onPermissionRadar: () -> Unit,
     onOpenExternal: () -> Unit,
     onSummarizeWithAssistant: () -> Unit,
     onShare: () -> Unit,
@@ -579,20 +578,18 @@ internal fun ExpandedBottomBarContent(
                                 }
                             },
                             displayTrailingContent = {
-                                    PrivacyXRayBadge(
-                                        blockedCount = tab.blockedCount,
-                                        onClick = onPrivacyXRay,
-                                        modifier = Modifier
-                                            .zIndex(2f)
-                                            .padding(end = 2.dp),
-                                        tabId = tab.id,
-                                    )
                                     PermissionRadarBadge(
                                         siteAvailable = PermissionOrigin.normalize(tab.url) != null,
                                         activityVisible = permissionActivityVisible,
-                                        isHttps = tab.url.startsWith("https://", ignoreCase = true),
-                                        onClick = onPermissionRadar,
+                                        connectionKind = SiteConnectionRules.kind(
+                                            pageUrl = tab.url,
+                                            isLoading = tab.isLoading,
+                                            hasError = tab.error != null || tab.failureKind != null,
+                                        ),
+                                        blockedCount = tab.blockedCount,
+                                        onClick = onPrivacyXRay,
                                         modifier = Modifier.padding(end = 2.dp),
+                                        tabId = tab.id,
                                     )
                             },
                         )

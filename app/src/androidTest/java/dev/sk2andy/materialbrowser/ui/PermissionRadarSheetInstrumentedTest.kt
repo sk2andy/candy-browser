@@ -8,6 +8,7 @@ import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import dev.sk2andy.materialbrowser.R
+import dev.sk2andy.materialbrowser.browser.SiteConnectionKind
 import dev.sk2andy.materialbrowser.browser.permissions.PermissionPrompt
 import dev.sk2andy.materialbrowser.browser.permissions.PermissionPromptChoice
 import dev.sk2andy.materialbrowser.browser.permissions.PermissionRadarEntry
@@ -109,7 +110,8 @@ class PermissionRadarSheetInstrumentedTest {
                 PermissionRadarBadge(
                     siteAvailable = true,
                     activityVisible = false,
-                    isHttps = true,
+                    connectionKind = SiteConnectionKind.Https,
+                    blockedCount = 0,
                     onClick = { opened = true },
                 )
             }

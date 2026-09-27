@@ -2,6 +2,10 @@
 
 package dev.sk2andy.materialbrowser.ui
 
+import android.os.SystemClock
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -12,12 +16,14 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -30,9 +36,13 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -41,6 +51,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.sk2andy.materialbrowser.R
+import dev.sk2andy.materialbrowser.browser.SiteConnectionKind
 import dev.sk2andy.materialbrowser.browser.permissions.PermissionPrompt
 import dev.sk2andy.materialbrowser.browser.permissions.PermissionPromptChoice
 import dev.sk2andy.materialbrowser.browser.permissions.PermissionRadarEntry
@@ -49,6 +60,7 @@ import dev.sk2andy.materialbrowser.browser.permissions.SitePermission
 import dev.sk2andy.materialbrowser.browser.permissions.SitePermissionActivity
 import dev.sk2andy.materialbrowser.browser.permissions.SitePermissionDecision
 import dev.sk2andy.materialbrowser.ui.theme.browserChromeColor
+import kotlinx.coroutines.delay
 
 @Composable
 internal fun PermissionRadarSheet(
@@ -60,119 +72,138 @@ internal fun PermissionRadarSheet(
     onResetSite: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    val site = snapshot.site
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         modifier = Modifier.testTag(PermissionRadarTestTags.Sheet),
         containerColor = browserChromeColor(MaterialTheme.colorScheme.surfaceContainerLow),
     ) {
-        Column(
+        PermissionRadarContent(
+            snapshot = snapshot,
+            profileEmoji = profileEmoji,
+            websiteNotificationsSupported = websiteNotificationsSupported,
+            onOriginSelected = onOriginSelected,
+            onDecisionChanged = onDecisionChanged,
+            onResetSite = onResetSite,
             modifier = Modifier
                 .fillMaxWidth()
                 .navigationBarsPadding()
                 .verticalScroll(rememberScrollState())
                 .padding(start = 24.dp, end = 24.dp, bottom = 24.dp),
-        ) {
+        )
+    }
+}
+
+@Composable
+internal fun PermissionRadarContent(
+    snapshot: PermissionRadarSnapshot,
+    profileEmoji: String,
+    websiteNotificationsSupported: Boolean,
+    onOriginSelected: (String) -> Unit,
+    onDecisionChanged: (SitePermission, SitePermissionDecision) -> Unit,
+    onResetSite: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val site = snapshot.site
+    Column(modifier = modifier.fillMaxWidth()) {
+        Text(
+            stringResource(R.string.permission_radar_title),
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.SemiBold,
+        )
+        Text(
+            stringResource(
+                if (snapshot.isPrivate) {
+                    R.string.permission_radar_private_summary
+                } else {
+                    R.string.permission_radar_profile_summary
+                },
+                profileEmoji,
+            ),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.height(16.dp))
+        if (snapshot.knownOrigins.size > 1) {
             Text(
-                stringResource(R.string.permission_radar_title),
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.SemiBold,
+                stringResource(R.string.permission_radar_sites),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary,
             )
-            Text(
-                stringResource(
-                    if (snapshot.isPrivate) {
-                        R.string.permission_radar_private_summary
-                    } else {
-                        R.string.permission_radar_profile_summary
-                    },
-                    profileEmoji,
-                ),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Spacer(Modifier.height(16.dp))
-            if (snapshot.knownOrigins.size > 1) {
-                Text(
-                    stringResource(R.string.permission_radar_sites),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary,
-                )
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    snapshot.knownOrigins.forEach { origin ->
-                        FilterChip(
-                            selected = origin == site?.origin,
-                            onClick = { onOriginSelected(origin) },
-                            label = {
-                                Text(
-                                    origin,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                )
-                            },
-                        )
-                    }
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                snapshot.knownOrigins.forEach { origin ->
+                    FilterChip(
+                        selected = origin == site?.origin,
+                        onClick = { onOriginSelected(origin) },
+                        label = {
+                            Text(
+                                origin,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        },
+                    )
                 }
-                Spacer(Modifier.height(10.dp))
             }
-            if (site == null) {
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(22.dp),
-                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                ) {
-                    Text(
-                        stringResource(R.string.permission_radar_no_site),
-                        modifier = Modifier.padding(18.dp),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            } else {
+            Spacer(Modifier.height(10.dp))
+        }
+        if (site == null) {
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(22.dp),
+                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            ) {
                 Text(
-                    site.origin,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    style = MaterialTheme.typography.titleMedium,
+                    stringResource(R.string.permission_radar_no_site),
+                    modifier = Modifier.padding(18.dp),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    val isHttps = site.origin.startsWith("https://")
-                    Icon(
-                        if (isHttps) Icons.Default.Lock else Icons.Default.Warning,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp),
-                    )
-                    Text(
-                        stringResource(
-                            if (isHttps) R.string.permission_site_https
-                            else R.string.permission_site_http,
-                        ),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                Spacer(Modifier.height(10.dp))
-                snapshot.entries.forEach { entry ->
-                    PermissionRadarRow(
-                        entry,
-                        snapshot.isPrivate,
-                        websiteNotificationsSupported,
-                        onDecisionChanged,
-                    )
-                    Spacer(Modifier.height(8.dp))
-                }
-                TextButton(
-                    onClick = onResetSite,
-                    modifier = Modifier.align(Alignment.End),
-                ) {
-                    Text(stringResource(R.string.permission_radar_reset_site))
-                }
+            }
+        } else {
+            Text(
+                site.origin,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                style = MaterialTheme.typography.titleMedium,
+            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                val isHttps = site.origin.startsWith("https://")
+                Icon(
+                    if (isHttps) Icons.Default.Lock else Icons.Default.Warning,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                )
+                Text(
+                    stringResource(
+                        if (isHttps) R.string.permission_site_https
+                        else R.string.permission_site_http,
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Spacer(Modifier.height(10.dp))
+            snapshot.entries.forEach { entry ->
+                PermissionRadarRow(
+                    entry,
+                    snapshot.isPrivate,
+                    websiteNotificationsSupported,
+                    onDecisionChanged,
+                )
+                Spacer(Modifier.height(8.dp))
+            }
+            TextButton(
+                onClick = onResetSite,
+                modifier = Modifier.align(Alignment.End),
+            ) {
+                Text(stringResource(R.string.permission_radar_reset_site))
             }
         }
     }
@@ -284,36 +315,105 @@ private fun PermissionActivityDot(activity: SitePermissionActivity) {
 internal fun PermissionRadarBadge(
     siteAvailable: Boolean,
     activityVisible: Boolean,
-    isHttps: Boolean,
+    connectionKind: SiteConnectionKind,
+    blockedCount: Int,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    tabId: String? = null,
 ) {
     if (!siteAvailable) return
-    val description = stringResource(
-        if (activityVisible) R.string.permission_radar_activity_cd
-        else R.string.permission_radar_site_action,
+    val currentBlockedCount by rememberUpdatedState(blockedCount)
+    val initialBlockedCount = remember(tabId) { blockedCount }
+    val pulseScale = remember(tabId) { Animatable(1f) }
+    LaunchedEffect(tabId) {
+        var previousCount = initialBlockedCount
+        var lastPulseCompletedAtMillis: Long? = null
+        snapshotFlow { currentBlockedCount }.collect { count ->
+            val previous = previousCount
+            previousCount = count
+            val now = SystemClock.uptimeMillis()
+            val elapsedSinceLastPulse = lastPulseCompletedAtMillis?.let { now - it }
+                ?: Long.MAX_VALUE
+            val pulseDelay = PrivacyXRayMotionRules.badgePulseDelayMillis(
+                previousCount = previous,
+                currentCount = count,
+                elapsedSinceLastPulseMillis = elapsedSinceLastPulse,
+            ) ?: return@collect
+
+            delay(pulseDelay)
+            val batchedCount = currentBlockedCount
+            previousCount = batchedCount
+            if (!PrivacyXRayMotionRules.shouldRunBatchedPulse(count, batchedCount)) {
+                return@collect
+            }
+            pulseScale.animateTo(
+                targetValue = 1.1f,
+                animationSpec = tween(110, easing = FastOutSlowInEasing),
+            )
+            pulseScale.animateTo(
+                targetValue = 1f,
+                animationSpec = tween(190, easing = FastOutSlowInEasing),
+            )
+            lastPulseCompletedAtMillis = SystemClock.uptimeMillis()
+        }
+    }
+    val connectionLabel = stringResource(
+        when (connectionKind) {
+            SiteConnectionKind.Https -> R.string.site_connection_https
+            SiteConnectionKind.Http -> R.string.site_connection_http
+            SiteConnectionKind.Unavailable -> R.string.site_connection_unavailable
+            SiteConnectionKind.Other -> R.string.site_connection_other
+        },
     )
+    val siteDescription = stringResource(
+        R.string.site_info_badge_cd,
+        connectionLabel,
+        blockedCount,
+    )
+    val description = if (activityVisible) {
+        "$siteDescription. ${stringResource(R.string.permission_radar_activity_cd)}"
+    } else {
+        siteDescription
+    }
     Surface(
         onClick = onClick,
         modifier = modifier
-            .size(40.dp)
-            .clip(CircleShape)
+            .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
+            .graphicsLayer {
+                scaleX = pulseScale.value
+                scaleY = pulseScale.value
+            }
             .semantics { contentDescription = description }
             .testTag(PermissionRadarTestTags.ActivityBadge),
-        shape = CircleShape,
+        shape = RoundedCornerShape(24.dp),
         color = if (activityVisible) MaterialTheme.colorScheme.tertiaryContainer
         else MaterialTheme.colorScheme.surfaceContainerHigh,
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Spacer(Modifier.weight(1f))
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
             Icon(
-                if (isHttps) Icons.Default.Lock else Icons.Default.Warning,
+                when (connectionKind) {
+                    SiteConnectionKind.Https -> Icons.Default.Lock
+                    SiteConnectionKind.Http -> Icons.Default.Warning
+                    SiteConnectionKind.Unavailable, SiteConnectionKind.Other -> Icons.Default.Info
+                },
                 contentDescription = null,
                 modifier = Modifier.size(20.dp),
                 tint = if (activityVisible) MaterialTheme.colorScheme.onTertiaryContainer
                 else MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            Spacer(Modifier.weight(1f))
+            if (blockedCount > 0) {
+                Text(
+                    blockedCount.toString(),
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = if (activityVisible) MaterialTheme.colorScheme.onTertiaryContainer
+                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
     }
 }
