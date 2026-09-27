@@ -1139,11 +1139,15 @@ private class GeckoViewBrowserSession(
                 ) ?: GeckoNavigationRequestDecision.Allow
                 return when (decision) {
                     GeckoNavigationRequestDecision.Allow -> {
-                        ensureNavigation(request.uri)
+                        if (request.target != GeckoSession.NavigationDelegate.TARGET_WINDOW_NEW) {
+                            ensureNavigation(request.uri)
+                        }
                         GeckoResult.allow()
                     }
                     GeckoNavigationRequestDecision.Deny -> {
-                        finishNavigation(request.uri)
+                        if (request.target != GeckoSession.NavigationDelegate.TARGET_WINDOW_NEW) {
+                            finishNavigation(request.uri)
+                        }
                         GeckoResult.deny()
                     }
                 }
