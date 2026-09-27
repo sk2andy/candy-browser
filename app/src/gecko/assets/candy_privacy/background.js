@@ -703,7 +703,7 @@ browser.runtime.onMessage.addListener((message, sender) => {
     });
   }
   if (
-    message.type === "safe-area-fallback" &&
+    (message.type === "safe-area-fallback" || message.type === "status-bar-backdrop") &&
     Number.isSafeInteger(message.navigationGeneration) &&
     Number.isSafeInteger(message.revision)
   ) {
@@ -716,7 +716,7 @@ browser.runtime.onMessage.addListener((message, sender) => {
       nativePort
     ) {
       nativePort.postMessage({
-        type: "safe-area-fallback",
+        type: message.type,
         protocolVersion: PROTOCOL_VERSION,
         token,
         revision: message.revision,

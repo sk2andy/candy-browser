@@ -1528,6 +1528,114 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
     }
 
     @Test
+    fun statusBarBackdropDoesNotChangeTopInsetAndClearsOnNavigation() {
+        composeRule.runOnIdle {
+            val store = BrowserSessionStore(composeRule.activity)
+            originalEngineKind = store.loadAndroidBrowserEngineKind()
+            assertTrue(store.saveAndroidBrowserEngineKind(AndroidBrowserEngineKind.GeckoView))
+            val browserController = BrowserController(composeRule.activity)
+            controller = browserController
+            val tabId = browserController.selectedTabId
+            val session = ReentrantAttachSession(tabId = tabId, onFirstAttach = {})
+            browserController.installGeckoEngineSessionForTesting(session)
+            browserController.updateDeveloperSettings(DeveloperSettings())
+            browserController.onWindowInsetsChanged(
+                WindowInsetsCompat.Builder()
+                    .setInsets(WindowInsetsCompat.Type.statusBars(), Insets.of(0, 96, 0, 0))
+                    .build(),
+            )
+            browserController.dispatchGeckoEngineEventForTesting(
+                BrowserEngineEvent(
+                    tabId = tabId,
+                    type = BrowserEngineEventType.NavigationStarted,
+                    address = "https://example.com/first",
+                    title = null,
+                    canGoBack = false,
+                    canGoForward = false,
+                    failureDescription = null,
+                ),
+            )
+            session.privacyPolicies.clear()
+
+            browserController.dispatchSelectedGeckoPrivacyEventForTesting(
+                GeckoPrivacyEvent(
+                    requestUrl = "",
+                    pageUrl = "https://example.com/first",
+                    ruleId = null,
+                    wasBlocked = false,
+                    isBuiltIn = false,
+                    isCompatibilityObservation = false,
+                    statusBarBackdropNavigationGeneration = 0,
+                    statusBarBackdropThemeColor = "#ff4500",
+                ),
+            )
+            assertEquals(null, browserController.selectedWebContentStatusBarBackdrop)
+
+            browserController.dispatchSelectedGeckoPrivacyEventForTesting(
+                GeckoPrivacyEvent(
+                    requestUrl = "",
+                    pageUrl = "https://example.com/first",
+                    ruleId = null,
+                    wasBlocked = false,
+                    isBuiltIn = false,
+                    isCompatibilityObservation = false,
+                    statusBarBackdropNavigationGeneration = 1,
+                    statusBarBackdropThemeColor = "#ff4500",
+                ),
+            )
+            assertEquals(
+                0xFFFF4500.toInt(),
+                browserController.selectedWebContentStatusBarBackdrop?.colorArgb,
+            )
+            assertEquals(null, browserController.selectedWebContentTopBarState)
+            assertEquals(emptyList<GeckoPrivacyPolicy>(), session.privacyPolicies)
+
+            browserController.dispatchSelectedGeckoPrivacyEventForTesting(
+                GeckoPrivacyEvent(
+                    requestUrl = "",
+                    pageUrl = "https://example.com/first",
+                    ruleId = null,
+                    wasBlocked = false,
+                    isBuiltIn = false,
+                    isCompatibilityObservation = false,
+                    statusBarBackdropNavigationGeneration = 1,
+                ),
+            )
+            assertEquals(null, browserController.selectedWebContentStatusBarBackdrop)
+            browserController.dispatchSelectedGeckoPrivacyEventForTesting(
+                GeckoPrivacyEvent(
+                    requestUrl = "",
+                    pageUrl = "https://example.com/first",
+                    ruleId = null,
+                    wasBlocked = false,
+                    isBuiltIn = false,
+                    isCompatibilityObservation = false,
+                    statusBarBackdropNavigationGeneration = 1,
+                    statusBarBackdropThemeColor = "#ff4500",
+                ),
+            )
+            assertEquals(
+                0xFFFF4500.toInt(),
+                browserController.selectedWebContentStatusBarBackdrop?.colorArgb,
+            )
+
+            browserController.dispatchGeckoEngineEventForTesting(
+                BrowserEngineEvent(
+                    tabId = tabId,
+                    type = BrowserEngineEventType.NavigationStarted,
+                    address = "https://example.com/second",
+                    title = null,
+                    canGoBack = false,
+                    canGoForward = false,
+                    failureDescription = null,
+                ),
+            )
+            assertEquals(null, browserController.selectedWebContentStatusBarBackdrop)
+            assertEquals(96, session.privacyPolicies.last().cssSafeAreaTopInsetPx)
+        }
+    }
+
+    @Test
     fun staleFallbackRestorationCannotClearNewerNavigationFallback() {
         composeRule.runOnIdle {
             val store = BrowserSessionStore(composeRule.activity)

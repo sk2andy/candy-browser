@@ -848,6 +848,9 @@ class BrowserController(
     internal val selectedWebContentTopBarState: WebContentTopBarState?
         get() = webContentTopBarStates[selectedTabId]
 
+    internal val selectedWebContentStatusBarBackdrop: WebContentStatusBarAppearance?
+        get() = webContentStatusBarBackdrops[selectedTabId]
+
     internal val canMinimizeFullscreenVideo: Boolean
         get() = presentationIsPrivate() == false
 
@@ -1328,6 +1331,8 @@ class BrowserController(
     private var nextBrowserEngineLoadRequestId = 0L
     private val automaticNativeTopSafeAreaTabIds = mutableSetOf<String>()
     private val webContentTopBarStates = mutableStateMapOf<String, WebContentTopBarState>()
+    private val webContentStatusBarBackdrops =
+        mutableStateMapOf<String, WebContentStatusBarAppearance>()
     private val firefoxExtensionOptionsTabs =
         mutableMapOf<String, FirefoxExtensionOptionsTabChrome>()
     private val committedRecallPages = mutableMapOf<String, RecallExtractionIdentity>()
@@ -10539,6 +10544,7 @@ class BrowserController(
         navigationGenerations.clear()
         automaticNativeTopSafeAreaTabIds.clear()
         webContentTopBarStates.clear()
+        webContentStatusBarBackdrops.clear()
         firefoxExtensionOptionsTabs.clear()
         committedRecallPages.clear()
         externalNavigationGrants.clear()
@@ -12100,6 +12106,15 @@ class BrowserController(
     }
 
     private fun onGeckoPrivacyEvent(tabId: String, event: GeckoPrivacyEvent) {
+        event.statusBarBackdropNavigationGeneration?.let { navigationGeneration ->
+            if (navigationGenerations[tabId] != navigationGeneration) return
+            val appearance = WebContentStatusBarAppearanceRules.fromReportedColor(
+                event.statusBarBackdropThemeColor,
+            )
+            if (appearance == null) webContentStatusBarBackdrops.remove(tabId)
+            else webContentStatusBarBackdrops[tabId] = appearance
+            return
+        }
         event.safeAreaFallbackNavigationGeneration?.let { navigationGeneration ->
             if (event.safeAreaFallbackIsTopHeader) {
                 enableNativeTopHeaderSafeArea(
@@ -12249,6 +12264,7 @@ class BrowserController(
                     browserEngineSessions[event.tabId] === navigatingSession &&
                     navigationGenerations[event.tabId] == nextNavigationGeneration
                 val clearedTopHeaderSafeArea = webContentTopBarStates.remove(event.tabId) != null
+                webContentStatusBarBackdrops.remove(event.tabId)
                 val restoreDocumentTopSafeArea =
                     event.tabId in automaticNativeTopSafeAreaTabIds ||
                         clearedTopHeaderSafeArea
@@ -15186,6 +15202,7 @@ class BrowserController(
         navigationGenerations.remove(tabId)
         automaticNativeTopSafeAreaTabIds.remove(tabId)
         webContentTopBarStates.remove(tabId)
+        webContentStatusBarBackdrops.remove(tabId)
         firefoxExtensionOptionsTabs.remove(tabId)
         clearExternalNavigationAuthorization(tabId)
         pageUrls.remove(tabId)

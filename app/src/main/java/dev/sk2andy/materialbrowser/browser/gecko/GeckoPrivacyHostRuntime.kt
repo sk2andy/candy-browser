@@ -551,6 +551,7 @@ internal class GeckoViewPrivacyHostRuntime(
             "events" -> acceptEvents(value)
             "main-frame-response" -> acceptMainFrameResponse(value)
             "safe-area-fallback" -> acceptSafeAreaFallback(value)
+            "status-bar-backdrop" -> acceptStatusBarBackdrop(value)
             "scroll-metrics" -> acceptScrollMetrics(value)
             "inline-video-state" -> acceptInlineVideoState(value)
             "inline-video-open-request" -> acceptInlineVideoOpenRequest(value)
@@ -763,6 +764,27 @@ internal class GeckoViewPrivacyHostRuntime(
                         color.isNotBlank() && color.length <= MAX_THEME_COLOR_LENGTH
                     },
                 safeAreaFallbackIsTopHeader = value.optBoolean("topHeader", false),
+            ),
+        )
+    }
+
+    private fun acceptStatusBarBackdrop(value: JSONObject) {
+        val binding = bindings[value.optString("token")] ?: return
+        if (binding.handshake.publishedRevision != value.optLong("revision", -1)) return
+        val navigationGeneration = value.optInt("navigationGeneration", -1)
+        if (navigationGeneration < 0 || navigationGeneration != binding.policy.navigationGeneration) return
+        val themeColor = value.optString("themeColor")
+            .takeIf { color -> color.isNotBlank() && color.length <= MAX_THEME_COLOR_LENGTH }
+        binding.sink.onEvent(
+            GeckoPrivacyEvent(
+                requestUrl = "",
+                pageUrl = binding.policy.pageHost?.let { host -> "https://$host/" },
+                ruleId = null,
+                wasBlocked = false,
+                isBuiltIn = false,
+                isCompatibilityObservation = false,
+                statusBarBackdropNavigationGeneration = navigationGeneration,
+                statusBarBackdropThemeColor = themeColor,
             ),
         )
     }

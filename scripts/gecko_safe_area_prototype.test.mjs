@@ -4,11 +4,12 @@ import { test } from 'node:test';
 import vm from 'node:vm';
 
 const source = readFileSync(new URL('../app/src/gecko/assets/candy_privacy/content_safe_area_prototype.js', import.meta.url), 'utf8');
+const redditSource = readFileSync(new URL('../app/src/gecko/assets/candy_privacy/content_safe_area_reddit.js', import.meta.url), 'utf8');
 
 function fixture({ density = 3, nativeTop = 96, normalizePixels = false, reparseStyles = false, prototypeSource = source, hostname = '', viewportContent = null, themeColor = null } = {}) {
   let clock = 0; let timerId = 0; let observer;
   const timers = new Map(); const listeners = new Map(); const mutations = []; const registrations = [];
-  const reads = { style: 0, rect: 0, selector: 0 }; const fallbacks = []; let writes = 0;
+  const reads = { style: 0, rect: 0, selector: 0 }; const fallbacks = []; const backdrops = []; let writes = 0;
   let ruleWrites = 0;
   const normalize = (value) => normalizePixels && /^[+-]?[\d.]+px$/.test(value) ? `${Number(Number(value.slice(0, -2)).toFixed(4))}px` : value;
   const sheets = [];
@@ -103,6 +104,9 @@ function fixture({ density = 3, nativeTop = 96, normalizePixels = false, reparse
         const marker = /\[([^=]+)="([^"]+)"\]/.exec(part);
         if (marker) return this.getAttribute(marker[1]) === marker[2];
         const value = part.trim();
+        if (value === 'meta[name="theme-color" i]') {
+          return this.localName === 'meta' && this.getAttribute('name') === 'theme-color';
+        }
         const id = /#([\w-]+)/.exec(value)?.[1];
         const classes = [...value.matchAll(/\.([\w-]+)/g)].map((match) => match[1]);
         return (!id || id === this.id) && classes.every((name) => (this.classes || []).includes(name)) &&
@@ -161,7 +165,7 @@ function fixture({ density = 3, nativeTop = 96, normalizePixels = false, reparse
       if (selector === 'meta[name="theme-color" i]') return theme ? [theme] : [];
       if (selector === 'meta[name="viewport" i]') return viewport ? [viewport] : [];
       if (!["header, nav, [role=\"banner\"], [role=\"navigation\"]",
-        'reddit-header-small, reddit-header-large, shreddit-header', 'main'].includes(selector)) return [];
+        'reddit-header-small, reddit-header-large, shreddit-header', 'shreddit-app', 'main'].includes(selector)) return [];
       reads.selector++;
       return root.querySelectorAll(selector);
     },
@@ -210,6 +214,7 @@ function fixture({ density = 3, nativeTop = 96, normalizePixels = false, reparse
       cssSafeAreaConfiguration: () => ({ ...config }),
       domDiagnosticsEnabled: () => true,
       fallbackToNative: (...args) => fallbacks.push(args),
+      statusBarBackdrop: (...args) => backdrops.push(args),
     },
     getComputedStyle: (element) => {
       reads.style++;
@@ -239,7 +244,7 @@ function fixture({ density = 3, nativeTop = 96, normalizePixels = false, reparse
     }
     assert.fail('Prototype work or own-style mutation loop did not terminate');
   };
-  return { body, viewport, context, config, reads, timers, registrations, flush, computed, sheets, fallbacks,
+  return { body, viewport, theme, context, config, reads, timers, registrations, flush, computed, sheets, fallbacks, backdrops,
     writes: () => writes, ruleWrites: () => ruleWrites,
     element: (position, top, tag) => body.append(new Element(position, top, tag)),
     sheet(definitions, options = {}) {
@@ -477,6 +482,113 @@ test('Reddit helper remains active for viewport cover and receives the bounded n
   f.configure({ enabled: false });
   assert.equal(configured.at(-1), false);
   assert.equal(f.context.document.documentElement.style.getPropertyValue('--candy-safe-area-inset-top'), '');
+});
+
+test('viewport-cover sticky header gets a theme-color backdrop after scroll without a native fallback', () => {
+  const f = fixture({ viewportContent: 'width=device-width, viewport-fit=cover', themeColor: '#ff4500' });
+  const header = f.element('sticky', '32px', 'header');
+  header.rect = { top: 32, left: 0, width: 800, height: 56, right: 800, bottom: 88 };
+  f.start();
+  assert.equal(f.diagnostics().active, false);
+  assert.deepEqual(f.backdrops, []);
+  const beforeScroll = { ...f.reads };
+  f.scrollTo(120);
+  f.event('scroll');
+  assert.deepEqual(f.reads, beforeScroll, 'Scroll callback does not inspect the DOM');
+  f.flush();
+  assert.deepEqual(f.backdrops, [[1, 1, '#ff4500']]);
+  assert.deepEqual(f.fallbacks, []);
+  f.event('scroll');
+  f.flush();
+  assert.equal(f.backdrops.length, 1);
+});
+
+test('status backdrop requires an opaque theme color and a pinned header below the inset', () => {
+  const noTheme = fixture({ viewportContent: 'viewport-fit=cover' });
+  noTheme.element('sticky', '32px', 'header').rect =
+    { top: 32, left: 0, width: 800, height: 56, right: 800, bottom: 88 };
+  noTheme.start();
+  noTheme.event('scroll');
+  noTheme.flush();
+  assert.deepEqual(noTheme.backdrops, []);
+
+  const wrongPosition = fixture({ viewportContent: 'viewport-fit=cover', themeColor: '#abcdef' });
+  wrongPosition.element('static', 'auto', 'header').rect =
+    { top: 32, left: 0, width: 800, height: 56, right: 800, bottom: 88 };
+  wrongPosition.start();
+  wrongPosition.event('scroll');
+  wrongPosition.flush();
+  assert.deepEqual(wrongPosition.backdrops, []);
+});
+
+test('Reddit backdrop prioritizes its custom header after earlier semantic elements', () => {
+  const f = fixture({
+    hostname: 'www.reddit.com',
+    viewportContent: 'viewport-fit=cover',
+    themeColor: '#ff4500',
+  });
+  for (let index = 0; index < 12; index++) f.element('static', 'auto', 'header');
+  const header = f.element('sticky', 'max(var(--candy-safe-area-inset-top), env(safe-area-inset-top))',
+    'reddit-header-small');
+  header.rect = { top: 32, left: 0, width: 800, height: 56, right: 800, bottom: 88 };
+  f.start();
+  f.event('scroll');
+  f.flush();
+  assert.deepEqual(f.backdrops, [[1, 1, '#ff4500']]);
+});
+
+test('Reddit backdrop finds a protected header in its open app shadow root', () => {
+  const f = fixture({ hostname: 'www.reddit.com', viewportContent: 'viewport-fit=cover', themeColor: '#ff4500' });
+  const app = f.element('static', 'auto', 'shreddit-app');
+  app.shadowRoot = f.context.document.createElement('shadow-root');
+  const header = f.context.document.createElement('reddit-header-small');
+  header.computed = { position: 'sticky', top: '32px' };
+  header.rect = { top: 32, left: 0, width: 800, height: 56, right: 800, bottom: 88 };
+  app.shadowRoot.append(header);
+  vm.runInContext(redditSource, f.context);
+  f.start();
+  f.event('scroll');
+  f.flush();
+  assert.deepEqual(f.backdrops, [[1, 1, '#ff4500']]);
+});
+
+test('backdrop recognizes a sticky wrapper around a semantic header', () => {
+  const f = fixture({ viewportContent: 'viewport-fit=cover', themeColor: '#123456' });
+  const wrapper = f.element('sticky', '32px', 'div');
+  wrapper.rect = { top: 32, left: 0, width: 800, height: 56, right: 800, bottom: 88 };
+  const header = f.element('static', 'auto', 'header');
+  wrapper.append(header);
+  f.start();
+  f.event('scroll');
+  f.flush();
+  assert.deepEqual(f.backdrops, [[1, 1, '#123456']]);
+});
+
+test('backdrop updates and clears when the page changes theme-color', () => {
+  const f = fixture({ viewportContent: 'viewport-fit=cover', themeColor: '#123456' });
+  const header = f.element('sticky', '32px', 'header');
+  header.rect = { top: 32, left: 0, width: 800, height: 56, right: 800, bottom: 88 };
+  f.start();
+  f.event('scroll');
+  f.flush();
+  f.theme.setAttribute('content', '#abcdef');
+  f.mutate(f.theme, 'content');
+  f.flush();
+  f.theme.setAttribute('content', 'transparent');
+  f.mutate(f.theme, 'content');
+  f.flush();
+  assert.deepEqual(f.backdrops, [[1, 1, '#123456'], [1, 1, '#abcdef'], [1, 1, null]]);
+});
+
+test('disabling safe-area policy clears the reported status-bar backdrop', () => {
+  const f = fixture({ viewportContent: 'viewport-fit=cover', themeColor: '#123456' });
+  const header = f.element('sticky', '32px', 'header');
+  header.rect = { top: 32, left: 0, width: 800, height: 56, right: 800, bottom: 88 };
+  f.start();
+  f.event('scroll');
+  f.flush();
+  f.configure({ enabled: false, revision: 2 });
+  assert.deepEqual(f.backdrops, [[1, 1, '#123456'], [1, 2, null]]);
 });
 
 test('sticky headers switch immediately while fixed headers must remain pinned after scrolling', () => {

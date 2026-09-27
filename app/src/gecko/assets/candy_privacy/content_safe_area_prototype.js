@@ -59,6 +59,10 @@
   let refreshBodyAtReady = false;
   let cssTurn = true;
   let nativeFallbackRequested = false;
+  let statusBarBackdropHeaderConfirmed = false;
+  let reportedStatusBarBackdropColor = null;
+  let statusBarBackdropPending = false;
+  const themeMediaWatchers = new Map();
   let fixedHeaderCandidates = new Map();
   let semanticHeaderCandidates = new Set();
   let headerVerificationPending = false;
@@ -160,6 +164,22 @@
       if (color) return color;
     }
     return null;
+  }
+
+  function watchThemeColorMedia() {
+    for (const candidate of document.querySelectorAll?.('meta[name="theme-color" i]') || []) {
+      const media = candidate.getAttribute("media");
+      if (!media || themeMediaWatchers.has(media) || themeMediaWatchers.size >= 8 ||
+          !globalThis.matchMedia) continue;
+      const query = globalThis.matchMedia(media);
+      const changed = () => {
+        if (!statusBarBackdropHeaderConfirmed) return;
+        statusBarBackdropPending = true;
+        schedule();
+      };
+      query.addEventListener?.("change", changed);
+      themeMediaWatchers.set(media, { query, changed });
+    }
   }
 
   function headerThemeColor(element, style) {
@@ -284,6 +304,50 @@
       }
     }
     return false;
+  }
+
+  function reportStatusBarBackdrop() {
+    if (nativeFallbackRequested || !configuration?.safeAreaEnabled ||
+        scrollGeneration === 0) return;
+    watchThemeColorMedia();
+    const themeColor = activeThemeColor();
+    if (statusBarBackdropHeaderConfirmed) {
+      if (themeColor !== reportedStatusBarBackdropColor) {
+        reportedStatusBarBackdropColor = themeColor;
+        globalThis.CandyContentTopInset?.statusBarBackdrop?.(
+          configuration.navigationGeneration, configuration.revision, themeColor);
+      }
+      return;
+    }
+    if (!themeColor) return;
+    const viewportWidth = Math.max(1, globalThis.innerWidth || document.documentElement.clientWidth || 0);
+    const viewportHeight = Math.max(1, globalThis.innerHeight || document.documentElement.clientHeight || 0);
+    const candidates = [...(globalThis.CandyRedditSafeArea?.headerCandidates?.() || []),
+      ...semanticHeaderCandidates];
+    const visited = new Set();
+    for (const candidate of candidates) {
+      for (let element = candidate, depth = 0; element && depth < 8;
+          element = composedParent(element), depth++) {
+        if (visited.has(element) || element === document.body ||
+            element === document.documentElement) continue;
+        visited.add(element);
+        const style = getComputedStyle(element);
+        if (style.position !== "fixed" && style.position !== "sticky") continue;
+        if (style.display === "none" || style.visibility === "hidden" ||
+            style.visibility === "collapse" || Number.parseFloat(style.opacity) <= 0.01) continue;
+        const top = pixels(style.top);
+        if (style.top === "auto" || (top !== null && (top < inset - 2 || top > inset + 2))) continue;
+        const rect = element.getBoundingClientRect();
+        if (rect.width < viewportWidth * 0.5 || rect.height <= 1 ||
+            rect.height > viewportHeight * 0.5 || rect.top < inset - 2 ||
+            rect.top > inset + 2) continue;
+        statusBarBackdropHeaderConfirmed = true;
+        reportedStatusBarBackdropColor = themeColor;
+        globalThis.CandyContentTopInset?.statusBarBackdrop?.(
+          configuration.navigationGeneration, configuration.revision, themeColor);
+        return;
+      }
+    }
   }
 
   function pixels(value) {
@@ -655,15 +719,17 @@
     selectorBuild = null;
     semanticCheckPending = false;
     headerVerificationPending = false;
+    statusBarBackdropPending = false;
     interactionUntil = 0;
   }
 
   function schedule(delay = 0) {
     if (timer || (!cleanup.length && !bodyPending && !jobs.length && !selectorScan &&
         !selectorBuild && !sourceDiscovery && !sourceQueue.length && !semanticCheckPending &&
-        !headerVerificationPending)) return;
+        !headerVerificationPending && !statusBarBackdropPending)) return;
     if (!cleanup.length && !bodyPending && !jobs.length && !selectorScan && !selectorBuild &&
         !sourceDiscovery && !semanticCheckPending && !headerVerificationPending &&
+        !statusBarBackdropPending &&
         sourceQueue.length) {
       delay = Math.max(delay, Math.max(0, Math.min(...sourceQueue.map((source) => source.due)) - performance.now()));
     }
@@ -691,7 +757,7 @@
   }
 
   function seedSemanticHeaders() {
-    if (!configuration?.active || !document.body || document.readyState === "loading" ||
+    if (!configuration?.safeAreaEnabled || !document.body || document.readyState === "loading" ||
         nativeFallbackRequested || semanticChecks >= maxSemanticChecks) return;
     semanticChecks++;
     const candidates = [];
@@ -712,14 +778,15 @@
         if (semanticHeaderCandidates.size < maxSemanticHeaderCandidates) {
           semanticHeaderCandidates.add(current);
         }
-        classify(current, getComputedStyle(current));
+        if (configuration.active) classify(current, getComputedStyle(current));
         if (nativeFallbackRequested) return;
       }
     }
   }
 
   function requestSemanticHeaderCheck(delay = 0) {
-    if (!configuration?.active || nativeFallbackRequested || semanticChecks >= maxSemanticChecks) return;
+    if (!configuration?.safeAreaEnabled || nativeFallbackRequested ||
+        semanticChecks >= maxSemanticChecks) return;
     semanticCheckPending = true;
     schedule(delay);
   }
@@ -818,7 +885,6 @@
         count++;
         continue;
       }
-      if (!configuration.active) break;
       if (headerVerificationPending) {
         headerVerificationPending = false;
         verifyFixedHeaderCandidates();
@@ -831,6 +897,13 @@
         count++;
         continue;
       }
+      if (statusBarBackdropPending) {
+        statusBarBackdropPending = false;
+        reportStatusBarBackdrop();
+        count++;
+        continue;
+      }
+      if (!configuration.active) break;
       if (bodyPending) {
         if (document.body) {
           protectBody();
@@ -891,20 +964,19 @@
       coverLayoutRevision++;
       configure();
     }
-    if (!configuration.active) return;
-    if (document.body && protectedBody !== document.body) {
-      bodyPending = true;
-      protectBody(); // One bounded body operation before the next paint, not a subtree scan.
-    }
-    if (globalThis.CandyRedditSafeArea) {
-      let remaining = 16;
-      for (let index = 0; index < Math.min(records.length, 64) && remaining > 0; index++) {
-        const record = records[index];
-        if (record.type !== "childList") continue;
-        for (let child = 0; child < record.addedNodes.length && remaining-- > 0; child++) {
-          globalThis.CandyRedditSafeArea.added(record.addedNodes[child]);
-        }
+    const themeChanged = records.slice(0, 64).some((record) => {
+      if (record.type === "attributes") {
+        return ["content", "media"].includes(record.attributeName) &&
+          record.target?.matches?.('meta[name="theme-color" i]');
       }
+      if (record.type !== "childList") return false;
+      return [...Array.from(record.addedNodes || []).slice(0, 8),
+        ...Array.from(record.removedNodes || []).slice(0, 8)].some((node) =>
+        node?.matches?.('meta[name="theme-color" i]'));
+    });
+    if (themeChanged && statusBarBackdropHeaderConfirmed) {
+      statusBarBackdropPending = true;
+      schedule();
     }
     const semanticMutation = records.slice(0, 64).some((record) => {
       if (record.type === "attributes") {
@@ -920,6 +992,21 @@
         (node.matches?.(semanticHeaderSelector) || !!node.querySelector?.(semanticSelector)));
     });
     if (semanticMutation) requestSemanticHeaderCheck();
+    if (!configuration.active) return;
+    if (document.body && protectedBody !== document.body) {
+      bodyPending = true;
+      protectBody(); // One bounded body operation before the next paint, not a subtree scan.
+    }
+    if (globalThis.CandyRedditSafeArea) {
+      let remaining = 16;
+      for (let index = 0; index < Math.min(records.length, 64) && remaining > 0; index++) {
+        const record = records[index];
+        if (record.type !== "childList") continue;
+        for (let child = 0; child < record.addedNodes.length && remaining-- > 0; child++) {
+          globalThis.CandyRedditSafeArea.added(record.addedNodes[child]);
+        }
+      }
+    }
     // Source events are independent of the trusted DOM-discovery interaction window.
     let remaining = 64;
     for (let index = 0; index < Math.min(records.length, 128) && remaining > 0; index++) {
@@ -991,7 +1078,8 @@
       coverCheckedRevision = coverLayoutRevision;
       coverCheckedInset = nextInset;
     }
-    const next = { active: incoming.ready === true && incoming.enabled === true && nextInset > 0 &&
+    const next = { safeAreaEnabled: incoming.ready === true && incoming.enabled === true && nextInset > 0,
+      active: incoming.ready === true && incoming.enabled === true && nextInset > 0 &&
       (!cover || coverNeedsProtection), cover,
       navigationGeneration: Number.isSafeInteger(incoming.navigationGeneration) ?
         Math.max(0, incoming.navigationGeneration) : 0,
@@ -1009,6 +1097,10 @@
     if (key === configurationKey) {
       if (resize && next.active) { enqueue(document.body, true); schedule(); }
       return;
+    }
+    if (!next.safeAreaEnabled && reportedStatusBarBackdropColor) {
+      globalThis.CandyContentTopInset?.statusBarBackdrop?.(
+        next.navigationGeneration, next.revision, null);
     }
     cancel();
     observer?.disconnect();
@@ -1046,6 +1138,13 @@
     refreshBodyAtReady = false;
     cssTurn = true;
     nativeFallbackRequested = false;
+    statusBarBackdropHeaderConfirmed = false;
+    reportedStatusBarBackdropColor = null;
+    statusBarBackdropPending = false;
+    for (const { query, changed } of themeMediaWatchers.values()) {
+      query.removeEventListener?.("change", changed);
+    }
+    themeMediaWatchers.clear();
     fixedHeaderCandidates = new Map();
     semanticHeaderCandidates = new Set();
     headerVerificationPending = false;
@@ -1082,8 +1181,9 @@
     scrollGeneration++;
     cancel();
     bodyPending = false;
+    statusBarBackdropPending = configuration?.safeAreaEnabled === true;
     headerVerificationPending = fixedHeaderCandidates.size > 0 || semanticHeaderCandidates.size > 0;
-    if (headerVerificationPending) {
+    if (headerVerificationPending || statusBarBackdropPending) {
       schedule(Math.max(
         minimumHeaderVerificationQuietMillis,
         configuration?.mutationDebounceMillis || minimumHeaderVerificationQuietMillis,

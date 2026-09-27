@@ -355,6 +355,7 @@ internal fun BrowserViewport(
     ).state
     val webContentTopBarState = controller.selectedWebContentTopBarState
     val webContentStatusBarAppearance = webContentTopBarState?.statusBarAppearance
+        ?: controller.selectedWebContentStatusBarBackdrop
     val defaultStatusBarUsesDarkIcons = !controller.appearanceSettings.usesDarkColors(
         isSystemInDarkTheme(),
     )
@@ -473,7 +474,8 @@ internal fun BrowserViewport(
                     controller.selectedFirefoxExtensionOptionsTitle == null,
                 statusBarTint = webContentStatusBarAppearance?.colorArgb
                     ?: MaterialTheme.colorScheme.surface.toArgb(),
-                solidStatusBarOverlay = webContentTopBarState != null,
+                solidStatusBarOverlay = webContentTopBarState != null ||
+                    controller.selectedWebContentStatusBarBackdrop != null,
                 statusBarUsesDarkIcons = webContentStatusBarAppearance?.useDarkIcons,
                 defaultStatusBarUsesDarkIcons = defaultStatusBarUsesDarkIcons,
                 onRefresh = controller::reload,

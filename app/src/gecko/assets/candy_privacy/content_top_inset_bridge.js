@@ -177,6 +177,19 @@ globalThis.CandyContentTopInset = Object.freeze({
       topHeader: topHeader === true,
     }).catch(() => {});
   },
+  statusBarBackdrop: (navigationGeneration, revision, themeColor) => {
+    if (
+      navigationGeneration !== state.navigationGeneration ||
+      revision !== state.revision ||
+      (themeColor !== null && typeof themeColor !== "string")
+    ) return;
+    browser.runtime.sendMessage({
+      type: "status-bar-backdrop",
+      navigationGeneration,
+      revision,
+      themeColor,
+    }).catch(() => {});
+  },
 });
 
 browser.runtime.onMessage.addListener((message) => {

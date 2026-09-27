@@ -559,6 +559,33 @@ test("newer privacy policy wins while older cookie rules are still loading", asy
     postedNativeMessages.filter((message) => message.type === "safe-area-fallback").at(-1).revision,
     2,
   );
+  const backdropCount = postedNativeMessages.filter(
+    (message) => message.type === "status-bar-backdrop",
+  ).length;
+  await sendRuntimeMessage(
+    { type: "status-bar-backdrop", navigationGeneration: 0, revision: 1, themeColor: "#ff4500" },
+    { tab: { id: 7 } },
+  );
+  assert.equal(
+    postedNativeMessages.filter((message) => message.type === "status-bar-backdrop").length,
+    backdropCount,
+  );
+  await sendRuntimeMessage(
+    { type: "status-bar-backdrop", navigationGeneration: 0, revision: 2, themeColor: "#ff4500" },
+    { tab: { id: 7 } },
+  );
+  assert.equal(
+    postedNativeMessages.filter((message) => message.type === "status-bar-backdrop").at(-1).themeColor,
+    "#ff4500",
+  );
+  await sendRuntimeMessage(
+    { type: "status-bar-backdrop", navigationGeneration: 0, revision: 2, themeColor: null },
+    { tab: { id: 7 } },
+  );
+  assert.equal(
+    postedNativeMessages.filter((message) => message.type === "status-bar-backdrop").at(-1).themeColor,
+    null,
+  );
   assert.ok(
     postedNativeMessages.some((message) =>
       message.type === "policy-ready" &&

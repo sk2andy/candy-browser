@@ -14,6 +14,7 @@
   const observers = new Map();
   const definitions = new Set();
   let apps = new Set();
+  let headers = new Set();
   let active = false;
   let protectedFlow = false;
   let flowChanged = null;
@@ -78,6 +79,7 @@
       css(`:root ${appTag} `));
     const desired = new Set();
     const currentApps = new Set(Array.from(document.querySelectorAll(appTag)).slice(0, 2));
+    const currentHeaders = new Set();
     let flow = false;
     if (!currentApps.size) observe(document.documentElement, desired);
     for (const app of currentApps) {
@@ -93,8 +95,9 @@
       for (const scope of scopes) {
         const main = scope.querySelector(".main-container");
         if (main) observe(main.parentElement, desired);
-        const headers = headerTags.flatMap((tag) => Array.from(scope.querySelectorAll(tag))).slice(0, 4);
-        for (const header of headers) {
+        const scopeHeaders = headerTags.flatMap((tag) => Array.from(scope.querySelectorAll(tag))).slice(0, 4);
+        for (const header of scopeHeaders) {
+          currentHeaders.add(header);
           observe(header, desired);
           if (header.shadowRoot) {
             protect(header.shadowRoot, `:host { top: ${inset} !important; }\n` +
@@ -106,6 +109,7 @@
       }
     }
     apps = currentApps;
+    headers = currentHeaders;
     for (const [target, observer] of observers) {
       if (!desired.has(target)) { observer.disconnect(); observers.delete(target); }
     }
@@ -145,6 +149,7 @@
       for (const style of layers.values()) style.remove();
       layers.clear();
       apps.clear();
+      headers.clear();
       reportFlow(false);
       return;
     }
@@ -159,5 +164,6 @@
     }
   }
 
-  globalThis.CandyRedditSafeArea = Object.freeze({ configure, sync, flowProtected: () => protectedFlow, owns, ownsSource, added });
+  globalThis.CandyRedditSafeArea = Object.freeze({ configure, sync, flowProtected: () => protectedFlow,
+    headerCandidates: () => Array.from(headers).slice(0, 8), owns, ownsSource, added });
 })();
