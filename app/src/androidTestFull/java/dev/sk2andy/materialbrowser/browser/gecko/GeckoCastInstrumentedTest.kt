@@ -3,6 +3,7 @@ package dev.sk2andy.materialbrowser.browser.gecko
 import android.content.Context
 import android.os.SystemClock
 import android.util.Base64
+import android.view.InputDevice
 import android.view.MotionEvent
 import android.view.View
 import androidx.test.core.app.ActivityScenario
@@ -58,27 +59,27 @@ class GeckoCastInstrumentedTest {
                     }
                     ready
                 }
-                awaitCondition(description = { "Gecko view did not reach tappable size" }) {
+                awaitCondition(description = { "Gecko view did not gain a focused, tappable window" }) {
                     var tappable = false
                     scenario.onActivity { activity ->
                         tappable = activity.browserControllerForTesting()
                             .selectedGeckoViewForTesting()
                             ?.let { view ->
-                                view.isAttachedToWindow && view.width > 0 && view.height > 0
+                                activity.hasWindowFocus() && view.isShown &&
+                                    view.width > 0 && view.height > 0
                             } == true
                     }
                     tappable
                 }
 
-                val tapPoint = FloatArray(2)
                 scenario.onActivity { activity ->
                     val geckoView = requireNotNull(
                         activity.browserControllerForTesting().selectedGeckoViewForTesting(),
                     )
-                    assertTrue(geckoView.isAttachedToWindow)
-                    geckoView.centerOnScreen(tapPoint)
+                    assertTrue(geckoView.isShown)
+                    tap(geckoView)
                 }
-                tap(x = tapPoint[0], y = tapPoint[1])
+                instrumentation.waitForIdleSync()
 
                 var candidateSnapshot = "not observed"
                 awaitCondition(description = { candidateSnapshot }) {
@@ -145,22 +146,28 @@ class GeckoCastInstrumentedTest {
         }
     }
 
-    private fun tap(x: Float, y: Float) {
+    private fun tap(view: View) {
         val downTime = SystemClock.uptimeMillis()
-        instrumentation.sendPointerSync(
-            MotionEvent.obtain(downTime, downTime, MotionEvent.ACTION_DOWN, x, y, 0),
-        )
-        instrumentation.sendPointerSync(
+        for (action in listOf(MotionEvent.ACTION_DOWN, MotionEvent.ACTION_UP)) {
             MotionEvent.obtain(
                 downTime,
                 SystemClock.uptimeMillis(),
-                MotionEvent.ACTION_UP,
-                x,
-                y,
+                action,
+                view.width / 2f,
+                view.height / 2f,
                 0,
-            ),
-        )
-        instrumentation.waitForIdleSync()
+            ).also { event ->
+                event.source = InputDevice.SOURCE_TOUCHSCREEN
+                try {
+                    assertTrue(
+                        "GeckoView rejected ${MotionEvent.actionToString(action)}",
+                        view.dispatchTouchEvent(event),
+                    )
+                } finally {
+                    event.recycle()
+                }
+            }
+        }
     }
 
     private fun awaitCondition(
@@ -175,13 +182,6 @@ class GeckoCastInstrumentedTest {
             Thread.sleep(50)
         }
         assertTrue("${description()} within ${timeoutMillis}ms", condition())
-    }
-
-    private fun View.centerOnScreen(target: FloatArray) {
-        val location = IntArray(2)
-        getLocationOnScreen(location)
-        target[0] = location[0] + width / 2f
-        target[1] = location[1] + height / 2f
     }
 
     private class CastFixtureServer : Closeable {
