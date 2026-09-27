@@ -1003,6 +1003,7 @@
     <string name="permission_location">Standort</string>
     <string name="permission_notifications">Benachrichtigungen</string>
     <string name="permission_notifications_private_unavailable">Im privaten Modus nicht verfügbar</string>
+    <string name="permission_notifications_system_webview_unavailable">Android System WebView unterstützt keine Website-Benachrichtigungen und kein Web Push.</string>
     <string name="web_notification_channel_name">Website-Benachrichtigungen</string>
     <string name="permission_midi">MIDI-Systemnachrichten</string>
     <string name="permission_protected_media">Geschützte Medien-ID</string>

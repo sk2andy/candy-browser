@@ -52,6 +52,7 @@ class PermissionRadarSheetInstrumentedTest {
                         ),
                     ),
                     profileEmoji = "🍬",
+                    websiteNotificationsSupported = true,
                     onOriginSelected = {},
                     onDecisionChanged = { permission, decision ->
                         changed.set(permission to decision)
@@ -139,6 +140,7 @@ class PermissionRadarSheetInstrumentedTest {
                         ),
                     ),
                     profileEmoji = "🍬",
+                    websiteNotificationsSupported = true,
                     onOriginSelected = {},
                     onDecisionChanged = { _, _ -> error("Private notifications cannot be changed") },
                     onResetSite = {},
@@ -150,6 +152,41 @@ class PermissionRadarSheetInstrumentedTest {
         composeRule.onNodeWithText(
             context.getString(R.string.permission_notifications_private_unavailable),
         ).assertExists()
+    }
+
+    @Test
+    fun systemWebViewExplainsUnsupportedNotificationsWithoutOfferingGrant() {
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                PermissionRadarSheet(
+                    snapshot = PermissionRadarSnapshot(
+                        site = site,
+                        isPrivate = false,
+                        knownOrigins = listOf(site.origin),
+                        entries = listOf(
+                            PermissionRadarEntry(
+                                permission = SitePermission.Notifications,
+                                decision = SitePermissionDecision.Ask,
+                                allowedForSession = false,
+                                activity = SitePermissionActivity.Idle,
+                            ),
+                        ),
+                    ),
+                    profileEmoji = "🍬",
+                    websiteNotificationsSupported = false,
+                    onOriginSelected = {},
+                    onDecisionChanged = { _, _ -> error("System WebView cannot grant notifications") },
+                    onResetSite = {},
+                    onDismiss = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText(
+            context.getString(R.string.permission_notifications_system_webview_unavailable),
+        ).assertExists()
+        composeRule.onNodeWithText(context.getString(R.string.permission_decision_allow))
+            .assertDoesNotExist()
     }
 
     @Test

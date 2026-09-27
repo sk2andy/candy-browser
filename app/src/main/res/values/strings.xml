@@ -1043,6 +1043,7 @@
     <string name="permission_location">Location</string>
     <string name="permission_notifications">Notifications</string>
     <string name="permission_notifications_private_unavailable">Unavailable in private browsing</string>
+    <string name="permission_notifications_system_webview_unavailable">Android System WebView does not support website notifications or Web Push.</string>
     <string name="web_notification_channel_name">Website notifications</string>
     <string name="permission_midi">MIDI system messages</string>
     <string name="permission_protected_media">Protected media ID</string>

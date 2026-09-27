@@ -54,6 +54,7 @@ import dev.sk2andy.materialbrowser.ui.theme.browserChromeColor
 internal fun PermissionRadarSheet(
     snapshot: PermissionRadarSnapshot,
     profileEmoji: String,
+    websiteNotificationsSupported: Boolean,
     onOriginSelected: (String) -> Unit,
     onDecisionChanged: (SitePermission, SitePermissionDecision) -> Unit,
     onResetSite: () -> Unit,
@@ -158,7 +159,12 @@ internal fun PermissionRadarSheet(
                 }
                 Spacer(Modifier.height(10.dp))
                 snapshot.entries.forEach { entry ->
-                    PermissionRadarRow(entry, snapshot.isPrivate, onDecisionChanged)
+                    PermissionRadarRow(
+                        entry,
+                        snapshot.isPrivate,
+                        websiteNotificationsSupported,
+                        onDecisionChanged,
+                    )
                     Spacer(Modifier.height(8.dp))
                 }
                 TextButton(
@@ -176,8 +182,11 @@ internal fun PermissionRadarSheet(
 private fun PermissionRadarRow(
     entry: PermissionRadarEntry,
     isPrivate: Boolean,
+    websiteNotificationsSupported: Boolean,
     onDecisionChanged: (SitePermission, SitePermissionDecision) -> Unit,
 ) {
+    val notificationsUnavailable =
+        entry.permission == SitePermission.Notifications && !websiteNotificationsSupported
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(22.dp),
@@ -202,6 +211,10 @@ private fun PermissionRadarRow(
                     )
                     Text(
                         when {
+                            notificationsUnavailable ->
+                                stringResource(
+                                    R.string.permission_notifications_system_webview_unavailable,
+                                )
                             entry.activity == SitePermissionActivity.Active ->
                                 stringResource(R.string.permission_radar_active)
                             entry.activity == SitePermissionActivity.Pending ->
@@ -214,15 +227,17 @@ private fun PermissionRadarRow(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-                PermissionActivityDot(entry.activity)
+                if (!notificationsUnavailable) PermissionActivityDot(entry.activity)
             }
-            if (isPrivate && entry.permission == SitePermission.Notifications) {
+            if (isPrivate && entry.permission == SitePermission.Notifications &&
+                !notificationsUnavailable
+            ) {
                 Text(
                     stringResource(R.string.permission_notifications_private_unavailable),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-            } else {
+            } else if (!notificationsUnavailable) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()

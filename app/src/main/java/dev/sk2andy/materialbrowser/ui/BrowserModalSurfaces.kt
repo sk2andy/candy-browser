@@ -25,6 +25,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.zIndex
 import androidx.compose.ui.unit.dp
+import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineKind
 import dev.sk2andy.materialbrowser.browser.BrowserController
 import dev.sk2andy.materialbrowser.browser.BrowserProfile
 import dev.sk2andy.materialbrowser.browser.FederatedLoginOffer
@@ -105,6 +106,8 @@ internal fun BoxScope.BrowserModalSurfaces(
             PermissionRadarSheet(
                 snapshot = snapshot,
                 profileEmoji = profileEmoji,
+                websiteNotificationsSupported =
+                    controller.browserEngineKind == AndroidBrowserEngineKind.GeckoView,
                 onOriginSelected = onPermissionOriginSelected,
                 onDecisionChanged = { permission, decision ->
                     snapshot.site?.let { site ->

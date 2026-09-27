@@ -1008,6 +1008,7 @@
     <string name="permission_location">Position</string>
     <string name="permission_notifications">Notifications</string>
     <string name="permission_notifications_private_unavailable">Indisponible en navigation privée</string>
+    <string name="permission_notifications_system_webview_unavailable">Android System WebView ne prend pas en charge les notifications de sites web ni Web Push.</string>
     <string name="web_notification_channel_name">Notifications des sites web</string>
     <string name="permission_midi">Messages système MIDI</string>
     <string name="permission_protected_media">Identifiant de média protégé</string>
