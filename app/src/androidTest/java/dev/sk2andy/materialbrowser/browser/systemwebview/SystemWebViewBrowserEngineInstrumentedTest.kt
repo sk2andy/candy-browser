@@ -10,6 +10,8 @@ import androidx.core.graphics.Insets
 import androidx.core.view.WindowInsetsCompat
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.SdkSuppress
+import androidx.webkit.WebSettingsCompat
+import androidx.webkit.WebViewFeature
 import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineKind
 import dev.sk2andy.materialbrowser.browser.BrowserController
 import dev.sk2andy.materialbrowser.browser.BrowserViewportRect
@@ -95,6 +97,20 @@ class SystemWebViewBrowserEngineInstrumentedTest {
             assertNotNull(engineView)
             assertTrue(engineView.containsWebView())
             assertFalse(GeckoRuntimeOwner.hasRuntimeForTesting())
+        }
+    }
+
+    @Test
+    fun paymentRequestIsEnabledWhenSystemWebViewSupportsIt() {
+        composeRule.runOnIdle {
+            val (browserController, webView) = createControllerWithView()
+            controller = browserController
+            if (WebViewFeature.isFeatureSupported(WebViewFeature.PAYMENT_REQUEST)) {
+                assertTrue(WebSettingsCompat.getPaymentRequestEnabled(webView.settings))
+                assertTrue(webView.settings.userAgentString.endsWith(" GOOGLE_PAY_SUPPORTED"))
+            } else {
+                assertFalse(webView.settings.userAgentString.contains("GOOGLE_PAY_SUPPORTED"))
+            }
         }
     }
 

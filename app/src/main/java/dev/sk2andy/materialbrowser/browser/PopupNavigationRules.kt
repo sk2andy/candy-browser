@@ -35,7 +35,11 @@ internal enum class PopupNavigationDecision {
 }
 
 internal object PopupNavigationRules {
-    const val PENDING_TIMEOUT_MILLIS = 5_000L
+    private const val PENDING_TIMEOUT_MILLIS = 5_000L
+    private const val PREOPENED_PENDING_TIMEOUT_MILLIS = 30_000L
+
+    fun pendingTimeoutMillis(preopenedBlank: Boolean): Long =
+        if (preopenedBlank) PREOPENED_PENDING_TIMEOUT_MILLIS else PENDING_TIMEOUT_MILLIS
 
     fun decide(
         pending: PendingPopupNavigation,

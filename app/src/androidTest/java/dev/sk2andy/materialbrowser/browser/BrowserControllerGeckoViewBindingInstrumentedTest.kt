@@ -65,6 +65,62 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
     private var originalAutoDeAmpEnabled: Boolean? = null
 
     @Test
+    fun userOpenedWebPopupAllowsGeckoNewSession() {
+        composeRule.runOnIdle {
+            val store = BrowserSessionStore(composeRule.activity)
+            originalEngineKind = store.loadAndroidBrowserEngineKind()
+            assertTrue(store.saveAndroidBrowserEngineKind(AndroidBrowserEngineKind.GeckoView))
+            val browserController = BrowserController(composeRule.activity)
+            controller = browserController
+            browserController.installGeckoEngineSessionForTesting(
+                ReentrantAttachSession(
+                    tabId = browserController.selectedTabId,
+                    onFirstAttach = {},
+                ),
+            )
+            val initialTabCount = browserController.tabs.size
+
+            assertEquals(
+                GeckoNavigationRequestDecision.Allow,
+                browserController.dispatchSelectedGeckoNavigationRequestForTesting(
+                    GeckoMainFrameNavigationRequest(
+                        url = "https://checkout.example/pay",
+                        isRedirect = false,
+                        hasUserGesture = true,
+                        isDirectNavigation = false,
+                        target = BrowserEngineNavigationTarget.New,
+                    ),
+                ),
+            )
+            assertEquals(initialTabCount, browserController.tabs.size)
+            assertEquals(
+                GeckoNavigationRequestDecision.Allow,
+                browserController.dispatchSelectedGeckoNavigationRequestForTesting(
+                    GeckoMainFrameNavigationRequest(
+                        url = "about:blank",
+                        isRedirect = false,
+                        hasUserGesture = true,
+                        isDirectNavigation = false,
+                        target = BrowserEngineNavigationTarget.New,
+                    ),
+                ),
+            )
+            assertEquals(
+                GeckoNavigationRequestDecision.Deny,
+                browserController.dispatchSelectedGeckoNavigationRequestForTesting(
+                    GeckoMainFrameNavigationRequest(
+                        url = "https://checkout.example/pay",
+                        isRedirect = false,
+                        hasUserGesture = false,
+                        isDirectNavigation = false,
+                        target = BrowserEngineNavigationTarget.New,
+                    ),
+                ),
+            )
+        }
+    }
+
+    @Test
     fun autoDeAmpPostsOnlyCurrentEnabledPublisherReplacement() {
         lateinit var session: ReentrantAttachSession
         composeRule.runOnIdle {
