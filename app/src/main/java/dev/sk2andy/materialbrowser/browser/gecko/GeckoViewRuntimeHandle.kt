@@ -68,6 +68,7 @@ import dev.sk2andy.materialbrowser.browser.integration.BrowserUriPolicy
 import dev.sk2andy.materialbrowser.browser.permissions.SitePermission
 import dev.sk2andy.materialbrowser.browser.permissions.PermissionOrigin
 import dev.sk2andy.materialbrowser.browser.permissions.SitePermissionDecision
+import dev.sk2andy.materialbrowser.browser.gecko.webpush.GeckoWebPushCoordinator
 import dev.sk2andy.materialbrowser.data.UserScriptValueStore
 import dev.sk2andy.materialbrowser.data.BrowserSessionStore
 import java.net.URI
@@ -291,6 +292,7 @@ internal class GeckoViewRuntimeHandle private constructor(
             )
             val runtime = GeckoRuntime.create(appContext, runtimeSettings)
             runtime.webNotificationDelegate = GeckoWebNotificationPresenter(appContext)
+            GeckoWebPushCoordinator.attach(appContext, runtime)
             val extensionController = runtime.webExtensionController
             val toppingHost = GeckoViewToppingHostRuntime(
                 controller = extensionController,

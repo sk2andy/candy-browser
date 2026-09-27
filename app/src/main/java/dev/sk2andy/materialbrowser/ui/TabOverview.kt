@@ -2175,8 +2175,8 @@ internal fun TabOverview(
                 confirmButton = {
                     Button(
                         onClick = {
-                            if (controller.setProfileIsolation(profileId, enabled)) {
-                                rootView.performConfirmHaptic()
+                            controller.setProfileIsolationAsync(profileId, enabled) { changed ->
+                                if (changed) rootView.performConfirmHaptic()
                             }
                             profileIsolationChange = null
                         },

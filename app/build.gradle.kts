@@ -691,6 +691,7 @@ dependencies {
     implementation("androidx.media3:media3-session:1.11.0")
     implementation("androidx.swiperefreshlayout:swiperefreshlayout:1.2.0")
     implementation("androidx.webkit:webkit:1.16.0")
+    implementation("androidx.work:work-runtime-ktx:2.11.2")
     implementation("com.google.guava:guava:33.2.1-android")
     implementation("com.github.Dimezis:BlurView:version-3.2.0")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")

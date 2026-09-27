@@ -154,6 +154,7 @@ import dev.sk2andy.materialbrowser.browser.gecko.GeckoToppingInteractionDelegate
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoViewInsetHost
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoViewInsetRules
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoViewInsets
+import dev.sk2andy.materialbrowser.browser.gecko.webpush.GeckoWebPushCoordinator
 import dev.sk2andy.materialbrowser.browser.systemwebview.SystemWebViewBrowserEngineFactory
 import dev.sk2andy.materialbrowser.browser.integration.AssistantSummaryLauncher
 import dev.sk2andy.materialbrowser.browser.integration.AssistantSummaryRequest
@@ -309,6 +310,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.atomic.AtomicReference
+import kotlinx.coroutines.runBlocking
 
 private class PendingGeckoPreviewCapture(
     val tabId: String,
@@ -1461,6 +1463,7 @@ class BrowserController(
     private val candyTrailGenerations = mutableMapOf<String, Int>()
     private val capsuleTabIds = mutableMapOf<String, String>()
     private val pendingRecallProfileDeletions = mutableSetOf<String>()
+    private val pendingProfileIsolationChanges = mutableSetOf<String>()
     var activeCapsuleTabId: String? = null
         private set
     private val pendingCandyTrailRestoreIds = mutableSetOf<String>()
@@ -6239,7 +6242,64 @@ class BrowserController(
     }
 
     fun setProfileIsolation(profileId: String, enabled: Boolean): Boolean {
-        if (profileId in lockedProfileIds) return false
+        if (
+            profileId in lockedProfileIds ||
+            profileId in pendingRecallProfileDeletions ||
+            profileId in pendingProfileIsolationChanges
+        ) return false
+        val current = profiles.firstOrNull { it.id == profileId } ?: return false
+        if (current.isolationEnabled && !enabled && !BuildConfig.SYSTEM_WEBVIEW_ONLY) return false
+        return applyProfileIsolation(profileId, enabled)
+    }
+
+    fun setProfileIsolationAsync(
+        profileId: String,
+        enabled: Boolean,
+        onComplete: (Boolean) -> Unit,
+    ) {
+        if (profileId in lockedProfileIds || profileId in pendingRecallProfileDeletions ||
+            !pendingProfileIsolationChanges.add(profileId)
+        ) {
+            onComplete(false)
+            return
+        }
+        val current = profiles.firstOrNull { it.id == profileId }
+        if (current == null || BrowserProfileRules.updateIsolation(
+                profile = current,
+                enabled = enabled,
+                isolationSupported = isProfileIsolationSupported,
+            ) == null
+        ) {
+            pendingProfileIsolationChanges.remove(profileId)
+            onComplete(false)
+            return
+        }
+        if (!current.isolationEnabled || BuildConfig.SYSTEM_WEBVIEW_ONLY) {
+            val result = applyProfileIsolation(profileId, enabled)
+            pendingProfileIsolationChanges.remove(profileId)
+            onComplete(result)
+            return
+        }
+        historyMutationExecutor.execute {
+            val pushCleared = runCatching {
+                runBlocking {
+                    GeckoWebPushCoordinator.removeProfileSubscriptions(
+                        activity.applicationContext,
+                        profileId,
+                    )
+                }
+            }.getOrDefault(false)
+            mainHandler.post {
+                val result = pushCleared && !destroyed &&
+                    profiles.firstOrNull { it.id == profileId }?.isolationEnabled == true &&
+                    applyProfileIsolation(profileId, enabled)
+                pendingProfileIsolationChanges.remove(profileId)
+                onComplete(result)
+            }
+        }
+    }
+
+    private fun applyProfileIsolation(profileId: String, enabled: Boolean): Boolean {
         val index = profiles.indexOfFirst { it.id == profileId }
         if (index < 0) return false
         val updatedProfile = BrowserProfileRules.updateIsolation(
@@ -6257,12 +6317,17 @@ class BrowserController(
         return true
     }
 
-    fun deleteProfile(profileId: String, excludedCapsuleId: String? = null): Boolean =
-        deleteProfileInternal(
+    fun deleteProfile(profileId: String, excludedCapsuleId: String? = null): Boolean {
+        if (profileId in pendingProfileIsolationChanges) return false
+        if (!BuildConfig.SYSTEM_WEBVIEW_ONLY &&
+            profiles.firstOrNull { it.id == profileId }?.isolationEnabled == true
+        ) return false
+        return deleteProfileInternal(
             profileId = profileId,
             excludedCapsuleId = excludedCapsuleId,
             recallAlreadyDeleted = false,
         )
+    }
 
     fun deleteProfileAsync(
         profileId: String,
@@ -6274,6 +6339,7 @@ class BrowserController(
             isSyncedProfile(profileId) ||
             isBoundSyncProfile(profileId) ||
             profileId in lockedProfileIds ||
+            profileId in pendingProfileIsolationChanges ||
             profiles.none { it.id == profileId }
         ) {
             onComplete(false)
@@ -6284,13 +6350,43 @@ class BrowserController(
             return
         }
         recallRepository.deleteProfilesAsync(setOf(profileId)) { deleted ->
-            val result = deleted && !destroyed && deleteProfileInternal(
-                profileId = profileId,
-                excludedCapsuleId = excludedCapsuleId,
-                recallAlreadyDeleted = true,
-            )
-            pendingRecallProfileDeletions.remove(profileId)
-            onComplete(result)
+            if (!deleted || destroyed) {
+                pendingRecallProfileDeletions.remove(profileId)
+                onComplete(false)
+                return@deleteProfilesAsync
+            }
+            val isolated = profiles.firstOrNull { it.id == profileId }?.isolationEnabled == true
+            if (!isolated || BuildConfig.SYSTEM_WEBVIEW_ONLY) {
+                val result = deleteProfileInternal(
+                    profileId = profileId,
+                    excludedCapsuleId = excludedCapsuleId,
+                    recallAlreadyDeleted = true,
+                )
+                pendingRecallProfileDeletions.remove(profileId)
+                onComplete(result)
+                return@deleteProfilesAsync
+            }
+            historyMutationExecutor.execute {
+                val pushCleared = runCatching {
+                    runBlocking {
+                        GeckoWebPushCoordinator.removeProfileSubscriptions(
+                            activity.applicationContext,
+                            profileId,
+                        )
+                    }
+                }.getOrDefault(false)
+                mainHandler.post {
+                    val result = pushCleared && !destroyed &&
+                        profiles.firstOrNull { it.id == profileId }?.isolationEnabled == true &&
+                        deleteProfileInternal(
+                            profileId = profileId,
+                            excludedCapsuleId = excludedCapsuleId,
+                            recallAlreadyDeleted = true,
+                        )
+                    pendingRecallProfileDeletions.remove(profileId)
+                    onComplete(result)
+                }
+            }
         }
     }
 
@@ -9322,6 +9418,9 @@ class BrowserController(
     fun updateBrowserEngineKind(kind: AndroidBrowserEngineKind) {
         if (kind == browserEngineKind) return
         if (!store.saveAndroidBrowserEngineKind(kind)) return
+        if (!BuildConfig.SYSTEM_WEBVIEW_ONLY) {
+            GeckoWebPushCoordinator.onBrowserEngineChanged(activity.applicationContext, kind)
+        }
         persist()
         store.saveTabsImmediately(persistableTabs(tabs), selectedTabId)
         store.flush()
@@ -9992,15 +10091,31 @@ class BrowserController(
         browserEngineSessionFactory.clearAllData { cleared ->
             if (destroyed) return@clearAllData
             if (!cleared) {
-                browsingDataClearPending = false
-                Toast.makeText(activity, R.string.history_clear_failed, Toast.LENGTH_SHORT).show()
-                engineViewRevision++
+                completeBrowsingDataClear(false)
                 return@clearAllData
             }
-            browserEngineSessions.keys.toList().forEach(::closeBrowserEngineSession)
-            finishClearingBrowsingData()
-            engineViewRevision++
+            historyMutationExecutor.execute {
+                val pushCleared = BuildConfig.SYSTEM_WEBVIEW_ONLY || runCatching {
+                    runBlocking {
+                        GeckoWebPushCoordinator.clearAllData(activity.applicationContext)
+                    }
+                }.getOrDefault(false)
+                mainHandler.post { completeBrowsingDataClear(pushCleared) }
+            }
         }
+    }
+
+    private fun completeBrowsingDataClear(cleared: Boolean) {
+        if (destroyed) return
+        if (!cleared) {
+            browsingDataClearPending = false
+            Toast.makeText(activity, R.string.history_clear_failed, Toast.LENGTH_SHORT).show()
+            engineViewRevision++
+            return
+        }
+        browserEngineSessions.keys.toList().forEach(::closeBrowserEngineSession)
+        finishClearingBrowsingData()
+        engineViewRevision++
     }
 
     private fun finishClearingBrowsingData() {

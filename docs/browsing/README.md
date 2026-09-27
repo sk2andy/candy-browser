@@ -13,6 +13,7 @@
 | Android/iOS feature-parity contract and completion gates | [`platform-feature-parity.md`](platform-feature-parity.md) | Shared semantic models, platform engine adapters and native renderers |
 | Fullscreen video, website/Android PiP and background media controls | [`picture-in-picture.md`](picture-in-picture.md) | `MainActivityPictureInPictureController`, `BrowserController`, `BrowserMediaPlaybackService`, `GeckoMedia3Playback`, `WebMediaContract`, `WebMediaBridgeScript`, `FullscreenVideoOverlay` |
 | Google Cast remote video playback | [`google-cast.md`](google-cast.md) | `CastMediaRules`, `CastSessionController`, `CastControls` |
+| GeckoView website push delivery | [`web-push.md`](web-push.md) | `GeckoWebPushCoordinator`, `FossWebPushTransport`, `FossWebPushStore` |
 | Address input, commands, gestures, Link Peek, actions | [`address-actions-and-ui.md`](address-actions-and-ui.md) | `browser/commands`, `browser/actions`, `browser/integration`, `ui/Address*` |
 | Candy Recall local full-text history search | [`recall.md`](recall.md) | `recall`, `RecallRepository`, address suggestions, History search |
 | SearXNG search, instance configuration, suggestions, fallback | [`searxng.md`](searxng.md) | `SearxngSettings`, `SearchEngine`, `SearchSuggestionProvider`, `BrowserSessionStore` |
@@ -47,4 +48,5 @@
 | Gecko bounded CSS classification, mutation gating, restoration and settings | `GeckoSafeAreaSettingsTest`, `GeckoCssSafeAreaInstrumentedTest`, `DeveloperOptionsSettingsPageInstrumentedTest`, `scripts/gecko_css_safe_area.test.mjs` |
 | Small Candy Edge prototype anchors, owned CSS, cancellation and update gates | `scripts/gecko_safe_area_prototype.test.mjs`, `GeckoSafeAreaPrototypeInstrumentedTest`; live Release-APK smoke and manual site testing remain separate |
 | Gecko default-extension catalog, integrity and runtime install | `scripts/test_generate_gecko_default_extensions.py`, `GeckoDefaultExtension*Test`, `GeckoDefaultExtensionProvisioningInstrumentedTest` |
+| Gecko website push protocol, decryption and encrypted storage | `FossWebPushProtocolTest`, `WebPushCryptoTest`, `FossWebPushStoreInstrumentedTest` |
 | Web media, fullscreen, PiP and Android system controls | `WebMediaContractTest`, `WebMediaBridgeInstrumentedTest`, `FullscreenVideoRulesTest`, `FullscreenVideoInstrumentedTest`, `FullscreenVideoActivityInstrumentedTest`, `FullscreenVideoOverlayInstrumentedTest`, `GeckoMedia3PlaybackTest`, `GeckoMedia3PlayerInstrumentedTest`, `BrowserMediaPlaybackServiceInstrumentedTest`, `GeckoMedia3ActivityE2eInstrumentedTest` |
