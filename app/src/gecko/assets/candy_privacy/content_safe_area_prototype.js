@@ -37,6 +37,12 @@
   let selectorMatcher = "";
   let configuration = null;
   let configurationKey = "";
+  let coverLayoutRevision = 0;
+  let coverCheckedRevision = -1;
+  let coverCheckedInset = -1;
+  let coverNeedsProtection = false;
+  let coverEnvProbe = null;
+  let coverEnvWatchGeneration = 0;
   let inset = 0;
   let jobs = [];
   let cleanup = [];
@@ -73,6 +79,60 @@
     const content = document.querySelector('meta[name="viewport" i]')?.getAttribute("content");
     return typeof content === "string" &&
       /(?:^|[\s,;])viewport-fit\s*=\s*cover(?=$|[\s,;])/i.test(content);
+  }
+
+  function visibleNearTop(element, style, safeTop) {
+    if (style.display === "none" || style.visibility === "hidden" || style.visibility === "collapse" ||
+        Number.parseFloat(style.opacity) <= 0.01) return false;
+    const rect = element.getBoundingClientRect();
+    return rect.width > 1 && rect.height > 1 && rect.top < safeTop - 0.5 && rect.bottom > 1;
+  }
+
+  function coverFlowNeedsProtection(safeTop) {
+    if (!document.body || globalThis.CandyRedditSafeArea?.flowProtected() === true) return false;
+    if ((pixels(getComputedStyle(document.body).paddingTop) || 0) >= safeTop - 0.5) return false;
+    let element = document.body.firstElementChild;
+    for (let inspected = 0; element && inspected < 16; inspected++) {
+      const style = getComputedStyle(element);
+      if (["fixed", "absolute"].includes(style.position) || !visibleNearTop(element, style, safeTop)) {
+        element = element.nextElementSibling;
+        continue;
+      }
+      if ((pixels(style.paddingTop) || 0) >= safeTop - 0.5 ||
+          ["video", "canvas", "img", "svg"].includes(element.localName)) return false;
+      if (element.firstElementChild && inspected < 8) {
+        element = element.firstElementChild;
+        continue;
+      }
+      let child = element.firstChild;
+      for (let checked = 0; child && checked < 8; checked++, child = child.nextSibling) {
+        if (child.nodeType === 3 && child.textContent?.slice(0, 128).trim()) return true;
+      }
+      return null;
+    }
+    return null;
+  }
+
+  function coverTopNeedsProtection(safeTop) {
+    if (!document.body || safeTop <= 0) return false;
+    const anchorNeedsProtection = (element) => {
+      const style = getComputedStyle(element);
+      if (style.position !== "fixed" && style.position !== "sticky") return false;
+      const rect = element.getBoundingClientRect();
+      if (!visibleNearTop(element, style, safeTop) || rect.height > globalThis.innerHeight / 2 ||
+          (pixels(style.top) ?? safeTop) >= safeTop - 0.5) return false;
+      if ((pixels(style.top) || 0) + (pixels(style.paddingTop) || 0) >= safeTop - 0.5) return false;
+      const firstChild = element.firstElementChild;
+      return !firstChild || firstChild.getBoundingClientRect().top < safeTop - 0.5;
+    };
+    for (const element of Array.from(document.querySelectorAll(semanticSelector)).slice(0, 8)) {
+      if (anchorNeedsProtection(element)) return true;
+    }
+    for (let element = document.body.firstElementChild, inspected = 0;
+        element && inspected < 64; element = nextElement(element, document.body), inspected++) {
+      if (anchorNeedsProtection(element)) return true;
+    }
+    return coverFlowNeedsProtection(safeTop) === true;
   }
 
   function normalizedOpaqueColor(value) {
@@ -148,7 +208,7 @@
   }
 
   function requestNativeFallbackForHeader(element, style) {
-    if (nativeFallbackRequested || !configuration?.active) return false;
+    if (nativeFallbackRequested || !configuration?.active || configuration.cover) return false;
     if (style.position !== "fixed" && style.position !== "sticky") return false;
     const opacity = Number.parseFloat(style.opacity);
     if (style.display === "none" || style.visibility === "hidden" ||
@@ -301,7 +361,7 @@
   function ensureLayer() {
     if (layer) return layer.isConnected ? layer.sheet : null;
     layer = document.createElement("style");
-    layer.textContent = knownTopSelectors.map((selector) =>
+    layer.textContent = (configuration?.cover ? [] : knownTopSelectors).map((selector) =>
       `${selector} { top: calc(0px + var(--candy-safe-area-inset-top)) !important; }`).join("\n");
     document.documentElement.appendChild(layer);
     if (!layer.sheet) { layer.remove(); layer = null; return null; }
@@ -310,6 +370,7 @@
 
   function selectorOwns(element) {
     if (globalThis.CandyRedditSafeArea?.owns(element)) return true;
+    if (configuration?.cover) return false;
     if (!selectorMatcher && !knownTopMatcher) return false;
     try {
       if (knownTopMatcher && element.matches(knownTopMatcher)) return true;
@@ -326,7 +387,7 @@
   }
 
   function startSelectorScan() {
-    if (selectorsScanned || !configuration?.active || document.readyState === "loading") return;
+    if (selectorsScanned || !configuration?.active || configuration.cover || document.readyState === "loading") return;
     selectorsScanned = true;
     sourceDiscovery = { index: 0 };
   }
@@ -354,6 +415,7 @@
   }
 
   function sourceNode(node) {
+    if (configuration?.cover) return;
     if (!(node instanceof Element) || isOwnSource(node)) return;
     if (node.localName === "style" || node.localName === "link") {
       // A replaced href/sheet or removed owner invalidates its previous cloned rules.
@@ -377,8 +439,41 @@
 
   function isOwnSource(node) {
     return globalThis.CandyRedditSafeArea?.ownsSource(node) ||
-      node === layer || node === selectorLayer || node === selectorBuild?.staging ||
+      node === layer || node === selectorLayer || node === selectorBuild?.staging || node === coverEnvProbe ||
       layer?.contains(node) || selectorLayer?.contains(node) || selectorBuild?.staging?.contains(node);
+  }
+
+  function watchCoverNativeInset() {
+    const generation = ++coverEnvWatchGeneration;
+    if (!configuration?.cover) {
+      coverEnvProbe?.remove();
+      coverEnvProbe = null;
+      return;
+    }
+    if (!document.body || !globalThis.requestAnimationFrame) return;
+    if (!coverEnvProbe?.isConnected) {
+      coverEnvProbe = document.createElement("div");
+      coverEnvProbe.style.setProperty("position", "fixed");
+      coverEnvProbe.style.setProperty("visibility", "hidden");
+      coverEnvProbe.style.setProperty("padding-top", "env(safe-area-inset-top, 0px)");
+      document.body.appendChild(coverEnvProbe);
+    }
+    const deadline = performance.now() + 3000;
+    let lastNativeInset = null;
+    let frames = 0;
+    const sample = () => {
+      if (generation !== coverEnvWatchGeneration || !configuration?.cover) return;
+      if (++frames % 4 !== 0) { globalThis.requestAnimationFrame(sample); return; }
+      const nativeInset = pixels(getComputedStyle(coverEnvProbe).paddingTop) || 0;
+      if (lastNativeInset !== null && Math.abs(nativeInset - lastNativeInset) > 0.5) {
+        coverLayoutRevision++;
+        configure();
+        return;
+      }
+      lastNativeInset = nativeInset;
+      if (nativeInset < inset - 0.5 && performance.now() < deadline) globalThis.requestAnimationFrame(sample);
+    };
+    globalThis.requestAnimationFrame(sample);
   }
 
   function beginSelectorBuild() {
@@ -657,7 +752,12 @@
     const bottom = style.position === "fixed" ? pixels(style.bottom) : null;
     if (style.position === "fixed" && top !== null &&
         (top >= globalThis.innerHeight / 2 || (bottom !== null && bottom <= globalThis.innerHeight / 2))) return;
-    if (top !== null) applyRule(element, "top", `${top + inset}px`);
+    if (top === null) return;
+    if (configuration.cover) {
+      if (top >= inset - 0.5 || top + (pixels(style.paddingTop) || 0) >= inset - 0.5 ||
+          element.firstElementChild?.getBoundingClientRect().top >= inset - 0.5) return;
+      applyRule(element, "top", `${top + inset}px`);
+    } else applyRule(element, "top", `${top + inset}px`);
   }
 
   function seedInitialDom() {
@@ -670,13 +770,10 @@
   }
 
   function protectBody() {
-    if (!configuration?.active || cleanup.length || !document.body || !document.documentElement) return;
-    if (viewportFitCoversSafeArea()) {
-      configure();
-      return;
-    }
-    bodyPending = false;
-    apply(document.documentElement, "--candy-safe-area-inset-top", `${inset}px`);
+    if (!configuration?.active || (cleanup.length && !configuration.cover) ||
+        !document.body || !document.documentElement) return;
+    bodyPending = cleanup.length > 0;
+    if (!cleanup.length) apply(document.documentElement, "--candy-safe-area-inset-top", `${inset}px`);
     const flowProtected = globalThis.CandyRedditSafeArea?.flowProtected() === true;
     if ((refreshBodyAtReady && document.readyState !== "loading") || flowProtected !== redditFlowProtected) {
       // Do not measure our early padding as author padding. Remove/read/republish
@@ -686,7 +783,9 @@
     }
     const style = getComputedStyle(document.body);
     const padding = pixels(style.paddingTop);
-    if (padding !== null) applyRule(document.body, "padding-top", `${flowProtected ? padding : Math.max(padding, inset)}px`);
+    if (padding !== null && (!configuration.cover || coverFlowNeedsProtection(inset) === true)) {
+      applyRule(document.body, "padding-top", `${flowProtected ? padding : Math.max(padding, inset)}px`);
+    }
     redditFlowProtected = flowProtected;
     classify(document.body, style);
     protectedBody = document.body;
@@ -748,6 +847,36 @@
   }
 
   function mutations(records) {
+    const wasCover = configuration?.cover === true;
+    const changedCoverLayout = records.slice(0, 32).some((record) => {
+      const target = record.target;
+      if (isOwnSource(target)) return false;
+      if (!wasCover) {
+        if (record.type === "attributes") {
+          return record.attributeName === "content" && target?.matches?.('meta[name="viewport" i]');
+        }
+        return record.type === "childList" && [...Array.from(record.addedNodes || []).slice(0, 8),
+          ...Array.from(record.removedNodes || []).slice(0, 8)].some((node) =>
+          node?.matches?.('meta[name="viewport" i]') || node?.querySelector?.('meta[name="viewport" i]'));
+      }
+      if (record.type === "attributes") {
+        return (target?.matches?.('meta[name="viewport" i]') && record.attributeName === "content") ||
+          (["href", "rel", "media", "disabled"].includes(record.attributeName) &&
+            ["style", "link"].includes(target?.localName)) ||
+          (["class", "style"].includes(record.attributeName) &&
+            (target === document.body || target?.matches?.(`${semanticSelector}, main`)));
+      }
+      if (record.type === "characterData") return target?.parentElement?.localName === "style";
+      if (record.type !== "childList") return false;
+      return [...Array.from(record.addedNodes || []).slice(0, 8),
+        ...Array.from(record.removedNodes || []).slice(0, 8)].some((node) =>
+        !isOwnSource(node) && (node?.matches?.(`${semanticSelector}, main, meta[name="viewport" i], style, link`) ||
+          node?.querySelector?.(`${semanticSelector}, main, meta[name="viewport" i], style, link`)));
+    });
+    if (changedCoverLayout && (wasCover || viewportFitCoversSafeArea())) {
+      coverLayoutRevision++;
+      configure();
+    }
     if (!configuration.active) return;
     if (document.body && protectedBody !== document.body) {
       bodyPending = true;
@@ -823,11 +952,11 @@
   }
 
   function observe() {
-    if (!configuration?.active || observer || !document.documentElement) return;
+    if ((!configuration?.active && !configuration?.cover) || observer || !document.documentElement) return;
     observer = new MutationObserver(mutations);
     observer.observe(document.documentElement, { childList: true, subtree: true,
       characterData: true, attributes: true, attributeOldValue: true,
-      attributeFilter: ["class", "style", "hidden", "role", "href", "rel", "media", "disabled"] });
+      attributeFilter: ["class", "style", "hidden", "role", "href", "rel", "media", "disabled", "content"] });
   }
 
   function configure(resize = false) {
@@ -838,8 +967,18 @@
     const redditActive = incoming.ready === true && incoming.enabled === true && nextInset > 0 &&
       !!globalThis.CandyRedditSafeArea;
     const bounded = (value, minimum, maximum, fallback) => Number.isSafeInteger(value) ? Math.min(maximum, Math.max(minimum, value)) : fallback;
+    const cover = viewportFitCoversSafeArea();
+    if (cover && document.body &&
+        (coverCheckedRevision !== coverLayoutRevision || coverCheckedInset !== nextInset)) {
+      // Probe the author's layout, not the CSS rules installed by an earlier pass.
+      layer?.remove();
+      selectorLayer?.remove();
+      coverNeedsProtection = coverTopNeedsProtection(nextInset);
+      coverCheckedRevision = coverLayoutRevision;
+      coverCheckedInset = nextInset;
+    }
     const next = { active: incoming.ready === true && incoming.enabled === true && nextInset > 0 &&
-      !viewportFitCoversSafeArea(),
+      (!cover || coverNeedsProtection), cover,
       navigationGeneration: Number.isSafeInteger(incoming.navigationGeneration) ?
         Math.max(0, incoming.navigationGeneration) : 0,
       revision: Number.isSafeInteger(incoming.revision) ? Math.max(0, incoming.revision) : 0,
@@ -852,7 +991,7 @@
       maxElementsPerBatch: bounded(incoming.maxElementsPerBatch, 4, 64, 16),
       maxBatchDurationMillis: bounded(incoming.maxBatchDurationMillis, 1, 8, 4),
       maxInitialElements: bounded(incoming.maxInitialElements, 64, 2048, 512) };
-    const key = JSON.stringify([next, nextInset, redditActive, incoming.navigationGeneration]);
+    const key = JSON.stringify([next, nextInset, redditActive, incoming.navigationGeneration, coverLayoutRevision]);
     if (key === configurationKey) {
       if (resize && next.active) { enqueue(document.body, true); schedule(); }
       return;
@@ -897,12 +1036,13 @@
     semanticHeaderCandidates = new Set();
     headerVerificationPending = false;
     scrollGeneration = 0;
-    if ((next.active || redditActive) && !cleanup.length && document.documentElement) {
-      apply(document.documentElement, "--candy-safe-area-inset-top", `${inset}px`);
+    if ((next.active || redditActive) && (!cleanup.length || next.cover) && document.documentElement) {
+      if (!cleanup.length) apply(document.documentElement, "--candy-safe-area-inset-top", `${inset}px`);
       if (next.active) protectBody();
     }
     startSelectorScan();
     observe();
+    watchCoverNativeInset();
     globalThis.CandyRedditSafeArea?.configure(redditActive, () => {
       if (!configuration?.active) return;
       bodyPending = true;
@@ -941,6 +1081,7 @@
   globalThis.__candyConfigureCssSafeArea = configure;
   document.addEventListener("DOMContentLoaded", () => {
     globalThis.CandyRedditSafeArea?.sync();
+    if (configuration?.cover) coverLayoutRevision++;
     configure();
     observe();
     startSelectorScan();
@@ -955,6 +1096,10 @@
   document.addEventListener("click", interaction, true);
   document.addEventListener("drop", interaction, true);
   document.addEventListener("load", (event) => {
+    if (configuration?.cover && event.target?.localName === "link") {
+      coverLayoutRevision++;
+      configure();
+    }
     if (configuration?.active && event.target?.localName === "link") {
       sourceNode(event.target);
       requestSemanticHeaderCheck();
@@ -963,6 +1108,8 @@
   }, true);
   globalThis.addEventListener("load", () => {
     globalThis.CandyRedditSafeArea?.sync();
+    if (configuration?.cover) coverLayoutRevision++;
+    configure();
     startSelectorScan();
     seedInitialDom();
     requestSemanticHeaderCheck();
@@ -970,7 +1117,10 @@
   }, { once: true });
   document.addEventListener("scroll", scroll, { capture: true, passive: true });
   globalThis.addEventListener("scroll", scroll, { passive: true });
-  globalThis.addEventListener("resize", () => { if (configuration?.recheckOnResize) configure(true); }, { passive: true });
+  globalThis.addEventListener("resize", () => {
+    if (configuration?.cover) coverLayoutRevision++;
+    if (configuration?.recheckOnResize || configuration?.cover) configure(true);
+  }, { passive: true });
   configure();
   globalThis.CandyCssSafeAreaDiagnostics = Object.freeze({
     sample: () => globalThis.CandyContentTopInset?.domDiagnosticsEnabled?.() === true ? {

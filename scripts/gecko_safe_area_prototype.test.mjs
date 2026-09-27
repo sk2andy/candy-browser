@@ -82,6 +82,10 @@ function fixture({ density = 3, nativeTop = 96, normalizePixels = false, reparse
     removeAttribute(name) { this.attributes.delete(name); if (name === 'media') this.reparse(); }
     set textContent(value) { this.content = value; this.reparse(); }
     get textContent() { return this.content; }
+    get firstChild() {
+      if (this.content) return { nodeType: 3, textContent: this.content, nextSibling: this.children[0] || null };
+      return this.children[0] || null;
+    }
     reparse() {
       if (!this.sheet || !reparseStyles) return;
       this.sheet.cssRules = [];
@@ -136,7 +140,7 @@ function fixture({ density = 3, nativeTop = 96, normalizePixels = false, reparse
     querySelector: (selector) => {
       if (selector === 'meta[name="viewport" i]') return viewport;
       reads.selector++;
-      assert.ok(['header', 'nav', '[role="banner"]'].includes(selector), 'Only bounded semantic fallback queries are expected');
+      assert.ok(['header', 'nav', 'main', '[role="banner"]'].includes(selector), 'Only bounded semantic fallback queries are expected');
       if (!document.documentElement) return null;
       const pending = [document.documentElement];
       while (pending.length) {
@@ -148,8 +152,9 @@ function fixture({ density = 3, nativeTop = 96, normalizePixels = false, reparse
     },
     querySelectorAll: (selector) => {
       if (selector === 'meta[name="theme-color" i]') return theme ? [theme] : [];
+      if (selector === 'meta[name="viewport" i]') return viewport ? [viewport] : [];
       if (!["header, nav, [role=\"banner\"], [role=\"navigation\"]",
-        'reddit-header-small, reddit-header-large, shreddit-header'].includes(selector)) return [];
+        'reddit-header-small, reddit-header-large, shreddit-header', 'main'].includes(selector)) return [];
       reads.selector++;
       return root.querySelectorAll(selector);
     },
@@ -181,6 +186,9 @@ function fixture({ density = 3, nativeTop = 96, normalizePixels = false, reparse
           if (rule.type === 1 && element.matches(rule.selectorText) && value) result[camel] = value;
         }
       }
+    }
+    for (const name of ['top', 'paddingTop']) {
+      if (result[name] === 'env(safe-area-inset-top)') result[name] = `${nativeTop / density}px`;
     }
     return result;
   }
@@ -224,7 +232,7 @@ function fixture({ density = 3, nativeTop = 96, normalizePixels = false, reparse
     }
     assert.fail('Prototype work or own-style mutation loop did not terminate');
   };
-  return { body, context, config, reads, timers, registrations, flush, computed, sheets, fallbacks,
+  return { body, viewport, context, config, reads, timers, registrations, flush, computed, sheets, fallbacks,
     writes: () => writes, ruleWrites: () => ruleWrites,
     element: (position, top, tag) => body.append(new Element(position, top, tag)),
     sheet(definitions, options = {}) {
@@ -246,7 +254,10 @@ function fixture({ density = 3, nativeTop = 96, normalizePixels = false, reparse
       assert.equal(typeof listener, 'function', `Actual ${target} ${type} listener must exist`);
       listener({ type, isTrusted: true, target: node });
     },
-    mutate(element, attributeName) { observer.callback([{ type: 'attributes', target: element, attributeName }]); },
+    mutate(element, attributeName) {
+      assert.ok(observer?.connected, 'DOM mutations need an active observer');
+      observer.callback([{ type: 'attributes', target: element, attributeName }]);
+    },
     added(element) { observer.callback([{ type: 'childList', target: body, addedNodes: [element], removedNodes: [] }]); },
     childAdded(parent, element) {
       parent.append(element);
@@ -264,16 +275,135 @@ function fixture({ density = 3, nativeTop = 96, normalizePixels = false, reparse
   };
 }
 
-test('viewport-fit cover leaves safe-area layout to Gecko', () => {
+test('viewport-fit cover without effective safe-area use receives CSS protection', () => {
   const f = fixture({ viewportContent: 'width=device-width, VIEWPORT-FIT = cover' });
   f.body.style.setProperty('padding-top', '4px');
-  const fixed = f.element('fixed', '8px');
+  const header = f.element('fixed', '8px', 'header');
+  header.rect = { top: 0, left: 0, width: 800, height: 56, right: 800, bottom: 56 };
+  const main = f.element('static', 'auto', 'main');
+  main.textContent = 'Unprotected page content';
+  main.rect = { top: 4, left: 0, width: 800, height: 400, right: 800, bottom: 404 };
+  const bottomNavigation = f.element('fixed', '600px', 'nav');
+  bottomNavigation.computed.bottom = '0px';
+  bottomNavigation.rect = { top: 600, left: 0, width: 800, height: 48, right: 800, bottom: 648 };
+  const hiddenProbe = f.element('static', 'auto');
+  hiddenProbe.computed.display = 'none';
+  hiddenProbe.style.setProperty('padding-top', 'env(safe-area-inset-top)');
   f.start();
-  assert.equal(f.diagnostics().active, false);
-  assert.equal(f.computed(f.body).paddingTop, '4px');
-  assert.equal(f.computed(fixed).top, '8px');
-  assert.equal(f.context.document.documentElement.style.getPropertyValue('--candy-safe-area-inset-top'), '');
-  assert.equal(f.sheets.filter((sheet) => sheet.isConnected).length, 0);
+  assert.equal(f.diagnostics().active, true);
+  assert.equal(f.computed(f.body).paddingTop, '32px');
+  assert.equal(f.computed(header).top, '40px');
+  assert.equal(f.computed(bottomNavigation).top, '600px');
+  assert.equal(f.computed(bottomNavigation).bottom, '0px');
+});
+
+test('viewport-fit cover with effective safe-area padding and top keeps author geometry', () => {
+  const f = fixture({ viewportContent: 'width=device-width,viewport-fit=cover' });
+  f.body.style.setProperty('padding-top', 'env(safe-area-inset-top)');
+  const header = f.element('fixed', 'auto', 'header');
+  header.style.setProperty('top', 'env(safe-area-inset-top)');
+  header.rect = { top: 32, left: 0, width: 800, height: 56, right: 800, bottom: 88 };
+  const main = f.element('static', 'auto', 'main');
+  main.textContent = 'Safe-area-aware page content';
+  main.rect = { top: 32, left: 0, width: 800, height: 400, right: 800, bottom: 432 };
+  f.start();
+  assert.equal(f.computed(f.body).paddingTop, '32px');
+  assert.equal(f.computed(header).top, '32px');
+});
+
+test('viewport-fit cover protects only an unaware fixed anchor on a mixed page', () => {
+  const f = fixture({ viewportContent: 'viewport-fit=cover' });
+  f.body.style.setProperty('padding-top', 'env(safe-area-inset-top)');
+  const aware = f.element('fixed', 'auto', 'header');
+  aware.style.setProperty('top', 'env(safe-area-inset-top)');
+  aware.rect = { top: 32, left: 0, width: 800, height: 56, right: 800, bottom: 88 };
+  const unaware = f.element('fixed', '8px', 'header');
+  unaware.rect = { top: 0, left: 0, width: 800, height: 56, right: 800, bottom: 56 };
+  const main = f.element('static', 'auto', 'main');
+  main.textContent = 'Page content below safe area';
+  main.rect = { top: 32, left: 0, width: 800, height: 400, right: 800, bottom: 432 };
+  f.start();
+  assert.equal(f.computed(f.body).paddingTop, '32px');
+  assert.equal(f.computed(aware).top, '32px');
+  assert.equal(f.computed(unaware).top, '40px');
+});
+
+test('cover page catches an unprotected custom fixed top control with safe body flow', () => {
+  const f = fixture({ viewportContent: 'viewport-fit=cover' });
+  f.body.style.setProperty('padding-top', 'env(safe-area-inset-top)');
+  const control = f.element('fixed', '0px', 'custom-topbar');
+  control.rect = { top: 0, left: 0, width: 800, height: 48, right: 800, bottom: 48 };
+  const main = f.element('static', 'auto', 'main');
+  main.textContent = 'Protected flow';
+  main.rect = { top: 32, left: 0, width: 800, height: 400, right: 800, bottom: 432 };
+  f.start();
+  assert.equal(f.computed(f.body).paddingTop, '32px');
+  assert.equal(f.computed(control).top, '32px');
+});
+
+test('cover page accepts combined top and padding that keep header content safe', () => {
+  const f = fixture({ viewportContent: 'viewport-fit=cover' });
+  f.body.style.setProperty('padding-top', 'env(safe-area-inset-top)');
+  const header = f.element('fixed', '16px', 'header');
+  header.style.setProperty('padding-top', '16px');
+  header.rect = { top: 16, left: 0, width: 800, height: 48, right: 800, bottom: 64 };
+  const main = f.element('static', 'auto', 'main');
+  main.textContent = 'Protected flow';
+  main.rect = { top: 32, left: 0, width: 800, height: 400, right: 800, bottom: 432 };
+  f.start();
+  assert.equal(f.computed(header).top, '16px');
+  assert.equal(f.computed(f.body).paddingTop, '32px');
+});
+
+test('viewport meta change rechecks cover protection without a policy update', () => {
+  const f = fixture({ viewportContent: 'viewport-fit=cover' });
+  f.body.style.setProperty('padding-top', 'env(safe-area-inset-top)');
+  const header = f.element('fixed', 'auto', 'header');
+  header.style.setProperty('top', 'env(safe-area-inset-top)');
+  header.rect = { top: 32, left: 0, width: 800, height: 56, right: 800, bottom: 88 };
+  const main = f.element('static', 'auto', 'main');
+  main.textContent = 'Page content after viewport change';
+  main.rect = { top: 32, left: 0, width: 800, height: 400, right: 800, bottom: 432 };
+  f.start();
+  assert.equal(f.computed(header).top, '32px');
+
+  f.body.style.setProperty('padding-top', '4px');
+  header.style.setProperty('top', '8px');
+  header.rect = { top: 0, left: 0, width: 800, height: 56, right: 800, bottom: 56 };
+  main.rect = { top: 4, left: 0, width: 800, height: 400, right: 800, bottom: 404 };
+  f.viewport.setAttribute('content', 'width=device-width');
+  f.mutate(f.viewport, 'content');
+  f.flush();
+
+  assert.equal(f.diagnostics().active, true);
+  assert.equal(f.computed(f.body).paddingTop, '32px');
+  assert.equal(f.computed(header).top, '40px');
+});
+
+test('late cover stylesheet can replace fallback offsets with native env padding', () => {
+  const f = fixture({ viewportContent: 'viewport-fit=cover' });
+  f.body.style.setProperty('padding-top', '4px');
+  const header = f.element('fixed', '8px', 'header');
+  header.rect = { top: 0, left: 0, width: 800, height: 56, right: 800, bottom: 56 };
+  const main = f.element('static', 'auto', 'main');
+  main.textContent = 'Visible content';
+  main.rect = { top: 4, left: 0, width: 800, height: 400, right: 800, bottom: 404 };
+  f.start();
+  assert.equal(f.computed(f.body).paddingTop, '32px');
+  assert.equal(f.computed(header).top, '40px');
+
+  f.body.style.setProperty('padding-top', 'env(safe-area-inset-top)');
+  header.style.setProperty('top', 'env(safe-area-inset-top)');
+  header.rect.top = 32;
+  header.rect.bottom = 88;
+  main.rect.top = 32;
+  main.rect.bottom = 432;
+  f.event('load', 'document', f.element('static', 'auto', 'link'));
+  f.flush();
+  assert.equal(f.computed(f.body).paddingTop, '32px');
+  assert.equal(f.computed(header).top, '32px');
+  f.configure({ revision: 2 });
+  assert.equal(f.computed(header).top, '32px');
 });
 
 test('Reddit helper remains active for viewport cover and receives the bounded native inset', () => {

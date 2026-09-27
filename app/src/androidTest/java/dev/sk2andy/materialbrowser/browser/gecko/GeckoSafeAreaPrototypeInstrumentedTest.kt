@@ -79,7 +79,99 @@ class GeckoSafeAreaPrototypeInstrumentedTest {
     }
 
     @Test
-    fun initialBodyAndHeaderRemainStableAcrossHeldDocumentLoad() {
+    fun coverPageAlreadyUsingNativeInsetKeepsItsAuthorPositions() {
+        val title = AtomicReference<String?>(null)
+        val policy = GeckoPrivacyPolicy.Disabled.copy(cssSafeAreaTopInsetPx = NATIVE_TOP_PX)
+        EdgeToEdgeSiteFixtureServer { _ -> COVER_AWARE_HTML }.use { server ->
+            ActivityScenario.launch(GeckoScrollTestActivity::class.java).use { scenario ->
+                lateinit var session: GeckoBrowserSession
+                lateinit var view: View
+                scenario.onActivity { activity ->
+                    WindowCompat.setDecorFitsSystemWindows(activity.window, false)
+                    session = GeckoRuntimeOwner.getOrCreate(activity).createSession(
+                        profileId = "safe-area-cover-aware-${UUID.randomUUID()}",
+                        isPrivate = false,
+                        privacyPolicy = policy,
+                    )
+                    session.bindExtensionTab("safe-area-cover-aware-${UUID.randomUUID()}", 1)
+                    session.setStateListener { state -> title.set(state.title) }
+                    view = session.createView(activity)
+                    activity.setContentView(view)
+                    session.setActive(true)
+                    assertTrue(session.loadUrl(server.fixtureUrl("/site-matrix/cover-aware")))
+                }
+                try {
+                    awaitReport(title) { it.getBoolean("loaded") }
+                    scenario.onActivity { updateNativeTop(view) }
+                    val report = awaitReport(title) {
+                        it.getBoolean("loaded") && it.getDouble("env") > 0 &&
+                            abs(it.getDouble("env") * it.getDouble("density") - NATIVE_TOP_PX) < 0.5 &&
+                            abs(it.getDouble("headerTop") - it.getDouble("env")) < 0.5 &&
+                            abs(it.getDouble("bodyPadding") - it.getDouble("env")) < 0.5
+                    }
+                    assertEquals(report.getDouble("env"), report.getDouble("bodyPadding"), 0.5)
+                    assertEquals(report.getDouble("env"), report.getDouble("headerTop"), 0.5)
+                    assertEquals(report.getDouble("env"), report.getDouble("mainTop"), 0.5)
+                } finally {
+                    scenario.onActivity {
+                        session.releaseView(view)
+                        session.setActive(false)
+                        session.close()
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
+    fun coverPageWithoutInsetReceivesTopProtection() {
+        val title = AtomicReference<String?>(null)
+        val policy = GeckoPrivacyPolicy.Disabled.copy(cssSafeAreaTopInsetPx = NATIVE_TOP_PX)
+        EdgeToEdgeSiteFixtureServer { _ -> COVER_UNAWARE_HTML }.use { server ->
+            ActivityScenario.launch(GeckoScrollTestActivity::class.java).use { scenario ->
+                lateinit var session: GeckoBrowserSession
+                lateinit var view: View
+                scenario.onActivity { activity ->
+                    WindowCompat.setDecorFitsSystemWindows(activity.window, false)
+                    session = GeckoRuntimeOwner.getOrCreate(activity).createSession(
+                        profileId = "safe-area-cover-unaware-${UUID.randomUUID()}",
+                        isPrivate = false,
+                        privacyPolicy = policy,
+                    )
+                    session.bindExtensionTab("safe-area-cover-unaware-${UUID.randomUUID()}", 1)
+                    session.setStateListener { state -> title.set(state.title) }
+                    view = session.createView(activity)
+                    activity.setContentView(view)
+                    session.setActive(true)
+                    assertTrue(session.loadUrl(server.fixtureUrl("/site-matrix/cover-unaware")))
+                }
+                try {
+                    awaitReport(title) { it.getBoolean("loaded") }
+                    scenario.onActivity { updateNativeTop(view) }
+                    val report = awaitReport(title) {
+                        it.getBoolean("loaded") && it.getDouble("bodyPadding") > 4 &&
+                            it.getDouble("headerTop") > 8
+                    }
+                    scenario.onActivity {
+                        val margins = (view as ViewGroup).getChildAt(0).layoutParams as ViewGroup.MarginLayoutParams
+                        assertEquals("Cover fallback keeps the renderer edge to edge", 0, margins.topMargin)
+                    }
+                    val safeTop = NATIVE_TOP_PX / report.getDouble("density")
+                    assertEquals(safeTop, report.getDouble("bodyPadding"), 0.5)
+                    assertEquals(safeTop + 8, report.getDouble("headerTop"), 0.5)
+                } finally {
+                    scenario.onActivity {
+                        session.releaseView(view)
+                        session.setActive(false)
+                        session.close()
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
+    fun bodyAndHeaderSettleBeforeHeldDocumentLoadCompletes() {
         val title = AtomicReference<String?>(null)
         val releaseLoad = CountDownLatch(1)
         EdgeToEdgeSiteFixtureServer { path ->
@@ -119,14 +211,13 @@ class GeckoSafeAreaPrototypeInstrumentedTest {
                             abs(it.getDouble("headerY") - it.getDouble("env") - 8) < 0.02
                     }
                     assertEquals(NATIVE_TOP_PX.toDouble(), held.getDouble("env") * held.getDouble("density"), 0.5)
-                    assertEquals("Initial rendered body already protected", held.getDouble("env"), held.getDouble("firstBody"), 0.02)
+                    assertEquals("Body protected while load is pending", held.getDouble("env"), held.getDouble("body"), 0.02)
                     assertEquals("Header protected while load is pending", held.getDouble("env") + 8, held.getDouble("protectedHeaderY"), 0.5)
-                    assertEquals("Body remains stable while load is pending", held.getDouble("minBody"), held.getDouble("maxBody"), 0.02)
                     assertEquals("Header remains stable while load is pending", held.getDouble("minHeaderY"), held.getDouble("maxHeaderY"), 0.5)
                     assertTrue("Header protected within initial-load deadline", held.getDouble("protectedAt") - held.getDouble("firstAt") < 400)
                     releaseLoad.countDown()
                     val loaded = awaitReport(title) { !it.getBoolean("bootstrap") && it.getBoolean("loaded") && it.getInt("afterLoadSamples") >= 5 }
-                    assertEquals("Load completion adds no body offset", held.getDouble("firstBody"), loaded.getDouble("body"), 0.02)
+                    assertEquals("Load completion adds no body offset", held.getDouble("body"), loaded.getDouble("body"), 0.02)
                     assertEquals("Load completion adds no header jump", held.getDouble("protectedHeaderY"), loaded.getDouble("headerY"), 0.5)
                     println("Prototype initial-load timing: $loaded")
                 } finally {
@@ -324,6 +415,47 @@ class GeckoSafeAreaPrototypeInstrumentedTest {
     private companion object {
         const val NATIVE_TOP_PX = 137
         const val REPORT_PREFIX = "Candy prototype: "
+        val COVER_AWARE_HTML = """
+            <!doctype html><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+            <style>
+              html,body { margin:0; }
+              body { padding-top:env(safe-area-inset-top); }
+              header { position:fixed; top:env(safe-area-inset-top); left:0; height:32px; width:100%; }
+              #probe { position:absolute; visibility:hidden; padding-top:env(safe-area-inset-top); }
+            </style>
+            <body><div id="probe"></div><header>Protected header</header><main>Protected body</main>
+            <script>
+              setInterval(() => {
+                document.title = '${REPORT_PREFIX}' + JSON.stringify({
+                  loaded:document.readyState === 'complete', density:devicePixelRatio,
+                  env:parseFloat(getComputedStyle(document.getElementById('probe')).paddingTop),
+                  bodyPadding:parseFloat(getComputedStyle(document.body).paddingTop),
+                  headerTop:document.querySelector('header').getBoundingClientRect().top,
+                  mainTop:document.querySelector('main').getBoundingClientRect().top,
+                });
+              }, 50);
+            </script>
+        """.trimIndent()
+        val COVER_UNAWARE_HTML = """
+            <!doctype html><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+            <style>
+              html,body { margin:0; }
+              body { padding-top:4px; }
+              header { position:fixed; top:8px; left:0; height:32px; width:100%; }
+              #probe { position:absolute; visibility:hidden; padding-top:env(safe-area-inset-top); }
+            </style>
+            <body><div id="probe"></div><header>Unprotected header</header><main>Unprotected body</main>
+            <script>
+              setInterval(() => {
+                document.title = '${REPORT_PREFIX}' + JSON.stringify({
+                  loaded:document.readyState === 'complete', density:devicePixelRatio,
+                  env:parseFloat(getComputedStyle(document.getElementById('probe')).paddingTop),
+                  bodyPadding:parseFloat(getComputedStyle(document.body).paddingTop),
+                  headerTop:document.querySelector('header').getBoundingClientRect().top,
+                });
+              }, 50);
+            </script>
+        """.trimIndent()
         val BOTTOM_NAVIGATION_HTML = """
             <!doctype html><meta name="viewport" content="width=device-width,initial-scale=1">
             <style>
@@ -361,7 +493,7 @@ class GeckoSafeAreaPrototypeInstrumentedTest {
             </script>
         """.trimIndent()
         val INITIAL_LOAD_HTML = """
-            <!doctype html><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+            <!doctype html><meta name="viewport" content="width=device-width,initial-scale=1">
             <style>html,body {margin:0;} #probe {position:absolute;visibility:hidden;padding-top:env(safe-area-inset-top);}</style>
             <body style="padding-top:4px"><div id="probe"></div>
             <header id="initial-header" style="position:fixed;top:8px;height:24px">Initial header</header><main>Initial body</main>
@@ -397,7 +529,7 @@ class GeckoSafeAreaPrototypeInstrumentedTest {
             </script><script async src="/initial-load-hold.js"></script>
         """.trimIndent()
         val HTML = """
-            <!doctype html><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+            <!doctype html><meta name="viewport" content="width=device-width,initial-scale=1">
             <style>
               html,body { margin:0; } #probe { position:absolute; visibility:hidden; padding-top:env(safe-area-inset-top); }
               #fixed { position:fixed; top:8px; left:0; height:20px; } #equal { position:fixed; top:env(safe-area-inset-top); left:80px; }

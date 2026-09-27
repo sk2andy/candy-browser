@@ -254,9 +254,9 @@
   `GeckoViewInsetRules` forwards all native safe areas to CSS, including the top edge, without
   native margins. Normal Gecko tabs and Link Peek disable the legacy document repair at the
   Gecko-only bridge before installing any of its observers or hooks. Gecko's separate bounded CSS
-  layer stays inactive when the document declares `viewport-fit=cover`; Gecko remains the sole owner
-  of `env(safe-area-inset-*)`, and Candy does not add body or positioned-element offsets that could
-  distort the page's full-height or IME scroll geometry. A wide semantic sticky top header in another
+  layer checks whether a `viewport-fit=cover` document actually keeps its visible top header and
+  normal flow outside the top safe area. It preserves author-managed positions and adds only missing
+  top protection; cover pages skip broad CSS-source cloning and native header fallback. A wide semantic sticky top header in another
   document switches only the top edge to Candy's native margin. A `fixed` declaration alone is not
   enough: each fixed header records its own baseline and qualifies only after a later downward document
   scroll, or movement of its cached following content anchor, of at least its height while its same
@@ -401,9 +401,9 @@ together. This prototype is not a compatibility claim for the layouts described 
 | Rule | Prototype behavior |
 | --- | --- |
 | Inset source | Existing native policy inset divided by device-pixel ratio, exposed as `--candy-safe-area-inset-top` |
-| `viewport-fit=cover` | Skip the generic Candy CSS layer, including body, fixed/sticky and known-site rules; keep Gecko's native renderer safe-area delivery. Reddit's scoped component helper remains active because current mobile markup declares cover without applying the renderer inset to its header flow. |
+| `viewport-fit=cover` | Inspect visible fixed/sticky semantic headers, the first 64 body elements, and a short normal-flow chain. Preserve top positions and padding already at or beyond the native inset; apply missing body/header top protection when visible content enters the top safe band. Recheck relevant author DOM/style and viewport-meta changes, and watch native `env(safe-area-inset-top)` delivery for at most three seconds after configuration so late renderer insets cannot leave a duplicate offset. Skip predeclared selectors, CSS-source cloning and native top-header fallback on cover pages. Gecko continues delivering native `env(safe-area-inset-*)` values. Reddit's scoped component helper remains active. This top-edge geometric check cannot prove protection for every hidden or later-activated layout. |
 | Normal page flow | A per-document stylesheet raises body top padding to at least the inset; larger initial padding is preserved |
-| Semantic top header | A visible viewport-wide `header`, `nav`, `[role=banner]`, or `[role=navigation]` with `position: fixed/sticky` and a nonnegative top anchor requests a navigation-scoped native top margin. Reddit discovery prioritizes its known `reddit-header-small`, `reddit-header-large`, and `shreddit-header` hosts. Candy paints the status-bar sibling with the active `theme-color`, then the resolved opaque header/page background, and selects contrasting status icons. `viewport-fit=cover` retains Gecko-owned edge-to-edge layout. |
+| Semantic top header | A visible viewport-wide `header`, `nav`, `[role=banner]`, or `[role=navigation]` with `position: fixed/sticky` and a nonnegative top anchor requests a navigation-scoped native top margin on non-cover pages. Reddit discovery prioritizes its known `reddit-header-small`, `reddit-header-large`, and `shreddit-header` hosts. Candy paints the status-bar sibling with the active `theme-color`, then the resolved opaque header/page background, and selects contrasting status icons. Cover pages retain Gecko-owned edge-to-edge layout and use the bounded CSS check above. |
 | Other fixed / sticky | Bounded per-element stylesheet rules apply `originalTop + inset` to discovered finite resolved CSS-pixel tops; fixed boxes extending into the lower half of the viewport are excluded because CSSOM can resolve an undeclared top on a bottom-anchored box; no positioned-element padding or inline top is added |
 | Predeclared selectors | Initial and event-driven CSS-source scans protect full selectors with literal `fixed`/`sticky` and a finite pixel `top` in the same CSS declaration block, even before any element matches that state |
 | Selector ownership | Elements matching a protected selector do not receive a second element-level top addition; body padding and unmatched element protection remain separate |
