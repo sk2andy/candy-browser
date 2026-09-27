@@ -10,6 +10,7 @@ function fixture({ density = 3, nativeTop = 96, envTop = nativeTop, simulateAnim
   normalizePixels = false, reparseStyles = false, prototypeSource = source, hostname = '',
   viewportContent = null, themeColor = null } = {}) {
   let clock = 0; let timerId = 0; let observer;
+  const observers = [];
   let deliveredEnvTop = envTop;
   const frameCallbacks = [];
   const timers = new Map(); const listeners = new Map(); const mutations = []; const registrations = [];
@@ -244,8 +245,8 @@ function fixture({ density = 3, nativeTop = 96, envTop = nativeTop, simulateAnim
       if (listeners.get(`window:${type}`) === callback) listeners.delete(`window:${type}`);
     },
     MutationObserver: class {
-      constructor(callback) { this.callback = callback; observer = this; }
-      observe() { this.connected = true; }
+      constructor(callback) { this.callback = callback; observer = this; observers.push(this); }
+      observe(target) { this.connected = true; (this.targets ||= new Set()).add(target); }
       disconnect() { this.connected = false; mutations.length = 0; }
     },
   });
@@ -295,6 +296,14 @@ function fixture({ density = 3, nativeTop = 96, envTop = nativeTop, simulateAnim
     childAdded(parent, element) {
       parent.append(element);
       observer.callback([{ type: 'childList', target: parent, addedNodes: [element], removedNodes: [] }]);
+    },
+    shadowChildAdded(parent, element) {
+      parent.append(element);
+      for (const watched of observers) {
+        if (watched.connected && watched.targets?.has(parent)) {
+          watched.callback([{ type: 'childList', target: parent, addedNodes: [element], removedNodes: [] }]);
+        }
+      }
     },
     textChanged(element) { observer.callback([{ type: 'characterData', target: { parentElement: element } }]); },
     removed(element) { element.remove(); observer.callback([{ type: 'childList', target: body, addedNodes: [], removedNodes: [element] }]); },
@@ -390,6 +399,53 @@ test('viewport-fit cover with effective safe-area padding and top keeps author g
   f.start();
   assert.equal(f.computed(f.body).paddingTop, '32px');
   assert.equal(f.computed(header).top, '32px');
+});
+
+test('same-document route generation rechecks cover protection with unchanged viewport meta', () => {
+  const f = fixture({ viewportContent: 'viewport-fit=cover' });
+  f.body.style.setProperty('padding-top', '4px');
+  const header = f.element('fixed', '0px', 'header');
+  header.rect = { top: 0, left: 0, width: 800, height: 56, right: 800, bottom: 56 };
+  const main = f.element('static', 'auto', 'main');
+  main.content = 'Detail';
+  main.rect = { top: 4, left: 0, width: 800, height: 400, right: 800, bottom: 404 };
+  f.start();
+  assert.equal(f.diagnostics().active, true);
+
+  f.body.style.setProperty('padding-top', '32px');
+  header.computed.top = '32px';
+  header.rect.top = 32; header.rect.bottom = 88;
+  main.rect.top = 32; main.rect.bottom = 432;
+  f.configure({ navigationGeneration: 2 });
+  assert.equal(f.diagnostics().active, false);
+
+  f.body.style.setProperty('padding-top', '4px');
+  header.computed.top = '0px';
+  header.rect.top = 0; header.rect.bottom = 56;
+  main.rect.top = 4; main.rect.bottom = 404;
+  f.configure({ navigationGeneration: 3 });
+  assert.equal(f.diagnostics().active, true);
+});
+
+test('cover route watches late generic div replacement only during bounded settling', () => {
+  const f = fixture({ viewportContent: 'viewport-fit=cover' });
+  const header = f.element('fixed', '32px', 'header');
+  header.rect = { top: 32, left: 0, width: 800, height: 56, right: 800, bottom: 88 };
+  const main = f.element('static', 'auto', 'main');
+  main.content = 'Initial safe content';
+  main.rect = { top: 32, left: 0, width: 800, height: 400, right: 800, bottom: 432 };
+  f.start();
+  assert.equal(f.diagnostics().active, false);
+
+  f.configure({ navigationGeneration: 2 });
+  assert.equal(f.diagnostics().active, false);
+  const movedContent = f.element('static', 'auto');
+  movedContent.content = 'Router content';
+  movedContent.rect = { top: 0, left: 0, width: 800, height: 300, right: 800, bottom: 300 };
+  f.added(movedContent);
+  f.flush();
+  assert.equal(f.diagnostics().active, true);
+  assert.equal(f.hasListener('scroll'), true);
 });
 
 test('late native env delivery rechecks an initially protected cover page once', () => {
@@ -779,6 +835,27 @@ test('late Reddit shadow header is detected by its helper without scrolling', ()
   f.context.CandyRedditSafeArea.sync();
   f.flush();
   assert.deepEqual(f.backdrops, [[1, 1, '#ff4500']]);
+});
+
+test('Reddit shadow router rechecks same header after route signal and content move', () => {
+  const f = fixture({ hostname: 'www.reddit.com', viewportContent: 'viewport-fit=cover', themeColor: '#ff4500' });
+  const app = f.element('static', 'auto', 'shreddit-app');
+  app.shadowRoot = f.context.document.createElement('shadow-root');
+  const header = f.context.document.createElement('reddit-header-small');
+  header.computed = { position: 'static', top: '32px' };
+  header.rect = { top: 32, left: 0, width: 800, height: 56, right: 800, bottom: 88 };
+  app.shadowRoot.append(header);
+  vm.runInContext(redditSource, f.context);
+  f.start();
+  assert.deepEqual(f.backdrops, []);
+
+  f.configure({ navigationGeneration: 2 });
+  assert.deepEqual(f.backdrops, []);
+  header.computed.position = 'sticky';
+  const routerContent = f.context.document.createElement('div');
+  f.shadowChildAdded(app.shadowRoot, routerContent);
+  f.flush();
+  assert.deepEqual(f.backdrops.at(-1), [2, 1, '#ff4500']);
 });
 
 test('backdrop recognizes a sticky wrapper around a semantic header', () => {

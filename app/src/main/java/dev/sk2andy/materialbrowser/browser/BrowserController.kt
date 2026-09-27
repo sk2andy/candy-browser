@@ -12223,6 +12223,46 @@ class BrowserController(
         }
     }
 
+    private fun refreshGeckoSafeAreaForSameDocumentNavigation(tabId: String) {
+        val session = browserEngineSessions[tabId] ?: return
+        val nextNavigationGeneration = navigationGenerations.getOrDefault(tabId, 0) + 1
+        val clearedTopHeaderSafeArea = webContentTopBarStates.remove(tabId) != null
+        webContentStatusBarBackdrops.remove(tabId)
+        val restoreDocumentTopSafeArea =
+            tabId in automaticNativeTopSafeAreaTabIds || clearedTopHeaderSafeArea
+        navigationGenerations[tabId] = nextNavigationGeneration
+        updateProtectionRequestContext(tabId, pageUrls[tabId])
+        fun isCurrentNavigation(): Boolean = !destroyed &&
+            browserEngineSessions[tabId] === session &&
+            navigationGenerations[tabId] == nextNavigationGeneration
+        val restoredDocumentTopInset = if (restoreDocumentTopSafeArea) {
+            if (usesGeckoEngine) 0 else currentSafeAreaTopInsetPx()
+        } else {
+            geckoContentTopInsetPx(tabId)
+        }
+        geckoPrivacyPolicyFor(tabId, restoredDocumentTopInset)?.let { policy ->
+            session.updatePrivacyPolicy(policy, onReady = {
+                val automaticFallbackRemoved =
+                    restoreDocumentTopSafeArea &&
+                        isCurrentNavigation() &&
+                        automaticNativeTopSafeAreaTabIds.remove(tabId)
+                if (isCurrentNavigation() &&
+                    (automaticFallbackRemoved || clearedTopHeaderSafeArea)) {
+                    lastWindowInsets?.let { insets ->
+                        geckoViewBindings.values
+                            .filter { binding -> binding.tabId == tabId }
+                            .forEach { binding ->
+                                applyGeckoWindowInsets(binding.view, binding.tabId, insets)
+                            }
+                    }
+                }
+                if (automaticFallbackRemoved && isCurrentNavigation()) {
+                    geckoPrivacyPolicyFor(tabId)?.let(session::updatePrivacyPolicy)
+                }
+            })
+        }
+    }
+
     private fun onGeckoEngineEvent(event: BrowserEngineEvent) {
         if (destroyed || browserEngineSessions[event.tabId] == null) return
         if (ignoreSupersededRemoteNavigationEvent(event)) {
@@ -12430,7 +12470,9 @@ class BrowserController(
                     clearRemoteSyncNavigationTracking(event.tabId)
                 }
                 if (currentTab?.isLoading == false) {
-                    if (normalizedChangedUrl != null && normalizedChangedUrl != previousUrl) {
+                    if (event.isLoading != true &&
+                        normalizedChangedUrl != null && normalizedChangedUrl != previousUrl) {
+                        refreshGeckoSafeAreaForSameDocumentNavigation(event.tabId)
                         markLocalSyncNavigationPending(event.tabId, normalizedChangedUrl)
                         scheduleSyncedTabNavigation(event.tabId)
                         scheduleAddressBarAutoDockProbe(event.tabId, normalizedChangedUrl)

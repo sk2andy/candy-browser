@@ -21,6 +21,8 @@
   let epoch = 0;
   let timer = 0;
   let structuralEvents = 0;
+  let structuralChangePending = false;
+  let navigationGeneration = null;
 
   function reportFlow(value) {
     if (protectedFlow === value) return;
@@ -47,13 +49,16 @@
     return true;
   }
 
-  function schedule() {
+  function schedule(structuralChange = false) {
+    if (structuralChange) structuralChangePending = true;
     if (!active || timer || structuralEvents >= 256) return;
     structuralEvents++;
     const expected = epoch;
     timer = setTimeout(() => {
       timer = 0;
-      if (active && epoch === expected) sync();
+      const changed = structuralChangePending;
+      structuralChangePending = false;
+      if (active && epoch === expected) sync(changed);
     }, 0);
   }
 
@@ -63,13 +68,13 @@
     if (observers.has(target) || observers.size >= 16) return;
     const observer = new MutationObserver((records) => {
       if (records.some((record) => [...record.addedNodes, ...record.removedNodes]
-        .some((node) => node.nodeType === 1 && !ownsSource(node)))) schedule();
+        .some((node) => node.nodeType === 1 && !ownsSource(node)))) schedule(true);
     });
     observer.observe(target, { childList: true });
     observers.set(target, observer);
   }
 
-  function sync() {
+  function sync(structuralChange = false) {
     if (!active || !document.documentElement) return;
     for (const [root, style] of layers) {
       if (!style.isConnected) { style.remove(); layers.delete(root); }
@@ -118,6 +123,7 @@
     }
     reportFlow(flow);
     if (headersChanged && !flowWasChanged) flowChanged?.(flow);
+    if (structuralChange && !headersChanged && !flowWasChanged) flowChanged?.(flow, true);
   }
 
   function inApp(element) {
@@ -140,13 +146,18 @@
     }
   }
 
-  function configure(enabled, callback) {
+  function configure(enabled, callback, generation) {
     flowChanged = typeof callback === "function" ? callback : null;
+    if (navigationGeneration !== generation) {
+      navigationGeneration = generation;
+      structuralEvents = 0;
+    }
     if (active === !!enabled) { if (active) sync(); return; }
     active = !!enabled;
     epoch++;
     if (timer) clearTimeout(timer);
     timer = 0;
+    structuralChangePending = false;
     if (!active) {
       for (const observer of observers.values()) observer.disconnect();
       observers.clear();

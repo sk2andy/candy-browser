@@ -1528,6 +1528,113 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
     }
 
     @Test
+    fun sameDocumentRouteChangeReevaluatesSafeAreaAndRejectsOldReports() {
+        composeRule.runOnIdle {
+            val store = BrowserSessionStore(composeRule.activity)
+            originalEngineKind = store.loadAndroidBrowserEngineKind()
+            assertTrue(store.saveAndroidBrowserEngineKind(AndroidBrowserEngineKind.GeckoView))
+            val browserController = BrowserController(composeRule.activity)
+            controller = browserController
+            val tabId = browserController.selectedTabId
+            val session = ReentrantAttachSession(tabId = tabId, onFirstAttach = {})
+            browserController.installGeckoEngineSessionForTesting(session)
+            browserController.updateDeveloperSettings(DeveloperSettings())
+            browserController.onWindowInsetsChanged(
+                WindowInsetsCompat.Builder()
+                    .setInsets(WindowInsetsCompat.Type.statusBars(), Insets.of(0, 96, 0, 0))
+                    .build(),
+            )
+            fun engineEvent(type: BrowserEngineEventType, url: String, title: String? = null) {
+                browserController.dispatchGeckoEngineEventForTesting(
+                    BrowserEngineEvent(
+                        tabId = tabId,
+                        type = type,
+                        address = url,
+                        title = title,
+                        canGoBack = true,
+                        canGoForward = false,
+                        failureDescription = null,
+                        isLoading = type == BrowserEngineEventType.NavigationStarted,
+                    ),
+                )
+            }
+            val detailUrl = "https://www.reddit.com/r/example/comments/post"
+            val homeUrl = "https://www.reddit.com/"
+            engineEvent(BrowserEngineEventType.NavigationStarted, detailUrl)
+            engineEvent(BrowserEngineEventType.NavigationCommitted, detailUrl)
+            session.privacyPolicies.clear()
+            browserController.dispatchSelectedGeckoPrivacyEventForTesting(
+                GeckoPrivacyEvent(
+                    requestUrl = "",
+                    pageUrl = detailUrl,
+                    ruleId = null,
+                    wasBlocked = false,
+                    isBuiltIn = false,
+                    isCompatibilityObservation = false,
+                    safeAreaFallbackNavigationGeneration = 1,
+                    safeAreaFallbackThemeColor = "#123456",
+                    safeAreaFallbackIsTopHeader = true,
+                ),
+            )
+            assertEquals(0, session.privacyPolicies.last().cssSafeAreaTopInsetPx)
+            browserController.dispatchSelectedGeckoPrivacyEventForTesting(
+                GeckoPrivacyEvent(
+                    requestUrl = "",
+                    pageUrl = detailUrl,
+                    ruleId = null,
+                    wasBlocked = false,
+                    isBuiltIn = false,
+                    isCompatibilityObservation = false,
+                    statusBarBackdropNavigationGeneration = 1,
+                    statusBarBackdropThemeColor = "#ff4500",
+                ),
+            )
+
+            session.privacyPolicies.clear()
+            engineEvent(BrowserEngineEventType.StateChanged, homeUrl)
+
+            assertEquals(null, browserController.selectedWebContentTopBarState)
+            assertEquals(null, browserController.selectedWebContentStatusBarBackdrop)
+            assertEquals(2, session.privacyPolicies.last().navigationGeneration)
+            assertEquals(96, session.privacyPolicies.last().cssSafeAreaTopInsetPx)
+            browserController.dispatchSelectedGeckoPrivacyEventForTesting(
+                GeckoPrivacyEvent(
+                    requestUrl = "",
+                    pageUrl = detailUrl,
+                    ruleId = null,
+                    wasBlocked = false,
+                    isBuiltIn = false,
+                    isCompatibilityObservation = false,
+                    statusBarBackdropNavigationGeneration = 1,
+                    statusBarBackdropThemeColor = "#123456",
+                ),
+            )
+            assertEquals(null, browserController.selectedWebContentStatusBarBackdrop)
+
+            session.privacyPolicies.clear()
+            engineEvent(BrowserEngineEventType.StateChanged, homeUrl, title = "Reddit")
+            assertEquals(emptyList<GeckoPrivacyPolicy>(), session.privacyPolicies)
+
+            browserController.dispatchSelectedGeckoPrivacyEventForTesting(
+                GeckoPrivacyEvent(
+                    requestUrl = "",
+                    pageUrl = homeUrl,
+                    ruleId = null,
+                    wasBlocked = false,
+                    isBuiltIn = false,
+                    isCompatibilityObservation = false,
+                    safeAreaFallbackNavigationGeneration = 2,
+                ),
+            )
+            assertEquals(0, session.privacyPolicies.last().cssSafeAreaTopInsetPx)
+            session.privacyPolicies.clear()
+            engineEvent(BrowserEngineEventType.StateChanged, detailUrl)
+            assertEquals(listOf(0, 96), session.privacyPolicies.map { it.cssSafeAreaTopInsetPx })
+            assertEquals(3, session.privacyPolicies.last().navigationGeneration)
+        }
+    }
+
+    @Test
     fun statusBarBackdropDoesNotChangeTopInsetAndClearsOnNavigation() {
         composeRule.runOnIdle {
             val store = BrowserSessionStore(composeRule.activity)

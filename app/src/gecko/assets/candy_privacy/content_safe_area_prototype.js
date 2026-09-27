@@ -74,6 +74,8 @@
   let coverLayoutMutationStates = new WeakMap();
   let coverLayoutPending = false;
   let coverLayoutDue = 0;
+  let routeCoverSettlingUntil = 0;
+  let routeCoverRechecks = 0;
   let scrollListenersAttached = false;
   let headerVerificationPending = false;
   let scrollGeneration = 0;
@@ -974,6 +976,7 @@
         performance.now() - started < configuration.maxBatchDurationMillis) {
       if (coverLayoutPending && performance.now() >= coverLayoutDue) {
         coverLayoutPending = false;
+        if (routeCoverSettlingUntil > 0) routeCoverRechecks++;
         coverLayoutRevision++;
         configure();
         return;
@@ -1032,6 +1035,14 @@
     schedule();
   }
 
+  function requestRouteCoverRecheck() {
+    if (!configuration?.cover || performance.now() >= routeCoverSettlingUntil ||
+        routeCoverRechecks >= 3) return;
+    coverLayoutPending = true;
+    coverLayoutDue = performance.now() + minimumHeaderVerificationQuietMillis;
+    schedule(minimumHeaderVerificationQuietMillis);
+  }
+
   function mutations(records) {
     const wasCover = configuration?.cover === true;
     let coverAttributeChanged = false;
@@ -1071,6 +1082,14 @@
       coverLayoutPending = true;
       coverLayoutDue = performance.now() + minimumHeaderVerificationQuietMillis;
       schedule(minimumHeaderVerificationQuietMillis);
+    }
+    if (wasCover && records.slice(0, 32).some((record) => record.type === "childList" &&
+          [...Array.from(record.addedNodes || []).slice(0, 8),
+            ...Array.from(record.removedNodes || []).slice(0, 8)].some((node) =>
+            node?.nodeType === 1 && node.localName !== "style" && !isOwnSource(node)))) {
+      // SPA routers can move ordinary divs after the URL event. Re-probe only
+      // during this short route transition, without work on scroll.
+      requestRouteCoverRecheck();
     }
     const themeChanged = records.slice(0, 64).some((record) => {
       if (record.type === "attributes") {
@@ -1235,9 +1254,13 @@
     const redditActive = incoming.ready === true && incoming.enabled === true && nextInset > 0 &&
       !!globalThis.CandyRedditSafeArea;
     const bounded = (value, minimum, maximum, fallback) => Number.isSafeInteger(value) ? Math.min(maximum, Math.max(minimum, value)) : fallback;
+    const nextNavigationGeneration = Number.isSafeInteger(incoming.navigationGeneration) ?
+      Math.max(0, incoming.navigationGeneration) : 0;
+    const routeChanged = configuration !== null &&
+      configuration.navigationGeneration !== nextNavigationGeneration;
     const cover = viewportFitCoversSafeArea();
     if (cover && document.body &&
-        (coverCheckedRevision !== coverLayoutRevision || coverCheckedInset !== nextInset)) {
+        (routeChanged || coverCheckedRevision !== coverLayoutRevision || coverCheckedInset !== nextInset)) {
       // Probe the author's layout, not the CSS rules installed by an earlier pass.
       layer?.remove();
       selectorLayer?.remove();
@@ -1248,8 +1271,7 @@
     const next = { safeAreaEnabled: incoming.ready === true && incoming.enabled === true && nextInset > 0,
       active: incoming.ready === true && incoming.enabled === true && nextInset > 0 &&
       (!cover || coverNeedsProtection), cover,
-      navigationGeneration: Number.isSafeInteger(incoming.navigationGeneration) ?
-        Math.max(0, incoming.navigationGeneration) : 0,
+      navigationGeneration: nextNavigationGeneration,
       revision: Number.isSafeInteger(incoming.revision) ? Math.max(0, incoming.revision) : 0,
       recheckAddedElements: incoming.recheckAddedElements === true,
       recheckChangedElements: incoming.recheckChangedElements === true,
@@ -1270,6 +1292,8 @@
       coverLayoutMutationStates = new WeakMap();
       backdropActivationStates = new WeakMap();
       backdropPriorityCandidates = [];
+      routeCoverSettlingUntil = routeChanged && cover ? performance.now() + 2000 : 0;
+      routeCoverRechecks = 0;
     }
     if ((!next.safeAreaEnabled ||
         (statusBarBackdropHeaderConfirmed && !statusBarBackdropHeader?.isConnected)) &&
@@ -1332,7 +1356,18 @@
     startSelectorScan();
     observe();
     watchCoverNativeInset();
-    globalThis.CandyRedditSafeArea?.configure(redditActive, () => {
+    globalThis.CandyRedditSafeArea?.configure(redditActive, (_flow, structuralChange) => {
+      if (structuralChange) {
+        if (performance.now() < routeCoverSettlingUntil && routeCoverRechecks < 3) {
+          for (const candidate of globalThis.CandyRedditSafeArea?.headerCandidates?.() || []) {
+            rememberBackdropHeaderCandidate(candidate);
+          }
+          statusBarBackdropPending = true;
+          schedule();
+        }
+        requestRouteCoverRecheck();
+        return;
+      }
       for (const candidate of globalThis.CandyRedditSafeArea?.headerCandidates?.() || []) {
         rememberBackdropHeaderCandidate(candidate);
       }
@@ -1342,7 +1377,7 @@
       bodyPending = true;
       protectBody();
       schedule();
-    });
+    }, next.navigationGeneration);
     requestSemanticHeaderCheck();
     schedule();
   }
