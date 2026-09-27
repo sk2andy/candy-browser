@@ -29,6 +29,55 @@ class GeckoSafeAreaPrototypeInstrumentedTest {
     private val instrumentation = InstrumentationRegistry.getInstrumentation()
 
     @Test
+    fun rootAbsoluteHeaderStackKeepsItsSpacingBelowTheTopSafeArea() {
+        val title = AtomicReference<String?>(null)
+        val policy = GeckoPrivacyPolicy.Disabled.copy(cssSafeAreaTopInsetPx = NATIVE_TOP_PX)
+        EdgeToEdgeSiteFixtureServer { _ -> ABSOLUTE_HEADER_STACK_HTML }.use { server ->
+            ActivityScenario.launch(GeckoScrollTestActivity::class.java).use { scenario ->
+                lateinit var session: GeckoBrowserSession
+                lateinit var view: View
+                scenario.onActivity { activity ->
+                    WindowCompat.setDecorFitsSystemWindows(activity.window, false)
+                    session = GeckoRuntimeOwner.getOrCreate(activity).createSession(
+                        profileId = "safe-area-absolute-${UUID.randomUUID()}",
+                        isPrivate = false,
+                        privacyPolicy = policy,
+                    )
+                    session.bindExtensionTab("safe-area-absolute-${UUID.randomUUID()}", 1)
+                    session.setStateListener { state -> title.set(state.title) }
+                    view = session.createView(activity)
+                    activity.setContentView(view)
+                    session.setActive(true)
+                    assertTrue(session.loadUrl(server.fixtureUrl("/site-matrix/absolute-header-stack")))
+                }
+                try {
+                    awaitReport(title) { it.getBoolean("loaded") }
+                    scenario.onActivity { updateNativeTop(view) }
+                    val report = awaitReport(title) {
+                        val safeTop = NATIVE_TOP_PX / it.getDouble("density")
+                        abs(it.getDouble("topHeader") - safeTop) < 0.5 &&
+                            abs(it.getDouble("mainHeader") - safeTop - 31) < 0.5
+                    }
+                    val safeTop = NATIVE_TOP_PX / report.getDouble("density")
+                    assertEquals(safeTop, report.getDouble("bodyPadding"), 0.5)
+                    assertEquals(safeTop, report.getDouble("topHeader"), 0.5)
+                    assertEquals(safeTop + 31, report.getDouble("mainHeader"), 0.5)
+                    assertEquals(0.0, report.getDouble("logoTop"), 0.5)
+                    assertEquals(0.0, report.getDouble("heroTop"), 0.5)
+                    assertEquals("BODY", report.getString("topOffsetParent"))
+                    assertEquals("BODY", report.getString("mainOffsetParent"))
+                } finally {
+                    scenario.onActivity {
+                        session.releaseView(view)
+                        session.setActive(false)
+                        session.close()
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
     fun bottomAnchoredFixedNavigationKeepsItsPositionWhenTopProtectionStarts() {
         val title = AtomicReference<String?>(null)
         val policy = GeckoPrivacyPolicy.Disabled.copy(cssSafeAreaTopInsetPx = NATIVE_TOP_PX)
@@ -415,6 +464,34 @@ class GeckoSafeAreaPrototypeInstrumentedTest {
     private companion object {
         const val NATIVE_TOP_PX = 137
         const val REPORT_PREFIX = "Candy prototype: "
+        val ABSOLUTE_HEADER_STACK_HTML = """
+            <!doctype html><meta name="viewport" content="width=device-width,initial-scale=1">
+            <style>
+              html,body { margin:0; }
+              #top-header { position:absolute; top:0; left:0; right:0; height:31px; }
+              #main-header { position:absolute; top:31px; left:0; right:0; height:80px; }
+              #logo { position:absolute; top:0; left:0; width:80px; height:80px; }
+              #hero { position:absolute; top:0; left:0; right:0; height:700px; }
+            </style>
+            <body><div id="wrapper"><div id="top-header">Contact</div>
+              <header id="main-header"><div id="logo">Logo</div></header>
+              <div id="hero">Hero</div></div>
+            <script>
+              setInterval(() => {
+                const top = document.getElementById('top-header');
+                const main = document.getElementById('main-header');
+                document.title = '${REPORT_PREFIX}' + JSON.stringify({
+                  loaded:document.readyState === 'complete', density:devicePixelRatio,
+                  bodyPadding:parseFloat(getComputedStyle(document.body).paddingTop),
+                  topHeader:parseFloat(getComputedStyle(top).top),
+                  mainHeader:parseFloat(getComputedStyle(main).top),
+                  logoTop:parseFloat(getComputedStyle(document.getElementById('logo')).top),
+                  heroTop:parseFloat(getComputedStyle(document.getElementById('hero')).top),
+                  topOffsetParent:top.offsetParent?.tagName, mainOffsetParent:main.offsetParent?.tagName,
+                });
+              }, 50);
+            </script>
+        """.trimIndent()
         val COVER_AWARE_HTML = """
             <!doctype html><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
             <style>

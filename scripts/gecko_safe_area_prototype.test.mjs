@@ -69,6 +69,13 @@ function fixture({ density = 3, nativeTop = 96, normalizePixels = false, reparse
       return false;
     }
     get firstElementChild() { return this.children[0] || null; }
+    get offsetParent() {
+      if (this.computed.position === 'fixed') return null;
+      for (let parent = this.parentElement; parent; parent = parent.parentElement) {
+        if (parent.computed.position !== 'static' || parent.localName === 'body') return parent;
+      }
+      return null;
+    }
     get nextElementSibling() {
       const siblings = this.parentElement?.children || [];
       return siblings[siblings.indexOf(this) + 1] || null;
@@ -295,6 +302,47 @@ test('viewport-fit cover without effective safe-area use receives CSS protection
   assert.equal(f.computed(header).top, '40px');
   assert.equal(f.computed(bottomNavigation).top, '600px');
   assert.equal(f.computed(bottomNavigation).bottom, '0px');
+});
+
+test('root absolute header stack clears the top safe area without moving nested absolute content', () => {
+  const f = fixture();
+  const wrapper = f.element('static', 'auto');
+  const topHeader = wrapper.append(f.element('absolute', '0px'));
+  topHeader.id = 'top-header';
+  topHeader.rect = { top: 0, left: 0, width: 800, height: 31, right: 800, bottom: 31 };
+  const mainHeader = wrapper.append(f.element('absolute', '31px', 'header'));
+  mainHeader.id = 'main-header';
+  mainHeader.rect = { top: 31, left: 0, width: 800, height: 80, right: 800, bottom: 111 };
+  const logo = mainHeader.append(f.element('absolute', '0px'));
+  logo.rect = { top: 31, left: 0, width: 100, height: 80, right: 100, bottom: 111 };
+  const hero = wrapper.append(f.element('absolute', '0px'));
+  hero.rect = { top: 0, left: 0, width: 800, height: 700, right: 800, bottom: 700 };
+
+  f.start();
+  assert.equal(f.computed(f.body).paddingTop, '32px');
+  assert.equal(f.computed(topHeader).top, '32px');
+  assert.equal(f.computed(mainHeader).top, '63px');
+  assert.equal(f.computed(logo).top, '0px');
+  assert.equal(f.computed(hero).top, '0px');
+  f.scrollTo(200); f.event('scroll'); f.flush();
+  assert.equal(f.computed(topHeader).top, '32px');
+  assert.equal(f.computed(mainHeader).top, '63px');
+});
+
+test('cover page protects only root absolute headers lacking an author safe-area offset', () => {
+  const f = fixture({ viewportContent: 'viewport-fit=cover' });
+  const unaware = f.element('absolute', '0px', 'header');
+  unaware.rect = { top: 0, left: 0, width: 800, height: 48, right: 800, bottom: 48 };
+  const aware = f.element('absolute', 'auto', 'header');
+  aware.style.setProperty('top', 'env(safe-area-inset-top)');
+  aware.rect = { top: 32, left: 0, width: 800, height: 48, right: 800, bottom: 80 };
+  const main = f.element('static', 'auto', 'main');
+  main.textContent = 'Page content';
+  main.rect = { top: 0, left: 0, width: 800, height: 400, right: 800, bottom: 400 };
+
+  f.start();
+  assert.equal(f.computed(unaware).top, '32px');
+  assert.equal(f.computed(aware).top, '32px');
 });
 
 test('viewport-fit cover with effective safe-area padding and top keeps author geometry', () => {

@@ -264,7 +264,10 @@
   proof. Fixed menus that move away with Google-like page
   chrome therefore keep the WebView edge to edge. The tab keeps the reported website status-bar
   appearance until its next navigation. Other documents classify suitable body flow
-  and viewport-bound top anchors, then add the inset to their original top positions once. It does not
+  and viewport-bound top anchors, then add the inset to their original top positions once. This also
+  covers wide, shallow absolute headers with a body/root positioning parent near the page top;
+  stacked sibling headers keep their original spacing, while nested absolute content stays relative
+  to its header. It does not
   repeatedly run broad layout repair while scrolling. Scroll events only advance a generation and
   rearm one worker. After at least 150 ms of scroll quiet, Candy verifies only cached bounded header
   candidates; it performs no selector query or DOM discovery on the hot or quiet scroll path.

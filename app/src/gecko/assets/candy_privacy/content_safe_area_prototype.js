@@ -732,6 +732,19 @@
     return null;
   }
 
+  function isRootAbsoluteHeader(element, style, top) {
+    if (style.position !== "absolute" || top === null || top < 0 ||
+        top > Math.max(64, inset * 2)) return false;
+    const offsetParent = element.offsetParent;
+    if (offsetParent !== document.body && offsetParent !== document.documentElement) return false;
+    if (!element.matches(semanticSelector) &&
+        !/(?:header|topbar|navbar|masthead)/i.test(`${element.id} ${element.className}`)) return false;
+    const rect = element.getBoundingClientRect();
+    const viewportWidth = Math.max(1, globalThis.innerWidth || document.documentElement.clientWidth || 0);
+    const viewportHeight = Math.max(1, globalThis.innerHeight || document.documentElement.clientHeight || 0);
+    return rect.width >= viewportWidth * 0.5 && rect.height > 1 && rect.height <= viewportHeight * 0.5;
+  }
+
   function classify(element, style) {
     const topHeaderChecked = style !== undefined;
     if (topHeaderChecked && style.position !== "fixed") fixedHeaderCandidates.delete(element);
@@ -744,9 +757,10 @@
     if (entry && (!layer?.isConnected || element.getAttribute(entry.attribute) !== entry.id)) releaseRule(element);
     style ??= getComputedStyle(element);
     if (style.position !== "fixed") fixedHeaderCandidates.delete(element);
-    if (style.position !== "fixed" && style.position !== "sticky") return;
-    if (!topHeaderChecked && requestNativeFallbackForHeader(element, style)) return;
     const top = pixels(style.top);
+    const rootAbsoluteHeader = isRootAbsoluteHeader(element, style, top);
+    if (style.position !== "fixed" && style.position !== "sticky" && !rootAbsoluteHeader) return;
+    if (!topHeaderChecked && requestNativeFallbackForHeader(element, style)) return;
     // CSSOM can resolve an auto top to pixels for a bottom-anchored fixed box.
     // Keep fixed boxes extending into the lower half out of top-inset rules.
     const bottom = style.position === "fixed" ? pixels(style.bottom) : null;

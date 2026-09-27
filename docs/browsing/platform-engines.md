@@ -197,8 +197,10 @@ Camera and microphone permissions remain separate and continue through Candy's p
   to CSS `env(safe-area-inset-*)` without shrinking the renderer. Normal Gecko tabs and Link Peek
   receive no legacy Candy document inset, and the Gecko-only bridge skips shared DOM repair
   installation before its observers, hooks or timers are created. A separate bounded Gecko CSS
-  layer protects suitable body flow and viewport-bound fixed/sticky anchors once. Documents with
-  `viewport-fit=cover` documents receive a bounded check of visible top headers and normal flow.
+  layer protects suitable body flow and viewport-bound fixed/sticky anchors once. Wide root-positioned
+  absolute headers near the top receive the same inset without moving their nested absolute content
+  again; cover pages keep author offsets that already use the inset. Documents with
+  `viewport-fit=cover` receive a bounded check of visible top headers and normal flow.
   Gecko's native `env(safe-area-inset-top)` remains authoritative where it already moves content
   out of the top safe area; unprotected top content receives the compatible CSS inset. Cover pages
   skip broad stylesheet cloning and native top-header fallback to avoid duplicate offsets.
