@@ -1257,6 +1257,7 @@ private class SystemWebViewBrowserEngineSession(
                     FrameLayout.LayoutParams.MATCH_PARENT,
                 ),
             )
+            updateCustomFullscreenMediaState(true)
             updateFullscreenState(true)
         }
 
@@ -1709,7 +1710,17 @@ private class SystemWebViewBrowserEngineSession(
         customFullscreenView = null
         customFullscreenCallback?.onCustomViewHidden()
         customFullscreenCallback = null
-        if (notify) updateFullscreenState(false)
+        if (notify) {
+            updateCustomFullscreenMediaState(false)
+            updateFullscreenState(false)
+        }
+    }
+
+    private fun updateCustomFullscreenMediaState(fullscreen: Boolean) {
+        val state = latestMediaState
+        if (!state.isActive || state.isFullscreen == fullscreen) return
+        latestMediaState = state.copy(isFullscreen = fullscreen)
+        mediaStateListener?.onStateChanged(latestMediaState)
     }
 
     private fun updateFullscreenState(fullscreen: Boolean) {

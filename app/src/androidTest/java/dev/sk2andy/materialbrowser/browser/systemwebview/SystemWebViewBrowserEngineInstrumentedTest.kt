@@ -1,8 +1,10 @@
 package dev.sk2andy.materialbrowser.browser.systemwebview
 
 import android.content.Context
-import android.webkit.WebView
+import android.view.View
 import android.view.ViewGroup
+import android.webkit.WebChromeClient
+import android.webkit.WebView
 import android.widget.FrameLayout
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
@@ -20,6 +22,7 @@ import dev.sk2andy.materialbrowser.browser.TextInputOcclusionProbeMode
 import dev.sk2andy.materialbrowser.browser.TextInputOcclusionProbeResult
 import dev.sk2andy.materialbrowser.browser.TextInputOcclusionScript
 import dev.sk2andy.materialbrowser.browser.WebRtcProtectionMode
+import dev.sk2andy.materialbrowser.browser.gecko.GeckoMediaSessionState
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoRuntimeOwner
 import dev.sk2andy.materialbrowser.data.BrowserSessionStore
 import dev.sk2andy.materialbrowser.reader.ReaderExtractionScript
@@ -27,6 +30,7 @@ import org.junit.After
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
@@ -95,6 +99,95 @@ class SystemWebViewBrowserEngineInstrumentedTest {
             assertNotNull(engineView)
             assertTrue(engineView.containsWebView())
             assertFalse(GeckoRuntimeOwner.hasRuntimeForTesting())
+        }
+    }
+
+    @Test
+    fun webViewFullscreenVideoKeepsNativeViewWithoutGeckoPresentation() {
+        composeRule.runOnIdle {
+            val (browserController, webView) = createControllerWithView()
+            controller = browserController
+            val originalParent = webView.parent
+            browserController.reportSelectedBrowserEngineMediaStateForTesting(
+                GeckoMediaSessionState(
+                    isActive = true,
+                    isPlaying = true,
+                    isFullscreen = true,
+                    videoTrackCount = 1,
+                    videoWidth = 1_920,
+                    videoHeight = 1_080,
+                ),
+            )
+            browserController.reportSelectedBrowserEngineFullscreenStateForTesting(true)
+
+            assertTrue(browserController.isSelectedWebContentFullscreen)
+            assertTrue(browserController.isSelectedLandscapeWebContentVideo)
+            assertFalse(browserController.isPictureInPictureEligible)
+            browserController.prepareForPictureInPicture { bounds ->
+                assertNull(bounds)
+            }
+            assertNull(browserController.fullscreenVideoState)
+            assertTrue(webView.parent === originalParent)
+
+            browserController.reportSelectedBrowserEngineFullscreenStateForTesting(false)
+            assertFalse(browserController.isSelectedLandscapeWebContentVideo)
+
+            browserController.reportSelectedBrowserEngineMediaStateForTesting(
+                GeckoMediaSessionState(
+                    isActive = true,
+                    isPlaying = true,
+                    isFullscreen = false,
+                    videoTrackCount = 1,
+                    videoWidth = 1_920,
+                    videoHeight = 1_080,
+                ),
+            )
+            browserController.reportSelectedBrowserEngineFullscreenStateForTesting(true)
+            assertFalse(browserController.isSelectedLandscapeWebContentVideo)
+            browserController.reportSelectedBrowserEngineFullscreenStateForTesting(false)
+        }
+    }
+
+    @Test
+    fun webViewCustomFullscreenViewAttachesAndRestoresBrowserView() {
+        lateinit var browserController: BrowserController
+        lateinit var webView: WebView
+        lateinit var customView: View
+        lateinit var chromeClient: WebChromeClient
+        var originalParent: ViewGroup? = null
+        var hidden = false
+        composeRule.runOnIdle {
+            val created = createControllerWithView()
+            browserController = created.first
+            webView = created.second
+            controller = browserController
+            originalParent = webView.parent as? ViewGroup
+            customView = View(composeRule.activity)
+            chromeClient = requireNotNull(webView.webChromeClient)
+
+            chromeClient.onShowCustomView(
+                customView,
+                object : WebChromeClient.CustomViewCallback {
+                    override fun onCustomViewHidden() {
+                        hidden = true
+                    }
+                },
+            )
+            assertTrue(customView.parent === composeRule.activity.window.decorView)
+            assertTrue(webView.parent === originalParent)
+        }
+        composeRule.waitUntil(timeoutMillis = 10_000L) {
+            browserController.isSelectedWebContentFullscreen
+        }
+        composeRule.runOnIdle {
+            assertNull(browserController.fullscreenVideoState)
+            chromeClient.onHideCustomView()
+            assertNull(customView.parent)
+            assertTrue(hidden)
+            assertTrue(webView.parent === originalParent)
+        }
+        composeRule.waitUntil(timeoutMillis = 10_000L) {
+            !browserController.isSelectedWebContentFullscreen
         }
     }
 

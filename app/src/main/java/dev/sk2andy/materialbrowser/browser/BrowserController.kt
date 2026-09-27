@@ -853,8 +853,18 @@ class BrowserController(
     internal val isSelectedWebContentFullscreen: Boolean
         get() = selectedTabId in browserEngineContentFullscreenTabIds
 
+    internal val isSelectedLandscapeWebContentVideo: Boolean
+        get() {
+            if (usesGeckoEngine || !isSelectedWebContentFullscreen) return false
+            val media = geckoMediaStates[selectedTabId] ?: return false
+            return media.isActive &&
+                media.isFullscreen &&
+                media.videoTrackCount > 0 &&
+                media.videoWidth > media.videoHeight
+        }
+
     internal val isPictureInPictureEligible: Boolean
-        get() = GeckoPictureInPictureRules.isEligible(
+        get() = usesGeckoEngine && GeckoPictureInPictureRules.isEligible(
             state = geckoMediaStates[selectedTabId],
             isPrivate = selectedTab.isIncognito,
             isSelectedTab = true,
@@ -3372,6 +3382,7 @@ class BrowserController(
         fun rejectPreparation() {
             onPrepared?.invoke(null)
         }
+        if (!usesGeckoEngine) return rejectPreparation()
         val tab = tabs.firstOrNull { candidate -> candidate.id == selectedTabId }
             ?: return rejectPreparation()
         val mediaState = geckoMediaStates[tab.id]
@@ -11462,6 +11473,7 @@ class BrowserController(
         session: AndroidBrowserEngineSessionPort,
         inlineVideoIdentity: GeckoInlineVideoIdentity? = null,
     ): Boolean {
+        if (!usesGeckoEngine) return false
         val tab = tabs.firstOrNull { candidate -> candidate.id == tabId } ?: return false
         if (tab.isIncognito || tab.id != selectedTabId) return false
         val binding = geckoViewBindings.values.firstOrNull { candidate ->

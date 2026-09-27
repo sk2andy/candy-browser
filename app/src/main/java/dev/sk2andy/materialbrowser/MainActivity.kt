@@ -402,6 +402,19 @@ class MainActivity : AppCompatActivity() {
                     if (::castSessionController.isInitialized) {
                         castSessionController.updateCandidate(browserController.castMediaCandidate)
                     }
+                    if (
+                        !browserController.usesGeckoEngine &&
+                        browserController.isSelectedWebContentFullscreen
+                    ) {
+                        val videoOrientation = if (
+                            browserController.isSelectedLandscapeWebContentVideo
+                        ) {
+                            ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+                        } else {
+                            ActivityInfo.SCREEN_ORIENTATION_SENSOR
+                        }
+                        if (requestedOrientation != videoOrientation) applyBrowserSystemUi()
+                    }
                     updatePictureInPictureParams()
                 }
             },
@@ -549,6 +562,8 @@ class MainActivity : AppCompatActivity() {
                 }
                 val fullscreenVideoState = browserController.fullscreenVideoState
                 val webContentFullscreen = browserController.isSelectedWebContentFullscreen
+                val landscapeWebContentVideo =
+                    browserController.isSelectedLandscapeWebContentVideo
                 val selectedTabId = browserController.selectedTabId
                 val fullscreenVideoGesturesActive =
                     browserController.isInlineMediaPlayerPresented &&
@@ -599,6 +614,7 @@ class MainActivity : AppCompatActivity() {
                 LaunchedEffect(
                     fullscreenVideoState,
                     webContentFullscreen,
+                    landscapeWebContentVideo,
                     browserController.systemMediaState,
                     selectedTabId,
                     videoOnlyPresentation,
@@ -1707,6 +1723,8 @@ class MainActivity : AppCompatActivity() {
             browserController.isFullImmersiveModeEnabled
         val state = BrowserWindowStateRules.resolve(
             isWebContentFullscreen = hideBrowserChrome,
+            isLandscapeVideoFullscreen =
+                browserController.isSelectedLandscapeWebContentVideo,
             isBrowserFullscreen = browserImmersive,
             isTabOverviewPortraitLocked = isTabOverviewPortraitLocked,
             supportsTabOverviewPortraitLock =
@@ -1720,6 +1738,7 @@ class MainActivity : AppCompatActivity() {
         )
         val orientation = when (state.requestedOrientation) {
             BrowserRequestedOrientation.Sensor -> ActivityInfo.SCREEN_ORIENTATION_SENSOR
+            BrowserRequestedOrientation.Landscape -> ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
             BrowserRequestedOrientation.Portrait -> ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
             BrowserRequestedOrientation.Unspecified -> ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
         }

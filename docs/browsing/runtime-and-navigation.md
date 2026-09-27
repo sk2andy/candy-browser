@@ -57,7 +57,10 @@
   URL within 32,768 characters, and never select a URL from prose, `EXTRA_HTML_TEXT`, or
   `ACTION_SEND_MULTIPLE`.
 - Show GeckoView and System WebView fullscreen content with Candy's address, tab, find and status
-  chrome hidden, and enable sensor rotation for its lifetime. In-app mini-player placement restores
+  chrome hidden, and enable sensor rotation for its lifetime. A landscape System WebView video
+  requests landscape while its page is fullscreen; other page fullscreen keeps sensor rotation.
+  System WebView keeps its native `WebChromeClient` custom view instead of entering Gecko's media
+  presentation path. In-app mini-player placement restores
   normal browser chrome.
   Web-content fullscreen takes orientation priority over the tab overview portrait lock; exiting restores
   the current browser orientation, system-bar policy and soft-input adjustment. While system bars

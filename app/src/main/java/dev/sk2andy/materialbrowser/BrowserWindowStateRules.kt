@@ -2,6 +2,7 @@ package dev.sk2andy.materialbrowser
 
 internal enum class BrowserRequestedOrientation {
     Sensor,
+    Landscape,
     Portrait,
     Unspecified,
 }
@@ -19,12 +20,14 @@ internal object BrowserWindowStateRules {
 
     fun resolve(
         isWebContentFullscreen: Boolean,
+        isLandscapeVideoFullscreen: Boolean = false,
         isBrowserFullscreen: Boolean,
         isTabOverviewPortraitLocked: Boolean,
         supportsTabOverviewPortraitLock: Boolean = true,
     ): BrowserWindowState = BrowserWindowState(
         isImmersive = isWebContentFullscreen || isBrowserFullscreen,
         requestedOrientation = when {
+            isWebContentFullscreen && isLandscapeVideoFullscreen -> BrowserRequestedOrientation.Landscape
             isWebContentFullscreen -> BrowserRequestedOrientation.Sensor
             isTabOverviewPortraitLocked && supportsTabOverviewPortraitLock ->
                 BrowserRequestedOrientation.Portrait

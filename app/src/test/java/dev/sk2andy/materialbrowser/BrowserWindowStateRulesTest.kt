@@ -19,6 +19,32 @@ class BrowserWindowStateRulesTest {
     }
 
     @Test
+    fun `landscape video fullscreen rotates despite tab overview portrait lock`() {
+        val state = BrowserWindowStateRules.resolve(
+            isWebContentFullscreen = true,
+            isLandscapeVideoFullscreen = true,
+            isBrowserFullscreen = false,
+            isTabOverviewPortraitLocked = true,
+        )
+
+        assertTrue(state.isImmersive)
+        assertEquals(BrowserRequestedOrientation.Landscape, state.requestedOrientation)
+    }
+
+    @Test
+    fun `landscape video without web fullscreen does not lock orientation`() {
+        val state = BrowserWindowStateRules.resolve(
+            isWebContentFullscreen = false,
+            isLandscapeVideoFullscreen = true,
+            isBrowserFullscreen = false,
+            isTabOverviewPortraitLocked = false,
+        )
+
+        assertFalse(state.isImmersive)
+        assertEquals(BrowserRequestedOrientation.Unspecified, state.requestedOrientation)
+    }
+
+    @Test
     fun `tab overview stays portrait after web fullscreen exits`() {
         val state = BrowserWindowStateRules.resolve(
             isWebContentFullscreen = false,

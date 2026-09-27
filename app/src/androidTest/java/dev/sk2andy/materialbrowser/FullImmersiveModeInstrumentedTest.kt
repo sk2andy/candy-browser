@@ -1,6 +1,7 @@
 package dev.sk2andy.materialbrowser
 
 import android.content.Context
+import android.content.pm.ActivityInfo
 import android.os.SystemClock
 import android.view.View
 import android.view.WindowManager
@@ -14,6 +15,8 @@ import androidx.core.view.WindowInsetsControllerCompat
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineKind
+import dev.sk2andy.materialbrowser.browser.gecko.GeckoMediaSessionState
 import dev.sk2andy.materialbrowser.data.BrowserSessionStore
 import dev.sk2andy.materialbrowser.data.GestureOnboardingStore
 import dev.sk2andy.materialbrowser.ui.AddressBarTestTags
@@ -120,6 +123,45 @@ class FullImmersiveModeInstrumentedTest {
                         activity.window,
                         activity.window.decorView,
                     ).systemBarsBehavior,
+                )
+            }
+        }
+    }
+
+    @Test
+    fun systemWebViewLandscapeVideoFullscreenRestoresOrientationOnExit() {
+        BrowserSessionStore(context).saveAndroidBrowserEngineKind(
+            AndroidBrowserEngineKind.SystemWebView,
+        )
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity { activity ->
+                val controller = activity.browserControllerForTesting()
+                controller.reportSelectedBrowserEngineFullscreenStateForTesting(true)
+                assertEquals(
+                    ActivityInfo.SCREEN_ORIENTATION_SENSOR,
+                    activity.requestedOrientation,
+                )
+                controller.reportSelectedBrowserEngineMediaStateForTesting(
+                    GeckoMediaSessionState(
+                        isActive = true,
+                        isPlaying = true,
+                        isFullscreen = true,
+                        videoTrackCount = 1,
+                        videoWidth = 1_920,
+                        videoHeight = 1_080,
+                    ),
+                )
+                assertEquals(
+                    ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE,
+                    activity.requestedOrientation,
+                )
+            }
+            scenario.onActivity { activity ->
+                activity.browserControllerForTesting()
+                    .reportSelectedBrowserEngineFullscreenStateForTesting(false)
+                assertEquals(
+                    ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED,
+                    activity.requestedOrientation,
                 )
             }
         }
