@@ -1,0 +1,1 @@
+Bug fixes: external links load reliably and open matching apps, System WebView videos return to landscape fullscreen, and site notification controls work again. Checkout and edge-to-edge pages are smoother. New site info sheet and Gecko website push through Mozilla Autopush.

@@ -26,6 +26,11 @@ on:
           - alpha
           - beta
           - production
+      publish_play:
+        description: Publish this release to Google Play after GitHub
+        required: true
+        default: true
+        type: boolean
 
 permissions:
   contents: write
@@ -410,6 +415,7 @@ jobs:
 
   publish-google-play:
     name: Publish GitHub release to Google Play
+    if: ${{ inputs.publish_play }}
     needs: release
     permissions:
       contents: read

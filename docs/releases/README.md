@@ -49,6 +49,9 @@ gh workflow run release.yml \
   -f play_track=alpha
 ```
 
+Google Play publication follows the GitHub Release by default. Pass `-f publish_play=false` for a
+GitHub-only release; the workflow still builds, signs and verifies the GitHub APKs.
+
 The workflow publishes the same file with `gh release create --notes-file`; no second release summary
 is generated.
 

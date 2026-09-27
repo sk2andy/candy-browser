@@ -550,6 +550,9 @@ gh workflow run release.yml \
   -f play_track=alpha
 ```
 
+The workflow publishes to Google Play after the GitHub Release by default. For a GitHub-only
+release, pass `-f publish_play=false`; the signed APK and release checks still run.
+
 ### Google Play releases
 
 The Play build uses the standard application ID `dev.sk2andy.materialbrowser`, targets API 36,
@@ -608,9 +611,10 @@ gh workflow run publish-google-play.yml \
   -f status=completed
 ```
 
-The Android release workflow directly invokes the reusable Play workflow after creating each GitHub
-Release; this avoids GitHub's protection against recursively triggering workflows with
-`GITHUB_TOKEN`. Its `play_track` input defaults to the closed alpha track and can target internal,
+By default, the Android release workflow directly invokes the reusable Play workflow after creating
+each GitHub Release; `publish_play=false` skips that job. The direct invocation avoids GitHub's
+protection against recursively triggering workflows with `GITHUB_TOKEN`. Its `play_track` input
+defaults to the closed alpha track and can target internal,
 beta, or production explicitly. A manually created stable GitHub Release also publishes to closed
 alpha, while a manually created prerelease publishes to Play beta. After production access is
 approved, select production when dispatching the release workflow. Manual dispatch from `main`

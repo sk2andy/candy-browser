@@ -1,0 +1,1 @@
+Fehler behoben: Externe Links laden zuverlässig und öffnen passende Apps. Videos im System WebView laufen wieder im Querformat-Vollbild; Website-Benachrichtigungen lassen sich erneut verwalten. Checkout und randlose Seiten funktionieren besser. Neu: Website-Info und Gecko Web Push über Mozilla Autopush.
