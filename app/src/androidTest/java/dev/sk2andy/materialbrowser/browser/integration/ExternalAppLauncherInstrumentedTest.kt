@@ -5,6 +5,7 @@ import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.ContextWrapper
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -50,10 +51,13 @@ class ExternalAppLauncherInstrumentedTest {
     @Test
     fun webLinkAvailabilityUsesTheSameHardenedIntentWithoutLaunchingIt() {
         var resolvedIntent: Intent? = null
-        val resolvingLauncher = ExternalAppLauncher(context) { target ->
-            resolvedIntent = Intent(target)
-            true
-        }
+        val resolvingLauncher = ExternalAppLauncher(
+            context = context,
+            canResolveExternalActivity = { target ->
+                resolvedIntent = Intent(target)
+                true
+            },
+        )
 
         assertTrue(resolvingLauncher.canOpenWebUrlExternally("https://example.com/article"))
         assertNull(context.lastIntent)
@@ -61,6 +65,110 @@ class ExternalAppLauncherInstrumentedTest {
         assertEquals("https://example.com/article", target.dataString)
         assertTrue(target.flags and Intent.FLAG_ACTIVITY_REQUIRE_NON_BROWSER != 0)
         assertTrue(target.flags and Intent.FLAG_ACTIVITY_REQUIRE_DEFAULT != 0)
+    }
+
+    @Test
+    fun explicitOpenInAppLaunchesMatchingAppWithoutDefaultHandler() {
+        val chosenLauncher = ExternalAppLauncher(
+            context = context,
+            canResolveExternalActivity = { false },
+            findExternalWebPackages = { listOf("app.morphe.android.youtube") },
+        )
+
+        assertEquals(
+            ExternalLaunchResult.Launched,
+            chosenLauncher.openWebUrlInChosenApp("https://www.youtube.com/watch?v=candy"),
+        )
+
+        val launchedIntent = requireNotNull(context.lastIntent)
+        assertEquals("app.morphe.android.youtube", launchedIntent.`package`)
+        assertEquals("https://www.youtube.com/watch?v=candy", launchedIntent.dataString)
+        assertTrue(launchedIntent.flags and Intent.FLAG_ACTIVITY_REQUIRE_NON_BROWSER != 0)
+        assertEquals(0, launchedIntent.flags and Intent.FLAG_ACTIVITY_REQUIRE_DEFAULT)
+    }
+
+    @Test
+    fun explicitOpenInAppFindsInstalledHandlerWithoutAndroidDefault() {
+        val testPackage = InstrumentationRegistry.getInstrumentation().context.packageName
+        val targetUrl = "https://issue199.candy.test/article"
+        val resolved = context.packageManager.resolveActivity(
+            Intent(Intent.ACTION_VIEW, Uri.parse(targetUrl))
+                .addCategory(Intent.CATEGORY_BROWSABLE),
+            PackageManager.MATCH_DEFAULT_ONLY,
+        )
+        assertNotEquals(testPackage, resolved?.activityInfo?.packageName)
+
+        assertEquals(
+            ExternalLaunchResult.Launched,
+            launcher.openWebUrlInChosenApp(targetUrl),
+        )
+
+        val launchedIntent = requireNotNull(context.lastIntent)
+        assertEquals(testPackage, launchedIntent.`package`)
+        assertEquals(targetUrl, launchedIntent.dataString)
+    }
+
+    @Test
+    fun explicitOpenInAppDoesNotSelectGenericBrowser() {
+        assertEquals(
+            ExternalLaunchResult.Launched,
+            launcher.openWebUrlInChosenApp("https://example.invalid/article"),
+        )
+
+        val launchedIntent = requireNotNull(context.lastIntent)
+        assertNull(launchedIntent.`package`)
+        assertTrue(launchedIntent.flags and Intent.FLAG_ACTIVITY_REQUIRE_NON_BROWSER != 0)
+        assertTrue(launchedIntent.flags and Intent.FLAG_ACTIVITY_REQUIRE_DEFAULT != 0)
+    }
+
+    @Test
+    fun explicitOpenInAppOffersOnlyMatchingAppsWhenSeveralAreInstalled() {
+        val chosenLauncher = ExternalAppLauncher(
+            context = context,
+            canResolveExternalActivity = { false },
+            findExternalWebPackages = {
+                listOf(
+                    "com.google.android.youtube",
+                    "app.morphe.android.youtube",
+                    "org.example.youtube",
+                    "org.example.video",
+                )
+            },
+        )
+
+        assertEquals(
+            ExternalLaunchResult.AppChooserShown,
+            chosenLauncher.openWebUrlInChosenApp("https://www.youtube.com/watch?v=candy"),
+        )
+
+        val chooser = requireNotNull(context.lastIntent)
+        assertEquals(Intent.ACTION_CHOOSER, chooser.action)
+        val primary = chooser.getParcelableExtra(Intent.EXTRA_INTENT, Intent::class.java)
+        assertEquals("com.google.android.youtube", primary?.`package`)
+        val others = chooser.getParcelableArrayExtra(Intent.EXTRA_ALTERNATE_INTENTS, Intent::class.java)
+        assertEquals(
+            listOf("app.morphe.android.youtube", "org.example.youtube", "org.example.video"),
+            others?.map { (it as Intent).`package` },
+        )
+    }
+
+    @Test
+    fun preferredDefaultOpensImmediatelyWithoutScanningOtherInstalledApps() {
+        val chosenLauncher = ExternalAppLauncher(
+            context = context,
+            canResolveExternalActivity = { true },
+            findExternalWebPackages = { error("Default handler must skip package scan") },
+        )
+
+        assertEquals(
+            ExternalLaunchResult.Launched,
+            chosenLauncher.openWebUrlInChosenApp("https://www.youtube.com/watch?v=candy"),
+        )
+
+        val launchedIntent = requireNotNull(context.lastIntent)
+        assertEquals("https://www.youtube.com/watch?v=candy", launchedIntent.dataString)
+        assertNull(launchedIntent.`package`)
+        assertTrue(launchedIntent.flags and Intent.FLAG_ACTIVITY_REQUIRE_DEFAULT != 0)
     }
 
     @Test

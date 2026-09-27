@@ -113,8 +113,11 @@
   backgrounding pauses their live Gecko session and resumes it on return, while tab/session, History,
   Recall, Candy Trail, Gecko-session-state, and preview persistence exclude them. Process death therefore
   restores the opener instead of an identity-provider page.
-- Resolve external intents on every permitted handoff attempt so apps installed while Candy remains
-  open are immediately eligible. Show handoff feedback only after Android accepts the external launch.
+- In `Automatic` mode, use Android's direct non-browser default handler when one exists. Otherwise,
+  search installed apps for a host-specific HTTP(S) handler off the UI thread. Open a sole matching
+  app directly, or show Android's app chooser when several match; unavailable links continue in Candy.
+  Apps installed while Candy remains open are immediately eligible. Recheck the source after lookup
+  and show handoff feedback only after Android accepts the external launch.
 - Honor Android's selection of Candy for incoming `ACTION_VIEW` and `ACTION_SEND` URLs. Neither
   the initial URL nor its automatic redirect chain receives an external-navigation grant; this prevents
   the calling app from returning the same link to Candy indefinitely. A subsequent user tap in the
@@ -125,16 +128,17 @@
   discard supplied components, selectors, extras, and flags. Valid HTTP(S) intent data can reach the
   named app before its validated browser fallback, with non-browser/default-handler requirements;
   Candy's own package and unsafe/internal schemes remain ineligible.
-- Offer user-tapped HTTP(S) links to Android only when a direct non-browser default handler can
-  receive them. Requiring both a default and a non-browser handler prevents browser/chooser loops;
-  unavailable or ambiguous app links continue in the current engine session. A same-registrable-site
+- Offer user-tapped HTTP(S) links to matching non-browser apps in `Automatic` mode. Keep browsers out
+  of the app chooser; unavailable app links continue in Candy. A same-registrable-site
   redirector such as a search result's intermediate URL also stays in that session; its bounded
   user-navigation grant remains available to the cross-site server redirect that follows.
 - Persist the browser-wide external-app handling mode as `Automatic` by default or `Always ask`.
   In ask mode, resolve HTTP(S) app-link availability without launching, show one current-source-bound
   confirmation, and never launch before confirmation. Cancellation leaves the source in place;
   links without a direct app handler continue in Candy without a misleading prompt. Explicit
-  user-invoked **Open in app** actions remain already confirmed. Apply the same navigation policy
+  user-invoked **Open in app** actions remain already confirmed and use the same default-handler and
+  matching-app selection as `Automatic`, including a chooser when several matching apps exist.
+  Apply the same navigation policy
   before creating a `target=_blank` or `window.open` tab so app links cannot bypass the handoff path.
 - Remember the normalized source URL before that redirect chain. After Android accepts a redirected
   app handoff, return the engine's deny decision before posting the Android launch, stop the redirect,

@@ -8,12 +8,48 @@ import android.net.Uri
 
 sealed interface ExternalLaunchResult {
     data object Launched : ExternalLaunchResult
+    data object AppChooserShown : ExternalLaunchResult
     data class OpenInBrowser(val url: String) : ExternalLaunchResult
     data object Unsupported : ExternalLaunchResult
 }
 
+data class PreparedWebAppLaunch(
+    val url: String,
+    val matchingPackages: List<String>,
+    val hasDefaultHandler: Boolean,
+)
+
 class ExternalAppLauncher(
     private val context: Context,
+    private val findExternalWebPackages: (Intent) -> List<String> = { target ->
+        val lookupFlags = PackageManager.MATCH_ALL or
+            PackageManager.MATCH_DEFAULT_ONLY or
+            PackageManager.GET_RESOLVED_FILTER
+        val genericWebIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://example.invalid/"))
+            .addCategory(Intent.CATEGORY_BROWSABLE)
+        val browserPackages = runCatching {
+            context.packageManager.queryIntentActivities(genericWebIntent, lookupFlags)
+        }.getOrDefault(emptyList()).mapNotNull { it.activityInfo?.packageName }.toSet()
+        runCatching { context.packageManager.getInstalledApplications(0) }
+            .getOrDefault(emptyList())
+            .mapNotNull { it.packageName }
+            .filter { packageName ->
+                packageName != context.packageName &&
+                    packageName != ANDROID_FRAMEWORK_PACKAGE &&
+                    packageName !in browserPackages
+            }
+            .filter { packageName ->
+                val scopedTarget = Intent(target).setPackage(packageName)
+                runCatching {
+                    context.packageManager.queryIntentActivities(scopedTarget, lookupFlags)
+                }.getOrDefault(emptyList()).any { resolved ->
+                    resolved.activityInfo?.packageName == packageName &&
+                        resolved.filter?.countDataAuthorities()?.let { it > 0 } == true
+                }
+            }
+            .distinct()
+            .sorted()
+    },
     private val canResolveExternalActivity: (Intent) -> Boolean = { target ->
         val resolved = context.packageManager.resolveActivity(
             target,
@@ -40,6 +76,52 @@ class ExternalAppLauncher(
         val normalized = BrowserUriPolicy.normalizeHttpUrl(url)
             ?: return ExternalLaunchResult.Unsupported
         return launchDirect(webIntent(normalized), fallbackUrl = null)
+    }
+
+    fun openWebUrlInChosenApp(url: String): ExternalLaunchResult {
+        val prepared = prepareWebUrlInChosenApp(url) ?: return ExternalLaunchResult.Unsupported
+        return openWebUrlInChosenApp(prepared)
+    }
+
+    fun prepareWebUrlInChosenApp(url: String): PreparedWebAppLaunch? {
+        val normalized = BrowserUriPolicy.normalizeHttpUrl(url)
+            ?: return null
+        val target = webIntent(normalized)
+        val hasDefaultHandler = GooglePlayAppLinkRules.shouldOpenInPlayStore(normalized) ||
+            canResolveExternalActivity(target)
+        return PreparedWebAppLaunch(
+            url = normalized,
+            matchingPackages = if (hasDefaultHandler) emptyList() else findExternalWebPackages(target),
+            hasDefaultHandler = hasDefaultHandler,
+        )
+    }
+
+    fun openWebUrlInChosenApp(prepared: PreparedWebAppLaunch): ExternalLaunchResult {
+        val target = webIntent(prepared.url)
+        if (prepared.hasDefaultHandler) {
+            return launchDirect(target, fallbackUrl = null)
+        }
+        val packages = prepared.matchingPackages
+        if (packages.isEmpty()) return launchDirect(target, fallbackUrl = null)
+        val appIntents = packages.map { packageName ->
+            Intent(Intent.ACTION_VIEW, Uri.parse(prepared.url))
+                .addCategory(Intent.CATEGORY_BROWSABLE)
+                .setPackage(packageName)
+                .addFlags(Intent.FLAG_ACTIVITY_REQUIRE_NON_BROWSER)
+        }
+        val chosenIntent = if (appIntents.size == 1) {
+            appIntents.single()
+        } else {
+            Intent.createChooser(appIntents.first(), null).apply {
+                putExtra(Intent.EXTRA_ALTERNATE_INTENTS, appIntents.drop(1).toTypedArray())
+            }
+        }
+        val result = launchDirect(chosenIntent, fallbackUrl = null)
+        return if (result == ExternalLaunchResult.Launched && appIntents.size > 1) {
+            ExternalLaunchResult.AppChooserShown
+        } else {
+            result
+        }
     }
 
     fun canOpenWebUrlExternally(url: String): Boolean {

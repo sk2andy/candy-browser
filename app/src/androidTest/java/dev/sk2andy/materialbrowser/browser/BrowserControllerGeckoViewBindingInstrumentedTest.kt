@@ -41,6 +41,7 @@ import dev.sk2andy.materialbrowser.data.GeckoSafeAreaSettings
 import dev.sk2andy.materialbrowser.data.HistoryEntry
 import dev.sk2andy.materialbrowser.data.HistoryRecordingMode
 import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -1777,7 +1778,9 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
             browserController.onResume()
         }
 
-        composeRule.waitForIdle()
+        composeRule.waitUntil(timeoutMillis = 5_000L) {
+            recordingContext.lastIntent?.dataString == APP_HANDOFF_TARGET_URL
+        }
         composeRule.runOnIdle {
             assertEquals(APP_HANDOFF_TARGET_URL, recordingContext.lastIntent?.dataString)
             assertEquals(
@@ -1815,6 +1818,137 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
                 session.commands.map(BrowserEngineCommand::type),
             )
         }
+    }
+
+    @Test
+    fun automaticAppLinkUsesInstalledAppEvenWhenAndroidHasNoDefault() {
+        val redditUrl = "https://www.reddit.com/r/candy/"
+        lateinit var recordingContext: RecordingContext
+        lateinit var lookupThreadName: String
+        composeRule.runOnIdle {
+            val activity = composeRule.activity
+            val store = BrowserSessionStore(activity)
+            originalEngineKind = store.loadAndroidBrowserEngineKind()
+            originalExternalAppLinkHandling = store.loadExternalAppLinkHandling()
+            assertTrue(store.saveAndroidBrowserEngineKind(AndroidBrowserEngineKind.GeckoView))
+            recordingContext = RecordingContext(activity)
+            val browserController = BrowserController(
+                activity = activity,
+                externalApps = ExternalAppLauncher(
+                    context = recordingContext,
+                    findExternalWebPackages = { target ->
+                        lookupThreadName = Thread.currentThread().name
+                        if (target.dataString == redditUrl) listOf("com.reddit.frontpage") else emptyList()
+                    },
+                    canResolveExternalActivity = { false },
+                ),
+            )
+            controller = browserController
+            val tabId = browserController.selectedTabId
+            browserController.installGeckoEngineSessionForTesting(
+                ReentrantAttachSession(tabId = tabId, onFirstAttach = {}),
+            )
+            browserController.updateExternalAppLinkHandling(ExternalAppLinkHandling.Automatic)
+            browserController.dispatchGeckoEngineEventForTesting(
+                BrowserEngineEvent(
+                    tabId = tabId,
+                    type = BrowserEngineEventType.NavigationCommitted,
+                    address = "https://www.google.com/search?q=reddit",
+                    title = "Search",
+                    canGoBack = false,
+                    canGoForward = false,
+                    failureDescription = null,
+                ),
+            )
+
+            assertEquals(
+                GeckoNavigationRequestDecision.Deny,
+                browserController.dispatchSelectedGeckoNavigationRequestForTesting(
+                    GeckoMainFrameNavigationRequest(
+                        url = redditUrl,
+                        isRedirect = false,
+                        hasUserGesture = true,
+                        isDirectNavigation = false,
+                    ),
+                ),
+            )
+            assertNull(recordingContext.lastIntent)
+        }
+        composeRule.waitUntil(timeoutMillis = 5_000L) {
+            recordingContext.lastIntent != null
+        }
+        assertEquals("external-app-lookup", lookupThreadName)
+        assertEquals(redditUrl, recordingContext.lastIntent?.dataString)
+        assertEquals("com.reddit.frontpage", recordingContext.lastIntent?.`package`)
+    }
+
+    @Test
+    fun openInAppDiscardsLookupWhenTabNavigatesBeforeLaunch() {
+        val firstUrl = "https://www.reddit.com/r/old/"
+        val currentUrl = "https://www.reddit.com/r/new/"
+        val lookupStarted = CountDownLatch(1)
+        val releaseLookup = CountDownLatch(1)
+        lateinit var recordingContext: RecordingContext
+        lateinit var browserController: BrowserController
+        lateinit var tabId: String
+        composeRule.runOnIdle {
+            val activity = composeRule.activity
+            val store = BrowserSessionStore(activity)
+            originalEngineKind = store.loadAndroidBrowserEngineKind()
+            assertTrue(store.saveAndroidBrowserEngineKind(AndroidBrowserEngineKind.GeckoView))
+            recordingContext = RecordingContext(activity)
+            browserController = BrowserController(
+                activity = activity,
+                externalApps = ExternalAppLauncher(
+                    context = recordingContext,
+                    canResolveExternalActivity = { false },
+                    findExternalWebPackages = { target ->
+                        if (target.dataString == firstUrl) {
+                            lookupStarted.countDown()
+                            releaseLookup.await(15, TimeUnit.SECONDS)
+                        }
+                        listOf("com.reddit.frontpage")
+                    },
+                ),
+            )
+            controller = browserController
+            tabId = browserController.selectedTabId
+            browserController.installGeckoEngineSessionForTesting(
+                ReentrantAttachSession(tabId = tabId, onFirstAttach = {}),
+            )
+            browserController.dispatchGeckoEngineEventForTesting(
+                BrowserEngineEvent(
+                    tabId = tabId,
+                    type = BrowserEngineEventType.NavigationCommitted,
+                    address = firstUrl,
+                    title = "Old",
+                    canGoBack = false,
+                    canGoForward = false,
+                    failureDescription = null,
+                ),
+            )
+            browserController.openPageExternally(tabId)
+        }
+        assertTrue(lookupStarted.await(5, TimeUnit.SECONDS))
+        composeRule.runOnIdle {
+            browserController.dispatchGeckoEngineEventForTesting(
+                BrowserEngineEvent(
+                    tabId = tabId,
+                    type = BrowserEngineEventType.NavigationCommitted,
+                    address = currentUrl,
+                    title = "New",
+                    canGoBack = true,
+                    canGoForward = false,
+                    failureDescription = null,
+                ),
+            )
+            browserController.openPageExternally(tabId)
+        }
+        releaseLookup.countDown()
+        composeRule.waitUntil(timeoutMillis = 5_000L) {
+            recordingContext.lastIntent?.dataString == currentUrl
+        }
+        assertEquals(listOf(currentUrl), recordingContext.launchedIntents.map { it.dataString })
     }
 
     @Test
@@ -2563,10 +2697,15 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
     }
 
     private class RecordingContext(base: Context) : ContextWrapper(base) {
+        val launchedIntents = mutableListOf<Intent>()
+
+        @Volatile
         var lastIntent: Intent? = null
 
         override fun startActivity(intent: Intent) {
-            lastIntent = Intent(intent)
+            val launched = Intent(intent)
+            launchedIntents += launched
+            lastIntent = launched
         }
     }
 

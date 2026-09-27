@@ -121,7 +121,21 @@ class MainActivityIncomingNavigationInstrumentedTest {
                         ),
                     ),
                 )
-                assertEquals(APP_URL, handoffs.single().dataString)
+            }
+            val deadline = SystemClock.elapsedRealtime() + 5_000L
+            while (handoffs.isEmpty() && SystemClock.elapsedRealtime() < deadline) {
+                SystemClock.sleep(20L)
+            }
+            assertEquals(APP_URL, handoffs.single().dataString)
+        }
+    }
+
+    @Test
+    fun coldIncomingViewLoadsPage() {
+        BrowserSessionStore(context).saveExternalLinkPreviewEnabled(false)
+        IncomingPageServer().use { server ->
+            ActivityScenario.launch<MainActivity>(incomingIntent(server.url)).use { scenario ->
+                awaitIncomingPage(scenario, server)
             }
         }
     }
@@ -160,6 +174,27 @@ class MainActivityIncomingNavigationInstrumentedTest {
     }
 
     @Test
+    fun warmIncomingViewLoadsPage() {
+        BrowserSessionStore(context).saveExternalLinkPreviewEnabled(false)
+        IncomingPageServer().use { server ->
+            val activity = instrumentation.startActivitySync(
+                Intent(context, MainActivity::class.java)
+                    .setAction(Intent.ACTION_MAIN)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK),
+            ) as MainActivity
+            try {
+                instrumentation.runOnMainSync {
+                    instrumentation.callActivityOnNewIntent(activity, incomingIntent(server.url))
+                }
+                awaitIncomingPage(activity, server)
+            } finally {
+                instrumentation.runOnMainSync { activity.finish() }
+                instrumentation.waitForIdleSync()
+            }
+        }
+    }
+
+    @Test
     fun warmIncomingViewKeepsNewPreviewWithoutAppHandoffGrant() {
         BrowserSessionStore(context).saveExternalLinkPreviewEnabled(true)
         ActivityScenario.launch<MainActivity>(incomingIntent(INCOMING_URL)).use { scenario ->
@@ -168,10 +203,21 @@ class MainActivityIncomingNavigationInstrumentedTest {
             scenario.onActivity { activity ->
                 originalIntent = activity.intent
                 activity.startActivity(
-                    incomingIntent(nextUrl).apply { removeFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK) },
+                    incomingIntent(nextUrl).apply {
+                        removeFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                        addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                    },
                 )
             }
-            instrumentation.waitForIdleSync()
+            val deadline = SystemClock.elapsedRealtime() + 5_000L
+            var previewUrl: String? = null
+            while (SystemClock.elapsedRealtime() < deadline) {
+                scenario.onActivity { activity ->
+                    previewUrl = activity.browserControllerForTesting().externalLinkPreviewState?.currentUrl
+                }
+                if (previewUrl == nextUrl) break
+                SystemClock.sleep(20L)
+            }
             scenario.onActivity { activity ->
                 try {
                     val preview = requireNotNull(activity.browserControllerForTesting().externalLinkPreviewState)
@@ -238,13 +284,12 @@ class MainActivityIncomingNavigationInstrumentedTest {
             lateinit var originalIntent: Intent
             scenario.onActivity { activity ->
                 originalIntent = activity.intent
-                activity.startActivity(
+                instrumentation.callActivityOnNewIntent(
+                    activity,
                     Intent(activity, MainActivity::class.java)
-                        .setAction(action)
-                        .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP),
+                        .setAction(action),
                 )
             }
-            instrumentation.waitForIdleSync()
             scenario.onActivity { activity ->
                 try {
                     assertNull(activity.browserControllerForTesting().externalLinkPreviewState)
@@ -267,6 +312,37 @@ class MainActivityIncomingNavigationInstrumentedTest {
             SystemClock.sleep(50L)
         }
         assertTrue("Incoming tab did not load; current URL: $currentUrl", currentUrl == INCOMING_URL)
+    }
+
+    private fun awaitIncomingPage(
+        scenario: ActivityScenario<MainActivity>,
+        server: IncomingPageServer,
+    ) {
+        var activity: MainActivity? = null
+        scenario.onActivity { activity = it }
+        awaitIncomingPage(requireNotNull(activity), server)
+    }
+
+    private fun awaitIncomingPage(activity: MainActivity, server: IncomingPageServer) {
+        val deadline = SystemClock.elapsedRealtime() + 30_000L
+        var title = ""
+        var currentUrl = ""
+        while (SystemClock.elapsedRealtime() < deadline) {
+            instrumentation.runOnMainSync {
+                val tab = activity.browserControllerForTesting().selectedTab
+                title = tab.title
+                currentUrl = tab.url
+            }
+            if (
+                currentUrl == server.url &&
+                title == "Incoming page" &&
+                server.requests.get() > 0
+            ) break
+            SystemClock.sleep(50L)
+        }
+        assertEquals(server.url, currentUrl)
+        assertEquals("Incoming page", title)
+        assertTrue("Incoming page was not requested", server.requests.get() > 0)
     }
 
     private fun awaitIncomingPreviewPage(activity: MainActivity, server: IncomingPageServer) {
