@@ -173,6 +173,7 @@ import dev.sk2andy.materialbrowser.browser.integration.ExternalPreviewDownloadGr
 import dev.sk2andy.materialbrowser.browser.integration.PageShareLauncher
 import dev.sk2andy.materialbrowser.browser.integration.PageShareRequest
 import dev.sk2andy.materialbrowser.browser.integration.PageShareResult
+import dev.sk2andy.materialbrowser.browser.integration.PreparedWebAppLaunch
 import dev.sk2andy.materialbrowser.browser.permissions.ActivePermissionGrant
 import dev.sk2andy.materialbrowser.browser.permissions.ActivePermissionLedger
 import dev.sk2andy.materialbrowser.browser.permissions.PermissionOrigin
@@ -1396,6 +1397,10 @@ class BrowserController(
         }
     }
     private val fileChooserValidationExecutor = Executors.newSingleThreadExecutor()
+    private val externalAppLookupExecutor = Executors.newSingleThreadExecutor { task ->
+        Thread(task, "external-app-lookup")
+    }
+    private var automaticExternalAppRequestId = 0L
     private val geckoFileUploadStager = GeckoFileUploadStager(activity.applicationContext)
     private val profileWallpaperExecutor = Executors.newSingleThreadExecutor { task ->
         Thread(task, "profile-wallpaper")
@@ -4861,6 +4866,7 @@ class BrowserController(
                 showExternalAppOpenedToast()
                 return
             }
+            ExternalLaunchResult.AppChooserShown -> return
             is ExternalLaunchResult.OpenInBrowser -> result.url
             ExternalLaunchResult.Unsupported -> {
                 Toast.makeText(
@@ -6807,7 +6813,11 @@ class BrowserController(
         grant: ExternalNavigationGrant?,
         isRedirect: Boolean,
     ): ExternalAppNavigationHandling {
-        if (safeHttpUrl != null && !externalApps.canOpenWebUrlExternally(safeHttpUrl)) {
+        if (
+            safeHttpUrl != null &&
+            externalAppLinkHandling == ExternalAppLinkHandling.AskEveryTime &&
+            !externalApps.canOpenWebUrlExternally(safeHttpUrl)
+        ) {
             return ExternalAppNavigationHandling.Unavailable
         }
         if (externalAppLinkHandling == ExternalAppLinkHandling.Automatic) {
@@ -6844,6 +6854,7 @@ class BrowserController(
         grant: ExternalNavigationGrant?,
         isRedirect: Boolean,
     ) {
+        val requestId = ++automaticExternalAppRequestId
         val sourceNavigationGeneration = currentExternalAppSourceNavigationGeneration(source)
         val sourcePageUrl = currentExternalAppSourcePageUrl(source)
         externalNavigationGrants.remove(source.policyTabId())
@@ -6853,8 +6864,11 @@ class BrowserController(
             grant = grant,
             isRedirect = isRedirect,
         )
-        mainHandler.post {
+        fun completeLaunch(prepared: PreparedWebAppLaunch?) {
+            if (requestId != automaticExternalAppRequestId) return
             if (
+                destroyed ||
+                externalAppLinkHandling != ExternalAppLinkHandling.Automatic ||
                 !isExternalAppSourceSnapshotCurrent(
                     source = source,
                     navigationGeneration = sourceNavigationGeneration,
@@ -6862,22 +6876,25 @@ class BrowserController(
                 )
             ) {
                 clearExternalNavigationRollback(source)
-                return@post
+                return
             }
             val result = if (safeHttpUrl != null) {
-                externalApps.openWebUrlExternally(safeHttpUrl)
+                prepared?.let(externalApps::openWebUrlInChosenApp)
+                    ?: ExternalLaunchResult.Unsupported
             } else {
                 externalApps.open(Uri.parse(requestUrl))
             }
             when (result) {
-                ExternalLaunchResult.Launched -> {
+                ExternalLaunchResult.Launched,
+                ExternalLaunchResult.AppChooserShown,
+                -> {
                     pendingExternalAppHandoff = ExternalAppHandoffRules.start(
                         targetUrl = webTargetUrl,
                         nowElapsedRealtime = SystemClock.elapsedRealtime(),
                     )?.let { handoff ->
                         PendingExternalAppHandoff(match = handoff, source = source)
                     }
-                    showExternalAppOpenedToast()
+                    if (result == ExternalLaunchResult.Launched) showExternalAppOpenedToast()
                 }
                 is ExternalLaunchResult.OpenInBrowser -> {
                     clearExternalNavigationRollback(source)
@@ -6897,6 +6914,19 @@ class BrowserController(
                 }
             }
         }
+        mainHandler.post {
+            if (destroyed) return@post
+            if (safeHttpUrl == null) {
+                completeLaunch(null)
+            } else {
+                externalAppLookupExecutor.execute {
+                    val prepared = runCatching {
+                        externalApps.prepareWebUrlInChosenApp(safeHttpUrl)
+                    }.getOrNull()
+                    mainHandler.post { completeLaunch(prepared) }
+                }
+            }
+        }
     }
 
     fun confirmExternalAppPrompt(promptId: Long) {
@@ -6911,14 +6941,16 @@ class BrowserController(
             externalApps.open(Uri.parse(pending.requestUrl))
         }
         when (result) {
-            ExternalLaunchResult.Launched -> {
+            ExternalLaunchResult.Launched,
+            ExternalLaunchResult.AppChooserShown,
+            -> {
                 pendingExternalAppHandoff = ExternalAppHandoffRules.start(
                     targetUrl = pending.webTargetUrl,
                     nowElapsedRealtime = SystemClock.elapsedRealtime(),
                 )?.let { handoff ->
                     PendingExternalAppHandoff(match = handoff, source = pending.source)
                 }
-                showExternalAppOpenedToast()
+                if (result == ExternalLaunchResult.Launched) showExternalAppOpenedToast()
             }
             is ExternalLaunchResult.OpenInBrowser -> {
                 clearExternalNavigationRollback(pending.source)
@@ -7243,17 +7275,44 @@ class BrowserController(
     }
 
     fun openPageExternally(tabId: String) {
-        val url = tabs.firstOrNull { it.id == tabId }?.url ?: return
+        if (destroyed) return
+        val tab = tabs.firstOrNull { it.id == tabId } ?: return
+        val url = tab.url
         if (url == BLANK_URL) return
-        when (externalApps.openWebUrlExternally(url)) {
-            ExternalLaunchResult.Launched -> Unit
-            is ExternalLaunchResult.OpenInBrowser,
-            ExternalLaunchResult.Unsupported,
-            -> Toast.makeText(
-                activity,
-                activity.getString(R.string.toast_no_external_app),
-                Toast.LENGTH_SHORT,
-            ).show()
+        val profileId = tab.profileId
+        val isPrivate = tab.isIncognito
+        val selectedTabIdAtLookup = selectedTabId
+        val activeProfileIdAtLookup = activeProfileId
+        val navigationGeneration = navigationGenerations.getOrDefault(tabId, 0)
+        externalAppLookupExecutor.execute {
+            val prepared = runCatching {
+                externalApps.prepareWebUrlInChosenApp(url)
+            }.getOrNull()
+            mainHandler.post {
+                if (
+                    destroyed ||
+                    selectedTabId != selectedTabIdAtLookup ||
+                    activeProfileId != activeProfileIdAtLookup ||
+                    navigationGenerations.getOrDefault(tabId, 0) != navigationGeneration ||
+                    tabs.none { current ->
+                        current.id == tabId && current.url == url &&
+                            current.profileId == profileId && current.isIncognito == isPrivate
+                    }
+                ) return@post
+                when (prepared?.let(externalApps::openWebUrlInChosenApp)) {
+                    ExternalLaunchResult.Launched,
+                    ExternalLaunchResult.AppChooserShown,
+                    -> Unit
+                    is ExternalLaunchResult.OpenInBrowser,
+                    ExternalLaunchResult.Unsupported,
+                    null,
+                    -> Toast.makeText(
+                        activity,
+                        activity.getString(R.string.toast_no_external_app),
+                        Toast.LENGTH_SHORT,
+                    ).show()
+                }
+            }
         }
     }
 
@@ -10325,6 +10384,7 @@ class BrowserController(
         cancelPendingWebPrompt()
         cancelPendingFileChooser()
         fileChooserValidationExecutor.shutdownNow()
+        externalAppLookupExecutor.shutdownNow()
         geckoFileUploadStager.releaseAll()
         profileWallpaperLoadGeneration++
         profileTabSwitcherWallpaperLoadGeneration++

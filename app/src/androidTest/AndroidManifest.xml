@@ -4,6 +4,16 @@
 
     <application android:label="Candy Test Icon Pack">
         <activity
+            android:name="dev.sk2andy.materialbrowser.browser.integration.ExternalAppLinkFixtureActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="issue199.candy.test" />
+            </intent-filter>
+        </activity>
+        <activity
             android:name="dev.sk2andy.materialbrowser.capsule.IconPackFixtureActivity"
             android:exported="true">
             <intent-filter>
