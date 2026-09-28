@@ -76,6 +76,8 @@
   let coverLayoutDue = 0;
   let routeCoverSettlingUntil = 0;
   let routeCoverRechecks = 0;
+  let viewportOverlayCandidates = [];
+  const knownViewportOverlays = new Set();
   let scrollListenersAttached = false;
   let headerVerificationPending = false;
   let scrollGeneration = 0;
@@ -104,6 +106,33 @@
         Number.parseFloat(style.opacity) <= 0.01) return false;
     const rect = element.getBoundingClientRect();
     return rect.width > 1 && rect.height > 1 && rect.top < safeTop - 0.5 && rect.bottom > 1;
+  }
+
+  function zeroInset(value) {
+    const parts = typeof value === "string" ? value.trim().split(/\s+/) : [];
+    return parts.length > 0 && parts.length <= 4 &&
+      parts.every((part) => /^(?:0|0px)$/.test(part));
+  }
+
+  function isViewportFixedOverlay(element, style, top = pixels(style.top), bottom = pixels(style.bottom)) {
+    if (style.position !== "fixed" || top === null || bottom === null ||
+        Math.abs(top) > 1 || Math.abs(bottom) > 1) return false;
+    const rect = element.getBoundingClientRect();
+    const width = Math.max(1, globalThis.innerWidth || document.documentElement.clientWidth || 0);
+    const height = Math.max(1, globalThis.innerHeight || document.documentElement.clientHeight || 0);
+    return rect.width >= width - 2 && rect.height >= height - 2 &&
+      rect.left <= 2 && rect.top <= 2 && rect.right >= width - 2 && rect.bottom >= height - 2;
+  }
+
+  function isViewportModalSurface(element, style, top, bottom, safeTop = inset) {
+    if (!isViewportFixedOverlay(element, style, top, bottom)) return false;
+    const firstChild = element.firstElementChild;
+    if (firstChild && firstChild.getBoundingClientRect().top >= safeTop - 0.5) return false;
+    if (element.getAttribute("role") === "dialog" || element.getAttribute("aria-modal") === "true") return true;
+    const identity = `${element.id || ""} ${element.className || ""}`;
+    if (/(?:backdrop|scrim|dimmer|shade|veil|overlay)/i.test(identity)) return false;
+    if (/(?:modal|dialog|interstitial)/i.test(identity)) return true;
+    return !!firstChild || !!element.textContent?.trim();
   }
 
   function coverFlowNeedsProtection(safeTop) {
@@ -137,17 +166,25 @@
       const style = getComputedStyle(element);
       if (style.position !== "fixed" && style.position !== "sticky") return false;
       const rect = element.getBoundingClientRect();
-      if (!visibleNearTop(element, style, safeTop) || rect.height > globalThis.innerHeight / 2 ||
+      if (!visibleNearTop(element, style, safeTop) ||
+          (rect.height > globalThis.innerHeight / 2 && !isViewportModalSurface(element, style, undefined, undefined, safeTop)) ||
           (pixels(style.top) ?? safeTop) >= safeTop - 0.5) return false;
       if ((pixels(style.top) || 0) + (pixels(style.paddingTop) || 0) >= safeTop - 0.5) return false;
       const firstChild = element.firstElementChild;
       return !firstChild || firstChild.getBoundingClientRect().top < safeTop - 0.5;
     };
+    for (const element of knownViewportOverlays) {
+      if (!element.isConnected) { knownViewportOverlays.delete(element); continue; }
+      if (anchorNeedsProtection(element)) return true;
+    }
     for (const element of Array.from(document.querySelectorAll(semanticSelector)).slice(0, 8)) {
       if (anchorNeedsProtection(element)) return true;
     }
     for (let element = document.body.firstElementChild, inspected = 0;
         element && inspected < 64; element = nextElement(element, document.body), inspected++) {
+      if (anchorNeedsProtection(element)) return true;
+    }
+    for (const element of Array.from(document.body.children || []).slice(-8)) {
       if (anchorNeedsProtection(element)) return true;
     }
     return coverFlowNeedsProtection(safeTop) === true;
@@ -682,6 +719,8 @@
     const top = pixels(rule.style.getPropertyValue("top"));
     const selector = rule.selectorText;
     if ((position !== "fixed" && position !== "sticky") || top === null || !selector || selector.length > 2048) return;
+    if (position === "fixed" &&
+        (rule.style.getPropertyValue("bottom") || rule.style.getPropertyValue("inset"))) return;
     const important = rule.style.getPropertyPriority("top") === "important";
     if (!important && scan.candidates.get(selector)?.important) return;
     if (!scan.candidates.has(selector) && scan.candidates.size >= cssLimits.selectors) { cssCounts.capped++; return; }
@@ -769,15 +808,16 @@
   function schedule(delay = 0) {
     if (timer || (!cleanup.length && !bodyPending && !jobs.length && !selectorScan &&
         !selectorBuild && !sourceDiscovery && !sourceQueue.length && !semanticCheckPending &&
-        !headerVerificationPending && !statusBarBackdropPending && !coverLayoutPending)) return;
+        !headerVerificationPending && !statusBarBackdropPending && !coverLayoutPending &&
+        !viewportOverlayCandidates.length)) return;
     if (coverLayoutPending && !cleanup.length && !bodyPending && !jobs.length && !selectorScan &&
         !selectorBuild && !sourceDiscovery && !sourceQueue.length && !semanticCheckPending &&
-        !headerVerificationPending && !statusBarBackdropPending) {
+        !headerVerificationPending && !statusBarBackdropPending && !viewportOverlayCandidates.length) {
       delay = Math.max(delay, coverLayoutDue - performance.now());
     }
     if (!cleanup.length && !bodyPending && !jobs.length && !selectorScan && !selectorBuild &&
         !sourceDiscovery && !semanticCheckPending && !headerVerificationPending &&
-        !statusBarBackdropPending && !coverLayoutPending &&
+        !statusBarBackdropPending && !coverLayoutPending && !viewportOverlayCandidates.length &&
         sourceQueue.length) {
       delay = Math.max(delay, Math.max(0, Math.min(...sourceQueue.map((source) => source.due)) - performance.now()));
     }
@@ -798,6 +838,66 @@
     if (shallow) jobs.unshift(job);
     else jobs.push(job);
     return job;
+  }
+
+  function queueViewportOverlayCandidate(element, recheckKnown = false) {
+    if (!(element instanceof Element) || !element.isConnected || isOwnSource(element) ||
+        (knownViewportOverlays.has(element) && !recheckKnown) ||
+        viewportOverlayCandidates.includes(element) || viewportOverlayCandidates.length >= 16) return;
+    viewportOverlayCandidates.push(element);
+  }
+
+  function hasInlineFullViewportInset(element) {
+    const inline = element?.getAttribute?.("style");
+    if (!inline || !/(?:inset|top|bottom)/i.test(inline)) return false;
+    const style = element?.style;
+    if (!style) return false;
+    const top = style.getPropertyValue("top").trim();
+    const bottom = style.getPropertyValue("bottom").trim();
+    return zeroInset(style.getPropertyValue("inset")) ||
+      (/^(?:0|0px)$/.test(top) && /^(?:0|0px)$/.test(bottom));
+  }
+
+  function hasViewportOverlayHint(element) {
+    return element?.getAttribute?.("role") === "dialog" ||
+      element?.getAttribute?.("aria-modal") === "true" ||
+      /(?:modal|dialog|interstitial)/i.test(`${element?.id || ""} ${element?.className || ""}`);
+  }
+
+  function queueAddedViewportOverlays(records) {
+    if (!configuration?.safeAreaEnabled) return;
+    let remaining = 16;
+    for (const record of records.slice(-32).reverse()) {
+      if (remaining <= 0) break;
+      if (record.type === "attributes" && ["style", "class"].includes(record.attributeName)) {
+        const target = record.target;
+        remaining--;
+        if (knownViewportOverlays.has(target)) {
+          if (record.oldValue !== target.getAttribute(record.attributeName)) {
+            queueViewportOverlayCandidate(target, true);
+          }
+        } else if (hasInlineFullViewportInset(target) || hasViewportOverlayHint(target)) {
+          queueViewportOverlayCandidate(target);
+        }
+        continue;
+      }
+      if (record.type !== "childList") continue;
+      const pending = Array.from(record.addedNodes || []).slice(-8).reverse()
+        .map((element) => ({ element, depth: 0 }));
+      while (pending.length && remaining > 0) {
+        const { element, depth } = pending.shift();
+        remaining--;
+        if (!(element instanceof Element) || isOwnSource(element)) continue;
+        if (hasInlineFullViewportInset(element) || hasViewportOverlayHint(element)) {
+          queueViewportOverlayCandidate(element);
+        }
+        if (depth >= 2) continue;
+        for (const child of Array.from(element.children || []).slice(-4).reverse()) {
+          pending.push({ element: child, depth: depth + 1 });
+        }
+      }
+    }
+    if (viewportOverlayCandidates.length) schedule(configuration.mutationDebounceMillis);
   }
 
   function composedParent(element) {
@@ -927,7 +1027,8 @@
     // Keep fixed boxes extending into the lower half out of top-inset rules.
     const bottom = style.position === "fixed" ? pixels(style.bottom) : null;
     if (style.position === "fixed" && top !== null &&
-        (top >= globalThis.innerHeight / 2 || (bottom !== null && bottom <= globalThis.innerHeight / 2))) return;
+        (top >= globalThis.innerHeight / 2 || (bottom !== null && bottom <= globalThis.innerHeight / 2)) &&
+        !isViewportModalSurface(element, style, top, bottom)) return;
     if (top === null) return;
     if (configuration.cover) {
       if (top >= inset - 0.5 || top + (pixels(style.paddingTop) || 0) >= inset - 0.5 ||
@@ -1005,6 +1106,35 @@
         count++;
         continue;
       }
+      if (viewportOverlayCandidates.length) {
+        const element = viewportOverlayCandidates.shift();
+        if (element.isConnected) {
+          const wasKnown = knownViewportOverlays.has(element);
+          if (wasKnown) releaseRule(element);
+          const style = getComputedStyle(element);
+          if (isViewportModalSurface(element, style)) {
+            knownViewportOverlays.add(element);
+            if (knownViewportOverlays.size > 8) {
+              knownViewportOverlays.delete(knownViewportOverlays.values().next().value);
+            }
+            if (configuration.cover && !configuration.active) {
+              coverLayoutRevision++;
+              configure();
+              return;
+            }
+            classify(element, style);
+          } else if (wasKnown) {
+            knownViewportOverlays.delete(element);
+            if (configuration.cover) {
+              coverLayoutRevision++;
+              configure();
+              return;
+            }
+          }
+        }
+        count++;
+        continue;
+      }
       if (!configuration.active) break;
       if (bodyPending) {
         if (document.body) {
@@ -1045,6 +1175,20 @@
 
   function mutations(records) {
     const wasCover = configuration?.cover === true;
+    let removedViewportOverlay = false;
+    for (const element of knownViewportOverlays) {
+      if (element.isConnected) continue;
+      knownViewportOverlays.delete(element);
+      releaseRule(element);
+      removedViewportOverlay = true;
+    }
+    if (removedViewportOverlay && wasCover) {
+      coverLayoutRevision++;
+      configure();
+      queueAddedViewportOverlays(records);
+      return;
+    }
+    queueAddedViewportOverlays(records);
     let coverAttributeChanged = false;
     const changedCoverLayout = records.slice(0, 32).some((record) => {
       const target = record.target;
@@ -1301,6 +1445,7 @@
       publishStatusBarBackdrop(null, next);
     }
     cancel();
+    viewportOverlayCandidates = [];
     observer?.disconnect();
     observer = null;
     // Remove protection before any fresh computed-style read for the next inset.
@@ -1355,6 +1500,19 @@
     }
     startSelectorScan();
     observe();
+    if (next.safeAreaEnabled && document.body) {
+      for (const child of Array.from(document.body.children || []).slice(-8)) {
+        if (hasInlineFullViewportInset(child) || hasViewportOverlayHint(child)) {
+          queueViewportOverlayCandidate(child);
+        }
+        for (let nested = child.firstElementChild, inspected = 0;
+            nested && inspected < 2; nested = nested.nextElementSibling, inspected++) {
+          if (hasInlineFullViewportInset(nested) || hasViewportOverlayHint(nested)) {
+            queueViewportOverlayCandidate(nested);
+          }
+        }
+      }
+    }
     watchCoverNativeInset();
     globalThis.CandyRedditSafeArea?.configure(redditActive, (_flow, structuralChange) => {
       if (structuralChange) {
@@ -1406,7 +1564,8 @@
     if (coverLayoutPending) coverLayoutDue = performance.now() + minimumHeaderVerificationQuietMillis;
     headerVerificationPending = configuration?.active === true && !configuration.cover &&
       (fixedHeaderCandidates.size > 0 || semanticHeaderCandidates.size > 0);
-    if (headerVerificationPending || statusBarBackdropPending || semanticCheckPending || coverLayoutPending) {
+    if (headerVerificationPending || statusBarBackdropPending || semanticCheckPending ||
+        coverLayoutPending || viewportOverlayCandidates.length) {
       schedule(Math.max(
         minimumHeaderVerificationQuietMillis,
         configuration?.mutationDebounceMillis || minimumHeaderVerificationQuietMillis,

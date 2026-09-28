@@ -128,6 +128,51 @@ class GeckoSafeAreaPrototypeInstrumentedTest {
     }
 
     @Test
+    fun initialAndAutomaticFullViewportModalsStayBelowStatusBar() {
+        val title = AtomicReference<String?>(null)
+        val policy = GeckoPrivacyPolicy.Disabled.copy(cssSafeAreaTopInsetPx = NATIVE_TOP_PX)
+        EdgeToEdgeSiteFixtureServer { _ -> FULL_VIEWPORT_MODAL_HTML }.use { server ->
+            ActivityScenario.launch(GeckoScrollTestActivity::class.java).use { scenario ->
+                lateinit var session: GeckoBrowserSession
+                lateinit var view: View
+                scenario.onActivity { activity ->
+                    WindowCompat.setDecorFitsSystemWindows(activity.window, false)
+                    session = GeckoRuntimeOwner.getOrCreate(activity).createSession(
+                        profileId = "safe-area-modal-${UUID.randomUUID()}",
+                        isPrivate = false,
+                        privacyPolicy = policy,
+                    )
+                    session.bindExtensionTab("safe-area-modal-${UUID.randomUUID()}", 1)
+                    session.setStateListener { state -> title.set(state.title) }
+                    view = session.createView(activity)
+                    activity.setContentView(view)
+                    session.setActive(true)
+                    assertTrue(session.loadUrl(server.fixtureUrl("/site-matrix/full-viewport-modal")))
+                }
+                try {
+                    awaitReport(title) { it.getBoolean("loaded") }
+                    scenario.onActivity { updateNativeTop(view) }
+                    val report = awaitReport(title) {
+                        it.getDouble("env") > 0 && it.getBoolean("lateModalReady") &&
+                            abs(it.getDouble("initialTop") - it.getDouble("env")) < 0.5 &&
+                            abs(it.getDouble("lateTop") - it.getDouble("env")) < 0.5
+                    }
+                    assertEquals(0.0, report.getDouble("scrimTop"), 0.5)
+                    assertEquals(0.0, report.getDouble("navigationBottom"), 0.5)
+                    assertEquals("", report.getString("navigationInlineTop"))
+                    assertEquals("0px", report.getString("lateInlineTop"))
+                } finally {
+                    scenario.onActivity {
+                        session.releaseView(view)
+                        session.setActive(false)
+                        session.close()
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
     fun coverPageAlreadyUsingNativeInsetKeepsItsAuthorPositions() {
         val title = AtomicReference<String?>(null)
         val policy = GeckoPrivacyPolicy.Disabled.copy(cssSafeAreaTopInsetPx = NATIVE_TOP_PX)
@@ -555,6 +600,45 @@ class GeckoSafeAreaPrototypeInstrumentedTest {
                   navigationRectBottom:navigation.getBoundingClientRect().bottom,
                   panelTop:parseFloat(getComputedStyle(document.getElementById('panel')).top),
                   navigationInlineTop:navigation.style.top,
+                });
+              }, 50);
+            </script>
+        """.trimIndent()
+        val FULL_VIEWPORT_MODAL_HTML = """
+            <!doctype html><meta name="viewport" content="width=device-width,initial-scale=1">
+            <style>
+              html,body { margin:0; }
+              #probe { position:absolute; visibility:hidden; padding-top:env(safe-area-inset-top); }
+              #scrim { position:fixed; inset:0; background:rgba(0,0,0,.45); }
+              #initial { position:fixed; inset:0; background:white; }
+              #navigation { position:fixed; bottom:0; height:48px; left:0; right:0; }
+            </style>
+            <body><div id="probe"></div><div id="scrim" class="modal-backdrop"></div>
+              <div id="initial" role="dialog"><div>Initial modal</div></div>
+              <nav id="navigation">Navigation</nav>
+            <script>
+              setTimeout(() => {
+                const late = document.createElement('div');
+                late.id = 'late';
+                late.setAttribute('role', 'dialog');
+                late.style.position = 'fixed';
+                late.style.inset = '0';
+                late.innerHTML = '<div>Automatic modal</div>';
+                document.body.append(late);
+              }, 500);
+              setInterval(() => {
+                const late = document.getElementById('late');
+                const navigation = document.getElementById('navigation');
+                document.title = '${REPORT_PREFIX}' + JSON.stringify({
+                  loaded:document.readyState === 'complete',
+                  env:parseFloat(getComputedStyle(document.getElementById('probe')).paddingTop),
+                  initialTop:parseFloat(getComputedStyle(document.getElementById('initial')).top),
+                  lateModalReady:!!late,
+                  lateTop:late ? parseFloat(getComputedStyle(late).top) : null,
+                  scrimTop:parseFloat(getComputedStyle(document.getElementById('scrim')).top),
+                  navigationBottom:parseFloat(getComputedStyle(navigation).bottom),
+                  navigationInlineTop:navigation.style.top,
+                  lateInlineTop:late?.style.top || '',
                 });
               }, 50);
             </script>

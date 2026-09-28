@@ -293,6 +293,7 @@ function fixture({ density = 3, nativeTop = 96, envTop = nativeTop, simulateAnim
       observer.callback([{ type: 'attributes', target: element, attributeName }]);
     },
     added(element) { observer.callback([{ type: 'childList', target: body, addedNodes: [element], removedNodes: [] }]); },
+    dispatchMutations(records) { observer.callback(records); },
     childAdded(parent, element) {
       parent.append(element);
       observer.callback([{ type: 'childList', target: parent, addedNodes: [element], removedNodes: [] }]);
@@ -1169,6 +1170,286 @@ test('bottom-anchored fixed navigation keeps its resolved top and bottom', () =>
   assert.equal(f.computed(navigation).bottom, '0px');
   assert.equal(navigation.style.getPropertyValue('top'), '');
   assert.equal(f.computed(tallPanel).top, '100px');
+});
+
+test('full-viewport fixed inset modal gains only a top inset at initial load', () => {
+  const f = fixture();
+  const modal = f.element('fixed', '0px');
+  modal.setAttribute('role', 'dialog');
+  modal.computed.bottom = '0px';
+  modal.rect = { top: 0, left: 0, width: 800, height: 800, right: 800, bottom: 800 };
+  const narrow = f.element('fixed', '0px');
+  narrow.computed.bottom = '0px';
+  narrow.rect = { top: 0, left: 0, width: 400, height: 800, right: 400, bottom: 800 };
+
+  f.start();
+
+  assert.equal(f.computed(modal).top, '32px');
+  assert.equal(f.computed(modal).bottom, '0px');
+  assert.equal(modal.style.getPropertyValue('top'), '');
+  assert.equal(f.computed(narrow).top, '0px', 'Partial-width fixed panels keep their geometry');
+});
+
+test('automatic inline modal insertion bypasses the click discovery gate', () => {
+  const f = fixture();
+  f.start();
+  const modal = f.context.document.createElement('div');
+  modal.setAttribute('role', 'dialog');
+  modal.computed = { position: 'fixed', top: '0px', bottom: '0px' };
+  modal.rect = { top: 0, left: 0, width: 800, height: 800, right: 800, bottom: 800 };
+  modal.style.setProperty('inset', '0px');
+  f.body.append(modal);
+  f.added(modal);
+  f.flush();
+
+  assert.equal(f.computed(modal).top, '32px');
+  assert.equal(f.computed(modal).bottom, '0px');
+});
+
+test('clicked class modal and automatic interstitial both receive the top inset', () => {
+  const f = fixture();
+  f.start();
+  const clicked = f.context.document.createElement('div');
+  clicked.setAttribute('role', 'dialog');
+  clicked.computed = { position: 'fixed', top: '0px', bottom: '0px' };
+  clicked.rect = { top: 0, left: 0, width: 800, height: 800, right: 800, bottom: 800 };
+  f.event('click');
+  f.body.append(clicked);
+  f.added(clicked);
+  f.flush();
+  assert.equal(f.computed(clicked).top, '32px');
+
+  const interstitial = f.context.document.createElement('div');
+  interstitial.className = 'interstitial-ad';
+  interstitial.computed = { position: 'fixed', top: '0px', bottom: '0px' };
+  interstitial.rect = { top: 0, left: 0, width: 800, height: 800, right: 800, bottom: 800 };
+  f.body.append(interstitial);
+  f.added(interstitial);
+  f.flush();
+  assert.equal(f.computed(interstitial).top, '32px');
+});
+
+test('inset stylesheet selector leaves a narrow drawer and checks modal geometry', () => {
+  const f = fixture();
+  f.sheet([{ selector: '.full-screen', declarations: { position: 'fixed', inset: '0px' } }]);
+  f.start();
+  const drawer = f.element('fixed', '0px');
+  drawer.classes = ['full-screen'];
+  drawer.className = 'full-screen';
+  drawer.computed.bottom = '0px';
+  drawer.rect = { top: 0, left: 0, width: 320, height: 800, right: 320, bottom: 800 };
+  f.added(drawer);
+  const modal = f.element('fixed', '0px');
+  modal.classes = ['full-screen', 'modal'];
+  modal.className = 'full-screen modal';
+  modal.computed.bottom = '0px';
+  modal.rect = { top: 0, left: 0, width: 800, height: 800, right: 800, bottom: 800 };
+  f.added(modal);
+  f.flush();
+
+  assert.equal(f.computed(drawer).top, '0px');
+  assert.equal(f.computed(modal).top, '32px');
+});
+
+test('fullscreen scrim stays behind the safe area while dialog surface moves', () => {
+  const f = fixture({ viewportContent: 'viewport-fit=cover' });
+  f.body.style.setProperty('padding-top', 'env(safe-area-inset-top)');
+  f.start();
+  const scrim = f.context.document.createElement('div');
+  scrim.className = 'modal-backdrop';
+  scrim.computed = { position: 'fixed', top: '0px', bottom: '0px' };
+  scrim.rect = { top: 0, left: 0, width: 800, height: 800, right: 800, bottom: 800 };
+  scrim.style.setProperty('inset', '0px');
+  const dialog = f.context.document.createElement('div');
+  dialog.setAttribute('role', 'dialog');
+  dialog.computed = { position: 'fixed', top: '0px', bottom: '0px' };
+  dialog.rect = { top: 0, left: 0, width: 800, height: 800, right: 800, bottom: 800 };
+  dialog.style.setProperty('inset', '0px');
+  f.body.append(scrim);
+  f.body.append(dialog);
+  f.dispatchMutations([{ type: 'childList', target: f.body,
+    addedNodes: [scrim, dialog], removedNodes: [] }]);
+  f.flush();
+
+  assert.equal(f.computed(scrim).top, '0px');
+  assert.equal(f.computed(dialog).top, '32px');
+});
+
+test('generic backdrop wrapper with safe child retains full viewport coverage', () => {
+  const f = fixture();
+  const overlay = f.element('fixed', '0px');
+  overlay.className = 'page-overlay';
+  overlay.computed.bottom = '0px';
+  overlay.rect = { top: 0, left: 0, width: 800, height: 800, right: 800, bottom: 800 };
+  const dialog = f.context.document.createElement('div');
+  dialog.rect = { top: 32, left: 100, width: 600, height: 300, right: 700, bottom: 332 };
+  overlay.append(dialog);
+
+  f.start();
+
+  assert.equal(f.computed(overlay).top, '0px');
+});
+
+test('modal candidate discovery stays bounded and prioritizes latest inserted overlay', () => {
+  const f = fixture();
+  f.start();
+  let inlineReads = 0;
+  const records = Array.from({ length: 31 }, () => ({ type: 'childList', target: f.body,
+    addedNodes: Array.from({ length: 8 }, () => {
+      const node = f.context.document.createElement('div');
+      const getAttribute = node.getAttribute.bind(node);
+      node.getAttribute = (name) => { if (name === 'style') inlineReads++; return getAttribute(name); };
+      f.body.append(node);
+      return node;
+    }), removedNodes: [] }));
+  const modal = f.context.document.createElement('div');
+  modal.setAttribute('role', 'dialog');
+  modal.computed = { position: 'fixed', top: '0px', bottom: '0px' };
+  modal.rect = { top: 0, left: 0, width: 800, height: 800, right: 800, bottom: 800 };
+  f.body.append(modal);
+  records.push({ type: 'childList', target: f.body, addedNodes: [modal], removedNodes: [] });
+  f.dispatchMutations(records);
+  f.flush();
+
+  assert.equal(f.computed(modal).top, '32px');
+  assert.ok(inlineReads <= 16, `Candidate prefilter inspected ${inlineReads} noise nodes`);
+  const before = { style: f.reads.style, rect: f.reads.rect };
+  for (let index = 0; index < 100; index++) {
+    f.dispatchMutations([{ type: 'attributes', target: modal, attributeName: 'class', oldValue: null }]);
+  }
+  for (let index = 0; index < 100; index++) f.event('scroll');
+  f.flush();
+  assert.deepEqual({ style: f.reads.style, rect: f.reads.rect }, before);
+});
+
+test('known full-screen modal releases its top rule when it becomes a narrow drawer', () => {
+  const f = fixture();
+  const modal = f.element('fixed', '0px');
+  modal.setAttribute('role', 'dialog');
+  modal.computed.bottom = '0px';
+  modal.rect = { top: 0, left: 0, width: 800, height: 800, right: 800, bottom: 800 };
+  f.start();
+  assert.equal(f.computed(modal).top, '32px');
+
+  modal.rect = { top: 0, left: 0, width: 320, height: 800, right: 320, bottom: 800 };
+  f.mutate(modal, 'class');
+  f.flush();
+  assert.equal(f.computed(modal).top, '0px');
+
+  modal.rect = { top: 0, left: 0, width: 800, height: 800, right: 800, bottom: 800 };
+  f.mutate(modal, 'class');
+  f.flush();
+  assert.equal(f.computed(modal).top, '32px');
+});
+
+test('cover page releases modal protection when the same node is hidden', () => {
+  const f = fixture({ viewportContent: 'viewport-fit=cover' });
+  f.body.style.setProperty('padding-top', 'env(safe-area-inset-top)');
+  const main = f.element('static', 'auto', 'main');
+  main.rect = { top: 32, left: 0, width: 800, height: 400, right: 800, bottom: 432 };
+  f.start();
+  assert.equal(f.diagnostics().active, false);
+
+  const modal = f.context.document.createElement('div');
+  modal.setAttribute('role', 'dialog');
+  modal.computed = { position: 'fixed', top: '0px', bottom: '0px' };
+  modal.rect = { top: 0, left: 0, width: 800, height: 800, right: 800, bottom: 800 };
+  f.body.append(modal);
+  f.added(modal);
+  f.flush();
+  assert.equal(f.computed(modal).top, '32px');
+
+  modal.computed.display = 'none';
+  modal.rect = { top: 0, left: 0, width: 0, height: 0, right: 0, bottom: 0 };
+  f.mutate(modal, 'class');
+  f.flush();
+  assert.equal(f.diagnostics().active, false);
+  assert.equal(f.computed(modal).top, '0px');
+
+  modal.computed.display = 'block';
+  modal.rect = { top: 0, left: 0, width: 800, height: 800, right: 800, bottom: 800 };
+  f.mutate(modal, 'class');
+  f.flush();
+  assert.equal(f.diagnostics().active, true);
+  assert.equal(f.computed(modal).top, '32px');
+});
+
+test('cover page shifts an unsafe full-screen modal and restores after removal', () => {
+  const f = fixture({ viewportContent: 'viewport-fit=cover' });
+  f.body.style.setProperty('padding-top', 'env(safe-area-inset-top)');
+  const main = f.element('static', 'auto', 'main');
+  main.content = 'Safe page content';
+  main.rect = { top: 32, left: 0, width: 800, height: 400, right: 800, bottom: 432 };
+  f.start();
+  assert.equal(f.diagnostics().active, false);
+
+  const modal = f.context.document.createElement('div');
+  modal.computed = { position: 'fixed', top: '0px', bottom: '0px' };
+  modal.rect = { top: 0, left: 0, width: 800, height: 800, right: 800, bottom: 800 };
+  modal.style.setProperty('inset', '0px');
+  const content = f.context.document.createElement('div');
+  content.rect = { top: 0, left: 0, width: 800, height: 60, right: 800, bottom: 60 };
+  modal.append(content);
+  f.body.append(modal);
+  f.added(modal);
+  f.flush();
+  assert.equal(f.diagnostics().active, true);
+  assert.equal(f.computed(modal).top, '32px');
+
+  f.removed(modal);
+  f.flush();
+  assert.equal(f.diagnostics().active, false);
+});
+
+test('cover page leaves a full-screen modal with author safe-area padding in place', () => {
+  const f = fixture({ viewportContent: 'viewport-fit=cover' });
+  f.body.style.setProperty('padding-top', 'env(safe-area-inset-top)');
+  const modal = f.element('fixed', '0px');
+  modal.computed.bottom = '0px';
+  modal.style.setProperty('padding-top', 'env(safe-area-inset-top)');
+  modal.rect = { top: 0, left: 0, width: 800, height: 800, right: 800, bottom: 800 };
+  const content = f.context.document.createElement('div');
+  content.rect = { top: 32, left: 0, width: 800, height: 60, right: 800, bottom: 92 };
+  modal.append(content);
+
+  f.start();
+
+  assert.equal(f.diagnostics().active, false);
+  assert.equal(f.computed(modal).top, '0px');
+  assert.equal(f.computed(modal).paddingTop, '32px');
+});
+
+test('cover page finds a replacement portal modal in the same mutation batch', () => {
+  const f = fixture({ viewportContent: 'viewport-fit=cover' });
+  f.body.style.setProperty('padding-top', 'env(safe-area-inset-top)');
+  for (let index = 0; index < 70; index++) f.element('static', 'auto');
+  const portal = f.element('static', 'auto');
+  for (let index = 0; index < 10; index++) f.element('static', 'auto');
+  const oldModal = f.element('fixed', '0px');
+  oldModal.setAttribute('role', 'dialog');
+  oldModal.computed.bottom = '0px';
+  oldModal.rect = { top: 0, left: 0, width: 800, height: 800, right: 800, bottom: 800 };
+  f.start();
+  assert.equal(f.diagnostics().active, true);
+
+  const wrapper = f.context.document.createElement('div');
+  wrapper.append(f.context.document.createElement('div'));
+  wrapper.append(f.context.document.createElement('div'));
+  const replacement = f.context.document.createElement('div');
+  replacement.setAttribute('role', 'dialog');
+  replacement.computed = { position: 'fixed', top: '0px', bottom: '0px' };
+  replacement.rect = { top: 0, left: 0, width: 800, height: 800, right: 800, bottom: 800 };
+  wrapper.append(replacement);
+  oldModal.remove();
+  portal.append(wrapper);
+  f.dispatchMutations([
+    { type: 'childList', target: f.body, addedNodes: [], removedNodes: [oldModal] },
+    { type: 'childList', target: portal, addedNodes: [wrapper], removedNodes: [] },
+  ]);
+  f.flush();
+
+  assert.equal(f.diagnostics().active, true);
+  assert.equal(f.computed(replacement).top, '32px');
 });
 
 test('passive normal resets stay protected without repairs; important authors and cleanup keep latest styles', () => {
