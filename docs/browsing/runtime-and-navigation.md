@@ -149,9 +149,11 @@
   document. Keep one short-lived, memory-only record of the handed-off target and source surface.
   If the receiving app immediately returns the same registrable-site web link to Candy, consume that
   record once and continue in the source tab or existing preview instead of creating another preview.
-- Route documented HTTPS `play.google.com/store/` links directly to `com.android.vending` without
-  generic app-link resolution flags. If Google Play is unavailable or rejects the launch, let the
-  originating engine session continue the normalized HTTPS request as Candy's browser fallback.
+- Route documented HTTPS `play.google.com/store/` links directly to `com.android.vending` even
+  from `www.google.com` search results, where both hosts share the same registrable site. Require
+  a user tap or its authorized redirect chain. Do not use generic app-link resolution flags. If
+  Google Play is unavailable or rejects the launch, let the originating engine session continue
+  the normalized HTTPS request as Candy's browser fallback.
 - Carry user intent across script-driven handoffs with a short-lived, tab- and engine-session-bound grant
   after a tapped HTTP(S) navigation. The grant permits an HTTP redirect or special-scheme handoff,
   ends on page completion or error, and is consumed by the first accepted external launch attempt.

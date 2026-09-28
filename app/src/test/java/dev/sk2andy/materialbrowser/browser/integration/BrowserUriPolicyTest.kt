@@ -234,6 +234,54 @@ class BrowserUriPolicyTest {
     }
 
     @Test
+    fun `Google search Play Store links reach app handoff with user intent`() {
+        val searchUrl = "https://www.google.com/search?q=candy+browser"
+        val playUrl = "https://play.google.com/store/apps/details?id=dev.sk2andy.materialbrowser"
+
+        assertTrue(
+            ExternalNavigationPolicy.shouldAttemptExternalLaunch(
+                scheme = "https",
+                isForMainFrame = true,
+                hasGesture = true,
+                isRedirect = false,
+                currentPageUrl = searchUrl,
+                targetUrl = playUrl,
+            ),
+        )
+        assertTrue(
+            ExternalNavigationPolicy.shouldAttemptExternalLaunch(
+                scheme = "https",
+                isForMainFrame = true,
+                hasGesture = false,
+                isRedirect = true,
+                hasUserNavigationGrant = true,
+                currentPageUrl = "https://www.google.com/url?q=play",
+                targetUrl = playUrl,
+            ),
+        )
+        assertFalse(
+            ExternalNavigationPolicy.shouldAttemptExternalLaunch(
+                scheme = "https",
+                isForMainFrame = true,
+                hasGesture = false,
+                isRedirect = true,
+                currentPageUrl = searchUrl,
+                targetUrl = playUrl,
+            ),
+        )
+        assertFalse(
+            ExternalNavigationPolicy.shouldAttemptExternalLaunch(
+                scheme = "https",
+                isForMainFrame = false,
+                hasGesture = true,
+                isRedirect = false,
+                currentPageUrl = searchUrl,
+                targetUrl = playUrl,
+            ),
+        )
+    }
+
+    @Test
     fun `external navigation grant expires at deterministic boundary`() {
         assertTrue(
             ExternalNavigationPolicy.isUserNavigationGrantActive(

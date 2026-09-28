@@ -1958,6 +1958,64 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
     }
 
     @Test
+    fun playStoreLinkFromGoogleSearchKeepsSourceTabWhenResumed() {
+        val playUrl = "https://play.google.com/store/apps/details?id=dev.sk2andy.materialbrowser"
+        lateinit var browserController: BrowserController
+        lateinit var recordingContext: RecordingContext
+        composeRule.runOnIdle {
+            val activity = composeRule.activity
+            val store = BrowserSessionStore(activity)
+            originalEngineKind = store.loadAndroidBrowserEngineKind()
+            originalExternalAppLinkHandling = store.loadExternalAppLinkHandling()
+            assertTrue(store.saveAndroidBrowserEngineKind(AndroidBrowserEngineKind.GeckoView))
+            recordingContext = RecordingContext(activity)
+            browserController = BrowserController(
+                activity = activity,
+                externalApps = ExternalAppLauncher(recordingContext),
+            )
+            controller = browserController
+            browserController.updateExternalAppLinkHandling(ExternalAppLinkHandling.Automatic)
+            val tabId = browserController.selectedTabId
+            browserController.installGeckoEngineSessionForTesting(
+                ReentrantAttachSession(tabId = tabId, onFirstAttach = {}),
+            )
+            browserController.dispatchGeckoEngineEventForTesting(
+                BrowserEngineEvent(
+                    tabId = tabId,
+                    type = BrowserEngineEventType.NavigationCommitted,
+                    address = APP_HANDOFF_SOURCE_URL,
+                    title = "Search",
+                    canGoBack = false,
+                    canGoForward = false,
+                    failureDescription = null,
+                ),
+            )
+
+            assertEquals(
+                GeckoNavigationRequestDecision.Deny,
+                browserController.dispatchSelectedGeckoNavigationRequestForTesting(
+                    GeckoMainFrameNavigationRequest(
+                        url = playUrl,
+                        isRedirect = false,
+                        hasUserGesture = true,
+                        isDirectNavigation = false,
+                    ),
+                ),
+            )
+        }
+
+        composeRule.waitUntil(timeoutMillis = 5_000L) {
+            recordingContext.lastIntent?.dataString == playUrl
+        }
+        composeRule.runOnIdle {
+            assertEquals("com.android.vending", recordingContext.lastIntent?.`package`)
+            browserController.onResume()
+            assertEquals(APP_HANDOFF_SOURCE_URL, browserController.selectedTab.url)
+            assertNull(browserController.selectedTab.error)
+        }
+    }
+
+    @Test
     fun redirectedAppHandoffRestoresSourceAndReturnedLinkSkipsPreview() {
         lateinit var browserController: BrowserController
         lateinit var session: ReentrantAttachSession

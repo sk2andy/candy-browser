@@ -88,7 +88,10 @@ object ExternalNavigationPolicy {
         if (!isForMainFrame) return false
         val normalizedScheme = scheme?.lowercase()?.takeIf(String::isNotBlank) ?: return false
         if (normalizedScheme == "http" || normalizedScheme == "https") {
-            if (isSameSiteWebNavigation(currentPageUrl, targetUrl)) return false
+            if (
+                isSameSiteWebNavigation(currentPageUrl, targetUrl) &&
+                !GooglePlayAppLinkRules.shouldOpenInPlayStore(targetUrl)
+            ) return false
             return hasGesture || (isRedirect && hasUserNavigationGrant)
         }
         if (
