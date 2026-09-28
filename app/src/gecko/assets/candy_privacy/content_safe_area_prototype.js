@@ -78,6 +78,7 @@
   let routeCoverRechecks = 0;
   let viewportOverlayCandidates = [];
   const knownViewportOverlays = new Set();
+  const viewportOverlayContents = new WeakMap();
   let scrollListenersAttached = false;
   let headerVerificationPending = false;
   let scrollGeneration = 0;
@@ -135,6 +136,25 @@
     return !!firstChild || !!element.textContent?.trim();
   }
 
+  function viewportDialogContent(element, style, safeTop = inset) {
+    if (!isViewportFixedOverlay(element, style)) return null;
+    const content = element.firstElementChild;
+    if (!content || (content.getAttribute("role") !== "dialog" &&
+        content.getAttribute("aria-modal") !== "true" &&
+        !/(?:modal|dialog)/i.test(`${content.id || ""} ${content.className || ""}`))) return null;
+    const rect = content.getBoundingClientRect();
+    const width = Math.max(1, globalThis.innerWidth || document.documentElement.clientWidth || 0);
+    const height = Math.max(1, globalThis.innerHeight || document.documentElement.clientHeight || 0);
+    if (rect.width < width - 2 || rect.height < height - 2 ||
+        rect.left > 2 || rect.top > 2 || rect.right < width - 2 || rect.bottom < height - 2) return null;
+    const contentStyle = getComputedStyle(content);
+    const paddingTop = pixels(contentStyle.paddingTop);
+    if (contentStyle.boxSizing !== "border-box" || paddingTop === null ||
+        paddingTop >= safeTop - 0.5 ||
+        content.firstElementChild?.getBoundingClientRect().top >= safeTop - 0.5) return null;
+    return { element: content, paddingTop };
+  }
+
   function coverFlowNeedsProtection(safeTop) {
     if (!document.body || globalThis.CandyRedditSafeArea?.flowProtected() === true) return false;
     if ((pixels(getComputedStyle(document.body).paddingTop) || 0) >= safeTop - 0.5) return false;
@@ -165,6 +185,7 @@
     const anchorNeedsProtection = (element) => {
       const style = getComputedStyle(element);
       if (style.position !== "fixed" && style.position !== "sticky") return false;
+      if (viewportDialogContent(element, style, safeTop)) return true;
       const rect = element.getBoundingClientRect();
       if (!visibleNearTop(element, style, safeTop) ||
           (rect.height > globalThis.innerHeight / 2 && !isViewportModalSurface(element, style, undefined, undefined, safeTop)) ||
@@ -869,19 +890,29 @@
     let remaining = 16;
     for (const record of records.slice(-32).reverse()) {
       if (remaining <= 0) break;
-      if (record.type === "attributes" && ["style", "class"].includes(record.attributeName)) {
+      if (record.type === "attributes" && ["style", "class", "role", "aria-modal"].includes(record.attributeName)) {
         const target = record.target;
         remaining--;
-        if (knownViewportOverlays.has(target)) {
+        const known = knownViewportOverlays.has(target) ? target :
+          (knownViewportOverlays.has(target.parentElement) ? target.parentElement : null);
+        if (known) {
           if (record.oldValue !== target.getAttribute(record.attributeName)) {
-            queueViewportOverlayCandidate(target, true);
+            queueViewportOverlayCandidate(known, true);
           }
+        } else if (["role", "aria-modal"].includes(record.attributeName) &&
+            hasViewportOverlayHint(target.parentElement)) {
+          queueViewportOverlayCandidate(target.parentElement);
         } else if (hasInlineFullViewportInset(target) || hasViewportOverlayHint(target)) {
           queueViewportOverlayCandidate(target);
         }
         continue;
       }
       if (record.type !== "childList") continue;
+      if (knownViewportOverlays.has(record.target)) {
+        queueViewportOverlayCandidate(record.target, true);
+      } else if (knownViewportOverlays.has(record.target?.parentElement)) {
+        queueViewportOverlayCandidate(record.target.parentElement, true);
+      }
       const pending = Array.from(record.addedNodes || []).slice(-8).reverse()
         .map((element) => ({ element, depth: 0 }));
       while (pending.length && remaining > 0) {
@@ -1110,19 +1141,33 @@
         const element = viewportOverlayCandidates.shift();
         if (element.isConnected) {
           const wasKnown = knownViewportOverlays.has(element);
-          if (wasKnown) releaseRule(element);
+          if (wasKnown) {
+            releaseRule(viewportOverlayContents.get(element));
+            viewportOverlayContents.delete(element);
+            releaseRule(element);
+          }
           const style = getComputedStyle(element);
-          if (isViewportModalSurface(element, style)) {
+          const content = viewportDialogContent(element, style);
+          if (content || isViewportModalSurface(element, style)) {
             knownViewportOverlays.add(element);
             if (knownViewportOverlays.size > 8) {
-              knownViewportOverlays.delete(knownViewportOverlays.values().next().value);
+              const oldest = knownViewportOverlays.values().next().value;
+              knownViewportOverlays.delete(oldest);
+              releaseRule(viewportOverlayContents.get(oldest));
+              viewportOverlayContents.delete(oldest);
+              releaseRule(oldest);
             }
             if (configuration.cover && !configuration.active) {
               coverLayoutRevision++;
               configure();
+              queueViewportOverlayCandidate(element, true);
+              schedule();
               return;
             }
-            classify(element, style);
+            if (content) {
+              viewportOverlayContents.set(element, content.element);
+              applyRule(content.element, "padding-top", `${Math.max(content.paddingTop, inset)}px`);
+            } else classify(element, style);
           } else if (wasKnown) {
             knownViewportOverlays.delete(element);
             if (configuration.cover) {
@@ -1179,6 +1224,8 @@
     for (const element of knownViewportOverlays) {
       if (element.isConnected) continue;
       knownViewportOverlays.delete(element);
+      releaseRule(viewportOverlayContents.get(element));
+      viewportOverlayContents.delete(element);
       releaseRule(element);
       removedViewportOverlay = true;
     }
@@ -1374,7 +1421,7 @@
     observer = new MutationObserver(mutations);
     observer.observe(document.documentElement, { childList: true, subtree: true,
       characterData: true, attributes: true, attributeOldValue: true,
-      attributeFilter: ["class", "style", "hidden", "role", "href", "rel", "media", "disabled", "content"] });
+      attributeFilter: ["class", "style", "hidden", "role", "aria-modal", "href", "rel", "media", "disabled", "content"] });
   }
 
   function updateScrollListeners() {
@@ -1501,6 +1548,7 @@
     startSelectorScan();
     observe();
     if (next.safeAreaEnabled && document.body) {
+      for (const element of knownViewportOverlays) queueViewportOverlayCandidate(element, true);
       for (const child of Array.from(document.body.children || []).slice(-8)) {
         if (hasInlineFullViewportInset(child) || hasViewportOverlayHint(child)) {
           queueViewportOverlayCandidate(child);

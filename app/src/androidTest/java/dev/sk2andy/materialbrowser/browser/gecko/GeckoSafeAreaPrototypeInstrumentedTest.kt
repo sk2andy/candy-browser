@@ -173,6 +173,51 @@ class GeckoSafeAreaPrototypeInstrumentedTest {
     }
 
     @Test
+    fun reactModalFullscreenContentKeepsBackdropBehindStatusBar() {
+        val title = AtomicReference<String?>(null)
+        val policy = GeckoPrivacyPolicy.Disabled.copy(cssSafeAreaTopInsetPx = NATIVE_TOP_PX)
+        EdgeToEdgeSiteFixtureServer { _ -> REACT_MODAL_FULLSCREEN_HTML }.use { server ->
+            ActivityScenario.launch(GeckoScrollTestActivity::class.java).use { scenario ->
+                lateinit var session: GeckoBrowserSession
+                lateinit var view: View
+                scenario.onActivity { activity ->
+                    WindowCompat.setDecorFitsSystemWindows(activity.window, false)
+                    session = GeckoRuntimeOwner.getOrCreate(activity).createSession(
+                        profileId = "safe-area-react-modal-${UUID.randomUUID()}",
+                        isPrivate = false,
+                        privacyPolicy = policy,
+                    )
+                    session.bindExtensionTab("safe-area-react-modal-${UUID.randomUUID()}", 1)
+                    session.setStateListener { state -> title.set(state.title) }
+                    view = session.createView(activity)
+                    activity.setContentView(view)
+                    session.setActive(true)
+                    assertTrue(session.loadUrl(server.fixtureUrl("/site-matrix/react-modal-fullscreen")))
+                }
+                try {
+                    awaitReport(title) { it.getBoolean("loaded") }
+                    scenario.onActivity { updateNativeTop(view) }
+                    val report = awaitReport(title) {
+                        it.getDouble("env") > 0 && it.getBoolean("modalReady") &&
+                            abs(it.getDouble("contentPadding") - it.getDouble("env")) < 0.5
+                    }
+                    assertEquals(0.0, report.getDouble("overlayTop"), 0.5)
+                    assertEquals(0.0, report.getDouble("overlayBottom"), 0.5)
+                    assertEquals(0.0, report.getDouble("contentTop"), 0.5)
+                    assertTrue(report.getDouble("headingTop") >= report.getDouble("env") - 0.5)
+                    assertEquals("", report.getString("contentInlinePadding"))
+                } finally {
+                    scenario.onActivity {
+                        session.releaseView(view)
+                        session.setActive(false)
+                        session.close()
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
     fun coverPageAlreadyUsingNativeInsetKeepsItsAuthorPositions() {
         val title = AtomicReference<String?>(null)
         val policy = GeckoPrivacyPolicy.Disabled.copy(cssSafeAreaTopInsetPx = NATIVE_TOP_PX)
@@ -639,6 +684,40 @@ class GeckoSafeAreaPrototypeInstrumentedTest {
                   navigationBottom:parseFloat(getComputedStyle(navigation).bottom),
                   navigationInlineTop:navigation.style.top,
                   lateInlineTop:late?.style.top || '',
+                });
+              }, 50);
+            </script>
+        """.trimIndent()
+        val REACT_MODAL_FULLSCREEN_HTML = """
+            <!doctype html><meta name="viewport" content="width=device-width,initial-scale=1">
+            <style>
+              html,body { margin:0; }
+              #probe { position:absolute; visibility:hidden; padding-top:env(safe-area-inset-top); }
+              .ReactModal__Overlay { position:fixed; inset:0; background:rgba(0,0,0,.4); }
+              .ReactModal__Content { position:absolute; top:50%; left:50%; right:auto; bottom:auto;
+                transform:translate(-50%,-50%); width:100%; height:100%; box-sizing:border-box;
+                background:white; overflow:auto; }
+              .ReactModal__Content header { margin:0; height:48px; }
+            </style>
+            <body><div id="probe"></div><script>
+              setTimeout(() => {
+                const portal = document.createElement('div');
+                portal.innerHTML = '<div class="ReactModal__Overlay"><div class="ReactModal__Content" role="dialog"><header>Preisentwicklung</header></div></div>';
+                document.body.append(portal);
+              }, 500);
+              setInterval(() => {
+                const overlay = document.querySelector('.ReactModal__Overlay');
+                const content = document.querySelector('.ReactModal__Content');
+                document.title = '${REPORT_PREFIX}' + JSON.stringify({
+                  loaded:document.readyState === 'complete',
+                  env:parseFloat(getComputedStyle(document.getElementById('probe')).paddingTop),
+                  modalReady:!!content,
+                  overlayTop:overlay ? overlay.getBoundingClientRect().top : null,
+                  overlayBottom:overlay ? parseFloat(getComputedStyle(overlay).bottom) : null,
+                  contentTop:content ? content.getBoundingClientRect().top : null,
+                  contentPadding:content ? parseFloat(getComputedStyle(content).paddingTop) : null,
+                  headingTop:content ? content.querySelector('header').getBoundingClientRect().top : null,
+                  contentInlinePadding:content?.style.paddingTop || '',
                 });
               }, 50);
             </script>

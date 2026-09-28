@@ -1307,6 +1307,114 @@ test('generic backdrop wrapper with safe child retains full viewport coverage', 
   assert.equal(f.computed(overlay).top, '0px');
 });
 
+test('ReactModal fullscreen content gains padding while its overlay covers the status bar', () => {
+  const f = fixture();
+  f.start();
+  const portal = f.context.document.createElement('div');
+  const overlay = f.context.document.createElement('div');
+  overlay.className = 'ReactModal__Overlay';
+  overlay.computed = { position: 'fixed', top: '0px', bottom: '0px' };
+  overlay.rect = { top: 0, left: 0, width: 800, height: 800, right: 800, bottom: 800 };
+  const content = f.context.document.createElement('div');
+  content.className = 'ReactModal__Content';
+  content.setAttribute('role', 'dialog');
+  content.computed = { position: 'absolute', top: '50%', paddingTop: '0px', boxSizing: 'border-box' };
+  content.rect = { top: 0, left: 0, width: 800, height: 800, right: 800, bottom: 800 };
+  const header = f.context.document.createElement('header');
+  header.rect = { top: 0, left: 0, width: 800, height: 48, right: 800, bottom: 48 };
+  content.append(header);
+  overlay.append(content);
+  portal.append(overlay);
+  f.body.append(portal);
+  f.added(portal);
+  f.flush();
+
+  assert.equal(f.computed(overlay).top, '0px');
+  assert.equal(f.computed(overlay).bottom, '0px');
+  assert.equal(f.computed(content).paddingTop, '32px');
+  assert.equal(content.style.getPropertyValue('padding-top'), '');
+
+  content.className = 'sheet';
+  content.removeAttribute('role');
+  f.mutate(content, 'role');
+  f.flush();
+  assert.equal(f.computed(content).paddingTop, '0px', 'Content without dialog semantics releases padding');
+
+  content.setAttribute('aria-modal', 'true');
+  f.mutate(content, 'aria-modal');
+  f.flush();
+  assert.equal(f.computed(content).paddingTop, '32px', 'Late dialog semantics restore padding');
+
+  content.rect = { top: 100, left: 100, width: 600, height: 500, right: 700, bottom: 600 };
+  f.mutate(content, 'class');
+  f.flush();
+  assert.equal(f.computed(content).paddingTop, '0px', 'A smaller dialog releases full-screen padding');
+});
+
+test('evicting an old tracked overlay also releases its content padding', () => {
+  const f = fixture();
+  f.start();
+  const contents = [];
+  for (let index = 0; index < 9; index++) {
+    const overlay = f.context.document.createElement('div');
+    overlay.className = 'ReactModal__Overlay';
+    overlay.computed = { position: 'fixed', top: '0px', bottom: '0px' };
+    overlay.rect = { top: 0, left: 0, width: 800, height: 800, right: 800, bottom: 800 };
+    const content = f.context.document.createElement('div');
+    content.setAttribute('role', 'dialog');
+    content.computed = { position: 'absolute', top: '50%', paddingTop: '0px', boxSizing: 'border-box' };
+    content.rect = { top: 0, left: 0, width: 800, height: 800, right: 800, bottom: 800 };
+    const header = f.context.document.createElement('header');
+    header.rect = { top: 0, left: 0, width: 800, height: 48, right: 800, bottom: 48 };
+    content.append(header);
+    overlay.append(content);
+    f.body.append(overlay);
+    f.added(overlay);
+    f.flush();
+    contents.push(content);
+  }
+
+  assert.equal(f.computed(contents[0]).paddingTop, '0px');
+  assert.equal(f.computed(contents[8]).paddingTop, '32px');
+});
+
+test('cover page activates for a late ReactModal portal and clears when it closes', () => {
+  const f = fixture({ viewportContent: 'viewport-fit=cover' });
+  f.body.style.setProperty('padding-top', 'env(safe-area-inset-top)');
+  const main = f.element('static', 'auto', 'main');
+  main.rect = { top: 32, left: 0, width: 800, height: 400, right: 800, bottom: 432 };
+  f.start();
+  assert.equal(f.diagnostics().active, false);
+
+  const portal = f.context.document.createElement('div');
+  const overlay = f.context.document.createElement('div');
+  overlay.className = 'ReactModal__Overlay';
+  overlay.computed = { position: 'fixed', top: '0px', bottom: '0px' };
+  overlay.rect = { top: 0, left: 0, width: 800, height: 800, right: 800, bottom: 800 };
+  const content = f.context.document.createElement('div');
+  content.className = 'ReactModal__Content';
+  content.setAttribute('role', 'dialog');
+  content.computed = { position: 'absolute', top: '50%', paddingTop: '0px', boxSizing: 'border-box' };
+  content.rect = { top: 0, left: 0, width: 800, height: 800, right: 800, bottom: 800 };
+  const header = f.context.document.createElement('header');
+  header.rect = { top: 0, left: 0, width: 800, height: 48, right: 800, bottom: 48 };
+  content.append(header);
+  overlay.append(content);
+  portal.append(overlay);
+  f.body.append(portal);
+  f.added(portal);
+  f.flush();
+
+  assert.equal(f.diagnostics().active, true);
+  assert.equal(f.computed(overlay).top, '0px');
+  assert.equal(f.computed(content).paddingTop, '32px');
+
+  f.removed(overlay);
+  f.flush();
+  assert.equal(f.diagnostics().active, false);
+  assert.equal(f.computed(content).paddingTop, '0px');
+});
+
 test('modal candidate discovery stays bounded and prioritizes latest inserted overlay', () => {
   const f = fixture();
   f.start();
