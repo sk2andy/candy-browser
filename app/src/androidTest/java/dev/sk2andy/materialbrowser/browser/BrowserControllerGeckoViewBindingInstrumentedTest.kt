@@ -1962,6 +1962,7 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
         val playUrl = "https://play.google.com/store/apps/details?id=dev.sk2andy.materialbrowser"
         lateinit var browserController: BrowserController
         lateinit var recordingContext: RecordingContext
+        lateinit var session: ReentrantAttachSession
         composeRule.runOnIdle {
             val activity = composeRule.activity
             val store = BrowserSessionStore(activity)
@@ -1976,15 +1977,30 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
             controller = browserController
             browserController.updateExternalAppLinkHandling(ExternalAppLinkHandling.Automatic)
             val tabId = browserController.selectedTabId
-            browserController.installGeckoEngineSessionForTesting(
-                ReentrantAttachSession(tabId = tabId, onFirstAttach = {}),
+            session = ReentrantAttachSession(
+                tabId = tabId,
+                onFirstAttach = {},
+                historyUrls = mapOf(0 to APP_HANDOFF_SOURCE_URL),
             )
+            browserController.installGeckoEngineSessionForTesting(session)
             browserController.dispatchGeckoEngineEventForTesting(
                 BrowserEngineEvent(
                     tabId = tabId,
                     type = BrowserEngineEventType.NavigationCommitted,
                     address = APP_HANDOFF_SOURCE_URL,
                     title = "Search",
+                    canGoBack = false,
+                    canGoForward = false,
+                    failureDescription = null,
+                ),
+            )
+
+            browserController.dispatchGeckoEngineEventForTesting(
+                BrowserEngineEvent(
+                    tabId = tabId,
+                    type = BrowserEngineEventType.NavigationStarted,
+                    address = playUrl,
+                    title = null,
                     canGoBack = false,
                     canGoForward = false,
                     failureDescription = null,
@@ -2002,6 +2018,17 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
                     ),
                 ),
             )
+            browserController.dispatchGeckoEngineEventForTesting(
+                BrowserEngineEvent(
+                    tabId = tabId,
+                    type = BrowserEngineEventType.NavigationFailed,
+                    address = playUrl,
+                    title = null,
+                    canGoBack = false,
+                    canGoForward = false,
+                    failureDescription = "Gecko navigation failed",
+                ),
+            )
         }
 
         composeRule.waitUntil(timeoutMillis = 5_000L) {
@@ -2011,6 +2038,8 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
             assertEquals("com.android.vending", recordingContext.lastIntent?.`package`)
             browserController.onResume()
             assertEquals(APP_HANDOFF_SOURCE_URL, browserController.selectedTab.url)
+            assertEquals("Search", browserController.selectedTab.title)
+            assertFalse(browserController.selectedTab.isLoading)
             assertNull(browserController.selectedTab.error)
         }
     }

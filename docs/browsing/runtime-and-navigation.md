@@ -154,6 +154,10 @@
   a user tap or its authorized redirect chain. Do not use generic app-link resolution flags. If
   Google Play is unavailable or rejects the launch, let the originating engine session continue
   the normalized HTTPS request as Candy's browser fallback.
+- For a direct app handoff from a regular tab, Gecko may report navigation started before its
+  request is denied and then report navigation failed. Keep the source tab snapshot while its history entry
+  still matches the source, and restore that tab when the denied target fails. Ignore late state
+  updates for that target so returning from the external app shows the original page.
 - Carry user intent across script-driven handoffs with a short-lived, tab- and engine-session-bound grant
   after a tapped HTTP(S) navigation. The grant permits an HTTP redirect or special-scheme handoff,
   ends on page completion or error, and is consumed by the first accepted external launch attempt.

@@ -494,6 +494,14 @@ private data class ExternalNavigationRollback(
     var restoringSource: Boolean = false,
 )
 
+private data class ExternalAppNavigationRecovery(
+    val session: AndroidBrowserEngineSessionPort,
+    val targetUrl: String,
+    val sourceTab: BrowserTab,
+    val navigationGeneration: Int,
+    var restored: Boolean = false,
+)
+
 private data class AutoDeAmpReplacementGuard(
     val publisherUrl: String,
     val expiresAtElapsedRealtime: Long,
@@ -1343,6 +1351,9 @@ class BrowserController(
     private var pendingExternalAppPrompt: PendingExternalAppPrompt? = null
     private var externalAppPromptSequence = 0L
     private var pendingExternalNavigationRollback: ExternalNavigationRollback? = null
+    private val navigationSourceTabs = mutableMapOf<String, BrowserTab>()
+    private val externalAppNavigationRecoveries =
+        mutableMapOf<String, ExternalAppNavigationRecovery>()
     private var webContentRequestGeneration = 0L
     private var userScriptMutationPending = false
     private var toppingCatalogRefreshGeneration = 0
@@ -6977,6 +6988,7 @@ class BrowserController(
                 )
             ) {
                 clearExternalNavigationRollback(source)
+                clearExternalAppNavigationRecovery(source)
                 return
             }
             val result = if (safeHttpUrl != null) {
@@ -6999,10 +7011,12 @@ class BrowserController(
                 }
                 is ExternalLaunchResult.OpenInBrowser -> {
                     clearExternalNavigationRollback(source)
+                    clearExternalAppNavigationRecovery(source)
                     openExternalAppFallback(source, result.url)
                 }
                 ExternalLaunchResult.Unsupported -> {
                     clearExternalNavigationRollback(source)
+                    clearExternalAppNavigationRecovery(source)
                     if (safeHttpUrl != null) {
                         openExternalAppFallback(source, safeHttpUrl)
                     } else {
@@ -7140,12 +7154,87 @@ class BrowserController(
 
     private fun currentExternalAppSourcePageUrl(source: ExternalAppHandoffSource): String? =
         when (source) {
-            is ExternalAppHandoffSource.Tab -> pageUrls[source.tabId]
-                ?: tabs.firstOrNull { tab -> tab.id == source.tabId }?.url
+            is ExternalAppHandoffSource.Tab -> {
+                val recovery = externalAppNavigationRecoveries[source.tabId]
+                if (
+                    recovery?.restored == true &&
+                    recovery.session === source.session &&
+                    recovery.navigationGeneration == navigationGenerations[source.tabId]
+                ) {
+                    recovery.targetUrl
+                } else {
+                    pageUrls[source.tabId]
+                        ?: tabs.firstOrNull { tab -> tab.id == source.tabId }?.url
+                }
+            }
             is ExternalAppHandoffSource.Preview -> externalLinkPreviewState
                 ?.takeIf { state -> state.sessionId == source.sessionId }
                 ?.currentUrl
         }
+
+    private fun rememberExternalAppNavigationRecovery(
+        tabId: String,
+        session: AndroidBrowserEngineSessionPort,
+        targetUrl: String,
+    ) {
+        val sourceTab = navigationSourceTabs[tabId]
+            ?: tabs.firstOrNull { tab -> tab.id == tabId && !tab.isLoading }
+            ?: return
+        if (
+            !ExternalNavigationRollbackRules.isAtSource(
+                sourceTab.url,
+                session.historyUrlAtOffset(0),
+            )
+        ) return
+        externalAppNavigationRecoveries[tabId] = ExternalAppNavigationRecovery(
+            session = session,
+            targetUrl = targetUrl,
+            sourceTab = sourceTab,
+            navigationGeneration = navigationGenerations.getOrDefault(tabId, 0),
+        )
+    }
+
+    private fun clearExternalAppNavigationRecovery(source: ExternalAppHandoffSource) {
+        if (source is ExternalAppHandoffSource.Tab) {
+            externalAppNavigationRecoveries.remove(source.tabId)
+        }
+    }
+
+    private fun restoreExternalAppNavigationSource(event: BrowserEngineEvent): Boolean {
+        val recovery = externalAppNavigationRecoveries[event.tabId] ?: return false
+        if (
+            browserEngineSessions[event.tabId] !== recovery.session ||
+            navigationGenerations[event.tabId] != recovery.navigationGeneration ||
+            event.address != recovery.targetUrl ||
+            !ExternalNavigationRollbackRules.isAtSource(
+                recovery.sourceTab.url,
+                recovery.session.historyUrlAtOffset(0),
+            )
+        ) {
+            externalAppNavigationRecoveries.remove(event.tabId)
+            return false
+        }
+        recovery.restored = true
+        navigationSourceTabs.remove(event.tabId)
+        pendingLocalSyncNavigationUrls.remove(event.tabId)
+        clearRemoteSyncNavigationTracking(event.tabId)
+        pageUrls[event.tabId] = recovery.sourceTab.url
+        updateTab(event.tabId) { tab ->
+            tab.copy(
+                url = recovery.sourceTab.url,
+                title = recovery.sourceTab.title,
+                isLoading = false,
+                progress = 100,
+                canGoBack = recovery.sourceTab.canGoBack,
+                canGoForward = recovery.sourceTab.canGoForward,
+                error = null,
+                failureKind = null,
+                httpStatusCode = recovery.sourceTab.httpStatusCode,
+            )
+        }
+        persist()
+        return true
+    }
 
     private fun clearExternalNavigationRollback(source: ExternalAppHandoffSource) {
         if (
@@ -7356,6 +7445,8 @@ class BrowserController(
     private fun clearExternalNavigationAuthorization(tabId: String) {
         externalNavigationGrants.remove(tabId)
         pendingInitialExternalNavigationGrants.remove(tabId)
+        navigationSourceTabs.remove(tabId)
+        externalAppNavigationRecoveries.remove(tabId)
         if (pendingExternalNavigationRollback?.tabId == tabId) {
             pendingExternalNavigationRollback = null
         }
@@ -10549,6 +10640,8 @@ class BrowserController(
         committedRecallPages.clear()
         externalNavigationGrants.clear()
         pendingInitialExternalNavigationGrants.clear()
+        navigationSourceTabs.clear()
+        externalAppNavigationRecoveries.clear()
         pendingExternalAppHandoff = null
         pendingExternalAppPrompt = null
         externalAppPrompt = null
@@ -10938,9 +11031,11 @@ class BrowserController(
                 )
             } ?: ExternalAppNavigationHandling.Unavailable
             if (appNavigationHandling == ExternalAppNavigationHandling.Prompted) {
+                rememberExternalAppNavigationRecovery(tabId, session, request.url)
                 return GeckoNavigationRequestDecision.Deny
             }
             if (appNavigationHandling == ExternalAppNavigationHandling.Automatic) {
+                rememberExternalAppNavigationRecovery(tabId, session, request.url)
                 postAutomaticExternalAppLaunch(
                     requestUrl = request.url,
                     safeHttpUrl = safeHttpUrl,
@@ -12267,12 +12362,25 @@ class BrowserController(
             engineViewRevision++
             return
         }
+        val recoveredNavigation = externalAppNavigationRecoveries[event.tabId]
+            ?.takeIf { recovery -> recovery.restored }
+        if (
+            recoveredNavigation != null &&
+            event.address == recoveredNavigation.targetUrl &&
+            (event.type == BrowserEngineEventType.NavigationFailed ||
+                event.type == BrowserEngineEventType.StateChanged)
+        ) return
         when (event.type) {
             BrowserEngineEventType.NavigationStarted -> {
                 invalidateExternalAppPromptForNavigation(event.tabId)
                 cancelAddressBarAutoDockProbe(event.tabId)
                 val navigatingSession = browserEngineSessions[event.tabId] ?: return
-                val previousUrl = tabs.firstOrNull { it.id == event.tabId }?.url
+                val previousTab = tabs.firstOrNull { it.id == event.tabId }
+                if (previousTab?.isLoading == false) {
+                    navigationSourceTabs[event.tabId] = previousTab
+                }
+                externalAppNavigationRecoveries.remove(event.tabId)
+                val previousUrl = previousTab?.url
                 event.address?.let { address ->
                     if (previousUrl != null && FaviconRules.changedSite(previousUrl, address)) {
                         invalidateFavicon(event.tabId)
@@ -12378,6 +12486,8 @@ class BrowserController(
                 markLocalSyncNavigationPending(event.tabId, event.address)
             }
             BrowserEngineEventType.NavigationCommitted -> {
+                navigationSourceTabs.remove(event.tabId)
+                externalAppNavigationRecoveries.remove(event.tabId)
                 val previousUrl = tabs.firstOrNull { it.id == event.tabId }?.url
                 event.address?.let { address ->
                     if (previousUrl != null && FaviconRules.changedSite(previousUrl, address)) {
@@ -12422,6 +12532,11 @@ class BrowserController(
                 }
             }
             BrowserEngineEventType.NavigationFailed -> {
+                if (restoreExternalAppNavigationSource(event)) {
+                    engineViewRevision++
+                    return
+                }
+                navigationSourceTabs.remove(event.tabId)
                 pendingLocalSyncNavigationUrls.remove(event.tabId)
                 clearRemoteSyncNavigationTracking(event.tabId)
                 connectivityMonitor.refresh()
@@ -12438,6 +12553,13 @@ class BrowserController(
                 }
             }
             BrowserEngineEventType.StateChanged -> {
+                if (
+                    recoveredNavigation != null &&
+                    ExternalNavigationRollbackRules.isAtSource(
+                        recoveredNavigation.sourceTab.url,
+                        event.address,
+                    )
+                ) externalAppNavigationRecoveries.remove(event.tabId)
                 event.address?.let { address -> pageUrls[event.tabId] = address }
                 refreshDomainMuteForTab(event.tabId)
                 val currentTab = tabs.firstOrNull { tab -> tab.id == event.tabId }
@@ -12510,6 +12632,8 @@ class BrowserController(
                 }
             }
             BrowserEngineEventType.Closed -> {
+                navigationSourceTabs.remove(event.tabId)
+                externalAppNavigationRecoveries.remove(event.tabId)
                 removePendingInitialBrowserEngineNavigation(event.tabId)
                 browserEngineSessions[event.tabId]?.let(::cancelPendingInlineMediaPlayerOpen)
                 pendingLocalSyncNavigationUrls.remove(event.tabId)
