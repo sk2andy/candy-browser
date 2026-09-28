@@ -940,6 +940,23 @@ test('sticky headers switch immediately while fixed headers must remain pinned a
   assert.deepEqual(restored.fallbacks, [[1, 1, '#456abc', true]]);
 });
 
+test('an early scroll still checks a semantic sticky header', () => {
+  const f = fixture({ themeColor: '#123abc' });
+  const header = f.element('sticky', '0px', 'header');
+  header.rect = { top: 32, left: 0, width: 800, height: 56, right: 800, bottom: 88 };
+  f.start(false);
+  const selectorReads = f.reads.selector;
+  f.scrollTo(80);
+  f.event('scroll');
+  f.scrollTo(120);
+  f.event('scroll');
+  assert.equal(f.reads.selector, selectorReads, 'Scroll itself does not query the DOM');
+  f.flush();
+
+  assert.equal(f.reads.selector, selectorReads + 1, 'Queued semantic check runs once after scroll quiet');
+  assert.deepEqual(f.fallbacks, [[1, 1, '#123abc', true]]);
+});
+
 test('cached Reddit custom headers coalesce scroll work and accept nested content movement', () => {
   const f = fixture({ hostname: 'www.reddit.com', themeColor: '#ff4500' });
   for (let index = 0; index < 12; index++) f.element('static', 'auto', 'header');
