@@ -1959,7 +1959,27 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
 
     @Test
     fun playStoreLinkFromGoogleSearchKeepsSourceTabWhenResumed() {
-        val playUrl = "https://play.google.com/store/apps/details?id=dev.sk2andy.materialbrowser"
+        assertPlayStoreHandoffRestoresSource(
+            sourceCommitted = true,
+            sourceUrl = APP_HANDOFF_SOURCE_URL,
+            playUrl = "https://play.google.com/store/apps/details?id=dev.sk2andy.materialbrowser",
+        )
+    }
+
+    @Test
+    fun redditPlayStoreLinkWhileGoogleSearchIsLoadingRestoresSourceTab() {
+        assertPlayStoreHandoffRestoresSource(
+            sourceCommitted = false,
+            sourceUrl = "https://www.google.com/search?q=Reddit%20Play%20Store",
+            playUrl = "https://play.google.com/store/apps/details?id=com.reddit.frontpage",
+        )
+    }
+
+    private fun assertPlayStoreHandoffRestoresSource(
+        sourceCommitted: Boolean,
+        sourceUrl: String,
+        playUrl: String,
+    ) {
         lateinit var browserController: BrowserController
         lateinit var recordingContext: RecordingContext
         lateinit var session: ReentrantAttachSession
@@ -1980,15 +2000,16 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
             session = ReentrantAttachSession(
                 tabId = tabId,
                 onFirstAttach = {},
-                historyUrls = mapOf(0 to APP_HANDOFF_SOURCE_URL),
+                historyUrls = if (sourceCommitted) mapOf(0 to sourceUrl) else emptyMap(),
             )
             browserController.installGeckoEngineSessionForTesting(session)
             browserController.dispatchGeckoEngineEventForTesting(
                 BrowserEngineEvent(
                     tabId = tabId,
-                    type = BrowserEngineEventType.NavigationCommitted,
-                    address = APP_HANDOFF_SOURCE_URL,
-                    title = "Search",
+                    type = if (sourceCommitted) BrowserEngineEventType.NavigationCommitted
+                        else BrowserEngineEventType.NavigationStarted,
+                    address = sourceUrl,
+                    title = if (sourceCommitted) "Search" else null,
                     canGoBack = false,
                     canGoForward = false,
                     failureDescription = null,
@@ -2006,6 +2027,7 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
                     failureDescription = null,
                 ),
             )
+            if (!sourceCommitted) session.setHistoryUrl(0, sourceUrl)
 
             assertEquals(
                 GeckoNavigationRequestDecision.Deny,
@@ -2037,8 +2059,8 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
         composeRule.runOnIdle {
             assertEquals("com.android.vending", recordingContext.lastIntent?.`package`)
             browserController.onResume()
-            assertEquals(APP_HANDOFF_SOURCE_URL, browserController.selectedTab.url)
-            assertEquals("Search", browserController.selectedTab.title)
+            assertEquals(sourceUrl, browserController.selectedTab.url)
+            assertEquals(if (sourceCommitted) "Search" else "", browserController.selectedTab.title)
             assertFalse(browserController.selectedTab.isLoading)
             assertNull(browserController.selectedTab.error)
         }

@@ -7177,15 +7177,20 @@ class BrowserController(
         session: AndroidBrowserEngineSessionPort,
         targetUrl: String,
     ) {
-        val sourceTab = navigationSourceTabs[tabId]
-            ?: tabs.firstOrNull { tab -> tab.id == tabId && !tab.isLoading }
-            ?: return
-        if (
-            !ExternalNavigationRollbackRules.isAtSource(
-                sourceTab.url,
-                session.historyUrlAtOffset(0),
+        val sourceUrl = BrowserUriPolicy.normalizeHttpUrl(session.historyUrlAtOffset(0)) ?: return
+        if (ExternalNavigationRollbackRules.isAtSource(sourceUrl, targetUrl)) return
+        val currentTab = tabs.firstOrNull { tab -> tab.id == tabId } ?: return
+        val sourceTab = listOfNotNull(navigationSourceTabs[tabId], currentTab)
+            .firstOrNull { tab -> ExternalNavigationRollbackRules.isAtSource(tab.url, sourceUrl) }
+            ?: currentTab.copy(
+                url = sourceUrl,
+                title = "",
+                isLoading = false,
+                progress = 100,
+                error = null,
+                failureKind = null,
+                httpStatusCode = null,
             )
-        ) return
         externalAppNavigationRecoveries[tabId] = ExternalAppNavigationRecovery(
             session = session,
             targetUrl = targetUrl,
@@ -12376,7 +12381,13 @@ class BrowserController(
                 cancelAddressBarAutoDockProbe(event.tabId)
                 val navigatingSession = browserEngineSessions[event.tabId] ?: return
                 val previousTab = tabs.firstOrNull { it.id == event.tabId }
-                if (previousTab?.isLoading == false) {
+                if (
+                    previousTab != null &&
+                    (!previousTab.isLoading || ExternalNavigationRollbackRules.isAtSource(
+                        previousTab.url,
+                        navigatingSession.historyUrlAtOffset(0),
+                    ))
+                ) {
                     navigationSourceTabs[event.tabId] = previousTab
                 }
                 externalAppNavigationRecoveries.remove(event.tabId)
