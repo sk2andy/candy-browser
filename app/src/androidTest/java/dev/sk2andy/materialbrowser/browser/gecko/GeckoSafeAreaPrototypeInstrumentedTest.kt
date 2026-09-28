@@ -205,6 +205,7 @@ class GeckoSafeAreaPrototypeInstrumentedTest {
                     assertEquals(0.0, report.getDouble("overlayBottom"), 0.5)
                     assertEquals(0.0, report.getDouble("contentTop"), 0.5)
                     assertTrue(report.getDouble("headingTop") >= report.getDouble("env") - 0.5)
+                    assertTrue(report.getDouble("closeTop") >= report.getDouble("env") - 0.5)
                     assertEquals("", report.getString("contentInlinePadding"))
                 } finally {
                     scenario.onActivity {
@@ -696,13 +697,14 @@ class GeckoSafeAreaPrototypeInstrumentedTest {
               .ReactModal__Overlay { position:fixed; inset:0; background:rgba(0,0,0,.4); }
               .ReactModal__Content { position:absolute; top:50%; left:50%; right:auto; bottom:auto;
                 transform:translate(-50%,-50%); width:100%; height:100%; box-sizing:border-box;
-                background:white; overflow:auto; }
+                background:white; overflow:auto; padding:20px; }
               .ReactModal__Content header { margin:0; height:48px; }
+              .modal-close-button { position:absolute; top:16px; right:16px; width:32px; height:32px; }
             </style>
             <body><div id="probe"></div><script>
               setTimeout(() => {
                 const portal = document.createElement('div');
-                portal.innerHTML = '<div class="ReactModal__Overlay"><div class="ReactModal__Content" role="dialog"><header>Preisentwicklung</header></div></div>';
+                portal.innerHTML = '<div class="ReactModal__Overlay"><div class="ReactModal__Content" role="dialog"><header>Preisentwicklung<button class="modal-close-button">Close</button></header></div></div>';
                 document.body.append(portal);
               }, 500);
               setInterval(() => {
@@ -717,6 +719,7 @@ class GeckoSafeAreaPrototypeInstrumentedTest {
                   contentTop:content ? content.getBoundingClientRect().top : null,
                   contentPadding:content ? parseFloat(getComputedStyle(content).paddingTop) : null,
                   headingTop:content ? content.querySelector('header').getBoundingClientRect().top : null,
+                  closeTop:content ? content.querySelector('button').getBoundingClientRect().top : null,
                   contentInlinePadding:content?.style.paddingTop || '',
                 });
               }, 50);

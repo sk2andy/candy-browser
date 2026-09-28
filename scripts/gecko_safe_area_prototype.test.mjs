@@ -1318,10 +1318,14 @@ test('ReactModal fullscreen content gains padding while its overlay covers the s
   const content = f.context.document.createElement('div');
   content.className = 'ReactModal__Content';
   content.setAttribute('role', 'dialog');
-  content.computed = { position: 'absolute', top: '50%', paddingTop: '0px', boxSizing: 'border-box' };
+  content.computed = { position: 'absolute', top: '50%', paddingTop: '20px', boxSizing: 'border-box' };
   content.rect = { top: 0, left: 0, width: 800, height: 800, right: 800, bottom: 800 };
   const header = f.context.document.createElement('header');
-  header.rect = { top: 0, left: 0, width: 800, height: 48, right: 800, bottom: 48 };
+  header.rect = { top: 20, left: 0, width: 800, height: 48, right: 800, bottom: 68 };
+  const close = f.context.document.createElement('button');
+  close.computed = { position: 'absolute', top: '16px' };
+  close.rect = { top: 16, left: 752, width: 32, height: 32, right: 784, bottom: 48 };
+  header.append(close);
   content.append(header);
   overlay.append(content);
   portal.append(overlay);
@@ -1332,23 +1336,27 @@ test('ReactModal fullscreen content gains padding while its overlay covers the s
   assert.equal(f.computed(overlay).top, '0px');
   assert.equal(f.computed(overlay).bottom, '0px');
   assert.equal(f.computed(content).paddingTop, '32px');
+  assert.equal(f.computed(close).top, '32px', 'Absolute close button clears the status bar');
   assert.equal(content.style.getPropertyValue('padding-top'), '');
 
   content.className = 'sheet';
   content.removeAttribute('role');
   f.mutate(content, 'role');
   f.flush();
-  assert.equal(f.computed(content).paddingTop, '0px', 'Content without dialog semantics releases padding');
+  assert.equal(f.computed(content).paddingTop, '20px', 'Content without dialog semantics releases padding');
+  assert.equal(f.computed(close).top, '16px');
 
   content.setAttribute('aria-modal', 'true');
   f.mutate(content, 'aria-modal');
   f.flush();
   assert.equal(f.computed(content).paddingTop, '32px', 'Late dialog semantics restore padding');
+  assert.equal(f.computed(close).top, '32px');
 
   content.rect = { top: 100, left: 100, width: 600, height: 500, right: 700, bottom: 600 };
   f.mutate(content, 'class');
   f.flush();
-  assert.equal(f.computed(content).paddingTop, '0px', 'A smaller dialog releases full-screen padding');
+  assert.equal(f.computed(content).paddingTop, '20px', 'A smaller dialog releases full-screen padding');
+  assert.equal(f.computed(close).top, '16px');
 });
 
 test('evicting an old tracked overlay also releases its content padding', () => {

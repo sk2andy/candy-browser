@@ -155,6 +155,30 @@
     return { element: content, paddingTop };
   }
 
+  function releaseViewportOverlayRules(element) {
+    for (const content of viewportOverlayContents.get(element) || []) releaseRule(content);
+    viewportOverlayContents.delete(element);
+    releaseRule(element);
+  }
+
+  function protectViewportDialogContent(content) {
+    const paddingTop = Math.max(content.paddingTop, inset);
+    applyRule(content.element, "padding-top", `${paddingTop}px`);
+    const protectedElements = [content.element];
+    const header = content.element.firstElementChild;
+    const controls = header ? [header, ...Array.from(header.children || []).slice(0, 8)] : [];
+    for (const control of controls) {
+      if (control.localName !== "button" && control.getAttribute("role") !== "button") continue;
+      const style = getComputedStyle(control);
+      const top = pixels(style.top);
+      if (style.position !== "absolute" || top === null || top < 0 ||
+          control.getBoundingClientRect().top >= inset - 0.5) continue;
+      applyRule(control, "top", `${Math.max(top + paddingTop - content.paddingTop, inset)}px`);
+      protectedElements.push(control);
+    }
+    return protectedElements;
+  }
+
   function coverFlowNeedsProtection(safeTop) {
     if (!document.body || globalThis.CandyRedditSafeArea?.flowProtected() === true) return false;
     if ((pixels(getComputedStyle(document.body).paddingTop) || 0) >= safeTop - 0.5) return false;
@@ -1142,9 +1166,7 @@
         if (element.isConnected) {
           const wasKnown = knownViewportOverlays.has(element);
           if (wasKnown) {
-            releaseRule(viewportOverlayContents.get(element));
-            viewportOverlayContents.delete(element);
-            releaseRule(element);
+            releaseViewportOverlayRules(element);
           }
           const style = getComputedStyle(element);
           const content = viewportDialogContent(element, style);
@@ -1153,9 +1175,7 @@
             if (knownViewportOverlays.size > 8) {
               const oldest = knownViewportOverlays.values().next().value;
               knownViewportOverlays.delete(oldest);
-              releaseRule(viewportOverlayContents.get(oldest));
-              viewportOverlayContents.delete(oldest);
-              releaseRule(oldest);
+              releaseViewportOverlayRules(oldest);
             }
             if (configuration.cover && !configuration.active) {
               coverLayoutRevision++;
@@ -1165,8 +1185,7 @@
               return;
             }
             if (content) {
-              viewportOverlayContents.set(element, content.element);
-              applyRule(content.element, "padding-top", `${Math.max(content.paddingTop, inset)}px`);
+              viewportOverlayContents.set(element, protectViewportDialogContent(content));
             } else classify(element, style);
           } else if (wasKnown) {
             knownViewportOverlays.delete(element);
@@ -1224,9 +1243,7 @@
     for (const element of knownViewportOverlays) {
       if (element.isConnected) continue;
       knownViewportOverlays.delete(element);
-      releaseRule(viewportOverlayContents.get(element));
-      viewportOverlayContents.delete(element);
-      releaseRule(element);
+      releaseViewportOverlayRules(element);
       removedViewportOverlay = true;
     }
     if (removedViewportOverlay && wasCover) {
