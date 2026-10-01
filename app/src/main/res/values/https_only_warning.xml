@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="https_only_warning_title">No secure connection available</string>
+    <string name="https_only_warning_protection">HTTPS protection</string>
+    <string name="https_only_warning_explanation">Candy could not open this page over HTTPS. An HTTP connection would be unencrypted.</string>
+    <string name="https_only_warning_risk">Others on the network could read or change your data.</string>
+    <string name="https_only_warning_back">Go back</string>
+    <string name="https_only_warning_retry">Try HTTPS again</string>
+    <string name="https_only_warning_options">More options</string>
+    <string name="https_only_warning_exception">Only continue if you trust this website. HTTPS protection stays active for other websites.</string>
+    <string name="https_only_warning_open_http">Temporarily open over HTTP</string>
+    <string name="https_only_warning_lifetime">Exception for this website during the current browser session.</string>
+    <string name="https_only_warning_unavailable">The exception could not be applied. Go back or try HTTPS again.</string>
+</resources>

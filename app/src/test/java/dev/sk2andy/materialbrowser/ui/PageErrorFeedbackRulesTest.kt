@@ -8,6 +8,23 @@ import org.junit.Test
 
 class PageErrorFeedbackRulesTest {
     @Test
+    fun `Gecko HTTPS-only document remains visible even during connectivity changes`() {
+        listOf(true, false).forEach { isOnline ->
+            val observation = PageErrorFeedbackRules.observe(
+                current = PageErrorFeedbackState.Offline(),
+                error = "Gecko navigation failed",
+                httpStatusCode = null,
+                isLoading = false,
+                isOnline = isOnline,
+                failureKind = BrowserEngineFailureKind.HttpsOnly,
+            )
+
+            assertEquals(PageErrorFeedbackState.Hidden, observation.state)
+            assertFalse(observation.shouldReload)
+        }
+    }
+
+    @Test
     fun `HTTP 404 becomes not found after navigation finishes`() {
         val observation = PageErrorFeedbackRules.observe(
             current = PageErrorFeedbackState.Hidden,

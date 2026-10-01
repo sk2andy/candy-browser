@@ -11,7 +11,9 @@ import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -25,6 +27,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -35,6 +39,7 @@ import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineKind
 import dev.sk2andy.materialbrowser.browser.DnsOverHttpsProvider
 import dev.sk2andy.materialbrowser.browser.DnsOverHttpsRules
 import dev.sk2andy.materialbrowser.browser.DnsOverHttpsSettings
+import dev.sk2andy.materialbrowser.browser.HttpsOnlyMode
 import dev.sk2andy.materialbrowser.browser.PrivacySignalSettings
 import dev.sk2andy.materialbrowser.browser.WebRtcProtectionMode
 import dev.sk2andy.materialbrowser.data.HistoryRecordingMode
@@ -52,6 +57,7 @@ internal object ProtectionSettingsTestTags {
     const val AutoDeAmp = "protection_settings_auto_de_amp"
     const val WebRtcProtection = "protection_settings_webrtc_protection"
     const val DnsOverHttps = "protection_settings_dns_over_https"
+    const val HttpsOnly = "protection_settings_https_only"
     const val CustomDnsEndpoint = "protection_settings_custom_dns_endpoint"
 }
 
@@ -61,9 +67,11 @@ internal fun ProtectionAndDataSettingsPage(
     blockedCount: Int,
     browserEngineKind: AndroidBrowserEngineKind = AndroidBrowserEngineKind.GeckoView,
     isDnsOverHttpsSupported: Boolean = browserEngineKind == AndroidBrowserEngineKind.GeckoView,
+    isHttpsOnlySupported: Boolean = browserEngineKind == AndroidBrowserEngineKind.GeckoView,
     webRtcProtectionMode: WebRtcProtectionMode = WebRtcProtectionMode.Default,
     privacySignalSettings: PrivacySignalSettings = PrivacySignalSettings.Default,
     isAutoDeAmpEnabled: Boolean = true,
+    httpsOnlyMode: HttpsOnlyMode = HttpsOnlyMode.Default,
     dnsOverHttpsSettings: DnsOverHttpsSettings = DnsOverHttpsRules.Default,
     isRecallEnabled: Boolean = false,
     historyRecordingMode: HistoryRecordingMode = HistoryRecordingMode.Enabled,
@@ -72,6 +80,7 @@ internal fun ProtectionAndDataSettingsPage(
     onWebRtcProtectionModeChanged: (WebRtcProtectionMode) -> Unit = {},
     onPrivacySignalSettingsChanged: (PrivacySignalSettings) -> Unit = {},
     onAutoDeAmpEnabledChanged: (Boolean) -> Unit = {},
+    onHttpsOnlyModeChanged: (HttpsOnlyMode) -> Unit = {},
     onDnsOverHttpsSettingsChanged: (DnsOverHttpsSettings) -> Unit = {},
     onRecallEnabledChanged: (Boolean) -> Unit = {},
     onHistoryRecordingModeChanged: (HistoryRecordingMode) -> Unit = {},
@@ -85,6 +94,7 @@ internal fun ProtectionAndDataSettingsPage(
 ) {
     var webRtcMenuExpanded by remember { mutableStateOf(false) }
     var dnsMenuExpanded by remember { mutableStateOf(false) }
+    var httpsMenuExpanded by remember { mutableStateOf(false) }
     var customDnsDialogVisible by rememberSaveable { mutableStateOf(false) }
     if (customDnsDialogVisible) {
         CustomDnsEndpointDialog(
@@ -224,6 +234,65 @@ internal fun ProtectionAndDataSettingsPage(
             checked = isAutoDeAmpEnabled,
             onCheckedChange = onAutoDeAmpEnabledChanged,
             modifier = Modifier.testTag(ProtectionSettingsTestTags.AutoDeAmp),
+        )
+        Spacer(Modifier.height(8.dp))
+        Box {
+            SettingsChoice(
+                title = stringResource(R.string.settings_https_only_title),
+                value = if (isHttpsOnlySupported) {
+                    httpsOnlyMode.displayName()
+                } else {
+                    stringResource(R.string.settings_https_only_unavailable)
+                },
+                expanded = httpsMenuExpanded,
+                onClick = { httpsMenuExpanded = true },
+                modifier = Modifier.testTag(ProtectionSettingsTestTags.HttpsOnly),
+                enabled = isHttpsOnlySupported,
+            )
+            SettingsDropdown(
+                expanded = isHttpsOnlySupported && httpsMenuExpanded,
+                onDismissRequest = { httpsMenuExpanded = false },
+            ) {
+                listOf(HttpsOnlyMode.AllTabs, HttpsOnlyMode.PrivateOnly, HttpsOnlyMode.Off)
+                    .forEach { mode ->
+                        DropdownMenuItem(
+                            text = {
+                                Column {
+                                    Text(mode.displayName(), fontWeight = FontWeight.SemiBold)
+                                    Text(
+                                        text = mode.description(),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                            },
+                            leadingIcon = {
+                                RadioButton(selected = mode == httpsOnlyMode, onClick = null)
+                            },
+                            modifier = Modifier.semantics { selected = mode == httpsOnlyMode },
+                            onClick = {
+                                httpsMenuExpanded = false
+                                if (mode != httpsOnlyMode) onHttpsOnlyModeChanged(mode)
+                            },
+                        )
+                    }
+            }
+        }
+        Text(
+            text = stringResource(
+                when {
+                    !isHttpsOnlySupported -> R.string.settings_https_only_system_webview_summary
+                    httpsOnlyMode == HttpsOnlyMode.Off -> R.string.settings_https_only_off_summary
+                    httpsOnlyMode == HttpsOnlyMode.PrivateOnly ->
+                        R.string.settings_https_only_private_summary
+                    else -> R.string.settings_https_only_all_summary
+                },
+            ),
+            modifier = Modifier.padding(start = 18.dp, top = 8.dp, end = 18.dp),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(
+                alpha = if (isHttpsOnlySupported) 1f else 0.6f,
+            ),
         )
         Spacer(Modifier.height(8.dp))
         Box {
@@ -478,6 +547,24 @@ private fun WebRtcProtectionMode.displayName(): String = stringResource(
             R.string.settings_webrtc_mode_disable_non_proxied_udp
         WebRtcProtectionMode.ProtectIpAddresses -> R.string.settings_webrtc_mode_protect
         WebRtcProtectionMode.Block -> R.string.settings_webrtc_mode_block
+    },
+)
+
+@Composable
+private fun HttpsOnlyMode.displayName(): String = stringResource(
+    when (this) {
+        HttpsOnlyMode.Off -> R.string.settings_https_only_mode_off
+        HttpsOnlyMode.PrivateOnly -> R.string.settings_https_only_mode_private
+        HttpsOnlyMode.AllTabs -> R.string.settings_https_only_mode_all
+    },
+)
+
+@Composable
+private fun HttpsOnlyMode.description(): String = stringResource(
+    when (this) {
+        HttpsOnlyMode.Off -> R.string.settings_https_only_mode_off_description
+        HttpsOnlyMode.PrivateOnly -> R.string.settings_https_only_mode_private_description
+        HttpsOnlyMode.AllTabs -> R.string.settings_https_only_mode_all_description
     },
 )
 

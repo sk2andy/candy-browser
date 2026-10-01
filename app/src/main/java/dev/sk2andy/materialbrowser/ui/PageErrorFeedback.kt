@@ -91,6 +91,9 @@ internal object PageErrorFeedbackRules {
         isWebPage: Boolean = true,
     ): PageErrorObservation = when {
         !isWebPage -> PageErrorObservation(PageErrorFeedbackState.Hidden)
+        // Gecko renders its local HTTPS-only warning with a native session exception action.
+        failureKind == BrowserEngineFailureKind.HttpsOnly ->
+            PageErrorObservation(PageErrorFeedbackState.Hidden)
         !isOnline && current is PageErrorFeedbackState.Offline -> PageErrorObservation(
             state = current.copy(isOnlineReady = false),
         )

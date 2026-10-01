@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="https_only_warning_title">No hay una conexión segura disponible</string>
+    <string name="https_only_warning_protection">Protección HTTPS</string>
+    <string name="https_only_warning_explanation">Candy no pudo abrir esta página mediante HTTPS. Una conexión HTTP no estaría cifrada.</string>
+    <string name="https_only_warning_risk">Otras personas en la red podrían leer o modificar tus datos.</string>
+    <string name="https_only_warning_back">Volver</string>
+    <string name="https_only_warning_retry">Reintentar con HTTPS</string>
+    <string name="https_only_warning_options">Más opciones</string>
+    <string name="https_only_warning_exception">Continúa solo si confías en este sitio. La protección HTTPS sigue activa para otros sitios.</string>
+    <string name="https_only_warning_open_http">Abrir temporalmente mediante HTTP</string>
+    <string name="https_only_warning_lifetime">Excepción para este sitio durante la sesión actual del navegador.</string>
+    <string name="https_only_warning_unavailable">No se pudo aplicar la excepción. Vuelve atrás o reintenta con HTTPS.</string>
+</resources>

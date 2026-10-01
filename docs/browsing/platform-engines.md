@@ -76,6 +76,21 @@ call-site cutover are not complete.
 - WKWebView remains the fixed iOS adapter, making the product's three adapters GeckoView, Android
   System WebView and WKWebView while only Android presents an engine selector.
 
+### HTTPS Only
+
+| Contract | Owner / behavior |
+| --- | --- |
+| Modes | `HttpsOnlyMode`: All tabs (default), Private tabs only, Off; stable preference IDs `all_tabs`, `private_only`, `off` |
+| Settings | Protection & Data, before encrypted DNS; selectable with GeckoView and disabled with an engine explanation under System WebView |
+| Persistence | `BrowserSessionStore` saves the global mode; missing or unknown values fall back to All tabs. Candy app data archives include the preference automatically. |
+| Runtime | Controller updates the Gecko runtime immediately; the runtime also reads the saved mode before the first navigation. |
+| Scope | Private tabs only protects private sessions; All tabs protects regular and private sessions. Off allows HTTP. |
+| Warning | Only Gecko's `ERROR_HTTPS_ONLY` returns the local `GeckoHttpsOnlyErrorPage` document, using translated resources and light/dark colors. Back, HTTPS retry and the explicit HTTP action under More options use the native failed navigation. The normal address bar stays in place; generic error feedback stays hidden for this failure kind. The observable tab retains the attempted HTTP URL. Regular warning snapshots add a validated Candy retry target beside Gecko's opaque state; restore keeps native history, then reapplies the protected upgrade with the current mode. Private warning state is never persisted. |
+| Actions | Error-document navigations bypass Gecko's load-request delegate. The existing prompt delegate consumes reserved local Back/retry messages without displaying a dialog and checks the current failure/navigation generation. Back reads committed native history and skips Candy's internal bootstrap entries. Retry and browser reload (including appearance changes) replace the failed entry and bypass cache; if the mode changes while the warning is open, retry still requests HTTPS. |
+| Privacy | The HTTP action calls Gecko's `document.reloadWithHttpsOnlyException()`; Gecko owns the origin-scoped session permission and separates regular/private contexts. Candy stores only the global mode, never private navigation or exceptions. Certificate failures never offer this action. |
+| Native exclusions | Gecko exempts trustworthy loopback destinations (including `.localhost`) and applies its own local-network/onion policy. Candy preserves that engine policy. |
+| Tests | `HttpsOnlyModeTest`, `GeckoHttpsOnlyErrorPageTest`, `GeckoBootstrapRecoveryRulesTest`, `GeckoNavigationFailureRulesTest`, `PageErrorFeedbackRulesTest`, `GeckoBrowserEngineAdapterTest`; native runtime/navigation/settings and store persistence in `GeckoHttpsOnlyRuntimeSettingsInstrumentedTest`, `GeckoHttpsOnlyNavigationInstrumentedTest`, `HttpsOnlySettingsInstrumentedTest`, `BrowserSessionStoreInstrumentedTest#httpsOnlyDefaultsToAllTabsAndPersistsEveryModeAcrossStoreInstances` |
+
 ### Anti-fingerprinting
 
 - Anti-fingerprinting is always active for regular and private Android browsing. It has no profile

@@ -25,4 +25,22 @@ class GeckoNavigationFailureRulesTest {
             GeckoNavigationFailureRules.kindForErrorCode(WebRequestError.ERROR_NET_TIMEOUT),
         )
     }
+
+    @Test
+    fun `only HTTPS upgrade failure exposes HTTP exception`() {
+        assertEquals(
+            BrowserEngineFailureKind.HttpsOnly,
+            GeckoNavigationFailureRules.kindForErrorCode(WebRequestError.ERROR_HTTPS_ONLY),
+        )
+        listOf(
+            WebRequestError.ERROR_SECURITY_BAD_CERT,
+            WebRequestError.ERROR_SECURITY_SSL,
+            WebRequestError.ERROR_BAD_HSTS_CERT,
+        ).forEach { errorCode ->
+            assertEquals(
+                BrowserEngineFailureKind.Other,
+                GeckoNavigationFailureRules.kindForErrorCode(errorCode),
+            )
+        }
+    }
 }
