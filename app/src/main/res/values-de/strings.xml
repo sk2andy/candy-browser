@@ -1262,6 +1262,16 @@
     <string name="developer_options_http_warning_message">HTTP verschlüsselt weder Zugangsdaten noch Seiteninhalte. Passwortmanager-Auswahl nur für vertrauenswürdige Entwicklungs- oder lokale Netzwerkseiten aktivieren.</string>
     <string name="developer_options_http_warning_confirm">Trotzdem aktivieren</string>
     <string name="developer_options_diagnostics_section">Diagnose</string>
+    <string name="developer_options_app_logging">App-Logging</string>
+    <string name="developer_options_app_logging_summary">Speichert begrenzte lokale Diagnoseereignisse und Absturzlogs über Neustarts hinweg, ohne Seiteninhalte. Pausiert bei offenen privaten Tabs. Export erfolgt manuell. Ausschalten löscht lokale Logs.</string>
+    <string name="developer_options_export_logs">App-Logs exportieren</string>
+    <string name="developer_options_export_logs_summary">Speicherort für Diagnoselogs wählen, um sie mit einem Fehlerbericht zu senden.</string>
+    <string name="developer_options_clear_logs">App-Logs löschen</string>
+    <string name="developer_options_clear_logs_summary">Löscht gespeicherte Diagnoselogs. Bei aktiviertem Logging werden weitere Ereignisse gespeichert.</string>
+    <string name="developer_options_logs_exported">App-Logs exportiert</string>
+    <string name="developer_options_logs_export_failed">App-Logs konnten nicht exportiert werden</string>
+    <string name="developer_options_logs_cleared">App-Logs gelöscht</string>
+    <string name="developer_options_logs_clear_failed">App-Logs konnten nicht gelöscht werden</string>
     <string name="developer_options_input_diagnostics">Touch- und Eingabediagnose</string>
     <string name="developer_options_input_diagnostics_summary">Schreibt detaillierte Eingabeereignisse für diesen App-Prozess nach logcat. Wird beim Prozessneustart automatisch ausgeschaltet.</string>
     <string name="developer_options_copy_diagnostics">Diagnosestatus kopieren</string>

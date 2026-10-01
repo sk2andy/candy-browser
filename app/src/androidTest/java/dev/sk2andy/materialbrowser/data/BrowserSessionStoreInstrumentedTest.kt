@@ -523,6 +523,37 @@ class BrowserSessionStoreInstrumentedTest {
     }
 
     @Test
+    fun appLoggingDefaultsOffAndPersistsUntilTurnedOff() {
+        val store = BrowserSessionStore(context)
+        assertFalse(store.loadDeveloperSettings().appLoggingEnabled)
+        val enabledSettings = DeveloperSettings(
+            forceSafeAreaFallback = true,
+            appLoggingEnabled = true,
+        )
+
+        store.saveDeveloperSettings(enabledSettings)
+
+        assertEquals(enabledSettings, BrowserSessionStore(context).loadDeveloperSettings())
+        val disabledSettings = enabledSettings.copy(appLoggingEnabled = false)
+        store.saveDeveloperSettings(disabledSettings)
+
+        assertEquals(disabledSettings, BrowserSessionStore(context).loadDeveloperSettings())
+    }
+
+    @Test
+    fun corruptAppLoggingSettingFallsBackToOffWithoutChangingOtherSettings() {
+        preferences.edit()
+            .putString("developer_app_logging_enabled", "invalid")
+            .putBoolean("developer_force_safe_area_fallback", true)
+            .commit()
+
+        assertEquals(
+            DeveloperSettings(forceSafeAreaFallback = true),
+            BrowserSessionStore(context).loadDeveloperSettings(),
+        )
+    }
+
+    @Test
     fun corruptDeveloperSettingsFallBackAndRemainBoundedPerField() {
         preferences.edit()
             .putString("developer_browser_chrome_scroll_dispatch_mode", "invalid")

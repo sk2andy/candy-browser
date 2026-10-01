@@ -194,6 +194,9 @@ internal object AppDataArchiveCodec {
                         ) {
                             return FileVisitResult.SKIP_SUBTREE
                         }
+                        if (!AppDataArchiveRules.shouldExportRelativePath(relativePath.toString())) {
+                            return FileVisitResult.SKIP_SUBTREE
+                        }
                         rejectSymbolicLink(directory, attributes)
                         sources += SourceEntry(
                             path = directory,

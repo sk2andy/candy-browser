@@ -89,6 +89,7 @@ import dev.sk2andy.materialbrowser.data.AppDataArchiveRestore
 import dev.sk2andy.materialbrowser.data.AppDataArchiveStaging
 import dev.sk2andy.materialbrowser.data.AppDataTransferLock
 import dev.sk2andy.materialbrowser.data.BrowserSessionStore
+import dev.sk2andy.materialbrowser.data.AppLogging
 import dev.sk2andy.materialbrowser.data.GestureOnboardingStore
 import dev.sk2andy.materialbrowser.data.ReleaseNotesContent
 import dev.sk2andy.materialbrowser.data.ReleaseNotesRepository
@@ -207,6 +208,24 @@ class MainActivity : AppCompatActivity() {
     ) { uri ->
         if (uri != null && ::favoriteBookmarksImporter.isInitialized) {
             favoriteBookmarksImporter.import(uri)
+        }
+    }
+    private val appLogsExportLauncher = registerForActivityResult(
+        ActivityResultContracts.CreateDocument("text/plain"),
+    ) { uri ->
+        if (uri == null || !::browserController.isInitialized) return@registerForActivityResult
+        val diagnostics = browserController.developerDiagnostics() +
+            "\nDevice: ${Build.MANUFACTURER} ${Build.MODEL}"
+        lifecycleScope.launch {
+            val exported = withContext(Dispatchers.IO) {
+                AppLogging.export(applicationContext, uri, diagnostics)
+            }
+            Toast.makeText(
+                this@MainActivity,
+                if (exported) R.string.developer_options_logs_exported
+                else R.string.developer_options_logs_export_failed,
+                Toast.LENGTH_SHORT,
+            ).show()
         }
     }
     private val appDataExportLauncher = registerForActivityResult(
@@ -696,6 +715,18 @@ class MainActivity : AppCompatActivity() {
                                     "application/octet-stream",
                                 ),
                             )
+                        },
+                        onExportAppLogs = { appLogsExportLauncher.launch("candy-app-logs.txt") },
+                        onClearAppLogs = {
+                            lifecycleScope.launch {
+                                val cleared = withContext(Dispatchers.IO) { AppLogging.clear() }
+                                Toast.makeText(
+                                    this@MainActivity,
+                                    if (cleared) R.string.developer_options_logs_cleared
+                                    else R.string.developer_options_logs_clear_failed,
+                                    Toast.LENGTH_SHORT,
+                                ).show()
+                            }
                         },
                         onExportAppData = {
                             if (!browserController.canExportAppData()) {

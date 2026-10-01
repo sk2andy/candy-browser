@@ -56,6 +56,8 @@ internal fun BrowserSettingsOverlay(
     onImportFavoriteBookmarks: () -> Unit,
     onOpenFilterStudio: () -> Unit,
     onExportAppData: () -> Unit,
+    onExportAppLogs: () -> Unit,
+    onClearAppLogs: () -> Unit,
     onImportAppData: () -> Unit,
     onShowGestureOnboarding: () -> Unit,
     onShowReleaseNotes: () -> Unit,
@@ -287,6 +289,8 @@ internal fun BrowserSettingsOverlay(
             onDeveloperSettingsChanged = controller::updateDeveloperSettings,
             onInputDiagnosticsEnabledChanged = controller::updateInputDiagnosticsEnabled,
             onCopyDeveloperDiagnostics = controller::copyDeveloperDiagnostics,
+            onExportAppLogs = onExportAppLogs,
+            onClearAppLogs = onClearAppLogs,
             onShowGestureOnboarding = onShowGestureOnboarding,
             onShowReleaseNotes = onShowReleaseNotes,
             onUnlockDeveloperOptions = {

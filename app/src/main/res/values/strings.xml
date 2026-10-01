@@ -1293,6 +1293,16 @@
     <string name="developer_options_http_warning_message">HTTP does not encrypt credentials or page contents. Only enable password-manager selection for trusted development or local-network pages.</string>
     <string name="developer_options_http_warning_confirm">Enable anyway</string>
     <string name="developer_options_diagnostics_section">Diagnostics</string>
+    <string name="developer_options_app_logging">App logging</string>
+    <string name="developer_options_app_logging_summary">Keeps limited local diagnostic events and crash logs across restarts, without page content. Pauses while private tabs are open. Export is manual. Turning this off deletes local logs.</string>
+    <string name="developer_options_export_logs">Export app logs</string>
+    <string name="developer_options_export_logs_summary">Choose where to save diagnostic logs so you can send them with a bug report.</string>
+    <string name="developer_options_clear_logs">Delete app logs</string>
+    <string name="developer_options_clear_logs_summary">Deletes saved diagnostic logs. Logging continues while enabled.</string>
+    <string name="developer_options_logs_exported">App logs exported</string>
+    <string name="developer_options_logs_export_failed">Could not export app logs</string>
+    <string name="developer_options_logs_cleared">App logs deleted</string>
+    <string name="developer_options_logs_clear_failed">Could not delete app logs</string>
     <string name="developer_options_input_diagnostics">Touch and input diagnostics</string>
     <string name="developer_options_input_diagnostics_summary">Writes detailed input events to logcat for this app process. Automatically turns off when the process restarts.</string>
     <string name="developer_options_copy_diagnostics">Copy diagnostic status</string>

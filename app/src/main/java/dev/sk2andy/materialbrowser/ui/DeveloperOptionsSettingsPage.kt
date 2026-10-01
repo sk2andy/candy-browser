@@ -40,6 +40,9 @@ internal object DeveloperOptionsTestTags {
     const val ForceSafeAreaFallback = "developer_options_force_safe_area_fallback"
     const val HttpPasswordAutofill = "developer_options_http_password_autofill"
     const val InputDiagnostics = "developer_options_input_diagnostics"
+    const val AppLogging = "developer_options_app_logging"
+    const val ExportLogs = "developer_options_export_logs"
+    const val ClearLogs = "developer_options_clear_logs"
     const val CopyDiagnostics = "developer_options_copy_diagnostics"
     const val ShowOnboarding = "developer_options_show_onboarding"
     const val ShowReleaseNotes = "developer_options_show_release_notes"
@@ -67,6 +70,8 @@ internal fun DeveloperOptionsSettingsPage(
     onHttpPasswordAutofillEnabledChanged: (Boolean) -> Unit = {},
     onInputDiagnosticsEnabledChanged: (Boolean) -> Unit = {},
     onCopyDiagnostics: () -> Unit = {},
+    onExportLogs: () -> Unit = {},
+    onClearLogs: () -> Unit = {},
     onShowOnboarding: () -> Unit = {},
     onShowReleaseNotes: () -> Unit = {},
     onBack: () -> Unit,
@@ -105,6 +110,30 @@ internal fun DeveloperOptionsSettingsPage(
         Spacer(Modifier.height(18.dp))
         SettingsSectionTitle(stringResource(R.string.developer_options_diagnostics_section))
         Spacer(Modifier.height(8.dp))
+        SettingsSwitch(
+            title = stringResource(R.string.developer_options_app_logging),
+            subtitle = stringResource(R.string.developer_options_app_logging_summary),
+            checked = settings.appLoggingEnabled,
+            onCheckedChange = { enabled ->
+                onSettingsChanged(settings.copy(appLoggingEnabled = enabled))
+            },
+            modifier = Modifier.testTag(DeveloperOptionsTestTags.AppLogging),
+        )
+        SettingsPageSpacer()
+        DeveloperAction(
+            title = stringResource(R.string.developer_options_export_logs),
+            summary = stringResource(R.string.developer_options_export_logs_summary),
+            onClick = onExportLogs,
+            modifier = Modifier.testTag(DeveloperOptionsTestTags.ExportLogs),
+        )
+        SettingsPageSpacer()
+        DeveloperAction(
+            title = stringResource(R.string.developer_options_clear_logs),
+            summary = stringResource(R.string.developer_options_clear_logs_summary),
+            onClick = onClearLogs,
+            modifier = Modifier.testTag(DeveloperOptionsTestTags.ClearLogs),
+        )
+        SettingsPageSpacer()
         SettingsSwitch(
             title = stringResource(R.string.developer_options_input_diagnostics),
             subtitle = stringResource(R.string.developer_options_input_diagnostics_summary),

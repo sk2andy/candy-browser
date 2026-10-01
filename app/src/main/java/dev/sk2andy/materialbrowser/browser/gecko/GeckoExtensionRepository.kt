@@ -1,5 +1,7 @@
 package dev.sk2andy.materialbrowser.browser.gecko
 
+import dev.sk2andy.materialbrowser.data.AppLogEvent
+import dev.sk2andy.materialbrowser.data.AppLogging
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -33,6 +35,7 @@ internal class GeckoExtensionRepository(
         } catch (error: CancellationException) {
             throw error
         } catch (error: Throwable) {
+            AppLogging.record(AppLogEvent.ExtensionReadFailed, error)
             GeckoExtensionReadResult.Failed(error)
         }
     }
@@ -48,13 +51,16 @@ internal class GeckoExtensionRepository(
             ?: return GeckoExtensionMutationResult.Rejected(
                 GeckoExtensionRejection.InvalidSignedXpiUri,
             )
-        return mutate {
+        return mutate(failureEvent = AppLogEvent.ExtensionInstallFailed) {
+            AppLogging.record(AppLogEvent.ExtensionInstallStarted)
             val installed = runtime.installSignedXpi(
                 uri = uri,
                 installationMethod = INSTALLATION_METHOD_MANAGER,
             )
             check(!installed.isBuiltIn) { "Signed XPI install returned a built-in extension" }
-            applyExtension(installed)
+            applyExtension(installed).also {
+                AppLogging.record(AppLogEvent.ExtensionInstallSucceeded)
+            }
         }
     }
 
@@ -121,12 +127,14 @@ internal class GeckoExtensionRepository(
             } catch (error: CancellationException) {
                 throw error
             } catch (error: Throwable) {
+                AppLogging.record(AppLogEvent.ExtensionMutationFailed, error)
                 GeckoExtensionMutationResult.Failed(error)
             }
         }
     }
 
     private suspend fun mutate(
+        failureEvent: AppLogEvent = AppLogEvent.ExtensionMutationFailed,
         mutation: suspend () -> GeckoExtensionMutationResult,
     ): GeckoExtensionMutationResult = mutationMutex.withLock {
         try {
@@ -134,6 +142,7 @@ internal class GeckoExtensionRepository(
         } catch (error: CancellationException) {
             throw error
         } catch (error: Throwable) {
+            AppLogging.record(failureEvent, error)
             GeckoExtensionMutationResult.Failed(error)
         }
     }

@@ -9,6 +9,11 @@ import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsOff
+import androidx.compose.ui.test.assertIsOn
+import androidx.compose.ui.test.hasParent
+import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.isToggleable
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.onNodeWithTag
@@ -380,6 +385,60 @@ class DeveloperOptionsSettingsPageInstrumentedTest {
 
         composeRule.onNodeWithTag(DeveloperOptionsTestTags.HttpPasswordAutofill)
             .assertIsNotEnabled()
+    }
+
+    @Test
+    fun appLoggingTogglePreservesOtherSettingsAndLogActionsEmitCallbacks() {
+        val original = DeveloperSettings(
+            browserChromeScrollDispatchMode = BrowserChromeScrollDispatchMode.Fixed30Hz,
+            forceSafeAreaFallback = true,
+        )
+        var settings by mutableStateOf(original)
+        var exportCount = 0
+        var clearCount = 0
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                DeveloperOptionsSettingsPage(
+                    settings = settings,
+                    onSettingsChanged = { settings = it },
+                    onExportLogs = { exportCount++ },
+                    onClearLogs = { clearCount++ },
+                    onBack = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(DeveloperOptionsTestTags.AppLogging)
+            .performScrollTo()
+        composeRule.onNode(
+            hasParent(hasTestTag(DeveloperOptionsTestTags.AppLogging)) and isToggleable(),
+        ).assertIsOff()
+        composeRule.onNodeWithTag(DeveloperOptionsTestTags.AppLogging)
+            .performClick()
+        composeRule.onNode(
+            hasParent(hasTestTag(DeveloperOptionsTestTags.AppLogging)) and isToggleable(),
+        ).assertIsOn()
+        assertEquals(original.copy(appLoggingEnabled = true), settings)
+        composeRule.onNodeWithTag(DeveloperOptionsTestTags.ExportLogs)
+            .performScrollTo()
+            .performClick()
+        composeRule.onNodeWithTag(DeveloperOptionsTestTags.ClearLogs)
+            .performScrollTo()
+            .performClick()
+        composeRule.onNodeWithTag(DeveloperOptionsTestTags.AppLogging)
+            .performScrollTo()
+            .performClick()
+        composeRule.onNode(
+            hasParent(hasTestTag(DeveloperOptionsTestTags.AppLogging)) and isToggleable(),
+        ).assertIsOff()
+        assertEquals(original, settings)
+        composeRule.onNodeWithTag(DeveloperOptionsTestTags.ExportLogs)
+            .performScrollTo()
+            .assertIsEnabled()
+            .performClick()
+
+        assertEquals(2, exportCount)
+        assertEquals(1, clearCount)
     }
 
     @Test

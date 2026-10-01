@@ -65,7 +65,11 @@ internal object AppDataArchiveRules {
 
     fun isAllowedArchiveRelativePath(path: String): Boolean =
         path != RECALL_DATABASE_RELATIVE_PATH &&
-            !path.startsWith("$RECALL_DATABASE_RELATIVE_PATH-")
+            !path.startsWith("$RECALL_DATABASE_RELATIVE_PATH-") &&
+            path != APP_LOGS_RELATIVE_PATH &&
+            !path.startsWith("$APP_LOGS_RELATIVE_PATH/") &&
+            path != APP_LOG_CAPTURE_RELATIVE_PATH &&
+            path != "$APP_LOG_CAPTURE_RELATIVE_PATH.bak"
 
     /**
      * Gecko and Chromium session/profile bytes are implementation data, not Candy archive data.
@@ -157,4 +161,6 @@ internal object AppDataArchiveRules {
 
     private val WINDOWS_ABSOLUTE_PATH_PATTERN = Regex("[A-Za-z]:($|/.*)")
     private const val RECALL_DATABASE_RELATIVE_PATH = "no_backup/candy_recall.db"
+    private const val APP_LOGS_RELATIVE_PATH = "no_backup/app_logs"
+    private const val APP_LOG_CAPTURE_RELATIVE_PATH = "shared_prefs/app_logging_capture.xml"
 }

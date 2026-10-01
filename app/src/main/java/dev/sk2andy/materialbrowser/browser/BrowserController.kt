@@ -217,6 +217,8 @@ import dev.sk2andy.materialbrowser.data.BrowserDownloadRequest
 import dev.sk2andy.materialbrowser.data.BrowserDownloadRequestFactory
 import dev.sk2andy.materialbrowser.data.BrowserDownloadSettings
 import dev.sk2andy.materialbrowser.data.DeveloperSettings
+import dev.sk2andy.materialbrowser.data.AppLogEvent
+import dev.sk2andy.materialbrowser.data.AppLogging
 import dev.sk2andy.materialbrowser.data.AppearanceSettings
 import dev.sk2andy.materialbrowser.data.BrowserAppearanceMode
 import dev.sk2andy.materialbrowser.data.AddressBarDockPlacement
@@ -597,6 +599,7 @@ class BrowserController(
     private val externalApps: ExternalAppLauncher = ExternalAppLauncher(activity),
 ) {
     private val closeAllPrivateTabsCallback: () -> Int = ::closeAllPrivateTabs
+    private val appLogPrivacyOwner = Any()
 
     val browserEngineKind: AndroidBrowserEngineKind =
         BrowserSessionStore(activity.applicationContext).loadAndroidBrowserEngineKind()
@@ -2536,6 +2539,11 @@ class BrowserController(
         inlineMediaPlayerMode = store.loadInlineMediaPlayerMode()
         isDeveloperOptionsUnlocked = store.loadDeveloperOptionsUnlocked()
         developerSettings = store.loadDeveloperSettings()
+        AppLogging.setPrivateBrowsingActive(
+            active = tabs.any(BrowserTab::isIncognito),
+            owner = appLogPrivacyOwner,
+        )
+        AppLogging.record(AppLogEvent.BrowserStarted)
         publishBrowserChromeScrollDispatchMode(
             developerSettings.browserChromeScrollDispatchMode,
         )
@@ -5806,6 +5814,10 @@ class BrowserController(
                 pendingInitialExternalNavigationGrants[tab.id] = grant
             }
         }
+        AppLogging.setPrivateBrowsingActive(
+            active = tab.isIncognito || tabs.any(BrowserTab::isIncognito),
+            owner = appLogPrivacyOwner,
+        )
         tabs += tab
         markSyncedTabPending(tab)
         updateSelectedTabId(tab.id)
@@ -5857,6 +5869,10 @@ class BrowserController(
             isIncognito = isIncognito ?: openerTab?.isIncognito ?: selectedTab.isIncognito,
             openerTabId = openerTabId,
             profileId = openerTab?.profileId ?: activeProfileId,
+        )
+        AppLogging.setPrivateBrowsingActive(
+            active = tab.isIncognito || tabs.any(BrowserTab::isIncognito),
+            owner = appLogPrivacyOwner,
         )
         tabs += tab
         if (!transientPopup) {
@@ -9483,7 +9499,12 @@ class BrowserController(
         if (developerSettings == normalized) return
         val safeAreaModeChanged =
             developerSettings.forceSafeAreaFallback != normalized.forceSafeAreaFallback
+        val appLoggingChanged = developerSettings.appLoggingEnabled != normalized.appLoggingEnabled
         developerSettings = normalized
+        if (appLoggingChanged && !AppLogging.setEnabled(normalized.appLoggingEnabled)) {
+            Toast.makeText(activity, R.string.developer_options_logs_clear_failed, Toast.LENGTH_SHORT)
+                .show()
+        }
         publishBrowserChromeScrollDispatchMode(normalized.browserChromeScrollDispatchMode)
         store.saveDeveloperSettings(normalized)
         refreshDeveloperSafeAreaConfiguration(safeAreaModeChanged)
@@ -9495,23 +9516,25 @@ class BrowserController(
         isInputDiagnosticsEnabled = enabled
     }
 
+    internal fun developerDiagnostics(): String = DeveloperDiagnosticsReport.render(
+        DeveloperDiagnosticsSnapshot(
+            appVersion = BuildConfig.VERSION_NAME,
+            versionCode = BuildConfig.VERSION_CODE.toLong(),
+            buildType = BuildConfig.BUILD_TYPE,
+            sdkInt = Build.VERSION.SDK_INT,
+            engine = browserEngineKind,
+            engineVersion = browserEngineSessionFactory.runtimeVersionName,
+            activeTabCount = activeTabs.size,
+            rendererSessionCount = browserEngineSessions.size,
+            fullscreenActive = fullscreenVideoState != null,
+            externalPreviewActive = externalLinkPreviewState != null,
+            inputDiagnosticsEnabled = isInputDiagnosticsEnabled,
+            developerSettings = developerSettings,
+        ),
+    )
+
     fun copyDeveloperDiagnostics() {
-        val report = DeveloperDiagnosticsReport.render(
-            DeveloperDiagnosticsSnapshot(
-                appVersion = BuildConfig.VERSION_NAME,
-                versionCode = BuildConfig.VERSION_CODE.toLong(),
-                buildType = BuildConfig.BUILD_TYPE,
-                sdkInt = Build.VERSION.SDK_INT,
-                engine = browserEngineKind,
-                engineVersion = browserEngineSessionFactory.runtimeVersionName,
-                activeTabCount = activeTabs.size,
-                rendererSessionCount = browserEngineSessions.size,
-                fullscreenActive = fullscreenVideoState != null,
-                externalPreviewActive = externalLinkPreviewState != null,
-                inputDiagnosticsEnabled = isInputDiagnosticsEnabled,
-                developerSettings = developerSettings,
-            ),
-        )
+        val report = developerDiagnostics()
         activity.getSystemService(ClipboardManager::class.java).setPrimaryClip(
             ClipData.newPlainText(
                 activity.getString(R.string.developer_options_copy_diagnostics),
@@ -10781,6 +10804,7 @@ class BrowserController(
         browserEngineSessions.keys.toList().forEach(::closeBrowserEngineSession)
         webViewStateRepository.flush()
         browserEngineSessionFactory.shutdown()
+        AppLogging.setPrivateBrowsingActive(active = false, owner = appLogPrivacyOwner)
         residentSessionAccessOrder.clear()
         castMediaCandidate = null
         pendingConsentCssUrls.clear()
@@ -15037,6 +15061,10 @@ class BrowserController(
     }
 
     private fun persist() {
+        AppLogging.setPrivateBrowsingActive(
+            active = tabs.any(BrowserTab::isIncognito),
+            owner = appLogPrivacyOwner,
+        )
         val reconciledStacks = TabStackRules.sanitized(tabStacks, tabs)
         if (reconciledStacks != tabStacks) tabStacks.replaceWith(reconciledStacks)
         val persistentTabs = persistableTabs(tabs)

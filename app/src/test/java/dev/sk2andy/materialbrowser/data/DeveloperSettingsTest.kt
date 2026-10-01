@@ -15,6 +15,7 @@ class DeveloperSettingsTest {
         assertEquals(400, settings.safeAreaLayoutQuietPeriodMillis)
         assertEquals(3, settings.safeAreaRequiredFailureCount)
         assertEquals(false, settings.forceSafeAreaFallback)
+        assertEquals(false, settings.appLoggingEnabled)
         assertEquals(GeckoSafeAreaSettings(), settings.geckoSafeAreaSettings)
     }
 
@@ -25,6 +26,7 @@ class DeveloperSettingsTest {
             safeAreaLayoutQuietPeriodMillis = 250,
             safeAreaRequiredFailureCount = 4,
             forceSafeAreaFallback = true,
+            appLoggingEnabled = true,
             geckoSafeAreaSettings = GeckoSafeAreaSettings(
                 enabled = false,
                 interactionWindowMillis = 0,

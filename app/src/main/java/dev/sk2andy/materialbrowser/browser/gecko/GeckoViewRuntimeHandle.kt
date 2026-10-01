@@ -72,6 +72,8 @@ import dev.sk2andy.materialbrowser.browser.permissions.SitePermissionDecision
 import dev.sk2andy.materialbrowser.browser.gecko.webpush.GeckoWebPushCoordinator
 import dev.sk2andy.materialbrowser.data.UserScriptValueStore
 import dev.sk2andy.materialbrowser.data.BrowserSessionStore
+import dev.sk2andy.materialbrowser.data.AppLogEvent
+import dev.sk2andy.materialbrowser.data.AppLogging
 import java.net.URI
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -1097,9 +1099,15 @@ private class GeckoViewBrowserSession(
                 )
             }
 
-            override fun onCrash(session: GeckoSession) = onContentProcessTerminated()
+            override fun onCrash(session: GeckoSession) {
+                if (!isPrivate) AppLogging.record(AppLogEvent.GeckoRendererCrashed)
+                onContentProcessTerminated()
+            }
 
-            override fun onKill(session: GeckoSession) = onContentProcessTerminated()
+            override fun onKill(session: GeckoSession) {
+                if (!isPrivate) AppLogging.record(AppLogEvent.GeckoRendererKilled)
+                onContentProcessTerminated()
+            }
         }
         session.navigationDelegate = object : GeckoSession.NavigationDelegate {
             override fun onLoadError(

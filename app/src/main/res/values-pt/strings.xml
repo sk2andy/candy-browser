@@ -1267,6 +1267,16 @@
     <string name="developer_options_http_warning_message">HTTP não encripta credenciais nem conteúdos. Ative a seleção do gestor de palavras-passe apenas para páginas de desenvolvimento ou de rede local fidedignas.</string>
     <string name="developer_options_http_warning_confirm">Ativar mesmo assim</string>
     <string name="developer_options_diagnostics_section">Diagnóstico</string>
+    <string name="developer_options_app_logging">Registo da aplicação</string>
+    <string name="developer_options_app_logging_summary">Mantém um número limitado de eventos de diagnóstico e registos de falhas locais após reiniciar, sem conteúdos das páginas. Pausa enquanto houver separadores privados abertos. A exportação é manual. Desativar elimina os registos locais.</string>
+    <string name="developer_options_export_logs">Exportar registos da aplicação</string>
+    <string name="developer_options_export_logs_summary">Escolha onde guardar os registos de diagnóstico para os enviar com um relatório de erro.</string>
+    <string name="developer_options_clear_logs">Eliminar registos da aplicação</string>
+    <string name="developer_options_clear_logs_summary">Elimina os registos de diagnóstico guardados. O registo continua enquanto estiver ativado.</string>
+    <string name="developer_options_logs_exported">Registos da aplicação exportados</string>
+    <string name="developer_options_logs_export_failed">Não foi possível exportar os registos da aplicação</string>
+    <string name="developer_options_logs_cleared">Registos da aplicação eliminados</string>
+    <string name="developer_options_logs_clear_failed">Não foi possível eliminar os registos da aplicação</string>
     <string name="developer_options_input_diagnostics">Diagnóstico de toque e entrada</string>
     <string name="developer_options_input_diagnostics_summary">Regista eventos de entrada detalhados no logcat durante este processo da aplicação. Desativa-se ao reiniciar o processo.</string>
     <string name="developer_options_copy_diagnostics">Copiar estado de diagnóstico</string>

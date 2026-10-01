@@ -42,7 +42,7 @@ class AppDataArchiveRulesTest {
     }
 
     @Test
-    fun `archive excludes only Recall files from no backup`() {
+    fun `archive excludes Recall and engine files from no backup`() {
         listOf(
             "candy_recall.db",
             "candy_recall.db-journal",
@@ -64,6 +64,32 @@ class AppDataArchiveRulesTest {
             AppDataArchiveRules.shouldExportRelativePath("no_backup/tab_webview_states/tab.bin"),
         )
         assertFalse(AppDataArchiveRules.shouldExportRelativePath("files/mozilla/profile"))
+    }
+
+    @Test
+    fun `archive excludes app logs and capture preferences without excluding siblings`() {
+        listOf(
+            "no_backup/app_logs",
+            "no_backup/app_logs/current.log",
+            "no_backup/app_logs/nested/previous.log",
+            "shared_prefs/app_logging_capture.xml",
+            "shared_prefs/app_logging_capture.xml.bak",
+        ).forEach { path ->
+            assertFalse(path, AppDataArchiveRules.shouldExportRelativePath(path))
+            assertNull(path, AppDataArchiveRules.dataRelativePath("data/$path", isDirectory = false))
+            assertNull(path, AppDataArchiveRules.dataRelativePath("data/$path/", isDirectory = true))
+        }
+        listOf(
+            "no_backup/app_logs_backup/current.log",
+            "no_backup/app_logs.txt",
+            "files/app_logs/current.log",
+            "no_backup/candy_trails/trail.json",
+            "shared_prefs/app_logging_capture_extra.xml",
+            "shared_prefs/browser_session.xml",
+        ).forEach { path ->
+            assertTrue(path, AppDataArchiveRules.shouldExportRelativePath(path))
+            assertEquals(path, AppDataArchiveRules.dataRelativePath("data/$path", isDirectory = false))
+        }
     }
 
     @Test

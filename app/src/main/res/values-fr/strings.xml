@@ -1267,6 +1267,16 @@
     <string name="developer_options_http_warning_message">HTTP ne chiffre ni les identifiants ni le contenu. Activez la sélection du gestionnaire de mots de passe uniquement pour des pages de développement ou de réseau local fiables.</string>
     <string name="developer_options_http_warning_confirm">Activer quand même</string>
     <string name="developer_options_diagnostics_section">Diagnostic</string>
+    <string name="developer_options_app_logging">Journalisation de l’application</string>
+    <string name="developer_options_app_logging_summary">Conserve un nombre limité d’événements de diagnostic et de journaux de plantage locaux après un redémarrage, sans contenu des pages. Pause tant que des onglets privés sont ouverts. Export manuel. La désactivation supprime les journaux locaux.</string>
+    <string name="developer_options_export_logs">Exporter les journaux de l’application</string>
+    <string name="developer_options_export_logs_summary">Choisissez où enregistrer les journaux de diagnostic pour les joindre à un rapport de bug.</string>
+    <string name="developer_options_clear_logs">Supprimer les journaux de l’application</string>
+    <string name="developer_options_clear_logs_summary">Supprime les journaux de diagnostic enregistrés. La journalisation continue tant qu’elle est activée.</string>
+    <string name="developer_options_logs_exported">Journaux de l’application exportés</string>
+    <string name="developer_options_logs_export_failed">Impossible d’exporter les journaux de l’application</string>
+    <string name="developer_options_logs_cleared">Journaux de l’application supprimés</string>
+    <string name="developer_options_logs_clear_failed">Impossible de supprimer les journaux de l’application</string>
     <string name="developer_options_input_diagnostics">Diagnostic tactile et des entrées</string>
     <string name="developer_options_input_diagnostics_summary">Écrit les événements d’entrée détaillés dans logcat pour ce processus. Se désactive au redémarrage du processus.</string>
     <string name="developer_options_copy_diagnostics">Copier l’état du diagnostic</string>
