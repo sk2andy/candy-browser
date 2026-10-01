@@ -1087,6 +1087,7 @@ class BrowserSessionStore internal constructor(
     }
 
     fun loadDeveloperSettings(): DeveloperSettings = DeveloperSettings(
+        appLoggingEnabled = loadBoolean(KEY_DEVELOPER_APP_LOGGING_ENABLED, false),
         browserChromeScrollDispatchMode = BrowserChromeScrollDispatchMode.fromStableId(
             preferences.getString(KEY_DEVELOPER_BROWSER_CHROME_SCROLL_DISPATCH_MODE, null),
         ),
@@ -1155,6 +1156,7 @@ class BrowserSessionStore internal constructor(
                 KEY_DEVELOPER_BROWSER_CHROME_SCROLL_DISPATCH_MODE,
                 normalized.browserChromeScrollDispatchMode.stableId,
             )
+            .putBoolean(KEY_DEVELOPER_APP_LOGGING_ENABLED, normalized.appLoggingEnabled)
             .putInt(
                 KEY_DEVELOPER_SAFE_AREA_LAYOUT_QUIET_PERIOD_MILLIS,
                 normalized.safeAreaLayoutQuietPeriodMillis,
@@ -1541,6 +1543,7 @@ class BrowserSessionStore internal constructor(
         const val KEY_INLINE_MEDIA_PLAYER_ENABLED = "inline_media_player_enabled"
         const val KEY_INLINE_MEDIA_PLAYER_MODE = "inline_media_player_mode"
         const val KEY_DEVELOPER_OPTIONS_UNLOCKED = "developer_options_unlocked"
+        const val KEY_DEVELOPER_APP_LOGGING_ENABLED = "developer_app_logging_enabled"
         const val KEY_DEVELOPER_BROWSER_CHROME_SCROLL_DISPATCH_MODE =
             "developer_browser_chrome_scroll_dispatch_mode"
         const val KEY_DEVELOPER_SAFE_AREA_LAYOUT_QUIET_PERIOD_MILLIS =

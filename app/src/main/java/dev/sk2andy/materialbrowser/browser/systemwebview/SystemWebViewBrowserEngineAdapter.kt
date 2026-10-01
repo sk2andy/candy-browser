@@ -1,5 +1,8 @@
 package dev.sk2andy.materialbrowser.browser.systemwebview
 
+import dev.sk2andy.materialbrowser.data.AppLogEvent
+import dev.sk2andy.materialbrowser.data.AppLogging
+
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.DownloadManager
@@ -1202,6 +1205,7 @@ private class SystemWebViewBrowserEngineSession(
             detail: RenderProcessGoneDetail,
         ): Boolean {
             if (!closed) {
+                if (!isPrivate) AppLogging.record(AppLogEvent.SystemRendererGone)
                 publish(
                     type = BrowserEngineEventType.Crashed,
                     address = currentPageUrl,

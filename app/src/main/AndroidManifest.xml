@@ -140,6 +140,7 @@
     <uses-permission android:name="${applicationId}.permission.PROFILER_INTERNAL" />
 
     <application
+        android:name=".CandyApplication"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:enableOnBackInvokedCallback="true"

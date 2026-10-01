@@ -31,6 +31,12 @@ class AppDataArchiveCodecTest {
             dataDirectory.resolve("shared_prefs/settings.xml"),
             "settings".toByteArray(StandardCharsets.UTF_8),
         )
+        listOf("app_logging_capture.xml", "app_logging_capture.xml.bak").forEach { name ->
+            Files.write(
+                dataDirectory.resolve("shared_prefs/$name"),
+                "device-local capture authorization".toByteArray(StandardCharsets.UTF_8),
+            )
+        }
         Files.createDirectories(dataDirectory.resolve("databases/empty"))
         Files.write(dataDirectory.resolve("databases/browser.db"), byteArrayOf(0, 1, 2, 3))
         Files.createDirectories(dataDirectory.resolve("no_backup/candy_trails"))
@@ -45,6 +51,11 @@ class AppDataArchiveCodecTest {
         Files.write(
             dataDirectory.resolve("no_backup/candy_recall.db-wal"),
             "sensitive recall wal".toByteArray(StandardCharsets.UTF_8),
+        )
+        Files.createDirectories(dataDirectory.resolve("no_backup/app_logs"))
+        Files.write(
+            dataDirectory.resolve("no_backup/app_logs/current.log"),
+            "device-local diagnostics".toByteArray(StandardCharsets.UTF_8),
         )
         Files.createDirectories(dataDirectory.resolve("cache"))
         Files.write(
@@ -80,6 +91,10 @@ class AppDataArchiveCodecTest {
         assertFalse(inspection.entries.any { entry -> entry.relativePath.startsWith("cache") })
         assertFalse(inspection.entries.any { entry -> entry.relativePath.startsWith("app_textures") })
         assertFalse(inspection.entries.any { entry -> entry.relativePath.contains("candy_recall.db") })
+        assertFalse(inspection.entries.any { entry -> entry.relativePath.startsWith("no_backup/app_logs") })
+        listOf("app_logging_capture.xml", "app_logging_capture.xml.bak").forEach { name ->
+            assertFalse(inspection.entries.any { entry -> entry.relativePath == "shared_prefs/$name" })
+        }
         assertTrue(inspection.entries.any { entry -> entry.relativePath.endsWith("trail.json") })
 
         val target = temporaryFolder.newFolder("target").toPath()
@@ -102,7 +117,32 @@ class AppDataArchiveCodecTest {
             ),
         )
         assertFalse(Files.exists(target.resolve("no_backup/candy_recall.db")))
+        assertFalse(Files.exists(target.resolve("no_backup/app_logs")))
+        assertFalse(Files.exists(target.resolve("shared_prefs/app_logging_capture.xml")))
+        assertFalse(Files.exists(target.resolve("shared_prefs/app_logging_capture.xml.bak")))
         assertFalse(Files.exists(target.resolve("cache")))
+    }
+
+    @Test
+    fun `inspect and extract reject incoming app logs and capture preferences`() {
+        listOf(
+            "no_backup/app_logs/current.log",
+            "shared_prefs/app_logging_capture.xml",
+            "shared_prefs/app_logging_capture.xml.bak",
+        ).forEachIndexed { index, path ->
+            val archive = zipOf("data/$path" to byteArrayOf(1))
+            val inspectionFailure = assertThrows(AppDataArchiveException::class.java) {
+                AppDataArchiveCodec.inspect(ByteArrayInputStream(archive))
+            }
+            assertEquals(path, AppDataArchiveFailure.InvalidEntryPath, inspectionFailure.failure)
+
+            val target = temporaryFolder.newFolder("app-logs-target-$index").toPath()
+            val extractionFailure = assertThrows(AppDataArchiveException::class.java) {
+                AppDataArchiveCodec.extract(ByteArrayInputStream(archive), target)
+            }
+            assertEquals(path, AppDataArchiveFailure.InvalidEntryPath, extractionFailure.failure)
+            assertFalse(Files.exists(target.resolve(path)))
+        }
     }
 
     @Test

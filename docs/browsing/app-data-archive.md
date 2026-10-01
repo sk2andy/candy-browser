@@ -44,6 +44,11 @@ preserving unrelated persistent `no_backup` stores. Imported History does not si
 reconstruct Recall text. Successful import and interrupted-import recovery clear any pre-existing
 local Recall index so old page text cannot coexist with imported History.
 
+App diagnostic logs under `no_backup/app_logs` and native capture authorization preferences
+`shared_prefs/app_logging_capture.xml` / `.xml.bak` stay local. Export excludes them and import
+rejects incoming entries at these paths, so a restored archive cannot grant access to another
+device’s native crash history.
+
 ## Safety and compatibility
 
 - Archives are plain ZIP files. They contain login sessions, browsing data, permission
@@ -86,6 +91,9 @@ client-side encryption and includes shared preferences, Candy Rules, userscripts
 Capsules. This covers settings, domain exceptions, regular tabs, snoozes and Filter Studio
 state. Rules and userscripts migrate once from `noBackupFilesDir` to `filesDir` so Android can
 include them.
+
+The local native capture preferences `app_logging_capture.xml` and their `.xml.bak` copy are
+explicitly excluded from cloud backup and device-to-device transfer alongside diagnostic logs.
 
 Device-to-device transfer additionally includes all `filesDir` and database content. Android's
 `noBackupFilesDir` remains outside automatic backup and transfer, so Candy Recall text stays on

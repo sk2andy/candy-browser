@@ -26,6 +26,7 @@ data class DeveloperSettings(
     val safeAreaRequiredFailureCount: Int = DEFAULT_SAFE_AREA_REQUIRED_FAILURE_COUNT,
     val forceSafeAreaFallback: Boolean = false,
     val geckoSafeAreaSettings: GeckoSafeAreaSettings = GeckoSafeAreaSettings(),
+    val appLoggingEnabled: Boolean = false,
 ) {
     fun normalized(): DeveloperSettings = copy(
         geckoSafeAreaSettings = geckoSafeAreaSettings.normalized(),

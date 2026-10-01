@@ -1267,6 +1267,16 @@
     <string name="developer_options_http_warning_message">HTTP no cifra las credenciales ni el contenido. Activa la selección del gestor de contraseñas solo para páginas de desarrollo o de red local de confianza.</string>
     <string name="developer_options_http_warning_confirm">Activar de todos modos</string>
     <string name="developer_options_diagnostics_section">Diagnóstico</string>
+    <string name="developer_options_app_logging">Registro de la aplicación</string>
+    <string name="developer_options_app_logging_summary">Conserva un número limitado de eventos de diagnóstico y registros de fallos locales tras reiniciar, sin contenido de las páginas. Se pausa mientras haya pestañas privadas abiertas. La exportación es manual. Al desactivarlo se eliminan los registros locales.</string>
+    <string name="developer_options_export_logs">Exportar registros de la aplicación</string>
+    <string name="developer_options_export_logs_summary">Elige dónde guardar los registros de diagnóstico para enviarlos con un informe de error.</string>
+    <string name="developer_options_clear_logs">Eliminar registros de la aplicación</string>
+    <string name="developer_options_clear_logs_summary">Elimina los registros de diagnóstico guardados. El registro continúa mientras esté activado.</string>
+    <string name="developer_options_logs_exported">Registros de la aplicación exportados</string>
+    <string name="developer_options_logs_export_failed">No se pudieron exportar los registros de la aplicación</string>
+    <string name="developer_options_logs_cleared">Registros de la aplicación eliminados</string>
+    <string name="developer_options_logs_clear_failed">No se pudieron eliminar los registros de la aplicación</string>
     <string name="developer_options_input_diagnostics">Diagnóstico táctil y de entrada</string>
     <string name="developer_options_input_diagnostics_summary">Escribe eventos de entrada detallados en logcat durante este proceso de la aplicación. Se desactiva al reiniciar el proceso.</string>
     <string name="developer_options_copy_diagnostics">Copiar estado de diagnóstico</string>

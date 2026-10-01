@@ -225,6 +225,8 @@ internal fun BrowserScreen(
     onImportUserScript: () -> Unit = {},
     onImportFavoriteBookmarks: () -> Unit = {},
     onExportAppData: () -> Unit = {},
+    onExportAppLogs: () -> Unit = {},
+    onClearAppLogs: () -> Unit = {},
     onImportAppData: () -> Unit = {},
     onShowGestureOnboarding: () -> Unit = {},
     onShowReleaseNotes: () -> Unit = {},
@@ -1820,6 +1822,8 @@ internal fun BrowserScreen(
                 filterStudioVisible = true
             },
             onExportAppData = onExportAppData,
+            onExportAppLogs = onExportAppLogs,
+            onClearAppLogs = onClearAppLogs,
             onImportAppData = onImportAppData,
             onShowGestureOnboarding = {
                 settingsVisible = false
