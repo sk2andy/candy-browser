@@ -3,6 +3,12 @@ description: Suggest an improvement to an existing feature
 labels:
   - enhancement
 body:
+  - type: markdown
+    attributes:
+      value: |
+        Please suggest only one feature improvement per issue. Open a separate issue for each improvement.
+        Issues collecting multiple improvements cannot be tracked.
+
   - type: textarea
     id: description
     attributes:

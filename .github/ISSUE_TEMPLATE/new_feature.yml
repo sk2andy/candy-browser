@@ -3,6 +3,12 @@ description: Suggest a new capability for Candy Browser
 labels:
   - enhancement
 body:
+  - type: markdown
+    attributes:
+      value: |
+        Please suggest only one feature per issue. Open a separate issue for each feature.
+        Issues collecting multiple features cannot be tracked.
+
   - type: textarea
     id: description
     attributes:

@@ -3,6 +3,12 @@ description: Report unexpected or incorrect behavior
 labels:
   - bug
 body:
+  - type: markdown
+    attributes:
+      value: |
+        Please report only one problem per issue. Open a separate issue for each problem.
+        Issues collecting multiple problems cannot be tracked.
+
   - type: textarea
     id: description
     attributes:
