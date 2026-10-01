@@ -31,6 +31,7 @@ flowchart LR
 | JVM loading rules | Clamp out-of-range values; preserve missing values; reject stale addresses, different tabs and late callbacks after stop. |
 | Compose | Both Rainbow and Tonal expose 42% and indeterminate semantics; 0 → 42 → 80 → completion and partial interruption hide correctly. |
 | Real engine integration | A local HTTP fixture gates main-document bytes and an uncached image response. Each engine must expose intermediate 1–99% while loading, finish at 100 after release, do the same on reload, and stop while the main document is delayed. |
+| iOS compatibility | The exported event initializer receives explicit `progress: nil` from WKWebView; no new iOS loading feature is enabled. Shared simulator framework export, the Swift constructor typecheck and typechecking all actual iOS Swift sources pass. A full target build reaches an unrelated asset-catalog blocker: installed simulator runtime 23D8133 does not match SDK 23C57. |
 | Isolation | Dedicated API 37 emulator, explicit `ANDROID_SERIAL=emulator-5582` and `adb -s emulator-5582`; each engine method uses a fresh instrumentation process. |
 
 Engine percentages describe renderer progress, not elapsed time or downloaded bytes. Engines can
