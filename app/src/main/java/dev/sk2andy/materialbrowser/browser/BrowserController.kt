@@ -3061,7 +3061,7 @@ class BrowserController(
                 requiresPageIme = true,
             )
         } else if (wasPageImeVisible) {
-            cancelAddressBarAutoDockProbe()
+            scheduleSelectedAddressBarAutoDockProbe()
         }
         if (
             browserChromeOwnsIme &&
@@ -3203,12 +3203,8 @@ class BrowserController(
         browserChromeOwnsIme = ownsIme
         if (ownsIme) {
             cancelAddressBarAutoDockProbe()
-        } else if (isPageImeVisible()) {
-            scheduleAddressBarAutoDockProbe(
-                tabId = selectedTab.id,
-                url = selectedTab.url,
-                requiresPageIme = true,
-            )
+        } else {
+            scheduleSelectedAddressBarAutoDockProbe()
         }
         val insets = lastWindowInsets ?: return
         dispatchWindowInsetsToAttachedEngineViews(insets)
@@ -4806,6 +4802,7 @@ class BrowserController(
         }
         if (resumeSelectedTab && isActivityResumed) {
             browserEngineSessions[selectedTabId]?.setActive(true)
+            scheduleSelectedAddressBarAutoDockProbe()
         }
     }
 
@@ -6234,6 +6231,7 @@ class BrowserController(
             }
             externalLinkPreviewRuntime?.geckoBinding?.session?.setActive(true)
             retryExternalNavigationRollbackAfterResume()
+            scheduleSelectedAddressBarAutoDockProbe()
         }
     }
 
@@ -9354,6 +9352,7 @@ class BrowserController(
         addressBarDockPlacement = normalized
         if (normalized != null) lastAddressBarDockPlacement = normalized
         store.saveAddressBarDockPlacement(normalized)
+        if (normalized == null) scheduleSelectedAddressBarAutoDockProbe()
     }
 
     fun updateAddressBarDockingEnabled(enabled: Boolean) {
@@ -9362,6 +9361,7 @@ class BrowserController(
         store.saveAddressBarDockingEnabled(enabled)
         if (!enabled) cancelAddressBarAutoDockProbe()
         if (!enabled) updateAddressBarDocked(false)
+        if (enabled) scheduleSelectedAddressBarAutoDockProbe()
     }
 
     fun updateExternalLinkPreviewEnabled(enabled: Boolean) {
@@ -9891,17 +9891,12 @@ class BrowserController(
         )
         if (addressBarViewportRect == updatedRect) return
         addressBarViewportRect = updatedRect
-        if (isPageImeVisible()) {
-            scheduleAddressBarAutoDockProbe(
-                tabId = selectedTab.id,
-                url = selectedTab.url,
-                requiresPageIme = true,
-            )
-        }
+        scheduleSelectedAddressBarAutoDockProbe()
     }
 
     fun clearAddressBarBoundsInViewport() {
         addressBarViewportRect = null
+        cancelAddressBarAutoDockProbe()
     }
 
     fun previewTopInsetPx(tabId: String): Int = if (
@@ -10552,6 +10547,7 @@ class BrowserController(
             retryExternalNavigationRollbackAfterResume()
         }
         if (isActiveProfileLocked) retryActiveProfileAuthentication()
+        scheduleSelectedAddressBarAutoDockProbe()
     }
 
     fun onStart() {
@@ -12924,12 +12920,29 @@ class BrowserController(
         engineViewRevision++
     }
 
+    private fun scheduleSelectedAddressBarAutoDockProbe() {
+        cancelAddressBarAutoDockProbe()
+        scheduleAddressBarAutoDockProbe(
+            tabId = selectedTab.id,
+            url = selectedTab.url,
+            requiresPageIme = isPageImeVisible(),
+        )
+    }
+
+    private fun isAddressBarAutoDockBrowserVisible(): Boolean =
+        isActivityResumed && !destroyed && !isActiveProfileLocked && externalLinkPreviewState == null
+
     private fun scheduleAddressBarAutoDockProbe(
         tabId: String,
         url: String,
         requiresPageIme: Boolean = false,
     ) {
-        if (selectedTabId != tabId) return
+        if (
+            selectedTabId != tabId ||
+            !isAddressBarAutoDockBrowserVisible() ||
+            browserChromeOwnsIme ||
+            (!requiresPageIme && selectedTab.isLoading)
+        ) return
         val expectedUrl = BrowserUriPolicy.normalizeHttpUrl(url) ?: return
         val session = browserEngineSessions[tabId] ?: return
         val navigationGeneration = navigationGenerations.getOrDefault(tabId, 0)
@@ -12940,7 +12953,11 @@ class BrowserController(
             expectedUrl = expectedUrl,
             session = session,
             navigationGeneration = navigationGeneration,
-            requiresPageIme = requiresPageIme,
+            mode = if (requiresPageIme) {
+                TextInputOcclusionProbeMode.FocusedTextInput
+            } else {
+                TextInputOcclusionProbeMode.AllEditors
+            },
             completedRetryCount = 0,
             probeGeneration = probeGeneration,
             delayMillis = ADDRESS_BAR_AUTO_DOCK_PROBE_DELAY_MILLIS,
@@ -12952,7 +12969,7 @@ class BrowserController(
         expectedUrl: String,
         session: AndroidBrowserEngineSessionPort,
         navigationGeneration: Int,
-        requiresPageIme: Boolean,
+        mode: TextInputOcclusionProbeMode,
         completedRetryCount: Int,
         probeGeneration: Long,
         delayMillis: Long,
@@ -12961,8 +12978,10 @@ class BrowserController(
             if (addressBarAutoDockProbeGeneration != probeGeneration) return@Runnable
             pendingAddressBarAutoDockProbe = null
             val viewportRect = addressBarViewportRect
+            val requiresPageIme = mode == TextInputOcclusionProbeMode.FocusedTextInput
             if (
                 (requiresPageIme && !isPageImeVisible()) ||
+                (!requiresPageIme && selectedTab.isLoading) ||
                 !AddressBarAutoDockRules.shouldProbe(
                     dockingEnabled = isAddressBarDockingEnabled,
                     addressBarDocked = isAddressBarDocked,
@@ -12971,6 +12990,8 @@ class BrowserController(
                     isPrivatePage = tabs.firstOrNull { tab -> tab.id == tabId }?.isIncognito !=
                         false,
                     hasViewportRect = viewportRect != null,
+                    isBrowserVisible = isAddressBarAutoDockBrowserVisible(),
+                    browserChromeOwnsIme = browserChromeOwnsIme,
                 )
             ) {
                 cancelAddressBarAutoDockProbe()
@@ -12989,6 +13010,8 @@ class BrowserController(
                 urlMatches = currentUrl == expectedUrl,
                 viewportRectMatches = addressBarViewportRect == viewportRect,
                 isPrivatePage = tabs.firstOrNull { tab -> tab.id == tabId }?.isIncognito != false,
+                isBrowserVisible = isAddressBarAutoDockBrowserVisible(),
+                browserChromeOwnsIme = browserChromeOwnsIme,
             )
             if (!probeIsCurrent) {
                 cancelAddressBarAutoDockProbe()
@@ -12996,11 +13019,7 @@ class BrowserController(
             }
             session.probeTextInputOcclusion(
                 viewportRect = requireNotNull(viewportRect),
-                mode = if (requiresPageIme) {
-                    TextInputOcclusionProbeMode.FocusedTextInput
-                } else {
-                    TextInputOcclusionProbeMode.AllEditors
-                },
+                mode = mode,
             ) { result ->
                 if (addressBarAutoDockProbeGeneration != probeGeneration) {
                     return@probeTextInputOcclusion
@@ -13023,6 +13042,8 @@ class BrowserController(
                     viewportRectMatches = addressBarViewportRect == viewportRect,
                     isPrivatePage = tabs.firstOrNull { tab -> tab.id == tabId }?.isIncognito !=
                         false,
+                    isBrowserVisible = isAddressBarAutoDockBrowserVisible(),
+                    browserChromeOwnsIme = browserChromeOwnsIme,
                 )
                 if (!resultIsCurrent) {
                     cancelAddressBarAutoDockProbe()
@@ -13032,15 +13053,12 @@ class BrowserController(
                     parkAddressBarOnRight()
                     return@probeTextInputOcclusion
                 }
-                val retryDelayMillis = if (
-                    requiresPageIme &&
-                    AddressBarAutoDockRules.shouldRetryFocusedProbe(result)
-                ) {
-                    AddressBarAutoDockRules.focusedProbeRetryDelayMillis(completedRetryCount)
-                } else {
-                    null
-                }
-                if (retryDelayMillis == null) {
+                val retry = AddressBarAutoDockRules.nextProbeRetry(
+                    mode = mode,
+                    result = result,
+                    completedRetryCount = completedRetryCount,
+                )
+                if (retry == null) {
                     cancelAddressBarAutoDockProbe()
                     return@probeTextInputOcclusion
                 }
@@ -13049,10 +13067,10 @@ class BrowserController(
                     expectedUrl = expectedUrl,
                     session = session,
                     navigationGeneration = navigationGeneration,
-                    requiresPageIme = true,
-                    completedRetryCount = completedRetryCount + 1,
+                    mode = retry.mode,
+                    completedRetryCount = retry.completedRetryCount,
                     probeGeneration = probeGeneration,
-                    delayMillis = retryDelayMillis,
+                    delayMillis = retry.delayMillis,
                 )
             }
         }
@@ -16234,6 +16252,7 @@ class BrowserController(
         }
         selectedTabId = tabId
         if (previousTabId != tabId) {
+            scheduleSelectedAddressBarAutoDockProbe()
             refreshGeckoScrollMetricsPolicies(previousTabId, tabId)
             publishFullscreenVideoState()
             browserEngineSessions[tabId]?.setActive(

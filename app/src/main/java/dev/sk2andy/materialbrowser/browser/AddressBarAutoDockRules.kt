@@ -24,7 +24,14 @@ internal enum class TextInputOcclusionProbeResult(val wireValue: Int) {
     }
 }
 
+internal data class AddressBarAutoDockProbeRetry(
+    val mode: TextInputOcclusionProbeMode,
+    val delayMillis: Long,
+    val completedRetryCount: Int,
+)
+
 internal object AddressBarAutoDockRules {
+    private const val VISIBLE_CONTROL_PROBE_INTERVAL_MILLIS = 2_000L
     private val focusedProbeRetryDelaysMillis = listOf(150L, 200L, 350L, 500L)
 
     fun shouldProbeForImeState(
@@ -68,7 +75,11 @@ internal object AddressBarAutoDockRules {
         isHttpPage: Boolean,
         isPrivatePage: Boolean,
         hasViewportRect: Boolean,
-    ): Boolean = dockingEnabled &&
+        isBrowserVisible: Boolean,
+        browserChromeOwnsIme: Boolean,
+    ): Boolean = isBrowserVisible &&
+        !browserChromeOwnsIme &&
+        dockingEnabled &&
         !addressBarDocked &&
         selectedTabMatches &&
         isHttpPage &&
@@ -84,7 +95,11 @@ internal object AddressBarAutoDockRules {
         urlMatches: Boolean,
         viewportRectMatches: Boolean,
         isPrivatePage: Boolean,
+        isBrowserVisible: Boolean,
+        browserChromeOwnsIme: Boolean,
     ): Boolean =
+        isBrowserVisible &&
+        !browserChromeOwnsIme &&
         dockingEnabled &&
         !addressBarDocked &&
         selectedTabMatches &&
@@ -99,4 +114,32 @@ internal object AddressBarAutoDockRules {
 
     fun shouldRetryFocusedProbe(result: TextInputOcclusionProbeResult): Boolean =
         result == TextInputOcclusionProbeResult.FocusedTextInputClear
+
+    fun nextProbeRetry(
+        mode: TextInputOcclusionProbeMode,
+        result: TextInputOcclusionProbeResult,
+        completedRetryCount: Int,
+    ): AddressBarAutoDockProbeRetry? {
+        if (result == TextInputOcclusionProbeResult.Occluded) return null
+        val focusedDelay = if (
+            mode == TextInputOcclusionProbeMode.FocusedTextInput && shouldRetryFocusedProbe(result)
+        ) {
+            focusedProbeRetryDelayMillis(completedRetryCount)
+        } else {
+            null
+        }
+        return if (focusedDelay != null) {
+            AddressBarAutoDockProbeRetry(
+                mode = TextInputOcclusionProbeMode.FocusedTextInput,
+                delayMillis = focusedDelay,
+                completedRetryCount = completedRetryCount + 1,
+            )
+        } else {
+            AddressBarAutoDockProbeRetry(
+                mode = TextInputOcclusionProbeMode.AllEditors,
+                delayMillis = VISIBLE_CONTROL_PROBE_INTERVAL_MILLIS,
+                completedRetryCount = 0,
+            )
+        }
+    }
 }

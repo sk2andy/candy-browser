@@ -37,6 +37,7 @@ import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineEvent
 import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineEventType
 import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineFailureKind
 import dev.sk2andy.materialbrowser.data.BrowserSessionStore
+import dev.sk2andy.materialbrowser.data.AddressBarDockPlacement
 import dev.sk2andy.materialbrowser.data.DeveloperSettings
 import dev.sk2andy.materialbrowser.data.GeckoSafeAreaSettings
 import dev.sk2andy.materialbrowser.data.HistoryEntry
@@ -65,6 +66,9 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
     private var originalHistoryRecordingMode: HistoryRecordingMode? = null
     private var originalExternalAppLinkHandling: ExternalAppLinkHandling? = null
     private var originalAutoDeAmpEnabled: Boolean? = null
+    private var originalAddressBarDockingEnabled: Boolean? = null
+    private var originalAddressBarDocked: Boolean? = null
+    private var originalLastAddressBarDockPlacement: AddressBarDockPlacement? = null
 
     @Test
     fun userOpenedWebPopupAllowsGeckoNewSession() {
@@ -353,11 +357,190 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
     }
 
     @Test
+    fun latePageControlParksAddressBarWithoutIme() {
+        lateinit var session: ReentrantAttachSession
+        composeRule.runOnIdle {
+            session = startAddressBarAutoDockSession(
+                probeResults = listOf(
+                    TextInputOcclusionProbeResult.NoFocusedTextInput,
+                    TextInputOcclusionProbeResult.Occluded,
+                ),
+            )
+        }
+
+        composeRule.waitUntil(timeoutMillis = 5_000L) {
+            session.textInputOcclusionProbeCount == 2 &&
+                requireNotNull(controller).isAddressBarDocked
+        }
+        composeRule.runOnIdle {
+            assertEquals(
+                TextInputOcclusionProbeMode.AllEditors,
+                session.lastTextInputOcclusionProbeMode,
+            )
+            requireNotNull(controller).updateAddressBarDocked(false)
+        }
+    }
+
+    @Test
+    fun regularPageControlProbesStopOnPauseAndRestartOnResume() {
+        lateinit var session: ReentrantAttachSession
+        composeRule.runOnIdle {
+            session = startAddressBarAutoDockSession(
+                probeResults = listOf(
+                    TextInputOcclusionProbeResult.NoFocusedTextInput,
+                    TextInputOcclusionProbeResult.Occluded,
+                ),
+            )
+            session.afterTextInputOcclusionProbe = {
+                if (session.textInputOcclusionProbeCount == 1) {
+                    requireNotNull(controller).onPause()
+                }
+            }
+        }
+        composeRule.waitUntil(timeoutMillis = 5_000L) {
+            session.textInputOcclusionProbeCount == 1
+        }
+        Thread.sleep(2_300L)
+        composeRule.runOnIdle {
+            assertEquals(1, session.textInputOcclusionProbeCount)
+            assertFalse(requireNotNull(controller).isAddressBarDocked)
+            requireNotNull(controller).onResume()
+        }
+        composeRule.waitUntil(timeoutMillis = 5_000L) {
+            session.textInputOcclusionProbeCount == 2 &&
+                requireNotNull(controller).isAddressBarDocked
+        }
+        composeRule.runOnIdle {
+            requireNotNull(controller).updateAddressBarDocked(false)
+        }
+    }
+
+    @Test
+    fun pageImeClosingRestartsRegularPageControlChecks() {
+        lateinit var session: ReentrantAttachSession
+        composeRule.runOnIdle {
+            session = startAddressBarAutoDockSession(
+                probeResults = listOf(
+                    TextInputOcclusionProbeResult.Occluded,
+                ),
+            )
+            session.deferTextInputOcclusionCallbacks = true
+            requireNotNull(controller).onWindowInsetsChanged(
+                WindowInsetsCompat.Builder()
+                    .setInsets(WindowInsetsCompat.Type.ime(), Insets.of(0, 0, 0, 600))
+                    .setVisible(WindowInsetsCompat.Type.ime(), true)
+                    .build(),
+            )
+        }
+        composeRule.waitUntil(timeoutMillis = 5_000L) {
+            session.textInputOcclusionProbeCount == 1
+        }
+        composeRule.runOnIdle {
+            assertEquals(
+                TextInputOcclusionProbeMode.FocusedTextInput,
+                session.lastTextInputOcclusionProbeMode,
+            )
+            requireNotNull(controller).onWindowInsetsChanged(
+                WindowInsetsCompat.Builder()
+                    .setVisible(WindowInsetsCompat.Type.ime(), false)
+                    .build(),
+            )
+            session.textInputOcclusionCallbacks.removeAt(0)(
+                TextInputOcclusionProbeResult.FocusedTextInputClear,
+            )
+            session.deferTextInputOcclusionCallbacks = false
+        }
+        composeRule.waitUntil(timeoutMillis = 5_000L) {
+            session.textInputOcclusionProbeCount == 2 &&
+                requireNotNull(controller).isAddressBarDocked
+        }
+        composeRule.runOnIdle {
+            assertEquals(
+                TextInputOcclusionProbeMode.AllEditors,
+                session.lastTextInputOcclusionProbeMode,
+            )
+            requireNotNull(controller).updateAddressBarDocked(false)
+        }
+    }
+
+    @Test
+    fun stalePageControlResultCannotParkAfterNavigation() {
+        lateinit var session: ReentrantAttachSession
+        composeRule.runOnIdle {
+            session = startAddressBarAutoDockSession(probeResults = emptyList())
+            session.deferTextInputOcclusionCallbacks = true
+        }
+        composeRule.waitUntil(timeoutMillis = 5_000L) {
+            session.textInputOcclusionProbeCount == 1
+        }
+        composeRule.runOnIdle {
+            requireNotNull(controller).dispatchGeckoEngineEventForTesting(
+                BrowserEngineEvent(
+                    tabId = session.tabId,
+                    type = BrowserEngineEventType.NavigationStarted,
+                    address = "https://replacement.test/",
+                    title = null,
+                    canGoBack = false,
+                    canGoForward = false,
+                    failureDescription = null,
+                ),
+            )
+            session.textInputOcclusionCallbacks.removeAt(0)(TextInputOcclusionProbeResult.Occluded)
+
+            assertFalse(requireNotNull(controller).isAddressBarDocked)
+        }
+    }
+
+    private fun startAddressBarAutoDockSession(
+        probeResults: List<TextInputOcclusionProbeResult>,
+    ): ReentrantAttachSession {
+        val browserController = createAddressBarAutoDockController()
+        val session = ReentrantAttachSession(
+            tabId = browserController.selectedTabId,
+            onFirstAttach = {},
+            textInputOcclusionProbeResults = probeResults,
+        )
+        browserController.installGeckoEngineSessionForTesting(session)
+        browserController.dispatchGeckoEngineEventForTesting(
+            BrowserEngineEvent(
+                tabId = session.tabId,
+                type = BrowserEngineEventType.NavigationCommitted,
+                address = "https://bottom-controls.test/",
+                title = null,
+                canGoBack = false,
+                canGoForward = false,
+                failureDescription = null,
+            ),
+        )
+        browserController.setAddressBarBoundsInViewport(
+            leftPx = 50f,
+            topPx = 800f,
+            rightPx = 950f,
+            bottomPx = 900f,
+            viewportWidthPx = 1_000f,
+            viewportHeightPx = 1_000f,
+        )
+        return session
+    }
+
+    private fun createAddressBarAutoDockController(): BrowserController {
+        val store = BrowserSessionStore(composeRule.activity)
+        originalAddressBarDockingEnabled = store.loadAddressBarDockingEnabled()
+        originalAddressBarDocked = store.loadAddressBarDocked()
+        originalLastAddressBarDockPlacement = store.loadLastAddressBarDockPlacement()
+        store.saveAddressBarDockingEnabled(true)
+        store.saveAddressBarDocked(false)
+        return BrowserController(composeRule.activity).also { browserController ->
+            controller = browserController
+            browserController.onResume()
+        }
+    }
+
+    @Test
     fun webpageImeOpeningReprobesAndParksOccludingAddressBar() {
         lateinit var session: ReentrantAttachSession
         composeRule.runOnIdle {
-            val browserController = BrowserController(composeRule.activity)
-            controller = browserController
+            val browserController = createAddressBarAutoDockController()
             val tabId = browserController.selectedTabId
             session = ReentrantAttachSession(
                 tabId = tabId,
@@ -441,8 +624,7 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
     fun webpageImeProbeBurstCatchesFocusedInputMovement() {
         lateinit var session: ReentrantAttachSession
         composeRule.runOnIdle {
-            val browserController = BrowserController(composeRule.activity)
-            controller = browserController
+            val browserController = createAddressBarAutoDockController()
             val tabId = browserController.selectedTabId
             session = ReentrantAttachSession(
                 tabId = tabId,
@@ -498,8 +680,7 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
     fun webpageImeProbeBurstStopsWhenAppPauses() {
         lateinit var session: ReentrantAttachSession
         composeRule.runOnIdle {
-            val browserController = BrowserController(composeRule.activity)
-            controller = browserController
+            val browserController = createAddressBarAutoDockController()
             val tabId = browserController.selectedTabId
             session = ReentrantAttachSession(
                 tabId = tabId,
@@ -508,6 +689,11 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
                     TextInputOcclusionProbeResult.FocusedTextInputClear
                 },
             )
+            session.afterTextInputOcclusionProbe = {
+                if (session.textInputOcclusionProbeCount == 1) {
+                    browserController.onPause()
+                }
+            }
             browserController.installGeckoEngineSessionForTesting(session)
             browserController.dispatchGeckoEngineEventForTesting(
                 BrowserEngineEvent(
@@ -538,10 +724,6 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
         composeRule.waitUntil(timeoutMillis = 5_000L) {
             session.textInputOcclusionProbeCount == 1
         }
-        composeRule.runOnIdle {
-            requireNotNull(controller).onPause()
-        }
-
         Thread.sleep(700L)
         composeRule.runOnIdle {
             assertEquals(1, session.textInputOcclusionProbeCount)
@@ -642,6 +824,9 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
                 }
                 originalExternalAppLinkHandling?.let(store::saveExternalAppLinkHandling)
                 originalAutoDeAmpEnabled?.let(store::saveAutoDeAmpEnabled)
+                originalLastAddressBarDockPlacement?.let(store::saveAddressBarDockPlacement)
+                originalAddressBarDocked?.let(store::saveAddressBarDocked)
+                originalAddressBarDockingEnabled?.let(store::saveAddressBarDockingEnabled)
             }
         }
     }
@@ -3205,6 +3390,9 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
         val activeStates = mutableListOf<Boolean>()
         val inlineVideoPresentationRequests = mutableListOf<Pair<GeckoInlineVideoIdentity?, Boolean>>()
         var deferPolicyReadyCallbacks = false
+        var deferTextInputOcclusionCallbacks = false
+        var afterTextInputOcclusionProbe: (() -> Unit)? = null
+        val textInputOcclusionCallbacks = mutableListOf<(TextInputOcclusionProbeResult) -> Unit>()
         var rejectMediaRestorationUntilPolicyAcknowledged = false
         var deferMediaRestorationCallbacks = false
         private var mediaRestorationCallback: ((Boolean) -> Unit)? = null
@@ -3376,6 +3564,10 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
             textInputOcclusionProbeCount++
             lastTextInputOcclusionViewportRect = viewportRect
             lastTextInputOcclusionProbeMode = mode
+            if (deferTextInputOcclusionCallbacks) {
+                textInputOcclusionCallbacks += onComplete
+                return
+            }
             onComplete(
                 if (textInputOcclusionProbeResults.isEmpty()) {
                     TextInputOcclusionProbeResult.NoFocusedTextInput
@@ -3383,6 +3575,7 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
                     textInputOcclusionProbeResults.removeAt(0)
                 },
             )
+            afterTextInputOcclusionProbe?.invoke()
         }
 
         override fun updatePrivacyPolicy(

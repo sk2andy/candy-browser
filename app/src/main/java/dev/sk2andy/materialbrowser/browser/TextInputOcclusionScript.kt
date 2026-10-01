@@ -31,20 +31,20 @@ internal object TextInputOcclusionScript {
           const scrollingDisabled = [root, document.body].some((element) => {
             if (!(element instanceof Element)) return false;
             const overflowY = globalThis.getComputedStyle(element).overflowY;
-            return overflowY === 'hidden' || overflowY === 'clip';
+            return overflowY === "hidden" || overflowY === "clip";
           });
           const textInputTypes = new Set([
-            '', 'email', 'number', 'password', 'search', 'tel', 'text', 'url',
+            "", "email", "number", "password", "search", "tel", "text", "url",
           ]);
           const isTextInput = (element) => {
-            if (!(element instanceof Element) || element.matches(':disabled') || element.readOnly ||
-                element.getAttribute('aria-disabled') === 'true') return false;
-            if (element.tagName === 'TEXTAREA') return true;
-            if (element.tagName === 'INPUT') {
-              return textInputTypes.has((element.type || '').toLowerCase());
+            if (!(element instanceof Element) || element.matches(":disabled") || element.readOnly ||
+                element.getAttribute("aria-disabled") === "true") return false;
+            if (element.tagName === "TEXTAREA") return true;
+            if (element.tagName === "INPUT") {
+              return textInputTypes.has((element.type || "").toLowerCase());
             }
-            return element.isContentEditable || ['', 'true', 'plaintext-only'].includes(
-              element.getAttribute('contenteditable'),
+            return element.isContentEditable || ["", "true", "plaintext-only"].includes(
+              element.getAttribute("contenteditable"),
             );
           };
           let activeElement = document.activeElement;
@@ -54,8 +54,8 @@ internal object TextInputOcclusionScript {
             activeElement = nested;
           }
           const focusedTextInput = isTextInput(activeElement) ? activeElement : null;
-          if (!focusedOnly && !scrollingDisabled &&
-              scrollHeight - viewportPageTop - viewportHeight > 1) return focusedTextInput ? 1 : 0;
+          const atDocumentBottom = scrollingDisabled ||
+            scrollHeight - viewportPageTop - viewportHeight <= 1;
           const blocked = {
             left: viewportLeft + obstruction.left * viewportWidth,
             top: viewportTop + obstruction.top * viewportHeight,
@@ -64,26 +64,45 @@ internal object TextInputOcclusionScript {
           };
           const parentOrHost = (element) =>
             element.assignedSlot || element.parentElement || element.getRootNode?.().host || null;
-          const isEditable = (element) => {
-            if (!(element instanceof Element) || element.matches(':disabled') || element.readOnly ||
-                element.getAttribute('aria-disabled') === 'true') {
-              return false;
-            }
-            const tag = element.tagName;
-            if (tag === 'TEXTAREA') return true;
-            if (tag === 'INPUT') return textInputTypes.has((element.type || '').toLowerCase());
-            return element.isContentEditable || ['', 'true', 'plaintext-only'].includes(
-              element.getAttribute('contenteditable'),
-            );
+          const controlSelector = 'button,select,a[href],summary,iframe,' +
+            '[role="button"],[role="link"],[role="tab"],[role="menuitem"],[role="checkbox"],' +
+            '[role="radio"],[role="switch"],[role="combobox"],[role="slider"]';
+          const interactiveSelector = 'textarea,input,[contenteditable],' + controlSelector + ',[tabindex]';
+          const isInteractive = (element) => {
+            if (!(element instanceof Element) || element.matches(":disabled") ||
+                element.getAttribute("aria-disabled") === "true" || element.readOnly) return false;
+            if (isTextInput(element)) return true;
+            if (element.tagName === "INPUT") return element.type !== "hidden" && !element.readOnly;
+            if (element.hasAttribute("contenteditable")) return false;
+            return element.matches(interactiveSelector) &&
+              (!element.hasAttribute("tabindex") || element.tabIndex >= 0 ||
+                element.matches(controlSelector));
           };
-          const isHidden = (element, maximumDepth = 24) => {
+          const hasBottomAnchor = (element) => {
+            let current = element;
+            const bottomBand = Math.max(96, viewportTop + viewportHeight - blocked.top);
+            for (let depth = 0; current && depth < 64; depth += 1) {
+              const style = globalThis.getComputedStyle(current);
+              if (style.position === "fixed" || style.position === "sticky") {
+                const rect = current.getBoundingClientRect();
+                const bottom = Number.parseFloat(style.bottom);
+                const nearViewportBottom = viewportTop + viewportHeight - rect.bottom <= bottomBand;
+                if (rect.top >= viewportTop + viewportHeight / 2 &&
+                    rect.bottom > blocked.top &&
+                    ((Number.isFinite(bottom) && bottom <= bottomBand) || nearViewportBottom)) return true;
+              }
+              current = parentOrHost(current);
+            }
+            return false;
+          };
+          const isHidden = (element, maximumDepth = 64) => {
             let current = element;
             for (let depth = 0; current && depth < maximumDepth; depth += 1) {
               if (current.matches('[hidden],[inert],[aria-hidden="true"]')) return true;
               const style = globalThis.getComputedStyle(current);
               const opacity = Number.parseFloat(style.opacity);
               if (
-                style.display === 'none' || style.contentVisibility === 'hidden' ||
+                style.display === "none" || style.contentVisibility === "hidden" ||
                 (Number.isFinite(opacity) && opacity <= 0.01)
               ) return true;
               current = parentOrHost(current);
@@ -109,12 +128,7 @@ internal object TextInputOcclusionScript {
             return false;
           };
           const overlaps = (element) => {
-            if (!isEditable(element) || isHidden(element)) return false;
-            const style = globalThis.getComputedStyle(element);
-            if (
-              style.pointerEvents === 'none' || style.visibility === 'hidden' ||
-              style.visibility === 'collapse'
-            ) return false;
+            if (!isInteractive(element)) return false;
             const rect = element.getBoundingClientRect();
             const intersection = {
               left: Math.max(rect.left, blocked.left),
@@ -124,6 +138,15 @@ internal object TextInputOcclusionScript {
             };
             if (rect.width <= 0 || rect.height <= 0 ||
                 intersection.right <= intersection.left || intersection.bottom <= intersection.top) return false;
+            if (isHidden(element)) return false;
+            const style = globalThis.getComputedStyle(element);
+            if (
+              style.pointerEvents === "none" || style.visibility === "hidden" ||
+              style.visibility === "collapse"
+            ) return false;
+            if (element.tagName === "IFRAME") {
+              if (!hasBottomAnchor(element)) return false;
+            } else if (!isTextInput(element) && !atDocumentBottom && !hasBottomAnchor(element)) return false;
             const points = [
               [0.5, 0.5], [0.15, 0.5], [0.85, 0.5], [0.5, 0.2], [0.5, 0.8],
             ];
@@ -138,35 +161,13 @@ internal object TextInputOcclusionScript {
             if (isHidden(focusedTextInput, 64)) return 0;
             const style = globalThis.getComputedStyle(focusedTextInput);
             if (
-              style.pointerEvents === 'none' || style.visibility === 'hidden' ||
-              style.visibility === 'collapse'
+              style.pointerEvents === "none" || style.visibility === "hidden" ||
+              style.visibility === "collapse"
             ) return 0;
             const rect = focusedTextInput.getBoundingClientRect();
             const horizontallyAligned = rect.right > blocked.left && rect.left < blocked.right;
             const reachesOrFallsBelowChrome = rect.bottom > blocked.top;
-            return rect.width > 0 && rect.height > 0 && horizontallyAligned &&
-                reachesOrFallsBelowChrome ? 2 : 1;
-          }
-          const selector = 'textarea,input,[contenteditable]';
-          const roots = [document];
-          let visitedElements = 0;
-          let visitedCandidates = 0;
-          for (let rootIndex = 0;
-            rootIndex < roots.length && rootIndex < 64 && visitedElements < 4096;
-            rootIndex += 1) {
-            const currentRoot = roots[rootIndex];
-            const walker = document.createTreeWalker(currentRoot, NodeFilter.SHOW_ELEMENT);
-            while (visitedElements < 4096) {
-              const element = walker.nextNode();
-              if (!element) break;
-              visitedElements += 1;
-              if (element.matches(selector) && visitedCandidates < 512) {
-                visitedCandidates += 1;
-                if (overlaps(element)) return 2;
-              }
-              if (element.shadowRoot) roots.push(element.shadowRoot);
-              if (roots.length >= 64) break;
-            }
+            return rect.width > 0 && rect.height > 0 && horizontallyAligned && reachesOrFallsBelowChrome ? 2 : 1;
           }
           const points = [
             [0.1, 0.25], [0.5, 0.25], [0.9, 0.25],
@@ -179,7 +180,7 @@ internal object TextInputOcclusionScript {
             const hit = topElementAtPoint(x, y);
             return [hit].some((element) => {
               let current = element;
-              for (let depth = 0; current && depth < 12; depth += 1) {
+              for (let depth = 0; current && depth < 64; depth += 1) {
                 if (overlaps(current)) return true;
                 current = parentOrHost(current);
               }
@@ -187,6 +188,26 @@ internal object TextInputOcclusionScript {
             });
           });
           if (occluded) return 2;
+          const roots = [document];
+          let visitedElements = 0;
+          let visitedCandidates = 0;
+          for (let rootIndex = 0;
+            rootIndex < roots.length && rootIndex < 64 && visitedElements < 4096;
+            rootIndex += 1) {
+            const currentRoot = roots[rootIndex];
+            const walker = document.createTreeWalker(currentRoot, NodeFilter.SHOW_ELEMENT);
+            while (visitedElements < 4096) {
+              const element = walker.nextNode();
+              if (!element) break;
+              visitedElements += 1;
+              if (element.matches(interactiveSelector) && visitedCandidates < 512) {
+                visitedCandidates += 1;
+                if (overlaps(element)) return 2;
+              }
+              if (element.shadowRoot) roots.push(element.shadowRoot);
+              if (roots.length >= 64) break;
+            }
+          }
           return focusedTextInput ? 1 : 0;
         })()
     """.trimIndent()

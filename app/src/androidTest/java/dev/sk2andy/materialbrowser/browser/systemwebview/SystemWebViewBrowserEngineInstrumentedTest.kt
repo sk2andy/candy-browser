@@ -412,7 +412,7 @@ class SystemWebViewBrowserEngineInstrumentedTest {
     }
 
     @Test
-    fun textInputOcclusionProbeRequiresVisibleEditorAndDocumentBottom() {
+    fun textInputOcclusionProbeHandlesScrollablePageAndFocusedEditorBelowChrome() {
         lateinit var browserController: BrowserController
         lateinit var webView: WebView
         composeRule.runOnIdle {
@@ -452,6 +452,16 @@ class SystemWebViewBrowserEngineInstrumentedTest {
                 TextInputOcclusionProbeMode.FocusedTextInput,
             ),
         )
+        composeRule.runOnIdle {
+            webView.evaluateJavascript(
+                "document.body.style.height='300vh';document.title='Long input probe';",
+                null,
+            )
+        }
+        composeRule.waitUntil(timeoutMillis = 10_000L) {
+            browserController.selectedTab.title == "Long input probe"
+        }
+        assertTrue(evaluateTextInputOcclusion(webView))
 
         composeRule.runOnIdle {
             webView.evaluateJavascript(
@@ -485,6 +495,52 @@ class SystemWebViewBrowserEngineInstrumentedTest {
                 TextInputOcclusionProbeMode.FocusedTextInput,
             ),
         )
+    }
+
+    @Test
+    fun bottomNavigationProbeRequiresVisibleInteractiveControl() {
+        lateinit var browserController: BrowserController
+        lateinit var webView: WebView
+        composeRule.runOnIdle {
+            val created = createControllerWithView()
+            browserController = created.first
+            webView = created.second
+            controller = browserController
+            webView.loadDataWithBaseURL(
+                "https://navigation-probe.test/",
+                """
+                    <html>
+                      <head><title>Sticky navigation ready</title>
+                        <meta name="viewport" content="width=device-width,initial-scale=1"></head>
+                      <body style="margin:0">
+                        <div style="height:calc(100vh - 80px)"></div>
+                        <nav style="position:sticky;bottom:0;height:80px">
+                          <a id="control" href="/inbox" style="display:block;height:80px">Inbox</a>
+                        </nav>
+                        <main style="height:200vh"></main>
+                      </body>
+                    </html>
+                """.trimIndent(),
+                "text/html",
+                "utf-8",
+                null,
+            )
+        }
+        composeRule.waitUntil(timeoutMillis = 10_000L) {
+            browserController.selectedTab.title == "Sticky navigation ready"
+        }
+        assertTrue(evaluateTextInputOcclusion(webView))
+        composeRule.runOnIdle {
+            webView.evaluateJavascript(
+                "document.getElementById('control').setAttribute('aria-disabled','true');" +
+                    "document.title='Disabled navigation ready';",
+                null,
+            )
+        }
+        composeRule.waitUntil(timeoutMillis = 10_000L) {
+            browserController.selectedTab.title == "Disabled navigation ready"
+        }
+        assertFalse(evaluateTextInputOcclusion(webView))
     }
 
     private fun extractContentOutcome(webView: WebView): PageTranslationContentOutcome {

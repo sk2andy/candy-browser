@@ -6,7 +6,7 @@ import org.junit.Test
 
 class TextInputOcclusionScriptTest {
     @Test
-    fun `script uses fixed bounded editable and scroll checks`() {
+    fun `script uses bounded interactive and bottom anchor checks`() {
         val script = TextInputOcclusionScript.javascript(
             BrowserViewportRect(
                 leftFraction = 0.1f,
@@ -16,17 +16,19 @@ class TextInputOcclusionScriptTest {
             ),
         )
 
-        assertTrue(script.contains("textarea,input,[contenteditable]"))
+        assertTrue(script.contains("const controlSelector = 'button,select,a[href],summary,iframe,'"))
+        assertTrue(script.contains("hasBottomAnchor"))
+        assertTrue(script.contains("atDocumentBottom"))
         assertTrue(script.contains("textInputTypes"))
         assertTrue(script.contains("const focusedOnly = false"))
         assertTrue(script.contains("document.activeElement"))
-        assertTrue(script.contains("scrollHeight - viewportPageTop - viewportHeight > 1"))
+        assertTrue(script.contains("scrollHeight - viewportPageTop - viewportHeight <= 1"))
         assertTrue(script.contains("visualViewport"))
         assertTrue(script.contains("element.shadowRoot"))
         assertTrue(script.contains("rootIndex < 64"))
         assertTrue(script.contains("visitedElements < 4096"))
         assertTrue(script.contains("visitedCandidates < 512"))
-        assertTrue(script.contains("depth < 24"))
+        assertTrue(script.contains("depth < 64"))
         assertFalse(script.contains("eval("))
         assertFalse(script.contains("document.write"))
     }
@@ -44,8 +46,8 @@ class TextInputOcclusionScriptTest {
         )
 
         assertTrue(script.contains("const focusedOnly = true"))
-        assertTrue(script.contains("element.tagName === 'TEXTAREA'"))
-        assertTrue(script.contains("element.tagName === 'INPUT'"))
+        assertTrue(script.contains("element.tagName === \"TEXTAREA\""))
+        assertTrue(script.contains("element.tagName === \"INPUT\""))
         assertTrue(script.contains("element.isContentEditable"))
         assertTrue(script.contains("if (!focusedTextInput) return 0"))
         assertTrue(script.contains("isHidden(focusedTextInput, 64)"))

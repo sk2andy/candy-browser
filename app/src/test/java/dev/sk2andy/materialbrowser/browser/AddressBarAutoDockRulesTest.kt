@@ -83,6 +83,8 @@ class AddressBarAutoDockRulesTest {
                 isHttpPage = true,
                 isPrivatePage = false,
                 hasViewportRect = true,
+                isBrowserVisible = true,
+                browserChromeOwnsIme = false,
             ),
         )
         assertFalse(
@@ -93,6 +95,8 @@ class AddressBarAutoDockRulesTest {
                 isHttpPage = true,
                 isPrivatePage = true,
                 hasViewportRect = true,
+                isBrowserVisible = true,
+                browserChromeOwnsIme = false,
             ),
         )
     }
@@ -108,6 +112,8 @@ class AddressBarAutoDockRulesTest {
             urlMatches = true,
             viewportRectMatches = true,
             isPrivatePage = false,
+            isBrowserVisible = true,
+            browserChromeOwnsIme = false,
         )
         val staleGeometry = AddressBarAutoDockRules.isProbeContextCurrent(
             dockingEnabled = true,
@@ -118,6 +124,8 @@ class AddressBarAutoDockRulesTest {
             urlMatches = true,
             viewportRectMatches = false,
             isPrivatePage = false,
+            isBrowserVisible = true,
+            browserChromeOwnsIme = false,
         )
 
         assertTrue(accepted)
@@ -158,5 +166,95 @@ class AddressBarAutoDockRulesTest {
             TextInputOcclusionProbeResult.NoFocusedTextInput,
             TextInputOcclusionProbeResult.fromWireValue(99),
         )
+    }
+
+    @Test
+    fun `paused browser and chrome owned ime reject probes and callbacks`() {
+        for ((isBrowserVisible, browserChromeOwnsIme) in listOf(false to false, true to true)) {
+            assertFalse(
+                AddressBarAutoDockRules.shouldProbe(
+                    dockingEnabled = true,
+                    addressBarDocked = false,
+                    selectedTabMatches = true,
+                    isHttpPage = true,
+                    isPrivatePage = false,
+                    hasViewportRect = true,
+                    isBrowserVisible = isBrowserVisible,
+                    browserChromeOwnsIme = browserChromeOwnsIme,
+                ),
+            )
+            assertFalse(
+                AddressBarAutoDockRules.isProbeContextCurrent(
+                    dockingEnabled = true,
+                    addressBarDocked = false,
+                    selectedTabMatches = true,
+                    sessionMatches = true,
+                    navigationMatches = true,
+                    urlMatches = true,
+                    viewportRectMatches = true,
+                    isPrivatePage = false,
+                    isBrowserVisible = isBrowserVisible,
+                    browserChromeOwnsIme = browserChromeOwnsIme,
+                ),
+            )
+        }
+    }
+
+    @Test
+    fun `clear regular probe repeats without keyboard or focus`() {
+        assertEquals(
+            AddressBarAutoDockProbeRetry(TextInputOcclusionProbeMode.AllEditors, 2_000L, 0),
+            AddressBarAutoDockRules.nextProbeRetry(
+                mode = TextInputOcclusionProbeMode.AllEditors,
+                result = TextInputOcclusionProbeResult.NoFocusedTextInput,
+                completedRetryCount = 0,
+            ),
+        )
+    }
+
+    @Test
+    fun `focused probes return to regular checks after focus loss or burst exhaustion`() {
+        val expected = AddressBarAutoDockProbeRetry(
+            mode = TextInputOcclusionProbeMode.AllEditors,
+            delayMillis = 2_000L,
+            completedRetryCount = 0,
+        )
+        assertEquals(
+            expected,
+            AddressBarAutoDockRules.nextProbeRetry(
+                mode = TextInputOcclusionProbeMode.FocusedTextInput,
+                result = TextInputOcclusionProbeResult.NoFocusedTextInput,
+                completedRetryCount = 0,
+            ),
+        )
+        assertEquals(
+            expected,
+            AddressBarAutoDockRules.nextProbeRetry(
+                mode = TextInputOcclusionProbeMode.FocusedTextInput,
+                result = TextInputOcclusionProbeResult.FocusedTextInputClear,
+                completedRetryCount = 4,
+            ),
+        )
+        assertEquals(
+            AddressBarAutoDockProbeRetry(TextInputOcclusionProbeMode.FocusedTextInput, 150L, 1),
+            AddressBarAutoDockRules.nextProbeRetry(
+                mode = TextInputOcclusionProbeMode.FocusedTextInput,
+                result = TextInputOcclusionProbeResult.FocusedTextInputClear,
+                completedRetryCount = 0,
+            ),
+        )
+    }
+
+    @Test
+    fun `occluded control terminates periodic probes`() {
+        for (mode in TextInputOcclusionProbeMode.entries) {
+            assertNull(
+                AddressBarAutoDockRules.nextProbeRetry(
+                    mode = mode,
+                    result = TextInputOcclusionProbeResult.Occluded,
+                    completedRetryCount = 0,
+                ),
+            )
+        }
     }
 }
