@@ -995,6 +995,8 @@ private class GeckoViewBrowserSession(
     private var toppingHostWaitRegistered = false
     private var trackingPermissionWaitRegistered = false
     private var pendingInitialUrl: String? = null
+    private var replaceBootstrapHistoryOnNextLoad = openSession
+    private var latestPageIsBootstrap = false
     private var pendingFailedPageRetryUrl: String? = null
     private var latestSessionState: GeckoSession.SessionState? = null
     private var pendingRestoredSessionState: GeckoSession.SessionState? = null
@@ -1115,6 +1117,7 @@ private class GeckoViewBrowserSession(
                 uri: String?,
                 error: WebRequestError,
             ): GeckoResult<String>? {
+                if (privacyHost.isBootstrapNavigation(session, uri)) return null
                 invalidateDomProbe()
                 uri?.let(::finishFailedNavigation)
                 updateState { current ->
@@ -1241,10 +1244,14 @@ private class GeckoViewBrowserSession(
             }
 
             override fun onCanGoBack(session: GeckoSession, canGoBack: Boolean) =
-                updateState { current -> current.copy(canGoBack = canGoBack) }
+                updateState { current ->
+                    current.copy(canGoBack = navigationCapability(-1, canGoBack))
+                }
 
             override fun onCanGoForward(session: GeckoSession, canGoForward: Boolean) =
-                updateState { current -> current.copy(canGoForward = canGoForward) }
+                updateState { current ->
+                    current.copy(canGoForward = navigationCapability(1, canGoForward))
+                }
         }
         session.historyDelegate = object : GeckoSession.HistoryDelegate {
             override fun onHistoryStateChange(
@@ -1256,6 +1263,12 @@ private class GeckoViewBrowserSession(
                 }
                 val updated = historyList.toBrowserHistoryState()
                 historyState = updated
+                updateState { current ->
+                    current.copy(
+                        canGoBack = historyIndexAtOffset(-1) != null,
+                        canGoForward = historyIndexAtOffset(1) != null,
+                    )
+                }
                 if (updated.matches(pendingRestoredHistoryState)) {
                     finishRestoredHistoryWait()
                 }
@@ -1850,7 +1863,10 @@ private class GeckoViewBrowserSession(
         }
         session.progressDelegate = object : GeckoSession.ProgressDelegate {
             override fun onPageStart(session: GeckoSession, url: String) {
-                if (privacyHost.isBootstrapNavigation(session, url)) return
+                val isBootstrap = privacyHost.isBootstrapNavigation(session, url)
+                latestPageIsBootstrap = isBootstrap
+                if (isBootstrap) return
+                if (url != "about:blank") replaceBootstrapHistoryOnNextLoad = false
                 if (navigationTargetUrl == null) beginNavigation(url)
                 markNavigationStarted(url)
                 invalidateDomProbe()
@@ -1886,6 +1902,9 @@ private class GeckoViewBrowserSession(
                 updateState { current -> current.copy(progress = progress.coerceIn(0, 100)) }
 
             override fun onPageStop(session: GeckoSession, success: Boolean) {
+                val isBootstrap = latestPageIsBootstrap
+                latestPageIsBootstrap = false
+                if (isBootstrap) return
                 finishStartedNavigation()
                 updateState { current ->
                     current.copy(
@@ -1901,6 +1920,7 @@ private class GeckoViewBrowserSession(
         session.setActive(false)
         privacyBinding = privacyHost.bind(
             session = session,
+            nativeWindow = !openSession,
             policy = initialPrivacyPolicy,
             sink = privacyEventSink,
             onScrollMetrics = { metrics ->
@@ -2868,10 +2888,9 @@ private class GeckoViewBrowserSession(
     override fun sessionStateSnapshot(): String? {
         if (closed || isPrivate) return null
         val snapshot = latestSessionState ?: return null
-        if (CandyPrivacyHostContract.isBootstrapDocumentUrl(
-                snapshot.toBrowserHistoryState().currentUrl(),
-            )
-        ) return null
+        if (!GeckoBootstrapHistoryRules.canRestoreHistory(snapshot.toBrowserHistoryState().urls)) {
+            return null
+        }
         return snapshot.toString()
     }
 
@@ -2882,11 +2901,12 @@ private class GeckoViewBrowserSession(
         val restored = runCatching { GeckoSession.SessionState.fromString(encodedState) }.getOrNull()
             ?: return false
         val restoredHistory = restored.toBrowserHistoryState()
-        if (CandyPrivacyHostContract.isBootstrapDocumentUrl(restoredHistory.currentUrl())) {
+        if (!GeckoBootstrapHistoryRules.canRestoreHistory(restoredHistory.urls)) {
             return false
         }
         latestSessionState = GeckoSession.SessionState(restored)
         pendingRestoredSessionState = restored
+        replaceBootstrapHistoryOnNextLoad = false
         pendingRestoredHistoryState = restoredHistory
         pendingRestoredHistoryState?.currentUrl()?.let(::beginNavigation)
         restorePendingStateIfReady()
@@ -2916,6 +2936,7 @@ private class GeckoViewBrowserSession(
                     .uri(safeUrl)
                     .flags(GeckoSession.LOAD_FLAGS_REPLACE_HISTORY),
             )
+            replaceBootstrapHistoryOnNextLoad = false
             return true
         }
         return loadValidatedUrl(safeUrl)
@@ -2964,7 +2985,7 @@ private class GeckoViewBrowserSession(
             pendingRestoredSessionState == null &&
             !restoredHistoryPending
         ) {
-            session.loadUri(safeUrl)
+            loadPageUrl(safeUrl)
             return true
         }
         pendingInitialUrl = safeUrl
@@ -3013,24 +3034,40 @@ private class GeckoViewBrowserSession(
 
     override fun goBack() {
         if (!closed && privacyBound && state.canGoBack) {
+            val history = historyState
+            val targetIndex = historyIndexAtOffset(-1)
+            if (history != null && targetIndex == null) return
             invalidateCredentialPrompts(recreateHost = false)
             historyUrlAtOffset(-1)?.let(::beginNavigation)
-            session.goBack()
+            if (history != null && targetIndex != history.currentIndex - 1) {
+                session.gotoHistoryIndex(requireNotNull(targetIndex))
+            } else {
+                session.goBack()
+            }
         }
     }
 
     override fun goForward() {
         if (!closed && privacyBound && state.canGoForward) {
+            val history = historyState
+            val targetIndex = historyIndexAtOffset(1)
+            if (history != null && targetIndex == null) return
             invalidateCredentialPrompts(recreateHost = false)
             historyUrlAtOffset(1)?.let(::beginNavigation)
-            session.goForward()
+            if (history != null && targetIndex != history.currentIndex + 1) {
+                session.gotoHistoryIndex(requireNotNull(targetIndex))
+            } else {
+                session.goForward()
+            }
         }
     }
 
     override fun goToHistoryIndex(index: Int) {
         if (!closed && privacyBound && index >= 0) {
+            val url = historyState?.urls?.getOrNull(index) ?: return
+            if (CandyPrivacyHostContract.isBootstrapDocumentUrl(url)) return
             invalidateCredentialPrompts(recreateHost = false)
-            historyState?.urls?.getOrNull(index)?.let(::beginNavigation)
+            beginNavigation(url)
             session.gotoHistoryIndex(index)
         }
     }
@@ -3038,7 +3075,23 @@ private class GeckoViewBrowserSession(
     override fun historyUrlAtOffset(offset: Int): String? {
         if (closed || !privacyBound) return null
         val current = historyState ?: return null
-        return current.urls.getOrNull(current.currentIndex + offset)
+        val index = historyIndexAtOffset(offset) ?: return null
+        return current.urls[index]
+    }
+
+    private fun historyIndexAtOffset(offset: Int): Int? {
+        val current = historyState ?: return null
+        return GeckoBootstrapHistoryRules.historyIndexAtOffset(
+            urls = current.urls,
+            currentIndex = current.currentIndex,
+            offset = offset,
+        )
+    }
+
+    private fun navigationCapability(offset: Int, nativeCapability: Boolean): Boolean {
+        val current = historyState ?: return nativeCapability
+        if (GeckoBootstrapHistoryRules.canRestoreHistory(current.urls)) return nativeCapability
+        return historyIndexAtOffset(offset) != null
     }
 
     override fun reload() {
@@ -3052,6 +3105,7 @@ private class GeckoViewBrowserSession(
         if (!closed) {
             pendingInitialUrl = null
             pendingFailedPageRetryUrl = null
+            latestPageIsBootstrap = false
             pendingRestoredSessionState = null
             finishRestoredHistoryWait()
             finishNavigation()
@@ -3098,6 +3152,7 @@ private class GeckoViewBrowserSession(
         pictureInPicturePlaybackExpected = false
         pendingInitialUrl = null
         pendingFailedPageRetryUrl = null
+        latestPageIsBootstrap = false
         pendingRestoredSessionState = null
         finishRestoredHistoryWait()
         navigationTargetUrl = null
@@ -3126,7 +3181,17 @@ private class GeckoViewBrowserSession(
         val pendingUrl = pendingInitialUrl ?: return
         pendingInitialUrl = null
         ensureNavigation(pendingUrl)
-        session.loadUri(pendingUrl)
+        loadPageUrl(pendingUrl)
+    }
+
+    private fun loadPageUrl(url: String) {
+        val flags = if (replaceBootstrapHistoryOnNextLoad) {
+            GeckoSession.LOAD_FLAGS_REPLACE_HISTORY
+        } else {
+            GeckoSession.LOAD_FLAGS_NONE
+        }
+        replaceBootstrapHistoryOnNextLoad = false
+        session.load(GeckoSession.Loader().uri(url).flags(flags))
     }
 
     private fun restorePendingStateIfReady(): Boolean {
@@ -3178,7 +3243,7 @@ private class GeckoViewBrowserSession(
         if (BrowserUriPolicy.normalizeHttpUrl(currentUrl) == retryUrl) {
             session.reload()
         } else {
-            session.loadUri(retryUrl)
+            loadPageUrl(retryUrl)
         }
         return true
     }
@@ -3352,6 +3417,7 @@ private class GeckoViewBrowserSession(
         invalidateDomProbe()
         pendingInitialUrl = null
         pendingFailedPageRetryUrl = null
+        latestPageIsBootstrap = false
         pendingRestoredSessionState = null
         finishRestoredHistoryWait()
         navigationTargetUrl = null

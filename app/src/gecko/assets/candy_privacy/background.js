@@ -34,6 +34,135 @@ let activeAnimationPolicyRevision = -1;
 let animationPolicyRegistration = null;
 let animationPolicyRegistrationQueue = Promise.resolve();
 
+const nativeSessionBindings = createNativeSessionBindings({
+  browser,
+  policiesByToken,
+  tokenByTab,
+  postNativeMessage: (message) => nativePort?.postMessage(message),
+});
+
+function createNativeSessionBindings({ browser, policiesByToken, tokenByTab, postNativeMessage }) {
+  const pendingRequests = new Map();
+  const probedRequests = new Set();
+  const pendingPolicies = new Set();
+  const uuid = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
+  let probeTimer = null;
+  let closed = false;
+
+  function validPolicy(policy) {
+    return policy?.bindingMode === "native-tab" && uuid.test(policy.token) &&
+      uuid.test(policy.bindingChallenge) && Number.isSafeInteger(policy.revision) &&
+      policy.revision > 0;
+  }
+
+  async function probeTabs() {
+    if (closed) return;
+    const policies = Array.from(pendingPolicies)
+      .map((token) => policiesByToken.get(token)).filter(validPolicy);
+    if (!policies.length) return;
+    try {
+      const tabs = await browser.tabs.query({});
+      for (const tab of tabs) {
+        if (!Number.isSafeInteger(tab.id) || tab.id <= 0 || tokenByTab.has(tab.id)) continue;
+        for (const policy of policies) {
+          if (closed || !pendingPolicies.has(policy.token)) continue;
+          const key = `${tab.id}\0${policy.token}\0${policy.revision}`;
+          if (probedRequests.has(key)) continue;
+          probedRequests.add(key);
+          const url = `${browser.runtime.getURL("binding.html")}?token=${policy.token}` +
+            `&challenge=${policy.bindingChallenge}&tab=${tab.id}&revision=${policy.revision}`;
+          // The native delegate always denies this challenge. Never load a binding document.
+          browser.tabs.update(tab.id, { url }).catch(() => {}).finally(() => {
+            probedRequests.delete(key);
+          });
+        }
+      }
+    } catch (_) {
+      // Session creation can briefly precede the extension's tab projection.
+    }
+    if (!closed && pendingPolicies.size && probeTimer === null) {
+      probeTimer = setTimeout(() => {
+        probeTimer = null;
+        probeTabs();
+      }, 100);
+    }
+  }
+
+  function settleTab(tabId, allowed) {
+    const pending = pendingRequests.get(tabId);
+    if (!pending) return;
+    pendingRequests.delete(tabId);
+    for (const request of pending) {
+      clearTimeout(request.timeout);
+      request.resolve(allowed);
+    }
+  }
+
+  return {
+    policyChanged(policy) {
+      if (closed || !validPolicy(policy) ||
+          Array.from(tokenByTab.values()).includes(policy.token)) return;
+      pendingPolicies.add(policy.token);
+      probeTabs();
+    },
+    authenticate(message) {
+      const policy = policiesByToken.get(message?.token);
+      if (closed || !validPolicy(policy) || message.challenge !== policy.bindingChallenge ||
+          message.revision !== policy.revision || !Number.isSafeInteger(message.tabId) ||
+          message.tabId <= 0 || tokenByTab.has(message.tabId) ||
+          Array.from(tokenByTab.values()).includes(message.token)) return false;
+      tokenByTab.set(message.tabId, message.token);
+      pendingPolicies.delete(message.token);
+      postNativeMessage({
+        type: "session-bound",
+        protocolVersion: PROTOCOL_VERSION,
+        token: message.token,
+        revision: message.revision,
+      });
+      settleTab(message.tabId, true);
+      return true;
+    },
+    waitForPolicy(tabId) {
+      if (closed || !Number.isSafeInteger(tabId) || tabId <= 0) return Promise.resolve(false);
+      if (policiesByToken.has(tokenByTab.get(tabId))) return Promise.resolve(true);
+      probeTabs();
+      return new Promise((resolve) => {
+        const pending = pendingRequests.get(tabId) || [];
+        const request = { resolve, timeout: null };
+        request.timeout = setTimeout(() => settleTab(tabId, false), 15000);
+        pending.push(request);
+        pendingRequests.set(tabId, pending);
+      });
+    },
+    removeToken(token) {
+      pendingPolicies.delete(token);
+      for (const [tabId, boundToken] of tokenByTab) {
+        if (boundToken === token) settleTab(tabId, false);
+      }
+      for (const key of probedRequests) {
+        if (key.split("\0")[1] === token) probedRequests.delete(key);
+      }
+      if (!pendingPolicies.size) {
+        for (const tabId of pendingRequests.keys()) settleTab(tabId, false);
+      }
+    },
+    removeTab(tabId) {
+      settleTab(tabId, false);
+      for (const key of probedRequests) {
+        if (key.split("\0")[0] === String(tabId)) probedRequests.delete(key);
+      }
+    },
+    close() {
+      closed = true;
+      if (probeTimer !== null) clearTimeout(probeTimer);
+      probeTimer = null;
+      pendingPolicies.clear();
+      probedRequests.clear();
+      for (const tabId of pendingRequests.keys()) settleTab(tabId, false);
+    },
+  };
+}
+
 function privacySignalSettings(policy) {
   return {
     doNotTrackEnabled: policy?.doNotTrackEnabled === true,
@@ -574,25 +703,35 @@ function flushEvents() {
   pendingEvents.clear();
 }
 
+function observeMainFrameRequest(details, policy, token) {
+  inlineVideosByTab.delete(details.tabId);
+  publishInlineVideoState(details.tabId);
+  policy.pageHost = hostFromUrl(details.url);
+  if (typeof details.requestId === "string") {
+    mainFrameRequestsById.set(details.requestId, {
+      token,
+      revision: policy.revision,
+      navigationGeneration: policy.navigationGeneration,
+    });
+  }
+  scheduleContentPolicy(details.tabId);
+}
+
 browser.webRequest.onBeforeRequest.addListener((details) => {
   // Service Worker requests have no tab. Never borrow a session's privacy policy.
   if (details.tabId === -1) return {};
   const token = tokenByTab.get(details.tabId);
   const policy = token && policiesByToken.get(token);
   if (details.type === "main_frame") {
-    inlineVideosByTab.delete(details.tabId);
-    publishInlineVideoState(details.tabId);
-    if (policy) {
-      policy.pageHost = hostFromUrl(details.url);
-      if (typeof details.requestId === "string") {
-        mainFrameRequestsById.set(details.requestId, {
-          token,
-          revision: policy.revision,
-          navigationGeneration: policy.navigationGeneration,
-        });
-      }
-      scheduleContentPolicy(details.tabId);
+    if (!policy) {
+      return nativeSessionBindings.waitForPolicy(details.tabId).then((allowed) => {
+        const boundPolicy = policiesByToken.get(tokenByTab.get(details.tabId));
+        if (!allowed || !boundPolicy) return { cancel: true };
+        observeMainFrameRequest(details, boundPolicy, tokenByTab.get(details.tabId));
+        return {};
+      });
     }
+    observeMainFrameRequest(details, policy, token);
     return {};
   }
   if (!policy) return { cancel: true };
@@ -767,6 +906,7 @@ browser.runtime.onMessage.addListener((message, sender) => {
 });
 
 browser.tabs.onRemoved.addListener((tabId) => {
+  nativeSessionBindings.removeTab(tabId);
   (contentPolicyTimersByTab.get(tabId) || []).forEach(clearTimeout);
   contentPolicyTimersByTab.delete(tabId);
   const token = tokenByTab.get(tabId);
@@ -1104,6 +1244,7 @@ function connectNative() {
         }
         publishContentPolicy(message.token, readyPolicy);
         acknowledgePolicy();
+        nativeSessionBindings.policyChanged(readyPolicy);
       };
       const policyReady = documentPoliciesReady.then(async (readyPolicy) => {
         if (readyPolicy.hideConsent) await ensureCookieRules();
@@ -1120,7 +1261,10 @@ function connectNative() {
           reason: String(error).slice(0, 512),
         });
       });
+    } else if (message.type === "tab-binding-authenticated") {
+      nativeSessionBindings.authenticate(message);
     } else if (message.type === "remove" && typeof message.token === "string") {
+      nativeSessionBindings.removeToken(message.token);
       policiesByToken.delete(message.token);
       latestPolicyRevisionByToken.delete(message.token);
       for (const [tabId, token] of tokenByTab) {
@@ -1150,7 +1294,10 @@ function connectNative() {
       updateInlineVideoPresentation(message);
     }
   });
-  nativePort.onDisconnect.addListener(() => { nativePort = null; });
+  nativePort.onDisconnect.addListener(() => {
+    nativePort = null;
+    nativeSessionBindings.close();
+  });
   nativePort.postMessage({ type: "ready", protocolVersion: PROTOCOL_VERSION });
 }
 

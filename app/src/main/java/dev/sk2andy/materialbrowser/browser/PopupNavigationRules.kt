@@ -2,6 +2,7 @@ package dev.sk2andy.materialbrowser.browser
 
 import dev.sk2andy.materialbrowser.blocking.CandyHostCanonicalizer
 import dev.sk2andy.materialbrowser.blocking.CandyPublicSuffixRules
+import dev.sk2andy.materialbrowser.browser.integration.BrowserUriPolicy
 import java.net.URI
 
 internal data class PendingPopupNavigation(
@@ -47,12 +48,12 @@ internal object PopupNavigationRules {
         blockerEnabled: Boolean,
         filterDecision: (targetUrl: String, openerUrl: String) -> PopupFilterDecision,
     ): PopupNavigationDecision {
-        val uri = runCatching { URI(targetUrl) }.getOrNull()
+        val normalizedUrl = BrowserUriPolicy.normalizeHttpUrl(targetUrl)
             ?: return PopupNavigationDecision.KeepPending
-        val targetHost = CandyHostCanonicalizer.canonicalHost(uri.host)
-        if (uri.scheme?.lowercase() !in setOf("http", "https") || targetHost == null) {
-            return PopupNavigationDecision.KeepPending
-        }
+        val uri = runCatching { URI(normalizedUrl) }.getOrNull()
+            ?: return PopupNavigationDecision.KeepPending
+        val targetHost = CandyHostCanonicalizer.canonicalHost(uri.host) ?: uri.host
+            ?: return PopupNavigationDecision.KeepPending
         if (!pending.hadUserGesture || !blockerEnabled || pending.sitePaused) {
             return PopupNavigationDecision.Allow
         }
@@ -70,7 +71,8 @@ internal object PopupNavigationRules {
     private fun isCrossSite(targetHost: String, openerUrl: String): Boolean {
         val opener = runCatching { URI(openerUrl) }.getOrNull() ?: return false
         if (opener.scheme?.lowercase() !in setOf("http", "https")) return false
-        val openerHost = CandyHostCanonicalizer.canonicalHost(opener.host) ?: return false
+        val openerHost = CandyHostCanonicalizer.canonicalHost(opener.host) ?: opener.host
+            ?: return false
         val targetSite = CandyPublicSuffixRules.registrableDomain(targetHost) ?: targetHost
         val openerSite = CandyPublicSuffixRules.registrableDomain(openerHost) ?: openerHost
         return targetSite != openerSite

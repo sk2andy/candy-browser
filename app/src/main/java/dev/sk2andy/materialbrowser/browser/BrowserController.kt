@@ -11348,14 +11348,14 @@ class BrowserController(
         return createGeckoPopup(
             openerTabId = openerTabId,
             preparedSession = request.session,
-            preopenedBlank = request.url == BLANK_URL,
+            initialUrl = request.url,
         )
     }
 
     private fun createGeckoPopup(
         openerTabId: String,
         preparedSession: BrowserEnginePreparedSession,
-        preopenedBlank: Boolean,
+        initialUrl: String,
     ): Boolean {
         val popupTabId = createGeckoPopupTab(openerTabId) ?: return false
         if (!browserEngineSessionFactory.prepareSession(popupTabId, preparedSession)) {
@@ -11363,14 +11363,17 @@ class BrowserController(
             return false
         }
         val pending = requireNotNull(pendingPopupNavigations[popupTabId])
-        browserEngineSessionFor(popupTabId)
+        val session = browserEngineSessionFor(popupTabId)
+        // Gecko loads the initial child URI itself without another onLoadRequest callback.
+        // Route it here so an accepted target=_blank tab does not stay transient indefinitely.
+        if (initialUrl != BLANK_URL) handlePendingPopupNavigation(popupTabId, session, initialUrl)
         mainHandler.postDelayed({
             if (pendingPopupNavigations[popupTabId] === pending) {
                 pendingPopupNavigations.remove(popupTabId)
                 if (popupTabId in transientPopupTabIds) discardTransientPopup(popupTabId)
                 scheduleResidentSessionTrim()
             }
-        }, PopupNavigationRules.pendingTimeoutMillis(preopenedBlank))
+        }, PopupNavigationRules.pendingTimeoutMillis(initialUrl == BLANK_URL))
         return true
     }
 
