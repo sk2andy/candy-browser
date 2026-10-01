@@ -305,6 +305,106 @@ test("WebRTC policies use fail-closed ordering and acknowledge verified settings
   );
 });
 
+test("tabless Service Worker requests stay allowed while unbound tabs fail closed", async () => {
+  let nativeMessageListener;
+  let beforeRequestListener;
+  let beforeSendHeadersListener;
+  let runtimeMessageListener;
+  const backgroundContext = vm.createContext({
+    URL,
+    Map,
+    Set,
+    Array,
+    Promise,
+    Number,
+    String,
+    Boolean,
+    setTimeout,
+    clearTimeout,
+    CandyPrivacyRules: {
+      parseCandyDefaults: () => [],
+      hostMatches: () => false,
+    },
+    CandyPrivacySignals: {
+      registrationCode: () => "",
+      requestHeaders: (headers, policy) => policy.doNotTrackEnabled ?
+        [...headers, { name: "DNT", value: "1" }] : headers,
+    },
+    fetch: async () => ({ ok: true, text: async () => "" }),
+    browser: {
+      runtime: {
+        getURL: (path) => path,
+        connectNative: () => ({
+          postMessage: () => {},
+          onMessage: { addListener: (listener) => { nativeMessageListener = listener; } },
+          onDisconnect: { addListener: () => {} },
+        }),
+        onMessage: { addListener: (listener) => { runtimeMessageListener = listener; } },
+      },
+      tabs: {
+        sendMessage: () => Promise.resolve(),
+        onRemoved: { addListener: () => {} },
+      },
+      contentScripts: { register: async () => ({ unregister: async () => {} }) },
+      webRequest: {
+        onBeforeRequest: {
+          addListener: (listener) => { beforeRequestListener = listener; },
+        },
+        onBeforeSendHeaders: {
+          addListener: (listener) => { beforeSendHeadersListener = listener; },
+        },
+        onHeadersReceived: { addListener: () => {} },
+        onErrorOccurred: { addListener: () => {} },
+      },
+    },
+  });
+  vm.runInContext(
+    fs.readFileSync(
+      new URL("../app/src/gecko/assets/candy_privacy/background.js", import.meta.url),
+      "utf8",
+    ),
+    backgroundContext,
+  );
+  const workerRequests = [
+    { type: "script", url: "https://push.example/service-worker.js" },
+    { type: "script", url: "https://cmp.inmobi.com/worker-import.js" },
+    { type: "xmlhttprequest", url: "https://cmp.inmobi.com/push-content" },
+  ];
+  const assertWorkerRequestsAllowed = () => {
+    for (const request of workerRequests) {
+      assert.equal(beforeRequestListener({ ...request, tabId: -1 }).cancel, undefined);
+      assert.equal(beforeRequestListener({ ...request, tabId: 99 }).cancel, true);
+    }
+    assert.equal(beforeSendHeadersListener({
+      tabId: -1,
+      requestHeaders: [{ name: "Accept", value: "application/json" }],
+    }).requestHeaders, undefined);
+  };
+  assertWorkerRequestsAllowed();
+
+  nativeMessageListener({
+    type: "policy",
+    protocolVersion: 2,
+    token: "tab-token",
+    revision: 1,
+    privacySignalRevision: 1,
+    animationPolicyRevision: 1,
+    animationsEnabled: true,
+    doNotTrackEnabled: true,
+    globalPrivacyControlEnabled: false,
+    navigationGeneration: 0,
+    hideConsent: true,
+  });
+  await new Promise((resolve) => setImmediate(resolve));
+  await runtimeMessageListener({ type: "bind", token: "tab-token" }, { tab: { id: 7 } });
+  assert.equal(beforeRequestListener({ ...workerRequests[1], tabId: 7 }).cancel, true);
+  assert.deepEqual(JSON.parse(JSON.stringify(beforeSendHeadersListener({
+    tabId: 7,
+    requestHeaders: [],
+  }).requestHeaders)), [{ name: "DNT", value: "1" }]);
+  assertWorkerRequestsAllowed();
+});
+
 test("newer privacy policy wins while older cookie rules are still loading", async () => {
   let resolveCookieAsset;
   let nativeMessageListener;

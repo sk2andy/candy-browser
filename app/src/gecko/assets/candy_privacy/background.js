@@ -575,6 +575,8 @@ function flushEvents() {
 }
 
 browser.webRequest.onBeforeRequest.addListener((details) => {
+  // Service Worker requests have no tab. Never borrow a session's privacy policy.
+  if (details.tabId === -1) return {};
   const token = tokenByTab.get(details.tabId);
   const policy = token && policiesByToken.get(token);
   if (details.type === "main_frame") {

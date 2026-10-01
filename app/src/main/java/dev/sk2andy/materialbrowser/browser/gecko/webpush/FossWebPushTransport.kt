@@ -5,7 +5,11 @@ import java.util.Base64
 import java.util.UUID
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -17,14 +21,18 @@ import okhttp3.Response
 import okhttp3.WebSocket
 import okhttp3.WebSocketListener
 
-/** Bounded Autopush WebSocket sessions; WorkManager starts them periodically while Candy is closed. */
+/** Shares a foreground Autopush socket; WorkManager uses bounded sessions while Candy is closed. */
 internal class FossWebPushTransport(
     context: Context,
     private val onMessage: suspend (FossPushMessage) -> Boolean,
     private val onSubscriptionsInvalidated: (List<String>) -> Unit,
+    private val serverUrl: String = AUTOPUSH_URL,
 ) {
     private val store = FossWebPushStore(context)
     private val mutex = Mutex()
+    // Accessed only under mutex, including reads and protocol messages from the foreground loop.
+    private var foregroundListening = false
+    private var foregroundSession: Session? = null
     private val client = OkHttpClient.Builder()
         .pingInterval(0, java.util.concurrent.TimeUnit.SECONDS)
         .build()
@@ -50,7 +58,8 @@ internal class FossWebPushTransport(
                 initial.pendingUnregister.size >= MAX_PENDING_UNREGISTER
             ) return@withContext null
 
-            val session = openSession() ?: return@withContext null
+            val session = sessionForOperation() ?: return@withContext null
+            var subscribed = false
             try {
                 repeat(2) {
                     if (session.state.subscriptions.size >= MAX_SUBSCRIPTIONS ||
@@ -97,12 +106,14 @@ internal class FossWebPushTransport(
                         return@withContext null
                     }
                     session.state = updated
-                    session.drainPending()
+                    if (session !== foregroundSession) session.drainPending()
+                    subscribed = true
                     return@withContext subscription.copyOf()
                 }
                 null
             } finally {
-                session.close()
+                if (!subscribed && session === foregroundSession) closeForegroundSession()
+                closeTemporarySession(session)
             }
         }
     }
@@ -125,6 +136,7 @@ internal class FossWebPushTransport(
     suspend fun removeProfileSubscriptions(profileId: String): List<String>? = mutex.withLock {
         withContext(Dispatchers.IO) {
             if (profileId.isEmpty()) return@withContext emptyList()
+            closeForegroundSession()
             val state = store.load()
             val removed = state.subscriptions.filter { subscription ->
                 FossWebPushScopeRules.belongsToIsolatedProfile(subscription.scope, profileId)
@@ -147,6 +159,7 @@ internal class FossWebPushTransport(
     suspend fun unsubscribe(scope: String): Boolean = mutex.withLock {
         withContext(Dispatchers.IO) {
             if (!FossWebPushScopeRules.isPersistentScope(scope)) return@withContext false
+            closeForegroundSession()
             val state = store.load()
             val subscription = state.subscriptions.firstOrNull { it.scope == scope } ?: return@withContext true
             val updated = state.copy(
@@ -172,6 +185,7 @@ internal class FossWebPushTransport(
     /** Browser-data deletion removes local keys first, even when Autopush is unreachable. */
     suspend fun clearAllData(): List<String>? = mutex.withLock {
         withContext(Dispatchers.IO) {
+            closeForegroundSession()
             val state = store.load()
             val scopes = state.subscriptions.map(FossPushSubscription::scope)
             val channels = (state.subscriptions.map(FossPushSubscription::channelId) + state.pendingUnregister)
@@ -206,13 +220,70 @@ internal class FossWebPushTransport(
         withContext(Dispatchers.IO) {
             val state = store.load()
             if (state.subscriptions.isEmpty() && state.pendingUnregister.isEmpty()) return@withContext true
-            val session = openSession() ?: return@withContext false
+            val session = sessionForOperation() ?: return@withContext false
+            var drained = false
             try {
-                session.drainPending()
+                session.drainPending().also { drained = it }
             } finally {
-                session.close()
+                if (!drained && session === foregroundSession) closeForegroundSession()
+                closeTemporarySession(session)
             }
         }
+    }
+
+    /** Keeps delivery live until the process leaves the foreground; cancellation releases the socket. */
+    suspend fun listenWhileForeground() = withContext(Dispatchers.IO) {
+        mutex.withLock {
+            check(!foregroundListening)
+            foregroundListening = true
+        }
+        try {
+            while (currentCoroutineContext().isActive) {
+                val connected = mutex.withLock {
+                    val state = foregroundSession?.state ?: store.load()
+                    if (state.subscriptions.isEmpty() && state.pendingUnregister.isEmpty()) {
+                        closeForegroundSession()
+                        return@withLock false
+                    }
+                    try {
+                        val session = sessionForOperation() ?: return@withLock false
+                        session.receiveNext(FOREGROUND_RECEIVE_MILLIS).also { healthy ->
+                            if (!healthy) closeForegroundSession()
+                        }
+                    } catch (cancelled: CancellationException) {
+                        throw cancelled
+                    } catch (_: Exception) {
+                        closeForegroundSession()
+                        false
+                    }
+                }
+                delay(if (connected) FOREGROUND_YIELD_MILLIS else RECONNECT_DELAY_MILLIS)
+            }
+        } finally {
+            withContext(NonCancellable) {
+                mutex.withLock {
+                    foregroundListening = false
+                    closeForegroundSession()
+                }
+            }
+        }
+    }
+
+    private suspend fun sessionForOperation(): Session? {
+        if (foregroundSession?.isClosed == true) closeForegroundSession()
+        return foregroundSession ?: openSession()?.also { session ->
+            if (foregroundListening) foregroundSession = session
+        }
+    }
+
+    private fun closeTemporarySession(session: Session) {
+        if (session.isClosed && session === foregroundSession) closeForegroundSession()
+        if (session !== foregroundSession) session.close()
+    }
+
+    private fun closeForegroundSession() {
+        foregroundSession?.close()
+        foregroundSession = null
     }
 
     private suspend fun openSession(
@@ -221,7 +292,7 @@ internal class FossWebPushTransport(
     ): Session? {
         val events = Channel<SocketEvent>(capacity = 64)
         val socket = client.newWebSocket(
-            Request.Builder().url(AUTOPUSH_URL).build(),
+            Request.Builder().url(serverUrl).build(),
             object : WebSocketListener() {
                 override fun onOpen(webSocket: WebSocket, response: Response) {
                     events.trySend(SocketEvent.Opened)
@@ -229,16 +300,22 @@ internal class FossWebPushTransport(
 
                 override fun onMessage(webSocket: WebSocket, text: String) {
                     if (events.trySend(SocketEvent.Message(text)).isFailure) {
+                        events.close()
                         webSocket.close(1009, "Push queue full")
                     }
                 }
 
+                override fun onClosing(webSocket: WebSocket, code: Int, reason: String) {
+                    events.close()
+                    webSocket.close(code, reason)
+                }
+
                 override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
-                    events.trySend(SocketEvent.Closed)
+                    events.close()
                 }
 
                 override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
-                    events.trySend(SocketEvent.Closed)
+                    events.close()
                 }
             },
         )
@@ -280,8 +357,17 @@ internal class FossWebPushTransport(
         var state: FossWebPushState,
         private val persistChanges: Boolean,
     ) {
-        suspend fun next(timeoutMillis: Long): SocketEvent? =
-            withTimeoutOrNull(timeoutMillis) { events.receiveCatching().getOrNull() }
+        var isClosed = false
+            private set
+
+        suspend fun next(timeoutMillis: Long): SocketEvent? {
+            if (isClosed) return SocketEvent.Closed
+            val event = withTimeoutOrNull(timeoutMillis) {
+                events.receiveCatching().getOrNull() ?: SocketEvent.Closed
+            }
+            if (event == SocketEvent.Closed) isClosed = true
+            return event
+        }
 
         suspend fun nextProtocol(timeoutMillis: Long): FossWebPushServerMessage? {
             val event = next(timeoutMillis) as? SocketEvent.Message ?: return null
@@ -318,6 +404,24 @@ internal class FossWebPushTransport(
                 }
             }
             return true
+        }
+
+        suspend fun receiveNext(timeoutMillis: Long): Boolean {
+            val event = next(timeoutMillis) ?: return true
+            return when (val message = (event as? SocketEvent.Message)?.let {
+                FossWebPushProtocol.decode(it.text)
+            }) {
+                is FossWebPushServerMessage.Notification -> {
+                    deliver(message)
+                    true
+                }
+                is FossWebPushServerMessage.Unregister -> {
+                    completeUnregister(message)
+                    true
+                }
+                FossWebPushServerMessage.Ignored -> true
+                else -> false
+            }
         }
 
         fun sendPendingUnregister() {
@@ -378,6 +482,7 @@ internal class FossWebPushTransport(
         }
 
         fun close() {
+            isClosed = true
             socket.close(1000, "Done")
             events.close()
         }
@@ -410,6 +515,9 @@ internal class FossWebPushTransport(
         private const val REGISTER_TIMEOUT_MILLIS = 20_000L
         private const val IDLE_DRAIN_MILLIS = 2_000L
         private const val MAX_DRAIN_MILLIS = 12_000L
+        private const val FOREGROUND_RECEIVE_MILLIS = 1_000L
+        private const val FOREGROUND_YIELD_MILLIS = 100L
+        private const val RECONNECT_DELAY_MILLIS = 5_000L
         private const val MAX_PAYLOAD_BYTES = 72 * 1_024
         private const val MAX_PENDING_UNREGISTER = 512
         private const val MAX_SUBSCRIPTIONS = 256

@@ -2,6 +2,10 @@ package dev.sk2andy.materialbrowser.browser.gecko.webpush
 
 import android.content.Context
 import androidx.annotation.UiThread
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.ProcessLifecycleOwner
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import dev.sk2andy.materialbrowser.BuildConfig
 import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineKind
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoRuntimeOwner
@@ -9,6 +13,7 @@ import dev.sk2andy.materialbrowser.data.BrowserSessionStore
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -23,6 +28,7 @@ internal object GeckoWebPushCoordinator {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val lock = Any()
     private val workerStartingRuntime = AtomicBoolean(false)
+    private var foregroundJob: Job? = null
 
     @Volatile
     private var transport: FossWebPushTransport? = null
@@ -37,6 +43,14 @@ internal object GeckoWebPushCoordinator {
         runtime.webPushController.setDelegate(delegate(appContext))
         val reconnectOnAttach = !workerStartingRuntime.get()
         val fossTransport = transport(appContext)
+        if (foregroundJob == null) {
+            val owner = ProcessLifecycleOwner.get()
+            foregroundJob = owner.lifecycleScope.launch {
+                owner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                    fossTransport.listenWhileForeground()
+                }
+            }
+        }
         scope.launch {
             val hasPendingWork = fossTransport.hasPendingWork()
             FossWebPushTransport.schedulePeriodicReconnect(
@@ -68,6 +82,8 @@ internal object GeckoWebPushCoordinator {
     fun onBrowserEngineChanged(context: Context, kind: AndroidBrowserEngineKind) {
         val appContext = context.applicationContext
         if (kind != AndroidBrowserEngineKind.GeckoView) {
+            foregroundJob?.cancel()
+            foregroundJob = null
             FossWebPushTransport.schedulePeriodicReconnect(appContext, enabled = false)
             return
         }
