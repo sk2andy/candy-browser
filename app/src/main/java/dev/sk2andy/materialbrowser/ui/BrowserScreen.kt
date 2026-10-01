@@ -614,6 +614,7 @@ internal fun BrowserScreen(
         rootView.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
     }
     val keyboard = LocalSoftwareKeyboardController.current
+    val addressTabImeHandoff = rememberBrowserImeHandoff()
     val favoriteAddedMessage = stringResource(R.string.favorite_added_confirmation)
     val favoriteRemovedMessage = stringResource(R.string.favorite_removed_confirmation)
     val snoozeConfirmationMessage = stringResource(R.string.snooze_confirmation)
@@ -1028,26 +1029,52 @@ internal fun BrowserScreen(
     fun selectNavigation(suggestion: AddressSuggestion): Unit {
         val target = suggestion.openTabId
             ?.let { tabId -> controller.activeTabs.firstOrNull { it.id == tabId } }
+        addressTabImeHandoff.cancel()
+        val selectionGeneration = ++addressEditorOpenGeneration
+        addressEditorVisible = false
         if (target == null) {
             rootView.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
             controller.submitAddress(suggestion.url)
         } else {
-            val targetHandoff = TabHandoff(
-                tab = target,
-                preview = controller.previews[target.id].takeUnless { target.isIncognito },
-                favicon = controller.favicons[target.id],
-                previewTopInsetPx = controller.previewTopInsetPx(target.id),
-            )
-            if (controller.switchToOpenTab(target.id)) {
-                liveFrameTabId = null
-                tabHandoff = targetHandoff
-                backAnimationScope.launch { tabHandoffAlpha.snapTo(1f) }
-                rootView.performConfirmHaptic()
+            val sourceTabId = controller.selectedTabId
+            val sourceProfileId = controller.activeProfileId
+            val sourceIsIncognito = controller.selectedTab.isIncognito
+            val selectTarget = {
+                val currentTarget = controller.activeTabs.firstOrNull { it.id == target.id }
+                val targetHandoff = currentTarget?.let { currentTab ->
+                    TabHandoff(
+                        tab = currentTab,
+                        preview = controller.previews[currentTab.id].takeUnless { currentTab.isIncognito },
+                        favicon = controller.favicons[currentTab.id],
+                        previewTopInsetPx = controller.previewTopInsetPx(currentTab.id),
+                    )
+                }
+                if (targetHandoff != null && controller.switchToOpenTab(target.id)) {
+                    liveFrameTabId = null
+                    tabHandoff = targetHandoff
+                    backAnimationScope.launch { tabHandoffAlpha.snapTo(1f) }
+                    rootView.performConfirmHaptic()
+                } else {
+                    controller.submitAddress(suggestion.url)
+                }
+            }
+            if (controller.usesGeckoEngine) {
+                keyboard?.hide()
+                addressTabImeHandoff.run(
+                    isCurrent = {
+                        selectionGeneration == addressEditorOpenGeneration &&
+                            sourceTabId == controller.selectedTabId &&
+                            sourceProfileId == controller.activeProfileId &&
+                            sourceIsIncognito == controller.selectedTab.isIncognito &&
+                            !addressEditorVisible && !tabOverviewVisible &&
+                            !tabOverviewOpening && !settingsVisible
+                    },
+                    onReady = selectTarget,
+                )
             } else {
-                controller.submitAddress(suggestion.url)
+                selectTarget()
             }
         }
-        addressEditorVisible = false
     }
 
     fun selectSuggestion(item: AddressSuggestionItem): Unit {
@@ -1222,7 +1249,7 @@ internal fun BrowserScreen(
             settingsVisible && settingsDestination != SettingsDestination.Home ->
                 BrowserBackTarget.SettingsSubpage
             settingsVisible -> BrowserBackTarget.Settings
-            addressEditorVisible -> BrowserBackTarget.AddressEditor
+            addressEditorVisible || addressTabImeHandoff.isPending -> BrowserBackTarget.AddressEditor
             controller.findInPageState != null -> BrowserBackTarget.FindInPage
             candyTrailTabId != null -> BrowserBackTarget.CandyTrail
             tabOverviewVisible || tabOverviewOpening -> BrowserBackTarget.TabOverview
@@ -1282,7 +1309,11 @@ internal fun BrowserScreen(
                     }
                     settingsVisible = false
                 }
-                BrowserBackTarget.AddressEditor -> addressEditorVisible = false
+                BrowserBackTarget.AddressEditor -> {
+                    addressEditorOpenGeneration++
+                    addressTabImeHandoff.cancel()
+                    addressEditorVisible = false
+                }
                 BrowserBackTarget.FindInPage -> controller.closeFindInPage()
                 BrowserBackTarget.CandyTrail -> {
                     candyTrailPredictiveBackCommitted = receivedProgress

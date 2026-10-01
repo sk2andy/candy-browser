@@ -144,10 +144,16 @@ Frosted exposes three persisted controls while selected:
 - The main `…` menu shares the active browser-content blur source, including the new-tab page; its rows remain translucent and its individual quick-action tiles use the configured blur strength. It opens from the address-bar action with a spring scale-and-rise transition and leaves with a short fade-and-shrink transition.
 - Bottom sheets use the general Frosted transparency setting; Privacy X-Ray also blurs the active browser content. Clear and AMOLED sheets remain opaque.
 - Forced light, dark and AMOLED modes update system-bar icon contrast independently from system night mode.
+- Dark new-tab and address-editor backgrounds, the Candy logo backing, private-mode backing and
+  tab-switch suggestion containers use dark brand or neutral Material surface roles. Dynamic accent and inverse
+  roles can be light even in a dark palette, so they do not own those dark containers. Brand artwork
+  retains its original colors; light appearance keeps its existing accent treatment.
 - Appearance mode also selects Android's activity night resources. Both browser engines therefore
   expose the same effective light or dark mode to websites through `prefers-color-scheme`; AMOLED is
-  dark, while System follows the device setting. GeckoView receives the runtime color-scheme
-  preference plus Android configuration changes while System is active, then reloads resident
+  dark, while System follows the device setting. Candy resolves the persisted System choice from
+  effective Activity resources and forwards a concrete light or dark website preference, avoiding
+  dependence on Gecko's separate native night-mode cache. Start and resume reapply that resolved
+  preference along with the effective Android configuration. Effective night-mode changes reload resident
   sessions so existing documents observe the change reliably. System WebView replaces active
   renderer views against the new
   Android theme while carrying navigation and document state through an in-memory-only handoff,

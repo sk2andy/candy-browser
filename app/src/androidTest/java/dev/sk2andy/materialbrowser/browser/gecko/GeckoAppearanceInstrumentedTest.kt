@@ -73,6 +73,108 @@ class GeckoAppearanceInstrumentedTest {
         exerciseAppearanceTransitions(coldStart = false, missViewConfiguration = true)
     }
 
+    @Test
+    fun systemWebsitePreferenceIgnoresStaleGeckoNightConfiguration() {
+        val preferences = context.getSharedPreferences(
+            BrowserSessionStore.PREFERENCES_NAME,
+            Context.MODE_PRIVATE,
+        )
+        val originalPreferences = preferences.all
+        val originalNightMode = shell("cmd uimode night").substringAfter(':').trim()
+        val originalRuntimeScheme = AtomicInteger(GeckoRuntimeSettings.COLOR_SCHEME_SYSTEM)
+        instrumentation.runOnMainSync {
+            if (GeckoRuntimeOwner.hasRuntimeForTesting()) {
+                originalRuntimeScheme.set(
+                    (GeckoRuntimeOwner.getOrCreate(context) as GeckoViewRuntimeHandle)
+                        .preferredColorSchemeForTesting(),
+                )
+            }
+        }
+        try {
+            preferences.edit().clear().putString(
+                BrowserSessionStore.KEY_ANDROID_BROWSER_ENGINE,
+                AndroidBrowserEngineKind.GeckoView.stableId,
+            ).commit()
+            setSystemNightMode("yes")
+            ThemeFixtureServer().use { server ->
+                ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+                    scenario.onActivity { activity ->
+                        assertTrue(
+                            activity.browserControllerForTesting().openUrl(
+                                url = server.url,
+                                inNewTab = false,
+                                authorizeInitialExternalNavigation = false,
+                            ),
+                        )
+                    }
+                    listOf(true, false).forEach { expectedDark ->
+                        setSystemNightMode(if (expectedDark) "yes" else "no")
+                        val expectedTitle = if (expectedDark) DARK_TITLE else LIGHT_TITLE
+                        awaitWebsiteTitle(scenario, expectedTitle)
+                        val requestsBeforeStaleConfiguration = server.pageRequests.get()
+                        scenario.onActivity { activity ->
+                            val controller = activity.browserControllerForTesting()
+                            assertEquals(
+                                BrowserAppearanceMode.System,
+                                controller.appearanceSettings.appearanceMode,
+                            )
+                            assertEquals(
+                                if (expectedDark) {
+                                    Configuration.UI_MODE_NIGHT_YES
+                                } else {
+                                    Configuration.UI_MODE_NIGHT_NO
+                                },
+                                activity.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK,
+                            )
+                            // A separate native night cache can receive a stale configuration while
+                            // Activity resources and Candy's selected System appearance are current.
+                            val staleConfiguration = Configuration(activity.resources.configuration).apply {
+                                uiMode = (uiMode and Configuration.UI_MODE_NIGHT_MASK.inv()) or
+                                    if (expectedDark) {
+                                        Configuration.UI_MODE_NIGHT_NO
+                                    } else {
+                                        Configuration.UI_MODE_NIGHT_YES
+                                    }
+                            }
+                            GeckoRuntimeOwner.getOrCreate(context).onConfigurationChanged(staleConfiguration)
+                        }
+                        // Media-query changes arrive from Gecko's process asynchronously.
+                        SystemClock.sleep(750L)
+                        awaitWebsiteTitle(scenario, expectedTitle)
+                        assertEquals(requestsBeforeStaleConfiguration, server.pageRequests.get())
+                    }
+                }
+            }
+        } finally {
+            preferences.edit().clear().apply {
+                originalPreferences.forEach { (key, value) ->
+                    when (value) {
+                        is String -> putString(key, value)
+                        is Boolean -> putBoolean(key, value)
+                        is Int -> putInt(key, value)
+                        is Long -> putLong(key, value)
+                        is Float -> putFloat(key, value)
+                        is Set<*> -> putStringSet(key, value.filterIsInstance<String>().toSet())
+                    }
+                }
+            }.commit()
+            setSystemNightMode(originalNightMode)
+            instrumentation.runOnMainSync {
+                if (GeckoRuntimeOwner.hasRuntimeForTesting()) {
+                    val runtime = GeckoRuntimeOwner.getOrCreate(context)
+                    runtime.onConfigurationChanged(context.applicationContext.resources.configuration)
+                    runtime.setWebContentColorScheme(
+                        when (originalRuntimeScheme.get()) {
+                            GeckoRuntimeSettings.COLOR_SCHEME_DARK -> BrowserWebContentColorScheme.Dark
+                            GeckoRuntimeSettings.COLOR_SCHEME_LIGHT -> BrowserWebContentColorScheme.Light
+                            else -> BrowserWebContentColorScheme.System
+                        },
+                    )
+                }
+            }
+        }
+    }
+
     private fun exerciseAppearanceTransitions(
         coldStart: Boolean,
         stopForSystemChange: Boolean = false,
@@ -138,7 +240,7 @@ class GeckoAppearanceInstrumentedTest {
                         scenario,
                         appearanceMode = BrowserAppearanceMode.System,
                         expectedDark = true,
-                        expectedScheme = GeckoRuntimeSettings.COLOR_SCHEME_SYSTEM,
+                        expectedScheme = GeckoRuntimeSettings.COLOR_SCHEME_DARK,
                         themeDark = themeDark,
                     )
 
@@ -153,7 +255,7 @@ class GeckoAppearanceInstrumentedTest {
                         scenario,
                         appearanceMode = BrowserAppearanceMode.System,
                         expectedDark = false,
-                        expectedScheme = GeckoRuntimeSettings.COLOR_SCHEME_SYSTEM,
+                        expectedScheme = GeckoRuntimeSettings.COLOR_SCHEME_LIGHT,
                         themeDark = themeDark,
                     )
 
@@ -217,7 +319,7 @@ class GeckoAppearanceInstrumentedTest {
                         scenario,
                         appearanceMode = BrowserAppearanceMode.System,
                         expectedDark = true,
-                        expectedScheme = GeckoRuntimeSettings.COLOR_SCHEME_SYSTEM,
+                        expectedScheme = GeckoRuntimeSettings.COLOR_SCHEME_DARK,
                         themeDark = themeDark,
                     )
                 }
@@ -295,7 +397,16 @@ class GeckoAppearanceInstrumentedTest {
                     if (expectedDark) Configuration.UI_MODE_NIGHT_NO else Configuration.UI_MODE_NIGHT_YES
             }
             activity.window.decorView.dispatchConfigurationChanged(staleConfiguration)
-            GeckoRuntimeOwner.getOrCreate(context).onConfigurationChanged(staleConfiguration)
+            GeckoRuntimeOwner.getOrCreate(context).apply {
+                onConfigurationChanged(staleConfiguration)
+                setWebContentColorScheme(
+                    if (expectedDark) {
+                        BrowserWebContentColorScheme.Light
+                    } else {
+                        BrowserWebContentColorScheme.Dark
+                    },
+                )
+            }
         }
         awaitTheme(themeDark, expectedDark = !expectedDark)
         awaitWebsiteTitle(scenario, if (expectedDark) LIGHT_TITLE else DARK_TITLE)
@@ -326,7 +437,11 @@ class GeckoAppearanceInstrumentedTest {
             scenario,
             appearanceMode = BrowserAppearanceMode.System,
             expectedDark = expectedDark,
-            expectedScheme = GeckoRuntimeSettings.COLOR_SCHEME_SYSTEM,
+            expectedScheme = if (expectedDark) {
+                GeckoRuntimeSettings.COLOR_SCHEME_DARK
+            } else {
+                GeckoRuntimeSettings.COLOR_SCHEME_LIGHT
+            },
             themeDark = themeDark,
         )
         repeat(2) { resume ->
@@ -340,7 +455,11 @@ class GeckoAppearanceInstrumentedTest {
                 scenario,
                 appearanceMode = BrowserAppearanceMode.System,
                 expectedDark = expectedDark,
-                expectedScheme = GeckoRuntimeSettings.COLOR_SCHEME_SYSTEM,
+                expectedScheme = if (expectedDark) {
+                    GeckoRuntimeSettings.COLOR_SCHEME_DARK
+                } else {
+                    GeckoRuntimeSettings.COLOR_SCHEME_LIGHT
+                },
                 themeDark = themeDark,
             )
             // Allow asynchronous navigation to arrive before checking document preservation.

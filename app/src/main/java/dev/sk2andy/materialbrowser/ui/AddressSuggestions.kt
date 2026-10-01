@@ -304,7 +304,7 @@ private fun RecallSuggestionRow(
 }
 
 @Composable
-private fun NavigationSuggestionRow(
+internal fun NavigationSuggestionRow(
     suggestion: AddressSuggestion,
     highlighted: Boolean,
     onHighlight: () -> Unit,
@@ -312,20 +312,17 @@ private fun NavigationSuggestionRow(
     onFill: () -> Unit,
 ) {
     val switchesToOpenTab = suggestion.openTabId != null
-    val containerColor = when {
-        highlighted -> MaterialTheme.colorScheme.tertiaryContainer
-        switchesToOpenTab -> MaterialTheme.colorScheme.primaryContainer
-        else -> Color.Transparent
-    }
-    val contentColor = when {
-        highlighted -> MaterialTheme.colorScheme.onTertiaryContainer
-        switchesToOpenTab -> MaterialTheme.colorScheme.onPrimaryContainer
-        else -> MaterialTheme.colorScheme.onSurface
-    }
+    val rowColors = AddressSuggestionColorRules.navigation(
+        colors = MaterialTheme.colorScheme,
+        highlighted = highlighted,
+        switchesToOpenTab = switchesToOpenTab,
+    )
+    val contentColor = rowColors.content
     Surface(
         modifier = Modifier
             .padding(horizontal = 6.dp, vertical = 1.dp)
             .fillMaxWidth()
+            .testTag(AddressSuggestionTestTags.navigationRow(suggestion.url))
             .clip(RoundedCornerShape(16.dp))
             .semantics { selected = highlighted }
             .clickable(
@@ -336,7 +333,7 @@ private fun NavigationSuggestionRow(
                 },
             ),
         shape = RoundedCornerShape(16.dp),
-        color = containerColor,
+        color = rowColors.container,
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 9.dp),

@@ -927,6 +927,7 @@ internal fun AddressEditorBackdrop(
     onDismiss: () -> Unit,
 ) {
     val colors = MaterialTheme.colorScheme
+    val blankTabColors = BlankTabColorRules.resolve(colors)
     val boundedProgress = BlankTabModeMorphRules.bounded(modeProgress)
     val regularIconAlpha = BlankTabModeMorphRules.regularIconAlpha(boundedProgress)
     val incognitoIconAlpha = BlankTabModeMorphRules.incognitoIconAlpha(boundedProgress)
@@ -934,8 +935,8 @@ internal fun AddressEditorBackdrop(
         Modifier.blankTabModeBackground(
             progress = boundedProgress,
             revealOriginInRoot = revealOriginInRoot,
-            regularCenterColor = colors.primaryContainer,
-            incognitoCenterColor = colors.inverseSurface,
+            regularCenterColor = blankTabColors.regularBackground,
+            incognitoCenterColor = blankTabColors.incognitoBackground,
             edgeColor = colors.surface,
             wallpaper = wallpaper,
         )
@@ -960,11 +961,12 @@ internal fun AddressEditorBackdrop(
             Surface(
                 modifier = Modifier
                     .align(Alignment.Center)
+                    .testTag(AddressEditorTestTags.Hero)
                     .size(96.dp),
                 shape = RoundedCornerShape(
                     BlankTabModeMorphRules.heroCornerRadiusDp(boundedProgress).dp,
                 ),
-                color = lerp(colors.primary, colors.inverseSurface, boundedProgress),
+                color = lerp(blankTabColors.regularHero, blankTabColors.incognitoHero, boundedProgress),
                 shadowElevation = 14.dp,
             ) {
                 Box(contentAlignment = Alignment.Center) {
@@ -990,10 +992,14 @@ internal fun AddressEditorBackdrop(
                                 scaleX = BlankTabModeMorphRules.iconScale(incognitoIconAlpha)
                                 scaleY = scaleX
                             },
-                        tint = colors.inverseOnSurface,
+                        tint = blankTabColors.incognitoContent,
                     )
                 }
             }
         }
     }
+}
+
+internal object AddressEditorTestTags {
+    const val Hero = "address_editor_hero"
 }

@@ -96,6 +96,15 @@
   margins with their maximum; a Compose safe-drawing host already owns keyboard space.
   Address editing and Find in page retain chrome-owned
   IME suppression, so their keyboards do not resize the underlying website.
+- When an address suggestion selects an existing Gecko tab, dismiss the address editor and
+  keyboard before binding the destination session. Wait for the observed IME bottom inset to
+  reach zero and the next rendering frame; a native surface rebound while the keyboard is
+  still open can retain a keyboard-sized crop even after Android and DOM bounds recover.
+  The pending handoff is memory-only and cancels on Back, a new address-editor generation,
+  source-tab/profile/private-mode change or newly opened settings/tab overview.
+  Revalidate the destination before selecting it; private
+  tabs never contribute persisted preview content. System WebView keeps its existing immediate
+  tab-selection path.
 - Route untrusted URLs through existing normalizers. Do not add a second permissive parser.
 - Keep Auto De-AMP browser-wide, persisted and enabled by default. Both GeckoView and System WebView
   enter the same main-frame listener. Rewrite only trusted Google viewer/cache document shapes whose

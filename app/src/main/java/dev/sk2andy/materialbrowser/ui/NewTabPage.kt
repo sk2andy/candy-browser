@@ -83,6 +83,7 @@ internal fun NewTabPage(
     explicitSafeDrawingPadding: PaddingValues? = null,
 ) {
     val colors = MaterialTheme.colorScheme
+    val blankTabColors = BlankTabColorRules.resolve(colors)
     val profileWallpaper = LocalProfileWallpaper.current.takeUnless { incognito }
     val boundedProgress = BlankTabModeMorphRules.bounded(modeProgress)
     val regularIconAlpha = BlankTabModeMorphRules.regularIconAlpha(boundedProgress)
@@ -101,8 +102,8 @@ internal fun NewTabPage(
             .blankTabModeBackground(
                 progress = boundedProgress,
                 revealOriginInRoot = revealOriginInRoot,
-                regularCenterColor = colors.primaryContainer,
-                incognitoCenterColor = colors.inverseSurface,
+                regularCenterColor = blankTabColors.regularBackground,
+                incognitoCenterColor = blankTabColors.incognitoBackground,
                 edgeColor = colors.surface,
                 wallpaper = profileWallpaper,
             ),
@@ -155,7 +156,7 @@ internal fun NewTabPage(
                     shape = RoundedCornerShape(
                         BlankTabModeMorphRules.heroCornerRadiusDp(boundedProgress).dp,
                     ),
-                    color = lerp(NewTabHeroRegularColor, colors.inverseSurface, boundedProgress),
+                    color = lerp(NewTabHeroRegularColor, blankTabColors.incognitoHero, boundedProgress),
                     shadowElevation = BlankTabModeMorphRules.HERO_SHADOW_ELEVATION_DP.dp,
                 ) {
                     Box(
@@ -184,7 +185,7 @@ internal fun NewTabPage(
                                     scaleX = BlankTabModeMorphRules.iconScale(incognitoIconAlpha)
                                     scaleY = scaleX
                                 },
-                            tint = colors.inverseOnSurface,
+                            tint = blankTabColors.incognitoContent,
                         )
                     }
                 }

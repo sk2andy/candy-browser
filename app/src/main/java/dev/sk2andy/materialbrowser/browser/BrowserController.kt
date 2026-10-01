@@ -7,6 +7,7 @@ import android.content.ClipboardManager
 import android.content.ContentValues
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.Rect
@@ -105,7 +106,7 @@ import dev.sk2andy.materialbrowser.browser.credentials.HttpAuthPrompt
 import dev.sk2andy.materialbrowser.browser.credentials.HttpAuthPromptRules
 import dev.sk2andy.materialbrowser.browser.engine.AndroidBrowserEngineFactory
 import dev.sk2andy.materialbrowser.browser.engine.BrowserEngineContentKind
-import dev.sk2andy.materialbrowser.browser.engine.BrowserWebContentColorScheme
+import dev.sk2andy.materialbrowser.browser.engine.BrowserWebContentAppearanceRules
 import dev.sk2andy.materialbrowser.browser.gecko.AndroidBrowserEngineSessionPort
 import dev.sk2andy.materialbrowser.browser.gecko.BrowserEnginePreviewCapture
 import dev.sk2andy.materialbrowser.browser.gecko.BrowserEnginePreparedSession
@@ -220,7 +221,6 @@ import dev.sk2andy.materialbrowser.data.DeveloperSettings
 import dev.sk2andy.materialbrowser.data.AppLogEvent
 import dev.sk2andy.materialbrowser.data.AppLogging
 import dev.sk2andy.materialbrowser.data.AppearanceSettings
-import dev.sk2andy.materialbrowser.data.BrowserAppearanceMode
 import dev.sk2andy.materialbrowser.data.AddressBarDockPlacement
 import dev.sk2andy.materialbrowser.data.BrowserSessionStore
 import dev.sk2andy.materialbrowser.data.AppDataTransferLock
@@ -9836,13 +9836,11 @@ class BrowserController(
 
     private fun applyWebContentAppearance(settings: AppearanceSettings) {
         browserEngineSessionFactory.setWebContentColorScheme(
-            when (settings.appearanceMode) {
-                BrowserAppearanceMode.System -> BrowserWebContentColorScheme.System
-                BrowserAppearanceMode.Light -> BrowserWebContentColorScheme.Light
-                BrowserAppearanceMode.Dark,
-                BrowserAppearanceMode.Amoled,
-                -> BrowserWebContentColorScheme.Dark
-            },
+            BrowserWebContentAppearanceRules.colorScheme(
+                settings = settings,
+                systemDark = activity.resources.configuration.uiMode and
+                    Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES,
+            ),
         )
         browserEngineSessionFactory.setForceDarkWebsites(settings.forceDarkWebsites)
     }
@@ -10556,6 +10554,7 @@ class BrowserController(
     fun onResume() {
         // The process-wide runtime can retain a night mode from before the app was stopped.
         browserEngineSessionFactory.onConfigurationChanged(activity.resources.configuration)
+        applyWebContentAppearance(appearanceSettings)
         if (store.loadPendingTabClearOnTaskRemoval()) {
             store.savePendingTabClearOnTaskRemoval(pending = false)
         }
@@ -10589,6 +10588,7 @@ class BrowserController(
 
     fun onStart() {
         browserEngineSessionFactory.onConfigurationChanged(activity.resources.configuration)
+        applyWebContentAppearance(appearanceSettings)
         isActivityStarted = true
         if (usesGeckoEngine && !isActiveProfileLocked) {
             if (externalLinkPreviewState == null) {

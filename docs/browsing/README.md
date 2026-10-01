@@ -41,6 +41,9 @@ The GeckoView 155 to 157 compatibility review, upstream fixes and upgrade checks
 Issue 221's bootstrap-history reproduction, popup boundaries and verification are recorded in
 [`../audits/issue-221-gecko-navigation.md`](../audits/issue-221-gecko-navigation.md).
 
+Dark System appearance, native website preferences and the address-editor/tab SurfaceView handoff
+are recorded in [`../audits/dark-appearance-and-address-tab-handoff.md`](../audits/dark-appearance-and-address-tab-handoff.md).
+
 | Surface | Tests |
 | --- | --- |
 | URL, search, AI mode, URI policy | `AddressResolverTest`, `SearchEngineTest`, `AddressAiModeRulesTest`, `AddressAiModeToggleInstrumentedTest`, `BrowserUriPolicyTest` |
@@ -51,7 +54,7 @@ Issue 221's bootstrap-history reproduction, popup boundaries and verification ar
 | Commands and suggestions | `browser/commands/*Test`, `SearchSuggestionProviderTest` |
 | Candy Recall rules, extraction, SQLite ranking and UI | `recall/*Test`, `RecallRepositoryInstrumentedTest`, focused address/History instrumented tests |
 | Gestures and motion | `ui/Address*Test`, `ui/Address*InstrumentedTest` |
-| Gecko keyboard viewport, focused input and chrome-owned IME | `GeckoViewInsetRulesTest`, `GeckoKeyboardInsetsInstrumentedTest`, `FullImmersiveModeInstrumentedTest` |
+| Gecko keyboard viewport, focused input, chrome-owned IME and new-tab suggestion handoff | `GeckoViewInsetRulesTest`, `GeckoKeyboardInsetsInstrumentedTest`, `GeckoAddressTabSelectionInstrumentedTest`, `FullImmersiveModeInstrumentedTest` |
 | Bottom control obstruction and automatic right parking | `AddressBarAutoDockRulesTest`, `TextInputOcclusionScriptTest`, `scripts/text_input_occlusion.test.mjs`, `GeckoPageControlOcclusionInstrumentedTest`, focused controller/System WebView instrumented tests |
 | Restored launcher tab and initial Gecko viewport | `StartupPresentationRulesTest`, `BrowserInitialNavigationRulesTest`, `MainActivityRestoredTabInstrumentedTest`, `BrowserControllerInitialViewportInstrumentedTest` |
 | WebView runtime, Basic authentication and Link Peek | `browser/*InstrumentedTest`, `BrowserControllerHttpAuthInstrumentedTest`, `ui/HttpAuthPromptDialogInstrumentedTest`, `ui/LinkPeekOverlayInstrumentedTest` |
@@ -60,6 +63,9 @@ Issue 221's bootstrap-history reproduction, popup boundaries and verification ar
 | Shared browser behavior and Gecko extension policy | `shared/src/commonTest`, `browser/gecko/*Test` |
 | Gecko loading surface, bootstrap canvas, first paint, reload and view reattachment | `GeckoWebContentThemeInstrumentedTest#unpaintedGeckoSurfaceUsesDarkBackground`, `#unpaintedGeckoSurfaceUsesLightBackground`, `#darkLoadingSurfaceReleasesForFirstPaintAndReload`, `#lightLoadingSurfaceReleasesForFirstPaintAndReload` |
 | Gecko website/Compose appearance, background night changes, missed configuration delivery and nested AppCompat night overrides | `GeckoAppearanceInstrumentedTest`, `GeckoWebContentThemeInstrumentedTest`; the cold-start method requires system dark before a fresh, isolated instrumentation process. Resume reproduction details: [`../audits/background-appearance-reconciliation.md`](../audits/background-appearance-reconciliation.md) |
+| Dark new-tab/editor logo backing and tab-switch suggestion contrast | `BlankTabColorRulesTest`, `AddressSuggestionColorRulesTest`, `AddressEditorDarkThemeInstrumentedTest` |
+| Effective website theme independent from native engine night caches | `BrowserWebContentAppearanceRulesTest`, focused `GeckoAppearanceInstrumentedTest.systemWebsitePreferenceIgnoresStaleGeckoNightConfiguration` |
+| First inline website theme during a fresh System-dark process | `GeckoColdStartThemeInstrumentedTest`; run alone after enabling system dark and force-stopping the app |
 | Edge-to-edge Safe-Area, Shadow DOM, observable fixture readiness and scroll scaling | `WebContentTopInsetScriptTest`, `WebContentTopInsetScriptInstrumentedTest`, `GeckoEdgeToEdgeInstrumentedTest`, `GeckoSafeAreaScalingInstrumentedTest`, `scripts/web_content_top_inset_performance.test.mjs`, `scripts/edge_to_edge_site_fixture.test.mjs` |
 | Diagnostic activation, export and private-session cancellation | `GeckoPerformanceDiagnosticsRulesTest`, `GeckoPerformanceDiagnosticsInstrumentedTest`, `BrowserPerformanceTraceTest`, `scripts/web_content_top_inset_diagnostics.test.mjs` |
 | Manual DOM probe, native env delivery, bounded payload and lifecycle cancellation | `GeckoDomDiagnosticsRulesTest`, `GeckoDomDiagnosticsInstrumentedTest`, `scripts/gecko_dom_probe.test.mjs` |
