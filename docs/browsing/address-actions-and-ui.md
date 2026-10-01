@@ -215,3 +215,12 @@ Google suggestions use the current public HTTPS OpenSearch-style endpoint with e
 and output parameters. Google documents this feed as unpublished and unsupported, so availability
 is not guaranteed. Like every remote provider, Google receives regular-tab input only after the
 minimum query length and only after explicit provider selection.
+
+## Site protection icon
+
+| Presentation | Contract |
+| --- | --- |
+| Default | Icon-only site information action, without a numeric counter or separate badge background |
+| Activity | Theme tertiary icon tint and existing batched pulse indicate permission/blocking activity |
+| Accessibility | Connection status, blocked count and permission activity remain in the content description; 48 dp click target opens Privacy X-Ray |
+| Details | Blocked counts remain available inside Privacy X-Ray |

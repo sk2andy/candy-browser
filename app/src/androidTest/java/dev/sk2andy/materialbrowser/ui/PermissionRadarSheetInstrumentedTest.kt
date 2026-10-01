@@ -2,6 +2,7 @@ package dev.sk2andy.materialbrowser.ui
 
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -121,6 +122,35 @@ class PermissionRadarSheetInstrumentedTest {
             .assertHasClickAction()
             .performClick()
         assertTrue(opened)
+    }
+
+    @Test
+    fun siteInfoButtonHidesCounterAndKeepsAccessibleBlockedCount() {
+        var opened = false
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                PermissionRadarBadge(
+                    siteAvailable = true,
+                    activityVisible = true,
+                    connectionKind = SiteConnectionKind.Https,
+                    blockedCount = 42,
+                    onClick = { opened = true },
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("42", useUnmergedTree = true).assertDoesNotExist()
+        composeRule.onNodeWithTag(PermissionRadarTestTags.ActivityBadge)
+            .assertHasClickAction()
+            .performClick()
+        assertTrue(opened)
+        composeRule.onNodeWithContentDescription(
+            context.getString(
+                R.string.site_info_badge_cd,
+                context.getString(R.string.site_connection_https),
+                42,
+            ) + ". " + context.getString(R.string.permission_radar_activity_cd),
+        ).assertExists()
     }
 
     @Test
