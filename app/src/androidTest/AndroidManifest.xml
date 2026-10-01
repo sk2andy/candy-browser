@@ -12,6 +12,12 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="https" android:host="issue199.candy.test" />
             </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="*" android:path="/issue207-download-task" />
+            </intent-filter>
         </activity>
         <activity
             android:name="dev.sk2andy.materialbrowser.capsule.IconPackFixtureActivity"

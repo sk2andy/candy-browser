@@ -2474,6 +2474,65 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
     }
 
     @Test
+    fun automaticWebLinkWithoutSiteAppResumesCandyOnRepeatedTap() {
+        val targetUrl = "https://kesha.lnk.to/issue207-download-task"
+        lateinit var recordingContext: RecordingContext
+        lateinit var browserController: BrowserController
+        lateinit var session: ReentrantAttachSession
+        composeRule.runOnIdle {
+            val activity = composeRule.activity
+            val store = BrowserSessionStore(activity)
+            originalEngineKind = store.loadAndroidBrowserEngineKind()
+            originalExternalAppLinkHandling = store.loadExternalAppLinkHandling()
+            assertTrue(store.saveAndroidBrowserEngineKind(AndroidBrowserEngineKind.GeckoView))
+            recordingContext = RecordingContext(activity)
+            browserController = BrowserController(
+                activity = activity,
+                externalApps = ExternalAppLauncher(recordingContext),
+            )
+            controller = browserController
+            val tabId = browserController.selectedTabId
+            session = ReentrantAttachSession(tabId = tabId, onFirstAttach = {})
+            browserController.installGeckoEngineSessionForTesting(session)
+            browserController.updateExternalAppLinkHandling(ExternalAppLinkHandling.Automatic)
+        }
+        repeat(2) {
+            composeRule.runOnIdle {
+                browserController.dispatchGeckoEngineEventForTesting(
+                    BrowserEngineEvent(
+                        tabId = browserController.selectedTabId,
+                        type = BrowserEngineEventType.NavigationCommitted,
+                        address = "https://www.google.com/search?q=kesha",
+                        title = "Search",
+                        canGoBack = false,
+                        canGoForward = false,
+                        failureDescription = null,
+                    ),
+                )
+                session.commands.clear()
+                assertEquals(
+                    GeckoNavigationRequestDecision.Deny,
+                    browserController.dispatchSelectedGeckoNavigationRequestForTesting(
+                        GeckoMainFrameNavigationRequest(
+                            url = targetUrl,
+                            isRedirect = false,
+                            hasUserGesture = true,
+                            isDirectNavigation = false,
+                        ),
+                    ),
+                )
+            }
+            composeRule.waitUntil(timeoutMillis = 5_000L) {
+                session.commands.any { it.address == targetUrl }
+            }
+            composeRule.runOnIdle {
+                assertNull(recordingContext.lastIntent)
+                assertNull(browserController.externalAppPrompt)
+            }
+        }
+    }
+
+    @Test
     fun automaticAppLinkUsesInstalledAppEvenWhenAndroidHasNoDefault() {
         val redditUrl = "https://www.reddit.com/r/candy/"
         lateinit var recordingContext: RecordingContext

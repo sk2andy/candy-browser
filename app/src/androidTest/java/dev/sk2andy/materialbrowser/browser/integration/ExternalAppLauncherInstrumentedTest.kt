@@ -21,7 +21,7 @@ class ExternalAppLauncherInstrumentedTest {
     private val context = RecordingContext(
         InstrumentationRegistry.getInstrumentation().targetContext,
     )
-    private val launcher = ExternalAppLauncher(context)
+    private val launcher = ExternalAppLauncher(context, canResolveExternalActivity = { true })
 
     @Test
     fun webLinksRequireDirectNonBrowserDefaultHandler() {
@@ -100,7 +100,7 @@ class ExternalAppLauncherInstrumentedTest {
 
         assertEquals(
             ExternalLaunchResult.Launched,
-            launcher.openWebUrlInChosenApp(targetUrl),
+            ExternalAppLauncher(context).openWebUrlInChosenApp(targetUrl),
         )
 
         val launchedIntent = requireNotNull(context.lastIntent)
@@ -110,15 +110,60 @@ class ExternalAppLauncherInstrumentedTest {
 
     @Test
     fun explicitOpenInAppDoesNotSelectGenericBrowser() {
-        assertEquals(
-            ExternalLaunchResult.Launched,
-            launcher.openWebUrlInChosenApp("https://example.invalid/article"),
+        val unavailableLauncher = ExternalAppLauncher(
+            context = context,
+            canResolveExternalActivity = { false },
+            findExternalWebPackages = { emptyList() },
         )
+        assertEquals(
+            ExternalLaunchResult.Unsupported,
+            unavailableLauncher.openWebUrlInChosenApp("https://example.invalid/article"),
+        )
+        assertNull(context.lastIntent)
+    }
 
-        val launchedIntent = requireNotNull(context.lastIntent)
-        assertNull(launchedIntent.`package`)
-        assertTrue(launchedIntent.flags and Intent.FLAG_ACTIVITY_REQUIRE_NON_BROWSER != 0)
-        assertTrue(launchedIntent.flags and Intent.FLAG_ACTIVITY_REQUIRE_DEFAULT != 0)
+    @Test
+    fun genericDownloadHandlerDoesNotReceiveOrdinaryWebLinks() {
+        val targetUrl = "https://kesha.lnk.to/issue207-download-task"
+        val testPackage = InstrumentationRegistry.getInstrumentation().context.packageName
+        val handlers = context.packageManager.queryIntentActivities(
+            Intent(Intent.ACTION_VIEW, Uri.parse(targetUrl))
+                .addCategory(Intent.CATEGORY_BROWSABLE)
+                .setPackage(testPackage),
+            PackageManager.MATCH_DEFAULT_ONLY or PackageManager.GET_RESOLVED_FILTER,
+        )
+        assertTrue(handlers.any { it.filter?.getDataAuthority(0)?.host == "*" })
+
+        val unavailableLauncher = ExternalAppLauncher(context)
+        assertEquals(
+            ExternalLaunchResult.Unsupported,
+            unavailableLauncher.openWebUrlInChosenApp(targetUrl),
+        )
+        assertNull(context.lastIntent)
+    }
+
+    @Test
+    fun unavailableDefaultHandlerNeverLaunchesOrShowsChooser() {
+        val unavailableLauncher = ExternalAppLauncher(
+            context = context,
+            canResolveExternalActivity = { false },
+        )
+        assertEquals(
+            ExternalLaunchResult.Unsupported,
+            unavailableLauncher.openWebUrlExternally("https://kesha.lnk.to/period"),
+        )
+        assertEquals(
+            ExternalLaunchResult.Unsupported,
+            unavailableLauncher.open(Uri.parse("intent://kesha.lnk.to/period#Intent;scheme=https;end")),
+        )
+        assertEquals(
+            ExternalLaunchResult.OpenInBrowser("https://kesha.lnk.to/period"),
+            unavailableLauncher.open(Uri.parse(
+                "intent://kesha.lnk.to/period#Intent;scheme=https;" +
+                    "S.browser_fallback_url=https%3A%2F%2Fkesha.lnk.to%2Fperiod;end",
+            )),
+        )
+        assertNull(context.lastIntent)
     }
 
     @Test
@@ -236,7 +281,7 @@ class ExternalAppLauncherInstrumentedTest {
     fun activityHandoffsUseExternalTasksForWebSpecialSchemeAndIntentLinks() {
         lateinit var activity: RecordingActivity
         InstrumentationRegistry.getInstrumentation().runOnMainSync { activity = RecordingActivity() }
-        val activityLauncher = ExternalAppLauncher(activity)
+        val activityLauncher = ExternalAppLauncher(activity, canResolveExternalActivity = { true })
         val requests = listOf(
             "https://example.com/article",
             PLAY_STORE_URL,

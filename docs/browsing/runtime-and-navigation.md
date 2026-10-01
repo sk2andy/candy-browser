@@ -163,8 +163,13 @@
 - Persist the browser-wide external-app handling mode as `Automatic` by default or `Always ask`.
   In ask mode, resolve HTTP(S) app-link availability without launching, show one current-source-bound
   confirmation, and never launch before confirmation. Cancellation leaves the source in place;
-  links without a direct app handler continue in Candy without a misleading prompt. Explicit
-  user-invoked **Open in app** actions remain already confirmed and use the same default-handler and
+  links without a direct app handler continue in Candy without a misleading prompt.
+  HTTP(S) handlers must declare an authority matching the target with a non-empty host suffix.
+  A catch-all `host="*"` download or utility handler is not a site app, even when Android selects it
+  as the default. Apply the same check to installed-app discovery and actual unscoped launches;
+  an empty candidate list returns to Candy without retrying a generic handler. Domain-scoped
+  wildcard handlers such as `*.spotify.com` remain eligible for matching subdomains.
+  User-invoked **Open in app** actions remain already confirmed and use the same default-handler and
   matching-app selection as `Automatic`, including a chooser when several matching apps exist.
   Apply the same navigation policy
   before creating a `target=_blank` or `window.open` tab so app links cannot bypass the handoff path.
