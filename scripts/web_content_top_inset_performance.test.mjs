@@ -2429,6 +2429,19 @@ test('point discovery reuses only identical coordinates inside one transaction',
   assert.equal(calls.points, 3);
 });
 
+test('safe unowned positioned elements do not gain a zero-translation stacking context', () => {
+  for (const position of ['absolute', 'fixed', 'sticky']) {
+    const { reads, fakeElement } = harness();
+    const safeControl = fakeElement({ computed: { position },
+      rect: { top: 200, bottom: 250, left: 0, right: 350, width: 350, height: 50 },
+    });
+    const plan = reads.withLayoutReadCache(() => reads.planLocalOffset(safeControl, 48));
+    assert.equal(plan, null, `${position} control below the inset needs no owned transform`);
+    assert.equal(safeControl.style.getPropertyValue('translate'), '');
+    assert.equal(safeControl.hasAttribute('data-candy-browser-top-inset-offset'), false);
+  }
+});
+
 test('normal offset plans do not query layout-resolved CSS height', () => {
   for (const [position, width, height] of [
     ['fixed', 25, 64], ['sticky', 25, 64], ['absolute', 25, 64],

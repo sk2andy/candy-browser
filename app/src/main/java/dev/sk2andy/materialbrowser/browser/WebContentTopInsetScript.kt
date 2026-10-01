@@ -945,6 +945,9 @@ internal object WebContentTopInsetScript {
                     : 0
                 );
                 const offset = Math.max(0, minimumTop - unshiftedTop);
+                // Even translate: 0px creates a stacking context. Leave safe author controls
+                // untouched so interaction-time discovery cannot change their click target.
+                if (!isOwned && offset === 0) return null;
                 const isFixedPanel = style.position === 'fixed' && isViewportTall;
                 let panelMaxHeight = null;
                 if (isFixedPanel) {
