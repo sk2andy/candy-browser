@@ -43,8 +43,10 @@ class ExternalDownloadManager(private val context: Context) {
     private val packageManager = context.packageManager
 
     fun discover(request: BrowserDownloadRequest? = null): List<ExternalDownloadManagerApp> {
-        val knownOneDmApps = ONE_DM_PACKAGES.mapNotNull(::oneDmApp)
-        val knownOneDmPackages = knownOneDmApps.mapTo(hashSetOf(), ExternalDownloadManagerApp::packageName)
+        val knownApps = ONE_DM_PACKAGES.mapNotNull { packageName ->
+            knownApp(packageName, ONE_DM_ACTIVITY, isOneDm = true)
+        } + listOfNotNull(knownApp(GOPEED_PACKAGE, GOPEED_ACTIVITY))
+        val knownPackages = knownApps.mapTo(hashSetOf(), ExternalDownloadManagerApp::packageName)
         val mimeTypes = request?.mimeType?.let(::listOf) ?: PROBE_MIME_TYPES
         val genericApps = mimeTypes.asSequence()
             .flatMap { mimeType ->
@@ -55,12 +57,12 @@ class ExternalDownloadManager(private val context: Context) {
                 ).asSequence()
             }
             .filterNot { it.activityInfo.packageName == context.packageName }
-            .filterNot { it.activityInfo.packageName in knownOneDmPackages }
+            .filterNot { it.activityInfo.packageName in knownPackages }
             .filter { it.activityInfo.packageName in GENERIC_MANAGER_PACKAGES }
             .mapNotNull(::genericApp)
             .distinctBy(ExternalDownloadManagerApp::packageName)
             .toList()
-        return (knownOneDmApps + genericApps)
+        return (knownApps + genericApps)
             .distinctBy(ExternalDownloadManagerApp::id)
             .sortedWith(
                 compareByDescending<ExternalDownloadManagerApp> { it.isOneDm }
@@ -116,8 +118,12 @@ class ExternalDownloadManager(private val context: Context) {
         }
     }
 
-    private fun oneDmApp(packageName: String): ExternalDownloadManagerApp? {
-        val component = ComponentName(packageName, ONE_DM_ACTIVITY)
+    private fun knownApp(
+        packageName: String,
+        activityName: String,
+        isOneDm: Boolean = false,
+    ): ExternalDownloadManagerApp? {
+        val component = ComponentName(packageName, activityName)
         val activityInfo = runCatching {
             packageManager.getActivityInfo(
                 component,
@@ -130,9 +136,9 @@ class ExternalDownloadManager(private val context: Context) {
             ?: packageName
         return app(
             packageName = packageName,
-            activityName = ONE_DM_ACTIVITY,
+            activityName = activityName,
             label = label,
-            isOneDm = true,
+            isOneDm = isOneDm,
         )
     }
 
@@ -191,6 +197,8 @@ class ExternalDownloadManager(private val context: Context) {
             "com.tachibana.downloader",
         )
         const val ONE_DM_ACTIVITY = "idm.internet.download.manager.Downloader"
+        const val GOPEED_PACKAGE = "com.gopeed.gopeed"
+        const val GOPEED_ACTIVITY = "com.gopeed.gopeed.MainActivity"
         const val EXTRA_FILENAME = "extra_filename"
         const val EXTRA_COOKIES = "extra_cookies"
         const val EXTRA_USER_AGENT = "extra_useragent"
