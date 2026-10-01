@@ -916,7 +916,9 @@ private fun GeckoBrowserSessionState.hasSharedStateChangeFrom(
         title != previous.title ||
         canGoBack != previous.canGoBack ||
         canGoForward != previous.canGoForward ||
-        httpStatusCode != previous.httpStatusCode
+        httpStatusCode != previous.httpStatusCode ||
+        progress != previous.progress ||
+        isLoading != previous.isLoading
 
 private fun GeckoBrowserSessionState.toEngineEvent(
     tabId: String,
@@ -933,4 +935,5 @@ private fun GeckoBrowserSessionState.toEngineEvent(
     isLoading = isLoading,
     httpStatusCode = httpStatusCode,
     failureKind = failureKind,
+    progress = progress.coerceIn(0, 100),
 )

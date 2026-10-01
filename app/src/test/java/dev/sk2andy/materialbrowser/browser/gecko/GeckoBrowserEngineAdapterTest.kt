@@ -17,6 +17,35 @@ import org.junit.Test
 
 class GeckoBrowserEngineAdapterTest {
     @Test
+    fun `progress only changes reach shared events while adapter is open`() {
+        val session = FakeGeckoBrowserSession()
+        val events = mutableListOf<BrowserEngineEvent>()
+        val adapter = GeckoBrowserEngineSessionAdapter(
+            tabId = "tab-1",
+            session = session,
+            eventSink = BrowserEngineEventSink(events::add),
+        )
+        val loading = GeckoBrowserSessionState(
+            url = "https://example.com/",
+            isLoading = true,
+            progress = 0,
+        )
+        session.emit(loading)
+        events.clear()
+
+        session.emit(loading.copy(progress = 42))
+        session.emit(loading.copy(progress = 80))
+
+        assertEquals(listOf(42, 80), events.map { it.progress })
+        assertTrue(events.all { it.type == BrowserEngineEventType.StateChanged })
+        assertTrue(events.all { it.isLoading == true })
+        adapter.execute(BrowserEngineCommands.close())
+        val countAfterClose = events.size
+        session.emit(loading.copy(progress = 95))
+        assertEquals(countAfterClose, events.size)
+    }
+
+    @Test
     fun `scroll events are forwarded only while adapter is open`() {
         val session = FakeGeckoBrowserSession()
         val adapter = GeckoBrowserEngineSessionAdapter(

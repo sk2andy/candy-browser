@@ -263,4 +263,12 @@ continues to remove timed motion from both styles while retaining loading/progre
 | Idle/restored tab | Hidden |
 
 `AddressLoadCapsuleFeedbackInstrumentedTest` covers both style semantics and
-progress/completion/interruption transitions. Engine callback forwarding is audited separately.
+progress/completion/interruption transitions. Android forwards engine progress through the nullable `BrowserEngineEvent.progress` field. Gecko
+includes progress-only state changes; System WebView publishes `WebChromeClient.onProgressChanged`.
+`BrowserLoadingProgressRules` accepts progress/loading updates only for the active tab and current
+navigation address, preserves missing values, and bounds reported percentages. Late callbacks cannot
+restart a stopped load. Real slow-resource load, reload and stop coverage lives in
+`BrowserLoadingProgressInstrumentedTest`; run each engine method in its own instrumentation process.
+
+See [`../audits/issue-215-loading-progress.md`](../audits/issue-215-loading-progress.md) for the callback
+path defect found while reviewing #204 and the measured verification scope.

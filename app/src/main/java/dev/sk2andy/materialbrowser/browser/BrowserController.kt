@@ -12808,9 +12808,12 @@ class BrowserController(
                 val previousUrl = currentTab?.url?.let(BrowserUriPolicy::normalizeHttpUrl)
                 val normalizedChangedUrl = event.address?.let(BrowserUriPolicy::normalizeHttpUrl)
                 updateTab(event.tabId) { tab ->
+                    val loadingTab = BrowserLoadingProgressRules.apply(tab, event)
                     tab.copy(
                         url = event.address ?: tab.url,
                         title = event.title ?: tab.title,
+                        isLoading = loadingTab.isLoading,
+                        progress = loadingTab.progress,
                         canGoBack = event.canGoBack,
                         canGoForward = event.canGoForward,
                         httpStatusCode = event.httpStatusCode

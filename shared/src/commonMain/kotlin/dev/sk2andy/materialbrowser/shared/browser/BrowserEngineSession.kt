@@ -91,6 +91,7 @@ data class BrowserEngineEvent(
     val isLoading: Boolean? = null,
     val httpStatusCode: Int? = null,
     val failureKind: BrowserEngineFailureKind? = null,
+    val progress: Int? = null,
 )
 
 class BrowserSessionController(

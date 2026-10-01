@@ -1241,6 +1241,14 @@ private class SystemWebViewBrowserEngineSession(
     }
 
     private fun chromeClient() = object : WebChromeClient() {
+        override fun onProgressChanged(view: WebView, newProgress: Int) {
+            if (closed) return
+            publish(
+                BrowserEngineEventType.StateChanged,
+                progress = newProgress.coerceIn(0, 100),
+            )
+        }
+
         override fun onReceivedTitle(view: WebView, title: String?) {
             publish(BrowserEngineEventType.StateChanged, title = title)
         }
@@ -1886,6 +1894,7 @@ private class SystemWebViewBrowserEngineSession(
         isLoading: Boolean? = null,
         failureDescription: String? = null,
         httpStatusCode: Int? = null,
+        progress: Int? = null,
     ) {
         eventSink.onEngineEvent(
             BrowserEngineEvent(
@@ -1898,6 +1907,7 @@ private class SystemWebViewBrowserEngineSession(
                 failureDescription = failureDescription,
                 isLoading = isLoading,
                 httpStatusCode = httpStatusCode,
+                progress = progress,
             ),
         )
     }
