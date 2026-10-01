@@ -750,8 +750,6 @@ private class SystemWebViewBrowserEngineSession(
         } else {
             defaultUserAgent
         }
-        webView.settings.useWideViewPort = enabled
-        webView.settings.loadWithOverviewMode = enabled
         installDesktopViewportPolicy()
     }
 
@@ -963,6 +961,8 @@ private class SystemWebViewBrowserEngineSession(
                 WebSettingsCompat.setPaymentRequestEnabled(this, true)
             }
             userAgentString = defaultUserAgent
+            useWideViewPort = true
+            loadWithOverviewMode = true
             domStorageEnabled = true
             allowFileAccess = false
             allowContentAccess = false
