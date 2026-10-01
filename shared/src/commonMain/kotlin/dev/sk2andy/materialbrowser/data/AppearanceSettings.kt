@@ -8,6 +8,7 @@ data class AppearanceSettings(
     val colorPalette: BrowserColorPalette = BrowserColorPalette.Dynamic,
     val surfaceStyle: BrowserSurfaceStyle = BrowserSurfaceStyle.Clear,
     val shapeStyle: BrowserShapeStyle = BrowserShapeStyle.Rounded,
+    val addressLoadStyle: BrowserAddressLoadStyle = BrowserAddressLoadStyle.Rainbow,
     val addressBarStyle: BrowserAddressBarStyle = BrowserAddressBarStyle.Classic,
     val addressBarColorPreset: BrowserAddressBarColorPreset = BrowserAddressBarColorPreset.Theme,
     val addressBarCustomColorHex: String = "",
@@ -131,6 +132,16 @@ enum class BrowserAddressBarStyle(val stableId: String) {
     companion object {
         fun fromStableId(value: String?): BrowserAddressBarStyle =
             entries.firstOrNull { it.stableId == value } ?: Classic
+    }
+}
+
+enum class BrowserAddressLoadStyle(val stableId: String) {
+    Rainbow("rainbow"),
+    Tonal("tonal");
+
+    companion object {
+        fun fromStableId(value: String?): BrowserAddressLoadStyle =
+            entries.firstOrNull { it.stableId == value } ?: Rainbow
     }
 }
 

@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import dev.sk2andy.materialbrowser.data.AddressBarColorRules
 import dev.sk2andy.materialbrowser.data.AppearanceSettings
 import dev.sk2andy.materialbrowser.data.BrowserAddressBarColorPreset
+import dev.sk2andy.materialbrowser.data.BrowserAddressLoadStyle
 import dev.sk2andy.materialbrowser.data.BrowserAddressBarStyle
 import dev.sk2andy.materialbrowser.data.BrowserAppearanceMode
 import dev.sk2andy.materialbrowser.data.BrowserColorPalette
@@ -64,6 +65,8 @@ data class AppearanceSettingsStrings(
     val frostedBlurSummary: String,
     val shapeStyle: String,
     val shapeStyleNames: Map<BrowserShapeStyle, String>,
+    val addressLoadStyle: String,
+    val addressLoadStyleNames: Map<BrowserAddressLoadStyle, String>,
     val addressBarStyle: String,
     val addressBarStyleNames: Map<BrowserAddressBarStyle, String>,
 )
@@ -80,6 +83,7 @@ object SharedAppearanceSettingsTestTags {
     const val ADDRESS_BAR_CUSTOM_COLOR_SAVE = "appearance_settings_address_bar_custom_color_save"
     const val SURFACE_STYLE = "appearance_settings_surface"
     const val SHAPE_STYLE = "appearance_settings_shape"
+    const val ADDRESS_LOAD_STYLE = "appearance_settings_address_load_style"
     const val ADDRESS_BAR_STYLE = "appearance_settings_address_bar_style"
     const val FROSTED_TRANSPARENCY = "appearance_settings_frosted_transparency"
     const val FROSTED_ADDRESS_BAR_TRANSPARENCY =
@@ -106,6 +110,7 @@ fun AppearanceSettingsPage(
     }
     var surfaceMenuExpanded by remember { mutableStateOf(false) }
     var shapeMenuExpanded by remember { mutableStateOf(false) }
+    var addressLoadStyleMenuExpanded by remember { mutableStateOf(false) }
     var addressBarStyleMenuExpanded by remember { mutableStateOf(false) }
     var pendingWebContentFontSize by remember(settings.webContentFontSizePercent) {
         mutableFloatStateOf(settings.webContentFontSizePercent.toFloat())
@@ -374,6 +379,33 @@ fun AppearanceSettingsPage(
                         onClick = {
                             shapeMenuExpanded = false
                             onSettingsChanged(settings.copy(shapeStyle = style))
+                        },
+                    )
+                }
+            }
+        }
+        SettingsPageSpacer()
+        Box {
+            SettingsChoice(
+                title = strings.addressLoadStyle,
+                value = strings.addressLoadStyleNames.getValue(settings.addressLoadStyle),
+                expanded = addressLoadStyleMenuExpanded,
+                onClick = { addressLoadStyleMenuExpanded = true },
+                containerColor = containerColor,
+                modifier = Modifier.testTag(SharedAppearanceSettingsTestTags.ADDRESS_LOAD_STYLE),
+                enabled = enabled,
+            )
+            SettingsDropdown(
+                expanded = enabled && addressLoadStyleMenuExpanded,
+                onDismissRequest = { addressLoadStyleMenuExpanded = false },
+            ) {
+                BrowserAddressLoadStyle.entries.forEach { style ->
+                    SettingsDropdownItem(
+                        label = strings.addressLoadStyleNames.getValue(style),
+                        selected = style == settings.addressLoadStyle,
+                        onClick = {
+                            addressLoadStyleMenuExpanded = false
+                            onSettingsChanged(settings.copy(addressLoadStyle = style))
                         },
                     )
                 }

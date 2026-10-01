@@ -1351,4 +1351,7 @@
     <string name="favorites_upload_icon">Bild auswählen</string>
     <string name="favorites_reset_icon">Favicon-Vorschau verwenden</string>
     <string name="favorites_icon_failed">Dieses Bild konnte nicht geladen werden</string>
+    <string name="settings_address_load_style">Ladeanzeige der Adressleiste</string>
+    <string name="address_load_style_rainbow">Regenbogen</string>
+    <string name="address_load_style_tonal">Tonal</string>
 </resources>

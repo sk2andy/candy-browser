@@ -2,6 +2,7 @@ package dev.sk2andy.materialbrowser.ui
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import dev.sk2andy.materialbrowser.data.BrowserAddressLoadStyle
 import dev.sk2andy.materialbrowser.shared.ui.AddressLoadCapsuleFeedback as SharedAddressLoadCapsuleFeedback
 
 internal typealias AddressLoadFeedbackMode =
@@ -21,6 +22,7 @@ internal fun AddressLoadCapsuleFeedback(
     morphProgress: Float,
     morphTargetSizePx: Float,
     sourceCornerRadiusPx: Float? = null,
+    style: BrowserAddressLoadStyle = BrowserAddressLoadStyle.Rainbow,
     modifier: Modifier = Modifier,
 ) {
     SharedAddressLoadCapsuleFeedback(
@@ -30,6 +32,7 @@ internal fun AddressLoadCapsuleFeedback(
         morphProgress = morphProgress,
         morphTargetSizePx = morphTargetSizePx,
         sourceCornerRadiusPx = sourceCornerRadiusPx,
+        style = style,
         modifier = modifier,
     )
 }

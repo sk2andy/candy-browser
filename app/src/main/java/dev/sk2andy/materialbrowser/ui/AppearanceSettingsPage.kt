@@ -7,6 +7,7 @@ import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineKind
 import dev.sk2andy.materialbrowser.data.AppearanceSettings
 import dev.sk2andy.materialbrowser.data.BrowserAddressBarColorPreset
+import dev.sk2andy.materialbrowser.data.BrowserAddressLoadStyle
 import dev.sk2andy.materialbrowser.data.BrowserAddressBarStyle
 import dev.sk2andy.materialbrowser.data.BrowserAppearanceMode
 import dev.sk2andy.materialbrowser.data.BrowserColorPalette
@@ -28,6 +29,7 @@ internal object AppearanceSettingsTestTags {
     const val AddressBarCustomColorSave = "appearance_settings_address_bar_custom_color_save"
     const val SurfaceStyle = "appearance_settings_surface"
     const val ShapeStyle = "appearance_settings_shape"
+    const val AddressLoadStyle = "appearance_settings_address_load_style"
     const val AddressBarStyle = "appearance_settings_address_bar_style"
     const val FrostedTransparency = "appearance_settings_frosted_transparency"
     const val FrostedAddressBarTransparency =
@@ -97,6 +99,10 @@ internal fun AppearanceSettingsPage(
             ),
             shapeStyle = stringResource(R.string.settings_shape_style),
             shapeStyleNames = BrowserShapeStyle.entries.associateWith { it.displayName() },
+            addressLoadStyle = stringResource(R.string.settings_address_load_style),
+            addressLoadStyleNames = BrowserAddressLoadStyle.entries.associateWith {
+                it.displayName()
+            },
             addressBarStyle = stringResource(R.string.settings_address_bar_style),
             addressBarStyleNames = BrowserAddressBarStyle.entries.associateWith {
                 it.displayName()

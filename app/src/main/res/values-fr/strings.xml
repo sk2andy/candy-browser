@@ -1356,4 +1356,7 @@
     <string name="favorites_upload_icon">Choisir une image</string>
     <string name="favorites_reset_icon">Utiliser un aperçu des favicons</string>
     <string name="favorites_icon_failed">Cette image n’a pas pu être chargée</string>
+    <string name="settings_address_load_style">Indicateur de chargement de la barre d’adresse</string>
+    <string name="address_load_style_rainbow">Arc-en-ciel</string>
+    <string name="address_load_style_tonal">Tonal</string>
 </resources>

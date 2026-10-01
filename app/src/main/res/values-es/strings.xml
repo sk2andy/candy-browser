@@ -1356,4 +1356,7 @@
     <string name="favorites_upload_icon">Elegir imagen</string>
     <string name="favorites_reset_icon">Usar vista previa de iconos</string>
     <string name="favorites_icon_failed">No se pudo cargar esta imagen</string>
+    <string name="settings_address_load_style">Indicador de carga de la barra de direcciones</string>
+    <string name="address_load_style_rainbow">Arcoíris</string>
+    <string name="address_load_style_tonal">Tonal</string>
 </resources>

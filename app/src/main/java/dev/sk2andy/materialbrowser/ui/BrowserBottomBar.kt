@@ -94,6 +94,7 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import dev.sk2andy.materialbrowser.data.BrowserAddressLoadStyle
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.browser.AddressResolver
 import dev.sk2andy.materialbrowser.browser.BLANK_URL
@@ -126,6 +127,7 @@ internal fun BrowserBottomBar(
     dockTargetEdge: AddressBarDockEdge,
     editing: Boolean,
     addressBarStyle: BrowserAddressBarStyle,
+    addressLoadStyle: BrowserAddressLoadStyle = BrowserAddressLoadStyle.Rainbow,
     actionLayout: AddressBarActionLayout,
     showCastButton: Boolean,
     showQrScanner: Boolean,
@@ -730,6 +732,7 @@ internal fun BrowserBottomBar(
                             tabId = tab.id,
                             isLoading = tab.isLoading,
                             progressPercent = tab.progress,
+                            style = addressLoadStyle,
                             morphProgress = 0f,
                             morphTargetSizePx = with(density) { 56.dp.toPx() },
                             sourceCornerRadiusPx = with(density) { barCornerRadius.toPx() },

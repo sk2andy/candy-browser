@@ -32,6 +32,7 @@
 | Surfaces | Clear, frosted | Clear |
 | Shape | Angular, rounded, extra rounded | Rounded |
 | Address bar style | Classic, segmented | Classic |
+| Address-bar loading indicator | Rainbow, tonal | Rainbow |
 | Startup animation | Off, on | On |
 | Address focus on launch | When startup animation is off, every launch, never | When startup animation is off |
 | Open home page on startup | Off, on | Off |
@@ -241,3 +242,25 @@ Frosted exposes three persisted controls while selected:
   ([bug 2049064](https://bugzilla.mozilla.org/show_bug.cgi?id=2049064)). The named immediate-playback
   device regression is enabled and passes on GeckoView 157. Candy compiles the pinned GeckoView 157
   against Android SDK 37.1 with AGP 9.4.0; see the [upgrade audit](../audits/geckoview-157-upgrade.md).
+
+## Address loading styles
+
+| Style | Presentation | Progress contract |
+| --- | --- | --- |
+| Rainbow (default) | Animated rainbow halo and rounded progress border | Uses active engine percentage; moving colors do not change the measured segment length |
+| Tonal | Theme primary/tertiary gradient, neutral outline track, breathing rounded stroke and soft halo | Same engine percentage and completion fade as Rainbow; theme colors stay in place |
+
+The loading style is a global persisted appearance choice. Unknown stored style IDs fall back to
+Rainbow. Selecting Tonal leaves the global animation setting unchanged. Disabling animations
+continues to remove timed motion from both styles while retaining loading/progress semantics.
+
+| Engine/UI state | Indicator |
+| --- | --- |
+| Loading with no positive progress yet (including address resolution) | Explicit indeterminate traveling segment |
+| Loading with positive engine progress | Determinate segment, clamped to 0–100%, with matching accessibility progress |
+| Completed active load | Short 280 ms completion fade, then hidden |
+| Interrupted/failed load below completion | Hidden without completion claim |
+| Idle/restored tab | Hidden |
+
+`AddressLoadCapsuleFeedbackInstrumentedTest` covers both style semantics and
+progress/completion/interruption transitions. Engine callback forwarding is audited separately.

@@ -20,6 +20,7 @@ import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineKind
 import dev.sk2andy.materialbrowser.data.AppearanceSettings
 import dev.sk2andy.materialbrowser.data.BrowserAddressBarColorPreset
+import dev.sk2andy.materialbrowser.data.BrowserAddressLoadStyle
 import dev.sk2andy.materialbrowser.data.BrowserAddressBarStyle
 import dev.sk2andy.materialbrowser.data.BrowserAppearanceMode
 import dev.sk2andy.materialbrowser.data.BrowserColorPalette
@@ -123,6 +124,34 @@ class AppearanceSettingsScreenInstrumentedTest {
             ),
             settings,
         )
+    }
+
+    @Test
+    fun loadingStyleChangesIndependentlyAndKeepsRainbowDefault() {
+        var settings by mutableStateOf(AppearanceSettings())
+        composeRule.setContent {
+            MaterialBrowserTheme(settings = settings) {
+                AppearanceSettingsPage(
+                    settings = settings,
+                    onSettingsChanged = { settings = it },
+                    onBack = {},
+                )
+            }
+        }
+
+        assertEquals(BrowserAddressLoadStyle.Rainbow, settings.addressLoadStyle)
+        composeRule.onNodeWithTag(AppearanceSettingsTestTags.AddressLoadStyle)
+            .performScrollTo()
+            .performClick()
+        composeRule.onNodeWithText(context.getString(R.string.address_load_style_tonal))
+            .performClick()
+        assertEquals(AppearanceSettings(addressLoadStyle = BrowserAddressLoadStyle.Tonal), settings)
+        assertTrue(settings.animationsEnabled)
+
+        composeRule.onNodeWithTag(AppearanceSettingsTestTags.AddressLoadStyle).performClick()
+        composeRule.onNodeWithText(context.getString(R.string.address_load_style_rainbow))
+            .performClick()
+        assertEquals(AppearanceSettings(), settings)
     }
 
     @Test

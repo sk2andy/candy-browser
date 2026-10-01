@@ -52,6 +52,7 @@ import dev.sk2andy.materialbrowser.browser.actions.ExternalDownloadManagerApp
 import dev.sk2andy.materialbrowser.browser.suggestions.SearchSuggestionProvider
 import dev.sk2andy.materialbrowser.data.BrowserAddressBarColorPreset
 import dev.sk2andy.materialbrowser.data.BrowserAppearanceMode
+import dev.sk2andy.materialbrowser.data.BrowserAddressLoadStyle
 import dev.sk2andy.materialbrowser.data.BrowserAddressBarStyle
 import dev.sk2andy.materialbrowser.data.BrowserColorPalette
 import dev.sk2andy.materialbrowser.data.BrowserDownloadSettings
@@ -299,4 +300,10 @@ internal fun SettingsSwitch(
 @Composable
 internal fun SettingsPageSpacer() {
     dev.sk2andy.materialbrowser.shared.ui.settings.SettingsPageSpacer()
+}
+
+@Composable
+internal fun BrowserAddressLoadStyle.displayName(): String = when (this) {
+    BrowserAddressLoadStyle.Rainbow -> stringResource(R.string.address_load_style_rainbow)
+    BrowserAddressLoadStyle.Tonal -> stringResource(R.string.address_load_style_tonal)
 }

@@ -17,6 +17,7 @@ class AppearanceSettingsTest {
         assertTrue(settings.colorPalette == BrowserColorPalette.Dynamic)
         assertTrue(settings.surfaceStyle == BrowserSurfaceStyle.Clear)
         assertTrue(settings.shapeStyle == BrowserShapeStyle.Rounded)
+        assertEquals(BrowserAddressLoadStyle.Rainbow, settings.addressLoadStyle)
         assertTrue(settings.addressBarStyle == BrowserAddressBarStyle.Classic)
         assertTrue(settings.addressBarColorPreset == BrowserAddressBarColorPreset.Theme)
         assertEquals("", settings.addressBarCustomColorHex)
@@ -39,6 +40,9 @@ class AppearanceSettingsTest {
         BrowserShapeStyle.entries.forEach { style ->
             assertTrue(BrowserShapeStyle.fromStableId(style.stableId) == style)
         }
+        BrowserAddressLoadStyle.entries.forEach { style ->
+            assertEquals(style, BrowserAddressLoadStyle.fromStableId(style.stableId))
+        }
         BrowserAddressBarStyle.entries.forEach { style ->
             assertTrue(BrowserAddressBarStyle.fromStableId(style.stableId) == style)
         }
@@ -57,6 +61,7 @@ class AppearanceSettingsTest {
 
     @Test
     fun `unknown and removed stable ids use safe defaults`() {
+        assertEquals(BrowserAddressLoadStyle.Rainbow, BrowserAddressLoadStyle.fromStableId("unknown"))
         assertTrue(BrowserAppearanceMode.fromStableId("unknown") == BrowserAppearanceMode.System)
         assertTrue(BrowserColorPalette.fromStableId("unknown") == BrowserColorPalette.Dynamic)
         assertTrue(BrowserSurfaceStyle.fromStableId("unknown") == BrowserSurfaceStyle.Clear)

@@ -12,6 +12,7 @@ import androidx.compose.ui.unit.dp
 import dev.sk2andy.materialbrowser.browser.PageTranslationProvider
 import dev.sk2andy.materialbrowser.data.AppearanceSettings
 import dev.sk2andy.materialbrowser.data.BrowserAddressBarColorPreset
+import dev.sk2andy.materialbrowser.data.BrowserAddressLoadStyle
 import dev.sk2andy.materialbrowser.data.BrowserAddressBarStyle
 import dev.sk2andy.materialbrowser.data.BrowserAppearanceMode
 import dev.sk2andy.materialbrowser.data.BrowserColorPalette
@@ -77,6 +78,11 @@ private val candyAppearanceStrings = AppearanceSettingsStrings(
         BrowserShapeStyle.Angular to "Kantig",
         BrowserShapeStyle.Rounded to "Rund",
         BrowserShapeStyle.ExtraRounded to "Extra rund",
+    ),
+    addressLoadStyle = "Ladeanzeige der Adressleiste",
+    addressLoadStyleNames = mapOf(
+        BrowserAddressLoadStyle.Rainbow to "Regenbogen",
+        BrowserAddressLoadStyle.Tonal to "Tonal",
     ),
     addressBarStyle = "Stil der Adressleiste",
     addressBarStyleNames = mapOf(

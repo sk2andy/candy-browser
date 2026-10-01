@@ -1306,6 +1306,9 @@ class BrowserSessionStore internal constructor(
             shapeStyle = BrowserShapeStyle.fromStableId(
                 preferences.getString(KEY_SHAPE_STYLE, null),
             ),
+            addressLoadStyle = BrowserAddressLoadStyle.fromStableId(
+                preferences.getString(KEY_ADDRESS_LOAD_STYLE, null),
+            ),
             addressBarStyle = BrowserAddressBarStyle.fromStableId(
                 preferences.getString(KEY_ADDRESS_BAR_STYLE, null),
             ),
@@ -1342,6 +1345,7 @@ class BrowserSessionStore internal constructor(
             .putString(KEY_COLOR_PALETTE, normalized.colorPalette.stableId)
             .putString(KEY_SURFACE_STYLE, normalized.surfaceStyle.stableId)
             .putString(KEY_SHAPE_STYLE, normalized.shapeStyle.stableId)
+            .putString(KEY_ADDRESS_LOAD_STYLE, normalized.addressLoadStyle.stableId)
             .putString(KEY_ADDRESS_BAR_STYLE, normalized.addressBarStyle.stableId)
             .putString(KEY_ADDRESS_BAR_COLOR_PRESET, normalized.addressBarColorPreset.stableId)
             .putString(KEY_ADDRESS_BAR_CUSTOM_COLOR_HEX, normalized.addressBarCustomColorHex)
@@ -1575,6 +1579,7 @@ class BrowserSessionStore internal constructor(
         const val KEY_COLOR_PALETTE = "color_palette"
         const val KEY_SURFACE_STYLE = "surface_style"
         const val KEY_SHAPE_STYLE = "shape_style"
+        const val KEY_ADDRESS_LOAD_STYLE = "address_load_style"
         const val KEY_ADDRESS_BAR_STYLE = "address_bar_style"
         const val KEY_ADDRESS_BAR_COLOR_PRESET = "address_bar_color_preset"
         const val KEY_ADDRESS_BAR_CUSTOM_COLOR_HEX = "address_bar_custom_color_hex"

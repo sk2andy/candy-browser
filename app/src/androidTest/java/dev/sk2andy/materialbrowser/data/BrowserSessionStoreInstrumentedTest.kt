@@ -482,6 +482,7 @@ class BrowserSessionStoreInstrumentedTest {
             colorPalette = BrowserColorPalette.Candy,
             surfaceStyle = BrowserSurfaceStyle.Frosted,
             shapeStyle = BrowserShapeStyle.Angular,
+            addressLoadStyle = BrowserAddressLoadStyle.Tonal,
             addressBarStyle = BrowserAddressBarStyle.Segmented,
             frostedTransparencyPercent = 70,
             frostedAddressBarTransparencyPercent = 50,
@@ -653,6 +654,7 @@ class BrowserSessionStoreInstrumentedTest {
     @Test
     fun corruptAppearanceSettingsFallBackPerField() {
         preferences.edit()
+            .putString("address_load_style", "unknown")
             .putString("appearance_mode", "unknown")
             .putString("force_dark_websites", "invalid")
             .putInt("web_content_font_size_percent", 123)

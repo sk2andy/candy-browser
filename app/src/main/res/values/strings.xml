@@ -1367,4 +1367,7 @@
     <string name="settings_menu_location_both">Both menus</string>
     <string name="settings_menu_entry_topping_commands">Topping commands</string>
     <string name="settings_menu_entry_firefox_page_actions">Firefox page actions</string>
+    <string name="settings_address_load_style">Address-bar loading indicator</string>
+    <string name="address_load_style_rainbow">Rainbow</string>
+    <string name="address_load_style_tonal">Tonal</string>
 </resources>

@@ -10,6 +10,7 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Box
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.foundation.progressSemantics
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -32,6 +33,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
+import dev.sk2andy.materialbrowser.data.BrowserAddressLoadStyle
 import kotlin.math.floor
 
 enum class AddressLoadFeedbackMode {
@@ -182,6 +184,7 @@ fun AddressLoadCapsuleFeedback(
     morphProgress: Float,
     morphTargetSizePx: Float,
     sourceCornerRadiusPx: Float? = null,
+    style: BrowserAddressLoadStyle = BrowserAddressLoadStyle.Rainbow,
     modifier: Modifier = Modifier,
 ) {
     var observedActiveLoad by remember(tabId) { mutableStateOf(isLoading) }
@@ -236,6 +239,7 @@ fun AddressLoadCapsuleFeedback(
         AddressLoadFeedbackMode.Hidden -> Modifier
     }
 
+    val colorScheme = MaterialTheme.colorScheme
     Box(
         modifier = modifier
             .then(semanticsModifier)
@@ -290,24 +294,43 @@ fun AddressLoadCapsuleFeedback(
                     }
                     val settleAlpha = 1f - settle
                     val bandWidth = (3.dp + 1.dp * breath - 0.5.dp * settle).toPx()
-                    val rainbowBrush = Brush.sweepGradient(
-                        colors = AddressLoadRainbowRules.shiftedColors(
-                            activeMotion.travelPhase.value,
-                        ),
-                        center = center,
-                    )
+                    val loadBrush = when (style) {
+                        BrowserAddressLoadStyle.Rainbow -> Brush.sweepGradient(
+                            colors = AddressLoadRainbowRules.shiftedColors(
+                                activeMotion.travelPhase.value,
+                            ),
+                            center = center,
+                        )
+                        BrowserAddressLoadStyle.Tonal -> Brush.linearGradient(
+                            colors = listOf(
+                                colorScheme.primary,
+                                colorScheme.tertiary,
+                                colorScheme.primary,
+                            ),
+                            start = outlineBounds.topLeft,
+                            end = outlineBounds.bottomRight,
+                        )
+                    }
                     drawPath(
                         path = outlinePath,
-                        brush = rainbowBrush,
+                        brush = loadBrush,
                         alpha = (0.08f + 0.04f * breath) * settleAlpha,
                         style = Stroke(width = bandWidth + 4.dp.toPx()),
                     )
-                    drawPath(
-                        path = outlinePath,
-                        brush = rainbowBrush,
-                        alpha = 0.24f * settleAlpha,
-                        style = Stroke(width = bandWidth),
-                    )
+                    when (style) {
+                        BrowserAddressLoadStyle.Rainbow -> drawPath(
+                            path = outlinePath,
+                            brush = loadBrush,
+                            alpha = 0.24f * settleAlpha,
+                            style = Stroke(width = bandWidth),
+                        )
+                        BrowserAddressLoadStyle.Tonal -> drawPath(
+                            path = outlinePath,
+                            color = colorScheme.outlineVariant,
+                            alpha = 0.55f * settleAlpha,
+                            style = Stroke(width = 2.dp.toPx()),
+                        )
+                    }
 
                     val segments = when (state.mode) {
                         AddressLoadFeedbackMode.Indeterminate -> AddressLoadCapsuleRules
@@ -329,7 +352,7 @@ fun AddressLoadCapsuleFeedback(
                         )
                         drawPath(
                             path = segmentPath,
-                            brush = rainbowBrush,
+                            brush = loadBrush,
                             alpha = 0.96f * settleAlpha,
                             style = Stroke(
                                 width = bandWidth,
