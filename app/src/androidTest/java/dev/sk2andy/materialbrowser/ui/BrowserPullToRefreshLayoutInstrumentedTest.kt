@@ -309,6 +309,12 @@ class BrowserPullToRefreshLayoutInstrumentedTest {
             }
         }
         composeRule.waitUntil(timeoutMillis = 5_000L) { refreshCount == 1 }
-        composeRule.runOnIdle { assertTrue(refreshLayout.isRefreshing) }
+        InstrumentationRegistry.getInstrumentation().runOnMainSync {
+            try {
+                assertTrue(refreshLayout.isRefreshing)
+            } finally {
+                refreshLayout.isRefreshing = false
+            }
+        }
     }
 }
