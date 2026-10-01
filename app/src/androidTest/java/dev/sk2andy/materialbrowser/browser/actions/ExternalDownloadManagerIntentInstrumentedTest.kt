@@ -9,6 +9,7 @@ import dev.sk2andy.materialbrowser.data.BrowserDownloadSettings
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
 import org.junit.Test
@@ -60,6 +61,48 @@ class ExternalDownloadManagerIntentInstrumentedTest {
         assertFalse(intent.hasExtra("extra_cookies"))
         assertFalse(intent.hasExtra("extra_useragent"))
         assertFalse(intent.hasExtra("extra_referer"))
+    }
+
+    @Test
+    fun gopeedUsesExplicitViewProtocolWithoutSessionData() {
+        for (allowSessionData in listOf(true, false)) {
+            val intent = manager.createIntent(
+                request,
+                gopeedApp(),
+                BrowserDownloadSettings(shareSessionDataWithOneDm = true),
+                allowSessionData = allowSessionData,
+            )
+
+            assertEquals("android.intent.action.VIEW", intent.action)
+            assertEquals("https://example.com/private.pdf", intent.dataString)
+            assertEquals("application/pdf", intent.type)
+            assertEquals(GOPEED_PACKAGE, intent.component?.packageName)
+            assertEquals(GOPEED_ACTIVITY, intent.component?.className)
+            assertNull(intent.extras)
+        }
+    }
+
+    @Test
+    fun installedGopeedIsDiscoveredWithoutMimeFilterMatching() {
+        assumeTrue("Requires real Gopeed installation", isPackageInstalled(GOPEED_PACKAGE))
+
+        for (downloadRequest in listOf(null, request, request.copy(mimeType = "application/zip"))) {
+            val gopeed = manager.discover(downloadRequest).singleOrNull { it.packageName == GOPEED_PACKAGE }
+
+            assertNotNull(gopeed)
+            assertFalse(requireNotNull(gopeed).isOneDm)
+            assertEquals("view|$GOPEED_PACKAGE", gopeed.id)
+            assertEquals(GOPEED_ACTIVITY, gopeed.activityName)
+            assertTrue(gopeed.label.isNotBlank())
+            assertNotNull(
+                manager.createIntent(
+                    downloadRequest ?: request,
+                    gopeed,
+                    BrowserDownloadSettings(),
+                    allowSessionData = false,
+                ).resolveActivity(context.packageManager),
+            )
+        }
     }
 
     @Test
@@ -134,6 +177,15 @@ class ExternalDownloadManagerIntentInstrumentedTest {
         isOneDm = false,
     )
 
+    private fun gopeedApp() = ExternalDownloadManagerApp(
+        id = "view|$GOPEED_PACKAGE",
+        packageName = GOPEED_PACKAGE,
+        activityName = GOPEED_ACTIVITY,
+        label = "Gopeed",
+        protocol = ExternalDownloadProtocol.View,
+        isOneDm = false,
+    )
+
     private fun isPackageInstalled(packageName: String): Boolean {
         require(packageName.matches(Regex("[A-Za-z0-9._]+")))
         val output = ParcelFileDescriptor.AutoCloseInputStream(
@@ -143,6 +195,8 @@ class ExternalDownloadManagerIntentInstrumentedTest {
     }
 
     private companion object {
+        const val GOPEED_PACKAGE = "com.gopeed.gopeed"
+        const val GOPEED_ACTIVITY = "com.gopeed.gopeed.MainActivity"
         const val NAVI_PACKAGE = "com.tachibana.downloader"
         const val NAVI_ACTIVITY = "com.tachibana.downloader.ui.adddownload.AddDownloadActivity"
     }
