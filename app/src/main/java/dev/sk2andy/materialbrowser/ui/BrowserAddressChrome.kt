@@ -81,6 +81,7 @@ internal fun BoxScope.BrowserAddressChrome(
     linkPeekAddressBarExpanded: Boolean,
     castUiState: CastUiState,
     settingsVisible: Boolean,
+    menuDismissRequestId: Int,
     addressValue: TextFieldValue,
     domainCompletion: String?,
     addressFocusNonce: Int,
@@ -274,6 +275,7 @@ internal fun BoxScope.BrowserAddressChrome(
         onDispose(controller::clearAddressBarBoundsInViewport)
     }
     BrowserBottomBar(
+        menuDismissRequestId = menuDismissRequestId,
         tab = selectedTab,
         pageTranslationProvider = controller.pageTranslationProvider,
         compact = controller.isBottomBarCompact &&

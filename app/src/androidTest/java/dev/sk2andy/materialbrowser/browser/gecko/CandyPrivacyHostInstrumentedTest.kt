@@ -21,9 +21,61 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mozilla.geckoview.ContentBlocking
+import org.mozilla.geckoview.GeckoSession
 
 @RunWith(AndroidJUnit4::class)
 class CandyPrivacyHostInstrumentedTest {
+    @Test
+    fun stalePrivacyBootstrapCallbacksDoNotReplaceRestoredPageAddress() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val server = FixtureServer()
+        val pageUrl = server.pageUrl(PAGE_HOST)
+        val pageLoaded = CountDownLatch(1)
+        val latestState = AtomicReference<GeckoBrowserSessionState>()
+        lateinit var session: GeckoBrowserSession
+        lateinit var view: View
+
+        InstrumentationRegistry.getInstrumentation().runOnMainSync {
+            session = GeckoRuntimeOwner.getOrCreate(context).createSession(
+                profileId = "privacy-stale-bootstrap",
+                isPrivate = false,
+                privacyPolicy = GeckoPrivacyPolicy.Disabled.copy(pageHost = PAGE_HOST),
+            )
+            view = session.createView(context)
+            session.setStateListener { state ->
+                latestState.set(state)
+                if (state.url == pageUrl && !state.isLoading) pageLoaded.countDown()
+            }
+            assertTrue(session.loadUrl(pageUrl))
+        }
+
+        try {
+            assertTrue("Web page did not load", pageLoaded.await(20, TimeUnit.SECONDS))
+            InstrumentationRegistry.getInstrumentation().runOnMainSync {
+                val nativeSession = session.javaClass.getDeclaredField("session")
+                    .apply { isAccessible = true }
+                    .get(session) as GeckoSession
+                val staleBootstrap =
+                    "moz-extension://5e6344e7-68a0-4a80-863c-0123456789ab/" +
+                        "bootstrap.html?token=11111111-2222-4333-8444-555555555555"
+                nativeSession.progressDelegate?.onPageStart(nativeSession, staleBootstrap)
+                nativeSession.navigationDelegate?.onLocationChange(
+                    nativeSession,
+                    staleBootstrap,
+                    emptyList(),
+                    false,
+                )
+                assertEquals(pageUrl, latestState.get().url)
+            }
+        } finally {
+            InstrumentationRegistry.getInstrumentation().runOnMainSync {
+                session.releaseView(view)
+                session.close()
+            }
+            server.close()
+        }
+    }
+
     @Test
     fun rapidPolicyRevisionsKeepOneBootstrapAndGateOnTheCurrentRevision() {
         val context = ApplicationProvider.getApplicationContext<Context>()

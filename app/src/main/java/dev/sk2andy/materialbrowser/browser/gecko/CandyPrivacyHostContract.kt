@@ -19,6 +19,10 @@ internal object CandyPrivacyHostContract {
     const val NATIVE_APP = "dev.sk2andy.materialbrowser.privacy"
     const val PROTOCOL_VERSION = 2
 
+    /** A restored session can still report the previous runtime's extension origin and token. */
+    fun isBootstrapDocumentUrl(url: String?): Boolean =
+        url != null && BOOTSTRAP_DOCUMENT_URL.matches(url)
+
     fun isTrustedBootstrapNavigation(
         url: String,
         extensionBaseUrl: String,
@@ -30,6 +34,12 @@ internal object CandyPrivacyHostContract {
         !hasUserGesture &&
         !isRedirect &&
         url == "${extensionBaseUrl}bootstrap.html?token=$token"
+
+    private val BOOTSTRAP_DOCUMENT_URL = Regex(
+        "^moz-extension://[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}/" +
+            "bootstrap\\.html\\?token=[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$",
+        RegexOption.IGNORE_CASE,
+    )
 
     fun isTrustedSessionBindingMessage(
         nativeApp: String,

@@ -169,6 +169,24 @@ class StartupPresentationRulesTest {
     }
 
     @Test
+    fun `never focusing address preserves last tab despite startup home preference`() {
+        assertFalse(
+            StartupPresentationRules.shouldOpenHomePage(
+                isLauncherLaunch = true,
+                isOpenHomeOnStartupEnabled = true,
+                startupAddressFocusMode = StartupAddressFocusMode.Never,
+            ),
+        )
+        assertTrue(
+            StartupPresentationRules.shouldOpenHomePage(
+                isLauncherLaunch = true,
+                isOpenHomeOnStartupEnabled = true,
+                startupAddressFocusMode = StartupAddressFocusMode.Always,
+            ),
+        )
+    }
+
+    @Test
     fun `home page opens only for enabled launcher launches`() {
         assertTrue(
             StartupPresentationRules.shouldOpenHomePage(

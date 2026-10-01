@@ -689,7 +689,25 @@ internal fun BrowserScreen(
         controller.releaseActiveProfileTabSwitcherWallpaper()
     }
     LaunchedEffect(incomingBrowserNavigationRequestId) {
-        if (incomingBrowserNavigationRequestId != 0) closeTabOverview()
+        if (incomingBrowserNavigationRequestId != 0) {
+            closeTabOverview()
+            settingsVisible = false
+            addressEditorOpenGeneration++
+            addressEditorVisible = false
+            highlightedSuggestionIndex = -1
+            activeCommandExecutionId = null
+            pendingCommand = null
+            commandFeedback = null
+            readerStudioSession = null
+            readerStudioRequestId++
+            candyTrailTabId = null
+            candyTrailSourceBounds = null
+            privacyXRayTabId = null
+            permissionRadarTabId = null
+            permissionRadarOrigin = null
+            snoozedTabsVisible = false
+            filterStudioVisible = false
+        }
     }
     val openAddressEditor: () -> Unit = {
         if (activeCommandExecutionId == null) {
@@ -740,8 +758,14 @@ internal fun BrowserScreen(
         return true
     }
     fun openNewTabAndEdit(isIncognito: Boolean = false) {
+        val openGeneration = ++addressEditorOpenGeneration
+        val requestedTabId = controller.selectedTabId
         val createAndEdit = {
-            if (createTabAndConfirm(isIncognito = isIncognito, emitHaptic = true)) {
+            if (
+                openGeneration == addressEditorOpenGeneration &&
+                requestedTabId == controller.selectedTabId &&
+                createTabAndConfirm(isIncognito = isIncognito, emitHaptic = true)
+            ) {
                 addressValue = TextFieldValue()
                 addressEditorVisible = true
                 highlightedSuggestionIndex = -1
@@ -1501,6 +1525,7 @@ internal fun BrowserScreen(
             linkPeekAddressBarExpanded = linkPeekAddressBarExpanded,
             castUiState = castUiState,
             settingsVisible = settingsVisible,
+            menuDismissRequestId = incomingBrowserNavigationRequestId,
             addressValue = addressValue,
             domainCompletion = domainCompletion,
             addressFocusNonce = addressFocusNonce,

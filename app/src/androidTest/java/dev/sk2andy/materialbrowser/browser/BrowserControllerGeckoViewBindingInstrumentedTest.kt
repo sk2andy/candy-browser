@@ -1,5 +1,6 @@
 package dev.sk2andy.materialbrowser.browser
 
+import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.ContextWrapper
 import android.content.Intent
@@ -70,9 +71,17 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
         composeRule.runOnIdle {
             val store = BrowserSessionStore(composeRule.activity)
             originalEngineKind = store.loadAndroidBrowserEngineKind()
+            originalExternalAppLinkHandling = store.loadExternalAppLinkHandling()
             assertTrue(store.saveAndroidBrowserEngineKind(AndroidBrowserEngineKind.GeckoView))
-            val browserController = BrowserController(composeRule.activity)
+            val browserController = BrowserController(
+                activity = composeRule.activity,
+                externalApps = ExternalAppLauncher(
+                    context = composeRule.activity,
+                    canResolveExternalActivity = { false },
+                ),
+            )
             controller = browserController
+            browserController.updateExternalAppLinkHandling(ExternalAppLinkHandling.AskEveryTime)
             browserController.installGeckoEngineSessionForTesting(
                 ReentrantAttachSession(
                     tabId = browserController.selectedTabId,
@@ -2201,6 +2210,270 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
     }
 
     @Test
+    fun newWindowBrowserFallbackKeepsSourceAndRedirectGrant() {
+        assertNewWindowBrowserFallback(isPrivate = false)
+    }
+
+    @Test
+    fun privateNewWindowBrowserFallbackKeepsPrivateSourceAndRedirectGrant() {
+        assertNewWindowBrowserFallback(isPrivate = true)
+    }
+
+    @Test
+    fun popupFallbackCaptureCannotReplaceNewIncomingTab() {
+        assertPopupFallbackPreservesIncomingSurface(usePreview = false)
+    }
+
+    @Test
+    fun popupFallbackCaptureCannotReplaceNewIncomingPreview() {
+        assertPopupFallbackPreservesIncomingSurface(usePreview = true)
+    }
+
+    private fun assertPopupFallbackPreservesIncomingSurface(usePreview: Boolean) {
+        val incomingUrl = "https://incoming.candy.test/latest"
+        val fallbackUrl = "https://redirect.candy.test/next"
+        lateinit var browserController: BrowserController
+        lateinit var session: ReentrantAttachSession
+        var sourceTabId = ""
+        composeRule.runOnIdle {
+            browserController = createExternalNavigationController(RecordingContext(composeRule.activity))
+            sourceTabId = browserController.selectedTabId
+            session = ReentrantAttachSession(tabId = sourceTabId, onFirstAttach = {})
+            session.onPreviewCapture = { onComplete ->
+                if (usePreview) {
+                    assertTrue(browserController.openExternalLinkPreview(incomingUrl))
+                } else {
+                    assertTrue(browserController.openUrl(incomingUrl, inNewTab = true))
+                }
+                onComplete(null)
+                BrowserEnginePreviewCapture { }
+            }
+            browserController.installGeckoEngineSessionForTesting(session)
+            val host = FrameLayout(composeRule.activity)
+            composeRule.activity.addContentView(host, matchParentLayoutParams())
+            browserController.attachSelectedBrowserEngineView(host)
+            browserController.onStart()
+            browserController.onResume()
+        }
+        composeRule.waitUntil(5_000L) {
+            session.createdView?.let { view -> view.isShown && view.width > 0 && view.height > 0 } == true
+        }
+        composeRule.runOnIdle {
+            assertEquals(
+                GeckoNavigationRequestDecision.Deny,
+                browserController.dispatchSelectedGeckoNavigationRequestForTesting(
+                    GeckoMainFrameNavigationRequest(
+                        url = fallbackUrl,
+                        isRedirect = false,
+                        hasUserGesture = true,
+                        isDirectNavigation = false,
+                        target = BrowserEngineNavigationTarget.New,
+                    ),
+                ),
+            )
+        }
+        composeRule.waitUntil(5_000L) {
+            browserController.tabs.any { it.url == fallbackUrl }
+        }
+        composeRule.runOnIdle {
+            if (usePreview) {
+                assertEquals(incomingUrl, browserController.externalLinkPreviewState?.currentUrl)
+                assertEquals(sourceTabId, browserController.selectedTabId)
+            } else {
+                assertEquals(incomingUrl, browserController.selectedTab.url)
+                assertTrue(browserController.selectedTabId != sourceTabId)
+            }
+        }
+    }
+
+    private fun assertNewWindowBrowserFallback(isPrivate: Boolean) {
+        lateinit var browserController: BrowserController
+        lateinit var recordingContext: RecordingContext
+        var openerTabId = ""
+        val fallbackUrl = "https://redirect.candy.test/next"
+        composeRule.runOnIdle {
+            recordingContext = RecordingContext(composeRule.activity)
+            browserController = createExternalNavigationController(recordingContext, isPrivate)
+            openerTabId = browserController.selectedTabId
+            assertEquals(
+                GeckoNavigationRequestDecision.Deny,
+                browserController.dispatchSelectedGeckoNavigationRequestForTesting(
+                    GeckoMainFrameNavigationRequest(
+                        url = fallbackUrl,
+                        isRedirect = false,
+                        hasUserGesture = true,
+                        isDirectNavigation = false,
+                        target = BrowserEngineNavigationTarget.New,
+                    ),
+                ),
+            )
+        }
+        composeRule.waitUntil(5_000L) { browserController.selectedTab.url == fallbackUrl }
+        composeRule.runOnIdle {
+            assertEquals(APP_HANDOFF_SOURCE_URL, browserController.tabs.single { it.id == openerTabId }.url)
+            assertEquals(openerTabId, browserController.selectedTab.openerTabId)
+            assertTrue(browserController.selectedTabId != openerTabId)
+            assertEquals(isPrivate, browserController.selectedTab.isIncognito)
+            assertEquals(
+                browserController.tabs.single { it.id == openerTabId }.profileId,
+                browserController.selectedTab.profileId,
+            )
+            browserController.installGeckoEngineSessionForTesting(
+                ReentrantAttachSession(tabId = browserController.selectedTabId, onFirstAttach = {}),
+            )
+            assertFallbackRedirect(browserController)
+        }
+        composeRule.waitUntil(5_000L) {
+            recordingContext.lastIntent?.dataString == APP_HANDOFF_TARGET_URL
+        }
+    }
+
+    @Test
+    fun currentWindowBrowserFallbackKeepsRedirectGrant() {
+        lateinit var browserController: BrowserController
+        lateinit var recordingContext: RecordingContext
+        val fallbackUrl = "https://redirect.candy.test/next"
+        composeRule.runOnIdle {
+            recordingContext = RecordingContext(composeRule.activity)
+            browserController = createExternalNavigationController(recordingContext)
+            assertEquals(
+                GeckoNavigationRequestDecision.Deny,
+                browserController.dispatchSelectedGeckoNavigationRequestForTesting(
+                    GeckoMainFrameNavigationRequest(
+                        url = fallbackUrl,
+                        isRedirect = false,
+                        hasUserGesture = true,
+                        isDirectNavigation = false,
+                    ),
+                ),
+            )
+        }
+        composeRule.waitUntil(5_000L) { browserController.selectedTab.url == fallbackUrl }
+        composeRule.runOnIdle {
+            assertFallbackInitialLoadAndRedirect(browserController, fallbackUrl)
+        }
+        composeRule.waitUntil(5_000L) {
+            recordingContext.lastIntent?.dataString == APP_HANDOFF_TARGET_URL
+        }
+    }
+
+    private fun assertFallbackInitialLoadAndRedirect(
+        browserController: BrowserController,
+        fallbackUrl: String,
+    ) {
+        assertEquals(
+            GeckoNavigationRequestDecision.Allow,
+            browserController.dispatchSelectedGeckoNavigationRequestForTesting(
+                GeckoMainFrameNavigationRequest(
+                    url = fallbackUrl,
+                    isRedirect = false,
+                    hasUserGesture = false,
+                    isDirectNavigation = true,
+                ),
+            ),
+        )
+        assertFallbackRedirect(browserController)
+    }
+
+    private fun assertFallbackRedirect(browserController: BrowserController) {
+        assertEquals(
+            GeckoNavigationRequestDecision.Deny,
+            browserController.dispatchSelectedGeckoNavigationRequestForTesting(
+                GeckoMainFrameNavigationRequest(
+                    url = APP_HANDOFF_TARGET_URL,
+                    isRedirect = true,
+                    hasUserGesture = false,
+                    isDirectNavigation = false,
+                ),
+            ),
+        )
+    }
+
+    @Test
+    fun returnedAppLinkAfterSourceTabSwitchUsesIncomingNavigation() {
+        assertStaleReturnedAppLink(closeSource = false)
+    }
+
+    @Test
+    fun returnedAppLinkAfterSourceTabClosedUsesIncomingNavigation() {
+        assertStaleReturnedAppLink(closeSource = true)
+    }
+
+    private fun assertStaleReturnedAppLink(closeSource: Boolean) {
+        lateinit var browserController: BrowserController
+        lateinit var recordingContext: RecordingContext
+        var sourceTabId = ""
+        composeRule.runOnIdle {
+            recordingContext = RecordingContext(composeRule.activity)
+            browserController = createExternalNavigationController(recordingContext)
+            sourceTabId = browserController.selectedTabId
+            assertEquals(
+                GeckoNavigationRequestDecision.Deny,
+                browserController.dispatchSelectedGeckoNavigationRequestForTesting(
+                    GeckoMainFrameNavigationRequest(
+                        url = APP_HANDOFF_TARGET_URL,
+                        isRedirect = false,
+                        hasUserGesture = true,
+                        isDirectNavigation = false,
+                    ),
+                ),
+            )
+        }
+        composeRule.waitUntil(5_000L) {
+            recordingContext.lastIntent?.dataString == APP_HANDOFF_TARGET_URL
+        }
+        composeRule.runOnIdle {
+            browserController.createTab()
+            if (closeSource) browserController.closeTab(sourceTabId)
+            val selectedId = browserController.selectedTabId
+            val selectedUrl = browserController.selectedTab.url
+            assertFalse(browserController.openReturnedExternalAppLink(APP_HANDOFF_RETURN_URL))
+            assertEquals(selectedId, browserController.selectedTabId)
+            assertEquals(selectedUrl, browserController.selectedTab.url)
+            assertNull(browserController.externalLinkPreviewState)
+        }
+    }
+
+    private fun createExternalNavigationController(
+        context: RecordingContext,
+        isPrivate: Boolean = false,
+    ): BrowserController {
+        context.availableAppUrl = APP_HANDOFF_TARGET_URL
+        val store = BrowserSessionStore(composeRule.activity)
+        originalEngineKind = store.loadAndroidBrowserEngineKind()
+        originalExternalAppLinkHandling = store.loadExternalAppLinkHandling()
+        assertTrue(store.saveAndroidBrowserEngineKind(AndroidBrowserEngineKind.GeckoView))
+        return BrowserController(
+            activity = composeRule.activity,
+            externalApps = ExternalAppLauncher(
+                context = context,
+                findExternalWebPackages = { emptyList() },
+                canResolveExternalActivity = { intent ->
+                    intent.dataString == APP_HANDOFF_TARGET_URL
+                },
+            ),
+        ).also { browserController ->
+            controller = browserController
+            browserController.updateExternalAppLinkHandling(ExternalAppLinkHandling.Automatic)
+            if (isPrivate) browserController.createTab(isIncognito = true)
+            browserController.installGeckoEngineSessionForTesting(
+                ReentrantAttachSession(tabId = browserController.selectedTabId, onFirstAttach = {}),
+            )
+            browserController.dispatchGeckoEngineEventForTesting(
+                BrowserEngineEvent(
+                    tabId = browserController.selectedTabId,
+                    type = BrowserEngineEventType.NavigationCommitted,
+                    address = APP_HANDOFF_SOURCE_URL,
+                    title = "Source",
+                    canGoBack = false,
+                    canGoForward = false,
+                    failureDescription = null,
+                ),
+            )
+        }
+    }
+
+    @Test
     fun automaticAppLinkUsesInstalledAppEvenWhenAndroidHasNoDefault() {
         val redditUrl = "https://www.reddit.com/r/candy/"
         lateinit var recordingContext: RecordingContext
@@ -2878,6 +3151,7 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
         private var mediaRestorationCallback: ((Boolean) -> Unit)? = null
         val pictureInPicturePlaybackExpectations = mutableListOf<Boolean>()
         val policyReadyCallbacks = mutableListOf<() -> Unit>()
+        var onPreviewCapture: (((Bitmap?) -> Unit) -> BrowserEnginePreviewCapture?)? = null
         private var privacyHandshake = GeckoPrivacyBindingHandshake()
         val privacyPolicyRevision: Long
             get() = privacyHandshake.publishedRevision
@@ -2948,7 +3222,7 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
             visibleViewHeightPx: Int,
             maximumTargetHeightPx: Int,
             onComplete: (Bitmap?) -> Unit,
-        ): BrowserEnginePreviewCapture? = null
+        ): BrowserEnginePreviewCapture? = onPreviewCapture?.invoke(onComplete)
 
         override fun findInPage(
             query: String,
@@ -3078,11 +3352,15 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
 
     private class RecordingContext(base: Context) : ContextWrapper(base) {
         val launchedIntents = mutableListOf<Intent>()
+        var availableAppUrl: String? = null
 
         @Volatile
         var lastIntent: Intent? = null
 
         override fun startActivity(intent: Intent) {
+            if (availableAppUrl != null && intent.dataString != availableAppUrl) {
+                throw ActivityNotFoundException("No test app for ${intent.dataString}")
+            }
             val launched = Intent(intent)
             launchedIntents += launched
             lastIntent = launched

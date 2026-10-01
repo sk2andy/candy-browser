@@ -288,6 +288,48 @@ class GeckoExtensionChromeRulesTest {
     }
 
     @Test
+    fun `options links preserve asset query and fragment within exact extension origin`() {
+        assertEquals(
+            "moz-extension://fixture-uuid/asset-viewer.html?url=filters.txt#content",
+            GeckoExtensionChromeRules.normalizeOptionsPageUrl(
+                baseUrl = "moz-extension://fixture-uuid/dashboard.html",
+                optionsPageUrl =
+                    "moz-extension://fixture-uuid/options/../asset-viewer.html?url=filters.txt#content",
+            ),
+        )
+    }
+
+    @Test
+    fun `options origin rejects foreign extension credentials ports and active schemes`() {
+        val rejectedTargets = listOf(
+            "moz-extension://other-uuid/asset-viewer.html",
+            "moz-extension://user@fixture-uuid/asset-viewer.html",
+            "moz-extension://fixture-uuid:443/asset-viewer.html",
+            "javascript:alert(1)",
+            "intent://fixture-uuid/asset-viewer.html",
+            "file:///asset-viewer.html",
+            " moz-extension://fixture-uuid/asset-viewer.html",
+            "moz-extension://fixture-uuid/asset-viewer.html\n",
+        )
+
+        rejectedTargets.forEach { target ->
+            assertNull(
+                target,
+                GeckoExtensionChromeRules.normalizeOptionsPageUrl(
+                    baseUrl = "moz-extension://fixture-uuid/dashboard.html",
+                    optionsPageUrl = target,
+                ),
+            )
+        }
+        assertNull(
+            GeckoExtensionChromeRules.normalizeOptionsPageUrl(
+                baseUrl = "https://fixture-uuid/dashboard.html",
+                optionsPageUrl = "moz-extension://fixture-uuid/asset-viewer.html",
+            ),
+        )
+    }
+
+    @Test
     fun `capability matrix documents tab model limits`() {
         val create = GeckoExtensionChromeRules.capabilityMatrix.single { it.api == "tabs.create" }
         val update = GeckoExtensionChromeRules.capabilityMatrix.single {

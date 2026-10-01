@@ -30,6 +30,9 @@
 
 ## Test lookup
 
+Issue 205's controlled reproductions and integrated checks are recorded in
+[`../audits/issue-205-gecko-loading-and-recovery.md`](../audits/issue-205-gecko-loading-and-recovery.md).
+
 | Surface | Tests |
 | --- | --- |
 | URL, search, AI mode, URI policy | `AddressResolverTest`, `SearchEngineTest`, `AddressAiModeRulesTest`, `AddressAiModeToggleInstrumentedTest`, `BrowserUriPolicyTest` |
@@ -39,10 +42,12 @@
 | Candy Recall rules, extraction, SQLite ranking and UI | `recall/*Test`, `RecallRepositoryInstrumentedTest`, focused address/History instrumented tests |
 | Gestures and motion | `ui/Address*Test`, `ui/Address*InstrumentedTest` |
 | Gecko keyboard viewport, focused input and chrome-owned IME | `GeckoViewInsetRulesTest`, `GeckoKeyboardInsetsInstrumentedTest`, `FullImmersiveModeInstrumentedTest` |
+| Restored launcher tab and initial Gecko viewport | `StartupPresentationRulesTest`, `BrowserInitialNavigationRulesTest`, `MainActivityRestoredTabInstrumentedTest`, `BrowserControllerInitialViewportInstrumentedTest` |
 | WebView runtime, Basic authentication and Link Peek | `browser/*InstrumentedTest`, `BrowserControllerHttpAuthInstrumentedTest`, `ui/HttpAuthPromptDialogInstrumentedTest`, `ui/LinkPeekOverlayInstrumentedTest` |
 | Payment Request and checkout popup routing | `SystemWebViewBrowserEngineInstrumentedTest`, `BrowserControllerGeckoViewBindingInstrumentedTest` |
 | Topping parsing, catalog integrity, storage and UI | `browser/userscript/*Test`, `*Topping*InstrumentedTest`, `UserscriptManagementScreenInstrumentedTest` |
 | Shared browser behavior and Gecko extension policy | `shared/src/commonTest`, `browser/gecko/*Test` |
+| Gecko loading surface, bootstrap canvas, first paint, reload and view reattachment | `GeckoWebContentThemeInstrumentedTest#unpaintedGeckoSurfaceUsesDarkBackground`, `#unpaintedGeckoSurfaceUsesLightBackground`, `#darkLoadingSurfaceReleasesForFirstPaintAndReload`, `#lightLoadingSurfaceReleasesForFirstPaintAndReload` |
 | Gecko website appearance and nested AppCompat night overrides | `GeckoAppearanceInstrumentedTest`, `GeckoWebContentThemeInstrumentedTest`; the cold-start method requires system dark before a fresh, isolated instrumentation process |
 | Edge-to-edge Safe-Area, Shadow DOM, observable fixture readiness and scroll scaling | `WebContentTopInsetScriptTest`, `WebContentTopInsetScriptInstrumentedTest`, `GeckoEdgeToEdgeInstrumentedTest`, `GeckoSafeAreaScalingInstrumentedTest`, `scripts/web_content_top_inset_performance.test.mjs`, `scripts/edge_to_edge_site_fixture.test.mjs` |
 | Diagnostic activation, export and private-session cancellation | `GeckoPerformanceDiagnosticsRulesTest`, `GeckoPerformanceDiagnosticsInstrumentedTest`, `BrowserPerformanceTraceTest`, `scripts/web_content_top_inset_diagnostics.test.mjs` |

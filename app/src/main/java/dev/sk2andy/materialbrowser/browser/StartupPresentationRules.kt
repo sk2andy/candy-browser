@@ -46,5 +46,7 @@ internal object StartupPresentationRules {
     fun shouldOpenHomePage(
         isLauncherLaunch: Boolean,
         isOpenHomeOnStartupEnabled: Boolean,
-    ): Boolean = isLauncherLaunch && isOpenHomeOnStartupEnabled
+        startupAddressFocusMode: StartupAddressFocusMode = StartupAddressFocusMode.Default,
+    ): Boolean = isLauncherLaunch && isOpenHomeOnStartupEnabled &&
+        startupAddressFocusMode != StartupAddressFocusMode.Never
 }

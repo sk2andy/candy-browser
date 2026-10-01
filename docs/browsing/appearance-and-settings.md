@@ -109,7 +109,9 @@ Frosted exposes three persisted controls while selected:
   onboarding, and release notes do not force the editor open. Explicit address-bar taps, hardware
   focus actions, and new-tab actions still focus the editor in every mode.
 - Open home page on startup is global and disabled by default. When enabled, normal cold and warm
-  launcher opens select a fresh blank tab while keeping restored tabs. An existing fresh regular
+  launcher opens select a fresh blank tab while keeping restored tabs, except when address focus
+  on launch is set to Never: that choice preserves the last selected tab and keeps the keyboard
+  closed. An existing fresh regular
   blank tab in the active profile is reused. External links, launcher shortcuts, Site Capsules, and
   activity recreation keep their own destinations.
 - Unknown stored values fall back per field; one corrupt value does not discard valid choices.

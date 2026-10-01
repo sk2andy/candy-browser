@@ -238,11 +238,15 @@ internal fun BrowserBottomBar(
     onBarPositioned: (boundsInRoot: Rect, topInWindowPx: Int) -> Unit,
     backdropBlurRegionEnabled: Boolean = true,
     onBackdropBlurRegionChanged: (BrowserBackdropBlurRegion?) -> Unit = {},
+    menuDismissRequestId: Int = 0,
     modifier: Modifier = Modifier,
 ) {
     val docked = dockState.placement != null
     val dockingEnabled = dockState.enabled
     var menuExpanded by remember { mutableStateOf(false) }
+    LaunchedEffect(menuDismissRequestId) {
+        if (menuDismissRequestId != 0) menuExpanded = false
+    }
     val focusRequester = remember { androidx.compose.ui.focus.FocusRequester() }
     val presentation = AddressBarPresentationRules.resolve(
         docked = docked,

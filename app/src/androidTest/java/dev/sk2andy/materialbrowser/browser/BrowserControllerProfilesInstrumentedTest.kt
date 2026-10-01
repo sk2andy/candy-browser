@@ -9,7 +9,10 @@ import dev.sk2andy.materialbrowser.data.SnoozedTab
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNotSame
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
 import org.junit.Rule
@@ -68,6 +71,211 @@ class BrowserControllerProfilesInstrumentedTest {
             assertTrue(selected)
             assertEquals("work", controller.activeProfileId)
             assertFalse(controller.isActiveProfileLocked)
+        }
+    }
+
+    @Test
+    fun previewProfileSelectionWaitsForAuthenticationWithoutSwitchingActiveProfile() {
+        activityRule.scenario.onActivity { activity ->
+            resetAndSeed(activity, protectedWorkProfiles(), activeProfileId = "home")
+            var purpose: ProfileAuthenticationPurpose? = null
+            var authenticationResult: ((Boolean) -> Unit)? = null
+            val controller = BrowserController(
+                activity = activity,
+                profileProtectionSupported = { true },
+                authenticateProfile = { requestedPurpose, onResult ->
+                    purpose = requestedPurpose
+                    authenticationResult = onResult
+                },
+            ).also { this.controller = it }
+            assertTrue(controller.openExternalLinkPreview("https://example.com/account"))
+            val sessionId = requireNotNull(controller.externalLinkPreviewState).sessionId
+            assertTrue(controller.prepareExternalLinkPreview(sessionId))
+            val preview = requireNotNull(controller.externalLinkPreviewState)
+            val sourceView = controller.externalLinkPreviewEngineViewForTesting()
+            assertNotNull(sourceView)
+
+            assertTrue(controller.selectExternalLinkPreviewProfile(preview.sessionId, "work"))
+
+            assertEquals(ProfileAuthenticationPurpose.Unlock, purpose)
+            assertEquals("home", controller.activeProfileId)
+            assertEquals(preview, controller.externalLinkPreviewState)
+            assertSame(sourceView, controller.externalLinkPreviewEngineViewForTesting())
+            assertTrue("work" in controller.lockedProfileIds)
+
+            requireNotNull(authenticationResult).invoke(true)
+
+            assertEquals("home", controller.activeProfileId)
+            assertEquals("work", controller.externalLinkPreviewState?.targetProfileId)
+            assertEquals(preview.generation + 1, controller.externalLinkPreviewState?.generation)
+            assertFalse("work" in controller.lockedProfileIds)
+            assertNotNull(controller.externalLinkPreviewEngineViewForTesting())
+            assertNotSame(sourceView, controller.externalLinkPreviewEngineViewForTesting())
+        }
+    }
+
+    @Test
+    fun canceledPreviewProfileAuthenticationKeepsOriginalPreview() {
+        activityRule.scenario.onActivity { activity ->
+            resetAndSeed(activity, protectedWorkProfiles(), activeProfileId = "home")
+            var authenticationResult: ((Boolean) -> Unit)? = null
+            val controller = BrowserController(
+                activity = activity,
+                profileProtectionSupported = { true },
+                authenticateProfile = { _, onResult -> authenticationResult = onResult },
+            ).also { this.controller = it }
+            assertTrue(controller.openExternalLinkPreview("https://example.com/account"))
+            val preview = requireNotNull(controller.externalLinkPreviewState)
+
+            assertTrue(controller.selectExternalLinkPreviewProfile(preview.sessionId, "work"))
+            requireNotNull(authenticationResult).invoke(false)
+
+            assertEquals(preview, controller.externalLinkPreviewState)
+            assertNull(controller.externalLinkPreviewEngineViewForTesting())
+            assertTrue("work" in controller.lockedProfileIds)
+            assertEquals("home", controller.activeProfileId)
+        }
+    }
+
+    @Test
+    fun previewAuthenticationResultIsRejectedAfterPreviewReplacement() {
+        activityRule.scenario.onActivity { activity ->
+            resetAndSeed(activity, protectedWorkProfiles(), activeProfileId = "home")
+            var authenticationResult: ((Boolean) -> Unit)? = null
+            val controller = BrowserController(
+                activity = activity,
+                profileProtectionSupported = { true },
+                authenticateProfile = { _, onResult -> authenticationResult = onResult },
+            ).also { this.controller = it }
+            assertTrue(controller.openExternalLinkPreview("https://example.com/account"))
+            val sessionId = requireNotNull(controller.externalLinkPreviewState).sessionId
+            assertTrue(controller.selectExternalLinkPreviewProfile(sessionId, "work"))
+            assertTrue(controller.dismissExternalLinkPreview(sessionId))
+            assertTrue(controller.openExternalLinkPreview("https://example.com/replacement"))
+            val replacement = requireNotNull(controller.externalLinkPreviewState)
+
+            requireNotNull(authenticationResult).invoke(true)
+
+            assertEquals(replacement, controller.externalLinkPreviewState)
+            assertNull(controller.externalLinkPreviewEngineViewForTesting())
+            assertTrue("work" in controller.lockedProfileIds)
+        }
+    }
+
+    @Test
+    fun selectingOriginalPreviewProfileRejectsPendingProtectedProfileAuthentication() {
+        activityRule.scenario.onActivity { activity ->
+            resetAndSeed(activity, protectedWorkProfiles(), activeProfileId = "home")
+            var authenticationResult: ((Boolean) -> Unit)? = null
+            val controller = BrowserController(
+                activity = activity,
+                profileProtectionSupported = { true },
+                authenticateProfile = { _, onResult -> authenticationResult = onResult },
+            ).also { this.controller = it }
+            assertTrue(controller.openExternalLinkPreview("https://example.com/account"))
+            val preview = requireNotNull(controller.externalLinkPreviewState)
+            assertTrue(controller.selectExternalLinkPreviewProfile(preview.sessionId, "work"))
+
+            assertFalse(controller.selectExternalLinkPreviewProfile(preview.sessionId, "home"))
+            requireNotNull(authenticationResult).invoke(true)
+
+            assertEquals(preview, controller.externalLinkPreviewState)
+            assertNull(controller.externalLinkPreviewEngineViewForTesting())
+            assertTrue("work" in controller.lockedProfileIds)
+        }
+    }
+
+    @Test
+    fun previewAuthenticationResultIsRejectedAfterRuntimeRecreation() {
+        activityRule.scenario.onActivity { activity ->
+            resetAndSeed(activity, protectedWorkProfiles(), activeProfileId = "home")
+            var authenticationResult: ((Boolean) -> Unit)? = null
+            val controller = BrowserController(
+                activity = activity,
+                profileProtectionSupported = { true },
+                authenticateProfile = { _, onResult -> authenticationResult = onResult },
+            ).also { this.controller = it }
+            assertTrue(controller.openExternalLinkPreview("https://example.com/account"))
+            val sessionId = requireNotNull(controller.externalLinkPreviewState).sessionId
+            assertTrue(controller.prepareExternalLinkPreview(sessionId))
+            assertTrue(controller.selectExternalLinkPreviewProfile(sessionId, "work"))
+            assertTrue(controller.setExternalLinkPreviewDesktopView(sessionId, enabled = true))
+            val recreatedPreview = requireNotNull(controller.externalLinkPreviewState)
+            val recreatedView = controller.externalLinkPreviewEngineViewForTesting()
+
+            requireNotNull(authenticationResult).invoke(true)
+
+            assertEquals(recreatedPreview, controller.externalLinkPreviewState)
+            assertSame(recreatedView, controller.externalLinkPreviewEngineViewForTesting())
+            assertTrue("work" in controller.lockedProfileIds)
+        }
+    }
+
+    @Test
+    fun previewAuthenticationResultIsRejectedAfterAppBackgrounds() {
+        activityRule.scenario.onActivity { activity ->
+            resetAndSeed(activity, protectedWorkProfiles(), activeProfileId = "home")
+            var authenticationResult: ((Boolean) -> Unit)? = null
+            val controller = BrowserController(
+                activity = activity,
+                profileProtectionSupported = { true },
+                authenticateProfile = { _, onResult -> authenticationResult = onResult },
+            ).also { this.controller = it }
+            assertTrue(controller.openExternalLinkPreview("https://example.com/account"))
+            val preview = requireNotNull(controller.externalLinkPreviewState)
+            assertTrue(controller.selectExternalLinkPreviewProfile(preview.sessionId, "work"))
+
+            controller.onAppBackgrounded(nowElapsedRealtime = 1_000L)
+            requireNotNull(authenticationResult).invoke(true)
+
+            assertEquals(preview, controller.externalLinkPreviewState)
+            assertNull(controller.externalLinkPreviewEngineViewForTesting())
+            assertTrue("work" in controller.lockedProfileIds)
+        }
+    }
+
+    @Test
+    fun backgroundRelockClosesPreviewInOtherProfile() {
+        activityRule.scenario.onActivity { activity ->
+            ProfileProtectionSession.unlock("work")
+            resetAndSeed(activity, protectedWorkProfiles(), activeProfileId = "home")
+            val controller = BrowserController(
+                activity = activity,
+                profileProtectionSupported = { true },
+            ).also { this.controller = it }
+            assertTrue(controller.openExternalLinkPreview("https://example.com/account"))
+            val sessionId = requireNotNull(controller.externalLinkPreviewState).sessionId
+            assertTrue(controller.selectExternalLinkPreviewProfile(sessionId, "work"))
+            assertNotNull(controller.externalLinkPreviewEngineViewForTesting())
+            assertEquals("home", controller.activeProfileId)
+
+            controller.onAppBackgrounded(nowElapsedRealtime = 1_000L)
+
+            assertTrue("work" in controller.lockedProfileIds)
+            assertFalse(controller.isActiveProfileLocked)
+            assertNull(controller.externalLinkPreviewState)
+            assertNull(controller.externalLinkPreviewEngineViewForTesting())
+            assertFalse(controller.prepareExternalLinkPreview(sessionId))
+        }
+    }
+
+    @Test
+    fun lockedInitialPreviewCannotPrepareProfileRuntime() {
+        activityRule.scenario.onActivity { activity ->
+            resetAndSeed(activity, protectedWorkProfiles(), activeProfileId = "work")
+            val controller = BrowserController(
+                activity = activity,
+                profileProtectionSupported = { true },
+            ).also { this.controller = it }
+            assertTrue(controller.isActiveProfileLocked)
+            assertTrue(controller.openExternalLinkPreview("https://example.com/account"))
+            val preview = requireNotNull(controller.externalLinkPreviewState)
+
+            assertFalse(controller.prepareExternalLinkPreview(preview.sessionId))
+
+            assertNull(controller.externalLinkPreviewEngineViewForTesting())
+            assertEquals("work", controller.externalLinkPreviewState?.targetProfileId)
+            assertTrue("work" in controller.lockedProfileIds)
         }
     }
 
@@ -481,4 +689,12 @@ class BrowserControllerProfilesInstrumentedTest {
         BrowserProfile(id = "home", emoji = "🏠", selectedTabId = "home-tab"),
         BrowserProfile(id = "work", emoji = "💼", selectedTabId = "work-tab"),
     )
+
+    private fun protectedWorkProfiles() = profiles().map { profile ->
+        if (profile.id == "work") {
+            profile.copy(protection = ProfileProtection(ProfileLockTrigger.AppBackgrounded))
+        } else {
+            profile
+        }
+    }
 }

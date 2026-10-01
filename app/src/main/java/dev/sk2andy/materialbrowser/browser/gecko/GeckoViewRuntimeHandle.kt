@@ -1130,6 +1130,9 @@ private class GeckoViewBrowserSession(
                         isRedirect = request.isRedirect,
                     )
                 ) return GeckoResult.allow()
+                if (CandyPrivacyHostContract.isBootstrapDocumentUrl(request.uri)) {
+                    return GeckoResult.deny()
+                }
                 val decision = navigationRequestListener?.onNavigationRequest(
                     GeckoMainFrameNavigationRequest(
                         url = request.uri,
@@ -2853,8 +2856,15 @@ private class GeckoViewBrowserSession(
         )
     }
 
-    override fun sessionStateSnapshot(): String? =
-        if (closed || isPrivate) null else latestSessionState?.toString()
+    override fun sessionStateSnapshot(): String? {
+        if (closed || isPrivate) return null
+        val snapshot = latestSessionState ?: return null
+        if (CandyPrivacyHostContract.isBootstrapDocumentUrl(
+                snapshot.toBrowserHistoryState().currentUrl(),
+            )
+        ) return null
+        return snapshot.toString()
+    }
 
     override fun restoreSessionState(encodedState: String): Boolean {
         if (closed || isPrivate || encodedState.length !in 1..GeckoSessionStateSnapshotRules.MAX_ENCODED_STATE_CHARS) {
@@ -2862,9 +2872,13 @@ private class GeckoViewBrowserSession(
         }
         val restored = runCatching { GeckoSession.SessionState.fromString(encodedState) }.getOrNull()
             ?: return false
+        val restoredHistory = restored.toBrowserHistoryState()
+        if (CandyPrivacyHostContract.isBootstrapDocumentUrl(restoredHistory.currentUrl())) {
+            return false
+        }
         latestSessionState = GeckoSession.SessionState(restored)
         pendingRestoredSessionState = restored
-        pendingRestoredHistoryState = restored.toBrowserHistoryState()
+        pendingRestoredHistoryState = restoredHistory
         pendingRestoredHistoryState?.currentUrl()?.let(::beginNavigation)
         restorePendingStateIfReady()
         return true

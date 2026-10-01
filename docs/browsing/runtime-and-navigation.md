@@ -14,6 +14,23 @@
 | Gecko CSS safe-area protection | Bounded load classification, one-time CSS anchors, configurable relevant mutation/interaction gates; scroll cancels work without geometry reads | `GeckoSafeAreaSettings`, `content_safe_area.js` |
 | System WebView safe-area mutation repair | Keep related attributes, owned-subtree and stylesheet/meta changes immediate; coalesce ancestor feed insertions into an animation frame; defer unrelated opaque feed changes to full quiet owned-layout revalidation before verification | `WebContentTopInsetScript` |
 
+- Initial Gecko loads wait for an attached, measured viewport. Readiness is checked on both layout
+  and attachment, so a view measured before attachment loads without waiting for a keyboard resize.
+  Replacing or canceling the pending load removes both observers.
+- A restored web tab waiting for its first viewport-bound load ignores initial `about:blank`
+  navigation/location callbacks. Those engine placeholders cannot replace its saved URL and remove
+  the page viewport before the queued load starts. Blank tabs, popups, explicit later blank
+  navigation, failures and renderer termination keep their normal behavior.
+
+## Gecko loading surfaces
+
+| Surface | Background and lifetime | Owner |
+| --- | --- | --- |
+| New view before session binding | Opaque Gecko dark/light fallback follows the view context's night mode; set before the native surface can attach | `CandyGeckoViewSafeAreaBridge` |
+| Session-bound view before first paint | Native cover and compositor clear color follow Gecko's effective website color scheme, including explicit overrides; Gecko clears the cover after its first paint | `CandyGeckoViewSafeAreaBridge`, Gecko compositor |
+| Internal privacy bootstrap document | `color-scheme: light dark` gives the temporary extension document a theme-aware canvas while the real website waits for its privacy handshake | `candy_privacy/bootstrap.css` |
+| Loaded website, reload and restored view | Keep direct `SurfaceView` rendering and Gecko-owned website colors; no persistent Candy page recoloring or loading overlay | `CandyGeckoEngineView`, Gecko compositor |
+
 ## Navigation paths
 
 | Input | Path | Boundary |
@@ -37,6 +54,7 @@
 | Local userscript | `UserScriptRules` → Gecko Topping document-start bridge | Require an explicit HTTP(S) pattern, top frame and regular tab; apply full URL exclusions before source runs |
 | Main-frame 404 | engine HTTP status → tab state → `PageErrorFeedbackRules` | Keep the navigation committed, preserve URL/title/history side effects, and cover the page with Candy's native not-found surface |
 | Offline page | failed main-frame navigation + `BrowserConnectivityMonitor` → controller → `PageErrorFeedbackRules` | Require Android's validated default internet capability, never cover an already loaded page merely because connectivity drops, auto-reload on reconnect only before the game starts, and preserve the game behind an explicit reload banner afterward |
+| Stale Gecko Privacy bootstrap | `CandyPrivacyHostContract` → Gecko session callbacks and snapshot restore | Treat the exact UUID-shaped `moz-extension://…/bootstrap.html?token=…` document as internal even when it came from an earlier runtime, and reject a native session snapshot whose current page is that bootstrap document; only the current session's exact origin and token may authorize a bootstrap navigation |
 | Pull to refresh | `BrowserPullToRefreshLayout` → `BrowserPullGestureRules` / `BrowserPullToRefreshRules` → `BrowserController.reload()` | Admit a downward-dominant gesture starting within 160 dp below the top safe inset only for a visible, idle web page whose engine-reported document offset is at the top; keep gestures starting lower in the page body with nested scrollers, plus blank, obscured, Find-in-page, overview and video-only surfaces, out of the gesture path |
 
 ## Invariants
@@ -98,6 +116,16 @@
   into the tab overview. When the root tab is the active profile's last tab, or the selected root tab is
   pinned, do not mutate tabs and let Android handle Back-to-Home. Tabs in other profiles do not become
   implicit Back targets.
+- An accepted incoming link leaves Site Capsule presentation and closes Settings, the Firefox
+  extension manager, extension action popup and other transient navigation surfaces. Cancel pending address-editor callbacks
+  so an older preview capture cannot open an editor over the incoming page. Reusing a returned link in
+  its original externally opened tab preserves that tab's Back-to-caller marker; if its source tab or
+  preview is no longer current, continue through the ordinary incoming-link path.
+- An external-app browser fallback keeps the original navigation target. New-window targets open a
+  popup child under the existing opener/profile/private and popup policies without replacing the
+  source tab. Retain the original bounded redirect grant without extending its lifetime; allow the
+  first browser fallback load once, then route its subsequent redirects through the normal app-link
+  policy. A fallback never grants app handoff to an unrequested incoming link.
 - Keep external-link preview sessions, URLs, engine views, progress, and target-profile selection out of
   tab/session, history, Candy Trail, favicon, Gecko-session-state, and tab-preview persistence. Recreate
   the transient engine session when its target profile changes and reload the final normalized HTTP(S) URL

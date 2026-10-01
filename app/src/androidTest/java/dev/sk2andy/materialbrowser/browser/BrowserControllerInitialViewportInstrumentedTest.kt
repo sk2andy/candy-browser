@@ -1,6 +1,8 @@
 package dev.sk2andy.materialbrowser.browser
 
 import android.os.SystemClock
+import android.view.View
+import android.view.ViewGroup
 import android.widget.FrameLayout
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
@@ -16,6 +18,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.mozilla.geckoview.GeckoView
 
 @RunWith(AndroidJUnit4::class)
 @SdkSuppress(minSdkVersion = 34)
@@ -64,6 +67,91 @@ class BrowserControllerInitialViewportInstrumentedTest {
                     assertTrue(store.saveHistoryRecordingMode(mode))
                 }
             }
+        }
+    }
+
+    @Test
+    fun initialBlankLocationDoesNotReplaceRestoredTabBeforeFirstNavigation() {
+        composeRule.runOnIdle {
+            val store = BrowserSessionStore(composeRule.activity)
+            originalEngineKind = store.loadAndroidBrowserEngineKind()
+            store.loadTabs().let { (tabs, selectedTabId) ->
+                originalTabs = tabs
+                originalSelectedTabId = selectedTabId
+            }
+            assertTrue(store.saveAndroidBrowserEngineKind(AndroidBrowserEngineKind.GeckoView))
+            val restoredTab = BrowserTab(
+                id = "restored-before-first-location",
+                url = "https://example.com/previously-open",
+                lastAccessedAt = System.currentTimeMillis(),
+            )
+            assertTrue(store.saveTabsImmediately(listOf(restoredTab), restoredTab.id))
+            val browserController = BrowserController(composeRule.activity)
+            controller = browserController
+            activeTestTabId = restoredTab.id
+            val host = FrameLayout(composeRule.activity)
+            val view = requireNotNull(browserController.attachSelectedBrowserEngineView(host))
+            val nativeSession = requireNotNull(findGeckoView(view)?.session)
+            requireNotNull(nativeSession.navigationDelegate).onLocationChange(
+                nativeSession,
+                BLANK_URL,
+                emptyList(),
+                false,
+            )
+
+            assertEquals(restoredTab.id, browserController.selectedTabId)
+            assertEquals(restoredTab.url, browserController.selectedTab.url)
+            assertTrue(browserController.isInitialNavigationWaitingForRendererForTesting())
+            browserController.detachBrowserEngineView(host)
+        }
+    }
+
+    @Test
+    fun restoredPageStartsWhenMeasuredViewportAttachesWithoutAnotherLayout() {
+        EdgeToEdgeSiteFixtureServer { HTML }.use { server ->
+            lateinit var host: FrameLayout
+            composeRule.runOnIdle {
+                val store = BrowserSessionStore(composeRule.activity)
+                originalEngineKind = store.loadAndroidBrowserEngineKind()
+                originalHistoryRecordingMode = store.loadHistoryRecordingMode()
+                store.loadTabs().let { (tabs, selectedTabId) ->
+                    originalTabs = tabs
+                    originalSelectedTabId = selectedTabId
+                }
+                assertTrue(store.saveAndroidBrowserEngineKind(AndroidBrowserEngineKind.GeckoView))
+                assertTrue(store.saveHistoryRecordingMode(HistoryRecordingMode.Disabled))
+                val restoredTab = BrowserTab(
+                    id = "restored-before-attachment",
+                    url = server.fixtureUrl(FIXTURE_PATH),
+                    lastAccessedAt = System.currentTimeMillis(),
+                )
+                assertTrue(store.saveTabsImmediately(listOf(restoredTab), restoredTab.id))
+                val browserController = BrowserController(composeRule.activity)
+                controller = browserController
+                activeTestTabId = restoredTab.id
+                browserController.onStart()
+                browserController.onResume()
+                host = FrameLayout(composeRule.activity)
+                val view = requireNotNull(browserController.attachSelectedBrowserEngineView(host))
+                host.measure(
+                    View.MeasureSpec.makeMeasureSpec(600, View.MeasureSpec.EXACTLY),
+                    View.MeasureSpec.makeMeasureSpec(800, View.MeasureSpec.EXACTLY),
+                )
+                host.layout(0, 0, 600, 800)
+                assertTrue(view.isLaidOut)
+                assertFalse(view.isAttachedToWindow)
+                assertTrue(browserController.isInitialNavigationWaitingForRendererForTesting())
+                composeRule.activity.addContentView(host, FrameLayout.LayoutParams(600, 800))
+                assertTrue(view.isAttachedToWindow)
+            }
+            composeRule.waitUntil(timeoutMillis = 5_000L) {
+                !requireNotNull(controller).isInitialNavigationWaitingForRendererForTesting()
+            }
+            composeRule.waitUntil(timeoutMillis = 30_000L) {
+                controller?.selectedTabForTesting()?.title?.startsWith(REPORT_PREFIX) == true
+            }
+            assertEquals(1, server.documentRequestCount.get())
+            assertFalse(requireNotNull(controller).isInitialNavigationWaitingForRendererForTesting())
         }
     }
 
@@ -163,6 +251,15 @@ class BrowserControllerInitialViewportInstrumentedTest {
                 server.documentRequestCount.get(),
             )
         }
+    }
+
+    private fun findGeckoView(view: View): GeckoView? {
+        if (view is GeckoView) return view
+        if (view !is ViewGroup) return null
+        for (index in 0 until view.childCount) {
+            findGeckoView(view.getChildAt(index))?.let { return it }
+        }
+        return null
     }
 
     private companion object {

@@ -149,6 +149,16 @@ internal object ExternalNavigationGrantRules {
         nowElapsedRealtime: Long,
     ): Boolean = grant != null && grant.expiresAtElapsedRealtime >= nowElapsedRealtime
 
+    fun resumeInBrowser(
+        grant: ExternalNavigationGrant?,
+        url: String?,
+        nowElapsedRealtime: Long,
+    ): ExternalNavigationGrant? {
+        if (!isActive(grant, nowElapsedRealtime)) return null
+        val safeUrl = BrowserUriPolicy.normalizeHttpUrl(url) ?: return null
+        return grant?.copy(currentUrl = safeUrl)
+    }
+
     fun shouldClearForMainFrameCallback(
         grant: ExternalNavigationGrant,
         callbackUrl: String?,

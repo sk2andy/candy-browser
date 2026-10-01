@@ -38,7 +38,7 @@ Main ownership: shared `browser/BrowserMenuLayout`, `ui/settings/BrowserMenuSett
 | Profiles and storage assignment | `BrowserProfileRulesTest`, `BrowserTabsControllerTest`, `BrowserSessionControllerTest`, `GeckoProfileStorageRulesTest`, `BrowserControllerProfilesInstrumentedTest`, `ProfileCreationFlowInstrumentedTest` |
 | Profile wallpapers | `ProfileWallpaperRulesTest`, `ProfileWallpaperStoreInstrumentedTest`, `BrowserControllerProfileWallpaperInstrumentedTest`, `ProfileWallpaperEditorContractInstrumentedTest`, `ProfileWallpaperEditorScreenInstrumentedTest` |
 | Biometric profile protection | `BrowserProfileRulesTest`, `BrowserSessionStoreInstrumentedTest`, `BrowserControllerProfilesInstrumentedTest`, `ProfileProtectionUiInstrumentedTest` |
-| Previews | `TabPreview*Test`, `TabPreviewRefreshInstrumentedTest` |
+| Previews | `TabPreview*Test`, `TabPreviewRefreshInstrumentedTest`, `BrowserControllerProfilesInstrumentedTest` (preview authentication and relock) |
 | Snoozing | `Snooze*Test`, `Snooze*InstrumentedTest` |
 | Private-tab notification | `PrivateTabsNotifierInstrumentedTest`, `PrivateTabsNotificationFlowInstrumentedTest`, `BrowserControllerProfilesInstrumentedTest` |
 | Launcher app shortcuts | `LauncherShortcutRulesTest`, `LauncherShortcutInstrumentedTest` |

@@ -244,6 +244,32 @@ class CandyPrivacyHostContractTest {
     }
 
     @Test
+    fun `stale runtime bootstrap document stays internal but cannot be trusted to navigate`() {
+        val staleUrl = "moz-extension://5e6344e7-68a0-4a80-863c-0123456789ab/" +
+            "bootstrap.html?token=11111111-2222-4333-8444-555555555555"
+
+        assertTrue(CandyPrivacyHostContract.isBootstrapDocumentUrl(staleUrl))
+        assertFalse(
+            CandyPrivacyHostContract.isTrustedBootstrapNavigation(
+                url = staleUrl,
+                extensionBaseUrl = "moz-extension://aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee/",
+                token = "66666666-7777-4888-8999-aaaaaaaaaaaa",
+                isDirectNavigation = true,
+                hasUserGesture = false,
+                isRedirect = false,
+            ),
+        )
+        listOf(
+            "moz-extension://5e6344e7-68a0-4a80-863c-0123456789ab/options.html",
+            "moz-extension://5e6344e7-68a0-4a80-863c-0123456789ab/bootstrap.html",
+            "$staleUrl&other=1",
+            "https://example.com/bootstrap.html?token=11111111-2222-4333-8444-555555555555",
+        ).forEach { url ->
+            assertFalse(CandyPrivacyHostContract.isBootstrapDocumentUrl(url))
+        }
+    }
+
+    @Test
     fun `gesture redirect and indirect bootstrap navigation remain untrusted`() {
         val baseUrl = "moz-extension://trusted-origin/"
         val url = "${baseUrl}bootstrap.html?token=session-token"

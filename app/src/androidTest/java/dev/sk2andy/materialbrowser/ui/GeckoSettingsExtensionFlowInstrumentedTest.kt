@@ -1,11 +1,16 @@
 package dev.sk2andy.materialbrowser.ui
 
 import android.content.Context
+import android.content.Intent
 import android.net.Uri
 import android.os.Handler
 import android.os.Looper
+import android.view.View
 import android.view.ViewGroup
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithTag
@@ -14,6 +19,8 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performSemanticsAction
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.core.graphics.Insets
 import androidx.core.view.WindowInsetsCompat
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -23,6 +30,8 @@ import androidx.test.uiautomator.UiDevice
 import dev.sk2andy.materialbrowser.BuildConfig
 import dev.sk2andy.materialbrowser.MainActivity
 import dev.sk2andy.materialbrowser.R
+import dev.sk2andy.materialbrowser.browser.BrowserController
+import dev.sk2andy.materialbrowser.browser.EdgeToEdgeSiteFixtureServer
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoRuntimeOwner
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoViewRuntimeHandle
 import dev.sk2andy.materialbrowser.data.BrowserSessionStore
@@ -43,6 +52,11 @@ import org.junit.runner.RunWith
 @SdkSuppress(minSdkVersion = 34)
 class GeckoSettingsExtensionFlowInstrumentedTest {
     private val context = InstrumentationRegistry.getInstrumentation().targetContext
+    private val fixtureServer = EdgeToEdgeSiteFixtureServer {
+        "<!doctype html><title>Navigation fixture</title><body>Navigation fixture</body>"
+    }
+    private val originalPageUrl = fixtureServer.fixtureUrl("/original-page")
+    private val incomingPageUrl = fixtureServer.fixtureUrl("/from-another-app")
 
     init {
         clearPreferences()
@@ -57,6 +71,7 @@ class GeckoSettingsExtensionFlowInstrumentedTest {
     @After
     fun tearDown() {
         composeRule.activityRule.scenario.close()
+        fixtureServer.close()
         clearPreferences()
     }
 
@@ -65,9 +80,12 @@ class GeckoSettingsExtensionFlowInstrumentedTest {
         openSettings()
 
         composeRule.onNodeWithText(context.getString(R.string.sync_settings_title))
-            .performClick()
+            .performSemanticsAction(SemanticsActions.OnClick) { it() }
+        composeRule.mainClock.advanceTimeBy(1_000L)
 
-        composeRule.onNodeWithTag(SyncSettingsTestTags.Endpoint).assertIsDisplayed()
+        composeRule.onNodeWithTag(SyncSettingsTestTags.Endpoint)
+            .performScrollTo()
+            .assertIsDisplayed()
         composeRule.onNodeWithTag(SyncSettingsTestTags.AccentColors)
             .performScrollTo()
             .assertIsDisplayed()
@@ -75,11 +93,7 @@ class GeckoSettingsExtensionFlowInstrumentedTest {
 
     @Test
     fun settingsExtensionBackReturnsToSettingsHome() {
-        openSettings()
-        composeRule.onNodeWithText(context.getString(R.string.gecko_extensions_title))
-            .performScrollTo()
-            .performClick()
-        composeRule.onNodeWithTag(FirefoxExtensionManagerTestTags.Overlay).assertIsDisplayed()
+        openFirefoxExtensionSettings()
 
         val device = UiDevice.getInstance(InstrumentationRegistry.getInstrumentation())
         assertTrue(
@@ -91,13 +105,80 @@ class GeckoSettingsExtensionFlowInstrumentedTest {
                 EDGE_BACK_SWIPE_STEPS,
             ),
         )
-        composeRule.waitUntil(timeoutMillis = TIMEOUT_MILLIS) {
+        waitForCondition {
             composeRule.onAllNodesWithTag(FirefoxExtensionManagerTestTags.Overlay)
                 .fetchSemanticsNodes().isEmpty()
         }
 
         composeRule.onNodeWithTag(FirefoxExtensionManagerTestTags.Overlay).assertDoesNotExist()
+        waitForCondition {
+            composeRule.onNodeWithText(context.getString(R.string.settings_title)).isDisplayed()
+        }
         composeRule.onNodeWithText(context.getString(R.string.settings_title)).assertIsDisplayed()
+    }
+
+    @Test
+    fun incomingLinkWithoutPreviewClosesSettingsAndShowsBrowser() {
+        composeRule.activityRule.scenario.onActivity { activity ->
+            activity.browserControllerForTesting().updateExternalLinkPreviewEnabled(false)
+        }
+        openSettings()
+
+        sendIncomingLink(previewEnabled = false)
+
+        composeRule.onNodeWithText(context.getString(R.string.settings_title)).assertDoesNotExist()
+        composeRule.activityRule.scenario.onActivity { activity ->
+            assertEquals(incomingPageUrl, activity.browserControllerForTesting().selectedTab.url)
+        }
+        composeRule.onNodeWithContentDescription(context.getString(R.string.cd_more_options))
+            .assertIsDisplayed()
+    }
+
+    @Test
+    fun incomingPreviewClosesExtensionManagerAndShowsPreview() {
+        composeRule.activityRule.scenario.onActivity { activity ->
+            activity.browserControllerForTesting().updateExternalLinkPreviewEnabled(true)
+        }
+        openFirefoxExtensionSettings()
+        composeRule.onNodeWithTag(FirefoxExtensionManagerTestTags.Overlay).assertIsDisplayed()
+
+        sendIncomingLink()
+
+        composeRule.onNodeWithTag(FirefoxExtensionManagerTestTags.Overlay).assertDoesNotExist()
+        composeRule.onNodeWithTag(ExternalLinkPreviewTestTags.Bar).assertIsDisplayed()
+        composeRule.activityRule.scenario.onActivity { activity ->
+            assertEquals(
+                incomingPageUrl,
+                activity.browserControllerForTesting().externalLinkPreviewState?.currentUrl,
+            )
+        }
+    }
+
+    @Test
+    fun incomingPreviewClosesExtensionPopupAndShowsPreview() {
+        composeRule.activityRule.scenario.onActivity { activity ->
+            val controller = activity.browserControllerForTesting()
+            val popupSetter = BrowserController::class.java.getDeclaredMethod(
+                "setFirefoxExtensionPopupView",
+                View::class.java,
+            ).apply { isAccessible = true }
+            popupSetter.invoke(controller, View(activity))
+        }
+        waitForCondition {
+            composeRule.onNodeWithTag(FirefoxExtensionChromeTestTags.Popup).isDisplayed()
+        }
+        composeRule.onNodeWithTag(FirefoxExtensionChromeTestTags.Popup).assertIsDisplayed()
+
+        sendIncomingLink()
+
+        composeRule.onNodeWithTag(FirefoxExtensionChromeTestTags.Popup).assertDoesNotExist()
+        composeRule.onNodeWithTag(ExternalLinkPreviewTestTags.Bar).assertIsDisplayed()
+        composeRule.activityRule.scenario.onActivity { activity ->
+            assertEquals(
+                incomingPageUrl,
+                activity.browserControllerForTesting().externalLinkPreviewState?.currentUrl,
+            )
+        }
     }
 
     @Test
@@ -107,13 +188,13 @@ class GeckoSettingsExtensionFlowInstrumentedTest {
         var originalTabCount = 0
         composeRule.activityRule.scenario.onActivity { activity ->
             val controller = activity.browserControllerForTesting()
-            controller.submitAddress(ORIGINAL_PAGE_URL)
+            controller.submitAddress(originalPageUrl)
             originalTabId = controller.selectedTabId
             originalTabCount = controller.tabs.size
         }
 
         openFirefoxExtensionSettings()
-        composeRule.waitUntil(timeoutMillis = TIMEOUT_MILLIS) {
+        waitForCondition {
             composeRule.onAllNodesWithTag(
                 FirefoxExtensionManagerTestTags.optionsPage(FIXTURE_EXTENSION_ID),
             ).fetchSemanticsNodes().isNotEmpty()
@@ -123,10 +204,10 @@ class GeckoSettingsExtensionFlowInstrumentedTest {
         ).assertIsDisplayed()
         composeRule.onNodeWithTag(
             FirefoxExtensionManagerTestTags.optionsPage(FIXTURE_EXTENSION_ID),
-        ).assertIsDisplayed().performClick()
+        ).assertIsDisplayed().performSemanticsAction(SemanticsActions.OnClick) { it() }
 
         var optionsTabId = ""
-        composeRule.waitUntil(timeoutMillis = TIMEOUT_MILLIS) {
+        waitForCondition {
             var optionsReady = false
             composeRule.activityRule.scenario.onActivity { activity ->
                 val controller = activity.browserControllerForTesting()
@@ -179,7 +260,7 @@ class GeckoSettingsExtensionFlowInstrumentedTest {
         composeRule.activityRule.scenario.onActivity { activity ->
             activity.onBackPressedDispatcher.onBackPressed()
         }
-        composeRule.waitUntil(timeoutMillis = TIMEOUT_MILLIS) {
+        waitForCondition {
             var returnedToOpener = false
             composeRule.activityRule.scenario.onActivity { activity ->
                 val controller = activity.browserControllerForTesting()
@@ -192,7 +273,7 @@ class GeckoSettingsExtensionFlowInstrumentedTest {
             val controller = activity.browserControllerForTesting()
             assertEquals(originalTabId, controller.selectedTabId)
             assertEquals(originalTabCount, controller.tabs.size)
-            assertEquals(ORIGINAL_PAGE_URL, controller.selectedTab.url)
+            assertEquals(originalPageUrl, controller.selectedTab.url)
         }
     }
 
@@ -200,7 +281,7 @@ class GeckoSettingsExtensionFlowInstrumentedTest {
     fun externalNavigationFromExtensionOptionsRestoresNormalBrowserChrome() {
         ensureBuiltInExtensionFixture()
         openFirefoxExtensionSettings()
-        composeRule.waitUntil(timeoutMillis = TIMEOUT_MILLIS) {
+        waitForCondition {
             composeRule.onAllNodesWithTag(
                 FirefoxExtensionManagerTestTags.optionsPage(FIXTURE_EXTENSION_ID),
             ).fetchSemanticsNodes().isNotEmpty()
@@ -208,7 +289,7 @@ class GeckoSettingsExtensionFlowInstrumentedTest {
         composeRule.onNodeWithTag(
             FirefoxExtensionManagerTestTags.optionsPage(FIXTURE_EXTENSION_ID),
         ).assertIsDisplayed().performClick()
-        composeRule.waitUntil(timeoutMillis = TIMEOUT_MILLIS) {
+        waitForCondition {
             composeRule.onAllNodesWithTag(FirefoxExtensionChromeTestTags.OptionsTopBar)
                 .fetchSemanticsNodes().isNotEmpty()
         }
@@ -219,7 +300,7 @@ class GeckoSettingsExtensionFlowInstrumentedTest {
             optionsTabId = controller.selectedTabId
             controller.submitAddress(EXTERNAL_PAGE_URL)
         }
-        composeRule.waitUntil(timeoutMillis = TIMEOUT_MILLIS) {
+        waitForCondition {
             var externalPageSelected = false
             composeRule.activityRule.scenario.onActivity { activity ->
                 externalPageSelected =
@@ -259,16 +340,64 @@ class GeckoSettingsExtensionFlowInstrumentedTest {
         openSettings()
         composeRule.onNodeWithText(context.getString(R.string.gecko_extensions_title))
             .performScrollTo()
-            .performClick()
+            .performSemanticsAction(SemanticsActions.OnClick) { it() }
+        composeRule.mainClock.advanceTimeBy(1_000L)
+        waitForCondition {
+            composeRule.onNodeWithTag(FirefoxExtensionManagerTestTags.Overlay).isDisplayed()
+        }
         composeRule.onNodeWithTag(FirefoxExtensionManagerTestTags.Overlay).assertIsDisplayed()
+    }
+
+    private fun waitForCondition(condition: () -> Boolean) {
+        composeRule.waitUntil(timeoutMillis = TIMEOUT_MILLIS) {
+            if (!composeRule.mainClock.autoAdvance) composeRule.mainClock.advanceTimeByFrame()
+            condition()
+        }
     }
 
     private fun openSettings() {
         openBrowserMenu()
+        composeRule.mainClock.autoAdvance = false
         composeRule.onNodeWithTag(BrowserMainMenuTestTags.Settings)
             .performScrollTo()
-            .performClick()
-        composeRule.onNodeWithText(context.getString(R.string.settings_title)).assertIsDisplayed()
+            .performSemanticsAction(SemanticsActions.OnClick) { it() }
+        composeRule.mainClock.advanceTimeBy(1_000L)
+        val settingsTitle = hasText(context.getString(R.string.settings_title)) and !hasClickAction()
+        waitForCondition {
+            composeRule.onNode(settingsTitle).isDisplayed()
+        }
+        composeRule.onNode(settingsTitle).assertIsDisplayed()
+    }
+
+    private fun sendIncomingLink(previewEnabled: Boolean = true) {
+        composeRule.activityRule.scenario.onActivity { activity ->
+            activity.browserControllerForTesting().updateExternalLinkPreviewEnabled(previewEnabled)
+            val originalIntent = activity.intent
+            try {
+                InstrumentationRegistry.getInstrumentation().callActivityOnNewIntent(
+                    activity,
+                    Intent(activity, MainActivity::class.java)
+                        .setAction(Intent.ACTION_VIEW)
+                        .setData(Uri.parse(incomingPageUrl)),
+                )
+            } finally {
+                activity.intent = originalIntent
+            }
+        }
+        composeRule.mainClock.advanceTimeBy(1_000L)
+        composeRule.waitForIdle()
+        waitForCondition {
+            var opened = false
+            composeRule.activityRule.scenario.onActivity { activity ->
+                val controller = activity.browserControllerForTesting()
+                opened = if (previewEnabled) {
+                    controller.externalLinkPreviewState?.currentUrl == incomingPageUrl
+                } else {
+                    controller.selectedTab.url == incomingPageUrl
+                }
+            }
+            opened
+        }
     }
 
     private fun openBrowserMenu() {
@@ -326,7 +455,6 @@ class GeckoSettingsExtensionFlowInstrumentedTest {
     private companion object {
         const val FIXTURE_EXTENSION_ID = "candy-firefox-fixture@sk2andy.dev"
         const val FIXTURE_EXTENSION_NAME = "Candy Firefox Conformance Fixture"
-        const val ORIGINAL_PAGE_URL = "https://example.invalid/original-page"
         const val EXTERNAL_PAGE_URL = "https://example.invalid/from-extension-options"
         const val LEFT_INSET_PX = 8
         const val TOP_INSET_PX = 96

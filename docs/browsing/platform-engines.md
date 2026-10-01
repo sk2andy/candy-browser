@@ -513,6 +513,17 @@ Camera and microphone permissions remain separate and continue through Candy's p
   initial `about:blank` entry is never exposed. If the tab leaves the extension's exact
   `moz-extension://` origin, Candy immediately restores normal address chrome and browser-history
   Back behavior.
+- Same-extension options links and user-opened extension windows remain Gecko-owned instead of
+  entering Android's external-app routing. Candy reuses the exact extension-origin validator;
+  foreign extension origins, credential-bearing targets and arbitrary schemes gain no internal
+  navigation grant. New extension windows inherit the opener's profile/private context, extension
+  chrome and session-only lifetime, including a blank window later navigated by the extension.
+  Gecko may omit the gesture flag for an extension-page click. Same-origin or blank extension
+  windows can open from a current options page without granting web pages that exception.
+  Evicting an options renderer preserves its in-memory origin metadata. Reopening loads the current
+  same-extension URL through the extension startup path after the selected viewport is ready;
+  an options tab that navigated to HTTP(S) reloads that web URL normally. Options tabs and their
+  native snapshots remain excluded from persistent browser sessions, history and sync.
 - The main browser menu lists the browser/page actions Gecko publishes for the selected tab instead
   of linking to extension options. Selecting one delegates its tab-scoped action key to Gecko;
   actions with a popup render that extension-owned, page-specific UI inside Candy's bounded dialog.

@@ -541,10 +541,12 @@ class MainActivity : AppCompatActivity() {
             SideEffect {
                 applyAppearanceNightMode(appearanceSettings.appearanceMode)
                 applyAppearanceSystemBars(appearanceDark)
-                val activeProfileProtected = browserController.localBrowserProfiles
-                    .firstOrNull { profile -> profile.id == browserController.activeProfileId }
+                val visibleProfileId = browserController.externalLinkPreviewState?.targetProfileId
+                    ?: browserController.activeProfileId
+                val visibleProfileProtected = browserController.localBrowserProfiles
+                    .firstOrNull { profile -> profile.id == visibleProfileId }
                     ?.protection != null
-                setRecentsScreenshotEnabled(!activeProfileProtected)
+                setRecentsScreenshotEnabled(!visibleProfileProtected)
             }
             CandyTheme(settings = appearanceSettings) {
                 val launcherShortcutState = LauncherShortcutRules.state(
@@ -1430,6 +1432,7 @@ class MainActivity : AppCompatActivity() {
         File(applicationInfo.dataDir, AppDataArchiveRules.TRANSFER_STATE_DIRECTORY_NAME)
 
     private fun openIntent(intent: Intent) {
+        val previousExternalLaunchTabId = externalLaunchTabId
         externalLaunchTabId = null
         val incomingRequest = IncomingBrowserIntent.from(intent)
         if (incomingRequest == null) browserController.dismissExternalLinkPreview()
@@ -1464,7 +1467,9 @@ class MainActivity : AppCompatActivity() {
                 request.kind == IncomingBrowserRequestKind.View &&
                 browserController.openReturnedExternalAppLink(request.url)
             ) {
-                incomingBrowserNavigationRequestId++
+                externalLaunchTabId = previousExternalLaunchTabId
+                    ?.takeIf { it == browserController.selectedTabId }
+                showIncomingBrowserNavigation()
                 return
             }
             if (
@@ -1473,7 +1478,7 @@ class MainActivity : AppCompatActivity() {
                     url = request.url,
                 )
             ) {
-                incomingBrowserNavigationRequestId++
+                showIncomingBrowserNavigation()
                 return
             }
             browserController.dismissExternalLinkPreview()
@@ -1484,8 +1489,15 @@ class MainActivity : AppCompatActivity() {
                 )
             ) return
             externalLaunchTabId = browserController.selectedTabId
-            incomingBrowserNavigationRequestId++
+            showIncomingBrowserNavigation()
         }
+    }
+
+    private fun showIncomingBrowserNavigation() {
+        firefoxExtensionManager?.dismiss()
+        firefoxExtensionsVisible = false
+        browserController.dismissFirefoxExtensionPopup()
+        incomingBrowserNavigationRequestId++
     }
 
     private fun openHomePageForLauncherLaunch(intent: Intent) {
@@ -1493,6 +1505,7 @@ class MainActivity : AppCompatActivity() {
             StartupPresentationRules.shouldOpenHomePage(
                 isLauncherLaunch = intent.action == Intent.ACTION_MAIN,
                 isOpenHomeOnStartupEnabled = browserController.isOpenHomeOnStartupEnabled,
+                startupAddressFocusMode = browserController.startupAddressFocusMode,
             )
         ) {
             browserController.openNormalHome()

@@ -432,6 +432,7 @@ internal class GeckoViewPrivacyHostRuntime(
     }
 
     fun isBootstrapNavigation(session: GeckoSession, url: String?): Boolean {
+        if (CandyPrivacyHostContract.isBootstrapDocumentUrl(url)) return true
         val binding = bindings.values.firstOrNull { candidate -> candidate.session === session }
             ?: return false
         val extensionBaseUrl = extension?.metaData?.baseUrl ?: return false

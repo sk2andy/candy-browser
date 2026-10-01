@@ -16,6 +16,7 @@ import androidx.test.platform.app.InstrumentationRegistry
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoMainFrameNavigationRequest
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoNavigationRequestDecision
 import dev.sk2andy.materialbrowser.browser.integration.LauncherShortcutRules
+import dev.sk2andy.materialbrowser.capsule.SiteCapsule
 import dev.sk2andy.materialbrowser.data.BrowserSessionStore
 import dev.sk2andy.materialbrowser.data.GestureOnboardingStore
 import dev.sk2andy.materialbrowser.data.ReleaseNotesStore
@@ -195,6 +196,16 @@ class MainActivityIncomingNavigationInstrumentedTest {
     }
 
     @Test
+    fun warmIncomingPreviewLeavesSiteCapsuleAndShowsIncomingPage() {
+        assertIncomingLinkLeavesSiteCapsule(previewEnabled = true)
+    }
+
+    @Test
+    fun warmIncomingViewLeavesSiteCapsuleAndShowsIncomingPage() {
+        assertIncomingLinkLeavesSiteCapsule(previewEnabled = false)
+    }
+
+    @Test
     fun warmIncomingViewKeepsNewPreviewWithoutAppHandoffGrant() {
         BrowserSessionStore(context).saveExternalLinkPreviewEnabled(true)
         ActivityScenario.launch<MainActivity>(incomingIntent(INCOMING_URL)).use { scenario ->
@@ -277,6 +288,42 @@ class MainActivityIncomingNavigationInstrumentedTest {
             .setAction(Intent.ACTION_VIEW)
             .setData(Uri.parse(url))
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+
+    private fun assertIncomingLinkLeavesSiteCapsule(previewEnabled: Boolean) {
+        BrowserSessionStore(context).saveExternalLinkPreviewEnabled(previewEnabled)
+        IncomingPageServer().use { server ->
+            ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+                var activity: MainActivity? = null
+                scenario.onActivity { current ->
+                    activity = current
+                    val controller = current.browserControllerForTesting()
+                    val capsule = SiteCapsule(
+                        id = "04a74ad8-7533-460c-bfbf-a135968940d5",
+                        name = "Incoming link capsule",
+                        startUrl = server.url,
+                        profileId = controller.activeProfileId,
+                        createdAtMillis = 1L,
+                        updatedAtMillis = 1L,
+                    )
+                    controller.siteCapsules += capsule
+                    assertTrue(controller.openSiteCapsule(capsule.id, navigateToStart = false))
+                    assertEquals(capsule.id, controller.activeCapsuleId)
+                    val originalIntent = current.intent
+                    try {
+                        instrumentation.callActivityOnNewIntent(current, incomingIntent(server.url))
+                    } finally {
+                        current.intent = originalIntent
+                    }
+                    assertNull(controller.activeSiteCapsule)
+                }
+                if (previewEnabled) {
+                    awaitIncomingPreviewPage(requireNotNull(activity), server)
+                } else {
+                    awaitIncomingPage(scenario, server)
+                }
+            }
+        }
+    }
 
     private fun assertWarmLaunchDismissesPreview(action: String) {
         BrowserSessionStore(context).saveExternalLinkPreviewEnabled(true)

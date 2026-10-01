@@ -346,6 +346,48 @@ class BrowserUriPolicyTest {
     }
 
     @Test
+    fun `browser fallback keeps source and original grant lifetime`() {
+        val grant = requireNotNull(
+            ExternalNavigationGrantRules.start(
+                url = "https://redirect.example/start",
+                sourceUrl = "https://source.example/page",
+                nowElapsedRealtime = 1_000L,
+            ),
+        )
+        val resumed = requireNotNull(
+            ExternalNavigationGrantRules.resumeInBrowser(
+                grant = grant,
+                url = "https://redirect.example/fallback",
+                nowElapsedRealtime = 15_000L,
+            ),
+        )
+        assertEquals("https://redirect.example/fallback", resumed.currentUrl)
+        assertEquals("https://source.example/page", resumed.sourceUrl)
+        assertEquals(16_000L, resumed.expiresAtElapsedRealtime)
+        assertNull(
+            ExternalNavigationGrantRules.resumeInBrowser(
+                grant = resumed,
+                url = "https://redirect.example/fallback",
+                nowElapsedRealtime = 16_001L,
+            ),
+        )
+        assertNull(
+            ExternalNavigationGrantRules.resumeInBrowser(
+                grant = grant,
+                url = "intent://invalid",
+                nowElapsedRealtime = 1_001L,
+            ),
+        )
+        assertNull(
+            ExternalNavigationGrantRules.resumeInBrowser(
+                grant = null,
+                url = "https://redirect.example/fallback",
+                nowElapsedRealtime = 1_001L,
+            ),
+        )
+    }
+
+    @Test
     fun `external app handoff accepts immediate same site return`() {
         val handoff = requireNotNull(
             ExternalAppHandoffRules.start(
