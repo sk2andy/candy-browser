@@ -28,6 +28,31 @@ class PopupNavigationRulesTest {
     }
 
     @Test
+    fun `local web popup leaves pending state without requiring a filter domain`() {
+        listOf("http://127.0.0.1:8080/page", "http://[::1]:8080/page", "http://localhost/page")
+            .forEach { url ->
+                assertEquals(PopupNavigationDecision.Allow, decide(url, enabled = false))
+                assertEquals(PopupNavigationDecision.Allow, decide(url))
+            }
+        assertEquals(
+            PopupNavigationDecision.AllowSameSite,
+            PopupNavigationRules.decide(
+                pending.copy(openerUrl = "http://127.0.0.1:8080/opener"),
+                "http://127.0.0.1:8080/page",
+                blockerEnabled = true,
+            ) { _, _ -> PopupFilterDecision.NoMatch },
+        )
+    }
+
+    @Test
+    fun `invalid web popup stays pending`() {
+        listOf("https:///missing-host", "javascript:alert(1)", "https://example.com/\u0000")
+            .forEach { url ->
+                assertEquals(PopupNavigationDecision.KeepPending, decide(url, enabled = false))
+            }
+    }
+
+    @Test
     fun `enabled matching popup is blocked`() {
         assertEquals(
             PopupNavigationDecision.BlockListed,

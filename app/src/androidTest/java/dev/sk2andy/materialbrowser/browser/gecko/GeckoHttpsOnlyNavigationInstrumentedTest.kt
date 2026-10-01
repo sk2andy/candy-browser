@@ -373,7 +373,8 @@ class GeckoHttpsOnlyNavigationInstrumentedTest {
             }
             composeRule.runOnIdle { controller.submitAddress(server.safeUrl) }
             awaitFixture(server.safeUrl)
-            composeRule.runOnIdle { controller.goBack() }
+            // Select the exact fixture index; Gecko's normal Back may skip untouched entries.
+            composeRule.runOnIdle { selectedNativeSession().gotoHistoryIndex(0) }
             awaitFixture(server.url)
             composeRule.runOnIdle {
                 assertFalse(controller.selectedTab.canGoBack)

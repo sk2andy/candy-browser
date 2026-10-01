@@ -38,10 +38,14 @@ Issue 205's controlled reproductions and integrated checks are recorded in
 The GeckoView 155 to 157 compatibility review, upstream fixes and upgrade checks are recorded in
 [`../audits/geckoview-157-upgrade.md`](../audits/geckoview-157-upgrade.md).
 
+Issue 221's bootstrap-history reproduction, popup boundaries and verification are recorded in
+[`../audits/issue-221-gecko-navigation.md`](../audits/issue-221-gecko-navigation.md).
+
 | Surface | Tests |
 | --- | --- |
 | URL, search, AI mode, URI policy | `AddressResolverTest`, `SearchEngineTest`, `AddressAiModeRulesTest`, `AddressAiModeToggleInstrumentedTest`, `BrowserUriPolicyTest` |
 | Gecko internal pages and engine boundary | `GeckoInternalPageRulesTest`, `AddressResolverTest`, `AddressAiModeRulesTest`, `SearchSuggestionProviderTest`, `GeckoInternalPageNavigationInstrumentedTest`, `GeckoRuntimeSettingsInstrumentedTest` |
+| Gecko first-page Back, native popup binding, POST and private navigation | `GeckoBootstrapHistoryRulesTest`, `GeckoNativeSessionBindingRulesTest`, `PopupNavigationRulesTest`, `GeckoBootstrapHistoryInstrumentedTest`, `GeckoPopupNavigationInstrumentedTest`, `scripts/gecko_native_session_binding.test.mjs` |
 | Auto De-AMP URL policy, persistence, navigation and UI | `AutoDeAmpRulesTest`, `AutoDeAmpSettingsInstrumentedTest`, focused `BrowserControllerGeckoViewBindingInstrumentedTest` method |
 | External app settings, host-specific handlers, availability, prompts, redirects and returned links | `ExternalAppLinkHandlingTest`, `ExternalWebAppHandlerRulesInstrumentedTest`, `ExternalAppLauncherInstrumentedTest`, `BrowserSessionStoreInstrumentedTest`, `BrowserSettingsScreenInstrumentedTest`, focused `BrowserControllerGeckoViewBindingInstrumentedTest` methods |
 | Commands and suggestions | `browser/commands/*Test`, `SearchSuggestionProviderTest` |

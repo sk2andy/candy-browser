@@ -13,6 +13,7 @@ import dev.sk2andy.materialbrowser.browser.WebRtcProtectionMode
 import dev.sk2andy.materialbrowser.browser.WebRtcProtectionRules
 import java.util.UUID
 import org.json.JSONObject
+import org.mozilla.geckoview.AllowOrDeny
 import org.mozilla.geckoview.GeckoResult
 import org.mozilla.geckoview.GeckoSession
 import org.mozilla.geckoview.WebExtension
@@ -61,6 +62,8 @@ internal class GeckoViewPrivacyHostRuntime(
     private data class Binding(
         val token: String,
         val session: GeckoSession,
+        val nativeWindow: Boolean,
+        val challenge: String = UUID.randomUUID().toString(),
         val sink: GeckoPrivacyEventSink,
         var handshake: GeckoPrivacyBindingHandshake = GeckoPrivacyBindingHandshake(),
         var policy: GeckoPrivacyPolicy = GeckoPrivacyPolicy.Disabled,
@@ -195,6 +198,7 @@ internal class GeckoViewPrivacyHostRuntime(
 
     fun bind(
         session: GeckoSession,
+        nativeWindow: Boolean = false,
         policy: GeckoPrivacyPolicy,
         sink: GeckoPrivacyEventSink,
         onScrollMetrics: (BrowserEngineScrollMetrics) -> Unit,
@@ -209,6 +213,7 @@ internal class GeckoViewPrivacyHostRuntime(
         val binding = Binding(
             token = token,
             session = session,
+            nativeWindow = nativeWindow,
             domProbe = GeckoDomProbeRequest(mainHandler),
             textInputOcclusionProbe = GeckoTextInputOcclusionRequest(mainHandler),
             sink = sink,
@@ -238,6 +243,12 @@ internal class GeckoViewPrivacyHostRuntime(
                 SessionMessageDelegate(binding),
                 CandyPrivacyHostContract.NATIVE_APP,
             )
+            if (binding.nativeWindow) {
+                session.webExtensionController.setTabDelegate(
+                    installed,
+                    NativeSessionTabDelegate(binding, installed),
+                )
+            }
             publish(binding, policy)
         }
         return object : GeckoPrivacyBinding {
@@ -394,6 +405,7 @@ internal class GeckoViewPrivacyHostRuntime(
                 binding.bound = null
                 binding.failed = null
                 extension?.let { installed ->
+                    if (binding.nativeWindow) session.webExtensionController.setTabDelegate(installed, null)
                     session.webExtensionController.setMessageDelegate(
                         installed,
                         null,
@@ -486,6 +498,8 @@ internal class GeckoViewPrivacyHostRuntime(
         refreshTimeout(binding)
         port?.postMessage(
             policy.toMessage(binding.token, binding.handshake.publishedRevision)
+                .put("bindingMode", if (binding.nativeWindow) "native-tab" else "bootstrap")
+                .put("bindingChallenge", if (binding.nativeWindow) binding.challenge else JSONObject.NULL)
                 .put("domDiagnosticsEnabled", BuildConfig.ENABLE_PERFORMANCE_DIAGNOSTICS && !binding.session.settings.usePrivateMode)
                 .put(
                     "performanceDiagnosticsEnabled",
@@ -525,7 +539,7 @@ internal class GeckoViewPrivacyHostRuntime(
                 if (!transition.accepted) return
                 binding.handshake = transition.state
                 binding.inlineVideoOpenGate.acknowledge(value.optLong("revision", -1))
-                if (transition.startBootstrap) startBootstrap(binding)
+                if (transition.startBootstrap && !binding.nativeWindow) startBootstrap(binding)
                 if (binding.handshake.isCurrentPolicyAcknowledged) {
                     publishPerformanceDiagnosticsState(binding)
                     val callbacks = binding.policyReadyCallbacks.toList()
@@ -1190,7 +1204,7 @@ internal class GeckoViewPrivacyHostRuntime(
             !binding.handshake.isCurrentPolicyAcknowledged ->
                 "policy revision ${binding.handshake.publishedRevision}"
             binding.bound != null && !binding.handshake.sessionBound ->
-                "session bootstrap binding"
+                if (binding.nativeWindow) "native session tab binding" else "session bootstrap binding"
             else -> null
         }
         if (phase == null) {
@@ -1313,6 +1327,55 @@ internal class GeckoViewPrivacyHostRuntime(
                     }
                 }
             })
+        }
+    }
+
+    private inner class NativeSessionTabDelegate(
+        private val binding: Binding,
+        private val installed: WebExtension,
+    ) : WebExtension.SessionTabDelegate {
+        override fun onUpdateTab(
+            source: WebExtension,
+            session: GeckoSession,
+            details: WebExtension.UpdateTabDetails,
+        ): GeckoResult<AllowOrDeny> {
+            if (bindings[binding.token] === binding && failureDescription == null) {
+                val request = GeckoNativeSessionBindingRules.requestFor(
+                    url = details.url,
+                    extensionBaseUrl = installed.metaData.baseUrl,
+                    token = binding.token,
+                    challenge = binding.challenge,
+                    currentRevision = binding.handshake.publishedRevision,
+                    hasInstalledExtension = GeckoNativeSessionBindingRules.isInstalledExtensionSource(
+                        extensionId = source.id,
+                        extensionBaseUrl = source.metaData.baseUrl,
+                        installedBaseUrl = installed.metaData.baseUrl,
+                        hasCurrentInstalledExtension = extension === installed,
+                    ),
+                    hasExpectedSession = session === binding.session,
+                    policyReady = binding.handshake.isCurrentPolicyAcknowledged,
+                )
+                if (request != null) {
+                    val transition = GeckoPrivacyBindingHandshakeRules.authenticateSession(
+                        binding.handshake,
+                        request.revision,
+                    )
+                    if (transition.accepted) {
+                        binding.handshake = transition.state
+                        port?.postMessage(
+                            JSONObject()
+                                .put("type", "tab-binding-authenticated")
+                                .put("protocolVersion", CandyPrivacyHostContract.PROTOCOL_VERSION)
+                                .put("token", binding.token)
+                                .put("challenge", binding.challenge)
+                                .put("tabId", request.tabId)
+                                .put("revision", request.revision),
+                        )
+                    }
+                }
+            }
+            // The challenge is authentication only. Never replace the native window's document.
+            return GeckoResult.deny()
         }
     }
 
