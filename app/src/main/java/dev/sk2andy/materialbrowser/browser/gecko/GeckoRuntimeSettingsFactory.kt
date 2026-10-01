@@ -4,6 +4,7 @@ import androidx.annotation.UiThread
 import dev.sk2andy.materialbrowser.BuildConfig
 import dev.sk2andy.materialbrowser.browser.DnsOverHttpsRules
 import dev.sk2andy.materialbrowser.browser.DnsOverHttpsSettings
+import dev.sk2andy.materialbrowser.browser.HttpsOnlyMode
 import org.mozilla.geckoview.ContentBlocking
 import org.mozilla.geckoview.GeckoRuntimeSettings
 
@@ -13,6 +14,7 @@ internal object GeckoRuntimeSettingsFactory {
         contentBlocking: ContentBlocking.Settings,
         trustUserCertificates: Boolean = BuildConfig.TRUST_USER_CERTIFICATES,
         dnsOverHttpsSettings: DnsOverHttpsSettings = DnsOverHttpsRules.Default,
+        httpsOnlyMode: HttpsOnlyMode = HttpsOnlyMode.Default,
     ): GeckoRuntimeSettings = GeckoRuntimeSettings.Builder()
         .contentBlocking(contentBlocking)
         .loginAutofillEnabled(true)
@@ -25,7 +27,19 @@ internal object GeckoRuntimeSettingsFactory {
             setFingerprintingProtection(true)
             setFingerprintingProtectionPrivateBrowsing(true)
             applyDnsOverHttpsSettings(dnsOverHttpsSettings)
+            applyHttpsOnlyMode(httpsOnlyMode)
         }
+}
+
+@UiThread
+internal fun GeckoRuntimeSettings.applyHttpsOnlyMode(mode: HttpsOnlyMode) {
+    setAllowInsecureConnections(
+        when (mode) {
+            HttpsOnlyMode.Off -> GeckoRuntimeSettings.ALLOW_ALL
+            HttpsOnlyMode.PrivateOnly -> GeckoRuntimeSettings.HTTPS_ONLY_PRIVATE
+            HttpsOnlyMode.AllTabs -> GeckoRuntimeSettings.HTTPS_ONLY
+        },
+    )
 }
 
 @UiThread

@@ -9,6 +9,7 @@ import dev.sk2andy.materialbrowser.browser.actions.WebContentTarget
 import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineCommands
 import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineEvent
 import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineEventType
+import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineFailureKind
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -16,6 +17,33 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class GeckoBrowserEngineAdapterTest {
+    @Test
+    fun `HTTPS error arriving after page stop replaces generic failure`() {
+        val session = FakeGeckoBrowserSession()
+        val events = mutableListOf<BrowserEngineEvent>()
+        GeckoBrowserEngineSessionAdapter(
+            tabId = "https-warning-tab",
+            session = session,
+            eventSink = BrowserEngineEventSink(events::add),
+        )
+        val loading = GeckoBrowserSessionState(url = "http://example.com", isLoading = true)
+        session.emit(loading)
+        val stopped = loading.copy(isLoading = false, lastNavigationSucceeded = false)
+        session.emit(stopped)
+        events.clear()
+
+        session.emit(
+            stopped.copy(
+                failureDescription = "Gecko navigation failed",
+                failureKind = BrowserEngineFailureKind.HttpsOnly,
+            ),
+        )
+
+        assertEquals(1, events.size)
+        assertEquals(BrowserEngineEventType.NavigationFailed, events.single().type)
+        assertEquals(BrowserEngineFailureKind.HttpsOnly, events.single().failureKind)
+    }
+
     @Test
     fun `progress only changes reach shared events while adapter is open`() {
         val session = FakeGeckoBrowserSession()

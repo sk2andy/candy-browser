@@ -77,6 +77,7 @@ enum class BrowserEngineEventType {
 enum class BrowserEngineFailureKind {
     Offline,
     UnknownHost,
+    HttpsOnly,
     Other,
 }
 

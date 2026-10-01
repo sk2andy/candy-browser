@@ -22,6 +22,7 @@ import dev.sk2andy.materialbrowser.browser.userscript.UserScriptMenuCommand
 import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineCapabilities
 import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineKind
 import dev.sk2andy.materialbrowser.browser.DnsOverHttpsSettings
+import dev.sk2andy.materialbrowser.browser.HttpsOnlyMode
 import dev.sk2andy.materialbrowser.browser.WebRtcProtectionMode
 import dev.sk2andy.materialbrowser.browser.engine.AndroidBrowserEngineFactory
 import dev.sk2andy.materialbrowser.browser.engine.BrowserEngineContentKind
@@ -286,6 +287,10 @@ internal class GeckoBrowserEngineSessionFactory(
     @UiThread
     override fun setDnsOverHttpsSettings(settings: DnsOverHttpsSettings) {
         runtime.setDnsOverHttpsSettings(settings)
+    }
+
+    override fun setHttpsOnlyMode(mode: HttpsOnlyMode) {
+        runtime.setHttpsOnlyMode(mode)
     }
 
     @UiThread
@@ -880,7 +885,10 @@ internal class GeckoBrowserEngineSessionAdapter(
             !state.isLoading && previousState.isLoading &&
                 state.lastNavigationSucceeded == false -> BrowserEngineEventType.NavigationFailed
             !state.isLoading && state.lastNavigationSucceeded == false &&
-                previousState.lastNavigationSucceeded != false ->
+                (
+                    previousState.lastNavigationSucceeded != false ||
+                        state.failureKind != previousState.failureKind
+                    ) ->
                 BrowserEngineEventType.NavigationFailed
             state.hasSharedStateChangeFrom(previousState) -> BrowserEngineEventType.StateChanged
             else -> null

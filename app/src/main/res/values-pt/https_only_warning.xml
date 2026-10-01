@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="https_only_warning_title">Nenhuma conexão segura disponível</string>
+    <string name="https_only_warning_protection">Proteção HTTPS</string>
+    <string name="https_only_warning_explanation">O Candy não conseguiu abrir esta página por HTTPS. Uma conexão HTTP não seria criptografada.</string>
+    <string name="https_only_warning_risk">Outras pessoas na rede poderiam ler ou alterar seus dados.</string>
+    <string name="https_only_warning_back">Voltar</string>
+    <string name="https_only_warning_retry">Tentar HTTPS novamente</string>
+    <string name="https_only_warning_options">Mais opções</string>
+    <string name="https_only_warning_exception">Continue apenas se confiar neste site. A proteção HTTPS permanece ativa para outros sites.</string>
+    <string name="https_only_warning_open_http">Abrir temporariamente por HTTP</string>
+    <string name="https_only_warning_lifetime">Exceção para este site durante a sessão atual do navegador.</string>
+    <string name="https_only_warning_unavailable">Não foi possível aplicar a exceção. Volte ou tente HTTPS novamente.</string>
+</resources>

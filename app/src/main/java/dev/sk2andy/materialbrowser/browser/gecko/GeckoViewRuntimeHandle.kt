@@ -49,6 +49,7 @@ import dev.sk2andy.materialbrowser.browser.BrowserEngineScrollListener
 import dev.sk2andy.materialbrowser.browser.BrowserEngineScrollMetrics
 import dev.sk2andy.materialbrowser.browser.BrowserViewportRect
 import dev.sk2andy.materialbrowser.browser.DnsOverHttpsSettings
+import dev.sk2andy.materialbrowser.browser.HttpsOnlyMode
 import dev.sk2andy.materialbrowser.browser.GeckoInternalPageRules
 import dev.sk2andy.materialbrowser.browser.TextInputOcclusionProbeMode
 import dev.sk2andy.materialbrowser.browser.TextInputOcclusionProbeResult
@@ -74,6 +75,7 @@ import dev.sk2andy.materialbrowser.data.UserScriptValueStore
 import dev.sk2andy.materialbrowser.data.BrowserSessionStore
 import dev.sk2andy.materialbrowser.data.AppLogEvent
 import dev.sk2andy.materialbrowser.data.AppLogging
+import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineFailureKind
 import java.net.URI
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -107,6 +109,7 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
 internal class GeckoViewRuntimeHandle private constructor(
+    private val context: Context,
     private val runtime: GeckoRuntime,
     override val extensions: GeckoExtensionRuntime,
     override val toppings: GeckoToppingHostRuntime,
@@ -129,6 +132,7 @@ internal class GeckoViewRuntimeHandle private constructor(
     ): GeckoBrowserSession {
         require(GeckoProfileRules.isValidProfileId(profileId)) { "Invalid Gecko profile ID" }
         return GeckoViewBrowserSession(
+            context = context,
             runtime = runtime,
             extensionController = runtime.webExtensionController,
             extensionRuntime = extensions,
@@ -159,6 +163,7 @@ internal class GeckoViewRuntimeHandle private constructor(
         ) return null
         if (session.settings.usePrivateMode != isPrivate) return null
         return GeckoViewBrowserSession(
+            context = context,
             runtime = runtime,
             extensionController = runtime.webExtensionController,
             extensionRuntime = extensions,
@@ -217,6 +222,11 @@ internal class GeckoViewRuntimeHandle private constructor(
     }
 
     @UiThread
+    override fun setHttpsOnlyMode(mode: HttpsOnlyMode) {
+        runtime.settings.applyHttpsOnlyMode(mode)
+    }
+
+    @UiThread
     override fun setWebContentFontSizeFactor(factor: Float) {
         runtime.settings.automaticFontSizeAdjustment = false
         runtime.settings.fontSizeFactor = factor
@@ -251,6 +261,9 @@ internal class GeckoViewRuntimeHandle private constructor(
 
     @VisibleForTesting
     fun dnsOverHttpsModeForTesting(): Int = runtime.settings.getTrustedRecusiveResolverMode()
+
+    @VisibleForTesting
+    fun httpsOnlyModeForTesting(): Int = runtime.settings.allowInsecureConnections
 
     @VisibleForTesting
     fun dnsOverHttpsEndpointForTesting(): String =
@@ -292,6 +305,7 @@ internal class GeckoViewRuntimeHandle private constructor(
             val runtimeSettings = GeckoRuntimeSettingsFactory.create(
                 contentBlocking = contentBlocking,
                 dnsOverHttpsSettings = BrowserSessionStore(appContext).loadDnsOverHttpsSettings(),
+                httpsOnlyMode = BrowserSessionStore(appContext).loadHttpsOnlyMode(),
             )
             val runtime = GeckoRuntime.create(appContext, runtimeSettings)
             runtime.webNotificationDelegate = GeckoWebNotificationPresenter(appContext)
@@ -314,6 +328,7 @@ internal class GeckoViewRuntimeHandle private constructor(
                 controller = extensionController,
             )
             return GeckoViewRuntimeHandle(
+                context = appContext,
                 runtime = runtime,
                 extensions = GeckoViewExtensionRuntime(
                     runtime = runtime,
@@ -853,7 +868,8 @@ internal class GeckoViewExtensionRuntime(
 }
 
 private class GeckoViewBrowserSession(
-    runtime: GeckoRuntime,
+    private val context: Context,
+    private val runtime: GeckoRuntime,
     private val extensionController: WebExtensionController,
     private val extensionRuntime: GeckoExtensionRuntime,
     override val profileId: String,
@@ -998,6 +1014,7 @@ private class GeckoViewBrowserSession(
     private var pendingFailedPageRetryUrl: String? = null
     private var latestSessionState: GeckoSession.SessionState? = null
     private var pendingRestoredSessionState: GeckoSession.SessionState? = null
+    private var pendingRestoredHttpsOnlyUrl: String? = null
     private var pendingRestoredHistoryState: GeckoBrowserHistoryState? = null
     private var restoredHistoryPending = false
     private var restoredHistoryTimeout: Runnable? = null
@@ -1009,6 +1026,8 @@ private class GeckoViewBrowserSession(
     private val startedNavigationAttempts = ArrayDeque<CookieNavigationAttempt>()
     private var privacyPolicy = initialPrivacyPolicy
     private var currentPageUrl: String? = null
+    private var httpsOnlyRetryUrl: String? = null
+    private var httpsOnlyBackGeneration: Long? = null
     private var trackingPermission: GeckoSession.PermissionDelegate.ContentPermission? = null
     private var notificationPermissionDecisionProvider: ((String) -> SitePermissionDecision)? = null
     private val notificationPermissionRevisions = mutableMapOf<String, Int>()
@@ -1116,11 +1135,30 @@ private class GeckoViewBrowserSession(
                 error: WebRequestError,
             ): GeckoResult<String>? {
                 invalidateDomProbe()
+                httpsOnlyRetryUrl = if (error.code == WebRequestError.ERROR_HTTPS_ONLY) {
+                    BrowserUriPolicy.normalizeHttpUrl(uri)?.let { url ->
+                        "http:" + url.substringAfter(':')
+                    }
+                } else {
+                    null
+                }
                 uri?.let(::finishFailedNavigation)
                 updateState { current ->
                     current.copy(
+                        url = httpsOnlyRetryUrl ?: current.url,
                         failureDescription = GECKO_NAVIGATION_FAILURE,
                         failureKind = GeckoNavigationFailureRules.kindForErrorCode(error.code),
+                        isLoading = false,
+                        progress = 100,
+                        lastNavigationSucceeded = false,
+                    )
+                }
+                if (error.code == WebRequestError.ERROR_HTTPS_ONLY && uri != null) {
+                    return GeckoResult.fromValue(
+                        GeckoHttpsOnlyErrorPage.uri(
+                            url = uri,
+                            strings = GeckoHttpsOnlyErrorPageResources.strings(context.resources),
+                        ),
                     )
                 }
                 return null
@@ -1232,7 +1270,19 @@ private class GeckoViewBrowserSession(
                         reload = ::reloadCurrentPage,
                     )
                 }
-                updateState { current -> current.copy(url = url) }
+                updateState { current ->
+                    // Preserve the HTTP request for tab restore; Gecko commits its failed upgrade as HTTPS.
+                    current.copy(
+                        url = if (current.failureKind == BrowserEngineFailureKind.HttpsOnly) {
+                            httpsOnlyRetryUrl ?: url
+                        } else {
+                            url
+                        },
+                    )
+                }
+                if (state.failureKind == BrowserEngineFailureKind.HttpsOnly) {
+                    session.flushSessionState()
+                }
                 if (autoplayPermissionChanged) {
                     beginAutoplayPermissionSync(url)
                 } else if (cookieBehaviorChanged) {
@@ -1423,19 +1473,24 @@ private class GeckoViewBrowserSession(
             override fun onAlertPrompt(
                 session: GeckoSession,
                 prompt: GeckoSession.PromptDelegate.AlertPrompt,
-            ) = dispatchWebPrompt(
-                request = BrowserEngineWebPromptRequest(
-                    kind = BrowserWebPromptKind.Alert,
-                    title = prompt.title,
-                    message = prompt.message,
-                    defaultValue = null,
-                    response = webActionPromptResponse(
-                        confirm = prompt::dismiss,
-                        dismiss = prompt::dismiss,
+            ): GeckoResult<GeckoSession.PromptDelegate.PromptResponse> {
+                if (handleHttpsOnlyWarningAction(prompt.message)) {
+                    return GeckoResult.fromValue(prompt.dismiss())
+                }
+                return dispatchWebPrompt(
+                    request = BrowserEngineWebPromptRequest(
+                        kind = BrowserWebPromptKind.Alert,
+                        title = prompt.title,
+                        message = prompt.message,
+                        defaultValue = null,
+                        response = webActionPromptResponse(
+                            confirm = prompt::dismiss,
+                            dismiss = prompt::dismiss,
+                        ),
                     ),
-                ),
-                fallback = prompt::dismiss,
-            )
+                    fallback = prompt::dismiss,
+                )
+            }
 
             override fun onButtonPrompt(
                 session: GeckoSession,
@@ -1849,12 +1904,29 @@ private class GeckoViewBrowserSession(
             }
         }
         session.progressDelegate = object : GeckoSession.ProgressDelegate {
+            override fun onSessionStateChange(
+                session: GeckoSession,
+                sessionState: GeckoSession.SessionState,
+            ) {
+                latestSessionState = GeckoSession.SessionState(sessionState)
+            }
+
             override fun onPageStart(session: GeckoSession, url: String) {
+                val returningFromHttpsWarning = httpsOnlyBackGeneration == navigationGeneration
+                httpsOnlyBackGeneration = null
+                if (returningFromHttpsWarning && GeckoBootstrapRecoveryRules.hasPoisonedAddress(url)) {
+                    val generation = navigationGeneration
+                    mainHandler.post {
+                        if (!closed && navigationGeneration == generation) loadUrl("about:blank")
+                    }
+                    return
+                }
                 if (privacyHost.isBootstrapNavigation(session, url)) return
                 if (navigationTargetUrl == null) beginNavigation(url)
                 markNavigationStarted(url)
                 invalidateDomProbe()
                 currentPageUrl = url
+                httpsOnlyRetryUrl = null
                 invalidateCredentialPrompts(recreateHost = true)
                 activeMediaSession = null
                 deactivatedMediaSession = null
@@ -2872,14 +2944,24 @@ private class GeckoViewBrowserSession(
                 snapshot.toBrowserHistoryState().currentUrl(),
             )
         ) return null
-        return snapshot.toString()
+        val encoded = snapshot.toString() ?: return null
+        val retryUrl = httpsOnlyRetryUrl
+            ?.takeIf { state.failureKind == BrowserEngineFailureKind.HttpsOnly }
+            ?: return encoded
+        // Keep Gecko's opaque history intact and record only Candy's protected retry target.
+        return JSONObject(encoded).put(HTTPS_ONLY_RESTORE_URL_KEY, retryUrl).toString()
     }
 
     override fun restoreSessionState(encodedState: String): Boolean {
         if (closed || isPrivate || encodedState.length !in 1..GeckoSessionStateSnapshotRules.MAX_ENCODED_STATE_CHARS) {
             return false
         }
-        val restored = runCatching { GeckoSession.SessionState.fromString(encodedState) }.getOrNull()
+        val encoded = runCatching { JSONObject(encodedState) }.getOrNull() ?: return false
+        val httpsOnlyUrl = BrowserUriPolicy.normalizeHttpUrl(
+            encoded.optString(HTTPS_ONLY_RESTORE_URL_KEY),
+        )?.takeIf { it.startsWith("http://") }
+        encoded.remove(HTTPS_ONLY_RESTORE_URL_KEY)
+        val restored = runCatching { GeckoSession.SessionState.fromString(encoded.toString()) }.getOrNull()
             ?: return false
         val restoredHistory = restored.toBrowserHistoryState()
         if (CandyPrivacyHostContract.isBootstrapDocumentUrl(restoredHistory.currentUrl())) {
@@ -2887,6 +2969,7 @@ private class GeckoViewBrowserSession(
         }
         latestSessionState = GeckoSession.SessionState(restored)
         pendingRestoredSessionState = restored
+        pendingRestoredHttpsOnlyUrl = httpsOnlyUrl
         pendingRestoredHistoryState = restoredHistory
         pendingRestoredHistoryState?.currentUrl()?.let(::beginNavigation)
         restorePendingStateIfReady()
@@ -2904,6 +2987,7 @@ private class GeckoViewBrowserSession(
     override fun replaceHistoryUrl(url: String): Boolean {
         if (closed) return false
         val safeUrl = BrowserUriPolicy.normalizeHttpUrl(url) ?: return false
+        pendingRestoredHttpsOnlyUrl = null
         invalidateCredentialPrompts(recreateHost = false)
         beginNavigation(safeUrl)
         if (
@@ -2930,6 +3014,7 @@ private class GeckoViewBrowserSession(
             return true
         }
         pendingInitialUrl = null
+        pendingRestoredHttpsOnlyUrl = null
         pendingFailedPageRetryUrl = safeUrl
         beginNavigation(safeUrl)
         if (!runPendingFailedPageRetryIfReady()) awaitNavigationReadiness()
@@ -2950,6 +3035,7 @@ private class GeckoViewBrowserSession(
     }
 
     private fun loadValidatedUrl(safeUrl: String): Boolean {
+        pendingRestoredHttpsOnlyUrl = null
         invalidateCredentialPrompts(recreateHost = false)
         pendingFailedPageRetryUrl = null
         privacyFailureDescription?.let { description ->
@@ -3013,6 +3099,7 @@ private class GeckoViewBrowserSession(
 
     override fun goBack() {
         if (!closed && privacyBound && state.canGoBack) {
+            pendingRestoredHttpsOnlyUrl = null
             invalidateCredentialPrompts(recreateHost = false)
             historyUrlAtOffset(-1)?.let(::beginNavigation)
             session.goBack()
@@ -3021,6 +3108,7 @@ private class GeckoViewBrowserSession(
 
     override fun goForward() {
         if (!closed && privacyBound && state.canGoForward) {
+            pendingRestoredHttpsOnlyUrl = null
             invalidateCredentialPrompts(recreateHost = false)
             historyUrlAtOffset(1)?.let(::beginNavigation)
             session.goForward()
@@ -3029,6 +3117,7 @@ private class GeckoViewBrowserSession(
 
     override fun goToHistoryIndex(index: Int) {
         if (!closed && privacyBound && index >= 0) {
+            pendingRestoredHttpsOnlyUrl = null
             invalidateCredentialPrompts(recreateHost = false)
             historyState?.urls?.getOrNull(index)?.let(::beginNavigation)
             session.gotoHistoryIndex(index)
@@ -3043,8 +3132,13 @@ private class GeckoViewBrowserSession(
 
     override fun reload() {
         if (!closed && privacyBound) {
+            pendingRestoredHttpsOnlyUrl = null
             invalidateCredentialPrompts(recreateHost = false)
-            reloadCurrentPage()
+            if (state.failureKind == BrowserEngineFailureKind.HttpsOnly && httpsOnlyRetryUrl != null) {
+                retryHttpsOnlyNavigation()
+            } else {
+                reloadCurrentPage()
+            }
         }
     }
 
@@ -3053,6 +3147,7 @@ private class GeckoViewBrowserSession(
             pendingInitialUrl = null
             pendingFailedPageRetryUrl = null
             pendingRestoredSessionState = null
+            pendingRestoredHttpsOnlyUrl = null
             finishRestoredHistoryWait()
             finishNavigation()
             invalidateCredentialPrompts(recreateHost = true)
@@ -3099,6 +3194,7 @@ private class GeckoViewBrowserSession(
         pendingInitialUrl = null
         pendingFailedPageRetryUrl = null
         pendingRestoredSessionState = null
+        pendingRestoredHttpsOnlyUrl = null
         finishRestoredHistoryWait()
         navigationTargetUrl = null
         pendingNavigationAttempts.clear()
@@ -3122,6 +3218,7 @@ private class GeckoViewBrowserSession(
             !privacyBound
         ) return
         if (restorePendingStateIfReady() || restoredHistoryPending) return
+        if (runPendingRestoredHttpsOnlyNavigation()) return
         if (runPendingFailedPageRetryIfReady() || pendingFailedPageRetryUrl != null) return
         val pendingUrl = pendingInitialUrl ?: return
         pendingInitialUrl = null
@@ -3137,6 +3234,16 @@ private class GeckoViewBrowserSession(
         scheduleRestoredHistoryTimeout()
         pendingRestoredHistoryState?.currentUrl()?.let(::ensureNavigation)
         session.restoreState(restored)
+        return true
+    }
+
+    private fun runPendingRestoredHttpsOnlyNavigation(): Boolean {
+        val httpUrl = pendingRestoredHttpsOnlyUrl ?: return false
+        pendingRestoredHttpsOnlyUrl = null
+        val restoredUrl = historyState?.currentUrl()
+        val replacesWarning = restoredUrl == httpUrl ||
+            restoredUrl == "https:" + httpUrl.substringAfter(':')
+        loadHttpsOnlyRetry(httpUrl, replaceHistory = replacesWarning)
         return true
     }
 
@@ -3239,6 +3346,60 @@ private class GeckoViewBrowserSession(
         if (failedAttempt?.generation == navigationGeneration) finishNavigation()
     }
 
+    private fun handleHttpsOnlyWarningAction(message: String?): Boolean {
+        if (
+            state.failureKind != BrowserEngineFailureKind.HttpsOnly ||
+            (
+                message != GeckoHttpsOnlyErrorPage.BACK_ACTION_MESSAGE &&
+                    message != GeckoHttpsOnlyErrorPage.RETRY_ACTION_MESSAGE
+                )
+        ) return false
+        // Error-document navigations bypass onLoadRequest; consume this local prompt instead.
+        val generation = navigationGeneration
+        mainHandler.post {
+            if (
+                !closed && navigationGeneration == generation &&
+                state.failureKind == BrowserEngineFailureKind.HttpsOnly
+            ) {
+                if (message == GeckoHttpsOnlyErrorPage.BACK_ACTION_MESSAGE) {
+                    if (state.canGoBack) {
+                        goBack()
+                        httpsOnlyBackGeneration = navigationGeneration
+                    } else {
+                        loadUrl("about:blank")
+                    }
+                } else {
+                    retryHttpsOnlyNavigation()
+                }
+            }
+        }
+        return true
+    }
+
+    private fun retryHttpsOnlyNavigation() {
+        val httpUrl = httpsOnlyRetryUrl ?: return
+        loadHttpsOnlyRetry(httpUrl, replaceHistory = true)
+    }
+
+    private fun loadHttpsOnlyRetry(httpUrl: String, replaceHistory: Boolean) {
+        if (!privacyBound) return
+        val mode = runtime.settings.allowInsecureConnections
+        val protectsSession = mode == GeckoRuntimeSettings.HTTPS_ONLY ||
+            (mode == GeckoRuntimeSettings.HTTPS_ONLY_PRIVATE && isPrivate)
+        // A mode changed while the warning was open must not turn an HTTPS retry into HTTP.
+        val retryUrl = if (protectsSession) httpUrl else "https:" + httpUrl.substringAfter(':')
+        invalidateCredentialPrompts(recreateHost = false)
+        beginNavigation(retryUrl)
+        session.load(
+            GeckoSession.Loader()
+                .uri(retryUrl)
+                .flags(
+                    GeckoSession.LOAD_FLAGS_BYPASS_CACHE or
+                        if (replaceHistory) GeckoSession.LOAD_FLAGS_REPLACE_HISTORY else 0,
+                ),
+        )
+    }
+
     private fun reloadCurrentPage() {
         currentPageUrl?.let(::beginNavigation)
         session.reload()
@@ -3324,6 +3485,7 @@ private class GeckoViewBrowserSession(
         pendingInitialUrl = null
         pendingFailedPageRetryUrl = null
         pendingRestoredSessionState = null
+        pendingRestoredHttpsOnlyUrl = null
         finishRestoredHistoryWait()
         navigationTargetUrl = null
         pendingNavigationAttempts.clear()
@@ -3353,6 +3515,7 @@ private class GeckoViewBrowserSession(
         pendingInitialUrl = null
         pendingFailedPageRetryUrl = null
         pendingRestoredSessionState = null
+        pendingRestoredHttpsOnlyUrl = null
         finishRestoredHistoryWait()
         navigationTargetUrl = null
         pendingNavigationAttempts.clear()
@@ -3410,6 +3573,7 @@ private class GeckoViewBrowserSession(
 
     private companion object {
         const val GECKO_NAVIGATION_FAILURE = "Gecko navigation failed"
+        const val HTTPS_ONLY_RESTORE_URL_KEY = "candyHttpsOnlyRetryUrl"
         const val CHOICE_VALUE_SEPARATOR = "\u001F"
         const val MAX_EXTENSION_URL_LENGTH = 4_096
         const val MAX_MEDIA_TIME_MILLIS = 604_800_000L

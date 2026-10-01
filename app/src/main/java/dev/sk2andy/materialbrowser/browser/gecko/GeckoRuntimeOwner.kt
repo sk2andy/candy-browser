@@ -5,6 +5,7 @@ import android.content.res.Configuration
 import androidx.annotation.UiThread
 import androidx.annotation.VisibleForTesting
 import dev.sk2andy.materialbrowser.browser.DnsOverHttpsSettings
+import dev.sk2andy.materialbrowser.browser.HttpsOnlyMode
 import dev.sk2andy.materialbrowser.browser.WebRtcProtectionMode
 import dev.sk2andy.materialbrowser.browser.engine.BrowserWebContentColorScheme
 import org.mozilla.geckoview.GeckoRuntime
@@ -54,6 +55,9 @@ internal interface GeckoRuntimeHandle {
 
     @UiThread
     fun setDnsOverHttpsSettings(settings: DnsOverHttpsSettings)
+
+    @UiThread
+    fun setHttpsOnlyMode(mode: HttpsOnlyMode) = Unit
 
     @UiThread
     fun setWebContentFontSizeFactor(factor: Float)

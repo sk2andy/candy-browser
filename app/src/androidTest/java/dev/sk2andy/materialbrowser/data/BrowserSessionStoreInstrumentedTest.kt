@@ -13,6 +13,7 @@ import dev.sk2andy.materialbrowser.browser.DEFAULT_PROFILE_ID
 import dev.sk2andy.materialbrowser.browser.DnsOverHttpsProvider
 import dev.sk2andy.materialbrowser.browser.DnsOverHttpsRules
 import dev.sk2andy.materialbrowser.browser.DnsOverHttpsSettings
+import dev.sk2andy.materialbrowser.browser.HttpsOnlyMode
 import dev.sk2andy.materialbrowser.browser.ExternalAppLinkHandling
 import dev.sk2andy.materialbrowser.browser.FavoriteAnimationSpeed
 import dev.sk2andy.materialbrowser.browser.InlineMediaPlayerMode
@@ -1332,6 +1333,22 @@ class BrowserSessionStoreInstrumentedTest {
             "future-mode",
         ).commit()
         assertEquals(WebRtcProtectionMode.ProtectIpAddresses, store.loadWebRtcProtectionMode())
+    }
+
+    @Test
+    fun httpsOnlyDefaultsToAllTabsAndPersistsEveryModeAcrossStoreInstances() {
+        val store = BrowserSessionStore(context)
+        assertEquals(HttpsOnlyMode.AllTabs, store.loadHttpsOnlyMode())
+
+        HttpsOnlyMode.entries.forEach { mode ->
+            store.saveHttpsOnlyMode(mode)
+            assertEquals(mode, BrowserSessionStore(context).loadHttpsOnlyMode())
+        }
+
+        preferences.edit()
+            .putString(BrowserSessionStore.KEY_HTTPS_ONLY_MODE, "future-mode")
+            .commit()
+        assertEquals(HttpsOnlyMode.AllTabs, store.loadHttpsOnlyMode())
     }
 
     @Test

@@ -612,6 +612,9 @@ class BrowserController(
     val isDnsOverHttpsSupported: Boolean
         get() = browserEngineCapabilities.dnsOverHttps
 
+    val isHttpsOnlySupported: Boolean
+        get() = usesGeckoEngine
+
     val supportsPageContentActions: Boolean
         get() = true
 
@@ -799,6 +802,8 @@ class BrowserController(
     var isAutoDeAmpEnabled by mutableStateOf(true)
         private set
     var dnsOverHttpsSettings by mutableStateOf(DnsOverHttpsRules.Default)
+        private set
+    var httpsOnlyMode by mutableStateOf(HttpsOnlyMode.Default)
         private set
     var externalLinkPreviewState by mutableStateOf<ExternalLinkPreviewState?>(null)
         private set
@@ -2350,6 +2355,8 @@ class BrowserController(
         browserEngineSessionFactory.setWebRtcProtectionMode(webRtcProtectionMode)
         privacySignalSettings = store.loadPrivacySignalSettings()
         isAutoDeAmpEnabled = store.loadAutoDeAmpEnabled()
+        httpsOnlyMode = store.loadHttpsOnlyMode()
+        browserEngineSessionFactory.setHttpsOnlyMode(httpsOnlyMode)
         dnsOverHttpsSettings = store.loadDnsOverHttpsSettings()
         browserEngineSessionFactory.setDnsOverHttpsSettings(dnsOverHttpsSettings)
         if (!BuildConfig.SYSTEM_WEBVIEW_ONLY && usesGeckoEngine) {
@@ -9676,6 +9683,13 @@ class BrowserController(
         if (isAutoDeAmpEnabled == enabled) return
         isAutoDeAmpEnabled = enabled
         store.saveAutoDeAmpEnabled(enabled)
+    }
+
+    fun updateHttpsOnlyMode(mode: HttpsOnlyMode) {
+        if (!isHttpsOnlySupported || httpsOnlyMode == mode) return
+        httpsOnlyMode = mode
+        store.saveHttpsOnlyMode(mode)
+        browserEngineSessionFactory.setHttpsOnlyMode(mode)
     }
 
     fun updateDnsOverHttpsSettings(settings: DnsOverHttpsSettings) {

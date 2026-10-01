@@ -9,6 +9,7 @@ import dev.sk2andy.materialbrowser.blocking.BlockerSettings
 import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineKind
 import dev.sk2andy.materialbrowser.browser.DnsOverHttpsRules
 import dev.sk2andy.materialbrowser.browser.DnsOverHttpsSettings
+import dev.sk2andy.materialbrowser.browser.HttpsOnlyMode
 import dev.sk2andy.materialbrowser.browser.BrowserProfile
 import dev.sk2andy.materialbrowser.browser.ExternalAppLinkHandling
 import dev.sk2andy.materialbrowser.browser.FavoriteAnimationSpeed
@@ -50,6 +51,7 @@ internal fun SettingsScreen(
     destination: SettingsDestination,
     browserEngineKind: AndroidBrowserEngineKind = AndroidBrowserEngineKind.GeckoView,
     isDnsOverHttpsSupported: Boolean = browserEngineKind == AndroidBrowserEngineKind.GeckoView,
+    isHttpsOnlySupported: Boolean = browserEngineKind == AndroidBrowserEngineKind.GeckoView,
     appearanceSettings: AppearanceSettings,
     downloadSettings: BrowserDownloadSettings,
     externalDownloadManagers: List<ExternalDownloadManagerApp>,
@@ -57,6 +59,7 @@ internal fun SettingsScreen(
     webRtcProtectionMode: WebRtcProtectionMode = WebRtcProtectionMode.Default,
     privacySignalSettings: PrivacySignalSettings = PrivacySignalSettings.Default,
     isAutoDeAmpEnabled: Boolean = true,
+    httpsOnlyMode: HttpsOnlyMode = HttpsOnlyMode.Default,
     dnsOverHttpsSettings: DnsOverHttpsSettings = DnsOverHttpsRules.Default,
     inactiveTabLifetime: InactiveTabLifetime,
     residentTabLimit: Int,
@@ -119,6 +122,7 @@ internal fun SettingsScreen(
     onWebRtcProtectionModeChanged: (WebRtcProtectionMode) -> Unit = {},
     onPrivacySignalSettingsChanged: (PrivacySignalSettings) -> Unit = {},
     onAutoDeAmpEnabledChanged: (Boolean) -> Unit = {},
+    onHttpsOnlyModeChanged: (HttpsOnlyMode) -> Unit = {},
     onDnsOverHttpsSettingsChanged: (DnsOverHttpsSettings) -> Unit = {},
     onInactiveTabLifetimeChanged: (InactiveTabLifetime) -> Unit,
     onResidentTabLimitChanged: (Int) -> Unit,
@@ -436,9 +440,11 @@ internal fun SettingsScreen(
                     blockedCount = blockedCount,
                     browserEngineKind = browserEngineKind,
                     isDnsOverHttpsSupported = isDnsOverHttpsSupported,
+                    isHttpsOnlySupported = isHttpsOnlySupported,
                     webRtcProtectionMode = webRtcProtectionMode,
                     privacySignalSettings = privacySignalSettings,
                     isAutoDeAmpEnabled = isAutoDeAmpEnabled,
+                    httpsOnlyMode = httpsOnlyMode,
                     dnsOverHttpsSettings = dnsOverHttpsSettings,
                     isRecallEnabled = isRecallEnabled,
                     historyRecordingMode = historyRecordingMode,
@@ -447,6 +453,7 @@ internal fun SettingsScreen(
                     onWebRtcProtectionModeChanged = onWebRtcProtectionModeChanged,
                     onPrivacySignalSettingsChanged = onPrivacySignalSettingsChanged,
                     onAutoDeAmpEnabledChanged = onAutoDeAmpEnabledChanged,
+                    onHttpsOnlyModeChanged = onHttpsOnlyModeChanged,
                     onDnsOverHttpsSettingsChanged = onDnsOverHttpsSettingsChanged,
                     onRecallEnabledChanged = onRecallEnabledChanged,
                     onHistoryRecordingModeChanged = onHistoryRecordingModeChanged,
