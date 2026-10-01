@@ -10,11 +10,13 @@ import android.os.SystemClock
 import android.view.SurfaceView
 import android.view.View
 import android.view.ViewGroup
+import android.view.Window
 import android.widget.FrameLayout
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import androidx.test.filters.SdkSuppress
 import dev.sk2andy.materialbrowser.MainActivity
 import dev.sk2andy.materialbrowser.browser.engine.BrowserWebContentColorScheme
 import java.net.InetAddress
@@ -32,6 +34,7 @@ import org.junit.runner.RunWith
 import org.mozilla.geckoview.GeckoView
 
 @RunWith(AndroidJUnit4::class)
+@SdkSuppress(minSdkVersion = 34)
 class GeckoWebContentThemeInstrumentedTest {
     private val instrumentation = InstrumentationRegistry.getInstrumentation()
 
@@ -67,18 +70,21 @@ class GeckoWebContentThemeInstrumentedTest {
     ) {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val requestReceived = CountDownLatch(1)
+        val loadingFrameCommitted = CountDownLatch(1)
         val allowResponse = CountDownLatch(1)
         val title = AtomicReference<String>()
         val contentPresented = AtomicBoolean(false)
         lateinit var runtime: GeckoRuntimeHandle
         lateinit var session: GeckoBrowserSession
         lateinit var view: View
+        lateinit var window: Window
         ThemeFixtureServer {
             requestReceived.countDown()
             check(allowResponse.await(TIMEOUT_MILLIS, TimeUnit.MILLISECONDS))
         }.use { server ->
             ActivityScenario.launch(MainActivity::class.java).use { scenario ->
                 scenario.onActivity { activity ->
+                    window = activity.window
                     runtime = GeckoRuntimeOwner.getOrCreate(context)
                     runtime.setWebContentColorScheme(colorScheme)
                     session = runtime.createSession(
@@ -93,6 +99,9 @@ class GeckoWebContentThemeInstrumentedTest {
                         addView(view, matchParentLayoutParams())
                     }
                     activity.setContentView(host)
+                    host.viewTreeObserver.registerFrameCommitCallback {
+                        loadingFrameCommitted.countDown()
+                    }
                     session.setStateListener { state -> title.set(state.title) }
                     session.awaitContentPresented { contentPresented.set(true) }
                     session.setActive(true)
@@ -103,7 +112,11 @@ class GeckoWebContentThemeInstrumentedTest {
                         "Delayed fixture was not requested",
                         requestReceived.await(TIMEOUT_MILLIS, TimeUnit.MILLISECONDS),
                     )
-                    val loadingPixel = screenshotCenterPixel()
+                    assertTrue(
+                        "Loading host did not commit its first frame",
+                        loadingFrameCommitted.await(TIMEOUT_MILLIS, TimeUnit.MILLISECONDS),
+                    )
+                    val loadingPixel = screenshotCenterPixel(window)
                     if (colorScheme == BrowserWebContentColorScheme.Dark) {
                         assertTrue(
                             "Dark loading surface flashed ${Integer.toHexString(loadingPixel)}",
@@ -119,7 +132,7 @@ class GeckoWebContentThemeInstrumentedTest {
                     assertTrue(awaitTitle(title, expectedTitle))
                     awaitCondition("Gecko did not present its first page") { contentPresented.get() }
                     awaitCondition("First paint did not replace loading surface") {
-                        screenshotCenterPixel() == PAGE_COLOR
+                        screenshotCenterPixel(window) == PAGE_COLOR
                     }
                     scenario.onActivity {
                         val engineView = (view as ViewGroup).getChildAt(0) as GeckoView
@@ -134,7 +147,7 @@ class GeckoWebContentThemeInstrumentedTest {
                     }
                     assertTrue(awaitTitle(title, expectedTitle))
                     awaitCondition("Reload did not retain visible page content") {
-                        screenshotCenterPixel() == PAGE_COLOR
+                        screenshotCenterPixel(window) == PAGE_COLOR
                     }
                     scenario.onActivity {
                         title.set(null)
@@ -142,7 +155,7 @@ class GeckoWebContentThemeInstrumentedTest {
                     }
                     assertTrue(awaitTitle(title, expectedTitle))
                     awaitCondition("Second navigation did not reveal page content") {
-                        screenshotCenterPixel() == PAGE_COLOR
+                        screenshotCenterPixel(window) == PAGE_COLOR
                     }
                     scenario.onActivity {
                         session.releaseView(view)
@@ -152,7 +165,7 @@ class GeckoWebContentThemeInstrumentedTest {
                         host.addView(view, matchParentLayoutParams())
                     }
                     awaitCondition("Reattached view did not reveal loaded page") {
-                        screenshotCenterPixel() == PAGE_COLOR
+                        screenshotCenterPixel(window) == PAGE_COLOR
                     }
                 } finally {
                     allowResponse.countDown()
@@ -172,8 +185,8 @@ class GeckoWebContentThemeInstrumentedTest {
         FrameLayout.LayoutParams.MATCH_PARENT,
     )
 
-    private fun screenshotCenterPixel(): Int {
-        val bitmap = requireNotNull(instrumentation.uiAutomation.takeScreenshot())
+    private fun screenshotCenterPixel(window: Window): Int {
+        val bitmap = requireNotNull(instrumentation.uiAutomation.takeScreenshot(window))
         return try {
             bitmap.getPixel(bitmap.width / 2, bitmap.height / 2)
         } finally {
