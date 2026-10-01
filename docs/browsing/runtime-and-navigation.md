@@ -55,7 +55,7 @@
 | Main-frame 404 | engine HTTP status → tab state → `PageErrorFeedbackRules` | Keep the navigation committed, preserve URL/title/history side effects, and cover the page with Candy's native not-found surface |
 | Offline page | failed main-frame navigation + `BrowserConnectivityMonitor` → controller → `PageErrorFeedbackRules` | Require Android's validated default internet capability, never cover an already loaded page merely because connectivity drops, auto-reload on reconnect only before the game starts, and preserve the game behind an explicit reload banner afterward |
 | Stale Gecko Privacy bootstrap | `CandyPrivacyHostContract` → Gecko session callbacks and snapshot restore | Treat the exact UUID-shaped `moz-extension://…/bootstrap.html?token=…` document as internal even when it came from an earlier runtime, and reject a native session snapshot whose current page is that bootstrap document; only the current session's exact origin and token may authorize a bootstrap navigation |
-| Pull to refresh | `BrowserPullToRefreshLayout` → `BrowserPullGestureRules` / `BrowserPullToRefreshRules` → `BrowserController.reload()` | Admit a downward-dominant gesture starting within 160 dp below the top safe inset only for a visible, idle web page whose engine-reported document offset is at the top; keep gestures starting lower in the page body with nested scrollers, plus blank, obscured, Find-in-page, overview and video-only surfaces, out of the gesture path |
+| Pull to refresh | `BrowserPullToRefreshLayout` → `BrowserPullGestureRules` / `BrowserPullToRefreshRules` → `BrowserController.reload()` | Admit a downward-dominant gesture anywhere on a visible, idle web page whose engine-reported document offset is at the top; on `instagram.com`, `tiktok.com`, `youtube.com` and their subdomains, require a start within 160 dp below the top safe inset so lower feed gestures stay with the page; keep blank, obscured, Find-in-page, overview and video-only surfaces out of the gesture path |
 
 ## Invariants
 
@@ -212,6 +212,10 @@
   Missing metrics fail closed. Offset the native refresh indicator below the top safe-drawing inset so it
   stays clear of display cutouts. Normal navigation does not show the pull indicator, and the existing
   menu reload remains the accessible non-gesture action.
+  Full-page pull admission is the default. Only Instagram, TikTok and YouTube (including subdomains)
+  retain the 160 dp top start zone to protect Reels, video feeds and nested scrollers below that zone.
+  Match the canonical HTTP(S) host, never URL path/query text or lookalike domain suffixes, and update
+  the restriction with the selected page. A gesture keeps the start-zone decision made on touch-down.
 - Treat Android connectivity as a process-local observable effect. A default network counts as online
   only with both `NET_CAPABILITY_INTERNET` and `NET_CAPABILITY_VALIDATED`; close the registered callback
   with `BrowserController`. Do not issue Candy-owned probe requests or replace an already usable page

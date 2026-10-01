@@ -10,6 +10,7 @@ import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import dev.sk2andy.materialbrowser.browser.BrowserPullToRefreshRules
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertSame
@@ -117,7 +118,7 @@ class BrowserPullToRefreshLayoutInstrumentedTest {
     }
 
     @Test
-    fun midPageSwipeReachesWebViewWithNestedScrollerAndEditor() {
+    fun restrictedSiteMidPageSwipeReachesWebViewWithNestedScrollerAndEditor() {
         var refreshCount = 0
         var webViewMoveCount = 0
         lateinit var refreshLayout: BrowserPullToRefreshLayout
@@ -164,6 +165,9 @@ class BrowserPullToRefreshLayoutInstrumentedTest {
                 indicatorColor = android.graphics.Color.RED,
                 indicatorContainerColor = android.graphics.Color.WHITE,
                 indicatorTopInsetPx = 0,
+                restrictPullToTopZone = BrowserPullToRefreshRules.restrictPullToTopZone(
+                    "https://www.instagram.com/reels/",
+                ),
                 canChildScrollUp = { false },
                 onRefresh = {
                     refreshCount++
@@ -233,6 +237,21 @@ class BrowserPullToRefreshLayoutInstrumentedTest {
 
     @Test
     fun pullInsideExpandedTopZoneStartsRefresh() {
+        assertPullStartsRefresh(
+            pageUrl = "https://m.youtube.com/shorts/123",
+            startYDp = 80f,
+        )
+    }
+
+    @Test
+    fun normalPagePullBelowTopZoneStartsRefresh() {
+        assertPullStartsRefresh(
+            pageUrl = "https://example.com/",
+            startYDp = 320f,
+        )
+    }
+
+    private fun assertPullStartsRefresh(pageUrl: String, startYDp: Float) {
         var refreshCount = 0
         lateinit var refreshLayout: BrowserPullToRefreshLayout
         composeRule.runOnIdle {
@@ -255,6 +274,7 @@ class BrowserPullToRefreshLayoutInstrumentedTest {
                 indicatorColor = android.graphics.Color.RED,
                 indicatorContainerColor = android.graphics.Color.WHITE,
                 indicatorTopInsetPx = 0,
+                restrictPullToTopZone = BrowserPullToRefreshRules.restrictPullToTopZone(pageUrl),
                 canChildScrollUp = { false },
                 onRefresh = {
                     refreshCount++
@@ -270,17 +290,17 @@ class BrowserPullToRefreshLayoutInstrumentedTest {
             )
         }
         composeRule.waitUntil(timeoutMillis = 10_000L) {
-            refreshLayout.height > 240f * refreshLayout.resources.displayMetrics.density
+            refreshLayout.height > (startYDp + 160f) * refreshLayout.resources.displayMetrics.density
         }
         composeRule.runOnIdle {
             val downTime = SystemClock.uptimeMillis()
             val x = refreshLayout.width / 2f
             val density = refreshLayout.resources.displayMetrics.density
             listOf(
-                MotionEvent.ACTION_DOWN to 80f * density,
-                MotionEvent.ACTION_MOVE to 150f * density,
-                MotionEvent.ACTION_MOVE to 220f * density,
-                MotionEvent.ACTION_UP to 220f * density,
+                MotionEvent.ACTION_DOWN to startYDp * density,
+                MotionEvent.ACTION_MOVE to (startYDp + 70f) * density,
+                MotionEvent.ACTION_MOVE to (startYDp + 140f) * density,
+                MotionEvent.ACTION_UP to (startYDp + 140f) * density,
             ).forEachIndexed { index, (action, eventY) ->
                 MotionEvent.obtain(downTime, downTime + index * 16L, action, x, eventY, 0).also {
                     refreshLayout.dispatchTouchEvent(it)

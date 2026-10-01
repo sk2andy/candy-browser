@@ -22,6 +22,7 @@ internal class BrowserPullToRefreshLayout(
     private val defaultIndicatorStartOffsetPx = progressViewStartOffset
     private val defaultIndicatorEndOffsetPx = progressViewEndOffset
     private var indicatorTopInsetPx = 0
+    private var restrictPullToTopZone = false
     private val pullZoneHeightPx = (PULL_ZONE_HEIGHT_DP * resources.displayMetrics.density).roundToInt()
     private val touchSlop = ViewConfiguration.get(context).scaledTouchSlop.toFloat()
     private var downX = 0f
@@ -50,7 +51,7 @@ internal class BrowserPullToRefreshLayout(
                 downX = event.x
                 downY = event.y
                 gestureDirection = if (
-                    BrowserPullGestureRules.canStartInTopZone(
+                    !restrictPullToTopZone || BrowserPullGestureRules.canStartInTopZone(
                         touchY = downY,
                         topInsetPx = indicatorTopInsetPx,
                         zoneHeightPx = pullZoneHeightPx,
@@ -103,11 +104,13 @@ internal class BrowserPullToRefreshLayout(
         indicatorColor: Int,
         indicatorContainerColor: Int,
         indicatorTopInsetPx: Int,
+        restrictPullToTopZone: Boolean,
         canChildScrollUp: () -> Boolean,
         onRefresh: () -> Boolean,
     ) {
         canContentScrollUp = canChildScrollUp
         this.onRefresh = onRefresh
+        this.restrictPullToTopZone = restrictPullToTopZone
         isEnabled = enabled
         updateIndicatorTopInset(indicatorTopInsetPx)
         val nextRefreshing = enabled && refreshing

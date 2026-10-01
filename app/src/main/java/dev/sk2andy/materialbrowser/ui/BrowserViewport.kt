@@ -709,6 +709,9 @@ private fun ActiveBrowserEngineView(
                     indicatorColor = indicatorColor,
                     indicatorContainerColor = indicatorContainerColor,
                     indicatorTopInsetPx = refreshIndicatorTopInsetPx,
+                    restrictPullToTopZone = BrowserPullToRefreshRules.restrictPullToTopZone(
+                        controller.selectedTab.url,
+                    ),
                     canChildScrollUp = {
                         BrowserPullToRefreshRules.canChildScrollUp(
                             controller.selectedBrowserEngineScrollMetrics(),

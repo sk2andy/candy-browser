@@ -6,6 +6,44 @@ import org.junit.Test
 
 class BrowserPullToRefreshRulesTest {
     @Test
+    fun `video feed sites restrict pulls to the top zone including subdomains`() {
+        listOf(
+            "https://instagram.com/reels/",
+            "https://www.instagram.com/",
+            "https://tiktok.com/",
+            "https://www.tiktok.com/@creator/video/123",
+            "https://youtube.com/shorts/123",
+            "https://m.youtube.com/",
+            "http://WWW.YOUTUBE.COM.:8080/watch?v=123",
+        ).forEach { url ->
+            assertTrue(url, BrowserPullToRefreshRules.restrictPullToTopZone(url))
+        }
+    }
+
+    @Test
+    fun `other pages keep full page pulls without matching lookalike hosts or URL text`() {
+        listOf(
+            "https://example.com/",
+            "https://example.com/instagram.com?next=https://youtube.com/",
+            "https://instagram.com.example.com/",
+            "https://notinstagram.com/",
+            "https://nottiktok.com/",
+            "https://notyoutube.com/",
+            "https://youtube.com@other.test/",
+        ).forEach { url ->
+            assertFalse(url, BrowserPullToRefreshRules.restrictPullToTopZone(url))
+        }
+    }
+
+    @Test
+    fun `missing malformed and non web URLs do not select a site exception`() {
+        listOf(null, "", "not a URL", "https://", "about:blank", "file://youtube.com/page")
+            .forEach { url ->
+                assertFalse(url, BrowserPullToRefreshRules.restrictPullToTopZone(url))
+            }
+    }
+
+    @Test
     fun `scroll metrics stay limited to selected tab without page scrollbar`() {
         assertTrue(
             BrowserPullToRefreshRules.shouldCollectScrollMetrics(
