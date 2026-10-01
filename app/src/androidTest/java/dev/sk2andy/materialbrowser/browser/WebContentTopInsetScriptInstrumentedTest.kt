@@ -1279,6 +1279,75 @@ class WebContentTopInsetScriptInstrumentedTest {
     }
 
     @Test
+    fun focusedFullViewportSearchPanelReceivesOneTopInset() {
+        val view = loadPage(
+            bridge = TopInsetBridge(CountDownLatch(1)),
+            html = """
+                <html><head><style>
+                  html, body { margin: 0; min-height: 200vh; }
+                  #panel { position: fixed; inset: 0 0 -4px 0; height: 100%; background: white; }
+                  #query { display: block; margin: 16px; }
+                </style></head><body>
+                <div id="panel"><textarea id="query">testing</textarea></div>
+                </body></html>
+            """.trimIndent(),
+        )
+        evaluate(view, WebContentTopInsetScript.installScript)
+        evaluate(view, "document.querySelector('#query').focus({preventScroll:true})")
+        val density = evaluate(view, "devicePixelRatio").toDouble()
+        val expectedTop = TOP_INSET_PX / density
+        awaitScriptCondition(
+            view,
+            "document.querySelector('#panel').getBoundingClientRect().top >= $expectedTop - 1",
+        )
+        repeat(4) { evaluate(view, "globalThis.__candyReconcileContentTopInset()") }
+
+        assertElementUsesExactStatusInset(view, "#panel")
+        assertTrue(elementTop(view, "#query") >= expectedTop)
+        assertTrue(
+            "Focused panel must fit below the safe top without extending the viewport",
+            evaluate(
+                view,
+                "document.querySelector('#panel').getBoundingClientRect().bottom <= innerHeight + 1",
+            ).toBooleanStrict(),
+        )
+        evaluate(view, "document.querySelector('#panel').hidden = true")
+        evaluate(
+            view,
+            "document.querySelector('#panel').hidden = false; " +
+                "document.querySelector('#query').focus({preventScroll:true})",
+        )
+        awaitScriptCondition(
+            view,
+            "document.querySelector('#panel').getBoundingClientRect().top >= $expectedTop - 1",
+        )
+        assertElementUsesExactStatusInset(view, "#panel")
+    }
+
+    @Test
+    fun fullViewportBackdropWithoutFocusedEditorKeepsItsGeometry() {
+        val view = loadPage(
+            bridge = TopInsetBridge(CountDownLatch(1)),
+            html = """
+                <html><head><style>
+                  html, body { margin: 0; }
+                  #backdrop { position: fixed; inset: 0; background: black; }
+                </style></head><body><div id="backdrop"></div></body></html>
+            """.trimIndent(),
+        )
+        evaluate(view, WebContentTopInsetScript.installScript)
+        repeat(4) { evaluate(view, "globalThis.__candyReconcileContentTopInset()") }
+        assertEquals(0.0, elementTop(view, "#backdrop"), CSS_PIXEL_TOLERANCE)
+        assertEquals(
+            "null",
+            evaluate(
+                view,
+                "document.querySelector('#backdrop').getAttribute('data-candy-browser-top-inset-offset')",
+            ),
+        )
+    }
+
+    @Test
     fun preFocusedSearchReceivesOneTopInset() {
         val fallbackReceived = CountDownLatch(1)
         val view = loadPage(

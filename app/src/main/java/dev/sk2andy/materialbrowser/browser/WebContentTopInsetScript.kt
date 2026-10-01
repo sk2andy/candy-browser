@@ -921,8 +921,27 @@ internal object WebContentTopInsetScript {
                 const rect = readElementRect(element);
                 const isViewportWide = rect.width >= readViewportSize().width * 0.8;
                 const isViewportTall = rect.height >= readViewportSize().height * 0.8;
+                const previousOffset = isOwned
+                  ? Number.parseFloat(element.style.getPropertyValue(offsetProperty)) || 0
+                  : 0;
                 if (isViewportWide && isViewportTall) {
-                  return null;
+                  // Search overlays can cover the whole viewport while placing their editor in
+                  // the status-bar band. Keep unrelated full-screen backgrounds edge to edge.
+                  const focused = document.activeElement;
+                  if (
+                    style.position !== 'fixed' ||
+                    !(focused instanceof Element) ||
+                    !focused.matches('textarea, input:not([type="hidden"]), [contenteditable="true"]') ||
+                    (focused.tagName === 'INPUT' &&
+                      ['button', 'submit', 'reset', 'checkbox', 'radio', 'range', 'color', 'file']
+                        .includes(focused.type)) ||
+                    !element.contains(focused)
+                  ) return null;
+                  const focusedRect = readElementRect(focused);
+                  if (
+                    focusedRect.width <= 0 || focusedRect.height <= 0 ||
+                    focusedRect.top - previousOffset >= cssPixels - 0.5
+                  ) return null;
                 }
                 if (
                   (style.position === 'fixed' || style.position === 'sticky') &&
@@ -930,9 +949,6 @@ internal object WebContentTopInsetScript {
                 ) {
                   return null;
                 }
-                const previousOffset = isOwned
-                  ? Number.parseFloat(element.style.getPropertyValue(offsetProperty)) || 0
-                  : 0;
                 const unshiftedTop = rect.top - previousOffset +
                   (style.position === 'absolute' ? globalThis.scrollY : 0);
                 const isCompactInteractive =

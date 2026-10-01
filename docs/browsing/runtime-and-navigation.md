@@ -12,7 +12,7 @@
 | Compose surfaces | Host engine/preview content, native page-error/offline presentation, address chrome, settings, modal surfaces and tab overview without owning browser state | [`BrowserViewport.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/BrowserViewport.kt), [`PageErrorFeedback.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/PageErrorFeedback.kt), [`BrowserAddressChrome.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/BrowserAddressChrome.kt), [`BrowserSettingsOverlay.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/BrowserSettingsOverlay.kt), [`BrowserModalSurfaces.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/BrowserModalSurfaces.kt), [`BrowserTransientOverlays.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/BrowserTransientOverlays.kt), [`TabOverview.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/TabOverview.kt), [`FullscreenVideoOverlay.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/FullscreenVideoOverlay.kt) |
 | Policies | Resolve input, URLs, settings, media, file chooser and external routes | [`browser/`](../../app/src/main/java/dev/sk2andy/materialbrowser/browser/) |
 | Gecko CSS safe-area protection | Bounded load classification, one-time CSS anchors, configurable relevant mutation/interaction gates; scroll cancels work without geometry reads | `GeckoSafeAreaSettings`, `content_safe_area.js` |
-| System WebView safe-area mutation repair | Keep related attributes, owned-subtree and stylesheet/meta changes immediate; coalesce ancestor feed insertions into an animation frame; defer unrelated opaque feed changes to full quiet owned-layout revalidation before verification | `WebContentTopInsetScript` |
+| System WebView safe-area mutation repair | Keep related attributes, owned-subtree and stylesheet/meta changes immediate; coalesce ancestor feed insertions into an animation frame; defer unrelated opaque feed changes to full quiet owned-layout revalidation before verification | `WebContentTopInsetScript`; [Google interaction audit](../audits/issue-209-google-overview-interactions.md), [viewport/focused editor audit](../audits/issue-210-211-layout.md) |
 
 - Initial Gecko loads wait for an attached, measured viewport. Readiness is checked on both layout
   and attachment, so a view measured before attachment loads without waiting for a keyboard resize.
@@ -252,6 +252,10 @@
   client hints, and a 980-CSS-pixel layout viewport. Rewrite mobile viewport sizing only for
   configured registrable domains, preserve unrelated directives such as `viewport-fit`, and restore
   page defaults through the required reload when desktop view is disabled.
+- System WebView enables wide-viewport and overview loading in both mobile and desktop modes.
+  Mobile pages retain their authored viewport width and scale; legacy pages without a viewport
+  directive can fit their wide layout to the screen. Returning from desktop mode does not disable
+  this mobile viewport support.
 - Keep private always-block-popup domains memory-only; persist regular domains per profile only.
 - Keep `CREDENTIAL_MANAGER_QUERY_CANDIDATE_CREDENTIALS` and `CREDENTIAL_MANAGER_SET_ORIGIN`
   declared for GeckoView's passkey lookup, origin-bound WebAuthn, and Candy's password Credential
@@ -330,6 +334,9 @@
   declaring `viewport-fit=cover` stays on the existing repair/renderer path rather than forcing a margin.
   The document-start compatibility inset protects normal flow and top-positioned content.
   Top-anchored fixed, sticky, absolute, and focused containers are shifted once into the safe area.
+  A viewport-sized fixed container qualifies only when it contains the currently focused text
+  editor whose original top crosses the safe band. It receives one owned offset and the existing
+  panel-height constraint; unrelated full-screen backgrounds retain their geometry.
   Stable viewport-sticky headers use an inherited CSS `max(originalTop, topInset)` anchor, including
   an owned inline top override inside open Shadow DOM. They need no style/rectangle reads or CSS
   rewrites during scrolling. Semantic author/ancestor changes explicitly revalidate and restore
