@@ -20,7 +20,6 @@ import java.util.concurrent.atomic.AtomicReference
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
-import org.junit.Ignore
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -52,10 +51,6 @@ class GeckoAutoplayInstrumentedTest {
         assertEquals(PLAYING_TITLE, result.title)
     }
 
-    @Ignore(
-        "GeckoView 140 rejects direct audible play before the async embedder permission resolves; " +
-            "Mozilla bug 2049064 is fixed in Gecko 154, whose Android metadata requires SDK 37",
-    )
     @Test
     fun disabledBlockedPolicyAllowsImmediateAudiblePlayback() {
         val result = runAutoplayFixture(

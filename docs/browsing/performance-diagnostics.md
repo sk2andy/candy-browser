@@ -134,7 +134,7 @@ Phase timings are nested/inclusive; never sum them into total CPU. Compare query
 size and duration independently from wall time and native restyle cost. Capture/export must preserve
 the existing privacy and explicit-serial rules above.
 
-## Gecko 155 sampler lifecycle
+## Gecko 157 sampler lifecycle
 
 | Constraint | Implementation |
 | --- | --- |
@@ -142,4 +142,4 @@ the existing privacy and explicit-serial rules above.
 | Native activity signal | Gecko's package-bound `org.mozilla.fenix.PROFILER_STATE_CHANGED` broadcast, `isActive` boolean |
 | Signal authenticity | Dynamic `RECEIVER_NOT_EXPORTED`, app-scoped signature permission defined and requested, main-thread delivery |
 | Asynchronous ordering | A new capture waits for native stop-result completion and stopped acknowledgement; canceled late starts cannot be exported |
-| Version boundary | Verified against Gecko 155 API bytecode and [Mozilla 155.0.1 native source](https://raw.githubusercontent.com/mozilla-firefox/firefox/FIREFOX_155_0_1_RELEASE/tools/profiler/core/platform.cpp); recheck when upgrading Gecko |
+| Version boundary | Rechecked against [Mozilla 157.0 native source](https://raw.githubusercontent.com/mozilla-firefox/firefox/FIREFOX_157_0_RELEASE/tools/profiler/core/platform.cpp); Java sampler/controller sources and native stop ordering remain unchanged from 155.0.1. Device evidence is recorded in the [upgrade audit](../audits/geckoview-157-upgrade.md); recheck when upgrading Gecko |

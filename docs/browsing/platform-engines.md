@@ -379,9 +379,9 @@ Camera and microphone permissions remain separate and continue through Candy's p
   bound to the exact selected session. Domain mute is applied to the current and every future native
   Gecko `MediaSession`; tab activity is not abused as an audio control. Existing audible and inaudible site permissions are updated
   through `StorageController` in their exact URI/context/private scope, read back, and only then
-  reloaded. Private sessions never publish Android PiP or system media. GeckoView 155 still has an
-  upstream race for synchronous audible `play()` before the asynchronous permission response; do not
-  replace the native contract with injected JavaScript as a workaround.
+  reloaded. Private sessions never publish Android PiP or system media. Mozilla fixed the synchronous
+  audible `play()` permission race in Gecko 154; the existing immediate-playback regression is enabled
+  and passes on the pinned GeckoView 157. Keep the native permission contract.
 - Gecko downloads, uploads, site permissions, HTTP authentication and web prompts cross focused,
   engine-neutral request models before reaching Candy UI or Android presenters. Every asynchronous
   result remains bound to its tab, Gecko session and navigation generation; selection, navigation,
@@ -636,9 +636,11 @@ implements them.
   disabled in private browsing, and is hidden from the Firefox extension manager. Regular first
   navigation waits for its bounded initialization gate so cold-start `document-start` scripts are
   not missed.
-- GeckoView `155.0.20260903215306` is pinned with Android SDK 37.1, AGP 9.4.0 and Gradle 9.6.0.
+- GeckoView `157.0.20260924084938` is pinned with Android SDK 37.1, AGP 9.4.0 and Gradle 9.6.0.
   `minSdk` remains 33 and `targetSdk` remains 36. Gecko upgrades stay coordinated toolchain changes,
   not floating dependency bumps.
+  The [155 to 157 upgrade audit](../audits/geckoview-157-upgrade.md) records API compatibility,
+  transitive dependency changes, upstream fixes and device regression evidence.
 - Browser commands clear Gecko data through a typed runtime seam. **Clear cache & reload** uses only
   `StorageController.ClearFlags.ALL_CACHES`; **Clear cookies & reload** uses only `COOKIES` and is
   deliberately labeled as affecting all Candy browser profiles because GeckoView 155 exposes no

@@ -3,20 +3,25 @@ package dev.sk2andy.materialbrowser.browser.gecko
 import android.content.Context
 import android.os.SystemClock
 import android.view.View
+import androidx.core.graphics.Insets
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import dev.sk2andy.materialbrowser.data.GeckoSafeAreaSettings
 import java.net.InetAddress
 import java.net.ServerSocket
 import java.net.SocketException
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
-import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.atomic.AtomicReference
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -512,228 +517,199 @@ class CandyPrivacyHostInstrumentedTest {
     }
 
     @Test
-    fun documentStartInsetKeepsFixedHeaderBelowStatusBar() {
-        assertDocumentStartInset(isPrivate = false)
+    fun documentStartCssSafeAreaKeepsFixedAndStickyHeadersBelowStatusBar() {
+        assertDocumentStartSafeArea(isPrivate = false)
     }
 
     @Test
-    fun privateDocumentStartInsetKeepsFixedHeaderBelowStatusBar() {
-        assertDocumentStartInset(isPrivate = true)
+    fun privateDocumentStartCssSafeAreaKeepsFixedAndStickyHeadersBelowStatusBar() {
+        assertDocumentStartSafeArea(isPrivate = true)
     }
 
     @Test
-    fun dynamicLayoutNeedsQuietRepeatedFailuresBeforeNativeFallback() {
-        val context = ApplicationProvider.getApplicationContext<Context>()
-        val server = FixtureServer()
-        val layoutChanged = CountDownLatch(1)
-        val fallbackReceived = CountDownLatch(1)
-        val layoutChangedAt = AtomicLong()
-        val fallbackAt = AtomicLong()
-        val fallback = AtomicReference<GeckoPrivacyEvent>()
-        lateinit var session: GeckoBrowserSession
-        lateinit var view: View
-
-        InstrumentationRegistry.getInstrumentation().runOnMainSync {
-            session = GeckoRuntimeOwner.getOrCreate(context).createSession(
-                profileId = "privacy-dynamic-safe-area",
-                isPrivate = false,
-                privacyPolicy = GeckoPrivacyPolicy.Disabled.copy(
-                    pageHost = COOKIE_PAGE_HOST,
-                    topInsetPx = SAFE_AREA_INSET_PX,
-                    navigationGeneration = DYNAMIC_NAVIGATION_GENERATION,
-                    safeAreaLayoutQuietPeriodMillis = DYNAMIC_LAYOUT_QUIET_PERIOD_MILLIS,
-                    safeAreaRequiredFailureCount = DYNAMIC_REQUIRED_FAILURE_COUNT,
-                ),
-                privacyEventSink = GeckoPrivacyEventSink { event ->
-                    if (event.safeAreaFallbackNavigationGeneration != null) {
-                        fallback.set(event)
-                        fallbackAt.set(SystemClock.elapsedRealtime())
-                        fallbackReceived.countDown()
-                    }
-                },
-            )
-            view = session.createView(context)
-            session.setStateListener { state ->
-                if (state.title == DYNAMIC_LAYOUT_CHANGED_TITLE) {
-                    layoutChangedAt.compareAndSet(0, SystemClock.elapsedRealtime())
-                    layoutChanged.countDown()
-                }
-            }
-            session.setActive(true)
-            assertTrue(session.loadUrl(server.dynamicSafeAreaPageUrl()))
-        }
-
-        try {
-            assertTrue(
-                "Dynamic fixture never changed layout",
-                layoutChanged.await(20, TimeUnit.SECONDS),
-            )
-            assertTrue(
-                "Native fallback was not reported",
-                fallbackReceived.await(20, TimeUnit.SECONDS),
-            )
-            assertEquals(
-                DYNAMIC_NAVIGATION_GENERATION,
-                fallback.get().safeAreaFallbackNavigationGeneration,
-            )
-            assertTrue(
-                "Fallback did not wait for layout quiet and repeated failures",
-                fallbackAt.get() - layoutChangedAt.get() >=
-                    MINIMUM_FALLBACK_CONFIRMATION_MILLIS,
-            )
-        } finally {
-            InstrumentationRegistry.getInstrumentation().runOnMainSync {
-                session.releaseView(view)
-                session.setActive(false)
-                session.close()
-            }
-            server.close()
-        }
-    }
-
-    @Test
-    fun developerSettingsReachRunningGeckoDocumentWithoutReload() {
-        val context = ApplicationProvider.getApplicationContext<Context>()
-        val server = FixtureServer()
-        val documentReady = CountDownLatch(1)
-        val policyReady = CountDownLatch(1)
-        val layoutBlocked = CountDownLatch(1)
-        val fallbackReceived = CountDownLatch(1)
-        val initialTitle = AtomicReference<String>()
-        val blockedTitle = AtomicReference<String>()
-        val layoutBlockedAt = AtomicLong()
-        val fallbackAt = AtomicLong()
-        val initialPolicy = GeckoPrivacyPolicy.Disabled.copy(
-            pageHost = COOKIE_PAGE_HOST,
-            topInsetPx = SAFE_AREA_INSET_PX,
-            navigationGeneration = DEVELOPER_NAVIGATION_GENERATION,
-            safeAreaLayoutQuietPeriodMillis = 100,
-            safeAreaRequiredFailureCount = 2,
+    fun dynamicLayoutProtectsAddedHeaderWithoutNativeFallback() {
+        val ready = CountDownLatch(1)
+        val protectionReady = CountDownLatch(1)
+        val fallback = CountDownLatch(1)
+        val policy = safeAreaPolicy().copy(
+            geckoSafeAreaSettings = GeckoSafeAreaSettings(requireInteractionForUpdates = false),
         )
-        lateinit var session: GeckoBrowserSession
-        lateinit var view: View
+        withSafeAreaFixture(
+            profileId = "privacy-dynamic-safe-area",
+            policy = policy,
+            pageUrl = FixtureServer::dynamicSafeAreaPageUrl,
+            onState = { state ->
+                if (state.title == DYNAMIC_READY_TITLE) ready.countDown()
+                if (state.title == DYNAMIC_PROTECTED_TITLE) protectionReady.countDown()
+            },
+            onPrivacyEvent = { event ->
+                if (event.safeAreaFallbackNavigationGeneration != null) fallback.countDown()
+            },
+        ) { scenario, session, server ->
+            assertTrue("Dynamic fixture never received CSS protection", ready.await(20, TimeUnit.SECONDS))
+            scenario.onActivity {
+                assertTrue(session.loadUrl("${server.dynamicSafeAreaPageUrl()}#trigger"))
+            }
+            assertTrue("Added header never received CSS protection", protectionReady.await(20, TimeUnit.SECONDS))
+            assertFalse("Supported dynamic layout requested native fallback", fallback.await(1, TimeUnit.SECONDS))
+        }
+    }
 
-        InstrumentationRegistry.getInstrumentation().runOnMainSync {
-            session = GeckoRuntimeOwner.getOrCreate(context).createSession(
-                profileId = "privacy-live-developer-safe-area",
-                isPrivate = false,
-                privacyPolicy = initialPolicy,
-                privacyEventSink = GeckoPrivacyEventSink { event ->
-                    if (event.safeAreaFallbackNavigationGeneration != null) {
-                        fallbackAt.set(SystemClock.elapsedRealtime())
-                        fallbackReceived.countDown()
-                    }
-                },
-            )
-            view = session.createView(context)
-            session.setStateListener { state ->
+    @Test
+    fun developerCssSafeAreaSettingsReachRunningDocumentWithoutReload() {
+        val protectionReady = CountDownLatch(1)
+        val restored = CountDownLatch(1)
+        val protectedAgain = CountDownLatch(1)
+        val disabledSeen = AtomicBoolean(false)
+        val initialTitle = AtomicReference<String>()
+        val restoredTitle = AtomicReference<String>()
+        val protectedAgainTitle = AtomicReference<String>()
+        val fallback = AtomicReference<GeckoPrivacyEvent>()
+        val policy = safeAreaPolicy()
+        withSafeAreaFixture(
+            profileId = "privacy-live-developer-safe-area",
+            policy = policy,
+            pageUrl = FixtureServer::developerSafeAreaPageUrl,
+            onState = { state ->
                 val title = state.title.orEmpty()
                 when {
                     title.startsWith(DEVELOPER_READY_TITLE_PREFIX) -> {
                         initialTitle.compareAndSet(null, title)
-                        documentReady.countDown()
+                        if (disabledSeen.get()) {
+                            protectedAgainTitle.set(title)
+                            protectedAgain.countDown()
+                        } else {
+                            protectionReady.countDown()
+                        }
                     }
-                    title.startsWith(DEVELOPER_BLOCKED_TITLE_PREFIX) -> {
-                        blockedTitle.set(title)
-                        layoutBlockedAt.compareAndSet(0, SystemClock.elapsedRealtime())
-                        layoutBlocked.countDown()
+                    title.startsWith(DEVELOPER_DISABLED_TITLE_PREFIX) -> {
+                        restoredTitle.set(title)
+                        disabledSeen.set(true)
+                        restored.countDown()
                     }
                 }
-            }
-            session.setActive(true)
-            assertTrue(session.loadUrl(server.developerSafeAreaPageUrl()))
-        }
-
-        try {
-            assertTrue("Developer fixture did not load", documentReady.await(20, TimeUnit.SECONDS))
-            InstrumentationRegistry.getInstrumentation().runOnMainSync {
+            },
+            onPrivacyEvent = { event ->
+                if (event.safeAreaFallbackNavigationGeneration != null) fallback.set(event)
+            },
+        ) { scenario, session, _ ->
+            assertTrue("Developer fixture never received CSS protection", protectionReady.await(20, TimeUnit.SECONDS))
+            val disabledPolicyReady = CountDownLatch(1)
+            scenario.onActivity {
                 session.updatePrivacyPolicy(
-                    initialPolicy.copy(
-                        safeAreaLayoutQuietPeriodMillis = 800,
-                        safeAreaRequiredFailureCount = 5,
-                    ),
-                    onReady = policyReady::countDown,
+                    policy.copy(geckoSafeAreaSettings = GeckoSafeAreaSettings(enabled = false)),
+                    onReady = disabledPolicyReady::countDown,
                 )
             }
-            assertTrue("Developer policy was not acknowledged", policyReady.await(20, TimeUnit.SECONDS))
-            InstrumentationRegistry.getInstrumentation().runOnMainSync {
-                assertTrue(session.loadUrl("${server.developerSafeAreaPageUrl()}#trigger"))
+            assertTrue("Disabled CSS policy was not acknowledged", disabledPolicyReady.await(20, TimeUnit.SECONDS))
+            assertTrue("Disabling CSS protection did not restore author layout", restored.await(20, TimeUnit.SECONDS))
+            val enabledPolicyReady = CountDownLatch(1)
+            scenario.onActivity {
+                session.updatePrivacyPolicy(policy, onReady = enabledPolicyReady::countDown)
             }
-            assertTrue("Developer fixture did not block the inset", layoutBlocked.await(20, TimeUnit.SECONDS))
-            assertTrue("Updated fallback policy was not applied", fallbackReceived.await(20, TimeUnit.SECONDS))
+            assertTrue("Enabled CSS policy was not acknowledged", enabledPolicyReady.await(20, TimeUnit.SECONDS))
+            assertTrue("Re-enabling CSS protection did not protect the document", protectedAgain.await(20, TimeUnit.SECONDS))
             assertEquals(
                 "Updating developer settings reloaded the Gecko document",
                 initialTitle.get().substringAfter(':'),
-                blockedTitle.get().substringAfter(':'),
+                restoredTitle.get().substringAfter(':'),
             )
-            assertTrue(
-                "Gecko kept the old fallback confirmation settings",
-                fallbackAt.get() - layoutBlockedAt.get() >=
-                    MINIMUM_DEVELOPER_FALLBACK_CONFIRMATION_MILLIS,
+            assertEquals(
+                "Re-enabling CSS protection reloaded the Gecko document",
+                initialTitle.get().substringAfter(':'),
+                protectedAgainTitle.get().substringAfter(':'),
             )
-        } finally {
-            InstrumentationRegistry.getInstrumentation().runOnMainSync {
-                session.releaseView(view)
-                session.setActive(false)
-                session.close()
-            }
-            server.close()
+            assertNull("Live CSS policy requested native fallback", fallback.get())
         }
     }
 
-    private fun assertDocumentStartInset(isPrivate: Boolean) {
-        val server = FixtureServer()
-        val safeTitle = CountDownLatch(1)
-        val scrolledSafeTitle = CountDownLatch(1)
+    private fun assertDocumentStartSafeArea(isPrivate: Boolean) {
+        val protectionReady = CountDownLatch(1)
+        val scrolled = CountDownLatch(1)
         val fallback = AtomicReference<GeckoPrivacyEvent>()
-        val finalState = AtomicReference<GeckoBrowserSessionState>()
-        lateinit var session: GeckoBrowserSession
-        lateinit var view: View
-        ActivityScenario.launch(GeckoScrollTestActivity::class.java).use { scenario ->
-            scenario.onActivity { activity ->
-                val policy = GeckoPrivacyPolicy.Disabled.copy(
-                    pageHost = COOKIE_PAGE_HOST,
-                    topInsetPx = SAFE_AREA_INSET_PX,
-                    navigationGeneration = 1,
-                )
-                session = GeckoRuntimeOwner.getOrCreate(activity).createSession(
-                    profileId = "privacy-safe-area-$isPrivate",
-                    isPrivate = isPrivate,
-                    privacyPolicy = policy,
-                    privacyEventSink = GeckoPrivacyEventSink { event ->
-                        if (event.safeAreaFallbackNavigationGeneration != null) fallback.set(event)
-                    },
-                )
-                view = session.createView(activity)
-                activity.setContentView(view)
-                session.setStateListener { state ->
-                    finalState.set(state)
-                    if (state.title == SAFE_AREA_TITLE) safeTitle.countDown()
-                    if (state.title == SCROLLED_SAFE_AREA_TITLE) scrolledSafeTitle.countDown()
-                }
-                session.setActive(true)
-                assertTrue(session.loadUrl(server.safeAreaPageUrl()))
-            }
+        val latestState = AtomicReference<GeckoBrowserSessionState>()
+        withSafeAreaFixture(
+            profileId = "privacy-safe-area-$isPrivate",
+            isPrivate = isPrivate,
+            policy = safeAreaPolicy(),
+            pageUrl = FixtureServer::safeAreaPageUrl,
+            onState = { state ->
+                latestState.set(state)
+                if (state.title == SAFE_AREA_TITLE) protectionReady.countDown()
+                if (state.title == SCROLLED_SAFE_AREA_TITLE) scrolled.countDown()
+            },
+            onPrivacyEvent = { event ->
+                if (event.safeAreaFallbackNavigationGeneration != null) fallback.set(event)
+            },
+        ) { scenario, session, _ ->
+            assertTrue(
+                "Fixed header and flow never received CSS protection; state=${latestState.get()}",
+                protectionReady.await(20, TimeUnit.SECONDS),
+            )
+            scenario.onActivity { session.scrollToVerticalOffset(SCROLL_OFFSET_PX) }
+            assertTrue(
+                "Sticky header entered the status bar after scrolling; state=${latestState.get()}",
+                scrolled.await(20, TimeUnit.SECONDS),
+            )
+            assertNull("Supported fixed/sticky layout requested native fallback", fallback.get())
+        }
+    }
 
-            try {
-                assertTrue(
-                    "Fixed header never reached the document inset; " +
-                        "state=${finalState.get()}, fallback=${fallback.get()}",
-                    safeTitle.await(45, TimeUnit.SECONDS),
-                )
-                scenario.onActivity { session.scrollToVerticalOffset(SCROLL_OFFSET_PX) }
-                assertTrue(
-                    "Sticky header entered the status bar after scrolling; " +
-                        "state=${finalState.get()}, fallback=${fallback.get()}",
-                    scrolledSafeTitle.await(20, TimeUnit.SECONDS),
-                )
-            } finally {
-                scenario.onActivity {
-                    session.releaseView(view)
-                    session.setActive(false)
-                    session.close()
+    private fun safeAreaPolicy(): GeckoPrivacyPolicy = GeckoPrivacyPolicy.Disabled.copy(
+        pageHost = COOKIE_PAGE_HOST,
+        cssSafeAreaTopInsetPx = SAFE_AREA_INSET_PX,
+        navigationGeneration = 1,
+    )
+
+    private fun withSafeAreaFixture(
+        profileId: String,
+        isPrivate: Boolean = false,
+        policy: GeckoPrivacyPolicy,
+        pageUrl: (FixtureServer) -> String,
+        onState: (GeckoBrowserSessionState) -> Unit,
+        onPrivacyEvent: (GeckoPrivacyEvent) -> Unit,
+        block: (ActivityScenario<GeckoScrollTestActivity>, GeckoBrowserSession, FixtureServer) -> Unit,
+    ) {
+        FixtureServer().use { server ->
+            ActivityScenario.launch(GeckoScrollTestActivity::class.java).use { scenario ->
+                lateinit var session: GeckoBrowserSession
+                lateinit var view: View
+                scenario.onActivity { activity ->
+                    WindowCompat.setDecorFitsSystemWindows(activity.window, false)
+                    session = GeckoRuntimeOwner.getOrCreate(activity).createSession(
+                        profileId = profileId,
+                        isPrivate = isPrivate,
+                        privacyPolicy = policy,
+                        privacyEventSink = GeckoPrivacyEventSink(onPrivacyEvent),
+                    )
+                    session.bindExtensionTab(profileId, 1)
+                    session.setStateListener(GeckoBrowserSessionStateListener(onState))
+                    view = session.createView(activity)
+                    activity.setContentView(view)
+                    session.setActive(true)
+                    (view as GeckoViewInsetHost).updateInsets(
+                        GeckoViewInsetRules.resolve(
+                            safeArea = GeckoViewInsets(left = 0, top = SAFE_AREA_INSET_PX, right = 0, bottom = 0),
+                            forceNativeSafeArea = false,
+                            forceNativeTopSafeArea = false,
+                            isFullscreenContent = false,
+                            isInsideSafeDrawingHost = false,
+                        ),
+                        WindowInsetsCompat.Builder()
+                            .setInsets(WindowInsetsCompat.Type.statusBars(), Insets.of(0, SAFE_AREA_INSET_PX, 0, 0))
+                            .build(),
+                    )
+                    assertTrue(session.loadUrl(pageUrl(server)))
                 }
-                server.close()
+                try {
+                    block(scenario, session, server)
+                } finally {
+                    scenario.onActivity {
+                        session.releaseView(view)
+                        session.setActive(false)
+                        session.close()
+                    }
+                }
             }
         }
     }
@@ -909,91 +885,101 @@ class CandyPrivacyHostInstrumentedTest {
 
         private fun safeAreaPage(): String = """
             <!doctype html>
-            <html><head><title>Checking safe area</title>
-            <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+            <html><head><title>Checking CSS safe area</title>
+            <meta name="viewport" content="width=device-width,initial-scale=1">
             <style>
               html, body { margin: 0; min-height: 200vh; }
               #header { position: fixed; inset: 0 0 auto; height: 24px; background: red; }
               #lead { height: 200px; }
               #sticky { position: sticky; top: 0; height: 24px; background: blue; }
               #content { height: 4000px; }
+              #env { position: absolute; visibility: hidden; padding-top: env(safe-area-inset-top); }
             </style></head><body><header id="header">Header</header>
-            <div id="lead"></div><nav id="sticky">Sticky</nav><main id="content"></main><script>
+            <div id="lead"></div><nav id="sticky">Sticky</nav><main id="content"></main>
+            <div id="env"></div><script>
+              let protectedBeforeScroll = false;
               const timer = setInterval(() => {
                 const expected = $SAFE_AREA_INSET_PX / devicePixelRatio;
-                const top = document.querySelector('#header').getBoundingClientRect().top;
-                const before = Number.parseFloat(
-                  getComputedStyle(document.documentElement, '::before').height
-                );
-                if (Math.abs(top - expected) <= 0.5 && Math.abs(before - expected) <= 0.5) {
-                  clearInterval(timer);
-                  document.title = '$SAFE_AREA_TITLE';
+                const env = Number.parseFloat(getComputedStyle(document.querySelector('#env')).paddingTop);
+                const bodyPadding = Number.parseFloat(getComputedStyle(document.body).paddingTop);
+                // Gecko protects flow with its CSS layer, not the legacy html::before spacer.
+                const legacyBefore = Number.parseFloat(getComputedStyle(document.documentElement, '::before').height);
+                if (Math.abs(env - expected) > 0.5 || legacyBefore > 0.5) return;
+                if (scrollY <= 100) {
+                  const top = document.querySelector('#header').getBoundingClientRect().top;
+                  const flowTop = document.querySelector('#lead').getBoundingClientRect().top;
+                  if (Math.abs(top - expected) <= 0.5 && Math.abs(bodyPadding - expected) <= 0.5 &&
+                      Math.abs(flowTop - expected) <= 0.5) {
+                    protectedBeforeScroll = true;
+                    document.title = '$SAFE_AREA_TITLE';
+                  }
+                  return;
                 }
-              }, 25);
-              addEventListener('scroll', () => {
-                const expected = $SAFE_AREA_INSET_PX / devicePixelRatio;
+                if (!protectedBeforeScroll) return;
                 document.querySelector('#header').style.display = 'none';
                 const stickyTop = document.querySelector('#sticky').getBoundingClientRect().top;
-                if (
-                  scrollY > 100 &&
-                  Math.abs(stickyTop - expected) <= 0.5
-                ) {
+                if (Math.abs(stickyTop - expected) <= 0.5) {
+                  clearInterval(timer);
                   document.title = '$SCROLLED_SAFE_AREA_TITLE';
                 }
-              }, { passive: true });
-              setTimeout(() => {
-                clearInterval(timer);
-                const root = document.documentElement;
-                const top = document.querySelector('#header').getBoundingClientRect().top;
-                const before = getComputedStyle(root, '::before').height;
-                document.title = 'unsafe:' + top + ':' + before + ':' +
-                  root.style.getPropertyValue('--candy-browser-content-top-inset');
-              }, 5000);
+              }, 25);
             </script></body></html>
         """.trimIndent()
 
         private fun dynamicSafeAreaPage(): String = """
             <!doctype html>
-            <html><head><title>Preparing dynamic layout</title>
-            <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-            </head><body><main id="content">Content</main><script>
-              addEventListener('load', () => {
-                const blocker = document.createElement('style');
-                blocker.textContent =
-                  'html:root::before { height: 0 !important; min-height: 0 !important; }';
-                document.head.appendChild(blocker);
-                let mutations = 0;
-                const timer = setInterval(() => {
-                  const item = document.createElement('div');
-                  item.textContent = 'Dynamic item ' + mutations;
-                  document.querySelector('#content').appendChild(item);
-                  mutations++;
-                  if (mutations !== 10) return;
-                  clearInterval(timer);
-                  document.title = '$DYNAMIC_LAYOUT_CHANGED_TITLE';
-                }, 100);
+            <html><head><title>Preparing dynamic CSS layout</title>
+            <meta name="viewport" content="width=device-width,initial-scale=1">
+            <style>
+              html, body { margin: 0; min-height: 200vh; }
+              #header { position: fixed; top: 0; left: 0; right: 0; height: 24px; background: red; }
+              #env { position: absolute; visibility: hidden; padding-top: env(safe-area-inset-top); }
+            </style></head><body><header id="header">Header</header><main>Content</main>
+            <div id="env"></div><script>
+              let addedHeader = null;
+              addEventListener('hashchange', () => {
+                if (location.hash !== '#trigger' || addedHeader) return;
+                addedHeader = document.createElement('nav');
+                addedHeader.style.cssText = 'position:fixed;top:0;left:0;right:0;height:24px;background:blue';
+                addedHeader.textContent = 'Added header';
+                document.body.appendChild(addedHeader);
               });
+              setInterval(() => {
+                const expected = $SAFE_AREA_INSET_PX / devicePixelRatio;
+                const env = Number.parseFloat(getComputedStyle(document.querySelector('#env')).paddingTop);
+                if (Math.abs(env - expected) > 0.5) return;
+                const top = (addedHeader || document.querySelector('#header')).getBoundingClientRect().top;
+                if (Math.abs(top - expected) <= 0.5) {
+                  document.title = addedHeader ? '$DYNAMIC_PROTECTED_TITLE' : '$DYNAMIC_READY_TITLE';
+                }
+              }, 25);
             </script></body></html>
         """.trimIndent()
 
         private fun developerSafeAreaPage(documentId: Int): String = """
             <!doctype html>
-            <html><head><title>$DEVELOPER_READY_TITLE_PREFIX:$documentId</title>
-            <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-            <style>html, body { margin: 0; min-height: 200vh; }</style>
-            </head><body><main>Developer safe-area fixture</main><script>
-              let triggered = false;
-              const trigger = () => {
-                if (triggered || location.hash !== '#trigger') return;
-                triggered = true;
-                const blocker = document.createElement('style');
-                blocker.textContent =
-                  'html:root::before { height: 0 !important; min-height: 0 !important; }';
-                document.head.appendChild(blocker);
-                document.title = '$DEVELOPER_BLOCKED_TITLE_PREFIX:$documentId';
-              };
-              addEventListener('hashchange', trigger);
-              trigger();
+            <html><head><title>Preparing developer CSS policy:$documentId</title>
+            <meta name="viewport" content="width=device-width,initial-scale=1">
+            <style>
+              html, body { margin: 0; min-height: 200vh; }
+              #header { position: fixed; top: 0; left: 0; right: 0; height: 24px; background: red; }
+              #env { position: absolute; visibility: hidden; padding-top: env(safe-area-inset-top); }
+            </style></head><body><header id="header">Header</header><main>Developer safe-area fixture</main>
+            <div id="env"></div><script>
+              let wasProtected = false;
+              setInterval(() => {
+                const expected = $SAFE_AREA_INSET_PX / devicePixelRatio;
+                const env = Number.parseFloat(getComputedStyle(document.querySelector('#env')).paddingTop);
+                if (Math.abs(env - expected) > 0.5) return;
+                const top = document.querySelector('#header').getBoundingClientRect().top;
+                const padding = Number.parseFloat(getComputedStyle(document.body).paddingTop);
+                if (Math.abs(top - expected) <= 0.5 && Math.abs(padding - expected) <= 0.5) {
+                  wasProtected = true;
+                  document.title = '$DEVELOPER_READY_TITLE_PREFIX:$documentId';
+                } else if (wasProtected && Math.abs(top) <= 0.5 && Math.abs(padding) <= 0.5) {
+                  document.title = '$DEVELOPER_DISABLED_TITLE_PREFIX:$documentId';
+                }
+              }, 25);
             </script></body></html>
         """.trimIndent()
 
@@ -1016,14 +1002,9 @@ class CandyPrivacyHostInstrumentedTest {
         const val SCROLL_OFFSET_PX = 600
         const val SAFE_AREA_TITLE = "Candy safe area applied"
         const val SCROLLED_SAFE_AREA_TITLE = "Candy sticky safe area applied"
-        const val DYNAMIC_LAYOUT_CHANGED_TITLE = "Dynamic safe area blocked"
-        const val DYNAMIC_NAVIGATION_GENERATION = 7
-        const val DYNAMIC_LAYOUT_QUIET_PERIOD_MILLIS = 100
-        const val DYNAMIC_REQUIRED_FAILURE_COUNT = 2
-        const val MINIMUM_FALLBACK_CONFIRMATION_MILLIS = 150L
-        const val DEVELOPER_NAVIGATION_GENERATION = 8
-        const val DEVELOPER_READY_TITLE_PREFIX = "Developer safe area ready"
-        const val DEVELOPER_BLOCKED_TITLE_PREFIX = "Developer safe area blocked"
-        const val MINIMUM_DEVELOPER_FALLBACK_CONFIRMATION_MILLIS = 2_800L
+        const val DYNAMIC_READY_TITLE = "Dynamic CSS safe area ready"
+        const val DYNAMIC_PROTECTED_TITLE = "Dynamic CSS header protected"
+        const val DEVELOPER_READY_TITLE_PREFIX = "Developer CSS safe area ready"
+        const val DEVELOPER_DISABLED_TITLE_PREFIX = "Developer CSS safe area disabled"
     }
 }

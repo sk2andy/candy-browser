@@ -300,7 +300,7 @@ class GeckoExtensionChromeInstrumentedTest {
             actions.firstOrNull { action ->
                 action.key.extensionId == FIXTURE_ID &&
                     action.key.kind == GeckoExtensionActionKind.Browser &&
-                    action.key.tabId == PRIMARY_TAB_ID
+                    (action.key.tabId == null || action.key.tabId == PRIMARY_TAB_ID)
             }?.let { action ->
                 actionKey.set(action.key)
                 actionLatch.countDown()

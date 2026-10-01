@@ -33,6 +33,9 @@
 Issue 205's controlled reproductions and integrated checks are recorded in
 [`../audits/issue-205-gecko-loading-and-recovery.md`](../audits/issue-205-gecko-loading-and-recovery.md).
 
+The GeckoView 155 to 157 compatibility review, upstream fixes and upgrade checks are recorded in
+[`../audits/geckoview-157-upgrade.md`](../audits/geckoview-157-upgrade.md).
+
 | Surface | Tests |
 | --- | --- |
 | URL, search, AI mode, URI policy | `AddressResolverTest`, `SearchEngineTest`, `AddressAiModeRulesTest`, `AddressAiModeToggleInstrumentedTest`, `BrowserUriPolicyTest` |

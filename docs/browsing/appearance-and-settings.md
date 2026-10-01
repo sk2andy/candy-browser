@@ -232,12 +232,12 @@ Frosted exposes three persisted controls while selected:
   deferred to their dedicated handlers. Existing Gecko site permissions are synchronized to the
   global setting so an older site decision cannot override it. Because the current document also
   caches its autoplay decision, changing the setting reloads already navigated Gecko sessions only
-  after both stored permission values confirm the new policy. GeckoView 155 does not expose a
+  after both stored permission values confirm the new policy. GeckoView 157 does not expose a
   completion callback for permission writes, so Candy retries the read for at most two seconds. If
   confirmation times out, the current document stays unchanged instead of reloading under an
   unconfirmed policy. Permission reads use Gecko's reported URI, context ID and private-mode scope;
   private decisions therefore remain session-private. This path does not inject JavaScript into the
-  page. GeckoView 155 can still reject a synchronous audible `play()` before its asynchronous
-  embedder permission result arrives (Mozilla bug 2049064). The exact case remains a named skipped
-  device regression until Mozilla ships the platform fix. Candy now compiles GeckoView 155 against
-  Android SDK 37.1 with AGP 9.4.0.
+  page. Mozilla fixed the synchronous audible `play()` permission race in Gecko 154
+  ([bug 2049064](https://bugzilla.mozilla.org/show_bug.cgi?id=2049064)). The named immediate-playback
+  device regression is enabled and passes on GeckoView 157. Candy compiles the pinned GeckoView 157
+  against Android SDK 37.1 with AGP 9.4.0; see the [upgrade audit](../audits/geckoview-157-upgrade.md).
