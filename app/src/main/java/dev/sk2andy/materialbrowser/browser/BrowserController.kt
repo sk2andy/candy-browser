@@ -2542,6 +2542,7 @@ class BrowserController(
         isVideoAutoplayBlocked =
             isVideoAutoplayBlockingSupported && store.loadVideoAutoplayBlocked()
         appearanceSettings = store.loadAppearanceSettings()
+        browserEngineSessionFactory.onConfigurationChanged(activity.resources.configuration)
         applyWebContentAppearance(appearanceSettings)
         browserEngineSessionFactory.setWebContentFontSizeFactor(
             appearanceSettings.webContentFontSizePercent / 100f,
@@ -10513,6 +10514,8 @@ class BrowserController(
     }
 
     fun onResume() {
+        // The process-wide runtime can retain a night mode from before the app was stopped.
+        browserEngineSessionFactory.onConfigurationChanged(activity.resources.configuration)
         if (store.loadPendingTabClearOnTaskRemoval()) {
             store.savePendingTabClearOnTaskRemoval(pending = false)
         }
@@ -10544,6 +10547,7 @@ class BrowserController(
     }
 
     fun onStart() {
+        browserEngineSessionFactory.onConfigurationChanged(activity.resources.configuration)
         isActivityStarted = true
         if (usesGeckoEngine && !isActiveProfileLocked) {
             if (externalLinkPreviewState == null) {

@@ -156,6 +156,15 @@ Frosted exposes three persisted controls while selected:
   configuration. AppCompat can dispatch nested callbacks when an app appearance override differs
   from the system; caching the incoming system value would hide a later return to System and leave
   Gecko's website media query on the previous light or dark mode.
+- The main Activity reconciles appearance on start, resume and configuration callbacks. It reapplies
+  the selected AppCompat night policy, distributes a fresh effective configuration to its view tree
+  (including Compose), and forwards it to the browser runtime before reactivating sessions. This
+  repairs views and Gecko's process-wide night-mode cache when background configuration delivery was
+  missed, including while the Activity is visible but paused. Explicit light, dark and AMOLED choices
+  still win over the device setting. Only an actual
+  effective night-mode edge uses the existing page refresh path; an unchanged resume or stale-cache
+  repair preserves the current document and tab. Controller initialization also refreshes the runtime
+  configuration when a new Activity reuses an existing Gecko runtime.
 - System WebView algorithmic darkening is off by default. The optional **Force dark mode on
   websites** setting allows System WebView to recolor sites without their own dark theme while the
   effective app appearance is dark. GeckoView has no equivalent API, so the control is disabled for

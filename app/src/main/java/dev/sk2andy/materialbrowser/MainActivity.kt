@@ -1148,6 +1148,7 @@ class MainActivity : AppCompatActivity() {
     override fun onStart() {
         super.onStart()
         if (::browserController.isInitialized && !appDataTransferActive) {
+            reconcileAppearanceConfiguration()
             browserController.onStart()
         }
     }
@@ -1183,9 +1184,18 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onConfigurationChanged(newConfig: Configuration) {
-        val previousNightConfiguration = appliedNightConfiguration
         super.onConfigurationChanged(newConfig)
         if (appDataTransferActive) return
+        synchronizeAppearanceConfiguration()
+        window.decorView.dispatchConfigurationChanged(Configuration(resources.configuration))
+        applyBrowserSystemUi()
+        if (::pictureInPictureController.isInitialized) {
+            pictureInPictureController.onConfigurationChanged()
+        }
+    }
+
+    private fun synchronizeAppearanceConfiguration() {
+        val previousNightConfiguration = appliedNightConfiguration
         // AppCompat may reapply a local override through nested configuration callbacks.
         appliedNightConfiguration = resources.configuration.uiMode and
             Configuration.UI_MODE_NIGHT_MASK
@@ -1196,15 +1206,14 @@ class MainActivity : AppCompatActivity() {
         ) {
             browserController.onAppearanceConfigurationChanged()
         }
-        applyBrowserSystemUi()
-        if (::pictureInPictureController.isInitialized) {
-            pictureInPictureController.onConfigurationChanged()
-        }
     }
 
     override fun onResume() {
         super.onResume()
         if (appDataTransferActive) return
+        if (::browserController.isInitialized) {
+            reconcileAppearanceConfiguration()
+        }
         fullscreenVideoSystemControls.onAppResumed()
         if (::pictureInPictureController.isInitialized) {
             pictureInPictureController.reconcileStateOnResume()
@@ -1215,6 +1224,14 @@ class MainActivity : AppCompatActivity() {
         }
         geckoActivityIntegration?.onHostResumed()
         updatePictureInPictureParams()
+    }
+
+    private fun reconcileAppearanceConfiguration() {
+        applyAppearanceNightMode(browserController.appearanceSettings.appearanceMode)
+        delegate.applyDayNight()
+        synchronizeAppearanceConfiguration()
+        // Resources can be current while stopped views missed configuration delivery.
+        window.decorView.dispatchConfigurationChanged(Configuration(resources.configuration))
     }
 
     override fun onDestroy() {
