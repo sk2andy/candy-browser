@@ -9,10 +9,11 @@ object AddressAiModeRules {
         input: String,
         searchEngine: SearchEngine,
         settingEnabled: Boolean,
+        allowGeckoInternalPages: Boolean = false,
     ): Boolean = settingEnabled &&
         searchEngine.supportsAiSearch &&
         !CommandMatcher.isExplicitCommandQuery(input) &&
-        AddressResolver.isSearchQuery(input)
+        AddressResolver.isSearchQuery(input, allowGeckoInternalPages)
 
     fun searchMode(toggleVisible: Boolean, toggleSelected: Boolean): SearchMode =
         if (toggleVisible && toggleSelected) SearchMode.Ai else SearchMode.Web

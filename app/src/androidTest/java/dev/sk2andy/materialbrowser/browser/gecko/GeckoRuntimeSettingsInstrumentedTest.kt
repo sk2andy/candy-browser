@@ -13,6 +13,17 @@ import org.mozilla.geckoview.ContentBlocking
 @RunWith(AndroidJUnit4::class)
 class GeckoRuntimeSettingsInstrumentedTest {
     @Test
+    fun internalConfigurationPageIsEnabled() {
+        InstrumentationRegistry.getInstrumentation().runOnMainSync {
+            val settings = GeckoRuntimeSettingsFactory.create(
+                ContentBlocking.Settings.Builder().build(),
+            )
+
+            assertTrue(settings.aboutConfigEnabled)
+        }
+    }
+
+    @Test
     fun userCaTrustRequiresExplicitBuildChannelOptIn() {
         InstrumentationRegistry.getInstrumentation().runOnMainSync {
             val blocking = ContentBlocking.Settings.Builder().build()

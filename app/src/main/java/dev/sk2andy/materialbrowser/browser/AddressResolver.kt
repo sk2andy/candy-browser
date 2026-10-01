@@ -17,7 +17,8 @@ object AddressResolver {
         searchEngine: SearchEngine,
         searchMode: SearchMode = SearchMode.Web,
         searxngInstanceUrl: String = "",
-    ): String = when (val target = classify(input)) {
+        allowGeckoInternalPages: Boolean = false,
+    ): String = when (val target = classify(input, allowGeckoInternalPages)) {
         AddressTarget.Blank -> BLANK_URL
         is AddressTarget.Url -> target.value
         is AddressTarget.Search -> searchEngine.buildSearchUrl(
@@ -27,11 +28,16 @@ object AddressResolver {
         )
     }
 
-    fun isSearchQuery(input: String): Boolean = classify(input) is AddressTarget.Search
+    fun isSearchQuery(input: String, allowGeckoInternalPages: Boolean = false): Boolean =
+        classify(input, allowGeckoInternalPages) is AddressTarget.Search
 
-    private fun classify(input: String): AddressTarget {
+    private fun classify(input: String, allowGeckoInternalPages: Boolean): AddressTarget {
         val value = input.trim()
         if (value.isEmpty()) return AddressTarget.Blank
+
+        if (allowGeckoInternalPages) {
+            GeckoInternalPageRules.normalizeUrl(value)?.let { return AddressTarget.Url(it) }
+        }
 
         if (schemePattern.containsMatchIn(value)) {
             val scheme = runCatching { URI(value).scheme }.getOrNull()

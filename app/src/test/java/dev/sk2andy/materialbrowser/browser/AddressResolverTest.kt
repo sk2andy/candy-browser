@@ -7,6 +7,43 @@ import org.junit.Test
 
 class AddressResolverTest {
     @Test
+    fun `about pages navigate only when gecko internal pages are allowed`() {
+        listOf("about:config", "about:buildconfig", "about:debug", "about:blank").forEach { url ->
+            assertEquals(
+                url,
+                AddressResolver.resolve(
+                    input = url,
+                    searchEngine = SearchEngine.Google,
+                    searchMode = SearchMode.Ai,
+                    allowGeckoInternalPages = true,
+                ),
+            )
+            assertFalse(AddressResolver.isSearchQuery(url, allowGeckoInternalPages = true))
+            assertTrue(AddressResolver.isSearchQuery(url))
+            assertTrue(AddressResolver.resolve(url).startsWith("https://www.google.com/search?q="))
+        }
+        assertEquals(
+            "about:config",
+            AddressResolver.resolve(" ABOUT:CONFIG ", SearchEngine.SearXNG, allowGeckoInternalPages = true),
+        )
+    }
+
+    @Test
+    fun `gecko support keeps malformed about urls and other schemes as search input`() {
+        listOf(
+            "about:",
+            "about://config",
+            "about:config test",
+            "chrome://geckoview/content/config.xhtml",
+            "javascript:alert(1)",
+            "data:text/html,test",
+            "file:///etc/passwd",
+        ).forEach { input ->
+            assertTrue(AddressResolver.isSearchQuery(input, allowGeckoInternalPages = true))
+        }
+    }
+
+    @Test
     fun `keeps complete web urls`() {
         assertEquals("https://example.com/path?q=1", AddressResolver.resolve("https://example.com/path?q=1"))
         assertEquals("http://localhost:8080", AddressResolver.resolve("http://localhost:8080"))

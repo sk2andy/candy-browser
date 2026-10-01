@@ -9,6 +9,18 @@ import org.junit.Test
 
 class AddressAiModeRulesTest {
     @Test
+    fun `gecko internal pages never offer ai search`() {
+        assertFalse(
+            AddressAiModeRules.isToggleVisible(
+                input = "about:config",
+                searchEngine = SearchEngine.Google,
+                settingEnabled = true,
+                allowGeckoInternalPages = true,
+            ),
+        )
+    }
+
+    @Test
     fun `toggle appears only for enabled ai capable search queries`() {
         assertTrue(
             AddressAiModeRules.isToggleVisible(

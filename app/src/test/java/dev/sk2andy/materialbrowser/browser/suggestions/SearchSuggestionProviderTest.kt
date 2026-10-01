@@ -17,6 +17,20 @@ import org.junit.Test
 
 class SearchSuggestionProviderTest {
     @Test
+    fun `gecko internal destinations never request remote suggestions`() {
+        listOf("about:config", "about:buildconfig", "ABOUT:CONFIG").forEach { query ->
+            assertFalse(
+                SearchSuggestionRules.shouldRequest(
+                    query = query,
+                    provider = SearchSuggestionProvider.Google,
+                    isIncognito = false,
+                    allowGeckoInternalPages = true,
+                ),
+            )
+        }
+    }
+
+    @Test
     fun `duckduckgo is default for missing or unknown preference`() {
         assertEquals(SearchSuggestionProvider.DuckDuckGo, SearchSuggestionProvider.fromStableId(null))
         assertEquals(

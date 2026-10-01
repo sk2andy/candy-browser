@@ -64,6 +64,7 @@ object SearchSuggestionRules {
         provider: SearchSuggestionProvider,
         isIncognito: Boolean,
         searxngInstanceUrl: String = "",
+        allowGeckoInternalPages: Boolean = false,
     ): Boolean {
         if (provider == SearchSuggestionProvider.None || isIncognito) return false
         val value = query.trim()
@@ -79,8 +80,7 @@ object SearchSuggestionRules {
             provider == SearchSuggestionProvider.SearXNG &&
             SearxngRules.normalizedInstanceUrl(searxngInstanceUrl) == null
         ) return false
-        return AddressResolver.resolve(value, SearchEngine.DuckDuckGo) ==
-            SearchEngine.DuckDuckGo.buildSearchUrl(value)
+        return AddressResolver.isSearchQuery(value, allowGeckoInternalPages)
     }
 
     fun sanitize(

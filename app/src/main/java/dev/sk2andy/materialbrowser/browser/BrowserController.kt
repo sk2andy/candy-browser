@@ -2484,7 +2484,9 @@ class BrowserController(
         browserEngineSessionFactory.reconcileToppings(userScripts)
         rebuildCandyMatcher()
         val nowMillis = System.currentTimeMillis()
-        snoozedTabs += snoozedTabStore.load()
+        snoozedTabs += snoozedTabStore.load().map { snoozed ->
+            snoozed.copy(tab = GeckoInternalPageRules.restoreTab(snoozed.tab, browserEngineKind))
+        }
         candyTrailRepository.processPendingRedactions()
         blockerSettings = workerSettings
         inactiveTabLifetime = store.loadInactiveTabLifetime()
@@ -2613,7 +2615,10 @@ class BrowserController(
         refreshFavoriteFavicons()
         val profileIds = profiles.mapTo(mutableSetOf(), BrowserProfile::id)
         tabs += restoredTabs.take(MAX_TABS).map { tab ->
-            val recoveredTab = GeckoBootstrapRecoveryRules.resetPoisonedTab(tab)
+            val recoveredTab = GeckoInternalPageRules.restoreTab(
+                GeckoBootstrapRecoveryRules.resetPoisonedTab(tab),
+                browserEngineKind,
+            )
             if (recoveredTab.profileId in profileIds) {
                 recoveredTab
             } else {
@@ -4974,7 +4979,7 @@ class BrowserController(
             null -> {
                 if (
                     searchEngine == SearchEngine.SearXNG &&
-                    AddressResolver.isSearchQuery(input) &&
+                    AddressResolver.isSearchQuery(input, allowGeckoInternalPages = usesGeckoEngine) &&
                     SearxngRules.normalizedInstanceUrl(searxngSettings.instanceUrl) == null
                 ) {
                     Toast.makeText(
@@ -4989,6 +4994,7 @@ class BrowserController(
                     searchEngine = searchEngine,
                     searchMode = searchMode,
                     searxngInstanceUrl = searxngSettings.instanceUrl,
+                    allowGeckoInternalPages = usesGeckoEngine,
                 )
             }
         }
@@ -5786,6 +5792,7 @@ class BrowserController(
                 input = initialUrl,
                 searchEngine = searchEngine,
                 searxngInstanceUrl = searxngSettings.instanceUrl,
+                allowGeckoInternalPages = usesGeckoEngine,
             )
         }
         val tab = newTabState(
@@ -5844,6 +5851,7 @@ class BrowserController(
                 input = initialUrl,
                 searchEngine = searchEngine,
                 searxngInstanceUrl = searxngSettings.instanceUrl,
+                allowGeckoInternalPages = usesGeckoEngine,
             )
         }
         val tab = newTabState(
@@ -10938,7 +10946,10 @@ class BrowserController(
                 )
                 val replacesInitialAmpUrl = isAutoDeAmpEnabled &&
                     AutoDeAmpRules.publisherUrlFor(tab.url) != null
-                val restored = if (replacesInitialAmpUrl) {
+                // Gecko session snapshots can restore privileged about pages as about:blank.
+                val reloadsInternalPage = usesGeckoEngine &&
+                    GeckoInternalPageRules.normalizeUrl(tab.url) != null
+                val restored = if (replacesInitialAmpUrl || reloadsInternalPage) {
                     false
                 } else if (usesGeckoEngine) {
                     val restoreDecision = GeckoSessionStateSnapshotRules.restoreDecision(
@@ -11111,6 +11122,21 @@ class BrowserController(
         val extensionChrome = firefoxExtensionOptionsTabs[tabId]
         val currentUrl = pageUrls[tabId] ?: tabs.firstOrNull { it.id == tabId }?.url
         val isCurrentExtensionPage = currentUrl?.let { extensionChrome?.owns(it) } == true
+        if (scheme == "about" && request.url != BLANK_URL) {
+            return if (usesGeckoEngine && GeckoInternalPageRules.canNavigate(
+                    url = request.url,
+                    currentUrl = currentUrl,
+                    isDirectNavigation = request.isDirectNavigation,
+                    isRedirect = request.isRedirect,
+                    target = request.target,
+                )
+            ) {
+                clearExternalNavigationAuthorization(tabId)
+                GeckoNavigationRequestDecision.Allow
+            } else {
+                GeckoNavigationRequestDecision.Deny
+            }
+        }
         if (isCurrentExtensionPage && request.url == BLANK_URL &&
             request.target == BrowserEngineNavigationTarget.New
         ) return GeckoNavigationRequestDecision.Allow

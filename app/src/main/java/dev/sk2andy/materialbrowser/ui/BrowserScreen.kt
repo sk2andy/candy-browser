@@ -855,6 +855,7 @@ internal fun BrowserScreen(
                 provider = controller.searchSuggestionProvider,
                 isIncognito = selectedTab.isIncognito,
                 searxngInstanceUrl = controller.searxngSettings.instanceUrl,
+                allowGeckoInternalPages = controller.usesGeckoEngine,
             )
         ) {
             return@LaunchedEffect
@@ -910,6 +911,7 @@ internal fun BrowserScreen(
         input = addressValue.text,
         searchEngine = controller.searchEngine,
         settingEnabled = controller.isAiModeToggleVisible,
+        allowGeckoInternalPages = controller.usesGeckoEngine,
     )
     LaunchedEffect(addressEditorVisible, selectedTab.id, showAiModeToggle) {
         if (!addressEditorVisible || !showAiModeToggle) {
@@ -1016,6 +1018,7 @@ internal fun BrowserScreen(
             input = input,
             searchEngine = controller.searchEngine,
             settingEnabled = controller.isAiModeToggleVisible,
+            allowGeckoInternalPages = controller.usesGeckoEngine,
         ),
         toggleSelected = aiModeSelectedState.value,
     )

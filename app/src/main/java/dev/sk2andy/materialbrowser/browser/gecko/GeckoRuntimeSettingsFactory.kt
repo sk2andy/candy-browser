@@ -16,6 +16,7 @@ internal object GeckoRuntimeSettingsFactory {
     ): GeckoRuntimeSettings = GeckoRuntimeSettings.Builder()
         .contentBlocking(contentBlocking)
         .loginAutofillEnabled(true)
+        .aboutConfigEnabled(true)
         .automaticFontSizeAdjustment(false)
         // Gecko owns its CA store; Android Network Security Config alone cannot opt it in.
         .enterpriseRootsEnabled(trustUserCertificates)

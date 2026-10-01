@@ -49,6 +49,7 @@ import dev.sk2andy.materialbrowser.browser.BrowserEngineScrollListener
 import dev.sk2andy.materialbrowser.browser.BrowserEngineScrollMetrics
 import dev.sk2andy.materialbrowser.browser.BrowserViewportRect
 import dev.sk2andy.materialbrowser.browser.DnsOverHttpsSettings
+import dev.sk2andy.materialbrowser.browser.GeckoInternalPageRules
 import dev.sk2andy.materialbrowser.browser.TextInputOcclusionProbeMode
 import dev.sk2andy.materialbrowser.browser.TextInputOcclusionProbeResult
 import dev.sk2andy.materialbrowser.browser.WebContentTopInsetTransitionRules
@@ -2886,7 +2887,9 @@ private class GeckoViewBrowserSession(
 
     override fun loadUrl(url: String): Boolean {
         if (closed) return false
-        val safeUrl = BrowserUriPolicy.normalizeHttpUrl(url) ?: return false
+        val safeUrl = BrowserUriPolicy.normalizeHttpUrl(url)
+            ?: GeckoInternalPageRules.normalizeUrl(url)
+            ?: return false
         return loadValidatedUrl(safeUrl)
     }
 

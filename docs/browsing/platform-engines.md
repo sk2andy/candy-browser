@@ -46,6 +46,10 @@ call-site cutover are not complete.
 - Existing and new installs default to GeckoView. The Browser settings page can switch the whole
   Android app to System WebView; Candy checkpoints tab URLs, commits the choice and restarts into a
   fresh process so the inactive runtime does not remain in RAM.
+- Gecko's address bar accepts `about:` destinations and enables `about:config` through the public
+  GeckoView runtime setting. These are engine pages, not Candy settings or Firefox desktop UI.
+  Gecko decides which page names exist in the bundled runtime. System WebView searches typed
+  `about:` input and restores saved Gecko internal tabs as blank tabs after switching engines.
 - The separately installed `systemwebview` distribution fixes the engine to Android System WebView,
   removes the engine selector and ships no GeckoView runtime, Gecko native libraries, Privacy host,
   or bundled Firefox extensions. It uses package `dev.sk2andy.materialbrowser.systemwebview` and a
