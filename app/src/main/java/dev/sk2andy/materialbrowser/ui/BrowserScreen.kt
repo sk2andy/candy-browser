@@ -1262,6 +1262,7 @@ internal fun BrowserScreen(
         },
     )
     PredictiveBackHandler(enabled = currentBackTarget != BrowserBackTarget.System) { events ->
+        controller.cancelSelectedBrowserEngineTouch()
         val target = currentBackTarget
         var receivedProgress = false
         try {

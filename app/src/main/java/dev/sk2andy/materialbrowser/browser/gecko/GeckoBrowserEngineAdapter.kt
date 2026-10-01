@@ -90,6 +90,10 @@ internal interface BrowserEngineViewPort {
 
     fun loadExtensionUrl(url: String): Boolean = false
 
+    fun cancelEngineTouch(view: View): Boolean = false
+
+    fun isEngineTouchCancelled(view: View): Boolean = false
+
     fun requestEngineFocus(view: View): Boolean = view.requestFocus()
 
     fun dispatchEngineGenericMotionEvent(view: View, event: MotionEvent): Boolean =
@@ -539,6 +543,12 @@ internal class GeckoBrowserEngineSessionAdapter(
     override fun setContentTargetListener(listener: BrowserContentTargetListener?) {
         session.setContentTargetListener(if (closed) null else listener)
     }
+
+    override fun cancelEngineTouch(view: View): Boolean =
+        (view as? CandyGeckoView)?.cancelActiveTouch() ?: false
+
+    override fun isEngineTouchCancelled(view: View): Boolean =
+        (view as? CandyGeckoView)?.hasCancelledTouchStream() == true
 
     override fun requestEngineFocus(view: View): Boolean =
         (view as? CandyGeckoView)?.requestEngineFocus() ?: view.requestFocus()

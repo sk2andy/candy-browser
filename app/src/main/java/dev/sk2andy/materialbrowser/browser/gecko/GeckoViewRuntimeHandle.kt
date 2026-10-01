@@ -1082,6 +1082,7 @@ private class GeckoViewBrowserSession(
                 if (
                     !active ||
                     !view.hasWindowFocus() ||
+                    view.hasCancelledTouchStream() ||
                     inPictureInPicture ||
                     pictureInPicturePlaybackExpected
                 ) return
@@ -3120,13 +3121,16 @@ private class GeckoViewBrowserSession(
 
     override fun goBack() {
         if (!closed && privacyBound && state.canGoBack) {
-            val history = historyState
+            // Ordinary snapshots can lag native capabilities; override only bootstrap traversal.
+            val history = historyState?.takeUnless { current ->
+                GeckoBootstrapHistoryRules.canRestoreHistory(current.urls)
+            }
             val targetIndex = historyIndexAtOffset(-1)
             if (history != null && targetIndex == null) return
             pendingRestoredHttpsOnlyUrl = null
             invalidateCredentialPrompts(recreateHost = false)
             historyUrlAtOffset(-1)?.let(::beginNavigation)
-            if (history != null && targetIndex != history.currentIndex - 1) {
+            if (history != null) {
                 session.gotoHistoryIndex(requireNotNull(targetIndex))
             } else {
                 session.goBack()
@@ -3136,13 +3140,16 @@ private class GeckoViewBrowserSession(
 
     override fun goForward() {
         if (!closed && privacyBound && state.canGoForward) {
-            val history = historyState
+            // Ordinary snapshots can lag native capabilities; override only bootstrap traversal.
+            val history = historyState?.takeUnless { current ->
+                GeckoBootstrapHistoryRules.canRestoreHistory(current.urls)
+            }
             val targetIndex = historyIndexAtOffset(1)
             if (history != null && targetIndex == null) return
             pendingRestoredHttpsOnlyUrl = null
             invalidateCredentialPrompts(recreateHost = false)
             historyUrlAtOffset(1)?.let(::beginNavigation)
-            if (history != null && targetIndex != history.currentIndex + 1) {
+            if (history != null) {
                 session.gotoHistoryIndex(requireNotNull(targetIndex))
             } else {
                 session.goForward()
@@ -3728,6 +3735,8 @@ internal class CandyGeckoView(context: Context) : FrameLayout(context), GeckoVie
 
     fun cancelActiveTouch(): Boolean = engineView.cancelActiveTouch()
 
+    fun hasCancelledTouchStream(): Boolean = engineView.hasCancelledTouchStream()
+
     fun requestEngineFocus(): Boolean = engineView.requestFocus()
 
     fun dispatchEngineKeyEvent(event: KeyEvent): Boolean = engineView.dispatchKeyEvent(event)
@@ -3876,6 +3885,10 @@ private class CandyGeckoEngineView(context: Context) : CandyGeckoViewSafeAreaBri
         ) {
             return true
         }
+        if (event.actionMasked == MotionEvent.ACTION_CANCEL) {
+            gestureState = GeckoContentGestureRules.onCancel(gestureState)
+            if (gestureState.activeTouchDownTime == null) clearTouchEvent()
+        }
         val handled = BrowserPerformanceTrace.section(BrowserPerformanceTrace.Phase.GeckoTouch) {
             super.dispatchTouchEvent(event)
         }
@@ -3889,9 +3902,7 @@ private class CandyGeckoEngineView(context: Context) : CandyGeckoViewSafeAreaBri
                 if (handled) rememberTouchEvent(event) else clearTouchEvent()
             }
 
-            MotionEvent.ACTION_UP,
-            MotionEvent.ACTION_CANCEL,
-            -> {
+            MotionEvent.ACTION_UP -> {
                 gestureState = GeckoContentGestureRules.onTerminal(
                     state = gestureState,
                     downTime = event.downTime,
@@ -3909,6 +3920,9 @@ private class CandyGeckoEngineView(context: Context) : CandyGeckoViewSafeAreaBri
         }
         return handled
     }
+
+    fun hasCancelledTouchStream(): Boolean =
+        GeckoContentGestureRules.hasCancelledStream(gestureState)
 
     fun cancelActiveTouch(): Boolean {
         val transition = GeckoContentGestureRules.cancel(gestureState)

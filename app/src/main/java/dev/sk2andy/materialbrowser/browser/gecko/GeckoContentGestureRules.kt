@@ -3,6 +3,7 @@ package dev.sk2andy.materialbrowser.browser.gecko
 internal data class GeckoContentGestureState(
     val activeTouchDownTime: Long? = null,
     val cancelledTouchDownTime: Long? = null,
+    val observedTouchDownTime: Long? = activeTouchDownTime,
 )
 
 internal data class GeckoContentGestureTransition(
@@ -19,29 +20,35 @@ internal object GeckoContentGestureRules {
         state.copy(
             activeTouchDownTime = downTime,
             cancelledTouchDownTime = null,
+            observedTouchDownTime = downTime,
         )
     } else {
         state.copy(
             activeTouchDownTime = null,
             cancelledTouchDownTime = null,
+            observedTouchDownTime = downTime,
         )
     }
 
     fun onTerminal(
         state: GeckoContentGestureState,
         downTime: Long,
-    ): GeckoContentGestureState = if (state.activeTouchDownTime == downTime) {
-        state.copy(activeTouchDownTime = null)
+    ): GeckoContentGestureState = if (state.observedTouchDownTime == downTime) {
+        state.copy(activeTouchDownTime = null, observedTouchDownTime = null)
     } else {
         state
     }
+
+    // Android can rewrite downTime when canceling the current view's touch target.
+    fun onCancel(state: GeckoContentGestureState): GeckoContentGestureState = cancel(state).state
 
     fun cancel(state: GeckoContentGestureState): GeckoContentGestureTransition =
         GeckoContentGestureTransition(
             state = state.copy(
                 activeTouchDownTime = null,
+                observedTouchDownTime = null,
                 cancelledTouchDownTime =
-                    state.activeTouchDownTime ?: state.cancelledTouchDownTime,
+                    state.observedTouchDownTime ?: state.cancelledTouchDownTime,
             ),
             dispatchCancelDownTime = state.activeTouchDownTime,
         )

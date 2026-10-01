@@ -1363,6 +1363,7 @@ class BrowserController(
     private var privacySignalRevision = PRIVACY_SIGNAL_REVISIONS.incrementAndGet()
     private var animationPolicyRevision = ANIMATION_POLICY_REVISIONS.incrementAndGet()
     private val navigationGenerations = mutableMapOf<String, Int>()
+    private var contentTouchCancellationGeneration = 0L
     private val autoDeAmpNavigationRequestGenerations = mutableMapOf<String, Long>()
     private val autoDeAmpReplacementGuards = mutableMapOf<String, AutoDeAmpReplacementGuard>()
     private val pendingBrowserEngineLoadRequests = mutableMapOf<String, Long>()
@@ -2768,6 +2769,12 @@ class BrowserController(
             binding.session.dispatchEngineKeyEvent(selectedView, upEvent)
         }
         return true
+    }
+
+    internal fun cancelSelectedBrowserEngineTouch() {
+        contentTouchCancellationGeneration++
+        val binding = selectedAttachedBrowserEngineBinding() ?: return
+        binding.session.cancelEngineTouch(binding.view)
     }
 
     private fun selectedAttachedBrowserEngineBinding(): GeckoViewBinding? = geckoViewBindings.values
@@ -10930,11 +10937,14 @@ class BrowserController(
                     },
                 )
                 session.setContentTargetListener { target ->
+                    val navigationGeneration = navigationGenerations[tab.id]
+                    val touchCancellationGeneration = contentTouchCancellationGeneration
                     mainHandler.post {
                         onGeckoContentTarget(
                             tabId = tab.id,
                             session = session,
-                            navigationGeneration = navigationGenerations[tab.id],
+                            navigationGeneration = navigationGeneration,
+                            touchCancellationGeneration = touchCancellationGeneration,
                             target = target,
                         )
                     }
@@ -11730,6 +11740,7 @@ class BrowserController(
         tabId: String,
         session: AndroidBrowserEngineSessionPort,
         navigationGeneration: Int?,
+        touchCancellationGeneration: Long,
         target: WebContentTarget,
     ) {
         if (
@@ -11738,10 +11749,13 @@ class BrowserController(
             !isActivityResumed ||
             selectedTabId != tabId ||
             browserEngineSessions[tabId] !== session ||
-            navigationGenerations[tabId] != navigationGeneration
+            navigationGenerations[tabId] != navigationGeneration ||
+            contentTouchCancellationGeneration != touchCancellationGeneration
         ) {
             return
         }
+        val binding = selectedAttachedBrowserEngineBinding()
+        if (binding != null && session.isEngineTouchCancelled(binding.view)) return
         handleWebContentLongPress(target, tabId)
     }
 

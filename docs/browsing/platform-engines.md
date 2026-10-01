@@ -373,14 +373,24 @@ Camera and microphone permissions remain separate and continue through Candy's p
 - Gecko link and image long-presses enter Candy through `ContentDelegate.onContextMenu`, then cross
   the session adapter as a normalized engine-neutral content target. The controller accepts only
   the selected current session at the unchanged navigation generation while the Activity is started
-  and resumed. Window-focus loss, session deactivation and renderer detachment terminate an active
-  Gecko touch stream with exactly one `ACTION_CANCEL`; this prevents Android's Home gesture from
-  leaving Gecko's long-press timer alive in the background. Normal taps, selection, context menus
+  and resumed. Navigation and touch-cancellation generations are captured before posting the
+  callback; delivery rejects callbacks invalidated by a Back gesture. Predictive Back start,
+  window-focus loss, session deactivation and renderer detachment terminate an active Gecko touch
+  stream with exactly one `ACTION_CANCEL`. Native cancellation also marks the stream before Gecko
+  receives it, rejecting delayed context menus until a fresh touch begins. Every DOWN is observed
+  independently of Gecko's handled result; Android can rewrite CANCEL's downTime, so cancellation
+  uses the current view's observed stream rather than the rewritten event timestamp. This prevents a held
+  OS Back gesture from opening Link Peek and Android's Home gesture from leaving Gecko's long-press
+  timer alive in the background. Delegated system Back keeps its native animation. Normal taps, selection, context menus
   and scroll streams remain owned by Gecko. Link Peek, Reader, find and printing all use that Gecko
   session instead of a second renderer.
 - Reader Studio extraction crosses the selected Gecko session through Candy's internal, session-bound
   WebExtension content-script bridge. Returned JSON still passes the shared Reader extraction bounds
   and stale tab, URL and session guards before reaching UI state.
+- Back/forward capabilities remain authoritative for ordinary native history, whose cached snapshot
+  may still contain only `about:blank` during cold navigation. Candy overrides native history indices
+  only when internal privacy-bootstrap entries must be skipped; an ordinary stale snapshot must not
+  turn a committed Back/Forward command into a no-op.
 - GeckoView does not expose successful main-frame HTTP response codes through its session navigation
   delegate. Candy's authenticated internal Privacy WebExtension therefore forwards bounded
   `webRequest.onHeadersReceived` status messages for the bound main frame. Each response retains the
