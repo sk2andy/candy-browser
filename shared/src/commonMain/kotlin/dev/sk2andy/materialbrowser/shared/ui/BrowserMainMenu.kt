@@ -184,6 +184,27 @@ interface BrowserMainMenuEffects {
     val style: BrowserMainMenuStyle
         get() = BrowserMainMenuStyle()
 
+    fun usesPlatformMenuMotion(): Boolean = false
+
+    @Composable
+    fun menuPopup(
+        expanded: Boolean,
+        visible: Boolean,
+        offset: IntOffset,
+        onDismissRequest: () -> Unit,
+        content: @Composable () -> Unit,
+    ) {
+        if (visible) {
+            Popup(
+                alignment = Alignment.BottomEnd,
+                offset = offset,
+                onDismissRequest = onDismissRequest,
+                properties = PopupProperties(focusable = expanded),
+                content = content,
+            )
+        }
+    }
+
     @Composable
     fun menuSurface(
         modifier: Modifier,
@@ -289,6 +310,7 @@ fun BrowserMainMenu(
         menuWidth < toolbarSingleRowMinWidth
     }
     val menuMaxHeight = screenSize.height * effects.maxHeightFraction()
+    val usesPlatformMenuMotion = effects.usesPlatformMenuMotion()
     val menuScrollState = rememberScrollState()
     val density = LocalDensity.current
     val layoutDirection = LocalLayoutDirection.current
@@ -329,8 +351,14 @@ fun BrowserMainMenu(
     } else {
         TransformOrigin(0f, 1f)
     }
-    LaunchedEffect(expanded) {
-        if (expanded) {
+    LaunchedEffect(expanded, usesPlatformMenuMotion) {
+        if (usesPlatformMenuMotion) {
+            if (expanded) {
+                actionCommitted = false
+                menuScrollState.scrollTo(0)
+            }
+            popupVisible = expanded
+        } else if (expanded) {
             actionCommitted = false
             val reversingExit = popupVisible
             popupVisible = true
@@ -371,8 +399,10 @@ fun BrowserMainMenu(
             popupVisible = false
         }
     }
-    LaunchedEffect(expanded, popupVisible) {
-        effects.popupState(expanded, popupVisible)
+    if (!usesPlatformMenuMotion) {
+        LaunchedEffect(expanded, popupVisible) {
+            effects.popupState(expanded, popupVisible)
+        }
     }
     fun commit(action: () -> Unit) {
         if (!expanded || actionCommitted) return
@@ -383,9 +413,17 @@ fun BrowserMainMenu(
 
     fun dismissThen(item: BrowserFeatureMenuItem) = commit { onAction(item) }
 
-    if (popupVisible) {
-        val currentSpatialProgress = morphProgress ?: spatialProgress.value
-        val currentEffectsProgress = morphProgress ?: effectsProgress.value
+    if (popupVisible || usesPlatformMenuMotion) {
+        val currentSpatialProgress = if (usesPlatformMenuMotion) {
+            1f
+        } else {
+            morphProgress ?: spatialProgress.value
+        }
+        val currentEffectsProgress = if (usesPlatformMenuMotion) {
+            1f
+        } else {
+            morphProgress ?: effectsProgress.value
+        }
         val contentProgress = BrowserMainMenuMotion.contentProgress(
             if (expanded) currentSpatialProgress else currentEffectsProgress,
         )
@@ -421,11 +459,11 @@ fun BrowserMainMenu(
                 )
             }
         } ?: menuShape
-        Popup(
-            alignment = Alignment.BottomEnd,
+        effects.menuPopup(
+            expanded = expanded,
+            visible = popupVisible,
             offset = popupOffset,
             onDismissRequest = onDismissRequest,
-            properties = PopupProperties(focusable = expanded),
         ) {
             effects.menuSurface(
                 modifier = Modifier

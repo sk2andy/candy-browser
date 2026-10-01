@@ -2,12 +2,12 @@ package dev.sk2andy.materialbrowser.ui
 
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
-import androidx.compose.animation.core.FiniteAnimationSpec
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.Icon
-import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.MotionScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -20,8 +20,10 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.DpSize
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.PopupProperties
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.browser.BrowserInputDiagnostics
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoExtensionActionKey
@@ -163,6 +165,40 @@ private class AndroidBrowserMainMenuEffects(
         useExpressiveToggleButtons = true,
     )
 
+    override fun usesPlatformMenuMotion(): Boolean = true
+
+    @Composable
+    override fun menuPopup(
+        expanded: Boolean,
+        visible: Boolean,
+        offset: IntOffset,
+        onDismissRequest: () -> Unit,
+        content: @Composable () -> Unit,
+    ) {
+        val scrollState = rememberScrollState()
+        LaunchedEffect(expanded) {
+            if (expanded) scrollState.scrollTo(0)
+        }
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = onDismissRequest,
+            scrollState = scrollState,
+            properties = PopupProperties(focusable = expanded),
+            containerColor = Color.Transparent,
+            tonalElevation = 0.dp,
+            shadowElevation = 0.dp,
+        ) {
+            DisposableEffect(expanded) {
+                popupState(expanded, visible = true)
+                onDispose {}
+            }
+            DisposableEffect(Unit) {
+                onDispose { popupState(expanded = false, visible = false) }
+            }
+            content()
+        }
+    }
+
     @Composable
     override fun menuSurface(
         modifier: Modifier,
@@ -187,24 +223,6 @@ private class AndroidBrowserMainMenuEffects(
         role: BrowserMainMenuContainerRole,
     ): Color =
         browserChromeColor(color, frostedAlpha)
-
-    @OptIn(ExperimentalMaterial3ExpressiveApi::class)
-    @Composable
-    override fun spatialAnimationSpec(expanding: Boolean): FiniteAnimationSpec<Float> =
-        if (expanding) {
-            MotionScheme.expressive().slowSpatialSpec()
-        } else {
-            MaterialTheme.motionScheme.fastSpatialSpec()
-        }
-
-    @OptIn(ExperimentalMaterial3ExpressiveApi::class)
-    @Composable
-    override fun effectsAnimationSpec(expanding: Boolean): FiniteAnimationSpec<Float> =
-        if (expanding) {
-            MotionScheme.expressive().defaultEffectsSpec()
-        } else {
-            MaterialTheme.motionScheme.fastEffectsSpec()
-        }
 
     override fun popupState(expanded: Boolean, visible: Boolean) {
         BrowserInputDiagnostics.popupState(expanded, visible)
