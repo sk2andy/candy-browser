@@ -26,6 +26,7 @@ import dev.sk2andy.materialbrowser.BuildConfig
 import dev.sk2andy.materialbrowser.MainActivity
 import dev.sk2andy.materialbrowser.browser.FullscreenVideoHost
 import dev.sk2andy.materialbrowser.browser.FullscreenVideoSource
+import dev.sk2andy.materialbrowser.browser.HttpsOnlyMode
 import dev.sk2andy.materialbrowser.browser.InlineMediaPlayerMode
 import dev.sk2andy.materialbrowser.data.BrowserSessionStore
 import dev.sk2andy.materialbrowser.data.GestureOnboardingStore
@@ -695,10 +696,147 @@ class GeckoPictureInPictureInstrumentedTest {
         )
     }
 
+    @Test
+    @SdkSuppress(minSdkVersion = 34)
+    fun fullscreenDownwardGestureRestoresWholePageAndDecodedInlineVideo() {
+        verifyYoutubeReturnGeometry(
+            YOUTUBE_CLIPPED_RETURN_HTML.replace(
+                "</div></div><script>",
+                "</div></div><main style='height:60vh;background:#dd22bb;color:white'>" +
+                    "<h1>Video title</h1><p>Channel details</p><p>Comments</p>" +
+                    "<p>Recommendations</p></main><script>",
+            ),
+            directReturnOnly = true,
+            firstFullscreenBySwipe = true,
+            exitByDownwardSwipe = true,
+        )
+    }
+
+    @Test
+    @SdkSuppress(minSdkVersion = 34)
+    fun fullscreenVideoAndControlsFillViewportDespiteInlineSizing() {
+        verifyYoutubeReturnGeometry(
+            YOUTUBE_CLIPPED_RETURN_HTML.replace(
+                "width:100%; height:100%; background:#080;",
+                "width:100%; height:56.25vw; background:#080;",
+            ),
+            directReturnOnly = true,
+            assertFullscreenViewport = true,
+        )
+    }
+
+    @Test
+    @SdkSuppress(minSdkVersion = 34)
+    fun websiteFullscreenUsesVideoViewportWithoutCandyPlayerTakeover() {
+        assertTrue(ReleaseNotesStore(context).markHandled(BuildConfig.VERSION_CODE.toLong()))
+        // Native site fullscreen does not own a Candy presentation. Keep its return independent
+        // of YouTube's separate inset compensation; Candy's clipped-player return is tested above.
+        val nativePlayerHtml = YOUTUBE_CLIPPED_RETURN_HTML
+            .replace("movie_player", "native-player")
+            .replace(" class=\"html5-video-player\"", "")
+        val html = nativePlayerHtml.replace(
+            "width:100%; height:100%; background:#080;",
+            "width:100%; height:56.25vw; background:#080;",
+        ).replace(
+            "<div class=\"ytp-chrome-bottom\"></div>",
+            "<button id='site-fullscreen' style='position:absolute;left:8px;top:8px;" +
+                "width:150px;height:44px'>Website fullscreen</button>" +
+                "<div id='site-controls' style='position:absolute;top:50%;left:50%;" +
+                "transform:translate(-50%,-50%);color:white'>&#9654; &#8545;</div>",
+        ).replace(
+            "const video = document.querySelector('video');",
+            "const siteAction = document.querySelector('#site-fullscreen');" +
+                "const siteHeader = document.querySelector('header');" +
+                "siteHeader.style.position = 'relative';siteHeader.appendChild(siteAction);" +
+                "siteAction.onclick = () => " +
+                "document.querySelector('#native-player').requestFullscreen();" +
+                "const video = document.querySelector('video');",
+        ).replace(
+            "action:action ? rect(action) : null,",
+            "action:action ? rect(action) : null," +
+                "siteAction:rect(document.querySelector('#site-fullscreen'))," +
+                "siteControls:rect(document.querySelector('#site-controls')),",
+        )
+        FixtureServer(html).use { server ->
+            ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+                scenario.onActivity { activity ->
+                    val controller = activity.browserControllerForTesting()
+                    controller.updateHttpsOnlyMode(HttpsOnlyMode.Off)
+                    controller.updateVideoAutoplayBlocked(false)
+                    controller.updateInlineMediaPlayerMode(InlineMediaPlayerMode.ButtonInlineAndFullscreen)
+                    assertTrue(controller.openUrl(server.url))
+                }
+                awaitCondition(description = { "Site fixture baseline missing: ${server.geometry}" }) {
+                    server.geometry.any { it.getString("phase") == "baseline" }
+                }
+                val baseline = server.geometry.first { it.getString("phase") == "baseline" }
+                lateinit var host: View
+                scenario.onActivity { activity ->
+                    val controller = activity.browserControllerForTesting()
+                    assertFalse(controller.isInlineMediaPlayerPresented)
+                    host = requireNotNull(controller.selectedGeckoViewForTesting())
+                }
+                captureInlinePixelEvidence(host, baseline, "site-baseline")
+                pauseForEvidence()
+                val location = IntArray(2)
+                scenario.onActivity { host.getLocationOnScreen(location) }
+                val action = baseline.getJSONArray("siteAction")
+                val scale = host.width / baseline.getDouble("viewportWidth")
+                tap(
+                    (location[0] + (action.getDouble(0) + action.getDouble(2) / 2) * scale).toFloat(),
+                    (location[1] + (action.getDouble(1) + action.getDouble(3) / 2) * scale).toFloat(),
+                )
+                awaitCondition(description = { "Site did not enter fullscreen: ${server.geometry}" }) {
+                    var fullscreen = false
+                    scenario.onActivity { activity ->
+                        fullscreen = activity.browserControllerForTesting().isSelectedWebContentFullscreen
+                    }
+                    fullscreen && server.geometry.any { it.getString("phase") == "fullscreen-settled" }
+                }
+                server.requestProbe("native-fullscreen")
+                awaitCondition(description = { "Site fullscreen probe missing" }) {
+                    server.geometry.any { it.getString("phase") == "native-fullscreen" }
+                }
+                val sample = server.geometry.first { it.getString("phase") == "native-fullscreen" }
+                dismissFullscreenEducation()
+                captureInlinePixelEvidence(host, sample, "native-fullscreen", verifyDecodedFrame = false)
+                pauseForEvidence()
+                val video = sample.getJSONArray("video")
+                val controls = sample.getJSONArray("siteControls")
+                assertEquals(0.0, video.getDouble(0), 2.0)
+                assertEquals(0.0, video.getDouble(1), 2.0)
+                assertEquals(sample.getDouble("viewportWidth"), video.getDouble(2), 2.0)
+                assertEquals(sample.getDouble("viewportHeight"), video.getDouble(3), 2.0)
+                assertEquals(
+                    "Site controls and decoded-video box have the same vertical center",
+                    video.getDouble(1) + video.getDouble(3) / 2,
+                    controls.getDouble(1) + controls.getDouble(3) / 2,
+                    2.0,
+                )
+                scenario.onActivity { activity ->
+                    val controller = activity.browserControllerForTesting()
+                    assertFalse("Website controls remain active", controller.isInlineMediaPlayerPresented)
+                    assertTrue(controller.exitSelectedWebContentFullscreen())
+                }
+                awaitCondition(description = { "Site did not restore inline layout" }) {
+                    server.geometry.any { it.getString("phase") == "direct-late" }
+                }
+                captureInlinePixelEvidence(
+                    host,
+                    server.geometry.first { it.getString("phase") == "direct-late" },
+                    "site-return",
+                )
+                pauseForEvidence()
+            }
+        }
+    }
+
     private fun verifyYoutubeReturnGeometry(
         html: String,
         directReturnOnly: Boolean,
         firstFullscreenBySwipe: Boolean = false,
+        exitByDownwardSwipe: Boolean = false,
+        assertFullscreenViewport: Boolean = false,
     ) {
         assertTrue(ReleaseNotesStore(context).markHandled(BuildConfig.VERSION_CODE.toLong()))
         prepareIsolatedYoutubeFixtureRuntime()
@@ -746,6 +884,7 @@ class GeckoPictureInPictureInstrumentedTest {
                         (location[1] + (bounds.getDouble(1) + bounds.getDouble(3) / 2) * scale).toFloat()
                 }
                 captureInlinePixelEvidence(stableGeckoHost, baseline, "baseline")
+                if (exitByDownwardSwipe || assertFullscreenViewport) pauseForEvidence()
                 tap(fullscreenTapPoint[0], fullscreenTapPoint[1])
                 if (firstFullscreenBySwipe) {
                     awaitCondition(description = { "Candy inline presentation missing before first swipe" }) {
@@ -783,13 +922,49 @@ class GeckoPictureInPictureInstrumentedTest {
                 val fullscreen = server.geometry.first { it.getString("phase") == "fullscreen-controls" }
                 assertTrue("YouTube player policy missing: $fullscreen", fullscreen.getBoolean("sitePlayer"))
                 assertTrue("Fullscreen lost frozen origin: $fullscreen", fullscreen.getBoolean("originStyle"))
+                if (exitByDownwardSwipe || assertFullscreenViewport) dismissFullscreenEducation()
+                if (exitByDownwardSwipe || assertFullscreenViewport) pauseForEvidence()
+                if (assertFullscreenViewport) {
+                    captureInlinePixelEvidence(
+                        stableGeckoHost,
+                        fullscreen,
+                        "fullscreen-viewport",
+                        verifyDecodedFrame = false,
+                    )
+                    val videoBounds = fullscreen.getJSONArray("video")
+                    assertEquals("Fullscreen video left", 0.0, videoBounds.getDouble(0), 2.0)
+                    assertEquals("Fullscreen video top", 0.0, videoBounds.getDouble(1), 2.0)
+                    assertEquals(
+                        "Fullscreen video width",
+                        fullscreen.getDouble("viewportWidth"),
+                        videoBounds.getDouble(2),
+                        2.0,
+                    )
+                    assertEquals(
+                        "Fullscreen video height",
+                        fullscreen.getDouble("viewportHeight"),
+                        videoBounds.getDouble(3),
+                        2.0,
+                    )
+                }
                 val device = UiDevice.getInstance(instrumentation)
                 if (directReturnOnly) {
                     scenario.onActivity { activity -> logReturnState(activity, "direct-before-back") }
                 }
                 if (directReturnOnly) {
-                    scenario.onActivity { activity ->
-                        assertTrue(activity.browserControllerForTesting().exitSelectedWebContentFullscreen())
+                    if (exitByDownwardSwipe) {
+                        val location = IntArray(2)
+                        scenario.onActivity { stableGeckoHost.getLocationOnScreen(location) }
+                        swipe(
+                            location[0] + stableGeckoHost.width * 0.5f,
+                            location[1] + stableGeckoHost.height * 0.5f,
+                            location[0] + stableGeckoHost.width * 0.5f,
+                            location[1] + stableGeckoHost.height * 0.85f,
+                        )
+                    } else {
+                        scenario.onActivity { activity ->
+                            assertTrue(activity.browserControllerForTesting().exitSelectedWebContentFullscreen())
+                        }
                     }
                 } else {
                     injectBack()
@@ -813,6 +988,29 @@ class GeckoPictureInPictureInstrumentedTest {
                         // are the acceptance criteria, not the transport latency.
                         if (settled) assertStableInlineGeometry(baseline, sample)
                     }
+                    if (exitByDownwardSwipe) {
+                        val screenshot = requireNotNull(instrumentation.uiAutomation.takeScreenshot())
+                        try {
+                            var pagePixels = 0
+                            var sampledPixels = 0
+                            for (y in screenshot.height / 2 until screenshot.height * 3 / 4 step 4) {
+                                for (x in screenshot.width / 8 until screenshot.width * 7 / 8 step 4) {
+                                    val pixel = screenshot.getPixel(x, y)
+                                    if (Color.red(pixel) > 180 && Color.blue(pixel) > 140 &&
+                                        Color.green(pixel) < 80) pagePixels++
+                                    sampledPixels++
+                                }
+                            }
+                            assertTrue(
+                                "Whole page missing after downward fullscreen dismissal: " +
+                                    "$pagePixels/$sampledPixels magenta pixels",
+                                pagePixels >= sampledPixels * 0.8,
+                            )
+                        } finally {
+                            screenshot.recycle()
+                        }
+                    }
+                    if (exitByDownwardSwipe || assertFullscreenViewport) pauseForEvidence()
                     return@scenarioScope
                 }
                 awaitCondition(description = { "Direct Back did not restore inline layout: ${server.geometry}" }) {
@@ -1306,6 +1504,8 @@ class GeckoPictureInPictureInstrumentedTest {
             "youtubePlayerKeepsVideoGeometryThroughDelayedSystemPictureInPictureReturn",
             "youtubeClippedPlayerKeepsDecodedVideoThroughDirectFullscreenReturn",
             "youtubeClippedPlayerKeepsDecodedVideoThroughFirstSwipeFullscreenReturn",
+            "fullscreenDownwardGestureRestoresWholePageAndDecodedInlineVideo",
+            "fullscreenVideoAndControlsFillViewportDespiteInlineSizing",
         ).map { method -> "${javaClass.name}#$method" }
         assumeTrue(
             "YouTube-host fixture requires an isolated single-method instrumentation run",
@@ -1440,6 +1640,16 @@ class GeckoPictureInPictureInstrumentedTest {
             KeyEvent(downTime, SystemClock.uptimeMillis(), KeyEvent.ACTION_UP, KeyEvent.KEYCODE_BACK, 0),
             true,
         ))
+    }
+
+    private fun pauseForEvidence() {
+        val duration = InstrumentationRegistry.getArguments()
+            .getString("evidencePauseMillis")?.toLongOrNull()?.coerceIn(0, 10_000) ?: 0
+        if (duration > 0) SystemClock.sleep(duration)
+    }
+
+    private fun dismissFullscreenEducation() {
+        UiDevice.getInstance(instrumentation).findObject(By.text("Got it"))?.click()
     }
 
     private fun captureInlinePixelEvidence(

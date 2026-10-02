@@ -922,6 +922,7 @@ class BrowserController(
                 presentation.inlineVideoIdentity == null &&
                 selectedTabId in browserEngineContentFullscreenTabIds
             return isInlineMediaPlayerSupported &&
+                InlineMediaPlayerModeRules.isEnabled(inlineMediaPlayerMode) &&
                 !inlineMediaPlayerOpenPending &&
                 (presentation == null || compatibleFullscreenPresentation) &&
                 isActivityResumed &&
@@ -3445,6 +3446,7 @@ class BrowserController(
                 browserEngineSessions[tab.id] === session &&
                 navigationGenerations[tab.id] == navigationGeneration &&
                 isInlineMediaPlayerSupported &&
+                InlineMediaPlayerModeRules.isEnabled(inlineMediaPlayerMode) &&
                 (
                     presentation == null ||
                         compatibleFullscreenPresentation ||
@@ -12383,7 +12385,9 @@ class BrowserController(
                 tabId = tab.id,
                 selectedTabId = selectedTabId,
             ),
-            inlineMediaPlayerEnabled = isInlineMediaPlayerSupported && !tab.isIncognito,
+            inlineMediaPlayerEnabled = isInlineMediaPlayerSupported &&
+                InlineMediaPlayerModeRules.isEnabled(inlineMediaPlayerMode) &&
+                !tab.isIncognito,
             inlineMediaPlayerMode = inlineMediaPlayerMode.stableId,
             inlineMediaPlayerActionLabel =
                 activity.getString(R.string.action_open_candy_player),
@@ -12391,6 +12395,10 @@ class BrowserController(
                 activity.getString(R.string.action_candy_player_play),
             inlineMediaPlayerPauseLabel =
                 activity.getString(R.string.action_candy_player_pause),
+            inlineMediaPlayerSeekBackwardLabel =
+                activity.getString(R.string.action_candy_player_seek_backward, "{seconds}"),
+            inlineMediaPlayerSeekForwardLabel =
+                activity.getString(R.string.action_candy_player_seek_forward, "{seconds}"),
             inlineMediaPlayerSeekLabel =
                 activity.getString(R.string.action_candy_player_seek),
             inlineMediaPlayerEnterFullscreenLabel =

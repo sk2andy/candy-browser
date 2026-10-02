@@ -1,5 +1,7 @@
 package dev.sk2andy.materialbrowser.ui
 
+import android.os.SystemClock
+
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -143,6 +145,17 @@ class BrowserSettingsScreenInstrumentedTest {
         ).performClick()
 
         assertEquals(InlineMediaPlayerMode.ButtonInlineAndFullscreen, mode)
+        val evidencePauseMillis = InstrumentationRegistry.getArguments()
+            .getString("evidencePauseMillis")?.toLongOrNull()?.coerceIn(0L, 5_000L) ?: 0L
+        composeRule.onNodeWithTag(BrowserSettingsTestTags.InlineMediaPlayer).performClick()
+        composeRule.waitForIdle()
+        if (evidencePauseMillis > 0) SystemClock.sleep(evidencePauseMillis)
+        composeRule.onNodeWithText(
+            context.getString(R.string.settings_inline_media_player_mode_disabled),
+        ).performClick()
+        assertEquals(InlineMediaPlayerMode.Disabled, mode)
+        composeRule.waitForIdle()
+        if (evidencePauseMillis > 0) SystemClock.sleep(evidencePauseMillis)
         composeRule.onNodeWithText(
             context.getString(R.string.settings_inline_media_player_subtitle),
         ).performScrollTo().assertIsDisplayed()

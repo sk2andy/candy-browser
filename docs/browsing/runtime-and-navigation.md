@@ -760,11 +760,12 @@ Agent implementation, security and debugging guide:
   order. Candy merges only callbacks from the current native media-session identity; stale ad/player
   sessions cannot overwrite the active YouTube state.
 - Media metadata, presentation state and mini-player position are memory-only and never persisted.
-- The experimental Candy Player mode persists and defaults to the least automatic option: a button
-  opens the player in fullscreen. The other modes add an inline button path, replace website
-  fullscreen, or start Candy Player when a video is detected. A legacy enabled switch migrates to
-  the inline-and-fullscreen button mode; a legacy disabled switch migrates to the fullscreen-button
-  default. Only top-frame HTML video in GeckoView is supported; cross-origin embeds remain unsupported.
+- The experimental Candy Player mode persists and defaults to the inline-and-fullscreen button
+  mode. The other enabled modes open fullscreen through a button, replace website fullscreen, or
+  start Candy Player when a video is detected. Off removes Candy launchers and controls, cancels
+  pending opens and restores website/native controls without pausing playback; website fullscreen
+  remains available. Absent, unknown and legacy preference values retain the existing button default.
+  Only top-frame HTML video in GeckoView is supported; cross-origin embeds remain unsupported.
 - Candy Player provides direct Android picture-in-picture from a recognized inline video; users do
   not need to enter fullscreen first.
 - Repeated lifecycle callbacks for one PiP transition are idempotent. They do not switch the GeckoView

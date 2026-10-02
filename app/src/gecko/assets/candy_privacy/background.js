@@ -405,6 +405,7 @@ function isPaused(policy, pageHost) {
 
 function contentPolicy(policy) {
   const inlineMediaPlayerModes = new Set([
+    "disabled",
     "button_fullscreen",
     "button_inline_and_fullscreen",
     "always_for_fullscreen",
@@ -432,7 +433,8 @@ function contentPolicy(policy) {
     navigationGeneration: Number.isSafeInteger(policy?.navigationGeneration) ?
       Math.max(0, policy.navigationGeneration) : 0,
     scrollMetricsEnabled: policy?.scrollMetricsEnabled === true,
-    inlineMediaPlayerEnabled: policy?.inlineMediaPlayerEnabled === true,
+    inlineMediaPlayerEnabled: policy?.inlineMediaPlayerEnabled === true &&
+      inlineMediaPlayerMode !== "disabled",
     doNotTrackEnabled: policy?.doNotTrackEnabled === true,
     globalPrivacyControlEnabled: policy?.globalPrivacyControlEnabled === true,
     privacySignalRevision: Number.isSafeInteger(policy?.privacySignalRevision) ?
@@ -450,6 +452,12 @@ function contentPolicy(policy) {
     inlineMediaPlayerPauseLabel:
       typeof policy?.inlineMediaPlayerPauseLabel === "string" ?
         policy.inlineMediaPlayerPauseLabel.slice(0, 80) : "Pause",
+    inlineMediaPlayerSeekBackwardLabel:
+      typeof policy?.inlineMediaPlayerSeekBackwardLabel === "string" ?
+        policy.inlineMediaPlayerSeekBackwardLabel.slice(0, 80) : "Seek backward {seconds} seconds",
+    inlineMediaPlayerSeekForwardLabel:
+      typeof policy?.inlineMediaPlayerSeekForwardLabel === "string" ?
+        policy.inlineMediaPlayerSeekForwardLabel.slice(0, 80) : "Seek forward {seconds} seconds",
     inlineMediaPlayerSeekLabel:
       typeof policy?.inlineMediaPlayerSeekLabel === "string" ?
         policy.inlineMediaPlayerSeekLabel.slice(0, 80) : "Seek",
@@ -601,6 +609,7 @@ function requestInlineVideoOpen(message, sender) {
   if (
     !policy ||
     policy.inlineMediaPlayerEnabled !== true ||
+    policy.inlineMediaPlayerMode === "disabled" ||
     message.revision !== policy.revision ||
     message.navigationGeneration !== policy.navigationGeneration ||
     (message.expected !== false && message.mode !== policy.inlineMediaPlayerMode) ||
@@ -633,6 +642,7 @@ function inlineVideoOpenResponse(message, sender) {
     sender.frameId !== 0 ||
     !nativePort ||
     policy?.inlineMediaPlayerEnabled !== true ||
+    policy?.inlineMediaPlayerMode === "disabled" ||
     !Number.isSafeInteger(message.revision) ||
     message.revision >= policy.revision ||
     message.navigationGeneration !== policy.navigationGeneration ||
@@ -655,6 +665,7 @@ function forwardInlineVideoGestureHaptic(message, sender) {
   if (
     !policy ||
     policy.inlineMediaPlayerEnabled !== true ||
+    policy.inlineMediaPlayerMode === "disabled" ||
     message.revision !== policy.revision ||
     message.navigationGeneration !== policy.navigationGeneration ||
     !inlineVideoGestureHapticPhases.has(message.phase) ||

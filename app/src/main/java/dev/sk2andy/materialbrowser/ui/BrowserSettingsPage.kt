@@ -439,6 +439,8 @@ private fun ExternalAppLinkHandling.displayName(): String = when (this) {
 
 @Composable
 private fun InlineMediaPlayerMode.displayName(): String = when (this) {
+    InlineMediaPlayerMode.Disabled ->
+        stringResource(R.string.settings_inline_media_player_mode_disabled)
     InlineMediaPlayerMode.ButtonFullscreen ->
         stringResource(R.string.settings_inline_media_player_mode_button_fullscreen)
     InlineMediaPlayerMode.ButtonInlineAndFullscreen ->

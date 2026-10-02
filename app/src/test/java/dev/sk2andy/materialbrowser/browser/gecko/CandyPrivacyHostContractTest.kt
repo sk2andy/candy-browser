@@ -124,6 +124,8 @@ class CandyPrivacyHostContractTest {
             inlineMediaPlayerPlayLabel = "Abspielen",
             inlineMediaPlayerPauseLabel = "Pausieren",
             inlineMediaPlayerSeekLabel = "Wiedergabeposition",
+            inlineMediaPlayerSeekBackwardLabel = "{seconds} Sekunden zurückspulen",
+            inlineMediaPlayerSeekForwardLabel = "{seconds} Sekunden vorspulen",
             inlineMediaPlayerEnterFullscreenLabel = "Video vergrößern",
             inlineMediaPlayerExitFullscreenLabel = "Video minimieren",
             inlineMediaPlayerShowControlsLabel = "Steuerelemente anzeigen",
@@ -149,6 +151,16 @@ class CandyPrivacyHostContractTest {
         assertEquals("Abspielen", policy.inlineMediaPlayerPlayLabel)
         assertEquals("Pausieren", policy.inlineMediaPlayerPauseLabel)
         assertEquals("Wiedergabeposition", policy.inlineMediaPlayerSeekLabel)
+        assertEquals("{seconds} Sekunden zurückspulen", policy.inlineMediaPlayerSeekBackwardLabel)
+        assertEquals("{seconds} Sekunden vorspulen", policy.inlineMediaPlayerSeekForwardLabel)
+        assertEquals(
+            "{seconds} Sekunden zurückspulen",
+            policy.toMessage("session-token", 1).getString("inlineMediaPlayerSeekBackwardLabel"),
+        )
+        assertEquals(
+            "{seconds} Sekunden vorspulen",
+            policy.toMessage("session-token", 1).getString("inlineMediaPlayerSeekForwardLabel"),
+        )
         assertEquals("Video vergrößern", policy.inlineMediaPlayerEnterFullscreenLabel)
         assertEquals("Video minimieren", policy.inlineMediaPlayerExitFullscreenLabel)
         assertEquals("Steuerelemente anzeigen", policy.inlineMediaPlayerShowControlsLabel)

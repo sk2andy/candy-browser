@@ -1,5 +1,8 @@
 package dev.sk2andy.materialbrowser.browser.gecko
 
+import dev.sk2andy.materialbrowser.browser.InlineMediaPlayerMode
+import dev.sk2andy.materialbrowser.browser.InlineMediaPlayerModeRules
+
 internal class GeckoInlineVideoOpenRequestGate(
     private val nowMillis: () -> Long,
 ) {
@@ -120,7 +123,9 @@ internal class GeckoInlineVideoOpenRequestGate(
     private fun identity(policy: GeckoPrivacyPolicy, isPrivate: Boolean) = PolicyIdentity(
         navigationGeneration = policy.navigationGeneration,
         mode = policy.inlineMediaPlayerMode,
-        enabled = policy.inlineMediaPlayerEnabled,
+        enabled = policy.inlineMediaPlayerEnabled && InlineMediaPlayerModeRules.isEnabled(
+            InlineMediaPlayerMode.fromStableId(policy.inlineMediaPlayerMode),
+        ),
         isPrivate = isPrivate,
     )
 

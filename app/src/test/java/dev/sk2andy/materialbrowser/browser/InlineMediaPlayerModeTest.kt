@@ -23,6 +23,20 @@ class InlineMediaPlayerModeTest {
     }
 
     @Test
+    fun `disabled mode does not detect open present or take over fullscreen`() {
+        val mode = InlineMediaPlayerMode.Disabled
+
+        assertEquals("disabled", mode.stableId)
+        assertFalse(InlineMediaPlayerModeRules.isEnabled(mode))
+        assertFalse(InlineMediaPlayerModeRules.detectsInlineVideo(mode))
+        assertFalse(InlineMediaPlayerModeRules.showsOpenButton(mode))
+        assertFalse(InlineMediaPlayerModeRules.buttonStartsFullscreen(mode))
+        assertFalse(InlineMediaPlayerModeRules.supportsInlinePresentation(mode))
+        assertFalse(InlineMediaPlayerModeRules.replacesWebsiteFullscreen(mode))
+        assertFalse(InlineMediaPlayerModeRules.startsWhenVideoDetected(mode))
+    }
+
+    @Test
     fun `button modes expose only their requested presentation choices`() {
         assertTrue(
             InlineMediaPlayerModeRules.showsOpenButton(

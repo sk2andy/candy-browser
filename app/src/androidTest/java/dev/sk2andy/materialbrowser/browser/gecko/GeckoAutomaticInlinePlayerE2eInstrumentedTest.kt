@@ -2,15 +2,20 @@ package dev.sk2andy.materialbrowser.browser.gecko
 
 import android.content.Context
 import android.os.SystemClock
+import android.view.InputDevice
+import android.view.MotionEvent
 import android.view.SurfaceView
 import android.view.View
 import android.view.ViewGroup
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import androidx.test.uiautomator.By
 import androidx.test.uiautomator.UiDevice
+import androidx.test.uiautomator.Until
 import dev.sk2andy.materialbrowser.BuildConfig
 import dev.sk2andy.materialbrowser.MainActivity
+import dev.sk2andy.materialbrowser.browser.HttpsOnlyMode
 import dev.sk2andy.materialbrowser.browser.InlineMediaPlayerMode
 import dev.sk2andy.materialbrowser.data.BrowserSessionStore
 import dev.sk2andy.materialbrowser.data.GestureOnboardingStore
@@ -45,6 +50,7 @@ class GeckoAutomaticInlinePlayerE2eInstrumentedTest {
         // the first real Gecko frame or steal the trusted fixture tap.
         assertTrue(ReleaseNotesStore(context).markHandled(BuildConfig.VERSION_CODE.toLong()))
         // Persist through same store used by Settings, before MainActivity creates controller.
+        BrowserSessionStore(context).saveHttpsOnlyMode(HttpsOnlyMode.Off)
         BrowserSessionStore(context).saveInlineMediaPlayerMode(InlineMediaPlayerMode.Automatic)
     }
 
@@ -105,13 +111,218 @@ class GeckoAutomaticInlinePlayerE2eInstrumentedTest {
         }
     }
 
-    private fun await(description: String, condition: () -> Boolean) {
+    @Test
+    fun disabledPlayerPreservesNativePlaybackFullscreenAndPersistedChoice() {
+        verifyDisabledPlayerJourney(startAutomatic = false)
+    }
+
+    @Test
+    fun activeCandyPlayerCanBeDisabledWithoutPausingNativeVideo() {
+        verifyDisabledPlayerJourney(startAutomatic = true)
+    }
+
+    private fun verifyDisabledPlayerJourney(startAutomatic: Boolean) {
+        val initialMode = if (startAutomatic) InlineMediaPlayerMode.Automatic else InlineMediaPlayerMode.Disabled
+        BrowserSessionStore(context).saveInlineMediaPlayerMode(initialMode)
+        FixtureServer(disabledMode = true).use { server ->
+            ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+                scenario.onActivity { activity ->
+                    val controller = activity.browserControllerForTesting()
+                    assertTrue(controller.inlineMediaPlayerMode == initialMode)
+                    assertTrue(controller.openUrl(server.url))
+                }
+                await("native video metadata and controls", diagnostics = {
+                    "requests=${server.requests.takeLast(10).map { it.substringBefore('?') }}; samples=${server.samples.takeLast(5)}"
+                }) {
+                    server.samples.any { it.getInt("readyState") >= 1 &&
+                        it.getBoolean("nativeControls") }
+                }
+                clickSitePlayer(scenario, server.samples.last())
+                if (startAutomatic) {
+                    await("automatic Candy controls before disable") {
+                        server.samples.any { it.getString("phase") == "automatic-open" }
+                    }
+                    pauseForEvidence()
+                    scenario.onActivity { activity ->
+                        val controller = activity.browserControllerForTesting()
+                        controller.updateInlineMediaPlayerMode(InlineMediaPlayerMode.Disabled)
+                        assertFalse("Disabled controller still accepts Candy opens", controller.canOpenInlineMediaPlayer)
+                    }
+                }
+                await("native playback continues without Candy controls") {
+                    server.samples.any { it.getString("phase") == "playback-tick" &&
+                        it.getDouble("currentTime") > 0.5 && !it.getBoolean("paused") &&
+                        !it.getBoolean("controls") && it.getBoolean("nativeControls") }
+                }
+                val playing = server.samples.last { it.getString("phase") == "playback-tick" }
+                assertTrue("Native controls removed: $playing", playing.getBoolean("nativeControls"))
+                assertFalse("Candy overlay survived Off: $playing", playing.getBoolean("controls"))
+                assertFalse("Candy launcher survived Off: $playing", playing.getBoolean("launcher"))
+                pauseForEvidence()
+                clickSitePlayer(scenario, playing)
+                await("trusted website fullscreen") {
+                    server.samples.any { it.getString("phase") == "site-fullscreen" }
+                }
+                val fullscreen = server.samples.last { it.getString("phase") == "site-fullscreen" }
+                assertTrue(fullscreen.getBoolean("fullscreen"))
+                assertTrue(fullscreen.getBoolean("nativeControls"))
+                assertFalse(fullscreen.getBoolean("controls"))
+                pauseForEvidence()
+                scenario.onActivity { activity ->
+                    assertTrue(activity.browserControllerForTesting().exitSelectedWebContentFullscreen())
+                }
+                await("website returns inline") { !server.samples.last().getBoolean("fullscreen") }
+                pauseForEvidence()
+                scenario.recreate()
+                scenario.onActivity { activity ->
+                    assertTrue("Off lost after Activity recreation", activity.browserControllerForTesting().inlineMediaPlayerMode == InlineMediaPlayerMode.Disabled)
+                }
+            }
+        }
+    }
+
+    private fun pauseForEvidence() {
+        val pauseMillis = InstrumentationRegistry.getArguments()
+            .getString("evidencePauseMillis")?.toLongOrNull()?.coerceIn(0L, 5_000L) ?: 0L
+        if (pauseMillis > 0) SystemClock.sleep(pauseMillis)
+    }
+
+    private fun clickSitePlayer(scenario: ActivityScenario<MainActivity>, sample: JSONObject) {
+        val point = IntArray(2)
+        scenario.onActivity { activity ->
+            val host = requireNotNull(activity.browserControllerForTesting().selectedGeckoViewForTesting())
+            host.getLocationOnScreen(point)
+            val button = sample.getJSONArray("button")
+            val scale = host.width / sample.getDouble("viewportWidth")
+            point[0] += ((button.getDouble(0) + button.getDouble(2) / 2) * scale).toInt()
+            point[1] += ((button.getDouble(1) + button.getDouble(3) / 2) * scale).toInt()
+        }
+        assertTrue(UiDevice.getInstance(instrumentation).click(point[0], point[1]))
+    }
+
+    @Test
+    fun trustedDoubleTapsSeekInlineAndFullscreenWithClampedBounds() {
+        FixtureServer(seekJourney = true).use { server ->
+            ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+                lateinit var host: View
+                scenario.onActivity { activity ->
+                    val controller = activity.browserControllerForTesting()
+                    assertTrue(controller.openUrl(server.url))
+                }
+                await("decoded thumbnail") {
+                    server.samples.any { it.getString("phase") == "paused-ready-stable" }
+                }
+                scenario.onActivity { activity ->
+                    host = requireNotNull(activity.browserControllerForTesting().selectedGeckoViewForTesting())
+                }
+                val sitePlay = fixturePoint(scenario, host, server.samples.last(), "button", 0.5, 0.5)
+                assertTrue(UiDevice.getInstance(instrumentation).click(sitePlay[0], sitePlay[1]))
+                await("paused Candy Player at six seconds; ${server.samples}") {
+                    server.samples.any { it.getString("phase") == "seek-ready" }
+                }
+                SystemClock.sleep(500)
+                pauseForEvidence()
+                fun doubleTap(fractionX: Double) {
+                    val sample = server.samples.last()
+                    val point = fixturePoint(scenario, host, sample, "video", fractionX, 0.3)
+                    tapPoint(point)
+                    SystemClock.sleep(60)
+                    tapPoint(point)
+                }
+                fun awaitTime(expected: Double) = await("video time $expected; ${server.samples.takeLast(3)}") {
+                    server.samples.last().getDouble("currentTime").let { kotlin.math.abs(it - expected) < 0.3 }
+                }
+                doubleTap(0.18)
+                awaitTime(0.0)
+                pauseForEvidence()
+                SystemClock.sleep(1_100)
+                doubleTap(0.82)
+                awaitTime(10.0)
+                pauseForEvidence()
+                SystemClock.sleep(1_100)
+                // Trusted upward free-surface swipe uses Candy's existing fullscreen gesture.
+                val sample = server.samples.last()
+                val start = fixturePoint(scenario, host, sample, "video", 0.18, 0.52)
+                val end = fixturePoint(scenario, host, sample, "video", 0.18, 0.05)
+                assertTrue(UiDevice.getInstance(instrumentation).swipe(start[0], start[1], end[0], end[1], 20))
+                await("Candy fullscreen") { server.samples.last().getBoolean("fullscreen") }
+                UiDevice.getInstance(instrumentation)
+                    .wait(Until.findObject(By.text("Got it")), 2_000)?.click()
+                SystemClock.sleep(700)
+                doubleTap(0.18)
+                awaitTime(0.0)
+                pauseForEvidence()
+                SystemClock.sleep(1_100)
+                doubleTap(0.82)
+                awaitTime(10.0)
+                pauseForEvidence()
+                SystemClock.sleep(1_100)
+                assertTrue("Double tap unexpectedly resumed playback", server.samples.last().getBoolean("paused"))
+                assertTrue("Candy controls disappeared", server.samples.last().getBoolean("controls"))
+                doubleTap(0.82)
+                awaitTime(12.0)
+                pauseForEvidence()
+                SystemClock.sleep(1_100)
+                assertTrue("Seeking to the end unexpectedly resumed playback", server.samples.last().getBoolean("paused"))
+            }
+        }
+    }
+
+    private fun fixturePoint(
+        scenario: ActivityScenario<MainActivity>,
+        host: View,
+        sample: JSONObject,
+        element: String,
+        fractionX: Double,
+        fractionY: Double,
+    ): IntArray = IntArray(2).also { point ->
+        scenario.onActivity {
+            host.getLocationOnScreen(point)
+            val bounds = sample.getJSONArray(element)
+            val scale = host.width / sample.getDouble("viewportWidth")
+            point[0] += ((bounds.getDouble(0) + bounds.getDouble(2) * fractionX) * scale).toInt()
+            point[1] += ((bounds.getDouble(1) + bounds.getDouble(3) * fractionY) * scale).toInt()
+        }
+    }
+
+    private fun tapPoint(point: IntArray) {
+        val downTime = SystemClock.uptimeMillis()
+        val pointer = MotionEvent.PointerProperties().apply {
+            id = 0
+            toolType = MotionEvent.TOOL_TYPE_FINGER
+        }
+        val coordinates = MotionEvent.PointerCoords().apply {
+            x = point[0].toFloat()
+            y = point[1].toFloat()
+            pressure = 1f
+            size = 1f
+        }
+        for (action in listOf(MotionEvent.ACTION_DOWN, MotionEvent.ACTION_UP)) {
+            val event = MotionEvent.obtain(
+                downTime, SystemClock.uptimeMillis(), action, 1,
+                arrayOf(pointer), arrayOf(coordinates), 0, 0, 1f, 1f, 0, 0,
+                InputDevice.SOURCE_TOUCHSCREEN, 0,
+            )
+            try {
+                assertTrue(instrumentation.uiAutomation.injectInputEvent(event, false))
+            } finally {
+                event.recycle()
+            }
+            if (action == MotionEvent.ACTION_DOWN) SystemClock.sleep(35)
+        }
+    }
+
+    private fun await(
+        description: String,
+        diagnostics: () -> String = { "" },
+        condition: () -> Boolean,
+    ) {
         val deadline = SystemClock.uptimeMillis() + 30_000
         while (SystemClock.uptimeMillis() < deadline) {
             if (condition()) return
             SystemClock.sleep(50)
         }
-        assertTrue("Timed out: $description", condition())
+        assertTrue("Timed out: $description; ${diagnostics()}", condition())
     }
 
     private fun ViewGroup.singleChild(): View = checkNotNull(takeIf { childCount == 1 }?.getChildAt(0))
@@ -122,7 +333,10 @@ class GeckoAutomaticInlinePlayerE2eInstrumentedTest {
         return null
     }
 
-    private class FixtureServer : Closeable {
+    private class FixtureServer(
+        disabledMode: Boolean = false,
+        seekJourney: Boolean = false,
+    ) : Closeable {
         private val socket = ServerSocket(0, 4, InetAddress.getByName("127.0.0.1"))
         val url = "http://127.0.0.1:${socket.localPort}/"
         private val recorded = mutableListOf<JSONObject>()
@@ -134,12 +348,27 @@ class GeckoAutomaticInlinePlayerE2eInstrumentedTest {
         private val html = HTML.replace(
             "watch();send('thumbnail');requestAnimationFrame(()=>requestAnimationFrame(()=>setTimeout(()=>send('thumbnail-stable'),400)));b.onpointerdown=()=>send('site-pointerdown');b.onclick=()=>{send('site-click');v.src='/video.webm';v.load();v.play().then(()=>send('play-resolved')).catch(e=>{playError=String(e);send('play-error')})};v.addEventListener('loadeddata',()=>send('loadeddata'));",
             "watch();v.src='/video.webm';v.load();send('thumbnail');v.addEventListener('loadeddata',()=>{send('paused-ready');requestAnimationFrame(()=>requestAnimationFrame(()=>setTimeout(()=>send('paused-ready-stable'),400)))},{once:true});b.onpointerdown=()=>send('site-pointerdown');b.onclick=()=>{send('site-click');v.play().then(()=>send('play-resolved')).catch(e=>{playError=String(e);send('play-error')})};",
-        )
+        ).let { page ->
+            if (!seekJourney) page else page.replace(
+                "if(c&&!opened){opened=true;send('automatic-open')}",
+                "if(c&&!opened){opened=true;send('automatic-open');setTimeout(()=>{v.pause();v.currentTime=6;send('seek-ready');setInterval(()=>send('seek-sample'),100)},1000)}",
+            )
+        }
+        private val servedHtml = if (disabledMode) {
+            html.replace("<video playsinline muted>", "<video playsinline muted controls loop>")
+                .replace("controls:!!document.querySelector", "nativeControls:v.controls,launcher:!!document.querySelector('[data-candy-inline-video-action]'),controls:!!document.querySelector")
+                .replace("b.onclick=()=>{send('site-click');v.play()", "b.onclick=()=>{if(!v.paused){v.requestFullscreen().then(()=>send('site-fullscreen'));return}send('site-click');v.play()")
+                .replace("v.addEventListener('error'", "const status=document.createElement('p');status.style='color:white;font:18px sans-serif;padding:16px';document.body.append(status);setInterval(()=>{status.textContent='Website player: '+v.currentTime.toFixed(1)+'s';send('playback-tick')},200);v.addEventListener('error'")
+        } else {
+            html
+        }
+
         private fun serve() {
             while (!socket.isClosed) {
                 val client = runCatching { socket.accept() }.getOrNull() ?: return
                 clients.execute {
                     client.use { connection ->
+                        connection.soTimeout = 2_000
                         val reader = connection.getInputStream().bufferedReader()
                         val request = reader.readLine().orEmpty().split(' ').getOrNull(1).orEmpty()
                         synchronized(requested) { requested += request }
@@ -152,8 +381,9 @@ class GeckoAutomaticInlinePlayerE2eInstrumentedTest {
                             synchronized(recorded) { recorded += sample }
                         }
                         val body = when {
+                            request.startsWith("/geometry?") -> ByteArray(0)
                             request == "/video.webm" -> VIDEO
-                            else -> html.toByteArray()
+                            else -> servedHtml.toByteArray()
                         }
                         val type = if (request == "/video.webm") "video/webm" else "text/html"
                         connection.getOutputStream().use { output ->

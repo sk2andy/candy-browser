@@ -1,6 +1,7 @@
 package dev.sk2andy.materialbrowser.browser
 
 enum class InlineMediaPlayerMode(val stableId: String) {
+    Disabled("disabled"),
     ButtonFullscreen("button_fullscreen"),
     ButtonInlineAndFullscreen("button_inline_and_fullscreen"),
     AlwaysForFullscreen("always_for_fullscreen"),
@@ -16,6 +17,9 @@ enum class InlineMediaPlayerMode(val stableId: String) {
 }
 
 internal object InlineMediaPlayerModeRules {
+    fun isEnabled(mode: InlineMediaPlayerMode): Boolean =
+        mode != InlineMediaPlayerMode.Disabled
+
     fun detectsInlineVideo(mode: InlineMediaPlayerMode): Boolean =
         showsOpenButton(mode) || startsWhenVideoDetected(mode)
 
@@ -23,6 +27,7 @@ internal object InlineMediaPlayerModeRules {
         InlineMediaPlayerMode.ButtonFullscreen,
         InlineMediaPlayerMode.ButtonInlineAndFullscreen,
         -> true
+        InlineMediaPlayerMode.Disabled,
         InlineMediaPlayerMode.AlwaysForFullscreen,
         InlineMediaPlayerMode.Automatic,
         -> false
@@ -35,6 +40,7 @@ internal object InlineMediaPlayerModeRules {
         InlineMediaPlayerMode.ButtonInlineAndFullscreen,
         InlineMediaPlayerMode.Automatic,
         -> true
+        InlineMediaPlayerMode.Disabled,
         InlineMediaPlayerMode.ButtonFullscreen,
         InlineMediaPlayerMode.AlwaysForFullscreen,
         -> false

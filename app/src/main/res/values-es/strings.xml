@@ -536,6 +536,7 @@
     <string name="settings_inline_media_player_title">Candy Player (experimental)</string>
     <string name="settings_inline_media_player_subtitle">Candy Player también ofrece un modo imagen en imagen mejorado directamente desde la página, sin entrar antes en pantalla completa. Los vídeos incrustados aún no son compatibles.</string>
     <string name="settings_inline_media_player_unsupported">Actualmente solo está disponible con GeckoView.</string>
+    <string name="settings_inline_media_player_mode_disabled">Desactivado (usar el reproductor del sitio)</string>
     <string name="settings_inline_media_player_mode_button_fullscreen">El botón abre el reproductor a pantalla completa</string>
     <string name="settings_inline_media_player_mode_button_inline_fullscreen">El botón abre el reproductor en línea o a pantalla completa</string>
     <string name="settings_inline_media_player_mode_always_fullscreen">Usar siempre Candy Player para la pantalla completa</string>
@@ -543,6 +544,8 @@
     <string name="action_open_candy_player">Abrir en Candy Player</string>
     <string name="action_candy_player_play">Reproducir</string>
     <string name="action_candy_player_pause">Pausar</string>
+    <string name="action_candy_player_seek_backward">Retroceder %1$s segundos</string>
+    <string name="action_candy_player_seek_forward">Avanzar %1$s segundos</string>
     <string name="action_candy_player_seek">Posición de reproducción</string>
     <string name="action_candy_player_show_controls">Mostrar controles</string>
     <string name="action_candy_player_hide_controls">Ocultar controles</string>

@@ -75,6 +75,18 @@ class GeckoInlineVideoOpenRequestGateTest {
     }
 
     @Test
+    fun `disabled mode rejects an open even with stale enabled flag`() {
+        val gate = readyGate()
+        gate.publish(policy.copy(inlineMediaPlayerMode = "disabled"), revision = 4, isPrivate = false)
+        gate.acknowledge(4)
+        gate.updateCandidate(4, candidate)
+
+        assertNull(gate.accept(request, revision = 4, mode = "disabled"))
+        assertNull(gate.accept(request, revision = 3, mode = MODE))
+        assertNull(gate.takeReady())
+    }
+
+    @Test
     fun `private policy explicit close and binding cancellation clear pending open`() {
         listOf<(GeckoInlineVideoOpenRequestGate) -> Unit>(
             { it.invalidatePolicy(policy, isPrivate = true) },

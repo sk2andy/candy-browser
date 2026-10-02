@@ -536,6 +536,7 @@
     <string name="settings_inline_media_player_title">Candy Player (expérimental)</string>
     <string name="settings_inline_media_player_subtitle">Candy Player propose aussi un mode image dans l’image amélioré directement depuis la page, sans passer d’abord en plein écran. Les vidéos intégrées ne sont pas encore prises en charge.</string>
     <string name="settings_inline_media_player_unsupported">Actuellement disponible uniquement avec GeckoView.</string>
+    <string name="settings_inline_media_player_mode_disabled">Désactivé (utiliser le lecteur du site)</string>
     <string name="settings_inline_media_player_mode_button_fullscreen">Le bouton ouvre le lecteur en plein écran</string>
     <string name="settings_inline_media_player_mode_button_inline_fullscreen">Le bouton ouvre le lecteur intégré ou en plein écran</string>
     <string name="settings_inline_media_player_mode_always_fullscreen">Toujours utiliser Candy Player en plein écran</string>
@@ -543,6 +544,8 @@
     <string name="action_open_candy_player">Ouvrir dans Candy Player</string>
     <string name="action_candy_player_play">Lire</string>
     <string name="action_candy_player_pause">Mettre en pause</string>
+    <string name="action_candy_player_seek_backward">Reculer de %1$s secondes</string>
+    <string name="action_candy_player_seek_forward">Avancer de %1$s secondes</string>
     <string name="action_candy_player_seek">Position de lecture</string>
     <string name="action_candy_player_show_controls">Afficher les commandes</string>
     <string name="action_candy_player_hide_controls">Masquer les commandes</string>

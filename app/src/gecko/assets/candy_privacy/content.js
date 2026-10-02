@@ -28,6 +28,8 @@ const candyPictureInPicturePlayback = {
   inlineMediaPlayerPlayLabel: "Play",
   inlineMediaPlayerPauseLabel: "Pause",
   inlineMediaPlayerSeekLabel: "Seek",
+  inlineMediaPlayerSeekBackwardLabel: "Seek backward {seconds} seconds",
+  inlineMediaPlayerSeekForwardLabel: "Seek forward {seconds} seconds",
   inlineMediaPlayerEnterFullscreenLabel: "Enter fullscreen",
   inlineMediaPlayerExitFullscreenLabel: "Exit fullscreen",
   inlineMediaPlayerCloseLabel: "Close Candy Player",
@@ -57,6 +59,7 @@ const candyPictureInPicturePlayback = {
   inlineSiteStyle: null,
   inlineStableOrigin: null,
   inlineFullscreenOrigin: null,
+  fullscreenVideoLayout: null,
 };
 const candyInlineVideoDocumentNonce = candyInlineVideoNonce();
 const candyInlineVideoElementNonces = new WeakMap();
@@ -83,16 +86,23 @@ const CANDY_INLINE_VIDEO_ORIGIN_X = "--candy-inline-video-origin-x";
 const CANDY_INLINE_VIDEO_ORIGIN_Y = "--candy-inline-video-origin-y";
 const CANDY_INLINE_VIDEO_ORIGIN_SCALE_X = "--candy-inline-video-origin-scale-x";
 const CANDY_INLINE_VIDEO_ORIGIN_SCALE_Y = "--candy-inline-video-origin-scale-y";
+const CANDY_FULLSCREEN_VIDEO_ATTRIBUTE = "data-candy-fullscreen-video";
+const CANDY_FULLSCREEN_VIDEO_ANCESTOR_ATTRIBUTE = "data-candy-fullscreen-video-ancestor";
+const CANDY_FULLSCREEN_VIDEO_ROOT_ATTRIBUTE = "data-candy-fullscreen-video-root";
 const CANDY_INLINE_VIDEO_ACTION_SIZE_PX = 56;
 const CANDY_INLINE_VIDEO_ACTION_INSET_PX = 16;
 const CANDY_INLINE_VIDEO_CONTROLS_HEIGHT_PX = 88;
 const CANDY_INLINE_FULLSCREEN_GESTURE_TOUCH_SLOP_PX = 10;
 const CANDY_INLINE_CONTROLS_TAP_MAX_DURATION_MS = 350;
+const CANDY_INLINE_CONTROLS_DOUBLE_TAP_INTERVAL_MS = 300;
+const CANDY_INLINE_CONTROLS_DOUBLE_TAP_DISTANCE_PX = 48;
+const CANDY_INLINE_CONTROLS_SEEK_SECONDS = 10;
 const CANDY_INLINE_FULLSCREEN_GESTURE_MIN_THRESHOLD_PX = 48;
 const CANDY_INLINE_FULLSCREEN_GESTURE_MAX_THRESHOLD_PX = 96;
 const CANDY_INLINE_FULLSCREEN_GESTURE_THRESHOLD_FRACTION = 0.13;
 const CANDY_INLINE_FULLSCREEN_GESTURE_STICKY_FRACTION = 0.18;
 const CANDY_INLINE_MEDIA_PLAYER_MODES = new Set([
+  "disabled",
   "button_fullscreen",
   "button_inline_and_fullscreen",
   "always_for_fullscreen",
@@ -155,7 +165,13 @@ function candyInlineVideoCloseIsHidden() {
   );
 }
 
+function candyInlineVideoPointerTime(event) {
+  return Number.isFinite(event?.timeStamp) && event.timeStamp >= 0 ?
+    event.timeStamp : performance.now();
+}
+
 function candyInlineVideoTapIsEligible(event, gesture) {
+  const now = candyInlineVideoPointerTime(event);
   return Boolean(
     event?.isTrusted &&
     event.isPrimary !== false &&
@@ -167,11 +183,38 @@ function candyInlineVideoTapIsEligible(event, gesture) {
     Number.isFinite(event.clientY) &&
     Number.isFinite(gesture.startX) &&
     Number.isFinite(gesture.startY) &&
-    Number.isFinite(performance.now()) &&
-    performance.now() - gesture.startedAt <= CANDY_INLINE_CONTROLS_TAP_MAX_DURATION_MS &&
+    Number.isFinite(now) && now >= gesture.startedAt &&
+    now - gesture.startedAt <= CANDY_INLINE_CONTROLS_TAP_MAX_DURATION_MS &&
     gesture.maxMovement <=
       CANDY_INLINE_FULLSCREEN_GESTURE_TOUCH_SLOP_PX
   );
+}
+
+function candyInlineVideoSeekDirection(pointerX, bounds) {
+  if (!Number.isFinite(pointerX) || !Number.isFinite(bounds?.left) ||
+      !Number.isFinite(bounds?.width) || bounds.width <= 0) return null;
+  if (pointerX < bounds.left || pointerX > bounds.left + bounds.width) return null;
+  return pointerX < bounds.left + bounds.width / 2 ? -1 : 1;
+}
+
+function candyInlineVideoDoubleTapMatches(previous, current) {
+  return Boolean(previous && current && previous.direction === current.direction &&
+    current.at >= previous.at &&
+    current.at - previous.at <= CANDY_INLINE_CONTROLS_DOUBLE_TAP_INTERVAL_MS &&
+    Math.hypot(current.x - previous.x, current.y - previous.y) <=
+      CANDY_INLINE_CONTROLS_DOUBLE_TAP_DISTANCE_PX);
+}
+
+function candyInlineVideoSeekTarget(currentTime, duration, ranges, direction) {
+  if (!Number.isFinite(currentTime) || !Number.isFinite(duration) || duration <= 0 ||
+      (direction !== -1 && direction !== 1)) return null;
+  const range = ranges.find(([start, end]) => Number.isFinite(start) &&
+    Number.isFinite(end) && start <= currentTime && currentTime <= end && end > start);
+  if (!range) return null;
+  const start = Math.max(0, range[0]);
+  const end = Math.min(duration, range[1]);
+  if (start > end) return null;
+  return Math.max(start, Math.min(end, currentTime + direction * CANDY_INLINE_CONTROLS_SEEK_SECONDS));
 }
 
 function candyInlineVideoControlsVisibilityLabel(visible) {
@@ -657,6 +700,20 @@ button:focus-visible { outline: 3px solid white; outline-offset: 3px; }
   border-left: 24px solid white;
   filter: drop-shadow(0 2px 2px rgba(42, 12, 72, 0.25));
 }
+.seek-feedback {
+  position: absolute;
+  top: 38%;
+  left: 12%;
+  border-radius: 24px;
+  padding: 14px 20px;
+  color: white;
+  background: rgba(20, 12, 35, .8);
+  font: 700 20px system-ui;
+  pointer-events: none;
+  z-index: 3;
+}
+.seek-feedback[data-direction="forward"] { left: auto; right: 12%; }
+.seek-feedback[hidden] { display: none; }
 .hero-play[hidden] { display: none; }
 .hero-play:active { transform: translate(-50%, -50%) scale(0.88) rotate(-4deg); }
 .hero-play[data-activating="true"] {
@@ -693,6 +750,12 @@ button:focus-visible { outline: 3px solid white; outline-offset: 3px; }
   heroPlay.type = "button";
   heroPlay.className = "hero-play";
   heroPlay.setAttribute("aria-label", candyPictureInPicturePlayback.inlineMediaPlayerPlayLabel);
+  const seekFeedback = document.createElement("div");
+  seekFeedback.className = "seek-feedback";
+  seekFeedback.hidden = true;
+  seekFeedback.setAttribute("role", "status");
+  seekFeedback.setAttribute("aria-live", "polite");
+  seekFeedback.setAttribute("aria-atomic", "true");
   const controls = document.createElement("div");
   controls.className = "controls";
   const timeline = document.createElement("div");
@@ -744,6 +807,59 @@ button:focus-visible { outline: 3px solid white; outline-offset: 3px; }
   utility.className = "pill utility";
   let heroActivationTimer = null;
   let activeFullscreenGesture = null;
+  let pendingTap = null;
+  let singleTapTimer = null;
+  let seekFeedbackTimer = null;
+  const ownsPresentation = () => host.isConnected && video.isConnected &&
+    candyPictureInPicturePlayback.inlinePresentationExpected &&
+    candyPictureInPicturePlayback.presentedVideo === video &&
+    candyPictureInPicturePlayback.inlineControlsHost === host;
+  const cancelPendingTap = () => {
+    if (singleTapTimer !== null) clearTimeout(singleTapTimer);
+    singleTapTimer = null;
+    pendingTap = null;
+  };
+  const seekByDoubleTap = (direction) => {
+    if (!ownsPresentation()) return;
+    try {
+      const ranges = Array.from({ length: video.seekable.length }, (_, index) =>
+        [video.seekable.start(index), video.seekable.end(index)]);
+      const target = candyInlineVideoSeekTarget(video.currentTime, video.duration, ranges, direction);
+      if (target === null) return;
+      const seconds = Math.round(Math.abs(target - video.currentTime) * 10) / 10;
+      video.currentTime = target;
+      const forward = direction > 0;
+      const template = forward ?
+        candyPictureInPicturePlayback.inlineMediaPlayerSeekForwardLabel :
+        candyPictureInPicturePlayback.inlineMediaPlayerSeekBackwardLabel;
+      seekFeedback.textContent = `${forward ? "» +" : "« −"}${seconds} s`;
+      seekFeedback.setAttribute("aria-label", template.replace("{seconds}", String(seconds)));
+      seekFeedback.dataset.direction = forward ? "forward" : "backward";
+      seekFeedback.hidden = false;
+      if (seekFeedbackTimer !== null) clearTimeout(seekFeedbackTimer);
+      seekFeedbackTimer = setTimeout(() => { seekFeedback.hidden = true; }, 900);
+      update();
+    } catch (_) { }
+  };
+  const resolveTap = (event) => {
+    const current = {
+      x: event.clientX, y: event.clientY, at: candyInlineVideoPointerTime(event),
+      direction: candyInlineVideoSeekDirection(event.clientX, host.getBoundingClientRect()),
+    };
+    if (current.direction === null) return;
+    if (candyInlineVideoDoubleTapMatches(pendingTap, current)) {
+      cancelPendingTap();
+      seekByDoubleTap(current.direction);
+      return;
+    }
+    if (pendingTap && ownsPresentation()) toggleControlsVisibility();
+    cancelPendingTap();
+    pendingTap = current;
+    singleTapTimer = setTimeout(() => {
+      cancelPendingTap();
+      if (ownsPresentation()) toggleControlsVisibility();
+    }, CANDY_INLINE_CONTROLS_DOUBLE_TAP_INTERVAL_MS);
+  };
   const updateControlsPolicy = () => {
     const hidden = candyInlineVideoCloseIsHidden();
     close.hidden = hidden;
@@ -873,11 +989,13 @@ button:focus-visible { outline: 3px solid white; outline-offset: 3px; }
         CANDY_INLINE_FULLSCREEN_GESTURE_TOUCH_SLOP_PX,
       );
       if (gesture.direction === "rejected") {
+        cancelPendingTap();
         finishFullscreenGesture();
         return null;
       }
     }
     if (gesture.direction !== "up") return null;
+    cancelPendingTap();
     event.preventDefault();
     event.stopPropagation();
     const update = candyInlineFullscreenGestureUpdate(
@@ -912,13 +1030,21 @@ button:focus-visible { outline: 3px solid white; outline-offset: 3px; }
       candyPictureInPicturePlayback.presentedVideo !== video
     ) return;
     finishFullscreenGesture();
+    if (candyInlineVideoDoubleTapMatches(pendingTap, {
+      x: event.clientX, y: event.clientY, at: candyInlineVideoPointerTime(event),
+      direction: candyInlineVideoSeekDirection(event.clientX, host.getBoundingClientRect()),
+    })) {
+      // Preserve the first tap while Gecko delivers the matching second release.
+      if (singleTapTimer !== null) clearTimeout(singleTapTimer);
+      singleTapTimer = null;
+    }
     const computedTransform = getComputedStyle(video).transform;
     activeFullscreenGesture = {
       pointerId: event.pointerId,
       startX: event.clientX,
       startY: event.clientY,
       maxMovement: 0,
-      startedAt: performance.now(),
+      startedAt: candyInlineVideoPointerTime(event),
       fullscreenGestureAllowed: !document.fullscreenElement,
       video,
       baseTransform: computedTransform === "none" ? "" : computedTransform,
@@ -963,7 +1089,9 @@ button:focus-visible { outline: 3px solid white; outline-offset: 3px; }
     }
     if (shouldToggleControls) {
       candyPictureInPicturePlayback.inlineControlsLastTouchToggleAt = performance.now();
-      toggleControlsVisibility();
+      resolveTap(event);
+    } else {
+      cancelPendingTap();
     }
     finishFullscreenGesture();
     if (fullscreenRequest) {
@@ -975,6 +1103,7 @@ button:focus-visible { outline: 3px solid white; outline-offset: 3px; }
   fullscreenGesture.addEventListener("keydown", (event) => {
     if (!event.isTrusted || event.repeat || (event.key !== "Enter" && event.key !== " ")) return;
     event.preventDefault();
+    cancelPendingTap();
     toggleControlsVisibility();
   });
   fullscreenGesture.addEventListener("click", (event) => {
@@ -985,13 +1114,23 @@ button:focus-visible { outline: 3px solid white; outline-offset: 3px; }
     )) return;
     toggleControlsVisibility();
   });
-  fullscreenGesture.addEventListener("pointercancel", () => finishFullscreenGesture());
-  fullscreenGesture.addEventListener("lostpointercapture", () => finishFullscreenGesture());
+  fullscreenGesture.addEventListener("pointercancel", () => {
+    cancelPendingTap();
+    finishFullscreenGesture();
+  });
+  fullscreenGesture.addEventListener("lostpointercapture", () => {
+    if (activeFullscreenGesture) cancelPendingTap();
+    finishFullscreenGesture();
+  });
+  controls.addEventListener("pointerdown", cancelPendingTap);
+  heroPlay.addEventListener("pointerdown", cancelPendingTap);
   const mediaEvents = ["durationchange", "ended", "loadedmetadata", "pause", "play", "timeupdate"];
   mediaEvents.forEach((eventName) => video.addEventListener(eventName, update));
   document.addEventListener("fullscreenchange", update);
   candyPictureInPicturePlayback.inlineControlsCleanup = () => {
     if (heroActivationTimer !== null) clearTimeout(heroActivationTimer);
+    cancelPendingTap();
+    if (seekFeedbackTimer !== null) clearTimeout(seekFeedbackTimer);
     finishFullscreenGesture();
     mediaEvents.forEach((eventName) => video.removeEventListener(eventName, update));
     document.removeEventListener("fullscreenchange", update);
@@ -1002,7 +1141,7 @@ button:focus-visible { outline: 3px solid white; outline-offset: 3px; }
   utility.append(fullscreen, close);
   actions.append(transport, utility);
   controls.append(timeline, actions);
-  stage.append(fullscreenGesture, heroPlay, controls);
+  stage.append(fullscreenGesture, heroPlay, seekFeedback, controls);
   shadow.append(style, stage);
   candyInlineVideoControlsParent(video)?.appendChild(host);
   candyPictureInPicturePlayback.inlineControlsHost = host;
@@ -1238,6 +1377,82 @@ function clearCandyInlineVideoFullscreenOrigin() {
   origin.video.style.removeProperty(CANDY_INLINE_VIDEO_ORIGIN_SCALE_Y);
   origin.style.remove();
   candyPictureInPicturePlayback.inlineFullscreenOrigin = null;
+}
+
+function clearCandyFullscreenVideoLayout() {
+  const layout = candyPictureInPicturePlayback.fullscreenVideoLayout;
+  if (!layout) return;
+  layout.video.removeAttribute(CANDY_FULLSCREEN_VIDEO_ATTRIBUTE);
+  layout.root.removeAttribute(CANDY_FULLSCREEN_VIDEO_ROOT_ATTRIBUTE);
+  layout.ancestors.forEach((ancestor) => {
+    ancestor.removeAttribute(CANDY_FULLSCREEN_VIDEO_ANCESTOR_ATTRIBUTE);
+  });
+  layout.style.remove();
+  candyPictureInPicturePlayback.fullscreenVideoLayout = null;
+}
+
+function updateCandyFullscreenVideoLayout() {
+  const root = document.fullscreenElement;
+  const presented = candyPictureInPicturePlayback.presentedVideo;
+  const video = root?.contains(presented) ? presented : root?.querySelector("video");
+  if (!candyPictureInPicturePlayback.inlineMediaPlayerEnabled ||
+      !root || !video?.isConnected || root === video) {
+    clearCandyFullscreenVideoLayout();
+    return;
+  }
+  const current = candyPictureInPicturePlayback.fullscreenVideoLayout;
+  if (current?.root === root && current.video === video) return;
+  clearCandyFullscreenVideoLayout();
+  // Sites may keep their inline video height inside a viewport-sized fullscreen player.
+  // Fullscreen-only rules give that exact video and its controls the same viewport without
+  // changing authored inline styles or moving the video out of its player.
+  const ancestors = [];
+  for (let ancestor = video.parentElement; ancestor; ancestor = ancestor.parentElement) {
+    ancestors.push(ancestor);
+    if (ancestor === root) break;
+  }
+  root.setAttribute(CANDY_FULLSCREEN_VIDEO_ROOT_ATTRIBUTE, "");
+  video.setAttribute(CANDY_FULLSCREEN_VIDEO_ATTRIBUTE, "");
+  ancestors.forEach((ancestor) => {
+    ancestor.setAttribute(CANDY_FULLSCREEN_VIDEO_ANCESTOR_ATTRIBUTE, "");
+  });
+  const style = document.createElement("style");
+  style.textContent = `
+[${CANDY_FULLSCREEN_VIDEO_ROOT_ATTRIBUTE}]:fullscreen {
+  width: 100vw !important;
+  height: 100vh !important;
+  max-width: none !important;
+  max-height: none !important;
+}
+[${CANDY_FULLSCREEN_VIDEO_ROOT_ATTRIBUTE}]:fullscreen[${CANDY_FULLSCREEN_VIDEO_ANCESTOR_ATTRIBUTE}],
+[${CANDY_FULLSCREEN_VIDEO_ROOT_ATTRIBUTE}]:fullscreen [${CANDY_FULLSCREEN_VIDEO_ANCESTOR_ATTRIBUTE}] {
+  overflow: visible !important;
+  clip-path: none !important;
+  contain: none !important;
+  transform: none !important;
+  translate: none !important;
+  scale: none !important;
+  filter: none !important;
+  perspective: none !important;
+  mask: none !important;
+  will-change: auto !important;
+}
+[${CANDY_FULLSCREEN_VIDEO_ROOT_ATTRIBUTE}]:fullscreen video[${CANDY_FULLSCREEN_VIDEO_ATTRIBUTE}] {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  max-width: none !important;
+  max-height: none !important;
+  margin: 0 !important;
+  transform: none !important;
+  translate: none !important;
+  scale: none !important;
+  object-fit: contain !important;
+}
+`;
+  document.documentElement.appendChild(style);
+  candyPictureInPicturePlayback.fullscreenVideoLayout = { root, video, ancestors, style };
 }
 
 function updateCandyInlineVideoFullscreenOriginVisibility() {
@@ -1820,8 +2035,11 @@ function reportCandyInlineVideoState(preferredVideo = null) {
     return Promise.resolve();
   }
   const presentedVideo = candyPictureInPicturePlayback.presentedVideo;
+  // Fullscreen resizes can briefly clip an already acknowledged video. Keep its
+  // identity until the element is removed or playback ends, rather than selecting
+  // a different candidate while the native presentation owns it.
   const video = candyPictureInPicturePlayback.inlinePresentationExpected &&
-    isCandyInlineVideoCandidate(presentedVideo) ?
+    presentedVideo?.isConnected && !presentedVideo.ended ?
     presentedVideo : isCandyInlineVideoCandidate(preferredVideo) ?
       preferredVideo : currentCandyPictureInPictureVideo();
   updateCandyInlineVideoAction(video);
@@ -1901,6 +2119,7 @@ function scheduleCandyInlineVideoStateReport() {
       clearCandyInlineVideoPresentation();
     }
     rememberCandyPictureInPictureVideos();
+    updateCandyFullscreenVideoLayout();
     reportCandyInlineVideoState();
   });
 }
@@ -1948,6 +2167,8 @@ function updateCandyInlineMediaPlayerPolicy(policy) {
     policy?.inlineMediaPlayerCloseLabel,
     policy?.inlineMediaPlayerShowControlsLabel,
     policy?.inlineMediaPlayerHideControlsLabel,
+    policy?.inlineMediaPlayerSeekBackwardLabel,
+    policy?.inlineMediaPlayerSeekForwardLabel,
   );
 }
 
@@ -1965,10 +2186,12 @@ function updateCandyInlineMediaPlayerEnabled(
   closeLabel,
   showControlsLabel,
   hideControlsLabel,
+  seekBackwardLabel,
+  seekForwardLabel,
 ) {
-  const normalized = enabled === true && self === top;
   const normalizedMode = CANDY_INLINE_MEDIA_PLAYER_MODES.has(mode) ?
     mode : "button_inline_and_fullscreen";
+  const normalized = enabled === true && self === top && normalizedMode !== "disabled";
   const normalizedActionLabel =
     typeof actionLabel === "string" && actionLabel.trim() ?
       actionLabel.trim().slice(0, 80) : "Open in Candy Player";
@@ -1992,6 +2215,10 @@ function updateCandyInlineMediaPlayerEnabled(
   const normalizedHideControlsLabel = typeof hideControlsLabel === "string" &&
       hideControlsLabel.trim() ? hideControlsLabel.trim().slice(0, 80) :
     "Hide controls";
+  const normalizedSeekBackwardLabel = typeof seekBackwardLabel === "string" && seekBackwardLabel.trim() ?
+    seekBackwardLabel.trim().slice(0, 80) : "Seek backward {seconds} seconds";
+  const normalizedSeekForwardLabel = typeof seekForwardLabel === "string" && seekForwardLabel.trim() ?
+    seekForwardLabel.trim().slice(0, 80) : "Seek forward {seconds} seconds";
   if (
     candyPictureInPicturePlayback.inlineMediaPlayerActionLabel !== normalizedActionLabel ||
     candyPictureInPicturePlayback.inlineMediaPlayerPlayLabel !== normalizedPlayLabel ||
@@ -2001,7 +2228,9 @@ function updateCandyInlineMediaPlayerEnabled(
       normalizedEnterFullscreenLabel ||
     candyPictureInPicturePlayback.inlineMediaPlayerExitFullscreenLabel !==
       normalizedExitFullscreenLabel ||
-    candyPictureInPicturePlayback.inlineMediaPlayerCloseLabel !== normalizedCloseLabel
+    candyPictureInPicturePlayback.inlineMediaPlayerCloseLabel !== normalizedCloseLabel ||
+    candyPictureInPicturePlayback.inlineMediaPlayerSeekBackwardLabel !== normalizedSeekBackwardLabel ||
+    candyPictureInPicturePlayback.inlineMediaPlayerSeekForwardLabel !== normalizedSeekForwardLabel
   ) {
     clearCandyInlineVideoOpenRequest();
     removeCandyInlineVideoAction();
@@ -2019,6 +2248,8 @@ function updateCandyInlineMediaPlayerEnabled(
   candyPictureInPicturePlayback.inlineMediaPlayerCloseLabel = normalizedCloseLabel;
   candyPictureInPicturePlayback.inlineMediaPlayerShowControlsLabel = normalizedShowControlsLabel;
   candyPictureInPicturePlayback.inlineMediaPlayerHideControlsLabel = normalizedHideControlsLabel;
+  candyPictureInPicturePlayback.inlineMediaPlayerSeekBackwardLabel = normalizedSeekBackwardLabel;
+  candyPictureInPicturePlayback.inlineMediaPlayerSeekForwardLabel = normalizedSeekForwardLabel;
   candyPictureInPicturePlayback.inlineMediaPolicyRevision =
     Number.isSafeInteger(revision) ? Math.max(0, revision) : 0;
   candyPictureInPicturePlayback.inlineMediaNavigationGeneration =
@@ -2034,6 +2265,7 @@ function updateCandyInlineMediaPlayerEnabled(
     return;
   }
   candyPictureInPicturePlayback.inlineMediaPlayerEnabled = normalized;
+  updateCandyFullscreenVideoLayout();
   if (!normalized) {
     clearCandyInlineVideoOpenRequest();
     stopCandyInlineVideoStateObservation();
@@ -2115,7 +2347,8 @@ function monitorCandyPictureInPictureAlignment(video) {
 function candyPictureInPictureVideoToPresent(preferredVideo = null) {
   return isCandyInlineVideoCandidate(preferredVideo) ? preferredVideo :
     candyPictureInPicturePlayback.inlinePresentationExpected ?
-      (isCandyInlineVideoCandidate(candyPictureInPicturePlayback.presentedVideo) ?
+      (candyPictureInPicturePlayback.presentedVideo?.isConnected &&
+        !candyPictureInPicturePlayback.presentedVideo.ended ?
         candyPictureInPicturePlayback.presentedVideo : null) :
       currentCandyPictureInPictureVideo();
 }
@@ -2538,6 +2771,7 @@ document.addEventListener("emptied", (event) => {
   reportCandyInlineVideoState(event.target);
 }, true);
 window.addEventListener("pagehide", () => {
+  clearCandyFullscreenVideoLayout();
   stopCandyInlineVideoStateObservation();
   removeCandyInlineVideoAction();
   clearCandyInlineVideoPresentation();
@@ -2563,6 +2797,7 @@ window.addEventListener(
 );
 document.addEventListener("visibilitychange", scheduleCandyPictureInPicturePlayback, true);
 document.addEventListener("fullscreenchange", () => {
+  updateCandyFullscreenVideoLayout();
   updateCandyInlineVideoFullscreenOriginVisibility();
   if (!document.fullscreenElement) restoreCandyInlineVideoFullscreenOrigin();
   scheduleCandyPictureInPictureAlignment();

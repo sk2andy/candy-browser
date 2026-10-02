@@ -121,6 +121,19 @@ canvas and unsupported DRM players remain out of scope for this spike. Android P
 for an inline video only after this acknowledged Candy presentation is active; detection alone never
 grants PiP eligibility.
 
+An acknowledged inline presentation keeps the exact connected video while fullscreen or inset
+changes temporarily alter its visible bounds. Candidate visibility gates new openings; it does not
+discard a video that already owns the presentation. Ending playback, element removal, navigation,
+mode changes and explicit close still release that ownership.
+
+While Candy Player is enabled, a website's container fullscreen uses a temporary, fullscreen-scoped
+layout for its exact video and the ancestors up to the fullscreen element. The video fills the same
+viewport as the site's controls with `object-fit: contain`; inline height and transformed clipping
+ancestors cannot leave it in a short strip. This also applies before Candy controls take over.
+Fullscreen exit, root/video replacement, disabling Candy Player and page teardown remove the owned
+attributes and stylesheet without rewriting the site's inline styles. A directly fullscreened
+video retains the browser's native layout.
+
 The trusted content host renders the open action directly over the current recognized top-frame
 video, even while playback is paused; page fullscreen is not required. The action lives in a closed
 shadow root for style isolation, uses the localized Android action label and accepts only a trusted
@@ -150,8 +163,15 @@ time and fullscreen controls over the video's lower edge. For YouTube, Candy als
 selected player's site chrome without hiding captions. The Candy control host moves into the DOM
 fullscreen element so it remains in the fullscreen top layer. Candy restores the page's original
 controls state and YouTube chrome when the inline presentation ends. A trusted primary touch tap
-of at most 350 ms on the free video surface toggles Candy controls, including while DOM fullscreen
-is active; controls, seek, mouse, pen, empty-pointer, long-press, drag/swipe, cancelled and
+of at most 350 ms on the free video surface toggles Candy controls after a 300 ms double-tap
+window, including while DOM fullscreen is active. Two nearby taps in the same half seek ten seconds:
+left backward, right forward. Native pointer timestamps measure the interval; a matching second
+touch suspends the pending single-tap timer until its release is validated. Seeking clamps to the current seekable interval and finite media
+duration; unseekable media or media without a finite duration ignores double-tap seeking. A badge shows the
+actual clamped amount and announces it with localized live-status semantics. Double taps preserve
+playback and control visibility. Pending taps and feedback timers belong to the exact overlay/video
+and are cancelled when its presentation closes, changes or enters PiP. Transport actions and drags
+cancel pending single taps; controls, seek, mouse, pen, empty-pointer, long-press, drag/swipe, cancelled and
 untrusted gestures never toggle them. Visibility is presentation-local and survives PiP entry,
 return and policy refresh for the same video, then resets when that
 presentation is replaced or closed. The close action is hidden and removed from keyboard focus in
@@ -230,12 +250,13 @@ remains an explicit user choice. The extension content-policy sanitizer uses the
 
 | Mode | Trigger and presentation |
 | --- | --- |
+| Off (use website player) | Persisted disable: no Candy launcher, custom controls, automatic opening or fullscreen takeover. Active Candy controls are removed; the website keeps native inline/fullscreen playback. |
 | Button fullscreen | The trusted video action requests DOM fullscreen during the user click, then enables Candy controls for the exact video. |
 | Button inline and fullscreen | The trusted video action enables Candy controls in place; their fullscreen action remains available. |
 | Always for fullscreen | A website fullscreen transition enables Candy controls for the fullscreen video automatically. |
 | Automatic | A visible top-frame video enables Candy controls only after playback starts and it has current frame data with non-zero intrinsic dimensions. Preloaded but paused YouTube videos keep their site thumbnail until Play. Pausing an already opened Candy presentation leaves its controls available. |
 
-All four modes keep direct improved Android PiP available for an actively playing, acknowledged
+All four enabled modes keep direct improved Android PiP available for an actively playing, acknowledged
 Candy presentation; entering DOM fullscreen first is not required.
 
 ## Ownership map
@@ -332,6 +353,9 @@ Repeated mode, navigation and cleanup callbacks stay idempotent.
 
 ## Verification
 
+Issue 223 implementation, uploaded recordings and remaining native-return scope:
+[`issue-223-candy-player.md`](../audits/issue-223-candy-player.md).
+
 Each agent session must reserve one emulator and use its explicit serial for all device commands.
 Never share an emulator or use a physical device for automated Android tests.
 
@@ -341,11 +365,14 @@ commands below.
 | Layer | Minimum check |
 | --- | --- |
 | Contract and pure rules | `./gradlew testFullDebugUnitTest testFossDebugUnitTest` |
-| Candy control events and lifetime | `node --test scripts/gecko_inline_media.test.mjs`: execute production shadow-overlay handlers with EventTarget events, actual background/content policy refresh for all four modes, localized accessibility labels, pointer cancellation/drag-return, touch compatibility click, keyboard/AT, and PiP recreation/presentation reset. DOM/CSS rendering and trusted device input remain instrumentation responsibilities. |
+| Candy control events and lifetime | `node --test scripts/gecko_inline_media.test.mjs scripts/gecko_fullscreen_video_layout.test.mjs`: execute production shadow-overlay handlers with EventTarget events, actual background/content policy refresh for the four enabled modes and Off, localized accessibility labels, pointer cancellation/drag-return, touch compatibility click, keyboard/AT, fullscreen layout ownership and PiP recreation/presentation reset. DOM/CSS rendering and trusted device input remain instrumentation responsibilities. |
 | Gecko PiP lifecycle | Run `GeckoPictureInPictureInstrumentedTest` on the same API 34+ session emulator |
 | Fullscreen/overlay placement | Covered by `GeckoPictureInPictureInstrumentedTest` on the same API 34+ emulator |
 | Inline player offset isolation | Local transformed-player fixture in `GeckoPictureInPictureInstrumentedTest` |
+| Fullscreen gesture return and portrait geometry | Isolated `GeckoPictureInPictureInstrumentedTest#fullscreenDownwardGestureRestoresWholePageAndDecodedInlineVideo`, `#fullscreenVideoAndControlsFillViewportDespiteInlineSizing` and `#websiteFullscreenUsesVideoViewportWithoutCandyPlayerTakeover`: API 37 with host GPU, decoded inline frames, whole-page content and native/Candy fullscreen geometry. |
+| Disabled mode | `GeckoAutomaticInlinePlayerE2eInstrumentedTest#disabledPlayerPreservesNativePlaybackFullscreenAndPersistedChoice` and `#activeCandyPlayerCanBeDisabledWithoutPausingNativeVideo`: Off restores native controls without pausing media, rejects Candy opens, keeps website fullscreen and survives Activity recreation; store round-trip and Settings choice tests cover persistence/UI. |
 | Automatic mode | `GeckoAutomaticInlinePlayerE2eInstrumentedTest`: persisted mode, settled paused thumbnail, trusted site tap, `loadeddata`, then Candy controls |
+| Double-tap seeking | `scripts/gecko_inline_media.test.mjs`: real handlers, localized feedback, seekable/duration bounds, delayed single taps, cancellation/stale video; `GeckoAutomaticInlinePlayerE2eInstrumentedTest#trustedDoubleTapsSeekInlineAndFullscreenWithClampedBounds`: decoded video, trusted taps, both directions, bounds and upward fullscreen swipe |
 | Delayed transformed-return regression | Android 17 / API 37 only; fresh single-method fixture process on a dedicated emulator |
 | Decoded fullscreen-return pixels | Android 17 / API 37 with a renderer that visibly displays the VP8 fixture (verified with `-gpu swiftshader_indirect`): isolated clipped-player direct and first-swipe methods in `GeckoPictureInPictureInstrumentedTest`; assert real cyan pixels without a dark upper band after return |
 | Android integration | `./gradlew lintFullDebug lintFossDebug assembleFullDebug assembleFossDebug` |

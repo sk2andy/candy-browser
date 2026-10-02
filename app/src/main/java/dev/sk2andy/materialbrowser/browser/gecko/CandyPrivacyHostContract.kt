@@ -90,6 +90,8 @@ internal data class GeckoPrivacyPolicy(
     val inlineMediaPlayerActionLabel: String = "Open in Candy Player",
     val inlineMediaPlayerPlayLabel: String = "Play",
     val inlineMediaPlayerPauseLabel: String = "Pause",
+    val inlineMediaPlayerSeekBackwardLabel: String = "Seek backward {seconds} seconds",
+    val inlineMediaPlayerSeekForwardLabel: String = "Seek forward {seconds} seconds",
     val inlineMediaPlayerSeekLabel: String = "Seek",
     val inlineMediaPlayerEnterFullscreenLabel: String = "Enter fullscreen",
     val inlineMediaPlayerExitFullscreenLabel: String = "Exit fullscreen",
@@ -139,6 +141,8 @@ internal object GeckoPrivacyPolicyRules {
         inlineMediaPlayerActionLabel: String = "Open in Candy Player",
         inlineMediaPlayerPlayLabel: String = "Play",
         inlineMediaPlayerPauseLabel: String = "Pause",
+        inlineMediaPlayerSeekBackwardLabel: String = "Seek backward {seconds} seconds",
+        inlineMediaPlayerSeekForwardLabel: String = "Seek forward {seconds} seconds",
         inlineMediaPlayerSeekLabel: String = "Seek",
         inlineMediaPlayerEnterFullscreenLabel: String = "Enter fullscreen",
         inlineMediaPlayerExitFullscreenLabel: String = "Exit fullscreen",
@@ -178,6 +182,8 @@ internal object GeckoPrivacyPolicyRules {
             inlineMediaPlayerActionLabel = inlineMediaPlayerActionLabel.take(80),
             inlineMediaPlayerPlayLabel = inlineMediaPlayerPlayLabel.take(80),
             inlineMediaPlayerPauseLabel = inlineMediaPlayerPauseLabel.take(80),
+            inlineMediaPlayerSeekBackwardLabel = inlineMediaPlayerSeekBackwardLabel.take(80),
+            inlineMediaPlayerSeekForwardLabel = inlineMediaPlayerSeekForwardLabel.take(80),
             inlineMediaPlayerSeekLabel = inlineMediaPlayerSeekLabel.take(80),
             inlineMediaPlayerEnterFullscreenLabel =
                 inlineMediaPlayerEnterFullscreenLabel.take(80),
@@ -236,6 +242,8 @@ internal fun GeckoPrivacyPolicy.toMessage(token: String, revision: Long): JSONOb
     .put("inlineMediaPlayerActionLabel", inlineMediaPlayerActionLabel)
     .put("inlineMediaPlayerPlayLabel", inlineMediaPlayerPlayLabel)
     .put("inlineMediaPlayerPauseLabel", inlineMediaPlayerPauseLabel)
+    .put("inlineMediaPlayerSeekBackwardLabel", inlineMediaPlayerSeekBackwardLabel)
+    .put("inlineMediaPlayerSeekForwardLabel", inlineMediaPlayerSeekForwardLabel)
     .put("inlineMediaPlayerSeekLabel", inlineMediaPlayerSeekLabel)
     .put("inlineMediaPlayerEnterFullscreenLabel", inlineMediaPlayerEnterFullscreenLabel)
     .put("inlineMediaPlayerExitFullscreenLabel", inlineMediaPlayerExitFullscreenLabel)
