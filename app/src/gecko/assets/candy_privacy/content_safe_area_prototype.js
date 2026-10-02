@@ -17,6 +17,7 @@
   let markerName = "";
   let markerId = 0;
   let layer = null;
+  let fullscreenRoot = document.fullscreenElement;
   let selectorLayer = null;
   let selectorScan = null;
   let selectorsScanned = false;
@@ -1063,6 +1064,12 @@
   }
 
   function classify(element, style) {
+    // Gecko presents container fullscreen as a fixed box. It is not a page header:
+    // retaining its top inset after it becomes inline clips video in its parent.
+    if (document.fullscreenElement?.contains(element)) {
+      releaseElementTop(element);
+      return;
+    }
     const topHeaderChecked = style !== undefined;
     if (topHeaderChecked && style.position !== "fixed") fixedHeaderCandidates.delete(element);
     if (topHeaderChecked && (style.position === "fixed" || style.position === "sticky") &&
@@ -1616,6 +1623,21 @@
     requestSemanticHeaderCheck();
   }
 
+  function fullscreenChanged() {
+    const previous = fullscreenRoot;
+    fullscreenRoot = document.fullscreenElement;
+    if (fullscreenRoot) {
+      for (const element of rules.keys()) {
+        if (fullscreenRoot.contains(element)) releaseElementTop(element);
+      }
+    } else if (previous && configuration?.active) {
+      // Recheck only the former fullscreen subtree. Still-fixed content regains
+      // protection from its authored top; an inline player receives no offset.
+      enqueue(previous, true);
+      schedule();
+    }
+  }
+
   function scroll() {
     scrollGeneration++;
     const semanticWasPending = semanticCheckPending;
@@ -1640,6 +1662,7 @@
   }
 
   globalThis.__candyConfigureCssSafeArea = configure;
+  document.addEventListener("fullscreenchange", fullscreenChanged);
   document.addEventListener("DOMContentLoaded", () => {
     globalThis.CandyRedditSafeArea?.sync();
     if (configuration?.cover) coverLayoutRevision++;

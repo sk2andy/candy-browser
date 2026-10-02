@@ -728,12 +728,29 @@ class GeckoPictureInPictureInstrumentedTest {
     @Test
     @SdkSuppress(minSdkVersion = 34)
     fun websiteFullscreenUsesVideoViewportWithoutCandyPlayerTakeover() {
+        verifyWebsiteFullscreenReturn(youtubeLikePlayer = false)
+    }
+
+    @Test
+    @SdkSuppress(minSdkVersion = 34)
+    fun nativeYoutubeFullscreenRestoresWholePageAndDecodedInlineVideo() {
+        verifyWebsiteFullscreenReturn(youtubeLikePlayer = true)
+    }
+
+    private fun verifyWebsiteFullscreenReturn(youtubeLikePlayer: Boolean) {
         assertTrue(ReleaseNotesStore(context).markHandled(BuildConfig.VERSION_CODE.toLong()))
-        // Native site fullscreen does not own a Candy presentation. Keep its return independent
-        // of YouTube's separate inset compensation; Candy's clipped-player return is tested above.
-        val nativePlayerHtml = YOUTUBE_CLIPPED_RETURN_HTML
-            .replace("movie_player", "native-player")
-            .replace(" class=\"html5-video-player\"", "")
+        val playerId = if (youtubeLikePlayer) "movie_player" else "native-player"
+        val nativePlayerHtml = if (youtubeLikePlayer) {
+            YOUTUBE_CLIPPED_RETURN_HTML.replace(
+                "</div></div><script>",
+                "</div></div><main style='height:60vh;background:#dd22bb;color:white'>" +
+                    "<h1>Video title</h1><p>Channel details</p><p>Comments</p>" +
+                    "<p>Recommendations</p></main><script>",
+            )
+        } else {
+            YOUTUBE_CLIPPED_RETURN_HTML.replace("movie_player", playerId)
+                .replace(" class=\"html5-video-player\"", "")
+        }
         val html = nativePlayerHtml.replace(
             "width:100%; height:100%; background:#080;",
             "width:100%; height:56.25vw; background:#080;",
@@ -749,7 +766,7 @@ class GeckoPictureInPictureInstrumentedTest {
                 "const siteHeader = document.querySelector('header');" +
                 "siteHeader.style.position = 'relative';siteHeader.appendChild(siteAction);" +
                 "siteAction.onclick = () => " +
-                "document.querySelector('#native-player').requestFullscreen();" +
+                "document.querySelector('#$playerId').requestFullscreen();" +
                 "const video = document.querySelector('video');",
         ).replace(
             "action:action ? rect(action) : null,",
@@ -816,8 +833,8 @@ class GeckoPictureInPictureInstrumentedTest {
                 scenario.onActivity { activity ->
                     val controller = activity.browserControllerForTesting()
                     assertFalse("Website controls remain active", controller.isInlineMediaPlayerPresented)
-                    assertTrue(controller.exitSelectedWebContentFullscreen())
                 }
+                injectBack()
                 awaitCondition(description = { "Site did not restore inline layout" }) {
                     server.geometry.any { it.getString("phase") == "direct-late" }
                 }
@@ -826,6 +843,13 @@ class GeckoPictureInPictureInstrumentedTest {
                     server.geometry.first { it.getString("phase") == "direct-late" },
                     "site-return",
                 )
+                if (youtubeLikePlayer) {
+                    assertStableInlineVideoGeometry(
+                        baseline,
+                        server.geometry.first { it.getString("phase") == "direct-late" },
+                    )
+                    assertPageContentVisible()
+                }
                 pauseForEvidence()
             }
         }
@@ -1588,7 +1612,7 @@ class GeckoPictureInPictureInstrumentedTest {
         }
     }
 
-    private fun assertStableInlineGeometry(baseline: JSONObject, sample: JSONObject) {
+    private fun assertStableInlineVideoGeometry(baseline: JSONObject, sample: JSONObject) {
         val evidence = "baseline=$baseline; sample=$sample"
         val bounds = sample.getJSONArray("video")
         val original = baseline.getJSONArray("video")
@@ -1608,6 +1632,13 @@ class GeckoPictureInPictureInstrumentedTest {
                 2.0,
             )
         }
+        assertFalse("Still fullscreen: $evidence", sample.getBoolean("fullscreen"))
+    }
+
+    private fun assertStableInlineGeometry(baseline: JSONObject, sample: JSONObject) {
+        assertStableInlineVideoGeometry(baseline, sample)
+        val evidence = "baseline=$baseline; sample=$sample"
+        val bounds = sample.getJSONArray("video")
         assertTrue("Candy controls missing: $evidence", sample.getBoolean("controls"))
         val controls = sample.getJSONArray("controlsRect")
         val left = maxOf(0.0, bounds.getDouble(0))
@@ -1650,6 +1681,29 @@ class GeckoPictureInPictureInstrumentedTest {
 
     private fun dismissFullscreenEducation() {
         UiDevice.getInstance(instrumentation).findObject(By.text("Got it"))?.click()
+    }
+
+    private fun assertPageContentVisible() {
+        val screenshot = requireNotNull(instrumentation.uiAutomation.takeScreenshot())
+        try {
+            var pagePixels = 0
+            var sampledPixels = 0
+            for (y in screenshot.height / 2 until screenshot.height * 3 / 4 step 4) {
+                for (x in screenshot.width / 8 until screenshot.width * 7 / 8 step 4) {
+                    val pixel = screenshot.getPixel(x, y)
+                    if (Color.red(pixel) > 180 && Color.blue(pixel) > 140 &&
+                        Color.green(pixel) < 80) pagePixels++
+                    sampledPixels++
+                }
+            }
+            assertTrue(
+                "Whole page missing after native fullscreen dismissal: " +
+                    "$pagePixels/$sampledPixels magenta pixels",
+                pagePixels >= sampledPixels * 0.8,
+            )
+        } finally {
+            screenshot.recycle()
+        }
     }
 
     private fun captureInlinePixelEvidence(
@@ -2025,6 +2079,8 @@ class GeckoPictureInPictureInstrumentedTest {
                   phase, elapsed:returnedAt === null ? 0 : Math.round(performance.now() - returnedAt),
                   sampledAtEpochMillis:Date.now(),
                   video:rect(video), player:rect(player), parent:rect(parent),
+                  playerAttributes:Object.fromEntries(Array.from(player.attributes,
+                    attribute => [attribute.name,attribute.value])),
                   body:rect(document.body), root:rect(document.documentElement),
                   bodyStyle:layoutStyle(document.body), rootStyle:layoutStyle(document.documentElement),
                   headerStyle:layoutStyle(document.querySelector('header')),

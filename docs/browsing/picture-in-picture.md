@@ -134,6 +134,11 @@ Fullscreen exit, root/video replacement, disabling Candy Player and page teardow
 attributes and stylesheet without rewriting the site's inline styles. A directly fullscreened
 video retains the browser's native layout.
 
+Native website fullscreen also releases Candy Edge's owned top offsets for its fullscreen subtree.
+Gecko's fixed fullscreen container must not retain a header inset after it becomes a clipped inline
+player. Returning to the page rechecks that bounded subtree without requiring Candy presentation
+ownership or replacing the website's controls.
+
 The trusted content host renders the open action directly over the current recognized top-frame
 video, even while playback is paused; page fullscreen is not required. The action lives in a closed
 shadow root for style isolation, uses the localized Android action label and accepts only a trusted
