@@ -17,6 +17,7 @@ import dev.sk2andy.materialbrowser.browser.HttpsOnlyMode
 import dev.sk2andy.materialbrowser.browser.ExternalAppLinkHandling
 import dev.sk2andy.materialbrowser.browser.FavoriteAnimationSpeed
 import dev.sk2andy.materialbrowser.browser.InlineMediaPlayerMode
+import dev.sk2andy.materialbrowser.browser.InlineMediaPlayerSeekSettings
 import dev.sk2andy.materialbrowser.browser.PageTranslationProvider
 import dev.sk2andy.materialbrowser.browser.ProfileWallpaper
 import dev.sk2andy.materialbrowser.browser.ProfileLockTrigger
@@ -1303,6 +1304,31 @@ class BrowserSessionStoreInstrumentedTest {
             .putString(BrowserSessionStore.KEY_INLINE_MEDIA_PLAYER_MODE, "future-mode")
             .commit()
         assertEquals(InlineMediaPlayerMode.ButtonInlineAndFullscreen, store.loadInlineMediaPlayerMode())
+    }
+
+    @Test
+    fun inlineMediaPlayerSeekSettingsDefaultAndPersistIndependently() {
+        val store = BrowserSessionStore(context)
+        assertEquals(InlineMediaPlayerSeekSettings(10, 10), store.loadInlineMediaPlayerSeekSettings())
+        val settings = InlineMediaPlayerSeekSettings(backwardSeconds = 15, forwardSeconds = 30)
+        store.saveInlineMediaPlayerSeekSettings(settings)
+        store.saveInlineMediaPlayerMode(InlineMediaPlayerMode.Disabled)
+        assertEquals(settings, BrowserSessionStore(context).loadInlineMediaPlayerSeekSettings())
+        store.saveInlineMediaPlayerMode(InlineMediaPlayerMode.Automatic)
+        assertEquals(settings, store.loadInlineMediaPlayerSeekSettings())
+    }
+
+    @Test
+    fun inlineMediaPlayerSeekSettingsNormalizeCorruptAndSavedValues() {
+        val store = BrowserSessionStore(context)
+        preferences.edit()
+            .putInt(BrowserSessionStore.KEY_INLINE_MEDIA_PLAYER_SEEK_BACKWARD_SECONDS, -1)
+            .putInt(BrowserSessionStore.KEY_INLINE_MEDIA_PLAYER_SEEK_FORWARD_SECONDS, 60)
+            .commit()
+        assertEquals(InlineMediaPlayerSeekSettings(10, 60), store.loadInlineMediaPlayerSeekSettings())
+        store.saveInlineMediaPlayerSeekSettings(InlineMediaPlayerSeekSettings(20, Int.MAX_VALUE))
+        assertEquals(InlineMediaPlayerSeekSettings(20, 10), BrowserSessionStore(context).loadInlineMediaPlayerSeekSettings())
+        assertEquals(10, preferences.getInt(BrowserSessionStore.KEY_INLINE_MEDIA_PLAYER_SEEK_FORWARD_SECONDS, -1))
     }
 
     @Test

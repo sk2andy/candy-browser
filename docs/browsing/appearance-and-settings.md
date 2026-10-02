@@ -40,6 +40,8 @@
 | Candy Recall | Off, on | Off |
 | Page translation provider | Google Translate, Yandex Translate, Kagi Translate | Yandex Translate on Android; Google Translate on iOS |
 | Prevent automatic video playback | Off, on | Off |
+| Candy Player double-tap backward | 5, 10, 15, 20, 30 or 60 seconds | 10 seconds |
+| Candy Player double-tap forward | 5, 10, 15, 20, 30 or 60 seconds | 10 seconds |
 | Developer safe-area layout quiet | 100–800 ms in 50-ms steps | 400 ms |
 | Developer safe-area failed checks | 2–5 | 3 |
 | Force native safe-area fallback | Off, on | Off |

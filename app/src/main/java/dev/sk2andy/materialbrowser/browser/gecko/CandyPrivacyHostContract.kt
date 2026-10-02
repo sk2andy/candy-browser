@@ -1,6 +1,7 @@
 package dev.sk2andy.materialbrowser.browser.gecko
 
 import dev.sk2andy.materialbrowser.browser.InlineMediaPlayerMode
+import dev.sk2andy.materialbrowser.browser.InlineMediaPlayerSeekSettingsRules
 import dev.sk2andy.materialbrowser.blocking.CandyRule
 import dev.sk2andy.materialbrowser.blocking.CandyRuleAction
 import dev.sk2andy.materialbrowser.blocking.CandyRuleKind
@@ -87,6 +88,8 @@ internal data class GeckoPrivacyPolicy(
     val scrollMetricsEnabled: Boolean = false,
     val inlineMediaPlayerEnabled: Boolean = false,
     val inlineMediaPlayerMode: String = InlineMediaPlayerMode.Default.stableId,
+    val inlineMediaPlayerSeekBackwardSeconds: Int = 10,
+    val inlineMediaPlayerSeekForwardSeconds: Int = 10,
     val inlineMediaPlayerActionLabel: String = "Open in Candy Player",
     val inlineMediaPlayerPlayLabel: String = "Play",
     val inlineMediaPlayerPauseLabel: String = "Pause",
@@ -138,6 +141,8 @@ internal object GeckoPrivacyPolicyRules {
         scrollMetricsEnabled: Boolean = false,
         inlineMediaPlayerEnabled: Boolean = false,
         inlineMediaPlayerMode: String = InlineMediaPlayerMode.Default.stableId,
+        inlineMediaPlayerSeekBackwardSeconds: Int = 10,
+        inlineMediaPlayerSeekForwardSeconds: Int = 10,
         inlineMediaPlayerActionLabel: String = "Open in Candy Player",
         inlineMediaPlayerPlayLabel: String = "Play",
         inlineMediaPlayerPauseLabel: String = "Pause",
@@ -179,6 +184,10 @@ internal object GeckoPrivacyPolicyRules {
             inlineMediaPlayerMode = InlineMediaPlayerMode.fromStableId(
                 inlineMediaPlayerMode,
             ).stableId,
+            inlineMediaPlayerSeekBackwardSeconds =
+                InlineMediaPlayerSeekSettingsRules.normalizeSeconds(inlineMediaPlayerSeekBackwardSeconds),
+            inlineMediaPlayerSeekForwardSeconds =
+                InlineMediaPlayerSeekSettingsRules.normalizeSeconds(inlineMediaPlayerSeekForwardSeconds),
             inlineMediaPlayerActionLabel = inlineMediaPlayerActionLabel.take(80),
             inlineMediaPlayerPlayLabel = inlineMediaPlayerPlayLabel.take(80),
             inlineMediaPlayerPauseLabel = inlineMediaPlayerPauseLabel.take(80),
@@ -239,6 +248,14 @@ internal fun GeckoPrivacyPolicy.toMessage(token: String, revision: Long): JSONOb
     .put("scrollMetricsEnabled", scrollMetricsEnabled)
     .put("inlineMediaPlayerEnabled", inlineMediaPlayerEnabled)
     .put("inlineMediaPlayerMode", inlineMediaPlayerMode)
+    .put(
+        "inlineMediaPlayerSeekBackwardSeconds",
+        InlineMediaPlayerSeekSettingsRules.normalizeSeconds(inlineMediaPlayerSeekBackwardSeconds),
+    )
+    .put(
+        "inlineMediaPlayerSeekForwardSeconds",
+        InlineMediaPlayerSeekSettingsRules.normalizeSeconds(inlineMediaPlayerSeekForwardSeconds),
+    )
     .put("inlineMediaPlayerActionLabel", inlineMediaPlayerActionLabel)
     .put("inlineMediaPlayerPlayLabel", inlineMediaPlayerPlayLabel)
     .put("inlineMediaPlayerPauseLabel", inlineMediaPlayerPauseLabel)

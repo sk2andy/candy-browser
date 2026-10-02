@@ -8,6 +8,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -21,6 +22,7 @@ import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineKind
 import dev.sk2andy.materialbrowser.browser.ExternalAppLinkHandling
 import dev.sk2andy.materialbrowser.browser.FavoriteAnimationSpeed
 import dev.sk2andy.materialbrowser.browser.InlineMediaPlayerMode
+import dev.sk2andy.materialbrowser.browser.InlineMediaPlayerSeekSettings
 import dev.sk2andy.materialbrowser.browser.PageTranslationProvider
 import dev.sk2andy.materialbrowser.browser.StartupAddressFocusMode
 import dev.sk2andy.materialbrowser.ui.theme.MaterialBrowserTheme
@@ -159,6 +161,70 @@ class BrowserSettingsScreenInstrumentedTest {
         composeRule.onNodeWithText(
             context.getString(R.string.settings_inline_media_player_subtitle),
         ).performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
+    fun inlineMediaPlayerSeekChoicesUpdateDirectionsSeparatelyAndDisableWithOff() {
+        var settings by mutableStateOf(InlineMediaPlayerSeekSettings())
+        var mode by mutableStateOf(InlineMediaPlayerMode.Automatic)
+        var supported by mutableStateOf(true)
+        val changes = mutableListOf<InlineMediaPlayerSeekSettings>()
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                BrowserSettingsPage(
+                    pageTranslationProvider = PageTranslationProvider.Google,
+                    isFullImmersiveModeEnabled = false,
+                    isStartupAnimationEnabled = true,
+                    isScrollBarEnabled = false,
+                    isVideoAutoplayBlocked = false,
+                    isVideoAutoplayBlockingSupported = true,
+                    inlineMediaPlayerMode = mode,
+                    inlineMediaPlayerSeekSettings = settings,
+                    isInlineMediaPlayerSupported = supported,
+                    isDefaultBrowser = false,
+                    onFullImmersiveModeEnabledChanged = {},
+                    onStartupAnimationEnabledChanged = {},
+                    onScrollBarEnabledChanged = {},
+                    onVideoAutoplayBlockedChanged = {},
+                    onInlineMediaPlayerSeekSettingsChanged = {
+                        settings = it
+                        changes.add(it)
+                    },
+                    onPageTranslationProviderChanged = {},
+                    onOpenDefaultBrowserSettings = {},
+                    onBack = {},
+                )
+            }
+        }
+
+        val evidencePauseMillis = InstrumentationRegistry.getArguments()
+            .getString("evidencePauseMillis")?.toLongOrNull()?.coerceIn(0L, 5_000L) ?: 0L
+        composeRule.onNodeWithTag(BrowserSettingsTestTags.InlineMediaPlayerSeekBackward)
+            .performScrollTo().performClick()
+        composeRule.waitForIdle()
+        if (evidencePauseMillis > 0) SystemClock.sleep(evidencePauseMillis)
+        composeRule.onNodeWithText(context.getString(R.string.settings_inline_media_player_seek_seconds, 15))
+            .performClick()
+        assertEquals(InlineMediaPlayerSeekSettings(15, 10), settings)
+        composeRule.onNodeWithTag(BrowserSettingsTestTags.InlineMediaPlayerSeekForward)
+            .performScrollTo().performClick()
+        composeRule.waitForIdle()
+        if (evidencePauseMillis > 0) SystemClock.sleep(evidencePauseMillis)
+        composeRule.onNodeWithText(context.getString(R.string.settings_inline_media_player_seek_seconds, 30))
+            .performClick()
+        assertEquals(listOf(InlineMediaPlayerSeekSettings(15, 10), InlineMediaPlayerSeekSettings(15, 30)), changes)
+        composeRule.waitForIdle()
+        if (evidencePauseMillis > 0) SystemClock.sleep(evidencePauseMillis)
+        composeRule.runOnIdle { mode = InlineMediaPlayerMode.Disabled }
+        composeRule.onNodeWithTag(BrowserSettingsTestTags.InlineMediaPlayerSeekBackward).assertIsNotEnabled()
+        composeRule.onNodeWithTag(BrowserSettingsTestTags.InlineMediaPlayerSeekForward).assertIsNotEnabled()
+        assertEquals(InlineMediaPlayerSeekSettings(15, 30), settings)
+        composeRule.runOnIdle {
+            mode = InlineMediaPlayerMode.Automatic
+            supported = false
+        }
+        composeRule.onNodeWithTag(BrowserSettingsTestTags.InlineMediaPlayerSeekBackward).assertIsNotEnabled()
+        composeRule.onNodeWithTag(BrowserSettingsTestTags.InlineMediaPlayerSeekForward).assertIsNotEnabled()
     }
 
     @Test

@@ -767,6 +767,9 @@ Agent implementation, security and debugging guide:
   pending opens and restores website/native controls without pausing playback; website fullscreen
   remains available. Absent, unknown and legacy preference values retain the existing button default.
   Only top-frame HTML video in GeckoView is supported; cross-origin embeds remain unsupported.
+- Candy Player's backward and forward double-tap distances persist independently in browser
+  settings. Each accepts 5, 10, 15, 20, 30 or 60 seconds and defaults to 10; unsupported values use
+  the default independently. Runtime policy refresh applies both values to an existing player.
 - Candy Player provides direct Android picture-in-picture from a recognized inline video; users do
   not need to enter fullscreen first.
 - Repeated lifecycle callbacks for one PiP transition are idempotent. They do not switch the GeckoView

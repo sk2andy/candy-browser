@@ -169,8 +169,11 @@ selected player's site chrome without hiding captions. The Candy control host mo
 fullscreen element so it remains in the fullscreen top layer. Candy restores the page's original
 controls state and YouTube chrome when the inline presentation ends. A trusted primary touch tap
 of at most 350 ms on the free video surface toggles Candy controls after a 300 ms double-tap
-window, including while DOM fullscreen is active. Two nearby taps in the same half seek ten seconds:
-left backward, right forward. Native pointer timestamps measure the interval; a matching second
+window, including while DOM fullscreen is active. Two nearby taps in the same half seek backward
+on the left and forward on the right. Browser settings persist each direction independently, with
+5, 10, 15, 20, 30 or 60 seconds and a default of 10 seconds each. Missing or unsupported stored/wire
+values fall back independently to 10 seconds. Policy updates apply to the current overlay without
+replacing the video or pausing playback. Native pointer timestamps measure the interval; a matching second
 touch suspends the pending single-tap timer until its release is validated. Seeking clamps to the current seekable interval and finite media
 duration; unseekable media or media without a finite duration ignores double-tap seeking. A badge shows the
 actual clamped amount and announces it with localized live-status semantics. Double taps preserve
@@ -378,6 +381,7 @@ commands below.
 | Disabled mode | `GeckoAutomaticInlinePlayerE2eInstrumentedTest#disabledPlayerPreservesNativePlaybackFullscreenAndPersistedChoice` and `#activeCandyPlayerCanBeDisabledWithoutPausingNativeVideo`: Off restores native controls without pausing media, rejects Candy opens, keeps website fullscreen and survives Activity recreation; store round-trip and Settings choice tests cover persistence/UI. |
 | Automatic mode | `GeckoAutomaticInlinePlayerE2eInstrumentedTest`: persisted mode, settled paused thumbnail, trusted site tap, `loadeddata`, then Candy controls |
 | Double-tap seeking | `scripts/gecko_inline_media.test.mjs`: real handlers, localized feedback, seekable/duration bounds, delayed single taps, cancellation/stale video; `GeckoAutomaticInlinePlayerE2eInstrumentedTest#trustedDoubleTapsSeekInlineAndFullscreenWithClampedBounds`: decoded video, trusted taps, both directions, bounds and upward fullscreen swipe |
+| Separate double-tap distances | `InlineMediaPlayerSeekSettingsTest`, `CandyPrivacyHostContractTest`, focused `BrowserSessionStoreInstrumentedTest` methods and `InlineMediaPlayerSeekSettingsInstrumentedTest`: defaults, independent normalization/persistence and recreation; `BrowserSettingsScreenInstrumentedTest#inlineMediaPlayerSeekChoicesUpdateDirectionsSeparatelyAndDisableWithOff`: separate dropdown callbacks and Off/unsupported state; `GeckoAutomaticInlinePlayerE2eInstrumentedTest#configuredDoubleTapsApplyIndependentDurationsToActiveInlineAndFullscreenPlayer`: genuine 45-second media, 5/15 → 15/5 live update, same overlay/video and trusted inline/fullscreen gestures. |
 | Delayed transformed-return regression | Android 17 / API 37 only; fresh single-method fixture process on a dedicated emulator |
 | Decoded fullscreen-return pixels | Android 17 / API 37 with a renderer that visibly displays the VP8 fixture (verified with `-gpu swiftshader_indirect`): isolated clipped-player direct and first-swipe methods in `GeckoPictureInPictureInstrumentedTest`; assert real cyan pixels without a dark upper band after return |
 | Android integration | `./gradlew lintFullDebug lintFossDebug assembleFullDebug assembleFossDebug` |

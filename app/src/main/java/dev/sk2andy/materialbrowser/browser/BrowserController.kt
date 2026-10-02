@@ -790,6 +790,8 @@ class BrowserController(
         private set
     var inlineMediaPlayerMode by mutableStateOf(InlineMediaPlayerMode.Default)
         private set
+    var inlineMediaPlayerSeekSettings by mutableStateOf(InlineMediaPlayerSeekSettings())
+        private set
     val isInlineMediaPlayerEnabled: Boolean
         get() = InlineMediaPlayerModeRules.supportsInlinePresentation(inlineMediaPlayerMode)
     private var inlineMediaPlayerOpenPending by mutableStateOf(false)
@@ -2548,6 +2550,7 @@ class BrowserController(
         isOpenHomeOnStartupEnabled = store.loadOpenHomeOnStartupEnabled()
         isScrollBarEnabled = store.loadScrollBarEnabled()
         inlineMediaPlayerMode = store.loadInlineMediaPlayerMode()
+        inlineMediaPlayerSeekSettings = store.loadInlineMediaPlayerSeekSettings()
         isDeveloperOptionsUnlocked = store.loadDeveloperOptionsUnlocked()
         developerSettings = store.loadDeveloperSettings()
         AppLogging.setPrivateBrowsingActive(
@@ -9650,6 +9653,15 @@ class BrowserController(
         refreshGeckoContentTopInsetPolicies()
     }
 
+    fun updateInlineMediaPlayerSeekSettings(settings: InlineMediaPlayerSeekSettings) {
+        if (!isInlineMediaPlayerSupported) return
+        val normalized = InlineMediaPlayerSeekSettingsRules.normalize(settings)
+        if (inlineMediaPlayerSeekSettings == normalized) return
+        inlineMediaPlayerSeekSettings = normalized
+        store.saveInlineMediaPlayerSeekSettings(normalized)
+        refreshGeckoContentTopInsetPolicies()
+    }
+
     @VisibleForTesting
     internal fun updateInlineMediaPlayerEnabled(enabled: Boolean) {
         updateInlineMediaPlayerMode(
@@ -12389,6 +12401,8 @@ class BrowserController(
                 InlineMediaPlayerModeRules.isEnabled(inlineMediaPlayerMode) &&
                 !tab.isIncognito,
             inlineMediaPlayerMode = inlineMediaPlayerMode.stableId,
+            inlineMediaPlayerSeekBackwardSeconds = inlineMediaPlayerSeekSettings.backwardSeconds,
+            inlineMediaPlayerSeekForwardSeconds = inlineMediaPlayerSeekSettings.forwardSeconds,
             inlineMediaPlayerActionLabel =
                 activity.getString(R.string.action_open_candy_player),
             inlineMediaPlayerPlayLabel =

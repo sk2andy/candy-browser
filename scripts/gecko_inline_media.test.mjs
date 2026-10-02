@@ -1973,7 +1973,6 @@ function inlineControlsHarness({ fullscreen = false, paused = true } = {}) {
     CANDY_INLINE_CONTROLS_TAP_MAX_DURATION_MS: 350,
     CANDY_INLINE_CONTROLS_DOUBLE_TAP_INTERVAL_MS: 300,
     CANDY_INLINE_CONTROLS_DOUBLE_TAP_DISTANCE_PX: 48,
-    CANDY_INLINE_CONTROLS_SEEK_SECONDS: 10,
     CANDY_INLINE_FULLSCREEN_GESTURE_TOUCH_SLOP_PX: 10,
     CANDY_INLINE_FULLSCREEN_GESTURE_MIN_THRESHOLD_PX: 48,
     CANDY_INLINE_FULLSCREEN_GESTURE_MAX_THRESHOLD_PX: 96,
@@ -2003,6 +2002,7 @@ function inlineControlsHarness({ fullscreen = false, paused = true } = {}) {
     "candyInlineFullscreenGestureDirection", "candyInlineFullscreenGestureUpdate",
     "candyInlineVideoCloseIsHiddenForMode", "candyInlineVideoCloseIsHidden",
     "candyInlineVideoPointerTime", "candyInlineVideoTapIsEligible", "candyInlineVideoControlsVisibilityLabel",
+    "normalizedCandyInlineVideoSeekSeconds",
     "candyInlineVideoSeekDirection", "candyInlineVideoDoubleTapMatches", "candyInlineVideoSeekTarget",
     "candyInlineVideoControlsGestureMovement", "candyInlineVideoControlsClickIsActivation",
     "candyInlineVideoTime", "candyWobblyProgressPath", "candyInlineVideoControlsParent",
@@ -2692,4 +2692,145 @@ test("matching second pointerdown preserves the first tap across a delayed relea
   assert.equal(h.video.currentTime, 30);
   assert.equal(h.state.inlineControlsVisible, true);
   assert.equal(h.element("seek-feedback").textContent, "» +10 s");
+});
+
+for (const fullscreen of [false, true]) {
+  test(`configured ${fullscreen ? "fullscreen" : "inline"} double taps use independent backward and forward durations`, () => {
+    const h = inlineControlsHarness({ fullscreen, paused: false });
+    const host = h.state.inlineControlsHost;
+    h.policy("button_inline_and_fullscreen", {
+      inlineMediaPlayerSeekBackwardSeconds: 5,
+      inlineMediaPlayerSeekForwardSeconds: 30,
+    });
+    h.tap({ x: 70, flush: false });
+    h.tap({ x: 70, flush: false });
+    assert.equal(h.video.currentTime, 15);
+    assert.equal(h.element("seek-feedback").textContent, "« −5 s");
+    assert.equal(h.element("seek-feedback").getAttribute("aria-label"), "Seek backward 5 seconds");
+    h.advance(350);
+    h.tap({ x: 330, flush: false });
+    h.tap({ x: 330, flush: false });
+    assert.equal(h.video.currentTime, 45);
+    assert.equal(h.element("seek-feedback").textContent, "» +30 s");
+    assert.equal(h.state.inlineControlsHost, host);
+    assert.equal(h.state.inlineControlsVisible, true);
+    assert.equal(h.video.paused, false);
+    assert.deepEqual(h.playbackCommands, []);
+  });
+}
+
+test("duration policy refresh preserves the current overlay and uses the latest value for a pending double tap", () => {
+  const h = inlineControlsHarness();
+  const host = h.state.inlineControlsHost;
+  const surface = h.element("fullscreen-gesture");
+  h.policy("button_inline_and_fullscreen", {
+    inlineMediaPlayerSeekBackwardSeconds: 5,
+    inlineMediaPlayerSeekForwardSeconds: 30,
+  });
+  h.tap({ x: 330, flush: false });
+  h.policy("button_inline_and_fullscreen", {
+    inlineMediaPlayerSeekBackwardSeconds: 60,
+    inlineMediaPlayerSeekForwardSeconds: 15,
+  });
+  assert.equal(h.state.inlineControlsHost, host);
+  assert.equal(h.element("fullscreen-gesture"), surface);
+  h.tap({ x: 330, flush: false });
+  assert.equal(h.video.currentTime, 35);
+  assert.equal(h.element("seek-feedback").textContent, "» +15 s");
+  assert.equal(h.video.paused, true);
+  assert.deepEqual(h.playbackCommands, []);
+  h.advance(350);
+  h.tap({ x: 70, flush: false });
+  h.tap({ x: 70, flush: false });
+  assert.equal(h.video.currentTime, 0);
+  assert.equal(h.element("seek-feedback").textContent, "« −35 s");
+});
+
+test("seek duration policy boundaries accept supported integers and independently default malformed or missing directions", () => {
+  const h = inlineControlsHarness();
+  const policy = (backward, forward) => ({
+    ...h.context.contentPolicy({ inlineMediaPlayerEnabled: true }),
+    inlineMediaPlayerSeekBackwardSeconds: backward,
+    inlineMediaPlayerSeekForwardSeconds: forward,
+  });
+  for (const seconds of [5, 10, 15, 20, 30, 60]) {
+    const forwarded = h.context.contentPolicy({
+      inlineMediaPlayerSeekBackwardSeconds: seconds,
+      inlineMediaPlayerSeekForwardSeconds: seconds,
+    });
+    assert.equal(forwarded.inlineMediaPlayerSeekBackwardSeconds, seconds);
+    assert.equal(forwarded.inlineMediaPlayerSeekForwardSeconds, seconds);
+    h.context.updateCandyInlineMediaPlayerPolicy(policy(seconds, seconds));
+    assert.equal(h.state.inlineMediaPlayerSeekBackwardSeconds, seconds);
+    assert.equal(h.state.inlineMediaPlayerSeekForwardSeconds, seconds);
+  }
+  for (const invalid of [undefined, null, "5", true, -5, 0, 9, 10.5, 61, NaN, Infinity]) {
+    const forwarded = h.context.contentPolicy({
+      inlineMediaPlayerSeekBackwardSeconds: invalid,
+      inlineMediaPlayerSeekForwardSeconds: 30,
+    });
+    assert.equal(forwarded.inlineMediaPlayerSeekBackwardSeconds, 10);
+    assert.equal(forwarded.inlineMediaPlayerSeekForwardSeconds, 30);
+    // Bypass background sanitization to verify the content message boundary too.
+    h.context.updateCandyInlineMediaPlayerPolicy(policy(invalid, 30));
+    assert.equal(h.state.inlineMediaPlayerSeekBackwardSeconds, 10);
+    assert.equal(h.state.inlineMediaPlayerSeekForwardSeconds, 30);
+    h.context.updateCandyInlineMediaPlayerPolicy(policy(5, invalid));
+    assert.equal(h.state.inlineMediaPlayerSeekBackwardSeconds, 5);
+    assert.equal(h.state.inlineMediaPlayerSeekForwardSeconds, 10);
+    const reverse = h.context.contentPolicy({
+      inlineMediaPlayerSeekBackwardSeconds: 5,
+      inlineMediaPlayerSeekForwardSeconds: invalid,
+    });
+    assert.equal(reverse.inlineMediaPlayerSeekBackwardSeconds, 5);
+    assert.equal(reverse.inlineMediaPlayerSeekForwardSeconds, 10);
+  }
+  h.context.updateCandyInlineMediaPlayerPolicy(h.context.contentPolicy({ inlineMediaPlayerEnabled: true }));
+  h.video.currentTime = 20;
+  h.tap({ x: 70, flush: false });
+  h.tap({ x: 70, flush: false });
+  assert.equal(h.video.currentTime, 10);
+  h.advance(350);
+  h.tap({ x: 330, flush: false });
+  h.tap({ x: 330, flush: false });
+  assert.equal(h.video.currentTime, 20);
+});
+
+test("configured durations clamp against media bounds and feedback reports the actual movement", () => {
+  const h = inlineControlsHarness();
+  h.policy("button_inline_and_fullscreen", {
+    inlineMediaPlayerSeekBackwardSeconds: 5,
+    inlineMediaPlayerSeekForwardSeconds: 30,
+  });
+  const doubleTap = (x) => { h.tap({ x, flush: false }); h.tap({ x, flush: false }); h.advance(350); };
+  h.video.currentTime = 2;
+  doubleTap(70);
+  assert.equal(h.video.currentTime, 0);
+  assert.equal(h.element("seek-feedback").textContent, "« −2 s");
+  h.video.currentTime = 90;
+  doubleTap(330);
+  assert.equal(h.video.currentTime, 100);
+  assert.equal(h.element("seek-feedback").textContent, "» +10 s");
+  h.video.seekable = { length: 1, start: () => 25, end: () => 40 };
+  h.video.currentTime = 30;
+  doubleTap(330);
+  assert.equal(h.video.currentTime, 40);
+  assert.equal(h.element("seek-feedback").textContent, "» +10 s");
+});
+
+test("Off clears pending configured gestures while retaining the sanitized duration policy", () => {
+  const h = inlineControlsHarness();
+  const settings = {
+    inlineMediaPlayerSeekBackwardSeconds: 5,
+    inlineMediaPlayerSeekForwardSeconds: 30,
+  };
+  h.policy("button_inline_and_fullscreen", settings);
+  h.tap({ x: 330, flush: false });
+  h.policy("disabled", settings);
+  h.advance(350);
+  assert.equal(h.video.currentTime, 20);
+  assert.equal(h.state.inlineControlsHost, null);
+  assert.equal(h.state.inlineMediaPlayerSeekBackwardSeconds, 5);
+  assert.equal(h.state.inlineMediaPlayerSeekForwardSeconds, 30);
+  assert.deepEqual(h.playbackCommands, []);
 });

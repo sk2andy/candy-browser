@@ -26,6 +26,9 @@ import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineKind
 import dev.sk2andy.materialbrowser.browser.ExternalAppLinkHandling
 import dev.sk2andy.materialbrowser.browser.FavoriteAnimationSpeed
 import dev.sk2andy.materialbrowser.browser.InlineMediaPlayerMode
+import dev.sk2andy.materialbrowser.browser.InlineMediaPlayerModeRules
+import dev.sk2andy.materialbrowser.browser.InlineMediaPlayerSeekSettings
+import dev.sk2andy.materialbrowser.browser.InlineMediaPlayerSeekSettingsRules
 import dev.sk2andy.materialbrowser.browser.PageTranslationProvider
 import dev.sk2andy.materialbrowser.browser.StartupAddressFocusMode
 import dev.sk2andy.materialbrowser.shared.ui.settings.TranslationProviderSettings
@@ -44,6 +47,8 @@ internal object BrowserSettingsTestTags {
     const val ExternalAppLinks = "browser_settings_external_app_links"
     const val BrowserEngine = "browser_settings_engine"
     const val InlineMediaPlayer = "browser_settings_inline_media_player"
+    const val InlineMediaPlayerSeekBackward = "browser_settings_inline_media_player_seek_backward"
+    const val InlineMediaPlayerSeekForward = "browser_settings_inline_media_player_seek_forward"
 }
 
 @Composable
@@ -62,6 +67,7 @@ internal fun BrowserSettingsPage(
     isVideoAutoplayBlocked: Boolean,
     isVideoAutoplayBlockingSupported: Boolean,
     inlineMediaPlayerMode: InlineMediaPlayerMode = InlineMediaPlayerMode.Default,
+    inlineMediaPlayerSeekSettings: InlineMediaPlayerSeekSettings = InlineMediaPlayerSeekSettings(),
     isInlineMediaPlayerSupported: Boolean = true,
     isDefaultBrowser: Boolean,
     onBrowserEngineKindChanged: (AndroidBrowserEngineKind) -> Unit = {},
@@ -77,6 +83,7 @@ internal fun BrowserSettingsPage(
     onScrollBarEnabledChanged: (Boolean) -> Unit,
     onVideoAutoplayBlockedChanged: (Boolean) -> Unit,
     onInlineMediaPlayerModeChanged: (InlineMediaPlayerMode) -> Unit = {},
+    onInlineMediaPlayerSeekSettingsChanged: (InlineMediaPlayerSeekSettings) -> Unit = {},
     onPageTranslationProviderChanged: (PageTranslationProvider) -> Unit,
     onOpenDefaultBrowserSettings: () -> Unit,
     onBack: () -> Unit,
@@ -333,6 +340,38 @@ internal fun BrowserSettingsPage(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Spacer(Modifier.height(8.dp))
+        InlineMediaPlayerSeekChoice(
+            title = stringResource(R.string.settings_inline_media_player_seek_backward),
+            seconds = inlineMediaPlayerSeekSettings.backwardSeconds,
+            enabled = isInlineMediaPlayerSupported &&
+                InlineMediaPlayerModeRules.isEnabled(inlineMediaPlayerMode),
+            onSecondsChanged = { seconds ->
+                onInlineMediaPlayerSeekSettingsChanged(
+                    inlineMediaPlayerSeekSettings.copy(backwardSeconds = seconds),
+                )
+            },
+            modifier = Modifier.testTag(BrowserSettingsTestTags.InlineMediaPlayerSeekBackward),
+        )
+        Spacer(Modifier.height(8.dp))
+        InlineMediaPlayerSeekChoice(
+            title = stringResource(R.string.settings_inline_media_player_seek_forward),
+            seconds = inlineMediaPlayerSeekSettings.forwardSeconds,
+            enabled = isInlineMediaPlayerSupported &&
+                InlineMediaPlayerModeRules.isEnabled(inlineMediaPlayerMode),
+            onSecondsChanged = { seconds ->
+                onInlineMediaPlayerSeekSettingsChanged(
+                    inlineMediaPlayerSeekSettings.copy(forwardSeconds = seconds),
+                )
+            },
+            modifier = Modifier.testTag(BrowserSettingsTestTags.InlineMediaPlayerSeekForward),
+        )
+        Text(
+            text = stringResource(R.string.settings_inline_media_player_seek_subtitle),
+            modifier = Modifier.padding(start = 18.dp, top = 8.dp, end = 18.dp),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.height(8.dp))
         TranslationProviderSettings(
             provider = pageTranslationProvider,
             strings = TranslationProviderSettingsStrings(
@@ -435,6 +474,42 @@ private fun ExternalAppLinkHandling.displayName(): String = when (this) {
         stringResource(R.string.settings_external_app_links_automatic)
     ExternalAppLinkHandling.AskEveryTime ->
         stringResource(R.string.settings_external_app_links_ask_every_time)
+}
+
+@Composable
+private fun InlineMediaPlayerSeekChoice(
+    title: String,
+    seconds: Int,
+    enabled: Boolean,
+    onSecondsChanged: (Int) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var expanded by remember(enabled) { mutableStateOf(false) }
+    Box {
+        SettingsChoice(
+            title = title,
+            value = stringResource(R.string.settings_inline_media_player_seek_seconds, seconds),
+            expanded = expanded,
+            onClick = { expanded = true },
+            enabled = enabled,
+            modifier = modifier,
+        )
+        SettingsDropdown(
+            expanded = expanded && enabled,
+            onDismissRequest = { expanded = false },
+        ) {
+            InlineMediaPlayerSeekSettingsRules.SupportedSeconds.forEach { option ->
+                SettingsDropdownItem(
+                    label = stringResource(R.string.settings_inline_media_player_seek_seconds, option),
+                    selected = option == seconds,
+                    onClick = {
+                        expanded = false
+                        if (option != seconds) onSecondsChanged(option)
+                    },
+                )
+            }
+        }
+    }
 }
 
 @Composable

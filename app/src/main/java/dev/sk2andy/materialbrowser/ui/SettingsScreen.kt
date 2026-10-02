@@ -14,6 +14,7 @@ import dev.sk2andy.materialbrowser.browser.BrowserProfile
 import dev.sk2andy.materialbrowser.browser.ExternalAppLinkHandling
 import dev.sk2andy.materialbrowser.browser.FavoriteAnimationSpeed
 import dev.sk2andy.materialbrowser.browser.InlineMediaPlayerMode
+import dev.sk2andy.materialbrowser.browser.InlineMediaPlayerSeekSettings
 import dev.sk2andy.materialbrowser.browser.PageTranslationProvider
 import dev.sk2andy.materialbrowser.browser.PrivacySignalSettings
 import dev.sk2andy.materialbrowser.browser.SearchEngine
@@ -101,6 +102,7 @@ internal fun SettingsScreen(
     isVideoAutoplayBlocked: Boolean,
     isVideoAutoplayBlockingSupported: Boolean,
     inlineMediaPlayerMode: InlineMediaPlayerMode = InlineMediaPlayerMode.Default,
+    inlineMediaPlayerSeekSettings: InlineMediaPlayerSeekSettings = InlineMediaPlayerSeekSettings(),
     isInlineMediaPlayerSupported: Boolean = true,
     developerSettings: DeveloperSettings = DeveloperSettings(),
     isDeveloperOptionsUnlocked: Boolean = false,
@@ -160,6 +162,7 @@ internal fun SettingsScreen(
     onScrollBarEnabledChanged: (Boolean) -> Unit,
     onVideoAutoplayBlockedChanged: (Boolean) -> Unit,
     onInlineMediaPlayerModeChanged: (InlineMediaPlayerMode) -> Unit = {},
+    onInlineMediaPlayerSeekSettingsChanged: (InlineMediaPlayerSeekSettings) -> Unit = {},
     onDeveloperSettingsChanged: (DeveloperSettings) -> Unit = {},
     onInputDiagnosticsEnabledChanged: (Boolean) -> Unit = {},
     onCopyDeveloperDiagnostics: () -> Unit = {},
@@ -366,6 +369,7 @@ internal fun SettingsScreen(
                     isVideoAutoplayBlocked = isVideoAutoplayBlocked,
                     isVideoAutoplayBlockingSupported = isVideoAutoplayBlockingSupported,
                     inlineMediaPlayerMode = inlineMediaPlayerMode,
+                    inlineMediaPlayerSeekSettings = inlineMediaPlayerSeekSettings,
                     isInlineMediaPlayerSupported = isInlineMediaPlayerSupported,
                     isDefaultBrowser = isDefaultBrowser,
                     onBrowserEngineKindChanged = onBrowserEngineKindChanged,
@@ -384,6 +388,7 @@ internal fun SettingsScreen(
                     onScrollBarEnabledChanged = onScrollBarEnabledChanged,
                     onVideoAutoplayBlockedChanged = onVideoAutoplayBlockedChanged,
                     onInlineMediaPlayerModeChanged = onInlineMediaPlayerModeChanged,
+                    onInlineMediaPlayerSeekSettingsChanged = onInlineMediaPlayerSeekSettingsChanged,
                     onPageTranslationProviderChanged = onPageTranslationProviderChanged,
                     onOpenDefaultBrowserSettings = onOpenDefaultBrowserSettings,
                     onBack = { onDestinationChanged(SettingsDestination.Home) },

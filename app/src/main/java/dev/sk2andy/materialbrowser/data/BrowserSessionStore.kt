@@ -22,6 +22,8 @@ import dev.sk2andy.materialbrowser.browser.DomainMuteRules
 import dev.sk2andy.materialbrowser.browser.ExternalAppLinkHandling
 import dev.sk2andy.materialbrowser.browser.FavoriteAnimationSpeed
 import dev.sk2andy.materialbrowser.browser.InlineMediaPlayerMode
+import dev.sk2andy.materialbrowser.browser.InlineMediaPlayerSeekSettings
+import dev.sk2andy.materialbrowser.browser.InlineMediaPlayerSeekSettingsRules
 import dev.sk2andy.materialbrowser.browser.PageTranslationProvider
 import dev.sk2andy.materialbrowser.browser.PopupSiteRules
 import dev.sk2andy.materialbrowser.browser.ProfileWallpaper
@@ -1080,6 +1082,22 @@ class BrowserSessionStore internal constructor(
             .apply()
     }
 
+    fun loadInlineMediaPlayerSeekSettings(): InlineMediaPlayerSeekSettings =
+        InlineMediaPlayerSeekSettingsRules.normalize(
+            InlineMediaPlayerSeekSettings(
+                backwardSeconds = preferences.getInt(KEY_INLINE_MEDIA_PLAYER_SEEK_BACKWARD_SECONDS, 10),
+                forwardSeconds = preferences.getInt(KEY_INLINE_MEDIA_PLAYER_SEEK_FORWARD_SECONDS, 10),
+            ),
+        )
+
+    fun saveInlineMediaPlayerSeekSettings(settings: InlineMediaPlayerSeekSettings) {
+        val normalized = InlineMediaPlayerSeekSettingsRules.normalize(settings)
+        preferences.edit()
+            .putInt(KEY_INLINE_MEDIA_PLAYER_SEEK_BACKWARD_SECONDS, normalized.backwardSeconds)
+            .putInt(KEY_INLINE_MEDIA_PLAYER_SEEK_FORWARD_SECONDS, normalized.forwardSeconds)
+            .apply()
+    }
+
     fun loadDeveloperOptionsUnlocked(): Boolean =
         preferences.getBoolean(KEY_DEVELOPER_OPTIONS_UNLOCKED, false)
 
@@ -1551,6 +1569,8 @@ class BrowserSessionStore internal constructor(
         const val KEY_SCROLL_BAR_ENABLED = "scroll_bar_enabled"
         const val KEY_INLINE_MEDIA_PLAYER_ENABLED = "inline_media_player_enabled"
         const val KEY_INLINE_MEDIA_PLAYER_MODE = "inline_media_player_mode"
+        const val KEY_INLINE_MEDIA_PLAYER_SEEK_BACKWARD_SECONDS = "inline_media_player_seek_backward_seconds"
+        const val KEY_INLINE_MEDIA_PLAYER_SEEK_FORWARD_SECONDS = "inline_media_player_seek_forward_seconds"
         const val KEY_DEVELOPER_OPTIONS_UNLOCKED = "developer_options_unlocked"
         const val KEY_DEVELOPER_APP_LOGGING_ENABLED = "developer_app_logging_enabled"
         const val KEY_DEVELOPER_BROWSER_CHROME_SCROLL_DISPATCH_MODE =

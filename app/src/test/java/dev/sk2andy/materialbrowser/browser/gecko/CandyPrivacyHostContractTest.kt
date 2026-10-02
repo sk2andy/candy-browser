@@ -14,6 +14,35 @@ import org.junit.Test
 
 class CandyPrivacyHostContractTest {
     @Test
+    fun `double tap durations cross policy independently and normalize malformed values`() {
+        fun policy(backward: Int, forward: Int) =
+            GeckoPrivacyPolicyRules.extensionOwnedAdFilteringWithCandyCookieDefaults(
+                pageHost = null,
+                pausedHosts = emptySet(),
+                hideCookieConsent = false,
+                cookieBannerRemovalDisabled = false,
+                blockThirdPartyCookies = true,
+                allowThirdPartyCookiesForSite = false,
+                inlineMediaPlayerSeekBackwardSeconds = backward,
+                inlineMediaPlayerSeekForwardSeconds = forward,
+            )
+
+        val valid = policy(backward = 15, forward = 30)
+        assertEquals(15, valid.inlineMediaPlayerSeekBackwardSeconds)
+        assertEquals(30, valid.inlineMediaPlayerSeekForwardSeconds)
+        val message = valid.toMessage(token = "session-token", revision = 1)
+        assertEquals(15, message.getInt("inlineMediaPlayerSeekBackwardSeconds"))
+        assertEquals(30, message.getInt("inlineMediaPlayerSeekForwardSeconds"))
+        val invalid = policy(backward = -1, forward = 61)
+        assertEquals(10, invalid.inlineMediaPlayerSeekBackwardSeconds)
+        assertEquals(10, invalid.inlineMediaPlayerSeekForwardSeconds)
+        val copiedMessage = valid.copy(inlineMediaPlayerSeekForwardSeconds = Int.MAX_VALUE)
+            .toMessage(token = "session-token", revision = 2)
+        assertEquals(15, copiedMessage.getInt("inlineMediaPlayerSeekBackwardSeconds"))
+        assertEquals(10, copiedMessage.getInt("inlineMediaPlayerSeekForwardSeconds"))
+    }
+
+    @Test
     fun `privacy signals cross authenticated policy independently`() {
         val message = GeckoPrivacyPolicy.Disabled.copy(
             doNotTrackEnabled = false,

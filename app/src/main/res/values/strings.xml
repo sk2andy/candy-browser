@@ -565,6 +565,10 @@
     <string name="settings_video_autoplay_subtitle">Videos start only when you play them. Turning this off can significantly increase CPU/GPU usage, battery drain, and page load.</string>
     <string name="settings_video_autoplay_unsupported">Requires a newer Gecko engine version.</string>
     <string name="settings_inline_media_player_title">Candy Player (experimental)</string>
+    <string name="settings_inline_media_player_seek_backward">Double-tap backward</string>
+    <string name="settings_inline_media_player_seek_forward">Double-tap forward</string>
+    <string name="settings_inline_media_player_seek_subtitle">Choose how far a double-tap skips on each side of the video.</string>
+    <string name="settings_inline_media_player_seek_seconds">%1$d seconds</string>
     <string name="settings_inline_media_player_subtitle">Candy Player also provides improved picture-in-picture directly from the page, without entering fullscreen first. Embedded videos are not supported yet.</string>
     <string name="settings_inline_media_player_unsupported">Currently available only with GeckoView.</string>
     <string name="settings_inline_media_player_mode_disabled">Off (use website player)</string>

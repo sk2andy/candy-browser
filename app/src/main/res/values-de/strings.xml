@@ -528,6 +528,10 @@
     <string name="settings_video_autoplay_subtitle">Videos starten nur, wenn du sie selbst abspielst. Das Ausschalten kann CPU-/GPU-Last, Akkuverbrauch und Seitenlast deutlich erhöhen.</string>
     <string name="settings_video_autoplay_unsupported">Erfordert eine neuere Gecko-Engine-Version.</string>
     <string name="settings_inline_media_player_title">Candy Player (experimentell)</string>
+    <string name="settings_inline_media_player_seek_backward">Doppeltipp rückwärts</string>
+    <string name="settings_inline_media_player_seek_forward">Doppeltipp vorwärts</string>
+    <string name="settings_inline_media_player_seek_subtitle">Wähle, wie weit ein Doppeltipp auf jeder Seite des Videos springt.</string>
+    <string name="settings_inline_media_player_seek_seconds">%1$d Sekunden</string>
     <string name="settings_inline_media_player_subtitle">Der Candy Player unterstützt auch verbessertes Bild-in-Bild direkt von der Seite, ohne vorher ins Vollbild zu wechseln. Eingebettete Videos werden noch nicht unterstützt.</string>
     <string name="settings_inline_media_player_unsupported">Derzeit nur mit GeckoView verfügbar.</string>
     <string name="settings_inline_media_player_mode_disabled">Aus (Website-Player verwenden)</string>
