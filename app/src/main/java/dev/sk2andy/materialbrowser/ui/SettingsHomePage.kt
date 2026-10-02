@@ -6,6 +6,7 @@ import androidx.compose.material.icons.filled.Face
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Build
+import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
@@ -77,6 +78,8 @@ private object AndroidSettingsHomeResources : SettingsHomeResources {
             SettingsHomeLabel.AppearanceSummary -> R.string.settings_home_appearance_summary
             SettingsHomeLabel.BrowserTitle -> R.string.settings_section_browser
             SettingsHomeLabel.BrowserSummary -> R.string.settings_home_browser_summary
+            SettingsHomeLabel.PlayerTitle -> R.string.settings_player_title
+            SettingsHomeLabel.PlayerSummary -> R.string.settings_home_player_summary
             SettingsHomeLabel.DownloadsTitle -> R.string.settings_downloads_title
             SettingsHomeLabel.UserscriptsTitle -> R.string.userscript_title
             SettingsHomeLabel.UserscriptsSummary -> R.string.settings_home_userscripts_summary
@@ -110,6 +113,7 @@ private fun AndroidSettingsHomeIcon(
         SettingsHomeIcon.TabsAndGestures -> Icons.AutoMirrored.Filled.List
         SettingsHomeIcon.Appearance -> Icons.Default.Face
         SettingsHomeIcon.Browser -> Icons.Default.Settings
+        SettingsHomeIcon.Player -> Icons.Default.PlayCircle
         SettingsHomeIcon.Downloads -> ImageVector.vectorResource(R.drawable.ic_reader_download)
         SettingsHomeIcon.Userscripts,
         SettingsHomeIcon.FirefoxExtensions,

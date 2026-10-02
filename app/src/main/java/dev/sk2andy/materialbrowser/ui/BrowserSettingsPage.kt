@@ -25,9 +25,6 @@ import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineKind
 import dev.sk2andy.materialbrowser.browser.ExternalAppLinkHandling
 import dev.sk2andy.materialbrowser.browser.FavoriteAnimationSpeed
-import dev.sk2andy.materialbrowser.browser.InlineMediaPlayerMode
-import dev.sk2andy.materialbrowser.browser.InlineMediaPlayerModeRules
-import dev.sk2andy.materialbrowser.browser.InlineMediaPlayerSeekSettings
 import dev.sk2andy.materialbrowser.browser.PageTranslationProvider
 import dev.sk2andy.materialbrowser.browser.StartupAddressFocusMode
 import dev.sk2andy.materialbrowser.shared.ui.settings.TranslationProviderSettings
@@ -45,9 +42,6 @@ internal object BrowserSettingsTestTags {
     const val ExternalLinkPreview = "browser_settings_external_link_preview"
     const val ExternalAppLinks = "browser_settings_external_app_links"
     const val BrowserEngine = "browser_settings_engine"
-    const val InlineMediaPlayer = "browser_settings_inline_media_player"
-    const val InlineMediaPlayerSeekBackward = "browser_settings_inline_media_player_seek_backward"
-    const val InlineMediaPlayerSeekForward = "browser_settings_inline_media_player_seek_forward"
 }
 
 @Composable
@@ -63,11 +57,6 @@ internal fun BrowserSettingsPage(
     favoriteAnimationSpeed: FavoriteAnimationSpeed = FavoriteAnimationSpeed.Default,
     isOpenHomeOnStartupEnabled: Boolean = false,
     isScrollBarEnabled: Boolean,
-    isVideoAutoplayBlocked: Boolean,
-    isVideoAutoplayBlockingSupported: Boolean,
-    inlineMediaPlayerMode: InlineMediaPlayerMode = InlineMediaPlayerMode.Default,
-    inlineMediaPlayerSeekSettings: InlineMediaPlayerSeekSettings = InlineMediaPlayerSeekSettings(),
-    isInlineMediaPlayerSupported: Boolean = true,
     isDefaultBrowser: Boolean,
     onBrowserEngineKindChanged: (AndroidBrowserEngineKind) -> Unit = {},
     onExternalLinkPreviewEnabledChanged: (Boolean) -> Unit = {},
@@ -80,9 +69,6 @@ internal fun BrowserSettingsPage(
     onImportFavoriteBookmarks: () -> Unit = {},
     onOpenHomeOnStartupEnabledChanged: (Boolean) -> Unit = {},
     onScrollBarEnabledChanged: (Boolean) -> Unit,
-    onVideoAutoplayBlockedChanged: (Boolean) -> Unit,
-    onInlineMediaPlayerModeChanged: (InlineMediaPlayerMode) -> Unit = {},
-    onInlineMediaPlayerSeekSettingsChanged: (InlineMediaPlayerSeekSettings) -> Unit = {},
     onPageTranslationProviderChanged: (PageTranslationProvider) -> Unit,
     onOpenDefaultBrowserSettings: () -> Unit,
     onBack: () -> Unit,
@@ -91,7 +77,6 @@ internal fun BrowserSettingsPage(
     var startupAddressFocusMenuExpanded by remember { mutableStateOf(false) }
     var favoriteSpeedMenuExpanded by remember { mutableStateOf(false) }
     var externalAppLinksMenuExpanded by remember { mutableStateOf(false) }
-    var inlineMediaPlayerMenuExpanded by remember { mutableStateOf(false) }
     SettingsPage(
         title = stringResource(R.string.settings_section_browser),
         onBack = onBack,
@@ -285,92 +270,6 @@ internal fun BrowserSettingsPage(
             modifier = Modifier.testTag(BrowserSettingsTestTags.ScrollBar),
         )
         Spacer(Modifier.height(8.dp))
-        SettingsSwitch(
-            title = stringResource(R.string.settings_video_autoplay_title),
-            subtitle = stringResource(
-                if (isVideoAutoplayBlockingSupported) {
-                    R.string.settings_video_autoplay_subtitle
-                } else {
-                    R.string.settings_video_autoplay_unsupported
-                },
-            ),
-            checked = isVideoAutoplayBlocked,
-            enabled = isVideoAutoplayBlockingSupported,
-            onCheckedChange = onVideoAutoplayBlockedChanged,
-        )
-        Spacer(Modifier.height(8.dp))
-        Box {
-            SettingsChoice(
-                title = stringResource(R.string.settings_inline_media_player_title),
-                value = inlineMediaPlayerMode.displayName(),
-                expanded = inlineMediaPlayerMenuExpanded,
-                onClick = { inlineMediaPlayerMenuExpanded = true },
-                enabled = isInlineMediaPlayerSupported,
-                modifier = Modifier.testTag(BrowserSettingsTestTags.InlineMediaPlayer),
-            )
-            SettingsDropdown(
-                expanded = inlineMediaPlayerMenuExpanded,
-                onDismissRequest = { inlineMediaPlayerMenuExpanded = false },
-            ) {
-                InlineMediaPlayerMode.entries.forEach { mode ->
-                    SettingsDropdownItem(
-                        label = mode.displayName(),
-                        selected = mode == inlineMediaPlayerMode,
-                        onClick = {
-                            inlineMediaPlayerMenuExpanded = false
-                            if (mode != inlineMediaPlayerMode) {
-                                onInlineMediaPlayerModeChanged(mode)
-                            }
-                        },
-                    )
-                }
-            }
-        }
-        Text(
-            text = stringResource(
-                if (isInlineMediaPlayerSupported) {
-                    R.string.settings_inline_media_player_subtitle
-                } else {
-                    R.string.settings_inline_media_player_unsupported
-                },
-            ),
-            modifier = Modifier.padding(start = 18.dp, top = 8.dp, end = 18.dp),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Spacer(Modifier.height(8.dp))
-        InlineMediaPlayerSeekSlider(
-            title = stringResource(R.string.settings_inline_media_player_seek_backward),
-            seconds = inlineMediaPlayerSeekSettings.backwardSeconds,
-            enabled = isInlineMediaPlayerSupported &&
-                InlineMediaPlayerModeRules.isEnabled(inlineMediaPlayerMode),
-            onSecondsChanged = { seconds ->
-                onInlineMediaPlayerSeekSettingsChanged(
-                    inlineMediaPlayerSeekSettings.copy(backwardSeconds = seconds),
-                )
-            },
-            modifier = Modifier.testTag(BrowserSettingsTestTags.InlineMediaPlayerSeekBackward),
-        )
-        Spacer(Modifier.height(8.dp))
-        InlineMediaPlayerSeekSlider(
-            title = stringResource(R.string.settings_inline_media_player_seek_forward),
-            seconds = inlineMediaPlayerSeekSettings.forwardSeconds,
-            enabled = isInlineMediaPlayerSupported &&
-                InlineMediaPlayerModeRules.isEnabled(inlineMediaPlayerMode),
-            onSecondsChanged = { seconds ->
-                onInlineMediaPlayerSeekSettingsChanged(
-                    inlineMediaPlayerSeekSettings.copy(forwardSeconds = seconds),
-                )
-            },
-            modifier = Modifier.testTag(BrowserSettingsTestTags.InlineMediaPlayerSeekForward),
-        )
-        Text(
-            text = stringResource(R.string.settings_inline_media_player_seek_subtitle),
-            modifier = Modifier.padding(start = 18.dp, top = 8.dp, end = 18.dp),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Spacer(Modifier.height(8.dp))
         TranslationProviderSettings(
             provider = pageTranslationProvider,
             strings = TranslationProviderSettingsStrings(
@@ -473,18 +372,4 @@ private fun ExternalAppLinkHandling.displayName(): String = when (this) {
         stringResource(R.string.settings_external_app_links_automatic)
     ExternalAppLinkHandling.AskEveryTime ->
         stringResource(R.string.settings_external_app_links_ask_every_time)
-}
-
-@Composable
-private fun InlineMediaPlayerMode.displayName(): String = when (this) {
-    InlineMediaPlayerMode.Disabled ->
-        stringResource(R.string.settings_inline_media_player_mode_disabled)
-    InlineMediaPlayerMode.ButtonFullscreen ->
-        stringResource(R.string.settings_inline_media_player_mode_button_fullscreen)
-    InlineMediaPlayerMode.ButtonInlineAndFullscreen ->
-        stringResource(R.string.settings_inline_media_player_mode_button_inline_fullscreen)
-    InlineMediaPlayerMode.AlwaysForFullscreen ->
-        stringResource(R.string.settings_inline_media_player_mode_always_fullscreen)
-    InlineMediaPlayerMode.Automatic ->
-        stringResource(R.string.settings_inline_media_player_mode_automatic)
 }

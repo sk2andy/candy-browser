@@ -379,6 +379,8 @@
     <string name="settings_home_search_summary">Motor de búsqueda y sugerencias</string>
     <string name="settings_tabs_gestures_title">Pestañas y gestos</string>
     <string name="settings_home_tabs_gestures_summary">Diseño, duración, perfiles y controles de pestañas</string>
+    <string name="settings_player_title">Reproductor</string>
+    <string name="settings_home_player_summary">Reproducción de vídeo, reproducción automática y saltos con doble toque</string>
     <string name="settings_home_browser_summary">Inicio, favoritos, páginas web, enlaces y navegador predeterminado</string>
     <string name="settings_downloads_title">Descargas</string>
     <string name="settings_home_capsules_summary">Gestionar Site Capsules y accesos directos guardados</string>

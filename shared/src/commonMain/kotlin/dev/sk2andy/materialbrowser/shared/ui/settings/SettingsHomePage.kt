@@ -14,6 +14,7 @@ enum class SettingsHomeIcon {
     TabsAndGestures,
     Appearance,
     Browser,
+    Player,
     Downloads,
     Userscripts,
     FirefoxExtensions,
@@ -40,6 +41,8 @@ enum class SettingsHomeLabel {
     AppearanceSummary,
     BrowserTitle,
     BrowserSummary,
+    PlayerTitle,
+    PlayerSummary,
     DownloadsTitle,
     UserscriptsTitle,
     UserscriptsSummary,
@@ -85,6 +88,7 @@ object SettingsHomeRules {
         add(item(SettingsHomeGroup.Browsing, SettingsDestination.Search, SettingsHomeIcon.Search, SettingsHomeLabel.SearchTitle, SettingsHomeLabel.SearchSummary))
         add(item(SettingsHomeGroup.Browsing, SettingsDestination.TabsAndGestures, SettingsHomeIcon.TabsAndGestures, SettingsHomeLabel.TabsAndGesturesTitle, SettingsHomeLabel.TabsAndGesturesSummary))
         add(item(SettingsHomeGroup.Browsing, SettingsDestination.Browser, SettingsHomeIcon.Browser, SettingsHomeLabel.BrowserTitle, SettingsHomeLabel.BrowserSummary))
+        add(item(SettingsHomeGroup.Browsing, SettingsDestination.Player, SettingsHomeIcon.Player, SettingsHomeLabel.PlayerTitle, SettingsHomeLabel.PlayerSummary))
         add(item(SettingsHomeGroup.Browsing, SettingsDestination.Downloads, SettingsHomeIcon.Downloads, SettingsHomeLabel.DownloadsTitle, null))
         add(item(SettingsHomeGroup.Personalization, SettingsDestination.Appearance, SettingsHomeIcon.Appearance, SettingsHomeLabel.AppearanceTitle, SettingsHomeLabel.AppearanceSummary))
         add(item(SettingsHomeGroup.Personalization, SettingsDestination.SiteCapsules, SettingsHomeIcon.SiteCapsules, SettingsHomeLabel.SiteCapsulesTitle, SettingsHomeLabel.SiteCapsulesSummary))

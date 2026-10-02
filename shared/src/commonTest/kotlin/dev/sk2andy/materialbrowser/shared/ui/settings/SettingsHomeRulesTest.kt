@@ -17,6 +17,7 @@ class SettingsHomeRulesTest {
                 SettingsDestination.Search,
                 SettingsDestination.TabsAndGestures,
                 SettingsDestination.Browser,
+                SettingsDestination.Player,
                 SettingsDestination.Downloads,
                 SettingsDestination.Appearance,
                 SettingsDestination.SiteCapsules,
@@ -72,5 +73,6 @@ class SettingsHomeRulesTest {
         assertTrue(CandySettingsRouteRules.isEnabled(SettingsDestination.Appearance))
         assertTrue(CandySettingsRouteRules.isEnabled(SettingsDestination.Search))
         assertFalse(CandySettingsRouteRules.isEnabled(SettingsDestination.Downloads))
+        assertFalse(CandySettingsRouteRules.isEnabled(SettingsDestination.Player))
     }
 }

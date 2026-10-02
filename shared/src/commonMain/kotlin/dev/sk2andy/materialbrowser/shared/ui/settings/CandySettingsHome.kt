@@ -8,6 +8,7 @@ import androidx.compose.material.icons.filled.Face
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Build
+import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
@@ -64,6 +65,8 @@ internal object CandySettingsHomeResources : SettingsHomeResources {
         SettingsHomeLabel.BrowserTitle -> "Browser"
         SettingsHomeLabel.BrowserSummary ->
             "Seitenübersetzung; weitere Browseroptionen in Vorbereitung"
+        SettingsHomeLabel.PlayerTitle -> "Player"
+        SettingsHomeLabel.PlayerSummary -> "Videowiedergabe, Autoplay und Doppeltipp-Sprünge"
         SettingsHomeLabel.DownloadsTitle -> "Downloads"
         SettingsHomeLabel.UserscriptsTitle -> "Toppings"
         SettingsHomeLabel.UserscriptsSummary -> "Passende Seiten mit Toppings anpassen"
@@ -96,6 +99,7 @@ internal fun CandySettingsHomeIcon(
         SettingsHomeIcon.TabsAndGestures -> Icons.AutoMirrored.Filled.List
         SettingsHomeIcon.Appearance -> Icons.Filled.Face
         SettingsHomeIcon.Browser -> Icons.Filled.Settings
+        SettingsHomeIcon.Player -> Icons.Filled.PlayCircle
         SettingsHomeIcon.Downloads -> Icons.Filled.Download
         SettingsHomeIcon.Userscripts,
         SettingsHomeIcon.FirefoxExtensions,
