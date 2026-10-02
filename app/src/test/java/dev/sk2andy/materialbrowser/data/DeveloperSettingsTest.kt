@@ -16,6 +16,8 @@ class DeveloperSettingsTest {
         assertEquals(3, settings.safeAreaRequiredFailureCount)
         assertEquals(false, settings.forceSafeAreaFallback)
         assertEquals(false, settings.appLoggingEnabled)
+        assertEquals(false, settings.geckoLoggingEnabled)
+        assertEquals(GeckoLoggingRules.DEFAULT_MODULES, settings.geckoLoggingModules)
         assertEquals(GeckoSafeAreaSettings(), settings.geckoSafeAreaSettings)
     }
 
@@ -43,6 +45,18 @@ class DeveloperSettingsTest {
                 ),
             ),
             settings.normalized(),
+        )
+    }
+
+    @Test
+    fun `invalid Gecko modules default without changing logging opt ins`() {
+        assertEquals(
+            DeveloperSettings(appLoggingEnabled = true, geckoLoggingEnabled = true),
+            DeveloperSettings(
+                appLoggingEnabled = true,
+                geckoLoggingEnabled = true,
+                geckoLoggingModules = "nsHttp:9",
+            ).normalized(),
         )
     }
 

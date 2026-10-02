@@ -28,6 +28,7 @@ import androidx.compose.ui.platform.LocalContext
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.browser.BrowserController
 import dev.sk2andy.materialbrowser.browser.BrowserTab
+import dev.sk2andy.materialbrowser.browser.gecko.GeckoLogging
 import dev.sk2andy.materialbrowser.browser.UserScriptSaveOutcome
 import dev.sk2andy.materialbrowser.browser.userscript.ToppingCatalogRules
 import dev.sk2andy.materialbrowser.browser.userscript.ToppingVerifier
@@ -58,6 +59,8 @@ internal fun BrowserSettingsOverlay(
     onExportAppData: () -> Unit,
     onExportAppLogs: () -> Unit,
     onClearAppLogs: () -> Unit,
+    onExportGeckoLogs: () -> Unit,
+    onClearGeckoLogs: () -> Unit,
     onImportAppData: () -> Unit,
     onShowGestureOnboarding: () -> Unit,
     onShowReleaseNotes: () -> Unit,
@@ -204,6 +207,8 @@ internal fun BrowserSettingsOverlay(
             developerSettings = controller.developerSettings,
             isDeveloperOptionsUnlocked = controller.isDeveloperOptionsUnlocked,
             isInputDiagnosticsEnabled = controller.isInputDiagnosticsEnabled,
+            isGeckoLoggingSupported = controller.usesGeckoEngine,
+            geckoLoggingStatus = GeckoLogging.status,
             blockedCount = selectedTab.blockedCount,
             isDefaultBrowser = controller.isDefaultBrowser,
             isUserScriptSupported = controller.isUserScriptSupported,
@@ -296,6 +301,8 @@ internal fun BrowserSettingsOverlay(
             onCopyDeveloperDiagnostics = controller::copyDeveloperDiagnostics,
             onExportAppLogs = onExportAppLogs,
             onClearAppLogs = onClearAppLogs,
+            onExportGeckoLogs = onExportGeckoLogs,
+            onClearGeckoLogs = onClearGeckoLogs,
             onShowGestureOnboarding = onShowGestureOnboarding,
             onShowReleaseNotes = onShowReleaseNotes,
             onUnlockDeveloperOptions = {

@@ -1107,6 +1107,10 @@ class BrowserSessionStore internal constructor(
 
     fun loadDeveloperSettings(): DeveloperSettings = DeveloperSettings(
         appLoggingEnabled = loadBoolean(KEY_DEVELOPER_APP_LOGGING_ENABLED, false),
+        geckoLoggingEnabled = loadBoolean(KEY_DEVELOPER_GECKO_LOGGING_ENABLED, false),
+        geckoLoggingModules = runCatching {
+            preferences.getString(KEY_DEVELOPER_GECKO_LOGGING_MODULES, null)
+        }.getOrNull() ?: GeckoLoggingRules.DEFAULT_MODULES,
         browserChromeScrollDispatchMode = BrowserChromeScrollDispatchMode.fromStableId(
             preferences.getString(KEY_DEVELOPER_BROWSER_CHROME_SCROLL_DISPATCH_MODE, null),
         ),
@@ -1176,6 +1180,8 @@ class BrowserSessionStore internal constructor(
                 normalized.browserChromeScrollDispatchMode.stableId,
             )
             .putBoolean(KEY_DEVELOPER_APP_LOGGING_ENABLED, normalized.appLoggingEnabled)
+            .putBoolean(KEY_DEVELOPER_GECKO_LOGGING_ENABLED, normalized.geckoLoggingEnabled)
+            .putString(KEY_DEVELOPER_GECKO_LOGGING_MODULES, normalized.geckoLoggingModules)
             .putInt(
                 KEY_DEVELOPER_SAFE_AREA_LAYOUT_QUIET_PERIOD_MILLIS,
                 normalized.safeAreaLayoutQuietPeriodMillis,
@@ -1573,6 +1579,8 @@ class BrowserSessionStore internal constructor(
         const val KEY_INLINE_MEDIA_PLAYER_SEEK_FORWARD_SECONDS = "inline_media_player_seek_forward_seconds"
         const val KEY_DEVELOPER_OPTIONS_UNLOCKED = "developer_options_unlocked"
         const val KEY_DEVELOPER_APP_LOGGING_ENABLED = "developer_app_logging_enabled"
+        const val KEY_DEVELOPER_GECKO_LOGGING_ENABLED = "developer_gecko_logging_enabled"
+        const val KEY_DEVELOPER_GECKO_LOGGING_MODULES = "developer_gecko_logging_modules"
         const val KEY_DEVELOPER_BROWSER_CHROME_SCROLL_DISPATCH_MODE =
             "developer_browser_chrome_scroll_dispatch_mode"
         const val KEY_DEVELOPER_SAFE_AREA_LAYOUT_QUIET_PERIOD_MILLIS =

@@ -89,6 +89,7 @@ import dev.sk2andy.materialbrowser.data.AppDataArchiveRestore
 import dev.sk2andy.materialbrowser.data.AppDataArchiveStaging
 import dev.sk2andy.materialbrowser.data.AppDataTransferLock
 import dev.sk2andy.materialbrowser.data.BrowserSessionStore
+import dev.sk2andy.materialbrowser.browser.gecko.GeckoLogging
 import dev.sk2andy.materialbrowser.data.AppLogging
 import dev.sk2andy.materialbrowser.data.GestureOnboardingStore
 import dev.sk2andy.materialbrowser.data.ReleaseNotesContent
@@ -220,6 +221,22 @@ class MainActivity : AppCompatActivity() {
             val exported = withContext(Dispatchers.IO) {
                 AppLogging.export(applicationContext, uri, diagnostics)
             }
+            Toast.makeText(
+                this@MainActivity,
+                if (exported) R.string.developer_options_logs_exported
+                else R.string.developer_options_logs_export_failed,
+                Toast.LENGTH_SHORT,
+            ).show()
+        }
+    }
+    private val geckoLogsExportLauncher = registerForActivityResult(
+        ActivityResultContracts.CreateDocument("text/plain"),
+    ) { uri ->
+        if (uri == null || !::browserController.isInitialized) return@registerForActivityResult
+        val diagnostics = browserController.developerDiagnostics() +
+            "\nDevice: ${Build.MANUFACTURER} ${Build.MODEL}"
+        lifecycleScope.launch {
+            val exported = GeckoLogging.export(applicationContext, uri, diagnostics)
             Toast.makeText(
                 this@MainActivity,
                 if (exported) R.string.developer_options_logs_exported
@@ -715,6 +732,18 @@ class MainActivity : AppCompatActivity() {
                                     "application/octet-stream",
                                 ),
                             )
+                        },
+                        onExportGeckoLogs = { geckoLogsExportLauncher.launch("candy-gecko-logs.txt") },
+                        onClearGeckoLogs = {
+                            lifecycleScope.launch {
+                                val cleared = GeckoLogging.clear()
+                                Toast.makeText(
+                                    this@MainActivity,
+                                    if (cleared) R.string.developer_options_logs_cleared
+                                    else R.string.developer_options_logs_clear_failed,
+                                    Toast.LENGTH_SHORT,
+                                ).show()
+                            }
                         },
                         onExportAppLogs = { appLogsExportLauncher.launch("candy-app-logs.txt") },
                         onClearAppLogs = {

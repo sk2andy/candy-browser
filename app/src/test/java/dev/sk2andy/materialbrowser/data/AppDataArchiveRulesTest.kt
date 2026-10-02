@@ -72,6 +72,9 @@ class AppDataArchiveRulesTest {
             "no_backup/app_logs",
             "no_backup/app_logs/current.log",
             "no_backup/app_logs/nested/previous.log",
+            "no_backup/gecko_logs",
+            "no_backup/gecko_logs/parent.moz_log",
+            "no_backup/gecko_logs/nested/child.moz_log",
             "shared_prefs/app_logging_capture.xml",
             "shared_prefs/app_logging_capture.xml.bak",
         ).forEach { path ->
@@ -82,6 +85,9 @@ class AppDataArchiveRulesTest {
         listOf(
             "no_backup/app_logs_backup/current.log",
             "no_backup/app_logs.txt",
+            "no_backup/gecko_logs_backup/parent.moz_log",
+            "no_backup/gecko_logs.txt",
+            "files/gecko_logs/parent.moz_log",
             "files/app_logs/current.log",
             "no_backup/candy_trails/trail.json",
             "shared_prefs/app_logging_capture_extra.xml",

@@ -543,6 +543,46 @@ class BrowserSessionStoreInstrumentedTest {
     }
 
     @Test
+    fun geckoLoggingDefaultsOffAndPersistsIndependentlyWithModules() {
+        val store = BrowserSessionStore(context)
+        assertFalse(store.loadDeveloperSettings().geckoLoggingEnabled)
+        assertEquals(GeckoLoggingRules.DEFAULT_MODULES, store.loadDeveloperSettings().geckoLoggingModules)
+        val settings = DeveloperSettings(
+            forceSafeAreaFallback = true,
+            geckoLoggingEnabled = true,
+            geckoLoggingModules = "nsHttp:3,cookie:2",
+        )
+
+        store.saveDeveloperSettings(settings)
+
+        assertEquals(settings, BrowserSessionStore(context).loadDeveloperSettings())
+        store.saveDeveloperSettings(settings.copy(geckoLoggingEnabled = false))
+        assertEquals(
+            settings.copy(geckoLoggingEnabled = false),
+            BrowserSessionStore(context).loadDeveloperSettings(),
+        )
+    }
+
+    @Test
+    fun corruptGeckoLoggingSettingsDefaultWithoutChangingAppLogging() {
+        preferences.edit()
+            .putString("developer_gecko_logging_enabled", "invalid")
+            .putBoolean("developer_gecko_logging_modules", true)
+            .putBoolean("developer_app_logging_enabled", true)
+            .commit()
+
+        assertEquals(
+            DeveloperSettings(appLoggingEnabled = true),
+            BrowserSessionStore(context).loadDeveloperSettings(),
+        )
+        preferences.edit().putString("developer_gecko_logging_modules", "nsHttp:9").commit()
+        assertEquals(
+            GeckoLoggingRules.DEFAULT_MODULES,
+            BrowserSessionStore(context).loadDeveloperSettings().geckoLoggingModules,
+        )
+    }
+
+    @Test
     fun corruptAppLoggingSettingFallsBackToOffWithoutChangingOtherSettings() {
         preferences.edit()
             .putString("developer_app_logging_enabled", "invalid")

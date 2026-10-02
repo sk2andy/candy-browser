@@ -68,6 +68,8 @@ internal object AppDataArchiveRules {
             !path.startsWith("$RECALL_DATABASE_RELATIVE_PATH-") &&
             path != APP_LOGS_RELATIVE_PATH &&
             !path.startsWith("$APP_LOGS_RELATIVE_PATH/") &&
+            path != GECKO_LOGS_RELATIVE_PATH &&
+            !path.startsWith("$GECKO_LOGS_RELATIVE_PATH/") &&
             path != APP_LOG_CAPTURE_RELATIVE_PATH &&
             path != "$APP_LOG_CAPTURE_RELATIVE_PATH.bak"
 
@@ -162,5 +164,6 @@ internal object AppDataArchiveRules {
     private val WINDOWS_ABSOLUTE_PATH_PATTERN = Regex("[A-Za-z]:($|/.*)")
     private const val RECALL_DATABASE_RELATIVE_PATH = "no_backup/candy_recall.db"
     private const val APP_LOGS_RELATIVE_PATH = "no_backup/app_logs"
+    private const val GECKO_LOGS_RELATIVE_PATH = "no_backup/gecko_logs"
     private const val APP_LOG_CAPTURE_RELATIVE_PATH = "shared_prefs/app_logging_capture.xml"
 }

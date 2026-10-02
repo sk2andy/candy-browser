@@ -5,6 +5,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import dev.sk2andy.materialbrowser.BuildConfig
 import dev.sk2andy.materialbrowser.R
+import dev.sk2andy.materialbrowser.browser.gecko.GeckoLoggingStatus
 import dev.sk2andy.materialbrowser.blocking.BlockerSettings
 import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineKind
 import dev.sk2andy.materialbrowser.browser.DnsOverHttpsRules
@@ -107,6 +108,8 @@ internal fun SettingsScreen(
     developerSettings: DeveloperSettings = DeveloperSettings(),
     isDeveloperOptionsUnlocked: Boolean = false,
     isInputDiagnosticsEnabled: Boolean = false,
+    isGeckoLoggingSupported: Boolean = false,
+    geckoLoggingStatus: GeckoLoggingStatus = GeckoLoggingStatus.Disabled,
     trustsUserCertificates: Boolean = BuildConfig.TRUST_USER_CERTIFICATES,
     blockedCount: Int,
     isDefaultBrowser: Boolean,
@@ -168,6 +171,8 @@ internal fun SettingsScreen(
     onCopyDeveloperDiagnostics: () -> Unit = {},
     onExportAppLogs: () -> Unit = {},
     onClearAppLogs: () -> Unit = {},
+    onExportGeckoLogs: () -> Unit = {},
+    onClearGeckoLogs: () -> Unit = {},
     onShowGestureOnboarding: () -> Unit = {},
     onShowReleaseNotes: () -> Unit = {},
     onUnlockDeveloperOptions: () -> Unit = {},
@@ -480,6 +485,8 @@ internal fun SettingsScreen(
                     isHttpPasswordAutofillEnabled = isHttpPasswordAutofillEnabled,
                     isHttpPasswordAutofillSupported = isHttpPasswordAutofillSupported,
                     isInputDiagnosticsEnabled = isInputDiagnosticsEnabled,
+                    isGeckoLoggingSupported = isGeckoLoggingSupported,
+                    geckoLoggingStatus = geckoLoggingStatus,
                     onSettingsChanged = onDeveloperSettingsChanged,
                     onHttpPasswordAutofillEnabledChanged =
                         onHttpPasswordAutofillEnabledChanged,
@@ -487,6 +494,8 @@ internal fun SettingsScreen(
                     onCopyDiagnostics = onCopyDeveloperDiagnostics,
                     onExportLogs = onExportAppLogs,
                     onClearLogs = onClearAppLogs,
+                    onExportGeckoLogs = onExportGeckoLogs,
+                    onClearGeckoLogs = onClearGeckoLogs,
                     onShowOnboarding = onShowGestureOnboarding,
                     onShowReleaseNotes = onShowReleaseNotes,
                     onBack = { onDestinationChanged(SettingsDestination.Home) },

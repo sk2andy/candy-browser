@@ -1,4 +1,4 @@
-# App logging
+# App and Gecko logging
 
 ## User flow
 
@@ -56,3 +56,19 @@
 | Toggle / export / delete actions | Focused `DeveloperOptionsSettingsPageInstrumentedTest` method |
 | Setting persistence / corrupt values | Focused `BrowserSessionStoreInstrumentedTest` methods |
 | Archive exclusion | `AppDataArchiveRulesTest`, `AppDataArchiveCodecTest` |
+
+## Raw Gecko diagnostics
+
+| Concern | Contract |
+| --- | --- |
+| Enable | Separate **Gecko logging** switch in Developer options; disabled by default, available with the Gecko engine |
+| Modules | Editable `module:level` list with an explicit Apply action; levels 0–5, at most 16 entries and 1,024 characters; initial HTTP, socket, DNS, cookie and console modules (including available parent-process extension console output) |
+| Sensitive content | Raw engine output may contain URLs, cookies, page data and extension data. This is separate from sanitized App logging; inspect exported files before sharing |
+| Implementation | Gecko's native `logging.<module>` and `logging.config.LOG_FILE` preferences; runtime default-branch settings are not persisted in Gecko's profile; effective values are checked before acknowledging a transition |
+| Private tabs | Any private controller or engine-session owner pauses capture. A private native window waits for successful native stop before opening; failed stop blocks the private session. Capture resumes only after every private owner releases it |
+| Export / deletion | Explicit Android document picker saves `candy-gecko-logs.txt`; native writes stop before snapshot or deletion. No upload. Switching off stops capture and deletes stored files; Delete clears stored files while the opt-in remains enabled |
+| Storage | `noBackupFilesDir/gecko_logs`; excluded from Android backup/transfer and Candy app-data archive export/import |
+| Bounds | Four capture segments with stopped files trimmed to 8 MiB total, export capped at 8 MiB with newest captures first; recording stops after five minutes or the observed size reaches 8 MiB. Size is checked periodically, so a burst may exceed the capture threshold. Toggle off/on to start another capture |
+| Availability | Native modules vary by Gecko version; unavailable modules produce no records. Android's sandbox prevents child-process logging to arbitrary files, so this captures parent-process native output rather than all process consoles |
+| Ownership | `browser/gecko/GeckoLogging`, `data/GeckoLoggingRules`, `data/GeckoLogStore`; runtime/session edges in `GeckoViewRuntimeHandle` and `GeckoViewExtensionChrome` |
+| Verification | `GeckoLoggingRulesTest`, `GeckoLogStoreTest`, archive exclusion tests, settings/UI persistence tests, `GeckoLoggingInstrumentedTest` for actual HTTP capture, private navigation, multiple owners, preference overrides, export and deletion |

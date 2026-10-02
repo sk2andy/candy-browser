@@ -22,9 +22,11 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.performTextReplacement
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import dev.sk2andy.materialbrowser.R
+import dev.sk2andy.materialbrowser.browser.gecko.GeckoLoggingStatus
 import dev.sk2andy.materialbrowser.data.BrowserChromeScrollDispatchMode
 import dev.sk2andy.materialbrowser.data.DeveloperSettings
 import dev.sk2andy.materialbrowser.data.GeckoSafeAreaSettings
@@ -439,6 +441,125 @@ class DeveloperOptionsSettingsPageInstrumentedTest {
 
         assertEquals(2, exportCount)
         assertEquals(1, clearCount)
+    }
+
+    @Test
+    fun geckoLoggingHasIndependentOptInValidatedModulesAndManualActions() {
+        val original = DeveloperSettings(appLoggingEnabled = true, forceSafeAreaFallback = true)
+        var settings by mutableStateOf(original)
+        var exportCount = 0
+        var clearCount = 0
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                DeveloperOptionsSettingsPage(
+                    settings = settings,
+                    isGeckoLoggingSupported = true,
+                    onSettingsChanged = { settings = it },
+                    onExportGeckoLogs = { exportCount++ },
+                    onClearGeckoLogs = { clearCount++ },
+                    onBack = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(DeveloperOptionsTestTags.GeckoLogging)
+            .performScrollTo()
+            .performClick()
+        assertEquals(original.copy(geckoLoggingEnabled = true), settings)
+        composeRule.onNodeWithTag(DeveloperOptionsTestTags.GeckoLoggingWarning)
+            .performScrollTo()
+            .assertIsDisplayed()
+        composeRule.onNodeWithTag(DeveloperOptionsTestTags.GeckoLoggingModules)
+            .performScrollTo()
+            .performTextReplacement("nsHttp:9")
+        composeRule.onNodeWithTag(DeveloperOptionsTestTags.ApplyGeckoLoggingModules)
+            .performScrollTo()
+            .assertIsNotEnabled()
+        assertEquals(original.copy(geckoLoggingEnabled = true), settings)
+        composeRule.onNodeWithTag(DeveloperOptionsTestTags.GeckoLoggingModules)
+            .performScrollTo()
+            .performTextReplacement("nsHttp:3,cookie:2")
+        assertEquals(original.copy(geckoLoggingEnabled = true), settings)
+        composeRule.onNodeWithTag(DeveloperOptionsTestTags.ApplyGeckoLoggingModules)
+            .performScrollTo()
+            .performClick()
+        assertEquals(
+            original.copy(geckoLoggingEnabled = true, geckoLoggingModules = "nsHttp:3,cookie:2"),
+            settings,
+        )
+        composeRule.onNodeWithTag(DeveloperOptionsTestTags.ExportGeckoLogs)
+            .performScrollTo()
+            .performClick()
+        composeRule.onNodeWithTag(DeveloperOptionsTestTags.ClearGeckoLogs)
+            .performScrollTo()
+            .performClick()
+        assertEquals(1, exportCount)
+        assertEquals(1, clearCount)
+    }
+
+    @Test
+    fun geckoLoggingStatusUpdatesWhileTheOptInRemainsEnabled() {
+        var status by mutableStateOf(GeckoLoggingStatus.Recording)
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                DeveloperOptionsSettingsPage(
+                    settings = DeveloperSettings(geckoLoggingEnabled = true),
+                    isGeckoLoggingSupported = true,
+                    geckoLoggingStatus = status,
+                    onSettingsChanged = {},
+                    onBack = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(DeveloperOptionsTestTags.GeckoLoggingStatus)
+            .performScrollTo()
+        composeRule.onNodeWithText(
+            context.getString(R.string.developer_options_gecko_logging_status_recording),
+        ).assertIsDisplayed()
+        composeRule.runOnIdle { status = GeckoLoggingStatus.PausedForPrivateBrowsing }
+        composeRule.onNodeWithText(
+            context.getString(R.string.developer_options_gecko_logging_status_private),
+        ).assertIsDisplayed()
+        composeRule.runOnIdle { status = GeckoLoggingStatus.LimitReached }
+        composeRule.onNodeWithText(
+            context.getString(R.string.developer_options_gecko_logging_status_limit),
+        ).assertIsDisplayed()
+        composeRule.onNodeWithTag(DeveloperOptionsTestTags.GeckoLogging).performScrollTo()
+        composeRule.onNode(
+            hasParent(hasTestTag(DeveloperOptionsTestTags.GeckoLogging)) and isToggleable(),
+        ).assertIsOn()
+    }
+
+    @Test
+    fun systemWebViewDisablesGeckoCaptureButKeepsSavedLogActionsAvailable() {
+        val original = DeveloperSettings(geckoLoggingEnabled = true)
+        var settings = original
+        var exportCount = 0
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                DeveloperOptionsSettingsPage(
+                    settings = settings,
+                    isGeckoLoggingSupported = false,
+                    onSettingsChanged = { settings = it },
+                    onExportGeckoLogs = { exportCount++ },
+                    onBack = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(DeveloperOptionsTestTags.GeckoLogging)
+            .performScrollTo()
+            .assertIsNotEnabled()
+        composeRule.onNodeWithTag(DeveloperOptionsTestTags.GeckoLoggingModules)
+            .performScrollTo()
+            .assertIsNotEnabled()
+        composeRule.onNodeWithTag(DeveloperOptionsTestTags.ExportGeckoLogs)
+            .performScrollTo()
+            .assertIsEnabled()
+            .performClick()
+        assertEquals(original, settings)
+        assertEquals(1, exportCount)
     }
 
     @Test

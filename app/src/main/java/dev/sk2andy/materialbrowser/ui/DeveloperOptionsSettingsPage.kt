@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -27,9 +28,11 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import dev.sk2andy.materialbrowser.R
+import dev.sk2andy.materialbrowser.browser.gecko.GeckoLoggingStatus
 import dev.sk2andy.materialbrowser.data.BrowserChromeScrollDispatchMode
 import dev.sk2andy.materialbrowser.data.DeveloperSettings
 import dev.sk2andy.materialbrowser.data.GeckoSafeAreaSettings
+import dev.sk2andy.materialbrowser.data.GeckoLoggingRules
 import dev.sk2andy.materialbrowser.ui.theme.browserChromeColor
 import kotlin.math.roundToInt
 
@@ -43,6 +46,13 @@ internal object DeveloperOptionsTestTags {
     const val AppLogging = "developer_options_app_logging"
     const val ExportLogs = "developer_options_export_logs"
     const val ClearLogs = "developer_options_clear_logs"
+    const val GeckoLogging = "developer_options_gecko_logging"
+    const val GeckoLoggingWarning = "developer_options_gecko_logging_warning"
+    const val GeckoLoggingStatus = "developer_options_gecko_logging_status"
+    const val GeckoLoggingModules = "developer_options_gecko_logging_modules"
+    const val ApplyGeckoLoggingModules = "developer_options_apply_gecko_logging_modules"
+    const val ExportGeckoLogs = "developer_options_export_gecko_logs"
+    const val ClearGeckoLogs = "developer_options_clear_gecko_logs"
     const val CopyDiagnostics = "developer_options_copy_diagnostics"
     const val ShowOnboarding = "developer_options_show_onboarding"
     const val ShowReleaseNotes = "developer_options_show_release_notes"
@@ -66,18 +76,25 @@ internal fun DeveloperOptionsSettingsPage(
     isHttpPasswordAutofillEnabled: Boolean = false,
     isHttpPasswordAutofillSupported: Boolean = false,
     isInputDiagnosticsEnabled: Boolean = false,
+    isGeckoLoggingSupported: Boolean = false,
+    geckoLoggingStatus: GeckoLoggingStatus = GeckoLoggingStatus.Disabled,
     onSettingsChanged: (DeveloperSettings) -> Unit,
     onHttpPasswordAutofillEnabledChanged: (Boolean) -> Unit = {},
     onInputDiagnosticsEnabledChanged: (Boolean) -> Unit = {},
     onCopyDiagnostics: () -> Unit = {},
     onExportLogs: () -> Unit = {},
     onClearLogs: () -> Unit = {},
+    onExportGeckoLogs: () -> Unit = {},
+    onClearGeckoLogs: () -> Unit = {},
     onShowOnboarding: () -> Unit = {},
     onShowReleaseNotes: () -> Unit = {},
     onBack: () -> Unit,
 ) {
     var httpAutofillConfirmationVisible by rememberSaveable { mutableStateOf(false) }
     var scrollDispatchMenuExpanded by remember { mutableStateOf(false) }
+    var geckoModulesDraft by rememberSaveable(settings.geckoLoggingModules) {
+        mutableStateOf(settings.geckoLoggingModules)
+    }
     SettingsPage(
         title = stringResource(R.string.developer_options_title),
         onBack = onBack,
@@ -132,6 +149,95 @@ internal fun DeveloperOptionsSettingsPage(
             summary = stringResource(R.string.developer_options_clear_logs_summary),
             onClick = onClearLogs,
             modifier = Modifier.testTag(DeveloperOptionsTestTags.ClearLogs),
+        )
+        SettingsPageSpacer()
+        SettingsSwitch(
+            title = stringResource(R.string.developer_options_gecko_logging),
+            subtitle = stringResource(
+                if (isGeckoLoggingSupported) {
+                    R.string.developer_options_gecko_logging_summary
+                } else {
+                    R.string.developer_options_gecko_logging_unsupported
+                },
+            ),
+            checked = isGeckoLoggingSupported && settings.geckoLoggingEnabled,
+            enabled = isGeckoLoggingSupported,
+            onCheckedChange = { enabled ->
+                onSettingsChanged(settings.copy(geckoLoggingEnabled = enabled))
+            },
+            modifier = Modifier.testTag(DeveloperOptionsTestTags.GeckoLogging),
+        )
+        if (isGeckoLoggingSupported) {
+            Text(
+                text = stringResource(geckoLoggingStatus.labelResource()),
+                modifier = Modifier
+                    .padding(start = 18.dp, top = 8.dp, end = 18.dp)
+                    .testTag(DeveloperOptionsTestTags.GeckoLoggingStatus),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Text(
+            text = stringResource(R.string.developer_options_gecko_logging_warning),
+            modifier = Modifier
+                .padding(start = 18.dp, top = 8.dp, end = 18.dp)
+                .testTag(DeveloperOptionsTestTags.GeckoLoggingWarning),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.error,
+        )
+        SettingsPageSpacer()
+        val validGeckoModules = GeckoLoggingRules.isValidModules(geckoModulesDraft)
+        OutlinedTextField(
+            value = geckoModulesDraft,
+            onValueChange = { value ->
+                geckoModulesDraft = value.take(GeckoLoggingRules.MAX_MODULES_LENGTH)
+            },
+            enabled = isGeckoLoggingSupported,
+            modifier = Modifier
+                .fillMaxWidth()
+                .testTag(DeveloperOptionsTestTags.GeckoLoggingModules),
+            label = { Text(stringResource(R.string.developer_options_gecko_logging_modules)) },
+            supportingText = {
+                Text(
+                    stringResource(
+                        if (validGeckoModules) {
+                            R.string.developer_options_gecko_logging_modules_summary
+                        } else {
+                            R.string.developer_options_gecko_logging_modules_invalid
+                        },
+                    ),
+                )
+            },
+            isError = !validGeckoModules,
+            singleLine = true,
+        )
+        Button(
+            onClick = {
+                onSettingsChanged(
+                    settings.copy(
+                        geckoLoggingModules = GeckoLoggingRules.normalizedModules(geckoModulesDraft),
+                    ),
+                )
+            },
+            enabled = isGeckoLoggingSupported && validGeckoModules &&
+                GeckoLoggingRules.normalizedModules(geckoModulesDraft) != settings.geckoLoggingModules,
+            modifier = Modifier.testTag(DeveloperOptionsTestTags.ApplyGeckoLoggingModules),
+        ) {
+            Text(stringResource(R.string.developer_options_gecko_logging_modules_apply))
+        }
+        SettingsPageSpacer()
+        DeveloperAction(
+            title = stringResource(R.string.developer_options_export_gecko_logs),
+            summary = stringResource(R.string.developer_options_export_gecko_logs_summary),
+            onClick = onExportGeckoLogs,
+            modifier = Modifier.testTag(DeveloperOptionsTestTags.ExportGeckoLogs),
+        )
+        SettingsPageSpacer()
+        DeveloperAction(
+            title = stringResource(R.string.developer_options_clear_gecko_logs),
+            summary = stringResource(R.string.developer_options_clear_gecko_logs_summary),
+            onClick = onClearGeckoLogs,
+            modifier = Modifier.testTag(DeveloperOptionsTestTags.ClearGeckoLogs),
         )
         SettingsPageSpacer()
         SettingsSwitch(
@@ -302,6 +408,17 @@ internal fun DeveloperOptionsSettingsPage(
             },
         )
     }
+}
+
+private fun GeckoLoggingStatus.labelResource(): Int = when (this) {
+    GeckoLoggingStatus.Disabled -> R.string.developer_options_gecko_logging_status_disabled
+    GeckoLoggingStatus.Starting -> R.string.developer_options_gecko_logging_status_starting
+    GeckoLoggingStatus.Recording -> R.string.developer_options_gecko_logging_status_recording
+    GeckoLoggingStatus.PausedForPrivateBrowsing ->
+        R.string.developer_options_gecko_logging_status_private
+    GeckoLoggingStatus.PausedForExport -> R.string.developer_options_gecko_logging_status_export
+    GeckoLoggingStatus.LimitReached -> R.string.developer_options_gecko_logging_status_limit
+    GeckoLoggingStatus.Failed -> R.string.developer_options_gecko_logging_status_failed
 }
 
 @Composable

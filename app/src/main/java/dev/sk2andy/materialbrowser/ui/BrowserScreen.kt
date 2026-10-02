@@ -227,6 +227,8 @@ internal fun BrowserScreen(
     onExportAppData: () -> Unit = {},
     onExportAppLogs: () -> Unit = {},
     onClearAppLogs: () -> Unit = {},
+    onExportGeckoLogs: () -> Unit = {},
+    onClearGeckoLogs: () -> Unit = {},
     onImportAppData: () -> Unit = {},
     onShowGestureOnboarding: () -> Unit = {},
     onShowReleaseNotes: () -> Unit = {},
@@ -1856,6 +1858,8 @@ internal fun BrowserScreen(
             onExportAppData = onExportAppData,
             onExportAppLogs = onExportAppLogs,
             onClearAppLogs = onClearAppLogs,
+            onExportGeckoLogs = onExportGeckoLogs,
+            onClearGeckoLogs = onClearGeckoLogs,
             onImportAppData = onImportAppData,
             onShowGestureOnboarding = {
                 settingsVisible = false

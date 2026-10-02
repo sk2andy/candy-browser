@@ -266,13 +266,21 @@ internal class GeckoViewExtensionChrome(
             )
             val tabId = host.createTab(allowed.value, GeckoPreparedSession(created))
                 ?: return deniedSessionResult("Candy could not create extension tab")
-            val bound = sessions.values.firstOrNull { binding ->
+            val binding = sessions.values.firstOrNull { binding ->
                 binding.identity.tabId == tabId && host.isCurrentSession(binding.identity)
-            }?.session
-            if (bound !== created || created.isOpen) {
+            }
+            if (binding?.session !== created || created.isOpen) {
                 return deniedSessionResult("Candy did not adopt unopened extension tab session")
             }
-            return GeckoResult.fromValue(created)
+            if (!owner.isPrivate) return GeckoResult.fromValue(created)
+            val result = GeckoResult<GeckoSession>()
+            GeckoLogging.beforePrivateSession(created) { stopped ->
+                if (stopped && host.isCurrentSession(binding.identity) &&
+                    GeckoLogging.hasPrivateSessionOwner(created)
+                ) result.complete(created)
+                else result.completeExceptionally(IllegalStateException("Could not pause Gecko diagnostics"))
+            }
+            return result
         }
 
         override fun onOpenOptionsPage(source: WebExtension) {

@@ -219,6 +219,7 @@ import dev.sk2andy.materialbrowser.data.BrowserDownloadRequestFactory
 import dev.sk2andy.materialbrowser.data.BrowserDownloadSettings
 import dev.sk2andy.materialbrowser.data.DeveloperSettings
 import dev.sk2andy.materialbrowser.data.AppLogEvent
+import dev.sk2andy.materialbrowser.browser.gecko.GeckoLogging
 import dev.sk2andy.materialbrowser.data.AppLogging
 import dev.sk2andy.materialbrowser.data.AppearanceSettings
 import dev.sk2andy.materialbrowser.data.AddressBarDockPlacement
@@ -2553,10 +2554,15 @@ class BrowserController(
         inlineMediaPlayerSeekSettings = store.loadInlineMediaPlayerSeekSettings()
         isDeveloperOptionsUnlocked = store.loadDeveloperOptionsUnlocked()
         developerSettings = store.loadDeveloperSettings()
+        GeckoLogging.setPrivateBrowsingActive(
+            active = tabs.any(BrowserTab::isIncognito),
+            owner = appLogPrivacyOwner,
+        )
         AppLogging.setPrivateBrowsingActive(
             active = tabs.any(BrowserTab::isIncognito),
             owner = appLogPrivacyOwner,
         )
+        GeckoLogging.configure(developerSettings)
         AppLogging.record(AppLogEvent.BrowserStarted)
         publishBrowserChromeScrollDispatchMode(
             developerSettings.browserChromeScrollDispatchMode,
@@ -5835,6 +5841,10 @@ class BrowserController(
                 pendingInitialExternalNavigationGrants[tab.id] = grant
             }
         }
+        GeckoLogging.setPrivateBrowsingActive(
+            active = tab.isIncognito || tabs.any(BrowserTab::isIncognito),
+            owner = appLogPrivacyOwner,
+        )
         AppLogging.setPrivateBrowsingActive(
             active = tab.isIncognito || tabs.any(BrowserTab::isIncognito),
             owner = appLogPrivacyOwner,
@@ -5890,6 +5900,10 @@ class BrowserController(
             isIncognito = isIncognito ?: openerTab?.isIncognito ?: selectedTab.isIncognito,
             openerTabId = openerTabId,
             profileId = openerTab?.profileId ?: activeProfileId,
+        )
+        GeckoLogging.setPrivateBrowsingActive(
+            active = tab.isIncognito || tabs.any(BrowserTab::isIncognito),
+            owner = appLogPrivacyOwner,
         )
         AppLogging.setPrivateBrowsingActive(
             active = tab.isIncognito || tabs.any(BrowserTab::isIncognito),
@@ -9559,6 +9573,7 @@ class BrowserController(
             developerSettings.forceSafeAreaFallback != normalized.forceSafeAreaFallback
         val appLoggingChanged = developerSettings.appLoggingEnabled != normalized.appLoggingEnabled
         developerSettings = normalized
+        GeckoLogging.configure(normalized)
         if (appLoggingChanged && !AppLogging.setEnabled(normalized.appLoggingEnabled)) {
             Toast.makeText(activity, R.string.developer_options_logs_clear_failed, Toast.LENGTH_SHORT)
                 .show()
@@ -10878,6 +10893,7 @@ class BrowserController(
         browserEngineSessions.keys.toList().forEach(::closeBrowserEngineSession)
         webViewStateRepository.flush()
         browserEngineSessionFactory.shutdown()
+        GeckoLogging.setPrivateBrowsingActive(active = false, owner = appLogPrivacyOwner)
         AppLogging.setPrivateBrowsingActive(active = false, owner = appLogPrivacyOwner)
         residentSessionAccessOrder.clear()
         castMediaCandidate = null
@@ -15156,6 +15172,10 @@ class BrowserController(
     }
 
     private fun persist() {
+        GeckoLogging.setPrivateBrowsingActive(
+            active = tabs.any(BrowserTab::isIncognito),
+            owner = appLogPrivacyOwner,
+        )
         AppLogging.setPrivateBrowsingActive(
             active = tabs.any(BrowserTab::isIncognito),
             owner = appLogPrivacyOwner,

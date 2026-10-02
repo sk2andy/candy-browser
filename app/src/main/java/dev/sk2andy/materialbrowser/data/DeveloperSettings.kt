@@ -27,8 +27,11 @@ data class DeveloperSettings(
     val forceSafeAreaFallback: Boolean = false,
     val geckoSafeAreaSettings: GeckoSafeAreaSettings = GeckoSafeAreaSettings(),
     val appLoggingEnabled: Boolean = false,
+    val geckoLoggingEnabled: Boolean = false,
+    val geckoLoggingModules: String = GeckoLoggingRules.DEFAULT_MODULES,
 ) {
     fun normalized(): DeveloperSettings = copy(
+        geckoLoggingModules = GeckoLoggingRules.normalizedModules(geckoLoggingModules),
         geckoSafeAreaSettings = geckoSafeAreaSettings.normalized(),
         safeAreaLayoutQuietPeriodMillis = normalizedLayoutQuietPeriodMillis(),
         safeAreaRequiredFailureCount = safeAreaRequiredFailureCount.coerceIn(

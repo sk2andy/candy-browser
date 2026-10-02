@@ -308,6 +308,7 @@ internal class GeckoViewRuntimeHandle private constructor(
                 httpsOnlyMode = BrowserSessionStore(appContext).loadHttpsOnlyMode(),
             )
             val runtime = GeckoRuntime.create(appContext, runtimeSettings)
+            GeckoLogging.attach(appContext)
             runtime.webNotificationDelegate = GeckoWebNotificationPresenter(appContext)
             GeckoWebPushCoordinator.attach(appContext, runtime)
             val extensionController = runtime.webExtensionController
@@ -995,6 +996,7 @@ private class GeckoViewBrowserSession(
         mutableMapOf<Int, GeckoSession.PermissionDelegate.ContentPermission>()
     private val appliedAutoplayValues = mutableMapOf<AutoplayPermissionKey, Int>()
     private var closed = false
+    private var loggingPrivacyReady = !isPrivate
     private var active = false
     private var inPictureInPicture = false
     private var pictureInPicturePlaybackExpected = false
@@ -1223,7 +1225,16 @@ private class GeckoViewBrowserSession(
                 val accepted = newSessionListener?.onNewSession(
                     GeckoNewSessionRequest(uri, GeckoPreparedSession(child)),
                 ) == true
-                return GeckoResult.fromValue(child.takeIf { accepted })
+                if (!accepted || !child.settings.usePrivateMode) {
+                    return GeckoResult.fromValue(child.takeIf { accepted })
+                }
+                val result = GeckoResult<GeckoSession>()
+                val loggingBarrierOwner = Any()
+                GeckoLogging.beforePrivateSession(loggingBarrierOwner) { stopped ->
+                    result.complete(child.takeIf { stopped && GeckoLogging.hasPrivateSessionOwner(child) })
+                    GeckoLogging.setPrivateBrowsingActive(false, loggingBarrierOwner)
+                }
+                return result
             }
 
             override fun onLocationChange(
@@ -1989,7 +2000,20 @@ private class GeckoViewBrowserSession(
                 ensureCredentialPromptHost()
             }
         }
-        if (openSession) session.open(runtime)
+        if (isPrivate) {
+            GeckoLogging.beforePrivateSession(session) { stopped ->
+                mainHandler.post {
+                    if (closed) return@post
+                    if (!stopped) {
+                        failPrivacyGate("Could not pause Gecko diagnostics")
+                    } else {
+                        if (openSession) session.open(runtime)
+                        loggingPrivacyReady = true
+                        loadPendingUrlIfReady()
+                    }
+                }
+            }
+        } else if (openSession) session.open(runtime)
         session.setActive(false)
         privacyBinding = privacyHost.bind(
             session = session,
@@ -3014,6 +3038,7 @@ private class GeckoViewBrowserSession(
         if (
             toppingHost.state != GeckoToppingHostState.Initializing &&
             trackingPermissions.isReady &&
+            loggingPrivacyReady &&
             privacyBound
         ) {
             session.load(
@@ -3068,6 +3093,7 @@ private class GeckoViewBrowserSession(
         if (
             toppingHost.state != GeckoToppingHostState.Initializing &&
             trackingPermissions.isReady &&
+            loggingPrivacyReady &&
             privacyBound &&
             pendingRestoredSessionState == null &&
             !restoredHistoryPending
@@ -3120,7 +3146,7 @@ private class GeckoViewBrowserSession(
     }
 
     override fun goBack() {
-        if (!closed && privacyBound && state.canGoBack) {
+        if (!closed && loggingPrivacyReady && privacyBound && state.canGoBack) {
             // Ordinary snapshots can lag native capabilities; override only bootstrap traversal.
             val history = historyState?.takeUnless { current ->
                 GeckoBootstrapHistoryRules.canRestoreHistory(current.urls)
@@ -3139,7 +3165,7 @@ private class GeckoViewBrowserSession(
     }
 
     override fun goForward() {
-        if (!closed && privacyBound && state.canGoForward) {
+        if (!closed && loggingPrivacyReady && privacyBound && state.canGoForward) {
             // Ordinary snapshots can lag native capabilities; override only bootstrap traversal.
             val history = historyState?.takeUnless { current ->
                 GeckoBootstrapHistoryRules.canRestoreHistory(current.urls)
@@ -3158,7 +3184,7 @@ private class GeckoViewBrowserSession(
     }
 
     override fun goToHistoryIndex(index: Int) {
-        if (!closed && privacyBound && index >= 0) {
+        if (!closed && loggingPrivacyReady && privacyBound && index >= 0) {
             val url = historyState?.urls?.getOrNull(index) ?: return
             if (CandyPrivacyHostContract.isBootstrapDocumentUrl(url)) return
             pendingRestoredHttpsOnlyUrl = null
@@ -3267,6 +3293,7 @@ private class GeckoViewBrowserSession(
         toppingBinding = GeckoToppingSessionBinding.None
         privacyBinding.close()
         session.close()
+        if (isPrivate) GeckoLogging.setPrivateBrowsingActive(false, session)
         if (BuildConfig.ENABLE_PERFORMANCE_DIAGNOSTICS) {
             GeckoPerformanceDiagnostics.unregisterSession(session)
         }
@@ -3275,6 +3302,7 @@ private class GeckoViewBrowserSession(
     private fun loadPendingUrlIfReady() {
         if (
             closed ||
+            !loggingPrivacyReady ||
             toppingHost.state == GeckoToppingHostState.Initializing ||
             !trackingPermissions.isReady ||
             !privacyBound
@@ -3299,6 +3327,7 @@ private class GeckoViewBrowserSession(
     }
 
     private fun restorePendingStateIfReady(): Boolean {
+        if (!loggingPrivacyReady) return false
         if (closed || !privacyBound) return false
         val restored = pendingRestoredSessionState ?: return false
         pendingRestoredSessionState = null
@@ -3341,6 +3370,7 @@ private class GeckoViewBrowserSession(
     }
 
     private fun runPendingFailedPageRetryIfReady(): Boolean {
+        if (!loggingPrivacyReady) return false
         if (
             closed ||
             toppingHost.state == GeckoToppingHostState.Initializing ||
@@ -3454,7 +3484,7 @@ private class GeckoViewBrowserSession(
     }
 
     private fun loadHttpsOnlyRetry(httpUrl: String, replaceHistory: Boolean) {
-        if (!privacyBound) return
+        if (!loggingPrivacyReady || !privacyBound) return
         val mode = runtime.settings.allowInsecureConnections
         val protectsSession = mode == GeckoRuntimeSettings.HTTPS_ONLY ||
             (mode == GeckoRuntimeSettings.HTTPS_ONLY_PRIVATE && isPrivate)
