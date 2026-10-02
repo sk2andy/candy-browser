@@ -376,6 +376,8 @@
     <string name="settings_home_search_summary">Suchmaschine und Vorschläge</string>
     <string name="settings_tabs_gestures_title">Tabs &amp; Gesten</string>
     <string name="settings_home_tabs_gestures_summary">Tab-Layout, Aufbewahrung, Profile und Bedienelemente</string>
+    <string name="settings_player_title">Player</string>
+    <string name="settings_home_player_summary">Videowiedergabe, Autoplay und Doppeltipp-Sprünge</string>
     <string name="settings_home_browser_summary">Start, Favoriten, Webseiten, Links und Standardbrowser</string>
     <string name="settings_downloads_title">Downloads</string>
     <string name="settings_home_capsules_summary">Gespeicherte Site Capsules und Verknüpfungen verwalten</string>

@@ -366,11 +366,6 @@ internal fun SettingsScreen(
                     favoriteAnimationSpeed = favoriteAnimationSpeed,
                     isOpenHomeOnStartupEnabled = isOpenHomeOnStartupEnabled,
                     isScrollBarEnabled = isScrollBarEnabled,
-                    isVideoAutoplayBlocked = isVideoAutoplayBlocked,
-                    isVideoAutoplayBlockingSupported = isVideoAutoplayBlockingSupported,
-                    inlineMediaPlayerMode = inlineMediaPlayerMode,
-                    inlineMediaPlayerSeekSettings = inlineMediaPlayerSeekSettings,
-                    isInlineMediaPlayerSupported = isInlineMediaPlayerSupported,
                     isDefaultBrowser = isDefaultBrowser,
                     onBrowserEngineKindChanged = onBrowserEngineKindChanged,
                     onExternalLinkPreviewEnabledChanged =
@@ -386,11 +381,20 @@ internal fun SettingsScreen(
                     onOpenHomeOnStartupEnabledChanged =
                         onOpenHomeOnStartupEnabledChanged,
                     onScrollBarEnabledChanged = onScrollBarEnabledChanged,
+                    onPageTranslationProviderChanged = onPageTranslationProviderChanged,
+                    onOpenDefaultBrowserSettings = onOpenDefaultBrowserSettings,
+                    onBack = { onDestinationChanged(SettingsDestination.Home) },
+                )
+
+                SettingsDestination.Player -> PlayerSettingsPage(
+                    isVideoAutoplayBlocked = isVideoAutoplayBlocked,
+                    isVideoAutoplayBlockingSupported = isVideoAutoplayBlockingSupported,
+                    inlineMediaPlayerMode = inlineMediaPlayerMode,
+                    inlineMediaPlayerSeekSettings = inlineMediaPlayerSeekSettings,
+                    isInlineMediaPlayerSupported = isInlineMediaPlayerSupported,
                     onVideoAutoplayBlockedChanged = onVideoAutoplayBlockedChanged,
                     onInlineMediaPlayerModeChanged = onInlineMediaPlayerModeChanged,
                     onInlineMediaPlayerSeekSettingsChanged = onInlineMediaPlayerSeekSettingsChanged,
-                    onPageTranslationProviderChanged = onPageTranslationProviderChanged,
-                    onOpenDefaultBrowserSettings = onOpenDefaultBrowserSettings,
                     onBack = { onDestinationChanged(SettingsDestination.Home) },
                 )
 

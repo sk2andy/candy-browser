@@ -379,6 +379,8 @@
     <string name="settings_home_search_summary">Motor de pesquisa e sugestões</string>
     <string name="settings_tabs_gestures_title">Separadores e gestos</string>
     <string name="settings_home_tabs_gestures_summary">Layout, duração, perfis e controlos dos separadores</string>
+    <string name="settings_player_title">Reprodutor</string>
+    <string name="settings_home_player_summary">Reprodução de vídeo, reprodução automática e saltos com duplo toque</string>
     <string name="settings_home_browser_summary">Início, favoritos, páginas web, ligações e navegador predefinido</string>
     <string name="settings_downloads_title">Transferências</string>
     <string name="settings_home_capsules_summary">Gerir Site Capsules e atalhos guardados</string>

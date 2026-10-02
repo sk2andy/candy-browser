@@ -1,30 +1,24 @@
 package dev.sk2andy.materialbrowser.ui
 
-import android.os.SystemClock
 
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.semantics.SemanticsProperties
-import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
-import androidx.compose.ui.test.performSemanticsAction
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineKind
 import dev.sk2andy.materialbrowser.browser.ExternalAppLinkHandling
 import dev.sk2andy.materialbrowser.browser.FavoriteAnimationSpeed
-import dev.sk2andy.materialbrowser.browser.InlineMediaPlayerMode
-import dev.sk2andy.materialbrowser.browser.InlineMediaPlayerSeekSettings
 import dev.sk2andy.materialbrowser.browser.PageTranslationProvider
 import dev.sk2andy.materialbrowser.browser.StartupAddressFocusMode
 import dev.sk2andy.materialbrowser.ui.theme.MaterialBrowserTheme
@@ -52,14 +46,11 @@ class BrowserSettingsScreenInstrumentedTest {
                     isFullImmersiveModeEnabled = false,
                     isStartupAnimationEnabled = true,
                     isScrollBarEnabled = false,
-                    isVideoAutoplayBlocked = true,
-                    isVideoAutoplayBlockingSupported = true,
                     isDefaultBrowser = false,
                     onBrowserEngineKindChanged = { engine = it },
                     onFullImmersiveModeEnabledChanged = {},
                     onStartupAnimationEnabledChanged = {},
                     onScrollBarEnabledChanged = {},
-                    onVideoAutoplayBlockedChanged = {},
                     onPageTranslationProviderChanged = {},
                     onOpenDefaultBrowserSettings = {},
                     onBack = {},
@@ -91,13 +82,10 @@ class BrowserSettingsScreenInstrumentedTest {
                     isFullImmersiveModeEnabled = false,
                     isStartupAnimationEnabled = true,
                     isScrollBarEnabled = enabled,
-                    isVideoAutoplayBlocked = false,
-                    isVideoAutoplayBlockingSupported = true,
                     isDefaultBrowser = false,
                     onFullImmersiveModeEnabledChanged = {},
                     onStartupAnimationEnabledChanged = {},
                     onScrollBarEnabledChanged = { enabled = it },
-                    onVideoAutoplayBlockedChanged = {},
                     onPageTranslationProviderChanged = {},
                     onOpenDefaultBrowserSettings = {},
                     onBack = {},
@@ -113,113 +101,6 @@ class BrowserSettingsScreenInstrumentedTest {
     }
 
     @Test
-    fun inlineMediaPlayerChoiceUpdatesModeAndExplainsDirectPictureInPicture() {
-        var mode by mutableStateOf(InlineMediaPlayerMode.ButtonFullscreen)
-        composeRule.setContent {
-            MaterialBrowserTheme {
-                BrowserSettingsPage(
-                    pageTranslationProvider = PageTranslationProvider.Google,
-                    isFullImmersiveModeEnabled = false,
-                    isStartupAnimationEnabled = true,
-                    isScrollBarEnabled = false,
-                    isVideoAutoplayBlocked = false,
-                    isVideoAutoplayBlockingSupported = true,
-                    inlineMediaPlayerMode = mode,
-                    isInlineMediaPlayerSupported = true,
-                    isDefaultBrowser = false,
-                    onFullImmersiveModeEnabledChanged = {},
-                    onStartupAnimationEnabledChanged = {},
-                    onScrollBarEnabledChanged = {},
-                    onVideoAutoplayBlockedChanged = {},
-                    onInlineMediaPlayerModeChanged = { mode = it },
-                    onPageTranslationProviderChanged = {},
-                    onOpenDefaultBrowserSettings = {},
-                    onBack = {},
-                )
-            }
-        }
-
-        composeRule.onNodeWithTag(BrowserSettingsTestTags.InlineMediaPlayer)
-            .performScrollTo()
-            .performClick()
-        composeRule.onNodeWithText(
-            context.getString(
-                R.string.settings_inline_media_player_mode_button_inline_fullscreen,
-            ),
-        ).performClick()
-
-        assertEquals(InlineMediaPlayerMode.ButtonInlineAndFullscreen, mode)
-        val evidencePauseMillis = InstrumentationRegistry.getArguments()
-            .getString("evidencePauseMillis")?.toLongOrNull()?.coerceIn(0L, 5_000L) ?: 0L
-        composeRule.onNodeWithTag(BrowserSettingsTestTags.InlineMediaPlayer).performClick()
-        composeRule.waitForIdle()
-        if (evidencePauseMillis > 0) SystemClock.sleep(evidencePauseMillis)
-        composeRule.onNodeWithText(
-            context.getString(R.string.settings_inline_media_player_mode_disabled),
-        ).performClick()
-        assertEquals(InlineMediaPlayerMode.Disabled, mode)
-        composeRule.waitForIdle()
-        if (evidencePauseMillis > 0) SystemClock.sleep(evidencePauseMillis)
-        composeRule.onNodeWithText(
-            context.getString(R.string.settings_inline_media_player_subtitle),
-        ).performScrollTo().assertIsDisplayed()
-    }
-
-    @Test
-    fun inlineMediaPlayerSeekSlidersUpdateDirectionsSeparatelyAndDisableWithOff() {
-        var settings by mutableStateOf(InlineMediaPlayerSeekSettings())
-        var mode by mutableStateOf(InlineMediaPlayerMode.Automatic)
-        var supported by mutableStateOf(true)
-        val changes = mutableListOf<InlineMediaPlayerSeekSettings>()
-        composeRule.setContent {
-            MaterialBrowserTheme {
-                BrowserSettingsPage(
-                    pageTranslationProvider = PageTranslationProvider.Google,
-                    isFullImmersiveModeEnabled = false,
-                    isStartupAnimationEnabled = true,
-                    isScrollBarEnabled = false,
-                    isVideoAutoplayBlocked = false,
-                    isVideoAutoplayBlockingSupported = true,
-                    inlineMediaPlayerMode = mode,
-                    inlineMediaPlayerSeekSettings = settings,
-                    isInlineMediaPlayerSupported = supported,
-                    isDefaultBrowser = false,
-                    onFullImmersiveModeEnabledChanged = {},
-                    onStartupAnimationEnabledChanged = {},
-                    onScrollBarEnabledChanged = {},
-                    onVideoAutoplayBlockedChanged = {},
-                    onInlineMediaPlayerSeekSettingsChanged = {
-                        settings = it
-                        changes.add(it)
-                    },
-                    onPageTranslationProviderChanged = {},
-                    onOpenDefaultBrowserSettings = {},
-                    onBack = {},
-                )
-            }
-        }
-
-        composeRule.onNodeWithTag(BrowserSettingsTestTags.InlineMediaPlayerSeekBackward)
-            .performScrollTo()
-            .performSemanticsAction(SemanticsActions.SetProgress) { it(2f) }
-        assertEquals(InlineMediaPlayerSeekSettings(15, 10), settings)
-        composeRule.onNodeWithTag(BrowserSettingsTestTags.InlineMediaPlayerSeekForward)
-            .performScrollTo()
-            .performSemanticsAction(SemanticsActions.SetProgress) { it(4f) }
-        assertEquals(listOf(InlineMediaPlayerSeekSettings(15, 10), InlineMediaPlayerSeekSettings(15, 30)), changes)
-        composeRule.runOnIdle { mode = InlineMediaPlayerMode.Disabled }
-        composeRule.onNodeWithTag(BrowserSettingsTestTags.InlineMediaPlayerSeekBackward).assertIsNotEnabled()
-        composeRule.onNodeWithTag(BrowserSettingsTestTags.InlineMediaPlayerSeekForward).assertIsNotEnabled()
-        assertEquals(InlineMediaPlayerSeekSettings(15, 30), settings)
-        composeRule.runOnIdle {
-            mode = InlineMediaPlayerMode.Automatic
-            supported = false
-        }
-        composeRule.onNodeWithTag(BrowserSettingsTestTags.InlineMediaPlayerSeekBackward).assertIsNotEnabled()
-        composeRule.onNodeWithTag(BrowserSettingsTestTags.InlineMediaPlayerSeekForward).assertIsNotEnabled()
-    }
-
-    @Test
     fun startupAnimationSwitchUpdatesSetting() {
         var enabled by mutableStateOf(true)
         composeRule.setContent {
@@ -229,13 +110,10 @@ class BrowserSettingsScreenInstrumentedTest {
                     isFullImmersiveModeEnabled = false,
                     isStartupAnimationEnabled = enabled,
                     isScrollBarEnabled = false,
-                    isVideoAutoplayBlocked = false,
-                    isVideoAutoplayBlockingSupported = true,
                     isDefaultBrowser = false,
                     onFullImmersiveModeEnabledChanged = {},
                     onStartupAnimationEnabledChanged = { enabled = it },
                     onScrollBarEnabledChanged = {},
-                    onVideoAutoplayBlockedChanged = {},
                     onPageTranslationProviderChanged = {},
                     onOpenDefaultBrowserSettings = {},
                     onBack = {},
@@ -259,14 +137,11 @@ class BrowserSettingsScreenInstrumentedTest {
                     isStartupAnimationEnabled = true,
                     startupAddressFocusMode = mode,
                     isScrollBarEnabled = false,
-                    isVideoAutoplayBlocked = false,
-                    isVideoAutoplayBlockingSupported = true,
                     isDefaultBrowser = false,
                     onFullImmersiveModeEnabledChanged = {},
                     onStartupAnimationEnabledChanged = {},
                     onStartupAddressFocusModeChanged = { mode = it },
                     onScrollBarEnabledChanged = {},
-                    onVideoAutoplayBlockedChanged = {},
                     onPageTranslationProviderChanged = {},
                     onOpenDefaultBrowserSettings = {},
                     onBack = {},
@@ -294,14 +169,11 @@ class BrowserSettingsScreenInstrumentedTest {
                     isStartupAnimationEnabled = true,
                     isFavoriteLaunchAnimationEnabled = enabled,
                     isScrollBarEnabled = false,
-                    isVideoAutoplayBlocked = false,
-                    isVideoAutoplayBlockingSupported = true,
                     isDefaultBrowser = false,
                     onFullImmersiveModeEnabledChanged = {},
                     onStartupAnimationEnabledChanged = {},
                     onFavoriteLaunchAnimationEnabledChanged = { enabled = it },
                     onScrollBarEnabledChanged = {},
-                    onVideoAutoplayBlockedChanged = {},
                     onPageTranslationProviderChanged = {},
                     onOpenDefaultBrowserSettings = {},
                     onBack = {},
@@ -325,14 +197,11 @@ class BrowserSettingsScreenInstrumentedTest {
                     isStartupAnimationEnabled = true,
                     favoriteAnimationSpeed = speed,
                     isScrollBarEnabled = false,
-                    isVideoAutoplayBlocked = false,
-                    isVideoAutoplayBlockingSupported = true,
                     isDefaultBrowser = false,
                     onFullImmersiveModeEnabledChanged = {},
                     onStartupAnimationEnabledChanged = {},
                     onFavoriteAnimationSpeedChanged = { speed = it },
                     onScrollBarEnabledChanged = {},
-                    onVideoAutoplayBlockedChanged = {},
                     onPageTranslationProviderChanged = {},
                     onOpenDefaultBrowserSettings = {},
                     onBack = {},
@@ -360,14 +229,11 @@ class BrowserSettingsScreenInstrumentedTest {
                     isFullImmersiveModeEnabled = false,
                     isStartupAnimationEnabled = true,
                     isScrollBarEnabled = false,
-                    isVideoAutoplayBlocked = false,
-                    isVideoAutoplayBlockingSupported = true,
                     isDefaultBrowser = false,
                     onFullImmersiveModeEnabledChanged = {},
                     onStartupAnimationEnabledChanged = {},
                     onImportFavoriteBookmarks = { importRequested = true },
                     onScrollBarEnabledChanged = {},
-                    onVideoAutoplayBlockedChanged = {},
                     onPageTranslationProviderChanged = {},
                     onOpenDefaultBrowserSettings = {},
                     onBack = {},
@@ -393,14 +259,11 @@ class BrowserSettingsScreenInstrumentedTest {
                     isStartupAnimationEnabled = true,
                     isOpenHomeOnStartupEnabled = enabled,
                     isScrollBarEnabled = false,
-                    isVideoAutoplayBlocked = false,
-                    isVideoAutoplayBlockingSupported = true,
                     isDefaultBrowser = false,
                     onFullImmersiveModeEnabledChanged = {},
                     onStartupAnimationEnabledChanged = {},
                     onOpenHomeOnStartupEnabledChanged = { enabled = it },
                     onScrollBarEnabledChanged = {},
-                    onVideoAutoplayBlockedChanged = {},
                     onPageTranslationProviderChanged = {},
                     onOpenDefaultBrowserSettings = {},
                     onBack = {},
@@ -423,13 +286,10 @@ class BrowserSettingsScreenInstrumentedTest {
                     isFullImmersiveModeEnabled = false,
                     isStartupAnimationEnabled = true,
                     isScrollBarEnabled = false,
-                    isVideoAutoplayBlocked = false,
-                    isVideoAutoplayBlockingSupported = true,
                     isDefaultBrowser = false,
                     onFullImmersiveModeEnabledChanged = {},
                     onStartupAnimationEnabledChanged = {},
                     onScrollBarEnabledChanged = {},
-                    onVideoAutoplayBlockedChanged = {},
                     onPageTranslationProviderChanged = { provider = it },
                     onOpenDefaultBrowserSettings = {},
                     onBack = {},
@@ -468,14 +328,11 @@ class BrowserSettingsScreenInstrumentedTest {
                     isFullImmersiveModeEnabled = false,
                     isStartupAnimationEnabled = true,
                     isScrollBarEnabled = false,
-                    isVideoAutoplayBlocked = false,
-                    isVideoAutoplayBlockingSupported = true,
                     isDefaultBrowser = false,
                     onExternalLinkPreviewEnabledChanged = { enabled = it },
                     onFullImmersiveModeEnabledChanged = {},
                     onStartupAnimationEnabledChanged = {},
                     onScrollBarEnabledChanged = {},
-                    onVideoAutoplayBlockedChanged = {},
                     onPageTranslationProviderChanged = {},
                     onOpenDefaultBrowserSettings = {},
                     onBack = {},
@@ -501,14 +358,11 @@ class BrowserSettingsScreenInstrumentedTest {
                     isFullImmersiveModeEnabled = false,
                     isStartupAnimationEnabled = true,
                     isScrollBarEnabled = false,
-                    isVideoAutoplayBlocked = false,
-                    isVideoAutoplayBlockingSupported = true,
                     isDefaultBrowser = false,
                     onExternalAppLinkHandlingChanged = { handling = it },
                     onFullImmersiveModeEnabledChanged = {},
                     onStartupAnimationEnabledChanged = {},
                     onScrollBarEnabledChanged = {},
-                    onVideoAutoplayBlockedChanged = {},
                     onPageTranslationProviderChanged = {},
                     onOpenDefaultBrowserSettings = {},
                     onBack = {},

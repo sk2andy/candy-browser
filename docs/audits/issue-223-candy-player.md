@@ -87,3 +87,26 @@ remains readable above the handle without overlap. Full/FOSS lint and debug asse
 12.9 seconds of native finger drags in real MainActivity Settings; the final persisted values
 were 15 seconds backward and 5 forward. [200% font proof](https://github.com/user-attachments/assets/83c83fa7-b23b-4161-80e3-6d85005ebb38)
 shows the adaptive bubble clearance. Light and dark appearances were visually checked.
+
+## Dedicated Player settings page
+
+Settings → Player now owns video autoplay, Candy Player mode and both independent haptic
+seek sliders. The Browser page no longer duplicates these controls. Header and native Android
+Back return to Settings Home. Existing preference keys, controller updates and runtime policy
+are unchanged; autoplay remains independently available when Candy Player is Off.
+
+The shared home has a Player destination, localized title/summary and platform icon adapters.
+Android opens the production Player page; the shared/iOS route remains explicitly disabled
+until that platform owns equivalent player settings.
+
+| Player-page verification | Result |
+| --- | --- |
+| Full/FOSS JVM suites | 1,728 passed per variant |
+| Shared Settings rules | 200 passed, including route order and unsupported Player gate |
+| Browser/Player/slider/navigation device suites | 17 passed on final FullDebug APK, API 37, 41.84 s |
+| Full/FOSS lint and debug builds | Passed |
+
+[Player-page recording](https://github.com/user-attachments/assets/5179a8fe-86a4-4565-ac87-2b96b7e90e64)
+shows 11.1 seconds of actual MainActivity navigation from Settings Home to Player, native gestures
+on both sliders and header Back to Home. The persisted final distances were 30 seconds backward
+and 20 seconds forward. The recording was captured on a dedicated API 37 emulator.

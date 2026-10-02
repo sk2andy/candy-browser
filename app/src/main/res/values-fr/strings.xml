@@ -379,6 +379,8 @@
     <string name="settings_home_search_summary">Moteur de recherche et suggestions</string>
     <string name="settings_tabs_gestures_title">Onglets et gestes</string>
     <string name="settings_home_tabs_gestures_summary">Disposition, durée, profils et commandes des onglets</string>
+    <string name="settings_player_title">Lecteur</string>
+    <string name="settings_home_player_summary">Lecture vidéo, lecture automatique et sauts par double appui</string>
     <string name="settings_home_browser_summary">Démarrage, favoris, pages web, liens et navigateur par défaut</string>
     <string name="settings_downloads_title">Téléchargements</string>
     <string name="settings_home_capsules_summary">Gérer les Site Capsules et raccourcis enregistrés</string>
