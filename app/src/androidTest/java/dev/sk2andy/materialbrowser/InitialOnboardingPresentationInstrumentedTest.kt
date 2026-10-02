@@ -22,7 +22,7 @@ class InitialOnboardingPresentationInstrumentedTest {
     private val context = InstrumentationRegistry.getInstrumentation().targetContext
 
     init {
-        prepareInitialOnboarding()
+        clearPreferences()
     }
 
     @get:Rule
@@ -39,6 +39,11 @@ class InitialOnboardingPresentationInstrumentedTest {
         composeRule.waitUntil(timeoutMillis = 5_000L) {
             composeRule.onAllNodesWithTag("candy_splash").fetchSemanticsNodes().isEmpty()
         }
+        composeRule.onNodeWithTag("gesture_onboarding_welcome").assertExists()
+        composeRule.onNodeWithTag(ReleaseNotesTestTags.Screen).assertDoesNotExist()
+        composeRule.activityRule.scenario.recreate()
+        composeRule.onNodeWithTag("gesture_onboarding_welcome").assertExists()
+        composeRule.onNodeWithTag(ReleaseNotesTestTags.Screen).assertDoesNotExist()
         composeRule.activityRule.scenario.onActivity { activity ->
             activity.setReleaseNotesVisible(true)
         }
@@ -63,15 +68,5 @@ class InitialOnboardingPresentationInstrumentedTest {
         ).forEach { name ->
             context.getSharedPreferences(name, Context.MODE_PRIVATE).edit().clear().commit()
         }
-    }
-
-    private fun prepareInitialOnboarding() {
-        clearPreferences()
-        context.getSharedPreferences(
-            GestureOnboardingStore.PREFERENCES_NAME,
-            Context.MODE_PRIVATE,
-        ).edit()
-            .putBoolean(GestureOnboardingStore.KEY_HAS_STARTED, true)
-            .commit()
     }
 }

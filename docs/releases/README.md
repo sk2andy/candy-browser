@@ -13,6 +13,7 @@ GitHub Release body. This keeps the product presentation and the public release 
 | Android package | Markdown and referenced screenshots are bundled as offline assets |
 | Presentation | Shown once on the first regular launcher start after an app update |
 | Fresh install | Uses only the normal onboarding; bundled notes are not queued afterward |
+| Startup order | Resolve onboarding before history lifecycle initialization writes browser-session preferences; first-run history markers must not trigger existing-user migration |
 | Update dialog | **Release notes** opens the available version's GitHub Release in a new Candy tab and dismisses the dialog only when opening succeeds; **Download update** and **Later** remain separate actions |
 | Persistence | Highest presented or onboarding-covered Android `versionCode`, stored in dedicated preferences |
 

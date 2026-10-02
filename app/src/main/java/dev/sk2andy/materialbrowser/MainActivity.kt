@@ -272,7 +272,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        BrowsingHistoryLifecycle.install(application)
         applyAppearanceNightMode(
             BrowserSessionStore(this).loadAppearanceSettings().appearanceMode,
         )
@@ -332,6 +331,7 @@ class MainActivity : AppCompatActivity() {
         releaseNotesVisible = savedInstanceState
             ?.getBoolean(STATE_RELEASE_NOTES_VISIBLE)
             ?: releaseNotesRequired
+        BrowsingHistoryLifecycle.install(application)
         val snoozeWakeNotifier = SnoozeWakeNotifier(this).also { it.ensureChannel() }
         privateTabsNotifier.ensureChannel()
         if (isColdStart) privateTabsNotifier.cancel()
