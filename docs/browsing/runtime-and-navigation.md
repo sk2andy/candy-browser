@@ -156,6 +156,11 @@
   app directly, or show Android's app chooser when several match; unavailable links continue in Candy.
   Apps installed while Candy remains open are immediately eligible. Recheck the source after lookup
   and show handoff feedback only after Android accepts the external launch.
+  Bind a regular-tab lookup to the exact engine session, document-start generation and main-frame
+  request revision, while retaining selected-tab/profile/private-surface checks. A same-document
+  History API URL update does not cancel the original tap or its browser fallback. A new document,
+  newer main-frame request or explicit navigation/Stop command invalidates the lookup immediately.
+  Link Peek and confirmation prompts keep their existing strict URL/generation snapshots.
 - Honor Android's selection of Candy for incoming `ACTION_VIEW` and `ACTION_SEND` URLs. Neither
   the initial URL nor its automatic redirect chain receives an external-navigation grant; this prevents
   the calling app from returning the same link to Candy indefinitely. A subsequent user tap in the

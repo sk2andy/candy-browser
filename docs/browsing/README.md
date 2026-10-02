@@ -41,6 +41,9 @@ The GeckoView 155 to 157 compatibility review, upstream fixes and upgrade checks
 Issue 221's bootstrap-history reproduction, popup boundaries and verification are recorded in
 [`../audits/issue-221-gecko-navigation.md`](../audits/issue-221-gecko-navigation.md).
 
+Issue 222's search-link History API race and navigation cancellation checks are recorded in
+[`../audits/issue-222-external-app-navigation.md`](../audits/issue-222-external-app-navigation.md).
+
 Dark System appearance, native website preferences and the address-editor/tab SurfaceView handoff
 are recorded in [`../audits/dark-appearance-and-address-tab-handoff.md`](../audits/dark-appearance-and-address-tab-handoff.md).
 
@@ -50,7 +53,7 @@ are recorded in [`../audits/dark-appearance-and-address-tab-handoff.md`](../audi
 | Gecko internal pages and engine boundary | `GeckoInternalPageRulesTest`, `AddressResolverTest`, `AddressAiModeRulesTest`, `SearchSuggestionProviderTest`, `GeckoInternalPageNavigationInstrumentedTest`, `GeckoRuntimeSettingsInstrumentedTest` |
 | Gecko first-page Back, native popup binding, POST and private navigation | `GeckoBootstrapHistoryRulesTest`, `GeckoNativeSessionBindingRulesTest`, `PopupNavigationRulesTest`, `GeckoBootstrapHistoryInstrumentedTest`, `GeckoPopupNavigationInstrumentedTest`, `scripts/gecko_native_session_binding.test.mjs` |
 | Auto De-AMP URL policy, persistence, navigation and UI | `AutoDeAmpRulesTest`, `AutoDeAmpSettingsInstrumentedTest`, focused `BrowserControllerGeckoViewBindingInstrumentedTest` method |
-| External app settings, host-specific handlers, availability, prompts, redirects and returned links | `ExternalAppLinkHandlingTest`, `ExternalWebAppHandlerRulesInstrumentedTest`, `ExternalAppLauncherInstrumentedTest`, `BrowserSessionStoreInstrumentedTest`, `BrowserSettingsScreenInstrumentedTest`, focused `BrowserControllerGeckoViewBindingInstrumentedTest` methods |
+| External app settings, host-specific handlers, availability, prompts, redirects and returned links | `GeckoExternalAppNavigationInstrumentedTest`, `ExternalAppLinkHandlingTest`, `ExternalWebAppHandlerRulesInstrumentedTest`, `ExternalAppLauncherInstrumentedTest`, `BrowserSessionStoreInstrumentedTest`, `BrowserSettingsScreenInstrumentedTest`, focused `BrowserControllerGeckoViewBindingInstrumentedTest` methods |
 | Commands and suggestions | `browser/commands/*Test`, `SearchSuggestionProviderTest` |
 | Candy Recall rules, extraction, SQLite ranking and UI | `recall/*Test`, `RecallRepositoryInstrumentedTest`, focused address/History instrumented tests |
 | Gestures and motion | `ui/Address*Test`, `ui/Address*InstrumentedTest` |

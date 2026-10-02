@@ -1364,7 +1364,9 @@ class BrowserController(
     private var animationPolicyRevision = ANIMATION_POLICY_REVISIONS.incrementAndGet()
     private val navigationGenerations = mutableMapOf<String, Int>()
     private var contentTouchCancellationGeneration = 0L
-    private val autoDeAmpNavigationRequestGenerations = mutableMapOf<String, Long>()
+    private val browserEngineNavigationRequestGenerations = mutableMapOf<String, Long>()
+    // Unlike navigationGenerations, document identity excludes same-document safe-area refreshes.
+    private val browserEngineDocumentGenerations = mutableMapOf<String, Long>()
     private val autoDeAmpReplacementGuards = mutableMapOf<String, AutoDeAmpReplacementGuard>()
     private val pendingBrowserEngineLoadRequests = mutableMapOf<String, Long>()
     private var nextBrowserEngineLoadRequestId = 0L
@@ -7094,6 +7096,13 @@ class BrowserController(
         val requestId = ++automaticExternalAppRequestId
         val sourceNavigationGeneration = currentExternalAppSourceNavigationGeneration(source)
         val sourcePageUrl = currentExternalAppSourcePageUrl(source)
+        val sourceDocumentGeneration =
+            browserEngineDocumentGenerations.getOrDefault(source.policyTabId(), 0L)
+        val sourceRequestGeneration = when (source) {
+            is ExternalAppHandoffSource.Tab ->
+                browserEngineNavigationRequestGenerations.getOrPut(source.tabId) { 0L }
+            is ExternalAppHandoffSource.Preview -> 0L
+        }
         externalNavigationGrants.remove(source.policyTabId())
         scheduleExternalNavigationRollback(
             source = source,
@@ -7106,8 +7115,10 @@ class BrowserController(
             if (
                 destroyed ||
                 externalAppLinkHandling != ExternalAppLinkHandling.Automatic ||
-                !isExternalAppSourceSnapshotCurrent(
+                !isAutomaticExternalAppSourceCurrent(
                     source = source,
+                    documentGeneration = sourceDocumentGeneration,
+                    requestGeneration = sourceRequestGeneration,
                     navigationGeneration = sourceNavigationGeneration,
                     pageUrl = sourcePageUrl,
                 )
@@ -7254,6 +7265,24 @@ class BrowserController(
                 isRedirect = isRedirect,
             )
         }
+    }
+
+    private fun isAutomaticExternalAppSourceCurrent(
+        source: ExternalAppHandoffSource,
+        documentGeneration: Long,
+        requestGeneration: Long,
+        navigationGeneration: Int,
+        pageUrl: String?,
+    ): Boolean = when (source) {
+        is ExternalAppHandoffSource.Tab ->
+            isExternalAppSourceCurrent(source) &&
+                browserEngineDocumentGenerations.getOrDefault(source.tabId, 0L) == documentGeneration &&
+                browserEngineNavigationRequestGenerations.getOrDefault(source.tabId, 0L) == requestGeneration
+        is ExternalAppHandoffSource.Preview -> isExternalAppSourceSnapshotCurrent(
+            source = source,
+            navigationGeneration = navigationGeneration,
+            pageUrl = pageUrl,
+        )
     }
 
     private fun isExternalAppPromptCurrent(pending: PendingExternalAppPrompt): Boolean =
@@ -7612,6 +7641,9 @@ class BrowserController(
     }
 
     private fun clearExternalNavigationAuthorization(tabId: String) {
+        browserEngineNavigationRequestGenerations[tabId]?.let { generation ->
+            browserEngineNavigationRequestGenerations[tabId] = generation + 1L
+        }
         externalNavigationGrants.remove(tabId)
         pendingInitialExternalNavigationGrants.remove(tabId)
         navigationSourceTabs.remove(tabId)
@@ -8920,6 +8952,7 @@ class BrowserController(
         val node = trail.nodes.firstOrNull { it.id == nodeId } ?: return false
         val selectedTrail = CandyTrailRules.selectNode(trail, nodeId, System.currentTimeMillis())
             ?: return false
+        clearExternalNavigationAuthorization(tabId)
         setCandyTrail(tab, selectedTrail)
         pendingCandyTrailTargets[tabId] = nodeId
         selectTab(tabId)
@@ -8952,6 +8985,7 @@ class BrowserController(
         }
         if (!selectedTab.canGoBack) return
         val session = browserEngineSessions[selectedTabId] ?: return
+        clearExternalNavigationAuthorization(selectedTabId)
         pendingBrowserEngineLoadRequests.remove(selectedTabId)
         val capsule = activeCapsuleForTab(selectedTabId)
         val targetUrl = session.historyUrlAtOffset(-1)
@@ -8967,6 +9001,7 @@ class BrowserController(
     }
     fun goForward() {
         if (!selectedTab.canGoForward) return
+        clearExternalNavigationAuthorization(selectedTabId)
         pendingBrowserEngineLoadRequests.remove(selectedTabId)
         val binding = candyTrailHistoryBindings[selectedTabId]
         binding?.entries?.getOrNull(binding.currentIndex + 1)?.nodeId?.let { targetNodeId ->
@@ -8975,6 +9010,7 @@ class BrowserController(
         browserEngineSessions[selectedTabId]?.execute(BrowserEngineCommands.forward())
     }
     fun reload() {
+        clearExternalNavigationAuthorization(selectedTabId)
         pendingBrowserEngineLoadRequests.remove(selectedTabId)
         updateTab(selectedTabId) {
             it.copy(
@@ -8992,6 +9028,7 @@ class BrowserController(
 
     internal fun reloadSelectedPageAfterExtensionChange() {
         if (!usesGeckoEngine) return
+        clearExternalNavigationAuthorization(selectedTabId)
         pendingBrowserEngineLoadRequests.remove(selectedTabId)
         browserEngineSessions[selectedTabId]?.execute(BrowserEngineCommands.reload())
     }
@@ -9001,6 +9038,7 @@ class BrowserController(
         val existingSession = browserEngineSessions[tabId]
         val failedTab = selectedTab
         val command = FailedPageRetryRules.commandFor(failedTab) ?: return false
+        clearExternalNavigationAuthorization(tabId)
         updateTab(tabId) {
             it.copy(
                 isLoading = true,
@@ -9021,6 +9059,7 @@ class BrowserController(
     }
 
     fun stopLoading() {
+        clearExternalNavigationAuthorization(selectedTabId)
         removePendingInitialBrowserEngineNavigation(selectedTabId)
         pendingBrowserEngineLoadRequests.remove(selectedTabId)
         browserEngineSessions[selectedTabId]?.execute(BrowserEngineCommands.stop())
@@ -11156,9 +11195,9 @@ class BrowserController(
         if (destroyed || browserEngineSessions[tabId] !== session) {
             return GeckoNavigationRequestDecision.Allow
         }
-        val autoDeAmpRequestGeneration =
-            autoDeAmpNavigationRequestGenerations.getOrDefault(tabId, 0L) + 1L
-        autoDeAmpNavigationRequestGenerations[tabId] = autoDeAmpRequestGeneration
+        val navigationRequestGeneration =
+            browserEngineNavigationRequestGenerations.getOrDefault(tabId, 0L) + 1L
+        browserEngineNavigationRequestGenerations[tabId] = navigationRequestGeneration
         if (request.hasUserGesture) pendingBrowserEngineLoadRequests.remove(tabId)
         val scheme = runCatching { Uri.parse(request.url).scheme }.getOrNull()?.lowercase()
         val safeHttpUrl = BrowserUriPolicy.normalizeHttpUrl(request.url)
@@ -11231,7 +11270,7 @@ class BrowserController(
                 if (
                     !destroyed &&
                     isAutoDeAmpEnabled &&
-                    autoDeAmpNavigationRequestGenerations[tabId] == autoDeAmpRequestGeneration &&
+                    browserEngineNavigationRequestGenerations[tabId] == navigationRequestGeneration &&
                     browserEngineSessions[tabId] === session
                 ) {
                     session.execute(BrowserEngineCommands.load(publisherUrl))
@@ -12683,6 +12722,8 @@ class BrowserController(
                 invalidateExternalAppPromptForNavigation(event.tabId)
                 cancelAddressBarAutoDockProbe(event.tabId)
                 val navigatingSession = browserEngineSessions[event.tabId] ?: return
+                browserEngineDocumentGenerations[event.tabId] =
+                    browserEngineDocumentGenerations.getOrDefault(event.tabId, 0L) + 1L
                 val previousTab = tabs.firstOrNull { it.id == event.tabId }
                 if (
                     previousTab != null &&
@@ -13364,7 +13405,8 @@ class BrowserController(
 
     private fun closeBrowserEngineSession(tabId: String) {
         removePendingInitialBrowserEngineNavigation(tabId)
-        autoDeAmpNavigationRequestGenerations.remove(tabId)
+        browserEngineNavigationRequestGenerations.remove(tabId)
+        browserEngineDocumentGenerations.remove(tabId)
         autoDeAmpReplacementGuards.remove(tabId)
         pendingBrowserEngineLoadRequests.remove(tabId)
         invalidateMedia3OwnerFor(tabId)

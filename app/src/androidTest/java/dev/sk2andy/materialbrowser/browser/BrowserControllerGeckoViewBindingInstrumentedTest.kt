@@ -141,9 +141,18 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
             val store = BrowserSessionStore(composeRule.activity)
             originalEngineKind = store.loadAndroidBrowserEngineKind()
             originalAutoDeAmpEnabled = store.loadAutoDeAmpEnabled()
+            originalExternalAppLinkHandling = store.loadExternalAppLinkHandling()
             assertTrue(store.saveAndroidBrowserEngineKind(AndroidBrowserEngineKind.GeckoView))
             store.saveAutoDeAmpEnabled(true)
-            val browserController = BrowserController(composeRule.activity)
+            store.saveExternalAppLinkHandling(ExternalAppLinkHandling.AskEveryTime)
+            val browserController = BrowserController(
+                activity = composeRule.activity,
+                externalApps = ExternalAppLauncher(
+                    context = composeRule.activity,
+                    findExternalWebPackages = { emptyList() },
+                    canResolveExternalActivity = { false },
+                ),
+            )
             controller = browserController
             session = ReentrantAttachSession(
                 tabId = browserController.selectedTabId,
