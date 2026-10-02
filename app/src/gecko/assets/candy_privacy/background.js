@@ -411,6 +411,8 @@ function contentPolicy(policy) {
     "always_for_fullscreen",
     "automatic",
   ]);
+  const seekSeconds = (value) => Number.isSafeInteger(value) &&
+    [5, 10, 15, 20, 30, 60].includes(value) ? value : 10;
   const inlineMediaPlayerMode = inlineMediaPlayerModes.has(policy?.inlineMediaPlayerMode) ?
     policy.inlineMediaPlayerMode : "button_inline_and_fullscreen";
   return {
@@ -452,6 +454,8 @@ function contentPolicy(policy) {
     inlineMediaPlayerPauseLabel:
       typeof policy?.inlineMediaPlayerPauseLabel === "string" ?
         policy.inlineMediaPlayerPauseLabel.slice(0, 80) : "Pause",
+    inlineMediaPlayerSeekBackwardSeconds: seekSeconds(policy?.inlineMediaPlayerSeekBackwardSeconds),
+    inlineMediaPlayerSeekForwardSeconds: seekSeconds(policy?.inlineMediaPlayerSeekForwardSeconds),
     inlineMediaPlayerSeekBackwardLabel:
       typeof policy?.inlineMediaPlayerSeekBackwardLabel === "string" ?
         policy.inlineMediaPlayerSeekBackwardLabel.slice(0, 80) : "Seek backward {seconds} seconds",

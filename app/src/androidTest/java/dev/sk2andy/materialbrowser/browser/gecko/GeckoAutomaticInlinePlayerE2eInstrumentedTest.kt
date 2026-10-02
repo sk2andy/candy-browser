@@ -17,6 +17,7 @@ import dev.sk2andy.materialbrowser.BuildConfig
 import dev.sk2andy.materialbrowser.MainActivity
 import dev.sk2andy.materialbrowser.browser.HttpsOnlyMode
 import dev.sk2andy.materialbrowser.browser.InlineMediaPlayerMode
+import dev.sk2andy.materialbrowser.browser.InlineMediaPlayerSeekSettings
 import dev.sk2andy.materialbrowser.data.BrowserSessionStore
 import dev.sk2andy.materialbrowser.data.GestureOnboardingStore
 import dev.sk2andy.materialbrowser.data.ReleaseNotesStore
@@ -268,6 +269,76 @@ class GeckoAutomaticInlinePlayerE2eInstrumentedTest {
         }
     }
 
+    @Test
+    fun configuredDoubleTapsApplyIndependentDurationsToActiveInlineAndFullscreenPlayer() {
+        FixtureServer(seekJourney = true, seekStartSeconds = 20, video = LONG_VIDEO).use { server ->
+            ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+                lateinit var host: View
+                scenario.onActivity { activity ->
+                    assertTrue(activity.browserControllerForTesting().openUrl(server.url))
+                }
+                await("decoded long thumbnail") {
+                    server.samples.any { it.getString("phase") == "paused-ready-stable" }
+                }
+                scenario.onActivity { activity ->
+                    host = requireNotNull(activity.browserControllerForTesting().selectedGeckoViewForTesting())
+                }
+                val sitePlay = fixturePoint(scenario, host, server.samples.last(), "button", 0.5, 0.5)
+                val device = UiDevice.getInstance(instrumentation)
+                assertTrue(device.click(sitePlay[0], sitePlay[1]))
+                await("paused Candy Player at twenty seconds") {
+                    server.samples.any { it.getString("phase") == "seek-ready" }
+                }
+                assertTrue(server.samples.last().getDouble("duration") == 45.0)
+                val seekable = server.samples.last().getJSONArray("seekable")
+                assertTrue(seekable.length() > 0 && seekable.getJSONArray(0).getDouble(1) == 45.0)
+                val controlsIdentity = server.samples.last().getInt("controlsIdentity")
+                assertTrue(controlsIdentity > 0)
+                fun updateSettings(backward: Int, forward: Int) {
+                    scenario.onActivity { activity ->
+                        val settings = InlineMediaPlayerSeekSettings(backward, forward)
+                        val controller = activity.browserControllerForTesting()
+                        controller.updateInlineMediaPlayerSeekSettings(settings)
+                        assertTrue(controller.inlineMediaPlayerSeekSettings == settings)
+                    }
+                    // Wait for the asynchronous native policy publication before trusted input.
+                    SystemClock.sleep(700)
+                    assertTrue(server.samples.last().getBoolean("controls"))
+                    assertTrue(server.samples.last().getInt("controlsIdentity") == controlsIdentity)
+                }
+                fun doubleTap(fractionX: Double, expected: Double) {
+                    val point = fixturePoint(scenario, host, server.samples.last(), "video", fractionX, 0.3)
+                    tapPoint(point)
+                    SystemClock.sleep(60)
+                    tapPoint(point)
+                    await("configured seek to $expected") {
+                        kotlin.math.abs(server.samples.last().getDouble("currentTime") - expected) < 0.3
+                    }
+                    assertTrue(server.samples.last().getBoolean("paused"))
+                    assertTrue(server.samples.last().getInt("controlsIdentity") == controlsIdentity)
+                    pauseForEvidence()
+                    SystemClock.sleep(1_100)
+                }
+                updateSettings(5, 15)
+                pauseForEvidence()
+                doubleTap(0.18, 15.0)
+                doubleTap(0.82, 30.0)
+                updateSettings(15, 5)
+                doubleTap(0.18, 15.0)
+                doubleTap(0.82, 20.0)
+                val sample = server.samples.last()
+                val start = fixturePoint(scenario, host, sample, "video", 0.18, 0.52)
+                val end = fixturePoint(scenario, host, sample, "video", 0.18, 0.05)
+                assertTrue(device.swipe(start[0], start[1], end[0], end[1], 20))
+                await("Candy fullscreen") { server.samples.last().getBoolean("fullscreen") }
+                device.wait(Until.findObject(By.text("Got it")), 2_000)?.click()
+                SystemClock.sleep(700)
+                doubleTap(0.18, 5.0)
+                doubleTap(0.82, 10.0)
+            }
+        }
+    }
+
     private fun fixturePoint(
         scenario: ActivityScenario<MainActivity>,
         host: View,
@@ -336,6 +407,8 @@ class GeckoAutomaticInlinePlayerE2eInstrumentedTest {
     private class FixtureServer(
         disabledMode: Boolean = false,
         seekJourney: Boolean = false,
+        seekStartSeconds: Int = 6,
+        private val video: ByteArray = VIDEO,
     ) : Closeable {
         private val socket = ServerSocket(0, 4, InetAddress.getByName("127.0.0.1"))
         val url = "http://127.0.0.1:${socket.localPort}/"
@@ -351,16 +424,20 @@ class GeckoAutomaticInlinePlayerE2eInstrumentedTest {
         ).let { page ->
             if (!seekJourney) page else page.replace(
                 "if(c&&!opened){opened=true;send('automatic-open')}",
-                "if(c&&!opened){opened=true;send('automatic-open');setTimeout(()=>{v.pause();v.currentTime=6;send('seek-ready');setInterval(()=>send('seek-sample'),100)},1000)}",
+                "if(c&&!opened){opened=true;send('automatic-open');setTimeout(()=>{v.pause();v.currentTime=$seekStartSeconds;send('seek-ready');setInterval(()=>send('seek-sample'),100)},1000)}",
             )
         }
+        private val identityHtml = if (seekStartSeconds == 6) html else html.replace(
+            "let opened=false;",
+            "let opened=false;const controlIds=new WeakMap();let nextControlId=0;const controlId=()=>{const c=document.querySelector('[data-candy-inline-video-controls]');if(!c)return 0;if(!controlIds.has(c))controlIds.set(c,++nextControlId);return controlIds.get(c)};",
+        ).replace("phase,at:Date.now(),", "phase,at:Date.now(),duration:v.duration,seekable:Array.from({length:v.seekable.length},(_,i)=>[v.seekable.start(i),v.seekable.end(i)]),controlsIdentity:controlId(),")
         private val servedHtml = if (disabledMode) {
-            html.replace("<video playsinline muted>", "<video playsinline muted controls loop>")
+            identityHtml.replace("<video playsinline muted>", "<video playsinline muted controls loop>")
                 .replace("controls:!!document.querySelector", "nativeControls:v.controls,launcher:!!document.querySelector('[data-candy-inline-video-action]'),controls:!!document.querySelector")
                 .replace("b.onclick=()=>{send('site-click');v.play()", "b.onclick=()=>{if(!v.paused){v.requestFullscreen().then(()=>send('site-fullscreen'));return}send('site-click');v.play()")
                 .replace("v.addEventListener('error'", "const status=document.createElement('p');status.style='color:white;font:18px sans-serif;padding:16px';document.body.append(status);setInterval(()=>{status.textContent='Website player: '+v.currentTime.toFixed(1)+'s';send('playback-tick')},200);v.addEventListener('error'")
         } else {
-            html
+            identityHtml
         }
 
         private fun serve() {
@@ -382,7 +459,7 @@ class GeckoAutomaticInlinePlayerE2eInstrumentedTest {
                         }
                         val body = when {
                             request.startsWith("/geometry?") -> ByteArray(0)
-                            request == "/video.webm" -> VIDEO
+                            request == "/video.webm" -> video
                             else -> servedHtml.toByteArray()
                         }
                         val type = if (request == "/video.webm") "video/webm" else "text/html"
@@ -398,6 +475,8 @@ class GeckoAutomaticInlinePlayerE2eInstrumentedTest {
     }
 
     private companion object {
+        // Genuine 45-second VP8 media for independently configured 5/15-second seeks.
+        val LONG_VIDEO = android.util.Base64.decode("GkXfo59ChoEBQveBAULygQRC84EIQoKEd2VibUKHgQJChYECGFOAZwEAAAAAAAt6EU2bdLpNu4tTq4QVSalmU6yBoU27i1OrhBZUrmtTrIHWTbuMU6uEElTDZ1OsggEyTbuMU6uEHFO7a1Osggtk7AEAAAAAAABZAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAVSalmsCrXsYMPQkBNgIxMYXZmNjMuMS4xMDFXQYxMYXZmNjMuMS4xMDFEiYhA5fkAAAAAABZUrmvXrgEAAAAAAABO14EBc8WIVMFNQO5ccnCcgQAitZyDdW5kiIEAhoVWX1ZQOIOBASPjg4QdzWUA4JCwgaC6gVqagQJVsIRVuYEBVe6BAOwBAAAAAAAAAgAAElTDZ/pzc59jwIBnyJlFo4dFTkNPREVSRIeMTGF2ZjYzLjEuMTAxc3PVY8CLY8WIVMFNQO5ccnBnyKBFo4dFTkNPREVSRIeTTGF2YzYzLjEuMTAxIGxpYnZweGfIoUWjiERVUkFUSU9ORIeTMDA6MDA6NDUuMDAwMDAwMDAwAB9DtnVBX+eBAKPXgQAAgPAFAJ0BKqAAWgAARwiFhYiFhIgCAgJ1qgP4AgaaE+CGqpNdxDqqTXcQ6qk13EOqpNdxDqqTXcQYAP7ujn/+7J/tk/2yf+8Z//W6363W/W63/rWYo5iBAfQAEQIAARAQABgAGFgv9AAIgIEAAACjmIED6AARAgABEBAAGAAYWC/0AAiAgQAAAKOYgQXcABECAAEQEAAYABhYL/QACICBAAAAo5iBB9AAEQIAARAQABgAGFgv9AAIgIEAAACjmIEJxAARAgABEBAAGAAYWC/0AAiAgQAAAKOYgQu4ABECAAEQEAAYABhYL/QACICBAAAAo5eBDawA8QEAARAQFGAAYWC/0AAiAgQAAKOYgQ+gABECAAEQEAAYABhYL/QACICBAAAAo5iBEZQAEQIAARAQABgAGFgv9AAIgIEAAACjmIETiAARAgABEBAAGAAYWC/0AAiAgQAAAB9DtnVBIeeCFXyjmIEAAAARAgABEBAAGAAYWC/0AAiAgQAAAKOYgQH0ABECAAEQEAAYABhYL/QACICBAAAAo5iBA+gAEQIAARAQABgAGFgv9AAIgIEAAACjmIEF3AARAgABEBAAGAAYWC/0AAiAgQAAAKOYgQfQABECAAEQEAAYABhYL/QACICBAAAAo5iBCcQAEQIAARAQABgAGFgv9AAIgIEAAACjmIELuAARAgABEBAAGAAYWC/0AAiAgQAAAKOXgQ2sAPEBAAEQEBRgAGFgv9AAIgIEAACjmIEPoAARAgABEBAAGAAYWC/0AAiAgQAAAKOYgRGUABECAAEQEAAYABhYL/QACICBAAAAo5iBE4gAEQIAARAQABgAGFgv9AAIgIEAAAAfQ7Z1QSHngir4o5iBAAAAEQIAARAQABgAGFgv9AAIgIEAAACjmIEB9AARAgABEBAAGAAYWC/0AAiAgQAAAKOYgQPoABECAAEQEAAYABhYL/QACICBAAAAo5iBBdwAEQIAARAQABgAGFgv9AAIgIEAAACjmIEH0AARAgABEBAAGAAYWC/0AAiAgQAAAKOYgQnEABECAAEQEAAYABhYL/QACICBAAAAo5iBC7gAEQIAARAQABgAGFgv9AAIgIEAAACjl4ENrADxAQABEBAUYABhYL/QACICBAAAo5iBD6AAEQIAARAQABgAGFgv9AAIgIEAAACjmIERlAARAgABEBAAGAAYWC/0AAiAgQAAAKOYgROIABECAAEQEAAYABhYL/QACICBAAAAH0O2dUEh54JAdKOYgQAAABECAAEQEAAYABhYL/QACICBAAAAo5iBAfQAEQIAARAQABgAGFgv9AAIgIEAAACjmIED6AARAgABEBAAGAAYWC/0AAiAgQAAAKOYgQXcABECAAEQEAAYABhYL/QACICBAAAAo5iBB9AAEQIAARAQABgAGFgv9AAIgIEAAACjmIEJxAARAgABEBAAGAAYWC/0AAiAgQAAAKOYgQu4ABECAAEQEAAYABhYL/QACICBAAAAo5eBDawA8QEAARAQFGAAYWC/0AAiAgQAAKOYgQ+gABECAAEQEAAYABhYL/QACICBAAAAo5iBEZQAEQIAARAQABgAGFgv9AAIgIEAAACjmIETiAARAgABEBAAGAAYWC/0AAiAgQAAAB9DtnVBIeeCVfCjmIEAAAARAgABEBAAGAAYWC/0AAiAgQAAAKOYgQH0ABECAAEQEAAYABhYL/QACICBAAAAo5iBA+gAEQIAARAQABgAGFgv9AAIgIEAAACjmIEF3AARAgABEBAAGAAYWC/0AAiAgQAAAKOYgQfQABECAAEQEAAYABhYL/QACICBAAAAo5iBCcQAEQIAARAQABgAGFgv9AAIgIEAAACjmIELuAARAgABEBAAGAAYWC/0AAiAgQAAAKOXgQ2sAPEBAAEQEBRgAGFgv9AAIgIEAACjmIEPoAARAgABEBAAGAAYWC/0AAiAgQAAAKOYgRGUABECAAEQEAAYABhYL/QACICBAAAAo5iBE4gAEQIAARAQABgAGFgv9AAIgIEAAAAfQ7Z1QSHngmtso5iBAAAAEQIAARAQABgAGFgv9AAIgIEAAACjmIEB9AARAgABEBAAGAAYWC/0AAiAgQAAAKOYgQPoABECAAEQEAAYABhYL/QACICBAAAAo5iBBdwAEQIAARAQABgAGFgv9AAIgIEAAACjmIEH0AARAgABEBAAGAAYWC/0AAiAgQAAAKOYgQnEABECAAEQEAAYABhYL/QACICBAAAAo5iBC7gAEQIAARAQABgAGFgv9AAIgIEAAACjl4ENrADxAQABEBAUYABhYL/QACICBAAAo5iBD6AAEQIAARAQABgAGFgv9AAIgIEAAACjmIERlAARAgABEBAAGAAYWC/0AAiAgQAAAKOYgROIABECAAEQEAAYABhYL/QACICBAAAAH0O2dUEh54KA6KOYgQAAABECAAEQEAAYABhYL/QACICBAAAAo5iBAfQAEQIAARAQABgAGFgv9AAIgIEAAACjmIED6AARAgABEBAAGAAYWC/0AAiAgQAAAKOYgQXcABECAAEQEAAYABhYL/QACICBAAAAo5iBB9AAEQIAARAQABgAGFgv9AAIgIEAAACjmIEJxAARAgABEBAAGAAYWC/0AAiAgQAAAKOYgQu4ABECAAEQEAAYABhYL/QACICBAAAAo5eBDawA8QEAARAQFGAAYWC/0AAiAgQAAKOYgQ+gABECAAEQEAAYABhYL/QACICBAAAAo5iBEZQAEQIAARAQABgAGFgv9AAIgIEAAACjmIETiAARAgABEBAAGAAYWC/0AAiAgQAAAB9DtnVBIeeClmSjmIEAAAARAgABEBAAGAAYWC/0AAiAgQAAAKOYgQH0ABECAAEQEAAYABhYL/QACICBAAAAo5iBA+gAEQIAARAQABgAGFgv9AAIgIEAAACjmIEF3AARAgABEBAAGAAYWC/0AAiAgQAAAKOYgQfQABECAAEQEAAYABhYL/QACICBAAAAo5iBCcQAEQIAARAQABgAGFgv9AAIgIEAAACjmIELuAARAgABEBAAGAAYWC/0AAiAgQAAAKOXgQ2sAPEBAAEQEBRgAGFgv9AAIgIEAACjmIEPoAARAgABEBAAGAAYWC/0AAiAgQAAAKOYgRGUABECAAEQEAAYABhYL/QACICBAAAAo5iBE4gAEQIAARAQABgAGFgv9AAIgIEAAAAfQ7Z1uOeCq+CjmIEAAAARAgABEBAAGAAYWC/0AAiAgQAAAKOYgQH0ABECAAEQEAAYABhYL/QACICBAAAAHFO7a5G7j7OBALeK94EB8YIBsfCBAw==", android.util.Base64.DEFAULT)
         val VIDEO = android.util.Base64.decode("GkXfo59ChoEBQveBAULygQRC84EIQoKEd2VibUKHgQJChYECGFOAZwEAAAAAAASQEU2bdLpNu4tTq4QVSalmU6yBoU27i1OrhBZUrmtTrIHWTbuMU6uEElTDZ1OsggEyTbuMU6uEHFO7a1OsggR67AEAAAAAAABZAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAVSalmsCrXsYMPQkBNgIxMYXZmNjMuMS4xMDFXQYxMYXZmNjMuMS4xMDFEiYhAx3AAAAAAABZUrmvXrgEAAAAAAABO14EBc8WIuEiFyor52QWcgQAitZyDdW5kiIEAhoVWX1ZQOIOBASPjg4QdzWUA4JCwgaC6gVqagQJVsIRVuYEBVe6BAOwBAAAAAAAAAgAAElTDZ/pzc59jwIBnyJlFo4dFTkNPREVSRIeMTGF2ZjYzLjEuMTAxc3PVY8CLY8WIuEiFyor52QVnyKBFo4dFTkNPREVSRIeTTGF2YzYzLjEuMTAxIGxpYnZweGfIoUWjiERVUkFUSU9ORIeTMDA6MDA6MTIuMDAwMDAwMDAwAB9DtnVBX+eBAKPXgQAAgPAFAJ0BKqAAWgAARwiFhYiFhIgCAgJ1qgP4AgaaE+CGqpNdxDqqTXcQ6qk13EOqpNdxDqqTXcQYAP7ujn/+7J/tk/2yf+8Z//W6363W/W63/rWYo5iBAfQAEQIAARAQABgAGFgv9AAIgIEAAACjmIED6AARAgABEBAAGAAYWC/0AAiAgQAAAKOYgQXcABECAAEQEAAYABhYL/QACICBAAAAo5iBB9AAEQIAARAQABgAGFgv9AAIgIEAAACjmIEJxAARAgABEBAAGAAYWC/0AAiAgQAAAKOYgQu4ABECAAEQEAAYABhYL/QACICBAAAAo5eBDawA8QEAARAQFGAAYWC/0AAiAgQAAKOYgQ+gABECAAEQEAAYABhYL/QACICBAAAAo5iBEZQAEQIAARAQABgAGFgv9AAIgIEAAACjmIETiAARAgABEBAAGAAYWC/0AAiAgQAAAB9DtnVBIeeCFXyjmIEAAAARAgABEBAAGAAYWC/0AAiAgQAAAKOYgQH0ABECAAEQEAAYABhYL/QACICBAAAAo5iBA+gAEQIAARAQABgAGFgv9AAIgIEAAACjmIEF3AARAgABEBAAGAAYWC/0AAiAgQAAAKOYgQfQABECAAEQEAAYABhYL/QACICBAAAAo5iBCcQAEQIAARAQABgAGFgv9AAIgIEAAACjmIELuAARAgABEBAAGAAYWC/0AAiAgQAAAKOXgQ2sAPEBAAEQEBRgAGFgv9AAIgIEAACjmIEPoAARAgABEBAAGAAYWC/0AAiAgQAAAKOYgRGUABECAAEQEAAYABhYL/QACICBAAAAo5iBE4gAEQIAARAQABgAGFgv9AAIgIEAAAAfQ7Z1uOeCKvijmIEAAAARAgABEBAAGAAYWC/0AAiAgQAAAKOYgQH0ABECAAEQEAAYABhYL/QACICBAAAAHFO7a5G7j7OBALeK94EB8YIBsfCBAw==", android.util.Base64.DEFAULT)
         val HTML = """<!doctype html><meta name=viewport content='width=device-width,initial-scale=1'><style>html,body{margin:0;background:#111}header{height:56px;background:#b00}#player-parent{position:relative;overflow:hidden;transform:translateZ(0)}#movie_player{position:relative;width:100%;aspect-ratio:16/9;overflow:hidden;transform:translateZ(0)}video{display:block;width:100%;height:100%;background:#000}button{position:absolute;inset:56px 0 auto;width:100%;height:56.25vw;background:transparent;border:0}</style><header></header><div id=player-parent><div id=movie_player class=html5-video-player><video playsinline muted></video><button aria-label=Play></button></div></div><script>const v=document.querySelector('video'),p=document.querySelector('#movie_player'),h=document.querySelector('header'),b=document.querySelector('button');let playError='';const r=e=>{let b=e.getBoundingClientRect();return[b.left,b.top,b.width,b.height]};let opened=false;const send=phase=>fetch('/geometry?'+encodeURIComponent(JSON.stringify({phase,at:Date.now(),video:r(v),player:r(p),header:r(h),button:r(b),viewportWidth:innerWidth,viewportHeight:innerHeight,readyState:v.readyState,videoWidth:v.videoWidth,videoHeight:v.videoHeight,paused:v.paused,currentTime:v.currentTime,playError,controls:!!document.querySelector('[data-candy-inline-video-controls]'),fullscreen:!!document.fullscreenElement})));const watch=()=>{let c=!!document.querySelector('[data-candy-inline-video-controls]');if(c&&!opened){opened=true;send('automatic-open')}requestAnimationFrame(watch)};watch();send('thumbnail');requestAnimationFrame(()=>requestAnimationFrame(()=>setTimeout(()=>send('thumbnail-stable'),400)));b.onpointerdown=()=>send('site-pointerdown');b.onclick=()=>{send('site-click');v.src='/video.webm';v.load();v.play().then(()=>send('play-resolved')).catch(e=>{playError=String(e);send('play-error')})};v.addEventListener('loadeddata',()=>send('loadeddata'));v.addEventListener('error',()=>send('media-error'));</script>"""
     }

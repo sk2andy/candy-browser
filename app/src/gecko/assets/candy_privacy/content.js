@@ -28,6 +28,8 @@ const candyPictureInPicturePlayback = {
   inlineMediaPlayerPlayLabel: "Play",
   inlineMediaPlayerPauseLabel: "Pause",
   inlineMediaPlayerSeekLabel: "Seek",
+  inlineMediaPlayerSeekBackwardSeconds: 10,
+  inlineMediaPlayerSeekForwardSeconds: 10,
   inlineMediaPlayerSeekBackwardLabel: "Seek backward {seconds} seconds",
   inlineMediaPlayerSeekForwardLabel: "Seek forward {seconds} seconds",
   inlineMediaPlayerEnterFullscreenLabel: "Enter fullscreen",
@@ -96,7 +98,6 @@ const CANDY_INLINE_FULLSCREEN_GESTURE_TOUCH_SLOP_PX = 10;
 const CANDY_INLINE_CONTROLS_TAP_MAX_DURATION_MS = 350;
 const CANDY_INLINE_CONTROLS_DOUBLE_TAP_INTERVAL_MS = 300;
 const CANDY_INLINE_CONTROLS_DOUBLE_TAP_DISTANCE_PX = 48;
-const CANDY_INLINE_CONTROLS_SEEK_SECONDS = 10;
 const CANDY_INLINE_FULLSCREEN_GESTURE_MIN_THRESHOLD_PX = 48;
 const CANDY_INLINE_FULLSCREEN_GESTURE_MAX_THRESHOLD_PX = 96;
 const CANDY_INLINE_FULLSCREEN_GESTURE_THRESHOLD_FRACTION = 0.13;
@@ -205,7 +206,7 @@ function candyInlineVideoDoubleTapMatches(previous, current) {
       CANDY_INLINE_CONTROLS_DOUBLE_TAP_DISTANCE_PX);
 }
 
-function candyInlineVideoSeekTarget(currentTime, duration, ranges, direction) {
+function candyInlineVideoSeekTarget(currentTime, duration, ranges, direction, seconds) {
   if (!Number.isFinite(currentTime) || !Number.isFinite(duration) || duration <= 0 ||
       (direction !== -1 && direction !== 1)) return null;
   const range = ranges.find(([start, end]) => Number.isFinite(start) &&
@@ -214,7 +215,7 @@ function candyInlineVideoSeekTarget(currentTime, duration, ranges, direction) {
   const start = Math.max(0, range[0]);
   const end = Math.min(duration, range[1]);
   if (start > end) return null;
-  return Math.max(start, Math.min(end, currentTime + direction * CANDY_INLINE_CONTROLS_SEEK_SECONDS));
+  return Math.max(start, Math.min(end, currentTime + direction * normalizedCandyInlineVideoSeekSeconds(seconds)));
 }
 
 function candyInlineVideoControlsVisibilityLabel(visible) {
@@ -824,7 +825,12 @@ button:focus-visible { outline: 3px solid white; outline-offset: 3px; }
     try {
       const ranges = Array.from({ length: video.seekable.length }, (_, index) =>
         [video.seekable.start(index), video.seekable.end(index)]);
-      const target = candyInlineVideoSeekTarget(video.currentTime, video.duration, ranges, direction);
+      const configuredSeconds = direction > 0 ?
+        candyPictureInPicturePlayback.inlineMediaPlayerSeekForwardSeconds :
+        candyPictureInPicturePlayback.inlineMediaPlayerSeekBackwardSeconds;
+      const target = candyInlineVideoSeekTarget(
+        video.currentTime, video.duration, ranges, direction, configuredSeconds,
+      );
       if (target === null) return;
       const seconds = Math.round(Math.abs(target - video.currentTime) * 10) / 10;
       video.currentTime = target;
@@ -2152,6 +2158,10 @@ function reconcileCandyInlineVideoState() {
   });
 }
 
+function normalizedCandyInlineVideoSeekSeconds(value) {
+  return Number.isSafeInteger(value) && [5, 10, 15, 20, 30, 60].includes(value) ? value : 10;
+}
+
 function updateCandyInlineMediaPlayerPolicy(policy) {
   updateCandyInlineMediaPlayerEnabled(
     policy?.inlineMediaPlayerEnabled,
@@ -2169,6 +2179,8 @@ function updateCandyInlineMediaPlayerPolicy(policy) {
     policy?.inlineMediaPlayerHideControlsLabel,
     policy?.inlineMediaPlayerSeekBackwardLabel,
     policy?.inlineMediaPlayerSeekForwardLabel,
+    policy?.inlineMediaPlayerSeekBackwardSeconds,
+    policy?.inlineMediaPlayerSeekForwardSeconds,
   );
 }
 
@@ -2188,6 +2200,8 @@ function updateCandyInlineMediaPlayerEnabled(
   hideControlsLabel,
   seekBackwardLabel,
   seekForwardLabel,
+  seekBackwardSeconds,
+  seekForwardSeconds,
 ) {
   const normalizedMode = CANDY_INLINE_MEDIA_PLAYER_MODES.has(mode) ?
     mode : "button_inline_and_fullscreen";
@@ -2250,6 +2264,10 @@ function updateCandyInlineMediaPlayerEnabled(
   candyPictureInPicturePlayback.inlineMediaPlayerHideControlsLabel = normalizedHideControlsLabel;
   candyPictureInPicturePlayback.inlineMediaPlayerSeekBackwardLabel = normalizedSeekBackwardLabel;
   candyPictureInPicturePlayback.inlineMediaPlayerSeekForwardLabel = normalizedSeekForwardLabel;
+  candyPictureInPicturePlayback.inlineMediaPlayerSeekBackwardSeconds =
+    normalizedCandyInlineVideoSeekSeconds(seekBackwardSeconds);
+  candyPictureInPicturePlayback.inlineMediaPlayerSeekForwardSeconds =
+    normalizedCandyInlineVideoSeekSeconds(seekForwardSeconds);
   candyPictureInPicturePlayback.inlineMediaPolicyRevision =
     Number.isSafeInteger(revision) ? Math.max(0, revision) : 0;
   candyPictureInPicturePlayback.inlineMediaNavigationGeneration =
