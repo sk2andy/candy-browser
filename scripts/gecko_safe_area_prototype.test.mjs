@@ -1136,6 +1136,53 @@ test('Reddit app ownership replaces body inset without losing author padding', (
   assert.deepEqual(f.reads, before);
 });
 
+test('fullscreen video roots and their controls never acquire header top offsets', () => {
+  const f = fixture();
+  const player = f.element('fixed', '0px');
+  const control = player.append(f.element('fixed', '8px'));
+  const pageControl = f.element('fixed', '8px');
+  f.context.document.fullscreenElement = player;
+  f.start();
+  assert.equal(f.computed(player).top, '0px');
+  assert.equal(f.computed(control).top, '8px');
+  assert.equal(f.computed(pageControl).top, '40px', 'Unrelated fixed content stays protected');
+  player.computed.position = 'relative';
+  f.context.document.fullscreenElement = null;
+  f.event('fullscreenchange'); f.flush();
+  assert.equal(f.computed(player).top, '0px', 'Inline player cannot retain a fullscreen header rule');
+});
+
+test('fullscreen releases only owned top rules and preserves newer author inline top', () => {
+  const f = fixture();
+  const player = f.element('fixed', '0px');
+  f.start();
+  assert.equal(f.computed(player).top, '32px');
+  player.style.setProperty('top', '7px');
+  f.context.document.fullscreenElement = player;
+  f.event('fullscreenchange'); f.flush();
+  assert.equal(f.computed(player).top, '7px');
+  assert.equal(player.style.getPropertyValue('top'), '7px');
+  player.computed.position = 'relative';
+  f.context.document.fullscreenElement = null;
+  f.event('fullscreenchange'); f.flush();
+  assert.equal(f.computed(player).top, '7px');
+});
+
+test('still-fixed surfaces regain one original inset after repeated fullscreen transitions', () => {
+  const f = fixture();
+  const player = f.element('fixed', '8px');
+  f.start();
+  for (let transition = 0; transition < 4; transition++) {
+    assert.equal(f.computed(player).top, '40px');
+    f.context.document.fullscreenElement = player;
+    f.event('fullscreenchange'); f.flush();
+    assert.equal(f.computed(player).top, '8px');
+    f.context.document.fullscreenElement = null;
+    f.event('fullscreenchange'); f.flush();
+  }
+  assert.equal(f.computed(player).top, '40px');
+});
+
 test('persistent body and finite fixed/sticky rules do not accumulate on authorized rechecks', () => {
   const f = fixture(); f.body.style.setProperty('padding-top', '4px');
   const nodes = [];
