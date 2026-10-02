@@ -6,6 +6,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotEnabled
@@ -15,6 +16,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import dev.sk2andy.materialbrowser.R
@@ -164,7 +166,7 @@ class BrowserSettingsScreenInstrumentedTest {
     }
 
     @Test
-    fun inlineMediaPlayerSeekChoicesUpdateDirectionsSeparatelyAndDisableWithOff() {
+    fun inlineMediaPlayerSeekSlidersUpdateDirectionsSeparatelyAndDisableWithOff() {
         var settings by mutableStateOf(InlineMediaPlayerSeekSettings())
         var mode by mutableStateOf(InlineMediaPlayerMode.Automatic)
         var supported by mutableStateOf(true)
@@ -197,24 +199,14 @@ class BrowserSettingsScreenInstrumentedTest {
             }
         }
 
-        val evidencePauseMillis = InstrumentationRegistry.getArguments()
-            .getString("evidencePauseMillis")?.toLongOrNull()?.coerceIn(0L, 5_000L) ?: 0L
         composeRule.onNodeWithTag(BrowserSettingsTestTags.InlineMediaPlayerSeekBackward)
-            .performScrollTo().performClick()
-        composeRule.waitForIdle()
-        if (evidencePauseMillis > 0) SystemClock.sleep(evidencePauseMillis)
-        composeRule.onNodeWithText(context.getString(R.string.settings_inline_media_player_seek_seconds, 15))
-            .performClick()
+            .performScrollTo()
+            .performSemanticsAction(SemanticsActions.SetProgress) { it(2f) }
         assertEquals(InlineMediaPlayerSeekSettings(15, 10), settings)
         composeRule.onNodeWithTag(BrowserSettingsTestTags.InlineMediaPlayerSeekForward)
-            .performScrollTo().performClick()
-        composeRule.waitForIdle()
-        if (evidencePauseMillis > 0) SystemClock.sleep(evidencePauseMillis)
-        composeRule.onNodeWithText(context.getString(R.string.settings_inline_media_player_seek_seconds, 30))
-            .performClick()
+            .performScrollTo()
+            .performSemanticsAction(SemanticsActions.SetProgress) { it(4f) }
         assertEquals(listOf(InlineMediaPlayerSeekSettings(15, 10), InlineMediaPlayerSeekSettings(15, 30)), changes)
-        composeRule.waitForIdle()
-        if (evidencePauseMillis > 0) SystemClock.sleep(evidencePauseMillis)
         composeRule.runOnIdle { mode = InlineMediaPlayerMode.Disabled }
         composeRule.onNodeWithTag(BrowserSettingsTestTags.InlineMediaPlayerSeekBackward).assertIsNotEnabled()
         composeRule.onNodeWithTag(BrowserSettingsTestTags.InlineMediaPlayerSeekForward).assertIsNotEnabled()

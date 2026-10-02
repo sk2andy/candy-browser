@@ -171,7 +171,11 @@ controls state and YouTube chrome when the inline presentation ends. A trusted p
 of at most 350 ms on the free video surface toggles Candy controls after a 300 ms double-tap
 window, including while DOM fullscreen is active. Two nearby taps in the same half seek backward
 on the left and forward on the right. Browser settings persist each direction independently, with
-5, 10, 15, 20, 30 or 60 seconds and a default of 10 seconds each. Missing or unsupported stored/wire
+5, 10, 15, 20, 30 or 60 seconds and a default of 10 seconds each. Each direction uses a discrete
+slider with stop dots, a thin handle and a value bubble during interaction. Stops are equally
+spaced despite their non-linear durations; accessibility announces localized seconds. User changes
+between stops request a segment haptic tick, respecting system feedback settings. Off and
+unsupported engines disable both sliders while retaining their values. Missing or unsupported stored/wire
 values fall back independently to 10 seconds. Policy updates apply to the current overlay without
 replacing the video or pausing playback. Native pointer timestamps measure the interval; a matching second
 touch suspends the pending single-tap timer until its release is validated. Seeking clamps to the current seekable interval and finite media
@@ -381,7 +385,7 @@ commands below.
 | Disabled mode | `GeckoAutomaticInlinePlayerE2eInstrumentedTest#disabledPlayerPreservesNativePlaybackFullscreenAndPersistedChoice` and `#activeCandyPlayerCanBeDisabledWithoutPausingNativeVideo`: Off restores native controls without pausing media, rejects Candy opens, keeps website fullscreen and survives Activity recreation; store round-trip and Settings choice tests cover persistence/UI. |
 | Automatic mode | `GeckoAutomaticInlinePlayerE2eInstrumentedTest`: persisted mode, settled paused thumbnail, trusted site tap, `loadeddata`, then Candy controls |
 | Double-tap seeking | `scripts/gecko_inline_media.test.mjs`: real handlers, localized feedback, seekable/duration bounds, delayed single taps, cancellation/stale video; `GeckoAutomaticInlinePlayerE2eInstrumentedTest#trustedDoubleTapsSeekInlineAndFullscreenWithClampedBounds`: decoded video, trusted taps, both directions, bounds and upward fullscreen swipe |
-| Separate double-tap distances | `InlineMediaPlayerSeekSettingsTest`, `CandyPrivacyHostContractTest`, focused `BrowserSessionStoreInstrumentedTest` methods and `InlineMediaPlayerSeekSettingsInstrumentedTest`: defaults, independent normalization/persistence and recreation; `BrowserSettingsScreenInstrumentedTest#inlineMediaPlayerSeekChoicesUpdateDirectionsSeparatelyAndDisableWithOff`: separate dropdown callbacks and Off/unsupported state; `GeckoAutomaticInlinePlayerE2eInstrumentedTest#configuredDoubleTapsApplyIndependentDurationsToActiveInlineAndFullscreenPlayer`: genuine 45-second media, 5/15 → 15/5 live update, same overlay/video and trusted inline/fullscreen gestures. |
+| Separate double-tap distances | `InlineMediaPlayerSeekSettingsTest`, `CandyPrivacyHostContractTest`, focused `BrowserSessionStoreInstrumentedTest` methods and `InlineMediaPlayerSeekSettingsInstrumentedTest`: defaults, independent normalization/persistence and recreation; `BrowserSettingsScreenInstrumentedTest#inlineMediaPlayerSeekSlidersUpdateDirectionsSeparatelyAndDisableWithOff`: separate slider callbacks and Off/unsupported state; `InlineMediaPlayerSeekSliderInstrumentedTest`: localized seconds, haptic stop changes/fallback and RTL keyboard; `GeckoAutomaticInlinePlayerE2eInstrumentedTest#configuredDoubleTapsApplyIndependentDurationsToActiveInlineAndFullscreenPlayer`: genuine 45-second media, 5/15 → 15/5 live update, same overlay/video and trusted inline/fullscreen gestures. |
 | Delayed transformed-return regression | Android 17 / API 37 only; fresh single-method fixture process on a dedicated emulator |
 | Decoded fullscreen-return pixels | Android 17 / API 37 with a renderer that visibly displays the VP8 fixture (verified with `-gpu swiftshader_indirect`): isolated clipped-player direct and first-swipe methods in `GeckoPictureInPictureInstrumentedTest`; assert real cyan pixels without a dark upper band after return |
 | Android integration | `./gradlew lintFullDebug lintFossDebug assembleFullDebug assembleFossDebug` |

@@ -28,7 +28,6 @@ import dev.sk2andy.materialbrowser.browser.FavoriteAnimationSpeed
 import dev.sk2andy.materialbrowser.browser.InlineMediaPlayerMode
 import dev.sk2andy.materialbrowser.browser.InlineMediaPlayerModeRules
 import dev.sk2andy.materialbrowser.browser.InlineMediaPlayerSeekSettings
-import dev.sk2andy.materialbrowser.browser.InlineMediaPlayerSeekSettingsRules
 import dev.sk2andy.materialbrowser.browser.PageTranslationProvider
 import dev.sk2andy.materialbrowser.browser.StartupAddressFocusMode
 import dev.sk2andy.materialbrowser.shared.ui.settings.TranslationProviderSettings
@@ -340,7 +339,7 @@ internal fun BrowserSettingsPage(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Spacer(Modifier.height(8.dp))
-        InlineMediaPlayerSeekChoice(
+        InlineMediaPlayerSeekSlider(
             title = stringResource(R.string.settings_inline_media_player_seek_backward),
             seconds = inlineMediaPlayerSeekSettings.backwardSeconds,
             enabled = isInlineMediaPlayerSupported &&
@@ -353,7 +352,7 @@ internal fun BrowserSettingsPage(
             modifier = Modifier.testTag(BrowserSettingsTestTags.InlineMediaPlayerSeekBackward),
         )
         Spacer(Modifier.height(8.dp))
-        InlineMediaPlayerSeekChoice(
+        InlineMediaPlayerSeekSlider(
             title = stringResource(R.string.settings_inline_media_player_seek_forward),
             seconds = inlineMediaPlayerSeekSettings.forwardSeconds,
             enabled = isInlineMediaPlayerSupported &&
@@ -474,42 +473,6 @@ private fun ExternalAppLinkHandling.displayName(): String = when (this) {
         stringResource(R.string.settings_external_app_links_automatic)
     ExternalAppLinkHandling.AskEveryTime ->
         stringResource(R.string.settings_external_app_links_ask_every_time)
-}
-
-@Composable
-private fun InlineMediaPlayerSeekChoice(
-    title: String,
-    seconds: Int,
-    enabled: Boolean,
-    onSecondsChanged: (Int) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    var expanded by remember(enabled) { mutableStateOf(false) }
-    Box {
-        SettingsChoice(
-            title = title,
-            value = stringResource(R.string.settings_inline_media_player_seek_seconds, seconds),
-            expanded = expanded,
-            onClick = { expanded = true },
-            enabled = enabled,
-            modifier = modifier,
-        )
-        SettingsDropdown(
-            expanded = expanded && enabled,
-            onDismissRequest = { expanded = false },
-        ) {
-            InlineMediaPlayerSeekSettingsRules.SupportedSeconds.forEach { option ->
-                SettingsDropdownItem(
-                    label = stringResource(R.string.settings_inline_media_player_seek_seconds, option),
-                    selected = option == seconds,
-                    onClick = {
-                        expanded = false
-                        if (option != seconds) onSecondsChanged(option)
-                    },
-                )
-            }
-        }
-    }
 }
 
 @Composable
