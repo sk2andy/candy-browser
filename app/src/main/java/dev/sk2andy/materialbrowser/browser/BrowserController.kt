@@ -891,9 +891,6 @@ class BrowserController(
     internal val selectedWebContentStatusBarBackdrop: WebContentStatusBarAppearance?
         get() = webContentStatusBarBackdrops[selectedTabId]
 
-    internal val canMinimizeFullscreenVideo: Boolean
-        get() = presentationIsPrivate() == false
-
     internal val isInlineMediaPlayerPresented: Boolean
         get() = geckoMediaStates[selectedTabId]?.isInlineVideoPresented == true
 

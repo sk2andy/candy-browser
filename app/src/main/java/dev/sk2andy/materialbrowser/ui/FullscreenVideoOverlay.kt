@@ -21,7 +21,6 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.Icon
@@ -63,7 +62,6 @@ internal object FullscreenVideoTestTags {
     const val Expanded = "fullscreen_video_expanded"
     const val MiniPlayer = "fullscreen_video_mini_player"
     const val DragHandle = "fullscreen_video_drag_handle"
-    const val Minimize = "fullscreen_video_minimize"
     const val Expand = "fullscreen_video_expand"
     const val Close = "fullscreen_video_close"
     const val GestureIndicator = "fullscreen_video_gesture_indicator"
@@ -88,10 +86,7 @@ internal fun FullscreenVideoOverlay(
         )
     ) {
         BrowserViewportVideoControls(
-            controller = controller,
             placement = placement,
-            videoOnlyPresentation = videoOnlyPresentation,
-            canMinimize = controller.canMinimizeFullscreenVideo,
             gestureState = gestureState,
             onBoundsChanged = onBoundsChanged,
         )
@@ -101,8 +96,6 @@ internal fun FullscreenVideoOverlay(
         controller = controller,
         sessionTabId = state.tabId,
         placement = placement,
-        videoOnlyPresentation = videoOnlyPresentation,
-        canMinimize = controller.canMinimizeFullscreenVideo,
         gestureState = gestureState,
         onBoundsChanged = onBoundsChanged,
     )
@@ -110,10 +103,7 @@ internal fun FullscreenVideoOverlay(
 
 @Composable
 private fun BrowserViewportVideoControls(
-    controller: BrowserController,
     placement: FullscreenVideoPlacement,
-    videoOnlyPresentation: Boolean,
-    canMinimize: Boolean,
     gestureState: FullscreenVideoGestureState?,
     onBoundsChanged: (Rect) -> Unit,
 ) {
@@ -125,22 +115,6 @@ private fun BrowserViewportVideoControls(
             .zIndex(FULLSCREEN_VIDEO_Z_INDEX)
             .testTag(FullscreenVideoTestTags.Expanded),
     ) {
-        if (!videoOnlyPresentation && canMinimize) {
-            VideoOverlayButton(
-                onClick = controller::minimizeFullscreenVideo,
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .windowInsetsPadding(WindowInsets.safeDrawing)
-                    .padding(16.dp)
-                    .testTag(FullscreenVideoTestTags.Minimize),
-                contentDescription = stringResource(R.string.cd_minimize_fullscreen_video),
-            ) {
-                Icon(
-                    imageVector = Icons.Default.KeyboardArrowDown,
-                    contentDescription = null,
-                )
-            }
-        }
         FullscreenVideoGestureIndicator(
             state = gestureState,
             modifier = Modifier
@@ -156,8 +130,6 @@ private fun StableFullscreenVideoHost(
     controller: BrowserController,
     sessionTabId: String,
     placement: FullscreenVideoPlacement,
-    videoOnlyPresentation: Boolean,
-    canMinimize: Boolean,
     gestureState: FullscreenVideoGestureState?,
     onBoundsChanged: (Rect) -> Unit,
 ) {
@@ -248,24 +220,6 @@ private fun StableFullscreenVideoHost(
                                 },
                             ),
                     )
-                    if (!isMiniPlayer && !videoOnlyPresentation && canMinimize) {
-                        VideoOverlayButton(
-                            onClick = controller::minimizeFullscreenVideo,
-                            modifier = Modifier
-                                .align(Alignment.TopEnd)
-                                .windowInsetsPadding(WindowInsets.safeDrawing)
-                                .padding(16.dp)
-                                .testTag(FullscreenVideoTestTags.Minimize),
-                            contentDescription = stringResource(
-                                R.string.cd_minimize_fullscreen_video,
-                            ),
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.KeyboardArrowDown,
-                                contentDescription = null,
-                            )
-                        }
-                    }
                     if (isMiniPlayer) {
                         Row(
                             modifier = Modifier

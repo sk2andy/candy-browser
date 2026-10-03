@@ -14,6 +14,10 @@ Android picture-in-picture. The shorter product-level contract remains in
 
 Canvas-only players, unsupported DRM surfaces and hostile player scripts remain best-effort.
 
+Expanded fullscreen does not expose a native down-chevron that moves the selected page into
+the in-app mini-player. Return to the page uses the existing fullscreen exit or Candy's downward
+gesture. Switching tabs can still retain the original GeckoView in the mini-player host.
+
 Gecko's native media-session delegate supplies playback state, transport commands and fullscreen
 element metadata. `ContentDelegate.onFullScreen` independently owns the page fullscreen lifecycle;
 Candy opens a video presentation only after both independent states agree and retains either exit
@@ -38,8 +42,8 @@ transformed player container remains below a fixed site header. Ancestor clippin
 protection remains owned while that ancestor stays in the presented video's chain; repeated
 presentation must not classify Candy's own neutralized computed styles as a reason to remove it.
 Changing ancestry adds only new protection and removes only obsolete protection. Every temporary
-attribute, style and offset is removed when PiP preparation is cancelled or PiP returns. Return and cancellation
-switch to normal browser geometry and restore system bars first, while Compose covers the resizing
+attribute, style and offset is removed when PiP preparation is cancelled or PiP returns. Return and
+cancellation switch to normal browser geometry and restore system bars first, while Compose covers the resizing
 Gecko SurfaceView with a black restoration layer. After final non-IME window insets reach the stable
 host, the trusted content bridge removes the video-only DOM layout and acknowledges only after two
 consecutive stable rendered frames. For a frozen inline origin, the player/parent layout must match

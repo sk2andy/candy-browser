@@ -41,6 +41,10 @@ The GeckoView 155 to 157 compatibility review, upstream fixes and upgrade checks
 Issue 236's Candy Close fullscreen regression and launcher checks are recorded in
 [`../audits/issue-236-candy-player.md`](../audits/issue-236-candy-player.md).
 
+Issue 241's real YouTube PiP ancestor feedback reproduction, repeated native Home/return checks
+and viewport measurements are recorded in
+[`../audits/issue-241-gecko-youtube-pip.md`](../audits/issue-241-gecko-youtube-pip.md).
+
 Issue 221's bootstrap-history reproduction, popup boundaries and verification are recorded in
 [`../audits/issue-221-gecko-navigation.md`](../audits/issue-221-gecko-navigation.md).
 
