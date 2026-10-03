@@ -38,6 +38,9 @@ Issue 205's controlled reproductions and integrated checks are recorded in
 The GeckoView 155 to 157 compatibility review, upstream fixes and upgrade checks are recorded in
 [`../audits/geckoview-157-upgrade.md`](../audits/geckoview-157-upgrade.md).
 
+Issue 236's Candy Close fullscreen regression and launcher checks are recorded in
+[`../audits/issue-236-candy-player.md`](../audits/issue-236-candy-player.md).
+
 Issue 221's bootstrap-history reproduction, popup boundaries and verification are recorded in
 [`../audits/issue-221-gecko-navigation.md`](../audits/issue-221-gecko-navigation.md).
 

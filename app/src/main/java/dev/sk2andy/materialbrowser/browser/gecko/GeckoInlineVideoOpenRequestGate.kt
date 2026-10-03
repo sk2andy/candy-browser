@@ -85,6 +85,11 @@ internal class GeckoInlineVideoOpenRequestGate(
             revision < minimumCompatibleRevision ||
             (request.expected && mode != current.mode)
         ) return null
+        if (!request.expected) {
+            return request.takeIf {
+                revision == publishedRevision || revision == acknowledgedRevision
+            }
+        }
         if (pending != null) return null
         if (revision == publishedRevision && acknowledgedRevision == publishedRevision) {
             return request

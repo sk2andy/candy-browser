@@ -1824,23 +1824,62 @@ async function requestCandyInlineVideoOpen(video, enterFullscreen = false) {
 }
 
 async function requestCandyInlineVideoClose(video) {
-  if (
-    !candyPictureInPicturePlayback.inlinePresentationExpected ||
-    candyPictureInPicturePlayback.presentedVideo !== video
-  ) return false;
+  const state = candyPictureInPicturePlayback;
+  const navigationGeneration = state.inlineMediaNavigationGeneration;
+  const controlsHost = state.inlineControlsHost;
+  const mode = state.inlineMediaPlayerMode;
+  const url = location.href;
+  const isCurrent = () => state.inlinePresentationExpected &&
+    state.presentedVideo === video && video?.isConnected &&
+    state.inlineControlsHost === controlsHost && state.inlineMediaPlayerMode === mode &&
+    state.inlineMediaNavigationGeneration === navigationGeneration && location.href === url;
+  if (!isCurrent()) return false;
   try {
-    const response = await browser.runtime.sendMessage({
-      type: "inline-video-open-request",
-      expected: false,
-      revision: candyPictureInPicturePlayback.inlineMediaPolicyRevision,
-      navigationGeneration: candyPictureInPicturePlayback.inlineMediaNavigationGeneration,
-      documentNonce: candyInlineVideoDocumentNonce,
-      elementNonce: candyInlineVideoElementNonce(video),
-    });
-    if (response?.forwarded !== true) return false;
-    clearCandyInlineVideoPresentation();
-    reportCandyInlineVideoState(video);
-    return true;
+    if (document.fullscreenElement?.contains(video)) {
+      // Keep the acknowledged presentation until Gecko restores its inline viewport.
+      // Removing it first loses the controller's fullscreen-return layout gate.
+      await document.exitFullscreen();
+      if (!isCurrent()) return false;
+      const restored = await waitForCandyPictureInPictureRestoration(false, true);
+      if (!restored.prepared || !isCurrent()) return false;
+    }
+    const deadline = performance.now() + 3000;
+    for (let attempt = 0; attempt < 2 && isCurrent(); attempt += 1) {
+      await reportCandyInlineVideoState(video);
+      if (!isCurrent()) return false;
+      const revision = state.inlineMediaPolicyRevision;
+      const response = await browser.runtime.sendMessage({
+        type: "inline-video-open-request",
+        expected: false,
+        mode,
+        revision,
+        navigationGeneration,
+        documentNonce: candyInlineVideoDocumentNonce,
+        elementNonce: candyInlineVideoElementNonce(video),
+      });
+      if (response?.forwarded === true) {
+        if (isCurrent()) {
+          clearCandyInlineVideoPresentation();
+          reportCandyInlineVideoState(video);
+        }
+        return true;
+      }
+      const retryPolicy = response?.retryPolicy;
+      if (
+        attempt !== 0 ||
+        !isCurrent() ||
+        performance.now() >= deadline ||
+        retryPolicy?.inlineMediaPlayerEnabled !== true ||
+        retryPolicy.inlineMediaPlayerMode !== mode ||
+        retryPolicy.navigationGeneration !== navigationGeneration ||
+        !Number.isSafeInteger(retryPolicy.revision) ||
+        retryPolicy.revision <= revision
+      ) return false;
+      if (retryPolicy.revision > state.inlineMediaPolicyRevision) {
+        updateCandyInlineMediaPlayerPolicy(retryPolicy);
+      }
+    }
+    return false;
   } catch (_) {
     return false;
   }
@@ -1986,21 +2025,30 @@ button[data-loading="true"]::after {
 
 function candyInlineVideoActionPosition(video) {
   const bounds = video.getBoundingClientRect();
+  const belowSitePlayer = Boolean(candyInlineVideoSitePlayer(video));
+  const top = belowSitePlayer ?
+    bounds.bottom + CANDY_INLINE_VIDEO_ACTION_INSET_PX :
+    Math.max(0, Math.min(
+      innerHeight - CANDY_INLINE_VIDEO_ACTION_SIZE_PX,
+      bounds.top + CANDY_INLINE_VIDEO_ACTION_INSET_PX,
+    ));
+  if (belowSitePlayer && (
+    document.fullscreenElement || top < 0 ||
+    top + CANDY_INLINE_VIDEO_ACTION_SIZE_PX > innerHeight
+  )) return null;
   return {
     left: Math.max(0, Math.min(
       innerWidth - CANDY_INLINE_VIDEO_ACTION_SIZE_PX,
       bounds.right - CANDY_INLINE_VIDEO_ACTION_SIZE_PX - CANDY_INLINE_VIDEO_ACTION_INSET_PX,
     )),
-    top: Math.max(0, Math.min(
-      innerHeight - CANDY_INLINE_VIDEO_ACTION_SIZE_PX,
-      bounds.top + CANDY_INLINE_VIDEO_ACTION_INSET_PX,
-    )),
+    top,
   };
 }
 
 function isCandyInlineVideoActionClick(event, video, host) {
   if (!isCandyInlineVideoCandidate(video) || !host?.isConnected) return false;
   const position = candyInlineVideoActionPosition(video);
+  if (!position) return false;
   const hostBounds = host.getBoundingClientRect();
   const tolerance = 2;
   return Math.abs(hostBounds.left - position.left) <= tolerance &&
@@ -2023,6 +2071,11 @@ function updateCandyInlineVideoAction(video) {
     removeCandyInlineVideoAction();
     return;
   }
+  const position = candyInlineVideoActionPosition(video);
+  if (!position) {
+    removeCandyInlineVideoAction();
+    return;
+  }
   let host = candyPictureInPicturePlayback.inlineActionHost;
   if (
     candyPictureInPicturePlayback.inlineActionVideo !== video ||
@@ -2031,7 +2084,6 @@ function updateCandyInlineVideoAction(video) {
     host = createCandyInlineVideoAction(video);
   }
   if (!host) return;
-  const position = candyInlineVideoActionPosition(video);
   setCandyInlineActionStyle(host, "left", `${Math.round(position.left)}px`);
   setCandyInlineActionStyle(host, "top", `${Math.round(position.top)}px`);
 }
@@ -2427,10 +2479,17 @@ function presentCandyPictureInPictureVideo(preferredVideo = null) {
   candyPictureInPicturePlayback.presentedVideo = video;
   updateCandyPictureInPictureVideoControls(video, true);
   if (candyUsesBackgroundVideoVisibilityFix) {
+    const previous = candyPictureInPicturePlayback.pictureInPictureAncestors;
     const ancestors = [];
     for (let ancestor = video.parentElement;
       ancestor && ancestor !== document.body && ancestor !== document.documentElement;
       ancestor = ancestor.parentElement) {
+      // Owned overrides hide the site's clipping/transform from computed style.
+      // Retain ownership until this ancestor leaves the current video's chain.
+      if (previous.includes(ancestor)) {
+        ancestors.push(ancestor);
+        continue;
+      }
       const style = getComputedStyle(ancestor);
       const clipsOrContainsVideo = [
         style.transform, style.translate, style.scale, style.filter,
@@ -2439,13 +2498,12 @@ function presentCandyPictureInPictureVideo(preferredVideo = null) {
         [style.overflowX, style.overflowY].some((value) => value && value !== "visible");
       if (clipsOrContainsVideo) ancestors.push(ancestor);
     }
-    const previous = candyPictureInPicturePlayback.pictureInPictureAncestors;
     if (ancestors.length !== previous.length ||
         ancestors.some((ancestor, index) => ancestor !== previous[index])) {
-      previous.forEach((element) => {
+      previous.filter((element) => !ancestors.includes(element)).forEach((element) => {
         element.removeAttribute(CANDY_PICTURE_IN_PICTURE_ANCESTOR_ATTRIBUTE);
       });
-      ancestors.forEach((element) => {
+      ancestors.filter((element) => !previous.includes(element)).forEach((element) => {
         element.setAttribute(CANDY_PICTURE_IN_PICTURE_ANCESTOR_ATTRIBUTE, "");
       });
       candyPictureInPicturePlayback.pictureInPictureAncestors = ancestors;
@@ -2604,7 +2662,7 @@ function candyPictureInPictureRestorationMatches(video, origin, allowFullscreen)
   ].every((delta) => Number.isFinite(delta) && Math.abs(delta) < 0.5);
 }
 
-function waitForCandyPictureInPictureRestoration(allowFullscreen) {
+function waitForCandyPictureInPictureRestoration(allowFullscreen, allowGenerationChange = false) {
   const state = candyPictureInPicturePlayback;
   const generation = state.generation;
   const navigationGeneration = state.inlineMediaNavigationGeneration;
@@ -2626,7 +2684,8 @@ function waitForCandyPictureInPictureRestoration(allowFullscreen) {
     const timeout = setTimeout(() => finish(false), 2_000);
     const check = () => {
       frame = null;
-      if (performance.now() >= deadline || state.expected || state.generation !== generation ||
+      if (performance.now() >= deadline || state.expected ||
+          (!allowGenerationChange && state.generation !== generation) ||
           state.inlineMediaNavigationGeneration !== navigationGeneration || location.href !== url ||
           state.presentedVideo !== video || (video && !video.isConnected) ||
           state.inlinePresentationExpected !== inlineExpected || state.inlineFullscreenOrigin !== origin ||

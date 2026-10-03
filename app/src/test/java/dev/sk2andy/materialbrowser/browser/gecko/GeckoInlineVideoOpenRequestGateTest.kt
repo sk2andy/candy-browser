@@ -42,6 +42,78 @@ class GeckoInlineVideoOpenRequestGateTest {
     }
 
     @Test
+    fun `current close arrives before policy ack without waiting for a fresh candidate`() {
+        val gate = readyGate()
+        gate.publish(policy.copy(topInsetPx = 0), revision = 4, isPrivate = false)
+        val close = request.copy(expected = false)
+
+        assertEquals(close, gate.accept(close, revision = 4, mode = null))
+        assertNull(gate.pendingDeadlineMillis)
+    }
+
+    @Test
+    fun `last acknowledged close survives compatible fullscreen policy publication`() {
+        val gate = readyGate()
+        gate.publish(policy.copy(topInsetPx = 0), revision = 4, isPrivate = false)
+        val close = request.copy(expected = false)
+
+        assertEquals(close, gate.accept(close, revision = 3, mode = null))
+        assertNull(gate.pendingDeadlineMillis)
+    }
+
+    @Test
+    fun `close cancels pending open while current publication waits for ack`() {
+        listOf(3L, 4L).forEach { revision ->
+            val gate = readyGate()
+            gate.publish(policy.copy(topInsetPx = 0), revision = 4, isPrivate = false)
+            assertNull(gate.accept(request, revision = 3, mode = MODE))
+            assertEquals(3_000L, gate.pendingDeadlineMillis)
+            val close = request.copy(expected = false)
+
+            assertEquals(close, gate.accept(close, revision = revision, mode = null))
+            assertNull(gate.pendingDeadlineMillis)
+            gate.acknowledge(4)
+            gate.updateCandidate(4, candidate)
+            assertNull(gate.takeReady())
+        }
+    }
+
+    @Test
+    fun `close rejects future unacknowledged and older revisions`() {
+        listOf(0L, 2L, 4L, 6L).forEach { revision ->
+            val gate = readyGate()
+            gate.publish(policy, revision = 4, isPrivate = false)
+            gate.publish(policy, revision = 5, isPrivate = false)
+
+            assertNull(gate.accept(request.copy(expected = false), revision = revision, mode = null))
+        }
+    }
+
+    @Test
+    fun `close during policy publication preserves private disabled and navigation boundaries`() {
+        listOf(
+            policy.copy(navigationGeneration = 3) to false,
+            policy.copy(inlineMediaPlayerEnabled = false) to false,
+            policy.copy(inlineMediaPlayerMode = "disabled") to false,
+            policy to true,
+        ).forEach { (changed, isPrivate) ->
+            val gate = readyGate()
+            gate.publish(changed, revision = 4, isPrivate = isPrivate)
+
+            assertNull(gate.accept(request.copy(expected = false), revision = 4, mode = null))
+            assertNull(gate.accept(request.copy(expected = false), revision = 3, mode = null))
+        }
+    }
+
+    @Test
+    fun `old acknowledged close cannot cross a player mode change`() {
+        val gate = readyGate()
+        gate.publish(policy.copy(inlineMediaPlayerMode = "automatic"), revision = 4, isPrivate = false)
+
+        assertNull(gate.accept(request.copy(expected = false), revision = 3, mode = null))
+    }
+
+    @Test
     fun `only exact last acknowledged revision may wait`() {
         listOf(0L, 2L, 4L, 5L).forEach { revision ->
             val gate = readyGate()

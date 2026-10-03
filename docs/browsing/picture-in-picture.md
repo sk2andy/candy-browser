@@ -34,8 +34,11 @@ Invalid dimensions fall back to 16:9; extreme values are clamped to Android's su
 During Android's video-only presentation, the bundled content bridge hides non-video page content,
 sizes the browser viewport to the media aspect ratio and moves the selected playing video to the
 viewport origin. The measured offset correction is required for players such as YouTube whose
-transformed player container remains below a fixed site header. Every temporary attribute, style
-and offset is removed when PiP preparation is cancelled or PiP returns. Return and cancellation
+transformed player container remains below a fixed site header. Ancestor clipping/transform
+protection remains owned while that ancestor stays in the presented video's chain; repeated
+presentation must not classify Candy's own neutralized computed styles as a reason to remove it.
+Changing ancestry adds only new protection and removes only obsolete protection. Every temporary
+attribute, style and offset is removed when PiP preparation is cancelled or PiP returns. Return and cancellation
 switch to normal browser geometry and restore system bars first, while Compose covers the resizing
 Gecko SurfaceView with a black restoration layer. After final non-IME window insets reach the stable
 host, the trusted content bridge removes the video-only DOM layout and acknowledges only after two
@@ -139,8 +142,11 @@ Gecko's fixed fullscreen container must not retain a header inset after it becom
 player. Returning to the page rechecks that bounded subtree without requiring Candy presentation
 ownership or replacing the website's controls.
 
-The trusted content host renders the open action directly over the current recognized top-frame
-video, even while playback is paused; page fullscreen is not required. The action lives in a closed
+The trusted content host renders the open action for the current recognized top-frame video,
+even while playback is paused; page fullscreen is not required. For a recognized YouTube player,
+the floating action sits 16 CSS pixels below the video, leaving native player settings and captions
+reachable. It is removed during website fullscreen or when there is no room below the video. Other
+players retain the action over the upper-right video corner. The action lives in a closed
 shadow root for style isolation, uses the localized Android action label and accepts only a trusted
 user click while its geometry still matches the visible video. That click starts a paused video,
 refreshes the exact clicked candidate and then requests the inline presentation. Video/ancestor
@@ -167,7 +173,16 @@ the exact HTML video's site-controlled native controls and adds isolated Candy p
 time and fullscreen controls over the video's lower edge. For YouTube, Candy also suppresses the
 selected player's site chrome without hiding captions. The Candy control host moves into the DOM
 fullscreen element so it remains in the fullscreen top layer. Candy restores the page's original
-controls state and YouTube chrome when the inline presentation ends. A trusted primary touch tap
+controls state and YouTube chrome when the inline presentation ends. Closing Candy from fullscreen
+first exits website fullscreen and waits for stable inline video/control geometry while retaining
+the acknowledged presentation. Only then does it release native ownership and restore website
+controls. Close remains actionable during acknowledgement of a compatible inset-policy revision,
+so policy replay cannot resurrect a closed presentation. The content host awaits a fresh exact-video
+report before Close and may refresh one newer compatible policy within the same bounded two-attempt
+window as Open; navigation, mode, video or controls-instance changes cancel that retry. A failed exit
+or restoration timeout keeps
+Candy usable; document/video replacement
+cancels the pending close without touching the replacement. A trusted primary touch tap
 of at most 350 ms on the free video surface toggles Candy controls after a 300 ms double-tap
 window, including while DOM fullscreen is active. Two nearby taps in the same half seek backward
 on the left and forward on the right. Settings → Player persists each direction independently, with

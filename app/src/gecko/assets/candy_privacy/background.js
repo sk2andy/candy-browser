@@ -637,7 +637,7 @@ function requestInlineVideoOpen(message, sender) {
 
 function inlineVideoOpenResponse(message, sender) {
   const forwarded = requestInlineVideoOpen(message, sender);
-  if (forwarded || message.expected === false) return { forwarded };
+  if (forwarded) return { forwarded };
   const tabId = sender.tab?.id;
   const policy = policiesByToken.get(tokenByTab.get(tabId));
   const candidate = inlineVideosByTab.get(tabId)?.get(0);

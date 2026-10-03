@@ -297,6 +297,120 @@ function queuedInlineOpenHarness() {
   };
 }
 
+function queuedInlineCloseHarness() {
+  const h = queuedInlineOpenHarness();
+  let cleared = 0;
+  let reports = 0;
+  Object.assign(h.state, { inlinePresentationExpected: true, presentedVideo: h.video, inlineControlsHost: {} });
+  h.content.location = { href: "https://m.youtube.com/watch?v=close-policy-race" };
+  h.content.document = { fullscreenElement: null };
+  h.content.clearCandyInlineVideoPresentation = () => {
+    cleared += 1;
+    h.state.inlinePresentationExpected = false;
+    h.state.presentedVideo = null;
+  };
+  const report = h.content.reportCandyInlineVideoState;
+  h.content.reportCandyInlineVideoState = (video) => { reports += 1; return report(video); };
+  const source = asset("content.js");
+  const start = source.indexOf("async function requestCandyInlineVideoClose(video) {");
+  const end = source.indexOf("\nfunction ", start + 1);
+  vm.runInContext(source.slice(start, end), h.content);
+  return { ...h, cleared: () => cleared, reports: () => reports };
+}
+
+test("queued close refreshes its exact candidate before forwarding current policy", async () => {
+  const h = queuedInlineCloseHarness();
+  const closed = h.content.requestCandyInlineVideoClose(h.video);
+  await h.deliver();
+  assert.equal(await closed, true);
+  assert.equal(h.nativeOpens().length, 1);
+  assert.equal(h.nativeOpens()[0].expected, false);
+  assert.equal(h.nativeOpens()[0].mode, undefined);
+  assert.equal(h.sent[0].mode, "button_fullscreen");
+  assert.equal(h.cleared(), 1);
+  assert.equal(h.reports(), 2);
+});
+
+test("queued close retries newer compatible policy only after a fresh exact candidate report", async () => {
+  const h = queuedInlineCloseHarness();
+  const closed = h.content.requestCandyInlineVideoClose(h.video);
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(h.sent[0].revision, 3);
+  h.policy.revision = 4;
+  await h.deliver();
+  assert.equal(h.sent.length, 2);
+  assert.equal(h.sent[1].revision, 4);
+  await h.deliver();
+  assert.equal(await closed, true);
+  assert.equal(h.nativeOpens().length, 1);
+  assert.equal(h.nativeOpens()[0].revision, 4);
+  assert.equal(h.nativeOpens()[0].expected, false);
+  assert.equal(h.cleared(), 1);
+  assert.equal(h.reports(), 3);
+});
+
+for (const [reason, change] of [
+  ["policy navigation", (h) => { h.policy.navigationGeneration = 3; }],
+  ["policy mode", (h) => { h.policy.inlineMediaPlayerMode = "automatic"; }],
+  ["disabled policy", (h) => { h.policy.inlineMediaPlayerEnabled = false; }],
+  ["background candidate", (h) => {
+    h.background.context.inlineVideosByTab.get(7).get(0).elementNonce = "c".repeat(32);
+  }],
+  ["video replacement", (h) => { h.state.presentedVideo = {}; }],
+  ["same-video presentation replacement", (h) => { h.state.inlineControlsHost = {}; }],
+  ["content navigation", (h) => { h.state.inlineMediaNavigationGeneration = 3; }],
+  ["content mode", (h) => { h.state.inlineMediaPlayerMode = "automatic"; }],
+  ["expired intent", (h) => { h.advanceTime(3000); }],
+]) {
+  test(`queued close cannot retry changed ${reason}`, async () => {
+    const h = queuedInlineCloseHarness();
+    const closed = h.content.requestCandyInlineVideoClose(h.video);
+    await new Promise((resolve) => setImmediate(resolve));
+    h.policy.revision = 4;
+    change(h);
+    await h.deliver();
+    assert.equal(await closed, false);
+    assert.equal(h.sent.length, 1);
+    assert.equal(h.nativeOpens().length, 0);
+    assert.equal(h.cleared(), 0);
+  });
+}
+
+test("queued close retries only once across repeated policy publications", async () => {
+  const h = queuedInlineCloseHarness();
+  const closed = h.content.requestCandyInlineVideoClose(h.video);
+  await new Promise((resolve) => setImmediate(resolve));
+  h.policy.revision = 4;
+  await h.deliver();
+  h.policy.revision = 5;
+  await h.deliver();
+  assert.equal(await closed, false);
+  assert.equal(h.sent.length, 2);
+  assert.equal(h.nativeOpens().length, 0);
+  assert.equal(h.cleared(), 0);
+});
+
+test("background close retry policy rejects missing mode nonces and non-top frames", () => {
+  const h = queuedInlineCloseHarness();
+  const sender = { tab: { id: 7 }, frameId: 0 };
+  h.background.context.updateInlineVideoState(candidate, sender);
+  h.policy.revision = 4;
+  const close = { ...candidate, type: "inline-video-open-request", mode: "button_fullscreen", expected: false };
+  assert.equal(h.background.context.inlineVideoOpenResponse(close, sender).retryPolicy.revision, 4);
+  for (const [invalid, invalidSender] of [
+    [{ ...close, mode: undefined }, sender],
+    [{ ...close, documentNonce: "c".repeat(32) }, sender],
+    [{ ...close, elementNonce: "c".repeat(32) }, sender],
+    [close, { ...sender, frameId: 1 }],
+    [{ ...close, revision: 5 }, sender],
+  ]) {
+    assert.deepEqual(
+      JSON.parse(JSON.stringify(h.background.context.inlineVideoOpenResponse(invalid, invalidSender))),
+      { forwarded: false },
+    );
+  }
+});
+
 test("queued inline open retries an inset policy revision for the same video and mode", async () => {
   const harness = queuedInlineOpenHarness();
   const opened = harness.content.requestCandyInlineVideoOpen(harness.video);
@@ -1086,6 +1200,135 @@ test("picture in picture cleanup removes offsets from every marked video", () =>
     ],
   );
   assert.equal(removedProperties.length, 4);
+});
+
+test("PiP ancestor ownership survives repeated presentation and follows reparenting", () => {
+  const ancestorAttribute = "data-candy-picture-in-picture-ancestor";
+  const rootAttribute = "data-candy-picture-in-picture";
+  const videoAttribute = "data-candy-picture-in-picture-video";
+  const styleAttribute = "data-candy-picture-in-picture-style";
+  const mutations = [];
+  const elements = [];
+  const element = (name, parentElement = null, siteStyle = {}) => {
+    const attributes = new Set();
+    const properties = new Map();
+    const node = {
+      name, parentElement, siteStyle, isConnected: true,
+      attributes,
+      style: {
+        setProperty: (key, value) => properties.set(key, value),
+        getPropertyValue: (key) => properties.get(key) || "",
+        removeProperty: (key) => properties.delete(key),
+      },
+      setAttribute(key) {
+        attributes.add(key);
+        if (key === ancestorAttribute) mutations.push([name, "set"]);
+      },
+      removeAttribute(key) {
+        attributes.delete(key);
+        if (key === ancestorAttribute) mutations.push([name, "remove"]);
+      },
+      hasAttribute: (key) => attributes.has(key),
+      appendChild(child) { child.parentElement = node; },
+      remove() { node.isConnected = false; node.parentElement = null; },
+    };
+    elements.push(node);
+    return node;
+  };
+  const root = element("html");
+  const body = element("body", root);
+  const outer = element("outer", body);
+  const player = element("player", outer, { transform: "translateY(80px)", overflowY: "hidden" });
+  const video = element("video", player);
+  video.controls = true;
+  const styles = [];
+  const state = {
+    expected: true, inlinePresentationExpected: true, presentedVideo: video,
+    pictureInPictureAncestors: [], alignmentFrame: null, alignmentMonitorFrame: null,
+  };
+  class Observer { observe() {} disconnect() {} }
+  const context = vm.createContext({
+    candyPictureInPicturePlayback: state,
+    candyPictureInPictureOriginalControls: new WeakMap(),
+    candyUsesBackgroundVideoVisibilityFix: true,
+    CANDY_PICTURE_IN_PICTURE_ANCESTOR_ATTRIBUTE: ancestorAttribute,
+    CANDY_PICTURE_IN_PICTURE_ROOT_ATTRIBUTE: rootAttribute,
+    CANDY_PICTURE_IN_PICTURE_VIDEO_ATTRIBUTE: videoAttribute,
+    CANDY_PICTURE_IN_PICTURE_STYLE_ATTRIBUTE: styleAttribute,
+    CANDY_INLINE_VIDEO_CONTROLS_ATTRIBUTE: "data-candy-inline-video-controls",
+    CANDY_PICTURE_IN_PICTURE_OFFSET_X: "--candy-picture-in-picture-offset-x",
+    CANDY_PICTURE_IN_PICTURE_OFFSET_Y: "--candy-picture-in-picture-offset-y",
+    MutationObserver: Observer, ResizeObserver: Observer,
+    candyPictureInPictureVideoToPresent: () => video,
+    alignCandyPictureInPictureVideo: () => {},
+    scheduleCandyPictureInPictureAlignment: () => {},
+    cancelAnimationFrame: () => {},
+    getComputedStyle(node) {
+      const protectedAncestor = root.hasAttribute(rootAttribute) &&
+        styles.some((style) => style.isConnected) && node.hasAttribute(ancestorAttribute);
+      return {
+        transform: "none", translate: "none", scale: "none", filter: "none",
+        perspective: "none", clipPath: "none", mask: "none", contain: "none",
+        overflowX: "visible", overflowY: "visible",
+        ...(protectedAncestor ? {} : node.siteStyle),
+      };
+    },
+    document: {
+      documentElement: root, body,
+      createElement() { const style = element("style"); styles.push(style); return style; },
+      querySelector: () => styles.find((style) => style.isConnected) || null,
+      querySelectorAll: () => elements.filter((node) => node.hasAttribute(videoAttribute)),
+    },
+  });
+  const source = asset("content.js");
+  const controlsAndCleanup = source
+    .split("function updateCandyPictureInPictureVideoControls(video, expected) {")[1]
+    .split("function clearCandyInlineVideoPresentation() {")[0];
+  vm.runInContext(
+    `function updateCandyPictureInPictureVideoControls(video, expected) {${controlsAndCleanup}`,
+    context,
+  );
+  const presentation = source
+    .split("function presentCandyPictureInPictureVideo(preferredVideo = null) {")[1]
+    .split("function rememberCandyPictureInPictureVideos() {")[0];
+  vm.runInContext(
+    `function presentCandyPictureInPictureVideo(preferredVideo = null) {${presentation}`,
+    context,
+  );
+
+  context.presentCandyPictureInPictureVideo(video);
+  for (let call = 0; call < 5; call += 1) {
+    context.presentCandyPictureInPictureVideo(video);
+    assert.equal(player.hasAttribute(ancestorAttribute), true,
+      "Candy's own computed styles must not revoke ancestor protection");
+  }
+  assert.deepEqual(mutations, [["player", "set"]]);
+  assert.equal(styles.length, 1);
+
+  outer.siteStyle = { overflowY: "hidden" };
+  context.presentCandyPictureInPictureVideo(video);
+  assert.equal(outer.hasAttribute(ancestorAttribute), true);
+  assert.deepEqual(mutations, [["player", "set"], ["outer", "set"]]);
+
+  const replacement = element("replacement", body, { contain: "paint" });
+  video.parentElement = replacement;
+  context.presentCandyPictureInPictureVideo(video);
+  assert.equal(player.hasAttribute(ancestorAttribute), false);
+  assert.equal(outer.hasAttribute(ancestorAttribute), false);
+  assert.equal(replacement.hasAttribute(ancestorAttribute), true);
+  assert.deepEqual(mutations.slice(2), [
+    ["player", "remove"], ["outer", "remove"], ["replacement", "set"],
+  ]);
+
+  video.style.setProperty("--candy-picture-in-picture-offset-y", "-80px");
+  context.clearCandyPictureInPicturePresentation();
+  assert.equal(replacement.hasAttribute(ancestorAttribute), false);
+  assert.equal(root.hasAttribute(rootAttribute), false);
+  assert.equal(video.hasAttribute(videoAttribute), false);
+  assert.equal(video.style.getPropertyValue("--candy-picture-in-picture-offset-y"), "");
+  assert.equal(video.controls, true);
+  assert.equal(styles[0].isConnected, false);
+  assert.equal(state.pictureInPictureAncestors.length, 0);
 });
 
 test("picture in picture restoration acknowledges after two rendered frames", async () => {
@@ -2402,7 +2645,7 @@ test("content presentation requires exact document and element identity", () => 
   assert.match(source, /!event\.isTrusted/);
   assert.match(source, /if \(video\.paused\) Promise\.resolve\(video\.play\(\)\)/);
   assert.match(source, /await reportCandyInlineVideoState\(video\)/);
-  assert.match(source, /response\?\.forwarded !== true/);
+  assert.match(source, /response\?\.forwarded === true/);
   assert.match(source, /inlineMediaPlayerMode === "button_fullscreen"/);
   assert.match(source, /inlineMediaPlayerMode === "always_for_fullscreen"/);
   assert.match(source, /inlineMediaPlayerMode === "automatic"/);
@@ -2491,6 +2734,171 @@ test("content presentation requires exact document and element identity", () => 
   );
   assert.ok(synchronousAlignment >= 0);
   assert.ok(scheduledAlignment > synchronousAlignment);
+});
+
+function inlineCloseHarness({ fullscreen = true } = {}) {
+  const h = restorationHarness();
+  const calls = [];
+  const reports = [];
+  h.context.updateCandyPictureInPicturePlayback(false);
+  h.context.preserveCandyInlineVideoFullscreenOrigin(h.video, h.player);
+  h.player.contains = (element) => element === h.video;
+  h.context.document.fullscreenElement = fullscreen ? h.player : null;
+  h.context.document.exitFullscreen = async () => {
+    calls.push("exit-fullscreen");
+    h.context.document.fullscreenElement = null;
+  };
+  h.context.browser = { runtime: { sendMessage: async (message) => {
+    calls.push(message);
+    return { forwarded: true };
+  } } };
+  h.context.candyInlineVideoElementNonce = () => candidate.elementNonce;
+  h.context.clearCandyInlineVideoPresentation = () => {
+    calls.push("clear-inline");
+    h.playback.inlinePresentationExpected = false;
+    h.playback.presentedVideo = null;
+  };
+  h.context.reportCandyInlineVideoState = (video) => reports.push(video);
+  const source = asset("content.js");
+  const start = source.indexOf("async function requestCandyInlineVideoClose(video) {");
+  const end = source.indexOf("\nfunction ", start + 1);
+  vm.runInContext(source.slice(start, end), h.context);
+  return { ...h, calls, reports };
+}
+
+test("Candy close exits fullscreen and waits for restored inline geometry before native teardown", async () => {
+  const h = inlineCloseHarness();
+  h.setLayout(0, 320);
+  const closed = h.context.requestCandyInlineVideoClose(h.video);
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.deepEqual(h.calls, ["exit-fullscreen"]);
+  assert.equal(h.playback.inlinePresentationExpected, true);
+  await h.renderFrame();
+  await h.renderFrame();
+  assert.deepEqual(h.calls, ["exit-fullscreen"], "clipped return cannot release native ownership");
+
+  // The controller's concurrent policy acknowledgement advances playback generation.
+  // Closing still belongs to this exact video/navigation, so let that restore complete.
+  h.context.updateCandyPictureInPicturePlayback(false);
+  h.setLayout(100, 400);
+  await h.renderFrame();
+  assert.deepEqual(h.calls, ["exit-fullscreen"]);
+  await h.renderFrame();
+  assert.equal(await closed, true);
+  assert.equal(h.calls[1].expected, false);
+  assert.equal(h.calls[1].elementNonce, candidate.elementNonce);
+  assert.deepEqual(h.calls.slice(2), ["clear-inline"]);
+  assert.deepEqual(h.reports, [h.video, h.video]);
+  assert.equal(h.context.document.fullscreenElement, null);
+  assert.equal(h.playback.inlinePresentationExpected, false);
+});
+
+test("Candy inline close keeps native playback and does not request fullscreen restoration", async () => {
+  const h = inlineCloseHarness({ fullscreen: false });
+  h.video.play = h.video.pause = () => assert.fail("close cannot change playback");
+  assert.equal(await h.context.requestCandyInlineVideoClose(h.video), true);
+  assert.equal(h.calls[0].expected, false);
+  assert.deepEqual(h.calls.slice(1), ["clear-inline"]);
+  assert.deepEqual(h.reports, [h.video, h.video]);
+});
+
+for (const [reason, change] of [
+  ["navigation", (h) => { h.playback.inlineMediaNavigationGeneration++; }],
+  ["document URL", (h) => { h.context.location.href += "&next=1"; }],
+  ["video replacement", (h) => { h.playback.presentedVideo = {}; }],
+  ["same-video presentation replacement", (h) => {
+    h.playback.inlineControlsHost = { ...h.playback.inlineControlsHost };
+  }],
+  ["player mode change", (h) => { h.playback.inlineMediaPlayerMode = "automatic"; }],
+  ["video detachment", (h) => { h.video.isConnected = false; }],
+  ["new PiP entry", (h) => { h.playback.expected = true; }],
+]) {
+  test(`Candy fullscreen close cannot tear down after ${reason}`, async () => {
+    const h = inlineCloseHarness();
+    const closed = h.context.requestCandyInlineVideoClose(h.video);
+    await new Promise((resolve) => setImmediate(resolve));
+    change(h);
+    await h.renderFrame();
+    await h.renderFrame();
+    assert.equal(await closed, false);
+    assert.deepEqual(h.calls, ["exit-fullscreen"]);
+  });
+}
+
+test("Candy close leaves controls usable when fullscreen exit fails", async () => {
+  const h = inlineCloseHarness();
+  h.context.document.exitFullscreen = async () => { throw new Error("exit rejected"); };
+  assert.equal(await h.context.requestCandyInlineVideoClose(h.video), false);
+  assert.equal(h.playback.inlinePresentationExpected, true);
+  assert.equal(h.playback.presentedVideo, h.video);
+  assert.deepEqual(h.calls, []);
+});
+
+test("Candy close keeps inline ownership when restored geometry times out", async () => {
+  const h = inlineCloseHarness();
+  h.setLayout(0, 320);
+  const closed = h.context.requestCandyInlineVideoClose(h.video);
+  await new Promise((resolve) => setImmediate(resolve));
+  h.advanceClock(2_001);
+  await h.renderFrame();
+  assert.equal(await closed, false);
+  assert.equal(h.playback.inlinePresentationExpected, true);
+  assert.equal(h.playback.presentedVideo, h.video);
+  assert.deepEqual(h.calls, ["exit-fullscreen"]);
+});
+
+test("Candy close response cannot clear a replacement presentation", async () => {
+  const h = inlineCloseHarness({ fullscreen: false });
+  const replacement = { isConnected: true };
+  let deliver;
+  h.context.browser.runtime.sendMessage = () => new Promise((resolve) => { deliver = resolve; });
+  const closed = h.context.requestCandyInlineVideoClose(h.video);
+  await new Promise((resolve) => setImmediate(resolve));
+  h.playback.presentedVideo = replacement;
+  deliver({ forwarded: true });
+  assert.equal(await closed, true);
+  assert.equal(h.playback.presentedVideo, replacement);
+  assert.equal(h.playback.inlinePresentationExpected, true);
+  assert.deepEqual(h.calls, []);
+});
+
+test("Candy close response cannot clear a reopened presentation of the same video", async () => {
+  const h = inlineCloseHarness({ fullscreen: false });
+  const replacementHost = {};
+  let deliver;
+  h.context.browser.runtime.sendMessage = () => new Promise((resolve) => { deliver = resolve; });
+  const closed = h.context.requestCandyInlineVideoClose(h.video);
+  await new Promise((resolve) => setImmediate(resolve));
+  h.playback.inlineControlsHost = replacementHost;
+  deliver({ forwarded: true });
+  assert.equal(await closed, true);
+  assert.equal(h.playback.presentedVideo, h.video);
+  assert.equal(h.playback.inlineControlsHost, replacementHost);
+  assert.equal(h.playback.inlinePresentationExpected, true);
+  assert.deepEqual(h.calls, []);
+});
+
+test("Candy close waits for its fresh candidate report and rejects a replacement while reporting", async () => {
+  const h = inlineCloseHarness({ fullscreen: false });
+  let deliverReport;
+  h.context.reportCandyInlineVideoState = () => new Promise((resolve) => { deliverReport = resolve; });
+  const closed = h.context.requestCandyInlineVideoClose(h.video);
+  assert.deepEqual(h.calls, [], "native close must follow the completed candidate report");
+  h.playback.inlineControlsHost = {};
+  deliverReport();
+  assert.equal(await closed, false);
+  assert.equal(h.playback.inlinePresentationExpected, true);
+  assert.deepEqual(h.calls, []);
+});
+
+test("Candy unforwarded close without retry policy preserves the acknowledged player", async () => {
+  const h = inlineCloseHarness({ fullscreen: false });
+  h.context.browser.runtime.sendMessage = async () => ({ forwarded: false });
+  assert.equal(await h.context.requestCandyInlineVideoClose(h.video), false);
+  assert.equal(h.playback.inlinePresentationExpected, true);
+  assert.equal(h.playback.presentedVideo, h.video);
+  assert.deepEqual(h.reports, [h.video]);
+  assert.deepEqual(h.calls, []);
 });
 
 test("fullscreen exit retains acknowledged Candy presentation while explicit cleanup remains scoped", () => {
@@ -2833,4 +3241,124 @@ test("Off clears pending configured gestures while retaining the sanitized durat
   assert.equal(h.state.inlineMediaPlayerSeekBackwardSeconds, 5);
   assert.equal(h.state.inlineMediaPlayerSeekForwardSeconds, 30);
   assert.deepEqual(h.playbackCommands, []);
+});
+
+function inlineActionPlacementHarness({ youtube = true, recognizedPlayer = true } = {}) {
+  let bounds = { left: 0, top: 100, right: 400, bottom: 325, width: 400, height: 225 };
+  const player = {};
+  const video = {
+    isConnected: true,
+    closest: () => recognizedPlayer ? player : null,
+    getBoundingClientRect: () => bounds,
+  };
+  const state = {
+    inlineMediaPlayerEnabled: true,
+    inlineActionHost: null,
+    inlineActionVideo: null,
+  };
+  let created = 0;
+  const context = vm.createContext({
+    candyUsesBackgroundVideoVisibilityFix: youtube,
+    candyPictureInPicturePlayback: state,
+    CANDY_INLINE_VIDEO_ACTION_SIZE_PX: 56,
+    CANDY_INLINE_VIDEO_ACTION_INSET_PX: 16,
+    innerWidth: 400,
+    innerHeight: 800,
+    document: { fullscreenElement: null },
+    isCandyInlineVideoCandidate: (candidate) => candidate === video && video.isConnected,
+    candyVideoPresentationExpected: () => false,
+    candyInlineMediaPlayerShowsButton: () => true,
+    createCandyInlineVideoAction: () => {
+      created += 1;
+      const properties = new Map();
+      const host = {
+        isConnected: true,
+        style: { setProperty: (name, value) => properties.set(name, value) },
+        getBoundingClientRect: () => {
+          const left = Number.parseFloat(properties.get("left"));
+          const top = Number.parseFloat(properties.get("top"));
+          return { left, top, right: left + 56, bottom: top + 56, width: 56, height: 56 };
+        },
+      };
+      state.inlineActionHost = host;
+      state.inlineActionVideo = video;
+      return host;
+    },
+    removeCandyInlineVideoAction: () => {
+      if (state.inlineActionHost) state.inlineActionHost.isConnected = false;
+      state.inlineActionHost = null;
+      state.inlineActionVideo = null;
+    },
+  });
+  const source = asset("content.js");
+  const load = (start, end) => vm.runInContext(
+    start + source.split(start)[1].split(end)[0], context,
+  );
+  load("function candyInlineVideoSitePlayer(video) {", "function rememberCandyInlineVideoStableOrigin(video) {");
+  load("function setCandyInlineActionStyle(element, property, value) {", "function createCandyInlineVideoAction(video) {");
+  load("function candyInlineVideoActionPosition(video) {", "function reportCandyInlineVideoState(preferredVideo = null) {");
+  return {
+    context, video, state,
+    update: () => context.updateCandyInlineVideoAction(video),
+    move: (next) => { bounds = { ...bounds, ...next }; },
+    created: () => created,
+  };
+}
+
+test("YouTube Candy launcher leaves the video settings area and sits below the exact video", () => {
+  const h = inlineActionPlacementHarness();
+  h.update();
+  const host = h.state.inlineActionHost;
+  const bounds = host.getBoundingClientRect();
+  assert.equal(bounds.left, 328);
+  assert.equal(bounds.top, h.video.getBoundingClientRect().bottom + 16);
+  assert.equal(h.context.isCandyInlineVideoActionClick(
+    { clientX: 356, clientY: 144 }, h.video, host,
+  ), false, "YouTube settings hit must not activate Candy");
+  assert.equal(h.context.isCandyInlineVideoActionClick(
+    { clientX: 356, clientY: 369 }, h.video, host,
+  ), true, "Candy launcher remains clickable below the video");
+  h.move({ top: 130, bottom: 355 });
+  assert.equal(h.context.isCandyInlineVideoActionClick(
+    { clientX: 356, clientY: 369 }, h.video, host,
+  ), false, "stale launcher coordinates reject clicks after player movement");
+  h.update();
+  assert.equal(h.state.inlineActionHost, host);
+  assert.equal(host.getBoundingClientRect().top, 371);
+});
+
+test("YouTube launcher hides when below-player room disappears and returns after viewport recovery", () => {
+  const h = inlineActionPlacementHarness();
+  h.update();
+  const oldHost = h.state.inlineActionHost;
+  h.context.innerHeight = 390;
+  assert.equal(h.context.isCandyInlineVideoActionClick(
+    { clientX: 356, clientY: 369 }, h.video, oldHost,
+  ), false, "viewport clipping rejects clicks before observer reconciliation");
+  h.update();
+  assert.equal(h.state.inlineActionHost, null);
+  assert.equal(oldHost.isConnected, false);
+  h.context.innerHeight = 800;
+  h.update();
+  assert.equal(h.created(), 2);
+  assert.equal(h.state.inlineActionHost.getBoundingClientRect().top, 341);
+  h.context.document.fullscreenElement = {};
+  h.update();
+  assert.equal(h.state.inlineActionHost, null, "page fullscreen keeps site controls unobstructed");
+  h.context.document.fullscreenElement = null;
+  h.move({ top: -245, bottom: -20 });
+  h.update();
+  assert.equal(h.state.inlineActionHost, null, "offscreen launcher does not clamp onto the viewport");
+});
+
+test("other sites and unrecognized YouTube video boxes preserve the existing launcher placement", () => {
+  for (const options of [{ youtube: false }, { recognizedPlayer: false }]) {
+    const h = inlineActionPlacementHarness(options);
+    h.update();
+    assert.equal(h.state.inlineActionHost.getBoundingClientRect().left, 328);
+    assert.equal(h.state.inlineActionHost.getBoundingClientRect().top, 116);
+    h.move({ top: -30, bottom: 195 });
+    h.update();
+    assert.equal(h.state.inlineActionHost.getBoundingClientRect().top, 0);
+  }
 });
