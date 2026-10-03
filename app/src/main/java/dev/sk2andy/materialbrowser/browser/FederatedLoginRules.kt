@@ -57,6 +57,17 @@ object FederatedLoginRules {
         return host == GOOGLE_ACCOUNTS_HOST && GOOGLE_AUTH_PATH_PREFIXES.any(path::startsWith)
     }
 
+    internal fun shouldPreservePopupNavigation(
+        url: String,
+        target: BrowserEngineNavigationTarget,
+        hasUserGesture: Boolean,
+        isNativePopup: Boolean,
+    ): Boolean = isProviderNavigation(url) && when (target) {
+        BrowserEngineNavigationTarget.New -> hasUserGesture
+        BrowserEngineNavigationTarget.Current -> isNativePopup
+        BrowserEngineNavigationTarget.None -> false
+    }
+
     fun compatibleUserAgent(defaultUserAgent: String): String = defaultUserAgent
         .replace(webViewMarkerPattern, "")
         .replace(versionTokenPattern, "")

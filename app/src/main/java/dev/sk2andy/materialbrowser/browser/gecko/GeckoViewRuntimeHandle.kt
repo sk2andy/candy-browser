@@ -931,6 +931,9 @@ private class GeckoViewBrowserSession(
     private var newSessionListener: GeckoNewSessionListener? = null
 
     @Volatile
+    private var closeRequestListener: GeckoCloseRequestListener? = null
+
+    @Volatile
     private var downloadResponseListener: GeckoDownloadResponseListener? = null
 
     @Volatile
@@ -1068,6 +1071,10 @@ private class GeckoViewBrowserSession(
 
             override fun onTitleChange(session: GeckoSession, title: String?) =
                 updateState { current -> current.copy(title = title) }
+
+            override fun onCloseRequest(session: GeckoSession) {
+                closeRequestListener?.onCloseRequest()
+            }
 
             override fun onContextMenu(
                 session: GeckoSession,
@@ -2105,6 +2112,10 @@ private class GeckoViewBrowserSession(
 
     override fun setNewSessionListener(listener: GeckoNewSessionListener?) {
         newSessionListener = listener
+    }
+
+    override fun setCloseRequestListener(listener: GeckoCloseRequestListener?) {
+        closeRequestListener = listener
     }
 
     override fun setDownloadResponseListener(listener: GeckoDownloadResponseListener?) {
@@ -3262,6 +3273,7 @@ private class GeckoViewBrowserSession(
         contentTargetListener = null
         navigationRequestListener = null
         newSessionListener = null
+        closeRequestListener = null
         downloadResponseListener = null
         filePromptListener = null
         androidPermissionRequestListener = null

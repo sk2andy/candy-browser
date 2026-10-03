@@ -10,6 +10,7 @@ import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.UiDevice
 import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineKind
 import dev.sk2andy.materialbrowser.browser.BrowserController
+import dev.sk2andy.materialbrowser.browser.BrowserEngineNavigationTarget
 import dev.sk2andy.materialbrowser.browser.BrowserTab
 import dev.sk2andy.materialbrowser.browser.EdgeToEdgeSiteFixtureServer
 import dev.sk2andy.materialbrowser.browser.ExternalAppLinkHandling
@@ -23,12 +24,16 @@ import java.net.ServerSocket
 import java.net.SocketException
 import java.nio.charset.StandardCharsets
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotSame
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
@@ -284,6 +289,189 @@ class GeckoPopupNavigationInstrumentedTest {
         }
     }
 
+    @Test
+    fun oauthPopupCompletionClosesChildAndReturnsToSignedInOpener() {
+        verifyOAuthPopupCompletion(isPrivate = false)
+    }
+
+    @Test
+    fun privateOAuthPopupCompletionClosesChildWithoutPersistingAuthPages() {
+        verifyOAuthPopupCompletion(isPrivate = true)
+    }
+
+    @Test
+    fun automaticAppRoutingPreservesGoogleAuthPopupButInterceptsOrdinaryCrossSitePopup() {
+        oauthFixtureServer().use { server ->
+            val openerUrl = server.fixtureUrl("/oauth-opener")
+            val externalUrl = server.fixtureUrl("/foreground").replace("127.0.0.1", "localhost")
+            openPage(openerUrl, "OAuth opener")
+            val openerId = composeRule.runOnIdle { controller.selectedTabId }
+            composeRule.runOnIdle {
+                controller.updateExternalAppLinkHandling(ExternalAppLinkHandling.Automatic)
+                val googleRequest = GeckoMainFrameNavigationRequest(
+                    url = "https://accounts.google.com/gsi/select?client_id=fixture",
+                    isRedirect = false,
+                    hasUserGesture = true,
+                    isDirectNavigation = false,
+                    target = BrowserEngineNavigationTarget.New,
+                )
+                assertEquals(
+                    GeckoNavigationRequestDecision.Allow,
+                    controller.dispatchSelectedGeckoNavigationRequestForTesting(googleRequest),
+                )
+                assertEquals(
+                    GeckoNavigationRequestDecision.Deny,
+                    controller.dispatchSelectedGeckoNavigationRequestForTesting(
+                        googleRequest.copy(url = externalUrl),
+                    ),
+                )
+            }
+            composeRule.waitUntil(30_000) {
+                composeRule.runOnIdle {
+                    controller.activeTabs.any { it.openerTabId == openerId && it.url == externalUrl }
+                }
+            }
+            composeRule.runOnIdle {
+                val child = controller.activeTabs.first {
+                    it.openerTabId == openerId && it.url == externalUrl
+                }
+                controller.selectTab(child.id)
+                controller.attachSelectedBrowserEngineView(host)
+            }
+            awaitPage(externalUrl, "Unrelated foreground")
+        }
+    }
+
+    @Test
+    fun backgroundPopupCloseRequestKeepsUnrelatedForegroundTabSelected() {
+        oauthFixtureServer().use { server ->
+            val openerUrl = server.fixtureUrl("/oauth-opener")
+            val consentUrl = server.fixtureUrl("/oauth-consent")
+            val foregroundUrl = server.fixtureUrl("/foreground")
+            openPage(openerUrl, "OAuth opener")
+            val openerId = composeRule.runOnIdle { controller.selectedTabId }
+            val popupId = openPopupChild(openerId, consentUrl, "OAuth consent")
+            val popupCloseListener = composeRule.runOnIdle { selectedCloseRequestListener() }
+            openPage(foregroundUrl, "Unrelated foreground")
+            val foregroundId = composeRule.runOnIdle { controller.selectedTabId }
+
+            deliverCloseRequests(popupCloseListener)
+            composeRule.runOnIdle {
+                assertTrue(controller.tabs.none { it.id == popupId })
+                assertEquals(foregroundId, controller.selectedTabId)
+                assertEquals(foregroundUrl, controller.selectedTab.url)
+                assertEquals("Unrelated foreground", controller.selectedTab.title)
+                assertEquals("OAuth opener", controller.tabs.first { it.id == openerId }.title)
+            }
+        }
+    }
+
+    @Test
+    fun manuallyOpenedPageCannotCloseItsCandyTab() {
+        oauthFixtureServer().use { server ->
+            val url = server.fixtureUrl("/manual-close")
+            openManualTabPage(url, "Manual close page")
+            val tabId = composeRule.runOnIdle { controller.selectedTabId }
+            tapPage()
+            awaitPage(url, "Manual close ignored")
+            composeRule.runOnIdle {
+                assertEquals(tabId, controller.selectedTabId)
+                assertTrue(controller.tabs.any { it.id == tabId })
+                assertNull(controller.selectedTab.openerTabId)
+            }
+        }
+    }
+
+    @Test
+    fun recreatedPopupSessionRejectsStaleAndUnexpectedCloseRequests() {
+        oauthFixtureServer().use { server ->
+            val openerUrl = server.fixtureUrl("/oauth-opener")
+            val consentUrl = server.fixtureUrl("/oauth-consent")
+            openPage(openerUrl, "OAuth opener")
+            val openerId = composeRule.runOnIdle { controller.selectedTabId }
+            val popupId = openPopupChild(openerId, consentUrl, "OAuth consent")
+            val oldSession = composeRule.runOnIdle { selectedSession() }
+            val oldCloseListener = composeRule.runOnIdle { selectedCloseRequestListener() }
+
+            composeRule.runOnIdle {
+                BrowserController::class.java.getDeclaredMethod(
+                    "closeBrowserEngineSession",
+                    String::class.java,
+                ).let { method ->
+                    method.isAccessible = true
+                    method.invoke(controller, popupId)
+                }
+                controller.attachSelectedBrowserEngineView(host)
+            }
+            awaitPage(consentUrl, "OAuth consent")
+            val replacementSession = composeRule.runOnIdle { selectedSession() }
+            val replacementCloseListener = composeRule.runOnIdle { selectedCloseRequestListener() }
+            assertNotSame(oldSession, replacementSession)
+
+            deliverCloseRequests(oldCloseListener, replacementCloseListener)
+            composeRule.runOnIdle {
+                assertEquals(popupId, controller.selectedTabId)
+                assertTrue(controller.tabs.any { it.id == popupId })
+                assertSame(replacementSession, selectedSession())
+                assertEquals(consentUrl, controller.selectedTab.url)
+                assertNull(controller.selectedTab.error)
+            }
+        }
+    }
+
+    private fun verifyOAuthPopupCompletion(isPrivate: Boolean) {
+        oauthFixtureServer().use { server ->
+            val openerUrl = server.fixtureUrl("/oauth-opener")
+            val consentUrl = server.fixtureUrl("/oauth-consent")
+            val completionUrl = server.fixtureUrl("/oauth-complete")
+            openPage(openerUrl, "OAuth opener", isPrivate)
+            val openerId = composeRule.runOnIdle { controller.selectedTabId }
+            val popupId = openPopupChild(openerId, consentUrl, "OAuth consent")
+            composeRule.runOnIdle {
+                assertEquals(openerId, controller.selectedTab.openerTabId)
+                assertEquals(isPrivate, controller.selectedTab.isIncognito)
+            }
+
+            tapPage()
+            awaitOAuthPopupClosed(openerId, popupId, openerId)
+            composeRule.runOnIdle { controller.attachSelectedBrowserEngineView(host) }
+            awaitPage(openerUrl, "OAuth signed in")
+            composeRule.runOnIdle {
+                assertNull(controller.selectedTab.error)
+                if (isPrivate) {
+                    val store = BrowserSessionStore(composeRule.activity)
+                    assertTrue(store.flush())
+                    assertTrue(store.loadTabs().first.none { it.id == openerId || it.id == popupId })
+                    assertTrue(store.loadHistory().none {
+                        it.url in setOf(openerUrl, consentUrl, completionUrl)
+                    })
+                }
+            }
+        }
+    }
+
+    private fun awaitOAuthPopupClosed(
+        openerId: String,
+        popupId: String,
+        selectedTabId: String,
+    ) {
+        try {
+            composeRule.waitUntil(30_000) {
+                composeRule.runOnIdle {
+                    controller.tabs.none { it.id == popupId } &&
+                        controller.selectedTabId == selectedTabId &&
+                        controller.tabs.firstOrNull { it.id == openerId }?.title == "OAuth signed in"
+                }
+            }
+        } catch (error: ComposeTimeoutException) {
+            throw AssertionError(
+                "OAuth popup did not close and deliver success: opener=$openerId, " +
+                    "popup=$popupId, selected=$selectedTabId; ${popupDiagnostics()}",
+                error,
+            )
+        }
+    }
+
     private fun verifyPopupNavigation(isPrivate: Boolean) {
         val requests = ConcurrentHashMap<String, AtomicInteger>()
         fixtureServer(requests).use { server ->
@@ -529,6 +717,22 @@ class GeckoPopupNavigationInstrumentedTest {
         return field.get(adapter) as GeckoBrowserSession
     }
 
+    private fun selectedCloseRequestListener(): GeckoCloseRequestListener {
+        val session = selectedGeckoSession()
+        val field = session.javaClass.getDeclaredField("closeRequestListener")
+        field.isAccessible = true
+        return field.get(session) as GeckoCloseRequestListener
+    }
+
+    private fun deliverCloseRequests(vararg listeners: GeckoCloseRequestListener) {
+        val callbacksDrained = CountDownLatch(1)
+        composeRule.runOnIdle {
+            listeners.forEach(GeckoCloseRequestListener::onCloseRequest)
+            host.post { callbacksDrained.countDown() }
+        }
+        assertTrue("Close callbacks did not drain", callbacksDrained.await(10, TimeUnit.SECONDS))
+    }
+
     private fun fixtureServer(
         requests: ConcurrentHashMap<String, AtomicInteger>,
         responseDelayMillis: Long = 0,
@@ -566,6 +770,53 @@ class GeckoPopupNavigationInstrumentedTest {
 
     private fun requestCount(requests: ConcurrentHashMap<String, AtomicInteger>, path: String): Int =
         requests[path]?.get() ?: 0
+
+    private fun oauthFixtureServer(): EdgeToEdgeSiteFixtureServer = EdgeToEdgeSiteFixtureServer { target ->
+        when (target.substringBefore('?')) {
+            "/oauth-opener" -> page(
+                "OAuth opener",
+                """
+                    <a href='/oauth-consent' onclick="authPopup = window.open(this.href,
+                        'candy-auth'); return false;">Sign in</a>
+                    <script>
+                    let authPopup;
+                    window.addEventListener('message', event => {
+                        if (event.origin !== location.origin || event.source !== authPopup ||
+                            event.data !== 'candy-auth-complete') return;
+                        document.title = 'OAuth signed in';
+                        document.querySelector('a').textContent = 'Signed in';
+                    });
+                    </script>
+                """.trimIndent(),
+            )
+            "/oauth-consent" -> page(
+                "OAuth consent",
+                "<a href='/oauth-complete'>Confirm access</a>",
+            )
+            "/oauth-complete" -> page(
+                "OAuth completion waiting",
+                """
+                    <script>
+                    if (window.opener) {
+                        window.opener.postMessage('candy-auth-complete', location.origin);
+                        window.close();
+                    } else {
+                        document.title = 'OAuth opener missing';
+                    }
+                    </script>
+                """.trimIndent(),
+            )
+            "/foreground" -> page("Unrelated foreground", "Foreground page loaded")
+            "/manual-close" -> page(
+                "Manual close page",
+                """
+                    <a href='#' onclick="window.close(); document.title = 'Manual close ignored';
+                        return false;">Try closing this tab</a>
+                """.trimIndent(),
+            )
+            else -> "<title>OAuth fixture resource</title>"
+        }
+    }
 
     private fun page(title: String, body: String): String = """
         <!doctype html>

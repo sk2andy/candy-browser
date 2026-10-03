@@ -136,6 +136,8 @@ internal interface AndroidBrowserEngineSessionPort :
 
     fun setNewSessionListener(listener: GeckoNewSessionListener?) = Unit
 
+    fun setCloseRequestListener(listener: GeckoCloseRequestListener?) = Unit
+
     fun setDownloadResponseListener(listener: GeckoDownloadResponseListener?) = Unit
 
     fun startContextDownload(
@@ -576,6 +578,11 @@ internal class GeckoBrowserEngineSessionAdapter(
     }
 
     @UiThread
+    override fun setCloseRequestListener(listener: GeckoCloseRequestListener?) {
+        session.setCloseRequestListener(if (closed) null else listener)
+    }
+
+    @UiThread
     override fun setDownloadResponseListener(listener: GeckoDownloadResponseListener?) {
         session.setDownloadResponseListener(if (closed) null else listener)
     }
@@ -835,6 +842,7 @@ internal class GeckoBrowserEngineSessionAdapter(
         session.setContentTargetListener(null)
         session.setNavigationRequestListener(null)
         session.setNewSessionListener(null)
+        session.setCloseRequestListener(null)
         session.setDownloadResponseListener(null)
         session.setFilePromptListener(null)
         session.setAndroidPermissionRequestListener(null)
@@ -866,6 +874,7 @@ internal class GeckoBrowserEngineSessionAdapter(
             session.setContentTargetListener(null)
             session.setNavigationRequestListener(null)
             session.setNewSessionListener(null)
+            session.setCloseRequestListener(null)
             session.setDownloadResponseListener(null)
             session.setFilePromptListener(null)
             session.setAndroidPermissionRequestListener(null)

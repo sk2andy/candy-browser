@@ -18,6 +18,64 @@ import org.junit.Test
 
 class GeckoBrowserEngineAdapterTest {
     @Test
+    fun `page close requests are delivered without closing the adapter directly`() {
+        val session = FakeGeckoBrowserSession()
+        val adapter = GeckoBrowserEngineSessionAdapter(
+            tabId = "auth-popup",
+            session = session,
+            eventSink = BrowserEngineEventSink { },
+        )
+        var requests = 0
+        adapter.setCloseRequestListener { requests++ }
+
+        session.emitCloseRequest()
+
+        assertEquals(1, requests)
+        assertEquals(0, session.closeCount)
+        adapter.setCloseRequestListener(null)
+        session.emitCloseRequest()
+        assertEquals(1, requests)
+    }
+
+    @Test
+    fun `closed adapter clears page close requests and rejects new listeners`() {
+        val session = FakeGeckoBrowserSession()
+        val adapter = GeckoBrowserEngineSessionAdapter(
+            tabId = "auth-popup",
+            session = session,
+            eventSink = BrowserEngineEventSink { },
+        )
+        var requests = 0
+        adapter.setCloseRequestListener { requests++ }
+
+        adapter.execute(BrowserEngineCommands.close())
+        session.emitCloseRequest()
+        adapter.setCloseRequestListener { requests++ }
+        session.emitCloseRequest()
+
+        assertEquals(0, requests)
+        assertEquals(1, session.closeCount)
+    }
+
+    @Test
+    fun `renderer crash clears page close requests`() {
+        val session = FakeGeckoBrowserSession()
+        val adapter = GeckoBrowserEngineSessionAdapter(
+            tabId = "auth-popup",
+            session = session,
+            eventSink = BrowserEngineEventSink { },
+        )
+        var requests = 0
+        adapter.setCloseRequestListener { requests++ }
+
+        session.emit(GeckoBrowserSessionState(crashed = true))
+        session.emitCloseRequest()
+
+        assertEquals(0, requests)
+        assertEquals(1, session.closeCount)
+    }
+
+    @Test
     fun `HTTPS error arriving after page stop replaces generic failure`() {
         val session = FakeGeckoBrowserSession()
         val events = mutableListOf<BrowserEngineEvent>()
@@ -684,6 +742,7 @@ private class FakeGeckoBrowserSession(
     private var scrollListener: BrowserEngineScrollListener? = null
     private var contentTargetListener: BrowserContentTargetListener? = null
     private var navigationRequestListener: GeckoNavigationRequestListener? = null
+    private var closeRequestListener: GeckoCloseRequestListener? = null
     private var fullscreenStateListener: GeckoFullscreenStateListener? = null
 
     override fun setStateListener(listener: GeckoBrowserSessionStateListener?) {
@@ -701,6 +760,14 @@ private class FakeGeckoBrowserSession(
 
     override fun setNavigationRequestListener(listener: GeckoNavigationRequestListener?) {
         navigationRequestListener = listener
+    }
+
+    override fun setCloseRequestListener(listener: GeckoCloseRequestListener?) {
+        closeRequestListener = listener
+    }
+
+    fun emitCloseRequest() {
+        closeRequestListener?.onCloseRequest()
     }
 
     override fun setMediaStateListener(listener: GeckoMediaSessionStateListener?) = Unit

@@ -89,6 +89,10 @@ internal fun interface GeckoNewSessionListener {
     fun onNewSession(request: GeckoNewSessionRequest): Boolean
 }
 
+internal fun interface GeckoCloseRequestListener {
+    fun onCloseRequest()
+}
+
 internal class GeckoExternalDownloadResponse(
     val metadata: BrowserEngineDownloadResponse,
     private val startTransfer: (GeckoDownloadTransferListener) -> GeckoDownloadCancellation?,
@@ -237,6 +241,8 @@ internal interface GeckoBrowserSession {
     fun setNavigationRequestListener(listener: GeckoNavigationRequestListener?)
 
     fun setNewSessionListener(listener: GeckoNewSessionListener?) = Unit
+
+    fun setCloseRequestListener(listener: GeckoCloseRequestListener?) = Unit
 
     fun setDownloadResponseListener(listener: GeckoDownloadResponseListener?) = Unit
 
