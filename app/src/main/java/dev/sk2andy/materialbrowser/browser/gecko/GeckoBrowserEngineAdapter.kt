@@ -45,6 +45,12 @@ internal interface BrowserEngineViewPort {
 
     fun createView(context: Context): View
 
+    val contentPresentationGeneration: Long
+        get() = 0L
+
+    val isContentPresented: Boolean
+        get() = true
+
     fun awaitContentPresented(listener: () -> Unit)
 
     fun releaseView(view: View)
@@ -486,6 +492,14 @@ internal class GeckoBrowserEngineSessionAdapter(
     override fun setBackdropBlurRegion(region: BrowserBackdropBlurRegion?) {
         if (!closed) session.setBackdropBlurRegion(region)
     }
+
+    @get:UiThread
+    override val contentPresentationGeneration: Long
+        get() = session.contentPresentationGeneration
+
+    @get:UiThread
+    override val isContentPresented: Boolean
+        get() = !closed && session.isContentPresented
 
     @UiThread
     override fun awaitContentPresented(listener: () -> Unit) {
