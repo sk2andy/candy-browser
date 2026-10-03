@@ -736,7 +736,9 @@ private fun ActiveBrowserEngineView(
                         onContentPresented = currentOnLiveFrame,
                         backdropCaptureEnabled = browserContentBlurEnabled,
                     )
-                    if (attachedView != null) {
+                    // Android's draw does not establish that Gecko's separate SurfaceView
+                    // has page content. Gecko releases the handoff through its engine gate.
+                    if (attachedView != null && !controller.usesGeckoEngine) {
                         hostState.bind(
                             tabId = selectedTabId,
                             revision = engineViewRevision,

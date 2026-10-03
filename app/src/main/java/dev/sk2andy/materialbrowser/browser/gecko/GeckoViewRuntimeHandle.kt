@@ -1051,6 +1051,7 @@ private class GeckoViewBrowserSession(
             override fun onFirstComposite(session: GeckoSession) {
                 BrowserPerformanceTrace.event(BrowserPerformanceTrace.Phase.GeckoFirstComposite)
                 contentPresentationGate.onFirstComposite()
+                if (contentPresentationGate.isContentPresented) boundView?.onContentPresented()
             }
 
             override fun onFirstContentfulPaint(session: GeckoSession) {
@@ -1058,11 +1059,13 @@ private class GeckoViewBrowserSession(
                     BrowserPerformanceTrace.Phase.GeckoFirstContentfulPaint,
                 )
                 contentPresentationGate.onFirstContentfulPaint()
+                if (contentPresentationGate.isContentPresented) boundView?.onContentPresented()
             }
 
             override fun onPaintStatusReset(session: GeckoSession) {
                 BrowserPerformanceTrace.event(BrowserPerformanceTrace.Phase.GeckoPaintReset)
                 contentPresentationGate.onPaintStatusReset()
+                boundView?.onPaintStatusReset()
             }
 
             override fun onFullScreen(session: GeckoSession, fullScreen: Boolean) {
@@ -1956,6 +1959,7 @@ private class GeckoViewBrowserSession(
                     return
                 }
                 if (isBootstrap) return
+                boundView?.onNavigationStarted()
                 if (url != "about:blank") replaceBootstrapHistoryOnNextLoad = false
                 if (navigationTargetUrl == null) beginNavigation(url)
                 markNavigationStarted(url)
@@ -2812,8 +2816,17 @@ private class GeckoViewBrowserSession(
             AndroidCredentialPromptHost.activityContext(context)?.let { activityContext ->
                 view.setActivityContextDelegate { activityContext }
             }
-            view.setSession(session)
             boundView = view
+            view.observePresentation(
+                isContentPresented = { boundView === view && contentPresentationGate.isContentPresented },
+                onSurfaceCreated = {
+                    if (boundView === view) contentPresentationGate.onSurfaceCreated()
+                },
+                onSurfaceDestroyed = {
+                    if (boundView === view) contentPresentationGate.onSurfaceDestroyed()
+                },
+            )
+            view.setSession(session)
             if (active) credentialPromptHost = AndroidCredentialPromptHost.create(context)
         }
     }
@@ -2834,6 +2847,14 @@ private class GeckoViewBrowserSession(
             (currentOffsetPx + deltaPx).coerceAtLeast(0),
         )
     }
+
+    @get:UiThread
+    override val contentPresentationGeneration: Long
+        get() = contentPresentationGate.presentationGeneration
+
+    @get:UiThread
+    override val isContentPresented: Boolean
+        get() = !closed && contentPresentationGate.isContentPresented
 
     @UiThread
     override fun awaitContentPresented(listener: () -> Unit) {
@@ -3625,6 +3646,7 @@ private class GeckoViewBrowserSession(
     }
 
     private fun onContentProcessTerminated() {
+        boundView?.onNavigationStarted()
         invalidateDomProbe()
         pendingInitialUrl = null
         pendingFailedPageRetryUrl = null
@@ -3721,9 +3743,40 @@ internal class CandyGeckoView(context: Context) : FrameLayout(context), GeckoVie
     private var windowInsets: WindowInsetsCompat? = null
     private var domDiagnosticGeneration = 0L
     private val engineView = createEngineView()
+    private val resumeCover: GeckoResumeCover
 
     init {
         addEngineView(engineView)
+        resumeCover = GeckoResumeCover(
+            host = engineView,
+            surface = requireNotNull(engineView.findSurfaceView()),
+            capture = engineView::captureContentPixels,
+        )
+    }
+
+    fun observePresentation(
+        isContentPresented: () -> Boolean,
+        onSurfaceCreated: () -> Unit,
+        onSurfaceDestroyed: () -> Unit,
+    ) {
+        resumeCover.isContentPresented = isContentPresented
+        resumeCover.onSurfaceCreated = onSurfaceCreated
+        resumeCover.onSurfaceDestroyed = onSurfaceDestroyed
+    }
+
+    fun onContentPresented() = resumeCover.onContentPresented()
+
+    fun onPaintStatusReset() = resumeCover.onPaintStatusReset()
+
+    fun onNavigationStarted() = resumeCover.onNavigationStarted()
+
+    override fun onWindowFocusChanged(hasWindowFocus: Boolean) {
+        if (hasWindowFocus) {
+            resumeCover.onFocusRestored()
+        } else {
+            resumeCover.captureBeforeBackground()
+        }
+        super.onWindowFocusChanged(hasWindowFocus)
     }
 
     fun configureAutofill(isPrivate: Boolean) {
@@ -3755,6 +3808,7 @@ internal class CandyGeckoView(context: Context) : FrameLayout(context), GeckoVie
     }
 
     fun releaseSession(): GeckoSession? {
+        resumeCover.release()
         engineView.cancelActiveTouch()
         return engineView.releaseSession()
     }

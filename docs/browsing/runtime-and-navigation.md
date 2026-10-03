@@ -107,6 +107,17 @@
   Revalidate the destination before selecting it; private
   tabs never contribute persisted preview content. System WebView keeps its existing immediate
   tab-selection path.
+- Gecko presentation readiness follows physical SurfaceView creation/destruction, compositor
+  composition and page paint. A temporary surface loss preserves pending presentation requests;
+  releasing view ownership cancels them. Android ViewTreeObserver drawing is not a Gecko frame
+  signal. Posted presentation callbacks revalidate the surface generation before releasing a tab
+  handoff, and rearm after a newer surface or paint reset.
+- A Gecko host captures its departing content on window-focus loss and keeps one short-lived
+  bitmap only in RAM. If its surface is recreated, a native overlay retains that frame while the
+  renderer stays attached and active. Current compositor/paint readiness releases the overlay.
+  A retained valid surface needs no new paint event. Navigation, renderer termination and view
+  release clear the buffer and reject late captures; private frames never enter preview storage.
+  Gecko paint reset alone preserves the departing frame because it can also occur on pause.
 - Route untrusted URLs through existing normalizers. Do not add a second permissive parser.
 - Keep Auto De-AMP browser-wide, persisted and enabled by default. Both GeckoView and System WebView
   enter the same main-frame listener. Rewrite only trusted Google viewer/cache document shapes whose
