@@ -1398,6 +1398,7 @@ class BrowserController(
     private val pendingPopupNavigations = mutableMapOf<String, PendingPopupNavigation>()
     private val pendingPopunderNavigations = mutableMapOf<String, PendingPopunderNavigation>()
     private val transientPopupTabIds = mutableSetOf<String>()
+    private val nativePopupSessions = mutableMapOf<String, AndroidBrowserEngineSessionPort>()
     private var blockedPopupSequence = 0L
     internal var blockedPopupOffer by mutableStateOf<BlockedPopupOffer?>(null)
         private set
@@ -10852,6 +10853,7 @@ class BrowserController(
         pendingPopupNavigations.clear()
         pendingPopunderNavigations.clear()
         transientPopupTabIds.clear()
+        nativePopupSessions.clear()
         blockedPopupOffer = null
         federatedLoginOffer = null
         federatedLoginOfferKeys.clear()
@@ -11030,6 +11032,9 @@ class BrowserController(
                 }
                 session.setNewSessionListener { request ->
                     onGeckoNewSession(tab.id, session, request)
+                }
+                session.setCloseRequestListener {
+                    mainHandler.post { onGeckoCloseRequest(tab.id, session) }
                 }
                 session.setDownloadResponseListener { response ->
                     onGeckoDownloadResponse(tab.id, session, response)
@@ -11349,8 +11354,16 @@ class BrowserController(
                 target = request.target,
             )
         }
+        // Identity popups need Gecko's native opener channel to return the login result.
+        val preserveLoginPopup = FederatedLoginRules.shouldPreservePopupNavigation(
+            url = request.url,
+            target = request.target,
+            hasUserGesture = request.hasUserGesture,
+            isNativePopup = nativePopupSessions[tabId] === session,
+        )
         if (
             !isInitialGrantedNavigation &&
+            !preserveLoginPopup &&
             ExternalNavigationPolicy.shouldAttemptExternalLaunch(
                 scheme = scheme,
                 isForMainFrame = true,
@@ -11414,6 +11427,17 @@ class BrowserController(
         return GeckoNavigationRequestDecision.Deny
     }
 
+    private fun onGeckoCloseRequest(
+        tabId: String,
+        session: AndroidBrowserEngineSessionPort,
+    ) {
+        if (
+            destroyed || browserEngineSessions[tabId] !== session ||
+            nativePopupSessions[tabId] !== session
+        ) return
+        closeTab(tabId)
+    }
+
     private fun onGeckoNewSession(
         openerTabId: String,
         openerSession: AndroidBrowserEngineSessionPort,
@@ -11460,6 +11484,7 @@ class BrowserController(
         }
         val pending = requireNotNull(pendingPopupNavigations[popupTabId])
         val session = browserEngineSessionFor(popupTabId)
+        nativePopupSessions[popupTabId] = session
         // Gecko loads the initial child URI itself without another onLoadRequest callback.
         // Route it here so an accepted target=_blank tab does not stay transient indefinitely.
         if (initialUrl != BLANK_URL) handlePendingPopupNavigation(popupTabId, session, initialUrl)
@@ -13023,6 +13048,7 @@ class BrowserController(
                     releaseGeckoView(binding.session, binding.view)
                     (binding.view.parent as? ViewGroup)?.removeView(binding.view)
                 }
+                nativePopupSessions.remove(event.tabId)
                 browserEngineSessions.remove(event.tabId)?.let(browserEngineMediaSessionIds::remove)
                 reconcileInlineVideoGestureHapticOwner()
                 updateTab(event.tabId) { tab ->
@@ -13048,6 +13074,7 @@ class BrowserController(
                 geckoMediaStates.remove(event.tabId)
                 inlineMediaPlayerReadyTabIds.remove(event.tabId)
                 browserEngineContentFullscreenTabIds.remove(event.tabId)
+                nativePopupSessions.remove(event.tabId)
                 browserEngineSessions.remove(event.tabId)?.let(browserEngineMediaSessionIds::remove)
                 reconcileInlineVideoGestureHapticOwner()
             }
@@ -13461,6 +13488,7 @@ class BrowserController(
     }
 
     private fun closeBrowserEngineSession(tabId: String) {
+        nativePopupSessions.remove(tabId)
         removePendingInitialBrowserEngineNavigation(tabId)
         browserEngineNavigationRequestGenerations.remove(tabId)
         browserEngineDocumentGenerations.remove(tabId)
@@ -15862,6 +15890,7 @@ class BrowserController(
         transientPopupTabIds.remove(tabId)
         federatedLoginPopupTabIds.remove(tabId)
         federatedLoginCompatibilityTabIds.remove(tabId)
+        nativePopupSessions.remove(tabId)
         if (blockedPopupOffer?.popupTabId == tabId) blockedPopupOffer = null
         if (federatedLoginOffer?.tabId == tabId) federatedLoginOffer = null
         if (captchaCompatibilityOffer?.tabId == tabId) captchaCompatibilityOffer = null
@@ -15896,6 +15925,7 @@ class BrowserController(
         transientPopupTabIds.remove(tab.id)
         federatedLoginPopupTabIds.remove(tab.id)
         federatedLoginCompatibilityTabIds.remove(tab.id)
+        nativePopupSessions.remove(tab.id)
         if (blockedPopupOffer?.popupTabId == tab.id) blockedPopupOffer = null
         if (federatedLoginOffer?.tabId == tab.id) federatedLoginOffer = null
         if (captchaCompatibilityOffer?.tabId == tab.id) captchaCompatibilityOffer = null
