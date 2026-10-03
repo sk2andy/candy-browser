@@ -1,0 +1,13 @@
+<resources>
+    <string name="https_only_warning_title">ไม่มีการเชื่อมต่อที่ปลอดภัย</string>
+    <string name="https_only_warning_protection">การป้องกัน HTTPS</string>
+    <string name="https_only_warning_explanation">Candy ไม่สามารถเปิดหน้านี้ผ่าน HTTPS ได้ การเชื่อมต่อ HTTP จะไม่เข้ารหัส</string>
+    <string name="https_only_warning_risk">ผู้อื่นในเครือข่ายอาจอ่านหรือเปลี่ยนแปลงข้อมูลของคุณได้</string>
+    <string name="https_only_warning_back">ย้อนกลับ</string>
+    <string name="https_only_warning_retry">ลอง HTTPS อีกครั้ง</string>
+    <string name="https_only_warning_options">ตัวเลือกเพิ่มเติม</string>
+    <string name="https_only_warning_exception">ดำเนินการต่อเมื่อคุณเชื่อถือเว็บไซต์นี้เท่านั้น การป้องกัน HTTPS ยังคงทำงานสำหรับเว็บไซต์อื่น</string>
+    <string name="https_only_warning_open_http">เปิดผ่าน HTTP ชั่วคราว</string>
+    <string name="https_only_warning_lifetime">ยกเว้นเว็บไซต์นี้ระหว่างเซสชันเบราว์เซอร์ปัจจุบัน</string>
+    <string name="https_only_warning_unavailable">ไม่สามารถใช้ข้อยกเว้นได้ ย้อนกลับหรือลอง HTTPS อีกครั้ง</string>
+</resources>

@@ -1,0 +1,14 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="https_only_warning_title">Nu este disponibilă o conexiune sigură</string>
+    <string name="https_only_warning_protection">Protecție HTTPS</string>
+    <string name="https_only_warning_explanation">Candy nu a putut deschide această pagină prin HTTPS. O conexiune HTTP ar fi necriptată.</string>
+    <string name="https_only_warning_risk">Alte persoane din rețea ar putea citi sau modifica datele dvs.</string>
+    <string name="https_only_warning_back">Înapoi</string>
+    <string name="https_only_warning_retry">Încearcă din nou HTTPS</string>
+    <string name="https_only_warning_options">Mai multe opțiuni</string>
+    <string name="https_only_warning_exception">Continuați numai dacă aveți încredere în acest site. Protecția HTTPS rămâne activă pentru celelalte site-uri.</string>
+    <string name="https_only_warning_open_http">Deschide temporar prin HTTP</string>
+    <string name="https_only_warning_lifetime">Excepție pentru acest site pe durata sesiunii curente a browserului.</string>
+    <string name="https_only_warning_unavailable">Excepția nu a putut fi aplicată. Reveniți sau încercați din nou HTTPS.</string>
+</resources>

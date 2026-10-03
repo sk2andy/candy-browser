@@ -1,0 +1,14 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="https_only_warning_title">Nuk ka lidhje të sigurt</string>
+    <string name="https_only_warning_protection">Mbrojtja HTTPS</string>
+    <string name="https_only_warning_explanation">Candy nuk mundi ta hapte këtë faqe përmes HTTPS. Një lidhje HTTP do të ishte e pashifruar.</string>
+    <string name="https_only_warning_risk">Të tjerët në rrjet mund t’i lexojnë ose ndryshojnë të dhënat tuaja.</string>
+    <string name="https_only_warning_back">Kthehu prapa</string>
+    <string name="https_only_warning_retry">Provo përsëri HTTPS</string>
+    <string name="https_only_warning_options">Më shumë mundësi</string>
+    <string name="https_only_warning_exception">Vazhdo vetëm nëse i beson këtij sajti. Mbrojtja HTTPS mbetet aktive për sajtet e tjera.</string>
+    <string name="https_only_warning_open_http">Hap përkohësisht përmes HTTP</string>
+    <string name="https_only_warning_lifetime">Përjashtim për këtë sajt gjatë sesionit aktual të shfletuesit.</string>
+    <string name="https_only_warning_unavailable">Përjashtimi nuk mund të zbatohej. Kthehu prapa ose provo përsëri HTTPS.</string>
+</resources>

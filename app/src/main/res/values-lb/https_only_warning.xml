@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="https_only_warning_title">Keng sécher Verbindung disponibel</string>
+    <string name="https_only_warning_protection">HTTPS-Schutz</string>
+    <string name="https_only_warning_explanation">Candy konnt dës Säit net iwwer HTTPS opmaachen. Eng HTTP-Verbindung wier net verschlësselt.</string>
+    <string name="https_only_warning_risk">Anerer am Netzwierk kéinten deng Date liesen oder änneren.</string>
+    <string name="https_only_warning_back">Zréckgoen</string>
+    <string name="https_only_warning_retry">HTTPS nach eng Kéier probéieren</string>
+    <string name="https_only_warning_options">Méi Optiounen</string>
+    <string name="https_only_warning_exception">Maach nëmme weider, wann s du dëser Websäit vertraus. Den HTTPS-Schutz bleift fir aner Websäiten aktiv.</string>
+    <string name="https_only_warning_open_http">Temporär iwwer HTTP opmaachen</string>
+    <string name="https_only_warning_lifetime">Ausnam fir dës Websäit wärend der aktueller Browser-Sessioun.</string>
+    <string name="https_only_warning_unavailable">D’Ausnam konnt net applizéiert ginn. Géi zréck oder probéier HTTPS nach eng Kéier.</string>
+</resources>

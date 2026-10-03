@@ -8,6 +8,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import dev.sk2andy.materialbrowser.R
@@ -22,6 +23,54 @@ import org.junit.runner.RunWith
 class AppLanguageSettingsInstrumentedTest {
     @get:Rule
     val composeRule = createComposeRule()
+
+    @Test
+    fun traditionalChineseSelectionKeepsItsScriptAndCanSwitchToSimplified() {
+        val simplified = Locale.forLanguageTag("zh-Hans")
+        val traditional = Locale.forLanguageTag("zh-Hant")
+        var languageTag by mutableStateOf("zh-Hant")
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                AppLanguageSettings(
+                    languageTag = languageTag,
+                    supportedLocales = listOf(simplified, traditional),
+                    onLanguageChanged = { languageTag = it },
+                )
+            }
+        }
+
+        composeRule.onNodeWithText(traditional.getDisplayName(traditional)).assertIsDisplayed()
+        composeRule.onNodeWithTag(BrowserSettingsTestTags.AppLanguage).performClick()
+        composeRule.onNodeWithText(simplified.getDisplayName(simplified)).performClick()
+        assertEquals("zh-Hans", languageTag)
+        composeRule.onNodeWithText(simplified.getDisplayName(simplified)).assertIsDisplayed()
+    }
+
+    @Test
+    fun longLanguageMenuCanScrollToVietnamese() {
+        val vietnamese = Locale.forLanguageTag("vi")
+        var languageTag by mutableStateOf("en")
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                AppLanguageSettings(
+                    languageTag = languageTag,
+                    supportedLocales = listOf(
+                        "en", "de", "fr", "pt", "es", "pl", "cs", "zh-Hans", "zh-Hant",
+                        "ja", "ko", "nb", "sv", "da", "nl", "lb", "sq", "bs", "bg", "el",
+                        "hr", "mk", "ro", "sr", "sl", "tr", "th", "vi",
+                    ).map(Locale::forLanguageTag),
+                    onLanguageChanged = { languageTag = it },
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(BrowserSettingsTestTags.AppLanguage).performClick()
+        composeRule.onNodeWithText(vietnamese.getDisplayName(vietnamese))
+            .performScrollTo()
+            .performClick()
+        assertEquals("vi", languageTag)
+        composeRule.onNodeWithText(vietnamese.getDisplayName(vietnamese)).assertIsDisplayed()
+    }
 
     @Test
     fun nativeLanguageNamesSelectPolishCzechAndDeviceDefault() {

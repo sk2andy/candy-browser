@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="https_only_warning_title">Ingen säker anslutning tillgänglig</string>
+    <string name="https_only_warning_protection">HTTPS-skydd</string>
+    <string name="https_only_warning_explanation">Candy kunde inte öppna sidan via HTTPS. En HTTP-anslutning skulle vara okrypterad.</string>
+    <string name="https_only_warning_risk">Andra i nätverket kan läsa eller ändra dina uppgifter.</string>
+    <string name="https_only_warning_back">Gå tillbaka</string>
+    <string name="https_only_warning_retry">Försök med HTTPS igen</string>
+    <string name="https_only_warning_options">Fler alternativ</string>
+    <string name="https_only_warning_exception">Fortsätt bara om du litar på webbplatsen. HTTPS-skyddet förblir aktivt för andra webbplatser.</string>
+    <string name="https_only_warning_open_http">Öppna tillfälligt via HTTP</string>
+    <string name="https_only_warning_lifetime">Undantag för webbplatsen under den aktuella webbläsarsessionen.</string>
+    <string name="https_only_warning_unavailable">Undantaget kunde inte tillämpas. Gå tillbaka eller försök med HTTPS igen.</string>
+</resources>

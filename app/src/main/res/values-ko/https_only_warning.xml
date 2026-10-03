@@ -1,0 +1,13 @@
+<resources>
+    <string name="https_only_warning_title">보안 연결을 사용할 수 없습니다</string>
+    <string name="https_only_warning_protection">HTTPS 보호</string>
+    <string name="https_only_warning_explanation">Candy가 이 페이지를 HTTPS로 열지 못했습니다. HTTP 연결은 암호화되지 않습니다.</string>
+    <string name="https_only_warning_risk">네트워크의 다른 사용자가 데이터를 읽거나 변경할 수 있습니다.</string>
+    <string name="https_only_warning_back">돌아가기</string>
+    <string name="https_only_warning_retry">HTTPS 다시 시도</string>
+    <string name="https_only_warning_options">더 많은 옵션</string>
+    <string name="https_only_warning_exception">이 웹사이트를 신뢰하는 경우에만 계속하세요. 다른 웹사이트에서는 HTTPS 보호가 계속 적용됩니다.</string>
+    <string name="https_only_warning_open_http">일시적으로 HTTP로 열기</string>
+    <string name="https_only_warning_lifetime">현재 브라우저 세션 동안 이 웹사이트에 예외를 적용합니다.</string>
+    <string name="https_only_warning_unavailable">예외를 적용하지 못했습니다. 돌아가거나 HTTPS를 다시 시도하세요.</string>
+</resources>

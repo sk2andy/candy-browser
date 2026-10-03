@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="https_only_warning_title">Δεν υπάρχει διαθέσιμη ασφαλής σύνδεση</string>
+    <string name="https_only_warning_protection">Προστασία HTTPS</string>
+    <string name="https_only_warning_explanation">Το Candy δεν μπόρεσε να ανοίξει τη σελίδα μέσω HTTPS. Μια σύνδεση HTTP δεν θα ήταν κρυπτογραφημένη.</string>
+    <string name="https_only_warning_risk">Άλλοι στο δίκτυο θα μπορούσαν να διαβάσουν ή να αλλάξουν τα δεδομένα σας.</string>
+    <string name="https_only_warning_back">Επιστροφή</string>
+    <string name="https_only_warning_retry">Νέα προσπάθεια HTTPS</string>
+    <string name="https_only_warning_options">Περισσότερες επιλογές</string>
+    <string name="https_only_warning_exception">Συνεχίστε μόνο αν εμπιστεύεστε τον ιστότοπο. Η προστασία HTTPS παραμένει ενεργή για άλλους ιστότοπους.</string>
+    <string name="https_only_warning_open_http">Προσωρινό άνοιγμα μέσω HTTP</string>
+    <string name="https_only_warning_lifetime">Εξαίρεση για αυτόν τον ιστότοπο κατά την τρέχουσα συνεδρία περιήγησης.</string>
+    <string name="https_only_warning_unavailable">Δεν ήταν δυνατή η εφαρμογή της εξαίρεσης. Επιστρέψτε ή δοκιμάστε ξανά HTTPS.</string>
+</resources>

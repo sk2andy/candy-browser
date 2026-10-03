@@ -1,0 +1,14 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="https_only_warning_title">Varna povezava ni na voljo</string>
+    <string name="https_only_warning_protection">Zaščita HTTPS</string>
+    <string name="https_only_warning_explanation">Candy te strani ni mogel odpreti prek HTTPS. Povezava HTTP ne bi bila šifrirana.</string>
+    <string name="https_only_warning_risk">Drugi v omrežju bi lahko brali ali spreminjali vaše podatke.</string>
+    <string name="https_only_warning_back">Pojdi nazaj</string>
+    <string name="https_only_warning_retry">Znova poskusi HTTPS</string>
+    <string name="https_only_warning_options">Več možnosti</string>
+    <string name="https_only_warning_exception">Nadaljujte le, če tej spletni strani zaupate. Zaščita HTTPS ostane aktivna za druge spletne strani.</string>
+    <string name="https_only_warning_open_http">Začasno odpri prek HTTP</string>
+    <string name="https_only_warning_lifetime">Izjema za to spletno stran med trenutno sejo brskalnika.</string>
+    <string name="https_only_warning_unavailable">Izjeme ni bilo mogoče uporabiti. Pojdite nazaj ali znova poskusite HTTPS.</string>
+</resources>

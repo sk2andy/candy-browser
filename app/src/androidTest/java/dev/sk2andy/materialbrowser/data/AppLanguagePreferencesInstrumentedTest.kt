@@ -2,6 +2,8 @@ package dev.sk2andy.materialbrowser.data
 
 import android.app.LocaleManager
 import android.content.Context
+import android.content.res.Configuration
+import android.os.LocaleList
 import android.os.SystemClock
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -14,6 +16,7 @@ import dev.sk2andy.materialbrowser.browser.BrowserController
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -45,10 +48,54 @@ class AppLanguagePreferencesInstrumentedTest {
     }
 
     @Test
+    fun everyNewLanguageResolvesLocalizedLabelsAndFormattedPluralCounts() {
+        val locales = AppLanguagePreferences(context).supportedLocales.filter {
+            it.language !in setOf("en", "de", "fr", "pt", "es", "pl", "cs")
+        }
+        assertEquals(21, locales.size)
+        val languageLabels = mutableMapOf<String, String>()
+        locales.forEach { locale ->
+            val configuration = Configuration(context.resources.configuration).apply {
+                setLocales(LocaleList(locale))
+            }
+            val localized = context.createConfigurationContext(configuration)
+            val languageLabel = localized.getString(R.string.settings_app_language)
+            languageLabels[locale.toLanguageTag()] = languageLabel
+            assertNotEquals(
+                "Language label must be translated for ${locale.toLanguageTag()}",
+                "App language",
+                languageLabel,
+            )
+            assertNotEquals(
+                "HTTPS warning must be translated for ${locale.toLanguageTag()}",
+                "No secure connection available",
+                localized.getString(R.string.https_only_warning_title),
+            )
+            listOf(0, 1, 2, 5, 21).forEach { count ->
+                val label = localized.resources.getQuantityString(
+                    R.plurals.cd_open_tab_overview_count,
+                    count,
+                    count,
+                )
+                assertTrue("Localized count must format for $locale: $label", label.contains("$count"))
+            }
+        }
+        assertNotEquals(
+            "Chinese scripts must resolve their own resources",
+            languageLabels.getValue("zh-Hans"),
+            languageLabels.getValue("zh-Hant"),
+        )
+    }
+
+    @Test
     fun nativeLocaleChangeKeepsActivityAndPrivateTabsAndPersistsAcrossLaunches() {
         val preferences = AppLanguagePreferences(context)
         assertEquals(
-            setOf("en", "de", "fr", "pt", "es", "pl", "cs"),
+            setOf(
+                "en", "de", "fr", "pt", "es", "pl", "cs",
+                "zh-Hans", "zh-Hant", "ja", "ko", "nb", "sv", "da", "nl", "lb",
+                "sq", "bs", "bg", "el", "hr", "mk", "ro", "sr", "sl", "tr", "th", "vi",
+            ),
             preferences.supportedLocales.map { it.toLanguageTag() }.toSet(),
         )
         preferences.setLanguage("pl")

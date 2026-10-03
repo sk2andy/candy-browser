@@ -1,0 +1,13 @@
+<resources>
+    <string name="https_only_warning_title">无法建立安全连接</string>
+    <string name="https_only_warning_protection">HTTPS 保护</string>
+    <string name="https_only_warning_explanation">Candy 无法通过 HTTPS 打开此页面。HTTP 连接不会加密。</string>
+    <string name="https_only_warning_risk">网络中的其他人可能读取或更改你的数据。</string>
+    <string name="https_only_warning_back">返回</string>
+    <string name="https_only_warning_retry">重试 HTTPS</string>
+    <string name="https_only_warning_options">更多选项</string>
+    <string name="https_only_warning_exception">仅在信任此网站时继续。其他网站的 HTTPS 保护仍然有效。</string>
+    <string name="https_only_warning_open_http">临时通过 HTTP 打开</string>
+    <string name="https_only_warning_lifetime">仅在当前浏览器会话中为此网站设置例外。</string>
+    <string name="https_only_warning_unavailable">无法应用例外。请返回或重试 HTTPS。</string>
+</resources>

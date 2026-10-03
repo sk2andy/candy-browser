@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="https_only_warning_title">Geen veilige verbinding beschikbaar</string>
+    <string name="https_only_warning_protection">HTTPS-bescherming</string>
+    <string name="https_only_warning_explanation">Candy kon deze pagina niet via HTTPS openen. Een HTTP-verbinding zou niet versleuteld zijn.</string>
+    <string name="https_only_warning_risk">Anderen op het netwerk kunnen je gegevens lezen of wijzigen.</string>
+    <string name="https_only_warning_back">Ga terug</string>
+    <string name="https_only_warning_retry">Probeer HTTPS opnieuw</string>
+    <string name="https_only_warning_options">Meer opties</string>
+    <string name="https_only_warning_exception">Ga alleen verder als je deze website vertrouwt. HTTPS-bescherming blijft actief voor andere websites.</string>
+    <string name="https_only_warning_open_http">Open tijdelijk via HTTP</string>
+    <string name="https_only_warning_lifetime">Uitzondering voor deze website tijdens de huidige browsersessie.</string>
+    <string name="https_only_warning_unavailable">De uitzondering kon niet worden toegepast. Ga terug of probeer HTTPS opnieuw.</string>
+</resources>

@@ -7,4 +7,25 @@
     <locale android:name="es" />
     <locale android:name="pl" />
     <locale android:name="cs" />
+    <locale android:name="zh-Hans" />
+    <locale android:name="zh-Hant" />
+    <locale android:name="ja" />
+    <locale android:name="ko" />
+    <locale android:name="nb" />
+    <locale android:name="sv" />
+    <locale android:name="da" />
+    <locale android:name="nl" />
+    <locale android:name="lb" />
+    <locale android:name="sq" />
+    <locale android:name="bs" />
+    <locale android:name="bg" />
+    <locale android:name="el" />
+    <locale android:name="hr" />
+    <locale android:name="mk" />
+    <locale android:name="ro" />
+    <locale android:name="sr" />
+    <locale android:name="sl" />
+    <locale android:name="tr" />
+    <locale android:name="th" />
+    <locale android:name="vi" />
 </locale-config>

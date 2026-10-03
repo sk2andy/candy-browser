@@ -1,0 +1,13 @@
+<resources>
+    <string name="https_only_warning_title">Không có kết nối an toàn</string>
+    <string name="https_only_warning_protection">Bảo vệ HTTPS</string>
+    <string name="https_only_warning_explanation">Candy không thể mở trang này qua HTTPS. Kết nối HTTP sẽ không được mã hóa.</string>
+    <string name="https_only_warning_risk">Người khác trên mạng có thể đọc hoặc thay đổi dữ liệu của bạn.</string>
+    <string name="https_only_warning_back">Quay lại</string>
+    <string name="https_only_warning_retry">Thử lại HTTPS</string>
+    <string name="https_only_warning_options">Tùy chọn khác</string>
+    <string name="https_only_warning_exception">Chỉ tiếp tục nếu bạn tin tưởng trang web này. Bảo vệ HTTPS vẫn hoạt động với các trang web khác.</string>
+    <string name="https_only_warning_open_http">Tạm thời mở qua HTTP</string>
+    <string name="https_only_warning_lifetime">Ngoại lệ cho trang web này trong phiên trình duyệt hiện tại.</string>
+    <string name="https_only_warning_unavailable">Không thể áp dụng ngoại lệ. Hãy quay lại hoặc thử lại HTTPS.</string>
+</resources>

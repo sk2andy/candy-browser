@@ -1,0 +1,14 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="https_only_warning_title">Безбедна веза није доступна</string>
+    <string name="https_only_warning_protection">HTTPS заштита</string>
+    <string name="https_only_warning_explanation">Candy није могао да отвори ову страницу преко HTTPS-а. HTTP веза не би била шифрована.</string>
+    <string name="https_only_warning_risk">Други на мрежи могли би да читају или мењају ваше податке.</string>
+    <string name="https_only_warning_back">Врати се</string>
+    <string name="https_only_warning_retry">Покушај поново преко HTTPS-а</string>
+    <string name="https_only_warning_options">Више опција</string>
+    <string name="https_only_warning_exception">Наставите само ако верујете овом веб-сајту. HTTPS заштита остаје активна за остале веб-сајтове.</string>
+    <string name="https_only_warning_open_http">Привремено отвори преко HTTP-а</string>
+    <string name="https_only_warning_lifetime">Изузетак за овај веб-сајт током текуће сесије прегледача.</string>
+    <string name="https_only_warning_unavailable">Изузетак није могао да се примени. Вратите се или покушајте поново преко HTTPS-а.</string>
+</resources>

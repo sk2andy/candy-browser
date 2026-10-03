@@ -1,0 +1,13 @@
+<resources>
+    <string name="https_only_warning_title">安全な接続を利用できません</string>
+    <string name="https_only_warning_protection">HTTPS 保護</string>
+    <string name="https_only_warning_explanation">Candy はこのページを HTTPS で開けませんでした。HTTP 接続は暗号化されません。</string>
+    <string name="https_only_warning_risk">ネットワーク上の第三者にデータを読み取られたり、変更されたりする可能性があります。</string>
+    <string name="https_only_warning_back">戻る</string>
+    <string name="https_only_warning_retry">HTTPS を再試行</string>
+    <string name="https_only_warning_options">その他のオプション</string>
+    <string name="https_only_warning_exception">このウェブサイトを信頼できる場合のみ続行してください。他のウェブサイトでは HTTPS 保護が引き続き有効です。</string>
+    <string name="https_only_warning_open_http">一時的に HTTP で開く</string>
+    <string name="https_only_warning_lifetime">現在のブラウザーセッション中、このウェブサイトを例外にします。</string>
+    <string name="https_only_warning_unavailable">例外を適用できませんでした。戻るか、HTTPS を再試行してください。</string>
+</resources>

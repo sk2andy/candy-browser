@@ -1316,6 +1316,8 @@
     <string name="developer_options_gecko_safe_area_section">Gecko Edge-to-edge</string>
     <string name="developer_options_gecko_safe_area_summary">Geckos CSS-Safe-Area-Korrekturen und Mutationsprüfungen abstimmen. Diese Einstellungen ändern weder System WebView noch den nativen Safe-Area-Fallback.</string>
     <string name="developer_options_gecko_safe_area_enabled">CSS-Safe-Area-Korrektur</string>
+    <string name="developer_options_gecko_add_inset_to_negative_top">Inset zu negativen top-Werten addieren</string>
+    <string name="developer_options_gecko_add_inset_to_negative_top_summary">Auch Fixed- und Sticky-Elemente mit negativen CSS-top-Werten um den Safe-Area-Inset verschieben. Standardmäßig aus, damit ausgeblendete Header verborgen bleiben.</string>
     <string name="developer_options_gecko_safe_area_enabled_summary">Candys Gecko-CSS-Korrekturen und Observer abschalten. Natives Edge-to-edge-Rendering, CSS-env()-Werte sowie expliziter und Notfall-Fallback bleiben verfügbar.</string>
     <string name="developer_options_gecko_recheck_added_elements">Neue Elemente prüfen</string>
     <string name="developer_options_gecko_recheck_added_elements_summary">Neu eingefügte Elemente innerhalb des Update-Budgets auf CSS-Safe-Area-Korrekturen prüfen.</string>

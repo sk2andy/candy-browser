@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="https_only_warning_title">Güvenli bağlantı yok</string>
+    <string name="https_only_warning_protection">HTTPS koruması</string>
+    <string name="https_only_warning_explanation">Candy bu sayfayı HTTPS üzerinden açamadı. HTTP bağlantısı şifrelenmez.</string>
+    <string name="https_only_warning_risk">Ağdaki diğer kişiler verilerinizi okuyabilir veya değiştirebilir.</string>
+    <string name="https_only_warning_back">Geri dön</string>
+    <string name="https_only_warning_retry">HTTPS bağlantısını yeniden dene</string>
+    <string name="https_only_warning_options">Diğer seçenekler</string>
+    <string name="https_only_warning_exception">Yalnızca bu siteye güveniyorsanız devam edin. HTTPS koruması diğer siteler için etkin kalır.</string>
+    <string name="https_only_warning_open_http">Geçici olarak HTTP üzerinden aç</string>
+    <string name="https_only_warning_lifetime">Geçerli tarayıcı oturumu boyunca bu siteye özel istisna.</string>
+    <string name="https_only_warning_unavailable">İstisna uygulanamadı. Geri dönün veya HTTPS bağlantısını yeniden deneyin.</string>
+</resources>

@@ -10,6 +10,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import dev.sk2andy.materialbrowser.R
+import dev.sk2andy.materialbrowser.data.AppLanguageRules
 import java.util.Locale
 
 @Composable
@@ -20,9 +21,7 @@ internal fun AppLanguageSettings(
 ) {
     var expanded by remember { mutableStateOf(false) }
     val systemLabel = stringResource(R.string.settings_app_language_system)
-    val selectedLocale = supportedLocales.firstOrNull {
-        it.language == Locale.forLanguageTag(languageTag).language
-    }
+    val selectedLocale = AppLanguageRules.selectedLocale(languageTag, supportedLocales)
     Box {
         SettingsChoice(
             title = stringResource(R.string.settings_app_language),

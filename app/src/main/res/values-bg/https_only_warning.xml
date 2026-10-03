@@ -1,0 +1,14 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="https_only_warning_title">Няма налична защитена връзка</string>
+    <string name="https_only_warning_protection">HTTPS защита</string>
+    <string name="https_only_warning_explanation">Candy не можа да отвори тази страница през HTTPS. HTTP връзката би била нешифрована.</string>
+    <string name="https_only_warning_risk">Други в мрежата биха могли да четат или променят данните ви.</string>
+    <string name="https_only_warning_back">Назад</string>
+    <string name="https_only_warning_retry">Опитай HTTPS отново</string>
+    <string name="https_only_warning_options">Още опции</string>
+    <string name="https_only_warning_exception">Продължете само ако имате доверие на този уебсайт. HTTPS защитата остава активна за другите уебсайтове.</string>
+    <string name="https_only_warning_open_http">Временно отвори през HTTP</string>
+    <string name="https_only_warning_lifetime">Изключение за този уебсайт по време на текущата сесия на браузъра.</string>
+    <string name="https_only_warning_unavailable">Изключението не можа да се приложи. Върнете се назад или опитайте HTTPS отново.</string>
+</resources>

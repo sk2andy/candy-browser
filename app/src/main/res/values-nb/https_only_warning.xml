@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="https_only_warning_title">Ingen sikker tilkobling tilgjengelig</string>
+    <string name="https_only_warning_protection">HTTPS-beskyttelse</string>
+    <string name="https_only_warning_explanation">Candy kunne ikke åpne denne siden med HTTPS. En HTTP-tilkobling ville vært ukryptert.</string>
+    <string name="https_only_warning_risk">Andre på nettverket kan lese eller endre dataene dine.</string>
+    <string name="https_only_warning_back">Gå tilbake</string>
+    <string name="https_only_warning_retry">Prøv HTTPS på nytt</string>
+    <string name="https_only_warning_options">Flere valg</string>
+    <string name="https_only_warning_exception">Fortsett bare hvis du stoler på denne nettsiden. HTTPS-beskyttelse forblir aktiv for andre nettsider.</string>
+    <string name="https_only_warning_open_http">Åpne midlertidig med HTTP</string>
+    <string name="https_only_warning_lifetime">Unntak for denne nettsiden i den gjeldende nettleserøkten.</string>
+    <string name="https_only_warning_unavailable">Unntaket kunne ikke brukes. Gå tilbake eller prøv HTTPS på nytt.</string>
+</resources>
