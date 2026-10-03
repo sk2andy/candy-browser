@@ -356,6 +356,12 @@ internal interface GeckoBrowserSession {
     /** Creates and binds the one View currently rendering this session. */
     fun createView(context: Context): View
 
+    val contentPresentationGeneration: Long
+        get() = 0L
+
+    val isContentPresented: Boolean
+        get() = true
+
     /**
      * Runs after Gecko has both started its compositor and painted valid page content.
      * A newer request replaces an older pending request for this session.

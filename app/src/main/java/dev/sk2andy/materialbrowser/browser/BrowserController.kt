@@ -2868,14 +2868,21 @@ class BrowserController(
         fun awaitContent(binding: GeckoViewBinding) {
             if (onContentPresented == null) return
             binding.session.awaitContentPresented {
+                val generation = binding.session.contentPresentationGeneration
                 container.post {
                     if (
-                        geckoViewBindings[container] === binding &&
-                        binding.tabId == selectedTabId &&
-                        binding.view.parent === container
+                        geckoViewBindings[container] !== binding ||
+                        binding.tabId != selectedTabId ||
+                        binding.view.parent !== container
+                    ) return@post
+                    if (
+                        generation != binding.session.contentPresentationGeneration ||
+                        !binding.session.isContentPresented
                     ) {
-                        onContentPresented(binding.tabId)
+                        awaitContent(binding)
+                        return@post
                     }
+                    onContentPresented(binding.tabId)
                 }
             }
         }
