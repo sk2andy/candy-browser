@@ -2,6 +2,8 @@ package dev.sk2andy.materialbrowser.ui
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
@@ -11,6 +13,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -29,6 +32,7 @@ internal fun BrowserWebPromptDialog(
     onConfirm: (String?) -> Unit,
     onCancel: () -> Unit,
 ) {
+    val scrollState = key(prompt.id) { rememberScrollState() }
     var value by remember(prompt.id) { mutableStateOf(prompt.defaultValue.orEmpty()) }
     var selectedChoices by remember(prompt.id) {
         mutableStateOf(prompt.choices.filter(BrowserWebPromptChoice::selected).map(BrowserWebPromptChoice::id).toSet())
@@ -48,7 +52,7 @@ internal fun BrowserWebPromptDialog(
             )
         },
         text = {
-            Column {
+            Column(modifier = Modifier.verticalScroll(scrollState)) {
                 val message = prompt.message ?: when (prompt.kind) {
                     BrowserWebPromptKind.BeforeUnload ->
                         stringResource(R.string.web_prompt_leave_message)

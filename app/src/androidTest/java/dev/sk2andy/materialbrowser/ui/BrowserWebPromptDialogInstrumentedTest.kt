@@ -1,12 +1,18 @@
 package dev.sk2andy.materialbrowser.ui
 
+import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsNotDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performTextReplacement
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import dev.sk2andy.materialbrowser.browser.BrowserWebPrompt
+import dev.sk2andy.materialbrowser.browser.BrowserWebPromptChoice
 import dev.sk2andy.materialbrowser.browser.BrowserWebPromptKind
+import dev.sk2andy.materialbrowser.browser.BrowserWebPromptRules
 import dev.sk2andy.materialbrowser.ui.theme.MaterialBrowserTheme
 import java.util.concurrent.atomic.AtomicReference
 import org.junit.Assert.assertEquals
@@ -39,9 +45,62 @@ class BrowserWebPromptDialogInstrumentedTest {
             }
         }
 
-        composeRule.onNodeWithTag(BrowserWebPromptTestTags.Input).performTextInput(" candy")
+        composeRule.onNodeWithTag(BrowserWebPromptTestTags.Input).performTextReplacement("initial candy")
         composeRule.onNodeWithTag(BrowserWebPromptTestTags.Confirm).performClick()
 
         assertEquals("initial candy", confirmed.get())
+    }
+
+    @Test
+    fun longChoicePromptScrollsToLastCountryAndConfirmsIt() {
+        val confirmed = AtomicReference<String?>()
+        showLongChoicePrompt(allowMultiple = false, onConfirm = confirmed::set)
+
+        composeRule.onNodeWithTag(BrowserWebPromptTestTags.Confirm).assertIsDisplayed()
+        composeRule.onNodeWithText("Zimbabwe").assertIsNotDisplayed()
+        composeRule.onNodeWithText("Zimbabwe").performScrollTo().assertIsDisplayed().performClick()
+        composeRule.onNodeWithTag(BrowserWebPromptTestTags.Confirm).assertIsDisplayed().performClick()
+
+        assertEquals("ZW", confirmed.get())
+    }
+
+    @Test
+    fun longMultipleChoicePromptKeepsSelectionsAcrossScroll() {
+        val confirmed = AtomicReference<String?>()
+        showLongChoicePrompt(allowMultiple = true, onConfirm = confirmed::set)
+
+        composeRule.onNodeWithText("Country 0").performClick()
+        composeRule.onNodeWithText("Zimbabwe").performScrollTo().assertIsDisplayed().performClick()
+        composeRule.onNodeWithTag(BrowserWebPromptTestTags.Confirm).assertIsDisplayed().performClick()
+
+        assertEquals(setOf("country-0", "ZW"), confirmed.get()?.split('\u001F')?.toSet())
+    }
+
+    private fun showLongChoicePrompt(allowMultiple: Boolean, onConfirm: (String?) -> Unit) {
+        val prompt = requireNotNull(
+            BrowserWebPromptRules.sanitized(
+                id = 2,
+                tabId = "tab-a",
+                kind = BrowserWebPromptKind.Choice,
+                title = "Country selection",
+                message = null,
+                defaultValue = null,
+                choices = List(252) { index ->
+                    BrowserWebPromptChoice(
+                        id = if (index == 251) "ZW" else "country-$index",
+                        label = if (index == 251) "Zimbabwe" else "Country $index",
+                        selected = false,
+                        disabled = false,
+                        separator = false,
+                    )
+                },
+                allowMultiple = allowMultiple,
+            ),
+        )
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                BrowserWebPromptDialog(prompt = prompt, onConfirm = onConfirm, onCancel = {})
+            }
+        }
     }
 }

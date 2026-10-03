@@ -180,7 +180,7 @@ internal object BrowserWebPromptRules {
     private const val MAX_TITLE_LENGTH = 200
     private const val MAX_MESSAGE_LENGTH = 4_096
     const val MAX_INPUT_LENGTH = 4_096
-    private const val MAX_CHOICES = 100
+    private const val MAX_CHOICES = 1_000
 }
 
 internal enum class BrowserEngineNavigationTarget {

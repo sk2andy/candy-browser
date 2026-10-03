@@ -443,7 +443,10 @@ Camera and microphone permissions remain separate and continue through Candy's p
   provider, account and privacy-policy prompts use the engine-neutral credential host and reject
   private, inactive, cross-origin or stale requests. Address/card autocomplete, HTML automatic
   popups and client certificates remain fail closed. Choice, color, date/time and folder
-  prompts use Candy's identity-bound prompt surface; Web Share requires explicit Candy confirmation
+  prompts use Candy's identity-bound prompt surface. Prompt content scrolls within the available
+  dialog height in portrait and landscape, keeping confirmation/cancel actions outside the scroll
+  area. Choice sanitization accepts up to 1,000 options so complete country lists stay selectable.
+  Web Share requires explicit Candy confirmation
   before Android's Sharesheet is launched. GeckoView exposes only a certificate alias confirmation,
   not a safe Android key-selection contract, so Candy never auto-selects or confirms a certificate;
   no prompt silently falls through a nullable Gecko delegate default.

@@ -134,4 +134,43 @@ class BrowserEngineRequestsTest {
         assertEquals(listOf("one"), prompt?.choices?.map(BrowserWebPromptChoice::id))
         assertTrue(requireNotNull(prompt).allowMultiple)
     }
+
+    @Test
+    fun `choice prompt retains the last country beyond one hundred options`() {
+        val choices = List(251) { index ->
+            BrowserWebPromptChoice("country-$index", "Country $index", selected = false, disabled = false, separator = false)
+        } + BrowserWebPromptChoice("ZW", "Zimbabwe", selected = false, disabled = false, separator = false)
+
+        val prompt = BrowserWebPromptRules.sanitized(
+            id = 7,
+            tabId = "tab-a",
+            kind = BrowserWebPromptKind.Choice,
+            title = null,
+            message = null,
+            defaultValue = null,
+            choices = choices,
+        )
+
+        assertEquals(252, prompt?.choices?.size)
+        assertEquals("ZW", prompt?.choices?.last()?.id)
+        assertEquals("Zimbabwe", prompt?.choices?.last()?.label)
+    }
+
+    @Test
+    fun `choice prompt bounds oversized option lists`() {
+        val prompt = BrowserWebPromptRules.sanitized(
+            id = 8,
+            tabId = "tab-a",
+            kind = BrowserWebPromptKind.Choice,
+            title = null,
+            message = null,
+            defaultValue = null,
+            choices = List(1_001) { index ->
+                BrowserWebPromptChoice("choice-$index", "Choice $index", selected = false, disabled = false, separator = false)
+            },
+        )
+
+        assertEquals(1_000, prompt?.choices?.size)
+        assertEquals("choice-999", prompt?.choices?.last()?.id)
+    }
 }
