@@ -42,7 +42,7 @@ import org.junit.runner.RunWith
 import org.mozilla.geckoview.GeckoView
 
 @RunWith(AndroidJUnit4::class)
-@SdkSuppress(minSdkVersion = 37)
+@SdkSuppress(minSdkVersion = 36)
 class GeckoBackGestureLinkPeekInstrumentedTest {
     @get:Rule
     val composeRule = createEmptyComposeRule()
@@ -83,12 +83,32 @@ class GeckoBackGestureLinkPeekInstrumentedTest {
     }
 
     @Test
+    fun leftBackGestureOnFirstPageReturnsHomeBeforeLeavingBrowser() {
+        assertCommittedRootBackGesture(fromRight = false)
+    }
+
+    @Test
+    fun rightBackGestureOnFirstPageReturnsHomeBeforeLeavingBrowser() {
+        assertCommittedRootBackGesture(fromRight = true)
+    }
+
+    @Test
+    fun backGestureFromLinkPeekTabTraversesHistoryThenReturnsToSource() {
+        assertLinkPeekBackGesture(isPinned = false)
+    }
+
+    @Test
+    fun backGestureFromPinnedLinkPeekTabTraversesHistoryThenReturnsToSource() {
+        assertLinkPeekBackGesture(isPinned = true)
+    }
+
+    @Test
     fun canceledBackGestureOverLinkAllowsSubsequentOrdinaryLongPress() {
         assertCanceledBackGesture(hasHistory = true)
     }
 
     @Test
-    fun canceledSystemBackGestureOverRootLinkAllowsSubsequentOrdinaryLongPress() {
+    fun canceledBackGestureOverFirstPageAllowsSubsequentOrdinaryLongPress() {
         assertCanceledBackGesture(hasHistory = false)
     }
 
@@ -163,6 +183,91 @@ class GeckoBackGestureLinkPeekInstrumentedTest {
         }
     }
 
+    private fun assertCommittedRootBackGesture(fromRight: Boolean) {
+        withSourcePage(hasHistory = false) { scenario, _, _ ->
+            var tabId = ""
+            scenario.onActivity { activity ->
+                tabId = activity.browserControllerForTesting().selectedTabId
+                assertTrue(activity.onBackPressedDispatcher.hasEnabledCallbacks())
+            }
+            finishCommittedBackGesture(scenario, beginBackGesture(scenario, fromRight))
+            awaitCondition("First-page Back did not return to Candy home") {
+                var home = false
+                scenario.onActivity { activity ->
+                    val controller = activity.browserControllerForTesting()
+                    home = controller.selectedTab.url == "about:blank"
+                    if (home) {
+                        assertEquals(tabId, controller.selectedTabId)
+                        assertFalse(controller.selectedTab.canGoBack)
+                        assertFalse(controller.selectedTab.canGoForward)
+                        assertTrue(activity.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED))
+                    }
+                }
+                home
+            }
+            composeRule.waitForIdle()
+            scenario.onActivity { activity ->
+                assertFalse(activity.onBackPressedDispatcher.hasEnabledCallbacks())
+                assertFalse(activity.browserControllerForTesting().contentActions.isLinkPeekVisible)
+            }
+            finishCommittedBackGesture(scenario, beginBackGesture(scenario, fromRight))
+            awaitCondition("Back at Candy home did not leave the browser") {
+                !scenario.state.isAtLeast(Lifecycle.State.RESUMED)
+            }
+        }
+    }
+
+    private fun assertLinkPeekBackGesture(isPinned: Boolean) {
+        withSourcePage(hasHistory = false) { scenario, server, _ ->
+            var sourceTabId = ""
+            var childTabId = ""
+            val childUrl = server.fixtureUrl(TARGET_PATH)
+            scenario.onActivity { activity ->
+                val controller = activity.browserControllerForTesting()
+                sourceTabId = controller.selectedTabId
+                controller.contentActions.show(WebContentTarget(linkUrl = childUrl), sourceTabId)
+                assertTrue(controller.openContextLinkInForeground(childUrl))
+                childTabId = controller.selectedTabId
+                assertEquals(sourceTabId, controller.selectedTab.openerTabId)
+                if (isPinned) assertTrue(controller.setTabPinned(childTabId, true))
+            }
+            assertPage(scenario, childUrl, SOURCE_TITLE)
+            scenario.onActivity { activity ->
+                assertTrue(activity.browserControllerForTesting().openUrl(server.fixtureUrl(PREVIOUS_PATH)))
+            }
+            assertPage(scenario, server.fixtureUrl(PREVIOUS_PATH), PREVIOUS_TITLE)
+            awaitCondition("Link Peek child did not acquire real page history") {
+                var hasHistory = false
+                scenario.onActivity { activity ->
+                    hasHistory = activity.browserControllerForTesting().selectedTab.canGoBack
+                }
+                hasHistory
+            }
+            composeRule.waitForIdle()
+            finishCommittedBackGesture(scenario, beginBackGesture(scenario, fromRight = false))
+            assertPage(scenario, childUrl, SOURCE_TITLE)
+            scenario.onActivity { activity ->
+                assertEquals(childTabId, activity.browserControllerForTesting().selectedTabId)
+                assertFalse(activity.browserControllerForTesting().selectedTab.canGoBack)
+            }
+            composeRule.waitForIdle()
+            finishCommittedBackGesture(scenario, beginBackGesture(scenario, fromRight = false))
+            assertPage(scenario, server.fixtureUrl(SOURCE_PATH), SOURCE_TITLE)
+            scenario.onActivity { activity ->
+                val controller = activity.browserControllerForTesting()
+                assertEquals(sourceTabId, controller.selectedTabId)
+                assertTrue(activity.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED))
+                if (isPinned) {
+                    val child = controller.tabs.single { it.id == childTabId }
+                    assertTrue(child.isPinned)
+                    assertEquals(childUrl, child.url)
+                } else {
+                    assertTrue(controller.tabs.none { it.id == childTabId })
+                }
+            }
+        }
+    }
+
     private fun withSourcePage(
         hasHistory: Boolean = true,
         block: (ActivityScenario<MainActivity>, EdgeToEdgeSiteFixtureServer, List<Int>) -> Unit,
@@ -206,7 +311,7 @@ class GeckoBackGestureLinkPeekInstrumentedTest {
                     scenario.onActivity { activity ->
                         val controller = activity.browserControllerForTesting()
                         assertFalse(controller.selectedTab.canGoBack)
-                        assertEquals(RootTabBackDecision.DelegateToSystem, controller.selectedRootTabBackDecision)
+                        assertEquals(RootTabBackDecision.ReturnToHome, controller.selectedRootTabBackDecision)
                     }
                 }
                 composeRule.waitForIdle()

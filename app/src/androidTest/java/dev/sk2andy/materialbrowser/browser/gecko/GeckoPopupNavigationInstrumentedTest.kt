@@ -156,7 +156,7 @@ class GeckoPopupNavigationInstrumentedTest {
     }
 
     @Test
-    fun firstPageInSoleManualTabRootBackDelegatesToSystemAndKeepsTab() {
+    fun firstPageInSoleManualTabRootBackReturnsHomeAndKeepsTab() {
         val requests = ConcurrentHashMap<String, AtomicInteger>()
         fixtureServer(requests).use { server ->
             val firstUrl = server.fixtureUrl("/first")
@@ -171,11 +171,15 @@ class GeckoPopupNavigationInstrumentedTest {
                 assertEquals(listOf(tabId), controller.activeTabs.map { it.id })
                 assertFalse(controller.selectedTab.canGoBack)
                 assertEquals(
-                    RootTabBackDecision.DelegateToSystem,
+                    RootTabBackDecision.ReturnToHome,
                     controller.performSelectedRootTabBack(),
                 )
                 assertEquals(tabId, controller.selectedTabId)
                 assertTrue(controller.tabs.any { it.id == tabId })
+                assertEquals("about:blank", controller.selectedTab.url)
+                assertFalse(controller.selectedTab.canGoBack)
+                assertFalse(controller.selectedTab.canGoForward)
+                assertEquals(RootTabBackDecision.DelegateToSystem, controller.selectedRootTabBackDecision)
             }
         }
     }

@@ -5051,6 +5051,9 @@ class BrowserController(
                 title = "",
                 isLoading = target != BLANK_URL,
                 progress = 0,
+                canGoBack = target != BLANK_URL && it.canGoBack,
+                canGoForward = target != BLANK_URL && it.canGoForward,
+                blockedCount = if (target == BLANK_URL) 0 else it.blockedCount,
                 error = null,
                 failureKind = null,
                 httpStatusCode = null,
@@ -5059,6 +5062,7 @@ class BrowserController(
         markLocalSyncNavigationPending(tabId, target)
         if (target == BLANK_URL) {
             closeBrowserEngineSession(tabId)
+            persist()
         } else if (existingSession == null) {
             browserEngineSessionFor(tabId)
         } else {
@@ -8457,8 +8461,12 @@ class BrowserController(
 
     internal fun performSelectedRootTabBack(): RootTabBackDecision {
         val decision = selectedRootTabBackDecision
-        if (decision != RootTabBackDecision.DelegateToSystem) {
-            closeTabFromUser(selectedTabId)
+        when (decision) {
+            RootTabBackDecision.ReturnToHome -> openUrl(BLANK_URL)
+            RootTabBackDecision.ReturnToOpener -> selectedTab.openerTabId?.let { selectTab(it) }
+            RootTabBackDecision.CloseAndReturnToOpener,
+            RootTabBackDecision.CloseAndShowTabOverview -> closeTabFromUser(selectedTabId)
+            RootTabBackDecision.DelegateToSystem -> Unit
         }
         return decision
     }

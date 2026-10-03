@@ -2,6 +2,8 @@ package dev.sk2andy.materialbrowser.browser
 
 internal enum class RootTabBackDecision {
     DelegateToSystem,
+    ReturnToHome,
+    ReturnToOpener,
     CloseAndReturnToOpener,
     CloseAndShowTabOverview,
 }
@@ -13,13 +15,20 @@ internal object RootTabBackRules {
     ): RootTabBackDecision {
         val selectedTab = tabs.firstOrNull { tab -> tab.id == selectedTabId }
             ?: return RootTabBackDecision.DelegateToSystem
+        if (tabs.any { tab -> tab.id != selectedTabId && tab.id == selectedTab.openerTabId }) {
+            return if (selectedTab.isPinned) {
+                RootTabBackDecision.ReturnToOpener
+            } else {
+                RootTabBackDecision.CloseAndReturnToOpener
+            }
+        }
         if (tabs.size == 1 || selectedTab.isPinned) {
-            return RootTabBackDecision.DelegateToSystem
+            return if (selectedTab.url == BLANK_URL) {
+                RootTabBackDecision.DelegateToSystem
+            } else {
+                RootTabBackDecision.ReturnToHome
+            }
         }
-        return if (tabs.any { tab -> tab.id == selectedTab.openerTabId }) {
-            RootTabBackDecision.CloseAndReturnToOpener
-        } else {
-            RootTabBackDecision.CloseAndShowTabOverview
-        }
+        return RootTabBackDecision.CloseAndShowTabOverview
     }
 }

@@ -54,7 +54,7 @@
 | Local userscript | `UserScriptRules` → Gecko Topping document-start bridge | Require an explicit HTTP(S) pattern, top frame and regular tab; apply full URL exclusions before source runs |
 | Main-frame 404 | engine HTTP status → tab state → `PageErrorFeedbackRules` | Keep the navigation committed, preserve URL/title/history side effects, and cover the page with Candy's native not-found surface |
 | Offline page | failed main-frame navigation + `BrowserConnectivityMonitor` → controller → `PageErrorFeedbackRules` | Require Android's validated default internet capability, never cover an already loaded page merely because connectivity drops, auto-reload on reconnect only before the game starts, and preserve the game behind an explicit reload banner afterward |
-| Gecko first-page history and Root Back | `GeckoBootstrapHistoryRules` → engine history and existing `RootTabBackRules` | The first app-owned page replaces its internal Privacy bootstrap entry. Back/Forward skips legacy bootstrap entries using unchanged native indices; snapshots containing any bootstrap entry are rejected. With no real previous page, Back follows the existing tab-close, opener-return or system-back rule. Only the current session's exact origin and token may authorize a bootstrap navigation. |
+| Gecko first-page history and Root Back | `GeckoBootstrapHistoryRules` → engine history and `RootTabBackRules` | The first app-owned page replaces its internal Privacy bootstrap entry. Back/Forward skips legacy bootstrap entries using unchanged native indices; snapshots containing any bootstrap entry are rejected. With no real previous page, Back returns to an active opener first, keeping pinned children. Without an opener, Back closes into overview or returns a last/pinned website to Candy home. Android receives Back only once that terminal tab is already home. Only the current session's exact origin and token may authorize a bootstrap navigation. |
 | Gecko native new-window binding | `GeckoNativeSessionBindingRules`, `GeckoPrivacyHostRuntime`, Candy Privacy background | Authenticate the exact extension/session/token/challenge/revision through a denied internal `tabs.update`, without loading a document. The original HTTP request waits for that binding, preserving POST data, referrer and opener; timeout, tab removal and native disconnect cancel it. Route the informational initial URI through the existing popup rules because Gecko does not emit another child load-request callback for it. |
 | Gecko identity popup routing | `FederatedLoginRules` → Gecko navigation request → native new-session binding | Keep user-triggered new-window navigation to known HTTPS Google identity endpoints in Gecko, including provider navigation inside an adopted native popup. External-app fallback would replace the child with a GET tab and lose `window.opener`. Existing popup rules still decide whether to admit the child; cookie compatibility remains separately consented. |
 | Gecko page-requested window close | Gecko content delegate → session/adapter close-request listener → controller | Honor `window.close()` only for native popup tabs adopted from Gecko in this process. Post closure through the existing tab-removal path, recheck exact session identity, and return to a valid opener only when the closing popup was selected. Background closure preserves the foreground selection; manual/restored/recreated tabs receive no close grant. Clear listeners on close/crash and remove grants on session replacement, tab removal, snooze and controller destruction. |
@@ -124,10 +124,15 @@
   request, so an older completion cannot replace a newer user destination.
 - Keep the external-app return marker memory-only and scoped to the tab opened by the latest accepted
   `ACTION_VIEW` or `ACTION_SEND`. Engine history consumes Back first. A root tab with an active opener
-  closes and returns to that opener; a deletable root tab with another active-profile sibling closes
+  closes and returns to that opener, including foreground/background tabs opened through Link Peek.
+  A pinned root tab with an active opener selects that opener while keeping the pinned tab and its
+  website intact. Only once the opener is absent do the Home/overview rules apply. A deletable root
+  tab with another active-profile sibling closes
   into the tab overview. When the root tab is the active profile's last tab, or the selected root tab is
-  pinned, do not mutate tabs and let Android handle Back-to-Home. Tabs in other profiles do not become
-  implicit Back targets.
+  pinned, first return its website to Candy home in the same tab, profile and private mode; retain its
+  pin and close the engine session with Back/Forward capabilities cleared. Only Back from that blank
+  home delegates to Android. Externally opened root tabs retain Back-to-caller priority. Tabs in other
+  profiles do not become implicit Back targets.
 - An accepted incoming link leaves Site Capsule presentation and closes Settings, the Firefox
   extension manager, extension action popup and other transient navigation surfaces. Cancel pending address-editor callbacks
   so an older preview capture cannot open an editor over the incoming page. Reusing a returned link in
