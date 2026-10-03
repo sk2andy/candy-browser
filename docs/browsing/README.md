@@ -41,6 +41,9 @@ The GeckoView 155 to 157 compatibility review, upstream fixes and upgrade checks
 Issue 221's bootstrap-history reproduction, popup boundaries and verification are recorded in
 [`../audits/issue-221-gecko-navigation.md`](../audits/issue-221-gecko-navigation.md).
 
+Issue 239's Google identity popup routing, native close lifecycle and live Claude login checks are recorded in
+[`../audits/issue-239-claude-google-login.md`](../audits/issue-239-claude-google-login.md).
+
 Issue 222's search-link History API race and navigation cancellation checks are recorded in
 [`../audits/issue-222-external-app-navigation.md`](../audits/issue-222-external-app-navigation.md).
 
