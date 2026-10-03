@@ -1409,4 +1409,6 @@
     <string name="developer_options_gecko_logging_status_export">En pausa para exportar o eliminar registros</string>
     <string name="developer_options_gecko_logging_status_limit">Límite de captura alcanzado. Desactiva y activa el registro para reiniciar.</string>
     <string name="developer_options_gecko_logging_status_failed">Captura detenida tras un error. Desactiva y activa el registro para reintentar.</string>
+    <string name="settings_app_language">Idioma de la aplicación</string>
+    <string name="settings_app_language_system">Usar el idioma del dispositivo</string>
 </resources>

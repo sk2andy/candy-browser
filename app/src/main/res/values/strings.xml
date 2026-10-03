@@ -1420,4 +1420,6 @@
     <string name="developer_options_gecko_logging_status_export">Paused for log export or deletion</string>
     <string name="developer_options_gecko_logging_status_limit">Capture limit reached. Turn logging off and on to restart.</string>
     <string name="developer_options_gecko_logging_status_failed">Capture stopped after an error. Turn logging off and on to retry.</string>
+    <string name="settings_app_language">App language</string>
+    <string name="settings_app_language_system">Follow device language</string>
 </resources>

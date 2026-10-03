@@ -1409,4 +1409,6 @@
     <string name="developer_options_gecko_logging_status_export">En pause pour exporter ou supprimer les journaux</string>
     <string name="developer_options_gecko_logging_status_limit">Limite de capture atteinte. Désactivez puis réactivez pour redémarrer.</string>
     <string name="developer_options_gecko_logging_status_failed">Capture arrêtée après une erreur. Désactivez puis réactivez pour réessayer.</string>
+    <string name="settings_app_language">Langue de l’application</string>
+    <string name="settings_app_language_system">Utiliser la langue de l’appareil</string>
 </resources>

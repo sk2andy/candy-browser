@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="https_only_warning_title">Zabezpečené spojení není dostupné</string>
+    <string name="https_only_warning_protection">Ochrana HTTPS</string>
+    <string name="https_only_warning_explanation">Candy nemohlo otevřít tuto stránku přes HTTPS. Spojení HTTP by nebylo šifrované.</string>
+    <string name="https_only_warning_risk">Ostatní v síti by mohli číst nebo měnit vaše data.</string>
+    <string name="https_only_warning_back">Zpět</string>
+    <string name="https_only_warning_retry">Zkusit HTTPS znovu</string>
+    <string name="https_only_warning_options">Další možnosti</string>
+    <string name="https_only_warning_exception">Pokračujte pouze tehdy, pokud tomuto webu důvěřujete. Ochrana HTTPS zůstává aktivní pro ostatní weby.</string>
+    <string name="https_only_warning_open_http">Dočasně otevřít přes HTTP</string>
+    <string name="https_only_warning_lifetime">Výjimka pro tento web během aktuální relace prohlížeče.</string>
+    <string name="https_only_warning_unavailable">Výjimku nelze použít. Vraťte se zpět nebo zkuste HTTPS znovu.</string>
+</resources>

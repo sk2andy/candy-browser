@@ -47,9 +47,13 @@ import dev.sk2andy.materialbrowser.sync.SyncConnectionSettings
 import dev.sk2andy.materialbrowser.sync.SyncDeviceIconCatalog
 import dev.sk2andy.materialbrowser.sync.SyncEnrollmentOutcome
 import dev.sk2andy.materialbrowser.sync.SyncRepositoryState
+import java.util.Locale
 
 @Composable
 internal fun SettingsScreen(
+    appLanguageTag: String = "",
+    supportedAppLocales: List<Locale> = emptyList(),
+    onAppLanguageChanged: (String) -> Unit = {},
     destination: SettingsDestination,
     browserEngineKind: AndroidBrowserEngineKind = AndroidBrowserEngineKind.GeckoView,
     isDnsOverHttpsSupported: Boolean = browserEngineKind == AndroidBrowserEngineKind.GeckoView,
@@ -360,6 +364,9 @@ internal fun SettingsScreen(
                 )
 
                 SettingsDestination.Browser -> BrowserSettingsPage(
+                    appLanguageTag = appLanguageTag,
+                    supportedAppLocales = supportedAppLocales,
+                    onAppLanguageChanged = onAppLanguageChanged,
                     browserEngineKind = browserEngineKind,
                     pageTranslationProvider = pageTranslationProvider,
                     isExternalLinkPreviewEnabled = isExternalLinkPreviewEnabled,

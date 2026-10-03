@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="https_only_warning_title">Brak dostępnego bezpiecznego połączenia</string>
+    <string name="https_only_warning_protection">Ochrona HTTPS</string>
+    <string name="https_only_warning_explanation">Candy nie może otworzyć tej strony przez HTTPS. Połączenie HTTP byłoby nieszyfrowane.</string>
+    <string name="https_only_warning_risk">Inne osoby w sieci mogłyby odczytywać lub zmieniać Twoje dane.</string>
+    <string name="https_only_warning_back">Wróć</string>
+    <string name="https_only_warning_retry">Ponów próbę HTTPS</string>
+    <string name="https_only_warning_options">Więcej opcji</string>
+    <string name="https_only_warning_exception">Kontynuuj tylko wtedy, gdy ufasz tej witrynie. Ochrona HTTPS pozostaje aktywna dla innych witryn.</string>
+    <string name="https_only_warning_open_http">Otwórz tymczasowo przez HTTP</string>
+    <string name="https_only_warning_lifetime">Wyjątek dla tej witryny podczas bieżącej sesji przeglądarki.</string>
+    <string name="https_only_warning_unavailable">Nie udało się zastosować wyjątku. Wróć lub ponów próbę HTTPS.</string>
+</resources>

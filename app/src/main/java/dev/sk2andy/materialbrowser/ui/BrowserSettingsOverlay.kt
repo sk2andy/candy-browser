@@ -20,11 +20,13 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.zIndex
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalConfiguration
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.browser.BrowserController
 import dev.sk2andy.materialbrowser.browser.BrowserTab
@@ -36,6 +38,7 @@ import dev.sk2andy.materialbrowser.browser.userscript.UserScriptParser
 import dev.sk2andy.materialbrowser.browser.userscript.UserScriptRunAt
 import dev.sk2andy.materialbrowser.capsule.SiteCapsule
 import dev.sk2andy.materialbrowser.data.ToppingCatalogRefreshResult
+import dev.sk2andy.materialbrowser.data.AppLanguagePreferences
 import kotlin.math.roundToInt
 
 @Composable
@@ -70,6 +73,11 @@ internal fun BrowserSettingsOverlay(
     onOpenFirefoxExtensions: (() -> Unit)? = null,
 ) {
     val context = LocalContext.current
+    val configuration = LocalConfiguration.current
+    val appLanguagePreferences = remember(context) { AppLanguagePreferences(context) }
+    var appLanguageTag by remember(appLanguagePreferences, configuration) {
+        mutableStateOf(appLanguagePreferences.languageTag)
+    }
     val toppingCatalogResult = controller.toppingCatalogResult
     val toppingCatalogScripts = controller.userScripts.toList()
     val busyToppingIds = controller.busyToppingIds.toSet()
@@ -148,6 +156,12 @@ internal fun BrowserSettingsOverlay(
         },
     ) {
         SettingsScreen(
+            appLanguageTag = appLanguageTag,
+            supportedAppLocales = appLanguagePreferences.supportedLocales,
+            onAppLanguageChanged = { languageTag ->
+                appLanguagePreferences.setLanguage(languageTag)
+                appLanguageTag = appLanguagePreferences.languageTag
+            },
             browserEngineKind = controller.browserEngineKind,
             isDnsOverHttpsSupported = controller.isDnsOverHttpsSupported,
             isHttpsOnlySupported = controller.isHttpsOnlySupported,

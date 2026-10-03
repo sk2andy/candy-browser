@@ -162,7 +162,7 @@
             android:permission="android.permission.DUMP" />
         <activity
             android:name=".MainActivity"
-            android:configChanges="orientation|screenLayout|screenSize|smallestScreenSize|uiMode"
+            android:configChanges="layoutDirection|locale|orientation|screenLayout|screenSize|smallestScreenSize|uiMode"
             android:exported="true"
             android:launchMode="singleTask"
             android:supportsPictureInPicture="true"

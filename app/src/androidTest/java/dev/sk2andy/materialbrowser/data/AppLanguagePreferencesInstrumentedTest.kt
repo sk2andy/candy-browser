@@ -1,0 +1,119 @@
+package dev.sk2andy.materialbrowser.data
+
+import android.app.LocaleManager
+import android.content.Context
+import android.os.SystemClock
+import androidx.test.core.app.ActivityScenario
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
+import dev.sk2andy.materialbrowser.BuildConfig
+import dev.sk2andy.materialbrowser.MainActivity
+import dev.sk2andy.materialbrowser.R
+import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineKind
+import dev.sk2andy.materialbrowser.browser.BrowserController
+import org.junit.After
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertSame
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Test
+import org.junit.runner.RunWith
+
+@RunWith(AndroidJUnit4::class)
+class AppLanguagePreferencesInstrumentedTest {
+    private val instrumentation = InstrumentationRegistry.getInstrumentation()
+    private val context = instrumentation.targetContext
+    private val localeManager = context.getSystemService(LocaleManager::class.java)
+    private val originalLocales = localeManager.applicationLocales
+
+    @Before
+    fun setUp() {
+        clearPreferences()
+        GestureOnboardingStore(context).markCompleted()
+        ReleaseNotesStore(context).markHandled(BuildConfig.VERSION_CODE.toLong())
+        BrowserSessionStore(context).apply {
+            saveAndroidBrowserEngineKind(AndroidBrowserEngineKind.SystemWebView)
+            saveStartupAnimationEnabled(false)
+        }
+    }
+
+    @After
+    fun tearDown() {
+        localeManager.applicationLocales = originalLocales
+        clearPreferences()
+    }
+
+    @Test
+    fun nativeLocaleChangeKeepsActivityAndPrivateTabsAndPersistsAcrossLaunches() {
+        val preferences = AppLanguagePreferences(context)
+        assertEquals(
+            setOf("en", "de", "fr", "pt", "es", "pl", "cs"),
+            preferences.supportedLocales.map { it.toLanguageTag() }.toSet(),
+        )
+        preferences.setLanguage("pl")
+        preferences.setLanguage("unknown")
+        assertEquals("pl", preferences.languageTag)
+        var privateTabId = ""
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            awaitLanguage(scenario, "pl")
+            lateinit var originalActivity: MainActivity
+            lateinit var originalController: BrowserController
+            var tabIds = emptyList<String>()
+            scenario.onActivity { activity ->
+                originalActivity = activity
+                originalController = activity.browserControllerForTesting()
+                originalController.createTab(isIncognito = true)
+                privateTabId = originalController.selectedTabId
+                tabIds = originalController.tabs.map { it.id }
+                assertEquals("Język aplikacji", activity.getString(R.string.settings_app_language))
+                AppLanguagePreferences(activity).setLanguage("cs")
+            }
+            awaitLanguage(scenario, "cs")
+            scenario.onActivity { activity ->
+                assertSame(originalActivity, activity)
+                val controller = activity.browserControllerForTesting()
+                assertSame(originalController, controller)
+                assertEquals(tabIds, controller.tabs.map { it.id })
+                assertEquals(privateTabId, controller.selectedTabId)
+                assertTrue(controller.selectedTab.isIncognito)
+                assertEquals("Jazyk aplikace", activity.getString(R.string.settings_app_language))
+            }
+            assertEquals("cs", AppLanguagePreferences(context).languageTag)
+        }
+
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            awaitLanguage(scenario, "cs")
+            assertFalse(
+                context.getSharedPreferences(BrowserSessionStore.PREFERENCES_NAME, Context.MODE_PRIVATE)
+                    .getString(BrowserSessionStore.KEY_TABS, "").orEmpty().contains(privateTabId),
+            )
+            scenario.onActivity { activity -> AppLanguagePreferences(activity).setLanguage("") }
+            awaitLanguage(scenario, localeManager.systemLocales[0].language)
+            assertEquals("", preferences.languageTag)
+        }
+    }
+
+    private fun awaitLanguage(scenario: ActivityScenario<MainActivity>, language: String) {
+        val deadline = SystemClock.uptimeMillis() + 10_000L
+        var applied = false
+        while (!applied && SystemClock.uptimeMillis() < deadline) {
+            scenario.onActivity { activity ->
+                applied = activity.resources.configuration.locales[0].language == language
+            }
+            if (!applied) SystemClock.sleep(50L)
+        }
+        assertTrue("App locale must update to $language", applied)
+        instrumentation.waitForIdleSync()
+    }
+
+    private fun clearPreferences() {
+        listOf(
+            BrowserSessionStore.PREFERENCES_NAME,
+            GestureOnboardingStore.PREFERENCES_NAME,
+            ReleaseNotesStore.PREFERENCES_NAME,
+        ).forEach { name ->
+            context.getSharedPreferences(name, Context.MODE_PRIVATE).edit().clear().commit()
+        }
+    }
+}

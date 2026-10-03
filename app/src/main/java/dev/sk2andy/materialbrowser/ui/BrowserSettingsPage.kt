@@ -30,8 +30,10 @@ import dev.sk2andy.materialbrowser.browser.StartupAddressFocusMode
 import dev.sk2andy.materialbrowser.shared.ui.settings.TranslationProviderSettings
 import dev.sk2andy.materialbrowser.shared.ui.settings.TranslationProviderSettingsStrings
 import dev.sk2andy.materialbrowser.ui.theme.browserChromeColor
+import java.util.Locale
 
 internal object BrowserSettingsTestTags {
+    const val AppLanguage = "browser_settings_app_language"
     const val StartupAnimation = "browser_settings_startup_animation"
     const val StartupAddressFocus = "browser_settings_startup_address_focus"
     const val FavoriteLaunchAnimation = "browser_settings_favorite_launch_animation"
@@ -46,6 +48,9 @@ internal object BrowserSettingsTestTags {
 
 @Composable
 internal fun BrowserSettingsPage(
+    appLanguageTag: String = "",
+    supportedAppLocales: List<Locale> = emptyList(),
+    onAppLanguageChanged: (String) -> Unit = {},
     browserEngineKind: AndroidBrowserEngineKind = AndroidBrowserEngineKind.GeckoView,
     pageTranslationProvider: PageTranslationProvider,
     isExternalLinkPreviewEnabled: Boolean = false,
@@ -83,6 +88,14 @@ internal fun BrowserSettingsPage(
     ) {
         SettingsSectionTitle(stringResource(R.string.settings_browser_group_general))
         Spacer(Modifier.height(8.dp))
+        if (supportedAppLocales.isNotEmpty()) {
+            AppLanguageSettings(
+                languageTag = appLanguageTag,
+                supportedLocales = supportedAppLocales,
+                onLanguageChanged = onAppLanguageChanged,
+            )
+            Spacer(Modifier.height(8.dp))
+        }
         if (!BuildConfig.SYSTEM_WEBVIEW_ONLY) {
             Box {
                 SettingsChoice(

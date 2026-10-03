@@ -1404,4 +1404,6 @@
     <string name="developer_options_gecko_logging_status_export">Für Export oder Löschen pausiert</string>
     <string name="developer_options_gecko_logging_status_limit">Aufzeichnungslimit erreicht. Zum Neustart Logging aus- und einschalten.</string>
     <string name="developer_options_gecko_logging_status_failed">Nach einem Fehler gestoppt. Für einen neuen Versuch Logging aus- und einschalten.</string>
+    <string name="settings_app_language">App-Sprache</string>
+    <string name="settings_app_language_system">Gerätesprache verwenden</string>
 </resources>
