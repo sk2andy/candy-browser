@@ -15,7 +15,7 @@
 | Boundary | Contract |
 | --- | --- |
 | Default | Disabled in both Full and FOSS builds; no upload or additional permissions |
-| Capture | Fixed app startup, extension installation/read/mutation and renderer termination events; uncaught JVM exceptions include bounded error classes and code frames; Android native crash history adds the crashed thread's stack |
+| Capture | Fixed app startup, extension installation/read/mutation, renderer termination, manual address-bar restoration and automatic address-bar parking events (visible control obstruction or focused input obstruction with page-owned IME); uncaught JVM exceptions include bounded error classes and code frames; Android native crash history adds the crashed thread's stack |
 | Excluded data | No exception messages, source filenames, URLs, page content, titles, inputs, extension IDs, profile names, or thread names |
 | Private tabs | Any open private tab pauses logging across controllers; entering private mode invalidates queued writes; individual engine callbacks also reject private sessions |
 | Retention | Two rotating log files, each at most 256 KiB; each record at most 16 KiB; bounded background queue drops excess events; small separate capture cutoff/revocation metadata remains when logs are deleted |

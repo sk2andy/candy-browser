@@ -17,6 +17,9 @@ internal enum class AppLogEvent {
     GeckoRendererCrashed,
     GeckoRendererKilled,
     SystemRendererGone,
+    AddressBarAutoParkedForVisibleControl,
+    AddressBarAutoParkedForFocusedInput,
+    AddressBarManuallyUnparked,
 }
 
 /** Only code metadata enters logs. Exception messages, file paths and browser input never do. */

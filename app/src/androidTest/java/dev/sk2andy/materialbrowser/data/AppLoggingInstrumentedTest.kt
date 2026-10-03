@@ -61,6 +61,29 @@ class AppLoggingInstrumentedTest {
     }
 
     @Test
+    fun exportsAddressBarParkingReasonsAndManualRestoration() {
+        val uri = createExportUri()
+        try {
+            AppLogging.setPrivateBrowsingActive(false)
+            assertTrue(AppLogging.setEnabled(true))
+            assertTrue(AppLogging.clear())
+            AppLogging.record(AppLogEvent.AddressBarAutoParkedForVisibleControl)
+            AppLogging.record(AppLogEvent.AddressBarAutoParkedForFocusedInput)
+            AppLogging.record(AppLogEvent.AddressBarManuallyUnparked)
+
+            val exported = exportText(uri)
+            assertTrue(exported.contains(" AddressBarAutoParkedForVisibleControl\n"))
+            assertTrue(exported.contains(" AddressBarAutoParkedForFocusedInput\n"))
+            assertTrue(exported.contains(" AddressBarManuallyUnparked\n"))
+            assertFalse(exported.contains("https://"))
+        } finally {
+            AppLogging.setPrivateBrowsingActive(false)
+            AppLogging.setEnabled(false)
+            context.contentResolver.delete(uri, null, null)
+        }
+    }
+
+    @Test
     fun privateBrowsingDropsEventsAndClearRemovesSavedAndQueuedRecords() {
         val uri = createExportUri()
         try {
@@ -72,11 +95,15 @@ class AppLoggingInstrumentedTest {
 
             AppLogging.record(AppLogEvent.UncaughtException, IllegalStateException(), sync = true)
             AppLogging.record(AppLogEvent.GeckoRendererCrashed)
+            AppLogging.record(AppLogEvent.AddressBarAutoParkedForVisibleControl, sync = true)
+            AppLogging.record(AppLogEvent.AddressBarAutoParkedForFocusedInput, sync = true)
+            AppLogging.record(AppLogEvent.AddressBarManuallyUnparked, sync = true)
 
             val privateExport = exportText(uri)
             assertTrue(privateExport.contains(" BrowserStarted\n"))
             assertFalse(privateExport.contains("UncaughtException"))
             assertFalse(privateExport.contains("GeckoRendererCrashed"))
+            assertFalse(privateExport.contains("AddressBar"))
             AppLogging.setPrivateBrowsingActive(false)
             repeat(128) { AppLogging.record(AppLogEvent.ExtensionInstallFailed) }
 

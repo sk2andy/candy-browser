@@ -1501,6 +1501,7 @@ class BrowserController(
     private var pendingAddressBarAutoDockProbe: Runnable? = null
     private var pendingAddressBarAutoDockTabId: String? = null
     private var addressBarAutoDockProbeGeneration = 0L
+    private val manuallyUnparkedAddressBarTabIds = mutableSetOf<String>()
     private val pendingGeckoPreviewCaptures = mutableMapOf<String, PendingGeckoPreviewCapture>()
     @VisibleForTesting
     var previewCaptureRequestCountForTesting = 0
@@ -9435,7 +9436,13 @@ class BrowserController(
         val normalized = placement?.normalized()
         if (normalized != null && !isAddressBarDockingEnabled) return
         if (addressBarDockPlacement == normalized) return
-        if (normalized != null) cancelAddressBarAutoDockProbe()
+        cancelAddressBarAutoDockProbe()
+        if (normalized == null && isAddressBarDockingEnabled) {
+            manuallyUnparkedAddressBarTabIds += selectedTabId
+            AppLogging.record(AppLogEvent.AddressBarManuallyUnparked)
+        } else if (normalized != null) {
+            manuallyUnparkedAddressBarTabIds.remove(selectedTabId)
+        }
         collapseBottomBar()
         addressBarDockPlacement = normalized
         if (normalized != null) lastAddressBarDockPlacement = normalized
@@ -12759,6 +12766,7 @@ class BrowserController(
             BrowserEngineEventType.NavigationStarted -> {
                 invalidateExternalAppPromptForNavigation(event.tabId)
                 cancelAddressBarAutoDockProbe(event.tabId)
+                manuallyUnparkedAddressBarTabIds.remove(event.tabId)
                 val navigatingSession = browserEngineSessions[event.tabId] ?: return
                 browserEngineDocumentGenerations[event.tabId] =
                     browserEngineDocumentGenerations.getOrDefault(event.tabId, 0L) + 1L
@@ -13073,6 +13081,7 @@ class BrowserController(
     ) {
         if (
             selectedTabId != tabId ||
+            tabId in manuallyUnparkedAddressBarTabIds ||
             !isAddressBarAutoDockBrowserVisible() ||
             browserChromeOwnsIme ||
             (!requiresPageIme && selectedTab.isLoading)
@@ -13126,6 +13135,7 @@ class BrowserController(
                     hasViewportRect = viewportRect != null,
                     isBrowserVisible = isAddressBarAutoDockBrowserVisible(),
                     browserChromeOwnsIme = browserChromeOwnsIme,
+                    manuallyUnparked = tabId in manuallyUnparkedAddressBarTabIds,
                 )
             ) {
                 cancelAddressBarAutoDockProbe()
@@ -13146,6 +13156,7 @@ class BrowserController(
                 isPrivatePage = tabs.firstOrNull { tab -> tab.id == tabId }?.isIncognito != false,
                 isBrowserVisible = isAddressBarAutoDockBrowserVisible(),
                 browserChromeOwnsIme = browserChromeOwnsIme,
+                manuallyUnparked = tabId in manuallyUnparkedAddressBarTabIds,
             )
             if (!probeIsCurrent) {
                 cancelAddressBarAutoDockProbe()
@@ -13178,6 +13189,7 @@ class BrowserController(
                         false,
                     isBrowserVisible = isAddressBarAutoDockBrowserVisible(),
                     browserChromeOwnsIme = browserChromeOwnsIme,
+                    manuallyUnparked = tabId in manuallyUnparkedAddressBarTabIds,
                 )
                 if (!resultIsCurrent) {
                     cancelAddressBarAutoDockProbe()
@@ -13185,6 +13197,13 @@ class BrowserController(
                 }
                 if (result == TextInputOcclusionProbeResult.Occluded) {
                     parkAddressBarOnRight()
+                    AppLogging.record(
+                        if (mode == TextInputOcclusionProbeMode.FocusedTextInput) {
+                            AppLogEvent.AddressBarAutoParkedForFocusedInput
+                        } else {
+                            AppLogEvent.AddressBarAutoParkedForVisibleControl
+                        },
+                    )
                     return@probeTextInputOcclusion
                 }
                 val retry = AddressBarAutoDockRules.nextProbeRetry(
@@ -13445,6 +13464,7 @@ class BrowserController(
         removePendingInitialBrowserEngineNavigation(tabId)
         browserEngineNavigationRequestGenerations.remove(tabId)
         browserEngineDocumentGenerations.remove(tabId)
+        manuallyUnparkedAddressBarTabIds.remove(tabId)
         autoDeAmpReplacementGuards.remove(tabId)
         pendingBrowserEngineLoadRequests.remove(tabId)
         invalidateMedia3OwnerFor(tabId)

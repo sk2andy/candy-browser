@@ -77,10 +77,12 @@ internal object AddressBarAutoDockRules {
         hasViewportRect: Boolean,
         isBrowserVisible: Boolean,
         browserChromeOwnsIme: Boolean,
+        manuallyUnparked: Boolean,
     ): Boolean = isBrowserVisible &&
         !browserChromeOwnsIme &&
         dockingEnabled &&
         !addressBarDocked &&
+        !manuallyUnparked &&
         selectedTabMatches &&
         isHttpPage &&
         !isPrivatePage &&
@@ -97,11 +99,13 @@ internal object AddressBarAutoDockRules {
         isPrivatePage: Boolean,
         isBrowserVisible: Boolean,
         browserChromeOwnsIme: Boolean,
+        manuallyUnparked: Boolean,
     ): Boolean =
         isBrowserVisible &&
         !browserChromeOwnsIme &&
         dockingEnabled &&
         !addressBarDocked &&
+        !manuallyUnparked &&
         selectedTabMatches &&
         sessionMatches &&
         navigationMatches &&

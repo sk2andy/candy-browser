@@ -37,11 +37,14 @@ import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineEvent
 import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineEventType
 import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineFailureKind
 import dev.sk2andy.materialbrowser.data.BrowserSessionStore
+import dev.sk2andy.materialbrowser.data.AppLogging
+import dev.sk2andy.materialbrowser.data.AppLogStore
 import dev.sk2andy.materialbrowser.data.AddressBarDockPlacement
 import dev.sk2andy.materialbrowser.data.DeveloperSettings
 import dev.sk2andy.materialbrowser.data.GeckoSafeAreaSettings
 import dev.sk2andy.materialbrowser.data.HistoryEntry
 import dev.sk2andy.materialbrowser.data.HistoryRecordingMode
+import java.io.File
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import org.junit.After
@@ -66,6 +69,7 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
     private var originalHistoryRecordingMode: HistoryRecordingMode? = null
     private var originalExternalAppLinkHandling: ExternalAppLinkHandling? = null
     private var originalAutoDeAmpEnabled: Boolean? = null
+    private var originalAppLoggingEnabled: Boolean? = null
     private var originalAddressBarDockingEnabled: Boolean? = null
     private var originalAddressBarDocked: Boolean? = null
     private var originalLastAddressBarDockPlacement: AddressBarDockPlacement? = null
@@ -369,6 +373,7 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
     fun latePageControlParksAddressBarWithoutIme() {
         lateinit var session: ReentrantAttachSession
         composeRule.runOnIdle {
+            enableAddressBarTestLogging()
             session = startAddressBarAutoDockSession(
                 probeResults = listOf(
                     TextInputOcclusionProbeResult.NoFocusedTextInput,
@@ -388,6 +393,12 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
             )
             requireNotNull(controller).updateAddressBarDocked(false)
         }
+        composeRule.waitUntil(timeoutMillis = 5_000L) {
+            val logs = addressBarTestLogs()
+            logs.contains(" AddressBarAutoParkedForVisibleControl\n") &&
+                logs.contains(" AddressBarManuallyUnparked\n")
+        }
+        assertFalse(addressBarTestLogs().contains("AddressBarAutoParkedForFocusedInput"))
     }
 
     @Test
@@ -500,6 +511,114 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
         }
     }
 
+    @Test
+    fun manualUnparkingSurvivesPageSignalsUntilNewNavigation() {
+        lateinit var session: ReentrantAttachSession
+        composeRule.runOnIdle {
+            session = startAddressBarAutoDockSession(
+                probeResults = listOf(
+                    TextInputOcclusionProbeResult.Occluded,
+                    TextInputOcclusionProbeResult.Occluded,
+                ),
+            )
+        }
+        composeRule.waitUntil(timeoutMillis = 5_000L) {
+            requireNotNull(controller).isAddressBarDocked
+        }
+        composeRule.runOnIdle {
+            val browserController = requireNotNull(controller)
+            browserController.updateAddressBarDocked(false)
+            browserController.setAddressBarBoundsInViewport(
+                leftPx = 50f,
+                topPx = 700f,
+                rightPx = 950f,
+                bottomPx = 800f,
+                viewportWidthPx = 1_000f,
+                viewportHeightPx = 1_000f,
+            )
+            browserController.onWindowInsetsChanged(
+                WindowInsetsCompat.Builder()
+                    .setInsets(WindowInsetsCompat.Type.ime(), Insets.of(0, 0, 0, 600))
+                    .setVisible(WindowInsetsCompat.Type.ime(), true)
+                    .build(),
+            )
+            browserController.onPause()
+            browserController.onResume()
+            browserController.dispatchGeckoEngineEventForTesting(
+                BrowserEngineEvent(
+                    tabId = session.tabId,
+                    type = BrowserEngineEventType.StateChanged,
+                    address = "https://bottom-controls.test/#comments",
+                    title = null,
+                    canGoBack = false,
+                    canGoForward = false,
+                    failureDescription = null,
+                ),
+            )
+        }
+        Thread.sleep(2_500L)
+        composeRule.runOnIdle {
+            val browserController = requireNotNull(controller)
+            assertEquals(1, session.textInputOcclusionProbeCount)
+            assertFalse(browserController.isAddressBarDocked)
+            for (type in listOf(
+                BrowserEngineEventType.NavigationStarted,
+                BrowserEngineEventType.NavigationCommitted,
+            )) {
+                browserController.dispatchGeckoEngineEventForTesting(
+                    BrowserEngineEvent(
+                        tabId = session.tabId,
+                        type = type,
+                        address = "https://replacement.test/",
+                        title = null,
+                        canGoBack = false,
+                        canGoForward = false,
+                        failureDescription = null,
+                    ),
+                )
+            }
+        }
+        composeRule.waitUntil(timeoutMillis = 5_000L) {
+            session.textInputOcclusionProbeCount == 2 &&
+                requireNotNull(controller).isAddressBarDocked
+        }
+    }
+
+    @Test
+    fun stalePageControlResultCannotParkAfterManualUnparking() {
+        lateinit var session: ReentrantAttachSession
+        composeRule.runOnIdle {
+            session = startAddressBarAutoDockSession(probeResults = emptyList())
+            session.deferTextInputOcclusionCallbacks = true
+        }
+        composeRule.waitUntil(timeoutMillis = 5_000L) {
+            session.textInputOcclusionProbeCount == 1
+        }
+        composeRule.runOnIdle {
+            val browserController = requireNotNull(controller)
+            browserController.parkAddressBarOnRight()
+            browserController.updateAddressBarDocked(false)
+            session.textInputOcclusionCallbacks.removeAt(0)(TextInputOcclusionProbeResult.Occluded)
+            assertFalse(browserController.isAddressBarDocked)
+        }
+        Thread.sleep(2_500L)
+        composeRule.runOnIdle {
+            assertEquals(1, session.textInputOcclusionProbeCount)
+            assertFalse(requireNotNull(controller).isAddressBarDocked)
+        }
+    }
+
+    private fun enableAddressBarTestLogging() {
+        originalAppLoggingEnabled = BrowserSessionStore(composeRule.activity)
+            .loadDeveloperSettings().appLoggingEnabled
+        assertTrue(AppLogging.setEnabled(true))
+        assertTrue(AppLogging.clear())
+    }
+
+    private fun addressBarTestLogs(): String = AppLogStore(
+        File(composeRule.activity.noBackupFilesDir, "app_logs"),
+    ).snapshot()
+
     private fun startAddressBarAutoDockSession(
         probeResults: List<TextInputOcclusionProbeResult>,
     ): ReentrantAttachSession {
@@ -549,6 +668,7 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
     fun webpageImeOpeningReprobesAndParksOccludingAddressBar() {
         lateinit var session: ReentrantAttachSession
         composeRule.runOnIdle {
+            enableAddressBarTestLogging()
             val browserController = createAddressBarAutoDockController()
             val tabId = browserController.selectedTabId
             session = ReentrantAttachSession(
@@ -627,6 +747,10 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
             assertTrue(requireNotNull(controller).isAddressBarDocked)
             requireNotNull(controller).updateAddressBarDocked(false)
         }
+        composeRule.waitUntil(timeoutMillis = 5_000L) {
+            addressBarTestLogs().contains(" AddressBarAutoParkedForFocusedInput\n")
+        }
+        assertFalse(addressBarTestLogs().contains("AddressBarAutoParkedForVisibleControl"))
     }
 
     @Test
@@ -836,6 +960,7 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
                 originalLastAddressBarDockPlacement?.let(store::saveAddressBarDockPlacement)
                 originalAddressBarDocked?.let(store::saveAddressBarDocked)
                 originalAddressBarDockingEnabled?.let(store::saveAddressBarDockingEnabled)
+                originalAppLoggingEnabled?.let(AppLogging::setEnabled)
             }
         }
     }

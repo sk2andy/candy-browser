@@ -85,6 +85,7 @@ class AddressBarAutoDockRulesTest {
                 hasViewportRect = true,
                 isBrowserVisible = true,
                 browserChromeOwnsIme = false,
+                manuallyUnparked = false,
             ),
         )
         assertFalse(
@@ -97,6 +98,7 @@ class AddressBarAutoDockRulesTest {
                 hasViewportRect = true,
                 isBrowserVisible = true,
                 browserChromeOwnsIme = false,
+                manuallyUnparked = false,
             ),
         )
     }
@@ -114,6 +116,7 @@ class AddressBarAutoDockRulesTest {
             isPrivatePage = false,
             isBrowserVisible = true,
             browserChromeOwnsIme = false,
+            manuallyUnparked = false,
         )
         val staleGeometry = AddressBarAutoDockRules.isProbeContextCurrent(
             dockingEnabled = true,
@@ -126,10 +129,43 @@ class AddressBarAutoDockRulesTest {
             isPrivatePage = false,
             isBrowserVisible = true,
             browserChromeOwnsIme = false,
+            manuallyUnparked = false,
         )
 
         assertTrue(accepted)
         assertFalse(staleGeometry)
+    }
+
+    @Test
+    fun `manual restoration rejects probes and late callbacks`() {
+        assertFalse(
+            AddressBarAutoDockRules.shouldProbe(
+                dockingEnabled = true,
+                addressBarDocked = false,
+                selectedTabMatches = true,
+                isHttpPage = true,
+                isPrivatePage = false,
+                hasViewportRect = true,
+                isBrowserVisible = true,
+                browserChromeOwnsIme = false,
+                manuallyUnparked = true,
+            ),
+        )
+        assertFalse(
+            AddressBarAutoDockRules.isProbeContextCurrent(
+                dockingEnabled = true,
+                addressBarDocked = false,
+                selectedTabMatches = true,
+                sessionMatches = true,
+                navigationMatches = true,
+                urlMatches = true,
+                viewportRectMatches = true,
+                isPrivatePage = false,
+                isBrowserVisible = true,
+                browserChromeOwnsIme = false,
+                manuallyUnparked = true,
+            ),
+        )
     }
 
     @Test
@@ -181,6 +217,7 @@ class AddressBarAutoDockRulesTest {
                     hasViewportRect = true,
                     isBrowserVisible = isBrowserVisible,
                     browserChromeOwnsIme = browserChromeOwnsIme,
+                    manuallyUnparked = false,
                 ),
             )
             assertFalse(
@@ -195,6 +232,7 @@ class AddressBarAutoDockRulesTest {
                     isPrivatePage = false,
                     isBrowserVisible = isBrowserVisible,
                     browserChromeOwnsIme = browserChromeOwnsIme,
+                    manuallyUnparked = false,
                 ),
             )
         }
