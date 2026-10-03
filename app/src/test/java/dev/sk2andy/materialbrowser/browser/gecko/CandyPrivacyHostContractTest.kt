@@ -106,6 +106,7 @@ class CandyPrivacyHostContractTest {
     @Test
     fun `css safe area options cross the authenticated policy as bounded flat fields`() {
         val settings = GeckoSafeAreaSettings(
+            addInsetToNegativeTop = true,
             recheckAddedElements = false,
             recheckChangedElements = false,
             requireInteractionForUpdates = false,
@@ -124,6 +125,7 @@ class CandyPrivacyHostContractTest {
         assertEquals(0, message.getInt("topInsetPx"))
         assertEquals(172, message.getInt("cssSafeAreaTopInsetPx"))
         assertTrue(message.getBoolean("geckoSafeAreaEnabled"))
+        assertTrue(message.getBoolean("addInsetToNegativeTop"))
         assertFalse(message.getBoolean("recheckAddedElements"))
         assertFalse(message.getBoolean("recheckChangedElements"))
         assertFalse(message.getBoolean("requireInteractionForUpdates"))
@@ -133,6 +135,13 @@ class CandyPrivacyHostContractTest {
         assertEquals(24, message.getInt("maxElementsPerBatch"))
         assertEquals(6, message.getInt("maxBatchDurationMillis"))
         assertEquals(768, message.getInt("maxInitialElements"))
+    }
+
+    @Test
+    fun `negative top inset addition defaults off in the authenticated policy`() {
+        val message = GeckoPrivacyPolicy.Disabled.toMessage(token = "session-token", revision = 1)
+
+        assertFalse(message.getBoolean("addInsetToNegativeTop"))
     }
 
     @Test

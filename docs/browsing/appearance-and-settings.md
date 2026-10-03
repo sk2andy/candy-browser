@@ -48,6 +48,7 @@
 | Developer safe-area layout quiet | 100–800 ms in 50-ms steps | 400 ms |
 | Developer safe-area failed checks | 2–5 | 3 |
 | Force native safe-area fallback | Off, on | Off |
+| Gecko inset addition for negative CSS `top` | Off, on | Off |
 | Touch and input diagnostics | Off, on for current process | Off |
 
 ## Cross-platform settings migration
@@ -198,6 +199,9 @@ Frosted exposes three persisted controls while selected:
   Gecko and System WebView without reloading, and reset any pending fallback confirmation chain.
   The native-fallback override updates document policy before redispatching window insets so pages
   never retain both Candy's scrollable inset and a native top margin.
+- Gecko edge-to-edge leaves negative CSS `top` values unchanged by default. The persisted
+  **Add inset to negative top values** developer switch restores inset addition for fixed and
+  sticky elements, applies live without a reload, and returns off when Gecko settings reset.
 - HTTP password-manager selection lives only in Developer options. It stays Gecko-only, defaults
   off and requires an explicit insecure-HTTP warning confirmation each time it is enabled.
 - Touch and input diagnostics are process-local and automatically return off after process restart.

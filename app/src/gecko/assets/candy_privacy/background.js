@@ -423,6 +423,7 @@ function contentPolicy(policy) {
     cssSafeAreaTopInsetPx: Number.isSafeInteger(policy?.cssSafeAreaTopInsetPx) ?
       Math.max(0, policy.cssSafeAreaTopInsetPx) : 0,
     geckoSafeAreaEnabled: policy?.geckoSafeAreaEnabled === true,
+    addInsetToNegativeTop: policy?.addInsetToNegativeTop === true,
     recheckAddedElements: policy?.recheckAddedElements === true,
     recheckChangedElements: policy?.recheckChangedElements === true,
     requireInteractionForUpdates: policy?.requireInteractionForUpdates !== false,

@@ -10,6 +10,7 @@ const state = {
   domDiagnosticsEnabled: false,
   cssSafeAreaTopInsetPx: 0,
   enabled: false,
+  addInsetToNegativeTop: false,
   recheckAddedElements: false,
   recheckChangedElements: false,
   requireInteractionForUpdates: true,
@@ -131,6 +132,7 @@ function applyPolicy(policy) {
   state.cssSafeAreaTopInsetPx = Number.isSafeInteger(policy.cssSafeAreaTopInsetPx) ?
     Math.max(0, policy.cssSafeAreaTopInsetPx) : 0;
   state.enabled = policy.geckoSafeAreaEnabled === true;
+  state.addInsetToNegativeTop = policy.addInsetToNegativeTop === true;
   state.recheckAddedElements = policy.recheckAddedElements === true;
   state.recheckChangedElements = policy.recheckChangedElements === true;
   state.requireInteractionForUpdates = policy.requireInteractionForUpdates !== false;

@@ -58,6 +58,7 @@ internal object DeveloperOptionsTestTags {
     const val ShowReleaseNotes = "developer_options_show_release_notes"
     const val Reset = "developer_options_reset"
     const val GeckoSafeAreaEnabled = "developer_options_gecko_safe_area_enabled"
+    const val GeckoAddInsetToNegativeTop = "developer_options_gecko_add_inset_to_negative_top"
     const val GeckoRecheckAddedElements = "developer_options_gecko_recheck_added_elements"
     const val GeckoRecheckChangedElements = "developer_options_gecko_recheck_changed_elements"
     const val GeckoRequireInteraction = "developer_options_gecko_require_interaction"
@@ -440,6 +441,17 @@ private fun GeckoSafeAreaSettingsSection(
             checked = settings.enabled,
             onCheckedChange = { onSettingsChanged(settings.copy(enabled = it)) },
             modifier = Modifier.testTag(DeveloperOptionsTestTags.GeckoSafeAreaEnabled),
+        )
+        SettingsPageSpacer()
+        SettingsSwitch(
+            title = stringResource(R.string.developer_options_gecko_add_inset_to_negative_top),
+            subtitle = stringResource(
+                R.string.developer_options_gecko_add_inset_to_negative_top_summary,
+            ),
+            checked = settings.addInsetToNegativeTop,
+            enabled = settings.enabled,
+            onCheckedChange = { onSettingsChanged(settings.copy(addInsetToNegativeTop = it)) },
+            modifier = Modifier.testTag(DeveloperOptionsTestTags.GeckoAddInsetToNegativeTop),
         )
         SettingsPageSpacer()
         SettingsSwitch(

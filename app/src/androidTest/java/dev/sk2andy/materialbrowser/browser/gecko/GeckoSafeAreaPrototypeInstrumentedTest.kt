@@ -29,6 +29,91 @@ class GeckoSafeAreaPrototypeInstrumentedTest {
     private val instrumentation = InstrumentationRegistry.getInstrumentation()
 
     @Test
+    fun negativeTopStatesStayHiddenAndDeveloperSettingRestoresTheInsetLive() {
+        val title = AtomicReference<String?>(null)
+        val policy = GeckoPrivacyPolicy.Disabled.copy(cssSafeAreaTopInsetPx = NATIVE_TOP_PX)
+        EdgeToEdgeSiteFixtureServer { _ -> NEGATIVE_TOP_HTML }.use { server ->
+            ActivityScenario.launch(GeckoScrollTestActivity::class.java).use { scenario ->
+                lateinit var session: GeckoBrowserSession
+                lateinit var view: View
+                scenario.onActivity { activity ->
+                    WindowCompat.setDecorFitsSystemWindows(activity.window, false)
+                    session = GeckoRuntimeOwner.getOrCreate(activity).createSession(
+                        profileId = "safe-area-negative-${UUID.randomUUID()}",
+                        isPrivate = false,
+                        privacyPolicy = policy.copy(geckoSafeAreaSettings = GeckoSafeAreaSettings(enabled = false)),
+                    )
+                    session.bindExtensionTab("safe-area-negative-${UUID.randomUUID()}", 1)
+                    session.setStateListener { state -> title.set(state.title) }
+                    view = session.createView(activity)
+                    activity.setContentView(view)
+                    session.setActive(true)
+                    assertTrue(session.loadUrl(server.fixtureUrl("/site-matrix/negative-top")))
+                }
+                try {
+                    awaitReport(title) { it.getBoolean("loaded") }
+                    scenario.onActivity { updateNativeTop(view) }
+                    awaitReport(title) { it.getDouble("env") > 0 }
+                    fun updatePolicy(next: GeckoPrivacyPolicy) {
+                        val ready = CountDownLatch(1)
+                        scenario.onActivity { session.updatePrivacyPolicy(next, onReady = ready::countDown) }
+                        assertTrue("Prototype policy acknowledgement", ready.await(30, TimeUnit.SECONDS))
+                    }
+                    updatePolicy(policy)
+                    val protected = awaitReport(title) {
+                        abs(it.getDouble("movingInline") - it.getDouble("env") - 8) < 0.02 &&
+                            abs(it.getDouble("movingClass") - it.getDouble("env") - 8) < 0.02
+                    }
+                    assertEquals(-64.0, protected.getDouble("inlineFixed"), 0.02)
+                    assertEquals(-8.0, protected.getDouble("inlineSticky"), 0.02)
+                    assertEquals(-64.0, protected.getDouble("selectorFixed"), 0.02)
+                    assertEquals(-8.0, protected.getDouble("selectorSticky"), 0.02)
+
+                    scenario.onActivity { session.scrollToVerticalOffset(600) }
+                    val hidden = awaitReport(title) {
+                        it.getBoolean("hidden") && abs(it.getDouble("movingInline") + 64) < 0.02 &&
+                            abs(it.getDouble("movingClass") + 64) < 0.02
+                    }
+                    assertEquals(0, hidden.getInt("trustedClicks"))
+                    assertEquals("-64px", hidden.getString("movingInlineAuthorTop"))
+                    assertEquals("", hidden.getString("movingClassAuthorTop"))
+
+                    updatePolicy(policy.copy(geckoSafeAreaSettings = GeckoSafeAreaSettings(addInsetToNegativeTop = true)))
+                    val legacy = awaitReport(title) {
+                        abs(it.getDouble("inlineFixed") - it.getDouble("env") + 64) < 0.02 &&
+                            abs(it.getDouble("inlineSticky") - it.getDouble("env") + 8) < 0.02 &&
+                            abs(it.getDouble("selectorFixed") - it.getDouble("env") + 64) < 0.02 &&
+                            abs(it.getDouble("selectorSticky") - it.getDouble("env") + 8) < 0.02
+                    }
+                    assertEquals(0, legacy.getInt("trustedClicks"))
+                    assertEquals("-64px", legacy.getString("movingInlineAuthorTop"))
+                    assertEquals("", legacy.getString("movingClassAuthorTop"))
+
+                    updatePolicy(policy)
+                    val restored = awaitReport(title) {
+                        abs(it.getDouble("inlineFixed") + 64) < 0.02 &&
+                            abs(it.getDouble("inlineSticky") + 8) < 0.02 &&
+                            abs(it.getDouble("selectorFixed") + 64) < 0.02 &&
+                            abs(it.getDouble("selectorSticky") + 8) < 0.02 &&
+                            abs(it.getDouble("movingInline") + 64) < 0.02 &&
+                            abs(it.getDouble("movingClass") + 64) < 0.02
+                    }
+                    assertTrue(restored.getBoolean("hidden"))
+                    assertEquals(0, restored.getInt("trustedClicks"))
+                    assertEquals("-64px", restored.getString("movingInlineAuthorTop"))
+                    assertEquals("", restored.getString("movingClassAuthorTop"))
+                } finally {
+                    scenario.onActivity {
+                        session.releaseView(view)
+                        session.setActive(false)
+                        session.close()
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
     fun rootAbsoluteHeaderStackKeepsItsSpacingBelowTheTopSafeArea() {
         val title = AtomicReference<String?>(null)
         val policy = GeckoPrivacyPolicy.Disabled.copy(cssSafeAreaTopInsetPx = NATIVE_TOP_PX)
@@ -555,6 +640,46 @@ class GeckoSafeAreaPrototypeInstrumentedTest {
     private companion object {
         const val NATIVE_TOP_PX = 137
         const val REPORT_PREFIX = "Candy prototype: "
+        val NEGATIVE_TOP_HTML = """
+            <!doctype html><meta name="viewport" content="width=device-width,initial-scale=1">
+            <style>
+              html,body { margin:0; }
+              #selector-fixed { position:fixed; top:-64px; }
+              #selector-sticky { position:sticky; top:-8px; }
+              #moving-class { position:fixed; top:8px; }
+              #moving-class.hidden { top:-64px; }
+              #probe { position:absolute; padding-top:env(safe-area-inset-top,0px); }
+              #tail { height:3000px; }
+            </style>
+            <body>
+              <div id="probe"></div>
+              <div id="inline-fixed" style="position:fixed;top:-64px">Inline fixed</div>
+              <div id="inline-sticky" style="position:sticky;top:-8px">Inline sticky</div>
+              <div id="selector-fixed">Selector fixed</div><div id="selector-sticky">Selector sticky</div>
+              <div id="moving-inline" style="position:fixed;top:8px">Moving inline</div>
+              <div id="moving-class">Moving class</div><div id="tail"></div>
+            </body>
+            <script>
+              let hidden = false, trustedClicks = 0;
+              document.addEventListener('click', event => { if (event.isTrusted) trustedClicks++; });
+              window.addEventListener('scroll', () => {
+                if (hidden || scrollY <= 80) return;
+                document.getElementById('moving-inline').style.top = '-64px';
+                document.getElementById('moving-class').classList.add('hidden');
+                hidden = true;
+              });
+              const report = () => {
+                const number = (id, property = 'top') => parseFloat(getComputedStyle(document.getElementById(id))[property]);
+                document.title = '${REPORT_PREFIX}' + JSON.stringify({loaded:document.readyState === 'complete',
+                  env:number('probe','paddingTop'), inlineFixed:number('inline-fixed'), inlineSticky:number('inline-sticky'),
+                  selectorFixed:number('selector-fixed'), selectorSticky:number('selector-sticky'),
+                  movingInline:number('moving-inline'), movingClass:number('moving-class'), hidden, trustedClicks,
+                  movingInlineAuthorTop:document.getElementById('moving-inline').style.top,
+                  movingClassAuthorTop:document.getElementById('moving-class').style.top});
+              };
+              setInterval(report,100); report();
+            </script>
+        """.trimIndent()
         val ABSOLUTE_HEADER_STACK_HTML = """
             <!doctype html><meta name="viewport" content="width=device-width,initial-scale=1">
             <style>

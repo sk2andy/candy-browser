@@ -11,6 +11,7 @@ class GeckoSafeAreaSettingsTest {
         val settings = GeckoSafeAreaSettings()
 
         assertTrue(settings.enabled)
+        assertFalse(settings.addInsetToNegativeTop)
         assertTrue(settings.recheckAddedElements)
         assertTrue(settings.recheckChangedElements)
         assertTrue(settings.requireInteractionForUpdates)
@@ -82,6 +83,7 @@ class GeckoSafeAreaSettingsTest {
     fun `normalization is idempotent and preserves all switches independently`() {
         val settings = GeckoSafeAreaSettings(
             enabled = false,
+            addInsetToNegativeTop = true,
             recheckAddedElements = false,
             recheckChangedElements = false,
             requireInteractionForUpdates = false,
@@ -94,6 +96,7 @@ class GeckoSafeAreaSettingsTest {
         ).normalized()
 
         assertFalse(settings.enabled)
+        assertTrue(settings.addInsetToNegativeTop)
         assertFalse(settings.recheckAddedElements)
         assertFalse(settings.recheckChangedElements)
         assertFalse(settings.requireInteractionForUpdates)
@@ -108,10 +111,15 @@ class GeckoSafeAreaSettingsTest {
 
     @Test
     fun `reset restores switches and budgets`() {
-        val settings = GeckoSafeAreaSettings(enabled = false, maxElementsPerBatch = 64)
+        val settings = GeckoSafeAreaSettings(
+            enabled = false,
+            addInsetToNegativeTop = true,
+            maxElementsPerBatch = 64,
+        )
 
         assertFalse(settings.hasDefaultSettings)
         assertEquals(GeckoSafeAreaSettings(), settings.withDefaults())
         assertTrue(settings.withDefaults().hasDefaultSettings)
+        assertFalse(settings.withDefaults().addInsetToNegativeTop)
     }
 }

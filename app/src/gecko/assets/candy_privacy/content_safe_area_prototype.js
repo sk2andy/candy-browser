@@ -6,6 +6,12 @@
   const owned = new Map();
   const ownWrites = new WeakMap();
   const rules = new Map();
+  const topCandidates = new Set();
+  const negativeTopElements = new Map();
+  let topMutationStates = new WeakMap();
+  let topInlineValues = new WeakMap();
+  let checkedSelectorTops = new WeakSet();
+  let negativeTopMarker = "";
   const hostname = typeof globalThis.location?.hostname === "string" ? globalThis.location.hostname.toLowerCase().replace(/\.$/, "") : "";
   const knownTopSelectors = hostname === "amazon.de" || hostname.endsWith(".amazon.de") ?
     [":root #btf-sub-nav-top-navigation-bar.persistent-header"] :
@@ -543,7 +549,7 @@
     if (layer) return layer.isConnected ? layer.sheet : null;
     layer = document.createElement("style");
     layer.textContent = (configuration?.cover ? [] : knownTopSelectors).map((selector) =>
-      `${selector} { top: calc(0px + var(--candy-safe-area-inset-top)) !important; }`).join("\n");
+      `${topSelector(selector)} { top: calc(0px + var(--candy-safe-area-inset-top)) !important; }`).join("\n");
     document.documentElement.appendChild(layer);
     if (!layer.sheet) { layer.remove(); layer = null; return null; }
     return layer.sheet;
@@ -558,6 +564,124 @@
       return !!selectorMatcher && element.matches(selectorMatcher);
     }
     catch { return false; }
+  }
+
+  function topSelector(selector) {
+    if (configuration.addInsetToNegativeTop) return selector;
+    // Append a zero-specificity exclusion to each complete selector, preserving
+    // commas inside functional pseudo-classes, attributes and quoted strings.
+    const selectors = [];
+    let start = 0, depth = 0, quote = "", pseudoElement = -1;
+    const append = (end) => {
+      const insertion = pseudoElement >= start ? pseudoElement : end;
+      selectors.push(`${selector.slice(start, insertion).trimEnd()}:not(:where([${negativeTopMarker}]))${selector.slice(insertion, end)}`);
+    };
+    for (let index = 0; index < selector.length; index++) {
+      const character = selector[index];
+      if (character === "\\") { index++; continue; }
+      if (quote) { if (character === quote) quote = ""; continue; }
+      if (character === '"' || character === "'") { quote = character; continue; }
+      if (character === "(" || character === "[") depth++;
+      else if (character === ")" || character === "]") depth--;
+      else if (character === ":" && selector[index + 1] === ":" && depth === 0 && pseudoElement < 0) pseudoElement = index;
+      else if (character === "," && depth === 0) {
+        append(index);
+        start = index + 1;
+        pseudoElement = -1;
+      }
+    }
+    append(selector.length);
+    return selectors.map((value) => value.trim()).join(", ");
+  }
+
+  function withAuthorTopStyles(read) {
+    const sheets = [layer?.sheet, selectorLayer?.sheet].filter(Boolean);
+    const disabled = sheets.map((sheet) => sheet.disabled);
+    try {
+      for (const sheet of sheets) sheet.disabled = true;
+      return read();
+    } finally {
+      for (let index = 0; index < sheets.length; index++) sheets[index].disabled = disabled[index];
+    }
+  }
+
+  function preserveNegativeTop(element, top) {
+    if (configuration.addInsetToNegativeTop) return false;
+    if (top !== null && top < 0) {
+      releaseElementTop(element);
+      if (!negativeTopElements.has(element) && negativeTopElements.size < configuration.maxInitialElements) {
+        const entry = { attribute: negativeTopMarker, id: "true", original: element.getAttribute(negativeTopMarker) };
+        negativeTopElements.set(element, entry);
+        element.setAttribute(negativeTopMarker, entry.id);
+      }
+      return true;
+    }
+    const entry = negativeTopElements.get(element);
+    if (entry) {
+      restore(element, entry);
+      negativeTopElements.delete(element);
+    }
+    return false;
+  }
+
+  function recheckNegativeTopMutations(records) {
+    if (configuration.addInsetToNegativeTop || !configuration.active) return;
+    const changed = new Set();
+    for (const record of records.slice(0, 64)) {
+      if (record.type === "childList") {
+        const pending = Array.from(record.addedNodes || []).slice(0, 8).map((element) => ({ element, depth: 0 }));
+        let remaining = 16;
+        while (pending.length && remaining-- > 0 && changed.size < 16) {
+          const { element, depth } = pending.shift();
+          if (!(element instanceof Element) || isOwnSource(element)) continue;
+          if (selectorOwns(element)) { rememberTopCandidate(element); changed.add(element); }
+          if (depth < 2) {
+            for (const child of Array.from(element.children || []).slice(0, 4)) {
+              pending.push({ element: child, depth: depth + 1 });
+            }
+          }
+        }
+        if (changed.size >= 16) break;
+        continue;
+      }
+      if (record.type !== "attributes" || !["class", "style"].includes(record.attributeName) ||
+          isOwnSource(record.target)) continue;
+      const target = record.target;
+      const state = `${target.getAttribute("class") || ""}\n${target.getAttribute("style") || ""}`;
+      if (topMutationStates.get(target) === state) continue;
+      topMutationStates.set(target, state);
+      const inlineTop = target.style.getPropertyValue("top");
+      const previousInlineTop = topInlineValues.get(target);
+      topInlineValues.set(target, inlineTop);
+      if (record.attributeName === "style" && !negativeTopElements.has(target)) {
+        const top = pixels(inlineTop);
+        if ((!inlineTop && !previousInlineTop) || (top !== null && top >= 0)) continue;
+      }
+      if (topCandidates.has(target) || selectorOwns(target)) changed.add(target);
+      if (record.attributeName === "class") {
+        for (const candidate of topCandidates) {
+          if (changed.size >= 16) break;
+          if (target !== candidate && target.contains(candidate)) changed.add(candidate);
+        }
+      }
+      if (changed.size >= 16) break;
+    }
+    if (!changed.size) return;
+    const authorTops = withAuthorTopStyles(() => Array.from(changed).slice(0, 16).map((element) =>
+      [element, pixels(getComputedStyle(element).top)]));
+    for (const [element, top] of authorTops) {
+      if (!element.isConnected) { topCandidates.delete(element); continue; }
+      if (selectorOwns(element)) checkedSelectorTops.add(element);
+      const wasNegative = negativeTopElements.has(element);
+      if (!preserveNegativeTop(element, top) && wasNegative) classify(element);
+    }
+  }
+
+  function rememberTopCandidate(element) {
+    if (topCandidates.has(element) || topCandidates.size >= configuration.maxInitialElements) return;
+    topCandidates.add(element);
+    topMutationStates.set(element, `${element.getAttribute("class") || ""}\n${element.getAttribute("style") || ""}`);
+    topInlineValues.set(element, element.style.getPropertyValue("top"));
   }
 
   function releaseElementTop(element) {
@@ -733,9 +857,12 @@
         return;
       }
       const [selector, candidate] = next.value;
+      // Retain negative candidates through source precedence to supersede an
+      // earlier positive declaration of the same selector, without publishing it.
+      if (candidate.top < 0 && !configuration.addInsetToNegativeTop) return;
       const sheet = build.staging.sheet;
       try {
-        const text = `${selector} { top: ${candidate.top + inset}px !important; }`;
+        const text = `${topSelector(selector)} { top: ${candidate.top + inset}px !important; }`;
         const index = sheet.insertRule(text, sheet.cssRules.length);
         build.applied.set(selector, { rule: sheet.cssRules[index], important: candidate.important, text });
       } catch { cssCounts.unsupported++; }
@@ -1074,7 +1201,15 @@
     if (topHeaderChecked && style.position !== "fixed") fixedHeaderCandidates.delete(element);
     if (topHeaderChecked && (style.position === "fixed" || style.position === "sticky") &&
         requestNativeFallbackForHeader(element, style)) return;
-    if (selectorOwns(element)) { releaseElementTop(element); return; }
+    if (selectorOwns(element)) {
+      rememberTopCandidate(element);
+      if (!configuration.addInsetToNegativeTop && !checkedSelectorTops.has(element)) {
+        preserveNegativeTop(element, withAuthorTopStyles(() => pixels(getComputedStyle(element).top)));
+        checkedSelectorTops.add(element);
+      }
+      releaseElementTop(element);
+      return;
+    }
     const entry = rules.get(element);
     if (entry && layer?.isConnected && element.getAttribute(entry.attribute) === entry.id &&
         entry.rule.style.getPropertyValue("top")) return;
@@ -1084,6 +1219,8 @@
     const top = pixels(style.top);
     const rootAbsoluteHeader = isRootAbsoluteHeader(element, style, top);
     if (style.position !== "fixed" && style.position !== "sticky" && !rootAbsoluteHeader) return;
+    rememberTopCandidate(element);
+    if (preserveNegativeTop(element, top)) return;
     if (!topHeaderChecked && requestNativeFallbackForHeader(element, style)) return;
     // CSSOM can resolve an auto top to pixels for a bottom-anchored fixed box.
     // Keep fixed boxes extending into the lower half out of top-inset rules.
@@ -1245,6 +1382,7 @@
   }
 
   function mutations(records) {
+    recheckNegativeTopMutations(records);
     const wasCover = configuration?.cover === true;
     let removedViewportOverlay = false;
     for (const element of knownViewportOverlays) {
@@ -1492,6 +1630,7 @@
       recheckChangedElements: incoming.recheckChangedElements === true,
       requireInteractionForUpdates: incoming.requireInteractionForUpdates !== false,
       recheckOnResize: incoming.recheckOnResize === true,
+      addInsetToNegativeTop: incoming.addInsetToNegativeTop === true,
       interactionWindowMillis: bounded(incoming.interactionWindowMillis, 100, 5000, 1000),
       mutationDebounceMillis: bounded(incoming.mutationDebounceMillis, 50, 1000, 150),
       maxElementsPerBatch: bounded(incoming.maxElementsPerBatch, 4, 64, 16),
@@ -1526,7 +1665,14 @@
     selectorLayer = null;
     cleanup.push(...rules);
     rules.clear();
+    cleanup.push(...negativeTopElements);
+    negativeTopElements.clear();
+    topCandidates.clear();
+    topMutationStates = new WeakMap();
+    topInlineValues = new WeakMap();
+    checkedSelectorTops = new WeakSet();
     markerName = `${markerPrefix}-${++layerEpoch}`;
+    negativeTopMarker = `${markerName}-negative`;
     markerId = 0;
     protectedSelectors = [];
     selectorImportance.clear();

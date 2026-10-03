@@ -266,6 +266,41 @@ test('Gecko CSS configuration is bounded, hot-applied and independent of the dor
   assert.equal(harness.CandyContentTopInset.cssSafeAreaConfiguration().enabled, false);
 });
 
+test('negative top inset addition crosses background and bridge only on explicit true', () => {
+  const source = readFileSync(new URL(
+    '../app/src/gecko/assets/candy_privacy/background.js', import.meta.url,
+  ), 'utf8');
+  const contentPolicy = source.split('function contentPolicy(policy) {')[1]
+    .split('function publishContentPolicy')[0];
+  const background = vm.createContext({});
+  vm.runInContext(`function contentPolicy(policy) {${contentPolicy}`, background);
+  const harness = bridgeHarness(performanceFixture().api);
+  const configurations = [];
+  harness.__candyConfigureCssSafeArea = () => {
+    configurations.push(harness.CandyContentTopInset.cssSafeAreaConfiguration().addInsetToNegativeTop);
+  };
+  assert.equal(harness.CandyContentTopInset.cssSafeAreaConfiguration().addInsetToNegativeTop, false);
+  assert.equal(background.contentPolicy(null).addInsetToNegativeTop, false);
+
+  let revision = 0;
+  for (const value of [undefined, false, 1, 'true', true, false]) {
+    const policy = background.contentPolicy({ revision: ++revision, addInsetToNegativeTop: value });
+    assert.equal(policy.addInsetToNegativeTop, value === true);
+    harness.applyPolicy(policy);
+    assert.equal(
+      harness.CandyContentTopInset.cssSafeAreaConfiguration().addInsetToNegativeTop,
+      value === true,
+    );
+  }
+  assert.deepEqual(configurations, [false, false, false, false, true, false]);
+  harness.applyPolicy(background.contentPolicy({ revision: 5, addInsetToNegativeTop: true }));
+  assert.equal(harness.CandyContentTopInset.cssSafeAreaConfiguration().addInsetToNegativeTop, false);
+  assert.equal(configurations.length, 6);
+
+  harness.applyPolicy({ type: 'content-policy', ready: true, revision: 7, addInsetToNegativeTop: 'true' });
+  assert.equal(harness.CandyContentTopInset.cssSafeAreaConfiguration().addInsetToNegativeTop, false);
+});
+
 test('diagnostic state messages require current revision without triggering reconciliation', () => {
   const fixture = performanceFixture();
   const harness = bridgeHarness(fixture.api);

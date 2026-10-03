@@ -622,6 +622,7 @@ class BrowserSessionStoreInstrumentedTest {
             forceSafeAreaFallback = true,
             geckoSafeAreaSettings = GeckoSafeAreaSettings(
                 enabled = false,
+                addInsetToNegativeTop = true,
                 recheckAddedElements = false,
                 recheckChangedElements = false,
                 requireInteractionForUpdates = false,
@@ -682,11 +683,32 @@ class BrowserSessionStoreInstrumentedTest {
     }
 
     @Test
+    fun negativeTopInsetAdditionDefaultsOffAndPersistsUntilTurnedOff() {
+        val store = BrowserSessionStore(context)
+        assertFalse(store.loadDeveloperSettings().geckoSafeAreaSettings.addInsetToNegativeTop)
+        val enabledSettings = DeveloperSettings(
+            geckoSafeAreaSettings = GeckoSafeAreaSettings(addInsetToNegativeTop = true),
+        )
+
+        store.saveDeveloperSettings(enabledSettings)
+        assertEquals(enabledSettings, BrowserSessionStore(context).loadDeveloperSettings())
+
+        val disabledSettings = enabledSettings.copy(
+            geckoSafeAreaSettings = enabledSettings.geckoSafeAreaSettings.copy(
+                addInsetToNegativeTop = false,
+            ),
+        )
+        store.saveDeveloperSettings(disabledSettings)
+        assertEquals(disabledSettings, BrowserSessionStore(context).loadDeveloperSettings())
+    }
+
+    @Test
     fun corruptGeckoSafeAreaSettingsFallBackIndependently() {
         preferences.edit()
             .putBoolean("developer_force_safe_area_fallback", true)
             .putInt("developer_safe_area_layout_quiet_period_millis", 250)
             .putString("gecko_safe_area_enabled", "invalid")
+            .putString("gecko_safe_area_add_inset_to_negative_top", "invalid")
             .putBoolean("gecko_safe_area_recheck_added_elements", false)
             .putString("gecko_safe_area_recheck_changed_elements", "invalid")
             .putString("gecko_safe_area_require_interaction_for_updates", "invalid")

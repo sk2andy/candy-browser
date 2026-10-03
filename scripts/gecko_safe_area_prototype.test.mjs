@@ -89,6 +89,7 @@ function fixture({ density = 3, nativeTop = 96, envTop = nativeTop, simulateAnim
     }
     getAttribute(name) {
       if (name === 'style') return this.properties.size ? JSON.stringify([...this.properties]) : null;
+      if (name === 'class' && this.classes) return this.classes.join(' ');
       if (name === 'role' && this.role) return this.role;
       return this.attributes.get(name) ?? null;
     }
@@ -108,6 +109,9 @@ function fixture({ density = 3, nativeTop = 96, envTop = nativeTop, simulateAnim
     matches(selector) {
       selectorMatches++;
       return selector.split(',').some((part) => {
+        const exclusion = /:not\(:where\(\[([^\]]+)\]\)\)/.exec(part);
+        if (exclusion && this.getAttribute(exclusion[1]) !== null) return false;
+        if (exclusion) part = part.replace(exclusion[0], '');
         const marker = /\[([^=]+)="([^"]+)"\]/.exec(part);
         if (marker) return this.getAttribute(marker[1]) === marker[2];
         const value = part.trim();
@@ -204,6 +208,7 @@ function fixture({ density = 3, nativeTop = 96, envTop = nativeTop, simulateAnim
         if (sheet.disabled || (sheet.media?.mediaText && sheet.media.mediaText !== 'all')) continue;
         for (const rule of accessible(sheet)) {
           const value = rule.style.getPropertyValue(name);
+          if (inline && rule.style.getPropertyPriority(name) !== 'important') continue;
           if (rule.type === 1 && element.matches(rule.selectorText) && value) result[camel] = value;
         }
       }
@@ -1185,6 +1190,7 @@ test('still-fixed surfaces regain one original inset after repeated fullscreen t
 
 test('persistent body and finite fixed/sticky rules do not accumulate on authorized rechecks', () => {
   const f = fixture(); f.body.style.setProperty('padding-top', '4px');
+  f.config.addInsetToNegativeTop = true;
   const nodes = [];
   for (const position of ['fixed', 'sticky']) {
     for (const top of ['0px', '8px', '-8px', '-1px', '32px', '80px', 'auto', '10%', 'calc(8px + 2px)', '8px-junk']) {
@@ -1220,6 +1226,134 @@ test('persistent body and finite fixed/sticky rules do not accumulate on authori
   assert.equal(fractional.computed(equal).top, '91.3334px');
   assert.equal(fractional.computed(above).top, '91.3345px');
   assert.equal(f.reads.rect, 0);
+});
+
+test('negative fixed and sticky tops stay authored by default and opt in without accumulating', () => {
+  const f = fixture();
+  const fixed = f.element('fixed', '-64px');
+  const sticky = f.element('sticky', '-0.01px');
+  const zero = f.element('fixed', '0px');
+  f.sheet([{ selector: '#negative', declarations: { position: 'fixed', top: '-80px' } }]);
+  const selector = f.element('static', 'auto'); selector.id = 'negative';
+  f.start();
+  assert.equal(f.computed(fixed).top, '-64px');
+  assert.equal(f.computed(sticky).top, '-0.01px');
+  assert.equal(f.computed(selector).top, '-80px');
+  assert.equal(f.computed(zero).top, '32px');
+  for (let repeat = 0; repeat < 3; repeat++) {
+    f.configure({ addInsetToNegativeTop: true });
+    assert.equal(f.computed(fixed).top, '-32px');
+    assert.equal(f.computed(sticky).top, '31.99px');
+    assert.equal(f.computed(selector).top, '-48px');
+    f.configure({ addInsetToNegativeTop: false });
+    assert.equal(f.computed(fixed).top, '-64px');
+    assert.equal(f.computed(sticky).top, '-0.01px');
+    assert.equal(f.computed(selector).top, '-80px');
+  }
+  f.configure({ addInsetToNegativeTop: 'true' });
+  assert.equal(f.computed(fixed).top, '-64px', 'Only the explicit boolean opts in');
+  f.configure({ enabled: false });
+  assert.equal(fixed.attributes.size, 0, 'Owned negative markers are removed on disable');
+});
+
+test('passive inline negative tops escape retained element and selector rules before paint', () => {
+  const f = fixture();
+  const fixed = f.element('fixed', '0px');
+  f.sheet([{ selector: '#selected', declarations: { position: 'sticky', top: '0px' } }]);
+  const selected = f.element('static', 'auto'); selected.id = 'selected';
+  f.start();
+  assert.equal(f.computed(fixed).top, '32px');
+  assert.equal(f.computed(selected).top, '32px');
+  f.event('scroll');
+  fixed.style.setProperty('top', '-64px');
+  selected.style.setProperty('top', '-80px');
+  f.flush();
+  assert.equal(f.computed(fixed).top, '-64px');
+  assert.equal(f.computed(selected).top, '-80px');
+  assert.equal(fixed.style.getPropertyPriority('top'), '');
+  const before = { reads: { ...f.reads }, rules: f.ruleWrites() };
+  for (let repeat = 0; repeat < 100; repeat++) {
+    f.mutate(selected, 'style'); f.event('scroll');
+  }
+  f.flush();
+  assert.deepEqual({ reads: { ...f.reads }, rules: f.ruleWrites() }, before);
+  fixed.style.setProperty('top', '0px'); selected.style.removeProperty('top'); f.flush();
+  assert.equal(f.computed(fixed).top, '32px');
+  assert.equal(f.computed(selected).top, '32px');
+  f.configure({ enabled: false });
+  assert.equal(fixed.attributes.size, 0);
+  assert.equal(selected.attributes.size, 0);
+});
+
+test('split negative class and ancestor states escape positive selectors outside interaction gate', () => {
+  const f = fixture();
+  f.sheet([{ selector: '#selected', declarations: { position: 'fixed', top: '0px' } },
+    { selector: '#selected.hidden', declarations: { top: '-64px' } },
+    { selector: '.hidden', declarations: { top: '-80px' } }]);
+  const selected = f.element('static', 'auto'); selected.id = 'selected';
+  f.start();
+  assert.equal(f.computed(selected).top, '32px');
+  f.event('scroll'); selected.classes = ['hidden']; f.mutate(selected, 'class'); f.flush();
+  assert.equal(f.computed(selected).top, '-80px');
+  selected.classes = []; f.mutate(selected, 'class'); f.flush();
+  assert.equal(f.computed(selected).top, '32px');
+  selected.computed.top = '-64px';
+  // Simulate an author ancestor rule changing the resolved top of a cached target.
+  const sheet = f.context.document.styleSheets[0];
+  sheet.cssRules[0].style.setProperty('top', '-64px');
+  f.body.classes = ['hide-header']; f.mutate(f.body, 'class'); f.flush();
+  assert.equal(f.computed(selected).top, '-64px');
+});
+
+test('negative selector declarations supersede captured positive tops and late nodes stay hidden', () => {
+  const f = fixture();
+  f.sheet([{ selector: '#same', declarations: { position: 'fixed', top: '0px' } }]);
+  f.sheet([{ selector: '#same', declarations: { position: 'fixed', top: '-64px' } }]);
+  f.sheet([{ selector: '#late', declarations: { position: 'fixed', top: '0px' } },
+    { selector: '#late.hidden', declarations: { top: '-80px' } }]);
+  f.start();
+  const same = f.element('static', 'auto'); same.id = 'same'; f.added(same);
+  const late = f.element('static', 'auto'); late.id = 'late'; late.classes = ['hidden']; f.added(late);
+  f.flush();
+  assert.equal(f.computed(same).top, '-64px');
+  assert.equal(f.computed(late).top, '-80px');
+  f.configure({ addInsetToNegativeTop: true });
+  assert.equal(f.computed(same).top, '-32px');
+});
+
+test('removing a positive inline top can expose a negative author stylesheet top', () => {
+  const f = fixture();
+  f.sheet([{ selector: '#hidden', declarations: { top: '-64px' } }]);
+  const hidden = f.element('fixed', '0px'); hidden.id = 'hidden'; hidden.style.setProperty('top', '0px');
+  f.start();
+  assert.equal(f.computed(hidden).top, '32px');
+  hidden.style.removeProperty('top'); f.flush();
+  assert.equal(f.computed(hidden).top, '-64px');
+});
+
+test('negative selector exclusions retain comma-list specificity and precede pseudo-elements', () => {
+  const f = fixture();
+  f.sheet([{ selector: '#one, .two', declarations: { position: 'fixed', top: '0px' } },
+    { selector: '#pseudo::before', declarations: { position: 'fixed', top: '8px' } }]);
+  f.start();
+  const injected = f.sheets.filter((element) => element.isConnected && element.parentElement?.localName === 'html')
+    .flatMap((element) => element.sheet.cssRules).map((rule) => rule.selectorText);
+  assert.ok(injected.some((selector) => /^#one:not\(:where\(\[[^\]]+\]\)\), \.two:not\(:where\(\[[^\]]+\]\)\)$/.test(selector)));
+  assert.ok(injected.some((selector) => /^#pseudo:not\(:where\(\[[^\]]+\]\)\)::before$/.test(selector)));
+});
+
+test('default negative policy does no repeated author reads for unchanged selector targets', () => {
+  const f = fixture();
+  f.sheet([{ selector: '#stable', declarations: { position: 'fixed', top: '0px' } }]);
+  const stable = f.element('static', 'auto'); stable.id = 'stable';
+  f.start();
+  f.event('click'); f.mutate(stable, 'class'); f.flush();
+  const before = { style: f.reads.style, rect: f.reads.rect, rules: f.ruleWrites() };
+  for (let repeat = 0; repeat < 100; repeat++) {
+    f.event('click'); f.mutate(stable, 'class'); f.mutate(stable, 'style'); f.flush();
+  }
+  assert.deepEqual({ style: f.reads.style, rect: f.reads.rect, rules: f.ruleWrites() }, before);
+  assert.equal(f.computed(stable).top, '32px');
 });
 
 test('bottom-anchored fixed navigation keeps its resolved top and bottom', () => {
@@ -1728,8 +1862,8 @@ test('full selector rules protect passive class activation and new matching node
   f.event('scroll'); f.mutate(latent, 'class'); f.added(added); f.flush();
   assert.deepEqual(
     { style: f.reads.style, rect: f.reads.rect, writes: f.writes(), rules: f.ruleWrites() },
-    { style: before.reads.style, rect: before.reads.rect, writes: before.writes, rules: before.rules },
-    'Passive activation and scroll do no broad repair',
+    { style: before.reads.style + 2, rect: before.reads.rect, writes: before.writes, rules: before.rules },
+    'Changed and added selector targets each get one author-top check; scroll does no broad repair',
   );
   assert.equal(f.reads.selector, before.reads.selector, 'Scroll does not restart semantic discovery');
   assert.equal(f.computed(latent).top, '40px'); assert.equal(f.computed(added).top, '32px');
@@ -1785,7 +1919,7 @@ test('selector scan skips unsupported and inaccessible contexts, consumes caps a
   });
   f.start();
   for (const node of nodes) node.classes = ['future'];
-  const own = f.sheets.find((node) => node !== inaccessible && node.sheet.cssRules.some((rule) => rule.selectorText === '#valid.future' && rule.style.getPropertyPriority('top') === 'important') && node.parentElement?.localName === 'html');
+  const own = f.sheets.find((node) => node !== inaccessible && node.sheet.cssRules.some((rule) => rule.selectorText.startsWith('#valid.future') && rule.style.getPropertyPriority('top') === 'important') && node.parentElement?.localName === 'html');
   assert.equal(f.computed(nodes[0]).top, '32px');
   assert.ok(!own.sheet.cssRules.some((rule) => /#(?:disabled|media|group|import|nested|auto|percent)/.test(rule.selectorText)));
   const count = own.sheet.cssRules.length;
@@ -1803,7 +1937,7 @@ test('selector scan skips unsupported and inaccessible contexts, consumes caps a
   reserved.start();
   assert.equal(reserved.computed(reserved.body).paddingTop, '32px', 'Selector duplicates cannot exhaust the body protection slot');
   const reservedLayers = reserved.sheets.filter((node) => node.isConnected && node.parentElement?.localName === 'html');
-  assert.equal(reservedLayers.flatMap((node) => node.sheet.cssRules).filter((rule) => rule.selectorText === '#reserved.future').length, 1);
+  assert.equal(reservedLayers.flatMap((node) => node.sheet.cssRules).filter((rule) => rule.selectorText.startsWith('#reserved.future')).length, 1);
   assert.equal(reservedLayers.flatMap((node) => node.sheet.cssRules).length, 2, 'Duplicate source rules use one clone and retain body protection');
 });
 
@@ -1927,7 +2061,7 @@ test('Gecko media attribute reparsing retains staged CSS rules instead of empty 
   f.start();
   assert.equal(f.computed(node).top, '40px', 'Media activation reparses canonical staged CSS, not empty text');
   const own = f.sheets.find((sheet) => sheet.isConnected && sheet.parentElement?.localName === 'html' && sheet.textContent);
-  assert.match(own.textContent, /#gecko\.fixed \{ top: 40px !important; \}/);
+  assert.match(own.textContent, /#gecko\.fixed:not\(:where\(\[data-candy-safe-area-[^\]]+-negative\]\)\) \{ top: 40px !important; \}/);
   assert.equal(own.sheet.cssRules.length, 1);
   f.event('scroll'); f.flush(); assert.equal(f.computed(node).top, '40px');
 });

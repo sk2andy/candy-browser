@@ -2,6 +2,7 @@ package dev.sk2andy.materialbrowser.data
 
 data class GeckoSafeAreaSettings(
     val enabled: Boolean = true,
+    val addInsetToNegativeTop: Boolean = false,
     val recheckAddedElements: Boolean = true,
     val recheckChangedElements: Boolean = true,
     val requireInteractionForUpdates: Boolean = true,

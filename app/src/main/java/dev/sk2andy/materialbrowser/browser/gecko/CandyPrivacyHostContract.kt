@@ -269,6 +269,7 @@ internal fun GeckoPrivacyPolicy.toMessage(token: String, revision: Long): JSONOb
     .put("inlineMediaPlayerHideControlsLabel", inlineMediaPlayerHideControlsLabel)
     .put("cssSafeAreaTopInsetPx", cssSafeAreaTopInsetPx)
     .put("geckoSafeAreaEnabled", geckoSafeAreaSettings.enabled)
+    .put("addInsetToNegativeTop", geckoSafeAreaSettings.addInsetToNegativeTop)
     .put("recheckAddedElements", geckoSafeAreaSettings.recheckAddedElements)
     .put("recheckChangedElements", geckoSafeAreaSettings.recheckChangedElements)
     .put("requireInteractionForUpdates", geckoSafeAreaSettings.requireInteractionForUpdates)

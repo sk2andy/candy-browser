@@ -1132,6 +1132,7 @@ class BrowserSessionStore internal constructor(
         ),
         geckoSafeAreaSettings = GeckoSafeAreaSettings(
             enabled = loadBoolean(KEY_GECKO_SAFE_AREA_ENABLED, true),
+            addInsetToNegativeTop = loadBoolean(KEY_GECKO_SAFE_AREA_ADD_INSET_TO_NEGATIVE_TOP, false),
             recheckAddedElements = loadBoolean(KEY_GECKO_SAFE_AREA_RECHECK_ADDED_ELEMENTS, true),
             recheckChangedElements = loadBoolean(KEY_GECKO_SAFE_AREA_RECHECK_CHANGED_ELEMENTS, true),
             requireInteractionForUpdates = loadBoolean(
@@ -1195,6 +1196,10 @@ class BrowserSessionStore internal constructor(
                 normalized.forceSafeAreaFallback,
             )
             .putBoolean(KEY_GECKO_SAFE_AREA_ENABLED, normalized.geckoSafeAreaSettings.enabled)
+            .putBoolean(
+                KEY_GECKO_SAFE_AREA_ADD_INSET_TO_NEGATIVE_TOP,
+                normalized.geckoSafeAreaSettings.addInsetToNegativeTop,
+            )
             .putBoolean(
                 KEY_GECKO_SAFE_AREA_RECHECK_ADDED_ELEMENTS,
                 normalized.geckoSafeAreaSettings.recheckAddedElements,
@@ -1590,6 +1595,8 @@ class BrowserSessionStore internal constructor(
         const val KEY_DEVELOPER_FORCE_SAFE_AREA_FALLBACK =
             "developer_force_safe_area_fallback"
         const val KEY_GECKO_SAFE_AREA_ENABLED = "gecko_safe_area_enabled"
+        const val KEY_GECKO_SAFE_AREA_ADD_INSET_TO_NEGATIVE_TOP =
+            "gecko_safe_area_add_inset_to_negative_top"
         const val KEY_GECKO_SAFE_AREA_RECHECK_ADDED_ELEMENTS = "gecko_safe_area_recheck_added_elements"
         const val KEY_GECKO_SAFE_AREA_RECHECK_CHANGED_ELEMENTS =
             "gecko_safe_area_recheck_changed_elements"

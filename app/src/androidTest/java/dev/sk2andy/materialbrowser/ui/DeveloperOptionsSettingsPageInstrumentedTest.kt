@@ -291,6 +291,44 @@ class DeveloperOptionsSettingsPageInstrumentedTest {
     }
 
     @Test
+    fun negativeTopInsetAdditionDefaultsOffCanToggleAndResetsWithoutChangingOtherSettings() {
+        val original = DeveloperSettings(forceSafeAreaFallback = true)
+        var settings by mutableStateOf(original)
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                DeveloperOptionsSettingsPage(
+                    settings = settings,
+                    onSettingsChanged = { settings = it },
+                    onBack = {},
+                )
+            }
+        }
+        val tag = DeveloperOptionsTestTags.GeckoAddInsetToNegativeTop
+        composeRule.onNodeWithTag(tag).performScrollTo()
+        composeRule.onNode(hasParent(hasTestTag(tag)) and isToggleable()).assertIsOff()
+
+        composeRule.onNodeWithTag(tag).performClick()
+        composeRule.onNode(hasParent(hasTestTag(tag)) and isToggleable()).assertIsOn()
+        assertEquals(
+            original.copy(geckoSafeAreaSettings = GeckoSafeAreaSettings(addInsetToNegativeTop = true)),
+            settings,
+        )
+
+        composeRule.onNodeWithTag(tag).performClick()
+        composeRule.onNode(hasParent(hasTestTag(tag)) and isToggleable()).assertIsOff()
+        assertEquals(original, settings)
+
+        composeRule.onNodeWithTag(tag).performClick()
+        composeRule.onNodeWithTag(DeveloperOptionsTestTags.GeckoReset)
+            .performScrollTo()
+            .assertIsEnabled()
+            .performClick()
+        assertEquals(original, settings)
+        composeRule.onNodeWithTag(tag).performScrollTo()
+        composeRule.onNode(hasParent(hasTestTag(tag)) and isToggleable()).assertIsOff()
+    }
+
+    @Test
     fun disablingGeckoCorrectionDisablesOnlyItsChildControlsAndResetReenablesIt() {
         val original = DeveloperSettings(forceSafeAreaFallback = true)
         var settings by mutableStateOf(original)
@@ -313,6 +351,7 @@ class DeveloperOptionsSettingsPageInstrumentedTest {
             settings,
         )
         listOf(
+            DeveloperOptionsTestTags.GeckoAddInsetToNegativeTop,
             DeveloperOptionsTestTags.GeckoRecheckAddedElements,
             DeveloperOptionsTestTags.GeckoRecheckChangedElements,
             DeveloperOptionsTestTags.GeckoRequireInteraction,
