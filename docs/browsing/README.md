@@ -52,6 +52,9 @@ Issue 221's bootstrap-history reproduction, popup boundaries and verification ar
 Issue 239's Google identity popup routing, native close lifecycle and live Claude login checks are recorded in
 [`../audits/issue-239-claude-google-login.md`](../audits/issue-239-claude-google-login.md).
 
+Issue 259's System WebView OAuth popup adoption, POST/opener preservation and scoped login
+compatibility checks are recorded in [`../audits/issue-259-system-webview-google-login.md`](../audits/issue-259-system-webview-google-login.md).
+
 Issue 222's search-link History API race and navigation cancellation checks are recorded in
 [`../audits/issue-222-external-app-navigation.md`](../audits/issue-222-external-app-navigation.md).
 
@@ -72,6 +75,7 @@ are recorded in [`../audits/dark-appearance-and-address-tab-handoff.md`](../audi
 | Bottom control obstruction and automatic right parking | `AddressBarAutoDockRulesTest`, `TextInputOcclusionScriptTest`, `scripts/text_input_occlusion.test.mjs`, `GeckoPageControlOcclusionInstrumentedTest`, focused controller/System WebView instrumented tests |
 | Restored launcher tab and initial Gecko viewport | `StartupPresentationRulesTest`, `BrowserInitialNavigationRulesTest`, `MainActivityRestoredTabInstrumentedTest`, `BrowserControllerInitialViewportInstrumentedTest` |
 | WebView runtime, Basic authentication and Link Peek | `browser/*InstrumentedTest`, `BrowserControllerHttpAuthInstrumentedTest`, `ui/HttpAuthPromptDialogInstrumentedTest`, `ui/LinkPeekOverlayInstrumentedTest` |
+| System WebView native OAuth popups, POST, close, Blob downloads and login compatibility | `SystemWebViewPopupNavigationInstrumentedTest`, `SystemWebViewBlobDownloadInstrumentedTest`, `FederatedLoginRulesTest` |
 | Held OS Back over page links and canceled gesture recovery | `GeckoContentGestureRulesTest`, `GeckoBackGestureLinkPeekInstrumentedTest` |
 | Payment Request and checkout popup routing | `SystemWebViewBrowserEngineInstrumentedTest`, `BrowserControllerGeckoViewBindingInstrumentedTest` |
 | Topping parsing, catalog integrity, storage and UI | `browser/userscript/*Test`, `*Topping*InstrumentedTest`, `UserscriptManagementScreenInstrumentedTest` |

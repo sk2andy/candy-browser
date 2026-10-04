@@ -12433,7 +12433,9 @@ class BrowserController(
     ): GeckoPrivacyPolicy {
         val siteProtectionPaused = isSiteProtectionPaused(tab.id, context, pageUrl)
         val federatedLoginCompatibilityEnabled =
-            isFederatedLoginCompatibilityEnabled(tab, pageUrl)
+            isFederatedLoginCompatibilityEnabled(tab, pageUrl) ||
+                (tab.id in federatedLoginCompatibilityTabIds &&
+                    (pageUrl == BLANK_URL || FederatedLoginRules.isProviderPage(pageUrl)))
         val captchaCompatibilityEnabled = isCaptchaCompatibilityEnabled(tab, pageUrl)
         val policy = GeckoPrivacyPolicyRules.extensionOwnedAdFilteringWithCandyCookieDefaults(
             pageHost = PrivacyRequestSanitizer.webHost(pageUrl),
@@ -12495,6 +12497,7 @@ class BrowserController(
             policy
         } else {
             policy.copy(
+                federatedLoginCompatibilityEnabled = federatedLoginCompatibilityEnabled,
                 blockAdsAndTrackers = workerSettings.blockAdsAndTrackers &&
                     !siteProtectionPaused,
                 candyRules = filterRules.filter { rule ->

@@ -72,6 +72,7 @@ import dev.sk2andy.materialbrowser.browser.BrowserEngineWebPromptResponse
 import dev.sk2andy.materialbrowser.browser.BrowserWebPromptKind
 import dev.sk2andy.materialbrowser.browser.DesktopSiteRules
 import dev.sk2andy.materialbrowser.browser.DesktopViewportScript
+import dev.sk2andy.materialbrowser.browser.FederatedLoginRules
 import dev.sk2andy.materialbrowser.browser.VideoAutoplayBlockerScript
 import dev.sk2andy.materialbrowser.browser.WebRtcBlockerScript
 import dev.sk2andy.materialbrowser.browser.WebRtcProtectionMode
@@ -90,6 +91,8 @@ import dev.sk2andy.materialbrowser.browser.systemwebview.commands.WebViewProfile
 import dev.sk2andy.materialbrowser.browser.gecko.AndroidBrowserEngineSessionPort
 import dev.sk2andy.materialbrowser.browser.gecko.BrowserEngineEventSink
 import dev.sk2andy.materialbrowser.browser.gecko.BrowserEnginePreviewCapture
+import dev.sk2andy.materialbrowser.browser.gecko.BrowserEnginePreparedSession
+import dev.sk2andy.materialbrowser.browser.gecko.GeckoCloseRequestListener
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoAndroidPermissionRequestListener
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoAuthPromptListener
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoBrowsingData
@@ -115,6 +118,7 @@ import dev.sk2andy.materialbrowser.browser.gecko.GeckoMediaSessionStateListener
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoNavigationRequestDecision
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoNavigationRequestListener
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoNewSessionListener
+import dev.sk2andy.materialbrowser.browser.gecko.GeckoNewSessionRequest
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoPrivacyEvent
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoPrivacyEventSink
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoPrivacyPolicy
@@ -148,6 +152,14 @@ private data class SystemWebViewRequestPrivacyState(
     val candyMatcher: CandyMatcherSnapshot,
 )
 
+private class SystemWebViewPreparedSession(
+    val opener: SystemWebViewBrowserEngineSession,
+    val openerUrl: String?,
+) : BrowserEnginePreparedSession {
+    var claimed = false
+    var adoptedSession: SystemWebViewBrowserEngineSession? = null
+}
+
 internal class SystemWebViewBrowserEngineFactory(
     private val context: Context,
 ) : AndroidBrowserEngineFactory {
@@ -164,6 +176,7 @@ internal class SystemWebViewBrowserEngineFactory(
     private var fontSizeFactor = 1f
     private var forceDarkWebsites = false
     private val sessions = mutableSetOf<SystemWebViewBrowserEngineSession>()
+    private val preparedSessions = mutableMapOf<String, SystemWebViewPreparedSession>()
     private val knownCookieManagers = mutableListOf<CookieManager>()
     private val incognitoProfileName = INCOGNITO_PROFILE_NAME
     private val toppingRuntime = UserScriptRuntime(
@@ -257,8 +270,19 @@ internal class SystemWebViewBrowserEngineFactory(
     }
 
     override fun shutdown() {
+        preparedSessions.clear()
         if (supportsMultiProfile()) deleteProfileIfPresent(incognitoProfileName)
         knownCookieManagers.clear()
+    }
+
+    override fun prepareSession(tabId: String, session: BrowserEnginePreparedSession): Boolean {
+        val prepared = session as? SystemWebViewPreparedSession ?: return false
+        if (tabId.isBlank() || prepared.claimed || prepared.opener !in sessions ||
+            preparedSessions.containsKey(tabId)
+        ) return false
+        prepared.claimed = true
+        preparedSessions[tabId] = prepared
+        return true
     }
 
     override fun create(
@@ -271,30 +295,40 @@ internal class SystemWebViewBrowserEngineFactory(
         privacyEventSink: GeckoPrivacyEventSink,
         trailHistoryEventSink: GeckoCandyTrailHistoryEventSink,
         eventSink: BrowserEngineEventSink,
-    ): AndroidBrowserEngineSessionPort = SystemWebViewBrowserEngineSession(
-        context = context,
-        tabId = tabId,
-        profileId = profileId,
-        isolationEnabled = isolationEnabled,
-        isPrivate = isPrivate,
-        allowsToppings = contentKind != BrowserEngineContentKind.LinkPeek,
-        incognitoProfileName = incognitoProfileName,
-        multiProfileSupported = supportsMultiProfile(),
-        contentBlocker = contentBlocker,
-        toppingRuntime = toppingRuntime,
-        initialScripts = scripts,
-        initialPrivacyPolicy = privacyPolicy,
-        privacyEventSink = privacyEventSink,
-        trailHistoryEventSink = trailHistoryEventSink,
-        eventSink = eventSink,
-        blockThirdPartyCookies = blockThirdPartyCookies,
-        initialWebRtcProtectionMode = webRtcProtectionMode,
-        fontSizeFactor = fontSizeFactor,
-        forceDarkWebsites = forceDarkWebsites,
-        onClosed = sessions::remove,
-    ).also { session ->
-        sessions += session
-        session.cookieManager()?.let(::rememberCookieManager)
+    ): AndroidBrowserEngineSessionPort {
+        val prepared = preparedSessions.remove(tabId)
+        check(prepared == null || prepared.opener.matchesPopupContext(
+            profileId = profileId,
+            isolationEnabled = isolationEnabled,
+            isPrivate = isPrivate,
+        )) { "Prepared System WebView popup does not match Candy tab context" }
+        return SystemWebViewBrowserEngineSession(
+            context = context,
+            tabId = tabId,
+            profileId = profileId,
+            isolationEnabled = isolationEnabled,
+            isPrivate = isPrivate,
+            allowsToppings = contentKind != BrowserEngineContentKind.LinkPeek,
+            incognitoProfileName = incognitoProfileName,
+            multiProfileSupported = supportsMultiProfile(),
+            contentBlocker = contentBlocker,
+            toppingRuntime = toppingRuntime,
+            initialScripts = scripts,
+            initialPrivacyPolicy = privacyPolicy,
+            privacyEventSink = privacyEventSink,
+            trailHistoryEventSink = trailHistoryEventSink,
+            eventSink = eventSink,
+            blockThirdPartyCookies = blockThirdPartyCookies,
+            initialWebRtcProtectionMode = webRtcProtectionMode,
+            fontSizeFactor = fontSizeFactor,
+            forceDarkWebsites = forceDarkWebsites,
+            onClosed = sessions::remove,
+            preparedPopup = prepared,
+        ).also { session ->
+            prepared?.adoptedSession = session
+            sessions += session
+            session.cookieManager()?.let(::rememberCookieManager)
+        }
     }
 
     private fun clearCookies(onComplete: (Boolean) -> Unit) {
@@ -368,9 +402,11 @@ private class SystemWebViewBrowserEngineSession(
     fontSizeFactor: Float,
     forceDarkWebsites: Boolean,
     private val onClosed: (SystemWebViewBrowserEngineSession) -> Unit,
+    private val preparedPopup: SystemWebViewPreparedSession? = null,
 ) : AndroidBrowserEngineSessionPort {
     private val appContext = context.applicationContext
     private val profileId = profileId
+    private val isolationEnabled = isolationEnabled
     private val webView = SystemWebViewHost(context, ::onSafeAreaFallback)
     private val host = webView
     private val blobDownloadTransfer = SystemWebViewBlobDownloadTransfer(appContext, webView)
@@ -389,6 +425,10 @@ private class SystemWebViewBrowserEngineSession(
     private var policyRevision = 0L
     private var navigationRequestListener: GeckoNavigationRequestListener? = null
     private var newSessionListener: GeckoNewSessionListener? = null
+    private var closeRequestListener: GeckoCloseRequestListener? = null
+    private var initialPopupNavigationPending = preparedPopup != null
+    private var navigationInProgress = false
+    private var pageLoadGeneration = 0L
     private var downloadResponseListener: GeckoDownloadResponseListener? = null
     private var filePromptListener: GeckoFilePromptListener? = null
     private var androidPermissionListener: GeckoAndroidPermissionRequestListener? = null
@@ -554,6 +594,14 @@ private class SystemWebViewBrowserEngineSession(
     override fun setNewSessionListener(listener: GeckoNewSessionListener?) {
         newSessionListener = listener
     }
+
+    override fun setCloseRequestListener(listener: GeckoCloseRequestListener?) {
+        closeRequestListener = if (closed) null else listener
+    }
+
+    fun matchesPopupContext(profileId: String, isolationEnabled: Boolean, isPrivate: Boolean): Boolean =
+        !closed && this.profileId == profileId && this.isolationEnabled == isolationEnabled &&
+            this.isPrivate == isPrivate
 
     override fun setDownloadResponseListener(listener: GeckoDownloadResponseListener?) {
         downloadResponseListener = listener
@@ -748,11 +796,7 @@ private class SystemWebViewBrowserEngineSession(
         if (desktopMode == enabled && (!enabled || desktopViewportDomain == nextDomain)) return
         desktopMode = enabled
         desktopViewportDomain = nextDomain.takeIf { enabled }
-        webView.settings.userAgentString = if (enabled) {
-            DesktopSiteRules.desktopUserAgent(defaultUserAgent)
-        } else {
-            defaultUserAgent
-        }
+        applyUserAgent()
         installDesktopViewportPolicy()
     }
 
@@ -934,6 +978,9 @@ private class SystemWebViewBrowserEngineSession(
             null
         }
         closed = true
+        closeRequestListener = null
+        newSessionListener = null
+        navigationRequestListener = null
         toppingRuntime.remove(webView)
         antiFingerprintingScriptHandler?.remove()
         animationPolicyScriptHandler?.remove()
@@ -1003,7 +1050,22 @@ private class SystemWebViewBrowserEngineSession(
         webView.webViewClient = browserClient()
         webView.webChromeClient = chromeClient()
         webView.setDownloadListener { url, _, contentDisposition, mimeType, _ ->
-            dispatchDownloadResponse(url, contentDisposition, mimeType)
+            val prepared = preparedPopup
+            if (initialPopupNavigationPending && prepared != null &&
+                SystemWebViewBlobDownloadRules.isPopupBlobDownload(
+                    blobUrl = url,
+                    pageUrl = prepared.openerUrl.orEmpty(),
+                    hasUserGesture = true,
+                )
+            ) {
+                initialPopupNavigationPending = false
+                if (!contentBlocker.shouldBlockPopup(url, prepared.openerUrl)) {
+                    prepared.opener.dispatchDownloadResponse(url, contentDisposition, mimeType)
+                }
+                closeRequestListener?.onCloseRequest()
+            } else {
+                dispatchDownloadResponse(url, contentDisposition, mimeType)
+            }
         }
         installMediaBridge()
         installAutoplayPolicy()
@@ -1060,6 +1122,9 @@ private class SystemWebViewBrowserEngineSession(
             if (closed) return true
             if (!request.isForMainFrame) return false
             val url = request.url.toString()
+            if (initialPopupNavigationPending && url != "about:blank") {
+                return handleInitialPopupNavigation(url) || dispatchDirectPackageDownload(url)
+            }
             val decision = navigationRequestListener?.onNavigationRequest(
                 GeckoMainFrameNavigationRequest(
                     url = url,
@@ -1081,6 +1146,18 @@ private class SystemWebViewBrowserEngineSession(
             val policy = requestState.policy
             val url = request.url.toString()
             if (request.isForMainFrame) return null
+            if (request.url.host in policy.compatibilityRequestHosts) {
+                privacyEventSink.onEvent(
+                    GeckoPrivacyEvent(
+                        requestUrl = url,
+                        pageUrl = currentPageUrl,
+                        ruleId = null,
+                        wasBlocked = false,
+                        isBuiltIn = false,
+                        isCompatibilityObservation = true,
+                    ),
+                )
+            }
             val candyDecision = if (policy.blockAdsAndTrackers) {
                 requestState.candyMatcher.decide(
                     requestUrl = url,
@@ -1127,6 +1204,13 @@ private class SystemWebViewBrowserEngineSession(
         }
 
         override fun onPageStarted(view: WebView, url: String?, favicon: Bitmap?) {
+            // WebView skips shouldOverrideUrlLoading for a popup's initial POST.
+            if (url != null && initialPopupNavigationPending && handleInitialPopupNavigation(url)) {
+                view.stopLoading()
+                return
+            }
+            navigationInProgress = true
+            pageLoadGeneration++
             blobDownloadTransfer.cancelAll()
             lastLoadFailed = false
             lastMainFrameHttpResponse = null
@@ -1158,7 +1242,17 @@ private class SystemWebViewBrowserEngineSession(
         }
 
         override fun onPageFinished(view: WebView, url: String?) {
+            if (navigationInProgress && url != currentPageUrl) return
             currentPageUrl = url
+            val completedGeneration = pageLoadGeneration
+            view.post {
+                if (!closed && !initialPopupNavigationPending &&
+                    pageLoadGeneration == completedGeneration && currentPageUrl == url
+                ) {
+                    navigationInProgress = false
+                    applyUserAgent()
+                }
+            }
             applyDocumentCosmetics(url)
             publishHistoryState(view)
             val httpStatusCode = lastMainFrameHttpResponse
@@ -1293,6 +1387,26 @@ private class SystemWebViewBrowserEngineSession(
             resultMsg: Message,
         ): Boolean {
             val transport = resultMsg.obj as? WebView.WebViewTransport ?: return false
+            if (closed || !isUserGesture) return false
+            val listener = newSessionListener
+            if (listener != null) {
+                val prepared = SystemWebViewPreparedSession(
+                    opener = this@SystemWebViewBrowserEngineSession,
+                    openerUrl = currentPageUrl,
+                )
+                if (!listener.onNewSession(GeckoNewSessionRequest(
+                        url = "about:blank",
+                        session = prepared,
+                    ))
+                ) return false
+                val child = prepared.adoptedSession ?: return false
+                if (child.closed) return false
+                // Native popup loading begins before WebView delivers onPageStarted.
+                child.navigationInProgress = true
+                transport.webView = child.webView
+                resultMsg.sendToTarget()
+                return true
+            }
             val popup = WebView(view.context)
             popup.settings.javaScriptEnabled = false
             assignedProfileName?.let { profileName -> WebViewCompat.setProfile(popup, profileName) }
@@ -1365,6 +1479,12 @@ private class SystemWebViewBrowserEngineSession(
             transport.webView = popup
             resultMsg.sendToTarget()
             return true
+        }
+
+        override fun onCloseWindow(window: WebView) {
+            if (!closed && window === webView && preparedPopup != null) {
+                closeRequestListener?.onCloseRequest()
+            }
         }
 
         override fun onShowFileChooser(
@@ -1531,6 +1651,7 @@ private class SystemWebViewBrowserEngineSession(
 
     private fun applyPrivacyPolicy() {
         setGlobalThirdPartyCookieBlocking(privacyPolicy.blockThirdPartyCookies)
+        applyUserAgent()
         host.updatePolicy(
             topInsetEnabled = privacyPolicy.topInsetPx > 0,
             animationsEnabled = privacyPolicy.animationsEnabled,
@@ -1539,6 +1660,59 @@ private class SystemWebViewBrowserEngineSession(
             safeAreaLayoutQuietPeriodMillis = privacyPolicy.safeAreaLayoutQuietPeriodMillis,
             safeAreaRequiredFailureCount = privacyPolicy.safeAreaRequiredFailureCount,
         )
+    }
+
+    private fun applyUserAgent() {
+        // Changing the UA during a native POST/redirect restarts it in WebView.
+        if (navigationInProgress) return
+        val userAgent = if (privacyPolicy.federatedLoginCompatibilityEnabled) {
+            FederatedLoginRules.compatibleUserAgent(defaultUserAgent)
+        } else {
+            defaultUserAgent
+        }
+        val effectiveUserAgent = if (desktopMode) DesktopSiteRules.desktopUserAgent(userAgent) else userAgent
+        if (webView.settings.userAgentString != effectiveUserAgent) {
+            webView.settings.userAgentString = effectiveUserAgent
+        }
+    }
+
+    private fun handleInitialPopupNavigation(url: String): Boolean {
+        val prepared = preparedPopup ?: return false
+        if (!initialPopupNavigationPending || url == "about:blank") return false
+        initialPopupNavigationPending = false
+        if (contentBlocker.shouldBlockPopup(url, prepared.openerUrl)) {
+            prepared.opener.privacyEventSink.onEvent(
+                GeckoPrivacyEvent(
+                    requestUrl = url,
+                    pageUrl = prepared.openerUrl,
+                    ruleId = null,
+                    wasBlocked = true,
+                    isBuiltIn = true,
+                    isCompatibilityObservation = false,
+                ),
+            )
+            closeRequestListener?.onCloseRequest()
+            return true
+        }
+        if (SystemWebViewBlobDownloadRules.isPopupBlobDownload(
+                blobUrl = url,
+                pageUrl = prepared.openerUrl.orEmpty(),
+                hasUserGesture = true,
+            )
+        ) {
+            prepared.opener.dispatchDownloadResponse(url, null, null)
+            closeRequestListener?.onCloseRequest()
+            return true
+        }
+        return navigationRequestListener?.onNavigationRequest(
+            GeckoMainFrameNavigationRequest(
+                url = url,
+                isRedirect = false,
+                hasUserGesture = true,
+                isDirectNavigation = true,
+                target = BrowserEngineNavigationTarget.Current,
+            ),
+        ) == GeckoNavigationRequestDecision.Deny
     }
 
     private fun applyDocumentCosmetics(url: String?) {

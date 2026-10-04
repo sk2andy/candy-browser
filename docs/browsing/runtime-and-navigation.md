@@ -58,6 +58,7 @@
 | Gecko native new-window binding | `GeckoNativeSessionBindingRules`, `GeckoPrivacyHostRuntime`, Candy Privacy background | Authenticate the exact extension/session/token/challenge/revision through a denied internal `tabs.update`, without loading a document. The original HTTP request waits for that binding, preserving POST data, referrer and opener; timeout, tab removal and native disconnect cancel it. Route the informational initial URI through the existing popup rules because Gecko does not emit another child load-request callback for it. |
 | Gecko identity popup routing | `FederatedLoginRules` → Gecko navigation request → native new-session binding | Keep user-triggered new-window navigation to known HTTPS Google identity endpoints in Gecko, including provider navigation inside an adopted native popup. External-app fallback would replace the child with a GET tab and lose `window.opener`. Existing popup rules still decide whether to admit the child; cookie compatibility remains separately consented. |
 | Gecko page-requested window close | Gecko content delegate → session/adapter close-request listener → controller | Honor `window.close()` only for native popup tabs adopted from Gecko in this process. Post closure through the existing tab-removal path, recheck exact session identity, and return to a valid opener only when the closing popup was selected. Background closure preserves the foreground selection; manual/restored/recreated tabs receive no close grant. Clear listeners on close/crash and remove grants on session replacement, tab removal, snooze and controller destruction. |
+| System WebView native popup adoption | System factory prepared-session slot → controller popup admission → `WebViewTransport` | Supply the exact configured child WebView instead of replaying its first URL in a new tab. Preserve opener, POST body and referrer; reject windows without a user gesture. First nonblank navigation uses Candy's popup filtering and existing pending-tab policy; initial POST uses the native `onPageStarted` fallback. `onCloseWindow` uses the same exact-session controller close grant. Blob popups download through the opener and remove the transient child. |
 | Pull to refresh | `BrowserPullToRefreshLayout` → `BrowserPullGestureRules` / `BrowserPullToRefreshRules` → `BrowserController.reload()` | Admit a downward-dominant gesture anywhere on a visible, idle web page whose engine-reported document offset is at the top; on `instagram.com`, `tiktok.com`, `youtube.com` and their subdomains, require a start within 160 dp below the top safe inset so lower feed gestures stay with the page; keep blank, obscured, Find-in-page, overview and video-only surfaces out of the gesture path |
 
 ## Invariants
@@ -730,6 +731,12 @@ the bounded candidates cached by load, mutation or interaction discovery.
 
 - Compatibility overrides match the exact current host. Regular tabs persist them per profile;
   private tabs keep them in memory for that tab only.
+- System WebView observes requests to the known compatibility hosts and offers the existing scoped
+  login prompt for recognized Google SDK endpoints. Only login consent removes the embedded-browser
+  user-agent markers; CAPTCHA consent and site pause do not. Native children inherit consent while
+  blank or on the exact HTTPS Google Accounts host, including account-chooser redirects. Leaving
+  that host restores ordinary policy. User-agent updates wait for an in-flight navigation to finish
+  because changing WebView's user agent mid-load can restart a native POST or redirect.
 - GeckoView 155 exposes `ACCEPT_FIRST_PARTY` only as a runtime-wide hard policy and provides no
   public site-scoped override for it. Candy therefore keeps that strict mode by default, then uses
   `ACCEPT_ALL` only while a selected session has a confirmed, exact-current-host SSO, CAPTCHA, or

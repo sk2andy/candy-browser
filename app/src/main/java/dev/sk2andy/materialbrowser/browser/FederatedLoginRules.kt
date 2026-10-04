@@ -57,6 +57,9 @@ object FederatedLoginRules {
         return host == GOOGLE_ACCOUNTS_HOST && GOOGLE_AUTH_PATH_PREFIXES.any(path::startsWith)
     }
 
+    internal fun isProviderPage(url: String): Boolean = secureWebUri(url) != null &&
+        PrivacyRequestSanitizer.webHost(url) == GOOGLE_ACCOUNTS_HOST
+
     internal fun shouldPreservePopupNavigation(
         url: String,
         target: BrowserEngineNavigationTarget,

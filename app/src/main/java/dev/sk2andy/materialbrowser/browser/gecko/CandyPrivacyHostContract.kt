@@ -82,6 +82,7 @@ internal data class GeckoPrivacyPolicy(
     val animationPolicyRevision: Long = 0L,
     val blockThirdPartyCookies: Boolean = true,
     val allowThirdPartyCookiesForSite: Boolean = false,
+    val federatedLoginCompatibilityEnabled: Boolean = false,
     val compatibilityRequestHosts: Set<String> = DEFAULT_COMPATIBILITY_REQUEST_HOSTS,
     val topInsetPx: Int = 0,
     val navigationGeneration: Int = 0,
