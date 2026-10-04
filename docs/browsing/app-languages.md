@@ -15,6 +15,7 @@
 | Group | Languages | Android locale tags |
 | --- | --- | --- |
 | Existing | English, German, French, Portuguese, Spanish, Polish, Czech | `en`, `de`, `fr`, `pt`, `es`, `pl`, `cs` |
+| Russian | Russian | `ru` (also used for `ru-RU`) |
 | East Asia | Simplified Chinese, Traditional Chinese, Japanese, Korean | `zh-Hans`, `zh-Hant`, `ja`, `ko` |
 | Southeast Asia | Thai, Vietnamese | `th`, `vi` |
 | Northern/western Europe | Norwegian Bokmål, Swedish, Danish, Dutch, Luxembourgish | `nb`, `sv`, `da`, `nl`, `lb` |
@@ -32,4 +33,5 @@ open. Keep improvements in the locale resources; no translation model or service
 | `AppLanguageRulesTest` | Chinese scripts/regions, exact region selection, language fallback and device default. |
 | `AppLanguageSettingsInstrumentedTest` | Native language labels, Chinese script switching, device default and scrolling through the full menu. |
 | `AppLanguagePreferencesInstrumentedTest` | Native locale persistence, private-tab preservation and Android resource resolution/formatting for every added language. |
+| Russian regression coverage | Native `русский` menu selection, `ru-RU` resource fallback, Russian one/few/many tab counts and persisted locale changes without losing private tabs. |
 | Full/FOSS assembly and lint | Android XML escaping, plural categories, packaged resources and both product flavors. |

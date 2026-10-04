@@ -701,7 +701,8 @@ transformations, and notices ship in `app/src/main/assets/`; maintenance entry p
 
 ## Languages
 
-English, German, French, Portuguese, and Spanish.
+29 app languages, including Russian (`ru`, also used for `ru-RU`). See the
+[complete language list](docs/browsing/app-languages.md#supported-languages).
 
 ## Licensing
 
