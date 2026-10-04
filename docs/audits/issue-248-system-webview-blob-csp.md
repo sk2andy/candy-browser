@@ -12,11 +12,27 @@
 | User-authorized Pixel 11 Pro | Android 17 / API 37, System WebView `153.0.8010.36`; auto-rotate remained disabled |
 | Installed regular Candy on Pixel | Version 0.45.1 with System WebView selected; existing Google login retained |
 | Gemini free, signed in on Pixel | Gemini Flash generated an image; the user repeatedly reproduced the download-button snackbar, "Download konnte nicht gestartet werden" |
-| Patched live Gemini download | Not yet verified in a signed-in session |
+| Patched live Gemini download | Still fails in the signed-in diagnostic app; native logs and debugger identify an opaque `blob:null/` request |
 
-The user confirmed a live System WebView download failure. The CSP defect below is independently
-proven in a controlled fixture; its relationship to that Gemini failure remains unconfirmed.
-Do not treat the fixture as a successful live Gemini acceptance test.
+The user confirmed a live System WebView download failure. The diagnostic build reproduces it:
+Gemini creates an opaque-origin image blob, which the existing same-origin route rejects.
+The CSP defect below is independently proven in a controlled fixture. It does not explain this
+captured native rejection. Do not treat that fixture as successful live Gemini acceptance.
+
+## Confirmed live failure
+
+| Evidence in the signed-in diagnostic app | Finding |
+| --- | --- |
+| Repeated native callbacks | `SystemDownloadResponseReceived` → `SystemDownloadRequested` → `SystemDownloadPlatform` → `SystemDownloadInvalidRequest` |
+| Native callback breakpoint, URL-type-only inspection | Download URL starts with `blob:null/`; owning main WebView URL uses HTTPS |
+| Text/DOM and frame-context probe | Gemini creates the JPEG blob inside an opaque sandboxed frame; its sandbox permits scripts and downloads but excludes same-origin access |
+| Actual rejection | `isSameOriginBlob` cannot match the opaque blob to the HTTPS main document; fallback `startDownload` rejects its non-HTTP(S) scheme |
+| Native stack trace | None: this is an explicit `InvalidRequest` callback before DownloadManager enqueue or storage access, not a caught exception |
+| Proposed capability probe | Test a fresh profile-matched passive-image helper navigating to the exact opaque blob and reading itself; prepared, not executed or established as a safe production fix |
+
+Opaque origin serialization `null` is not an origin identity. Do not relax the existing same-origin
+gate by comparing two `null` strings, or execute arbitrary opaque HTML/SVG blobs in a JavaScript
+enabled helper. The live case still requires a separately verified ownership and transfer path.
 
 ## Pixel diagnostics
 
