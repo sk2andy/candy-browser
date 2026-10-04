@@ -8,7 +8,6 @@ import android.app.Activity
 import android.app.DownloadManager
 import android.content.Context
 import android.graphics.Bitmap
-import android.graphics.Canvas
 import android.net.Uri
 import android.os.Environment
 import android.os.Message
@@ -63,6 +62,7 @@ import dev.sk2andy.materialbrowser.browser.BrowserEngineNavigationTarget
 import dev.sk2andy.materialbrowser.browser.BrowserEnginePermissionSetResponse
 import dev.sk2andy.materialbrowser.browser.BrowserEngineScrollListener
 import dev.sk2andy.materialbrowser.browser.BrowserEngineScrollMetrics
+import dev.sk2andy.materialbrowser.browser.BrowserPreviewBitmapRenderer
 import dev.sk2andy.materialbrowser.browser.BrowserViewportRect
 import dev.sk2andy.materialbrowser.browser.PrivacySignalDocumentScript
 import dev.sk2andy.materialbrowser.browser.PrivacySignalSettings
@@ -704,14 +704,12 @@ private class SystemWebViewBrowserEngineSession(
                     .coerceAtLeast(1),
             )
             val bitmap = runCatching {
-                Bitmap.createBitmap(targetWidthPx, targetHeight, Bitmap.Config.ARGB_8888).also {
-                    val canvas = Canvas(it)
-                    canvas.scale(
-                        targetWidthPx.toFloat() / webView.width,
-                        targetHeight.toFloat() / visibleViewHeightPx,
-                    )
-                    webView.draw(canvas)
-                }
+                BrowserPreviewBitmapRenderer.render(
+                    sourceWidthPx = webView.width,
+                    targetWidthPx = targetWidthPx,
+                    targetHeightPx = targetHeight,
+                    draw = webView::draw,
+                )
             }.getOrNull()
             if (!cancelled.get()) onComplete(bitmap) else bitmap?.recycle()
         }

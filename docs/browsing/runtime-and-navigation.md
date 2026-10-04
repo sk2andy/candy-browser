@@ -128,6 +128,12 @@
   A retained valid surface needs no new paint event. Navigation, renderer termination and view
   release clear the buffer and reject late captures; private frames never enter preview storage.
   Gecko paint reset alone preserves the departing frame because it can also occur on pause.
+  Departing frames render at their captured physical pixel size with an identity image matrix;
+  neither drawable density nor independent X/Y scaling may resize them. A renderer viewport-size
+  change (including IME, orientation or window resizing) discards the frame and invalidates pending
+  captures, even if the viewport later returns to its old dimensions. Captures whose bitmap size
+  differs from the captured/current viewport are rejected. This prevents a keyboard-height frame
+  from stretching over the full-height live page after file-picker return.
 - Route untrusted URLs through existing normalizers. Do not add a second permissive parser.
 - Keep Auto De-AMP browser-wide, persisted and enabled by default. Both GeckoView and System WebView
   enter the same main-frame listener. Rewrite only trusted Google viewer/cache document shapes whose
