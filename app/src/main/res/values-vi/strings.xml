@@ -1389,4 +1389,12 @@
     <string name="developer_options_gecko_logging_status_failed">Việc bắt được dừng lại sau một lỗi. Tắt và bật để thử lại.</string>
     <string name="settings_app_language">Ngôn ngữ ứng dụng</string>
     <string name="settings_app_language_system">Theo ngôn ngữ thiết bị</string>
+    <string name="command_delete_site_data_reload_name">Xóa cookie và dữ liệu của trang web này</string>
+    <string name="command_delete_site_data_reload_effect">Xem lại cookie và dữ liệu trang web của %1$s, rồi tải lại thẻ này</string>
+    <string name="command_feedback_site_data_cleared">Đã xóa dữ liệu trang web và tải lại thẻ</string>
+    <string name="command_site_data_confirm_title">Xóa dữ liệu của %1$s?</string>
+    <string name="command_site_data_confirm_webview">Cookie và bộ nhớ trang web của tên miền có thể đăng ký thuộc địa chỉ này cùng mọi tên miền phụ sẽ bị xóa khỏi hồ sơ lưu trữ này, trên mọi lược đồ giao thức và cổng, bao gồm dữ liệu nhúng hoặc phân vùng. Các tên miền phụ khác cùng tên miền cũng có thể bị ảnh hưởng. Bạn có thể bị đăng xuất. Sau đó thẻ này sẽ tải lại. Dữ liệu của các trang web không liên quan được giữ nguyên.</string>
+    <string name="command_site_data_unsupported">Công cụ này không thể xóa an toàn cookie và bộ nhớ của một trang web trong hồ sơ hiện tại. Sẽ không xóa gì.</string>
+    <string name="command_site_data_shared_storage">Các thẻ và hồ sơ khác dùng chung bộ nhớ này cũng sẽ mất dữ liệu của trang web này.</string>
+    <string name="command_site_data_target_changed">Thẻ này hoặc trang của thẻ đã thay đổi. Sẽ không xóa gì. Hãy mở lại thông tin trang web để xem trang hiện tại.</string>
 </resources>

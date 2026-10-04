@@ -1389,4 +1389,12 @@
     <string name="developer_options_gecko_logging_status_failed">捕獲はエラーで停止した. ログインをオフにして再試しにオンします.</string>
     <string name="settings_app_language">アプリの言語</string>
     <string name="settings_app_language_system">端末の言語を使用</string>
+    <string name="command_delete_site_data_reload_name">このサイトの Cookie とデータを削除</string>
+    <string name="command_delete_site_data_reload_effect">%1$s の Cookie とサイトデータを確認して、このタブを再読み込み</string>
+    <string name="command_feedback_site_data_cleared">サイトデータを削除し、タブを再読み込みしました</string>
+    <string name="command_site_data_confirm_title">%1$s のデータを削除しますか？</string>
+    <string name="command_site_data_confirm_webview">このストレージプロファイルから、このアドレスの登録可能なドメインとすべてのサブドメインの Cookie およびサイトストレージを削除します。すべてのスキームとポート、埋め込みコンテンツのデータやパーティション化されたデータも対象です。同じドメイン内の他のサブドメインにも影響する場合があります。ログアウトされる場合があります。その後、このタブを再読み込みします。無関係なサイトのデータは保持されます。</string>
+    <string name="command_site_data_unsupported">このエンジンでは、現在のプロファイル内で一つのサイトの Cookie とストレージを安全に削除できません。何も削除しません。</string>
+    <string name="command_site_data_shared_storage">このストレージを共有する他のタブやプロファイルでも、このサイトのデータが失われます。</string>
+    <string name="command_site_data_target_changed">このタブまたはページが変更されました。何も削除しません。サイト情報をもう一度開き、現在のページを確認してください。</string>
 </resources>

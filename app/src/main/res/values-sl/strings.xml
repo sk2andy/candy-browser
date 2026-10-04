@@ -1438,4 +1438,12 @@
     <string name="developer_options_gecko_logging_status_failed">Ujemanje je ustavljeno zaradi napake. Izklopite prijavo in poskusite znova.</string>
     <string name="settings_app_language">Jezik aplikacije</string>
     <string name="settings_app_language_system">Uporabi jezik naprave</string>
+    <string name="command_delete_site_data_reload_name">Izbriši piškotke in podatke tega spletnega mesta</string>
+    <string name="command_delete_site_data_reload_effect">Preglej piškotke in podatke spletnega mesta za %1$s, nato znova naloži ta zavihek</string>
+    <string name="command_feedback_site_data_cleared">Podatki spletnega mesta so izbrisani in zavihek znova naložen</string>
+    <string name="command_site_data_confirm_title">Izbrišem podatke za %1$s?</string>
+    <string name="command_site_data_confirm_webview">Piškotki in shramba spletnega mesta za registrirano domeno tega naslova in vse njene poddomene bodo izbrisani iz tega profila shrambe, za vse protokole in vrata, vključno z vdelanimi ali razdeljenimi podatki. To lahko vpliva tudi na druge poddomene iste domene. Lahko se odjaviš iz računov. Ta zavihek se nato znova naloži. Nepovezana spletna mesta ohranijo svoje podatke.</string>
+    <string name="command_site_data_unsupported">Ta pogon ne more varno izbrisati piškotkov in shrambe posameznega spletnega mesta v trenutnem profilu. Nič ne bo izbrisano.</string>
+    <string name="command_site_data_shared_storage">Drugi zavihki in profili, ki delijo to shrambo, bodo prav tako izgubili podatke tega spletnega mesta.</string>
+    <string name="command_site_data_target_changed">Ta zavihek ali njegova stran se je spremenila. Nič ne bo izbrisano. Znova odpri informacije o spletnem mestu, da pregledaš trenutno stran.</string>
 </resources>

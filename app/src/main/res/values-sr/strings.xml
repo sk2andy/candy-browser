@@ -1422,4 +1422,12 @@
     <string name="developer_options_gecko_logging_status_failed">Захваће је заустављено због грешке. Искључите регистрацију и укључите да бисте поново покушали.</string>
     <string name="settings_app_language">Језик апликације</string>
     <string name="settings_app_language_system">Користи језик уређаја</string>
+    <string name="command_delete_site_data_reload_name">Обриши колачиће и податке овог сајта</string>
+    <string name="command_delete_site_data_reload_effect">Прегледај колачиће и податке сајта за %1$s, па поново учитај ову картицу</string>
+    <string name="command_feedback_site_data_cleared">Подаци сајта су обрисани и картица поново учитана</string>
+    <string name="command_site_data_confirm_title">Обрисати податке за %1$s?</string>
+    <string name="command_site_data_confirm_webview">Колачићи и складиште сајта за регистровани домен ове адресе и све његове поддомене биће обрисани из овог профила складишта, за све протоколе и портове, укључујући уграђене или партиционисане податке. Ово може да утиче и на друге поддомене истог домена. Можеш бити одјављен. Ова картица се затим поново учитава. Неповезани сајтови задржавају своје податке.</string>
+    <string name="command_site_data_unsupported">Овај механизам не може безбедно да обрише колачиће и складиште појединачног сајта у тренутном профилу. Ништа неће бити обрисано.</string>
+    <string name="command_site_data_shared_storage">Друге картице и профили који деле ово складиште такође ће изгубити податке овог сајта.</string>
+    <string name="command_site_data_target_changed">Ова картица или њена страница се променила. Ништа неће бити обрисано. Поново отвори информације о сајту да прегледаш тренутну страницу.</string>
 </resources>

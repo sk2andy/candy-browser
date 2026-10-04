@@ -1389,4 +1389,12 @@
     <string name="developer_options_gecko_logging_status_failed">การจับได้หยุดหลังเกิดความผิดพลาด ปิดล็อกและเปิดเพื่อลองอีกครั้ง</string>
     <string name="settings_app_language">ภาษาของแอป</string>
     <string name="settings_app_language_system">ใช้ภาษาของอุปกรณ์</string>
+    <string name="command_delete_site_data_reload_name">ล้างคุกกี้และข้อมูลของเว็บไซต์นี้</string>
+    <string name="command_delete_site_data_reload_effect">ตรวจสอบคุกกี้และข้อมูลเว็บไซต์ของ %1$s แล้วโหลดแท็บนี้ใหม่</string>
+    <string name="command_feedback_site_data_cleared">ลบข้อมูลเว็บไซต์และโหลดแท็บใหม่แล้ว</string>
+    <string name="command_site_data_confirm_title">ลบข้อมูลของ %1$s หรือไม่?</string>
+    <string name="command_site_data_confirm_webview">คุกกี้และพื้นที่เก็บข้อมูลเว็บไซต์ของโดเมนที่จดทะเบียนได้สำหรับที่อยู่นี้และโดเมนย่อยทั้งหมดจะถูกลบออกจากโปรไฟล์พื้นที่เก็บข้อมูลนี้ ครอบคลุมทุกรูปแบบโปรโตคอลและพอร์ต รวมถึงข้อมูลที่ฝังอยู่หรือแบ่งพาร์ทิชัน โดเมนย่อยอื่นภายใต้โดเมนเดียวกันอาจได้รับผลด้วย คุณอาจถูกออกจากระบบ จากนั้นแท็บนี้จะโหลดใหม่ เว็บไซต์ที่ไม่เกี่ยวข้องจะเก็บข้อมูลไว้</string>
+    <string name="command_site_data_unsupported">เอนจินนี้ไม่สามารถล้างคุกกี้และพื้นที่เก็บข้อมูลของเว็บไซต์เดียวในโปรไฟล์ปัจจุบันได้อย่างปลอดภัย จะไม่มีการลบข้อมูลใด ๆ</string>
+    <string name="command_site_data_shared_storage">แท็บและโปรไฟล์อื่นที่ใช้พื้นที่เก็บข้อมูลนี้ร่วมกันจะสูญเสียข้อมูลของเว็บไซต์นี้ด้วย</string>
+    <string name="command_site_data_target_changed">แท็บนี้หรือหน้าเว็บเปลี่ยนไปแล้ว จะไม่มีการลบข้อมูลใด ๆ เปิดข้อมูลเว็บไซต์อีกครั้งเพื่อตรวจสอบหน้าปัจจุบัน</string>
 </resources>

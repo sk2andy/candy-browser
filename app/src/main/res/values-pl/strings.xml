@@ -1437,4 +1437,12 @@
     <string name="developer_options_gecko_logging_status_failed">Zapis zatrzymany po błędzie. Wyłącz i włącz rejestrowanie, aby spróbować ponownie.</string>
     <string name="settings_app_language">Język aplikacji</string>
     <string name="settings_app_language_system">Używaj języka urządzenia</string>
+    <string name="command_delete_site_data_reload_name">Wyczyść pliki cookie i dane tej witryny</string>
+    <string name="command_delete_site_data_reload_effect">Sprawdź pliki cookie i dane witryny %1$s, a następnie ponownie wczytaj tę kartę</string>
+    <string name="command_feedback_site_data_cleared">Dane witryny usunięte, karta wczytana ponownie</string>
+    <string name="command_site_data_confirm_title">Usunąć dane dla %1$s?</string>
+    <string name="command_site_data_confirm_webview">Pliki cookie i pamięć witryny dla domeny rejestrowalnej tego adresu oraz wszystkich jej subdomen zostaną usunięte z tego profilu pamięci, dla wszystkich protokołów i portów, w tym dane osadzone lub partycjonowane. Może to również wpłynąć na inne subdomeny tego samego poziomu. Możesz zostać wylogowany. Następnie ta karta zostanie wczytana ponownie. Niepowiązane witryny zachowają swoje dane.</string>
+    <string name="command_site_data_unsupported">Ten silnik nie może bezpiecznie wyczyścić plików cookie i pamięci jednej witryny w bieżącym profilu. Nic nie zostanie usunięte.</string>
+    <string name="command_site_data_shared_storage">Inne karty i profile korzystające ze wspólnej pamięci również utracą dane tej witryny.</string>
+    <string name="command_site_data_target_changed">Ta karta lub jej strona uległa zmianie. Nic nie zostanie usunięte. Otwórz ponownie informacje o witrynie, aby sprawdzić bieżącą stronę.</string>
 </resources>

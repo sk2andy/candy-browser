@@ -1406,4 +1406,12 @@
     <string name="developer_options_gecko_logging_status_failed">Optagelsen stoppede efter en fejl. Slå logning fra og til for at prøve igen.</string>
     <string name="settings_app_language">Appsprog</string>
     <string name="settings_app_language_system">Følg enhedens sprog</string>
+    <string name="command_delete_site_data_reload_name">Ryd cookies og data for dette websted</string>
+    <string name="command_delete_site_data_reload_effect">Gennemgå cookies og webstedsdata for %1$s, og genindlæs derefter dette faneblad</string>
+    <string name="command_feedback_site_data_cleared">Webstedsdata slettet og faneblad genindlæst</string>
+    <string name="command_site_data_confirm_title">Slet data for %1$s?</string>
+    <string name="command_site_data_confirm_webview">Cookies og webstedslagring for denne adresses registrerbare domæne og alle dets underdomæner slettes fra denne lagringsprofil, for alle protokoller og porte, inklusive indlejrede eller partitionerede data. Dette kan også påvirke andre underdomæner på samme niveau. Du kan blive logget ud. Dette faneblad genindlæses bagefter. Websteder uden tilknytning beholder deres data.</string>
+    <string name="command_site_data_unsupported">Denne motor kan ikke sikkert rydde cookies og lagring for ét websted i den aktuelle profil. Intet bliver slettet.</string>
+    <string name="command_site_data_shared_storage">Andre faneblade og profiler, der deler denne lagring, mister også data for dette websted.</string>
+    <string name="command_site_data_target_changed">Dette faneblad eller dets side er ændret. Intet bliver slettet. Åbn webstedsoplysningerne igen for at gennemgå den aktuelle side.</string>
 </resources>

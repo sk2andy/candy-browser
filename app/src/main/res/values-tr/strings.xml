@@ -1406,4 +1406,12 @@
     <string name="developer_options_gecko_logging_status_failed">Hata nedeniyle kayıt durdu. Yeniden denemek için günlük kaydını kapatıp açın.</string>
     <string name="settings_app_language">Uygulama dili</string>
     <string name="settings_app_language_system">Cihaz dilini kullan</string>
+    <string name="command_delete_site_data_reload_name">Bu sitenin çerezlerini ve verilerini temizle</string>
+    <string name="command_delete_site_data_reload_effect">%1$s için çerezleri ve site verilerini gözden geçir, ardından bu sekmeyi yeniden yükle</string>
+    <string name="command_feedback_site_data_cleared">Site verileri silindi ve sekme yeniden yüklendi</string>
+    <string name="command_site_data_confirm_title">%1$s verileri silinsin mi?</string>
+    <string name="command_site_data_confirm_webview">Bu depolama profilinden bu adresin kaydedilebilir alan adına ve tüm alt alan adlarına ait çerezler ve site depolaması, tüm protokol şemaları ve bağlantı noktaları için silinir. Gömülü veya bölümlenmiş veriler de buna dahildir. Aynı alan adının diğer alt alan adları da etkilenebilir. Oturumunuz kapanabilir. Ardından bu sekme yeniden yüklenir. İlgisiz sitelerin verileri korunur.</string>
+    <string name="command_site_data_unsupported">Bu motor, mevcut profilde tek bir sitenin çerezlerini ve depolamasını güvenle temizleyemiyor. Hiçbir şey silinmeyecek.</string>
+    <string name="command_site_data_shared_storage">Bu depolamayı paylaşan diğer sekmeler ve profiller de bu sitenin verilerini kaybeder.</string>
+    <string name="command_site_data_target_changed">Bu sekme veya sayfası değişti. Hiçbir şey silinmeyecek. Mevcut sayfayı gözden geçirmek için site bilgilerini yeniden açın.</string>
 </resources>

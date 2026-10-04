@@ -1413,4 +1413,12 @@
     <string name="developer_options_gecko_logging_status_failed">Captura parada após um erro. Desative e ative o registo para tentar novamente.</string>
     <string name="settings_app_language">Idioma da aplicação</string>
     <string name="settings_app_language_system">Usar o idioma do dispositivo</string>
+    <string name="command_delete_site_data_reload_name">Limpar cookies e dados deste site</string>
+    <string name="command_delete_site_data_reload_effect">Rever os cookies e dados do site de %1$s e depois recarregar este separador</string>
+    <string name="command_feedback_site_data_cleared">Dados do site eliminados e separador recarregado</string>
+    <string name="command_site_data_confirm_title">Eliminar os dados de %1$s?</string>
+    <string name="command_site_data_confirm_webview">Os cookies e o armazenamento web do domínio registável deste endereço e de todos os seus subdomínios serão eliminados deste perfil de armazenamento, para todos os protocolos e portas, incluindo dados incorporados ou particionados. Isto também pode afetar subdomínios do mesmo domínio. A tua sessão poderá terminar. Este separador será recarregado depois. Os sites sem relação mantêm os seus dados.</string>
+    <string name="command_site_data_unsupported">Este motor não pode limpar com segurança os cookies e o armazenamento de um único site no perfil atual. Nada será eliminado.</string>
+    <string name="command_site_data_shared_storage">Outros separadores e perfis que partilhem este armazenamento também perderão os dados deste site.</string>
+    <string name="command_site_data_target_changed">Este separador ou a sua página mudou. Nada será eliminado. Abre novamente as informações do site para rever a página atual.</string>
 </resources>
