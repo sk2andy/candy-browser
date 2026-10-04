@@ -107,6 +107,16 @@ class FederatedLoginRulesTest {
     }
 
     @Test
+    fun `provider page includes account redirects but rejects insecure and lookalike hosts`() {
+        assertTrue(FederatedLoginRules.isProviderPage("https://accounts.google.com/v3/signin/identifier"))
+        assertTrue(FederatedLoginRules.isProviderPage("https://accounts.google.com/ServiceLogin"))
+        assertFalse(FederatedLoginRules.isProviderPage("http://accounts.google.com/ServiceLogin"))
+        assertFalse(FederatedLoginRules.isProviderPage("https://accounts.google.com.example/ServiceLogin"))
+        assertFalse(FederatedLoginRules.isProviderPage("https://example.com/ServiceLogin"))
+        assertFalse(FederatedLoginRules.isProviderPage("https://accounts.google.com/invalid path"))
+    }
+
+    @Test
     fun `preserves provider completion within accepted native popup without another gesture`() {
         assertTrue(
             FederatedLoginRules.shouldPreservePopupNavigation(

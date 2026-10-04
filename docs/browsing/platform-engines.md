@@ -68,6 +68,10 @@ call-site cutover are not complete.
   Google Pay additionally depends on a recent WebView/Play Services and Google's app integration
   approval; enabling the API alone does not guarantee a live checkout. GeckoView does not expose
   AndroidX WebKit's Payment Request setting or native Google Pay handoff.
+- System WebView adopts user-triggered native popup windows into the existing controller tab flow.
+  The exact configured child retains `window.opener`, POST data and referrer; page-requested close
+  removes only the currently adopted native session. Google SDK detection offers the existing
+  site-scoped login compatibility consent for cookies and the embedded-browser user-agent markers.
 - System WebView uses profile-scoped cookie managers for page loads, downloads and data deletion.
   Private profiles disable credential/autofill integration, use one process-local AndroidX WebKit
   profile and are removed on clean shutdown or before the next System-WebView process starts.
@@ -196,7 +200,8 @@ System WebView installs the blocker in the page JavaScript world at document sta
 before a page script can capture the constructor. Changing the mode installs or removes the handler
 and reloads every factory-owned session. If an outdated WebView provider lacks document-start
 injection, Candy disables page JavaScript while a protected mode is active rather than allowing an
-unprotected connection. Temporary popup WebViews keep JavaScript explicitly disabled.
+unprotected connection. Adopted popup sessions install the same policy before native transport
+binding; standalone download-capture WebViews keep JavaScript explicitly disabled.
 Camera and microphone permissions remain separate and continue through Candy's permission policy.
 
 ## Android Gecko and extension invariants
