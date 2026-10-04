@@ -113,6 +113,7 @@ internal object PrivacyXRayTestTags {
     const val Connection = "site_connection"
     const val XRayTab = "site_info_xray_tab"
     const val PermissionsTab = "site_info_permissions_tab"
+    const val ClearSiteData = "site_info_clear_site_data"
 }
 
 private enum class SiteInfoSection { Privacy, Permissions }
@@ -137,6 +138,7 @@ internal fun PrivacyXRaySheet(
     onPermissionOriginSelected: (String) -> Unit,
     onPermissionDecisionChanged: (SitePermission, SitePermissionDecision) -> Unit,
     onResetSitePermissions: () -> Unit,
+    onClearSiteData: (() -> Unit)? = null,
     onDismiss: () -> Unit,
 ) {
     val title = stringResource(R.string.site_info_title)
@@ -196,6 +198,16 @@ internal fun PrivacyXRaySheet(
                         label = { Text(stringResource(R.string.permission_radar_title)) },
                         modifier = Modifier.testTag(PrivacyXRayTestTags.PermissionsTab),
                     )
+                }
+                onClearSiteData?.let { clearSiteData ->
+                    TextButton(
+                        onClick = clearSiteData,
+                        modifier = Modifier
+                            .padding(horizontal = 20.dp)
+                            .testTag(PrivacyXRayTestTags.ClearSiteData),
+                    ) {
+                        Text(stringResource(R.string.command_delete_site_data_reload_name))
+                    }
                 }
                 if (selectedSection == SiteInfoSection.Privacy) {
                     PrivacyXRayContent(

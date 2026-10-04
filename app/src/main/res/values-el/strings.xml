@@ -1406,4 +1406,12 @@
     <string name="developer_options_gecko_logging_status_failed">Η καταγραφή σταμάτησε λόγω σφάλματος. Απενεργοποιήστε και ενεργοποιήστε ξανά την καταγραφή για νέα προσπάθεια.</string>
     <string name="settings_app_language">Γλώσσα εφαρμογής</string>
     <string name="settings_app_language_system">Χρήση γλώσσας συσκευής</string>
+    <string name="command_delete_site_data_reload_name">Διαγραφή cookies και δεδομένων αυτού του ιστοτόπου</string>
+    <string name="command_delete_site_data_reload_effect">Έλεγξε τα cookies και τα δεδομένα του ιστοτόπου για %1$s και μετά φόρτωσε ξανά αυτή την καρτέλα</string>
+    <string name="command_feedback_site_data_cleared">Τα δεδομένα του ιστοτόπου διαγράφηκαν και η καρτέλα φορτώθηκε ξανά</string>
+    <string name="command_site_data_confirm_title">Διαγραφή δεδομένων για %1$s;</string>
+    <string name="command_site_data_confirm_webview">Τα cookies και ο χώρος αποθήκευσης του ιστοτόπου για τον καταχωρισμένο τομέα αυτής της διεύθυνσης και όλους τους υποτομείς του θα διαγραφούν από αυτό το προφίλ αποθήκευσης, για όλα τα πρωτόκολλα και τις θύρες, συμπεριλαμβανομένων ενσωματωμένων ή διαμερισμένων δεδομένων. Αυτό μπορεί να επηρεάσει και άλλους υποτομείς του ίδιου τομέα. Μπορεί να αποσυνδεθείς. Αυτή η καρτέλα φορτώνεται ξανά στη συνέχεια. Οι μη σχετιζόμενοι ιστότοποι διατηρούν τα δεδομένα τους.</string>
+    <string name="command_site_data_unsupported">Αυτή η μηχανή δεν μπορεί να διαγράψει με ασφάλεια τα cookies και τον χώρο αποθήκευσης ενός μεμονωμένου ιστοτόπου στο τρέχον προφίλ. Δεν θα διαγραφεί τίποτα.</string>
+    <string name="command_site_data_shared_storage">Άλλες καρτέλες και προφίλ που μοιράζονται αυτόν τον χώρο αποθήκευσης θα χάσουν επίσης τα δεδομένα αυτού του ιστοτόπου.</string>
+    <string name="command_site_data_target_changed">Αυτή η καρτέλα ή η σελίδα της άλλαξε. Δεν θα διαγραφεί τίποτα. Άνοιξε ξανά τις πληροφορίες του ιστοτόπου για να ελέγξεις την τρέχουσα σελίδα.</string>
 </resources>

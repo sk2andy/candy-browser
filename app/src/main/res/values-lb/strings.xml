@@ -1406,4 +1406,12 @@
     <string name="developer_options_gecko_logging_status_failed">D’Opnam gouf no engem Feeler gestoppt. Schalt d’Protokolléierung aus an erëm un, fir nach eng Kéier ze probéieren.</string>
     <string name="settings_app_language">App-Sprooch</string>
     <string name="settings_app_language_system">Sprooch vum Apparat benotzen</string>
+    <string name="command_delete_site_data_reload_name">Cookieën an Date vun dëser Websäit läschen</string>
+    <string name="command_delete_site_data_reload_effect">Cookieën a Websäitdate fir %1$s iwwerpréiwen, duerno dësen Tab nei lueden</string>
+    <string name="command_feedback_site_data_cleared">Websäitdate geläscht an Tab nei gelueden</string>
+    <string name="command_site_data_confirm_title">Date fir %1$s läschen?</string>
+    <string name="command_site_data_confirm_webview">Cookieën a Websäitspäicher fir déi registréierbar Domain vun dëser Adress an all hir Ënnerdomaine ginn aus dësem Späicherprofil geläscht, iwwer all Protokollschemaen a Porten, inklusiv agebett oder partitionéiert Donnéeën. Aner Ënnerdomaine vun därselwechter Domain kënnen och betraff sinn. Dir kënnt ofgemellt ginn. Duerno gëtt dësen Tab nei gelueden. Onofhängeg Websäite behalen hir Donnéeën.</string>
+    <string name="command_site_data_unsupported">Dëse Motor kann d’Cookieën an de Späicher vun enger eenzeler Websäit am aktuelle Profil net sécher läschen. Et gëtt näischt geläscht.</string>
+    <string name="command_site_data_shared_storage">Aner Tabs a Profiller, déi dëse Späicher deelen, verléieren och d’Date vun dëser Websäit.</string>
+    <string name="command_site_data_target_changed">Dësen Tab oder seng Säit huet sech geännert. Et gëtt näischt geläscht. Maacht d’Websäitinformatioun nach eng Kéier op, fir déi aktuell Säit ze iwwerpréiwen.</string>
 </resources>

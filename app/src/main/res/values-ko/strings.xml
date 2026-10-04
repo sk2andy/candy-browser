@@ -1389,4 +1389,12 @@
     <string name="developer_options_gecko_logging_status_failed">실수로 캡처가 중단됐습니다. 로깅을 끄고 다시 시도하기 위해 켜십시오.</string>
     <string name="settings_app_language">앱 언어</string>
     <string name="settings_app_language_system">기기 언어 따르기</string>
+    <string name="command_delete_site_data_reload_name">이 사이트의 쿠키 및 데이터 삭제</string>
+    <string name="command_delete_site_data_reload_effect">%1$s의 쿠키와 웹사이트 데이터를 확인한 뒤 이 탭 새로고침</string>
+    <string name="command_feedback_site_data_cleared">사이트 데이터를 삭제하고 탭을 새로고침했습니다</string>
+    <string name="command_site_data_confirm_title">%1$s의 데이터를 삭제할까요?</string>
+    <string name="command_site_data_confirm_webview">이 저장소 프로필에서 이 주소의 등록 가능 도메인과 모든 하위 도메인의 쿠키 및 웹사이트 저장소를 삭제합니다. 모든 스킴과 포트, 삽입된 콘텐츠의 데이터 또는 파티션된 데이터가 포함되며, 같은 도메인의 다른 하위 도메인에도 영향을 줄 수 있습니다. 로그아웃될 수 있습니다. 이후 이 탭을 새로고침합니다. 관련 없는 사이트의 데이터는 유지됩니다.</string>
+    <string name="command_site_data_unsupported">이 엔진은 현재 프로필에서 한 사이트의 쿠키와 저장소를 안전하게 삭제할 수 없습니다. 아무것도 삭제하지 않습니다.</string>
+    <string name="command_site_data_shared_storage">이 저장소를 공유하는 다른 탭과 프로필에서도 이 사이트의 데이터가 삭제됩니다.</string>
+    <string name="command_site_data_target_changed">이 탭 또는 페이지가 변경되었습니다. 아무것도 삭제하지 않습니다. 사이트 정보를 다시 열어 현재 페이지를 확인하세요.</string>
 </resources>

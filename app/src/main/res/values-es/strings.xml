@@ -1413,4 +1413,12 @@
     <string name="developer_options_gecko_logging_status_failed">Captura detenida tras un error. Desactiva y activa el registro para reintentar.</string>
     <string name="settings_app_language">Idioma de la aplicación</string>
     <string name="settings_app_language_system">Usar el idioma del dispositivo</string>
+    <string name="command_delete_site_data_reload_name">Borrar las cookies y los datos de este sitio</string>
+    <string name="command_delete_site_data_reload_effect">Revisar las cookies y los datos del sitio de %1$s y después volver a cargar esta pestaña</string>
+    <string name="command_feedback_site_data_cleared">Datos del sitio eliminados y pestaña recargada</string>
+    <string name="command_site_data_confirm_title">¿Eliminar los datos de %1$s?</string>
+    <string name="command_site_data_confirm_webview">Se eliminarán de este perfil de almacenamiento las cookies y el almacenamiento web del dominio registrable de esta dirección y de todos sus subdominios, para todos los protocolos y puertos, incluidos los datos incrustados o particionados. Esto también puede afectar a subdominios hermanos. Podrías cerrar sesión. Después se volverá a cargar esta pestaña. Los sitios no relacionados conservarán sus datos.</string>
+    <string name="command_site_data_unsupported">Este motor no puede borrar de forma segura las cookies y el almacenamiento de un solo sitio en el perfil actual. No se eliminará nada.</string>
+    <string name="command_site_data_shared_storage">Otras pestañas y perfiles que compartan este almacenamiento también perderán los datos de este sitio.</string>
+    <string name="command_site_data_target_changed">Esta pestaña o su página ha cambiado. No se eliminará nada. Abre de nuevo la información del sitio para revisar la página actual.</string>
 </resources>

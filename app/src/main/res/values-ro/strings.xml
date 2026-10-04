@@ -1422,4 +1422,12 @@
     <string name="developer_options_gecko_logging_status_failed">Captarea s-a oprit după o eroare. Opreşte şi opreşte pentru a încerca din nou.</string>
     <string name="settings_app_language">Limba aplicației</string>
     <string name="settings_app_language_system">Folosește limba dispozitivului</string>
+    <string name="command_delete_site_data_reload_name">Șterge cookie-urile și datele acestui site</string>
+    <string name="command_delete_site_data_reload_effect">Verifică cookie-urile și datele site-ului pentru %1$s, apoi reîncarcă această filă</string>
+    <string name="command_feedback_site_data_cleared">Datele site-ului au fost șterse și fila reîncărcată</string>
+    <string name="command_site_data_confirm_title">Ștergi datele pentru %1$s?</string>
+    <string name="command_site_data_confirm_webview">Cookie-urile și spațiul de stocare al site-ului pentru domeniul înregistrat al acestei adrese și toate subdomeniile sale vor fi șterse din acest profil de stocare, pentru toate protocoalele și porturile, inclusiv datele încorporate sau partiționate. Acest lucru poate afecta și alte subdomenii ale aceluiași domeniu. Poți fi deconectat. Această filă se reîncarcă apoi. Site-urile fără legătură își păstrează datele.</string>
+    <string name="command_site_data_unsupported">Acest motor nu poate șterge în siguranță cookie-urile și spațiul de stocare al unui singur site în profilul curent. Nu se va șterge nimic.</string>
+    <string name="command_site_data_shared_storage">Alte file și profiluri care partajează acest spațiu de stocare vor pierde și ele datele acestui site.</string>
+    <string name="command_site_data_target_changed">Această filă sau pagina ei s-a schimbat. Nu se va șterge nimic. Deschide din nou informațiile site-ului pentru a verifica pagina curentă.</string>
 </resources>

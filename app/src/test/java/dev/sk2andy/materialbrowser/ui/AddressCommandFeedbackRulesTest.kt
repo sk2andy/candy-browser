@@ -12,6 +12,7 @@ class AddressCommandFeedbackRulesTest {
         val expected = listOf(
             CommandResult.CacheClearedAndReloaded to AddressCommandFeedbackMessage.CacheCleared,
             CommandResult.CookiesClearedAndReloaded to AddressCommandFeedbackMessage.CookiesCleared,
+            CommandResult.SiteDataClearedAndReloaded to AddressCommandFeedbackMessage.SiteDataCleared,
             CommandResult.Reloaded to AddressCommandFeedbackMessage.Reloaded,
             CommandResult.LoadingStopped to AddressCommandFeedbackMessage.LoadingStopped,
             CommandResult.TabPinned to AddressCommandFeedbackMessage.TabPinned,

@@ -2,10 +2,12 @@ package dev.sk2andy.materialbrowser.browser.commands
 
 import dev.sk2andy.materialbrowser.browser.BrowserProfile
 import dev.sk2andy.materialbrowser.browser.BrowserTab
+import dev.sk2andy.materialbrowser.browser.SiteDataTarget
 
 enum class BrowserCommandKind(val executionId: String?) {
     ClearCacheAndReload("clear-cache-and-reload"),
     ClearCookiesAndReload("clear-cookies-and-reload"),
+    ClearSiteDataAndReload("clear-site-data-and-reload"),
     Reload("reload"),
     StopLoading("stop-loading"),
     PinTab("pin-tab"),
@@ -21,6 +23,7 @@ enum class BrowserCommandKind(val executionId: String?) {
 enum class CommandConfirmation {
     None,
     ClearCookies,
+    ClearSiteData,
     CloseMultipleDuplicates,
 }
 
@@ -32,6 +35,7 @@ data class BrowserCommand(
     val duplicateCount: Int = 0,
     val duplicateTabIds: List<String> = emptyList(),
     val confirmation: CommandConfirmation = CommandConfirmation.None,
+    val siteDataTarget: SiteDataTarget? = null,
 )
 
 data class CommandContext(
@@ -45,6 +49,7 @@ data class CommandContext(
     val canMoveSelectedTab: Boolean,
     val hasLoadedPage: Boolean,
     val canClearCookies: Boolean,
+    val siteDataTarget: SiteDataTarget? = null,
 )
 
 enum class CommandCookieScope {
@@ -68,6 +73,7 @@ object BrowserCommandRegistry {
     fun commands(context: CommandContext): List<BrowserCommand> = buildList {
         if (context.hasLoadedPage) {
             add(fixed(BrowserCommandKind.ClearCacheAndReload))
+            context.siteDataTarget?.let { add(siteDataCommand(it)) }
             if (context.canClearCookies) {
                 add(
                     fixed(BrowserCommandKind.ClearCookiesAndReload).copy(
@@ -141,6 +147,12 @@ object BrowserCommandRegistry {
         }
         add(fixed(BrowserCommandKind.OpenSettings))
     }
+
+    fun siteDataCommand(target: SiteDataTarget): BrowserCommand =
+        fixed(BrowserCommandKind.ClearSiteDataAndReload).copy(
+            confirmation = CommandConfirmation.ClearSiteData,
+            siteDataTarget = target,
+        )
 
     private fun fixed(kind: BrowserCommandKind): BrowserCommand = BrowserCommand(
         executionId = checkNotNull(kind.executionId),

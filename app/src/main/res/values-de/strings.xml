@@ -1408,4 +1408,12 @@
     <string name="developer_options_gecko_logging_status_failed">Nach einem Fehler gestoppt. Für einen neuen Versuch Logging aus- und einschalten.</string>
     <string name="settings_app_language">App-Sprache</string>
     <string name="settings_app_language_system">Gerätesprache verwenden</string>
+    <string name="command_delete_site_data_reload_name">Cookies &amp; Daten dieser Website löschen</string>
+    <string name="command_delete_site_data_reload_effect">Cookies und Website-Daten für %1$s prüfen, dann diesen Tab neu laden</string>
+    <string name="command_feedback_site_data_cleared">Website-Daten gelöscht und Tab neu geladen</string>
+    <string name="command_site_data_confirm_title">Daten für %1$s löschen?</string>
+    <string name="command_site_data_confirm_webview">Cookies und Website-Speicher der registrierten Domain dieser Adresse und aller ihrer Subdomains werden aus diesem Speicherprofil gelöscht: für alle Protokolle und Ports, einschließlich eingebetteter oder partitionierter Daten. Dies kann auch benachbarte Subdomains betreffen. Du kannst abgemeldet werden. Dieser Tab wird danach neu geladen. Unabhängige Websites behalten ihre Daten.</string>
+    <string name="command_site_data_unsupported">Diese Engine kann Cookies und Speicher einer einzelnen Website im aktuellen Profil nicht sicher löschen. Es wird nichts gelöscht.</string>
+    <string name="command_site_data_shared_storage">Andere Tabs und Profile, die diesen Speicher teilen, verlieren ebenfalls die Daten dieser Website.</string>
+    <string name="command_site_data_target_changed">Dieser Tab oder seine Seite hat sich geändert. Es wird nichts gelöscht. Öffne die Website-Informationen erneut, um die aktuelle Seite zu prüfen.</string>
 </resources>

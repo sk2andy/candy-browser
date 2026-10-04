@@ -1406,4 +1406,12 @@
     <string name="developer_options_gecko_logging_status_failed">Opptaket stoppet etter en feil. Slå logging av og på for å prøve på nytt.</string>
     <string name="settings_app_language">Appspråk</string>
     <string name="settings_app_language_system">Følg enhetens språk</string>
+    <string name="command_delete_site_data_reload_name">Tøm informasjonskapsler og data for dette nettstedet</string>
+    <string name="command_delete_site_data_reload_effect">Se gjennom informasjonskapsler og nettstedsdata for %1$s, og last deretter denne fanen på nytt</string>
+    <string name="command_feedback_site_data_cleared">Nettstedsdata slettet og fanen lastet på nytt</string>
+    <string name="command_site_data_confirm_title">Slette data for %1$s?</string>
+    <string name="command_site_data_confirm_webview">Informasjonskapsler og nettstedslagring for denne adressens registrerbare domene og alle underdomenene slettes fra denne lagringsprofilen, for alle protokoller og porter, inkludert innebygde eller partisjonerte data. Dette kan også påvirke andre underdomener på samme nivå. Du kan bli logget ut. Denne fanen lastes på nytt etterpå. Nettsteder uten tilknytning beholder dataene sine.</string>
+    <string name="command_site_data_unsupported">Denne motoren kan ikke trygt tømme informasjonskapsler og lagring for ett nettsted i gjeldende profil. Ingenting blir slettet.</string>
+    <string name="command_site_data_shared_storage">Andre faner og profiler som deler denne lagringen, mister også dataene for dette nettstedet.</string>
+    <string name="command_site_data_target_changed">Denne fanen eller siden har endret seg. Ingenting blir slettet. Åpne nettstedsinformasjonen igjen for å se gjennom gjeldende side.</string>
 </resources>

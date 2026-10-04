@@ -1389,4 +1389,12 @@
     <string name="developer_options_gecko_logging_status_failed">由于错误,捕获停止. 关闭登录并重新尝试.</string>
     <string name="settings_app_language">应用语言</string>
     <string name="settings_app_language_system">跟随设备语言</string>
+    <string name="command_delete_site_data_reload_name">清除此网站的 Cookie 和数据</string>
+    <string name="command_delete_site_data_reload_effect">确认 %1$s 的 Cookie 和网站数据，然后重新加载此标签页</string>
+    <string name="command_feedback_site_data_cleared">网站数据已删除，标签页已重新加载</string>
+    <string name="command_site_data_confirm_title">删除 %1$s 的数据？</string>
+    <string name="command_site_data_confirm_webview">将从此存储配置文件中删除此地址所属的可注册域及其所有子域的 Cookie 和网站存储，涵盖所有协议方案和端口，包括嵌入内容的数据或分区数据。这也可能影响同一域下的其他子域。你可能会退出登录。随后会重新加载此标签页。不相关网站的数据会保留。</string>
+    <string name="command_site_data_unsupported">此引擎无法在当前配置文件中安全地清除单个网站的 Cookie 和存储。不会删除任何内容。</string>
+    <string name="command_site_data_shared_storage">共享此存储的其他标签页和配置文件也会失去此网站的数据。</string>
+    <string name="command_site_data_target_changed">此标签页或其页面已更改。不会删除任何内容。请重新打开网站信息以确认当前页面。</string>
 </resources>

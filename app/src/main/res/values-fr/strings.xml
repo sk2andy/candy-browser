@@ -1413,4 +1413,12 @@
     <string name="developer_options_gecko_logging_status_failed">Capture arrêtée après une erreur. Désactivez puis réactivez pour réessayer.</string>
     <string name="settings_app_language">Langue de l’application</string>
     <string name="settings_app_language_system">Utiliser la langue de l’appareil</string>
+    <string name="command_delete_site_data_reload_name">Effacer les cookies et données de ce site</string>
+    <string name="command_delete_site_data_reload_effect">Vérifier les cookies et données du site pour %1$s, puis actualiser cet onglet</string>
+    <string name="command_feedback_site_data_cleared">Données du site supprimées et onglet actualisé</string>
+    <string name="command_site_data_confirm_title">Supprimer les données de %1$s ?</string>
+    <string name="command_site_data_confirm_webview">Les cookies et le stockage du site pour le domaine enregistrable de cette adresse et tous ses sous-domaines seront supprimés de ce profil de stockage, pour tous les protocoles et ports, y compris les données intégrées ou partitionnées. Cela peut aussi toucher les sous-domaines voisins. Vous pouvez être déconnecté. Cet onglet sera ensuite actualisé. Les sites sans lien conservent leurs données.</string>
+    <string name="command_site_data_unsupported">Ce moteur ne peut pas effacer en toute sécurité les cookies et le stockage d’un seul site dans le profil actuel. Rien ne sera supprimé.</string>
+    <string name="command_site_data_shared_storage">Les autres onglets et profils partageant ce stockage perdront aussi les données de ce site.</string>
+    <string name="command_site_data_target_changed">Cet onglet ou sa page a changé. Rien ne sera supprimé. Ouvrez à nouveau les informations du site pour vérifier la page actuelle.</string>
 </resources>

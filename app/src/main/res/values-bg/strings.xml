@@ -1406,4 +1406,12 @@
     <string name="developer_options_gecko_logging_status_failed">Захващането спря след грешка. Изключете и включете регистрацията, за да опитате отново.</string>
     <string name="settings_app_language">Език на приложението</string>
     <string name="settings_app_language_system">Използвай езика на устройството</string>
+    <string name="command_delete_site_data_reload_name">Изчисти бисквитките и данните на този сайт</string>
+    <string name="command_delete_site_data_reload_effect">Прегледай бисквитките и данните на сайта за %1$s, след което презареди този раздел</string>
+    <string name="command_feedback_site_data_cleared">Данните на сайта са изтрити и разделът е презареден</string>
+    <string name="command_site_data_confirm_title">Да се изтрият данните за %1$s?</string>
+    <string name="command_site_data_confirm_webview">Бисквитките и хранилището на уебсайта за регистрирания домейн на този адрес и всички негови поддомейни ще бъдат изтрити от този профил за съхранение, за всички протоколи и портове, включително вградени или разделени данни. Това може да засегне и други поддомейни на същия домейн. Може да излезеш от акаунтите си. След това този раздел се презарежда. Несвързаните сайтове запазват данните си.</string>
+    <string name="command_site_data_unsupported">Този енджин не може безопасно да изчисти бисквитките и хранилището на отделен сайт в текущия профил. Нищо няма да бъде изтрито.</string>
+    <string name="command_site_data_shared_storage">Другите раздели и профили, които споделят това хранилище, също ще загубят данните на този сайт.</string>
+    <string name="command_site_data_target_changed">Този раздел или страницата му се промени. Нищо няма да бъде изтрито. Отвори отново информацията за сайта, за да прегледаш текущата страница.</string>
 </resources>

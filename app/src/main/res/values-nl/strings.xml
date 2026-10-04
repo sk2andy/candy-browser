@@ -1406,4 +1406,12 @@
     <string name="developer_options_gecko_logging_status_failed">Opname gestopt na een fout. Schakel logboekregistratie uit en weer in om opnieuw te proberen.</string>
     <string name="settings_app_language">App-taal</string>
     <string name="settings_app_language_system">Volg de taal van het apparaat</string>
+    <string name="command_delete_site_data_reload_name">Cookies en gegevens van deze site wissen</string>
+    <string name="command_delete_site_data_reload_effect">Cookies en websitegegevens voor %1$s controleren en daarna dit tabblad opnieuw laden</string>
+    <string name="command_feedback_site_data_cleared">Websitegegevens verwijderd en tabblad opnieuw geladen</string>
+    <string name="command_site_data_confirm_title">Gegevens voor %1$s verwijderen?</string>
+    <string name="command_site_data_confirm_webview">Cookies en websiteopslag voor het registreerbare domein van dit adres en alle bijbehorende subdomeinen worden uit dit opslagprofiel verwijderd, voor alle protocollen en poorten, inclusief ingesloten of gepartitioneerde gegevens. Dit kan ook andere subdomeinen van hetzelfde domein treffen. Je kunt worden afgemeld. Dit tabblad wordt daarna opnieuw geladen. Niet-gerelateerde sites behouden hun gegevens.</string>
+    <string name="command_site_data_unsupported">Deze engine kan de cookies en opslag van één site niet veilig wissen in het huidige profiel. Er wordt niets verwijderd.</string>
+    <string name="command_site_data_shared_storage">Andere tabbladen en profielen die deze opslag delen, verliezen ook de gegevens van deze site.</string>
+    <string name="command_site_data_target_changed">Dit tabblad of de bijbehorende pagina is gewijzigd. Er wordt niets verwijderd. Open de site-informatie opnieuw om de huidige pagina te controleren.</string>
 </resources>

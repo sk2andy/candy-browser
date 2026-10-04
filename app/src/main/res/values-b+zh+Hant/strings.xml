@@ -1389,4 +1389,12 @@
     <string name="developer_options_gecko_logging_status_failed">由於錯誤,捕獲停止. 關閉登入並重新嘗試.</string>
     <string name="settings_app_language">應用程式語言</string>
     <string name="settings_app_language_system">使用裝置語言</string>
+    <string name="command_delete_site_data_reload_name">清除此網站的 Cookie 和資料</string>
+    <string name="command_delete_site_data_reload_effect">確認 %1$s 的 Cookie 和網站資料，然後重新載入此分頁</string>
+    <string name="command_feedback_site_data_cleared">網站資料已刪除，分頁已重新載入</string>
+    <string name="command_site_data_confirm_title">刪除 %1$s 的資料？</string>
+    <string name="command_site_data_confirm_webview">將從此儲存設定檔中刪除此網址所屬的可註冊網域及其所有子網域的 Cookie 和網站儲存，涵蓋所有通訊協定和連接埠，包括嵌入內容的資料或分區資料。這也可能影響同一網域下的其他子網域。你可能會登出。隨後會重新載入此分頁。不相關網站的資料會保留。</string>
+    <string name="command_site_data_unsupported">此引擎無法在目前設定檔中安全地清除單一網站的 Cookie 和儲存資料。不會刪除任何內容。</string>
+    <string name="command_site_data_shared_storage">共用此儲存空間的其他分頁和設定檔也會失去此網站的資料。</string>
+    <string name="command_site_data_target_changed">此分頁或其頁面已變更。不會刪除任何內容。請重新開啟網站資訊以確認目前頁面。</string>
 </resources>

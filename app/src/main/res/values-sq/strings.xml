@@ -1406,4 +1406,12 @@
     <string name="developer_options_gecko_logging_status_failed">Kapja u ndalua pas një gabimi. Mbylle dhe aktivizo regjistrimin për të provuar përsëri.</string>
     <string name="settings_app_language">Gjuha e aplikacionit</string>
     <string name="settings_app_language_system">Përdor gjuhën e pajisjes</string>
+    <string name="command_delete_site_data_reload_name">Fshi cookies dhe të dhënat e kësaj faqeje</string>
+    <string name="command_delete_site_data_reload_effect">Shqyrto cookies dhe të dhënat e faqes për %1$s, pastaj ringarko këtë skedë</string>
+    <string name="command_feedback_site_data_cleared">Të dhënat e faqes u fshinë dhe skeda u ringarkua</string>
+    <string name="command_site_data_confirm_title">Të fshihen të dhënat për %1$s?</string>
+    <string name="command_site_data_confirm_webview">Cookies dhe hapësira e ruajtjes së faqes për domenin e regjistruar të kësaj adrese dhe të gjitha nëndomenet e tij do të fshihen nga ky profil ruajtjeje, për të gjitha protokollet dhe portat, përfshirë të dhënat e integruara ose të ndara në particione. Kjo mund të ndikojë edhe në nëndomene të tjera të të njëjtit domen. Mund të dalësh nga llogaritë. Kjo skedë ringarkohet më pas. Faqet e palidhura i ruajnë të dhënat e tyre.</string>
+    <string name="command_site_data_unsupported">Ky motor nuk mund të fshijë në mënyrë të sigurt cookies dhe hapësirën e ruajtjes së një faqeje të vetme në profilin aktual. Asgjë nuk do të fshihet.</string>
+    <string name="command_site_data_shared_storage">Skedat dhe profilet e tjera që ndajnë këtë hapësirë ruajtjeje do të humbasin gjithashtu të dhënat e kësaj faqeje.</string>
+    <string name="command_site_data_target_changed">Kjo skedë ose faqja e saj ndryshoi. Asgjë nuk do të fshihet. Hap sërish informacionin e faqes për të shqyrtuar faqen aktuale.</string>
 </resources>

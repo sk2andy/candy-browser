@@ -18,6 +18,7 @@ class AndroidCommandCatalog(private val context: Context) {
     private fun BrowserCommand.nameResource(): Int = when (kind) {
         BrowserCommandKind.ClearCacheAndReload -> R.string.command_clear_cache_reload_name
         BrowserCommandKind.ClearCookiesAndReload -> R.string.command_delete_cookies_reload_name
+        BrowserCommandKind.ClearSiteDataAndReload -> R.string.command_delete_site_data_reload_name
         BrowserCommandKind.Reload -> R.string.action_reload
         BrowserCommandKind.StopLoading -> R.string.action_stop_loading
         BrowserCommandKind.PinTab -> R.string.action_pin_tab
@@ -44,6 +45,10 @@ class AndroidCommandCatalog(private val context: Context) {
                 CommandCookieScope.AllBrowserProfiles ->
                     R.string.command_delete_cookies_reload_effect_all
             },
+        )
+        BrowserCommandKind.ClearSiteDataAndReload -> context.getString(
+            R.string.command_delete_site_data_reload_effect,
+            siteDataTarget?.host.orEmpty(),
         )
         BrowserCommandKind.Reload -> context.getString(R.string.command_reload_effect)
         BrowserCommandKind.StopLoading -> context.getString(R.string.command_stop_loading_effect)

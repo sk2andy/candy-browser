@@ -1422,4 +1422,12 @@
     <string name="developer_options_gecko_logging_status_failed">Uhvat je zaustavljen zbog greške. Isključite i uključite za novi pokušaj.</string>
     <string name="settings_app_language">Jezik aplikacije</string>
     <string name="settings_app_language_system">Koristi jezik uređaja</string>
+    <string name="command_delete_site_data_reload_name">Izbriši kolačiće i podatke ove stranice</string>
+    <string name="command_delete_site_data_reload_effect">Pregledaj kolačiće i podatke web-stranice za %1$s, zatim ponovno učitaj ovu karticu</string>
+    <string name="command_feedback_site_data_cleared">Podaci stranice izbrisani i kartica ponovno učitana</string>
+    <string name="command_site_data_confirm_title">Izbrisati podatke za %1$s?</string>
+    <string name="command_site_data_confirm_webview">Kolačići i pohrana web-stranice za registriranu domenu ove adrese i sve njezine poddomene bit će izbrisani iz ovog profila pohrane, za sve protokole i portove, uključujući ugrađene ili particionirane podatke. To može utjecati i na druge poddomene iste domene. Možeš biti odjavljen. Ova se kartica zatim ponovno učitava. Nepovezane stranice zadržavaju svoje podatke.</string>
+    <string name="command_site_data_unsupported">Ovaj mehanizam ne može sigurno izbrisati kolačiće i pohranu pojedine stranice u trenutačnom profilu. Ništa neće biti izbrisano.</string>
+    <string name="command_site_data_shared_storage">Druge kartice i profili koji dijele ovu pohranu također će izgubiti podatke ove stranice.</string>
+    <string name="command_site_data_target_changed">Ova kartica ili njezina stranica se promijenila. Ništa neće biti izbrisano. Ponovno otvori informacije o stranici kako bi pregledao trenutačnu stranicu.</string>
 </resources>
