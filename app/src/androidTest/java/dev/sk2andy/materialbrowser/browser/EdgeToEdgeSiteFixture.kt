@@ -69,11 +69,15 @@ internal object EdgeToEdgeSiteMatrix {
                   #header.safe-area {
                     position: fixed; inset: 0 0 auto 0; padding-top: env(safe-area-inset-top);
                   }
+                  #header.safe-area #search { top: calc(12px + env(safe-area-inset-top)); }
                   #search {
                     box-sizing: border-box; position: absolute; left: 72px; top: 12px;
                     width: calc(100% - 84px); height: 40px;
                   }
-                  #focused-search { position: fixed; inset: 0 0 auto 0; height: 64px; background: #fff; }
+                  #focused-search {
+                    position: fixed; top: 0; left: 0; right: 0;
+                    height: 64px; background: #fff;
+                  }
                   main { padding-top: 96px; height: 2400px; }
                 </style>
               </head>
@@ -83,24 +87,39 @@ internal object EdgeToEdgeSiteMatrix {
                   const cases = [$cases];
                   const results = [];
                   const frame = () => new Promise((resolve) => requestAnimationFrame(resolve));
+                  const candyTopInset = () => Math.max(
+                    Number.parseFloat(getComputedStyle(document.documentElement)
+                      .getPropertyValue('--candy-browser-content-top-inset')) || 0,
+                    Number.parseFloat(getComputedStyle(document.documentElement)
+                      .getPropertyValue('--candy-safe-area-inset-top')) || 0
+                  );
+                  const nativeTopHeader = () => {
+                    const bridge = globalThis.CandySystemSafeArea;
+                    if (bridge?.configuration) {
+                      return JSON.parse(bridge.configuration()).nativeTopInsetPx > 0;
+                    }
+                    return document.documentElement.getAttribute(
+                      'data-candy-browser-native-top-header'
+                    ) === 'true';
+                  };
                   const candyPolicyReady = () => {
-                    const rootInset = Number.parseFloat(
-                      document.documentElement.style.getPropertyValue(
-                        '--candy-browser-content-top-inset'
-                      )
-                    ) || 0;
-                    if (rootInset > 0) return true;
-                    if (
-                      document.documentElement.getAttribute(
-                        'data-candy-browser-native-top-header'
-                      ) === 'true'
-                    ) return true;
+                    if (nativeTopHeader()) return true;
+                    const inset = candyTopInset();
+                    if (inset > 0) {
+                      const focusedSearch = document.querySelector('#focused-search');
+                      const surface = focusedSearch && !focusedSearch.hidden
+                        ? focusedSearch
+                        : document.querySelector('#header');
+                      return surface && surface.getBoundingClientRect().top +
+                        (Number.parseFloat(getComputedStyle(surface).paddingTop) || 0) >=
+                        inset - 0.5;
+                    }
                     const header = document.querySelector('#header.safe-area');
                     return header && Number.parseFloat(getComputedStyle(header).paddingTop) > 0;
                   };
                   const settleCandyLayout = async () => {
                     // Gecko's isolated extension globals are not visible to this page script.
-                    // Wait for observable DOM policy, including genuine engine safe-area padding.
+                    // Wait for the visible surface, including genuine engine safe-area padding.
                     for (
                       let attempt = 0;
                       attempt < 120 && !candyPolicyReady();
@@ -112,7 +131,7 @@ internal object EdgeToEdgeSiteMatrix {
                   };
                   const settleScrollLayout = async (site) => {
                     await settleCandyLayout();
-                    if (site.layout !== 'LateSticky') return;
+                    // Cached fixed headers may hand top ownership to the native host after quiet.
                     await new Promise((resolve) => setTimeout(resolve, 500));
                     for (let pass = 0; pass < 4; pass++) await frame();
                   };
@@ -151,15 +170,11 @@ internal object EdgeToEdgeSiteMatrix {
                       const focusedQuery = document.querySelector('#focused-query');
                       focusedQuery.focus({ preventScroll: true });
                       await settleCandyLayout();
-                      const requiredTop = Number.parseFloat(
-                        document.documentElement.style.getPropertyValue(
-                          '--candy-browser-content-top-inset'
-                        )
-                      ) || 0;
+                      const requiredTop = nativeTopHeader() ? 0 : candyTopInset();
                       const focusedTop = document.querySelector('#focused-search')
                         .getBoundingClientRect().top;
                       const queryTop = focusedQuery.getBoundingClientRect().top;
-                      const safe = requiredTop > 0 &&
+                      const safe = (requiredTop > 0 || nativeTopHeader()) &&
                         focusedTop >= requiredTop - 0.5 &&
                         queryTop >= requiredTop - 0.5;
                       document.title = safe
@@ -189,17 +204,12 @@ internal object EdgeToEdgeSiteMatrix {
                       const search = document.querySelector('#search');
                       document.title = 'Preparing Candy site matrix: ' + site.name + ' initial layout';
                       await settleCandyLayout();
-                      const candyTopInset = Number.parseFloat(
-                        document.documentElement.style.getPropertyValue(
-                          '--candy-browser-content-top-inset'
-                        )
-                      ) || 0;
+                      const initialCandyTopInset = candyTopInset();
+                      const initialRequiredTop = nativeTopHeader() ? 0 : initialCandyTopInset;
                       const beforeFocusTop = document.querySelector('#header')
                         .getBoundingClientRect().top;
                       const header = document.querySelector('#header');
-                      const ownedOffsetBeforeVisibilityChange = header.style.getPropertyValue(
-                        '--candy-browser-owned-top-inset-offset'
-                      );
+                      const topBeforeVisibilityChange = getComputedStyle(header).top;
                       if (site.name === 'Vimeo') {
                         document.title = 'Preparing Candy site matrix: ' + site.name + ' hidden layout';
                         header.style.display = 'none';
@@ -208,23 +218,24 @@ internal object EdgeToEdgeSiteMatrix {
                         header.style.display = '';
                         await settleCandyLayout();
                       }
-                      const ownedOffsetAfterVisibilityChange = header.style.getPropertyValue(
-                        '--candy-browser-owned-top-inset-offset'
-                      );
+                      const topAfterVisibilityChange = getComputedStyle(header).top;
                       const offsetStableAcrossVisibilityChange = site.name !== 'Vimeo' ||
-                        ownedOffsetBeforeVisibilityChange === ownedOffsetAfterVisibilityChange;
+                        topBeforeVisibilityChange === topAfterVisibilityChange;
                       scrollTo(0, 480);
                       document.title = 'Preparing Candy site matrix: ' + site.name + ' scroll down';
                       const immediateTopWhileScrolled = document.querySelector('#header')
                         .getBoundingClientRect().top;
+                      const immediateRequiredTop = nativeTopHeader() ? 0 : candyTopInset();
                       await settleScrollLayout(site);
                       const topWhileScrolled = document.querySelector('#header')
                         .getBoundingClientRect().top;
+                      const scrolledRequiredTop = nativeTopHeader() ? 0 : candyTopInset();
                       scrollTo(0, 0);
                       document.title = 'Preparing Candy site matrix: ' + site.name + ' scroll back';
                       await settleScrollLayout(site);
                       const afterScrollTop = document.querySelector('#header')
                         .getBoundingClientRect().top;
+                      const afterScrollRequiredTop = nativeTopHeader() ? 0 : candyTopInset();
                       if (site.focusedSearch) {
                         document.title = 'Preparing Candy site matrix: ' + site.name + ' focused search';
                         search.focus({ preventScroll: true });
@@ -260,17 +271,22 @@ internal object EdgeToEdgeSiteMatrix {
                       const focusedQuery = document.querySelector('#focused-query');
                       const focused = !site.focusedSearch || !focusedSearch.hidden;
                       const focusedQueryTop = focusedQuery.getBoundingClientRect().top;
+                      const prototypeInset = Number.parseFloat(
+                        getComputedStyle(document.documentElement)
+                          .getPropertyValue('--candy-safe-area-inset-top')
+                      ) || 0;
                       const candyCompatibilityApplied = Boolean(
                         document.querySelector('style[data-candy-browser-owned="true"]')
-                      );
-                      const usesNativeTopHeader = document.documentElement.getAttribute(
-                        'data-candy-browser-native-top-header'
-                      ) === 'true';
+                      ) || prototypeInset > 0;
+                      const usesNativeTopHeader = nativeTopHeader();
                       const usesEngineSafeArea = site.layout === 'CoverWithSafeArea' &&
                         !candyCompatibilityApplied && safeAreaPaddingTop > 0;
                       const protectionModeValid = usesNativeTopHeader || usesEngineSafeArea ||
-                        (candyCompatibilityApplied && candyTopInset > 0);
-                      const ownedProtectionValid = usesNativeTopHeader || site.layout === 'Flow' ||
+                        (candyCompatibilityApplied && candyTopInset() > 0);
+                      const ownedProtectionValid = usesNativeTopHeader || usesEngineSafeArea ||
+                        site.layout === 'Flow' ||
+                        prototypeInset > 0 && Number.isFinite(computedStickyTop) &&
+                        computedStickyTop >= prototypeInset - 0.5 ||
                         protectedOwned === 'true' &&
                         protectedOffset.endsWith('px') ||
                         protectedStickyOwned === 'true' &&
@@ -279,7 +295,7 @@ internal object EdgeToEdgeSiteMatrix {
                         Number.isFinite(computedStickyTop);
                       const requiredTop = usesNativeTopHeader || usesEngineSafeArea
                         ? 0
-                        : candyTopInset;
+                        : candyTopInset();
                       results.push({
                         name: site.name,
                         beforeFocusTop,
@@ -294,7 +310,7 @@ internal object EdgeToEdgeSiteMatrix {
                         computedStickyTop,
                         safeAreaPaddingTop,
                         focused,
-                        candyTopInset,
+                        candyTopInset: initialCandyTopInset,
                         candyCompatibilityApplied,
                         usesNativeTopHeader,
                         protectionModeValid,
@@ -302,16 +318,16 @@ internal object EdgeToEdgeSiteMatrix {
                           'data-candy-browser-top-inset-failure'
                         ),
                         offsetStableAcrossVisibilityChange,
-                        passed: beforeFocusTop >= requiredTop - 0.5 &&
+                        passed: beforeFocusTop >= initialRequiredTop - 0.5 &&
                           (!site.requiresImmediateStickyProtection ||
-                            immediateTopWhileScrolled >= requiredTop - 0.5) &&
-                          afterScrollTop >= requiredTop - 0.5 &&
+                            immediateTopWhileScrolled >= immediateRequiredTop - 0.5) &&
+                          afterScrollTop >= afterScrollRequiredTop - 0.5 &&
                           (['Flow', 'Absolute'].includes(site.layout) ||
-                            topWhileScrolled >= requiredTop - 0.5) &&
+                            topWhileScrolled >= scrolledRequiredTop - 0.5) &&
                           protectedTop >= requiredTop - 0.5 &&
                           (!site.focusedSearch || focusedQueryTop >= requiredTop - 0.5) &&
                           (!site.focusedSearch ||
-                            Math.abs(protectedTop - beforeFocusTop) <= 0.5) &&
+                            Math.abs(protectedTop - afterScrollTop) <= 0.5) &&
                           focused && protectionModeValid && ownedProtectionValid &&
                           offsetStableAcrossVisibilityChange
                       });

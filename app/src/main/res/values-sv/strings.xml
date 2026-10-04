@@ -1326,12 +1326,12 @@
     <string name="developer_options_show_release_notes">Visa vad som är nytt</string>
     <string name="developer_options_show_release_notes_summary">Öppnar utgåvans anteckningar som är bundna med denna appversion igen.</string>
     <string name="developer_options_safe_area_section">Säkerhetsreservering av områden</string>
-    <string name="developer_options_gecko_safe_area_section">Gecko kant-till-kant</string>
-    <string name="developer_options_gecko_safe_area_summary">Tonfisk Geckos CSS korrigeringar av säkra områden och mutationskontroller. Dessa inställningar ändras inte System WebView eller den inhemska reserven för säkerhetsområde.</string>
+    <string name="developer_options_gecko_safe_area_section">Kant-till-kant</string>
+    <string name="developer_options_gecko_safe_area_summary">Justera CSS-korrigeringar av säkert område och kontroller av DOM-ändringar för Gecko och System WebView. Dessa inställningar ändrar inte den inbyggda reservfunktionen för säkert område.</string>
     <string name="developer_options_gecko_safe_area_enabled">CSS Korrigering av säkerhetsområde</string>
     <string name="developer_options_gecko_add_inset_to_negative_top">Lägg till indrag för negativa top-värden</string>
     <string name="developer_options_gecko_add_inset_to_negative_top_summary">Flyttar även fixed- och sticky-element med negativa CSS-top-värden med det säkra områdets indrag. Av som standard för att bevara dolda sidhuvuden.</string>
-    <string name="developer_options_gecko_safe_area_enabled_summary">Stäng av Candys Gecko CSS korrigeringar och observatörer. Inhemsk kant-till-kant-återgivning CSS env() värden, och uttrycklig eller akut reserv finns kvar.</string>
+    <string name="developer_options_gecko_safe_area_enabled_summary">Stäng av Candys CSS-korrigeringar och observatörer för Gecko och System WebView. Inbyggd kant-till-kant-rendering, CSS env()-värden och uttrycklig eller akut reservfunktion är fortfarande tillgängliga.</string>
     <string name="developer_options_gecko_recheck_added_elements">Kontrollera tilläggselement</string>
     <string name="developer_options_gecko_recheck_added_elements_summary">Kontrollera nyinsatta element för CSS säkerhetskorrigeringar i uppdateringsbudgeten.</string>
     <string name="developer_options_gecko_recheck_changed_elements">Kontrollera ändrade element</string>

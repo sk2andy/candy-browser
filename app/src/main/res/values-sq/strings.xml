@@ -1326,12 +1326,12 @@
     <string name="developer_options_show_release_notes">Trego çfarë është e re</string>
     <string name="developer_options_show_release_notes_summary">Hap përsëri shënimet e lëshimit të ofruara me versionin e kësaj aplikacioni.</string>
     <string name="developer_options_safe_area_section">Zonat e sigurta</string>
-    <string name="developer_options_gecko_safe_area_section">Gecko nga skaji në skaj</string>
-    <string name="developer_options_gecko_safe_area_summary">Rregullo korrigjimet CSS të zonës së sigurt të Gecko dhe kontrollet e ndryshimeve DOM. Këto cilësime nuk ndryshojnë System WebView apo mënyrën rezervë vendase të zonës së sigurt.</string>
+    <string name="developer_options_gecko_safe_area_section">Nga skaji në skaj</string>
+    <string name="developer_options_gecko_safe_area_summary">Rregullo korrigjimet CSS të zonës së sigurt dhe kontrollet e ndryshimeve DOM për Gecko dhe System WebView. Këto cilësime nuk ndryshojnë mënyrën rezervë vendase të zonës së sigurt.</string>
     <string name="developer_options_gecko_safe_area_enabled">CSS Korrigjim i zonës së sigurt</string>
     <string name="developer_options_gecko_add_inset_to_negative_top">Shto hapësirë për vlerat negative top</string>
     <string name="developer_options_gecko_add_inset_to_negative_top_summary">Zhvendos edhe elementet fikse dhe ngjitëse me vlera negative CSS top me hapësirën e zonës së sigurt. Çaktivizuar si parazgjedhje për të ruajtur titujt e fshehur.</string>
-    <string name="developer_options_gecko_safe_area_enabled_summary">Fikni Candys Gecko CSS korrigjimet dhe vëzhguesit. Renderizimi i brendshëm nga skaji në skaj, CSS env() vlerat dhe rezervimi eksplicit ose emergjent mbeten në dispozicion.</string>
+    <string name="developer_options_gecko_safe_area_enabled_summary">Çaktivizo korrigjimet CSS dhe vëzhguesit e Candy për Gecko dhe System WebView. Renderimi vendas nga skaji në skaj, vlerat CSS env() dhe mënyra rezervë e shprehur ose e emergjencës mbeten të disponueshme.</string>
     <string name="developer_options_gecko_recheck_added_elements">Kontrolloni elementet e shtuara</string>
     <string name="developer_options_gecko_recheck_added_elements_summary">Kontrollo elementet e sapofutura për korrigjime CSS të zonës së sigurt brenda buxhetit të përditësimit.</string>
     <string name="developer_options_gecko_recheck_changed_elements">Kontrolloni elementet e ndryshuara</string>

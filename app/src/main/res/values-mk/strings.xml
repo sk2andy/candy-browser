@@ -1326,12 +1326,12 @@
     <string name="developer_options_show_release_notes">Покажете што е ново</string>
     <string name="developer_options_show_release_notes_summary">Повторно ги отвора бележките за издавање со оваа верзија на апликацијата.</string>
     <string name="developer_options_safe_area_section">Заштита на безбедносното подрачје</string>
-    <string name="developer_options_gecko_safe_area_section">Gecko од крај до крај</string>
-    <string name="developer_options_gecko_safe_area_summary">Приспособете ги Gecko CSS исправките на безбедната област и проверките на промени во DOM. Овие поставки не го менуваат System WebView или изворниот резервен режим на безбедната област.</string>
+    <string name="developer_options_gecko_safe_area_section">Од крај до крај</string>
+    <string name="developer_options_gecko_safe_area_summary">Приспособете ги CSS исправките на безбедната област и проверките на промени во DOM за Gecko и System WebView. Овие поставки не го менуваат изворниот резервен режим на безбедната област.</string>
     <string name="developer_options_gecko_safe_area_enabled">CSS Коригирање на безбедносното подрачје</string>
     <string name="developer_options_gecko_add_inset_to_negative_top">Додај растојание на негативните вредности top</string>
     <string name="developer_options_gecko_add_inset_to_negative_top_summary">Помести ги и фиксните и лепливите елементи со негативни CSS вредности top за растојанието на безбедната област. Стандардно е исклучено за скриените заглавија да останат скриени.</string>
-    <string name="developer_options_gecko_safe_area_enabled_summary">Избришете Candys Gecko CSS корекции и набљудувачи. Природното рендеринг од крај до крај, CSS env() вредности и експлицитно или атентативно враќање се сè уште достапни.</string>
+    <string name="developer_options_gecko_safe_area_enabled_summary">Исклучете ги CSS исправките и набљудувачите на Candy за Gecko и System WebView. Изворното прикажување од крај до крај, вредностите CSS env() и експлицитниот или итниот резервен режим остануваат достапни.</string>
     <string name="developer_options_gecko_recheck_added_elements">Проверете ги додадените елементи</string>
     <string name="developer_options_gecko_recheck_added_elements_summary">Проверувајте ги нововметнатите елементи за CSS исправки на безбедната област во рамките на буџетот за ажурирање.</string>
     <string name="developer_options_gecko_recheck_changed_elements">Проверете ги промените елементи</string>

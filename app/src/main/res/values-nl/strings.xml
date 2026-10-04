@@ -1326,12 +1326,12 @@
     <string name="developer_options_show_release_notes">Laat zien wat nieuw is</string>
     <string name="developer_options_show_release_notes_summary">Opent de release notities gebundeld met deze app versie opnieuw.</string>
     <string name="developer_options_safe_area_section">Veilig gebied terugval</string>
-    <string name="developer_options_gecko_safe_area_section">Gecko Rand-to-edge</string>
-    <string name="developer_options_gecko_safe_area_summary">Tune Gecko’s CSS veiligheidsruimtecorrecties en mutatiecontroles. Deze instellingen veranderen niet System WebView of de terugval in de oorspronkelijke veilige ruimte.</string>
+    <string name="developer_options_gecko_safe_area_section">Van rand tot rand</string>
+    <string name="developer_options_gecko_safe_area_summary">Stem CSS-correcties voor het veilige gebied en controles op DOM-wijzigingen af voor Gecko en System WebView. Deze instellingen wijzigen de native terugval voor het veilige gebied niet.</string>
     <string name="developer_options_gecko_safe_area_enabled">CSS beveiligingsruimtecorrectie</string>
     <string name="developer_options_gecko_add_inset_to_negative_top">Voeg inspringing toe aan negatieve top-waarden</string>
     <string name="developer_options_gecko_add_inset_to_negative_top_summary">Verschuift ook fixed- en sticky-elementen met negatieve CSS-top-waarden met de inspringing voor het veilige gebied. Standaard uit om verborgen koppen te behouden.</string>
-    <string name="developer_options_gecko_safe_area_enabled_summary">Zet Candy’s Gecko CSS correcties en waarnemers uit. Noodweergave van rand tot rand, CSS env() waarden, en expliciete of noodinval blijven beschikbaar.</string>
+    <string name="developer_options_gecko_safe_area_enabled_summary">Schakel Candy’s CSS-correcties en waarnemers uit voor Gecko en System WebView. Native weergave van rand tot rand, CSS env()-waarden en expliciete of noodterugval blijven beschikbaar.</string>
     <string name="developer_options_gecko_recheck_added_elements">Toegevoegde elementen controleren</string>
     <string name="developer_options_gecko_recheck_added_elements_summary">Controleer nieuw ingevoegde elementen voor CSS veiligheidsruimtecorrecties binnen de updatebegroting.</string>
     <string name="developer_options_gecko_recheck_changed_elements">Gewijzigde elementen controleren</string>

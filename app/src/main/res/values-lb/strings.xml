@@ -1326,12 +1326,12 @@
     <string name="developer_options_show_release_notes">Weist wat nei ass</string>
     <string name="developer_options_show_release_notes_summary">Maacht d\'Verëffentlechungsnotizen, déi mat dëser App-Versioun gebündelt sinn, erëm op.</string>
     <string name="developer_options_safe_area_section">Sécher Zone Fallback</string>
-    <string name="developer_options_gecko_safe_area_section">Gecko Rand-zu-Kant</string>
-    <string name="developer_options_gecko_safe_area_summary">Tune Geckos CSS Korrektiounen a Mutatiounskontrollen. Dës Astellungen änneren sech net System WebView oder den nativen Fallback vun der sécherer Zone.</string>
+    <string name="developer_options_gecko_safe_area_section">Rand-zu-Rand</string>
+    <string name="developer_options_gecko_safe_area_summary">Stëmmt CSS-Korrekture vum séchere Beräich an DOM-Mutatiounskontrolle fir Gecko a System WebView of. Dës Astellungen änneren den nativen Fallback vum séchere Beräich net.</string>
     <string name="developer_options_gecko_safe_area_enabled">CSS Korrektur vun der sécherer Zone</string>
     <string name="developer_options_gecko_add_inset_to_negative_top">Ofstand bei negativen top-Wäerter dobäisetzen</string>
     <string name="developer_options_gecko_add_inset_to_negative_top_summary">Verréckelt och fixed- a sticky-Elementer mat negativen CSS-top-Wäerter ëm den Ofstand vum séchere Beräich. Standardméisseg aus, fir verstoppte Kappberäicher ze erhalen.</string>
-    <string name="developer_options_gecko_safe_area_enabled_summary">Schalt Candys Gecko CSS Korrektiounen a Beobachter aus. Native Edge-to-Edge Rendering, CSS env() Wäerter, an explizit oder Noutfall Fallback bleiwen verfügbar.</string>
+    <string name="developer_options_gecko_safe_area_enabled_summary">Schalt Candys CSS-Korrekturen a Beobachter fir Gecko a System WebView aus. Natiivt Rand-zu-Rand-Rendering, CSS env()-Wäerter an explizitten oder Noutfall-Fallback bleiwen disponibel.</string>
     <string name="developer_options_gecko_recheck_added_elements">Kontrolléiert déi bäigefüügt Elementer</string>
     <string name="developer_options_gecko_recheck_added_elements_summary">Kontrolléiert nei agefouert Elementer fir CSS Korrektiounen an der sécherer Zone am aktualiséierten Budget.</string>
     <string name="developer_options_gecko_recheck_changed_elements">Kontrolléiert geännert Elementer</string>

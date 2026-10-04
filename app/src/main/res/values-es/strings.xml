@@ -1320,12 +1320,12 @@
     <string name="developer_options_force_safe_area_fallback">Forzar alternativa de área segura nativa</string>
     <string name="developer_options_force_safe_area_fallback_summary">Usa márgenes superiores nativos en todas las páginas en lugar del margen desplazable de Candy.</string>
     <string name="developer_options_safe_area_section">Alternativa de área segura</string>
-    <string name="developer_options_gecko_safe_area_section">Gecko de borde a borde</string>
-    <string name="developer_options_gecko_safe_area_summary">Ajusta las correcciones CSS del área segura y las comprobaciones de mutaciones de Gecko. Estos ajustes no cambian System WebView ni la alternativa nativa del área segura.</string>
+    <string name="developer_options_gecko_safe_area_section">De borde a borde</string>
+    <string name="developer_options_gecko_safe_area_summary">Ajusta las correcciones CSS del área segura y las comprobaciones de cambios del DOM para Gecko y System WebView. Estos ajustes no cambian la alternativa nativa del área segura.</string>
     <string name="developer_options_gecko_safe_area_enabled">Corrección CSS del área segura</string>
     <string name="developer_options_gecko_add_inset_to_negative_top">Añadir el inset a los valores negativos de top</string>
     <string name="developer_options_gecko_add_inset_to_negative_top_summary">Desplazar también los elementos fixed y sticky con valores CSS top negativos sumando el inset del área segura. Desactivado por defecto para mantener ocultas las cabeceras.</string>
-    <string name="developer_options_gecko_safe_area_enabled_summary">Desactiva las correcciones CSS y los observadores de Gecko de Candy. El renderizado nativo de borde a borde, los valores CSS env() y la alternativa explícita o de emergencia siguen disponibles.</string>
+    <string name="developer_options_gecko_safe_area_enabled_summary">Desactiva las correcciones CSS y los observadores de Candy para Gecko y System WebView. El renderizado nativo de borde a borde, los valores CSS env() y la alternativa explícita o de emergencia siguen disponibles.</string>
     <string name="developer_options_gecko_recheck_added_elements">Comprobar elementos añadidos</string>
     <string name="developer_options_gecko_recheck_added_elements_summary">Comprueba las correcciones CSS del área segura de los elementos nuevos dentro del presupuesto de actualización.</string>
     <string name="developer_options_gecko_recheck_changed_elements">Comprobar elementos modificados</string>

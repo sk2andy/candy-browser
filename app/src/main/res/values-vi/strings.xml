@@ -1311,12 +1311,12 @@
     <string name="developer_options_show_release_notes">Hiển thị nội dung mới</string>
     <string name="developer_options_show_release_notes_summary">Mở lại các ghi chú phát hành đi kèm với phiên bản ứng dụng này.</string>
     <string name="developer_options_safe_area_section">Khu vực an toàn dự phòng</string>
-    <string name="developer_options_gecko_safe_area_section">Gecko cạnh đến cạnh</string>
-    <string name="developer_options_gecko_safe_area_summary">Tune Geckos CSS sửa đổi khu vực an toàn và kiểm tra đột biến. Các thiết lập này không thay đổi System WebView hoặc phòng thủ vùng an toàn tự nhiên.</string>
+    <string name="developer_options_gecko_safe_area_section">Tràn viền</string>
+    <string name="developer_options_gecko_safe_area_summary">Điều chỉnh các sửa lỗi vùng an toàn bằng CSS và kiểm tra thay đổi DOM cho Gecko và System WebView. Các thiết lập này không thay đổi cơ chế dự phòng vùng an toàn gốc.</string>
     <string name="developer_options_gecko_safe_area_enabled">CSS Điều chỉnh khu vực an toàn</string>
     <string name="developer_options_gecko_add_inset_to_negative_top">Thêm lề an toàn vào giá trị top âm</string>
     <string name="developer_options_gecko_add_inset_to_negative_top_summary">Cũng dịch chuyển các phần tử fixed và sticky có giá trị CSS top âm theo khoảng lề an toàn. Mặc định tắt để giữ nguyên tiêu đề đang ẩn.</string>
-    <string name="developer_options_gecko_safe_area_enabled_summary">Tắt Candys Gecko CSS chỉnh sửa và quan sát viên. Native edge-to-edge rendering, CSS env() giá trị, và fallback rõ ràng hoặc khẩn cấp vẫn có sẵn.</string>
+    <string name="developer_options_gecko_safe_area_enabled_summary">Tắt các sửa lỗi CSS và bộ quan sát của Candy cho Gecko và System WebView. Kết xuất tràn viền gốc, giá trị CSS env() và cơ chế dự phòng được chọn rõ ràng hoặc khẩn cấp vẫn khả dụng.</string>
     <string name="developer_options_gecko_recheck_added_elements">Kiểm tra các phần tử được thêm vào</string>
     <string name="developer_options_gecko_recheck_added_elements_summary">Kiểm tra các yếu tố mới được thêm vào cho CSS sửa đổi khu vực an toàn trong ngân sách cập nhật.</string>
     <string name="developer_options_gecko_recheck_changed_elements">Kiểm tra các phần tử đã thay đổi</string>

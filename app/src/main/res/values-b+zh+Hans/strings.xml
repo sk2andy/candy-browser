@@ -1311,12 +1311,12 @@
     <string name="developer_options_show_release_notes">显示更新内容</string>
     <string name="developer_options_show_release_notes_summary">打开与此应用程序版本捆绑的发布说明.</string>
     <string name="developer_options_safe_area_section">安全区域后备</string>
-    <string name="developer_options_gecko_safe_area_section">Gecko 边到边显示</string>
-    <string name="developer_options_gecko_safe_area_summary">调节 Geckos CSS 安全区域更正和突变检查. 这些设置不会改变 System WebView 或本地安全区备用设置.</string>
+    <string name="developer_options_gecko_safe_area_section">边到边显示</string>
+    <string name="developer_options_gecko_safe_area_summary">调整 Gecko 和 System WebView 的 CSS 安全区域修正及 DOM 变化检查。这些设置不会改变原生安全区域回退机制。</string>
     <string name="developer_options_gecko_safe_area_enabled">CSS安全区更正</string>
     <string name="developer_options_gecko_add_inset_to_negative_top">为负的 top 值添加安全区偏移</string>
     <string name="developer_options_gecko_add_inset_to_negative_top_summary">同时为 CSS top 值为负的固定定位和粘性定位元素添加安全区偏移。默认关闭，以保留隐藏的页头。</string>
-    <string name="developer_options_gecko_safe_area_enabled_summary">关闭 Candy Gecko CSS 校正和观察器. 本地边对边染, CSS env() 值和明确或紧急后备仍然可用.</string>
+    <string name="developer_options_gecko_safe_area_enabled_summary">关闭 Candy 在 Gecko 和 System WebView 中的 CSS 修正和观察器。原生边到边渲染、CSS env() 值以及显式或紧急回退仍然可用。</string>
     <string name="developer_options_gecko_recheck_added_elements">检查添加的元素</string>
     <string name="developer_options_gecko_recheck_added_elements_summary">在更新预算中检查新添加的元素是否有CSS安全区更正.</string>
     <string name="developer_options_gecko_recheck_changed_elements">检查已更改的元素</string>

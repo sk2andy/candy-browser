@@ -1353,12 +1353,12 @@
     <string name="developer_options_show_release_notes">Zobrazit novinky</string>
     <string name="developer_options_show_release_notes_summary">Znovu otevře poznámky k vydání přiložené k této verzi aplikace.</string>
     <string name="developer_options_safe_area_section">Záložní bezpečná oblast</string>
-    <string name="developer_options_gecko_safe_area_section">Gecko od okraje k okraji</string>
-    <string name="developer_options_gecko_safe_area_summary">Ladění oprav bezpečné oblasti CSS a kontrol změn v Gecko. Tato nastavení nemění System WebView ani nativní záložní bezpečnou oblast.</string>
+    <string name="developer_options_gecko_safe_area_section">Od okraje k okraji</string>
+    <string name="developer_options_gecko_safe_area_summary">Laďte opravy bezpečné oblasti CSS a kontroly změn DOM pro Gecko a System WebView. Tato nastavení nemění nativní záložní režim bezpečné oblasti.</string>
     <string name="developer_options_gecko_safe_area_enabled">Opravy bezpečné oblasti CSS</string>
     <string name="developer_options_gecko_add_inset_to_negative_top">Přidat inset k záporným hodnotám top</string>
     <string name="developer_options_gecko_add_inset_to_negative_top_summary">Posouvat také prvky fixed a sticky se zápornými hodnotami CSS top o inset bezpečné oblasti. Ve výchozím stavu vypnuto, aby skryté hlavičky zůstaly skryté.</string>
-    <string name="developer_options_gecko_safe_area_enabled_summary">Vypne opravy CSS a pozorovatele Gecko v Candy. Nativní vykreslování od okraje k okraji, hodnoty CSS env() a výslovný či nouzový záložní režim zůstávají dostupné.</string>
+    <string name="developer_options_gecko_safe_area_enabled_summary">Vypněte opravy CSS a pozorovatele Candy pro Gecko a System WebView. Nativní vykreslování od okraje k okraji, hodnoty CSS env() a výslovný či nouzový záložní režim zůstávají dostupné.</string>
     <string name="developer_options_gecko_recheck_added_elements">Kontrolovat přidané prvky</string>
     <string name="developer_options_gecko_recheck_added_elements_summary">Kontrolovat nově vložené prvky pro opravy bezpečné oblasti CSS v rámci limitu aktualizace.</string>
     <string name="developer_options_gecko_recheck_changed_elements">Kontrolovat změněné prvky</string>

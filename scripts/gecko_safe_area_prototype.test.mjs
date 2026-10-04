@@ -3,8 +3,8 @@ import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import vm from 'node:vm';
 
-const source = readFileSync(new URL('../app/src/gecko/assets/candy_privacy/content_safe_area_prototype.js', import.meta.url), 'utf8');
-const redditSource = readFileSync(new URL('../app/src/gecko/assets/candy_privacy/content_safe_area_reddit.js', import.meta.url), 'utf8');
+const source = readFileSync(new URL('../app/src/main/assets/candy_privacy/content_safe_area_prototype.js', import.meta.url), 'utf8');
+const redditSource = readFileSync(new URL('../app/src/main/assets/candy_privacy/content_safe_area_reddit.js', import.meta.url), 'utf8');
 
 function fixture({ density = 3, nativeTop = 96, envTop = nativeTop, simulateAnimationFrames = false,
   normalizePixels = false, reparseStyles = false, prototypeSource = source, hostname = '',
@@ -1119,6 +1119,77 @@ test('known Google menu and focus CSS are seeded before activation and removed w
     assert.equal(f.sheets.some((node) => node.textContent.includes('#navd')), false);
     assert.equal(f.sheets.some((node) => node.textContent.includes('.A7Yvie.emcav')), false);
   }
+});
+
+test('Amazon India toolbar keeps its translated offscreen state without recurring discovery', () => {
+  for (const hostname of ['amazon.in', 'www.amazon.in', 'www.amazon.in.']) {
+    const f = fixture({ hostname, reparseStyles: true });
+    const toolbar = f.element('sticky', '0px');
+    toolbar.classes = ['s-mobile-toolbar-sticky'];
+    toolbar.computed.transform = 'matrix(1, 0, 0, 1, 0, -96)';
+    f.start(false);
+    const layer = f.sheets.find((node) => node.textContent.includes('.s-mobile-toolbar-sticky'));
+    assert.ok(layer?.isConnected, 'Toolbar states must be protected before delayed classification');
+    const visibleTop = 'calc(0px + var(--candy-safe-area-inset-top))';
+    assert.equal(f.computed(toolbar).top, visibleTop);
+    toolbar.classes.push('s-mobile-toolbar-offscreen');
+    assert.equal(f.computed(toolbar).top, '0px', 'A fully translated toolbar must not reveal one inset of content');
+    assert.equal(f.computed(toolbar).transform, 'matrix(1, 0, 0, 1, 0, -96)', 'Keep the author hide transition');
+    toolbar.classes.pop();
+    assert.equal(f.computed(toolbar).top, visibleTop, 'Revealed toolbar regains its inset before any worker');
+    f.flush();
+    const before = { queries: f.reads.selector, rules: f.ruleWrites(), writes: f.writes() };
+    for (let repeat = 0; repeat < 100; repeat++) {
+      toolbar.classes.push('s-mobile-toolbar-offscreen');
+      f.mutate(toolbar, 'class'); f.event('scroll');
+      assert.equal(f.computed(toolbar).top, '0px');
+      toolbar.classes.pop();
+      f.mutate(toolbar, 'class'); f.event('scroll');
+      assert.equal(f.computed(toolbar).top, visibleTop);
+    }
+    f.flush();
+    assert.deepEqual({ queries: f.reads.selector, rules: f.ruleWrites(), writes: f.writes() }, before);
+    assert.equal(toolbar.style.getPropertyValue('top'), '', 'State protection stays in persistent CSS');
+    assert.deepEqual(f.fallbacks, []);
+    f.configure({ enabled: false });
+    assert.equal(layer.isConnected, false);
+    assert.equal(f.computed(toolbar).top, '0px');
+    assert.equal(toolbar.attributes.size, 0, 'Disabling restores all owned toolbar markers');
+  }
+});
+
+test('Amazon India toolbar selectors remain restricted to the actual host', () => {
+  for (const hostname of ['amazon.in.example.org', 'notamazon.in', 'amazon.com', 'example.org']) {
+    const f = fixture({ hostname, reparseStyles: true });
+    const toolbar = f.element('sticky', '0px');
+    toolbar.classes = ['s-mobile-toolbar-sticky', 's-mobile-toolbar-offscreen'];
+    f.start(false);
+    assert.equal(f.sheets.some((node) => node.textContent.includes('.s-mobile-toolbar-sticky')), false);
+    assert.equal(f.computed(toolbar).top, '0px');
+  }
+});
+
+test('Amazon India visible and hidden toolbar rules preserve negative author tops', () => {
+  const f = fixture({ hostname: 'www.amazon.in', reparseStyles: true });
+  const toolbar = f.element('sticky', '-96px');
+  toolbar.classes = ['s-mobile-toolbar-sticky'];
+  f.start();
+  assert.equal(f.computed(toolbar).top, '-96px');
+  toolbar.classes.push('s-mobile-toolbar-offscreen');
+  f.mutate(toolbar, 'class'); f.flush();
+  assert.equal(f.computed(toolbar).top, '-96px', 'Offscreen top reset must also exclude authored negative anchors');
+  toolbar.classes.pop();
+  f.mutate(toolbar, 'class'); f.flush();
+  assert.equal(f.computed(toolbar).top, '-96px');
+  toolbar.computed.top = '0px';
+  toolbar.style.setProperty('top', '0px'); f.flush();
+  assert.equal(f.computed(toolbar).top, 'calc(0px + var(--candy-safe-area-inset-top))');
+  toolbar.classes.push('s-mobile-toolbar-offscreen');
+  assert.equal(f.computed(toolbar).top, '0px');
+  f.configure({ enabled: false });
+  assert.equal(toolbar.style.getPropertyValue('top'), '0px');
+  assert.equal(toolbar.style.getPropertyPriority('top'), '');
+  assert.equal(toolbar.attributes.size, 0);
 });
 
 test('Reddit app ownership replaces body inset without losing author padding', () => {

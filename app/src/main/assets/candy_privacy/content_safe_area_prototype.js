@@ -13,10 +13,13 @@
   let checkedSelectorTops = new WeakSet();
   let negativeTopMarker = "";
   const hostname = typeof globalThis.location?.hostname === "string" ? globalThis.location.hostname.toLowerCase().replace(/\.$/, "") : "";
+  const amazonIndia = hostname === "amazon.in" || hostname.endsWith(".amazon.in");
   const knownTopSelectors = hostname === "amazon.de" || hostname.endsWith(".amazon.de") ?
     [":root #btf-sub-nav-top-navigation-bar.persistent-header"] :
+    amazonIndia ? [":root .s-mobile-toolbar-sticky"] :
     ["google.com", "google.de"].some((host) => hostname === host || hostname.endsWith(`.${host}`)) ?
       [":root #navd", ":root #tsf .A7Yvie.emcav"] : [];
+  const hiddenTopSelectors = amazonIndia ? [":root .s-mobile-toolbar-sticky.s-mobile-toolbar-offscreen"] : [];
   const knownTopMatcher = knownTopSelectors.join(", ");
   const markerPrefix = `data-candy-safe-area-${Math.random().toString(36).slice(2)}`;
   let layerEpoch = 0;
@@ -548,8 +551,13 @@
   function ensureLayer() {
     if (layer) return layer.isConnected ? layer.sheet : null;
     layer = document.createElement("style");
-    layer.textContent = (configuration?.cover ? [] : knownTopSelectors).map((selector) =>
-      `${topSelector(selector)} { top: calc(0px + var(--candy-safe-area-inset-top)) !important; }`).join("\n");
+    // Amazon hides its sticky toolbar by translating its full height above top 0.
+    // Preserve that anchor while hidden; class changes stay entirely in CSS.
+    layer.textContent = configuration?.cover ? "" : [
+      ...knownTopSelectors.map((selector) =>
+        `${topSelector(selector)} { top: calc(0px + var(--candy-safe-area-inset-top)) !important; }`),
+      ...hiddenTopSelectors.map((selector) => `${topSelector(selector)} { top: 0px !important; }`)
+    ].join("\n");
     document.documentElement.appendChild(layer);
     if (!layer.sheet) { layer.remove(); layer = null; return null; }
     return layer.sheet;

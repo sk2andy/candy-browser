@@ -1340,12 +1340,12 @@
     <string name="developer_options_show_release_notes">Arată ce e nou</string>
     <string name="developer_options_show_release_notes_summary">Deschide notele de lansare care vin cu această versiune a aplicației din nou.</string>
     <string name="developer_options_safe_area_section">Zona sigură de rezervă</string>
-    <string name="developer_options_gecko_safe_area_section">Gecko de la un capăt la altul</string>
-    <string name="developer_options_gecko_safe_area_summary">Ajustați corecțiile CSS pentru zona sigură din Gecko și verificările modificărilor DOM. Aceste setări nu modifică System WebView sau modul nativ de rezervă pentru zona sigură.</string>
+    <string name="developer_options_gecko_safe_area_section">De la o margine la alta</string>
+    <string name="developer_options_gecko_safe_area_summary">Ajustați corecțiile CSS pentru zona sigură și verificările modificărilor DOM pentru Gecko și System WebView. Aceste setări nu modifică modul nativ de rezervă pentru zona sigură.</string>
     <string name="developer_options_gecko_safe_area_enabled">CSS corecție pentru zona de siguranță</string>
     <string name="developer_options_gecko_add_inset_to_negative_top">Adaugă marginea la valorile negative top</string>
     <string name="developer_options_gecko_add_inset_to_negative_top_summary">Deplasează și elementele fixe și lipicioase cu valori CSS top negative cu marginea zonei sigure. Dezactivat implicit pentru a păstra antetele ascunse.</string>
-    <string name="developer_options_gecko_safe_area_enabled_summary">Închideți Candys Gecko CSS corecții și observatori. Rendering-ul nativ de la margine la margine, CSS env() valorile și fallback-ul explicit sau de urgență rămân disponibile.</string>
+    <string name="developer_options_gecko_safe_area_enabled_summary">Dezactivați corecțiile CSS și observatorii Candy pentru Gecko și System WebView. Randarea nativă de la o margine la alta, valorile CSS env() și modul de rezervă explicit sau de urgență rămân disponibile.</string>
     <string name="developer_options_gecko_recheck_added_elements">Verificați elementele adăugate</string>
     <string name="developer_options_gecko_recheck_added_elements_summary">Verificați elementele nou inserate pentru corecții CSS ale zonei sigure în limita bugetului de actualizare.</string>
     <string name="developer_options_gecko_recheck_changed_elements">Verificați elementele modificate</string>

@@ -17,6 +17,7 @@ import android.print.PrintAttributes
 import android.print.PrintManager
 import android.view.View
 import android.view.ViewGroup
+import android.view.WindowInsets
 import android.widget.FrameLayout
 import android.webkit.CookieManager
 import android.webkit.GeolocationPermissions
@@ -33,6 +34,7 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.annotation.UiThread
 import androidx.core.graphics.Insets
+import androidx.core.view.DisplayCutoutCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.webkit.JavaScriptExecutionWorld
@@ -77,9 +79,6 @@ import dev.sk2andy.materialbrowser.browser.WebRtcBlockerScript
 import dev.sk2andy.materialbrowser.browser.WebRtcProtectionMode
 import dev.sk2andy.materialbrowser.browser.WebRtcProtectionRules
 import dev.sk2andy.materialbrowser.browser.WebContentAnimationPolicyScript
-import dev.sk2andy.materialbrowser.browser.WebContentTopInsetMode
-import dev.sk2andy.materialbrowser.browser.WebContentTopInsetRules
-import dev.sk2andy.materialbrowser.browser.WebContentTopInsetScript
 import dev.sk2andy.materialbrowser.browser.WebContentTopInsetTransitionRules
 import dev.sk2andy.materialbrowser.browser.smoothWebContentTopInsetChange
 import dev.sk2andy.materialbrowser.browser.engine.AndroidBrowserEngineFactory
@@ -371,7 +370,7 @@ private class SystemWebViewBrowserEngineSession(
 ) : AndroidBrowserEngineSessionPort {
     private val appContext = context.applicationContext
     private val profileId = profileId
-    private val webView = SystemWebViewHost(context, ::onSafeAreaFallback)
+    private val webView = SystemWebViewHost(context, ::onSafeAreaFallback, ::onStatusBarBackdrop)
     private val host = webView
     private val blobDownloadTransfer = SystemWebViewBlobDownloadTransfer(appContext, webView)
     private var closed = false
@@ -407,7 +406,7 @@ private class SystemWebViewBrowserEngineSession(
     private var privacySignalHeaderRefreshPending = false
     private var autoplayScriptHandler: ScriptHandler? = null
     private var webRtcScriptHandler: ScriptHandler? = null
-    private var topInsetScriptHandler: ScriptHandler? = null
+    private var safeAreaScriptHandler: ScriptHandler? = null
     private var mediaScriptHandler: ScriptHandler? = null
     private var desktopViewportScriptHandler: ScriptHandler? = null
     private val antiFingerprintingSeed = UUID.randomUUID().toString().replace("-", "")
@@ -460,7 +459,7 @@ private class SystemWebViewBrowserEngineSession(
         installAnimationPolicy()
         installPrivacySignalPolicy()
         installWebRtcPolicy()
-        installTopInsetScript()
+        installSafeAreaScript()
         installToppings(initialScripts)
         setGlobalThirdPartyCookieBlocking(blockThirdPartyCookies)
         applyPrivacyPolicy()
@@ -940,7 +939,7 @@ private class SystemWebViewBrowserEngineSession(
         privacySignalScriptHandler?.remove()
         autoplayScriptHandler?.remove()
         webRtcScriptHandler?.remove()
-        topInsetScriptHandler?.remove()
+        safeAreaScriptHandler?.remove()
         desktopViewportScriptHandler?.remove()
         removeMediaBridge()
         blobDownloadTransfer.close()
@@ -1151,8 +1150,8 @@ private class SystemWebViewBrowserEngineSession(
                     null,
                 )
             }
-            if (topInsetScriptHandler == null) {
-                view.evaluateJavascript(WebContentTopInsetScript.installScript, null)
+            if (safeAreaScriptHandler == null) {
+                view.evaluateJavascript(host.safeAreaInstallScript, null)
             }
             applyDocumentCosmetics(url)
         }
@@ -1531,14 +1530,7 @@ private class SystemWebViewBrowserEngineSession(
 
     private fun applyPrivacyPolicy() {
         setGlobalThirdPartyCookieBlocking(privacyPolicy.blockThirdPartyCookies)
-        host.updatePolicy(
-            topInsetEnabled = privacyPolicy.topInsetPx > 0,
-            animationsEnabled = privacyPolicy.animationsEnabled,
-            navigationGeneration = privacyPolicy.navigationGeneration,
-            policyRevision = policyRevision,
-            safeAreaLayoutQuietPeriodMillis = privacyPolicy.safeAreaLayoutQuietPeriodMillis,
-            safeAreaRequiredFailureCount = privacyPolicy.safeAreaRequiredFailureCount,
-        )
+        host.updatePolicy(privacyPolicy, policyRevision)
     }
 
     private fun applyDocumentCosmetics(url: String?) {
@@ -1597,8 +1589,8 @@ private class SystemWebViewBrowserEngineSession(
             "(document.head||document.documentElement).appendChild(s);})()"
     }
 
-    private fun installTopInsetScript() {
-        topInsetScriptHandler = addDocumentStartScript(WebContentTopInsetScript.installScript)
+    private fun installSafeAreaScript() {
+        safeAreaScriptHandler = addDocumentStartScript(host.safeAreaInstallScript)
     }
 
     private fun installAntiFingerprintingPolicy() {
@@ -1783,7 +1775,7 @@ private class SystemWebViewBrowserEngineSession(
     ) {
         val policy = privacyPolicy
         if (
-            navigationGeneration != policy.navigationGeneration ||
+            closed || navigationGeneration != policy.navigationGeneration ||
             revision != policyRevision
         ) {
             return
@@ -1799,6 +1791,22 @@ private class SystemWebViewBrowserEngineSession(
                 safeAreaFallbackNavigationGeneration = navigationGeneration,
                 safeAreaFallbackThemeColor = themeColor,
                 safeAreaFallbackIsTopHeader = isTopHeader,
+            ),
+        )
+    }
+
+    private fun onStatusBarBackdrop(generation: Int, revision: Long, themeColor: String?) {
+        if (closed || generation != privacyPolicy.navigationGeneration || revision != policyRevision) return
+        privacyEventSink.onEvent(
+            GeckoPrivacyEvent(
+                requestUrl = webView.url.orEmpty(),
+                pageUrl = webView.url,
+                ruleId = null,
+                wasBlocked = false,
+                isBuiltIn = true,
+                isCompatibilityObservation = false,
+                statusBarBackdropNavigationGeneration = generation,
+                statusBarBackdropThemeColor = themeColor,
             ),
         )
     }
@@ -1921,21 +1929,19 @@ private class SystemWebViewBrowserEngineSession(
 private class SystemWebViewHost(
     context: Context,
     private val onFallback: (Int, Long, String?, Boolean) -> Unit,
+    private val onBackdrop: (Int, Long, String?) -> Unit,
 ) : WebView(context), GeckoViewInsetHost {
-    private var topInsetPx = 0
-    private var layoutTopInsetPx = 0
-    private var navigationGeneration = 0
-    private var policyRevision = 0L
-    private var topInsetEnabled = false
-    private var animationsEnabled = true
-    private var safeAreaLayoutQuietPeriodMillis = 400
-    private var safeAreaRequiredFailureCount = 3
-    private val viewportCoverAllowed = SystemWebViewSafeAreaRules.supportsCssSafeAreaInsets(
+    val safeAreaInstallScript = SystemWebViewSafeAreaScript.installScript(context)
+    private val supportsNativeCssSafeArea = SystemWebViewSafeAreaRules.supportsCssSafeAreaInsets(
         WebView.getCurrentWebViewPackage()?.versionName,
     )
+    private var privacyPolicy = GeckoPrivacyPolicy.Disabled
+    private var policyRevision = 0L
+    @Volatile
+    private var safeAreaConfiguration = SystemWebViewSafeAreaScript.configuration(privacyPolicy, 0, 0)
     private var currentLayout = GeckoViewInsetLayout(
         margins = GeckoViewInsets.Zero,
-        rendererSafeAreaOverride = null,
+        rendererSafeAreaOverride = GeckoViewInsets.Zero,
         scrollableTopInsetPx = 0,
     )
 
@@ -1943,25 +1949,7 @@ private class SystemWebViewHost(
         addJavascriptInterface(
             object {
                 @android.webkit.JavascriptInterface
-                fun topInsetPx(): Int = topInsetPx
-
-                @android.webkit.JavascriptInterface
-                fun viewportCoverAllowed(): Boolean = viewportCoverAllowed
-
-                @android.webkit.JavascriptInterface
-                fun navigationGeneration(): Int = navigationGeneration
-
-                @android.webkit.JavascriptInterface
-                fun policyRevision(): Long = policyRevision
-
-                @android.webkit.JavascriptInterface
-                fun safeAreaLayoutQuietPeriodMillis(): Int = safeAreaLayoutQuietPeriodMillis
-
-                @android.webkit.JavascriptInterface
-                fun safeAreaRequiredFailureCount(): Int = safeAreaRequiredFailureCount
-
-                @android.webkit.JavascriptInterface
-                fun nativeTopHeaderEnabled(): Boolean = true
+                fun configuration(): String = safeAreaConfiguration
 
                 @android.webkit.JavascriptInterface
                 fun fallbackToNative(
@@ -1970,77 +1958,96 @@ private class SystemWebViewHost(
                     themeColor: String?,
                     isTopHeader: Boolean,
                 ) = post { onFallback(generation, revision, themeColor, isTopHeader) }
+
+                @android.webkit.JavascriptInterface
+                fun statusBarBackdrop(generation: Int, revision: Long, themeColor: String?) =
+                    post { onBackdrop(generation, revision, themeColor) }
             },
-            WebContentTopInsetScript.bridgeName,
+            SystemWebViewSafeAreaScript.BRIDGE_NAME,
         )
     }
 
     fun contentScrollRangePx(): Int = computeVerticalScrollRange()
 
-    fun updatePolicy(
-        topInsetEnabled: Boolean,
-        animationsEnabled: Boolean,
-        navigationGeneration: Int,
-        policyRevision: Long,
-        safeAreaLayoutQuietPeriodMillis: Int,
-        safeAreaRequiredFailureCount: Int,
-    ) {
-        val wasEnabled = this.topInsetEnabled
-        val settingsChanged =
-            this.safeAreaLayoutQuietPeriodMillis != safeAreaLayoutQuietPeriodMillis ||
-                this.safeAreaRequiredFailureCount != safeAreaRequiredFailureCount
-        this.topInsetEnabled = topInsetEnabled
-        this.animationsEnabled = animationsEnabled
-        this.navigationGeneration = navigationGeneration
-        this.safeAreaLayoutQuietPeriodMillis = safeAreaLayoutQuietPeriodMillis
-        this.safeAreaRequiredFailureCount = safeAreaRequiredFailureCount
-        this.policyRevision = policyRevision
-        val previousTopInset = topInsetPx
-        applyCurrentLayout()
-        if (wasEnabled != topInsetEnabled || previousTopInset != topInsetPx) {
-            evaluateJavascript(WebContentTopInsetScript.installScript, null)
-        } else if (settingsChanged) {
-            evaluateJavascript("globalThis.__candyReconfigureContentTopInset?.();", null)
+    // Clamp before Android calls either a provider listener or WebView.onApplyWindowInsets.
+    override fun dispatchApplyWindowInsets(insets: WindowInsets): WindowInsets =
+        super.dispatchApplyWindowInsets(rendererWindowInsets(insets))
+
+    override fun onApplyWindowInsets(insets: WindowInsets): WindowInsets =
+        super.onApplyWindowInsets(rendererWindowInsets(insets))
+
+    private fun rendererWindowInsets(insets: WindowInsets): WindowInsets {
+        // Pre-144 providers can retain env() after a cutout disappears. Keep their renderer
+        // insets zero from the first delivery; the shared CSS policy supplies the safe area.
+        val override = if (supportsNativeCssSafeArea) {
+            currentLayout.rendererSafeAreaOverride ?: return insets
+        } else {
+            GeckoViewInsets.Zero
         }
+        return WindowInsetsCompat.toWindowInsetsCompat(insets, this)
+            .withSafeAreaOverride(override)
+            .toWindowInsets()
+            ?: insets
+    }
+
+    fun updatePolicy(policy: GeckoPrivacyPolicy, revision: Long) {
+        privacyPolicy = policy
+        policyRevision = revision
+        refreshSafeAreaConfiguration()
+    }
+
+    private fun refreshSafeAreaConfiguration() {
+        val layout = currentLayout
+        val topInsetPx = if (layout.margins.top == 0) {
+            minOf(privacyPolicy.cssSafeAreaTopInsetPx, layout.rendererSafeAreaOverride?.top ?: 0)
+        } else {
+            0
+        }
+        val configuration = SystemWebViewSafeAreaScript.configuration(
+            policy = privacyPolicy,
+            revision = policyRevision,
+            topInsetPx = topInsetPx,
+            nativeTopInsetPx = layout.margins.top,
+        )
+        if (safeAreaConfiguration == configuration) return
+        safeAreaConfiguration = configuration
+        evaluateJavascript(safeAreaInstallScript, null)
     }
 
     override fun updateInsets(
         layout: GeckoViewInsetLayout,
         windowInsets: WindowInsetsCompat,
     ) {
-        val animateTopInsetChange = animationsEnabled &&
+        val animateTopInsetChange = privacyPolicy.animationsEnabled &&
             WebContentTopInsetTransitionRules.shouldAnimate(
                 previousState = currentLayout.topInsetTransitionState,
                 nextState = layout.topInsetTransitionState,
             )
-        currentLayout = layout
-        layoutTopInsetPx = layout.scrollableTopInsetPx
-        val previousTopInset = topInsetPx
-        val previousBottomPadding = paddingBottom
+        currentLayout = if (supportsNativeCssSafeArea) {
+            layout
+        } else {
+            val cutout = windowInsets.getInsets(WindowInsetsCompat.Type.displayCutout())
+            SystemWebViewSafeAreaRules.withNativeCutoutMargins(
+                layout,
+                GeckoViewInsets(
+                    left = cutout.left,
+                    top = cutout.top,
+                    right = cutout.right,
+                    bottom = cutout.bottom,
+                ),
+            )
+        }
         applyCurrentLayout(animateTopInsetChange)
         val rendererInsets = layout.rendererSafeAreaOverride
             ?.let(windowInsets::withSafeAreaOverride)
             ?: windowInsets
         ViewCompat.dispatchApplyWindowInsets(this, rendererInsets)
-        if (previousTopInset != topInsetPx || previousBottomPadding != paddingBottom) {
-            evaluateJavascript(WebContentTopInsetScript.installScript, null)
-        }
+        refreshSafeAreaConfiguration()
     }
 
     private fun applyCurrentLayout(animateTopInsetChange: Boolean = false) {
         val layout = currentLayout
-        val mode = WebContentTopInsetRules.resolve(
-            drawsEdgeToEdge = layout.margins.top == 0 && layout.scrollableTopInsetPx == 0,
-            forceSafeArea = layout.margins.top > 0,
-            scrollableDocumentEnabled = topInsetEnabled && layout.scrollableTopInsetPx > 0,
-        )
-        val nativeTopInset = when (mode) {
-            WebContentTopInsetMode.NativeSafeArea ->
-                layout.margins.top.coerceAtLeast(layout.scrollableTopInsetPx)
-            WebContentTopInsetMode.EdgeToEdge,
-            WebContentTopInsetMode.ScrollableDocument,
-            -> layout.margins.top
-        }
+        val nativeTopInset = layout.margins.top
         (layoutParams as? ViewGroup.MarginLayoutParams)?.let { params ->
             val previousTopMargin = params.topMargin
             if (
@@ -2063,7 +2070,6 @@ private class SystemWebViewHost(
                 )
             }
         }
-        topInsetPx = if (mode == WebContentTopInsetMode.ScrollableDocument) layoutTopInsetPx else 0
         setPadding(0, 0, 0, 0)
     }
 }
@@ -2072,6 +2078,30 @@ private fun WindowInsetsCompat.withSafeAreaOverride(
     override: GeckoViewInsets,
 ): WindowInsetsCompat {
     val builder = WindowInsetsCompat.Builder(this)
+    // WebView also reads the platform cutout object; changing its type insets alone leaves env()
+    // active on an edge that Candy has already moved into a native margin.
+    toWindowInsets()?.displayCutout?.let { cutout ->
+        val originalSafeInsets = Insets.of(
+            cutout.safeInsetLeft,
+            cutout.safeInsetTop,
+            cutout.safeInsetRight,
+            cutout.safeInsetBottom,
+        )
+        val originalWaterfallInsets = Insets.toCompatInsets(cutout.waterfallInsets)
+        val safeInsets = originalSafeInsets.clampedTo(override)
+        val waterfallInsets = originalWaterfallInsets.clampedTo(override)
+        if (safeInsets == originalSafeInsets && waterfallInsets == originalWaterfallInsets) return@let
+        builder.setDisplayCutout(
+            DisplayCutoutCompat(
+                safeInsets,
+                cutout.boundingRectLeft.takeIf { override.left > 0 },
+                cutout.boundingRectTop.takeIf { override.top > 0 },
+                cutout.boundingRectRight.takeIf { override.right > 0 },
+                cutout.boundingRectBottom.takeIf { override.bottom > 0 },
+                waterfallInsets,
+            ),
+        )
+    }
     listOf(
         WindowInsetsCompat.Type.statusBars(),
         WindowInsetsCompat.Type.navigationBars(),

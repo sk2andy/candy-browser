@@ -1326,12 +1326,12 @@
     <string name="developer_options_show_release_notes">Покажете какво е ново</string>
     <string name="developer_options_show_release_notes_summary">Отваря бележките за пускане, съставени с тази версия на приложението отново.</string>
     <string name="developer_options_safe_area_section">Застрахователна зона</string>
-    <string name="developer_options_gecko_safe_area_section">Gecko от край до край</string>
-    <string name="developer_options_gecko_safe_area_summary">Настройте корекциите на безопасната област CSS в Gecko и проверките за промени в DOM. Тези настройки не променят System WebView или вградения резервен режим на безопасната област.</string>
+    <string name="developer_options_gecko_safe_area_section">От край до край</string>
+    <string name="developer_options_gecko_safe_area_summary">Настройте CSS корекциите на безопасната област и проверките за промени в DOM за Gecko и System WebView. Тези настройки не променят вградения резервен режим на безопасната област.</string>
     <string name="developer_options_gecko_safe_area_enabled">CSS корекция за безопасна зона</string>
     <string name="developer_options_gecko_add_inset_to_negative_top">Добави отстъп към отрицателните стойности на top</string>
     <string name="developer_options_gecko_add_inset_to_negative_top_summary">Премества също фиксираните и залепващите елементи с отрицателни CSS стойности на top с отстъпа на безопасната област. По подразбиране е изключено, за да запази скритите заглавни ленти.</string>
-    <string name="developer_options_gecko_safe_area_enabled_summary">Изключване на Candys Gecko CSS корекции и наблюдатели. Природното рендеринг от ръб до ръб, CSS env() стойностите и изричното или аварийното резервно възстановяване остават достъпни.</string>
+    <string name="developer_options_gecko_safe_area_enabled_summary">Изключете CSS корекциите и наблюдателите на Candy за Gecko и System WebView. Вграденото изобразяване от край до край, стойностите CSS env() и изричният или аварийният резервен режим остават достъпни.</string>
     <string name="developer_options_gecko_recheck_added_elements">Проверка на добавените елементи</string>
     <string name="developer_options_gecko_recheck_added_elements_summary">Проверявайте нововмъкнатите елементи за CSS корекции на безопасната област в рамките на бюджета за актуализации.</string>
     <string name="developer_options_gecko_recheck_changed_elements">Проверка на променените елементи</string>

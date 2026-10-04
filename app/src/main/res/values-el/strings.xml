@@ -1326,12 +1326,12 @@
     <string name="developer_options_show_release_notes">Εμφάνιση τι είναι νέο</string>
     <string name="developer_options_show_release_notes_summary">Ανοίγει τις σημειώσεις έκδοσης που συνδέονται με αυτή την έκδοση εφαρμογής και πάλι.</string>
     <string name="developer_options_safe_area_section">Ασφαλής υποχώρηση περιοχής</string>
-    <string name="developer_options_gecko_safe_area_section">Gecko άκρη προς άκρη</string>
-    <string name="developer_options_gecko_safe_area_summary">Ρυθμίστε τις διορθώσεις ασφαλούς περιοχής CSS και τους ελέγχους αλλαγών DOM του Gecko. Αυτές οι ρυθμίσεις δεν αλλάζουν το System WebView ή την εγγενή εναλλακτική ασφαλή περιοχή.</string>
+    <string name="developer_options_gecko_safe_area_section">Από άκρη σε άκρη</string>
+    <string name="developer_options_gecko_safe_area_summary">Ρυθμίστε τις διορθώσεις ασφαλούς περιοχής CSS και τους ελέγχους αλλαγών DOM για Gecko και System WebView. Αυτές οι ρυθμίσεις δεν αλλάζουν την εγγενή εναλλακτική ασφαλή περιοχή.</string>
     <string name="developer_options_gecko_safe_area_enabled">CSS διόρθωση ασφαλούς περιοχής</string>
     <string name="developer_options_gecko_add_inset_to_negative_top">Προσθήκη περιθωρίου σε αρνητικές τιμές top</string>
     <string name="developer_options_gecko_add_inset_to_negative_top_summary">Μετατοπίζει επίσης στοιχεία fixed και sticky με αρνητικές τιμές CSS top κατά το περιθώριο της ασφαλούς περιοχής. Απενεργοποιημένο από προεπιλογή για διατήρηση κρυφών κεφαλίδων.</string>
-    <string name="developer_options_gecko_safe_area_enabled_summary">Απενεργοποιήστε τις διορθώσεις CSS και τους παρατηρητές Gecko του Candy. Η εγγενής απόδοση από άκρη σε άκρη, οι τιμές CSS env() και η ρητή ή επείγουσα εναλλακτική παραμένουν διαθέσιμες.</string>
+    <string name="developer_options_gecko_safe_area_enabled_summary">Απενεργοποιήστε τις διορθώσεις CSS και τους παρατηρητές του Candy για Gecko και System WebView. Η εγγενής απόδοση από άκρη σε άκρη, οι τιμές CSS env() και η ρητή ή επείγουσα εναλλακτική παραμένουν διαθέσιμες.</string>
     <string name="developer_options_gecko_recheck_added_elements">Έλεγχος των προστιθέμενων στοιχείων</string>
     <string name="developer_options_gecko_recheck_added_elements_summary">Ελέγξτε τα στοιχεία που έχουν εισαχθεί πρόσφατα για CSS διορθώσεις σε ασφαλή περιοχή στο πλαίσιο του επικαιροποιημένου προϋπολογισμού.</string>
     <string name="developer_options_gecko_recheck_changed_elements">Ελέγξτε τα αλλαγμένα στοιχεία</string>

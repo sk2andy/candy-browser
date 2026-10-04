@@ -1311,12 +1311,12 @@
     <string name="developer_options_show_release_notes">新機能を表示</string>
     <string name="developer_options_show_release_notes_summary">このアプリのバージョンに追加されたリリースノートを再び開きます.</string>
     <string name="developer_options_safe_area_section">安全なエリアのバックバック</string>
-    <string name="developer_options_gecko_safe_area_section">Gecko 端から端まで</string>
-    <string name="developer_options_gecko_safe_area_summary">Geckos CSS 安全なエリアの修正と変異検査 これらの設定は System WebView またはネイティブ・セーフ・ゾーン・フォールバックは変更されません.</string>
+    <string name="developer_options_gecko_safe_area_section">エッジツーエッジ</string>
+    <string name="developer_options_gecko_safe_area_summary">Gecko と System WebView の CSS セーフエリア補正と DOM 変更チェックを調整します。これらの設定はネイティブのセーフエリアフォールバックを変更しません。</string>
     <string name="developer_options_gecko_safe_area_enabled">CSS 安全なエリアの修正</string>
     <string name="developer_options_gecko_add_inset_to_negative_top">負の top 値に安全領域の余白を追加</string>
     <string name="developer_options_gecko_add_inset_to_negative_top_summary">CSS の top 値が負の fixed 要素と sticky 要素も、安全領域の余白分だけ移動します。非表示のヘッダーを維持するため、既定では無効です。</string>
-    <string name="developer_options_gecko_safe_area_enabled_summary">Candys Gecko CSSの修正とオブザーバーをオフにする. ネイティブエッジツーエッジレンダリング, CSS env() 値,および明示的または緊急フォールバックは引き続き利用可能である.</string>
+    <string name="developer_options_gecko_safe_area_enabled_summary">Gecko と System WebView 向けの Candy の CSS 補正とオブザーバーを無効にします。ネイティブのエッジツーエッジ描画、CSS env() の値、明示的または緊急のフォールバックは引き続き利用できます。</string>
     <string name="developer_options_gecko_recheck_added_elements">追加された要素をチェック</string>
     <string name="developer_options_gecko_recheck_added_elements_summary">CSS 更新予算内の安全エリアの訂正について,新たに挿入された要素を確認します.</string>
     <string name="developer_options_gecko_recheck_changed_elements">変更された要素をチェック</string>

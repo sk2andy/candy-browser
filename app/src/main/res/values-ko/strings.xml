@@ -1311,12 +1311,12 @@
     <string name="developer_options_show_release_notes">새로운 기능 표시</string>
     <string name="developer_options_show_release_notes_summary">이 앱 버전과 함께 제공된 릴리스 메모를 다시 열고</string>
     <string name="developer_options_safe_area_section">안전 영역 재발</string>
-    <string name="developer_options_gecko_safe_area_section">Gecko 가장자리에서 가장자리로</string>
-    <string name="developer_options_gecko_safe_area_summary">Geckos CSS 안전 영역 수정 및 돌연변이 검사 이 설정은 System WebView 또는 네이티브 안전 영역 재구성 변경되지 않습니다.</string>
+    <string name="developer_options_gecko_safe_area_section">엣지 투 엣지</string>
+    <string name="developer_options_gecko_safe_area_summary">Gecko와 System WebView의 CSS 안전 영역 보정 및 DOM 변경 검사를 조정합니다. 이 설정은 네이티브 안전 영역 대체 동작을 변경하지 않습니다.</string>
     <string name="developer_options_gecko_safe_area_enabled">CSS 안전 구역 수정</string>
     <string name="developer_options_gecko_add_inset_to_negative_top">음수 top 값에 안전 영역 여백 추가</string>
     <string name="developer_options_gecko_add_inset_to_negative_top_summary">CSS top 값이 음수인 fixed 및 sticky 요소도 안전 영역 여백만큼 이동합니다. 숨겨진 헤더를 유지하기 위해 기본적으로 꺼져 있습니다.</string>
-    <string name="developer_options_gecko_safe_area_enabled_summary">Candys Gecko CSS 수정 및 관찰자를 끄십시오. 네이티브 엣지-투-엣지 렌더링, CSS env() 값, 그리고 명시적 또는 비상 재구축은 여전히 사용할 수 있습니다.</string>
+    <string name="developer_options_gecko_safe_area_enabled_summary">Gecko와 System WebView에서 Candy의 CSS 보정과 관찰자를 끕니다. 네이티브 엣지 투 엣지 렌더링, CSS env() 값, 명시적 또는 긴급 대체 동작은 계속 사용할 수 있습니다.</string>
     <string name="developer_options_gecko_recheck_added_elements">추가된 요소를 확인</string>
     <string name="developer_options_gecko_recheck_added_elements_summary">업데이트 예산 내에서 새로 삽입된 요소를 확인 CSS 안전 영역 수정.</string>
     <string name="developer_options_gecko_recheck_changed_elements">변경된 요소를 확인</string>

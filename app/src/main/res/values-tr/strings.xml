@@ -1326,12 +1326,12 @@
     <string name="developer_options_show_release_notes">Yeni olanları gösterin</string>
     <string name="developer_options_show_release_notes_summary">Bu uygulama sürümüyle birlikte gelen yayın notlarını tekrar açar.</string>
     <string name="developer_options_safe_area_section">Güvenli bölge yedekleme</string>
-    <string name="developer_options_gecko_safe_area_section">Gecko kenardan kenara</string>
-    <string name="developer_options_gecko_safe_area_summary">Geckos CSS güvenli alan düzeltmeleri ve mutasyon kontrolleri. Bu ayarlar System WebView veya yerel güvenli alan yedek ayarları değişmez.</string>
+    <string name="developer_options_gecko_safe_area_section">Kenardan kenara</string>
+    <string name="developer_options_gecko_safe_area_summary">Gecko ve System WebView için CSS güvenli alan düzeltmelerini ve DOM değişikliği kontrollerini ayarlayın. Bu ayarlar yerel güvenli alan yedek davranışını değiştirmez.</string>
     <string name="developer_options_gecko_safe_area_enabled">CSS Güvenli bölge düzeltmesi</string>
     <string name="developer_options_gecko_add_inset_to_negative_top">Negatif top değerlerine boşluk ekle</string>
     <string name="developer_options_gecko_add_inset_to_negative_top_summary">Negatif CSS top değerlerine sahip fixed ve sticky öğeleri de güvenli alan boşluğu kadar kaydırır. Gizli üstbilgileri korumak için varsayılan olarak kapalıdır.</string>
-    <string name="developer_options_gecko_safe_area_enabled_summary">Candys Gecko CSS düzeltmeleri ve gözlemcileri kapatın. Yerel kenardan kenara görüntüleme, CSS env() değerleri ve açık veya acil durum yedekleme hala kullanılabilir.</string>
+    <string name="developer_options_gecko_safe_area_enabled_summary">Gecko ve System WebView için Candy CSS düzeltmelerini ve gözlemcilerini kapatın. Yerel kenardan kenara görüntüleme, CSS env() değerleri ve açık veya acil durum yedek davranışı kullanılabilir kalır.</string>
     <string name="developer_options_gecko_recheck_added_elements">Eklenen öğeleri kontrol edin</string>
     <string name="developer_options_gecko_recheck_added_elements_summary">Yeni eklenen öğelerin CSS güvenli alan düzeltmelerini güncelleme bütçesi içinde kontrol edin.</string>
     <string name="developer_options_gecko_recheck_changed_elements">Değiştirilen öğeleri kontrol et</string>

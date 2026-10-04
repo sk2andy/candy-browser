@@ -1340,12 +1340,12 @@
     <string name="developer_options_show_release_notes">Pokažite što je novo</string>
     <string name="developer_options_show_release_notes_summary">Opet otvara bilješke izdanja koje dolaze s ovom verzijom aplikacije.</string>
     <string name="developer_options_safe_area_section">Zaštitna zona</string>
-    <string name="developer_options_gecko_safe_area_section">Gecko od ruba do ruba</string>
-    <string name="developer_options_gecko_safe_area_summary">Podesite Gecko CSS korekcije sigurnog područja i provjere promjena DOM-a. Ove postavke ne mijenjaju System WebView ni izvorni pričuvni način sigurnog područja.</string>
+    <string name="developer_options_gecko_safe_area_section">Od ruba do ruba</string>
+    <string name="developer_options_gecko_safe_area_summary">Podesite CSS ispravke sigurnog područja i provjere promjena DOM-a za Gecko i System WebView. Ove postavke ne mijenjaju izvorni pričuvni način sigurnog područja.</string>
     <string name="developer_options_gecko_safe_area_enabled">CSS korekcija za sigurnu zonu</string>
     <string name="developer_options_gecko_add_inset_to_negative_top">Dodaj odmak negativnim vrijednostima top</string>
     <string name="developer_options_gecko_add_inset_to_negative_top_summary">Pomakni i fiksne i ljepljive elemente s negativnim CSS vrijednostima top za odmak sigurnog područja. Zadano isključeno kako bi skrivena zaglavlja ostala skrivena.</string>
-    <string name="developer_options_gecko_safe_area_enabled_summary">Izgubit će se Candys Gecko CSS ispravke i promatrači. Native edge-to-edge rendering, CSS env() vrijednosti i eksplicitna ili hitna povratna pomoć ostaju dostupni.</string>
+    <string name="developer_options_gecko_safe_area_enabled_summary">Isključite Candy CSS ispravke i promatrače za Gecko i System WebView. Izvorno prikazivanje od ruba do ruba, CSS env() vrijednosti i izričiti ili hitni pričuvni način ostaju dostupni.</string>
     <string name="developer_options_gecko_recheck_added_elements">Provjerite dodane elemente</string>
     <string name="developer_options_gecko_recheck_added_elements_summary">Provjeravajte novoumetnute elemente za CSS korekcije sigurnog područja unutar budžeta ažuriranja.</string>
     <string name="developer_options_gecko_recheck_changed_elements">Provjerite promijenjene elemente</string>

@@ -1326,12 +1326,12 @@
     <string name="developer_options_show_release_notes">Vis hvad der er nyt</string>
     <string name="developer_options_show_release_notes_summary">Åbner udgivelse noter bundtet med denne app version igen.</string>
     <string name="developer_options_safe_area_section">Sikkerhedsreserve</string>
-    <string name="developer_options_gecko_safe_area_section">Gecko kant-til-kant</string>
-    <string name="developer_options_gecko_safe_area_summary">Tun Gecko CSS korrektioner af sikkerhedsarealer og mutationskontrol. Disse indstillinger ændrer sig ikke System WebView eller den indfødte reservedel.</string>
+    <string name="developer_options_gecko_safe_area_section">Kant-til-kant</string>
+    <string name="developer_options_gecko_safe_area_summary">Juster CSS-rettelser af det sikre område og kontrol af DOM-ændringer for Gecko og System WebView. Disse indstillinger ændrer ikke den native reservefunktion for det sikre område.</string>
     <string name="developer_options_gecko_safe_area_enabled">CSS korrektion af sikkerhedsområde</string>
     <string name="developer_options_gecko_add_inset_to_negative_top">Tilføj indrykning til negative top-værdier</string>
     <string name="developer_options_gecko_add_inset_to_negative_top_summary">Flytter også fixed- og sticky-elementer med negative CSS-top-værdier med det sikre områdes indrykning. Fra som standard for at bevare skjulte sidehoveder.</string>
-    <string name="developer_options_gecko_safe_area_enabled_summary">Sluk Candy\'s Gecko CSS korrektioner og observatører. Native kant-til-kant rendering CSS env() værdier, og eksplicit eller nødreserve forbliver tilgængelige.</string>
+    <string name="developer_options_gecko_safe_area_enabled_summary">Slå Candys CSS-rettelser og observatører fra for Gecko og System WebView. Nativ kant-til-kant-gengivelse, CSS env()-værdier og eksplicit eller nødreservefunktion er fortsat tilgængelige.</string>
     <string name="developer_options_gecko_recheck_added_elements">Tjek tilføjede elementer</string>
     <string name="developer_options_gecko_recheck_added_elements_summary">Kontrollér nyligt indsatte elementer for CSS korrektioner af sikre områder inden for det opdaterede budget.</string>
     <string name="developer_options_gecko_recheck_changed_elements">Tjek ændrede elementer</string>

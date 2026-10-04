@@ -4378,7 +4378,7 @@ class BrowserController(
                 tab = policyTab,
                 pageUrl = state.currentUrl,
                 context = requestContext,
-                topInsetPx = externalLinkPreviewContentTopInsetPx(),
+                topInsetPx = 0,
                 navigationGeneration = state.generation,
             ),
             privacyEventSink = GeckoPrivacyEventSink { event ->
@@ -4529,7 +4529,7 @@ class BrowserController(
                     tab = runtime.policyTab,
                     pageUrl = safeUrl,
                     context = requestContext,
-                    topInsetPx = externalLinkPreviewContentTopInsetPx(),
+                    topInsetPx = 0,
                     navigationGeneration = generation,
                 ),
                 reloadOnCookiePermissionChange = true,
@@ -4916,7 +4916,7 @@ class BrowserController(
             isFullscreenContent = isFullscreenContent,
             isInsideSafeDrawingHost = isInsideSafeDrawingHost ||
                 (isFullscreenContent && fullscreenVideoInsideSafeDrawingHost),
-            useNativeCssSafeArea = usesGeckoEngine,
+            useNativeCssSafeArea = true,
             keyboardBottomInsetPx = if (usesGeckoEngine) {
                 effectiveInsets.getInsets(WindowInsetsCompat.Type.ime()).bottom
             } else {
@@ -4935,8 +4935,7 @@ class BrowserController(
                 view.layoutParams = layoutParams
             }
         }
-        // The outer host always fills the edge-to-edge window. Its inner GeckoView either receives
-        // GeckoView 155's current root safe area or native margins for the keyboard/site override.
+        // Both engine hosts assign each edge to renderer CSS or native margins from this layout.
         (view as? GeckoViewInsetHost)?.updateInsets(layout, effectiveInsets)
     }
 
@@ -9759,7 +9758,7 @@ class BrowserController(
                         tab = previewRuntime.policyTab,
                         pageUrl = pageUrl,
                         context = protectionRequestContextFor(previewRuntime.policyTab, pageUrl),
-                        topInsetPx = externalLinkPreviewContentTopInsetPx(),
+                        topInsetPx = 0,
                         navigationGeneration = previewRuntime.generation,
                     ),
                 ) {
@@ -9872,7 +9871,7 @@ class BrowserController(
                     tab = previewRuntime.policyTab,
                     pageUrl = pageUrl,
                     context = protectionRequestContextFor(previewRuntime.policyTab, pageUrl),
-                    topInsetPx = externalLinkPreviewContentTopInsetPx(),
+                    topInsetPx = 0,
                     navigationGeneration = previewRuntime.generation,
                 ),
             ) {
@@ -12406,7 +12405,7 @@ class BrowserController(
 
     private fun geckoPrivacyPolicyFor(
         tabId: String,
-        topInsetPx: Int = geckoContentTopInsetPx(tabId),
+        topInsetPx: Int = 0,
     ): GeckoPrivacyPolicy? {
         val tab = tabs.firstOrNull { candidate -> candidate.id == tabId } ?: return null
         val pageUrl = pageUrls[tabId] ?: tab.url
@@ -12504,23 +12503,8 @@ class BrowserController(
         }
     }
 
-    private fun geckoContentTopInsetPx(tabId: String): Int {
-        if (
-            usesGeckoEngine ||
-            developerSettings.forceSafeAreaFallback ||
-            usesNativeSafeArea(tabId) ||
-            tabId in automaticNativeTopSafeAreaTabIds ||
-            webContentTopBarStates.containsKey(tabId) ||
-            tabId in browserEngineContentFullscreenTabIds
-        ) {
-            return 0
-        }
-        return currentSafeAreaTopInsetPx()
-    }
-
     private fun geckoCssSafeAreaTopInsetPx(tab: BrowserTab, pageUrl: String): Int =
         if (
-            !usesGeckoEngine ||
             developerSettings.forceSafeAreaFallback ||
             usesNativeSafeArea(tab.id) ||
             PrivacyRequestSanitizer.webHost(pageUrl)?.let { host -> isSafeAreaForced(tab, host) } == true ||
@@ -12538,9 +12522,6 @@ class BrowserController(
         ?.top
         ?.coerceAtLeast(0)
         ?: 0
-
-    private fun externalLinkPreviewContentTopInsetPx(): Int =
-        if (usesGeckoEngine || developerSettings.forceSafeAreaFallback) 0 else currentSafeAreaTopInsetPx()
 
     private fun usesNativeSafeArea(tabId: String): Boolean =
         isSafeAreaForced(tabId) || isActiveFirefoxExtensionOptionsPage(tabId)
@@ -12611,7 +12592,7 @@ class BrowserController(
                 tab = runtime.policyTab,
                 pageUrl = pageUrl,
                 context = context,
-                topInsetPx = externalLinkPreviewContentTopInsetPx(),
+                topInsetPx = 0,
                 navigationGeneration = runtime.generation,
             ),
             onReady = dispatchUpdatedInsets,
@@ -12748,12 +12729,7 @@ class BrowserController(
         fun isCurrentNavigation(): Boolean = !destroyed &&
             browserEngineSessions[tabId] === session &&
             navigationGenerations[tabId] == nextNavigationGeneration
-        val restoredDocumentTopInset = if (restoreDocumentTopSafeArea) {
-            if (usesGeckoEngine) 0 else currentSafeAreaTopInsetPx()
-        } else {
-            geckoContentTopInsetPx(tabId)
-        }
-        geckoPrivacyPolicyFor(tabId, restoredDocumentTopInset)?.let { policy ->
+        geckoPrivacyPolicyFor(tabId)?.let { policy ->
             session.updatePrivacyPolicy(policy, onReady = {
                 val automaticFallbackRemoved =
                     restoreDocumentTopSafeArea &&
@@ -12864,14 +12840,8 @@ class BrowserController(
                 event.address?.let { address -> pageUrls[event.tabId] = address }
                 refreshDomainMuteForTab(event.tabId)
                 updateProtectionRequestContext(event.tabId, event.address)
-                val restoredDocumentTopInset = if (restoreDocumentTopSafeArea) {
-                    if (usesGeckoEngine) 0 else currentSafeAreaTopInsetPx()
-                } else {
-                    geckoContentTopInsetPx(event.tabId)
-                }
                 geckoPrivacyPolicyFor(
                     tabId = event.tabId,
-                    topInsetPx = restoredDocumentTopInset,
                 )?.let { policy ->
                     navigatingSession.updatePrivacyPolicy(
                         policy = policy,
