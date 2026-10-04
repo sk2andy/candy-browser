@@ -5,12 +5,14 @@ package dev.sk2andy.materialbrowser.browser.gecko
  *
  * Gecko may start its compositor before page content exists. Conversely, a paused or detached
  * surface can stop displaying valid content while the compositor keeps running. Both signals are
- * therefore required before Candy replaces a tab-preview handoff with the live engine view.
+ * therefore required before Candy replaces a tab-preview handoff with the live engine view. A
+ * retained document can reuse its earlier content paint once the replacement surface composites.
  */
 internal class GeckoContentPresentationGate {
     private var surfaceAvailable = false
     private var compositorStarted = false
     private var contentPainted = false
+    private var retainedDocumentPainted = false
     private var pendingListener: (() -> Unit)? = null
 
     var presentationGeneration = 0L
@@ -27,12 +29,24 @@ internal class GeckoContentPresentationGate {
     fun onFirstComposite() {
         if (!surfaceAvailable) return
         compositorStarted = true
+        // Gecko can reset paint after background memory pressure without repeating the document's
+        // contentful-paint callback. A new composite can present the same already-painted document.
+        if (retainedDocumentPainted) {
+            contentPainted = true
+            retainedDocumentPainted = false
+        }
         dispatchIfReady()
     }
 
     fun onFirstContentfulPaint() {
         contentPainted = true
+        retainedDocumentPainted = false
         dispatchIfReady()
+    }
+
+    fun onNavigationStarted() {
+        contentPainted = false
+        retainedDocumentPainted = false
     }
 
     fun onPaintStatusReset() {
@@ -49,6 +63,7 @@ internal class GeckoContentPresentationGate {
     /** A temporary surface loss preserves the page paint and its pending presentation request. */
     fun onSurfaceDestroyed() {
         if (!surfaceAvailable) return
+        retainedDocumentPainted = retainedDocumentPainted || contentPainted
         surfaceAvailable = false
         compositorStarted = false
         presentationGeneration++
@@ -56,6 +71,7 @@ internal class GeckoContentPresentationGate {
 
     /** A detached surface needs a new composite; the session's page paint remains valid. */
     fun onSurfaceDetached() {
+        retainedDocumentPainted = retainedDocumentPainted || contentPainted
         surfaceAvailable = false
         compositorStarted = false
         pendingListener = null
@@ -66,6 +82,7 @@ internal class GeckoContentPresentationGate {
         surfaceAvailable = false
         compositorStarted = false
         contentPainted = false
+        retainedDocumentPainted = false
         pendingListener = null
         presentationGeneration++
     }

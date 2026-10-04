@@ -112,6 +112,12 @@
   releasing view ownership cancels them. Android ViewTreeObserver drawing is not a Gecko frame
   signal. Posted presentation callbacks revalidate the surface generation before releasing a tab
   handoff, and rearm after a newer surface or paint reset.
+  A previously painted document remains eligible for presentation after temporary surface loss,
+  including a delayed background-memory-pressure paint reset. Its replacement surface must still
+  deliver a new composite. Gecko 157 can omit another contentful-paint callback for that unchanged
+  document; waiting for it would leave the departing screenshot permanently over a live page.
+  Navigation and renderer termination discard the retained document proof. Initial pages, new
+  documents and paint resets on a continuously visible surface still require contentful paint.
 - A Gecko host captures its departing content on window-focus loss and keeps one short-lived
   bitmap only in RAM. If its surface is recreated, a native overlay retains that frame while the
   renderer stays attached and active. Current compositor/paint readiness releases the overlay.
@@ -830,5 +836,6 @@ WebView request state.
 | Android web-content fullscreen chrome | `FullscreenVideoRulesTest` plus `FullscreenVideoChromeInstrumentedTest` in the Full and System WebView builds on a dedicated API 34+ emulator |
 | Edge-to-edge window, safe web viewport, focused search, and representative site layouts | `SystemWebViewEdgeToEdgeInstrumentedTest` and `GeckoEdgeToEdgeInstrumentedTest` run deterministic layout profiles derived from YouTube, Google, ESPN, NYTimes, CNN, Reddit, Facebook, IKEA, GitHub, Discord, Instagram, TapTap, Vimeo, Wikipedia, Stack Overflow, and DuckDuckGo on API 34+; the TapTap profile asserts safety immediately in the scroll task so delayed post-scroll repair cannot mask a jumping sticky header; live sites remain manual/nightly smoke targets rather than merge gates |
 | Gecko media, fullscreen and PiP policy | `GeckoMediaRulesTest`, `FullscreenVideoRulesTest`, `GeckoBrowserEngineAdapterTest` and `GeckoPictureInPictureInstrumentedTest` on a dedicated API 34+ emulator |
+| Long background/resume page continuity | `GeckoContentPresentationGateTest` and `BrowserPageResumeInstrumentedTest` on a dedicated API 34+ emulator; repeated 31-second intervals, real input/rendered pixels, scroll/history, no reload, regular/private Gecko and System WebView |
 | Android intent routing | `IncomingBrowserIntentInstrumentedTest`, `ExternalAppLauncherInstrumentedTest`, and `MainActivityIncomingNavigationInstrumentedTest` for cold/warm incoming links, initial redirects, and subsequent tapped handoffs |
 | Distribution and TLS channels | `./gradlew testFullDebugUnitTest testFossDebugUnitTest testFullUserCaDebugUnitTest assembleFullDebug assembleFossDebug assembleFullUserCaDebug`, then `python3 scripts/test_network_security_apks.py` |
