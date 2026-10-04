@@ -110,7 +110,9 @@ class WebViewSiteDataInstrumentedTest {
                         (view.parent as? ViewGroup)?.removeView(view)
                         view.destroy()
                     }
-                    profiles.forEach { ProfileStore.getInstance().deleteProfile(it) }
+                    profiles.forEach { profile ->
+                        runCatching { ProfileStore.getInstance().deleteProfile(profile) }
+                    }
                 }
             }
         }
@@ -123,12 +125,15 @@ class WebViewSiteDataInstrumentedTest {
         composeRule.runOnIdle {
             assertTrue(WebViewSiteData.isSupported(true))
             view.set(createView(profile))
-            val cookies = WebViewCompat.getProfile(view.get()).cookieManager
-            cookies.setCookie("https://a.example", "fixture=retained")
-            WebViewSiteData.clear(view.get(), "about:blank", true) { assertFalse(it) }
-            assertTrue(cookies.getCookie("https://a.example").contains("fixture=retained"))
-            view.get().destroy()
-            ProfileStore.getInstance().deleteProfile(profile)
+            try {
+                val cookies = WebViewCompat.getProfile(view.get()).cookieManager
+                cookies.setCookie("https://a.example", "fixture=retained")
+                WebViewSiteData.clear(view.get(), "about:blank", true) { assertFalse(it) }
+                assertTrue(cookies.getCookie("https://a.example").contains("fixture=retained"))
+            } finally {
+                view.get().destroy()
+                runCatching { ProfileStore.getInstance().deleteProfile(profile) }
+            }
         }
     }
 
