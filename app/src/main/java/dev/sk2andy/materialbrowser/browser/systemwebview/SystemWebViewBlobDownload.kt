@@ -5,8 +5,13 @@ import android.net.Uri
 import android.os.Handler
 import android.os.Looper
 import android.util.Base64
+import android.webkit.RenderProcessGoneDetail
+import android.webkit.WebResourceRequest
 import android.webkit.WebView
+import android.webkit.WebViewClient
+import androidx.annotation.UiThread
 import androidx.webkit.JavaScriptReplyProxy
+import androidx.webkit.Profile
 import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoDownloadCancellation
@@ -29,10 +34,11 @@ import org.json.JSONObject
 
 /** Resolves renderer-owned `blob:` downloads and streams them into scoped storage. */
 internal class SystemWebViewBlobDownloadTransfer(
-    context: Context,
+    private val context: Context,
     private val webView: WebView,
     private val sink: GeckoDownloadStreamSink = MediaStoreDownloadStreamSink(context),
     private val notifier: CandyDownloadNotifier = CandyDownloadNotifier(context),
+    private val helperFactory: (Context) -> WebView = ::WebView,
 ) : AutoCloseable {
     private data class Operation(
         val id: Int,
@@ -49,22 +55,20 @@ internal class SystemWebViewBlobDownloadTransfer(
         var receivedBytes: Long = 0,
         var completed: Boolean = false,
         var timeout: Runnable? = null,
+        var helper: WebView? = null,
     )
 
     private val token = UUID.randomUUID().toString().replace("-", "")
     private val operations = ConcurrentHashMap<Int, Operation>()
+    private val helperOperations = mutableMapOf<Int, Operation>()
     private val mainHandler = Handler(Looper.getMainLooper())
     private val io = Executors.newSingleThreadExecutor { runnable ->
         Thread(runnable, "candy-system-blob-download").apply { isDaemon = true }
     }
-    private var listenerInstalled = false
     @Volatile
     private var closed = false
 
-    init {
-        installListener()
-    }
-
+    @UiThread
     fun start(
         blobUrl: String,
         pageUrl: String?,
@@ -76,7 +80,10 @@ internal class SystemWebViewBlobDownloadTransfer(
         val safePageUrl = pageUrl?.takeIf {
             SystemWebViewBlobDownloadRules.isSameOriginBlob(blobUrl, it)
         }
-        if (safePageUrl == null || closed || !installListener()) {
+        if (
+            safePageUrl == null || closed ||
+            !WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)
+        ) {
             dispatch { listener.onFailed(GeckoDownloadFailure.InvalidRequest) }
             return null
         }
@@ -91,16 +98,10 @@ internal class SystemWebViewBlobDownloadTransfer(
             listener = listener,
         )
         operations[id] = operation
-        webView.evaluateJavascript(
-            SystemWebViewBlobDownloadScript.create(
-                token = token,
-                id = id,
-                blobUrl = blobUrl,
-                reportedMimeType = mimeType,
-            ),
-            null,
-        )
         scheduleTimeout(operation)
+        if (runCatching { startHelper(operation) }.isFailure) {
+            cancel(id, GeckoDownloadFailure.InvalidRequest)
+        }
         return GeckoDownloadCancellation { cancel(id, GeckoDownloadFailure.Cancelled) }
     }
 
@@ -113,52 +114,106 @@ internal class SystemWebViewBlobDownloadTransfer(
         }
     }
 
+    @UiThread
     override fun close() {
         if (closed) return
         closed = true
+        // Release even terminal helpers with queued cleanup before the owning session closes.
+        helperOperations.values.toList().forEach(::destroyHelper)
         io.execute {
             operations.values.toList().forEach { operation ->
                 fail(operation, GeckoDownloadFailure.Cancelled)
             }
         }
         io.shutdown()
-        if (
-            listenerInstalled &&
-            WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)
-        ) {
-            runCatching { WebViewCompat.removeWebMessageListener(webView, BRIDGE_NAME) }
-        }
-        listenerInstalled = false
     }
 
-    private fun installListener(): Boolean {
-        if (listenerInstalled) return true
-        if (!WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)) return false
-        return runCatching {
-            WebViewCompat.addWebMessageListener(webView, BRIDGE_NAME, setOf("*")) {
-                    _, message, sourceOrigin, isMainFrame, replyProxy,
-                ->
-                receive(message.data, sourceOrigin, isMainFrame, replyProxy)
+    private fun startHelper(operation: Operation) {
+        // App-owned HTML keeps the source page's connect-src policy out of the native download.
+        // The blob still belongs to the source origin and profile; no network re-fetch is allowed.
+        val helper = helperFactory(context).also { operation.helper = it }
+        helperOperations[operation.id] = operation
+        if (WebViewFeature.isFeatureSupported(WebViewFeature.MULTI_PROFILE)) {
+            val profileName = WebViewCompat.getProfile(webView).name
+            if (profileName != Profile.DEFAULT_PROFILE_NAME) {
+                WebViewCompat.setProfile(helper, profileName)
             }
-            listenerInstalled = true
-        }.isSuccess
+        }
+        helper.settings.apply {
+            javaScriptEnabled = true
+            blockNetworkLoads = true
+            allowFileAccess = false
+            allowContentAccess = false
+        }
+        WebViewCompat.addWebMessageListener(helper, BRIDGE_NAME, setOf("*")) {
+                view, message, sourceOrigin, isMainFrame, replyProxy,
+            ->
+            receive(view, message.data, sourceOrigin, isMainFrame, replyProxy)
+        }
+        helper.webViewClient = object : WebViewClient() {
+            private var scriptStarted = false
+
+            override fun shouldOverrideUrlLoading(
+                view: WebView,
+                request: WebResourceRequest,
+            ): Boolean = true
+
+            override fun onPageFinished(view: WebView, url: String?) {
+                if (closed || operation.terminal.get() || scriptStarted) return
+                scriptStarted = true
+                view.evaluateJavascript(
+                    SystemWebViewBlobDownloadScript.create(
+                        token = token,
+                        id = operation.id,
+                        blobUrl = operation.blobUrl,
+                        reportedMimeType = operation.reportedMimeType,
+                    ),
+                    null,
+                )
+            }
+
+            override fun onRenderProcessGone(
+                view: WebView,
+                detail: RenderProcessGoneDetail,
+            ): Boolean {
+                cancel(operation.id, GeckoDownloadFailure.Network)
+                return true
+            }
+        }
+        helper.loadDataWithBaseURL(operation.pageUrl, "<html></html>", "text/html", "utf-8", null)
+    }
+
+    private fun releaseHelper(operation: Operation) {
+        mainHandler.post { destroyHelper(operation) }
+    }
+
+    private fun destroyHelper(operation: Operation) {
+        helperOperations.remove(operation.id)
+        val helper = operation.helper ?: return
+        operation.helper = null
+        runCatching { WebViewCompat.removeWebMessageListener(helper, BRIDGE_NAME) }
+        runCatching { helper.stopLoading() }
+        runCatching { helper.destroy() }
     }
 
     private fun receive(
+        view: WebView,
         raw: String?,
         sourceOrigin: Uri,
         isMainFrame: Boolean,
         replyProxy: JavaScriptReplyProxy,
     ) {
+        if (closed) return
         val message = SystemWebViewBlobDownloadMessage.parse(raw, token) ?: return
         val operation = operations[message.id] ?: return
+        if (operation.helper !== view) return
         if (
             !isMainFrame ||
             !SystemWebViewBlobDownloadRules.isSameOrigin(sourceOrigin.toString(), operation.pageUrl)
         ) {
             io.execute {
                 fail(operation, GeckoDownloadFailure.InvalidRequest)
-                reply(replyProxy, message, accepted = false)
+                reply(operation, replyProxy, message, accepted = false)
             }
             return
         }
@@ -183,11 +238,12 @@ internal class SystemWebViewBlobDownloadTransfer(
                     }
                 }
             }
-            reply(replyProxy, message, accepted)
+            reply(operation, replyProxy, message, accepted)
         }
     }
 
     private fun reply(
+        operation: Operation,
         replyProxy: JavaScriptReplyProxy,
         message: SystemWebViewBlobDownloadMessage,
         accepted: Boolean,
@@ -200,8 +256,12 @@ internal class SystemWebViewBlobDownloadTransfer(
             operations[message.id]?.let(::scheduleTimeout)
         }
         mainHandler.post {
-            if (!closed) {
-                replyProxy.postMessage(SystemWebViewBlobDownloadMessage.reply(message, accepted))
+            if (!closed && !operation.terminal.get()) {
+                runCatching {
+                    replyProxy.postMessage(SystemWebViewBlobDownloadMessage.reply(message, accepted))
+                }.onFailure {
+                    cancel(operation.id, GeckoDownloadFailure.Network)
+                }
             }
         }
     }
@@ -330,6 +390,7 @@ internal class SystemWebViewBlobDownloadTransfer(
         operation.terminal.set(true)
         operations.remove(operation.id)
         clearTimeout(operation)
+        releaseHelper(operation)
         DownloadRuntimeRegistry.completed(operation.id)
         dispatch { operation.listener.onComplete(operation.receivedBytes) }
         notifier.complete(
@@ -350,6 +411,7 @@ internal class SystemWebViewBlobDownloadTransfer(
         if (!operation.terminal.compareAndSet(false, true)) return
         operations.remove(operation.id)
         clearTimeout(operation)
+        releaseHelper(operation)
         runCatching { operation.entry?.abort() }
         if (operation.start != null) {
             DownloadRuntimeRegistry.failed(
