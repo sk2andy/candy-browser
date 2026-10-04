@@ -100,6 +100,7 @@ fun SettingsLink(
     Surface(
         modifier = Modifier
             .fillMaxWidth()
+            .settingsSearchTarget(title)
             .clip(MaterialTheme.shapes.large)
             .combinedClickable(
                 enabled = enabled,
@@ -177,7 +178,7 @@ fun SettingsChoice(
     Surface(
         onClick = onClick,
         enabled = enabled,
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth().settingsSearchTarget(title),
         shape = MaterialTheme.shapes.large,
         color = containerColor,
     ) {
@@ -268,6 +269,7 @@ fun SettingsSwitch(
     Row(
         modifier = modifier
             .fillMaxWidth()
+            .settingsSearchTarget(title)
             .clickable(enabled = enabled) { onCheckedChange(!checked) }
             .padding(vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,

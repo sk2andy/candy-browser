@@ -1426,4 +1426,6 @@
     <string name="command_site_data_unsupported">Diese Engine kann Cookies und Speicher einer einzelnen Website im aktuellen Profil nicht sicher löschen. Es wird nichts gelöscht.</string>
     <string name="command_site_data_shared_storage">Andere Tabs und Profile, die diesen Speicher teilen, verlieren ebenfalls die Daten dieser Website.</string>
     <string name="command_site_data_target_changed">Dieser Tab oder seine Seite hat sich geändert. Es wird nichts gelöscht. Öffne die Website-Informationen erneut, um die aktuelle Seite zu prüfen.</string>
+    <string name="settings_search_hint">Einstellungen suchen</string>
+    <string name="settings_search_empty">Keine Einstellungen gefunden. Versuche einen anderen Suchbegriff.</string>
 </resources>

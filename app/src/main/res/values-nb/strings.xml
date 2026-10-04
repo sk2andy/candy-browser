@@ -1424,4 +1424,6 @@
     <string name="command_site_data_unsupported">Denne motoren kan ikke trygt tømme informasjonskapsler og lagring for ett nettsted i gjeldende profil. Ingenting blir slettet.</string>
     <string name="command_site_data_shared_storage">Andre faner og profiler som deler denne lagringen, mister også dataene for dette nettstedet.</string>
     <string name="command_site_data_target_changed">Denne fanen eller siden har endret seg. Ingenting blir slettet. Åpne nettstedsinformasjonen igjen for å se gjennom gjeldende side.</string>
+    <string name="settings_search_hint">Søk i innstillinger</string>
+    <string name="settings_search_empty">Ingen innstillinger funnet. Prøv et annet søk.</string>
 </resources>

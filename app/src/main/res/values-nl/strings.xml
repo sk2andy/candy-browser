@@ -1424,4 +1424,6 @@
     <string name="command_site_data_unsupported">Deze engine kan de cookies en opslag van één site niet veilig wissen in het huidige profiel. Er wordt niets verwijderd.</string>
     <string name="command_site_data_shared_storage">Andere tabbladen en profielen die deze opslag delen, verliezen ook de gegevens van deze site.</string>
     <string name="command_site_data_target_changed">Dit tabblad of de bijbehorende pagina is gewijzigd. Er wordt niets verwijderd. Open de site-informatie opnieuw om de huidige pagina te controleren.</string>
+    <string name="settings_search_hint">Instellingen zoeken</string>
+    <string name="settings_search_empty">Geen instellingen gevonden. Probeer een andere zoekterm.</string>
 </resources>

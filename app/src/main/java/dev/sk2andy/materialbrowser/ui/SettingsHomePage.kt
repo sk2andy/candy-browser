@@ -34,6 +34,10 @@ internal fun SettingsHomePage(
     onOpenFirefoxExtensions: (() -> Unit)? = null,
     developerOptionsUnlocked: Boolean = false,
     onUnlockDeveloperOptions: (() -> Unit)? = null,
+    searchQuery: String = "",
+    searchEntries: List<SettingsSearchEntry> = emptyList(),
+    onSearchQueryChanged: (String) -> Unit = {},
+    onSearchResultSelected: (SettingsSearchEntry) -> Unit = {},
 ) {
     SharedSettingsHomePage(
         downloadSummary = downloadSummary,
@@ -53,6 +57,15 @@ internal fun SettingsHomePage(
         onOpenFirefoxExtensions = onOpenFirefoxExtensions,
         developerOptionsUnlocked = developerOptionsUnlocked,
         onUnlockDeveloperOptions = onUnlockDeveloperOptions,
+        showHomeItems = searchQuery.isBlank(),
+        searchContent = {
+            SettingsSearchField(
+                query = searchQuery,
+                entries = searchEntries,
+                onQueryChanged = onSearchQueryChanged,
+                onResultSelected = onSearchResultSelected,
+            )
+        },
     )
 }
 

@@ -19,6 +19,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import dev.sk2andy.materialbrowser.R
+import dev.sk2andy.materialbrowser.shared.ui.settings.settingsSearchTarget
 import dev.sk2andy.materialbrowser.browser.SearchEngine
 import dev.sk2andy.materialbrowser.browser.SearxngRules
 import dev.sk2andy.materialbrowser.browser.SearxngSettings
@@ -110,7 +111,8 @@ internal fun SearchSettingsPage(
                 },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .testTag(SearchSettingsTestTags.SearxngInstanceUrl),
+                    .testTag(SearchSettingsTestTags.SearxngInstanceUrl)
+                    .settingsSearchTarget(stringResource(R.string.settings_searxng_instance_url)),
                 label = { Text(stringResource(R.string.settings_searxng_instance_url)) },
                 supportingText = {
                     Text(

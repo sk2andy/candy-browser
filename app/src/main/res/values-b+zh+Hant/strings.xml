@@ -1407,4 +1407,6 @@
     <string name="command_site_data_unsupported">此引擎無法在目前設定檔中安全地清除單一網站的 Cookie 和儲存資料。不會刪除任何內容。</string>
     <string name="command_site_data_shared_storage">共用此儲存空間的其他分頁和設定檔也會失去此網站的資料。</string>
     <string name="command_site_data_target_changed">此分頁或其頁面已變更。不會刪除任何內容。請重新開啟網站資訊以確認目前頁面。</string>
+    <string name="settings_search_hint">搜尋設定</string>
+    <string name="settings_search_empty">找不到設定。請嘗試其他搜尋詞。</string>
 </resources>

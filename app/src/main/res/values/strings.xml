@@ -1442,4 +1442,6 @@
     <string name="command_site_data_unsupported">This engine cannot safely clear one site’s cookies and storage in the current profile. Nothing will be deleted.</string>
     <string name="command_site_data_shared_storage">Other tabs and profiles sharing this storage will also lose this site’s data.</string>
     <string name="command_site_data_target_changed">This tab or its page changed. Nothing will be deleted. Open the site information again to review the current page.</string>
+    <string name="settings_search_hint">Search settings</string>
+    <string name="settings_search_empty">No settings found. Try another search.</string>
 </resources>

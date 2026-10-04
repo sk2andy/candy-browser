@@ -1455,4 +1455,6 @@
     <string name="command_site_data_unsupported">Ten silnik nie może bezpiecznie wyczyścić plików cookie i pamięci jednej witryny w bieżącym profilu. Nic nie zostanie usunięte.</string>
     <string name="command_site_data_shared_storage">Inne karty i profile korzystające ze wspólnej pamięci również utracą dane tej witryny.</string>
     <string name="command_site_data_target_changed">Ta karta lub jej strona uległa zmianie. Nic nie zostanie usunięte. Otwórz ponownie informacje o witrynie, aby sprawdzić bieżącą stronę.</string>
+    <string name="settings_search_hint">Szukaj ustawień</string>
+    <string name="settings_search_empty">Nie znaleziono ustawień. Spróbuj innego wyszukiwania.</string>
 </resources>

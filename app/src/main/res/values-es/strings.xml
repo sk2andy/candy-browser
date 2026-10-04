@@ -1431,4 +1431,6 @@
     <string name="command_site_data_unsupported">Este motor no puede borrar de forma segura las cookies y el almacenamiento de un solo sitio en el perfil actual. No se eliminará nada.</string>
     <string name="command_site_data_shared_storage">Otras pestañas y perfiles que compartan este almacenamiento también perderán los datos de este sitio.</string>
     <string name="command_site_data_target_changed">Esta pestaña o su página ha cambiado. No se eliminará nada. Abre de nuevo la información del sitio para revisar la página actual.</string>
+    <string name="settings_search_hint">Buscar ajustes</string>
+    <string name="settings_search_empty">No se encontraron ajustes. Prueba otra búsqueda.</string>
 </resources>

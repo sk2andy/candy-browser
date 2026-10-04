@@ -1424,4 +1424,6 @@
     <string name="command_site_data_unsupported">Този енджин не може безопасно да изчисти бисквитките и хранилището на отделен сайт в текущия профил. Нищо няма да бъде изтрито.</string>
     <string name="command_site_data_shared_storage">Другите раздели и профили, които споделят това хранилище, също ще загубят данните на този сайт.</string>
     <string name="command_site_data_target_changed">Този раздел или страницата му се промени. Нищо няма да бъде изтрито. Отвори отново информацията за сайта, за да прегледаш текущата страница.</string>
+    <string name="settings_search_hint">Търсене в настройките</string>
+    <string name="settings_search_empty">Няма намерени настройки. Опитайте друга дума.</string>
 </resources>
