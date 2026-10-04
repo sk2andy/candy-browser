@@ -300,3 +300,4 @@ path defect found while reviewing #204 and the measured verification scope.
 | Back and keyboard | Selecting a result hides the keyboard and clears focus. Returning to Home retains the query. Header/system Back on Home clears an active query before dismissing Settings. The clear button restores categories and lets the user keep typing. |
 | Privacy | Query and target use `remember`, never saved state, preferences, history, logs or remote suggestions. Closing Settings discards them, including when opened from private browsing. |
 | Verification | `SettingsSearchRulesTest`, `SettingsSearchCatalogTest`, `SettingsSearchInstrumentedTest`, `scripts/test_localization.py`. |
+| Executed checks and screenshots | [`Settings search audit`](../audits/issue-253-settings-search.md). |
