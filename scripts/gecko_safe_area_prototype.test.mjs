@@ -433,6 +433,173 @@ test('same-document route generation rechecks cover protection with unchanged vi
   assert.equal(f.diagnostics().active, true);
 });
 
+test('unchanged cover protection retains its stylesheet and anchors across menu mutations', () => {
+  const f = fixture({ viewportContent: 'viewport-fit=cover' });
+  const header = f.element('fixed', '0px', 'header');
+  header.rect = { top: 0, left: 0, width: 800, height: 56, right: 800, bottom: 56 };
+  const main = f.element('static', 'auto', 'main');
+  main.content = 'Visible page content';
+  f.start();
+  assert.equal(f.diagnostics().active, true);
+  assert.equal(f.computed(header).top, '32px');
+  assert.equal(f.computed(f.body).paddingTop, '32px');
+
+  const layer = f.sheets.find((element) => element.isConnected &&
+    element.parentElement === f.context.document.documentElement);
+  assert.ok(layer);
+  const rules = [...layer.sheet.cssRules];
+  const headerMarkers = [...header.attributes];
+  const bodyMarkers = [...f.body.attributes];
+  const assertRetained = () => {
+    assert.equal(layer.isConnected, true, 'An unchanged cover decision must not detach protection');
+    assert.equal(layer.sheet.cssRules.length, rules.length);
+    for (let index = 0; index < rules.length; index++) {
+      assert.equal(layer.sheet.cssRules[index], rules[index], 'Existing anchors keep their rule identity');
+    }
+    assert.deepEqual([...header.attributes], headerMarkers);
+    assert.deepEqual([...f.body.attributes], bodyMarkers);
+    assert.equal(f.computed(header).top, '32px');
+    assert.equal(f.computed(f.body).paddingTop, '32px');
+  };
+
+  for (const classes of [['menu-open'], []]) {
+    header.classes = classes;
+    f.event('click', 'document', header);
+    f.mutate(header, 'class');
+    assertRetained();
+    f.flush();
+    assertRetained();
+  }
+
+  const menu = f.context.document.createElement('nav');
+  menu.content = 'Menu links';
+  f.childAdded(header, menu);
+  assertRetained();
+  f.flush();
+  assertRetained();
+});
+
+test('unchanged cover protection adds missing body padding when normal flow appears', () => {
+  const f = fixture({ viewportContent: 'viewport-fit=cover' });
+  const header = f.element('fixed', '0px', 'header');
+  header.rect = { top: 0, left: 0, width: 800, height: 56, right: 800, bottom: 56 };
+  f.start();
+  assert.equal(f.diagnostics().active, true);
+  assert.equal(f.computed(header).top, '32px');
+  assert.equal(f.computed(f.body).paddingTop, '0px');
+
+  const main = f.element('static', 'auto', 'main');
+  main.content = 'New visible page content';
+  f.added(main);
+  f.flush();
+
+  assert.equal(f.computed(f.body).paddingTop, '32px');
+  assert.equal(f.computed(header).top, '32px');
+});
+
+test('cover body scroll lock gains its inset before the debounced worker', () => {
+  const f = fixture({ viewportContent: 'viewport-fit=cover' });
+  const header = f.element('sticky', '0px', 'header');
+  header.rect = { top: 0, left: 0, width: 800, height: 56, right: 800, bottom: 56 };
+  const logo = f.context.document.createElement('svg');
+  header.append(logo);
+  f.start();
+  assert.equal(f.computed(f.body).paddingTop, '0px');
+  assert.equal(f.computed(header).top, '32px');
+
+  f.event('click', 'document', header);
+  f.body.computed.position = 'fixed';
+  f.body.computed.top = '0px';
+  f.body.classes = ['scroll-locked'];
+  f.mutate(f.body, 'class');
+  assert.equal(f.computed(f.body).top, '32px', 'The containing block is protected before any worker runs');
+  assert.equal(f.computed(f.body).paddingTop, '0px');
+  f.flush();
+  assert.equal(f.computed(f.body).top, '32px');
+
+  f.body.computed.position = 'static';
+  f.body.computed.top = 'auto';
+  f.body.classes = [];
+  f.mutate(f.body, 'class');
+  f.flush();
+  f.event('click', 'document', header);
+  f.body.computed.position = 'fixed';
+  f.body.computed.top = '0px';
+  f.body.classes = ['scroll-locked'];
+  f.mutate(f.body, 'class');
+  assert.equal(f.computed(f.body).top, '32px', 'Reopening does not add a second inset');
+});
+
+test('cover body scroll lock keeps existing body padding without another top inset', () => {
+  const f = fixture({ viewportContent: 'viewport-fit=cover' });
+  const header = f.element('sticky', '0px', 'header');
+  header.content = 'Visible header text';
+  header.rect = { top: 0, left: 0, width: 800, height: 56, right: 800, bottom: 56 };
+  f.start();
+  assert.equal(f.computed(f.body).paddingTop, '32px');
+
+  for (let opening = 0; opening < 2; opening++) {
+    f.event('click', 'document', header);
+    f.body.computed.position = 'fixed';
+    f.body.computed.top = '0px';
+    f.body.classes = ['scroll-locked'];
+    f.mutate(f.body, 'class');
+    assert.equal(f.computed(f.body).top, '0px', 'Existing body padding already protects the flow');
+    assert.equal(f.computed(f.body).paddingTop, '32px');
+    f.flush();
+    assert.equal(f.computed(f.body).top, '0px', 'The worker does not duplicate the inset either');
+
+    f.body.computed.position = 'static';
+    f.body.computed.top = 'auto';
+    f.body.classes = [];
+    f.mutate(f.body, 'class');
+    f.flush();
+  }
+});
+
+test('loading cover protects an SVG-first sticky header synchronously', () => {
+  const f = fixture({ viewportContent: 'viewport-fit=cover' });
+  f.context.document.readyState = 'loading';
+  const header = f.element('sticky', '0px', 'header');
+  header.rect = { top: 0, left: 0, width: 800, height: 56, right: 800, bottom: 56 };
+  header.append(f.context.document.createElement('svg'));
+  f.start(false);
+  assert.equal(f.computed(header).top, '32px', 'Protection precedes the first worker or parser completion');
+  assert.equal(f.computed(f.body).paddingTop, '0px');
+});
+
+test('loading cover protects a header promoted by parser-time CSS without a quiet delay', () => {
+  const f = fixture({ viewportContent: 'viewport-fit=cover' });
+  f.context.document.readyState = 'loading';
+  const header = f.element('static', 'auto', 'header');
+  header.rect = { top: 0, left: 0, width: 800, height: 56, right: 800, bottom: 56 };
+  header.append(f.context.document.createElement('svg'));
+  f.start();
+  assert.equal(f.diagnostics().active, false);
+  header.computed.position = 'sticky';
+  header.computed.top = '0px';
+  header.classes = ['styled'];
+  f.mutate(header, 'class');
+  assert.equal(f.computed(header).top, '32px', 'Parser-time promotion needs no trusted click or worker');
+  assert.equal(f.computed(f.body).paddingTop, '0px');
+});
+
+test('immediate cover body protection keeps the changed-element interaction gates', () => {
+  for (const changedElements of [true, false]) {
+    const f = fixture({ viewportContent: 'viewport-fit=cover' });
+    const header = f.element('sticky', '0px', 'header');
+    header.rect = { top: 0, left: 0, width: 800, height: 56, right: 800, bottom: 56 };
+    f.start();
+    f.configure({ recheckChangedElements: changedElements });
+    if (!changedElements) f.event('click', 'document', header);
+    f.body.computed.position = 'fixed';
+    f.body.computed.top = '0px';
+    f.body.classes = ['scroll-locked'];
+    f.mutate(f.body, 'class');
+    assert.equal(f.computed(f.body).top, '0px');
+  }
+});
+
 test('cover route watches late generic div replacement only during bounded settling', () => {
   const f = fixture({ viewportContent: 'viewport-fit=cover' });
   const header = f.element('fixed', '32px', 'header');

@@ -57,6 +57,9 @@ Issue 239's Google identity popup routing, native close lifecycle and live Claud
 Issue 222's search-link History API race and navigation cancellation checks are recorded in
 [`../audits/issue-222-external-app-navigation.md`](../audits/issue-222-external-app-navigation.md).
 
+Issue 278's Gecko REWE header jump and retained Cover safe-area checks are recorded in
+[`../audits/issue-278-cover-header-jumping.md`](../audits/issue-278-cover-header-jumping.md).
+
 Dark System appearance, native website preferences and the address-editor/tab SurfaceView handoff
 are recorded in [`../audits/dark-appearance-and-address-tab-handoff.md`](../audits/dark-appearance-and-address-tab-handoff.md).
 
