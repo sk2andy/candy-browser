@@ -28,3 +28,18 @@
 | Controller completion, failure, stale navigation/session and selection | `BrowserControllerGeckoViewBindingInstrumentedTest#siteDataDeletion*` injects a controllable engine session; separate native tests cover actual storage deletion. |
 | Supported, shared-storage, stale and unsupported confirmation | `SiteDataConfirmationDialogInstrumentedTest`, `PrivacyXRaySheetInstrumentedTest` |
 | Real WebView site/profile/private cookie and storage boundaries | `WebViewSiteDataInstrumentedTest`: independent local hosts `127.0.0.1` and `127.0.0.2`; cookies, HttpOnly cookies, localStorage and IndexedDB seeded before deletion. |
+
+## Runtime evidence
+
+Captured from a dedicated API 36 emulator on 2026-10-04 with System WebView 133.0.6943.137 and the actual FullDebug app. The fixture stores real cookies, localStorage and IndexedDB; it does not reseed after reload.
+
+| Check | Result |
+| --- | --- |
+| Full / Foss JVM suites | 1,789 tests each; no failures, errors or skips. |
+| Full / Foss lint and debug assembly | Passed; FullDebug Android test APK also assembled. |
+| Focused API 36 instrumentation | 17 passed: native storage (2), controller target/completion (6), confirmation (3), site sheet (4), profile/private boundaries (2). |
+| Native storage after deletion | [Site A empty; independent Site B and other profile/private storage unchanged](images/site-data/native-sites-after-delete.png). A separate private-context deletion also preserved regular data. |
+| Actual Candy deletion and reload | [Before](images/site-data/app-before-delete.png), [confirmation](images/site-data/app-confirmation.png), [after](images/site-data/app-after-delete.png). All three storage categories changed from stored to empty; the fixture server recorded a new page request. |
+| Actual command palette | [One site command alongside the existing global command](images/site-data/palette.png); selecting the site command opened the same confirmation. |
+| Actual GeckoView refusal | [Explanation and Cancel only](images/site-data/gecko-unsupported.png). This proves refusal, not Gecko deletion. The local fixture omitted its charset declaration, causing mojibake in the background page; the product dialog text is correct. |
+| Independent review | Code/API and captured screenshots reviewed; approved as a WebView partial implementation. Issue 250 remains incomplete. |
