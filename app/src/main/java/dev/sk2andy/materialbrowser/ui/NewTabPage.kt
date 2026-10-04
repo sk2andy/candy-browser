@@ -75,6 +75,7 @@ internal fun NewTabPage(
     onSearch: () -> Unit,
     onFavorite: (String) -> Unit,
     onOpenFavorites: () -> Unit = {},
+    onAddFavorite: (String, String, (Boolean) -> Unit) -> Unit = { _, _, done -> done(false) },
     onReorderFavorite: (String, Int) -> Unit = { _, _ -> },
     favoriteLaunchAnimationEnabled: Boolean = true,
     favoriteAnimationSpeed: FavoriteAnimationSpeed = FavoriteAnimationSpeed.Default,
@@ -92,6 +93,7 @@ internal fun NewTabPage(
     var rootOriginInWindow by remember { mutableStateOf(Offset.Unspecified) }
     var heroCenterInWindow by remember { mutableStateOf(Offset.Unspecified) }
     var launchRequest by remember { mutableStateOf<NewTabFavoriteLaunchRequest?>(null) }
+    var addFavoriteVisible by remember { mutableStateOf(false) }
     val contentEnabled = interactive && launchRequest == null
     Box(
         modifier = Modifier
@@ -189,7 +191,7 @@ internal fun NewTabPage(
                         )
                     }
                 }
-                if (!incognito && (favoriteLibrary?.entries?.isNotEmpty() == true || favorites.isNotEmpty())) {
+                if (!incognito) {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -232,8 +234,19 @@ internal fun NewTabPage(
                                         modifier = Modifier.testTag(NewTabFavoritesTestTags.Manage),
                                     ) {
                                         Icon(
-                                            painter = painterResource(R.drawable.ic_symbol_favorite),
-                                            contentDescription = stringResource(R.string.favorites_title),
+                                            painter = painterResource(R.drawable.ic_symbol_settings),
+                                            contentDescription = stringResource(R.string.favorites_manage),
+                                            tint = colors.onSurfaceVariant,
+                                        )
+                                    }
+                                    IconButton(
+                                        onClick = { addFavoriteVisible = true },
+                                        enabled = contentEnabled,
+                                        modifier = Modifier.testTag(NewTabFavoritesTestTags.Add),
+                                    ) {
+                                        Icon(
+                                            painter = painterResource(R.drawable.ic_symbol_add),
+                                            contentDescription = stringResource(R.string.action_add_favorite),
                                             tint = colors.onSurfaceVariant,
                                         )
                                     }
@@ -269,6 +282,12 @@ internal fun NewTabPage(
                     }
                 }
             }
+        }
+        if (addFavoriteVisible && !incognito && interactive) {
+            AddFavoriteDialog(
+                onDismiss = { addFavoriteVisible = false },
+                onAdd = onAddFavorite,
+            )
         }
         launchRequest?.let { request ->
             NewTabFavoriteLaunchOverlay(

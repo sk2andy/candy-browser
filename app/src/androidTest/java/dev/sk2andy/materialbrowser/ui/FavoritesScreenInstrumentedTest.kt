@@ -34,6 +34,31 @@ class FavoritesScreenInstrumentedTest {
     val composeRule = createComposeRule()
 
     @Test
+    fun favoriteMenuRefreshesOnlySelectedIcon() {
+        val favorite = favorite("https://example.com/", "Example")
+        val refreshed = AtomicReference<FavoriteEntry?>()
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                FavoritesScreen(
+                    favorites = listOf(favorite),
+                    onDeleteFavorite = { _, done -> done(null) },
+                    onUndoDelete = {},
+                    onOpenFavorite = {},
+                    onBack = {},
+                    onRefreshFavoriteIcon = refreshed::set,
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("favorites_actions:${favorite.id}").performClick()
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        composeRule.onNodeWithText(context.getString(R.string.favorites_refresh_icon)).performClick()
+
+        assertEquals(favorite, refreshed.get())
+        composeRule.onNodeWithText(favorite.title).assertIsDisplayed()
+    }
+
+    @Test
     fun searchDeleteUndoAndOpenFavorite() {
         val alpha = favorite("https://alpha.example/", "Alpha")
         val beta = favorite("https://beta.example/guide", "Beta Guide")

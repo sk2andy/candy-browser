@@ -1442,4 +1442,7 @@
     <string name="command_site_data_target_changed">Această filă sau pagina ei s-a schimbat. Nu se va șterge nimic. Deschide din nou informațiile site-ului pentru a verifica pagina curentă.</string>
     <string name="settings_search_hint">Caută în setări</string>
     <string name="settings_search_empty">Nu s-au găsit setări. Încearcă altă căutare.</string>
+    <string name="favorites_url">URL-ul site-ului</string>
+    <string name="favorites_manage">Editează favoritele</string>
+    <string name="favorites_refresh_icon">Actualizează pictograma</string>
 </resources>

@@ -1433,4 +1433,7 @@
     <string name="command_site_data_target_changed">Cet onglet ou sa page a changé. Rien ne sera supprimé. Ouvrez à nouveau les informations du site pour vérifier la page actuelle.</string>
     <string name="settings_search_hint">Rechercher des paramètres</string>
     <string name="settings_search_empty">Aucun paramètre trouvé. Essayez une autre recherche.</string>
+    <string name="favorites_url">URL du site</string>
+    <string name="favorites_manage">Modifier les favoris</string>
+    <string name="favorites_refresh_icon">Actualiser l’icône</string>
 </resources>

@@ -1426,4 +1426,7 @@
     <string name="command_site_data_target_changed">Dësen Tab oder seng Säit huet sech geännert. Et gëtt näischt geläscht. Maacht d’Websäitinformatioun nach eng Kéier op, fir déi aktuell Säit ze iwwerpréiwen.</string>
     <string name="settings_search_hint">Astellunge sichen</string>
     <string name="settings_search_empty">Keng Astellunge fonnt. Probéier en anere Sichbegrëff.</string>
+    <string name="favorites_url">Websäit-URL</string>
+    <string name="favorites_manage">Favoritte beaarbechten</string>
+    <string name="favorites_refresh_icon">Symbol aktualiséieren</string>
 </resources>

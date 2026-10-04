@@ -1426,4 +1426,7 @@
     <string name="command_site_data_target_changed">Dit tabblad of de bijbehorende pagina is gewijzigd. Er wordt niets verwijderd. Open de site-informatie opnieuw om de huidige pagina te controleren.</string>
     <string name="settings_search_hint">Instellingen zoeken</string>
     <string name="settings_search_empty">Geen instellingen gevonden. Probeer een andere zoekterm.</string>
+    <string name="favorites_url">Website-URL</string>
+    <string name="favorites_manage">Favorieten bewerken</string>
+    <string name="favorites_refresh_icon">Pictogram vernieuwen</string>
 </resources>

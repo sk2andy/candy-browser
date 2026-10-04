@@ -1426,4 +1426,7 @@
     <string name="command_site_data_target_changed">Αυτή η καρτέλα ή η σελίδα της άλλαξε. Δεν θα διαγραφεί τίποτα. Άνοιξε ξανά τις πληροφορίες του ιστοτόπου για να ελέγξεις την τρέχουσα σελίδα.</string>
     <string name="settings_search_hint">Αναζήτηση ρυθμίσεων</string>
     <string name="settings_search_empty">Δεν βρέθηκαν ρυθμίσεις. Δοκιμάστε άλλη αναζήτηση.</string>
+    <string name="favorites_url">Διεύθυνση ιστοτόπου</string>
+    <string name="favorites_manage">Επεξεργασία αγαπημένων</string>
+    <string name="favorites_refresh_icon">Ανανέωση εικονιδίου</string>
 </resources>

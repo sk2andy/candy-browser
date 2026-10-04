@@ -1409,4 +1409,7 @@
     <string name="command_site_data_target_changed">此标签页或其页面已更改。不会删除任何内容。请重新打开网站信息以确认当前页面。</string>
     <string name="settings_search_hint">搜索设置</string>
     <string name="settings_search_empty">未找到设置。请尝试其他搜索词。</string>
+    <string name="favorites_url">网站网址</string>
+    <string name="favorites_manage">编辑收藏</string>
+    <string name="favorites_refresh_icon">更新图标</string>
 </resources>

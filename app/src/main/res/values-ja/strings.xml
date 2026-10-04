@@ -1409,4 +1409,7 @@
     <string name="command_site_data_target_changed">このタブまたはページが変更されました。何も削除しません。サイト情報をもう一度開き、現在のページを確認してください。</string>
     <string name="settings_search_hint">設定を検索</string>
     <string name="settings_search_empty">設定が見つかりません。別の検索語を試してください。</string>
+    <string name="favorites_url">ウェブサイトのURL</string>
+    <string name="favorites_manage">お気に入りを編集</string>
+    <string name="favorites_refresh_icon">アイコンを更新</string>
 </resources>

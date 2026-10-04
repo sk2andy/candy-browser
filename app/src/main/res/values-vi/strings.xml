@@ -1409,4 +1409,7 @@
     <string name="command_site_data_target_changed">Thẻ này hoặc trang của thẻ đã thay đổi. Sẽ không xóa gì. Hãy mở lại thông tin trang web để xem trang hiện tại.</string>
     <string name="settings_search_hint">Tìm kiếm cài đặt</string>
     <string name="settings_search_empty">Không tìm thấy cài đặt. Hãy thử từ khóa khác.</string>
+    <string name="favorites_url">URL trang web</string>
+    <string name="favorites_manage">Chỉnh sửa mục yêu thích</string>
+    <string name="favorites_refresh_icon">Làm mới biểu tượng</string>
 </resources>

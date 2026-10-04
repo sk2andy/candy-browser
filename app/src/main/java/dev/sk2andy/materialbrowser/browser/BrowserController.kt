@@ -232,6 +232,7 @@ import dev.sk2andy.materialbrowser.data.CandyRuleRepository
 import dev.sk2andy.materialbrowser.data.FavoriteBookmarkMergeResult
 import dev.sk2andy.materialbrowser.data.FavoriteEntry
 import dev.sk2andy.materialbrowser.data.FavoriteLibrary
+import dev.sk2andy.materialbrowser.data.FavoriteAddRules
 import dev.sk2andy.materialbrowser.data.BrowsingFavoritesRules
 import dev.sk2andy.materialbrowser.data.CanonicalWebUrl
 import dev.sk2andy.materialbrowser.data.FavoriteFaviconRepository
@@ -9377,6 +9378,34 @@ class BrowserController(
         }
     }
 
+    internal fun addFavorite(url: String, title: String, onComplete: (Boolean) -> Unit) {
+        if (destroyed || selectedTab.isIncognito || favoriteImportInFlight) {
+            onComplete(false)
+            return
+        }
+        val entry = FavoriteAddRules.entry(url, title, System.currentTimeMillis())
+        val before = favoriteLibrary
+        val updated = entry?.let { FavoriteAddRules.add(before, it) }
+        if (entry == null || updated == null) {
+            onComplete(false)
+            return
+        }
+        favoriteImportInFlight = true
+        favoriteMutationExecutor.execute {
+            val saved = store.saveFavoriteLibraryCommitted(updated, before)
+            mainHandler.post {
+                favoriteImportInFlight = false
+                if (destroyed) return@post
+                if (saved) {
+                    reloadFavorites()
+                    favoriteFaviconRepository.capture(entry.url, bitmap = null)
+                    refreshFavoriteFavicons()
+                }
+                onComplete(saved)
+            }
+        }
+    }
+
     fun toggleFavorite(tabId: String = selectedTabId): FavoriteMutation? {
         if (favoriteImportInFlight) return null
         val tab = tabs.firstOrNull { it.id == tabId } ?: return null
@@ -14661,6 +14690,8 @@ class BrowserController(
         val restored = store.loadFavoriteLibrary()
         favoriteRevision++
         applyFavoriteLibrary(restored)
+        retireFavoriteFavicons(favoriteFavicons.values.toList())
+        favoriteFavicons.clear()
         refreshFavoriteFavicons()
     }
 
