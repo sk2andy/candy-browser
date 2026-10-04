@@ -12,7 +12,7 @@ internal class FavoriteFaviconRepository private constructor(context: Context) {
         Thread(task, "favorite-favicon-io")
     }
 
-    fun capture(url: String, bitmap: Bitmap?) {
+    fun capture(url: String, bitmap: Bitmap?, forceRefresh: Boolean = false) {
         val snapshot = bitmap
             ?.takeUnless(Bitmap::isRecycled)
             ?.takeIf { icon ->
@@ -21,19 +21,21 @@ internal class FavoriteFaviconRepository private constructor(context: Context) {
             }
             ?.copy(Bitmap.Config.ARGB_8888, false)
         executor.execute {
-            if (snapshot != null) {
-                try {
-                    store.save(url, snapshot)
-                } finally {
-                    snapshot.recycle()
-                }
-                return@execute
+            val cached = store.load(url)
+            val local = listOfNotNull(snapshot, cached).maxByOrNull(Bitmap::minimumDimension)
+            val fetched = if (forceRefresh || (local?.minimumDimension() ?: 0) < FaviconPageIconRules.PREFERRED_ICON_DIMENSION) {
+                client.fetchFavorite(url)
+            } else {
+                null
             }
-            val fetched = client.fetch(url) ?: return@execute
+            val candidates = if (forceRefresh) listOfNotNull(fetched, local) else listOfNotNull(local, fetched)
+            val best = candidates.maxByOrNull(Bitmap::minimumDimension)
             try {
-                store.save(url, fetched)
+                if (best != null) store.save(url, best)
             } finally {
-                fetched.recycle()
+                snapshot?.recycle()
+                cached?.recycle()
+                fetched?.recycle()
             }
         }
     }

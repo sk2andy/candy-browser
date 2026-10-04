@@ -73,71 +73,85 @@ internal fun BrowserTransientOverlays(
     }
 
     pendingCommand?.let { pending ->
-        val isCookieCommand = pending.command.confirmation == CommandConfirmation.ClearCookies
-        AlertDialog(
-            onDismissRequest = {
-                onPendingCommandDismiss()
-            },
-            title = {
-                Text(
-                    stringResource(
-                        if (isCookieCommand) {
-                            R.string.command_cookie_confirm_title
-                        } else {
-                            R.string.command_duplicates_confirm_title
-                        },
-                    ),
+        if (pending.command.confirmation == CommandConfirmation.ClearSiteData) {
+            pending.command.siteDataTarget?.let { target ->
+                val targetIsCurrent = target.tabId == controller.selectedTabId &&
+                    target == controller.siteDataTarget(target.tabId)
+                SiteDataConfirmationDialog(
+                    target = target,
+                    supported = targetIsCurrent && controller.canClearSiteData(target.tabId),
+                    targetIsCurrent = targetIsCurrent,
+                    onConfirm = { onPendingCommandConfirmed(pending.command) },
+                    onDismiss = onPendingCommandDismiss,
                 )
-            },
-            text = {
-                Text(
-                    if (isCookieCommand) {
-                        stringResource(
-                            when (controller.commandCookieScope) {
-                                CommandCookieScope.SharedRegularProfile ->
-                                    R.string.command_cookie_confirm_regular
-                                CommandCookieScope.IsolatedRegularProfile ->
-                                    R.string.command_cookie_confirm_isolated
-                                CommandCookieScope.PrivateProfile ->
-                                    R.string.command_cookie_confirm_private
-                                CommandCookieScope.AllBrowserProfiles ->
-                                    R.string.command_cookie_confirm_all
-                            },
-                        )
-                    } else {
-                        pluralStringResource(
-                            R.plurals.command_duplicates_confirm_message,
-                            pending.command.duplicateCount,
-                            pending.command.duplicateCount,
-                        )
-                    },
-                )
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        onPendingCommandConfirmed(pending.command)
-                    },
-                ) {
+            }
+        } else {
+            val isCookieCommand = pending.command.confirmation == CommandConfirmation.ClearCookies
+            AlertDialog(
+                onDismissRequest = {
+                    onPendingCommandDismiss()
+                },
+                title = {
                     Text(
                         stringResource(
                             if (isCookieCommand) {
-                                R.string.action_delete
+                                R.string.command_cookie_confirm_title
                             } else {
-                                R.string.command_close_duplicates_name
+                                R.string.command_duplicates_confirm_title
                             },
                         ),
                     )
-                }
-            },
-            dismissButton = {
-                TextButton(
-                    onClick = {
-                        onPendingCommandDismiss()
-                    },
-                ) { Text(stringResource(R.string.action_cancel)) }
-            },
-        )
+                },
+                text = {
+                    Text(
+                        if (isCookieCommand) {
+                            stringResource(
+                                when (controller.commandCookieScope) {
+                                    CommandCookieScope.SharedRegularProfile ->
+                                        R.string.command_cookie_confirm_regular
+                                    CommandCookieScope.IsolatedRegularProfile ->
+                                        R.string.command_cookie_confirm_isolated
+                                    CommandCookieScope.PrivateProfile ->
+                                        R.string.command_cookie_confirm_private
+                                    CommandCookieScope.AllBrowserProfiles ->
+                                        R.string.command_cookie_confirm_all
+                                },
+                            )
+                        } else {
+                            pluralStringResource(
+                                R.plurals.command_duplicates_confirm_message,
+                                pending.command.duplicateCount,
+                                pending.command.duplicateCount,
+                            )
+                        },
+                    )
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            onPendingCommandConfirmed(pending.command)
+                        },
+                    ) {
+                        Text(
+                            stringResource(
+                                if (isCookieCommand) {
+                                    R.string.action_delete
+                                } else {
+                                    R.string.command_close_duplicates_name
+                                },
+                            ),
+                        )
+                    }
+                },
+                dismissButton = {
+                    TextButton(
+                        onClick = {
+                            onPendingCommandDismiss()
+                        },
+                    ) { Text(stringResource(R.string.action_cancel)) }
+                },
+            )
+        }
     }
 
     if (controller.contentActions.isLinkPeekVisible) {

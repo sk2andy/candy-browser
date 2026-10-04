@@ -232,6 +232,7 @@ import dev.sk2andy.materialbrowser.data.CandyRuleRepository
 import dev.sk2andy.materialbrowser.data.FavoriteBookmarkMergeResult
 import dev.sk2andy.materialbrowser.data.FavoriteEntry
 import dev.sk2andy.materialbrowser.data.FavoriteLibrary
+import dev.sk2andy.materialbrowser.data.FavoriteAddRules
 import dev.sk2andy.materialbrowser.data.BrowsingFavoritesRules
 import dev.sk2andy.materialbrowser.data.CanonicalWebUrl
 import dev.sk2andy.materialbrowser.data.FavoriteFaviconRepository
@@ -9128,6 +9129,58 @@ class BrowserController(
         return true
     }
 
+    fun siteDataTarget(tabId: String = selectedTabId): SiteDataTarget? {
+        val tab = tabs.firstOrNull { it.id == tabId } ?: return null
+        val sharesStorage = if (tab.isIncognito) {
+            !usesGeckoEngine
+        } else {
+            profileForId(tab.profileId)?.isolationEnabled != true
+        }
+        return SiteDataRules.target(
+            tab = tab,
+            pageUrl = pageUrls[tabId] ?: tab.url,
+            navigationGeneration = navigationGenerations[tabId],
+            sharesStorage = sharesStorage,
+        )
+    }
+
+    fun canClearSiteData(tabId: String = selectedTabId): Boolean =
+        !destroyed && !browsingDataClearPending &&
+            tabs.firstOrNull { it.id == tabId }?.profileId !in lockedProfileIds &&
+            siteDataTarget(tabId) != null &&
+            browserEngineSessions[tabId]?.supportsSiteDataDeletion == true
+
+    fun clearSiteDataAndReload(target: SiteDataTarget, onComplete: (Boolean) -> Unit): Boolean {
+        if (target.tabId != selectedTabId ||
+            !SiteDataRules.isCurrent(target, siteDataTarget(target.tabId)) ||
+            !canClearSiteData(target.tabId)
+        ) {
+            return false
+        }
+        val session = browserEngineSessions[target.tabId] ?: return false
+        clearExternalNavigationAuthorization(target.tabId)
+        session.clearSiteData(target.url) { cleared ->
+            val unchanged = cleared &&
+                canClearSiteData(target.tabId) &&
+                browserEngineSessions[target.tabId] === session &&
+                SiteDataRules.isCurrent(target, siteDataTarget(target.tabId))
+            if (unchanged) {
+                updateTab(target.tabId) { tab ->
+                    tab.copy(
+                        isLoading = true,
+                        progress = 0,
+                        error = null,
+                        failureKind = null,
+                        httpStatusCode = null,
+                    )
+                }
+                session.execute(BrowserEngineCommands.reload())
+            }
+            onComplete(unchanged)
+        }
+        return true
+    }
+
     private fun clearGeckoBrowsingDataAndReload(
         tabId: String,
         data: GeckoBrowsingData,
@@ -9202,6 +9255,7 @@ class BrowserController(
                 canMoveSelectedTab = canMoveSelectedTab,
                 hasLoadedPage = selectedTab.url != BLANK_URL,
                 canClearCookies = true,
+                siteDataTarget = siteDataTarget(),
             ),
         )
         val commandMatches = CommandMatcher.match(
@@ -9327,6 +9381,34 @@ class BrowserController(
                     reloadFavorites()
                 }
                 onComplete(result)
+            }
+        }
+    }
+
+    internal fun addFavorite(url: String, title: String, onComplete: (Boolean) -> Unit) {
+        if (destroyed || selectedTab.isIncognito || favoriteImportInFlight) {
+            onComplete(false)
+            return
+        }
+        val entry = FavoriteAddRules.entry(url, title, System.currentTimeMillis())
+        val before = favoriteLibrary
+        val updated = entry?.let { FavoriteAddRules.add(before, it) }
+        if (entry == null || updated == null) {
+            onComplete(false)
+            return
+        }
+        favoriteImportInFlight = true
+        favoriteMutationExecutor.execute {
+            val saved = store.saveFavoriteLibraryCommitted(updated, before)
+            mainHandler.post {
+                favoriteImportInFlight = false
+                if (destroyed) return@post
+                if (saved) {
+                    reloadFavorites()
+                    favoriteFaviconRepository.capture(entry.url, bitmap = null)
+                    refreshFavoriteFavicons()
+                }
+                onComplete(saved)
             }
         }
     }
@@ -14587,6 +14669,8 @@ class BrowserController(
         val restored = store.loadFavoriteLibrary()
         favoriteRevision++
         applyFavoriteLibrary(restored)
+        retireFavoriteFavicons(favoriteFavicons.values.toList())
+        favoriteFavicons.clear()
         refreshFavoriteFavicons()
     }
 

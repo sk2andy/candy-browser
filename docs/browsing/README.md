@@ -5,6 +5,7 @@
 | Need | Detail | Main code |
 | --- | --- | --- |
 | Runtime ownership, WebView lifecycle and navigation | [`runtime-and-navigation.md`](runtime-and-navigation.md) | `MainActivity`, `MainActivityPictureInPictureController`, `BrowserController`, `BrowserViewport`, `BrowserTab` |
+| Gecko page continuity across tab switches and long background intervals | [`runtime-and-navigation.md`](runtime-and-navigation.md) | `GeckoContentPresentationGate`, `GeckoResumeCover`, `GeckoTabInteractionInstrumentedTest`, `BrowserPageResumeInstrumentedTest` |
 | Default-on Auto De-AMP navigation and trusted URL shapes | [`runtime-and-navigation.md`](runtime-and-navigation.md#navigation-paths) | `AutoDeAmpRules`, `BrowserController`, `BrowserSessionStore`, `ProtectionSettingsPage` |
 | Android Gecko, Firefox extensions and iOS WebKit boundary | [`platform-engines.md`](platform-engines.md) | `BrowserController`, `browser/gecko`, `shared`, `iosApp` |
 | HTTPS-only modes, local warning and session exceptions | [`platform-engines.md`](platform-engines.md#https-only) | `HttpsOnlyMode`, `GeckoHttpsOnlyErrorPage`, `ProtectionSettingsPage` |
@@ -18,12 +19,14 @@
 | Google Cast remote video playback | [`google-cast.md`](google-cast.md) | `CastMediaRules`, `CastSessionController`, `CastControls` |
 | GeckoView website push delivery | [`web-push.md`](web-push.md) | `GeckoWebPushCoordinator`, `FossWebPushTransport`, `FossWebPushStore` |
 | Address input, commands, gestures, Link Peek, actions | [`address-actions-and-ui.md`](address-actions-and-ui.md) | `browser/commands`, `browser/actions`, `browser/integration`, `ui/Address*` |
+| Site cookie/storage deletion and engine limitations | [`site-data.md`](site-data.md) | `SiteDataRules`, `WebViewSiteData`, `SiteDataConfirmationDialog` |
 | Candy Recall local full-text history search | [`recall.md`](recall.md) | `recall`, `RecallRepository`, address suggestions, History search |
 | SearXNG search, instance configuration, suggestions, fallback | [`searxng.md`](searxng.md) | `SearxngSettings`, `SearchEngine`, `SearchSuggestionProvider`, `BrowserSessionStore` |
 | Kagi search and privacy-enhanced suggestions | [`kagi.md`](kagi.md) | `SearchEngine`, `SearchSuggestionProvider` |
 | Google AI Mode user flow, routing, persistence, and privacy | [`google-ai-mode.md`](google-ai-mode.md) | `SearchEngine`, `AddressAiModeRules`, `BrowserSessionStore`, `AddressAiModeToggle` |
 | Page translation providers, URL routing, persistence, and privacy | [`page-translation.md`](page-translation.md) | `PageTranslationRules`, `BrowserController`, `BrowserSessionStore`, `BrowserMainMenu`, `BrowserSettingsPage` |
 | Appearance and browser theme | [`appearance-and-settings.md`](appearance-and-settings.md) | `AppearanceSettings`, `MaterialBrowserTheme`, `AppearanceNightMode`, `SettingsScreen`, `AppearanceSettingsPage` |
+| Localized settings search and capability-filtered navigation | [`appearance-and-settings.md`](appearance-and-settings.md#settings-search) | `SettingsSearchRules`, `SettingsSearchCatalog`, `SettingsSearchField`, shared `SettingsSearchTarget` |
 | Profile-scoped browsing history and retention controls | [`history.md`](history.md) | `BrowsingHistoryRepository`, `HistoryActivity`, `HistoryScreen` |
 | Local download progress, search and cleanup | [`downloads.md`](downloads.md) | `DownloadRepository`, `DownloadsActivity`, `DownloadsScreen` |
 | Favorite library, search and deletion undo | [`favorites.md`](favorites.md) | `BrowserSessionStore`, `BrowsingFavoritesRules`, `FavoritesActivity`, `FavoritesScreen` |
@@ -76,6 +79,7 @@ are recorded in [`../audits/dark-appearance-and-address-tab-handoff.md`](../audi
 | Payment Request and checkout popup routing | `SystemWebViewBrowserEngineInstrumentedTest`, `BrowserControllerGeckoViewBindingInstrumentedTest` |
 | Topping parsing, catalog integrity, storage and UI | `browser/userscript/*Test`, `*Topping*InstrumentedTest`, `UserscriptManagementScreenInstrumentedTest` |
 | Shared browser behavior and Gecko extension policy | `shared/src/commonTest`, `browser/gecko/*Test` |
+| Gecko tab interaction, retained paint ordering and long background resume | `GeckoContentPresentationGateTest`, `GeckoTabInteractionInstrumentedTest`, `BrowserPageResumeInstrumentedTest`; evidence and limits: [`../audits/gecko-tab-paint-reset-recovery.md`](../audits/gecko-tab-paint-reset-recovery.md) |
 | Gecko loading surface, bootstrap canvas, first paint, reload and view reattachment | `GeckoWebContentThemeInstrumentedTest#unpaintedGeckoSurfaceUsesDarkBackground`, `#unpaintedGeckoSurfaceUsesLightBackground`, `#darkLoadingSurfaceReleasesForFirstPaintAndReload`, `#lightLoadingSurfaceReleasesForFirstPaintAndReload` |
 | Gecko website/Compose appearance, background night changes, missed configuration delivery and nested AppCompat night overrides | `GeckoAppearanceInstrumentedTest`, `GeckoWebContentThemeInstrumentedTest`; the cold-start method requires system dark before a fresh, isolated instrumentation process. Resume reproduction details: [`../audits/background-appearance-reconciliation.md`](../audits/background-appearance-reconciliation.md) |
 | Dark new-tab/editor logo backing and tab-switch suggestion contrast | `BlankTabColorRulesTest`, `AddressSuggestionColorRulesTest`, `AddressEditorDarkThemeInstrumentedTest` |

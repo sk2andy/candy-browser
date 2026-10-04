@@ -867,6 +867,16 @@
     <string name="site_connection_unavailable_description">Siden er ennå lastet inn eller kunne ikke lastes. Forbindelsesstatusen er ikke tilgjengelig ennå.</string>
     <string name="site_connection_other_description">Tilkoblingsdetaljer er ikke tilgjengelig for denne siden.</string>
     <string name="privacy_xray_title">Privacy X-Ray</string>
+    <string name="privacy_gecko_request_blocking">Blokkering av forespørsler i Gecko</string>
+    <string name="privacy_gecko_telemetry_note">Firefox-utvidelser som uBlock Origin blokkerer forespørsler uavhengig. De blokkerte forespørslene deres er ikke med i Candys tellere. Åpne uBlock Origin for å sjekke beskyttelsen av denne siden.</string>
+    <string name="privacy_gecko_open_ublock">Åpne uBlock Origin</string>
+    <string name="privacy_gecko_ublock_unavailable">uBlock Origin er ikke tilgjengelig for denne fanen. Sjekk at den er aktivert i Firefox-utvidelser; private faner trenger egen tillatelse til privat nettlesing.</string>
+    <string name="privacy_gecko_candy_total_label">Candy-blokkeringer</string>
+    <string name="privacy_gecko_candy_scope_note">Her telles bare forespørsler fra informasjonskapselbannere som Candy blokkerer. Null betyr ikke at Firefox-utvidelser ikke har blokkert noe.</string>
+    <string name="privacy_gecko_no_candy_requests">Ingen forespørsler fra informasjonskapselbannere blokkert av Candy er registrert for denne fanen.</string>
+    <string name="privacy_gecko_extension_policy">Firefox-utvidelser styrer beskyttelsen mot annonser og sporere. Sjekk gjeldende status i utvidelsen.</string>
+    <string name="privacy_gecko_candy_site_protection">Candy-beskyttelse for dette nettstedet</string>
+    <string name="privacy_gecko_pause_warning_message">Å sette Candy-beskyttelsen på pause tillater tredjeparts informasjonskapsler og kjente informasjonskapselbannere på %1$s. Firefox-utvidelser beholder sine egne beskyttelsesinnstillinger. Siden lastes inn på nytt med en gang.</string>
     <string name="privacy_xray_subtitle">Livevisning for %1$s</string>
     <string name="privacy_xray_total_label">Faneblokker</string>
     <string name="privacy_xray_live_note">Live oppdateringer er gruppert for å fortsette å surfe jevnt</string>
@@ -1406,4 +1416,17 @@
     <string name="developer_options_gecko_logging_status_failed">Opptaket stoppet etter en feil. Slå logging av og på for å prøve på nytt.</string>
     <string name="settings_app_language">Appspråk</string>
     <string name="settings_app_language_system">Følg enhetens språk</string>
+    <string name="command_delete_site_data_reload_name">Tøm informasjonskapsler og data for dette nettstedet</string>
+    <string name="command_delete_site_data_reload_effect">Se gjennom informasjonskapsler og nettstedsdata for %1$s, og last deretter denne fanen på nytt</string>
+    <string name="command_feedback_site_data_cleared">Nettstedsdata slettet og fanen lastet på nytt</string>
+    <string name="command_site_data_confirm_title">Slette data for %1$s?</string>
+    <string name="command_site_data_confirm_webview">Informasjonskapsler og nettstedslagring for denne adressens registrerbare domene og alle underdomenene slettes fra denne lagringsprofilen, for alle protokoller og porter, inkludert innebygde eller partisjonerte data. Dette kan også påvirke andre underdomener på samme nivå. Du kan bli logget ut. Denne fanen lastes på nytt etterpå. Nettsteder uten tilknytning beholder dataene sine.</string>
+    <string name="command_site_data_unsupported">Denne motoren kan ikke trygt tømme informasjonskapsler og lagring for ett nettsted i gjeldende profil. Ingenting blir slettet.</string>
+    <string name="command_site_data_shared_storage">Andre faner og profiler som deler denne lagringen, mister også dataene for dette nettstedet.</string>
+    <string name="command_site_data_target_changed">Denne fanen eller siden har endret seg. Ingenting blir slettet. Åpne nettstedsinformasjonen igjen for å se gjennom gjeldende side.</string>
+    <string name="settings_search_hint">Søk i innstillinger</string>
+    <string name="settings_search_empty">Ingen innstillinger funnet. Prøv et annet søk.</string>
+    <string name="favorites_url">Nettadresse</string>
+    <string name="favorites_manage">Rediger favoritter</string>
+    <string name="favorites_refresh_icon">Oppdater ikon</string>
 </resources>

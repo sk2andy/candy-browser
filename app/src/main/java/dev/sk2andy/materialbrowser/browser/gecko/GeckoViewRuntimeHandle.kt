@@ -1959,6 +1959,7 @@ private class GeckoViewBrowserSession(
                     return
                 }
                 if (isBootstrap) return
+                contentPresentationGate.onNavigationStarted()
                 boundView?.onNavigationStarted()
                 if (url != "about:blank") replaceBootstrapHistoryOnNextLoad = false
                 if (navigationTargetUrl == null) beginNavigation(url)
@@ -3646,6 +3647,7 @@ private class GeckoViewBrowserSession(
     }
 
     private fun onContentProcessTerminated() {
+        contentPresentationGate.onNavigationStarted()
         boundView?.onNavigationStarted()
         invalidateDomProbe()
         pendingInitialUrl = null

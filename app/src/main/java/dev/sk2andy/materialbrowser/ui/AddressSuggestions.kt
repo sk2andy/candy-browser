@@ -548,7 +548,9 @@ private fun CommandIcon(kind: BrowserCommandKind, tint: Color) {
         BrowserCommandKind.ClearCacheAndReload,
         BrowserCommandKind.Reload,
         -> Icon(Icons.Default.Refresh, contentDescription = null, modifier = modifier, tint = tint)
-        BrowserCommandKind.ClearCookiesAndReload -> Icon(
+        BrowserCommandKind.ClearCookiesAndReload,
+        BrowserCommandKind.ClearSiteDataAndReload,
+        -> Icon(
             painterResource(R.drawable.ic_delete_outline),
             contentDescription = null,
             modifier = modifier,

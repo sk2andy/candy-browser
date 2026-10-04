@@ -115,6 +115,11 @@ internal interface AndroidBrowserEngineSessionPort :
     BrowserEngineViewPort {
     fun setActive(active: Boolean)
 
+    /** False when the engine cannot combine site and storage-context boundaries safely. */
+    val supportsSiteDataDeletion: Boolean get() = false
+
+    fun clearSiteData(url: String, onComplete: (Boolean) -> Unit) = onComplete(false)
+
     /** Existing page icon from an engine callback; GeckoView does not expose one. */
     fun setFaviconListener(listener: ((String?, Bitmap) -> Unit)?) = Unit
 

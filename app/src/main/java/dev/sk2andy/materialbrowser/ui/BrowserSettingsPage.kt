@@ -22,6 +22,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import dev.sk2andy.materialbrowser.BuildConfig
 import dev.sk2andy.materialbrowser.R
+import dev.sk2andy.materialbrowser.shared.ui.settings.settingsSearchTarget
 import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineKind
 import dev.sk2andy.materialbrowser.browser.ExternalAppLinkHandling
 import dev.sk2andy.materialbrowser.browser.FavoriteAnimationSpeed
@@ -144,7 +145,8 @@ internal fun BrowserSettingsPage(
         }
         Surface(
             onClick = onOpenDefaultBrowserSettings,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth()
+                .settingsSearchTarget(stringResource(R.string.settings_default_browser)),
             shape = MaterialTheme.shapes.large,
             color = browserChromeColor(MaterialTheme.colorScheme.surfaceContainerHigh),
         ) {

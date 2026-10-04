@@ -109,6 +109,7 @@ internal object NewTabFavoritesTestTags {
     const val Container = "new_tab_favorites_container"
     const val LaunchOverlay = "new_tab_favorite_launch_overlay"
     const val DragPreview = "new_tab_favorite_drag_preview"
+    const val Add = "new_tab_favorites_add"
     const val Manage = "new_tab_favorites_manage"
 
     fun favorite(url: String): String = "new_tab_favorite_$url"

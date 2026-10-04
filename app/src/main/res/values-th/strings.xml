@@ -855,6 +855,16 @@
     <string name="site_connection_unavailable_description">หน้ายังการบรรจุอยู่ หรือไม่สามารถบรรจุได้ สถานะการเชื่อมต่อยังไม่ได้</string>
     <string name="site_connection_other_description">รายละเอียดการเชื่อมต่อไม่ได้สําหรับหน้านี้</string>
     <string name="privacy_xray_title">Privacy X-Ray</string>
+    <string name="privacy_gecko_request_blocking">การบล็อกคำขอใน Gecko</string>
+    <string name="privacy_gecko_telemetry_note">ส่วนขยาย Firefox เช่น uBlock Origin บล็อกคำขออย่างอิสระ คำขอที่ส่วนขยายบล็อกจะไม่นับรวมในตัวนับของ Candy เปิด uBlock Origin เพื่อตรวจสอบการป้องกันหน้านี้</string>
+    <string name="privacy_gecko_open_ublock">เปิด uBlock Origin</string>
+    <string name="privacy_gecko_ublock_unavailable">uBlock Origin ไม่พร้อมใช้งานในแท็บนี้ ตรวจสอบว่าเปิดใช้งานในส่วนขยาย Firefox แล้ว แท็บส่วนตัวต้องได้รับอนุญาตให้ใช้ในการท่องเว็บแบบส่วนตัวแยกต่างหาก</string>
+    <string name="privacy_gecko_candy_total_label">คำขอที่ Candy บล็อก</string>
+    <string name="privacy_gecko_candy_scope_note">ที่นี่นับเฉพาะคำขอแบนเนอร์คุกกี้ที่ Candy บล็อก ค่าศูนย์ไม่ได้หมายความว่าส่วนขยาย Firefox ไม่ได้บล็อกอะไรเลย</string>
+    <string name="privacy_gecko_no_candy_requests">ไม่มีการบันทึกคำขอแบนเนอร์คุกกี้ที่ Candy บล็อกในแท็บนี้</string>
+    <string name="privacy_gecko_extension_policy">ส่วนขยาย Firefox จัดการการป้องกันโฆษณาและตัวติดตาม ตรวจสอบสถานะปัจจุบันในส่วนขยาย</string>
+    <string name="privacy_gecko_candy_site_protection">การป้องกันของ Candy สำหรับเว็บไซต์นี้</string>
+    <string name="privacy_gecko_pause_warning_message">การหยุดการป้องกันของ Candy ชั่วคราวจะอนุญาตคุกกี้ของบุคคลที่สามและแบนเนอร์คุกกี้ที่รู้จักบน %1$s ส่วนขยาย Firefox จะคงการตั้งค่าการป้องกันของตนเอง หน้าจะโหลดใหม่ทันที</string>
     <string name="privacy_xray_subtitle">ดูสดสําหรับ %1$s</string>
     <string name="privacy_xray_total_label">คำขอที่บล็อกในแท็บนี้</string>
     <string name="privacy_xray_live_note">การอัพเดทสดถูกจัดเป็นกลุ่ม เพื่อให้การอัพเดทเรียบร้อย</string>
@@ -1389,4 +1399,17 @@
     <string name="developer_options_gecko_logging_status_failed">การจับได้หยุดหลังเกิดความผิดพลาด ปิดล็อกและเปิดเพื่อลองอีกครั้ง</string>
     <string name="settings_app_language">ภาษาของแอป</string>
     <string name="settings_app_language_system">ใช้ภาษาของอุปกรณ์</string>
+    <string name="command_delete_site_data_reload_name">ล้างคุกกี้และข้อมูลของเว็บไซต์นี้</string>
+    <string name="command_delete_site_data_reload_effect">ตรวจสอบคุกกี้และข้อมูลเว็บไซต์ของ %1$s แล้วโหลดแท็บนี้ใหม่</string>
+    <string name="command_feedback_site_data_cleared">ลบข้อมูลเว็บไซต์และโหลดแท็บใหม่แล้ว</string>
+    <string name="command_site_data_confirm_title">ลบข้อมูลของ %1$s หรือไม่?</string>
+    <string name="command_site_data_confirm_webview">คุกกี้และพื้นที่เก็บข้อมูลเว็บไซต์ของโดเมนที่จดทะเบียนได้สำหรับที่อยู่นี้และโดเมนย่อยทั้งหมดจะถูกลบออกจากโปรไฟล์พื้นที่เก็บข้อมูลนี้ ครอบคลุมทุกรูปแบบโปรโตคอลและพอร์ต รวมถึงข้อมูลที่ฝังอยู่หรือแบ่งพาร์ทิชัน โดเมนย่อยอื่นภายใต้โดเมนเดียวกันอาจได้รับผลด้วย คุณอาจถูกออกจากระบบ จากนั้นแท็บนี้จะโหลดใหม่ เว็บไซต์ที่ไม่เกี่ยวข้องจะเก็บข้อมูลไว้</string>
+    <string name="command_site_data_unsupported">เอนจินนี้ไม่สามารถล้างคุกกี้และพื้นที่เก็บข้อมูลของเว็บไซต์เดียวในโปรไฟล์ปัจจุบันได้อย่างปลอดภัย จะไม่มีการลบข้อมูลใด ๆ</string>
+    <string name="command_site_data_shared_storage">แท็บและโปรไฟล์อื่นที่ใช้พื้นที่เก็บข้อมูลนี้ร่วมกันจะสูญเสียข้อมูลของเว็บไซต์นี้ด้วย</string>
+    <string name="command_site_data_target_changed">แท็บนี้หรือหน้าเว็บเปลี่ยนไปแล้ว จะไม่มีการลบข้อมูลใด ๆ เปิดข้อมูลเว็บไซต์อีกครั้งเพื่อตรวจสอบหน้าปัจจุบัน</string>
+    <string name="settings_search_hint">ค้นหาการตั้งค่า</string>
+    <string name="settings_search_empty">ไม่พบการตั้งค่า ลองใช้คำค้นอื่น</string>
+    <string name="favorites_url">URL เว็บไซต์</string>
+    <string name="favorites_manage">แก้ไขรายการโปรด</string>
+    <string name="favorites_refresh_icon">รีเฟรชไอคอน</string>
 </resources>

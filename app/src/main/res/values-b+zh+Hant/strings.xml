@@ -855,6 +855,16 @@
     <string name="site_connection_unavailable_description">頁面仍在載入或無法載入. 它的連線狀態尚未可用.</string>
     <string name="site_connection_other_description">這個頁面上沒有連線詳細資訊.</string>
     <string name="privacy_xray_title">Privacy X-Ray</string>
+    <string name="privacy_gecko_request_blocking">Gecko 請求封鎖</string>
+    <string name="privacy_gecko_telemetry_note">Firefox 擴充功能（如 uBlock Origin）獨立封鎖請求。它們封鎖的請求不計入 Candy 的計數。開啟 uBlock Origin，查看其對此頁面的保護。</string>
+    <string name="privacy_gecko_open_ublock">開啟 uBlock Origin</string>
+    <string name="privacy_gecko_ublock_unavailable">此分頁無法使用 uBlock Origin。請確認已在 Firefox 擴充功能中啟用；隱私分頁需要另外授予隱私瀏覽權限。</string>
+    <string name="privacy_gecko_candy_total_label">Candy 封鎖數</string>
+    <string name="privacy_gecko_candy_scope_note">此處僅統計 Candy 封鎖的 Cookie 橫幅請求。零並不表示 Firefox 擴充功能未封鎖任何請求。</string>
+    <string name="privacy_gecko_no_candy_requests">此分頁尚未記錄到 Candy 封鎖的 Cookie 橫幅請求。</string>
+    <string name="privacy_gecko_extension_policy">廣告和追蹤器保護由 Firefox 擴充功能管理。請在擴充功能中查看目前狀態。</string>
+    <string name="privacy_gecko_candy_site_protection">此網站的 Candy 保護</string>
+    <string name="privacy_gecko_pause_warning_message">暫停 Candy 保護將允許 %1$s 上的第三方 Cookie 和已知 Cookie 橫幅。Firefox 擴充功能會保留各自的保護設定。頁面會立即重新載入。</string>
     <string name="privacy_xray_subtitle">%1$s 的實時檢視</string>
     <string name="privacy_xray_total_label">此分頁的封鎖請求</string>
     <string name="privacy_xray_live_note">實時更新被分組以保持順利的瀏覽</string>
@@ -1389,4 +1399,17 @@
     <string name="developer_options_gecko_logging_status_failed">由於錯誤,捕獲停止. 關閉登入並重新嘗試.</string>
     <string name="settings_app_language">應用程式語言</string>
     <string name="settings_app_language_system">使用裝置語言</string>
+    <string name="command_delete_site_data_reload_name">清除此網站的 Cookie 和資料</string>
+    <string name="command_delete_site_data_reload_effect">確認 %1$s 的 Cookie 和網站資料，然後重新載入此分頁</string>
+    <string name="command_feedback_site_data_cleared">網站資料已刪除，分頁已重新載入</string>
+    <string name="command_site_data_confirm_title">刪除 %1$s 的資料？</string>
+    <string name="command_site_data_confirm_webview">將從此儲存設定檔中刪除此網址所屬的可註冊網域及其所有子網域的 Cookie 和網站儲存，涵蓋所有通訊協定和連接埠，包括嵌入內容的資料或分區資料。這也可能影響同一網域下的其他子網域。你可能會登出。隨後會重新載入此分頁。不相關網站的資料會保留。</string>
+    <string name="command_site_data_unsupported">此引擎無法在目前設定檔中安全地清除單一網站的 Cookie 和儲存資料。不會刪除任何內容。</string>
+    <string name="command_site_data_shared_storage">共用此儲存空間的其他分頁和設定檔也會失去此網站的資料。</string>
+    <string name="command_site_data_target_changed">此分頁或其頁面已變更。不會刪除任何內容。請重新開啟網站資訊以確認目前頁面。</string>
+    <string name="settings_search_hint">搜尋設定</string>
+    <string name="settings_search_empty">找不到設定。請嘗試其他搜尋詞。</string>
+    <string name="favorites_url">網站網址</string>
+    <string name="favorites_manage">編輯收藏</string>
+    <string name="favorites_refresh_icon">更新圖示</string>
 </resources>

@@ -10,6 +10,27 @@
 | `PrivacyXRayRepository` | Own live snapshots, rule decisions and site exceptions |
 | Address-bar connection badge | Opens one site sheet with Privacy X-Ray and Permission Radar tabs, including when no requests were blocked; shows the blocked count and uses distinct HTTPS, HTTP and unavailable indicators; keeps a 48 dp touch target around a 40 dp visible badge |
 | `PrivacyXRaySheet` | Shows the page address connection type and switches between the live X-Ray snapshot and site permissions; Frosted mode blurs the active browser-content source behind the sheet |
+| Gecko request-blocking card | Explains that Firefox extension requests are absent from Candy counters; opens the enabled uBlock Origin browser action only for the current selected tab, through Gecko's existing profile/private-aware popup path |
+| Gecko Candy counters | Count only Candy's observed cookie-banner request blocks; zero does not imply uBlock blocked nothing. Candy Studio/rule actions are unavailable here because Gecko ad/tracker filtering belongs to Firefox extensions. Candy pause does not pause extensions. |
+| System WebView counters | Keep existing Candy request/rule observations, categories, domain actions and Studio |
+
+Gecko's public `webRequest.onErrorOccurred` exposes request errors without the blocking extension's
+identity. Extension cancellation can produce `NS_ERROR_ABORT`, which cannot be treated as evidence
+that uBlock blocked a request. Candy neither infers counts from errors nor reads extension-private
+storage or logs. The native ContentBlocking delegate observes Gecko protection, not uBlock's filter
+decisions. See [the API contract](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/webRequest/onErrorOccurred)
+and [Mozilla's cancellation path](https://searchfox.org/firefox-main/source/toolkit/components/extensions/webrequest/WebRequest.sys.mjs).
+
+| Regression evidence | Contract |
+| --- | --- |
+| `GeckoPrivacyXRayInstrumentedTest` | Signed bundled uBlock blocks a packaged EasyList script URL against a local server while an allowed control loads; disabling and re-enabling uBlock proves the source. Candy never synthesizes uBlock events, including after navigation. |
+| `PrivacyXRayEngineInstrumentedTest` | Production site-info wiring shows the Gecko source explanation and preserves System WebView counters/Studio |
+| `GeckoPrivacyXRayPopupInstrumentedTest` | Real signed uBlock popup through the site-info button; exact extension/tab/private identity, owner-switch dismissal, and no borrowed action for a non-selected or private-ineligible tab |
+| `GeckoPrivacyXRayRulesTest` | Exact uBlock action identity, current tab, enabled action and unavailable states |
+
+X-Ray observations remain memory-only and bounded per tab. Existing navigation resets and private
+cleanup apply unchanged. Gecko's extension host excludes extensions without explicit private access;
+X-Ray does not grant access or persist a separate extension count.
 
 ## Permission Radar
 

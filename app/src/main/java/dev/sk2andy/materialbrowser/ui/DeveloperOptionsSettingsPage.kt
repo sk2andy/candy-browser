@@ -28,6 +28,7 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import dev.sk2andy.materialbrowser.R
+import dev.sk2andy.materialbrowser.shared.ui.settings.settingsSearchTarget
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoLoggingStatus
 import dev.sk2andy.materialbrowser.data.BrowserChromeScrollDispatchMode
 import dev.sk2andy.materialbrowser.data.DeveloperSettings
@@ -196,7 +197,8 @@ internal fun DeveloperOptionsSettingsPage(
             enabled = isGeckoLoggingSupported,
             modifier = Modifier
                 .fillMaxWidth()
-                .testTag(DeveloperOptionsTestTags.GeckoLoggingModules),
+                .testTag(DeveloperOptionsTestTags.GeckoLoggingModules)
+                .settingsSearchTarget(stringResource(R.string.developer_options_gecko_logging_modules)),
             label = { Text(stringResource(R.string.developer_options_gecko_logging_modules)) },
             supportingText = {
                 Text(
@@ -621,7 +623,7 @@ private fun DeveloperAction(
 ) {
     Surface(
         onClick = onClick,
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth().settingsSearchTarget(title),
         shape = MaterialTheme.shapes.large,
         color = browserChromeColor(MaterialTheme.colorScheme.surfaceContainerHigh),
     ) {
@@ -649,7 +651,7 @@ private fun DeveloperSettingsSlider(
     onValueChanged: (Int) -> Unit,
 ) {
     Surface(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.settingsSearchTarget(title).fillMaxWidth(),
         shape = MaterialTheme.shapes.large,
         color = browserChromeColor(MaterialTheme.colorScheme.surfaceContainerHigh),
     ) {
