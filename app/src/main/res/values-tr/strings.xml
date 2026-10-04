@@ -867,6 +867,16 @@
     <string name="site_connection_unavailable_description">Sayfa hala yükleniyor veya yüklenemedi. Bağlantı durumu henüz açık değil.</string>
     <string name="site_connection_other_description">Bağlantı ayrıntıları bu sayfada mevcut değil.</string>
     <string name="privacy_xray_title">Privacy X-Ray</string>
+    <string name="privacy_gecko_request_blocking">Gecko istek engelleme</string>
+    <string name="privacy_gecko_telemetry_note">uBlock Origin gibi Firefox eklentileri istekleri bağımsız olarak engeller. Engelledikleri istekler Candy sayaçlarına dahil edilmez. Bu sayfadaki korumasını incelemek için uBlock Origin’i aç.</string>
+    <string name="privacy_gecko_open_ublock">uBlock Origin’i aç</string>
+    <string name="privacy_gecko_ublock_unavailable">uBlock Origin bu sekmede kullanılamıyor. Firefox eklentilerinde etkin olduğunu kontrol et; gizli sekmeler için ayrıca gizli gezinme izni gerekir.</string>
+    <string name="privacy_gecko_candy_total_label">Candy engellemeleri</string>
+    <string name="privacy_gecko_candy_scope_note">Burada yalnızca Candy’nin engellediği çerez bildirimi istekleri sayılır. Sıfır, Firefox eklentilerinin hiçbir şeyi engellemediği anlamına gelmez.</string>
+    <string name="privacy_gecko_no_candy_requests">Bu sekmede Candy’nin engellediği çerez bildirimi isteği kaydedilmedi.</string>
+    <string name="privacy_gecko_extension_policy">Reklam ve izleyici korumasını Firefox eklentileri yönetir. Güncel durumu eklentiden kontrol et.</string>
+    <string name="privacy_gecko_candy_site_protection">Bu site için Candy koruması</string>
+    <string name="privacy_gecko_pause_warning_message">Candy korumasını duraklatmak %1$s üzerinde üçüncü taraf çerezlere ve bilinen çerez bildirimlerine izin verir. Firefox eklentileri kendi koruma ayarlarını korur. Sayfa hemen yeniden yüklenir.</string>
     <string name="privacy_xray_subtitle">Canlı görüntüleme için %1$s</string>
     <string name="privacy_xray_total_label">Sekme blokları</string>
     <string name="privacy_xray_live_note">Canlı güncellemeler gezinmeyi sorunsuz tutmak için gruplandırılır</string>

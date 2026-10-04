@@ -878,6 +878,16 @@
     <string name="site_connection_unavailable_description">Страница се још увек учитава или није могла да се учита. Статус везе још није доступан.</string>
     <string name="site_connection_other_description">Детаљи повезивања нису доступни за ову страницу.</string>
     <string name="privacy_xray_title">Privacy X-Ray</string>
+    <string name="privacy_gecko_request_blocking">Блокирање захтева у Gecko</string>
+    <string name="privacy_gecko_telemetry_note">Firefox проширења као што је uBlock Origin независно блокирају захтеве. Њихови блокирани захтеви нису укључени у Candy бројаче. Отвори uBlock Origin да провериш његову заштиту за ову страницу.</string>
+    <string name="privacy_gecko_open_ublock">Отвори uBlock Origin</string>
+    <string name="privacy_gecko_ublock_unavailable">uBlock Origin није доступан за ову картицу. Провери да ли је укључен у Firefox проширењима; приватне картице захтевају посебну дозволу за приватно прегледање.</string>
+    <string name="privacy_gecko_candy_total_label">Candy блокирања</string>
+    <string name="privacy_gecko_candy_scope_note">Овде се броје само захтеви банера за колачиће које блокира Candy. Нула не значи да Firefox проширења нису ништа блокирала.</string>
+    <string name="privacy_gecko_no_candy_requests">За ову картицу нема забележених захтева банера за колачиће које је блокирао Candy.</string>
+    <string name="privacy_gecko_extension_policy">Firefox проширења управљају заштитом од огласа и алата за праћење. Провери тренутно стање у проширењу.</string>
+    <string name="privacy_gecko_candy_site_protection">Candy заштита за овај веб-сајт</string>
+    <string name="privacy_gecko_pause_warning_message">Паузирање Candy заштите дозвољава колачиће трећих страна и познате банере за колачиће на %1$s. Firefox проширења задржавају своја подешавања заштите. Страница се одмах поново учитава.</string>
     <string name="privacy_xray_subtitle">Живо преглед за %1$s</string>
     <string name="privacy_xray_total_label">Блокирања у картици</string>
     <string name="privacy_xray_live_note">Живе ажурирања су групиране како би се претраживање одржавало непрекидно</string>

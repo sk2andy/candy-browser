@@ -855,6 +855,16 @@
     <string name="site_connection_unavailable_description">页面仍在加载或无法加载. 它的连接状态尚未可用.</string>
     <string name="site_connection_other_description">这个页面上没有连接详细信息.</string>
     <string name="privacy_xray_title">Privacy X-Ray</string>
+    <string name="privacy_gecko_request_blocking">Gecko 请求屏蔽</string>
+    <string name="privacy_gecko_telemetry_note">Firefox 扩展（如 uBlock Origin）独立屏蔽请求。它们屏蔽的请求不计入 Candy 的计数。打开 uBlock Origin，查看其对此页面的保护。</string>
+    <string name="privacy_gecko_open_ublock">打开 uBlock Origin</string>
+    <string name="privacy_gecko_ublock_unavailable">此标签页无法使用 uBlock Origin。请确认已在 Firefox 扩展中启用；隐私标签页需要单独授予隐私浏览权限。</string>
+    <string name="privacy_gecko_candy_total_label">Candy 屏蔽数</string>
+    <string name="privacy_gecko_candy_scope_note">此处仅统计 Candy 屏蔽的 Cookie 横幅请求。零并不表示 Firefox 扩展未屏蔽任何请求。</string>
+    <string name="privacy_gecko_no_candy_requests">此标签页尚未记录到 Candy 屏蔽的 Cookie 横幅请求。</string>
+    <string name="privacy_gecko_extension_policy">广告和跟踪器保护由 Firefox 扩展管理。请在扩展中查看当前状态。</string>
+    <string name="privacy_gecko_candy_site_protection">此网站的 Candy 保护</string>
+    <string name="privacy_gecko_pause_warning_message">暂停 Candy 保护将允许 %1$s 上的第三方 Cookie 和已知 Cookie 横幅。Firefox 扩展会保留各自的保护设置。页面会立即重新加载。</string>
     <string name="privacy_xray_subtitle">%1$s 的实时视图</string>
     <string name="privacy_xray_total_label">此标签页的屏蔽请求</string>
     <string name="privacy_xray_live_note">实时更新被分组以保持顺利的浏览</string>

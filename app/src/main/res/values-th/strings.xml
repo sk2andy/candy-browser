@@ -855,6 +855,16 @@
     <string name="site_connection_unavailable_description">หน้ายังการบรรจุอยู่ หรือไม่สามารถบรรจุได้ สถานะการเชื่อมต่อยังไม่ได้</string>
     <string name="site_connection_other_description">รายละเอียดการเชื่อมต่อไม่ได้สําหรับหน้านี้</string>
     <string name="privacy_xray_title">Privacy X-Ray</string>
+    <string name="privacy_gecko_request_blocking">การบล็อกคำขอใน Gecko</string>
+    <string name="privacy_gecko_telemetry_note">ส่วนขยาย Firefox เช่น uBlock Origin บล็อกคำขออย่างอิสระ คำขอที่ส่วนขยายบล็อกจะไม่นับรวมในตัวนับของ Candy เปิด uBlock Origin เพื่อตรวจสอบการป้องกันหน้านี้</string>
+    <string name="privacy_gecko_open_ublock">เปิด uBlock Origin</string>
+    <string name="privacy_gecko_ublock_unavailable">uBlock Origin ไม่พร้อมใช้งานในแท็บนี้ ตรวจสอบว่าเปิดใช้งานในส่วนขยาย Firefox แล้ว แท็บส่วนตัวต้องได้รับอนุญาตให้ใช้ในการท่องเว็บแบบส่วนตัวแยกต่างหาก</string>
+    <string name="privacy_gecko_candy_total_label">คำขอที่ Candy บล็อก</string>
+    <string name="privacy_gecko_candy_scope_note">ที่นี่นับเฉพาะคำขอแบนเนอร์คุกกี้ที่ Candy บล็อก ค่าศูนย์ไม่ได้หมายความว่าส่วนขยาย Firefox ไม่ได้บล็อกอะไรเลย</string>
+    <string name="privacy_gecko_no_candy_requests">ไม่มีการบันทึกคำขอแบนเนอร์คุกกี้ที่ Candy บล็อกในแท็บนี้</string>
+    <string name="privacy_gecko_extension_policy">ส่วนขยาย Firefox จัดการการป้องกันโฆษณาและตัวติดตาม ตรวจสอบสถานะปัจจุบันในส่วนขยาย</string>
+    <string name="privacy_gecko_candy_site_protection">การป้องกันของ Candy สำหรับเว็บไซต์นี้</string>
+    <string name="privacy_gecko_pause_warning_message">การหยุดการป้องกันของ Candy ชั่วคราวจะอนุญาตคุกกี้ของบุคคลที่สามและแบนเนอร์คุกกี้ที่รู้จักบน %1$s ส่วนขยาย Firefox จะคงการตั้งค่าการป้องกันของตนเอง หน้าจะโหลดใหม่ทันที</string>
     <string name="privacy_xray_subtitle">ดูสดสําหรับ %1$s</string>
     <string name="privacy_xray_total_label">คำขอที่บล็อกในแท็บนี้</string>
     <string name="privacy_xray_live_note">การอัพเดทสดถูกจัดเป็นกลุ่ม เพื่อให้การอัพเดทเรียบร้อย</string>

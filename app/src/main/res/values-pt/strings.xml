@@ -765,6 +765,16 @@
     <string name="site_connection_http_description">Este endereço utiliza HTTP sem encriptação. As informações enviadas poderão ser visíveis a outras pessoas.</string>
     <string name="site_connection_unavailable_description">A página ainda está a carregar ou não pôde ser carregada. O estado da ligação ainda não está disponível.</string>
     <string name="site_connection_other_description">Os detalhes da ligação não estão disponíveis para esta página.</string>
+    <string name="privacy_gecko_request_blocking">Bloqueio de pedidos no Gecko</string>
+    <string name="privacy_gecko_telemetry_note">As extensões do Firefox, como o uBlock Origin, bloqueiam pedidos de forma independente. Os pedidos que bloqueiam não são incluídos nos contadores do Candy. Abre o uBlock Origin para verificar a sua proteção nesta página.</string>
+    <string name="privacy_gecko_open_ublock">Abrir uBlock Origin</string>
+    <string name="privacy_gecko_ublock_unavailable">O uBlock Origin não está disponível neste separador. Verifica se está ativado nas extensões do Firefox; os separadores privados precisam de uma autorização separada para navegação privada.</string>
+    <string name="privacy_gecko_candy_total_label">Bloqueios do Candy</string>
+    <string name="privacy_gecko_candy_scope_note">Aqui só são contados os pedidos de banners de cookies bloqueados pelo Candy. Zero não significa que as extensões do Firefox não tenham bloqueado nada.</string>
+    <string name="privacy_gecko_no_candy_requests">Não há pedidos de banners de cookies bloqueados pelo Candy registados neste separador.</string>
+    <string name="privacy_gecko_extension_policy">As extensões do Firefox gerem a proteção contra publicidade e rastreadores. Verifica o estado atual na extensão.</string>
+    <string name="privacy_gecko_candy_site_protection">Proteção do Candy para este site</string>
+    <string name="privacy_gecko_pause_warning_message">Ao pausar a proteção do Candy, permite cookies de terceiros e banners de cookies conhecidos em %1$s. As extensões do Firefox mantêm as suas próprias definições de proteção. A página é recarregada de imediato.</string>
     <string name="privacy_xray_subtitle">Vista em direto para %1$s</string>
     <string name="privacy_xray_total_label">Bloqueios do separador</string>
     <string name="privacy_xray_live_note">As atualizações são agrupadas para manter a navegação fluida</string>

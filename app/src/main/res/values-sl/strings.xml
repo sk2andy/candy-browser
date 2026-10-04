@@ -889,6 +889,16 @@
     <string name="site_connection_unavailable_description">Stran se še vedno naloži ali je ni bilo mogoče naložiti. Status povezave še ni na voljo.</string>
     <string name="site_connection_other_description">Podatki o povezavi na tej strani niso na voljo.</string>
     <string name="privacy_xray_title">Privacy X-Ray</string>
+    <string name="privacy_gecko_request_blocking">Blokiranje zahtev v Gecko</string>
+    <string name="privacy_gecko_telemetry_note">Razširitve za Firefox, kot je uBlock Origin, neodvisno blokirajo zahteve. Njihove blokirane zahteve niso vključene v števce Candy. Odpri uBlock Origin, da preveriš njegovo zaščito za to stran.</string>
+    <string name="privacy_gecko_open_ublock">Odpri uBlock Origin</string>
+    <string name="privacy_gecko_ublock_unavailable">uBlock Origin ni na voljo za ta zavihek. Preveri, ali je omogočen v razširitvah za Firefox; zasebni zavihki potrebujejo ločeno dovoljenje za zasebno brskanje.</string>
+    <string name="privacy_gecko_candy_total_label">Blokiranja Candy</string>
+    <string name="privacy_gecko_candy_scope_note">Tu se štejejo samo zahteve pasic za piškotke, ki jih blokira Candy. Ničla ne pomeni, da razširitve za Firefox niso ničesar blokirale.</string>
+    <string name="privacy_gecko_no_candy_requests">Za ta zavihek ni zabeleženih zahtev pasic za piškotke, ki jih je blokiral Candy.</string>
+    <string name="privacy_gecko_extension_policy">Razširitve za Firefox upravljajo zaščito pred oglasi in sledilniki. Trenutno stanje preveri v razširitvi.</string>
+    <string name="privacy_gecko_candy_site_protection">Zaščita Candy za to spletno mesto</string>
+    <string name="privacy_gecko_pause_warning_message">Začasna ustavitev zaščite Candy dovoli piškotke tretjih oseb in znane pasice za piškotke na %1$s. Razširitve za Firefox ohranijo svoje nastavitve zaščite. Stran se takoj znova naloži.</string>
     <string name="privacy_xray_subtitle">Prikaz v živo za %1$s</string>
     <string name="privacy_xray_total_label">Blokiranja v zavihku</string>
     <string name="privacy_xray_live_note">Posodobitve v živo so združene, da bo brskanje nemoteno.</string>

@@ -765,6 +765,16 @@
     <string name="site_connection_http_description">Esta dirección usa HTTP sin cifrar. La información enviada podría ser visible para otras personas.</string>
     <string name="site_connection_unavailable_description">La página aún se está cargando o no se pudo cargar. Su estado de conexión todavía no está disponible.</string>
     <string name="site_connection_other_description">No hay detalles de conexión disponibles para esta página.</string>
+    <string name="privacy_gecko_request_blocking">Bloqueo de solicitudes en Gecko</string>
+    <string name="privacy_gecko_telemetry_note">Las extensiones de Firefox, como uBlock Origin, bloquean solicitudes de forma independiente. Sus solicitudes bloqueadas no se incluyen en los contadores de Candy. Abre uBlock Origin para comprobar su protección en esta página.</string>
+    <string name="privacy_gecko_open_ublock">Abrir uBlock Origin</string>
+    <string name="privacy_gecko_ublock_unavailable">uBlock Origin no está disponible para esta pestaña. Comprueba que esté activado en las extensiones de Firefox; las pestañas privadas necesitan un permiso separado para la navegación privada.</string>
+    <string name="privacy_gecko_candy_total_label">Bloqueos de Candy</string>
+    <string name="privacy_gecko_candy_scope_note">Aquí solo se cuentan las solicitudes de banners de cookies bloqueadas por Candy. Cero no significa que las extensiones de Firefox no hayan bloqueado nada.</string>
+    <string name="privacy_gecko_no_candy_requests">No se han registrado solicitudes de banners de cookies bloqueadas por Candy en esta pestaña.</string>
+    <string name="privacy_gecko_extension_policy">Las extensiones de Firefox gestionan la protección contra anuncios y rastreadores. Comprueba el estado actual en la extensión.</string>
+    <string name="privacy_gecko_candy_site_protection">Protección de Candy para este sitio</string>
+    <string name="privacy_gecko_pause_warning_message">Al pausar la protección de Candy se permiten las cookies de terceros y los banners de cookies conocidos en %1$s. Las extensiones de Firefox conservan sus propios ajustes de protección. La página se recarga de inmediato.</string>
     <string name="privacy_xray_subtitle">Vista en directo de %1$s</string>
     <string name="privacy_xray_total_label">Bloqueos de la pestaña</string>
     <string name="privacy_xray_live_note">Las actualizaciones se agrupan para mantener una navegación fluida</string>

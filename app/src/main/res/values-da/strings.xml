@@ -867,6 +867,16 @@
     <string name="site_connection_unavailable_description">Siden er stadig indlæser eller kunne ikke indlæses. Dens forbindelsesstatus er endnu ikke tilgængelig.</string>
     <string name="site_connection_other_description">Tilslutningsdetaljer er ikke tilgængelige for denne side.</string>
     <string name="privacy_xray_title">Privacy X-Ray</string>
+    <string name="privacy_gecko_request_blocking">Blokering af forespørgsler i Gecko</string>
+    <string name="privacy_gecko_telemetry_note">Firefox-udvidelser som uBlock Origin blokerer forespørgsler uafhængigt. Deres blokerede forespørgsler indgår ikke i Candys tællere. Åbn uBlock Origin for at kontrollere beskyttelsen af denne side.</string>
+    <string name="privacy_gecko_open_ublock">Åbn uBlock Origin</string>
+    <string name="privacy_gecko_ublock_unavailable">uBlock Origin er ikke tilgængelig for dette faneblad. Kontrollér, at den er aktiveret i Firefox-udvidelser; private faneblade kræver særskilt tilladelse til privat browsing.</string>
+    <string name="privacy_gecko_candy_total_label">Candy-blokeringer</string>
+    <string name="privacy_gecko_candy_scope_note">Her tælles kun forespørgsler fra cookie-bannere, som Candy blokerer. Nul betyder ikke, at Firefox-udvidelser ikke har blokeret noget.</string>
+    <string name="privacy_gecko_no_candy_requests">Ingen forespørgsler fra cookie-bannere blokeret af Candy er registreret for dette faneblad.</string>
+    <string name="privacy_gecko_extension_policy">Firefox-udvidelser styrer beskyttelsen mod annoncer og trackere. Kontrollér den aktuelle status i udvidelsen.</string>
+    <string name="privacy_gecko_candy_site_protection">Candy-beskyttelse for dette websted</string>
+    <string name="privacy_gecko_pause_warning_message">Hvis Candy-beskyttelsen sættes på pause, tillades tredjepartscookies og kendte cookie-bannere på %1$s. Firefox-udvidelser beholder deres egne beskyttelsesindstillinger. Siden genindlæses med det samme.</string>
     <string name="privacy_xray_subtitle">Levende udsigt til %1$s</string>
     <string name="privacy_xray_total_label">Fanebladsblokke</string>
     <string name="privacy_xray_live_note">Live opdateringer er grupperet for at holde browsing glat</string>

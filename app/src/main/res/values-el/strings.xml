@@ -867,6 +867,16 @@
     <string name="site_connection_unavailable_description">Η σελίδα εξακολουθεί να φορτώνει ή δεν μπορεί να φορτωθεί. Η κατάσταση σύνδεσης του δεν είναι ακόμα διαθέσιμη.</string>
     <string name="site_connection_other_description">Τα στοιχεία σύνδεσης δεν είναι διαθέσιμα για αυτή τη σελίδα.</string>
     <string name="privacy_xray_title">Privacy X-Ray</string>
+    <string name="privacy_gecko_request_blocking">Αποκλεισμός αιτημάτων στο Gecko</string>
+    <string name="privacy_gecko_telemetry_note">Οι επεκτάσεις Firefox, όπως το uBlock Origin, αποκλείουν αιτήματα ανεξάρτητα. Τα αιτήματα που αποκλείουν δεν περιλαμβάνονται στους μετρητές του Candy. Άνοιξε το uBlock Origin για να ελέγξεις την προστασία του για αυτή τη σελίδα.</string>
+    <string name="privacy_gecko_open_ublock">Άνοιγμα uBlock Origin</string>
+    <string name="privacy_gecko_ublock_unavailable">Το uBlock Origin δεν είναι διαθέσιμο για αυτή την καρτέλα. Έλεγξε ότι είναι ενεργοποιημένο στις επεκτάσεις Firefox· οι ιδιωτικές καρτέλες χρειάζονται ξεχωριστή άδεια για ιδιωτική περιήγηση.</string>
+    <string name="privacy_gecko_candy_total_label">Αποκλεισμοί Candy</string>
+    <string name="privacy_gecko_candy_scope_note">Εδώ μετρώνται μόνο τα αιτήματα από πανό cookie που αποκλείει το Candy. Το μηδέν δεν σημαίνει ότι οι επεκτάσεις Firefox δεν απέκλεισαν τίποτα.</string>
+    <string name="privacy_gecko_no_candy_requests">Δεν έχουν καταγραφεί αιτήματα από πανό cookie που αποκλείστηκαν από το Candy για αυτή την καρτέλα.</string>
+    <string name="privacy_gecko_extension_policy">Οι επεκτάσεις Firefox διαχειρίζονται την προστασία από διαφημίσεις και ιχνηλάτες. Έλεγξε την τρέχουσα κατάσταση στην επέκταση.</string>
+    <string name="privacy_gecko_candy_site_protection">Προστασία Candy για αυτόν τον ιστότοπο</string>
+    <string name="privacy_gecko_pause_warning_message">Η παύση της προστασίας Candy επιτρέπει cookie τρίτων και γνωστά πανό cookie στο %1$s. Οι επεκτάσεις Firefox διατηρούν τις δικές τους ρυθμίσεις προστασίας. Η σελίδα επαναφορτώνεται αμέσως.</string>
     <string name="privacy_xray_subtitle">Ζωντανή προβολή για %1$s</string>
     <string name="privacy_xray_total_label">Τετράγωνα καρτελών</string>
     <string name="privacy_xray_live_note">Live ενημερώσεις ομαδοποιούνται για να κρατήσει την περιήγηση ομαλή</string>

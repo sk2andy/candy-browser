@@ -867,6 +867,16 @@
     <string name="site_connection_unavailable_description">Sidan laddas eller kan inte laddas. Dess anslutningsstatus är ännu inte tillgänglig.</string>
     <string name="site_connection_other_description">Anslutningsdetaljer är inte tillgängliga för den här sidan.</string>
     <string name="privacy_xray_title">Privacy X-Ray</string>
+    <string name="privacy_gecko_request_blocking">Blockering av förfrågningar i Gecko</string>
+    <string name="privacy_gecko_telemetry_note">Firefox-tillägg som uBlock Origin blockerar förfrågningar oberoende. Deras blockerade förfrågningar ingår inte i Candys räknare. Öppna uBlock Origin för att kontrollera skyddet för den här sidan.</string>
+    <string name="privacy_gecko_open_ublock">Öppna uBlock Origin</string>
+    <string name="privacy_gecko_ublock_unavailable">uBlock Origin är inte tillgängligt för den här fliken. Kontrollera att det är aktiverat i Firefox-tillägg; privata flikar behöver separat tillåtelse för privat surfning.</string>
+    <string name="privacy_gecko_candy_total_label">Candy-blockeringar</string>
+    <string name="privacy_gecko_candy_scope_note">Här räknas bara förfrågningar från cookie-banners som Candy blockerar. Noll betyder inte att Firefox-tillägg inte har blockerat något.</string>
+    <string name="privacy_gecko_no_candy_requests">Inga förfrågningar från cookie-banners blockerade av Candy har registrerats för den här fliken.</string>
+    <string name="privacy_gecko_extension_policy">Firefox-tillägg hanterar skyddet mot annonser och spårare. Kontrollera aktuell status i tillägget.</string>
+    <string name="privacy_gecko_candy_site_protection">Candy-skydd för den här webbplatsen</string>
+    <string name="privacy_gecko_pause_warning_message">Om Candy-skyddet pausas tillåts tredjepartscookies och kända cookie-banners på %1$s. Firefox-tillägg behåller sina egna skyddsinställningar. Sidan laddas om omedelbart.</string>
     <string name="privacy_xray_subtitle">Levande vy för %1$s</string>
     <string name="privacy_xray_total_label">Flikblock</string>
     <string name="privacy_xray_live_note">Liveuppdateringar är grupperade för att hålla bläddring slät</string>

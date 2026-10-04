@@ -878,6 +878,16 @@
     <string name="site_connection_unavailable_description">Stranica se i dalje učitava ili nije mogla da se učita. Status njegove veze još nije dostupan.</string>
     <string name="site_connection_other_description">Podaci o povezivanju nisu dostupni na ovoj stranici.</string>
     <string name="privacy_xray_title">Privacy X-Ray</string>
+    <string name="privacy_gecko_request_blocking">Blokiranje zahtjeva u Gecko</string>
+    <string name="privacy_gecko_telemetry_note">Firefox proširenja poput uBlock Origin nezavisno blokiraju zahtjeve. Njihovi blokirani zahtjevi nisu uključeni u Candy brojače. Otvori uBlock Origin da provjeriš njegovu zaštitu za ovu stranicu.</string>
+    <string name="privacy_gecko_open_ublock">Otvori uBlock Origin</string>
+    <string name="privacy_gecko_ublock_unavailable">uBlock Origin nije dostupan za ovu karticu. Provjeri je li uključen u Firefox proširenjima; privatne kartice trebaju zasebnu dozvolu za privatno pregledanje.</string>
+    <string name="privacy_gecko_candy_total_label">Candy blokiranja</string>
+    <string name="privacy_gecko_candy_scope_note">Ovdje se broje samo zahtjevi za banere za kolačiće koje blokira Candy. Nula ne znači da Firefox proširenja nisu ništa blokirala.</string>
+    <string name="privacy_gecko_no_candy_requests">Za ovu karticu nema zabilježenih zahtjeva za banere za kolačiće koje je blokirao Candy.</string>
+    <string name="privacy_gecko_extension_policy">Firefox proširenja upravljaju zaštitom od oglasa i alata za praćenje. Provjeri trenutno stanje u proširenju.</string>
+    <string name="privacy_gecko_candy_site_protection">Candy zaštita za ovu web-stranicu</string>
+    <string name="privacy_gecko_pause_warning_message">Pauziranje Candy zaštite dopušta kolačiće trećih strana i poznate banere za kolačiće na %1$s. Firefox proširenja zadržavaju svoje postavke zaštite. Stranica se odmah ponovo učitava.</string>
     <string name="privacy_xray_subtitle">Prikaz uživo za %1$s</string>
     <string name="privacy_xray_total_label">Blokiranja u kartici</string>
     <string name="privacy_xray_live_note">Live ažuriranja su grupisana kako bi se brbljanje vodilo glatko</string>

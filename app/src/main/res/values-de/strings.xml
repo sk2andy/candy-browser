@@ -844,6 +844,16 @@
     <string name="site_connection_http_description">Diese Adresse verwendet unverschlüsseltes HTTP. Gesendete Informationen könnten für andere sichtbar sein.</string>
     <string name="site_connection_unavailable_description">Die Seite lädt noch oder konnte nicht geladen werden. Ihr Verbindungsstatus ist noch nicht verfügbar.</string>
     <string name="site_connection_other_description">Für diese Seite sind keine Verbindungsdetails verfügbar.</string>
+    <string name="privacy_gecko_request_blocking">Blockierte Anfragen in Gecko</string>
+    <string name="privacy_gecko_telemetry_note">Firefox-Erweiterungen wie uBlock Origin blockieren Anfragen unabhängig. Ihre Blockaden sind nicht in Candys Zählern enthalten. Öffne uBlock Origin, um dessen Schutz für diese Seite zu prüfen.</string>
+    <string name="privacy_gecko_open_ublock">uBlock Origin öffnen</string>
+    <string name="privacy_gecko_ublock_unavailable">uBlock Origin ist für diesen Tab nicht verfügbar. Prüfe, ob die Erweiterung aktiviert ist; private Tabs benötigen eine separate Freigabe für privates Browsen.</string>
+    <string name="privacy_gecko_candy_total_label">Candy-Blockaden</string>
+    <string name="privacy_gecko_candy_scope_note">Hier werden nur Cookie-Banner-Anfragen gezählt, die Candy blockiert hat. Null bedeutet nicht, dass Firefox-Erweiterungen nichts blockiert haben.</string>
+    <string name="privacy_gecko_no_candy_requests">Candy hat für diesen Tab keine blockierten Cookie-Banner-Anfragen erfasst.</string>
+    <string name="privacy_gecko_extension_policy">Firefox-Erweiterungen verwalten den Schutz vor Werbung und Trackern. Prüfe den aktuellen Status in der Erweiterung.</string>
+    <string name="privacy_gecko_candy_site_protection">Candy-Schutz für diese Website</string>
+    <string name="privacy_gecko_pause_warning_message">Pausieren des Candy-Schutzes erlaubt Drittanbieter-Cookies und bekannte Cookie-Banner auf %1$s. Firefox-Erweiterungen behalten ihre eigenen Schutzeinstellungen. Die Seite wird sofort neu geladen.</string>
     <string name="privacy_xray_subtitle">Live-Ansicht für %1$s</string>
     <string name="privacy_xray_total_label">Tab-Blockaden</string>
     <string name="privacy_xray_live_note">Live-Updates werden für flüssiges Browsen gebündelt</string>

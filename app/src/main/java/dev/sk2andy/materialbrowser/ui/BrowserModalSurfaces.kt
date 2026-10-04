@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineKind
 import dev.sk2andy.materialbrowser.browser.BrowserController
 import dev.sk2andy.materialbrowser.browser.BrowserProfile
+import dev.sk2andy.materialbrowser.browser.gecko.GeckoPrivacyXRayRules
 import dev.sk2andy.materialbrowser.browser.SiteConnectionRules
 import dev.sk2andy.materialbrowser.browser.SiteDataTarget
 import dev.sk2andy.materialbrowser.browser.FederatedLoginOffer
@@ -75,6 +76,11 @@ internal fun BoxScope.BrowserModalSurfaces(
                 ?.emoji
                 .orEmpty()
             val siteDataTarget = controller.siteDataTarget(tabId)
+            val requestBlockerAction = if (tabId == controller.selectedTabId) {
+                GeckoPrivacyXRayRules.requestBlockerAction(controller.firefoxExtensionActions, tabId)
+            } else {
+                null
+            }
             PrivacyXRaySheet(
                 pageUrl = xRayTab.url,
                 connectionKind = SiteConnectionRules.kind(
@@ -89,6 +95,19 @@ internal fun BoxScope.BrowserModalSurfaces(
                 profileEmoji = profileEmoji,
                 websiteNotificationsSupported =
                     controller.browserEngineKind == AndroidBrowserEngineKind.GeckoView,
+                browserEngineKind = controller.browserEngineKind,
+                onOpenRequestBlocker = requestBlockerAction?.let { action ->
+                    {
+                        if (tabId == controller.selectedTabId &&
+                            GeckoPrivacyXRayRules.requestBlockerAction(
+                                controller.firefoxExtensionActions,
+                                tabId,
+                            ) == action && controller.clickFirefoxExtensionAction(action)
+                        ) {
+                            onPrivacyXRayDismiss()
+                        }
+                    }
+                },
                 backdropSource = browserContentBlurTarget.asCandyChromeBackdropSource(),
                 onPause = { persistently ->
                     controller.pauseSiteProtection(tabId, persistently)

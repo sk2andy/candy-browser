@@ -867,6 +867,16 @@
     <string name="site_connection_unavailable_description">Страницата все още се зарежда или не може да бъде заредена. Състоянието на връзката му все още не е налично.</string>
     <string name="site_connection_other_description">Подробности за връзката не са налични за тази страница.</string>
     <string name="privacy_xray_title">Privacy X-Ray</string>
+    <string name="privacy_gecko_request_blocking">Блокиране на заявки в Gecko</string>
+    <string name="privacy_gecko_telemetry_note">Разширенията на Firefox, като uBlock Origin, блокират заявки независимо. Блокираните от тях заявки не са включени в броячите на Candy. Отвори uBlock Origin, за да провериш защитата му за тази страница.</string>
+    <string name="privacy_gecko_open_ublock">Отвори uBlock Origin</string>
+    <string name="privacy_gecko_ublock_unavailable">uBlock Origin не е наличен за този раздел. Провери дали е включен в разширенията на Firefox; частните раздели изискват отделно разрешение за частно сърфиране.</string>
+    <string name="privacy_gecko_candy_total_label">Блокирания от Candy</string>
+    <string name="privacy_gecko_candy_scope_note">Тук се броят само заявките за банери за бисквитки, блокирани от Candy. Нула не означава, че разширенията на Firefox не са блокирали нищо.</string>
+    <string name="privacy_gecko_no_candy_requests">За този раздел няма записани заявки за банери за бисквитки, блокирани от Candy.</string>
+    <string name="privacy_gecko_extension_policy">Разширенията на Firefox управляват защитата от реклами и проследяващи елементи. Провери текущото състояние в разширението.</string>
+    <string name="privacy_gecko_candy_site_protection">Защита от Candy за този сайт</string>
+    <string name="privacy_gecko_pause_warning_message">Временното спиране на защитата на Candy позволява бисквитки на трети страни и познати банери за бисквитки на %1$s. Разширенията на Firefox запазват собствените си настройки за защита. Страницата се презарежда веднага.</string>
     <string name="privacy_xray_subtitle">Преглед на живо за %1$s</string>
     <string name="privacy_xray_total_label">Блокирания в раздела</string>
     <string name="privacy_xray_live_note">Живите актуализации са групирани, за да поддържате гладко сърфиране</string>
