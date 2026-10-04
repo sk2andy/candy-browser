@@ -78,10 +78,16 @@
   URL within 32,768 characters, and never select a URL from prose, `EXTRA_HTML_TEXT`, or
   `ACTION_SEND_MULTIPLE`.
 - Show GeckoView and System WebView fullscreen content with Candy's address, tab, find and status
-  chrome hidden, and enable sensor rotation for its lifetime. A landscape System WebView video
-  requests landscape while its page is fullscreen; other page fullscreen keeps sensor rotation.
+  chrome hidden. Gecko keeps sensor rotation for its fullscreen lifetime. A confirmed landscape
+  System WebView video requests landscape while its page is fullscreen; game and other non-video
+  System WebView fullscreen follows Android's normal orientation and user rotation policy.
+  A native custom-view callback reports page fullscreen only: unrelated active media does not
+  become fullscreen. The media bridge identifies video fullscreen through DOM element ancestry.
   System WebView keeps its native `WebChromeClient` custom view instead of entering Gecko's media
-  presentation path. In-app mini-player placement restores
+  presentation path. Native fullscreen exits once through its callback; the original document's
+  scroll offset is restored after the inline visual-state/frame fence. Navigation, a newer
+  fullscreen view and session close invalidate that memory-only restoration.
+  In-app mini-player placement restores
   normal browser chrome.
   Web-content fullscreen takes orientation priority over the tab overview portrait lock; exiting restores
   the current browser orientation, system-bar policy and soft-input adjustment. While system bars

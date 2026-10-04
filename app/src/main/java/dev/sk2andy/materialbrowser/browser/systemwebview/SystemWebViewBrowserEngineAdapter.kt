@@ -419,6 +419,8 @@ private class SystemWebViewBrowserEngineSession(
     private val mediaBridgeToken = UUID.randomUUID().toString().replace("-", "")
     private var customFullscreenView: View? = null
     private var customFullscreenCallback: WebChromeClient.CustomViewCallback? = null
+    private var customFullscreenScrollPosition: FullscreenScrollPosition? = null
+    private var customFullscreenRevision = 0L
     private var lastFullscreenState = false
     private var latestMediaState = GeckoMediaSessionState()
     private var consentReadyCallbackRegistered = false
@@ -831,11 +833,17 @@ private class SystemWebViewBrowserEngineSession(
 
     override fun exitFullscreen() {
         if (closed) return
+        if (customFullscreenView != null) {
+            // Let WebView finish DOM fullscreen before onHideCustomView removes its surface.
+            val callback = customFullscreenCallback
+            customFullscreenCallback = null
+            callback?.onCustomViewHidden()
+            return
+        }
         webView.evaluateJavascript(
             "document.fullscreenElement ? document.exitFullscreen() : undefined",
             null,
         )
-        dismissCustomFullscreenView(notify = true)
     }
 
     override fun extractPageForReader(onComplete: (String?) -> Unit) {
@@ -1150,6 +1158,8 @@ private class SystemWebViewBrowserEngineSession(
         }
 
         override fun onPageStarted(view: WebView, url: String?, favicon: Bitmap?) {
+            customFullscreenRevision++
+            customFullscreenScrollPosition = null
             blobDownloadTransfer.cancelAll()
             lastLoadFailed = false
             lastMainFrameHttpResponse = null
@@ -1292,6 +1302,13 @@ private class SystemWebViewBrowserEngineSession(
                 return
             }
             val activity = webView.context as? Activity ?: return callback.onCustomViewHidden()
+            customFullscreenRevision++
+            customFullscreenScrollPosition = FullscreenScrollPosition(
+                x = webView.scrollX,
+                y = webView.scrollY,
+                revision = customFullscreenRevision,
+                navigationGeneration = privacyPolicy.navigationGeneration,
+            )
             customFullscreenView = view
             customFullscreenCallback = callback
             (activity.window.decorView as? ViewGroup)?.addView(
@@ -1301,7 +1318,7 @@ private class SystemWebViewBrowserEngineSession(
                     FrameLayout.LayoutParams.MATCH_PARENT,
                 ),
             )
-            updateCustomFullscreenMediaState(true)
+            // Custom views also host games; the media bridge owns video fullscreen identity.
             updateFullscreenState(true)
         }
 
@@ -1712,7 +1729,7 @@ private class SystemWebViewBrowserEngineSession(
                 latestMediaState = GeckoMediaSessionState(
                         isActive = state.isActive,
                         isPlaying = state.isPlaying,
-                        isFullscreen = state.isFullscreen || customFullscreenView != null,
+                        isFullscreen = state.isFullscreen,
                         title = state.title,
                         currentPositionMillis = state.currentPositionMillis,
                         durationMillis = state.durationMillis,
@@ -1743,20 +1760,51 @@ private class SystemWebViewBrowserEngineSession(
     }
 
     private fun dismissCustomFullscreenView(notify: Boolean) {
+        val scrollPosition = customFullscreenScrollPosition
+        customFullscreenScrollPosition = null
         customFullscreenView?.let { view -> (view.parent as? ViewGroup)?.removeView(view) }
         customFullscreenView = null
-        customFullscreenCallback?.onCustomViewHidden()
+        val callback = customFullscreenCallback
         customFullscreenCallback = null
+        callback?.onCustomViewHidden()
         if (notify) {
-            updateCustomFullscreenMediaState(false)
+            clearCustomFullscreenMediaState()
             updateFullscreenState(false)
+            if (scrollPosition != null) restoreFullscreenScrollPosition(scrollPosition)
+        } else {
+            customFullscreenRevision++
         }
     }
 
-    private fun updateCustomFullscreenMediaState(fullscreen: Boolean) {
+    private data class FullscreenScrollPosition(
+        val x: Int,
+        val y: Int,
+        val revision: Long,
+        val navigationGeneration: Int,
+    )
+
+    private fun restoreFullscreenScrollPosition(position: FullscreenScrollPosition) {
+        if (closed) return
+        // The inline document and its normal host must render before restoring the entry offset.
+        webView.postVisualStateCallback(position.revision, object : WebView.VisualStateCallback() {
+            override fun onComplete(requestId: Long) {
+                webView.postOnAnimation {
+                    if (
+                        !closed && customFullscreenView == null &&
+                        customFullscreenRevision == position.revision &&
+                        privacyPolicy.navigationGeneration == position.navigationGeneration
+                    ) {
+                        webView.scrollTo(position.x, position.y)
+                    }
+                }
+            }
+        })
+    }
+
+    private fun clearCustomFullscreenMediaState() {
         val state = latestMediaState
-        if (!state.isActive || state.isFullscreen == fullscreen) return
-        latestMediaState = state.copy(isFullscreen = fullscreen)
+        if (!state.isFullscreen) return
+        latestMediaState = state.copy(isFullscreen = false)
         mediaStateListener?.onStateChanged(latestMediaState)
     }
 
