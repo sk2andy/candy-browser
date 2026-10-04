@@ -33,6 +33,15 @@ failure or timeout. A report-only script CSP warning is not evidence of a blocke
 Console capture followed the [documented WebView flag workflow](https://developer.android.com/develop/ui/views/layout/webapps/debug-javascript-console-logs).
 The flag and the notification permission required by DevTools were returned to their prior states.
 
+The diagnostic build now wraps System WebView's native download response and transfer callbacks.
+It records fixed route, failure-reason and helper/bridge/storage stage events. Caught native
+exceptions retain bounded classes and code frames, without messages or request metadata.
+Opt-in app logs and debug-only `CandyDownload` Logcat share the global private-owner gate;
+private sessions remain excluded after their callbacks outlive the tab. Gecko is unchanged.
+
+The separate `Candy #248` package preserves the signed release's data. Its WebView profile needs
+its own Google login before the original Gemini download can be tested.
+
 ## Controlled reproduction
 
 | Scenario on unchanged production code | Result |
@@ -81,6 +90,9 @@ immediately deletable by [ProfileStore](https://developer.android.com/reference/
 | `SystemWebViewBlobDownloadInstrumentedTest` | Native popup, CSP popup, private popup, original PNG, isolated source profile, foreign-profile refusal, revoked URL, pending storage cancellation, synchronous isolated/private helper close |
 | User-authorized Pixel, API 37 / WebView 153.0.8010.36 | All 11 instrumented tests passed in the separate `systemwebview.issue248` test app; this validates controlled transfers, not patched live Gemini |
 | `testFullDebugUnitTest`, `testFossDebugUnitTest` | Shared Android/JVM regressions |
+| Native-callback diagnostic build JVM suites | 1,788 tests per flavor, including six callback ownership, private identity and sanitized exception regressions; no failures or skips |
+| Pixel native diagnostic privacy test | Passed; private owners/sessions suppressed, actual sanitized exception frames visible in Logcat |
+| Diagnostic build popup-suite rerun | Interrupted after Pixel entered its lock screen; popup layout timed out before download start. The complete rerun still needs an unlocked Pixel |
 | `lintSystemwebviewDebug` | Android/WebView contracts |
 | `assembleSystemwebviewDebug`, `assembleSystemwebviewDebugAndroidTest` | APK and instrumentation compilation |
 | Manual controlled-page download | Candy's Downloads screen shows `download.png`, Finished, 72 B / 72 B |

@@ -22,6 +22,7 @@ import dev.sk2andy.materialbrowser.browser.gecko.GeckoDownloadStreamSink
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoDownloadTransferListener
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoDownloadTransferStart
 import dev.sk2andy.materialbrowser.browser.gecko.MediaStoreDownloadStreamSink
+import dev.sk2andy.materialbrowser.data.AppLogEvent
 import dev.sk2andy.materialbrowser.data.DownloadRuntimeRegistry
 import dev.sk2andy.materialbrowser.data.SafeDownloadValues
 import java.net.URI
@@ -39,6 +40,7 @@ internal class SystemWebViewBlobDownloadTransfer(
     private val sink: GeckoDownloadStreamSink = MediaStoreDownloadStreamSink(context),
     private val notifier: CandyDownloadNotifier = CandyDownloadNotifier(context),
     private val helperFactory: (Context) -> WebView = ::WebView,
+    private val diagnostic: (AppLogEvent, Throwable?) -> Unit = { _, _ -> },
 ) : AutoCloseable {
     private data class Operation(
         val id: Int,
@@ -99,7 +101,8 @@ internal class SystemWebViewBlobDownloadTransfer(
         )
         operations[id] = operation
         scheduleTimeout(operation)
-        if (runCatching { startHelper(operation) }.isFailure) {
+        runCatching { startHelper(operation) }.onFailure {
+            diagnostic(AppLogEvent.SystemDownloadHelperSetupFailed, it)
             cancel(id, GeckoDownloadFailure.InvalidRequest)
         }
         return GeckoDownloadCancellation { cancel(id, GeckoDownloadFailure.Cancelled) }
@@ -228,6 +231,7 @@ internal class SystemWebViewBlobDownloadTransfer(
                         is SystemWebViewBlobDownloadMessage.Chunk -> append(operation, message)
                         is SystemWebViewBlobDownloadMessage.Finish -> finish(operation, message)
                         is SystemWebViewBlobDownloadMessage.Error -> {
+                            diagnostic(AppLogEvent.SystemDownloadBridgeError, null)
                             fail(operation, GeckoDownloadFailure.Network)
                         }
                     }
@@ -260,6 +264,7 @@ internal class SystemWebViewBlobDownloadTransfer(
                 runCatching {
                     replyProxy.postMessage(SystemWebViewBlobDownloadMessage.reply(message, accepted))
                 }.onFailure {
+                    diagnostic(AppLogEvent.SystemDownloadBridgeReplyFailed, it)
                     cancel(operation.id, GeckoDownloadFailure.Network)
                 }
             }
@@ -271,6 +276,7 @@ internal class SystemWebViewBlobDownloadTransfer(
         val timeout = Runnable {
             val current = operations[operation.id]
             if (current === operation && current.nextSequence == expectedSequence) {
+                diagnostic(AppLogEvent.SystemDownloadTimedOut, null)
                 cancel(operation.id, GeckoDownloadFailure.Network)
             }
         }
@@ -305,6 +311,7 @@ internal class SystemWebViewBlobDownloadTransfer(
             mimeType,
         )
         val entry = runCatching { sink.open(fileName, mimeType) }.getOrElse {
+            diagnostic(AppLogEvent.SystemDownloadSinkOpenFailed, it)
             fail(operation, GeckoDownloadFailure.Storage)
             return
         }
@@ -355,7 +362,8 @@ internal class SystemWebViewBlobDownloadTransfer(
             fail(operation, GeckoDownloadFailure.InvalidRequest)
             return
         }
-        if (runCatching { entry.output.write(bytes) }.isFailure) {
+        runCatching { entry.output.write(bytes) }.getOrElse {
+            diagnostic(AppLogEvent.SystemDownloadSinkWriteFailed, it)
             fail(operation, GeckoDownloadFailure.Storage)
             return
         }
@@ -381,7 +389,8 @@ internal class SystemWebViewBlobDownloadTransfer(
             fail(operation, GeckoDownloadFailure.Network)
             return
         }
-        if (runCatching(entry::commit).isFailure) {
+        runCatching(entry::commit).getOrElse {
+            diagnostic(AppLogEvent.SystemDownloadSinkCommitFailed, it)
             fail(operation, GeckoDownloadFailure.Storage)
             return
         }

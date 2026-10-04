@@ -14,9 +14,10 @@
 
 | Boundary | Contract |
 | --- | --- |
-| Default | Disabled in both Full and FOSS builds; no upload or additional permissions |
+| Default | App-managed file capture is disabled in every build flavor; no upload or additional permissions |
 | Capture | Fixed app startup, extension installation/read/mutation, renderer termination, manual address-bar restoration and automatic address-bar parking events (visible control obstruction or focused input obstruction with page-owned IME); uncaught JVM exceptions include bounded error classes and code frames; Android native crash history adds the crashed thread's stack |
 | Excluded data | No exception messages, source filenames, URLs, page content, titles, inputs, extension IDs, profile names, or thread names |
+| System WebView downloads | Fixed response/request, native route, started/completed and failure-reason events; caught helper, bridge and storage exceptions use the same sanitized code frames. DownloadManager started means enqueued, not completed. Debug builds also emit these sanitized events under `CandyDownload` in Logcat; both outputs reject private sessions and pause while any private owner is active |
 | Private tabs | Any open private tab pauses logging across controllers; entering private mode invalidates queued writes; individual engine callbacks also reject private sessions |
 | Retention | Two rotating log files, each at most 256 KiB; each record at most 16 KiB; bounded background queue drops excess events; small separate capture cutoff/revocation metadata remains when logs are deleted |
 | Crash write | Synchronous bounded write with file-descriptor sync before delegating the unchanged exception to Android's existing handler |
@@ -33,7 +34,7 @@
 | Payload and bounds | `data/AppLogRules`, `data/AppLogStore`; deterministic JVM tests |
 | Android capture/export | `data/AppLogging`, `CandyApplication`, `MainActivity` |
 | Developer control | `DeveloperSettings`, `BrowserSessionStore`, `DeveloperOptionsSettingsPage` |
-| Engine/extension events | `GeckoExtensionRepository`, `GeckoViewRuntimeHandle`, `SystemWebViewBrowserEngineAdapter` |
+| Engine/extension events | `GeckoExtensionRepository`, `GeckoViewRuntimeHandle`, `SystemWebViewBrowserEngineAdapter`, `SystemWebViewDownloadDiagnostics` |
 | Native engine crash | `ApplicationExitInfo` tombstone protobuf is checked after restart, renderer termination and during export; only native-crash records from authorized capture intervals are accepted |
 | Native stack content | At most 64 frames of the crashed thread: architecture, signal/code, relative PC, library basename, optional code symbol/offset and module Build-ID; no registers, memory, abort text, paths, thread names, file descriptors or system log buffers |
 | Native privacy boundary | Entering private mode closes the capture interval before private tabs are created; resuming creates a fresh interval. Clearing/off advances the durable cutoff. Revocation in separate preferences protects against a stale checkpoint after failed file replacement; clock rollback blocks capture until a new forward-time reset |
@@ -53,6 +54,7 @@
 | Native system integration | API 37 dedicated emulator: real `SIGABRT` in the main app and Gecko GPU process; sanitized native frames recovered after restart |
 | Durable native capture gates / restart / corruption | `NativeCrashHistoryStoreInstrumentedTest` |
 | Android export / private capture / deletion | `AppLoggingInstrumentedTest` |
+| System download callback forwarding / private identity | `SystemWebViewDownloadDiagnosticsTest`; focused `AppLoggingInstrumentedTest.downloadDiagnosticsRejectPrivateSessionsAndPrivateOwners` |
 | Toggle / export / delete actions | Focused `DeveloperOptionsSettingsPageInstrumentedTest` method |
 | Setting persistence / corrupt values | Focused `BrowserSessionStoreInstrumentedTest` methods |
 | Archive exclusion | `AppDataArchiveRulesTest`, `AppDataArchiveCodecTest` |

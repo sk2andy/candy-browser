@@ -133,6 +133,46 @@ class AppLoggingInstrumentedTest {
     }
 
     @Test
+    fun downloadDiagnosticsRejectPrivateSessionsAndPrivateOwners() {
+        val uri = createExportUri()
+        val owner = Any()
+        try {
+            AppLogging.setPrivateBrowsingActive(false)
+            assertTrue(AppLogging.setEnabled(true))
+            assertTrue(AppLogging.clear())
+            AppLogging.setPrivateBrowsingActive(true, owner)
+            AppLogging.recordDiagnostic(AppLogEvent.SystemDownloadNetworkFailed, isPrivate = false)
+            assertEquals("Test diagnostics\n\nCandy app logs\n", exportText(uri))
+
+            AppLogging.setPrivateBrowsingActive(false, owner)
+            AppLogging.recordDiagnostic(AppLogEvent.SystemDownloadStorageFailed, isPrivate = true)
+            assertEquals("Test diagnostics\n\nCandy app logs\n", exportText(uri))
+
+            val error = IllegalStateException("https://private.example Cookie=secret /private/file")
+            error.stackTrace = arrayOf(StackTraceElement("Code", "enqueue", "/private/file", 42))
+            AppLogging.recordDiagnostic(
+                AppLogEvent.SystemDownloadEnqueueFailed,
+                isPrivate = false,
+                error = error,
+            )
+            val exported = exportText(uri)
+            assertTrue(exported.contains(" SystemDownloadEnqueueFailed\n"))
+            assertTrue(exported.contains("  exception java.lang.IllegalStateException\n"))
+            assertTrue(exported.contains("    at Code.enqueue:42\n"))
+            assertFalse(exported.contains("SystemDownloadNetworkFailed"))
+            assertFalse(exported.contains("SystemDownloadStorageFailed"))
+            assertFalse(exported.contains("private"))
+            assertFalse(exported.contains("Cookie"))
+            assertFalse(exported.contains("secret"))
+        } finally {
+            AppLogging.setPrivateBrowsingActive(false, owner)
+            AppLogging.setPrivateBrowsingActive(false)
+            AppLogging.setEnabled(false)
+            context.contentResolver.delete(uri, null, null)
+        }
+    }
+
+    @Test
     fun loggingRemainsPausedUntilAllPrivateOwnersReleaseIt() {
         val uri = createExportUri()
         val ownerA = Any()
