@@ -1424,4 +1424,6 @@
     <string name="command_site_data_unsupported">Bu motor, mevcut profilde tek bir sitenin çerezlerini ve depolamasını güvenle temizleyemiyor. Hiçbir şey silinmeyecek.</string>
     <string name="command_site_data_shared_storage">Bu depolamayı paylaşan diğer sekmeler ve profiller de bu sitenin verilerini kaybeder.</string>
     <string name="command_site_data_target_changed">Bu sekme veya sayfası değişti. Hiçbir şey silinmeyecek. Mevcut sayfayı gözden geçirmek için site bilgilerini yeniden açın.</string>
+    <string name="settings_search_hint">Ayarlarda ara</string>
+    <string name="settings_search_empty">Ayar bulunamadı. Başka bir arama deneyin.</string>
 </resources>

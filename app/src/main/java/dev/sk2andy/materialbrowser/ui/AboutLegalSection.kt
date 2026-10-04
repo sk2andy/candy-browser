@@ -38,6 +38,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import dev.sk2andy.materialbrowser.BuildConfig
 import dev.sk2andy.materialbrowser.R
+import dev.sk2andy.materialbrowser.shared.ui.settings.settingsSearchTarget
 import dev.sk2andy.materialbrowser.legal.CandyLegalSources
 import dev.sk2andy.materialbrowser.legal.ThirdPartyComponent
 import dev.sk2andy.materialbrowser.legal.ThirdPartyNotice
@@ -165,6 +166,7 @@ private fun AboutLegalRow(
         onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
+            .settingsSearchTarget(title)
             .sizeIn(minHeight = 64.dp)
             .testTag(tag),
         color = MaterialTheme.colorScheme.surfaceContainerHigh,

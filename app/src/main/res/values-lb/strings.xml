@@ -1424,4 +1424,6 @@
     <string name="command_site_data_unsupported">Dëse Motor kann d’Cookieën an de Späicher vun enger eenzeler Websäit am aktuelle Profil net sécher läschen. Et gëtt näischt geläscht.</string>
     <string name="command_site_data_shared_storage">Aner Tabs a Profiller, déi dëse Späicher deelen, verléieren och d’Date vun dëser Websäit.</string>
     <string name="command_site_data_target_changed">Dësen Tab oder seng Säit huet sech geännert. Et gëtt näischt geläscht. Maacht d’Websäitinformatioun nach eng Kéier op, fir déi aktuell Säit ze iwwerpréiwen.</string>
+    <string name="settings_search_hint">Astellunge sichen</string>
+    <string name="settings_search_empty">Keng Astellunge fonnt. Probéier en anere Sichbegrëff.</string>
 </resources>

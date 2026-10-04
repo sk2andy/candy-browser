@@ -1431,4 +1431,6 @@
     <string name="command_site_data_unsupported">Este motor não pode limpar com segurança os cookies e o armazenamento de um único site no perfil atual. Nada será eliminado.</string>
     <string name="command_site_data_shared_storage">Outros separadores e perfis que partilhem este armazenamento também perderão os dados deste site.</string>
     <string name="command_site_data_target_changed">Este separador ou a sua página mudou. Nada será eliminado. Abre novamente as informações do site para rever a página atual.</string>
+    <string name="settings_search_hint">Pesquisar configurações</string>
+    <string name="settings_search_empty">Nenhuma configuração encontrada. Tente outra pesquisa.</string>
 </resources>

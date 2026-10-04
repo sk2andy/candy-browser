@@ -1456,4 +1456,6 @@
     <string name="command_site_data_unsupported">Ta pogon ne more varno izbrisati piškotkov in shrambe posameznega spletnega mesta v trenutnem profilu. Nič ne bo izbrisano.</string>
     <string name="command_site_data_shared_storage">Drugi zavihki in profili, ki delijo to shrambo, bodo prav tako izgubili podatke tega spletnega mesta.</string>
     <string name="command_site_data_target_changed">Ta zavihek ali njegova stran se je spremenila. Nič ne bo izbrisano. Znova odpri informacije o spletnem mestu, da pregledaš trenutno stran.</string>
+    <string name="settings_search_hint">Poišči nastavitve</string>
+    <string name="settings_search_empty">Ni najdenih nastavitev. Poskusite drugo iskanje.</string>
 </resources>

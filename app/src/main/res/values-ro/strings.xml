@@ -1440,4 +1440,6 @@
     <string name="command_site_data_unsupported">Acest motor nu poate șterge în siguranță cookie-urile și spațiul de stocare al unui singur site în profilul curent. Nu se va șterge nimic.</string>
     <string name="command_site_data_shared_storage">Alte file și profiluri care partajează acest spațiu de stocare vor pierde și ele datele acestui site.</string>
     <string name="command_site_data_target_changed">Această filă sau pagina ei s-a schimbat. Nu se va șterge nimic. Deschide din nou informațiile site-ului pentru a verifica pagina curentă.</string>
+    <string name="settings_search_hint">Caută în setări</string>
+    <string name="settings_search_empty">Nu s-au găsit setări. Încearcă altă căutare.</string>
 </resources>
