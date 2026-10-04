@@ -1,7 +1,9 @@
 package dev.sk2andy.materialbrowser.browser
 
+import android.Manifest
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Color
 import android.os.SystemClock
@@ -196,6 +198,14 @@ class BrowserPageResumeInstrumentedTest {
     }
 
     private fun configureSession(engine: AndroidBrowserEngineKind) {
+        instrumentation.uiAutomation.grantRuntimePermission(
+            context.packageName,
+            Manifest.permission.POST_NOTIFICATIONS,
+        )
+        assertEquals(
+            PackageManager.PERMISSION_GRANTED,
+            context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS),
+        )
         preferences.edit().clear().commit()
         GestureOnboardingStore(context).markCompleted()
         ReleaseNotesStore(context).markHandled(BuildConfig.VERSION_CODE.toLong())
