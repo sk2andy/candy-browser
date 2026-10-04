@@ -68,6 +68,7 @@ are recorded in [`../audits/dark-appearance-and-address-tab-handoff.md`](../audi
 | Candy Recall rules, extraction, SQLite ranking and UI | `recall/*Test`, `RecallRepositoryInstrumentedTest`, focused address/History instrumented tests |
 | Gestures and motion | `ui/Address*Test`, `ui/Address*InstrumentedTest` |
 | Gecko keyboard viewport, focused input, chrome-owned IME and new-tab suggestion handoff | `GeckoViewInsetRulesTest`, `GeckoKeyboardInsetsInstrumentedTest`, `GeckoAddressTabSelectionInstrumentedTest`, `FullImmersiveModeInstrumentedTest` |
+| Missed hidden-IME delivery after Activity resume or restored window focus | `GeckoKeyboardInsetsInstrumentedTest#resumeReconcilesKeyboardMarginsWhenHiddenInsetsWereMissed`, `#restoredWindowFocusReconcilesKeyboardMarginsWhenHiddenInsetsWereMissed`; assert native margins, visual viewport and restored lower-page pixels |
 | Bottom control obstruction and automatic right parking | `AddressBarAutoDockRulesTest`, `TextInputOcclusionScriptTest`, `scripts/text_input_occlusion.test.mjs`, `GeckoPageControlOcclusionInstrumentedTest`, focused controller/System WebView instrumented tests |
 | Restored launcher tab and initial Gecko viewport | `StartupPresentationRulesTest`, `BrowserInitialNavigationRulesTest`, `MainActivityRestoredTabInstrumentedTest`, `BrowserControllerInitialViewportInstrumentedTest` |
 | WebView runtime, Basic authentication and Link Peek | `browser/*InstrumentedTest`, `BrowserControllerHttpAuthInstrumentedTest`, `ui/HttpAuthPromptDialogInstrumentedTest`, `ui/LinkPeekOverlayInstrumentedTest` |

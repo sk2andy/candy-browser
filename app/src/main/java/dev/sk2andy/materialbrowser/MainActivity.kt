@@ -1170,6 +1170,7 @@ class MainActivity : AppCompatActivity() {
             !appDataTransferActive
         ) {
             applyBrowserSystemUi()
+            browserController.refreshWindowInsets()
         }
     }
 

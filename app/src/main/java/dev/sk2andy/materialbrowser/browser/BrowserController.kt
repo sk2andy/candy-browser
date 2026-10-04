@@ -3132,6 +3132,14 @@ class BrowserController(
         }
     }
 
+    fun refreshWindowInsets() {
+        // Android may hide the IME while Candy is stopped or behind another window without
+        // delivering a changed inset to the content listener. Release stale renderer margins
+        // from the current root snapshot, then request a fresh traversal after focus returns.
+        ViewCompat.getRootWindowInsets(activity.window.decorView)?.let(::onWindowInsetsChanged)
+        ViewCompat.requestApplyInsets(activity.findViewById(android.R.id.content))
+    }
+
     private fun scheduleMediaLayoutRestoration(
         view: View,
         onCancelled: () -> Unit = {},
@@ -10646,6 +10654,7 @@ class BrowserController(
     }
 
     fun onResume() {
+        refreshWindowInsets()
         // The process-wide runtime can retain a night mode from before the app was stopped.
         browserEngineSessionFactory.onConfigurationChanged(activity.resources.configuration)
         applyWebContentAppearance(appearanceSettings)
