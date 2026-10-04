@@ -238,6 +238,9 @@ class SettingsSearchInstrumentedTest {
     private fun advanceRoute() {
         composeRule.mainClock.advanceTimeBy(1_000L)
         composeRule.waitForIdle()
+        // Scroll requests start after the target has been placed and received a frame.
+        composeRule.mainClock.advanceTimeBy(1_000L)
+        composeRule.waitForIdle()
     }
 
     private fun captureScreenshot(name: String) {
