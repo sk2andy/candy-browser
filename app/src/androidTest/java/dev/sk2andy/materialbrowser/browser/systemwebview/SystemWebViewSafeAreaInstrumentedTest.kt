@@ -62,6 +62,36 @@ class SystemWebViewSafeAreaInstrumentedTest {
     }
 
     @Test
+    fun coverBodyScrollLockKeepsStickyHeaderAtOneInsetAcrossRepeatedOpenings() {
+        withLoadedFixture(cover = true, html = scrollLockHtml()) { fixture ->
+            updatePolicy(
+                fixture,
+                cssPolicy().copy(geckoSafeAreaSettings = GeckoSafeAreaSettings(requireInteractionForUpdates = false)),
+            )
+            var report = awaitReport(fixture, "Cover header did not receive its initial inset") {
+                abs(it.getDouble("stickyTop") - cssInset(it)) <= CSS_TOLERANCE &&
+                    abs(it.getDouble("bodyPadding")) <= CSS_TOLERANCE
+            }
+            evaluate(fixture, "globalThis.__candyScrollLockSamples.armed = true")
+            repeat(4) {
+                val before = report.getJSONObject("scrollLockSamples").getInt("samples")
+                evaluate(fixture, "document.body.classList.toggle('locked')")
+                report = awaitReport(fixture, "Scroll-lock frames did not settle") {
+                    it.getJSONObject("scrollLockSamples").getInt("samples") >= before + 15
+                }
+            }
+            val samples = report.getJSONObject("scrollLockSamples")
+            println("System WebView cover body scroll lock: $report")
+            assertTrue("Both fixed-body openings are sampled", samples.getInt("fixedSamples") >= 25)
+            assertEquals("No frame loses the header inset", cssInset(report), samples.getDouble("minTop"), CSS_TOLERANCE)
+            assertEquals("A protected sticky child receives no duplicate inset", cssInset(report), samples.getDouble("maxTop"), CSS_TOLERANCE)
+            assertEquals(0.0, samples.getDouble("maxPadding"), CSS_TOLERANCE)
+            assertEquals(0.0, samples.getDouble("maxScroll"), CSS_TOLERANCE)
+            assertEdgeToEdge(fixture)
+        }
+    }
+
+    @Test
     fun authoredCoverEnvPaddingAndFixedTopReceiveProtectionExactlyOnce() {
         withLoadedFixture(cover = true, authorEnv = true) { fixture ->
             val report = awaitReport(fixture, "Author env protection did not settle") {
@@ -430,9 +460,45 @@ class SystemWebViewSafeAreaInstrumentedTest {
                 stickyInlineTop: sticky.style.top,
                 negativeTop: document.querySelector('#negative').getBoundingClientRect().top,
                 insetFrames: globalThis.__candySafeAreaInsetFrames || 0,
-                scrollY
+                scrollY,
+                scrollLockSamples: globalThis.__candyScrollLockSamples || null
               });
             })()
+        """.trimIndent()
+
+        fun scrollLockHtml(): String = """
+            <!doctype html><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+            <style>
+              html,body { margin:0; }
+              body.locked { position:fixed; top:0; width:100%; height:100vh; overflow:hidden; }
+              header { position:sticky; top:0; height:100px; background:#cc071e; }
+              svg { width:60px; height:50px; }
+              #flow { height:3000px; }
+              #fixed,#negative { display:none; }
+              #env { position:absolute; visibility:hidden; padding-top:env(safe-area-inset-top); }
+            </style>
+            <body><div style="display:none"></div><header id="sticky"><svg viewBox="0 0 60 50"><rect width="60" height="50" fill="white"/></svg></header>
+            <main id="flow">Content</main><div id="fixed"></div><div id="negative"></div><div id="env"></div>
+            <script>
+              const header = document.getElementById('sticky');
+              const samples = globalThis.__candyScrollLockSamples = {
+                armed:false, samples:0, fixedSamples:0, minTop:Infinity, maxTop:-Infinity, maxPadding:0, maxScroll:0,
+              };
+              function frame() {
+                if (samples.armed) {
+                  const top = header.getBoundingClientRect().top;
+                  const body = getComputedStyle(document.body);
+                  samples.samples++;
+                  if (body.position === 'fixed') samples.fixedSamples++;
+                  samples.minTop = Math.min(samples.minTop, top);
+                  samples.maxTop = Math.max(samples.maxTop, top);
+                  samples.maxPadding = Math.max(samples.maxPadding, parseFloat(body.paddingTop));
+                  samples.maxScroll = Math.max(samples.maxScroll, Math.abs(scrollY));
+                }
+                requestAnimationFrame(frame);
+              }
+              requestAnimationFrame(frame);
+            </script>
         """.trimIndent()
 
         fun amazonToolbarHtml(): String = fixtureHtml(cover = false, authorEnv = false)

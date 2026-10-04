@@ -1,6 +1,8 @@
 package dev.sk2andy.materialbrowser.browser.gecko
 
 import android.os.SystemClock
+import android.view.InputDevice
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import androidx.core.graphics.Insets
@@ -27,6 +29,106 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class GeckoSafeAreaPrototypeInstrumentedTest {
     private val instrumentation = InstrumentationRegistry.getInstrumentation()
+
+    @Test
+    fun coverHeaderKeepsItsGeometryAcrossRepeatedClassChanges() {
+        val title = AtomicReference<String?>(null)
+        val policy = GeckoPrivacyPolicy.Disabled.copy(
+            cssSafeAreaTopInsetPx = NATIVE_TOP_PX,
+            geckoSafeAreaSettings = GeckoSafeAreaSettings(maxElementsPerBatch = 4, maxBatchDurationMillis = 1),
+        )
+        EdgeToEdgeSiteFixtureServer { _ -> COVER_HEADER_MUTATION_HTML }.use { server ->
+            ActivityScenario.launch(GeckoScrollTestActivity::class.java).use { scenario ->
+                lateinit var session: GeckoBrowserSession
+                lateinit var view: View
+                scenario.onActivity { activity ->
+                    WindowCompat.setDecorFitsSystemWindows(activity.window, false)
+                    session = GeckoRuntimeOwner.getOrCreate(activity).createSession(
+                        profileId = "safe-area-cover-mutation-${UUID.randomUUID()}",
+                        isPrivate = false,
+                        privacyPolicy = policy,
+                    )
+                    session.bindExtensionTab("safe-area-cover-mutation-${UUID.randomUUID()}", 1)
+                    session.setStateListener { state -> title.set(state.title) }
+                    view = session.createView(activity)
+                    activity.setContentView(view)
+                    session.setActive(true)
+                    assertTrue(session.loadUrl(server.fixtureUrl("/site-matrix/cover-header-mutation")))
+                }
+                try {
+                    awaitReport(title) { it.getBoolean("loaded") }
+                    scenario.onActivity { updateNativeTop(view) }
+                    val report = awaitReport(title) { it.getBoolean("done") }
+                    val safeTop = NATIVE_TOP_PX / report.getDouble("density")
+                    assertEquals(5, report.getInt("mutations"))
+                    assertEquals("Cover rechecks keep the existing protection stylesheet", 0, report.getInt("layerRemovals"))
+                    assertTrue("Every frame through each cover recheck is sampled", report.getInt("samples") >= 30)
+                    assertEquals("Cover header never loses its inset", safeTop, report.getDouble("minTop"), 0.5)
+                    assertEquals("Cover header never gets a second inset", safeTop, report.getDouble("maxTop"), 0.5)
+                    assertEquals("Class changes do not scroll the page", 0.0, report.getDouble("maxScroll"), 0.5)
+                    println("Prototype cover header mutations: $report")
+                } finally {
+                    scenario.onActivity {
+                        session.releaseView(view)
+                        session.setActive(false)
+                        session.close()
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
+    fun coverBodyScrollLockKeepsStickyHeaderBelowTheSafeAreaOnEveryClick() {
+        val title = AtomicReference<String?>(null)
+        val policy = GeckoPrivacyPolicy.Disabled.copy(
+            cssSafeAreaTopInsetPx = NATIVE_TOP_PX,
+            geckoSafeAreaSettings = GeckoSafeAreaSettings(maxElementsPerBatch = 4, maxBatchDurationMillis = 1),
+        )
+        EdgeToEdgeSiteFixtureServer { _ -> COVER_BODY_SCROLL_LOCK_HTML }.use { server ->
+            ActivityScenario.launch(GeckoScrollTestActivity::class.java).use { scenario ->
+                lateinit var session: GeckoBrowserSession
+                lateinit var view: View
+                scenario.onActivity { activity ->
+                    WindowCompat.setDecorFitsSystemWindows(activity.window, false)
+                    session = GeckoRuntimeOwner.getOrCreate(activity).createSession(
+                        profileId = "safe-area-cover-scroll-lock-${UUID.randomUUID()}",
+                        isPrivate = false,
+                        privacyPolicy = policy,
+                    )
+                    session.bindExtensionTab("safe-area-cover-scroll-lock-${UUID.randomUUID()}", 1)
+                    session.setStateListener { state -> title.set(state.title) }
+                    view = session.createView(activity)
+                    activity.setContentView(view)
+                    session.setActive(true)
+                    assertTrue(session.loadUrl(server.fixtureUrl("/site-matrix/cover-body-scroll-lock")))
+                }
+                try {
+                    awaitReport(title) { it.getBoolean("loaded") }
+                    scenario.onActivity { updateNativeTop(view) }
+                    var report = awaitReport(title) { it.getBoolean("started") }
+                    for (click in 1..4) {
+                        tapButton(scenario, view, report)
+                        report = awaitReport(title) { it.getInt("settledClicks") >= click }
+                    }
+                    val safeTop = NATIVE_TOP_PX / report.getDouble("density")
+                    println("Prototype cover body scroll lock: $report")
+                    assertEquals(4, report.getInt("trustedClicks"))
+                    assertTrue("Both scroll-lock openings are sampled before and after worker settlement", report.getInt("fixedSamples") >= 20)
+                    assertEquals("The first scroll lock never drops the sticky header", safeTop, report.getDouble("minTop"), 0.5)
+                    assertEquals("Repeated scroll locks never duplicate the header inset", safeTop, report.getDouble("maxTop"), 0.5)
+                    assertEquals("SVG header content does not acquire body padding", 0.0, report.getDouble("maxPadding"), 0.5)
+                    assertEquals("Opening and closing the menu does not scroll the document", 0.0, report.getDouble("maxScroll"), 0.5)
+                } finally {
+                    scenario.onActivity {
+                        session.releaseView(view)
+                        session.setActive(false)
+                        session.close()
+                    }
+                }
+            }
+        }
+    }
 
     @Test
     fun negativeTopStatesStayHiddenAndDeveloperSettingRestoresTheInsetLive() {
@@ -396,6 +498,77 @@ class GeckoSafeAreaPrototypeInstrumentedTest {
     }
 
     @Test
+    fun coverStickyHeaderIsProtectedWhileParserIsBlockedOnceCssPolicyIsReady() {
+        val title = AtomicReference<String?>(null)
+        val releaseParser = CountDownLatch(1)
+        EdgeToEdgeSiteFixtureServer { path ->
+            when (path) {
+                "/cover-parser-hold.js" -> {
+                    releaseParser.await(20, TimeUnit.SECONDS)
+                    "/* Controlled parser hold. */"
+                }
+                "/site-matrix/cover-parser-load" -> COVER_PARSER_LOAD_HTML
+                else -> INITIAL_BOOTSTRAP_HTML
+            }
+        }.use { server ->
+            ActivityScenario.launch(GeckoScrollTestActivity::class.java).use { scenario ->
+                lateinit var session: GeckoBrowserSession
+                lateinit var view: View
+                scenario.onActivity { activity ->
+                    WindowCompat.setDecorFitsSystemWindows(activity.window, false)
+                    session = GeckoRuntimeOwner.getOrCreate(activity).createSession(
+                        profileId = "safe-area-cover-parser-${UUID.randomUUID()}",
+                        isPrivate = false,
+                        privacyPolicy = GeckoPrivacyPolicy.Disabled.copy(
+                            cssSafeAreaTopInsetPx = NATIVE_TOP_PX,
+                            geckoSafeAreaSettings = GeckoSafeAreaSettings(maxElementsPerBatch = 4, maxBatchDurationMillis = 1),
+                        ),
+                    )
+                    session.bindExtensionTab("safe-area-cover-parser-${UUID.randomUUID()}", 1)
+                    session.setStateListener { state -> title.set(state.title) }
+                    view = session.createView(activity)
+                    activity.setContentView(view)
+                    session.setActive(true)
+                    assertTrue(session.loadUrl(server.fixtureUrl("/site-matrix/cover-parser-bootstrap")))
+                }
+                try {
+                    awaitReport(title) { it.getBoolean("bootstrap") && it.getBoolean("loaded") }
+                    scenario.onActivity { updateNativeTop(view) }
+                    awaitReport(title) { abs(it.getDouble("env") * it.getDouble("density") - NATIVE_TOP_PX) < 0.5 }
+                    scenario.onActivity { assertTrue(session.loadUrl(server.fixtureUrl("/site-matrix/cover-parser-load"))) }
+                    val held = awaitReport(title) {
+                        !it.getBoolean("bootstrap") && it.getInt("loadingSamples") >= 8
+                    }
+                    val safeTop = NATIVE_TOP_PX / held.getDouble("density")
+                    println("Prototype cover parser hold: $held")
+                    assertEquals("First header frame is sampled before DOM readiness", "loading", held.getString("firstReadyState"))
+                    assertEquals("Native inset is ready in the first visible frame", safeTop, held.getDouble("firstEnv"), 0.5)
+                    assertEquals("First policy-ready frame is sampled before DOM readiness", "loading", held.getString("firstPolicyReadyState"))
+                    assertEquals("Header clears the safe area from the first policy-ready frame", safeTop, held.getDouble("firstPolicyHeaderY"), 0.5)
+                    assertEquals("Header never enters the safe area while parsing is blocked", safeTop, held.getDouble("minHeaderY"), 0.5)
+                    assertEquals("Header receives only one inset while parsing is blocked", safeTop, held.getDouble("maxHeaderY"), 0.5)
+                    assertEquals("SVG-first header does not acquire body padding", 0.0, held.getDouble("maxBodyPadding"), 0.5)
+                    releaseParser.countDown()
+                    val loaded = awaitReport(title) {
+                        !it.getBoolean("bootstrap") && it.getBoolean("loaded") && it.getInt("afterLoadSamples") >= 8
+                    }
+                    assertEquals("DOM readiness adds no header jump", safeTop, loaded.getDouble("minHeaderY"), 0.5)
+                    assertEquals("Load completion adds no header jump", safeTop, loaded.getDouble("maxHeaderY"), 0.5)
+                    assertEquals("Load completion adds no body padding", 0.0, loaded.getDouble("maxBodyPadding"), 0.5)
+                    println("Prototype cover parser completion: $loaded")
+                } finally {
+                    releaseParser.countDown()
+                    scenario.onActivity {
+                        session.releaseView(view)
+                        session.setActive(false)
+                        session.close()
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
     fun bodyAndHeaderSettleBeforeHeldDocumentLoadCompletes() {
         val title = AtomicReference<String?>(null)
         val releaseLoad = CountDownLatch(1)
@@ -608,6 +781,32 @@ class GeckoSafeAreaPrototypeInstrumentedTest {
         }
     }
 
+    private fun tapButton(scenario: ActivityScenario<GeckoScrollTestActivity>, view: View, report: JSONObject) {
+        val location = IntArray(2)
+        scenario.onActivity { view.getLocationOnScreen(location) }
+        val density = report.getDouble("density").toFloat()
+        val x = location[0] + report.getDouble("buttonX").toFloat() * density
+        val y = location[1] + report.getDouble("buttonY").toFloat() * density
+        val downTime = SystemClock.uptimeMillis()
+        injectTouch(MotionEvent.ACTION_DOWN, downTime, downTime, x, y)
+        SystemClock.sleep(50)
+        injectTouch(MotionEvent.ACTION_UP, downTime, SystemClock.uptimeMillis(), x, y)
+    }
+
+    private fun injectTouch(action: Int, downTime: Long, eventTime: Long, x: Float, y: Float) {
+        MotionEvent.obtain(downTime, eventTime, action, x, y, 0).also { event ->
+            event.source = InputDevice.SOURCE_TOUCHSCREEN
+            try {
+                assertTrue(
+                    "Input injection failed for ${MotionEvent.actionToString(action)}",
+                    instrumentation.uiAutomation.injectInputEvent(event, true),
+                )
+            } finally {
+                event.recycle()
+            }
+        }
+    }
+
     private fun updateNativeTop(view: View) {
         (view as GeckoViewInsetHost).updateInsets(
             GeckoViewInsetRules.resolve(
@@ -640,6 +839,117 @@ class GeckoSafeAreaPrototypeInstrumentedTest {
     private companion object {
         const val NATIVE_TOP_PX = 137
         const val REPORT_PREFIX = "Candy prototype: "
+        val COVER_HEADER_MUTATION_HTML = """
+            <!doctype html><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+            <style>
+              html,body { margin:0; }
+              header { position:sticky; top:0; height:100px; background:#cc071e; }
+              header.open { background:#cc071f; }
+              main { height:3000px; }
+            </style>
+            <body><header><button>Menu</button></header><main>Content</main></body>
+            <script>
+              const header = document.querySelector('header');
+              for (let index = 0; index < 24; index++) {
+                const anchor = document.createElement('div');
+                anchor.style.cssText = 'position:fixed;top:8px;width:2px;height:2px;';
+                document.body.appendChild(anchor);
+              }
+              let started = false, done = false, mutations = 0, samples = 0;
+              let layerRemovals = 0;
+              let minTop = Infinity, maxTop = -Infinity, maxScroll = 0;
+              const protectionLayers = new Set();
+              new MutationObserver(records => {
+                if (!started || done) return;
+                for (const record of records) {
+                  for (const node of record.removedNodes) {
+                    if (protectionLayers.has(node)) layerRemovals++;
+                  }
+                }
+              }).observe(document.documentElement, { childList:true });
+              function frame() {
+                const top = header.getBoundingClientRect().top;
+                if (!started && document.readyState === 'complete' && top > 20) {
+                  started = true;
+                  // Candy inserts its per-element rules through CSSOM; the
+                  // fixture's author stylesheet has nonempty source text.
+                  for (const style of document.querySelectorAll('style')) {
+                    if (!style.textContent.trim()) protectionLayers.add(style);
+                  }
+                  const timer = setInterval(() => {
+                    header.classList.toggle('open');
+                    if (++mutations === 5) {
+                      clearInterval(timer);
+                      setTimeout(() => { done = true; }, 500);
+                    }
+                  }, 300);
+                }
+                if (started && !done) {
+                  samples++;
+                  minTop = Math.min(minTop, top);
+                  maxTop = Math.max(maxTop, top);
+                  maxScroll = Math.max(maxScroll, Math.abs(scrollY));
+                }
+                requestAnimationFrame(frame);
+              }
+              requestAnimationFrame(frame);
+              setInterval(() => {
+                document.title = '${REPORT_PREFIX}' + JSON.stringify({
+                  loaded:document.readyState === 'complete', density:devicePixelRatio,
+                  done, mutations, samples, minTop, maxTop, maxScroll, layerRemovals,
+                  headerTop:header.getBoundingClientRect().top,
+                  bodyPadding:getComputedStyle(document.body).paddingTop,
+                  cssTop:getComputedStyle(header).top,
+                });
+              }, 50);
+            </script>
+        """.trimIndent()
+        val COVER_BODY_SCROLL_LOCK_HTML = """
+            <!doctype html><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+            <style>
+              html,body { margin:0; }
+              body.locked { position:fixed; top:0; width:100%; height:100vh; overflow:hidden; }
+              header { position:sticky; top:0; height:100px; background:#cc071e; }
+              header svg { width:60px; height:50px; }
+              button { position:absolute; right:20px; top:20px; width:120px; height:60px; }
+              main { height:3000px; }
+            </style>
+            <body><header><svg viewBox="0 0 60 50"><rect width="60" height="50" fill="white"/></svg><button>Menu</button></header><main>Content</main></body>
+            <script>
+              const header = document.querySelector('header');
+              const button = document.querySelector('button');
+              let started = false, trustedClicks = 0, settledClicks = 0, fixedSamples = 0;
+              let minTop = Infinity, maxTop = -Infinity, maxPadding = 0, maxScroll = 0;
+              button.addEventListener('click', event => {
+                if (!event.isTrusted || !started) return;
+                document.body.classList.toggle('locked');
+                const click = ++trustedClicks;
+                setTimeout(() => { settledClicks = click; }, 500);
+              });
+              function frame() {
+                const top = header.getBoundingClientRect().top;
+                const safeTop = $NATIVE_TOP_PX / devicePixelRatio;
+                if (!started && document.readyState === 'complete' && Math.abs(top - safeTop) < 0.5) started = true;
+                if (started && trustedClicks > 0) {
+                  minTop = Math.min(minTop, top);
+                  maxTop = Math.max(maxTop, top);
+                  maxPadding = Math.max(maxPadding, parseFloat(getComputedStyle(document.body).paddingTop));
+                  maxScroll = Math.max(maxScroll, Math.abs(scrollY));
+                  if (getComputedStyle(document.body).position === 'fixed') fixedSamples++;
+                }
+                requestAnimationFrame(frame);
+              }
+              requestAnimationFrame(frame);
+              setInterval(() => {
+                const rect = button.getBoundingClientRect();
+                document.title = '${REPORT_PREFIX}' + JSON.stringify({
+                  loaded:document.readyState === 'complete', density:devicePixelRatio,
+                  started, trustedClicks, settledClicks, fixedSamples, minTop, maxTop, maxPadding, maxScroll,
+                  buttonX:rect.left + rect.width / 2, buttonY:rect.top + rect.height / 2,
+                });
+              }, 50);
+            </script>
+        """.trimIndent()
         val NEGATIVE_TOP_HTML = """
             <!doctype html><meta name="viewport" content="width=device-width,initial-scale=1">
             <style>
@@ -859,6 +1169,61 @@ class GeckoSafeAreaPrototypeInstrumentedTest {
                 env:parseFloat(getComputedStyle(document.getElementById('probe')).paddingTop),
                 density:devicePixelRatio,loaded:document.readyState === 'complete'}); }, 50);
             </script>
+        """.trimIndent()
+        val COVER_PARSER_LOAD_HTML = """
+            <!doctype html><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+            <style>
+              html,body { margin:0; }
+              header { position:sticky; top:0; height:100px; background:#cc071e; }
+              header svg { width:60px; height:50px; }
+              main { height:3000px; }
+              #probe { position:absolute; visibility:hidden; padding-top:env(safe-area-inset-top); }
+            </style>
+            <body><header><svg viewBox="0 0 60 50"><rect width="60" height="50" fill="white"/></svg></header><main>Content</main><div id="probe"></div>
+            <script>
+              const header = document.querySelector('header');
+              const probe = document.getElementById('probe');
+              let loadingSamples = 0, afterLoadSamples = 0;
+              let firstHeaderY = null, firstReadyState = null, firstEnv = null, firstCandyInset = null;
+              let firstPolicyHeaderY = null, firstPolicyReadyState = null, prePolicySamples = 0;
+              let minHeaderY = Infinity, maxHeaderY = -Infinity, maxBodyPadding = 0;
+              function frame() {
+                const rect = header.getBoundingClientRect();
+                const env = parseFloat(getComputedStyle(probe).paddingTop);
+                const loaded = document.readyState === 'complete';
+                const candyInset = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--candy-safe-area-inset-top')) || 0;
+                if (rect.width > 1 && rect.height > 1) {
+                  if (firstHeaderY === null) {
+                    firstHeaderY = rect.top;
+                    firstReadyState = document.readyState;
+                    firstEnv = env;
+                    firstCandyInset = candyInset;
+                  }
+                  // The extension policy arrives asynchronously in each new document.
+                  // Keep raw first-frame diagnostics; verify parser-time protection once it is published.
+                  if (firstPolicyHeaderY === null && env > 0 && Math.abs(candyInset - env) < 0.5) {
+                    firstPolicyHeaderY = rect.top;
+                    firstPolicyReadyState = document.readyState;
+                  }
+                  if (firstPolicyHeaderY !== null) {
+                    minHeaderY = Math.min(minHeaderY, rect.top);
+                    maxHeaderY = Math.max(maxHeaderY, rect.top);
+                    maxBodyPadding = Math.max(maxBodyPadding, parseFloat(getComputedStyle(document.body).paddingTop));
+                    if (document.readyState === 'loading') loadingSamples++;
+                    if (loaded) afterLoadSamples++;
+                  } else {
+                    prePolicySamples++;
+                  }
+                  document.title = '${REPORT_PREFIX}' + JSON.stringify({
+                    bootstrap:false, loaded, density:devicePixelRatio, env, loadingSamples, afterLoadSamples,
+                    firstHeaderY, firstReadyState, firstEnv, firstCandyInset, prePolicySamples,
+                    firstPolicyHeaderY, firstPolicyReadyState, minHeaderY, maxHeaderY, maxBodyPadding,
+                  });
+                }
+                requestAnimationFrame(frame);
+              }
+              requestAnimationFrame(frame);
+            </script><script src="/cover-parser-hold.js"></script>
         """.trimIndent()
         val INITIAL_LOAD_HTML = """
             <!doctype html><meta name="viewport" content="width=device-width,initial-scale=1">
