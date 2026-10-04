@@ -32,6 +32,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
+import org.junit.Assume.assumeFalse
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -75,11 +76,13 @@ class GeckoTabInteractionInstrumentedTest {
 
     @Test
     fun regularGeckoTabsRemainInteractiveAcrossRepeatedSwitchesAndResume() {
+        assumeFalse(BuildConfig.SYSTEM_WEBVIEW_ONLY)
         verifyInteraction(AndroidBrowserEngineKind.GeckoView, isPrivate = false)
     }
 
     @Test
     fun privateGeckoTabsRemainInteractiveWithoutPersistingPages() {
+        assumeFalse(BuildConfig.SYSTEM_WEBVIEW_ONLY)
         verifyInteraction(AndroidBrowserEngineKind.GeckoView, isPrivate = true)
     }
 

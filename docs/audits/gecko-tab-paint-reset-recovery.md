@@ -35,6 +35,8 @@ flowchart LR
 
 ## Verification
 
+Native runs and screenshots used commit `71835a8f`. A later test-only change adds the existing `SYSTEM_WEBVIEW_ONLY` skip pattern to the two Gecko methods; normal Full/Foss test bodies and production code are unchanged. Final CI compilation validates those guards. No additional device run at the guard commit is claimed.
+
 | Check | Before | After |
 | --- | --- | --- |
 | Original gate + first regression, Gradle FullDebug | 14/15 pass; reset-before-detach fails | 21/21 gate tests pass in both Full/Foss |
