@@ -23,17 +23,17 @@
 
 | Check | Result |
 | --- | --- |
-| Full unit suite | 1,796 passed; zero failures, errors or skipped. |
-| Foss unit suite | 1,796 passed; zero failures, errors or skipped. |
+| Full unit suite | 1,805 passed; zero failures, errors or skipped. |
+| Foss unit suite | 1,805 passed; zero failures, errors or skipped. |
 | New rules/catalog tests | 6 rules + 8 catalog tests passed in each variant. |
 | Full/Foss lint and debug assembly | Passed. |
 | Full instrumentation APK assembly | Passed. |
-| Dedicated API 34 MainActivity instrumentation | 6 passed in 62.862 seconds; zero skipped. |
+| Dedicated API 34 MainActivity instrumentation | 6 passed in 69.327 seconds; zero skipped. |
 | Localization script | 2 passed; search strings cover all 28 declared locales. |
 | Independent code/style review | No remaining blocking findings after focus/navigation and custom-control coverage corrections. |
-| Safe-area and Google Cast CI | Both passed on production-code commit `1e676f9c`; documentation/screenshots follow separately. |
+| Safe-area and Google Cast CI | Required workflows are tracked in [PR 261 checks](https://github.com/sk2andy/candy-browser/pull/261/checks); merge requires both to pass on the final PR head. |
 
-Local Gradle validation used `testFullDebugUnitTest testFossDebugUnitTest lintFullDebug lintFossDebug assembleFullDebug assembleFossDebug assembleFullDebugAndroidTest`, with two workers and Kotlin compilation in process. Device validation installed the resulting APKs and ran `SettingsSearchInstrumentedTest` plus `PlayerSettingsNavigationInstrumentedTest` through the AndroidJUnitRunner, with explicit `ANDROID_SERIAL=emulator-5674` and `adb -s emulator-5674`. The emulator and shared host lock were released after validation.
+Combined local validation used main commit `affa9d23` with feature/test snapshot `5b969968`. Local Gradle validation used `testFullDebugUnitTest testFossDebugUnitTest lintFullDebug lintFossDebug assembleFullDebug assembleFossDebug assembleFullDebugAndroidTest`, with two workers and Kotlin compilation in process. Device validation installed the resulting APKs and ran `SettingsSearchInstrumentedTest` plus `PlayerSettingsNavigationInstrumentedTest` through the AndroidJUnitRunner, with explicit `ANDROID_SERIAL=emulator-5674` and `adb -s emulator-5674`. The emulator and shared host lock were released after validation.
 
 Runtime coverage uses the English API 34 emulator. Other locales receive structural resource validation and pure matching coverage; physical devices and every locale/engine combination are not runtime-verified.
 
