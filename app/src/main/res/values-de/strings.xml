@@ -1428,4 +1428,7 @@
     <string name="command_site_data_target_changed">Dieser Tab oder seine Seite hat sich geändert. Es wird nichts gelöscht. Öffne die Website-Informationen erneut, um die aktuelle Seite zu prüfen.</string>
     <string name="settings_search_hint">Einstellungen suchen</string>
     <string name="settings_search_empty">Keine Einstellungen gefunden. Versuche einen anderen Suchbegriff.</string>
+    <string name="favorites_url">Website-URL</string>
+    <string name="favorites_manage">Favoriten bearbeiten</string>
+    <string name="favorites_refresh_icon">Symbol aktualisieren</string>
 </resources>

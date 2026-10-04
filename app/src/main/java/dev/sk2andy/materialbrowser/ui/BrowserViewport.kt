@@ -521,6 +521,7 @@ internal fun BrowserViewport(
                         onSearch = onSearch,
                         onFavorite = onFavorite,
                         onOpenFavorites = onOpenFavorites,
+                        onAddFavorite = controller::addFavorite,
                         onReorderFavorite = onReorderFavorite,
                         favoriteLaunchAnimationEnabled =
                             CandyAnimationRules.favoriteLaunchAnimationEnabled(

@@ -47,11 +47,32 @@ class NewTabPageInstrumentedTest {
     val composeRule = createComposeRule()
 
     @Test
-    fun emptyFavoritesHideContainer() {
+    fun emptyFavoritesKeepAddActionAvailable() {
         setNewTab(favorites = emptyList())
 
         composeRule.onNodeWithTag(NewTabFavoritesTestTags.Container).assertDoesNotExist()
-        composeRule.onNodeWithText(favoritesTitle()).assertDoesNotExist()
+        composeRule.onNodeWithText(favoritesTitle()).assertIsDisplayed()
+        composeRule.onNodeWithTag(NewTabFavoritesTestTags.Add).assertIsDisplayed()
+    }
+
+    @Test
+    fun manageActionOpensExistingFavoritesEditor() {
+        var opened = false
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                NewTabPage(
+                    favorites = listOf(favorite(1)),
+                    incognito = false,
+                    modeProgress = 0f,
+                    revealOriginInRoot = Offset.Zero,
+                    onSearch = {},
+                    onFavorite = {},
+                    onOpenFavorites = { opened = true },
+                )
+            }
+        }
+        composeRule.onNodeWithTag(NewTabFavoritesTestTags.Manage).performClick()
+        assertTrue(opened)
     }
 
     @Test

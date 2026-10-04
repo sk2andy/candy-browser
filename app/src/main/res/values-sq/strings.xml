@@ -1426,4 +1426,7 @@
     <string name="command_site_data_target_changed">Kjo skedë ose faqja e saj ndryshoi. Asgjë nuk do të fshihet. Hap sërish informacionin e faqes për të shqyrtuar faqen aktuale.</string>
     <string name="settings_search_hint">Kërko cilësime</string>
     <string name="settings_search_empty">Nuk u gjetën cilësime. Provoni një kërkim tjetër.</string>
+    <string name="favorites_url">URL-ja e faqes</string>
+    <string name="favorites_manage">Ndrysho të preferuarat</string>
+    <string name="favorites_refresh_icon">Rifresko ikonën</string>
 </resources>

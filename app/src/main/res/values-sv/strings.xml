@@ -1426,4 +1426,7 @@
     <string name="command_site_data_target_changed">Fliken eller dess sida har ändrats. Inget raderas. Öppna webbplatsinformationen igen för att granska den aktuella sidan.</string>
     <string name="settings_search_hint">Sök i inställningar</string>
     <string name="settings_search_empty">Inga inställningar hittades. Prova en annan sökning.</string>
+    <string name="favorites_url">Webbplatsens URL</string>
+    <string name="favorites_manage">Redigera favoriter</string>
+    <string name="favorites_refresh_icon">Uppdatera ikon</string>
 </resources>

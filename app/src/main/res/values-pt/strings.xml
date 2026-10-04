@@ -1433,4 +1433,7 @@
     <string name="command_site_data_target_changed">Este separador ou a sua página mudou. Nada será eliminado. Abre novamente as informações do site para rever a página atual.</string>
     <string name="settings_search_hint">Pesquisar configurações</string>
     <string name="settings_search_empty">Nenhuma configuração encontrada. Tente outra pesquisa.</string>
+    <string name="favorites_url">URL do site</string>
+    <string name="favorites_manage">Editar favoritos</string>
+    <string name="favorites_refresh_icon">Atualizar ícone</string>
 </resources>

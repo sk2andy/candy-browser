@@ -1444,4 +1444,7 @@
     <string name="command_site_data_target_changed">This tab or its page changed. Nothing will be deleted. Open the site information again to review the current page.</string>
     <string name="settings_search_hint">Search settings</string>
     <string name="settings_search_empty">No settings found. Try another search.</string>
+    <string name="favorites_url">Website URL</string>
+    <string name="favorites_manage">Edit favorites</string>
+    <string name="favorites_refresh_icon">Refresh icon</string>
 </resources>

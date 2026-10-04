@@ -1457,4 +1457,7 @@
     <string name="command_site_data_target_changed">Ta karta lub jej strona uległa zmianie. Nic nie zostanie usunięte. Otwórz ponownie informacje o witrynie, aby sprawdzić bieżącą stronę.</string>
     <string name="settings_search_hint">Szukaj ustawień</string>
     <string name="settings_search_empty">Nie znaleziono ustawień. Spróbuj innego wyszukiwania.</string>
+    <string name="favorites_url">URL witryny</string>
+    <string name="favorites_manage">Edytuj ulubione</string>
+    <string name="favorites_refresh_icon">Odśwież ikonę</string>
 </resources>

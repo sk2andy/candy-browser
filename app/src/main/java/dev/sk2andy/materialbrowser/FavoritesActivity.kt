@@ -143,6 +143,7 @@ class FavoritesActivity : ComponentActivity() {
                             chooseFolderIcon.launch("image/*")
                         }
                     },
+                    onRefreshFavoriteIcon = ::refreshFavoriteIcon,
                 )
             }
         }
@@ -184,7 +185,12 @@ class FavoritesActivity : ComponentActivity() {
                     loadedFolders += folderIconStore.loadAll(customIds)
                 }
                 ensureActive()
-                favoriteFavicons = loadedFavicons.toMap()
+                val currentFavoriteUrls = favoriteLibrary.favorites.map(FavoriteEntry::url).toSet()
+                loadedFavicons.filterKeys { it !in currentFavoriteUrls || it in favoriteFavicons }
+                    .values.forEach(retiredIcons::add)
+                favoriteFavicons.filterKeys { it !in currentFavoriteUrls }.values.forEach(retiredIcons::add)
+                favoriteFavicons = loadedFavicons.filterKeys(currentFavoriteUrls::contains) +
+                    favoriteFavicons.filterKeys(currentFavoriteUrls::contains)
                 // The picker or icon editor may finish while the initial cache load is running.
                 val currentCustomIds = favoriteLibrary.folders
                     .filter { it.icon == FavoriteFolderIcon.Custom }
@@ -202,6 +208,39 @@ class FavoritesActivity : ComponentActivity() {
                         if (!bitmap.isRecycled) bitmap.recycle()
                     }
                 }
+            }
+        }
+    }
+
+    private fun refreshFavoriteIcon(entry: FavoriteEntry) {
+        if (isFavoriteMutationInFlight || entry !in favoriteLibrary.favorites) return
+        val before = favoriteLibrary
+        isFavoriteMutationInFlight = true
+        lifecycleScope.launch {
+            var loaded: Bitmap? = null
+            var ownershipTransferred = false
+            try {
+                withContext(Dispatchers.IO) {
+                    favoriteFaviconRepository.capture(entry.url, bitmap = null, forceRefresh = true)
+                    if (favoriteFaviconRepository.flush()) {
+                        loaded = favoriteFaviconRepository.loadAll(listOf(entry.url))[entry.url]
+                    }
+                }
+                ensureActive()
+                if (favoriteLibrary != before) return@launch
+                val bitmap = loaded
+                if (bitmap == null) {
+                    Toast.makeText(this@FavoritesActivity, R.string.favorites_icon_failed, Toast.LENGTH_SHORT).show()
+                    return@launch
+                }
+                favoriteFavicons[entry.url]?.let(retiredIcons::add)
+                favoriteFavicons = favoriteFavicons + (entry.url to bitmap)
+                ownershipTransferred = true
+                favoriteRevision++
+                undoLibrary = null
+            } finally {
+                if (!ownershipTransferred) loaded?.let { if (!it.isRecycled) it.recycle() }
+                isFavoriteMutationInFlight = false
             }
         }
     }

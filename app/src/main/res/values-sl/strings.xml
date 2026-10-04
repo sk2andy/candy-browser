@@ -1458,4 +1458,7 @@
     <string name="command_site_data_target_changed">Ta zavihek ali njegova stran se je spremenila. Nič ne bo izbrisano. Znova odpri informacije o spletnem mestu, da pregledaš trenutno stran.</string>
     <string name="settings_search_hint">Poišči nastavitve</string>
     <string name="settings_search_empty">Ni najdenih nastavitev. Poskusite drugo iskanje.</string>
+    <string name="favorites_url">URL spletne strani</string>
+    <string name="favorites_manage">Uredi priljubljene</string>
+    <string name="favorites_refresh_icon">Osveži ikono</string>
 </resources>

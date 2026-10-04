@@ -1426,4 +1426,7 @@
     <string name="command_site_data_target_changed">Dette faneblad eller dets side er ændret. Intet bliver slettet. Åbn webstedsoplysningerne igen for at gennemgå den aktuelle side.</string>
     <string name="settings_search_hint">Søg i indstillinger</string>
     <string name="settings_search_empty">Ingen indstillinger fundet. Prøv en anden søgning.</string>
+    <string name="favorites_url">Webadresse</string>
+    <string name="favorites_manage">Rediger favoritter</string>
+    <string name="favorites_refresh_icon">Opdater ikon</string>
 </resources>

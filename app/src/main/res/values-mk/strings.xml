@@ -1426,4 +1426,7 @@
     <string name="command_site_data_target_changed">Ова јазиче или неговата страница се промени. Ништо нема да биде избришано. Повторно отвори ги информациите за страницата за да ја прегледаш тековната страница.</string>
     <string name="settings_search_hint">Пребарај поставки</string>
     <string name="settings_search_empty">Не се најдени поставки. Обидете се со друг поим.</string>
+    <string name="favorites_url">URL на веб-страницата</string>
+    <string name="favorites_manage">Уреди омилени</string>
+    <string name="favorites_refresh_icon">Освежи ја иконата</string>
 </resources>

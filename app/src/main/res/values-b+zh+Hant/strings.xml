@@ -1409,4 +1409,7 @@
     <string name="command_site_data_target_changed">此分頁或其頁面已變更。不會刪除任何內容。請重新開啟網站資訊以確認目前頁面。</string>
     <string name="settings_search_hint">搜尋設定</string>
     <string name="settings_search_empty">找不到設定。請嘗試其他搜尋詞。</string>
+    <string name="favorites_url">網站網址</string>
+    <string name="favorites_manage">編輯收藏</string>
+    <string name="favorites_refresh_icon">更新圖示</string>
 </resources>

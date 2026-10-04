@@ -1442,4 +1442,7 @@
     <string name="command_site_data_target_changed">Ova kartica ili njena stranica se promijenila. Ništa neće biti izbrisano. Ponovo otvori informacije o stranici kako bi pregledao trenutnu stranicu.</string>
     <string name="settings_search_hint">Pretraži postavke</string>
     <string name="settings_search_empty">Nema pronađenih postavki. Pokušajte s drugim pojmom.</string>
+    <string name="favorites_url">URL web-stranice</string>
+    <string name="favorites_manage">Uredi favorite</string>
+    <string name="favorites_refresh_icon">Osvježi ikonu</string>
 </resources>

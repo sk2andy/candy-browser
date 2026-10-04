@@ -1433,4 +1433,7 @@
     <string name="command_site_data_target_changed">Esta pestaña o su página ha cambiado. No se eliminará nada. Abre de nuevo la información del sitio para revisar la página actual.</string>
     <string name="settings_search_hint">Buscar ajustes</string>
     <string name="settings_search_empty">No se encontraron ajustes. Prueba otra búsqueda.</string>
+    <string name="favorites_url">URL del sitio web</string>
+    <string name="favorites_manage">Editar favoritos</string>
+    <string name="favorites_refresh_icon">Actualizar icono</string>
 </resources>

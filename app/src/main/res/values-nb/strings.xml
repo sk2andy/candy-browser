@@ -1426,4 +1426,7 @@
     <string name="command_site_data_target_changed">Denne fanen eller siden har endret seg. Ingenting blir slettet. Åpne nettstedsinformasjonen igjen for å se gjennom gjeldende side.</string>
     <string name="settings_search_hint">Søk i innstillinger</string>
     <string name="settings_search_empty">Ingen innstillinger funnet. Prøv et annet søk.</string>
+    <string name="favorites_url">Nettadresse</string>
+    <string name="favorites_manage">Rediger favoritter</string>
+    <string name="favorites_refresh_icon">Oppdater ikon</string>
 </resources>

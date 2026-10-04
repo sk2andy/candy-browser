@@ -1426,4 +1426,7 @@
     <string name="command_site_data_target_changed">Bu sekme veya sayfası değişti. Hiçbir şey silinmeyecek. Mevcut sayfayı gözden geçirmek için site bilgilerini yeniden açın.</string>
     <string name="settings_search_hint">Ayarlarda ara</string>
     <string name="settings_search_empty">Ayar bulunamadı. Başka bir arama deneyin.</string>
+    <string name="favorites_url">Web sitesi URL’si</string>
+    <string name="favorites_manage">Favorileri düzenle</string>
+    <string name="favorites_refresh_icon">Simgeyi yenile</string>
 </resources>
