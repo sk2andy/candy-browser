@@ -447,7 +447,7 @@ class MainActivity : AppCompatActivity() {
                         ) {
                             ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
                         } else {
-                            ActivityInfo.SCREEN_ORIENTATION_SENSOR
+                            ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
                         }
                         if (requestedOrientation != videoOrientation) applyBrowserSystemUi()
                     }
@@ -1816,6 +1816,7 @@ class MainActivity : AppCompatActivity() {
             isWebContentFullscreen = hideBrowserChrome,
             isLandscapeVideoFullscreen =
                 browserController.isSelectedLandscapeWebContentVideo,
+            usesSystemWebView = !browserController.usesGeckoEngine,
             isBrowserFullscreen = browserImmersive,
             isTabOverviewPortraitLocked = isTabOverviewPortraitLocked,
             supportsTabOverviewPortraitLock =
