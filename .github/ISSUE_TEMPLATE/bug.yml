@@ -7,7 +7,7 @@ body:
     attributes:
       value: |
         Please report only one problem per issue. Open a separate issue for each problem.
-        Issues collecting multiple problems cannot be tracked.
+        Issues collecting multiple problems cannot be tracked. They are not guaranteed to be addressed and may be closed automatically.
 
   - type: textarea
     id: description
