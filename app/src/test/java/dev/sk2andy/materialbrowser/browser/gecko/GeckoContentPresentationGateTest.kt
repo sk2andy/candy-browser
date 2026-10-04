@@ -7,6 +7,26 @@ import org.junit.Test
 
 class GeckoContentPresentationGateTest {
     @Test
+    fun `hidden document paint survives delayed paint reset until surface composites again`() {
+        val gate = GeckoContentPresentationGate()
+        gate.onSurfaceCreated()
+        gate.onFirstComposite()
+        gate.onFirstContentfulPaint()
+        gate.onSurfaceDestroyed()
+        gate.onPaintStatusReset()
+        var presentations = 0
+
+        gate.awaitContentPresented { presentations++ }
+        assertFalse(gate.isContentPresented)
+        gate.onSurfaceCreated()
+        assertFalse(gate.isContentPresented)
+        gate.onFirstComposite()
+
+        assertTrue(gate.isContentPresented)
+        assertEquals(1, presentations)
+    }
+
+    @Test
     fun `compositor alone cannot release preview handoff`() {
         val gate = GeckoContentPresentationGate()
         gate.onSurfaceCreated()
@@ -185,12 +205,13 @@ class GeckoContentPresentationGateTest {
     }
 
     @Test
-    fun `recreated surface after paint reset still waits for content paint`() {
+    fun `new navigation after surface loss cannot reuse previous document paint`() {
         val gate = GeckoContentPresentationGate()
         gate.onSurfaceCreated()
         gate.onFirstComposite()
         gate.onFirstContentfulPaint()
         gate.onSurfaceDestroyed()
+        gate.onNavigationStarted()
         gate.onPaintStatusReset()
         var presentations = 0
 
@@ -205,6 +226,57 @@ class GeckoContentPresentationGateTest {
 
         assertTrue(gate.isContentPresented)
         assertEquals(1, presentations)
+    }
+
+    @Test
+    fun `visible paint reset after recovery still waits for content paint`() {
+        val gate = GeckoContentPresentationGate()
+        gate.onSurfaceCreated()
+        gate.onFirstComposite()
+        gate.onFirstContentfulPaint()
+        gate.onSurfaceDestroyed()
+        gate.onPaintStatusReset()
+        gate.onSurfaceCreated()
+        gate.onFirstComposite()
+        gate.onPaintStatusReset()
+
+        gate.onFirstComposite()
+
+        assertFalse(gate.isContentPresented)
+        gate.onFirstContentfulPaint()
+        assertTrue(gate.isContentPresented)
+    }
+
+    @Test
+    fun `detached document survives delayed paint reset without another content paint`() {
+        val gate = GeckoContentPresentationGate()
+        gate.onSurfaceCreated()
+        gate.onFirstComposite()
+        gate.onFirstContentfulPaint()
+        gate.onSurfaceDetached()
+        gate.onPaintStatusReset()
+
+        gate.onFirstComposite()
+        assertFalse(gate.isContentPresented)
+        gate.onSurfaceCreated()
+        gate.onFirstComposite()
+
+        assertTrue(gate.isContentPresented)
+    }
+
+    @Test
+    fun `navigation on a live surface needs its own content paint`() {
+        val gate = GeckoContentPresentationGate()
+        gate.onSurfaceCreated()
+        gate.onFirstComposite()
+        gate.onFirstContentfulPaint()
+        gate.onNavigationStarted()
+
+        gate.onFirstComposite()
+        assertFalse(gate.isContentPresented)
+        gate.onFirstContentfulPaint()
+
+        assertTrue(gate.isContentPresented)
     }
 
     @Test

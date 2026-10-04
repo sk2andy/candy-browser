@@ -5,6 +5,7 @@
 | Need | Detail | Main code |
 | --- | --- | --- |
 | Runtime ownership, WebView lifecycle and navigation | [`runtime-and-navigation.md`](runtime-and-navigation.md) | `MainActivity`, `MainActivityPictureInPictureController`, `BrowserController`, `BrowserViewport`, `BrowserTab` |
+| Gecko page continuity after long background intervals | [`runtime-and-navigation.md`](runtime-and-navigation.md) | `GeckoContentPresentationGate`, `GeckoResumeCover`, `BrowserPageResumeInstrumentedTest` |
 | Default-on Auto De-AMP navigation and trusted URL shapes | [`runtime-and-navigation.md`](runtime-and-navigation.md#navigation-paths) | `AutoDeAmpRules`, `BrowserController`, `BrowserSessionStore`, `ProtectionSettingsPage` |
 | Android Gecko, Firefox extensions and iOS WebKit boundary | [`platform-engines.md`](platform-engines.md) | `BrowserController`, `browser/gecko`, `shared`, `iosApp` |
 | HTTPS-only modes, local warning and session exceptions | [`platform-engines.md`](platform-engines.md#https-only) | `HttpsOnlyMode`, `GeckoHttpsOnlyErrorPage`, `ProtectionSettingsPage` |
