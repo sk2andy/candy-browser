@@ -293,7 +293,8 @@ path defect found while reviewing #204 and the measured verification scope.
 
 | Contract | Behavior |
 | --- | --- |
-| Empty query | Show the existing Settings Home categories below the Material search field. |
+| Search presentation | Native Material 3 `SearchBar` and `SearchBarDefaults.InputField`, with a filled 56 dp pill, inline placeholder and theme colors. Results use native `ListItem` rows in one shared container below the bar, following the library-search pattern. |
+| Empty query | Show the existing Settings Home categories below the search bar. |
 | Matching | Match every word against localized title, description or page context, ignoring case and accents. Prefer exact titles, then title matches; preserve catalog order for ties. |
 | Availability | Build entries from current browser/search engine, suggestion provider, flavor capabilities, download manager, appearance and developer unlock. Do not index unavailable conditional controls or user-owned data. |
 | Navigation | Open the existing settings destination without changing a preference. Common choices, switches, links and sliders scroll the matched control into view and show a theme-colored outline. External Firefox extensions use the existing action. |
