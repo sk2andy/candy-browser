@@ -2,6 +2,8 @@ package dev.sk2andy.materialbrowser.data
 
 import android.content.Context
 import android.net.Uri
+import android.util.Log
+import dev.sk2andy.materialbrowser.BuildConfig
 import java.io.File
 import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.ThreadPoolExecutor
@@ -115,6 +117,18 @@ internal object AppLogging {
                 }
             }
         }
+    }
+
+    /** Debug Logcat uses the same sanitized payload and private-owner gate as opt-in app logs. */
+    @Synchronized
+    fun recordDiagnostic(event: AppLogEvent, isPrivate: Boolean, error: Throwable? = null) {
+        if (isPrivate || privateBrowsingActive) return
+        if (BuildConfig.DEBUG) {
+            runCatching {
+                Log.d("CandyDownload", AppLogRules.render(event, System.currentTimeMillis(), error))
+            }
+        }
+        record(event, error)
     }
 
     @Synchronized

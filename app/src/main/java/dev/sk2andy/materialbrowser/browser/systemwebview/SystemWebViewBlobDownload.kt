@@ -5,8 +5,14 @@ import android.net.Uri
 import android.os.Handler
 import android.os.Looper
 import android.util.Base64
+import android.webkit.RenderProcessGoneDetail
+import android.webkit.WebResourceError
+import android.webkit.WebResourceRequest
 import android.webkit.WebView
+import android.webkit.WebViewClient
+import androidx.annotation.UiThread
 import androidx.webkit.JavaScriptReplyProxy
+import androidx.webkit.Profile
 import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoDownloadCancellation
@@ -17,6 +23,7 @@ import dev.sk2andy.materialbrowser.browser.gecko.GeckoDownloadStreamSink
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoDownloadTransferListener
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoDownloadTransferStart
 import dev.sk2andy.materialbrowser.browser.gecko.MediaStoreDownloadStreamSink
+import dev.sk2andy.materialbrowser.data.AppLogEvent
 import dev.sk2andy.materialbrowser.data.DownloadRuntimeRegistry
 import dev.sk2andy.materialbrowser.data.SafeDownloadValues
 import java.net.URI
@@ -29,10 +36,12 @@ import org.json.JSONObject
 
 /** Resolves renderer-owned `blob:` downloads and streams them into scoped storage. */
 internal class SystemWebViewBlobDownloadTransfer(
-    context: Context,
+    private val context: Context,
     private val webView: WebView,
     private val sink: GeckoDownloadStreamSink = MediaStoreDownloadStreamSink(context),
     private val notifier: CandyDownloadNotifier = CandyDownloadNotifier(context),
+    private val helperFactory: (Context) -> WebView = ::WebView,
+    private val diagnostic: (AppLogEvent, Throwable?) -> Unit = { _, _ -> },
 ) : AutoCloseable {
     private data class Operation(
         val id: Int,
@@ -42,6 +51,7 @@ internal class SystemWebViewBlobDownloadTransfer(
         val reportedMimeType: String?,
         val referrer: String?,
         val listener: GeckoDownloadTransferListener,
+        val opaqueImage: Boolean,
         val terminal: AtomicBoolean = AtomicBoolean(false),
         var entry: GeckoDownloadStreamEntry? = null,
         var start: GeckoDownloadTransferStart? = null,
@@ -49,22 +59,20 @@ internal class SystemWebViewBlobDownloadTransfer(
         var receivedBytes: Long = 0,
         var completed: Boolean = false,
         var timeout: Runnable? = null,
+        var helper: WebView? = null,
     )
 
     private val token = UUID.randomUUID().toString().replace("-", "")
     private val operations = ConcurrentHashMap<Int, Operation>()
+    private val helperOperations = mutableMapOf<Int, Operation>()
     private val mainHandler = Handler(Looper.getMainLooper())
     private val io = Executors.newSingleThreadExecutor { runnable ->
         Thread(runnable, "candy-system-blob-download").apply { isDaemon = true }
     }
-    private var listenerInstalled = false
     @Volatile
     private var closed = false
 
-    init {
-        installListener()
-    }
-
+    @UiThread
     fun start(
         blobUrl: String,
         pageUrl: String?,
@@ -74,9 +82,12 @@ internal class SystemWebViewBlobDownloadTransfer(
         listener: GeckoDownloadTransferListener,
     ): GeckoDownloadCancellation? {
         val safePageUrl = pageUrl?.takeIf {
-            SystemWebViewBlobDownloadRules.isSameOriginBlob(blobUrl, it)
+            SystemWebViewBlobDownloadRules.isSupportedBlob(blobUrl, it, mimeType)
         }
-        if (safePageUrl == null || closed || !installListener()) {
+        if (
+            safePageUrl == null || closed ||
+            !WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)
+        ) {
             dispatch { listener.onFailed(GeckoDownloadFailure.InvalidRequest) }
             return null
         }
@@ -89,18 +100,14 @@ internal class SystemWebViewBlobDownloadTransfer(
             reportedMimeType = mimeType,
             referrer = referrer,
             listener = listener,
+            opaqueImage = SystemWebViewBlobDownloadRules.isOpaqueImageBlob(blobUrl, safePageUrl, mimeType),
         )
         operations[id] = operation
-        webView.evaluateJavascript(
-            SystemWebViewBlobDownloadScript.create(
-                token = token,
-                id = id,
-                blobUrl = blobUrl,
-                reportedMimeType = mimeType,
-            ),
-            null,
-        )
         scheduleTimeout(operation)
+        runCatching { startHelper(operation) }.onFailure {
+            diagnostic(AppLogEvent.SystemDownloadHelperSetupFailed, it)
+            cancel(id, GeckoDownloadFailure.InvalidRequest)
+        }
         return GeckoDownloadCancellation { cancel(id, GeckoDownloadFailure.Cancelled) }
     }
 
@@ -113,52 +120,133 @@ internal class SystemWebViewBlobDownloadTransfer(
         }
     }
 
+    @UiThread
     override fun close() {
         if (closed) return
         closed = true
+        // Release even terminal helpers with queued cleanup before the owning session closes.
+        helperOperations.values.toList().forEach(::destroyHelper)
         io.execute {
             operations.values.toList().forEach { operation ->
                 fail(operation, GeckoDownloadFailure.Cancelled)
             }
         }
         io.shutdown()
-        if (
-            listenerInstalled &&
-            WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)
-        ) {
-            runCatching { WebViewCompat.removeWebMessageListener(webView, BRIDGE_NAME) }
-        }
-        listenerInstalled = false
     }
 
-    private fun installListener(): Boolean {
-        if (listenerInstalled) return true
-        if (!WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)) return false
-        return runCatching {
-            WebViewCompat.addWebMessageListener(webView, BRIDGE_NAME, setOf("*")) {
-                    _, message, sourceOrigin, isMainFrame, replyProxy,
-                ->
-                receive(message.data, sourceOrigin, isMainFrame, replyProxy)
+    private fun startHelper(operation: Operation) {
+        // Same-origin blobs use app HTML; opaque PNG/JPEG blobs use their own passive image document.
+        // Both stay in the source profile and never re-fetch the image from the network.
+        val helper = helperFactory(context).also { operation.helper = it }
+        helperOperations[operation.id] = operation
+        if (WebViewFeature.isFeatureSupported(WebViewFeature.MULTI_PROFILE)) {
+            val profileName = WebViewCompat.getProfile(webView).name
+            if (profileName != Profile.DEFAULT_PROFILE_NAME) {
+                WebViewCompat.setProfile(helper, profileName)
             }
-            listenerInstalled = true
-        }.isSuccess
+        }
+        helper.settings.apply {
+            javaScriptEnabled = true
+            blockNetworkLoads = true
+            allowFileAccess = false
+            allowContentAccess = false
+        }
+        WebViewCompat.addWebMessageListener(helper, BRIDGE_NAME, setOf("*")) {
+                view, message, sourceOrigin, isMainFrame, replyProxy,
+            ->
+            receive(view, message.data, sourceOrigin, isMainFrame, replyProxy)
+        }
+        helper.webViewClient = object : WebViewClient() {
+            private var scriptStarted = false
+
+            override fun shouldOverrideUrlLoading(
+                view: WebView,
+                request: WebResourceRequest,
+            ): Boolean = true
+
+            override fun onPageFinished(view: WebView, url: String?) {
+                if (closed || operation.terminal.get() || scriptStarted) return
+                if (operation.opaqueImage && (url != operation.blobUrl || view.url != operation.blobUrl)) {
+                    return
+                }
+                scriptStarted = true
+                view.evaluateJavascript(
+                    SystemWebViewBlobDownloadScript.create(
+                        token = token,
+                        id = operation.id,
+                        blobUrl = operation.blobUrl,
+                        reportedMimeType = operation.reportedMimeType,
+                        opaqueImage = operation.opaqueImage,
+                    ),
+                    null,
+                )
+            }
+
+            override fun onRenderProcessGone(
+                view: WebView,
+                detail: RenderProcessGoneDetail,
+            ): Boolean {
+                cancel(operation.id, GeckoDownloadFailure.Network)
+                return true
+            }
+
+            override fun onReceivedError(
+                view: WebView,
+                request: WebResourceRequest,
+                error: WebResourceError,
+            ) {
+                if (request.isForMainFrame) {
+                    diagnostic(AppLogEvent.SystemDownloadHelperLoadFailed, null)
+                    cancel(operation.id, GeckoDownloadFailure.Network)
+                }
+            }
+        }
+        helper.setDownloadListener { _, _, _, _, _ ->
+            cancel(operation.id, GeckoDownloadFailure.InvalidRequest)
+        }
+        if (operation.opaqueImage) {
+            helper.loadUrl(operation.blobUrl)
+        } else {
+            helper.loadDataWithBaseURL(operation.pageUrl, "<html></html>", "text/html", "utf-8", null)
+        }
+    }
+
+    private fun releaseHelper(operation: Operation) {
+        mainHandler.post { destroyHelper(operation) }
+    }
+
+    private fun destroyHelper(operation: Operation) {
+        helperOperations.remove(operation.id)
+        val helper = operation.helper ?: return
+        operation.helper = null
+        runCatching { WebViewCompat.removeWebMessageListener(helper, BRIDGE_NAME) }
+        runCatching { helper.stopLoading() }
+        runCatching { helper.destroy() }
     }
 
     private fun receive(
+        view: WebView,
         raw: String?,
         sourceOrigin: Uri,
         isMainFrame: Boolean,
         replyProxy: JavaScriptReplyProxy,
     ) {
+        if (closed) return
         val message = SystemWebViewBlobDownloadMessage.parse(raw, token) ?: return
         val operation = operations[message.id] ?: return
+        if (operation.helper !== view) return
         if (
             !isMainFrame ||
-            !SystemWebViewBlobDownloadRules.isSameOrigin(sourceOrigin.toString(), operation.pageUrl)
+            if (operation.opaqueImage) {
+                // `null` is not an origin identity; bind the passive helper to this exact blob instead.
+                view.url != operation.blobUrl
+            } else {
+                !SystemWebViewBlobDownloadRules.isSameOrigin(sourceOrigin.toString(), operation.pageUrl)
+            }
         ) {
             io.execute {
                 fail(operation, GeckoDownloadFailure.InvalidRequest)
-                reply(replyProxy, message, accepted = false)
+                reply(operation, replyProxy, message, accepted = false)
             }
             return
         }
@@ -173,6 +261,7 @@ internal class SystemWebViewBlobDownloadTransfer(
                         is SystemWebViewBlobDownloadMessage.Chunk -> append(operation, message)
                         is SystemWebViewBlobDownloadMessage.Finish -> finish(operation, message)
                         is SystemWebViewBlobDownloadMessage.Error -> {
+                            diagnostic(AppLogEvent.SystemDownloadBridgeError, null)
                             fail(operation, GeckoDownloadFailure.Network)
                         }
                     }
@@ -183,11 +272,12 @@ internal class SystemWebViewBlobDownloadTransfer(
                     }
                 }
             }
-            reply(replyProxy, message, accepted)
+            reply(operation, replyProxy, message, accepted)
         }
     }
 
     private fun reply(
+        operation: Operation,
         replyProxy: JavaScriptReplyProxy,
         message: SystemWebViewBlobDownloadMessage,
         accepted: Boolean,
@@ -200,8 +290,13 @@ internal class SystemWebViewBlobDownloadTransfer(
             operations[message.id]?.let(::scheduleTimeout)
         }
         mainHandler.post {
-            if (!closed) {
-                replyProxy.postMessage(SystemWebViewBlobDownloadMessage.reply(message, accepted))
+            if (!closed && !operation.terminal.get()) {
+                runCatching {
+                    replyProxy.postMessage(SystemWebViewBlobDownloadMessage.reply(message, accepted))
+                }.onFailure {
+                    diagnostic(AppLogEvent.SystemDownloadBridgeReplyFailed, it)
+                    cancel(operation.id, GeckoDownloadFailure.Network)
+                }
             }
         }
     }
@@ -211,6 +306,7 @@ internal class SystemWebViewBlobDownloadTransfer(
         val timeout = Runnable {
             val current = operations[operation.id]
             if (current === operation && current.nextSequence == expectedSequence) {
+                diagnostic(AppLogEvent.SystemDownloadTimedOut, null)
                 cancel(operation.id, GeckoDownloadFailure.Network)
             }
         }
@@ -237,14 +333,19 @@ internal class SystemWebViewBlobDownloadTransfer(
             return
         }
         val mimeType = SafeDownloadValues.mimeType(
-            message.mimeType.ifBlank { operation.reportedMimeType },
+            if (operation.opaqueImage) message.mimeType else message.mimeType.ifBlank { operation.reportedMimeType },
         )
+        if (operation.opaqueImage && mimeType != SafeDownloadValues.mimeType(operation.reportedMimeType)) {
+            fail(operation, GeckoDownloadFailure.InvalidRequest)
+            return
+        }
         val fileName = SafeDownloadValues.fileName(
             operation.blobUrl,
             operation.contentDisposition,
             mimeType,
         )
         val entry = runCatching { sink.open(fileName, mimeType) }.getOrElse {
+            diagnostic(AppLogEvent.SystemDownloadSinkOpenFailed, it)
             fail(operation, GeckoDownloadFailure.Storage)
             return
         }
@@ -295,7 +396,8 @@ internal class SystemWebViewBlobDownloadTransfer(
             fail(operation, GeckoDownloadFailure.InvalidRequest)
             return
         }
-        if (runCatching { entry.output.write(bytes) }.isFailure) {
+        runCatching { entry.output.write(bytes) }.getOrElse {
+            diagnostic(AppLogEvent.SystemDownloadSinkWriteFailed, it)
             fail(operation, GeckoDownloadFailure.Storage)
             return
         }
@@ -321,7 +423,8 @@ internal class SystemWebViewBlobDownloadTransfer(
             fail(operation, GeckoDownloadFailure.Network)
             return
         }
-        if (runCatching(entry::commit).isFailure) {
+        runCatching(entry::commit).getOrElse {
+            diagnostic(AppLogEvent.SystemDownloadSinkCommitFailed, it)
             fail(operation, GeckoDownloadFailure.Storage)
             return
         }
@@ -330,6 +433,7 @@ internal class SystemWebViewBlobDownloadTransfer(
         operation.terminal.set(true)
         operations.remove(operation.id)
         clearTimeout(operation)
+        releaseHelper(operation)
         DownloadRuntimeRegistry.completed(operation.id)
         dispatch { operation.listener.onComplete(operation.receivedBytes) }
         notifier.complete(
@@ -350,6 +454,7 @@ internal class SystemWebViewBlobDownloadTransfer(
         if (!operation.terminal.compareAndSet(false, true)) return
         operations.remove(operation.id)
         clearTimeout(operation)
+        releaseHelper(operation)
         runCatching { operation.entry?.abort() }
         if (operation.start != null) {
             DownloadRuntimeRegistry.failed(
@@ -377,6 +482,17 @@ internal class SystemWebViewBlobDownloadTransfer(
 }
 
 internal object SystemWebViewBlobDownloadRules {
+    fun isSupportedBlob(blobUrl: String, pageUrl: String, mimeType: String?): Boolean =
+        isSameOriginBlob(blobUrl, pageUrl) || isOpaqueImageBlob(blobUrl, pageUrl, mimeType)
+
+    fun isOpaqueImageBlob(blobUrl: String, pageUrl: String, mimeType: String?): Boolean {
+        if (origin(pageUrl) == null) return false
+        if (SafeDownloadValues.mimeType(mimeType) !in PASSIVE_IMAGE_MIME_TYPES) return false
+        if (blobUrl.length != 46 || !blobUrl.startsWith("blob:null/")) return false
+        val identifier = blobUrl.removePrefix("blob:null/")
+        return runCatching { UUID.fromString(identifier).toString() == identifier }.getOrDefault(false)
+    }
+
     fun isPopupBlobDownload(
         blobUrl: String,
         pageUrl: String,
@@ -407,6 +523,8 @@ internal object SystemWebViewBlobDownloadRules {
         val port = uri.port.takeUnless { it == -1 } ?: if (scheme == "https") 443 else 80
         Triple(scheme, host, port)
     }.getOrNull()
+
+    private val PASSIVE_IMAGE_MIME_TYPES = setOf("image/png", "image/jpeg")
 }
 
 internal sealed interface SystemWebViewBlobDownloadMessage {
@@ -476,9 +594,18 @@ internal sealed interface SystemWebViewBlobDownloadMessage {
 }
 
 internal object SystemWebViewBlobDownloadScript {
-    fun create(token: String, id: Int, blobUrl: String, reportedMimeType: String?): String {
+    fun create(
+        token: String,
+        id: Int,
+        blobUrl: String,
+        reportedMimeType: String?,
+        opaqueImage: Boolean = false,
+    ): String {
         require(token.matches(Regex("[A-Za-z0-9_-]{32,80}")))
         require(id > 0)
+        val mimeExpression = if (opaqueImage) "blob.type" else {
+            "blob.type || ${JSONObject.quote(reportedMimeType.orEmpty())}"
+        }
         return """
             (async () => {
               const bridge = globalThis.CandySystemBlobDownloadBridge;
@@ -522,7 +649,7 @@ internal object SystemWebViewBlobDownloadScript {
                   id,
                   sequence: sequence++,
                   type: 'start',
-                  mime: blob.type || ${JSONObject.quote(reportedMimeType.orEmpty())},
+                  mime: $mimeExpression,
                   total: blob.size
                 });
                 const chunkSize = 24 * 1024;

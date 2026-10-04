@@ -1,0 +1,129 @@
+# Issue 248: System WebView blob downloads and CSP
+
+## Scope and live evidence
+
+| Evidence | Result |
+| --- | --- |
+| Issue attachment filename | Ends in `dev.sk2andy.materialbrowser.systemwebview.jpg`; no readable image was attached |
+| User's local Gecko test | Download works; no Gecko change is included |
+| Dedicated Android emulator | Android 16 / API 36, System WebView `133.0.6943.137` |
+| Signed Candy System WebView release | Version 0.45.1, official APK checksum verified |
+| Gemini free, signed out | Submitted a request for a red circle on a white background; Gemini answered that image creation requires signing in |
+| User-authorized Pixel 11 Pro | Android 17 / API 37, System WebView `153.0.8010.36`; auto-rotate remained disabled |
+| Installed regular Candy on Pixel | Version 0.45.1 with System WebView selected; existing Google login retained |
+| Gemini free, signed in on Pixel | Gemini Flash generated an image; the user repeatedly reproduced the download-button snackbar, "Download konnte nicht gestartet werden" |
+| Initial CSP-only patch | Still failed in the signed-in diagnostic app; native logs and debugger identified an opaque `blob:null/` request |
+| Final opaque-image patch | Two signed-in Gemini downloads completed on Pixel; user independently confirmed success |
+
+The user confirmed a live System WebView download failure: Gemini creates an opaque-origin JPEG
+blob, which the original same-origin route rejects. The final patch supports this specific passive
+image path and has passed live Gemini acceptance. The independently reproduced CSP defect below
+also remains covered; it was not the cause of the opaque URL's native rejection.
+
+## Confirmed live failure
+
+| Evidence in the signed-in diagnostic app | Finding |
+| --- | --- |
+| Repeated native callbacks | `SystemDownloadResponseReceived` → `SystemDownloadRequested` → `SystemDownloadPlatform` → `SystemDownloadInvalidRequest` |
+| Native callback breakpoint, URL-type-only inspection | Download URL starts with `blob:null/`; owning main WebView URL uses HTTPS |
+| Text/DOM and frame-context probe | Gemini creates the JPEG blob inside an opaque sandboxed frame; its sandbox permits scripts and downloads but excludes same-origin access |
+| Actual rejection | `isSameOriginBlob` cannot match the opaque blob to the HTTPS main document; fallback `startDownload` rejects its non-HTTP(S) scheme |
+| Native stack trace | None: this is an explicit `InvalidRequest` callback before DownloadManager enqueue or storage access, not a caught exception |
+| Executed capability probe | A fresh profile-matched passive image helper navigated to the exact opaque blob and read its original bytes, even with creator `connect-src 'none'` |
+| Final native callback trace | `SystemDownloadResponseReceived` → `SystemDownloadRequested` → `SystemDownloadBlobHelper` → `SystemDownloadStarted` → `SystemDownloadCompleted` |
+| Completed live files | Two Candy-owned JPEG rows, 732,621 and 846,572 bytes, both 1,408 × 768 pixels and `is_pending=0` |
+
+Opaque origin serialization `null` is not an origin identity. Do not relax the existing same-origin
+gate by comparing two `null` strings, or execute arbitrary opaque HTML/SVG blobs in a JavaScript
+enabled helper. The verified path instead uses the exact requested URL and source profile, with
+native PNG/JPEG MIME gating and a matching fetched MIME type before storage opens.
+
+## Pixel diagnostics
+
+| Capture | Finding |
+| --- | --- |
+| Release-process Logcat, including repeated attempts | No download exception stack trace or concrete transfer failure reason was recorded |
+| Temporary WebView `webview-log-js-console-messages` flag | Exposed report-only script CSP warnings and repeated "No ID or name found in config" messages; neither identifies the download failure |
+| Android DownloadManager/DownloadProvider tags | No matching diagnostic records |
+| Shared download response callback | `startBuiltInDownloadResponse` discards `onFailed(reason)` and displays the generic snackbar |
+| Blob JavaScript | Catches exceptions and sends a generic bridge error without the exception details |
+
+The existing release logs cannot distinguish an invalid request, blob fetch failure, storage
+failure or timeout. A report-only script CSP warning is not evidence of a blocked blob fetch.
+Console capture followed the [documented WebView flag workflow](https://developer.android.com/develop/ui/views/layout/webapps/debug-javascript-console-logs).
+The flag and the notification permission required by DevTools were returned to their prior states.
+
+The diagnostic build now wraps System WebView's native download response and transfer callbacks.
+It records fixed route, failure-reason and helper/bridge/storage stage events. Caught native
+exceptions retain bounded classes and code frames, without messages or request metadata.
+Opt-in app logs and debug-only `CandyDownload` Logcat share the global private-owner gate;
+private sessions remain excluded after their callbacks outlive the tab. Gecko is unchanged.
+
+The separate `Candy #248` package preserves the signed release's data. Its own signed-in WebView
+profile was used for the successful original Gemini download test.
+
+## Controlled reproduction
+
+| Scenario on unchanged production code | Result |
+| --- | --- |
+| Genuine touch opens a same-origin PNG blob popup without CSP | Download completes |
+| Same popup with `connect-src 'self'` | Transfer reports `Network`; Chromium logs a CSP refusal for `fetch(blob:...)` |
+| App-owned HTML, same origin and default profile | The original PNG can be read from another WebView |
+
+The fixture uses a valid 2-by-1 PNG with a red and green pixel. Assertions check the exact bytes,
+decoded dimensions and colors, stored MIME type, extension, and completed MediaStore row.
+The popup regression uses a real touch and the production popup/download routing.
+
+`connect-src 'self'` does not authorize a `blob:` fetch from an HTTPS/HTTP document. Candy's injected
+JavaScript previously inherited that restriction. The website can display or open its image while
+Candy's native transfer fails. See the [CSP source matching rules](https://www.w3.org/TR/CSP/#match-url-to-source-expression).
+
+## Transfer ownership
+
+```mermaid
+flowchart LR
+    A[Native blob download callback] --> B{Blob type}
+    B --> C[Same-origin blob]
+    C --> D[App HTML with source origin and exact profile]
+    B --> H[Canonical opaque PNG or JPEG]
+    H --> I[Exact blob image document in source profile]
+    I --> J[Verify helper URL and fetched MIME]
+    J --> E[Bounded original-byte chunks]
+    D --> E
+    E --> F[Scoped MediaStore file]
+    F --> G[Destroy helper]
+    D --> K[Failure or cancellation]
+    I --> K
+    K --> G
+```
+
+The helper copies the exact source profile before any settings or navigation. Profile lookup errors
+fail the transfer rather than falling back to the default profile. It blocks network, file and
+content access. Same-origin transfers execute app-owned HTML; opaque PNG/JPEG transfers load the
+passive image document and inject app-owned transfer JavaScript. The source page's CSP is unchanged.
+Native messages retain main-frame, helper-identity, token and sequence checks, plus source origin
+for same-origin transfers or the exact requested helper URL for opaque image transfers;
+existing size, chunk, timeout, cancellation and storage rules remain in force.
+
+Helper cleanup runs on the main thread on every terminal outcome. `close()` destroys all live
+helpers synchronously, including terminal operations awaiting posted cleanup. Repeated cleanup
+is idempotent. Tests inspect real WebView destruction directly: loaded profiles cannot be assumed
+immediately deletable by [ProfileStore](https://developer.android.com/reference/androidx/webkit/ProfileStore#deleteProfile(java.lang.String)).
+
+## Verification
+
+| Check | Coverage |
+| --- | --- |
+| `SystemWebViewBlobDownloadInstrumentedTest` | 19 regressions: native and CSP popups; opaque PNG/JPEG bytes and metadata; isolated/private profiles; foreign-profile and revoked-URL refusal; real sandboxed native downloads; pending cancellation; synchronous helper close |
+| User-authorized Pixel, API 37 / WebView 153.0.8010.36 | Original 11 regressions passed before the opaque-image patch; live final-patch JPEG downloads and regular, isolated and private opaque transfer fixtures passed |
+| Final 19-test device run | Touch fixtures were blocked by the Pixel lock screen. Foreign/revoked opaque fixtures initially waited 15 seconds, shorter than the native 30-second failure boundary; only these rejection waits now allow 35 seconds. The complete unlocked rerun remains outstanding |
+| `testFullDebugUnitTest`, `testFossDebugUnitTest` | Shared Android/JVM regressions |
+| Final Full/Foss JVM suites | 1,793 tests per flavor, including opaque URL/MIME policy and native diagnostic regressions; no failures or skips |
+| Pixel native diagnostic privacy test | Passed; private owners/sessions suppressed, actual sanitized exception frames visible in Logcat |
+| `lintSystemwebviewDebug` | Android/WebView contracts |
+| `assembleSystemwebviewDebug`, `assembleSystemwebviewDebugAndroidTest` | APK and instrumentation compilation |
+| Manual controlled-page download | Candy's Downloads screen shows `download.png`, Finished, 72 B / 72 B |
+
+Run device tests only on the session's dedicated emulator, or on a physical device explicitly
+selected by the user; always use its explicit ADB serial.
+Live signed-in free Gemini acceptance is complete and confirmed by the user.

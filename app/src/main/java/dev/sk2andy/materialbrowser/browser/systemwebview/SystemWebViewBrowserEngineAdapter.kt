@@ -373,7 +373,12 @@ private class SystemWebViewBrowserEngineSession(
     private val profileId = profileId
     private val webView = SystemWebViewHost(context, ::onSafeAreaFallback, ::onStatusBarBackdrop)
     private val host = webView
-    private val blobDownloadTransfer = SystemWebViewBlobDownloadTransfer(appContext, webView)
+    private val downloadDiagnostics = SystemWebViewDownloadDiagnostics(isPrivate)
+    private val blobDownloadTransfer = SystemWebViewBlobDownloadTransfer(
+        appContext,
+        webView,
+        diagnostic = downloadDiagnostics::record,
+    )
     private var closed = false
     private var active = true
     private var desktopMode = false
@@ -568,7 +573,11 @@ private class SystemWebViewBrowserEngineSession(
     }
 
     override fun setDownloadResponseListener(listener: GeckoDownloadResponseListener?) {
-        downloadResponseListener = listener
+        downloadResponseListener = listener?.let { delegate ->
+            GeckoDownloadResponseListener { response ->
+                delegate.onDownloadResponse(downloadDiagnostics.response(response))
+            }
+        }
     }
 
     override fun startContextDownload(
@@ -578,7 +587,7 @@ private class SystemWebViewBrowserEngineSession(
         url = request.url,
         contentDisposition = request.suggestedFileName?.let { "attachment; filename=\"$it\"" },
         mimeType = null,
-        listener = listener,
+        listener = downloadDiagnostics.transferListener(listener),
     )
 
     override fun setFilePromptListener(listener: GeckoFilePromptListener?) {
@@ -1038,11 +1047,13 @@ private class SystemWebViewBrowserEngineSession(
                 metadata = metadata,
                 startTransfer = { listener ->
                     if (
-                        SystemWebViewBlobDownloadRules.isSameOriginBlob(
+                        SystemWebViewBlobDownloadRules.isSupportedBlob(
                             url,
                             pageUrl.orEmpty(),
+                            mimeType,
                         )
                     ) {
+                        downloadDiagnostics.record(AppLogEvent.SystemDownloadBlobHelper)
                         blobDownloadTransfer.start(
                             blobUrl = url,
                             pageUrl = pageUrl,
@@ -1830,6 +1841,7 @@ private class SystemWebViewBrowserEngineSession(
         mimeType: String?,
         listener: GeckoDownloadTransferListener,
     ): GeckoDownloadCancellation? {
+        downloadDiagnostics.record(AppLogEvent.SystemDownloadPlatform)
         val safeUri = runCatching { Uri.parse(url) }.getOrNull()
             ?.takeIf { it.scheme == "http" || it.scheme == "https" }
             ?: run {
@@ -1867,6 +1879,7 @@ private class SystemWebViewBrowserEngineSession(
         request.addRequestHeader("User-Agent", webView.settings.userAgentString)
         val manager = appContext.getSystemService(DownloadManager::class.java) ?: return null
         val id = runCatching { manager.enqueue(request) }.getOrElse {
+            downloadDiagnostics.record(AppLogEvent.SystemDownloadEnqueueFailed, it)
             listener.onFailed(GeckoDownloadFailure.Storage)
             return null
         }
