@@ -38,6 +38,7 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import dev.sk2andy.materialbrowser.R
+import dev.sk2andy.materialbrowser.shared.ui.settings.settingsSearchTarget
 import dev.sk2andy.materialbrowser.browser.InlineMediaPlayerSeekSettingsRules
 import dev.sk2andy.materialbrowser.ui.theme.browserChromeColor
 import kotlin.math.roundToInt
@@ -67,7 +68,7 @@ internal fun InlineMediaPlayerSeekSlider(
     val colors = SliderDefaults.colors()
 
     Surface(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().settingsSearchTarget(title),
         shape = MaterialTheme.shapes.large,
         color = browserChromeColor(MaterialTheme.colorScheme.surfaceContainerHigh),
     ) {

@@ -48,6 +48,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import dev.sk2andy.materialbrowser.R
+import dev.sk2andy.materialbrowser.shared.ui.settings.settingsSearchTarget
 import dev.sk2andy.materialbrowser.browser.actions.ExternalDownloadManagerApp
 import dev.sk2andy.materialbrowser.browser.suggestions.SearchSuggestionProvider
 import dev.sk2andy.materialbrowser.data.BrowserAddressBarColorPreset
@@ -100,6 +101,7 @@ internal fun PrivacyXRaySettingsCounter(
         modifier = modifier
             .fillMaxWidth()
             .sizeIn(minHeight = 48.dp)
+            .settingsSearchTarget(stringResource(R.string.privacy_xray_title))
             .testTag(PrivacyXRayTestTags.SettingsCounter),
         shape = MaterialTheme.shapes.large,
         color = MaterialTheme.colorScheme.primaryContainer,

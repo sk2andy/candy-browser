@@ -13,10 +13,13 @@
   let checkedSelectorTops = new WeakSet();
   let negativeTopMarker = "";
   const hostname = typeof globalThis.location?.hostname === "string" ? globalThis.location.hostname.toLowerCase().replace(/\.$/, "") : "";
+  const amazonIndia = hostname === "amazon.in" || hostname.endsWith(".amazon.in");
   const knownTopSelectors = hostname === "amazon.de" || hostname.endsWith(".amazon.de") ?
     [":root #btf-sub-nav-top-navigation-bar.persistent-header"] :
+    amazonIndia ? [":root .s-mobile-toolbar-sticky"] :
     ["google.com", "google.de"].some((host) => hostname === host || hostname.endsWith(`.${host}`)) ?
       [":root #navd", ":root #tsf .A7Yvie.emcav"] : [];
+  const hiddenTopSelectors = amazonIndia ? [":root .s-mobile-toolbar-sticky.s-mobile-toolbar-offscreen"] : [];
   const knownTopMatcher = knownTopSelectors.join(", ");
   const markerPrefix = `data-candy-safe-area-${Math.random().toString(36).slice(2)}`;
   let layerEpoch = 0;
@@ -548,8 +551,13 @@
   function ensureLayer() {
     if (layer) return layer.isConnected ? layer.sheet : null;
     layer = document.createElement("style");
-    layer.textContent = (configuration?.cover ? [] : knownTopSelectors).map((selector) =>
-      `${topSelector(selector)} { top: calc(0px + var(--candy-safe-area-inset-top)) !important; }`).join("\n");
+    // Amazon hides its sticky toolbar by translating its full height above top 0.
+    // Preserve that anchor while hidden; class changes stay entirely in CSS.
+    layer.textContent = configuration?.cover ? "" : [
+      ...knownTopSelectors.map((selector) =>
+        `${topSelector(selector)} { top: calc(0px + var(--candy-safe-area-inset-top)) !important; }`),
+      ...hiddenTopSelectors.map((selector) => `${topSelector(selector)} { top: 0px !important; }`)
+    ].join("\n");
     document.documentElement.appendChild(layer);
     if (!layer.sheet) { layer.remove(); layer = null; return null; }
     return layer.sheet;
@@ -1131,12 +1139,11 @@
     return false;
   }
 
-  function seedSemanticHeaders() {
-    if (!configuration?.safeAreaEnabled || !document.body || document.readyState === "loading" ||
+  function seedSemanticHeaders(allowLoading = false) {
+    const loading = document.readyState === "loading";
+    if (!configuration?.safeAreaEnabled || !document.body || (loading && !allowLoading) ||
         nativeFallbackRequested || semanticChecks >= maxSemanticChecks ||
         (configuration.cover && coverSemanticSeeded)) return;
-    semanticChecks++;
-    if (configuration.cover) coverSemanticSeeded = true;
     const candidates = [];
     if (knownNativeHeaderSelector) {
       candidates.push(...Array.from(document.querySelectorAll(knownNativeHeaderSelector)).slice(0, 4));
@@ -1145,6 +1152,9 @@
       if (!candidates.includes(candidate)) candidates.push(candidate);
       if (candidates.length >= 8) break;
     }
+    if (loading && !candidates.length) return;
+    semanticChecks++;
+    if (configuration.cover && !loading) coverSemanticSeeded = true;
     const visited = new Set();
     for (const candidate of candidates) {
       let current = candidate;
@@ -1266,6 +1276,9 @@
     classify(document.body, style);
     protectedBody = document.body;
     if (document.readyState === "loading") refreshBodyAtReady = true;
+    // Cover flow can start with an SVG logo and need no body padding. Its
+    // sticky header still needs protection before the parser's first paint.
+    if (configuration.cover && document.readyState === "loading") seedSemanticHeaders(true);
     seedInitialDom();
   }
 
@@ -1432,9 +1445,15 @@
       coverLayoutRevision++;
       configure();
     } else if (coverAttributeChanged && wasCover) {
-      coverLayoutPending = true;
-      coverLayoutDue = performance.now() + minimumHeaderVerificationQuietMillis;
-      schedule(minimumHeaderVerificationQuietMillis);
+      if (document.readyState === "loading") {
+        // Parser-time CSS can promote an already inserted header to sticky.
+        coverLayoutRevision++;
+        configure();
+      } else {
+        coverLayoutPending = true;
+        coverLayoutDue = performance.now() + minimumHeaderVerificationQuietMillis;
+        schedule(minimumHeaderVerificationQuietMillis);
+      }
     }
     if (wasCover && records.slice(0, 32).some((record) => record.type === "childList" &&
           [...Array.from(record.addedNodes || []).slice(0, 8),
@@ -1560,6 +1579,7 @@
     schedule();
     if (configuration.requireInteractionForUpdates &&
         (interactionUntil <= 0 || performance.now() > interactionUntil)) return;
+    let bodyRechecked = false;
     for (let index = 0; index < Math.min(records.length, 128); index++) {
       const record = records[index];
       if (isOwnSource(record.target) ||
@@ -1568,6 +1588,32 @@
         const own = ownWrites.get(record.target);
         if (record.attributeName === "style" && own &&
             own.after === (record.target.getAttribute("style") || "") && own.before.has(record.oldValue || "")) continue;
+        if (!bodyRechecked && configuration.cover && record.target === document.body &&
+            ["class", "style"].includes(record.attributeName)) {
+          // A scroll lock can turn the body into the sticky header's fixed
+          // containing block. Protect that one box before the next paint.
+          const padding = pixels(getComputedStyle(document.body).paddingTop) || 0;
+          if (padding < inset - 0.5) {
+            const child = Array.from(semanticHeaderCandidates).slice(0, 8).find((candidate) => {
+              if (!candidate.isConnected || !document.body.contains(candidate) ||
+                  !candidate.matches(semanticHeaderSelector)) return false;
+              const rect = candidate.getBoundingClientRect();
+              return rect.height > 1 && rect.top >= 0 && rect.top <= inset + 64;
+            }) || document.body.firstElementChild;
+            const childTop = child?.getBoundingClientRect().top;
+            const alreadyProtected = !!rules.get(document.body)?.rule.style.getPropertyValue("top");
+            // Existing Candy offsets on its sticky child are not author safety.
+            withAuthorTopStyles(() => {
+              document.body.getBoundingClientRect();
+              classify(document.body);
+            });
+            // Some engines keep the child's sticky offset in a fixed body.
+            // Retain that working offset instead of adding a second inset.
+            if (!alreadyProtected && child?.isConnected && childTop >= inset - 0.5 &&
+                child.getBoundingClientRect().top > childTop + 0.5) releaseElementTop(document.body);
+          }
+          bodyRechecked = true;
+        }
         enqueue(record.target);
       } else if (record.type === "childList" && configuration.recheckAddedElements) {
         for (let child = 0; child < Math.min(record.addedNodes.length, 16); child++) {
@@ -1612,12 +1658,12 @@
     const routeChanged = configuration !== null &&
       configuration.navigationGeneration !== nextNavigationGeneration;
     const cover = viewportFitCoversSafeArea();
-    if (cover && document.body &&
-        (routeChanged || coverCheckedRevision !== coverLayoutRevision || coverCheckedInset !== nextInset)) {
-      // Probe the author's layout, not the CSS rules installed by an earlier pass.
-      layer?.remove();
-      selectorLayer?.remove();
-      coverNeedsProtection = coverTopNeedsProtection(nextInset);
+    const recheckCover = cover && document.body &&
+      (routeChanged || coverCheckedRevision !== coverLayoutRevision || coverCheckedInset !== nextInset);
+    if (recheckCover) {
+      // Restore the current protection in this task. An unchanged cover decision
+      // must not detach its stylesheet and wait for the worker to rebuild it.
+      coverNeedsProtection = withAuthorTopStyles(() => coverTopNeedsProtection(nextInset));
       coverCheckedRevision = coverLayoutRevision;
       coverCheckedInset = nextInset;
     }
@@ -1636,8 +1682,15 @@
       maxElementsPerBatch: bounded(incoming.maxElementsPerBatch, 4, 64, 16),
       maxBatchDurationMillis: bounded(incoming.maxBatchDurationMillis, 1, 8, 4),
       maxInitialElements: bounded(incoming.maxInitialElements, 64, 2048, 512) };
-    const key = JSON.stringify([next, nextInset, redditActive, incoming.navigationGeneration, coverLayoutRevision]);
+    const key = JSON.stringify([next, nextInset, redditActive, incoming.navigationGeneration]);
     if (key === configurationKey) {
+      if (recheckCover) {
+        coverSemanticSeeded = false;
+        statusBarBackdropHeaderConfirmed = false;
+        statusBarBackdropHeader = null;
+        if (next.active) protectBody();
+        requestSemanticHeaderCheck();
+      }
       if (resize && next.active) { enqueue(document.body, true); schedule(); }
       return;
     }

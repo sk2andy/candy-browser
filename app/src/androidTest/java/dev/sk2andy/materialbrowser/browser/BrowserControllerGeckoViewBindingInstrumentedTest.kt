@@ -75,6 +75,189 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
     private var originalLastAddressBarDockPlacement: AddressBarDockPlacement? = null
 
     @Test
+    fun siteDataDeletionReloadsCapturedSessionOnlyAfterSuccessfulCompletion() {
+        composeRule.runOnIdle {
+            val (browserController, session) = createSiteDataController()
+            val target = requireNotNull(browserController.siteDataTarget())
+            val outcomes = mutableListOf<Boolean>()
+
+            assertTrue(browserController.clearSiteDataAndReload(target, outcomes::add))
+            assertEquals(listOf("https://site-a.example/account"), session.siteDataUrls)
+            assertEquals(emptyList<BrowserEngineCommand>(), session.commands)
+            assertEquals(emptyList<Boolean>(), outcomes)
+
+            session.completeSiteDataDeletion(true)
+
+            assertEquals(listOf(BrowserEngineCommandType.Reload), session.commands.map { it.type })
+            assertEquals(listOf(true), outcomes)
+            assertEquals(target.tabId, browserController.selectedTabId)
+        }
+    }
+
+    @Test
+    fun siteDataDeletionReloadsOriginatingTabWithoutRetargetingNewSelection() {
+        composeRule.runOnIdle {
+            val (browserController, session) = createSiteDataController()
+            val target = requireNotNull(browserController.siteDataTarget())
+            val outcomes = mutableListOf<Boolean>()
+            assertTrue(browserController.clearSiteDataAndReload(target, outcomes::add))
+            val selectedTabId = browserController.createTab(isIncognito = false)
+            assertTrue(selectedTabId != target.tabId)
+            val selectedSession = ReentrantAttachSession(
+                tabId = selectedTabId,
+                onFirstAttach = {},
+                supportsSiteDataDeletion = true,
+            )
+            browserController.installGeckoEngineSessionForTesting(selectedSession)
+            session.commands.clear()
+
+            session.completeSiteDataDeletion(true)
+
+            assertEquals(listOf(BrowserEngineCommandType.Reload), session.commands.map { it.type })
+            assertEquals(emptyList<BrowserEngineCommand>(), selectedSession.commands)
+            assertEquals(emptyList<String>(), selectedSession.siteDataUrls)
+            assertEquals(selectedTabId, browserController.selectedTabId)
+            assertEquals(listOf(true), outcomes)
+        }
+    }
+
+    @Test
+    fun siteDataDeletionFailureDoesNotReload() {
+        composeRule.runOnIdle {
+            val (browserController, session) = createSiteDataController()
+            val outcomes = mutableListOf<Boolean>()
+            assertTrue(
+                browserController.clearSiteDataAndReload(
+                    requireNotNull(browserController.siteDataTarget()),
+                    outcomes::add,
+                ),
+            )
+
+            session.completeSiteDataDeletion(false)
+
+            assertEquals(listOf("https://site-a.example/account"), session.siteDataUrls)
+            assertEquals(emptyList<BrowserEngineCommand>(), session.commands)
+            assertEquals(listOf(false), outcomes)
+        }
+    }
+
+    @Test
+    fun siteDataDeletionCompletionAfterNavigationDoesNotReloadNewPage() {
+        composeRule.runOnIdle {
+            val (browserController, session) = createSiteDataController()
+            val target = requireNotNull(browserController.siteDataTarget())
+            val outcomes = mutableListOf<Boolean>()
+            assertTrue(browserController.clearSiteDataAndReload(target, outcomes::add))
+
+            dispatchSiteDataNavigation(
+                browserController,
+                session.tabId,
+                BrowserEngineEventType.NavigationStarted,
+                "https://site-b.example/next",
+            )
+            session.completeSiteDataDeletion(true)
+
+            assertTrue(session.commands.none { it.type == BrowserEngineCommandType.Reload })
+            assertEquals(listOf(false), outcomes)
+            assertEquals("https://site-b.example/next", browserController.siteDataTarget()?.url)
+        }
+    }
+
+    @Test
+    fun siteDataDeletionCompletionAfterSessionReplacementDoesNotReloadReplacement() {
+        composeRule.runOnIdle {
+            val (browserController, session) = createSiteDataController()
+            val outcomes = mutableListOf<Boolean>()
+            assertTrue(
+                browserController.clearSiteDataAndReload(
+                    requireNotNull(browserController.siteDataTarget()),
+                    outcomes::add,
+                ),
+            )
+            val replacement = ReentrantAttachSession(
+                tabId = session.tabId,
+                onFirstAttach = {},
+                supportsSiteDataDeletion = true,
+            )
+            browserController.installGeckoEngineSessionForTesting(replacement)
+            session.completeSiteDataDeletion(true)
+
+            assertTrue(session.commands.none { it.type == BrowserEngineCommandType.Reload })
+            assertEquals(emptyList<BrowserEngineCommand>(), replacement.commands)
+            assertEquals(emptyList<String>(), replacement.siteDataUrls)
+            assertEquals(listOf(false), outcomes)
+        }
+    }
+
+    @Test
+    fun siteDataDeletionRejectsChangedTargetProfilePrivateModeAndSelection() {
+        composeRule.runOnIdle {
+            val (browserController, session) = createSiteDataController()
+            val target = requireNotNull(browserController.siteDataTarget())
+            val outcomes = mutableListOf<Boolean>()
+            listOf(
+                target.copy(url = "https://site-b.example/"),
+                target.copy(profileId = "another-profile"),
+                target.copy(isPrivate = !target.isPrivate),
+                target.copy(navigationGeneration = (target.navigationGeneration ?: 0) + 1),
+            ).forEach { changedTarget ->
+                assertFalse(browserController.clearSiteDataAndReload(changedTarget, outcomes::add))
+            }
+            val anotherTabId = browserController.createTab(isIncognito = false)
+            assertTrue(anotherTabId != target.tabId)
+            assertFalse(browserController.clearSiteDataAndReload(target, outcomes::add))
+
+            assertEquals(emptyList<String>(), session.siteDataUrls)
+            assertTrue(session.commands.none { it.type == BrowserEngineCommandType.Reload })
+            assertEquals(emptyList<Boolean>(), outcomes)
+        }
+    }
+
+    private fun createSiteDataController(): Pair<BrowserController, ReentrantAttachSession> {
+        val store = BrowserSessionStore(composeRule.activity)
+        originalEngineKind = store.loadAndroidBrowserEngineKind()
+        originalHistory = store.loadHistory()
+        originalHistoryRecordingMode = store.loadHistoryRecordingMode()
+        assertTrue(store.saveAndroidBrowserEngineKind(AndroidBrowserEngineKind.GeckoView))
+        assertTrue(store.saveHistoryRecordingMode(HistoryRecordingMode.Disabled))
+        val browserController = BrowserController(composeRule.activity)
+        controller = browserController
+        val session = ReentrantAttachSession(
+            tabId = browserController.selectedTabId,
+            onFirstAttach = {},
+            supportsSiteDataDeletion = true,
+        )
+        browserController.installGeckoEngineSessionForTesting(session)
+        dispatchSiteDataNavigation(
+            browserController,
+            session.tabId,
+            BrowserEngineEventType.NavigationCommitted,
+            "https://site-a.example/account",
+        )
+        session.commands.clear()
+        return browserController to session
+    }
+
+    private fun dispatchSiteDataNavigation(
+        browserController: BrowserController,
+        tabId: String,
+        type: BrowserEngineEventType,
+        address: String,
+    ) {
+        browserController.dispatchGeckoEngineEventForTesting(
+            BrowserEngineEvent(
+                tabId = tabId,
+                type = type,
+                address = address,
+                title = "Site data test",
+                canGoBack = false,
+                canGoForward = false,
+                failureDescription = null,
+            ),
+        )
+    }
+
+    @Test
     fun userOpenedWebPopupAllowsGeckoNewSession() {
         composeRule.runOnIdle {
             val store = BrowserSessionStore(composeRule.activity)
@@ -3515,11 +3698,14 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
         private val presentContentImmediately: Boolean = false,
         textInputOcclusionProbeResults: List<TextInputOcclusionProbeResult> = emptyList(),
         historyUrls: Map<Int, String> = emptyMap(),
+        override val supportsSiteDataDeletion: Boolean = false,
     ) : AndroidBrowserEngineSessionPort {
         private val historyUrls = historyUrls.toMutableMap()
         private val textInputOcclusionProbeResults =
             textInputOcclusionProbeResults.toMutableList()
         val commands = mutableListOf<BrowserEngineCommand>()
+        val siteDataUrls = mutableListOf<String>()
+        private var siteDataCompletion: ((Boolean) -> Unit)? = null
         val privacyPolicies = mutableListOf<GeckoPrivacyPolicy>()
         val activeStates = mutableListOf<Boolean>()
         val inlineVideoPresentationRequests = mutableListOf<Pair<GeckoInlineVideoIdentity?, Boolean>>()
@@ -3592,6 +3778,17 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
 
         override fun execute(command: BrowserEngineCommand) {
             commands += command
+        }
+
+        override fun clearSiteData(url: String, onComplete: (Boolean) -> Unit) {
+            siteDataUrls += url
+            siteDataCompletion = onComplete
+        }
+
+        fun completeSiteDataDeletion(cleared: Boolean) {
+            val callback = requireNotNull(siteDataCompletion)
+            siteDataCompletion = null
+            callback(cleared)
         }
 
         override fun awaitContentPresented(listener: () -> Unit) {

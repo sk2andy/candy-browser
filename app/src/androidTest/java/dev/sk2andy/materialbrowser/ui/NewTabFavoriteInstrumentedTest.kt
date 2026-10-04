@@ -12,6 +12,8 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTouchInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -22,6 +24,7 @@ import dev.sk2andy.materialbrowser.data.AddressBarAction
 import dev.sk2andy.materialbrowser.data.BrowserSessionStore
 import dev.sk2andy.materialbrowser.data.FavoriteEntry
 import dev.sk2andy.materialbrowser.data.FavoriteFaviconStore
+import dev.sk2andy.materialbrowser.data.FavoriteFaviconRepository
 import dev.sk2andy.materialbrowser.data.FavoriteFolder
 import dev.sk2andy.materialbrowser.data.FavoriteLibrary
 import dev.sk2andy.materialbrowser.data.FavoriteMutation
@@ -49,8 +52,73 @@ class NewTabFavoriteInstrumentedTest {
             controller?.destroy()
             controller = null
             clearSession()
-            FavoriteFaviconStore(composeRule.activity).prune(emptySet())
         }
+        assertTrue(FavoriteFaviconRepository.get(composeRule.activity).flush())
+        FavoriteFaviconStore(composeRule.activity).prune(emptySet())
+    }
+
+    @Test
+    fun homePlusOpensAddFavoriteDialog() {
+        val browserController = createController(
+            FavoriteEntry("https://existing.example/", "Existing", 1L),
+        )
+        setBrowserContent(browserController)
+
+        composeRule.onNodeWithTag("new_tab_favorites_add").assertIsDisplayed().performClick()
+        composeRule.onNodeWithTag("add_favorite_url").assertIsDisplayed()
+    }
+
+    @Test
+    fun homeAddPersistsFavoriteAndCancelLeavesLibraryUnchanged() {
+        val browserController = createController(FavoriteLibrary())
+        setBrowserContent(browserController)
+        captureHomeScreenshot("252-header")
+        composeRule.onNodeWithTag("new_tab_favorites_add").performClick()
+        composeRule.onNodeWithTag("add_favorite_confirm").assertIsNotEnabled()
+        captureHomeScreenshot("252-dialog")
+        composeRule.onNodeWithTag("add_favorite_title").performTextInput("Example favorite")
+        composeRule.onNodeWithTag("add_favorite_url").performTextInput("https://127.0.0.1/example")
+        composeRule.onNodeWithTag("add_favorite_confirm").performClick()
+        composeRule.waitUntil(timeoutMillis = 5_000L) {
+            browserController.favorites.any { it.title == "Example favorite" }
+        }
+        composeRule.onNodeWithTag("add_favorite_url").assertDoesNotExist()
+        composeRule.onNodeWithTag(NewTabFavoritesTestTags.favorite("https://127.0.0.1/example"))
+            .assertIsDisplayed()
+        assertEquals(browserController.favoriteLibrary, BrowserSessionStore(composeRule.activity).loadFavoriteLibrary())
+        captureHomeScreenshot("252-result")
+
+        val before = browserController.favoriteLibrary
+        composeRule.onNodeWithTag("new_tab_favorites_add").performClick()
+        composeRule.onNodeWithTag("add_favorite_url").performTextInput("https://127.0.0.1/canceled")
+        composeRule.onNodeWithText(composeRule.activity.getString(android.R.string.cancel)).performClick()
+        composeRule.runOnIdle {
+            assertEquals(before, browserController.favoriteLibrary)
+            assertEquals(before, BrowserSessionStore(composeRule.activity).loadFavoriteLibrary())
+        }
+    }
+
+    @Test
+    fun privateHomeCannotAddPersistentFavorite() {
+        val browserController = createController(FavoriteLibrary())
+        composeRule.runOnIdle { browserController.createTab(isIncognito = true) }
+        setBrowserContent(browserController)
+        composeRule.onNodeWithTag("new_tab_favorites_add").assertDoesNotExist()
+        composeRule.runOnIdle {
+            browserController.addFavorite("https://127.0.0.1/private", "Private") { assertFalse(it) }
+            assertTrue(BrowserSessionStore(composeRule.activity).loadFavoriteLibrary().favorites.isEmpty())
+        }
+    }
+
+    private fun captureHomeScreenshot(name: String) {
+        val directory = InstrumentationRegistry.getArguments().getString("candyScreenshotDirectory") ?: return
+        composeRule.waitForIdle()
+        val screenshot = requireNotNull(InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot())
+        val targetDirectory = java.io.File(directory).apply { mkdirs() }
+        java.io.File(targetDirectory, "$name.png").outputStream().use { output ->
+            screenshot.compress(Bitmap.CompressFormat.PNG, 100, output)
+        }
+        screenshot.recycle()
     }
 
     @Test
@@ -228,6 +296,29 @@ class NewTabFavoriteInstrumentedTest {
             browserController.favoriteFavicons[favorite.url]?.isRecycled == false
         }
         assertEquals(16, browserController.favoriteFavicons[favorite.url]?.width)
+    }
+
+    @Test
+    fun returningFromEditorReloadsRefreshedFavoriteIcon() {
+        val favorite = FavoriteEntry("https://127.0.0.1/refreshed", "Refreshed", 1L)
+        val small = Bitmap.createBitmap(16, 16, Bitmap.Config.ARGB_8888)
+        val sharp = Bitmap.createBitmap(144, 144, Bitmap.Config.ARGB_8888)
+        composeRule.runOnIdle {
+            FavoriteFaviconStore(composeRule.activity).save(favorite.url, small)
+        }
+        val browserController = createController(favorite)
+        composeRule.waitUntil(timeoutMillis = 5_000L) {
+            browserController.favoriteFavicons[favorite.url]?.width == 16
+        }
+        composeRule.runOnIdle {
+            assertTrue(FavoriteFaviconStore(composeRule.activity).save(favorite.url, sharp))
+            browserController.reloadFavorites()
+        }
+        composeRule.waitUntil(timeoutMillis = 5_000L) {
+            browserController.favoriteFavicons[favorite.url]?.width == 144
+        }
+        small.recycle()
+        sharp.recycle()
     }
 
     @Test

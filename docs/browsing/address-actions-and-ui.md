@@ -48,6 +48,11 @@ clearing removes only all cache types; cookie clearing covers the process runtim
 regular profiles. Both commands stay pending until the engine reports completion and reload only the
 unchanged originating tab. No Chromium/WebView fallback participates in either command.
 
+The separate **Clear this site’s cookies & data** command also appears in the security/connection sheet.
+Both entries share a captured-target confirmation. Supported System WebViews clear only the chosen
+site in their bound storage context; Gecko shows the documented safety limitation without deleting.
+See [`site-data.md`](site-data.md) for domain expansion, shared-storage warnings and engine boundaries.
+
 ## Configurable expanded actions
 
 | Concern | Source | Rule |

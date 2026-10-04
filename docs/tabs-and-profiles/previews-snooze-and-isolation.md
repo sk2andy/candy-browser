@@ -5,6 +5,7 @@
 | Piece | Responsibility |
 | --- | --- |
 | `TabPreviewCaptureRules` | Match capture width to the Hero card on windows at least 600 dp wide, capped at 1,280 px and 2.5 million output pixels; compact windows retain 480 px. Never upscale the source. Reject likely failed PixelCopy results. |
+| `BrowserPreviewBitmapRenderer` | Scale Gecko and System WebView page previews with one factor for both axes. Crop the bottom when the bounded output height is exhausted; never compress the full page into that height. Pixel tests preserve asymmetric landmarks in tall captures. |
 | `GeckoPreviewCaptureRules` / `TabSwitchPreviewLayoutRules` | Crop Gecko compositor captures to Candy's visible viewport, then reconstruct the same safe-area top inset and captured height during Hero/Grid/List handoffs. A captured height is immutable for the transition and therefore does not follow the moving address bar. |
 | `GeckoContentPresentationGate` | Keep the preview over a GeckoView until Gecko has reported both a real first composite and valid content paint. `onPaintStatusReset` revokes page readiness until the next contentful paint; rebinding a detached surface retains that page paint but still requires a fresh composite. Android `OnDraw` is not treated as Gecko content readiness. |
 | `BrowserController` | Own Gecko `capturePixels` timing, reject stale captures by tab/session/navigation generation, and validate the selected renderer binding again before reporting live content to Compose. |

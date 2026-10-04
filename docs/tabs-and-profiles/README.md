@@ -38,7 +38,8 @@ Main ownership: shared `browser/BrowserMenuLayout`, `ui/settings/BrowserMenuSett
 | Profiles and storage assignment | `BrowserProfileRulesTest`, `BrowserTabsControllerTest`, `BrowserSessionControllerTest`, `GeckoProfileStorageRulesTest`, `BrowserControllerProfilesInstrumentedTest`, `ProfileCreationFlowInstrumentedTest` |
 | Profile wallpapers | `ProfileWallpaperRulesTest`, `ProfileWallpaperStoreInstrumentedTest`, `BrowserControllerProfileWallpaperInstrumentedTest`, `ProfileWallpaperEditorContractInstrumentedTest`, `ProfileWallpaperEditorScreenInstrumentedTest` |
 | Biometric profile protection | `BrowserProfileRulesTest`, `BrowserSessionStoreInstrumentedTest`, `BrowserControllerProfilesInstrumentedTest`, `ProfileProtectionUiInstrumentedTest` |
-| Previews | `TabPreview*Test`, `TabPreviewRefreshInstrumentedTest`, `BrowserControllerProfilesInstrumentedTest` (preview authentication and relock) |
+| Resident Gecko tab interaction and resume | `GeckoContentPresentationGateTest`, `GeckoTabInteractionInstrumentedTest`, `BrowserPageResumeInstrumentedTest` |
+| Previews | `TabPreview*Test`, `GeckoPreviewCaptureRulesTest`, `BrowserPreviewBitmapRendererInstrumentedTest` (uniform scaling, height crop and bitmap density in both engine capture paths), `TabPreviewRefreshInstrumentedTest`, `BrowserControllerProfilesInstrumentedTest` (preview authentication and relock) |
 | Snoozing | `Snooze*Test`, `Snooze*InstrumentedTest` |
 | Private-tab notification | `PrivateTabsNotifierInstrumentedTest`, `PrivateTabsNotificationFlowInstrumentedTest`, `BrowserControllerProfilesInstrumentedTest` |
 | Launcher app shortcuts | `LauncherShortcutRulesTest`, `LauncherShortcutInstrumentedTest` |

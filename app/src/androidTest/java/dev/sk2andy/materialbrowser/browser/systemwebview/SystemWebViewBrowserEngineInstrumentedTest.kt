@@ -236,7 +236,7 @@ class SystemWebViewBrowserEngineInstrumentedTest {
         composeRule.runOnIdle {
             assertEquals(0, (webView.layoutParams as ViewGroup.MarginLayoutParams).topMargin)
             webView.evaluateJavascript(
-                "${dev.sk2andy.materialbrowser.browser.WebContentTopInsetScript.bridgeName}.topInsetPx()",
+                "JSON.parse(${SystemWebViewSafeAreaScript.BRIDGE_NAME}.configuration()).cssSafeAreaTopInsetPx",
             ) { value ->
                 result.set(value)
                 completed.countDown()

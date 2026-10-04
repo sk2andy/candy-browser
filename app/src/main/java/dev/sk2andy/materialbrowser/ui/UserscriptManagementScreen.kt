@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -57,6 +58,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.sk2andy.materialbrowser.R
+import dev.sk2andy.materialbrowser.shared.ui.settings.settingsSearchTarget
+import dev.sk2andy.materialbrowser.shared.ui.settings.LocalSettingsSearchTarget
 import dev.sk2andy.materialbrowser.shared.topping.ToppingFrameScope
 import kotlinx.coroutines.launch
 
@@ -167,7 +170,14 @@ internal fun UserscriptManagementScreen(
                 }
             }
 
+            val searchTarget = LocalSettingsSearchTarget.current
+            val initialItem = when (searchTarget) {
+                stringResource(R.string.userscript_add) -> 2
+                stringResource(R.string.userscript_import) -> 3
+                else -> 0
+            }
             LazyColumn(
+                state = rememberLazyListState(initialFirstVisibleItemIndex = initialItem),
                 modifier = Modifier
                     .weight(1f)
                     .testTag(UserscriptManagementTestTags.List),
@@ -197,7 +207,8 @@ internal fun UserscriptManagementScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .sizeIn(minHeight = 52.dp)
-                            .testTag(UserscriptManagementTestTags.Add),
+                            .testTag(UserscriptManagementTestTags.Add)
+                            .settingsSearchTarget(stringResource(R.string.userscript_add)),
                         shape = MaterialTheme.shapes.large,
                     ) {
                         Icon(Icons.Default.Add, contentDescription = null)
@@ -211,7 +222,8 @@ internal fun UserscriptManagementScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .sizeIn(minHeight = 48.dp)
-                            .testTag(UserscriptManagementTestTags.Import),
+                            .testTag(UserscriptManagementTestTags.Import)
+                            .settingsSearchTarget(stringResource(R.string.userscript_import)),
                         shape = MaterialTheme.shapes.large,
                     ) {
                         Text(stringResource(R.string.userscript_import))

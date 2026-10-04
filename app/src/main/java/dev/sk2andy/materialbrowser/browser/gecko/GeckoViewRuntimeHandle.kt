@@ -47,6 +47,7 @@ import dev.sk2andy.materialbrowser.browser.BrowserEngineScrollEvent
 import dev.sk2andy.materialbrowser.browser.BrowserEngineScrollEventSource
 import dev.sk2andy.materialbrowser.browser.BrowserEngineScrollListener
 import dev.sk2andy.materialbrowser.browser.BrowserEngineScrollMetrics
+import dev.sk2andy.materialbrowser.browser.BrowserPreviewBitmapRenderer
 import dev.sk2andy.materialbrowser.browser.BrowserViewportRect
 import dev.sk2andy.materialbrowser.browser.DnsOverHttpsSettings
 import dev.sk2andy.materialbrowser.browser.HttpsOnlyMode
@@ -3687,27 +3688,16 @@ private class GeckoViewBrowserSession(
             captured.recycle()
             return null
         }
-        val cropped = if (layout.sourceHeightPx < captured.height) {
-            Bitmap.createBitmap(captured, 0, 0, captured.width, layout.sourceHeightPx)
-        } else {
-            captured
-        }
-        val scaled = if (
-            cropped.width == layout.targetWidthPx &&
-            cropped.height == layout.targetHeightPx
-        ) {
-            cropped
-        } else {
-            Bitmap.createScaledBitmap(
-                cropped,
-                layout.targetWidthPx,
-                layout.targetHeightPx,
-                true,
+        return try {
+            BrowserPreviewBitmapRenderer.render(
+                source = captured,
+                sourceHeightPx = layout.sourceHeightPx,
+                targetWidthPx = layout.targetWidthPx,
+                targetHeightPx = layout.targetHeightPx,
             )
+        } finally {
+            captured.recycle()
         }
-        if (cropped !== captured && !cropped.isRecycled && cropped !== scaled) cropped.recycle()
-        if (captured !== scaled && !captured.isRecycled) captured.recycle()
-        return scaled
     }
 
     private companion object {

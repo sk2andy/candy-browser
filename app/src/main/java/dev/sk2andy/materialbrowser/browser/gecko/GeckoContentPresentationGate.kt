@@ -12,6 +12,8 @@ internal class GeckoContentPresentationGate {
     private var surfaceAvailable = false
     private var compositorStarted = false
     private var contentPainted = false
+    // A paint reset can precede surface loss without replacing the current document.
+    private var documentPainted = false
     private var retainedDocumentPainted = false
     private var pendingListener: (() -> Unit)? = null
 
@@ -40,12 +42,14 @@ internal class GeckoContentPresentationGate {
 
     fun onFirstContentfulPaint() {
         contentPainted = true
+        documentPainted = true
         retainedDocumentPainted = false
         dispatchIfReady()
     }
 
     fun onNavigationStarted() {
         contentPainted = false
+        documentPainted = false
         retainedDocumentPainted = false
     }
 
@@ -63,7 +67,7 @@ internal class GeckoContentPresentationGate {
     /** A temporary surface loss preserves the page paint and its pending presentation request. */
     fun onSurfaceDestroyed() {
         if (!surfaceAvailable) return
-        retainedDocumentPainted = retainedDocumentPainted || contentPainted
+        retainedDocumentPainted = retainedDocumentPainted || documentPainted
         surfaceAvailable = false
         compositorStarted = false
         presentationGeneration++
@@ -71,7 +75,7 @@ internal class GeckoContentPresentationGate {
 
     /** A detached surface needs a new composite; the session's page paint remains valid. */
     fun onSurfaceDetached() {
-        retainedDocumentPainted = retainedDocumentPainted || contentPainted
+        retainedDocumentPainted = retainedDocumentPainted || documentPainted
         surfaceAvailable = false
         compositorStarted = false
         pendingListener = null
@@ -82,6 +86,7 @@ internal class GeckoContentPresentationGate {
         surfaceAvailable = false
         compositorStarted = false
         contentPainted = false
+        documentPainted = false
         retainedDocumentPainted = false
         pendingListener = null
         presentationGeneration++

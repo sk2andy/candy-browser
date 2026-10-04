@@ -7,6 +7,33 @@ import org.junit.Test
 
 class BrowserWindowStateRulesTest {
     @Test
+    fun `system webview game fullscreen follows device orientation despite tab overview lock`() {
+        val state = BrowserWindowStateRules.resolve(
+            isWebContentFullscreen = true,
+            usesSystemWebView = true,
+            isBrowserFullscreen = false,
+            isTabOverviewPortraitLocked = true,
+        )
+
+        assertTrue(state.isImmersive)
+        assertEquals(BrowserRequestedOrientation.Unspecified, state.requestedOrientation)
+    }
+
+    @Test
+    fun `system webview landscape video still requests landscape`() {
+        val state = BrowserWindowStateRules.resolve(
+            isWebContentFullscreen = true,
+            isLandscapeVideoFullscreen = true,
+            usesSystemWebView = true,
+            isBrowserFullscreen = false,
+            isTabOverviewPortraitLocked = true,
+        )
+
+        assertTrue(state.isImmersive)
+        assertEquals(BrowserRequestedOrientation.Landscape, state.requestedOrientation)
+    }
+
+    @Test
     fun `web fullscreen overrides tab overview portrait lock`() {
         val state = BrowserWindowStateRules.resolve(
             isWebContentFullscreen = true,

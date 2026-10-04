@@ -232,6 +232,7 @@ import dev.sk2andy.materialbrowser.data.CandyRuleRepository
 import dev.sk2andy.materialbrowser.data.FavoriteBookmarkMergeResult
 import dev.sk2andy.materialbrowser.data.FavoriteEntry
 import dev.sk2andy.materialbrowser.data.FavoriteLibrary
+import dev.sk2andy.materialbrowser.data.FavoriteAddRules
 import dev.sk2andy.materialbrowser.data.BrowsingFavoritesRules
 import dev.sk2andy.materialbrowser.data.CanonicalWebUrl
 import dev.sk2andy.materialbrowser.data.FavoriteFaviconRepository
@@ -3132,6 +3133,14 @@ class BrowserController(
         }
     }
 
+    fun refreshWindowInsets() {
+        // Android may hide the IME while Candy is stopped or behind another window without
+        // delivering a changed inset to the content listener. Release stale renderer margins
+        // from the current root snapshot, then request a fresh traversal after focus returns.
+        ViewCompat.getRootWindowInsets(activity.window.decorView)?.let(::onWindowInsetsChanged)
+        ViewCompat.requestApplyInsets(activity.findViewById(android.R.id.content))
+    }
+
     private fun scheduleMediaLayoutRestoration(
         view: View,
         onCancelled: () -> Unit = {},
@@ -4378,7 +4387,7 @@ class BrowserController(
                 tab = policyTab,
                 pageUrl = state.currentUrl,
                 context = requestContext,
-                topInsetPx = externalLinkPreviewContentTopInsetPx(),
+                topInsetPx = 0,
                 navigationGeneration = state.generation,
             ),
             privacyEventSink = GeckoPrivacyEventSink { event ->
@@ -4529,7 +4538,7 @@ class BrowserController(
                     tab = runtime.policyTab,
                     pageUrl = safeUrl,
                     context = requestContext,
-                    topInsetPx = externalLinkPreviewContentTopInsetPx(),
+                    topInsetPx = 0,
                     navigationGeneration = generation,
                 ),
                 reloadOnCookiePermissionChange = true,
@@ -4916,7 +4925,7 @@ class BrowserController(
             isFullscreenContent = isFullscreenContent,
             isInsideSafeDrawingHost = isInsideSafeDrawingHost ||
                 (isFullscreenContent && fullscreenVideoInsideSafeDrawingHost),
-            useNativeCssSafeArea = usesGeckoEngine,
+            useNativeCssSafeArea = true,
             keyboardBottomInsetPx = if (usesGeckoEngine) {
                 effectiveInsets.getInsets(WindowInsetsCompat.Type.ime()).bottom
             } else {
@@ -4935,8 +4944,7 @@ class BrowserController(
                 view.layoutParams = layoutParams
             }
         }
-        // The outer host always fills the edge-to-edge window. Its inner GeckoView either receives
-        // GeckoView 155's current root safe area or native margins for the keyboard/site override.
+        // Both engine hosts assign each edge to renderer CSS or native margins from this layout.
         (view as? GeckoViewInsetHost)?.updateInsets(layout, effectiveInsets)
     }
 
@@ -9121,6 +9129,58 @@ class BrowserController(
         return true
     }
 
+    fun siteDataTarget(tabId: String = selectedTabId): SiteDataTarget? {
+        val tab = tabs.firstOrNull { it.id == tabId } ?: return null
+        val sharesStorage = if (tab.isIncognito) {
+            !usesGeckoEngine
+        } else {
+            profileForId(tab.profileId)?.isolationEnabled != true
+        }
+        return SiteDataRules.target(
+            tab = tab,
+            pageUrl = pageUrls[tabId] ?: tab.url,
+            navigationGeneration = navigationGenerations[tabId],
+            sharesStorage = sharesStorage,
+        )
+    }
+
+    fun canClearSiteData(tabId: String = selectedTabId): Boolean =
+        !destroyed && !browsingDataClearPending &&
+            tabs.firstOrNull { it.id == tabId }?.profileId !in lockedProfileIds &&
+            siteDataTarget(tabId) != null &&
+            browserEngineSessions[tabId]?.supportsSiteDataDeletion == true
+
+    fun clearSiteDataAndReload(target: SiteDataTarget, onComplete: (Boolean) -> Unit): Boolean {
+        if (target.tabId != selectedTabId ||
+            !SiteDataRules.isCurrent(target, siteDataTarget(target.tabId)) ||
+            !canClearSiteData(target.tabId)
+        ) {
+            return false
+        }
+        val session = browserEngineSessions[target.tabId] ?: return false
+        clearExternalNavigationAuthorization(target.tabId)
+        session.clearSiteData(target.url) { cleared ->
+            val unchanged = cleared &&
+                canClearSiteData(target.tabId) &&
+                browserEngineSessions[target.tabId] === session &&
+                SiteDataRules.isCurrent(target, siteDataTarget(target.tabId))
+            if (unchanged) {
+                updateTab(target.tabId) { tab ->
+                    tab.copy(
+                        isLoading = true,
+                        progress = 0,
+                        error = null,
+                        failureKind = null,
+                        httpStatusCode = null,
+                    )
+                }
+                session.execute(BrowserEngineCommands.reload())
+            }
+            onComplete(unchanged)
+        }
+        return true
+    }
+
     private fun clearGeckoBrowsingDataAndReload(
         tabId: String,
         data: GeckoBrowsingData,
@@ -9195,6 +9255,7 @@ class BrowserController(
                 canMoveSelectedTab = canMoveSelectedTab,
                 hasLoadedPage = selectedTab.url != BLANK_URL,
                 canClearCookies = true,
+                siteDataTarget = siteDataTarget(),
             ),
         )
         val commandMatches = CommandMatcher.match(
@@ -9320,6 +9381,34 @@ class BrowserController(
                     reloadFavorites()
                 }
                 onComplete(result)
+            }
+        }
+    }
+
+    internal fun addFavorite(url: String, title: String, onComplete: (Boolean) -> Unit) {
+        if (destroyed || selectedTab.isIncognito || favoriteImportInFlight) {
+            onComplete(false)
+            return
+        }
+        val entry = FavoriteAddRules.entry(url, title, System.currentTimeMillis())
+        val before = favoriteLibrary
+        val updated = entry?.let { FavoriteAddRules.add(before, it) }
+        if (entry == null || updated == null) {
+            onComplete(false)
+            return
+        }
+        favoriteImportInFlight = true
+        favoriteMutationExecutor.execute {
+            val saved = store.saveFavoriteLibraryCommitted(updated, before)
+            mainHandler.post {
+                favoriteImportInFlight = false
+                if (destroyed) return@post
+                if (saved) {
+                    reloadFavorites()
+                    favoriteFaviconRepository.capture(entry.url, bitmap = null)
+                    refreshFavoriteFavicons()
+                }
+                onComplete(saved)
             }
         }
     }
@@ -9759,7 +9848,7 @@ class BrowserController(
                         tab = previewRuntime.policyTab,
                         pageUrl = pageUrl,
                         context = protectionRequestContextFor(previewRuntime.policyTab, pageUrl),
-                        topInsetPx = externalLinkPreviewContentTopInsetPx(),
+                        topInsetPx = 0,
                         navigationGeneration = previewRuntime.generation,
                     ),
                 ) {
@@ -9872,7 +9961,7 @@ class BrowserController(
                     tab = previewRuntime.policyTab,
                     pageUrl = pageUrl,
                     context = protectionRequestContextFor(previewRuntime.policyTab, pageUrl),
-                    topInsetPx = externalLinkPreviewContentTopInsetPx(),
+                    topInsetPx = 0,
                     navigationGeneration = previewRuntime.generation,
                 ),
             ) {
@@ -10647,6 +10736,7 @@ class BrowserController(
     }
 
     fun onResume() {
+        refreshWindowInsets()
         // The process-wide runtime can retain a night mode from before the app was stopped.
         browserEngineSessionFactory.onConfigurationChanged(activity.resources.configuration)
         applyWebContentAppearance(appearanceSettings)
@@ -12406,7 +12496,7 @@ class BrowserController(
 
     private fun geckoPrivacyPolicyFor(
         tabId: String,
-        topInsetPx: Int = geckoContentTopInsetPx(tabId),
+        topInsetPx: Int = 0,
     ): GeckoPrivacyPolicy? {
         val tab = tabs.firstOrNull { candidate -> candidate.id == tabId } ?: return null
         val pageUrl = pageUrls[tabId] ?: tab.url
@@ -12507,23 +12597,8 @@ class BrowserController(
         }
     }
 
-    private fun geckoContentTopInsetPx(tabId: String): Int {
-        if (
-            usesGeckoEngine ||
-            developerSettings.forceSafeAreaFallback ||
-            usesNativeSafeArea(tabId) ||
-            tabId in automaticNativeTopSafeAreaTabIds ||
-            webContentTopBarStates.containsKey(tabId) ||
-            tabId in browserEngineContentFullscreenTabIds
-        ) {
-            return 0
-        }
-        return currentSafeAreaTopInsetPx()
-    }
-
     private fun geckoCssSafeAreaTopInsetPx(tab: BrowserTab, pageUrl: String): Int =
         if (
-            !usesGeckoEngine ||
             developerSettings.forceSafeAreaFallback ||
             usesNativeSafeArea(tab.id) ||
             PrivacyRequestSanitizer.webHost(pageUrl)?.let { host -> isSafeAreaForced(tab, host) } == true ||
@@ -12541,9 +12616,6 @@ class BrowserController(
         ?.top
         ?.coerceAtLeast(0)
         ?: 0
-
-    private fun externalLinkPreviewContentTopInsetPx(): Int =
-        if (usesGeckoEngine || developerSettings.forceSafeAreaFallback) 0 else currentSafeAreaTopInsetPx()
 
     private fun usesNativeSafeArea(tabId: String): Boolean =
         isSafeAreaForced(tabId) || isActiveFirefoxExtensionOptionsPage(tabId)
@@ -12614,7 +12686,7 @@ class BrowserController(
                 tab = runtime.policyTab,
                 pageUrl = pageUrl,
                 context = context,
-                topInsetPx = externalLinkPreviewContentTopInsetPx(),
+                topInsetPx = 0,
                 navigationGeneration = runtime.generation,
             ),
             onReady = dispatchUpdatedInsets,
@@ -12751,12 +12823,7 @@ class BrowserController(
         fun isCurrentNavigation(): Boolean = !destroyed &&
             browserEngineSessions[tabId] === session &&
             navigationGenerations[tabId] == nextNavigationGeneration
-        val restoredDocumentTopInset = if (restoreDocumentTopSafeArea) {
-            if (usesGeckoEngine) 0 else currentSafeAreaTopInsetPx()
-        } else {
-            geckoContentTopInsetPx(tabId)
-        }
-        geckoPrivacyPolicyFor(tabId, restoredDocumentTopInset)?.let { policy ->
+        geckoPrivacyPolicyFor(tabId)?.let { policy ->
             session.updatePrivacyPolicy(policy, onReady = {
                 val automaticFallbackRemoved =
                     restoreDocumentTopSafeArea &&
@@ -12867,14 +12934,8 @@ class BrowserController(
                 event.address?.let { address -> pageUrls[event.tabId] = address }
                 refreshDomainMuteForTab(event.tabId)
                 updateProtectionRequestContext(event.tabId, event.address)
-                val restoredDocumentTopInset = if (restoreDocumentTopSafeArea) {
-                    if (usesGeckoEngine) 0 else currentSafeAreaTopInsetPx()
-                } else {
-                    geckoContentTopInsetPx(event.tabId)
-                }
                 geckoPrivacyPolicyFor(
                     tabId = event.tabId,
-                    topInsetPx = restoredDocumentTopInset,
                 )?.let { policy ->
                     navigatingSession.updatePrivacyPolicy(
                         policy = policy,
@@ -14611,6 +14672,8 @@ class BrowserController(
         val restored = store.loadFavoriteLibrary()
         favoriteRevision++
         applyFavoriteLibrary(restored)
+        retireFavoriteFavicons(favoriteFavicons.values.toList())
+        favoriteFavicons.clear()
         refreshFavoriteFavicons()
     }
 

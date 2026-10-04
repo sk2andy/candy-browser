@@ -92,6 +92,6 @@ internal class FavoriteFaviconStore(context: Context) {
         const val FILE_EXTENSION = "png"
         const val PNG_QUALITY = 100
         const val MAX_FILE_SIZE_BYTES = 2L * 1_024L * 1_024L
-        const val MAX_RENDERED_FAVICON_DIMENSION = 128
+        const val MAX_RENDERED_FAVICON_DIMENSION = 256
     }
 }

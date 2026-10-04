@@ -86,7 +86,7 @@ fun TabDismissResistanceSettings(
 ) {
     var value by remember(valuePercent) { mutableFloatStateOf(valuePercent.toFloat()) }
     Surface(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().settingsSearchTarget(title),
         shape = MaterialTheme.shapes.large,
         color = containerColor,
     ) {

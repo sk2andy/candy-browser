@@ -27,11 +27,15 @@ internal object GeckoPreviewCaptureRules {
         ) {
             return null
         }
-        val sourceHeight = (
+        val visibleSourceHeight = (
             capturedHeightPx *
                 visibleViewHeightPx.coerceAtMost(viewHeightPx).toFloat() /
                 viewHeightPx
             ).roundToInt().coerceIn(1, capturedHeightPx)
+        val maximumSourceHeight = (maximumTargetHeightPx.toLong() * capturedWidthPx / targetWidthPx)
+            .coerceIn(1, capturedHeightPx.toLong())
+            .toInt()
+        val sourceHeight = minOf(visibleSourceHeight, maximumSourceHeight)
         val targetHeight = (sourceHeight * targetWidthPx.toFloat() / capturedWidthPx)
             .roundToInt()
             .coerceIn(1, maximumTargetHeightPx)

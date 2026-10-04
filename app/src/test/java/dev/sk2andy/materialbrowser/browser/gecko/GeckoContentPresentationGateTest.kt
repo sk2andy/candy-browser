@@ -7,6 +7,61 @@ import org.junit.Test
 
 class GeckoContentPresentationGateTest {
     @Test
+    fun `navigation after a visible reset clears retained document paint before detachment`() {
+        val gate = GeckoContentPresentationGate()
+        gate.onSurfaceCreated()
+        gate.onFirstComposite()
+        gate.onFirstContentfulPaint()
+        gate.onPaintStatusReset()
+        gate.onNavigationStarted()
+        gate.onSurfaceDetached()
+        gate.onSurfaceCreated()
+        gate.onFirstComposite()
+
+        assertFalse(gate.isContentPresented)
+        gate.onFirstContentfulPaint()
+        assertTrue(gate.isContentPresented)
+    }
+
+    @Test
+    fun `document paint survives repeated resets before surface destruction`() {
+        val gate = GeckoContentPresentationGate()
+        gate.onSurfaceCreated()
+        gate.onFirstComposite()
+        gate.onFirstContentfulPaint()
+
+        repeat(3) {
+            gate.onPaintStatusReset()
+            assertFalse(gate.isContentPresented)
+            gate.onSurfaceDestroyed()
+            gate.onSurfaceCreated()
+            assertFalse(gate.isContentPresented)
+            gate.onFirstComposite()
+            assertTrue(gate.isContentPresented)
+        }
+    }
+
+    @Test
+    fun `paint reset before tab detachment retains the current document for its next composite`() {
+        val gate = GeckoContentPresentationGate()
+        gate.onSurfaceCreated()
+        gate.onFirstComposite()
+        gate.onFirstContentfulPaint()
+        gate.onPaintStatusReset()
+        assertFalse(gate.isContentPresented)
+        gate.onSurfaceDetached()
+        var presentations = 0
+        gate.awaitContentPresented { presentations++ }
+
+        gate.onSurfaceCreated()
+        assertFalse(gate.isContentPresented)
+        gate.onFirstComposite()
+
+        assertTrue(gate.isContentPresented)
+        assertEquals(1, presentations)
+    }
+
+    @Test
     fun `hidden document paint survives delayed paint reset until surface composites again`() {
         val gate = GeckoContentPresentationGate()
         gate.onSurfaceCreated()

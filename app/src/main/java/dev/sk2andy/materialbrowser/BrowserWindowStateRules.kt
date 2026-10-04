@@ -21,6 +21,7 @@ internal object BrowserWindowStateRules {
     fun resolve(
         isWebContentFullscreen: Boolean,
         isLandscapeVideoFullscreen: Boolean = false,
+        usesSystemWebView: Boolean = false,
         isBrowserFullscreen: Boolean,
         isTabOverviewPortraitLocked: Boolean,
         supportsTabOverviewPortraitLock: Boolean = true,
@@ -28,6 +29,7 @@ internal object BrowserWindowStateRules {
         isImmersive = isWebContentFullscreen || isBrowserFullscreen,
         requestedOrientation = when {
             isWebContentFullscreen && isLandscapeVideoFullscreen -> BrowserRequestedOrientation.Landscape
+            isWebContentFullscreen && usesSystemWebView -> BrowserRequestedOrientation.Unspecified
             isWebContentFullscreen -> BrowserRequestedOrientation.Sensor
             isTabOverviewPortraitLocked && supportsTabOverviewPortraitLock ->
                 BrowserRequestedOrientation.Portrait

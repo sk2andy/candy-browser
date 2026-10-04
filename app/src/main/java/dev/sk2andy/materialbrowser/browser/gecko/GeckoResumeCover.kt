@@ -17,7 +17,7 @@ internal class GeckoResumeCover(
     private val capture: () -> GeckoResult<Bitmap>,
 ) {
     private val image = ImageView(host.context).apply {
-        scaleType = ImageView.ScaleType.FIT_XY
+        scaleType = ImageView.ScaleType.MATRIX
         importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
         importantForAutofill = View.IMPORTANT_FOR_AUTOFILL_NO_EXCLUDE_DESCENDANTS
         visibility = View.GONE
@@ -32,6 +32,14 @@ internal class GeckoResumeCover(
     var isContentPresented: () -> Boolean = { false }
     var onSurfaceCreated: (() -> Unit)? = null
     var onSurfaceDestroyed: (() -> Unit)? = null
+
+    private val layoutListener = View.OnLayoutChangeListener {
+        _, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom ->
+        if (right - left != oldRight - oldLeft || bottom - top != oldBottom - oldTop) {
+            // A departing frame belongs to one renderer viewport, including its IME margins.
+            clearFrame()
+        }
+    }
 
     private val callback = object : SurfaceHolder.Callback {
         override fun surfaceCreated(holder: SurfaceHolder) {
@@ -60,10 +68,14 @@ internal class GeckoResumeCover(
             ),
         )
         surface.holder.addCallback(callback)
+        host.addOnLayoutChangeListener(layoutListener)
     }
 
     fun captureBeforeBackground() {
         if (released || capturePending || !contentPresented || !surface.holder.surface.isValid) return
+        val width = host.width
+        val height = host.height
+        if (width <= 0 || height <= 0) return
         val request = ++captureRequest
         val result = try {
             capture()
@@ -78,6 +90,15 @@ internal class GeckoResumeCover(
                     return@accept
                 }
                 capturePending = false
+                if (
+                    bitmap == null || host.width != width || host.height != height ||
+                    bitmap.width != width || bitmap.height != height
+                ) {
+                    bitmap?.recycle()
+                    return@accept
+                }
+                // Gecko captures physical pixels; drawable density must not rescale them.
+                bitmap.density = Bitmap.DENSITY_NONE
                 frame = bitmap
                 if (!contentPresented) showFrame()
             },
@@ -117,6 +138,7 @@ internal class GeckoResumeCover(
     fun release() {
         released = true
         surface.holder.removeCallback(callback)
+        host.removeOnLayoutChangeListener(layoutListener)
         isContentPresented = { false }
         onSurfaceCreated = null
         onSurfaceDestroyed = null
@@ -125,6 +147,10 @@ internal class GeckoResumeCover(
 
     private fun showFrame() {
         val bitmap = frame?.takeUnless(Bitmap::isRecycled) ?: return
+        if (bitmap.width != host.width || bitmap.height != host.height) {
+            clearFrame()
+            return
+        }
         image.setImageBitmap(bitmap)
         image.visibility = View.VISIBLE
     }

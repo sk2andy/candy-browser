@@ -34,6 +34,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import dev.sk2andy.materialbrowser.R
+import dev.sk2andy.materialbrowser.shared.ui.settings.settingsSearchTarget
 import dev.sk2andy.materialbrowser.blocking.BlockerSettings
 import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineKind
 import dev.sk2andy.materialbrowser.browser.DnsOverHttpsProvider
@@ -121,6 +122,7 @@ internal fun ProtectionAndDataSettingsPage(
             onClick = onPermissionRadar,
             modifier = Modifier
                 .fillMaxWidth()
+                .settingsSearchTarget(stringResource(R.string.permission_radar_title))
                 .sizeIn(minHeight = 48.dp),
             shape = MaterialTheme.shapes.large,
             color = MaterialTheme.colorScheme.tertiaryContainer,
@@ -158,6 +160,7 @@ internal fun ProtectionAndDataSettingsPage(
             onClick = onFilterStudio,
             modifier = Modifier
                 .fillMaxWidth()
+                .settingsSearchTarget(stringResource(R.string.filter_studio_title))
                 .sizeIn(minHeight = 48.dp),
             shape = MaterialTheme.shapes.large,
             color = MaterialTheme.colorScheme.secondaryContainer,
@@ -466,6 +469,7 @@ internal fun ProtectionAndDataSettingsPage(
             onClick = onClearData,
             modifier = Modifier
                 .fillMaxWidth()
+                .settingsSearchTarget(stringResource(R.string.action_clear_browsing_data))
                 .sizeIn(minHeight = 48.dp),
             shape = MaterialTheme.shapes.large,
             color = MaterialTheme.colorScheme.errorContainer,
@@ -588,7 +592,7 @@ private fun DataArchiveAction(
 ) {
     Surface(
         onClick = onClick,
-        modifier = modifier
+        modifier = modifier.settingsSearchTarget(title)
             .fillMaxWidth()
             .sizeIn(minHeight = 48.dp),
         shape = MaterialTheme.shapes.large,

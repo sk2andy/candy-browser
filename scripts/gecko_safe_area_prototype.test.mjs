@@ -3,8 +3,8 @@ import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import vm from 'node:vm';
 
-const source = readFileSync(new URL('../app/src/gecko/assets/candy_privacy/content_safe_area_prototype.js', import.meta.url), 'utf8');
-const redditSource = readFileSync(new URL('../app/src/gecko/assets/candy_privacy/content_safe_area_reddit.js', import.meta.url), 'utf8');
+const source = readFileSync(new URL('../app/src/main/assets/candy_privacy/content_safe_area_prototype.js', import.meta.url), 'utf8');
+const redditSource = readFileSync(new URL('../app/src/main/assets/candy_privacy/content_safe_area_reddit.js', import.meta.url), 'utf8');
 
 function fixture({ density = 3, nativeTop = 96, envTop = nativeTop, simulateAnimationFrames = false,
   normalizePixels = false, reparseStyles = false, prototypeSource = source, hostname = '',
@@ -431,6 +431,173 @@ test('same-document route generation rechecks cover protection with unchanged vi
   main.rect.top = 4; main.rect.bottom = 404;
   f.configure({ navigationGeneration: 3 });
   assert.equal(f.diagnostics().active, true);
+});
+
+test('unchanged cover protection retains its stylesheet and anchors across menu mutations', () => {
+  const f = fixture({ viewportContent: 'viewport-fit=cover' });
+  const header = f.element('fixed', '0px', 'header');
+  header.rect = { top: 0, left: 0, width: 800, height: 56, right: 800, bottom: 56 };
+  const main = f.element('static', 'auto', 'main');
+  main.content = 'Visible page content';
+  f.start();
+  assert.equal(f.diagnostics().active, true);
+  assert.equal(f.computed(header).top, '32px');
+  assert.equal(f.computed(f.body).paddingTop, '32px');
+
+  const layer = f.sheets.find((element) => element.isConnected &&
+    element.parentElement === f.context.document.documentElement);
+  assert.ok(layer);
+  const rules = [...layer.sheet.cssRules];
+  const headerMarkers = [...header.attributes];
+  const bodyMarkers = [...f.body.attributes];
+  const assertRetained = () => {
+    assert.equal(layer.isConnected, true, 'An unchanged cover decision must not detach protection');
+    assert.equal(layer.sheet.cssRules.length, rules.length);
+    for (let index = 0; index < rules.length; index++) {
+      assert.equal(layer.sheet.cssRules[index], rules[index], 'Existing anchors keep their rule identity');
+    }
+    assert.deepEqual([...header.attributes], headerMarkers);
+    assert.deepEqual([...f.body.attributes], bodyMarkers);
+    assert.equal(f.computed(header).top, '32px');
+    assert.equal(f.computed(f.body).paddingTop, '32px');
+  };
+
+  for (const classes of [['menu-open'], []]) {
+    header.classes = classes;
+    f.event('click', 'document', header);
+    f.mutate(header, 'class');
+    assertRetained();
+    f.flush();
+    assertRetained();
+  }
+
+  const menu = f.context.document.createElement('nav');
+  menu.content = 'Menu links';
+  f.childAdded(header, menu);
+  assertRetained();
+  f.flush();
+  assertRetained();
+});
+
+test('unchanged cover protection adds missing body padding when normal flow appears', () => {
+  const f = fixture({ viewportContent: 'viewport-fit=cover' });
+  const header = f.element('fixed', '0px', 'header');
+  header.rect = { top: 0, left: 0, width: 800, height: 56, right: 800, bottom: 56 };
+  f.start();
+  assert.equal(f.diagnostics().active, true);
+  assert.equal(f.computed(header).top, '32px');
+  assert.equal(f.computed(f.body).paddingTop, '0px');
+
+  const main = f.element('static', 'auto', 'main');
+  main.content = 'New visible page content';
+  f.added(main);
+  f.flush();
+
+  assert.equal(f.computed(f.body).paddingTop, '32px');
+  assert.equal(f.computed(header).top, '32px');
+});
+
+test('cover body scroll lock gains its inset before the debounced worker', () => {
+  const f = fixture({ viewportContent: 'viewport-fit=cover' });
+  const header = f.element('sticky', '0px', 'header');
+  header.rect = { top: 0, left: 0, width: 800, height: 56, right: 800, bottom: 56 };
+  const logo = f.context.document.createElement('svg');
+  header.append(logo);
+  f.start();
+  assert.equal(f.computed(f.body).paddingTop, '0px');
+  assert.equal(f.computed(header).top, '32px');
+
+  f.event('click', 'document', header);
+  f.body.computed.position = 'fixed';
+  f.body.computed.top = '0px';
+  f.body.classes = ['scroll-locked'];
+  f.mutate(f.body, 'class');
+  assert.equal(f.computed(f.body).top, '32px', 'The containing block is protected before any worker runs');
+  assert.equal(f.computed(f.body).paddingTop, '0px');
+  f.flush();
+  assert.equal(f.computed(f.body).top, '32px');
+
+  f.body.computed.position = 'static';
+  f.body.computed.top = 'auto';
+  f.body.classes = [];
+  f.mutate(f.body, 'class');
+  f.flush();
+  f.event('click', 'document', header);
+  f.body.computed.position = 'fixed';
+  f.body.computed.top = '0px';
+  f.body.classes = ['scroll-locked'];
+  f.mutate(f.body, 'class');
+  assert.equal(f.computed(f.body).top, '32px', 'Reopening does not add a second inset');
+});
+
+test('cover body scroll lock keeps existing body padding without another top inset', () => {
+  const f = fixture({ viewportContent: 'viewport-fit=cover' });
+  const header = f.element('sticky', '0px', 'header');
+  header.content = 'Visible header text';
+  header.rect = { top: 0, left: 0, width: 800, height: 56, right: 800, bottom: 56 };
+  f.start();
+  assert.equal(f.computed(f.body).paddingTop, '32px');
+
+  for (let opening = 0; opening < 2; opening++) {
+    f.event('click', 'document', header);
+    f.body.computed.position = 'fixed';
+    f.body.computed.top = '0px';
+    f.body.classes = ['scroll-locked'];
+    f.mutate(f.body, 'class');
+    assert.equal(f.computed(f.body).top, '0px', 'Existing body padding already protects the flow');
+    assert.equal(f.computed(f.body).paddingTop, '32px');
+    f.flush();
+    assert.equal(f.computed(f.body).top, '0px', 'The worker does not duplicate the inset either');
+
+    f.body.computed.position = 'static';
+    f.body.computed.top = 'auto';
+    f.body.classes = [];
+    f.mutate(f.body, 'class');
+    f.flush();
+  }
+});
+
+test('loading cover protects an SVG-first sticky header synchronously', () => {
+  const f = fixture({ viewportContent: 'viewport-fit=cover' });
+  f.context.document.readyState = 'loading';
+  const header = f.element('sticky', '0px', 'header');
+  header.rect = { top: 0, left: 0, width: 800, height: 56, right: 800, bottom: 56 };
+  header.append(f.context.document.createElement('svg'));
+  f.start(false);
+  assert.equal(f.computed(header).top, '32px', 'Protection precedes the first worker or parser completion');
+  assert.equal(f.computed(f.body).paddingTop, '0px');
+});
+
+test('loading cover protects a header promoted by parser-time CSS without a quiet delay', () => {
+  const f = fixture({ viewportContent: 'viewport-fit=cover' });
+  f.context.document.readyState = 'loading';
+  const header = f.element('static', 'auto', 'header');
+  header.rect = { top: 0, left: 0, width: 800, height: 56, right: 800, bottom: 56 };
+  header.append(f.context.document.createElement('svg'));
+  f.start();
+  assert.equal(f.diagnostics().active, false);
+  header.computed.position = 'sticky';
+  header.computed.top = '0px';
+  header.classes = ['styled'];
+  f.mutate(header, 'class');
+  assert.equal(f.computed(header).top, '32px', 'Parser-time promotion needs no trusted click or worker');
+  assert.equal(f.computed(f.body).paddingTop, '0px');
+});
+
+test('immediate cover body protection keeps the changed-element interaction gates', () => {
+  for (const changedElements of [true, false]) {
+    const f = fixture({ viewportContent: 'viewport-fit=cover' });
+    const header = f.element('sticky', '0px', 'header');
+    header.rect = { top: 0, left: 0, width: 800, height: 56, right: 800, bottom: 56 };
+    f.start();
+    f.configure({ recheckChangedElements: changedElements });
+    if (!changedElements) f.event('click', 'document', header);
+    f.body.computed.position = 'fixed';
+    f.body.computed.top = '0px';
+    f.body.classes = ['scroll-locked'];
+    f.mutate(f.body, 'class');
+    assert.equal(f.computed(f.body).top, '0px');
+  }
 });
 
 test('cover route watches late generic div replacement only during bounded settling', () => {
@@ -1119,6 +1286,77 @@ test('known Google menu and focus CSS are seeded before activation and removed w
     assert.equal(f.sheets.some((node) => node.textContent.includes('#navd')), false);
     assert.equal(f.sheets.some((node) => node.textContent.includes('.A7Yvie.emcav')), false);
   }
+});
+
+test('Amazon India toolbar keeps its translated offscreen state without recurring discovery', () => {
+  for (const hostname of ['amazon.in', 'www.amazon.in', 'www.amazon.in.']) {
+    const f = fixture({ hostname, reparseStyles: true });
+    const toolbar = f.element('sticky', '0px');
+    toolbar.classes = ['s-mobile-toolbar-sticky'];
+    toolbar.computed.transform = 'matrix(1, 0, 0, 1, 0, -96)';
+    f.start(false);
+    const layer = f.sheets.find((node) => node.textContent.includes('.s-mobile-toolbar-sticky'));
+    assert.ok(layer?.isConnected, 'Toolbar states must be protected before delayed classification');
+    const visibleTop = 'calc(0px + var(--candy-safe-area-inset-top))';
+    assert.equal(f.computed(toolbar).top, visibleTop);
+    toolbar.classes.push('s-mobile-toolbar-offscreen');
+    assert.equal(f.computed(toolbar).top, '0px', 'A fully translated toolbar must not reveal one inset of content');
+    assert.equal(f.computed(toolbar).transform, 'matrix(1, 0, 0, 1, 0, -96)', 'Keep the author hide transition');
+    toolbar.classes.pop();
+    assert.equal(f.computed(toolbar).top, visibleTop, 'Revealed toolbar regains its inset before any worker');
+    f.flush();
+    const before = { queries: f.reads.selector, rules: f.ruleWrites(), writes: f.writes() };
+    for (let repeat = 0; repeat < 100; repeat++) {
+      toolbar.classes.push('s-mobile-toolbar-offscreen');
+      f.mutate(toolbar, 'class'); f.event('scroll');
+      assert.equal(f.computed(toolbar).top, '0px');
+      toolbar.classes.pop();
+      f.mutate(toolbar, 'class'); f.event('scroll');
+      assert.equal(f.computed(toolbar).top, visibleTop);
+    }
+    f.flush();
+    assert.deepEqual({ queries: f.reads.selector, rules: f.ruleWrites(), writes: f.writes() }, before);
+    assert.equal(toolbar.style.getPropertyValue('top'), '', 'State protection stays in persistent CSS');
+    assert.deepEqual(f.fallbacks, []);
+    f.configure({ enabled: false });
+    assert.equal(layer.isConnected, false);
+    assert.equal(f.computed(toolbar).top, '0px');
+    assert.equal(toolbar.attributes.size, 0, 'Disabling restores all owned toolbar markers');
+  }
+});
+
+test('Amazon India toolbar selectors remain restricted to the actual host', () => {
+  for (const hostname of ['amazon.in.example.org', 'notamazon.in', 'amazon.com', 'example.org']) {
+    const f = fixture({ hostname, reparseStyles: true });
+    const toolbar = f.element('sticky', '0px');
+    toolbar.classes = ['s-mobile-toolbar-sticky', 's-mobile-toolbar-offscreen'];
+    f.start(false);
+    assert.equal(f.sheets.some((node) => node.textContent.includes('.s-mobile-toolbar-sticky')), false);
+    assert.equal(f.computed(toolbar).top, '0px');
+  }
+});
+
+test('Amazon India visible and hidden toolbar rules preserve negative author tops', () => {
+  const f = fixture({ hostname: 'www.amazon.in', reparseStyles: true });
+  const toolbar = f.element('sticky', '-96px');
+  toolbar.classes = ['s-mobile-toolbar-sticky'];
+  f.start();
+  assert.equal(f.computed(toolbar).top, '-96px');
+  toolbar.classes.push('s-mobile-toolbar-offscreen');
+  f.mutate(toolbar, 'class'); f.flush();
+  assert.equal(f.computed(toolbar).top, '-96px', 'Offscreen top reset must also exclude authored negative anchors');
+  toolbar.classes.pop();
+  f.mutate(toolbar, 'class'); f.flush();
+  assert.equal(f.computed(toolbar).top, '-96px');
+  toolbar.computed.top = '0px';
+  toolbar.style.setProperty('top', '0px'); f.flush();
+  assert.equal(f.computed(toolbar).top, 'calc(0px + var(--candy-safe-area-inset-top))');
+  toolbar.classes.push('s-mobile-toolbar-offscreen');
+  assert.equal(f.computed(toolbar).top, '0px');
+  f.configure({ enabled: false });
+  assert.equal(toolbar.style.getPropertyValue('top'), '0px');
+  assert.equal(toolbar.style.getPropertyPriority('top'), '');
+  assert.equal(toolbar.attributes.size, 0);
 });
 
 test('Reddit app ownership replaces body inset without losing author padding', () => {

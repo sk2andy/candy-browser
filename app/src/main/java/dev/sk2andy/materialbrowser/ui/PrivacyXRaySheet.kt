@@ -91,6 +91,7 @@ import dev.sk2andy.materialbrowser.blocking.PrivacyRequestCategory
 import dev.sk2andy.materialbrowser.blocking.PrivacyRuleDecisionAction
 import dev.sk2andy.materialbrowser.blocking.PrivacyXRaySnapshot
 import dev.sk2andy.materialbrowser.blocking.SiteProtectionState
+import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineKind
 import dev.sk2andy.materialbrowser.browser.SiteConnectionKind
 import dev.sk2andy.materialbrowser.browser.SiteConnectionRules
 import dev.sk2andy.materialbrowser.browser.permissions.PermissionRadarSnapshot
@@ -113,6 +114,8 @@ internal object PrivacyXRayTestTags {
     const val Connection = "site_connection"
     const val XRayTab = "site_info_xray_tab"
     const val PermissionsTab = "site_info_permissions_tab"
+    const val ClearSiteData = "site_info_clear_site_data"
+    const val RequestBlocker = "privacy_xray_request_blocker"
 }
 
 private enum class SiteInfoSection { Privacy, Permissions }
@@ -127,6 +130,8 @@ internal fun PrivacyXRaySheet(
     permissionSnapshot: PermissionRadarSnapshot,
     profileEmoji: String,
     websiteNotificationsSupported: Boolean,
+    browserEngineKind: AndroidBrowserEngineKind = AndroidBrowserEngineKind.SystemWebView,
+    onOpenRequestBlocker: (() -> Unit)? = null,
     backdropSource: CandyChromeBackdropSource? = null,
     onPause: (persistently: Boolean) -> Unit,
     onResume: () -> Unit,
@@ -137,6 +142,7 @@ internal fun PrivacyXRaySheet(
     onPermissionOriginSelected: (String) -> Unit,
     onPermissionDecisionChanged: (SitePermission, SitePermissionDecision) -> Unit,
     onResetSitePermissions: () -> Unit,
+    onClearSiteData: (() -> Unit)? = null,
     onDismiss: () -> Unit,
 ) {
     val title = stringResource(R.string.site_info_title)
@@ -197,6 +203,16 @@ internal fun PrivacyXRaySheet(
                         modifier = Modifier.testTag(PrivacyXRayTestTags.PermissionsTab),
                     )
                 }
+                onClearSiteData?.let { clearSiteData ->
+                    TextButton(
+                        onClick = clearSiteData,
+                        modifier = Modifier
+                            .padding(horizontal = 20.dp)
+                            .testTag(PrivacyXRayTestTags.ClearSiteData),
+                    ) {
+                        Text(stringResource(R.string.command_delete_site_data_reload_name))
+                    }
+                }
                 if (selectedSection == SiteInfoSection.Privacy) {
                     PrivacyXRayContent(
                         pageUrl = pageUrl,
@@ -204,6 +220,8 @@ internal fun PrivacyXRaySheet(
                         snapshot = snapshot,
                         blockerSettings = blockerSettings,
                         siteState = siteState,
+                        browserEngineKind = browserEngineKind,
+                        onOpenRequestBlocker = onOpenRequestBlocker,
                         onPauseClick = { pauseWarningVisible = true },
                         onResumeClick = {
                             view.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
@@ -241,7 +259,11 @@ internal fun PrivacyXRaySheet(
             text = {
                 Text(
                     stringResource(
-                        R.string.privacy_pause_warning_message,
+                        if (browserEngineKind == AndroidBrowserEngineKind.GeckoView) {
+                            R.string.privacy_gecko_pause_warning_message
+                        } else {
+                            R.string.privacy_pause_warning_message
+                        },
                         siteState.host.orEmpty(),
                     ),
                 )
@@ -359,6 +381,8 @@ internal fun PrivacyXRayContent(
     snapshot: PrivacyXRaySnapshot,
     blockerSettings: BlockerSettings,
     siteState: SiteProtectionState,
+    browserEngineKind: AndroidBrowserEngineKind = AndroidBrowserEngineKind.SystemWebView,
+    onOpenRequestBlocker: (() -> Unit)? = null,
     onPauseClick: () -> Unit,
     onResumeClick: () -> Unit,
     onRevokeThirdPartyCookieCompatibility: () -> Unit = {},
@@ -366,6 +390,7 @@ internal fun PrivacyXRayContent(
         { _, _, _ -> },
     onOpenStudio: (ruleId: String?) -> Unit = {},
 ) {
+    val usesGecko = browserEngineKind == AndroidBrowserEngineKind.GeckoView
     var detailsExpanded by remember { mutableStateOf(false) }
     val visibleDomains = if (detailsExpanded) snapshot.domains else snapshot.domains.take(3)
     val categoryColors = mapOf(
@@ -391,8 +416,10 @@ internal fun PrivacyXRayContent(
                     .weight(1f)
                     .testTag(PrivacyXRayTestTags.XRayTitle),
             )
-            TextButton(onClick = { onOpenStudio(null) }) {
-                Text(stringResource(R.string.filter_studio_open))
+            if (!usesGecko) {
+                TextButton(onClick = { onOpenStudio(null) }) {
+                    Text(stringResource(R.string.filter_studio_open))
+                }
             }
         }
         siteState.host?.let { host ->
@@ -405,19 +432,26 @@ internal fun PrivacyXRayContent(
             )
         }
         Spacer(Modifier.height(18.dp))
-        PrivacyHero(snapshot, categoryColors)
+        if (usesGecko) {
+            GeckoRequestBlockingCard(onOpenRequestBlocker)
+            Spacer(Modifier.height(18.dp))
+        }
+        PrivacyHero(snapshot, categoryColors, usesGecko)
         Spacer(Modifier.height(20.dp))
 
         SectionTitle(stringResource(R.string.privacy_xray_categories))
         Spacer(Modifier.height(8.dp))
-        PrivacyCategoryRows(snapshot, categoryColors)
+        PrivacyCategoryRows(snapshot, categoryColors, usesGecko)
         Spacer(Modifier.height(20.dp))
 
         SectionTitle(stringResource(R.string.privacy_xray_domains))
         Spacer(Modifier.height(8.dp))
         if (snapshot.domains.isEmpty()) {
             Text(
-                stringResource(R.string.privacy_xray_no_requests),
+                stringResource(
+                    if (usesGecko) R.string.privacy_gecko_no_candy_requests
+                    else R.string.privacy_xray_no_requests,
+                ),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -431,6 +465,7 @@ internal fun PrivacyXRayContent(
                         color = categoryColors.getValue(domain.category),
                         onRuleAction = onRuleAction,
                         onOpenStudio = onOpenStudio,
+                        canEditRules = !usesGecko,
                     )
                     Spacer(Modifier.height(10.dp))
                 }
@@ -493,11 +528,44 @@ internal fun PrivacyXRayContent(
         PrivacyPolicyCard(
             settings = blockerSettings,
             siteState = siteState,
+            usesGecko = usesGecko,
             onRevokeThirdPartyCookieCompatibility = onRevokeThirdPartyCookieCompatibility,
         )
         siteState.host?.let {
             Spacer(Modifier.height(18.dp))
-            SiteProtectionCard(siteState, onPauseClick, onResumeClick)
+            SiteProtectionCard(siteState, onPauseClick, onResumeClick, usesGecko)
+        }
+    }
+}
+
+@Composable
+private fun GeckoRequestBlockingCard(onOpenRequestBlocker: (() -> Unit)?) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(22.dp),
+        color = MaterialTheme.colorScheme.secondaryContainer,
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            SectionTitle(stringResource(R.string.privacy_gecko_request_blocking))
+            Spacer(Modifier.height(8.dp))
+            Text(
+                stringResource(R.string.privacy_gecko_telemetry_note),
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            if (onOpenRequestBlocker != null) {
+                TextButton(
+                    onClick = onOpenRequestBlocker,
+                    modifier = Modifier.testTag(PrivacyXRayTestTags.RequestBlocker),
+                ) {
+                    Text(stringResource(R.string.privacy_gecko_open_ublock))
+                }
+            } else {
+                Text(
+                    stringResource(R.string.privacy_gecko_ublock_unavailable),
+                    modifier = Modifier.padding(top = 8.dp),
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
         }
     }
 }
@@ -506,6 +574,7 @@ internal fun PrivacyXRayContent(
 private fun PrivacyHero(
     snapshot: PrivacyXRaySnapshot,
     categoryColors: Map<PrivacyRequestCategory, Color>,
+    usesGecko: Boolean,
 ) {
     val contentColor = TabOverviewContrastRules.titleContentColor(
         primaryContainer = MaterialTheme.colorScheme.primaryContainer,
@@ -613,7 +682,10 @@ private fun PrivacyHero(
                         )
                     }
                     Text(
-                        stringResource(R.string.privacy_xray_total_label),
+                        stringResource(
+                            if (usesGecko) R.string.privacy_gecko_candy_total_label
+                            else R.string.privacy_xray_total_label,
+                        ),
                         color = contentColor,
                         style = MaterialTheme.typography.labelSmall,
                     )
@@ -629,7 +701,10 @@ private fun PrivacyHero(
                 )
                 Spacer(Modifier.height(6.dp))
                 Text(
-                    stringResource(R.string.privacy_xray_scope_note),
+                    stringResource(
+                        if (usesGecko) R.string.privacy_gecko_candy_scope_note
+                        else R.string.privacy_xray_scope_note,
+                    ),
                     style = MaterialTheme.typography.bodySmall,
                     color = contentColor,
                 )
@@ -642,11 +717,15 @@ private fun PrivacyHero(
 private fun PrivacyCategoryRows(
     snapshot: PrivacyXRaySnapshot,
     colors: Map<PrivacyRequestCategory, Color>,
+    usesGecko: Boolean,
 ) {
     val categories = PrivacyRequestCategory.entries.filter { snapshot.categoryCounts[it] != null }
     if (categories.isEmpty()) {
         Text(
-            stringResource(R.string.privacy_xray_no_requests),
+            stringResource(
+                if (usesGecko) R.string.privacy_gecko_no_candy_requests
+                else R.string.privacy_xray_no_requests,
+            ),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -684,6 +763,7 @@ private fun PrivacyDomainBar(
     color: Color,
     onRuleAction: (domain: String, action: CandyRuleAction, siteScoped: Boolean) -> Unit,
     onOpenStudio: (ruleId: String?) -> Unit,
+    canEditRules: Boolean,
 ) {
     var actionsVisible by remember(domain.host) { mutableStateOf(false) }
     val total = domain.blockedCount + domain.allowedCount
@@ -702,7 +782,8 @@ private fun PrivacyDomainBar(
         party,
     )
     Surface(
-        onClick = { actionsVisible = !actionsVisible },
+        onClick = { if (canEditRules) actionsVisible = !actionsVisible },
+        enabled = canEditRules,
         modifier = Modifier
             .fillMaxWidth()
             .semantics { contentDescription = description },
@@ -753,7 +834,7 @@ private fun PrivacyDomainBar(
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        domain.ruleDecision?.let { decision ->
+        domain.ruleDecision?.takeIf { canEditRules }?.let { decision ->
             TextButton(
                 onClick = { onOpenStudio(decision.ruleId) },
                 modifier = Modifier.sizeIn(minHeight = 48.dp),
@@ -773,7 +854,7 @@ private fun PrivacyDomainBar(
                 )
             }
         }
-        AnimatedVisibility(visible = actionsVisible) {
+        AnimatedVisibility(visible = canEditRules && actionsVisible) {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     OutlinedButton(
@@ -805,6 +886,7 @@ private fun PrivacyDomainBar(
 private fun PrivacyPolicyCard(
     settings: BlockerSettings,
     siteState: SiteProtectionState,
+    usesGecko: Boolean,
     onRevokeThirdPartyCookieCompatibility: () -> Unit,
 ) {
     Surface(
@@ -815,11 +897,18 @@ private fun PrivacyPolicyCard(
         Column(modifier = Modifier.padding(16.dp)) {
             SectionTitle(stringResource(R.string.privacy_policy_title))
             Spacer(Modifier.height(10.dp))
-            PolicyRow(
-                stringResource(R.string.privacy_ads_tracker_protection),
-                active = settings.blockAdsAndTrackers && !siteState.isPaused,
-                activeLabel = stringResource(R.string.privacy_policy_active),
-            )
+            if (usesGecko) {
+                Text(
+                    stringResource(R.string.privacy_gecko_extension_policy),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            } else {
+                PolicyRow(
+                    stringResource(R.string.privacy_ads_tracker_protection),
+                    active = settings.blockAdsAndTrackers && !siteState.isPaused,
+                    activeLabel = stringResource(R.string.privacy_policy_active),
+                )
+            }
             HorizontalDivider(Modifier.padding(vertical = 9.dp))
             PolicyRow(
                 stringResource(R.string.privacy_third_party_cookie_policy),
@@ -874,6 +963,7 @@ private fun SiteProtectionCard(
     siteState: SiteProtectionState,
     onPauseClick: () -> Unit,
     onResumeClick: () -> Unit,
+    usesGecko: Boolean,
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -886,7 +976,10 @@ private fun SiteProtectionCard(
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
-                stringResource(R.string.privacy_site_protection),
+                stringResource(
+                    if (usesGecko) R.string.privacy_gecko_candy_site_protection
+                    else R.string.privacy_site_protection,
+                ),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
             )

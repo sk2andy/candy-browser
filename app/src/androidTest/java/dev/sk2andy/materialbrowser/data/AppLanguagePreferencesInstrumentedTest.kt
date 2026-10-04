@@ -13,6 +13,7 @@ import dev.sk2andy.materialbrowser.MainActivity
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineKind
 import dev.sk2andy.materialbrowser.browser.BrowserController
+import java.util.Locale
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -36,7 +37,7 @@ class AppLanguagePreferencesInstrumentedTest {
         GestureOnboardingStore(context).markCompleted()
         ReleaseNotesStore(context).markHandled(BuildConfig.VERSION_CODE.toLong())
         BrowserSessionStore(context).apply {
-            saveAndroidBrowserEngineKind(AndroidBrowserEngineKind.SystemWebView)
+            saveAndroidBrowserEngineKind(AndroidBrowserEngineKind.GeckoView)
             saveStartupAnimationEnabled(false)
         }
     }
@@ -52,7 +53,7 @@ class AppLanguagePreferencesInstrumentedTest {
         val locales = AppLanguagePreferences(context).supportedLocales.filter {
             it.language !in setOf("en", "de", "fr", "pt", "es", "pl", "cs")
         }
-        assertEquals(21, locales.size)
+        assertEquals(22, locales.size)
         val languageLabels = mutableMapOf<String, String>()
         locales.forEach { locale ->
             val configuration = Configuration(context.resources.configuration).apply {
@@ -88,11 +89,36 @@ class AppLanguagePreferencesInstrumentedTest {
     }
 
     @Test
+    fun russianRegionalLocaleResolvesRussianLabelsAndPluralCategories() {
+        val configuration = Configuration(context.resources.configuration).apply {
+            setLocales(LocaleList(Locale.forLanguageTag("ru-RU")))
+        }
+        val localized = context.createConfigurationContext(configuration)
+        assertEquals("Язык приложения", localized.getString(R.string.settings_app_language))
+        mapOf(
+            0 to "Открыть обзор вкладок, 0 вкладок",
+            1 to "Открыть обзор вкладок, 1 вкладка",
+            2 to "Открыть обзор вкладок, 2 вкладки",
+            5 to "Открыть обзор вкладок, 5 вкладок",
+            11 to "Открыть обзор вкладок, 11 вкладок",
+            21 to "Открыть обзор вкладок, 21 вкладка",
+            22 to "Открыть обзор вкладок, 22 вкладки",
+            25 to "Открыть обзор вкладок, 25 вкладок",
+            101 to "Открыть обзор вкладок, 101 вкладка",
+        ).forEach { (count, expected) ->
+            assertEquals(
+                expected,
+                localized.resources.getQuantityString(R.plurals.cd_open_tab_overview_count, count, count),
+            )
+        }
+    }
+
+    @Test
     fun nativeLocaleChangeKeepsActivityAndPrivateTabsAndPersistsAcrossLaunches() {
         val preferences = AppLanguagePreferences(context)
         assertEquals(
             setOf(
-                "en", "de", "fr", "pt", "es", "pl", "cs",
+                "en", "de", "fr", "pt", "es", "pl", "cs", "ru",
                 "zh-Hans", "zh-Hant", "ja", "ko", "nb", "sv", "da", "nl", "lb",
                 "sq", "bs", "bg", "el", "hr", "mk", "ro", "sr", "sl", "tr", "th", "vi",
             ),
@@ -125,12 +151,23 @@ class AppLanguagePreferencesInstrumentedTest {
                 assertEquals(privateTabId, controller.selectedTabId)
                 assertTrue(controller.selectedTab.isIncognito)
                 assertEquals("Jazyk aplikace", activity.getString(R.string.settings_app_language))
+                AppLanguagePreferences(activity).setLanguage("ru")
             }
-            assertEquals("cs", AppLanguagePreferences(context).languageTag)
+            awaitLanguage(scenario, "ru")
+            scenario.onActivity { activity ->
+                assertSame(originalActivity, activity)
+                val controller = activity.browserControllerForTesting()
+                assertSame(originalController, controller)
+                assertEquals(tabIds, controller.tabs.map { it.id })
+                assertEquals(privateTabId, controller.selectedTabId)
+                assertTrue(controller.selectedTab.isIncognito)
+                assertEquals("Язык приложения", activity.getString(R.string.settings_app_language))
+            }
+            assertEquals("ru", AppLanguagePreferences(context).languageTag)
         }
 
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
-            awaitLanguage(scenario, "cs")
+            awaitLanguage(scenario, "ru")
             assertFalse(
                 context.getSharedPreferences(BrowserSessionStore.PREFERENCES_NAME, Context.MODE_PRIVATE)
                     .getString(BrowserSessionStore.KEY_TABS, "").orEmpty().contains(privateTabId),

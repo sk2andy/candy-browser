@@ -1,5 +1,6 @@
 package dev.sk2andy.materialbrowser.browser.commands
 
+import dev.sk2andy.materialbrowser.browser.SiteDataTarget
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -119,6 +120,72 @@ class CommandDispatcherTest {
     }
 
     @Test
+    fun `site data command dispatches only its captured target and waits for completion`() {
+        val actions = RecordingActions()
+        val target = siteTarget()
+        val outcomes = mutableListOf<CommandDispatchOutcome>()
+        val outcome = CommandDispatcher.dispatch(
+            BrowserCommandRegistry.siteDataCommand(target),
+            actions,
+            outcomes::add,
+        )
+
+        assertEquals(CommandDispatchOutcome.Pending(BrowserCommandKind.ClearSiteDataAndReload), outcome)
+        assertEquals(target, actions.siteTarget)
+        assertEquals(emptyList<CommandDispatchOutcome>(), outcomes)
+        actions.completeSiteData(completed = true)
+        assertEquals(
+            listOf(CommandDispatchOutcome.Succeeded(CommandResult.SiteDataClearedAndReloaded)),
+            outcomes,
+        )
+    }
+
+    @Test
+    fun `site data command never falls back to global cookies when target or operation fails`() {
+        val actions = RecordingActions(succeeds = false)
+        val missing = CommandDispatcher.dispatch(
+            BrowserCommand("clear-site-data-and-reload", BrowserCommandKind.ClearSiteDataAndReload),
+            actions,
+        )
+        assertEquals(CommandDispatchOutcome.Rejected(BrowserCommandKind.ClearSiteDataAndReload), missing)
+        assertEquals(emptyList<String>(), actions.events)
+
+        val rejected = CommandDispatcher.dispatch(
+            BrowserCommandRegistry.siteDataCommand(siteTarget()),
+            actions,
+        )
+        assertEquals(CommandDispatchOutcome.Rejected(BrowserCommandKind.ClearSiteDataAndReload), rejected)
+        assertEquals(listOf("site-data"), actions.events)
+    }
+
+    @Test
+    fun `site data command reports rejected async completion`() {
+        val actions = RecordingActions()
+        val outcomes = mutableListOf<CommandDispatchOutcome>()
+        CommandDispatcher.dispatch(
+            BrowserCommandRegistry.siteDataCommand(siteTarget()),
+            actions,
+            outcomes::add,
+        )
+        actions.completeSiteData(completed = false)
+
+        assertEquals(
+            listOf(CommandDispatchOutcome.Rejected(BrowserCommandKind.ClearSiteDataAndReload)),
+            outcomes,
+        )
+    }
+
+    private fun siteTarget() = SiteDataTarget(
+        tabId = "tab-a",
+        url = "https://a.example/page",
+        origin = "https://a.example",
+        host = "a.example",
+        profileId = "work",
+        isPrivate = false,
+        navigationGeneration = 4,
+    )
+
+    @Test
     fun `dispatch preserves dynamic profile target`() {
         val actions = RecordingActions()
         val completedOutcomes = mutableListOf<CommandDispatchOutcome>()
@@ -194,6 +261,9 @@ class CommandDispatcherTest {
         val events = mutableListOf<String>()
         private var cacheCompletion: ((Boolean) -> Unit)? = null
         private var cookieCompletion: ((Boolean) -> Unit)? = null
+        var siteTarget: SiteDataTarget? = null
+            private set
+        private var siteDataCompletion: ((Boolean) -> Unit)? = null
         private var profileSwitchCompletion: ((Boolean) -> Unit)? = null
         override fun clearCacheAndReload(onComplete: (Boolean) -> Unit): Boolean {
             events += "cache"
@@ -203,6 +273,15 @@ class CommandDispatcherTest {
         override fun clearCookiesAndReload(onComplete: (Boolean) -> Unit): Boolean {
             events += "cookies"
             if (succeeds) cookieCompletion = onComplete
+            return succeeds
+        }
+        override fun clearSiteDataAndReload(
+            target: SiteDataTarget,
+            onComplete: (Boolean) -> Unit,
+        ): Boolean {
+            events += "site-data"
+            siteTarget = target
+            if (succeeds) siteDataCompletion = onComplete
             return succeeds
         }
         override fun reload() = record("reload")
@@ -223,6 +302,10 @@ class CommandDispatcherTest {
         }
         override fun createTab(isIncognito: Boolean) = record("new:$isIncognito")
         override fun openSettings() = record("settings")
+        fun completeSiteData(completed: Boolean) {
+            checkNotNull(siteDataCompletion).invoke(completed)
+            siteDataCompletion = null
+        }
         fun completeCookies(completed: Boolean) {
             checkNotNull(cookieCompletion).invoke(completed)
             cookieCompletion = null

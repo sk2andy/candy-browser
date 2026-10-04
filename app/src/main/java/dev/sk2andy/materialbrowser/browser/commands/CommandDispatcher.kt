@@ -1,8 +1,11 @@
 package dev.sk2andy.materialbrowser.browser.commands
 
+import dev.sk2andy.materialbrowser.browser.SiteDataTarget
+
 interface CommandActions {
     fun clearCacheAndReload(onComplete: (Boolean) -> Unit): Boolean
     fun clearCookiesAndReload(onComplete: (Boolean) -> Unit): Boolean
+    fun clearSiteDataAndReload(target: SiteDataTarget, onComplete: (Boolean) -> Unit): Boolean
     fun reload(): Boolean
     fun stopLoading(): Boolean
     fun setSelectedTabPinned(isPinned: Boolean): Boolean
@@ -44,6 +47,20 @@ object CommandDispatcher {
                             completed,
                             CommandResult.CookiesClearedAndReloaded,
                         ),
+                    )
+                }
+                if (started) {
+                    CommandDispatchOutcome.Pending(command.kind)
+                } else {
+                    CommandDispatchOutcome.Rejected(command.kind)
+                }
+            }
+            BrowserCommandKind.ClearSiteDataAndReload -> {
+                val target = command.siteDataTarget
+                    ?: return CommandDispatchOutcome.Rejected(command.kind)
+                val started = actions.clearSiteDataAndReload(target) { completed ->
+                    onPendingOutcome(
+                        outcome(command, completed, CommandResult.SiteDataClearedAndReloaded),
                     )
                 }
                 if (started) {

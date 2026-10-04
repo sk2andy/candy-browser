@@ -12,6 +12,7 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import dev.sk2andy.materialbrowser.R
+import dev.sk2andy.materialbrowser.data.AppLanguagePreferences
 import dev.sk2andy.materialbrowser.ui.theme.MaterialBrowserTheme
 import java.util.Locale
 import org.junit.Assert.assertEquals
@@ -54,11 +55,9 @@ class AppLanguageSettingsInstrumentedTest {
             MaterialBrowserTheme {
                 AppLanguageSettings(
                     languageTag = languageTag,
-                    supportedLocales = listOf(
-                        "en", "de", "fr", "pt", "es", "pl", "cs", "zh-Hans", "zh-Hant",
-                        "ja", "ko", "nb", "sv", "da", "nl", "lb", "sq", "bs", "bg", "el",
-                        "hr", "mk", "ro", "sr", "sl", "tr", "th", "vi",
-                    ).map(Locale::forLanguageTag),
+                    supportedLocales = AppLanguagePreferences(
+                        InstrumentationRegistry.getInstrumentation().targetContext,
+                    ).supportedLocales,
                     onLanguageChanged = { languageTag = it },
                 )
             }
@@ -70,6 +69,27 @@ class AppLanguageSettingsInstrumentedTest {
             .performClick()
         assertEquals("vi", languageTag)
         composeRule.onNodeWithText(vietnamese.getDisplayName(vietnamese)).assertIsDisplayed()
+    }
+
+    @Test
+    fun russianNativeNameCanBeSelectedFromSupportedLanguages() {
+        var languageTag by mutableStateOf("en")
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                AppLanguageSettings(
+                    languageTag = languageTag,
+                    supportedLocales = AppLanguagePreferences(
+                        InstrumentationRegistry.getInstrumentation().targetContext,
+                    ).supportedLocales,
+                    onLanguageChanged = { languageTag = it },
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(BrowserSettingsTestTags.AppLanguage).performClick()
+        composeRule.onNodeWithText("русский").performScrollTo().performClick()
+        assertEquals("ru", languageTag)
+        composeRule.onNodeWithText("русский").assertIsDisplayed()
     }
 
     @Test

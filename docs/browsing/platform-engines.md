@@ -222,134 +222,41 @@ Camera and microphone permissions remain separate and continue through Candy's p
   API 34+ regression fixtures verify a real GeckoSession and the production controller-listener
   seam, including page scroll, Link Peek and tab/session replacement guards.
 - Android keeps Candy's window, Gecko surface, and System WebView at the full edge-to-edge frame.
-  Gecko forwards every safe-area edge, including the status-bar top,
-  to CSS `env(safe-area-inset-*)` without shrinking the renderer. Normal Gecko tabs and Link Peek
-  receive no legacy Candy document inset, and the Gecko-only bridge skips shared DOM repair
-  installation before its observers, hooks or timers are created. A separate bounded Gecko CSS
-  layer protects suitable body flow and viewport-bound fixed/sticky anchors once. Wide root-positioned
-  absolute headers near the top receive the same inset without moving their nested absolute content
-  again; cover pages keep author offsets that already use the inset. Documents with
-  `viewport-fit=cover` receive a bounded check of visible top headers and normal flow.
-  Gecko's native `env(safe-area-inset-top)` remains authoritative where it already moves content
-  out of the top safe area; unprotected top content receives the compatible CSS inset. Cover pages
-  skip broad stylesheet cloning and native top-header fallback to avoid duplicate offsets.
-  Link Peek inside Compose safe-drawing hosts also keeps this correction disabled to avoid duplicating
-  the host inset. Ordinary scrolling cancels obsolete work but never schedules
-  geometry reads. Relevant additions/attribute changes are interaction-gated by default; developer
-  controls can tune or disable that layer live. Classification has explicit node/time/ancestor
-  bounds, so it is not a universal layout-protection guarantee. Verified unsupported overlaps retain
-  the navigation-scoped emergency native top fallback; explicit native overrides remain available.
-  Privacy and scroll metrics are unchanged.
-  When a protected semantic header anchors below the top safe inset, Candy can
-  cover the otherwise transparent status-bar strip with the page's active opaque `theme-color`.
-  This status-bar backdrop is separate from native top-margin fallback and does not move page
-  content. Header discovery and theme changes update it; cover pages that already handle their
-  safe area register no scroll listener.
-  It is scoped
-  to the current navigation and removed when that navigation ends.
-  System WebView retains the document-start compatibility repair described below. There, Candy owns
-  its normal-tab top safe area because `viewport-fit=cover` only opts into the
-  viewport and does not prove that a page consumes `env(safe-area-inset-top)`. The renderer top
-  safe area is therefore zero while side and bottom CSS safe-area values remain available.
-  Every page receives a document-start compatibility inset: normal flow starts below the protected
-  top and top-anchored fixed, sticky, absolute, or focused containers are shifted by the same stable
-  amount. A sticky element whose site-owned `top` would enter the protected strip receives a stable
-  safe-area-relative sticky anchor before it starts scrolling; the flow spacer therefore cannot scroll
-  away underneath headers such as TapTap's. Candy reacts to new DOM and focus/input transitions, but
-  never recomputes established moving offsets because of scrolling; an established offset survives
-  site-owned hide/show, while a visible element that returns to normal flow has Candy's old translation
-  removed. A passive animation-frame-bounded scroll check anchors a newly stuck top element before
-  paint. When
-  repeated verified layout failures cannot be repaired locally, Candy moves only the top edge into
-  a native margin for that navigation; side and bottom rendering stays edge to edge.
-  The explicit per-site **Force safe area** override moves every edge into native margins.
-  Fullscreen remains truly edge to edge, while Compose safe-drawing hosts clear duplicate renderer
-  insets.
+  Both engines use the [shared Candy Edge prototype](runtime-and-navigation.md#current-candy-edge-prototype)
+  from `candy_privacy/content_safe_area_prototype.js` and `content_safe_area_reddit.js`.
+  `GeckoViewInsetRules` enables native CSS safe-area delivery for both engine hosts. Gecko's
+  content bridge and System WebView's synchronous `SystemWebViewSafeAreaScript` supply the same
+  bounded CSS policy, developer settings and navigation/revision-validated reports. Neither normal
+  engine installs the legacy `WebContentTopInsetScript` repair loop.
+  The System WebView bridge bounds its policy CSS inset by the current layout/policy inset and
+  clears it when a native top margin owns the edge. `SystemWebViewHost` clamps every Android
+  `dispatchApplyWindowInsets` and `onApplyWindowInsets` delivery before provider code, preserving
+  the native-margin, fullscreen and Compose safe-drawing exclusions across framework traversals.
+  Body flow, fixed/sticky anchors, cover-page checks, Reddit component rules, semantic native
+  top-header fallback and status-bar backdrops follow the shared prototype table. Ordinary scroll
+  cancels broad discovery and does not start a new DOM scan; quiet checks use bounded cached
+  fixed-header candidates.
+  On cover pages, existing native `env(safe-area-inset-top)` protection remains authoritative;
+  unsafe visible top content receives the missing CSS protection. `SystemWebViewSafeAreaRules`
+  allows native CSS safe-area delivery only for a known WebView milestone of at least 144.
+  Older or unrecognized providers receive zero renderer safe-area insets from the first dispatch;
+  Candy's shared CSS still receives the actual layout/policy top inset. Legacy CSS protects only
+  the top edge, so `SystemWebViewSafeAreaRules.withNativeCutoutMargins` reserves actual side/bottom
+  cutout edges in native margins without reserving the navigation-bar bottom generally. Fullscreen
+  and Compose safe-drawing hosts keep their existing ownership without extra margins. This avoids
+  the WebView 133 stale-`env()` case when Force safe area removes a previously delivered cutout. Modern native
+  delivery remains clamped to the current layout; no synthetic zero cutout is introduced.
+  Android documents full `systemBars()` and `displayCutout()` delivery from WebView M144 in its
+  [window-insets guide](https://developer.android.com/develop/ui/views/layout/webapps/understand-window-insets).
+  Native header fallback and status-bar backdrop remain navigation-scoped and memory-only; backdrop
+  paints only Candy's status-bar sibling. The shared **Edge-to-edge** developer controls tune CSS
+  correction and mutation checks on both engines. Explicit native **Force safe area** and fullscreen
+  exclusions remain available.
   Candy always keeps GeckoView's default `SurfaceView` backend so page frames go directly to
   Android's compositor. On Android 17 and newer, Frosted address chrome maps its measured rounded
   bounds to a native `SurfaceView` blur region. Android 13, 14, 15 and 16 keep the same translucent
   glass overlay without website blur. System WebView remains in the ordinary View hierarchy and
   therefore retains live Frosted blur on every supported version from Android 13 onward.
-- System WebView's shared safe-area compatibility script gives stable viewport-sticky elements a CSS `max()` top
-  anchor with owned inline styling for Shadow DOM. Window scrolling does not read their geometry
-  or rewrite their styling; relevant semantic mutations, viewport changes and policy reconfiguration
-  revalidate author positioning. Nested scrollports and moving anchors retain sequential JS repair.
-  Scroll-time JS work uses a separate set containing only non-CSS sticky elements it already
-  owns; CSS-owned headers are not iterated. An empty set schedules no known-header frame unless
-  scrolling occurs synchronously during an owned DOM write, before JS anchor registration completes.
-  Author revalidation maintains membership when a header enters or leaves a nested/moving path.
-  Broad hit-testing, Shadow DOM discovery and layout recovery run
-  after both DOM and scroll quiet deadlines or on an explicit interaction, never once per fling frame.
-  A new scroll replaces pending deferred recovery without resuming old geometry; dirty discovery
-  authorization remains. Recovery coalesces redundant scroll-quiet protection while preserving
-  independent emergency verification even when recovery is skipped or throws. Root, policy,
-  scroll and quiet-request identities reject stale callbacks. Newly added subtrees
-  also receive bounded added-only frame work during continuous scrolling; fixed children
-  in offscreen wrappers remain eligible. It does not drain attribute roots or certify global
-  safety. Scroll updates execution identity without starving the queued fresh-read wakeup;
-  reconfiguration/disposal cancel it. Shadow DOM
-  traversal uses point queries; observers cover open roots encountered on relevant visible paths.
-  System WebView also observes newly attached open roots through a lifecycle-scoped shadow hook;
-  Gecko's isolated content-script world does not hook page-owned prototypes. New or semantically
-  changed subtrees receive a bounded, style-first priority walk; normal-flow nodes need no rectangle
-  or ancestor scans. Added and attribute jobs receive separate alternating slots, with recent/FIFO
-  turns inside each lane so recurring feed updates do not restart an unfinished cursor or starve a
-  newly added control. Changes during a walk coalesce one fresh follow-up; removed or reparented
-  child cursors also require that follow-up. The global 256-root cap preserves admission to an empty
-  lane, but priority remains best-effort under overflow. Bookkeeping and bounded completion
-  transitions share the cooperative task budget. This is early protection, not a replacement for
-  conservative top-strip verification; queue completion is never a negative CSS safety proof.
-- Safe-area discovery shares computed-style, geometry, Light-/Shadow-DOM parent paths (including
-  null parents) and point-query reads only within one synchronous read epoch. Actual Candy layout
-  writes invalidate before and after the setter, including reads from reentrant custom-element
-  reactions and throwing setters. Invalidation allocates no collections; each reader allocates only
-  its own collection when needed and publishes only if epoch/collection identities still match.
-  Reentrant getters return their actual local value without poisoning newer reads; no ancestry cache survives a yield.
-  The full synchronous mutation callback shares the same lazy epoch across record classification
-  and immediate repair, without a viewport read for unrelated style-only classification. Owned CSS
-  values/attributes are not rewritten. Sticky anchors remain sequential because an ancestor's
-  update can move a nested scrollport before its child's geometry is read.
-  Stable reconciliations reuse the existing candidate set; quiet scroll, relevant DOM changes,
-  explicit interaction, resize and startup stabilization reopen discovery. Unknown containers and
-  Shadow DOM changes remain conservative so viewport-fixed descendants cannot be skipped based
-  on an offscreen parent rectangle. No new automatic native-inset fallback is introduced.
-- Dense top-strip protection and late verification yield between packets of at most eight points,
-  stopping after an approximately four-millisecond read budget. A single native hit-test can exceed
-  that budget; it is not a hard task-time guarantee. Pending/cancelled discovery does not count as
-  a confirmed layout failure. Only element identities and cursors cross task boundaries; changed
-  navigation, policy, viewport, scrolling or author layout invalidate partial geometry. Tiny stable
-  fixed controls can be protected earlier through fresh collision-checked priority validation.
-  That JS path may accept an exact identity transform on the fixed element itself (such as
-  `translateZ(0)`), without changing the author's transform or stacking context. Transformed ancestors,
-  scaling, rotation, perspective and motion remain conservative; CSS sticky classification does not
-  inherit this exception.
-  Common header/control seeds retain the first inset row; the rotating dense grid prioritizes its
-  trailing row so small controls at the lower status-bar boundary are not always last. Its scheduling
-  cursor and seed/raster turn survive cancelled scroll/author-layout epochs, but no geometry, negative result or completed
-  coverage does. Root, policy, inset, density and viewport/grid changes reset that hint. Continued
-  discovery still needs actual task slots after synchronous sticky/priority work; even a one-hit
-  window must alternate seeds and raster instead of restarting the same seed forever. Cancellation alone
-  is never evidence of a performance win or safe layout.
-  Unknown sticky headers share the same portioned point-discovery job. Dense hits perform style-only
-  sticky registration; five just-below-inset points detect initially unstuck headers. Those points
-  delay common seed probes without discarding them or stealing dense-grid progress. Both grids need
-  fresh complete coverage before a positive protection result; cancellation retains scheduling hints
-  only. Known nested/moving sticky repair stays sequential and immediate. Collision checks and
-  exceptional targeted-flow repair remain separate costs.
-  Initial CSS-sticky anchoring reuses existing top-background hits so owned-style observer delivery
-  cannot leave a visible header unprotected before its first scroll. It adds no synchronous grid;
-  nested/moving anchors retain sequential geometry. Style-hidden positioned elements skip rectangle reads.
-  Layout viewport dimensions are read lazily once per synchronous read epoch; style-only mutation
-  checks request none. Reconcile captures them before owned styling. They survive cache invalidation because document styling
-  cannot resize the layout viewport; the next task/yield reads them anew. Element/style/point geometry
-  still invalidates after every actual owned write.
-  CSS height is resolved only for tall fixed-panel sizing, not ordinary header/control offset plans.
-  Shadow point traversal selects the first unvisited root without reading unrelated later hosts;
-  layer flattening preserves deepest-first order and deduplicates boxes without intermediate maps
-  or reversing/copying the layer list.
-  Fresh viewport validation counts toward each discovery packet's budget. A slow atomic validation
-  still permits one point of progress rather than endlessly rescheduling; native queries can overshoot
-  the cooperative target, so four milliseconds is not a hard execution ceiling.
 - The optional draggable scrollbar reads bounded document metrics from Candy's authenticated,
   top-frame Gecko content bridge; GeckoView's Android view scrollbar metrics describe only the
   compositor host and are not a document-height API. The same overlay writes absolute offsets through

@@ -99,6 +99,7 @@ internal fun FavoritesScreen(
     onReorderEntry: (FavoriteLibraryEntry, Int) -> Unit = { _, _ -> },
     onFolderIconChange: (FavoriteFolder, FavoriteFolderIcon?) -> Unit = { _, _ -> },
     onUploadFolderIcon: (FavoriteFolder) -> Unit = {},
+    onRefreshFavoriteIcon: (FavoriteEntry) -> Unit = {},
 ) {
     val source = library ?: FavoriteLibrary(favorites)
     var query by rememberSaveable { mutableStateOf("") }
@@ -264,6 +265,7 @@ internal fun FavoritesScreen(
                     onRename = { renameTarget = entry },
                     onMove = { moveTarget = entry },
                     onIcon = { iconTarget = entry as? FavoriteFolder },
+                    onRefreshIcon = { (entry as? FavoriteEntry)?.let(onRefreshFavoriteIcon) },
                     onOpen = {
                         when (entry) {
                             is FavoriteEntry -> onOpenFavorite(entry)
@@ -394,6 +396,7 @@ private fun FavoriteLibraryRow(
     onRename: () -> Unit,
     onMove: () -> Unit,
     onIcon: () -> Unit,
+    onRefreshIcon: () -> Unit,
     onOpen: () -> Unit,
     onDelete: () -> Unit,
 ) {
@@ -425,6 +428,11 @@ private fun FavoriteLibraryRow(
                         DropdownMenuItem(text = { Text(stringResource(R.string.favorites_move_down)) }, enabled = canMoveLater, onClick = { menuOpen = false; onMoveLater() })
                         if (entry is FavoriteFolder) {
                             DropdownMenuItem(text = { Text(stringResource(R.string.favorites_folder_icon)) }, onClick = { menuOpen = false; onIcon() })
+                        } else {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.favorites_refresh_icon)) },
+                                onClick = { menuOpen = false; onRefreshIcon() },
+                            )
                         }
                     }
                 }

@@ -92,7 +92,19 @@ class SystemWebViewEdgeToEdgeInstrumentedTest {
                         "globalThis.__candySiteMatrix.results[0].protectionModeValid",
                     ),
                 )
-                scenario.onActivity { activity -> assertWebViewGeometry(activity, webView) }
+                val usesNativeTopHeader = evaluateBoolean(
+                    scenario,
+                    "globalThis.__candySiteMatrix.results[0].usesNativeTopHeader",
+                )
+                scenario.onActivity { activity ->
+                    assertWebViewGeometry(activity, webView)
+                    if (usesNativeTopHeader) {
+                        assertTrue(
+                            "${site.name} reported native protection without a native top margin",
+                            (webView.layoutParams as ViewGroup.MarginLayoutParams).topMargin > 0,
+                        )
+                    }
+                }
                 SystemClock.sleep(LAYOUT_STABILITY_WINDOW_MILLIS)
                 scenario.onActivity { activity -> assertWebViewGeometry(activity, webView) }
                 assertTrue(
@@ -134,7 +146,25 @@ class SystemWebViewEdgeToEdgeInstrumentedTest {
                 "viewport-fit=cover must use either supported engine CSS insets or Candy",
                 engineSafeAreaApplied.xor(candyCompatibilityApplied),
             )
-            scenario.onActivity { activity -> assertWebViewGeometry(activity, webView) }
+            var safeTop = 0
+            scenario.onActivity { activity ->
+                assertWebViewGeometry(activity, webView)
+                safeTop = requireNotNull(
+                    ViewCompat.getRootWindowInsets(activity.window.decorView),
+                ).getInsets(
+                    WindowInsetsCompat.Type.statusBars() or WindowInsetsCompat.Type.displayCutout(),
+                ).top
+            }
+            val cssSafeTop = safeTop / evaluateNumber(scenario, "globalThis.devicePixelRatio")
+            listOf("#header button", "#search").forEach { selector ->
+                assertTrue(
+                    "Cover-aware content $selector overlaps the status bar",
+                    evaluateNumber(
+                        scenario,
+                        "document.querySelector('$selector').getBoundingClientRect().top",
+                    ) >= cssSafeTop - CSS_TOLERANCE,
+                )
+            }
         }
     }
 
@@ -184,16 +214,19 @@ class SystemWebViewEdgeToEdgeInstrumentedTest {
                 assertTrue(activity.browserControllerForTesting().openUrl(server.siteUrl(instagram)))
             }
             awaitWebViewTitle(scenario, EdgeToEdgeSiteMatrix.readyTitle(instagram))
+            var safeTop = 0
             var safeBottom = 0
             scenario.onActivity { activity ->
                 val controller = activity.browserControllerForTesting()
-                safeBottom = requireNotNull(
+                val safeInsets = requireNotNull(
                     ViewCompat.getRootWindowInsets(activity.window.decorView),
                 ).getInsets(
                     WindowInsetsCompat.Type.statusBars() or
                         WindowInsetsCompat.Type.navigationBars() or
                         WindowInsetsCompat.Type.displayCutout(),
-                ).bottom
+                )
+                safeTop = safeInsets.top
+                safeBottom = safeInsets.bottom
                 assertTrue(controller.setForceSafeArea(controller.selectedTabId, true))
             }
             instrumentation.waitForIdleSync()
@@ -206,8 +239,11 @@ class SystemWebViewEdgeToEdgeInstrumentedTest {
                         ?.findSystemWebView(),
                 )
                 val margins = webView.layoutParams as ViewGroup.MarginLayoutParams
+                assertTrue("Expected a non-zero top safe area", safeTop > 0)
                 assertTrue("Expected a non-zero bottom safe area", safeBottom > 0)
+                assertEquals(safeTop, margins.topMargin)
                 assertEquals(safeBottom, margins.bottomMargin)
+                assertWindowTop(webView, safeTop)
                 assertWindowBottom(webView, activity.window.decorView.height - safeBottom)
             }
             assertEquals(
@@ -235,24 +271,26 @@ class SystemWebViewEdgeToEdgeInstrumentedTest {
                         ?.findSystemWebView(),
                 )
                 assertWebViewGeometry(activity, webView)
+                assertEquals(0, (webView.layoutParams as ViewGroup.MarginLayoutParams).topMargin)
             }
+            val cssSafeTop = safeTop / evaluateNumber(scenario, "globalThis.devicePixelRatio")
             assertEquals(
-                "Disabling Force safe area must keep renderer top ownership cleared",
-                0.0,
+                "Disabling Force safe area must restore exactly one document top inset",
+                cssSafeTop,
                 evaluateNumber(
                     scenario,
-                    "Number.parseFloat(" +
-                        "getComputedStyle(document.querySelector('#header')).paddingTop)",
+                    "document.querySelector('#header').getBoundingClientRect().top + " +
+                        "Number.parseFloat(getComputedStyle(" +
+                        "document.querySelector('#header')).paddingTop)",
                 ),
                 CSS_TOLERANCE,
             )
             assertTrue(
-                "Disabling Force safe area must restore Candy document top protection",
+                "Restored header content must stay below the status bar",
                 evaluateNumber(
                     scenario,
-                    "Number.parseFloat(document.documentElement.style.getPropertyValue(" +
-                        "'--candy-browser-content-top-inset'))",
-                ) > 0,
+                    "document.querySelector('#header button').getBoundingClientRect().top",
+                ) >= cssSafeTop - CSS_TOLERANCE,
             )
         }
     }
@@ -268,15 +306,21 @@ class SystemWebViewEdgeToEdgeInstrumentedTest {
             activity.browserControllerForTesting().selectedBrowserEngineViewForTesting(),
         )
         val controller = activity.browserControllerForTesting()
-        assertEquals(0, controller.previewTopInsetPx(controller.selectedTabId))
-        assertWindowTop(view, 0)
-        assertWindowTop(webView, 0)
+        val safeTop = requireNotNull(
+            ViewCompat.getRootWindowInsets(activity.window.decorView),
+        ).getInsets(
+            WindowInsetsCompat.Type.statusBars() or WindowInsetsCompat.Type.displayCutout(),
+        ).top
+        val nativeTop = (webView.layoutParams as ViewGroup.MarginLayoutParams).topMargin
+        assertTrue(
+            "Top ownership must be edge-to-edge or the current native inset",
+            nativeTop == 0 || nativeTop == safeTop,
+        )
+        assertEquals(nativeTop, controller.previewTopInsetPx(controller.selectedTabId))
+        assertWindowTop(view, nativeTop)
+        assertWindowTop(webView, nativeTop)
         assertWindowBottom(view, activity.window.decorView.height)
         assertWindowBottom(webView, activity.window.decorView.height)
-        assertEquals(
-            0,
-            (webView.layoutParams as ViewGroup.MarginLayoutParams).topMargin,
-        )
     }
 
     private fun awaitViewReady(scenario: ActivityScenario<MainActivity>): android.webkit.WebView {
@@ -327,6 +371,17 @@ class SystemWebViewEdgeToEdgeInstrumentedTest {
     }
 
     private fun tapSearchField(scenario: ActivityScenario<MainActivity>) {
+        val centerX = evaluateNumber(
+            scenario,
+            "(() => { const rect = document.querySelector('#search').getBoundingClientRect(); " +
+                "return rect.left + rect.width / 2; })()",
+        ).toFloat()
+        val centerY = evaluateNumber(
+            scenario,
+            "(() => { const rect = document.querySelector('#search').getBoundingClientRect(); " +
+                "return rect.top + rect.height / 2; })()",
+        ).toFloat()
+        val density = evaluateNumber(scenario, "globalThis.devicePixelRatio").toFloat()
         val coordinates = FloatArray(2)
         scenario.onActivity { activity ->
             val webView = requireNotNull(
@@ -336,15 +391,8 @@ class SystemWebViewEdgeToEdgeInstrumentedTest {
             )
             val location = IntArray(2)
             webView.getLocationOnScreen(location)
-            val density = activity.resources.displayMetrics.density
-            val safeTop = requireNotNull(
-                ViewCompat.getRootWindowInsets(activity.window.decorView),
-            ).getInsets(
-                WindowInsetsCompat.Type.statusBars() or
-                    WindowInsetsCompat.Type.displayCutout(),
-            ).top
-            coordinates[0] = location[0] + SEARCH_TAP_X_CSS_PX * density
-            coordinates[1] = location[1] + safeTop + SEARCH_TAP_Y_CSS_PX * density
+            coordinates[0] = location[0] + centerX * density
+            coordinates[1] = location[1] + centerY * density
         }
         assertTrue(
             UiDevice.getInstance(instrumentation).click(
@@ -430,8 +478,6 @@ class SystemWebViewEdgeToEdgeInstrumentedTest {
         const val TEST_ACTIVITY_ACTION =
             "dev.sk2andy.materialbrowser.test.SYSTEM_WEBVIEW_EDGE_TO_EDGE"
         const val CSS_TOLERANCE = 1.0
-        const val SEARCH_TAP_X_CSS_PX = 100f
-        const val SEARCH_TAP_Y_CSS_PX = 16f
         const val TIMEOUT_MILLIS = 20_000L
         const val POLL_MILLIS = 50L
         const val LAYOUT_STABILITY_WINDOW_MILLIS = 600L
