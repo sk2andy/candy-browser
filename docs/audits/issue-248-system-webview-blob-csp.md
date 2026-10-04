@@ -9,10 +9,29 @@
 | Dedicated Android emulator | Android 16 / API 36, System WebView `133.0.6943.137` |
 | Signed Candy System WebView release | Version 0.45.1, official APK checksum verified |
 | Gemini free, signed out | Submitted a request for a red circle on a white background; Gemini answered that image creation requires signing in |
-| Original Gemini image/download trigger | Not reproduced: no signed-in image-generation session was available |
+| User-authorized Pixel 11 Pro | Android 17 / API 37, System WebView `153.0.8010.36`; auto-rotate remained disabled |
+| Installed regular Candy on Pixel | Version 0.45.1 with System WebView selected; existing Google login retained |
+| Gemini free, signed in on Pixel | Gemini Flash generated an image; the user repeatedly reproduced the download-button snackbar, "Download konnte nicht gestartet werden" |
+| Patched live Gemini download | Not yet verified in a signed-in session |
 
-The CSP defect below is proven in a controlled fixture. Its relationship to the original Gemini
-report remains unconfirmed. Do not treat the fixture as a successful live Gemini acceptance test.
+The user confirmed a live System WebView download failure. The CSP defect below is independently
+proven in a controlled fixture; its relationship to that Gemini failure remains unconfirmed.
+Do not treat the fixture as a successful live Gemini acceptance test.
+
+## Pixel diagnostics
+
+| Capture | Finding |
+| --- | --- |
+| Release-process Logcat, including repeated attempts | No download exception stack trace or concrete transfer failure reason was recorded |
+| Temporary WebView `webview-log-js-console-messages` flag | Exposed report-only script CSP warnings and repeated "No ID or name found in config" messages; neither identifies the download failure |
+| Android DownloadManager/DownloadProvider tags | No matching diagnostic records |
+| Shared download response callback | `startBuiltInDownloadResponse` discards `onFailed(reason)` and displays the generic snackbar |
+| Blob JavaScript | Catches exceptions and sends a generic bridge error without the exception details |
+
+The existing release logs cannot distinguish an invalid request, blob fetch failure, storage
+failure or timeout. A report-only script CSP warning is not evidence of a blocked blob fetch.
+Console capture followed the [documented WebView flag workflow](https://developer.android.com/develop/ui/views/layout/webapps/debug-javascript-console-logs).
+The flag and the notification permission required by DevTools were returned to their prior states.
 
 ## Controlled reproduction
 
@@ -60,10 +79,12 @@ immediately deletable by [ProfileStore](https://developer.android.com/reference/
 | Check | Coverage |
 | --- | --- |
 | `SystemWebViewBlobDownloadInstrumentedTest` | Native popup, CSP popup, private popup, original PNG, isolated source profile, foreign-profile refusal, revoked URL, pending storage cancellation, synchronous isolated/private helper close |
+| User-authorized Pixel, API 37 / WebView 153.0.8010.36 | All 11 instrumented tests passed in the separate `systemwebview.issue248` test app; this validates controlled transfers, not patched live Gemini |
 | `testFullDebugUnitTest`, `testFossDebugUnitTest` | Shared Android/JVM regressions |
 | `lintSystemwebviewDebug` | Android/WebView contracts |
 | `assembleSystemwebviewDebug`, `assembleSystemwebviewDebugAndroidTest` | APK and instrumentation compilation |
 | Manual controlled-page download | Candy's Downloads screen shows `download.png`, Finished, 72 B / 72 B |
 
-Run device tests only on the session's dedicated emulator and use its explicit ADB serial.
-Reproduce the original Gemini issue with a signed-in free account before marking issue 248 resolved.
+Run device tests only on the session's dedicated emulator, or on a physical device explicitly
+selected by the user; always use its explicit ADB serial.
+Verify the patched Gemini download with a signed-in free account before marking issue 248 resolved.
