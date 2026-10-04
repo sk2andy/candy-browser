@@ -1424,4 +1424,6 @@
     <string name="command_site_data_unsupported">Denne motor kan ikke sikkert rydde cookies og lagring for ét websted i den aktuelle profil. Intet bliver slettet.</string>
     <string name="command_site_data_shared_storage">Andre faneblade og profiler, der deler denne lagring, mister også data for dette websted.</string>
     <string name="command_site_data_target_changed">Dette faneblad eller dets side er ændret. Intet bliver slettet. Åbn webstedsoplysningerne igen for at gennemgå den aktuelle side.</string>
+    <string name="settings_search_hint">Søg i indstillinger</string>
+    <string name="settings_search_empty">Ingen indstillinger fundet. Prøv en anden søgning.</string>
 </resources>

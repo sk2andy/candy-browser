@@ -24,6 +24,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.unit.dp
 import dev.sk2andy.materialbrowser.R
+import dev.sk2andy.materialbrowser.shared.ui.settings.settingsSearchTarget
 import dev.sk2andy.materialbrowser.browser.BrowserSessionResidencyRules
 import dev.sk2andy.materialbrowser.browser.LinkLongPressAction
 import dev.sk2andy.materialbrowser.data.InactiveTabLifetime
@@ -151,7 +152,8 @@ internal fun TabsAndGesturesSettingsPage(
         )
         SettingsPageSpacer()
         Surface(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth()
+                .settingsSearchTarget(stringResource(R.string.settings_resident_tab_limit)),
             shape = MaterialTheme.shapes.large,
             color = browserChromeColor(MaterialTheme.colorScheme.surfaceContainerHigh),
         ) {

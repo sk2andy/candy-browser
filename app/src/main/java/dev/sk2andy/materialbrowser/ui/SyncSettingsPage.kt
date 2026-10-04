@@ -43,6 +43,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import dev.sk2andy.materialbrowser.R
+import dev.sk2andy.materialbrowser.shared.ui.settings.settingsSearchTarget
 import dev.sk2andy.materialbrowser.browser.BrowserProfile
 import dev.sk2andy.materialbrowser.browser.DEFAULT_BROWSER_PROFILE
 import dev.sk2andy.materialbrowser.sync.SyncConnectionSettings
@@ -155,14 +156,16 @@ internal fun SyncSettingsPage(
             label = { Text(stringResource(R.string.sync_endpoint_label)) },
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
-            modifier = Modifier.fillMaxWidth().testTag(SyncSettingsTestTags.Endpoint),
+            modifier = Modifier.fillMaxWidth().testTag(SyncSettingsTestTags.Endpoint)
+                .settingsSearchTarget(stringResource(R.string.sync_endpoint_label)),
         )
         OutlinedTextField(
             value = username,
             onValueChange = { username = it },
             label = { Text(stringResource(R.string.sync_username_label)) },
             singleLine = true,
-            modifier = Modifier.fillMaxWidth().testTag(SyncSettingsTestTags.Username),
+            modifier = Modifier.fillMaxWidth().testTag(SyncSettingsTestTags.Username)
+                .settingsSearchTarget(stringResource(R.string.sync_username_label)),
         )
         SecretTextField(
             value = serverPassword,
@@ -184,7 +187,8 @@ internal fun SyncSettingsPage(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable { profileMenuExpanded = true }
-                    .testTag(SyncSettingsTestTags.LocalProfile),
+                    .testTag(SyncSettingsTestTags.LocalProfile)
+                    .settingsSearchTarget(stringResource(R.string.sync_local_profile_label)),
                 shape = MaterialTheme.shapes.large,
                 color = MaterialTheme.colorScheme.surfaceContainerHigh,
             ) {
@@ -238,7 +242,8 @@ internal fun SyncSettingsPage(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(top = 8.dp)
-                .testTag(SyncSettingsTestTags.DeviceName),
+                .testTag(SyncSettingsTestTags.DeviceName)
+                .settingsSearchTarget(stringResource(R.string.sync_device_name_label)),
         )
         Box {
             Surface(
@@ -246,7 +251,8 @@ internal fun SyncSettingsPage(
                     .fillMaxWidth()
                     .padding(top = 8.dp)
                     .clickable { iconMenuExpanded = true }
-                    .testTag(SyncSettingsTestTags.Icon),
+                    .testTag(SyncSettingsTestTags.Icon)
+                    .settingsSearchTarget(stringResource(R.string.sync_device_icon_label)),
                 shape = MaterialTheme.shapes.large,
                 color = MaterialTheme.colorScheme.surfaceContainerHigh,
             ) {
@@ -422,7 +428,7 @@ internal fun SyncSettingsPage(
 @Composable
 private fun SyncSetupGuide(onOpenDocumentation: (String) -> Unit) {
     Surface(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.settingsSearchTarget(stringResource(R.string.sync_setup_guide_title)).fillMaxWidth(),
         shape = MaterialTheme.shapes.extraLarge,
         color = MaterialTheme.colorScheme.surfaceContainerLow,
     ) {
@@ -495,7 +501,7 @@ private fun SyncSetupGuideStep(
 ) {
     Surface(
         onClick = onClick,
-        modifier = Modifier.fillMaxWidth().testTag(testTag),
+        modifier = Modifier.fillMaxWidth().testTag(testTag).settingsSearchTarget(title),
         shape = MaterialTheme.shapes.large,
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
     ) {
@@ -550,7 +556,8 @@ private fun SyncAccentColorPicker(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .testTag(SyncSettingsTestTags.AccentColors),
+            .testTag(SyncSettingsTestTags.AccentColors)
+                .settingsSearchTarget(stringResource(R.string.sync_accent_color_label)),
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         hues.chunked(SYNC_ACCENT_COLORS_PER_ROW).forEachIndexed { rowIndex, rowHues ->
@@ -646,7 +653,8 @@ private fun SecretTextField(
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
         modifier = Modifier
             .fillMaxWidth()
-            .testTag(fieldTestTag),
+            .testTag(fieldTestTag)
+            .settingsSearchTarget(label),
     )
 }
 

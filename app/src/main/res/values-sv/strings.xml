@@ -1424,4 +1424,6 @@
     <string name="command_site_data_unsupported">Den här motorn kan inte säkert rensa cookies och lagring för en enskild webbplats i den aktuella profilen. Inget raderas.</string>
     <string name="command_site_data_shared_storage">Andra flikar och profiler som delar lagringen förlorar också webbplatsens data.</string>
     <string name="command_site_data_target_changed">Fliken eller dess sida har ändrats. Inget raderas. Öppna webbplatsinformationen igen för att granska den aktuella sidan.</string>
+    <string name="settings_search_hint">Sök i inställningar</string>
+    <string name="settings_search_empty">Inga inställningar hittades. Prova en annan sökning.</string>
 </resources>

@@ -1407,4 +1407,6 @@
     <string name="command_site_data_unsupported">เอนจินนี้ไม่สามารถล้างคุกกี้และพื้นที่เก็บข้อมูลของเว็บไซต์เดียวในโปรไฟล์ปัจจุบันได้อย่างปลอดภัย จะไม่มีการลบข้อมูลใด ๆ</string>
     <string name="command_site_data_shared_storage">แท็บและโปรไฟล์อื่นที่ใช้พื้นที่เก็บข้อมูลนี้ร่วมกันจะสูญเสียข้อมูลของเว็บไซต์นี้ด้วย</string>
     <string name="command_site_data_target_changed">แท็บนี้หรือหน้าเว็บเปลี่ยนไปแล้ว จะไม่มีการลบข้อมูลใด ๆ เปิดข้อมูลเว็บไซต์อีกครั้งเพื่อตรวจสอบหน้าปัจจุบัน</string>
+    <string name="settings_search_hint">ค้นหาการตั้งค่า</string>
+    <string name="settings_search_empty">ไม่พบการตั้งค่า ลองใช้คำค้นอื่น</string>
 </resources>

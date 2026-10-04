@@ -9,6 +9,7 @@
 | State | Observable selection and update wiring | `browser/BrowserController.kt` |
 | Theme | Platform design language, color schemes, motion, Android night resources, root/system-bar wiring, website color-scheme and font-size preferences, surface treatment, shape tokens and AMOLED surfaces | `MainActivity.kt`, `AppearanceNightMode.kt`, `browser/BrowserController.kt`, `browser/gecko/GeckoRuntimeOwner.kt`, `ui/theme/CandyDesignSystem.kt`, `ui/theme/MaterialBrowserTheme.kt` |
 | Settings routing | Shared destination model, transition, home, controls and core pages; platform resources, icons, effects and persisted state stay adapters | `shared/src/commonMain/.../SettingsDestination.kt`, `shared/src/commonMain/.../ui/settings`, Android `ui/SettingsScreen.kt` adapters |
+| Android settings search | Memory-only search on Settings Home matches localized option titles, descriptions and destination context. Capability-filtered results open existing routes and highlight/scroll common controls into view. | `ui/SettingsSearchRules.kt`, `ui/SettingsSearchCatalog.kt`, `ui/SettingsSearchField.kt`, shared `SettingsSearchTarget.kt` |
 | Android app language | Settings → Browser → App language uses native language names and a Follow device language option. Android's `LocaleManager` owns persistence and synchronization with system app-language settings. The supported list comes from `res/xml/locales_config.xml`; all supported languages and localization checks are listed in [`app-languages.md`](app-languages.md). | `data/AppLanguagePreferences.kt`, `ui/AppLanguageSettings.kt`, `ui/BrowserSettingsOverlay.kt`, `res/values-*/strings.xml` |
 | Language changes | MainActivity handles locale and layout-direction configuration updates without recreation, retaining open regular/private tabs and the current settings page. Localized Android resources refresh through the existing configuration dispatch; device-language changes apply when no app override is selected. | `MainActivity.kt`, `AndroidManifest.xml`, `AppLanguageSettingsInstrumentedTest`, `AppLanguagePreferencesInstrumentedTest` |
 | Player settings | Direct Settings → Player page for video autoplay, Candy Player mode and independent seek sliders; header and Android Back return to Settings Home. Browser no longer duplicates these controls; shared/iOS keeps the unavailable route disabled. | `ui/PlayerSettingsPage.kt`, `ui/InlineMediaPlayerSeekSlider.kt`, `SettingsDestination.Player`, `PlayerSettingsPageInstrumentedTest`, `PlayerSettingsNavigationInstrumentedTest` |
@@ -287,3 +288,16 @@ restart a stopped load. Real slow-resource load, reload and stop coverage lives 
 
 See [`../audits/issue-215-loading-progress.md`](../audits/issue-215-loading-progress.md) for the callback
 path defect found while reviewing #204 and the measured verification scope.
+
+## Settings search
+
+| Contract | Behavior |
+| --- | --- |
+| Empty query | Show the existing Settings Home categories below the Material search field. |
+| Matching | Match every word against localized title, description or page context, ignoring case and accents. Prefer exact titles, then title matches; preserve catalog order for ties. |
+| Availability | Build entries from current browser/search engine, suggestion provider, flavor capabilities, download manager, appearance and developer unlock. Do not index unavailable conditional controls or user-owned data. |
+| Navigation | Open the existing settings destination without changing a preference. Common choices, switches, links and sliders scroll the matched control into view and show a theme-colored outline. External Firefox extensions use the existing action. |
+| Back and keyboard | Selecting a result hides the keyboard and clears focus. Returning to Home retains the query. Header/system Back on Home clears an active query before dismissing Settings. The clear button restores categories and lets the user keep typing. |
+| Privacy | Query and target use `remember`, never saved state, preferences, history, logs or remote suggestions. Closing Settings discards them, including when opened from private browsing. |
+| Verification | `SettingsSearchRulesTest`, `SettingsSearchCatalogTest`, `SettingsSearchInstrumentedTest`, `scripts/test_localization.py`. |
+| Executed checks and screenshots | [`Settings search audit`](../audits/issue-253-settings-search.md). |

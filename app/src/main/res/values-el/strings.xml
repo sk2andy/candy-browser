@@ -1424,4 +1424,6 @@
     <string name="command_site_data_unsupported">Αυτή η μηχανή δεν μπορεί να διαγράψει με ασφάλεια τα cookies και τον χώρο αποθήκευσης ενός μεμονωμένου ιστοτόπου στο τρέχον προφίλ. Δεν θα διαγραφεί τίποτα.</string>
     <string name="command_site_data_shared_storage">Άλλες καρτέλες και προφίλ που μοιράζονται αυτόν τον χώρο αποθήκευσης θα χάσουν επίσης τα δεδομένα αυτού του ιστοτόπου.</string>
     <string name="command_site_data_target_changed">Αυτή η καρτέλα ή η σελίδα της άλλαξε. Δεν θα διαγραφεί τίποτα. Άνοιξε ξανά τις πληροφορίες του ιστοτόπου για να ελέγξεις την τρέχουσα σελίδα.</string>
+    <string name="settings_search_hint">Αναζήτηση ρυθμίσεων</string>
+    <string name="settings_search_empty">Δεν βρέθηκαν ρυθμίσεις. Δοκιμάστε άλλη αναζήτηση.</string>
 </resources>

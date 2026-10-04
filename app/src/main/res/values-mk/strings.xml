@@ -1424,4 +1424,6 @@
     <string name="command_site_data_unsupported">Овој механизам не може безбедно да ги избрише колачињата и складиштето на поединечна страница во тековниот профил. Ништо нема да биде избришано.</string>
     <string name="command_site_data_shared_storage">Другите јазичиња и профили што го делат ова складиште исто така ќе ги изгубат податоците на оваа страница.</string>
     <string name="command_site_data_target_changed">Ова јазиче или неговата страница се промени. Ништо нема да биде избришано. Повторно отвори ги информациите за страницата за да ја прегледаш тековната страница.</string>
+    <string name="settings_search_hint">Пребарај поставки</string>
+    <string name="settings_search_empty">Не се најдени поставки. Обидете се со друг поим.</string>
 </resources>

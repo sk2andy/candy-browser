@@ -1424,4 +1424,6 @@
     <string name="command_site_data_unsupported">Ky motor nuk mund të fshijë në mënyrë të sigurt cookies dhe hapësirën e ruajtjes së një faqeje të vetme në profilin aktual. Asgjë nuk do të fshihet.</string>
     <string name="command_site_data_shared_storage">Skedat dhe profilet e tjera që ndajnë këtë hapësirë ruajtjeje do të humbasin gjithashtu të dhënat e kësaj faqeje.</string>
     <string name="command_site_data_target_changed">Kjo skedë ose faqja e saj ndryshoi. Asgjë nuk do të fshihet. Hap sërish informacionin e faqes për të shqyrtuar faqen aktuale.</string>
+    <string name="settings_search_hint">Kërko cilësime</string>
+    <string name="settings_search_empty">Nuk u gjetën cilësime. Provoni një kërkim tjetër.</string>
 </resources>

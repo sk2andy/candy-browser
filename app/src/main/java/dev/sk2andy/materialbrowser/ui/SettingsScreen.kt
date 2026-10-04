@@ -1,7 +1,16 @@
 package dev.sk2andy.materialbrowser.ui
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import dev.sk2andy.materialbrowser.BuildConfig
 import dev.sk2andy.materialbrowser.R
@@ -32,6 +41,9 @@ import dev.sk2andy.materialbrowser.data.AddressBarAction
 import dev.sk2andy.materialbrowser.data.AddressBarActionLayout
 import dev.sk2andy.materialbrowser.data.BrowserDownloadSettings
 import dev.sk2andy.materialbrowser.data.DeveloperSettings
+import dev.sk2andy.materialbrowser.data.DownloadManagerMode
+import dev.sk2andy.materialbrowser.data.BrowserSurfaceStyle
+import dev.sk2andy.materialbrowser.shared.ui.settings.LocalSettingsSearchTarget
 import dev.sk2andy.materialbrowser.data.InactiveTabLifetime
 import dev.sk2andy.materialbrowser.data.HistoryRecordingMode
 import dev.sk2andy.materialbrowser.browser.LinkPeekAction
@@ -209,18 +221,82 @@ internal fun SettingsScreen(
     onOpenFirefoxExtensions: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
+    var searchQuery by remember { mutableStateOf("") }
+    var searchTarget by remember { mutableStateOf<SettingsSearchEntry?>(null) }
+    val focusManager = LocalFocusManager.current
+    val keyboard = LocalSoftwareKeyboardController.current
+    val clearSearch = {
+        searchQuery = ""
+        keyboard?.hide()
+        focusManager.clearFocus()
+    }
+    LaunchedEffect(destination) {
+        if (searchTarget?.destination != destination) searchTarget = null
+    }
+    BackHandler(enabled = destination == SettingsDestination.Home && searchQuery.isNotEmpty()) {
+        clearSearch()
+    }
+    val searchEntries = settingsSearchEntries(
+        SettingsSearchAvailability(
+            searchSuggestionProvider = searchSuggestionProvider,
+            hasAppLanguages = supportedAppLocales.isNotEmpty(),
+            hasUserScriptSupport = isUserScriptSupported,
+            isGeckoEngine = browserEngineKind == AndroidBrowserEngineKind.GeckoView,
+            hasBrowserEngineSelection = !BuildConfig.SYSTEM_WEBVIEW_ONLY,
+            supportsAiSearch = searchEngine.supportsAiSearch,
+            hasSearxngInstance = searchEngine == SearchEngine.SearXNG ||
+                searchSuggestionProvider == SearchSuggestionProvider.SearXNG,
+            hasSearxngSuggestionFallback = searchSuggestionProvider == SearchSuggestionProvider.SearXNG,
+            isDnsOverHttpsSupported = isDnsOverHttpsSupported,
+            isHttpsOnlySupported = isHttpsOnlySupported,
+            isVideoAutoplayBlockingSupported = isVideoAutoplayBlockingSupported,
+            isInlineMediaPlayerSupported = isInlineMediaPlayerSupported,
+            isForceDarkWebsitesSupported = browserEngineKind == AndroidBrowserEngineKind.SystemWebView,
+            isDeveloperOptionsUnlocked = isDeveloperOptionsUnlocked,
+            isHttpPasswordAutofillSupported = isHttpPasswordAutofillSupported,
+            isGeckoLoggingSupported = isGeckoLoggingSupported,
+            hasFirefoxExtensions = onOpenFirefoxExtensions != null,
+            isBuiltInDownloadManager = downloadSettings.managerMode == DownloadManagerMode.BuiltIn,
+            hasOneDmSessionSharing = when (downloadSettings.managerMode) {
+                DownloadManagerMode.BuiltIn -> false
+                DownloadManagerMode.AskEveryTime -> externalDownloadManagers.any(ExternalDownloadManagerApp::isOneDm)
+                DownloadManagerMode.External -> externalDownloadManagers.firstOrNull {
+                    it.id == downloadSettings.externalManagerId
+                }?.isOneDm == true
+            },
+            isFrostedSurface = appearanceSettings.surfaceStyle == BrowserSurfaceStyle.Frosted,
+        ),
+    )
     SettingsRouter(
         destination = destination,
         modifier = modifier,
     ) { currentDestination ->
+        CompositionLocalProvider(
+            LocalSettingsSearchTarget provides searchTarget?.title.takeIf {
+                searchTarget?.destination == currentDestination
+            },
+        ) {
             when (currentDestination) {
                 SettingsDestination.Home -> SettingsHomePage(
                     downloadSummary = downloadSettings.displayName(externalDownloadManagers),
                     onDestinationChanged = onDestinationChanged,
-                    onDismiss = onDismiss,
+                    onDismiss = {
+                        if (searchQuery.isNotEmpty()) clearSearch() else onDismiss()
+                    },
                     onOpenFirefoxExtensions = onOpenFirefoxExtensions,
                     developerOptionsUnlocked = isDeveloperOptionsUnlocked,
                     onUnlockDeveloperOptions = onUnlockDeveloperOptions,
+                    searchQuery = searchQuery,
+                    searchEntries = searchEntries,
+                    onSearchQueryChanged = { searchQuery = it },
+                    onSearchResultSelected = { entry ->
+                        if (entry.destination == null) {
+                            onOpenFirefoxExtensions?.invoke()
+                        } else {
+                            searchTarget = entry
+                            onDestinationChanged(entry.destination)
+                        }
+                    },
                 )
 
                 SettingsDestination.Search -> SearchSettingsPage(
@@ -520,6 +596,7 @@ internal fun SettingsScreen(
             }
         }
     }
+}
 
 private fun LinkPeekAction.labelRes(): Int = when (this) {
     LinkPeekAction.ReaderLater -> R.string.reader_save_offline

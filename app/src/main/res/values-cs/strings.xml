@@ -1455,4 +1455,6 @@
     <string name="command_site_data_unsupported">Tento prohlížecí modul nemůže v aktuálním profilu bezpečně vymazat cookies a úložiště jediného webu. Nic nebude smazáno.</string>
     <string name="command_site_data_shared_storage">Ostatní panely a profily sdílející toto úložiště také přijdou o data tohoto webu.</string>
     <string name="command_site_data_target_changed">Tento panel nebo jeho stránka se změnily. Nic nebude smazáno. Znovu otevři informace o webu a zkontroluj aktuální stránku.</string>
+    <string name="settings_search_hint">Hledat v nastavení</string>
+    <string name="settings_search_empty">Žádné nastavení nenalezeno. Zkuste jiný dotaz.</string>
 </resources>

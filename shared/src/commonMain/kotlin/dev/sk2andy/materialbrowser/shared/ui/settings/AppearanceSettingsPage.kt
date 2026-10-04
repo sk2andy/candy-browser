@@ -507,7 +507,7 @@ private fun AppearanceSlider(
     testTag: String,
 ) {
     Surface(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().settingsSearchTarget(title),
         shape = MaterialTheme.shapes.large,
         color = containerColor,
     ) {
