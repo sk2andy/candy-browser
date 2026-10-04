@@ -113,7 +113,8 @@
   signal. Posted presentation callbacks revalidate the surface generation before releasing a tab
   handoff, and rearm after a newer surface or paint reset.
   A previously painted document remains eligible for presentation after temporary surface loss,
-  including a delayed background-memory-pressure paint reset. Its replacement surface must still
+  whether paint resets before or after the surface is lost. Current-document paint history survives
+  that reset until navigation or close. Its replacement surface must still
   deliver a new composite. Gecko 157 can omit another contentful-paint callback for that unchanged
   document; waiting for it would leave the departing screenshot permanently over a live page.
   Navigation and renderer termination discard the retained document proof. Initial pages, new
