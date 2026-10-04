@@ -130,10 +130,10 @@ class SettingsSearchInstrumentedTest {
     fun headerBackClearsFocusedSearchAndDeepCustomOptionIsVisible() {
         openSettings()
         val query = context.getString(R.string.settings_tab_dismiss_resistance)
-        composeRule.onNodeWithTag(SettingsSearchTestTags.Query)
-            .performClick()
-            .performTextReplacement(query)
-            .assertIsFocused()
+        val field = composeRule.onNodeWithTag(SettingsSearchTestTags.Query)
+        field.performClick()
+        field.performTextReplacement(query)
+        field.assertIsFocused()
         advanceRoute()
         headerBack()
         assertQuery("")
@@ -208,11 +208,12 @@ class SettingsSearchInstrumentedTest {
     }
 
     private fun search(query: String) {
-        composeRule.onNodeWithTag(SettingsSearchTestTags.Query)
-            .performClick()
-            .performTextReplacement(query)
-            .performImeAction()
+        val field = composeRule.onNodeWithTag(SettingsSearchTestTags.Query)
+        field.performClick()
+        field.performTextReplacement(query)
+        field.performImeAction()
         advanceRoute()
+        assertKeyboardHidden()
     }
 
     private fun headerBack() {
