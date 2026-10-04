@@ -867,6 +867,16 @@
     <string name="site_connection_unavailable_description">D\'Säit lädt nach ëmmer oder konnt net geladen ginn. Säi Verbindungsstatus ass nach net verfügbar.</string>
     <string name="site_connection_other_description">Verbindungsdetailer sinn net verfügbar fir dës Säit.</string>
     <string name="privacy_xray_title">Privacy X-Ray</string>
+    <string name="privacy_gecko_request_blocking">Ufuerderungsblockéierung am Gecko</string>
+    <string name="privacy_gecko_telemetry_note">Firefox-Erweiderunge wéi uBlock Origin blockéieren Ufuerderungen onofhängeg. Hir blockéiert Ufuerderunge sinn net an de Compteure vu Candy enthalen. Maach uBlock Origin op, fir säi Schutz fir dës Säit ze kontrolléieren.</string>
+    <string name="privacy_gecko_open_ublock">uBlock Origin opmaachen</string>
+    <string name="privacy_gecko_ublock_unavailable">uBlock Origin ass fir dësen Tab net verfügbar. Kontrolléier, ob et an de Firefox-Erweiderungen aktivéiert ass; privat Tabs brauchen eng separat Erlaabnis fir privat Surfen.</string>
+    <string name="privacy_gecko_candy_total_label">Candy-Blockéierungen</string>
+    <string name="privacy_gecko_candy_scope_note">Hei ginn nëmme Cookie-Banner-Ufuerderunge gezielt, déi Candy blockéiert. Null heescht net, datt Firefox-Erweiderungen näischt blockéiert hunn.</string>
+    <string name="privacy_gecko_no_candy_requests">Fir dësen Tab goufe keng vu Candy blockéiert Cookie-Banner-Ufuerderunge registréiert.</string>
+    <string name="privacy_gecko_extension_policy">Firefox-Erweiderunge verwalten de Schutz géint Annoncen an Tracker. Kontrolléier den aktuelle Status an der Erweiderung.</string>
+    <string name="privacy_gecko_candy_site_protection">Candy-Schutz fir dëse Site</string>
+    <string name="privacy_gecko_pause_warning_message">De Candy-Schutz pauséieren erlaabt Drëtt-Partei-Cookien a bekannte Cookie-Banner op %1$s. Firefox-Erweiderunge behalen hir eege Schutzastellungen. D’Säit gëtt direkt nei gelueden.</string>
     <string name="privacy_xray_subtitle">Live Vue fir %1$s</string>
     <string name="privacy_xray_total_label">Tab-Blöcker</string>
     <string name="privacy_xray_live_note">Live Updates ginn zesummegeluecht fir de Browsing glat ze halen</string>

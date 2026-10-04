@@ -855,6 +855,16 @@
     <string name="site_connection_unavailable_description">ページがまだ読み込まれるか,読み込めないか. 接続状態はまだ確認されていません.</string>
     <string name="site_connection_other_description">このページでは接続情報が提供されていません.</string>
     <string name="privacy_xray_title">Privacy X-Ray</string>
+    <string name="privacy_gecko_request_blocking">Gecko のリクエストブロック</string>
+    <string name="privacy_gecko_telemetry_note">uBlock Origin などの Firefox 拡張機能は、独立してリクエストをブロックします。そのブロック数は Candy のカウンターに含まれません。uBlock Origin を開いて、このページの保護を確認してください。</string>
+    <string name="privacy_gecko_open_ublock">uBlock Origin を開く</string>
+    <string name="privacy_gecko_ublock_unavailable">このタブでは uBlock Origin を利用できません。Firefox 拡張機能で有効になっているか確認してください。プライベートタブには、プライベートブラウジング用の別途の許可が必要です。</string>
+    <string name="privacy_gecko_candy_total_label">Candy のブロック数</string>
+    <string name="privacy_gecko_candy_scope_note">ここでは Candy がブロックした Cookie バナーのリクエストのみを数えます。ゼロでも、Firefox 拡張機能が何もブロックしていないとは限りません。</string>
+    <string name="privacy_gecko_no_candy_requests">このタブで Candy がブロックした Cookie バナーのリクエストは記録されていません。</string>
+    <string name="privacy_gecko_extension_policy">広告とトラッカーの保護は Firefox 拡張機能が管理します。現在の状態は拡張機能で確認してください。</string>
+    <string name="privacy_gecko_candy_site_protection">このサイトの Candy 保護</string>
+    <string name="privacy_gecko_pause_warning_message">Candy の保護を一時停止すると、%1$s 上のサードパーティー Cookie と既知の Cookie バナーが許可されます。Firefox 拡張機能の保護設定は維持されます。ページはすぐに再読み込みされます。</string>
     <string name="privacy_xray_subtitle">%1$sのライブビュー</string>
     <string name="privacy_xray_total_label">このタブのブロック数</string>
     <string name="privacy_xray_live_note">ブラウジングをスムーズにするためにライブ更新がグループ化されています</string>

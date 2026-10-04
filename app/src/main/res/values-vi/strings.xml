@@ -855,6 +855,16 @@
     <string name="site_connection_unavailable_description">Trang vẫn đang tải hoặc không thể tải được. Tình trạng kết nối của nó vẫn chưa sẵn sàng.</string>
     <string name="site_connection_other_description">Chi tiết kết nối không có sẵn cho trang này.</string>
     <string name="privacy_xray_title">Privacy X-Ray</string>
+    <string name="privacy_gecko_request_blocking">Chặn yêu cầu trong Gecko</string>
+    <string name="privacy_gecko_telemetry_note">Các tiện ích Firefox như uBlock Origin chặn yêu cầu độc lập. Các yêu cầu chúng chặn không được tính vào bộ đếm của Candy. Mở uBlock Origin để kiểm tra khả năng bảo vệ trang này.</string>
+    <string name="privacy_gecko_open_ublock">Mở uBlock Origin</string>
+    <string name="privacy_gecko_ublock_unavailable">uBlock Origin không khả dụng cho thẻ này. Kiểm tra xem tiện ích đã được bật trong các tiện ích Firefox chưa; thẻ riêng tư cần quyền truy cập riêng cho chế độ duyệt web riêng tư.</string>
+    <string name="privacy_gecko_candy_total_label">Yêu cầu Candy chặn</string>
+    <string name="privacy_gecko_candy_scope_note">Ở đây chỉ đếm các yêu cầu biểu ngữ cookie do Candy chặn. Giá trị 0 không có nghĩa là các tiện ích Firefox chưa chặn gì.</string>
+    <string name="privacy_gecko_no_candy_requests">Chưa ghi nhận yêu cầu biểu ngữ cookie do Candy chặn trong thẻ này.</string>
+    <string name="privacy_gecko_extension_policy">Các tiện ích Firefox quản lý việc bảo vệ khỏi quảng cáo và trình theo dõi. Kiểm tra trạng thái hiện tại trong tiện ích.</string>
+    <string name="privacy_gecko_candy_site_protection">Bảo vệ Candy cho trang web này</string>
+    <string name="privacy_gecko_pause_warning_message">Tạm dừng bảo vệ Candy sẽ cho phép cookie bên thứ ba và biểu ngữ cookie đã biết trên %1$s. Các tiện ích Firefox giữ nguyên cài đặt bảo vệ riêng. Trang sẽ tải lại ngay.</string>
     <string name="privacy_xray_subtitle">Xem trực tiếp cho %1$s</string>
     <string name="privacy_xray_total_label">Yêu cầu bị chặn trong thẻ</string>
     <string name="privacy_xray_live_note">Các bản cập nhật trực tiếp được nhóm lại để giữ cho việc duyệt web trơn tru</string>

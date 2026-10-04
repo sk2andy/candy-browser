@@ -855,6 +855,16 @@
     <string name="site_connection_unavailable_description">頁面仍在載入或無法載入. 它的連線狀態尚未可用.</string>
     <string name="site_connection_other_description">這個頁面上沒有連線詳細資訊.</string>
     <string name="privacy_xray_title">Privacy X-Ray</string>
+    <string name="privacy_gecko_request_blocking">Gecko 請求封鎖</string>
+    <string name="privacy_gecko_telemetry_note">Firefox 擴充功能（如 uBlock Origin）獨立封鎖請求。它們封鎖的請求不計入 Candy 的計數。開啟 uBlock Origin，查看其對此頁面的保護。</string>
+    <string name="privacy_gecko_open_ublock">開啟 uBlock Origin</string>
+    <string name="privacy_gecko_ublock_unavailable">此分頁無法使用 uBlock Origin。請確認已在 Firefox 擴充功能中啟用；隱私分頁需要另外授予隱私瀏覽權限。</string>
+    <string name="privacy_gecko_candy_total_label">Candy 封鎖數</string>
+    <string name="privacy_gecko_candy_scope_note">此處僅統計 Candy 封鎖的 Cookie 橫幅請求。零並不表示 Firefox 擴充功能未封鎖任何請求。</string>
+    <string name="privacy_gecko_no_candy_requests">此分頁尚未記錄到 Candy 封鎖的 Cookie 橫幅請求。</string>
+    <string name="privacy_gecko_extension_policy">廣告和追蹤器保護由 Firefox 擴充功能管理。請在擴充功能中查看目前狀態。</string>
+    <string name="privacy_gecko_candy_site_protection">此網站的 Candy 保護</string>
+    <string name="privacy_gecko_pause_warning_message">暫停 Candy 保護將允許 %1$s 上的第三方 Cookie 和已知 Cookie 橫幅。Firefox 擴充功能會保留各自的保護設定。頁面會立即重新載入。</string>
     <string name="privacy_xray_subtitle">%1$s 的實時檢視</string>
     <string name="privacy_xray_total_label">此分頁的封鎖請求</string>
     <string name="privacy_xray_live_note">實時更新被分組以保持順利的瀏覽</string>

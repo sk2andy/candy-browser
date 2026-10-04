@@ -855,6 +855,16 @@
     <string name="site_connection_unavailable_description">페이지가 여전히 로드되고 있거나 로드될 수 없습니다. 연결 상태는 아직 확인되지 않았습니다.</string>
     <string name="site_connection_other_description">이 페이지에 연결 정보가 없습니다.</string>
     <string name="privacy_xray_title">Privacy X-Ray</string>
+    <string name="privacy_gecko_request_blocking">Gecko 요청 차단</string>
+    <string name="privacy_gecko_telemetry_note">uBlock Origin 같은 Firefox 확장 기능은 요청을 독립적으로 차단합니다. 이 요청은 Candy의 차단 수에 포함되지 않습니다. uBlock Origin을 열어 이 페이지에 대한 보호를 확인하세요.</string>
+    <string name="privacy_gecko_open_ublock">uBlock Origin 열기</string>
+    <string name="privacy_gecko_ublock_unavailable">이 탭에서는 uBlock Origin을 사용할 수 없습니다. Firefox 확장 기능에서 활성화되어 있는지 확인하세요. 비공개 탭에는 별도의 비공개 탐색 권한이 필요합니다.</string>
+    <string name="privacy_gecko_candy_total_label">Candy 차단 수</string>
+    <string name="privacy_gecko_candy_scope_note">여기에는 Candy가 차단한 쿠키 배너 요청만 집계됩니다. 0이라고 해서 Firefox 확장 기능이 아무것도 차단하지 않은 것은 아닙니다.</string>
+    <string name="privacy_gecko_no_candy_requests">이 탭에서 Candy가 차단한 쿠키 배너 요청이 기록되지 않았습니다.</string>
+    <string name="privacy_gecko_extension_policy">광고 및 추적기 보호는 Firefox 확장 기능에서 관리합니다. 확장 기능에서 현재 상태를 확인하세요.</string>
+    <string name="privacy_gecko_candy_site_protection">이 사이트의 Candy 보호</string>
+    <string name="privacy_gecko_pause_warning_message">Candy 보호를 일시 중지하면 %1$s에서 타사 쿠키와 알려진 쿠키 배너가 허용됩니다. Firefox 확장 기능은 자체 보호 설정을 유지합니다. 페이지가 즉시 새로고침됩니다.</string>
     <string name="privacy_xray_subtitle">%1$s의 라이브 뷰</string>
     <string name="privacy_xray_total_label">이 탭의 차단 요청</string>
     <string name="privacy_xray_live_note">실시간 업데이트가 순조롭게 브라우징을 유지하기 위해 그룹화됩니다</string>

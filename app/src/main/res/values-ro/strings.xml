@@ -878,6 +878,16 @@
     <string name="site_connection_unavailable_description">Pagina încă se încărcă sau nu a putut fi încărcată. Starea conexiunii sale nu este încă disponibilă.</string>
     <string name="site_connection_other_description">Detaliile de conexiune nu sunt disponibile pentru această pagină.</string>
     <string name="privacy_xray_title">Privacy X-Ray</string>
+    <string name="privacy_gecko_request_blocking">Blocarea solicitărilor în Gecko</string>
+    <string name="privacy_gecko_telemetry_note">Extensiile Firefox, precum uBlock Origin, blochează solicitările independent. Solicitările blocate de ele nu sunt incluse în contoarele Candy. Deschide uBlock Origin pentru a verifica protecția sa pentru această pagină.</string>
+    <string name="privacy_gecko_open_ublock">Deschide uBlock Origin</string>
+    <string name="privacy_gecko_ublock_unavailable">uBlock Origin nu este disponibil pentru această filă. Verifică dacă este activat în extensiile Firefox; filele private necesită o permisiune separată pentru navigarea privată.</string>
+    <string name="privacy_gecko_candy_total_label">Blocări Candy</string>
+    <string name="privacy_gecko_candy_scope_note">Aici sunt numărate doar solicitările bannerelor pentru cookie-uri blocate de Candy. Zero nu înseamnă că extensiile Firefox nu au blocat nimic.</string>
+    <string name="privacy_gecko_no_candy_requests">Nu există solicitări ale bannerelor pentru cookie-uri blocate de Candy înregistrate pentru această filă.</string>
+    <string name="privacy_gecko_extension_policy">Extensiile Firefox gestionează protecția împotriva reclamelor și instrumentelor de urmărire. Verifică starea actuală în extensie.</string>
+    <string name="privacy_gecko_candy_site_protection">Protecție Candy pentru acest site</string>
+    <string name="privacy_gecko_pause_warning_message">Suspendarea protecției Candy permite cookie-urile terților și bannerele cunoscute pentru cookie-uri pe %1$s. Extensiile Firefox își păstrează propriile setări de protecție. Pagina se reîncarcă imediat.</string>
     <string name="privacy_xray_subtitle">Vizualizare în direct pentru %1$s</string>
     <string name="privacy_xray_total_label">Blocări în filă</string>
     <string name="privacy_xray_live_note">Actualizările live sunt grupate pentru a păstra navigarea fără probleme</string>

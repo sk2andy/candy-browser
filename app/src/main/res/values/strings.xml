@@ -884,6 +884,16 @@
     <string name="site_connection_unavailable_description">The page is still loading or could not be loaded. Its connection status is not yet available.</string>
     <string name="site_connection_other_description">Connection details are unavailable for this page.</string>
     <string name="privacy_xray_title">Privacy X-Ray</string>
+    <string name="privacy_gecko_request_blocking">Gecko request blocking</string>
+    <string name="privacy_gecko_telemetry_note">Firefox extensions such as uBlock Origin block requests independently. Their blocked requests are not included in Candy’s counters. Open uBlock Origin to inspect its protection for this page.</string>
+    <string name="privacy_gecko_open_ublock">Open uBlock Origin</string>
+    <string name="privacy_gecko_ublock_unavailable">uBlock Origin is unavailable for this tab. Check that it is enabled in Firefox extensions; private tabs need separate private-browsing access.</string>
+    <string name="privacy_gecko_candy_total_label">Candy blocks</string>
+    <string name="privacy_gecko_candy_scope_note">Only cookie-banner requests blocked by Candy are counted here. Zero does not mean Firefox extensions blocked nothing.</string>
+    <string name="privacy_gecko_no_candy_requests">Candy has not recorded any blocked cookie-banner requests for this tab.</string>
+    <string name="privacy_gecko_extension_policy">Ad and tracker protection is managed by Firefox extensions. Inspect the extension to check its current state.</string>
+    <string name="privacy_gecko_candy_site_protection">Candy protection for this site</string>
+    <string name="privacy_gecko_pause_warning_message">Pausing Candy protection allows third-party cookies and known cookie banners on %1$s. Firefox extensions keep their own protection settings. The page reloads immediately.</string>
     <string name="privacy_xray_subtitle">Live view for %1$s</string>
     <string name="privacy_xray_total_label">Tab blocks</string>
     <string name="privacy_xray_live_note">Live updates are grouped to keep browsing smooth</string>

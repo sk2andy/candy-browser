@@ -867,6 +867,16 @@
     <string name="site_connection_unavailable_description">Страницата се уште се вградува или не може да се вгради. Статусот на врската сè уште не е достапен.</string>
     <string name="site_connection_other_description">Деталите за поврзување не се достапни за оваа страница.</string>
     <string name="privacy_xray_title">Privacy X-Ray</string>
+    <string name="privacy_gecko_request_blocking">Блокирање барања во Gecko</string>
+    <string name="privacy_gecko_telemetry_note">Проширувањата за Firefox, како uBlock Origin, независно блокираат барања. Нивните блокирани барања не се вклучени во бројачите на Candy. Отвори uBlock Origin за да ја провериш неговата заштита за оваа страница.</string>
+    <string name="privacy_gecko_open_ublock">Отвори uBlock Origin</string>
+    <string name="privacy_gecko_ublock_unavailable">uBlock Origin не е достапен за ова јазиче. Провери дали е овозможен во проширувањата за Firefox; приватните јазичиња бараат посебна дозвола за приватно прелистување.</string>
+    <string name="privacy_gecko_candy_total_label">Блокирања од Candy</string>
+    <string name="privacy_gecko_candy_scope_note">Тука се бројат само барањата за банери за колачиња што ги блокира Candy. Нула не значи дека проширувањата за Firefox не блокирале ништо.</string>
+    <string name="privacy_gecko_no_candy_requests">За ова јазиче нема забележани барања за банери за колачиња блокирани од Candy.</string>
+    <string name="privacy_gecko_extension_policy">Проширувањата за Firefox управуваат со заштитата од реклами и следачи. Провери ја тековната состојба во проширувањето.</string>
+    <string name="privacy_gecko_candy_site_protection">Заштита од Candy за оваа веб-страница</string>
+    <string name="privacy_gecko_pause_warning_message">Паузирањето на заштитата на Candy дозволува колачиња од трети страни и познати банери за колачиња на %1$s. Проширувањата за Firefox ги задржуваат своите поставки за заштита. Страницата веднаш се вчитува повторно.</string>
     <string name="privacy_xray_subtitle">Преглед во живо за %1$s</string>
     <string name="privacy_xray_total_label">Блокирања во јазичето</string>
     <string name="privacy_xray_live_note">Живите ажурирања се групирани за да го одржувате бледо пребарување</string>

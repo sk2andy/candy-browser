@@ -888,6 +888,16 @@
     <string name="site_connection_unavailable_description">Stránka se stále načítá nebo ji nelze načíst. Stav jejího spojení zatím není dostupný.</string>
     <string name="site_connection_other_description">Podrobnosti spojení nejsou pro tuto stránku dostupné.</string>
     <string name="privacy_xray_title">Privacy X-Ray</string>
+    <string name="privacy_gecko_request_blocking">Blokování požadavků v Gecko</string>
+    <string name="privacy_gecko_telemetry_note">Rozšíření Firefoxu, jako uBlock Origin, blokují požadavky nezávisle. Jimi blokované požadavky nejsou zahrnuty v počítadlech Candy. Otevři uBlock Origin a zkontroluj jeho ochranu této stránky.</string>
+    <string name="privacy_gecko_open_ublock">Otevřít uBlock Origin</string>
+    <string name="privacy_gecko_ublock_unavailable">uBlock Origin není pro tento panel dostupný. Zkontroluj, zda je povolený v rozšířeních Firefoxu; anonymní panely vyžadují samostatné povolení pro anonymní prohlížení.</string>
+    <string name="privacy_gecko_candy_total_label">Blokování Candy</string>
+    <string name="privacy_gecko_candy_scope_note">Zde se počítají pouze požadavky bannerů cookies blokované Candy. Nula neznamená, že rozšíření Firefoxu nic nezablokovala.</string>
+    <string name="privacy_gecko_no_candy_requests">Pro tento panel nebyly zaznamenány žádné požadavky bannerů cookies blokované Candy.</string>
+    <string name="privacy_gecko_extension_policy">Ochranu před reklamami a sledovacími prvky spravují rozšíření Firefoxu. Aktuální stav zkontroluj v rozšíření.</string>
+    <string name="privacy_gecko_candy_site_protection">Ochrana Candy pro tento web</string>
+    <string name="privacy_gecko_pause_warning_message">Pozastavení ochrany Candy povolí cookies třetích stran a známé bannery cookies na %1$s. Rozšíření Firefoxu si ponechají vlastní nastavení ochrany. Stránka se ihned znovu načte.</string>
     <string name="privacy_xray_subtitle">Živý přehled pro %1$s</string>
     <string name="privacy_xray_total_label">Blokování v panelu</string>
     <string name="privacy_xray_live_note">Živé aktualizace jsou seskupeny pro plynulé prohlížení</string>

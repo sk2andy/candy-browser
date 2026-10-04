@@ -867,6 +867,16 @@
     <string name="site_connection_unavailable_description">Siden er ennå lastet inn eller kunne ikke lastes. Forbindelsesstatusen er ikke tilgjengelig ennå.</string>
     <string name="site_connection_other_description">Tilkoblingsdetaljer er ikke tilgjengelig for denne siden.</string>
     <string name="privacy_xray_title">Privacy X-Ray</string>
+    <string name="privacy_gecko_request_blocking">Blokkering av forespørsler i Gecko</string>
+    <string name="privacy_gecko_telemetry_note">Firefox-utvidelser som uBlock Origin blokkerer forespørsler uavhengig. De blokkerte forespørslene deres er ikke med i Candys tellere. Åpne uBlock Origin for å sjekke beskyttelsen av denne siden.</string>
+    <string name="privacy_gecko_open_ublock">Åpne uBlock Origin</string>
+    <string name="privacy_gecko_ublock_unavailable">uBlock Origin er ikke tilgjengelig for denne fanen. Sjekk at den er aktivert i Firefox-utvidelser; private faner trenger egen tillatelse til privat nettlesing.</string>
+    <string name="privacy_gecko_candy_total_label">Candy-blokkeringer</string>
+    <string name="privacy_gecko_candy_scope_note">Her telles bare forespørsler fra informasjonskapselbannere som Candy blokkerer. Null betyr ikke at Firefox-utvidelser ikke har blokkert noe.</string>
+    <string name="privacy_gecko_no_candy_requests">Ingen forespørsler fra informasjonskapselbannere blokkert av Candy er registrert for denne fanen.</string>
+    <string name="privacy_gecko_extension_policy">Firefox-utvidelser styrer beskyttelsen mot annonser og sporere. Sjekk gjeldende status i utvidelsen.</string>
+    <string name="privacy_gecko_candy_site_protection">Candy-beskyttelse for dette nettstedet</string>
+    <string name="privacy_gecko_pause_warning_message">Å sette Candy-beskyttelsen på pause tillater tredjeparts informasjonskapsler og kjente informasjonskapselbannere på %1$s. Firefox-utvidelser beholder sine egne beskyttelsesinnstillinger. Siden lastes inn på nytt med en gang.</string>
     <string name="privacy_xray_subtitle">Livevisning for %1$s</string>
     <string name="privacy_xray_total_label">Faneblokker</string>
     <string name="privacy_xray_live_note">Live oppdateringer er gruppert for å fortsette å surfe jevnt</string>

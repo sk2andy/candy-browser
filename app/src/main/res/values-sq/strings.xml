@@ -867,6 +867,16 @@
     <string name="site_connection_unavailable_description">Faqja është ende duke u ngarkuar ose nuk mund të ngarkohet. Statusin e lidhjes ende nuk është në dispozicion.</string>
     <string name="site_connection_other_description">Detajet e lidhjes nuk janë në dispozicion për këtë faqe.</string>
     <string name="privacy_xray_title">Privacy X-Ray</string>
+    <string name="privacy_gecko_request_blocking">Bllokimi i kërkesave në Gecko</string>
+    <string name="privacy_gecko_telemetry_note">Zgjerimet e Firefox, si uBlock Origin, bllokojnë kërkesat në mënyrë të pavarur. Kërkesat e bllokuara prej tyre nuk përfshihen në numëruesit e Candy. Hap uBlock Origin për të kontrolluar mbrojtjen e tij për këtë faqe.</string>
+    <string name="privacy_gecko_open_ublock">Hap uBlock Origin</string>
+    <string name="privacy_gecko_ublock_unavailable">uBlock Origin nuk është i disponueshëm për këtë skedë. Kontrollo që është aktivizuar te zgjerimet e Firefox; skedat private kërkojnë leje të veçantë për shfletim privat.</string>
+    <string name="privacy_gecko_candy_total_label">Bllokime nga Candy</string>
+    <string name="privacy_gecko_candy_scope_note">Këtu numërohen vetëm kërkesat e banerave të cookies të bllokuara nga Candy. Zero nuk do të thotë se zgjerimet e Firefox nuk kanë bllokuar asgjë.</string>
+    <string name="privacy_gecko_no_candy_requests">Nuk ka kërkesa të banerave të cookies të bllokuara nga Candy të regjistruara për këtë skedë.</string>
+    <string name="privacy_gecko_extension_policy">Zgjerimet e Firefox menaxhojnë mbrojtjen nga reklamat dhe gjurmuesit. Kontrollo gjendjen aktuale te zgjerimi.</string>
+    <string name="privacy_gecko_candy_site_protection">Mbrojtja Candy për këtë sajt</string>
+    <string name="privacy_gecko_pause_warning_message">Pezullimi i mbrojtjes Candy lejon cookies të palëve të treta dhe banerat e njohur të cookies në %1$s. Zgjerimet e Firefox ruajnë cilësimet e tyre të mbrojtjes. Faqja ringarkohet menjëherë.</string>
     <string name="privacy_xray_subtitle">Shikimi i drejtpërdrejtë për %1$s</string>
     <string name="privacy_xray_total_label">Bllokime në skedë</string>
     <string name="privacy_xray_live_note">Përditësimet e drejtpërdrejta janë të grupuara për të mbajtur shfletimin të qetë</string>

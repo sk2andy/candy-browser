@@ -867,6 +867,16 @@
     <string name="site_connection_unavailable_description">De pagina is nog steeds geladen of kon niet geladen worden. De verbindingsstatus is nog niet beschikbaar.</string>
     <string name="site_connection_other_description">Verbindingsdetails zijn niet beschikbaar voor deze pagina.</string>
     <string name="privacy_xray_title">Privacy X-Ray</string>
+    <string name="privacy_gecko_request_blocking">Verzoeken blokkeren in Gecko</string>
+    <string name="privacy_gecko_telemetry_note">Firefox-extensies zoals uBlock Origin blokkeren verzoeken onafhankelijk. Hun geblokkeerde verzoeken tellen niet mee in de tellers van Candy. Open uBlock Origin om de bescherming voor deze pagina te controleren.</string>
+    <string name="privacy_gecko_open_ublock">uBlock Origin openen</string>
+    <string name="privacy_gecko_ublock_unavailable">uBlock Origin is niet beschikbaar voor dit tabblad. Controleer of het is ingeschakeld bij Firefox-extensies; privétabbladen vereisen aparte toestemming voor privénavigatie.</string>
+    <string name="privacy_gecko_candy_total_label">Candy-blokkeringen</string>
+    <string name="privacy_gecko_candy_scope_note">Hier tellen alleen verzoeken van cookiebanners die Candy blokkeert. Nul betekent niet dat Firefox-extensies niets hebben geblokkeerd.</string>
+    <string name="privacy_gecko_no_candy_requests">Voor dit tabblad zijn geen door Candy geblokkeerde verzoeken van cookiebanners geregistreerd.</string>
+    <string name="privacy_gecko_extension_policy">Firefox-extensies beheren de bescherming tegen advertenties en trackers. Controleer de huidige status in de extensie.</string>
+    <string name="privacy_gecko_candy_site_protection">Candy-bescherming voor deze site</string>
+    <string name="privacy_gecko_pause_warning_message">Als je Candy-bescherming pauzeert, worden cookies van derden en bekende cookiebanners op %1$s toegestaan. Firefox-extensies behouden hun eigen beschermingsinstellingen. De pagina wordt direct opnieuw geladen.</string>
     <string name="privacy_xray_subtitle">Levende weergave voor %1$s</string>
     <string name="privacy_xray_total_label">Tabblokken</string>
     <string name="privacy_xray_live_note">Live updates zijn gegroepeerd om glad te blijven surfen</string>

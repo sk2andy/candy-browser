@@ -888,6 +888,16 @@
     <string name="site_connection_unavailable_description">Strona nadal się wczytuje lub nie została wczytana. Stan jej połączenia nie jest jeszcze dostępny.</string>
     <string name="site_connection_other_description">Szczegóły połączenia dla tej strony są niedostępne.</string>
     <string name="privacy_xray_title">Privacy X-Ray</string>
+    <string name="privacy_gecko_request_blocking">Blokowanie żądań w Gecko</string>
+    <string name="privacy_gecko_telemetry_note">Rozszerzenia Firefoksa, takie jak uBlock Origin, niezależnie blokują żądania. Zablokowane przez nie żądania nie są uwzględniane w licznikach Candy. Otwórz uBlock Origin, aby sprawdzić jego ochronę tej strony.</string>
+    <string name="privacy_gecko_open_ublock">Otwórz uBlock Origin</string>
+    <string name="privacy_gecko_ublock_unavailable">uBlock Origin jest niedostępny w tej karcie. Sprawdź, czy jest włączony w rozszerzeniach Firefoksa; karty prywatne wymagają osobnego zezwolenia na przeglądanie prywatne.</string>
+    <string name="privacy_gecko_candy_total_label">Blokady Candy</string>
+    <string name="privacy_gecko_candy_scope_note">Tutaj liczone są tylko żądania banerów plików cookie zablokowane przez Candy. Zero nie oznacza, że rozszerzenia Firefoksa niczego nie zablokowały.</string>
+    <string name="privacy_gecko_no_candy_requests">Nie zarejestrowano żądań banerów plików cookie zablokowanych przez Candy w tej karcie.</string>
+    <string name="privacy_gecko_extension_policy">Rozszerzenia Firefoksa zarządzają ochroną przed reklamami i elementami śledzącymi. Sprawdź bieżący stan w rozszerzeniu.</string>
+    <string name="privacy_gecko_candy_site_protection">Ochrona Candy dla tej witryny</string>
+    <string name="privacy_gecko_pause_warning_message">Wstrzymanie ochrony Candy zezwala na pliki cookie innych firm i znane banery plików cookie w %1$s. Rozszerzenia Firefoksa zachowują własne ustawienia ochrony. Strona zostanie od razu wczytana ponownie.</string>
     <string name="privacy_xray_subtitle">Podgląd na żywo dla %1$s</string>
     <string name="privacy_xray_total_label">Blokady karty</string>
     <string name="privacy_xray_live_note">Aktualizacje na żywo są grupowane, aby zachować płynność przeglądania</string>

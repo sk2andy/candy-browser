@@ -765,6 +765,16 @@
     <string name="site_connection_http_description">Cette adresse utilise HTTP sans chiffrement. Les informations envoyées pourraient être visibles par d’autres.</string>
     <string name="site_connection_unavailable_description">La page est en cours de chargement ou n’a pas pu être chargée. Son état de connexion n’est pas encore disponible.</string>
     <string name="site_connection_other_description">Aucun détail de connexion disponible pour cette page.</string>
+    <string name="privacy_gecko_request_blocking">Blocage des requêtes dans Gecko</string>
+    <string name="privacy_gecko_telemetry_note">Les extensions Firefox comme uBlock Origin bloquent les requêtes indépendamment. Leurs requêtes bloquées ne sont pas incluses dans les compteurs de Candy. Ouvre uBlock Origin pour vérifier sa protection pour cette page.</string>
+    <string name="privacy_gecko_open_ublock">Ouvrir uBlock Origin</string>
+    <string name="privacy_gecko_ublock_unavailable">uBlock Origin est indisponible pour cet onglet. Vérifie son activation dans les extensions Firefox ; les onglets privés nécessitent une autorisation distincte pour la navigation privée.</string>
+    <string name="privacy_gecko_candy_total_label">Blocages de Candy</string>
+    <string name="privacy_gecko_candy_scope_note">Seules les requêtes de bandeaux de cookies bloquées par Candy sont comptées ici. Zéro ne signifie pas que les extensions Firefox n’ont rien bloqué.</string>
+    <string name="privacy_gecko_no_candy_requests">Aucune requête de bandeau de cookies bloquée par Candy enregistrée pour cet onglet.</string>
+    <string name="privacy_gecko_extension_policy">Les extensions Firefox gèrent la protection contre les publicités et les traqueurs. Vérifie l’état actuel dans l’extension.</string>
+    <string name="privacy_gecko_candy_site_protection">Protection Candy pour ce site</string>
+    <string name="privacy_gecko_pause_warning_message">La suspension de la protection Candy autorise les cookies tiers et les bandeaux de cookies connus sur %1$s. Les extensions Firefox conservent leurs propres paramètres de protection. La page est immédiatement rechargée.</string>
     <string name="privacy_xray_subtitle">Vue en direct pour %1$s</string>
     <string name="privacy_xray_total_label">Blocages de l’onglet</string>
     <string name="privacy_xray_live_note">Les mises à jour sont regroupées pour une navigation fluide</string>
