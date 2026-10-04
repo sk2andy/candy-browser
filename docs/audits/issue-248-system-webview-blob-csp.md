@@ -12,12 +12,13 @@
 | User-authorized Pixel 11 Pro | Android 17 / API 37, System WebView `153.0.8010.36`; auto-rotate remained disabled |
 | Installed regular Candy on Pixel | Version 0.45.1 with System WebView selected; existing Google login retained |
 | Gemini free, signed in on Pixel | Gemini Flash generated an image; the user repeatedly reproduced the download-button snackbar, "Download konnte nicht gestartet werden" |
-| Patched live Gemini download | Still fails in the signed-in diagnostic app; native logs and debugger identify an opaque `blob:null/` request |
+| Initial CSP-only patch | Still failed in the signed-in diagnostic app; native logs and debugger identified an opaque `blob:null/` request |
+| Final opaque-image patch | Two signed-in Gemini downloads completed on Pixel; user independently confirmed success |
 
-The user confirmed a live System WebView download failure. The diagnostic build reproduces it:
-Gemini creates an opaque-origin image blob, which the existing same-origin route rejects.
-The CSP defect below is independently proven in a controlled fixture. It does not explain this
-captured native rejection. Do not treat that fixture as successful live Gemini acceptance.
+The user confirmed a live System WebView download failure: Gemini creates an opaque-origin JPEG
+blob, which the original same-origin route rejects. The final patch supports this specific passive
+image path and has passed live Gemini acceptance. The independently reproduced CSP defect below
+also remains covered; it was not the cause of the opaque URL's native rejection.
 
 ## Confirmed live failure
 
@@ -28,11 +29,14 @@ captured native rejection. Do not treat that fixture as successful live Gemini a
 | Text/DOM and frame-context probe | Gemini creates the JPEG blob inside an opaque sandboxed frame; its sandbox permits scripts and downloads but excludes same-origin access |
 | Actual rejection | `isSameOriginBlob` cannot match the opaque blob to the HTTPS main document; fallback `startDownload` rejects its non-HTTP(S) scheme |
 | Native stack trace | None: this is an explicit `InvalidRequest` callback before DownloadManager enqueue or storage access, not a caught exception |
-| Proposed capability probe | Test a fresh profile-matched passive-image helper navigating to the exact opaque blob and reading itself; prepared, not executed or established as a safe production fix |
+| Executed capability probe | A fresh profile-matched passive image helper navigated to the exact opaque blob and read its original bytes, even with creator `connect-src 'none'` |
+| Final native callback trace | `SystemDownloadResponseReceived` → `SystemDownloadRequested` → `SystemDownloadBlobHelper` → `SystemDownloadStarted` → `SystemDownloadCompleted` |
+| Completed live files | Two Candy-owned JPEG rows, 732,621 and 846,572 bytes, both 1,408 × 768 pixels and `is_pending=0` |
 
 Opaque origin serialization `null` is not an origin identity. Do not relax the existing same-origin
 gate by comparing two `null` strings, or execute arbitrary opaque HTML/SVG blobs in a JavaScript
-enabled helper. The live case still requires a separately verified ownership and transfer path.
+enabled helper. The verified path instead uses the exact requested URL and source profile, with
+native PNG/JPEG MIME gating and a matching fetched MIME type before storage opens.
 
 ## Pixel diagnostics
 
@@ -55,8 +59,8 @@ exceptions retain bounded classes and code frames, without messages or request m
 Opt-in app logs and debug-only `CandyDownload` Logcat share the global private-owner gate;
 private sessions remain excluded after their callbacks outlive the tab. Gecko is unchanged.
 
-The separate `Candy #248` package preserves the signed release's data. Its WebView profile needs
-its own Google login before the original Gemini download can be tested.
+The separate `Candy #248` package preserves the signed release's data. Its own signed-in WebView
+profile was used for the successful original Gemini download test.
 
 ## Controlled reproduction
 
@@ -78,20 +82,27 @@ Candy's native transfer fails. See the [CSP source matching rules](https://www.w
 
 ```mermaid
 flowchart LR
-    A[Source page creates PNG blob] --> B[User opens blob popup]
-    B --> C[Validate same origin]
-    C --> D[Temporary app HTML with source origin and profile]
-    D --> E[Bounded original-byte chunks]
+    A[Native blob download callback] --> B{Blob type}
+    B --> C[Same-origin blob]
+    C --> D[App HTML with source origin and exact profile]
+    B --> H[Canonical opaque PNG or JPEG]
+    H --> I[Exact blob image document in source profile]
+    I --> J[Verify helper URL and fetched MIME]
+    J --> E[Bounded original-byte chunks]
+    D --> E
     E --> F[Scoped MediaStore file]
     F --> G[Destroy helper]
-    D --> H[Failure or cancellation]
-    H --> G
+    D --> K[Failure or cancellation]
+    I --> K
+    K --> G
 ```
 
 The helper copies the exact source profile before any settings or navigation. Profile lookup errors
 fail the transfer rather than falling back to the default profile. It blocks network, file and
-content access and executes only app-owned HTML and transfer JavaScript. The source page's CSP is
-unchanged. Native messages retain origin, main-frame, helper-identity, token and sequence checks;
+content access. Same-origin transfers execute app-owned HTML; opaque PNG/JPEG transfers load the
+passive image document and inject app-owned transfer JavaScript. The source page's CSP is unchanged.
+Native messages retain main-frame, helper-identity, token and sequence checks, plus source origin
+for same-origin transfers or the exact requested helper URL for opaque image transfers;
 existing size, chunk, timeout, cancellation and storage rules remain in force.
 
 Helper cleanup runs on the main thread on every terminal outcome. `close()` destroys all live
@@ -103,16 +114,16 @@ immediately deletable by [ProfileStore](https://developer.android.com/reference/
 
 | Check | Coverage |
 | --- | --- |
-| `SystemWebViewBlobDownloadInstrumentedTest` | Native popup, CSP popup, private popup, original PNG, isolated source profile, foreign-profile refusal, revoked URL, pending storage cancellation, synchronous isolated/private helper close |
-| User-authorized Pixel, API 37 / WebView 153.0.8010.36 | All 11 instrumented tests passed in the separate `systemwebview.issue248` test app; this validates controlled transfers, not patched live Gemini |
+| `SystemWebViewBlobDownloadInstrumentedTest` | 19 regressions: native and CSP popups; opaque PNG/JPEG bytes and metadata; isolated/private profiles; foreign-profile and revoked-URL refusal; real sandboxed native downloads; pending cancellation; synchronous helper close |
+| User-authorized Pixel, API 37 / WebView 153.0.8010.36 | Original 11 regressions passed before the opaque-image patch; live final-patch JPEG downloads and regular, isolated and private opaque transfer fixtures passed |
+| Final 19-test device run | Touch fixtures were blocked by the Pixel lock screen. Foreign/revoked opaque fixtures initially waited 15 seconds, shorter than the native 30-second failure boundary; only these rejection waits now allow 35 seconds. The complete unlocked rerun remains outstanding |
 | `testFullDebugUnitTest`, `testFossDebugUnitTest` | Shared Android/JVM regressions |
-| Native-callback diagnostic build JVM suites | 1,788 tests per flavor, including six callback ownership, private identity and sanitized exception regressions; no failures or skips |
+| Final Full/Foss JVM suites | 1,793 tests per flavor, including opaque URL/MIME policy and native diagnostic regressions; no failures or skips |
 | Pixel native diagnostic privacy test | Passed; private owners/sessions suppressed, actual sanitized exception frames visible in Logcat |
-| Diagnostic build popup-suite rerun | Interrupted after Pixel entered its lock screen; popup layout timed out before download start. The complete rerun still needs an unlocked Pixel |
 | `lintSystemwebviewDebug` | Android/WebView contracts |
 | `assembleSystemwebviewDebug`, `assembleSystemwebviewDebugAndroidTest` | APK and instrumentation compilation |
 | Manual controlled-page download | Candy's Downloads screen shows `download.png`, Finished, 72 B / 72 B |
 
 Run device tests only on the session's dedicated emulator, or on a physical device explicitly
 selected by the user; always use its explicit ADB serial.
-Verify the patched Gemini download with a signed-in free account before marking issue 248 resolved.
+Live signed-in free Gemini acceptance is complete and confirmed by the user.

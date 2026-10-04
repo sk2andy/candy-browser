@@ -29,6 +29,7 @@ internal enum class AppLogEvent {
     SystemDownloadStorageFailed,
     SystemDownloadCancelled,
     SystemDownloadHelperSetupFailed,
+    SystemDownloadHelperLoadFailed,
     SystemDownloadBridgeReplyFailed,
     SystemDownloadBridgeError,
     SystemDownloadTimedOut,

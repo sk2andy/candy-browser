@@ -1035,9 +1035,10 @@ private class SystemWebViewBrowserEngineSession(
                 metadata = metadata,
                 startTransfer = { listener ->
                     if (
-                        SystemWebViewBlobDownloadRules.isSameOriginBlob(
+                        SystemWebViewBlobDownloadRules.isSupportedBlob(
                             url,
                             pageUrl.orEmpty(),
+                            mimeType,
                         )
                     ) {
                         downloadDiagnostics.record(AppLogEvent.SystemDownloadBlobHelper)
