@@ -1424,4 +1424,12 @@
     <string name="developer_options_gecko_logging_status_failed">Capture stopped after an error. Turn logging off and on to retry.</string>
     <string name="settings_app_language">App language</string>
     <string name="settings_app_language_system">Follow device language</string>
+    <string name="command_delete_site_data_reload_name">Clear this site’s cookies &amp; data</string>
+    <string name="command_delete_site_data_reload_effect">Review cookies and website data for %1$s, then reload this tab</string>
+    <string name="command_feedback_site_data_cleared">Site data deleted and tab reloaded</string>
+    <string name="command_site_data_confirm_title">Delete data for %1$s?</string>
+    <string name="command_site_data_confirm_webview">Cookies and website storage for this address’s registered domain and all its subdomains will be deleted from this storage profile, across all schemes and ports, including embedded or partitioned data. This can also affect sibling subdomains. You may be signed out. This tab reloads afterward. Unrelated sites keep their data.</string>
+    <string name="command_site_data_unsupported">This engine cannot safely clear one site’s cookies and storage in the current profile. Nothing will be deleted.</string>
+    <string name="command_site_data_shared_storage">Other tabs and profiles sharing this storage will also lose this site’s data.</string>
+    <string name="command_site_data_target_changed">This tab or its page changed. Nothing will be deleted. Open the site information again to review the current page.</string>
 </resources>

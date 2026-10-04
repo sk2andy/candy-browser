@@ -87,6 +87,7 @@ import dev.sk2andy.materialbrowser.browser.engine.BrowserEngineContentKind
 import dev.sk2andy.materialbrowser.browser.integration.BrowserUriPolicy
 import dev.sk2andy.materialbrowser.browser.systemwebview.credentials.SystemWebViewCredentials
 import dev.sk2andy.materialbrowser.browser.systemwebview.commands.WebViewProfileCookies
+import dev.sk2andy.materialbrowser.browser.systemwebview.commands.WebViewSiteData
 import dev.sk2andy.materialbrowser.browser.gecko.AndroidBrowserEngineSessionPort
 import dev.sk2andy.materialbrowser.browser.gecko.BrowserEngineEventSink
 import dev.sk2andy.materialbrowser.browser.gecko.BrowserEnginePreviewCapture
@@ -351,7 +352,7 @@ private class SystemWebViewBrowserEngineSession(
     context: Context,
     override val tabId: String,
     profileId: String,
-    isolationEnabled: Boolean,
+    private val isolationEnabled: Boolean,
     private val isPrivate: Boolean,
     private val allowsToppings: Boolean,
     incognitoProfileName: String,
@@ -504,6 +505,18 @@ private class SystemWebViewBrowserEngineSession(
         check(!closed) { "Cannot bind a closed browser engine session" }
         if (!isPrivate) SystemWebViewCredentials.onAttached(webView)
         return host
+    }
+
+    override val supportsSiteDataDeletion: Boolean
+        get() = !closed && WebViewSiteData.isSupported(isPrivate || isolationEnabled)
+
+    override fun clearSiteData(url: String, onComplete: (Boolean) -> Unit) {
+        if (!supportsSiteDataDeletion) {
+            onComplete(false)
+            return
+        }
+        webView.stopLoading()
+        WebViewSiteData.clear(webView, url, isPrivate || isolationEnabled, onComplete)
     }
 
     override fun awaitContentPresented(listener: () -> Unit) {

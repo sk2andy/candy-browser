@@ -11,6 +11,7 @@ internal enum class AddressCommandFeedbackTone {
 internal enum class AddressCommandFeedbackMessage {
     CacheCleared,
     CookiesCleared,
+    SiteDataCleared,
     Reloaded,
     LoadingStopped,
     TabPinned,
@@ -59,6 +60,7 @@ internal object AddressCommandFeedbackRules {
         is CommandDispatchOutcome.Succeeded -> when (val result = outcome.result) {
             CommandResult.CacheClearedAndReloaded -> confirm(AddressCommandFeedbackMessage.CacheCleared)
             CommandResult.CookiesClearedAndReloaded -> confirm(AddressCommandFeedbackMessage.CookiesCleared)
+            CommandResult.SiteDataClearedAndReloaded -> confirm(AddressCommandFeedbackMessage.SiteDataCleared)
             CommandResult.Reloaded -> confirm(AddressCommandFeedbackMessage.Reloaded)
             CommandResult.LoadingStopped -> confirm(AddressCommandFeedbackMessage.LoadingStopped)
             CommandResult.TabPinned -> confirm(AddressCommandFeedbackMessage.TabPinned)

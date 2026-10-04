@@ -3,6 +3,7 @@ package dev.sk2andy.materialbrowser.browser.commands
 sealed interface CommandResult {
     data object CacheClearedAndReloaded : CommandResult
     data object CookiesClearedAndReloaded : CommandResult
+    data object SiteDataClearedAndReloaded : CommandResult
     data object Reloaded : CommandResult
     data object LoadingStopped : CommandResult
     data object TabPinned : CommandResult

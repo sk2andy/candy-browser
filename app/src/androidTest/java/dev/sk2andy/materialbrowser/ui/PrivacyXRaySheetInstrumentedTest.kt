@@ -124,6 +124,7 @@ class PrivacyXRaySheetInstrumentedTest {
     @Test
     fun siteSheetKeepsPrivacyAndPermissionsBehindOneEntry() {
         val changed = AtomicReference<Pair<SitePermission, SitePermissionDecision>?>()
+        val siteDataRequests = AtomicInteger()
         composeRule.setContent {
             MaterialBrowserTheme {
                 PrivacyXRaySheet(
@@ -154,11 +155,14 @@ class PrivacyXRaySheetInstrumentedTest {
                         changed.set(permission to decision)
                     },
                     onResetSitePermissions = {},
+                    onClearSiteData = siteDataRequests::incrementAndGet,
                     onDismiss = {},
                 )
             }
         }
 
+        composeRule.onNodeWithTag(PrivacyXRayTestTags.ClearSiteData).performClick()
+        assertEquals(1, siteDataRequests.get())
         composeRule.onNodeWithTag(PrivacyXRayTestTags.Total).assertExists()
         composeRule.onNodeWithTag(PrivacyXRayTestTags.PermissionsTab).performClick()
         composeRule.onNodeWithText("https://news.example").assertExists()

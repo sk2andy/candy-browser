@@ -97,7 +97,10 @@ import dev.sk2andy.materialbrowser.browser.commands.AddressAiModeRules
 import dev.sk2andy.materialbrowser.browser.commands.AddressSuggestionItem
 import dev.sk2andy.materialbrowser.browser.commands.AddressSubmission
 import dev.sk2andy.materialbrowser.browser.commands.AddressSubmissionRules
+import dev.sk2andy.materialbrowser.browser.SiteDataTarget
+import dev.sk2andy.materialbrowser.browser.commands.AndroidCommandCatalog
 import dev.sk2andy.materialbrowser.browser.commands.BrowserCommand
+import dev.sk2andy.materialbrowser.browser.commands.BrowserCommandRegistry
 import dev.sk2andy.materialbrowser.browser.commands.BrowserCommandKind
 import dev.sk2andy.materialbrowser.browser.commands.CommandActions
 import dev.sk2andy.materialbrowser.browser.commands.CommandConfirmation
@@ -928,6 +931,10 @@ internal fun BrowserScreen(
             controller.clearCacheAndReload(onComplete)
         override fun clearCookiesAndReload(onComplete: (Boolean) -> Unit): Boolean =
             controller.clearCookiesAndReload(onComplete)
+        override fun clearSiteDataAndReload(
+            target: SiteDataTarget,
+            onComplete: (Boolean) -> Unit,
+        ): Boolean = controller.clearSiteDataAndReload(target, onComplete)
         override fun reload(): Boolean {
             if (controller.selectedTab.url == BLANK_URL || controller.selectedTab.isLoading) return false
             controller.reload()
@@ -1895,6 +1902,15 @@ internal fun BrowserScreen(
                 filterStudioSelectedRuleId = ruleId
                 privacyXRayTabId = null
                 filterStudioVisible = true
+            },
+            onClearSiteData = { target ->
+                privacyXRayTabId = null
+                selectCommand(
+                    AndroidCommandCatalog(rootView.context).localize(
+                        commands = listOf(BrowserCommandRegistry.siteDataCommand(target)),
+                        cookieScope = controller.commandCookieScope,
+                    ).single(),
+                )
             },
             onPrivacyXRayDismiss = { privacyXRayTabId = null },
             onPermissionOriginSelected = { permissionRadarOrigin = it },

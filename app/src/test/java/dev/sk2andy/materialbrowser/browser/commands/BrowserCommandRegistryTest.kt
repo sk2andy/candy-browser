@@ -2,6 +2,7 @@ package dev.sk2andy.materialbrowser.browser.commands
 
 import dev.sk2andy.materialbrowser.browser.BrowserProfile
 import dev.sk2andy.materialbrowser.browser.BrowserTab
+import dev.sk2andy.materialbrowser.browser.SiteDataTarget
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -101,6 +102,35 @@ class BrowserCommandRegistryTest {
 
         assertTrue(available.any { it.kind == BrowserCommandKind.ClearCookiesAndReload })
         assertFalse(unavailable.any { it.kind == BrowserCommandKind.ClearCookiesAndReload })
+    }
+
+    @Test
+    fun `site data command preserves target and stays discoverable when deletion is unsupported`() {
+        val target = SiteDataTarget(
+            tabId = "tab",
+            url = "https://news.example/article",
+            origin = "https://news.example",
+            host = "news.example",
+            profileId = "home",
+            isPrivate = false,
+            navigationGeneration = 3,
+        )
+        val commands = BrowserCommandRegistry.commands(
+            context().copy(siteDataTarget = target),
+        )
+        val command = commands.single { it.kind == BrowserCommandKind.ClearSiteDataAndReload }
+
+        assertEquals("clear-site-data-and-reload", command.executionId)
+        assertEquals(CommandConfirmation.ClearSiteData, command.confirmation)
+        assertEquals(target, command.siteDataTarget)
+        assertEquals(BrowserCommandRegistry.siteDataCommand(target), command)
+    }
+
+    @Test
+    fun `site data command is absent without a supported web address target`() {
+        val commands = BrowserCommandRegistry.commands(context())
+
+        assertFalse(commands.any { it.kind == BrowserCommandKind.ClearSiteDataAndReload })
     }
 
     @Test

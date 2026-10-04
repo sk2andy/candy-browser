@@ -984,6 +984,8 @@ private fun AddressCommandFeedback.localizedText(): String = when (message) {
         stringResource(R.string.command_feedback_cache_cleared)
     AddressCommandFeedbackMessage.CookiesCleared ->
         stringResource(R.string.command_feedback_cookies_cleared)
+    AddressCommandFeedbackMessage.SiteDataCleared ->
+        stringResource(R.string.command_feedback_site_data_cleared)
     AddressCommandFeedbackMessage.Reloaded ->
         stringResource(R.string.command_feedback_reloaded)
     AddressCommandFeedbackMessage.LoadingStopped ->
