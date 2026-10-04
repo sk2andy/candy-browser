@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="https_only_warning_title">Защищённое соединение недоступно</string>
+    <string name="https_only_warning_protection">Защита HTTPS</string>
+    <string name="https_only_warning_explanation">Candy не удалось открыть эту страницу через HTTPS. Соединение HTTP будет незашифрованным.</string>
+    <string name="https_only_warning_risk">Другие участники сети могут прочитать или изменить ваши данные.</string>
+    <string name="https_only_warning_back">Назад</string>
+    <string name="https_only_warning_retry">Повторить попытку с HTTPS</string>
+    <string name="https_only_warning_options">Другие варианты</string>
+    <string name="https_only_warning_exception">Продолжайте только если доверяете этому сайту. Защита HTTPS останется активной для других сайтов.</string>
+    <string name="https_only_warning_open_http">Временно открыть через HTTP</string>
+    <string name="https_only_warning_lifetime">Исключение для этого сайта на время текущего сеанса браузера.</string>
+    <string name="https_only_warning_unavailable">Не удалось применить исключение. Вернитесь назад или повторите попытку с HTTPS.</string>
+</resources>
