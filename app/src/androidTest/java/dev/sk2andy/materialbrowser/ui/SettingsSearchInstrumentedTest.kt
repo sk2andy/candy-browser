@@ -5,6 +5,7 @@ import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.assertHeightIsEqualTo
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotFocused
@@ -22,6 +23,7 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.unit.dp
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -67,6 +69,10 @@ class SettingsSearchInstrumentedTest {
     @Test
     fun localizedSearchOpensVisibleOptionAndPersistsItsChange() {
         openSettings()
+        composeRule.onNodeWithTag(SettingsSearchTestTags.Query)
+            .assertHeightIsEqualTo(56.dp)
+            .assert(hasText(context.getString(R.string.settings_search_hint)))
+        captureScreenshot("issue253-home.png")
         val query = context.getString(R.string.settings_scroll_bar_title)
         search(query)
         val result = composeRule.onNodeWithTag(
