@@ -508,6 +508,27 @@ class GeckoBrowserEngineAdapterTest {
     }
 
     @Test
+    fun `cross domain navigation starts again while previous page is loading`() {
+        val session = FakeGeckoBrowserSession()
+        val events = mutableListOf<BrowserEngineEvent>()
+        GeckoBrowserEngineSessionAdapter(
+            tabId = "tab-1",
+            session = session,
+            eventSink = events::add,
+        )
+        session.emit(GeckoBrowserSessionState(url = "https://lidl.de/", isLoading = true))
+        session.emit(GeckoBrowserSessionState(url = "https://github.com/", isLoading = true))
+        session.emit(GeckoBrowserSessionState(url = "https://github.com/explore", isLoading = true))
+        session.emit(GeckoBrowserSessionState(url = "https://example.com/", isLoading = true))
+
+        assertEquals(
+            listOf("https://lidl.de/", "https://github.com/", "https://example.com/"),
+            events.filter { it.type == BrowserEngineEventType.NavigationStarted }.map { it.address },
+        )
+        assertEquals(BrowserEngineEventType.StateChanged, events[2].type)
+    }
+
+    @Test
     fun `same document Gecko changes update shared chrome without ending a load`() {
         val session = FakeGeckoBrowserSession()
         val events = mutableListOf<BrowserEngineEvent>()

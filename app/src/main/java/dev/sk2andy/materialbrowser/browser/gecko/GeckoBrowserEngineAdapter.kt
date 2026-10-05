@@ -23,6 +23,7 @@ import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineCapabilities
 import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineKind
 import dev.sk2andy.materialbrowser.browser.DnsOverHttpsSettings
 import dev.sk2andy.materialbrowser.browser.HttpsOnlyMode
+import dev.sk2andy.materialbrowser.browser.WebContentSafeAreaNavigationRules
 import dev.sk2andy.materialbrowser.browser.WebRtcProtectionMode
 import dev.sk2andy.materialbrowser.browser.engine.AndroidBrowserEngineFactory
 import dev.sk2andy.materialbrowser.browser.engine.BrowserEngineContentKind
@@ -913,7 +914,11 @@ internal class GeckoBrowserEngineSessionAdapter(
             return
         }
         val type = when {
-            state.isLoading && !previousState.isLoading ->
+            state.isLoading && (
+                !previousState.isLoading ||
+                    state.url != previousState.url &&
+                    WebContentSafeAreaNavigationRules.shouldReset(previousState.url, state.url)
+                ) ->
                 BrowserEngineEventType.NavigationStarted
             !state.isLoading && previousState.isLoading && state.lastNavigationSucceeded == true ->
                 BrowserEngineEventType.NavigationCommitted
