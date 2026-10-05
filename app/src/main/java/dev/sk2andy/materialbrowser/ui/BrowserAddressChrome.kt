@@ -337,12 +337,7 @@ internal fun BoxScope.BrowserAddressChrome(
         onActivateAddressSuggestion = {
             val highlighted = suggestionItems.getOrNull(highlightedSuggestionIndex)
             if (highlighted == null) {
-                submitAddressOrCommand(
-                    AddressEditorCompletionRules.submissionText(
-                        input = addressValue.text,
-                        ghostCompletion = domainCompletion,
-                    ),
-                )
+                submitAddressOrCommand(addressValue.text)
             } else {
                 selectSuggestion(highlighted)
             }

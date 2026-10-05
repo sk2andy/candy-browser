@@ -1555,7 +1555,6 @@ private fun CandyBrowserChrome(
                             actionSink.perform(CandyBrowserUiAction.Navigate)
                             isAddressEditing = false
                         },
-                        submissionText = { input, _ -> input },
                         fieldHeight = chromeMetrics.actionSize,
                         editorModifier = Modifier
                             .focusRequester(addressFocusRequester)

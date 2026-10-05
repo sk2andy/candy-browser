@@ -17,6 +17,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -40,7 +42,6 @@ fun AddressBarFieldContent(
     placeholder: String,
     displayText: String,
     onSubmitAddress: (String) -> Unit,
-    submissionText: (String, String?) -> String,
     modifier: Modifier = Modifier,
     fieldHeight: Dp = 48.dp,
     editorModifier: Modifier = Modifier,
@@ -70,10 +71,15 @@ fun AddressBarFieldContent(
                         color = contentColor,
                     ),
                     cursorBrush = SolidColor(cursorColor),
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
+                    keyboardOptions = KeyboardOptions(
+                        capitalization = KeyboardCapitalization.None,
+                        autoCorrectEnabled = false,
+                        keyboardType = KeyboardType.Uri,
+                        imeAction = ImeAction.Go,
+                    ),
                     keyboardActions = KeyboardActions(
                         onGo = {
-                            onSubmitAddress(submissionText(editValue.text, ghostCompletion))
+                            onSubmitAddress(editValue.text)
                         },
                     ),
                     decorationBox = { innerTextField ->

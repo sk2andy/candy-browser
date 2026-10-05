@@ -483,7 +483,6 @@ internal fun ExpandedBottomBarContent(
                                 AddressResolver.displayText(tab.url)
                             },
                             onSubmitAddress = onSubmitAddress,
-                            submissionText = AddressEditorCompletionRules::submissionText,
                             modifier = Modifier.blockExitingAddressEditor(
                                 blocked = wideTabStripEnabled && !editing,
                             ),
