@@ -58,6 +58,7 @@
   let jobs = [];
   let cleanup = [];
   let timer = 0;
+  let timerDue = 0;
   let timerEpoch = 0;
   let observer = null;
   let interactionUntil = 0;
@@ -80,6 +81,13 @@
   const themeMediaWatchers = new Map();
   let fixedHeaderCandidates = new Map();
   let semanticHeaderCandidates = new Set();
+  const headerTopCandidates = new Set();
+  const dirtyHeaderTops = new Set();
+  const headerTopSelectorOverrides = new Map();
+  let headerTopMutationStates = new WeakMap();
+  let headerTopCheckDue = 0;
+  let lastHeaderTopCheck = -Infinity;
+  let headerTopMarker = "";
   let backdropPriorityCandidates = [];
   let backdropActivationStates = new WeakMap();
   let coverLayoutMutationStates = new WeakMap();
@@ -106,6 +114,8 @@
   const maxBackdropPriorityCandidates = 8;
   const minimumHeaderVerificationQuietMillis = 150;
   const maxSemanticChecks = 256;
+  const maxHeaderTopCandidates = 8;
+  const minimumHeaderTopCheckIntervalMillis = 50;
 
   function viewportFitCoversSafeArea() {
     const content = document.querySelector('meta[name="viewport" i]')?.getAttribute("content");
@@ -567,6 +577,7 @@
 
   function selectorOwns(element) {
     if (globalThis.CandyRedditSafeArea?.owns(element)) return true;
+    if (headerTopSelectorOverrides.has(element)) return false;
     if (configuration?.cover) return false;
     if (!selectorMatcher && !knownTopMatcher) return false;
     try {
@@ -577,14 +588,15 @@
   }
 
   function topSelector(selector) {
-    if (configuration.addInsetToNegativeTop) return selector;
-    // Append a zero-specificity exclusion to each complete selector, preserving
+    // Append zero-specificity exclusions to each complete selector, preserving
     // commas inside functional pseudo-classes, attributes and quoted strings.
     const selectors = [];
     let start = 0, depth = 0, quote = "", pseudoElement = -1;
     const append = (end) => {
       const insertion = pseudoElement >= start ? pseudoElement : end;
-      selectors.push(`${selector.slice(start, insertion).trimEnd()}:not(:where([${negativeTopMarker}]))${selector.slice(insertion, end)}`);
+      const exclusion = `:not(:where([${headerTopMarker}]))` +
+        (configuration.addInsetToNegativeTop ? "" : `:not(:where([${negativeTopMarker}]))`);
+      selectors.push(`${selector.slice(start, insertion).trimEnd()}${exclusion}${selector.slice(insertion, end)}`);
     };
     for (let index = 0; index < selector.length; index++) {
       const character = selector[index];
@@ -676,6 +688,8 @@
       }
       if (changed.size >= 16) break;
     }
+    // Known headers use the coalesced author-layout pass, including positive tops.
+    for (const element of headerTopCandidates) changed.delete(element);
     if (!changed.size) return;
     const authorTops = withAuthorTopStyles(() => Array.from(changed).slice(0, 16).map((element) =>
       [element, pixels(getComputedStyle(element).top)]));
@@ -688,10 +702,113 @@
   }
 
   function rememberTopCandidate(element) {
+    if (semanticHeaderCandidates.has(element) || element.matches(semanticHeaderSelector) ||
+        /(?:header|topbar|navbar|masthead)/i.test(`${element.id || ""} ${element.className || ""}`)) {
+      rememberHeaderTopCandidate(element);
+    }
     if (topCandidates.has(element) || topCandidates.size >= configuration.maxInitialElements) return;
     topCandidates.add(element);
     topMutationStates.set(element, `${element.getAttribute("class") || ""}\n${element.getAttribute("style") || ""}`);
     topInlineValues.set(element, element.style.getPropertyValue("top"));
+  }
+
+  function rememberHeaderTopCandidate(element) {
+    pruneHeaderTopCandidates();
+    if (headerTopCandidates.has(element) || headerTopCandidates.size >= maxHeaderTopCandidates) return;
+    headerTopCandidates.add(element);
+    headerTopMutationStates.set(element, headerTopMutationState(element));
+  }
+
+  function pruneHeaderTopCandidates() {
+    for (const header of headerTopCandidates) {
+      if (header.isConnected) continue;
+      releaseElementTop(header);
+      const entry = headerTopSelectorOverrides.get(header);
+      if (entry) restore(header, entry);
+      headerTopSelectorOverrides.delete(header);
+      headerTopCandidates.delete(header);
+      dirtyHeaderTops.delete(header);
+    }
+  }
+
+  function headerTopMutationState(element) {
+    return JSON.stringify(["class", "style", "hidden"].map((name) => element.getAttribute(name)));
+  }
+
+  function touchesKnownHeader(target) {
+    if (!(target instanceof Element)) return false;
+    for (const header of headerTopCandidates) {
+      if (target === header || target.contains(header)) return true;
+    }
+    return false;
+  }
+
+  function queueHeaderTopCheck(element) {
+    if (!configuration?.active || nativeFallbackRequested || !element.isConnected) return;
+    dirtyHeaderTops.add(element);
+    headerTopCheckDue = Math.max(performance.now(), lastHeaderTopCheck + minimumHeaderTopCheckIntervalMillis);
+  }
+
+  function queueKnownHeaderTopChecks() {
+    pruneHeaderTopCandidates();
+    for (const header of headerTopCandidates) queueHeaderTopCheck(header);
+    schedule();
+  }
+
+  function queueHeaderTopMutations(records) {
+    if (!configuration?.active || !configuration.recheckChangedElements) return;
+    pruneHeaderTopCandidates();
+    for (const record of records.slice(0, 128)) {
+      const target = record.type === "characterData" ? record.target?.parentElement : record.target;
+      if (!(target instanceof Element) || isOwnSource(target)) continue;
+      if (["style", "link"].includes(target.localName)) {
+        if (record.type !== "attributes" || ["href", "rel", "media", "disabled"].includes(record.attributeName)) {
+          for (const header of headerTopCandidates) queueHeaderTopCheck(header);
+        }
+        continue;
+      }
+      if (record.type !== "attributes" || !["class", "style", "hidden"].includes(record.attributeName) ||
+          !touchesKnownHeader(target)) continue;
+      const own = ownWrites.get(target);
+      if (record.attributeName === "style" && own && own.after === (target.getAttribute("style") || "") &&
+          own.before.has(record.oldValue || "")) continue;
+      const state = headerTopMutationState(target);
+      if (headerTopMutationStates.get(target) === state) continue;
+      headerTopMutationStates.set(target, state);
+      for (const header of headerTopCandidates) {
+        if (target === header || target.contains(header)) queueHeaderTopCheck(header);
+      }
+    }
+    schedule();
+  }
+
+  function refreshHeaderTops() {
+    const headers = Array.from(dirtyHeaderTops).slice(0, Math.min(maxHeaderTopCandidates, configuration.maxElementsPerBatch));
+    for (const header of headers) dirtyHeaderTops.delete(header);
+    lastHeaderTopCheck = performance.now();
+    if (dirtyHeaderTops.size) headerTopCheckDue = lastHeaderTopCheck + minimumHeaderTopCheckIntervalMillis;
+    // Snapshot primitive author values while both owned sheets are disabled once.
+    // A browser style flush can exceed the cooperative worker's time budget.
+    const samples = withAuthorTopStyles(() => headers.filter((header) => header.isConnected).map((header) => {
+      const author = getComputedStyle(header);
+      const style = {};
+      for (const name of ["position", "top", "bottom", "paddingTop", "display", "visibility", "opacity"]) style[name] = author[name];
+      if (configuration.cover) style.authorChildTop = header.firstElementChild?.getBoundingClientRect().top;
+      return [header, style];
+    }));
+    for (const [header, style] of samples) {
+      if (globalThis.CandyRedditSafeArea?.owns(header)) continue;
+      if (!configuration.cover && !headerTopSelectorOverrides.has(header)) {
+        const entry = { attribute: headerTopMarker, id: "true", original: header.getAttribute(headerTopMarker) };
+        headerTopSelectorOverrides.set(header, entry);
+        header.setAttribute(entry.attribute, entry.id);
+      }
+      classify(header, style, true);
+      if (style.position === "sticky" || (style.position === "fixed" && !fixedHeaderCandidates.has(header))) {
+        requestNativeFallbackForHeader(header, style);
+      }
+    }
+    pruneHeaderTopCandidates();
   }
 
   function releaseElementTop(element) {
@@ -747,6 +864,10 @@
       else if (invalidated && (!node.isConnected || node.localName === "style" || node.disabled === true ||
           node.getAttribute("disabled") !== null ||
           !(node.getAttribute("rel") || "").toLowerCase().split(/\s+/).includes("stylesheet"))) beginSelectorBuild();
+      if (invalidated || node.localName === "style" ||
+          (node.getAttribute("rel") || "").toLowerCase().split(/\s+/).includes("stylesheet")) {
+        queueKnownHeaderTopChecks();
+      }
       // A connected replacement may not expose sheet until load. Retain the last
       // committed protection while waiting, rather than committing an empty gap.
     }
@@ -949,7 +1070,7 @@
   }
 
   // Author origin: normal inline resets lose to these rules; inline !important can win.
-  function applyRule(element, name, value) {
+  function applyRule(element, name, value, replace = false) {
     // Author removal/tampering is not repaired; a new configuration creates a new layer.
     if (layer && !layer.isConnected) return;
     let entry = rules.get(element);
@@ -967,7 +1088,8 @@
       rules.set(element, entry);
       element.setAttribute(markerName, id);
     }
-    if (!entry.rule.style.getPropertyValue(name)) entry.rule.style.setProperty(name, value, "important");
+    const previous = entry.rule.style.getPropertyValue(name);
+    if ((!previous || replace) && previous !== value) entry.rule.style.setProperty(name, value, "important");
   }
 
   function cancel() {
@@ -989,10 +1111,10 @@
   }
 
   function schedule(delay = 0) {
-    if (timer || (!cleanup.length && !bodyPending && !jobs.length && !selectorScan &&
-        !selectorBuild && !sourceDiscovery && !sourceQueue.length && !semanticCheckPending &&
-        !headerVerificationPending && !statusBarBackdropPending && !coverLayoutPending &&
-        !viewportOverlayCandidates.length)) return;
+    const otherWorkPending = cleanup.length > 0 || bodyPending || jobs.length > 0 || !!selectorScan ||
+      !!selectorBuild || !!sourceDiscovery || sourceQueue.length > 0 || semanticCheckPending ||
+      headerVerificationPending || statusBarBackdropPending || coverLayoutPending || viewportOverlayCandidates.length > 0;
+    if (!otherWorkPending && !dirtyHeaderTops.size) return;
     if (coverLayoutPending && !cleanup.length && !bodyPending && !jobs.length && !selectorScan &&
         !selectorBuild && !sourceDiscovery && !sourceQueue.length && !semanticCheckPending &&
         !headerVerificationPending && !statusBarBackdropPending && !viewportOverlayCandidates.length) {
@@ -1004,6 +1126,14 @@
         sourceQueue.length) {
       delay = Math.max(delay, Math.max(0, Math.min(...sourceQueue.map((source) => source.due)) - performance.now()));
     }
+    if (dirtyHeaderTops.size) {
+      const headerDelay = Math.max(0, headerTopCheckDue - performance.now());
+      delay = otherWorkPending ? Math.min(delay, headerDelay) : headerDelay;
+    }
+    const due = performance.now() + Math.max(0, delay);
+    if (timer && timerDue <= due) return;
+    if (timer) clearTimeout(timer);
+    timerDue = due;
     const epoch = timerEpoch;
     timer = setTimeout(() => {
       if (epoch !== timerEpoch) return;
@@ -1159,6 +1289,7 @@
     if (configuration.cover && !loading) coverSemanticSeeded = true;
     const visited = new Set();
     for (const candidate of candidates) {
+      rememberHeaderTopCandidate(candidate);
       let current = candidate;
       for (let depth = 0; current && current !== document.body &&
           current !== document.documentElement && depth < 8; depth++, current = composedParent(current)) {
@@ -1202,7 +1333,7 @@
     return rect.width >= viewportWidth * 0.5 && rect.height > 1 && rect.height <= viewportHeight * 0.5;
   }
 
-  function classify(element, style) {
+  function classify(element, style, refreshTop = false) {
     // Gecko presents container fullscreen as a fixed box. It is not a page header:
     // retaining its top inset after it becomes inline clips video in its parent.
     if (document.fullscreenElement?.contains(element)) {
@@ -1211,7 +1342,7 @@
     }
     const topHeaderChecked = style !== undefined;
     if (topHeaderChecked && style.position !== "fixed") fixedHeaderCandidates.delete(element);
-    if (topHeaderChecked && (style.position === "fixed" || style.position === "sticky") &&
+    if (!refreshTop && topHeaderChecked && (style.position === "fixed" || style.position === "sticky") &&
         requestNativeFallbackForHeader(element, style)) return;
     if (selectorOwns(element)) {
       rememberTopCandidate(element);
@@ -1223,29 +1354,41 @@
       return;
     }
     const entry = rules.get(element);
-    if (entry && layer?.isConnected && element.getAttribute(entry.attribute) === entry.id &&
+    if (!refreshTop && entry && layer?.isConnected && element.getAttribute(entry.attribute) === entry.id &&
         entry.rule.style.getPropertyValue("top")) return;
     if (entry && (!layer?.isConnected || element.getAttribute(entry.attribute) !== entry.id)) releaseRule(element);
     style ??= getComputedStyle(element);
     if (style.position !== "fixed") fixedHeaderCandidates.delete(element);
     const top = pixels(style.top);
     const rootAbsoluteHeader = isRootAbsoluteHeader(element, style, top);
-    if (style.position !== "fixed" && style.position !== "sticky" && !rootAbsoluteHeader) return;
+    if (style.position !== "fixed" && style.position !== "sticky" && !rootAbsoluteHeader) {
+      if (refreshTop) releaseElementTop(element);
+      return;
+    }
     rememberTopCandidate(element);
     if (preserveNegativeTop(element, top)) return;
-    if (!topHeaderChecked && requestNativeFallbackForHeader(element, style)) return;
+    if (!refreshTop && !topHeaderChecked && requestNativeFallbackForHeader(element, style)) return;
     // CSSOM can resolve an auto top to pixels for a bottom-anchored fixed box.
     // Keep fixed boxes extending into the lower half out of top-inset rules.
     const bottom = style.position === "fixed" ? pixels(style.bottom) : null;
     if (style.position === "fixed" && top !== null &&
         (top >= globalThis.innerHeight / 2 || (bottom !== null && bottom <= globalThis.innerHeight / 2)) &&
-        !isViewportModalSurface(element, style, top, bottom)) return;
-    if (top === null) return;
+        !isViewportModalSurface(element, style, top, bottom)) {
+      if (refreshTop) releaseElementTop(element);
+      return;
+    }
+    if (top === null) {
+      if (refreshTop) releaseElementTop(element);
+      return;
+    }
     if (configuration.cover) {
       if (top >= inset - 0.5 || top + (pixels(style.paddingTop) || 0) >= inset - 0.5 ||
-          element.firstElementChild?.getBoundingClientRect().top >= inset - 0.5) return;
-      applyRule(element, "top", `${top + inset}px`);
-    } else applyRule(element, "top", `${top + inset}px`);
+          (refreshTop ? style.authorChildTop : element.firstElementChild?.getBoundingClientRect().top) >= inset - 0.5) {
+        if (refreshTop) releaseElementTop(element);
+        return;
+      }
+      applyRule(element, "top", `${top + inset}px`, refreshTop);
+    } else applyRule(element, "top", `${top + inset}px`, refreshTop);
   }
 
   function seedInitialDom() {
@@ -1300,6 +1443,11 @@
         const [element, entries] = cleanup.shift();
         restore(element, entries);
         count++;
+        continue;
+      }
+      if (dirtyHeaderTops.size && performance.now() >= headerTopCheckDue) {
+        refreshHeaderTops();
+        count += Math.min(maxHeaderTopCandidates, configuration.maxElementsPerBatch);
         continue;
       }
       if (headerVerificationPending) {
@@ -1439,6 +1587,7 @@
     if (records.some((record) => record.type === "childList" && record.removedNodes?.length)) {
       releaseDetachedElements();
     }
+    queueHeaderTopMutations(records);
     recheckNegativeTopMutations(records);
     const wasCover = configuration?.cover === true;
     let removedViewportOverlay = false;
@@ -1568,6 +1717,7 @@
     } else {
       const semanticMutation = records.slice(0, 64).some((record) => {
         if (record.type === "attributes") {
+          if (touchesKnownHeader(record.target)) return false;
           return record.target?.matches?.(semanticHeaderSelector) ||
             !!record.target?.querySelector?.(semanticSelector);
         }
@@ -1749,7 +1899,7 @@
         if (next.active) protectBody();
         requestSemanticHeaderCheck();
       }
-      if (resize && next.active) { enqueue(document.body, true); schedule(); }
+      if (resize && next.active) { queueKnownHeaderTopChecks(); enqueue(document.body, true); schedule(); }
       return;
     }
     if (configuration?.navigationGeneration !== next.navigationGeneration) {
@@ -1778,12 +1928,19 @@
     rules.clear();
     cleanup.push(...negativeTopElements);
     negativeTopElements.clear();
+    cleanup.push(...headerTopSelectorOverrides);
+    headerTopSelectorOverrides.clear();
+    headerTopCandidates.clear();
+    dirtyHeaderTops.clear();
+    headerTopMutationStates = new WeakMap();
+    lastHeaderTopCheck = -Infinity;
     topCandidates.clear();
     topMutationStates = new WeakMap();
     topInlineValues = new WeakMap();
     checkedSelectorTops = new WeakSet();
     markerName = `${markerPrefix}-${++layerEpoch}`;
     negativeTopMarker = `${markerName}-negative`;
+    headerTopMarker = `${markerName}-header`;
     markerId = 0;
     protectedSelectors = [];
     selectorImportance.clear();
@@ -1910,7 +2067,7 @@
     headerVerificationPending = configuration?.active === true && !configuration.cover &&
       (fixedHeaderCandidates.size > 0 || semanticHeaderCandidates.size > 0);
     if (headerVerificationPending || statusBarBackdropPending || semanticCheckPending ||
-        coverLayoutPending || viewportOverlayCandidates.length) {
+        coverLayoutPending || viewportOverlayCandidates.length || dirtyHeaderTops.size) {
       schedule(Math.max(
         minimumHeaderVerificationQuietMillis,
         configuration?.mutationDebounceMillis || minimumHeaderVerificationQuietMillis,
@@ -1938,13 +2095,17 @@
   document.addEventListener("click", interaction, true);
   document.addEventListener("drop", interaction, true);
   document.addEventListener("load", (event) => {
+    if (event.target?.localName === "link" &&
+        (event.target.getAttribute("rel") || "").toLowerCase().split(/\s+/).includes("stylesheet")) {
+      queueKnownHeaderTopChecks();
+    }
     if (configuration?.cover && event.target?.localName === "link") {
       coverLayoutRevision++;
       configure();
     }
     if (configuration?.active && event.target?.localName === "link") {
       sourceNode(event.target);
-      requestSemanticHeaderCheck();
+      if (!headerTopCandidates.size) requestSemanticHeaderCheck();
       schedule();
     }
   }, true);
