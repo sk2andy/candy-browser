@@ -1302,6 +1302,16 @@
     <string name="developer_options_unlock_action">Lås opp utviklervalg</string>
     <string name="developer_options_unlocked">Utviklervalg låst opp</string>
     <string name="developer_options_security_section">Sikkerhetsoverstyring</string>
+    <string name="developer_options_memory_section">Minne for faner</string>
+    <string name="developer_options_foreground_tab_idle_timeout">Frigjør inaktive faner</string>
+    <string name="developer_options_foreground_tab_idle_timeout_summary">Frigjør faner som ikke er valgt etter denne tiden uten aktivitet mens Candy er i forgrunnen. Den valgte fanen og beskyttede økter forblir lastet.</string>
+    <string name="developer_options_background_warm_tab_count">Faner som holdes lastet i bakgrunnen</string>
+    <string name="developer_options_background_warm_tab_count_summary">Antall nylig brukte faner som ikke er valgt og som holdes lastet i bakgrunnen. Den valgte fanen forblir alltid lastet; beskyttede økter kan overskride denne grensen.</string>
+    <string name="developer_options_history_cache_lifetime">Levetid for sidebufferen</string>
+    <string name="developer_options_history_cache_lifetime_summary">Gecko beholder flere sider i hurtigbufferen for Tilbake og Fremover. Tidsuret frigjør aktuelle sider etter omtrent to tredeler til hele den valgte tiden; minnepress kan frigjøre dem tidligere. Endring av verdien krever en full omstart av appen.</string>
+    <string name="developer_options_minutes_value">%1$d min</string>
+    <string name="developer_options_seconds_value">%1$d s</string>
+    <string name="developer_options_tabs_value">%1$d faner</string>
     <string name="developer_options_http_warning_title">Slå på automatisk utfylling på usikre sider?</string>
     <string name="developer_options_http_warning_message">HTTP krypterer ikke akkreditiv eller sideinnhold. Slå bare på valg av passordbehandler for tiltrodd utvikling eller sider for lokale nettverk.</string>
     <string name="developer_options_http_warning_confirm">Slå på likevel</string>

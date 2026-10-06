@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.ContextWrapper
 import android.content.Intent
 import android.graphics.Bitmap
+import android.os.SystemClock
 import android.view.View
 import android.widget.FrameLayout
 import androidx.activity.ComponentActivity
@@ -50,6 +51,7 @@ import java.util.concurrent.TimeUnit
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
@@ -65,6 +67,7 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
 
     private var controller: BrowserController? = null
     private var originalEngineKind: AndroidBrowserEngineKind? = null
+    private var originalProfiles: Pair<List<BrowserProfile>, String>? = null
     private var originalHistory: List<HistoryEntry>? = null
     private var originalHistoryRecordingMode: HistoryRecordingMode? = null
     private var originalExternalAppLinkHandling: ExternalAppLinkHandling? = null
@@ -255,6 +258,37 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
                 failureDescription = null,
             ),
         )
+    }
+
+    @Test
+    fun sameTabSessionRecreationReleasesFindInPageOwner() {
+        composeRule.runOnIdle {
+            val store = BrowserSessionStore(composeRule.activity)
+            originalEngineKind = store.loadAndroidBrowserEngineKind()
+            originalProfiles = store.loadProfiles()
+            store.saveProfiles(listOf(DEFAULT_BROWSER_PROFILE), DEFAULT_PROFILE_ID)
+            assertTrue(store.saveAndroidBrowserEngineKind(AndroidBrowserEngineKind.GeckoView))
+            val browserController = BrowserController(composeRule.activity).also { controller = it }
+            val session = ReentrantAttachSession(
+                tabId = browserController.selectedTabId,
+                onFirstAttach = {},
+            )
+            browserController.installGeckoEngineSessionForTesting(session)
+            dispatchSiteDataNavigation(
+                browserController = browserController,
+                tabId = session.tabId,
+                type = BrowserEngineEventType.NavigationCommitted,
+                address = "https://example.com/find-owner",
+            )
+            assertTrue(browserController.openFindInPage())
+            assertNotNull(browserController.findInPageState)
+
+            assertTrue(browserController.setProfileIsolation(browserController.activeProfileId, true))
+
+            assertEquals(session.tabId, browserController.selectedTabId)
+            assertNull(browserController.findInPageState)
+            assertTrue(session.commands.any { it.type == BrowserEngineCommandType.Close })
+        }
     }
 
     @Test
@@ -1132,6 +1166,9 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
                 originalEngineKind?.let { kind ->
                     assertTrue(store.saveAndroidBrowserEngineKind(kind))
                 }
+                originalProfiles?.let { (profiles, activeProfileId) ->
+                    store.saveProfiles(profiles, activeProfileId)
+                }
                 originalHistoryRecordingMode?.let { mode ->
                     assertTrue(store.saveHistoryRecordingMode(mode))
                 }
@@ -1510,6 +1547,58 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
             assertSame(destinationHost, destinationHost.getChildAt(0)?.parent)
             assertEquals(0, staleContentCallbackCount)
             assertEquals(1, currentContentCallbackCount)
+        }
+    }
+
+    @Test
+    fun failedPictureInPictureEntryReleasesStoppedSelectedViewAfterTimeout() {
+        lateinit var session: ReentrantAttachSession
+        lateinit var oldView: View
+        composeRule.runOnIdle {
+            session = prepareFullscreenInlineSession()
+            val browserController = requireNotNull(controller)
+            browserController.onStart()
+            oldView = requireNotNull(session.createdView)
+            browserController.prepareForPictureInPicture()
+
+            browserController.onStop()
+            browserController.onAppBackgrounded()
+
+            assertSame(oldView, session.createdView)
+            assertTrue(oldView.parent != null)
+        }
+        composeRule.waitUntil(timeoutMillis = 8_000L) { session.createdView == null }
+        composeRule.runOnIdle {
+            assertNull(oldView.parent)
+            assertNull(requireNotNull(controller).selectedBrowserEngineViewForTesting())
+            assertTrue(session.tabId in requireNotNull(controller).residentTabIdsForTesting())
+            assertFalse(session.commands.any { it.type == BrowserEngineCommandType.Close })
+        }
+    }
+
+    @Test
+    fun confirmedPictureInPictureEntryKeepsSelectedViewAfterTransitionTimeout() {
+        lateinit var session: ReentrantAttachSession
+        lateinit var oldView: View
+        var stoppedAt = 0L
+        composeRule.runOnIdle {
+            session = prepareFullscreenInlineSession()
+            val browserController = requireNotNull(controller)
+            browserController.onStart()
+            oldView = requireNotNull(session.createdView)
+            browserController.prepareForPictureInPicture()
+            browserController.onStop()
+            browserController.onPictureInPictureModeChanged(true)
+            browserController.onAppBackgrounded()
+            stoppedAt = SystemClock.elapsedRealtime()
+        }
+        composeRule.waitUntil(timeoutMillis = 8_000L) {
+            SystemClock.elapsedRealtime() - stoppedAt >= 6_000L
+        }
+        composeRule.runOnIdle {
+            assertSame(oldView, session.createdView)
+            assertTrue(oldView.parent != null)
+            assertSame(oldView, requireNotNull(controller).selectedBrowserEngineViewForTesting())
         }
     }
 

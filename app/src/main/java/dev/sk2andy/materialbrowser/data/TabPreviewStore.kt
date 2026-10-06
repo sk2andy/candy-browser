@@ -18,7 +18,13 @@ class TabPreviewStore(context: Context) {
         deleteDirectory(legacyDirectory)
     }
 
-    fun load(tabId: String): Bitmap? {
+    fun load(
+        tabId: String,
+        targetWidthPx: Int = TabPreviewCaptureRules.COMPACT_TARGET_WIDTH_PX,
+    ): Bitmap? {
+        if (targetWidthPx !in 1..TabPreviewCaptureRules.MAX_TARGET_WIDTH_PX) return null
+        var sampleSize = 1
+        lateinit var dimensions: TabPreviewBitmapDimensions
         val file = fileFor(tabId) ?: return null
         val atomicFile = AtomicFile(file)
         val bitmap = try {
@@ -30,14 +36,34 @@ class TabPreviewStore(context: Context) {
                 val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
                 BitmapFactory.decodeStream(input, null, bounds)
                 if (
-                    bounds.outWidth !in 1..MAX_BITMAP_DIMENSION ||
-                    bounds.outHeight !in 1..MAX_BITMAP_DIMENSION
+                    bounds.outWidth !in 1..TabPreviewCaptureRules.MAX_BITMAP_DIMENSION ||
+                    bounds.outHeight !in 1..TabPreviewCaptureRules.MAX_BITMAP_DIMENSION ||
+                    bounds.outWidth.toLong() * bounds.outHeight > TabPreviewCaptureRules.MAX_BITMAP_PIXELS
                 ) {
                     atomicFile.delete()
                     return null
                 }
+                dimensions = requireNotNull(TabPreviewCaptureRules.resolveBitmapDimensions(
+                    sourceWidthPx = bounds.outWidth,
+                    sourceHeightPx = bounds.outHeight,
+                    targetWidthPx = targetWidthPx,
+                    maximumTargetHeightPx = if (targetWidthPx <= TabPreviewCaptureRules.COMPACT_TARGET_WIDTH_PX) {
+                        TabPreviewCaptureRules.maximumTargetHeightPx(targetWidthPx)
+                    } else {
+                        TabPreviewCaptureRules.MAX_BITMAP_DIMENSION
+                    },
+                ))
+                sampleSize = minOf(
+                    TabPreviewCaptureRules.decodeSampleSize(bounds.outWidth, dimensions.widthPx),
+                    TabPreviewCaptureRules.decodeSampleSize(bounds.outHeight, dimensions.heightPx),
+                )
             }
-            atomicFile.openRead().use { input -> BitmapFactory.decodeStream(input) }
+            atomicFile.openRead().use { input ->
+                BitmapFactory.decodeStream(input, null, BitmapFactory.Options().apply {
+                    inSampleSize = sampleSize
+                    inPreferredConfig = Bitmap.Config.ARGB_8888
+                })
+            }
         } catch (_: FileNotFoundException) {
             return null
         } catch (_: Exception) {
@@ -45,21 +71,37 @@ class TabPreviewStore(context: Context) {
         }
         if (
             bitmap == null ||
-            bitmap.width !in 1..MAX_BITMAP_DIMENSION ||
-            bitmap.height !in 1..MAX_BITMAP_DIMENSION
+            bitmap.width !in 1..TabPreviewCaptureRules.MAX_BITMAP_DIMENSION ||
+            bitmap.height !in 1..TabPreviewCaptureRules.MAX_BITMAP_DIMENSION
         ) {
             bitmap?.recycle()
             atomicFile.delete()
             return null
         }
-        return bitmap
+        if (dimensions.widthPx == bitmap.width && dimensions.heightPx == bitmap.height) return bitmap
+        return try {
+            Bitmap.createScaledBitmap(
+                bitmap,
+                dimensions.widthPx,
+                dimensions.heightPx,
+                true,
+            )
+        } finally {
+            bitmap.recycle()
+        }
     }
 
     fun save(tabId: String, bitmap: Bitmap): Boolean {
-        if (bitmap.isRecycled || !files.ensureExists()) return false
+        if (
+            bitmap.isRecycled ||
+            bitmap.width !in 1..TabPreviewCaptureRules.MAX_BITMAP_DIMENSION ||
+            bitmap.height !in 1..TabPreviewCaptureRules.MAX_BITMAP_DIMENSION ||
+            bitmap.width.toLong() * bitmap.height > TabPreviewCaptureRules.MAX_BITMAP_PIXELS ||
+            !files.ensureExists()
+        ) return false
         val target = fileFor(tabId) ?: return false
         return AtomicFile(target).writeSafely { output ->
-            check(bitmap.compress(Bitmap.CompressFormat.WEBP_LOSSY, WEBP_QUALITY, output))
+            check(bitmap.compress(Bitmap.CompressFormat.WEBP_LOSSLESS, WEBP_QUALITY, output))
         }
     }
 
@@ -78,8 +120,7 @@ class TabPreviewStore(context: Context) {
         const val DIRECTORY_NAME = "tab_previews_v2"
         const val LEGACY_DIRECTORY_NAME = "tab_previews"
         const val FILE_EXTENSION = "webp"
-        const val WEBP_QUALITY = 82
-        const val MAX_BITMAP_DIMENSION = 4_096
+        const val WEBP_QUALITY = 100
         const val MAX_FILE_SIZE_BYTES = 12L * 1_024L * 1_024L
     }
 }

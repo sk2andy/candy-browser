@@ -1,7 +1,10 @@
 package dev.sk2andy.materialbrowser.browser.systemwebview
 
+import android.graphics.Color
 import android.graphics.Rect
 import android.os.SystemClock
+import android.view.InputDevice
+import android.view.MotionEvent
 import android.view.ViewGroup
 import android.webkit.WebView
 import androidx.core.graphics.Insets
@@ -39,6 +42,84 @@ import org.junit.runner.RunWith
 @SdkSuppress(minSdkVersion = 34)
 class SystemWebViewSafeAreaInstrumentedTest {
     private val instrumentation = InstrumentationRegistry.getInstrumentation()
+
+    @Test
+    fun returningToTopKeepsPageColorDuringOverscroll() {
+        val html = fixtureHtml(cover = false, authorEnv = false)
+            .replace("html, body { margin: 0; }", "html, body { margin: 0; background: #f6f5ed; }")
+        withLoadedFixture(html = html) { fixture ->
+            evaluate(fixture, "scrollTo(0, 400)")
+            awaitReport(fixture, "Page did not scroll down") { it.getDouble("scrollY") >= 399 }
+            evaluate(fixture, "scrollTo(0, 0)")
+            awaitReport(fixture, "Page did not return to the top") { it.getDouble("scrollY") == 0.0 }
+            val location = IntArray(2)
+            fixture.scenario.onActivity { fixture.webView.getLocationOnScreen(location) }
+            val sampleX = location[0] + fixture.webView.width / 2
+            val sampleY = maxOf(location[1], NATIVE_TOP_PX) + 48
+            val expectedColor = Color.rgb(246, 245, 237)
+            val deadline = SystemClock.elapsedRealtime() + TIMEOUT_MILLIS
+            var color = Color.TRANSPARENT
+            while (color != expectedColor && SystemClock.elapsedRealtime() < deadline) {
+                val screenshot = requireNotNull(instrumentation.uiAutomation.takeScreenshot())
+                color = screenshot.getPixel(sampleX, sampleY)
+                screenshot.recycle()
+                if (color != expectedColor) SystemClock.sleep(POLL_MILLIS)
+            }
+            assertEquals("Loaded page must paint before the gesture", expectedColor, color)
+
+            val downTime = SystemClock.uptimeMillis()
+            try {
+                listOf(
+                    MotionEvent.ACTION_DOWN to 0.3f,
+                    MotionEvent.ACTION_MOVE to 0.4f,
+                    MotionEvent.ACTION_MOVE to 0.6f,
+                    MotionEvent.ACTION_MOVE to 0.8f,
+                ).forEach { (action, heightFraction) ->
+                    fixture.scenario.onActivity {
+                        MotionEvent.obtain(
+                            downTime,
+                            SystemClock.uptimeMillis(),
+                            action,
+                            fixture.webView.width / 2f,
+                            fixture.webView.height * heightFraction,
+                            0,
+                        ).also { event ->
+                            event.source = InputDevice.SOURCE_TOUCHSCREEN
+                            fixture.webView.dispatchTouchEvent(event)
+                            event.recycle()
+                        }
+                    }
+                    SystemClock.sleep(32)
+                }
+                val screenshot = requireNotNull(instrumentation.uiAutomation.takeScreenshot())
+                try {
+                    assertEquals(
+                        "Top edge must retain the page color",
+                        expectedColor,
+                        screenshot.getPixel(sampleX, sampleY),
+                    )
+                } finally {
+                    screenshot.recycle()
+                }
+                fixture.scenario.onActivity { assertEquals(0, fixture.webView.scrollY) }
+            } finally {
+                fixture.scenario.onActivity {
+                    MotionEvent.obtain(
+                        downTime,
+                        SystemClock.uptimeMillis(),
+                        MotionEvent.ACTION_CANCEL,
+                        0f,
+                        0f,
+                        0,
+                    ).also { event ->
+                        event.source = InputDevice.SOURCE_TOUCHSCREEN
+                        fixture.webView.dispatchTouchEvent(event)
+                        event.recycle()
+                    }
+                }
+            }
+        }
+    }
 
     @Test
     fun coverAndNonCoverPagesReceiveOneInsetForFlowFixedAndStickyContent() {

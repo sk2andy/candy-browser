@@ -1106,6 +1106,26 @@ class BrowserSessionStore internal constructor(
     }
 
     fun loadDeveloperSettings(): DeveloperSettings = DeveloperSettings(
+        browserMemorySettings = BrowserMemorySettings(
+            foregroundTabIdleTimeoutMinutes = loadBoundedInt(
+                key = KEY_DEVELOPER_FOREGROUND_TAB_IDLE_TIMEOUT_MINUTES,
+                defaultValue = BrowserMemorySettings.DEFAULT_FOREGROUND_TAB_IDLE_TIMEOUT_MINUTES,
+                range = BrowserMemorySettings.MIN_FOREGROUND_TAB_IDLE_TIMEOUT_MINUTES..
+                    BrowserMemorySettings.MAX_FOREGROUND_TAB_IDLE_TIMEOUT_MINUTES,
+            ),
+            backgroundWarmTabCount = loadBoundedInt(
+                key = KEY_DEVELOPER_BACKGROUND_WARM_TAB_COUNT,
+                defaultValue = BrowserMemorySettings.DEFAULT_BACKGROUND_WARM_TAB_COUNT,
+                range = BrowserMemorySettings.MIN_BACKGROUND_WARM_TAB_COUNT..
+                    BrowserMemorySettings.MAX_BACKGROUND_WARM_TAB_COUNT,
+            ),
+            historyCacheLifetimeMinutes = loadBoundedInt(
+                key = KEY_DEVELOPER_HISTORY_CACHE_LIFETIME_MINUTES,
+                defaultValue = BrowserMemorySettings.DEFAULT_HISTORY_CACHE_LIFETIME_MINUTES,
+                range = BrowserMemorySettings.MIN_HISTORY_CACHE_LIFETIME_MINUTES..
+                    BrowserMemorySettings.MAX_HISTORY_CACHE_LIFETIME_MINUTES,
+            ),
+        ),
         appLoggingEnabled = loadBoolean(KEY_DEVELOPER_APP_LOGGING_ENABLED, false),
         geckoLoggingEnabled = loadBoolean(KEY_DEVELOPER_GECKO_LOGGING_ENABLED, false),
         geckoLoggingModules = runCatching {
@@ -1176,6 +1196,18 @@ class BrowserSessionStore internal constructor(
     fun saveDeveloperSettings(settings: DeveloperSettings) {
         val normalized = settings.normalized()
         preferences.edit()
+            .putInt(
+                KEY_DEVELOPER_FOREGROUND_TAB_IDLE_TIMEOUT_MINUTES,
+                normalized.browserMemorySettings.foregroundTabIdleTimeoutMinutes,
+            )
+            .putInt(
+                KEY_DEVELOPER_BACKGROUND_WARM_TAB_COUNT,
+                normalized.browserMemorySettings.backgroundWarmTabCount,
+            )
+            .putInt(
+                KEY_DEVELOPER_HISTORY_CACHE_LIFETIME_MINUTES,
+                normalized.browserMemorySettings.historyCacheLifetimeMinutes,
+            )
             .putString(
                 KEY_DEVELOPER_BROWSER_CHROME_SCROLL_DISPATCH_MODE,
                 normalized.browserChromeScrollDispatchMode.stableId,
@@ -1583,6 +1615,11 @@ class BrowserSessionStore internal constructor(
         const val KEY_INLINE_MEDIA_PLAYER_SEEK_BACKWARD_SECONDS = "inline_media_player_seek_backward_seconds"
         const val KEY_INLINE_MEDIA_PLAYER_SEEK_FORWARD_SECONDS = "inline_media_player_seek_forward_seconds"
         const val KEY_DEVELOPER_OPTIONS_UNLOCKED = "developer_options_unlocked"
+        const val KEY_DEVELOPER_FOREGROUND_TAB_IDLE_TIMEOUT_MINUTES =
+            "developer_foreground_tab_idle_timeout_minutes"
+        const val KEY_DEVELOPER_BACKGROUND_WARM_TAB_COUNT = "developer_background_warm_tab_count"
+        const val KEY_DEVELOPER_HISTORY_CACHE_LIFETIME_MINUTES =
+            "developer_history_cache_lifetime_minutes"
         const val KEY_DEVELOPER_APP_LOGGING_ENABLED = "developer_app_logging_enabled"
         const val KEY_DEVELOPER_GECKO_LOGGING_ENABLED = "developer_gecko_logging_enabled"
         const val KEY_DEVELOPER_GECKO_LOGGING_MODULES = "developer_gecko_logging_modules"

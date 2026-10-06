@@ -47,9 +47,10 @@ class AndroidBrowserEngineArchitectureTest {
         assertTrue(runtime.contains("contentBlocking = contentBlocking"))
         assertTrue(
             runtime.contains(
-                "BrowserSessionStore(appContext).loadDnsOverHttpsSettings()",
+                "dnsOverHttpsSettings = sessionStore.loadDnsOverHttpsSettings()",
             ),
         )
+        assertTrue(runtime.contains("val sessionStore = BrowserSessionStore(appContext)"))
     }
 
     private fun source(relativePath: String): String {

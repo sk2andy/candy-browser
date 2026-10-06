@@ -123,6 +123,13 @@ internal class GeckoViewToppingHostRuntime(
         extension?.let { installed -> attachSessionDelegate(installed, binding) }
         return GeckoToppingSessionBinding {
             if (sessionBindings.remove(token) !== binding) return@GeckoToppingSessionBinding
+            extension?.let { installed ->
+                session.webExtensionController.setMessageDelegate(
+                    installed,
+                    null,
+                    CandyToppingHostContract.NATIVE_APP,
+                )
+            }
             val affected = menuCommands.keys.removeAll { key -> key.document.bindingToken == token }
             rateWindows.keys.removeAll { key -> key.first == token }
             openTabRateWindows.keys.removeAll { key -> key.first == token }

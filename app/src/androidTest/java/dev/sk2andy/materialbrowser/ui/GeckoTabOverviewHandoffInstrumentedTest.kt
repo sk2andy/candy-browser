@@ -81,6 +81,43 @@ class GeckoTabOverviewHandoffInstrumentedTest {
     }
 
     @Test
+    fun departingPreviewKeepsPagePixelsBelowFloatingAddressBar() {
+        StripeFixtureServer().use { server ->
+            awaitGeckoRuntimeReadiness()
+            ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+                composeRule.waitForIdle()
+                scenario.onActivity { activity ->
+                    assertTrue(activity.browserControllerForTesting().openUrl(server.url))
+                }
+                awaitCondition(scenario) { controller ->
+                    controller.selectedTab.url == server.url &&
+                        controller.selectedGeckoViewForTesting()?.isAttachedToWindow == true
+                }
+                scenario.onActivity { activity ->
+                    activity.onBackPressedDispatcher.onBackPressed()
+                }
+                composeRule.waitForIdle()
+                SystemClock.sleep(PAGE_SETTLE_MILLIS)
+                awaitPreview(scenario)
+
+                scenario.onActivity { activity ->
+                    val controller = activity.browserControllerForTesting()
+                    val host = requireNotNull(controller.selectedGeckoViewForTesting())
+                    val renderer = host.descendants().filterIsInstance<GeckoView>().first()
+                    val preview = requireNotNull(controller.previews[controller.selectedTabId])
+                    val reconstructedHeight = preview.height * renderer.width.toFloat() /
+                        preview.width
+                    assertTrue(
+                        "Departing preview ends above renderer bottom: " +
+                            "preview=$reconstructedHeight, renderer=${renderer.height}",
+                        kotlin.math.abs(reconstructedHeight - renderer.height) <= 4f,
+                    )
+                }
+            }
+        }
+    }
+
+    @Test
     fun heroEntryAndExitKeepGeckoViewportPixelStableAcrossSafeArea() {
         StripeFixtureServer().use { server ->
             awaitGeckoRuntimeReadiness()

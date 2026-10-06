@@ -1287,6 +1287,16 @@
     <string name="developer_options_unlock_action">ปลดล็อกตัวเลือกสำหรับนักพัฒนา</string>
     <string name="developer_options_unlocked">ปลดล็อกตัวเลือกสำหรับนักพัฒนาแล้ว</string>
     <string name="developer_options_security_section">ข้อยกเว้นด้านความปลอดภัย</string>
+    <string name="developer_options_memory_section">หน่วยความจำของแท็บ</string>
+    <string name="developer_options_foreground_tab_idle_timeout">นำแท็บที่ไม่ได้ใช้งานออกจากหน่วยความจำ</string>
+    <string name="developer_options_foreground_tab_idle_timeout_summary">เมื่อ Candy อยู่เบื้องหน้า จะนำแท็บที่ไม่ได้เลือกออกจากหน่วยความจำหลังไม่ได้ใช้งานครบเวลานี้ แท็บที่เลือกและเซสชันที่ได้รับการปกป้องจะยังคงโหลดอยู่</string>
+    <string name="developer_options_background_warm_tab_count">แท็บที่คงไว้ในหน่วยความจำขณะอยู่เบื้องหลัง</string>
+    <string name="developer_options_background_warm_tab_count_summary">จำนวนแท็บที่ใช้ล่าสุดแต่ไม่ได้เลือก ซึ่งจะยังคงโหลดอยู่เมื่อแอปอยู่เบื้องหลัง แท็บที่เลือกจะยังคงโหลดอยู่เสมอ ส่วนเซสชันที่ได้รับการปกป้องอาจทำให้เกินขีดจำกัดนี้</string>
+    <string name="developer_options_history_cache_lifetime">ระยะเวลาเก็บแคชของหน้า</string>
+    <string name="developer_options_history_cache_lifetime_summary">Gecko เก็บแคชหลายหน้าสำหรับการย้อนกลับและไปข้างหน้า ตัวจับเวลาหมดอายุจะนำหน้าที่เข้าเกณฑ์ออกจากหน่วยความจำเมื่อผ่านไปประมาณสองในสามถึงเต็มเวลาที่เลือก หากหน่วยความจำไม่เพียงพอ อาจนำออกเร็วกว่านั้น การเปลี่ยนค่านี้ต้องเริ่มแอปใหม่ทั้งหมด</string>
+    <string name="developer_options_minutes_value">%1$d นาที</string>
+    <string name="developer_options_seconds_value">%1$d วินาที</string>
+    <string name="developer_options_tabs_value">%1$d แท็บ</string>
     <string name="developer_options_http_warning_title">เติมเต็มอัตโนมัติในหน้าที่ไม่ปลอดภัย?</string>
     <string name="developer_options_http_warning_message">HTTP ไม่เข้ารหัสหลักฐานหรือเนื้อหาหน้า เปิดการเลือกผู้จัดการรหัสผ่านเฉพาะสําหรับการพัฒนาที่เชื่อถือได้ หรือหน้าในเครือข่ายท้องถิ่น</string>
     <string name="developer_options_http_warning_confirm">เปิดให้ใช้ได้</string>

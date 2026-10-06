@@ -9,9 +9,24 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mozilla.geckoview.ContentBlocking
+import org.mozilla.geckoview.GeckoRuntimeSettings
 
 @RunWith(AndroidJUnit4::class)
 class GeckoRuntimeSettingsInstrumentedTest {
+    @Test
+    fun highValueSitesUseSelectiveProcessIsolation() {
+        InstrumentationRegistry.getInstrumentation().runOnMainSync {
+            val settings = GeckoRuntimeSettingsFactory.create(
+                ContentBlocking.Settings.Builder().build(),
+            )
+
+            assertEquals(
+                GeckoRuntimeSettings.STRATEGY_ISOLATE_HIGH_VALUE,
+                settings.webContentIsolationStrategy,
+            )
+        }
+    }
+
     @Test
     fun internalConfigurationPageIsEnabled() {
         InstrumentationRegistry.getInstrumentation().runOnMainSync {

@@ -146,3 +146,23 @@ test("removed unbound tab cancels its request while another native binding stays
   h.binding.close();
   assert.equal(await other, false);
 });
+
+test("completed main-frame responses release request metadata after native disconnect", () => {
+  let headersReceived;
+  const requests = new Map();
+  const context = vm.createContext({
+    browser: { webRequest: { onHeadersReceived: { addListener(callback) { headersReceived = callback; } } } },
+    mainFrameRequestsById: requests,
+    nativePort: null,
+  });
+  vm.runInContext(background.slice(
+    background.indexOf("browser.webRequest.onHeadersReceived.addListener("),
+    background.indexOf("browser.webRequest.onErrorOccurred.addListener("),
+  ), context);
+  for (let cycle = 0; cycle < 100; cycle++) {
+    const requestId = String(cycle);
+    requests.set(requestId, { token, revision: 2, navigationGeneration: cycle });
+    headersReceived({ type: "main_frame", requestId, statusCode: 200 });
+    assert.equal(requests.size, 0, `Completed request retained after disconnect ${cycle}`);
+  }
+});

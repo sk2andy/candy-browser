@@ -1,22 +1,105 @@
 package dev.sk2andy.materialbrowser.browser.gecko
 
 import android.content.Context
+import android.content.res.Configuration
 import android.view.View
+import dev.sk2andy.materialbrowser.browser.DnsOverHttpsSettings
+import dev.sk2andy.materialbrowser.browser.WebRtcProtectionMode
 import dev.sk2andy.materialbrowser.browser.BrowserEngineScrollEvent
 import dev.sk2andy.materialbrowser.browser.BrowserEngineScrollListener
 import dev.sk2andy.materialbrowser.browser.actions.BrowserContentTargetListener
 import dev.sk2andy.materialbrowser.browser.actions.WebContentTarget
+import dev.sk2andy.materialbrowser.browser.engine.BrowserEngineContentKind
+import dev.sk2andy.materialbrowser.browser.engine.BrowserWebContentColorScheme
 import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineCommands
 import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineEvent
 import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineEventType
 import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineFailureKind
+import java.lang.ref.Reference
+import java.lang.ref.ReferenceQueue
+import java.lang.ref.WeakReference
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.mozilla.geckoview.GeckoRuntime
 
 class GeckoBrowserEngineAdapterTest {
+    @Test
+    fun `delayed WebRTC acknowledgement reloads only its still open snapshot`() {
+        val liveSession = FakeGeckoBrowserSession()
+        val closedSession = FakeGeckoBrowserSession()
+        val laterSession = FakeGeckoBrowserSession()
+        val runtime = DeferredWebRtcRuntime(liveSession, closedSession, laterSession)
+        val factory = GeckoBrowserEngineSessionFactory(runtime)
+        val liveAdapter = createFactoryAdapter(factory, "live")
+        val closedAdapter = createFactoryAdapter(factory, "closed")
+
+        factory.setWebRtcProtectionMode(WebRtcProtectionMode.Block)
+        assertTrue(liveSession.actions.isEmpty())
+        closedAdapter.execute(BrowserEngineCommands.close())
+        val laterAdapter = createFactoryAdapter(factory, "later")
+        runtime.acknowledge()
+
+        assertEquals(listOf("reload"), liveSession.actions)
+        assertTrue(closedSession.actions.isEmpty())
+        assertTrue(laterSession.actions.isEmpty())
+        assertEquals(1, closedSession.closeCount)
+        liveAdapter.execute(BrowserEngineCommands.close())
+        laterAdapter.execute(BrowserEngineCommands.close())
+    }
+
+    @Test
+    fun `withheld WebRTC acknowledgement does not retain closed adapter or event owner`() {
+        val session = FakeGeckoBrowserSession()
+        val runtime = DeferredWebRtcRuntime(session)
+        val factory = GeckoBrowserEngineSessionFactory(runtime)
+        val queue = ReferenceQueue<Any>()
+        val references = closeFactoryAdapterWithPendingPolicy(factory, queue)
+        val collected = mutableSetOf<Reference<out Any>>()
+        val deadline = System.nanoTime() + 5_000_000_000L
+        while (collected.size < references.size && System.nanoTime() < deadline) {
+            System.gc()
+            System.runFinalization()
+            queue.remove(50L)?.let(collected::add)
+            var reference = queue.poll()
+            while (reference != null) {
+                collected += reference
+                reference = queue.poll()
+            }
+        }
+
+        assertEquals("Pending ACK retained closed adapter or its event owner", references.toSet(), collected)
+        assertTrue(runtime.hasPendingAcknowledgement)
+        runtime.acknowledge()
+        assertTrue(session.actions.isEmpty())
+        assertEquals(1, session.closeCount)
+    }
+
+    private fun closeFactoryAdapterWithPendingPolicy(
+        factory: GeckoBrowserEngineSessionFactory,
+        queue: ReferenceQueue<Any>,
+    ): List<WeakReference<Any>> {
+        val owner = FactoryEventOwner()
+        val adapter = createFactoryAdapter(factory, "closed", BrowserEngineEventSink(owner::onEvent))
+        factory.setWebRtcProtectionMode(WebRtcProtectionMode.Block)
+        adapter.execute(BrowserEngineCommands.close())
+        return listOf(WeakReference(adapter, queue), WeakReference(owner, queue))
+    }
+
+    private fun createFactoryAdapter(
+        factory: GeckoBrowserEngineSessionFactory,
+        tabId: String,
+        eventSink: BrowserEngineEventSink = BrowserEngineEventSink { },
+    ): AndroidBrowserEngineSessionPort = factory.create(
+        tabId = tabId,
+        profileId = "profile",
+        isPrivate = false,
+        contentKind = BrowserEngineContentKind.RegularTab,
+        eventSink = eventSink,
+    )
+
     @Test
     fun `page close requests are delivered without closing the adapter directly`() {
         val session = FakeGeckoBrowserSession()
@@ -420,6 +503,66 @@ class GeckoBrowserEngineAdapterTest {
     }
 
     @Test
+    fun `trusted input queries cross the adapter independently from native form state`() {
+        val session = FakeUserInputGeckoBrowserSession().apply { formData = true }
+        val adapter = GeckoBrowserEngineSessionAdapter(
+            tabId = "tab-1",
+            session = session,
+            eventSink = BrowserEngineEventSink { },
+        )
+        val results = mutableListOf<Boolean?>()
+
+        adapter.containsUserInput(results::add)
+        session.userInput = true
+        adapter.containsUserInput(results::add)
+        session.userInput = null
+        adapter.containsUserInput(results::add)
+        adapter.execute(BrowserEngineCommands.close())
+        adapter.containsUserInput(results::add)
+
+        assertEquals(listOf(false, true, null, null), results)
+        assertEquals(3, session.userInputChecks)
+        assertEquals(0, session.formChecks)
+    }
+
+    @Test
+    fun `sessions without trusted input probes keep conservative form protection`() {
+        val session = FakeGeckoBrowserSession().apply { formData = true }
+        val adapter = GeckoBrowserEngineSessionAdapter(
+            tabId = "tab-1",
+            session = session,
+            eventSink = BrowserEngineEventSink { },
+        )
+        val results = mutableListOf<Boolean?>()
+
+        adapter.containsUserInput(results::add)
+        session.formData = null
+        adapter.containsUserInput(results::add)
+
+        assertEquals(listOf(true, null), results)
+        assertEquals(2, session.formChecks)
+    }
+
+    @Test
+    fun `selected priority remains independent from visibility until close`() {
+        val session = FakeGeckoBrowserSession()
+        val adapter = GeckoBrowserEngineSessionAdapter(
+            tabId = "tab-1",
+            session = session,
+            eventSink = BrowserEngineEventSink { },
+        )
+
+        adapter.setSelectedPriority(true)
+        adapter.setActive(false)
+        adapter.setSelectedPriority(false)
+        adapter.execute(BrowserEngineCommands.close())
+        adapter.setSelectedPriority(true)
+
+        assertEquals(listOf(true, false), session.selectedPriorities)
+        assertEquals(listOf(false), session.activeStates)
+    }
+
+    @Test
     fun `long press content targets cross the adapter until close`() {
         val session = FakeGeckoBrowserSession()
         val adapter = GeckoBrowserEngineSessionAdapter(
@@ -710,13 +853,70 @@ class GeckoBrowserEngineAdapterTest {
     }
 }
 
-private class FakeGeckoBrowserSession(
+private class FactoryEventOwner {
+    private val events = mutableListOf<BrowserEngineEvent>()
+
+    fun onEvent(event: BrowserEngineEvent) {
+        events += event
+    }
+}
+
+private class DeferredWebRtcRuntime(vararg sessions: FakeGeckoBrowserSession) : GeckoRuntimeHandle {
+    private val pendingSessions = ArrayDeque(sessions.toList())
+    private var pendingAcknowledgement: (() -> Unit)? = null
+    val hasPendingAcknowledgement: Boolean
+        get() = pendingAcknowledgement != null
+
+    override val extensions: GeckoExtensionRuntime
+        get() = error("Not used by this ownership test")
+    override val toppings: GeckoToppingHostRuntime
+        get() = error("Not used by this ownership test")
+
+    override fun createSession(
+        profileId: String,
+        isolationEnabled: Boolean,
+        isPrivate: Boolean,
+        privacyPolicy: GeckoPrivacyPolicy,
+        privacyEventSink: GeckoPrivacyEventSink,
+    ): GeckoBrowserSession = pendingSessions.removeFirst()
+
+    override fun setWebRtcProtectionMode(mode: WebRtcProtectionMode, onReady: () -> Unit) {
+        pendingAcknowledgement = onReady
+    }
+
+    fun acknowledge() {
+        val acknowledgement = checkNotNull(pendingAcknowledgement)
+        pendingAcknowledgement = null
+        acknowledgement()
+    }
+
+    override fun clearBrowsingData(data: GeckoBrowsingData, onComplete: (Boolean) -> Unit) =
+        onComplete(true)
+
+    override fun setBlockThirdPartyCookies(blocked: Boolean) = Unit
+
+    override fun setDnsOverHttpsSettings(settings: DnsOverHttpsSettings) = Unit
+
+    override fun setWebContentFontSizeFactor(factor: Float) = Unit
+
+    override fun setWebContentColorScheme(colorScheme: BrowserWebContentColorScheme) = Unit
+
+    override fun onConfigurationChanged(configuration: Configuration) = Unit
+
+    override fun bindWebAuthnActivityDelegate(delegate: GeckoRuntime.ActivityDelegate) = Unit
+
+    override fun unbindWebAuthnActivityDelegate(delegate: GeckoRuntime.ActivityDelegate) = Unit
+}
+
+private open class FakeGeckoBrowserSession(
     private val loadAccepted: Boolean = true,
     private val initialState: GeckoBrowserSessionState = GeckoBrowserSessionState(),
 ) : GeckoBrowserSession {
     override val profileId = "profile"
     override val isPrivate = false
 
+    var formData: Boolean? = false
+    var formChecks = 0
     var loadedUrl: String? = null
     val actions = mutableListOf<String>()
     var closeCount = 0
@@ -733,6 +933,7 @@ private class FakeGeckoBrowserSession(
     var historyUrls: List<String> = emptyList()
     var historyCurrentIndex: Int = -1
     val activeStates = mutableListOf<Boolean>()
+    val selectedPriorities = mutableListOf<Boolean>()
     val pictureInPictureStates = mutableListOf<Boolean>()
     val pictureInPicturePlaybackStates = mutableListOf<Boolean>()
     var pictureInPictureRestorationCount = 0
@@ -828,6 +1029,15 @@ private class FakeGeckoBrowserSession(
 
     override fun setActive(active: Boolean) {
         activeStates += active
+    }
+
+    override fun containsFormData(onResult: (Boolean?) -> Unit) {
+        formChecks++
+        onResult(formData)
+    }
+
+    override fun setSelectedPriority(selected: Boolean) {
+        selectedPriorities += selected
     }
 
     fun emitFullscreen(fullscreen: Boolean) {
@@ -934,4 +1144,14 @@ private class FakeGeckoBrowserSession(
         request: GeckoMainFrameNavigationRequest,
     ): GeckoNavigationRequestDecision = navigationRequestListener?.onNavigationRequest(request)
         ?: GeckoNavigationRequestDecision.Allow
+}
+
+private class FakeUserInputGeckoBrowserSession : FakeGeckoBrowserSession() {
+    var userInput: Boolean? = false
+    var userInputChecks = 0
+
+    override fun containsUserInput(onResult: (Boolean?) -> Unit) {
+        userInputChecks++
+        onResult(userInput)
+    }
 }

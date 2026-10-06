@@ -1287,6 +1287,16 @@
     <string name="developer_options_unlock_action">解锁开发者选项</string>
     <string name="developer_options_unlocked">开发者选项已解锁</string>
     <string name="developer_options_security_section">安全例外</string>
+    <string name="developer_options_memory_section">标签页内存</string>
+    <string name="developer_options_foreground_tab_idle_timeout">卸载闲置标签页</string>
+    <string name="developer_options_foreground_tab_idle_timeout_summary">Candy 在前台运行时，未选中的标签页在闲置达到此时长后会被卸载。当前选中的标签页和受保护的会话会保持加载。</string>
+    <string name="developer_options_background_warm_tab_count">后台保持加载的标签页</string>
+    <string name="developer_options_background_warm_tab_count_summary">应用进入后台后，保持加载的最近使用且未选中的标签页数量。当前选中的标签页始终保持加载；受保护的会话可能超出此限制。</string>
+    <string name="developer_options_history_cache_lifetime">页面缓存保留时间</string>
+    <string name="developer_options_history_cache_lifetime_summary">Gecko 会缓存多个页面，供后退和前进时使用。其到期计时器会在所选时长的大约三分之二到完整时长之间释放符合条件的页面；内存压力可能使页面提前释放。更改此值后，需完全重启应用。</string>
+    <string name="developer_options_minutes_value">%1$d 分钟</string>
+    <string name="developer_options_seconds_value">%1$d 秒</string>
+    <string name="developer_options_tabs_value">%1$d 个标签页</string>
     <string name="developer_options_http_warning_title">在不安全的页面上启用自动填充?</string>
     <string name="developer_options_http_warning_message">HTTP 不加密凭证或页面内容. 仅为可信开发或本地网络页面启用密码管理器选择.</string>
     <string name="developer_options_http_warning_confirm">无论如何都能启用</string>

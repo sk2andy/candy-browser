@@ -28,6 +28,7 @@ import androidx.test.platform.app.InstrumentationRegistry
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoLoggingStatus
 import dev.sk2andy.materialbrowser.data.BrowserChromeScrollDispatchMode
+import dev.sk2andy.materialbrowser.data.BrowserMemorySettings
 import dev.sk2andy.materialbrowser.data.DeveloperSettings
 import dev.sk2andy.materialbrowser.data.GeckoSafeAreaSettings
 import dev.sk2andy.materialbrowser.ui.theme.MaterialBrowserTheme
@@ -82,6 +83,48 @@ class DeveloperOptionsSettingsPageInstrumentedTest {
             .assertIsDisplayed()
             .performClick()
         assertEquals(SettingsDestination.DeveloperOptions, destination)
+    }
+
+    @Test
+    fun memoryControlsUpdateIndependentlyIncludingZeroBackgroundBudget() {
+        val original = DeveloperSettings(
+            appLoggingEnabled = true,
+            forceSafeAreaFallback = true,
+            browserMemorySettings = BrowserMemorySettings(backgroundWarmTabCount = 5),
+        )
+        var settings by mutableStateOf(original)
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                DeveloperOptionsSettingsPage(
+                    settings = settings,
+                    onSettingsChanged = { settings = it },
+                    onBack = {},
+                )
+            }
+        }
+
+        listOf(
+            DeveloperOptionsTestTags.ForegroundTabIdleTimeout to 7f,
+            DeveloperOptionsTestTags.BackgroundWarmTabCount to 0f,
+            DeveloperOptionsTestTags.HistoryCacheLifetime to 9f,
+        ).forEach { (tag, value) ->
+            composeRule.onNodeWithTag(tag)
+                .performScrollTo()
+                .performSemanticsAction(SemanticsActions.SetProgress) { setProgress ->
+                    setProgress(value)
+                }
+        }
+
+        assertEquals(
+            original.copy(
+                browserMemorySettings = BrowserMemorySettings(
+                    foregroundTabIdleTimeoutMinutes = 7,
+                    backgroundWarmTabCount = 0,
+                    historyCacheLifetimeMinutes = 9,
+                ),
+            ),
+            settings,
+        )
     }
 
     @Test

@@ -1302,6 +1302,16 @@
     <string name="developer_options_unlock_action">Отключване на опциите за разработчици</string>
     <string name="developer_options_unlocked">Опции за разработчици отключени</string>
     <string name="developer_options_security_section">Изключения от защитата</string>
+    <string name="developer_options_memory_section">Памет на разделите</string>
+    <string name="developer_options_foreground_tab_idle_timeout">Освобождаване на неактивни раздели</string>
+    <string name="developer_options_foreground_tab_idle_timeout_summary">Освобождава паметта на неизбраните раздели след това време на неактивност, докато Candy е на преден план. Избраният раздел и защитените сесии остават заредени.</string>
+    <string name="developer_options_background_warm_tab_count">Заредени раздели във фонов режим</string>
+    <string name="developer_options_background_warm_tab_count_summary">Брой наскоро използвани, неизбрани раздели, които остават заредени във фонов режим. Избраният раздел винаги остава зареден; защитените сесии могат да надвишат това ограничение.</string>
+    <string name="developer_options_history_cache_lifetime">Време на съхранение на страниците в кеша</string>
+    <string name="developer_options_history_cache_lifetime_summary">Gecko съхранява няколко страници в кеша за Назад и Напред. Таймерът освобождава подходящите страници след приблизително две трети до цялото избрано време; недостигът на памет може да ги освободи по-рано. Промяната на тази стойност изисква пълно рестартиране на приложението.</string>
+    <string name="developer_options_minutes_value">%1$d мин</string>
+    <string name="developer_options_seconds_value">%1$d сек</string>
+    <string name="developer_options_tabs_value">%1$d раздела</string>
     <string name="developer_options_http_warning_title">Включете автоматично попълване на несигурни страници?</string>
     <string name="developer_options_http_warning_message">HTTP не шифрова данните за вход или съдържанието на страницата. Активирайте избора на мениджър на пароли само за надеждни страници за разработка или страници в локалната мрежа.</string>
     <string name="developer_options_http_warning_confirm">Въпреки това го включи.</string>

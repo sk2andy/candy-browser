@@ -22,6 +22,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -184,10 +185,88 @@ class BrowserControllerDownloadRoutingInstrumentedTest {
             assertNotNull(browser.pendingDownloadChoice)
 
             browser.closeTab(browser.selectedTabId)
-            browser.confirmDownloadChoice(null)
 
             assertEquals(0, started)
             assertEquals(1, discarded)
+            assertNull(browser.pendingDownloadChoice)
+        }
+    }
+
+    @Test
+    fun closedSourceReleasesItsPendingAndQueuedResponsesButPreservesOtherSource() {
+        activityRule.scenario.onActivity { activity ->
+            val browser = BrowserController(activity).also { controller = it }
+            browser.onStart()
+            browser.externalDownloadDiscoveryForTesting = { listOf(oneDm) }
+            browser.updateDownloadSettings(BrowserDownloadSettings(managerMode = DownloadManagerMode.AskEveryTime))
+            val closingTabId = browser.selectedTabId
+            browser.dispatchSelectedDownloadResponseForTesting(response("https://example.com/first.pdf"))
+            browser.dispatchSelectedDownloadResponseForTesting(response("https://example.com/second.pdf"))
+            browser.createTab()
+            browser.dispatchSelectedDownloadResponseForTesting(response("https://example.com/other.pdf"))
+
+            browser.closeTab(closingTabId)
+
+            assertEquals(2, discarded)
+            assertEquals(0, started)
+            assertEquals("https://example.com/other.pdf", browser.pendingDownloadChoice?.request?.url)
+            browser.confirmDownloadChoice(null)
+            assertEquals(1, started)
+            assertEquals(2, discarded)
+            assertNull(browser.pendingDownloadChoice)
+            browser.destroy()
+            assertEquals(2, discarded)
+        }
+    }
+
+    @Test
+    fun closingQueuedSourcePreservesUnrelatedPendingResponse() {
+        activityRule.scenario.onActivity { activity ->
+            val browser = BrowserController(activity).also { controller = it }
+            browser.onStart()
+            browser.externalDownloadDiscoveryForTesting = { listOf(oneDm) }
+            browser.updateDownloadSettings(BrowserDownloadSettings(managerMode = DownloadManagerMode.AskEveryTime))
+            browser.dispatchSelectedDownloadResponseForTesting(response())
+            val pending = requireNotNull(browser.pendingDownloadChoice)
+            browser.createTab()
+            browser.dispatchSelectedDownloadResponseForTesting(response("https://example.com/queued.pdf"))
+
+            browser.closeTab(browser.selectedTabId)
+
+            assertEquals(1, discarded)
+            assertSame(pending, browser.pendingDownloadChoice)
+            browser.confirmDownloadChoice(null)
+            assertEquals(1, started)
+            assertEquals(1, discarded)
+            assertNull(browser.pendingDownloadChoice)
+        }
+    }
+
+    @Test
+    fun staleChooserCallbacksCannotConfirmOrDismissPromotedResponse() {
+        activityRule.scenario.onActivity { activity ->
+            val browser = BrowserController(activity).also { controller = it }
+            browser.onStart()
+            browser.externalDownloadDiscoveryForTesting = { listOf(oneDm) }
+            browser.updateDownloadSettings(BrowserDownloadSettings(managerMode = DownloadManagerMode.AskEveryTime))
+            val closingTabId = browser.selectedTabId
+            browser.dispatchSelectedDownloadResponseForTesting(response())
+            val staleChoice = requireNotNull(browser.pendingDownloadChoice)
+            browser.createTab()
+            browser.dispatchSelectedDownloadResponseForTesting(response("https://example.com/next.pdf"))
+            browser.closeTab(closingTabId)
+            val promotedChoice = requireNotNull(browser.pendingDownloadChoice)
+
+            browser.confirmDownloadChoice(managerId = null, expectedChoice = staleChoice)
+            browser.dismissDownloadChoice(expectedChoice = staleChoice)
+
+            assertSame(promotedChoice, browser.pendingDownloadChoice)
+            assertEquals(0, started)
+            assertEquals(1, discarded)
+            browser.confirmDownloadChoice(managerId = null, expectedChoice = promotedChoice)
+            assertEquals(1, started)
+            assertEquals(1, discarded)
+            assertNull(browser.pendingDownloadChoice)
         }
     }
 
@@ -235,6 +314,7 @@ class BrowserControllerDownloadRoutingInstrumentedTest {
             browser.closeTab(browser.selectedTabId)
 
             assertFalse(requireNotNull(choice.isSourceCurrent).invoke())
+            assertNull(browser.pendingDownloadChoice)
             browser.confirmDownloadChoice(null)
             assertNull(browser.contentActions.lastDownload)
             assertNull(browser.pendingDownloadChoice)
@@ -274,9 +354,67 @@ class BrowserControllerDownloadRoutingInstrumentedTest {
             assertNotNull(browser.pendingDownloadChoice)
 
             assertTrue(browser.dismissExternalLinkPreview(sessionId))
-            browser.confirmDownloadChoice(null)
 
             assertEquals(0, started)
+            assertEquals(1, discarded)
+            assertNull(browser.pendingDownloadChoice)
+        }
+    }
+
+    @Test
+    fun confirmingPreviewExternalChoicePreservesNextIndependentResponse() {
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        val monitor = instrumentation.addMonitor(
+            oneDm.activityName,
+            Instrumentation.ActivityResult(Activity.RESULT_OK, null),
+            true,
+        )
+        try {
+            activityRule.scenario.onActivity { activity ->
+                val browser = BrowserController(activity).also { controller = it }
+                browser.onStart()
+                browser.externalDownloadDiscoveryForTesting = { listOf(oneDm) }
+                browser.updateDownloadSettings(BrowserDownloadSettings(managerMode = DownloadManagerMode.AskEveryTime))
+                preparePreview(browser)
+                browser.dispatchAuthorizedExternalPreviewDownloadForTesting(response("https://example.com/Candy.apk"))
+                browser.dispatchSelectedDownloadResponseForTesting(response("https://example.com/independent.pdf"))
+
+                browser.confirmDownloadChoice(oneDm.id)
+
+                assertEquals(1, monitor.hits)
+                assertEquals(1, discarded)
+                assertEquals(0, started)
+                assertNull(browser.externalLinkPreviewState)
+                assertEquals("https://example.com/independent.pdf", browser.pendingDownloadChoice?.request?.url)
+                browser.confirmDownloadChoice(null)
+                assertEquals(1, started)
+                assertEquals(1, discarded)
+                assertNull(browser.pendingDownloadChoice)
+            }
+        } finally {
+            instrumentation.removeMonitor(monitor)
+        }
+    }
+
+    @Test
+    fun dismissingPreviewChoicePreservesNextIndependentResponse() {
+        activityRule.scenario.onActivity { activity ->
+            val browser = BrowserController(activity).also { controller = it }
+            browser.onStart()
+            browser.externalDownloadDiscoveryForTesting = { listOf(oneDm) }
+            browser.updateDownloadSettings(BrowserDownloadSettings(managerMode = DownloadManagerMode.AskEveryTime))
+            preparePreview(browser)
+            browser.dispatchAuthorizedExternalPreviewDownloadForTesting(response("https://example.com/Candy.apk"))
+            browser.dispatchSelectedDownloadResponseForTesting(response("https://example.com/independent.pdf"))
+
+            browser.dismissDownloadChoice()
+
+            assertEquals(1, discarded)
+            assertEquals(0, started)
+            assertNull(browser.externalLinkPreviewState)
+            assertEquals("https://example.com/independent.pdf", browser.pendingDownloadChoice?.request?.url)
+            browser.confirmDownloadChoice(null)
+            assertEquals(1, started)
             assertEquals(1, discarded)
             assertNull(browser.pendingDownloadChoice)
         }

@@ -474,6 +474,22 @@ private data class PendingGeckoViewAttach(
     val backdropCaptureEnabled: Boolean,
 )
 
+private data class PendingMemorySessionCheck(
+    val tabId: String,
+    val session: AndroidBrowserEngineSessionPort,
+    val generation: Long,
+    val navigationGeneration: Int?,
+    val documentGeneration: Long?,
+    val lastAccess: Long?,
+    val accessSequence: Long?,
+    val isBackground: Boolean,
+    val nowElapsedRealtime: Long,
+    val attempt: Int = 1,
+) {
+    var timeout: Runnable? = null
+    var retry: Runnable? = null
+}
+
 internal data class BrowserActivityResultIdentity(
     val tabId: String,
     val session: AndroidBrowserEngineSessionPort,
@@ -672,6 +688,7 @@ class BrowserController(
         get() = selectedTabIdState
         private set(value) {
             if (selectedTabIdState == value) return
+            if (restorationPreviewTabId != null && restorationPreviewTabId != value) invalidateRestorationPreview()
             if (findInPageState?.tabId != value) closeFindInPage()
             selectedTabIdState = value
             geckoMediaPresentation
@@ -1207,6 +1224,20 @@ class BrowserController(
         get() = pendingPopupNavigations.size
 
     @VisibleForTesting
+    internal fun createPendingGeckoPopupForTesting(): String? {
+        val tabId = createGeckoPopupTab(selectedTabId) ?: return null
+        schedulePendingPopupTimeout(
+            popupTabId = tabId,
+            pending = requireNotNull(pendingPopupNavigations[tabId]),
+            preopenedBlank = true,
+        )
+        return tabId
+    }
+
+    @VisibleForTesting
+    internal fun pendingPopupTimeoutForTesting(tabId: String): Runnable? = pendingPopupTimeouts[tabId]
+
+    @VisibleForTesting
     val transientPopupCountForTesting: Int
         get() = transientPopupTabIds.size
 
@@ -1336,8 +1367,23 @@ class BrowserController(
         }
     }
     private val residentSessionAccessOrder = mutableMapOf<String, Long>()
+    private val residentSessionLastAccessElapsedRealtime = mutableMapOf<String, Long>()
     private var residentSessionAccessSequence = 0L
     private var residentSessionTrimScheduled = false
+    private var foregroundMemoryTrimScheduled = false
+    private var isAppInBackground = false
+    private var backgroundMemoryGeneration = 0L
+    private var backgroundSessionBudgetApplied = false
+    private var uiMemoryTrimmed = false
+    private var isProfileTabSwitcherWallpaperRequested = false
+    private val pendingMemorySessionChecks = mutableMapOf<String, PendingMemorySessionCheck>()
+    private val foregroundMemoryTrim = Runnable {
+        foregroundMemoryTrimScheduled = false
+        if (!destroyed && !isAppInBackground) {
+            trimIdleResidentSessions()
+            scheduleForegroundMemoryTrim()
+        }
+    }
     private var fullscreenVideoSourceRevision = 0
     private var geckoMediaPresentation: GeckoMediaPresentation? = null
     private var fullscreenVideoInsideSafeDrawingHost = false
@@ -1394,6 +1440,7 @@ class BrowserController(
     private var toppingCatalogRefreshGeneration = 0
     private val pendingConsentCssUrls = mutableMapOf<String, String?>()
     private val pendingPopupNavigations = mutableMapOf<String, PendingPopupNavigation>()
+    private val pendingPopupTimeouts = mutableMapOf<String, Runnable>()
     private val pendingPopunderNavigations = mutableMapOf<String, PendingPopunderNavigation>()
     private val transientPopupTabIds = mutableSetOf<String>()
     private val nativePopupSessions = mutableMapOf<String, AndroidBrowserEngineSessionPort>()
@@ -1490,6 +1537,7 @@ class BrowserController(
     private val protectionRequestContexts = ConcurrentHashMap<String, ProtectionRequestContext>()
     private var isActivityResumed = false
     private var isActivityStarted = false
+    private var isGeckoViewBindingStopped = false
     private var recallDisablePending = false
     private var browsingDataClearPending = false
     @Volatile
@@ -1508,6 +1556,11 @@ class BrowserController(
     private var lastWindowInsets: WindowInsetsCompat? = null
     private var browserChromeOwnsIme = false
     private var previewEpoch = 0
+    var restorationPreview: TabPreview? by mutableStateOf(null)
+        private set
+    private var restorationPreviewOwner: Any? = null
+    private var restorationPreviewTabId: String? = null
+    private var restorationPreviewGeneration = 0L
     private var faviconEpoch = 0
     private val faviconGenerations = mutableMapOf<String, Int>()
     private val faviconFetchAttempts = mutableMapOf<String, TabFaviconFetchAttempt>()
@@ -1561,6 +1614,7 @@ class BrowserController(
     private val profileWallpaperStore = ProfileWallpaperStore(activity.applicationContext)
     private var profileWallpaperLoadGeneration = 0
     private var profileTabSwitcherWallpaperLoadGeneration = 0
+    private val pendingTabSwitcherWallpaperCallbacks = mutableMapOf<Int, () -> Unit>()
     private val capsuleShortcuts = CapsuleShortcutPublisher(activity)
     private val candyRuleRepository = CandyRuleRepository.get(activity)
     private val userScriptRepository = UserScriptRepository.get(activity)
@@ -2801,6 +2855,7 @@ class BrowserController(
         onContentPresented: ((String) -> Unit)?,
         backdropCaptureEnabled: Boolean,
     ): View? {
+        if (usesGeckoEngine && isGeckoViewBindingStopped) return null
         val selectedSessionIsBeingReleased =
             browserEngineSessions[selectedTabId] in geckoViewSessionsBeingReleased
         if (isGeckoViewBindingMutationInProgress || selectedSessionIsBeingReleased) {
@@ -3056,6 +3111,11 @@ class BrowserController(
     ) {
         geckoViewBindings[container] = binding
         try {
+            // Seeded session geometry preserves warm pages. Reconcile a changed window or
+            // policy before its replacement renderer can publish a visible surface.
+            lastWindowInsets?.let { insets ->
+                applyGeckoWindowInsets(binding.view, binding.tabId, insets)
+            }
             container.addView(
                 binding.view,
                 FrameLayout.LayoutParams(
@@ -3697,6 +3757,9 @@ class BrowserController(
             if (geckoMediaPresentation?.inlineVideoIdentity != null) {
                 clearGeckoMediaPresentation(preserveInlinePresentation = true)
             }
+            if (usesGeckoEngine && isAppInBackground && !isActivityStarted) {
+                releaseHiddenGeckoViewBindings()
+            }
             scheduleResidentSessionTrim()
             onPresentationRestored()
         }
@@ -3851,6 +3914,9 @@ class BrowserController(
                     )
             ) {
                 clearGeckoMediaPresentation()
+            }
+            if (usesGeckoEngine && isAppInBackground && !isActivityStarted) {
+                releaseHiddenGeckoViewBindings()
             }
             scheduleResidentSessionTrim()
             completeReturn()
@@ -4835,6 +4901,7 @@ class BrowserController(
         externalLinkPreviewRuntime = null
         externalLinkPreviewState = null
         runtime?.policyTab?.id?.let { policyTabId ->
+            releaseDownloadChoicesForSource(policyTabId)
             externalNavigationGrants.remove(policyTabId)
             if (pendingExternalNavigationRollback?.tabId == policyTabId) {
                 pendingExternalNavigationRollback = null
@@ -6352,7 +6419,7 @@ class BrowserController(
         val profileId = profile?.id
         val generation = ++profileWallpaperLoadGeneration
         activeProfileWallpaperBitmap = null
-        if (profileId == null || wallpaper == null) return
+        if (uiMemoryTrimmed || profileId == null || wallpaper == null) return
         profileWallpaperExecutor.execute {
             val loaded = profileWallpaperStore.load(profileId, ProfileWallpaperTarget.NewTab)
             mainHandler.post {
@@ -6378,21 +6445,24 @@ class BrowserController(
     }
 
     fun loadActiveProfileTabSwitcherWallpaper(onReady: () -> Unit = {}) {
+        isProfileTabSwitcherWallpaperRequested = true
         val profile = localProfiles.firstOrNull { it.id == activeProfileId }
         val wallpaper = profile?.tabSwitcherWallpaper
         val profileId = profile?.id
         val generation = ++profileTabSwitcherWallpaperLoadGeneration
         activeProfileTabSwitcherWallpaperBitmap = null
-        if (profileId == null || wallpaper == null) {
+        if (uiMemoryTrimmed || profileId == null || wallpaper == null) {
             onReady()
             return
         }
+        pendingTabSwitcherWallpaperCallbacks[generation] = onReady
         profileWallpaperExecutor.execute {
             val loaded = profileWallpaperStore.load(
                 profileId,
                 ProfileWallpaperTarget.TabSwitcher,
             )
             mainHandler.post {
+                val readyCallback = pendingTabSwitcherWallpaperCallbacks.remove(generation)
                 if (
                     destroyed ||
                     generation != profileTabSwitcherWallpaperLoadGeneration ||
@@ -6403,7 +6473,7 @@ class BrowserController(
                 }
                 if (loaded != null) {
                     activeProfileTabSwitcherWallpaperBitmap = loaded
-                    onReady()
+                    readyCallback?.invoke()
                     return@post
                 }
                 val index = profiles.indexOfFirst { candidate -> candidate.id == profileId }
@@ -6411,12 +6481,13 @@ class BrowserController(
                     profiles[index] = profiles[index].copy(tabSwitcherWallpaper = null)
                     persist()
                 }
-                onReady()
+                readyCallback?.invoke()
             }
         }
     }
 
     fun releaseActiveProfileTabSwitcherWallpaper() {
+        isProfileTabSwitcherWallpaperRequested = false
         profileTabSwitcherWallpaperLoadGeneration += 1
         activeProfileTabSwitcherWallpaperBitmap = null
     }
@@ -6735,6 +6806,7 @@ class BrowserController(
         }
         val sourceIndex = activeTabs.indexOfFirst { it.id == tabId }
         if (isSyncTargetProfile(sourceTab.profileId)) enqueueSyncedTabClose(sourceTab)
+        if (restorationPreviewTabId == tabId) invalidateRestorationPreview()
         val movedTab = sourceTab.copy(
             profileId = profileId,
             isIncognito = sourceTab.isIncognito && !targetIsSynced,
@@ -6876,8 +6948,12 @@ class BrowserController(
         return null
     }
 
-    fun confirmDownloadChoice(managerId: String?) {
+    fun confirmDownloadChoice(
+        managerId: String?,
+        expectedChoice: PendingDownloadChoice? = pendingDownloadChoice,
+    ) {
         val choice = pendingDownloadChoice ?: return
+        if (choice !== expectedChoice) return
         pendingDownloadChoice = null
         if (choice.isSourceCurrent?.invoke() == false) {
             choice.releaseResponse?.invoke()
@@ -6905,9 +6981,11 @@ class BrowserController(
         showNextDownloadChoice()
     }
 
-    fun dismissDownloadChoice() {
-        pendingDownloadChoice?.releaseResponse?.invoke()
+    fun dismissDownloadChoice(expectedChoice: PendingDownloadChoice? = pendingDownloadChoice) {
+        val choice = pendingDownloadChoice ?: return
+        if (choice !== expectedChoice) return
         pendingDownloadChoice = null
+        choice.releaseResponse?.invoke()
         showNextDownloadChoice()
     }
 
@@ -9681,6 +9759,8 @@ class BrowserController(
         val safeAreaModeChanged =
             developerSettings.forceSafeAreaFallback != normalized.forceSafeAreaFallback
         val appLoggingChanged = developerSettings.appLoggingEnabled != normalized.appLoggingEnabled
+        val memorySettingsChanged =
+            developerSettings.browserMemorySettings != normalized.browserMemorySettings
         developerSettings = normalized
         GeckoLogging.configure(normalized)
         if (appLoggingChanged && !AppLogging.setEnabled(normalized.appLoggingEnabled)) {
@@ -9690,6 +9770,7 @@ class BrowserController(
         publishBrowserChromeScrollDispatchMode(normalized.browserChromeScrollDispatchMode)
         store.saveDeveloperSettings(normalized)
         refreshDeveloperSafeAreaConfiguration(safeAreaModeChanged)
+        if (memorySettingsChanged) refreshMemorySettings()
     }
 
     fun updateInputDiagnosticsEnabled(enabled: Boolean) {
@@ -10652,6 +10733,7 @@ class BrowserController(
         snoozedTabStore.save(emptyList())
         snoozeScheduler.schedule(emptyList())
         previewEpoch++
+        invalidateRestorationPreview()
         previews.clear()
         previewRepository.clear()
         faviconEpoch++
@@ -10772,9 +10854,15 @@ class BrowserController(
     }
 
     fun onStart() {
+        cancelBackgroundMemoryTrim()
+        restoreTrimmedUiResources()
         browserEngineSessionFactory.onConfigurationChanged(activity.resources.configuration)
         applyWebContentAppearance(appearanceSettings)
         isActivityStarted = true
+        if (isGeckoViewBindingStopped) {
+            isGeckoViewBindingStopped = false
+            engineViewRevision++
+        }
         if (usesGeckoEngine && !isActiveProfileLocked) {
             if (externalLinkPreviewState == null) {
                 browserEngineSessions[selectedTabId]?.setActive(true)
@@ -10812,13 +10900,15 @@ class BrowserController(
         val keepsBackgroundMedia = media3Publication(
             traceSource = "BrowserController.onStop",
         )?.snapshot?.isPlaying == true
-        if (usesGeckoEngine && !keepsPictureInPictureMedia && !keepsBackgroundMedia) {
+        if (usesGeckoEngine && !keepsPictureInPictureMedia) {
+            // Visibility is independent of audio; inactive Gecko sessions keep media playing.
             browserEngineSessions[selectedTabId]?.setActive(false)
+            releaseHiddenGeckoViewBindings()
         }
         externalLinkPreviewRuntime?.geckoBinding?.session?.setActive(false)
         if (!keepsPictureInPictureMedia && !keepsBackgroundMedia) {
             stopPictureInPictureMedia()
-        } else if (!isInPictureInPictureMode && !isInPictureInPicture) {
+        } else if (keepsPictureInPictureMedia && !isInPictureInPictureMode && !isInPictureInPicture) {
             val transitionGeneration = pictureInPictureTransitionGeneration
             mainHandler.postDelayed(
                 {
@@ -10871,17 +10961,284 @@ class BrowserController(
     }
 
     fun onAppBackgrounded(nowElapsedRealtime: Long = SystemClock.elapsedRealtime()) {
+        if (destroyed) return
+        if (!isAppInBackground) {
+            isAppInBackground = true
+            backgroundMemoryGeneration++
+            cancelPendingMemorySessionChecks()
+            mainHandler.removeCallbacks(foregroundMemoryTrim)
+            foregroundMemoryTrimScheduled = false
+        }
+        recordSessionDiagnostic(BrowserSessionDiagnostics.Event.Backgrounded, selectedTabId)
+        if (usesGeckoEngine) {
+            browserEngineSessions.forEach { (tabId, session) ->
+                if (
+                    tabId != pictureInPictureOwnerTabId ||
+                    (!isInPictureInPicture && !pictureInPictureTransitionPending)
+                ) session.setActive(false)
+            }
+            if (!isInPictureInPicture && !pictureInPictureTransitionPending) {
+                releaseHiddenGeckoViewBindings()
+            }
+        }
         profileLockGeneration++
         ProfileProtectionSession.markBackgrounded(nowElapsedRealtime)
         lockProtectedProfiles { protection ->
             protection.lockTrigger == ProfileLockTrigger.AppBackgrounded
         }
+        if (!backgroundSessionBudgetApplied) trimBackgroundMemory()
     }
 
     fun onAppForegrounded(nowElapsedRealtime: Long = SystemClock.elapsedRealtime()) {
+        cancelBackgroundMemoryTrim()
+        recordSessionDiagnostic(BrowserSessionDiagnostics.Event.Foregrounded, selectedTabId)
+        restoreTrimmedUiResources()
         isProfileProtectionSupported = profileProtectionSupported()
         lockProfilesAfterBackground(nowElapsedRealtime)
         if (isActivityResumed && isActiveProfileLocked) retryActiveProfileAuthentication()
+    }
+
+    private fun releaseHiddenGeckoViewBindings() {
+        // Block AndroidView.update from synchronously recreating a renderer during release.
+        isGeckoViewBindingStopped = true
+        pendingGeckoViewAttachRetries.clear()
+        geckoViewBindings.entries
+            .filter { (_, binding) -> binding.view !== geckoMediaPresentation?.view }
+            .map { (container, _) -> container }
+            .forEach(::detachBrowserEngineView)
+        engineViewRevision++
+    }
+
+    fun onTrimMemory(level: Int) {
+        if (destroyed) return
+        val action = BrowserBackgroundMemoryRules.trimAction(
+            level = level,
+            isProcessInForeground = isActivityStarted || isInPictureInPicture || pictureInPictureTransitionPending,
+        )
+        when (action) {
+            BrowserBackgroundMemoryTrimAction.None -> Unit
+            BrowserBackgroundMemoryTrimAction.UiResources -> trimUiResources()
+            BrowserBackgroundMemoryTrimAction.UiResourcesAndSessions -> {
+                trimUiResources()
+                if (isAppInBackground) trimBackgroundMemory()
+            }
+        }
+    }
+
+    private fun cancelBackgroundMemoryTrim() {
+        isAppInBackground = false
+        backgroundMemoryGeneration++
+        backgroundSessionBudgetApplied = false
+        cancelPendingMemorySessionChecks()
+        scheduleForegroundMemoryTrim()
+    }
+
+    private fun refreshMemorySettings() {
+        backgroundMemoryGeneration++
+        cancelPendingMemorySessionChecks()
+        if (isAppInBackground) {
+            trimBackgroundMemory()
+        } else {
+            trimIdleResidentSessions()
+            scheduleForegroundMemoryTrim()
+        }
+    }
+
+    private fun scheduleForegroundMemoryTrim() {
+        if (
+            foregroundMemoryTrimScheduled || destroyed || isAppInBackground ||
+            browserEngineSessions.size <= 1
+        ) return
+        foregroundMemoryTrimScheduled = true
+        mainHandler.postDelayed(foregroundMemoryTrim, BrowserForegroundMemoryRules.SWEEP_INTERVAL_MILLIS)
+    }
+
+    @VisibleForTesting
+    internal fun trimBackgroundMemoryForTesting() = trimBackgroundMemory()
+
+    private fun trimBackgroundMemory() {
+        if (destroyed || !isAppInBackground) return
+        if (!uiMemoryTrimmed && !isInPictureInPicture && !pictureInPictureTransitionPending) trimUiResources()
+        if (!backgroundSessionBudgetApplied) AppLogging.record(AppLogEvent.BackgroundMemoryBudgetApplied)
+        backgroundSessionBudgetApplied = true
+        trimBackgroundResidentSessions()
+    }
+
+    private fun trimUiResources() {
+        if (destroyed) return
+        uiMemoryTrimmed = true
+        previewEpoch++
+        invalidateRestorationPreview()
+        faviconEpoch++
+        pendingGeckoPreviewCaptures.keys.toList().forEach(::cancelPendingGeckoPreviewCapture)
+        val retainedTabIds = tabs.filter(BrowserTab::isIncognito).mapTo(hashSetOf(), BrowserTab::id)
+        previews.keys.filterNot(retainedTabIds::contains).forEach(previews::remove)
+        favicons.keys.filterNot(retainedTabIds::contains).forEach(favicons::remove)
+        faviconFetchAttempts.values.forEach { it.cancelled.set(true) }
+        faviconFetchAttempts.clear()
+        favoriteFaviconLoadGeneration++
+        favoriteFolderIconLoadGeneration++
+        favoriteFavicons.clear()
+        favoriteFolderIcons.clear()
+        profileWallpaperLoadGeneration++
+        profileTabSwitcherWallpaperLoadGeneration++
+        activeProfileWallpaperBitmap = null
+        activeProfileTabSwitcherWallpaperBitmap = null
+        browserEngineSessions.values.forEach(AndroidBrowserEngineSessionPort::trimUiMemory)
+        externalLinkPreviewRuntime?.geckoBinding?.session?.trimUiMemory()
+        geckoLinkPeekBindings.values.forEach { binding -> binding.session.trimUiMemory() }
+        val wallpaperCallbacks = pendingTabSwitcherWallpaperCallbacks.values.toList()
+        pendingTabSwitcherWallpaperCallbacks.clear()
+        wallpaperCallbacks.forEach { callback -> callback() }
+    }
+
+    private fun restoreTrimmedUiResources() {
+        if (!uiMemoryTrimmed || destroyed) return
+        uiMemoryTrimmed = false
+        restorePersistedPreviews()
+        restorePersistedFavicons()
+        refreshFavoriteFavicons()
+        refreshFavoriteFolderIcons()
+        refreshActiveProfileWallpaper()
+        if (isProfileTabSwitcherWallpaperRequested) loadActiveProfileTabSwitcherWallpaper()
+    }
+
+    private fun backgroundSessionEvictionOrder(): List<String> = BrowserBackgroundMemoryRules.evictionOrder(
+        residentTabIds = browserEngineSessions.keys,
+        accessOrder = residentSessionAccessOrder,
+        selectedTabId = selectedTabId,
+        protectedTabIds = protectedResidentTabIds() + tabs.filter(BrowserTab::isIncognito).map(BrowserTab::id),
+        isProcessInForeground = !isAppInBackground,
+        warmTabCount = developerSettings.browserMemorySettings.backgroundWarmTabCount,
+    )
+
+    private fun trimBackgroundResidentSessions() {
+        if (destroyed || !isAppInBackground) return
+        trimMemoryResidentSessions(isBackground = true)
+    }
+
+    private fun idleSessionEvictionOrder(nowElapsedRealtime: Long): List<String> =
+        BrowserForegroundMemoryRules.evictionOrder(
+            residentTabIds = browserEngineSessions.keys,
+            lastAccessElapsedRealtime = residentSessionLastAccessElapsedRealtime,
+            protectedTabIds = protectedResidentTabIds() + tabs.filter(BrowserTab::isIncognito).map(BrowserTab::id),
+            nowElapsedRealtime = nowElapsedRealtime,
+            idleTimeoutMillis = developerSettings.browserMemorySettings.foregroundTabIdleTimeoutMinutes * 60_000L,
+        )
+
+    @VisibleForTesting
+    internal fun trimIdleResidentSessionsForTesting(nowElapsedRealtime: Long) =
+        trimIdleResidentSessions(nowElapsedRealtime)
+
+    private fun trimIdleResidentSessions(nowElapsedRealtime: Long = SystemClock.elapsedRealtime()) {
+        if (destroyed || isAppInBackground) return
+        trimMemoryResidentSessions(isBackground = false, nowElapsedRealtime = nowElapsedRealtime)
+    }
+
+    private fun trimMemoryResidentSessions(
+        isBackground: Boolean,
+        nowElapsedRealtime: Long = SystemClock.elapsedRealtime(),
+    ) {
+        val evictionOrder = if (isBackground) {
+            backgroundSessionEvictionOrder()
+        } else {
+            idleSessionEvictionOrder(nowElapsedRealtime)
+        }
+        evictionOrder.forEach { tabId ->
+            val session = browserEngineSessions[tabId] ?: return@forEach
+            if (tabId in pendingMemorySessionChecks) return@forEach
+            val check = PendingMemorySessionCheck(
+                tabId = tabId,
+                session = session,
+                generation = backgroundMemoryGeneration,
+                navigationGeneration = navigationGenerations[tabId],
+                documentGeneration = browserEngineDocumentGenerations[tabId],
+                lastAccess = residentSessionLastAccessElapsedRealtime[tabId],
+                accessSequence = residentSessionAccessOrder[tabId],
+                isBackground = isBackground,
+                nowElapsedRealtime = nowElapsedRealtime,
+            )
+            pendingMemorySessionChecks[tabId] = check
+            startMemorySessionCheck(check)
+        }
+    }
+
+    private fun isMemorySessionCheckCurrent(check: PendingMemorySessionCheck): Boolean {
+        if (
+            destroyed || check.generation != backgroundMemoryGeneration ||
+            pendingMemorySessionChecks[check.tabId] !== check ||
+            isAppInBackground != check.isBackground ||
+            browserEngineSessions[check.tabId] !== check.session ||
+            navigationGenerations[check.tabId] != check.navigationGeneration ||
+            browserEngineDocumentGenerations[check.tabId] != check.documentGeneration ||
+            residentSessionLastAccessElapsedRealtime[check.tabId] != check.lastAccess ||
+            residentSessionAccessOrder[check.tabId] != check.accessSequence
+        ) return false
+        val evictionOrder = if (check.isBackground) {
+            backgroundSessionEvictionOrder()
+        } else {
+            idleSessionEvictionOrder(check.nowElapsedRealtime)
+        }
+        return check.tabId in evictionOrder
+    }
+
+    private fun startMemorySessionCheck(check: PendingMemorySessionCheck) {
+        if (!isMemorySessionCheckCurrent(check)) {
+            if (pendingMemorySessionChecks[check.tabId] === check) cancelPendingMemorySessionCheck(check.tabId)
+            return
+        }
+        check.retry = null
+        val timeout = Runnable { completeMemorySessionCheck(check, containsData = null) }
+        check.timeout = timeout
+        mainHandler.postDelayed(timeout, BrowserBackgroundMemoryRules.INPUT_CHECK_TIMEOUT_MILLIS)
+        val onResult: (Boolean?) -> Unit = { containsData ->
+            mainHandler.post { completeMemorySessionCheck(check, containsData) }
+        }
+        if (check.isBackground) check.session.containsUserInput(onResult)
+        else check.session.containsFormData(onResult)
+    }
+
+    private fun completeMemorySessionCheck(check: PendingMemorySessionCheck, containsData: Boolean?) {
+        // Identity belongs to this attempt, not merely this session: late replies must not consume retries.
+        if (pendingMemorySessionChecks[check.tabId] !== check) return
+        val isCurrent = isMemorySessionCheckCurrent(check)
+        cancelPendingMemorySessionCheck(check.tabId)
+        if (!isCurrent) return
+        if (containsData == false) {
+            recordSessionDiagnostic(
+                if (check.isBackground) BrowserSessionDiagnostics.Event.BackgroundEviction
+                else BrowserSessionDiagnostics.Event.IdleEviction,
+                check.tabId,
+            )
+            evictResidentSession(check.tabId)
+            engineViewRevision++
+            if (check.isBackground) AppLogging.record(AppLogEvent.BackgroundMemorySessionUnloaded)
+            return
+        }
+        if (!check.isBackground) return
+        if (containsData == true) {
+            AppLogging.record(AppLogEvent.BackgroundMemoryInputProtected)
+            return
+        }
+        if (!BrowserBackgroundMemoryRules.shouldRetryInputCheck(check.attempt)) {
+            AppLogging.record(AppLogEvent.BackgroundMemoryInputUnknown)
+            return
+        }
+        val retryCheck = check.copy(attempt = check.attempt + 1)
+        val retry = Runnable { startMemorySessionCheck(retryCheck) }
+        retryCheck.retry = retry
+        pendingMemorySessionChecks[check.tabId] = retryCheck
+        mainHandler.postDelayed(retry, BrowserBackgroundMemoryRules.INPUT_CHECK_RETRY_MILLIS)
+    }
+
+    private fun cancelPendingMemorySessionCheck(tabId: String) {
+        val check = pendingMemorySessionChecks.remove(tabId) ?: return
+        check.timeout?.let(mainHandler::removeCallbacks)
+        check.retry?.let(mainHandler::removeCallbacks)
+    }
+
+    private fun cancelPendingMemorySessionChecks() {
+        pendingMemorySessionChecks.keys.toList().forEach(::cancelPendingMemorySessionCheck)
     }
 
     private fun stopPictureInPictureMedia() {
@@ -10898,9 +11255,17 @@ class BrowserController(
         ownerSession?.executeMediaCommand(GeckoMediaCommand.Pause)
         if (!isActivityResumed) ownerSession?.setActive(false)
         clearGeckoMediaPresentation()
+        // A failed PiP entry kept the view protected at onStop. Once that protection ends,
+        // release the stopped Activity's selected binding as well as other ordinary views.
+        if (usesGeckoEngine && !isActivityStarted && !activity.isInPictureInPictureMode) {
+            releaseHiddenGeckoViewBindings()
+        }
     }
 
     fun destroy(lockClosedProfiles: Boolean = false) {
+        cancelBackgroundMemoryTrim()
+        mainHandler.removeCallbacks(foregroundMemoryTrim)
+        foregroundMemoryTrimScheduled = false
         stopInlineVideoGestureHaptic()
         cancelPendingMediaLayoutRestoration()
         if (lockClosedProfiles) {
@@ -10952,6 +11317,8 @@ class BrowserController(
         }
         pendingGeckoPreviewCaptures.clear()
         transientPopupTabIds.toList().forEach(::discardTransientPopup)
+        pendingPopupTimeouts.values.forEach(mainHandler::removeCallbacks)
+        pendingPopupTimeouts.clear()
         pendingPopupNavigations.clear()
         pendingPopunderNavigations.clear()
         transientPopupTabIds.clear()
@@ -10975,6 +11342,7 @@ class BrowserController(
         profileWallpaperLoadGeneration++
         profileTabSwitcherWallpaperLoadGeneration++
         profileWallpaperExecutor.shutdownNow()
+        pendingTabSwitcherWallpaperCallbacks.clear()
         historyMutationExecutor.shutdown()
         favoriteMutationExecutor.shutdown()
         favoriteFaviconLoadGeneration++
@@ -11027,6 +11395,7 @@ class BrowserController(
         pageUrls.clear()
         bottomBarCompactStates.clear()
         browserChromeScrollStates.clear()
+        invalidateRestorationPreview()
         previews.clear()
         favicons.clear()
         recycleFavoriteFavicons(favoriteFavicons.values + retiredFavoriteFavicons)
@@ -11072,6 +11441,15 @@ class BrowserController(
                 trailHistoryEventSink = ::onGeckoTrailHistoryEvent,
                 eventSink = ::onGeckoEngineEvent,
             ).also { session ->
+                BrowserSessionDiagnostics.record(
+                    event = BrowserSessionDiagnostics.Event.Created,
+                    session = session,
+                    selected = tab.id == selectedTabId,
+                    inBackground = isAppInBackground,
+                    residentCount = browserEngineSessions.size + 1,
+                    privateBrowsing = tabs.any(BrowserTab::isIncognito),
+                )
+                session.setSelectedPriority(tab.id == selectedTabId)
                 session.setFaviconListener { pageUrl, bitmap ->
                     mainHandler.post {
                         onEngineFavicon(tab.id, session, pageUrl, bitmap)
@@ -11590,14 +11968,31 @@ class BrowserController(
         // Gecko loads the initial child URI itself without another onLoadRequest callback.
         // Route it here so an accepted target=_blank tab does not stay transient indefinitely.
         if (initialUrl != BLANK_URL) handlePendingPopupNavigation(popupTabId, session, initialUrl)
-        mainHandler.postDelayed({
+        schedulePendingPopupTimeout(popupTabId, pending, preopenedBlank = initialUrl == BLANK_URL)
+        return true
+    }
+
+    private fun schedulePendingPopupTimeout(
+        popupTabId: String,
+        pending: PendingPopupNavigation,
+        preopenedBlank: Boolean,
+    ) {
+        cancelPendingPopupTimeout(popupTabId)
+        if (pendingPopupNavigations[popupTabId] !== pending) return
+        val timeout = Runnable {
+            pendingPopupTimeouts.remove(popupTabId)
             if (pendingPopupNavigations[popupTabId] === pending) {
                 pendingPopupNavigations.remove(popupTabId)
                 if (popupTabId in transientPopupTabIds) discardTransientPopup(popupTabId)
                 scheduleResidentSessionTrim()
             }
-        }, PopupNavigationRules.pendingTimeoutMillis(initialUrl == BLANK_URL))
-        return true
+        }
+        pendingPopupTimeouts[popupTabId] = timeout
+        mainHandler.postDelayed(timeout, PopupNavigationRules.pendingTimeoutMillis(preopenedBlank))
+    }
+
+    private fun cancelPendingPopupTimeout(tabId: String) {
+        pendingPopupTimeouts.remove(tabId)?.let(mainHandler::removeCallbacks)
     }
 
     private fun createGeckoPopupTab(openerTabId: String): String? {
@@ -12871,6 +13266,8 @@ class BrowserController(
         ) return
         when (event.type) {
             BrowserEngineEventType.NavigationStarted -> {
+                recordSessionDiagnostic(BrowserSessionDiagnostics.Event.NavigationStarted, event.tabId)
+                cancelPendingMemorySessionCheck(event.tabId)
                 invalidateExternalAppPromptForNavigation(event.tabId)
                 cancelAddressBarAutoDockProbe(event.tabId)
                 manuallyUnparkedAddressBarTabIds.remove(event.tabId)
@@ -13106,6 +13503,8 @@ class BrowserController(
                 }
             }
             BrowserEngineEventType.Crashed -> {
+                recordSessionDiagnostic(BrowserSessionDiagnostics.Event.RendererTerminated, event.tabId)
+                cancelPendingMemorySessionCheck(event.tabId)
                 removePendingInitialBrowserEngineNavigation(event.tabId)
                 browserEngineSessions[event.tabId]?.let(::cancelPendingInlineMediaPlayerOpen)
                 cancelPendingGeckoPreviewCapture(event.tabId)
@@ -13138,6 +13537,7 @@ class BrowserController(
                 }
             }
             BrowserEngineEventType.Closed -> {
+                cancelPendingMemorySessionCheck(event.tabId)
                 navigationSourceTabs.remove(event.tabId)
                 externalAppNavigationRecoveries.remove(event.tabId)
                 removePendingInitialBrowserEngineNavigation(event.tabId)
@@ -13564,6 +13964,12 @@ class BrowserController(
     }
 
     private fun closeBrowserEngineSession(tabId: String) {
+        if (tabId in browserEngineSessions) {
+            recordSessionDiagnostic(BrowserSessionDiagnostics.Event.Closed, tabId)
+        }
+        cancelPendingMemorySessionCheck(tabId)
+        cancelPendingPopupTimeout(tabId)
+        releaseDownloadChoicesForSource(tabId)
         nativePopupSessions.remove(tabId)
         removePendingInitialBrowserEngineNavigation(tabId)
         browserEngineNavigationRequestGenerations.remove(tabId)
@@ -13587,6 +13993,7 @@ class BrowserController(
             (binding.view.parent as? ViewGroup)?.removeView(binding.view)
         }
         browserEngineSessions.remove(tabId)?.let { session ->
+            if (findInPageSession?.geckoSession === session) closeFindInPage()
             browserEngineMediaSessionIds.remove(session)
             persistBrowserEngineSessionState(tabId, session)
             session.execute(BrowserEngineCommands.close())
@@ -13681,6 +14088,8 @@ class BrowserController(
         if (tabId !in browserEngineSessions) return
         residentSessionAccessSequence++
         residentSessionAccessOrder[tabId] = residentSessionAccessSequence
+        residentSessionLastAccessElapsedRealtime[tabId] = SystemClock.elapsedRealtime()
+        scheduleForegroundMemoryTrim()
     }
 
     private fun scheduleResidentSessionTrim() {
@@ -13693,6 +14102,10 @@ class BrowserController(
     }
 
     private fun trimResidentSessions() {
+        if (isAppInBackground && backgroundSessionBudgetApplied) {
+            trimBackgroundResidentSessions()
+            return
+        }
         residentSessionAccessOrder.keys.retainAll(browserEngineSessions.keys)
         val evictionIds = BrowserSessionResidencyRules.evictionOrder(
             residentTabIds = browserEngineSessions.keys,
@@ -13701,7 +14114,10 @@ class BrowserController(
             limit = residentTabLimit,
         )
         if (evictionIds.isEmpty()) return
-        evictionIds.forEach(::evictResidentSession)
+        evictionIds.forEach { tabId ->
+            recordSessionDiagnostic(BrowserSessionDiagnostics.Event.CapacityEviction, tabId)
+            evictResidentSession(tabId)
+        }
         engineViewRevision++
     }
 
@@ -13709,6 +14125,9 @@ class BrowserController(
         selectedTabId.takeIf(String::isNotBlank)?.let(::add)
         geckoMediaPresentation?.tabId?.let(::add)
         pictureInPictureOwnerTabId?.let(::add)
+        media3CapturedOwner?.takeIf(::isCurrentMedia3Owner)?.tabId?.let(::add)
+        media3BackgroundOwner?.takeIf(::isCurrentMedia3Owner)?.tabId?.let(::add)
+        geckoMediaStates.filterValues { state -> state.isPlaying }.keys.forEach(::add)
         pendingPermissionAccess?.identity?.tabId?.let(::add)
         pendingHttpAuthChallenge?.tabId?.let(::add)
         pendingFileChooser?.identity?.tabId?.let(::add)
@@ -13731,7 +14150,19 @@ class BrowserController(
         if (tabId !in browserEngineSessions) return
         closeBrowserEngineSession(tabId)
         residentSessionAccessOrder.remove(tabId)
+        residentSessionLastAccessElapsedRealtime.remove(tabId)
         updateTab(tabId) { it.copy(isLoading = false) }
+    }
+
+    private fun recordSessionDiagnostic(event: BrowserSessionDiagnostics.Event, tabId: String) {
+        BrowserSessionDiagnostics.record(
+            event = event,
+            session = browserEngineSessions[tabId],
+            selected = tabId == selectedTabId,
+            inBackground = isAppInBackground,
+            residentCount = browserEngineSessions.size,
+            privateBrowsing = tabs.any(BrowserTab::isIncognito),
+        )
     }
 
     private fun activeCapsuleForTab(tabId: String): SiteCapsule? = activeSiteCapsule
@@ -14257,6 +14688,7 @@ class BrowserController(
         if (decision == PopupNavigationDecision.KeepPending) return decision
         if (decision != PopupNavigationDecision.AllowSameSite) {
             pendingPopupNavigations.remove(tabId)
+            cancelPendingPopupTimeout(tabId)
             scheduleResidentSessionTrim()
         }
         if (decision == PopupNavigationDecision.AllowSameSite) {
@@ -14438,6 +14870,7 @@ class BrowserController(
                             builtInDownload = startBuiltInDownload,
                             releaseResponse = releaseResponse,
                             isSourceCurrent = isSourceCurrent,
+                            sourceTabId = tabId,
                         ),
                     )
                     null
@@ -14471,7 +14904,21 @@ class BrowserController(
     }
 
     private fun showNextDownloadChoice() {
-        pendingDownloadChoice = queuedDownloadChoices.pollFirst()
+        if (pendingDownloadChoice == null) {
+            pendingDownloadChoice = queuedDownloadChoices.pollFirst()
+        }
+    }
+
+    private fun releaseDownloadChoicesForSource(tabId: String) {
+        val releasing = queuedDownloadChoices.filter { choice -> choice.sourceTabId == tabId }.toMutableList()
+        queuedDownloadChoices.removeAll { choice -> choice.sourceTabId == tabId }
+        pendingDownloadChoice?.takeIf { choice -> choice.sourceTabId == tabId }?.let { choice ->
+            pendingDownloadChoice = null
+            releasing += choice
+        }
+        // Remove ownership before releasing responses: preview callbacks can reenter teardown.
+        releasing.forEach { choice -> choice.releaseResponse?.invoke() }
+        if (pendingDownloadChoice == null) showNextDownloadChoice()
     }
 
     private fun launchExternallyOrFallback(
@@ -14709,7 +15156,7 @@ class BrowserController(
     }
 
     private fun refreshFavoriteFolderIcons() {
-        if (destroyed) return
+        if (destroyed || uiMemoryTrimmed) return
         val folderIds = favoriteLibrary.folders.map { folder -> folder.id }.toSet()
         favoriteFolderIcons.keys.filterNot(folderIds::contains).forEach { id ->
             favoriteFolderIcons.remove(id)?.let { bitmap -> recycleFavoriteFavicons(listOf(bitmap)) }
@@ -14732,7 +15179,7 @@ class BrowserController(
     }
 
     private fun refreshFavoriteFavicons() {
-        if (destroyed) return
+        if (destroyed || uiMemoryTrimmed) return
         val urls = favorites.map(FavoriteEntry::url)
         val validUrls = urls.toSet()
         val removedBitmaps = favoriteFavicons.keys
@@ -14782,12 +15229,58 @@ class BrowserController(
         if (index >= 0) tabs[index] = transform(tabs[index])
     }
 
+    fun isTabSessionResident(tabId: String): Boolean = tabId in browserEngineSessions
+
+    fun requestRestorationPreview(tabId: String, owner: Any) {
+        if (restorationPreviewOwner === owner && restorationPreviewTabId == tabId) return
+        invalidateRestorationPreview()
+        val tab = tabs.firstOrNull { it.id == tabId } ?: return
+        if (
+            destroyed || uiMemoryTrimmed || isAppInBackground || tab.isIncognito ||
+            isSessionEphemeralTab(tabId) || tab.url == BLANK_URL ||
+            tabId != selectedTabId || tab.profileId != activeProfileId || tab.profileId in lockedProfileIds
+        ) return
+        restorationPreviewOwner = owner
+        restorationPreviewTabId = tabId
+        val generation = restorationPreviewGeneration
+        val epoch = previewEpoch
+        val pageUrl = tab.url
+        val profileId = tab.profileId
+        previewRepository.loadRestorationPreview(tabId) { bitmap ->
+            mainHandler.post {
+                if (
+                    !destroyed && !uiMemoryTrimmed && !isAppInBackground &&
+                    restorationPreviewOwner === owner && restorationPreviewTabId == tabId &&
+                    restorationPreviewGeneration == generation && previewEpoch == epoch &&
+                    selectedTabId == tabId && activeProfileId == profileId && profileId !in lockedProfileIds &&
+                    tabs.any { it.id == tabId && it.url == pageUrl && it.profileId == profileId && !it.isIncognito }
+                ) {
+                    restorationPreview = bitmap?.let { TabPreview(tabId, it) }
+                } else {
+                    bitmap?.recycle()
+                }
+            }
+        }
+    }
+
+    fun releaseRestorationPreview(owner: Any) {
+        if (restorationPreviewOwner === owner) invalidateRestorationPreview()
+    }
+
+    private fun invalidateRestorationPreview() {
+        restorationPreviewGeneration++
+        restorationPreviewOwner = null
+        restorationPreviewTabId = null
+        // Published images can still belong to the current Compose draw; release their reference.
+        restorationPreview = null
+    }
+
     private fun captureVisiblePreview(
         tabId: String,
         onComplete: () -> Unit = {},
         acceptAfterDeparture: Boolean = false,
     ) {
-        if (isSessionEphemeralTab(tabId)) {
+        if (uiMemoryTrimmed || isSessionEphemeralTab(tabId)) {
             onComplete()
             return
         }
@@ -14895,8 +15388,24 @@ class BrowserController(
                     candidateQuality != null &&
                     TabPreviewCaptureRules.shouldStorePixelCopy(candidateQuality)
                 ) {
-                    previews[request.tabId] = bitmap
-                    previewRepository.save(request.tabId, bitmap)
+                    val dimensions = requireNotNull(TabPreviewCaptureRules.resolveBitmapDimensions(
+                        sourceWidthPx = bitmap.width,
+                        sourceHeightPx = bitmap.height,
+                        targetWidthPx = TabPreviewCaptureRules.COMPACT_TARGET_WIDTH_PX,
+                        maximumTargetHeightPx = TabPreviewCaptureRules.maximumTargetHeightPx(
+                            TabPreviewCaptureRules.COMPACT_TARGET_WIDTH_PX,
+                        ),
+                    ))
+                    val thumbnail = Bitmap.createScaledBitmap(
+                        bitmap,
+                        dimensions.widthPx,
+                        dimensions.heightPx,
+                        true,
+                    ).let { scaled ->
+                        if (scaled === bitmap) bitmap.copy(Bitmap.Config.ARGB_8888, false) else scaled
+                    }
+                    if (thumbnail != null) previews[request.tabId] = thumbnail
+                    previewRepository.saveCapture(request.tabId, bitmap)
                 } else {
                     bitmap.recycle()
                 }
@@ -15166,7 +15675,7 @@ class BrowserController(
     private fun storeFavicon(tabId: String, bitmap: Bitmap) {
         val tab = tabs.firstOrNull { it.id == tabId }
         if (bitmap.isRecycled || tab == null) return
-        favicons[tabId] = bitmap
+        if (!uiMemoryTrimmed || tab.isIncognito) favicons[tabId] = bitmap
         if (!tab.isIncognito && !isSessionEphemeralTab(tabId)) {
             faviconRepository.save(tabId, bitmap)
         }
@@ -15185,7 +15694,7 @@ class BrowserController(
     }
 
     private fun scheduleGeckoFaviconFetch(tabId: String, pageUrl: String) {
-        if (!usesGeckoEngine || favicons[tabId] != null) return
+        if (uiMemoryTrimmed || !usesGeckoEngine || favicons[tabId] != null) return
         val safeUrl = BrowserUriPolicy.normalizeHttpUrl(pageUrl) ?: return
         val tab = tabs.firstOrNull { it.id == tabId } ?: return
         if (tab.isIncognito || isSessionEphemeralTab(tabId) ||
@@ -15335,6 +15844,9 @@ class BrowserController(
             .filter { profile -> profile.protection?.let(shouldLock) == true }
             .mapTo(linkedSetOf(), BrowserProfile::id)
         if (profileIds.isEmpty()) return
+        if (tabs.firstOrNull { it.id == restorationPreviewTabId }?.profileId in profileIds) {
+            invalidateRestorationPreview()
+        }
         ProfileProtectionSession.lock(profileIds)
         lockedProfileIds += profileIds
         if (externalLinkPreviewState?.targetProfileId in profileIds) {
@@ -15949,6 +16461,7 @@ class BrowserController(
         clearPermissionActivity(tabId)
         clearPrivacyDataForTab(tabId)
         residentSessionAccessOrder.remove(tabId)
+        residentSessionLastAccessElapsedRealtime.remove(tabId)
         navigationGenerations.remove(tabId)
         automaticNativeTopSafeAreaTabIds.remove(tabId)
         webContentTopBarStates.remove(tabId)
@@ -15978,6 +16491,7 @@ class BrowserController(
         candyTrails.remove(tabId)
         candyTrailGenerations.remove(tabId)
         if (!preserveRestorableState) candyTrailRepository.delete(tabId)
+        if (restorationPreviewTabId == tabId) invalidateRestorationPreview()
         previews.remove(tabId)
         if (!preserveRestorableState) previewRepository.delete(tabId)
         invalidateFavicon(tabId)
@@ -15990,6 +16504,7 @@ class BrowserController(
 
         clearPrivacyDataForTab(tab.id)
         residentSessionAccessOrder.remove(tab.id)
+        residentSessionLastAccessElapsedRealtime.remove(tab.id)
         navigationGenerations.remove(tab.id)
         pageUrls.remove(tab.id)
         bottomBarCompactStates.remove(tab.id)
@@ -16515,14 +17030,23 @@ class BrowserController(
             contentActions.dismiss()
         }
         val previousTabId = selectedTabId
+        if (previousTabId != tabId) {
+            markResidentSessionAccess(previousTabId)
+            markResidentSessionAccess(tabId)
+        }
         if (
             previousTabId != tabId &&
             geckoMediaPresentation?.tabId != previousTabId
         ) {
             browserEngineSessions[previousTabId]?.setActive(false)
         }
-        selectedTabId = tabId
         if (previousTabId != tabId) {
+            browserEngineSessions[previousTabId]?.setSelectedPriority(false)
+        }
+        selectedTabId = tabId
+        recordSessionDiagnostic(BrowserSessionDiagnostics.Event.Selected, tabId)
+        if (previousTabId != tabId) {
+            browserEngineSessions[tabId]?.setSelectedPriority(true)
             scheduleSelectedAddressBarAutoDockProbe()
             refreshGeckoScrollMetricsPolicies(previousTabId, tabId)
             publishFullscreenVideoState()

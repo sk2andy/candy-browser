@@ -1316,6 +1316,16 @@
     <string name="developer_options_unlock_action">Dezlegați opțiunile dezvoltatorului</string>
     <string name="developer_options_unlocked">Opțiunile dezvoltatorului deblocate</string>
     <string name="developer_options_security_section">Excepții de securitate</string>
+    <string name="developer_options_memory_section">Memoria filelor</string>
+    <string name="developer_options_foreground_tab_idle_timeout">Eliberează memoria filelor inactive</string>
+    <string name="developer_options_foreground_tab_idle_timeout_summary">Eliberează memoria filelor neselectate după această perioadă de inactivitate cât timp Candy este în prim-plan. Fila selectată și sesiunile protejate rămân încărcate.</string>
+    <string name="developer_options_background_warm_tab_count">File încărcate în fundal</string>
+    <string name="developer_options_background_warm_tab_count_summary">Numărul de file neselectate, utilizate recent, care rămân încărcate în fundal. Fila selectată rămâne întotdeauna încărcată; sesiunile protejate pot depăși această limită.</string>
+    <string name="developer_options_history_cache_lifetime">Durata cache-ului paginilor</string>
+    <string name="developer_options_history_cache_lifetime_summary">Gecko păstrează mai multe pagini în cache pentru Înapoi și Înainte. Temporizatorul eliberează paginile eligibile după aproximativ două treimi până la întreaga durată selectată; presiunea asupra memoriei le poate elibera mai devreme. Modificarea acestei valori necesită repornirea completă a aplicației.</string>
+    <string name="developer_options_minutes_value">%1$d min</string>
+    <string name="developer_options_seconds_value">%1$d s</string>
+    <string name="developer_options_tabs_value">%1$d file</string>
     <string name="developer_options_http_warning_title">Activaţi completarea automată pe paginile nesigure?</string>
     <string name="developer_options_http_warning_message">HTTP nu criptează datele de autentificare sau conținutul paginii. Activați selectarea managerului de parole doar pentru pagini de dezvoltare de încredere sau pagini din rețeaua locală.</string>
     <string name="developer_options_http_warning_confirm">Activaţi oricum .</string>

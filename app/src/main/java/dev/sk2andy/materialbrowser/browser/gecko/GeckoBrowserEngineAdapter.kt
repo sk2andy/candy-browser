@@ -34,6 +34,7 @@ import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineCommandType
 import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineEvent
 import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineEventType
 import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineSessionPort
+import java.lang.ref.WeakReference
 import org.mozilla.geckoview.GeckoSession
 import org.mozilla.geckoview.GeckoView
 
@@ -114,6 +115,16 @@ internal interface AndroidBrowserEngineSessionPort :
     BrowserEngineSessionPort,
     BrowserEngineViewPort {
     fun setActive(active: Boolean)
+
+    fun setSelectedPriority(selected: Boolean) = Unit
+
+    fun trimUiMemory() = Unit
+
+    /** Conservative form-state protection for automatic idle eviction. */
+    fun containsFormData(onResult: (Boolean?) -> Unit) = onResult(null)
+
+    /** Unknown user-input state must not permit background eviction. */
+    fun containsUserInput(onResult: (Boolean?) -> Unit) = containsFormData(onResult)
 
     /** False when the engine cannot combine site and storage-context boundaries safely. */
     val supportsSiteDataDeletion: Boolean get() = false
@@ -293,10 +304,11 @@ internal class GeckoBrowserEngineSessionFactory(
 
     @UiThread
     override fun setWebRtcProtectionMode(mode: WebRtcProtectionMode) {
-        val sessionsToReload = sessions.values.toList()
+        // A missing native ACK must not retain closed tabs through this process-owned callback.
+        val sessionsToReload = sessions.values.map { WeakReference(it) }
         runtime.setWebRtcProtectionMode(mode) {
-            sessionsToReload.forEach { session ->
-                session.execute(BrowserEngineCommands.reload())
+            sessionsToReload.forEach { reference ->
+                reference.get()?.execute(BrowserEngineCommands.reload())
             }
         }
     }
@@ -522,6 +534,26 @@ internal class GeckoBrowserEngineSessionAdapter(
             session.setActive(active)
             onActiveChanged(active)
         }
+    }
+
+    @UiThread
+    override fun setSelectedPriority(selected: Boolean) {
+        if (!closed) session.setSelectedPriority(selected)
+    }
+
+    @UiThread
+    override fun trimUiMemory() {
+        if (!closed) session.trimUiMemory()
+    }
+
+    @UiThread
+    override fun containsFormData(onResult: (Boolean?) -> Unit) {
+        if (closed) onResult(null) else session.containsFormData(onResult)
+    }
+
+    @UiThread
+    override fun containsUserInput(onResult: (Boolean?) -> Unit) {
+        if (closed) onResult(null) else session.containsUserInput(onResult)
     }
 
     @UiThread

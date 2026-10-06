@@ -788,12 +788,10 @@ browser.webRequest.onBeforeSendHeaders.addListener((details) => {
 }, { urls: ["http://*/*", "https://*/*"] }, ["blocking", "requestHeaders"]);
 
 browser.webRequest.onHeadersReceived.addListener((details) => {
-  if (details.type !== "main_frame" || !nativePort || !Number.isInteger(details.statusCode)) {
-    return;
-  }
+  if (details.type !== "main_frame") return;
   const request = mainFrameRequestsById.get(details.requestId);
   mainFrameRequestsById.delete(details.requestId);
-  if (!request) return;
+  if (!request || !nativePort || !Number.isInteger(details.statusCode)) return;
   const cloudflareChallenge = (details.responseHeaders || []).some((header) =>
     typeof header.name === "string" &&
     header.name.toLowerCase() === "cf-mitigated" &&
@@ -961,6 +959,72 @@ function extractReader(message) {
     (payload) => postReaderResult(message, payload || null),
     () => postReaderResult(message, null),
   );
+}
+
+async function queryUserInput(message) {
+  const policy = policiesByToken.get(message.token);
+  if (!policy || policy.revision !== message.revision ||
+      policy.navigationGeneration !== message.navigationGeneration ||
+      !Number.isSafeInteger(message.requestId) || message.requestId <= 0 ||
+      typeof message.nonce !== "string" ||
+      !/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(message.nonce)) return;
+  const tabEntry = Array.from(tokenByTab.entries()).find(([, token]) => token === message.token);
+  if (!tabEntry) return;
+  const postResult = (hasUserInput) => {
+    const current = policiesByToken.get(message.token);
+    if (!nativePort || current?.revision !== message.revision ||
+        current.navigationGeneration !== message.navigationGeneration ||
+        tokenByTab.get(tabEntry[0]) !== message.token) return;
+    nativePort.postMessage({
+      type: "user-input-result", protocolVersion: PROTOCOL_VERSION,
+      token: message.token, revision: message.revision,
+      navigationGeneration: message.navigationGeneration, requestId: message.requestId,
+      nonce: message.nonce, hasUserInput,
+    });
+  };
+  const validFrames = (frames) => Array.isArray(frames) && frames.length > 0 && frames.length <= 256 &&
+    frames.some((frame) => frame.frameId === 0) &&
+    new Set(frames.map((frame) => frame.frameId)).size === frames.length &&
+    frames.every((frame) => Number.isSafeInteger(frame.frameId) && frame.frameId >= 0 &&
+      // Firefox 157 omits the unsupported errorOccurred field. Missing content answers
+      // still fail closed; an explicit navigation error can never authorize eviction.
+      Number.isSafeInteger(frame.parentFrameId) &&
+      (frame.errorOccurred === undefined || frame.errorOccurred === false) &&
+      typeof frame.url === "string");
+  const sameFrames = (before, after) => validFrames(after) && before.length === after.length &&
+    before.every((frame) => after.some((current) => current.frameId === frame.frameId &&
+      current.parentFrameId === frame.parentFrameId && current.url === frame.url &&
+      current.documentId === frame.documentId));
+  const sampleFrames = (frames, previous) => Promise.all(frames.map(async (frame, index) => {
+    try {
+      const result = await browser.tabs.sendMessage(tabEntry[0], {
+        type: "user-input-query", nonce: message.nonce,
+        ...(previous ? { documentNonce: previous[index].documentNonce } : {}),
+      }, { frameId: frame.frameId });
+      if (!result || result.nonce !== message.nonce ||
+          typeof result.documentNonce !== "string" || !/^[0-9a-f]{32}$/.test(result.documentNonce) ||
+          (previous && result.documentNonce !== previous[index].documentNonce) ||
+          typeof result.hasUserInput !== "boolean") return null;
+      return result;
+    } catch (_error) {
+      return null;
+    }
+  }));
+  try {
+    const frames = await browser.webNavigation.getAllFrames({ tabId: tabEntry[0] });
+    if (!validFrames(frames)) return postResult(null);
+    const first = await sampleFrames(frames);
+    if (first.some((result) => result?.hasUserInput === true)) return postResult(true);
+    if (first.some((result) => result === null)) return postResult(null);
+    // A second query binds each answer to the same isolated content-script document.
+    const second = await sampleFrames(frames, first);
+    if (second.some((result) => result?.hasUserInput === true)) return postResult(true);
+    if (second.some((result) => result === null)) return postResult(null);
+    const currentFrames = await browser.webNavigation.getAllFrames({ tabId: tabEntry[0] });
+    postResult(sameFrames(frames, currentFrames) ? false : null);
+  } catch (_error) {
+    postResult(null);
+  }
 }
 
 function probeDom(message) {
@@ -1296,6 +1360,8 @@ function connectNative() {
       typeof message.token === "string"
     ) {
       probeTextInputOcclusion(message);
+    } else if (message.type === "user-input-query" && typeof message.token === "string") {
+      queryUserInput(message);
     } else if (message.type === "dom-probe" && typeof message.token === "string") {
       probeDom(message);
     } else if (

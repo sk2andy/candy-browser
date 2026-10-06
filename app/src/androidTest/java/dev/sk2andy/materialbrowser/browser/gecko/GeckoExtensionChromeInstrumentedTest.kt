@@ -3,6 +3,7 @@ package dev.sk2andy.materialbrowser.browser.gecko
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
+import android.view.ViewGroup
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -13,14 +14,19 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
 import java.util.concurrent.CopyOnWriteArrayList
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mozilla.geckoview.GeckoResult
+import org.mozilla.geckoview.GeckoSession
 import org.mozilla.geckoview.GeckoView
 import org.mozilla.geckoview.WebExtension
 
@@ -46,6 +52,7 @@ class GeckoExtensionChromeInstrumentedTest {
         lateinit var host: FixtureChromeHost
         lateinit var primary: GeckoBrowserSession
         lateinit var primaryView: android.view.View
+        lateinit var nativePrimary: GeckoSession
 
         InstrumentationRegistry.getInstrumentation().runOnMainSync {
             runtime = GeckoRuntimeOwner.getOrCreate(context) as GeckoViewRuntimeHandle
@@ -101,6 +108,9 @@ class GeckoExtensionChromeInstrumentedTest {
             )
             host.bind(PRIMARY_TAB_ID, primary, generation = 1, selected = true)
             primaryView = primary.createView(context)
+            nativePrimary = checkNotNull(
+                ((primaryView as ViewGroup).getChildAt(0) as GeckoView).session,
+            )
             primary.setActive(true)
             assertTrue(primary.loadUrl(server.pageUrl()))
         }
@@ -134,6 +144,26 @@ class GeckoExtensionChromeInstrumentedTest {
             assertFalse(results.has("error"))
             assertNull("Popup session survived owner-tab switch", host.popupView)
             assertEquals("moz-extension", host.optionsUrl?.substringBefore("://"))
+            InstrumentationRegistry.getInstrumentation().runOnMainSync {
+                assertNotNull(nativePrimary.webExtensionController.getActionDelegate(extension))
+                assertNotNull(nativePrimary.webExtensionController.getTabDelegate(extension))
+            }
+            runBlocking(Dispatchers.Main) {
+                withTimeout(90_000L) {
+                    runtime.extensions.uninstall(FIXTURE_ID)
+                    runtime.extensions.listInstalled()
+                }
+            }
+            InstrumentationRegistry.getInstrumentation().runOnMainSync {
+                assertNull(
+                    "Removed extension retained its Candy action delegate",
+                    nativePrimary.webExtensionController.getActionDelegate(extension),
+                )
+                assertNull(
+                    "Removed extension retained its Candy tab delegate",
+                    nativePrimary.webExtensionController.getTabDelegate(extension),
+                )
+            }
         } finally {
             InstrumentationRegistry.getInstrumentation().runOnMainSync {
                 runtime.extensions.setChromeHost(null)

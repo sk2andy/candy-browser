@@ -1302,6 +1302,16 @@
     <string name="developer_options_unlock_action">Entlooss Entwéckler Optiounen</string>
     <string name="developer_options_unlocked">Entwéckler Optiounen opgemaach</string>
     <string name="developer_options_security_section">Sécherheet iwwerschreift</string>
+    <string name="developer_options_memory_section">Tab-Späicher</string>
+    <string name="developer_options_foreground_tab_idle_timeout">Inaktiv Tabs entlueden</string>
+    <string name="developer_options_foreground_tab_idle_timeout_summary">Entluet net ausgewielten Tabs no dëser Zäit ouni Aktivitéit, wärend Candy am Virdergrond ass. Den ausgewielten Tab a geschützte Sessioune bleiwe gelueden.</string>
+    <string name="developer_options_background_warm_tab_count">Gelueden Tabs am Hannergrond</string>
+    <string name="developer_options_background_warm_tab_count_summary">Zuel vun de rezent benotzten, net ausgewielten Tabs, déi am Hannergrond geluede bleiwen. Den ausgewielten Tab bleift ëmmer gelueden; geschützte Sessioune kënnen dës Limit iwwerschreiden.</string>
+    <string name="developer_options_history_cache_lifetime">Liewensdauer vum Säitecache</string>
+    <string name="developer_options_history_cache_lifetime_summary">Gecko hält méi Säiten am Cache fir Zeréck a Vir. Den Timer gëtt déi entspriechend Säiten no ongeféier zwee Drëttel bis zur ganzer gewielter Zäit fräi; Späicherdrock kann se méi fréi fräiginn. Eng Ännerung erfuerdert e komplette Neustart vun der App.</string>
+    <string name="developer_options_minutes_value">%1$d min</string>
+    <string name="developer_options_seconds_value">%1$d s</string>
+    <string name="developer_options_tabs_value">%1$d Tabs</string>
     <string name="developer_options_http_warning_title">Automatesch ausfëllen op onsécher Säiten aktivéieren?</string>
     <string name="developer_options_http_warning_message">HTTP verschlësselt keng Zougangsdaten oder Säiteninhalter. Erméiglecht nëmmen d\'Auswiel vum Passwuertmanager fir vertrauenswürdeg Entwéckler oder lokal Netzwierk Säiten.</string>
     <string name="developer_options_http_warning_confirm">Op alle Fall aktivéiert</string>

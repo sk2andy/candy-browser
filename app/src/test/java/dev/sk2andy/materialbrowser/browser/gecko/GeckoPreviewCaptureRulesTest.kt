@@ -63,6 +63,25 @@ class GeckoPreviewCaptureRulesTest {
     }
 
     @Test
+    fun `narrow capture never upscales when preview height crops source`() {
+        assertEquals(
+            GeckoPreviewBitmapLayout(
+                sourceHeightPx = 900,
+                targetWidthPx = 300,
+                targetHeightPx = 900,
+            ),
+            GeckoPreviewCaptureRules.resolveBitmapLayout(
+                viewHeightPx = 2_400,
+                visibleViewHeightPx = 2_400,
+                capturedWidthPx = 300,
+                capturedHeightPx = 2_400,
+                targetWidthPx = 480,
+                maximumTargetHeightPx = 900,
+            ),
+        )
+    }
+
+    @Test
     fun `invalid compositor dimensions cannot allocate a preview`() {
         assertNull(
             GeckoPreviewCaptureRules.resolveBitmapLayout(

@@ -341,7 +341,7 @@ internal fun BrowserScreen(
     val liveFrameTabIdState = remember { mutableStateOf<String?>(null) }
     var liveFrameTabId by liveFrameTabIdState
     val reportLiveFrame = remember { { tabId: String -> liveFrameTabIdState.value = tabId } }
-    val tabHandoffAlpha = remember { Animatable(1f) }
+    val tabHandoffAlpha = rememberTabHandoffAlpha(tabHandoff)
     val settingsBackProgress = remember { Animatable(0f) }
     val candyTrailBackProgress = remember { Animatable(0f) }
     var settingsPredictiveBackCommitted by remember { mutableStateOf(false) }
@@ -1056,6 +1056,10 @@ internal fun BrowserScreen(
                         preview = controller.previews[currentTab.id].takeUnless { currentTab.isIncognito },
                         favicon = controller.favicons[currentTab.id],
                         previewTopInsetPx = controller.previewTopInsetPx(currentTab.id),
+                        isRestoring = TabHandoffRules.isRestoring(
+                            currentTab,
+                            controller.isTabSessionResident(currentTab.id),
+                        ),
                     )
                 }
                 if (targetHandoff != null && controller.switchToOpenTab(target.id)) {
@@ -1173,7 +1177,7 @@ internal fun BrowserScreen(
     }
 
     LaunchedEffect(
-        tabHandoff?.tabId,
+        tabHandoff?.visualIdentity,
         liveFrameTabId,
         tabOverviewVisible,
         selectedTab.id,
@@ -1198,9 +1202,12 @@ internal fun BrowserScreen(
         }
         tabHandoffAlpha.animateTo(
             targetValue = 0f,
-            animationSpec = tween(durationMillis = 110, easing = FastOutSlowInEasing),
+            animationSpec = tween(
+                durationMillis = TabHandoffRules.revealDurationMillis(handoff),
+                easing = FastOutSlowInEasing,
+            ),
         )
-        if (tabHandoff?.tabId == handoff.tabId) tabHandoff = null
+        if (tabHandoff === handoff) tabHandoff = null
     }
 
     LaunchedEffect(selectedTab.id, selectedTab.error) {
@@ -1494,6 +1501,9 @@ internal fun BrowserScreen(
                         liveFrameTabId = liveFrameTabId,
                         tabOverviewVisible = tabOverviewVisible,
                         onLiveFrame = reportLiveFrame,
+                        onHandoffExpired = { expired ->
+                            if (tabHandoff === expired) tabHandoff = null
+                        },
                         onSearch = if (showInteractiveBlankStart) {
                             { addressEditorVisible = false }
                         } else {
@@ -1684,6 +1694,10 @@ internal fun BrowserScreen(
                     preview = controller.previews[target.id].takeUnless { target.isIncognito },
                     favicon = controller.favicons[target.id],
                     previewTopInsetPx = controller.previewTopInsetPx(target.id),
+                    isRestoring = TabHandoffRules.isRestoring(
+                        target,
+                        controller.isTabSessionResident(target.id),
+                    ),
                 )
             }
             controller.selectTab(tabId)

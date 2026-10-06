@@ -33,6 +33,13 @@ internal object DeveloperDiagnosticsReport {
         "Input diagnostics enabled: ${snapshot.inputDiagnosticsEnabled.yesOrNo}",
         "Browser chrome scroll dispatch: " +
             snapshot.developerSettings.browserChromeScrollDispatchMode.stableId,
+        "Foreground tab idle timeout: " +
+            "${snapshot.developerSettings.browserMemorySettings.foregroundTabIdleTimeoutMinutes} min",
+        "Background warm unselected tabs: " +
+            snapshot.developerSettings.browserMemorySettings.backgroundWarmTabCount,
+        "Background session unloading: immediate, restore on selection",
+        "Gecko page cache lifetime (restart required): " +
+            "${snapshot.developerSettings.browserMemorySettings.historyCacheLifetimeMinutes} min",
         "Safe-area layout quiet period: " +
             "${snapshot.developerSettings.safeAreaLayoutQuietPeriodMillis} ms",
         "Safe-area required failures: " +

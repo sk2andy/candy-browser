@@ -1,0 +1,3974 @@
+{
+  "baselineCommit": "801cb758",
+  "productionApkSha256": "0441b42d66042f38f3f52eb5f857adb27398d107f8df5ac7e2630ee81d8ecab7",
+  "device": {
+    "serial": "emulator-5580",
+    "api": 37,
+    "memTotalKiB": 4009604,
+    "swapTotalKiB": 3007196
+  },
+  "limits": {
+    "foregroundResidentTabs": 10,
+    "foregroundIdleMinutes": 3,
+    "backgroundUnselectedWarmTabs": 0
+  },
+  "variants": {
+    "normal": {
+      "completed": true,
+      "testApk": {
+        "app": {
+          "sha256": "0441b42d66042f38f3f52eb5f857adb27398d107f8df5ac7e2630ee81d8ecab7"
+        },
+        "test": {
+          "sha256": "78575f7aad4bdd1a802fd76749061abe12db7e83b2aac6eabd37378b8a244b15"
+        }
+      },
+      "samples": [
+        {
+          "name": "natural-fg",
+          "backgroundElapsedMillis": null,
+          "residentSessionCount": 10,
+          "viewBindingCount": 1,
+          "pendingMemoryGuardCount": 0,
+          "pendingPreviewCount": 0,
+          "pendingViewAttachCount": 0,
+          "privacyBindingCount": null,
+          "privacyPendingUntilReadyCount": null,
+          "privacyPendingInputQueryCount": null,
+          "nativeSessionQueuedCallCount": null,
+          "weakAdapterAliveCount": 20,
+          "weakNativeSessionAliveCount": null,
+          "weakClosedNativeSessionAliveCount": null,
+          "weakViewAliveCount": 3,
+          "documentRequests": 20,
+          "isAppInBackground": false,
+          "backgroundBudgetApplied": false,
+          "completedBackgroundGuardOutcomeEventCounts": null,
+          "separateUserInputProbe": {
+            "trueCount": 0,
+            "falseCount": 10,
+            "unknownCount": 0,
+            "durationMillis": 106,
+            "scope": "Separate current-resident queries after sample; production eviction callbacks are not intercepted"
+          },
+          "nativeCaptureDurationMillis": 316,
+          "groupSmapsPssKiB": 1727879,
+          "groupSmapsRssKiB": 3231308,
+          "groupSwapPssKiB": 166084,
+          "externalSampleDurationSeconds": 1.1951889991760254,
+          "mainOomScoreAdj": 0,
+          "mainSetProcState": "2",
+          "mainFrozen": "false",
+          "mainInstrumented": true,
+          "mainDebugTotalPssIncludingSwapKiB": 603138,
+          "mainDebugSwapKiB": 82424,
+          "nativeAllocationTotals": {
+            "explicit_bytes": 1519988372,
+            "allocation_categories_bytes": {
+              "javascript": 411864232,
+              "images": 152545104,
+              "graphics": 10021152,
+              "dom_layout": 335745120,
+              "bindings": 1977712,
+              "heap_unclassified": 254942189,
+              "other": 352892863
+            },
+            "ownership_subsets_bytes": {
+              "bfcache": 0,
+              "extensions": 39575832,
+              "orphan_dom": 0
+            },
+            "metrics_bytes": {
+              "resident": 3078139904,
+              "resident-unique": 1528901632,
+              "resident-fast": null,
+              "heap-allocated": 1317914720,
+              "heap-overhead": null,
+              "vsize": 119565934592,
+              "js-main-runtime-gc-heap-committed": null
+            },
+            "counters": {
+              "ghost_windows": null
+            }
+          }
+        },
+        {
+          "name": "natural-bg-5",
+          "backgroundElapsedMillis": 5026,
+          "residentSessionCount": 1,
+          "viewBindingCount": 0,
+          "pendingMemoryGuardCount": 0,
+          "pendingPreviewCount": 0,
+          "pendingViewAttachCount": 0,
+          "privacyBindingCount": null,
+          "privacyPendingUntilReadyCount": null,
+          "privacyPendingInputQueryCount": null,
+          "nativeSessionQueuedCallCount": null,
+          "weakAdapterAliveCount": 20,
+          "weakNativeSessionAliveCount": null,
+          "weakClosedNativeSessionAliveCount": null,
+          "weakViewAliveCount": 1,
+          "documentRequests": 20,
+          "isAppInBackground": true,
+          "backgroundBudgetApplied": true,
+          "completedBackgroundGuardOutcomeEventCounts": null,
+          "separateUserInputProbe": null,
+          "nativeCaptureDurationMillis": null,
+          "groupSmapsPssKiB": 891068,
+          "groupSmapsRssKiB": 1851440,
+          "groupSwapPssKiB": 88316,
+          "externalSampleDurationSeconds": 0.6766977310180664,
+          "mainOomScoreAdj": 0,
+          "mainSetProcState": "4",
+          "mainFrozen": "false",
+          "mainInstrumented": true,
+          "mainDebugTotalPssIncludingSwapKiB": 483066,
+          "mainDebugSwapKiB": 48528
+        },
+        {
+          "name": "natural-bg-30",
+          "backgroundElapsedMillis": 30027,
+          "residentSessionCount": 1,
+          "viewBindingCount": 0,
+          "pendingMemoryGuardCount": 0,
+          "pendingPreviewCount": 0,
+          "pendingViewAttachCount": 0,
+          "privacyBindingCount": null,
+          "privacyPendingUntilReadyCount": null,
+          "privacyPendingInputQueryCount": null,
+          "nativeSessionQueuedCallCount": null,
+          "weakAdapterAliveCount": 1,
+          "weakNativeSessionAliveCount": null,
+          "weakClosedNativeSessionAliveCount": null,
+          "weakViewAliveCount": 0,
+          "documentRequests": 20,
+          "isAppInBackground": true,
+          "backgroundBudgetApplied": true,
+          "completedBackgroundGuardOutcomeEventCounts": null,
+          "separateUserInputProbe": {
+            "trueCount": 0,
+            "falseCount": 1,
+            "unknownCount": 0,
+            "durationMillis": 105,
+            "scope": "Separate current-resident queries after sample; production eviction callbacks are not intercepted"
+          },
+          "nativeCaptureDurationMillis": 205,
+          "groupSmapsPssKiB": 761711,
+          "groupSmapsRssKiB": 1722208,
+          "groupSwapPssKiB": 86536,
+          "externalSampleDurationSeconds": 0.682736873626709,
+          "mainOomScoreAdj": 0,
+          "mainSetProcState": "4",
+          "mainFrozen": "false",
+          "mainInstrumented": true,
+          "mainDebugTotalPssIncludingSwapKiB": 455989,
+          "mainDebugSwapKiB": 48516,
+          "nativeAllocationTotals": {
+            "explicit_bytes": 281767044,
+            "allocation_categories_bytes": {
+              "javascript": 112542552,
+              "images": 3523872,
+              "graphics": 887904,
+              "dom_layout": 32148848,
+              "bindings": 803424,
+              "heap_unclassified": 60981117,
+              "other": 70879327
+            },
+            "ownership_subsets_bytes": {
+              "bfcache": 0,
+              "extensions": 29819664,
+              "orphan_dom": 0
+            },
+            "metrics_bytes": {
+              "resident": 1543069696,
+              "resident-unique": 570114048,
+              "resident-fast": null,
+              "heap-allocated": 220123856,
+              "heap-overhead": null,
+              "vsize": 77685817344,
+              "js-main-runtime-gc-heap-committed": null
+            },
+            "counters": {
+              "ghost_windows": null
+            }
+          }
+        },
+        {
+          "name": "natural-bg-120",
+          "backgroundElapsedMillis": 120038,
+          "residentSessionCount": 1,
+          "viewBindingCount": 0,
+          "pendingMemoryGuardCount": 0,
+          "pendingPreviewCount": 0,
+          "pendingViewAttachCount": 0,
+          "privacyBindingCount": null,
+          "privacyPendingUntilReadyCount": null,
+          "privacyPendingInputQueryCount": null,
+          "nativeSessionQueuedCallCount": null,
+          "weakAdapterAliveCount": 1,
+          "weakNativeSessionAliveCount": null,
+          "weakClosedNativeSessionAliveCount": null,
+          "weakViewAliveCount": 0,
+          "documentRequests": 20,
+          "isAppInBackground": true,
+          "backgroundBudgetApplied": true,
+          "completedBackgroundGuardOutcomeEventCounts": null,
+          "separateUserInputProbe": null,
+          "nativeCaptureDurationMillis": null,
+          "groupSmapsPssKiB": 756330,
+          "groupSmapsRssKiB": 1716908,
+          "groupSwapPssKiB": 86196,
+          "externalSampleDurationSeconds": 0.9287960529327393,
+          "mainOomScoreAdj": 0,
+          "mainSetProcState": "4",
+          "mainFrozen": "false",
+          "mainInstrumented": true,
+          "mainDebugTotalPssIncludingSwapKiB": 454572,
+          "mainDebugSwapKiB": 48212
+        },
+        {
+          "name": "natural-bg-300",
+          "backgroundElapsedMillis": 300030,
+          "residentSessionCount": 1,
+          "viewBindingCount": 0,
+          "pendingMemoryGuardCount": 0,
+          "pendingPreviewCount": 0,
+          "pendingViewAttachCount": 0,
+          "privacyBindingCount": null,
+          "privacyPendingUntilReadyCount": null,
+          "privacyPendingInputQueryCount": null,
+          "nativeSessionQueuedCallCount": null,
+          "weakAdapterAliveCount": 1,
+          "weakNativeSessionAliveCount": null,
+          "weakClosedNativeSessionAliveCount": null,
+          "weakViewAliveCount": 0,
+          "documentRequests": 20,
+          "isAppInBackground": true,
+          "backgroundBudgetApplied": true,
+          "completedBackgroundGuardOutcomeEventCounts": null,
+          "separateUserInputProbe": {
+            "trueCount": 0,
+            "falseCount": 1,
+            "unknownCount": 0,
+            "durationMillis": 104,
+            "scope": "Separate current-resident queries after sample; production eviction callbacks are not intercepted"
+          },
+          "nativeCaptureDurationMillis": 207,
+          "groupSmapsPssKiB": 753553,
+          "groupSmapsRssKiB": 1714236,
+          "groupSwapPssKiB": 85980,
+          "externalSampleDurationSeconds": 0.9484398365020752,
+          "mainOomScoreAdj": 0,
+          "mainSetProcState": "4",
+          "mainFrozen": "false",
+          "mainInstrumented": true,
+          "mainDebugTotalPssIncludingSwapKiB": 452598,
+          "mainDebugSwapKiB": 48048,
+          "nativeAllocationTotals": {
+            "explicit_bytes": 266284964,
+            "allocation_categories_bytes": {
+              "javascript": 95855032,
+              "images": 3523872,
+              "graphics": 887904,
+              "dom_layout": 32148848,
+              "bindings": 805712,
+              "heap_unclassified": 61406317,
+              "other": 71657279
+            },
+            "ownership_subsets_bytes": {
+              "bfcache": 0,
+              "extensions": 29414144,
+              "orphan_dom": 0
+            },
+            "metrics_bytes": {
+              "resident": 1534918656,
+              "resident-unique": 561790976,
+              "resident-fast": null,
+              "heap-allocated": 219944368,
+              "heap-overhead": null,
+              "vsize": 77620985856,
+              "js-main-runtime-gc-heap-committed": null
+            },
+            "counters": {
+              "ghost_windows": null
+            }
+          }
+        },
+        {
+          "name": "cycle-1-fg",
+          "backgroundElapsedMillis": null,
+          "residentSessionCount": 10,
+          "viewBindingCount": 1,
+          "pendingMemoryGuardCount": 0,
+          "pendingPreviewCount": 0,
+          "pendingViewAttachCount": 0,
+          "privacyBindingCount": null,
+          "privacyPendingUntilReadyCount": null,
+          "privacyPendingInputQueryCount": null,
+          "nativeSessionQueuedCallCount": null,
+          "weakAdapterAliveCount": 10,
+          "weakNativeSessionAliveCount": null,
+          "weakClosedNativeSessionAliveCount": null,
+          "weakViewAliveCount": 2,
+          "documentRequests": 29,
+          "isAppInBackground": false,
+          "backgroundBudgetApplied": false,
+          "completedBackgroundGuardOutcomeEventCounts": null,
+          "separateUserInputProbe": {
+            "trueCount": 0,
+            "falseCount": 10,
+            "unknownCount": 0,
+            "durationMillis": 103,
+            "scope": "Separate current-resident queries after sample; production eviction callbacks are not intercepted"
+          },
+          "nativeCaptureDurationMillis": 202,
+          "groupSmapsPssKiB": 1536622,
+          "groupSmapsRssKiB": 3035652,
+          "groupSwapPssKiB": 85012,
+          "externalSampleDurationSeconds": 1.0833399295806885,
+          "mainOomScoreAdj": 0,
+          "mainSetProcState": "2",
+          "mainFrozen": "false",
+          "mainInstrumented": true,
+          "mainDebugTotalPssIncludingSwapKiB": 599575,
+          "mainDebugSwapKiB": 47340,
+          "nativeAllocationTotals": {
+            "explicit_bytes": 1234699924,
+            "allocation_categories_bytes": {
+              "javascript": 317084296,
+              "images": 73038368,
+              "graphics": 10085712,
+              "dom_layout": 320330752,
+              "bindings": 1883824,
+              "heap_unclassified": 159495021,
+              "other": 352781951
+            },
+            "ownership_subsets_bytes": {
+              "bfcache": 0,
+              "extensions": 35635800,
+              "orphan_dom": 0
+            },
+            "metrics_bytes": {
+              "resident": 2872537088,
+              "resident-unique": 1324511232,
+              "resident-fast": null,
+              "heap-allocated": 1066404416,
+              "heap-overhead": null,
+              "vsize": 119140847616,
+              "js-main-runtime-gc-heap-committed": null
+            },
+            "counters": {
+              "ghost_windows": null
+            }
+          }
+        },
+        {
+          "name": "cycle-1-bg-30",
+          "backgroundElapsedMillis": 30031,
+          "residentSessionCount": 1,
+          "viewBindingCount": 0,
+          "pendingMemoryGuardCount": 0,
+          "pendingPreviewCount": 0,
+          "pendingViewAttachCount": 0,
+          "privacyBindingCount": null,
+          "privacyPendingUntilReadyCount": null,
+          "privacyPendingInputQueryCount": null,
+          "nativeSessionQueuedCallCount": null,
+          "weakAdapterAliveCount": 10,
+          "weakNativeSessionAliveCount": null,
+          "weakClosedNativeSessionAliveCount": null,
+          "weakViewAliveCount": 1,
+          "documentRequests": 29,
+          "isAppInBackground": true,
+          "backgroundBudgetApplied": true,
+          "completedBackgroundGuardOutcomeEventCounts": null,
+          "separateUserInputProbe": {
+            "trueCount": 0,
+            "falseCount": 1,
+            "unknownCount": 0,
+            "durationMillis": 102,
+            "scope": "Separate current-resident queries after sample; production eviction callbacks are not intercepted"
+          },
+          "nativeCaptureDurationMillis": 205,
+          "groupSmapsPssKiB": 767276,
+          "groupSmapsRssKiB": 1728756,
+          "groupSwapPssKiB": 85004,
+          "externalSampleDurationSeconds": 0.8376538753509521,
+          "mainOomScoreAdj": 0,
+          "mainSetProcState": "4",
+          "mainFrozen": "false",
+          "mainInstrumented": true,
+          "mainDebugTotalPssIncludingSwapKiB": 474538,
+          "mainDebugSwapKiB": 47336,
+          "nativeAllocationTotals": {
+            "explicit_bytes": 288142292,
+            "allocation_categories_bytes": {
+              "javascript": 115925432,
+              "images": 3523872,
+              "graphics": 900000,
+              "dom_layout": 32268880,
+              "bindings": 1024592,
+              "heap_unclassified": 63238189,
+              "other": 71261327
+            },
+            "ownership_subsets_bytes": {
+              "bfcache": 0,
+              "extensions": 29666240,
+              "orphan_dom": 0
+            },
+            "metrics_bytes": {
+              "resident": 1542811648,
+              "resident-unique": 567853056,
+              "resident-fast": null,
+              "heap-allocated": 224070416,
+              "heap-overhead": null,
+              "vsize": 77694222336,
+              "js-main-runtime-gc-heap-committed": null
+            },
+            "counters": {
+              "ghost_windows": null
+            }
+          }
+        },
+        {
+          "name": "cycle-2-fg",
+          "backgroundElapsedMillis": null,
+          "residentSessionCount": 10,
+          "viewBindingCount": 1,
+          "pendingMemoryGuardCount": 0,
+          "pendingPreviewCount": 0,
+          "pendingViewAttachCount": 0,
+          "privacyBindingCount": null,
+          "privacyPendingUntilReadyCount": null,
+          "privacyPendingInputQueryCount": null,
+          "nativeSessionQueuedCallCount": null,
+          "weakAdapterAliveCount": 10,
+          "weakNativeSessionAliveCount": null,
+          "weakClosedNativeSessionAliveCount": null,
+          "weakViewAliveCount": 3,
+          "documentRequests": 38,
+          "isAppInBackground": false,
+          "backgroundBudgetApplied": false,
+          "completedBackgroundGuardOutcomeEventCounts": null,
+          "separateUserInputProbe": {
+            "trueCount": 0,
+            "falseCount": 10,
+            "unknownCount": 0,
+            "durationMillis": 101,
+            "scope": "Separate current-resident queries after sample; production eviction callbacks are not intercepted"
+          },
+          "nativeCaptureDurationMillis": 203,
+          "groupSmapsPssKiB": 1615443,
+          "groupSmapsRssKiB": 3115136,
+          "groupSwapPssKiB": 84968,
+          "externalSampleDurationSeconds": 1.03078031539917,
+          "mainOomScoreAdj": 0,
+          "mainSetProcState": "2",
+          "mainFrozen": "false",
+          "mainInstrumented": true,
+          "mainDebugTotalPssIncludingSwapKiB": 606793,
+          "mainDebugSwapKiB": 47320,
+          "nativeAllocationTotals": {
+            "explicit_bytes": 1231247540,
+            "allocation_categories_bytes": {
+              "javascript": 309175848,
+              "images": 73038368,
+              "graphics": 10470880,
+              "dom_layout": 320342704,
+              "bindings": 2421808,
+              "heap_unclassified": 162554637,
+              "other": 353243295
+            },
+            "ownership_subsets_bytes": {
+              "bfcache": 0,
+              "extensions": 35598432,
+              "orphan_dom": 0
+            },
+            "metrics_bytes": {
+              "resident": 2937769984,
+              "resident-unique": 1388101632,
+              "resident-fast": null,
+              "heap-allocated": 1079564816,
+              "heap-overhead": null,
+              "vsize": 119316914176,
+              "js-main-runtime-gc-heap-committed": null
+            },
+            "counters": {
+              "ghost_windows": null
+            }
+          }
+        },
+        {
+          "name": "cycle-2-bg-30",
+          "backgroundElapsedMillis": 30027,
+          "residentSessionCount": 1,
+          "viewBindingCount": 0,
+          "pendingMemoryGuardCount": 0,
+          "pendingPreviewCount": 0,
+          "pendingViewAttachCount": 0,
+          "privacyBindingCount": null,
+          "privacyPendingUntilReadyCount": null,
+          "privacyPendingInputQueryCount": null,
+          "nativeSessionQueuedCallCount": null,
+          "weakAdapterAliveCount": 10,
+          "weakNativeSessionAliveCount": null,
+          "weakClosedNativeSessionAliveCount": null,
+          "weakViewAliveCount": 1,
+          "documentRequests": 38,
+          "isAppInBackground": true,
+          "backgroundBudgetApplied": true,
+          "completedBackgroundGuardOutcomeEventCounts": null,
+          "separateUserInputProbe": {
+            "trueCount": 0,
+            "falseCount": 1,
+            "unknownCount": 0,
+            "durationMillis": 104,
+            "scope": "Separate current-resident queries after sample; production eviction callbacks are not intercepted"
+          },
+          "nativeCaptureDurationMillis": 408,
+          "groupSmapsPssKiB": 772899,
+          "groupSmapsRssKiB": 1733684,
+          "groupSwapPssKiB": 84968,
+          "externalSampleDurationSeconds": 0.9567298889160156,
+          "mainOomScoreAdj": 0,
+          "mainSetProcState": "4",
+          "mainFrozen": "false",
+          "mainInstrumented": true,
+          "mainDebugTotalPssIncludingSwapKiB": 482048,
+          "mainDebugSwapKiB": 47320,
+          "nativeAllocationTotals": {
+            "explicit_bytes": 295090948,
+            "allocation_categories_bytes": {
+              "javascript": 121449080,
+              "images": 3523872,
+              "graphics": 900016,
+              "dom_layout": 32361120,
+              "bindings": 1222672,
+              "heap_unclassified": 64366109,
+              "other": 71268079
+            },
+            "ownership_subsets_bytes": {
+              "bfcache": 0,
+              "extensions": 29847488,
+              "orphan_dom": 0
+            },
+            "metrics_bytes": {
+              "resident": 1547804672,
+              "resident-unique": 574296064,
+              "resident-fast": null,
+              "heap-allocated": 226172880,
+              "heap-overhead": null,
+              "vsize": 77715116032,
+              "js-main-runtime-gc-heap-committed": null
+            },
+            "counters": {
+              "ghost_windows": null
+            }
+          }
+        },
+        {
+          "name": "cycle-3-fg",
+          "backgroundElapsedMillis": null,
+          "residentSessionCount": 10,
+          "viewBindingCount": 1,
+          "pendingMemoryGuardCount": 0,
+          "pendingPreviewCount": 0,
+          "pendingViewAttachCount": 0,
+          "privacyBindingCount": null,
+          "privacyPendingUntilReadyCount": null,
+          "privacyPendingInputQueryCount": null,
+          "nativeSessionQueuedCallCount": null,
+          "weakAdapterAliveCount": 10,
+          "weakNativeSessionAliveCount": null,
+          "weakClosedNativeSessionAliveCount": null,
+          "weakViewAliveCount": 5,
+          "documentRequests": 47,
+          "isAppInBackground": false,
+          "backgroundBudgetApplied": false,
+          "completedBackgroundGuardOutcomeEventCounts": null,
+          "separateUserInputProbe": {
+            "trueCount": 0,
+            "falseCount": 10,
+            "unknownCount": 0,
+            "durationMillis": 101,
+            "scope": "Separate current-resident queries after sample; production eviction callbacks are not intercepted"
+          },
+          "nativeCaptureDurationMillis": 508,
+          "groupSmapsPssKiB": 1536605,
+          "groupSmapsRssKiB": 3034928,
+          "groupSwapPssKiB": 84932,
+          "externalSampleDurationSeconds": 1.7237498760223389,
+          "mainOomScoreAdj": 0,
+          "mainSetProcState": "2",
+          "mainFrozen": "false",
+          "mainInstrumented": true,
+          "mainDebugTotalPssIncludingSwapKiB": 615801,
+          "mainDebugSwapKiB": 47292,
+          "nativeAllocationTotals": {
+            "explicit_bytes": 1214945748,
+            "allocation_categories_bytes": {
+              "javascript": 294767720,
+              "images": 73038368,
+              "graphics": 10064016,
+              "dom_layout": 319663136,
+              "bindings": 2014624,
+              "heap_unclassified": 162951885,
+              "other": 352445999
+            },
+            "ownership_subsets_bytes": {
+              "bfcache": 0,
+              "extensions": 34709888,
+              "orphan_dom": 0
+            },
+            "metrics_bytes": {
+              "resident": 2877980672,
+              "resident-unique": 1330618368,
+              "resident-fast": null,
+              "heap-allocated": 1070863952,
+              "heap-overhead": null,
+              "vsize": 119101632512,
+              "js-main-runtime-gc-heap-committed": null
+            },
+            "counters": {
+              "ghost_windows": null
+            }
+          }
+        },
+        {
+          "name": "cycle-3-bg-30",
+          "backgroundElapsedMillis": 30032,
+          "residentSessionCount": 1,
+          "viewBindingCount": 0,
+          "pendingMemoryGuardCount": 0,
+          "pendingPreviewCount": 0,
+          "pendingViewAttachCount": 0,
+          "privacyBindingCount": null,
+          "privacyPendingUntilReadyCount": null,
+          "privacyPendingInputQueryCount": null,
+          "nativeSessionQueuedCallCount": null,
+          "weakAdapterAliveCount": 10,
+          "weakNativeSessionAliveCount": null,
+          "weakClosedNativeSessionAliveCount": null,
+          "weakViewAliveCount": 1,
+          "documentRequests": 47,
+          "isAppInBackground": true,
+          "backgroundBudgetApplied": true,
+          "completedBackgroundGuardOutcomeEventCounts": null,
+          "separateUserInputProbe": {
+            "trueCount": 0,
+            "falseCount": 1,
+            "unknownCount": 0,
+            "durationMillis": 105,
+            "scope": "Separate current-resident queries after sample; production eviction callbacks are not intercepted"
+          },
+          "nativeCaptureDurationMillis": 304,
+          "groupSmapsPssKiB": 780896,
+          "groupSmapsRssKiB": 1741904,
+          "groupSwapPssKiB": 84928,
+          "externalSampleDurationSeconds": 0.8995907306671143,
+          "mainOomScoreAdj": 0,
+          "mainSetProcState": "4",
+          "mainFrozen": "false",
+          "mainInstrumented": true,
+          "mainDebugTotalPssIncludingSwapKiB": 487894,
+          "mainDebugSwapKiB": 47288,
+          "nativeAllocationTotals": {
+            "explicit_bytes": 293420676,
+            "allocation_categories_bytes": {
+              "javascript": 118167000,
+              "images": 3523872,
+              "graphics": 900016,
+              "dom_layout": 32458032,
+              "bindings": 1421040,
+              "heap_unclassified": 65683149,
+              "other": 71267567
+            },
+            "ownership_subsets_bytes": {
+              "bfcache": 0,
+              "extensions": 29812032,
+              "orphan_dom": 0
+            },
+            "metrics_bytes": {
+              "resident": 1558585344,
+              "resident-unique": 584609792,
+              "resident-fast": null,
+              "heap-allocated": 227700592,
+              "heap-overhead": null,
+              "vsize": 77701111808,
+              "js-main-runtime-gc-heap-committed": null
+            },
+            "counters": {
+              "ghost_windows": null
+            }
+          }
+        },
+        {
+          "name": "cycle-4-fg",
+          "backgroundElapsedMillis": null,
+          "residentSessionCount": 10,
+          "viewBindingCount": 1,
+          "pendingMemoryGuardCount": 0,
+          "pendingPreviewCount": 0,
+          "pendingViewAttachCount": 0,
+          "privacyBindingCount": null,
+          "privacyPendingUntilReadyCount": null,
+          "privacyPendingInputQueryCount": null,
+          "nativeSessionQueuedCallCount": null,
+          "weakAdapterAliveCount": 10,
+          "weakNativeSessionAliveCount": null,
+          "weakClosedNativeSessionAliveCount": null,
+          "weakViewAliveCount": 4,
+          "documentRequests": 56,
+          "isAppInBackground": false,
+          "backgroundBudgetApplied": false,
+          "completedBackgroundGuardOutcomeEventCounts": null,
+          "separateUserInputProbe": {
+            "trueCount": 0,
+            "falseCount": 10,
+            "unknownCount": 0,
+            "durationMillis": 102,
+            "scope": "Separate current-resident queries after sample; production eviction callbacks are not intercepted"
+          },
+          "nativeCaptureDurationMillis": 305,
+          "groupSmapsPssKiB": 1618396,
+          "groupSmapsRssKiB": 3118376,
+          "groupSwapPssKiB": 84880,
+          "externalSampleDurationSeconds": 1.1406280994415283,
+          "mainOomScoreAdj": 0,
+          "mainSetProcState": "2",
+          "mainFrozen": "false",
+          "mainInstrumented": true,
+          "mainDebugTotalPssIncludingSwapKiB": 618899,
+          "mainDebugSwapKiB": 47240,
+          "nativeAllocationTotals": {
+            "explicit_bytes": 1282849220,
+            "allocation_categories_bytes": {
+              "javascript": 308833416,
+              "images": 73038368,
+              "graphics": 10300416,
+              "dom_layout": 318115424,
+              "bindings": 2780528,
+              "heap_unclassified": 216042653,
+              "other": 353738415
+            },
+            "ownership_subsets_bytes": {
+              "bfcache": 0,
+              "extensions": 35375368,
+              "orphan_dom": 0
+            },
+            "metrics_bytes": {
+              "resident": 2974642176,
+              "resident-unique": 1424293888,
+              "resident-fast": null,
+              "heap-allocated": 1126067744,
+              "heap-overhead": null,
+              "vsize": 119331352576,
+              "js-main-runtime-gc-heap-committed": null
+            },
+            "counters": {
+              "ghost_windows": null
+            }
+          }
+        },
+        {
+          "name": "cycle-4-bg-30",
+          "backgroundElapsedMillis": 30037,
+          "residentSessionCount": 1,
+          "viewBindingCount": 0,
+          "pendingMemoryGuardCount": 0,
+          "pendingPreviewCount": 0,
+          "pendingViewAttachCount": 0,
+          "privacyBindingCount": null,
+          "privacyPendingUntilReadyCount": null,
+          "privacyPendingInputQueryCount": null,
+          "nativeSessionQueuedCallCount": null,
+          "weakAdapterAliveCount": 10,
+          "weakNativeSessionAliveCount": null,
+          "weakClosedNativeSessionAliveCount": null,
+          "weakViewAliveCount": 1,
+          "documentRequests": 56,
+          "isAppInBackground": true,
+          "backgroundBudgetApplied": true,
+          "completedBackgroundGuardOutcomeEventCounts": null,
+          "separateUserInputProbe": {
+            "trueCount": 0,
+            "falseCount": 1,
+            "unknownCount": 0,
+            "durationMillis": 101,
+            "scope": "Separate current-resident queries after sample; production eviction callbacks are not intercepted"
+          },
+          "nativeCaptureDurationMillis": 308,
+          "groupSmapsPssKiB": 794629,
+          "groupSmapsRssKiB": 1755868,
+          "groupSwapPssKiB": 84876,
+          "externalSampleDurationSeconds": 0.9742558002471924,
+          "mainOomScoreAdj": 0,
+          "mainSetProcState": "4",
+          "mainFrozen": "false",
+          "mainInstrumented": true,
+          "mainDebugTotalPssIncludingSwapKiB": 501497,
+          "mainDebugSwapKiB": 47240,
+          "nativeAllocationTotals": {
+            "explicit_bytes": 304075076,
+            "allocation_categories_bytes": {
+              "javascript": 126987576,
+              "images": 3523872,
+              "graphics": 900016,
+              "dom_layout": 32554944,
+              "bindings": 1619344,
+              "heap_unclassified": 67209789,
+              "other": 71279535
+            },
+            "ownership_subsets_bytes": {
+              "bfcache": 0,
+              "extensions": 29916208,
+              "orphan_dom": 0
+            },
+            "metrics_bytes": {
+              "resident": 1570734080,
+              "resident-unique": 596291584,
+              "resident-fast": null,
+              "heap-allocated": 231125120,
+              "heap-overhead": null,
+              "vsize": 77713002496,
+              "js-main-runtime-gc-heap-committed": null
+            },
+            "counters": {
+              "ghost_windows": null
+            }
+          }
+        },
+        {
+          "name": "post-java-hprof",
+          "backgroundElapsedMillis": null,
+          "residentSessionCount": 1,
+          "viewBindingCount": 0,
+          "pendingMemoryGuardCount": 0,
+          "pendingPreviewCount": 0,
+          "pendingViewAttachCount": 0,
+          "privacyBindingCount": null,
+          "privacyPendingUntilReadyCount": null,
+          "privacyPendingInputQueryCount": null,
+          "nativeSessionQueuedCallCount": null,
+          "weakAdapterAliveCount": 1,
+          "weakNativeSessionAliveCount": null,
+          "weakClosedNativeSessionAliveCount": null,
+          "weakViewAliveCount": 0,
+          "documentRequests": 56,
+          "isAppInBackground": true,
+          "backgroundBudgetApplied": true,
+          "completedBackgroundGuardOutcomeEventCounts": null,
+          "separateUserInputProbe": {
+            "trueCount": 0,
+            "falseCount": 1,
+            "unknownCount": 0,
+            "durationMillis": 100,
+            "scope": "Separate current-resident queries after sample; production eviction callbacks are not intercepted"
+          },
+          "nativeCaptureDurationMillis": 203,
+          "groupSmapsPssKiB": 816935,
+          "groupSmapsRssKiB": 1779956,
+          "groupSwapPssKiB": 84748,
+          "externalSampleDurationSeconds": 0.6938931941986084,
+          "mainOomScoreAdj": 0,
+          "mainSetProcState": "4",
+          "mainFrozen": "false",
+          "mainInstrumented": true,
+          "mainDebugTotalPssIncludingSwapKiB": 523657,
+          "mainDebugSwapKiB": 47112,
+          "nativeAllocationTotals": {
+            "explicit_bytes": 305099972,
+            "allocation_categories_bytes": {
+              "javascript": 127214872,
+              "images": 3523872,
+              "graphics": 900016,
+              "dom_layout": 32591936,
+              "bindings": 1620112,
+              "heap_unclassified": 67969629,
+              "other": 71279535
+            },
+            "ownership_subsets_bytes": {
+              "bfcache": 0,
+              "extensions": 29935808,
+              "orphan_dom": 0
+            },
+            "metrics_bytes": {
+              "resident": 1591529472,
+              "resident-unique": 614563840,
+              "resident-fast": null,
+              "heap-allocated": 232075760,
+              "heap-overhead": null,
+              "vsize": 77713186816,
+              "js-main-runtime-gc-heap-committed": null
+            },
+            "counters": {
+              "ghost_windows": null
+            }
+          }
+        },
+        {
+          "name": "post-java-gc",
+          "backgroundElapsedMillis": null,
+          "residentSessionCount": 1,
+          "viewBindingCount": 0,
+          "pendingMemoryGuardCount": 0,
+          "pendingPreviewCount": 0,
+          "pendingViewAttachCount": 0,
+          "privacyBindingCount": null,
+          "privacyPendingUntilReadyCount": null,
+          "privacyPendingInputQueryCount": null,
+          "nativeSessionQueuedCallCount": null,
+          "weakAdapterAliveCount": 1,
+          "weakNativeSessionAliveCount": null,
+          "weakClosedNativeSessionAliveCount": null,
+          "weakViewAliveCount": 0,
+          "documentRequests": 56,
+          "isAppInBackground": true,
+          "backgroundBudgetApplied": true,
+          "completedBackgroundGuardOutcomeEventCounts": null,
+          "separateUserInputProbe": {
+            "trueCount": 0,
+            "falseCount": 1,
+            "unknownCount": 0,
+            "durationMillis": 101,
+            "scope": "Separate current-resident queries after sample; production eviction callbacks are not intercepted"
+          },
+          "nativeCaptureDurationMillis": 206,
+          "groupSmapsPssKiB": 818251,
+          "groupSmapsRssKiB": 1781276,
+          "groupSwapPssKiB": 84744,
+          "externalSampleDurationSeconds": 0.7201998233795166,
+          "mainOomScoreAdj": 0,
+          "mainSetProcState": "4",
+          "mainFrozen": "false",
+          "mainInstrumented": true,
+          "mainDebugTotalPssIncludingSwapKiB": 524961,
+          "mainDebugSwapKiB": 47108,
+          "nativeAllocationTotals": {
+            "explicit_bytes": 305589492,
+            "allocation_categories_bytes": {
+              "javascript": 127275672,
+              "images": 3523872,
+              "graphics": 900016,
+              "dom_layout": 32628928,
+              "bindings": 1620592,
+              "heap_unclassified": 68360877,
+              "other": 71279535
+            },
+            "ownership_subsets_bytes": {
+              "bfcache": 0,
+              "extensions": 29939712,
+              "orphan_dom": 0
+            },
+            "metrics_bytes": {
+              "resident": 1599844352,
+              "resident-unique": 622870528,
+              "resident-fast": null,
+              "heap-allocated": 232561056,
+              "heap-overhead": null,
+              "vsize": 77713186816,
+              "js-main-runtime-gc-heap-committed": null
+            },
+            "counters": {
+              "ghost_windows": null
+            }
+          }
+        },
+        {
+          "name": "gecko-minimize",
+          "backgroundElapsedMillis": null,
+          "residentSessionCount": 1,
+          "viewBindingCount": 0,
+          "pendingMemoryGuardCount": 0,
+          "pendingPreviewCount": 0,
+          "pendingViewAttachCount": 0,
+          "privacyBindingCount": null,
+          "privacyPendingUntilReadyCount": null,
+          "privacyPendingInputQueryCount": null,
+          "nativeSessionQueuedCallCount": null,
+          "weakAdapterAliveCount": 1,
+          "weakNativeSessionAliveCount": null,
+          "weakClosedNativeSessionAliveCount": null,
+          "weakViewAliveCount": 0,
+          "documentRequests": 56,
+          "isAppInBackground": true,
+          "backgroundBudgetApplied": true,
+          "completedBackgroundGuardOutcomeEventCounts": null,
+          "separateUserInputProbe": {
+            "trueCount": 0,
+            "falseCount": 1,
+            "unknownCount": 0,
+            "durationMillis": 102,
+            "scope": "Separate current-resident queries after sample; production eviction callbacks are not intercepted"
+          },
+          "nativeCaptureDurationMillis": 203,
+          "groupSmapsPssKiB": 804275,
+          "groupSmapsRssKiB": 1767300,
+          "groupSwapPssKiB": 84740,
+          "externalSampleDurationSeconds": 0.7407841682434082,
+          "mainOomScoreAdj": 0,
+          "mainSetProcState": "4",
+          "mainFrozen": "false",
+          "mainInstrumented": true,
+          "mainDebugTotalPssIncludingSwapKiB": 510973,
+          "mainDebugSwapKiB": 47108,
+          "nativeAllocationTotals": {
+            "explicit_bytes": 306163572,
+            "allocation_categories_bytes": {
+              "javascript": 127398856,
+              "images": 3523872,
+              "graphics": 900016,
+              "dom_layout": 32665920,
+              "bindings": 1623760,
+              "heap_unclassified": 68771613,
+              "other": 71279535
+            },
+            "ownership_subsets_bytes": {
+              "bfcache": 0,
+              "extensions": 29951568,
+              "orphan_dom": 0
+            },
+            "metrics_bytes": {
+              "resident": 1579913216,
+              "resident-unique": 602939392,
+              "resident-fast": null,
+              "heap-allocated": 233063760,
+              "heap-overhead": null,
+              "vsize": 77713186816,
+              "js-main-runtime-gc-heap-committed": null
+            },
+            "counters": {
+              "ghost_windows": null
+            }
+          }
+        },
+        {
+          "name": "post-gecko-minimize",
+          "backgroundElapsedMillis": null,
+          "residentSessionCount": 1,
+          "viewBindingCount": 0,
+          "pendingMemoryGuardCount": 0,
+          "pendingPreviewCount": 0,
+          "pendingViewAttachCount": 0,
+          "privacyBindingCount": null,
+          "privacyPendingUntilReadyCount": null,
+          "privacyPendingInputQueryCount": null,
+          "nativeSessionQueuedCallCount": null,
+          "weakAdapterAliveCount": 1,
+          "weakNativeSessionAliveCount": null,
+          "weakClosedNativeSessionAliveCount": null,
+          "weakViewAliveCount": 0,
+          "documentRequests": 56,
+          "isAppInBackground": true,
+          "backgroundBudgetApplied": true,
+          "completedBackgroundGuardOutcomeEventCounts": null,
+          "separateUserInputProbe": null,
+          "nativeCaptureDurationMillis": null,
+          "groupSmapsPssKiB": 797335,
+          "groupSmapsRssKiB": 1760360,
+          "groupSwapPssKiB": 84708,
+          "externalSampleDurationSeconds": 0.756364107131958,
+          "mainOomScoreAdj": 0,
+          "mainSetProcState": "4",
+          "mainFrozen": "false",
+          "mainInstrumented": true,
+          "mainDebugTotalPssIncludingSwapKiB": 503957,
+          "mainDebugSwapKiB": 47108
+        }
+      ]
+    },
+    "blank": {
+      "completed": true,
+      "testApk": {
+        "appSha256": "0441b42d66042f38f3f52eb5f857adb27398d107f8df5ac7e2630ee81d8ecab7",
+        "testSha256": "5b073557b2a3f1746dee9d0b70d84853ff08301efe6b91d33966b0890076784c"
+      },
+      "samples": [
+        {
+          "name": "natural-fg",
+          "backgroundElapsedMillis": null,
+          "residentSessionCount": 10,
+          "viewBindingCount": 1,
+          "pendingMemoryGuardCount": 0,
+          "pendingPreviewCount": 0,
+          "pendingViewAttachCount": 0,
+          "privacyBindingCount": 10,
+          "privacyPendingUntilReadyCount": 0,
+          "privacyPendingInputQueryCount": 0,
+          "nativeSessionQueuedCallCount": 0,
+          "weakAdapterAliveCount": 20,
+          "weakNativeSessionAliveCount": 20,
+          "weakClosedNativeSessionAliveCount": 10,
+          "weakViewAliveCount": 1,
+          "documentRequests": 20,
+          "isAppInBackground": false,
+          "backgroundBudgetApplied": false,
+          "completedBackgroundGuardOutcomeEventCounts": {
+            "falseUnloaded": 0,
+            "trueProtected": 0,
+            "unknownAfterRetries": 0,
+            "scope": "Cumulative completed production outcome events; intermediate null attempts and queued log writes are not counted"
+          },
+          "separateUserInputProbe": {
+            "trueCount": 0,
+            "falseCount": 0,
+            "unknownCount": 10,
+            "durationMillis": 103,
+            "scope": "Separate current-resident queries after sample; production eviction callbacks are not intercepted"
+          },
+          "nativeCaptureDurationMillis": 211,
+          "groupSmapsPssKiB": 1753747,
+          "groupSmapsRssKiB": 3234980,
+          "groupSwapPssKiB": 39076,
+          "externalSampleDurationSeconds": 1.2270631790161133,
+          "mainOomScoreAdj": 0,
+          "mainSetProcState": "2",
+          "mainFrozen": "false",
+          "mainInstrumented": true,
+          "mainDebugTotalPssIncludingSwapKiB": 589374,
+          "mainDebugSwapKiB": 46376,
+          "nativeAllocationTotals": {
+            "explicit_bytes": 1426654982,
+            "allocation_categories_bytes": {
+              "javascript": 360387992,
+              "images": 152545104,
+              "graphics": 10092480,
+              "dom_layout": 306326816,
+              "bindings": 1952736,
+              "heap_unclassified": 243473965,
+              "other": 351875889
+            },
+            "ownership_subsets_bytes": {
+              "bfcache": 0,
+              "extensions": 37900120,
+              "orphan_dom": 0
+            },
+            "metrics_bytes": {
+              "resident": 3109085184,
+              "resident-unique": 1544056832,
+              "resident-fast": null,
+              "heap-allocated": 1194163408,
+              "heap-overhead": null,
+              "vsize": 119504412672,
+              "js-main-runtime-gc-heap-committed": null
+            },
+            "counters": {
+              "ghost_windows": null
+            }
+          }
+        },
+        {
+          "name": "natural-bg-5",
+          "backgroundElapsedMillis": 5034,
+          "residentSessionCount": 10,
+          "viewBindingCount": 0,
+          "pendingMemoryGuardCount": 0,
+          "pendingPreviewCount": 0,
+          "pendingViewAttachCount": 0,
+          "privacyBindingCount": 10,
+          "privacyPendingUntilReadyCount": 0,
+          "privacyPendingInputQueryCount": 0,
+          "nativeSessionQueuedCallCount": 0,
+          "weakAdapterAliveCount": 20,
+          "weakNativeSessionAliveCount": 20,
+          "weakClosedNativeSessionAliveCount": 10,
+          "weakViewAliveCount": 1,
+          "documentRequests": 20,
+          "isAppInBackground": true,
+          "backgroundBudgetApplied": true,
+          "completedBackgroundGuardOutcomeEventCounts": {
+            "falseUnloaded": 0,
+            "trueProtected": 0,
+            "unknownAfterRetries": 9,
+            "scope": "Cumulative completed production outcome events; intermediate null attempts and queued log writes are not counted"
+          },
+          "separateUserInputProbe": null,
+          "nativeCaptureDurationMillis": null,
+          "groupSmapsPssKiB": 1534670,
+          "groupSmapsRssKiB": 2778372,
+          "groupSwapPssKiB": 32759,
+          "externalSampleDurationSeconds": 0.9077250957489014,
+          "mainOomScoreAdj": 0,
+          "mainSetProcState": "4",
+          "mainFrozen": "false",
+          "mainInstrumented": true,
+          "mainDebugTotalPssIncludingSwapKiB": 598870,
+          "mainDebugSwapKiB": 37900
+        },
+        {
+          "name": "natural-bg-30",
+          "backgroundElapsedMillis": 30199,
+          "residentSessionCount": 10,
+          "viewBindingCount": 0,
+          "pendingMemoryGuardCount": 0,
+          "pendingPreviewCount": 0,
+          "pendingViewAttachCount": 0,
+          "privacyBindingCount": 10,
+          "privacyPendingUntilReadyCount": 0,
+          "privacyPendingInputQueryCount": 0,
+          "nativeSessionQueuedCallCount": 0,
+          "weakAdapterAliveCount": 10,
+          "weakNativeSessionAliveCount": 20,
+          "weakClosedNativeSessionAliveCount": 10,
+          "weakViewAliveCount": 0,
+          "documentRequests": 20,
+          "isAppInBackground": true,
+          "backgroundBudgetApplied": true,
+          "completedBackgroundGuardOutcomeEventCounts": {
+            "falseUnloaded": 0,
+            "trueProtected": 0,
+            "unknownAfterRetries": 9,
+            "scope": "Cumulative completed production outcome events; intermediate null attempts and queued log writes are not counted"
+          },
+          "separateUserInputProbe": {
+            "trueCount": 0,
+            "falseCount": 0,
+            "unknownCount": 10,
+            "durationMillis": 111,
+            "scope": "Separate current-resident queries after sample; production eviction callbacks are not intercepted"
+          },
+          "nativeCaptureDurationMillis": 720,
+          "groupSmapsPssKiB": 1501562,
+          "groupSmapsRssKiB": 2745100,
+          "groupSwapPssKiB": 32707,
+          "externalSampleDurationSeconds": 1.9877750873565674,
+          "mainOomScoreAdj": 0,
+          "mainSetProcState": "4",
+          "mainFrozen": "false",
+          "mainInstrumented": true,
+          "mainDebugTotalPssIncludingSwapKiB": 577959,
+          "mainDebugSwapKiB": 37864,
+          "nativeAllocationTotals": {
+            "explicit_bytes": 1149493398,
+            "allocation_categories_bytes": {
+              "javascript": 304556512,
+              "images": 35231920,
+              "graphics": 9315920,
+              "dom_layout": 306315264,
+              "bindings": 1459440,
+              "heap_unclassified": 141996133,
+              "other": 350618209
+            },
+            "ownership_subsets_bytes": {
+              "bfcache": 0,
+              "extensions": 36153736,
+              "orphan_dom": 0
+            },
+            "metrics_bytes": {
+              "resident": 2586767360,
+              "resident-unique": 1288736768,
+              "resident-fast": null,
+              "heap-allocated": 1012738272,
+              "heap-overhead": null,
+              "vsize": 98843815936,
+              "js-main-runtime-gc-heap-committed": null
+            },
+            "counters": {
+              "ghost_windows": null
+            }
+          }
+        },
+        {
+          "name": "natural-bg-120",
+          "backgroundElapsedMillis": 120054,
+          "residentSessionCount": 10,
+          "viewBindingCount": 0,
+          "pendingMemoryGuardCount": 0,
+          "pendingPreviewCount": 0,
+          "pendingViewAttachCount": 0,
+          "privacyBindingCount": 10,
+          "privacyPendingUntilReadyCount": 0,
+          "privacyPendingInputQueryCount": 0,
+          "nativeSessionQueuedCallCount": 0,
+          "weakAdapterAliveCount": 10,
+          "weakNativeSessionAliveCount": 20,
+          "weakClosedNativeSessionAliveCount": 10,
+          "weakViewAliveCount": 0,
+          "documentRequests": 20,
+          "isAppInBackground": true,
+          "backgroundBudgetApplied": true,
+          "completedBackgroundGuardOutcomeEventCounts": {
+            "falseUnloaded": 0,
+            "trueProtected": 0,
+            "unknownAfterRetries": 9,
+            "scope": "Cumulative completed production outcome events; intermediate null attempts and queued log writes are not counted"
+          },
+          "separateUserInputProbe": {
+            "trueCount": 0,
+            "falseCount": 0,
+            "unknownCount": 10,
+            "durationMillis": 101,
+            "scope": "Separate current-resident queries after sample; production eviction callbacks are not intercepted"
+          },
+          "nativeCaptureDurationMillis": 517,
+          "groupSmapsPssKiB": 1484243,
+          "groupSmapsRssKiB": 2727912,
+          "groupSwapPssKiB": 32703,
+          "externalSampleDurationSeconds": 1.7207701206207275,
+          "mainOomScoreAdj": 0,
+          "mainSetProcState": "4",
+          "mainFrozen": "false",
+          "mainInstrumented": true,
+          "mainDebugTotalPssIncludingSwapKiB": 576002,
+          "mainDebugSwapKiB": 37844,
+          "nativeAllocationTotals": {
+            "explicit_bytes": 1089522566,
+            "allocation_categories_bytes": {
+              "javascript": 248958736,
+              "images": 35231920,
+              "graphics": 9315920,
+              "dom_layout": 306271744,
+              "bindings": 1454048,
+              "heap_unclassified": 137673109,
+              "other": 350617089
+            },
+            "ownership_subsets_bytes": {
+              "bfcache": 0,
+              "extensions": 35265744,
+              "orphan_dom": 0
+            },
+            "metrics_bytes": {
+              "resident": 2569109504,
+              "resident-unique": 1271078912,
+              "resident-fast": null,
+              "heap-allocated": 1007297184,
+              "heap-overhead": null,
+              "vsize": 98790338560,
+              "js-main-runtime-gc-heap-committed": null
+            },
+            "counters": {
+              "ghost_windows": null
+            }
+          }
+        },
+        {
+          "name": "post-java-hprof",
+          "backgroundElapsedMillis": null,
+          "residentSessionCount": 10,
+          "viewBindingCount": 0,
+          "pendingMemoryGuardCount": 0,
+          "pendingPreviewCount": 0,
+          "pendingViewAttachCount": 0,
+          "privacyBindingCount": 10,
+          "privacyPendingUntilReadyCount": 0,
+          "privacyPendingInputQueryCount": 0,
+          "nativeSessionQueuedCallCount": 0,
+          "weakAdapterAliveCount": 10,
+          "weakNativeSessionAliveCount": 20,
+          "weakClosedNativeSessionAliveCount": 10,
+          "weakViewAliveCount": 0,
+          "documentRequests": 20,
+          "isAppInBackground": true,
+          "backgroundBudgetApplied": true,
+          "completedBackgroundGuardOutcomeEventCounts": {
+            "falseUnloaded": 0,
+            "trueProtected": 0,
+            "unknownAfterRetries": 9,
+            "scope": "Cumulative completed production outcome events; intermediate null attempts and queued log writes are not counted"
+          },
+          "separateUserInputProbe": {
+            "trueCount": 0,
+            "falseCount": 0,
+            "unknownCount": 10,
+            "durationMillis": 102,
+            "scope": "Separate current-resident queries after sample; production eviction callbacks are not intercepted"
+          },
+          "nativeCaptureDurationMillis": 206,
+          "groupSmapsPssKiB": 1516096,
+          "groupSmapsRssKiB": 2761164,
+          "groupSwapPssKiB": 32626,
+          "externalSampleDurationSeconds": 1.2895066738128662,
+          "mainOomScoreAdj": 0,
+          "mainSetProcState": "4",
+          "mainFrozen": "false",
+          "mainInstrumented": true,
+          "mainDebugTotalPssIncludingSwapKiB": 607911,
+          "mainDebugSwapKiB": 36980,
+          "nativeAllocationTotals": {
+            "explicit_bytes": 1093761830,
+            "allocation_categories_bytes": {
+              "javascript": 250091136,
+              "images": 35231920,
+              "graphics": 9315920,
+              "dom_layout": 306594944,
+              "bindings": 1467600,
+              "heap_unclassified": 140439125,
+              "other": 350621185
+            },
+            "ownership_subsets_bytes": {
+              "bfcache": 0,
+              "extensions": 35420016,
+              "orphan_dom": 0
+            },
+            "metrics_bytes": {
+              "resident": 2599407616,
+              "resident-unique": 1299390464,
+              "resident-fast": null,
+              "heap-allocated": 1010959504,
+              "heap-overhead": null,
+              "vsize": 98791469056,
+              "js-main-runtime-gc-heap-committed": null
+            },
+            "counters": {
+              "ghost_windows": null
+            }
+          }
+        },
+        {
+          "name": "post-java-gc",
+          "backgroundElapsedMillis": null,
+          "residentSessionCount": 10,
+          "viewBindingCount": 0,
+          "pendingMemoryGuardCount": 0,
+          "pendingPreviewCount": 0,
+          "pendingViewAttachCount": 0,
+          "privacyBindingCount": 10,
+          "privacyPendingUntilReadyCount": 0,
+          "privacyPendingInputQueryCount": 0,
+          "nativeSessionQueuedCallCount": 0,
+          "weakAdapterAliveCount": 10,
+          "weakNativeSessionAliveCount": 20,
+          "weakClosedNativeSessionAliveCount": 10,
+          "weakViewAliveCount": 0,
+          "documentRequests": 20,
+          "isAppInBackground": true,
+          "backgroundBudgetApplied": true,
+          "completedBackgroundGuardOutcomeEventCounts": {
+            "falseUnloaded": 0,
+            "trueProtected": 0,
+            "unknownAfterRetries": 9,
+            "scope": "Cumulative completed production outcome events; intermediate null attempts and queued log writes are not counted"
+          },
+          "separateUserInputProbe": {
+            "trueCount": 0,
+            "falseCount": 0,
+            "unknownCount": 10,
+            "durationMillis": 103,
+            "scope": "Separate current-resident queries after sample; production eviction callbacks are not intercepted"
+          },
+          "nativeCaptureDurationMillis": 411,
+          "groupSmapsPssKiB": 1517619,
+          "groupSmapsRssKiB": 2762696,
+          "groupSwapPssKiB": 32618,
+          "externalSampleDurationSeconds": 1.1590890884399414,
+          "mainOomScoreAdj": 0,
+          "mainSetProcState": "4",
+          "mainFrozen": "false",
+          "mainInstrumented": true,
+          "mainDebugTotalPssIncludingSwapKiB": 609291,
+          "mainDebugSwapKiB": 36972,
+          "nativeAllocationTotals": {
+            "explicit_bytes": 1096022838,
+            "allocation_categories_bytes": {
+              "javascript": 251565456,
+              "images": 35231920,
+              "graphics": 9315920,
+              "dom_layout": 306918144,
+              "bindings": 1471680,
+              "heap_unclassified": 140898533,
+              "other": 350621185
+            },
+            "ownership_subsets_bytes": {
+              "bfcache": 0,
+              "extensions": 35515896,
+              "orphan_dom": 0
+            },
+            "metrics_bytes": {
+              "resident": 2591096832,
+              "resident-unique": 1291071488,
+              "resident-fast": null,
+              "heap-allocated": 1011899184,
+              "heap-overhead": null,
+              "vsize": 98791469056,
+              "js-main-runtime-gc-heap-committed": null
+            },
+            "counters": {
+              "ghost_windows": null
+            }
+          }
+        },
+        {
+          "name": "gecko-minimize",
+          "backgroundElapsedMillis": null,
+          "residentSessionCount": 10,
+          "viewBindingCount": 0,
+          "pendingMemoryGuardCount": 0,
+          "pendingPreviewCount": 0,
+          "pendingViewAttachCount": 0,
+          "privacyBindingCount": 10,
+          "privacyPendingUntilReadyCount": 0,
+          "privacyPendingInputQueryCount": 0,
+          "nativeSessionQueuedCallCount": 0,
+          "weakAdapterAliveCount": 10,
+          "weakNativeSessionAliveCount": 20,
+          "weakClosedNativeSessionAliveCount": 10,
+          "weakViewAliveCount": 0,
+          "documentRequests": 20,
+          "isAppInBackground": true,
+          "backgroundBudgetApplied": true,
+          "completedBackgroundGuardOutcomeEventCounts": {
+            "falseUnloaded": 0,
+            "trueProtected": 0,
+            "unknownAfterRetries": 9,
+            "scope": "Cumulative completed production outcome events; intermediate null attempts and queued log writes are not counted"
+          },
+          "separateUserInputProbe": {
+            "trueCount": 0,
+            "falseCount": 0,
+            "unknownCount": 10,
+            "durationMillis": 103,
+            "scope": "Separate current-resident queries after sample; production eviction callbacks are not intercepted"
+          },
+          "nativeCaptureDurationMillis": 428,
+          "groupSmapsPssKiB": 1505110,
+          "groupSmapsRssKiB": 2750188,
+          "groupSwapPssKiB": 32618,
+          "externalSampleDurationSeconds": 1.1649081707000732,
+          "mainOomScoreAdj": 0,
+          "mainSetProcState": "4",
+          "mainFrozen": "false",
+          "mainInstrumented": true,
+          "mainDebugTotalPssIncludingSwapKiB": 596810,
+          "mainDebugSwapKiB": 36972,
+          "nativeAllocationTotals": {
+            "explicit_bytes": 1096273782,
+            "allocation_categories_bytes": {
+              "javascript": 250841632,
+              "images": 35231920,
+              "graphics": 9315920,
+              "dom_layout": 307241344,
+              "bindings": 1478816,
+              "heap_unclassified": 141532213,
+              "other": 350631937
+            },
+            "ownership_subsets_bytes": {
+              "bfcache": 0,
+              "extensions": 35537016,
+              "orphan_dom": 0
+            },
+            "metrics_bytes": {
+              "resident": 2584416256,
+              "resident-unique": 1284395008,
+              "resident-fast": null,
+              "heap-allocated": 1013050768,
+              "heap-overhead": null,
+              "vsize": 98791469056,
+              "js-main-runtime-gc-heap-committed": null
+            },
+            "counters": {
+              "ghost_windows": null
+            }
+          }
+        },
+        {
+          "name": "post-gecko-minimize",
+          "backgroundElapsedMillis": null,
+          "residentSessionCount": 10,
+          "viewBindingCount": 0,
+          "pendingMemoryGuardCount": 0,
+          "pendingPreviewCount": 0,
+          "pendingViewAttachCount": 0,
+          "privacyBindingCount": 10,
+          "privacyPendingUntilReadyCount": 0,
+          "privacyPendingInputQueryCount": 0,
+          "nativeSessionQueuedCallCount": 0,
+          "weakAdapterAliveCount": 10,
+          "weakNativeSessionAliveCount": 20,
+          "weakClosedNativeSessionAliveCount": 10,
+          "weakViewAliveCount": 0,
+          "documentRequests": 20,
+          "isAppInBackground": true,
+          "backgroundBudgetApplied": true,
+          "completedBackgroundGuardOutcomeEventCounts": {
+            "falseUnloaded": 0,
+            "trueProtected": 0,
+            "unknownAfterRetries": 9,
+            "scope": "Cumulative completed production outcome events; intermediate null attempts and queued log writes are not counted"
+          },
+          "separateUserInputProbe": null,
+          "nativeCaptureDurationMillis": null,
+          "groupSmapsPssKiB": 1498834,
+          "groupSmapsRssKiB": 2743912,
+          "groupSwapPssKiB": 32618,
+          "externalSampleDurationSeconds": 1.1561248302459717,
+          "mainOomScoreAdj": 0,
+          "mainSetProcState": "4",
+          "mainFrozen": "false",
+          "mainInstrumented": true,
+          "mainDebugTotalPssIncludingSwapKiB": 590374,
+          "mainDebugSwapKiB": 36972
+        }
+      ]
+    }
+  },
+  "limitsOfInterpretation": [
+    "Both variants load20fresh local-only heavy fixtures. Foreground capacity settles10; selectedsession exempt from backgroundUnselectedWarmTabs0.",
+    "Instrumentation keeps mainOOMadj0/procstate4/unfrozen after realHome/ProcessLifecycleSTOP, so normalCached/CPUkill/freeze behavior is not measured. UiAutomation enables accessibility and makes a11ycache large.",
+    "Natural samples precede explicit JavaGC/GeckoMinimize. FIFOreports and later separate inputprobes wake/allocate; reports touchmemory, costs stored separately.",
+    "Weak/native wrappers counts are objectcounts, not retainedbytes. WebExtensionController pendingmessages heapcounts are separate from unsynchronized NativeQueue runread; finalsource now takes queue lock.",
+    "Normal firsttestAPK lacks additional nativeweak/privacy/log diagnostics included in secondtestAPK; productionAPK and perpagepayload identical apart from oneemptyaboutblank iframe perblankpage.",
+    "MainDebugTotalPss includesSwap; groupSmapsPss excludesSwap; RSSdoublecounts sharedmappings. Nativeexplicit is allocationinventory, not PSS.",
+    "Production outcomeevents count completedchecks only; separate own probes are not interceptedproductionresults. Intermediate nullretryresults were not allobserved."
+  ],
+  "heapControls": {
+    "heap-after-gecko-minimize.json": {
+      "targetCounts": {
+        "dev.sk2andy.materialbrowser.MainActivity": 1,
+        "dev.sk2andy.materialbrowser.browser.BrowserController": 1,
+        "dev.sk2andy.materialbrowser.browser.gecko.GeckoViewBrowserSession": 56,
+        "org.mozilla.geckoview.GeckoSession": 56,
+        "org.mozilla.geckoview.SessionAccessibility": 56,
+        "org.mozilla.geckoview.SessionAccessibility$NativeProvider": 56,
+        "org.mozilla.geckoview.WebExtensionController": 1,
+        "org.mozilla.geckoview.WebExtensionController$Message": 0,
+        "org.mozilla.geckoview.WebExtensionController$MessageRecipient": 0
+      },
+      "closedCandyWrapperCount": 55,
+      "strongRootedClosedCandyWrapperCount": 55,
+      "geckoSessionNullWindowCount": 55,
+      "nativeProviderJniGlobalRootCount": 56,
+      "nonzeroNativeProviderHandleCount": 56
+    },
+    "heap-after-java-gc.json": {
+      "targetCounts": {
+        "dev.sk2andy.materialbrowser.MainActivity": 1,
+        "dev.sk2andy.materialbrowser.browser.BrowserController": 1,
+        "dev.sk2andy.materialbrowser.browser.gecko.GeckoViewBrowserSession": 56,
+        "org.mozilla.geckoview.GeckoSession": 56,
+        "org.mozilla.geckoview.SessionAccessibility": 56,
+        "org.mozilla.geckoview.SessionAccessibility$NativeProvider": 56,
+        "org.mozilla.geckoview.WebExtensionController": 1,
+        "org.mozilla.geckoview.WebExtensionController$Message": 0,
+        "org.mozilla.geckoview.WebExtensionController$MessageRecipient": 0
+      },
+      "closedCandyWrapperCount": 55,
+      "strongRootedClosedCandyWrapperCount": 55,
+      "geckoSessionNullWindowCount": 55,
+      "nativeProviderJniGlobalRootCount": 56,
+      "nonzeroNativeProviderHandleCount": 56
+    },
+    "heap-before-gc.json": {
+      "targetCounts": {
+        "dev.sk2andy.materialbrowser.MainActivity": 1,
+        "dev.sk2andy.materialbrowser.browser.BrowserController": 1,
+        "dev.sk2andy.materialbrowser.browser.gecko.GeckoViewBrowserSession": 56,
+        "org.mozilla.geckoview.GeckoSession": 56,
+        "org.mozilla.geckoview.SessionAccessibility": 56,
+        "org.mozilla.geckoview.SessionAccessibility$NativeProvider": 56,
+        "org.mozilla.geckoview.WebExtensionController": 1,
+        "org.mozilla.geckoview.WebExtensionController$Message": 0,
+        "org.mozilla.geckoview.WebExtensionController$MessageRecipient": 0
+      },
+      "closedCandyWrapperCount": 55,
+      "strongRootedClosedCandyWrapperCount": 55,
+      "geckoSessionNullWindowCount": 55,
+      "nativeProviderJniGlobalRootCount": 56,
+      "nonzeroNativeProviderHandleCount": 56
+    }
+  },
+  "uninstrumentedControl": {
+    "api": 37,
+    "instrumentation": false,
+    "nativeAttributionAvailable": false,
+    "samples": [
+      {
+        "stage": "natural-fg",
+        "requests": 20,
+        "readyPages": 20,
+        "groupPssKiB": 1536394,
+        "groupSwapPssKiB": 252,
+        "mainOomScoreAdj": 0,
+        "mainFrozen": false,
+        "processCount": 6,
+        "mainSetProcState": 2
+      },
+      {
+        "stage": "natural-bg-5",
+        "requests": 20,
+        "readyPages": 20,
+        "groupPssKiB": 995334,
+        "groupSwapPssKiB": 172,
+        "mainOomScoreAdj": 700,
+        "mainFrozen": false,
+        "processCount": 4,
+        "mainSetProcState": 15
+      },
+      {
+        "stage": "natural-bg-30",
+        "requests": 20,
+        "readyPages": 20,
+        "groupPssKiB": 849410,
+        "groupSwapPssKiB": 172,
+        "mainOomScoreAdj": 700,
+        "mainFrozen": false,
+        "processCount": 4,
+        "mainSetProcState": 15
+      },
+      {
+        "stage": "natural-bg-120",
+        "requests": 20,
+        "readyPages": 20,
+        "groupPssKiB": 248431,
+        "groupSwapPssKiB": 400232,
+        "mainOomScoreAdj": 900,
+        "mainFrozen": true,
+        "processCount": 4,
+        "mainSetProcState": 15
+      },
+      {
+        "stage": "natural-bg-300",
+        "requests": 20,
+        "readyPages": 20,
+        "groupPssKiB": 248489,
+        "groupSwapPssKiB": 400232,
+        "mainOomScoreAdj": 900,
+        "mainFrozen": true,
+        "processCount": 4,
+        "mainSetProcState": 15
+      }
+    ],
+    "postNaturalHeap": {
+      "targetCounts": {
+        "dev.sk2andy.materialbrowser.MainActivity": 1,
+        "dev.sk2andy.materialbrowser.browser.BrowserController": 1,
+        "dev.sk2andy.materialbrowser.browser.gecko.GeckoViewBrowserSession": 20,
+        "org.mozilla.geckoview.GeckoSession": 20,
+        "org.mozilla.geckoview.SessionAccessibility": 20,
+        "org.mozilla.geckoview.SessionAccessibility$NativeProvider": 20,
+        "org.mozilla.geckoview.WebExtensionController": 1,
+        "org.mozilla.geckoview.WebExtensionController$Message": 0,
+        "org.mozilla.geckoview.WebExtensionController$MessageRecipient": 0
+      },
+      "closedCandyWrapperCount": 19,
+      "strongRootedClosedCandyWrapperCount": 19,
+      "geckoSessionNullWindowCount": 19,
+      "nativeProviderJniGlobalRootCount": 20,
+      "nonzeroNativeProviderHandleCount": 20
+    },
+    "limitations": [
+      "ADB intents over emulator-host HTTP; readiness signaled after payload allocation and image decoding; final title UUID assignment unsupported on insecure HTTP",
+      "Cold profile, snapshot history and instrumentation/accessibility differ; absolute figures are not a paired native-allocation comparison",
+      "Plain HPROF only after all natural samples; no native GC intervention"
+    ]
+  },
+  "a11yOwnershipSubsetBytes": {
+    "natural-bg-30": {
+      "a11yReportedBytesByRole": {
+        "main": 30924256
+      },
+      "scope": "Explicit a11y allocation reporter subset; overlaps other allocation category"
+    },
+    "cycle-3-bg-30": {
+      "a11yReportedBytesByRole": {
+        "main": 30924256
+      },
+      "scope": "Explicit a11y allocation reporter subset; overlaps other allocation category"
+    },
+    "cycle-2-fg": {
+      "a11yReportedBytesByRole": {
+        "main": 309242560
+      },
+      "scope": "Explicit a11y allocation reporter subset; overlaps other allocation category"
+    },
+    "natural-bg-300": {
+      "a11yReportedBytesByRole": {
+        "main": 30924256
+      },
+      "scope": "Explicit a11y allocation reporter subset; overlaps other allocation category"
+    },
+    "post-java-gc": {
+      "a11yReportedBytesByRole": {
+        "main": 30924256
+      },
+      "scope": "Explicit a11y allocation reporter subset; overlaps other allocation category"
+    },
+    "natural-fg": {
+      "a11yReportedBytesByRole": {
+        "main": 309242560
+      },
+      "scope": "Explicit a11y allocation reporter subset; overlaps other allocation category"
+    },
+    "cycle-4-bg-30": {
+      "a11yReportedBytesByRole": {
+        "main": 30924256
+      },
+      "scope": "Explicit a11y allocation reporter subset; overlaps other allocation category"
+    },
+    "gecko-minimize": {
+      "a11yReportedBytesByRole": {
+        "main": 30924256
+      },
+      "scope": "Explicit a11y allocation reporter subset; overlaps other allocation category"
+    },
+    "cycle-4-fg": {
+      "a11yReportedBytesByRole": {
+        "main": 309242560
+      },
+      "scope": "Explicit a11y allocation reporter subset; overlaps other allocation category"
+    },
+    "cycle-1-bg-30": {
+      "a11yReportedBytesByRole": {
+        "main": 30924256
+      },
+      "scope": "Explicit a11y allocation reporter subset; overlaps other allocation category"
+    },
+    "cycle-1-fg": {
+      "a11yReportedBytesByRole": {
+        "main": 309242560
+      },
+      "scope": "Explicit a11y allocation reporter subset; overlaps other allocation category"
+    },
+    "cycle-2-bg-30": {
+      "a11yReportedBytesByRole": {
+        "main": 30924256
+      },
+      "scope": "Explicit a11y allocation reporter subset; overlaps other allocation category"
+    },
+    "post-java-hprof": {
+      "a11yReportedBytesByRole": {
+        "main": 30924256
+      },
+      "scope": "Explicit a11y allocation reporter subset; overlaps other allocation category"
+    },
+    "cycle-3-fg": {
+      "a11yReportedBytesByRole": {
+        "main": 309242560
+      },
+      "scope": "Explicit a11y allocation reporter subset; overlaps other allocation category"
+    }
+  },
+  "mitigation": {
+    "fixedApkSha256": "bd82329120498725da6ec71e804afb5224fafd13d595557c676ee83dc9db64e8",
+    "unchangedTestSourceSha256": "a3ff9990157e84afeedbae66716f7fab2df5eeded19df2c9ca646d6311148edc",
+    "baselineClosedCandyWrapperAlive": true,
+    "baselineDestroyedControllerAlive": true,
+    "fixedClosedCandyWrapperAlive": false,
+    "fixedDestroyedControllerAlive": false,
+    "baselineRegressionSeconds": 44.805,
+    "fixedRegressionSeconds": 45.66,
+    "fullUnitTests": 1863,
+    "fossUnitTests": 1863,
+    "warmAndRegularPrivateRegressionTests": 4,
+    "nativeReleaseOrPssImprovementEstablished": false
+  },
+  "blankPostMinimizeHeap": {
+    "targetCounts": {
+      "dev.sk2andy.materialbrowser.MainActivity": 1,
+      "dev.sk2andy.materialbrowser.browser.BrowserController": 1,
+      "dev.sk2andy.materialbrowser.browser.gecko.GeckoViewBrowserSession": 20,
+      "org.mozilla.geckoview.GeckoSession": 20,
+      "org.mozilla.geckoview.SessionAccessibility": 20,
+      "org.mozilla.geckoview.SessionAccessibility$NativeProvider": 20,
+      "org.mozilla.geckoview.WebExtensionController": 1,
+      "org.mozilla.geckoview.WebExtensionController$Message": 0,
+      "org.mozilla.geckoview.WebExtensionController$MessageRecipient": 0
+    },
+    "strongReachableCounts": {
+      "dev.sk2andy.materialbrowser.MainActivity": 1,
+      "dev.sk2andy.materialbrowser.browser.BrowserController": 1,
+      "dev.sk2andy.materialbrowser.browser.gecko.GeckoViewBrowserSession": 20,
+      "org.mozilla.geckoview.GeckoSession": 20,
+      "org.mozilla.geckoview.SessionAccessibility": 20,
+      "org.mozilla.geckoview.SessionAccessibility$NativeProvider": 20,
+      "org.mozilla.geckoview.WebExtensionController": 1,
+      "org.mozilla.geckoview.WebExtensionController$Message": 0,
+      "org.mozilla.geckoview.WebExtensionController$MessageRecipient": 0
+    },
+    "closedCandyWrapperCount": 10
+  },
+  "nativeGrowthOwnershipSubsetsBytes": {
+    "cycle-4-bg-30": {
+      "content_active_page": 42906432,
+      "detached_functions": 15962760,
+      "extension_windows_dom_layout": 309648,
+      "extension_windows_javascript": 29177856,
+      "main_detached_dom_layout": 592240,
+      "main_detached_javascript": 21862728,
+      "main_detached_total": 22454968,
+      "main_nonwindow_getter_setters": 1999072,
+      "main_nonwindow_js_total": 36072896,
+      "main_nonwindow_propertymap_gc_dict": 1391488,
+      "main_nonwindow_propertymap_malloc_tables": 1769792,
+      "main_nonwindow_scope_gc_buffers": 1364528,
+      "main_nonwindow_scope_gc_heap": 1130720,
+      "main_nonwindow_unused_chunks": 3145728,
+      "main_nonwindow_unused_gc_things": 2385640,
+      "main_proto_iface_cache": 1266080
+    },
+    "gecko-minimize": {
+      "content_active_page": 42906432,
+      "detached_functions": 15962760,
+      "extension_windows_dom_layout": 309648,
+      "extension_windows_javascript": 29205728,
+      "main_detached_dom_layout": 592240,
+      "main_detached_javascript": 21862728,
+      "main_detached_total": 22454968,
+      "main_nonwindow_getter_setters": 1999120,
+      "main_nonwindow_js_total": 36207584,
+      "main_nonwindow_propertymap_gc_dict": 1391488,
+      "main_nonwindow_propertymap_malloc_tables": 1769792,
+      "main_nonwindow_scope_gc_buffers": 1364528,
+      "main_nonwindow_scope_gc_heap": 1130720,
+      "main_nonwindow_unused_chunks": 3145728,
+      "main_nonwindow_unused_gc_things": 2373264,
+      "main_proto_iface_cache": 1266080
+    },
+    "natural-bg-300": {
+      "content_active_page": 42906432,
+      "detached_functions": 5514408,
+      "extension_windows_dom_layout": 309648,
+      "extension_windows_javascript": 28676528,
+      "main_detached_dom_layout": 204592,
+      "main_detached_javascript": 7528104,
+      "main_detached_total": 7732696,
+      "main_nonwindow_getter_setters": 744208,
+      "main_nonwindow_js_total": 23103824,
+      "main_nonwindow_propertymap_gc_dict": 502144,
+      "main_nonwindow_propertymap_malloc_tables": 30912,
+      "main_nonwindow_scope_gc_buffers": 790800,
+      "main_nonwindow_scope_gc_heap": 649632,
+      "main_nonwindow_unused_chunks": 0,
+      "main_nonwindow_unused_gc_things": 112416,
+      "main_proto_iface_cache": 528096
+    }
+  },
+  "nativeGrowthDetachedInnerWindowCounts": {
+    "natural-bg-300": 19,
+    "cycle-4-bg-30": 55,
+    "gecko-minimize": 55
+  },
+  "geckoOnlyControl": {
+    "test": "captureClosedRawGeckoSessionsWithoutCandyDelegates",
+    "pass": true,
+    "instrumentationDurationSeconds": 58.859,
+    "mainPid": 3382,
+    "isolatedSerial": "emulator-5580",
+    "api": 37,
+    "profile": {
+      "addonCount": 0,
+      "newProfileCreated": true
+    },
+    "apkHashes": {
+      "productionSha256": "0441b42d66042f38f3f52eb5f857adb27398d107f8df5ac7e2630ee81d8ecab7",
+      "testSha256": "d03dafe652f1d151a31de689fdb3e209a8a573202926429d9d4ce7d533ff23aa"
+    },
+    "capture": {
+      "mainPid": 3382,
+      "completed": true,
+      "sessionsLoadedAndClosed": 20,
+      "snapshots": [
+        {
+          "name": "settled-30",
+          "mainPid": 3382,
+          "documentRequests": 20,
+          "trackedSessionCount": 20,
+          "weakSessionAliveCount": 20,
+          "weakViewAliveCount": 12,
+          "candyRuntimeCreated": false
+        },
+        {
+          "name": "after-java-gc",
+          "mainPid": 3382,
+          "documentRequests": 20,
+          "trackedSessionCount": 20,
+          "weakSessionAliveCount": 20,
+          "weakViewAliveCount": 0,
+          "candyRuntimeCreated": false
+        },
+        {
+          "name": "after-native-minimize",
+          "mainPid": 3382,
+          "documentRequests": 20,
+          "trackedSessionCount": 20,
+          "weakSessionAliveCount": 20,
+          "weakViewAliveCount": 0,
+          "candyRuntimeCreated": false
+        }
+      ],
+      "profileArguments": [
+        "-profile",
+        "app-private gecko-only-closed/profile"
+      ],
+      "startupPreferences": [
+        "memory_info_dumper.watch_fifo.enabled=true",
+        "memory_info_dumper.watch_fifo.directory=app-private cache/gecko_temp"
+      ],
+      "notes": "Direct GeckoRuntime/GeckoSession/GeckoView only. Test delegates clear before close. All session/view capture fields are weak. Java GC precedes first HPROF; native minimize is separate. Instrumentation/UiAutomation enables accessibility and raises process importance."
+    },
+    "nativeWindowCounts": {
+      "settled-30": {
+        "geckoWindowDomOtherReporterEntryCount": 20,
+        "geckoWindowDomReporterBytes": 212800,
+        "geckoWindowJsReporterBytes": 7965600,
+        "ghostGeckoWindows": 0,
+        "note": "Duplicate per-window DOM entries preserved; byte-unit explicit window rows include property-tables and exclude event counters. Subsets overlap explicit totals."
+      },
+      "after-java-gc": {
+        "geckoWindowDomOtherReporterEntryCount": 20,
+        "geckoWindowDomReporterBytes": 212800,
+        "geckoWindowJsReporterBytes": 7965600,
+        "ghostGeckoWindows": 0,
+        "note": "Duplicate per-window DOM entries preserved; byte-unit explicit window rows include property-tables and exclude event counters. Subsets overlap explicit totals."
+      },
+      "native-minimize": {
+        "geckoWindowDomOtherReporterEntryCount": 20,
+        "geckoWindowDomReporterBytes": 212800,
+        "geckoWindowJsReporterBytes": 7965600,
+        "ghostGeckoWindows": 20,
+        "note": "Duplicate per-window DOM entries preserved; byte-unit explicit window rows include property-tables and exclude event counters. Subsets overlap explicit totals."
+      }
+    },
+    "nativeCategories": {
+      "settled-30": {
+        "process_count": 4,
+        "processes": [
+          {
+            "process": "gpu (pid 3471)",
+            "explicit_bytes": 1535808,
+            "allocation_categories_bytes": {
+              "javascript": 0,
+              "images": 0,
+              "graphics": 0,
+              "dom_layout": 0,
+              "bindings": 0,
+              "heap_unclassified": 976512,
+              "other": 559296
+            },
+            "ownership_subsets_bytes": {
+              "bfcache": 0,
+              "extensions": 0,
+              "orphan_dom": 0
+            },
+            "heap_unclassified_source": "derived",
+            "metrics_bytes": {
+              "resident": 287444992,
+              "resident-unique": 31637504,
+              "resident-fast": null,
+              "heap-allocated": 1355584,
+              "heap-overhead": null,
+              "vsize": 17813381120,
+              "js-main-runtime-gc-heap-committed": null
+            },
+            "counters": {
+              "ghost_windows": null
+            },
+            "excluded_aggregate_paths": 1,
+            "warnings": [
+              "Aggregate ancestor paths excluded; incomplete descendant exports may undercount."
+            ]
+          },
+          {
+            "process": "main (pid 3382)",
+            "explicit_bytes": 113152280,
+            "allocation_categories_bytes": {
+              "javascript": 39475552,
+              "images": 240,
+              "graphics": 202672,
+              "dom_layout": 657312,
+              "bindings": 525824,
+              "heap_unclassified": 37427428,
+              "other": 34863252
+            },
+            "ownership_subsets_bytes": {
+              "bfcache": 0,
+              "extensions": 0,
+              "orphan_dom": 0
+            },
+            "heap_unclassified_source": "derived",
+            "metrics_bytes": {
+              "resident": 689692672,
+              "resident-unique": 253775872,
+              "resident-fast": null,
+              "heap-allocated": 78774880,
+              "heap-overhead": null,
+              "vsize": 21933666304,
+              "js-main-runtime-gc-heap-committed": null
+            },
+            "counters": {
+              "ghost_windows": 0
+            },
+            "excluded_aggregate_paths": 0,
+            "warnings": []
+          },
+          {
+            "process": "other (pid 4275)",
+            "explicit_bytes": 19130272,
+            "allocation_categories_bytes": {
+              "javascript": 1777624,
+              "images": 240,
+              "graphics": 201648,
+              "dom_layout": 0,
+              "bindings": 18832,
+              "heap_unclassified": 16354072,
+              "other": 777856
+            },
+            "ownership_subsets_bytes": {
+              "bfcache": 0,
+              "extensions": 0,
+              "orphan_dom": 0
+            },
+            "heap_unclassified_source": "derived",
+            "metrics_bytes": {
+              "resident": 319045632,
+              "resident-unique": 44986368,
+              "resident-fast": null,
+              "heap-allocated": 17942352,
+              "heap-overhead": null,
+              "vsize": 20355248128,
+              "js-main-runtime-gc-heap-committed": null
+            },
+            "counters": {
+              "ghost_windows": 0
+            },
+            "excluded_aggregate_paths": 0,
+            "warnings": []
+          },
+          {
+            "process": "content (pid 3488)",
+            "explicit_bytes": 20343024,
+            "allocation_categories_bytes": {
+              "javascript": 2689752,
+              "images": 240,
+              "graphics": 201648,
+              "dom_layout": 8736,
+              "bindings": 16640,
+              "heap_unclassified": 16501944,
+              "other": 924064
+            },
+            "ownership_subsets_bytes": {
+              "bfcache": 0,
+              "extensions": 0,
+              "orphan_dom": 0
+            },
+            "heap_unclassified_source": "derived",
+            "metrics_bytes": {
+              "resident": 328228864,
+              "resident-unique": 45592576,
+              "resident-fast": null,
+              "heap-allocated": 18013184,
+              "heap-overhead": null,
+              "vsize": 20423397376,
+              "js-main-runtime-gc-heap-committed": null
+            },
+            "counters": {
+              "ghost_windows": 0
+            },
+            "excluded_aggregate_paths": 0,
+            "warnings": []
+          }
+        ],
+        "totals": {
+          "explicit_bytes": 154161384,
+          "allocation_categories_bytes": {
+            "javascript": 43942928,
+            "images": 720,
+            "graphics": 605968,
+            "dom_layout": 666048,
+            "bindings": 561296,
+            "heap_unclassified": 71259956,
+            "other": 37124468
+          },
+          "ownership_subsets_bytes": {
+            "bfcache": 0,
+            "extensions": 0,
+            "orphan_dom": 0
+          },
+          "metrics_bytes": {
+            "resident": 1624412160,
+            "resident-unique": 375992320,
+            "resident-fast": null,
+            "heap-allocated": 116086000,
+            "heap-overhead": null,
+            "vsize": 80525692928,
+            "js-main-runtime-gc-heap-committed": null
+          },
+          "counters": {
+            "ghost_windows": null
+          }
+        },
+        "notes": [
+          "Allocation categories partition explicit bytes; ownership subsets overlap them and each other. Do not add subsets to allocations.",
+          "Other reporter trees overlap explicit and are excluded. XPConnect bindings are Gecko infrastructure, not proof of a Candy JS bridge leak.",
+          "JavaScript includes native worker runtime reports. Other is measured allocation outside these selected categories, not synonymous with unclassified heap.",
+          "Resident sums include shared pages more than once; they are not Android PSS or physical RAM totals. Do not add resident to explicit.",
+          "Missing metrics are null, not zero. BFCache and extension ownership only include paths identifiable in the report.",
+          "Anonymized reports may hide extension attribution. Process names and report paths are omitted from this summary.",
+          "Native explicit reporters do not inventory the Android ART heap. Use a separate Java heap dump to attribute Kotlin objects, bitmaps, and Candy bridge owners."
+        ]
+      },
+      "after-java-gc": {
+        "process_count": 4,
+        "processes": [
+          {
+            "process": "gpu (pid 3471)",
+            "explicit_bytes": 1535904,
+            "allocation_categories_bytes": {
+              "javascript": 0,
+              "images": 0,
+              "graphics": 0,
+              "dom_layout": 0,
+              "bindings": 0,
+              "heap_unclassified": 976608,
+              "other": 559296
+            },
+            "ownership_subsets_bytes": {
+              "bfcache": 0,
+              "extensions": 0,
+              "orphan_dom": 0
+            },
+            "heap_unclassified_source": "derived",
+            "metrics_bytes": {
+              "resident": 288821248,
+              "resident-unique": 32096256,
+              "resident-fast": null,
+              "heap-allocated": 1355680,
+              "heap-overhead": null,
+              "vsize": 17815478272,
+              "js-main-runtime-gc-heap-committed": null
+            },
+            "counters": {
+              "ghost_windows": null
+            },
+            "excluded_aggregate_paths": 1,
+            "warnings": [
+              "Aggregate ancestor paths excluded; incomplete descendant exports may undercount."
+            ]
+          },
+          {
+            "process": "main (pid 3382)",
+            "explicit_bytes": 113469800,
+            "allocation_categories_bytes": {
+              "javascript": 39475552,
+              "images": 240,
+              "graphics": 202672,
+              "dom_layout": 657312,
+              "bindings": 526080,
+              "heap_unclassified": 37816884,
+              "other": 34791060
+            },
+            "ownership_subsets_bytes": {
+              "bfcache": 0,
+              "extensions": 0,
+              "orphan_dom": 0
+            },
+            "heap_unclassified_source": "derived",
+            "metrics_bytes": {
+              "resident": 707510272,
+              "resident-unique": 266485760,
+              "resident-fast": null,
+              "heap-allocated": 79092400,
+              "heap-overhead": null,
+              "vsize": 21936574464,
+              "js-main-runtime-gc-heap-committed": null
+            },
+            "counters": {
+              "ghost_windows": 0
+            },
+            "excluded_aggregate_paths": 0,
+            "warnings": []
+          },
+          {
+            "process": "other (pid 4275)",
+            "explicit_bytes": 19130544,
+            "allocation_categories_bytes": {
+              "javascript": 1777624,
+              "images": 240,
+              "graphics": 201648,
+              "dom_layout": 0,
+              "bindings": 18832,
+              "heap_unclassified": 16354344,
+              "other": 777856
+            },
+            "ownership_subsets_bytes": {
+              "bfcache": 0,
+              "extensions": 0,
+              "orphan_dom": 0
+            },
+            "heap_unclassified_source": "derived",
+            "metrics_bytes": {
+              "resident": 322424832,
+              "resident-unique": 46223360,
+              "resident-fast": null,
+              "heap-allocated": 17942624,
+              "heap-overhead": null,
+              "vsize": 20358393856,
+              "js-main-runtime-gc-heap-committed": null
+            },
+            "counters": {
+              "ghost_windows": 0
+            },
+            "excluded_aggregate_paths": 0,
+            "warnings": []
+          },
+          {
+            "process": "content (pid 3488)",
+            "explicit_bytes": 20343632,
+            "allocation_categories_bytes": {
+              "javascript": 2689752,
+              "images": 240,
+              "graphics": 201648,
+              "dom_layout": 8736,
+              "bindings": 16640,
+              "heap_unclassified": 16502552,
+              "other": 924064
+            },
+            "ownership_subsets_bytes": {
+              "bfcache": 0,
+              "extensions": 0,
+              "orphan_dom": 0
+            },
+            "heap_unclassified_source": "derived",
+            "metrics_bytes": {
+              "resident": 330395648,
+              "resident-unique": 45826048,
+              "resident-fast": null,
+              "heap-allocated": 18013792,
+              "heap-overhead": null,
+              "vsize": 20423397376,
+              "js-main-runtime-gc-heap-committed": null
+            },
+            "counters": {
+              "ghost_windows": 0
+            },
+            "excluded_aggregate_paths": 0,
+            "warnings": []
+          }
+        ],
+        "totals": {
+          "explicit_bytes": 154479880,
+          "allocation_categories_bytes": {
+            "javascript": 43942928,
+            "images": 720,
+            "graphics": 605968,
+            "dom_layout": 666048,
+            "bindings": 561552,
+            "heap_unclassified": 71650388,
+            "other": 37052276
+          },
+          "ownership_subsets_bytes": {
+            "bfcache": 0,
+            "extensions": 0,
+            "orphan_dom": 0
+          },
+          "metrics_bytes": {
+            "resident": 1649152000,
+            "resident-unique": 390631424,
+            "resident-fast": null,
+            "heap-allocated": 116404496,
+            "heap-overhead": null,
+            "vsize": 80533843968,
+            "js-main-runtime-gc-heap-committed": null
+          },
+          "counters": {
+            "ghost_windows": null
+          }
+        },
+        "notes": [
+          "Allocation categories partition explicit bytes; ownership subsets overlap them and each other. Do not add subsets to allocations.",
+          "Other reporter trees overlap explicit and are excluded. XPConnect bindings are Gecko infrastructure, not proof of a Candy JS bridge leak.",
+          "JavaScript includes native worker runtime reports. Other is measured allocation outside these selected categories, not synonymous with unclassified heap.",
+          "Resident sums include shared pages more than once; they are not Android PSS or physical RAM totals. Do not add resident to explicit.",
+          "Missing metrics are null, not zero. BFCache and extension ownership only include paths identifiable in the report.",
+          "Anonymized reports may hide extension attribution. Process names and report paths are omitted from this summary.",
+          "Native explicit reporters do not inventory the Android ART heap. Use a separate Java heap dump to attribute Kotlin objects, bitmaps, and Candy bridge owners."
+        ]
+      },
+      "native-minimize": {
+        "process_count": 3,
+        "processes": [
+          {
+            "process": "gpu (pid 3471)",
+            "explicit_bytes": 1525328,
+            "allocation_categories_bytes": {
+              "javascript": 0,
+              "images": 0,
+              "graphics": 0,
+              "dom_layout": 0,
+              "bindings": 0,
+              "heap_unclassified": 966032,
+              "other": 559296
+            },
+            "ownership_subsets_bytes": {
+              "bfcache": 0,
+              "extensions": 0,
+              "orphan_dom": 0
+            },
+            "heap_unclassified_source": "derived",
+            "metrics_bytes": {
+              "resident": 288763904,
+              "resident-unique": 32362496,
+              "resident-fast": null,
+              "heap-allocated": 1345104,
+              "heap-overhead": null,
+              "vsize": 17815478272,
+              "js-main-runtime-gc-heap-committed": null
+            },
+            "counters": {
+              "ghost_windows": null
+            },
+            "excluded_aggregate_paths": 1,
+            "warnings": [
+              "Aggregate ancestor paths excluded; incomplete descendant exports may undercount."
+            ]
+          },
+          {
+            "process": "main (pid 3382)",
+            "explicit_bytes": 110521064,
+            "allocation_categories_bytes": {
+              "javascript": 39479760,
+              "images": 240,
+              "graphics": 202672,
+              "dom_layout": 657312,
+              "bindings": 526480,
+              "heap_unclassified": 38232628,
+              "other": 31421972
+            },
+            "ownership_subsets_bytes": {
+              "bfcache": 0,
+              "extensions": 0,
+              "orphan_dom": 0
+            },
+            "heap_unclassified_source": "derived",
+            "metrics_bytes": {
+              "resident": 707555328,
+              "resident-unique": 269094912,
+              "resident-fast": null,
+              "heap-allocated": 76143600,
+              "heap-overhead": null,
+              "vsize": 21936574464,
+              "js-main-runtime-gc-heap-committed": null
+            },
+            "counters": {
+              "ghost_windows": 20
+            },
+            "excluded_aggregate_paths": 0,
+            "warnings": []
+          },
+          {
+            "process": "content (pid 3488)",
+            "explicit_bytes": 20343680,
+            "allocation_categories_bytes": {
+              "javascript": 2689752,
+              "images": 240,
+              "graphics": 201648,
+              "dom_layout": 8736,
+              "bindings": 16640,
+              "heap_unclassified": 16502600,
+              "other": 924064
+            },
+            "ownership_subsets_bytes": {
+              "bfcache": 0,
+              "extensions": 0,
+              "orphan_dom": 0
+            },
+            "heap_unclassified_source": "derived",
+            "metrics_bytes": {
+              "resident": 329998336,
+              "resident-unique": 45658112,
+              "resident-fast": null,
+              "heap-allocated": 18013840,
+              "heap-overhead": null,
+              "vsize": 20423397376,
+              "js-main-runtime-gc-heap-committed": null
+            },
+            "counters": {
+              "ghost_windows": 0
+            },
+            "excluded_aggregate_paths": 0,
+            "warnings": []
+          }
+        ],
+        "totals": {
+          "explicit_bytes": 132390072,
+          "allocation_categories_bytes": {
+            "javascript": 42169512,
+            "images": 480,
+            "graphics": 404320,
+            "dom_layout": 666048,
+            "bindings": 543120,
+            "heap_unclassified": 55701260,
+            "other": 32905332
+          },
+          "ownership_subsets_bytes": {
+            "bfcache": 0,
+            "extensions": 0,
+            "orphan_dom": 0
+          },
+          "metrics_bytes": {
+            "resident": 1326317568,
+            "resident-unique": 347115520,
+            "resident-fast": null,
+            "heap-allocated": 95502544,
+            "heap-overhead": null,
+            "vsize": 60175450112,
+            "js-main-runtime-gc-heap-committed": null
+          },
+          "counters": {
+            "ghost_windows": null
+          }
+        },
+        "notes": [
+          "Allocation categories partition explicit bytes; ownership subsets overlap them and each other. Do not add subsets to allocations.",
+          "Other reporter trees overlap explicit and are excluded. XPConnect bindings are Gecko infrastructure, not proof of a Candy JS bridge leak.",
+          "JavaScript includes native worker runtime reports. Other is measured allocation outside these selected categories, not synonymous with unclassified heap.",
+          "Resident sums include shared pages more than once; they are not Android PSS or physical RAM totals. Do not add resident to explicit.",
+          "Missing metrics are null, not zero. BFCache and extension ownership only include paths identifiable in the report.",
+          "Anonymized reports may hide extension attribution. Process names and report paths are omitted from this summary.",
+          "Native explicit reporters do not inventory the Android ART heap. Use a separate Java heap dump to attribute Kotlin objects, bitmaps, and Candy bridge owners."
+        ]
+      }
+    },
+    "javaHeapCounts": {
+      "after-java-gc": {
+        "classInstanceCounts": {
+          "dev.sk2andy.materialbrowser.MainActivity": 0,
+          "dev.sk2andy.materialbrowser.browser.BrowserController": 0,
+          "dev.sk2andy.materialbrowser.browser.gecko.GeckoViewBrowserSession": 0,
+          "org.mozilla.geckoview.GeckoSession": 20,
+          "org.mozilla.geckoview.SessionAccessibility": 20,
+          "org.mozilla.geckoview.SessionAccessibility$NativeProvider": 20,
+          "org.mozilla.geckoview.WebExtensionController": 1,
+          "org.mozilla.geckoview.WebExtensionController$Message": 0,
+          "org.mozilla.geckoview.WebExtensionController$MessageRecipient": 0
+        },
+        "closedNativeSessions": 20,
+        "nativeProviderStrongJniRoots": 20,
+        "nativeProviderNonzeroHandleCount": 20,
+        "pendingWebExtensionMessageKeys": 0
+      },
+      "after-native-minimize": {
+        "classInstanceCounts": {
+          "dev.sk2andy.materialbrowser.MainActivity": 0,
+          "dev.sk2andy.materialbrowser.browser.BrowserController": 0,
+          "dev.sk2andy.materialbrowser.browser.gecko.GeckoViewBrowserSession": 0,
+          "org.mozilla.geckoview.GeckoSession": 20,
+          "org.mozilla.geckoview.SessionAccessibility": 20,
+          "org.mozilla.geckoview.SessionAccessibility$NativeProvider": 20,
+          "org.mozilla.geckoview.WebExtensionController": 1,
+          "org.mozilla.geckoview.WebExtensionController$Message": 0,
+          "org.mozilla.geckoview.WebExtensionController$MessageRecipient": 0
+        },
+        "closedNativeSessions": 20,
+        "nativeProviderStrongJniRoots": 20,
+        "nativeProviderNonzeroHandleCount": 20,
+        "pendingWebExtensionMessageKeys": 0
+      }
+    },
+    "limitations": [
+      "Instrumentation accessibility enabled; no accessibility-disabled variant",
+      "FirstComposite may be initial blank paint; fresh title, PageStop and 20 document requests independently establish successful target loads",
+      "Fixed profile path persists unless session-owned fixture app is cleared; recorded run externally cleared and new profile confirmed",
+      "Native minimize report process count changes 4 to 3; inventory drop is not solely within-process heap reclamation"
+    ]
+  },
+  "rawHostCapturesRemovedAfterReview": true,
+  "geckoOnlyReusedSessionControl": {
+    "instrumentationPass": true,
+    "instrumentationSeconds": 42.571,
+    "capture": {
+      "mainPid": 3439,
+      "completed": true,
+      "sessionsLoadedAndClosed": 20,
+      "reuseSession": true,
+      "snapshots": [
+        {
+          "name": "settled-30",
+          "mainPid": 3439,
+          "documentRequests": 20,
+          "trackedSessionCount": 1,
+          "weakSessionAliveCount": 1,
+          "weakViewAliveCount": 0,
+          "candyRuntimeCreated": false
+        },
+        {
+          "name": "after-java-gc",
+          "mainPid": 3439,
+          "documentRequests": 20,
+          "trackedSessionCount": 1,
+          "weakSessionAliveCount": 1,
+          "weakViewAliveCount": 0,
+          "candyRuntimeCreated": false
+        },
+        {
+          "name": "after-native-minimize",
+          "mainPid": 3439,
+          "documentRequests": 20,
+          "trackedSessionCount": 1,
+          "weakSessionAliveCount": 1,
+          "weakViewAliveCount": 0,
+          "candyRuntimeCreated": false
+        }
+      ],
+      "profileArguments": [
+        "-profile",
+        "app-private gecko-only-closed/profile"
+      ],
+      "startupPreferences": [
+        "memory_info_dumper.watch_fifo.enabled=true",
+        "memory_info_dumper.watch_fifo.directory=app-private cache/gecko_temp"
+      ],
+      "notes": "Direct GeckoRuntime/GeckoSession/GeckoView only. Test delegates clear before close. All session/view capture fields are weak. Java GC precedes first HPROF; native minimize is separate. Instrumentation/UiAutomation enables accessibility and raises process importance."
+    },
+    "profile": {
+      "addonCount": 0,
+      "freshAppDataBeforeRun": true
+    },
+    "apkHashes": {
+      "production_sha256": "0441b42d66042f38f3f52eb5f857adb27398d107f8df5ac7e2630ee81d8ecab7",
+      "android_test_sha256": "492795e7fe8019aa4fbf3bf8df15cead5ea56011b11288e840ec0394ad74bcfb"
+    },
+    "nativeCategories": {
+      "settled-30": {
+        "process_count": 4,
+        "processes": [
+          {
+            "process": "gpu (pid 3520)",
+            "explicit_bytes": 1446736,
+            "allocation_categories_bytes": {
+              "javascript": 0,
+              "images": 0,
+              "graphics": 0,
+              "dom_layout": 0,
+              "bindings": 0,
+              "heap_unclassified": 887440,
+              "other": 559296
+            },
+            "ownership_subsets_bytes": {
+              "bfcache": 0,
+              "extensions": 0,
+              "orphan_dom": 0
+            },
+            "heap_unclassified_source": "derived",
+            "metrics_bytes": {
+              "resident": 290619392,
+              "resident-unique": 34340864,
+              "resident-fast": null,
+              "heap-allocated": 1266512,
+              "heap-overhead": null,
+              "vsize": 17784676352,
+              "js-main-runtime-gc-heap-committed": null
+            },
+            "counters": {
+              "ghost_windows": null
+            },
+            "excluded_aggregate_paths": 1,
+            "warnings": [
+              "Aggregate ancestor paths excluded; incomplete descendant exports may undercount."
+            ]
+          },
+          {
+            "process": "main (pid 3439)",
+            "explicit_bytes": 259743656,
+            "allocation_categories_bytes": {
+              "javascript": 172282480,
+              "images": 240,
+              "graphics": 202672,
+              "dom_layout": 1934240,
+              "bindings": 2322480,
+              "heap_unclassified": 44819892,
+              "other": 38181652
+            },
+            "ownership_subsets_bytes": {
+              "bfcache": 0,
+              "extensions": 0,
+              "orphan_dom": 0
+            },
+            "heap_unclassified_source": "derived",
+            "metrics_bytes": {
+              "resident": 821510144,
+              "resident-unique": 385523712,
+              "resident-fast": null,
+              "heap-allocated": 193530832,
+              "heap-overhead": null,
+              "vsize": 21986893824,
+              "js-main-runtime-gc-heap-committed": null
+            },
+            "counters": {
+              "ghost_windows": 0
+            },
+            "excluded_aggregate_paths": 0,
+            "warnings": []
+          },
+          {
+            "process": "other (pid 4300)",
+            "explicit_bytes": 19130128,
+            "allocation_categories_bytes": {
+              "javascript": 1777624,
+              "images": 240,
+              "graphics": 201648,
+              "dom_layout": 0,
+              "bindings": 18832,
+              "heap_unclassified": 16354072,
+              "other": 777712
+            },
+            "ownership_subsets_bytes": {
+              "bfcache": 0,
+              "extensions": 0,
+              "orphan_dom": 0
+            },
+            "heap_unclassified_source": "derived",
+            "metrics_bytes": {
+              "resident": 320393216,
+              "resident-unique": 44265472,
+              "resident-fast": null,
+              "heap-allocated": 17942208,
+              "heap-overhead": null,
+              "vsize": 20341682176,
+              "js-main-runtime-gc-heap-committed": null
+            },
+            "counters": {
+              "ghost_windows": 0
+            },
+            "excluded_aggregate_paths": 0,
+            "warnings": []
+          },
+          {
+            "process": "content (pid 3525)",
+            "explicit_bytes": 20327296,
+            "allocation_categories_bytes": {
+              "javascript": 2689752,
+              "images": 240,
+              "graphics": 201648,
+              "dom_layout": 8736,
+              "bindings": 16640,
+              "heap_unclassified": 16485800,
+              "other": 924480
+            },
+            "ownership_subsets_bytes": {
+              "bfcache": 0,
+              "extensions": 0,
+              "orphan_dom": 0
+            },
+            "heap_unclassified_source": "derived",
+            "metrics_bytes": {
+              "resident": 338255872,
+              "resident-unique": 54808576,
+              "resident-fast": null,
+              "heap-allocated": 17997456,
+              "heap-overhead": null,
+              "vsize": 20519473152,
+              "js-main-runtime-gc-heap-committed": null
+            },
+            "counters": {
+              "ghost_windows": 0
+            },
+            "excluded_aggregate_paths": 0,
+            "warnings": []
+          }
+        ],
+        "totals": {
+          "explicit_bytes": 300647816,
+          "allocation_categories_bytes": {
+            "javascript": 176749856,
+            "images": 720,
+            "graphics": 605968,
+            "dom_layout": 1942976,
+            "bindings": 2357952,
+            "heap_unclassified": 78547204,
+            "other": 40443140
+          },
+          "ownership_subsets_bytes": {
+            "bfcache": 0,
+            "extensions": 0,
+            "orphan_dom": 0
+          },
+          "metrics_bytes": {
+            "resident": 1770778624,
+            "resident-unique": 518938624,
+            "resident-fast": null,
+            "heap-allocated": 230737008,
+            "heap-overhead": null,
+            "vsize": 80632725504,
+            "js-main-runtime-gc-heap-committed": null
+          },
+          "counters": {
+            "ghost_windows": null
+          }
+        },
+        "notes": [
+          "Allocation categories partition explicit bytes; ownership subsets overlap them and each other. Do not add subsets to allocations.",
+          "Other reporter trees overlap explicit and are excluded. XPConnect bindings are Gecko infrastructure, not proof of a Candy JS bridge leak.",
+          "JavaScript includes native worker runtime reports. Other is measured allocation outside these selected categories, not synonymous with unclassified heap.",
+          "Resident sums include shared pages more than once; they are not Android PSS or physical RAM totals. Do not add resident to explicit.",
+          "Missing metrics are null, not zero. BFCache and extension ownership only include paths identifiable in the report.",
+          "Anonymized reports may hide extension attribution. Process names and report paths are omitted from this summary.",
+          "Native explicit reporters do not inventory the Android ART heap. Use a separate Java heap dump to attribute Kotlin objects, bitmaps, and Candy bridge owners."
+        ]
+      },
+      "after-java-gc": {
+        "process_count": 4,
+        "processes": [
+          {
+            "process": "gpu (pid 3520)",
+            "explicit_bytes": 1446832,
+            "allocation_categories_bytes": {
+              "javascript": 0,
+              "images": 0,
+              "graphics": 0,
+              "dom_layout": 0,
+              "bindings": 0,
+              "heap_unclassified": 887536,
+              "other": 559296
+            },
+            "ownership_subsets_bytes": {
+              "bfcache": 0,
+              "extensions": 0,
+              "orphan_dom": 0
+            },
+            "heap_unclassified_source": "derived",
+            "metrics_bytes": {
+              "resident": 291860480,
+              "resident-unique": 34729984,
+              "resident-fast": null,
+              "heap-allocated": 1266608,
+              "heap-overhead": null,
+              "vsize": 17786773504,
+              "js-main-runtime-gc-heap-committed": null
+            },
+            "counters": {
+              "ghost_windows": null
+            },
+            "excluded_aggregate_paths": 1,
+            "warnings": [
+              "Aggregate ancestor paths excluded; incomplete descendant exports may undercount."
+            ]
+          },
+          {
+            "process": "main (pid 3439)",
+            "explicit_bytes": 257490424,
+            "allocation_categories_bytes": {
+              "javascript": 172282480,
+              "images": 240,
+              "graphics": 202672,
+              "dom_layout": 1934240,
+              "bindings": 2326832,
+              "heap_unclassified": 44992500,
+              "other": 35751460
+            },
+            "ownership_subsets_bytes": {
+              "bfcache": 0,
+              "extensions": 0,
+              "orphan_dom": 0
+            },
+            "heap_unclassified_source": "derived",
+            "metrics_bytes": {
+              "resident": 838164480,
+              "resident-unique": 397168640,
+              "resident-fast": null,
+              "heap-allocated": 191293984,
+              "heap-overhead": null,
+              "vsize": 21985902592,
+              "js-main-runtime-gc-heap-committed": null
+            },
+            "counters": {
+              "ghost_windows": 0
+            },
+            "excluded_aggregate_paths": 0,
+            "warnings": []
+          },
+          {
+            "process": "other (pid 4300)",
+            "explicit_bytes": 19130272,
+            "allocation_categories_bytes": {
+              "javascript": 1777624,
+              "images": 240,
+              "graphics": 201648,
+              "dom_layout": 0,
+              "bindings": 18832,
+              "heap_unclassified": 16354216,
+              "other": 777712
+            },
+            "ownership_subsets_bytes": {
+              "bfcache": 0,
+              "extensions": 0,
+              "orphan_dom": 0
+            },
+            "heap_unclassified_source": "derived",
+            "metrics_bytes": {
+              "resident": 323989504,
+              "resident-unique": 45260800,
+              "resident-fast": null,
+              "heap-allocated": 17942352,
+              "heap-overhead": null,
+              "vsize": 20344827904,
+              "js-main-runtime-gc-heap-committed": null
+            },
+            "counters": {
+              "ghost_windows": 0
+            },
+            "excluded_aggregate_paths": 0,
+            "warnings": []
+          },
+          {
+            "process": "content (pid 3525)",
+            "explicit_bytes": 20326432,
+            "allocation_categories_bytes": {
+              "javascript": 2689752,
+              "images": 240,
+              "graphics": 201648,
+              "dom_layout": 8736,
+              "bindings": 16640,
+              "heap_unclassified": 16484936,
+              "other": 924480
+            },
+            "ownership_subsets_bytes": {
+              "bfcache": 0,
+              "extensions": 0,
+              "orphan_dom": 0
+            },
+            "heap_unclassified_source": "derived",
+            "metrics_bytes": {
+              "resident": 339881984,
+              "resident-unique": 54046720,
+              "resident-fast": null,
+              "heap-allocated": 17996592,
+              "heap-overhead": null,
+              "vsize": 20519473152,
+              "js-main-runtime-gc-heap-committed": null
+            },
+            "counters": {
+              "ghost_windows": 0
+            },
+            "excluded_aggregate_paths": 0,
+            "warnings": []
+          }
+        ],
+        "totals": {
+          "explicit_bytes": 298393960,
+          "allocation_categories_bytes": {
+            "javascript": 176749856,
+            "images": 720,
+            "graphics": 605968,
+            "dom_layout": 1942976,
+            "bindings": 2362304,
+            "heap_unclassified": 78719188,
+            "other": 38012948
+          },
+          "ownership_subsets_bytes": {
+            "bfcache": 0,
+            "extensions": 0,
+            "orphan_dom": 0
+          },
+          "metrics_bytes": {
+            "resident": 1793896448,
+            "resident-unique": 531206144,
+            "resident-fast": null,
+            "heap-allocated": 228499536,
+            "heap-overhead": null,
+            "vsize": 80636977152,
+            "js-main-runtime-gc-heap-committed": null
+          },
+          "counters": {
+            "ghost_windows": null
+          }
+        },
+        "notes": [
+          "Allocation categories partition explicit bytes; ownership subsets overlap them and each other. Do not add subsets to allocations.",
+          "Other reporter trees overlap explicit and are excluded. XPConnect bindings are Gecko infrastructure, not proof of a Candy JS bridge leak.",
+          "JavaScript includes native worker runtime reports. Other is measured allocation outside these selected categories, not synonymous with unclassified heap.",
+          "Resident sums include shared pages more than once; they are not Android PSS or physical RAM totals. Do not add resident to explicit.",
+          "Missing metrics are null, not zero. BFCache and extension ownership only include paths identifiable in the report.",
+          "Anonymized reports may hide extension attribution. Process names and report paths are omitted from this summary.",
+          "Native explicit reporters do not inventory the Android ART heap. Use a separate Java heap dump to attribute Kotlin objects, bitmaps, and Candy bridge owners."
+        ]
+      },
+      "native-minimize": {
+        "process_count": 3,
+        "processes": [
+          {
+            "process": "gpu (pid 3520)",
+            "explicit_bytes": 1436256,
+            "allocation_categories_bytes": {
+              "javascript": 0,
+              "images": 0,
+              "graphics": 0,
+              "dom_layout": 0,
+              "bindings": 0,
+              "heap_unclassified": 876960,
+              "other": 559296
+            },
+            "ownership_subsets_bytes": {
+              "bfcache": 0,
+              "extensions": 0,
+              "orphan_dom": 0
+            },
+            "heap_unclassified_source": "derived",
+            "metrics_bytes": {
+              "resident": 291860480,
+              "resident-unique": 34775040,
+              "resident-fast": null,
+              "heap-allocated": 1256032,
+              "heap-overhead": null,
+              "vsize": 17786773504,
+              "js-main-runtime-gc-heap-committed": null
+            },
+            "counters": {
+              "ghost_windows": null
+            },
+            "excluded_aggregate_paths": 1,
+            "warnings": [
+              "Aggregate ancestor paths excluded; incomplete descendant exports may undercount."
+            ]
+          },
+          {
+            "process": "main (pid 3439)",
+            "explicit_bytes": 250815400,
+            "allocation_categories_bytes": {
+              "javascript": 167998560,
+              "images": 240,
+              "graphics": 202672,
+              "dom_layout": 1934240,
+              "bindings": 2327232,
+              "heap_unclassified": 45331220,
+              "other": 33021236
+            },
+            "ownership_subsets_bytes": {
+              "bfcache": 0,
+              "extensions": 0,
+              "orphan_dom": 0
+            },
+            "heap_unclassified_source": "derived",
+            "metrics_bytes": {
+              "resident": 836923392,
+              "resident-unique": 398725120,
+              "resident-fast": null,
+              "heap-allocated": 188742288,
+              "heap-overhead": null,
+              "vsize": 21981708288,
+              "js-main-runtime-gc-heap-committed": null
+            },
+            "counters": {
+              "ghost_windows": 20
+            },
+            "excluded_aggregate_paths": 0,
+            "warnings": []
+          },
+          {
+            "process": "content (pid 3525)",
+            "explicit_bytes": 20326608,
+            "allocation_categories_bytes": {
+              "javascript": 2689752,
+              "images": 240,
+              "graphics": 201648,
+              "dom_layout": 8736,
+              "bindings": 16640,
+              "heap_unclassified": 16485112,
+              "other": 924480
+            },
+            "ownership_subsets_bytes": {
+              "bfcache": 0,
+              "extensions": 0,
+              "orphan_dom": 0
+            },
+            "heap_unclassified_source": "derived",
+            "metrics_bytes": {
+              "resident": 338042880,
+              "resident-unique": 53231616,
+              "resident-fast": null,
+              "heap-allocated": 17996768,
+              "heap-overhead": null,
+              "vsize": 20519473152,
+              "js-main-runtime-gc-heap-committed": null
+            },
+            "counters": {
+              "ghost_windows": 0
+            },
+            "excluded_aggregate_paths": 0,
+            "warnings": []
+          }
+        ],
+        "totals": {
+          "explicit_bytes": 272578264,
+          "allocation_categories_bytes": {
+            "javascript": 170688312,
+            "images": 480,
+            "graphics": 404320,
+            "dom_layout": 1942976,
+            "bindings": 2343872,
+            "heap_unclassified": 62693292,
+            "other": 34505012
+          },
+          "ownership_subsets_bytes": {
+            "bfcache": 0,
+            "extensions": 0,
+            "orphan_dom": 0
+          },
+          "metrics_bytes": {
+            "resident": 1466826752,
+            "resident-unique": 486731776,
+            "resident-fast": null,
+            "heap-allocated": 207995088,
+            "heap-overhead": null,
+            "vsize": 60287954944,
+            "js-main-runtime-gc-heap-committed": null
+          },
+          "counters": {
+            "ghost_windows": null
+          }
+        },
+        "notes": [
+          "Allocation categories partition explicit bytes; ownership subsets overlap them and each other. Do not add subsets to allocations.",
+          "Other reporter trees overlap explicit and are excluded. XPConnect bindings are Gecko infrastructure, not proof of a Candy JS bridge leak.",
+          "JavaScript includes native worker runtime reports. Other is measured allocation outside these selected categories, not synonymous with unclassified heap.",
+          "Resident sums include shared pages more than once; they are not Android PSS or physical RAM totals. Do not add resident to explicit.",
+          "Missing metrics are null, not zero. BFCache and extension ownership only include paths identifiable in the report.",
+          "Anonymized reports may hide extension attribution. Process names and report paths are omitted from this summary.",
+          "Native explicit reporters do not inventory the Android ART heap. Use a separate Java heap dump to attribute Kotlin objects, bitmaps, and Candy bridge owners."
+        ]
+      }
+    },
+    "chromeWindows": {
+      "settled-30": {
+        "geckoWindowDomOtherReporterEntryCount": 20,
+        "geckoWindowDomReporterBytes": 212800,
+        "geckoWindowJsReporterBytes": 7965600,
+        "ghostGeckoWindows": 0,
+        "note": "Duplicate per-window DOM entries preserved; DOM/layout includes property-tables and only explicit-prefix byte-unit rows. Allocations overlap explicit totals."
+      },
+      "after-java-gc": {
+        "geckoWindowDomOtherReporterEntryCount": 20,
+        "geckoWindowDomReporterBytes": 212800,
+        "geckoWindowJsReporterBytes": 7965600,
+        "ghostGeckoWindows": 0,
+        "note": "Duplicate per-window DOM entries preserved; DOM/layout includes property-tables and only explicit-prefix byte-unit rows. Allocations overlap explicit totals."
+      },
+      "native-minimize": {
+        "geckoWindowDomOtherReporterEntryCount": 20,
+        "geckoWindowDomReporterBytes": 212800,
+        "geckoWindowJsReporterBytes": 7965600,
+        "ghostGeckoWindows": 20,
+        "note": "Duplicate per-window DOM entries preserved; DOM/layout includes property-tables and only explicit-prefix byte-unit rows. Allocations overlap explicit totals."
+      }
+    },
+    "javaHeaps": {
+      "after-java-gc": {
+        "counts": {
+          "dev.sk2andy.materialbrowser.MainActivity": 0,
+          "dev.sk2andy.materialbrowser.browser.BrowserController": 0,
+          "dev.sk2andy.materialbrowser.browser.gecko.GeckoViewBrowserSession": 0,
+          "org.mozilla.geckoview.GeckoSession": 1,
+          "org.mozilla.geckoview.SessionAccessibility": 1,
+          "org.mozilla.geckoview.SessionAccessibility$NativeProvider": 1,
+          "org.mozilla.geckoview.WebExtensionController": 1,
+          "org.mozilla.geckoview.WebExtensionController$Message": 0,
+          "org.mozilla.geckoview.WebExtensionController$MessageRecipient": 0
+        },
+        "closedGeckoSessions": 1,
+        "directStrongJniProviderRoots": 1,
+        "providerNativeHandlePresent": 1
+      },
+      "after-native-minimize": {
+        "counts": {
+          "dev.sk2andy.materialbrowser.MainActivity": 0,
+          "dev.sk2andy.materialbrowser.browser.BrowserController": 0,
+          "dev.sk2andy.materialbrowser.browser.gecko.GeckoViewBrowserSession": 0,
+          "org.mozilla.geckoview.GeckoSession": 1,
+          "org.mozilla.geckoview.SessionAccessibility": 1,
+          "org.mozilla.geckoview.SessionAccessibility$NativeProvider": 1,
+          "org.mozilla.geckoview.WebExtensionController": 1,
+          "org.mozilla.geckoview.WebExtensionController$Message": 0,
+          "org.mozilla.geckoview.WebExtensionController$MessageRecipient": 0
+        },
+        "closedGeckoSessions": 1,
+        "directStrongJniProviderRoots": 1,
+        "providerNativeHandlePresent": 1
+      }
+    },
+    "accessibilityAndJsSubsets": {
+      "settled-30": {
+        "mainExplicitA11yAccessibilityPathBytes": 0,
+        "allProcessA11yAccessibilityPathReporterCount": 0,
+        "mainJsNonWindowBytes": 158845704,
+        "mainJsNonWindowZoneBytes": 107902752,
+        "mainJsNonWindowRuntimeBytes": 48596472,
+        "note": "A11y measured only from fixed explicit path prefixes; general shmem description mentions accessibility but is not assigned to it. JS subsets overlap explicit inventory."
+      },
+      "after-java-gc": {
+        "mainExplicitA11yAccessibilityPathBytes": 0,
+        "allProcessA11yAccessibilityPathReporterCount": 0,
+        "mainJsNonWindowBytes": 158845704,
+        "mainJsNonWindowZoneBytes": 107902752,
+        "mainJsNonWindowRuntimeBytes": 48596472,
+        "note": "A11y measured only from fixed explicit path prefixes; general shmem description mentions accessibility but is not assigned to it. JS subsets overlap explicit inventory."
+      },
+      "native-minimize": {
+        "mainExplicitA11yAccessibilityPathBytes": 0,
+        "allProcessA11yAccessibilityPathReporterCount": 0,
+        "mainJsNonWindowBytes": 158850072,
+        "mainJsNonWindowZoneBytes": 107907120,
+        "mainJsNonWindowRuntimeBytes": 48596472,
+        "note": "A11y measured only from fixed explicit path prefixes; general shmem description mentions accessibility but is not assigned to it. JS subsets overlap explicit inventory."
+      }
+    },
+    "jniGlobalHprofRecordMultiplicity": {
+      "after-java-gc": {
+        "uniqueNativeProviderObjects": 1,
+        "uniqueJniGlobalRootedNativeProviders": 1,
+        "nativeProviderJniGlobalHprofRecords": 1,
+        "jniGlobalHprofRecordsPerProviderHistogram": {
+          "1": 1
+        },
+        "note": "HPROF root records and unique Java objects are separate counts; neither establishes number of C++ holders."
+      },
+      "after-native-minimize": {
+        "uniqueNativeProviderObjects": 1,
+        "uniqueJniGlobalRootedNativeProviders": 1,
+        "nativeProviderJniGlobalHprofRecords": 1,
+        "jniGlobalHprofRecordsPerProviderHistogram": {
+          "1": 1
+        },
+        "note": "HPROF root records and unique Java objects are separate counts; neither establishes number of C++ holders."
+      }
+    },
+    "limitsOfInterpretation": [
+      "One Java NativeProvider and one JNI Global root record do not count all C++ holders.",
+      "Twenty chrome inner windows remain; reuse alone is not a demonstrated memory mitigation.",
+      "Aggregate explicit native allocations are higher than the separate distinct-session run; absolute inventories do not isolate ownership or equal Android PSS."
+    ]
+  },
+  "geckoChromeRetainingGraph": {
+    "cc": {
+      "all_cc_live_root_paths": {
+        "patterns": [
+          {
+            "path": [
+              {
+                "class": "nsXPCWrappedJS",
+                "incoming_edge": "root"
+              },
+              {
+                "class": "JS participant",
+                "incoming_edge": "other-edge"
+              },
+              {
+                "class": "JS Window",
+                "incoming_edge": "other-edge"
+              },
+              {
+                "class": "nsGlobalWindowInner",
+                "incoming_edge": "other-edge"
+              }
+            ],
+            "target_count": 20
+          }
+        ],
+        "reached_targets": 20,
+        "unreached_targets": 0
+      },
+      "edge_count": 536208,
+      "external_root_classes": {
+        "nsFrameMessageManager": 3,
+        "nsXPCWrappedJS": 242,
+        "other-native": 159
+      },
+      "external_root_count": 404,
+      "external_root_paths": {
+        "patterns": [
+          {
+            "path": [
+              {
+                "class": "nsXPCWrappedJS",
+                "incoming_edge": "root"
+              },
+              {
+                "class": "JS participant",
+                "incoming_edge": "other-edge"
+              },
+              {
+                "class": "JS Window",
+                "incoming_edge": "other-edge"
+              },
+              {
+                "class": "nsGlobalWindowInner",
+                "incoming_edge": "other-edge"
+              }
+            ],
+            "target_count": 20
+          }
+        ],
+        "reached_targets": 20,
+        "unreached_targets": 0
+      },
+      "garbage_count": 3908,
+      "incremental_root_count": 0,
+      "inner_window_count": 20,
+      "inner_window_garbage_count": 0,
+      "marked_js_count": 2949,
+      "node_count": 199591,
+      "unknown_line_count": 0,
+      "weakmap_count": 59
+    },
+    "gc": {
+      "black_root_paths_to_wrapped_windows": {
+        "patterns": [],
+        "reached_targets": 0,
+        "unreached_targets": 0
+      },
+      "edge_count": 742192,
+      "gecko_chrome_zone_count": 0,
+      "node_count": 258808,
+      "root_mark_counts": {
+        "B": 1711,
+        "G": 723
+      },
+      "unknown_line_count": 0,
+      "weakmap_count": 22,
+      "wrapped_inner_window_count": 0,
+      "zone_count": 3
+    },
+    "limits": [
+      "WeakMapEntry hyperedges excluded from ordinary strong-edge paths",
+      "GC realm headers list all realms before zone cells; no per-cell last-realm attribution",
+      "GC root list includes embedding gray roots; only B-marked roots used for black-root paths",
+      "All CC inner windows included; role matching must be checked privately before attribution",
+      "Unrecognized classes/edge labels replaced with fixed generic labels"
+    ],
+    "verifiedListenerRoot": {
+      "interface": "nsIGeckoViewEventListener",
+      "targetCount": 20,
+      "rootCountForSelectedPaths": 20,
+      "refcount": 4,
+      "knownInternalReferences": 1,
+      "knownIncomingEdge": "self",
+      "referencesOutsideCcGraph": 3,
+      "exactOutsideOwnerProven": false,
+      "sourceOwnerCandidate": "EventDispatcherBase strong listener collection. ModuleManager registers for three events but its unload does not unregister them; exact outside holders remain unproven."
+    },
+    "capture": {
+      "instrumentationPass": true,
+      "instrumentationSeconds": 42.807,
+      "capture": {
+        "mainPid": 5776,
+        "completed": true,
+        "sessionsLoadedAndClosed": 20,
+        "reuseSession": false,
+        "captureGcLogs": true,
+        "snapshots": [
+          {
+            "name": "settled-30",
+            "mainPid": 5776,
+            "documentRequests": 20,
+            "trackedSessionCount": 20,
+            "weakSessionAliveCount": 20,
+            "weakViewAliveCount": 0,
+            "candyRuntimeCreated": false
+          },
+          {
+            "name": "after-java-gc",
+            "mainPid": 5776,
+            "documentRequests": 20,
+            "trackedSessionCount": 20,
+            "weakSessionAliveCount": 20,
+            "weakViewAliveCount": 0,
+            "candyRuntimeCreated": false
+          },
+          {
+            "name": "after-native-minimize",
+            "mainPid": 5776,
+            "documentRequests": 20,
+            "trackedSessionCount": 20,
+            "weakSessionAliveCount": 20,
+            "weakViewAliveCount": 0,
+            "candyRuntimeCreated": false
+          }
+        ],
+        "profileArguments": [
+          "-profile",
+          "app-private gecko-only-closed/profile"
+        ],
+        "startupPreferences": [
+          "memory_info_dumper.watch_fifo.enabled=true",
+          "memory_info_dumper.watch_fifo.directory=app-private cache/gecko_temp"
+        ],
+        "notes": "Direct GeckoRuntime/GeckoSession/GeckoView only. Test delegates clear before close. All session/view capture fields are weak. Java GC precedes first HPROF; native minimize is separate. Instrumentation/UiAutomation enables accessibility and raises process importance."
+      },
+      "logPairs": {
+        "parentPid": 5776,
+        "expectedContentPids": [
+          5868
+        ],
+        "completeGcLogCount": 2,
+        "completeCcLogCount": 2,
+        "allTraces": true
+      },
+      "profile": {
+        "addonCount": 0,
+        "freshAppDataBeforeRun": true
+      },
+      "apkHashes": {
+        "production_sha256": "0441b42d66042f38f3f52eb5f857adb27398d107f8df5ac7e2630ee81d8ecab7",
+        "android_test_sha256": "61f744635234875a803d3ab48723699b7e1cce58323758402a765a0377dcd60d"
+      },
+      "nativeCategories": {
+        "settled-30": {
+          "process_count": 4,
+          "processes": [
+            {
+              "process": "gpu (pid 5854)",
+              "explicit_bytes": 1724528,
+              "allocation_categories_bytes": {
+                "javascript": 0,
+                "images": 0,
+                "graphics": 118784,
+                "dom_layout": 0,
+                "bindings": 0,
+                "heap_unclassified": 1046448,
+                "other": 559296
+              },
+              "ownership_subsets_bytes": {
+                "bfcache": 0,
+                "extensions": 0,
+                "orphan_dom": 0
+              },
+              "heap_unclassified_source": "derived",
+              "metrics_bytes": {
+                "resident": 292347904,
+                "resident-unique": 35143680,
+                "resident-fast": null,
+                "heap-allocated": 1544304,
+                "heap-overhead": null,
+                "vsize": 17783705600,
+                "js-main-runtime-gc-heap-committed": null
+              },
+              "counters": {
+                "ghost_windows": null
+              },
+              "excluded_aggregate_paths": 1,
+              "warnings": [
+                "Aggregate ancestor paths excluded; incomplete descendant exports may undercount."
+              ]
+            },
+            {
+              "process": "main (pid 5776)",
+              "explicit_bytes": 279355016,
+              "allocation_categories_bytes": {
+                "javascript": 180286224,
+                "images": 240,
+                "graphics": 202672,
+                "dom_layout": 1941408,
+                "bindings": 2269216,
+                "heap_unclassified": 56310148,
+                "other": 38345108
+              },
+              "ownership_subsets_bytes": {
+                "bfcache": 0,
+                "extensions": 0,
+                "orphan_dom": 0
+              },
+              "heap_unclassified_source": "derived",
+              "metrics_bytes": {
+                "resident": 863199232,
+                "resident-unique": 424718336,
+                "resident-fast": null,
+                "heap-allocated": 193406848,
+                "heap-overhead": null,
+                "vsize": 22019428352,
+                "js-main-runtime-gc-heap-committed": null
+              },
+              "counters": {
+                "ghost_windows": 0
+              },
+              "excluded_aggregate_paths": 0,
+              "warnings": []
+            },
+            {
+              "process": "other (pid 6633)",
+              "explicit_bytes": 19130176,
+              "allocation_categories_bytes": {
+                "javascript": 1777624,
+                "images": 240,
+                "graphics": 201648,
+                "dom_layout": 0,
+                "bindings": 18832,
+                "heap_unclassified": 16354072,
+                "other": 777760
+              },
+              "ownership_subsets_bytes": {
+                "bfcache": 0,
+                "extensions": 0,
+                "orphan_dom": 0
+              },
+              "heap_unclassified_source": "derived",
+              "metrics_bytes": {
+                "resident": 320794624,
+                "resident-unique": 44740608,
+                "resident-fast": null,
+                "heap-allocated": 17942256,
+                "heap-overhead": null,
+                "vsize": 20382511104,
+                "js-main-runtime-gc-heap-committed": null
+              },
+              "counters": {
+                "ghost_windows": 0
+              },
+              "excluded_aggregate_paths": 0,
+              "warnings": []
+            },
+            {
+              "process": "content (pid 5868)",
+              "explicit_bytes": 20327376,
+              "allocation_categories_bytes": {
+                "javascript": 2689752,
+                "images": 240,
+                "graphics": 201648,
+                "dom_layout": 8736,
+                "bindings": 16640,
+                "heap_unclassified": 16485832,
+                "other": 924528
+              },
+              "ownership_subsets_bytes": {
+                "bfcache": 0,
+                "extensions": 0,
+                "orphan_dom": 0
+              },
+              "heap_unclassified_source": "derived",
+              "metrics_bytes": {
+                "resident": 338583552,
+                "resident-unique": 54013952,
+                "resident-fast": null,
+                "heap-allocated": 17997536,
+                "heap-overhead": null,
+                "vsize": 20497518592,
+                "js-main-runtime-gc-heap-committed": null
+              },
+              "counters": {
+                "ghost_windows": 0
+              },
+              "excluded_aggregate_paths": 0,
+              "warnings": []
+            }
+          ],
+          "totals": {
+            "explicit_bytes": 320537096,
+            "allocation_categories_bytes": {
+              "javascript": 184753600,
+              "images": 720,
+              "graphics": 724752,
+              "dom_layout": 1950144,
+              "bindings": 2304688,
+              "heap_unclassified": 90196500,
+              "other": 40606692
+            },
+            "ownership_subsets_bytes": {
+              "bfcache": 0,
+              "extensions": 0,
+              "orphan_dom": 0
+            },
+            "metrics_bytes": {
+              "resident": 1814925312,
+              "resident-unique": 558616576,
+              "resident-fast": null,
+              "heap-allocated": 230890944,
+              "heap-overhead": null,
+              "vsize": 80683163648,
+              "js-main-runtime-gc-heap-committed": null
+            },
+            "counters": {
+              "ghost_windows": null
+            }
+          },
+          "notes": [
+            "Allocation categories partition explicit bytes; ownership subsets overlap them and each other. Do not add subsets to allocations.",
+            "Other reporter trees overlap explicit and are excluded. XPConnect bindings are Gecko infrastructure, not proof of a Candy JS bridge leak.",
+            "JavaScript includes native worker runtime reports. Other is measured allocation outside these selected categories, not synonymous with unclassified heap.",
+            "Resident sums include shared pages more than once; they are not Android PSS or physical RAM totals. Do not add resident to explicit.",
+            "Missing metrics are null, not zero. BFCache and extension ownership only include paths identifiable in the report.",
+            "Anonymized reports may hide extension attribution. Process names and report paths are omitted from this summary.",
+            "Native explicit reporters do not inventory the Android ART heap. Use a separate Java heap dump to attribute Kotlin objects, bitmaps, and Candy bridge owners."
+          ]
+        },
+        "after-java-gc": {
+          "process_count": 4,
+          "processes": [
+            {
+              "process": "gpu (pid 5854)",
+              "explicit_bytes": 1724624,
+              "allocation_categories_bytes": {
+                "javascript": 0,
+                "images": 0,
+                "graphics": 118784,
+                "dom_layout": 0,
+                "bindings": 0,
+                "heap_unclassified": 1046544,
+                "other": 559296
+              },
+              "ownership_subsets_bytes": {
+                "bfcache": 0,
+                "extensions": 0,
+                "orphan_dom": 0
+              },
+              "heap_unclassified_source": "derived",
+              "metrics_bytes": {
+                "resident": 293429248,
+                "resident-unique": 35438592,
+                "resident-fast": null,
+                "heap-allocated": 1544400,
+                "heap-overhead": null,
+                "vsize": 17786851328,
+                "js-main-runtime-gc-heap-committed": null
+              },
+              "counters": {
+                "ghost_windows": null
+              },
+              "excluded_aggregate_paths": 1,
+              "warnings": [
+                "Aggregate ancestor paths excluded; incomplete descendant exports may undercount."
+              ]
+            },
+            {
+              "process": "main (pid 5776)",
+              "explicit_bytes": 276750824,
+              "allocation_categories_bytes": {
+                "javascript": 180286224,
+                "images": 240,
+                "graphics": 202672,
+                "dom_layout": 1941408,
+                "bindings": 2303520,
+                "heap_unclassified": 56084068,
+                "other": 35932692
+              },
+              "ownership_subsets_bytes": {
+                "bfcache": 0,
+                "extensions": 0,
+                "orphan_dom": 0
+              },
+              "heap_unclassified_source": "derived",
+              "metrics_bytes": {
+                "resident": 872214528,
+                "resident-unique": 428785664,
+                "resident-fast": null,
+                "heap-allocated": 190843616,
+                "heap-overhead": null,
+                "vsize": 21966974976,
+                "js-main-runtime-gc-heap-committed": null
+              },
+              "counters": {
+                "ghost_windows": 0
+              },
+              "excluded_aggregate_paths": 0,
+              "warnings": []
+            },
+            {
+              "process": "other (pid 6633)",
+              "explicit_bytes": 19130448,
+              "allocation_categories_bytes": {
+                "javascript": 1777624,
+                "images": 240,
+                "graphics": 201648,
+                "dom_layout": 0,
+                "bindings": 18832,
+                "heap_unclassified": 16354344,
+                "other": 777760
+              },
+              "ownership_subsets_bytes": {
+                "bfcache": 0,
+                "extensions": 0,
+                "orphan_dom": 0
+              },
+              "heap_unclassified_source": "derived",
+              "metrics_bytes": {
+                "resident": 324382720,
+                "resident-unique": 46141440,
+                "resident-fast": null,
+                "heap-allocated": 17942528,
+                "heap-overhead": null,
+                "vsize": 20385656832,
+                "js-main-runtime-gc-heap-committed": null
+              },
+              "counters": {
+                "ghost_windows": 0
+              },
+              "excluded_aggregate_paths": 0,
+              "warnings": []
+            },
+            {
+              "process": "content (pid 5868)",
+              "explicit_bytes": 20326512,
+              "allocation_categories_bytes": {
+                "javascript": 2689752,
+                "images": 240,
+                "graphics": 201648,
+                "dom_layout": 8736,
+                "bindings": 16640,
+                "heap_unclassified": 16484968,
+                "other": 924528
+              },
+              "ownership_subsets_bytes": {
+                "bfcache": 0,
+                "extensions": 0,
+                "orphan_dom": 0
+              },
+              "heap_unclassified_source": "derived",
+              "metrics_bytes": {
+                "resident": 340819968,
+                "resident-unique": 54165504,
+                "resident-fast": null,
+                "heap-allocated": 17996672,
+                "heap-overhead": null,
+                "vsize": 20499615744,
+                "js-main-runtime-gc-heap-committed": null
+              },
+              "counters": {
+                "ghost_windows": 0
+              },
+              "excluded_aggregate_paths": 0,
+              "warnings": []
+            }
+          ],
+          "totals": {
+            "explicit_bytes": 317932408,
+            "allocation_categories_bytes": {
+              "javascript": 184753600,
+              "images": 720,
+              "graphics": 724752,
+              "dom_layout": 1950144,
+              "bindings": 2338992,
+              "heap_unclassified": 89969924,
+              "other": 38194276
+            },
+            "ownership_subsets_bytes": {
+              "bfcache": 0,
+              "extensions": 0,
+              "orphan_dom": 0
+            },
+            "metrics_bytes": {
+              "resident": 1830846464,
+              "resident-unique": 564531200,
+              "resident-fast": null,
+              "heap-allocated": 228327216,
+              "heap-overhead": null,
+              "vsize": 80639098880,
+              "js-main-runtime-gc-heap-committed": null
+            },
+            "counters": {
+              "ghost_windows": null
+            }
+          },
+          "notes": [
+            "Allocation categories partition explicit bytes; ownership subsets overlap them and each other. Do not add subsets to allocations.",
+            "Other reporter trees overlap explicit and are excluded. XPConnect bindings are Gecko infrastructure, not proof of a Candy JS bridge leak.",
+            "JavaScript includes native worker runtime reports. Other is measured allocation outside these selected categories, not synonymous with unclassified heap.",
+            "Resident sums include shared pages more than once; they are not Android PSS or physical RAM totals. Do not add resident to explicit.",
+            "Missing metrics are null, not zero. BFCache and extension ownership only include paths identifiable in the report.",
+            "Anonymized reports may hide extension attribution. Process names and report paths are omitted from this summary.",
+            "Native explicit reporters do not inventory the Android ART heap. Use a separate Java heap dump to attribute Kotlin objects, bitmaps, and Candy bridge owners."
+          ]
+        },
+        "native-minimize": {
+          "process_count": 3,
+          "processes": [
+            {
+              "process": "gpu (pid 5854)",
+              "explicit_bytes": 1714048,
+              "allocation_categories_bytes": {
+                "javascript": 0,
+                "images": 0,
+                "graphics": 118784,
+                "dom_layout": 0,
+                "bindings": 0,
+                "heap_unclassified": 1035968,
+                "other": 559296
+              },
+              "ownership_subsets_bytes": {
+                "bfcache": 0,
+                "extensions": 0,
+                "orphan_dom": 0
+              },
+              "heap_unclassified_source": "derived",
+              "metrics_bytes": {
+                "resident": 293441536,
+                "resident-unique": 35803136,
+                "resident-fast": null,
+                "heap-allocated": 1533824,
+                "heap-overhead": null,
+                "vsize": 17786851328,
+                "js-main-runtime-gc-heap-committed": null
+              },
+              "counters": {
+                "ghost_windows": null
+              },
+              "excluded_aggregate_paths": 1,
+              "warnings": [
+                "Aggregate ancestor paths excluded; incomplete descendant exports may undercount."
+              ]
+            },
+            {
+              "process": "main (pid 5776)",
+              "explicit_bytes": 268874808,
+              "allocation_categories_bytes": {
+                "javascript": 174990496,
+                "images": 240,
+                "graphics": 202672,
+                "dom_layout": 1941408,
+                "bindings": 2303920,
+                "heap_unclassified": 56419956,
+                "other": 33016116
+              },
+              "ownership_subsets_bytes": {
+                "bfcache": 0,
+                "extensions": 0,
+                "orphan_dom": 0
+              },
+              "heap_unclassified_source": "derived",
+              "metrics_bytes": {
+                "resident": 873123840,
+                "resident-unique": 432922624,
+                "resident-fast": null,
+                "heap-allocated": 188102640,
+                "heap-overhead": null,
+                "vsize": 21962780672,
+                "js-main-runtime-gc-heap-committed": null
+              },
+              "counters": {
+                "ghost_windows": 20
+              },
+              "excluded_aggregate_paths": 0,
+              "warnings": []
+            },
+            {
+              "process": "content (pid 5868)",
+              "explicit_bytes": 20326688,
+              "allocation_categories_bytes": {
+                "javascript": 2689752,
+                "images": 240,
+                "graphics": 201648,
+                "dom_layout": 8736,
+                "bindings": 16640,
+                "heap_unclassified": 16485144,
+                "other": 924528
+              },
+              "ownership_subsets_bytes": {
+                "bfcache": 0,
+                "extensions": 0,
+                "orphan_dom": 0
+              },
+              "heap_unclassified_source": "derived",
+              "metrics_bytes": {
+                "resident": 339038208,
+                "resident-unique": 52772864,
+                "resident-fast": null,
+                "heap-allocated": 17996848,
+                "heap-overhead": null,
+                "vsize": 20499615744,
+                "js-main-runtime-gc-heap-committed": null
+              },
+              "counters": {
+                "ghost_windows": 0
+              },
+              "excluded_aggregate_paths": 0,
+              "warnings": []
+            }
+          ],
+          "totals": {
+            "explicit_bytes": 290915544,
+            "allocation_categories_bytes": {
+              "javascript": 177680248,
+              "images": 480,
+              "graphics": 523104,
+              "dom_layout": 1950144,
+              "bindings": 2320560,
+              "heap_unclassified": 73941068,
+              "other": 34499940
+            },
+            "ownership_subsets_bytes": {
+              "bfcache": 0,
+              "extensions": 0,
+              "orphan_dom": 0
+            },
+            "metrics_bytes": {
+              "resident": 1505603584,
+              "resident-unique": 521498624,
+              "resident-fast": null,
+              "heap-allocated": 207633312,
+              "heap-overhead": null,
+              "vsize": 60249247744,
+              "js-main-runtime-gc-heap-committed": null
+            },
+            "counters": {
+              "ghost_windows": null
+            }
+          },
+          "notes": [
+            "Allocation categories partition explicit bytes; ownership subsets overlap them and each other. Do not add subsets to allocations.",
+            "Other reporter trees overlap explicit and are excluded. XPConnect bindings are Gecko infrastructure, not proof of a Candy JS bridge leak.",
+            "JavaScript includes native worker runtime reports. Other is measured allocation outside these selected categories, not synonymous with unclassified heap.",
+            "Resident sums include shared pages more than once; they are not Android PSS or physical RAM totals. Do not add resident to explicit.",
+            "Missing metrics are null, not zero. BFCache and extension ownership only include paths identifiable in the report.",
+            "Anonymized reports may hide extension attribution. Process names and report paths are omitted from this summary.",
+            "Native explicit reporters do not inventory the Android ART heap. Use a separate Java heap dump to attribute Kotlin objects, bitmaps, and Candy bridge owners."
+          ]
+        }
+      },
+      "chromeWindows": {
+        "settled-30": {
+          "geckoWindowDomOtherReporterEntryCount": 20,
+          "geckoWindowDomReporterBytes": 212800,
+          "geckoWindowJsReporterBytes": 7965600,
+          "geckoWindowTotalExplicitReporterBytes": 8178400,
+          "ghostGeckoWindows": 0
+        },
+        "after-java-gc": {
+          "geckoWindowDomOtherReporterEntryCount": 20,
+          "geckoWindowDomReporterBytes": 212800,
+          "geckoWindowJsReporterBytes": 7965600,
+          "geckoWindowTotalExplicitReporterBytes": 8178400,
+          "ghostGeckoWindows": 0
+        },
+        "native-minimize": {
+          "geckoWindowDomOtherReporterEntryCount": 20,
+          "geckoWindowDomReporterBytes": 212800,
+          "geckoWindowJsReporterBytes": 7965600,
+          "geckoWindowTotalExplicitReporterBytes": 8178400,
+          "ghostGeckoWindows": 20
+        }
+      },
+      "javaHeaps": {
+        "after-java-gc": {
+          "counts": {
+            "dev.sk2andy.materialbrowser.MainActivity": 0,
+            "dev.sk2andy.materialbrowser.browser.BrowserController": 0,
+            "dev.sk2andy.materialbrowser.browser.gecko.GeckoViewBrowserSession": 0,
+            "org.mozilla.geckoview.GeckoSession": 20,
+            "org.mozilla.geckoview.SessionAccessibility": 20,
+            "org.mozilla.geckoview.SessionAccessibility$NativeProvider": 20,
+            "org.mozilla.geckoview.WebExtensionController": 1,
+            "org.mozilla.geckoview.WebExtensionController$Message": 0,
+            "org.mozilla.geckoview.WebExtensionController$MessageRecipient": 0
+          },
+          "closedGeckoSessions": 20,
+          "uniqueJniGlobalRootedProviders": 20,
+          "providerNativeHandlePresent": 20
+        },
+        "after-native-minimize": {
+          "counts": {
+            "dev.sk2andy.materialbrowser.MainActivity": 0,
+            "dev.sk2andy.materialbrowser.browser.BrowserController": 0,
+            "dev.sk2andy.materialbrowser.browser.gecko.GeckoViewBrowserSession": 0,
+            "org.mozilla.geckoview.GeckoSession": 20,
+            "org.mozilla.geckoview.SessionAccessibility": 20,
+            "org.mozilla.geckoview.SessionAccessibility$NativeProvider": 20,
+            "org.mozilla.geckoview.WebExtensionController": 1,
+            "org.mozilla.geckoview.WebExtensionController$Message": 0,
+            "org.mozilla.geckoview.WebExtensionController$MessageRecipient": 0
+          },
+          "closedGeckoSessions": 20,
+          "uniqueJniGlobalRootedProviders": 20,
+          "providerNativeHandlePresent": 20
+        }
+      }
+    },
+    "captureLimits": [
+      "Successful corrected instrumentation: one test, 42.807 seconds.",
+      "Prior capture failed its Android output-directory waiter; complete graphs are not counted as a test PASS.",
+      "GC/CC dump is a collection intervention, not natural PSS measurement.",
+      "Listener-root classes and exact interfaces were privately checked; raw addresses/descriptions/realm URLs omitted.",
+      "GC special WrappedDOM mappings absent; no proof of missing reachability."
+    ]
+  },
+  "diagnosticFixtureCleanup": {
+    "dedicatedFixtureAppCleared": true,
+    "emulatorsStopped": true,
+    "hostRawHeapsNativeReportsCcGcLogsRemoved": true,
+    "independentNumericAndStructuralReviewCompleted": true
+  }
+}
