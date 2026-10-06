@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_app_icon">Pictograma aplicației</string>
+    <string name="app_icon_classic">Clasică</string>
+    <string name="app_icon_cookie">Biscuit</string>
+    <string name="app_icon_cotton_candy">Vată de zahăr</string>
+    <string name="app_icon_lemon">Lămâie</string>
+    <string name="app_icon_donut">Gogoașă</string>
+    <string name="app_icon_jelly_beans">Jeleuri</string>
+</resources>

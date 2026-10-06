@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_app_icon">Икона на апликацијата</string>
+    <string name="app_icon_classic">Класична</string>
+    <string name="app_icon_cookie">Колаче</string>
+    <string name="app_icon_cotton_candy">Шеќерна волна</string>
+    <string name="app_icon_lemon">Лимон</string>
+    <string name="app_icon_donut">Крофна</string>
+    <string name="app_icon_jelly_beans">Желе бонбони</string>
+</resources>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_app_icon">App-Symbol</string>
+    <string name="app_icon_classic">Klassesch</string>
+    <string name="app_icon_cookie">Cookie</string>
+    <string name="app_icon_cotton_candy">Zockerwatt</string>
+    <string name="app_icon_lemon">Zitroun</string>
+    <string name="app_icon_donut">Donut</string>
+    <string name="app_icon_jelly_beans">Jelly Beans</string>
+</resources>

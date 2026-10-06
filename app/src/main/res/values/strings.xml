@@ -370,6 +370,15 @@
     <string name="settings_appearance_title">Appearance</string>
     <string name="settings_home_appearance_summary">Colors, website text, surfaces, and shape</string>
     <string name="settings_appearance_mode">Appearance</string>
+    <string name="settings_app_icon">App icon</string>
+    <string name="app_icon_classic">Classic</string>
+    <string name="app_icon_cookie">Cookie</string>
+    <string name="app_icon_cotton_candy">Cotton candy</string>
+    <string name="app_icon_lemon">Lemon</string>
+    <string name="app_icon_donut">Donut</string>
+    <string name="app_icon_jelly_beans">Jelly beans</string>
+    <string name="app_icon_variant_maxed" translatable="false">Maxed</string>
+    <string name="app_icon_variant_freeform" translatable="false">Freeform</string>
     <string name="appearance_mode_system">System</string>
     <string name="appearance_mode_light">Light</string>
     <string name="appearance_mode_dark">Dark</string>

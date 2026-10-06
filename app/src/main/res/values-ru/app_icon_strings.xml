@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_app_icon">Значок приложения</string>
+    <string name="app_icon_classic">Классический</string>
+    <string name="app_icon_cookie">Печенье</string>
+    <string name="app_icon_cotton_candy">Сахарная вата</string>
+    <string name="app_icon_lemon">Лимон</string>
+    <string name="app_icon_donut">Пончик</string>
+    <string name="app_icon_jelly_beans">Желейные конфеты</string>
+</resources>

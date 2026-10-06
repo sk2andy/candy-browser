@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_app_icon">Ikona aplikacije</string>
+    <string name="app_icon_classic">Klasična</string>
+    <string name="app_icon_cookie">Keksić</string>
+    <string name="app_icon_cotton_candy">Šećerna vuna</string>
+    <string name="app_icon_lemon">Limun</string>
+    <string name="app_icon_donut">Krafna</string>
+    <string name="app_icon_jelly_beans">Žele bomboni</string>
+</resources>

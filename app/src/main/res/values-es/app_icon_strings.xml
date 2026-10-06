@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_app_icon">Icono de la app</string>
+    <string name="app_icon_classic">Clásico</string>
+    <string name="app_icon_cookie">Galleta</string>
+    <string name="app_icon_cotton_candy">Algodón de azúcar</string>
+    <string name="app_icon_lemon">Limón</string>
+    <string name="app_icon_donut">Dónut</string>
+    <string name="app_icon_jelly_beans">Grageas</string>
+</resources>

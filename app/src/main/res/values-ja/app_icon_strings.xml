@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_app_icon">アプリアイコン</string>
+    <string name="app_icon_classic">クラシック</string>
+    <string name="app_icon_cookie">クッキー</string>
+    <string name="app_icon_cotton_candy">わたあめ</string>
+    <string name="app_icon_lemon">レモン</string>
+    <string name="app_icon_donut">ドーナツ</string>
+    <string name="app_icon_jelly_beans">ジェリービーンズ</string>
+</resources>

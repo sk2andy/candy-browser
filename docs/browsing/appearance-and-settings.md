@@ -11,6 +11,7 @@
 | Settings routing | Shared destination model, transition, home, controls and core pages; platform resources, icons, effects and persisted state stay adapters | `shared/src/commonMain/.../SettingsDestination.kt`, `shared/src/commonMain/.../ui/settings`, Android `ui/SettingsScreen.kt` adapters |
 | Android settings search | Memory-only search on Settings Home matches localized option titles, descriptions and destination context. Capability-filtered results open existing routes and highlight/scroll common controls into view. | `ui/SettingsSearchRules.kt`, `ui/SettingsSearchCatalog.kt`, `ui/SettingsSearchField.kt`, shared `SettingsSearchTarget.kt` |
 | Android app language | Settings → Browser → App language uses native language names and a Follow device language option. Android's `LocaleManager` owns persistence and synchronization with system app-language settings. The supported list comes from `res/xml/locales_config.xml`; all supported languages and localization checks are listed in [`app-languages.md`](app-languages.md). | `data/AppLanguagePreferences.kt`, `ui/AppLanguageSettings.kt`, `ui/BrowserSettingsOverlay.kt`, `res/values-*/strings.xml` |
+| Android app icon | Settings → Appearance → App icon switches one launcher alias at a time. Android's enabled component state persists the choice; MainActivity keeps external link and share filters. The artwork is recomposed from the user supplied Candy Browser icon overview for a centered, circular launcher mask. | `data/AppIconSelection.kt`, `ui/AppIconSettings.kt`, `AndroidManifest.xml`, `res/drawable-nodpi/ic_launcher_*_art.png` |
 | Language changes | MainActivity handles locale and layout-direction configuration updates without recreation, retaining open regular/private tabs and the current settings page. Localized Android resources refresh through the existing configuration dispatch; device-language changes apply when no app override is selected. | `MainActivity.kt`, `AndroidManifest.xml`, `AppLanguageSettingsInstrumentedTest`, `AppLanguagePreferencesInstrumentedTest` |
 | Player settings | Direct Settings → Player page for video autoplay, Candy Player mode and independent seek sliders; header and Android Back return to Settings Home. Browser no longer duplicates these controls; shared/iOS keeps the unavailable route disabled. | `ui/PlayerSettingsPage.kt`, `ui/InlineMediaPlayerSeekSlider.kt`, `SettingsDestination.Player`, `PlayerSettingsPageInstrumentedTest`, `PlayerSettingsNavigationInstrumentedTest` |
 | Appearance UI | Shared production destination and controls; Android supplies live persisted state, iOS shows them disabled until it owns equivalent state | `shared/src/commonMain/.../ui/settings/AppearanceSettingsPage.kt`, Android `ui/AppearanceSettingsPage.kt` adapter |
@@ -28,6 +29,7 @@
 | Setting | Values | Default |
 | --- | --- | --- |
 | Appearance | System, light, dark, AMOLED | System |
+| Android app icon | Classic; Cookie, Lemon, and Donut in regular and Maxed sizes; Cotton Candy regular and Freeform; Jelly Beans | Classic |
 | Animations | Off, on | On |
 | Force dark mode on websites | Off, on | Off |
 | Website font size | 50–200% in 5% steps | 100% |
@@ -104,6 +106,22 @@ Frosted exposes three persisted controls while selected:
 ## Invariants
 
 - Appearance settings are global and persist across normal and private browsing.
+- The Android app icon is a global launcher component choice. Exactly one of the ten selectable
+  launcher aliases is enabled after a selection, while MainActivity remains enabled for external intents.
+  The six square PNGs are based on `Candy Browser Icon-Übersicht.png`.
+  Regular artwork retains room around the motif. Maxed Cookie
+  and Donut fill the circular Pixel Launcher mask; other launcher shapes may crop
+  their edges. The Cotton Candy stick stays within Android's
+  [66 dp safe zone](https://developer.android.com/develop/ui/compose/system/icon_design_adaptive).
+  Every adaptive icon has a full pastel background layer, including outside its
+  inset artwork. Regular Lemon and Maxed Lemon omit the leaf; Maxed Lemon fills
+  the circular mask. Freeform Cotton Candy shows a complete stick; regular
+  Cotton Candy keeps a compact round puff. Jelly Beans stay centered.
+- The transparent Cotton Candy source cutout is kept at
+  [`images/app-icons/cotton-candy-freeform-transparent.png`](images/app-icons/cotton-candy-freeform-transparent.png).
+  On the tested Pixel Launcher, a transparent adaptive background rendered black and a legacy
+  transparent PNG received a white circular backing, so the selectable launcher icon retains
+  its pastel background.
 - Animations are global and enabled by default. Disabling them supplies a zero
   `MotionDurationScale` to each Android Compose root, skips Candy's startup and favorite-launch
   animations, and removes app-owned Activity window transitions. The setting applies live to the

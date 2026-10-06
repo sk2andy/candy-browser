@@ -73,6 +73,16 @@ private fun SettingsSearchDefinition.localizedDescription(): String = when (id) 
         InactiveTabLifetime.entries.map { it.displayName() }.joinToString(", ")
     "settings_appearance_mode" ->
         BrowserAppearanceMode.entries.map { it.displayName() }.joinToString(", ")
+    "settings_app_icon" -> listOf(
+        stringResource(R.string.app_icon_classic),
+        stringResource(R.string.app_icon_cookie),
+        stringResource(R.string.app_icon_cotton_candy),
+        stringResource(R.string.app_icon_lemon),
+        stringResource(R.string.app_icon_donut),
+        stringResource(R.string.app_icon_jelly_beans),
+        stringResource(R.string.app_icon_variant_maxed),
+        stringResource(R.string.app_icon_variant_freeform),
+    ).joinToString(", ")
     "settings_color_palette" ->
         BrowserColorPalette.entries.map { it.displayName() }.joinToString(", ")
     "settings_address_bar_color" ->
@@ -380,6 +390,11 @@ internal fun settingsSearchDefinitions(
         setting(
             id = "settings_appearance_mode",
             titleRes = R.string.settings_appearance_mode,
+            descriptionRes = R.string.settings_home_appearance_summary,
+        )
+        setting(
+            id = "settings_app_icon",
+            titleRes = R.string.settings_app_icon,
             descriptionRes = R.string.settings_home_appearance_summary,
         )
         setting(

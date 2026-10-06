@@ -333,6 +333,13 @@
     <string name="settings_appearance_title">Darstellung</string>
     <string name="settings_home_appearance_summary">Farben, Website-Schrift, Oberflächen und Form</string>
     <string name="settings_appearance_mode">Erscheinungsbild</string>
+    <string name="settings_app_icon">App-Symbol</string>
+    <string name="app_icon_classic">Klassisch</string>
+    <string name="app_icon_cookie">Cookie</string>
+    <string name="app_icon_cotton_candy">Zuckerwatte</string>
+    <string name="app_icon_lemon">Zitrone</string>
+    <string name="app_icon_donut">Donut</string>
+    <string name="app_icon_jelly_beans">Jelly Beans</string>
     <string name="appearance_mode_system">System</string>
     <string name="appearance_mode_light">Hell</string>
     <string name="appearance_mode_dark">Dunkel</string>

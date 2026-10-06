@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_app_icon">Uygulama simgesi</string>
+    <string name="app_icon_classic">Klasik</string>
+    <string name="app_icon_cookie">Kurabiye</string>
+    <string name="app_icon_cotton_candy">Pamuk şeker</string>
+    <string name="app_icon_lemon">Limon</string>
+    <string name="app_icon_donut">Donut</string>
+    <string name="app_icon_jelly_beans">Jelibon</string>
+</resources>

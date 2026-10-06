@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_app_icon">應用程式圖示</string>
+    <string name="app_icon_classic">經典</string>
+    <string name="app_icon_cookie">餅乾</string>
+    <string name="app_icon_cotton_candy">棉花糖</string>
+    <string name="app_icon_lemon">檸檬</string>
+    <string name="app_icon_donut">甜甜圈</string>
+    <string name="app_icon_jelly_beans">糖豆</string>
+</resources>

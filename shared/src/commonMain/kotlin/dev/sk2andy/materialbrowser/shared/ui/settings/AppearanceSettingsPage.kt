@@ -2,6 +2,7 @@ package dev.sk2andy.materialbrowser.shared.ui.settings
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -100,6 +101,7 @@ fun AppearanceSettingsPage(
     onBack: () -> Unit,
     enabled: Boolean = true,
     forceDarkWebsitesAvailable: Boolean = true,
+    additionalAppearanceContent: @Composable ColumnScope.() -> Unit = {},
 ) {
     var appearanceMenuExpanded by remember { mutableStateOf(false) }
     var paletteMenuExpanded by remember { mutableStateOf(false) }
@@ -148,6 +150,7 @@ fun AppearanceSettingsPage(
             }
         }
         SettingsPageSpacer()
+        additionalAppearanceContent()
         SettingsSwitch(
             title = strings.animations,
             subtitle = strings.animationsSummary,

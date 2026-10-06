@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@color/app_icon_lemon_background" />
+    <item
+        android:drawable="@drawable/ic_launcher_lemon_art"
+        android:left="-2dp"
+        android:top="0dp"
+        android:right="-2dp"
+        android:bottom="-4dp" />
+</layer-list>

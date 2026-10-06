@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_app_icon">Εικονίδιο εφαρμογής</string>
+    <string name="app_icon_classic">Κλασικό</string>
+    <string name="app_icon_cookie">Μπισκότο</string>
+    <string name="app_icon_cotton_candy">Μαλλί της γριάς</string>
+    <string name="app_icon_lemon">Λεμόνι</string>
+    <string name="app_icon_donut">Ντόνατ</string>
+    <string name="app_icon_jelly_beans">Ζελεδάκια</string>
+</resources>

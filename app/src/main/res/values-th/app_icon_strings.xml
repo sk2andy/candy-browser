@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_app_icon">ไอคอนแอป</string>
+    <string name="app_icon_classic">คลาสสิก</string>
+    <string name="app_icon_cookie">คุกกี้</string>
+    <string name="app_icon_cotton_candy">สายไหม</string>
+    <string name="app_icon_lemon">เลมอน</string>
+    <string name="app_icon_donut">โดนัท</string>
+    <string name="app_icon_jelly_beans">เจลลีบีน</string>
+</resources>

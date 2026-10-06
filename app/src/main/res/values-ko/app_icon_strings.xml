@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_app_icon">앱 아이콘</string>
+    <string name="app_icon_classic">클래식</string>
+    <string name="app_icon_cookie">쿠키</string>
+    <string name="app_icon_cotton_candy">솜사탕</string>
+    <string name="app_icon_lemon">레몬</string>
+    <string name="app_icon_donut">도넛</string>
+    <string name="app_icon_jelly_beans">젤리빈</string>
+</resources>

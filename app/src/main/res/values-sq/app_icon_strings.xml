@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_app_icon">Ikona e aplikacionit</string>
+    <string name="app_icon_classic">Klasike</string>
+    <string name="app_icon_cookie">Biskotë</string>
+    <string name="app_icon_cotton_candy">Karamele pambuku</string>
+    <string name="app_icon_lemon">Limon</string>
+    <string name="app_icon_donut">Donut</string>
+    <string name="app_icon_jelly_beans">Karamele pelte</string>
+</resources>

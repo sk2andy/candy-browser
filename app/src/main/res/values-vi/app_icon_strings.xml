@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_app_icon">Biểu tượng ứng dụng</string>
+    <string name="app_icon_classic">Cổ điển</string>
+    <string name="app_icon_cookie">Bánh quy</string>
+    <string name="app_icon_cotton_candy">Kẹo bông gòn</string>
+    <string name="app_icon_lemon">Chanh</string>
+    <string name="app_icon_donut">Bánh donut</string>
+    <string name="app_icon_jelly_beans">Kẹo dẻo</string>
+</resources>

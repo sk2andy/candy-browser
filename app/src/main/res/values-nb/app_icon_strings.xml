@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_app_icon">Appikon</string>
+    <string name="app_icon_classic">Klassisk</string>
+    <string name="app_icon_cookie">Kjeks</string>
+    <string name="app_icon_cotton_candy">Sukkerspinn</string>
+    <string name="app_icon_lemon">Sitron</string>
+    <string name="app_icon_donut">Smultring</string>
+    <string name="app_icon_jelly_beans">Gelébønner</string>
+</resources>

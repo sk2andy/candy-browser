@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="app_icon_cookie_background">#FCDEC1</color>
+    <color name="app_icon_cotton_candy_background">#D3D3FB</color>
+    <color name="app_icon_lemon_background">#FDF3DA</color>
+    <color name="app_icon_donut_background">#FCE1F3</color>
+    <color name="app_icon_jelly_beans_background">#FDFCF5</color>
+</resources>

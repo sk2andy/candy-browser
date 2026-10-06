@@ -16,9 +16,14 @@ import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import android.content.pm.PackageManager
+import android.content.Intent
+import android.net.Uri
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineKind
 import dev.sk2andy.materialbrowser.data.AppearanceSettings
+import dev.sk2andy.materialbrowser.data.AppIconOption
+import dev.sk2andy.materialbrowser.data.AppIconSelection
 import dev.sk2andy.materialbrowser.data.BrowserAddressBarColorPreset
 import dev.sk2andy.materialbrowser.data.BrowserAddressLoadStyle
 import dev.sk2andy.materialbrowser.data.BrowserAddressBarStyle
@@ -40,6 +45,96 @@ class AppearanceSettingsScreenInstrumentedTest {
     val composeRule = createComposeRule()
 
     private val context = InstrumentationRegistry.getInstrumentation().targetContext
+
+    @Test
+    fun appIconChoiceSwitchesLauncherAliasAndCanRestoreClassic() {
+        val selection = AppIconSelection(context)
+        selection.select(AppIconOption.Classic)
+        try {
+            composeRule.setContent {
+                MaterialBrowserTheme(settings = AppearanceSettings()) {
+                    AppearanceSettingsPage(
+                        settings = AppearanceSettings(),
+                        onSettingsChanged = {},
+                        onBack = {},
+                    )
+                }
+            }
+
+            composeRule.onNodeWithTag(AppIconSettingsTestTags.Choice).performClick()
+            composeRule.onNodeWithText(context.getString(R.string.app_icon_cookie)).performClick()
+            assertEquals(AppIconOption.Cookie, selection.selected())
+            assertEquals(AppIconOption.Cookie, AppIconSelection(context).selected())
+            assertEquals(
+                PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
+                context.packageManager.getComponentEnabledSetting(
+                    AppIconOption.Cookie.componentName(context),
+                ),
+            )
+            assertEquals(
+                PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
+                context.packageManager.getComponentEnabledSetting(
+                    AppIconOption.Classic.componentName(context),
+                ),
+            )
+            val launcherActivities = context.packageManager.queryIntentActivities(
+                Intent(Intent.ACTION_MAIN)
+                    .addCategory(Intent.CATEGORY_LAUNCHER)
+                    .setPackage(context.packageName),
+                0,
+            )
+            assertEquals(1, launcherActivities.size)
+            assertEquals(
+                AppIconOption.Cookie.componentName(context).className,
+                launcherActivities.single().activityInfo.name,
+            )
+            assertTrue(
+                context.packageManager.queryIntentActivities(
+                    Intent(Intent.ACTION_VIEW, Uri.parse("https://example.com"))
+                        .addCategory(Intent.CATEGORY_DEFAULT)
+                        .setPackage(context.packageName),
+                    0,
+                ).any { it.activityInfo.name == "dev.sk2andy.materialbrowser.MainActivity" },
+            )
+            assertTrue(
+                context.packageManager.queryIntentActivities(
+                    Intent(Intent.ACTION_SEND)
+                        .setType("text/plain")
+                        .addCategory(Intent.CATEGORY_DEFAULT)
+                        .setPackage(context.packageName),
+                    0,
+                ).any { it.activityInfo.name == "dev.sk2andy.materialbrowser.MainActivity" },
+            )
+
+            composeRule.onNodeWithTag(AppIconSettingsTestTags.Choice).performClick()
+            composeRule.onNodeWithText(
+                context.getString(R.string.app_icon_cookie) + " · " +
+                    context.getString(R.string.app_icon_variant_maxed),
+            ).performClick()
+            assertEquals(AppIconOption.CookieMaxed, selection.selected())
+
+            composeRule.onNodeWithTag(AppIconSettingsTestTags.Choice).performClick()
+            composeRule.onNodeWithText(
+                context.getString(R.string.app_icon_cotton_candy) + " · " +
+                    context.getString(R.string.app_icon_variant_freeform),
+            ).performScrollTo().performClick()
+            assertEquals(AppIconOption.CottonCandyFreeform, selection.selected())
+            assertEquals(
+                1,
+                context.packageManager.queryIntentActivities(
+                    Intent(Intent.ACTION_MAIN)
+                        .addCategory(Intent.CATEGORY_LAUNCHER)
+                        .setPackage(context.packageName),
+                    0,
+                ).size,
+            )
+
+            selection.select(AppIconOption.Classic)
+            assertEquals(AppIconOption.Classic, selection.selected())
+        } finally {
+            selection.select(AppIconOption.Classic)
+        }
+    }
 
     @Test
     fun eachAppearanceChoiceUpdatesOnlyItsSetting() {

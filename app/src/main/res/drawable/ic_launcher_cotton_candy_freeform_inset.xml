@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@color/app_icon_cotton_candy_background" />
+    <item
+        android:drawable="@drawable/ic_launcher_cotton_candy_freeform_art"
+        android:left="11dp"
+        android:top="11dp"
+        android:right="11dp"
+        android:bottom="11dp" />
+</layer-list>
