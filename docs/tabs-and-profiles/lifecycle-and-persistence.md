@@ -111,11 +111,18 @@ The input probe has a separate all-frame registration with
 [`match_origin_as_fallback`](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/manifest.json/content_scripts),
 supported since Firefox 128. HTTP/HTTPS-owned `srcdoc`, `blob` and other inherited-origin
 documents can answer the same document-bound query; other privacy scripts retain their
-existing HTTP/HTTPS scope. The probe still requires document-start registration before
-reporting no input. Gecko injects late into empty `about:blank` frames, so those frames
-remain unknown and keep their session resident. A trusted input event still protects
-their document even after late registration. Unreachable frames and changed nonces
-also remain unknown.
+existing HTTP/HTTPS scope. Gecko injects late into empty `about:blank` frames despite
+`document_start`. After installing the input listeners, the probe can initialize such
+a frame as clean only when it has the normal empty HTML/head/body structure, no editable
+document or elements, no open or closed shadow roots, and no prior sticky user activation.
+Firefox's
+[`openOrClosedShadowRoot`](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/dom/openOrClosedShadowRoot)
+property checks shadow-root presence without reading its contents. Missing or failing
+inspection APIs remain unknown. This is a narrow empty-frame exception; a completed
+load alone does not establish a clean input history. Late populated documents stay
+unknown, and a later cleared DOM never resets an unknown or observed-input flag.
+Trusted input events still protect documents after late registration. Unreachable
+frames and changed nonces also remain unknown. No field values or text are read.
 
 Gecko's native `containsFormData()` reports saveable form state, including state a
 page supplied without a user edit. Real Gecko 157 tests on API 37 distinguish these

@@ -292,6 +292,24 @@ one extra open session is specifically this frame case. A production diagnostic 
 without page URLs, form values or frame contents. Relaxing unknown protection globally would risk losing unsent input;
 a narrow pristine-frame rule needs its own document-identity and navigation-race tests.
 
+#### Follow-up: late empty-frame initialization
+
+The measurements above predate the empty-frame correction in Candy Privacy Host 1.5.65.
+After installing capture listeners, the tracker now initializes a late `about:blank`
+document as clean only for an empty HTML/head/body skeleton without editability, open
+or closed shadow roots, or prior sticky user activation. Missing APIs and late populated
+documents remain unknown. Clearing the document later cannot reset its original state;
+trusted input remains sticky. The two-sample document nonce and final frame-inventory
+checks remain unchanged. No input values, text, or shadow contents are inspected.
+
+Actual Gecko 157 on the dedicated API 37 emulator now reports `false` for the empty-frame
+fixture, and the real controller background budget closes its unselected session.
+Trusted input inside an inherited frame or a closed body shadow still protects its parent.
+The feature contract is documented in
+[`lifecycle-and-persistence.md`](../tabs-and-profiles/lifecycle-and-persistence.md#background-memory).
+This verifies the eviction mechanism; the many-tab PSS figures above were not remeasured
+after this correction and must not be presented as new Pixel savings.
+
 ### Durable closed-session ownership
 
 The normal run creates 56 loaded native sessions across its initial workload and four return cycles. All three final
