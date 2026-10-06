@@ -51,6 +51,7 @@ import java.util.concurrent.TimeUnit
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
@@ -66,6 +67,7 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
 
     private var controller: BrowserController? = null
     private var originalEngineKind: AndroidBrowserEngineKind? = null
+    private var originalProfiles: Pair<List<BrowserProfile>, String>? = null
     private var originalHistory: List<HistoryEntry>? = null
     private var originalHistoryRecordingMode: HistoryRecordingMode? = null
     private var originalExternalAppLinkHandling: ExternalAppLinkHandling? = null
@@ -256,6 +258,37 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
                 failureDescription = null,
             ),
         )
+    }
+
+    @Test
+    fun sameTabSessionRecreationReleasesFindInPageOwner() {
+        composeRule.runOnIdle {
+            val store = BrowserSessionStore(composeRule.activity)
+            originalEngineKind = store.loadAndroidBrowserEngineKind()
+            originalProfiles = store.loadProfiles()
+            store.saveProfiles(listOf(DEFAULT_BROWSER_PROFILE), DEFAULT_PROFILE_ID)
+            assertTrue(store.saveAndroidBrowserEngineKind(AndroidBrowserEngineKind.GeckoView))
+            val browserController = BrowserController(composeRule.activity).also { controller = it }
+            val session = ReentrantAttachSession(
+                tabId = browserController.selectedTabId,
+                onFirstAttach = {},
+            )
+            browserController.installGeckoEngineSessionForTesting(session)
+            dispatchSiteDataNavigation(
+                browserController = browserController,
+                tabId = session.tabId,
+                type = BrowserEngineEventType.NavigationCommitted,
+                address = "https://example.com/find-owner",
+            )
+            assertTrue(browserController.openFindInPage())
+            assertNotNull(browserController.findInPageState)
+
+            assertTrue(browserController.setProfileIsolation(browserController.activeProfileId, true))
+
+            assertEquals(session.tabId, browserController.selectedTabId)
+            assertNull(browserController.findInPageState)
+            assertTrue(session.commands.any { it.type == BrowserEngineCommandType.Close })
+        }
     }
 
     @Test
@@ -1132,6 +1165,9 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
                 val store = BrowserSessionStore(composeRule.activity)
                 originalEngineKind?.let { kind ->
                     assertTrue(store.saveAndroidBrowserEngineKind(kind))
+                }
+                originalProfiles?.let { (profiles, activeProfileId) ->
+                    store.saveProfiles(profiles, activeProfileId)
                 }
                 originalHistoryRecordingMode?.let { mode ->
                     assertTrue(store.saveHistoryRecordingMode(mode))

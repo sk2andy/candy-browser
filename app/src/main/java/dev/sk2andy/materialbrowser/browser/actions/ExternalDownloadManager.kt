@@ -32,6 +32,7 @@ data class PendingDownloadChoice(
     val builtInDownload: (() -> DownloadActionResult?)? = null,
     val releaseResponse: (() -> Unit)? = null,
     val isSourceCurrent: (() -> Boolean)? = null,
+    val sourceTabId: String? = null,
 )
 
 sealed interface ExternalDownloadLaunchResult {

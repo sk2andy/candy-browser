@@ -1,22 +1,105 @@
 package dev.sk2andy.materialbrowser.browser.gecko
 
 import android.content.Context
+import android.content.res.Configuration
 import android.view.View
+import dev.sk2andy.materialbrowser.browser.DnsOverHttpsSettings
+import dev.sk2andy.materialbrowser.browser.WebRtcProtectionMode
 import dev.sk2andy.materialbrowser.browser.BrowserEngineScrollEvent
 import dev.sk2andy.materialbrowser.browser.BrowserEngineScrollListener
 import dev.sk2andy.materialbrowser.browser.actions.BrowserContentTargetListener
 import dev.sk2andy.materialbrowser.browser.actions.WebContentTarget
+import dev.sk2andy.materialbrowser.browser.engine.BrowserEngineContentKind
+import dev.sk2andy.materialbrowser.browser.engine.BrowserWebContentColorScheme
 import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineCommands
 import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineEvent
 import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineEventType
 import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineFailureKind
+import java.lang.ref.Reference
+import java.lang.ref.ReferenceQueue
+import java.lang.ref.WeakReference
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.mozilla.geckoview.GeckoRuntime
 
 class GeckoBrowserEngineAdapterTest {
+    @Test
+    fun `delayed WebRTC acknowledgement reloads only its still open snapshot`() {
+        val liveSession = FakeGeckoBrowserSession()
+        val closedSession = FakeGeckoBrowserSession()
+        val laterSession = FakeGeckoBrowserSession()
+        val runtime = DeferredWebRtcRuntime(liveSession, closedSession, laterSession)
+        val factory = GeckoBrowserEngineSessionFactory(runtime)
+        val liveAdapter = createFactoryAdapter(factory, "live")
+        val closedAdapter = createFactoryAdapter(factory, "closed")
+
+        factory.setWebRtcProtectionMode(WebRtcProtectionMode.Block)
+        assertTrue(liveSession.actions.isEmpty())
+        closedAdapter.execute(BrowserEngineCommands.close())
+        val laterAdapter = createFactoryAdapter(factory, "later")
+        runtime.acknowledge()
+
+        assertEquals(listOf("reload"), liveSession.actions)
+        assertTrue(closedSession.actions.isEmpty())
+        assertTrue(laterSession.actions.isEmpty())
+        assertEquals(1, closedSession.closeCount)
+        liveAdapter.execute(BrowserEngineCommands.close())
+        laterAdapter.execute(BrowserEngineCommands.close())
+    }
+
+    @Test
+    fun `withheld WebRTC acknowledgement does not retain closed adapter or event owner`() {
+        val session = FakeGeckoBrowserSession()
+        val runtime = DeferredWebRtcRuntime(session)
+        val factory = GeckoBrowserEngineSessionFactory(runtime)
+        val queue = ReferenceQueue<Any>()
+        val references = closeFactoryAdapterWithPendingPolicy(factory, queue)
+        val collected = mutableSetOf<Reference<out Any>>()
+        val deadline = System.nanoTime() + 5_000_000_000L
+        while (collected.size < references.size && System.nanoTime() < deadline) {
+            System.gc()
+            System.runFinalization()
+            queue.remove(50L)?.let(collected::add)
+            var reference = queue.poll()
+            while (reference != null) {
+                collected += reference
+                reference = queue.poll()
+            }
+        }
+
+        assertEquals("Pending ACK retained closed adapter or its event owner", references.toSet(), collected)
+        assertTrue(runtime.hasPendingAcknowledgement)
+        runtime.acknowledge()
+        assertTrue(session.actions.isEmpty())
+        assertEquals(1, session.closeCount)
+    }
+
+    private fun closeFactoryAdapterWithPendingPolicy(
+        factory: GeckoBrowserEngineSessionFactory,
+        queue: ReferenceQueue<Any>,
+    ): List<WeakReference<Any>> {
+        val owner = FactoryEventOwner()
+        val adapter = createFactoryAdapter(factory, "closed", BrowserEngineEventSink(owner::onEvent))
+        factory.setWebRtcProtectionMode(WebRtcProtectionMode.Block)
+        adapter.execute(BrowserEngineCommands.close())
+        return listOf(WeakReference(adapter, queue), WeakReference(owner, queue))
+    }
+
+    private fun createFactoryAdapter(
+        factory: GeckoBrowserEngineSessionFactory,
+        tabId: String,
+        eventSink: BrowserEngineEventSink = BrowserEngineEventSink { },
+    ): AndroidBrowserEngineSessionPort = factory.create(
+        tabId = tabId,
+        profileId = "profile",
+        isPrivate = false,
+        contentKind = BrowserEngineContentKind.RegularTab,
+        eventSink = eventSink,
+    )
+
     @Test
     fun `page close requests are delivered without closing the adapter directly`() {
         val session = FakeGeckoBrowserSession()
@@ -768,6 +851,61 @@ class GeckoBrowserEngineAdapterTest {
         assertEquals("Gecko content process terminated", events.single().failureDescription)
         assertTrue(session.actions.isEmpty())
     }
+}
+
+private class FactoryEventOwner {
+    private val events = mutableListOf<BrowserEngineEvent>()
+
+    fun onEvent(event: BrowserEngineEvent) {
+        events += event
+    }
+}
+
+private class DeferredWebRtcRuntime(vararg sessions: FakeGeckoBrowserSession) : GeckoRuntimeHandle {
+    private val pendingSessions = ArrayDeque(sessions.toList())
+    private var pendingAcknowledgement: (() -> Unit)? = null
+    val hasPendingAcknowledgement: Boolean
+        get() = pendingAcknowledgement != null
+
+    override val extensions: GeckoExtensionRuntime
+        get() = error("Not used by this ownership test")
+    override val toppings: GeckoToppingHostRuntime
+        get() = error("Not used by this ownership test")
+
+    override fun createSession(
+        profileId: String,
+        isolationEnabled: Boolean,
+        isPrivate: Boolean,
+        privacyPolicy: GeckoPrivacyPolicy,
+        privacyEventSink: GeckoPrivacyEventSink,
+    ): GeckoBrowserSession = pendingSessions.removeFirst()
+
+    override fun setWebRtcProtectionMode(mode: WebRtcProtectionMode, onReady: () -> Unit) {
+        pendingAcknowledgement = onReady
+    }
+
+    fun acknowledge() {
+        val acknowledgement = checkNotNull(pendingAcknowledgement)
+        pendingAcknowledgement = null
+        acknowledgement()
+    }
+
+    override fun clearBrowsingData(data: GeckoBrowsingData, onComplete: (Boolean) -> Unit) =
+        onComplete(true)
+
+    override fun setBlockThirdPartyCookies(blocked: Boolean) = Unit
+
+    override fun setDnsOverHttpsSettings(settings: DnsOverHttpsSettings) = Unit
+
+    override fun setWebContentFontSizeFactor(factor: Float) = Unit
+
+    override fun setWebContentColorScheme(colorScheme: BrowserWebContentColorScheme) = Unit
+
+    override fun onConfigurationChanged(configuration: Configuration) = Unit
+
+    override fun bindWebAuthnActivityDelegate(delegate: GeckoRuntime.ActivityDelegate) = Unit
+
+    override fun unbindWebAuthnActivityDelegate(delegate: GeckoRuntime.ActivityDelegate) = Unit
 }
 
 private open class FakeGeckoBrowserSession(

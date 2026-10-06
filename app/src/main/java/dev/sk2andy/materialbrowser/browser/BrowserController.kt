@@ -1224,6 +1224,20 @@ class BrowserController(
         get() = pendingPopupNavigations.size
 
     @VisibleForTesting
+    internal fun createPendingGeckoPopupForTesting(): String? {
+        val tabId = createGeckoPopupTab(selectedTabId) ?: return null
+        schedulePendingPopupTimeout(
+            popupTabId = tabId,
+            pending = requireNotNull(pendingPopupNavigations[tabId]),
+            preopenedBlank = true,
+        )
+        return tabId
+    }
+
+    @VisibleForTesting
+    internal fun pendingPopupTimeoutForTesting(tabId: String): Runnable? = pendingPopupTimeouts[tabId]
+
+    @VisibleForTesting
     val transientPopupCountForTesting: Int
         get() = transientPopupTabIds.size
 
@@ -1426,6 +1440,7 @@ class BrowserController(
     private var toppingCatalogRefreshGeneration = 0
     private val pendingConsentCssUrls = mutableMapOf<String, String?>()
     private val pendingPopupNavigations = mutableMapOf<String, PendingPopupNavigation>()
+    private val pendingPopupTimeouts = mutableMapOf<String, Runnable>()
     private val pendingPopunderNavigations = mutableMapOf<String, PendingPopunderNavigation>()
     private val transientPopupTabIds = mutableSetOf<String>()
     private val nativePopupSessions = mutableMapOf<String, AndroidBrowserEngineSessionPort>()
@@ -4886,6 +4901,7 @@ class BrowserController(
         externalLinkPreviewRuntime = null
         externalLinkPreviewState = null
         runtime?.policyTab?.id?.let { policyTabId ->
+            releaseDownloadChoicesForSource(policyTabId)
             externalNavigationGrants.remove(policyTabId)
             if (pendingExternalNavigationRollback?.tabId == policyTabId) {
                 pendingExternalNavigationRollback = null
@@ -6932,8 +6948,12 @@ class BrowserController(
         return null
     }
 
-    fun confirmDownloadChoice(managerId: String?) {
+    fun confirmDownloadChoice(
+        managerId: String?,
+        expectedChoice: PendingDownloadChoice? = pendingDownloadChoice,
+    ) {
         val choice = pendingDownloadChoice ?: return
+        if (choice !== expectedChoice) return
         pendingDownloadChoice = null
         if (choice.isSourceCurrent?.invoke() == false) {
             choice.releaseResponse?.invoke()
@@ -6961,9 +6981,11 @@ class BrowserController(
         showNextDownloadChoice()
     }
 
-    fun dismissDownloadChoice() {
-        pendingDownloadChoice?.releaseResponse?.invoke()
+    fun dismissDownloadChoice(expectedChoice: PendingDownloadChoice? = pendingDownloadChoice) {
+        val choice = pendingDownloadChoice ?: return
+        if (choice !== expectedChoice) return
         pendingDownloadChoice = null
+        choice.releaseResponse?.invoke()
         showNextDownloadChoice()
     }
 
@@ -11295,6 +11317,8 @@ class BrowserController(
         }
         pendingGeckoPreviewCaptures.clear()
         transientPopupTabIds.toList().forEach(::discardTransientPopup)
+        pendingPopupTimeouts.values.forEach(mainHandler::removeCallbacks)
+        pendingPopupTimeouts.clear()
         pendingPopupNavigations.clear()
         pendingPopunderNavigations.clear()
         transientPopupTabIds.clear()
@@ -11944,14 +11968,31 @@ class BrowserController(
         // Gecko loads the initial child URI itself without another onLoadRequest callback.
         // Route it here so an accepted target=_blank tab does not stay transient indefinitely.
         if (initialUrl != BLANK_URL) handlePendingPopupNavigation(popupTabId, session, initialUrl)
-        mainHandler.postDelayed({
+        schedulePendingPopupTimeout(popupTabId, pending, preopenedBlank = initialUrl == BLANK_URL)
+        return true
+    }
+
+    private fun schedulePendingPopupTimeout(
+        popupTabId: String,
+        pending: PendingPopupNavigation,
+        preopenedBlank: Boolean,
+    ) {
+        cancelPendingPopupTimeout(popupTabId)
+        if (pendingPopupNavigations[popupTabId] !== pending) return
+        val timeout = Runnable {
+            pendingPopupTimeouts.remove(popupTabId)
             if (pendingPopupNavigations[popupTabId] === pending) {
                 pendingPopupNavigations.remove(popupTabId)
                 if (popupTabId in transientPopupTabIds) discardTransientPopup(popupTabId)
                 scheduleResidentSessionTrim()
             }
-        }, PopupNavigationRules.pendingTimeoutMillis(initialUrl == BLANK_URL))
-        return true
+        }
+        pendingPopupTimeouts[popupTabId] = timeout
+        mainHandler.postDelayed(timeout, PopupNavigationRules.pendingTimeoutMillis(preopenedBlank))
+    }
+
+    private fun cancelPendingPopupTimeout(tabId: String) {
+        pendingPopupTimeouts.remove(tabId)?.let(mainHandler::removeCallbacks)
     }
 
     private fun createGeckoPopupTab(openerTabId: String): String? {
@@ -13924,6 +13965,8 @@ class BrowserController(
             recordSessionDiagnostic(BrowserSessionDiagnostics.Event.Closed, tabId)
         }
         cancelPendingMemorySessionCheck(tabId)
+        cancelPendingPopupTimeout(tabId)
+        releaseDownloadChoicesForSource(tabId)
         nativePopupSessions.remove(tabId)
         removePendingInitialBrowserEngineNavigation(tabId)
         browserEngineNavigationRequestGenerations.remove(tabId)
@@ -13947,6 +13990,7 @@ class BrowserController(
             (binding.view.parent as? ViewGroup)?.removeView(binding.view)
         }
         browserEngineSessions.remove(tabId)?.let { session ->
+            if (findInPageSession?.geckoSession === session) closeFindInPage()
             browserEngineMediaSessionIds.remove(session)
             persistBrowserEngineSessionState(tabId, session)
             session.execute(BrowserEngineCommands.close())
@@ -14641,6 +14685,7 @@ class BrowserController(
         if (decision == PopupNavigationDecision.KeepPending) return decision
         if (decision != PopupNavigationDecision.AllowSameSite) {
             pendingPopupNavigations.remove(tabId)
+            cancelPendingPopupTimeout(tabId)
             scheduleResidentSessionTrim()
         }
         if (decision == PopupNavigationDecision.AllowSameSite) {
@@ -14822,6 +14867,7 @@ class BrowserController(
                             builtInDownload = startBuiltInDownload,
                             releaseResponse = releaseResponse,
                             isSourceCurrent = isSourceCurrent,
+                            sourceTabId = tabId,
                         ),
                     )
                     null
@@ -14855,7 +14901,21 @@ class BrowserController(
     }
 
     private fun showNextDownloadChoice() {
-        pendingDownloadChoice = queuedDownloadChoices.pollFirst()
+        if (pendingDownloadChoice == null) {
+            pendingDownloadChoice = queuedDownloadChoices.pollFirst()
+        }
+    }
+
+    private fun releaseDownloadChoicesForSource(tabId: String) {
+        val releasing = queuedDownloadChoices.filter { choice -> choice.sourceTabId == tabId }.toMutableList()
+        queuedDownloadChoices.removeAll { choice -> choice.sourceTabId == tabId }
+        pendingDownloadChoice?.takeIf { choice -> choice.sourceTabId == tabId }?.let { choice ->
+            pendingDownloadChoice = null
+            releasing += choice
+        }
+        // Remove ownership before releasing responses: preview callbacks can reenter teardown.
+        releasing.forEach { choice -> choice.releaseResponse?.invoke() }
+        if (pendingDownloadChoice == null) showNextDownloadChoice()
     }
 
     private fun launchExternallyOrFallback(

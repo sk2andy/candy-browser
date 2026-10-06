@@ -199,10 +199,36 @@ injection, Candy disables page JavaScript while a protected mode is active rathe
 unprotected connection. Temporary popup WebViews keep JavaScript explicitly disabled.
 Camera and microphone permissions remain separate and continue through Candy's permission policy.
 
+## Gecko crash helper startup
+
+The resolved GeckoView `157.0.20260924084938` AAR always starts the crash-helper service.
+`crashHandler(null)` and `MOZ_CRASHREPORTER_DISABLE` do not disable it. The native Android
+`CrashReporter::OOPInit` deliberately bypasses the reporting-enabled check and always connects
+to the helper. Skipping Java startup and returning invalid pipe descriptors crashes in native
+IPC initialization; the compile-time no-reporter path is only safe with a matching native build.
+Candy therefore adds no ineffective or unsafe setting to this SDK.
+
+A cold-process experiment on a dedicated API 37 emulator confirmed the boundary: the pinned
+Java-only gate with `{-1, -1}` crashed within about three seconds; unchanged helper startup
+loaded regular/private documents and counted one helper process. The experimental gate was
+removed. Supporting an optional helper requires a coordinated, tested native Gecko build.
+See [the exact native startup](https://github.com/mozilla-firefox/firefox/blob/fdd757a2e09c9471cddf383e64e631e4ce178499/toolkit/crashreporter/nsExceptionHandler.cpp)
+and [native Android IPC connector](https://github.com/mozilla-firefox/firefox/blob/fdd757a2e09c9471cddf383e64e631e4ce178499/toolkit/crashreporter/crash_helper_common/src/ipc_connector/unix.rs).
+
 ## Android Gecko and extension invariants
 
 - `GeckoRuntimeOwner` creates exactly one `GeckoRuntime` for the app process. Sessions are cheap,
   independently closeable adapters around it.
+- Release startup loads the generated history-cache preferences through Gecko's SnakeYAML 2.2
+  parser. `proguard-rules.pro` preserves the class names of `TypeDescription` and
+  `introspector.PropertySubstitute`: their logger initializers call `Class.getPackage().getName()`,
+  which fails on Android when R8 moves them into the unnamed package. Their code remains eligible
+  for shrinking and optimization; Gecko's existing consumer rules preserve the reflected config fields.
+- Final Gecko session close clears Candy's public session delegates and session-local extension
+  message delegates. Native Gecko objects may outlive close, so they must not retain the Candy
+  session wrapper or its destroyed controller. Warm view release/rebinding keeps delegates intact.
+- Removing an extension clears its action and tab delegates on every bound Gecko session before its inventory entry is forgotten. Later session cleanup must not depend on an already-removed extension ID.
+- Deferred WebRTC policy readiness keeps only weak references to the original adapter snapshot. Live tabs stay owned by the factory; a missing ACK must not retain closed adapters/controllers. The native policy still must acknowledge before any reload.
 - Candy reports every selected-tab transition through GeckoView's active-tab API. This keeps
   Firefox extension `tabs`, `webNavigation`, CSS injection and script injection scoped to the
   same tab that Candy's shared chrome presents.

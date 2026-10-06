@@ -3376,6 +3376,7 @@ private class GeckoViewBrowserSession(
         inlineVideoGestureHapticListener = null
         fullscreenStateListener = null
         scrollListener = null
+        notificationPermissionDecisionProvider = null
         activeMediaSession = null
         deactivatedMediaSession = null
         inPictureInPicture = false
@@ -3394,6 +3395,16 @@ private class GeckoViewBrowserSession(
         toppingBinding.close()
         toppingBinding = GeckoToppingSessionBinding.None
         privacyBinding.close()
+        // Native Gecko objects can outlive close; release their Candy ownership here.
+        // ContentDelegate also clears Gecko's process-hang handler through the public API.
+        session.contentDelegate = null
+        session.navigationDelegate = null
+        session.historyDelegate = null
+        session.scrollDelegate = null
+        session.permissionDelegate = null
+        session.promptDelegate = null
+        session.mediaSessionDelegate = null
+        session.progressDelegate = null
         session.close()
         if (isPrivate) GeckoLogging.setPrivateBrowsingActive(false, session)
         if (BuildConfig.ENABLE_PERFORMANCE_DIAGNOSTICS) {

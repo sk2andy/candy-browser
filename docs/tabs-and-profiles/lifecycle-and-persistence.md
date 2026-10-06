@@ -17,6 +17,9 @@
 | Overview mode | `TabOverviewMode` and `ui/TabOverview*Rules` | Cover flow uses an Android-switcher-like card at roughly 74% of screen width and 0.45 aspect, with the favicon and title overlaid at top-left; grid and list share the same controller tab state; both compact modes can open at the newest tabs and anchor short content at the bottom, with incomplete grid rows aligned to keep the newest tab bottom-right; the overview locks the activity to portrait until it closes |
 | Candy Stacks | Shared `TabStack` and `TabStackRules`; Android `BrowserController`, `BrowserSessionStore`, and `TabStackUi` adapters | A stack contains at least two tabs with the same profile, privacy mode, and pin state. Shared rules own deterministic membership, collapse, preview, visibility, and persistence-boundary decisions; native adapters own storage and UI effects. Coverflow and Grid show an inline marker on every expanded member. The marker animates every visible member behind the tapped trigger tab and collapses them into a layered card at that position; tapping that card opens a separately configurable Coverflow, Grid, or List member folder. The chosen preview tab supplies collapsed content independently from the trigger anchor. Main List remains flat, and tab reordering is disabled while a stack is collapsed. |
 
+- Popup navigation timeouts are owned by tab ID and cancelled on close, completed popup transitions and controller destruction; stale timers must not retain a destroyed controller until their deadline.
+- Closing or replacing a Gecko session also closes an active find-in-page owner for that exact session, including recreation without changing the selected tab ID.
+
 ## Persistence
 
 | State | Storage | Rule |
