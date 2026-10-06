@@ -71,6 +71,11 @@ fun BrowserMenuToolbarAction(
     showLabel: Boolean = true,
     minHeight: Dp = 64.dp,
     verticalLabelFontSize: TextUnit = 11.sp,
+    contentColor: Color = if (selected) {
+        MaterialTheme.colorScheme.onPrimaryContainer
+    } else {
+        MaterialTheme.colorScheme.onSurface
+    },
     shape: Shape = MaterialTheme.shapes.large,
     containerColor: Color = if (selected) {
         MaterialTheme.colorScheme.primaryContainer
@@ -85,11 +90,7 @@ fun BrowserMenuToolbarAction(
             contentDescription = accessibilityLabel
         }
     }
-    val contentColor = when {
-        !enabled -> colors.onSurface.copy(alpha = 0.38f)
-        selected -> colors.onPrimaryContainer
-        else -> colors.onSurface
-    }
+    val actionContentColor = if (enabled) contentColor else colors.onSurface.copy(alpha = 0.38f)
     Surface(
         onClick = onClick,
         modifier = modifier
@@ -98,7 +99,7 @@ fun BrowserMenuToolbarAction(
         enabled = enabled,
         shape = shape,
         color = containerColor,
-        contentColor = contentColor,
+        contentColor = actionContentColor,
     ) {
         if (horizontalContent) {
             Row(

@@ -20,6 +20,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.DpSize
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -55,6 +56,16 @@ internal typealias BrowserMainMenuTestTags =
     dev.sk2andy.materialbrowser.shared.ui.BrowserMainMenuTestTags
 internal typealias DomainMuteMenuTestTags =
     dev.sk2andy.materialbrowser.shared.ui.DomainMuteMenuTestTags
+
+internal object BrowserMainMenuPopupRules {
+    // Material DropdownMenu reserves 48dp above and below plus 8dp content padding per edge.
+    private val ReservedVerticalSpace = 112.dp
+
+    fun maxContentHeight(screenHeight: Dp, preferredFraction: Float): Dp = minOf(
+        screenHeight * preferredFraction,
+        (screenHeight - ReservedVerticalSpace).coerceAtLeast(0.dp),
+    )
+}
 
 private val AndroidBrowserMainMenuResources = object : BrowserMainMenuResources {
     @Composable
@@ -166,6 +177,12 @@ private class AndroidBrowserMainMenuEffects(
     )
 
     override fun usesPlatformMenuMotion(): Boolean = true
+
+    @Composable
+    override fun maxHeight(screenSize: DpSize) = BrowserMainMenuPopupRules.maxContentHeight(
+        screenHeight = screenSize.height,
+        preferredFraction = maxHeightFraction(),
+    )
 
     @Composable
     override fun menuPopup(

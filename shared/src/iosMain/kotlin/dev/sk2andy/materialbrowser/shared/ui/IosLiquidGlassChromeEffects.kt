@@ -161,6 +161,9 @@ private object IosLiquidGlassMainMenuEffects : BrowserMainMenuEffects {
     @Composable
     override fun sectionTitleColor(color: Color): Color = IOS_SECONDARY_LABEL
 
+    @Composable
+    override fun selectedToolbarContentColor(): Color = MaterialTheme.colorScheme.onPrimaryContainer
+
     override fun preservesVisualEffectDuringMorph(): Boolean = true
 
     override fun maxHeightFraction(): Float = IOS_MENU_MAX_HEIGHT_FRACTION

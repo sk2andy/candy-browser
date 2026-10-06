@@ -64,7 +64,7 @@ See [`site-data.md`](site-data.md) for domain expansion, shared-storage warnings
 | Persistence and migration | [`BrowserSessionStore.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/data/BrowserSessionStore.kt) | Stable wire names persist the two ordered sides. Unknown, duplicate or excess values are normalized independently of Compose. The former tab-button visibility preference migrates once into the new layout and is then removed. |
 | Temporary controls | `ui/BrowserBottomBar.kt`, `ui/ExpandedAddressBar.kt`, `ui/BrowserMainMenu.kt` | Cast and blank-editor controls consume the same icon budget. Cast may temporarily displace the last configured action; any displaced action that has no ordinary menu equivalent is exposed in **More** for that state. |
 | Presentation style | `AppearanceSettings.addressBarStyle`, `ui/ExpandedAddressBar.kt` | Classic preserves the existing expanded layout. Segmented draws one primary pill behind configured actions and the address field plus a separate trailing pill for **More**; focused editing keeps the input borderless, adds the search affordance, and changes the trailing pill to **Close**. The outer and inner curves stay concentric and use the same 8 dp inset around and between segments. Compact, parked, overview, command-feedback, external-preview and find-in-page chrome stay unchanged. |
-| Main-menu placement and motion | `shared/ui/BrowserMainMenu.kt`, `ui/BrowserMainMenu.kt` | The address bar remains stable while **More** opens and closes. Android uses the public Material 3 `DropdownMenu` with its default placement and transition, without a custom offset or a second content animation. Its transparent host retains the Candy surface and grouped actions; Material owns the outer scroll container and 8dp vertical content padding. The shared popup host preserves the native iOS anchor morph. Closing releases focus while Material completes its exit. |
+| Main-menu placement and motion | `shared/ui/BrowserMainMenu.kt`, `ui/BrowserMainMenu.kt` | The address bar remains stable while **More** opens and closes. Android uses the public Material 3 `DropdownMenu` with its default placement and transition, without a custom offset or a second content animation. Its transparent host retains the Candy surface and grouped actions. The shared menu scrolls its upper content while keeping the action footer fixed; Android caps surface height below Material's popup margins and padding so Material's outer scroll stays idle. The shared popup host preserves the native iOS anchor morph. Closing releases focus while Material completes its exit. |
 
 The parked compact pill remains intentionally action-free. When address input takes the full editor
 width, configured actions retain the existing horizontal fade/shrink transition and return when the
@@ -99,8 +99,20 @@ Default layout preserves prior surfaces. Existing shared actions such as favorit
 Candy Trail remain in both menus; tab-only browser/navigation actions and switcher-only profile,
 stack and close-all actions remain where they were until the user changes them.
 
-On Android, the tab menu is capped at 320dp wide. Its top navigation actions use icon-only,
-48dp circular buttons; their localized labels remain available as accessibility descriptions.
+On Android, the tab menu is capped at 320dp wide. A scrolling upper row exposes enabled/configured
+Snoozed Tabs, Favorites, Downloads, History and Settings destinations with icons and localized labels.
+Back, Forward, Reload/Stop, Favorite and Pin remain in a fixed lower panel with 48dp circular controls
+and symmetric 14dp vertical padding. Both rows use a 3+2 fallback when the available width cannot fit
+five controls. The library row, page, Toppings, Candy, extension and remaining browser content scroll
+together above the fixed lower panel. The menu wraps its actual content up to the existing maximum
+height; short menus leave no stretched empty tail. All colors resolve from the existing theme,
+including Material You device colors. The lower panel inherits the menu surface without a separate
+background tint; unselected button circles use `surfaceContainerLowest`, and selected actions use
+`primary`/`onPrimary`. The upper content includes the optional title, so a short window scrolls
+the title and library actions while the lower controls stay visible. The Android height cap
+reserves Material's 48dp margins and 8dp internal padding on both vertical edges.
+The iOS effect adapter preserves its selected glass-control foreground. Filtering still happens before
+rendering, and library clicks close the menu before invoking their existing destination callbacks.
 
 ## Find in page
 
