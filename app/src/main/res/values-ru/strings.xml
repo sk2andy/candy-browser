@@ -1332,6 +1332,16 @@
     <string name="developer_options_unlock_action">Разблокировать настройки разработчика</string>
     <string name="developer_options_unlocked">Настройки разработчика разблокированы</string>
     <string name="developer_options_security_section">Изменение ограничений безопасности</string>
+    <string name="developer_options_memory_section">Память вкладок</string>
+    <string name="developer_options_foreground_tab_idle_timeout">Выгружать неактивные вкладки</string>
+    <string name="developer_options_foreground_tab_idle_timeout_summary">Выгружает невыбранные вкладки после указанного времени простоя, пока Candy работает на переднем плане. Выбранная вкладка и защищённые сеансы остаются загруженными.</string>
+    <string name="developer_options_background_warm_tab_count">Загруженные вкладки в фоне</string>
+    <string name="developer_options_background_warm_tab_count_summary">Количество недавно использованных невыбранных вкладок, которые остаются загруженными в фоне. Выбранная вкладка всегда остаётся загруженной; защищённые сеансы могут превышать этот предел.</string>
+    <string name="developer_options_history_cache_lifetime">Время хранения страниц в кэше</string>
+    <string name="developer_options_history_cache_lifetime_summary">Gecko хранит несколько страниц в кэше для переходов назад и вперёд. Таймер освобождает подходящие страницы примерно через две трети указанного времени или к его окончанию; при нехватке памяти это может произойти раньше. Изменение настройки требует полного перезапуска приложения.</string>
+    <string name="developer_options_minutes_value">%1$d мин</string>
+    <string name="developer_options_seconds_value">%1$d с</string>
+    <string name="developer_options_tabs_value">%1$d вкладок</string>
     <string name="developer_options_http_warning_title">Включить автозаполнение на незащищённых страницах?</string>
     <string name="developer_options_http_warning_message">HTTP не шифрует учётные данные и содержимое страниц. Включайте выбор менеджера паролей только для доверенных страниц разработки или локальной сети.</string>
     <string name="developer_options_http_warning_confirm">Всё равно включить</string>
