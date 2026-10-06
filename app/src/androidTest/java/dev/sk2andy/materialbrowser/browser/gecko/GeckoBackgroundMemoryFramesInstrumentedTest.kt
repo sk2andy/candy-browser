@@ -43,12 +43,29 @@ class GeckoBackgroundMemoryFramesInstrumentedTest {
     }
 
     @Test
-    fun emptyAboutBlankIframeRetainsUnknownDataWhenGeckoInjectsLate() {
+    fun emptyAboutBlankIframeUnloadsDespiteLateInjection() {
         withLoadedForm(html = PAGE_PREFIX + "<iframe src='about:blank'></iframe>") { fixture ->
             fixture.scenario.onActivity { fixture.session.setActive(false) }
 
-            assertEquals(null, containsUserInput(fixture.session))
-            assertBackgroundResidency(fixture, retained = true)
+            assertEquals(false, containsUserInput(fixture.session))
+            assertBackgroundResidency(fixture, retained = false)
+        }
+    }
+
+    @Test
+    fun editedClosedBodyShadowInAboutBlankIframeProtectsParentSession() {
+        withLoadedForm(html = """
+            <!doctype html><title>loading</title><body><p>Parent</p>
+            <iframe id="frame" src="about:blank" style="$FRAME_STYLE"></iframe>
+            <script>
+                frame.contentDocument.body.attachShadow({mode: 'closed'}).innerHTML =
+                    `$FRAME_INPUT_HTML`;
+                document.title = 'form-ready';
+            </script>
+        """.trimIndent()) { fixture ->
+            // Real input must protect the frame through a closed shadow root,
+            // whether Gecko installs before or after the parent populates it.
+            assertEditedFrameProtected(fixture)
         }
     }
 
@@ -175,7 +192,7 @@ class GeckoBackgroundMemoryFramesInstrumentedTest {
                 browserController.createTab(isIncognito = false)
             }
             // Selection refreshes the page policy asynchronously. Wait for its current
-            // handshake before applying the budget, as the production grace normally does.
+            // handshake before applying the budget.
             if (!retained) {
                 val deadline = SystemClock.elapsedRealtime() + TIMEOUT_MILLIS
                 var settledInput = containsUserInput(fixture.session)
@@ -232,7 +249,7 @@ class GeckoBackgroundMemoryFramesInstrumentedTest {
         val ready = CountDownLatch(1)
         val result = AtomicReference<Boolean?>()
         instrumentation.runOnMainSync {
-            session.containsFormData { containsData ->
+            session.containsUserInput { containsData ->
                 result.set(containsData)
                 ready.countDown()
             }

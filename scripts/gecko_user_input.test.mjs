@@ -8,14 +8,17 @@ const asset = (name) => fs.readFileSync(
   "utf8",
 );
 
-function inputHarness({ readyState = "loading", registrationFails = false } = {}) {
+function inputHarness({ readyState = "loading", registrationFails = false, documentFields = {},
+    userActivation = { hasBeenActive: false } } = {}) {
   const listeners = new Map();
   let queryListener;
   const context = vm.createContext({
     browser: { runtime: { onMessage: { addListener: (listener) => { queryListener = listener; } } } },
     crypto: { getRandomValues: (bytes) => bytes.fill(1) },
+    navigator: { userActivation },
     document: {
       readyState,
+      ...documentFields,
       addEventListener(type, listener, capture) {
         assert.equal(capture, true);
         if (registrationFails) throw new Error("Listener unavailable");
@@ -83,6 +86,74 @@ test("late or incomplete registration and stale document queries return unknown"
   late.listeners.get("input")({ isTrusted: true });
   assert.equal(late.sample().hasUserInput, true);
   assert.equal(inputHarness().sample("02".repeat(16)).hasUserInput, null);
+});
+
+function emptyBlankDocument() {
+  const element = (localName) => ({
+    localName, childNodes: [], isContentEditable: false, openOrClosedShadowRoot: null,
+  });
+  const head = element("head");
+  const body = element("body");
+  return {
+    URL: "about:blank", designMode: "off", head, body,
+    documentElement: { ...element("html"), childNodes: [head, body] },
+  };
+}
+
+test("late untouched empty blank frame starts clean and later trusted input stays protected", () => {
+  for (const readyState of ["interactive", "complete"]) {
+    const harness = inputHarness({ readyState, documentFields: emptyBlankDocument() });
+    assert.equal(harness.sample().hasUserInput, false);
+    harness.listeners.get("input")({ isTrusted: true });
+    assert.equal(harness.sample().hasUserInput, true);
+    assert.equal(harness.sample("02".repeat(16)).hasUserInput, null);
+    assert.equal(harness.sample().hasUserInput, true);
+  }
+});
+
+test("late populated editable or shadow documents are never initialized clean", () => {
+  for (const mutate of [
+    (document) => { document.URL = "https://top.example/"; },
+    (document) => { document.designMode = "on"; },
+    (document) => { document.head.childNodes.push({}); },
+    (document) => { document.body.childNodes.push({}); },
+    (document) => { document.documentElement.childNodes.reverse(); },
+    (document) => { document.body.localName = "frameset"; },
+    (document) => { document.body = null; },
+    ...["documentElement", "head", "body"].flatMap((key) => [
+      (document) => { document[key].isContentEditable = true; },
+      (document) => { document[key].openOrClosedShadowRoot = {}; },
+      (document) => { delete document[key].openOrClosedShadowRoot; },
+      (document) => { Object.defineProperty(document[key], "openOrClosedShadowRoot", {
+        get() { throw new Error("Unavailable shadow access"); },
+      }); },
+    ]),
+  ]) {
+    const documentFields = emptyBlankDocument();
+    mutate(documentFields);
+    const harness = inputHarness({ readyState: "complete", documentFields });
+    assert.equal(harness.sample().hasUserInput, null);
+    harness.listeners.get("input")({ isTrusted: true });
+    assert.equal(harness.sample().hasUserInput, true);
+  }
+});
+
+test("prior or unavailable interaction state keeps late blank frame unknown", () => {
+  for (const userActivation of [undefined, null, {}, { hasBeenActive: true }, { hasBeenActive: "false" }]) {
+    const harness = inputHarness({
+      readyState: "complete", documentFields: emptyBlankDocument(),
+      userActivation: userActivation === undefined ? {} : userActivation,
+    });
+    assert.equal(harness.sample().hasUserInput, null);
+  }
+});
+
+test("late populated frame cannot become clean by removing its contents after installation", () => {
+  const documentFields = emptyBlankDocument();
+  documentFields.body.childNodes.push({});
+  const harness = inputHarness({ readyState: "complete", documentFields });
+  documentFields.body.childNodes.length = 0;
+  assert.equal(harness.sample().hasUserInput, null);
 });
 
 const request = {
