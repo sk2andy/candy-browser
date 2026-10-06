@@ -115,6 +115,16 @@ internal interface AndroidBrowserEngineSessionPort :
     BrowserEngineViewPort {
     fun setActive(active: Boolean)
 
+    fun setSelectedPriority(selected: Boolean) = Unit
+
+    fun trimUiMemory() = Unit
+
+    /** Conservative form-state protection for automatic idle eviction. */
+    fun containsFormData(onResult: (Boolean?) -> Unit) = onResult(null)
+
+    /** Unknown user-input state must not permit background eviction. */
+    fun containsUserInput(onResult: (Boolean?) -> Unit) = containsFormData(onResult)
+
     /** False when the engine cannot combine site and storage-context boundaries safely. */
     val supportsSiteDataDeletion: Boolean get() = false
 
@@ -522,6 +532,26 @@ internal class GeckoBrowserEngineSessionAdapter(
             session.setActive(active)
             onActiveChanged(active)
         }
+    }
+
+    @UiThread
+    override fun setSelectedPriority(selected: Boolean) {
+        if (!closed) session.setSelectedPriority(selected)
+    }
+
+    @UiThread
+    override fun trimUiMemory() {
+        if (!closed) session.trimUiMemory()
+    }
+
+    @UiThread
+    override fun containsFormData(onResult: (Boolean?) -> Unit) {
+        if (closed) onResult(null) else session.containsFormData(onResult)
+    }
+
+    @UiThread
+    override fun containsUserInput(onResult: (Boolean?) -> Unit) {
+        if (closed) onResult(null) else session.containsUserInput(onResult)
     }
 
     @UiThread

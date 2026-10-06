@@ -31,6 +31,7 @@ import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.shared.ui.settings.settingsSearchTarget
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoLoggingStatus
 import dev.sk2andy.materialbrowser.data.BrowserChromeScrollDispatchMode
+import dev.sk2andy.materialbrowser.data.BrowserMemorySettings
 import dev.sk2andy.materialbrowser.data.DeveloperSettings
 import dev.sk2andy.materialbrowser.data.GeckoSafeAreaSettings
 import dev.sk2andy.materialbrowser.data.GeckoLoggingRules
@@ -38,6 +39,9 @@ import dev.sk2andy.materialbrowser.ui.theme.browserChromeColor
 import kotlin.math.roundToInt
 
 internal object DeveloperOptionsTestTags {
+    const val ForegroundTabIdleTimeout = "developer_options_foreground_tab_idle_timeout"
+    const val BackgroundWarmTabCount = "developer_options_background_warm_tab_count"
+    const val HistoryCacheLifetime = "developer_options_history_cache_lifetime"
     const val BrowserChromeScrollDispatchMode = "developer_options_scroll_dispatch_mode"
     const val LayoutQuietPeriod = "developer_options_layout_quiet_period"
     const val RequiredFailures = "developer_options_required_failures"
@@ -323,6 +327,13 @@ internal fun DeveloperOptionsSettingsPage(
             modifier = Modifier.padding(start = 18.dp, top = 8.dp, end = 18.dp),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.height(18.dp))
+        BrowserMemorySettingsSection(
+            settings = settings.browserMemorySettings,
+            onSettingsChanged = { memorySettings ->
+                onSettingsChanged(settings.copy(browserMemorySettings = memorySettings.normalized()))
+            },
         )
         Spacer(Modifier.height(18.dp))
         SettingsSectionTitle(stringResource(R.string.developer_options_safe_area_section))
@@ -636,6 +647,65 @@ private fun DeveloperAction(
             )
         }
     }
+}
+
+@Composable
+private fun BrowserMemorySettingsSection(
+    settings: BrowserMemorySettings,
+    onSettingsChanged: (BrowserMemorySettings) -> Unit,
+) {
+    SettingsSectionTitle(stringResource(R.string.developer_options_memory_section))
+    Spacer(Modifier.height(8.dp))
+    DeveloperSettingsSlider(
+        title = stringResource(R.string.developer_options_foreground_tab_idle_timeout),
+        summary = stringResource(R.string.developer_options_foreground_tab_idle_timeout_summary),
+        valueLabel = stringResource(
+            R.string.developer_options_minutes_value,
+            settings.foregroundTabIdleTimeoutMinutes,
+        ),
+        value = settings.foregroundTabIdleTimeoutMinutes,
+        range = BrowserMemorySettings.MIN_FOREGROUND_TAB_IDLE_TIMEOUT_MINUTES..
+            BrowserMemorySettings.MAX_FOREGROUND_TAB_IDLE_TIMEOUT_MINUTES,
+        step = 1,
+        testTag = DeveloperOptionsTestTags.ForegroundTabIdleTimeout,
+        onValueChanged = { value ->
+            onSettingsChanged(settings.copy(foregroundTabIdleTimeoutMinutes = value))
+        },
+    )
+    SettingsPageSpacer()
+    DeveloperSettingsSlider(
+        title = stringResource(R.string.developer_options_background_warm_tab_count),
+        summary = stringResource(R.string.developer_options_background_warm_tab_count_summary),
+        valueLabel = stringResource(
+            R.string.developer_options_tabs_value,
+            settings.backgroundWarmTabCount,
+        ),
+        value = settings.backgroundWarmTabCount,
+        range = BrowserMemorySettings.MIN_BACKGROUND_WARM_TAB_COUNT..
+            BrowserMemorySettings.MAX_BACKGROUND_WARM_TAB_COUNT,
+        step = 1,
+        testTag = DeveloperOptionsTestTags.BackgroundWarmTabCount,
+        onValueChanged = { value ->
+            onSettingsChanged(settings.copy(backgroundWarmTabCount = value))
+        },
+    )
+    SettingsPageSpacer()
+    DeveloperSettingsSlider(
+        title = stringResource(R.string.developer_options_history_cache_lifetime),
+        summary = stringResource(R.string.developer_options_history_cache_lifetime_summary),
+        valueLabel = stringResource(
+            R.string.developer_options_minutes_value,
+            settings.historyCacheLifetimeMinutes,
+        ),
+        value = settings.historyCacheLifetimeMinutes,
+        range = BrowserMemorySettings.MIN_HISTORY_CACHE_LIFETIME_MINUTES..
+            BrowserMemorySettings.MAX_HISTORY_CACHE_LIFETIME_MINUTES,
+        step = 1,
+        testTag = DeveloperOptionsTestTags.HistoryCacheLifetime,
+        onValueChanged = { value ->
+            onSettingsChanged(settings.copy(historyCacheLifetimeMinutes = value))
+        },
+    )
 }
 
 @Composable

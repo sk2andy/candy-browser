@@ -420,6 +420,66 @@ class GeckoBrowserEngineAdapterTest {
     }
 
     @Test
+    fun `trusted input queries cross the adapter independently from native form state`() {
+        val session = FakeUserInputGeckoBrowserSession().apply { formData = true }
+        val adapter = GeckoBrowserEngineSessionAdapter(
+            tabId = "tab-1",
+            session = session,
+            eventSink = BrowserEngineEventSink { },
+        )
+        val results = mutableListOf<Boolean?>()
+
+        adapter.containsUserInput(results::add)
+        session.userInput = true
+        adapter.containsUserInput(results::add)
+        session.userInput = null
+        adapter.containsUserInput(results::add)
+        adapter.execute(BrowserEngineCommands.close())
+        adapter.containsUserInput(results::add)
+
+        assertEquals(listOf(false, true, null, null), results)
+        assertEquals(3, session.userInputChecks)
+        assertEquals(0, session.formChecks)
+    }
+
+    @Test
+    fun `sessions without trusted input probes keep conservative form protection`() {
+        val session = FakeGeckoBrowserSession().apply { formData = true }
+        val adapter = GeckoBrowserEngineSessionAdapter(
+            tabId = "tab-1",
+            session = session,
+            eventSink = BrowserEngineEventSink { },
+        )
+        val results = mutableListOf<Boolean?>()
+
+        adapter.containsUserInput(results::add)
+        session.formData = null
+        adapter.containsUserInput(results::add)
+
+        assertEquals(listOf(true, null), results)
+        assertEquals(2, session.formChecks)
+    }
+
+    @Test
+    fun `selected priority remains independent from visibility until close`() {
+        val session = FakeGeckoBrowserSession()
+        val adapter = GeckoBrowserEngineSessionAdapter(
+            tabId = "tab-1",
+            session = session,
+            eventSink = BrowserEngineEventSink { },
+        )
+
+        adapter.setSelectedPriority(true)
+        adapter.setActive(false)
+        adapter.setSelectedPriority(false)
+        adapter.execute(BrowserEngineCommands.close())
+        adapter.setSelectedPriority(true)
+
+        assertEquals(listOf(true, false), session.selectedPriorities)
+        assertEquals(listOf(false), session.activeStates)
+    }
+
+    @Test
     fun `long press content targets cross the adapter until close`() {
         val session = FakeGeckoBrowserSession()
         val adapter = GeckoBrowserEngineSessionAdapter(
@@ -710,13 +770,15 @@ class GeckoBrowserEngineAdapterTest {
     }
 }
 
-private class FakeGeckoBrowserSession(
+private open class FakeGeckoBrowserSession(
     private val loadAccepted: Boolean = true,
     private val initialState: GeckoBrowserSessionState = GeckoBrowserSessionState(),
 ) : GeckoBrowserSession {
     override val profileId = "profile"
     override val isPrivate = false
 
+    var formData: Boolean? = false
+    var formChecks = 0
     var loadedUrl: String? = null
     val actions = mutableListOf<String>()
     var closeCount = 0
@@ -733,6 +795,7 @@ private class FakeGeckoBrowserSession(
     var historyUrls: List<String> = emptyList()
     var historyCurrentIndex: Int = -1
     val activeStates = mutableListOf<Boolean>()
+    val selectedPriorities = mutableListOf<Boolean>()
     val pictureInPictureStates = mutableListOf<Boolean>()
     val pictureInPicturePlaybackStates = mutableListOf<Boolean>()
     var pictureInPictureRestorationCount = 0
@@ -828,6 +891,15 @@ private class FakeGeckoBrowserSession(
 
     override fun setActive(active: Boolean) {
         activeStates += active
+    }
+
+    override fun containsFormData(onResult: (Boolean?) -> Unit) {
+        formChecks++
+        onResult(formData)
+    }
+
+    override fun setSelectedPriority(selected: Boolean) {
+        selectedPriorities += selected
     }
 
     fun emitFullscreen(fullscreen: Boolean) {
@@ -934,4 +1006,14 @@ private class FakeGeckoBrowserSession(
         request: GeckoMainFrameNavigationRequest,
     ): GeckoNavigationRequestDecision = navigationRequestListener?.onNavigationRequest(request)
         ?: GeckoNavigationRequestDecision.Allow
+}
+
+private class FakeUserInputGeckoBrowserSession : FakeGeckoBrowserSession() {
+    var userInput: Boolean? = false
+    var userInputChecks = 0
+
+    override fun containsUserInput(onResult: (Boolean?) -> Unit) {
+        userInputChecks++
+        onResult(userInput)
+    }
 }

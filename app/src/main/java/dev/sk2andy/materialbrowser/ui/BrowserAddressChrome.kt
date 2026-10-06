@@ -444,6 +444,10 @@ internal fun BoxScope.BrowserAddressChrome(
                         },
                         favicon = controller.favicons[targetTab.id],
                         previewTopInsetPx = controller.previewTopInsetPx(targetTab.id),
+                        isRestoring = TabHandoffRules.isRestoring(
+                            targetTab,
+                            controller.isTabSessionResident(targetTab.id),
+                        ),
                     ),
                 )
                 browserDragOffset.floatValue = 0f
@@ -572,7 +576,7 @@ internal fun BoxScope.BrowserAddressChrome(
         onOpenCandyTrail = onOpenCandyTrail,
         onSnooze = onSnooze,
         onAddSiteCapsule = onAddSiteCapsule,
-        onBarPositioned = { boundsInRoot, topInWindowPx ->
+        onBarPositioned = { boundsInRoot, _ ->
             addressBarBoundsInRoot = boundsInRoot
             if (
                 effectiveAddressBarDockPlacement != null &&
@@ -580,11 +584,11 @@ internal fun BoxScope.BrowserAddressChrome(
                 commandFeedback == null
             ) {
                 bottomBarTopPx.floatValue = Float.NaN
-                controller.setPreviewContentBottomInWindowPx(0)
             } else {
                 bottomBarTopPx.floatValue = boundsInRoot.top
-                controller.setPreviewContentBottomInWindowPx(topInWindowPx)
             }
+            // Chrome floats above the page; its top is not the renderer's capture boundary.
+            controller.setPreviewContentBottomInWindowPx(0)
         },
         backdropBlurRegionEnabled = browserDragOffset.floatValue == 0f && !settingsVisible,
         onBackdropBlurRegionChanged = controller::setSelectedBrowserBackdropBlurRegion,

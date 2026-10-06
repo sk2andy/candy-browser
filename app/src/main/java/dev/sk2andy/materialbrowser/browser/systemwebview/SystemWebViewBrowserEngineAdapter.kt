@@ -1,5 +1,6 @@
 package dev.sk2andy.materialbrowser.browser.systemwebview
 
+import dev.sk2andy.materialbrowser.data.TabPreviewCaptureRules
 import dev.sk2andy.materialbrowser.data.AppLogEvent
 import dev.sk2andy.materialbrowser.data.AppLogging
 
@@ -746,17 +747,24 @@ private class SystemWebViewBrowserEngineSession(
                 onComplete(null)
                 return@post
             }
-            val targetHeight = minOf(
-                maximumTargetHeightPx.coerceAtLeast(1),
-                (visibleViewHeightPx.toLong() * targetWidthPx / webView.width.coerceAtLeast(1))
-                    .toInt()
-                    .coerceAtLeast(1),
-            )
+            val captureWidth = minOf(targetWidthPx, webView.width)
+            val maximumSourceHeight = (maximumTargetHeightPx.toLong() * webView.width / captureWidth)
+                .coerceIn(1, Int.MAX_VALUE.toLong())
+                .toInt()
+            val dimensions = TabPreviewCaptureRules.resolveBitmapDimensions(
+                sourceWidthPx = webView.width,
+                sourceHeightPx = minOf(visibleViewHeightPx, maximumSourceHeight),
+                targetWidthPx = targetWidthPx,
+                maximumTargetHeightPx = maximumTargetHeightPx,
+            ) ?: run {
+                onComplete(null)
+                return@post
+            }
             val bitmap = runCatching {
                 BrowserPreviewBitmapRenderer.render(
                     sourceWidthPx = webView.width,
-                    targetWidthPx = targetWidthPx,
-                    targetHeightPx = targetHeight,
+                    targetWidthPx = dimensions.widthPx,
+                    targetHeightPx = dimensions.heightPx,
                     draw = webView::draw,
                 )
             }.getOrNull()

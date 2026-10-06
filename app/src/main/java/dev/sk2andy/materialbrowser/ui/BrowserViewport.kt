@@ -13,13 +13,18 @@ import android.graphics.Bitmap
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.os.Build
+import android.view.SurfaceView
 import android.view.View
+import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -66,6 +71,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.TransformOrigin
@@ -87,6 +94,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.applyStatusBarIconAppearance
 import dev.sk2andy.materialbrowser.browser.BLANK_URL
@@ -103,6 +113,8 @@ import dev.sk2andy.materialbrowser.data.FavoriteEntry
 import dev.sk2andy.materialbrowser.data.FavoriteLibrary
 import dev.sk2andy.materialbrowser.ui.theme.browserChromeSurfaceTokens
 import eightbitlab.com.blurview.BlurTarget
+import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.delay
 import kotlin.math.absoluteValue
 import kotlin.math.roundToInt
 
@@ -317,6 +329,7 @@ internal fun BrowserViewport(
     liveFrameTabId: String?,
     tabOverviewVisible: Boolean,
     onLiveFrame: (String) -> Unit,
+    onHandoffExpired: (TabHandoff) -> Unit,
     onSearch: () -> Unit,
     onFavorite: (String) -> Unit,
     onOpenFavorites: () -> Unit = {},
@@ -328,6 +341,59 @@ internal fun BrowserViewport(
     onBlurTargetReleased: (BlurTarget) -> Unit,
 ) {
     val density = LocalDensity.current
+    var attachedEngineView by remember(selectedTab.id) { mutableStateOf<View?>(null) }
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val currentOnHandoffExpired by rememberUpdatedState(onHandoffExpired)
+    val fallbackAlpha = remember(handoff?.visualIdentity) { Animatable(1f) }
+    LaunchedEffect(controller, handoff?.visualIdentity, selectedTab.id, tabOverviewVisible, lifecycleOwner) {
+        val restoringFrame = handoff?.takeIf {
+            it.isRestoring && it.tabId == selectedTab.id && !tabOverviewVisible
+        } ?: return@LaunchedEffect
+        lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            controller.requestRestorationPreview(restoringFrame.tabId, restoringFrame.visualIdentity)
+            try {
+                awaitCancellation()
+            } finally {
+                controller.releaseRestorationPreview(restoringFrame.visualIdentity)
+            }
+        }
+    }
+    LaunchedEffect(
+        handoff?.visualIdentity,
+        selectedTab.id,
+        attachedEngineView,
+        tabOverviewVisible,
+        lifecycleOwner,
+    ) {
+        val departingFrame = handoff ?: return@LaunchedEffect
+        val engineView = attachedEngineView ?: return@LaunchedEffect
+        if (tabOverviewVisible || departingFrame.tabId != selectedTab.id) return@LaunchedEffect
+        lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            delay(TabHandoffRules.SURFACE_FALLBACK_DELAY_MILLIS)
+            while (true) {
+                if (
+                    engineView.isAttachedToWindow && engineView.isShown &&
+                    (!controller.usesGeckoEngine || engineView.hasValidRendererSurface())
+                ) {
+                    // A decorative snapshot must not indefinitely hide an interactive renderer.
+                    // This releases only the UI cover; Gecko's paint gate remains authoritative.
+                    fallbackAlpha.animateTo(
+                        targetValue = 0f,
+                        animationSpec = tween(
+                            durationMillis = TabHandoffRules.revealDurationMillis(departingFrame),
+                            easing = FastOutSlowInEasing,
+                        ),
+                    )
+                    currentOnHandoffExpired(departingFrame)
+                    engineView.postOnAnimation {
+                        if (engineView.isAttachedToWindow) engineView.rootView.invalidate()
+                    }
+                    return@repeatOnLifecycle
+                }
+                delay(100L)
+            }
+        }
+    }
     val hapticView = LocalView.current
     val pictureInPictureAspectRatio = controller.pictureInPictureAspectRatio
     val dragDirection by remember(dragOffset) {
@@ -480,6 +546,7 @@ internal fun BrowserViewport(
                 defaultStatusBarUsesDarkIcons = defaultStatusBarUsesDarkIcons,
                 onRefresh = controller::reload,
                 onLiveFrame = onLiveFrame,
+                onEngineViewAttached = { attachedEngineView = it },
                 onBlurTargetAttached = onBlurTargetAttached,
                 onBlurTargetReleased = onBlurTargetReleased,
                 contentObscured = pageErrorFeedback !is PageErrorFeedbackState.Hidden,
@@ -581,21 +648,25 @@ internal fun BrowserViewport(
     }
 
     handoff?.let { currentHandoff ->
+        val liveRevealAlpha = if (TabHandoffRules.shouldRevealLiveContent(
+                handoff = currentHandoff,
+                tabOverviewVisible = tabOverviewVisible,
+                liveFrameTabId = liveFrameTabId,
+            )
+        ) {
+            handoffAlpha
+        } else {
+            1f
+        }
         TabHandoffOverlay(
             handoff = currentHandoff,
+            preview = controller.restorationPreview
+                ?.takeIf { currentHandoff.isRestoring && it.tabId == currentHandoff.tabId }
+                ?.bitmap ?: currentHandoff.preview,
             favorites = controller.favorites,
             favoriteLibrary = controller.favoriteLibrary,
             favoriteFavicons = controller.favoriteFavicons,
-            alpha = if (TabHandoffRules.shouldRevealLiveContent(
-                    handoff = currentHandoff,
-                    tabOverviewVisible = tabOverviewVisible,
-                    liveFrameTabId = liveFrameTabId,
-                )
-            ) {
-                handoffAlpha
-            } else {
-                1f
-            },
+            alpha = minOf(fallbackAlpha.value, liveRevealAlpha),
             rootHeightPx = rootHeightPx,
             bottomBarTopPx = bottomBarTopPx,
         )
@@ -629,6 +700,7 @@ private fun ActiveBrowserEngineView(
     defaultStatusBarUsesDarkIcons: Boolean,
     onRefresh: () -> Unit,
     onLiveFrame: (String) -> Unit,
+    onEngineViewAttached: (View?) -> Unit,
     onBlurTargetAttached: (BlurTarget) -> Unit,
     onBlurTargetReleased: (BlurTarget) -> Unit,
     contentObscured: Boolean,
@@ -673,6 +745,7 @@ private fun ActiveBrowserEngineView(
     val indicatorContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh.toArgb()
     val currentOnRefresh by rememberUpdatedState(onRefresh)
     val currentOnLiveFrame by rememberUpdatedState(onLiveFrame)
+    val currentOnEngineViewAttached by rememberUpdatedState(onEngineViewAttached)
     val currentOnBlurTargetAttached by rememberUpdatedState(onBlurTargetAttached)
     val currentOnBlurTargetReleased by rememberUpdatedState(onBlurTargetReleased)
     key(browserContentBlurEnabled) {
@@ -737,6 +810,7 @@ private fun ActiveBrowserEngineView(
                         onContentPresented = currentOnLiveFrame,
                         backdropCaptureEnabled = browserContentBlurEnabled,
                     )
+                    currentOnEngineViewAttached(attachedView)
                     // Android's draw does not establish that Gecko's separate SurfaceView
                     // has page content. Gecko releases the handoff through its engine gate.
                     if (attachedView != null && !controller.usesGeckoEngine) {
@@ -749,8 +823,10 @@ private fun ActiveBrowserEngineView(
                         }
                     }
                 }
+                if (!visible) currentOnEngineViewAttached(null)
             },
             onRelease = { hostView ->
+                currentOnEngineViewAttached(null)
                 val hostState = hostView.tag as? BrowserEngineViewHostState
                 hostState?.release()
                 hostView.tag = null
@@ -760,6 +836,14 @@ private fun ActiveBrowserEngineView(
             modifier = Modifier.fillMaxSize(),
         )
     }
+}
+
+private fun View.hasValidRendererSurface(): Boolean = when (this) {
+    is SurfaceView -> holder.surface.isValid
+    is ViewGroup -> (0 until childCount).any { index ->
+        getChildAt(index).hasValidRendererSurface()
+    }
+    else -> false
 }
 
 private class BrowserEngineViewHostState(val container: FrameLayout) {
@@ -854,6 +938,7 @@ private class BrowserEngineViewHostState(val container: FrameLayout) {
 @Composable
 private fun TabHandoffOverlay(
     handoff: TabHandoff,
+    preview: Bitmap?,
     favorites: List<FavoriteEntry>,
     favoriteLibrary: FavoriteLibrary? = null,
     favoriteFavicons: Map<String, Bitmap>,
@@ -869,7 +954,7 @@ private fun TabHandoffOverlay(
     ) {
         FullscreenTabPreviewContent(
             tab = handoff.tab,
-            preview = handoff.preview,
+            preview = preview,
             favicon = handoff.favicon,
             favorites = favorites,
             favoriteLibrary = favoriteLibrary,
@@ -877,6 +962,7 @@ private fun TabHandoffOverlay(
             rootHeightPx = rootHeightPx,
             previewTopInsetPx = handoff.previewTopInsetPx,
             bottomBarTopPx = bottomBarTopPx,
+            previewSaturation = TabHandoffRules.previewSaturation(handoff, alpha),
         )
     }
 }
@@ -941,8 +1027,16 @@ internal fun FullscreenTabPreviewContent(
     favoriteLibrary: FavoriteLibrary? = null,
     favoriteFavicons: Map<String, Bitmap> = emptyMap(),
     blankFavoritesAlpha: () -> Float = { 1f },
+    previewSaturation: Float = 1f,
 ) {
     val density = LocalDensity.current
+    val previewColorFilter = remember(previewSaturation) {
+        if (previewSaturation < 1f) {
+            ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(previewSaturation) })
+        } else {
+            null
+        }
+    }
     BoxWithConstraints(
         modifier = Modifier
             .fillMaxSize()
@@ -984,6 +1078,7 @@ internal fun FullscreenTabPreviewContent(
                             modifier = Modifier.fillMaxSize(),
                             contentScale = ContentScale.Crop,
                             alignment = Alignment.TopCenter,
+                            colorFilter = previewColorFilter,
                         )
                     } else {
                         TabPreviewPlaceholder(title = displayTabTitle(tab), favicon = favicon)

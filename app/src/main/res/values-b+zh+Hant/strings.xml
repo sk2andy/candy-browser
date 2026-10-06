@@ -1287,6 +1287,16 @@
     <string name="developer_options_unlock_action">解鎖開發者選項</string>
     <string name="developer_options_unlocked">開發者選項已解鎖</string>
     <string name="developer_options_security_section">安全例外</string>
+    <string name="developer_options_memory_section">分頁記憶體</string>
+    <string name="developer_options_foreground_tab_idle_timeout">卸載閒置分頁</string>
+    <string name="developer_options_foreground_tab_idle_timeout_summary">Candy 在前景執行時，未選取的分頁在閒置達到此時間後會被卸載。目前選取的分頁和受保護的工作階段會保持載入。</string>
+    <string name="developer_options_background_warm_tab_count">背景保持載入的分頁</string>
+    <string name="developer_options_background_warm_tab_count_summary">應用程式進入背景後，保持載入的最近使用且未選取的分頁數量。目前選取的分頁始終保持載入；受保護的工作階段可能超出此限制。</string>
+    <string name="developer_options_history_cache_lifetime">頁面快取保留時間</string>
+    <string name="developer_options_history_cache_lifetime_summary">Gecko 會快取多個頁面，供上一頁和下一頁操作使用。其到期計時器會在所選時間的大約三分之二到完整時間之間釋放符合條件的頁面；記憶體壓力可能使頁面提前釋放。變更此值後，需完全重新啟動應用程式。</string>
+    <string name="developer_options_minutes_value">%1$d 分鐘</string>
+    <string name="developer_options_seconds_value">%1$d 秒</string>
+    <string name="developer_options_tabs_value">%1$d 個分頁</string>
     <string name="developer_options_http_warning_title">在不安全的頁面上啟用自動填充?</string>
     <string name="developer_options_http_warning_message">HTTP 不加密憑證或頁面內容. 僅為可信開發或本地網路頁面啟用密碼管理器選擇.</string>
     <string name="developer_options_http_warning_confirm">無論如何都能啟用</string>

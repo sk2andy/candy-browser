@@ -1302,6 +1302,16 @@
     <string name="developer_options_unlock_action">Lås upp utvecklaralternativ</string>
     <string name="developer_options_unlocked">Utvecklares alternativ låstes upp</string>
     <string name="developer_options_security_section">Säkerheten överskrider</string>
+    <string name="developer_options_memory_section">Minne för flikar</string>
+    <string name="developer_options_foreground_tab_idle_timeout">Frigör inaktiva flikar</string>
+    <string name="developer_options_foreground_tab_idle_timeout_summary">Frigör flikar som inte är valda efter denna tid utan aktivitet medan Candy är i förgrunden. Den valda fliken och skyddade sessioner förblir laddade.</string>
+    <string name="developer_options_background_warm_tab_count">Flikar som hålls laddade i bakgrunden</string>
+    <string name="developer_options_background_warm_tab_count_summary">Antal nyligen använda flikar som inte är valda och som hålls laddade i bakgrunden. Den valda fliken förblir alltid laddad; skyddade sessioner kan överskrida denna gräns.</string>
+    <string name="developer_options_history_cache_lifetime">Livslängd för sidcache</string>
+    <string name="developer_options_history_cache_lifetime_summary">Gecko behåller flera sidor i cachen för Bakåt och Framåt. Timern frigör berörda sidor efter ungefär två tredjedelar till hela den valda tiden; minnestryck kan frigöra dem tidigare. En ändring kräver att appen startas om helt.</string>
+    <string name="developer_options_minutes_value">%1$d min</string>
+    <string name="developer_options_seconds_value">%1$d s</string>
+    <string name="developer_options_tabs_value">%1$d flikar</string>
     <string name="developer_options_http_warning_title">Aktivera automatisk påfyllning på osäkra sidor?</string>
     <string name="developer_options_http_warning_message">HTTP krypterar inte identiteter eller sidinnehåll. Aktivera endast val av lösenordshanterare för betrodd utveckling eller sidor för lokala nätverk.</string>
     <string name="developer_options_http_warning_confirm">Aktivera ändå</string>

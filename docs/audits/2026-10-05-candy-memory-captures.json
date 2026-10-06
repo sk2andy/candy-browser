@@ -1,0 +1,1829 @@
+{
+  "geckoVersion": "157.0.20260924084938",
+  "method": {
+    "warmupSeconds": 60,
+    "backgroundSeconds": 60,
+    "domCycles": 100,
+    "pairedTestApkSha256": "fa36f7a2a2cc2114164ee24d5ed3211d01ec36f7b0e18e2433e6a374326a1fb6",
+    "limits": [
+      "One sequential emulator pair; not a randomized benchmark or equal-workload Firefox comparison.",
+      "Native explicit allocation and Android PSS are different metrics.",
+      "Android snapshot precedes native capture, except after-minimize-android, which includes report parser overhead.",
+      "Controlled DOM fixture does not assert that Candy owns the created candidates."
+    ]
+  },
+  "runs": {
+    "baseline": {
+      "apkSha256": "5be1b66e26525536ed3962e5a0a6ebe939588e0272a7a4cb1264db8fe258cbb9",
+      "parentPidValidatedAllReports": true,
+      "snapshots": [
+        {
+          "name": "before-dom-churn",
+          "processLifecycleState": "RESUMED",
+          "mainTotalPssKiB": 338049,
+          "javaUsedBytes": 18856976,
+          "nativeAllocatedBytes": 25255376,
+          "nativeMemoryMinimized": false,
+          "androidSampleBeforeNativeCapture": true,
+          "nativeSummary": {
+            "process_count": 3,
+            "processes": [
+              {
+                "process": "gpu",
+                "explicit_bytes": 2880160,
+                "allocation_categories_bytes": {
+                  "javascript": 0,
+                  "images": 0,
+                  "graphics": 346248,
+                  "dom_layout": 0,
+                  "bindings": 0,
+                  "heap_unclassified": 1975064,
+                  "other": 558848
+                },
+                "ownership_subsets_bytes": {
+                  "bfcache": 0,
+                  "extensions": 0,
+                  "orphan_dom": 0
+                },
+                "heap_unclassified_source": "derived",
+                "metrics_bytes": {
+                  "resident": 294268928,
+                  "resident-unique": 36642816,
+                  "resident-fast": null,
+                  "heap-allocated": 2699936,
+                  "heap-overhead": null,
+                  "vsize": 17829093376,
+                  "js-main-runtime-gc-heap-committed": null
+                },
+                "counters": {
+                  "ghost_windows": null
+                },
+                "excluded_aggregate_paths": 1,
+                "warnings": [
+                  "Aggregate ancestor paths excluded; incomplete descendant exports may undercount."
+                ]
+              },
+              {
+                "process": "main",
+                "explicit_bytes": 153120743,
+                "allocation_categories_bytes": {
+                  "javascript": 87467920,
+                  "images": 464,
+                  "graphics": 208496,
+                  "dom_layout": 12793248,
+                  "bindings": 637584,
+                  "heap_unclassified": 28128864,
+                  "other": 23884167
+                },
+                "ownership_subsets_bytes": {
+                  "bfcache": 0,
+                  "extensions": 30791048,
+                  "orphan_dom": 0
+                },
+                "heap_unclassified_source": "derived",
+                "metrics_bytes": {
+                  "resident": 720007168,
+                  "resident-unique": 245727232,
+                  "resident-fast": null,
+                  "heap-allocated": 106871056,
+                  "heap-overhead": null,
+                  "vsize": 47694278656,
+                  "js-main-runtime-gc-heap-committed": null
+                },
+                "counters": {
+                  "ghost_windows": 0
+                },
+                "excluded_aggregate_paths": 0,
+                "warnings": []
+              },
+              {
+                "process": "content",
+                "explicit_bytes": 35898976,
+                "allocation_categories_bytes": {
+                  "javascript": 9711896,
+                  "images": 240,
+                  "graphics": 204560,
+                  "dom_layout": 2494544,
+                  "bindings": 114496,
+                  "heap_unclassified": 21630248,
+                  "other": 1742992
+                },
+                "ownership_subsets_bytes": {
+                  "bfcache": 0,
+                  "extensions": 693376,
+                  "orphan_dom": 0
+                },
+                "heap_unclassified_source": "derived",
+                "metrics_bytes": {
+                  "resident": 359944192,
+                  "resident-unique": 64229376,
+                  "resident-fast": null,
+                  "heap-allocated": 30101312,
+                  "heap-overhead": null,
+                  "vsize": 20124045312,
+                  "js-main-runtime-gc-heap-committed": null
+                },
+                "counters": {
+                  "ghost_windows": 0
+                },
+                "excluded_aggregate_paths": 0,
+                "warnings": []
+              }
+            ],
+            "totals": {
+              "explicit_bytes": 191899879,
+              "allocation_categories_bytes": {
+                "javascript": 97179816,
+                "images": 704,
+                "graphics": 759304,
+                "dom_layout": 15287792,
+                "bindings": 752080,
+                "heap_unclassified": 51734176,
+                "other": 26186007
+              },
+              "ownership_subsets_bytes": {
+                "bfcache": 0,
+                "extensions": 31484424,
+                "orphan_dom": 0
+              },
+              "metrics_bytes": {
+                "resident": 1374220288,
+                "resident-unique": 346599424,
+                "resident-fast": null,
+                "heap-allocated": 139672304,
+                "heap-overhead": null,
+                "vsize": 85647417344,
+                "js-main-runtime-gc-heap-committed": null
+              },
+              "counters": {
+                "ghost_windows": null
+              }
+            },
+            "notes": [
+              "Allocation categories partition explicit bytes; ownership subsets overlap them and each other. Do not add subsets to allocations.",
+              "Other reporter trees overlap explicit and are excluded. XPConnect bindings are Gecko infrastructure, not proof of a Candy JS bridge leak.",
+              "JavaScript includes native worker runtime reports. Other is measured allocation outside these selected categories, not synonymous with unclassified heap.",
+              "Resident sums include shared pages more than once; they are not Android PSS or physical RAM totals. Do not add resident to explicit.",
+              "Missing metrics are null, not zero. BFCache and extension ownership only include paths identifiable in the report.",
+              "Anonymized reports may hide extension attribution. Process names and report paths are omitted from this summary.",
+              "Native explicit reporters do not inventory the Android ART heap. Use a separate Java heap dump to attribute Kotlin objects, bitmaps, and Candy bridge owners."
+            ]
+          },
+          "mainMemoryStatsKiB": {
+            "summary.code": "36584",
+            "summary.stack": "3412",
+            "summary.graphics": "0",
+            "summary.java-heap": "20260",
+            "summary.native-heap": "17668",
+            "summary.system": "99209",
+            "summary.total-pss": "338049",
+            "summary.private-other": "160916",
+            "summary.total-swap": "0"
+          }
+        },
+        {
+          "name": "after-dom-churn",
+          "processLifecycleState": "RESUMED",
+          "mainTotalPssKiB": 330558,
+          "javaUsedBytes": 18862864,
+          "nativeAllocatedBytes": 23877920,
+          "nativeMemoryMinimized": false,
+          "androidSampleBeforeNativeCapture": true,
+          "nativeSummary": {
+            "process_count": 4,
+            "processes": [
+              {
+                "process": "gpu",
+                "explicit_bytes": 3282720,
+                "allocation_categories_bytes": {
+                  "javascript": 0,
+                  "images": 0,
+                  "graphics": 895664,
+                  "dom_layout": 0,
+                  "bindings": 0,
+                  "heap_unclassified": 1828208,
+                  "other": 558848
+                },
+                "ownership_subsets_bytes": {
+                  "bfcache": 0,
+                  "extensions": 0,
+                  "orphan_dom": 0
+                },
+                "heap_unclassified_source": "derived",
+                "metrics_bytes": {
+                  "resident": 298352640,
+                  "resident-unique": 39047168,
+                  "resident-fast": null,
+                  "heap-allocated": 3102496,
+                  "heap-overhead": null,
+                  "vsize": 17831157760,
+                  "js-main-runtime-gc-heap-committed": null
+                },
+                "counters": {
+                  "ghost_windows": null
+                },
+                "excluded_aggregate_paths": 1,
+                "warnings": [
+                  "Aggregate ancestor paths excluded; incomplete descendant exports may undercount."
+                ]
+              },
+              {
+                "process": "main",
+                "explicit_bytes": 154763639,
+                "allocation_categories_bytes": {
+                  "javascript": 87908800,
+                  "images": 464,
+                  "graphics": 208496,
+                  "dom_layout": 13671584,
+                  "bindings": 474624,
+                  "heap_unclassified": 28550288,
+                  "other": 23949383
+                },
+                "ownership_subsets_bytes": {
+                  "bfcache": 0,
+                  "extensions": 30945752,
+                  "orphan_dom": 0
+                },
+                "heap_unclassified_source": "derived",
+                "metrics_bytes": {
+                  "resident": 729202688,
+                  "resident-unique": 248561664,
+                  "resident-fast": null,
+                  "heap-allocated": 108221856,
+                  "heap-overhead": null,
+                  "vsize": 47684431872,
+                  "js-main-runtime-gc-heap-committed": null
+                },
+                "counters": {
+                  "ghost_windows": 0
+                },
+                "excluded_aggregate_paths": 0,
+                "warnings": []
+              },
+              {
+                "process": "other",
+                "explicit_bytes": 18788368,
+                "allocation_categories_bytes": {
+                  "javascript": 1589224,
+                  "images": 240,
+                  "graphics": 201648,
+                  "dom_layout": 0,
+                  "bindings": 19216,
+                  "heap_unclassified": 16381112,
+                  "other": 596928
+                },
+                "ownership_subsets_bytes": {
+                  "bfcache": 0,
+                  "extensions": 0,
+                  "orphan_dom": 0
+                },
+                "heap_unclassified_source": "derived",
+                "metrics_bytes": {
+                  "resident": 320487424,
+                  "resident-unique": 44032000,
+                  "resident-fast": null,
+                  "heap-allocated": 17582848,
+                  "heap-overhead": null,
+                  "vsize": 20444545024,
+                  "js-main-runtime-gc-heap-committed": null
+                },
+                "counters": {
+                  "ghost_windows": 0
+                },
+                "excluded_aggregate_paths": 0,
+                "warnings": []
+              },
+              {
+                "process": "content",
+                "explicit_bytes": 63430032,
+                "allocation_categories_bytes": {
+                  "javascript": 13270456,
+                  "images": 240,
+                  "graphics": 1702016,
+                  "dom_layout": 11219200,
+                  "bindings": 122176,
+                  "heap_unclassified": 34508296,
+                  "other": 2607648
+                },
+                "ownership_subsets_bytes": {
+                  "bfcache": 0,
+                  "extensions": 1646352,
+                  "orphan_dom": 8363648
+                },
+                "heap_unclassified_source": "derived",
+                "metrics_bytes": {
+                  "resident": 391364608,
+                  "resident-unique": 91934720,
+                  "resident-fast": null,
+                  "heap-allocated": 55735776,
+                  "heap-overhead": null,
+                  "vsize": 20140822528,
+                  "js-main-runtime-gc-heap-committed": null
+                },
+                "counters": {
+                  "ghost_windows": 0
+                },
+                "excluded_aggregate_paths": 0,
+                "warnings": []
+              }
+            ],
+            "totals": {
+              "explicit_bytes": 240264759,
+              "allocation_categories_bytes": {
+                "javascript": 102768480,
+                "images": 944,
+                "graphics": 3007824,
+                "dom_layout": 24890784,
+                "bindings": 616016,
+                "heap_unclassified": 81267904,
+                "other": 27712807
+              },
+              "ownership_subsets_bytes": {
+                "bfcache": 0,
+                "extensions": 32592104,
+                "orphan_dom": 8363648
+              },
+              "metrics_bytes": {
+                "resident": 1739407360,
+                "resident-unique": 423575552,
+                "resident-fast": null,
+                "heap-allocated": 184642976,
+                "heap-overhead": null,
+                "vsize": 106100957184,
+                "js-main-runtime-gc-heap-committed": null
+              },
+              "counters": {
+                "ghost_windows": null
+              }
+            },
+            "notes": [
+              "Allocation categories partition explicit bytes; ownership subsets overlap them and each other. Do not add subsets to allocations.",
+              "Other reporter trees overlap explicit and are excluded. XPConnect bindings are Gecko infrastructure, not proof of a Candy JS bridge leak.",
+              "JavaScript includes native worker runtime reports. Other is measured allocation outside these selected categories, not synonymous with unclassified heap.",
+              "Resident sums include shared pages more than once; they are not Android PSS or physical RAM totals. Do not add resident to explicit.",
+              "Missing metrics are null, not zero. BFCache and extension ownership only include paths identifiable in the report.",
+              "Anonymized reports may hide extension attribution. Process names and report paths are omitted from this summary.",
+              "Native explicit reporters do not inventory the Android ART heap. Use a separate Java heap dump to attribute Kotlin objects, bitmaps, and Candy bridge owners."
+            ]
+          },
+          "mainMemoryStatsKiB": {
+            "summary.code": "34292",
+            "summary.stack": "3388",
+            "summary.graphics": "0",
+            "summary.java-heap": "24344",
+            "summary.native-heap": "16880",
+            "summary.system": "88066",
+            "summary.total-pss": "330558",
+            "summary.private-other": "163588",
+            "summary.total-swap": "0"
+          }
+        },
+        {
+          "name": "before-background",
+          "processLifecycleState": "RESUMED",
+          "mainTotalPssKiB": 337578,
+          "javaUsedBytes": 25877776,
+          "nativeAllocatedBytes": 23818992,
+          "mainMemoryStatsKiB": {
+            "summary.code": "34104",
+            "summary.stack": "3388",
+            "summary.graphics": "0",
+            "summary.java-heap": "31512",
+            "summary.native-heap": "16796",
+            "summary.system": "87878",
+            "summary.total-pss": "337578",
+            "summary.private-other": "163900",
+            "summary.total-swap": "0"
+          }
+        },
+        {
+          "name": "while-background",
+          "processLifecycleState": "CREATED",
+          "mainTotalPssKiB": 344622,
+          "javaUsedBytes": 10071408,
+          "nativeAllocatedBytes": 36116592,
+          "nativeMemoryMinimized": false,
+          "androidSampleBeforeNativeCapture": true,
+          "nativeSummary": {
+            "process_count": 3,
+            "processes": [
+              {
+                "process": "gpu",
+                "explicit_bytes": 2804832,
+                "allocation_categories_bytes": {
+                  "javascript": 0,
+                  "images": 0,
+                  "graphics": 730640,
+                  "dom_layout": 0,
+                  "bindings": 0,
+                  "heap_unclassified": 1515344,
+                  "other": 558848
+                },
+                "ownership_subsets_bytes": {
+                  "bfcache": 0,
+                  "extensions": 0,
+                  "orphan_dom": 0
+                },
+                "heap_unclassified_source": "derived",
+                "metrics_bytes": {
+                  "resident": 297615360,
+                  "resident-unique": 38211584,
+                  "resident-fast": null,
+                  "heap-allocated": 2624608,
+                  "heap-overhead": null,
+                  "vsize": 17833254912,
+                  "js-main-runtime-gc-heap-committed": null
+                },
+                "counters": {
+                  "ghost_windows": null
+                },
+                "excluded_aggregate_paths": 1,
+                "warnings": [
+                  "Aggregate ancestor paths excluded; incomplete descendant exports may undercount."
+                ]
+              },
+              {
+                "process": "main",
+                "explicit_bytes": 126773511,
+                "allocation_categories_bytes": {
+                  "javascript": 78963696,
+                  "images": 400,
+                  "graphics": 206688,
+                  "dom_layout": 2134256,
+                  "bindings": 328000,
+                  "heap_unclassified": 21786080,
+                  "other": 23354391
+                },
+                "ownership_subsets_bytes": {
+                  "bfcache": 0,
+                  "extensions": 29253184,
+                  "orphan_dom": 0
+                },
+                "heap_unclassified_source": "derived",
+                "metrics_bytes": {
+                  "resident": 729247744,
+                  "resident-unique": 248819712,
+                  "resident-fast": null,
+                  "heap-allocated": 85429984,
+                  "heap-overhead": null,
+                  "vsize": 39048609792,
+                  "js-main-runtime-gc-heap-committed": null
+                },
+                "counters": {
+                  "ghost_windows": 0
+                },
+                "excluded_aggregate_paths": 0,
+                "warnings": []
+              },
+              {
+                "process": "content",
+                "explicit_bytes": 33975120,
+                "allocation_categories_bytes": {
+                  "javascript": 9982248,
+                  "images": 240,
+                  "graphics": 204032,
+                  "dom_layout": 2674768,
+                  "bindings": 80496,
+                  "heap_unclassified": 19376920,
+                  "other": 1656416
+                },
+                "ownership_subsets_bytes": {
+                  "bfcache": 0,
+                  "extensions": 399312,
+                  "orphan_dom": 82816
+                },
+                "heap_unclassified_source": "derived",
+                "metrics_bytes": {
+                  "resident": 388706304,
+                  "resident-unique": 90079232,
+                  "resident-fast": null,
+                  "heap-allocated": 28194256,
+                  "heap-overhead": null,
+                  "vsize": 20103962624,
+                  "js-main-runtime-gc-heap-committed": null
+                },
+                "counters": {
+                  "ghost_windows": 0
+                },
+                "excluded_aggregate_paths": 0,
+                "warnings": []
+              }
+            ],
+            "totals": {
+              "explicit_bytes": 163553463,
+              "allocation_categories_bytes": {
+                "javascript": 88945944,
+                "images": 640,
+                "graphics": 1141360,
+                "dom_layout": 4809024,
+                "bindings": 408496,
+                "heap_unclassified": 42678344,
+                "other": 25569655
+              },
+              "ownership_subsets_bytes": {
+                "bfcache": 0,
+                "extensions": 29652496,
+                "orphan_dom": 82816
+              },
+              "metrics_bytes": {
+                "resident": 1415569408,
+                "resident-unique": 377110528,
+                "resident-fast": null,
+                "heap-allocated": 116248848,
+                "heap-overhead": null,
+                "vsize": 76985827328,
+                "js-main-runtime-gc-heap-committed": null
+              },
+              "counters": {
+                "ghost_windows": null
+              }
+            },
+            "notes": [
+              "Allocation categories partition explicit bytes; ownership subsets overlap them and each other. Do not add subsets to allocations.",
+              "Other reporter trees overlap explicit and are excluded. XPConnect bindings are Gecko infrastructure, not proof of a Candy JS bridge leak.",
+              "JavaScript includes native worker runtime reports. Other is measured allocation outside these selected categories, not synonymous with unclassified heap.",
+              "Resident sums include shared pages more than once; they are not Android PSS or physical RAM totals. Do not add resident to explicit.",
+              "Missing metrics are null, not zero. BFCache and extension ownership only include paths identifiable in the report.",
+              "Anonymized reports may hide extension attribution. Process names and report paths are omitted from this summary.",
+              "Native explicit reporters do not inventory the Android ART heap. Use a separate Java heap dump to attribute Kotlin objects, bitmaps, and Candy bridge owners."
+            ]
+          },
+          "mainMemoryStatsKiB": {
+            "summary.code": "35212",
+            "summary.stack": "3344",
+            "summary.graphics": "0",
+            "summary.java-heap": "16308",
+            "summary.native-heap": "33064",
+            "summary.system": "101646",
+            "summary.total-pss": "344622",
+            "summary.private-other": "155048",
+            "summary.total-swap": "0"
+          }
+        },
+        {
+          "name": "after-background-resume",
+          "processLifecycleState": "RESUMED",
+          "mainTotalPssKiB": 336271,
+          "javaUsedBytes": 10698032,
+          "nativeAllocatedBytes": 26221376,
+          "nativeMemoryMinimized": false,
+          "androidSampleBeforeNativeCapture": true,
+          "nativeSummary": {
+            "process_count": 3,
+            "processes": [
+              {
+                "process": "gpu",
+                "explicit_bytes": 3250944,
+                "allocation_categories_bytes": {
+                  "javascript": 0,
+                  "images": 0,
+                  "graphics": 718288,
+                  "dom_layout": 0,
+                  "bindings": 0,
+                  "heap_unclassified": 1973808,
+                  "other": 558848
+                },
+                "ownership_subsets_bytes": {
+                  "bfcache": 0,
+                  "extensions": 0,
+                  "orphan_dom": 0
+                },
+                "heap_unclassified_source": "derived",
+                "metrics_bytes": {
+                  "resident": 298713088,
+                  "resident-unique": 39313408,
+                  "resident-fast": null,
+                  "heap-allocated": 3070720,
+                  "heap-overhead": null,
+                  "vsize": 17833304064,
+                  "js-main-runtime-gc-heap-committed": null
+                },
+                "counters": {
+                  "ghost_windows": null
+                },
+                "excluded_aggregate_paths": 1,
+                "warnings": [
+                  "Aggregate ancestor paths excluded; incomplete descendant exports may undercount."
+                ]
+              },
+              {
+                "process": "main",
+                "explicit_bytes": 128233879,
+                "allocation_categories_bytes": {
+                  "javascript": 79589456,
+                  "images": 400,
+                  "graphics": 206688,
+                  "dom_layout": 2319328,
+                  "bindings": 340592,
+                  "heap_unclassified": 22350832,
+                  "other": 23426583
+                },
+                "ownership_subsets_bytes": {
+                  "bfcache": 0,
+                  "extensions": 29361232,
+                  "orphan_dom": 0
+                },
+                "heap_unclassified_source": "derived",
+                "metrics_bytes": {
+                  "resident": 720773120,
+                  "resident-unique": 240246784,
+                  "resident-fast": null,
+                  "heap-allocated": 86479280,
+                  "heap-overhead": null,
+                  "vsize": 39056236544,
+                  "js-main-runtime-gc-heap-committed": null
+                },
+                "counters": {
+                  "ghost_windows": 0
+                },
+                "excluded_aggregate_paths": 0,
+                "warnings": []
+              },
+              {
+                "process": "content",
+                "explicit_bytes": 34846080,
+                "allocation_categories_bytes": {
+                  "javascript": 10493848,
+                  "images": 240,
+                  "graphics": 204032,
+                  "dom_layout": 2674544,
+                  "bindings": 81216,
+                  "heap_unclassified": 19663592,
+                  "other": 1728608
+                },
+                "ownership_subsets_bytes": {
+                  "bfcache": 0,
+                  "extensions": 530008,
+                  "orphan_dom": 83168
+                },
+                "heap_unclassified_source": "derived",
+                "metrics_bytes": {
+                  "resident": 390234112,
+                  "resident-unique": 91541504,
+                  "resident-fast": null,
+                  "heap-allocated": 28921856,
+                  "heap-overhead": null,
+                  "vsize": 20103962624,
+                  "js-main-runtime-gc-heap-committed": null
+                },
+                "counters": {
+                  "ghost_windows": 0
+                },
+                "excluded_aggregate_paths": 0,
+                "warnings": []
+              }
+            ],
+            "totals": {
+              "explicit_bytes": 166330903,
+              "allocation_categories_bytes": {
+                "javascript": 90083304,
+                "images": 640,
+                "graphics": 1129008,
+                "dom_layout": 4993872,
+                "bindings": 421808,
+                "heap_unclassified": 43988232,
+                "other": 25714039
+              },
+              "ownership_subsets_bytes": {
+                "bfcache": 0,
+                "extensions": 29891240,
+                "orphan_dom": 83168
+              },
+              "metrics_bytes": {
+                "resident": 1409720320,
+                "resident-unique": 371101696,
+                "resident-fast": null,
+                "heap-allocated": 118471856,
+                "heap-overhead": null,
+                "vsize": 76993503232,
+                "js-main-runtime-gc-heap-committed": null
+              },
+              "counters": {
+                "ghost_windows": null
+              }
+            },
+            "notes": [
+              "Allocation categories partition explicit bytes; ownership subsets overlap them and each other. Do not add subsets to allocations.",
+              "Other reporter trees overlap explicit and are excluded. XPConnect bindings are Gecko infrastructure, not proof of a Candy JS bridge leak.",
+              "JavaScript includes native worker runtime reports. Other is measured allocation outside these selected categories, not synonymous with unclassified heap.",
+              "Resident sums include shared pages more than once; they are not Android PSS or physical RAM totals. Do not add resident to explicit.",
+              "Missing metrics are null, not zero. BFCache and extension ownership only include paths identifiable in the report.",
+              "Anonymized reports may hide extension attribution. Process names and report paths are omitted from this summary.",
+              "Native explicit reporters do not inventory the Android ART heap. Use a separate Java heap dump to attribute Kotlin objects, bitmaps, and Candy bridge owners."
+            ]
+          },
+          "mainMemoryStatsKiB": {
+            "summary.code": "35244",
+            "summary.stack": "3368",
+            "summary.graphics": "0",
+            "summary.java-heap": "16620",
+            "summary.native-heap": "22800",
+            "summary.system": "101683",
+            "summary.total-pss": "336271",
+            "summary.private-other": "156556",
+            "summary.total-swap": "0"
+          }
+        },
+        {
+          "name": "after-minimize",
+          "processLifecycleState": "RESUMED",
+          "mainTotalPssKiB": 341111,
+          "javaUsedBytes": 15740240,
+          "nativeAllocatedBytes": 26248240,
+          "nativeMemoryMinimized": true,
+          "androidSampleBeforeNativeCapture": true,
+          "nativeSummary": {
+            "process_count": 3,
+            "processes": [
+              {
+                "process": "gpu",
+                "explicit_bytes": 2831472,
+                "allocation_categories_bytes": {
+                  "javascript": 0,
+                  "images": 0,
+                  "graphics": 701552,
+                  "dom_layout": 0,
+                  "bindings": 0,
+                  "heap_unclassified": 1571072,
+                  "other": 558848
+                },
+                "ownership_subsets_bytes": {
+                  "bfcache": 0,
+                  "extensions": 0,
+                  "orphan_dom": 0
+                },
+                "heap_unclassified_source": "derived",
+                "metrics_bytes": {
+                  "resident": 299237376,
+                  "resident-unique": 39837696,
+                  "resident-fast": null,
+                  "heap-allocated": 2651248,
+                  "heap-overhead": null,
+                  "vsize": 17833304064,
+                  "js-main-runtime-gc-heap-committed": null
+                },
+                "counters": {
+                  "ghost_windows": null
+                },
+                "excluded_aggregate_paths": 1,
+                "warnings": [
+                  "Aggregate ancestor paths excluded; incomplete descendant exports may undercount."
+                ]
+              },
+              {
+                "process": "main",
+                "explicit_bytes": 128547479,
+                "allocation_categories_bytes": {
+                  "javascript": 79589456,
+                  "images": 400,
+                  "graphics": 206688,
+                  "dom_layout": 2319328,
+                  "bindings": 340848,
+                  "heap_unclassified": 22736368,
+                  "other": 23354391
+                },
+                "ownership_subsets_bytes": {
+                  "bfcache": 0,
+                  "extensions": 29361232,
+                  "orphan_dom": 0
+                },
+                "heap_unclassified_source": "derived",
+                "metrics_bytes": {
+                  "resident": 725303296,
+                  "resident-unique": 244703232,
+                  "resident-fast": null,
+                  "heap-allocated": 86792880,
+                  "heap-overhead": null,
+                  "vsize": 39056269312,
+                  "js-main-runtime-gc-heap-committed": null
+                },
+                "counters": {
+                  "ghost_windows": 0
+                },
+                "excluded_aggregate_paths": 0,
+                "warnings": []
+              },
+              {
+                "process": "content",
+                "explicit_bytes": 35042256,
+                "allocation_categories_bytes": {
+                  "javascript": 10595000,
+                  "images": 240,
+                  "graphics": 204032,
+                  "dom_layout": 2674544,
+                  "bindings": 83648,
+                  "heap_unclassified": 19828376,
+                  "other": 1656416
+                },
+                "ownership_subsets_bytes": {
+                  "bfcache": 0,
+                  "extensions": 530008,
+                  "orphan_dom": 83168
+                },
+                "heap_unclassified_source": "derived",
+                "metrics_bytes": {
+                  "resident": 381116416,
+                  "resident-unique": 82423808,
+                  "resident-fast": null,
+                  "heap-allocated": 29047632,
+                  "heap-overhead": null,
+                  "vsize": 20103962624,
+                  "js-main-runtime-gc-heap-committed": null
+                },
+                "counters": {
+                  "ghost_windows": 0
+                },
+                "excluded_aggregate_paths": 0,
+                "warnings": []
+              }
+            ],
+            "totals": {
+              "explicit_bytes": 166421207,
+              "allocation_categories_bytes": {
+                "javascript": 90184456,
+                "images": 640,
+                "graphics": 1112272,
+                "dom_layout": 4993872,
+                "bindings": 424496,
+                "heap_unclassified": 44135816,
+                "other": 25569655
+              },
+              "ownership_subsets_bytes": {
+                "bfcache": 0,
+                "extensions": 29891240,
+                "orphan_dom": 83168
+              },
+              "metrics_bytes": {
+                "resident": 1405657088,
+                "resident-unique": 366964736,
+                "resident-fast": null,
+                "heap-allocated": 118491760,
+                "heap-overhead": null,
+                "vsize": 76993536000,
+                "js-main-runtime-gc-heap-committed": null
+              },
+              "counters": {
+                "ghost_windows": null
+              }
+            },
+            "notes": [
+              "Allocation categories partition explicit bytes; ownership subsets overlap them and each other. Do not add subsets to allocations.",
+              "Other reporter trees overlap explicit and are excluded. XPConnect bindings are Gecko infrastructure, not proof of a Candy JS bridge leak.",
+              "JavaScript includes native worker runtime reports. Other is measured allocation outside these selected categories, not synonymous with unclassified heap.",
+              "Resident sums include shared pages more than once; they are not Android PSS or physical RAM totals. Do not add resident to explicit.",
+              "Missing metrics are null, not zero. BFCache and extension ownership only include paths identifiable in the report.",
+              "Anonymized reports may hide extension attribution. Process names and report paths are omitted from this summary.",
+              "Native explicit reporters do not inventory the Android ART heap. Use a separate Java heap dump to attribute Kotlin objects, bitmaps, and Candy bridge owners."
+            ]
+          },
+          "mainMemoryStatsKiB": {
+            "summary.code": "35260",
+            "summary.stack": "3368",
+            "summary.graphics": "0",
+            "summary.java-heap": "20992",
+            "summary.native-heap": "22844",
+            "summary.system": "101719",
+            "summary.total-pss": "341111",
+            "summary.private-other": "156928",
+            "summary.total-swap": "0"
+          }
+        },
+        {
+          "name": "after-minimize-android",
+          "processLifecycleState": "RESUMED",
+          "mainTotalPssKiB": 339311,
+          "javaUsedBytes": 12041488,
+          "nativeAllocatedBytes": 26156832,
+          "mainMemoryStatsKiB": {
+            "summary.code": "35220",
+            "summary.stack": "3368",
+            "summary.graphics": "0",
+            "summary.java-heap": "18436",
+            "summary.native-heap": "22844",
+            "summary.system": "101759",
+            "summary.total-pss": "339311",
+            "summary.private-other": "157684",
+            "summary.total-swap": "0"
+          }
+        }
+      ],
+      "artObjectInventory": {
+        "MainActivity": 1,
+        "BrowserController": 1,
+        "GeckoSession": 2,
+        "GeckoViewBrowserSession": 2,
+        "GeckoViewPrivacyHostRuntime": 1,
+        "CandyGeckoView": 3,
+        "Bitmap": 12,
+        "activeViewBindings": 1,
+        "pendingPreviewCaptures": 0
+      }
+    },
+    "fixed": {
+      "apkSha256": "f8bb684d146d25901f0571e651493aef1c83e7d9a47d8bee76f468497debd5fd",
+      "parentPidValidatedAllReports": true,
+      "snapshots": [
+        {
+          "name": "before-dom-churn",
+          "processLifecycleState": "RESUMED",
+          "mainTotalPssKiB": 330992,
+          "javaUsedBytes": 10824688,
+          "nativeAllocatedBytes": 24787904,
+          "nativeMemoryMinimized": false,
+          "androidSampleBeforeNativeCapture": true,
+          "nativeSummary": {
+            "process_count": 3,
+            "processes": [
+              {
+                "process": "gpu",
+                "explicit_bytes": 2880304,
+                "allocation_categories_bytes": {
+                  "javascript": 0,
+                  "images": 0,
+                  "graphics": 346248,
+                  "dom_layout": 0,
+                  "bindings": 0,
+                  "heap_unclassified": 1975208,
+                  "other": 558848
+                },
+                "ownership_subsets_bytes": {
+                  "bfcache": 0,
+                  "extensions": 0,
+                  "orphan_dom": 0
+                },
+                "heap_unclassified_source": "derived",
+                "metrics_bytes": {
+                  "resident": 294391808,
+                  "resident-unique": 37470208,
+                  "resident-fast": null,
+                  "heap-allocated": 2700080,
+                  "heap-overhead": null,
+                  "vsize": 17724338176,
+                  "js-main-runtime-gc-heap-committed": null
+                },
+                "counters": {
+                  "ghost_windows": null
+                },
+                "excluded_aggregate_paths": 1,
+                "warnings": [
+                  "Aggregate ancestor paths excluded; incomplete descendant exports may undercount."
+                ]
+              },
+              {
+                "process": "main",
+                "explicit_bytes": 154477597,
+                "allocation_categories_bytes": {
+                  "javascript": 88695392,
+                  "images": 464,
+                  "graphics": 208496,
+                  "dom_layout": 13384976,
+                  "bindings": 652256,
+                  "heap_unclassified": 27562368,
+                  "other": 23973645
+                },
+                "ownership_subsets_bytes": {
+                  "bfcache": 0,
+                  "extensions": 30685840,
+                  "orphan_dom": 0
+                },
+                "heap_unclassified_source": "derived",
+                "metrics_bytes": {
+                  "resident": 716521472,
+                  "resident-unique": 241926144,
+                  "resident-fast": null,
+                  "heap-allocated": 112539920,
+                  "heap-overhead": null,
+                  "vsize": 47983833088,
+                  "js-main-runtime-gc-heap-committed": null
+                },
+                "counters": {
+                  "ghost_windows": 0
+                },
+                "excluded_aggregate_paths": 0,
+                "warnings": []
+              },
+              {
+                "process": "content",
+                "explicit_bytes": 36041376,
+                "allocation_categories_bytes": {
+                  "javascript": 9561592,
+                  "images": 240,
+                  "graphics": 204560,
+                  "dom_layout": 2496704,
+                  "bindings": 84160,
+                  "heap_unclassified": 21676008,
+                  "other": 2018112
+                },
+                "ownership_subsets_bytes": {
+                  "bfcache": 0,
+                  "extensions": 695992,
+                  "orphan_dom": 0
+                },
+                "heap_unclassified_source": "derived",
+                "metrics_bytes": {
+                  "resident": 360464384,
+                  "resident-unique": 63979520,
+                  "resident-fast": null,
+                  "heap-allocated": 30489216,
+                  "heap-overhead": null,
+                  "vsize": 20414885888,
+                  "js-main-runtime-gc-heap-committed": null
+                },
+                "counters": {
+                  "ghost_windows": 0
+                },
+                "excluded_aggregate_paths": 0,
+                "warnings": []
+              }
+            ],
+            "totals": {
+              "explicit_bytes": 193399277,
+              "allocation_categories_bytes": {
+                "javascript": 98256984,
+                "images": 704,
+                "graphics": 759304,
+                "dom_layout": 15881680,
+                "bindings": 736416,
+                "heap_unclassified": 51213584,
+                "other": 26550605
+              },
+              "ownership_subsets_bytes": {
+                "bfcache": 0,
+                "extensions": 31381832,
+                "orphan_dom": 0
+              },
+              "metrics_bytes": {
+                "resident": 1371377664,
+                "resident-unique": 343375872,
+                "resident-fast": null,
+                "heap-allocated": 145729216,
+                "heap-overhead": null,
+                "vsize": 86123057152,
+                "js-main-runtime-gc-heap-committed": null
+              },
+              "counters": {
+                "ghost_windows": null
+              }
+            },
+            "notes": [
+              "Allocation categories partition explicit bytes; ownership subsets overlap them and each other. Do not add subsets to allocations.",
+              "Other reporter trees overlap explicit and are excluded. XPConnect bindings are Gecko infrastructure, not proof of a Candy JS bridge leak.",
+              "JavaScript includes native worker runtime reports. Other is measured allocation outside these selected categories, not synonymous with unclassified heap.",
+              "Resident sums include shared pages more than once; they are not Android PSS or physical RAM totals. Do not add resident to explicit.",
+              "Missing metrics are null, not zero. BFCache and extension ownership only include paths identifiable in the report.",
+              "Anonymized reports may hide extension attribution. Process names and report paths are omitted from this summary.",
+              "Native explicit reporters do not inventory the Android ART heap. Use a separate Java heap dump to attribute Kotlin objects, bitmaps, and Candy bridge owners."
+            ]
+          },
+          "mainMemoryStatsKiB": {
+            "summary.code": "36032",
+            "summary.stack": "3352",
+            "summary.graphics": "0",
+            "summary.java-heap": "16956",
+            "summary.native-heap": "17508",
+            "summary.system": "95996",
+            "summary.total-pss": "330992",
+            "summary.private-other": "161148",
+            "summary.total-swap": "0"
+          }
+        },
+        {
+          "name": "after-dom-churn",
+          "processLifecycleState": "RESUMED",
+          "mainTotalPssKiB": 326795,
+          "javaUsedBytes": 19469232,
+          "nativeAllocatedBytes": 23876768,
+          "nativeMemoryMinimized": false,
+          "androidSampleBeforeNativeCapture": true,
+          "nativeSummary": {
+            "process_count": 4,
+            "processes": [
+              {
+                "process": "gpu",
+                "explicit_bytes": 2996976,
+                "allocation_categories_bytes": {
+                  "javascript": 0,
+                  "images": 0,
+                  "graphics": 868560,
+                  "dom_layout": 0,
+                  "bindings": 0,
+                  "heap_unclassified": 1569568,
+                  "other": 558848
+                },
+                "ownership_subsets_bytes": {
+                  "bfcache": 0,
+                  "extensions": 0,
+                  "orphan_dom": 0
+                },
+                "heap_unclassified_source": "derived",
+                "metrics_bytes": {
+                  "resident": 298586112,
+                  "resident-unique": 39723008,
+                  "resident-fast": null,
+                  "heap-allocated": 2816752,
+                  "heap-overhead": null,
+                  "vsize": 17726402560,
+                  "js-main-runtime-gc-heap-committed": null
+                },
+                "counters": {
+                  "ghost_windows": null
+                },
+                "excluded_aggregate_paths": 1,
+                "warnings": [
+                  "Aggregate ancestor paths excluded; incomplete descendant exports may undercount."
+                ]
+              },
+              {
+                "process": "main",
+                "explicit_bytes": 157369213,
+                "allocation_categories_bytes": {
+                  "javascript": 90295248,
+                  "images": 464,
+                  "graphics": 208496,
+                  "dom_layout": 14340976,
+                  "bindings": 476512,
+                  "heap_unclassified": 27995936,
+                  "other": 24051581
+                },
+                "ownership_subsets_bytes": {
+                  "bfcache": 0,
+                  "extensions": 30814048,
+                  "orphan_dom": 0
+                },
+                "heap_unclassified_source": "derived",
+                "metrics_bytes": {
+                  "resident": 729255936,
+                  "resident-unique": 248758272,
+                  "resident-fast": null,
+                  "heap-allocated": 114002480,
+                  "heap-overhead": null,
+                  "vsize": 47975051264,
+                  "js-main-runtime-gc-heap-committed": null
+                },
+                "counters": {
+                  "ghost_windows": 0
+                },
+                "excluded_aggregate_paths": 0,
+                "warnings": []
+              },
+              {
+                "process": "other",
+                "explicit_bytes": 19223600,
+                "allocation_categories_bytes": {
+                  "javascript": 1826616,
+                  "images": 240,
+                  "graphics": 201648,
+                  "dom_layout": 0,
+                  "bindings": 19216,
+                  "heap_unclassified": 16394072,
+                  "other": 781808
+                },
+                "ownership_subsets_bytes": {
+                  "bfcache": 0,
+                  "extensions": 0,
+                  "orphan_dom": 0
+                },
+                "heap_unclassified_source": "derived",
+                "metrics_bytes": {
+                  "resident": 321548288,
+                  "resident-unique": 44195840,
+                  "resident-fast": null,
+                  "heap-allocated": 18018080,
+                  "heap-overhead": null,
+                  "vsize": 20740628480,
+                  "js-main-runtime-gc-heap-committed": null
+                },
+                "counters": {
+                  "ghost_windows": 0
+                },
+                "excluded_aggregate_paths": 0,
+                "warnings": []
+              },
+              {
+                "process": "content",
+                "explicit_bytes": 63682352,
+                "allocation_categories_bytes": {
+                  "javascript": 12977736,
+                  "images": 240,
+                  "graphics": 1702016,
+                  "dom_layout": 11304384,
+                  "bindings": 122432,
+                  "heap_unclassified": 34692744,
+                  "other": 2882800
+                },
+                "ownership_subsets_bytes": {
+                  "bfcache": 0,
+                  "extensions": 1719168,
+                  "orphan_dom": 8462368
+                },
+                "heap_unclassified_source": "derived",
+                "metrics_bytes": {
+                  "resident": 391897088,
+                  "resident-unique": 91324416,
+                  "resident-fast": null,
+                  "heap-allocated": 56382480,
+                  "heap-overhead": null,
+                  "vsize": 20430614528,
+                  "js-main-runtime-gc-heap-committed": null
+                },
+                "counters": {
+                  "ghost_windows": 0
+                },
+                "excluded_aggregate_paths": 0,
+                "warnings": []
+              }
+            ],
+            "totals": {
+              "explicit_bytes": 243272141,
+              "allocation_categories_bytes": {
+                "javascript": 105099600,
+                "images": 944,
+                "graphics": 2980720,
+                "dom_layout": 25645360,
+                "bindings": 618160,
+                "heap_unclassified": 80652320,
+                "other": 28275037
+              },
+              "ownership_subsets_bytes": {
+                "bfcache": 0,
+                "extensions": 32533216,
+                "orphan_dom": 8462368
+              },
+              "metrics_bytes": {
+                "resident": 1741287424,
+                "resident-unique": 424001536,
+                "resident-fast": null,
+                "heap-allocated": 191219792,
+                "heap-overhead": null,
+                "vsize": 106872696832,
+                "js-main-runtime-gc-heap-committed": null
+              },
+              "counters": {
+                "ghost_windows": null
+              }
+            },
+            "notes": [
+              "Allocation categories partition explicit bytes; ownership subsets overlap them and each other. Do not add subsets to allocations.",
+              "Other reporter trees overlap explicit and are excluded. XPConnect bindings are Gecko infrastructure, not proof of a Candy JS bridge leak.",
+              "JavaScript includes native worker runtime reports. Other is measured allocation outside these selected categories, not synonymous with unclassified heap.",
+              "Resident sums include shared pages more than once; they are not Android PSS or physical RAM totals. Do not add resident to explicit.",
+              "Missing metrics are null, not zero. BFCache and extension ownership only include paths identifiable in the report.",
+              "Anonymized reports may hide extension attribution. Process names and report paths are omitted from this summary.",
+              "Native explicit reporters do not inventory the Android ART heap. Use a separate Java heap dump to attribute Kotlin objects, bitmaps, and Candy bridge owners."
+            ]
+          },
+          "mainMemoryStatsKiB": {
+            "summary.code": "34224",
+            "summary.stack": "3324",
+            "summary.graphics": "0",
+            "summary.java-heap": "24888",
+            "summary.native-heap": "16872",
+            "summary.system": "84343",
+            "summary.total-pss": "326795",
+            "summary.private-other": "163144",
+            "summary.total-swap": "0"
+          }
+        },
+        {
+          "name": "before-background",
+          "processLifecycleState": "RESUMED",
+          "mainTotalPssKiB": 332708,
+          "javaUsedBytes": 26742016,
+          "nativeAllocatedBytes": 23807296,
+          "mainMemoryStatsKiB": {
+            "summary.code": "34176",
+            "summary.stack": "3324",
+            "summary.graphics": "0",
+            "summary.java-heap": "30508",
+            "summary.native-heap": "16832",
+            "summary.system": "84064",
+            "summary.total-pss": "332708",
+            "summary.private-other": "163804",
+            "summary.total-swap": "0"
+          }
+        },
+        {
+          "name": "while-background",
+          "processLifecycleState": "CREATED",
+          "mainTotalPssKiB": 340578,
+          "javaUsedBytes": 10108256,
+          "nativeAllocatedBytes": 36125024,
+          "nativeMemoryMinimized": false,
+          "androidSampleBeforeNativeCapture": true,
+          "nativeSummary": {
+            "process_count": 3,
+            "processes": [
+              {
+                "process": "gpu",
+                "explicit_bytes": 2780624,
+                "allocation_categories_bytes": {
+                  "javascript": 0,
+                  "images": 0,
+                  "graphics": 701520,
+                  "dom_layout": 0,
+                  "bindings": 0,
+                  "heap_unclassified": 1520256,
+                  "other": 558848
+                },
+                "ownership_subsets_bytes": {
+                  "bfcache": 0,
+                  "extensions": 0,
+                  "orphan_dom": 0
+                },
+                "heap_unclassified_source": "derived",
+                "metrics_bytes": {
+                  "resident": 298237952,
+                  "resident-unique": 39235584,
+                  "resident-fast": null,
+                  "heap-allocated": 2600400,
+                  "heap-overhead": null,
+                  "vsize": 17728499712,
+                  "js-main-runtime-gc-heap-committed": null
+                },
+                "counters": {
+                  "ghost_windows": null
+                },
+                "excluded_aggregate_paths": 1,
+                "warnings": [
+                  "Aggregate ancestor paths excluded; incomplete descendant exports may undercount."
+                ]
+              },
+              {
+                "process": "main",
+                "explicit_bytes": 128807149,
+                "allocation_categories_bytes": {
+                  "javascript": 81415792,
+                  "images": 400,
+                  "graphics": 206688,
+                  "dom_layout": 2132800,
+                  "bindings": 328000,
+                  "heap_unclassified": 21285328,
+                  "other": 23438141
+                },
+                "ownership_subsets_bytes": {
+                  "bfcache": 0,
+                  "extensions": 29459248,
+                  "orphan_dom": 0
+                },
+                "heap_unclassified_source": "derived",
+                "metrics_bytes": {
+                  "resident": 729104384,
+                  "resident-unique": 247902208,
+                  "resident-fast": null,
+                  "heap-allocated": 90384576,
+                  "heap-overhead": null,
+                  "vsize": 39358169088,
+                  "js-main-runtime-gc-heap-committed": null
+                },
+                "counters": {
+                  "ghost_windows": 0
+                },
+                "excluded_aggregate_paths": 0,
+                "warnings": []
+              },
+              {
+                "process": "content",
+                "explicit_bytes": 33320448,
+                "allocation_categories_bytes": {
+                  "javascript": 9040664,
+                  "images": 240,
+                  "graphics": 204032,
+                  "dom_layout": 2678464,
+                  "bindings": 80496,
+                  "heap_unclassified": 19384952,
+                  "other": 1931600
+                },
+                "ownership_subsets_bytes": {
+                  "bfcache": 0,
+                  "extensions": 399560,
+                  "orphan_dom": 84576
+                },
+                "heap_unclassified_source": "derived",
+                "metrics_bytes": {
+                  "resident": 380940288,
+                  "resident-unique": 80994304,
+                  "resident-fast": null,
+                  "heap-allocated": 28550928,
+                  "heap-overhead": null,
+                  "vsize": 20394799104,
+                  "js-main-runtime-gc-heap-committed": null
+                },
+                "counters": {
+                  "ghost_windows": 0
+                },
+                "excluded_aggregate_paths": 0,
+                "warnings": []
+              }
+            ],
+            "totals": {
+              "explicit_bytes": 164908221,
+              "allocation_categories_bytes": {
+                "javascript": 90456456,
+                "images": 640,
+                "graphics": 1112240,
+                "dom_layout": 4811264,
+                "bindings": 408496,
+                "heap_unclassified": 42190536,
+                "other": 25928589
+              },
+              "ownership_subsets_bytes": {
+                "bfcache": 0,
+                "extensions": 29858808,
+                "orphan_dom": 84576
+              },
+              "metrics_bytes": {
+                "resident": 1408282624,
+                "resident-unique": 368132096,
+                "resident-fast": null,
+                "heap-allocated": 121535904,
+                "heap-overhead": null,
+                "vsize": 77481467904,
+                "js-main-runtime-gc-heap-committed": null
+              },
+              "counters": {
+                "ghost_windows": null
+              }
+            },
+            "notes": [
+              "Allocation categories partition explicit bytes; ownership subsets overlap them and each other. Do not add subsets to allocations.",
+              "Other reporter trees overlap explicit and are excluded. XPConnect bindings are Gecko infrastructure, not proof of a Candy JS bridge leak.",
+              "JavaScript includes native worker runtime reports. Other is measured allocation outside these selected categories, not synonymous with unclassified heap.",
+              "Resident sums include shared pages more than once; they are not Android PSS or physical RAM totals. Do not add resident to explicit.",
+              "Missing metrics are null, not zero. BFCache and extension ownership only include paths identifiable in the report.",
+              "Anonymized reports may hide extension attribution. Process names and report paths are omitted from this summary.",
+              "Native explicit reporters do not inventory the Android ART heap. Use a separate Java heap dump to attribute Kotlin objects, bitmaps, and Candy bridge owners."
+            ]
+          },
+          "mainMemoryStatsKiB": {
+            "summary.code": "34036",
+            "summary.stack": "3304",
+            "summary.graphics": "0",
+            "summary.java-heap": "16320",
+            "summary.native-heap": "33216",
+            "summary.system": "98506",
+            "summary.total-pss": "340578",
+            "summary.private-other": "155196",
+            "summary.total-swap": "0"
+          }
+        },
+        {
+          "name": "after-background-resume",
+          "processLifecycleState": "RESUMED",
+          "mainTotalPssKiB": 333674,
+          "javaUsedBytes": 12975728,
+          "nativeAllocatedBytes": 26156272,
+          "nativeMemoryMinimized": false,
+          "androidSampleBeforeNativeCapture": true,
+          "nativeSummary": {
+            "process_count": 3,
+            "processes": [
+              {
+                "process": "gpu",
+                "explicit_bytes": 2788912,
+                "allocation_categories_bytes": {
+                  "javascript": 0,
+                  "images": 0,
+                  "graphics": 701520,
+                  "dom_layout": 0,
+                  "bindings": 0,
+                  "heap_unclassified": 1528544,
+                  "other": 558848
+                },
+                "ownership_subsets_bytes": {
+                  "bfcache": 0,
+                  "extensions": 0,
+                  "orphan_dom": 0
+                },
+                "heap_unclassified_source": "derived",
+                "metrics_bytes": {
+                  "resident": 298491904,
+                  "resident-unique": 39489536,
+                  "resident-fast": null,
+                  "heap-allocated": 2608688,
+                  "heap-overhead": null,
+                  "vsize": 17728499712,
+                  "js-main-runtime-gc-heap-committed": null
+                },
+                "counters": {
+                  "ghost_windows": null
+                },
+                "excluded_aggregate_paths": 1,
+                "warnings": [
+                  "Aggregate ancestor paths excluded; incomplete descendant exports may undercount."
+                ]
+              },
+              {
+                "process": "main",
+                "explicit_bytes": 130037997,
+                "allocation_categories_bytes": {
+                  "javascript": 81954960,
+                  "images": 400,
+                  "graphics": 206688,
+                  "dom_layout": 2367232,
+                  "bindings": 341264,
+                  "heap_unclassified": 21729312,
+                  "other": 23438141
+                },
+                "ownership_subsets_bytes": {
+                  "bfcache": 0,
+                  "extensions": 29517344,
+                  "orphan_dom": 0
+                },
+                "heap_unclassified_source": "derived",
+                "metrics_bytes": {
+                  "resident": 722173952,
+                  "resident-unique": 240709632,
+                  "resident-fast": null,
+                  "heap-allocated": 91404240,
+                  "heap-overhead": null,
+                  "vsize": 39365779456,
+                  "js-main-runtime-gc-heap-committed": null
+                },
+                "counters": {
+                  "ghost_windows": 0
+                },
+                "excluded_aggregate_paths": 0,
+                "warnings": []
+              },
+              {
+                "process": "content",
+                "explicit_bytes": 34217024,
+                "allocation_categories_bytes": {
+                  "javascript": 9563848,
+                  "images": 240,
+                  "graphics": 204032,
+                  "dom_layout": 2682256,
+                  "bindings": 81456,
+                  "heap_unclassified": 19681400,
+                  "other": 2003792
+                },
+                "ownership_subsets_bytes": {
+                  "bfcache": 0,
+                  "extensions": 510816,
+                  "orphan_dom": 84928
+                },
+                "heap_unclassified_source": "derived",
+                "metrics_bytes": {
+                  "resident": 382050304,
+                  "resident-unique": 82104320,
+                  "resident-fast": null,
+                  "heap-allocated": 29238416,
+                  "heap-overhead": null,
+                  "vsize": 20394799104,
+                  "js-main-runtime-gc-heap-committed": null
+                },
+                "counters": {
+                  "ghost_windows": 0
+                },
+                "excluded_aggregate_paths": 0,
+                "warnings": []
+              }
+            ],
+            "totals": {
+              "explicit_bytes": 167043933,
+              "allocation_categories_bytes": {
+                "javascript": 91518808,
+                "images": 640,
+                "graphics": 1112240,
+                "dom_layout": 5049488,
+                "bindings": 422720,
+                "heap_unclassified": 42939256,
+                "other": 26000781
+              },
+              "ownership_subsets_bytes": {
+                "bfcache": 0,
+                "extensions": 30028160,
+                "orphan_dom": 84928
+              },
+              "metrics_bytes": {
+                "resident": 1402716160,
+                "resident-unique": 362303488,
+                "resident-fast": null,
+                "heap-allocated": 123251344,
+                "heap-overhead": null,
+                "vsize": 77489078272,
+                "js-main-runtime-gc-heap-committed": null
+              },
+              "counters": {
+                "ghost_windows": null
+              }
+            },
+            "notes": [
+              "Allocation categories partition explicit bytes; ownership subsets overlap them and each other. Do not add subsets to allocations.",
+              "Other reporter trees overlap explicit and are excluded. XPConnect bindings are Gecko infrastructure, not proof of a Candy JS bridge leak.",
+              "JavaScript includes native worker runtime reports. Other is measured allocation outside these selected categories, not synonymous with unclassified heap.",
+              "Resident sums include shared pages more than once; they are not Android PSS or physical RAM totals. Do not add resident to explicit.",
+              "Missing metrics are null, not zero. BFCache and extension ownership only include paths identifiable in the report.",
+              "Anonymized reports may hide extension attribution. Process names and report paths are omitted from this summary.",
+              "Native explicit reporters do not inventory the Android ART heap. Use a separate Java heap dump to attribute Kotlin objects, bitmaps, and Candy bridge owners."
+            ]
+          },
+          "mainMemoryStatsKiB": {
+            "summary.code": "34044",
+            "summary.stack": "3328",
+            "summary.graphics": "0",
+            "summary.java-heap": "18612",
+            "summary.native-heap": "22728",
+            "summary.system": "98634",
+            "summary.total-pss": "333674",
+            "summary.private-other": "156328",
+            "summary.total-swap": "0"
+          }
+        },
+        {
+          "name": "after-minimize",
+          "processLifecycleState": "RESUMED",
+          "mainTotalPssKiB": 338818,
+          "javaUsedBytes": 11767040,
+          "nativeAllocatedBytes": 23926784,
+          "nativeMemoryMinimized": true,
+          "androidSampleBeforeNativeCapture": true,
+          "nativeSummary": {
+            "process_count": 3,
+            "processes": [
+              {
+                "process": "gpu",
+                "explicit_bytes": 2784240,
+                "allocation_categories_bytes": {
+                  "javascript": 0,
+                  "images": 0,
+                  "graphics": 701552,
+                  "dom_layout": 0,
+                  "bindings": 0,
+                  "heap_unclassified": 1523840,
+                  "other": 558848
+                },
+                "ownership_subsets_bytes": {
+                  "bfcache": 0,
+                  "extensions": 0,
+                  "orphan_dom": 0
+                },
+                "heap_unclassified_source": "derived",
+                "metrics_bytes": {
+                  "resident": 298491904,
+                  "resident-unique": 39489536,
+                  "resident-fast": null,
+                  "heap-allocated": 2604016,
+                  "heap-overhead": null,
+                  "vsize": 17728499712,
+                  "js-main-runtime-gc-heap-committed": null
+                },
+                "counters": {
+                  "ghost_windows": null
+                },
+                "excluded_aggregate_paths": 1,
+                "warnings": [
+                  "Aggregate ancestor paths excluded; incomplete descendant exports may undercount."
+                ]
+              },
+              {
+                "process": "main",
+                "explicit_bytes": 130419613,
+                "allocation_categories_bytes": {
+                  "javascript": 81954960,
+                  "images": 400,
+                  "graphics": 206688,
+                  "dom_layout": 2367232,
+                  "bindings": 341264,
+                  "heap_unclassified": 22110928,
+                  "other": 23438141
+                },
+                "ownership_subsets_bytes": {
+                  "bfcache": 0,
+                  "extensions": 29517344,
+                  "orphan_dom": 0
+                },
+                "heap_unclassified_source": "derived",
+                "metrics_bytes": {
+                  "resident": 719048704,
+                  "resident-unique": 237584384,
+                  "resident-fast": null,
+                  "heap-allocated": 91785856,
+                  "heap-overhead": null,
+                  "vsize": 39365779456,
+                  "js-main-runtime-gc-heap-committed": null
+                },
+                "counters": {
+                  "ghost_windows": 0
+                },
+                "excluded_aggregate_paths": 0,
+                "warnings": []
+              },
+              {
+                "process": "content",
+                "explicit_bytes": 34170496,
+                "allocation_categories_bytes": {
+                  "javascript": 9587944,
+                  "images": 240,
+                  "graphics": 204032,
+                  "dom_layout": 2682256,
+                  "bindings": 84144,
+                  "heap_unclassified": 19680280,
+                  "other": 1931600
+                },
+                "ownership_subsets_bytes": {
+                  "bfcache": 0,
+                  "extensions": 510816,
+                  "orphan_dom": 84928
+                },
+                "heap_unclassified_source": "derived",
+                "metrics_bytes": {
+                  "resident": 381227008,
+                  "resident-unique": 81281024,
+                  "resident-fast": null,
+                  "heap-allocated": 29187024,
+                  "heap-overhead": null,
+                  "vsize": 20394799104,
+                  "js-main-runtime-gc-heap-committed": null
+                },
+                "counters": {
+                  "ghost_windows": 0
+                },
+                "excluded_aggregate_paths": 0,
+                "warnings": []
+              }
+            ],
+            "totals": {
+              "explicit_bytes": 167374349,
+              "allocation_categories_bytes": {
+                "javascript": 91542904,
+                "images": 640,
+                "graphics": 1112272,
+                "dom_layout": 5049488,
+                "bindings": 425408,
+                "heap_unclassified": 43315048,
+                "other": 25928589
+              },
+              "ownership_subsets_bytes": {
+                "bfcache": 0,
+                "extensions": 30028160,
+                "orphan_dom": 84928
+              },
+              "metrics_bytes": {
+                "resident": 1398767616,
+                "resident-unique": 358354944,
+                "resident-fast": null,
+                "heap-allocated": 123576896,
+                "heap-overhead": null,
+                "vsize": 77489078272,
+                "js-main-runtime-gc-heap-committed": null
+              },
+              "counters": {
+                "ghost_windows": null
+              }
+            },
+            "notes": [
+              "Allocation categories partition explicit bytes; ownership subsets overlap them and each other. Do not add subsets to allocations.",
+              "Other reporter trees overlap explicit and are excluded. XPConnect bindings are Gecko infrastructure, not proof of a Candy JS bridge leak.",
+              "JavaScript includes native worker runtime reports. Other is measured allocation outside these selected categories, not synonymous with unclassified heap.",
+              "Resident sums include shared pages more than once; they are not Android PSS or physical RAM totals. Do not add resident to explicit.",
+              "Missing metrics are null, not zero. BFCache and extension ownership only include paths identifiable in the report.",
+              "Anonymized reports may hide extension attribution. Process names and report paths are omitted from this summary.",
+              "Native explicit reporters do not inventory the Android ART heap. Use a separate Java heap dump to attribute Kotlin objects, bitmaps, and Candy bridge owners."
+            ]
+          },
+          "mainMemoryStatsKiB": {
+            "summary.code": "34044",
+            "summary.stack": "3328",
+            "summary.graphics": "0",
+            "summary.java-heap": "22940",
+            "summary.native-heap": "22764",
+            "summary.system": "98634",
+            "summary.total-pss": "338818",
+            "summary.private-other": "157108",
+            "summary.total-swap": "0"
+          }
+        },
+        {
+          "name": "after-minimize-android",
+          "processLifecycleState": "RESUMED",
+          "mainTotalPssKiB": 336446,
+          "javaUsedBytes": 16735488,
+          "nativeAllocatedBytes": 23919776,
+          "mainMemoryStatsKiB": {
+            "summary.code": "34044",
+            "summary.stack": "3328",
+            "summary.graphics": "0",
+            "summary.java-heap": "22460",
+            "summary.native-heap": "20760",
+            "summary.system": "98634",
+            "summary.total-pss": "336446",
+            "summary.private-other": "157220",
+            "summary.total-swap": "0"
+          }
+        }
+      ],
+      "artObjectInventory": {
+        "MainActivity": 1,
+        "BrowserController": 1,
+        "GeckoSession": 2,
+        "GeckoViewBrowserSession": 2,
+        "GeckoViewPrivacyHostRuntime": 1,
+        "CandyGeckoView": 2,
+        "Bitmap": 10,
+        "activeViewBindings": 1,
+        "pendingPreviewCaptures": 0
+      }
+    }
+  }
+}

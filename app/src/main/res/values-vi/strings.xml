@@ -1287,6 +1287,16 @@
     <string name="developer_options_unlock_action">Mở khóa tùy chọn nhà phát triển</string>
     <string name="developer_options_unlocked">Đã mở khóa tùy chọn nhà phát triển</string>
     <string name="developer_options_security_section">Ngoại lệ bảo mật</string>
+    <string name="developer_options_memory_section">Bộ nhớ thẻ</string>
+    <string name="developer_options_foreground_tab_idle_timeout">Dỡ các thẻ không hoạt động</string>
+    <string name="developer_options_foreground_tab_idle_timeout_summary">Khi Candy ở nền trước, dỡ các thẻ không được chọn sau thời gian không hoạt động này. Thẻ đang được chọn và các phiên được bảo vệ vẫn được giữ trong bộ nhớ.</string>
+    <string name="developer_options_background_warm_tab_count">Các thẻ giữ trong bộ nhớ ở nền</string>
+    <string name="developer_options_background_warm_tab_count_summary">Số thẻ vừa dùng nhưng không được chọn sẽ được giữ trong bộ nhớ khi ứng dụng chạy nền. Thẻ đang được chọn luôn được giữ lại; các phiên được bảo vệ có thể vượt quá giới hạn này.</string>
+    <string name="developer_options_history_cache_lifetime">Thời gian lưu trang trong bộ nhớ đệm</string>
+    <string name="developer_options_history_cache_lifetime_summary">Gecko lưu nhiều trang trong bộ nhớ đệm để dùng khi quay lại và tiến tới. Bộ hẹn giờ hết hạn giải phóng các trang đủ điều kiện sau khoảng hai phần ba đến toàn bộ thời gian đã chọn; tình trạng thiếu bộ nhớ có thể khiến chúng được giải phóng sớm hơn. Thay đổi giá trị này yêu cầu khởi động lại ứng dụng hoàn toàn.</string>
+    <string name="developer_options_minutes_value">%1$d phút</string>
+    <string name="developer_options_seconds_value">%1$d giây</string>
+    <string name="developer_options_tabs_value">%1$d thẻ</string>
     <string name="developer_options_http_warning_title">Cho phép tự động điền vào các trang không an toàn?</string>
     <string name="developer_options_http_warning_message">HTTP không mã hóa thông tin đăng nhập hoặc nội dung trang. Chỉ bật chọn quản lý mật khẩu cho các trang phát triển đáng tin cậy hoặc mạng cục bộ.</string>
     <string name="developer_options_http_warning_confirm">Cho phép dù sao</string>

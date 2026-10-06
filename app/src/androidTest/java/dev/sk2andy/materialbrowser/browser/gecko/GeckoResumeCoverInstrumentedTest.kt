@@ -102,6 +102,60 @@ class GeckoResumeCoverInstrumentedTest {
     }
 
     @Test
+    fun validSurfaceReleasesDecorativeFrameWithoutClaimingContentReady() {
+        withPendingDepartureCapture { fixture ->
+            fixture.scenario.onActivity {
+                fixture.result.complete(greenFrame(fixture.host))
+                fixture.cover.isContentPresented = { false }
+                fixture.surface.visibility = View.INVISIBLE
+            }
+            awaitCondition("Departing frame did not cover lost surface") {
+                fixture.image.visibility == View.VISIBLE
+            }
+            fixture.scenario.onActivity { fixture.surface.visibility = View.VISIBLE }
+            awaitCondition("Replacement surface did not become available") {
+                fixture.surface.holder.surface.isValid
+            }
+            awaitCondition("Decorative frame indefinitely hid valid surface") {
+                fixture.image.visibility == View.GONE && fixture.image.drawable == null
+            }
+            fixture.scenario.onActivity {
+                assertEquals(false, fixture.cover.isContentPresented())
+            }
+        }
+    }
+
+    @Test
+    fun returningAfterHiddenDeadlineRearmsDecorativeFrameRelease() {
+        withPendingDepartureCapture { fixture ->
+            fixture.scenario.onActivity {
+                fixture.result.complete(greenFrame(fixture.host))
+                fixture.cover.isContentPresented = { false }
+                fixture.surface.visibility = View.INVISIBLE
+            }
+            awaitCondition("Departing frame did not cover lost surface") {
+                fixture.image.visibility == View.VISIBLE
+            }
+            fixture.scenario.onActivity { fixture.surface.visibility = View.VISIBLE }
+            awaitCondition("Replacement surface did not become available") {
+                fixture.surface.holder.surface.isValid
+            }
+            fixture.scenario.onActivity { fixture.host.visibility = View.INVISIBLE }
+            SystemClock.sleep(2_200L)
+            fixture.scenario.onActivity {
+                fixture.host.visibility = View.VISIBLE
+                fixture.cover.onFocusRestored()
+            }
+            awaitCondition("Returned surface did not become available") {
+                fixture.surface.holder.surface.isValid
+            }
+            awaitCondition("Returned frame did not expire without content-ready callback") {
+                fixture.image.visibility == View.GONE && fixture.image.drawable == null
+            }
+        }
+    }
+
+    @Test
     fun navigationRejectsLateDepartureCapture() {
         assertLateCaptureDoesNotRestoreCover(GeckoResumeCover::onNavigationStarted)
     }

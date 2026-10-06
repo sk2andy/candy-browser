@@ -1302,6 +1302,16 @@
     <string name="developer_options_unlock_action">Zgjidhni opsionet e zhvilluesit</string>
     <string name="developer_options_unlocked">Opsionet e zhvilluesit të zhbllokuara</string>
     <string name="developer_options_security_section">Përjashtime sigurie</string>
+    <string name="developer_options_memory_section">Memoria e skedave</string>
+    <string name="developer_options_foreground_tab_idle_timeout">Hiq nga memoria skedat joaktive</string>
+    <string name="developer_options_foreground_tab_idle_timeout_summary">Hiq nga memoria skedat e pazgjedhura pas kësaj kohe pasiviteti kur Candy është në plan të parë. Skeda e zgjedhur dhe sesionet e mbrojtura mbeten të ngarkuara.</string>
+    <string name="developer_options_background_warm_tab_count">Skeda të ngarkuara në sfond</string>
+    <string name="developer_options_background_warm_tab_count_summary">Numri i skedave të pazgjedhura, të përdorura së fundmi, që mbeten të ngarkuara në sfond. Skeda e zgjedhur mbetet gjithmonë e ngarkuar; sesionet e mbrojtura mund ta tejkalojnë këtë kufi.</string>
+    <string name="developer_options_history_cache_lifetime">Kohëzgjatja e memories së faqeve</string>
+    <string name="developer_options_history_cache_lifetime_summary">Gecko ruan disa faqe në memorien e përkohshme për Kthehu dhe Përpara. Kohëmatësi liron faqet e përshtatshme pas afërsisht dy të tretave deri në gjithë kohën e zgjedhur; presioni mbi memorien mund t’i lirojë më herët. Ndryshimi i kësaj vlere kërkon rinisje të plotë të aplikacionit.</string>
+    <string name="developer_options_minutes_value">%1$d min</string>
+    <string name="developer_options_seconds_value">%1$d s</string>
+    <string name="developer_options_tabs_value">%1$d skeda</string>
     <string name="developer_options_http_warning_title">Të aktivizoni mbushjen automatike në faqet e pasigurta?</string>
     <string name="developer_options_http_warning_message">HTTP nuk enkripton kredencialet ose përmbajtjen e faqes. Aktivizoni zgjedhjen e menaxherit të fjalëkalimeve vetëm për faqe zhvillimi të besuara ose faqe të rrjetit lokal.</string>
     <string name="developer_options_http_warning_confirm">Aktivizoni gjithsesi</string>

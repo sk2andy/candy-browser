@@ -23,6 +23,7 @@
 | Project coding conventions | [`../.agents/skills/coding-style/SKILL.md`](../.agents/skills/coding-style/SKILL.md) |
 | Product overview and build commands | [`../README.md`](../README.md) |
 | Privacy and compatibility audits | [`audits/`](audits/) |
+| Android memory ownership and Firefox lifecycle comparison | [`audits/2026-10-05-candy-memory-ownership.md`](audits/2026-10-05-candy-memory-ownership.md), [`audits/2026-10-05-firefox-android-memory.md`](audits/2026-10-05-firefox-android-memory.md) |
 | Product screenshots | [`screenshots/`](screenshots/) |
 | Candy Sync architecture and operations | [`sync/README.md`](sync/README.md) |
 | Promotional artwork and video | [`promo/`](promo/), [`promo/video/README.md`](promo/video/README.md), and the `generate_*promo*` scripts in [`../scripts/`](../scripts/) |

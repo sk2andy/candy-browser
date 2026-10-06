@@ -1316,6 +1316,16 @@
     <string name="developer_options_unlock_action">Откључити опције програмера</string>
     <string name="developer_options_unlocked">Опције за програмере откључене</string>
     <string name="developer_options_security_section">Безбедносни изузеци</string>
+    <string name="developer_options_memory_section">Меморија картица</string>
+    <string name="developer_options_foreground_tab_idle_timeout">Ослободи меморију неактивних картица</string>
+    <string name="developer_options_foreground_tab_idle_timeout_summary">Ослободи меморију неизабраних картица после овог времена неактивности док је Candy у првом плану. Изабрана картица и заштићене сесије остају учитане.</string>
+    <string name="developer_options_background_warm_tab_count">Учитане картице у позадини</string>
+    <string name="developer_options_background_warm_tab_count_summary">Број недавно коришћених, неизабраних картица које остају учитане у позадини. Изабрана картица увек остаје учитана; заштићене сесије могу премашити ово ограничење.</string>
+    <string name="developer_options_history_cache_lifetime">Трајање кеша страница</string>
+    <string name="developer_options_history_cache_lifetime_summary">Gecko чува више страница у кешу за Назад и Напред. Тајмер ослобађа одговарајуће странице после приближно две трећине до целог изабраног времена; притисак на меморију може их ослободити раније. Промена ове вредности захтева потпуно поновно покретање апликације.</string>
+    <string name="developer_options_minutes_value">%1$d мин</string>
+    <string name="developer_options_seconds_value">%1$d с</string>
+    <string name="developer_options_tabs_value">%1$d картица</string>
     <string name="developer_options_http_warning_title">Омогућити аутоматско попуњавање на несигурним страницама?</string>
     <string name="developer_options_http_warning_message">HTTP не шифрује приступне податке ни садржај странице. Избор менаџера лозинки омогућите само за поуздане развојне странице или странице локалне мреже.</string>
     <string name="developer_options_http_warning_confirm">Укључите у сваком случају</string>

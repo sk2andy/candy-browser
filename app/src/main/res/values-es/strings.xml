@@ -1294,6 +1294,16 @@
     <string name="developer_options_unlock_action">Desbloquear opciones para desarrolladores</string>
     <string name="developer_options_unlocked">Opciones para desarrolladores desbloqueadas</string>
     <string name="developer_options_security_section">Excepciones de seguridad</string>
+    <string name="developer_options_memory_section">Memoria de las pestañas</string>
+    <string name="developer_options_foreground_tab_idle_timeout">Descargar pestañas inactivas</string>
+    <string name="developer_options_foreground_tab_idle_timeout_summary">Descarga las pestañas no seleccionadas tras este tiempo de inactividad mientras Candy está en primer plano. La pestaña seleccionada y las sesiones protegidas permanecen cargadas.</string>
+    <string name="developer_options_background_warm_tab_count">Pestañas cargadas en segundo plano</string>
+    <string name="developer_options_background_warm_tab_count_summary">Número de pestañas no seleccionadas usadas recientemente que se mantienen cargadas en segundo plano. La pestaña seleccionada siempre permanece cargada; las sesiones protegidas pueden superar este límite.</string>
+    <string name="developer_options_history_cache_lifetime">Duración de la caché de páginas</string>
+    <string name="developer_options_history_cache_lifetime_summary">Gecko mantiene varias páginas en caché para Atrás y Adelante. Su temporizador libera las páginas correspondientes tras aproximadamente dos tercios hasta la totalidad del tiempo elegido; la presión de memoria puede liberarlas antes. Cambiar este valor requiere reiniciar completamente la aplicación.</string>
+    <string name="developer_options_minutes_value">%1$d min</string>
+    <string name="developer_options_seconds_value">%1$d s</string>
+    <string name="developer_options_tabs_value">%1$d pestañas</string>
     <string name="developer_options_http_warning_title">¿Activar el autocompletado en páginas no seguras?</string>
     <string name="developer_options_http_warning_message">HTTP no cifra las credenciales ni el contenido. Activa la selección del gestor de contraseñas solo para páginas de desarrollo o de red local de confianza.</string>
     <string name="developer_options_http_warning_confirm">Activar de todos modos</string>

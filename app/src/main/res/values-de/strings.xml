@@ -1289,6 +1289,16 @@
     <string name="developer_options_unlock_action">Entwickleroptionen freischalten</string>
     <string name="developer_options_unlocked">Entwickleroptionen freigeschaltet</string>
     <string name="developer_options_security_section">Sicherheitsausnahmen</string>
+    <string name="developer_options_memory_section">Tab-Speicher</string>
+    <string name="developer_options_foreground_tab_idle_timeout">Inaktive Tabs entladen</string>
+    <string name="developer_options_foreground_tab_idle_timeout_summary">Entlädt nicht ausgewählte Tabs nach dieser Ruhezeit, während Candy im Vordergrund ist. Der ausgewählte Tab und geschützte Sitzungen bleiben geladen.</string>
+    <string name="developer_options_background_warm_tab_count">Warme Tabs im Hintergrund</string>
+    <string name="developer_options_background_warm_tab_count_summary">Anzahl zuletzt verwendeter, nicht ausgewählter Tabs, die im Hintergrund geladen bleiben. Der ausgewählte Tab bleibt immer geladen; geschützte Sitzungen können dieses Limit überschreiten.</string>
+    <string name="developer_options_history_cache_lifetime">Lebensdauer des Seitencaches</string>
+    <string name="developer_options_history_cache_lifetime_summary">Gecko hält mehrere Seiten für Zurück und Vorwärts im Cache. Der Ablauftimer gibt geeignete Seiten nach ungefähr zwei Dritteln bis zur vollen gewählten Zeit frei; Speicherdruck kann sie früher freigeben. Änderungen erfordern einen vollständigen App-Neustart.</string>
+    <string name="developer_options_minutes_value">%1$d min</string>
+    <string name="developer_options_seconds_value">%1$d s</string>
+    <string name="developer_options_tabs_value">%1$d Tabs</string>
     <string name="developer_options_http_warning_title">Autofill auf unsicheren Seiten aktivieren?</string>
     <string name="developer_options_http_warning_message">HTTP verschlüsselt weder Zugangsdaten noch Seiteninhalte. Passwortmanager-Auswahl nur für vertrauenswürdige Entwicklungs- oder lokale Netzwerkseiten aktivieren.</string>
     <string name="developer_options_http_warning_confirm">Trotzdem aktivieren</string>

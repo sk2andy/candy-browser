@@ -5,9 +5,9 @@ import org.junit.Test
 
 class TabPreviewCaptureRulesTest {
     @Test
-    fun `compact viewport keeps existing 480 pixel capture`() {
+    fun `compact viewport captures its native width for sharp restoration`() {
         assertEquals(
-            480,
+            1_080,
             TabPreviewCaptureRules.targetWidthPx(
                 sourceWidthPx = 1_080,
                 viewportWidthPx = 1_080,
@@ -28,9 +28,9 @@ class TabPreviewCaptureRulesTest {
                 density = 2f,
             ),
         )
-        assertEquals(1_953, TabPreviewCaptureRules.maximumTargetHeightPx(1_280))
+        assertEquals(3_840, TabPreviewCaptureRules.maximumTargetHeightPx(1_280))
         assertEquals(
-            720,
+            1_280,
             TabPreviewCaptureRules.targetWidthPx(
                 sourceWidthPx = 1_600,
                 viewportWidthPx = 1_600,
@@ -38,6 +38,36 @@ class TabPreviewCaptureRulesTest {
                 density = 2f,
             ),
         )
+    }
+
+    @Test
+    fun `Pixel portrait preview keeps native pixels without exceeding three megapixels`() {
+        assertEquals(
+            TabPreviewBitmapDimensions(1_080, 2_410),
+            TabPreviewCaptureRules.resolveBitmapDimensions(1_080, 2_410, 1_080, 3_240),
+        )
+    }
+
+    @Test
+    fun `tall preview scales both axes together within pixel and dimension bounds`() {
+        val dimensions = requireNotNull(TabPreviewCaptureRules.resolveBitmapDimensions(
+            sourceWidthPx = 1_280,
+            sourceHeightPx = 4_000,
+            targetWidthPx = 1_280,
+            maximumTargetHeightPx = 3_840,
+        ))
+
+        assertEquals(TabPreviewBitmapDimensions(979, 3_061), dimensions)
+        assertEquals(true, dimensions.widthPx.toLong() * dimensions.heightPx <= 3_000_000)
+        assertEquals(true, kotlin.math.abs(dimensions.heightPx / dimensions.widthPx.toDouble() - 3.125) < 0.005)
+        assertEquals(4_096, TabPreviewCaptureRules.maximumTargetHeightPx(Int.MAX_VALUE))
+    }
+
+    @Test
+    fun `thumbnail sampling keeps enough pixels for a sharp 480 pixel overview`() {
+        assertEquals(2, TabPreviewCaptureRules.decodeSampleSize(1_080, 480))
+        assertEquals(1, TabPreviewCaptureRules.decodeSampleSize(480, 1_280))
+        assertEquals(1, TabPreviewCaptureRules.decodeSampleSize(0, 480))
     }
 
     @Test
