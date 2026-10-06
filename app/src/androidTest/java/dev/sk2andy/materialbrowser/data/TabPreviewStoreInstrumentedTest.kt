@@ -2,6 +2,8 @@ package dev.sk2andy.materialbrowser.data
 
 import android.graphics.Bitmap
 import android.graphics.Color
+import android.graphics.Canvas
+import android.graphics.Paint
 import android.util.AtomicFile
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -53,6 +55,92 @@ class TabPreviewStoreInstrumentedTest {
 
         source.recycle()
         restored?.recycle()
+    }
+
+    @Test
+    fun sharpPixelPreviewKeepsLosslessPixelsWhileDefaultLoadUsesSmallThumbnail() {
+        val source = Bitmap.createBitmap(1_080, 2_410, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(source)
+        canvas.drawColor(Color.WHITE)
+        val paint = Paint().apply { color = Color.BLACK; strokeWidth = 1f }
+        for (x in 0 until source.width step 2) canvas.drawLine(x + 0.5f, 0f, x + 0.5f, 2_410f, paint)
+        try {
+            assertTrue(store.save(tabId, source))
+            val sharp = requireNotNull(store.load(tabId, targetWidthPx = 1_280))
+            val thumbnail = requireNotNull(store.load(tabId))
+            try {
+                assertEquals(1_080, sharp.width)
+                assertEquals(2_410, sharp.height)
+                assertEquals(10_411_200, sharp.byteCount)
+                assertEquals(source.getPixel(100, 1_000), sharp.getPixel(100, 1_000))
+                assertEquals(source.getPixel(101, 1_000), sharp.getPixel(101, 1_000))
+                assertEquals(480, thumbnail.width)
+                assertEquals(1_071, thumbnail.height)
+                assertTrue(thumbnail.byteCount <= 2_100_000)
+            } finally {
+                sharp.recycle()
+                thumbnail.recycle()
+            }
+        } finally {
+            source.recycle()
+        }
+    }
+
+    @Test
+    fun tallPreviewDecodesSmallThumbnailWithoutStretchingOrPermanentFullSizeAllocation() {
+        val source = Bitmap.createBitmap(614, 3_840, Bitmap.Config.ARGB_8888)
+        try {
+            assertTrue(store.save(tabId, source))
+            val thumbnail = requireNotNull(store.load(tabId))
+            val sharp = requireNotNull(store.load(tabId, targetWidthPx = 1_280))
+            try {
+                assertEquals(230, thumbnail.width)
+                assertEquals(1_440, thumbnail.height)
+                assertTrue(thumbnail.byteCount <= 2_764_800)
+                assertTrue(kotlin.math.abs(thumbnail.width / thumbnail.height.toDouble() - 614.0 / 3_840) < 0.001)
+                assertEquals(614, sharp.width)
+                assertEquals(3_840, sharp.height)
+                assertTrue(sharp.byteCount <= 12_000_000)
+            } finally {
+                thumbnail.recycle()
+                sharp.recycle()
+            }
+        } finally {
+            source.recycle()
+        }
+    }
+
+    @Test
+    fun legacySmallPreviewIsNeverUpscaledIntoFalseDetail() {
+        val source = Bitmap.createBitmap(480, 1_000, Bitmap.Config.ARGB_8888)
+        try {
+            assertTrue(store.save(tabId, source))
+            val sharp = requireNotNull(store.load(tabId, targetWidthPx = 1_280))
+            try {
+                assertEquals(480, sharp.width)
+                assertEquals(1_000, sharp.height)
+            } finally {
+                sharp.recycle()
+            }
+        } finally {
+            source.recycle()
+        }
+    }
+
+    @Test
+    fun rejectsOversizedEncodedPreviewBeforeDecodingItsPixels() {
+        val source = Bitmap.createBitmap(2_048, 2_048, Bitmap.Config.ARGB_8888)
+        try {
+            assertFalse(store.save(tabId, source))
+            val file = requireNotNull(store.fileFor(tabId))
+            require(file.parentFile?.mkdirs() == true || file.parentFile?.isDirectory == true)
+            file.outputStream().use { source.compress(Bitmap.CompressFormat.WEBP_LOSSLESS, 100, it) }
+
+            assertNull(store.load(tabId, targetWidthPx = 1_280))
+            assertFalse(file.exists())
+        } finally {
+            source.recycle()
+        }
     }
 
     @Test

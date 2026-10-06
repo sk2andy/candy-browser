@@ -1329,6 +1329,16 @@
     <string name="developer_options_unlock_action">Odemknout možnosti vývojáře</string>
     <string name="developer_options_unlocked">Možnosti vývojáře odemčeny</string>
     <string name="developer_options_security_section">Výjimky zabezpečení</string>
+    <string name="developer_options_memory_section">Paměť panelů</string>
+    <string name="developer_options_foreground_tab_idle_timeout">Uvolňovat neaktivní panely</string>
+    <string name="developer_options_foreground_tab_idle_timeout_summary">Uvolní nevybrané panely po této době nečinnosti, když je Candy v popředí. Vybraný panel a chráněné relace zůstávají načtené.</string>
+    <string name="developer_options_background_warm_tab_count">Panely ponechané načtené na pozadí</string>
+    <string name="developer_options_background_warm_tab_count_summary">Počet nedávno použitých nevybraných panelů, které zůstanou načtené na pozadí. Vybraný panel vždy zůstává načtený; chráněné relace mohou tento limit překročit.</string>
+    <string name="developer_options_history_cache_lifetime">Doba uchování stránek v mezipaměti</string>
+    <string name="developer_options_history_cache_lifetime_summary">Gecko uchovává více stránek v mezipaměti pro Zpět a Vpřed. Časovač uvolní příslušné stránky po přibližně dvou třetinách až celé zvolené doby; nedostatek paměti je může uvolnit dříve. Změna této hodnoty vyžaduje úplný restart aplikace.</string>
+    <string name="developer_options_minutes_value">%1$d min</string>
+    <string name="developer_options_seconds_value">%1$d s</string>
+    <string name="developer_options_tabs_value">%1$d panelů</string>
     <string name="developer_options_http_warning_title">Zapnout automatické vyplňování na nezabezpečených stránkách?</string>
     <string name="developer_options_http_warning_message">HTTP nešifruje přihlašovací údaje ani obsah stránky. Výběr správce hesel zapínejte pouze pro důvěryhodné vývojové stránky nebo stránky místní sítě.</string>
     <string name="developer_options_http_warning_confirm">Přesto zapnout</string>

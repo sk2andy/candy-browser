@@ -1287,6 +1287,16 @@
     <string name="developer_options_unlock_action">開発者向けオプションを解除</string>
     <string name="developer_options_unlocked">開発者向けオプションを解除しました</string>
     <string name="developer_options_security_section">セキュリティの例外設定</string>
+    <string name="developer_options_memory_section">タブのメモリ</string>
+    <string name="developer_options_foreground_tab_idle_timeout">待機中のタブを解放</string>
+    <string name="developer_options_foreground_tab_idle_timeout_summary">Candy がフォアグラウンドにある間、選択されていないタブをこの待機時間後に解放します。選択中のタブと保護されたセッションは読み込んだまま維持します。</string>
+    <string name="developer_options_background_warm_tab_count">バックグラウンドで保持するタブ</string>
+    <string name="developer_options_background_warm_tab_count_summary">バックグラウンドで読み込んだまま維持する、最近使用した未選択のタブ数です。選択中のタブは常に保持します。保護されたセッションはこの上限を超える場合があります。</string>
+    <string name="developer_options_history_cache_lifetime">ページキャッシュの保持時間</string>
+    <string name="developer_options_history_cache_lifetime_summary">Gecko は「戻る」と「進む」用に複数のページをキャッシュします。有効期限のタイマーは、選択した時間の約3分の2から全時間までの間に対象ページを解放します。メモリ不足時はそれより早く解放する場合があります。この値の変更にはアプリの完全な再起動が必要です。</string>
+    <string name="developer_options_minutes_value">%1$d 分</string>
+    <string name="developer_options_seconds_value">%1$d 秒</string>
+    <string name="developer_options_tabs_value">%1$d タブ</string>
     <string name="developer_options_http_warning_title">安全でないページに自動記入を有効にするか?</string>
     <string name="developer_options_http_warning_message">HTTP は認証情報やページコンテンツを暗号化しない. 信頼される開発やローカルネットワークのページにのみパスワード管理者の選択を有効にします.</string>
     <string name="developer_options_http_warning_confirm">とにかく有効にする</string>

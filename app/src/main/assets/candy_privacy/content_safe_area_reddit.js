@@ -67,11 +67,29 @@
     desired.add(target);
     if (observers.has(target) || observers.size >= 16) return;
     const observer = new MutationObserver((records) => {
+      if (records.some((record) => record.removedNodes.length)) releaseDetachedElements();
       if (records.some((record) => [...record.addedNodes, ...record.removedNodes]
         .some((node) => node.nodeType === 1 && !ownsSource(node)))) schedule(true);
     });
     observer.observe(target, { childList: true });
     observers.set(target, observer);
+  }
+
+  function releaseDetachedElements() {
+    // Releasing bounded ownership must still work after discovery exhausts its
+    // per-navigation structural budget, including roots detached by an ancestor.
+    for (const [root, style] of layers) {
+      if (!style.isConnected) { style.remove(); layers.delete(root); }
+    }
+    for (const [target, observer] of observers) {
+      if (!target.isConnected) { observer.disconnect(); observers.delete(target); }
+    }
+    for (const candidates of [apps, headers]) {
+      for (const element of candidates) {
+        if (!element.isConnected) candidates.delete(element);
+      }
+    }
+    if (!apps.size) reportFlow(false);
   }
 
   function sync(structuralChange = false) {
@@ -180,5 +198,5 @@
   }
 
   globalThis.CandyRedditSafeArea = Object.freeze({ configure, sync, flowProtected: () => protectedFlow,
-    headerCandidates: () => Array.from(headers).slice(0, 8), owns, ownsSource, added });
+    headerCandidates: () => Array.from(headers).slice(0, 8), owns, ownsSource, added, releaseDetachedElements });
 })();

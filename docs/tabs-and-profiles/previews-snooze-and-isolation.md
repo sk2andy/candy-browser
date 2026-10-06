@@ -4,10 +4,12 @@
 
 | Piece | Responsibility |
 | --- | --- |
-| `TabPreviewCaptureRules` | Match capture width to the Hero card on windows at least 600 dp wide, capped at 1,280 px and 2.5 million output pixels; compact windows retain 480 px. Never upscale the source. Reject likely failed PixelCopy results. |
-| `GeckoPreviewCaptureRules` / `TabSwitchPreviewLayoutRules` | Crop Gecko compositor captures to Candy's visible viewport, then reconstruct the same safe-area top inset and captured height during Hero/Grid/List handoffs. A captured height is immutable for the transition and therefore does not follow the moving address bar. |
-| `GeckoContentPresentationGate` | Keep the preview over a GeckoView until Gecko has reported both a real first composite and valid content paint. `onPaintStatusReset` revokes page readiness until the next contentful paint; rebinding a detached surface retains that page paint but still requires a fresh composite. Android `OnDraw` is not treated as Gecko content readiness. |
+| `TabPreviewCaptureRules` | Capture regular pages at the renderer width, capped at 1,280 px and 3 million output pixels. Never upscale the source. Keep the ordinary decoded switcher cache at 480 px; reject likely failed PixelCopy results. |
+| `GeckoPreviewCaptureRules` / `TabSwitchPreviewLayoutRules` | Capture the full visible renderer, including page pixels behind floating address chrome, then reconstruct the same safe-area top inset and captured height during swipe/Hero/Grid/List handoffs. Address-bar bounds never crop a departing page; the chrome is composed separately above it. A captured height is immutable for the transition and therefore does not follow the moving address bar. |
+| `GeckoViewRuntimeHandle` | Seed replacement renderer views with their retained session's last pure inset layout before binding the session. Native margins and CSS safe-area ownership therefore do not briefly reset to a new view's defaults during a warm switch. Retain no Activity, view or WindowInsets instance; the controller applies known current insets before attaching the view, then refreshes root insets after attachment for changed window geometry, fullscreen or safe-drawing hosts. |
+| `GeckoContentPresentationGate` | Establish engine readiness from a real composite and document paint proof; Android `OnDraw` is not Gecko content readiness. Decorative swipe/overview snapshots normally wait for the gate, but expire after two resumed seconds over an attached, visible, valid renderer surface if readiness delivery stalls. Expiration never marks engine content ready. Each handoff owns a distinct visual identity, so an old timeout cannot remove a replacement. |
 | `BrowserController` | Own Gecko `capturePixels` timing, reject stale captures by tab/session/navigation generation, and validate the selected renderer binding again before reporting live content to Compose. |
+| `TabHandoff` / `BrowserViewport` | Classify an unloaded regular tab before selecting it. Its fullscreen restoration snapshot starts grayscale and fades into live color over 250 ms; warm handoffs retain color and their 110 ms reveal. The tab switcher remains colored. Load one larger restoration bitmap only while its handoff owns the selected, resumed viewport; release it on completion, backgrounding, replacement or disposal. Owner identity prevents old cleanup from dropping a newer request. Color filtering changes drawing only and never copies or modifies stored bitmaps. |
 | `TabPreviewRepository` | Serialize preview file I/O on one executor and prune unknown tab IDs |
 | `TabPreviewStore` | Validate bitmap dimensions/encoding and bound stored data |
 | `AtomicTabFileDirectory` | Share safe UUID filenames, atomic writes, pruning and explicit directory lifecycle with favicon and Gecko-session-state stores |
@@ -19,9 +21,18 @@ Hero and Grid use the same shared `TabCardHeroContent` interpolation on entry an
 supplies platform bitmaps and renderer readiness at the edge; the transition geometry, durations and
 card crop stay in shared Compose so iOS and Android do not fork the tab-overview animation.
 Android captures the selected tab again before opening the overview, so existing lower-resolution
-stored previews are replaced when that tab becomes active. The larger capture keeps the existing
+stored previews are replaced when that tab becomes active. An unloaded tab initially falls back to
+its compact cached image while its larger stored snapshot loads. The larger capture keeps the existing
 selected-renderer and navigation-generation checks and still skips private and ephemeral tabs;
 regular-tab previews alone enter the bounded repository.
+
+The visual timeout starts a bounded reveal after two resumed seconds over a valid visible surface,
+using the same 250 ms restoration or 110 ms warm fade. Its timer and bitmap ownership suspend while
+the activity is backgrounded. The timeout prefers a live renderer over an indefinitely stale screenshot. Surface validity
+does not prove content paint: if Gecko itself stalls, expiration can briefly expose its loading
+surface. Native engine readiness and presentation callbacks retain their independent paint checks.
+Timeout release schedules a fresh Android root draw so the SurfaceView's transparent region is
+updated after the Compose snapshot disappears; removing Compose state alone can retain old pixels.
 
 ## Snoozing
 

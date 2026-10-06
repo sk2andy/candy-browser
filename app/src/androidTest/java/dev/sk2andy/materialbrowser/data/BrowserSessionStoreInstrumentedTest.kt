@@ -525,6 +525,66 @@ class BrowserSessionStoreInstrumentedTest {
     }
 
     @Test
+    fun memorySettingsRoundTripAndNormalizeWithoutChangingOtherDeveloperSettings() {
+        val store = BrowserSessionStore(context)
+        val settings = DeveloperSettings(
+            appLoggingEnabled = true,
+            browserMemorySettings = BrowserMemorySettings(
+                foregroundTabIdleTimeoutMinutes = 7,
+                backgroundWarmTabCount = 4,
+                historyCacheLifetimeMinutes = 9,
+            ),
+        )
+
+        store.saveDeveloperSettings(settings)
+
+        assertEquals(settings, BrowserSessionStore(context).loadDeveloperSettings())
+        store.saveDeveloperSettings(
+            settings.copy(
+                browserMemorySettings = BrowserMemorySettings(
+                    foregroundTabIdleTimeoutMinutes = 0,
+                    backgroundWarmTabCount = 99,
+                    historyCacheLifetimeMinutes = 999,
+                ),
+            ),
+        )
+        assertEquals(
+            settings.copy(
+                browserMemorySettings = BrowserMemorySettings(
+                    foregroundTabIdleTimeoutMinutes = 1,
+                    backgroundWarmTabCount = 20,
+                    historyCacheLifetimeMinutes = 60,
+                ),
+            ),
+            BrowserSessionStore(context).loadDeveloperSettings(),
+        )
+    }
+
+    @Test
+    fun corruptMemorySettingsFallBackAndRemainBoundedPerField() {
+        preferences.edit()
+            .putString("developer_foreground_tab_idle_timeout_minutes", "invalid")
+            .putInt("developer_background_warm_tab_count", -3)
+            // A previous build's delayed-background setting no longer governs unloading.
+            .putInt("developer_background_grace_period_seconds", 300)
+            .putString("developer_history_cache_lifetime_minutes", "invalid")
+            .putBoolean("developer_app_logging_enabled", true)
+            .commit()
+
+        assertEquals(
+            DeveloperSettings(
+                appLoggingEnabled = true,
+                browserMemorySettings = BrowserMemorySettings(
+                    foregroundTabIdleTimeoutMinutes = 3,
+                    backgroundWarmTabCount = 0,
+                    historyCacheLifetimeMinutes = 5,
+                ),
+            ),
+            BrowserSessionStore(context).loadDeveloperSettings(),
+        )
+    }
+
+    @Test
     fun appLoggingDefaultsOffAndPersistsUntilTurnedOff() {
         val store = BrowserSessionStore(context)
         assertFalse(store.loadDeveloperSettings().appLoggingEnabled)

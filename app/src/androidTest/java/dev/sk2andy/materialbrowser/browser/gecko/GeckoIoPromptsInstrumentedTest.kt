@@ -9,6 +9,10 @@ import android.os.ParcelFileDescriptor
 import android.os.SystemClock
 import android.provider.MediaStore
 import android.view.View
+import android.view.ViewGroup
+import android.widget.ImageView
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -34,6 +38,8 @@ import java.util.Base64
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.math.abs
+import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
@@ -110,6 +116,71 @@ class GeckoIoPromptsInstrumentedTest {
                         }
                     } == true,
                 )
+            }
+        }
+    }
+
+    @Test
+    fun cancellingFilePickerWithFocusedEditorRestoresLivePageWithoutResumeCover() {
+        FixtureServer().use { server ->
+            seedSelectedTab("about:blank")
+            launchMainActivity().use { scenario ->
+                navigateAndAwaitView(scenario, server.url("/focused-upload"))
+                val initialReport = awaitFocusedUploadReport(scenario) { true }
+                val initialEngineHeight = scenario.value { geckoEngineView().height }
+
+                tapFocusedUploadControl(initialReport, "editor")
+                awaitImeVisibility(scenario, visible = true)
+                val focusedReport = awaitFocusedUploadReport(scenario) { report ->
+                    report.getBoolean("editorFocused") &&
+                        report.getDouble("height") < initialReport.getDouble("height")
+                }
+                tapFocusedUploadControl(focusedReport, "upload")
+                awaitValue("DocumentsUI as resumed activity") {
+                    true.takeIf {
+                        shellOutput("dumpsys activity activities").lineSequence().any { line ->
+                            (line.contains("topResumedActivity") || line.contains("mResumedActivity")) &&
+                                line.contains(".documentsui")
+                        }
+                    }
+                }
+                instrumentation.uiAutomation.executeShellCommand("input keyevent 4").close()
+
+                awaitValue("cancelled focused Gecko file chooser delivery") {
+                    scenario.value { controller ->
+                        true.takeIf { !controller.hasPendingFileChooserForTesting() }
+                    }
+                }
+                awaitImeVisibility(scenario, visible = false)
+                awaitValue("restored native Gecko viewport") {
+                    scenario.value {
+                        true.takeIf { geckoEngineView().height == initialEngineHeight }
+                    }
+                }
+                val restoredReport = awaitFocusedUploadReport(scenario) { report ->
+                    report.getInt("pickerOpens") == 1 &&
+                        report.getInt("heartbeat") > focusedReport.getInt("heartbeat") &&
+                        abs(report.getDouble("height") - initialReport.getDouble("height")) < 1 &&
+                        abs(report.getDouble("width") - initialReport.getDouble("width")) < 1 &&
+                        abs(report.getDouble("scale") - initialReport.getDouble("scale")) < 0.01 &&
+                        abs(report.getJSONObject("editor").getDouble("height") -
+                            initialReport.getJSONObject("editor").getDouble("height")) < 1
+                }
+                awaitValue("Gecko resume cover removed after picker cancellation") {
+                    scenario.value {
+                        val engine = geckoEngineView()
+                        val cover = (0 until engine.childCount)
+                            .map(engine::getChildAt)
+                            .filterIsInstance<ImageView>()
+                            .single()
+                        true.takeIf { cover.visibility == View.GONE }
+                    }
+                }
+                tapFocusedUploadControl(restoredReport, "probe")
+                awaitFocusedUploadReport(scenario) { report ->
+                    report.getInt("clicks") == 1 &&
+                        report.getInt("heartbeat") > restoredReport.getInt("heartbeat")
+                }
             }
         }
     }
@@ -382,6 +453,45 @@ class GeckoIoPromptsInstrumentedTest {
         SystemClock.sleep(250)
     }
 
+    private fun geckoEngineView(): ViewGroup =
+        (requireNotNull(testEngineView) as ViewGroup).getChildAt(0) as ViewGroup
+
+    private fun tapFocusedUploadControl(report: JSONObject, control: String) {
+        val bounds = report.getJSONObject(control)
+        val point = IntArray(2)
+        instrumentation.runOnMainSync {
+            val engine = geckoEngineView()
+            engine.getLocationOnScreen(point)
+            val density = report.getDouble("density")
+            point[0] += ((bounds.getDouble("left") + bounds.getDouble("width") / 2) * density).toInt()
+            point[1] += ((bounds.getDouble("top") + bounds.getDouble("height") / 2) * density).toInt()
+        }
+        instrumentation.uiAutomation.executeShellCommand("input tap ${point[0]} ${point[1]}").close()
+    }
+
+    private fun awaitImeVisibility(scenario: ActivityScenario<MainActivity>, visible: Boolean) {
+        awaitValue("keyboard visible=$visible") {
+            var matches = false
+            scenario.onActivity { activity ->
+                matches = ViewCompat.getRootWindowInsets(activity.window.decorView)
+                    ?.isVisible(WindowInsetsCompat.Type.ime()) == visible
+            }
+            true.takeIf { matches }
+        }
+    }
+
+    private fun awaitFocusedUploadReport(
+        scenario: ActivityScenario<MainActivity>,
+        matches: (JSONObject) -> Boolean,
+    ): JSONObject = requireNotNull(awaitValue("focused upload page report") {
+        scenario.value { controller ->
+            controller.selectedTab.title.takeIf { it.startsWith(FOCUSED_UPLOAD_REPORT_PREFIX) }
+                ?.removePrefix(FOCUSED_UPLOAD_REPORT_PREFIX)
+                ?.let(::JSONObject)
+                ?.takeIf(matches)
+        }
+    })
+
     private fun storedDownload(name: String): ByteArray? = context.contentResolver.query(
         MediaStore.Downloads.EXTERNAL_CONTENT_URI,
         arrayOf(MediaStore.Downloads._ID),
@@ -487,6 +597,7 @@ class GeckoIoPromptsInstrumentedTest {
                         ),
                     )
                     "/upload" -> write(connection, "200 OK", "text/html", UPLOAD_HTML)
+                    "/focused-upload" -> write(connection, "200 OK", "text/html", FOCUSED_UPLOAD_HTML)
                     "/media" -> write(connection, "200 OK", "text/html", MEDIA_HTML)
                     "/notification" -> write(connection, "200 OK", "text/html", NOTIFICATION_HTML)
                     "/notification-state" -> write(
@@ -529,6 +640,41 @@ class GeckoIoPromptsInstrumentedTest {
                 <!doctype html><meta name="viewport" content="width=device-width">
                 <input id="candy-file" aria-label="Candy file upload" type="file" multiple style="position:fixed;inset:0;width:100%;height:100%;opacity:.01">
             """
+            const val FOCUSED_UPLOAD_HTML = """
+                <!doctype html><meta name="viewport" content="width=device-width,initial-scale=1">
+                <style>
+                  html,body{margin:0;height:100%;overflow:hidden}
+                  #editor{position:fixed;left:15%;top:20%;width:70%;height:30%;box-sizing:border-box}
+                  button{position:fixed;left:25%;width:50%;height:40px}
+                  #upload{top:5%}#probe{bottom:15%}
+                </style>
+                <textarea id="editor" aria-label="Candy upload editor"></textarea>
+                <input id="file" type="file" hidden>
+                <button id="upload">Choose file</button><button id="probe">Check live page</button>
+                <script>
+                  const editor=document.querySelector('#editor');
+                  const upload=document.querySelector('#upload');
+                  const probe=document.querySelector('#probe');
+                  let heartbeat=0,pickerOpens=0,clicks=0;
+                  upload.addEventListener('pointerdown',event=>event.preventDefault());
+                  upload.addEventListener('click',()=>{
+                    pickerOpens++;document.querySelector('#file').click();sample();
+                  });
+                  probe.addEventListener('click',()=>{clicks++;sample();});
+                  function bounds(element){
+                    const rect=element.getBoundingClientRect();
+                    return {left:rect.left,top:rect.top,width:rect.width,height:rect.height};
+                  }
+                  function sample(){
+                    document.title='Candy focused upload: '+JSON.stringify({
+                      heartbeat:++heartbeat,pickerOpens,clicks,editorFocused:document.activeElement===editor,
+                      height:visualViewport.height,width:visualViewport.width,scale:visualViewport.scale,
+                      density:devicePixelRatio,editor:bounds(editor),upload:bounds(upload),probe:bounds(probe)
+                    });
+                  }
+                  setInterval(sample,100);sample();
+                </script>
+            """
             const val MEDIA_HTML = """
                 <!doctype html><meta name="viewport" content="width=device-width"><title>media-ready</title>
                 <button aria-label="Candy media request" style="position:fixed;inset:0;width:100%;height:100%" onclick="document.title='media-requested';navigator.mediaDevices.getUserMedia({video:true,audio:true}).then(()=>document.title='media-granted').catch(error=>document.title='media-'+error.name)">media</button>
@@ -550,5 +696,6 @@ class GeckoIoPromptsInstrumentedTest {
     private companion object {
         const val DOWNLOAD_FILE_NAME = "gecko.apk"
         const val TEST_ACTIVITY_ACTION = "dev.sk2andy.materialbrowser.test.GECKO_IO"
+        const val FOCUSED_UPLOAD_REPORT_PREFIX = "Candy focused upload: "
     }
 }

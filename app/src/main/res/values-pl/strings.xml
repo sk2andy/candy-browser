@@ -1329,6 +1329,16 @@
     <string name="developer_options_unlock_action">Odblokuj opcje programistyczne</string>
     <string name="developer_options_unlocked">Opcje programistyczne odblokowane</string>
     <string name="developer_options_security_section">Wyjątki zabezpieczeń</string>
+    <string name="developer_options_memory_section">Pamięć kart</string>
+    <string name="developer_options_foreground_tab_idle_timeout">Zwalniaj nieaktywne karty</string>
+    <string name="developer_options_foreground_tab_idle_timeout_summary">Zwalnia niewybrane karty po tym czasie bezczynności, gdy Candy działa na pierwszym planie. Wybrana karta i chronione sesje pozostają w pamięci.</string>
+    <string name="developer_options_background_warm_tab_count">Karty pozostające w pamięci w tle</string>
+    <string name="developer_options_background_warm_tab_count_summary">Liczba ostatnio używanych, niewybranych kart pozostających w pamięci w tle. Wybrana karta zawsze pozostaje w pamięci; chronione sesje mogą przekraczać ten limit.</string>
+    <string name="developer_options_history_cache_lifetime">Czas przechowywania stron w pamięci podręcznej</string>
+    <string name="developer_options_history_cache_lifetime_summary">Gecko przechowuje wiele stron w pamięci podręcznej dla poleceń Wstecz i Dalej. Zegar zwalnia odpowiednie strony po upływie od około dwóch trzecich do całego wybranego czasu; niedobór pamięci może zwolnić je wcześniej. Zmiana tej wartości wymaga pełnego ponownego uruchomienia aplikacji.</string>
+    <string name="developer_options_minutes_value">%1$d min</string>
+    <string name="developer_options_seconds_value">%1$d s</string>
+    <string name="developer_options_tabs_value">%1$d kart</string>
     <string name="developer_options_http_warning_title">Włączyć autouzupełnianie na niebezpiecznych stronach?</string>
     <string name="developer_options_http_warning_message">HTTP nie szyfruje danych logowania ani treści stron. Włączaj wybór menedżera haseł wyłącznie dla zaufanych stron testowych lub w sieci lokalnej.</string>
     <string name="developer_options_http_warning_confirm">Włącz mimo to</string>

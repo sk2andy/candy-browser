@@ -302,10 +302,16 @@ internal class GeckoViewRuntimeHandle private constructor(
                     ContentBlocking.CookieBehavior.ACCEPT_FIRST_PARTY,
                 )
                 .build()
+            val sessionStore = BrowserSessionStore(appContext)
+            val historyCacheConfigPath = GeckoHistoryCacheConfig.write(
+                directory = appContext.noBackupFilesDir,
+                settings = sessionStore.loadDeveloperSettings().browserMemorySettings,
+            )
             val runtimeSettings = GeckoRuntimeSettingsFactory.create(
                 contentBlocking = contentBlocking,
-                dnsOverHttpsSettings = BrowserSessionStore(appContext).loadDnsOverHttpsSettings(),
-                httpsOnlyMode = BrowserSessionStore(appContext).loadHttpsOnlyMode(),
+                dnsOverHttpsSettings = sessionStore.loadDnsOverHttpsSettings(),
+                httpsOnlyMode = sessionStore.loadHttpsOnlyMode(),
+                configFilePath = historyCacheConfigPath,
             )
             val runtime = GeckoRuntime.create(appContext, runtimeSettings)
             GeckoLogging.attach(appContext)
@@ -986,6 +992,7 @@ private class GeckoViewBrowserSession(
     private var scrollListener: BrowserEngineScrollListener? = null
 
     private var boundView: CandyGeckoView? = null
+    private var retainedViewInsetLayout: GeckoViewInsetLayout? = null
     private var backdropBlurRegion: BrowserBackdropBlurRegion? = null
     private val contentPresentationGate = GeckoContentPresentationGate()
     private var activeMediaSession: MediaSession? = null
@@ -1029,6 +1036,21 @@ private class GeckoViewBrowserSession(
     // starts a queued main-frame load or native restore, even while the Activity is inactive.
     private var navigationTargetUrl: String? = null
     private var navigationGeneration = 0L
+    private val sessionPriority = GeckoSessionPriorityController(
+        containsFormData = ::containsFormData,
+        navigationGeneration = { navigationGeneration },
+        setHighPriority = { high ->
+            session.setPriorityHint(
+                if (high) GeckoSession.PRIORITY_HIGH else GeckoSession.PRIORITY_DEFAULT,
+            )
+        },
+        scheduleExpiry = { expire ->
+            val runnable = Runnable { expire() }
+            mainHandler.postDelayed(runnable, GeckoSessionPriorityController.FORM_PRIORITY_LIFETIME_MILLIS)
+            val cancel: () -> Unit = { mainHandler.removeCallbacks(runnable) }
+            cancel
+        },
+    )
     private val pendingNavigationAttempts = ArrayDeque<CookieNavigationAttempt>()
     private val startedNavigationAttempts = ArrayDeque<CookieNavigationAttempt>()
     private var privacyPolicy = initialPrivacyPolicy
@@ -1043,6 +1065,7 @@ private class GeckoViewBrowserSession(
     private val privacyBinding: GeckoPrivacyBinding
     private var toppingBinding: GeckoToppingSessionBinding = GeckoToppingSessionBinding.None
     init {
+        session.settings.setSuspendMediaWhenInactive(false)
         if (BuildConfig.ENABLE_PERFORMANCE_DIAGNOSTICS) {
             GeckoPerformanceDiagnostics.registerSession(session, isPrivate)
             GeckoDomDiagnostics.registerSession(session, isPrivate)
@@ -2086,6 +2109,7 @@ private class GeckoViewBrowserSession(
     }
 
     private fun invalidateDomProbe() {
+        if (privacyBound) privacyBinding.cancelUserInputQuery()
         if (!BuildConfig.ENABLE_PERFORMANCE_DIAGNOSTICS) return
         GeckoDomDiagnostics.navigationChanged(session)
         // Navigation delegates can run during initial host binding; cancel after it exists.
@@ -2756,8 +2780,10 @@ private class GeckoViewBrowserSession(
     override fun setActive(active: Boolean) {
         if (closed) return
         if (!active) boundView?.cancelActiveTouch()
-        if (this.active == active) return
+        // GeckoView changes native activity when its Surface is acquired or released. Reassert
+        // visibility even when Candy's cached state is unchanged after a view replacement.
         session.setActive(active)
+        if (this.active == active) return
         extensionController.setTabActive(session, active)
         this.active = active
         if (BuildConfig.ENABLE_PERFORMANCE_DIAGNOSTICS) {
@@ -2766,8 +2792,45 @@ private class GeckoViewBrowserSession(
         }
         invalidateCredentialPrompts(recreateHost = active)
         if (active) extensionRuntime.onSelectedChromeSessionChanged()
-        val cookieBehaviorChanged = reconcileCookieBehavior()
-        if (cookieBehaviorChanged && active && currentPageUrl != null) reloadCurrentPage()
+        // Visibility changes restore the runtime's cookie mode for future requests. The retained
+        // document already loaded under its own policy; selecting it must not restart navigation.
+        reconcileCookieBehavior()
+    }
+
+    @UiThread
+    override fun setSelectedPriority(selected: Boolean) {
+        if (!closed) sessionPriority.setSelected(selected)
+    }
+
+    @UiThread
+    override fun trimUiMemory() {
+        if (!closed) boundView?.trimUiMemory()
+    }
+
+    @UiThread
+    override fun containsFormData(onResult: (Boolean?) -> Unit) {
+        if (closed) {
+            onResult(null)
+            return
+        }
+        session.containsFormData().withHandler(mainHandler).accept(
+            { containsData ->
+                if (closed) {
+                    onResult(null)
+                } else if (containsData == false) {
+                    // Gecko's saved form data excludes fields such as autocomplete="off".
+                    privacyBinding.containsUserInput(onResult)
+                } else {
+                    onResult(containsData)
+                }
+            },
+            { onResult(null) },
+        )
+    }
+
+    @UiThread
+    override fun containsUserInput(onResult: (Boolean?) -> Unit) {
+        if (closed) onResult(null) else privacyBinding.containsUserInput(onResult)
     }
 
     @UiThread
@@ -2810,7 +2873,7 @@ private class GeckoViewBrowserSession(
     override fun createView(context: Context): View {
         check(!closed) { "Cannot bind a closed Gecko session" }
         check(boundView == null) { "Gecko session already has a bound View" }
-        return CandyGeckoView(context).also { view ->
+        return CandyGeckoView(context, retainedViewInsetLayout).also { view ->
             view.setBackdropBlurRegion(backdropBlurRegion)
             view.setAnimationsEnabled(privacyPolicy.animationsEnabled)
             view.configureAutofill(isPrivate)
@@ -2868,6 +2931,9 @@ private class GeckoViewBrowserSession(
         if (geckoView !== boundView) return
         mediaRestorationReadback.cancel()
         invalidateDomProbe()
+        // Keep only geometry, never the released Activity host or WindowInsets instance.
+        // A retained document must not briefly reflow through a new view's default safe area.
+        retainedViewInsetLayout = geckoView.insetLayoutSnapshot()
         // Clear ownership before releaseSession or prompt cancellation can synchronously re-enter
         // Compose and ask the controller to attach this session again.
         boundView = null
@@ -3279,6 +3345,7 @@ private class GeckoViewBrowserSession(
     override fun close() {
         if (closed) return
         closed = true
+        sessionPriority.close()
         mediaRestorationReadback.cancel()
         if (BuildConfig.ENABLE_PERFORMANCE_DIAGNOSTICS) GeckoDomDiagnostics.unregisterSession(session)
         if (active) extensionController.setTabActive(session, false)
@@ -3289,6 +3356,7 @@ private class GeckoViewBrowserSession(
         invalidateCredentialPrompts(recreateHost = false)
         boundView?.releaseSession()
         boundView = null
+        retainedViewInsetLayout = null
         contentPresentationGate.close()
         listener = null
         historyStateListener = null
@@ -3733,11 +3801,14 @@ private class GeckoViewBrowserSession(
  * Small GeckoView edge exposing Android's protected scroll metrics to the shared chrome.
  * Gecko still owns all scrolling; Candy only renders and drags the indicator.
  */
-internal class CandyGeckoView(context: Context) : FrameLayout(context), GeckoViewInsetHost {
+internal class CandyGeckoView(
+    context: Context,
+    initialInsetLayout: GeckoViewInsetLayout? = null,
+) : FrameLayout(context), GeckoViewInsetHost {
     private var autofillEnabled = true
     private var animationsEnabled = true
     private var activityContextDelegate: GeckoView.ActivityContextDelegate? = null
-    private var insetLayout = GeckoViewInsetLayout(
+    private var insetLayout = initialInsetLayout ?: GeckoViewInsetLayout(
         margins = GeckoViewInsets.Zero,
         rendererSafeAreaOverride = null,
         scrollableTopInsetPx = 0,
@@ -3771,6 +3842,8 @@ internal class CandyGeckoView(context: Context) : FrameLayout(context), GeckoVie
     fun onPaintStatusReset() = resumeCover.onPaintStatusReset()
 
     fun onNavigationStarted() = resumeCover.onNavigationStarted()
+
+    fun trimUiMemory() = resumeCover.trimMemory()
 
     override fun onWindowFocusChanged(hasWindowFocus: Boolean) {
         if (hasWindowFocus) {
@@ -3816,6 +3889,8 @@ internal class CandyGeckoView(context: Context) : FrameLayout(context), GeckoVie
     }
 
     fun capturePixels(): GeckoResult<Bitmap> = engineView.captureContentPixels()
+
+    fun insetLayoutSnapshot(): GeckoViewInsetLayout = insetLayout
 
     fun domDiagnosticInsets(): JSONObject = JSONObject().apply {
         put("generation", domDiagnosticGeneration)
@@ -4053,6 +4128,8 @@ private class CandyGeckoEngineView(context: Context) : CandyGeckoViewSafeAreaBri
     }
 
     fun dispatchInsetsAfterSessionAttach() {
+        windowInsets?.let(::dispatchCandyWindowInsets)
+        dispatchRendererSafeAreaOverride()
         post {
             windowInsets?.let(::dispatchCandyWindowInsets)
             dispatchRendererSafeAreaOverride()

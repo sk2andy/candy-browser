@@ -147,6 +147,26 @@ test('disable removes every owned root style, observer and pending structural ta
   f.helper.sync(); assert.equal(f.root.querySelectorAll('style').length, 0);
 });
 
+test('removal drops detached shadow roots and header references after the structural work cap', () => {
+  const f = fixture(); const app = f.app(true); const headerRoot = app.header.openShadow();
+  f.helper.configure(true);
+  const parentObserver = f.observers.find((observer) => observer.target === f.body);
+  for (let index = 0; index < 256; index++) {
+    parentObserver.callback([{ addedNodes: [new f.Node('div')], removedNodes: [] }]);
+    f.flush();
+  }
+  app.host.remove();
+  parentObserver.callback([{ addedNodes: [], removedNodes: [app.host] }]);
+  f.flush();
+  assert.equal(f.helper.headerCandidates().length, 0);
+  assert.equal(f.helper.owns(app.header), false);
+  assert.equal(app.scope.querySelector('style'), null);
+  assert.equal(headerRoot.querySelector('style'), null);
+  assert.ok(f.observers.filter((observer) => !observer.target.isConnected)
+    .every((observer) => !observer.connected));
+  assert.equal(f.timers.size, 0);
+});
+
 test('wrong hostname and child frames install no helper or effects', () => {
   for (const options of [{ hostname: 'notreddit.com' }, { hostname: 'reddit.com.example.org' }, { topFrame: false }]) {
     const f = fixture(options);

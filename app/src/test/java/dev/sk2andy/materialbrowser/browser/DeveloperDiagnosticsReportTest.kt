@@ -1,6 +1,7 @@
 package dev.sk2andy.materialbrowser.browser
 
 import dev.sk2andy.materialbrowser.data.BrowserChromeScrollDispatchMode
+import dev.sk2andy.materialbrowser.data.BrowserMemorySettings
 import dev.sk2andy.materialbrowser.data.DeveloperSettings
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -28,6 +29,11 @@ class DeveloperDiagnosticsReportTest {
                     safeAreaLayoutQuietPeriodMillis = 250,
                     safeAreaRequiredFailureCount = 4,
                     forceSafeAreaFallback = true,
+                    browserMemorySettings = BrowserMemorySettings(
+                        foregroundTabIdleTimeoutMinutes = 7,
+                        backgroundWarmTabCount = 2,
+                        historyCacheLifetimeMinutes = 9,
+                    ),
                 ),
             ),
         )
@@ -47,13 +53,17 @@ class DeveloperDiagnosticsReportTest {
             External preview active: No
             Input diagnostics enabled: Yes
             Browser chrome scroll dispatch: fixed_60_hz
+            Foreground tab idle timeout: 7 min
+            Background warm unselected tabs: 2
+            Background session unloading: immediate, restore on selection
+            Gecko page cache lifetime (restart required): 9 min
             Safe-area layout quiet period: 250 ms
             Safe-area required failures: 4
             Native safe-area fallback forced: Yes
             """.trimIndent(),
             report,
         )
-        listOf("http://", "https://", "tab id", "profile name").forEach { privateField ->
+        listOf("http://", "https://", "tab id:", "profile name:").forEach { privateField ->
             assertFalse(report.contains(privateField, ignoreCase = true))
         }
     }
@@ -92,6 +102,10 @@ class DeveloperDiagnosticsReportTest {
             External preview active: Yes
             Input diagnostics enabled: No
             Browser chrome scroll dispatch: optimized
+            Foreground tab idle timeout: 3 min
+            Background warm unselected tabs: 0
+            Background session unloading: immediate, restore on selection
+            Gecko page cache lifetime (restart required): 5 min
             Safe-area layout quiet period: 400 ms
             Safe-area required failures: 3
             Native safe-area fallback forced: No

@@ -1302,6 +1302,16 @@
     <string name="developer_options_unlock_action">Geliştirici seçeneklerini kilitleme</string>
     <string name="developer_options_unlocked">Geliştirici seçenekleri kilitlenmedi</string>
     <string name="developer_options_security_section">Güvenlik önlemleri</string>
+    <string name="developer_options_memory_section">Sekme belleği</string>
+    <string name="developer_options_foreground_tab_idle_timeout">Boşta kalan sekmeleri bellekten çıkar</string>
+    <string name="developer_options_foreground_tab_idle_timeout_summary">Candy ön plandayken, seçili olmayan sekmeleri bu boşta kalma süresinden sonra bellekten çıkarır. Seçili sekme ve korunan oturumlar yüklü kalır.</string>
+    <string name="developer_options_background_warm_tab_count">Arka planda yüklü tutulan sekmeler</string>
+    <string name="developer_options_background_warm_tab_count_summary">Arka planda yüklü tutulacak, yakın zamanda kullanılan ve seçili olmayan sekmelerin sayısı. Seçili sekme her zaman yüklü kalır; korunan oturumlar bu sınırın aşılmasına neden olabilir.</string>
+    <string name="developer_options_history_cache_lifetime">Sayfa önbelleği saklama süresi</string>
+    <string name="developer_options_history_cache_lifetime_summary">Gecko, Geri ve İleri işlemleri için birden fazla sayfayı önbellekte tutar. Süre sonu zamanlayıcısı uygun sayfaları, seçilen sürenin yaklaşık üçte ikisi ile tamamı arasında bellekten çıkarır; bellek baskısı sayfaların daha erken çıkarılmasına neden olabilir. Bu değeri değiştirmek için uygulamayı tamamen yeniden başlatmak gerekir.</string>
+    <string name="developer_options_minutes_value">%1$d dk</string>
+    <string name="developer_options_seconds_value">%1$d sn</string>
+    <string name="developer_options_tabs_value">%1$d sekme</string>
     <string name="developer_options_http_warning_title">Güvensiz sayfalarda otomatik doldurma etkinleştir?</string>
     <string name="developer_options_http_warning_message">HTTP kimlik bilgilerini veya sayfa içeriğini şifrelemez. Sadece güvenilir geliştirme veya yerel ağ sayfaları için şifreler yöneticisi seçimini etkinleştir.</string>
     <string name="developer_options_http_warning_confirm">Her halükarda etkinleştir .</string>

@@ -1302,6 +1302,16 @@
     <string name="developer_options_unlock_action">Ξεκλειδώστε τις επιλογές προγραμματιστή</string>
     <string name="developer_options_unlocked">Επιλογή προγραμματιστή ξεκλείδωτη</string>
     <string name="developer_options_security_section">Παρακάμψεις ασφαλείας</string>
+    <string name="developer_options_memory_section">Μνήμη καρτελών</string>
+    <string name="developer_options_foreground_tab_idle_timeout">Αποφόρτωση ανενεργών καρτελών</string>
+    <string name="developer_options_foreground_tab_idle_timeout_summary">Όταν το Candy είναι στο προσκήνιο, οι μη επιλεγμένες καρτέλες αποφορτώνονται μετά από αυτό το διάστημα αδράνειας. Η επιλεγμένη καρτέλα και οι προστατευμένες συνεδρίες παραμένουν φορτωμένες.</string>
+    <string name="developer_options_background_warm_tab_count">Καρτέλες που διατηρούνται φορτωμένες στο παρασκήνιο</string>
+    <string name="developer_options_background_warm_tab_count_summary">Αριθμός μη επιλεγμένων καρτελών που χρησιμοποιήθηκαν πρόσφατα και θα παραμείνουν φορτωμένες στο παρασκήνιο. Η επιλεγμένη καρτέλα παραμένει πάντα φορτωμένη· οι προστατευμένες συνεδρίες μπορεί να υπερβούν αυτό το όριο.</string>
+    <string name="developer_options_history_cache_lifetime">Διάρκεια διατήρησης σελίδων στην προσωρινή μνήμη</string>
+    <string name="developer_options_history_cache_lifetime_summary">Το Gecko διατηρεί πολλές σελίδες στην προσωρινή μνήμη για τις ενέργειες Πίσω και Μπροστά. Ο χρονοδιακόπτης λήξης αποδεσμεύει τις κατάλληλες σελίδες μετά από περίπου τα δύο τρίτα έως ολόκληρο το επιλεγμένο διάστημα· η πίεση στη μνήμη μπορεί να τις αποδεσμεύσει νωρίτερα. Η αλλαγή αυτής της τιμής απαιτεί πλήρη επανεκκίνηση της εφαρμογής.</string>
+    <string name="developer_options_minutes_value">%1$d λεπτά</string>
+    <string name="developer_options_seconds_value">%1$d δευτ.</string>
+    <string name="developer_options_tabs_value">%1$d καρτέλες</string>
     <string name="developer_options_http_warning_title">Ενεργοποίηση αυτόματης πλήρωσης σε ανασφαλείς σελίδες;</string>
     <string name="developer_options_http_warning_message">HTTP δεν κρυπτογραφεί διαπιστευτήρια ή περιεχόμενα σελίδων. Επιτρέπει μόνο την επιλογή κωδικού πρόσβασης για αξιόπιστες σελίδες ανάπτυξης ή τοπικών δικτύων.</string>
     <string name="developer_options_http_warning_confirm">Ενεργοποίηση ούτως ή άλλως</string>

@@ -1320,6 +1320,16 @@
     <string name="developer_options_unlock_action">Unlock developer options</string>
     <string name="developer_options_unlocked">Developer options unlocked</string>
     <string name="developer_options_security_section">Security overrides</string>
+    <string name="developer_options_memory_section">Tab memory</string>
+    <string name="developer_options_foreground_tab_idle_timeout">Unload idle tabs</string>
+    <string name="developer_options_foreground_tab_idle_timeout_summary">Unload unselected tabs after this idle time while Candy is in the foreground. The selected tab and protected sessions remain loaded.</string>
+    <string name="developer_options_background_warm_tab_count">Warm tabs in the background</string>
+    <string name="developer_options_background_warm_tab_count_summary">Number of recently used, unselected tabs to keep loaded in the background. The selected tab always stays loaded; protected sessions may exceed this limit.</string>
+    <string name="developer_options_history_cache_lifetime">Page cache lifetime</string>
+    <string name="developer_options_history_cache_lifetime_summary">Gecko keeps multiple pages cached for Back and Forward. Its expiry timer releases eligible pages after roughly two thirds to the full selected time; memory pressure can release them earlier. Changing this value requires a full app restart.</string>
+    <string name="developer_options_minutes_value">%1$d min</string>
+    <string name="developer_options_seconds_value">%1$d s</string>
+    <string name="developer_options_tabs_value">%1$d tabs</string>
     <string name="developer_options_http_warning_title">Enable autofill on insecure pages?</string>
     <string name="developer_options_http_warning_message">HTTP does not encrypt credentials or page contents. Only enable password-manager selection for trusted development or local-network pages.</string>
     <string name="developer_options_http_warning_confirm">Enable anyway</string>

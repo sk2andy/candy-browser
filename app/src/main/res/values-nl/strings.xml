@@ -1302,6 +1302,16 @@
     <string name="developer_options_unlock_action">Ontwikkelaarsopties ontgrendelen</string>
     <string name="developer_options_unlocked">Ontwikkelaarsopties ontgrendeld</string>
     <string name="developer_options_security_section">Beveiliging overschrijdt</string>
+    <string name="developer_options_memory_section">Tabgeheugen</string>
+    <string name="developer_options_foreground_tab_idle_timeout">Inactieve tabs uit het geheugen verwijderen</string>
+    <string name="developer_options_foreground_tab_idle_timeout_summary">Verwijdert niet-geselecteerde tabs na deze inactieve tijd uit het geheugen terwijl Candy op de voorgrond staat. De geselecteerde tab en beschermde sessies blijven geladen.</string>
+    <string name="developer_options_background_warm_tab_count">Geladen tabs op de achtergrond</string>
+    <string name="developer_options_background_warm_tab_count_summary">Aantal onlangs gebruikte, niet-geselecteerde tabs dat op de achtergrond geladen blijft. De geselecteerde tab blijft altijd geladen; beschermde sessies kunnen deze limiet overschrijden.</string>
+    <string name="developer_options_history_cache_lifetime">Bewaartijd van de paginacache</string>
+    <string name="developer_options_history_cache_lifetime_summary">Gecko bewaart meerdere pagina’s in de cache voor Terug en Vooruit. De timer verwijdert daarvoor in aanmerking komende pagina’s na ongeveer twee derde tot de volledige gekozen tijd; geheugendruk kan ze eerder vrijgeven. Een wijziging vereist een volledige herstart van de app.</string>
+    <string name="developer_options_minutes_value">%1$d min</string>
+    <string name="developer_options_seconds_value">%1$d s</string>
+    <string name="developer_options_tabs_value">%1$d tabs</string>
     <string name="developer_options_http_warning_title">Auto-invullen inschakelen op onzekere pagina\'s?</string>
     <string name="developer_options_http_warning_message">HTTP versleutelt geen geloofsbrieven of paginainhoud. Schakel alleen Password-manager selectie in voor betrouwbare ontwikkeling of lokale-netwerk pagina\'s.</string>
     <string name="developer_options_http_warning_confirm">Toch inschakelen</string>

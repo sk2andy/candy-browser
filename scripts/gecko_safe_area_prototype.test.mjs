@@ -69,7 +69,13 @@ function fixture({ density = 3, nativeTop = 96, envTop = nativeTop, simulateAnim
     remove() {
       const siblings = this.parentElement?.children;
       if (siblings) siblings.splice(siblings.indexOf(this), 1);
-      this.parentElement = null; this.isConnected = false;
+      this.parentElement = null;
+      const pending = [this];
+      while (pending.length) {
+        const element = pending.pop();
+        element.isConnected = false;
+        pending.push(...element.children);
+      }
     }
     contains(element) {
       for (let current = element; current; current = current.parentElement) if (current === this) return true;
@@ -323,6 +329,62 @@ function fixture({ density = 3, nativeTop = 96, envTop = nativeTop, simulateAnim
   };
 }
 
+test('removal-only mutations release protected subtrees without a trusted interaction or geometry reads', () => {
+  const f = fixture();
+  f.start();
+  const baseline = f.diagnostics().ownedCount;
+  for (let cycle = 0; cycle < 100; cycle++) {
+    const subtree = f.element('static', 'auto');
+    const header = f.element('fixed', '8px');
+    subtree.append(header);
+    f.event('click', 'document', subtree);
+    f.added(subtree);
+    f.flush();
+    assert.equal(f.computed(header).top, '40px');
+    // Let the trusted discovery window expire; removal must still drop ownership.
+    f.scrollTo(10);
+    f.event('scroll');
+    f.flush();
+    const reads = { style: f.reads.style, rect: f.reads.rect };
+    f.removed(subtree);
+    f.flush();
+    assert.equal(f.diagnostics().ownedCount, baseline, `Detached ownership after cycle ${cycle}`);
+    assert.equal(f.computed(header).top, '8px');
+    assert.deepEqual({ style: f.reads.style, rect: f.reads.rect }, reads);
+  }
+});
+
+test('removed negative-top nodes restore their marker and leave capacity for later nodes', () => {
+  const f = fixture({ hostname: 'amazon.in' });
+  f.config.maxInitialElements = 64;
+  f.start();
+  for (let cycle = 0; cycle < 100; cycle++) {
+    const header = f.element('fixed', '-50px');
+    header.classes = ['s-mobile-toolbar-sticky'];
+    f.added(header);
+    f.flush();
+    assert.equal(header.attributes.size, 1, `Negative-top marker before removal ${cycle}`);
+    f.removed(header);
+    f.flush();
+    assert.equal(header.attributes.size, 0, `Restored marker after removal ${cycle}`);
+    assert.equal(f.computed(header).top, '-50px');
+  }
+});
+
+test('removing a large subtree releases stylesheet owners beyond the mutation discovery budget', () => {
+  const f = fixture();
+  const subtree = f.element('static', 'auto');
+  for (let index = 0; index < 80; index++) subtree.append(f.element('static', 'auto'));
+  const sheet = f.sheet([{ selector: '.floating', declarations: { position: 'fixed', top: '8px' } }]);
+  subtree.append(sheet);
+  f.start();
+  assert.equal(f.diagnostics().cssSourceCount, 1);
+  f.removed(subtree);
+  f.flush();
+  assert.equal(f.diagnostics().cssSourceCount, 0);
+  assert.equal(f.diagnostics().cssRulesApplied, 0);
+});
+
 test('viewport-fit cover without effective safe-area use receives CSS protection', () => {
   const f = fixture({ viewportContent: 'width=device-width, VIEWPORT-FIT = cover' });
   f.body.style.setProperty('padding-top', '4px');
@@ -571,6 +633,57 @@ test('late cover stylesheet can replace fallback offsets with native env padding
   assert.equal(f.computed(header).top, '32px');
   f.configure({ revision: 2 });
   assert.equal(f.computed(header).top, '32px');
+});
+
+test('policy revisions retain safe-area styles during foreground tab switches', () => {
+  const f = fixture();
+  f.body.style.setProperty('padding-top', '4px');
+  const fixed = f.element('fixed', '8px');
+  f.start();
+  const layers = f.sheets.filter(sheet => sheet.isConnected);
+  const writes = f.writes();
+  const ruleWrites = f.ruleWrites();
+
+  for (let revision = 2; revision <= 12; revision++) {
+    f.configure({ revision, scrollMetricsEnabled: revision % 2 === 0 });
+    assert.deepEqual(f.sheets.filter(sheet => sheet.isConnected), layers);
+    assert.equal(f.writes(), writes, 'Unchanged layout must retain owned inline styles');
+    assert.equal(f.ruleWrites(), ruleWrites, 'Unchanged layout must retain owned CSS rules');
+    assert.equal(f.computed(f.body).paddingTop, '32px');
+    assert.equal(f.computed(fixed).top, '40px');
+  }
+});
+
+test('revision-only updates replay native header fallback without rebuilding its layout', () => {
+  const f = fixture({ themeColor: '#cc0000' });
+  const header = f.element('sticky', '0px', 'header');
+  header.rect = { top: 0, left: 0, width: 800, height: 56, right: 800, bottom: 56 };
+  f.start();
+  assert.deepEqual(f.fallbacks, [[1, 1, '#cc0000', true]]);
+  const reads = { ...f.reads };
+  const writes = f.writes();
+
+  f.configure({ revision: 2 });
+
+  assert.deepEqual(f.fallbacks, [[1, 1, '#cc0000', true], [1, 2, '#cc0000', true]]);
+  assert.deepEqual(f.reads, reads, 'New delivery revision must not rediscover the header');
+  assert.equal(f.writes(), writes);
+});
+
+test('revision-only updates replay backdrop color and clear with current freshness', () => {
+  const f = fixture({ viewportContent: 'viewport-fit=cover', themeColor: '#ff4500' });
+  const header = f.element('sticky', '32px', 'header');
+  header.rect = { top: 32, left: 0, width: 800, height: 56, right: 800, bottom: 88 };
+  f.start();
+  f.configure({ revision: 2 });
+  assert.deepEqual(f.backdrops, [[1, 1, '#ff4500'], [1, 2, '#ff4500']]);
+
+  header.remove();
+  f.mutate(f.theme, 'content');
+  f.flush();
+  assert.deepEqual(f.backdrops.at(-1), [1, 2, null]);
+  f.configure({ revision: 3 });
+  assert.deepEqual(f.backdrops.at(-1), [1, 3, null], 'Replay a clear rejected by an older revision');
 });
 
 test('Reddit helper remains active for viewport cover and receives the bounded native inset', () => {

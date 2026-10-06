@@ -26,6 +26,7 @@ data class DeveloperSettings(
     val safeAreaRequiredFailureCount: Int = DEFAULT_SAFE_AREA_REQUIRED_FAILURE_COUNT,
     val forceSafeAreaFallback: Boolean = false,
     val geckoSafeAreaSettings: GeckoSafeAreaSettings = GeckoSafeAreaSettings(),
+    val browserMemorySettings: BrowserMemorySettings = BrowserMemorySettings(),
     val appLoggingEnabled: Boolean = false,
     val geckoLoggingEnabled: Boolean = false,
     val geckoLoggingModules: String = GeckoLoggingRules.DEFAULT_MODULES,
@@ -33,6 +34,7 @@ data class DeveloperSettings(
     fun normalized(): DeveloperSettings = copy(
         geckoLoggingModules = GeckoLoggingRules.normalizedModules(geckoLoggingModules),
         geckoSafeAreaSettings = geckoSafeAreaSettings.normalized(),
+        browserMemorySettings = browserMemorySettings.normalized(),
         safeAreaLayoutQuietPeriodMillis = normalizedLayoutQuietPeriodMillis(),
         safeAreaRequiredFailureCount = safeAreaRequiredFailureCount.coerceIn(
             MIN_SAFE_AREA_REQUIRED_FAILURE_COUNT,

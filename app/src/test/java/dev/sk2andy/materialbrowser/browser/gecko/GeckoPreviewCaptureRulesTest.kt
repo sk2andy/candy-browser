@@ -29,7 +29,7 @@ class GeckoPreviewCaptureRulesTest {
         assertEquals(
             GeckoPreviewBitmapLayout(
                 sourceHeightPx = 2_400,
-                targetWidthPx = 480,
+                targetWidthPx = 360,
                 targetHeightPx = 1_440,
             ),
             GeckoPreviewCaptureRules.resolveBitmapLayout(

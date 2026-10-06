@@ -1214,6 +1214,13 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    override fun onTrimMemory(level: Int) {
+        super.onTrimMemory(level)
+        if (::browserController.isInitialized && !appDataTransferActive) {
+            browserController.onTrimMemory(level)
+        }
+    }
+
     override fun onStop() {
         if (::browserController.isInitialized && !appDataTransferActive) {
             browserController.onStop(

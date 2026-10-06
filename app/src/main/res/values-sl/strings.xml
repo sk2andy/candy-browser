@@ -1330,6 +1330,16 @@
     <string name="developer_options_unlock_action">Odklopite možnosti razvijalca</string>
     <string name="developer_options_unlocked">Možnosti razvijalca odklopljene</string>
     <string name="developer_options_security_section">Varnostne izjeme</string>
+    <string name="developer_options_memory_section">Pomnilnik zavihkov</string>
+    <string name="developer_options_foreground_tab_idle_timeout">Sprosti nedejavne zavihke</string>
+    <string name="developer_options_foreground_tab_idle_timeout_summary">Sprosti pomnilnik neizbranih zavihkov po tem času nedejavnosti, ko je Candy v ospredju. Izbrani zavihek in zaščitene seje ostanejo naloženi.</string>
+    <string name="developer_options_background_warm_tab_count">Naloženi zavihki v ozadju</string>
+    <string name="developer_options_background_warm_tab_count_summary">Število nedavno uporabljenih, neizbranih zavihkov, ki ostanejo naloženi v ozadju. Izbrani zavihek vedno ostane naložen; zaščitene seje lahko presežejo to omejitev.</string>
+    <string name="developer_options_history_cache_lifetime">Trajanje predpomnilnika strani</string>
+    <string name="developer_options_history_cache_lifetime_summary">Gecko hrani več strani v predpomnilniku za Nazaj in Naprej. Časovnik sprosti primerne strani po približno dveh tretjinah do celotnega izbranega časa; pritisk na pomnilnik jih lahko sprosti prej. Sprememba te vrednosti zahteva popoln ponovni zagon aplikacije.</string>
+    <string name="developer_options_minutes_value">%1$d min</string>
+    <string name="developer_options_seconds_value">%1$d s</string>
+    <string name="developer_options_tabs_value">%1$d zavihkov</string>
     <string name="developer_options_http_warning_title">Omogočite avtomatsko polnjenje na nevarnih straneh?</string>
     <string name="developer_options_http_warning_message">HTTP ne šifrira prijavnih podatkov ali vsebine strani. Izbiro upravljalnika gesel omogočite le za zaupanja vredne razvojne strani ali strani lokalnega omrežja.</string>
     <string name="developer_options_http_warning_confirm">Vseeno omogoči.</string>

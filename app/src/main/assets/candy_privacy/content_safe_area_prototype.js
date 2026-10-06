@@ -71,6 +71,7 @@
   let refreshBodyAtReady = false;
   let cssTurn = true;
   let nativeFallbackRequested = false;
+  let nativeFallbackThemeColor = null;
   let statusBarBackdropHeaderConfirmed = false;
   let statusBarBackdropHeader = null;
   let reportedStatusBarBackdropColor = null;
@@ -370,11 +371,12 @@
       }
     }
     nativeFallbackRequested = true;
+    nativeFallbackThemeColor = headerThemeColor(element, style);
     document.documentElement.setAttribute("data-candy-browser-native-top-header", "true");
     globalThis.CandyContentTopInset?.fallbackToNative?.(
       configuration.navigationGeneration,
       configuration.revision,
-      headerThemeColor(element, style),
+      nativeFallbackThemeColor,
       true,
     );
     return true;
@@ -463,13 +465,13 @@
     publishStatusBarBackdrop(null);
   }
 
-  function publishStatusBarBackdrop(color, policy = configuration) {
+  function publishStatusBarBackdrop(color, policy = configuration, forcePublish = false) {
     const revision = `${policy.navigationGeneration}:${policy.revision}`;
-    if (color === null && reportedStatusBarBackdropColor === null) {
+    if (!forcePublish && color === null && reportedStatusBarBackdropColor === null) {
       reportedStatusBarBackdropRevision = revision;
       return;
     }
-    if (color === reportedStatusBarBackdropColor && revision === reportedStatusBarBackdropRevision) return;
+    if (!forcePublish && color === reportedStatusBarBackdropColor && revision === reportedStatusBarBackdropRevision) return;
     reportedStatusBarBackdropColor = color;
     reportedStatusBarBackdropRevision = revision;
     globalThis.CandyContentTopInset?.statusBarBackdrop?.(
@@ -1389,7 +1391,49 @@
     schedule(minimumHeaderVerificationQuietMillis);
   }
 
+  function releaseDetachedElements() {
+    // Ownership is bounded, but a single detached node can retain a large page
+    // subtree. Sweep metadata even outside the trusted DOM-discovery window.
+    // Check connectivity only; removal must never schedule layout discovery.
+    globalThis.CandyRedditSafeArea?.releaseDetachedElements?.();
+    for (const element of rules.keys()) {
+      if (!element.isConnected) releaseRule(element);
+    }
+    for (const [element, entries] of owned) {
+      if (element.isConnected) continue;
+      restore(element, entries);
+      owned.delete(element);
+    }
+    for (const [element, entry] of negativeTopElements) {
+      if (element.isConnected) continue;
+      restore(element, entry);
+      negativeTopElements.delete(element);
+    }
+    for (const candidates of [topCandidates, fixedHeaderCandidates, semanticHeaderCandidates]) {
+      for (const element of candidates.keys()) {
+        if (!element.isConnected) candidates.delete(element);
+      }
+    }
+    backdropPriorityCandidates = backdropPriorityCandidates.filter((element) => element.isConnected);
+    viewportOverlayCandidates = viewportOverlayCandidates.filter((element) => element.isConnected);
+    jobs = jobs.filter((job) => job.root.isConnected);
+    let removedSources = false;
+    for (const [sheet, source] of sources) {
+      if (!source.owner || source.owner.isConnected) continue;
+      sources.delete(sheet);
+      if (selectorScan?.source === source) selectorScan = null;
+      removedSources = true;
+    }
+    if (removedSources) {
+      sourceQueue = sourceQueue.filter((source) => sources.has(source.sheet));
+      beginSelectorBuild();
+    }
+  }
+
   function mutations(records) {
+    if (records.some((record) => record.type === "childList" && record.removedNodes?.length)) {
+      releaseDetachedElements();
+    }
     recheckNegativeTopMutations(records);
     const wasCover = configuration?.cover === true;
     let removedViewportOverlay = false;
@@ -1633,7 +1677,6 @@
       active: incoming.ready === true && incoming.enabled === true && nextInset > 0 &&
       (!cover || coverNeedsProtection), cover,
       navigationGeneration: nextNavigationGeneration,
-      revision: Number.isSafeInteger(incoming.revision) ? Math.max(0, incoming.revision) : 0,
       recheckAddedElements: incoming.recheckAddedElements === true,
       recheckChangedElements: incoming.recheckChangedElements === true,
       requireInteractionForUpdates: incoming.requireInteractionForUpdates !== false,
@@ -1645,7 +1688,22 @@
       maxBatchDurationMillis: bounded(incoming.maxBatchDurationMillis, 1, 8, 4),
       maxInitialElements: bounded(incoming.maxInitialElements, 64, 2048, 512) };
     const key = JSON.stringify([next, nextInset, redditActive, incoming.navigationGeneration, coverLayoutRevision]);
+    // A tab switch updates scroll reporting and policy freshness, not safe-area geometry.
+    // Keep delivery revisions out of the layout key so owned CSS survives that update.
+    next.revision = Number.isSafeInteger(incoming.revision) ? Math.max(0, incoming.revision) : 0;
     if (key === configurationKey) {
+      const revisionChanged = configuration.revision !== next.revision;
+      configuration = next;
+      if (revisionChanged) {
+        if (nativeFallbackRequested) {
+          globalThis.CandyContentTopInset?.fallbackToNative?.(
+            next.navigationGeneration, next.revision, nativeFallbackThemeColor, true);
+        } else {
+          // An older report (including a clear) may still be in flight when native
+          // publishes the next policy. Replay with current freshness, without discovery.
+          publishStatusBarBackdrop(reportedStatusBarBackdropColor, next, true);
+        }
+      }
       if (resize && next.active) { enqueue(document.body, true); schedule(); }
       return;
     }
@@ -1708,6 +1766,7 @@
     refreshBodyAtReady = false;
     cssTurn = true;
     nativeFallbackRequested = false;
+    nativeFallbackThemeColor = null;
     statusBarBackdropHeaderConfirmed = false;
     statusBarBackdropHeader = null;
     statusBarBackdropPending = false;

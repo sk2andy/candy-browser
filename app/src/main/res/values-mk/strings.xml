@@ -1302,6 +1302,16 @@
     <string name="developer_options_unlock_action">Отклучете ги опциите за програмери</string>
     <string name="developer_options_unlocked">Опции за програмери отклучени</string>
     <string name="developer_options_security_section">Безбедносни исклучоци</string>
+    <string name="developer_options_memory_section">Меморија на јазичињата</string>
+    <string name="developer_options_foreground_tab_idle_timeout">Ослободи ги неактивните јазичиња</string>
+    <string name="developer_options_foreground_tab_idle_timeout_summary">Ослободи ја меморијата на неизбраните јазичиња по ова време на неактивност додека Candy е во преден план. Избраното јазиче и заштитените сесии остануваат вчитани.</string>
+    <string name="developer_options_background_warm_tab_count">Вчитани јазичиња во заднина</string>
+    <string name="developer_options_background_warm_tab_count_summary">Број на неодамна користени, неизбрани јазичиња што остануваат вчитани во заднина. Избраното јазиче секогаш останува вчитано; заштитените сесии може да го надминат ова ограничување.</string>
+    <string name="developer_options_history_cache_lifetime">Траење на кешот на страниците</string>
+    <string name="developer_options_history_cache_lifetime_summary">Gecko чува повеќе страници во кешот за Назад и Напред. Тајмерот ги ослободува соодветните страници по приближно две третини до целото избрано време; недостигот на меморија може да ги ослободи порано. Промената на оваа вредност бара целосно рестартирање на апликацијата.</string>
+    <string name="developer_options_minutes_value">%1$d мин</string>
+    <string name="developer_options_seconds_value">%1$d сек</string>
+    <string name="developer_options_tabs_value">%1$d јазичиња</string>
     <string name="developer_options_http_warning_title">Вклучете го автопополнувањето на несигурните страници?</string>
     <string name="developer_options_http_warning_message">HTTP не ги шифрира податоците за најавување или содржината на страницата. Изборот на менаџер за лозинки овозможете го само за доверливи развојни страници или страници на локалната мрежа.</string>
     <string name="developer_options_http_warning_confirm">Активирај во секој случај.</string>

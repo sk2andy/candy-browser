@@ -1,6 +1,7 @@
 package dev.sk2andy.materialbrowser.browser.gecko
 
 import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.graphics.Color
 import android.os.SystemClock
 import android.view.SurfaceView
@@ -43,7 +44,7 @@ class GeckoResumeCoverInstrumentedTest {
                 host.addView(surface, matchParentLayoutParams())
                 cover = GeckoResumeCover(host, surface) {
                     captures.incrementAndGet()
-                    GeckoResult.fromValue(greenFrame())
+                    GeckoResult.fromValue(greenFrame(host))
                 }.apply {
                     isContentPresented = ready::get
                     onSurfaceCreated = { ready.set(false) }
@@ -101,6 +102,60 @@ class GeckoResumeCoverInstrumentedTest {
     }
 
     @Test
+    fun validSurfaceReleasesDecorativeFrameWithoutClaimingContentReady() {
+        withPendingDepartureCapture { fixture ->
+            fixture.scenario.onActivity {
+                fixture.result.complete(greenFrame(fixture.host))
+                fixture.cover.isContentPresented = { false }
+                fixture.surface.visibility = View.INVISIBLE
+            }
+            awaitCondition("Departing frame did not cover lost surface") {
+                fixture.image.visibility == View.VISIBLE
+            }
+            fixture.scenario.onActivity { fixture.surface.visibility = View.VISIBLE }
+            awaitCondition("Replacement surface did not become available") {
+                fixture.surface.holder.surface.isValid
+            }
+            awaitCondition("Decorative frame indefinitely hid valid surface") {
+                fixture.image.visibility == View.GONE && fixture.image.drawable == null
+            }
+            fixture.scenario.onActivity {
+                assertEquals(false, fixture.cover.isContentPresented())
+            }
+        }
+    }
+
+    @Test
+    fun returningAfterHiddenDeadlineRearmsDecorativeFrameRelease() {
+        withPendingDepartureCapture { fixture ->
+            fixture.scenario.onActivity {
+                fixture.result.complete(greenFrame(fixture.host))
+                fixture.cover.isContentPresented = { false }
+                fixture.surface.visibility = View.INVISIBLE
+            }
+            awaitCondition("Departing frame did not cover lost surface") {
+                fixture.image.visibility == View.VISIBLE
+            }
+            fixture.scenario.onActivity { fixture.surface.visibility = View.VISIBLE }
+            awaitCondition("Replacement surface did not become available") {
+                fixture.surface.holder.surface.isValid
+            }
+            fixture.scenario.onActivity { fixture.host.visibility = View.INVISIBLE }
+            SystemClock.sleep(2_200L)
+            fixture.scenario.onActivity {
+                fixture.host.visibility = View.VISIBLE
+                fixture.cover.onFocusRestored()
+            }
+            awaitCondition("Returned surface did not become available") {
+                fixture.surface.holder.surface.isValid
+            }
+            awaitCondition("Returned frame did not expire without content-ready callback") {
+                fixture.image.visibility == View.GONE && fixture.image.drawable == null
+            }
+        }
+    }
+
+    @Test
     fun navigationRejectsLateDepartureCapture() {
         assertLateCaptureDoesNotRestoreCover(GeckoResumeCover::onNavigationStarted)
     }
@@ -123,7 +178,7 @@ class GeckoResumeCoverInstrumentedTest {
                 host.addView(surface, matchParentLayoutParams())
                 cover = GeckoResumeCover(host, surface) {
                     captures.incrementAndGet()
-                    GeckoResult.fromValue(greenFrame())
+                    GeckoResult.fromValue(greenFrame(host))
                 }.apply {
                     isContentPresented = { true }
                 }
@@ -152,6 +207,157 @@ class GeckoResumeCoverInstrumentedTest {
             }
         }
     }
+
+    @Test
+    fun viewportResizeRemovesVisibleDepartureFrame() {
+        withPendingDepartureCapture { fixture ->
+            fixture.scenario.onActivity {
+                fixture.result.complete(greenFrame(fixture.host))
+            }
+            instrumentation.waitForIdleSync()
+            fixture.scenario.onActivity { fixture.surface.visibility = View.INVISIBLE }
+            awaitCondition("Surface loss did not show the captured frame") {
+                fixture.image.visibility == View.VISIBLE
+            }
+
+            fixture.scenario.onActivity {
+                fixture.host.layoutParams = FrameLayout.LayoutParams(320, 640)
+            }
+            awaitCondition("Viewport resize did not discard the captured frame") {
+                fixture.host.height == 640 && fixture.image.visibility == View.GONE &&
+                    fixture.image.drawable == null
+            }
+        }
+    }
+
+    @Test
+    fun viewportResizeAwayAndBackRejectsPendingDepartureCapture() {
+        withPendingDepartureCapture { fixture ->
+            lateinit var bitmap: Bitmap
+            fixture.scenario.onActivity {
+                bitmap = greenFrame(fixture.host)
+                fixture.host.layoutParams = FrameLayout.LayoutParams(320, 640)
+            }
+            awaitCondition("Viewport did not resize") { fixture.host.height == 640 }
+            fixture.scenario.onActivity {
+                fixture.host.layoutParams = FrameLayout.LayoutParams(320, 480)
+            }
+            awaitCondition("Viewport did not return to its captured dimensions") {
+                fixture.host.height == 480
+            }
+            fixture.scenario.onActivity {
+                fixture.surface.visibility = View.INVISIBLE
+                fixture.result.complete(bitmap)
+            }
+            awaitCondition("Capture from an earlier viewport was not recycled") { bitmap.isRecycled }
+            fixture.scenario.onActivity {
+                assertEquals(View.GONE, fixture.image.visibility)
+                assertEquals(null, fixture.image.drawable)
+            }
+        }
+    }
+
+    @Test
+    fun mismatchingCaptureDimensionsCannotCoverViewport() {
+        withPendingDepartureCapture { fixture ->
+            val bitmap = Bitmap.createBitmap(320, 479, Bitmap.Config.ARGB_8888)
+            fixture.scenario.onActivity {
+                fixture.surface.visibility = View.INVISIBLE
+                fixture.result.complete(bitmap)
+            }
+            awaitCondition("Wrong-size capture was not rejected and recycled") { bitmap.isRecycled }
+            fixture.scenario.onActivity {
+                assertEquals(View.GONE, fixture.image.visibility)
+                assertEquals(null, fixture.image.drawable)
+            }
+        }
+    }
+
+    @Test
+    fun departureFrameKeepsPixelGeometryDespiteBitmapDensity() {
+        withPendingDepartureCapture { fixture ->
+            fixture.scenario.onActivity {
+                val bitmap = greenFrame(fixture.host).apply {
+                    density = 640
+                    for (y in 60 until 120) {
+                        for (x in 40 until 80) setPixel(x, y, Color.YELLOW)
+                    }
+                }
+                fixture.result.complete(bitmap)
+            }
+            instrumentation.waitForIdleSync()
+            fixture.scenario.onActivity { fixture.surface.visibility = View.INVISIBLE }
+            awaitCondition("Surface loss did not show the captured frame") {
+                fixture.image.visibility == View.VISIBLE && fixture.image.width == 320 &&
+                    fixture.image.height == 480
+            }
+            fixture.scenario.onActivity {
+                val rendered = Bitmap.createBitmap(320, 480, Bitmap.Config.ARGB_8888).apply {
+                    density = Bitmap.DENSITY_NONE
+                }
+                try {
+                    fixture.image.draw(Canvas(rendered))
+                    assertEquals(Color.YELLOW, rendered.getPixel(40, 60))
+                    assertEquals(Color.YELLOW, rendered.getPixel(79, 119))
+                    assertEquals(PAGE_COLOR, rendered.getPixel(39, 60))
+                    assertEquals(PAGE_COLOR, rendered.getPixel(80, 119))
+                    assertEquals(PAGE_COLOR, rendered.getPixel(40, 59))
+                    assertEquals(PAGE_COLOR, rendered.getPixel(79, 120))
+                } finally {
+                    rendered.recycle()
+                }
+            }
+        }
+    }
+
+    private fun withPendingDepartureCapture(test: (CoverFixture) -> Unit) {
+        val captures = AtomicInteger()
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            lateinit var fixture: CoverFixture
+            scenario.onActivity { activity ->
+                val host = FrameLayout(activity)
+                val surface = SurfaceView(activity)
+                val result = GeckoResult<Bitmap>()
+                host.addView(surface, matchParentLayoutParams())
+                val cover = GeckoResumeCover(host, surface) {
+                    captures.incrementAndGet()
+                    result
+                }.apply { isContentPresented = { true } }
+                fixture = CoverFixture(
+                    scenario,
+                    host,
+                    surface,
+                    cover,
+                    host.getChildAt(1) as ImageView,
+                    result,
+                )
+                activity.setContentView(host, FrameLayout.LayoutParams(320, 480))
+            }
+            try {
+                awaitCondition("Initial surface did not become available") {
+                    fixture.host.width == 320 && fixture.host.height == 480 &&
+                        fixture.surface.holder.surface.isValid
+                }
+                scenario.onActivity { fixture.cover.onContentPresented() }
+                awaitCondition("Presented content did not allow departure capture") {
+                    if (captures.get() == 0) fixture.cover.captureBeforeBackground()
+                    captures.get() == 1
+                }
+                test(fixture)
+            } finally {
+                scenario.onActivity { fixture.cover.release() }
+            }
+        }
+    }
+
+    private data class CoverFixture(
+        val scenario: ActivityScenario<MainActivity>,
+        val host: FrameLayout,
+        val surface: SurfaceView,
+        val cover: GeckoResumeCover,
+        val image: ImageView,
+        val result: GeckoResult<Bitmap>,
+    )
 
     private fun assertLateCaptureDoesNotRestoreCover(clearCover: (GeckoResumeCover) -> Unit) {
         lateinit var result: GeckoResult<Bitmap>
@@ -193,8 +399,9 @@ class GeckoResumeCoverInstrumentedTest {
                 awaitCondition("Surface did not become unavailable") {
                     !surface.holder.surface.isValid
                 }
-                val bitmap = greenFrame()
+                lateinit var bitmap: Bitmap
                 scenario.onActivity {
+                    bitmap = greenFrame(surface)
                     clearCover(cover)
                     result.complete(bitmap)
                 }
@@ -243,7 +450,11 @@ class GeckoResumeCoverInstrumentedTest {
         assertTrue(message, observed.get())
     }
 
-    private fun greenFrame(): Bitmap = Bitmap.createBitmap(32, 32, Bitmap.Config.ARGB_8888).apply {
+    private fun greenFrame(view: View): Bitmap = Bitmap.createBitmap(
+        view.width,
+        view.height,
+        Bitmap.Config.ARGB_8888,
+    ).apply {
         eraseColor(PAGE_COLOR)
     }
 

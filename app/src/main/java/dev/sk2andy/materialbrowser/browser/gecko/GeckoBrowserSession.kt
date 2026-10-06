@@ -341,8 +341,20 @@ internal interface GeckoBrowserSession {
     /** Requests that Gecko leave DOM fullscreen through its public session API. */
     fun exitFullscreen() = Unit
 
-    /** Reports whether this is Candy's selected tab so WebExtensions receive active-tab events. */
+    /** Reports renderer visibility; selected-session process protection is a separate signal. */
     fun setActive(active: Boolean)
+
+    /** Protects the selected tab's process independently from renderer visibility. */
+    fun setSelectedPriority(selected: Boolean) = Unit
+
+    /** Drops reconstructible renderer UI images without closing the page. */
+    fun trimUiMemory() = Unit
+
+    /** Null means form state could not be checked and the session must remain resident. */
+    fun containsFormData(onResult: (Boolean?) -> Unit) = onResult(null)
+
+    /** Reports trusted user edits; engines without this probe retain their conservative form check. */
+    fun containsUserInput(onResult: (Boolean?) -> Unit) = containsFormData(onResult)
 
     /** Binds Gecko's session delegates to Candy's stable tab identity. */
     fun bindExtensionTab(tabId: String, generation: Long) = Unit

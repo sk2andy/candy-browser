@@ -1294,6 +1294,16 @@
     <string name="developer_options_unlock_action">Déverrouiller les options pour les développeurs</string>
     <string name="developer_options_unlocked">Options pour les développeurs déverrouillées</string>
     <string name="developer_options_security_section">Exceptions de sécurité</string>
+    <string name="developer_options_memory_section">Mémoire des onglets</string>
+    <string name="developer_options_foreground_tab_idle_timeout">Décharger les onglets inactifs</string>
+    <string name="developer_options_foreground_tab_idle_timeout_summary">Décharge les onglets non sélectionnés après cette durée d’inactivité lorsque Candy est au premier plan. L’onglet sélectionné et les sessions protégées restent chargés.</string>
+    <string name="developer_options_background_warm_tab_count">Onglets gardés chargés en arrière-plan</string>
+    <string name="developer_options_background_warm_tab_count_summary">Nombre d’onglets non sélectionnés récemment utilisés à garder chargés en arrière-plan. L’onglet sélectionné reste toujours chargé ; les sessions protégées peuvent dépasser cette limite.</string>
+    <string name="developer_options_history_cache_lifetime">Durée du cache des pages</string>
+    <string name="developer_options_history_cache_lifetime_summary">Gecko garde plusieurs pages en cache pour Précédent et Suivant. Son minuteur libère les pages concernées après environ deux tiers à la totalité de la durée choisie ; un manque de mémoire peut les libérer plus tôt. Modifier cette valeur nécessite un redémarrage complet de l’application.</string>
+    <string name="developer_options_minutes_value">%1$d min</string>
+    <string name="developer_options_seconds_value">%1$d s</string>
+    <string name="developer_options_tabs_value">%1$d onglets</string>
     <string name="developer_options_http_warning_title">Activer la saisie automatique sur les pages non sécurisées ?</string>
     <string name="developer_options_http_warning_message">HTTP ne chiffre ni les identifiants ni le contenu. Activez la sélection du gestionnaire de mots de passe uniquement pour des pages de développement ou de réseau local fiables.</string>
     <string name="developer_options_http_warning_confirm">Activer quand même</string>

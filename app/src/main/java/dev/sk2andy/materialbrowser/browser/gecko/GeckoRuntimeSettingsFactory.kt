@@ -15,8 +15,10 @@ internal object GeckoRuntimeSettingsFactory {
         trustUserCertificates: Boolean = BuildConfig.TRUST_USER_CERTIFICATES,
         dnsOverHttpsSettings: DnsOverHttpsSettings = DnsOverHttpsRules.Default,
         httpsOnlyMode: HttpsOnlyMode = HttpsOnlyMode.Default,
+        configFilePath: String? = null,
     ): GeckoRuntimeSettings = GeckoRuntimeSettings.Builder()
         .contentBlocking(contentBlocking)
+        .configFilePath(configFilePath)
         .loginAutofillEnabled(true)
         .aboutConfigEnabled(true)
         .automaticFontSizeAdjustment(false)
@@ -24,6 +26,7 @@ internal object GeckoRuntimeSettingsFactory {
         .enterpriseRootsEnabled(trustUserCertificates)
         .build()
         .apply {
+            setWebContentIsolationStrategy(GeckoRuntimeSettings.STRATEGY_ISOLATE_HIGH_VALUE)
             setFingerprintingProtection(true)
             setFingerprintingProtectionPrivateBrowsing(true)
             applyDnsOverHttpsSettings(dnsOverHttpsSettings)

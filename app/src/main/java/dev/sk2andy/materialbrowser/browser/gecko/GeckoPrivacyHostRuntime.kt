@@ -34,6 +34,11 @@ internal interface GeckoPrivacyBinding {
 
     fun cancelDomProbe()
 
+    /** Unknown or incomplete document state must retain the live session. */
+    fun containsUserInput(onResult: (Boolean?) -> Unit) = onResult(null)
+
+    fun cancelUserInputQuery() = Unit
+
     fun scrollMetrics(): BrowserEngineScrollMetrics?
 
     fun setPictureInPicturePlaybackExpected(expected: Boolean)
@@ -76,6 +81,7 @@ internal class GeckoViewPrivacyHostRuntime(
         var readerTimeout: Runnable? = null,
         val domProbe: GeckoDomProbeRequest,
         val textInputOcclusionProbe: GeckoTextInputOcclusionRequest,
+        val userInputRequest: GeckoUserInputRequest,
         var pictureInPicturePlaybackExpected: Boolean = false,
         var pictureInPicturePlaybackRequestGeneration: Long = 0,
         var pictureInPicturePreparationRequestId: Long? = null,
@@ -216,6 +222,7 @@ internal class GeckoViewPrivacyHostRuntime(
             nativeWindow = nativeWindow,
             domProbe = GeckoDomProbeRequest(mainHandler),
             textInputOcclusionProbe = GeckoTextInputOcclusionRequest(mainHandler),
+            userInputRequest = GeckoUserInputRequest(mainHandler),
             sink = sink,
             onScrollMetrics = onScrollMetrics,
             onMainFrameResponse = onMainFrameResponse,
@@ -253,6 +260,7 @@ internal class GeckoViewPrivacyHostRuntime(
         }
         return object : GeckoPrivacyBinding {
             override fun update(policy: GeckoPrivacyPolicy, onReady: () -> Unit) {
+                binding.userInputRequest.cancel()
                 binding.inlineVideoOpenGate.invalidatePolicy(policy, session.settings.usePrivateMode)
                 refreshInlineVideoOpenTimeout(binding)
                 binding.policy = policy
@@ -317,6 +325,26 @@ internal class GeckoViewPrivacyHostRuntime(
             }
 
             override fun cancelDomProbe() = binding.domProbe.cancel()
+
+            override fun containsUserInput(onResult: (Boolean?) -> Unit) {
+                val currentPort = port
+                if (
+                    bindings[token] !== binding || currentPort == null || failureDescription != null ||
+                    !binding.handshake.isCurrentPolicyAcknowledged
+                ) {
+                    onResult(null)
+                    return
+                }
+                binding.userInputRequest.start(
+                    token = token,
+                    revision = binding.handshake.publishedRevision,
+                    navigationGeneration = binding.policy.navigationGeneration,
+                    post = currentPort::postMessage,
+                    onResult = onResult,
+                )
+            }
+
+            override fun cancelUserInputQuery() = binding.userInputRequest.cancel()
 
             override fun setPictureInPicturePlaybackExpected(expected: Boolean) {
                 binding.pictureInPicturePlaybackExpected = expected
@@ -391,6 +419,7 @@ internal class GeckoViewPrivacyHostRuntime(
                 bindings.remove(token)
                 binding.domProbe.cancel()
                 binding.textInputOcclusionProbe.cancel()
+                binding.userInputRequest.cancel()
                 clearPictureInPicturePreparationRequest(binding)?.invoke(null)
                 clearPictureInPictureRestorationRequest(binding)?.invoke(false)
                 clearInlineVideoPresentationRequest(binding)?.invoke(false)
@@ -475,6 +504,7 @@ internal class GeckoViewPrivacyHostRuntime(
         if (bindings[binding.token] !== binding) return
         binding.domProbe.cancel()
         binding.textInputOcclusionProbe.cancel()
+        binding.userInputRequest.cancel()
         val readerResult = clearReaderRequest(binding)
         val pictureInPicturePreparationResult =
             clearPictureInPicturePreparationRequest(binding)
@@ -594,6 +624,15 @@ internal class GeckoViewPrivacyHostRuntime(
                     binding.policy.navigationGeneration != value.optInt("navigationGeneration", -1)
                 ) return
                 binding.domProbe.accept(value)
+            }
+            "user-input-result" -> {
+                val binding = bindings[value.optString("token")] ?: return
+                if (
+                    !binding.handshake.isCurrentPolicyAcknowledged ||
+                    binding.handshake.publishedRevision != value.optLong("revision", -1) ||
+                    binding.policy.navigationGeneration != value.optInt("navigationGeneration", -1)
+                ) return
+                binding.userInputRequest.accept(value)
             }
             "failed" -> fail(IllegalStateException(value.optString("reason", "Privacy host failed")))
         }
@@ -1284,6 +1323,7 @@ internal class GeckoViewPrivacyHostRuntime(
             cancelPendingInlineVideoOpen(binding)
             binding.domProbe.cancel()
             binding.textInputOcclusionProbe.cancel()
+            binding.userInputRequest.cancel()
             cancelTimeout(binding)
             clearPictureInPicturePreparationRequest(binding)?.invoke(null)
             clearInlineVideoPresentationRequest(binding)?.invoke(false)

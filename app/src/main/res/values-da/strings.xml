@@ -1302,6 +1302,16 @@
     <string name="developer_options_unlock_action">Lås op for udviklervalg</string>
     <string name="developer_options_unlocked">Udviklerindstillinger låst op</string>
     <string name="developer_options_security_section">Sikkerhedsoverstyring</string>
+    <string name="developer_options_memory_section">Hukommelse til faneblade</string>
+    <string name="developer_options_foreground_tab_idle_timeout">Frigør inaktive faneblade</string>
+    <string name="developer_options_foreground_tab_idle_timeout_summary">Frigør faneblade, der ikke er valgt, efter denne tid uden aktivitet, mens Candy er i forgrunden. Det valgte faneblad og beskyttede sessioner forbliver indlæst.</string>
+    <string name="developer_options_background_warm_tab_count">Faneblade, der holdes indlæst i baggrunden</string>
+    <string name="developer_options_background_warm_tab_count_summary">Antal nyligt brugte faneblade, der ikke er valgt, som holdes indlæst i baggrunden. Det valgte faneblad forbliver altid indlæst; beskyttede sessioner kan overskride denne grænse.</string>
+    <string name="developer_options_history_cache_lifetime">Levetid for sidecache</string>
+    <string name="developer_options_history_cache_lifetime_summary">Gecko beholder flere sider i cachen til Tilbage og Frem. Timeren frigør relevante sider efter cirka to tredjedele til hele den valgte tid; hukommelsespres kan frigøre dem tidligere. Ændringer kræver en fuld genstart af appen.</string>
+    <string name="developer_options_minutes_value">%1$d min</string>
+    <string name="developer_options_seconds_value">%1$d s</string>
+    <string name="developer_options_tabs_value">%1$d faneblade</string>
     <string name="developer_options_http_warning_title">Aktivér autofill på usikre sider?</string>
     <string name="developer_options_http_warning_message">HTTP krypterer ikke legitimationsoplysninger eller sideindhold. Aktivér kun valg af password-manager for betroet udvikling eller sider med lokalt netværk.</string>
     <string name="developer_options_http_warning_confirm">Aktivér alligevel</string>

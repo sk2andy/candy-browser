@@ -82,6 +82,9 @@ before cross-host main-frame navigation and on deactivation, revocation, or clos
 same-mode sibling sessions share the runtime. Candy marks them inactive through Gecko's session
 lifecycle during that bounded compatibility window, though GeckoView does not specify that as a
 complete network suspension.
+Reactivating a retained tab restores its cookie mode for subsequent requests without reloading
+the document. Explicit permission changes still use their existing reload path; a tab switch
+must preserve the live document, JavaScript state, and scroll position.
 Compatibility observations are returned to native code in bounded batches. The built-in host is
 hidden from the user extension manager and is explicitly enabled in private browsing; ordinary
 installed Firefox extensions retain their separate permission policy.

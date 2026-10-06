@@ -1287,6 +1287,16 @@
     <string name="developer_options_unlock_action">개발자 옵션 잠금 해제</string>
     <string name="developer_options_unlocked">개발자 옵션 잠금 해제됨</string>
     <string name="developer_options_security_section">보안 예외 설정</string>
+    <string name="developer_options_memory_section">탭 메모리</string>
+    <string name="developer_options_foreground_tab_idle_timeout">유휴 탭 해제</string>
+    <string name="developer_options_foreground_tab_idle_timeout_summary">Candy가 포그라운드에 있는 동안 선택하지 않은 탭을 이 유휴 시간이 지나면 해제합니다. 선택한 탭과 보호된 세션은 로드된 상태로 유지합니다.</string>
+    <string name="developer_options_background_warm_tab_count">백그라운드에서 유지할 탭</string>
+    <string name="developer_options_background_warm_tab_count_summary">백그라운드에서 로드된 상태로 유지할 최근 사용한 미선택 탭의 수입니다. 선택한 탭은 항상 유지하며, 보호된 세션은 이 제한을 초과할 수 있습니다.</string>
+    <string name="developer_options_history_cache_lifetime">페이지 캐시 유지 시간</string>
+    <string name="developer_options_history_cache_lifetime_summary">Gecko는 뒤로 가기와 앞으로 가기에 사용할 여러 페이지를 캐시합니다. 만료 타이머는 선택한 시간의 약 3분의 2부터 전체 시간 사이에 해당 페이지를 해제합니다. 메모리 부족 시 더 일찍 해제할 수 있습니다. 이 값을 변경하면 앱을 완전히 다시 시작해야 합니다.</string>
+    <string name="developer_options_minutes_value">%1$d분</string>
+    <string name="developer_options_seconds_value">%1$d초</string>
+    <string name="developer_options_tabs_value">탭 %1$d개</string>
     <string name="developer_options_http_warning_title">안전하지 않은 페이지에서 자동 채우기를 허용하세요?</string>
     <string name="developer_options_http_warning_message">HTTP는 자격증이나 페이지 컨텐츠를 암호화하지 않습니다. 신뢰할 수 있는 개발자 또는 로컬 네트워크 페이지에서만 비밀번호 관리자 선택을 활성화합니다.</string>
     <string name="developer_options_http_warning_confirm">어쨌든 활성화</string>

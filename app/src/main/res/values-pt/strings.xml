@@ -1294,6 +1294,16 @@
     <string name="developer_options_unlock_action">Desbloquear opções do programador</string>
     <string name="developer_options_unlocked">Opções do programador desbloqueadas</string>
     <string name="developer_options_security_section">Exceções de segurança</string>
+    <string name="developer_options_memory_section">Memória dos separadores</string>
+    <string name="developer_options_foreground_tab_idle_timeout">Descarregar separadores inativos</string>
+    <string name="developer_options_foreground_tab_idle_timeout_summary">Descarrega os separadores não selecionados após este período de inatividade enquanto o Candy está em primeiro plano. O separador selecionado e as sessões protegidas permanecem carregados.</string>
+    <string name="developer_options_background_warm_tab_count">Separadores carregados em segundo plano</string>
+    <string name="developer_options_background_warm_tab_count_summary">Número de separadores não selecionados usados recentemente a manter carregados em segundo plano. O separador selecionado permanece sempre carregado; as sessões protegidas podem ultrapassar este limite.</string>
+    <string name="developer_options_history_cache_lifetime">Duração da cache de páginas</string>
+    <string name="developer_options_history_cache_lifetime_summary">O Gecko mantém várias páginas em cache para Retroceder e Avançar. O temporizador liberta as páginas elegíveis após cerca de dois terços até à totalidade do tempo escolhido; a falta de memória pode libertá-las mais cedo. Alterar este valor exige um reinício completo da aplicação.</string>
+    <string name="developer_options_minutes_value">%1$d min</string>
+    <string name="developer_options_seconds_value">%1$d s</string>
+    <string name="developer_options_tabs_value">%1$d separadores</string>
     <string name="developer_options_http_warning_title">Ativar preenchimento automático em páginas inseguras?</string>
     <string name="developer_options_http_warning_message">HTTP não encripta credenciais nem conteúdos. Ative a seleção do gestor de palavras-passe apenas para páginas de desenvolvimento ou de rede local fidedignas.</string>
     <string name="developer_options_http_warning_confirm">Ativar mesmo assim</string>

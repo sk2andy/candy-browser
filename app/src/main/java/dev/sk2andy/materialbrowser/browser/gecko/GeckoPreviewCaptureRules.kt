@@ -1,5 +1,6 @@
 package dev.sk2andy.materialbrowser.browser.gecko
 
+import dev.sk2andy.materialbrowser.data.TabPreviewCaptureRules
 import kotlin.math.roundToInt
 
 internal data class GeckoPreviewBitmapLayout(
@@ -32,13 +33,16 @@ internal object GeckoPreviewCaptureRules {
                 visibleViewHeightPx.coerceAtMost(viewHeightPx).toFloat() /
                 viewHeightPx
             ).roundToInt().coerceIn(1, capturedHeightPx)
-        val targetHeight = (sourceHeight * targetWidthPx.toFloat() / capturedWidthPx)
-            .roundToInt()
-            .coerceIn(1, maximumTargetHeightPx)
-        return GeckoPreviewBitmapLayout(
+        val dimensions = TabPreviewCaptureRules.resolveBitmapDimensions(
+            sourceWidthPx = capturedWidthPx,
             sourceHeightPx = sourceHeight,
             targetWidthPx = targetWidthPx,
-            targetHeightPx = targetHeight,
+            maximumTargetHeightPx = maximumTargetHeightPx,
+        ) ?: return null
+        return GeckoPreviewBitmapLayout(
+            sourceHeightPx = sourceHeight,
+            targetWidthPx = dimensions.widthPx,
+            targetHeightPx = dimensions.heightPx,
         )
     }
 }
