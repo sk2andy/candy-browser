@@ -63,6 +63,9 @@ Issue 222's search-link History API race and navigation cancellation checks are 
 Issue 278's Gecko REWE header jump and retained Cover safe-area checks are recorded in
 [`../audits/issue-278-cover-header-jumping.md`](../audits/issue-278-cover-header-jumping.md).
 
+Lidl's interrupted CSS processing and GitHub's narrow navigation-panel investigation are recorded
+in [`../audits/gecko-header-scroll-and-sidebars.md`](../audits/gecko-header-scroll-and-sidebars.md).
+
 Dark System appearance, native website preferences and the address-editor/tab SurfaceView handoff
 are recorded in [`../audits/dark-appearance-and-address-tab-handoff.md`](../audits/dark-appearance-and-address-tab-handoff.md).
 
@@ -97,7 +100,7 @@ are recorded in [`../audits/dark-appearance-and-address-tab-handoff.md`](../audi
 | Diagnostic activation, export and private-session cancellation | `GeckoPerformanceDiagnosticsRulesTest`, `GeckoPerformanceDiagnosticsInstrumentedTest`, `BrowserPerformanceTraceTest`, `scripts/web_content_top_inset_diagnostics.test.mjs` |
 | Manual DOM probe, native env delivery, bounded payload and lifecycle cancellation | `GeckoDomDiagnosticsRulesTest`, `GeckoDomDiagnosticsInstrumentedTest`, `scripts/gecko_dom_probe.test.mjs` |
 | Gecko bounded CSS classification, mutation gating, restoration and settings | `GeckoSafeAreaSettingsTest`, `GeckoCssSafeAreaInstrumentedTest`, `DeveloperOptionsSettingsPageInstrumentedTest`, `scripts/gecko_css_safe_area.test.mjs` |
-| Shared Candy Edge prototype anchors, owned CSS, cancellation and update gates | `scripts/gecko_safe_area_prototype.test.mjs`, `GeckoSafeAreaPrototypeInstrumentedTest`; live Release-APK smoke and manual site testing remain separate |
+| Shared Candy Edge prototype anchors, coalesced known-header top changes, owned CSS, cancellation and update gates | `scripts/gecko_safe_area_prototype.test.mjs`, `GeckoSafeAreaPrototypeInstrumentedTest`; live Release-APK smoke and manual site testing remain separate |
 | System WebView shared CSS body/fixed/sticky protection, cover/author-env restoration, native/safe-host exclusions and private policies | `SystemWebViewSafeAreaInstrumentedTest`, `SystemWebViewBrowserEngineInstrumentedTest`; site matrix and Force safe area without duplicate offsets: `SystemWebViewEdgeToEdgeInstrumentedTest` |
 | System WebView game/video fullscreen, device orientation and scroll restoration | `BrowserWindowStateRulesTest`, `FullImmersiveModeInstrumentedTest`, `SystemWebViewMediaBridgeInstrumentedTest`, focused `SystemWebViewBrowserEngineInstrumentedTest` methods |
 | Gecko default-extension catalog, integrity and runtime install | `scripts/test_generate_gecko_default_extensions.py`, `GeckoDefaultExtension*Test`, `GeckoDefaultExtensionProvisioningInstrumentedTest` |

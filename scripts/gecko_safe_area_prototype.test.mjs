@@ -109,9 +109,9 @@ function fixture({ density = 3, nativeTop = 96, envTop = nativeTop, simulateAnim
     matches(selector) {
       selectorMatches++;
       return selector.split(',').some((part) => {
-        const exclusion = /:not\(:where\(\[([^\]]+)\]\)\)/.exec(part);
-        if (exclusion && this.getAttribute(exclusion[1]) !== null) return false;
-        if (exclusion) part = part.replace(exclusion[0], '');
+        const exclusions = [...part.matchAll(/:not\(:where\(\[([^\]]+)\]\)\)/g)];
+        if (exclusions.some((exclusion) => this.getAttribute(exclusion[1]) !== null)) return false;
+        for (const exclusion of exclusions) part = part.replace(exclusion[0], '');
         const marker = /\[([^=]+)="([^"]+)"\]/.exec(part);
         if (marker) return this.getAttribute(marker[1]) === marker[2];
         const value = part.trim();
@@ -319,6 +319,7 @@ function fixture({ density = 3, nativeTop = 96, envTop = nativeTop, simulateAnim
       if (timer) { timers.delete(id); clock = Math.max(clock, timer.at); timer.callback(); }
     },
     now: () => clock,
+    advance: (millis) => { clock += millis; },
     diagnostics: () => context.CandyCssSafeAreaDiagnostics.sample(),
   };
 }
@@ -948,6 +949,7 @@ test('backdrop clears when a connected cover header stops being sticky', () => {
   header.rect = { top: 32, left: 0, width: 800, height: 56, right: 800, bottom: 88 };
   f.start();
   Object.assign(header.computed, { position: 'static', top: 'auto' });
+  header.classes = ['static'];
   header.setAttribute('class', 'unpinned');
   f.mutate(header, 'class');
   f.flush();
@@ -1166,6 +1168,7 @@ test('fixed header position changes reset persistence proof before a later scrol
   assert.deepEqual(f.fallbacks, [], 'A stale fixed baseline must not survive a static phase');
 
   Object.assign(header.computed, { position: 'fixed', top: '0px' });
+  header.classes = ['fixed'];
   f.mutate(header, 'class');
   f.flush();
   assert.deepEqual(f.fallbacks, [], 'Returning to fixed starts a new baseline');
@@ -1576,8 +1579,8 @@ test('negative selector exclusions retain comma-list specificity and precede pse
   f.start();
   const injected = f.sheets.filter((element) => element.isConnected && element.parentElement?.localName === 'html')
     .flatMap((element) => element.sheet.cssRules).map((rule) => rule.selectorText);
-  assert.ok(injected.some((selector) => /^#one:not\(:where\(\[[^\]]+\]\)\), \.two:not\(:where\(\[[^\]]+\]\)\)$/.test(selector)));
-  assert.ok(injected.some((selector) => /^#pseudo:not\(:where\(\[[^\]]+\]\)\)::before$/.test(selector)));
+  assert.ok(injected.some((selector) => /^#one(?::not\(:where\(\[[^\]]+\]\)\)){2}, \.two(?::not\(:where\(\[[^\]]+\]\)\)){2}$/.test(selector)));
+  assert.ok(injected.some((selector) => /^#pseudo(?::not\(:where\(\[[^\]]+\]\)\)){2}::before$/.test(selector)));
 });
 
 test('default negative policy does no repeated author reads for unchanged selector targets', () => {
@@ -2041,6 +2044,209 @@ test('passive normal resets stay protected without repairs; important authors an
   assert.ok([f.body, fixed, sticky, important].every((element) => element.attributes.size === 0));
 });
 
+test('known headers follow positive author tops without interaction or a policy reset', () => {
+  const f = fixture();
+  const header = f.element('fixed', '64px', 'header');
+  header.rect = { top: 64, left: 0, width: 200, height: 40, right: 200, bottom: 104 };
+  header.style.setProperty('top', '64px');
+  f.start();
+  assert.equal(f.computed(header).top, '96px');
+  const layer = f.sheets.find((node) => node.sheet.cssRules.some((rule) => rule.style.getPropertyValue('top')));
+  const queries = f.reads.selector;
+  header.style.setProperty('top', '0px');
+  f.flush();
+  assert.equal(f.computed(header).top, '32px');
+  assert.equal(header.style.getPropertyValue('top'), '0px');
+  assert.equal(layer.isConnected, true, 'Local correction retains the existing stylesheet');
+  assert.equal(f.reads.selector, queries, 'Known header updates do not query the document');
+  assert.deepEqual(f.fallbacks, [], 'Local top changes do not switch the native policy');
+
+  const settled = { reads: { ...f.reads }, rules: f.ruleWrites() };
+  for (let index = 0; index < 100; index++) header.style.setProperty('top', '0px');
+  f.flush();
+  assert.deepEqual({ reads: { ...f.reads }, rules: f.ruleWrites() }, settled,
+    'Repeated identical author states do not read styles or write rules');
+  header.style.setProperty('top', '16px');
+  f.flush();
+  assert.equal(f.computed(header).top, '48px');
+  f.configure({ enabled: false });
+  assert.equal(f.computed(header).top, '16px');
+  assert.equal(header.attributes.size, 0);
+});
+
+test('ancestor changes are coalesced and survive cancellation by scrolling', () => {
+  const f = fixture();
+  const parent = f.element('static', 'auto');
+  const header = f.element('fixed', '64px', 'header');
+  parent.append(header);
+  header.rect = { top: 64, left: 0, width: 200, height: 40, right: 200, bottom: 104 };
+  f.start();
+  header.computed.top = '0px';
+  parent.classes = ['compact'];
+  const before = { ...f.reads };
+  f.mutate(parent, 'class');
+  assert.deepEqual(f.reads, before, 'Mutation collection never measures layout');
+  f.event('scroll');
+  f.flush();
+  assert.equal(f.computed(header).top, '32px');
+  assert.equal(f.reads.selector, before.selector, 'Scroll preserves only cached header work');
+  header.computed.top = '-64px';
+  parent.classes = ['hidden'];
+  f.mutate(parent, 'class');
+  f.flush();
+  assert.equal(f.computed(header).top, '-64px');
+  header.computed.top = '0px';
+  parent.classes = ['compact'];
+  f.mutate(parent, 'class');
+  f.flush();
+  assert.equal(f.computed(header).top, '32px');
+});
+
+test('tracked header corrections supersede selector clones and later source updates', () => {
+  const f = fixture();
+  const style = f.sheet([{ selector: '#tracked', declarations: { position: 'fixed', top: '64px' } }]);
+  const header = f.element('static', 'auto', 'header'); header.id = 'tracked';
+  header.rect = { top: 64, left: 0, width: 200, height: 40, right: 200, bottom: 104 };
+  f.start();
+  assert.equal(f.computed(header).top, '96px');
+  header.style.setProperty('top', '0px');
+  f.flush();
+  assert.equal(f.computed(header).top, '32px');
+  style.sheet.cssRules[0].style.setProperty('top', '80px');
+  f.textChanged(style);
+  f.flush();
+  assert.equal(f.computed(header).top, '32px', 'A later selector build cannot override the local header rule');
+  header.style.removeProperty('top');
+  f.flush();
+  assert.equal(f.computed(header).top, '112px');
+  f.configure({ enabled: false });
+  assert.equal(f.computed(header).top, '80px');
+  assert.equal(header.attributes.size, 0);
+});
+
+test('header replacement releases a full cache and pending work stops on policy replacement', () => {
+  const f = fixture();
+  const headers = Array.from({ length: 8 }, () => f.element('fixed', '64px', 'header'));
+  for (const header of headers) header.rect = { top: 64, left: 0, width: 200, height: 40, right: 200, bottom: 104 };
+  f.start();
+  for (const header of headers) f.removed(header);
+  const replacement = f.element('fixed', '64px', 'header');
+  replacement.rect = { top: 64, left: 0, width: 200, height: 40, right: 200, bottom: 104 };
+  f.added(replacement); f.flush();
+  replacement.style.setProperty('top', '0px');
+  f.flush();
+  assert.equal(f.computed(replacement).top, '32px');
+  replacement.style.setProperty('top', '16px');
+  f.configure({ enabled: false, navigationGeneration: 2 });
+  assert.equal(f.computed(replacement).top, '16px');
+  assert.equal(f.timers.size, 0);
+  assert.ok(headers.every((header) => header.attributes.size === 0));
+});
+
+test('empty boolean hidden attributes are distinct from absent header attributes', () => {
+  const f = fixture();
+  const header = f.element('fixed', '64px', 'header');
+  header.rect = { top: 64, left: 0, width: 200, height: 40, right: 200, bottom: 104 };
+  f.start();
+  header.setAttribute('hidden', ''); header.computed.top = '-64px';
+  f.mutate(header, 'hidden'); f.flush();
+  assert.equal(f.computed(header).top, '-64px');
+  header.removeAttribute('hidden'); header.computed.top = '0px';
+  f.mutate(header, 'hidden'); f.flush();
+  assert.equal(f.computed(header).top, '32px');
+});
+
+test('stylesheet load and viewport changes recheck cached headers without network polling', () => {
+  const f = fixture();
+  const header = f.element('fixed', '64px', 'header');
+  header.rect = { top: 64, left: 0, width: 200, height: 40, right: 200, bottom: 104 };
+  f.start();
+  const queries = f.reads.selector;
+  header.computed.top = '0px';
+  const link = f.context.document.createElement('link');
+  link.setAttribute('rel', 'stylesheet');
+  f.event('load', 'document', link);
+  f.flush();
+  assert.equal(f.computed(header).top, '32px');
+  header.computed.top = '16px';
+  f.event('resize');
+  f.flush();
+  assert.equal(f.computed(header).top, '48px');
+  assert.equal(f.reads.selector, queries);
+
+  const unrelated = f.element('static', 'auto');
+  const before = { reads: { ...f.reads }, rules: f.ruleWrites() };
+  for (let index = 0; index < 100; index++) {
+    f.textChanged(unrelated);
+    f.event('load', 'document', f.context.document.createElement('img'));
+  }
+  f.flush();
+  assert.deepEqual({ reads: { ...f.reads }, rules: f.ruleWrites() }, before);
+});
+
+test('inserted and removed stylesheets refresh existing per-element header rules', () => {
+  const f = fixture();
+  const header = f.element('fixed', '64px', 'header');
+  header.rect = { top: 64, left: 0, width: 200, height: 40, right: 200, bottom: 104 };
+  f.start();
+  const style = f.sheet([{ selector: 'header', declarations: { top: '0px' } }]);
+  f.added(style); f.flush();
+  assert.equal(f.computed(header).top, '32px');
+  f.removed(style); f.flush();
+  assert.equal(f.computed(header).top, '96px');
+});
+
+test('header mutation bursts have one worker, bounded reads and no idle polling', () => {
+  const f = fixture();
+  const header = f.element('fixed', '64px', 'header');
+  header.rect = { top: 64, left: 0, width: 200, height: 40, right: 200, bottom: 104 };
+  f.start();
+  const before = { ...f.reads };
+  const rules = f.ruleWrites();
+  for (let index = 0; index < 100; index++) header.style.setProperty('top', `${index}px`);
+  f.step();
+  assert.deepEqual(f.reads, before, 'A burst only queues the current header state');
+  assert.equal(f.timers.size, 1);
+  f.flush();
+  assert.equal(f.computed(header).top, '131px');
+  assert.equal(f.reads.style, before.style + 1);
+  assert.equal(f.ruleWrites(), rules + 1);
+
+  const lastCheck = f.now();
+  f.advance(10); header.style.setProperty('top', '0px'); f.step();
+  f.advance(10); header.style.setProperty('top', '16px'); f.step();
+  assert.equal(f.timers.size, 1);
+  assert.equal([...f.timers.values()][0].at, lastCheck + 50, 'Later events cannot postpone the scheduled check');
+  f.flush();
+  assert.equal(f.computed(header).top, '48px');
+  const idle = { reads: { ...f.reads }, rules: f.ruleWrites() };
+  f.advance(10000); f.flush();
+  assert.equal(f.timers.size, 0);
+  assert.deepEqual({ reads: { ...f.reads }, rules: f.ruleWrites() }, idle);
+});
+
+test('pending header refresh does not delay an immediate semantic check', () => {
+  const f = fixture();
+  const header = f.element('fixed', '64px', 'header');
+  header.rect = { top: 64, left: 0, width: 200, height: 40, right: 200, bottom: 104 };
+  f.start();
+  header.style.setProperty('top', '0px');
+  f.flush();
+
+  const lastCheck = f.now();
+  header.style.setProperty('top', '16px');
+  f.step();
+  assert.equal([...f.timers.values()][0].at, lastCheck + 50);
+
+  const addedHeader = f.element('fixed', '0px', 'header');
+  f.added(addedHeader);
+  assert.equal([...f.timers.values()][0].at, f.now(),
+    'A new semantic header must run now while the cached header remains rate-limited');
+  f.flush();
+  assert.equal(f.computed(header).top, '48px');
+  assert.equal(f.computed(addedHeader).top, '32px');
+});
+
 test('readiness, reserved late semantic seed, trusted discovery and nested scroll cancellation stay bounded', () => {
   const ready = fixture(); const root = ready.context.document.documentElement;
   ready.context.document.documentElement = null; ready.context.document.body = null; ready.start();
@@ -2299,7 +2505,7 @@ test('Gecko media attribute reparsing retains staged CSS rules instead of empty 
   f.start();
   assert.equal(f.computed(node).top, '40px', 'Media activation reparses canonical staged CSS, not empty text');
   const own = f.sheets.find((sheet) => sheet.isConnected && sheet.parentElement?.localName === 'html' && sheet.textContent);
-  assert.match(own.textContent, /#gecko\.fixed:not\(:where\(\[data-candy-safe-area-[^\]]+-negative\]\)\) \{ top: 40px !important; \}/);
+  assert.match(own.textContent, /#gecko\.fixed(?::not\(:where\(\[data-candy-safe-area-[^\]]+\]\)\)){2} \{ top: 40px !important; \}/);
   assert.equal(own.sheet.cssRules.length, 1);
   f.event('scroll'); f.flush(); assert.equal(f.computed(node).top, '40px');
 });

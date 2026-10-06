@@ -13,6 +13,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import dev.sk2andy.materialbrowser.browser.EdgeToEdgeSiteFixtureServer
 import dev.sk2andy.materialbrowser.data.GeckoSafeAreaSettings
+import java.net.URI
 import java.util.UUID
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
@@ -29,6 +30,71 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class GeckoSafeAreaPrototypeInstrumentedTest {
     private val instrumentation = InstrumentationRegistry.getInstrumentation()
+
+    @Test
+    fun knownHeaderTracksUntrustedInlineAndAncestorTopChangesAcrossScroll() {
+        val title = AtomicReference<String?>(null)
+        val policy = GeckoPrivacyPolicy.Disabled.copy(cssSafeAreaTopInsetPx = NATIVE_TOP_PX)
+        EdgeToEdgeSiteFixtureServer { _ -> KNOWN_HEADER_TOP_MUTATION_HTML }.use { server ->
+            ActivityScenario.launch(GeckoScrollTestActivity::class.java).use { scenario ->
+                lateinit var session: GeckoBrowserSession
+                lateinit var view: View
+                scenario.onActivity { activity ->
+                    WindowCompat.setDecorFitsSystemWindows(activity.window, false)
+                    session = GeckoRuntimeOwner.getOrCreate(activity).createSession(
+                        profileId = "safe-area-known-header-${UUID.randomUUID()}",
+                        isPrivate = false,
+                        privacyPolicy = policy,
+                    )
+                    session.bindExtensionTab("safe-area-known-header-${UUID.randomUUID()}", 1)
+                    session.setStateListener { state -> title.set(state.title) }
+                    view = session.createView(activity)
+                    activity.setContentView(view)
+                    session.setActive(true)
+                    assertTrue(session.loadUrl(server.fixtureUrl("/site-matrix/known-header-top-mutation")))
+                }
+                try {
+                    awaitReport(title) { it.getBoolean("loaded") }
+                    scenario.onActivity { updateNativeTop(view) }
+                    val updated = awaitReport(title) {
+                        it.getInt("stage") == 3 && abs(it.getDouble("top") - it.getDouble("env") - 16) < 0.5
+                    }
+                    val safeTop = NATIVE_TOP_PX / updated.getDouble("density")
+                    assertEquals(safeTop + 64, updated.getDouble("initialTop"), 0.5)
+                    assertEquals(safeTop + 64, updated.getDouble("initialY"), 0.5)
+                    assertEquals("Normal inline resets use the current author top", safeTop, updated.getDouble("resetTop"), 0.5)
+                    assertEquals(safeTop, updated.getDouble("resetY"), 0.5)
+                    assertEquals("Ancestor class changes receive exactly one inset", safeTop + 16, updated.getDouble("top"), 0.5)
+                    assertEquals(safeTop + 16, updated.getDouble("y"), 0.5)
+                    assertEquals("", updated.getString("authorTop"))
+                    assertEquals(0, updated.getInt("trustedClicks"))
+
+                    scenario.onActivity { session.scrollToVerticalOffset(600) }
+                    val hidden = awaitReport(title) {
+                        it.getBoolean("hidden") && it.getDouble("scroll") > 80 && abs(it.getDouble("top") + 64) < 0.5
+                    }
+                    assertEquals("Negative scroll states keep their authored position", -64.0, hidden.getDouble("y"), 0.5)
+                    assertEquals(0, hidden.getInt("trustedClicks"))
+
+                    scenario.onActivity { session.scrollToVerticalOffset(0) }
+                    val restored = awaitReport(title) {
+                        !it.getBoolean("hidden") && it.getDouble("scroll") < 1 &&
+                            abs(it.getDouble("top") - safeTop - 16) < 0.5
+                    }
+                    assertEquals("Returning from a negative state restores one inset", safeTop + 16, restored.getDouble("y"), 0.5)
+                    assertEquals("", restored.getString("authorTop"))
+                    assertEquals(0, restored.getInt("trustedClicks"))
+                    println("Prototype known header top changes: $restored")
+                } finally {
+                    scenario.onActivity {
+                        session.releaseView(view)
+                        session.setActive(false)
+                        session.close()
+                    }
+                }
+            }
+        }
+    }
 
     @Test
     fun coverHeaderKeepsItsGeometryAcrossRepeatedClassChanges() {
@@ -158,7 +224,12 @@ class GeckoSafeAreaPrototypeInstrumentedTest {
                     awaitReport(title) { it.getDouble("env") > 0 }
                     fun updatePolicy(next: GeckoPrivacyPolicy) {
                         val ready = CountDownLatch(1)
-                        scenario.onActivity { session.updatePrivacyPolicy(next, onReady = ready::countDown) }
+                        scenario.onActivity {
+                            session.updatePrivacyPolicy(
+                                next.copy(pageHost = URI(server.fixtureUrl("/")).host),
+                                onReady = ready::countDown,
+                            )
+                        }
                         assertTrue("Prototype policy acknowledgement", ready.await(30, TimeUnit.SECONDS))
                     }
                     updatePolicy(policy)
@@ -293,7 +364,12 @@ class GeckoSafeAreaPrototypeInstrumentedTest {
                         it.getDouble("env") > 0 && it.getDouble("navigationBottom") == 0.0
                     }
                     val ready = CountDownLatch(1)
-                    scenario.onActivity { session.updatePrivacyPolicy(policy, onReady = ready::countDown) }
+                    scenario.onActivity {
+                        session.updatePrivacyPolicy(
+                            policy.copy(pageHost = URI(server.fixtureUrl("/")).host),
+                            onReady = ready::countDown,
+                        )
+                    }
                     assertTrue("Prototype policy acknowledgement", ready.await(30, TimeUnit.SECONDS))
                     val protected = awaitReport(title) {
                         abs(it.getDouble("headerTop") - it.getDouble("env") - 8) < 0.5
@@ -663,7 +739,12 @@ class GeckoSafeAreaPrototypeInstrumentedTest {
                     println("Prototype CSSOM probes: ${initial.getJSONObject("mediaAttributeProbe")}; ${initial.getJSONObject("mediaListProbe")}")
                     fun updatePolicy(next: GeckoPrivacyPolicy) {
                         val ready = CountDownLatch(1)
-                        scenario.onActivity { session.updatePrivacyPolicy(next, onReady = ready::countDown) }
+                        scenario.onActivity {
+                            session.updatePrivacyPolicy(
+                                next.copy(pageHost = URI(server.fixtureUrl("/")).host),
+                                onReady = ready::countDown,
+                            )
+                        }
                         assertTrue("Prototype policy acknowledgement", ready.await(30, TimeUnit.SECONDS))
                     }
                     updatePolicy(policy)
@@ -839,6 +920,54 @@ class GeckoSafeAreaPrototypeInstrumentedTest {
     private companion object {
         const val NATIVE_TOP_PX = 137
         const val REPORT_PREFIX = "Candy prototype: "
+        val KNOWN_HEADER_TOP_MUTATION_HTML = """
+            <!doctype html><meta name="viewport" content="width=device-width,initial-scale=1">
+            <style>
+              html,body { margin:0; }
+              #probe { position:absolute; visibility:hidden; padding-top:env(safe-area-inset-top); }
+              #tracked-header { position:fixed; left:0; width:200px; height:32px; background:#cc071e; }
+              #tracked-header { top:0; }
+              #header-container.compact #tracked-header { top:16px; }
+              #header-container.hidden #tracked-header { top:-64px; }
+              main { height:3000px; }
+            </style>
+            <body><div id="probe"></div><div id="header-container">
+              <header id="tracked-header" style="top:64px">Tracked header</header>
+            </div><main>Content</main></body>
+            <script>
+              const header = document.getElementById('tracked-header');
+              const container = document.getElementById('header-container');
+              let stage = 0, pending = false, trustedClicks = 0;
+              let initialTop = null, initialY = null, resetTop = null, resetY = null;
+              document.addEventListener('click', event => { if (event.isTrusted) trustedClicks++; });
+              window.addEventListener('scroll', () => {
+                if (stage === 3) container.classList.toggle('hidden', scrollY > 80);
+              });
+              setInterval(() => {
+                const env = parseFloat(getComputedStyle(document.getElementById('probe')).paddingTop);
+                const top = parseFloat(getComputedStyle(header).top);
+                const y = header.getBoundingClientRect().top;
+                if (!pending && document.readyState === 'complete' && env > 0) {
+                  if (stage === 0 && Math.abs(top - env - 64) < 0.5) {
+                    initialTop = top; initialY = y; pending = true;
+                    setTimeout(() => { header.style.top = '0px'; stage = 1; pending = false; }, 150);
+                  } else if (stage === 1 && Math.abs(top - env) < 0.5) {
+                    resetTop = top; resetY = y; pending = true;
+                    setTimeout(() => { header.style.removeProperty('top'); stage = 2; pending = false; }, 150);
+                  } else if (stage === 2 && Math.abs(top - env) < 0.5) {
+                    pending = true;
+                    setTimeout(() => { container.classList.add('compact'); stage = 3; pending = false; }, 150);
+                  }
+                }
+                document.title = '${REPORT_PREFIX}' + JSON.stringify({
+                  loaded:document.readyState === 'complete', density:devicePixelRatio, env,
+                  stage, initialTop, initialY, resetTop, resetY, top, y,
+                  authorTop:header.style.top, hidden:container.classList.contains('hidden'),
+                  trustedClicks, scroll:scrollY,
+                });
+              }, 50);
+            </script>
+        """.trimIndent()
         val COVER_HEADER_MUTATION_HTML = """
             <!doctype html><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
             <style>
