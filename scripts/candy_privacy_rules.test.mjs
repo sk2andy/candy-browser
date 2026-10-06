@@ -645,7 +645,7 @@ test("newer privacy policy wins while older cookie rules are still loading", asy
   ).length;
   await sendRuntimeMessage(
     { type: "safe-area-fallback", navigationGeneration: 0, revision: 1 },
-    { tab: { id: 7 } },
+    { tab: { id: 7 }, frameId: 0, url: "https://example.com/ok" },
   );
   assert.equal(
     postedNativeMessages.filter((message) => message.type === "safe-area-fallback").length,
@@ -653,7 +653,7 @@ test("newer privacy policy wins while older cookie rules are still loading", asy
   );
   await sendRuntimeMessage(
     { type: "safe-area-fallback", navigationGeneration: 0, revision: 2 },
-    { tab: { id: 7 } },
+    { tab: { id: 7 }, frameId: 0, url: "https://example.com/ok" },
   );
   assert.equal(
     postedNativeMessages.filter((message) => message.type === "safe-area-fallback").at(-1).revision,
@@ -664,7 +664,7 @@ test("newer privacy policy wins while older cookie rules are still loading", asy
   ).length;
   await sendRuntimeMessage(
     { type: "status-bar-backdrop", navigationGeneration: 0, revision: 1, themeColor: "#ff4500" },
-    { tab: { id: 7 } },
+    { tab: { id: 7 }, frameId: 0, url: "https://example.com/ok" },
   );
   assert.equal(
     postedNativeMessages.filter((message) => message.type === "status-bar-backdrop").length,
@@ -672,7 +672,7 @@ test("newer privacy policy wins while older cookie rules are still loading", asy
   );
   await sendRuntimeMessage(
     { type: "status-bar-backdrop", navigationGeneration: 0, revision: 2, themeColor: "#ff4500" },
-    { tab: { id: 7 } },
+    { tab: { id: 7 }, frameId: 0, url: "https://example.com/ok" },
   );
   assert.equal(
     postedNativeMessages.filter((message) => message.type === "status-bar-backdrop").at(-1).themeColor,
@@ -680,12 +680,44 @@ test("newer privacy policy wins while older cookie rules are still loading", asy
   );
   await sendRuntimeMessage(
     { type: "status-bar-backdrop", navigationGeneration: 0, revision: 2, themeColor: null },
-    { tab: { id: 7 } },
+    { tab: { id: 7 }, frameId: 0, url: "https://example.com/ok" },
   );
   assert.equal(
     postedNativeMessages.filter((message) => message.type === "status-bar-backdrop").at(-1).themeColor,
     null,
   );
+  for (const [revision, pageHost, outgoingHost] of [
+    [3, "github.com", "lidl.de"],
+    [4, "example.com", "github.com"],
+  ]) {
+    nativeMessageListener({
+      type: "policy", protocolVersion: 2, token: "tab-token", revision,
+      privacySignalRevision: 1, animationPolicyRevision: 1, animationsEnabled: true,
+      doNotTrackEnabled: true, globalPrivacyControlEnabled: true, hideConsent: false,
+      navigationGeneration: revision, pageHost,
+    });
+    await new Promise((resolve) => setImmediate(resolve));
+    const currentPolicy = await sendRuntimeMessage(
+      { type: "content-policy-request" }, { tab: { id: 7 } },
+    );
+    assert.equal(currentPolicy.pageHost, pageHost);
+    for (const type of ["safe-area-fallback", "status-bar-backdrop"]) {
+      const count = () => postedNativeMessages.filter((message) => message.type === type).length;
+      const before = count();
+      const message = { type, revision, navigationGeneration: revision, themeColor: "#ffffff" };
+      await sendRuntimeMessage(message, {
+        tab: { id: 7 }, frameId: 0, url: `https://${outgoingHost}/`,
+      });
+      await sendRuntimeMessage(message, {
+        tab: { id: 7 }, frameId: 1, url: `https://${pageHost}/`,
+      });
+      assert.equal(count(), before, "Outgoing domain and child frames cannot relatch fallback");
+      await sendRuntimeMessage(message, {
+        tab: { id: 7 }, frameId: 0, url: `https://${pageHost.toUpperCase()}./route`,
+      });
+      assert.equal(count(), before + 1, "Current normalized host remains eligible");
+    }
+  }
   assert.ok(
     postedNativeMessages.some((message) =>
       message.type === "policy-ready" &&

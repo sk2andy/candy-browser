@@ -1297,6 +1297,10 @@ class BrowserController(
     }
 
     @VisibleForTesting
+    internal val selectedWebContentSafeAreaNavigationGenerationForTesting: Int
+        get() = navigationGenerations.getOrDefault(selectedTabId, 0)
+
+    @VisibleForTesting
     internal fun dispatchExternalLinkPreviewPrivacyEventForTesting(event: GeckoPrivacyEvent) {
         val runtime = requireNotNull(externalLinkPreviewRuntime)
         onExternalLinkPreviewPrivacyEvent(
@@ -12841,6 +12845,7 @@ class BrowserController(
         url: String,
     ) {
         val targetUrl = autoDeAmpPublisherUrl(tabId, url) ?: url
+        resetWebContentSafeAreaForDomainNavigation(tabId, targetUrl)
         pageUrls[tabId] = targetUrl
         updateProtectionRequestContext(tabId, targetUrl)
         val policy = geckoPrivacyPolicyFor(tabId) ?: return
@@ -13154,6 +13159,25 @@ class BrowserController(
         )
     }
 
+    private fun resetWebContentSafeAreaForDomainNavigation(tabId: String, nextUrl: String?) {
+        if (nextUrl == null ||
+            !WebContentSafeAreaNavigationRules.shouldReset(pageUrls[tabId], nextUrl)
+        ) return
+        navigationGenerations[tabId] = navigationGenerations.getOrDefault(tabId, 0) + 1
+        automaticNativeTopSafeAreaTabIds.remove(tabId)
+        webContentTopBarStates.remove(tabId)
+        webContentStatusBarBackdrops.remove(tabId)
+        // Resolve native margins against the incoming site's explicit override.
+        pageUrls[tabId] = nextUrl
+        lastWindowInsets?.let { insets ->
+            geckoViewBindings.values
+                .filter { binding -> binding.tabId == tabId }
+                .forEach { binding ->
+                    applyGeckoWindowInsets(binding.view, binding.tabId, insets)
+                }
+        }
+    }
+
     private fun enableAutomaticNativeTopSafeArea(
         tabId: String,
         navigationGeneration: Int,
@@ -13303,14 +13327,15 @@ class BrowserController(
                 ) {
                     clearGeckoMediaPresentation()
                 }
-                val nextNavigationGeneration =
-                    navigationGenerations.getOrDefault(event.tabId, 0) + 1
                 val replaceActiveMediaOwner = BrowserMediaNavigationRules.mayReplaceActiveMediaOwner(
                     currentDocumentUrl = pageUrls[event.tabId]
                         ?: tabs.firstOrNull { tab -> tab.id == event.tabId }?.url,
                     navigationAddress = event.address,
                     mediaIsActive = geckoMediaStates[event.tabId]?.isActive == true,
                 )
+                resetWebContentSafeAreaForDomainNavigation(event.tabId, event.address)
+                val nextNavigationGeneration =
+                    navigationGenerations.getOrDefault(event.tabId, 0) + 1
                 fun isCurrentNavigation(): Boolean = !destroyed &&
                     browserEngineSessions[event.tabId] === navigatingSession &&
                     navigationGenerations[event.tabId] == nextNavigationGeneration

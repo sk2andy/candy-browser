@@ -107,6 +107,20 @@ function applyPolicy(policy) {
     schedulePolicyRetry();
     return;
   }
+  let pageHost = null;
+  try {
+    const url = new URL(globalThis.location.href);
+    if (url.protocol === "http:" || url.protocol === "https:") {
+      pageHost = url.hostname.toLowerCase().replace(/\.$/, "");
+    }
+  } catch (_) {
+    // Internal bootstrap documents have no web host.
+  }
+  const policyHost = typeof policy.pageHost === "string" ? policy.pageHost : null;
+  if (pageHost !== policyHost) {
+    schedulePolicyRetry();
+    return;
+  }
   const revision = Number.isSafeInteger(policy.revision) ? Math.max(0, policy.revision) : 0;
   if (revision < state.revision) return;
   policyReady = true;

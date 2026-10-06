@@ -418,6 +418,7 @@ function contentPolicy(policy) {
   return {
     type: "content-policy",
     ready: Boolean(policy),
+    pageHost: typeof policy?.pageHost === "string" ? policy.pageHost : null,
     revision: Number.isSafeInteger(policy?.revision) ? Math.max(0, policy.revision) : 0,
     topInsetPx: Number.isSafeInteger(policy?.topInsetPx) ? Math.max(0, policy.topInsetPx) : 0,
     cssSafeAreaTopInsetPx: Number.isSafeInteger(policy?.cssSafeAreaTopInsetPx) ?
@@ -866,6 +867,9 @@ browser.runtime.onMessage.addListener((message, sender) => {
     const policy = token && policiesByToken.get(token);
     if (
       policy &&
+      sender.frameId === 0 &&
+      typeof policy.pageHost === "string" &&
+      hostFromUrl(sender.url) === policy.pageHost &&
       policy.navigationGeneration === message.navigationGeneration &&
       policy.revision === message.revision &&
       nativePort

@@ -92,6 +92,44 @@ function bridgeHarness(performance) {
   return context;
 }
 
+test('cross-domain policies cannot overwrite outgoing or incoming document state', () => {
+  const harness = bridgeHarness(performanceFixture().api);
+  harness.URL = URL;
+  harness.location = { href: 'https://lidl.de/' };
+  const policy = (pageHost, revision, navigationGeneration) => ({
+    type: 'content-policy', ready: true, pageHost, revision, navigationGeneration,
+    cssSafeAreaTopInsetPx: 96, geckoSafeAreaEnabled: true,
+  });
+  harness.applyPolicy(policy('lidl.de', 1, 1));
+  harness.applyPolicy(policy('github.com', 2, 2));
+  assert.equal(harness.CandyContentTopInset.policyRevision(), 1);
+  assert.equal(harness.CandyContentTopInset.navigationGeneration(), 1);
+
+  harness.location.href = 'https://GITHUB.com./explore';
+  harness.applyPolicy(policy('lidl.de', 20, 1));
+  harness.applyPolicy(policy(null, 21, 2));
+  assert.equal(harness.CandyContentTopInset.policyRevision(), 1);
+  harness.applyPolicy(policy('github.com', 2, 2));
+  assert.equal(harness.CandyContentTopInset.policyRevision(), 2);
+  assert.equal(harness.CandyContentTopInset.navigationGeneration(), 2);
+  assert.equal(harness.CandyContentTopInset.cssSafeAreaConfiguration().cssSafeAreaTopInsetPx, 96);
+
+  harness.location.href = 'https://github.com/settings';
+  harness.applyPolicy(policy('github.com', 3, 3));
+  assert.equal(harness.CandyContentTopInset.navigationGeneration(), 3, 'Same-host routes remain eligible');
+});
+
+test('internal bootstrap retains null-host policy while web document waits for its host', () => {
+  const harness = bridgeHarness(performanceFixture().api);
+  harness.URL = URL;
+  harness.location = { href: 'about:blank' };
+  harness.applyPolicy({ type: 'content-policy', ready: true, pageHost: null, revision: 1 });
+  assert.equal(harness.CandyContentTopInset.policyRevision(), 1);
+  harness.location.href = 'https://github.com/';
+  harness.applyPolicy({ type: 'content-policy', ready: true, pageHost: null, revision: 2 });
+  assert.equal(harness.CandyContentTopInset.policyRevision(), 1);
+});
+
 test('Gradle template substitutions retain a valid complete Gecko script', () => {
   new vm.Script(generatedScript);
   assert.ok(generatedScript.includes('globalThis.CandyContentTopInset'));
