@@ -24,6 +24,8 @@
 | Product overview and build commands | [`../README.md`](../README.md) |
 | Privacy and compatibility audits | [`audits/`](audits/) |
 | Android memory ownership and Firefox lifecycle comparison | [`audits/2026-10-05-candy-memory-ownership.md`](audits/2026-10-05-candy-memory-ownership.md), [`audits/2026-10-05-firefox-android-memory.md`](audits/2026-10-05-firefox-android-memory.md) |
+| Background eviction, JNI ownership and many-tab memory measurements | [`audits/2026-10-06-background-memory-analysis.md`](audits/2026-10-06-background-memory-analysis.md) |
+| Candy reference ownership and crash-helper boundary | [`audits/2026-10-06-candy-reference-audit.md`](audits/2026-10-06-candy-reference-audit.md) |
 | Product screenshots | [`screenshots/`](screenshots/) |
 | Candy Sync architecture and operations | [`sync/README.md`](sync/README.md) |
 | Promotional artwork and video | [`promo/`](promo/), [`promo/video/README.md`](promo/video/README.md), and the `generate_*promo*` scripts in [`../scripts/`](../scripts/) |

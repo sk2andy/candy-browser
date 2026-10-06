@@ -574,7 +574,13 @@ internal class GeckoViewExtensionChrome(
     }
 
     private fun removeExtension(extensionId: String) {
-        extensions.remove(extensionId)?.let(::clearExtensionDelegates)
+        extensions.remove(extensionId)?.let { extension ->
+            sessions.keys.forEach { session ->
+                session.webExtensionController.setActionDelegate(extension, null)
+                session.webExtensionController.setTabDelegate(extension, null)
+            }
+            clearExtensionDelegates(extension)
+        }
         defaultActions.keys.removeAll { key -> key.extensionId == extensionId }
         sessionActions.keys.removeAll { key -> key.extensionId == extensionId }
     }

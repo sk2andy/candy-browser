@@ -34,6 +34,7 @@ import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineCommandType
 import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineEvent
 import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineEventType
 import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineSessionPort
+import java.lang.ref.WeakReference
 import org.mozilla.geckoview.GeckoSession
 import org.mozilla.geckoview.GeckoView
 
@@ -303,10 +304,11 @@ internal class GeckoBrowserEngineSessionFactory(
 
     @UiThread
     override fun setWebRtcProtectionMode(mode: WebRtcProtectionMode) {
-        val sessionsToReload = sessions.values.toList()
+        // A missing native ACK must not retain closed tabs through this process-owned callback.
+        val sessionsToReload = sessions.values.map { WeakReference(it) }
         runtime.setWebRtcProtectionMode(mode) {
-            sessionsToReload.forEach { session ->
-                session.execute(BrowserEngineCommands.reload())
+            sessionsToReload.forEach { reference ->
+                reference.get()?.execute(BrowserEngineCommands.reload())
             }
         }
     }

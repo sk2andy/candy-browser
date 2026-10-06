@@ -62,8 +62,8 @@ internal fun BoxScope.BrowserModalSurfaces(
     controller.pendingDownloadChoice?.let { choice ->
         DownloadManagerChooserDialog(
             choice = choice,
-            onSelect = controller::confirmDownloadChoice,
-            onDismiss = controller::dismissDownloadChoice,
+            onSelect = { managerId -> controller.confirmDownloadChoice(managerId, choice) },
+            onDismiss = { controller.dismissDownloadChoice(choice) },
         )
     }
 
