@@ -191,15 +191,17 @@ lists the primary Ctrl chords.
 | Tab-actions presentation | `shared/src/commonMain/.../ui/TabActionsMenu.kt`; platform call-site cutover and iOS action-state wiring remain open |
 
 External download routing supports the built-in downloader, per-download selection, or one persisted
-verified manager. Verified external targets are 1DM, Gopeed, ADM, and Download Navi. Gopeed, ADM,
-and Download Navi receive only the normalized HTTP(S) URL and MIME type through an explicit `ACTION_VIEW` intent. 1DM
+verified manager. Verified external targets are 1DM, Gopeed, Aria2App, ADM, and Download Navi.
+Gopeed, Aria2App, ADM, and Download Navi receive only the normalized HTTP(S) URL and MIME type
+through an explicit `ACTION_VIEW` intent. 1DM
 session sharing remains separately opt-in and is never allowed for private tabs. If a selected app is
 missing or cannot be started, Candy falls back to the built-in downloader.
 
 | Manager discovery | Contract |
 | --- | --- |
-| 1DM and Gopeed | Check the known exported, enabled activity directly, independent of MIME intent filters |
+| 1DM, Gopeed, and Aria2App | Check the known exported, enabled activity directly, independent of MIME intent filters |
 | Gopeed | Declare package visibility for `com.gopeed.gopeed`; target `com.gopeed.gopeed.MainActivity` without session or filename extras |
+| Aria2App | Declare package visibility for `com.gianlu.aria2app`; target its exported `com.gianlu.aria2app.LoadingActivity` without session or filename extras |
 | ADM and Download Navi | Query compatible HTTP(S)/MIME handlers within the verified package allowlist |
 
 ## Change pattern

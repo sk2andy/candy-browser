@@ -83,6 +83,49 @@ class ExternalDownloadManagerIntentInstrumentedTest {
     }
 
     @Test
+    fun aria2AppUsesExplicitViewProtocolWithoutSessionData() {
+        for (allowSessionData in listOf(true, false)) {
+            val intent = manager.createIntent(
+                request,
+                aria2App(),
+                BrowserDownloadSettings(shareSessionDataWithOneDm = true),
+                allowSessionData = allowSessionData,
+            )
+
+            assertEquals("android.intent.action.VIEW", intent.action)
+            assertEquals("https://example.com/private.pdf", intent.dataString)
+            assertEquals("application/pdf", intent.type)
+            assertEquals(ARIA2_APP_PACKAGE, intent.component?.packageName)
+            assertEquals(ARIA2_APP_ACTIVITY, intent.component?.className)
+            assertNull(intent.extras)
+        }
+    }
+
+    @Test
+    fun installedAria2AppIsDiscoveredWithoutMimeFilterMatching() {
+        assumeTrue("Requires real Aria2App installation", isPackageInstalled(ARIA2_APP_PACKAGE))
+
+        for (downloadRequest in listOf(null, request, request.copy(mimeType = "application/zip"))) {
+            val aria2App = manager.discover(downloadRequest)
+                .singleOrNull { it.packageName == ARIA2_APP_PACKAGE }
+
+            assertNotNull(aria2App)
+            assertFalse(requireNotNull(aria2App).isOneDm)
+            assertEquals("view|$ARIA2_APP_PACKAGE", aria2App.id)
+            assertEquals(ARIA2_APP_ACTIVITY, aria2App.activityName)
+            assertTrue(aria2App.label.isNotBlank())
+            assertNotNull(
+                manager.createIntent(
+                    downloadRequest ?: request,
+                    aria2App,
+                    BrowserDownloadSettings(),
+                    allowSessionData = false,
+                ).resolveActivity(context.packageManager),
+            )
+        }
+    }
+
+    @Test
     fun installedGopeedIsDiscoveredWithoutMimeFilterMatching() {
         assumeTrue("Requires real Gopeed installation", isPackageInstalled(GOPEED_PACKAGE))
 
@@ -186,6 +229,15 @@ class ExternalDownloadManagerIntentInstrumentedTest {
         isOneDm = false,
     )
 
+    private fun aria2App() = ExternalDownloadManagerApp(
+        id = "view|$ARIA2_APP_PACKAGE",
+        packageName = ARIA2_APP_PACKAGE,
+        activityName = ARIA2_APP_ACTIVITY,
+        label = "Aria2App",
+        protocol = ExternalDownloadProtocol.View,
+        isOneDm = false,
+    )
+
     private fun isPackageInstalled(packageName: String): Boolean {
         require(packageName.matches(Regex("[A-Za-z0-9._]+")))
         val output = ParcelFileDescriptor.AutoCloseInputStream(
@@ -197,6 +249,8 @@ class ExternalDownloadManagerIntentInstrumentedTest {
     private companion object {
         const val GOPEED_PACKAGE = "com.gopeed.gopeed"
         const val GOPEED_ACTIVITY = "com.gopeed.gopeed.MainActivity"
+        const val ARIA2_APP_PACKAGE = "com.gianlu.aria2app"
+        const val ARIA2_APP_ACTIVITY = "com.gianlu.aria2app.LoadingActivity"
         const val NAVI_PACKAGE = "com.tachibana.downloader"
         const val NAVI_ACTIVITY = "com.tachibana.downloader.ui.adddownload.AddDownloadActivity"
     }

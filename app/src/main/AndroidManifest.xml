@@ -51,6 +51,7 @@
         <package android:name="idm.internet.download.manager.plus" />
         <package android:name="idm.internet.download.manager.adm.lite" />
         <package android:name="com.gopeed.gopeed" />
+        <package android:name="com.gianlu.aria2app" />
         <package android:name="com.dv.adm" />
         <package android:name="com.tachibana.downloader" />
         <intent>

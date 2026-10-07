@@ -46,7 +46,10 @@ class ExternalDownloadManager(private val context: Context) {
     fun discover(request: BrowserDownloadRequest? = null): List<ExternalDownloadManagerApp> {
         val knownApps = ONE_DM_PACKAGES.mapNotNull { packageName ->
             knownApp(packageName, ONE_DM_ACTIVITY, isOneDm = true)
-        } + listOfNotNull(knownApp(GOPEED_PACKAGE, GOPEED_ACTIVITY))
+        } + listOfNotNull(
+            knownApp(GOPEED_PACKAGE, GOPEED_ACTIVITY),
+            knownApp(ARIA2_APP_PACKAGE, ARIA2_APP_ACTIVITY),
+        )
         val knownPackages = knownApps.mapTo(hashSetOf(), ExternalDownloadManagerApp::packageName)
         val mimeTypes = request?.mimeType?.let(::listOf) ?: PROBE_MIME_TYPES
         val genericApps = mimeTypes.asSequence()
@@ -200,6 +203,8 @@ class ExternalDownloadManager(private val context: Context) {
         const val ONE_DM_ACTIVITY = "idm.internet.download.manager.Downloader"
         const val GOPEED_PACKAGE = "com.gopeed.gopeed"
         const val GOPEED_ACTIVITY = "com.gopeed.gopeed.MainActivity"
+        const val ARIA2_APP_PACKAGE = "com.gianlu.aria2app"
+        const val ARIA2_APP_ACTIVITY = "com.gianlu.aria2app.LoadingActivity"
         const val EXTRA_FILENAME = "extra_filename"
         const val EXTRA_COOKIES = "extra_cookies"
         const val EXTRA_USER_AGENT = "extra_useragent"
