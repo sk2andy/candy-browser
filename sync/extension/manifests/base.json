@@ -1,7 +1,6 @@
 {
   "manifest_version": 3,
   "name": "Candy Sync",
-  "version": "0.1.0",
   "description": "Ende-zu-Ende verschlüsselter, selbst gehosteter Sync für Tabs und Tab-Gruppen.",
   "homepage_url": "https://sk2andy.github.io/candy-browser/",
   "icons": {

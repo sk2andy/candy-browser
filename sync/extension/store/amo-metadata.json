@@ -1,0 +1,22 @@
+{
+  "name": {
+    "en-US": "Candy Sync"
+  },
+  "default_locale": "en-US",
+  "summary": {
+    "en-US": "Sync open tabs with Candy Browser through your own server. End-to-end encryption keeps tab URLs and titles private."
+  },
+  "description": {
+    "en-US": "Keep your desktop tabs connected to Candy Browser with Candy Sync, an open-source extension for a self-hosted synchronization server.\n\n• Synchronize eligible open tabs, including URLs, titles, order, pin state and supported group assignments.\n• Apply changes from Candy Browser to the matching desktop synced profile: open, navigate, pin, reorder and close tabs.\n• Encrypt tab payloads and device presentation data locally before upload.\n• Choose your own server, device name and profile icon.\n• Enable supported sync scopes and grant browser permissions during setup.\n• Use realtime delivery when available, with durable recovery after interruptions.\n\nSetup requires a Candy Sync server and its credentials. Candy does not provide a hosted sync service. Remote servers require HTTPS; localhost HTTP is available for development on the same device. Open the extension's Options page to connect. There is no toolbar popup.\n\nYour E2EE passphrase stays on your device and unlocks the encrypted local vault. After restarting the browser, unlock the session again. The passphrase cannot be changed or recovered: keep it safe and use a different value from your server password.\n\nPrivate tabs, browser-internal pages and local files are excluded. The selected server receives encrypted payloads and necessary authentication/routing metadata. This extension has no analytics or advertising code.\n\nBookmark synchronization and dedicated tab-group merging are not available in this version. Supported group assignments travel with tab snapshots.\n\nPrivacy policy: https://sk2andy.github.io/candy-browser/privacy/\nSource and support: https://github.com/sk2andy/candy-browser"
+  },
+  "homepage": {
+    "en-US": "https://sk2andy.github.io/candy-browser/"
+  },
+  "categories": [
+    "tabs"
+  ],
+  "version": {
+    "license": "MPL-2.0",
+    "approval_notes": "Self-hosted extension; no developer-hosted account or service. Reviewers can start their own disposable local server from the repository: in sync/server copy .env.example to .env, set CANDY_SYNC_USERNAME and a unique CANDY_SYNC_PASSWORD of at least 16 bytes. For this disposable same-device review server, explicitly set CANDY_SYNC_PUBLIC_URL=http://localhost:8080, CANDY_SYNC_ALLOW_HTTP=true, and CANDY_SYNC_BIND_ADDRESS=127.0.0.1. Run docker compose up --build -d to build the candy-sync server and candy-sync-tls gateway from the checked-out source. The gateway exposes local HTTP on port 8080. Use http://localhost:8080/ in extension Options; this configuration also advertises the correct local WebSocket scheme without installing a CA. Do not expose this HTTP review setup remotely. Choose a separate E2EE passphrase with at least 16 characters, repeat it and acknowledge the loss warning. Do not put the E2EE passphrase into server configuration. Create a second extension/browser profile or Android client using the same server credentials and passphrase to test cross-device synchronization. No fixed credentials are shipped. Build steps and source archive layout: BUILD.md at the submitted source archive root. All executable code is bundled locally; no content scripts or remote executable code. Required Firefox data categories: authenticationInfo and personallyIdentifyingInfo; optional browsingActivity accompanies optional tab synchronization. Public privacy policy: https://sk2andy.github.io/candy-browser/privacy/."
+  }
+}
