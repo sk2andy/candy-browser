@@ -159,7 +159,7 @@ class GeckoBrowserEngineAdapterTest {
     }
 
     @Test
-    fun `HTTPS error arriving after page stop replaces generic failure`() {
+    fun `HTTPS error arriving after page stop reports confirmed failure`() {
         val session = FakeGeckoBrowserSession()
         val events = mutableListOf<BrowserEngineEvent>()
         GeckoBrowserEngineSessionAdapter(
@@ -171,6 +171,10 @@ class GeckoBrowserEngineAdapterTest {
         session.emit(loading)
         val stopped = loading.copy(isLoading = false, lastNavigationSucceeded = false)
         session.emit(stopped)
+        assertEquals(
+            listOf(BrowserEngineEventType.NavigationStarted, BrowserEngineEventType.StateChanged),
+            events.map(BrowserEngineEvent::type),
+        )
         events.clear()
 
         session.emit(
@@ -183,6 +187,54 @@ class GeckoBrowserEngineAdapterTest {
         assertEquals(1, events.size)
         assertEquals(BrowserEngineEventType.NavigationFailed, events.single().type)
         assertEquals(BrowserEngineFailureKind.HttpsOnly, events.single().failureKind)
+    }
+
+    @Test
+    fun `unsuccessful stop followed by new page does not report navigation failure`() {
+        val session = FakeGeckoBrowserSession()
+        val events = mutableListOf<BrowserEngineEvent>()
+        GeckoBrowserEngineSessionAdapter(
+            tabId = "navigation-tab",
+            session = session,
+            eventSink = events::add,
+        )
+        val google = GeckoBrowserSessionState(url = "https://www.google.com", isLoading = true)
+        session.emit(google)
+        session.emit(google.copy(isLoading = false, lastNavigationSucceeded = false))
+        val destination = GeckoBrowserSessionState(url = "https://vaerm.de", isLoading = true)
+        session.emit(destination)
+        session.emit(destination.copy(isLoading = false, lastNavigationSucceeded = true))
+
+        assertEquals(
+            listOf(
+                BrowserEngineEventType.NavigationStarted,
+                BrowserEngineEventType.StateChanged,
+                BrowserEngineEventType.NavigationStarted,
+                BrowserEngineEventType.NavigationCommitted,
+            ),
+            events.map(BrowserEngineEvent::type),
+        )
+        assertTrue(events.all { it.failureDescription == null })
+    }
+
+    @Test
+    fun `transport error description arriving after page stop reports failure`() {
+        val session = FakeGeckoBrowserSession()
+        val events = mutableListOf<BrowserEngineEvent>()
+        GeckoBrowserEngineSessionAdapter(
+            tabId = "failed-tab",
+            session = session,
+            eventSink = events::add,
+        )
+        val loading = GeckoBrowserSessionState(url = "https://example.com", isLoading = true)
+        session.emit(loading)
+        val stopped = loading.copy(isLoading = false, lastNavigationSucceeded = false)
+        session.emit(stopped)
+        events.clear()
+        session.emit(stopped.copy(failureDescription = "Connection refused"))
+
+        assertEquals(BrowserEngineEventType.NavigationFailed, events.single().type)
+        assertEquals("Connection refused", events.single().failureDescription)
     }
 
     @Test

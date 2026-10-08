@@ -957,12 +957,14 @@ internal class GeckoBrowserEngineSessionAdapter(
             !state.isLoading && previousState.isLoading &&
                 state.lastNavigationSucceeded == false && stopRequested ->
                 BrowserEngineEventType.StateChanged
-            !state.isLoading && previousState.isLoading &&
-                state.lastNavigationSucceeded == false -> BrowserEngineEventType.NavigationFailed
+            // An unsuccessful stop alone can be a replaced load; wait for concrete error details.
             !state.isLoading && state.lastNavigationSucceeded == false &&
+                (state.failureDescription != null || state.failureKind != null) &&
                 (
-                    previousState.lastNavigationSucceeded != false ||
-                        state.failureKind != previousState.failureKind
+                    previousState.isLoading ||
+                        previousState.lastNavigationSucceeded != false ||
+                        state.failureKind != previousState.failureKind ||
+                        state.failureDescription != previousState.failureDescription
                     ) ->
                 BrowserEngineEventType.NavigationFailed
             state.hasSharedStateChangeFrom(previousState) -> BrowserEngineEventType.StateChanged
