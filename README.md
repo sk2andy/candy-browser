@@ -26,6 +26,14 @@
   <a href="https://github.com/sk2andy/candy-browser/releases">Releases</a>
 </p>
 
+<p align="center">
+  <a href="https://buymeacoffee.com/sk2andy"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" height="50" alt="Buy me a coffee"></a>
+</p>
+
+> [!NOTE]
+> **Next release: stability fixes.** I'm focusing on finding and fixing as many bugs as possible
+> and testing the changes over an extended period to make Candy Browser more reliable.
+
 ## 🎉 Firefox extensions on Android
 
 Candy uses GeckoView by default and supports Mozilla-signed Firefox extensions directly inside the
@@ -36,14 +44,6 @@ managed from Candy's browser settings.
 Extension actions, popups, options, permissions, updates, and enable/disable controls stay inside
 Candy's browser chrome. See [Platform engines](docs/browsing/platform-engines.md#android-gecko-and-extension-invariants)
 for the supported GeckoView integration and current compatibility boundaries.
-
-<p align="center">
-  <a href="https://buymeacoffee.com/sk2andy"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" height="50" alt="Buy me a coffee"></a>
-</p>
-
-> [!NOTE]
-> **Next release: stability fixes.** I'm focusing on finding and fixing as many bugs as possible
-> and testing the changes over an extended period to make Candy Browser more reliable.
 
 <p align="center">
   <img src="docs/screenshots/candy-home.png" width="30%" alt="Candy Browser start page">
