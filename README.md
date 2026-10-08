@@ -41,6 +41,10 @@ for the supported GeckoView integration and current compatibility boundaries.
   <a href="https://buymeacoffee.com/sk2andy"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" height="50" alt="Buy me a coffee"></a>
 </p>
 
+> [!NOTE]
+> **Next release: stability fixes.** I'm focusing on finding and fixing as many bugs as possible
+> and testing the changes over an extended period to make Candy Browser more reliable.
+
 <p align="center">
   <img src="docs/screenshots/candy-home.png" width="30%" alt="Candy Browser start page">
   &nbsp;
