@@ -36,6 +36,9 @@ npm run verify
 
 Build artifacts appear in `dist/chromium/` and `dist/firefox/`.
 
+For public store packages, publisher credentials, and automatic version releases, see
+[`extension-stores.md`](extension-stores.md).
+
 | Browser | Development loading path |
 | --- | --- |
 | Chromium | `chrome://extensions` → Developer mode → Load unpacked → `dist/chromium` |

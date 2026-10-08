@@ -13,6 +13,7 @@ creating a duplicate self profile.
 | --- | --- |
 | Deploy, configure, back up, and monitor the server | [`server.md`](server.md) |
 | Build, load, configure, and test the extension | [`extension.md`](extension.md) |
+| Store listings, publisher setup, and automatic extension releases | [`extension-stores.md`](extension-stores.md) |
 | Android setup, profile behavior, security, and code ownership | [`app-integration.md`](app-integration.md) |
 | Normative threat model and cryptographic contract | [`../../sync/SECURITY.md`](../../sync/SECURITY.md) |
 | REST, schemas, fixtures, and shared icon catalog | [`../../sync/protocol/README.md`](../../sync/protocol/README.md) |
