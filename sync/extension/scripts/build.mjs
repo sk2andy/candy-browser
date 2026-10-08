@@ -6,6 +6,7 @@ import { build } from "esbuild";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const requested = process.argv[2];
+const packageMetadata = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
 const browsers = requested ? [requested] : ["chromium", "firefox"];
 
 if (browsers.some((browser) => !["chromium", "firefox"].includes(browser))) {
@@ -60,7 +61,11 @@ for (const browser of browsers) {
 
   const base = JSON.parse(fs.readFileSync(path.join(root, "manifests", "base.json"), "utf8"));
   const overlay = JSON.parse(fs.readFileSync(path.join(root, "manifests", `${browser}.json`), "utf8"));
-  fs.writeFileSync(path.join(output, "manifest.json"), `${JSON.stringify(merge(base, overlay), null, 2)}\n`);
+  const manifest = merge(base, overlay);
+  manifest.version = packageMetadata.version;
+  fs.writeFileSync(path.join(output, "manifest.json"), `${JSON.stringify(manifest, null, 2)}\n`);
+  copy(path.resolve(root, "../../LICENSE"), path.join(output, "LICENSE"));
+  copy(path.join(root, "node_modules/@noble/hashes/LICENSE"), path.join(output, "licenses/noble-hashes.txt"));
   copy(path.join(root, "src", "options", "index.html"), path.join(output, "options", "index.html"));
   copy(path.join(root, "src", "options", "options.css"), path.join(output, "options", "options.css"));
   copy(path.resolve(root, "../protocol/device-icons-v1.json"), path.join(output, "device-icons-v1.json"));
