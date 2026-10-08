@@ -14,17 +14,19 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsNotDisplayed
+import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
-import androidx.compose.ui.test.assertIsNotEnabled
-import androidx.compose.ui.test.assertIsNotDisplayed
-import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasAnyDescendant
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onChildren
@@ -33,6 +35,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performTouchInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import dev.sk2andy.materialbrowser.R
@@ -326,6 +329,17 @@ class BrowserMainMenuInstrumentedTest {
                 hasAnyDescendant(hasTestTag(BrowserMainMenuTestTags.History)) and
                 hasAnyDescendant(hasTestTag(BrowserMainMenuTestTags.Settings)),
         ).assertExists()
+        listOf(
+            R.string.snoozed_tabs_title,
+            R.string.favorites_title,
+            R.string.downloads_title,
+            R.string.action_history,
+            R.string.action_settings,
+        ).forEach { labelResource ->
+            val label = context.getString(labelResource)
+            composeRule.onAllNodesWithText(label).assertCountEquals(0)
+            composeRule.onNodeWithContentDescription(label).assertExists()
+        }
         composeRule.onNodeWithTag(FirefoxExtensionChromeTestTags.SectionTitle).assertExists()
         composeRule.onNodeWithTag(
             FirefoxExtensionChromeTestTags.action(extensionActionKey.saveableId),
@@ -522,6 +536,31 @@ class BrowserMainMenuInstrumentedTest {
         composeRule.onNodeWithTag(BrowserMainMenuTestTags.Pin).assertIsSelected()
         composeRule.onNodeWithContentDescription(context.getString(R.string.action_remove_pin))
             .assertIsDisplayed()
+    }
+
+    @Test
+    fun libraryLongPressShowsNameWithoutOpeningAction() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val dismissals = AtomicInteger()
+        composeRule.setContent {
+            ShortBrowserMainMenu(onDismiss = { dismissals.incrementAndGet() })
+        }
+
+        val label = context.getString(R.string.snoozed_tabs_title)
+        composeRule.onAllNodesWithText(label).assertCountEquals(0)
+        composeRule.onNodeWithContentDescription(label).assertIsDisplayed()
+        composeRule.onNodeWithTag(BrowserMainMenuTestTags.SnoozedTabs)
+            .assertHasClickAction()
+            .assert(
+                SemanticsMatcher.expectValue(
+                    SemanticsProperties.ContentDescription,
+                    listOf(label),
+                ),
+            )
+            .performTouchInput { longClick() }
+        composeRule.onNodeWithText(label).assertIsDisplayed()
+        composeRule.onNodeWithTag(BrowserMainMenuTestTags.Menu).assertIsDisplayed()
+        assertEquals(0, dismissals.get())
     }
 
     @Test
