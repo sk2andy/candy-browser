@@ -114,6 +114,10 @@ reserves Material's 48dp margins and 8dp internal padding on both vertical edges
 The iOS effect adapter preserves its selected glass-control foreground. Filtering still happens before
 rendering, and library clicks close the menu before invoking their existing destination callbacks.
 
+The top library row keeps snoozed tabs, favorites, downloads, history and settings icon-only.
+Localized names remain available to screen readers and appear as plain tooltips on long press.
+Snoozed tabs use a rising Zzz glyph so they remain distinct from the history clock.
+
 ## Find in page
 
 | Layer | Source | Boundary |
