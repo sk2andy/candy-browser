@@ -37,6 +37,9 @@ for (const browser of ["chromium", "firefox"]) {
     const output = path.join(root, "dist", browser);
     const manifest = JSON.parse(fs.readFileSync(path.join(output, "manifest.json"), "utf8"));
     assert.equal(manifest.manifest_version, 3);
+    assert.equal(manifest.version, JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8")).version);
+    assert.equal(fs.existsSync(path.join(output, "LICENSE")), true);
+    assert.equal(fs.existsSync(path.join(output, "licenses/noble-hashes.txt")), true);
     assert.equal(manifest.options_ui.open_in_tab, true);
     assert.equal(manifest.action?.default_popup, undefined);
     assert.equal(JSON.stringify(manifest).includes("Candy Hosted"), false);

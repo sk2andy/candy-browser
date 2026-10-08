@@ -139,6 +139,9 @@ or device tokens in transit.
 The public project website lives at <https://sk2andy.github.io/candy-browser/> and its English
 privacy policy at <https://sk2andy.github.io/candy-browser/privacy/>.
 
+Store packaging and automated releases are documented in
+[`../../docs/sync/extension-stores.md`](../../docs/sync/extension-stores.md).
+
 ## Status
 
 The background process stores only redacted status in `storage.local`. A browser

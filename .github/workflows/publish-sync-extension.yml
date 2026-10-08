@@ -1,0 +1,148 @@
+name: Publish Candy Sync extension
+
+on:
+  push:
+    tags:
+      - sync-extension-v*
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Extension version X.Y.Z matching an existing sync-extension-vX.Y.Z tag
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sync-extension-store-publish
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Verify and package store release
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      version: ${{ steps.release.outputs.version }}
+    env:
+      RELEASE_VERSION: ${{ inputs.version }}
+    steps:
+      - name: Check out extension release tag
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event_name == 'push' && github.ref || format('refs/tags/sync-extension-v{0}', inputs.version) }}
+          persist-credentials: false
+      - name: Set up Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: "22.22.0"
+          cache: npm
+          cache-dependency-path: sync/extension/package-lock.json
+      - name: Validate release version and trusted manual branch
+        id: release
+        run: node sync/extension/scripts/publish-stores.mjs validate
+      - name: Install locked dependencies
+        working-directory: sync/extension
+        run: npm ci
+      - name: Verify extension and publishing policy
+        working-directory: sync/extension
+        run: |
+          npm run verify
+          npm run test:stores
+          node --test tests/publish-stores.test.mjs
+      - name: Package tested store binaries and review sources
+        working-directory: sync/extension
+        run: npm run package:stores
+      - name: Validate Firefox store package
+        working-directory: sync/extension
+        run: npx --yes --package=web-ext@10.7.0 web-ext lint --source-dir=dist/firefox --no-config-discovery
+      - name: Upload verified packages
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: candy-sync-store-${{ github.run_id }}
+          path: sync/extension/release/
+          if-no-files-found: error
+          retention-days: 30
+
+  chrome:
+    name: Submit Chrome Web Store release
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: chrome-web-store
+    env:
+      RELEASE_VERSION: ${{ needs.build.outputs.version }}
+    steps:
+      - name: Check out validated release tag
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: refs/tags/sync-extension-v${{ needs.build.outputs.version }}
+          persist-credentials: false
+      - name: Set up Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: "22.22.0"
+      - name: Download verified packages
+        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
+        with:
+          name: candy-sync-store-${{ github.run_id }}
+          path: sync/extension/release
+      - name: Verify artifact checksums
+        working-directory: sync/extension/release
+        run: sha256sum --check SHA256SUMS
+      - name: Upload and submit Chrome package for review
+        env:
+          CWS_PUBLISHER_ID: ${{ vars.CWS_PUBLISHER_ID }}
+          CWS_EXTENSION_ID: ${{ vars.CWS_EXTENSION_ID }}
+          CWS_CLIENT_ID: ${{ secrets.CWS_CLIENT_ID }}
+          CWS_CLIENT_SECRET: ${{ secrets.CWS_CLIENT_SECRET }}
+          CWS_REFRESH_TOKEN: ${{ secrets.CWS_REFRESH_TOKEN }}
+        run: node sync/extension/scripts/publish-stores.mjs chrome
+
+  firefox:
+    name: Submit Firefox Add-ons release
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: firefox-addons
+    env:
+      RELEASE_VERSION: ${{ needs.build.outputs.version }}
+    steps:
+      - name: Check out validated release tag
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: refs/tags/sync-extension-v${{ needs.build.outputs.version }}
+          persist-credentials: false
+      - name: Set up Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: "22.22.0"
+      - name: Download verified packages
+        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
+        with:
+          name: candy-sync-store-${{ github.run_id }}
+          path: sync/extension/release
+      - name: Verify artifact checksums
+        working-directory: sync/extension/release
+        run: sha256sum --check SHA256SUMS
+      - name: Submit listed Firefox version and review sources
+        working-directory: sync/extension
+        env:
+          AMO_JWT_ISSUER: ${{ secrets.AMO_JWT_ISSUER }}
+          AMO_JWT_SECRET: ${{ secrets.AMO_JWT_SECRET }}
+          WEB_EXT_API_KEY: ${{ secrets.AMO_JWT_ISSUER }}
+          WEB_EXT_API_SECRET: ${{ secrets.AMO_JWT_SECRET }}
+        run: |
+          node scripts/publish-stores.mjs check-firefox
+          mkdir -p store-firefox
+          unzip -q "release/candy-sync-firefox-${RELEASE_VERSION}.zip" -d store-firefox
+          npx --yes --package=web-ext@10.7.0 web-ext sign \
+            --source-dir=store-firefox \
+            --channel=listed \
+            --amo-metadata=store/amo-metadata.json \
+            --upload-source-code="release/candy-sync-source-${RELEASE_VERSION}.zip" \
+            --approval-timeout=0 \
+            --no-input \
+            --no-config-discovery
+          echo 'Firefox version submitted. Store approval may still be pending.' >> "$GITHUB_STEP_SUMMARY"
