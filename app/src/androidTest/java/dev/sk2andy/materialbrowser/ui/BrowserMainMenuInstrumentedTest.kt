@@ -2,29 +2,40 @@ package dev.sk2andy.materialbrowser.ui
 
 import android.content.res.Configuration
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsNotDisplayed
+import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
-import androidx.compose.ui.test.assertIsNotEnabled
-import androidx.compose.ui.test.assertIsNotDisplayed
-import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasAnyDescendant
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onChildren
@@ -33,6 +44,9 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import dev.sk2andy.materialbrowser.R
@@ -326,6 +340,17 @@ class BrowserMainMenuInstrumentedTest {
                 hasAnyDescendant(hasTestTag(BrowserMainMenuTestTags.History)) and
                 hasAnyDescendant(hasTestTag(BrowserMainMenuTestTags.Settings)),
         ).assertExists()
+        listOf(
+            R.string.snoozed_tabs_title,
+            R.string.favorites_title,
+            R.string.downloads_title,
+            R.string.action_history,
+            R.string.action_settings,
+        ).forEach { labelResource ->
+            val label = context.getString(labelResource)
+            composeRule.onAllNodesWithText(label).assertCountEquals(0)
+            composeRule.onNodeWithContentDescription(label).assertExists()
+        }
         composeRule.onNodeWithTag(FirefoxExtensionChromeTestTags.SectionTitle).assertExists()
         composeRule.onNodeWithTag(
             FirefoxExtensionChromeTestTags.action(extensionActionKey.saveableId),
@@ -525,6 +550,31 @@ class BrowserMainMenuInstrumentedTest {
     }
 
     @Test
+    fun libraryLongPressShowsNameWithoutOpeningAction() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val dismissals = AtomicInteger()
+        composeRule.setContent {
+            ShortBrowserMainMenu(onDismiss = { dismissals.incrementAndGet() })
+        }
+
+        val label = context.getString(R.string.snoozed_tabs_title)
+        composeRule.onAllNodesWithText(label).assertCountEquals(0)
+        composeRule.onNodeWithContentDescription(label).assertIsDisplayed()
+        composeRule.onNodeWithTag(BrowserMainMenuTestTags.SnoozedTabs)
+            .assertHasClickAction()
+            .assert(
+                SemanticsMatcher.expectValue(
+                    SemanticsProperties.ContentDescription,
+                    listOf(label),
+                ),
+            )
+            .performTouchInput { longClick() }
+        composeRule.onNodeWithText(label).assertIsDisplayed()
+        composeRule.onNodeWithTag(BrowserMainMenuTestTags.Menu).assertIsDisplayed()
+        assertEquals(0, dismissals.get())
+    }
+
+    @Test
     fun keepsNarrowMenuTargetsAtLeast48DpInsideMenu() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val density = context.resources.displayMetrics.density
@@ -603,6 +653,49 @@ class BrowserMainMenuInstrumentedTest {
         assertEquals(footerBefore.top, footerAfter.top, 1f)
         assertEquals(footerBefore.bottom, footerAfter.bottom, 1f)
         assertTrue(footerAfter.bottom <= menuBounds.bottom + 1f)
+    }
+
+    @Test
+    fun placesMenuCloserToBottomTrigger() {
+        assertBottomTriggerPlacement(LayoutDirection.Ltr)
+    }
+
+    @Test
+    fun preservesBottomTriggerPlacementInRtl() {
+        assertBottomTriggerPlacement(LayoutDirection.Rtl)
+    }
+
+    private fun assertBottomTriggerPlacement(layoutDirection: LayoutDirection) {
+        val density = InstrumentationRegistry.getInstrumentation().targetContext
+            .resources.displayMetrics.density
+        composeRule.setContent {
+            CompositionLocalProvider(LocalLayoutDirection provides layoutDirection) {
+                Box(Modifier.fillMaxSize().testTag("menu_position_window")) {
+                    Box(Modifier.align(Alignment.BottomEnd).padding(bottom = 80.dp, end = 12.dp)) {
+                        Box(Modifier.size(48.dp).testTag("menu_position_anchor")) {
+                            ShortBrowserMainMenu()
+                        }
+                    }
+                }
+            }
+        }
+        val anchor = screenBounds("menu_position_anchor")
+        val menu = screenBounds(BrowserMainMenuTestTags.Menu)
+        val window = screenBounds("menu_position_window")
+        // The transparent Material host adds 8dp padding below the Candy surface.
+        assertEquals(anchor.top + 16f * density, menu.bottom, 1f)
+        assertTrue(menu.top >= window.top + 48f * density - 1f)
+        assertTrue(menu.bottom <= window.bottom - 48f * density + 1f)
+        assertTrue(menu.left >= window.left - 1f)
+        assertTrue(menu.right <= window.right + 1f)
+    }
+
+    private fun screenBounds(tag: String): Rect {
+        val node = composeRule.onNodeWithTag(tag).assertIsDisplayed().fetchSemanticsNode()
+        return Rect(
+            offset = node.positionOnScreen,
+            size = Size(node.size.width.toFloat(), node.size.height.toFloat()),
+        )
     }
 
     @Composable

@@ -2,12 +2,14 @@ package dev.sk2andy.materialbrowser.ui
 
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.PlainTooltip
+import androidx.compose.material3.Text
+import androidx.compose.material3.TooltipBox
+import androidx.compose.material3.TooltipDefaults
+import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -19,12 +21,11 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.PopupProperties
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.browser.BrowserInputDiagnostics
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoExtensionActionKey
@@ -37,18 +38,18 @@ import dev.sk2andy.materialbrowser.shared.browser.BrowserFeatureMenuLabelKey
 import dev.sk2andy.materialbrowser.shared.browser.BrowserFeatureMenuRules
 import dev.sk2andy.materialbrowser.shared.browser.BrowserFeatureMenuSection
 import dev.sk2andy.materialbrowser.shared.browser.BrowserFeatureMenuState
-import dev.sk2andy.materialbrowser.shared.browser.BrowserToppingMenuCommand
 import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuEntry
 import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuLayout
 import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuLayoutRules
 import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuSurface
-import dev.sk2andy.materialbrowser.shared.ui.BrowserMainMenuEffects
+import dev.sk2andy.materialbrowser.shared.browser.BrowserToppingMenuCommand
+import dev.sk2andy.materialbrowser.shared.ui.BrowserMainMenu as SharedBrowserMainMenu
 import dev.sk2andy.materialbrowser.shared.ui.BrowserMainMenuContainerRole
+import dev.sk2andy.materialbrowser.shared.ui.BrowserMainMenuEffects
 import dev.sk2andy.materialbrowser.shared.ui.BrowserMainMenuResources
 import dev.sk2andy.materialbrowser.shared.ui.BrowserMainMenuStyle
 import dev.sk2andy.materialbrowser.ui.theme.browserChromeColor
 import dev.sk2andy.materialbrowser.ui.theme.browserChromeSurfaceTokens
-import dev.sk2andy.materialbrowser.shared.ui.BrowserMainMenu as SharedBrowserMainMenu
 
 internal typealias BrowserMainMenuMotion =
     dev.sk2andy.materialbrowser.shared.ui.BrowserMainMenuMotion
@@ -192,28 +193,28 @@ private class AndroidBrowserMainMenuEffects(
         onDismissRequest: () -> Unit,
         content: @Composable () -> Unit,
     ) {
-        val scrollState = rememberScrollState()
-        LaunchedEffect(expanded) {
-            if (expanded) scrollState.scrollTo(0)
-        }
-        DropdownMenu(
+        BrowserMainMenuPopup(
             expanded = expanded,
             onDismissRequest = onDismissRequest,
-            scrollState = scrollState,
-            properties = PopupProperties(focusable = expanded),
-            containerColor = Color.Transparent,
-            tonalElevation = 0.dp,
-            shadowElevation = 0.dp,
-        ) {
-            DisposableEffect(expanded) {
-                popupState(expanded, visible = true)
-                onDispose {}
-            }
-            DisposableEffect(Unit) {
-                onDispose { popupState(expanded = false, visible = false) }
-            }
-            content()
-        }
+            onPopupStateChange = { visible -> popupState(expanded && visible, visible) },
+            content = content,
+        )
+    }
+
+    @OptIn(ExperimentalMaterial3Api::class)
+    @Composable
+    override fun actionTooltip(
+        label: String,
+        modifier: Modifier,
+        content: @Composable () -> Unit,
+    ) {
+        TooltipBox(
+            positionProvider = TooltipDefaults.rememberTooltipPositionProvider(),
+            tooltip = { PlainTooltip { Text(label) } },
+            state = rememberTooltipState(),
+            modifier = modifier,
+            content = content,
+        )
     }
 
     @Composable
@@ -542,9 +543,8 @@ internal fun BrowserFeatureMenuItem.androidDrawableResource(): Int = when (actio
     BrowserFeatureMenuAction.OpenCandyTrail -> R.drawable.ic_symbol_route
     BrowserFeatureMenuAction.AddSiteCapsule -> R.drawable.ic_symbol_add_to_home_screen
     BrowserFeatureMenuAction.Summarize -> R.drawable.ic_symbol_auto_awesome
-    BrowserFeatureMenuAction.SnoozeTab,
-    BrowserFeatureMenuAction.OpenSnoozedTabs,
-    -> R.drawable.ic_snooze
+    BrowserFeatureMenuAction.SnoozeTab -> R.drawable.ic_snooze
+    BrowserFeatureMenuAction.OpenSnoozedTabs -> R.drawable.ic_snoozed_tabs
     BrowserFeatureMenuAction.DockAddressBar -> R.drawable.ic_symbol_chevron_right
     BrowserFeatureMenuAction.OpenFavorites -> R.drawable.ic_symbol_favorite
     BrowserFeatureMenuAction.OpenDownloads -> R.drawable.ic_reader_download
