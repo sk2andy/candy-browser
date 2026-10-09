@@ -10,10 +10,10 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -25,9 +25,14 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.GenericShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TooltipBox
+import androidx.compose.material3.TooltipDefaults
+import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -49,11 +54,12 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.TextUnit
@@ -210,6 +216,22 @@ interface BrowserMainMenuEffects {
                 content = content,
             )
         }
+    }
+
+    @OptIn(ExperimentalMaterial3Api::class)
+    @Composable
+    fun actionTooltip(
+        label: String,
+        modifier: Modifier,
+        content: @Composable () -> Unit,
+    ) {
+        TooltipBox(
+            positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
+            tooltip = { PlainTooltip { Text(label) } },
+            state = rememberTooltipState(),
+            modifier = modifier,
+            content = content,
+        )
     }
 
     @Composable
@@ -737,7 +759,7 @@ private fun BrowserMainMenuLibraries(
         Column {
             val rows = if (compact) items.chunked(3) else listOf(items)
             rows.forEach { row ->
-                Row(modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
+                Row(modifier = Modifier.fillMaxWidth().height(48.dp)) {
                     row.forEach { item ->
                         BrowserMainMenuLibraryAction(
                             item = item,
@@ -746,8 +768,7 @@ private fun BrowserMainMenuLibraries(
                             onClick = { onClick(item) },
                             modifier = Modifier
                                 .weight(1f)
-                                .fillMaxHeight()
-                                .then(item.testTagModifier()),
+                                .fillMaxHeight(),
                         )
                     }
                 }
@@ -765,41 +786,39 @@ private fun BrowserMainMenuLibraryAction(
     modifier: Modifier,
 ) {
     val colors = MaterialTheme.colorScheme
+    val label = resources.label(item)
     val actionContentColor = if (item.enabled) colors.onSurface else colors.onSurface.copy(alpha = 0.38f)
-    Surface(
-        onClick = onClick,
-        modifier = modifier.heightIn(min = 80.dp),
-        enabled = item.enabled,
-        shape = RoundedCornerShape(0.dp),
-        color = Color.Transparent,
-        contentColor = actionContentColor,
-    ) {
-        Column(
-            modifier = Modifier.padding(vertical = 6.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
+    Box(modifier = modifier) {
+        effects.actionTooltip(
+            label = label,
+            modifier = Modifier.fillMaxSize(),
         ) {
             Surface(
-                shape = CircleShape,
-                color = effects.containerColor(colors.surfaceContainerLowest),
+                onClick = onClick,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .then(item.testTagModifier())
+                    .semantics { contentDescription = label },
+                enabled = item.enabled,
+                shape = RoundedCornerShape(0.dp),
+                color = Color.Transparent,
                 contentColor = actionContentColor,
             ) {
-                Box(
-                    modifier = Modifier.size(40.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    resources.icon(item, Modifier.size(effects.style.toolbarIconSize))
+                Box(contentAlignment = Alignment.Center) {
+                    Surface(
+                        shape = CircleShape,
+                        color = effects.containerColor(colors.surfaceContainerLowest),
+                        contentColor = actionContentColor,
+                    ) {
+                        Box(
+                            modifier = Modifier.size(40.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            resources.icon(item, Modifier.size(effects.style.toolbarIconSize))
+                        }
+                    }
                 }
             }
-            Spacer(Modifier.height(4.dp))
-            Text(
-                text = resources.label(item),
-                minLines = 2,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-                style = MaterialTheme.typography.labelSmall,
-                textAlign = TextAlign.Center,
-            )
         }
     }
 }

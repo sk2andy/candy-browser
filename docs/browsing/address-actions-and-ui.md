@@ -64,7 +64,7 @@ See [`site-data.md`](site-data.md) for domain expansion, shared-storage warnings
 | Persistence and migration | [`BrowserSessionStore.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/data/BrowserSessionStore.kt) | Stable wire names persist the two ordered sides. Unknown, duplicate or excess values are normalized independently of Compose. The former tab-button visibility preference migrates once into the new layout and is then removed. |
 | Temporary controls | `ui/BrowserBottomBar.kt`, `ui/ExpandedAddressBar.kt`, `ui/BrowserMainMenu.kt` | Cast and blank-editor controls consume the same icon budget. Cast may temporarily displace the last configured action; any displaced action that has no ordinary menu equivalent is exposed in **More** for that state. |
 | Presentation style | `AppearanceSettings.addressBarStyle`, `ui/ExpandedAddressBar.kt` | Classic preserves the existing expanded layout. Segmented draws one primary pill behind configured actions and the address field plus a separate trailing pill for **More**; focused editing keeps the input borderless, adds the search affordance, and changes the trailing pill to **Close**. The outer and inner curves stay concentric and use the same 8 dp inset around and between segments. Compact, parked, overview, command-feedback, external-preview and find-in-page chrome stay unchanged. |
-| Main-menu placement and motion | `shared/ui/BrowserMainMenu.kt`, `ui/BrowserMainMenu.kt` | The address bar remains stable while **More** opens and closes. Android uses the public Material 3 `DropdownMenu` with its default placement and transition, without a custom offset or a second content animation. Its transparent host retains the Candy surface and grouped actions. The shared menu scrolls its upper content while keeping the action footer fixed; Android caps surface height below Material's popup margins and padding so Material's outer scroll stays idle. The shared popup host preserves the native iOS anchor morph. Closing releases focus while Material completes its exit. |
+| Main-menu placement and motion | `shared/ui/BrowserMainMenu.kt`, `ui/BrowserMainMenu.kt`, `ui/BrowserMainMenuPopup.kt` | The address bar remains stable while **More** opens and closes. Android retains Material 3's transparent padded host and scale/alpha transition. Its popup uses Material's existing placement candidates and applies a 24dp downward shift after the window-edge fallback, bounded by the actual window container and system-bar/cutout insets. This brings the menu closer to the bottom **More** trigger without a second content animation. The host retains the Candy surface and grouped actions. The shared menu scrolls its upper content while keeping the action footer fixed; Android caps surface height below Material's popup margins and padding so the outer scroll stays idle. The shared popup host preserves the native iOS anchor morph. Closing releases focus while the exit completes. |
 
 The parked compact pill remains intentionally action-free. When address input takes the full editor
 width, configured actions retain the existing horizontal fade/shrink transition and return when the
@@ -113,6 +113,10 @@ the title and library actions while the lower controls stay visible. The Android
 reserves Material's 48dp margins and 8dp internal padding on both vertical edges.
 The iOS effect adapter preserves its selected glass-control foreground. Filtering still happens before
 rendering, and library clicks close the menu before invoking their existing destination callbacks.
+
+The top library row keeps snoozed tabs, favorites, downloads, history and settings icon-only.
+Localized names remain available to screen readers and appear as plain tooltips on long press.
+Snoozed tabs use a rising Zzz glyph so they remain distinct from the history clock.
 
 ## Find in page
 
