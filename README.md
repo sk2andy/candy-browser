@@ -92,9 +92,11 @@ docker compose up -d
 The public `sk2andy/candy-sync:latest` image supports Linux AMD64 and ARM64. Contributors can still
 build the server locally with `docker compose up --build -d`.
 
-Build and load the WebExtension from `sync/extension/`, open its browser-managed Options Page, and
-enter the endpoint plus an E2EE passphrase. In Candy Browser, open **Settings → Synchronization**
-and join with the same endpoint, credentials, and passphrase.
+Install Candy Sync from the [Chrome Web Store](https://chromewebstore.google.com/detail/candy-sync/mbmmijoehjmjdehhbikpflhahamohbge),
+open its browser-managed Options Page, and enter the endpoint, credentials, and E2EE passphrase.
+For Firefox or local development, build and load the WebExtension from `sync/extension/` using the
+[Candy Sync extension guide](docs/sync/extension.md). In Candy Browser, open
+**Settings → Synchronization** and join with the same endpoint, credentials, and passphrase.
 
 See the [Candy Sync guide](docs/sync/README.md) for server deployment, local TLS, Chromium/Firefox
 loading, Android setup, backups, protocol details, and the full security model.
@@ -343,6 +345,16 @@ for download. Standard installs on ARM64 devices prefer the smaller ARM64 APK an
 universal APK when needed. Both use the same application ID, version, and signing key, so either can
 update an existing standard install. The FOSS build disables this updater. Android still requires
 you to open a downloaded file and approve installation.
+
+### Candy Sync extensions
+
+Install the desktop companion for self-hosted, end-to-end encrypted tab synchronization:
+
+<a href="https://chromewebstore.google.com/detail/candy-sync/mbmmijoehjmjdehhbikpflhahamohbge"><img src="https://developer.chrome.com/static/docs/webstore/branding/image/UV4C4ybeBTsZt43U4xis.png" height="48" alt="Get Candy Sync in the Chrome Web Store"></a>
+
+Firefox users can [build and load the extension](docs/sync/extension.md) until its Mozilla Add-ons
+listing is publicly available. Both clients require your own Candy Sync server; see
+[Start Candy Sync](#start-candy-sync) for setup.
 
 ### Obtainium
 
