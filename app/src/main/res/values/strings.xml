@@ -617,6 +617,8 @@
     <string name="settings_address_bar_actions_after">Right of address</string>
     <string name="settings_address_bar_actions_full">All three configurable positions are occupied.</string>
     <string name="settings_address_bar_docking_title">Move the parked address pill</string>
+    <string name="settings_address_bar_swipe_mode_title">Switch address pill with swipes</string>
+    <string name="settings_address_bar_swipe_mode_summary">Swipe down on the page to expand the pill and up to compact it, even when the page cannot scroll. When off, the pill follows page scrolling.</string>
     <string name="settings_address_bar_docking_subtitle">Drag the parked pill and release it at any height to snap it to the nearest screen edge. Turn off to keep the address bar centered.</string>
     <string name="settings_tab_dismiss_resistance">Tab dismissal resistance</string>
     <string name="settings_tab_dismiss_resistance_summary">Resistance phase: %1$d%% of the closing distance</string>

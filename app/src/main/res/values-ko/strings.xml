@@ -584,6 +584,8 @@
     <string name="settings_address_bar_actions_after">회신권</string>
     <string name="settings_address_bar_actions_full">세 가지 구성 가능한 위치 모두 점유되어 있습니다.</string>
     <string name="settings_address_bar_docking_title">주차된 주소 패블릿을 옮기세요</string>
+    <string name="settings_address_bar_swipe_mode_title">스와이프로 주소 표시줄 전환</string>
+    <string name="settings_address_bar_swipe_mode_summary">페이지에서 아래로 스와이프하면 주소 표시줄이 펼쳐지고 위로 스와이프하면 작아집니다. 스크롤할 수 없는 페이지에서도 작동합니다. 끄면 페이지 스크롤에 따라 바뀝니다.</string>
     <string name="settings_address_bar_docking_subtitle">정지된 약을 당겨서 가장 가까운 화면 가장자리에 놓아주세요. 주소줄을 중앙에 놓지 않도록 끄세요.</string>
     <string name="settings_tab_dismiss_resistance">탭 방출 저항</string>
     <string name="settings_tab_dismiss_resistance_summary">저항 단계: %1$d%% 닫기 거리의</string>

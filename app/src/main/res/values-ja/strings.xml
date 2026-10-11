@@ -584,6 +584,8 @@
     <string name="settings_address_bar_actions_after">問い合わせの権利</string>
     <string name="settings_address_bar_actions_full">3つの配置可能な位置はすべて 占有されています.</string>
     <string name="settings_address_bar_docking_title">駐車したアドレスタブレットを移動</string>
+    <string name="settings_address_bar_swipe_mode_title">スワイプでアドレスバーを切り替える</string>
+    <string name="settings_address_bar_swipe_mode_summary">ページを下にスワイプするとアドレスバーが展開し、上にスワイプするとコンパクトになります。スクロールできないページでも使えます。オフの場合はページのスクロールに連動します。</string>
     <string name="settings_address_bar_docking_subtitle">駐車した錠剤を引っ張って 画面の最寄りの辺に 押し付けるように任意の高さで放出します アドレスバーを中心に保つためにオフにします.</string>
     <string name="settings_tab_dismiss_resistance">タブ解体抵抗</string>
     <string name="settings_tab_dismiss_resistance_summary">抵抗相: %1$d%% 閉じる距離</string>

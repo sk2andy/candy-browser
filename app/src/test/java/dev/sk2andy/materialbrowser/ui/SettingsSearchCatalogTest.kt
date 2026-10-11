@@ -38,6 +38,20 @@ class SettingsSearchCatalogTest {
     }
 
     @Test
+    fun `address pill swipe mode is searchable under tabs and gestures for either engine`() {
+        listOf(false, true).forEach { isGeckoEngine ->
+            val definition = settingsSearchDefinitions(
+                SettingsSearchAvailability(isGeckoEngine = isGeckoEngine),
+            ).single { it.id == "settings_address_bar_swipe_mode_title" }
+
+            assertEquals(SettingsDestination.TabsAndGestures, definition.destination)
+            assertEquals(R.string.settings_tabs_gestures_title, definition.contextRes)
+            assertEquals(R.string.settings_address_bar_swipe_mode_title, definition.titleRes)
+            assertEquals(R.string.settings_address_bar_swipe_mode_summary, definition.descriptionRes)
+        }
+    }
+
+    @Test
     fun `supported capabilities expose their settings and Firefox external action`() {
         val entries = settingsSearchDefinitions(
             SettingsSearchAvailability(

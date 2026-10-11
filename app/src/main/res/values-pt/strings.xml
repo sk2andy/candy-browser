@@ -577,6 +577,8 @@
     <string name="settings_address_bar_actions_after">À direita do endereço</string>
     <string name="settings_address_bar_actions_full">As três posições configuráveis estão ocupadas.</string>
     <string name="settings_address_bar_docking_title">Mover a pílula de endereço fixada</string>
+    <string name="settings_address_bar_swipe_mode_title">Alternar a barra de endereço com gestos</string>
+    <string name="settings_address_bar_swipe_mode_summary">Deslize para baixo na página para expandir a barra e para cima para a compactar, mesmo que a página não permita rolagem. Quando desativado, a barra acompanha a rolagem da página.</string>
     <string name="settings_address_bar_docking_subtitle">Arraste a pílula fixada e solte-a em qualquer altura para a encaixar na margem mais próxima. Desative para manter a barra centrada.</string>
     <string name="settings_tab_dismiss_resistance">Resistência ao fechar separadores</string>
     <string name="settings_tab_dismiss_resistance_summary">Fase de resistência: %1$d%% do percurso de fecho</string>

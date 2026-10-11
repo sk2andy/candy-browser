@@ -350,6 +350,45 @@ class TabSettingsScreenInstrumentedTest {
     }
 
     @Test
+    fun addressBarSwipeModeReflectsStateAndInvokesCallback() {
+        var enabled by mutableStateOf(false)
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                TabsAndGesturesSettingsPage(
+                    inactiveTabLifetime = InactiveTabLifetime.Never,
+                    residentTabLimit = 10,
+                    tabOverviewMode = TabOverviewMode.Grid,
+                    tabStackFolderMode = TabOverviewMode.Grid,
+                    tabListStartsAtBottom = false,
+                    automaticTabSortingEnabled = false,
+                    dismissResistancePercent = 40,
+                    profilesEnabled = true,
+                    isAddressBarDockingEnabled = true,
+                    isAddressBarSwipeModeEnabled = enabled,
+                    onInactiveTabLifetimeChanged = {},
+                    onResidentTabLimitChanged = {},
+                    onTabOverviewModeChanged = {},
+                    onTabStackFolderModeChanged = {},
+                    onTabListStartsAtBottomChanged = {},
+                    onAutomaticTabSortingEnabledChanged = {},
+                    onDismissResistancePercentChanged = {},
+                    onProfilesEnabledChanged = {},
+                    onAddressBarDockingEnabledChanged = {},
+                    onAddressBarSwipeModeEnabledChanged = { enabled = it },
+                    onAddressBarActions = {},
+                    onBack = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(TabSettingsTestTags.AddressBarSwipeMode)
+            .performScrollTo().performClick()
+        composeRule.runOnIdle { assertTrue(enabled) }
+        composeRule.onNodeWithTag(TabSettingsTestTags.AddressBarSwipeMode).performClick()
+        composeRule.runOnIdle { assertFalse(enabled) }
+    }
+
+    @Test
     fun addressBarDockingSwitchCanDisableParking() {
         var enabled by mutableStateOf(true)
         composeRule.setContent {

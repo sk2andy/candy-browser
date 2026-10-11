@@ -594,6 +594,8 @@
     <string name="settings_address_bar_actions_after">Adressrecht</string>
     <string name="settings_address_bar_actions_full">All dräi konfiguréierbar Positiounen sinn besat.</string>
     <string name="settings_address_bar_docking_title">Dat geparkten Adressfeld réckelen</string>
+    <string name="settings_address_bar_swipe_mode_title">Adressleescht mat Wësche wiesselen</string>
+    <string name="settings_address_bar_swipe_mode_summary">Wësch op der Säit no ënnen, fir d’Adressleescht auszebauen, an no uewen, fir se kompakt ze maachen, och wann d’Säit net scrollt. Wann ausgeschalt, follegt d’Adressleescht dem Scrolle vun der Säit.</string>
     <string name="settings_address_bar_docking_subtitle">Zéi dat geparkten Feld a looss et op enger Héicht lass, fir et un den nooste Bildschiermrand ze pechen. Ausschalten hält d’Adressleescht an der Mëtt.</string>
     <string name="settings_tab_dismiss_resistance">Widderstand beim Zoumaache vun Tabs</string>
     <string name="settings_tab_dismiss_resistance_summary">Resistenzphase: %1$d%% vun der Schließdistanz</string>

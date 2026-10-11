@@ -611,6 +611,8 @@
     <string name="settings_address_bar_actions_after">Vpravo od adresy</string>
     <string name="settings_address_bar_actions_full">Všechny tři nastavitelné pozice jsou obsazené.</string>
     <string name="settings_address_bar_docking_title">Přesouvat zaparkovanou adresní kapsli</string>
+    <string name="settings_address_bar_swipe_mode_title">Přepínat adresní řádek gesty</string>
+    <string name="settings_address_bar_swipe_mode_summary">Přejetím dolů na stránce rozbalíte adresní řádek a přejetím nahoru jej zmenšíte, i když stránku nelze posouvat. Po vypnutí řádek reaguje na posouvání stránky.</string>
     <string name="settings_address_bar_docking_subtitle">Přetáhněte zaparkovanou kapsli a pusťte ji v libovolné výšce. Přichytí se k nejbližšímu okraji obrazovky. Vypnutím ponecháte adresní řádek uprostřed.</string>
     <string name="settings_tab_dismiss_resistance">Odpor při zavírání panelu</string>
     <string name="settings_tab_dismiss_resistance_summary">Fáze odporu: %1$d%% vzdálenosti pro zavření</string>

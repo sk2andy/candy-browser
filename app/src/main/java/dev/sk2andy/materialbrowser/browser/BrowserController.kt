@@ -792,6 +792,8 @@ class BrowserController(
     private var nextFindInPageSessionId = 0L
     var isFullImmersiveModeEnabled by mutableStateOf(false)
         private set
+    var isAddressBarSwipeModeEnabled by mutableStateOf(false)
+        private set
     var isStartupAnimationEnabled by mutableStateOf(true)
         private set
     var startupAddressFocusMode by mutableStateOf(StartupAddressFocusMode.Default)
@@ -2604,6 +2606,7 @@ class BrowserController(
         }
         addressBarActionLayout = store.loadAddressBarActionLayout()
         isFullImmersiveModeEnabled = store.loadFullImmersiveModeEnabled()
+        isAddressBarSwipeModeEnabled = store.loadAddressBarSwipeModeEnabled()
         isStartupAnimationEnabled = store.loadStartupAnimationEnabled()
         startupAddressFocusMode = store.loadStartupAddressFocusMode()
         isHttpPasswordAutofillEnabled = store.loadHttpPasswordAutofillEnabled()
@@ -9598,6 +9601,19 @@ class BrowserController(
         bottomBarCompactStates[selectedTabId] = false
     }
 
+    internal fun onAddressBarSwipe(tabId: String, engineViewRevision: Int, compact: Boolean) {
+        if (
+            destroyed ||
+            !isAddressBarSwipeModeEnabled ||
+            tabId != selectedTabId ||
+            engineViewRevision != this.engineViewRevision
+        ) return
+        if (activeTabs.none { it.id == tabId }) return
+        if (bottomBarCompactStates[tabId] != compact) {
+            bottomBarCompactStates[tabId] = compact
+        }
+    }
+
     private fun collapseBottomBar() {
         bottomBarCompactStates[selectedTabId] = true
     }
@@ -9722,6 +9738,13 @@ class BrowserController(
         isFullImmersiveModeEnabled = enabled
         store.saveFullImmersiveModeEnabled(enabled)
         onFullImmersiveModeChanged(enabled)
+    }
+
+    fun updateAddressBarSwipeModeEnabled(enabled: Boolean) {
+        if (isAddressBarSwipeModeEnabled == enabled) return
+        isAddressBarSwipeModeEnabled = enabled
+        browserChromeScrollStates.clear()
+        store.saveAddressBarSwipeModeEnabled(enabled)
     }
 
     fun updateStartupAnimationEnabled(enabled: Boolean) {
@@ -14086,6 +14109,7 @@ class BrowserController(
         rendererIsCurrent: Boolean,
         event: BrowserEngineScrollEvent,
     ) {
+        if (isAddressBarSwipeModeEnabled) return
         if (
             !BrowserChromeScrollRules.accepts(
                 eventTabId = tabId,

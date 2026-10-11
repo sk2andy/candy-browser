@@ -578,6 +578,8 @@
     <string name="settings_address_bar_actions_after">Rechts von der Adresse</string>
     <string name="settings_address_bar_actions_full">Alle drei konfigurierbaren Plätze sind belegt.</string>
     <string name="settings_address_bar_docking_title">Geparkte Adresspille verschieben</string>
+    <string name="settings_address_bar_swipe_mode_title">Adresspille durch Wischen umschalten</string>
+    <string name="settings_address_bar_swipe_mode_summary">Auf der Seite nach unten wischen, um die Pille auszuklappen, und nach oben, um sie kompakt anzuzeigen. Funktioniert auch ohne scrollbare Seite. Wenn deaktiviert, folgt die Pille dem Scrollen.</string>
     <string name="settings_address_bar_docking_subtitle">Die geparkte Pille ziehen und auf beliebiger Höhe loslassen. Sie rastet am nächsten Bildschirmrand ein. Deaktivieren, um die Adressleiste mittig zu halten.</string>
     <string name="settings_tab_dismiss_resistance">Widerstand beim Schließen von Tabs</string>
     <string name="settings_tab_dismiss_resistance_summary">Widerstandsphase: %1$d%% des Schließwegs</string>

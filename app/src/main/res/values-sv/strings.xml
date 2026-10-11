@@ -594,6 +594,8 @@
     <string name="settings_address_bar_actions_after">Rätt till adress</string>
     <string name="settings_address_bar_actions_full">Alla tre konfigurerbara positioner är upptagna.</string>
     <string name="settings_address_bar_docking_title">Flytta det parkerade adressfältet</string>
+    <string name="settings_address_bar_swipe_mode_title">Växla adressfält med svep</string>
+    <string name="settings_address_bar_swipe_mode_summary">Svep nedåt på sidan för att utöka adressfältet och uppåt för att göra det kompakt, även när sidan inte kan rullas. När detta är av följer adressfältet sidans rullning.</string>
     <string name="settings_address_bar_docking_subtitle">Dra det parkerade fältet och släpp det på valfri höjd för att fästa det vid närmaste skärmkant. Stäng av för att hålla adressfältet centrerat.</string>
     <string name="settings_tab_dismiss_resistance">Motstånd när flikar stängs</string>
     <string name="settings_tab_dismiss_resistance_summary">Motståndsfas: %1$d%% av stängningsavståndet</string>

@@ -201,6 +201,7 @@ internal fun BrowserSettingsOverlay(
             addressBarActionLayout = controller.addressBarActionLayout,
             browserMenuLayout = controller.browserMenuLayout,
             isAddressBarDockingEnabled = controller.isAddressBarDockingEnabled,
+            isAddressBarSwipeModeEnabled = controller.isAddressBarSwipeModeEnabled,
             isExternalLinkPreviewEnabled = controller.isExternalLinkPreviewEnabled,
             externalAppLinkHandling = controller.externalAppLinkHandling,
             isFullImmersiveModeEnabled = controller.isFullImmersiveModeEnabled,
@@ -292,6 +293,8 @@ internal fun BrowserSettingsOverlay(
             onBrowserMenuBottomSheetToolbarEntriesChanged = controller::updateBrowserMenuBottomSheetToolbarEntries,
             onAddressBarDockingEnabledChanged =
                 controller::updateAddressBarDockingEnabled,
+            onAddressBarSwipeModeEnabledChanged =
+                controller::updateAddressBarSwipeModeEnabled,
             onExternalLinkPreviewEnabledChanged =
                 controller::updateExternalLinkPreviewEnabled,
             onExternalAppLinkHandlingChanged = controller::updateExternalAppLinkHandling,

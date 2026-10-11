@@ -603,6 +603,8 @@
     <string name="settings_address_bar_actions_after">La dreapta adresei</string>
     <string name="settings_address_bar_actions_full">Toate cele trei poziţii configurabil sunt ocupate.</string>
     <string name="settings_address_bar_docking_title">Mută câmpul adresei de la margine</string>
+    <string name="settings_address_bar_swipe_mode_title">Schimbă bara de adrese prin glisare</string>
+    <string name="settings_address_bar_swipe_mode_summary">Glisează în jos pe pagină pentru a extinde bara și în sus pentru a o restrânge, chiar dacă pagina nu se poate derula. Când este dezactivat, bara urmează derularea paginii.</string>
     <string name="settings_address_bar_docking_subtitle">Trageţi pilula parcată şi eliberaţi-o la orice înălţime pentru a o prinde în marginea ecranului. Opreşte-l ca să păstrezi bara de adrese în centru.</string>
     <string name="settings_tab_dismiss_resistance">Rezistență la închiderea filei</string>
     <string name="settings_tab_dismiss_resistance_summary">Faza de rezistență: %1$d%% din distanța de închidere</string>

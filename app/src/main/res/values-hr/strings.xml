@@ -603,6 +603,8 @@
     <string name="settings_address_bar_actions_after">Desno od adrese</string>
     <string name="settings_address_bar_actions_full">Sva tri postavljiva položaja su zauzeta.</string>
     <string name="settings_address_bar_docking_title">Premjesti adresno polje uz rub</string>
+    <string name="settings_address_bar_swipe_mode_title">Mijenjaj adresnu traku povlačenjem</string>
+    <string name="settings_address_bar_swipe_mode_summary">Povucite prema dolje na stranici da proširite traku, a prema gore da je sažmete, čak i kada se stranica ne može pomicati. Kada je isključeno, traka prati pomicanje stranice.</string>
     <string name="settings_address_bar_docking_subtitle">Povucite stavljenu tabletu i oslobodite je na bilo kojoj visini kako biste je stavili na najbliži rub ekrana. Isključi da bi adresna traka bila usredotočena.</string>
     <string name="settings_tab_dismiss_resistance">Otpor zatvaranju kartice</string>
     <string name="settings_tab_dismiss_resistance_summary">Faza otpora: %1$d%% udaljenosti zatvaranja</string>

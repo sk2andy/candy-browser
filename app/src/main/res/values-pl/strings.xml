@@ -611,6 +611,8 @@
     <string name="settings_address_bar_actions_after">Na prawo od adresu</string>
     <string name="settings_address_bar_actions_full">Wszystkie trzy konfigurowalne pozycje są zajęte.</string>
     <string name="settings_address_bar_docking_title">Przenoś zaparkowane pole adresu</string>
+    <string name="settings_address_bar_swipe_mode_title">Przełączaj pasek adresu gestami</string>
+    <string name="settings_address_bar_swipe_mode_summary">Przesuń w dół na stronie, aby rozwinąć pasek, lub w górę, aby go zwinąć, nawet gdy strony nie można przewijać. Po wyłączeniu pasek reaguje na przewijanie strony.</string>
     <string name="settings_address_bar_docking_subtitle">Przeciągnij zaparkowane pole i puść na dowolnej wysokości, aby przyciągnąć je do najbliższej krawędzi ekranu. Wyłącz, aby pasek adresu pozostał na środku.</string>
     <string name="settings_tab_dismiss_resistance">Opór przy zamykaniu karty</string>
     <string name="settings_tab_dismiss_resistance_summary">Faza oporu: %1$d%% odległości zamykania</string>

@@ -603,6 +603,8 @@
     <string name="settings_address_bar_actions_after">Десно од адресе</string>
     <string name="settings_address_bar_actions_full">Сва три конфигурисана положаја су заузета.</string>
     <string name="settings_address_bar_docking_title">Премести адресно поље уз ивицу</string>
+    <string name="settings_address_bar_swipe_mode_title">Мењај адресну траку превлачењем</string>
+    <string name="settings_address_bar_swipe_mode_summary">Превуците надоле на страници да проширите траку, а нагоре да је сажмете, чак и када страница не може да се помера. Када је искључено, трака прати померање странице.</string>
     <string name="settings_address_bar_docking_subtitle">Повуците паркирану пилулу и пустите је на било коју висину да бисте је ставили на најближу ивицу екрана. Искључите да би адресна трака остала у центру.</string>
     <string name="settings_tab_dismiss_resistance">Отпор затварању картице</string>
     <string name="settings_tab_dismiss_resistance_summary">Фаза отпора: %1$d%% растојања за затварање</string>

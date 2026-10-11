@@ -594,6 +594,8 @@
     <string name="settings_address_bar_actions_after">Вдясно от адреса</string>
     <string name="settings_address_bar_actions_full">Всички три конфигурируеми позиции са заети.</string>
     <string name="settings_address_bar_docking_title">Премести адресното поле до ръба</string>
+    <string name="settings_address_bar_swipe_mode_title">Превключване на адресната лента с плъзгане</string>
+    <string name="settings_address_bar_swipe_mode_summary">Плъзнете надолу по страницата, за да разгънете лентата, и нагоре, за да я свиете, дори ако страницата не може да се превърта. Когато е изключено, лентата следва превъртането на страницата.</string>
     <string name="settings_address_bar_docking_subtitle">Издърпайте паркираното хапче и го пуснете на всякаква височина, за да го приберете до най-близкия ръб на екрана. Изключете, за да запазите адресната лента в центъра.</string>
     <string name="settings_tab_dismiss_resistance">Съпротивление при затваряне на раздел</string>
     <string name="settings_tab_dismiss_resistance_summary">Фаза на съпротивление: %1$d%% от разстоянието за затваряне</string>

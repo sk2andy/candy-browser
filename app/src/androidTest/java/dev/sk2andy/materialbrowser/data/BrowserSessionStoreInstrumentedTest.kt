@@ -456,6 +456,19 @@ class BrowserSessionStoreInstrumentedTest {
     }
 
     @Test
+    fun addressBarSwipeModeDefaultsToDisabledAndRoundTrips() {
+        val store = BrowserSessionStore(context)
+
+        assertFalse(store.loadAddressBarSwipeModeEnabled())
+
+        store.saveAddressBarSwipeModeEnabled(true)
+        assertTrue(BrowserSessionStore(context).loadAddressBarSwipeModeEnabled())
+
+        store.saveAddressBarSwipeModeEnabled(false)
+        assertFalse(BrowserSessionStore(context).loadAddressBarSwipeModeEnabled())
+    }
+
+    @Test
     fun downloadSettingsDefaultSafelyAndRoundTrip() {
         val store = BrowserSessionStore(context)
 

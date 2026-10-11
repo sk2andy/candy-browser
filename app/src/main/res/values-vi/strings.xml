@@ -584,6 +584,8 @@
     <string name="settings_address_bar_actions_after">Quyền tiếp cận</string>
     <string name="settings_address_bar_actions_full">Tất cả ba vị trí có thể cấu hình đều được chiếm đóng.</string>
     <string name="settings_address_bar_docking_title">Di chuyển bảng địa chỉ đậu xe.</string>
+    <string name="settings_address_bar_swipe_mode_title">Chuyển thanh địa chỉ bằng thao tác vuốt</string>
+    <string name="settings_address_bar_swipe_mode_summary">Vuốt xuống trên trang để mở rộng thanh địa chỉ và vuốt lên để thu gọn, kể cả khi không thể cuộn trang. Khi tắt, thanh địa chỉ thay đổi theo thao tác cuộn trang.</string>
     <string name="settings_address_bar_docking_subtitle">Lôi thuốc đậu và thả nó ở bất kỳ độ cao nào để nhấp vào cạnh màn hình gần nhất. Tắt để giữ thanh địa chỉ ở trung tâm.</string>
     <string name="settings_tab_dismiss_resistance">Kháng thả tab</string>
     <string name="settings_tab_dismiss_resistance_summary">Giai đoạn kháng cự: %1$d%% của khoảng cách đóng</string>

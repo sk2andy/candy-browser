@@ -594,6 +594,8 @@
     <string name="settings_address_bar_actions_after">Recht van adres</string>
     <string name="settings_address_bar_actions_full">Alle drie configurerende posities zijn bezet.</string>
     <string name="settings_address_bar_docking_title">Verplaats het geparkeerde adresveld</string>
+    <string name="settings_address_bar_swipe_mode_title">Adresbalk met veegbewegingen wisselen</string>
+    <string name="settings_address_bar_swipe_mode_summary">Veeg omlaag op de pagina om de adresbalk uit te klappen en omhoog om deze compact te maken, ook als de pagina niet kan scrollen. Uitgeschakeld volgt de adresbalk het scrollen van de pagina.</string>
     <string name="settings_address_bar_docking_subtitle">Sleep het geparkeerde veld en laat het op elke gewenste hoogte los om het aan de dichtstbijzijnde schermrand vast te zetten. Schakel uit om de adresbalk in het midden te houden.</string>
     <string name="settings_tab_dismiss_resistance">Weerstand bij het sluiten van tabbladen</string>
     <string name="settings_tab_dismiss_resistance_summary">Resistentiefase: %1$d%% van de sluitingsafstand</string>

@@ -107,6 +107,7 @@ internal fun SettingsScreen(
     addressBarActionLayout: AddressBarActionLayout,
     browserMenuLayout: BrowserMenuLayout = BrowserMenuLayout.Default,
     isAddressBarDockingEnabled: Boolean,
+    isAddressBarSwipeModeEnabled: Boolean = false,
     isExternalLinkPreviewEnabled: Boolean = false,
     externalAppLinkHandling: ExternalAppLinkHandling = ExternalAppLinkHandling.Default,
     isFullImmersiveModeEnabled: Boolean,
@@ -173,6 +174,7 @@ internal fun SettingsScreen(
     onBrowserMenuBottomSheetContentLayoutChanged: (BrowserMenuBottomSheetContentLayout) -> Unit = {},
     onBrowserMenuBottomSheetToolbarEntriesChanged: (List<BrowserMenuEntry?>) -> Unit = {},
     onAddressBarDockingEnabledChanged: (Boolean) -> Unit,
+    onAddressBarSwipeModeEnabledChanged: (Boolean) -> Unit = {},
     onExternalLinkPreviewEnabledChanged: (Boolean) -> Unit = {},
     onExternalAppLinkHandlingChanged: (ExternalAppLinkHandling) -> Unit = {},
     onFullImmersiveModeEnabledChanged: (Boolean) -> Unit,
@@ -330,6 +332,7 @@ internal fun SettingsScreen(
                     dismissResistancePercent = dismissResistancePercent,
                     profilesEnabled = profilesEnabled,
                     isAddressBarDockingEnabled = isAddressBarDockingEnabled,
+                    isAddressBarSwipeModeEnabled = isAddressBarSwipeModeEnabled,
                     addressBarLongPressAction = addressBarLongPressAction,
                     linkLongPressAction = linkLongPressAction,
                     onInactiveTabLifetimeChanged = onInactiveTabLifetimeChanged,
@@ -343,6 +346,7 @@ internal fun SettingsScreen(
                     onDismissResistancePercentChanged = onDismissResistancePercentChanged,
                     onProfilesEnabledChanged = onProfilesEnabledChanged,
                     onAddressBarDockingEnabledChanged = onAddressBarDockingEnabledChanged,
+                    onAddressBarSwipeModeEnabledChanged = onAddressBarSwipeModeEnabledChanged,
                     onAddressBarLongPressActions = {
                         onDestinationChanged(SettingsDestination.AddressBarLongPressActions)
                     },

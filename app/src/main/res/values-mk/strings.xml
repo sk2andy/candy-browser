@@ -594,6 +594,8 @@
     <string name="settings_address_bar_actions_after">Десно од адресата</string>
     <string name="settings_address_bar_actions_full">Сите три конфигурирани позиции се зафатени.</string>
     <string name="settings_address_bar_docking_title">Премести го адресното поле до работ</string>
+    <string name="settings_address_bar_swipe_mode_title">Менувај ја адресната лента со повлекување</string>
+    <string name="settings_address_bar_swipe_mode_summary">Повлечете надолу на страницата за да ја проширите лентата и нагоре за да ја соберете, дури и ако страницата не може да се лизга. Кога е исклучено, лентата го следи лизгањето на страницата.</string>
     <string name="settings_address_bar_docking_subtitle">Превлечете ја паркираната таблета и пуштете ја на која било висина за да ја ставите на најблискиот работ на екранот. Исклучете го за да ја задржите адреската лента во центарот.</string>
     <string name="settings_tab_dismiss_resistance">Отпор при затворање на јазичето</string>
     <string name="settings_tab_dismiss_resistance_summary">Фаза на отпор: %1$d%% од растојанието за затворање</string>
