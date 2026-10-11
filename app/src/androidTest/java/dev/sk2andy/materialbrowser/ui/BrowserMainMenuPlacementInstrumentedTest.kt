@@ -34,6 +34,8 @@ import androidx.test.uiautomator.By
 import androidx.test.uiautomator.UiDevice
 import androidx.test.uiautomator.Until
 import dev.sk2andy.materialbrowser.R
+import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuLayout
+import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuPresentation
 import dev.sk2andy.materialbrowser.ui.theme.MaterialBrowserTheme
 import org.junit.Assert.assertTrue
 import org.junit.Assert.assertFalse
@@ -129,6 +131,7 @@ class BrowserMainMenuPlacementInstrumentedTest {
                                 Icon(Icons.Default.MoreVert, "Open placement menu")
                             }
                             BrowserMainMenu(
+                                menuLayout = BrowserMenuLayout.Default.copy(presentation = BrowserMenuPresentation.Floating),
                                 expanded = expanded,
                                 backdropSource = null,
                                 onDismissRequest = { expanded = false },

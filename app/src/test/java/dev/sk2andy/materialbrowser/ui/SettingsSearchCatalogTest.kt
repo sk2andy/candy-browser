@@ -10,6 +10,17 @@ import org.junit.Test
 
 class SettingsSearchCatalogTest {
     @Test
+    fun `menu presentation and sheet sections search opens menu settings`() {
+        val entries = settingsSearchDefinitions(SettingsSearchAvailability()).associateBy { it.id }
+
+        listOf("settings_menu_presentation_title", "settings_menu_bottom_sheet_layout_title")
+            .forEach { id ->
+                assertEquals(SettingsDestination.MenuActions, entries.getValue(id).destination)
+                assertEquals(R.string.settings_menu_presentation_summary, entries.getValue(id).descriptionRes)
+            }
+    }
+
+    @Test
     fun `catalog hides engine and flavor capabilities that are not available`() {
         val ids = ids(SettingsSearchAvailability())
 

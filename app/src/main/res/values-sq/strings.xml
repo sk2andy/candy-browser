@@ -1439,4 +1439,19 @@
     <string name="favorites_url">URL-ja e faqes</string>
     <string name="favorites_manage">Ndrysho të preferuarat</string>
     <string name="favorites_refresh_icon">Rifresko ikonën</string>
+    <string name="settings_menu_presentation_title">Stili i menysë</string>
+    <string name="settings_menu_presentation_summary">Zgjidhni menynë normale ose një panel të poshtëm me seksione të lëvizshme ose dy faqe për rrëshqitje.</string>
+    <string name="settings_menu_presentation_floating">Meny normale</string>
+    <string name="settings_menu_presentation_bottom_sheet">Panel i poshtëm</string>
+    <string name="settings_menu_bottom_sheet_layout_title">Seksionet e panelit të poshtëm</string>
+    <string name="settings_menu_bottom_sheet_layout_scroll">Lëvizje vertikale</string>
+    <string name="settings_menu_bottom_sheet_layout_pages">Dy faqe për rrëshqitje</string>
+    <string name="browser_menu_quick_actions">Veprime të shpejta</string>
+    <string name="browser_menu_page_controls">Kontrollet e faqes</string>
+    <string name="browser_menu_dismiss">Mbyll menynë</string>
+    <string name="browser_menu_page_actions">Veprimet e faqes</string>
+    <string name="settings_menu_bottom_sheet_toolbar_title">Shiriti i veglave në panelin e poshtëm</string>
+    <string name="settings_menu_bottom_sheet_toolbar_summary">Zgjidhni pesë veprime nga e majta në të djathtë. Veprimet e caktuara ndërrojnë vendet. Një vend bosh fsheh butonin.</string>
+    <string name="settings_menu_bottom_sheet_toolbar_slot">Veprimi %1$d</string>
+    <string name="settings_menu_bottom_sheet_toolbar_empty">Vend bosh</string>
 </resources>

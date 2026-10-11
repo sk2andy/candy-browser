@@ -1455,4 +1455,19 @@
     <string name="favorites_url">URL web-stranice</string>
     <string name="favorites_manage">Uredi favorite</string>
     <string name="favorites_refresh_icon">Osvježi ikonu</string>
+    <string name="settings_menu_presentation_title">Stil izbornika</string>
+    <string name="settings_menu_presentation_summary">Odaberite obični izbornik ili donju ploču s odjeljcima za pomicanje ili dvije stranice za povlačenje.</string>
+    <string name="settings_menu_presentation_floating">Obični izbornik</string>
+    <string name="settings_menu_presentation_bottom_sheet">Donja ploča</string>
+    <string name="settings_menu_bottom_sheet_layout_title">Odjeljci donje ploče</string>
+    <string name="settings_menu_bottom_sheet_layout_scroll">Okomito pomicanje</string>
+    <string name="settings_menu_bottom_sheet_layout_pages">Dvije stranice za povlačenje</string>
+    <string name="browser_menu_quick_actions">Brze radnje</string>
+    <string name="browser_menu_page_controls">Kontrole stranice</string>
+    <string name="browser_menu_dismiss">Zatvori izbornik</string>
+    <string name="browser_menu_page_actions">Radnje stranice</string>
+    <string name="settings_menu_bottom_sheet_toolbar_title">Alatna traka donjeg panela</string>
+    <string name="settings_menu_bottom_sheet_toolbar_summary">Odaberite pet radnji slijeva nadesno. Već dodijeljene radnje zamjenjuju mjesta. Prazno mjesto skriva gumb.</string>
+    <string name="settings_menu_bottom_sheet_toolbar_slot">Radnja %1$d</string>
+    <string name="settings_menu_bottom_sheet_toolbar_empty">Prazno mjesto</string>
 </resources>

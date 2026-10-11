@@ -34,6 +34,7 @@
 | Favorite library, search and deletion undo | [`favorites.md`](favorites.md) | `BrowserSessionStore`, `BrowsingFavoritesRules`, `FavoritesActivity`, `FavoritesScreen` |
 | App data ZIP export/import | [`app-data-archive.md`](app-data-archive.md) | `AppDataArchive*`, `AppDataTransferActivity`, `MainActivity`, `ProtectionSettingsPage` |
 | Toppings / local userscripts | [`userscripts.md`](userscripts.md) | `browser/userscript`, `UserScriptStore`, `ToppingCatalogRepository` |
+| Default bottom-sheet menu, configurable footer, fixed address/shortcuts and scroll/swipe sections | [`address-actions-and-ui.md`](address-actions-and-ui.md#configurable-menu-actions) | `BrowserMenuLayout`, shared `BrowserMenuBottomSheetContent` / `BrowserMenuBottomSheetRules` / `BrowserMenuBottomSheetToolbarRules`, Android `BrowserMenuBottomSheet` / `BrowserMenuSheetAddressBar` |
 
 ## Test lookup
 

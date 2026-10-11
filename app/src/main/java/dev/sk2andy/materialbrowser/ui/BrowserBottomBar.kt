@@ -246,6 +246,7 @@ internal fun BrowserBottomBar(
     val docked = dockState.placement != null
     val dockingEnabled = dockState.enabled
     var menuExpanded by remember { mutableStateOf(false) }
+    var menuSheetVisible by remember { mutableStateOf(false) }
     LaunchedEffect(menuDismissRequestId) {
         if (menuDismissRequestId != 0) menuExpanded = false
     }
@@ -412,6 +413,7 @@ internal fun BrowserBottomBar(
                 tab.url != BLANK_URL &&
                     backdropBlurRegionEnabled &&
                     !showingTabOverview &&
+                    !menuSheetVisible &&
                     !visualOnly &&
                     commandFeedback == null &&
                     chromeTokens.backdropBlurEnabled &&
@@ -497,6 +499,7 @@ internal fun BrowserBottomBar(
                         )
                     }
                     .graphicsLayer {
+                        alpha = if (menuSheetVisible) 0f else 1f
                         val stretch = dockStretchProgress.coerceIn(-0.12f, 1f)
                         scaleX = pulseScale.value * (1f - stretch * 0.04f)
                         scaleX *= dockRepositionFeedbackScale.x
@@ -593,6 +596,7 @@ internal fun BrowserBottomBar(
                                 onUserScriptMenuCommand = onUserScriptMenuCommand,
                                 menuExpanded = menuExpanded,
                                 onMenuExpandedChange = { menuExpanded = it },
+                                onMenuSheetVisibleChange = { menuSheetVisible = it },
                                 onBack = onBack,
                                 onForward = onForward,
                                 onAddress = onAddress,

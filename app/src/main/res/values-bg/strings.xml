@@ -1439,4 +1439,19 @@
     <string name="favorites_url">Адрес на сайта</string>
     <string name="favorites_manage">Редактиране на любими</string>
     <string name="favorites_refresh_icon">Обновяване на иконата</string>
+    <string name="settings_menu_presentation_title">Стил на менюто</string>
+    <string name="settings_menu_presentation_summary">Изберете обикновено меню или долен панел с превъртащи се секции или две страници за плъзгане.</string>
+    <string name="settings_menu_presentation_floating">Обикновено меню</string>
+    <string name="settings_menu_presentation_bottom_sheet">Долен панел</string>
+    <string name="settings_menu_bottom_sheet_layout_title">Секции на долния панел</string>
+    <string name="settings_menu_bottom_sheet_layout_scroll">Вертикално превъртане</string>
+    <string name="settings_menu_bottom_sheet_layout_pages">Две страници за плъзгане</string>
+    <string name="browser_menu_quick_actions">Бързи действия</string>
+    <string name="browser_menu_page_controls">Контроли на страницата</string>
+    <string name="browser_menu_dismiss">Затваряне на менюто</string>
+    <string name="browser_menu_page_actions">Действия на страницата</string>
+    <string name="settings_menu_bottom_sheet_toolbar_title">Лента с инструменти в долния панел</string>
+    <string name="settings_menu_bottom_sheet_toolbar_summary">Изберете пет действия отляво надясно. Вече зададените действия разменят местата си. Празното място скрива бутона.</string>
+    <string name="settings_menu_bottom_sheet_toolbar_slot">Действие %1$d</string>
+    <string name="settings_menu_bottom_sheet_toolbar_empty">Празно място</string>
 </resources>

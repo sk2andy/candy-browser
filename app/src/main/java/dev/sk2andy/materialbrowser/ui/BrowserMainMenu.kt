@@ -2,6 +2,7 @@ package dev.sk2andy.materialbrowser.ui
 
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.PlainTooltip
@@ -15,6 +16,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.platform.LocalConfiguration
@@ -41,6 +43,8 @@ import dev.sk2andy.materialbrowser.shared.browser.BrowserFeatureMenuState
 import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuEntry
 import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuLayout
 import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuLayoutRules
+import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuBottomSheetToolbarRules
+import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuPresentation
 import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuSurface
 import dev.sk2andy.materialbrowser.shared.browser.BrowserToppingMenuCommand
 import dev.sk2andy.materialbrowser.shared.ui.BrowserMainMenu as SharedBrowserMainMenu
@@ -321,8 +325,16 @@ internal fun BrowserMainMenu(
     menuLayout: BrowserMenuLayout = BrowserMenuLayout.Default,
     onFirefoxExtensionAction: (GeckoExtensionActionKey) -> Unit = {},
     onSettings: () -> Unit,
+    bottomSheetAddressBar: (@Composable ((() -> Unit) -> Unit) -> Unit)? = null,
+    bottomSheetAnchorBounds: Rect? = null,
+    onBottomSheetVisibleChange: (Boolean) -> Unit = {},
 ) {
     val configuration = LocalConfiguration.current
+    val toolbarPageActions = if (menuLayout.presentation == BrowserMenuPresentation.BottomSheet) {
+        BrowserMenuBottomSheetToolbarRules.additionalPageActions(menuLayout.bottomSheetToolbarEntries)
+    } else {
+        emptyList()
+    }
     val menuState = BrowserFeatureMenuState(
         canGoBack = canGoBack,
         canGoForward = canGoForward,
@@ -352,7 +364,9 @@ internal fun BrowserMainMenu(
         canAddSiteCapsule = canAddSiteCapsule,
         canSnooze = canSnooze,
         canDockAddressBar = canDockAddressBar,
-        overflowPageActions = overflowAddressBarActions.mapNotNull(AddressBarAction::sharedMenuAction),
+        overflowPageActions = (
+            overflowAddressBarActions.mapNotNull(AddressBarAction::sharedMenuAction) + toolbarPageActions
+        ).distinct(),
         toppingCommands = userScriptMenuCommands.map(UserScriptMenuCommand::sharedMenuCommand),
     )
     val items = BrowserMenuLayoutRules.visibleItems(
@@ -365,88 +379,110 @@ internal fun BrowserMainMenu(
     if (expanded && presentedExtensionActions != extensionSnapshot) {
         presentedExtensionActions = extensionSnapshot
     }
-    SharedBrowserMainMenu(
-        expanded = expanded,
-        onDismissRequest = onDismissRequest,
-        pageSubtitle = pageSubtitle,
-        items = items,
-        snoozedTabCount = snoozedTabCount,
-        screenSize = DpSize(configuration.screenWidthDp.dp, configuration.screenHeightDp.dp),
-        resources = AndroidBrowserMainMenuResources,
-        effects = rememberAndroidBrowserMainMenuEffects(backdropSource),
-        extensionContent = if (
-            BrowserMenuLayoutRules.isVisible(
-                menuLayout,
-                BrowserMenuEntry.FirefoxPageActions,
-                BrowserMenuSurface.Tab,
+    val extensionContent: @Composable ColumnScope.((() -> Unit) -> Unit) -> Unit = if (
+        BrowserMenuLayoutRules.isVisible(
+            menuLayout,
+            BrowserMenuEntry.FirefoxPageActions,
+            BrowserMenuSurface.Tab,
+        )
+    ) {
+        { commit ->
+            FirefoxExtensionMenuSection(
+                actions = presentedExtensionActions,
+                onAction = { actionKey ->
+                    commit { onFirefoxExtensionAction(actionKey) }
+                },
             )
-        ) {
-            { commit ->
-                FirefoxExtensionMenuSection(
-                    actions = presentedExtensionActions,
-                    onAction = { actionKey ->
-                        commit { onFirefoxExtensionAction(actionKey) }
-                    },
-                )
+        }
+    } else {
+        {}
+    }
+    val onMenuAction: (BrowserFeatureMenuItem) -> Unit = { item ->
+        when (item.action) {
+            BrowserFeatureMenuAction.Back -> onBack()
+            BrowserFeatureMenuAction.Forward -> onForward()
+            BrowserFeatureMenuAction.Reload,
+            BrowserFeatureMenuAction.Stop,
+            -> onReloadOrStop()
+            BrowserFeatureMenuAction.ToggleFavorite -> onToggleFavorite()
+            BrowserFeatureMenuAction.TogglePinned -> onTogglePinned()
+            BrowserFeatureMenuAction.ShowTabs -> onTabs()
+            BrowserFeatureMenuAction.NewTab -> onNewTab()
+            BrowserFeatureMenuAction.DuplicateTab -> onDuplicateTab()
+            BrowserFeatureMenuAction.CloseTab -> onCloseTab()
+            BrowserFeatureMenuAction.ParkAddressBarRight -> onParkAddressBarRight()
+            BrowserFeatureMenuAction.OpenReader -> onOpenReader()
+            BrowserFeatureMenuAction.TranslatePage -> onTranslate()
+            BrowserFeatureMenuAction.FindInPage -> onFindInPage()
+            BrowserFeatureMenuAction.Share -> onShare()
+            BrowserFeatureMenuAction.OpenExternal -> onOpenExternal()
+            BrowserFeatureMenuAction.Print -> onPrint()
+            BrowserFeatureMenuAction.ToggleCookieBannerRemoval ->
+                onCookieBannerRemovalEnabledChange(item.checked != true)
+            BrowserFeatureMenuAction.ToggleForceVerticalScrolling ->
+                onForceVerticalScrollingChange(item.checked != true)
+            BrowserFeatureMenuAction.ToggleForcePageZooming ->
+                onForcePageZoomingChange(item.checked != true)
+            BrowserFeatureMenuAction.ToggleForceSafeArea ->
+                onForceSafeAreaChange(item.checked != true)
+            BrowserFeatureMenuAction.ToggleAlwaysBlockPopups ->
+                onAlwaysBlockPopupsChange(item.checked != true)
+            BrowserFeatureMenuAction.ToggleDesktopView ->
+                onDesktopViewChange(item.checked != true)
+            BrowserFeatureMenuAction.ToggleDomainMute ->
+                onDomainMutedChange(item.checked != true)
+            BrowserFeatureMenuAction.OpenCandyTrail -> onOpenCandyTrail()
+            BrowserFeatureMenuAction.AddSiteCapsule -> onAddSiteCapsule()
+            BrowserFeatureMenuAction.Summarize -> onSummarize()
+            BrowserFeatureMenuAction.SnoozeTab -> onSnooze()
+            BrowserFeatureMenuAction.DockAddressBar -> onDockAddressBar()
+            BrowserFeatureMenuAction.OpenSnoozedTabs -> onSnoozedTabs()
+            BrowserFeatureMenuAction.OpenFavorites -> onFavorites()
+            BrowserFeatureMenuAction.OpenDownloads -> onDownloads()
+            BrowserFeatureMenuAction.OpenHistory -> onHistory()
+            BrowserFeatureMenuAction.OpenFirefoxExtensions -> Unit
+            BrowserFeatureMenuAction.OpenSettings -> onSettings()
+            BrowserFeatureMenuAction.InvokeToppingCommand -> {
+                userScriptMenuCommands.firstOrNull { command ->
+                    command.scriptId == item.toppingScriptId &&
+                        command.commandId == item.toppingCommandId &&
+                        command.documentId == item.toppingDocumentId
+                }?.let(onUserScriptMenuCommand)
             }
-        } else {
-            {}
-        },
-        onAction = { item ->
-            when (item.action) {
-                BrowserFeatureMenuAction.Back -> onBack()
-                BrowserFeatureMenuAction.Forward -> onForward()
-                BrowserFeatureMenuAction.Reload,
-                BrowserFeatureMenuAction.Stop,
-                -> onReloadOrStop()
-                BrowserFeatureMenuAction.ToggleFavorite -> onToggleFavorite()
-                BrowserFeatureMenuAction.TogglePinned -> onTogglePinned()
-                BrowserFeatureMenuAction.ShowTabs -> onTabs()
-                BrowserFeatureMenuAction.NewTab -> onNewTab()
-                BrowserFeatureMenuAction.DuplicateTab -> onDuplicateTab()
-                BrowserFeatureMenuAction.CloseTab -> onCloseTab()
-                BrowserFeatureMenuAction.ParkAddressBarRight -> onParkAddressBarRight()
-                BrowserFeatureMenuAction.OpenReader -> onOpenReader()
-                BrowserFeatureMenuAction.TranslatePage -> onTranslate()
-                BrowserFeatureMenuAction.FindInPage -> onFindInPage()
-                BrowserFeatureMenuAction.Share -> onShare()
-                BrowserFeatureMenuAction.OpenExternal -> onOpenExternal()
-                BrowserFeatureMenuAction.Print -> onPrint()
-                BrowserFeatureMenuAction.ToggleCookieBannerRemoval ->
-                    onCookieBannerRemovalEnabledChange(item.checked != true)
-                BrowserFeatureMenuAction.ToggleForceVerticalScrolling ->
-                    onForceVerticalScrollingChange(item.checked != true)
-                BrowserFeatureMenuAction.ToggleForcePageZooming ->
-                    onForcePageZoomingChange(item.checked != true)
-                BrowserFeatureMenuAction.ToggleForceSafeArea ->
-                    onForceSafeAreaChange(item.checked != true)
-                BrowserFeatureMenuAction.ToggleAlwaysBlockPopups ->
-                    onAlwaysBlockPopupsChange(item.checked != true)
-                BrowserFeatureMenuAction.ToggleDesktopView ->
-                    onDesktopViewChange(item.checked != true)
-                BrowserFeatureMenuAction.ToggleDomainMute ->
-                    onDomainMutedChange(item.checked != true)
-                BrowserFeatureMenuAction.OpenCandyTrail -> onOpenCandyTrail()
-                BrowserFeatureMenuAction.AddSiteCapsule -> onAddSiteCapsule()
-                BrowserFeatureMenuAction.Summarize -> onSummarize()
-                BrowserFeatureMenuAction.SnoozeTab -> onSnooze()
-                BrowserFeatureMenuAction.DockAddressBar -> onDockAddressBar()
-                BrowserFeatureMenuAction.OpenSnoozedTabs -> onSnoozedTabs()
-                BrowserFeatureMenuAction.OpenFavorites -> onFavorites()
-                BrowserFeatureMenuAction.OpenDownloads -> onDownloads()
-                BrowserFeatureMenuAction.OpenHistory -> onHistory()
-                BrowserFeatureMenuAction.OpenFirefoxExtensions -> Unit
-                BrowserFeatureMenuAction.OpenSettings -> onSettings()
-                BrowserFeatureMenuAction.InvokeToppingCommand -> {
-                    userScriptMenuCommands.firstOrNull { command ->
-                        command.scriptId == item.toppingScriptId &&
-                            command.commandId == item.toppingCommandId &&
-                            command.documentId == item.toppingDocumentId
-                    }?.let(onUserScriptMenuCommand)
-                }
-            }
-        },
-    )
+        }
+    }
+    val effects = rememberAndroidBrowserMainMenuEffects(backdropSource)
+    if (menuLayout.presentation == BrowserMenuPresentation.BottomSheet) {
+        BrowserMenuBottomSheet(
+            expanded = expanded,
+            onDismissRequest = onDismissRequest,
+            anchorBounds = bottomSheetAnchorBounds,
+            pageSubtitle = pageSubtitle,
+            addressBar = bottomSheetAddressBar,
+            items = items,
+            contentLayout = menuLayout.bottomSheetContentLayout,
+            toolbarEntries = menuLayout.bottomSheetToolbarEntries,
+            resources = AndroidBrowserMainMenuResources,
+            effects = effects,
+            snoozedTabCount = snoozedTabCount,
+            onAction = onMenuAction,
+            onVisibleChange = onBottomSheetVisibleChange,
+            extensionContent = extensionContent,
+        )
+    } else {
+        SharedBrowserMainMenu(
+            expanded = expanded,
+            onDismissRequest = onDismissRequest,
+            pageSubtitle = pageSubtitle,
+            items = items,
+            snoozedTabCount = snoozedTabCount,
+            screenSize = DpSize(configuration.screenWidthDp.dp, configuration.screenHeightDp.dp),
+            resources = AndroidBrowserMainMenuResources,
+            effects = effects,
+            extensionContent = extensionContent,
+            onAction = onMenuAction,
+        )
+    }
 }
 
 @Composable

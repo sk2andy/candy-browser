@@ -227,6 +227,24 @@ internal fun settingsSearchDefinitions(
             destination = SettingsDestination.MenuActions,
         )
         setting(
+            id = "settings_menu_presentation_title",
+            titleRes = R.string.settings_menu_presentation_title,
+            descriptionRes = R.string.settings_menu_presentation_summary,
+            destination = SettingsDestination.MenuActions,
+        )
+        setting(
+            id = "settings_menu_bottom_sheet_layout_title",
+            titleRes = R.string.settings_menu_bottom_sheet_layout_title,
+            descriptionRes = R.string.settings_menu_presentation_summary,
+            destination = SettingsDestination.MenuActions,
+        )
+        setting(
+            id = "settings_menu_bottom_sheet_toolbar_title",
+            titleRes = R.string.settings_menu_bottom_sheet_toolbar_title,
+            descriptionRes = R.string.settings_menu_bottom_sheet_toolbar_summary,
+            destination = SettingsDestination.MenuActions,
+        )
+        setting(
             id = "settings_address_bar_docking_title",
             titleRes = R.string.settings_address_bar_docking_title,
             descriptionRes = R.string.settings_address_bar_docking_subtitle,

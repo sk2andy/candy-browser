@@ -15,6 +15,7 @@
 | Language changes | MainActivity handles locale and layout-direction configuration updates without recreation, retaining open regular/private tabs and the current settings page. Localized Android resources refresh through the existing configuration dispatch; device-language changes apply when no app override is selected. | `MainActivity.kt`, `AndroidManifest.xml`, `AppLanguageSettingsInstrumentedTest`, `AppLanguagePreferencesInstrumentedTest` |
 | Player settings | Direct Settings → Player page for video autoplay, Candy Player mode and independent seek sliders; header and Android Back return to Settings Home. Browser no longer duplicates these controls; shared/iOS keeps the unavailable route disabled. | `ui/PlayerSettingsPage.kt`, `ui/InlineMediaPlayerSeekSlider.kt`, `SettingsDestination.Player`, `PlayerSettingsPageInstrumentedTest`, `PlayerSettingsNavigationInstrumentedTest` |
 | Appearance UI | Shared production destination and controls; Android supplies live persisted state, iOS shows them disabled until it owns equivalent state | `shared/src/commonMain/.../ui/settings/AppearanceSettingsPage.kt`, Android `ui/AppearanceSettingsPage.kt` adapter |
+| Browser menu presentation | Android **Tabs & gestures → Menu actions** chooses Floating menu or Bottom sheet and Scroll or two Swipe pages; five lower-toolbar positions accept all supported individual tab-menu actions or empty slots; global stable preferences retain placement and slot order. | `BrowserMenuLayout`, `BrowserMenuSettingsPage`, `BrowserSessionStore` |
 | Address-bar actions | Persisted ordered action layout plus drag-editor navigation under Tabs & gestures | `data/AddressBarActionLayout.kt`, `ui/AddressBarActionEditor.kt`, `BrowserSessionStore` |
 | Page scroll bar | Persisted opt-in, engine-neutral scroll metrics and draggable auto-hide overlay | `BrowserSessionStore`, browser-engine session ports, `ui/BrowserScrollBar` |
 | Developer options | Persisted hidden unlock, bounded safe-area fallback tuning, insecure-HTTP autofill override, process-local input diagnostics, privacy-safe runtime report, [opt-in app logging and export](app-logging.md), and presentation replay actions | `DeveloperSettings`, `BrowserSessionStore`, `AppLogging`, `BrowserInputDiagnostics`, `DeveloperDiagnosticsReport`, `BrowserController`, `MainActivity`, `ui/DeveloperOptionsSettingsPage` |
@@ -37,6 +38,8 @@
 | Address-bar color | Theme, dimmed, graphite, black, custom RGB hex | Theme |
 | Surfaces | Clear, frosted | Clear |
 | Shape | Angular, rounded, extra rounded | Rounded |
+| Android browser menu | Bottom sheet, Floating menu | Bottom sheet |
+| Bottom-sheet sections | Scroll, two Swipe pages (page actions / page controls) | Scroll |
 | Address bar style | Classic, segmented | Classic |
 | Address-bar loading indicator | Rainbow, tonal | Rainbow |
 | Startup animation | Off, on | On |

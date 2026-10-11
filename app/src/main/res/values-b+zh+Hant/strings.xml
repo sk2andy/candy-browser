@@ -1422,4 +1422,19 @@
     <string name="favorites_url">網站網址</string>
     <string name="favorites_manage">編輯收藏</string>
     <string name="favorites_refresh_icon">更新圖示</string>
+    <string name="settings_menu_presentation_title">選單樣式</string>
+    <string name="settings_menu_presentation_summary">選擇一般選單，或使用包含捲動區段或兩頁滑動內容的底部面板。</string>
+    <string name="settings_menu_presentation_floating">一般選單</string>
+    <string name="settings_menu_presentation_bottom_sheet">底部面板</string>
+    <string name="settings_menu_bottom_sheet_layout_title">底部面板區段</string>
+    <string name="settings_menu_bottom_sheet_layout_scroll">垂直捲動</string>
+    <string name="settings_menu_bottom_sheet_layout_pages">兩頁滑動內容</string>
+    <string name="browser_menu_quick_actions">快捷操作</string>
+    <string name="browser_menu_page_controls">頁面控制</string>
+    <string name="browser_menu_dismiss">關閉選單</string>
+    <string name="browser_menu_page_actions">頁面操作</string>
+    <string name="settings_menu_bottom_sheet_toolbar_title">底部面板工具列</string>
+    <string name="settings_menu_bottom_sheet_toolbar_summary">從左到右選擇五個操作。已指派的操作會交換位置。空位將隱藏對應按鈕。</string>
+    <string name="settings_menu_bottom_sheet_toolbar_slot">操作 %1$d</string>
+    <string name="settings_menu_bottom_sheet_toolbar_empty">空位</string>
 </resources>

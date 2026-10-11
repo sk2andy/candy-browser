@@ -1439,4 +1439,19 @@
     <string name="favorites_url">Nettadresse</string>
     <string name="favorites_manage">Rediger favoritter</string>
     <string name="favorites_refresh_icon">Oppdater ikon</string>
+    <string name="settings_menu_presentation_title">Menystil</string>
+    <string name="settings_menu_presentation_summary">Velg vanlig meny eller et bunnpanel med rullbare seksjoner eller to sider du kan sveipe mellom.</string>
+    <string name="settings_menu_presentation_floating">Vanlig meny</string>
+    <string name="settings_menu_presentation_bottom_sheet">Bunnpanel</string>
+    <string name="settings_menu_bottom_sheet_layout_title">Seksjoner i bunnpanelet</string>
+    <string name="settings_menu_bottom_sheet_layout_scroll">Rull vertikalt</string>
+    <string name="settings_menu_bottom_sheet_layout_pages">To sider med sveiping</string>
+    <string name="browser_menu_quick_actions">Hurtighandlinger</string>
+    <string name="browser_menu_page_controls">Sidekontroller</string>
+    <string name="browser_menu_dismiss">Lukk meny</string>
+    <string name="browser_menu_page_actions">Sidehandlinger</string>
+    <string name="settings_menu_bottom_sheet_toolbar_title">Verktøylinje i bunnpanelet</string>
+    <string name="settings_menu_bottom_sheet_toolbar_summary">Velg fem handlinger fra venstre mot høyre. Handlinger som allerede er tildelt, bytter plass. En tom plass skjuler knappen.</string>
+    <string name="settings_menu_bottom_sheet_toolbar_slot">Handling %1$d</string>
+    <string name="settings_menu_bottom_sheet_toolbar_empty">Tom plass</string>
 </resources>

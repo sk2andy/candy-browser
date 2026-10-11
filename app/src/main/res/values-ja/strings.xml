@@ -1422,4 +1422,19 @@
     <string name="favorites_url">ウェブサイトのURL</string>
     <string name="favorites_manage">お気に入りを編集</string>
     <string name="favorites_refresh_icon">アイコンを更新</string>
+    <string name="settings_menu_presentation_title">メニューの表示形式</string>
+    <string name="settings_menu_presentation_summary">通常のメニュー、またはセクションをスクロールするか2ページをスワイプするボトムシートを選択します。</string>
+    <string name="settings_menu_presentation_floating">通常のメニュー</string>
+    <string name="settings_menu_presentation_bottom_sheet">ボトムシート</string>
+    <string name="settings_menu_bottom_sheet_layout_title">ボトムシートのセクション</string>
+    <string name="settings_menu_bottom_sheet_layout_scroll">縦にスクロール</string>
+    <string name="settings_menu_bottom_sheet_layout_pages">2ページをスワイプ</string>
+    <string name="browser_menu_quick_actions">クイック操作</string>
+    <string name="browser_menu_page_controls">ページ設定</string>
+    <string name="browser_menu_dismiss">メニューを閉じる</string>
+    <string name="browser_menu_page_actions">ページ操作</string>
+    <string name="settings_menu_bottom_sheet_toolbar_title">ボトムシートのツールバー</string>
+    <string name="settings_menu_bottom_sheet_toolbar_summary">左から右に5つの操作を選択します。すでに割り当てられた操作は位置が入れ替わります。空のスロットはボタンを非表示にします。</string>
+    <string name="settings_menu_bottom_sheet_toolbar_slot">操作 %1$d</string>
+    <string name="settings_menu_bottom_sheet_toolbar_empty">空のスロット</string>
 </resources>

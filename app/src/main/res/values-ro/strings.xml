@@ -1455,4 +1455,19 @@
     <string name="favorites_url">URL-ul site-ului</string>
     <string name="favorites_manage">Editează favoritele</string>
     <string name="favorites_refresh_icon">Actualizează pictograma</string>
+    <string name="settings_menu_presentation_title">Stilul meniului</string>
+    <string name="settings_menu_presentation_summary">Alege meniul normal sau un panou inferior cu secțiuni derulabile ori două pagini glisabile.</string>
+    <string name="settings_menu_presentation_floating">Meniu normal</string>
+    <string name="settings_menu_presentation_bottom_sheet">Panou inferior</string>
+    <string name="settings_menu_bottom_sheet_layout_title">Secțiunile panoului inferior</string>
+    <string name="settings_menu_bottom_sheet_layout_scroll">Derulare verticală</string>
+    <string name="settings_menu_bottom_sheet_layout_pages">Două pagini glisabile</string>
+    <string name="browser_menu_quick_actions">Acțiuni rapide</string>
+    <string name="browser_menu_page_controls">Comenzi pentru pagină</string>
+    <string name="browser_menu_dismiss">Închide meniul</string>
+    <string name="browser_menu_page_actions">Acțiuni pentru pagină</string>
+    <string name="settings_menu_bottom_sheet_toolbar_title">Bara de instrumente a panoului inferior</string>
+    <string name="settings_menu_bottom_sheet_toolbar_summary">Alege cinci acțiuni de la stânga la dreapta. Acțiunile deja atribuite își schimbă locurile. Un loc gol ascunde butonul.</string>
+    <string name="settings_menu_bottom_sheet_toolbar_slot">Acțiunea %1$d</string>
+    <string name="settings_menu_bottom_sheet_toolbar_empty">Loc gol</string>
 </resources>

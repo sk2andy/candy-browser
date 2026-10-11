@@ -85,6 +85,8 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalWindowInfo
@@ -158,6 +160,7 @@ internal fun ExpandedBottomBarContent(
     onUserScriptMenuCommand: (UserScriptMenuCommand) -> Unit,
     menuExpanded: Boolean,
     onMenuExpandedChange: (Boolean) -> Unit,
+    onMenuSheetVisibleChange: (Boolean) -> Unit = {},
     onBack: () -> Unit,
     onForward: () -> Unit,
     onAddress: () -> Unit,
@@ -346,6 +349,28 @@ internal fun ExpandedBottomBarContent(
         onParkRight = onParkRight,
         onNewTabButtonBounds = onNewTabButtonBounds,
     )
+    val requestedSheetAddress = BrowserMenuSheetAddressSnapshot(
+        displayText = if (tab.url == BLANK_URL) {
+            stringResource(R.string.address_empty_hint)
+        } else {
+            AddressResolver.displayText(tab.url)
+        },
+        actionLayout = visibleActionLayout,
+        actionState = actionState,
+        siteAvailable = PermissionOrigin.normalize(tab.url) != null,
+        activityVisible = permissionActivityVisible,
+        connectionKind = SiteConnectionRules.kind(
+            pageUrl = tab.url,
+            isLoading = tab.isLoading,
+            hasError = tab.error != null || tab.failureKind != null,
+        ),
+        blockedCount = tab.blockedCount,
+        tabId = tab.id,
+    )
+    var presentedSheetAddress by remember { mutableStateOf(requestedSheetAddress) }
+    if (menuExpanded && presentedSheetAddress != requestedSheetAddress) {
+        presentedSheetAddress = requestedSheetAddress
+    }
     LaunchedEffect(editorUsesFullWidth) {
         if (editorUsesFullWidth) onMenuExpandedChange(false)
     }
@@ -361,9 +386,11 @@ internal fun ExpandedBottomBarContent(
             keyboard?.show()
         }
     }
+    var addressBarBounds by remember { mutableStateOf<Rect?>(null) }
     Column {
         Row(
             modifier = Modifier
+                .onGloballyPositioned { addressBarBounds = it.boundsInWindow() }
                 .then(
                     if (segmentedAddressBar) {
                         Modifier.testTag(AddressBarTestTags.SegmentedContainer)
@@ -742,6 +769,30 @@ internal fun ExpandedBottomBarContent(
                                 menuLayout = menuLayout,
                                 onFirefoxExtensionAction = onFirefoxExtensionAction,
                                 onSettings = onSettings,
+                                bottomSheetAnchorBounds = addressBarBounds,
+                                onBottomSheetVisibleChange = onMenuSheetVisibleChange,
+                                bottomSheetAddressBar = { commit ->
+                                    val snapshot = presentedSheetAddress
+                                    BrowserMenuSheetAddressBar(
+                                        displayText = snapshot.displayText,
+                                        actionLayout = snapshot.actionLayout,
+                                        actionState = snapshot.actionState,
+                                        actionCallbacks = actionCallbacks,
+                                        commit = commit,
+                                        onAddress = onAddress,
+                                        onDismissRequest = { onMenuExpandedChange(false) },
+                                        connectionContent = {
+                                            PermissionRadarBadge(
+                                                siteAvailable = snapshot.siteAvailable,
+                                                activityVisible = snapshot.activityVisible,
+                                                connectionKind = snapshot.connectionKind,
+                                                blockedCount = snapshot.blockedCount,
+                                                onClick = { commit(onPrivacyXRay) },
+                                                tabId = snapshot.tabId,
+                                            )
+                                        },
+                                    )
+                                },
                             )
                         }
                     }

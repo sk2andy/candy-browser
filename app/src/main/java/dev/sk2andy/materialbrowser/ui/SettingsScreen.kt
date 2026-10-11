@@ -53,6 +53,8 @@ import dev.sk2andy.materialbrowser.shared.ui.settings.SettingsRouter
 import dev.sk2andy.materialbrowser.shared.topping.ToppingFrameScope
 import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuEntry
 import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuLayout
+import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuBottomSheetContentLayout
+import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuPresentation
 import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuLocation
 import dev.sk2andy.materialbrowser.shared.browser.AddressBarLongPressAction
 import dev.sk2andy.materialbrowser.sync.SyncConnectionSettings
@@ -167,6 +169,9 @@ internal fun SettingsScreen(
     onProfilesEnabledChanged: (Boolean) -> Unit,
     onAddressBarActionLayoutChanged: (AddressBarActionLayout) -> Unit,
     onBrowserMenuLocationChanged: (BrowserMenuEntry, BrowserMenuLocation) -> Unit = { _, _ -> },
+    onBrowserMenuPresentationChanged: (BrowserMenuPresentation) -> Unit = {},
+    onBrowserMenuBottomSheetContentLayoutChanged: (BrowserMenuBottomSheetContentLayout) -> Unit = {},
+    onBrowserMenuBottomSheetToolbarEntriesChanged: (List<BrowserMenuEntry?>) -> Unit = {},
     onAddressBarDockingEnabledChanged: (Boolean) -> Unit,
     onExternalLinkPreviewEnabledChanged: (Boolean) -> Unit = {},
     onExternalAppLinkHandlingChanged: (ExternalAppLinkHandling) -> Unit = {},
@@ -393,6 +398,9 @@ internal fun SettingsScreen(
                 SettingsDestination.MenuActions -> BrowserMenuSettingsPage(
                     layout = browserMenuLayout,
                     onLocationChanged = onBrowserMenuLocationChanged,
+                    onPresentationChanged = onBrowserMenuPresentationChanged,
+                    onBottomSheetContentLayoutChanged = onBrowserMenuBottomSheetContentLayoutChanged,
+                    onBottomSheetToolbarEntriesChanged = onBrowserMenuBottomSheetToolbarEntriesChanged,
                     onBack = {
                         onDestinationChanged(SettingsDestination.TabsAndGestures)
                     },

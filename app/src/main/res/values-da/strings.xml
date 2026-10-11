@@ -1439,4 +1439,19 @@
     <string name="favorites_url">Webadresse</string>
     <string name="favorites_manage">Rediger favoritter</string>
     <string name="favorites_refresh_icon">Opdater ikon</string>
+    <string name="settings_menu_presentation_title">Menustil</string>
+    <string name="settings_menu_presentation_summary">Vælg normal menu eller et bundpanel med rullende sektioner eller to sider, du kan stryge mellem.</string>
+    <string name="settings_menu_presentation_floating">Normal menu</string>
+    <string name="settings_menu_presentation_bottom_sheet">Bundpanel</string>
+    <string name="settings_menu_bottom_sheet_layout_title">Sektioner i bundpanelet</string>
+    <string name="settings_menu_bottom_sheet_layout_scroll">Rul lodret</string>
+    <string name="settings_menu_bottom_sheet_layout_pages">To sider med strygning</string>
+    <string name="browser_menu_quick_actions">Hurtige handlinger</string>
+    <string name="browser_menu_page_controls">Sidekontroller</string>
+    <string name="browser_menu_dismiss">Luk menu</string>
+    <string name="browser_menu_page_actions">Sidehandlinger</string>
+    <string name="settings_menu_bottom_sheet_toolbar_title">Værktøjslinje i bundpanelet</string>
+    <string name="settings_menu_bottom_sheet_toolbar_summary">Vælg fem handlinger fra venstre mod højre. Allerede tildelte handlinger bytter plads. En tom plads skjuler knappen.</string>
+    <string name="settings_menu_bottom_sheet_toolbar_slot">Handling %1$d</string>
+    <string name="settings_menu_bottom_sheet_toolbar_empty">Tom plads</string>
 </resources>

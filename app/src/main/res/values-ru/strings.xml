@@ -1473,4 +1473,19 @@
     <string name="favorites_url">URL сайта</string>
     <string name="favorites_manage">Изменить избранное</string>
     <string name="favorites_refresh_icon">Обновить значок</string>
+    <string name="settings_menu_presentation_title">Стиль меню</string>
+    <string name="settings_menu_presentation_summary">Выберите обычное меню или нижнюю панель с прокруткой разделов либо двумя страницами для свайпа.</string>
+    <string name="settings_menu_presentation_floating">Обычное меню</string>
+    <string name="settings_menu_presentation_bottom_sheet">Нижняя панель</string>
+    <string name="settings_menu_bottom_sheet_layout_title">Разделы нижней панели</string>
+    <string name="settings_menu_bottom_sheet_layout_scroll">Вертикальная прокрутка</string>
+    <string name="settings_menu_bottom_sheet_layout_pages">Две страницы для свайпа</string>
+    <string name="browser_menu_quick_actions">Быстрые действия</string>
+    <string name="browser_menu_page_controls">Управление страницей</string>
+    <string name="browser_menu_dismiss">Закрыть меню</string>
+    <string name="browser_menu_page_actions">Действия со страницей</string>
+    <string name="settings_menu_bottom_sheet_toolbar_title">Панель инструментов нижнего меню</string>
+    <string name="settings_menu_bottom_sheet_toolbar_summary">Выберите пять действий слева направо. Уже назначенные действия меняются местами. Пустое место скрывает кнопку.</string>
+    <string name="settings_menu_bottom_sheet_toolbar_slot">Действие %1$d</string>
+    <string name="settings_menu_bottom_sheet_toolbar_empty">Пустое место</string>
 </resources>

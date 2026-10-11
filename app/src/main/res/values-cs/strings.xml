@@ -1470,4 +1470,19 @@
     <string name="favorites_url">URL webu</string>
     <string name="favorites_manage">Upravit oblíbené</string>
     <string name="favorites_refresh_icon">Obnovit ikonu</string>
+    <string name="settings_menu_presentation_title">Styl nabídky</string>
+    <string name="settings_menu_presentation_summary">Vyberte běžnou nabídku nebo spodní panel s posuvnými sekcemi či dvěma stránkami ovládanými přejetím.</string>
+    <string name="settings_menu_presentation_floating">Běžná nabídka</string>
+    <string name="settings_menu_presentation_bottom_sheet">Spodní panel</string>
+    <string name="settings_menu_bottom_sheet_layout_title">Sekce spodního panelu</string>
+    <string name="settings_menu_bottom_sheet_layout_scroll">Svislé posouvání</string>
+    <string name="settings_menu_bottom_sheet_layout_pages">Dvě stránky pro přejetí</string>
+    <string name="browser_menu_quick_actions">Rychlé akce</string>
+    <string name="browser_menu_page_controls">Ovládání stránky</string>
+    <string name="browser_menu_dismiss">Zavřít nabídku</string>
+    <string name="browser_menu_page_actions">Akce stránky</string>
+    <string name="settings_menu_bottom_sheet_toolbar_title">Panel nástrojů spodního panelu</string>
+    <string name="settings_menu_bottom_sheet_toolbar_summary">Vyberte pět akcí zleva doprava. Již přiřazené akce si vymění místa. Prázdné místo skryje tlačítko.</string>
+    <string name="settings_menu_bottom_sheet_toolbar_slot">Akce %1$d</string>
+    <string name="settings_menu_bottom_sheet_toolbar_empty">Prázdné místo</string>
 </resources>

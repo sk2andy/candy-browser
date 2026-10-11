@@ -1455,4 +1455,19 @@
     <string name="favorites_url">Адреса веб-сајта</string>
     <string name="favorites_manage">Уреди омиљене</string>
     <string name="favorites_refresh_icon">Освежи икону</string>
+    <string name="settings_menu_presentation_title">Стил менија</string>
+    <string name="settings_menu_presentation_summary">Изаберите обичан мени или доњи панел са одељцима за померање или две странице за превлачење.</string>
+    <string name="settings_menu_presentation_floating">Обичан мени</string>
+    <string name="settings_menu_presentation_bottom_sheet">Доњи панел</string>
+    <string name="settings_menu_bottom_sheet_layout_title">Одељци доњег панела</string>
+    <string name="settings_menu_bottom_sheet_layout_scroll">Вертикално померање</string>
+    <string name="settings_menu_bottom_sheet_layout_pages">Две странице за превлачење</string>
+    <string name="browser_menu_quick_actions">Брзе радње</string>
+    <string name="browser_menu_page_controls">Контроле странице</string>
+    <string name="browser_menu_dismiss">Затвори мени</string>
+    <string name="browser_menu_page_actions">Радње странице</string>
+    <string name="settings_menu_bottom_sheet_toolbar_title">Трака са алаткама доњег панела</string>
+    <string name="settings_menu_bottom_sheet_toolbar_summary">Изаберите пет радњи слева надесно. Већ додељене радње мењају места. Празно место скрива дугме.</string>
+    <string name="settings_menu_bottom_sheet_toolbar_slot">Радња %1$d</string>
+    <string name="settings_menu_bottom_sheet_toolbar_empty">Празно место</string>
 </resources>

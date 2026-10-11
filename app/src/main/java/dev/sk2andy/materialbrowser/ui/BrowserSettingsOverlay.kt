@@ -287,6 +287,9 @@ internal fun BrowserSettingsOverlay(
             onProfilesEnabledChanged = controller::updateProfilesEnabled,
             onAddressBarActionLayoutChanged = controller::updateAddressBarActionLayout,
             onBrowserMenuLocationChanged = controller::updateBrowserMenuLocation,
+            onBrowserMenuPresentationChanged = controller::updateBrowserMenuPresentation,
+            onBrowserMenuBottomSheetContentLayoutChanged = controller::updateBrowserMenuBottomSheetContentLayout,
+            onBrowserMenuBottomSheetToolbarEntriesChanged = controller::updateBrowserMenuBottomSheetToolbarEntries,
             onAddressBarDockingEnabledChanged =
                 controller::updateAddressBarDockingEnabled,
             onExternalLinkPreviewEnabledChanged =

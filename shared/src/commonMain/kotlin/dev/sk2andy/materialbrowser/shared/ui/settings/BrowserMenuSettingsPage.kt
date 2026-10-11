@@ -54,6 +54,7 @@ fun BrowserMenuSettingsPage(
     availableEntries: List<BrowserMenuEntry> = BrowserMenuEntry.entries,
     onLocationChanged: (BrowserMenuEntry, BrowserMenuLocation) -> Unit,
     onBack: () -> Unit,
+    presentationSettings: @Composable () -> Unit = {},
 ) {
     var expandedEntry by remember { mutableStateOf<BrowserMenuEntry?>(null) }
     SettingsPage(
@@ -61,6 +62,7 @@ fun BrowserMenuSettingsPage(
         backContentDescription = resources.back(),
         onBack = onBack,
     ) {
+        presentationSettings()
         Text(
             text = resources.intro(),
             modifier = Modifier.testTag(BrowserMenuSettingsTestTags.Intro),

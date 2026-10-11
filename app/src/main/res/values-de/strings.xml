@@ -1448,4 +1448,19 @@
     <string name="favorites_url">Website-URL</string>
     <string name="favorites_manage">Favoriten bearbeiten</string>
     <string name="favorites_refresh_icon">Symbol aktualisieren</string>
+    <string name="settings_menu_presentation_title">Menü-Darstellung</string>
+    <string name="settings_menu_presentation_summary">Wähle das normale Menü oder ein Bottom Sheet mit scrollbaren Bereichen oder zwei Seiten zum Wischen.</string>
+    <string name="settings_menu_presentation_floating">Normales Menü</string>
+    <string name="settings_menu_presentation_bottom_sheet">Bottom Sheet</string>
+    <string name="settings_menu_bottom_sheet_layout_title">Bereiche im Bottom Sheet</string>
+    <string name="settings_menu_bottom_sheet_layout_scroll">Vertikal scrollen</string>
+    <string name="settings_menu_bottom_sheet_layout_pages">Zwei Seiten zum Wischen</string>
+    <string name="browser_menu_quick_actions">Schnellaktionen</string>
+    <string name="browser_menu_page_controls">Seitensteuerung</string>
+    <string name="browser_menu_dismiss">Menü schließen</string>
+    <string name="browser_menu_page_actions">Seitenaktionen</string>
+    <string name="settings_menu_bottom_sheet_toolbar_title">Werkzeugleiste im Bottom Sheet</string>
+    <string name="settings_menu_bottom_sheet_toolbar_summary">Wähle fünf Aktionen von links nach rechts. Bereits belegte Aktionen tauschen ihren Platz. Ein leerer Platz blendet die Schaltfläche aus.</string>
+    <string name="settings_menu_bottom_sheet_toolbar_slot">Aktion %1$d</string>
+    <string name="settings_menu_bottom_sheet_toolbar_empty">Leerer Platz</string>
 </resources>

@@ -1446,4 +1446,19 @@
     <string name="favorites_url">URL du site</string>
     <string name="favorites_manage">Modifier les favoris</string>
     <string name="favorites_refresh_icon">Actualiser l’icône</string>
+    <string name="settings_menu_presentation_title">Style du menu</string>
+    <string name="settings_menu_presentation_summary">Choisissez le menu normal ou un panneau inférieur avec des sections défilantes ou deux pages à balayer.</string>
+    <string name="settings_menu_presentation_floating">Menu normal</string>
+    <string name="settings_menu_presentation_bottom_sheet">Panneau inférieur</string>
+    <string name="settings_menu_bottom_sheet_layout_title">Sections du panneau inférieur</string>
+    <string name="settings_menu_bottom_sheet_layout_scroll">Défilement vertical</string>
+    <string name="settings_menu_bottom_sheet_layout_pages">Deux pages à balayer</string>
+    <string name="browser_menu_quick_actions">Actions rapides</string>
+    <string name="browser_menu_page_controls">Commandes de page</string>
+    <string name="browser_menu_dismiss">Fermer le menu</string>
+    <string name="browser_menu_page_actions">Actions de page</string>
+    <string name="settings_menu_bottom_sheet_toolbar_title">Barre d’outils du panneau inférieur</string>
+    <string name="settings_menu_bottom_sheet_toolbar_summary">Choisissez cinq actions de gauche à droite. Les actions déjà attribuées échangent leur place. Un emplacement vide masque son bouton.</string>
+    <string name="settings_menu_bottom_sheet_toolbar_slot">Action %1$d</string>
+    <string name="settings_menu_bottom_sheet_toolbar_empty">Emplacement vide</string>
 </resources>

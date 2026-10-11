@@ -1446,4 +1446,19 @@
     <string name="favorites_url">URL del sitio web</string>
     <string name="favorites_manage">Editar favoritos</string>
     <string name="favorites_refresh_icon">Actualizar icono</string>
+    <string name="settings_menu_presentation_title">Estilo del menú</string>
+    <string name="settings_menu_presentation_summary">Elige el menú normal o un panel inferior con secciones desplazables o dos páginas deslizantes.</string>
+    <string name="settings_menu_presentation_floating">Menú normal</string>
+    <string name="settings_menu_presentation_bottom_sheet">Panel inferior</string>
+    <string name="settings_menu_bottom_sheet_layout_title">Secciones del panel inferior</string>
+    <string name="settings_menu_bottom_sheet_layout_scroll">Desplazamiento vertical</string>
+    <string name="settings_menu_bottom_sheet_layout_pages">Dos páginas deslizantes</string>
+    <string name="browser_menu_quick_actions">Acciones rápidas</string>
+    <string name="browser_menu_page_controls">Controles de página</string>
+    <string name="browser_menu_dismiss">Cerrar menú</string>
+    <string name="browser_menu_page_actions">Acciones de página</string>
+    <string name="settings_menu_bottom_sheet_toolbar_title">Barra de herramientas del panel inferior</string>
+    <string name="settings_menu_bottom_sheet_toolbar_summary">Elige cinco acciones de izquierda a derecha. Las acciones ya asignadas intercambian posiciones. Un espacio vacío oculta su botón.</string>
+    <string name="settings_menu_bottom_sheet_toolbar_slot">Acción %1$d</string>
+    <string name="settings_menu_bottom_sheet_toolbar_empty">Espacio vacío</string>
 </resources>

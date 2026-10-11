@@ -1439,4 +1439,19 @@
     <string name="favorites_url">URL на веб-страницата</string>
     <string name="favorites_manage">Уреди омилени</string>
     <string name="favorites_refresh_icon">Освежи ја иконата</string>
+    <string name="settings_menu_presentation_title">Стил на менито</string>
+    <string name="settings_menu_presentation_summary">Изберете обично мени или долен панел со секции за лизгање или две страници за повлекување.</string>
+    <string name="settings_menu_presentation_floating">Обично мени</string>
+    <string name="settings_menu_presentation_bottom_sheet">Долен панел</string>
+    <string name="settings_menu_bottom_sheet_layout_title">Секции на долниот панел</string>
+    <string name="settings_menu_bottom_sheet_layout_scroll">Вертикално лизгање</string>
+    <string name="settings_menu_bottom_sheet_layout_pages">Две страници за повлекување</string>
+    <string name="browser_menu_quick_actions">Брзи дејства</string>
+    <string name="browser_menu_page_controls">Контроли на страницата</string>
+    <string name="browser_menu_dismiss">Затвори мени</string>
+    <string name="browser_menu_page_actions">Дејства на страницата</string>
+    <string name="settings_menu_bottom_sheet_toolbar_title">Лента со алатки на долниот панел</string>
+    <string name="settings_menu_bottom_sheet_toolbar_summary">Изберете пет дејства од лево кон десно. Веќе доделените дејства ги заменуваат местата. Празното место го крие копчето.</string>
+    <string name="settings_menu_bottom_sheet_toolbar_slot">Дејство %1$d</string>
+    <string name="settings_menu_bottom_sheet_toolbar_empty">Празно место</string>
 </resources>

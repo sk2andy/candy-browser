@@ -1470,4 +1470,19 @@
     <string name="favorites_url">URL witryny</string>
     <string name="favorites_manage">Edytuj ulubione</string>
     <string name="favorites_refresh_icon">Odśwież ikonę</string>
+    <string name="settings_menu_presentation_title">Styl menu</string>
+    <string name="settings_menu_presentation_summary">Wybierz zwykłe menu lub dolny panel z przewijanymi sekcjami albo dwiema stronami przesuwanymi gestem.</string>
+    <string name="settings_menu_presentation_floating">Zwykłe menu</string>
+    <string name="settings_menu_presentation_bottom_sheet">Dolny panel</string>
+    <string name="settings_menu_bottom_sheet_layout_title">Sekcje dolnego panelu</string>
+    <string name="settings_menu_bottom_sheet_layout_scroll">Przewijanie pionowe</string>
+    <string name="settings_menu_bottom_sheet_layout_pages">Dwie przesuwane strony</string>
+    <string name="browser_menu_quick_actions">Szybkie działania</string>
+    <string name="browser_menu_page_controls">Sterowanie stroną</string>
+    <string name="browser_menu_dismiss">Zamknij menu</string>
+    <string name="browser_menu_page_actions">Działania na stronie</string>
+    <string name="settings_menu_bottom_sheet_toolbar_title">Pasek narzędzi dolnego panelu</string>
+    <string name="settings_menu_bottom_sheet_toolbar_summary">Wybierz pięć działań od lewej do prawej. Przypisane już działania zamieniają się miejscami. Puste miejsce ukrywa przycisk.</string>
+    <string name="settings_menu_bottom_sheet_toolbar_slot">Działanie %1$d</string>
+    <string name="settings_menu_bottom_sheet_toolbar_empty">Puste miejsce</string>
 </resources>

@@ -1439,4 +1439,19 @@
     <string name="favorites_url">Web sitesi URL’si</string>
     <string name="favorites_manage">Favorileri düzenle</string>
     <string name="favorites_refresh_icon">Simgeyi yenile</string>
+    <string name="settings_menu_presentation_title">Menü stili</string>
+    <string name="settings_menu_presentation_summary">Normal menüyü veya kaydırılabilir bölümler ya da iki yatay kaydırılabilir sayfa içeren alt paneli seçin.</string>
+    <string name="settings_menu_presentation_floating">Normal menü</string>
+    <string name="settings_menu_presentation_bottom_sheet">Alt panel</string>
+    <string name="settings_menu_bottom_sheet_layout_title">Alt panel bölümleri</string>
+    <string name="settings_menu_bottom_sheet_layout_scroll">Dikey kaydırma</string>
+    <string name="settings_menu_bottom_sheet_layout_pages">İki yatay kaydırılabilir sayfa</string>
+    <string name="browser_menu_quick_actions">Hızlı işlemler</string>
+    <string name="browser_menu_page_controls">Sayfa denetimleri</string>
+    <string name="browser_menu_dismiss">Menüyü kapat</string>
+    <string name="browser_menu_page_actions">Sayfa işlemleri</string>
+    <string name="settings_menu_bottom_sheet_toolbar_title">Alt panel araç çubuğu</string>
+    <string name="settings_menu_bottom_sheet_toolbar_summary">Soldan sağa beş işlem seçin. Önceden atanmış işlemler yer değiştirir. Boş bir yuva düğmesini gizler.</string>
+    <string name="settings_menu_bottom_sheet_toolbar_slot">İşlem %1$d</string>
+    <string name="settings_menu_bottom_sheet_toolbar_empty">Boş yuva</string>
 </resources>

@@ -1439,4 +1439,19 @@
     <string name="favorites_url">Websäit-URL</string>
     <string name="favorites_manage">Favoritte beaarbechten</string>
     <string name="favorites_refresh_icon">Symbol aktualiséieren</string>
+    <string name="settings_menu_presentation_title">Menüstil</string>
+    <string name="settings_menu_presentation_summary">Wiel den normale Menü oder en ënneschte Panel mat scrollbare Beräicher oder zwou Säiten zum Wëschen.</string>
+    <string name="settings_menu_presentation_floating">Normale Menü</string>
+    <string name="settings_menu_presentation_bottom_sheet">Ënneschte Panel</string>
+    <string name="settings_menu_bottom_sheet_layout_title">Beräicher am ënneschte Panel</string>
+    <string name="settings_menu_bottom_sheet_layout_scroll">Vertikal scrollen</string>
+    <string name="settings_menu_bottom_sheet_layout_pages">Zwou Säiten zum Wëschen</string>
+    <string name="browser_menu_quick_actions">Schnellaktiounen</string>
+    <string name="browser_menu_page_controls">Säitesteierung</string>
+    <string name="browser_menu_dismiss">Menü zoumaachen</string>
+    <string name="browser_menu_page_actions">Säitenaktiounen</string>
+    <string name="settings_menu_bottom_sheet_toolbar_title">Geschierleescht am ënneschte Panel</string>
+    <string name="settings_menu_bottom_sheet_toolbar_summary">Wiel fënnef Aktioune vu lénks no riets. Scho zougewise Aktioune wiesselen d’Plaz. Eng eidel Plaz verstoppt de Knäppchen.</string>
+    <string name="settings_menu_bottom_sheet_toolbar_slot">Aktioun %1$d</string>
+    <string name="settings_menu_bottom_sheet_toolbar_empty">Eidel Plaz</string>
 </resources>

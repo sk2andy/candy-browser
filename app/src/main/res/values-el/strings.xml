@@ -1439,4 +1439,19 @@
     <string name="favorites_url">Διεύθυνση ιστοτόπου</string>
     <string name="favorites_manage">Επεξεργασία αγαπημένων</string>
     <string name="favorites_refresh_icon">Ανανέωση εικονιδίου</string>
+    <string name="settings_menu_presentation_title">Στυλ μενού</string>
+    <string name="settings_menu_presentation_summary">Επιλέξτε κανονικό μενού ή κάτω πλαίσιο με ενότητες κύλισης ή δύο σελίδες με σάρωση.</string>
+    <string name="settings_menu_presentation_floating">Κανονικό μενού</string>
+    <string name="settings_menu_presentation_bottom_sheet">Κάτω πλαίσιο</string>
+    <string name="settings_menu_bottom_sheet_layout_title">Ενότητες κάτω πλαισίου</string>
+    <string name="settings_menu_bottom_sheet_layout_scroll">Κάθετη κύλιση</string>
+    <string name="settings_menu_bottom_sheet_layout_pages">Δύο σελίδες με σάρωση</string>
+    <string name="browser_menu_quick_actions">Γρήγορες ενέργειες</string>
+    <string name="browser_menu_page_controls">Έλεγχοι σελίδας</string>
+    <string name="browser_menu_dismiss">Κλείσιμο μενού</string>
+    <string name="browser_menu_page_actions">Ενέργειες σελίδας</string>
+    <string name="settings_menu_bottom_sheet_toolbar_title">Γραμμή εργαλείων κάτω πλαισίου</string>
+    <string name="settings_menu_bottom_sheet_toolbar_summary">Επιλέξτε πέντε ενέργειες από αριστερά προς τα δεξιά. Οι ήδη επιλεγμένες ενέργειες ανταλλάσσουν θέσεις. Μια κενή θέση αποκρύπτει το κουμπί.</string>
+    <string name="settings_menu_bottom_sheet_toolbar_slot">Ενέργεια %1$d</string>
+    <string name="settings_menu_bottom_sheet_toolbar_empty">Κενή θέση</string>
 </resources>

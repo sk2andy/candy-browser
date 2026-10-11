@@ -1439,4 +1439,19 @@
     <string name="favorites_url">Webbplatsens URL</string>
     <string name="favorites_manage">Redigera favoriter</string>
     <string name="favorites_refresh_icon">Uppdatera ikon</string>
+    <string name="settings_menu_presentation_title">Menystil</string>
+    <string name="settings_menu_presentation_summary">Välj vanlig meny eller en bottenpanel med rullbara avsnitt eller två sidor att svepa mellan.</string>
+    <string name="settings_menu_presentation_floating">Vanlig meny</string>
+    <string name="settings_menu_presentation_bottom_sheet">Bottenpanel</string>
+    <string name="settings_menu_bottom_sheet_layout_title">Avsnitt i bottenpanelen</string>
+    <string name="settings_menu_bottom_sheet_layout_scroll">Rulla vertikalt</string>
+    <string name="settings_menu_bottom_sheet_layout_pages">Två svepbara sidor</string>
+    <string name="browser_menu_quick_actions">Snabbåtgärder</string>
+    <string name="browser_menu_page_controls">Sidkontroller</string>
+    <string name="browser_menu_dismiss">Stäng meny</string>
+    <string name="browser_menu_page_actions">Sidåtgärder</string>
+    <string name="settings_menu_bottom_sheet_toolbar_title">Verktygsfält i bottenpanelen</string>
+    <string name="settings_menu_bottom_sheet_toolbar_summary">Välj fem åtgärder från vänster till höger. Redan tilldelade åtgärder byter plats. En tom plats döljer knappen.</string>
+    <string name="settings_menu_bottom_sheet_toolbar_slot">Åtgärd %1$d</string>
+    <string name="settings_menu_bottom_sheet_toolbar_empty">Tom plats</string>
 </resources>

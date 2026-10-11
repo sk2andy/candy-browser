@@ -296,7 +296,10 @@ import dev.sk2andy.materialbrowser.shared.browser.AddressBarLongPressAction
 import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineEventType
 import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuEntry
 import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuLayout
+import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuBottomSheetContentLayout
 import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuLayoutRules
+import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuBottomSheetToolbarRules
+import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuPresentation
 import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuLocation
 import dev.sk2andy.materialbrowser.recall.RecallExtractionIdentity
 import dev.sk2andy.materialbrowser.recall.RecallMatch
@@ -9682,6 +9685,27 @@ class BrowserController(
     ) {
         val updated = BrowserMenuLayoutRules.update(browserMenuLayout, entry, location)
         if (updated == browserMenuLayout) return
+        browserMenuLayout = updated
+        store.saveBrowserMenuLayout(updated)
+    }
+
+    fun updateBrowserMenuPresentation(presentation: BrowserMenuPresentation) {
+        if (browserMenuLayout.presentation == presentation) return
+        browserMenuLayout = browserMenuLayout.copy(presentation = presentation)
+        store.saveBrowserMenuLayout(browserMenuLayout)
+    }
+
+    fun updateBrowserMenuBottomSheetContentLayout(layout: BrowserMenuBottomSheetContentLayout) {
+        if (browserMenuLayout.bottomSheetContentLayout == layout) return
+        browserMenuLayout = browserMenuLayout.copy(bottomSheetContentLayout = layout)
+        store.saveBrowserMenuLayout(browserMenuLayout)
+    }
+
+    fun updateBrowserMenuBottomSheetToolbarEntries(entries: List<BrowserMenuEntry?>) {
+        val updated = browserMenuLayout.copy(
+            bottomSheetToolbarEntries = BrowserMenuBottomSheetToolbarRules.normalize(entries),
+        )
+        if (browserMenuLayout == updated) return
         browserMenuLayout = updated
         store.saveBrowserMenuLayout(updated)
     }

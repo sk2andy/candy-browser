@@ -1471,4 +1471,19 @@
     <string name="favorites_url">URL spletne strani</string>
     <string name="favorites_manage">Uredi priljubljene</string>
     <string name="favorites_refresh_icon">Osveži ikono</string>
+    <string name="settings_menu_presentation_title">Slog menija</string>
+    <string name="settings_menu_presentation_summary">Izberite običajni meni ali spodnjo ploščo z drsnimi razdelki ali dvema stranema za podrsavanje.</string>
+    <string name="settings_menu_presentation_floating">Običajni meni</string>
+    <string name="settings_menu_presentation_bottom_sheet">Spodnja plošča</string>
+    <string name="settings_menu_bottom_sheet_layout_title">Razdelki spodnje plošče</string>
+    <string name="settings_menu_bottom_sheet_layout_scroll">Navpično drsenje</string>
+    <string name="settings_menu_bottom_sheet_layout_pages">Dve strani za podrsavanje</string>
+    <string name="browser_menu_quick_actions">Hitra dejanja</string>
+    <string name="browser_menu_page_controls">Nadzor strani</string>
+    <string name="browser_menu_dismiss">Zapri meni</string>
+    <string name="browser_menu_page_actions">Dejanja strani</string>
+    <string name="settings_menu_bottom_sheet_toolbar_title">Orodna vrstica spodnje plošče</string>
+    <string name="settings_menu_bottom_sheet_toolbar_summary">Izberite pet dejanj od leve proti desni. Že dodeljena dejanja zamenjajo mesti. Prazno mesto skrije gumb.</string>
+    <string name="settings_menu_bottom_sheet_toolbar_slot">Dejanje %1$d</string>
+    <string name="settings_menu_bottom_sheet_toolbar_empty">Prazno mesto</string>
 </resources>

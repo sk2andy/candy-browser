@@ -1439,4 +1439,19 @@
     <string name="favorites_url">Website-URL</string>
     <string name="favorites_manage">Favorieten bewerken</string>
     <string name="favorites_refresh_icon">Pictogram vernieuwen</string>
+    <string name="settings_menu_presentation_title">Menustijl</string>
+    <string name="settings_menu_presentation_summary">Kies het normale menu of een onderpaneel met scrollbare onderdelen of twee pagina’s om te vegen.</string>
+    <string name="settings_menu_presentation_floating">Normaal menu</string>
+    <string name="settings_menu_presentation_bottom_sheet">Onderpaneel</string>
+    <string name="settings_menu_bottom_sheet_layout_title">Onderdelen van onderpaneel</string>
+    <string name="settings_menu_bottom_sheet_layout_scroll">Verticaal scrollen</string>
+    <string name="settings_menu_bottom_sheet_layout_pages">Twee veegbare pagina’s</string>
+    <string name="browser_menu_quick_actions">Snelle acties</string>
+    <string name="browser_menu_page_controls">Paginabediening</string>
+    <string name="browser_menu_dismiss">Menu sluiten</string>
+    <string name="browser_menu_page_actions">Pagina-acties</string>
+    <string name="settings_menu_bottom_sheet_toolbar_title">Werkbalk van het onderste paneel</string>
+    <string name="settings_menu_bottom_sheet_toolbar_summary">Kies vijf acties van links naar rechts. Acties die al zijn toegewezen wisselen van plaats. Een leeg vak verbergt de knop.</string>
+    <string name="settings_menu_bottom_sheet_toolbar_slot">Actie %1$d</string>
+    <string name="settings_menu_bottom_sheet_toolbar_empty">Leeg vak</string>
 </resources>

@@ -1466,4 +1466,19 @@
     <string name="favorites_url">Website URL</string>
     <string name="favorites_manage">Edit favorites</string>
     <string name="favorites_refresh_icon">Refresh icon</string>
+    <string name="settings_menu_presentation_title">Menu style</string>
+    <string name="settings_menu_presentation_summary">Choose the normal menu or a bottom sheet with scrolling sections or two swipeable pages.</string>
+    <string name="settings_menu_presentation_floating">Normal menu</string>
+    <string name="settings_menu_presentation_bottom_sheet">Bottom sheet</string>
+    <string name="settings_menu_bottom_sheet_layout_title">Bottom sheet sections</string>
+    <string name="settings_menu_bottom_sheet_layout_scroll">Scroll vertically</string>
+    <string name="settings_menu_bottom_sheet_layout_pages">Two swipeable pages</string>
+    <string name="browser_menu_quick_actions">Quick actions</string>
+    <string name="browser_menu_page_controls">Page controls</string>
+    <string name="browser_menu_dismiss">Close menu</string>
+    <string name="browser_menu_page_actions">Page actions</string>
+    <string name="settings_menu_bottom_sheet_toolbar_title">Bottom sheet toolbar</string>
+    <string name="settings_menu_bottom_sheet_toolbar_summary">Choose five actions from left to right. Actions already assigned to another slot swap places. Leave a slot empty to hide its button.</string>
+    <string name="settings_menu_bottom_sheet_toolbar_slot">Action %1$d</string>
+    <string name="settings_menu_bottom_sheet_toolbar_empty">Empty slot</string>
 </resources>

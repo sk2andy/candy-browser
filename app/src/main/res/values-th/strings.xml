@@ -1422,4 +1422,19 @@
     <string name="favorites_url">URL เว็บไซต์</string>
     <string name="favorites_manage">แก้ไขรายการโปรด</string>
     <string name="favorites_refresh_icon">รีเฟรชไอคอน</string>
+    <string name="settings_menu_presentation_title">รูปแบบเมนู</string>
+    <string name="settings_menu_presentation_summary">เลือกเมนูปกติหรือแผงด้านล่างที่เลื่อนส่วนต่าง ๆ หรือปัดระหว่างสองหน้าได้</string>
+    <string name="settings_menu_presentation_floating">เมนูปกติ</string>
+    <string name="settings_menu_presentation_bottom_sheet">แผงด้านล่าง</string>
+    <string name="settings_menu_bottom_sheet_layout_title">ส่วนของแผงด้านล่าง</string>
+    <string name="settings_menu_bottom_sheet_layout_scroll">เลื่อนแนวตั้ง</string>
+    <string name="settings_menu_bottom_sheet_layout_pages">สองหน้าที่ปัดได้</string>
+    <string name="browser_menu_quick_actions">การดำเนินการด่วน</string>
+    <string name="browser_menu_page_controls">การควบคุมหน้า</string>
+    <string name="browser_menu_dismiss">ปิดเมนู</string>
+    <string name="browser_menu_page_actions">การดำเนินการกับหน้า</string>
+    <string name="settings_menu_bottom_sheet_toolbar_title">แถบเครื่องมือแผงด้านล่าง</string>
+    <string name="settings_menu_bottom_sheet_toolbar_summary">เลือกห้าการทำงานจากซ้ายไปขวา การทำงานที่กำหนดแล้วจะสลับตำแหน่งกัน ช่องว่างจะซ่อนปุ่มนั้น</string>
+    <string name="settings_menu_bottom_sheet_toolbar_slot">การทำงาน %1$d</string>
+    <string name="settings_menu_bottom_sheet_toolbar_empty">ช่องว่าง</string>
 </resources>
