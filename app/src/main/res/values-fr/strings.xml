@@ -577,6 +577,8 @@
     <string name="settings_address_bar_actions_after">À droite de l’adresse</string>
     <string name="settings_address_bar_actions_full">Les trois emplacements configurables sont occupés.</string>
     <string name="settings_address_bar_docking_title">Déplacer la pilule d’adresse ancrée</string>
+    <string name="settings_address_bar_swipe_mode_title">Changer la pilule d’adresse par balayage</string>
+    <string name="settings_address_bar_swipe_mode_summary">Balayez la page vers le bas pour déployer la pilule et vers le haut pour la réduire, même si la page ne défile pas. Si désactivé, la pilule suit le défilement de la page.</string>
     <string name="settings_address_bar_docking_subtitle">Faites glisser la pilule ancrée et relâchez-la à la hauteur voulue pour la fixer au bord le plus proche. Désactivez cette option pour garder la barre centrée.</string>
     <string name="settings_tab_dismiss_resistance">Résistance à la fermeture des onglets</string>
     <string name="settings_tab_dismiss_resistance_summary">Phase de résistance : %1$d%% de la distance de fermeture</string>

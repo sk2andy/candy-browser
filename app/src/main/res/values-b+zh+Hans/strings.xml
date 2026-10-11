@@ -584,6 +584,8 @@
     <string name="settings_address_bar_actions_after">联系权</string>
     <string name="settings_address_bar_actions_full">所有三个可配置的位置都被占领了.</string>
     <string name="settings_address_bar_docking_title">移动停留的地址片.</string>
+    <string name="settings_address_bar_swipe_mode_title">滑动切换地址栏</string>
+    <string name="settings_address_bar_swipe_mode_summary">在页面上向下滑动展开地址栏，向上滑动收起地址栏，即使页面无法滚动也可使用。关闭后，地址栏跟随页面滚动变化。</string>
     <string name="settings_address_bar_docking_subtitle">拖拉停放的药丸,并在任何高度放下,将其到最近的屏幕边缘. 关闭以保持地址的中心.</string>
     <string name="settings_tab_dismiss_resistance">标签释放阻力</string>
     <string name="settings_tab_dismiss_resistance_summary">阻力相: %1$d%% 关闭距离</string>

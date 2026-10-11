@@ -614,6 +614,8 @@
     <string name="settings_address_bar_actions_after">Справа от адреса</string>
     <string name="settings_address_bar_actions_full">Все три настраиваемых места заняты.</string>
     <string name="settings_address_bar_docking_title">Перемещать свёрнутую адресную строку</string>
+    <string name="settings_address_bar_swipe_mode_title">Переключать адресную строку свайпами</string>
+    <string name="settings_address_bar_swipe_mode_summary">Проведите вниз по странице, чтобы развернуть строку, или вверх, чтобы свернуть её, даже если страница не прокручивается. Если отключено, строка реагирует на прокрутку страницы.</string>
     <string name="settings_address_bar_docking_subtitle">Перетащите свёрнутую строку и отпустите на любой высоте, чтобы закрепить её у ближайшего края экрана. Отключите, чтобы адресная строка оставалась по центру.</string>
     <string name="settings_tab_dismiss_resistance">Сопротивление закрытию вкладки</string>
     <string name="settings_tab_dismiss_resistance_summary">Фаза сопротивления: %1$d%% расстояния закрытия</string>

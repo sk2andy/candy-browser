@@ -594,6 +594,8 @@
     <string name="settings_address_bar_actions_after">Djathtas adresës</string>
     <string name="settings_address_bar_actions_full">Të tre pozicionet e konfigurueshme janë të zënë.</string>
     <string name="settings_address_bar_docking_title">Zhvendos fushën e adresës pranë skajit</string>
+    <string name="settings_address_bar_swipe_mode_title">Ndrysho shiritin e adresës me rrëshqitje</string>
+    <string name="settings_address_bar_swipe_mode_summary">Rrëshqit poshtë në faqe për të zgjeruar shiritin dhe lart për ta ngjeshur, edhe kur faqja nuk mund të lëvizë. Kur është çaktivizuar, shiriti ndjek lëvizjen e faqes.</string>
     <string name="settings_address_bar_docking_subtitle">Nxirrni pilulën e parkuar dhe lironi në çdo lartësi për ta vendosur në skajin më të afërt të ekranit. Fikeni për të mbajtur shiritin e adresës në qendër.</string>
     <string name="settings_tab_dismiss_resistance">Rezistenca gjatë mbylljes së skedës</string>
     <string name="settings_tab_dismiss_resistance_summary">Faza e rezistencës: %1$d%% e largësisë së mbylljes</string>

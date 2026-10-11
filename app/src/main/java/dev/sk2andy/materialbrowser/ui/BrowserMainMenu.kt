@@ -2,8 +2,6 @@ package dev.sk2andy.materialbrowser.ui
 
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.PlainTooltip
@@ -12,8 +10,6 @@ import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.TooltipDefaults
 import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -30,7 +26,6 @@ import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.PopupProperties
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.browser.BrowserInputDiagnostics
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoExtensionActionKey
@@ -198,28 +193,12 @@ private class AndroidBrowserMainMenuEffects(
         onDismissRequest: () -> Unit,
         content: @Composable () -> Unit,
     ) {
-        val scrollState = rememberScrollState()
-        LaunchedEffect(expanded) {
-            if (expanded) scrollState.scrollTo(0)
-        }
-        DropdownMenu(
+        BrowserMainMenuPopup(
             expanded = expanded,
             onDismissRequest = onDismissRequest,
-            scrollState = scrollState,
-            properties = PopupProperties(focusable = expanded),
-            containerColor = Color.Transparent,
-            tonalElevation = 0.dp,
-            shadowElevation = 0.dp,
-        ) {
-            DisposableEffect(expanded) {
-                popupState(expanded, visible = true)
-                onDispose {}
-            }
-            DisposableEffect(Unit) {
-                onDispose { popupState(expanded = false, visible = false) }
-            }
-            content()
-        }
+            onPopupStateChange = { visible -> popupState(expanded && visible, visible) },
+            content = content,
+        )
     }
 
     @OptIn(ExperimentalMaterial3Api::class)

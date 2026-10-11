@@ -43,6 +43,7 @@ internal object TabSettingsTestTags {
     const val AutomaticSorting = "tab_settings_automatic_sorting"
     const val ClosedTabUndo = "tab_settings_closed_tab_undo"
     const val AddressBarDocking = "tab_settings_address_bar_docking"
+    const val AddressBarSwipeMode = "tab_settings_address_bar_swipe_mode"
     const val AddressBarLongPressAction = "tab_settings_address_bar_long_press_action"
     const val LinkLongPressAction = "tab_settings_link_long_press_action"
 }
@@ -59,6 +60,7 @@ internal fun TabsAndGesturesSettingsPage(
     dismissResistancePercent: Int,
     profilesEnabled: Boolean,
     isAddressBarDockingEnabled: Boolean,
+    isAddressBarSwipeModeEnabled: Boolean = false,
     addressBarLongPressAction: AddressBarLongPressAction = AddressBarLongPressAction.Default,
     linkLongPressAction: LinkLongPressAction = LinkLongPressAction.LinkPeek,
     onInactiveTabLifetimeChanged: (InactiveTabLifetime) -> Unit,
@@ -71,6 +73,7 @@ internal fun TabsAndGesturesSettingsPage(
     onDismissResistancePercentChanged: (Int) -> Unit,
     onProfilesEnabledChanged: (Boolean) -> Unit,
     onAddressBarDockingEnabledChanged: (Boolean) -> Unit,
+    onAddressBarSwipeModeEnabledChanged: (Boolean) -> Unit = {},
     onAddressBarLongPressActions: () -> Unit = {},
     onLinkLongPressActionChanged: (LinkLongPressAction) -> Unit = {},
     onLinkPeekActions: () -> Unit = {},
@@ -279,6 +282,14 @@ internal fun TabsAndGesturesSettingsPage(
             checked = isAddressBarDockingEnabled,
             onCheckedChange = onAddressBarDockingEnabledChanged,
             modifier = Modifier.testTag(TabSettingsTestTags.AddressBarDocking),
+        )
+        Spacer(Modifier.height(2.dp))
+        SettingsSwitch(
+            title = stringResource(R.string.settings_address_bar_swipe_mode_title),
+            subtitle = stringResource(R.string.settings_address_bar_swipe_mode_summary),
+            checked = isAddressBarSwipeModeEnabled,
+            onCheckedChange = onAddressBarSwipeModeEnabledChanged,
+            modifier = Modifier.testTag(TabSettingsTestTags.AddressBarSwipeMode),
         )
         Spacer(Modifier.height(2.dp))
         TabDismissResistanceSettings(

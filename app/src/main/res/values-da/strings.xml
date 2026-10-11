@@ -594,6 +594,8 @@
     <string name="settings_address_bar_actions_after">Adresseret</string>
     <string name="settings_address_bar_actions_full">Alle tre konfigurerbare positioner er optaget.</string>
     <string name="settings_address_bar_docking_title">Flyt det parkerede adressefelt</string>
+    <string name="settings_address_bar_swipe_mode_title">Skift adresselinje med strøg</string>
+    <string name="settings_address_bar_swipe_mode_summary">Stryg ned på siden for at udvide adresselinjen og op for at gøre den kompakt, også når siden ikke kan rulles. Når dette er slået fra, følger adresselinjen sidens rulning.</string>
     <string name="settings_address_bar_docking_subtitle">Træk det parkerede felt og slip det i en vilkårlig højde for at fastgøre det til nærmeste skærmkant. Slå fra for at holde adresselinjen centreret.</string>
     <string name="settings_tab_dismiss_resistance">Modstand ved lukning af faner</string>
     <string name="settings_tab_dismiss_resistance_summary">Modstandsfase: %1$d%% af lukkeafstanden</string>
