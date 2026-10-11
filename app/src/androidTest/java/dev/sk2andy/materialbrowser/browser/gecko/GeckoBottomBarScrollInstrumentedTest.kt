@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.os.SystemClock
+import android.view.MotionEvent
 import android.view.View
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.semantics.SemanticsActions
@@ -38,6 +39,7 @@ import dev.sk2andy.materialbrowser.data.sync.AndroidSyncCacheStore
 import dev.sk2andy.materialbrowser.data.sync.AndroidSyncVaultStore
 import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineCommand
 import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineCommandType
+import dev.sk2andy.materialbrowser.ui.StatusBarStaticOverlayHost
 import java.io.Closeable
 import java.net.InetAddress
 import java.net.ServerSocket
@@ -91,6 +93,121 @@ class GeckoBottomBarScrollInstrumentedTest {
             assertRealGeckoScrollDelegate(server)
         }
         assertControllerTabIsolation()
+    }
+
+    @Test
+    fun viewportSwipesTogglePillOnNonScrollingGeckoPage() {
+        LongPageFixtureServer(
+            html = """
+                <!doctype html>
+                <meta name="viewport" content="width=device-width,initial-scale=1">
+                <title>$READY_TITLE</title>
+                <style>html,body{margin:0;height:100%;overflow:hidden}</style>
+                <canvas style="width:100%;height:100%"></canvas>
+            """.trimIndent(),
+        ).use { server ->
+            store.saveAddressBarSwipeModeEnabled(true)
+            prepareVisibleLongPage(server.url)
+            ActivityScenario.launch<MainActivity>(mainActivityIntent()).use { scenario ->
+                awaitController(scenario) { controller ->
+                    controller.selectedTab.title == READY_TITLE &&
+                        !controller.selectedTab.isLoading &&
+                        controller.selectedGeckoViewForTesting()?.isAttachedToWindow == true &&
+                        controller.selectedBrowserEngineScrollMetrics()?.offsetPx == 0
+                }
+                scenario.onActivity { activity ->
+                    val controller = activity.browserControllerForTesting()
+                    val view = requireNotNull(controller.selectedGeckoViewForTesting())
+                    val host = generateSequence(view.parent) { it.parent }
+                        .filterIsInstance<StatusBarStaticOverlayHost>()
+                        .first()
+                    assertTrue(controller.isAddressBarSwipeModeEnabled)
+                    assertFalse(controller.isBottomBarCompact)
+                    dispatchViewportSwipe(host, distanceDp = -40f)
+                }
+                awaitController(scenario) { it.isBottomBarCompact }
+                scenario.onActivity { activity ->
+                    val controller = activity.browserControllerForTesting()
+                    val view = requireNotNull(controller.selectedGeckoViewForTesting())
+                    val host = generateSequence(view.parent) { it.parent }
+                        .filterIsInstance<StatusBarStaticOverlayHost>()
+                        .first()
+                    assertTrue(controller.selectedBrowserEngineScrollMetrics()?.offsetPx == 0)
+                    dispatchViewportSwipe(host, distanceDp = 32f)
+                }
+                awaitController(scenario) { !it.isBottomBarCompact }
+                scenario.onActivity { activity ->
+                    val controller = activity.browserControllerForTesting()
+                    assertTrue(controller.selectedBrowserEngineScrollMetrics()?.offsetPx == 0)
+                    assertFalse(controller.selectedTab.isLoading)
+                }
+            }
+        }
+    }
+
+    @Test
+    fun swipeModeIgnoresRendererScrollAndRejectsDepartingTabGestures() {
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            lateinit var session: FakeEngineSession
+            lateinit var firstTabId: String
+            scenario.onActivity { activity ->
+                val controller = activity.browserControllerForTesting()
+                firstTabId = controller.selectedTabId
+                session = FakeEngineSession(firstTabId)
+                controller.installGeckoEngineSessionForTesting(session)
+                controller.updateAddressBarSwipeModeEnabled(true)
+                session.emitScroll(0)
+                session.emitScroll(500)
+            }
+            instrumentation.waitForIdleSync()
+            scenario.onActivity { activity ->
+                val controller = activity.browserControllerForTesting()
+                assertFalse(controller.isBottomBarCompact)
+                controller.onAddressBarSwipe(
+                    firstTabId,
+                    controller.engineViewRevision - 1,
+                    compact = true,
+                )
+                assertFalse(controller.isBottomBarCompact)
+                controller.onAddressBarSwipe(firstTabId, controller.engineViewRevision, compact = true)
+                assertTrue(controller.isBottomBarCompact)
+                session.emitScroll(0)
+            }
+            instrumentation.waitForIdleSync()
+            scenario.onActivity { activity ->
+                val controller = activity.browserControllerForTesting()
+                assertTrue(controller.isBottomBarCompact)
+                controller.createTab()
+                controller.onAddressBarSwipe(firstTabId, controller.engineViewRevision, compact = true)
+                assertFalse(controller.isBottomBarCompact)
+                controller.selectTab(firstTabId)
+                controller.updateAddressBarSwipeModeEnabled(false)
+                controller.onAddressBarSwipe(firstTabId, controller.engineViewRevision, compact = false)
+                assertTrue(controller.isBottomBarCompact)
+                session.emitScroll(0)
+            }
+            awaitController(scenario) { !it.isBottomBarCompact }
+        }
+    }
+
+    private fun dispatchViewportSwipe(host: View, distanceDp: Float) {
+        val downTime = SystemClock.uptimeMillis()
+        val x = host.width / 2f
+        val startY = host.height / 2f
+        val distancePx = distanceDp * host.resources.displayMetrics.density
+        listOf(
+            MotionEvent.ACTION_DOWN to startY,
+            MotionEvent.ACTION_MOVE to startY + distancePx / 2f,
+            MotionEvent.ACTION_MOVE to startY + distancePx,
+            MotionEvent.ACTION_UP to startY + distancePx,
+        ).forEachIndexed { index, (action, y) ->
+            val event = MotionEvent.obtain(downTime, downTime + index * 16L, action, x, y, 0)
+            try {
+                host.dispatchTouchEvent(event)
+            } finally {
+                event.recycle()
+            }
+        }
     }
 
     @Test
@@ -474,7 +591,7 @@ class GeckoBottomBarScrollInstrumentedTest {
         ) = onReady()
     }
 
-    private class LongPageFixtureServer : Closeable {
+    private class LongPageFixtureServer(private val html: String = HTML) : Closeable {
         private val server = ServerSocket(0, 4, InetAddress.getByName("127.0.0.1"))
         private val thread = Thread(::serve, "gecko-bottom-bar-scroll-fixture").apply {
             isDaemon = true
@@ -493,7 +610,7 @@ class GeckoBottomBarScrollInstrumentedTest {
                                 // Drain headers before serving the deterministic local page.
                             }
                         }
-                        val body = HTML.toByteArray()
+                        val body = html.toByteArray()
                         connection.getOutputStream().buffered().use { output ->
                             output.write(
                                 "HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\n"

@@ -232,6 +232,11 @@ internal fun settingsSearchDefinitions(
             descriptionRes = R.string.settings_address_bar_docking_subtitle,
         )
         setting(
+            id = "settings_address_bar_swipe_mode_title",
+            titleRes = R.string.settings_address_bar_swipe_mode_title,
+            descriptionRes = R.string.settings_address_bar_swipe_mode_summary,
+        )
+        setting(
             id = "settings_tab_dismiss_resistance",
             titleRes = R.string.settings_tab_dismiss_resistance,
             descriptionRes = R.string.settings_home_tabs_gestures_summary,

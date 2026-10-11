@@ -612,6 +612,8 @@
     <string name="settings_address_bar_actions_after">Desno od naslova</string>
     <string name="settings_address_bar_actions_full">Vsi trije nastavljivi položaji so zasedeni.</string>
     <string name="settings_address_bar_docking_title">Premakni naslovno polje ob robu</string>
+    <string name="settings_address_bar_swipe_mode_title">Preklopi naslovno vrstico s potegi</string>
+    <string name="settings_address_bar_swipe_mode_summary">Potegnite navzdol po strani, da razširite vrstico, in navzgor, da jo skrčite, tudi če se po strani ni mogoče pomikati. Ko je izklopljeno, vrstica sledi pomikanju strani.</string>
     <string name="settings_address_bar_docking_subtitle">Privlačite ustavil tableto in ga izpustite na kateri koli višini, da ga prilepite na najbližji rob zaslona. Izklopi, da boš imel naslovno vrstico v središču.</string>
     <string name="settings_tab_dismiss_resistance">Upor pri zapiranju zavihka</string>
     <string name="settings_tab_dismiss_resistance_summary">Faza upora: %1$d%% razdalje za zapiranje</string>

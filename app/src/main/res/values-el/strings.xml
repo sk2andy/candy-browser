@@ -594,6 +594,8 @@
     <string name="settings_address_bar_actions_after">Δικαίωμα διεύθυνσης</string>
     <string name="settings_address_bar_actions_full">Και οι τρεις διαμορφώσιμες θέσεις είναι κατειλημμένες.</string>
     <string name="settings_address_bar_docking_title">Μετακίνηση του σταθμευμένου πεδίου διεύθυνσης</string>
+    <string name="settings_address_bar_swipe_mode_title">Αλλαγή γραμμής διεύθυνσης με σάρωση</string>
+    <string name="settings_address_bar_swipe_mode_summary">Σύρετε προς τα κάτω στη σελίδα για να αναπτύξετε τη γραμμή και προς τα πάνω για να τη συμπτύξετε, ακόμη και αν η σελίδα δεν κάνει κύλιση. Όταν είναι ανενεργό, η γραμμή ακολουθεί την κύλιση της σελίδας.</string>
     <string name="settings_address_bar_docking_subtitle">Σύρετε το σταθμευμένο πεδίο και αφήστε το σε οποιοδήποτε ύψος για να προσκολληθεί στην κοντινότερη άκρη. Απενεργοποιήστε για να παραμένει η γραμμή διεύθυνσης στο κέντρο.</string>
     <string name="settings_tab_dismiss_resistance">Αντίσταση κλεισίματος καρτέλας</string>
     <string name="settings_tab_dismiss_resistance_summary">Φάση αντίστασης: %1$d%% της απόστασης κλεισίματος</string>

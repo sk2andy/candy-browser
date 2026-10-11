@@ -584,6 +584,8 @@
     <string name="settings_address_bar_actions_after">聯絡權</string>
     <string name="settings_address_bar_actions_full">所有三個可配置的位置都被佔領了.</string>
     <string name="settings_address_bar_docking_title">移動停留的地址片.</string>
+    <string name="settings_address_bar_swipe_mode_title">滑動切換網址列</string>
+    <string name="settings_address_bar_swipe_mode_summary">在頁面上向下滑動展開網址列，向上滑動收起網址列，即使頁面無法捲動也能使用。關閉後，網址列隨頁面捲動變化。</string>
     <string name="settings_address_bar_docking_subtitle">拖拉停放的藥丸,並在任何高度放下,將其到最近的螢幕邊緣. 關閉以保持地址的中心.</string>
     <string name="settings_tab_dismiss_resistance">標籤釋放阻力</string>
     <string name="settings_tab_dismiss_resistance_summary">阻力相: %1$d%% 關閉距離</string>

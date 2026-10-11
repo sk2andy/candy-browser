@@ -577,6 +577,8 @@
     <string name="settings_address_bar_actions_after">A la derecha</string>
     <string name="settings_address_bar_actions_full">Las tres posiciones configurables están ocupadas.</string>
     <string name="settings_address_bar_docking_title">Mover la píldora de dirección aparcada</string>
+    <string name="settings_address_bar_swipe_mode_title">Cambiar la barra de direcciones con gestos</string>
+    <string name="settings_address_bar_swipe_mode_summary">Desliza hacia abajo en la página para expandir la barra y hacia arriba para compactarla, incluso si la página no se puede desplazar. Si está desactivado, la barra sigue el desplazamiento de la página.</string>
     <string name="settings_address_bar_docking_subtitle">Arrastra la píldora aparcada y suéltala a cualquier altura para fijarla al borde de pantalla más cercano. Desactívalo para mantener la barra centrada.</string>
     <string name="settings_tab_dismiss_resistance">Resistencia al cerrar pestañas</string>
     <string name="settings_tab_dismiss_resistance_summary">Fase de resistencia: %1$d%% del recorrido de cierre</string>

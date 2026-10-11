@@ -16,6 +16,7 @@ internal class StatusBarStaticOverlayHost(
     browserContentBlurEnabled: Boolean = false,
     pullToRefreshEnabled: Boolean = false,
 ) : FrameLayout(context) {
+    private val chromeSwipeTouchObserver = BrowserChromeSwipeTouchObserver(context)
     val contentContainer: FrameLayout = if (browserContentBlurEnabled) {
         BrowserChromeBlurTarget(context).apply { captureEnabled = true }
     } else {
@@ -44,6 +45,25 @@ internal class StatusBarStaticOverlayHost(
             overlayView,
             LayoutParams(LayoutParams.MATCH_PARENT, 0),
         )
+    }
+
+    override fun dispatchTouchEvent(event: MotionEvent): Boolean {
+        chromeSwipeTouchObserver.onTouchEvent(event)
+        return super.dispatchTouchEvent(event)
+    }
+
+    override fun onDetachedFromWindow() {
+        chromeSwipeTouchObserver.reset()
+        super.onDetachedFromWindow()
+    }
+
+    fun updateChromeSwipe(
+        enabled: Boolean,
+        tabId: String,
+        engineViewRevision: Int,
+        onCompactChanged: (Boolean) -> Unit,
+    ) {
+        chromeSwipeTouchObserver.update(enabled, tabId, engineViewRevision, onCompactChanged)
     }
 
     fun updatePullToRefresh(
