@@ -92,9 +92,10 @@ docker compose up -d
 The public `sk2andy/candy-sync:latest` image supports Linux AMD64 and ARM64. Contributors can still
 build the server locally with `docker compose up --build -d`.
 
-Install Candy Sync from the [Chrome Web Store](https://chromewebstore.google.com/detail/candy-sync/mbmmijoehjmjdehhbikpflhahamohbge),
-open its browser-managed Options Page, and enter the endpoint, credentials, and E2EE passphrase.
-For Firefox or local development, build and load the WebExtension from `sync/extension/` using the
+Install Candy Sync from the [Chrome Web Store](https://chromewebstore.google.com/detail/candy-sync/mbmmijoehjmjdehhbikpflhahamohbge)
+or [Mozilla Add-ons](https://addons.mozilla.org/en-US/firefox/addon/candy-sync/), open its
+browser-managed Options Page, and enter the endpoint, credentials, and E2EE passphrase.
+For local development, build and load the WebExtension from `sync/extension/` using the
 [Candy Sync extension guide](docs/sync/extension.md). In Candy Browser, open
 **Settings → Synchronization** and join with the same endpoint, credentials, and passphrase.
 
@@ -104,7 +105,7 @@ loading, Android setup, backups, protocol details, and the full security model.
 ### Candy Sync roadmap
 
 - [ ] Add multi-user support
-- [ ] Publish the extension to the Chrome Web Store and Mozilla Add-ons
+- [x] Publish the extension to the Chrome Web Store and Mozilla Add-ons
 - [x] Publish a prebuilt server image to Docker Hub
 - [ ] Offer a hosted solution for people who do not want to self-host
 
@@ -352,9 +353,10 @@ Install the desktop companion for self-hosted, end-to-end encrypted tab synchron
 
 <a href="https://chromewebstore.google.com/detail/candy-sync/mbmmijoehjmjdehhbikpflhahamohbge"><img src="https://developer.chrome.com/static/docs/webstore/branding/image/UV4C4ybeBTsZt43U4xis.png" height="48" alt="Get Candy Sync in the Chrome Web Store"></a>
 
-Firefox users can [build and load the extension](docs/sync/extension.md) until its Mozilla Add-ons
-listing is publicly available. Both clients require your own Candy Sync server; see
-[Start Candy Sync](#start-candy-sync) for setup.
+<a href="https://addons.mozilla.org/en-US/firefox/addon/candy-sync/"><img src="https://extensionworkshop.com/assets/img/documentation/publish/get-the-addon-178x60px.dad84b42.png" height="48" alt="Get Candy Sync on Firefox Add-ons"></a>
+
+Both clients require your own Candy Sync server; see [Start Candy Sync](#start-candy-sync) for setup.
+For local development, [build and load the extension](docs/sync/extension.md).
 
 ### Obtainium
 
