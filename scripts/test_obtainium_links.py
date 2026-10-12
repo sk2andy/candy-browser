@@ -46,6 +46,10 @@ class ObtainiumLinksTest(unittest.TestCase):
                 self.assertEqual(0, app["preferredApkIndex"])
                 self.assertIs(nightly, settings["includePrereleases"])
                 self.assertEqual("date", settings["sortMethodChoice"])
+                self.assertEqual(
+                    not nightly and suffix == "foss-release",
+                    settings.get("fallbackToOlderReleases", False),
+                )
 
                 asset_filter = re.compile(settings["apkFilterRegEx"])
                 title_filter = re.compile(settings["filterReleaseTitlesByRegEx"])

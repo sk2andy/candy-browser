@@ -42,6 +42,8 @@ def setup_link(variant: Variant, nightly: bool) -> str:
         "apkFilterRegEx": rf"^CandyBrowser-v{version_pattern}-{asset_suffix}\.apk$",
         "sortMethodChoice": "date",
     }
+    if not nightly and variant.package_suffix == ".foss":
+        settings["fallbackToOlderReleases"] = True
     app = {
         "id": APPLICATION_ID + variant.package_suffix + (".nightly" if nightly else ""),
         "url": REPOSITORY_URL,
