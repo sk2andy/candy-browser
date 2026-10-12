@@ -224,6 +224,7 @@ internal fun SettingsScreen(
     onImportAppData: () -> Unit,
     onClearData: () -> Unit,
     onOpenLegalUrl: (String) -> Unit,
+    onShareSyncExtensionLink: (String) -> Unit = {},
     onDismiss: () -> Unit,
     onOpenFirefoxExtensions: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
@@ -541,6 +542,7 @@ internal fun SettingsScreen(
                     onEnroll = onEnrollSync,
                     onRefresh = onRefreshSync,
                     onOpenDocumentation = onOpenLegalUrl,
+                    onShareExtensionLink = onShareSyncExtensionLink,
                     onBack = { onDestinationChanged(SettingsDestination.Home) },
                 )
 

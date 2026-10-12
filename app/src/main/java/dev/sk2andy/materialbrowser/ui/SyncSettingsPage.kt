@@ -43,6 +43,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import dev.sk2andy.materialbrowser.R
+import dev.sk2andy.materialbrowser.shared.ui.settings.SyncExtensionStoreUrls
 import dev.sk2andy.materialbrowser.shared.ui.settings.settingsSearchTarget
 import dev.sk2andy.materialbrowser.browser.BrowserProfile
 import dev.sk2andy.materialbrowser.browser.DEFAULT_BROWSER_PROFILE
@@ -85,6 +86,10 @@ internal object SyncSettingsTestTags {
     const val ExtensionGuide = "sync_settings_extension_guide"
     const val WorkspaceGuide = "sync_settings_workspace_guide"
     const val AndroidGuide = "sync_settings_android_guide"
+    const val ChromeStore = "sync_settings_chrome_store"
+    const val ChromeStoreShare = "sync_settings_chrome_store_share"
+    const val FirefoxStore = "sync_settings_firefox_store"
+    const val FirefoxStoreShare = "sync_settings_firefox_store_share"
     const val Documentation = "sync_settings_documentation"
 
     fun accentColor(hue: Int): String = "sync_settings_accent_color:$hue"
@@ -100,6 +105,7 @@ internal fun SyncSettingsPage(
     onEnroll: (CharArray, CharArray, (SyncEnrollmentOutcome) -> Unit) -> Unit,
     onRefresh: () -> Unit,
     onOpenDocumentation: (String) -> Unit = {},
+    onShareExtensionLink: (String) -> Unit = {},
     onBack: () -> Unit,
 ) {
     val configured = state.settings
@@ -143,6 +149,7 @@ internal fun SyncSettingsPage(
         onBack = onBack,
     ) {
         SyncSetupGuide(onOpenDocumentation)
+        SyncExtensionStores(onOpenDocumentation, onShareExtensionLink)
         SyncStatusCard(state)
         Text(
             text = stringResource(R.string.sync_connection_section),
@@ -421,6 +428,83 @@ internal fun SyncSettingsPage(
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun SyncExtensionStores(
+    onOpenLink: (String) -> Unit,
+    onShareLink: (String) -> Unit,
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.extraLarge,
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+    ) {
+        Column(
+            modifier = Modifier.padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Text(
+                text = stringResource(R.string.sync_extension_stores_title),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Text(
+                text = stringResource(R.string.sync_extension_stores_summary),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            SyncExtensionStoreRow(
+                title = stringResource(R.string.sync_extension_chrome_store),
+                url = SyncExtensionStoreUrls.Chrome,
+                openTestTag = SyncSettingsTestTags.ChromeStore,
+                shareTestTag = SyncSettingsTestTags.ChromeStoreShare,
+                onOpenLink = onOpenLink,
+                onShareLink = onShareLink,
+            )
+            SyncExtensionStoreRow(
+                title = stringResource(R.string.sync_extension_firefox_store),
+                url = SyncExtensionStoreUrls.Firefox,
+                openTestTag = SyncSettingsTestTags.FirefoxStore,
+                shareTestTag = SyncSettingsTestTags.FirefoxStoreShare,
+                onOpenLink = onOpenLink,
+                onShareLink = onShareLink,
+            )
+        }
+    }
+}
+
+@Composable
+private fun SyncExtensionStoreRow(
+    title: String,
+    url: String,
+    openTestTag: String,
+    shareTestTag: String,
+    onOpenLink: (String) -> Unit,
+    onShareLink: (String) -> Unit,
+) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        TextButton(
+            onClick = { onOpenLink(url) },
+            modifier = Modifier.weight(1f).testTag(openTestTag),
+        ) {
+            Text(title, modifier = Modifier.weight(1f))
+            Icon(
+                painter = painterResource(R.drawable.ic_symbol_open_in_new),
+                contentDescription = null,
+                modifier = Modifier.padding(start = 8.dp).size(18.dp),
+            )
+        }
+        IconButton(
+            onClick = { onShareLink(url) },
+            modifier = Modifier.testTag(shareTestTag),
+        ) {
+            Icon(
+                painter = painterResource(R.drawable.ic_symbol_share),
+                contentDescription = stringResource(R.string.sync_extension_share_link, title),
+            )
         }
     }
 }

@@ -1185,6 +1185,11 @@
     <string name="external_link_preview_copy_link">Αντιγραφή συνδέσμου</string>
     <string name="external_link_preview_copy_label">Candy σύνδεση</string>
     <string name="toast_link_copied">Αντιγραφή σύνδεσης</string>
+    <string name="sync_extension_stores_title">Επεκτάσεις Candy Sync</string>
+    <string name="sync_extension_stores_summary">Εγκαταστήστε το Candy Sync στον υπολογιστή σας ή κοινοποιήστε τον σύνδεσμο του καταστήματος.</string>
+    <string name="sync_extension_chrome_store">Chrome Web Store</string>
+    <string name="sync_extension_firefox_store">Firefox Add-ons</string>
+    <string name="sync_extension_share_link">Κοινοποίηση συνδέσμου %1$s</string>
     <string name="sync_settings_title">Συγχρονισμός</string>
     <string name="settings_home_sync_summary">Αυτοεξυπηρετούμενες, κρυπτογραφημένες καρτέλες συσκευών τέλους έως τέλους</string>
     <string name="sync_setup_guide_title">Ρύθμιση Candy Sync</string>

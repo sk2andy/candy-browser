@@ -11,13 +11,14 @@ import {
   classifyDeltaRevision, classifyRealtimeCursor, monotonicCursor, mutationCandyId, nextOutboxAction,
   PullCursorGuard, reconciliationDrafts, reduceTabMutation, shouldApplyMutationToBrowser,
 } from "../core/tab-mutation-rules.js";
+import { idleLockSeconds, isIdleLockMinutes, isLockPolicy, lockPolicy } from "../core/lock-rules.js";
 import { decryptTabMutation, decryptTabSnapshot, encryptTabMutation, encryptTabSnapshot } from "../crypto/crypto.js";
 import { base64UrlToBytes } from "../crypto/encoding.js";
 import { extensionApi } from "../platform/webextension.js";
 import { ApiError, CandySyncApiClient, type DiscoveryResponse } from "../protocol/api-client.js";
 import { CandySyncRealtimeClient, type RealtimeChangeFrame } from "../realtime/realtime-client.js";
 import {
-  loadSessionSecrets, loadSettings, loadTabDeltaOutbox, loadTabMutationState,
+  clearSessionSecrets, loadSessionSecrets, saveSessionSecrets, loadSettings, loadTabDeltaOutbox, loadTabMutationState,
   saveSettings, saveSettingsAndTabDeltaOutbox, saveStatus, saveTabDeltaOutbox, saveTabMutationState,
 } from "../storage/stores.js";
 
@@ -35,6 +36,33 @@ function enqueueOperation<T>(operation: () => Promise<T>): Promise<T> {
   const result = operationTail.then(operation, operation);
   operationTail = result.then(() => undefined, () => undefined);
   return result;
+}
+
+function stopRealtime(): void {
+  realtime?.stop(); realtime = null; realtimeIdentity = "";
+}
+
+async function lockSync(): Promise<void> {
+  stopRealtime();
+  await clearSessionSecrets();
+  await saveStatus(status("locked", "Passphrase required to unlock sync."));
+}
+
+async function unlockedSecrets(settings: StoredSettings | null): Promise<VaultSecrets | null> {
+  if (settings && lockPolicy(settings) === "idle") {
+    try {
+      const state = await extensionApi().idle.queryState(idleLockSeconds(settings));
+      if (state !== "active") { await lockSync(); return null; }
+    } catch { await lockSync(); return null; }
+  }
+  const secrets = await loadSessionSecrets();
+  if (!secrets) stopRealtime();
+  return secrets;
+}
+
+async function configureIdleDetection(): Promise<void> {
+  const settings = await loadSettings();
+  extensionApi().idle.setDetectionInterval(settings ? idleLockSeconds(settings) : 1_800);
 }
 
 function status(code: SyncStatus["code"], message: string, extra: Partial<SyncStatus> = {}): SyncStatus {
@@ -331,7 +359,7 @@ async function handleRealtimeChange(frame: RealtimeChangeFrame): Promise<void> {
   let catchUp = false;
   await enqueueOperation(async () => {
     const settings = await loadSettings();
-    const secrets = await loadSessionSecrets();
+    const secrets = await unlockedSecrets(settings);
     if (!settings || !secrets || settings.protocolVersion !== 2 || !settings.selection.tabs) return;
     const cursorState = classifyRealtimeCursor(settings.v2Cursor ?? "", frame.cursor);
     if (cursorState === "gap") { catchUp = true; return; }
@@ -349,7 +377,7 @@ async function handleRealtimeChange(frame: RealtimeChangeFrame): Promise<void> {
 export async function synchronizeTabsOnce(): Promise<void> {
   let settings = await loadSettings();
   if (!settings) { await saveStatus(status("unconfigured", "Candy Sync is not configured yet.")); return; }
-  const secrets = await loadSessionSecrets();
+  const secrets = await unlockedSecrets(settings);
   if (!secrets) { await saveStatus(status("locked", "Passphrase required to unlock sync.")); return; }
   if (!settings.selection.tabs) {
     realtime?.stop(); realtime = null; realtimeIdentity = "";
@@ -393,7 +421,7 @@ export async function synchronizeTabs(): Promise<void> {
 async function handleLocalMutations(mutations: readonly TabMutationDraft[]): Promise<void> {
   if (applyingRemoteChange || mutations.length === 0) return;
   const settings = await loadSettings();
-  const secrets = await loadSessionSecrets();
+  const secrets = await unlockedSecrets(settings);
   if (!settings || !secrets || !settings.selection.tabs) return;
   if (settings.protocolVersion !== 2) {
     localTabsDirty = true;
@@ -461,8 +489,42 @@ export function startBackground(): void {
   const permissionChanged = () => { localTabsDirty = true; void synchronizeTabs(); };
   api.permissions.onAdded.addListener(permissionChanged);
   api.permissions.onRemoved.addListener(permissionChanged);
+  api.idle.onStateChanged.addListener((state) => {
+    if (state === "active") return;
+    void enqueueOperation(async () => {
+      const settings = await loadSettings();
+      if (lockPolicy(settings) === "idle") await lockSync();
+    });
+  });
   api.runtime.onMessage.addListener((message: unknown, _sender, sendResponse) => {
-    const typed = message && typeof message === "object" ? message as { type?: unknown; selection?: unknown } : null;
+    const typed = message && typeof message === "object" ? message as { type?: unknown; selection?: unknown; policy?: unknown; minutes?: unknown; secrets?: unknown } : null;
+    if (typed?.type === "LOCK_SYNC" || typed?.type === "UNLOCK_SESSION" || typed?.type === "UPDATE_LOCK_POLICY") {
+      const operation = enqueueOperation(async () => {
+        if (typed.type === "LOCK_SYNC") { await lockSync(); return; }
+        const latest = await loadSettings();
+        if (!latest) throw new Error("Candy Sync is not configured yet.");
+        if (typed.type === "UPDATE_LOCK_POLICY") {
+          if (!isLockPolicy(typed.policy) || !isIdleLockMinutes(typed.minutes)) throw new Error("Choose a lock policy and 1–1440 whole minutes.");
+          const secrets = await loadSessionSecrets();
+          await saveSettings({ ...latest, lockPolicy: typed.policy, idleLockMinutes: typed.minutes });
+          if (secrets) await saveSessionSecrets(secrets);
+          else await clearSessionSecrets();
+          await configureIdleDetection();
+          await unlockedSecrets(await loadSettings());
+        } else {
+          const secrets = typed.secrets as Partial<VaultSecrets> | undefined;
+          if (!secrets || secrets.deviceId !== latest.deviceId || secrets.workspaceId !== latest.workspaceId ||
+              typeof secrets.workspaceKey !== "string" || typeof secrets.devicePrivateKeyPkcs8 !== "string" || typeof secrets.deviceToken !== "string") {
+            throw new Error("Invalid unlocked device identity.");
+          }
+          await saveSessionSecrets(secrets as VaultSecrets);
+          await configureIdleDetection();
+          await saveStatus(status("ready", "Local keys unlocked. The passphrase was discarded."));
+        }
+      });
+      void operation.then(() => sendResponse({ ok: true }), (error: unknown) => sendResponse({ ok: false, error: error instanceof Error ? error.message : "Lock settings could not be saved." }));
+      return true;
+    }
     if (typed?.type === "SYNC_NOW") {
       void synchronizeTabs().then(() => sendResponse({ ok: true }), (error: unknown) => sendResponse({ ok: false, error: error instanceof Error ? error.message : "Sync failed" }));
       return true;
@@ -480,6 +542,7 @@ export function startBackground(): void {
     }
     return false;
   });
+  void configureIdleDetection();
   void ensureAlarm();
   void synchronizeTabs();
 }

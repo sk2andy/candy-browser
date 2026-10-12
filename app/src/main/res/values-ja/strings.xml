@@ -1170,6 +1170,11 @@
     <string name="external_link_preview_copy_link">コピーリンク</string>
     <string name="external_link_preview_copy_label">Candyリンク</string>
     <string name="toast_link_copied">リンクをコピーした</string>
+    <string name="sync_extension_stores_title">Candy Sync 拡張機能</string>
+    <string name="sync_extension_stores_summary">デスクトップのブラウザーに Candy Sync をインストールするか、ストアのリンクを共有できます。</string>
+    <string name="sync_extension_chrome_store">Chrome Web Store</string>
+    <string name="sync_extension_firefox_store">Firefox Add-ons</string>
+    <string name="sync_extension_share_link">%1$s のリンクを共有</string>
     <string name="sync_settings_title">同期</string>
     <string name="settings_home_sync_summary">端から端まで暗号化されたデバイスのタブ</string>
     <string name="sync_setup_guide_title">設定する Candy Sync</string>

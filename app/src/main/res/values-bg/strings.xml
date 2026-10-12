@@ -1185,6 +1185,11 @@
     <string name="external_link_preview_copy_link">Копирай връзката</string>
     <string name="external_link_preview_copy_label">Връзка Candy</string>
     <string name="toast_link_copied">Свързване копирано</string>
+    <string name="sync_extension_stores_title">Разширения Candy Sync</string>
+    <string name="sync_extension_stores_summary">Инсталирайте Candy Sync в настолния браузър или споделете връзката към магазина.</string>
+    <string name="sync_extension_chrome_store">Chrome Web Store</string>
+    <string name="sync_extension_firefox_store">Firefox Add-ons</string>
+    <string name="sync_extension_share_link">Споделяне на връзка към %1$s</string>
     <string name="sync_settings_title">Синхронизиране</string>
     <string name="settings_home_sync_summary">Self-hosted, end-to-end криптирани раздели за устройства</string>
     <string name="sync_setup_guide_title">Настройка Candy Sync</string>

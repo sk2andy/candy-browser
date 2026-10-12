@@ -1156,6 +1156,11 @@
     <string name="external_link_preview_copy_link">Copiar ligação</string>
     <string name="external_link_preview_copy_label">Ligação do Candy</string>
     <string name="toast_link_copied">Ligação copiada</string>
+    <string name="sync_extension_stores_title">Extensões Candy Sync</string>
+    <string name="sync_extension_stores_summary">Instala o Candy Sync no navegador do computador ou partilha a ligação da loja.</string>
+    <string name="sync_extension_chrome_store">Chrome Web Store</string>
+    <string name="sync_extension_firefox_store">Firefox Add-ons</string>
+    <string name="sync_extension_share_link">Partilhar ligação para %1$s</string>
     <string name="sync_settings_title">Sincronização</string>
     <string name="settings_home_sync_summary">Separadores de dispositivos autoalojados e encriptados ponto a ponto</string>
     <string name="sync_setup_guide_title">Configurar o Candy Sync</string>

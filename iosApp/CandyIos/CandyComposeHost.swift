@@ -343,6 +343,14 @@ private struct CandyComposeControllerHost: UIViewControllerRepresentable {
             browser.refreshSync()
         }
 
+        func openExtensionStore(url: String) {
+            browser.openSyncExtensionStore(url)
+        }
+
+        func shareExtensionStore(url: String) {
+            browser.shareSyncExtensionStore(url)
+        }
+
         func changeTabOverviewMode(mode: TabOverviewMode) {
             if mode == .hero {
                 browser.updateTabOverviewMode(.hero)

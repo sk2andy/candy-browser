@@ -1185,6 +1185,11 @@
     <string name="external_link_preview_copy_link">Verwijzing kopiëren</string>
     <string name="external_link_preview_copy_label">Candy koppeling</string>
     <string name="toast_link_copied">Verwijzing gekopieerd</string>
+    <string name="sync_extension_stores_title">Candy Sync-extensies</string>
+    <string name="sync_extension_stores_summary">Installeer Candy Sync in je desktopbrowser of deel de winkellink.</string>
+    <string name="sync_extension_chrome_store">Chrome Web Store</string>
+    <string name="sync_extension_firefox_store">Firefox Add-ons</string>
+    <string name="sync_extension_share_link">Link naar %1$s delen</string>
     <string name="sync_settings_title">Sync</string>
     <string name="settings_home_sync_summary">Self-hosted, eind-to-end versleuteld apparaat tabbladen</string>
     <string name="sync_setup_guide_title">Instelling Candy Sync</string>

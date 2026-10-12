@@ -1185,6 +1185,11 @@
     <string name="external_link_preview_copy_link">Bağlantıyı kopyala</string>
     <string name="external_link_preview_copy_label">Candy bağlantı</string>
     <string name="toast_link_copied">Bağlantı kopyalandı</string>
+    <string name="sync_extension_stores_title">Candy Sync uzantıları</string>
+    <string name="sync_extension_stores_summary">Candy Sync’i masaüstü tarayıcınıza yükleyin veya mağaza bağlantısını paylaşın.</string>
+    <string name="sync_extension_chrome_store">Chrome Web Store</string>
+    <string name="sync_extension_firefox_store">Firefox Add-ons</string>
+    <string name="sync_extension_share_link">%1$s bağlantısını paylaş</string>
     <string name="sync_settings_title">Çeviri:</string>
     <string name="settings_home_sync_summary">Kendi kendine barındırılan, uçtan uca şifreli cihaz sekmeleri</string>
     <string name="sync_setup_guide_title">Yapılandırma Candy Sync</string>

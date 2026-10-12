@@ -1215,6 +1215,11 @@
     <string name="external_link_preview_copy_link">Копировать ссылку</string>
     <string name="external_link_preview_copy_label">Ссылка Candy</string>
     <string name="toast_link_copied">Ссылка скопирована</string>
+    <string name="sync_extension_stores_title">Расширения Candy Sync</string>
+    <string name="sync_extension_stores_summary">Установите Candy Sync в браузере на компьютере или поделитесь ссылкой на магазин.</string>
+    <string name="sync_extension_chrome_store">Chrome Web Store</string>
+    <string name="sync_extension_firefox_store">Firefox Add-ons</string>
+    <string name="sync_extension_share_link">Поделиться ссылкой на %1$s</string>
     <string name="sync_settings_title">Синхронизация</string>
     <string name="settings_home_sync_summary">Вкладки устройств на вашем сервере со сквозным шифрованием</string>
     <string name="sync_setup_guide_title">Настроить Candy Sync</string>

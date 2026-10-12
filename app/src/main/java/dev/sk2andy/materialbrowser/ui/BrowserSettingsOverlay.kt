@@ -413,6 +413,7 @@ internal fun BrowserSettingsOverlay(
             onImportAppData = onImportAppData,
             onClearData = onClearData,
             onOpenLegalUrl = onOpenLegalUrl,
+            onShareSyncExtensionLink = controller::shareLink,
             onDismiss = onDismiss,
             onOpenFirefoxExtensions = onOpenFirefoxExtensions,
             modifier = Modifier.predictiveBackSurface(

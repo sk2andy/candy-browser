@@ -64,6 +64,8 @@ test("browser manifests use their supported background environment", () => {
   const expectedHosts = ["https://*/*", "http://localhost/*", "http://127.0.0.1/*", "http://[::1]/*"];
   assert.deepEqual(chromium.optional_host_permissions, expectedHosts);
   assert.deepEqual(firefox.optional_host_permissions, expectedHosts);
+  assert.deepEqual(chromium.permissions, ["alarms", "storage", "idle"]);
+  assert.deepEqual(firefox.permissions, ["alarms", "storage", "idle"]);
   assert.deepEqual(chromium.optional_permissions, ["tabs", "tabGroups"]);
   assert.deepEqual(firefox.optional_permissions, ["tabs", "tabGroups"]);
   assert.deepEqual(firefox.browser_specific_settings.gecko.data_collection_permissions.optional, ["browsingActivity"]);

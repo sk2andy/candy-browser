@@ -175,7 +175,8 @@ tag. Tag is not separate JSON field.
 
 ### Local vault
 
-`storage.local` is not encrypted. It stores settings and vault envelope only.
+`storage.local` is not encrypted. It stores settings and the encrypted vault envelope.
+Explicit extension Never mode additionally stores unlocked vault secrets in the browser profile.
 Vault plaintext contains:
 
 ```text
@@ -191,8 +192,14 @@ Vault uses independent 16-byte salt and fixed local Argon2id parameters
 `candy-sync/local-vault/v1`. Ciphertext includes GCM tag.
 
 Unlocked secrets live in `storage.session` with `TRUSTED_CONTEXTS` access where
-browser exposes setting. Browser restart locks sync until passphrase unlock.
-Passphrase and unwrapped vault never enter `storage.local` or `storage.sync`.
+browser exposes setting. Default browser-restart and configurable inactivity modes require
+passphrase unlock after restart. Idle mode uses local computer input inactivity (1–1440 minutes,
+default 30), independent of sync traffic, with idle events and checks on background wake.
+Explicit Never mode persists unwrapped vault secrets in `storage.local` to survive restart,
+weakening locked-profile protection; the Options Page warns before saving this choice. Manual lock
+and switching away from Never remove the persistent copy. Lock/unlock operations serialize with
+synchronization and stop realtime delivery. Passphrase never enters any storage area;
+`storage.sync` remains unused.
 
 ### Encrypted device name
 

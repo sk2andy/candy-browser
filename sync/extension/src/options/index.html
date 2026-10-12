@@ -80,6 +80,21 @@
                 <input id="passphrase-confirmation" name="passphraseConfirmation" type="password" required minlength="16" autocomplete="new-password">
               </div>
             </div>
+            <div class="field">
+              <label for="lock-policy">Automatically lock sync</label>
+              <select id="lock-policy">
+                <option value="browser-restart">When the browser restarts</option>
+                <option value="idle">After inactivity</option>
+                <option value="never">Never (stay unlocked after restart)</option>
+              </select>
+              <small>Inactivity means no keyboard or pointer input on this computer. Automatic synchronization does not reset the timer.</small>
+            </div>
+            <div class="field" id="idle-lock-field" hidden>
+              <label for="idle-lock-minutes">Inactivity timeout (minutes)</label>
+              <input id="idle-lock-minutes" type="number" min="1" max="1440" step="1" value="30">
+            </div>
+            <p id="persistent-unlock-warning" role="note" hidden>Never stores the unlocked workspace key, private device key, and device token in this browser profile without passphrase protection. Anyone with profile access can use them. The passphrase itself is never stored. Lock removes this saved access.</p>
+            <button type="button" id="save-lock-policy" hidden>Save lock settings</button>
             <label class="acknowledge" id="acknowledge-row">
               <input id="acknowledge" type="checkbox" required>
               <span>I understand: the passphrase cannot be changed or recovered. Losing it means losing the data.</span>

@@ -15,7 +15,7 @@ for (const manifest of [chromium, firefox]) {
   assert.equal(manifest.manifest_version, 3);
   assert.equal(manifest.options_ui?.open_in_tab, true);
   assert.equal(manifest.action?.default_popup, undefined);
-  assert.deepEqual(manifest.permissions, ["alarms", "storage"]);
+  assert.deepEqual(manifest.permissions, ["alarms", "storage", "idle"]);
   assert.deepEqual(manifest.optional_permissions, ["tabs", "tabGroups"]);
   assert.equal(manifest.optional_permissions.includes("bookmarks"), false);
   assert.deepEqual(manifest.optional_host_permissions, [

@@ -1170,6 +1170,11 @@
     <string name="external_link_preview_copy_link">複製連結</string>
     <string name="external_link_preview_copy_label">Candy 連結</string>
     <string name="toast_link_copied">連結複製</string>
+    <string name="sync_extension_stores_title">Candy Sync 擴充功能</string>
+    <string name="sync_extension_stores_summary">在桌面瀏覽器中安裝 Candy Sync，或分享商店連結。</string>
+    <string name="sync_extension_chrome_store">Chrome Web Store</string>
+    <string name="sync_extension_firefox_store">Firefox Add-ons</string>
+    <string name="sync_extension_share_link">分享 %1$s 連結</string>
     <string name="sync_settings_title">同步</string>
     <string name="settings_home_sync_summary">自主託管的端到端加密裝置標籤</string>
     <string name="sync_setup_guide_title">設定 Candy Sync</string>
