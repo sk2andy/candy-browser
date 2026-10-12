@@ -19,6 +19,7 @@ import dev.sk2andy.materialbrowser.browser.actions.BrowserDownloadManager
 import dev.sk2andy.materialbrowser.browser.actions.DownloadActionResult
 import dev.sk2andy.materialbrowser.data.BrowserDownloadRequest
 import dev.sk2andy.materialbrowser.update.AppReleaseChannel
+import dev.sk2andy.materialbrowser.update.AppUpdateTrack
 import dev.sk2andy.materialbrowser.update.AvailableAppUpdate
 import dev.sk2andy.materialbrowser.update.GitHubAppUpdateChecker
 
@@ -51,6 +52,7 @@ internal fun AppUpdatePrompt(
             updateChecker.findAvailableUpdate(
                 currentVersionName = BuildConfig.VERSION_NAME,
                 channel = releaseChannel,
+                track = if (BuildConfig.NIGHTLY_BUILD) AppUpdateTrack.Nightly else AppUpdateTrack.Stable,
             )?.let { update ->
                 availableUpdateVersion = update.versionName
                 availableUpdateUrl = update.downloadUrl

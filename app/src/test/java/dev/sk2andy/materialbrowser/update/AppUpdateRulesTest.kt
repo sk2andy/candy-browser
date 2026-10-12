@@ -7,6 +7,123 @@ import org.junit.Test
 
 class AppUpdateRulesTest {
     @Test
+    fun `stable installs never offer nightly releases`() {
+        for (channel in AppReleaseChannel.entries) {
+            for (prerelease in listOf(false, true)) {
+                assertNull(
+                    AppUpdateRules.findAvailableUpdate(
+                        currentVersionName = "0.8",
+                        release = nightlyRelease("0.9-nightly.202610120200", channel, prerelease),
+                        channel = channel,
+                    ),
+                )
+            }
+        }
+    }
+
+    @Test
+    fun `nightly installs only offer their matching variant`() {
+        for (channel in AppReleaseChannel.entries) {
+            val tag = "v0.9-nightly.202610120000"
+            val assets = AppReleaseChannel.entries.map { asset(tag, it.assetSuffix) }
+            val update = AppUpdateRules.findAvailableUpdate(
+                currentVersionName = "0.8-nightly.202610110000",
+                release = release(tag, prerelease = true, assets = assets),
+                channel = channel,
+                track = AppUpdateTrack.Nightly,
+            )
+
+            assertEquals("CandyBrowser-$tag-${channel.assetSuffix}.apk", update?.fileName)
+            assertEquals(
+                "https://github.com/sk2andy/candy-browser/releases/tag/$tag",
+                update?.releaseNotesUrl,
+            )
+        }
+    }
+
+    @Test
+    fun `nightly ordering follows build time even when base version decreases`() {
+        val update = AppUpdateRules.findAvailableUpdate(
+            currentVersionName = "1.0-nightly.202610110000",
+            releases = listOf(
+                release("v2.0"),
+                nightlyRelease("1.1-nightly.202610100000"),
+                nightlyRelease("0.9-nightly.202610120000"),
+                nightlyRelease("3.0-nightly.202610130000").copy(draft = true),
+                release("v9.0-rc.1", prerelease = true),
+            ),
+            channel = AppReleaseChannel.Standard,
+            supportedAbis = emptyList(),
+            track = AppUpdateTrack.Nightly,
+        )
+
+        assertEquals("0.9-nightly.202610120000", update?.versionName)
+    }
+
+    @Test
+    fun `nightly rejects stable same older and malformed builds`() {
+        val current = "0.9-nightly.202610120000"
+        val rejectedReleases = listOf(
+            release("v1.0"),
+            release("v1.0-rc.1", prerelease = true),
+            nightlyRelease(current),
+            nightlyRelease("1.0-nightly.202610110000"),
+            nightlyRelease("1.0-nightly.202613120000"),
+            nightlyRelease("1.0-nightly.202602300000"),
+            nightlyRelease("1.0-nightly.202610122400"),
+            nightlyRelease("1.0-nightly.202610120001", prerelease = false),
+            nightlyRelease("1.0-nightly.202610120001").copy(draft = true),
+        )
+        for (release in rejectedReleases) {
+            assertNull(
+                AppUpdateRules.findAvailableUpdate(current, release, track = AppUpdateTrack.Nightly),
+            )
+        }
+        assertNull(
+            AppUpdateRules.findAvailableUpdate(
+                "0.9",
+                nightlyRelease("1.0-nightly.202610130000"),
+                track = AppUpdateTrack.Nightly,
+            ),
+        )
+    }
+
+    @Test
+    fun `nightly keeps ABI selection and rejects mismatched asset paths`() {
+        val tag = "v0.9-nightly.202610120000"
+        val arm64 = asset(tag, "arm64-v8a-release")
+        val valid = release(
+            tag,
+            prerelease = true,
+            assets = listOf(asset(tag, "release"), arm64),
+        )
+        assertEquals(
+            arm64.name,
+            AppUpdateRules.findAvailableUpdate(
+                "0.9-nightly.202610110000",
+                valid,
+                supportedAbis = listOf("arm64-v8a"),
+                track = AppUpdateTrack.Nightly,
+            )?.fileName,
+        )
+        for (invalidAssets in listOf(
+            listOf(arm64.copy(downloadUrl = arm64.downloadUrl.replace(tag, "v0.9"))),
+            listOf(arm64.copy(contentType = "application/octet-stream")),
+            listOf(arm64, arm64),
+            listOf(asset(tag, "ca-release")),
+        )) {
+            assertNull(
+                AppUpdateRules.findAvailableUpdate(
+                    "0.9-nightly.202610110000",
+                    valid.copy(assets = invalidAssets),
+                    supportedAbis = listOf("arm64-v8a"),
+                    track = AppUpdateTrack.Nightly,
+                ),
+            )
+        }
+    }
+
+    @Test
     fun `certificate trust selects matching release channel`() {
         assertEquals(
             AppReleaseChannel.Standard,
@@ -247,6 +364,16 @@ class AppUpdateRulesTest {
             ),
         )
     }
+
+    private fun nightlyRelease(
+        version: String,
+        channel: AppReleaseChannel = AppReleaseChannel.Standard,
+        prerelease: Boolean = true,
+    ) = release(
+        tag = "v$version",
+        prerelease = prerelease,
+        assets = listOf(asset("v$version", channel.assetSuffix)),
+    )
 
     private fun release(
         tag: String,

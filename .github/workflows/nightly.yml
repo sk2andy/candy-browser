@@ -1,0 +1,273 @@
+name: Nightly Android APK
+
+on:
+  schedule:
+    # Fixed 02:00 CEST throughout the year, including winter: 00:00 UTC.
+    - cron: "0 0 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: android-nightly
+  cancel-in-progress: false
+
+jobs:
+  nightly:
+    name: Build changed main and publish Nightly
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    environment: release
+
+    steps:
+      - name: Check out main
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Prepare changed source and immutable Nightly metadata
+        id: metadata
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          # API failures stop the run; they must never be mistaken for a first Nightly.
+          gh api --paginate --slurp \
+            "repos/${GITHUB_REPOSITORY}/releases?per_page=100" \
+            > "$RUNNER_TEMP/nightly-releases.json"
+          python3 scripts/test_nightly_release.py
+          python3 scripts/nightly_release.py \
+            --releases "$RUNNER_TEMP/nightly-releases.json" \
+            --repository "$GITHUB_REPOSITORY" \
+            --output "$GITHUB_OUTPUT"
+          # Later commands use this detached commit even if main advances during the build.
+          git checkout --detach "$(git rev-parse 'HEAD^{commit}')"
+
+      - name: Set up JDK 17
+        if: steps.metadata.outputs.build == 'true'
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+
+      - name: Set up Android SDK
+        if: steps.metadata.outputs.build == 'true'
+        uses: android-actions/setup-android@40fd30fb8d7440372e1316f5d1809ec01dcd3699 # v4.0.1
+        with:
+          packages: platform-tools
+
+      - name: Install Android SDK platform 37.1
+        if: steps.metadata.outputs.build == 'true'
+        shell: bash
+        run: sdkmanager "platforms;android-37.1"
+
+      - name: Restore release keystore
+        if: steps.metadata.outputs.build == 'true'
+        shell: bash
+        env:
+          CANDY_RELEASE_KEYSTORE_BASE64: ${{ secrets.CANDY_RELEASE_KEYSTORE_BASE64 }}
+          CANDY_RELEASE_STORE_PASSWORD: ${{ secrets.CANDY_RELEASE_STORE_PASSWORD }}
+          CANDY_RELEASE_KEY_ALIAS: ${{ secrets.CANDY_RELEASE_KEY_ALIAS }}
+          CANDY_RELEASE_KEY_PASSWORD: ${{ secrets.CANDY_RELEASE_KEY_PASSWORD }}
+          CANDY_RELEASE_CERTIFICATE_SHA256: ${{ vars.CANDY_RELEASE_CERTIFICATE_SHA256 }}
+        run: |
+          set -euo pipefail
+          required_variables=(
+            CANDY_RELEASE_KEYSTORE_BASE64
+            CANDY_RELEASE_STORE_PASSWORD
+            CANDY_RELEASE_KEY_ALIAS
+            CANDY_RELEASE_KEY_PASSWORD
+            CANDY_RELEASE_CERTIFICATE_SHA256
+          )
+          for variable in "${required_variables[@]}"; do
+            if [[ -z "${!variable:-}" ]]; then
+              echo "Missing release configuration: ${variable}" >&2
+              exit 1
+            fi
+          done
+          keystore_path="$RUNNER_TEMP/candy-release.jks"
+          printf '%s' "$CANDY_RELEASE_KEYSTORE_BASE64" | base64 --decode > "$keystore_path"
+          chmod 600 "$keystore_path"
+          expected_certificate="${CANDY_RELEASE_CERTIFICATE_SHA256//:/}"
+          expected_certificate="${expected_certificate,,}"
+          if [[ ! "$expected_certificate" =~ ^[0-9a-f]{64}$ ]]; then
+            echo "CANDY_RELEASE_CERTIFICATE_SHA256 must contain a SHA-256 certificate digest." >&2
+            exit 1
+          fi
+          actual_certificate="$(
+            keytool -exportcert \
+              -keystore "$keystore_path" \
+              -storepass:env CANDY_RELEASE_STORE_PASSWORD \
+              -alias "$CANDY_RELEASE_KEY_ALIAS" \
+              | sha256sum | cut -d ' ' -f 1
+          )"
+          if [[ "$actual_certificate" != "$expected_certificate" ]]; then
+            echo "Release keystore certificate does not match pinned repository fingerprint." >&2
+            exit 1
+          fi
+          echo "CANDY_RELEASE_KEYSTORE_PATH=${keystore_path}" >> "$GITHUB_ENV"
+
+      - name: Test and build signed Nightly APKs
+        if: steps.metadata.outputs.build == 'true'
+        shell: bash
+        env:
+          RELEASE_VERSION: ${{ steps.metadata.outputs.version }}
+          RELEASE_VERSION_CODE: ${{ steps.metadata.outputs.version_code }}
+          RELEASE_NOTES: ${{ steps.metadata.outputs.notes }}
+          CANDY_RELEASE_STORE_PASSWORD: ${{ secrets.CANDY_RELEASE_STORE_PASSWORD }}
+          CANDY_RELEASE_KEY_ALIAS: ${{ secrets.CANDY_RELEASE_KEY_ALIAS }}
+          CANDY_RELEASE_KEY_PASSWORD: ${{ secrets.CANDY_RELEASE_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          # Build committed filter assets; nightly snapshots must not drift from their source SHA.
+          python3 scripts/test_compile_easylist_hosts.py
+          python3 scripts/test_compile_easylist_cosmetic.py
+          python3 scripts/test_compile_hagezi_hosts.py
+          python3 scripts/test_compile_uassets_cosmetic.py
+          python3 scripts/test_compile_advanced_filters.py
+          python3 scripts/test_compile_procedural_cosmetic.py
+          python3 scripts/test_generate_gecko_default_extensions.py
+          python3 scripts/generate_gecko_default_extensions.py verify
+          gradle_flags=(
+            --no-daemon --max-workers=1
+            "-Pcandy.versionName=$RELEASE_VERSION"
+            "-Pcandy.versionCode=$RELEASE_VERSION_CODE"
+            "-Pcandy.releaseNotesFile=$RELEASE_NOTES"
+          )
+          ./gradlew "${gradle_flags[@]}" \
+            testFullDebugUnitTest testFossDebugUnitTest testSystemwebviewDebugUnitTest \
+            lintFullNightly lintFossNightly lintSystemwebviewNightly lintFullUserCaNightly
+          ./gradlew "${gradle_flags[@]}" assembleFullNightly
+          ./gradlew "${gradle_flags[@]}" assembleFossNightly
+          ./gradlew "${gradle_flags[@]}" assembleSystemwebviewNightly
+          ./gradlew "${gradle_flags[@]}" assembleFullUserCaNightly
+          CANDY_STANDARD_APK="app/build/outputs/apk/full/nightly/app-full-nightly.apk" \
+            CANDY_FOSS_APK="app/build/outputs/apk/foss/nightly/app-foss-nightly.apk" \
+            CANDY_USER_CA_APK="app/build/outputs/apk/full/userCaNightly/app-full-userCaNightly.apk" \
+            CANDY_STANDARD_APPLICATION_ID="dev.sk2andy.materialbrowser.nightly" \
+            CANDY_FOSS_APPLICATION_ID="dev.sk2andy.materialbrowser.foss.nightly" \
+            CANDY_USER_CA_APPLICATION_ID="dev.sk2andy.materialbrowser.ca.nightly" \
+            CANDY_STANDARD_APP_LABEL="Candy Browser Nightly" \
+            CANDY_FOSS_APP_LABEL="Candy FOSS Nightly" \
+            CANDY_USER_CA_APP_LABEL="Candy CA Nightly" \
+            CANDY_STANDARD_LAUNCHER_FOREGROUND="drawable/ic_launcher_foreground" \
+            CANDY_FOSS_LAUNCHER_FOREGROUND="drawable/ic_launcher_foreground_foss" \
+            CANDY_USER_CA_LAUNCHER_FOREGROUND="drawable/ic_launcher_foreground_ca" \
+            CANDY_STANDARD_LAUNCHER_MONOCHROME="drawable/ic_launcher_monochrome" \
+            CANDY_FOSS_LAUNCHER_MONOCHROME="drawable/ic_launcher_monochrome_foss" \
+            CANDY_USER_CA_LAUNCHER_MONOCHROME="drawable/ic_launcher_monochrome_ca" \
+            python3 scripts/test_network_security_apks.py
+          cp "app/build/outputs/apk/full/nightly/app-full-nightly.apk" \
+            "$RUNNER_TEMP/candy-standard-universal-nightly.apk"
+          ./gradlew "${gradle_flags[@]}" \
+            -Pcandy.releaseAbi=arm64-v8a -Pcandy.compressNativeLibs=true assembleFullNightly
+          cp "app/build/outputs/apk/full/nightly/app-full-nightly.apk" \
+            "$RUNNER_TEMP/candy-standard-arm64-v8a-nightly.apk"
+
+      - name: Verify and checksum every Nightly APK
+        if: steps.metadata.outputs.build == 'true'
+        shell: bash
+        env:
+          RELEASE_TAG: ${{ steps.metadata.outputs.tag }}
+          RELEASE_VERSION: ${{ steps.metadata.outputs.version }}
+          RELEASE_VERSION_CODE: ${{ steps.metadata.outputs.version_code }}
+          RELEASE_NOTES: ${{ steps.metadata.outputs.notes }}
+          CANDY_RELEASE_CERTIFICATE_SHA256: ${{ vars.CANDY_RELEASE_CERTIFICATE_SHA256 }}
+        run: |
+          set -euo pipefail
+          mkdir nightly-artifacts
+          prefix="nightly-artifacts/CandyBrowser-${RELEASE_TAG}"
+          cp "$RUNNER_TEMP/candy-standard-universal-nightly.apk" "${prefix}-release.apk"
+          cp "$RUNNER_TEMP/candy-standard-arm64-v8a-nightly.apk" "${prefix}-arm64-v8a-release.apk"
+          cp "app/build/outputs/apk/foss/nightly/app-foss-nightly.apk" "${prefix}-foss-release.apk"
+          cp "app/build/outputs/apk/systemwebview/nightly/app-systemwebview-nightly.apk" \
+            "${prefix}-systemwebview-release.apk"
+          cp "app/build/outputs/apk/full/userCaNightly/app-full-userCaNightly.apk" \
+            "${prefix}-ca-release.apk"
+          apksigner="$(ls "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -n 1)"
+          aapt2="$(ls "$ANDROID_HOME"/build-tools/*/aapt2 | sort -V | tail -n 1)"
+          zipalign="$(ls "$ANDROID_HOME"/build-tools/*/zipalign | sort -V | tail -n 1)"
+          expected_certificate="${CANDY_RELEASE_CERTIFICATE_SHA256//:/}"
+          expected_certificate="${expected_certificate,,}"
+          for apk in nightly-artifacts/*.apk; do
+            expected_package="dev.sk2andy.materialbrowser.nightly"
+            case "$apk" in
+              *-foss-release.apk) expected_package="dev.sk2andy.materialbrowser.foss.nightly" ;;
+              *-systemwebview-release.apk) expected_package="dev.sk2andy.materialbrowser.systemwebview.nightly" ;;
+              *-ca-release.apk) expected_package="dev.sk2andy.materialbrowser.ca.nightly" ;;
+            esac
+            badging="$("$aapt2" dump badging "$apk")"
+            if ! grep -Fq \
+              "package: name='${expected_package}' versionCode='${RELEASE_VERSION_CODE}' versionName='${RELEASE_VERSION}'" \
+              <<< "$badging"; then
+              echo "${apk} package identity or version is incorrect." >&2
+              exit 1
+            fi
+            if [[ "$apk" == *-arm64-v8a-release.apk ]] && \
+              ! grep -Fxq "native-code: 'arm64-v8a'" <<< "$badging"; then
+              echo "ARM64 APK contains unexpected native architectures." >&2
+              exit 1
+            fi
+            verification="$("$apksigner" verify --verbose --print-certs "$apk")"
+            actual_certificate="$(
+              printf '%s\n' "$verification" \
+                | sed -nE 's/^.*certificate SHA-256 digest: ([[:xdigit:]:]+)$/\1/p' \
+                | tr '[:upper:]' '[:lower:]' | tr -d ':' | sort -u
+            )"
+            if [[ "$actual_certificate" != "$expected_certificate" ]]; then
+              echo "${apk} certificate does not match pinned repository fingerprint." >&2
+              exit 1
+            fi
+            "$zipalign" -c -P 16 4 "$apk"
+            (cd nightly-artifacts && sha256sum "$(basename "$apk")" > "$(basename "$apk").sha256")
+          done
+          CANDY_SYSTEM_WEBVIEW_APK="${prefix}-systemwebview-release.apk" \
+            CANDY_SYSTEM_WEBVIEW_APPLICATION_ID="dev.sk2andy.materialbrowser.systemwebview.nightly" \
+            CANDY_SYSTEM_WEBVIEW_APP_LABEL="Candy System WebView Nightly" \
+            CANDY_SYSTEM_WEBVIEW_VERSION_CODE="$RELEASE_VERSION_CODE" \
+            CANDY_SYSTEM_WEBVIEW_VERSION_NAME="$RELEASE_VERSION" \
+            python3 scripts/test_systemwebview_apk.py
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          from zipfile import ZipFile
+
+          expected = Path(os.environ["RELEASE_NOTES"]).read_bytes()
+          for apk in Path("nightly-artifacts").glob("*.apk"):
+              with ZipFile(apk) as archive:
+                  if archive.read("assets/candy_release_notes.md") != expected:
+                      raise RuntimeError(f"Bundled release notes do not match GitHub notes: {apk}")
+          PY
+          (cd nightly-artifacts && sha256sum --check ./*.sha256)
+
+      - name: Publish immutable Nightly prerelease
+        if: steps.metadata.outputs.build == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_SHA: ${{ steps.metadata.outputs.sha }}
+          RELEASE_TAG: ${{ steps.metadata.outputs.tag }}
+          RELEASE_VERSION: ${{ steps.metadata.outputs.version }}
+          RELEASE_NOTES: ${{ steps.metadata.outputs.notes }}
+        run: |
+          set -euo pipefail
+          if [[ "$(git rev-parse 'HEAD^{commit}')" != "$RELEASE_SHA" ]]; then
+            echo "Checked-out source changed after Nightly metadata was prepared." >&2
+            exit 1
+          fi
+          git diff --exit-code
+          # With assets, gh creates a draft and publishes only after every upload succeeds.
+          gh release create "$RELEASE_TAG" nightly-artifacts/* \
+            --target "$RELEASE_SHA" \
+            --title "Candy Browser Nightly ${RELEASE_VERSION}" \
+            --notes-file "$RELEASE_NOTES" --prerelease --latest=false
+
+      - name: Remove release keystore
+        if: always()
+        shell: bash
+        run: rm -f -- "$RUNNER_TEMP/candy-release.jks"

@@ -15,17 +15,29 @@ internal class GitHubAppUpdateChecker {
     suspend fun findAvailableUpdate(
         currentVersionName: String,
         channel: AppReleaseChannel,
+        track: AppUpdateTrack = AppUpdateTrack.Stable,
     ): AvailableAppUpdate? =
         withContext(Dispatchers.IO) {
             try {
                 ensureActive()
-                val release = fetchLatestRelease()
+                val releases = when (track) {
+                    AppUpdateTrack.Stable -> listOf(fetchReleases(LATEST_RELEASE_URL, track).single())
+                    AppUpdateTrack.Nightly -> buildList {
+                        for (page in 1..MAX_RELEASE_PAGES) {
+                            ensureActive()
+                            val releases = fetchReleases("$RELEASES_URL&page=$page", track)
+                            addAll(releases)
+                            if (releases.size < RELEASES_PER_PAGE) break
+                        }
+                    }
+                }
                 ensureActive()
                 AppUpdateRules.findAvailableUpdate(
                     currentVersionName = currentVersionName,
-                    release = release,
+                    releases = releases,
                     channel = channel,
                     supportedAbis = Build.SUPPORTED_ABIS.asList(),
+                    track = track,
                 )
             } catch (cancellation: CancellationException) {
                 throw cancellation
@@ -34,8 +46,8 @@ internal class GitHubAppUpdateChecker {
             }
         }
 
-    private fun fetchLatestRelease(): GitHubReleaseMetadata {
-        val connection = URL(LATEST_RELEASE_URL).openConnection() as HttpsURLConnection
+    private fun fetchReleases(url: String, track: AppUpdateTrack): List<GitHubReleaseMetadata> {
+        val connection = URL(url).openConnection() as HttpsURLConnection
         return try {
             connection.connectTimeout = CONNECT_TIMEOUT_MILLIS
             connection.readTimeout = READ_TIMEOUT_MILLIS
@@ -45,7 +57,20 @@ internal class GitHubAppUpdateChecker {
             connection.setRequestProperty("User-Agent", USER_AGENT)
             check(connection.responseCode == HttpsURLConnection.HTTP_OK)
             val json = connection.inputStream.bufferedReader(Charsets.UTF_8).use(::readBounded)
-            JsonReader(StringReader(json)).use(::readRelease)
+            JsonReader(StringReader(json)).use { reader ->
+                if (track == AppUpdateTrack.Stable) {
+                    listOf(readRelease(reader))
+                } else {
+                    buildList {
+                        reader.beginArray()
+                        while (reader.hasNext()) {
+                            check(size < RELEASES_PER_PAGE)
+                            add(readRelease(reader))
+                        }
+                        reader.endArray()
+                    }
+                }
+            }
         } finally {
             connection.disconnect()
         }
@@ -107,11 +132,15 @@ internal class GitHubAppUpdateChecker {
     private companion object {
         const val LATEST_RELEASE_URL =
             "https://api.github.com/repos/sk2andy/candy-browser/releases/latest"
+        const val RELEASES_URL =
+            "https://api.github.com/repos/sk2andy/candy-browser/releases?per_page=20"
+        const val RELEASES_PER_PAGE = 20
+        const val MAX_RELEASE_PAGES = 3
         const val GITHUB_API_VERSION = "2026-03-10"
         const val USER_AGENT = "Candy-Browser-Android"
         const val CONNECT_TIMEOUT_MILLIS = 5_000
         const val READ_TIMEOUT_MILLIS = 8_000
-        const val MAX_RESPONSE_CHARACTERS = 256 * 1_024
+        const val MAX_RESPONSE_CHARACTERS = 2 * 1_024 * 1_024
         const val MAX_ASSETS = 20
     }
 }

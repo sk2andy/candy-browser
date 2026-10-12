@@ -232,6 +232,7 @@ android {
         manifestPlaceholders["appLabel"] = "@string/app_name"
         manifestPlaceholders["networkSecurityConfig"] = "@xml/network_security_config"
         buildConfigField("boolean", "ENABLE_GITHUB_UPDATES", "false")
+        buildConfigField("boolean", "NIGHTLY_BUILD", "false")
         buildConfigField("boolean", "FOSS_DISTRIBUTION", "false")
         buildConfigField("boolean", "SYSTEM_WEBVIEW_ONLY", "false")
         buildConfigField("boolean", "TRUST_USER_CERTIFICATES", "false")
@@ -349,6 +350,21 @@ android {
             buildConfigField("boolean", "TRUST_USER_CERTIFICATES", "true")
             matchingFallbacks += listOf("release")
         }
+
+        create("nightly") {
+            initWith(getByName("release"))
+            applicationIdSuffix = ".nightly"
+            buildConfigField("boolean", "NIGHTLY_BUILD", "true")
+            matchingFallbacks += listOf("release")
+        }
+
+        create("userCaNightly") {
+            initWith(getByName("userCaRelease"))
+            applicationIdSuffix = ".ca.nightly"
+            manifestPlaceholders["appLabel"] = "Candy CA Nightly"
+            buildConfigField("boolean", "NIGHTLY_BUILD", "true")
+            matchingFallbacks += listOf("release")
+        }
     }
 
     sourceSets {
@@ -372,6 +388,7 @@ android {
         )
         getByName("userCaDebug").res.srcDir("src/userCa/res")
         getByName("userCaRelease").res.srcDir("src/userCa/res")
+        getByName("userCaNightly").res.srcDir("src/userCa/res")
     }
 
     compileOptions {
@@ -401,7 +418,20 @@ androidComponents {
         variant.enable = variant.productFlavors.toMap()["distribution"] == "full"
     }
 
+    beforeVariants(selector().withBuildType("userCaNightly")) { variant ->
+        variant.enable = variant.productFlavors.toMap()["distribution"] == "full"
+    }
+
     onVariants { variant ->
+        if (variant.buildType == "nightly") {
+            val appLabel = when (variant.productFlavors.toMap()["distribution"]) {
+                "full" -> "Candy Browser Nightly"
+                "foss" -> "Candy FOSS Nightly"
+                "systemwebview" -> "Candy System WebView Nightly"
+                else -> error("Unknown nightly distribution: ${variant.name}")
+            }
+            variant.manifestPlaceholders.put("appLabel", appLabel)
+        }
         val capitalizedVariantName = variant.name.replaceFirstChar(Char::uppercaseChar)
         val generateLauncherShortcuts = tasks.register<GenerateLauncherShortcutResources>(
             "generate${capitalizedVariantName}LauncherShortcutResources",
@@ -607,70 +637,77 @@ tasks.matching {
     it.name == "preFullReleaseBuild" ||
         it.name == "preFullLocalReleaseBuild" ||
         it.name == "preFullUserCaReleaseBuild" ||
-        it.name == "preSystemwebviewReleaseBuild"
+        it.name == "preSystemwebviewReleaseBuild" ||
+        it.name == "preFullNightlyBuild" ||
+        it.name == "preFossNightlyBuild" ||
+        it.name == "preSystemwebviewNightlyBuild" ||
+        it.name == "preFullUserCaNightlyBuild"
 }.configureEach {
     dependsOn(validateReleaseSigning)
 }
 
-val verifySystemWebViewReleaseDependencies by tasks.registering {
-    group = "verification"
-    description = "Rejects GeckoView from the System WebView-only release runtime."
+listOf("release", "nightly").forEach { buildType ->
+    val capitalizedBuildType = buildType.replaceFirstChar(Char::uppercaseChar)
+    val verifySystemWebViewDependencies = tasks.register("verifySystemWebView${capitalizedBuildType}Dependencies") {
+        group = "verification"
+        description = "Rejects GeckoView from the System WebView-only release runtime."
 
-    doLast {
-        val violations = configurations.getByName("systemwebviewReleaseRuntimeClasspath")
-            .incoming
-            .resolutionResult
-            .allComponents
-            .mapNotNull { it.moduleVersion }
-            .filter { module -> module.group == "org.mozilla.geckoview" }
-            .map { it.toString() }
-            .sorted()
+        doLast {
+            val violations = configurations.getByName("systemwebview${capitalizedBuildType}RuntimeClasspath")
+                .incoming
+                .resolutionResult
+                .allComponents
+                .mapNotNull { it.moduleVersion }
+                .filter { module -> module.group == "org.mozilla.geckoview" }
+                .map { it.toString() }
+                .sorted()
 
-        check(violations.isEmpty()) {
-            "System WebView release contains GeckoView runtime dependencies: " +
-                violations.joinToString()
-        }
-    }
-}
-
-tasks.matching { it.name == "preSystemwebviewReleaseBuild" }.configureEach {
-    dependsOn(verifySystemWebViewReleaseDependencies)
-}
-
-val verifyFossReleaseDependencies by tasks.registering {
-    group = "verification"
-    description = "Rejects proprietary Google runtime dependencies from the FOSS release."
-
-    doLast {
-        val forbiddenGroups = listOf(
-            "com.google.android.datatransport",
-            "com.google.android.gms",
-            "com.google.android.odml",
-            "com.google.firebase",
-            "com.google.mlkit",
-        )
-        val violations = configurations.getByName("fossReleaseRuntimeClasspath")
-            .incoming
-            .resolutionResult
-            .allComponents
-            .mapNotNull { it.moduleVersion }
-            .filter { module ->
-                forbiddenGroups.any { group ->
-                    module.group == group || module.group.startsWith("$group.")
-                }
+            check(violations.isEmpty()) {
+                "System WebView release contains GeckoView runtime dependencies: " +
+                    violations.joinToString()
             }
-            .map { it.toString() }
-            .sorted()
-
-        check(violations.isEmpty()) {
-            "FOSS release contains forbidden Google runtime dependencies: " +
-                violations.joinToString()
         }
     }
-}
 
-tasks.matching { it.name == "preFossReleaseBuild" }.configureEach {
-    dependsOn(verifyFossReleaseDependencies)
+    tasks.matching { it.name == "preSystemwebview${capitalizedBuildType}Build" }.configureEach {
+        dependsOn(verifySystemWebViewDependencies)
+    }
+
+    val verifyFossDependencies = tasks.register("verifyFoss${capitalizedBuildType}Dependencies") {
+        group = "verification"
+        description = "Rejects proprietary Google runtime dependencies from the FOSS release."
+
+        doLast {
+            val forbiddenGroups = listOf(
+                "com.google.android.datatransport",
+                "com.google.android.gms",
+                "com.google.android.odml",
+                "com.google.firebase",
+                "com.google.mlkit",
+            )
+            val violations = configurations.getByName("foss${capitalizedBuildType}RuntimeClasspath")
+                .incoming
+                .resolutionResult
+                .allComponents
+                .mapNotNull { it.moduleVersion }
+                .filter { module ->
+                    forbiddenGroups.any { group ->
+                        module.group == group || module.group.startsWith("$group.")
+                    }
+                }
+                .map { it.toString() }
+                .sorted()
+
+            check(violations.isEmpty()) {
+                "FOSS release contains forbidden Google runtime dependencies: " +
+                    violations.joinToString()
+            }
+        }
+    }
+
+    tasks.matching { it.name == "preFoss${capitalizedBuildType}Build" }.configureEach {
+        dependsOn(verifyFossDependencies)
+    }
 }
 
 val geckoViewDependency = "org.mozilla.geckoview:geckoview:157.0.20260924084938"

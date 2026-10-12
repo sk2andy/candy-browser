@@ -341,10 +341,12 @@ Candy Browser requires Android 13 (API 33) or newer.
 
 [Download Candy Browser](https://github.com/sk2andy/candy-browser/releases)
 
-Standard and User CA production builds check GitHub for updates at startup and offer a signed APK
-for download. Standard installs on ARM64 devices prefer the smaller ARM64 APK and fall back to the
-universal APK when needed. Both use the same application ID, version, and signing key, so either can
-update an existing standard install. The FOSS build disables this updater. Android still requires
+Standard, System WebView, and User CA production builds check GitHub for updates at startup and
+offer a signed APK for download. Stable installs receive stable releases; Nightly installs receive
+only Nightly prereleases. Standard installs on ARM64 devices prefer the smaller ARM64 APK and fall
+back to the universal APK when needed. Both standard APKs use the same application ID, version, and
+signing key, so either can update an existing standard install. The FOSS build disables this updater
+in both channels; use F-Droid for stable FOSS or Obtainium for the GitHub APKs. Android still requires
 you to open a downloaded file and approve installation.
 
 ### Candy Sync extensions
@@ -358,15 +360,47 @@ Install the desktop companion for self-hosted, end-to-end encrypted tab synchron
 Both clients require your own Candy Sync server; see [Start Candy Sync](#start-candy-sync) for setup.
 For local development, [build and load the extension](docs/sync/extension.md).
 
+### Nightly builds
+
+Nightly builds publish to [GitHub Releases](https://github.com/sk2andy/candy-browser/releases) at
+**00:00 UTC daily (02:00 CEST; 01:00 CET in winter)** when `main` has new commits since the last
+successfully published Nightly. GitHub may start scheduled jobs later than the requested time.
+Each build is a signed, optimized prerelease with an immutable
+`v<base-version>-nightly.<UTC YYYYMMDDHHmm>` tag. Nightlies do not publish to Google Play.
+
+| Variant | Stable application ID | Nightly application ID | Nightly launcher name |
+| --- | --- | --- | --- |
+| Standard | `dev.sk2andy.materialbrowser` | `dev.sk2andy.materialbrowser.nightly` | Candy Browser Nightly |
+| FOSS | `dev.sk2andy.materialbrowser.foss` | `dev.sk2andy.materialbrowser.foss.nightly` | Candy FOSS Nightly |
+| System WebView | `dev.sk2andy.materialbrowser.systemwebview` | `dev.sk2andy.materialbrowser.systemwebview.nightly` | Candy System WebView Nightly |
+| User CA | `dev.sk2andy.materialbrowser.ca` | `dev.sk2andy.materialbrowser.ca.nightly` | Candy CA Nightly |
+
+Stable and Nightly can stay installed side by side. Their profiles, settings, and caches remain
+independent. Installing Nightly starts with fresh app data; it does not replace or migrate a stable
+install. Nightly update prompts keep the installed variant and prefer ARM64 for standard builds.
+
 ### Obtainium
 
-Use the filtered setup link so Obtainium always selects the standard certificate-trust channel:
+Choose both the variant and release channel below. Each setup link fixes the APK filter, package
+ID, release-title filter, prerelease setting, and date sorting. Stable links exclude prereleases;
+Nightly links include prereleases and select only Candy Browser Nightly releases.
 
-<a href="https://apps.obtainium.imranr.dev/redirect?r=obtainium%3A%2F%2Fapp%2F%7B%22id%22%3A%22dev.sk2andy.materialbrowser%22%2C%22url%22%3A%22https%3A%2F%2Fgithub.com%2Fsk2andy%2Fcandy-browser%22%2C%22author%22%3A%22sk2andy%22%2C%22name%22%3A%22Candy%20Browser%22%2C%22preferredApkIndex%22%3A0%2C%22additionalSettings%22%3A%22%7B%5C%22apkFilterRegEx%5C%22%3A%5C%22%5ECandyBrowser-v%5B0-9%5D%2B(%3F%3A%5C%5C%5C%5C.%5B0-9%5D%2B)%7B1%2C2%7D-release%5C%5C%5C%5C.apk%24%5C%22%7D%22%7D"><img src="https://raw.githubusercontent.com/ImranR98/Obtainium/main/assets/graphics/badge_obtainium.png" height="48" alt="Get it on Obtainium"></a>
+<a href="https://apps.obtainium.imranr.dev/redirect?r=obtainium%3A%2F%2Fapp%2F%7B%22id%22%3A%22dev.sk2andy.materialbrowser%22%2C%22url%22%3A%22https%3A%2F%2Fgithub.com%2Fsk2andy%2Fcandy-browser%22%2C%22author%22%3A%22sk2andy%22%2C%22name%22%3A%22Candy%20Browser%22%2C%22preferredApkIndex%22%3A0%2C%22additionalSettings%22%3A%22%7B%5C%22includePrereleases%5C%22%3Afalse%2C%5C%22filterReleaseTitlesByRegEx%5C%22%3A%5C%22%5ECandy%20Browser%20v%5B0-9%5D%2B%28%3F%3A%5C%5C%5C%5C.%5B0-9%5D%2B%29%7B1%2C2%7D%24%5C%22%2C%5C%22apkFilterRegEx%5C%22%3A%5C%22%5ECandyBrowser-v%5B0-9%5D%2B%28%3F%3A%5C%5C%5C%5C.%5B0-9%5D%2B%29%7B1%2C2%7D-release%5C%5C%5C%5C.apk%24%5C%22%2C%5C%22sortMethodChoice%5C%22%3A%5C%22date%5C%22%7D%22%7D"><img src="https://raw.githubusercontent.com/ImranR98/Obtainium/main/assets/graphics/badge_obtainium.png" height="48" alt="Get Stable Candy Browser on Obtainium"></a>
 
-The standard and User CA channels use separate application IDs, so both can stay installed and keep
-independent profiles, settings, and caches. Keep the asset filter: it prevents Obtainium from
-selecting a different channel than the configured app.
+| Variant | Stable | Nightly |
+| --- | --- | --- |
+| Standard · universal | [Stable](https://apps.obtainium.imranr.dev/redirect?r=obtainium%3A%2F%2Fapp%2F%7B%22id%22%3A%22dev.sk2andy.materialbrowser%22%2C%22url%22%3A%22https%3A%2F%2Fgithub.com%2Fsk2andy%2Fcandy-browser%22%2C%22author%22%3A%22sk2andy%22%2C%22name%22%3A%22Candy%20Browser%22%2C%22preferredApkIndex%22%3A0%2C%22additionalSettings%22%3A%22%7B%5C%22includePrereleases%5C%22%3Afalse%2C%5C%22filterReleaseTitlesByRegEx%5C%22%3A%5C%22%5ECandy%20Browser%20v%5B0-9%5D%2B%28%3F%3A%5C%5C%5C%5C.%5B0-9%5D%2B%29%7B1%2C2%7D%24%5C%22%2C%5C%22apkFilterRegEx%5C%22%3A%5C%22%5ECandyBrowser-v%5B0-9%5D%2B%28%3F%3A%5C%5C%5C%5C.%5B0-9%5D%2B%29%7B1%2C2%7D-release%5C%5C%5C%5C.apk%24%5C%22%2C%5C%22sortMethodChoice%5C%22%3A%5C%22date%5C%22%7D%22%7D) | [Nightly](https://apps.obtainium.imranr.dev/redirect?r=obtainium%3A%2F%2Fapp%2F%7B%22id%22%3A%22dev.sk2andy.materialbrowser.nightly%22%2C%22url%22%3A%22https%3A%2F%2Fgithub.com%2Fsk2andy%2Fcandy-browser%22%2C%22author%22%3A%22sk2andy%22%2C%22name%22%3A%22Candy%20Browser%20Nightly%22%2C%22preferredApkIndex%22%3A0%2C%22additionalSettings%22%3A%22%7B%5C%22includePrereleases%5C%22%3Atrue%2C%5C%22filterReleaseTitlesByRegEx%5C%22%3A%5C%22%5ECandy%20Browser%20Nightly%20%5C%22%2C%5C%22apkFilterRegEx%5C%22%3A%5C%22%5ECandyBrowser-v%5B0-9%5D%2B%28%3F%3A%5C%5C%5C%5C.%5B0-9%5D%2B%29%7B1%2C2%7D-nightly%5C%5C%5C%5C.%5B0-9%5D%7B12%7D-release%5C%5C%5C%5C.apk%24%5C%22%2C%5C%22sortMethodChoice%5C%22%3A%5C%22date%5C%22%7D%22%7D) |
+| Standard · ARM64 | [Stable](https://apps.obtainium.imranr.dev/redirect?r=obtainium%3A%2F%2Fapp%2F%7B%22id%22%3A%22dev.sk2andy.materialbrowser%22%2C%22url%22%3A%22https%3A%2F%2Fgithub.com%2Fsk2andy%2Fcandy-browser%22%2C%22author%22%3A%22sk2andy%22%2C%22name%22%3A%22Candy%20Browser%22%2C%22preferredApkIndex%22%3A0%2C%22additionalSettings%22%3A%22%7B%5C%22includePrereleases%5C%22%3Afalse%2C%5C%22filterReleaseTitlesByRegEx%5C%22%3A%5C%22%5ECandy%20Browser%20v%5B0-9%5D%2B%28%3F%3A%5C%5C%5C%5C.%5B0-9%5D%2B%29%7B1%2C2%7D%24%5C%22%2C%5C%22apkFilterRegEx%5C%22%3A%5C%22%5ECandyBrowser-v%5B0-9%5D%2B%28%3F%3A%5C%5C%5C%5C.%5B0-9%5D%2B%29%7B1%2C2%7D-arm64-v8a-release%5C%5C%5C%5C.apk%24%5C%22%2C%5C%22sortMethodChoice%5C%22%3A%5C%22date%5C%22%7D%22%7D) | [Nightly](https://apps.obtainium.imranr.dev/redirect?r=obtainium%3A%2F%2Fapp%2F%7B%22id%22%3A%22dev.sk2andy.materialbrowser.nightly%22%2C%22url%22%3A%22https%3A%2F%2Fgithub.com%2Fsk2andy%2Fcandy-browser%22%2C%22author%22%3A%22sk2andy%22%2C%22name%22%3A%22Candy%20Browser%20Nightly%22%2C%22preferredApkIndex%22%3A0%2C%22additionalSettings%22%3A%22%7B%5C%22includePrereleases%5C%22%3Atrue%2C%5C%22filterReleaseTitlesByRegEx%5C%22%3A%5C%22%5ECandy%20Browser%20Nightly%20%5C%22%2C%5C%22apkFilterRegEx%5C%22%3A%5C%22%5ECandyBrowser-v%5B0-9%5D%2B%28%3F%3A%5C%5C%5C%5C.%5B0-9%5D%2B%29%7B1%2C2%7D-nightly%5C%5C%5C%5C.%5B0-9%5D%7B12%7D-arm64-v8a-release%5C%5C%5C%5C.apk%24%5C%22%2C%5C%22sortMethodChoice%5C%22%3A%5C%22date%5C%22%7D%22%7D) |
+| FOSS | [Stable](https://apps.obtainium.imranr.dev/redirect?r=obtainium%3A%2F%2Fapp%2F%7B%22id%22%3A%22dev.sk2andy.materialbrowser.foss%22%2C%22url%22%3A%22https%3A%2F%2Fgithub.com%2Fsk2andy%2Fcandy-browser%22%2C%22author%22%3A%22sk2andy%22%2C%22name%22%3A%22Candy%20FOSS%22%2C%22preferredApkIndex%22%3A0%2C%22additionalSettings%22%3A%22%7B%5C%22includePrereleases%5C%22%3Afalse%2C%5C%22filterReleaseTitlesByRegEx%5C%22%3A%5C%22%5ECandy%20Browser%20v%5B0-9%5D%2B%28%3F%3A%5C%5C%5C%5C.%5B0-9%5D%2B%29%7B1%2C2%7D%24%5C%22%2C%5C%22apkFilterRegEx%5C%22%3A%5C%22%5ECandyBrowser-v%5B0-9%5D%2B%28%3F%3A%5C%5C%5C%5C.%5B0-9%5D%2B%29%7B1%2C2%7D-foss%28%3F%3A-github%29%3F-release%5C%5C%5C%5C.apk%24%5C%22%2C%5C%22sortMethodChoice%5C%22%3A%5C%22date%5C%22%7D%22%7D) | [Nightly](https://apps.obtainium.imranr.dev/redirect?r=obtainium%3A%2F%2Fapp%2F%7B%22id%22%3A%22dev.sk2andy.materialbrowser.foss.nightly%22%2C%22url%22%3A%22https%3A%2F%2Fgithub.com%2Fsk2andy%2Fcandy-browser%22%2C%22author%22%3A%22sk2andy%22%2C%22name%22%3A%22Candy%20FOSS%20Nightly%22%2C%22preferredApkIndex%22%3A0%2C%22additionalSettings%22%3A%22%7B%5C%22includePrereleases%5C%22%3Atrue%2C%5C%22filterReleaseTitlesByRegEx%5C%22%3A%5C%22%5ECandy%20Browser%20Nightly%20%5C%22%2C%5C%22apkFilterRegEx%5C%22%3A%5C%22%5ECandyBrowser-v%5B0-9%5D%2B%28%3F%3A%5C%5C%5C%5C.%5B0-9%5D%2B%29%7B1%2C2%7D-nightly%5C%5C%5C%5C.%5B0-9%5D%7B12%7D-foss-release%5C%5C%5C%5C.apk%24%5C%22%2C%5C%22sortMethodChoice%5C%22%3A%5C%22date%5C%22%7D%22%7D) |
+| System WebView | [Stable](https://apps.obtainium.imranr.dev/redirect?r=obtainium%3A%2F%2Fapp%2F%7B%22id%22%3A%22dev.sk2andy.materialbrowser.systemwebview%22%2C%22url%22%3A%22https%3A%2F%2Fgithub.com%2Fsk2andy%2Fcandy-browser%22%2C%22author%22%3A%22sk2andy%22%2C%22name%22%3A%22Candy%20System%20WebView%22%2C%22preferredApkIndex%22%3A0%2C%22additionalSettings%22%3A%22%7B%5C%22includePrereleases%5C%22%3Afalse%2C%5C%22filterReleaseTitlesByRegEx%5C%22%3A%5C%22%5ECandy%20Browser%20v%5B0-9%5D%2B%28%3F%3A%5C%5C%5C%5C.%5B0-9%5D%2B%29%7B1%2C2%7D%24%5C%22%2C%5C%22apkFilterRegEx%5C%22%3A%5C%22%5ECandyBrowser-v%5B0-9%5D%2B%28%3F%3A%5C%5C%5C%5C.%5B0-9%5D%2B%29%7B1%2C2%7D-systemwebview-release%5C%5C%5C%5C.apk%24%5C%22%2C%5C%22sortMethodChoice%5C%22%3A%5C%22date%5C%22%7D%22%7D) | [Nightly](https://apps.obtainium.imranr.dev/redirect?r=obtainium%3A%2F%2Fapp%2F%7B%22id%22%3A%22dev.sk2andy.materialbrowser.systemwebview.nightly%22%2C%22url%22%3A%22https%3A%2F%2Fgithub.com%2Fsk2andy%2Fcandy-browser%22%2C%22author%22%3A%22sk2andy%22%2C%22name%22%3A%22Candy%20System%20WebView%20Nightly%22%2C%22preferredApkIndex%22%3A0%2C%22additionalSettings%22%3A%22%7B%5C%22includePrereleases%5C%22%3Atrue%2C%5C%22filterReleaseTitlesByRegEx%5C%22%3A%5C%22%5ECandy%20Browser%20Nightly%20%5C%22%2C%5C%22apkFilterRegEx%5C%22%3A%5C%22%5ECandyBrowser-v%5B0-9%5D%2B%28%3F%3A%5C%5C%5C%5C.%5B0-9%5D%2B%29%7B1%2C2%7D-nightly%5C%5C%5C%5C.%5B0-9%5D%7B12%7D-systemwebview-release%5C%5C%5C%5C.apk%24%5C%22%2C%5C%22sortMethodChoice%5C%22%3A%5C%22date%5C%22%7D%22%7D) |
+| User CA | [Stable](https://apps.obtainium.imranr.dev/redirect?r=obtainium%3A%2F%2Fapp%2F%7B%22id%22%3A%22dev.sk2andy.materialbrowser.ca%22%2C%22url%22%3A%22https%3A%2F%2Fgithub.com%2Fsk2andy%2Fcandy-browser%22%2C%22author%22%3A%22sk2andy%22%2C%22name%22%3A%22Candy%20CA%22%2C%22preferredApkIndex%22%3A0%2C%22additionalSettings%22%3A%22%7B%5C%22includePrereleases%5C%22%3Afalse%2C%5C%22filterReleaseTitlesByRegEx%5C%22%3A%5C%22%5ECandy%20Browser%20v%5B0-9%5D%2B%28%3F%3A%5C%5C%5C%5C.%5B0-9%5D%2B%29%7B1%2C2%7D%24%5C%22%2C%5C%22apkFilterRegEx%5C%22%3A%5C%22%5ECandyBrowser-v%5B0-9%5D%2B%28%3F%3A%5C%5C%5C%5C.%5B0-9%5D%2B%29%7B1%2C2%7D-ca-release%5C%5C%5C%5C.apk%24%5C%22%2C%5C%22sortMethodChoice%5C%22%3A%5C%22date%5C%22%7D%22%7D) | [Nightly](https://apps.obtainium.imranr.dev/redirect?r=obtainium%3A%2F%2Fapp%2F%7B%22id%22%3A%22dev.sk2andy.materialbrowser.ca.nightly%22%2C%22url%22%3A%22https%3A%2F%2Fgithub.com%2Fsk2andy%2Fcandy-browser%22%2C%22author%22%3A%22sk2andy%22%2C%22name%22%3A%22Candy%20CA%20Nightly%22%2C%22preferredApkIndex%22%3A0%2C%22additionalSettings%22%3A%22%7B%5C%22includePrereleases%5C%22%3Atrue%2C%5C%22filterReleaseTitlesByRegEx%5C%22%3A%5C%22%5ECandy%20Browser%20Nightly%20%5C%22%2C%5C%22apkFilterRegEx%5C%22%3A%5C%22%5ECandyBrowser-v%5B0-9%5D%2B%28%3F%3A%5C%5C%5C%5C.%5B0-9%5D%2B%29%7B1%2C2%7D-nightly%5C%5C%5C%5C.%5B0-9%5D%7B12%7D-ca-release%5C%5C%5C%5C.apk%24%5C%22%2C%5C%22sortMethodChoice%5C%22%3A%5C%22date%5C%22%7D%22%7D) |
+
+Standard universal and ARM64 are alternative APKs for the same app; choose ARM64 on compatible
+devices. Keep the supplied filters when editing Obtainium settings so updates stay on the chosen
+variant and channel. FOSS Nightly updates use Obtainium because Candy's FOSS updater stays disabled.
+Stable FOSS accepts both the ordinary GitHub FOSS APK and the reproducible F-Droid reference APK;
+both share the stable FOSS package, version, and signing key. Nightly FOSS selects only its Nightly
+APK.
 
 ### F-Droid
 
@@ -387,14 +421,16 @@ and cannot become versions of the new package. Submission files and maintainer s
 so F-Droid can verify its source build and preserve update compatibility with the upstream signing
 key.
 
-Releases contain four APK channels plus an architecture-optimized standard APK:
+Releases contain four APK channels plus an architecture-optimized standard APK. Stable releases
+also publish a separate reproducible F-Droid reference:
 
 | APK suffix | Certificate trust | Intended use |
 | --- | --- | --- |
 | `-release.apk` | Android system CAs only | Universal compatibility fallback |
 | `-arm64-v8a-release.apk` | Android system CAs only | Recommended smaller APK for ARM64 devices |
 | `-systemwebview-release.apk` | Android system CAs only | Small, separately installed build using only Android System WebView |
-| `-foss-release.apk` | Android system CAs only | F-Droid reproducible-build reference without proprietary Google integrations |
+| `-foss-github-release.apk` | Android system CAs only | Ordinary stable GitHub FOSS build without proprietary Google integrations |
+| `-foss-release.apk` | Android system CAs only | Stable: reproducible F-Droid reference; Nightly: regular FOSS build |
 | `-ca-release.apk` | System CAs plus every CA in Android's user store | Explicit opt-in for HTTPS filtering/proxy tools such as AdGuard |
 
 Both standard APKs use `dev.sk2andy.materialbrowser` and the same release signature. The System
@@ -416,8 +452,8 @@ install the User CA APK when you trust every CA in Android's user credential sto
 that controls its private key. APK signature verification still protects Candy updates from APKs
 signed by another key.
 
-Advanced users who intentionally need this channel can use the
-[filtered User CA Obtainium setup](https://apps.obtainium.imranr.dev/redirect?r=obtainium%3A%2F%2Fapp%2F%7B%22id%22%3A%22dev.sk2andy.materialbrowser.ca%22%2C%22url%22%3A%22https%3A%2F%2Fgithub.com%2Fsk2andy%2Fcandy-browser%22%2C%22author%22%3A%22sk2andy%22%2C%22name%22%3A%22Candy%20CA%22%2C%22preferredApkIndex%22%3A0%2C%22additionalSettings%22%3A%22%7B%5C%22apkFilterRegEx%5C%22%3A%5C%22%5ECandyBrowser-v%5B0-9%5D%2B(%3F%3A%5C%5C%5C%5C.%5B0-9%5D%2B)%7B1%2C2%7D-ca-release%5C%5C%5C%5C.apk%24%5C%22%7D%22%7D).
+Advanced users who intentionally need this channel can choose the **User CA** Stable or Nightly
+setup in the [Obtainium table](#obtainium).
 
 ## Build from source
 

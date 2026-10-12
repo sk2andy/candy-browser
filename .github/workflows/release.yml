@@ -300,10 +300,12 @@ jobs:
 
           release_apk="CandyBrowser-${RELEASE_TAG}-release.apk"
           arm64_release_apk="CandyBrowser-${RELEASE_TAG}-arm64-v8a-release.apk"
+          foss_release_apk="CandyBrowser-${RELEASE_TAG}-foss-github-release.apk"
           systemwebview_release_apk="CandyBrowser-${RELEASE_TAG}-systemwebview-release.apk"
           user_ca_release_apk="CandyBrowser-${RELEASE_TAG}-ca-release.apk"
           cp "$RUNNER_TEMP/candy-standard-universal-release.apk" "$release_apk"
           cp "$RUNNER_TEMP/candy-standard-arm64-v8a-release.apk" "$arm64_release_apk"
+          cp "app/build/outputs/apk/foss/release/app-foss-release.apk" "$foss_release_apk"
           cp "$RUNNER_TEMP/candy-systemwebview-release.apk" "$systemwebview_release_apk"
           cp \
             "app/build/outputs/apk/full/userCaRelease/app-full-userCaRelease.apk" \
@@ -318,6 +320,7 @@ jobs:
           for apk in \
             "$release_apk" \
             "$arm64_release_apk" \
+            "$foss_release_apk" \
             "$systemwebview_release_apk" \
             "$user_ca_release_apk"; do
             verification="$("$apksigner" verify --verbose --print-certs "$apk")"
@@ -374,6 +377,8 @@ jobs:
             echo "RELEASE_CHECKSUM=${release_apk}.sha256"
             echo "ARM64_RELEASE_APK=${arm64_release_apk}"
             echo "ARM64_RELEASE_CHECKSUM=${arm64_release_apk}.sha256"
+            echo "FOSS_RELEASE_APK=${foss_release_apk}"
+            echo "FOSS_RELEASE_CHECKSUM=${foss_release_apk}.sha256"
             echo "SYSTEM_WEBVIEW_RELEASE_APK=${systemwebview_release_apk}"
             echo "SYSTEM_WEBVIEW_RELEASE_CHECKSUM=${systemwebview_release_apk}.sha256"
             echo "USER_CA_RELEASE_APK=${user_ca_release_apk}"
@@ -402,6 +407,8 @@ jobs:
             "$RELEASE_CHECKSUM" \
             "$ARM64_RELEASE_APK" \
             "$ARM64_RELEASE_CHECKSUM" \
+            "$FOSS_RELEASE_APK" \
+            "$FOSS_RELEASE_CHECKSUM" \
             "$SYSTEM_WEBVIEW_RELEASE_APK" \
             "$SYSTEM_WEBVIEW_RELEASE_CHECKSUM" \
             "$USER_CA_RELEASE_APK" \
