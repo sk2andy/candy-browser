@@ -1,5 +1,6 @@
 import { removeEndpointPermission, requestSetupPermissions, requestSyncPermissions } from "../browser-adapters/permissions.js";
 import { SYNC_TYPES, type StoredSettings, type SyncSelection, type SyncStatus, type VaultSecrets } from "../core/models.js";
+import { DEFAULT_IDLE_LOCK_MINUTES, isIdleLockMinutes, isLockPolicy, lockPolicy } from "../core/lock-rules.js";
 import { defaultDeviceIconId, DEVICE_ICON_CATALOG, DEVICE_ICON_IDS } from "../core/device-icon-catalog.js";
 import { endpointPermissionOrigin, endpointTransportWarning, normalizeEndpoint } from "../core/endpoint-rules.js";
 import {
@@ -17,11 +18,9 @@ import { bytesToBase64Url, utf8 } from "../crypto/encoding.js";
 import { extensionApi } from "../platform/webextension.js";
 import { CandySyncApiClient } from "../protocol/api-client.js";
 import {
-  clearSessionSecrets,
   loadSessionSecrets,
   loadSettings,
   loadStatus,
-  saveSessionSecrets,
   saveSettings,
   saveStatus,
 } from "../storage/stores.js";
@@ -57,6 +56,30 @@ const statusCode = element<HTMLElement>("status-code");
 const statusMessage = element<HTMLElement>("status-message");
 const transportWarning = element<HTMLElement>("transport-warning");
 
+const lockPolicyInput = element<HTMLSelectElement>("lock-policy");
+const idleLockInput = element<HTMLInputElement>("idle-lock-minutes");
+const saveLockPolicyButton = element<HTMLButtonElement>("save-lock-policy");
+
+function renderLockPolicy(): void {
+  element<HTMLElement>("idle-lock-field").hidden = lockPolicyInput.value !== "idle";
+  idleLockInput.disabled = lockPolicyInput.disabled || lockPolicyInput.value !== "idle";
+  element<HTMLElement>("persistent-unlock-warning").hidden = lockPolicyInput.value !== "never";
+}
+
+function lockSettings() {
+  const policy = lockPolicyInput.value;
+  const minutes = Number(idleLockInput.value);
+  if (!isLockPolicy(policy) || (policy === "idle" && !isIdleLockMinutes(minutes))) {
+    throw new Error("Choose 1–1440 whole minutes for the inactivity timeout.");
+  }
+  return { lockPolicy: policy, idleLockMinutes: isIdleLockMinutes(minutes) ? minutes : DEFAULT_IDLE_LOCK_MINUTES };
+}
+
+async function backgroundRequest(message: Record<string, unknown>): Promise<void> {
+  const result = await extensionApi().runtime.sendMessage(message) as { ok?: boolean; error?: string };
+  if (!result?.ok) throw new Error(result?.error ?? "Sync settings could not be saved.");
+}
+
 let settings: StoredSettings | null = null;
 
 const permissionOrigin = (endpoint: string): string => endpointPermissionOrigin(endpoint);
@@ -66,7 +89,9 @@ function selection(): SyncSelection {
 }
 
 function setBusy(busy: boolean): void {
-  for (const button of [connectButton, unlockButton, saveSelectionButton, syncNowButton, lockButton]) button.disabled = busy;
+  for (const button of [connectButton, unlockButton, saveSelectionButton, syncNowButton, lockButton, saveLockPolicyButton]) button.disabled = busy;
+  lockPolicyInput.disabled = busy;
+  idleLockInput.disabled = busy || lockPolicyInput.value !== "idle";
 }
 
 function showFeedback(message: string, kind: "error" | "success" | "neutral" = "neutral"): void {
@@ -104,6 +129,10 @@ async function renderStatus(): Promise<void> {
 }
 
 function renderConfigured(config: StoredSettings): void {
+  lockPolicyInput.value = lockPolicy(config);
+  idleLockInput.value = String(config.idleLockMinutes ?? DEFAULT_IDLE_LOCK_MINUTES);
+  saveLockPolicyButton.hidden = false;
+  renderLockPolicy();
   endpointInput.value = config.endpoint;
   usernameInput.value = config.username;
   deviceNameInput.value = config.deviceName;
@@ -140,6 +169,7 @@ async function initialize(): Promise<void> {
   } else {
     deviceNameInput.value = `${navigator.userAgent.includes("Firefox") ? "Firefox" : "Chromium"} on this device`;
   }
+  renderLockPolicy();
   renderTransportWarning();
   await renderStatus();
 }
@@ -155,6 +185,7 @@ setupForm.addEventListener("submit", async (event) => {
   let endpoint: string;
   try {
     endpoint = normalizeEndpoint(endpointInput.value);
+    lockSettings();
   } catch (error) {
     showFeedback(error instanceof Error ? error.message : "Endpoint is invalid.", "error");
     return;
@@ -238,6 +269,7 @@ setupForm.addEventListener("submit", async (event) => {
     const vault = await createVault(passphrase, secrets);
     const nextSettings: StoredSettings = {
       schemaVersion: 1,
+      ...lockSettings(),
       endpoint,
       username: usernameInput.value.trim(),
       deviceName: deviceNameInput.value.trim(),
@@ -251,7 +283,7 @@ setupForm.addEventListener("submit", async (event) => {
     };
     await saveSettings(nextSettings);
     committed = true;
-    await saveSessionSecrets(secrets);
+    await backgroundRequest({ type: "UNLOCK_SESSION", secrets });
     await saveStatus({ code: "ready", message: "Device enrolled; the first encrypted sync is starting.", updatedAt: new Date().toISOString() });
     settings = nextSettings;
     renderConfigured(nextSettings);
@@ -287,8 +319,7 @@ unlockButton.addEventListener("click", async () => {
   passphraseInput.value = "";
   try {
     const secrets = await unlockVault(passphrase, settings.vault);
-    await saveSessionSecrets(secrets);
-    await saveStatus({ code: "ready", message: "Keys unlocked for this browser session.", updatedAt: new Date().toISOString() });
+    await backgroundRequest({ type: "UNLOCK_SESSION", secrets });
     showFeedback("Session unlocked. The passphrase was discarded.", "success");
     await extensionApi().runtime.sendMessage({ type: "SYNC_NOW" });
   } catch {
@@ -330,11 +361,28 @@ syncNowButton.addEventListener("click", async () => {
   }
 });
 
+lockPolicyInput.addEventListener("change", renderLockPolicy);
+
+saveLockPolicyButton.addEventListener("click", async () => {
+  setBusy(true);
+  try {
+    const next = lockSettings();
+    await backgroundRequest({ type: "UPDATE_LOCK_POLICY", policy: next.lockPolicy, minutes: next.idleLockMinutes });
+    settings = await loadSettings();
+    showFeedback("Lock settings saved.", "success");
+  } catch (error) {
+    showFeedback(error instanceof Error ? error.message : "Lock settings could not be saved.", "error");
+  } finally { setBusy(false); await renderStatus(); }
+});
+
 lockButton.addEventListener("click", async () => {
-  await clearSessionSecrets();
-  await saveStatus({ code: "locked", message: "Local keys were removed from session storage.", updatedAt: new Date().toISOString() });
-  showFeedback("Session gesperrt.", "success");
-  await renderStatus();
+  setBusy(true);
+  try {
+    await backgroundRequest({ type: "LOCK_SYNC" });
+    showFeedback("Session gesperrt.", "success");
+  } catch (error) {
+    showFeedback(error instanceof Error ? error.message : "Sync could not be locked.", "error");
+  } finally { setBusy(false); await renderStatus(); }
 });
 
 extensionApi().storage.onChanged.addListener((_changes, area) => {

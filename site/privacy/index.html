@@ -43,7 +43,7 @@
     <aside class="legal-aside">
       <p class="eyebrow">Candy Browser</p>
       <h1>Privacy Policy</h1>
-      <p>Last updated: 11 September 2026</p>
+      <p>Last updated: 12 October 2026</p>
       <nav aria-label="Privacy policy sections">
         <a href="#summary">Summary</a>
         <a href="#browser-data">Browser data</a>
@@ -102,7 +102,8 @@
       <section id="permissions">
         <h2>4. Browser extension permissions</h2>
         <dl class="legal-definitions">
-          <div><dt>Storage</dt><dd>Keeps settings, encrypted local vault data, encrypted pending changes, and redacted status.</dd></div>
+          <div><dt>Storage</dt><dd>Keeps settings, encrypted local vault data, encrypted pending changes, and redacted status. Choosing “Never” for extension locking also remembers decrypted keys and the device token locally across browser restarts; the passphrase is never saved. Manual Lock removes those remembered secrets.</dd></div>
+          <div><dt>Idle</dt><dd>Detects system inactivity locally for your chosen automatic lock timeout. Activity state is not sent to the server or developer.</dd></div>
           <div><dt>Alarms</dt><dd>Resumes periodic recovery when realtime delivery is suspended or unavailable.</dd></div>
           <div><dt>Tabs</dt><dd>Reads and applies eligible tab state only after tab synchronization is selected.</dd></div>
           <div><dt>Tab groups</dt><dd>Reads supported group assignments only after group synchronization is selected.</dd></div>
@@ -127,7 +128,7 @@
 
       <section id="security">
         <h2>7. Security</h2>
-        <p>Candy Sync uses Argon2id for passphrase-based key derivation, AES-256-GCM for authenticated encryption, HKDF-SHA-256 for key separation, and independently generated P-256 device identities. Secrets stored by the extension are kept inside an encrypted local vault.</p>
+        <p>Candy Sync uses Argon2id for passphrase-based key derivation, AES-256-GCM for authenticated encryption, HKDF-SHA-256 for key separation, and independently generated P-256 device identities. Secrets stored by the extension are kept inside an encrypted local vault by default. The optional “Never” lock setting additionally persists decrypted keys and the device token in the browser profile, which weakens protection against local profile access.</p>
         <p>No system can guarantee absolute security. An unlocked browser profile, device malware, browser debugging, a compromised extension update, or an untrusted server transport may expose information outside Candy's encryption boundary.</p>
       </section>
 

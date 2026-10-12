@@ -1158,6 +1158,11 @@
     <string name="external_link_preview_copy_link">Link kopieren</string>
     <string name="external_link_preview_copy_label">Candy-Link</string>
     <string name="toast_link_copied">Link kopiert</string>
+    <string name="sync_extension_stores_title">Candy-Sync-Erweiterungen</string>
+    <string name="sync_extension_stores_summary">Installiere Candy Sync im Desktop-Browser oder teile den Store-Link.</string>
+    <string name="sync_extension_chrome_store">Chrome Web Store</string>
+    <string name="sync_extension_firefox_store">Firefox Add-ons</string>
+    <string name="sync_extension_share_link">Link zu %1$s teilen</string>
     <string name="sync_settings_title">Synchronisierung</string>
     <string name="settings_home_sync_summary">Selbst gehostete, Ende-zu-Ende-verschlüsselte Geräte-Tabs</string>
     <string name="sync_setup_guide_title">Candy Sync einrichten</string>

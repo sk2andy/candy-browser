@@ -10,7 +10,7 @@
     "96": "icons/icon-96.png",
     "128": "icons/icon-128.png"
   },
-  "permissions": ["alarms", "storage"],
+  "permissions": ["alarms", "storage", "idle"],
   "optional_permissions": ["tabs", "tabGroups"],
   "optional_host_permissions": [
     "https://*/*",

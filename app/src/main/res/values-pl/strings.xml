@@ -1212,6 +1212,11 @@
     <string name="external_link_preview_copy_link">Kopiuj link</string>
     <string name="external_link_preview_copy_label">Link Candy</string>
     <string name="toast_link_copied">Link skopiowany</string>
+    <string name="sync_extension_stores_title">Rozszerzenia Candy Sync</string>
+    <string name="sync_extension_stores_summary">Zainstaluj Candy Sync w przeglądarce na komputerze lub udostępnij link do sklepu.</string>
+    <string name="sync_extension_chrome_store">Chrome Web Store</string>
+    <string name="sync_extension_firefox_store">Firefox Add-ons</string>
+    <string name="sync_extension_share_link">Udostępnij link do %1$s</string>
     <string name="sync_settings_title">Synchronizacja</string>
     <string name="settings_home_sync_summary">Samodzielny hosting, karty urządzeń szyfrowane od końca do końca</string>
     <string name="sync_setup_guide_title">Skonfiguruj Candy Sync</string>

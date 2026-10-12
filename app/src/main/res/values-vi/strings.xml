@@ -1170,6 +1170,11 @@
     <string name="external_link_preview_copy_link">Sao chép liên kết</string>
     <string name="external_link_preview_copy_label">Candy liên kết</string>
     <string name="toast_link_copied">Liên kết được sao chép</string>
+    <string name="sync_extension_stores_title">Tiện ích Candy Sync</string>
+    <string name="sync_extension_stores_summary">Cài đặt Candy Sync trong trình duyệt máy tính hoặc chia sẻ liên kết cửa hàng.</string>
+    <string name="sync_extension_chrome_store">Chrome Web Store</string>
+    <string name="sync_extension_firefox_store">Firefox Add-ons</string>
+    <string name="sync_extension_share_link">Chia sẻ liên kết %1$s</string>
     <string name="sync_settings_title">Đồng bộ</string>
     <string name="settings_home_sync_summary">Các tab thiết bị tự lưu trữ, mã hóa từ đầu đến cuối</string>
     <string name="sync_setup_guide_title">Thiết lập Candy Sync</string>

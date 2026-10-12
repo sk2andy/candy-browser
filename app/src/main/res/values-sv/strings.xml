@@ -1185,6 +1185,11 @@
     <string name="external_link_preview_copy_link">Kopiera länk</string>
     <string name="external_link_preview_copy_label">Candy länk</string>
     <string name="toast_link_copied">Länk kopierad</string>
+    <string name="sync_extension_stores_title">Candy Sync-tillägg</string>
+    <string name="sync_extension_stores_summary">Installera Candy Sync i datorns webbläsare eller dela butikslänken.</string>
+    <string name="sync_extension_chrome_store">Chrome Web Store</string>
+    <string name="sync_extension_firefox_store">Firefox Add-ons</string>
+    <string name="sync_extension_share_link">Dela länk till %1$s</string>
     <string name="sync_settings_title">Synkronisera</string>
     <string name="settings_home_sync_summary">Självvärderade, änd-till-slut-krypterade enhetsflikar</string>
     <string name="sync_setup_guide_title">Upprätta Candy Sync</string>

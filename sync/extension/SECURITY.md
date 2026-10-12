@@ -79,8 +79,8 @@ ciphertext instead of encrypting again under the same nonce.
 The extension creates every device key pair locally with
 `crypto.subtle.generateKey`. It exports the public key as DER SubjectPublicKeyInfo
 and the private key as PKCS8. Only the SPKI public key and its SHA-256 fingerprint
-reach the server. PKCS8 bytes exist persistently only inside the encrypted local
-vault.
+reach the server. PKCS8 bytes persist inside the encrypted local vault by default. Explicit Never
+mode additionally persists unlocked vault secrets in the browser profile.
 
 On first enrollment, the extension generates a random 32-byte workspace key and
 encrypts it into an immutable recovery envelope under the passphrase-derived
@@ -113,18 +113,32 @@ envelopes therefore cannot be swapped across device records or between domains.
 
 | Area | Contents |
 | --- | --- |
-| `storage.local` | Endpoint, username, device label, selection, IDs, separate v1/v2 cursors and revisions, encrypted vault, durable encrypted outboxes, reducer tombstones, stable browser-tab UUID map, redacted status |
+| `storage.local` | Endpoint, username, device label, selection, IDs, separate v1/v2 cursors and revisions, encrypted vault, durable encrypted outboxes, reducer tombstones, stable browser-tab UUID map, redacted status; explicit Never mode additionally stores unlocked vault secrets |
 | `storage.session` | Decrypted vault secrets for the current browser session |
 | `storage.sync` | Never used |
 
-`storage.local` is not itself encrypted; all secrets stored there remain inside
-the AES-GCM vault envelope. Vault plaintext contains the workspace key, device
+`storage.local` is not itself encrypted. By default, secrets stored there remain
+inside the AES-GCM vault envelope. Explicit Never mode stores a separate unlocked
+copy after a visible warning about access to the browser profile. Vault plaintext contains the workspace key, device
 private-key PKCS8 bytes, device token, workspace ID, and device ID.
 
 `storage.session` is memory-backed, restricted to `TRUSTED_CONTEXTS` where the
 browser exposes that setting, and cleared when the browser exits. It survives a
 service-worker suspension but not a browser restart. The extension contains no
 content scripts and no web-accessible resources.
+
+The Options Page offers browser restart (default), input inactivity (1–1440
+minutes, default 30), and Never. Inactivity uses the browser idle API and local
+computer keyboard/pointer input; automated sync does not reset it. Idle events
+and checks before sync/local/realtime work enforce locking across worker
+suspension. Chrome also reports system lock; Firefox reports active/idle only.
+Idle mode requires re-unlock after browser restart. Never mode deliberately
+remembers unlocked workspace/private keys and the device token in `storage.local`
+across restarts; no passphrase is persisted. Manual Lock removes both copies,
+and switching away from Never removes the persistent copy. Lock/unlock and
+policy changes serialize with sync. Running operations finish before lock
+acknowledgement; realtime delivery then closes. Idle activity is not sent to
+the server or logged.
 
 ## Local security boundary
 

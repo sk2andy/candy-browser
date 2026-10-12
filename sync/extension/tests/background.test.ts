@@ -41,6 +41,7 @@ test("background serializes selection updates without losing revision or durable
   let runtimeListener: ((message: unknown, sender: unknown, respond: (value: unknown) => void) => boolean) | undefined;
   const event = { addListener: () => undefined };
   const fakeChrome = {
+    idle: { queryState: async () => "active", setDetectionInterval: () => undefined, onStateChanged: event },
     alarms: { get: async () => ({ name: "candy-sync-periodic" }), create: async () => undefined, onAlarm: event },
     tabs: {
       query: async () => [{

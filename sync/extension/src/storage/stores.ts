@@ -1,9 +1,11 @@
 import type { StoredSettings, SyncStatus, TabDeltaOutbox, TabMutationState, VaultSecrets } from "../core/models.js";
+import { lockPolicy } from "../core/lock-rules.js";
 import { emptyTabMutationState } from "../core/tab-mutation-rules.js";
 import { extensionApi } from "../platform/webextension.js";
 
 const SETTINGS_KEY = "candySyncSettingsV1";
 const STATUS_KEY = "candySyncStatusV1";
+const PERSISTENT_UNLOCK_KEY = "candySyncPersistentUnlockV1";
 const SESSION_KEY = "candySyncSessionSecretsV1";
 const TAB_IDENTITIES_KEY = "candySyncTabIdentitiesV1";
 const TAB_DELTA_OUTBOX_KEY = "candySyncTabDeltaOutboxV2";
@@ -33,8 +35,16 @@ export async function saveStatus(status: SyncStatus): Promise<void> {
 }
 
 export async function loadSessionSecrets(): Promise<VaultSecrets | null> {
-  const result = await extensionApi().storage.session.get(SESSION_KEY);
-  return (result[SESSION_KEY] as VaultSecrets | undefined) ?? null;
+  const api = extensionApi();
+  const settings = await loadSettings();
+  const result = await api.storage.session.get(SESSION_KEY);
+  let secrets = (result[SESSION_KEY] as VaultSecrets | undefined) ?? null;
+  if (!secrets && lockPolicy(settings) === "never") {
+    const persistent = await api.storage.local.get(PERSISTENT_UNLOCK_KEY);
+    secrets = (persistent[PERSISTENT_UNLOCK_KEY] as VaultSecrets | undefined) ?? null;
+  }
+  if (!secrets || !settings || secrets.deviceId !== settings.deviceId || secrets.workspaceId !== settings.workspaceId) return null;
+  return secrets;
 }
 
 export async function saveSessionSecrets(secrets: VaultSecrets): Promise<void> {
@@ -43,10 +53,18 @@ export async function saveSessionSecrets(secrets: VaultSecrets): Promise<void> {
     await api.storage.session.setAccessLevel({ accessLevel: "TRUSTED_CONTEXTS" });
   }
   await api.storage.session.set({ [SESSION_KEY]: secrets });
+  if (lockPolicy(await loadSettings()) === "never") {
+    await api.storage.local.set({ [PERSISTENT_UNLOCK_KEY]: secrets });
+  } else {
+    await api.storage.local.remove(PERSISTENT_UNLOCK_KEY);
+  }
 }
 
 export async function clearSessionSecrets(): Promise<void> {
-  await extensionApi().storage.session.remove(SESSION_KEY);
+  const api = extensionApi();
+  // Remove the restart-surviving copy before the current browser-session copy.
+  await api.storage.local.remove(PERSISTENT_UNLOCK_KEY);
+  await api.storage.session.remove(SESSION_KEY);
 }
 
 export async function loadTabIdentities(): Promise<Record<string, string>> {

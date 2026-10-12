@@ -1213,6 +1213,11 @@
     <string name="external_link_preview_copy_link">Kopiranje povezave</string>
     <string name="external_link_preview_copy_label">Povezava Candy</string>
     <string name="toast_link_copied">Povezava kopirana</string>
+    <string name="sync_extension_stores_title">Razširitve Candy Sync</string>
+    <string name="sync_extension_stores_summary">Namestite Candy Sync v brskalnik na računalniku ali delite povezavo do trgovine.</string>
+    <string name="sync_extension_chrome_store">Chrome Web Store</string>
+    <string name="sync_extension_firefox_store">Firefox Add-ons</string>
+    <string name="sync_extension_share_link">Deli povezavo do %1$s</string>
     <string name="sync_settings_title">Sinhronizacija</string>
     <string name="settings_home_sync_summary">Samostalni, end-to-end šifrirani zavihki naprav</string>
     <string name="sync_setup_guide_title">Nastavitev Candy Sync</string>

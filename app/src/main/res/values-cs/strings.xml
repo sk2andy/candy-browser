@@ -1212,6 +1212,11 @@
     <string name="external_link_preview_copy_link">Kopírovat odkaz</string>
     <string name="external_link_preview_copy_label">Odkaz Candy</string>
     <string name="toast_link_copied">Odkaz zkopírován</string>
+    <string name="sync_extension_stores_title">Rozšíření Candy Sync</string>
+    <string name="sync_extension_stores_summary">Nainstalujte Candy Sync do prohlížeče v počítači nebo sdílejte odkaz na obchod.</string>
+    <string name="sync_extension_chrome_store">Chrome Web Store</string>
+    <string name="sync_extension_firefox_store">Firefox Add-ons</string>
+    <string name="sync_extension_share_link">Sdílet odkaz na %1$s</string>
     <string name="sync_settings_title">Synchronizace</string>
     <string name="settings_home_sync_summary">Vlastní server, panely zařízení s koncovým šifrováním</string>
     <string name="sync_setup_guide_title">Nastavit Candy Sync</string>

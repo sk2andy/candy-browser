@@ -1199,6 +1199,11 @@
     <string name="external_link_preview_copy_link">Kopiraj vezu</string>
     <string name="external_link_preview_copy_label">Link Candy</string>
     <string name="toast_link_copied">Link je kopiran.</string>
+    <string name="sync_extension_stores_title">Candy Sync proširenja</string>
+    <string name="sync_extension_stores_summary">Instalirajte Candy Sync u pregledniku na računaru ili podijelite vezu do trgovine.</string>
+    <string name="sync_extension_chrome_store">Chrome Web Store</string>
+    <string name="sync_extension_firefox_store">Firefox Add-ons</string>
+    <string name="sync_extension_share_link">Podijeli vezu za %1$s</string>
     <string name="sync_settings_title">Sinhronizacija</string>
     <string name="settings_home_sync_summary">Samostalno ugrađene, end-to-end šifrovane kartice uređaja</string>
     <string name="sync_setup_guide_title">Nastavljanje Candy Sync</string>
