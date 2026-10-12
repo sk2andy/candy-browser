@@ -19,3 +19,7 @@ task/
 tracking/
 output
 .kotlin
+
+# Xcode build caches and downloaded package checkouts
+/iosApp/derived-data/
+/iosApp/xcode-packages/
