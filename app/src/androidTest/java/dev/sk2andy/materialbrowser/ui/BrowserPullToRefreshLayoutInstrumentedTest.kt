@@ -28,6 +28,38 @@ class BrowserPullToRefreshLayoutInstrumentedTest {
     val composeRule = createAndroidComposeRule<ComponentActivity>()
 
     @Test
+    fun cancellationKeepsAnAlreadyAcceptedRefreshActive() {
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        instrumentation.runOnMainSync {
+            val host = StatusBarStaticOverlayHost(instrumentation.targetContext, pullToRefreshEnabled = true)
+            val layout = host.getChildAt(0) as BrowserPullToRefreshLayout
+            host.updatePullToRefresh(
+                enabled = true,
+                refreshing = true,
+                indicatorColor = android.graphics.Color.BLUE,
+                indicatorContainerColor = android.graphics.Color.WHITE,
+                indicatorTopInsetPx = 96,
+                canChildScrollUp = { false },
+                onRefresh = { true },
+            )
+            val start = layout.progressViewStartOffset
+            val end = layout.progressViewEndOffset
+            val now = SystemClock.uptimeMillis()
+            val cancel = MotionEvent.obtain(now, now, MotionEvent.ACTION_CANCEL, 10f, 100f, 0)
+            try {
+                layout.onTouchEvent(cancel)
+                assertTrue(layout.isRefreshing)
+                assertTrue(layout.isEnabled)
+                assertEquals(start, layout.progressViewStartOffset)
+                assertEquals(end, layout.progressViewEndOffset)
+            } finally {
+                cancel.recycle()
+                layout.isRefreshing = false
+            }
+        }
+    }
+
+    @Test
     fun hostWrapsExistingContentContainerWhenRefreshIsEnabled() {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         instrumentation.runOnMainSync {

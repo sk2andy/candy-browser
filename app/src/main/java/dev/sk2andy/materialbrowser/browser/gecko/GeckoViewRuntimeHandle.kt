@@ -14,6 +14,7 @@ import android.view.MotionEvent
 import android.view.RoundedRectBlurRegion
 import android.view.SurfaceView
 import android.view.View
+import android.view.ViewConfiguration
 import android.view.ViewGroup
 import android.widget.FrameLayout
 import androidx.annotation.RequiresApi
@@ -108,6 +109,7 @@ import org.mozilla.geckoview.WebExtension
 import org.mozilla.geckoview.WebExtensionController
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
+import kotlin.math.abs
 
 internal class GeckoViewRuntimeHandle private constructor(
     private val context: Context,
@@ -4007,6 +4009,10 @@ private class CandyGeckoEngineView(context: Context) : CandyGeckoViewSafeAreaBri
     private var appliedBackdropRegion: BrowserSurfaceBackdropBlurRegion? = null
     private var hasAppliedBackdropRegion = false
     private var gestureState = GeckoContentGestureState()
+    private val pullToRefreshTouchState = GeckoPullToRefreshTouchState()
+    private var pullTouchDownX = 0f
+    private var pullTouchDownY = 0f
+    private val pullTouchSlop = ViewConfiguration.get(context).scaledTouchSlop
     private var latestTouchEvent: MotionEvent? = null
     private var rendererSafeAreaOverride: GeckoViewInsets? = null
     private var windowInsets: WindowInsetsCompat? = null
@@ -4095,6 +4101,73 @@ private class CandyGeckoEngineView(context: Context) : CandyGeckoViewSafeAreaBri
         return handled
     }
 
+    override fun onTouchEvent(event: MotionEvent): Boolean {
+        if (event.actionMasked == MotionEvent.ACTION_DOWN && session != null) {
+            val requestGeneration = pullToRefreshTouchState.start()
+            pullTouchDownX = event.x
+            pullTouchDownY = event.y
+            // Fail closed until Gecko has hit-tested this DOWN. Dispatch it exactly once;
+            // Gecko's detail API also requests focus and forwards the event to APZ.
+            parent?.requestDisallowInterceptTouchEvent(true)
+            dispatchPullTouchDetail(event, requestGeneration, isDown = true)
+            return true
+        }
+        if (event.actionMasked == MotionEvent.ACTION_MOVE) {
+            val deltaX = event.x - pullTouchDownX
+            val deltaY = event.y - pullTouchDownY
+            if (deltaY > pullTouchSlop && deltaY > abs(deltaX)) {
+                pullToRefreshTouchState.requestMove()?.let { requestGeneration ->
+                    // The first drag may be consumed by a touchmove listener even when DOWN
+                    // was at the top. Query once, forwarding this MOVE exactly once as well.
+                    dispatchPullTouchDetail(event, requestGeneration, isDown = false)
+                    return true
+                }
+            } else if (abs(deltaX) > pullTouchSlop || deltaY < -pullTouchSlop) {
+                pullToRefreshTouchState.finish()
+            }
+        }
+        when (event.actionMasked) {
+            MotionEvent.ACTION_UP,
+            MotionEvent.ACTION_CANCEL,
+            MotionEvent.ACTION_POINTER_DOWN,
+            -> {
+                pullToRefreshTouchState.finish()
+                if (event.actionMasked == MotionEvent.ACTION_POINTER_DOWN) {
+                    parent?.requestDisallowInterceptTouchEvent(true)
+                }
+            }
+        }
+        return super.onTouchEvent(event)
+    }
+
+    private fun dispatchPullTouchDetail(event: MotionEvent, requestGeneration: Long, isDown: Boolean) {
+        val touchedSession = session
+        onTouchEventForDetailResult(event).accept({ detail ->
+            if (
+                detail != null && pullToRefreshTouchState.canApply(requestGeneration) &&
+                session === touchedSession && isAttachedToWindow
+            ) {
+                val allowed = if (isDown) {
+                    GeckoPullToRefreshRules.canCheckPullOnMove(
+                        detail.handledResult(), detail.scrollableDirections(), detail.overscrollDirections(),
+                    )
+                } else {
+                    GeckoPullToRefreshRules.canAllowParentIntercept(
+                        detail.handledResult(), detail.scrollableDirections(), detail.overscrollDirections(),
+                    )
+                }
+                val release = if (isDown) {
+                    pullToRefreshTouchState.recordDown(requestGeneration, allowed)
+                } else {
+                    pullToRefreshTouchState.recordMove(requestGeneration, allowed)
+                }
+                parent?.requestDisallowInterceptTouchEvent(!release)
+            }
+        }, { _ ->
+            // Failed or missing details keep the stream with Gecko.
+        })
+    }
+
     fun hasCancelledTouchStream(): Boolean =
         GeckoContentGestureRules.hasCancelledStream(gestureState)
 
@@ -4145,6 +4218,7 @@ private class CandyGeckoEngineView(context: Context) : CandyGeckoViewSafeAreaBri
     }
 
     override fun onDetachedFromWindow() {
+        pullToRefreshTouchState.finish()
         cancelActiveTouch()
         if (Build.VERSION.SDK_INT >= BrowserBackdropBlurRules.NATIVE_SURFACE_BLUR_MIN_SDK) {
             appliedBackdropSurface?.let(GeckoSurfaceBackdropBlurApi37::clear)

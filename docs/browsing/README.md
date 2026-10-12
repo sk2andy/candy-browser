@@ -5,6 +5,7 @@
 | Need | Detail | Main code |
 | --- | --- | --- |
 | Runtime ownership, WebView lifecycle and navigation | [`runtime-and-navigation.md`](runtime-and-navigation.md) | `MainActivity`, `MainActivityPictureInPictureController`, `BrowserController`, `BrowserViewport`, `BrowserTab` |
+| Gecko pull-to-refresh admission for nested scroll containers and website-owned touches | [`runtime-and-navigation.md`](runtime-and-navigation.md#invariants) | `GeckoPullToRefreshRules`, `CandyGeckoEngineView`, `BrowserPullToRefreshLayout` |
 | Background UI-memory trimming, renderer-view release, selected-session priority, audio visibility and delayed Gecko residency budget | [`../tabs-and-profiles/lifecycle-and-persistence.md`](../tabs-and-profiles/lifecycle-and-persistence.md#background-memory) | `BrowserBackgroundMemoryRules`, `GeckoSessionPriorityController`, `BrowserController`, `MainActivity`, `GeckoResumeCover` |
 | Gecko process isolation, multi-page history-cache lifetime and developer memory controls | [`../tabs-and-profiles/lifecycle-and-persistence.md`](../tabs-and-profiles/lifecycle-and-persistence.md#gecko-history-cache-and-developer-controls) | `GeckoRuntimeSettingsFactory`, `GeckoHistoryCacheRules`, `GeckoHistoryCacheConfig`, `BrowserMemorySettings` |
 | Gecko page continuity across tab switches and long background intervals | [`runtime-and-navigation.md`](runtime-and-navigation.md) | `GeckoContentPresentationGate`, `GeckoResumeCover`, `GeckoTabInteractionInstrumentedTest`, `BrowserPageResumeInstrumentedTest` |

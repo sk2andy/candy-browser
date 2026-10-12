@@ -60,7 +60,7 @@
 | Gecko identity popup routing | `FederatedLoginRules` → Gecko navigation request → native new-session binding | Keep user-triggered new-window navigation to known HTTPS Google identity endpoints in Gecko, including provider navigation inside an adopted native popup. External-app fallback would replace the child with a GET tab and lose `window.opener`. Existing popup rules still decide whether to admit the child; cookie compatibility remains separately consented. |
 | Gecko page-requested window close | Gecko content delegate → session/adapter close-request listener → controller | Honor `window.close()` only for native popup tabs adopted from Gecko in this process. Post closure through the existing tab-removal path, recheck exact session identity, and return to a valid opener only when the closing popup was selected. Background closure preserves the foreground selection; manual/restored/recreated tabs receive no close grant. Clear listeners on close/crash and remove grants on session replacement, tab removal, snooze and controller destruction. |
 | System WebView native popup adoption | System factory prepared-session slot → controller popup admission → `WebViewTransport` | Supply the exact configured child WebView instead of replaying its first URL in a new tab. Preserve opener, POST body and referrer; reject windows without a user gesture. First nonblank navigation uses Candy's popup filtering and existing pending-tab policy; initial POST uses the native `onPageStarted` fallback. `onCloseWindow` uses the same exact-session controller close grant. Blob popups download through the opener and remove the transient child. |
-| Pull to refresh | `BrowserPullToRefreshLayout` → `BrowserPullGestureRules` / `BrowserPullToRefreshRules` → `BrowserController.reload()` | Admit a downward-dominant gesture anywhere on a visible, idle web page whose engine-reported document offset is at the top; on `instagram.com`, `tiktok.com`, `youtube.com` and their subdomains, require a start within 160 dp below the top safe inset so lower feed gestures stay with the page; keep blank, obscured, Find-in-page, overview and video-only surfaces out of the gesture path |
+| Pull to refresh | `BrowserPullToRefreshLayout` → `BrowserPullGestureRules` / `BrowserPullToRefreshRules`; Gecko touch admission: `GeckoPullToRefreshRules` → `BrowserController.reload()` | Admit a downward-dominant gesture on a visible, idle web page at document top; Gecko additionally requires the touched scroll chain to be at its top and permit vertical overscroll without website-owned input; on `instagram.com`, `tiktok.com`, `youtube.com` and their subdomains, require a start within 160 dp below the top safe inset; keep blank, obscured, Find-in-page, overview and video-only surfaces out of the gesture path |
 
 ## Invariants
 
@@ -278,6 +278,23 @@
   Missing metrics fail closed. Offset the native refresh indicator below the top safe-drawing inset so it
   stays clear of display cutouts. Normal navigation does not show the pull indicator, and the existing
   menu reload remains the accessible non-gesture action.
+  For Gecko, document top alone is insufficient: a GitHub-style issue dialog can still have content
+  above its own scroll position. Dispatch each touch-down once through GeckoView 157's
+  `onTouchEventForDetailResult`, blocking parent interception until both its asynchronous hit-test
+  and the first downward drag permit the pull. Query at most one Move as well as Down, since a
+  touchmove listener may claim a gesture after Down. Keep the gesture with Gecko when the touched
+  scroll chain can scroll upward, the website consumes the drag, or CSS disallows vertical overscroll.
+  Lock the initial scroll-chain decision for the stream;
+  reaching the container top requires a fresh touch-down before a pull can refresh. Ignore delayed
+  answers after Up, Cancel, a second pointer, a replacement stream/session or view detachment.
+  Subsequent events use normal Gecko delivery; do not allocate a detail result on every Move.
+  Gecko also honors `overflow:hidden` on the root document: reaching an inner dialog's top does
+  not override that page-level lock. Tests for a permitted refresh use an unlocked root and retain
+  separate root-locked, nested-scrolled and content-owned controls.
+  Canceling a native pull hides its transient indicator and clears its captured refresh callback.
+  An already accepted refresh remains active until the normal loading completion; cancellation
+  does not reset that indicator or change its safe-area offsets.
+  This additional engine admission is Gecko-specific; System WebView retains its existing contract.
   Full-page pull admission is the default. Only Instagram, TikTok and YouTube (including subdomains)
   retain the 160 dp top start zone to protect Reels, video feeds and nested scrollers below that zone.
   Match the canonical HTTP(S) host, never URL path/query text or lookalike domain suffixes, and update
@@ -791,7 +808,7 @@ WebView request state.
 | WebView touch-stream ownership | `BrowserScrollInstrumentedTest#browserWebViewRetainsTouchStreamFromInterceptingParent` plus `#fullBrowserWindowKeepsWebViewTouchStreamsComplete` on API 34+ |
 | WebView reverse-flick momentum | `BrowserMomentumRecoveryRulesTest` plus `BrowserScrollInstrumentedTest#busyLongPageKeepsEveryRapidAlternatingFlick` on the affected WebView version |
 | Draggable page scrollbar | `BrowserScrollBarRulesTest`, `CandyPrivacyHostContractTest`, `BrowserScrollBarInstrumentedTest`, and `GeckoBottomBarScrollInstrumentedTest#realGeckoScrollbarPortReadsAndMovesLongDocument` on API 34+ |
-| Pull to refresh | `BrowserPullGestureRulesTest`, `BrowserPullToRefreshRulesTest`, and `BrowserPullToRefreshLayoutInstrumentedTest` on an API 34+ emulator |
+| Pull to refresh | `BrowserPullGestureRulesTest`, `BrowserPullToRefreshRulesTest`, `GeckoPullToRefreshRulesTest`, `BrowserPullToRefreshLayoutInstrumentedTest`, and real-engine `GeckoPullToRefreshInstrumentedTest` on an API 34+ emulator; the latter uses a local GitHub-shaped dialog, not an authenticated live GitHub page |
 | Android web-content fullscreen chrome | `FullscreenVideoRulesTest` plus `FullscreenVideoChromeInstrumentedTest` in the Full and System WebView builds on a dedicated API 34+ emulator |
 | Edge-to-edge window, safe web viewport, focused search, and representative site layouts | `SystemWebViewEdgeToEdgeInstrumentedTest` and `GeckoEdgeToEdgeInstrumentedTest` run deterministic layout profiles derived from YouTube, Google, ESPN, NYTimes, CNN, Reddit, Facebook, IKEA, GitHub, Discord, Instagram, TapTap, Vimeo, Wikipedia, Stack Overflow, and DuckDuckGo on API 34+; the TapTap profile asserts safety immediately in the scroll task so delayed post-scroll repair cannot mask a jumping sticky header; live sites remain manual/nightly smoke targets rather than merge gates |
 | Gecko media, fullscreen and PiP policy | `GeckoMediaRulesTest`, `FullscreenVideoRulesTest`, `GeckoBrowserEngineAdapterTest` and `GeckoPictureInPictureInstrumentedTest` on a dedicated API 34+ emulator |
