@@ -64,6 +64,9 @@ compatibility checks are recorded in [`../audits/issue-259-system-webview-google
 Issue 222's search-link History API race and navigation cancellation checks are recorded in
 [`../audits/issue-222-external-app-navigation.md`](../audits/issue-222-external-app-navigation.md).
 
+Issue 304's cross-session app-lookup cancellation regression and native navigation controls are
+recorded in [`../audits/issue-304-reddit-navigation.md`](../audits/issue-304-reddit-navigation.md).
+
 Issue 278's Gecko REWE header jump and retained Cover safe-area checks are recorded in
 [`../audits/issue-278-cover-header-jumping.md`](../audits/issue-278-cover-header-jumping.md).
 

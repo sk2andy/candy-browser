@@ -206,6 +206,9 @@
   request revision, while retaining selected-tab/profile/private-surface checks. A same-document
   History API URL update does not cancel the original tap or its browser fallback. A new document,
   newer main-frame request or explicit navigation/Stop command invalidates the lookup immediately.
+  Track the latest lookup independently for each tab or external preview. An authorized redirect
+  arriving from a background session cannot cancel the selected tab's lookup. Clear pending IDs
+  on completion, explicit navigation/Stop, session removal, preview release and controller destruction.
   Link Peek and confirmation prompts keep their existing strict URL/generation snapshots.
 - Honor Android's selection of Candy for incoming `ACTION_VIEW` and `ACTION_SEND` URLs. Neither
   the initial URL nor its automatic redirect chain receives an external-navigation grant; this prevents

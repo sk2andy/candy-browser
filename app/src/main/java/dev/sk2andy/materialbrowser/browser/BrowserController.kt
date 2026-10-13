@@ -1510,7 +1510,8 @@ class BrowserController(
     private val externalAppLookupExecutor = Executors.newSingleThreadExecutor { task ->
         Thread(task, "external-app-lookup")
     }
-    private var automaticExternalAppRequestId = 0L
+    private var nextAutomaticExternalAppRequestId = 0L
+    private val pendingAutomaticExternalAppRequests = mutableMapOf<String, Long>()
     private val geckoFileUploadStager = GeckoFileUploadStager(activity.applicationContext)
     private val profileWallpaperExecutor = Executors.newSingleThreadExecutor { task ->
         Thread(task, "profile-wallpaper")
@@ -4912,6 +4913,7 @@ class BrowserController(
         externalLinkPreviewState = null
         runtime?.policyTab?.id?.let { policyTabId ->
             releaseDownloadChoicesForSource(policyTabId)
+            pendingAutomaticExternalAppRequests.remove(policyTabId)
             externalNavigationGrants.remove(policyTabId)
             if (pendingExternalNavigationRollback?.tabId == policyTabId) {
                 pendingExternalNavigationRollback = null
@@ -7218,7 +7220,9 @@ class BrowserController(
         grant: ExternalNavigationGrant?,
         isRedirect: Boolean,
     ) {
-        val requestId = ++automaticExternalAppRequestId
+        val policyTabId = source.policyTabId()
+        val requestId = ++nextAutomaticExternalAppRequestId
+        pendingAutomaticExternalAppRequests[policyTabId] = requestId
         val sourceNavigationGeneration = currentExternalAppSourceNavigationGeneration(source)
         val sourcePageUrl = currentExternalAppSourcePageUrl(source)
         val sourceDocumentGeneration =
@@ -7236,7 +7240,8 @@ class BrowserController(
             isRedirect = isRedirect,
         )
         fun completeLaunch(prepared: PreparedWebAppLaunch?) {
-            if (requestId != automaticExternalAppRequestId) return
+            if (pendingAutomaticExternalAppRequests[policyTabId] != requestId) return
+            pendingAutomaticExternalAppRequests.remove(policyTabId)
             if (
                 destroyed ||
                 externalAppLinkHandling != ExternalAppLinkHandling.Automatic ||
@@ -7766,6 +7771,7 @@ class BrowserController(
     }
 
     private fun clearExternalNavigationAuthorization(tabId: String) {
+        pendingAutomaticExternalAppRequests.remove(tabId)
         browserEngineNavigationRequestGenerations[tabId]?.let { generation ->
             browserEngineNavigationRequestGenerations[tabId] = generation + 1L
         }
@@ -11434,6 +11440,7 @@ class BrowserController(
         webContentStatusBarBackdrops.clear()
         firefoxExtensionOptionsTabs.clear()
         committedRecallPages.clear()
+        pendingAutomaticExternalAppRequests.clear()
         externalNavigationGrants.clear()
         pendingInitialExternalNavigationGrants.clear()
         navigationSourceTabs.clear()
@@ -14044,6 +14051,7 @@ class BrowserController(
         releaseDownloadChoicesForSource(tabId)
         nativePopupSessions.remove(tabId)
         removePendingInitialBrowserEngineNavigation(tabId)
+        pendingAutomaticExternalAppRequests.remove(tabId)
         browserEngineNavigationRequestGenerations.remove(tabId)
         browserEngineDocumentGenerations.remove(tabId)
         manuallyUnparkedAddressBarTabIds.remove(tabId)

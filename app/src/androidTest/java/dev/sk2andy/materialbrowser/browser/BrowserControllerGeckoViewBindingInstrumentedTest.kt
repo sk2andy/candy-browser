@@ -5,6 +5,8 @@ import android.content.Context
 import android.content.ContextWrapper
 import android.content.Intent
 import android.graphics.Bitmap
+import android.os.Handler
+import android.os.Looper
 import android.os.SystemClock
 import android.view.View
 import android.widget.FrameLayout
@@ -47,6 +49,7 @@ import dev.sk2andy.materialbrowser.data.HistoryEntry
 import dev.sk2andy.materialbrowser.data.HistoryRecordingMode
 import java.io.File
 import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executor
 import java.util.concurrent.TimeUnit
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -3120,6 +3123,144 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
                 assertNull(recordingContext.lastIntent)
                 assertNull(browserController.externalAppPrompt)
             }
+        }
+    }
+
+    @Test
+    fun backgroundRedirectLookupDoesNotCancelSelectedTabBrowserFallback() {
+        val selectedSourceUrl = "https://search.brave.com/search?q=reddit"
+        val selectedTargetUrl = "https://www.reddit.com/r/candy/"
+        val backgroundSourceUrl = "https://background.candy.test/source"
+        val backgroundRedirectUrl = "https://background.candy.test/redirect"
+        val backgroundTargetUrl = "https://github.com/sk2andy/candy-browser"
+        val lookupStarted = CountDownLatch(1)
+        val releaseLookup = CountDownLatch(1)
+        val backgroundLookupStarted = CountDownLatch(1)
+        lateinit var browserController: BrowserController
+        lateinit var recordingContext: RecordingContext
+        lateinit var selectedSession: ReentrantAttachSession
+        lateinit var backgroundSession: ReentrantAttachSession
+        var selectedTabId = ""
+        var backgroundTabId = ""
+        composeRule.runOnIdle {
+            val activity = composeRule.activity
+            val store = BrowserSessionStore(activity)
+            originalEngineKind = store.loadAndroidBrowserEngineKind()
+            originalExternalAppLinkHandling = store.loadExternalAppLinkHandling()
+            assertTrue(store.saveAndroidBrowserEngineKind(AndroidBrowserEngineKind.GeckoView))
+            recordingContext = RecordingContext(activity)
+            browserController = BrowserController(
+                activity = activity,
+                externalApps = ExternalAppLauncher(
+                    context = recordingContext,
+                    canResolveExternalActivity = { false },
+                    findExternalWebPackages = { intent ->
+                        if (intent.dataString == selectedTargetUrl) {
+                            lookupStarted.countDown()
+                            check(releaseLookup.await(15, TimeUnit.SECONDS)) {
+                                "Selected app lookup was not released"
+                            }
+                        } else if (intent.dataString == backgroundTargetUrl) {
+                            backgroundLookupStarted.countDown()
+                        }
+                        emptyList()
+                    },
+                ),
+            )
+            controller = browserController
+            browserController.updateExternalAppLinkHandling(ExternalAppLinkHandling.Automatic)
+            selectedTabId = browserController.createTab(initialUrl = selectedSourceUrl)
+            selectedSession = ReentrantAttachSession(
+                tabId = selectedTabId,
+                onFirstAttach = {},
+                historyUrls = mapOf(0 to selectedSourceUrl),
+            )
+            browserController.installGeckoEngineSessionForTesting(selectedSession)
+            backgroundTabId = browserController.createTab(initialUrl = backgroundSourceUrl)
+            backgroundSession = ReentrantAttachSession(
+                tabId = backgroundTabId,
+                onFirstAttach = {},
+                historyUrls = mapOf(0 to backgroundSourceUrl),
+            )
+            browserController.installGeckoEngineSessionForTesting(backgroundSession)
+            assertEquals(
+                GeckoNavigationRequestDecision.Allow,
+                browserController.dispatchSelectedGeckoNavigationRequestForTesting(
+                    GeckoMainFrameNavigationRequest(
+                        url = backgroundRedirectUrl,
+                        isRedirect = false,
+                        hasUserGesture = true,
+                        isDirectNavigation = false,
+                    ),
+                ),
+            )
+            browserController.selectTab(selectedTabId)
+            selectedSession.commands.clear()
+            assertEquals(
+                GeckoNavigationRequestDecision.Deny,
+                browserController.dispatchSelectedGeckoNavigationRequestForTesting(
+                    GeckoMainFrameNavigationRequest(
+                        url = selectedTargetUrl,
+                        isRedirect = false,
+                        hasUserGesture = true,
+                        isDirectNavigation = false,
+                    ),
+                ),
+            )
+        }
+        try {
+            assertTrue("Selected app lookup did not start", lookupStarted.await(5, TimeUnit.SECONDS))
+            composeRule.runOnIdle {
+                // Native navigation callbacks keep their session identity when its tab is backgrounded.
+                val navigationCallback = BrowserController::class.java.getDeclaredMethod(
+                    "onGeckoNavigationRequest",
+                    String::class.java,
+                    AndroidBrowserEngineSessionPort::class.java,
+                    GeckoMainFrameNavigationRequest::class.java,
+                ).apply { isAccessible = true }
+                assertEquals(
+                    GeckoNavigationRequestDecision.Deny,
+                    navigationCallback.invoke(
+                        browserController,
+                        backgroundTabId,
+                        backgroundSession,
+                        GeckoMainFrameNavigationRequest(
+                            url = backgroundTargetUrl,
+                            isRedirect = true,
+                            hasUserGesture = false,
+                            isDirectNavigation = false,
+                        ),
+                    ),
+                )
+                assertEquals(selectedTabId, browserController.selectedTabId)
+            }
+        } finally {
+            releaseLookup.countDown()
+        }
+        assertTrue("Background app lookup did not start", backgroundLookupStarted.await(5, TimeUnit.SECONDS))
+        val executor = composeRule.runOnIdle {
+            BrowserController::class.java.getDeclaredField("externalAppLookupExecutor").let { field ->
+                field.isAccessible = true
+                field.get(browserController) as Executor
+            }
+        }
+        val completed = CountDownLatch(1)
+        // The serial executor marker posts after both launch completions on the main thread.
+        executor.execute { Handler(Looper.getMainLooper()).post { completed.countDown() } }
+        assertTrue("App lookups did not complete", completed.await(5, TimeUnit.SECONDS))
+        composeRule.runOnIdle {
+            assertEquals(selectedTabId, browserController.selectedTabId)
+            assertEquals(
+                listOf(selectedTargetUrl),
+                selectedSession.commands.filter { command ->
+                    command.type == BrowserEngineCommandType.Load
+                }.map(BrowserEngineCommand::address),
+            )
+            assertFalse(backgroundSession.commands.any { command ->
+                command.type == BrowserEngineCommandType.Load && command.address == backgroundTargetUrl
+            })
+            assertNull(recordingContext.lastIntent)
+            assertNull(browserController.externalAppPrompt)
         }
     }
 

@@ -20,6 +20,11 @@ import dev.sk2andy.materialbrowser.browser.HttpsOnlyMode
 import dev.sk2andy.materialbrowser.browser.integration.ExternalAppLauncher
 import dev.sk2andy.materialbrowser.data.BrowserSessionStore
 import dev.sk2andy.materialbrowser.data.HistoryEntry
+import java.net.InetAddress
+import java.net.ServerSocket
+import java.net.Socket
+import java.net.SocketException
+import java.nio.charset.StandardCharsets
 import java.util.UUID
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.CountDownLatch
@@ -139,6 +144,109 @@ class GeckoExternalAppNavigationInstrumentedTest {
             openNewWindow = false,
             replaceSourceHistory = true,
         )
+    }
+
+    @Test
+    fun delayedAutomaticHttpRedirectWithoutAppResumesCrossSiteTarget() {
+        RedirectFixtureServer(::page).use { server ->
+            composeRule.runOnIdle {
+                controller.createTab(initialUrl = server.sourceUrl)
+                controller.attachSelectedBrowserEngineView(host)
+            }
+            awaitPage(server.sourceUrl, "External app source")
+            val sourceId = composeRule.runOnIdle {
+                observeSelectedSession()
+                controller.selectedTabId
+            }
+            val gate = LookupGate(server.targetUrl)
+            lookupGate.set(gate)
+            try {
+                tapPage()
+                assertTrue(
+                    "Redirected app lookup did not start; ${diagnostics()}",
+                    gate.started.await(5, TimeUnit.SECONDS),
+                )
+                UiDevice.getInstance(InstrumentationRegistry.getInstrumentation())
+                    .waitForIdle(2_000L)
+                composeRule.runOnIdle {
+                    assertTrue(navigationRequests.any { request ->
+                        request.url == server.redirectUrl && request.hasUserGesture
+                    })
+                    assertTrue(navigationRequests.any { request ->
+                        request.url == server.targetUrl && request.isRedirect
+                    })
+                    assertEquals(0, server.targetRequests.get())
+                }
+            } finally {
+                gate.release.countDown()
+            }
+            awaitPage(server.targetUrl, "External app target")
+            awaitAutomaticLookupCompletion()
+            awaitCondition("Redirect fallback did not retain source history") {
+                nativeHistoryUrls() == listOf(server.sourceUrl, server.targetUrl)
+            }
+            composeRule.runOnIdle {
+                assertEquals(sourceId, controller.selectedTabId)
+                assertTrue(controller.selectedTab.canGoBack)
+                assertEquals(1, server.targetRequests.get())
+                assertNull(controller.selectedTab.error)
+                assertNull(controller.externalAppPrompt)
+            }
+        }
+    }
+
+    @Test
+    fun delayedAutomaticDirectLinkWhileSourceStillLoadingResumesTarget() {
+        RedirectFixtureServer(::page, holdSourceLoad = true).use { server ->
+            composeRule.runOnIdle {
+                controller.createTab(initialUrl = server.sourceUrl)
+                controller.attachSelectedBrowserEngineView(host)
+            }
+            assertTrue(
+                "Slow source image was not requested",
+                server.slowRequestStarted.await(5, TimeUnit.SECONDS),
+            )
+            awaitCondition("Source content did not become available during its pending image load") {
+                controller.selectedTab.let { tab ->
+                    tab.url == server.sourceUrl && tab.title == "External app source" && tab.isLoading
+                }
+            }
+            val sourceId = composeRule.runOnIdle {
+                observeSelectedSession()
+                controller.selectedTabId
+            }
+            val gate = LookupGate(server.targetUrl)
+            lookupGate.set(gate)
+            try {
+                tapPage()
+                assertTrue(
+                    "Direct app lookup did not start while source was loading; ${diagnostics()}",
+                    gate.started.await(5, TimeUnit.SECONDS),
+                )
+                UiDevice.getInstance(InstrumentationRegistry.getInstrumentation())
+                    .waitForIdle(2_000L)
+                composeRule.runOnIdle {
+                    assertTrue(navigationRequests.any { request ->
+                        request.url == server.targetUrl && request.hasUserGesture && !request.isRedirect
+                    })
+                    assertEquals(0, server.targetRequests.get())
+                }
+            } finally {
+                gate.release.countDown()
+            }
+            awaitPage(server.targetUrl, "External app target")
+            awaitAutomaticLookupCompletion()
+            awaitCondition("Direct fallback did not retain loading source history") {
+                nativeHistoryUrls() == listOf(server.sourceUrl, server.targetUrl)
+            }
+            composeRule.runOnIdle {
+                assertEquals(sourceId, controller.selectedTabId)
+                assertTrue(controller.selectedTab.canGoBack)
+                assertEquals(1, server.targetRequests.get())
+                assertNull(controller.selectedTab.error)
+                assertNull(controller.externalAppPrompt)
+            }
+        }
     }
 
     @Test
@@ -458,6 +566,104 @@ class GeckoExternalAppNavigationInstrumentedTest {
         display:flex;align-items:center;justify-content:center;font-size:32px}</style></head>
         <body>$body</body></html>
     """.trimIndent()
+
+    private class RedirectFixtureServer(
+        private val page: (String, String) -> String,
+        private val holdSourceLoad: Boolean = false,
+    ) : AutoCloseable {
+        private val socket = ServerSocket(0, 8, InetAddress.getByName("127.0.0.1"))
+        private val thread = Thread(::serve, "external-app-redirect-fixture").apply {
+            isDaemon = true
+            start()
+        }
+        val sourceUrl = "http://localhost:${socket.localPort}/source"
+        val redirectUrl = "http://localhost:${socket.localPort}/redirect"
+        val targetUrl = "http://127.0.0.1:${socket.localPort}/target"
+        val targetRequests = AtomicInteger()
+        val slowRequestStarted = CountDownLatch(1)
+        private val releaseSourceLoad = CountDownLatch(1)
+        private val workers = CopyOnWriteArrayList<Thread>()
+
+        private fun serve() {
+            while (!socket.isClosed) {
+                val connection = try {
+                    socket.accept()
+                } catch (error: SocketException) {
+                    if (socket.isClosed) return
+                    continue
+                }
+                val worker = Thread({ serveConnection(connection) }, "external-app-fixture-response")
+                    .apply { isDaemon = true }
+                workers += worker
+                worker.start()
+            }
+        }
+
+        private fun serveConnection(connection: Socket) {
+            connection.use { client ->
+                runCatching {
+                    client.soTimeout = 5_000
+                    val reader = client.getInputStream().bufferedReader()
+                    val path = reader.readLine()?.split(' ')?.getOrNull(1).orEmpty()
+                        .substringBefore('?')
+                    while (!reader.readLine().isNullOrEmpty()) {
+                        // Drain request headers before responding.
+                    }
+                    val output = client.getOutputStream()
+                    if (path == "/redirect") {
+                        output.write(
+                            ("HTTP/1.1 302 Found\r\nLocation: $targetUrl\r\n" +
+                                "Content-Length: 0\r\nConnection: close\r\n\r\n")
+                                .toByteArray(StandardCharsets.US_ASCII),
+                        )
+                    } else {
+                        val html = when (path) {
+                            "/source" -> page(
+                                "External app source",
+                                if (holdSourceLoad) {
+                                    "<a href='$targetUrl'>Open cross-site result</a>" +
+                                        "<img src='/slow.svg' width='1' height='1' alt=''>"
+                                } else {
+                                    "<a href='/redirect'>Open redirected result</a>"
+                                },
+                            )
+                            "/target" -> {
+                                targetRequests.incrementAndGet()
+                                page("External app target", "Target loaded")
+                            }
+                            "/slow.svg" -> {
+                                slowRequestStarted.countDown()
+                                check(releaseSourceLoad.await(60, TimeUnit.SECONDS)) {
+                                    "Slow source image was not released"
+                                }
+                                "<svg xmlns='http://www.w3.org/2000/svg' width='1' height='1'/>"
+                            }
+                            else -> "<title>Fixture resource</title>"
+                        }
+                        val body = html.toByteArray(StandardCharsets.UTF_8)
+                        val contentType = if (path == "/slow.svg") "image/svg+xml" else "text/html"
+                        output.write(
+                            ("HTTP/1.1 200 OK\r\n" +
+                                "Content-Type: $contentType; charset=utf-8\r\n" +
+                                "Cache-Control: no-store\r\nContent-Length: ${body.size}\r\n" +
+                                "Connection: close\r\n\r\n")
+                                .toByteArray(StandardCharsets.US_ASCII),
+                        )
+                        output.write(body)
+                    }
+                    output.flush()
+                }
+                // Gecko can close a canceled document or image connection before the response.
+            }
+        }
+
+        override fun close() {
+            releaseSourceLoad.countDown()
+            socket.close()
+            thread.join(2_000L)
+            workers.forEach { worker -> worker.join(2_000L) }
+        }
+    }
 
     private class LookupGate(val url: String) {
         val started = CountDownLatch(1)
