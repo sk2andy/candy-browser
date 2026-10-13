@@ -79,7 +79,12 @@ fun AddressBarFieldContent(
                     ),
                     keyboardActions = KeyboardActions(
                         onGo = {
-                            onSubmitAddress(editValue.text)
+                            onSubmitAddress(
+                                AddressBarFieldCompletionRules.submissionText(
+                                    editValue,
+                                    ghostCompletion,
+                                ),
+                            )
                         },
                     ),
                     decorationBox = { innerTextField ->

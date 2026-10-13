@@ -60,6 +60,7 @@ import dev.sk2andy.materialbrowser.reader.ReaderStudioSessionRules
 import dev.sk2andy.materialbrowser.shared.browser.AddressBarLongPressAction
 import dev.sk2andy.materialbrowser.shared.browser.AddressBarLongPressActionRules
 import dev.sk2andy.materialbrowser.shared.browser.AddressBarLongPressContext
+import dev.sk2andy.materialbrowser.shared.ui.AddressBarFieldCompletionRules
 import eightbitlab.com.blurview.BlurTarget
 import kotlin.math.absoluteValue
 
@@ -337,7 +338,9 @@ internal fun BoxScope.BrowserAddressChrome(
         onActivateAddressSuggestion = {
             val highlighted = suggestionItems.getOrNull(highlightedSuggestionIndex)
             if (highlighted == null) {
-                submitAddressOrCommand(addressValue.text)
+                submitAddressOrCommand(
+                    AddressBarFieldCompletionRules.submissionText(addressValue, domainCompletion),
+                )
             } else {
                 selectSuggestion(highlighted)
             }
