@@ -27,6 +27,7 @@ import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.shared.ui.settings.settingsSearchTarget
 import dev.sk2andy.materialbrowser.browser.BrowserSessionResidencyRules
 import dev.sk2andy.materialbrowser.browser.LinkLongPressAction
+import dev.sk2andy.materialbrowser.browser.LinkPeekSwipeAction
 import dev.sk2andy.materialbrowser.data.InactiveTabLifetime
 import dev.sk2andy.materialbrowser.data.TabOverviewMode
 import dev.sk2andy.materialbrowser.shared.browser.AddressBarLongPressAction
@@ -46,6 +47,7 @@ internal object TabSettingsTestTags {
     const val AddressBarSwipeMode = "tab_settings_address_bar_swipe_mode"
     const val AddressBarLongPressAction = "tab_settings_address_bar_long_press_action"
     const val LinkLongPressAction = "tab_settings_link_long_press_action"
+    const val LinkPeekSwipeAction = "tab_settings_link_peek_swipe_action"
 }
 
 @Composable
@@ -63,6 +65,7 @@ internal fun TabsAndGesturesSettingsPage(
     isAddressBarSwipeModeEnabled: Boolean = false,
     addressBarLongPressAction: AddressBarLongPressAction = AddressBarLongPressAction.Default,
     linkLongPressAction: LinkLongPressAction = LinkLongPressAction.LinkPeek,
+    linkPeekSwipeAction: LinkPeekSwipeAction = LinkPeekSwipeAction.OpenBackground,
     onInactiveTabLifetimeChanged: (InactiveTabLifetime) -> Unit,
     onResidentTabLimitChanged: (Int) -> Unit,
     onTabOverviewModeChanged: (TabOverviewMode) -> Unit,
@@ -76,6 +79,7 @@ internal fun TabsAndGesturesSettingsPage(
     onAddressBarSwipeModeEnabledChanged: (Boolean) -> Unit = {},
     onAddressBarLongPressActions: () -> Unit = {},
     onLinkLongPressActionChanged: (LinkLongPressAction) -> Unit = {},
+    onLinkPeekSwipeActionChanged: (LinkPeekSwipeAction) -> Unit = {},
     onLinkPeekActions: () -> Unit = {},
     onAddressBarActions: () -> Unit,
     onMenuActions: () -> Unit = {},
@@ -84,6 +88,7 @@ internal fun TabsAndGesturesSettingsPage(
     var lifetimeMenuExpanded by remember { mutableStateOf(false) }
     var stackFolderModeMenuExpanded by remember { mutableStateOf(false) }
     var linkLongPressActionMenuExpanded by remember { mutableStateOf(false) }
+    var linkPeekSwipeActionMenuExpanded by remember { mutableStateOf(false) }
     var residentLimit by remember(residentTabLimit) {
         mutableFloatStateOf(residentTabLimit.toFloat())
     }
@@ -254,6 +259,44 @@ internal fun TabsAndGesturesSettingsPage(
                 }
             }
         }
+        if (linkLongPressAction == LinkLongPressAction.LinkPeek) {
+            Spacer(Modifier.height(2.dp))
+            Box(
+                modifier = Modifier
+                    .testTag(TabSettingsTestTags.LinkPeekSwipeAction)
+                    .settingsSearchTarget(
+                        stringResource(R.string.settings_link_peek_swipe_action),
+                    ),
+            ) {
+                SettingsChoice(
+                    title = stringResource(R.string.settings_link_peek_swipe_action),
+                    value = stringResource(linkPeekSwipeAction.labelRes()),
+                    expanded = linkPeekSwipeActionMenuExpanded,
+                    onClick = { linkPeekSwipeActionMenuExpanded = true },
+                )
+                SettingsDropdown(
+                    expanded = linkPeekSwipeActionMenuExpanded,
+                    onDismissRequest = { linkPeekSwipeActionMenuExpanded = false },
+                ) {
+                    LinkPeekSwipeAction.entries.forEach { action ->
+                        SettingsDropdownItem(
+                            label = stringResource(action.labelRes()),
+                            selected = action == linkPeekSwipeAction,
+                            onClick = {
+                                linkPeekSwipeActionMenuExpanded = false
+                                onLinkPeekSwipeActionChanged(action)
+                            },
+                        )
+                    }
+                }
+            }
+            Text(
+                text = stringResource(R.string.settings_link_peek_swipe_action_summary),
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
         Spacer(Modifier.height(2.dp))
         SettingsLink(
             icon = ImageVector.vectorResource(R.drawable.ic_symbol_open_in_new),
@@ -316,4 +359,16 @@ private fun LinkLongPressAction.labelRes(): Int = when (this) {
         R.string.action_open_link_private_background_tab
     LinkLongPressAction.OpenInPrivateTabInForeground ->
         R.string.action_open_link_private_foreground_tab
+}
+
+private fun LinkPeekSwipeAction.labelRes(): Int = when (this) {
+    LinkPeekSwipeAction.OpenBackground -> R.string.action_open_link_background_tab
+    LinkPeekSwipeAction.OpenForeground -> R.string.action_open_link_foreground_tab
+    LinkPeekSwipeAction.OpenNewStack -> R.string.action_open_link_new_stack
+    LinkPeekSwipeAction.OpenPrivate -> R.string.action_open_link_private_foreground_tab
+    LinkPeekSwipeAction.Copy -> R.string.external_link_preview_copy_link
+    LinkPeekSwipeAction.Share -> R.string.action_share
+    LinkPeekSwipeAction.Favorite -> R.string.action_add_favorite
+    LinkPeekSwipeAction.Snooze -> R.string.action_snooze_tab
+    LinkPeekSwipeAction.ReaderLater -> R.string.reader_save_offline
 }

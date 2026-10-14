@@ -60,6 +60,7 @@ continues to navigate without waiting for a gesture animation.
 | Address focus on launch | When startup animation is off, every launch, never | When startup animation is off |
 | Open home page on startup | Off, on | Off |
 | Long-press link action | Link Peek, copy, share, download, regular foreground/background tab, private foreground/background tab | Link Peek |
+| Link Peek right-swipe action | Background tab, foreground tab, new stack with source, private tab, copy, share, favorite, snooze, Reader offline; shown only when Link Peek is selected | Background tab |
 | Switch address pill with swipes | Off: follows page scrolling; on: swipe down expands, swipe up compacts | Off |
 | Candy Recall | Off, on | Off |
 | Page translation provider | Google Translate, Yandex Translate, Kagi Translate | Yandex Translate on Android; Google Translate on iOS |
@@ -272,6 +273,9 @@ Frosted exposes three persisted controls while selected:
   keep their content sheet, and private-open falls back to Link Peek when the active profile cannot
   create private tabs. Direct downloads reuse the source tab's engine-scoped context-download path;
   Gecko retains its referrer and private session context.
+- Link Peek right-swipe action persists independently of the long-press link choice. Its dropdown
+  and localized search entry appear only when Link Peek is selected. Unknown stored action IDs
+  fall back to background-tab open; left always closes the preview except during commit motion.
 - Tabs & gestures also owns the Link Peek action editor. It reuses the address-action editor's
   breakaway, snap, settle, haptic and accessibility behavior. Its three configurable positions may
   hold unique actions or remain empty; dragging a toolbar action back to the palette clears that

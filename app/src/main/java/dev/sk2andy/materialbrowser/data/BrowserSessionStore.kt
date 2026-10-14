@@ -41,6 +41,7 @@ import dev.sk2andy.materialbrowser.browser.TabStack
 import dev.sk2andy.materialbrowser.browser.TabStackColor
 import dev.sk2andy.materialbrowser.browser.WebRtcProtectionMode
 import dev.sk2andy.materialbrowser.browser.LinkLongPressAction
+import dev.sk2andy.materialbrowser.browser.LinkPeekSwipeAction
 import dev.sk2andy.materialbrowser.browser.LinkPeekActionLayout
 import dev.sk2andy.materialbrowser.browser.LinkPeekActionLayoutRules
 import dev.sk2andy.materialbrowser.browser.suggestions.SearchSuggestionProvider
@@ -926,6 +927,14 @@ class BrowserSessionStore internal constructor(
         preferences.edit().putString(KEY_LINK_LONG_PRESS_ACTION, action.stableId).apply()
     }
 
+    fun loadLinkPeekSwipeAction(): LinkPeekSwipeAction = LinkPeekSwipeAction.fromWireValue(
+        preferences.getString(KEY_LINK_PEEK_SWIPE_ACTION, null),
+    )
+
+    fun saveLinkPeekSwipeAction(action: LinkPeekSwipeAction) {
+        preferences.edit().putString(KEY_LINK_PEEK_SWIPE_ACTION, action.wireValue).apply()
+    }
+
     fun loadAddressBarLongPressAction(): AddressBarLongPressAction =
         AddressBarLongPressAction.fromStableId(
             preferences.getString(KEY_ADDRESS_BAR_LONG_PRESS_ACTION, null),
@@ -1604,6 +1613,7 @@ class BrowserSessionStore internal constructor(
         const val KEY_EXTERNAL_LINK_PREVIEW_ENABLED = "external_link_preview_enabled"
         const val KEY_EXTERNAL_APP_LINK_HANDLING = "external_app_link_handling"
         const val KEY_LINK_LONG_PRESS_ACTION = "link_long_press_action"
+        const val KEY_LINK_PEEK_SWIPE_ACTION = "link_peek_swipe_action"
         const val KEY_ADDRESS_BAR_LONG_PRESS_ACTION = "address_bar_long_press_action"
         const val KEY_LINK_PEEK_ACTION_LAYOUT = "link_peek_action_layout"
         const val KEY_ADDRESS_BAR_ACTION_LAYOUT = "address_bar_action_layout"

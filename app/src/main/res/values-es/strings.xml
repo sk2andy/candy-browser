@@ -562,6 +562,9 @@
     <string name="settings_link_long_press_action">Acción al mantener pulsado un enlace</string>
     <string name="settings_address_bar_long_press_title">Acción al mantener pulsada la barra de direcciones</string>
     <string name="settings_address_bar_long_press_summary">Elige qué ocurre al mantener pulsada la barra de direcciones</string>
+    <string name="settings_link_peek_swipe_action">Acción al deslizar a la derecha en Link Peek</string>
+    <string name="settings_link_peek_swipe_action_summary">Desliza a la derecha para realizar la acción elegida. Desliza a la izquierda para cerrar Link Peek.</string>
+    <string name="action_open_link_new_stack">Abrir en una nueva pila de pestañas</string>
     <string name="settings_link_peek_actions_title">Botones de Link Peek</string>
     <string name="settings_link_peek_actions_summary">Elige y ordena hasta tres acciones rápidas</string>
     <string name="settings_link_peek_actions_instructions">Mantén pulsadas las acciones y arrástralas a ranuras vacías. Arrastra una de vuelta a Acciones disponibles para dejar su ranura vacía. El + pulsante permanece siempre en la tercera ranura y abre una pestaña en segundo plano.</string>

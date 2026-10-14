@@ -34,6 +34,7 @@ import dev.sk2andy.materialbrowser.browser.WebRtcProtectionMode
 import dev.sk2andy.materialbrowser.browser.isSynced
 import dev.sk2andy.materialbrowser.browser.actions.ExternalDownloadManagerApp
 import dev.sk2andy.materialbrowser.browser.LinkLongPressAction
+import dev.sk2andy.materialbrowser.browser.LinkPeekSwipeAction
 import dev.sk2andy.materialbrowser.browser.suggestions.SearchSuggestionProvider
 import dev.sk2andy.materialbrowser.capsule.SiteCapsule
 import dev.sk2andy.materialbrowser.data.AppearanceSettings
@@ -87,6 +88,7 @@ internal fun SettingsScreen(
     pageTranslationProvider: PageTranslationProvider,
     addressBarLongPressAction: AddressBarLongPressAction = AddressBarLongPressAction.Default,
     linkLongPressAction: LinkLongPressAction = LinkLongPressAction.LinkPeek,
+    linkPeekSwipeAction: LinkPeekSwipeAction = LinkPeekSwipeAction.OpenBackground,
     linkPeekActionLayout: LinkPeekActionLayout = LinkPeekActionLayout.Default,
     searxngSettings: SearxngSettings,
     isAiModeToggleVisible: Boolean,
@@ -154,6 +156,7 @@ internal fun SettingsScreen(
     onPageTranslationProviderChanged: (PageTranslationProvider) -> Unit,
     onAddressBarLongPressActionChanged: (AddressBarLongPressAction) -> Unit = {},
     onLinkLongPressActionChanged: (LinkLongPressAction) -> Unit = {},
+    onLinkPeekSwipeActionChanged: (LinkPeekSwipeAction) -> Unit = {},
     onLinkPeekActionLayoutChanged: (LinkPeekActionLayout) -> Unit = {},
     onSearxngSettingsChanged: (SearxngSettings) -> Unit,
     onAiModeToggleVisibleChanged: (Boolean) -> Unit,
@@ -246,6 +249,7 @@ internal fun SettingsScreen(
     }
     val searchEntries = settingsSearchEntries(
         SettingsSearchAvailability(
+            isLinkPeekEnabled = linkLongPressAction == LinkLongPressAction.LinkPeek,
             searchSuggestionProvider = searchSuggestionProvider,
             hasAppLanguages = supportedAppLocales.isNotEmpty(),
             hasUserScriptSupport = isUserScriptSupported,
@@ -345,6 +349,7 @@ internal fun SettingsScreen(
                     isAddressBarSwipeModeEnabled = isAddressBarSwipeModeEnabled,
                     addressBarLongPressAction = addressBarLongPressAction,
                     linkLongPressAction = linkLongPressAction,
+                    linkPeekSwipeAction = linkPeekSwipeAction,
                     onInactiveTabLifetimeChanged = onInactiveTabLifetimeChanged,
                     onResidentTabLimitChanged = onResidentTabLimitChanged,
                     onTabOverviewModeChanged = onTabOverviewModeChanged,
@@ -361,6 +366,7 @@ internal fun SettingsScreen(
                         onDestinationChanged(SettingsDestination.AddressBarLongPressActions)
                     },
                     onLinkLongPressActionChanged = onLinkLongPressActionChanged,
+                    onLinkPeekSwipeActionChanged = onLinkPeekSwipeActionChanged,
                     onLinkPeekActions = {
                         onDestinationChanged(SettingsDestination.LinkPeekActions)
                     },

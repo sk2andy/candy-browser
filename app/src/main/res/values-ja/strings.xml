@@ -569,6 +569,9 @@
     <string name="settings_link_long_press_action">ロングプレス・リンク・アクション</string>
     <string name="settings_address_bar_long_press_title">アドレスバーを長く押す</string>
     <string name="settings_address_bar_long_press_summary">アドレスバーをタッチして押すとどうなるかを選択します</string>
+    <string name="settings_link_peek_swipe_action">Link Peek の右スワイプ操作</string>
+    <string name="settings_link_peek_swipe_action_summary">右にスワイプすると選択した操作を実行します。左にスワイプすると Link Peek を閉じます。</string>
+    <string name="action_open_link_new_stack">新しいタブグループで開く</string>
     <string name="settings_link_peek_actions_title">Link Peek のボタン</string>
     <string name="settings_link_peek_actions_summary">最大3つの迅速なアクションを選択し,設定します.</string>
     <string name="settings_link_peek_actions_instructions">長押ししてドラッグするアクションを空っぽのスロットに スロットが空になるように\"つを\"可用アクション\"に戻す. パルス + は常に3番目のスロットに留まり,背景タブを開きます.</string>

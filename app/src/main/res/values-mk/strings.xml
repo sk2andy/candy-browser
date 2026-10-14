@@ -579,6 +579,9 @@
     <string name="settings_link_long_press_action">Акција на долга притискачка на врската</string>
     <string name="settings_address_bar_long_press_title">Акција со долг притисок на адресното поле</string>
     <string name="settings_address_bar_long_press_summary">Изберете што се случува кога ќе го допрете адресниот лента</string>
+    <string name="settings_link_peek_swipe_action">Дејство при лизгање надесно во Link Peek</string>
+    <string name="settings_link_peek_swipe_action_summary">Лизгајте надесно за да го извршите избраното дејство. Лизгајте налево за да го затворите Link Peek.</string>
+    <string name="action_open_link_new_stack">Отвори во нова група јазичиња</string>
     <string name="settings_link_peek_actions_title">Копчиња Link Peek</string>
     <string name="settings_link_peek_actions_summary">Изберете и организирајте до три брзи акции</string>
     <string name="settings_link_peek_actions_instructions">Долго притискање и влечење на акциите во празни слотови. Превлечете го назад во Достапни активности за да го оставите празниот слот. Пулсирањето + секогаш останува во третиот слот и ја отвора табелата за позадина.</string>

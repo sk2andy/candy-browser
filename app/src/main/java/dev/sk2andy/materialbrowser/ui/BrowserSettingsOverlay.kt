@@ -181,6 +181,7 @@ internal fun BrowserSettingsOverlay(
             pageTranslationProvider = controller.pageTranslationProvider,
             addressBarLongPressAction = controller.addressBarLongPressAction,
             linkLongPressAction = controller.linkLongPressAction,
+            linkPeekSwipeAction = controller.linkPeekSwipeAction,
             linkPeekActionLayout = controller.linkPeekActionLayout,
             searxngSettings = controller.searxngSettings,
             isAiModeToggleVisible = controller.isAiModeToggleVisible,
@@ -270,6 +271,7 @@ internal fun BrowserSettingsOverlay(
             onAddressBarLongPressActionChanged =
                 controller::updateAddressBarLongPressAction,
             onLinkLongPressActionChanged = controller::updateLinkLongPressAction,
+            onLinkPeekSwipeActionChanged = controller::updateLinkPeekSwipeAction,
             onLinkPeekActionLayoutChanged = controller::updateLinkPeekActionLayout,
             onSearxngSettingsChanged = controller::updateSearxngSettings,
             onAiModeToggleVisibleChanged = controller::updateAiModeToggleVisible,

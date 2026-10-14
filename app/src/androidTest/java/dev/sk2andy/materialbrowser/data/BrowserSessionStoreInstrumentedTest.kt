@@ -30,6 +30,7 @@ import dev.sk2andy.materialbrowser.browser.TabStack
 import dev.sk2andy.materialbrowser.browser.TabStackColor
 import dev.sk2andy.materialbrowser.browser.WebRtcProtectionMode
 import dev.sk2andy.materialbrowser.browser.LinkLongPressAction
+import dev.sk2andy.materialbrowser.browser.LinkPeekSwipeAction
 import dev.sk2andy.materialbrowser.browser.suggestions.SearchSuggestionProvider
 import dev.sk2andy.materialbrowser.browser.BrowserSessionResidencyRules
 import dev.sk2andy.materialbrowser.blocking.SitePrivacyOverrides
@@ -1351,6 +1352,22 @@ class BrowserSessionStoreInstrumentedTest {
 
         preferences.edit().putString("link_long_press_action", "broken").commit()
         assertEquals(LinkLongPressAction.LinkPeek, store.loadLinkLongPressAction())
+    }
+
+    @Test
+    fun linkPeekSwipeActionDefaultsToBackgroundAndRoundTrips() {
+        val store = BrowserSessionStore(context)
+        assertEquals(LinkPeekSwipeAction.OpenBackground, store.loadLinkPeekSwipeAction())
+
+        LinkPeekSwipeAction.entries.forEach { action ->
+            store.saveLinkPeekSwipeAction(action)
+            assertEquals(action, BrowserSessionStore(context).loadLinkPeekSwipeAction())
+        }
+
+        preferences.edit()
+            .putString(BrowserSessionStore.KEY_LINK_PEEK_SWIPE_ACTION, "broken")
+            .commit()
+        assertEquals(LinkPeekSwipeAction.OpenBackground, store.loadLinkPeekSwipeAction())
     }
 
     @Test

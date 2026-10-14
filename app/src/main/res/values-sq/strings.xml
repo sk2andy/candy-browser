@@ -579,6 +579,9 @@
     <string name="settings_link_long_press_action">Veprimi i lidhjes me shtypje të gjatë</string>
     <string name="settings_address_bar_long_press_title">Aksioni i shiritit të adresës me shtypje të gjatë</string>
     <string name="settings_address_bar_long_press_summary">Zgjidhni se çfarë ndodh kur prekni dhe mbani në dorë shiritin e adresës</string>
+    <string name="settings_link_peek_swipe_action">Veprimi kur rrëshqisni djathtas në Link Peek</string>
+    <string name="settings_link_peek_swipe_action_summary">Rrëshqitni djathtas për të kryer veprimin e zgjedhur. Rrëshqitni majtas për të mbyllur Link Peek.</string>
+    <string name="action_open_link_new_stack">Hap në një grup të ri skedash</string>
     <string name="settings_link_peek_actions_title">Butonat Link Peek</string>
     <string name="settings_link_peek_actions_summary">Zgjidhni dhe rregulloni deri në tre veprime të shpejta</string>
     <string name="settings_link_peek_actions_instructions">Shtypja e gjatë dhe tërheqja e veprimeve në hapësira bosh. Tërhiqeni një përsëri në veprimet e disponueshme për të lënë hapësirën e tij të zbrazët. Pulsimi + qëndron gjithmonë në vend të tretë dhe hap një skedë sfond.</string>

@@ -579,6 +579,9 @@
     <string name="settings_link_long_press_action">Δράση σύνδεσης μακράς πίεσης</string>
     <string name="settings_address_bar_long_press_title">Δράση μπαρ διευθύνσεων μακράς πίεσης</string>
     <string name="settings_address_bar_long_press_summary">Επιλέξτε τι συμβαίνει όταν αγγίζετε και κρατήστε τη γραμμή διευθύνσεων</string>
+    <string name="settings_link_peek_swipe_action">Ενέργεια σάρωσης προς τα δεξιά στο Link Peek</string>
+    <string name="settings_link_peek_swipe_action_summary">Σύρετε προς τα δεξιά για να εκτελέσετε την επιλεγμένη ενέργεια. Σύρετε προς τα αριστερά για να κλείσετε το Link Peek.</string>
+    <string name="action_open_link_new_stack">Άνοιγμα σε νέα στοίβα καρτελών</string>
     <string name="settings_link_peek_actions_title">Κουμπιά Link Peek</string>
     <string name="settings_link_peek_actions_summary">Επιλέξτε και κανονίστε μέχρι τρεις γρήγορες ενέργειες</string>
     <string name="settings_link_peek_actions_instructions">Long-press και drag ενέργειες σε άδεια slots. Σύρετε ένα πίσω στις Διαθέσιμες ενέργειες για να αφήσετε την υποδοχή άδεια. Το pulsing + παραμένει πάντα στην τρίτη θέση και ανοίγει μια καρτέλα φόντου.</string>

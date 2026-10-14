@@ -731,6 +731,8 @@ class BrowserController(
         private set
     var linkLongPressAction by mutableStateOf(LinkLongPressAction.LinkPeek)
         private set
+    var linkPeekSwipeAction by mutableStateOf(LinkPeekSwipeAction.OpenBackground)
+        private set
     var addressBarLongPressAction by mutableStateOf(AddressBarLongPressAction.Default)
         private set
     var searxngSettings by mutableStateOf(SearxngSettings())
@@ -2576,6 +2578,7 @@ class BrowserController(
         searchEngine = store.loadSearchEngine()
         pageTranslationProvider = store.loadPageTranslationProvider()
         linkLongPressAction = store.loadLinkLongPressAction()
+        linkPeekSwipeAction = store.loadLinkPeekSwipeAction()
         addressBarLongPressAction = store.loadAddressBarLongPressAction()
         linkPeekActionLayout = store.loadLinkPeekActionLayout()
         browserMenuLayout = store.loadBrowserMenuLayout()
@@ -5970,6 +5973,7 @@ class BrowserController(
         openerTabId: String? = null,
         isIncognito: Boolean? = null,
         transientPopup: Boolean = false,
+        showContentActionFeedback: Boolean = true,
     ): String? {
         pruneStaleTabs()
         if (tabs.size >= MAX_TABS) {
@@ -6013,7 +6017,7 @@ class BrowserController(
         }
         if (transientPopup) transientPopupTabIds += tab.id
         persist()
-        if (!transientPopup) {
+        if (!transientPopup && showContentActionFeedback) {
             contentActions.requestAddressBarPulse()
             contentActions.dismiss()
         }
@@ -6944,6 +6948,13 @@ class BrowserController(
     val canPersistContextLink: Boolean
         get() = contextLinkSourceTab()?.isIncognito == false
 
+    val canOpenContextLinkInNewStack: Boolean
+        get() = contextLinkSourceTab()?.let { sourceTab ->
+            !isSessionEphemeralTab(sourceTab.id) &&
+                hasTabCapacity() &&
+                TabStackRules.removeTab(tabStacks, sourceTab.id).size < TabStackRules.MAX_STACKS
+        } == true
+
     val contextLinkSourceTabId: String?
         get() = contextLinkSourceTab()?.id
 
@@ -7015,6 +7026,33 @@ class BrowserController(
             return true
         }
         return false
+    }
+
+    fun openContextLinkInNewStack(url: String): Boolean {
+        val sourceTab = contextLinkSourceTab() ?: return false
+        if (!canOpenContextLinkInNewStack) return false
+        val safeUrl = BrowserUriPolicy.normalizeHttpUrl(url) ?: return false
+        val stackName = Uri.parse(safeUrl).host ?: return false
+        val tabId = createBackgroundTab(
+            initialUrl = safeUrl,
+            openerTabId = sourceTab.id,
+            showContentActionFeedback = false,
+        ) ?: return false
+        if (sourceTab.isPinned) setTabPinned(tabId, isPinned = true)
+        val stackId = createTabStack(
+            tabIds = listOf(sourceTab.id, tabId),
+            name = stackName,
+            color = TabStackColor.Grape,
+            previewTabId = tabId,
+        )
+        if (stackId == null) {
+            if (sourceTab.isPinned) setTabPinned(tabId, isPinned = false)
+            closeTab(tabId)
+            return false
+        }
+        contentActions.dismiss()
+        contentActions.requestLinkPeekNewTabPulse()
+        return true
     }
 
     fun openContextLinkInForeground(url: String): Boolean {
@@ -9686,6 +9724,12 @@ class BrowserController(
         if (linkLongPressAction == action) return
         linkLongPressAction = action
         store.saveLinkLongPressAction(action)
+    }
+
+    fun updateLinkPeekSwipeAction(action: LinkPeekSwipeAction) {
+        if (linkPeekSwipeAction == action) return
+        linkPeekSwipeAction = action
+        store.saveLinkPeekSwipeAction(action)
     }
 
     fun updateAddressBarLongPressAction(action: AddressBarLongPressAction) {

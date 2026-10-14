@@ -562,6 +562,9 @@
     <string name="settings_link_long_press_action">Ação ao premir uma ligação sem soltar</string>
     <string name="settings_address_bar_long_press_title">Ação ao manter premida a barra de endereço</string>
     <string name="settings_address_bar_long_press_summary">Escolha o que acontece ao manter premida a barra de endereço</string>
+    <string name="settings_link_peek_swipe_action">Ação ao deslizar para a direita no Link Peek</string>
+    <string name="settings_link_peek_swipe_action_summary">Deslize para a direita para executar a ação escolhida. Deslize para a esquerda para fechar o Link Peek.</string>
+    <string name="action_open_link_new_stack">Abrir numa nova pilha de separadores</string>
     <string name="settings_link_peek_actions_title">Botões do Link Peek</string>
     <string name="settings_link_peek_actions_summary">Escolha e organize até três ações rápidas</string>
     <string name="settings_link_peek_actions_instructions">Prima sem soltar e arraste ações para espaços vazios. Arraste uma de volta para Ações disponíveis para deixar o espaço vazio. O + pulsante permanece sempre no terceiro espaço e abre um separador em segundo plano.</string>

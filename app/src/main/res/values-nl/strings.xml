@@ -579,6 +579,9 @@
     <string name="settings_link_long_press_action">Actie voor langedrukkoppeling</string>
     <string name="settings_address_bar_long_press_title">Actie voor lange-druk adresbalk</string>
     <string name="settings_address_bar_long_press_summary">Kies wat er gebeurt als u aanraakt en de adresbalk vasthoudt</string>
+    <string name="settings_link_peek_swipe_action">Actie bij naar rechts vegen in Link Peek</string>
+    <string name="settings_link_peek_swipe_action_summary">Veeg naar rechts om de gekozen actie uit te voeren. Veeg naar links om Link Peek te sluiten.</string>
+    <string name="action_open_link_new_stack">Openen in een nieuwe tabbladstapel</string>
     <string name="settings_link_peek_actions_title">Link Peek-knoppen</string>
     <string name="settings_link_peek_actions_summary">Kies en regelen tot drie snelle acties</string>
     <string name="settings_link_peek_actions_instructions">De acties met lange druk en sleep in lege slots. Sleep er één terug naar Beschikbare acties om zijn vak leeg te laten. De pulsing + blijft altijd in het derde slot en opent een achtergrond tabblad.</string>

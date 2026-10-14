@@ -569,6 +569,9 @@
     <string name="settings_link_long_press_action">长压链接操作</string>
     <string name="settings_address_bar_long_press_title">长按地址操作</string>
     <string name="settings_address_bar_long_press_summary">选择触摸并按住地址时会发生什么</string>
+    <string name="settings_link_peek_swipe_action">Link Peek 右滑操作</string>
+    <string name="settings_link_peek_swipe_action_summary">向右滑动执行所选操作。向左滑动关闭 Link Peek。</string>
+    <string name="action_open_link_new_stack">在新的标签页组中打开</string>
     <string name="settings_link_peek_actions_title">Link Peek 按钮</string>
     <string name="settings_link_peek_actions_summary">选择和安排最多三个快速操作</string>
     <string name="settings_link_peek_actions_instructions">长按下并拖动操作进入空格. 拖一个回可用操作, 让它的插槽空. 脉冲+始终保持在第三个插槽中,并打开背景标签页.</string>

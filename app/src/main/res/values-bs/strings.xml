@@ -588,6 +588,9 @@
     <string name="settings_link_long_press_action">Akcija dugotrajnog pritiska na vezu</string>
     <string name="settings_address_bar_long_press_title">Aktivnost dugog pritiska na adresnu traku</string>
     <string name="settings_address_bar_long_press_summary">Izaberite šta se dešava kada dodirnete i držite adresnu traku</string>
+    <string name="settings_link_peek_swipe_action">Akcija pri prevlačenju udesno u Link Peek</string>
+    <string name="settings_link_peek_swipe_action_summary">Prevucite udesno za izabranu akciju. Prevucite ulijevo da zatvorite Link Peek.</string>
+    <string name="action_open_link_new_stack">Otvori u novoj grupi kartica</string>
     <string name="settings_link_peek_actions_title">Dugmad Link Peek</string>
     <string name="settings_link_peek_actions_summary">Izaberite i organizujte do tri brze akcije</string>
     <string name="settings_link_peek_actions_instructions">Dug pritisak i povlačenje akcija u prazne slotove. Povucite ga nazad na Dostupne akcije da bi ostavio prazan slot. Pulsiranje + uvijek ostaje u trećem slotu i otvara karticu pozadine.</string>

@@ -579,6 +579,9 @@
     <string name="settings_link_long_press_action">Åtgärder för länkning med lång tryck</string>
     <string name="settings_address_bar_long_press_title">Addressradsåtgärd för långtryckning</string>
     <string name="settings_address_bar_long_press_summary">Välj vad som händer när du rör vid och håller adresslinjen</string>
+    <string name="settings_link_peek_swipe_action">Åtgärd vid svep åt höger i Link Peek</string>
+    <string name="settings_link_peek_swipe_action_summary">Svep åt höger för att utföra den valda åtgärden. Svep åt vänster för att stänga Link Peek.</string>
+    <string name="action_open_link_new_stack">Öppna i en ny flikstack</string>
     <string name="settings_link_peek_actions_title">Link Peek-knappar</string>
     <string name="settings_link_peek_actions_summary">Välj och ordna upp till tre snabba åtgärder</string>
     <string name="settings_link_peek_actions_instructions">Långpressa och dra åtgärder till tomma slots. Dra en tillbaka till Tillgängliga åtgärder för att lämna sin plats tom. Pulsing + stannar alltid i den tredje slotten och öppnar en bakgrundsflik.</string>

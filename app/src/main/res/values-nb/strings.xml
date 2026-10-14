@@ -579,6 +579,9 @@
     <string name="settings_link_long_press_action">Handling ved langtrykk</string>
     <string name="settings_address_bar_long_press_title">Handling ved lang trykk på adresselinja</string>
     <string name="settings_address_bar_long_press_summary">Velg hva som skal skje når du berører og holder adresselinja</string>
+    <string name="settings_link_peek_swipe_action">Handling ved sveip til høyre i Link Peek</string>
+    <string name="settings_link_peek_swipe_action_summary">Sveip til høyre for å utføre den valgte handlingen. Sveip til venstre for å lukke Link Peek.</string>
+    <string name="action_open_link_new_stack">Åpne i en ny fanestabel</string>
     <string name="settings_link_peek_actions_title">Link Peek-knapper</string>
     <string name="settings_link_peek_actions_summary">Velg og organiser inntil tre raske handlinger</string>
     <string name="settings_link_peek_actions_instructions">Trykk langtrekk og dra handlinger til tomme plasser. Dra en plass tilbake til Tilgjengelige handlinger for å la plassen være tom. Pulserende + blir alltid i den tredje plassen og åpner en bakgrunnsfane.</string>

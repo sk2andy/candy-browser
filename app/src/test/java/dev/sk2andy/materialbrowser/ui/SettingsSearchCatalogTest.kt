@@ -10,6 +10,16 @@ import org.junit.Test
 
 class SettingsSearchCatalogTest {
     @Test
+    fun `link peek swipe action appears only when link peek enabled`() {
+        assertTrue("settings_link_peek_swipe_action" in ids(SettingsSearchAvailability()))
+        assertFalse(
+            "settings_link_peek_swipe_action" in ids(
+                SettingsSearchAvailability(isLinkPeekEnabled = false),
+            ),
+        )
+    }
+
+    @Test
     fun `menu presentation and sheet sections search opens menu settings`() {
         val entries = settingsSearchDefinitions(SettingsSearchAvailability()).associateBy { it.id }
 

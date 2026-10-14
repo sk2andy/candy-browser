@@ -596,6 +596,9 @@
     <string name="settings_link_long_press_action">Akce při podržení odkazu</string>
     <string name="settings_address_bar_long_press_title">Akce při podržení adresního řádku</string>
     <string name="settings_address_bar_long_press_summary">Vyberte akci při podržení adresního řádku</string>
+    <string name="settings_link_peek_swipe_action">Akce při přejetí doprava v Link Peek</string>
+    <string name="settings_link_peek_swipe_action_summary">Přejetím doprava provedete zvolenou akci. Přejetím doleva zavřete Link Peek.</string>
+    <string name="action_open_link_new_stack">Otevřít v nové skupině panelů</string>
     <string name="settings_link_peek_actions_title">Tlačítka Link Peek</string>
     <string name="settings_link_peek_actions_summary">Vyberte a uspořádejte až tři rychlé akce</string>
     <string name="settings_link_peek_actions_instructions">Podržte a přetáhněte akce do prázdných pozic. Přetažením zpět do dostupných akcí pozici uvolníte. Pulzující + zůstává vždy na třetí pozici a otevírá panel na pozadí.</string>

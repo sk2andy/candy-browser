@@ -588,6 +588,9 @@
     <string name="settings_link_long_press_action">Dugo pritisak na vezu</string>
     <string name="settings_address_bar_long_press_title">Dugo pritisak na adresnu traku</string>
     <string name="settings_address_bar_long_press_summary">Odaberite što se događa kada dodirnete i držite adresnu traku</string>
+    <string name="settings_link_peek_swipe_action">Radnja pri povlačenju udesno u Link Peek</string>
+    <string name="settings_link_peek_swipe_action_summary">Povucite udesno za odabranu radnju. Povucite ulijevo da zatvorite Link Peek.</string>
+    <string name="action_open_link_new_stack">Otvori u novoj grupi kartica</string>
     <string name="settings_link_peek_actions_title">Gumbi Link Peek</string>
     <string name="settings_link_peek_actions_summary">Odaberite i organizirati do tri brza djelovanja</string>
     <string name="settings_link_peek_actions_instructions">Dugo pritisnite i povucite akcije u prazne otvorove. Povucite jedan natrag na Dostupne akcije da bi ostavili prazan slot. Pulsiranje + uvijek ostaje u trećem slotu i otvara karticu pozadine.</string>

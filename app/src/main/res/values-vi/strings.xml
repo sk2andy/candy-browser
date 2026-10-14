@@ -569,6 +569,9 @@
     <string name="settings_link_long_press_action">Hành động liên kết nhấn dài</string>
     <string name="settings_address_bar_long_press_title">Hành động thanh địa chỉ bằng cách nhấn dài</string>
     <string name="settings_address_bar_long_press_summary">Chọn điều gì xảy ra khi bạn chạm và giữ thanh địa chỉ</string>
+    <string name="settings_link_peek_swipe_action">Thao tác khi vuốt sang phải trong Link Peek</string>
+    <string name="settings_link_peek_swipe_action_summary">Vuốt sang phải để thực hiện thao tác đã chọn. Vuốt sang trái để đóng Link Peek.</string>
+    <string name="action_open_link_new_stack">Mở trong nhóm tab mới</string>
     <string name="settings_link_peek_actions_title">Nút Link Peek</string>
     <string name="settings_link_peek_actions_summary">Chọn và sắp xếp tối đa ba hành động nhanh</string>
     <string name="settings_link_peek_actions_instructions">Bấm dài và kéo các hành động vào các khe trống. Kéo một trở lại các hành động có sẵn để để trống khe cắm của nó. Các xung + luôn ở trong khe cắm thứ ba và mở một tab nền.</string>
