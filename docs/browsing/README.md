@@ -39,6 +39,9 @@
 
 ## Test lookup
 
+Issue 302's remembered-edge automatic parking reproduction, real-engine checks
+and limits are recorded in [`../audits/issue-302-address-pill-side.md`](../audits/issue-302-address-pill-side.md).
+
 Issue 205's controlled reproductions and integrated checks are recorded in
 [`../audits/issue-205-gecko-loading-and-recovery.md`](../audits/issue-205-gecko-loading-and-recovery.md).
 
@@ -90,7 +93,7 @@ are recorded in [`../audits/dark-appearance-and-address-tab-handoff.md`](../audi
 | Optional viewport swipe pill mode | `BrowserChromeSwipeRulesTest`, `BrowserChromeSwipeTouchObserverInstrumentedTest`, focused `GeckoBottomBarScrollInstrumentedTest`, `BrowserSessionStoreInstrumentedTest`, `TabSettingsScreenInstrumentedTest` |
 | Gecko keyboard viewport, focused input, chrome-owned IME and new-tab suggestion handoff | `GeckoViewInsetRulesTest`, `GeckoKeyboardInsetsInstrumentedTest`, `GeckoAddressTabSelectionInstrumentedTest`, `FullImmersiveModeInstrumentedTest` |
 | Missed hidden-IME delivery after Activity resume or restored window focus | `GeckoKeyboardInsetsInstrumentedTest#resumeReconcilesKeyboardMarginsWhenHiddenInsetsWereMissed`, `#restoredWindowFocusReconcilesKeyboardMarginsWhenHiddenInsetsWereMissed`; assert native margins, visual viewport and restored lower-page pixels |
-| Bottom control obstruction and automatic right parking | `AddressBarAutoDockRulesTest`, `TextInputOcclusionScriptTest`, `scripts/text_input_occlusion.test.mjs`, `GeckoPageControlOcclusionInstrumentedTest`, focused controller/System WebView instrumented tests |
+| Bottom control obstruction and remembered-edge automatic parking | `AddressBarAutoDockRulesTest`, `TextInputOcclusionScriptTest`, `scripts/text_input_occlusion.test.mjs`, `GeckoPageControlOcclusionInstrumentedTest`, `AddressBarDockPersistenceInstrumentedTest`, focused controller/System WebView instrumented tests |
 | Restored launcher tab and initial Gecko viewport | `StartupPresentationRulesTest`, `BrowserInitialNavigationRulesTest`, `MainActivityRestoredTabInstrumentedTest`, `BrowserControllerInitialViewportInstrumentedTest` |
 | WebView runtime, Basic authentication and Link Peek | `browser/*InstrumentedTest`, `BrowserControllerHttpAuthInstrumentedTest`, `ui/HttpAuthPromptDialogInstrumentedTest`, `ui/LinkPeekOverlayInstrumentedTest` |
 | System WebView native OAuth popups, POST, close, Blob downloads and login compatibility | `SystemWebViewPopupNavigationInstrumentedTest`, `SystemWebViewBlobDownloadInstrumentedTest`, `FederatedLoginRulesTest` |

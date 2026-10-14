@@ -13778,7 +13778,7 @@ class BrowserController(
                     return@probeTextInputOcclusion
                 }
                 if (result == TextInputOcclusionProbeResult.Occluded) {
-                    parkAddressBarOnRight()
+                    updateAddressBarDocked(true)
                     AppLogging.record(
                         if (mode == TextInputOcclusionProbeMode.FocusedTextInput) {
                             AppLogEvent.AddressBarAutoParkedForFocusedInput

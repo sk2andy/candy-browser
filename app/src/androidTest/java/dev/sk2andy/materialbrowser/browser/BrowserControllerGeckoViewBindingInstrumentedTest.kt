@@ -42,6 +42,7 @@ import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineFailureKind
 import dev.sk2andy.materialbrowser.data.BrowserSessionStore
 import dev.sk2andy.materialbrowser.data.AppLogging
 import dev.sk2andy.materialbrowser.data.AppLogStore
+import dev.sk2andy.materialbrowser.data.AddressBarDockEdge
 import dev.sk2andy.materialbrowser.data.AddressBarDockPlacement
 import dev.sk2andy.materialbrowser.data.DeveloperSettings
 import dev.sk2andy.materialbrowser.data.GeckoSafeAreaSettings
@@ -586,6 +587,62 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
             staleCallback()
 
             assertEquals(listOf(BrowserEngineCommands.stop()), session.commands)
+        }
+    }
+
+    @Test
+    fun focusedInputAutoParkingKeepsRememberedLeftEdgeAndHeight() {
+        lateinit var session: ReentrantAttachSession
+        val placement = AddressBarDockPlacement(AddressBarDockEdge.Left, 0.6f)
+        composeRule.runOnIdle {
+            val browserController = createAddressBarAutoDockController()
+            browserController.updateAddressBarDockPlacement(placement)
+            browserController.updateAddressBarDocked(false)
+            session = ReentrantAttachSession(
+                tabId = browserController.selectedTabId,
+                onFirstAttach = {},
+                textInputOcclusionProbeResults = listOf(TextInputOcclusionProbeResult.Occluded),
+            )
+            browserController.installGeckoEngineSessionForTesting(session)
+            browserController.dispatchGeckoEngineEventForTesting(
+                BrowserEngineEvent(
+                    tabId = session.tabId,
+                    type = BrowserEngineEventType.NavigationStarted,
+                    address = "https://chat.test/",
+                    title = null,
+                    canGoBack = false,
+                    canGoForward = false,
+                    failureDescription = null,
+                ),
+            )
+            browserController.setAddressBarBoundsInViewport(
+                leftPx = 50f,
+                topPx = 700f,
+                rightPx = 950f,
+                bottomPx = 800f,
+                viewportWidthPx = 1_000f,
+                viewportHeightPx = 1_000f,
+            )
+            browserController.onWindowInsetsChanged(
+                WindowInsetsCompat.Builder()
+                    .setInsets(WindowInsetsCompat.Type.ime(), Insets.of(0, 0, 0, 600))
+                    .setVisible(WindowInsetsCompat.Type.ime(), true)
+                    .build(),
+            )
+        }
+        composeRule.waitUntil(timeoutMillis = 5_000L) {
+            requireNotNull(controller).isAddressBarDocked
+        }
+        composeRule.runOnIdle {
+            assertEquals(
+                TextInputOcclusionProbeMode.FocusedTextInput,
+                session.lastTextInputOcclusionProbeMode,
+            )
+            assertEquals(placement, requireNotNull(controller).addressBarDockPlacement)
+            assertEquals(
+                placement,
+                BrowserSessionStore(composeRule.activity).loadLastAddressBarDockPlacement(),
+            )
         }
     }
 
