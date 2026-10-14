@@ -1461,4 +1461,13 @@
     <string name="settings_menu_bottom_sheet_toolbar_summary">Wiel fënnef Aktioune vu lénks no riets. Scho zougewise Aktioune wiesselen d’Plaz. Eng eidel Plaz verstoppt de Knäppchen.</string>
     <string name="settings_menu_bottom_sheet_toolbar_slot">Aktioun %1$d</string>
     <string name="settings_menu_bottom_sheet_toolbar_empty">Eidel Plaz</string>
+    <string name="reader_settings">Liesastellungen</string>
+    <string name="reader_compact_controls">Kompakt Steierung</string>
+    <string name="reader_expand_controls">URL a Steierung weisen</string>
+    <string name="reader_hide_controls">Steierung ganz verstoppen</string>
+    <string name="reader_hidden_controls_hint">Android-Zeréck weist d’Steierung erëm.</string>
+    <string name="reader_continue_reading">Weiderliesen</string>
+    <string name="reader_font_serif">Serif</string>
+    <string name="reader_font_sans">Sans</string>
+    <string name="reader_theme_light">Hell</string>
 </resources>

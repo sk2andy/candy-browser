@@ -1461,4 +1461,13 @@
     <string name="settings_menu_bottom_sheet_toolbar_summary">Vælg fem handlinger fra venstre mod højre. Allerede tildelte handlinger bytter plads. En tom plads skjuler knappen.</string>
     <string name="settings_menu_bottom_sheet_toolbar_slot">Handling %1$d</string>
     <string name="settings_menu_bottom_sheet_toolbar_empty">Tom plads</string>
+    <string name="reader_settings">Læseindstillinger</string>
+    <string name="reader_compact_controls">Kompakte kontroller</string>
+    <string name="reader_expand_controls">Vis URL og kontroller</string>
+    <string name="reader_hide_controls">Skjul alle kontroller</string>
+    <string name="reader_hidden_controls_hint">Tilbage i Android viser kontrollerne igen.</string>
+    <string name="reader_continue_reading">Læs videre</string>
+    <string name="reader_font_serif">Serif</string>
+    <string name="reader_font_sans">Sans</string>
+    <string name="reader_theme_light">Lys</string>
 </resources>

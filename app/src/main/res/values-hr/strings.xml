@@ -1477,4 +1477,13 @@
     <string name="settings_menu_bottom_sheet_toolbar_summary">Odaberite pet radnji slijeva nadesno. Već dodijeljene radnje zamjenjuju mjesta. Prazno mjesto skriva gumb.</string>
     <string name="settings_menu_bottom_sheet_toolbar_slot">Radnja %1$d</string>
     <string name="settings_menu_bottom_sheet_toolbar_empty">Prazno mjesto</string>
+    <string name="reader_settings">Postavke čitanja</string>
+    <string name="reader_compact_controls">Kompaktne kontrole</string>
+    <string name="reader_expand_controls">Prikaži URL i kontrole</string>
+    <string name="reader_hide_controls">Sakrij sve kontrole</string>
+    <string name="reader_hidden_controls_hint">Tipka Natrag u Androidu ponovno prikazuje kontrole.</string>
+    <string name="reader_continue_reading">Nastavi čitati</string>
+    <string name="reader_font_serif">Serif</string>
+    <string name="reader_font_sans">Sans</string>
+    <string name="reader_theme_light">Svijetlo</string>
 </resources>

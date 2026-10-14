@@ -1477,4 +1477,13 @@
     <string name="settings_menu_bottom_sheet_toolbar_summary">Изаберите пет радњи слева надесно. Већ додељене радње мењају места. Празно место скрива дугме.</string>
     <string name="settings_menu_bottom_sheet_toolbar_slot">Радња %1$d</string>
     <string name="settings_menu_bottom_sheet_toolbar_empty">Празно место</string>
+    <string name="reader_settings">Подешавања читања</string>
+    <string name="reader_compact_controls">Компактне контроле</string>
+    <string name="reader_expand_controls">Прикажи URL и контроле</string>
+    <string name="reader_hide_controls">Сакриј све контроле</string>
+    <string name="reader_hidden_controls_hint">Дугме Назад у Android-у поново приказује контроле.</string>
+    <string name="reader_continue_reading">Настави читање</string>
+    <string name="reader_font_serif">Серифни</string>
+    <string name="reader_font_sans">Без серифа</string>
+    <string name="reader_theme_light">Светло</string>
 </resources>

@@ -1493,4 +1493,13 @@
     <string name="settings_menu_bottom_sheet_toolbar_summary">Izberite pet dejanj od leve proti desni. Že dodeljena dejanja zamenjajo mesti. Prazno mesto skrije gumb.</string>
     <string name="settings_menu_bottom_sheet_toolbar_slot">Dejanje %1$d</string>
     <string name="settings_menu_bottom_sheet_toolbar_empty">Prazno mesto</string>
+    <string name="reader_settings">Nastavitve branja</string>
+    <string name="reader_compact_controls">Strnjeni kontrolniki</string>
+    <string name="reader_expand_controls">Prikaži URL in kontrolnike</string>
+    <string name="reader_hide_controls">Skrij vse kontrolnike</string>
+    <string name="reader_hidden_controls_hint">Gumb Nazaj v Androidu ponovno prikaže kontrolnike.</string>
+    <string name="reader_continue_reading">Nadaljuj branje</string>
+    <string name="reader_font_serif">Serif</string>
+    <string name="reader_font_sans">Sans</string>
+    <string name="reader_theme_light">Svetlo</string>
 </resources>

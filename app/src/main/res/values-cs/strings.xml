@@ -1492,4 +1492,13 @@
     <string name="settings_menu_bottom_sheet_toolbar_summary">Vyberte pět akcí zleva doprava. Již přiřazené akce si vymění místa. Prázdné místo skryje tlačítko.</string>
     <string name="settings_menu_bottom_sheet_toolbar_slot">Akce %1$d</string>
     <string name="settings_menu_bottom_sheet_toolbar_empty">Prázdné místo</string>
+    <string name="reader_settings">Nastavení čtení</string>
+    <string name="reader_compact_controls">Kompaktní ovládání</string>
+    <string name="reader_expand_controls">Zobrazit URL a ovládání</string>
+    <string name="reader_hide_controls">Úplně skrýt ovládání</string>
+    <string name="reader_hidden_controls_hint">Tlačítko Zpět v Androidu znovu zobrazí ovládání.</string>
+    <string name="reader_continue_reading">Pokračovat ve čtení</string>
+    <string name="reader_font_serif">Patkové</string>
+    <string name="reader_font_sans">Bezpatkové</string>
+    <string name="reader_theme_light">Světlý</string>
 </resources>

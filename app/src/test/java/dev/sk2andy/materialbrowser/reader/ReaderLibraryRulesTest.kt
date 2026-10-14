@@ -7,6 +7,16 @@ import org.junit.Test
 
 class ReaderLibraryRulesTest {
     @Test
+    fun `new and private reader settings default to paper while light remains selectable`() {
+        assertEquals(ReaderTheme.Paper, ReaderSettings().theme)
+        val light = ReaderLibraryRules.updateSettings(
+            ReaderLibraryState(), ReaderSettings(theme = ReaderTheme.Light), isPrivate = false,
+        )
+        assertEquals(ReaderTheme.Light, light.settings.theme)
+        assertEquals(ReaderTheme.Paper, ReaderLibraryRules.visibleState(light, isPrivate = true).settings.theme)
+    }
+
+    @Test
     fun `private mode cannot cross any persistence boundary`() {
         val state = ReaderLibraryState(
             settings = ReaderSettings(1.2f, ReaderTheme.Paper),

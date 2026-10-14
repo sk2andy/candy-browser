@@ -1468,4 +1468,13 @@
     <string name="settings_menu_bottom_sheet_toolbar_summary">Choisissez cinq actions de gauche à droite. Les actions déjà attribuées échangent leur place. Un emplacement vide masque son bouton.</string>
     <string name="settings_menu_bottom_sheet_toolbar_slot">Action %1$d</string>
     <string name="settings_menu_bottom_sheet_toolbar_empty">Emplacement vide</string>
+    <string name="reader_settings">Réglages de lecture</string>
+    <string name="reader_compact_controls">Commandes compactes</string>
+    <string name="reader_expand_controls">Afficher l’URL et les commandes</string>
+    <string name="reader_hide_controls">Masquer toutes les commandes</string>
+    <string name="reader_hidden_controls_hint">Le bouton Retour d’Android réaffiche les commandes.</string>
+    <string name="reader_continue_reading">Continuer la lecture</string>
+    <string name="reader_font_serif">Avec empattements</string>
+    <string name="reader_font_sans">Sans empattements</string>
+    <string name="reader_theme_light">Clair</string>
 </resources>

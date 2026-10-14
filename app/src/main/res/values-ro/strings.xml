@@ -1477,4 +1477,13 @@
     <string name="settings_menu_bottom_sheet_toolbar_summary">Alege cinci acțiuni de la stânga la dreapta. Acțiunile deja atribuite își schimbă locurile. Un loc gol ascunde butonul.</string>
     <string name="settings_menu_bottom_sheet_toolbar_slot">Acțiunea %1$d</string>
     <string name="settings_menu_bottom_sheet_toolbar_empty">Loc gol</string>
+    <string name="reader_settings">Setări de lectură</string>
+    <string name="reader_compact_controls">Comenzi compacte</string>
+    <string name="reader_expand_controls">Arată URL și comenzile</string>
+    <string name="reader_hide_controls">Ascunde toate comenzile</string>
+    <string name="reader_hidden_controls_hint">Butonul Înapoi din Android arată din nou comenzile.</string>
+    <string name="reader_continue_reading">Continuă lectura</string>
+    <string name="reader_font_serif">Serif</string>
+    <string name="reader_font_sans">Sans</string>
+    <string name="reader_theme_light">Luminos</string>
 </resources>

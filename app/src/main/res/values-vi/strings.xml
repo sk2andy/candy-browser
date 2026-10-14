@@ -1444,4 +1444,13 @@
     <string name="settings_menu_bottom_sheet_toolbar_summary">Chọn năm thao tác từ trái sang phải. Các thao tác đã được gán sẽ đổi chỗ. Ô trống sẽ ẩn nút tương ứng.</string>
     <string name="settings_menu_bottom_sheet_toolbar_slot">Thao tác %1$d</string>
     <string name="settings_menu_bottom_sheet_toolbar_empty">Ô trống</string>
+    <string name="reader_settings">Cài đặt đọc</string>
+    <string name="reader_compact_controls">Điều khiển thu gọn</string>
+    <string name="reader_expand_controls">Hiện URL và điều khiển</string>
+    <string name="reader_hide_controls">Ẩn toàn bộ điều khiển</string>
+    <string name="reader_hidden_controls_hint">Nút Quay lại của Android sẽ hiện lại điều khiển.</string>
+    <string name="reader_continue_reading">Đọc tiếp</string>
+    <string name="reader_font_serif">Có chân</string>
+    <string name="reader_font_sans">Không chân</string>
+    <string name="reader_theme_light">Sáng</string>
 </resources>

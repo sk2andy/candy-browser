@@ -1495,4 +1495,13 @@
     <string name="settings_menu_bottom_sheet_toolbar_summary">Выберите пять действий слева направо. Уже назначенные действия меняются местами. Пустое место скрывает кнопку.</string>
     <string name="settings_menu_bottom_sheet_toolbar_slot">Действие %1$d</string>
     <string name="settings_menu_bottom_sheet_toolbar_empty">Пустое место</string>
+    <string name="reader_settings">Настройки чтения</string>
+    <string name="reader_compact_controls">Компактное управление</string>
+    <string name="reader_expand_controls">Показать URL и управление</string>
+    <string name="reader_hide_controls">Полностью скрыть управление</string>
+    <string name="reader_hidden_controls_hint">Кнопка «Назад» Android вернёт управление.</string>
+    <string name="reader_continue_reading">Продолжить чтение</string>
+    <string name="reader_font_serif">С засечками</string>
+    <string name="reader_font_sans">Без засечек</string>
+    <string name="reader_theme_light">Светлая</string>
 </resources>

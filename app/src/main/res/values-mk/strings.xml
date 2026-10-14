@@ -1461,4 +1461,13 @@
     <string name="settings_menu_bottom_sheet_toolbar_summary">Изберете пет дејства од лево кон десно. Веќе доделените дејства ги заменуваат местата. Празното место го крие копчето.</string>
     <string name="settings_menu_bottom_sheet_toolbar_slot">Дејство %1$d</string>
     <string name="settings_menu_bottom_sheet_toolbar_empty">Празно место</string>
+    <string name="reader_settings">Поставки за читање</string>
+    <string name="reader_compact_controls">Компактни контроли</string>
+    <string name="reader_expand_controls">Прикажи URL и контроли</string>
+    <string name="reader_hide_controls">Сокриј ги сите контроли</string>
+    <string name="reader_hidden_controls_hint">Назад во Android повторно ги прикажува контролите.</string>
+    <string name="reader_continue_reading">Продолжи со читање</string>
+    <string name="reader_font_serif">Серифен</string>
+    <string name="reader_font_sans">Безсерифен</string>
+    <string name="reader_theme_light">Светло</string>
 </resources>

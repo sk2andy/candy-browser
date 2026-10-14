@@ -1444,4 +1444,13 @@
     <string name="settings_menu_bottom_sheet_toolbar_summary">เลือกห้าการทำงานจากซ้ายไปขวา การทำงานที่กำหนดแล้วจะสลับตำแหน่งกัน ช่องว่างจะซ่อนปุ่มนั้น</string>
     <string name="settings_menu_bottom_sheet_toolbar_slot">การทำงาน %1$d</string>
     <string name="settings_menu_bottom_sheet_toolbar_empty">ช่องว่าง</string>
+    <string name="reader_settings">การตั้งค่าการอ่าน</string>
+    <string name="reader_compact_controls">การควบคุมแบบย่อ</string>
+    <string name="reader_expand_controls">แสดง URL และการควบคุม</string>
+    <string name="reader_hide_controls">ซ่อนการควบคุมทั้งหมด</string>
+    <string name="reader_hidden_controls_hint">ปุ่มย้อนกลับของ Android จะแสดงการควบคุมอีกครั้ง</string>
+    <string name="reader_continue_reading">อ่านต่อ</string>
+    <string name="reader_font_serif">มีเชิง</string>
+    <string name="reader_font_sans">ไม่มีเชิง</string>
+    <string name="reader_theme_light">สว่าง</string>
 </resources>

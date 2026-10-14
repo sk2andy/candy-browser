@@ -3,6 +3,7 @@ package dev.sk2andy.materialbrowser.shared.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -10,9 +11,15 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.layout.windowInsetsTopHeight
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -34,7 +41,6 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
@@ -54,10 +60,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
@@ -69,6 +77,7 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.Hyphens
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -88,13 +97,27 @@ import dev.sk2andy.materialbrowser.reader.ReaderSpeechState
 import dev.sk2andy.materialbrowser.reader.ReaderSpeechRules
 import dev.sk2andy.materialbrowser.reader.ReaderSpeechStatus
 import dev.sk2andy.materialbrowser.reader.ReaderTheme
+import dev.sk2andy.materialbrowser.reader.ReaderFont
+import dev.sk2andy.materialbrowser.reader.ReaderChromeMode
+import dev.sk2andy.materialbrowser.reader.ReaderChromeRules
 import dev.sk2andy.materialbrowser.reader.ReaderTextAlignment
 import kotlinx.coroutines.delay
 
 object ReaderStudioTestTags {
+    const val Back = "reader_studio_back"
+    const val Pill = "reader_studio_pill"
+    const val Url = "reader_studio_url"
+    const val Toggle = "reader_studio_toggle"
+    const val Settings = "reader_studio_settings"
+    const val Sheet = "reader_studio_sheet"
+    const val Hide = "reader_studio_hide"
+    const val Continue = "reader_studio_continue"
+    const val Typeface = "reader_studio_typeface"
     const val Screen = "reader_studio_screen"
     const val Loading = "reader_studio_loading"
     const val Error = "reader_studio_error"
+    const val ArticleTitle = "reader_studio_article_title"
+    const val StatusBarScrim = "reader_studio_status_bar_scrim"
     const val Article = "reader_studio_article"
     const val Progress = "reader_studio_progress"
     const val Save = "reader_studio_save"
@@ -111,6 +134,14 @@ object ReaderStudioTestTags {
 
 enum class ReaderStudioLabel {
     Close,
+    Settings,
+    CompactControls,
+    ExpandControls,
+    HideControls,
+    HiddenControlsHint,
+    ContinueReading,
+    FontSerif,
+    FontSans,
     Title,
     Article,
     Original,
@@ -124,6 +155,7 @@ enum class ReaderStudioLabel {
     SaveOffline,
     OfflineShort,
     ThemeSystem,
+    ThemeLight,
     ThemePaper,
     ThemeNight,
     FontDecrease,
@@ -166,6 +198,14 @@ interface ReaderStudioResources {
 internal object DefaultReaderStudioResources : ReaderStudioResources {
     @Composable
     override fun text(label: ReaderStudioLabel, value: Int?): String = when (label) {
+        ReaderStudioLabel.Settings -> "Reading settings"
+        ReaderStudioLabel.CompactControls -> "Use compact controls"
+        ReaderStudioLabel.ExpandControls -> "Show URL and controls"
+        ReaderStudioLabel.HideControls -> "Hide controls completely"
+        ReaderStudioLabel.HiddenControlsHint -> "Android Back shows the controls again."
+        ReaderStudioLabel.ContinueReading -> "Continue reading"
+        ReaderStudioLabel.FontSerif -> "Serif"
+        ReaderStudioLabel.FontSans -> "Sans"
         ReaderStudioLabel.Close -> "Close Reader Studio"
         ReaderStudioLabel.Title -> "Reader Studio"
         ReaderStudioLabel.Article -> "Article"
@@ -183,6 +223,7 @@ internal object DefaultReaderStudioResources : ReaderStudioResources {
         ReaderStudioLabel.SaveOffline -> "Save offline"
         ReaderStudioLabel.OfflineShort -> "Offline"
         ReaderStudioLabel.ThemeSystem -> "System"
+        ReaderStudioLabel.ThemeLight -> "Light"
         ReaderStudioLabel.ThemePaper -> "Paper"
         ReaderStudioLabel.ThemeNight -> "Night"
         ReaderStudioLabel.FontDecrease -> "Decrease text size"
@@ -301,18 +342,32 @@ fun ReaderStudioScreen(
     onDismiss: () -> Unit,
     onOpenOriginal: (String) -> Unit,
     onOpenLink: (String) -> Unit,
+    backHandler: (@Composable (Boolean, () -> Unit) -> Unit)? = null,
+    systemBarAppearance: @Composable (Boolean) -> Unit = {},
 ) {
     var library by remember(isPrivate) { mutableStateOf(ReaderLibraryState()) }
     var activeDocument by remember(result) {
         mutableStateOf((result as? ReaderExtractionResult.Success)?.document)
     }
     var activeSnapshot by remember { mutableStateOf<ReaderSnapshot?>(null) }
-    var libraryVisible by remember { mutableStateOf(false) }
+    var libraryVisible by rememberSaveable(sourceUrl, isPrivate) { mutableStateOf(false) }
+    var chrome by rememberSaveable(sourceUrl, isPrivate) { mutableStateOf(ReaderChromeMode.Expanded) }
+    var settingsVisible by rememberSaveable(sourceUrl, isPrivate) { mutableStateOf(false) }
+    val onBack: () -> Unit = {
+        when {
+            settingsVisible -> settingsVisible = false
+            chrome == ReaderChromeMode.Hidden -> chrome = ReaderChromeRules.restore(chrome)
+            libraryVisible -> libraryVisible = false
+            else -> onDismiss()
+        }
+    }
+    backHandler?.invoke(true, onBack)
     var libraryLoaded by remember(isPrivate) { mutableStateOf(isPrivate) }
     var sessionSettings by remember(library.settings, isPrivate) {
         mutableStateOf(library.settings)
     }
     val colors = readerColors(sessionSettings.theme)
+    systemBarAppearance(colors.article.luminance() > 0.5f)
     LaunchedEffect(result, isPrivate) {
         libraryLoaded = false
         repository.load(isPrivate) { loaded ->
@@ -328,24 +383,18 @@ fun ReaderStudioScreen(
         color = colors.background,
         contentColor = colors.content,
     ) {
-        Column(modifier = Modifier.safeDrawingPadding()) {
-            ReaderStudioHeader(
-                resources = resources,
-                libraryVisible = libraryVisible,
-                isPrivate = isPrivate,
-                snapshotCount = library.snapshots.size,
-                onDismiss = onDismiss,
-                onOpenOriginal = {
-                    onOpenOriginal(activeDocument?.sourceUrl ?: sourceUrl)
-                },
-                onLibrary = { libraryVisible = !libraryVisible },
-            )
+        Box(
+            modifier = Modifier.windowInsetsPadding(
+                WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom),
+            ),
+        ) {
             if (libraryVisible && !isPrivate) {
                 ReaderLibraryContent(
                     resources = resources,
                     snapshots = library.snapshots,
                     progressByUrl = library.progressByUrl,
                     colors = colors,
+                    backButtonVisible = backHandler == null,
                     onOpen = { snapshot ->
                         activeSnapshot = snapshot
                         activeDocument = snapshot.document
@@ -380,11 +429,12 @@ fun ReaderStudioScreen(
                         resources = resources,
                         speechFactory = speechFactory,
                         colors = colors,
+                        backButtonVisible = backHandler == null,
                         onSettingsChanged = { settings ->
-                            sessionSettings = settings
+                            sessionSettings = settings.copy(fontScale = settings.fontScale.coerceIn(0.8f, 1.6f))
                             if (!isPrivate) {
                                 repository.updateSettings(
-                                    settings,
+                                    sessionSettings,
                                     isPrivate = false,
                                 ) { updated ->
                                     library = updated
@@ -398,57 +448,82 @@ fun ReaderStudioScreen(
                             }
                         },
                         onOpenLink = onOpenLink,
+                        settingsVisible = settingsVisible,
+                        onCloseSettings = { settingsVisible = false },
+                        onHideControls = {
+                            chrome = ReaderChromeMode.Hidden
+                            settingsVisible = false
+                        },
+                        onLibrary = {
+                            settingsVisible = false
+                            libraryVisible = true
+                        },
+                        onOpenOriginal = { onOpenOriginal(checkNotNull(activeDocument).sourceUrl) },
                     )
                 }
             }
-        }
-    }
-}
-
-@Composable
-private fun ReaderStudioHeader(
-    resources: ReaderStudioResources,
-    libraryVisible: Boolean,
-    isPrivate: Boolean,
-    snapshotCount: Int,
-    onDismiss: () -> Unit,
-    onOpenOriginal: () -> Unit,
-    onLibrary: () -> Unit,
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 8.dp, vertical = 6.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        IconButton(onClick = onDismiss) {
-            Icon(
-                Icons.AutoMirrored.Filled.ArrowBack,
-                contentDescription = resources.text(ReaderStudioLabel.Close),
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .fillMaxWidth()
+                    .windowInsetsTopHeight(WindowInsets.statusBars)
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(colors.article, colors.article.copy(alpha = 0.86f)),
+                        ),
+                    )
+                    .testTag(ReaderStudioTestTags.StatusBarScrim),
             )
-        }
-        Text(
-            resources.text(ReaderStudioLabel.Title),
-            modifier = Modifier.weight(1f),
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold,
-        )
-        if (!isPrivate) {
-            TextButton(
-                onClick = onLibrary,
-                modifier = Modifier.testTag(ReaderStudioTestTags.Library),
-            ) {
-                Text(
-                    if (libraryVisible) {
-                        resources.text(ReaderStudioLabel.Article)
-                    } else {
-                        resources.text(ReaderStudioLabel.OfflineCount, snapshotCount)
-                    },
+            if (backHandler == null) {
+                IconButton(
+                    onClick = onBack,
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .windowInsetsPadding(WindowInsets.statusBars)
+                        .padding(8.dp)
+                        .testTag(ReaderStudioTestTags.Back),
+                ) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = resources.text(
+                            if (chrome == ReaderChromeMode.Hidden || libraryVisible || settingsVisible) {
+                                ReaderStudioLabel.ContinueReading
+                            } else {
+                                ReaderStudioLabel.Close
+                            },
+                        ),
+                    )
+                }
+            }
+            if (chrome != ReaderChromeMode.Hidden) {
+                ReaderPill(
+                    resources = resources,
+                    sourceUrl = activeDocument?.sourceUrl ?: sourceUrl,
+                    mode = chrome,
+                    colors = colors,
+                    onToggle = { chrome = ReaderChromeRules.toggle(chrome) },
+                    onSettings = { settingsVisible = true },
+                    modifier = Modifier.align(Alignment.BottomCenter).padding(16.dp),
                 )
             }
-        }
-        TextButton(onClick = onOpenOriginal) {
-            Text(resources.text(ReaderStudioLabel.Original))
+            if (settingsVisible && (libraryVisible || activeDocument == null)) {
+                ReaderSettingsSheet(
+                    resources = resources,
+                    colors = colors,
+                    onDismiss = { settingsVisible = false },
+                    onHide = {
+                        chrome = ReaderChromeMode.Hidden
+                        settingsVisible = false
+                    },
+                    onLibrary = if (isPrivate) null else {
+                        {
+                            libraryVisible = !libraryVisible
+                            settingsVisible = false
+                        }
+                    },
+                    onOpenOriginal = { onOpenOriginal(activeDocument?.sourceUrl ?: sourceUrl) },
+                ) {}
+            }
         }
     }
 }
@@ -535,9 +610,15 @@ private fun ReaderArticle(
     resources: ReaderStudioResources,
     speechFactory: () -> ReaderSpeech,
     colors: ReaderColors,
+    backButtonVisible: Boolean,
     onSettingsChanged: (ReaderSettings) -> Unit,
     onLibraryChanged: (ReaderLibraryState) -> Unit,
     onOpenLink: (String) -> Unit,
+    settingsVisible: Boolean,
+    onCloseSettings: () -> Unit,
+    onHideControls: () -> Unit,
+    onLibrary: () -> Unit,
+    onOpenOriginal: () -> Unit,
 ) {
     val scrollState = rememberScrollState()
     val speech = remember(document.sourceUrl) { speechFactory() }
@@ -569,86 +650,69 @@ private fun ReaderArticle(
         }
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    listOf(colors.background, colors.card.copy(alpha = 0.34f)),
-                ),
-            ),
-    ) {
-        LinearProgressIndicator(
-            progress = { progress },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(4.dp)
-                .testTag(ReaderStudioTestTags.Progress),
-            color = colors.accent,
-            trackColor = colors.accent.copy(alpha = 0.16f),
-        )
-        ReaderControls(
+    if (settingsVisible) {
+        ReaderSettingsSheet(
             resources = resources,
-            settings = settings,
-            isPrivate = isPrivate,
-            speechStatus = speech.state.status,
-            speechExcerpt = ReaderSpeechRules.currentExcerpt(
-                document.speechText,
-                speech.state.characterOffset,
-            ),
             colors = colors,
-            onSettingsChanged = onSettingsChanged,
-            onPlay = { speech.play(document.speechText) },
-            onPause = speech::pause,
-            onStop = speech::stop,
-            onSave = {
-                repository.saveSnapshot(document, progress, isPrivate, onLibraryChanged)
-            },
-        )
+            onDismiss = onCloseSettings,
+            onHide = onHideControls,
+            onLibrary = onLibrary.takeUnless { isPrivate },
+            onOpenOriginal = onOpenOriginal,
+        ) {
+            LinearProgressIndicator(
+                progress = { progress },
+                modifier = Modifier.fillMaxWidth().testTag(ReaderStudioTestTags.Progress),
+                color = colors.accent,
+                trackColor = colors.accent.copy(alpha = 0.16f),
+            )
+            Text(resources.text(ReaderStudioLabel.ProgressPercent, (progress * 100).toInt()))
+            ReaderControls(
+                resources = resources,
+                settings = settings,
+                isPrivate = isPrivate,
+                speechStatus = speech.state.status,
+                speechExcerpt = ReaderSpeechRules.currentExcerpt(
+                    document.speechText,
+                    speech.state.characterOffset,
+                ),
+                colors = colors,
+                onSettingsChanged = onSettingsChanged,
+                onPlay = { speech.play(document.speechText) },
+                onPause = speech::pause,
+                onStop = speech::stop,
+                onSave = {
+                    repository.saveSnapshot(document, progress, isPrivate, onLibraryChanged)
+                },
+            )
+        }
+    }
+    Box(modifier = Modifier.fillMaxSize().background(colors.article)) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(scrollState)
-                .padding(horizontal = 14.dp, vertical = 8.dp)
                 .testTag(ReaderStudioTestTags.Article),
         ) {
-            Surface(
+            Spacer(Modifier.windowInsetsTopHeight(WindowInsets.statusBars))
+            if (backButtonVisible) Spacer(Modifier.height(56.dp))
+            Box(
                 modifier = Modifier.fillMaxWidth(),
-                color = colors.article,
-                shape = RoundedCornerShape(32.dp),
-                tonalElevation = 2.dp,
-                shadowElevation = 2.dp,
+                contentAlignment = Alignment.TopCenter,
             ) {
-                Column(modifier = Modifier.padding(horizontal = 22.dp, vertical = 24.dp)) {
-                    Surface(
-                        color = colors.accent.copy(alpha = 0.12f),
-                        contentColor = colors.accent,
-                        shape = CircleShape,
-                    ) {
-                        Text(
-                            document.siteName,
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.SemiBold,
-                        )
-                    }
-                    Spacer(Modifier.height(16.dp))
+                Column(
+                    modifier = Modifier
+                        .widthIn(max = 760.dp)
+                        .padding(horizontal = 24.dp, vertical = 24.dp),
+                ) {
                     Text(
                         document.title,
-                        modifier = Modifier.semantics { heading() },
+                        modifier = Modifier.testTag(ReaderStudioTestTags.ArticleTitle).semantics { heading() },
                         style = MaterialTheme.typography.headlineLarge.copy(
+                            fontFamily = settings.font.composeFamily(),
                             fontSize = 30.sp * settings.fontScale,
                             lineHeight = 36.sp * settings.fontScale,
                         ),
                         fontWeight = FontWeight.Bold,
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        document.sourceUrl,
-                        color = colors.muted,
-                        style = MaterialTheme.typography.labelSmall,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
                     )
                     Spacer(Modifier.height(22.dp))
                     document.blocks.forEach { block ->
@@ -656,13 +720,14 @@ private fun ReaderArticle(
                             block = block,
                             fontScale = settings.fontScale,
                             textAlignment = settings.textAlignment,
+                            font = settings.font,
                             colors = colors,
                             onOpenLink = onOpenLink,
                         )
                     }
                 }
             }
-            Spacer(Modifier.height(36.dp))
+            Spacer(Modifier.height(112.dp))
         }
     }
 }
@@ -690,108 +755,125 @@ private fun ReaderControls(
         tonalElevation = 5.dp,
         shadowElevation = 2.dp,
     ) {
-        Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp)) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            ReaderFontSizeSegmented(
-                resources = resources,
-                settings = settings,
-                colors = colors,
-                onSettingsChanged = onSettingsChanged,
-                modifier = Modifier.weight(1f),
-            )
-            ReaderAlignmentSegmented(
-                resources = resources,
-                settings = settings,
-                colors = colors,
-                onSettingsChanged = onSettingsChanged,
-                modifier = Modifier.weight(1f),
-            )
-            if (!isPrivate) {
-                val saveDescription = resources.text(ReaderStudioLabel.SaveOffline)
-                val showSaveLabel = LocalDensity.current.fontScale < 1.6f
-                FilledTonalButton(
-                    onClick = onSave,
-                    modifier = Modifier
-                        .weight(1f)
-                        .testTag(ReaderStudioTestTags.Save),
-                    shape = CircleShape,
-                    contentPadding = PaddingValues(horizontal = 12.dp),
-                    colors = ButtonDefaults.filledTonalButtonColors(
-                        containerColor = colors.accent,
-                        contentColor = colors.onAccent,
-                    ),
+        BoxWithConstraints {
+            val showSaveLabel = maxWidth >= 320.dp && LocalDensity.current.fontScale < 1.6f
+            val themeColumns = if (maxWidth < 360.dp || LocalDensity.current.fontScale >= 1.6f) 2 else 4
+            Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp)) {
+                SingleChoiceSegmentedButtonRow(
+                    modifier = Modifier.fillMaxWidth().testTag(ReaderStudioTestTags.Typeface),
                 ) {
-                    resources.icon(
-                        icon = ReaderStudioIcon.Download,
-                        modifier = Modifier.size(20.dp),
-                        contentDescription = saveDescription.takeUnless { showSaveLabel },
-                    )
-                    if (showSaveLabel) {
-                        Spacer(Modifier.size(6.dp))
-                        Text(resources.text(ReaderStudioLabel.OfflineShort))
+                    ReaderFont.entries.forEachIndexed { index, font ->
+                        SegmentedButton(
+                            selected = settings.font == font,
+                            onClick = { onSettingsChanged(settings.copy(font = font)) },
+                            shape = SegmentedButtonDefaults.itemShape(index, ReaderFont.entries.size),
+                            colors = readerSegmentedColors(colors),
+                            label = {
+                                Text(
+                                    resources.text(
+                                        if (font == ReaderFont.Serif) {
+                                            ReaderStudioLabel.FontSerif
+                                        } else {
+                                            ReaderStudioLabel.FontSans
+                                        },
+                                    ),
+                                )
+                            },
+                        )
                     }
                 }
-            }
-        }
-        SingleChoiceSegmentedButtonRow(
-            modifier = Modifier
-                .fillMaxWidth()
-                .testTag(ReaderStudioTestTags.ThemeSegmented),
-        ) {
-            ReaderTheme.entries.forEachIndexed { index, theme ->
-                SegmentedButton(
-                    modifier = Modifier.weight(1f),
-                    selected = settings.theme == theme,
-                    onClick = { onSettingsChanged(settings.copy(theme = theme)) },
-                    shape = SegmentedButtonDefaults.itemShape(
-                        index = index,
-                        count = ReaderTheme.entries.size,
-                    ),
-                    label = {
-                        Text(
-                            resources.text(
-                                when (theme) {
-                                    ReaderTheme.System -> ReaderStudioLabel.ThemeSystem
-                                    ReaderTheme.Paper -> ReaderStudioLabel.ThemePaper
-                                    ReaderTheme.Night -> ReaderStudioLabel.ThemeNight
-                                },
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    ReaderFontSizeSegmented(
+                        resources = resources,
+                        settings = settings,
+                        colors = colors,
+                        onSettingsChanged = onSettingsChanged,
+                        modifier = Modifier.weight(1f),
+                    )
+                    ReaderAlignmentSegmented(
+                        resources = resources,
+                        settings = settings,
+                        colors = colors,
+                        onSettingsChanged = onSettingsChanged,
+                        modifier = Modifier.weight(1f),
+                    )
+                    if (!isPrivate) {
+                        val saveDescription = resources.text(ReaderStudioLabel.SaveOffline)
+                        FilledTonalButton(
+                            onClick = onSave,
+                            modifier = Modifier
+                                .weight(1f)
+                                .testTag(ReaderStudioTestTags.Save),
+                            shape = CircleShape,
+                            contentPadding = PaddingValues(horizontal = 12.dp),
+                            colors = ButtonDefaults.filledTonalButtonColors(
+                                containerColor = colors.accent,
+                                contentColor = colors.onAccent,
                             ),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    },
-                    colors = SegmentedButtonDefaults.colors(
-                        activeContainerColor = colors.accent,
-                        activeContentColor = colors.onAccent,
-                        activeBorderColor = colors.accent,
-                        inactiveContainerColor = Color.Transparent,
-                        inactiveContentColor = colors.content,
-                        inactiveBorderColor = colors.muted,
-                    ),
+                        ) {
+                            resources.icon(
+                                icon = ReaderStudioIcon.Download,
+                                modifier = Modifier.size(20.dp),
+                                contentDescription = saveDescription.takeUnless { showSaveLabel },
+                            )
+                            if (showSaveLabel) {
+                                Spacer(Modifier.size(6.dp))
+                                Text(resources.text(ReaderStudioLabel.OfflineShort))
+                            }
+                        }
+                    }
+                }
+                Column(modifier = Modifier.testTag(ReaderStudioTestTags.ThemeSegmented)) {
+                    ReaderTheme.entries.chunked(themeColumns).forEach { themes ->
+                        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                            themes.forEachIndexed { index, theme ->
+                                SegmentedButton(
+                                    modifier = Modifier.weight(1f),
+                                    selected = settings.theme == theme,
+                                    onClick = { onSettingsChanged(settings.copy(theme = theme)) },
+                                    shape = SegmentedButtonDefaults.itemShape(index, themes.size),
+                                    label = {
+                                        Text(
+                                            resources.text(
+                                                when (theme) {
+                                                    ReaderTheme.System -> ReaderStudioLabel.ThemeSystem
+                                                    ReaderTheme.Light -> ReaderStudioLabel.ThemeLight
+                                                    ReaderTheme.Paper -> ReaderStudioLabel.ThemePaper
+                                                    ReaderTheme.Night -> ReaderStudioLabel.ThemeNight
+                                                },
+                                            ),
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                        )
+                                    },
+                                    colors = readerSegmentedColors(colors),
+                                )
+                            }
+                        }
+                    }
+                }
+                ReaderSpeechTransport(
+                    resources = resources,
+                    status = speechStatus,
+                    excerpt = speechExcerpt,
+                    colors = colors,
+                    onPlay = onPlay,
+                    onPause = onPause,
+                    onStop = onStop,
                 )
+                if (isPrivate) {
+                    Text(
+                        resources.text(ReaderStudioLabel.PrivateNotice),
+                        modifier = Modifier.testTag(ReaderStudioTestTags.PrivateNotice),
+                        color = colors.muted,
+                        style = MaterialTheme.typography.labelMedium,
+                    )
+                }
             }
-        }
-        ReaderSpeechTransport(
-            resources = resources,
-            status = speechStatus,
-            excerpt = speechExcerpt,
-            colors = colors,
-            onPlay = onPlay,
-            onPause = onPause,
-            onStop = onStop,
-        )
-        if (isPrivate) {
-            Text(
-                resources.text(ReaderStudioLabel.PrivateNotice),
-                modifier = Modifier.testTag(ReaderStudioTestTags.PrivateNotice),
-                color = colors.muted,
-                style = MaterialTheme.typography.labelMedium,
-            )
-        }
         }
     }
 }
@@ -991,6 +1073,7 @@ private fun ReaderBlockContent(
     block: ReaderBlock,
     fontScale: Float,
     textAlignment: ReaderTextAlignment,
+    font: ReaderFont,
     colors: ReaderColors,
     onOpenLink: (String) -> Unit,
 ) {
@@ -1035,6 +1118,7 @@ private fun ReaderBlockContent(
                     Modifier
                 },
                 style = style.copy(
+                    fontFamily = font.composeFamily(),
                     textAlign = if (justify) TextAlign.Justify else TextAlign.Start,
                     hyphens = if (justify) Hyphens.Auto else Hyphens.None,
                 ),
@@ -1067,6 +1151,7 @@ private fun ReaderLibraryContent(
     snapshots: List<ReaderSnapshot>,
     progressByUrl: Map<String, Float>,
     colors: ReaderColors,
+    backButtonVisible: Boolean,
     onOpen: (ReaderSnapshot) -> Unit,
     onDelete: (ReaderSnapshot) -> Unit,
 ) {
@@ -1074,8 +1159,10 @@ private fun ReaderLibraryContent(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
+            .windowInsetsPadding(WindowInsets.statusBars)
             .padding(18.dp),
     ) {
+        if (backButtonVisible) Spacer(Modifier.height(56.dp))
         Text(
             resources.text(ReaderStudioLabel.OfflineLibrary),
             style = MaterialTheme.typography.headlineMedium,
@@ -1122,11 +1209,11 @@ private fun ReaderLibraryContent(
                 }
             }
         }
-        Spacer(Modifier.navigationBarsPadding())
+        Spacer(Modifier.height(112.dp))
     }
 }
 
-private data class ReaderColors(
+internal data class ReaderColors(
     val background: Color,
     val content: Color,
     val muted: Color,
@@ -1147,6 +1234,15 @@ private fun readerColors(theme: ReaderTheme): ReaderColors = when (theme) {
         accent = MaterialTheme.colorScheme.primary,
         onAccent = MaterialTheme.colorScheme.onPrimary,
     )
+    ReaderTheme.Light -> ReaderColors(
+        background = Color(0xFFF8F9FC),
+        content = Color(0xFF1C1B20),
+        muted = Color(0xFF5D5B65),
+        card = Color(0xFFECEEF5),
+        article = Color.White,
+        accent = Color(0xFF455F91),
+        onAccent = Color.White,
+    )
     ReaderTheme.Paper -> ReaderColors(
         background = Color(0xFFFFF4D6),
         content = Color(0xFF322A1D),
@@ -1165,4 +1261,9 @@ private fun readerColors(theme: ReaderTheme): ReaderColors = when (theme) {
         accent = Color(0xFFD8B7FF),
         onAccent = Color(0xFF281338),
     )
+}
+
+private fun ReaderFont.composeFamily(): FontFamily = when (this) {
+    ReaderFont.Sans -> FontFamily.SansSerif
+    ReaderFont.Serif -> FontFamily.Serif
 }

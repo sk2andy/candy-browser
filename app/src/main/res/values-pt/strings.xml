@@ -1468,4 +1468,13 @@
     <string name="settings_menu_bottom_sheet_toolbar_summary">Escolha cinco ações da esquerda para a direita. As ações já atribuídas trocam de posição. Um espaço vazio oculta o botão.</string>
     <string name="settings_menu_bottom_sheet_toolbar_slot">Ação %1$d</string>
     <string name="settings_menu_bottom_sheet_toolbar_empty">Espaço vazio</string>
+    <string name="reader_settings">Definições de leitura</string>
+    <string name="reader_compact_controls">Controlos compactos</string>
+    <string name="reader_expand_controls">Mostrar URL e controlos</string>
+    <string name="reader_hide_controls">Ocultar todos os controlos</string>
+    <string name="reader_hidden_controls_hint">O botão Voltar do Android mostra os controlos novamente.</string>
+    <string name="reader_continue_reading">Continuar a ler</string>
+    <string name="reader_font_serif">Serifa</string>
+    <string name="reader_font_sans">Sem serifa</string>
+    <string name="reader_theme_light">Claro</string>
 </resources>

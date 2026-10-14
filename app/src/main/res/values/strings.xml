@@ -1490,4 +1490,13 @@
     <string name="settings_menu_bottom_sheet_toolbar_summary">Choose five actions from left to right. Actions already assigned to another slot swap places. Leave a slot empty to hide its button.</string>
     <string name="settings_menu_bottom_sheet_toolbar_slot">Action %1$d</string>
     <string name="settings_menu_bottom_sheet_toolbar_empty">Empty slot</string>
+    <string name="reader_settings">Reading settings</string>
+    <string name="reader_compact_controls">Use compact controls</string>
+    <string name="reader_expand_controls">Show URL and controls</string>
+    <string name="reader_hide_controls">Hide controls completely</string>
+    <string name="reader_hidden_controls_hint">Android Back shows the controls again.</string>
+    <string name="reader_continue_reading">Continue reading</string>
+    <string name="reader_font_serif">Serif</string>
+    <string name="reader_font_sans">Sans</string>
+    <string name="reader_theme_light">Light</string>
 </resources>

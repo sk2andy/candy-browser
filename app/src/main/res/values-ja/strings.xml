@@ -1444,4 +1444,13 @@
     <string name="settings_menu_bottom_sheet_toolbar_summary">左から右に5つの操作を選択します。すでに割り当てられた操作は位置が入れ替わります。空のスロットはボタンを非表示にします。</string>
     <string name="settings_menu_bottom_sheet_toolbar_slot">操作 %1$d</string>
     <string name="settings_menu_bottom_sheet_toolbar_empty">空のスロット</string>
+    <string name="reader_settings">読書設定</string>
+    <string name="reader_compact_controls">コンパクトな操作表示</string>
+    <string name="reader_expand_controls">URLと操作を表示</string>
+    <string name="reader_hide_controls">操作をすべて非表示</string>
+    <string name="reader_hidden_controls_hint">Androidの戻るボタンで操作を再表示します。</string>
+    <string name="reader_continue_reading">読み続ける</string>
+    <string name="reader_font_serif">セリフ</string>
+    <string name="reader_font_sans">サンセリフ</string>
+    <string name="reader_theme_light">ライト</string>
 </resources>

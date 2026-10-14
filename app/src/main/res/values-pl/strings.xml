@@ -1492,4 +1492,13 @@
     <string name="settings_menu_bottom_sheet_toolbar_summary">Wybierz pięć działań od lewej do prawej. Przypisane już działania zamieniają się miejscami. Puste miejsce ukrywa przycisk.</string>
     <string name="settings_menu_bottom_sheet_toolbar_slot">Działanie %1$d</string>
     <string name="settings_menu_bottom_sheet_toolbar_empty">Puste miejsce</string>
+    <string name="reader_settings">Ustawienia czytania</string>
+    <string name="reader_compact_controls">Kompaktowe sterowanie</string>
+    <string name="reader_expand_controls">Pokaż URL i sterowanie</string>
+    <string name="reader_hide_controls">Ukryj całe sterowanie</string>
+    <string name="reader_hidden_controls_hint">Przycisk Wstecz Androida ponownie pokaże sterowanie.</string>
+    <string name="reader_continue_reading">Czytaj dalej</string>
+    <string name="reader_font_serif">Szeryfowa</string>
+    <string name="reader_font_sans">Bezszeryfowa</string>
+    <string name="reader_theme_light">Jasny</string>
 </resources>

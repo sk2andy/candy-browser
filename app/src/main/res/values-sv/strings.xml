@@ -1461,4 +1461,13 @@
     <string name="settings_menu_bottom_sheet_toolbar_summary">Välj fem åtgärder från vänster till höger. Redan tilldelade åtgärder byter plats. En tom plats döljer knappen.</string>
     <string name="settings_menu_bottom_sheet_toolbar_slot">Åtgärd %1$d</string>
     <string name="settings_menu_bottom_sheet_toolbar_empty">Tom plats</string>
+    <string name="reader_settings">Läsinställningar</string>
+    <string name="reader_compact_controls">Kompakta kontroller</string>
+    <string name="reader_expand_controls">Visa URL och kontroller</string>
+    <string name="reader_hide_controls">Dölj alla kontroller</string>
+    <string name="reader_hidden_controls_hint">Bakåt i Android visar kontrollerna igen.</string>
+    <string name="reader_continue_reading">Fortsätt läsa</string>
+    <string name="reader_font_serif">Serif</string>
+    <string name="reader_font_sans">Sans</string>
+    <string name="reader_theme_light">Ljust</string>
 </resources>

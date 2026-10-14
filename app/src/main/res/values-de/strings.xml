@@ -1472,4 +1472,13 @@
     <string name="settings_menu_bottom_sheet_toolbar_summary">Wähle fünf Aktionen von links nach rechts. Bereits belegte Aktionen tauschen ihren Platz. Ein leerer Platz blendet die Schaltfläche aus.</string>
     <string name="settings_menu_bottom_sheet_toolbar_slot">Aktion %1$d</string>
     <string name="settings_menu_bottom_sheet_toolbar_empty">Leerer Platz</string>
+    <string name="reader_settings">Leseeinstellungen</string>
+    <string name="reader_compact_controls">Kleine Steuerung anzeigen</string>
+    <string name="reader_expand_controls">URL und Steuerung anzeigen</string>
+    <string name="reader_hide_controls">Steuerung ganz ausblenden</string>
+    <string name="reader_hidden_controls_hint">Android-Zurück zeigt die Steuerung wieder.</string>
+    <string name="reader_continue_reading">Weiterlesen</string>
+    <string name="reader_font_serif">Serif</string>
+    <string name="reader_font_sans">Sans</string>
+    <string name="reader_theme_light">Hell</string>
 </resources>

@@ -1468,4 +1468,13 @@
     <string name="settings_menu_bottom_sheet_toolbar_summary">Elige cinco acciones de izquierda a derecha. Las acciones ya asignadas intercambian posiciones. Un espacio vacío oculta su botón.</string>
     <string name="settings_menu_bottom_sheet_toolbar_slot">Acción %1$d</string>
     <string name="settings_menu_bottom_sheet_toolbar_empty">Espacio vacío</string>
+    <string name="reader_settings">Ajustes de lectura</string>
+    <string name="reader_compact_controls">Controles compactos</string>
+    <string name="reader_expand_controls">Mostrar URL y controles</string>
+    <string name="reader_hide_controls">Ocultar todos los controles</string>
+    <string name="reader_hidden_controls_hint">El botón Atrás de Android vuelve a mostrar los controles.</string>
+    <string name="reader_continue_reading">Seguir leyendo</string>
+    <string name="reader_font_serif">Serif</string>
+    <string name="reader_font_sans">Sans</string>
+    <string name="reader_theme_light">Claro</string>
 </resources>

@@ -1444,4 +1444,13 @@
     <string name="settings_menu_bottom_sheet_toolbar_summary">從左到右選擇五個操作。已指派的操作會交換位置。空位將隱藏對應按鈕。</string>
     <string name="settings_menu_bottom_sheet_toolbar_slot">操作 %1$d</string>
     <string name="settings_menu_bottom_sheet_toolbar_empty">空位</string>
+    <string name="reader_settings">閱讀設定</string>
+    <string name="reader_compact_controls">精簡控制項</string>
+    <string name="reader_expand_controls">顯示網址和控制項</string>
+    <string name="reader_hide_controls">完全隱藏控制項</string>
+    <string name="reader_hidden_controls_hint">按 Android 返回鍵可重新顯示控制項。</string>
+    <string name="reader_continue_reading">繼續閱讀</string>
+    <string name="reader_font_serif">襯線</string>
+    <string name="reader_font_sans">無襯線</string>
+    <string name="reader_theme_light">淺色</string>
 </resources>
