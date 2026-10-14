@@ -7,4 +7,6 @@
     <string name="app_icon_lemon">Limona</string>
     <string name="app_icon_donut">Krof</string>
     <string name="app_icon_jelly_beans">Žele bonboni</string>
+    <string name="app_icon_outline_light">Obris na svetli podlagi</string>
+    <string name="app_icon_outline_dark">Obris na temni podlagi</string>
 </resources>

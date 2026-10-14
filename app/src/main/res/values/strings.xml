@@ -372,6 +372,8 @@
     <string name="settings_appearance_mode">Appearance</string>
     <string name="settings_app_icon">App icon</string>
     <string name="app_icon_classic">Classic</string>
+    <string name="app_icon_outline_light">Outline light</string>
+    <string name="app_icon_outline_dark">Outline dark</string>
     <string name="app_icon_cookie">Cookie</string>
     <string name="app_icon_cotton_candy">Cotton candy</string>
     <string name="app_icon_lemon">Lemon</string>

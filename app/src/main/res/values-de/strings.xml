@@ -335,6 +335,8 @@
     <string name="settings_appearance_mode">Erscheinungsbild</string>
     <string name="settings_app_icon">App-Symbol</string>
     <string name="app_icon_classic">Klassisch</string>
+    <string name="app_icon_outline_light">Kontur hell</string>
+    <string name="app_icon_outline_dark">Kontur dunkel</string>
     <string name="app_icon_cookie">Cookie</string>
     <string name="app_icon_cotton_candy">Zuckerwatte</string>
     <string name="app_icon_lemon">Zitrone</string>

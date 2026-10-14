@@ -7,4 +7,6 @@
     <string name="app_icon_lemon">レモン</string>
     <string name="app_icon_donut">ドーナツ</string>
     <string name="app_icon_jelly_beans">ジェリービーンズ</string>
+    <string name="app_icon_outline_light">明るい背景の輪郭</string>
+    <string name="app_icon_outline_dark">暗い背景の輪郭</string>
 </resources>

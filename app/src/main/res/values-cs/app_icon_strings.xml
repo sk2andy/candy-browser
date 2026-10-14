@@ -7,4 +7,6 @@
     <string name="app_icon_lemon">Citron</string>
     <string name="app_icon_donut">Donut</string>
     <string name="app_icon_jelly_beans">Želé bonbony</string>
+    <string name="app_icon_outline_light">Obrys na světlém pozadí</string>
+    <string name="app_icon_outline_dark">Obrys na tmavém pozadí</string>
 </resources>

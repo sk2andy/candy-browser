@@ -7,4 +7,6 @@
     <string name="app_icon_lemon">檸檬</string>
     <string name="app_icon_donut">甜甜圈</string>
     <string name="app_icon_jelly_beans">糖豆</string>
+    <string name="app_icon_outline_light">淺色背景輪廓</string>
+    <string name="app_icon_outline_dark">深色背景輪廓</string>
 </resources>

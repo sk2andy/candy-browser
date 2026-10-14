@@ -31,7 +31,7 @@
 | Setting | Values | Default |
 | --- | --- | --- |
 | Appearance | System, light, dark, AMOLED | System |
-| Android app icon | Classic; Cookie, Lemon, and Donut in regular and Maxed sizes; Cotton Candy regular and Freeform; Jelly Beans | Classic |
+| Android app icon | Classic; Outline light/dark; Cookie, Lemon, and Donut in regular and Maxed sizes; Cotton Candy regular and Freeform; Jelly Beans | Classic |
 | Animations | Off, on | On |
 | Force dark mode on websites | Off, on | Off |
 | Website font size | 50–200% in 5% steps | 100% |
@@ -111,17 +111,27 @@ Frosted exposes three persisted controls while selected:
 ## Invariants
 
 - Appearance settings are global and persist across normal and private browsing.
-- The Android app icon is a global launcher component choice. Exactly one of the ten selectable
+- The Android app icon is a global launcher component choice. Exactly one of the twelve selectable
   launcher aliases is enabled after a selection, while MainActivity remains enabled for external intents.
   The six square PNGs are based on `Candy Browser Icon-Übersicht.png`.
   Regular artwork retains room around the motif. Maxed Cookie
   and Donut fill the circular Pixel Launcher mask; other launcher shapes may crop
   their edges. The Cotton Candy stick stays within Android's
   [66 dp safe zone](https://developer.android.com/develop/ui/compose/system/icon_design_adaptive).
-  Every adaptive icon has a full pastel background layer, including outside its
+  The illustrated adaptive icons have a full pastel background layer, including outside their
   inset artwork. Regular Lemon and Maxed Lemon omit the leaf; Maxed Lemon fills
   the circular mask. Freeform Cotton Candy shows a complete stick; regular
   Cotton Candy keeps a compact round puff. Jelly Beans stay centered.
+- Outline light and dark preserve Classic's three separate curved leaves. Only these two icons
+  use a proportional 16⅔% foreground inset on each side (18 dp on a 108 dp foreground layer).
+  This gives the outlines more breathing room and scales with small previews; Classic and
+  the other illustrated icons retain their existing insets.
+  They use unfilled black contours on white / white contours on black, with a full adaptive
+  background and an outline-only monochrome layer for themed launchers. The original shared
+  `ic_launcher_foreground_art.png` remains unchanged. Regenerate the vector paths with
+  [`scripts/generate_outline_app_icons.py`](../../scripts/generate_outline_app_icons.py), which
+  pins the source SHA-256 and smooths raster stair steps into cubic contours. Sampled curves
+  stay within 2.5 source pixels (0.63 dp before the foreground inset) of the alpha boundary.
 - The transparent Cotton Candy source cutout is kept at
   [`images/app-icons/cotton-candy-freeform-transparent.png`](images/app-icons/cotton-candy-freeform-transparent.png).
   On the tested Pixel Launcher, a transparent adaptive background rendered black and a legacy
