@@ -275,9 +275,18 @@ internal fun SettingsScreen(
             isFrostedSurface = appearanceSettings.surfaceStyle == BrowserSurfaceStyle.Frosted,
         ),
     )
+    val backState = rememberNativeScreenBackState()
+    NativeScreenBackHandler(
+        state = backState,
+        enabled = destination != SettingsDestination.Home,
+        onBack = { onDestinationChanged(SettingsBackRules.parentDestination(destination)) },
+    )
     SettingsRouter(
         destination = destination,
-        modifier = modifier,
+        modifier = modifier.predictiveBackSurface(
+            progress = backState.progress.value,
+            swipeEdgeSign = backState.swipeEdgeSign,
+        ),
     ) { currentDestination ->
         CompositionLocalProvider(
             LocalSettingsSearchTarget provides searchTarget?.title.takeIf {

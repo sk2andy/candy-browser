@@ -1,5 +1,18 @@
 # Appearance and settings
 
+## Android predictive Back
+
+| Surface | Behavior | Owner |
+| --- | --- | --- |
+| Settings home | Existing shrink preview reveals the browser; a nonempty settings search clears first | `BrowserScreen`, `BrowserSettingsOverlay` |
+| Settings subpages | Default shrink follows gesture progress; cancellation restores the page, commit returns to its parent | `SettingsScreen`, `NativeScreenBackHandler`, `SettingsBackRules` |
+| Nested action pages / Topping catalog | Return to Tabs & gestures / Toppings respectively before Settings home | `SettingsBackRules` |
+| Snoozed tabs | Default shrink, followed by the existing dismissal fade; rescheduling dialogs retain Back priority | `SnoozedTabsScreen`, `NativeScreenBackHandler` |
+
+The shared motion keeps the existing 0.9 minimum scale, edge-directed translation and rounded
+corners. A canceled gesture restores the surface without navigation. Button/three-button Back
+continues to navigate without waiting for a gesture animation.
+
 ## Ownership
 
 | Layer | Responsibility | Main code |

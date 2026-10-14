@@ -1,6 +1,6 @@
 package dev.sk2andy.materialbrowser.ui
 
-import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.layout.Box
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -36,20 +36,30 @@ internal fun ReaderStudioScreen(
     onOpenLink: (String) -> Unit,
 ) {
     val context = LocalContext.current
-    SharedReaderStudioScreen(
-        result = result,
-        sourceUrl = sourceUrl,
-        isPrivate = isPrivate,
-        repository = repository,
-        resources = AndroidReaderStudioResources,
-        speechFactory = { ReaderSpeechController(context) },
-        onRetry = onRetry,
-        onDismiss = onDismiss,
-        onOpenOriginal = onOpenOriginal,
-        onOpenLink = onOpenLink,
-        backHandler = { enabled, onBack -> BackHandler(enabled = enabled, onBack = onBack) },
-        systemBarAppearance = { darkIcons -> ReaderSystemBarAppearance(darkIcons) },
-    )
+    val backState = rememberNativeScreenBackState()
+    Box(
+        modifier = Modifier.predictiveBackSurface(
+            progress = backState.progress.value,
+            swipeEdgeSign = backState.swipeEdgeSign,
+        ),
+    ) {
+        SharedReaderStudioScreen(
+            result = result,
+            sourceUrl = sourceUrl,
+            isPrivate = isPrivate,
+            repository = repository,
+            resources = AndroidReaderStudioResources,
+            speechFactory = { ReaderSpeechController(context) },
+            onRetry = onRetry,
+            onDismiss = onDismiss,
+            onOpenOriginal = onOpenOriginal,
+            onOpenLink = onOpenLink,
+            backHandler = { enabled, onBack ->
+                NativeScreenBackHandler(state = backState, enabled = enabled, onBack = onBack)
+            },
+            systemBarAppearance = { darkIcons -> ReaderSystemBarAppearance(darkIcons) },
+        )
+    }
 }
 
 internal object AndroidReaderStudioResources : ReaderStudioResources {

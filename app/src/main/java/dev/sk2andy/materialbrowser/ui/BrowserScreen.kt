@@ -1299,17 +1299,7 @@ internal fun BrowserScreen(
                 BrowserBackTarget.FilterStudio -> filterStudioVisible = false
                 BrowserBackTarget.SnoozedTabs -> snoozedTabsVisible = false
                 BrowserBackTarget.SettingsSubpage -> {
-                    settingsDestination = when (settingsDestination) {
-                        SettingsDestination.ToppingCatalog -> SettingsDestination.Userscripts
-                        SettingsDestination.AddressBarLongPressActions,
-                        SettingsDestination.AddressBarActions ->
-                            SettingsDestination.TabsAndGestures
-                        SettingsDestination.MenuActions ->
-                            SettingsDestination.TabsAndGestures
-                        SettingsDestination.LinkPeekActions ->
-                            SettingsDestination.TabsAndGestures
-                        else -> SettingsDestination.Home
-                    }
+                    settingsDestination = SettingsBackRules.parentDestination(settingsDestination)
                 }
                 BrowserBackTarget.Settings -> {
                     settingsPredictiveBackCommitted = receivedProgress

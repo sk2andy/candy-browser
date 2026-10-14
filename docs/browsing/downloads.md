@@ -16,6 +16,7 @@ System WebView CSP reproduction and the verified live Gemini download are record
 ## Behavior
 
 - Downloads is a separate, non-exported activity opened from the browser `…` menu beside Favorites and History.
+- System Back delegates to Android's activity dismissal so supported Android versions can show the native predictive Back preview. The toolbar Back action still finishes the activity; confirmation dialogs retain their own Back handling.
 - Candy-owned downloads from Android `DownloadManager` and Gecko's scoped `MediaStore` writer appear together. Downloads handed to an external manager remain owned and tracked by that app.
 - Entries are ordered by last update, newest first. The Material 3 search bar filters file names and source URLs live. Time chips filter to today or the last 7 or 30 local calendar days.
 - Active downloads refresh while the screen is visible. The Material Expressive wavy indicator shows determinate progress for known total sizes and indeterminate progress for unknown totals.

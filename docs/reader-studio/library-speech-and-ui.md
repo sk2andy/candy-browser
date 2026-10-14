@@ -63,6 +63,11 @@ sheet state survive configuration restoration for the same source/private sessio
 Back through the shared screen's platform callback. Hosts without a Back callback, including iOS,
 show an inset-aware Back button with the same restore, library, and dismissal behavior.
 
+Android wraps Reader Studio in the same default predictive Back shrink used by Settings. Gesture
+progress drives scale, horizontal translation and corner rounding; cancellation restores the reader
+without taking its Back action. Commit retains the shared restore/library/dismiss order above.
+The settings bottom sheet continues to handle its own Back gesture before the reader surface.
+
 
 Paper is the default for new, missing, or invalid theme settings; explicit saved choices are retained.
 Light remains bright regardless of the browser/system dark appearance. The article has no origin chip
