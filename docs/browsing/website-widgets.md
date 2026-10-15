@@ -31,7 +31,7 @@
 | Retention | At most 32 captures; unbound drafts expire after 24 hours and are pruned on the next save |
 | Unsupported launcher pinning | Configure through the launcher widget picker instead |
 | Launcher configuration | All grid providers declare optional initial configuration and standard reconfiguration. `SiteWidgetConfigurationActivity` validates the actual bound Candy provider, dispatches the existing editor action and returns the widget ID to the launcher; existing content stays valid while editing. Available long-press wording/actions depend on the launcher. |
-| Platform | Android prototype; hidden from the shared/iOS feature menu |
+| Platform | Android prototype; hidden from the shared/iOS feature menu. System-WebView-only builds guard factory creation locally with the build flag, allowing R8 to remove the Gecko SDK branch across coroutine boundaries; the minified APK purity test enforces this. |
 | Localization | English and German prototype strings; other app locales fall back to English. MissingTranslation is suppressed only for this prototype resource file. |
 
 ## Ownership

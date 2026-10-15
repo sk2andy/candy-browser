@@ -61,7 +61,9 @@ concurrency:
 jobs:
   build:
     name: Build signed Play bundle
-    if: github.event_name == 'release' || github.ref == 'refs/heads/main'
+    if: >-
+      (github.event_name == 'release' || github.ref == 'refs/heads/main') &&
+      !contains(github.event.release.tag_name, '-nightly.')
     runs-on: ubuntu-latest
     timeout-minutes: 45
     permissions:

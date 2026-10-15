@@ -79,7 +79,7 @@ next release, prepare the shared Markdown file before tagging and publish it unc
 | Update ordering | Nightly timestamp determines recency, independently of the base version |
 | FOSS updates | In-app GitHub updater remains disabled; Obtainium can track stable or Nightly FOSS APKs |
 | Stable FOSS assets | Ordinary GitHub releases use `-foss-github-release.apk`; the separate reproducible F-Droid reference retains `-foss-release.apk`. Stable Obtainium accepts both compatible package/signature choices; Nightly FOSS uses only `-foss-release.apk` |
-| Google Play | No Nightly publication |
+| Google Play | No Nightly publication; the Play workflow ignores Nightly release events, including locally published prereleases |
 | Failure | Failed builds do not advance the successfully published SHA marker; later runs retry changed `main` |
 
 The [download and Obtainium guide](../../README.md#nightly-builds) lists each package and provides

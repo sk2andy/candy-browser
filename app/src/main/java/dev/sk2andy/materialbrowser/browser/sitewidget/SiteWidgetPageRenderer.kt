@@ -77,7 +77,13 @@ internal class SiteWidgetPageRenderer(context: Context) {
                 engine == AndroidBrowserEngineKind.SystemWebView && source.isolationEnabled &&
                 !SystemWebViewBrowserEngineFactory.supportsMultiProfile()
             ) return null
-            val factory: AndroidBrowserEngineFactory = when (engine) {
+            val factory: AndroidBrowserEngineFactory = if (BuildConfig.SYSTEM_WEBVIEW_ONLY) {
+                if (engine != AndroidBrowserEngineKind.SystemWebView) return null
+                SystemWebViewBrowserEngineFactory(
+                    context = appContext,
+                    cleanupPrivateProfiles = false,
+                )
+            } else when (engine) {
                 AndroidBrowserEngineKind.GeckoView -> GeckoBrowserEngineSessionFactory(appContext)
                 AndroidBrowserEngineKind.SystemWebView -> SystemWebViewBrowserEngineFactory(
                     context = appContext,
