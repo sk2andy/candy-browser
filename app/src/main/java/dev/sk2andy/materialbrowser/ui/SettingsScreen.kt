@@ -21,6 +21,7 @@ import dev.sk2andy.materialbrowser.browser.DnsOverHttpsRules
 import dev.sk2andy.materialbrowser.browser.DnsOverHttpsSettings
 import dev.sk2andy.materialbrowser.browser.HttpsOnlyMode
 import dev.sk2andy.materialbrowser.browser.BrowserProfile
+import dev.sk2andy.materialbrowser.browser.integration.linkrouting.LinkRoutingRule
 import dev.sk2andy.materialbrowser.browser.ExternalAppLinkHandling
 import dev.sk2andy.materialbrowser.browser.FavoriteAnimationSpeed
 import dev.sk2andy.materialbrowser.browser.InlineMediaPlayerMode
@@ -53,6 +54,8 @@ import dev.sk2andy.materialbrowser.shared.ui.settings.SettingsRouter
 import dev.sk2andy.materialbrowser.shared.topping.ToppingFrameScope
 import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuEntry
 import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuLayout
+import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuBottomSheetContentLayout
+import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuPresentation
 import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuLocation
 import dev.sk2andy.materialbrowser.shared.browser.AddressBarLongPressAction
 import dev.sk2andy.materialbrowser.sync.SyncConnectionSettings
@@ -105,6 +108,7 @@ internal fun SettingsScreen(
     addressBarActionLayout: AddressBarActionLayout,
     browserMenuLayout: BrowserMenuLayout = BrowserMenuLayout.Default,
     isAddressBarDockingEnabled: Boolean,
+    isAddressBarSwipeModeEnabled: Boolean = false,
     isExternalLinkPreviewEnabled: Boolean = false,
     externalAppLinkHandling: ExternalAppLinkHandling = ExternalAppLinkHandling.Default,
     isFullImmersiveModeEnabled: Boolean,
@@ -167,7 +171,11 @@ internal fun SettingsScreen(
     onProfilesEnabledChanged: (Boolean) -> Unit,
     onAddressBarActionLayoutChanged: (AddressBarActionLayout) -> Unit,
     onBrowserMenuLocationChanged: (BrowserMenuEntry, BrowserMenuLocation) -> Unit = { _, _ -> },
+    onBrowserMenuPresentationChanged: (BrowserMenuPresentation) -> Unit = {},
+    onBrowserMenuBottomSheetContentLayoutChanged: (BrowserMenuBottomSheetContentLayout) -> Unit = {},
+    onBrowserMenuBottomSheetToolbarEntriesChanged: (List<BrowserMenuEntry?>) -> Unit = {},
     onAddressBarDockingEnabledChanged: (Boolean) -> Unit,
+    onAddressBarSwipeModeEnabledChanged: (Boolean) -> Unit = {},
     onExternalLinkPreviewEnabledChanged: (Boolean) -> Unit = {},
     onExternalAppLinkHandlingChanged: (ExternalAppLinkHandling) -> Unit = {},
     onFullImmersiveModeEnabledChanged: (Boolean) -> Unit,
@@ -193,6 +201,7 @@ internal fun SettingsScreen(
     onShowReleaseNotes: () -> Unit = {},
     onUnlockDeveloperOptions: () -> Unit = {},
     onOpenDefaultBrowserSettings: () -> Unit,
+    onOpenDeviceSearch: () -> Unit = {},
     onPrivacyXRay: () -> Unit,
     onPermissionRadar: () -> Unit,
     onEditCapsule: (SiteCapsule) -> Unit,
@@ -217,8 +226,11 @@ internal fun SettingsScreen(
     onImportAppData: () -> Unit,
     onClearData: () -> Unit,
     onOpenLegalUrl: (String) -> Unit,
+    onShareSyncExtensionLink: (String) -> Unit = {},
     onDismiss: () -> Unit,
     onOpenFirefoxExtensions: (() -> Unit)? = null,
+    linkRoutingRules: List<LinkRoutingRule> = emptyList(),
+    onLinkRoutingRulesChanged: (List<LinkRoutingRule>) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     var searchQuery by remember { mutableStateOf("") }
@@ -325,6 +337,7 @@ internal fun SettingsScreen(
                     dismissResistancePercent = dismissResistancePercent,
                     profilesEnabled = profilesEnabled,
                     isAddressBarDockingEnabled = isAddressBarDockingEnabled,
+                    isAddressBarSwipeModeEnabled = isAddressBarSwipeModeEnabled,
                     addressBarLongPressAction = addressBarLongPressAction,
                     linkLongPressAction = linkLongPressAction,
                     onInactiveTabLifetimeChanged = onInactiveTabLifetimeChanged,
@@ -338,6 +351,7 @@ internal fun SettingsScreen(
                     onDismissResistancePercentChanged = onDismissResistancePercentChanged,
                     onProfilesEnabledChanged = onProfilesEnabledChanged,
                     onAddressBarDockingEnabledChanged = onAddressBarDockingEnabledChanged,
+                    onAddressBarSwipeModeEnabledChanged = onAddressBarSwipeModeEnabledChanged,
                     onAddressBarLongPressActions = {
                         onDestinationChanged(SettingsDestination.AddressBarLongPressActions)
                     },
@@ -393,6 +407,9 @@ internal fun SettingsScreen(
                 SettingsDestination.MenuActions -> BrowserMenuSettingsPage(
                     layout = browserMenuLayout,
                     onLocationChanged = onBrowserMenuLocationChanged,
+                    onPresentationChanged = onBrowserMenuPresentationChanged,
+                    onBottomSheetContentLayoutChanged = onBrowserMenuBottomSheetContentLayoutChanged,
+                    onBottomSheetToolbarEntriesChanged = onBrowserMenuBottomSheetToolbarEntriesChanged,
                     onBack = {
                         onDestinationChanged(SettingsDestination.TabsAndGestures)
                     },
@@ -459,6 +476,8 @@ internal fun SettingsScreen(
                     onExternalLinkPreviewEnabledChanged =
                         onExternalLinkPreviewEnabledChanged,
                     onExternalAppLinkHandlingChanged = onExternalAppLinkHandlingChanged,
+                    onLinkRouting = { onDestinationChanged(SettingsDestination.LinkRouting) },
+                    onDeviceSearch = onOpenDeviceSearch,
                     onFullImmersiveModeEnabledChanged = onFullImmersiveModeEnabledChanged,
                     onStartupAnimationEnabledChanged = onStartupAnimationEnabledChanged,
                     onStartupAddressFocusModeChanged = onStartupAddressFocusModeChanged,
@@ -472,6 +491,14 @@ internal fun SettingsScreen(
                     onPageTranslationProviderChanged = onPageTranslationProviderChanged,
                     onOpenDefaultBrowserSettings = onOpenDefaultBrowserSettings,
                     onBack = { onDestinationChanged(SettingsDestination.Home) },
+                )
+
+                SettingsDestination.LinkRouting -> LinkRoutingSettingsPage(
+                    rules = linkRoutingRules,
+                    profiles = profiles.filter { profilesEnabled || it.id == activeProfileId },
+                    capsules = siteCapsules,
+                    onRulesChanged = onLinkRoutingRulesChanged,
+                    onBack = { onDestinationChanged(SettingsDestination.Browser) },
                 )
 
                 SettingsDestination.Player -> PlayerSettingsPage(
@@ -529,6 +556,7 @@ internal fun SettingsScreen(
                     onEnroll = onEnrollSync,
                     onRefresh = onRefreshSync,
                     onOpenDocumentation = onOpenLegalUrl,
+                    onShareExtensionLink = onShareSyncExtensionLink,
                     onBack = { onDestinationChanged(SettingsDestination.Home) },
                 )
 

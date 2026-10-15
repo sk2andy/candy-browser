@@ -1,0 +1,23 @@
+<resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
+    <string name="link_routing_title">Personal link rules</string>
+    <string name="link_routing_summary">Choose where links from other apps open. The first enabled matching rule wins.</string>
+    <string name="link_routing_add">Add rule</string>
+    <string name="link_routing_empty">No rules yet. Add a domain and choose a profile, Reader Studio or a Site Capsule.</string>
+    <string name="link_routing_edit">Edit link rule</string>
+    <string name="link_routing_delete">Delete rule</string>
+    <string name="link_routing_move_up">Higher priority</string>
+    <string name="link_routing_move_down">Lower priority</string>
+    <string name="link_routing_domain">Domain without https://</string>
+    <string name="link_routing_subdomains">Include subdomains</string>
+    <string name="link_routing_subdomains_summary">Also match addresses such as www.example.com.</string>
+    <string name="link_routing_target">Open with</string>
+    <string name="link_routing_destination">Destination</string>
+    <string name="link_routing_profile">Profile</string>
+    <string name="link_routing_reader">Reader Studio</string>
+    <string name="link_routing_capsule">Site Capsule</string>
+    <string name="link_routing_save">Save rule</string>
+    <string name="link_routing_boundaries">Applies to web links Android sends to Candy. Private tabs keep their normal behavior. Protected and synced profiles are unavailable as automatic destinations.</string>
+    <string name="link_routing_target_missing">Destination unavailable</string>
+    <string name="link_routing_target_unavailable">This link rule cannot open its destination. Update the rule in Settings.</string>
+    <string name="link_routing_save_failed">Link rules could not be saved.</string>
+</resources>

@@ -131,6 +131,33 @@ class BrowserFeatureMenuRulesTest {
     }
 
     @Test
+    fun `website widget stays hidden without platform capability`() {
+        val items = BrowserFeatureMenuRules.items(
+            state = BrowserFeatureMenuState(canCreateSiteWidget = true),
+        )
+
+        assertFalse(items.any { it.action == BrowserFeatureMenuAction.CreateSiteWidget })
+    }
+
+    @Test
+    fun `website widget availability follows capture policy`() {
+        val capabilities = BrowserFeatureMenuCapabilities(supportsSiteWidgets = true)
+        val unavailable = BrowserFeatureMenuRules.items(
+            state = BrowserFeatureMenuState(),
+            capabilities = capabilities,
+        ).single { it.action == BrowserFeatureMenuAction.CreateSiteWidget }
+        val available = BrowserFeatureMenuRules.items(
+            state = BrowserFeatureMenuState(canCreateSiteWidget = true),
+            capabilities = capabilities,
+        ).single { it.action == BrowserFeatureMenuAction.CreateSiteWidget }
+
+        assertFalse(unavailable.enabled)
+        assertTrue(available.enabled)
+        assertEquals(BrowserFeatureMenuSection.Candy, available.section)
+        assertEquals(BrowserMenuEntry.CreateSiteWidget, BrowserMenuLayoutRules.entryForAction(available.action))
+    }
+
+    @Test
     fun `topping commands preserve dynamic identity caption and script`() {
         val item = BrowserFeatureMenuRules.items(
             BrowserFeatureMenuState(

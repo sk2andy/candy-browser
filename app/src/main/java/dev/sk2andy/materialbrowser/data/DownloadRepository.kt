@@ -18,12 +18,16 @@ internal class DownloadRepository(
     private val resolver = applicationContext.contentResolver
 
     fun snapshot(): List<DownloadEntry> {
+        val provenance = DownloadProvenanceStore(applicationContext).snapshot().associateBy(DownloadProvenance::id)
         val systemEntries = querySystemDownloads()
         val mediaEntries = queryMediaStoreDownloads().filterNot { mediaEntry ->
             systemEntries.any { systemEntry -> systemEntry.matchesIndexedMedia(mediaEntry) }
         }
         return (DownloadRuntimeRegistry.snapshot() + systemEntries + mediaEntries)
             .distinctBy(DownloadEntry::id)
+            .map { entry ->
+                entry.copy(sourceProfileId = provenance[entry.id]?.takeIf { it.name == entry.name }?.profileId)
+            }
             .sortedWith(
                 compareByDescending(DownloadEntry::lastModified).thenByDescending(DownloadEntry::id),
             )

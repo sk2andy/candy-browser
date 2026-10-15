@@ -38,6 +38,17 @@ settings, system password/passkey stores, public downloads and APK assets are no
 app data and are not archived. Export is blocked while private tabs exist so an active
 incognito WebView profile cannot enter the ZIP.
 
+| Local-only data | Excluded archive paths |
+| --- | --- |
+| Candy Recall page text | `no_backup/candy_recall.db` and SQLite sidecars |
+| App and Gecko diagnostics | `no_backup/app_logs`, `no_backup/gecko_logs` and descendants |
+| Native log capture authorization | `shared_prefs/app_logging_capture.xml` and `.xml.bak` |
+| Homescreen website widgets | `no_backup/site_widget_snapshots_v1` and descendants, including images, source metadata and launcher widget bindings |
+| Download document-picker provenance | `no_backup/download_document_sources_v1.json` and its atomic backup; backend IDs remain device-local |
+
+These exclusions apply to both export and incoming archive entries. Website widget captures
+remain device-local; launcher widget IDs and captured page pixels never migrate through the ZIP.
+
 Candy Recall stores readable page text in `no_backup/candy_recall.db`. Manual export and import
 rules reject that database and its SQLite journal/WAL sidecars by exact relative path while
 preserving unrelated persistent `no_backup` stores. Imported History does not silently fetch or

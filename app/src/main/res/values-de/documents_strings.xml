@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="documents_root_summary">Gespeicherte Artikel und Downloads</string>
+    <string name="documents_reader_folder">Reader-Artikel</string>
+    <string name="documents_downloads_folder">Downloads</string>
+</resources>

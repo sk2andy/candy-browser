@@ -28,6 +28,8 @@ export interface StoredSettings {
   protocolVersion?: 1 | 2;
   selection: SyncSelection;
   vault: VaultEnvelope;
+  lockPolicy?: "browser-restart" | "idle" | "never";
+  idleLockMinutes?: number;
 }
 
 interface TabMutationBase {

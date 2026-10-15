@@ -48,6 +48,7 @@ enum class BrowserFeatureMenuAction {
     ToggleDomainMute,
     OpenCandyTrail,
     AddSiteCapsule,
+    CreateSiteWidget,
     Summarize,
     SnoozeTab,
     DockAddressBar,
@@ -90,6 +91,7 @@ enum class BrowserFeatureMenuLabelKey {
     UnmuteDomain,
     CandyTrail,
     AddSiteCapsule,
+    CreateSiteWidget,
     Summarize,
     SnoozeTab,
     DockAddressBar,
@@ -152,6 +154,7 @@ data class BrowserFeatureMenuState(
     val canToggleDomainMute: Boolean = false,
     val isDomainMuted: Boolean = false,
     val canAddSiteCapsule: Boolean = false,
+    val canCreateSiteWidget: Boolean = false,
     val canSnooze: Boolean = false,
     val canDockAddressBar: Boolean = true,
     val overflowPageActions: List<BrowserFeatureMenuAction> = emptyList(),
@@ -160,6 +163,7 @@ data class BrowserFeatureMenuState(
 
 data class BrowserFeatureMenuCapabilities(
     val supportsFirefoxExtensions: Boolean = false,
+    val supportsSiteWidgets: Boolean = false,
 )
 
 object BrowserFeatureMenuRules {
@@ -170,7 +174,7 @@ object BrowserFeatureMenuRules {
         toolbarItems(state).forEach(::add)
         pageItems(state).forEach(::add)
         toppingItems(state).forEach(::add)
-        candyItems(state).forEach(::add)
+        candyItems(state, capabilities).forEach(::add)
         browserItems(state, capabilities).forEach(::add)
     }
 
@@ -377,32 +381,53 @@ object BrowserFeatureMenuRules {
         )
     }
 
-    private fun candyItems(state: BrowserFeatureMenuState) = listOf(
-        command(
-            BrowserFeatureMenuAction.OpenCandyTrail,
-            BrowserFeatureMenuLabelKey.CandyTrail,
-            BrowserFeatureMenuSection.Candy,
-            state.hasPage,
-        ),
-        command(
-            BrowserFeatureMenuAction.AddSiteCapsule,
-            BrowserFeatureMenuLabelKey.AddSiteCapsule,
-            BrowserFeatureMenuSection.Candy,
-            state.canAddSiteCapsule,
-        ),
-        command(
-            BrowserFeatureMenuAction.Summarize,
-            BrowserFeatureMenuLabelKey.Summarize,
-            BrowserFeatureMenuSection.Candy,
-            state.hasPage,
-        ),
-        command(
-            BrowserFeatureMenuAction.SnoozeTab,
-            BrowserFeatureMenuLabelKey.SnoozeTab,
-            BrowserFeatureMenuSection.Candy,
-            state.canSnooze,
-        ),
-    )
+    private fun candyItems(
+        state: BrowserFeatureMenuState,
+        capabilities: BrowserFeatureMenuCapabilities,
+    ) = buildList {
+        add(
+            command(
+                BrowserFeatureMenuAction.OpenCandyTrail,
+                BrowserFeatureMenuLabelKey.CandyTrail,
+                BrowserFeatureMenuSection.Candy,
+                state.hasPage,
+            ),
+        )
+        add(
+            command(
+                BrowserFeatureMenuAction.AddSiteCapsule,
+                BrowserFeatureMenuLabelKey.AddSiteCapsule,
+                BrowserFeatureMenuSection.Candy,
+                state.canAddSiteCapsule,
+            ),
+        )
+        if (capabilities.supportsSiteWidgets) {
+            add(
+                command(
+                    BrowserFeatureMenuAction.CreateSiteWidget,
+                    BrowserFeatureMenuLabelKey.CreateSiteWidget,
+                    BrowserFeatureMenuSection.Candy,
+                    state.canCreateSiteWidget,
+                ),
+            )
+        }
+        add(
+            command(
+                BrowserFeatureMenuAction.Summarize,
+                BrowserFeatureMenuLabelKey.Summarize,
+                BrowserFeatureMenuSection.Candy,
+                state.hasPage,
+            ),
+        )
+        add(
+            command(
+                BrowserFeatureMenuAction.SnoozeTab,
+                BrowserFeatureMenuLabelKey.SnoozeTab,
+                BrowserFeatureMenuSection.Candy,
+                state.canSnooze,
+            ),
+        )
+    }
 
     private fun browserItems(
         state: BrowserFeatureMenuState,

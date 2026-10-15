@@ -2,6 +2,7 @@ package dev.sk2andy.materialbrowser.ui
 
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -24,6 +25,7 @@ internal fun ReaderStudioScreen(
     sourceUrl: String,
     isPrivate: Boolean,
     repository: ReaderLibraryRepository,
+    sourceProfileId: String? = null,
     onRetry: () -> Unit,
     onDismiss: () -> Unit,
     onOpenOriginal: (String) -> Unit,
@@ -34,7 +36,7 @@ internal fun ReaderStudioScreen(
         result = result,
         sourceUrl = sourceUrl,
         isPrivate = isPrivate,
-        repository = repository,
+        repository = remember(repository, sourceProfileId) { repository.forProfile(sourceProfileId) },
         resources = AndroidReaderStudioResources,
         speechFactory = { ReaderSpeechController(context) },
         onRetry = onRetry,

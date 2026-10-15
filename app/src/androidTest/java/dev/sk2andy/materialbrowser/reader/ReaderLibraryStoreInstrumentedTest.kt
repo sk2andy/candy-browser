@@ -2,8 +2,14 @@ package dev.sk2andy.materialbrowser.reader
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import android.os.SystemClock
+import android.util.AtomicFile
+import java.io.File
+import java.io.FileOutputStream
+import java.util.concurrent.atomic.AtomicReference
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -65,6 +71,19 @@ class ReaderLibraryStoreInstrumentedTest {
     }
 
     @Test
+    fun resavingLibraryArticleCannotRelabelProtectedOrUnknownProvenance() {
+        val protected = document("https://example.com/protected")
+        store.saveSnapshot(protected, 0f, false, sourceProfileId = "protected-profile")
+        store.saveSnapshot(protected, 0.5f, false, sourceProfileId = "public-profile", preserveExistingProvenance = true)
+        assertEquals("protected-profile", store.load(false).snapshots.single().sourceProfileId)
+
+        val legacy = document("https://example.com/legacy")
+        store.saveSnapshot(legacy, 0f, false)
+        store.saveSnapshot(legacy, 0.5f, false, sourceProfileId = "public-profile", preserveExistingProvenance = true)
+        assertNull(store.load(false).snapshots.first { it.document.sourceUrl == legacy.sourceUrl }.sourceProfileId)
+    }
+
+    @Test
     fun repositorySerializesWritesInSubmissionOrder() {
         val repository = ReaderLibraryRepository.get(context)
         val sourceUrl = "https://example.com/ordered"
@@ -87,6 +106,54 @@ class ReaderLibraryStoreInstrumentedTest {
         repository.awaitIdle(completed::countDown)
 
         assertTrue(completed.await(10, TimeUnit.SECONDS))
+    }
+
+    @Test
+    fun separateProviderReaderWaitsForInFlightRepositoryWrite() {
+        store.saveSnapshot(document("https://example.com/before"), 0f, false)
+        val writeStarted = CountDownLatch(1)
+        val releaseWrite = CountDownLatch(1)
+        val readStarted = CountDownLatch(1)
+        val readFinished = CountDownLatch(1)
+        val failure = AtomicReference<Throwable?>()
+        val result = AtomicReference<ReaderLibraryState?>()
+        val writer = ReaderLibraryStore(object : AtomicFile(File(context.filesDir, "reader_library_v1.json")) {
+            override fun startWrite(): FileOutputStream {
+                val output = super.startWrite()
+                writeStarted.countDown()
+                check(releaseWrite.await(10, TimeUnit.SECONDS))
+                return output
+            }
+        })
+        val writing = Thread {
+            runCatching { writer.saveSnapshot(document("https://example.com/after"), 0f, false) }
+                .onFailure(failure::set)
+        }
+        val reading = Thread {
+            readStarted.countDown()
+            runCatching { result.set(ReaderLibraryStore(context).load(false)) }
+                .onFailure(failure::set)
+            readFinished.countDown()
+        }
+        writing.start()
+        try {
+            assertTrue(writeStarted.await(10, TimeUnit.SECONDS))
+            reading.start()
+            assertTrue(readStarted.await(10, TimeUnit.SECONDS))
+            val deadline = SystemClock.elapsedRealtime() + 5_000L
+            while (reading.state != Thread.State.BLOCKED && readFinished.count != 0L && SystemClock.elapsedRealtime() < deadline) {
+                SystemClock.sleep(10L)
+            }
+            assertEquals("Separate store must not race AtomicFile.openRead against startWrite", Thread.State.BLOCKED, reading.state)
+            assertFalse(readFinished.await(1, TimeUnit.MILLISECONDS))
+        } finally {
+            releaseWrite.countDown()
+            writing.join(10_000L)
+            reading.join(10_000L)
+        }
+        failure.get()?.let { throw AssertionError("Concurrent Reader access failed", it) }
+        assertEquals(2, result.get()?.snapshots?.size)
+        assertEquals(2, ReaderLibraryStore(context).load(false).snapshots.size)
     }
 
     private fun document(url: String) = ReaderDocument(

@@ -227,9 +227,32 @@ internal fun settingsSearchDefinitions(
             destination = SettingsDestination.MenuActions,
         )
         setting(
+            id = "settings_menu_presentation_title",
+            titleRes = R.string.settings_menu_presentation_title,
+            descriptionRes = R.string.settings_menu_presentation_summary,
+            destination = SettingsDestination.MenuActions,
+        )
+        setting(
+            id = "settings_menu_bottom_sheet_layout_title",
+            titleRes = R.string.settings_menu_bottom_sheet_layout_title,
+            descriptionRes = R.string.settings_menu_presentation_summary,
+            destination = SettingsDestination.MenuActions,
+        )
+        setting(
+            id = "settings_menu_bottom_sheet_toolbar_title",
+            titleRes = R.string.settings_menu_bottom_sheet_toolbar_title,
+            descriptionRes = R.string.settings_menu_bottom_sheet_toolbar_summary,
+            destination = SettingsDestination.MenuActions,
+        )
+        setting(
             id = "settings_address_bar_docking_title",
             titleRes = R.string.settings_address_bar_docking_title,
             descriptionRes = R.string.settings_address_bar_docking_subtitle,
+        )
+        setting(
+            id = "settings_address_bar_swipe_mode_title",
+            titleRes = R.string.settings_address_bar_swipe_mode_title,
+            descriptionRes = R.string.settings_address_bar_swipe_mode_summary,
         )
         setting(
             id = "settings_tab_dismiss_resistance",
@@ -318,11 +341,23 @@ internal fun settingsSearchDefinitions(
             descriptionRes = R.string.settings_external_app_links_summary,
         )
         setting(
+            id = "device_search_title",
+            titleRes = R.string.device_search_title,
+            descriptionRes = R.string.device_search_settings_summary,
+        )
+        setting(
             id = "settings_external_link_preview_title",
             titleRes = R.string.settings_external_link_preview_title,
             descriptionRes = R.string.settings_external_link_preview_subtitle,
         )
     }
+
+    settingsPage(
+        destination = SettingsDestination.LinkRouting,
+        id = "link_routing_title",
+        titleRes = R.string.link_routing_title,
+        descriptionRes = R.string.link_routing_summary,
+    ) {}
 
     settingsPage(
         destination = SettingsDestination.Player,

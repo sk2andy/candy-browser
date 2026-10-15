@@ -1,17 +1,40 @@
 package dev.sk2andy.materialbrowser.ui
 
 import androidx.annotation.StringRes
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import dev.sk2andy.materialbrowser.R
+import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuBottomSheetContentLayout
+import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuBottomSheetToolbarRules
 import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuConfigurationSection
 import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuEntry
 import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuLayout
+import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuLayoutRules
 import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuLocation
+import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuPresentation
 import dev.sk2andy.materialbrowser.shared.ui.settings.BrowserMenuSettingsResources
 import dev.sk2andy.materialbrowser.shared.ui.settings.BrowserMenuSettingsPage as SharedBrowserMenuSettingsPage
 import dev.sk2andy.materialbrowser.ui.theme.browserChromeColor
+
+internal object BrowserMenuPresentationSettingsTestTags {
+    const val Presentation = "browser_menu_settings_presentation"
+    const val ContentLayout = "browser_menu_settings_content_layout"
+
+    fun toolbarSlot(index: Int): String = "browser_menu_settings_toolbar_slot_$index"
+}
 
 private object AndroidBrowserMenuSettingsResources : BrowserMenuSettingsResources {
     @Composable
@@ -55,6 +78,9 @@ internal fun BrowserMenuSettingsPage(
     layout: BrowserMenuLayout,
     onLocationChanged: (BrowserMenuEntry, BrowserMenuLocation) -> Unit,
     onBack: () -> Unit,
+    onPresentationChanged: (BrowserMenuPresentation) -> Unit = {},
+    onBottomSheetContentLayoutChanged: (BrowserMenuBottomSheetContentLayout) -> Unit = {},
+    onBottomSheetToolbarEntriesChanged: (List<BrowserMenuEntry?>) -> Unit = {},
 ) {
     SharedBrowserMenuSettingsPage(
         layout = layout,
@@ -65,8 +91,175 @@ internal fun BrowserMenuSettingsPage(
         },
         onLocationChanged = onLocationChanged,
         onBack = onBack,
+        presentationSettings = {
+            BrowserMenuPresentationSettings(
+                layout = layout,
+                onPresentationChanged = onPresentationChanged,
+                onBottomSheetContentLayoutChanged = onBottomSheetContentLayoutChanged,
+                onBottomSheetToolbarEntriesChanged = onBottomSheetToolbarEntriesChanged,
+                onLocationChanged = onLocationChanged,
+            )
+        },
     )
 }
+
+@Composable
+private fun BrowserMenuPresentationSettings(
+    layout: BrowserMenuLayout,
+    onPresentationChanged: (BrowserMenuPresentation) -> Unit,
+    onBottomSheetContentLayoutChanged: (BrowserMenuBottomSheetContentLayout) -> Unit,
+    onBottomSheetToolbarEntriesChanged: (List<BrowserMenuEntry?>) -> Unit,
+    onLocationChanged: (BrowserMenuEntry, BrowserMenuLocation) -> Unit,
+) {
+    var presentationExpanded by remember { mutableStateOf(false) }
+    var contentLayoutExpanded by remember { mutableStateOf(false) }
+    Box {
+        SettingsChoice(
+            title = stringResource(R.string.settings_menu_presentation_title),
+            value = layout.presentation.displayName(),
+            expanded = presentationExpanded,
+            onClick = { presentationExpanded = true },
+            modifier = Modifier.testTag(BrowserMenuPresentationSettingsTestTags.Presentation),
+        )
+        SettingsDropdown(
+            expanded = presentationExpanded,
+            onDismissRequest = { presentationExpanded = false },
+        ) {
+            BrowserMenuPresentation.entries.forEach { presentation ->
+                SettingsDropdownItem(
+                    label = presentation.displayName(),
+                    selected = presentation == layout.presentation,
+                    onClick = {
+                        presentationExpanded = false
+                        if (presentation != layout.presentation) onPresentationChanged(presentation)
+                    },
+                )
+            }
+        }
+    }
+    Spacer(Modifier.height(8.dp))
+    Box {
+        SettingsChoice(
+            title = stringResource(R.string.settings_menu_bottom_sheet_layout_title),
+            value = layout.bottomSheetContentLayout.displayName(),
+            expanded = contentLayoutExpanded,
+            onClick = { contentLayoutExpanded = true },
+            modifier = Modifier.testTag(BrowserMenuPresentationSettingsTestTags.ContentLayout),
+        )
+        SettingsDropdown(
+            expanded = contentLayoutExpanded,
+            onDismissRequest = { contentLayoutExpanded = false },
+        ) {
+            BrowserMenuBottomSheetContentLayout.entries.forEach { contentLayout ->
+                SettingsDropdownItem(
+                    label = contentLayout.displayName(),
+                    selected = contentLayout == layout.bottomSheetContentLayout,
+                    onClick = {
+                        contentLayoutExpanded = false
+                        if (contentLayout != layout.bottomSheetContentLayout) {
+                            onBottomSheetContentLayoutChanged(contentLayout)
+                        }
+                    },
+                )
+            }
+        }
+    }
+    Text(
+        text = stringResource(R.string.settings_menu_presentation_summary),
+        modifier = Modifier.padding(start = 18.dp, top = 8.dp, end = 18.dp),
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+    Spacer(Modifier.height(16.dp))
+    if (layout.presentation == BrowserMenuPresentation.BottomSheet) {
+        BrowserMenuBottomSheetToolbarSettings(
+            layout = layout,
+            onEntriesChanged = onBottomSheetToolbarEntriesChanged,
+            onLocationChanged = onLocationChanged,
+        )
+    }
+}
+
+@Composable
+private fun BrowserMenuBottomSheetToolbarSettings(
+    layout: BrowserMenuLayout,
+    onEntriesChanged: (List<BrowserMenuEntry?>) -> Unit,
+    onLocationChanged: (BrowserMenuEntry, BrowserMenuLocation) -> Unit,
+) {
+    var expandedSlot by remember { mutableStateOf<Int?>(null) }
+    val entries = BrowserMenuBottomSheetToolbarRules.normalize(layout.bottomSheetToolbarEntries)
+    val availableEntries = BrowserMenuBottomSheetToolbarRules.availableEntries().filterNot { entry ->
+        entry == BrowserMenuEntry.OpenFirefoxExtensions
+    }
+    SettingsSectionTitle(stringResource(R.string.settings_menu_bottom_sheet_toolbar_title))
+    Spacer(Modifier.height(8.dp))
+    entries.forEachIndexed { index, currentEntry ->
+        Box {
+            SettingsChoice(
+                title = stringResource(R.string.settings_menu_bottom_sheet_toolbar_slot, index + 1),
+                value = currentEntry?.let { entry -> stringResource(entry.labelResource()) }
+                    ?: stringResource(R.string.settings_menu_bottom_sheet_toolbar_empty),
+                expanded = expandedSlot == index,
+                onClick = { expandedSlot = index },
+                modifier = Modifier.testTag(BrowserMenuPresentationSettingsTestTags.toolbarSlot(index)),
+            )
+            SettingsDropdown(
+                expanded = expandedSlot == index,
+                onDismissRequest = { expandedSlot = null },
+            ) {
+                (listOf(null) + availableEntries).forEach { entry ->
+                    SettingsDropdownItem(
+                        label = entry?.let { stringResource(it.labelResource()) }
+                            ?: stringResource(R.string.settings_menu_bottom_sheet_toolbar_empty),
+                        selected = entry == currentEntry,
+                        onClick = {
+                            expandedSlot = null
+                            if (entry != null) {
+                                when (BrowserMenuLayoutRules.location(layout, entry)) {
+                                    BrowserMenuLocation.Nowhere -> onLocationChanged(entry, BrowserMenuLocation.Tab)
+                                    BrowserMenuLocation.TabSwitcher -> onLocationChanged(entry, BrowserMenuLocation.Both)
+                                    BrowserMenuLocation.Tab,
+                                    BrowserMenuLocation.Both,
+                                    -> Unit
+                                }
+                            }
+                            if (entry != currentEntry) {
+                                onEntriesChanged(
+                                    BrowserMenuBottomSheetToolbarRules.update(layout, index, entry)
+                                        .bottomSheetToolbarEntries,
+                                )
+                            }
+                        },
+                    )
+                }
+            }
+        }
+        if (index != entries.lastIndex) Spacer(Modifier.height(4.dp))
+    }
+    Text(
+        text = stringResource(R.string.settings_menu_bottom_sheet_toolbar_summary),
+        modifier = Modifier.padding(start = 18.dp, top = 8.dp, end = 18.dp),
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+    Spacer(Modifier.height(16.dp))
+}
+
+@Composable
+private fun BrowserMenuPresentation.displayName(): String = stringResource(
+    when (this) {
+        BrowserMenuPresentation.Floating -> R.string.settings_menu_presentation_floating
+        BrowserMenuPresentation.BottomSheet -> R.string.settings_menu_presentation_bottom_sheet
+    },
+)
+
+@Composable
+private fun BrowserMenuBottomSheetContentLayout.displayName(): String = stringResource(
+    when (this) {
+        BrowserMenuBottomSheetContentLayout.Scroll -> R.string.settings_menu_bottom_sheet_layout_scroll
+        BrowserMenuBottomSheetContentLayout.SwipePages -> R.string.settings_menu_bottom_sheet_layout_pages
+    },
+)
 
 @StringRes
 private fun BrowserMenuEntry.labelResource(): Int = when (this) {
@@ -96,6 +289,7 @@ private fun BrowserMenuEntry.labelResource(): Int = when (this) {
     BrowserMenuEntry.FirefoxPageActions -> R.string.settings_menu_entry_firefox_page_actions
     BrowserMenuEntry.CandyTrail -> R.string.action_open_candy_trail
     BrowserMenuEntry.AddSiteCapsule -> R.string.action_add_site_capsule
+    BrowserMenuEntry.CreateSiteWidget -> R.string.site_widget_editor_title
     BrowserMenuEntry.Summarize -> R.string.action_summarize
     BrowserMenuEntry.Snooze -> R.string.action_snooze_tab
     BrowserMenuEntry.AddressBarDocking -> R.string.action_dock_address_bar

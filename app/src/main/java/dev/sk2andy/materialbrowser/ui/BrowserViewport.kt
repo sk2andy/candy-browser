@@ -524,17 +524,20 @@ internal fun BrowserViewport(
             ),
     ) {
         if (selectedTab.url != BLANK_URL) {
+            val pageGesturesEnabled = !videoOnlyPresentation &&
+                !tabOverviewVisible &&
+                controller.selectedFirefoxExtensionOptionsTitle == null &&
+                controller.findInPageState == null &&
+                pageErrorFeedback is PageErrorFeedbackState.Hidden
             ActiveBrowserEngineView(
                 controller = controller,
                 visible = webViewVideoOnlyPresentation ||
                     !tabOverviewVisible ||
                     selectedTab.isIncognito,
                 isLoading = selectedTab.isLoading,
-                pullToRefreshEnabled = !videoOnlyPresentation &&
-                    !tabOverviewVisible &&
-                    controller.selectedFirefoxExtensionOptionsTitle == null &&
-                    controller.findInPageState == null &&
-                    pageErrorFeedback is PageErrorFeedbackState.Hidden,
+                pullToRefreshEnabled = pageGesturesEnabled,
+                addressBarSwipeEnabled = pageGesturesEnabled &&
+                    controller.isAddressBarSwipeModeEnabled,
                 showStatusBarOverlay = !videoOnlyPresentation &&
                     !tabOverviewVisible &&
                     controller.selectedFirefoxExtensionOptionsTitle == null,
@@ -693,6 +696,7 @@ private fun ActiveBrowserEngineView(
     visible: Boolean,
     isLoading: Boolean,
     pullToRefreshEnabled: Boolean,
+    addressBarSwipeEnabled: Boolean,
     showStatusBarOverlay: Boolean,
     statusBarTint: Int,
     solidStatusBarOverlay: Boolean,
@@ -801,6 +805,14 @@ private fun ActiveBrowserEngineView(
                         pullRefreshRequested = true
                         currentOnRefresh()
                         true
+                    },
+                )
+                hostView.updateChromeSwipe(
+                    enabled = visible && !contentObscured && addressBarSwipeEnabled,
+                    tabId = selectedTabId,
+                    engineViewRevision = engineViewRevision,
+                    onCompactChanged = { compact ->
+                        controller.onAddressBarSwipe(selectedTabId, engineViewRevision, compact)
                     },
                 )
                 if (visible) {

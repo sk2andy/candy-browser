@@ -112,6 +112,13 @@ enum class BrowserMenuEntry(
         true,
         true,
     ),
+    CreateSiteWidget(
+        "create_site_widget",
+        BrowserMenuConfigurationSection.Candy,
+        BrowserMenuLocation.Tab,
+        true,
+        false,
+    ),
     Summarize("summarize", BrowserMenuConfigurationSection.Candy, BrowserMenuLocation.Both, true, true),
     Snooze("snooze", BrowserMenuConfigurationSection.Candy, BrowserMenuLocation.Both, true, true),
 
@@ -194,8 +201,33 @@ enum class BrowserMenuEntry(
     }
 }
 
+enum class BrowserMenuPresentation(val stableId: String) {
+    Floating("floating"),
+    BottomSheet("bottom_sheet"),
+    ;
+
+    companion object {
+        fun fromStableId(value: String?): BrowserMenuPresentation =
+            entries.firstOrNull { presentation -> presentation.stableId == value } ?: BottomSheet
+    }
+}
+
+enum class BrowserMenuBottomSheetContentLayout(val stableId: String) {
+    Scroll("scroll"),
+    SwipePages("swipe_pages"),
+    ;
+
+    companion object {
+        fun fromStableId(value: String?): BrowserMenuBottomSheetContentLayout =
+            entries.firstOrNull { layout -> layout.stableId == value } ?: Scroll
+    }
+}
+
 data class BrowserMenuLayout(
     val locations: Map<BrowserMenuEntry, BrowserMenuLocation> = emptyMap(),
+    val presentation: BrowserMenuPresentation = BrowserMenuPresentation.BottomSheet,
+    val bottomSheetContentLayout: BrowserMenuBottomSheetContentLayout = BrowserMenuBottomSheetContentLayout.Scroll,
+    val bottomSheetToolbarEntries: List<BrowserMenuEntry?> = BrowserMenuBottomSheetToolbarRules.DefaultEntries,
 ) {
     companion object {
         val Default = BrowserMenuLayout()
@@ -203,6 +235,10 @@ data class BrowserMenuLayout(
 }
 
 object BrowserMenuLayoutRules {
+    private const val PRESENTATION_KEY = "presentation"
+    private const val BOTTOM_SHEET_CONTENT_LAYOUT_KEY = "bottom_sheet_content_layout"
+    private const val BOTTOM_SHEET_TOOLBAR_ENTRIES_KEY = "bottom_sheet_toolbar_entries"
+
     fun location(
         layout: BrowserMenuLayout,
         entry: BrowserMenuEntry,
@@ -224,12 +260,13 @@ object BrowserMenuLayoutRules {
     ): BrowserMenuLayout {
         if (location !in allowedLocations(entry)) return normalize(layout)
         return normalize(
-            BrowserMenuLayout(layout.locations + (entry to location)),
+            layout.copy(locations = layout.locations + (entry to location)),
         )
     }
 
-    fun normalize(layout: BrowserMenuLayout): BrowserMenuLayout = BrowserMenuLayout(
+    fun normalize(layout: BrowserMenuLayout): BrowserMenuLayout = layout.copy(
         locations = BrowserMenuEntry.entries.associateWith { entry -> location(layout, entry) },
+        bottomSheetToolbarEntries = BrowserMenuBottomSheetToolbarRules.normalize(layout.bottomSheetToolbarEntries),
     )
 
     fun isVisible(
@@ -245,18 +282,31 @@ object BrowserMenuLayoutRules {
 
     fun fromWireValues(values: Map<String, String>): BrowserMenuLayout = normalize(
         BrowserMenuLayout(
-            values.mapNotNull { (entryId, locationId) ->
+            locations = values.mapNotNull { (entryId, locationId) ->
                 val entry = BrowserMenuEntry.fromStableId(entryId) ?: return@mapNotNull null
                 val location = BrowserMenuLocation.fromStableId(locationId) ?: return@mapNotNull null
                 (entry to location).takeIf { location in allowedLocations(entry) }
             }.toMap(),
+            presentation = BrowserMenuPresentation.fromStableId(values[PRESENTATION_KEY]),
+            bottomSheetContentLayout = BrowserMenuBottomSheetContentLayout.fromStableId(
+                values[BOTTOM_SHEET_CONTENT_LAYOUT_KEY],
+            ),
+            bottomSheetToolbarEntries = BrowserMenuBottomSheetToolbarRules.fromWireValue(
+                values[BOTTOM_SHEET_TOOLBAR_ENTRIES_KEY],
+            ),
         ),
     )
 
     fun toWireValues(layout: BrowserMenuLayout): Map<String, String> =
         BrowserMenuEntry.entries.associate { entry ->
             entry.stableId to location(layout, entry).stableId
-        }
+        } + mapOf(
+            PRESENTATION_KEY to layout.presentation.stableId,
+            BOTTOM_SHEET_CONTENT_LAYOUT_KEY to layout.bottomSheetContentLayout.stableId,
+            BOTTOM_SHEET_TOOLBAR_ENTRIES_KEY to BrowserMenuBottomSheetToolbarRules.toWireValue(
+                layout.bottomSheetToolbarEntries,
+            ),
+        )
 
     fun entryForAction(action: BrowserFeatureMenuAction): BrowserMenuEntry = when (action) {
         BrowserFeatureMenuAction.Back -> BrowserMenuEntry.Back
@@ -288,6 +338,7 @@ object BrowserMenuLayoutRules {
         BrowserFeatureMenuAction.ToggleDomainMute -> BrowserMenuEntry.DomainMute
         BrowserFeatureMenuAction.OpenCandyTrail -> BrowserMenuEntry.CandyTrail
         BrowserFeatureMenuAction.AddSiteCapsule -> BrowserMenuEntry.AddSiteCapsule
+        BrowserFeatureMenuAction.CreateSiteWidget -> BrowserMenuEntry.CreateSiteWidget
         BrowserFeatureMenuAction.Summarize -> BrowserMenuEntry.Summarize
         BrowserFeatureMenuAction.SnoozeTab -> BrowserMenuEntry.Snooze
         BrowserFeatureMenuAction.OpenSnoozedTabs -> BrowserMenuEntry.OpenSnoozedTabs

@@ -35,6 +35,38 @@ class BrowserMediaPlaybackServiceInstrumentedTest {
     }
 
     @Test
+    fun closingUnrelatedWindowKeepsCurrentMediaOwnerAndCommands() {
+        val firstCommands = mutableListOf<Pair<GeckoMediaPlaybackOwner, GeckoMediaPlaybackCommand>>()
+        val secondCommands = mutableListOf<Pair<GeckoMediaPlaybackOwner, GeckoMediaPlaybackCommand>>()
+        val first = BrowserMediaSystemSession(
+            context = context,
+            onCommand = { owner, command -> firstCommands += owner to command },
+            mayStartService = { true },
+        )
+        val second = BrowserMediaSystemSession(
+            context = context,
+            onCommand = { owner, command -> secondCommands += owner to command },
+            mayStartService = { false },
+        )
+        val owner = owner()
+        instrumentation.runOnMainSync { first.publish(publication(owner)) }
+        awaitServiceState(expected = true)
+
+        instrumentation.runOnMainSync {
+            second.publish(null)
+            second.stopAndClear()
+            second.release()
+            assertEquals(owner, BrowserMediaPlaybackService.serviceStateForTesting().publication?.snapshot?.owner)
+            BrowserMediaPlaybackService.dispatchForTesting(owner, GeckoMediaPlaybackCommand.Pause)
+        }
+
+        assertEquals(listOf(owner to GeckoMediaPlaybackCommand.Pause), firstCommands)
+        assertTrue(secondCommands.isEmpty())
+        instrumentation.runOnMainSync { first.release() }
+        awaitServiceState(expected = false)
+    }
+
+    @Test
     fun authenticatedMediaControllerConnectsAndRoutesAnExactOwnerCommand() {
         val commands = mutableListOf<Pair<GeckoMediaPlaybackOwner, GeckoMediaPlaybackCommand>>()
         val owner = owner()

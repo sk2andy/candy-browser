@@ -594,6 +594,8 @@
     <string name="settings_address_bar_actions_after">Rätt till adress</string>
     <string name="settings_address_bar_actions_full">Alla tre konfigurerbara positioner är upptagna.</string>
     <string name="settings_address_bar_docking_title">Flytta det parkerade adressfältet</string>
+    <string name="settings_address_bar_swipe_mode_title">Växla adressfält med svep</string>
+    <string name="settings_address_bar_swipe_mode_summary">Svep nedåt på sidan för att utöka adressfältet och uppåt för att göra det kompakt, även när sidan inte kan rullas. När detta är av följer adressfältet sidans rullning.</string>
     <string name="settings_address_bar_docking_subtitle">Dra det parkerade fältet och släpp det på valfri höjd för att fästa det vid närmaste skärmkant. Stäng av för att hålla adressfältet centrerat.</string>
     <string name="settings_tab_dismiss_resistance">Motstånd när flikar stängs</string>
     <string name="settings_tab_dismiss_resistance_summary">Motståndsfas: %1$d%% av stängningsavståndet</string>
@@ -1183,6 +1185,11 @@
     <string name="external_link_preview_copy_link">Kopiera länk</string>
     <string name="external_link_preview_copy_label">Candy länk</string>
     <string name="toast_link_copied">Länk kopierad</string>
+    <string name="sync_extension_stores_title">Candy Sync-tillägg</string>
+    <string name="sync_extension_stores_summary">Installera Candy Sync i datorns webbläsare eller dela butikslänken.</string>
+    <string name="sync_extension_chrome_store">Chrome Web Store</string>
+    <string name="sync_extension_firefox_store">Firefox Add-ons</string>
+    <string name="sync_extension_share_link">Dela länk till %1$s</string>
     <string name="sync_settings_title">Synkronisera</string>
     <string name="settings_home_sync_summary">Självvärderade, änd-till-slut-krypterade enhetsflikar</string>
     <string name="sync_setup_guide_title">Upprätta Candy Sync</string>
@@ -1439,4 +1446,19 @@
     <string name="favorites_url">Webbplatsens URL</string>
     <string name="favorites_manage">Redigera favoriter</string>
     <string name="favorites_refresh_icon">Uppdatera ikon</string>
+    <string name="settings_menu_presentation_title">Menystil</string>
+    <string name="settings_menu_presentation_summary">Välj vanlig meny eller en bottenpanel med rullbara avsnitt eller två sidor att svepa mellan.</string>
+    <string name="settings_menu_presentation_floating">Vanlig meny</string>
+    <string name="settings_menu_presentation_bottom_sheet">Bottenpanel</string>
+    <string name="settings_menu_bottom_sheet_layout_title">Avsnitt i bottenpanelen</string>
+    <string name="settings_menu_bottom_sheet_layout_scroll">Rulla vertikalt</string>
+    <string name="settings_menu_bottom_sheet_layout_pages">Två svepbara sidor</string>
+    <string name="browser_menu_quick_actions">Snabbåtgärder</string>
+    <string name="browser_menu_page_controls">Sidkontroller</string>
+    <string name="browser_menu_dismiss">Stäng meny</string>
+    <string name="browser_menu_page_actions">Sidåtgärder</string>
+    <string name="settings_menu_bottom_sheet_toolbar_title">Verktygsfält i bottenpanelen</string>
+    <string name="settings_menu_bottom_sheet_toolbar_summary">Välj fem åtgärder från vänster till höger. Redan tilldelade åtgärder byter plats. En tom plats döljer knappen.</string>
+    <string name="settings_menu_bottom_sheet_toolbar_slot">Åtgärd %1$d</string>
+    <string name="settings_menu_bottom_sheet_toolbar_empty">Tom plats</string>
 </resources>

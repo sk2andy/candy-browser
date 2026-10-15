@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
+    <string name="device_search_title">Device search</string>
+    <string name="device_search_settings_summary">Choose bookmarks and saved articles for Android search</string>
+    <string name="device_search_summary">Choose individual bookmarks and saved articles to share with system search. Browsing history and article text stay in Candy. Private content and protected profiles are excluded.</string>
+    <string name="device_search_enable">Share with device search</string>
+    <string name="device_search_enable_summary">Only selected items are published. Turning this off removes them from the index.</string>
+    <string name="device_search_launcher_note">Results appear only in launchers or system search apps that support Android AppSearch. Availability depends on your device.</string>
+    <string name="device_search_bookmark_profile">Open bookmarks in this profile</string>
+    <string name="device_search_bookmarks">Bookmarks</string>
+    <string name="device_search_articles">Saved articles</string>
+    <string name="device_search_empty">No eligible items. Saved articles need a known, unprotected local profile.</string>
+    <string name="device_search_saving">Updating device search…</string>
+    <string name="device_search_failed">Device search could not be updated. Try changing the selection again.</string>
+    <string name="device_search_item_unavailable">This item is no longer shared or available.</string>
+    <string name="device_search_open">Open in Candy</string>
+</resources>

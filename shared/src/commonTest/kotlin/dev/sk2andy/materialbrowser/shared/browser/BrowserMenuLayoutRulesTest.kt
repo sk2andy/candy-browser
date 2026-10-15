@@ -7,6 +7,58 @@ import kotlin.test.assertTrue
 
 class BrowserMenuLayoutRulesTest {
     @Test
+    fun `missing or invalid presentation values use bottom sheet and scrolling defaults`() {
+        assertEquals(BrowserMenuPresentation.BottomSheet, BrowserMenuLayout.Default.presentation)
+
+        listOf(emptyMap(), mapOf("presentation" to "future", "bottom_sheet_content_layout" to "future"))
+            .forEach { values ->
+                val decoded = BrowserMenuLayoutRules.fromWireValues(values)
+
+                assertEquals(BrowserMenuPresentation.BottomSheet, decoded.presentation)
+                assertEquals(BrowserMenuBottomSheetContentLayout.Scroll, decoded.bottomSheetContentLayout)
+            }
+    }
+
+    @Test
+    fun `explicit floating preference survives decoding and round trip`() {
+        val layout = BrowserMenuLayoutRules.fromWireValues(mapOf("presentation" to "floating"))
+
+        assertEquals(BrowserMenuPresentation.Floating, layout.presentation)
+        assertEquals(layout, BrowserMenuLayoutRules.fromWireValues(BrowserMenuLayoutRules.toWireValues(layout)))
+    }
+
+    @Test
+    fun `presentation values round trip with customized action locations`() {
+        val layout = BrowserMenuLayoutRules.update(
+            BrowserMenuLayout(
+                presentation = BrowserMenuPresentation.BottomSheet,
+                bottomSheetContentLayout = BrowserMenuBottomSheetContentLayout.SwipePages,
+            ),
+            BrowserMenuEntry.Share,
+            BrowserMenuLocation.Nowhere,
+        )
+
+        assertEquals(layout, BrowserMenuLayoutRules.fromWireValues(BrowserMenuLayoutRules.toWireValues(layout)))
+        assertEquals(BrowserMenuPresentation.BottomSheet, layout.presentation)
+        assertEquals(BrowserMenuBottomSheetContentLayout.SwipePages, layout.bottomSheetContentLayout)
+    }
+
+    @Test
+    fun `invalid section layout preserves valid presentation and action locations`() {
+        val decoded = BrowserMenuLayoutRules.fromWireValues(
+            mapOf(
+                "presentation" to "bottom_sheet",
+                "bottom_sheet_content_layout" to "future",
+                BrowserMenuEntry.Share.stableId to BrowserMenuLocation.Nowhere.stableId,
+            ),
+        )
+
+        assertEquals(BrowserMenuPresentation.BottomSheet, decoded.presentation)
+        assertEquals(BrowserMenuBottomSheetContentLayout.Scroll, decoded.bottomSheetContentLayout)
+        assertEquals(BrowserMenuLocation.Nowhere, BrowserMenuLayoutRules.location(decoded, BrowserMenuEntry.Share))
+    }
+
+    @Test
     fun `default layout preserves current surfaces`() {
         val layout = BrowserMenuLayout.Default
 

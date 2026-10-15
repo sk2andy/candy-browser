@@ -40,6 +40,7 @@ class SiteCapsuleStoreInstrumentedTest {
             profileId = "work",
             ownsDedicatedProfile = true,
             isolatedStorageRequested = true,
+            opensInOwnWindow = true,
             navigationMode = CapsuleNavigationMode.SameRegistrableDomain,
             chromeMode = CapsuleChromeMode.NoControls,
             iconMode = CapsuleIconMode.Custom,
@@ -64,6 +65,7 @@ class SiteCapsuleStoreInstrumentedTest {
 
         assertEquals(SiteCapsuleRules.DEFAULT_ICON_EMOJI, capsule.iconEmoji)
         assertEquals(CapsuleIconColor.Light, capsule.iconColor)
+        assertEquals(false, capsule.opensInOwnWindow)
     }
 
     @Test

@@ -299,6 +299,10 @@ class BrowserMediaPlaybackService : MediaSessionService() {
 
         internal fun clear(context: Context) = BrowserMediaServiceRegistry.clear(context, ClearReason.All)
 
+        internal fun isOwnedByAnotherSession(
+            commandSink: (GeckoMediaPlaybackOwner, GeckoMediaPlaybackCommand) -> Unit,
+        ): Boolean = BrowserMediaServiceRegistry.isOwnedByAnotherSession(commandSink)
+
         internal fun release(context: Context) = BrowserMediaServiceRegistry.release(context)
 
         internal fun stopAndClear(context: Context) = BrowserMediaServiceRegistry.stopAndClear()
@@ -357,6 +361,11 @@ private object BrowserMediaServiceRegistry {
     private var clearReason: ClearReason? = null
     private var commandSink: ((GeckoMediaPlaybackOwner, GeckoMediaPlaybackCommand) -> Unit)? = null
     private var stopAndClearInProgress = false
+
+    @Synchronized
+    fun isOwnedByAnotherSession(
+        candidateSink: (GeckoMediaPlaybackOwner, GeckoMediaPlaybackCommand) -> Unit,
+    ): Boolean = commandSink != null && commandSink !== candidateSink
 
     @Synchronized
     fun publish(

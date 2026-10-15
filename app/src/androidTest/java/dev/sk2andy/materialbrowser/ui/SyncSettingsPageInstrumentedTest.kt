@@ -168,6 +168,44 @@ class SyncSettingsPageInstrumentedTest {
     }
 
     @Test
+    fun extensionStoresOpenAndShareOnlyTheirPublicInstallationLinks() {
+        val openedUrl = AtomicReference<String>()
+        val sharedUrl = AtomicReference<String>()
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                SyncSettingsPage(
+                    state = unconfiguredState(),
+                    iconCatalog = catalog(),
+                    onConfigure = { true },
+                    onEnroll = { _, _, _ -> },
+                    onRefresh = {},
+                    onOpenDocumentation = openedUrl::set,
+                    onShareExtensionLink = sharedUrl::set,
+                    onBack = {},
+                )
+            }
+        }
+
+        listOf(
+            Triple(
+                SyncSettingsTestTags.ChromeStore,
+                SyncSettingsTestTags.ChromeStoreShare,
+                "https://chromewebstore.google.com/detail/candy-sync/mbmmijoehjmjdehhbikpflhahamohbge",
+            ),
+            Triple(
+                SyncSettingsTestTags.FirefoxStore,
+                SyncSettingsTestTags.FirefoxStoreShare,
+                "https://addons.mozilla.org/en-US/firefox/addon/candy-sync/",
+            ),
+        ).forEach { (openTag, shareTag, expectedUrl) ->
+            composeRule.onNodeWithTag(openTag).performScrollTo().performClick()
+            assertEquals(expectedUrl, openedUrl.get())
+            composeRule.onNodeWithTag(shareTag).performScrollTo().performClick()
+            assertEquals(expectedUrl, sharedUrl.get())
+        }
+    }
+
+    @Test
     fun setupCanBindAnExistingLocalProfile() {
         val configured = AtomicReference<SyncConnectionSettings>()
         composeRule.setContent {

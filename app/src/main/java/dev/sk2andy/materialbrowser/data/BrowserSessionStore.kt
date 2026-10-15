@@ -3,6 +3,7 @@ package dev.sk2andy.materialbrowser.data
 import android.content.Context
 import android.content.SharedPreferences
 import dev.sk2andy.materialbrowser.BuildConfig
+import dev.sk2andy.materialbrowser.capsule.SiteCapsuleRules
 import dev.sk2andy.materialbrowser.blocking.BlockerSettings
 import dev.sk2andy.materialbrowser.blocking.SiteExceptionRules
 import dev.sk2andy.materialbrowser.blocking.SitePrivacyOverrides
@@ -53,13 +54,19 @@ import org.json.JSONObject
 
 class BrowserSessionStore internal constructor(
     private val preferences: SharedPreferences,
+    private val sessionPreferences: SharedPreferences = preferences,
 ) {
     constructor(context: Context) : this(
         context.getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE),
     )
 
+    constructor(context: Context, capsuleId: String) : this(
+        context.getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE),
+        context.getSharedPreferences(capsulePreferencesName(capsuleId), Context.MODE_PRIVATE),
+    )
+
     fun loadTabs(nowMillis: Long = System.currentTimeMillis()): Pair<List<BrowserTab>, String?> {
-        val raw = preferences.getString(KEY_TABS, null) ?: return emptyList<BrowserTab>() to null
+        val raw = sessionPreferences.getString(KEY_TABS, null) ?: return emptyList<BrowserTab>() to null
         return runCatching {
             val array = JSONArray(raw)
             val tabs = buildList {
@@ -89,7 +96,7 @@ class BrowserSessionStore internal constructor(
             val persistentTabs = TabPinningRules.orderedTabs(
                 TabPersistenceRules.persistentTabs(tabs),
             )
-            persistentTabs to preferences.getString(KEY_SELECTED_TAB, null)
+            persistentTabs to sessionPreferences.getString(KEY_SELECTED_TAB, null)
                 ?.takeIf { selectedId -> persistentTabs.any { it.id == selectedId } }
         }.getOrDefault(emptyList<BrowserTab>() to null)
     }
@@ -101,7 +108,11 @@ class BrowserSessionStore internal constructor(
     fun saveTabsImmediately(tabs: List<BrowserTab>, selectedTabId: String): Boolean =
         tabsEditor(tabs, selectedTabId).commit()
 
-    fun flush(): Boolean = preferences.edit().commit()
+    fun flush(): Boolean {
+        val settingsFlushed = preferences.edit().commit()
+        val sessionFlushed = sessionPreferences === preferences || sessionPreferences.edit().commit()
+        return settingsFlushed && sessionFlushed
+    }
 
     @Synchronized
     fun saveTabsAndSnoozedImmediately(
@@ -109,16 +120,16 @@ class BrowserSessionStore internal constructor(
         selectedTabId: String,
         snoozedTabs: List<SnoozedTab>,
     ): Boolean {
-        val originalTabs = preferences.getString(KEY_TABS, null)
-        val originalSelection = preferences.getString(KEY_SELECTED_TAB, null)
-        val originalSnoozedTabs = preferences.getString(SnoozedTabStore.KEY_TABS, null)
+        val originalTabs = sessionPreferences.getString(KEY_TABS, null)
+        val originalSelection = sessionPreferences.getString(KEY_SELECTED_TAB, null)
+        val originalSnoozedTabs = sessionPreferences.getString(SnoozedTabStore.KEY_TABS, null)
         val committed = SnoozedTabStore.putTabs(
             tabsEditor(tabs, selectedTabId),
             snoozedTabs,
         ).commit()
         if (committed) return true
 
-        preferences.edit()
+        sessionPreferences.edit()
             .restoreString(KEY_TABS, originalTabs)
             .restoreString(KEY_SELECTED_TAB, originalSelection)
             .restoreString(SnoozedTabStore.KEY_TABS, originalSnoozedTabs)
@@ -132,7 +143,7 @@ class BrowserSessionStore internal constructor(
     ): SharedPreferences.Editor = if (value == null) remove(key) else putString(key, value)
 
     private fun tabsEditor(tabs: List<BrowserTab>, selectedTabId: String) =
-        preferences.edit().also { editor ->
+        sessionPreferences.edit().also { editor ->
             val persistentTabs = TabPersistenceRules.persistentTabs(tabs)
             val persistentSelection = TabPersistenceRules.persistentSelection(tabs, selectedTabId)
             val array = JSONArray()
@@ -156,11 +167,11 @@ class BrowserSessionStore internal constructor(
         }
 
     fun saveSelectedTab(selectedTabId: String) {
-        preferences.edit().putString(KEY_SELECTED_TAB, selectedTabId).apply()
+        sessionPreferences.edit().putString(KEY_SELECTED_TAB, selectedTabId).apply()
     }
 
     fun loadTabStacks(tabs: Collection<BrowserTab>): List<TabStack> {
-        val raw = preferences.getString(KEY_TAB_STACKS, null) ?: return emptyList()
+        val raw = sessionPreferences.getString(KEY_TAB_STACKS, null) ?: return emptyList()
         if (raw.length > MAX_TAB_STACKS_JSON_LENGTH) return emptyList()
         return runCatching {
             val array = JSONArray(raw)
@@ -212,7 +223,7 @@ class BrowserSessionStore internal constructor(
                     .put("isCollapsed", stack.isCollapsed),
             )
         }
-        preferences.edit().putString(KEY_TAB_STACKS, array.toString()).apply()
+        sessionPreferences.edit().putString(KEY_TAB_STACKS, array.toString()).apply()
     }
 
     fun loadProfiles(): Pair<List<BrowserProfile>, String> {
@@ -697,9 +708,9 @@ class BrowserSessionStore internal constructor(
     }
 
     fun loadPendingTabClearOnTaskRemoval(): Boolean =
-        preferences.getBoolean(KEY_PENDING_TAB_CLEAR_ON_TASK_REMOVAL, false)
+        sessionPreferences.getBoolean(KEY_PENDING_TAB_CLEAR_ON_TASK_REMOVAL, false)
 
-    fun savePendingTabClearOnTaskRemoval(pending: Boolean): Boolean = preferences.edit()
+    fun savePendingTabClearOnTaskRemoval(pending: Boolean): Boolean = sessionPreferences.edit()
         .putBoolean(KEY_PENDING_TAB_CLEAR_ON_TASK_REMOVAL, pending)
         .commit()
 
@@ -893,6 +904,13 @@ class BrowserSessionStore internal constructor(
 
     fun saveAddressBarDockingEnabled(enabled: Boolean) {
         preferences.edit().putBoolean(KEY_ADDRESS_BAR_DOCKING_ENABLED, enabled).apply()
+    }
+
+    fun loadAddressBarSwipeModeEnabled(): Boolean =
+        preferences.getBoolean(KEY_ADDRESS_BAR_SWIPE_MODE_ENABLED, false)
+
+    fun saveAddressBarSwipeModeEnabled(enabled: Boolean) {
+        preferences.edit().putBoolean(KEY_ADDRESS_BAR_SWIPE_MODE_ENABLED, enabled).apply()
     }
 
     fun loadExternalLinkPreviewEnabled(): Boolean =
@@ -1550,6 +1568,24 @@ class BrowserSessionStore internal constructor(
     internal companion object {
         private val HISTORY_TRAIL_JOURNAL_LOCK = Any()
         const val PREFERENCES_NAME = "browser_session"
+
+        internal fun capsulePreferencesName(capsuleId: String): String {
+            require(SiteCapsuleRules.opaqueId(capsuleId) != null)
+            return "${PREFERENCES_NAME}_capsule_$capsuleId"
+        }
+
+        internal fun clearCapsuleSession(context: Context, capsuleId: String): Boolean =
+            context.getSharedPreferences(capsulePreferencesName(capsuleId), Context.MODE_PRIVATE)
+                .edit().clear().commit()
+
+        internal fun allPersistentTabIds(context: Context): Set<String> = buildSet {
+            addAll(BrowserSessionStore(context).loadTabs().first.map(BrowserTab::id))
+            addAll(SnoozedTabStore(context).load().map { it.tab.id })
+            SiteCapsuleStore(context).load().forEach { capsule ->
+                addAll(BrowserSessionStore(context, capsule.id).loadTabs().first.map(BrowserTab::id))
+            }
+        }
+
         const val KEY_TABS = "tabs"
         const val KEY_SELECTED_TAB = "selected_tab"
         const val KEY_TAB_STACKS = "tab_stacks"
@@ -1593,6 +1629,7 @@ class BrowserSessionStore internal constructor(
         const val KEY_ADDRESS_BAR_DOCK_VERTICAL_FRACTION =
             "address_bar_dock_vertical_fraction"
         const val KEY_ADDRESS_BAR_DOCKING_ENABLED = "address_bar_docking_enabled"
+        const val KEY_ADDRESS_BAR_SWIPE_MODE_ENABLED = "address_bar_swipe_mode_enabled"
         const val KEY_EXTERNAL_LINK_PREVIEW_ENABLED = "external_link_preview_enabled"
         const val KEY_EXTERNAL_APP_LINK_HANDLING = "external_app_link_handling"
         const val KEY_LINK_LONG_PRESS_ACTION = "link_long_press_action"

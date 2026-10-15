@@ -42,6 +42,8 @@ internal class SystemWebViewBlobDownloadTransfer(
     private val notifier: CandyDownloadNotifier = CandyDownloadNotifier(context),
     private val helperFactory: (Context) -> WebView = ::WebView,
     private val diagnostic: (AppLogEvent, Throwable?) -> Unit = { _, _ -> },
+    private val sourceProfileId: String? = null,
+    private val isPrivate: Boolean = false,
 ) : AutoCloseable {
     private data class Operation(
         val id: Int,
@@ -359,6 +361,14 @@ internal class SystemWebViewBlobDownloadTransfer(
             totalBytes = message.totalBytes,
         )
         operation.entry = entry
+        runCatching { android.content.ContentUris.parseId(entry.uri) }.getOrNull()?.let { mediaId ->
+            dev.sk2andy.materialbrowser.data.DownloadProvenanceStore(context).record(
+                dev.sk2andy.materialbrowser.data.DownloadEntryIds.encodeMediaStoreId(mediaId),
+                start.fileName,
+                sourceProfileId,
+                isPrivate,
+            )
+        }
         operation.start = start
         operation.nextSequence++
         DownloadRuntimeRegistry.started(

@@ -584,6 +584,8 @@
     <string name="settings_address_bar_actions_after">Quyền tiếp cận</string>
     <string name="settings_address_bar_actions_full">Tất cả ba vị trí có thể cấu hình đều được chiếm đóng.</string>
     <string name="settings_address_bar_docking_title">Di chuyển bảng địa chỉ đậu xe.</string>
+    <string name="settings_address_bar_swipe_mode_title">Chuyển thanh địa chỉ bằng thao tác vuốt</string>
+    <string name="settings_address_bar_swipe_mode_summary">Vuốt xuống trên trang để mở rộng thanh địa chỉ và vuốt lên để thu gọn, kể cả khi không thể cuộn trang. Khi tắt, thanh địa chỉ thay đổi theo thao tác cuộn trang.</string>
     <string name="settings_address_bar_docking_subtitle">Lôi thuốc đậu và thả nó ở bất kỳ độ cao nào để nhấp vào cạnh màn hình gần nhất. Tắt để giữ thanh địa chỉ ở trung tâm.</string>
     <string name="settings_tab_dismiss_resistance">Kháng thả tab</string>
     <string name="settings_tab_dismiss_resistance_summary">Giai đoạn kháng cự: %1$d%% của khoảng cách đóng</string>
@@ -1168,6 +1170,11 @@
     <string name="external_link_preview_copy_link">Sao chép liên kết</string>
     <string name="external_link_preview_copy_label">Candy liên kết</string>
     <string name="toast_link_copied">Liên kết được sao chép</string>
+    <string name="sync_extension_stores_title">Tiện ích Candy Sync</string>
+    <string name="sync_extension_stores_summary">Cài đặt Candy Sync trong trình duyệt máy tính hoặc chia sẻ liên kết cửa hàng.</string>
+    <string name="sync_extension_chrome_store">Chrome Web Store</string>
+    <string name="sync_extension_firefox_store">Firefox Add-ons</string>
+    <string name="sync_extension_share_link">Chia sẻ liên kết %1$s</string>
     <string name="sync_settings_title">Đồng bộ</string>
     <string name="settings_home_sync_summary">Các tab thiết bị tự lưu trữ, mã hóa từ đầu đến cuối</string>
     <string name="sync_setup_guide_title">Thiết lập Candy Sync</string>
@@ -1422,4 +1429,19 @@
     <string name="favorites_url">URL trang web</string>
     <string name="favorites_manage">Chỉnh sửa mục yêu thích</string>
     <string name="favorites_refresh_icon">Làm mới biểu tượng</string>
+    <string name="settings_menu_presentation_title">Kiểu menu</string>
+    <string name="settings_menu_presentation_summary">Chọn menu thông thường hoặc bảng dưới cùng có các phần cuộn được hay hai trang có thể vuốt.</string>
+    <string name="settings_menu_presentation_floating">Menu thông thường</string>
+    <string name="settings_menu_presentation_bottom_sheet">Bảng dưới cùng</string>
+    <string name="settings_menu_bottom_sheet_layout_title">Các phần của bảng dưới cùng</string>
+    <string name="settings_menu_bottom_sheet_layout_scroll">Cuộn dọc</string>
+    <string name="settings_menu_bottom_sheet_layout_pages">Hai trang có thể vuốt</string>
+    <string name="browser_menu_quick_actions">Thao tác nhanh</string>
+    <string name="browser_menu_page_controls">Điều khiển trang</string>
+    <string name="browser_menu_dismiss">Đóng menu</string>
+    <string name="browser_menu_page_actions">Thao tác trên trang</string>
+    <string name="settings_menu_bottom_sheet_toolbar_title">Thanh công cụ bảng dưới cùng</string>
+    <string name="settings_menu_bottom_sheet_toolbar_summary">Chọn năm thao tác từ trái sang phải. Các thao tác đã được gán sẽ đổi chỗ. Ô trống sẽ ẩn nút tương ứng.</string>
+    <string name="settings_menu_bottom_sheet_toolbar_slot">Thao tác %1$d</string>
+    <string name="settings_menu_bottom_sheet_toolbar_empty">Ô trống</string>
 </resources>

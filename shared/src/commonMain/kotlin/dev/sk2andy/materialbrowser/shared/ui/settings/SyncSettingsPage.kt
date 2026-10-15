@@ -83,6 +83,10 @@ interface SyncSettingsActionSink {
     )
 
     fun refresh()
+
+    fun openExtensionStore(url: String) {}
+
+    fun shareExtensionStore(url: String) {}
 }
 
 internal enum class SyncSettingsValidationError {
@@ -107,6 +111,42 @@ internal object SyncSettingsFormRules {
         endpoint.isBlank() || username.isBlank() || serverPassword.isBlank() ||
             passphrase.isBlank() || deviceName.isBlank() -> SyncSettingsValidationError.RequiredFields
         else -> null
+    }
+}
+
+@Composable
+private fun SyncExtensionStores(actions: SyncSettingsActionSink) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.extraLarge,
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+    ) {
+        Column(
+            modifier = Modifier.padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Text("Candy-Sync-Erweiterungen", style = MaterialTheme.typography.titleMedium)
+            Text(
+                "Installiere Candy Sync im Desktop-Browser oder teile den Store-Link.",
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            listOf(
+                "Chrome Web Store" to SyncExtensionStoreUrls.Chrome,
+                "Firefox Add-ons" to SyncExtensionStoreUrls.Firefox,
+            ).forEach { (title, url) ->
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    TextButton(
+                        onClick = { actions.openExtensionStore(url) },
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Text(title)
+                    }
+                    TextButton(onClick = { actions.shareExtensionStore(url) }) {
+                        Text("Link teilen")
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -154,6 +194,7 @@ fun SyncSettingsPage(
         ?: state.localProfiles.first()
 
     SettingsPage(title = "Synchronisierung", backContentDescription = "Zurück", onBack = onBack) {
+        SyncExtensionStores(actions)
         SyncStatusCard(state)
         SectionTitle("Verbindung")
         OutlinedTextField(

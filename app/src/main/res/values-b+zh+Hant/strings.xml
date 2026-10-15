@@ -584,6 +584,8 @@
     <string name="settings_address_bar_actions_after">聯絡權</string>
     <string name="settings_address_bar_actions_full">所有三個可配置的位置都被佔領了.</string>
     <string name="settings_address_bar_docking_title">移動停留的地址片.</string>
+    <string name="settings_address_bar_swipe_mode_title">滑動切換網址列</string>
+    <string name="settings_address_bar_swipe_mode_summary">在頁面上向下滑動展開網址列，向上滑動收起網址列，即使頁面無法捲動也能使用。關閉後，網址列隨頁面捲動變化。</string>
     <string name="settings_address_bar_docking_subtitle">拖拉停放的藥丸,並在任何高度放下,將其到最近的螢幕邊緣. 關閉以保持地址的中心.</string>
     <string name="settings_tab_dismiss_resistance">標籤釋放阻力</string>
     <string name="settings_tab_dismiss_resistance_summary">阻力相: %1$d%% 關閉距離</string>
@@ -1168,6 +1170,11 @@
     <string name="external_link_preview_copy_link">複製連結</string>
     <string name="external_link_preview_copy_label">Candy 連結</string>
     <string name="toast_link_copied">連結複製</string>
+    <string name="sync_extension_stores_title">Candy Sync 擴充功能</string>
+    <string name="sync_extension_stores_summary">在桌面瀏覽器中安裝 Candy Sync，或分享商店連結。</string>
+    <string name="sync_extension_chrome_store">Chrome Web Store</string>
+    <string name="sync_extension_firefox_store">Firefox Add-ons</string>
+    <string name="sync_extension_share_link">分享 %1$s 連結</string>
     <string name="sync_settings_title">同步</string>
     <string name="settings_home_sync_summary">自主託管的端到端加密裝置標籤</string>
     <string name="sync_setup_guide_title">設定 Candy Sync</string>
@@ -1422,4 +1429,19 @@
     <string name="favorites_url">網站網址</string>
     <string name="favorites_manage">編輯收藏</string>
     <string name="favorites_refresh_icon">更新圖示</string>
+    <string name="settings_menu_presentation_title">選單樣式</string>
+    <string name="settings_menu_presentation_summary">選擇一般選單，或使用包含捲動區段或兩頁滑動內容的底部面板。</string>
+    <string name="settings_menu_presentation_floating">一般選單</string>
+    <string name="settings_menu_presentation_bottom_sheet">底部面板</string>
+    <string name="settings_menu_bottom_sheet_layout_title">底部面板區段</string>
+    <string name="settings_menu_bottom_sheet_layout_scroll">垂直捲動</string>
+    <string name="settings_menu_bottom_sheet_layout_pages">兩頁滑動內容</string>
+    <string name="browser_menu_quick_actions">快捷操作</string>
+    <string name="browser_menu_page_controls">頁面控制</string>
+    <string name="browser_menu_dismiss">關閉選單</string>
+    <string name="browser_menu_page_actions">頁面操作</string>
+    <string name="settings_menu_bottom_sheet_toolbar_title">底部面板工具列</string>
+    <string name="settings_menu_bottom_sheet_toolbar_summary">從左到右選擇五個操作。已指派的操作會交換位置。空位將隱藏對應按鈕。</string>
+    <string name="settings_menu_bottom_sheet_toolbar_slot">操作 %1$d</string>
+    <string name="settings_menu_bottom_sheet_toolbar_empty">空位</string>
 </resources>

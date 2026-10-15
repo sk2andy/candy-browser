@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
+    <string name="documents_root_summary">Saved articles and downloads</string>
+    <string name="documents_reader_folder">Reader articles</string>
+    <string name="documents_downloads_folder">Downloads</string>
+</resources>

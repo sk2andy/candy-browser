@@ -1,0 +1,23 @@
+<resources>
+    <string name="link_routing_title">Persönliche Link-Regeln</string>
+    <string name="link_routing_summary">Lege fest, wo Links aus anderen Apps öffnen. Die erste passende aktive Regel gilt.</string>
+    <string name="link_routing_add">Regel hinzufügen</string>
+    <string name="link_routing_empty">Noch keine Regeln. Füge eine Domain hinzu und wähle ein Profil, Reader Studio oder eine Site Capsule.</string>
+    <string name="link_routing_edit">Link-Regel bearbeiten</string>
+    <string name="link_routing_delete">Regel löschen</string>
+    <string name="link_routing_move_up">Höhere Priorität</string>
+    <string name="link_routing_move_down">Niedrigere Priorität</string>
+    <string name="link_routing_domain">Domain ohne https://</string>
+    <string name="link_routing_subdomains">Subdomains einschließen</string>
+    <string name="link_routing_subdomains_summary">Auch Adressen wie www.example.com erfassen.</string>
+    <string name="link_routing_target">Öffnen mit</string>
+    <string name="link_routing_destination">Ziel</string>
+    <string name="link_routing_profile">Profil</string>
+    <string name="link_routing_reader">Reader Studio</string>
+    <string name="link_routing_capsule">Site Capsule</string>
+    <string name="link_routing_save">Regel speichern</string>
+    <string name="link_routing_boundaries">Gilt für Weblinks, die Android an Candy übergibt. Private Tabs behalten ihr normales Verhalten. Geschützte und synchronisierte Profile stehen als automatische Ziele nicht zur Verfügung.</string>
+    <string name="link_routing_target_missing">Ziel nicht verfügbar</string>
+    <string name="link_routing_target_unavailable">Das Ziel dieser Link-Regel kann nicht geöffnet werden. Passe die Regel in den Einstellungen an.</string>
+    <string name="link_routing_save_failed">Link-Regeln konnten nicht gespeichert werden.</string>
+</resources>

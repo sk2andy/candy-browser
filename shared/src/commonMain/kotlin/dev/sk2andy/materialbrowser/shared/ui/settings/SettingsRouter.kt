@@ -32,6 +32,8 @@ fun SettingsRouter(
             transitionSpec = {
                 if (
                     targetState == SettingsDestination.Home ||
+                    initialState == SettingsDestination.LinkRouting &&
+                    targetState == SettingsDestination.Browser ||
                     initialState == SettingsDestination.ToppingCatalog &&
                     targetState == SettingsDestination.Userscripts ||
                     initialState == SettingsDestination.AddressBarLongPressActions &&

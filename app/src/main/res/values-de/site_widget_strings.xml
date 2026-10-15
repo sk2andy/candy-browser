@@ -1,0 +1,35 @@
+<resources>
+    <string name="site_widget_name">Website-Ausschnitt (Prototyp)</string>
+    <string name="site_widget_name_square">Website-Ausschnitt 4×4 (Prototyp)</string>
+    <string name="site_widget_description">Zeige einen gewählten Website-Ausschnitt auf dem Startbildschirm</string>
+    <string name="site_widget_empty">Öffne eine Seite in Candy und tippe dann hier, um einen Ausschnitt zu wählen.</string>
+    <string name="site_widget_open">Seite öffnen</string>
+    <string name="site_widget_refresh">Aktualisieren</string>
+    <string name="site_widget_unavailable">Diese Seite kann nicht als Widget gespeichert werden. Nutze ein normales, ungeschütztes lokales Profil.</string>
+    <string name="site_widget_pin_failed">Das Widget konnte nicht hinzugefügt werden. Bitte versuche es erneut.</string>
+    <string name="site_widget_pin_requested">Bestätige das Hinzufügen des Widgets auf deinem Startbildschirm.</string>
+    <string name="site_widget_editor_title">Website-Widget</string>
+    <string name="site_widget_editor_instructions">Wähle Spalten und Reihen. Zoome mit zwei Fingern oder dem Regler und verschiebe die Seite unter dem Rahmen.</string>
+    <string name="site_widget_format_four_by_three">4 × 3</string>
+    <string name="site_widget_format_four_by_four">4 × 4</string>
+    <string name="site_widget_editor_size">Größe des Ausschnitts</string>
+    <string name="site_widget_editor_pin">Zum Startbildschirm hinzufügen</string>
+    <string name="site_widget_editor_interaction_hint">Das Widget zeigt eine Momentaufnahme. Antippen öffnet die Seite in Candy.</string>
+    <string name="site_widget_private_unavailable">Website-Widgets sind in privaten Tabs nicht verfügbar.</string>
+    <string name="site_widget_capture_failed">Die Seite konnte nicht aufgenommen werden. Versuche es nach dem Laden erneut.</string>
+    <string name="site_widget_pin_unavailable">Dieser Launcher unterstützt das direkte Hinzufügen nicht. Füge das Candy-Website-Widget über seine Widget-Auswahl hinzu.</string>
+    <string name="site_widget_save_failed">Das Widget konnte nicht gespeichert werden. Bitte versuche es erneut.</string>
+    <string name="site_widget_reselect">Ausschnitt bearbeiten</string>
+    <string name="site_widget_refresh_failed">Aktualisierung fehlgeschlagen. Die letzte Aufnahme bleibt sichtbar.</string>
+    <string name="site_widget_refreshing">Wird aktualisiert…</string>
+    <string name="site_widget_editor_columns">Spalten: %1$d</string>
+    <string name="site_widget_editor_rows">Reihen: %1$d</string>
+    <string name="site_widget_editor_zoom">Zoom</string>
+    <string name="site_widget_editor_zoom_value">Zoom: %1$.1f×</string>
+    <string name="site_widget_editor_interval">Aktualisierungsintervall</string>
+    <string name="site_widget_editor_interval_value">Aktualisierung: %1$s</string>
+    <string name="site_widget_editor_interval_hint">Android kann automatische Aktualisierungen verzögern, etwa im Energiesparmodus.</string>
+    <string name="site_widget_interval_manual">Nur manuell</string>
+    <string name="site_widget_interval_minutes">Alle %1$d Minuten</string>
+    <string name="site_widget_interval_hours">Alle %1$d Std.</string>
+</resources>

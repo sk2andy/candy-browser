@@ -58,6 +58,7 @@ class SiteCapsuleEditorContractInstrumentedTest {
             name = "Mail",
             startUrl = "https://mail.example",
             profileId = "candy",
+            opensInOwnWindow = true,
             iconEmoji = "📬",
             iconColor = CapsuleIconColor.Charcoal,
             createdAtMillis = 10L,
@@ -82,6 +83,7 @@ class SiteCapsuleEditorContractInstrumentedTest {
             SiteCapsuleEditorContract.requestFrom(contract.createIntent(context, request)),
         )
 
+        assertTrue(decoded.existing?.opensInOwnWindow == true)
         assertEquals("📬", decoded.existing?.iconEmoji)
         assertEquals(CapsuleIconColor.Charcoal, decoded.existing?.iconColor)
         assertTrue(decoded.previewIconIsRendered)
@@ -103,6 +105,7 @@ class SiteCapsuleEditorContractInstrumentedTest {
             navigationMode = CapsuleNavigationMode.SameRegistrableDomain,
             chromeMode = CapsuleChromeMode.Minimal,
             iconMode = CapsuleIconMode.ProfileFallback,
+            opensInOwnWindow = true,
             iconEmoji = "📬",
             iconColor = CapsuleIconColor.Sky,
             sourceFavicon = sourceFavicon,

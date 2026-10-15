@@ -10,6 +10,17 @@ import org.junit.Test
 
 class SettingsSearchCatalogTest {
     @Test
+    fun `menu presentation and sheet sections search opens menu settings`() {
+        val entries = settingsSearchDefinitions(SettingsSearchAvailability()).associateBy { it.id }
+
+        listOf("settings_menu_presentation_title", "settings_menu_bottom_sheet_layout_title")
+            .forEach { id ->
+                assertEquals(SettingsDestination.MenuActions, entries.getValue(id).destination)
+                assertEquals(R.string.settings_menu_presentation_summary, entries.getValue(id).descriptionRes)
+            }
+    }
+
+    @Test
     fun `catalog hides engine and flavor capabilities that are not available`() {
         val ids = ids(SettingsSearchAvailability())
 
@@ -24,6 +35,20 @@ class SettingsSearchCatalogTest {
         assertFalse("settings_app_language" in ids)
         assertTrue("settings_scroll_bar_title" in ids)
         assertTrue("settings_webrtc_protection_title" in ids)
+    }
+
+    @Test
+    fun `address pill swipe mode is searchable under tabs and gestures for either engine`() {
+        listOf(false, true).forEach { isGeckoEngine ->
+            val definition = settingsSearchDefinitions(
+                SettingsSearchAvailability(isGeckoEngine = isGeckoEngine),
+            ).single { it.id == "settings_address_bar_swipe_mode_title" }
+
+            assertEquals(SettingsDestination.TabsAndGestures, definition.destination)
+            assertEquals(R.string.settings_tabs_gestures_title, definition.contextRes)
+            assertEquals(R.string.settings_address_bar_swipe_mode_title, definition.titleRes)
+            assertEquals(R.string.settings_address_bar_swipe_mode_summary, definition.descriptionRes)
+        }
     }
 
     @Test

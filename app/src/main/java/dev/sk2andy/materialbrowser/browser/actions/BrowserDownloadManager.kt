@@ -9,6 +9,7 @@ import dev.sk2andy.materialbrowser.data.BrowserDownloadRequest
 import dev.sk2andy.materialbrowser.data.BrowserDownloadRequestFactory
 import dev.sk2andy.materialbrowser.data.BrowserSessionStore
 import dev.sk2andy.materialbrowser.data.DownloadDirectoryRules
+import dev.sk2andy.materialbrowser.data.DownloadProvenanceStore
 
 class BrowserDownloadManager(context: Context) {
     private val applicationContext = context.applicationContext
@@ -49,6 +50,7 @@ class BrowserDownloadManager(context: Context) {
             safeRequest.referrer?.let { platformRequest.addRequestHeader("Referer", it) }
             val manager = applicationContext.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
             val id = manager.enqueue(platformRequest)
+            DownloadProvenanceStore(applicationContext).record(id, safeRequest.fileName, request.sourceProfileId, request.isPrivate)
             DownloadActionResult.Enqueued(id, safeRequest.fileName)
         }.getOrElse {
             DownloadActionResult.Failed(

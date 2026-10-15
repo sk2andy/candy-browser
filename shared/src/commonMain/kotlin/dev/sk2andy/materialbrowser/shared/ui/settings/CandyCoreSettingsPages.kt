@@ -239,6 +239,7 @@ internal object CandyBrowserMenuSettingsResources : BrowserMenuSettingsResources
         BrowserMenuEntry.FirefoxPageActions -> "Firefox-Seitenaktionen"
         BrowserMenuEntry.CandyTrail -> "Candy Trail"
         BrowserMenuEntry.AddSiteCapsule -> "Site Capsule hinzufügen"
+        BrowserMenuEntry.CreateSiteWidget -> "Website-Widget"
         BrowserMenuEntry.Summarize -> "Zusammenfassen"
         BrowserMenuEntry.Snooze -> "Tab schlummern"
         BrowserMenuEntry.AddressBarDocking -> "Adressleiste parken"

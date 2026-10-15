@@ -578,6 +578,8 @@
     <string name="settings_address_bar_actions_after">Rechts von der Adresse</string>
     <string name="settings_address_bar_actions_full">Alle drei konfigurierbaren Plätze sind belegt.</string>
     <string name="settings_address_bar_docking_title">Geparkte Adresspille verschieben</string>
+    <string name="settings_address_bar_swipe_mode_title">Adresspille durch Wischen umschalten</string>
+    <string name="settings_address_bar_swipe_mode_summary">Auf der Seite nach unten wischen, um die Pille auszuklappen, und nach oben, um sie kompakt anzuzeigen. Funktioniert auch ohne scrollbare Seite. Wenn deaktiviert, folgt die Pille dem Scrollen.</string>
     <string name="settings_address_bar_docking_subtitle">Die geparkte Pille ziehen und auf beliebiger Höhe loslassen. Sie rastet am nächsten Bildschirmrand ein. Deaktivieren, um die Adressleiste mittig zu halten.</string>
     <string name="settings_tab_dismiss_resistance">Widerstand beim Schließen von Tabs</string>
     <string name="settings_tab_dismiss_resistance_summary">Widerstandsphase: %1$d%% des Schließwegs</string>
@@ -1156,6 +1158,11 @@
     <string name="external_link_preview_copy_link">Link kopieren</string>
     <string name="external_link_preview_copy_label">Candy-Link</string>
     <string name="toast_link_copied">Link kopiert</string>
+    <string name="sync_extension_stores_title">Candy-Sync-Erweiterungen</string>
+    <string name="sync_extension_stores_summary">Installiere Candy Sync im Desktop-Browser oder teile den Store-Link.</string>
+    <string name="sync_extension_chrome_store">Chrome Web Store</string>
+    <string name="sync_extension_firefox_store">Firefox Add-ons</string>
+    <string name="sync_extension_share_link">Link zu %1$s teilen</string>
     <string name="sync_settings_title">Synchronisierung</string>
     <string name="settings_home_sync_summary">Selbst gehostete, Ende-zu-Ende-verschlüsselte Geräte-Tabs</string>
     <string name="sync_setup_guide_title">Candy Sync einrichten</string>
@@ -1448,4 +1455,19 @@
     <string name="favorites_url">Website-URL</string>
     <string name="favorites_manage">Favoriten bearbeiten</string>
     <string name="favorites_refresh_icon">Symbol aktualisieren</string>
+    <string name="settings_menu_presentation_title">Menü-Darstellung</string>
+    <string name="settings_menu_presentation_summary">Wähle das normale Menü oder ein Bottom Sheet mit scrollbaren Bereichen oder zwei Seiten zum Wischen.</string>
+    <string name="settings_menu_presentation_floating">Normales Menü</string>
+    <string name="settings_menu_presentation_bottom_sheet">Bottom Sheet</string>
+    <string name="settings_menu_bottom_sheet_layout_title">Bereiche im Bottom Sheet</string>
+    <string name="settings_menu_bottom_sheet_layout_scroll">Vertikal scrollen</string>
+    <string name="settings_menu_bottom_sheet_layout_pages">Zwei Seiten zum Wischen</string>
+    <string name="browser_menu_quick_actions">Schnellaktionen</string>
+    <string name="browser_menu_page_controls">Seitensteuerung</string>
+    <string name="browser_menu_dismiss">Menü schließen</string>
+    <string name="browser_menu_page_actions">Seitenaktionen</string>
+    <string name="settings_menu_bottom_sheet_toolbar_title">Werkzeugleiste im Bottom Sheet</string>
+    <string name="settings_menu_bottom_sheet_toolbar_summary">Wähle fünf Aktionen von links nach rechts. Bereits belegte Aktionen tauschen ihren Platz. Ein leerer Platz blendet die Schaltfläche aus.</string>
+    <string name="settings_menu_bottom_sheet_toolbar_slot">Aktion %1$d</string>
+    <string name="settings_menu_bottom_sheet_toolbar_empty">Leerer Platz</string>
 </resources>

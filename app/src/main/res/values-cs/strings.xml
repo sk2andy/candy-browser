@@ -611,6 +611,8 @@
     <string name="settings_address_bar_actions_after">Vpravo od adresy</string>
     <string name="settings_address_bar_actions_full">Všechny tři nastavitelné pozice jsou obsazené.</string>
     <string name="settings_address_bar_docking_title">Přesouvat zaparkovanou adresní kapsli</string>
+    <string name="settings_address_bar_swipe_mode_title">Přepínat adresní řádek gesty</string>
+    <string name="settings_address_bar_swipe_mode_summary">Přejetím dolů na stránce rozbalíte adresní řádek a přejetím nahoru jej zmenšíte, i když stránku nelze posouvat. Po vypnutí řádek reaguje na posouvání stránky.</string>
     <string name="settings_address_bar_docking_subtitle">Přetáhněte zaparkovanou kapsli a pusťte ji v libovolné výšce. Přichytí se k nejbližšímu okraji obrazovky. Vypnutím ponecháte adresní řádek uprostřed.</string>
     <string name="settings_tab_dismiss_resistance">Odpor při zavírání panelu</string>
     <string name="settings_tab_dismiss_resistance_summary">Fáze odporu: %1$d%% vzdálenosti pro zavření</string>
@@ -1210,6 +1212,11 @@
     <string name="external_link_preview_copy_link">Kopírovat odkaz</string>
     <string name="external_link_preview_copy_label">Odkaz Candy</string>
     <string name="toast_link_copied">Odkaz zkopírován</string>
+    <string name="sync_extension_stores_title">Rozšíření Candy Sync</string>
+    <string name="sync_extension_stores_summary">Nainstalujte Candy Sync do prohlížeče v počítači nebo sdílejte odkaz na obchod.</string>
+    <string name="sync_extension_chrome_store">Chrome Web Store</string>
+    <string name="sync_extension_firefox_store">Firefox Add-ons</string>
+    <string name="sync_extension_share_link">Sdílet odkaz na %1$s</string>
     <string name="sync_settings_title">Synchronizace</string>
     <string name="settings_home_sync_summary">Vlastní server, panely zařízení s koncovým šifrováním</string>
     <string name="sync_setup_guide_title">Nastavit Candy Sync</string>
@@ -1470,4 +1477,19 @@
     <string name="favorites_url">URL webu</string>
     <string name="favorites_manage">Upravit oblíbené</string>
     <string name="favorites_refresh_icon">Obnovit ikonu</string>
+    <string name="settings_menu_presentation_title">Styl nabídky</string>
+    <string name="settings_menu_presentation_summary">Vyberte běžnou nabídku nebo spodní panel s posuvnými sekcemi či dvěma stránkami ovládanými přejetím.</string>
+    <string name="settings_menu_presentation_floating">Běžná nabídka</string>
+    <string name="settings_menu_presentation_bottom_sheet">Spodní panel</string>
+    <string name="settings_menu_bottom_sheet_layout_title">Sekce spodního panelu</string>
+    <string name="settings_menu_bottom_sheet_layout_scroll">Svislé posouvání</string>
+    <string name="settings_menu_bottom_sheet_layout_pages">Dvě stránky pro přejetí</string>
+    <string name="browser_menu_quick_actions">Rychlé akce</string>
+    <string name="browser_menu_page_controls">Ovládání stránky</string>
+    <string name="browser_menu_dismiss">Zavřít nabídku</string>
+    <string name="browser_menu_page_actions">Akce stránky</string>
+    <string name="settings_menu_bottom_sheet_toolbar_title">Panel nástrojů spodního panelu</string>
+    <string name="settings_menu_bottom_sheet_toolbar_summary">Vyberte pět akcí zleva doprava. Již přiřazené akce si vymění místa. Prázdné místo skryje tlačítko.</string>
+    <string name="settings_menu_bottom_sheet_toolbar_slot">Akce %1$d</string>
+    <string name="settings_menu_bottom_sheet_toolbar_empty">Prázdné místo</string>
 </resources>

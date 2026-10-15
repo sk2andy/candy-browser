@@ -154,6 +154,9 @@ The small sync badge is local UI state and is not part of user-controlled encryp
 The Sync settings page starts with a four-step self-hosting guide. Each step links directly to the
 matching server quick start, extension build, first-client setup, or Android setup section before
 the connection form. Documentation links open in a new Candy tab so setup context remains available.
+Android and iOS settings also offer the public Chrome Web Store and Firefox Add-ons listings.
+Each listing has a separate share action that sends only its public installation URL through the
+platform share sheet; server endpoints, credentials, and passphrases are never included.
 
 The Sync settings page requests:
 

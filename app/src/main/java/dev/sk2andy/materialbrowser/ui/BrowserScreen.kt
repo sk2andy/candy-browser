@@ -74,6 +74,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.browser.AddressResolver
 import dev.sk2andy.materialbrowser.browser.BLANK_URL
+import dev.sk2andy.materialbrowser.browser.integration.linkrouting.LinkRoutingRules
 import dev.sk2andy.materialbrowser.browser.BrowserController
 import dev.sk2andy.materialbrowser.browser.BrowserProfile
 import dev.sk2andy.materialbrowser.browser.BrowserTab
@@ -453,6 +454,7 @@ internal fun BrowserScreen(
                 isolatedStorageRequested = submission.isolatedStorageRequested,
                 navigationMode = submission.navigationMode,
                 chromeMode = submission.chromeMode,
+                opensInOwnWindow = submission.opensInOwnWindow,
                 iconMode = submission.iconMode,
                 iconEmoji = submission.iconEmoji,
                 iconColor = submission.iconColor,
@@ -791,6 +793,7 @@ internal fun BrowserScreen(
         val requestId = ++readerStudioRequestId
         readerStudioSession = ReaderStudioSession(
             tabId = selectedTab.id,
+            sourceProfileId = selectedTab.profileId,
             sourceUrl = selectedTab.url,
             isPrivate = selectedTab.isIncognito,
             requestId = requestId,
@@ -1216,6 +1219,36 @@ internal fun BrowserScreen(
         }
     }
 
+    LaunchedEffect(controller.deviceSearchReaderSnapshot, selectedTab.id) {
+        val snapshot = controller.consumeDeviceSearchReaderSnapshot() ?: return@LaunchedEffect
+        if (!selectedTab.isIncognito && selectedTab.profileId == snapshot.sourceProfileId) {
+            readerStudioSession = ReaderStudioSession(
+                tabId = selectedTab.id,
+                sourceUrl = snapshot.document.sourceUrl,
+                isPrivate = false,
+                sourceProfileId = snapshot.sourceProfileId,
+                requestId = ++readerStudioRequestId,
+            )
+            readerStudioResult = ReaderExtractionResult.Success(snapshot.document)
+        }
+    }
+
+    LaunchedEffect(
+        controller.incomingLinkRouter.readerRequest,
+        selectedTab.id,
+        selectedTab.isLoading,
+        selectedTab.url,
+        selectedTab.error,
+    ) {
+        val request = controller.incomingLinkRouter.readerRequest ?: return@LaunchedEffect
+        if (LinkRoutingRules.shouldCancelReaderRequest(request, selectedTab)) {
+            controller.incomingLinkRouter.clearReaderRequest()
+        } else if (LinkRoutingRules.canOpenReader(request, selectedTab)) {
+            controller.incomingLinkRouter.clearReaderRequest()
+            openReaderStudio()
+        }
+    }
+
     LaunchedEffect(selectedTab.id, readerStudioSession) {
         if (ReaderStudioSessionRules.shouldClose(readerStudioSession, selectedTab.id)) {
             readerStudioSession = null
@@ -1300,6 +1333,7 @@ internal fun BrowserScreen(
                 BrowserBackTarget.SnoozedTabs -> snoozedTabsVisible = false
                 BrowserBackTarget.SettingsSubpage -> {
                     settingsDestination = when (settingsDestination) {
+                        SettingsDestination.LinkRouting -> SettingsDestination.Browser
                         SettingsDestination.ToppingCatalog -> SettingsDestination.Userscripts
                         SettingsDestination.AddressBarLongPressActions,
                         SettingsDestination.AddressBarActions ->
@@ -1649,9 +1683,13 @@ internal fun BrowserScreen(
             onAddSiteCapsule = {
                 performAddressBarLongPress(AddressBarLongPressAction.CreateSiteCapsule)
             },
+            canCreateSiteWidget = controller.canCreateSiteWidget,
+            onCreateSiteWidget = { controller.requestSiteWidgetEditor() },
             onAddressBarLongPressAction = ::performAddressBarLongPress,
             )
         }
+
+        SiteWidgetEditorHost(controller)
 
         readerStudioSession?.let { session ->
             ReaderStudioScreen(
@@ -1659,6 +1697,7 @@ internal fun BrowserScreen(
                 sourceUrl = session.sourceUrl,
                 isPrivate = session.isPrivate,
                 repository = readerLibraryRepository,
+                sourceProfileId = session.sourceProfileId,
                 onRetry = {
                     readerStudioResult = null
                     val requestId = ++readerStudioRequestId

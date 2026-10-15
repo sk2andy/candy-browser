@@ -464,6 +464,21 @@ final class BrowserViewModel: NSObject, ObservableObject {
         syncRepository.refresh { _ in }
     }
 
+    func openSyncExtensionStore(_ url: String) {
+        guard let target = syncExtensionStoreURL(url) else { return }
+        UIApplication.shared.open(target)
+    }
+
+    func shareSyncExtensionStore(_ url: String) {
+        guard let target = syncExtensionStoreURL(url) else { return }
+        sharePayload = BrowserSharePayload(title: "Candy Sync", url: target)
+    }
+
+    private func syncExtensionStoreURL(_ url: String) -> URL? {
+        guard SyncExtensionStoreUrls.shared.isStoreUrl(url: url) else { return nil }
+        return URL(string: url)
+    }
+
     @discardableResult
     func performCandyTrail(_ action: BrowserCandyTrailAction) -> BrowserCandyTrailActionResult {
         switch action {
@@ -1344,6 +1359,7 @@ final class BrowserViewModel: NSObject, ObservableObject {
             canToggleDomainMute: false,
             isDomainMuted: false,
             canAddSiteCapsule: false,
+            canCreateSiteWidget: false,
             canSnooze: false,
             canDockAddressBar: false,
             overflowPageActions: [.showtabs, .newtab, .closetab],
@@ -1359,7 +1375,10 @@ final class BrowserViewModel: NSObject, ObservableObject {
         )
         let items = BrowserFeatureMenuRules.shared.items(
             state: state,
-            capabilities: BrowserFeatureMenuCapabilities(supportsFirefoxExtensions: false)
+            capabilities: BrowserFeatureMenuCapabilities(
+                supportsFirefoxExtensions: false,
+                supportsSiteWidgets: false
+            )
         ).filter { item in
             isImplementedFeatureAction(item.action)
         }

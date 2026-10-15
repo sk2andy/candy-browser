@@ -74,8 +74,19 @@ creates its own independent device key and encrypted name/icon. No passphrase is
 
 The server password and E2EE passphrase must differ. The password is used only during enrollment and
 is not persisted. The passphrase is immutable for the workspace, cannot be changed or recovered in
-either protocol version, is never persisted, and must be entered again after browser restart to
-unlock sync.
+either protocol version and is never persisted. By default, browser restart requires the passphrase
+to unlock sync again. The Options Page also offers an inactivity timeout (1–1440 whole minutes,
+default 30) and an explicit Never mode. Inactivity uses computer-wide keyboard/pointer input, not
+sync traffic. Idle events and state checks before sync, local mutations, and realtime application
+enforce the timeout across background-worker suspension. Chromium also locks on system lock when
+reported; Firefox reports active/idle only. Idle mode also locks on browser restart.
+
+Never mode remembers the unlocked workspace key, private device key, and device token in the
+browser profile across restarts. The warning explains that profile access then bypasses passphrase
+protection. The passphrase is still never stored. Manual Lock clears both the current-session copy
+and the persistent copy; switching away from Never removes the persistent copy. Background
+operations serialize lock/unlock and policy changes with synchronization; an already-running
+operation finishes before lock acknowledgement, then realtime delivery closes.
 
 Browser packages require HTTPS for remote endpoints and grant HTTP host access only for localhost.
 The protocol client retains the server-advertised `allowHttp` guard for development integration,
@@ -195,11 +206,14 @@ Setup requests only the configured scheme and host after direct user action. The
 intentionally omits the port because Firefox rejects ports in match patterns. Entering remote HTTP
 shows an inline block reason before any permission or credential request.
 
+The required `idle` permission reports computer activity solely for the local lock timeout. Activity
+states are not uploaded or logged.
+
 ## Local storage
 
 | Storage area | Contents |
 | --- | --- |
-| `storage.local` | Non-secret settings, encrypted vault, encrypted outbox, redacted status |
+| `storage.local` | Settings, encrypted vault/outbox, redacted status; only explicit Never mode adds unlocked vault secrets |
 | `storage.session` | Unlocked vault secrets for the current browser session |
 | `storage.sync` | Never used |
 

@@ -67,6 +67,15 @@ class AppDataArchiveRulesTest {
     }
 
     @Test
+    fun `device search consent stays on its device and rejects import paths`() {
+        listOf("shared_prefs/device_search.xml", "shared_prefs/device_search.xml.bak").forEach { path ->
+            assertFalse(AppDataArchiveRules.shouldExportRelativePath(path))
+            assertNull(AppDataArchiveRules.dataRelativePath("data/$path", isDirectory = false))
+        }
+        assertTrue(AppDataArchiveRules.shouldExportRelativePath("shared_prefs/device_search_extra.xml"))
+    }
+
+    @Test
     fun `archive excludes app logs and capture preferences without excluding siblings`() {
         listOf(
             "no_backup/app_logs",
@@ -96,6 +105,45 @@ class AppDataArchiveRulesTest {
             assertTrue(path, AppDataArchiveRules.shouldExportRelativePath(path))
             assertEquals(path, AppDataArchiveRules.dataRelativePath("data/$path", isDirectory = false))
         }
+    }
+
+    @Test
+    fun `archive excludes site widget captures and bindings without excluding lookalike paths`() {
+        listOf(
+            "no_backup/site_widget_snapshots_v1",
+            "no_backup/site_widget_snapshots_v1/bindings.json",
+            "no_backup/site_widget_snapshots_v1/capture.png",
+            "no_backup/site_widget_snapshots_v1/capture.json",
+            "no_backup/site_widget_snapshots_v1/capture.json.bak",
+            "no_backup/site_widget_snapshots_v1/nested/capture.png",
+        ).forEach { path ->
+            assertFalse(path, AppDataArchiveRules.shouldExportRelativePath(path))
+            assertNull(path, AppDataArchiveRules.dataRelativePath("data/$path", isDirectory = false))
+            assertNull(path, AppDataArchiveRules.dataRelativePath("data/$path/", isDirectory = true))
+        }
+        listOf(
+            "no_backup/site_widget_snapshots_v10/capture.png",
+            "no_backup/site_widget_snapshots_v1_backup/capture.png",
+            "no_backup/site_widget_snapshots_v1.json",
+            "files/site_widget_snapshots_v1/capture.png",
+            "no_backup/candy_trails/trail.json",
+        ).forEach { path ->
+            assertTrue(path, AppDataArchiveRules.shouldExportRelativePath(path))
+            assertEquals(path, AppDataArchiveRules.dataRelativePath("data/$path", isDirectory = false))
+            assertEquals(path, AppDataArchiveRules.dataRelativePath("data/$path/", isDirectory = true))
+        }
+    }
+
+    @Test
+    fun `download document provenance never migrates to another device`() {
+        listOf(
+            "no_backup/download_document_sources_v1.json",
+            "no_backup/download_document_sources_v1.json.bak",
+        ).forEach { path ->
+            assertFalse(AppDataArchiveRules.shouldExportRelativePath(path))
+            assertNull(AppDataArchiveRules.dataRelativePath("data/$path", isDirectory = false))
+        }
+        assertTrue(AppDataArchiveRules.shouldExportRelativePath("files/download_document_sources_v1.json"))
     }
 
     @Test

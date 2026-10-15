@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -78,6 +79,8 @@ internal fun BrowserSettingsPage(
     onPageTranslationProviderChanged: (PageTranslationProvider) -> Unit,
     onOpenDefaultBrowserSettings: () -> Unit,
     onBack: () -> Unit,
+    onLinkRouting: () -> Unit = {},
+    onDeviceSearch: () -> Unit = {},
 ) {
     var engineMenuExpanded by remember { mutableStateOf(false) }
     var startupAddressFocusMenuExpanded by remember { mutableStateOf(false) }
@@ -269,6 +272,22 @@ internal fun BrowserSettingsPage(
         )
         Spacer(Modifier.height(18.dp))
         SettingsSectionTitle(stringResource(R.string.settings_browser_group_websites))
+        Spacer(Modifier.height(8.dp))
+        Box(Modifier.settingsSearchTarget(stringResource(R.string.device_search_title))) {
+            SettingsLink(
+                icon = Icons.Default.Search,
+                title = stringResource(R.string.device_search_title),
+                subtitle = stringResource(R.string.device_search_settings_summary),
+                onClick = onDeviceSearch,
+            )
+        }
+        Spacer(Modifier.height(8.dp))
+        SettingsLink(
+            icon = Icons.Default.Search,
+            title = stringResource(R.string.link_routing_title),
+            subtitle = stringResource(R.string.link_routing_summary),
+            onClick = onLinkRouting,
+        )
         Spacer(Modifier.height(8.dp))
         SettingsSwitch(
             title = stringResource(R.string.settings_full_immersive_mode_title),

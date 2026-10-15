@@ -25,9 +25,13 @@ class FaviconRepository private constructor(context: Context) {
         ThreadPoolExecutor.AbortPolicy(),
     )
 
-    fun restore(validTabIds: Set<String>, onLoaded: (String, Bitmap) -> Unit) {
+    fun restore(
+        validTabIds: Set<String>,
+        retainedTabIds: Set<String> = emptySet(),
+        onLoaded: (String, Bitmap) -> Unit,
+    ) {
         executor.execute {
-            store.prune(validTabIds)
+            store.prune(validTabIds + retainedTabIds)
             validTabIds.forEach { tabId ->
                 store.load(tabId)?.let { bitmap -> onLoaded(tabId, bitmap) }
             }

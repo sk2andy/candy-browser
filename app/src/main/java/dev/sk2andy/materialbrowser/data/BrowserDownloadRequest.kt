@@ -12,6 +12,8 @@ data class BrowserDownloadRequest(
     val userAgent: String? = null,
     val cookies: String? = null,
     val referrer: String? = null,
+    val sourceProfileId: String? = null,
+    val isPrivate: Boolean = false,
 )
 
 object BrowserDownloadRequestFactory {

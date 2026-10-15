@@ -43,6 +43,7 @@ data class SiteCapsuleEditorSubmission(
     val iconColor: CapsuleIconColor,
     val sourceFavicon: Bitmap?,
     val customIcon: Bitmap? = null,
+    val opensInOwnWindow: Boolean = false,
 )
 
 class SiteCapsuleEditorContract :
@@ -82,6 +83,7 @@ class SiteCapsuleEditorContract :
                 putExtra(EXTRA_EXISTING_PROFILE_ID, existing.profileId)
                 putExtra(EXTRA_EXISTING_OWNS_PROFILE, existing.ownsDedicatedProfile)
                 putExtra(EXTRA_EXISTING_ISOLATED, existing.isolatedStorageRequested)
+                putExtra(EXTRA_EXISTING_OWN_WINDOW, existing.opensInOwnWindow)
                 putExtra(EXTRA_EXISTING_NAVIGATION, existing.navigationMode.wireValue)
                 putExtra(EXTRA_EXISTING_CHROME, existing.chromeMode.wireValue)
                 putExtra(EXTRA_EXISTING_ICON, existing.iconMode.wireValue)
@@ -120,6 +122,7 @@ class SiteCapsuleEditorContract :
                 ?.takeIf(String::isNotEmpty)
                 ?: DEFAULT_DEDICATED_EMOJI,
             isolatedStorageRequested = intent.getBooleanExtra(EXTRA_RESULT_ISOLATED, false),
+            opensInOwnWindow = intent.getBooleanExtra(EXTRA_RESULT_OWN_WINDOW, false),
             navigationMode = CapsuleNavigationMode.fromWireValue(
                 intent.getStringExtra(EXTRA_RESULT_NAVIGATION),
             ),
@@ -179,6 +182,7 @@ class SiteCapsuleEditorContract :
         private const val EXTRA_EXISTING_URL = "capsule_editor.existing_url"
         private const val EXTRA_EXISTING_PROFILE_ID = "capsule_editor.existing_profile_id"
         private const val EXTRA_EXISTING_OWNS_PROFILE = "capsule_editor.existing_owns_profile"
+        private const val EXTRA_EXISTING_OWN_WINDOW = "capsule_editor.existing_own_window"
         private const val EXTRA_EXISTING_ISOLATED = "capsule_editor.existing_isolated"
         private const val EXTRA_EXISTING_NAVIGATION = "capsule_editor.existing_navigation"
         private const val EXTRA_EXISTING_CHROME = "capsule_editor.existing_chrome"
@@ -197,6 +201,7 @@ class SiteCapsuleEditorContract :
             "capsule_editor.result.create_dedicated"
         private const val EXTRA_RESULT_DEDICATED_EMOJI =
             "capsule_editor.result.dedicated_emoji"
+        private const val EXTRA_RESULT_OWN_WINDOW = "capsule_editor.result.own_window"
         private const val EXTRA_RESULT_ISOLATED = "capsule_editor.result.isolated"
         private const val EXTRA_RESULT_NAVIGATION = "capsule_editor.result.navigation"
         private const val EXTRA_RESULT_CHROME = "capsule_editor.result.chrome"
@@ -245,6 +250,7 @@ class SiteCapsuleEditorContract :
                         EXTRA_EXISTING_OWNS_PROFILE,
                         false,
                     ),
+                    opensInOwnWindow = intent.getBooleanExtra(EXTRA_EXISTING_OWN_WINDOW, false),
                     isolatedStorageRequested = intent.getBooleanExtra(
                         EXTRA_EXISTING_ISOLATED,
                         false,
@@ -319,6 +325,7 @@ class SiteCapsuleEditorContract :
             putExtra(EXTRA_RESULT_CREATE_DEDICATED, submission.createDedicatedProfile)
             putExtra(EXTRA_RESULT_DEDICATED_EMOJI, submission.dedicatedEmoji)
             putExtra(EXTRA_RESULT_ISOLATED, submission.isolatedStorageRequested)
+            putExtra(EXTRA_RESULT_OWN_WINDOW, submission.opensInOwnWindow)
             putExtra(EXTRA_RESULT_NAVIGATION, submission.navigationMode.wireValue)
             putExtra(EXTRA_RESULT_CHROME, submission.chromeMode.wireValue)
             putExtra(EXTRA_RESULT_ICON, submission.iconMode.wireValue)

@@ -40,6 +40,8 @@ data class ReaderSnapshot(
     val document: ReaderDocument,
     val progress: Float,
     val savedAtMillis: Long,
+    val sourceProfileId: String? = null,
+    val isPrivate: Boolean = false,
 )
 
 data class ReaderLibraryState(

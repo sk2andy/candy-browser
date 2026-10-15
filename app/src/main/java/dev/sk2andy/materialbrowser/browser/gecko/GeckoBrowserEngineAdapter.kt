@@ -41,6 +41,9 @@ import org.mozilla.geckoview.GeckoView
 
 /** Android view-host edge kept separate from the engine-neutral shared session port. */
 internal interface BrowserEngineViewPort {
+    /** A short-lived renderer surface; it never attaches a window or changes the selected tab. */
+    fun createOffscreenSurface(widthPx: Int, heightPx: Int): BrowserEngineOffscreenSurface? = null
+
     fun setBackdropCaptureEnabled(enabled: Boolean) = Unit
 
     fun setBackdropBlurRegion(region: BrowserBackdropBlurRegion?) = Unit
@@ -109,6 +112,12 @@ internal interface BrowserEngineViewPort {
 
     fun dispatchEngineKeyEvent(view: View, event: KeyEvent): Boolean =
         view.dispatchKeyEvent(event)
+}
+
+internal interface BrowserEngineOffscreenSurface {
+    fun capture(scrollY: Int, onComplete: (Bitmap?) -> Unit): BrowserEnginePreviewCapture?
+
+    fun close()
 }
 
 /** One Android browser tab: shared commands plus the platform renderer host. */
@@ -792,6 +801,10 @@ internal class GeckoBrowserEngineSessionAdapter(
             onComplete = onComplete,
         )
     }
+
+    @UiThread
+    override fun createOffscreenSurface(widthPx: Int, heightPx: Int): BrowserEngineOffscreenSurface? =
+        if (closed) null else session.createOffscreenSurface(widthPx, heightPx)
 
     @UiThread
     override fun findInPage(

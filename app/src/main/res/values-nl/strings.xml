@@ -594,6 +594,8 @@
     <string name="settings_address_bar_actions_after">Recht van adres</string>
     <string name="settings_address_bar_actions_full">Alle drie configurerende posities zijn bezet.</string>
     <string name="settings_address_bar_docking_title">Verplaats het geparkeerde adresveld</string>
+    <string name="settings_address_bar_swipe_mode_title">Adresbalk met veegbewegingen wisselen</string>
+    <string name="settings_address_bar_swipe_mode_summary">Veeg omlaag op de pagina om de adresbalk uit te klappen en omhoog om deze compact te maken, ook als de pagina niet kan scrollen. Uitgeschakeld volgt de adresbalk het scrollen van de pagina.</string>
     <string name="settings_address_bar_docking_subtitle">Sleep het geparkeerde veld en laat het op elke gewenste hoogte los om het aan de dichtstbijzijnde schermrand vast te zetten. Schakel uit om de adresbalk in het midden te houden.</string>
     <string name="settings_tab_dismiss_resistance">Weerstand bij het sluiten van tabbladen</string>
     <string name="settings_tab_dismiss_resistance_summary">Resistentiefase: %1$d%% van de sluitingsafstand</string>
@@ -1183,6 +1185,11 @@
     <string name="external_link_preview_copy_link">Verwijzing kopiëren</string>
     <string name="external_link_preview_copy_label">Candy koppeling</string>
     <string name="toast_link_copied">Verwijzing gekopieerd</string>
+    <string name="sync_extension_stores_title">Candy Sync-extensies</string>
+    <string name="sync_extension_stores_summary">Installeer Candy Sync in je desktopbrowser of deel de winkellink.</string>
+    <string name="sync_extension_chrome_store">Chrome Web Store</string>
+    <string name="sync_extension_firefox_store">Firefox Add-ons</string>
+    <string name="sync_extension_share_link">Link naar %1$s delen</string>
     <string name="sync_settings_title">Sync</string>
     <string name="settings_home_sync_summary">Self-hosted, eind-to-end versleuteld apparaat tabbladen</string>
     <string name="sync_setup_guide_title">Instelling Candy Sync</string>
@@ -1439,4 +1446,19 @@
     <string name="favorites_url">Website-URL</string>
     <string name="favorites_manage">Favorieten bewerken</string>
     <string name="favorites_refresh_icon">Pictogram vernieuwen</string>
+    <string name="settings_menu_presentation_title">Menustijl</string>
+    <string name="settings_menu_presentation_summary">Kies het normale menu of een onderpaneel met scrollbare onderdelen of twee pagina’s om te vegen.</string>
+    <string name="settings_menu_presentation_floating">Normaal menu</string>
+    <string name="settings_menu_presentation_bottom_sheet">Onderpaneel</string>
+    <string name="settings_menu_bottom_sheet_layout_title">Onderdelen van onderpaneel</string>
+    <string name="settings_menu_bottom_sheet_layout_scroll">Verticaal scrollen</string>
+    <string name="settings_menu_bottom_sheet_layout_pages">Twee veegbare pagina’s</string>
+    <string name="browser_menu_quick_actions">Snelle acties</string>
+    <string name="browser_menu_page_controls">Paginabediening</string>
+    <string name="browser_menu_dismiss">Menu sluiten</string>
+    <string name="browser_menu_page_actions">Pagina-acties</string>
+    <string name="settings_menu_bottom_sheet_toolbar_title">Werkbalk van het onderste paneel</string>
+    <string name="settings_menu_bottom_sheet_toolbar_summary">Kies vijf acties van links naar rechts. Acties die al zijn toegewezen wisselen van plaats. Een leeg vak verbergt de knop.</string>
+    <string name="settings_menu_bottom_sheet_toolbar_slot">Actie %1$d</string>
+    <string name="settings_menu_bottom_sheet_toolbar_empty">Leeg vak</string>
 </resources>

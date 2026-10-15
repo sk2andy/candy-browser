@@ -10,6 +10,7 @@ enum class SettingsDestination {
     LinkPeekActions,
     Appearance,
     Browser,
+    LinkRouting,
     Player,
     Downloads,
     Userscripts,

@@ -14,6 +14,8 @@ import dev.sk2andy.materialbrowser.data.BrowserDownloadRequestFactory
 import dev.sk2andy.materialbrowser.data.BrowserSessionStore
 import dev.sk2andy.materialbrowser.data.DownloadDirectoryRules
 import dev.sk2andy.materialbrowser.data.DownloadRuntimeRegistry
+import dev.sk2andy.materialbrowser.data.DownloadEntryIds
+import dev.sk2andy.materialbrowser.data.DownloadProvenanceStore
 import dev.sk2andy.materialbrowser.data.SafeDownloadValues
 import java.io.Closeable
 import java.io.OutputStream
@@ -167,6 +169,8 @@ internal class GeckoDownloadTransferManager(
 ) : AutoCloseable {
     private class Operation(
         val ownerKey: Any,
+        val sourceProfileId: String,
+        val isPrivate: Boolean,
         val cancelled: AtomicBoolean = AtomicBoolean(false),
         val terminal: AtomicBoolean = AtomicBoolean(false),
     ) {
@@ -183,6 +187,7 @@ internal class GeckoDownloadTransferManager(
     private val operations = ConcurrentHashMap<Int, Operation>()
     private val closed = AtomicBoolean(false)
     private val mainHandler = Handler(Looper.getMainLooper())
+    private val provenance = DownloadProvenanceStore(context.applicationContext)
 
     @SuppressLint("WrongConstant") // Gecko combines these @IntDef bit flags at runtime.
     fun start(
@@ -194,7 +199,7 @@ internal class GeckoDownloadTransferManager(
             return null
         }
         val id = DownloadRuntimeRegistry.nextTransferId()
-        val operation = Operation(transfer.owner.sessionKey)
+        val operation = Operation(transfer.owner.sessionKey, transfer.owner.profileId, transfer.owner.isPrivate)
         operations[id] = operation
         val flags = transfer.fetchFlags or if (transfer.owner.isPrivate) {
             GeckoWebExecutor.FETCH_FLAGS_PRIVATE
@@ -237,7 +242,7 @@ internal class GeckoDownloadTransferManager(
             return null
         }
         val id = DownloadRuntimeRegistry.nextTransferId()
-        val operation = Operation(owner.sessionKey)
+        val operation = Operation(owner.sessionKey, owner.profileId, owner.isPrivate)
         operations[id] = operation
         receiveResponse(
             id = id,
@@ -326,6 +331,14 @@ internal class GeckoDownloadTransferManager(
                 return
             }
             operation.entry = entry
+            runCatching { ContentUris.parseId(entry.uri) }.getOrNull()?.let { mediaId ->
+                provenance.record(
+                    DownloadEntryIds.encodeMediaStoreId(mediaId),
+                    started.fileName,
+                    operation.sourceProfileId,
+                    operation.isPrivate,
+                )
+            }
             DownloadRuntimeRegistry.started(
                 id = started.id,
                 name = started.fileName,

@@ -22,6 +22,28 @@ class SiteCapsuleRulesTest {
     }
 
     @Test
+    fun `own window opt in survives creation and update without changing profile`() {
+        val created = requireNotNull(SiteCapsuleRules.create(
+            draft = draft().copy(opensInOwnWindow = true),
+            id = ID,
+            nowMillis = 10L,
+            multiProfileSupported = true,
+        ))
+        val updated = requireNotNull(SiteCapsuleRules.update(
+            existing = created,
+            draft = draft().copy(opensInOwnWindow = false),
+            nowMillis = 20L,
+            multiProfileSupported = true,
+        ))
+
+        assertTrue(created.opensInOwnWindow)
+        assertFalse(updated.opensInOwnWindow)
+        assertEquals(created.profileId, updated.profileId)
+        assertEquals(created.id, updated.id)
+        assertEquals(10L, updated.createdAtMillis)
+    }
+
+    @Test
     fun `creation limit is explicit and never silently evicts`() {
         assertTrue(SiteCapsuleRules.canCreate(63))
         assertFalse(SiteCapsuleRules.canCreate(64))

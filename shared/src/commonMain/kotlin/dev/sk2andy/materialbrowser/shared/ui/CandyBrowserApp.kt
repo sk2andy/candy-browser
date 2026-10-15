@@ -1799,6 +1799,7 @@ private fun BrowserMenuActionIcon(
         BrowserFeatureMenuAction.ToggleDomainMute -> Icons.Filled.VolumeOff
         BrowserFeatureMenuAction.OpenCandyTrail -> Icons.Filled.Route
         BrowserFeatureMenuAction.AddSiteCapsule -> Icons.Filled.AddToHomeScreen
+        BrowserFeatureMenuAction.CreateSiteWidget -> Icons.Filled.AddToHomeScreen
         BrowserFeatureMenuAction.OpenFavorites -> Icons.Filled.Star
         BrowserFeatureMenuAction.OpenDownloads -> Icons.Filled.Download
         BrowserFeatureMenuAction.OpenHistory -> Icons.Filled.History
@@ -1859,6 +1860,7 @@ private fun BrowserFeatureMenuItem.localizedLabel(): String = dynamicLabel ?: wh
     BrowserFeatureMenuLabelKey.UnmuteDomain -> "Domain aktivieren"
     BrowserFeatureMenuLabelKey.CandyTrail -> "Candy Trail"
     BrowserFeatureMenuLabelKey.AddSiteCapsule -> "Site Capsule hinzufügen"
+    BrowserFeatureMenuLabelKey.CreateSiteWidget -> "Website-Widget"
     BrowserFeatureMenuLabelKey.Summarize -> "Zusammenfassen"
     BrowserFeatureMenuLabelKey.SnoozeTab -> "Tab schlummern"
     BrowserFeatureMenuLabelKey.DockAddressBar -> "Adressleiste andocken"

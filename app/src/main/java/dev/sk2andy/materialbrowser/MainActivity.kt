@@ -81,6 +81,10 @@ import dev.sk2andy.materialbrowser.browser.integration.IncomingBrowserIntent
 import dev.sk2andy.materialbrowser.browser.integration.IncomingBrowserRequestKind
 import dev.sk2andy.materialbrowser.browser.integration.LauncherShortcutPublisher
 import dev.sk2andy.materialbrowser.browser.integration.LauncherShortcutRules
+import dev.sk2andy.materialbrowser.browser.sitewidget.SiteWidgetIntentHandler
+import dev.sk2andy.materialbrowser.browser.integration.devicesearch.DeviceSearchContract
+import dev.sk2andy.materialbrowser.capsule.CapsuleWindowRules
+import dev.sk2andy.materialbrowser.capsule.CapsuleWindowLauncher
 import dev.sk2andy.materialbrowser.capsule.CapsuleIntentRules
 import dev.sk2andy.materialbrowser.capsule.CapsuleLaunchResolution
 import dev.sk2andy.materialbrowser.data.AppDataArchiveEnvironment
@@ -123,7 +127,8 @@ import java.io.File
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
-class MainActivity : AppCompatActivity() {
+open class MainActivity : AppCompatActivity() {
+    protected open val capsuleWindowId: String? = null
     private lateinit var browserController: BrowserController
     private lateinit var browserMediaSystemSession: BrowserMediaSystemSession
     private lateinit var castSessionController: CastSessionController
@@ -132,6 +137,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var userScriptImporter: UserScriptImporter
     private lateinit var favoriteBookmarksImporter: FavoriteBookmarksImporter
     private lateinit var launcherShortcutIntentHandler: LauncherShortcutIntentHandler
+    private lateinit var siteWidgetIntentHandler: SiteWidgetIntentHandler
     private var geckoActivityIntegration: GeckoActivityIntegration? = null
     private lateinit var profileBiometricAuthenticator: ProfileBiometricAuthenticator
     private val profileProcessLifecycleObserver = object : DefaultLifecycleObserver {
@@ -183,7 +189,7 @@ class MainActivity : AppCompatActivity() {
         ActivityResultContracts.RequestPermission(),
     ) { granted ->
         CandyDownloadNotifier(this).onPermissionResult(granted)
-        if (::browserController.isInitialized) {
+        if (::browserController.isInitialized && capsuleWindowId == null) {
             privateTabsNotifier.update(browserController.tabs.count { it.isIncognito })
         }
     }
@@ -351,7 +357,7 @@ class MainActivity : AppCompatActivity() {
         BrowsingHistoryLifecycle.install(application)
         val snoozeWakeNotifier = SnoozeWakeNotifier(this).also { it.ensureChannel() }
         privateTabsNotifier.ensureChannel()
-        if (isColdStart) privateTabsNotifier.cancel()
+        if (isColdStart && capsuleWindowId == null) privateTabsNotifier.cancel()
         val downloadNotifier = CandyDownloadNotifier(this).also {
             it.ensureChannel()
             it.reconcileOrphanedActiveNotifications()
@@ -397,6 +403,7 @@ class MainActivity : AppCompatActivity() {
         profileBiometricAuthenticator = ProfileBiometricAuthenticator(this)
         browserController = BrowserController(
             activity = this,
+            capsuleWindowId = capsuleWindowId,
             requestRuntimePermissions = { permissions ->
                 webPermissionLauncher.launch(permissions.toTypedArray())
             },
@@ -476,6 +483,7 @@ class MainActivity : AppCompatActivity() {
             isRestoredTask = savedInstanceState != null,
         )
         lifecycleScope.launch {
+            if (capsuleWindowId != null) return@launch
             snapshotFlow { browserController.tabs.count { it.isIncognito } }
                 .distinctUntilChanged()
                 .collect { privateTabCount ->
@@ -515,6 +523,12 @@ class MainActivity : AppCompatActivity() {
             publisher = launcherShortcutPublisher,
             onNavigationRequested = { incomingBrowserNavigationRequestId++ },
             onAddressEditorRequested = { launcherAddressEditorRequestId++ },
+        )
+        siteWidgetIntentHandler = SiteWidgetIntentHandler(
+            context = this,
+            controller = browserController,
+            scope = lifecycleScope,
+            onNavigate = ::showIncomingBrowserNavigation,
         )
         if (!isColdExternalLinkLaunch) ensureMediaControllers()
         applyBrowserSystemUi()
@@ -1287,7 +1301,7 @@ class MainActivity : AppCompatActivity() {
             pictureInPictureController.reconcileStateOnResume()
         }
         if (::browserController.isInitialized) browserController.onResume()
-        if (::browserController.isInitialized) {
+        if (::browserController.isInitialized && capsuleWindowId == null) {
             privateTabsNotifier.update(browserController.tabs.count { it.isIncognito })
         }
         geckoActivityIntegration?.onHostResumed()
@@ -1306,7 +1320,7 @@ class MainActivity : AppCompatActivity() {
         activityDestroyed = true
         window.decorView.stopRubberbandHaptic()
         if (::browserController.isInitialized) fullscreenVideoSystemControls.close()
-        if (!isChangingConfigurations) privateTabsNotifier.cancel()
+        if (!isChangingConfigurations && capsuleWindowId == null) privateTabsNotifier.cancel()
         if (!BuildConfig.SYSTEM_WEBVIEW_ONLY) firefoxExtensionManager?.close()
         firefoxExtensionManager = null
         geckoActivityIntegration?.close()
@@ -1327,7 +1341,9 @@ class MainActivity : AppCompatActivity() {
                     protectedTabIds = setOfNotNull(geckoWebAuthnActivityIdentity?.tabId),
                 )
             }
-            browserController.destroy(lockClosedProfiles = !isChangingConfigurations)
+            browserController.destroy(
+                lockClosedProfiles = !isChangingConfigurations && capsuleWindowId == null,
+            )
         }
         if (::browserMediaSystemSession.isInitialized) browserMediaSystemSession.release()
         super.onDestroy()
@@ -1517,14 +1533,36 @@ class MainActivity : AppCompatActivity() {
         File(applicationInfo.dataDir, AppDataArchiveRules.TRANSFER_STATE_DIRECTORY_NAME)
 
     private fun openIntent(intent: Intent) {
+        browserController.cancelDeviceSearchNavigation()
+        if (intent.action == DeviceSearchContract.ACTION_OPEN) {
+            browserController.openDeviceSearchItem(
+                intent.getStringExtra(DeviceSearchContract.EXTRA_ITEM_ID),
+                ::showIncomingBrowserNavigation,
+            )
+            return
+        }
         val previousExternalLaunchTabId = externalLaunchTabId
         externalLaunchTabId = null
+        browserController.incomingLinkRouter.clearReaderRequest()
         val incomingRequest = IncomingBrowserIntent.from(intent)
         if (incomingRequest == null) browserController.dismissExternalLinkPreview()
+        if (ProcessTextResearchIntentHandler.open(this, browserController, intent)) {
+            showIncomingBrowserNavigation()
+            return
+        }
+        if (siteWidgetIntentHandler.open(intent)) return
         if (launcherShortcutIntentHandler.open(intent)) return
         if (intent.action == SnoozeWakeNotifier.ACTION_OPEN_RESTORED_TAB) {
             intent.getStringExtra(SnoozeWakeNotifier.EXTRA_TAB_ID)?.let { tabId ->
                 browserController.openSnoozedWakeTab(tabId)
+            }
+            return
+        }
+        if (intent.action == CapsuleWindowLauncher.ACTION_OPEN_IN_BROWSER) {
+            val capsuleId = intent.getStringExtra(CapsuleIntentRules.EXTRA_CAPSULE_ID)
+            val targetUrl = intent.getStringExtra(CapsuleWindowLauncher.EXTRA_TARGET_URL)
+            if (capsuleId != null && targetUrl != null) {
+                browserController.openSiteCapsuleTargetInBrowser(capsuleId, targetUrl)
             }
             return
         }
@@ -1535,8 +1573,18 @@ class MainActivity : AppCompatActivity() {
             )
         ) {
             is CapsuleLaunchResolution.Open -> {
-                if (!browserController.openSiteCapsule(resolution.capsule.id)) {
-                    browserController.openNormalHomeFromInvalidCapsule()
+                if (capsuleWindowId == null &&
+                    CapsuleWindowRules.canOpen(resolution.capsule, browserController.profiles)
+                ) {
+                    startActivity(CapsuleWindowLauncher.intent(this, resolution.capsule))
+                } else {
+                    val targetUrl = intent.getStringExtra(CapsuleWindowLauncher.EXTRA_TARGET_URL)
+                    val opened = if (targetUrl != null) {
+                        browserController.openRoutedSiteCapsule(resolution.capsule.id, targetUrl)
+                    } else {
+                        browserController.openSiteCapsule(resolution.capsule.id)
+                    }
+                    if (!opened) browserController.openNormalHomeFromInvalidCapsule()
                 }
                 return
             }
@@ -1554,6 +1602,14 @@ class MainActivity : AppCompatActivity() {
             ) {
                 externalLaunchTabId = previousExternalLaunchTabId
                     ?.takeIf { it == browserController.selectedTabId }
+                showIncomingBrowserNavigation()
+                return
+            }
+            if (
+                request.kind == IncomingBrowserRequestKind.View &&
+                browserController.incomingLinkRouter.open(request.url)
+            ) {
+                externalLaunchTabId = browserController.selectedTabId
                 showIncomingBrowserNavigation()
                 return
             }
@@ -1707,6 +1763,14 @@ class MainActivity : AppCompatActivity() {
         isBrowserHardwareInputAvailable() && browserController.requestSelectedBrowserEngineFocus()
 
     @VisibleForTesting
+    protected fun discardCapsuleWindowSession() {
+        if (::browserController.isInitialized) browserController.discardCapsuleWindowSession()
+    }
+
+    protected fun refreshCapsuleWindowFilterRules() {
+        if (::browserController.isInitialized) browserController.refreshCapsuleWindowFilterRules()
+    }
+
     fun browserControllerForTesting(): BrowserController = browserController
 
     @VisibleForTesting

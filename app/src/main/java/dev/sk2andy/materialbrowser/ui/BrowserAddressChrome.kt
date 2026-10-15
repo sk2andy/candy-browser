@@ -128,6 +128,8 @@ internal fun BoxScope.BrowserAddressChrome(
     onOpenCandyTrail: () -> Unit,
     onSnooze: () -> Unit,
     onAddSiteCapsule: () -> Unit,
+    canCreateSiteWidget: Boolean = false,
+    onCreateSiteWidget: () -> Unit = {},
     onAddressBarLongPressAction: (AddressBarLongPressAction) -> Unit,
 ) {
     val context = LocalContext.current
@@ -576,6 +578,8 @@ internal fun BoxScope.BrowserAddressChrome(
         onOpenCandyTrail = onOpenCandyTrail,
         onSnooze = onSnooze,
         onAddSiteCapsule = onAddSiteCapsule,
+        canCreateSiteWidget = canCreateSiteWidget,
+        onCreateSiteWidget = onCreateSiteWidget,
         onBarPositioned = { boundsInRoot, _ ->
             addressBarBoundsInRoot = boundsInRoot
             if (

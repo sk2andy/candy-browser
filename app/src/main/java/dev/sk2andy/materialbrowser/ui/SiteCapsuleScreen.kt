@@ -98,6 +98,7 @@ object SiteCapsuleTestTags {
     const val WebContent = "site_capsule_web_content"
     const val Editor = "site_capsule_editor"
     const val Save = "site_capsule_save"
+    const val OwnWindow = "site_capsule_own_window"
     const val Chrome = "site_capsule_chrome"
     const val IconEmoji = "site_capsule_icon_emoji"
     const val CustomIcon = "site_capsule_custom_icon"
@@ -343,6 +344,9 @@ fun SiteCapsuleEditorScreen(
     }
     var isolatedStorage by rememberSaveable(existing?.id) {
         mutableStateOf(existing?.isolatedStorageRequested == true)
+    }
+    var opensInOwnWindow by rememberSaveable(existing?.id) {
+        mutableStateOf(existing?.opensInOwnWindow == true)
     }
     var navigationMode by rememberSaveable(existing?.id) {
         mutableStateOf(existing?.navigationMode ?: CapsuleNavigationMode.SameOrigin)
@@ -623,6 +627,27 @@ fun SiteCapsuleEditorScreen(
                         )
                     }
                 }
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { opensInOwnWindow = !opensInOwnWindow }
+                        .padding(vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text(stringResource(R.string.capsule_own_window))
+                        Text(
+                            stringResource(R.string.capsule_own_window_summary),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Switch(
+                        checked = opensInOwnWindow,
+                        onCheckedChange = { opensInOwnWindow = it },
+                        modifier = Modifier.testTag(SiteCapsuleTestTags.OwnWindow),
+                    )
+                }
                 Spacer(Modifier.height(14.dp))
                 Text(
                     stringResource(R.string.capsule_navigation_mode),
@@ -686,6 +711,7 @@ fun SiteCapsuleEditorScreen(
                                 createDedicatedProfile = createDedicatedProfile,
                                 dedicatedEmoji = dedicatedEmoji,
                                 isolatedStorageRequested = isolatedStorage,
+                                opensInOwnWindow = opensInOwnWindow,
                                 navigationMode = navigationMode,
                                 chromeMode = chromeMode,
                                 iconMode = iconMode,

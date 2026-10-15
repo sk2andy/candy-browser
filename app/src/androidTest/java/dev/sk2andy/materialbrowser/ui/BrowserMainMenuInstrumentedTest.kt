@@ -44,6 +44,7 @@ import dev.sk2andy.materialbrowser.data.AppearanceSettings
 import dev.sk2andy.materialbrowser.data.BrowserSurfaceStyle
 import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuEntry
 import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuLayout
+import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuPresentation
 import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuLocation
 import dev.sk2andy.materialbrowser.ui.theme.MaterialBrowserTheme
 import eightbitlab.com.blurview.BlurTarget
@@ -111,6 +112,7 @@ class BrowserMainMenuInstrumentedTest {
                             onTargetReleased = { if (blurTarget === it) blurTarget = null },
                         ) {}
                         BrowserMainMenu(
+                            menuLayout = BrowserMenuLayout.Default.copy(presentation = BrowserMenuPresentation.Floating),
                             expanded = expanded,
                             backdropSource = blurTarget.asCandyChromeBackdropSource(),
                             onDismissRequest = {
@@ -302,12 +304,13 @@ class BrowserMainMenuInstrumentedTest {
             candyGroup and
                 hasAnyDescendant(hasText(context.getString(R.string.action_open_candy_trail))) and
                 hasAnyDescendant(hasText(context.getString(R.string.action_add_site_capsule))) and
+                hasAnyDescendant(hasText(context.getString(R.string.site_widget_editor_title))) and
                 hasAnyDescendant(hasText(context.getString(R.string.action_summarize))) and
                 hasAnyDescendant(hasText(context.getString(R.string.action_snooze_tab))),
         ).assertExists()
         composeRule.onNodeWithTag(BrowserMainMenuTestTags.CandyGroup)
             .onChildren()
-            .assertCountEquals(4)
+            .assertCountEquals(5)
         composeRule.onNodeWithText(
             context.getString(R.string.browser_menu_browser_group),
         ).assertExists()
@@ -638,6 +641,7 @@ class BrowserMainMenuInstrumentedTest {
                 BrowserMenuEntry.OpenSettings,
             )
             BrowserMenuLayout(
+                presentation = BrowserMenuPresentation.Floating,
                 locations = BrowserMenuEntry.entries.associateWith { entry ->
                     if (entry in visibleEntries) {
                         BrowserMenuLocation.Tab
@@ -729,6 +733,7 @@ class BrowserMainMenuInstrumentedTest {
                 var expanded by remember { mutableStateOf(true) }
                 setMenuExpanded = { expanded = it }
                 BrowserMainMenu(
+                    menuLayout = BrowserMenuLayout.Default.copy(presentation = BrowserMenuPresentation.Floating),
                     expanded = expanded,
                     backdropSource = null,
                     onDismissRequest = { expanded = false },

@@ -584,6 +584,8 @@
     <string name="settings_address_bar_actions_after">联系权</string>
     <string name="settings_address_bar_actions_full">所有三个可配置的位置都被占领了.</string>
     <string name="settings_address_bar_docking_title">移动停留的地址片.</string>
+    <string name="settings_address_bar_swipe_mode_title">滑动切换地址栏</string>
+    <string name="settings_address_bar_swipe_mode_summary">在页面上向下滑动展开地址栏，向上滑动收起地址栏，即使页面无法滚动也可使用。关闭后，地址栏跟随页面滚动变化。</string>
     <string name="settings_address_bar_docking_subtitle">拖拉停放的药丸,并在任何高度放下,将其到最近的屏幕边缘. 关闭以保持地址的中心.</string>
     <string name="settings_tab_dismiss_resistance">标签释放阻力</string>
     <string name="settings_tab_dismiss_resistance_summary">阻力相: %1$d%% 关闭距离</string>
@@ -1168,6 +1170,11 @@
     <string name="external_link_preview_copy_link">复制链接</string>
     <string name="external_link_preview_copy_label">Candy 链接</string>
     <string name="toast_link_copied">链接复制</string>
+    <string name="sync_extension_stores_title">Candy Sync 扩展</string>
+    <string name="sync_extension_stores_summary">在桌面浏览器中安装 Candy Sync，或分享商店链接。</string>
+    <string name="sync_extension_chrome_store">Chrome Web Store</string>
+    <string name="sync_extension_firefox_store">Firefox Add-ons</string>
+    <string name="sync_extension_share_link">分享 %1$s 链接</string>
     <string name="sync_settings_title">同步</string>
     <string name="settings_home_sync_summary">自主托管的端到端加密设备标签</string>
     <string name="sync_setup_guide_title">设置 Candy Sync</string>
@@ -1422,4 +1429,19 @@
     <string name="favorites_url">网站网址</string>
     <string name="favorites_manage">编辑收藏</string>
     <string name="favorites_refresh_icon">更新图标</string>
+    <string name="settings_menu_presentation_title">菜单样式</string>
+    <string name="settings_menu_presentation_summary">选择普通菜单，或使用包含滚动分区或两页滑动内容的底部面板。</string>
+    <string name="settings_menu_presentation_floating">普通菜单</string>
+    <string name="settings_menu_presentation_bottom_sheet">底部面板</string>
+    <string name="settings_menu_bottom_sheet_layout_title">底部面板分区</string>
+    <string name="settings_menu_bottom_sheet_layout_scroll">纵向滚动</string>
+    <string name="settings_menu_bottom_sheet_layout_pages">两页滑动内容</string>
+    <string name="browser_menu_quick_actions">快捷操作</string>
+    <string name="browser_menu_page_controls">页面控制</string>
+    <string name="browser_menu_dismiss">关闭菜单</string>
+    <string name="browser_menu_page_actions">页面操作</string>
+    <string name="settings_menu_bottom_sheet_toolbar_title">底部面板工具栏</string>
+    <string name="settings_menu_bottom_sheet_toolbar_summary">从左到右选择五个操作。已分配的操作会交换位置。空位将隐藏对应按钮。</string>
+    <string name="settings_menu_bottom_sheet_toolbar_slot">操作 %1$d</string>
+    <string name="settings_menu_bottom_sheet_toolbar_empty">空位</string>
 </resources>

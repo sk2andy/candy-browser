@@ -54,6 +54,7 @@ class SiteCapsuleStore(context: Context) {
                         .put("profileId", capsule.profileId)
                         .put("ownsDedicatedProfile", capsule.ownsDedicatedProfile)
                         .put("isolatedStorageRequested", capsule.isolatedStorageRequested)
+                        .put("opensInOwnWindow", capsule.opensInOwnWindow)
                         .put("navigationMode", capsule.navigationMode.wireValue)
                         .put("chromeMode", capsule.chromeMode.wireValue)
                         .put("iconMode", capsule.iconMode.wireValue)
@@ -87,6 +88,7 @@ class SiteCapsuleStore(context: Context) {
             profileId = item.getString("profileId"),
             ownsDedicatedProfile = item.optBoolean("ownsDedicatedProfile", false),
             isolatedStorageRequested = item.optBoolean("isolatedStorageRequested", false),
+            opensInOwnWindow = item.optBoolean("opensInOwnWindow", false),
             navigationMode = CapsuleNavigationMode.fromWireValue(item.optString("navigationMode")),
             chromeMode = CapsuleChromeMode.fromWireValue(item.optString("chromeMode")),
             iconMode = CapsuleIconMode.fromWireValue(item.optString("iconMode")),

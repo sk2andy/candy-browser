@@ -69,11 +69,12 @@ class ReaderLibraryRepository private constructor(context: Context) : ReaderLibr
         document: ReaderDocument,
         progress: Float,
         isPrivate: Boolean,
+        sourceProfileId: String? = null,
         onSaved: (ReaderSnapshot?) -> Unit,
     ) {
         enqueue {
             val snapshot = try {
-                store.saveSnapshot(document, progress, isPrivate)
+                store.saveSnapshot(document, progress, isPrivate, sourceProfileId = sourceProfileId)
             } catch (cancellation: CancellationException) {
                 throw cancellation
             } catch (error: Throwable) {
@@ -83,6 +84,28 @@ class ReaderLibraryRepository private constructor(context: Context) : ReaderLibr
             onMain { onSaved(snapshot) }
         }
     }
+
+    fun forProfile(profileId: String?): ReaderLibraryDataSource =
+        object : ReaderLibraryDataSource by this@ReaderLibraryRepository {
+            override fun saveSnapshot(
+                document: ReaderDocument,
+                progress: Float,
+                isPrivate: Boolean,
+                onUpdated: (ReaderLibraryState) -> Unit,
+            ) {
+                enqueue {
+                    store.saveSnapshot(
+                        document,
+                        progress,
+                        isPrivate,
+                        sourceProfileId = profileId,
+                        preserveExistingProvenance = true,
+                    )
+                    val state = store.load(isPrivate)
+                    onMain { onUpdated(state) }
+                }
+            }
+        }
 
     override fun deleteSnapshot(
         snapshotId: String,

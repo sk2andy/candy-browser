@@ -231,6 +231,8 @@ internal enum class GeckoMediaCommand {
  * for Compose hosting, so callers cannot reach or replace the process GeckoRuntime.
  */
 internal interface GeckoBrowserSession {
+    fun createOffscreenSurface(widthPx: Int, heightPx: Int): BrowserEngineOffscreenSurface? = null
+
     val profileId: String
     val isPrivate: Boolean
 

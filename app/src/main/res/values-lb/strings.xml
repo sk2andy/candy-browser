@@ -594,6 +594,8 @@
     <string name="settings_address_bar_actions_after">Adressrecht</string>
     <string name="settings_address_bar_actions_full">All dräi konfiguréierbar Positiounen sinn besat.</string>
     <string name="settings_address_bar_docking_title">Dat geparkten Adressfeld réckelen</string>
+    <string name="settings_address_bar_swipe_mode_title">Adressleescht mat Wësche wiesselen</string>
+    <string name="settings_address_bar_swipe_mode_summary">Wësch op der Säit no ënnen, fir d’Adressleescht auszebauen, an no uewen, fir se kompakt ze maachen, och wann d’Säit net scrollt. Wann ausgeschalt, follegt d’Adressleescht dem Scrolle vun der Säit.</string>
     <string name="settings_address_bar_docking_subtitle">Zéi dat geparkten Feld a looss et op enger Héicht lass, fir et un den nooste Bildschiermrand ze pechen. Ausschalten hält d’Adressleescht an der Mëtt.</string>
     <string name="settings_tab_dismiss_resistance">Widderstand beim Zoumaache vun Tabs</string>
     <string name="settings_tab_dismiss_resistance_summary">Resistenzphase: %1$d%% vun der Schließdistanz</string>
@@ -1183,6 +1185,11 @@
     <string name="external_link_preview_copy_link">Kopie Link</string>
     <string name="external_link_preview_copy_label">Candy Link</string>
     <string name="toast_link_copied">Link kopéiert</string>
+    <string name="sync_extension_stores_title">Candy Sync-Erweiderungen</string>
+    <string name="sync_extension_stores_summary">Installéier Candy Sync am Desktop-Browser oder deel de Link zum Store.</string>
+    <string name="sync_extension_chrome_store">Chrome Web Store</string>
+    <string name="sync_extension_firefox_store">Firefox Add-ons</string>
+    <string name="sync_extension_share_link">Link op %1$s deelen</string>
     <string name="sync_settings_title">Synchroniséiert</string>
     <string name="settings_home_sync_summary">Self-hosted, end-to-end verschlësselten Apparat Tabs</string>
     <string name="sync_setup_guide_title">Setup Candy Sync</string>
@@ -1439,4 +1446,19 @@
     <string name="favorites_url">Websäit-URL</string>
     <string name="favorites_manage">Favoritte beaarbechten</string>
     <string name="favorites_refresh_icon">Symbol aktualiséieren</string>
+    <string name="settings_menu_presentation_title">Menüstil</string>
+    <string name="settings_menu_presentation_summary">Wiel den normale Menü oder en ënneschte Panel mat scrollbare Beräicher oder zwou Säiten zum Wëschen.</string>
+    <string name="settings_menu_presentation_floating">Normale Menü</string>
+    <string name="settings_menu_presentation_bottom_sheet">Ënneschte Panel</string>
+    <string name="settings_menu_bottom_sheet_layout_title">Beräicher am ënneschte Panel</string>
+    <string name="settings_menu_bottom_sheet_layout_scroll">Vertikal scrollen</string>
+    <string name="settings_menu_bottom_sheet_layout_pages">Zwou Säiten zum Wëschen</string>
+    <string name="browser_menu_quick_actions">Schnellaktiounen</string>
+    <string name="browser_menu_page_controls">Säitesteierung</string>
+    <string name="browser_menu_dismiss">Menü zoumaachen</string>
+    <string name="browser_menu_page_actions">Säitenaktiounen</string>
+    <string name="settings_menu_bottom_sheet_toolbar_title">Geschierleescht am ënneschte Panel</string>
+    <string name="settings_menu_bottom_sheet_toolbar_summary">Wiel fënnef Aktioune vu lénks no riets. Scho zougewise Aktioune wiesselen d’Plaz. Eng eidel Plaz verstoppt de Knäppchen.</string>
+    <string name="settings_menu_bottom_sheet_toolbar_slot">Aktioun %1$d</string>
+    <string name="settings_menu_bottom_sheet_toolbar_empty">Eidel Plaz</string>
 </resources>

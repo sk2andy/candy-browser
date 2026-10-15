@@ -9,6 +9,7 @@ import androidx.core.content.pm.ShortcutInfoCompat
 import androidx.core.content.pm.ShortcutManagerCompat
 import androidx.core.graphics.drawable.IconCompat
 import dev.sk2andy.materialbrowser.MainActivity
+import dev.sk2andy.materialbrowser.SiteCapsuleLauncherActivity
 
 class CapsuleShortcutPublisher(private val context: Context) {
     fun isPinningSupported(): Boolean = ShortcutManagerCompat.isRequestPinShortcutSupported(context)
@@ -47,7 +48,7 @@ class CapsuleShortcutPublisher(private val context: Context) {
         }
     }
 
-    internal fun launchIntent(capsuleId: String): Intent = Intent(context, MainActivity::class.java)
+    internal fun launchIntent(capsuleId: String): Intent = Intent(context, SiteCapsuleLauncherActivity::class.java)
         .setAction(CapsuleIntentRules.ACTION_OPEN_CAPSULE)
         .putExtra(CapsuleIntentRules.EXTRA_CAPSULE_ID, capsuleId)
         .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)

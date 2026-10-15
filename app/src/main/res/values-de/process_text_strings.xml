@@ -1,0 +1,11 @@
+<resources>
+    <string name="process_text_research">In Candy recherchieren</string>
+    <string name="process_text_read_aloud">Mit Candy vorlesen</string>
+    <string name="process_text_choose_profile">Wähle das normale Profil für diese Suche.</string>
+    <string name="process_text_research_profile">In %1$s recherchieren</string>
+    <string name="process_text_no_profiles">Kein normales Profil verfügbar. Geschützte und synchronisierte Profile sind ausgeschlossen.</string>
+    <string name="process_text_unavailable">Dieser Text oder dieses Profil ist nicht mehr verfügbar. Wähle den Text erneut aus.</string>
+    <string name="process_text_play">Vorlesen</string>
+    <string name="process_text_speech_memory_only">Dieser Text bleibt im Speicher und wird nicht in deiner Reader-Bibliothek gespeichert. Beim Verlassen stoppt die Wiedergabe.</string>
+    <string name="process_text_speech_unavailable">Vorlesen ist nicht verfügbar. Prüfe die Android-Einstellungen für die Sprachausgabe.</string>
+</resources>

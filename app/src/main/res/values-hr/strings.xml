@@ -603,6 +603,8 @@
     <string name="settings_address_bar_actions_after">Desno od adrese</string>
     <string name="settings_address_bar_actions_full">Sva tri postavljiva položaja su zauzeta.</string>
     <string name="settings_address_bar_docking_title">Premjesti adresno polje uz rub</string>
+    <string name="settings_address_bar_swipe_mode_title">Mijenjaj adresnu traku povlačenjem</string>
+    <string name="settings_address_bar_swipe_mode_summary">Povucite prema dolje na stranici da proširite traku, a prema gore da je sažmete, čak i kada se stranica ne može pomicati. Kada je isključeno, traka prati pomicanje stranice.</string>
     <string name="settings_address_bar_docking_subtitle">Povucite stavljenu tabletu i oslobodite je na bilo kojoj visini kako biste je stavili na najbliži rub ekrana. Isključi da bi adresna traka bila usredotočena.</string>
     <string name="settings_tab_dismiss_resistance">Otpor zatvaranju kartice</string>
     <string name="settings_tab_dismiss_resistance_summary">Faza otpora: %1$d%% udaljenosti zatvaranja</string>
@@ -1197,6 +1199,11 @@
     <string name="external_link_preview_copy_link">Kopiraj vezu</string>
     <string name="external_link_preview_copy_label">Poveznica Candy</string>
     <string name="toast_link_copied">Poveznica kopirana</string>
+    <string name="sync_extension_stores_title">Proširenja Candy Sync</string>
+    <string name="sync_extension_stores_summary">Instalirajte Candy Sync u pregledniku na računalu ili podijelite poveznicu na trgovinu.</string>
+    <string name="sync_extension_chrome_store">Chrome Web Store</string>
+    <string name="sync_extension_firefox_store">Firefox Add-ons</string>
+    <string name="sync_extension_share_link">Podijeli poveznicu za %1$s</string>
     <string name="sync_settings_title">Sinkronizacija</string>
     <string name="settings_home_sync_summary">Uređaji s samohostiranim, end-to-end šifriranim karticama</string>
     <string name="sync_setup_guide_title">Sastavljanje Candy Sync</string>
@@ -1455,4 +1462,19 @@
     <string name="favorites_url">URL web-stranice</string>
     <string name="favorites_manage">Uredi favorite</string>
     <string name="favorites_refresh_icon">Osvježi ikonu</string>
+    <string name="settings_menu_presentation_title">Stil izbornika</string>
+    <string name="settings_menu_presentation_summary">Odaberite obični izbornik ili donju ploču s odjeljcima za pomicanje ili dvije stranice za povlačenje.</string>
+    <string name="settings_menu_presentation_floating">Obični izbornik</string>
+    <string name="settings_menu_presentation_bottom_sheet">Donja ploča</string>
+    <string name="settings_menu_bottom_sheet_layout_title">Odjeljci donje ploče</string>
+    <string name="settings_menu_bottom_sheet_layout_scroll">Okomito pomicanje</string>
+    <string name="settings_menu_bottom_sheet_layout_pages">Dvije stranice za povlačenje</string>
+    <string name="browser_menu_quick_actions">Brze radnje</string>
+    <string name="browser_menu_page_controls">Kontrole stranice</string>
+    <string name="browser_menu_dismiss">Zatvori izbornik</string>
+    <string name="browser_menu_page_actions">Radnje stranice</string>
+    <string name="settings_menu_bottom_sheet_toolbar_title">Alatna traka donjeg panela</string>
+    <string name="settings_menu_bottom_sheet_toolbar_summary">Odaberite pet radnji slijeva nadesno. Već dodijeljene radnje zamjenjuju mjesta. Prazno mjesto skriva gumb.</string>
+    <string name="settings_menu_bottom_sheet_toolbar_slot">Radnja %1$d</string>
+    <string name="settings_menu_bottom_sheet_toolbar_empty">Prazno mjesto</string>
 </resources>

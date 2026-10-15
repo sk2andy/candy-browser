@@ -35,6 +35,8 @@ import dev.sk2andy.materialbrowser.browser.BrowserSessionResidencyRules
 import dev.sk2andy.materialbrowser.blocking.SitePrivacyOverrides
 import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuEntry
 import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuLayout
+import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuBottomSheetContentLayout
+import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuPresentation
 import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuLayoutRules
 import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuLocation
 import dev.sk2andy.materialbrowser.shared.browser.AddressBarLongPressAction
@@ -451,6 +453,19 @@ class BrowserSessionStoreInstrumentedTest {
 
         store.saveAddressBarDockingEnabled(true)
         assertTrue(store.loadAddressBarDockingEnabled())
+    }
+
+    @Test
+    fun addressBarSwipeModeDefaultsToDisabledAndRoundTrips() {
+        val store = BrowserSessionStore(context)
+
+        assertFalse(store.loadAddressBarSwipeModeEnabled())
+
+        store.saveAddressBarSwipeModeEnabled(true)
+        assertTrue(BrowserSessionStore(context).loadAddressBarSwipeModeEnabled())
+
+        store.saveAddressBarSwipeModeEnabled(false)
+        assertFalse(BrowserSessionStore(context).loadAddressBarSwipeModeEnabled())
     }
 
     @Test
@@ -1824,7 +1839,17 @@ class BrowserSessionStoreInstrumentedTest {
         assertEquals(BrowserMenuLayout.Default, store.loadBrowserMenuLayout())
         val layout = BrowserMenuLayoutRules.update(
             BrowserMenuLayoutRules.update(
-                BrowserMenuLayout.Default,
+                BrowserMenuLayout(
+                    presentation = BrowserMenuPresentation.BottomSheet,
+                    bottomSheetContentLayout = BrowserMenuBottomSheetContentLayout.SwipePages,
+                    bottomSheetToolbarEntries = listOf(
+                        BrowserMenuEntry.Share,
+                        null,
+                        BrowserMenuEntry.DesktopView,
+                        BrowserMenuEntry.NewTab,
+                        BrowserMenuEntry.OpenSettings,
+                    ),
+                ),
                 BrowserMenuEntry.Share,
                 BrowserMenuLocation.Tab,
             ),
@@ -1834,6 +1859,18 @@ class BrowserSessionStoreInstrumentedTest {
         store.saveBrowserMenuLayout(layout)
 
         val restored = store.loadBrowserMenuLayout()
+        assertEquals(BrowserMenuPresentation.BottomSheet, restored.presentation)
+        assertEquals(BrowserMenuBottomSheetContentLayout.SwipePages, restored.bottomSheetContentLayout)
+        assertEquals(
+            listOf(
+                BrowserMenuEntry.Share,
+                null,
+                BrowserMenuEntry.DesktopView,
+                BrowserMenuEntry.NewTab,
+                BrowserMenuEntry.OpenSettings,
+            ),
+            restored.bottomSheetToolbarEntries,
+        )
         assertEquals(
             BrowserMenuLocation.Tab,
             BrowserMenuLayoutRules.location(restored, BrowserMenuEntry.Share),

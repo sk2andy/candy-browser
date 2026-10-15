@@ -614,6 +614,8 @@
     <string name="settings_address_bar_actions_after">Справа от адреса</string>
     <string name="settings_address_bar_actions_full">Все три настраиваемых места заняты.</string>
     <string name="settings_address_bar_docking_title">Перемещать свёрнутую адресную строку</string>
+    <string name="settings_address_bar_swipe_mode_title">Переключать адресную строку свайпами</string>
+    <string name="settings_address_bar_swipe_mode_summary">Проведите вниз по странице, чтобы развернуть строку, или вверх, чтобы свернуть её, даже если страница не прокручивается. Если отключено, строка реагирует на прокрутку страницы.</string>
     <string name="settings_address_bar_docking_subtitle">Перетащите свёрнутую строку и отпустите на любой высоте, чтобы закрепить её у ближайшего края экрана. Отключите, чтобы адресная строка оставалась по центру.</string>
     <string name="settings_tab_dismiss_resistance">Сопротивление закрытию вкладки</string>
     <string name="settings_tab_dismiss_resistance_summary">Фаза сопротивления: %1$d%% расстояния закрытия</string>
@@ -1213,6 +1215,11 @@
     <string name="external_link_preview_copy_link">Копировать ссылку</string>
     <string name="external_link_preview_copy_label">Ссылка Candy</string>
     <string name="toast_link_copied">Ссылка скопирована</string>
+    <string name="sync_extension_stores_title">Расширения Candy Sync</string>
+    <string name="sync_extension_stores_summary">Установите Candy Sync в браузере на компьютере или поделитесь ссылкой на магазин.</string>
+    <string name="sync_extension_chrome_store">Chrome Web Store</string>
+    <string name="sync_extension_firefox_store">Firefox Add-ons</string>
+    <string name="sync_extension_share_link">Поделиться ссылкой на %1$s</string>
     <string name="sync_settings_title">Синхронизация</string>
     <string name="settings_home_sync_summary">Вкладки устройств на вашем сервере со сквозным шифрованием</string>
     <string name="sync_setup_guide_title">Настроить Candy Sync</string>
@@ -1473,4 +1480,19 @@
     <string name="favorites_url">URL сайта</string>
     <string name="favorites_manage">Изменить избранное</string>
     <string name="favorites_refresh_icon">Обновить значок</string>
+    <string name="settings_menu_presentation_title">Стиль меню</string>
+    <string name="settings_menu_presentation_summary">Выберите обычное меню или нижнюю панель с прокруткой разделов либо двумя страницами для свайпа.</string>
+    <string name="settings_menu_presentation_floating">Обычное меню</string>
+    <string name="settings_menu_presentation_bottom_sheet">Нижняя панель</string>
+    <string name="settings_menu_bottom_sheet_layout_title">Разделы нижней панели</string>
+    <string name="settings_menu_bottom_sheet_layout_scroll">Вертикальная прокрутка</string>
+    <string name="settings_menu_bottom_sheet_layout_pages">Две страницы для свайпа</string>
+    <string name="browser_menu_quick_actions">Быстрые действия</string>
+    <string name="browser_menu_page_controls">Управление страницей</string>
+    <string name="browser_menu_dismiss">Закрыть меню</string>
+    <string name="browser_menu_page_actions">Действия со страницей</string>
+    <string name="settings_menu_bottom_sheet_toolbar_title">Панель инструментов нижнего меню</string>
+    <string name="settings_menu_bottom_sheet_toolbar_summary">Выберите пять действий слева направо. Уже назначенные действия меняются местами. Пустое место скрывает кнопку.</string>
+    <string name="settings_menu_bottom_sheet_toolbar_slot">Действие %1$d</string>
+    <string name="settings_menu_bottom_sheet_toolbar_empty">Пустое место</string>
 </resources>

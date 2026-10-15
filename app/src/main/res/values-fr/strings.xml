@@ -577,6 +577,8 @@
     <string name="settings_address_bar_actions_after">À droite de l’adresse</string>
     <string name="settings_address_bar_actions_full">Les trois emplacements configurables sont occupés.</string>
     <string name="settings_address_bar_docking_title">Déplacer la pilule d’adresse ancrée</string>
+    <string name="settings_address_bar_swipe_mode_title">Changer la pilule d’adresse par balayage</string>
+    <string name="settings_address_bar_swipe_mode_summary">Balayez la page vers le bas pour déployer la pilule et vers le haut pour la réduire, même si la page ne défile pas. Si désactivé, la pilule suit le défilement de la page.</string>
     <string name="settings_address_bar_docking_subtitle">Faites glisser la pilule ancrée et relâchez-la à la hauteur voulue pour la fixer au bord le plus proche. Désactivez cette option pour garder la barre centrée.</string>
     <string name="settings_tab_dismiss_resistance">Résistance à la fermeture des onglets</string>
     <string name="settings_tab_dismiss_resistance_summary">Phase de résistance : %1$d%% de la distance de fermeture</string>
@@ -1154,6 +1156,11 @@
     <string name="external_link_preview_copy_link">Copier le lien</string>
     <string name="external_link_preview_copy_label">Lien Candy</string>
     <string name="toast_link_copied">Lien copié</string>
+    <string name="sync_extension_stores_title">Extensions Candy Sync</string>
+    <string name="sync_extension_stores_summary">Installez Candy Sync dans le navigateur de votre ordinateur ou partagez le lien de la boutique.</string>
+    <string name="sync_extension_chrome_store">Chrome Web Store</string>
+    <string name="sync_extension_firefox_store">Firefox Add-ons</string>
+    <string name="sync_extension_share_link">Partager le lien vers %1$s</string>
     <string name="sync_settings_title">Synchronisation</string>
     <string name="settings_home_sync_summary">Onglets d’appareils auto-hébergés et chiffrés de bout en bout</string>
     <string name="sync_setup_guide_title">Configurer Candy Sync</string>
@@ -1446,4 +1453,19 @@
     <string name="favorites_url">URL du site</string>
     <string name="favorites_manage">Modifier les favoris</string>
     <string name="favorites_refresh_icon">Actualiser l’icône</string>
+    <string name="settings_menu_presentation_title">Style du menu</string>
+    <string name="settings_menu_presentation_summary">Choisissez le menu normal ou un panneau inférieur avec des sections défilantes ou deux pages à balayer.</string>
+    <string name="settings_menu_presentation_floating">Menu normal</string>
+    <string name="settings_menu_presentation_bottom_sheet">Panneau inférieur</string>
+    <string name="settings_menu_bottom_sheet_layout_title">Sections du panneau inférieur</string>
+    <string name="settings_menu_bottom_sheet_layout_scroll">Défilement vertical</string>
+    <string name="settings_menu_bottom_sheet_layout_pages">Deux pages à balayer</string>
+    <string name="browser_menu_quick_actions">Actions rapides</string>
+    <string name="browser_menu_page_controls">Commandes de page</string>
+    <string name="browser_menu_dismiss">Fermer le menu</string>
+    <string name="browser_menu_page_actions">Actions de page</string>
+    <string name="settings_menu_bottom_sheet_toolbar_title">Barre d’outils du panneau inférieur</string>
+    <string name="settings_menu_bottom_sheet_toolbar_summary">Choisissez cinq actions de gauche à droite. Les actions déjà attribuées échangent leur place. Un emplacement vide masque son bouton.</string>
+    <string name="settings_menu_bottom_sheet_toolbar_slot">Action %1$d</string>
+    <string name="settings_menu_bottom_sheet_toolbar_empty">Emplacement vide</string>
 </resources>

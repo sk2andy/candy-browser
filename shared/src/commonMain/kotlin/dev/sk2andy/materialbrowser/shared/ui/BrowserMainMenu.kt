@@ -49,6 +49,11 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.toggleableState
+import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -757,7 +762,7 @@ private fun BrowserMainMenuLibraries(
 }
 
 @Composable
-private fun BrowserMainMenuLibraryAction(
+internal fun BrowserMainMenuLibraryAction(
     item: BrowserFeatureMenuItem,
     resources: BrowserMainMenuResources,
     effects: BrowserMainMenuEffects,
@@ -805,7 +810,7 @@ private fun BrowserMainMenuLibraryAction(
 }
 
 @Composable
-private fun BrowserMainMenuToolbar(
+internal fun BrowserMainMenuToolbar(
     items: List<BrowserFeatureMenuItem>,
     compact: Boolean,
     resources: BrowserMainMenuResources,
@@ -845,53 +850,74 @@ private fun BrowserMainMenuToolbarRow(
         },
     ) {
         items.forEach { item ->
-            val label = resources.label(item, toolbar = true)
-            BrowserMenuToolbarAction(
-                label = label,
-                icon = { resources.icon(item, Modifier.size(style.toolbarIconSize)) },
-                enabled = item.enabled || item.action in RELOAD_ACTIONS,
-                selected = item.checked == true,
-                accessibilityLabel = resources.accessibilityLabel(item) ?: label.takeUnless {
-                    style.showToolbarLabels
-                },
-                minHeight = style.toolbarMinHeight,
-                verticalLabelFontSize = style.toolbarLabelFontSize,
-                showLabel = style.showToolbarLabels,
-                shape = if (style.showToolbarLabels) {
-                    MaterialTheme.shapes.large
-                } else {
-                    CircleShape
-                },
-                containerColor = effects.containerColor(
-                    if (item.checked == true) {
-                        MaterialTheme.colorScheme.primary
-                    } else {
-                        MaterialTheme.colorScheme.surfaceContainerLowest
-                    },
-                    role = if (item.checked == true) {
-                        BrowserMainMenuContainerRole.Selected
-                    } else {
-                        BrowserMainMenuContainerRole.Regular
-                    },
-                ),
-                contentColor = if (item.checked == true) {
-                    effects.selectedToolbarContentColor()
-                } else {
-                    MaterialTheme.colorScheme.onSurface
-                },
-                onClick = { onClick(item) },
+            BrowserMainMenuToolbarItem(
+                item = item,
+                resources = resources,
+                effects = effects,
+                onClick = onClick,
                 modifier = if (style.showToolbarLabels) {
-                    Modifier
-                        .weight(1f)
-                        .then(item.testTagModifier())
+                    Modifier.weight(1f)
                 } else {
-                    Modifier
-                        .size(style.toolbarButtonSize)
-                        .then(item.testTagModifier())
+                    Modifier.size(style.toolbarButtonSize)
                 },
             )
         }
     }
+}
+
+@Composable
+internal fun BrowserMainMenuToolbarItem(
+    item: BrowserFeatureMenuItem,
+    resources: BrowserMainMenuResources,
+    effects: BrowserMainMenuEffects,
+    onClick: (BrowserFeatureMenuItem) -> Unit,
+    modifier: Modifier,
+) {
+    val style = effects.style
+    val label = resources.label(item, toolbar = true)
+    BrowserMenuToolbarAction(
+        label = label,
+        icon = { resources.icon(item, Modifier.size(style.toolbarIconSize)) },
+        enabled = item.enabled || item.action in RELOAD_ACTIONS,
+        selected = item.checked == true,
+        accessibilityLabel = resources.accessibilityLabel(item) ?: label.takeUnless {
+            style.showToolbarLabels
+        },
+        minHeight = style.toolbarMinHeight,
+        verticalLabelFontSize = style.toolbarLabelFontSize,
+        showLabel = style.showToolbarLabels,
+        shape = if (style.showToolbarLabels) {
+            MaterialTheme.shapes.large
+        } else {
+            CircleShape
+        },
+        containerColor = effects.containerColor(
+            if (item.checked == true) {
+                MaterialTheme.colorScheme.primary
+            } else {
+                MaterialTheme.colorScheme.surfaceContainerLowest
+            },
+            role = if (item.checked == true) {
+                BrowserMainMenuContainerRole.Selected
+            } else {
+                BrowserMainMenuContainerRole.Regular
+            },
+        ),
+        contentColor = if (item.checked == true) {
+            effects.selectedToolbarContentColor()
+        } else {
+            MaterialTheme.colorScheme.onSurface
+        },
+        onClick = { onClick(item) },
+        modifier = modifier.then(item.testTagModifier()).then(
+            if (item.kind == BrowserFeatureMenuItemKind.Toggle) {
+                Modifier.semantics {
+                    role = Role.Checkbox
+                    toggleableState = if (item.checked == true) ToggleableState.On else ToggleableState.Off
+                }
+            } else Modifier,
+        ),
+    )
 }
 
 private val RELOAD_ACTIONS = setOf(
@@ -916,7 +942,7 @@ private fun BrowserMainMenuSectionTitle(
 }
 
 @Composable
-private fun BrowserMainMenuItemGroup(
+internal fun BrowserMainMenuItemGroup(
     items: List<BrowserFeatureMenuItem>,
     resources: BrowserMainMenuResources,
     effects: BrowserMainMenuEffects,
@@ -1050,7 +1076,7 @@ private fun BrowserFeatureMenuItem.hasTrailingIcon(): Boolean = action in setOf(
     BrowserFeatureMenuAction.OpenSettings,
 )
 
-private fun BrowserFeatureMenuItem.testTagModifier(): Modifier = when (action) {
+internal fun BrowserFeatureMenuItem.testTagModifier(): Modifier = when (action) {
     BrowserFeatureMenuAction.ToggleFavorite -> Modifier.testTag(BrowserMainMenuTestTags.Favorite)
     BrowserFeatureMenuAction.TogglePinned -> Modifier.testTag(BrowserMainMenuTestTags.Pin)
     BrowserFeatureMenuAction.TranslatePage -> Modifier.testTag(BrowserMainMenuTestTags.Translate)

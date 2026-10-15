@@ -577,6 +577,8 @@
     <string name="settings_address_bar_actions_after">A la derecha</string>
     <string name="settings_address_bar_actions_full">Las tres posiciones configurables están ocupadas.</string>
     <string name="settings_address_bar_docking_title">Mover la píldora de dirección aparcada</string>
+    <string name="settings_address_bar_swipe_mode_title">Cambiar la barra de direcciones con gestos</string>
+    <string name="settings_address_bar_swipe_mode_summary">Desliza hacia abajo en la página para expandir la barra y hacia arriba para compactarla, incluso si la página no se puede desplazar. Si está desactivado, la barra sigue el desplazamiento de la página.</string>
     <string name="settings_address_bar_docking_subtitle">Arrastra la píldora aparcada y suéltala a cualquier altura para fijarla al borde de pantalla más cercano. Desactívalo para mantener la barra centrada.</string>
     <string name="settings_tab_dismiss_resistance">Resistencia al cerrar pestañas</string>
     <string name="settings_tab_dismiss_resistance_summary">Fase de resistencia: %1$d%% del recorrido de cierre</string>
@@ -1154,6 +1156,11 @@
     <string name="external_link_preview_copy_link">Copiar enlace</string>
     <string name="external_link_preview_copy_label">Enlace de Candy</string>
     <string name="toast_link_copied">Enlace copiado</string>
+    <string name="sync_extension_stores_title">Extensiones de Candy Sync</string>
+    <string name="sync_extension_stores_summary">Instala Candy Sync en el navegador de tu ordenador o comparte el enlace de la tienda.</string>
+    <string name="sync_extension_chrome_store">Chrome Web Store</string>
+    <string name="sync_extension_firefox_store">Firefox Add-ons</string>
+    <string name="sync_extension_share_link">Compartir enlace de %1$s</string>
     <string name="sync_settings_title">Sincronización</string>
     <string name="settings_home_sync_summary">Pestañas de dispositivos autohospedadas y cifradas de extremo a extremo</string>
     <string name="sync_setup_guide_title">Configurar Candy Sync</string>
@@ -1446,4 +1453,19 @@
     <string name="favorites_url">URL del sitio web</string>
     <string name="favorites_manage">Editar favoritos</string>
     <string name="favorites_refresh_icon">Actualizar icono</string>
+    <string name="settings_menu_presentation_title">Estilo del menú</string>
+    <string name="settings_menu_presentation_summary">Elige el menú normal o un panel inferior con secciones desplazables o dos páginas deslizantes.</string>
+    <string name="settings_menu_presentation_floating">Menú normal</string>
+    <string name="settings_menu_presentation_bottom_sheet">Panel inferior</string>
+    <string name="settings_menu_bottom_sheet_layout_title">Secciones del panel inferior</string>
+    <string name="settings_menu_bottom_sheet_layout_scroll">Desplazamiento vertical</string>
+    <string name="settings_menu_bottom_sheet_layout_pages">Dos páginas deslizantes</string>
+    <string name="browser_menu_quick_actions">Acciones rápidas</string>
+    <string name="browser_menu_page_controls">Controles de página</string>
+    <string name="browser_menu_dismiss">Cerrar menú</string>
+    <string name="browser_menu_page_actions">Acciones de página</string>
+    <string name="settings_menu_bottom_sheet_toolbar_title">Barra de herramientas del panel inferior</string>
+    <string name="settings_menu_bottom_sheet_toolbar_summary">Elige cinco acciones de izquierda a derecha. Las acciones ya asignadas intercambian posiciones. Un espacio vacío oculta su botón.</string>
+    <string name="settings_menu_bottom_sheet_toolbar_slot">Acción %1$d</string>
+    <string name="settings_menu_bottom_sheet_toolbar_empty">Espacio vacío</string>
 </resources>

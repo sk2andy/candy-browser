@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
+    <string name="device_search_title">Gerätesuche</string>
+    <string name="device_search_settings_summary">Lesezeichen und gespeicherte Artikel für die Android-Suche auswählen</string>
+    <string name="device_search_summary">Einzelne Lesezeichen und gespeicherte Artikel für die Systemsuche freigeben. Browserverlauf und Artikeltext bleiben in Candy. Private Inhalte und geschützte Profile sind ausgeschlossen.</string>
+    <string name="device_search_enable">Für Gerätesuche freigeben</string>
+    <string name="device_search_enable_summary">Nur ausgewählte Einträge werden freigegeben. Ausschalten entfernt sie aus dem Suchindex.</string>
+    <string name="device_search_launcher_note">Ergebnisse erscheinen nur in Launchern oder Systemsuch-Apps mit Android-AppSearch-Unterstützung. Verfügbarkeit hängt vom Gerät ab.</string>
+    <string name="device_search_bookmark_profile">Lesezeichen in diesem Profil öffnen</string>
+    <string name="device_search_bookmarks">Lesezeichen</string>
+    <string name="device_search_articles">Gespeicherte Artikel</string>
+    <string name="device_search_empty">Keine geeigneten Einträge. Gespeicherte Artikel benötigen ein bekanntes, ungeschütztes lokales Profil.</string>
+    <string name="device_search_saving">Gerätesuche wird aktualisiert…</string>
+    <string name="device_search_failed">Gerätesuche konnte nicht aktualisiert werden. Auswahl erneut ändern und versuchen.</string>
+    <string name="device_search_item_unavailable">Dieser Eintrag ist nicht mehr freigegeben oder verfügbar.</string>
+    <string name="device_search_open">In Candy öffnen</string>
+</resources>

@@ -993,6 +993,7 @@ private class GeckoViewBrowserSession(
     private var scrollListener: BrowserEngineScrollListener? = null
 
     private var boundView: CandyGeckoView? = null
+    private var offscreenSurface: GeckoOffscreenSurface? = null
     private var retainedViewInsetLayout: GeckoViewInsetLayout? = null
     private var backdropBlurRegion: BrowserBackdropBlurRegion? = null
     private val contentPresentationGate = GeckoContentPresentationGate()
@@ -2871,9 +2872,25 @@ private class GeckoViewBrowserSession(
     }
 
     @UiThread
+    override fun createOffscreenSurface(widthPx: Int, heightPx: Int): BrowserEngineOffscreenSurface? {
+        if (closed || boundView != null || offscreenSurface != null) return null
+        return GeckoOffscreenSurface.create(
+            session = session,
+            widthPx = widthPx,
+            heightPx = heightPx,
+            onSurfaceCreated = contentPresentationGate::onSurfaceCreated,
+            onClosed = {
+                contentPresentationGate.onSurfaceDetached()
+                offscreenSurface = null
+            },
+        ).also { offscreenSurface = it }
+    }
+
+    @UiThread
     override fun createView(context: Context): View {
         check(!closed) { "Cannot bind a closed Gecko session" }
         check(boundView == null) { "Gecko session already has a bound View" }
+        check(offscreenSurface == null) { "Gecko session already has an offscreen surface" }
         return CandyGeckoView(context, retainedViewInsetLayout).also { view ->
             view.setBackdropBlurRegion(backdropBlurRegion)
             view.setAnimationsEnabled(privacyPolicy.animationsEnabled)
@@ -3345,6 +3362,7 @@ private class GeckoViewBrowserSession(
     @UiThread
     override fun close() {
         if (closed) return
+        offscreenSurface?.close()
         closed = true
         sessionPriority.close()
         mediaRestorationReadback.cancel()

@@ -584,6 +584,8 @@
     <string name="settings_address_bar_actions_after">問い合わせの権利</string>
     <string name="settings_address_bar_actions_full">3つの配置可能な位置はすべて 占有されています.</string>
     <string name="settings_address_bar_docking_title">駐車したアドレスタブレットを移動</string>
+    <string name="settings_address_bar_swipe_mode_title">スワイプでアドレスバーを切り替える</string>
+    <string name="settings_address_bar_swipe_mode_summary">ページを下にスワイプするとアドレスバーが展開し、上にスワイプするとコンパクトになります。スクロールできないページでも使えます。オフの場合はページのスクロールに連動します。</string>
     <string name="settings_address_bar_docking_subtitle">駐車した錠剤を引っ張って 画面の最寄りの辺に 押し付けるように任意の高さで放出します アドレスバーを中心に保つためにオフにします.</string>
     <string name="settings_tab_dismiss_resistance">タブ解体抵抗</string>
     <string name="settings_tab_dismiss_resistance_summary">抵抗相: %1$d%% 閉じる距離</string>
@@ -1168,6 +1170,11 @@
     <string name="external_link_preview_copy_link">コピーリンク</string>
     <string name="external_link_preview_copy_label">Candyリンク</string>
     <string name="toast_link_copied">リンクをコピーした</string>
+    <string name="sync_extension_stores_title">Candy Sync 拡張機能</string>
+    <string name="sync_extension_stores_summary">デスクトップのブラウザーに Candy Sync をインストールするか、ストアのリンクを共有できます。</string>
+    <string name="sync_extension_chrome_store">Chrome Web Store</string>
+    <string name="sync_extension_firefox_store">Firefox Add-ons</string>
+    <string name="sync_extension_share_link">%1$s のリンクを共有</string>
     <string name="sync_settings_title">同期</string>
     <string name="settings_home_sync_summary">端から端まで暗号化されたデバイスのタブ</string>
     <string name="sync_setup_guide_title">設定する Candy Sync</string>
@@ -1422,4 +1429,19 @@
     <string name="favorites_url">ウェブサイトのURL</string>
     <string name="favorites_manage">お気に入りを編集</string>
     <string name="favorites_refresh_icon">アイコンを更新</string>
+    <string name="settings_menu_presentation_title">メニューの表示形式</string>
+    <string name="settings_menu_presentation_summary">通常のメニュー、またはセクションをスクロールするか2ページをスワイプするボトムシートを選択します。</string>
+    <string name="settings_menu_presentation_floating">通常のメニュー</string>
+    <string name="settings_menu_presentation_bottom_sheet">ボトムシート</string>
+    <string name="settings_menu_bottom_sheet_layout_title">ボトムシートのセクション</string>
+    <string name="settings_menu_bottom_sheet_layout_scroll">縦にスクロール</string>
+    <string name="settings_menu_bottom_sheet_layout_pages">2ページをスワイプ</string>
+    <string name="browser_menu_quick_actions">クイック操作</string>
+    <string name="browser_menu_page_controls">ページ設定</string>
+    <string name="browser_menu_dismiss">メニューを閉じる</string>
+    <string name="browser_menu_page_actions">ページ操作</string>
+    <string name="settings_menu_bottom_sheet_toolbar_title">ボトムシートのツールバー</string>
+    <string name="settings_menu_bottom_sheet_toolbar_summary">左から右に5つの操作を選択します。すでに割り当てられた操作は位置が入れ替わります。空のスロットはボタンを非表示にします。</string>
+    <string name="settings_menu_bottom_sheet_toolbar_slot">操作 %1$d</string>
+    <string name="settings_menu_bottom_sheet_toolbar_empty">空のスロット</string>
 </resources>

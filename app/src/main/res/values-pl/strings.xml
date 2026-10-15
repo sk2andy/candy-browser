@@ -611,6 +611,8 @@
     <string name="settings_address_bar_actions_after">Na prawo od adresu</string>
     <string name="settings_address_bar_actions_full">Wszystkie trzy konfigurowalne pozycje są zajęte.</string>
     <string name="settings_address_bar_docking_title">Przenoś zaparkowane pole adresu</string>
+    <string name="settings_address_bar_swipe_mode_title">Przełączaj pasek adresu gestami</string>
+    <string name="settings_address_bar_swipe_mode_summary">Przesuń w dół na stronie, aby rozwinąć pasek, lub w górę, aby go zwinąć, nawet gdy strony nie można przewijać. Po wyłączeniu pasek reaguje na przewijanie strony.</string>
     <string name="settings_address_bar_docking_subtitle">Przeciągnij zaparkowane pole i puść na dowolnej wysokości, aby przyciągnąć je do najbliższej krawędzi ekranu. Wyłącz, aby pasek adresu pozostał na środku.</string>
     <string name="settings_tab_dismiss_resistance">Opór przy zamykaniu karty</string>
     <string name="settings_tab_dismiss_resistance_summary">Faza oporu: %1$d%% odległości zamykania</string>
@@ -1210,6 +1212,11 @@
     <string name="external_link_preview_copy_link">Kopiuj link</string>
     <string name="external_link_preview_copy_label">Link Candy</string>
     <string name="toast_link_copied">Link skopiowany</string>
+    <string name="sync_extension_stores_title">Rozszerzenia Candy Sync</string>
+    <string name="sync_extension_stores_summary">Zainstaluj Candy Sync w przeglądarce na komputerze lub udostępnij link do sklepu.</string>
+    <string name="sync_extension_chrome_store">Chrome Web Store</string>
+    <string name="sync_extension_firefox_store">Firefox Add-ons</string>
+    <string name="sync_extension_share_link">Udostępnij link do %1$s</string>
     <string name="sync_settings_title">Synchronizacja</string>
     <string name="settings_home_sync_summary">Samodzielny hosting, karty urządzeń szyfrowane od końca do końca</string>
     <string name="sync_setup_guide_title">Skonfiguruj Candy Sync</string>
@@ -1470,4 +1477,19 @@
     <string name="favorites_url">URL witryny</string>
     <string name="favorites_manage">Edytuj ulubione</string>
     <string name="favorites_refresh_icon">Odśwież ikonę</string>
+    <string name="settings_menu_presentation_title">Styl menu</string>
+    <string name="settings_menu_presentation_summary">Wybierz zwykłe menu lub dolny panel z przewijanymi sekcjami albo dwiema stronami przesuwanymi gestem.</string>
+    <string name="settings_menu_presentation_floating">Zwykłe menu</string>
+    <string name="settings_menu_presentation_bottom_sheet">Dolny panel</string>
+    <string name="settings_menu_bottom_sheet_layout_title">Sekcje dolnego panelu</string>
+    <string name="settings_menu_bottom_sheet_layout_scroll">Przewijanie pionowe</string>
+    <string name="settings_menu_bottom_sheet_layout_pages">Dwie przesuwane strony</string>
+    <string name="browser_menu_quick_actions">Szybkie działania</string>
+    <string name="browser_menu_page_controls">Sterowanie stroną</string>
+    <string name="browser_menu_dismiss">Zamknij menu</string>
+    <string name="browser_menu_page_actions">Działania na stronie</string>
+    <string name="settings_menu_bottom_sheet_toolbar_title">Pasek narzędzi dolnego panelu</string>
+    <string name="settings_menu_bottom_sheet_toolbar_summary">Wybierz pięć działań od lewej do prawej. Przypisane już działania zamieniają się miejscami. Puste miejsce ukrywa przycisk.</string>
+    <string name="settings_menu_bottom_sheet_toolbar_slot">Działanie %1$d</string>
+    <string name="settings_menu_bottom_sheet_toolbar_empty">Puste miejsce</string>
 </resources>

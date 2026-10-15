@@ -8,57 +8,59 @@ import java.io.File
 import java.nio.charset.StandardCharsets
 import java.util.UUID
 
-class ReaderLibraryStore(context: Context) {
-    private val file = AtomicFile(File(context.filesDir, FILE_NAME))
+class ReaderLibraryStore internal constructor(private val file: AtomicFile) {
+    constructor(context: Context) : this(AtomicFile(File(context.filesDir, FILE_NAME)))
 
-    @Synchronized
-    fun load(isPrivate: Boolean): ReaderLibraryState =
+    fun load(isPrivate: Boolean): ReaderLibraryState = synchronized(lock) {
         if (isPrivate) ReaderLibraryState() else read()
+    }
 
-    @Synchronized
-    fun updateSettings(settings: ReaderSettings, isPrivate: Boolean) {
+    fun updateSettings(settings: ReaderSettings, isPrivate: Boolean) = synchronized(lock) {
         mutate(isPrivate) { ReaderLibraryRules.updateSettings(it, settings, isPrivate = false) }
     }
 
-    @Synchronized
-    fun updateProgress(sourceUrl: String, progress: Float, isPrivate: Boolean) {
+    fun updateProgress(sourceUrl: String, progress: Float, isPrivate: Boolean) = synchronized(lock) {
         mutate(isPrivate) {
             ReaderLibraryRules.updateProgress(it, sourceUrl, progress, isPrivate = false)
         }
     }
 
-    @Synchronized
     fun saveSnapshot(
         document: ReaderDocument,
         progress: Float,
         isPrivate: Boolean,
         nowMillis: Long = System.currentTimeMillis(),
-    ): ReaderSnapshot? {
-        if (isPrivate) return null
+        sourceProfileId: String? = null,
+        preserveExistingProvenance: Boolean = false,
+    ): ReaderSnapshot? = synchronized(lock) {
+        if (isPrivate) return@synchronized null
+        val before = read()
+        val existing = before.snapshots.firstOrNull { preserveExistingProvenance && it.document == document }
+        if (existing?.isPrivate == true) return@synchronized null
         val snapshot = ReaderSnapshot(
             id = UUID.randomUUID().toString(),
             document = document,
             progress = progress.coerceIn(0f, 1f),
             savedAtMillis = nowMillis,
+            sourceProfileId = if (existing != null) existing.sourceProfileId else sourceProfileId?.takeIf {
+                it.isNotBlank() && it.length <= 128 && it.none(Char::isISOControl)
+            },
         )
-        mutate(isPrivate = false) {
-            ReaderLibraryRules.saveSnapshot(it, snapshot, isPrivate = false)
-        }
-        return snapshot
+        val after = ReaderLibraryRules.saveSnapshot(before, snapshot, isPrivate = false)
+        if (after != before) write(after)
+        snapshot
     }
 
-    @Synchronized
-    fun deleteSnapshot(snapshotId: String, isPrivate: Boolean): Boolean {
-        if (isPrivate) return false
+    fun deleteSnapshot(snapshotId: String, isPrivate: Boolean): Boolean = synchronized(lock) {
+        if (isPrivate) return@synchronized false
         val before = read()
         val after = ReaderLibraryRules.deleteSnapshot(before, snapshotId, isPrivate = false)
-        if (before == after) return false
+        if (before == after) return@synchronized false
         write(after)
-        return true
+        true
     }
 
-    @Synchronized
-    fun clear() {
+    fun clear() = synchronized(lock) {
         file.delete()
     }
 
@@ -123,6 +125,8 @@ class ReaderLibraryStore(context: Context) {
         .put("id", snapshot.id)
         .put("progress", snapshot.progress.toDouble())
         .put("savedAt", snapshot.savedAtMillis)
+        .put("sourceProfileId", snapshot.sourceProfileId)
+        .put("isPrivate", snapshot.isPrivate)
         .put("document", encodeDocument(snapshot.document))
 
     private fun encodeDocument(document: ReaderDocument): JSONObject = JSONObject()
@@ -192,6 +196,10 @@ class ReaderLibraryStore(context: Context) {
             document = document,
             progress = json.optDouble("progress", 0.0).toFloat().coerceIn(0f, 1f),
             savedAtMillis = json.optLong("savedAt", 0L),
+            sourceProfileId = json.optionalString("sourceProfileId")?.takeIf {
+                it.isNotBlank() && it.length <= 128 && it.none(Char::isISOControl)
+            },
+            isPrivate = json.optBoolean("isPrivate", false),
         )
     }.getOrNull()
 
@@ -233,6 +241,7 @@ class ReaderLibraryStore(context: Context) {
     }
 
     private companion object {
+        val lock = Any()
         const val FILE_NAME = "reader_library_v1.json"
         const val CURRENT_VERSION = 1
         const val MAX_JSON_BYTES = 8 * 1024 * 1024

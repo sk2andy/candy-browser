@@ -92,6 +92,7 @@ import dev.sk2andy.materialbrowser.browser.systemwebview.commands.WebViewSiteDat
 import dev.sk2andy.materialbrowser.browser.gecko.AndroidBrowserEngineSessionPort
 import dev.sk2andy.materialbrowser.browser.gecko.BrowserEngineEventSink
 import dev.sk2andy.materialbrowser.browser.gecko.BrowserEnginePreviewCapture
+import dev.sk2andy.materialbrowser.browser.gecko.BrowserEngineOffscreenSurface
 import dev.sk2andy.materialbrowser.browser.gecko.BrowserEnginePreparedSession
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoCloseRequestListener
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoAndroidPermissionRequestListener
@@ -163,6 +164,7 @@ private class SystemWebViewPreparedSession(
 
 internal class SystemWebViewBrowserEngineFactory(
     private val context: Context,
+    cleanupPrivateProfiles: Boolean = true,
 ) : AndroidBrowserEngineFactory {
     override val kind = AndroidBrowserEngineKind.SystemWebView
     override val capabilities = AndroidBrowserEngineCapabilities.SystemWebView
@@ -190,7 +192,7 @@ internal class SystemWebViewBrowserEngineFactory(
     private val contentBlocker = ContentBlocker(context.applicationContext)
 
     init {
-        cleanupStalePrivateProfiles()
+        if (cleanupPrivateProfiles) cleanupStalePrivateProfiles()
         contentBlocker.prepareConsentScript()
         contentBlocker.prepareCosmeticRules()
     }
@@ -414,6 +416,8 @@ private class SystemWebViewBrowserEngineSession(
         appContext,
         webView,
         diagnostic = downloadDiagnostics::record,
+        sourceProfileId = profileId,
+        isPrivate = isPrivate,
     )
     private var closed = false
     private var active = true
@@ -551,6 +555,11 @@ private class SystemWebViewBrowserEngineSession(
         check(!closed) { "Cannot bind a closed browser engine session" }
         if (!isPrivate) SystemWebViewCredentials.onAttached(webView)
         return host
+    }
+
+    override fun createOffscreenSurface(widthPx: Int, heightPx: Int): BrowserEngineOffscreenSurface? {
+        if (closed || widthPx <= 0 || heightPx <= 0) return null
+        return SystemWebViewOffscreenSurface(webView, widthPx, heightPx)
     }
 
     override val supportsSiteDataDeletion: Boolean
@@ -2110,6 +2119,7 @@ private class SystemWebViewBrowserEngineSession(
             listener.onFailed(GeckoDownloadFailure.Storage)
             return null
         }
+        dev.sk2andy.materialbrowser.data.DownloadProvenanceStore(appContext).record(id, fileName, profileId, isPrivate)
         listener.onStarted(
             GeckoDownloadTransferStart(
                 id = id.toInt(),

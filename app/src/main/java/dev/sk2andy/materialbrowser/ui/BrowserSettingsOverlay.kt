@@ -7,6 +7,8 @@
 package dev.sk2andy.materialbrowser.ui
 
 import android.widget.Toast
+import android.content.Intent
+import dev.sk2andy.materialbrowser.DeviceSearchSettingsActivity
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.slideInHorizontally
@@ -156,6 +158,9 @@ internal fun BrowserSettingsOverlay(
         },
     ) {
         SettingsScreen(
+            onOpenDeviceSearch = {
+                context.startActivity(Intent(context, DeviceSearchSettingsActivity::class.java))
+            },
             appLanguageTag = appLanguageTag,
             supportedAppLocales = appLanguagePreferences.supportedLocales,
             onAppLanguageChanged = { languageTag ->
@@ -201,8 +206,11 @@ internal fun BrowserSettingsOverlay(
             addressBarActionLayout = controller.addressBarActionLayout,
             browserMenuLayout = controller.browserMenuLayout,
             isAddressBarDockingEnabled = controller.isAddressBarDockingEnabled,
+            isAddressBarSwipeModeEnabled = controller.isAddressBarSwipeModeEnabled,
             isExternalLinkPreviewEnabled = controller.isExternalLinkPreviewEnabled,
             externalAppLinkHandling = controller.externalAppLinkHandling,
+            linkRoutingRules = controller.incomingLinkRouter.rules,
+            onLinkRoutingRulesChanged = controller.incomingLinkRouter::updateRules,
             isFullImmersiveModeEnabled = controller.isFullImmersiveModeEnabled,
             isStartupAnimationEnabled = controller.isStartupAnimationEnabled,
             startupAddressFocusMode = controller.startupAddressFocusMode,
@@ -287,8 +295,13 @@ internal fun BrowserSettingsOverlay(
             onProfilesEnabledChanged = controller::updateProfilesEnabled,
             onAddressBarActionLayoutChanged = controller::updateAddressBarActionLayout,
             onBrowserMenuLocationChanged = controller::updateBrowserMenuLocation,
+            onBrowserMenuPresentationChanged = controller::updateBrowserMenuPresentation,
+            onBrowserMenuBottomSheetContentLayoutChanged = controller::updateBrowserMenuBottomSheetContentLayout,
+            onBrowserMenuBottomSheetToolbarEntriesChanged = controller::updateBrowserMenuBottomSheetToolbarEntries,
             onAddressBarDockingEnabledChanged =
                 controller::updateAddressBarDockingEnabled,
+            onAddressBarSwipeModeEnabledChanged =
+                controller::updateAddressBarSwipeModeEnabled,
             onExternalLinkPreviewEnabledChanged =
                 controller::updateExternalLinkPreviewEnabled,
             onExternalAppLinkHandlingChanged = controller::updateExternalAppLinkHandling,
@@ -407,6 +420,7 @@ internal fun BrowserSettingsOverlay(
             onImportAppData = onImportAppData,
             onClearData = onClearData,
             onOpenLegalUrl = onOpenLegalUrl,
+            onShareSyncExtensionLink = controller::shareLink,
             onDismiss = onDismiss,
             onOpenFirefoxExtensions = onOpenFirefoxExtensions,
             modifier = Modifier.predictiveBackSurface(

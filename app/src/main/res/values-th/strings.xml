@@ -584,6 +584,8 @@
     <string name="settings_address_bar_actions_after">สิทธิในการติดต่อ</string>
     <string name="settings_address_bar_actions_full">ตําแหน่งที่สามารถตั้งค่าได้ทั้ง 3 จุดก็ครอบงําแล้ว</string>
     <string name="settings_address_bar_docking_title">ย้ายตัวเลขที่จอดอยู่</string>
+    <string name="settings_address_bar_swipe_mode_title">สลับแถบที่อยู่ด้วยการปัด</string>
+    <string name="settings_address_bar_swipe_mode_summary">ปัดลงบนหน้าเว็บเพื่อขยายแถบที่อยู่ และปัดขึ้นเพื่อย่อ แม้ว่าหน้าเว็บจะเลื่อนไม่ได้ เมื่อปิด แถบที่อยู่จะเปลี่ยนตามการเลื่อนหน้าเว็บ</string>
     <string name="settings_address_bar_docking_subtitle">ดึงยาที่จอดไว้ และปล่อยให้มันขึ้นสูงใด ๆ เพื่อจับมันไปยังขอบหน้าจอที่ใกล้ที่สุด ปิดเพื่อให้บาร์ที่อยู่อยู่ตรงกลาง</string>
     <string name="settings_tab_dismiss_resistance">ความต้านทานการปลด Tab</string>
     <string name="settings_tab_dismiss_resistance_summary">ระยะความต้านทาน: %1$d%% ของระยะปิด</string>
@@ -1168,6 +1170,11 @@
     <string name="external_link_preview_copy_link">สําเนาลิงค์</string>
     <string name="external_link_preview_copy_label">Candy ลิงค์</string>
     <string name="toast_link_copied">ลิงค์ถูกสําเนา</string>
+    <string name="sync_extension_stores_title">ส่วนขยาย Candy Sync</string>
+    <string name="sync_extension_stores_summary">ติดตั้ง Candy Sync ในเบราว์เซอร์บนคอมพิวเตอร์หรือแชร์ลิงก์ร้านค้า</string>
+    <string name="sync_extension_chrome_store">Chrome Web Store</string>
+    <string name="sync_extension_firefox_store">Firefox Add-ons</string>
+    <string name="sync_extension_share_link">แชร์ลิงก์ %1$s</string>
     <string name="sync_settings_title">ซิงค์</string>
     <string name="settings_home_sync_summary">แท็บอุปกรณ์ที่มีการเข้ารหัสจากปลายไปปลาย</string>
     <string name="sync_setup_guide_title">กําหนด Candy Sync</string>
@@ -1422,4 +1429,19 @@
     <string name="favorites_url">URL เว็บไซต์</string>
     <string name="favorites_manage">แก้ไขรายการโปรด</string>
     <string name="favorites_refresh_icon">รีเฟรชไอคอน</string>
+    <string name="settings_menu_presentation_title">รูปแบบเมนู</string>
+    <string name="settings_menu_presentation_summary">เลือกเมนูปกติหรือแผงด้านล่างที่เลื่อนส่วนต่าง ๆ หรือปัดระหว่างสองหน้าได้</string>
+    <string name="settings_menu_presentation_floating">เมนูปกติ</string>
+    <string name="settings_menu_presentation_bottom_sheet">แผงด้านล่าง</string>
+    <string name="settings_menu_bottom_sheet_layout_title">ส่วนของแผงด้านล่าง</string>
+    <string name="settings_menu_bottom_sheet_layout_scroll">เลื่อนแนวตั้ง</string>
+    <string name="settings_menu_bottom_sheet_layout_pages">สองหน้าที่ปัดได้</string>
+    <string name="browser_menu_quick_actions">การดำเนินการด่วน</string>
+    <string name="browser_menu_page_controls">การควบคุมหน้า</string>
+    <string name="browser_menu_dismiss">ปิดเมนู</string>
+    <string name="browser_menu_page_actions">การดำเนินการกับหน้า</string>
+    <string name="settings_menu_bottom_sheet_toolbar_title">แถบเครื่องมือแผงด้านล่าง</string>
+    <string name="settings_menu_bottom_sheet_toolbar_summary">เลือกห้าการทำงานจากซ้ายไปขวา การทำงานที่กำหนดแล้วจะสลับตำแหน่งกัน ช่องว่างจะซ่อนปุ่มนั้น</string>
+    <string name="settings_menu_bottom_sheet_toolbar_slot">การทำงาน %1$d</string>
+    <string name="settings_menu_bottom_sheet_toolbar_empty">ช่องว่าง</string>
 </resources>

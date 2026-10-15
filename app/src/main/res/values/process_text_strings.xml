@@ -1,0 +1,11 @@
+<resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
+    <string name="process_text_research">Research in Candy</string>
+    <string name="process_text_read_aloud">Read aloud with Candy</string>
+    <string name="process_text_choose_profile">Choose the regular profile for this search.</string>
+    <string name="process_text_research_profile">Research in %1$s</string>
+    <string name="process_text_no_profiles">No available regular profile. Protected and synced profiles are excluded.</string>
+    <string name="process_text_unavailable">This text or profile is no longer available. Select the text again.</string>
+    <string name="process_text_play">Read aloud</string>
+    <string name="process_text_speech_memory_only">This text stays in memory and is not saved to your Reader library. Playback stops when you leave this screen.</string>
+    <string name="process_text_speech_unavailable">Speech is unavailable. Check the Android text-to-speech settings.</string>
+</resources>

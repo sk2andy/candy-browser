@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
+    <string name="capsule_own_window">Own window</string>
+    <string name="capsule_own_window_summary">Show this Capsule separately in Android’s app overview. Available for unprotected local profiles.</string>
+</resources>

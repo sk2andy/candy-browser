@@ -16,6 +16,7 @@ internal class BrowserMediaSystemSession(
     private val appContext = context.applicationContext
 
     fun publish(publication: GeckoMediaPlaybackPublication?) {
+        if (shouldKeepOtherSession(publication)) return
         BrowserMediaLifecycleTrace.record(
             source = "BrowserMediaSystemSession",
             action = "publish",
@@ -30,6 +31,7 @@ internal class BrowserMediaSystemSession(
     }
 
     fun invalidate(owner: GeckoMediaPlaybackOwner) {
+        if (isOwnedByAnotherSession()) return
         BrowserMediaLifecycleTrace.record(
             source = "BrowserMediaSystemSession",
             action = "invalidate",
@@ -39,6 +41,7 @@ internal class BrowserMediaSystemSession(
     }
 
     fun restoreAfterPictureInPicture(publication: GeckoMediaPlaybackPublication?) {
+        if (shouldKeepOtherSession(publication)) return
         BrowserMediaLifecycleTrace.record(
             source = "BrowserMediaSystemSession",
             action = "restore-picture-in-picture",
@@ -53,6 +56,7 @@ internal class BrowserMediaSystemSession(
     }
 
     fun replacePublication(publication: GeckoMediaPlaybackPublication?) {
+        if (shouldKeepOtherSession(publication)) return
         BrowserMediaLifecycleTrace.record(
             source = "BrowserMediaSystemSession",
             action = "replace-publication",
@@ -67,6 +71,7 @@ internal class BrowserMediaSystemSession(
     }
 
     fun clearForPrivateContext() {
+        if (isOwnedByAnotherSession()) return
         BrowserMediaLifecycleTrace.record(
             source = "BrowserMediaSystemSession",
             action = "clear-private-context",
@@ -75,6 +80,7 @@ internal class BrowserMediaSystemSession(
     }
 
     fun clearForProfileLock() {
+        if (isOwnedByAnotherSession()) return
         BrowserMediaLifecycleTrace.record(
             source = "BrowserMediaSystemSession",
             action = "clear-profile-lock",
@@ -91,6 +97,7 @@ internal class BrowserMediaSystemSession(
     }
 
     fun stopAndClear() {
+        if (isOwnedByAnotherSession()) return
         BrowserMediaLifecycleTrace.record(
             source = "BrowserMediaSystemSession",
             action = "stop-and-clear",
@@ -98,7 +105,18 @@ internal class BrowserMediaSystemSession(
         BrowserMediaPlaybackService.stopAndClear(appContext)
     }
 
+    private fun isOwnedByAnotherSession(): Boolean =
+        BrowserMediaPlaybackService.isOwnedByAnotherSession(onCommand)
+
+    private fun shouldKeepOtherSession(publication: GeckoMediaPlaybackPublication?): Boolean {
+        if (!isOwnedByAnotherSession()) return false
+        val safePublication = publication ?: return true
+        val snapshot = GeckoMediaPlaybackRules.publicationOrNull(safePublication) ?: return true
+        return !snapshot.isPlaying && !safePublication.isPictureInPictureOwner
+    }
+
     fun release() {
+        if (isOwnedByAnotherSession()) return
         BrowserMediaLifecycleTrace.record(
             source = "BrowserMediaSystemSession",
             action = "release",

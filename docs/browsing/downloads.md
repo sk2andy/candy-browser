@@ -39,4 +39,5 @@ System WebView CSP reproduction and the verified live Gemini download are record
 ## Privacy
 
 - Candy adds no download-history persistence and stores no cookies, referrers or profile metadata for this screen.
+- Android's separate [document-picker integration](documents-provider.md) keeps a bounded, device-local mapping of newly created regular download IDs and filenames to their source profile. It excludes private downloads and never records cookies or source URLs. Downloads without that provenance remain visible here but are not exported through the picker.
 - The repository reads only downloads owned by Candy's Android package. Private Gecko metadata stays at the existing transfer boundary rather than entering browser persistence.

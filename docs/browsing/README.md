@@ -31,9 +31,15 @@
 | Localized settings search and capability-filtered navigation | [`appearance-and-settings.md`](appearance-and-settings.md#settings-search) | `SettingsSearchRules`, `SettingsSearchCatalog`, `SettingsSearchField`, shared `SettingsSearchTarget` |
 | Profile-scoped browsing history and retention controls | [`history.md`](history.md) | `BrowsingHistoryRepository`, `HistoryActivity`, `HistoryScreen` |
 | Local download progress, search and cleanup | [`downloads.md`](downloads.md) | `DownloadRepository`, `DownloadsActivity`, `DownloadsScreen` |
+| Saved Reader PDFs and completed files in Android's document picker | [`documents-provider.md`](documents-provider.md) | `CandyDocumentsProvider`, `browser/documents`, `DownloadProvenanceStore` |
 | Favorite library, search and deletion undo | [`favorites.md`](favorites.md) | `BrowserSessionStore`, `BrowsingFavoritesRules`, `FavoritesActivity`, `FavoritesScreen` |
+| Android selected-text research and speech | [`selected-text-actions.md`](selected-text-actions.md) | `SelectedTextActivities`, `ProcessTextRules`, `ProcessTextResearchIntentHandler`, `ReaderSpeechController` |
+| Selected bookmarks/articles in system search | [`device-search.md`](device-search.md) | `browser/integration/devicesearch`, `DeviceSearchSettingsActivity` |
+| Personal incoming-link rules | [`link-routing.md`](link-routing.md) | `browser/integration/linkrouting`, `LinkRoutingStore`, `LinkRoutingSettingsPage` |
+| Selected website areas as Android homescreen widgets (prototype) | [`website-widgets.md`](website-widgets.md) | `browser/sitewidget`, `SiteWidgetStore`, `SiteWidgetCropEditor`, `SiteWidgetProvider` |
 | App data ZIP export/import | [`app-data-archive.md`](app-data-archive.md) | `AppDataArchive*`, `AppDataTransferActivity`, `MainActivity`, `ProtectionSettingsPage` |
 | Toppings / local userscripts | [`userscripts.md`](userscripts.md) | `browser/userscript`, `UserScriptStore`, `ToppingCatalogRepository` |
+| Default bottom-sheet menu, configurable footer, fixed address/shortcuts and scroll/swipe sections | [`address-actions-and-ui.md`](address-actions-and-ui.md#configurable-menu-actions) | `BrowserMenuLayout`, shared `BrowserMenuBottomSheetContent` / `BrowserMenuBottomSheetRules` / `BrowserMenuBottomSheetToolbarRules`, Android `BrowserMenuBottomSheet` / `BrowserMenuSheetAddressBar` |
 
 ## Test lookup
 
@@ -82,6 +88,7 @@ are recorded in [`../audits/dark-appearance-and-address-tab-handoff.md`](../audi
 | Commands and suggestions | `browser/commands/*Test`, `SearchSuggestionProviderTest` |
 | Candy Recall rules, extraction, SQLite ranking and UI | `recall/*Test`, `RecallRepositoryInstrumentedTest`, focused address/History instrumented tests |
 | Gestures and motion | `ui/Address*Test`, `ui/Address*InstrumentedTest` |
+| Optional viewport swipe pill mode | `BrowserChromeSwipeRulesTest`, `BrowserChromeSwipeTouchObserverInstrumentedTest`, focused `GeckoBottomBarScrollInstrumentedTest`, `BrowserSessionStoreInstrumentedTest`, `TabSettingsScreenInstrumentedTest` |
 | Gecko keyboard viewport, focused input, chrome-owned IME and new-tab suggestion handoff | `GeckoViewInsetRulesTest`, `GeckoKeyboardInsetsInstrumentedTest`, `GeckoAddressTabSelectionInstrumentedTest`, `FullImmersiveModeInstrumentedTest` |
 | Missed hidden-IME delivery after Activity resume or restored window focus | `GeckoKeyboardInsetsInstrumentedTest#resumeReconcilesKeyboardMarginsWhenHiddenInsetsWereMissed`, `#restoredWindowFocusReconcilesKeyboardMarginsWhenHiddenInsetsWereMissed`; assert native margins, visual viewport and restored lower-page pixels |
 | Bottom control obstruction and automatic right parking | `AddressBarAutoDockRulesTest`, `TextInputOcclusionScriptTest`, `scripts/text_input_occlusion.test.mjs`, `GeckoPageControlOcclusionInstrumentedTest`, focused controller/System WebView instrumented tests |

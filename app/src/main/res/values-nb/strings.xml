@@ -594,6 +594,8 @@
     <string name="settings_address_bar_actions_after">Adresserett</string>
     <string name="settings_address_bar_actions_full">Alle tre konfigurerbare posisjoner benyttes.</string>
     <string name="settings_address_bar_docking_title">Flytt det parkerte adressefeltet</string>
+    <string name="settings_address_bar_swipe_mode_title">Bytt adresselinje med sveip</string>
+    <string name="settings_address_bar_swipe_mode_summary">Sveip ned på siden for å utvide adresselinjen og opp for å gjøre den kompakt, også når siden ikke kan rulles. Når dette er av, følger adresselinjen siderullingen.</string>
     <string name="settings_address_bar_docking_subtitle">Dra det parkerte feltet og slipp det i valgfri høyde for å feste det til nærmeste skjermkant. Slå av for å holde adresselinjen sentrert.</string>
     <string name="settings_tab_dismiss_resistance">Motstand ved lukking av faner</string>
     <string name="settings_tab_dismiss_resistance_summary">Motstandsfase: %1$d%% av lukkeavstanden</string>
@@ -1183,6 +1185,11 @@
     <string name="external_link_preview_copy_link">Kopier lenke</string>
     <string name="external_link_preview_copy_label">Candy lenke</string>
     <string name="toast_link_copied">Lenke kopiert</string>
+    <string name="sync_extension_stores_title">Candy Sync-utvidelser</string>
+    <string name="sync_extension_stores_summary">Installer Candy Sync i nettleseren på datamaskinen, eller del butikklenken.</string>
+    <string name="sync_extension_chrome_store">Chrome Web Store</string>
+    <string name="sync_extension_firefox_store">Firefox Add-ons</string>
+    <string name="sync_extension_share_link">Del lenke til %1$s</string>
     <string name="sync_settings_title">Synkronisering</string>
     <string name="settings_home_sync_summary">Faner med egenverter, ende til ende krypterte enheter</string>
     <string name="sync_setup_guide_title">Sett opp Candy Sync</string>
@@ -1439,4 +1446,19 @@
     <string name="favorites_url">Nettadresse</string>
     <string name="favorites_manage">Rediger favoritter</string>
     <string name="favorites_refresh_icon">Oppdater ikon</string>
+    <string name="settings_menu_presentation_title">Menystil</string>
+    <string name="settings_menu_presentation_summary">Velg vanlig meny eller et bunnpanel med rullbare seksjoner eller to sider du kan sveipe mellom.</string>
+    <string name="settings_menu_presentation_floating">Vanlig meny</string>
+    <string name="settings_menu_presentation_bottom_sheet">Bunnpanel</string>
+    <string name="settings_menu_bottom_sheet_layout_title">Seksjoner i bunnpanelet</string>
+    <string name="settings_menu_bottom_sheet_layout_scroll">Rull vertikalt</string>
+    <string name="settings_menu_bottom_sheet_layout_pages">To sider med sveiping</string>
+    <string name="browser_menu_quick_actions">Hurtighandlinger</string>
+    <string name="browser_menu_page_controls">Sidekontroller</string>
+    <string name="browser_menu_dismiss">Lukk meny</string>
+    <string name="browser_menu_page_actions">Sidehandlinger</string>
+    <string name="settings_menu_bottom_sheet_toolbar_title">Verktøylinje i bunnpanelet</string>
+    <string name="settings_menu_bottom_sheet_toolbar_summary">Velg fem handlinger fra venstre mot høyre. Handlinger som allerede er tildelt, bytter plass. En tom plass skjuler knappen.</string>
+    <string name="settings_menu_bottom_sheet_toolbar_slot">Handling %1$d</string>
+    <string name="settings_menu_bottom_sheet_toolbar_empty">Tom plass</string>
 </resources>
