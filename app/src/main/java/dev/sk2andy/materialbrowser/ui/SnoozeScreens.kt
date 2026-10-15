@@ -255,8 +255,11 @@ internal fun SnoozedTabsScreen(
     modifier: Modifier = Modifier,
 ) {
     var editingTab by remember { mutableStateOf<SnoozedTab?>(null) }
+    val backState = rememberNativeScreenBackState()
+    NativeScreenBackHandler(state = backState, retainProgressOnBack = true, onBack = onBack)
     Surface(
         modifier = modifier
+            .predictiveBackSurface(backState.progress.value, backState.swipeEdgeSign)
             .fillMaxSize()
             .testTag(SnoozeTestTags.Management),
         color = MaterialTheme.colorScheme.surface,

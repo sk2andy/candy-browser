@@ -569,6 +569,9 @@
     <string name="settings_link_long_press_action">ロングプレス・リンク・アクション</string>
     <string name="settings_address_bar_long_press_title">アドレスバーを長く押す</string>
     <string name="settings_address_bar_long_press_summary">アドレスバーをタッチして押すとどうなるかを選択します</string>
+    <string name="settings_link_peek_swipe_action">Link Peek の右スワイプ操作</string>
+    <string name="settings_link_peek_swipe_action_summary">右にスワイプすると選択した操作を実行します。左にスワイプすると Link Peek を閉じます。</string>
+    <string name="action_open_link_new_stack">新しいタブグループで開く</string>
     <string name="settings_link_peek_actions_title">Link Peek のボタン</string>
     <string name="settings_link_peek_actions_summary">最大3つの迅速なアクションを選択し,設定します.</string>
     <string name="settings_link_peek_actions_instructions">長押ししてドラッグするアクションを空っぽのスロットに スロットが空になるように\"つを\"可用アクション\"に戻す. パルス + は常に3番目のスロットに留まり,背景タブを開きます.</string>
@@ -1444,4 +1447,13 @@
     <string name="settings_menu_bottom_sheet_toolbar_summary">左から右に5つの操作を選択します。すでに割り当てられた操作は位置が入れ替わります。空のスロットはボタンを非表示にします。</string>
     <string name="settings_menu_bottom_sheet_toolbar_slot">操作 %1$d</string>
     <string name="settings_menu_bottom_sheet_toolbar_empty">空のスロット</string>
+    <string name="reader_settings">読書設定</string>
+    <string name="reader_compact_controls">コンパクトな操作表示</string>
+    <string name="reader_expand_controls">URLと操作を表示</string>
+    <string name="reader_hide_controls">操作をすべて非表示</string>
+    <string name="reader_hidden_controls_hint">Androidの戻るボタンで操作を再表示します。</string>
+    <string name="reader_continue_reading">読み続ける</string>
+    <string name="reader_font_serif">セリフ</string>
+    <string name="reader_font_sans">サンセリフ</string>
+    <string name="reader_theme_light">ライト</string>
 </resources>

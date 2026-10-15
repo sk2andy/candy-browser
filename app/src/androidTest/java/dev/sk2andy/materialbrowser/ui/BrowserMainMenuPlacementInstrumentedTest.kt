@@ -38,6 +38,7 @@ import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuLayout
 import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuPresentation
 import dev.sk2andy.materialbrowser.ui.theme.MaterialBrowserTheme
 import org.junit.Assert.assertTrue
+import org.junit.Assert.assertFalse
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -73,6 +74,22 @@ class BrowserMainMenuPlacementInstrumentedTest {
         composeRule.onNodeWithTag(BrowserMainMenuTestTags.Menu).assertIsDisplayed()
         val title = requireNotNull(device.wait(Until.findObject(By.text(menuTitle())), 5_000))
         assertTrue(title.visibleBounds.top >= anchorBounds.bottom)
+    }
+
+    @Test
+    fun menuTakesFocusAndBackReturnsItToActivity() {
+        showMenu(topAnchor = false)
+        composeRule.onNodeWithContentDescription("Open placement menu").performClick()
+        composeRule.onNodeWithTag(BrowserMainMenuTestTags.Menu).assertIsDisplayed()
+        composeRule.activityRule.scenario.onActivity { activity ->
+            assertFalse(activity.window.decorView.hasWindowFocus())
+        }
+        UiDevice.getInstance(InstrumentationRegistry.getInstrumentation()).pressBack()
+        composeRule.waitForIdle()
+        composeRule.onNodeWithTag(BrowserMainMenuTestTags.Menu).assertDoesNotExist()
+        composeRule.activityRule.scenario.onActivity { activity ->
+            assertTrue(activity.window.decorView.hasWindowFocus())
+        }
     }
 
     @Test

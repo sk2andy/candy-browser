@@ -72,6 +72,8 @@ class BrowserMenuBottomSheetInstrumentedTest {
     fun scrollKeepsAddressShortcutsAndPageActionsFixed() {
         showMenu()
         openMenu()
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        composeRule.onNodeWithText(context.getString(R.string.downloads_title)).assertIsDisplayed()
         captureScreenshot("portrait")
         val device = UiDevice.getInstance(InstrumentationRegistry.getInstrumentation())
         val scrimBounds = composeRule.onNodeWithTag(BrowserMenuBottomSheetTestTags.Scrim)

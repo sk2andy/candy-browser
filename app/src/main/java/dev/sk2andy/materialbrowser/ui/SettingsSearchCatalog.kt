@@ -19,6 +19,7 @@ import dev.sk2andy.materialbrowser.data.TabOverviewMode
 internal data class SettingsSearchAvailability(
     val searchSuggestionProvider: SearchSuggestionProvider = SearchSuggestionProvider.DuckDuckGo,
     val hasAppLanguages: Boolean = false,
+    val isLinkPeekEnabled: Boolean = true,
     val hasBrowserEngineSelection: Boolean = false,
     val supportsAiSearch: Boolean = false,
     val hasSearxngInstance: Boolean = false,
@@ -208,6 +209,13 @@ internal fun settingsSearchDefinitions(
             titleRes = R.string.settings_link_long_press_action,
             descriptionRes = R.string.settings_home_tabs_gestures_summary,
         )
+        if (availability.isLinkPeekEnabled) {
+            setting(
+                id = "settings_link_peek_swipe_action",
+                titleRes = R.string.settings_link_peek_swipe_action,
+                descriptionRes = R.string.settings_link_peek_swipe_action_summary,
+            )
+        }
         setting(
             id = "settings_link_peek_actions_title",
             titleRes = R.string.settings_link_peek_actions_title,

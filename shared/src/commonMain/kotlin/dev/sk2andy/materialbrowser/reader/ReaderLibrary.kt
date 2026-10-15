@@ -25,14 +25,17 @@ interface ReaderLibraryDataSource {
     )
 }
 
-enum class ReaderTheme { System, Paper, Night }
+enum class ReaderTheme { System, Light, Paper, Night }
+
+enum class ReaderFont { Serif, Sans }
 
 enum class ReaderTextAlignment { Start, Justified }
 
 data class ReaderSettings(
     val fontScale: Float = 1f,
-    val theme: ReaderTheme = ReaderTheme.System,
+    val theme: ReaderTheme = ReaderTheme.Paper,
     val textAlignment: ReaderTextAlignment = ReaderTextAlignment.Start,
+    val font: ReaderFont = ReaderFont.Sans,
 )
 
 data class ReaderSnapshot(

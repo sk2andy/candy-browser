@@ -38,7 +38,7 @@ class ReaderLibraryStoreInstrumentedTest {
     fun snapshotSettingsAndProgressRoundTrip() {
         val document = document("https://example.com/article")
         store.updateSettings(
-            ReaderSettings(1.3f, ReaderTheme.Paper, ReaderTextAlignment.Justified),
+            ReaderSettings(1.3f, ReaderTheme.Paper, ReaderTextAlignment.Justified, ReaderFont.Serif),
             isPrivate = false,
         )
         store.updateProgress(document.sourceUrl, 0.42f, isPrivate = false)
@@ -47,11 +47,35 @@ class ReaderLibraryStoreInstrumentedTest {
         val restored = ReaderLibraryStore(context).load(isPrivate = false)
 
         assertEquals(
-            ReaderSettings(1.3f, ReaderTheme.Paper, ReaderTextAlignment.Justified),
+            ReaderSettings(1.3f, ReaderTheme.Paper, ReaderTextAlignment.Justified, ReaderFont.Serif),
             restored.settings,
         )
         assertEquals(0.42f, restored.progressByUrl[document.sourceUrl])
         assertEquals(document, restored.snapshots.single().document)
+    }
+
+    @Test
+    fun absentAndInvalidThemesDefaultToPaperButExplicitLightAndSystemAreRetained() {
+        val file = java.io.File(context.filesDir, "reader_library_v1.json")
+        listOf("" to ReaderTheme.Paper, "Unknown" to ReaderTheme.Paper,
+            "Light" to ReaderTheme.Light, "System" to ReaderTheme.System).forEach { (name, expected) ->
+            file.writeText("""{"version":1,"settings":{"theme":"$name"}}""")
+            assertEquals(expected, store.load(isPrivate = false).settings.theme)
+        }
+        store.updateSettings(ReaderSettings(theme = ReaderTheme.Light), isPrivate = false)
+        assertEquals(ReaderTheme.Light, ReaderLibraryStore(context).load(isPrivate = false).settings.theme)
+    }
+
+    @Test
+    fun oldOrUnknownTypefaceKeepsExistingSettingsAndFallsBackToSans() {
+        val file = java.io.File(context.filesDir, "reader_library_v1.json")
+        listOf("", ", \"font\": \"UnknownFont\"").forEach { fontField ->
+            file.writeText("""{"version":1,"settings":{"fontScale":1.2,"theme":"Paper"$fontField}}""")
+            val settings = store.load(isPrivate = false).settings
+            assertEquals(ReaderFont.Sans, settings.font)
+            assertEquals(ReaderTheme.Paper, settings.theme)
+            assertEquals(1.2f, settings.fontScale)
+        }
     }
 
     @Test
@@ -60,7 +84,7 @@ class ReaderLibraryStoreInstrumentedTest {
         store.saveSnapshot(initial, 0.2f, isPrivate = false)
 
         assertNull(store.saveSnapshot(document("https://private.example"), 0.8f, isPrivate = true))
-        store.updateSettings(ReaderSettings(1.6f, ReaderTheme.Night), isPrivate = true)
+        store.updateSettings(ReaderSettings(1.6f, ReaderTheme.Night, font = ReaderFont.Serif), isPrivate = true)
         store.updateProgress(initial.sourceUrl, 0.9f, isPrivate = true)
         assertTrue(store.load(isPrivate = true).snapshots.isEmpty())
 

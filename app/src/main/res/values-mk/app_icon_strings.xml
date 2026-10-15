@@ -7,4 +7,6 @@
     <string name="app_icon_lemon">Лимон</string>
     <string name="app_icon_donut">Крофна</string>
     <string name="app_icon_jelly_beans">Желе бонбони</string>
+    <string name="app_icon_outline_light">Контура на светла заднина</string>
+    <string name="app_icon_outline_dark">Контура на темна заднина</string>
 </resources>

@@ -23,7 +23,7 @@
 | System WebView refresh surface | An app-owned, private `VirtualDisplay` hosts the temporary same-profile WebView in an app-themed `Presentation`. This gives Chromium an attached hardware surface without a window on the user's main display. Capture waits for `postVisualStateCallback`, then uses `PixelCopy` on that private window. No MediaProjection, global whole-document drawing or activity launch is used. |
 | Renderer lifetime | At most 20 seconds per attempt; cancellation closes the temporary session, display/surface and presentation. Image queues are drained while rendering. The returned bitmap contains only the bounded source viewport before the saved crop is applied. |
 | Selection | Visible viewport rectangle, not a DOM-element anchor; scrolling or layout changes require reselection |
-| Size | 25 grid-specific providers (2–6 rows and columns), preserving existing 4×3 and 4×4 component names; actual cell dimensions and padding depend on the launcher. Image uses fit-center to preserve the selected content. |
+| Size | 25 grid-specific providers (2–6 rows and columns), preserving existing 4×3 and 4×4 component names; actual cell dimensions and padding depend on the launcher. Image fills the entire rounded widget with center-crop, without header or footer strips; launcher size differences can crop the image edges. The sole visible control is a circular refresh button inset 12 dp from the top-right corner. |
 | Source identity | Tab, profile, document URL, navigation generation, session, attached view and view dimensions checked at capture; document identity rechecked before publication |
 | Private content | Private, ephemeral, synced and protected-profile sources cannot be captured |
 | Later profile protection / deletion | Invalidate saved captures and republish blank widget content when allowed profile ownership changes |
@@ -70,10 +70,12 @@
 
 | OS-integration prototype verified on 2026-10-15 | Result |
 | --- | --- |
-| Full / Foss JVM suites | 1,955 tests each, passed |
-| Shared JVM suite | 221 tests, passed |
+| Full / Foss / System WebView JVM suites after main integration | 1,996 tests each, passed |
+| Shared JVM suite after main integration | 228 tests, passed |
 | API 36 session-owned emulator | 65 relevant OS/Reader/store/UI checks, passed; real launcher pin/open/refresh/reselect included |
-| Full / Foss debug builds and lint | Passed; lint has warnings, no errors |
+| Full / Foss debug builds and lint after main integration | Passed; lint has warnings, no errors |
+| Menus, Reader and native back after main integration | 37 API 36 instrumented tests passed |
+| Full-bleed widget polish on API 36 | 10 provider/configuration/editor/launcher flow tests passed; screenshot confirms no header/footer strips and one inset circular refresh button |
 | Neighboring download regressions | 28/30 passed; two existing native sandbox-anchor filename cases still return `download.png`. OS-feature checks above pass; the complete neighboring regression run is not entirely green. |
 
 ![Actual selection editor and homescreen prototype](../screenshots/candy-website-widget-prototype.png)

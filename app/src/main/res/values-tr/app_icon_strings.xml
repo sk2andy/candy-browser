@@ -7,4 +7,6 @@
     <string name="app_icon_lemon">Limon</string>
     <string name="app_icon_donut">Donut</string>
     <string name="app_icon_jelly_beans">Jelibon</string>
+    <string name="app_icon_outline_light">Açık zeminli kontur</string>
+    <string name="app_icon_outline_dark">Koyu zeminli kontur</string>
 </resources>

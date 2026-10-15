@@ -214,6 +214,13 @@ internal fun BrowserTransientOverlays(
                 controller.openContextLinkInForeground(currentUrl)
             },
             actionLayout = controller.linkPeekActionLayout,
+            rightSwipeAction = controller.linkPeekSwipeAction,
+            canOpenNewStack = controller.canOpenContextLinkInNewStack,
+            onOpenNewStack = { currentUrl ->
+                if (controller.openContextLinkInNewStack(currentUrl)) {
+                    rootView.performConfirmHaptic()
+                }
+            },
             isFavorite = controller::isFavorite,
             canSaveReaderOffline = controller.canPersistContextLink,
             canFavorite = controller.canPersistContextLink,

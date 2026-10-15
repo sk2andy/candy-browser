@@ -1,5 +1,18 @@
 # Appearance and settings
 
+## Android predictive Back
+
+| Surface | Behavior | Owner |
+| --- | --- | --- |
+| Settings home | Existing shrink preview reveals the browser; a nonempty settings search clears first | `BrowserScreen`, `BrowserSettingsOverlay` |
+| Settings subpages | Default shrink follows gesture progress; cancellation restores the page, commit returns to its parent | `SettingsScreen`, `NativeScreenBackHandler`, `SettingsBackRules` |
+| Nested action pages / Topping catalog | Return to Tabs & gestures / Toppings respectively before Settings home | `SettingsBackRules` |
+| Snoozed tabs | Default shrink, followed by the existing dismissal fade; rescheduling dialogs retain Back priority | `SnoozedTabsScreen`, `NativeScreenBackHandler` |
+
+The shared motion keeps the existing 0.9 minimum scale, edge-directed translation and rounded
+corners. A canceled gesture restores the surface without navigation. Button/three-button Back
+continues to navigate without waiting for a gesture animation.
+
 ## Ownership
 
 | Layer | Responsibility | Main code |
@@ -31,7 +44,7 @@
 | Setting | Values | Default |
 | --- | --- | --- |
 | Appearance | System, light, dark, AMOLED | System |
-| Android app icon | Classic; Cookie, Lemon, and Donut in regular and Maxed sizes; Cotton Candy regular and Freeform; Jelly Beans | Classic |
+| Android app icon | Classic; Outline light/dark; Cookie, Lemon, and Donut in regular and Maxed sizes; Cotton Candy regular and Freeform; Jelly Beans | Classic |
 | Animations | Off, on | On |
 | Force dark mode on websites | Off, on | Off |
 | Website font size | 50–200% in 5% steps | 100% |
@@ -47,6 +60,7 @@
 | Address focus on launch | When startup animation is off, every launch, never | When startup animation is off |
 | Open home page on startup | Off, on | Off |
 | Long-press link action | Link Peek, copy, share, download, regular foreground/background tab, private foreground/background tab | Link Peek |
+| Link Peek right-swipe action | Background tab, foreground tab, new stack with source, private tab, copy, share, favorite, snooze, Reader offline; shown only when Link Peek is selected | Background tab |
 | Switch address pill with swipes | Off: follows page scrolling; on: swipe down expands, swipe up compacts | Off |
 | Candy Recall | Off, on | Off |
 | Page translation provider | Google Translate, Yandex Translate, Kagi Translate | Yandex Translate on Android; Google Translate on iOS |
@@ -111,17 +125,27 @@ Frosted exposes three persisted controls while selected:
 ## Invariants
 
 - Appearance settings are global and persist across normal and private browsing.
-- The Android app icon is a global launcher component choice. Exactly one of the ten selectable
+- The Android app icon is a global launcher component choice. Exactly one of the twelve selectable
   launcher aliases is enabled after a selection, while MainActivity remains enabled for external intents.
   The six square PNGs are based on `Candy Browser Icon-Übersicht.png`.
   Regular artwork retains room around the motif. Maxed Cookie
   and Donut fill the circular Pixel Launcher mask; other launcher shapes may crop
   their edges. The Cotton Candy stick stays within Android's
   [66 dp safe zone](https://developer.android.com/develop/ui/compose/system/icon_design_adaptive).
-  Every adaptive icon has a full pastel background layer, including outside its
+  The illustrated adaptive icons have a full pastel background layer, including outside their
   inset artwork. Regular Lemon and Maxed Lemon omit the leaf; Maxed Lemon fills
   the circular mask. Freeform Cotton Candy shows a complete stick; regular
   Cotton Candy keeps a compact round puff. Jelly Beans stay centered.
+- Outline light and dark preserve Classic's three separate curved leaves. Only these two icons
+  use a proportional 16⅔% foreground inset on each side (18 dp on a 108 dp foreground layer).
+  This gives the outlines more breathing room and scales with small previews; Classic and
+  the other illustrated icons retain their existing insets.
+  They use unfilled black contours on white / white contours on black, with a full adaptive
+  background and an outline-only monochrome layer for themed launchers. The original shared
+  `ic_launcher_foreground_art.png` remains unchanged. Regenerate the vector paths with
+  [`scripts/generate_outline_app_icons.py`](../../scripts/generate_outline_app_icons.py), which
+  pins the source SHA-256 and smooths raster stair steps into cubic contours. Sampled curves
+  stay within 2.5 source pixels (0.63 dp before the foreground inset) of the alpha boundary.
 - The transparent Cotton Candy source cutout is kept at
   [`images/app-icons/cotton-candy-freeform-transparent.png`](images/app-icons/cotton-candy-freeform-transparent.png).
   On the tested Pixel Launcher, a transparent adaptive background rendered black and a legacy
@@ -249,6 +273,9 @@ Frosted exposes three persisted controls while selected:
   keep their content sheet, and private-open falls back to Link Peek when the active profile cannot
   create private tabs. Direct downloads reuse the source tab's engine-scoped context-download path;
   Gecko retains its referrer and private session context.
+- Link Peek right-swipe action persists independently of the long-press link choice. Its dropdown
+  and localized search entry appear only when Link Peek is selected. Unknown stored action IDs
+  fall back to background-tab open; left always closes the preview except during commit motion.
 - Tabs & gestures also owns the Link Peek action editor. It reuses the address-action editor's
   breakaway, snap, settle, haptic and accessibility behavior. Its three configurable positions may
   hold unique actions or remain empty; dragging a toolbar action back to the palette clears that

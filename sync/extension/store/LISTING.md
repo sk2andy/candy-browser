@@ -28,7 +28,7 @@ Keep your desktop tabs connected to Candy Browser with Candy Sync, a source-avai
 
 Setup requires a Candy Sync server and its credentials. Candy does not provide a hosted sync service. Remote servers require HTTPS; localhost HTTP is available for development on the same device. Open the extension's Options page to connect. There is no toolbar popup.
 
-Your E2EE passphrase stays on your device and unlocks the encrypted local vault. After restarting the browser, unlock the session again. The passphrase cannot be changed or recovered: keep it safe and use a different value from your server password.
+Your E2EE passphrase stays on your device and unlocks the encrypted local vault. Choose when sync locks: at browser restart (default), after a configurable number of idle minutes, or never. Never keeps decrypted keys locally across restarts; use it only on a trusted browser profile. Manual Lock removes remembered keys. The passphrase is never stored. The passphrase cannot be changed or recovered: keep it safe and use a different value from your server password.
 
 Private tabs, browser-internal pages and local files are excluded. The selected server receives encrypted payloads and necessary authentication/routing metadata. This extension has no analytics or advertising code.
 
@@ -44,6 +44,7 @@ Single purpose: Synchronize eligible browser tabs with Candy Browser through a u
 | Permission | Justification to paste into the dashboard |
 | --- | --- |
 | storage | Store server settings, encrypted local vault, encrypted pending changes, stable tab identifiers and redacted sync status. |
+| idle | Detect system inactivity locally for the user-selected automatic lock timeout. Activity state is never uploaded. |
 | alarms | Resume synchronization and recover missed changes when background realtime delivery is suspended. |
 | tabs (optional) | Read eligible tab URLs, titles, order and pin state; apply synchronized opens, navigations, pin changes, reordering and closes after the user selects tab synchronization. Private tabs, browser-internal pages and local files are excluded. |
 | tabGroups (optional) | Read supported group assignments for the encrypted tab snapshot after the user selects group synchronization. Dedicated group merging is not implemented. |

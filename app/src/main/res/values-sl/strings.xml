@@ -597,6 +597,9 @@
     <string name="settings_link_long_press_action">Delovanje dolgega pritiska na povezavo</string>
     <string name="settings_address_bar_long_press_title">Dolgotrajni pritisek na naslovno vrstico</string>
     <string name="settings_address_bar_long_press_summary">Izberite, kaj se zgodi, ko se dotaknete in držite naslovno vrstico</string>
+    <string name="settings_link_peek_swipe_action">Dejanje ob podrsanju v desno v Link Peek</string>
+    <string name="settings_link_peek_swipe_action_summary">Podrsajte v desno za izbrano dejanje. Podrsajte v levo, da zaprete Link Peek.</string>
+    <string name="action_open_link_new_stack">Odpri v novem skladu zavihkov</string>
     <string name="settings_link_peek_actions_title">Gumbi Link Peek</string>
     <string name="settings_link_peek_actions_summary">Izberite in uredite do treh hitrih dejanj</string>
     <string name="settings_link_peek_actions_instructions">Dolgo pritisnite in povlecite akcije v prazne prostore. Prenesite eno nazaj na razpoložljive akcije, da ostane prazna. Pulsna + vedno ostane v tretjem slotu in odpre zavihek v ozadju.</string>
@@ -1493,4 +1496,13 @@
     <string name="settings_menu_bottom_sheet_toolbar_summary">Izberite pet dejanj od leve proti desni. Že dodeljena dejanja zamenjajo mesti. Prazno mesto skrije gumb.</string>
     <string name="settings_menu_bottom_sheet_toolbar_slot">Dejanje %1$d</string>
     <string name="settings_menu_bottom_sheet_toolbar_empty">Prazno mesto</string>
+    <string name="reader_settings">Nastavitve branja</string>
+    <string name="reader_compact_controls">Strnjeni kontrolniki</string>
+    <string name="reader_expand_controls">Prikaži URL in kontrolnike</string>
+    <string name="reader_hide_controls">Skrij vse kontrolnike</string>
+    <string name="reader_hidden_controls_hint">Gumb Nazaj v Androidu ponovno prikaže kontrolnike.</string>
+    <string name="reader_continue_reading">Nadaljuj branje</string>
+    <string name="reader_font_serif">Serif</string>
+    <string name="reader_font_sans">Sans</string>
+    <string name="reader_theme_light">Svetlo</string>
 </resources>

@@ -7,4 +7,6 @@
     <string name="app_icon_lemon">Limon</string>
     <string name="app_icon_donut">Donut</string>
     <string name="app_icon_jelly_beans">Karamele pelte</string>
+    <string name="app_icon_outline_light">Kontur i çelët</string>
+    <string name="app_icon_outline_dark">Kontur i errët</string>
 </resources>

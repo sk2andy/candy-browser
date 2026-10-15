@@ -596,6 +596,9 @@
     <string name="settings_link_long_press_action">Akce při podržení odkazu</string>
     <string name="settings_address_bar_long_press_title">Akce při podržení adresního řádku</string>
     <string name="settings_address_bar_long_press_summary">Vyberte akci při podržení adresního řádku</string>
+    <string name="settings_link_peek_swipe_action">Akce při přejetí doprava v Link Peek</string>
+    <string name="settings_link_peek_swipe_action_summary">Přejetím doprava provedete zvolenou akci. Přejetím doleva zavřete Link Peek.</string>
+    <string name="action_open_link_new_stack">Otevřít v nové skupině panelů</string>
     <string name="settings_link_peek_actions_title">Tlačítka Link Peek</string>
     <string name="settings_link_peek_actions_summary">Vyberte a uspořádejte až tři rychlé akce</string>
     <string name="settings_link_peek_actions_instructions">Podržte a přetáhněte akce do prázdných pozic. Přetažením zpět do dostupných akcí pozici uvolníte. Pulzující + zůstává vždy na třetí pozici a otevírá panel na pozadí.</string>
@@ -1492,4 +1495,13 @@
     <string name="settings_menu_bottom_sheet_toolbar_summary">Vyberte pět akcí zleva doprava. Již přiřazené akce si vymění místa. Prázdné místo skryje tlačítko.</string>
     <string name="settings_menu_bottom_sheet_toolbar_slot">Akce %1$d</string>
     <string name="settings_menu_bottom_sheet_toolbar_empty">Prázdné místo</string>
+    <string name="reader_settings">Nastavení čtení</string>
+    <string name="reader_compact_controls">Kompaktní ovládání</string>
+    <string name="reader_expand_controls">Zobrazit URL a ovládání</string>
+    <string name="reader_hide_controls">Úplně skrýt ovládání</string>
+    <string name="reader_hidden_controls_hint">Tlačítko Zpět v Androidu znovu zobrazí ovládání.</string>
+    <string name="reader_continue_reading">Pokračovat ve čtení</string>
+    <string name="reader_font_serif">Patkové</string>
+    <string name="reader_font_sans">Bezpatkové</string>
+    <string name="reader_theme_light">Světlý</string>
 </resources>

@@ -335,6 +335,8 @@
     <string name="settings_appearance_mode">Erscheinungsbild</string>
     <string name="settings_app_icon">App-Symbol</string>
     <string name="app_icon_classic">Klassisch</string>
+    <string name="app_icon_outline_light">Kontur hell</string>
+    <string name="app_icon_outline_dark">Kontur dunkel</string>
     <string name="app_icon_cookie">Cookie</string>
     <string name="app_icon_cotton_candy">Zuckerwatte</string>
     <string name="app_icon_lemon">Zitrone</string>
@@ -563,6 +565,9 @@
     <string name="settings_link_long_press_action">Aktion bei langem Drücken auf Links</string>
     <string name="settings_address_bar_long_press_title">Aktion bei langem Drücken auf die Adressleiste</string>
     <string name="settings_address_bar_long_press_summary">Lege fest, was beim Berühren und Halten der Adressleiste passiert</string>
+    <string name="settings_link_peek_swipe_action">Link-Peek-Aktion beim Wischen nach rechts</string>
+    <string name="settings_link_peek_swipe_action_summary">Nach rechts wischen führt die gewählte Aktion aus. Nach links wischen schließt Link Peek.</string>
+    <string name="action_open_link_new_stack">In neuem Tab-Stapel öffnen</string>
     <string name="settings_link_peek_actions_title">Link-Peek-Schaltflächen</string>
     <string name="settings_link_peek_actions_summary">Bis zu drei Schnellaktionen auswählen und anordnen</string>
     <string name="settings_link_peek_actions_instructions">Aktionen lange drücken und in freie Slots ziehen. Eine Aktion zurück zu „Verfügbare Aktionen“ ziehen, um ihren Slot freizulassen. Das pulsierende + bleibt immer im dritten Slot und öffnet einen Hintergrund-Tab.</string>
@@ -1470,4 +1475,13 @@
     <string name="settings_menu_bottom_sheet_toolbar_summary">Wähle fünf Aktionen von links nach rechts. Bereits belegte Aktionen tauschen ihren Platz. Ein leerer Platz blendet die Schaltfläche aus.</string>
     <string name="settings_menu_bottom_sheet_toolbar_slot">Aktion %1$d</string>
     <string name="settings_menu_bottom_sheet_toolbar_empty">Leerer Platz</string>
+    <string name="reader_settings">Leseeinstellungen</string>
+    <string name="reader_compact_controls">Kleine Steuerung anzeigen</string>
+    <string name="reader_expand_controls">URL und Steuerung anzeigen</string>
+    <string name="reader_hide_controls">Steuerung ganz ausblenden</string>
+    <string name="reader_hidden_controls_hint">Android-Zurück zeigt die Steuerung wieder.</string>
+    <string name="reader_continue_reading">Weiterlesen</string>
+    <string name="reader_font_serif">Serif</string>
+    <string name="reader_font_sans">Sans</string>
+    <string name="reader_theme_light">Hell</string>
 </resources>

@@ -569,6 +569,9 @@
     <string name="settings_link_long_press_action">長壓連結操作</string>
     <string name="settings_address_bar_long_press_title">長按地址操作</string>
     <string name="settings_address_bar_long_press_summary">選擇觸控並按住地址時會發生什麼</string>
+    <string name="settings_link_peek_swipe_action">Link Peek 向右滑動的動作</string>
+    <string name="settings_link_peek_swipe_action_summary">向右滑動執行所選動作。向左滑動關閉 Link Peek。</string>
+    <string name="action_open_link_new_stack">在新的分頁群組中開啟</string>
     <string name="settings_link_peek_actions_title">Link Peek 按鈕</string>
     <string name="settings_link_peek_actions_summary">選擇和安排最多三個快速操作</string>
     <string name="settings_link_peek_actions_instructions">長按下並拖動操作進入空格. 拖一個回可用操作, 讓它的插槽空. 脈衝+始終保持在第三個插槽中,並開啟背景分頁.</string>
@@ -1444,4 +1447,13 @@
     <string name="settings_menu_bottom_sheet_toolbar_summary">從左到右選擇五個操作。已指派的操作會交換位置。空位將隱藏對應按鈕。</string>
     <string name="settings_menu_bottom_sheet_toolbar_slot">操作 %1$d</string>
     <string name="settings_menu_bottom_sheet_toolbar_empty">空位</string>
+    <string name="reader_settings">閱讀設定</string>
+    <string name="reader_compact_controls">精簡控制項</string>
+    <string name="reader_expand_controls">顯示網址和控制項</string>
+    <string name="reader_hide_controls">完全隱藏控制項</string>
+    <string name="reader_hidden_controls_hint">按 Android 返回鍵可重新顯示控制項。</string>
+    <string name="reader_continue_reading">繼續閱讀</string>
+    <string name="reader_font_serif">襯線</string>
+    <string name="reader_font_sans">無襯線</string>
+    <string name="reader_theme_light">淺色</string>
 </resources>

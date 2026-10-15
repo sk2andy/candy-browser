@@ -1,6 +1,9 @@
 package dev.sk2andy.materialbrowser.update
 
 import java.net.URI
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
+import java.time.format.ResolverStyle
 
 data class AvailableAppUpdate(
     val versionName: String,
@@ -52,17 +55,51 @@ internal enum class AppReleaseChannel(
     }
 }
 
+internal enum class AppUpdateTrack {
+    Stable,
+    Nightly,
+}
+
 internal object AppUpdateRules {
+    fun findAvailableUpdate(
+        currentVersionName: String,
+        releases: List<GitHubReleaseMetadata>,
+        channel: AppReleaseChannel,
+        supportedAbis: List<String>,
+        track: AppUpdateTrack,
+    ): AvailableAppUpdate? {
+        val release = when (track) {
+            AppUpdateTrack.Stable -> releases.firstOrNull { !it.draft && !it.prerelease }
+            AppUpdateTrack.Nightly -> releases.filter { !it.draft && it.prerelease }
+                .mapNotNull { release -> nightlyBuildNumber(release.tagName)?.let { it to release } }
+                .maxByOrNull { it.first }
+                ?.second
+        } ?: return null
+        return findAvailableUpdate(currentVersionName, release, channel, supportedAbis, track)
+    }
+
     fun findAvailableUpdate(
         currentVersionName: String,
         release: GitHubReleaseMetadata,
         channel: AppReleaseChannel = AppReleaseChannel.Standard,
         supportedAbis: List<String> = emptyList(),
+        track: AppUpdateTrack = AppUpdateTrack.Stable,
     ): AvailableAppUpdate? {
-        if (release.draft || release.prerelease) return null
-        val currentVersion = AppVersion.parse(currentVersionName) ?: return null
-        val releaseVersion = AppVersion.parse(release.tagName) ?: return null
-        if (releaseVersion <= currentVersion) return null
+        if (release.draft) return null
+        when (track) {
+            AppUpdateTrack.Stable -> {
+                if (release.prerelease || nightlyBuildNumber(release.tagName) != null) return null
+                val currentVersion = AppVersion.parse(currentVersionName) ?: return null
+                val releaseVersion = AppVersion.parse(release.tagName) ?: return null
+                if (releaseVersion <= currentVersion) return null
+            }
+            AppUpdateTrack.Nightly -> {
+                if (!release.prerelease) return null
+                val currentBuild = nightlyBuildNumber(currentVersionName) ?: return null
+                val releaseBuild = nightlyBuildNumber(release.tagName) ?: return null
+                if (releaseBuild <= currentBuild) return null
+            }
+        }
 
         val normalizedTag = release.tagName.removePrefix("v")
         val expectedFileNames = buildList {
@@ -116,6 +153,20 @@ internal object AppUpdateRules {
     }.getOrDefault(false)
 
     private const val RELEASE_DOWNLOAD_PATH = "/sk2andy/candy-browser/releases/download/"
+
+    private val nightlyVersionPattern = Regex("^v?\\d+\\.\\d+(?:\\.\\d+)?-nightly\\.(\\d{12})$")
+    private val nightlyTimestampFormat = DateTimeFormatter.ofPattern("uuuuMMddHHmm")
+        .withResolverStyle(ResolverStyle.STRICT)
+
+    private fun nightlyBuildNumber(versionName: String): Long? {
+        if (AppVersion.parse(versionName) == null) return null
+        val timestamp = nightlyVersionPattern.matchEntire(versionName)?.groupValues?.get(1)
+            ?: return null
+        return runCatching {
+            LocalDateTime.parse(timestamp, nightlyTimestampFormat)
+            timestamp.toLong()
+        }.getOrNull()
+    }
 }
 
 internal data class AppVersion(

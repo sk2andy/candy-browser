@@ -569,6 +569,9 @@
     <string name="settings_link_long_press_action">กระบวนการกดยาว</string>
     <string name="settings_address_bar_long_press_title">การกดบานที่อยู่ยาว</string>
     <string name="settings_address_bar_long_press_summary">เลือกสิ่งที่เกิดขึ้นเมื่อคุณสัมผัสและยึดบาร์ที่อยู่</string>
+    <string name="settings_link_peek_swipe_action">การทำงานเมื่อปัดไปทางขวาใน Link Peek</string>
+    <string name="settings_link_peek_swipe_action_summary">ปัดไปทางขวาเพื่อทำงานที่เลือก ปัดไปทางซ้ายเพื่อปิด Link Peek</string>
+    <string name="action_open_link_new_stack">เปิดในกลุ่มแท็บใหม่</string>
     <string name="settings_link_peek_actions_title">ปุ่ม Link Peek</string>
     <string name="settings_link_peek_actions_summary">เลือกและจัดให้ได้ถึง 3 การกระทํารวดเร็ว</string>
     <string name="settings_link_peek_actions_instructions">กดยาวและลากการกระทําในสล็อตว่าง ดึงตัวหนึ่งกลับไปยัง available actions เพื่อให้ช่องว่างว่าง ปุ่ม pulsing + อยู่ที่สล็อตที่สามเสมอ และเปิดแท็บเบื้องหลัง</string>
@@ -1444,4 +1447,13 @@
     <string name="settings_menu_bottom_sheet_toolbar_summary">เลือกห้าการทำงานจากซ้ายไปขวา การทำงานที่กำหนดแล้วจะสลับตำแหน่งกัน ช่องว่างจะซ่อนปุ่มนั้น</string>
     <string name="settings_menu_bottom_sheet_toolbar_slot">การทำงาน %1$d</string>
     <string name="settings_menu_bottom_sheet_toolbar_empty">ช่องว่าง</string>
+    <string name="reader_settings">การตั้งค่าการอ่าน</string>
+    <string name="reader_compact_controls">การควบคุมแบบย่อ</string>
+    <string name="reader_expand_controls">แสดง URL และการควบคุม</string>
+    <string name="reader_hide_controls">ซ่อนการควบคุมทั้งหมด</string>
+    <string name="reader_hidden_controls_hint">ปุ่มย้อนกลับของ Android จะแสดงการควบคุมอีกครั้ง</string>
+    <string name="reader_continue_reading">อ่านต่อ</string>
+    <string name="reader_font_serif">มีเชิง</string>
+    <string name="reader_font_sans">ไม่มีเชิง</string>
+    <string name="reader_theme_light">สว่าง</string>
 </resources>

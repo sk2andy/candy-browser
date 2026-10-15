@@ -7,4 +7,6 @@
     <string name="app_icon_lemon">Λεμόνι</string>
     <string name="app_icon_donut">Ντόνατ</string>
     <string name="app_icon_jelly_beans">Ζελεδάκια</string>
+    <string name="app_icon_outline_light">Περίγραμμα σε φωτεινό φόντο</string>
+    <string name="app_icon_outline_dark">Περίγραμμα σε σκοτεινό φόντο</string>
 </resources>

@@ -7,4 +7,6 @@
     <string name="app_icon_lemon">Chanh</string>
     <string name="app_icon_donut">Bánh donut</string>
     <string name="app_icon_jelly_beans">Kẹo dẻo</string>
+    <string name="app_icon_outline_light">Viền nền sáng</string>
+    <string name="app_icon_outline_dark">Viền nền tối</string>
 </resources>

@@ -7,4 +7,6 @@
     <string name="app_icon_lemon">เลมอน</string>
     <string name="app_icon_donut">โดนัท</string>
     <string name="app_icon_jelly_beans">เจลลีบีน</string>
+    <string name="app_icon_outline_light">เส้นขอบบนพื้นหลังสว่าง</string>
+    <string name="app_icon_outline_dark">เส้นขอบบนพื้นหลังมืด</string>
 </resources>

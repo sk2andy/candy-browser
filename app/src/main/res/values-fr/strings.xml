@@ -562,6 +562,9 @@
     <string name="settings_link_long_press_action">Action lors d’un appui prolongé sur un lien</string>
     <string name="settings_address_bar_long_press_title">Action lors d’un appui prolongé sur la barre d’adresse</string>
     <string name="settings_address_bar_long_press_summary">Choisissez l’action exécutée en maintenant la barre d’adresse</string>
+    <string name="settings_link_peek_swipe_action">Action du balayage vers la droite dans Link Peek</string>
+    <string name="settings_link_peek_swipe_action_summary">Balayez vers la droite pour effectuer l’action choisie. Balayez vers la gauche pour fermer Link Peek.</string>
+    <string name="action_open_link_new_stack">Ouvrir dans une nouvelle pile d’onglets</string>
     <string name="settings_link_peek_actions_title">Boutons Link Peek</string>
     <string name="settings_link_peek_actions_summary">Choisir et organiser jusqu’à trois actions rapides</string>
     <string name="settings_link_peek_actions_instructions">Appuyez longuement sur les actions et faites-les glisser dans des emplacements vides. Faites-en glisser une vers Actions disponibles pour laisser son emplacement vide. Le + pulsant reste toujours au troisième emplacement et ouvre un onglet en arrière-plan.</string>
@@ -1468,4 +1471,13 @@
     <string name="settings_menu_bottom_sheet_toolbar_summary">Choisissez cinq actions de gauche à droite. Les actions déjà attribuées échangent leur place. Un emplacement vide masque son bouton.</string>
     <string name="settings_menu_bottom_sheet_toolbar_slot">Action %1$d</string>
     <string name="settings_menu_bottom_sheet_toolbar_empty">Emplacement vide</string>
+    <string name="reader_settings">Réglages de lecture</string>
+    <string name="reader_compact_controls">Commandes compactes</string>
+    <string name="reader_expand_controls">Afficher l’URL et les commandes</string>
+    <string name="reader_hide_controls">Masquer toutes les commandes</string>
+    <string name="reader_hidden_controls_hint">Le bouton Retour d’Android réaffiche les commandes.</string>
+    <string name="reader_continue_reading">Continuer la lecture</string>
+    <string name="reader_font_serif">Avec empattements</string>
+    <string name="reader_font_sans">Sans empattements</string>
+    <string name="reader_theme_light">Clair</string>
 </resources>

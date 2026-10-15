@@ -2,7 +2,6 @@ package dev.sk2andy.materialbrowser.ui
 
 import android.net.Uri
 import android.text.format.Formatter
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -98,7 +97,6 @@ internal fun DownloadsScreen(
         downloads.filter { entry -> entry.status.isTerminal }
     }
 
-    BackHandler(onBack = onBack)
     Scaffold(
         topBar = {
             TopAppBar(

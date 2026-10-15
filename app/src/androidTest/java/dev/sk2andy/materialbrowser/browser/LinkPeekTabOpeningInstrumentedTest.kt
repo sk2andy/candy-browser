@@ -4,6 +4,8 @@ import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import dev.sk2andy.materialbrowser.MainActivity
 import dev.sk2andy.materialbrowser.browser.actions.WebContentTarget
+import dev.sk2andy.materialbrowser.data.BrowserSessionStore
+import dev.sk2andy.materialbrowser.data.TabStackRules
 import org.junit.Assume.assumeTrue
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -98,6 +100,180 @@ class LinkPeekTabOpeningInstrumentedTest {
                 assertEquals("https://example.com/committed", created.url)
                 assertEquals(sourceTabId, created.openerTabId)
                 controller.closeTab(created.id)
+            }
+        }
+    }
+
+    @Test
+    fun committedPeekUrlOpensBackgroundStackWithSourceTab() {
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity { activity ->
+                val controller = activity.browserControllerForTesting()
+                val sourceTabId = controller.createTab(
+                    initialUrl = "https://example.com/source",
+                    isIncognito = false,
+                )
+                val source = controller.selectedTab
+                val originalIds = controller.tabs.mapTo(mutableSetOf(), BrowserTab::id)
+                controller.contentActions.show(
+                    target = WebContentTarget(linkUrl = "https://example.com/original"),
+                    sourceTabId = sourceTabId,
+                )
+
+                assertTrue(controller.canOpenContextLinkInNewStack)
+                assertTrue(controller.openContextLinkInNewStack("https://redirect.example/article"))
+
+                val created = controller.tabs.single { it.id !in originalIds }
+                val stack = controller.activeTabStacks.single { created.id in it.tabIds }
+                assertEquals(sourceTabId, controller.selectedTabId)
+                assertEquals(source.url, controller.selectedTab.url)
+                assertEquals("https://redirect.example/article", created.url)
+                assertEquals(sourceTabId, created.openerTabId)
+                assertEquals(source.profileId, created.profileId)
+                assertFalse(created.isIncognito)
+                assertEquals(listOf(sourceTabId, created.id), stack.tabIds)
+                assertEquals("redirect.example", stack.name)
+                assertEquals(TabStackColor.Grape, stack.color)
+                assertEquals(created.id, stack.previewTabId)
+                assertFalse(controller.contentActions.isVisible)
+                assertTrue(
+                    BrowserSessionStore(activity).loadTabStacks(controller.tabs)
+                        .any { it.id == stack.id },
+                )
+                assertFalse(controller.openContextLinkInNewStack("https://redirect.example/article"))
+                controller.closeTab(created.id)
+                controller.closeTab(sourceTabId)
+            }
+        }
+    }
+
+    @Test
+    fun privatePeekStackStaysInMemoryAndInheritsPrivateSource() {
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity { activity ->
+                val controller = activity.browserControllerForTesting()
+                assumeTrue(controller.canOpenLinkInPrivate)
+                val sourceTabId = controller.createTab(isIncognito = true)
+                val source = controller.selectedTab
+                val originalIds = controller.tabs.mapTo(mutableSetOf(), BrowserTab::id)
+                controller.contentActions.show(
+                    target = WebContentTarget(linkUrl = "https://private.example/original"),
+                    sourceTabId = sourceTabId,
+                )
+
+                assertTrue(controller.canOpenContextLinkInNewStack)
+                assertTrue(controller.openContextLinkInNewStack("https://private.example/committed"))
+
+                val created = controller.tabs.single { it.id !in originalIds }
+                val stack = controller.activeTabStacks.single { created.id in it.tabIds }
+                assertEquals(sourceTabId, controller.selectedTabId)
+                assertTrue(created.isIncognito)
+                assertEquals(source.profileId, created.profileId)
+                assertEquals(sourceTabId, created.openerTabId)
+                assertEquals(listOf(sourceTabId, created.id), stack.tabIds)
+                assertFalse(
+                    BrowserSessionStore(activity).loadTabStacks(controller.tabs)
+                        .any { it.id == stack.id },
+                )
+                controller.closeTab(created.id)
+                controller.closeTab(sourceTabId)
+            }
+        }
+    }
+
+    @Test
+    fun peekStackInheritsPinnedStateSoBothMembersRemainCompatible() {
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity { activity ->
+                val controller = activity.browserControllerForTesting()
+                val sourceTabId = controller.createTab(isIncognito = false)
+                assertTrue(controller.setTabPinned(sourceTabId, isPinned = true))
+                val originalIds = controller.tabs.mapTo(mutableSetOf(), BrowserTab::id)
+                controller.contentActions.show(
+                    target = WebContentTarget(linkUrl = "https://example.com/pinned"),
+                    sourceTabId = sourceTabId,
+                )
+
+                assertTrue(controller.openContextLinkInNewStack("https://example.com/pinned"))
+
+                val created = controller.tabs.single { it.id !in originalIds }
+                assertTrue(created.isPinned)
+                assertTrue(controller.selectedTab.isPinned)
+                assertTrue(controller.activeTabStacks.any { created.id in it.tabIds })
+                controller.setTabPinned(created.id, isPinned = false)
+                controller.closeTab(created.id)
+                controller.setTabPinned(sourceTabId, isPinned = false)
+                controller.closeTab(sourceTabId)
+            }
+        }
+    }
+
+    @Test
+    fun fullStackCapacityLeavesPeekOpenAndCreatesNoTab() {
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity { activity ->
+                val controller = activity.browserControllerForTesting()
+                val sourceTabId = controller.createTab(isIncognito = false)
+                val createdIds = mutableListOf<String>()
+                repeat(TabStackRules.MAX_STACKS) { index ->
+                    val members = List(2) { member ->
+                        requireNotNull(
+                            controller.createBackgroundTab("https://example.com/$index/$member"),
+                        ).also(createdIds::add)
+                    }
+                    requireNotNull(
+                        controller.createTabStack(
+                            tabIds = members,
+                            name = "Stack $index",
+                            color = TabStackColor.Grape,
+                        ),
+                    )
+                }
+                val originalIds = controller.tabs.map(BrowserTab::id)
+                controller.contentActions.show(
+                    target = WebContentTarget(linkUrl = "https://example.com/capacity"),
+                    sourceTabId = sourceTabId,
+                )
+
+                assertFalse(controller.canOpenContextLinkInNewStack)
+                assertFalse(controller.openContextLinkInNewStack("https://example.com/capacity"))
+                assertEquals(originalIds, controller.tabs.map(BrowserTab::id))
+                assertTrue(controller.contentActions.isVisible)
+                assertEquals(sourceTabId, controller.selectedTabId)
+
+                createdIds.forEach(controller::closeTab)
+                controller.closeTab(sourceTabId)
+            }
+        }
+    }
+
+    @Test
+    fun peekStackRejectsUnsafeUrlsAndStaleSourceWithoutCreatingTabs() {
+        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            scenario.onActivity { activity ->
+                val controller = activity.browserControllerForTesting()
+                val sourceTabId = controller.selectedTabId
+                val otherTabId = requireNotNull(
+                    controller.createBackgroundTab("https://example.com/other"),
+                )
+                val originalIds = controller.tabs.map(BrowserTab::id)
+                controller.contentActions.show(
+                    target = WebContentTarget(linkUrl = "https://example.com/original"),
+                    sourceTabId = sourceTabId,
+                )
+
+                listOf("javascript:alert(1)", "file:///secret", "https://").forEach { url ->
+                    assertFalse(controller.openContextLinkInNewStack(url))
+                    assertEquals(originalIds, controller.tabs.map(BrowserTab::id))
+                    assertTrue(controller.contentActions.isVisible)
+                }
+
+                controller.selectTab(otherTabId)
+
+                assertFalse(controller.canOpenContextLinkInNewStack)
+                assertFalse(controller.openContextLinkInNewStack("https://example.com/stale"))
+                assertEquals(originalIds, controller.tabs.map(BrowserTab::id))
+                controller.closeTab(otherTabId)
             }
         }
     }

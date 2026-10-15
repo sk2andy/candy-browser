@@ -579,6 +579,9 @@
     <string name="settings_link_long_press_action">Actie voor langedrukkoppeling</string>
     <string name="settings_address_bar_long_press_title">Actie voor lange-druk adresbalk</string>
     <string name="settings_address_bar_long_press_summary">Kies wat er gebeurt als u aanraakt en de adresbalk vasthoudt</string>
+    <string name="settings_link_peek_swipe_action">Actie bij naar rechts vegen in Link Peek</string>
+    <string name="settings_link_peek_swipe_action_summary">Veeg naar rechts om de gekozen actie uit te voeren. Veeg naar links om Link Peek te sluiten.</string>
+    <string name="action_open_link_new_stack">Openen in een nieuwe tabbladstapel</string>
     <string name="settings_link_peek_actions_title">Link Peek-knoppen</string>
     <string name="settings_link_peek_actions_summary">Kies en regelen tot drie snelle acties</string>
     <string name="settings_link_peek_actions_instructions">De acties met lange druk en sleep in lege slots. Sleep er één terug naar Beschikbare acties om zijn vak leeg te laten. De pulsing + blijft altijd in het derde slot en opent een achtergrond tabblad.</string>
@@ -1461,4 +1464,13 @@
     <string name="settings_menu_bottom_sheet_toolbar_summary">Kies vijf acties van links naar rechts. Acties die al zijn toegewezen wisselen van plaats. Een leeg vak verbergt de knop.</string>
     <string name="settings_menu_bottom_sheet_toolbar_slot">Actie %1$d</string>
     <string name="settings_menu_bottom_sheet_toolbar_empty">Leeg vak</string>
+    <string name="reader_settings">Leesinstellingen</string>
+    <string name="reader_compact_controls">Compacte bediening</string>
+    <string name="reader_expand_controls">URL en bediening tonen</string>
+    <string name="reader_hide_controls">Alle bediening verbergen</string>
+    <string name="reader_hidden_controls_hint">Terug in Android toont de bediening weer.</string>
+    <string name="reader_continue_reading">Verder lezen</string>
+    <string name="reader_font_serif">Serif</string>
+    <string name="reader_font_sans">Sans</string>
+    <string name="reader_theme_light">Licht</string>
 </resources>

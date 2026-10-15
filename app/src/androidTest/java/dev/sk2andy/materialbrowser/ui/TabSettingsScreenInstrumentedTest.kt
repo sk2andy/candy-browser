@@ -19,6 +19,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.browser.LinkLongPressAction
+import dev.sk2andy.materialbrowser.browser.LinkPeekSwipeAction
 import dev.sk2andy.materialbrowser.data.InactiveTabLifetime
 import dev.sk2andy.materialbrowser.data.TabOverviewMode
 import dev.sk2andy.materialbrowser.ui.theme.MaterialBrowserTheme
@@ -234,6 +235,69 @@ class TabSettingsScreenInstrumentedTest {
         ).performClick()
 
         assertEquals(LinkLongPressAction.CopyLink, action)
+        composeRule.onNodeWithTag(TabSettingsTestTags.LinkPeekSwipeAction).assertDoesNotExist()
+    }
+
+    @Test
+    fun linkPeekSwipeChoiceShowsAllActionsAndUpdatesSetting() {
+        var action by mutableStateOf(LinkPeekSwipeAction.OpenBackground)
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                TabsAndGesturesSettingsPage(
+                    inactiveTabLifetime = InactiveTabLifetime.Never,
+                    residentTabLimit = 10,
+                    tabOverviewMode = TabOverviewMode.Grid,
+                    tabStackFolderMode = TabOverviewMode.Grid,
+                    tabListStartsAtBottom = false,
+                    automaticTabSortingEnabled = false,
+                    dismissResistancePercent = 40,
+                    profilesEnabled = true,
+                    isAddressBarDockingEnabled = true,
+                    linkPeekSwipeAction = action,
+                    onInactiveTabLifetimeChanged = {},
+                    onResidentTabLimitChanged = {},
+                    onTabOverviewModeChanged = {},
+                    onTabStackFolderModeChanged = {},
+                    onTabListStartsAtBottomChanged = {},
+                    onAutomaticTabSortingEnabledChanged = {},
+                    onDismissResistancePercentChanged = {},
+                    onProfilesEnabledChanged = {},
+                    onAddressBarDockingEnabledChanged = {},
+                    onLinkPeekSwipeActionChanged = { action = it },
+                    onAddressBarActions = {},
+                    onBack = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(TabSettingsTestTags.LinkPeekSwipeAction)
+            .performScrollTo()
+            .performClick()
+
+        val actions = listOf(
+            LinkPeekSwipeAction.OpenBackground to R.string.action_open_link_background_tab,
+            LinkPeekSwipeAction.OpenForeground to R.string.action_open_link_foreground_tab,
+            LinkPeekSwipeAction.OpenNewStack to R.string.action_open_link_new_stack,
+            LinkPeekSwipeAction.OpenPrivate to R.string.action_open_link_private_foreground_tab,
+            LinkPeekSwipeAction.Copy to R.string.external_link_preview_copy_link,
+            LinkPeekSwipeAction.Share to R.string.action_share,
+            LinkPeekSwipeAction.Favorite to R.string.action_add_favorite,
+            LinkPeekSwipeAction.Snooze to R.string.action_snooze_tab,
+            LinkPeekSwipeAction.ReaderLater to R.string.reader_save_offline,
+        )
+        actions.forEach { (candidate, label) ->
+            composeRule.onNode(
+                hasText(context.getString(label)) and
+                    SemanticsMatcher.expectValue(
+                        SemanticsProperties.Selected,
+                        candidate == LinkPeekSwipeAction.OpenBackground,
+                    ),
+            ).assertExists()
+        }
+        composeRule.onNodeWithText(context.getString(R.string.action_open_link_new_stack))
+            .performClick()
+
+        assertEquals(LinkPeekSwipeAction.OpenNewStack, action)
     }
 
     @Test

@@ -7,4 +7,6 @@
     <string name="app_icon_lemon">레몬</string>
     <string name="app_icon_donut">도넛</string>
     <string name="app_icon_jelly_beans">젤리빈</string>
+    <string name="app_icon_outline_light">밝은 배경 윤곽선</string>
+    <string name="app_icon_outline_dark">어두운 배경 윤곽선</string>
 </resources>

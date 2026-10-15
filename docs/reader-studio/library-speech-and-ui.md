@@ -46,3 +46,41 @@ parallel SwiftUI Reader surface exists.
 Android selected-text actions reuse `ReaderSpeechController` for temporary read-aloud sessions without creating
 Reader documents or library snapshots. These sessions stop when their activity leaves the foreground and
 close their speech engine on destruction. See [`selected-text-actions.md`](../browsing/selected-text-actions.md).
+
+## Reader controls
+
+The article uses a flat surface behind the system status bar down to the navigation inset, with no
+Reader Studio header or separate settings toolbar. Text has readable internal gutters and the last
+paragraph can scroll above the floating controls. The large bottom pill displays the current article
+URL as read-only text and an ellipsis settings action. Scrolling down accumulates 24 dp before
+switching to a compact domain/settings pill; scrolling up accumulates 16 dp before restoring the full
+URL pill, matching the browser thresholds. Direction changes reset that distance, and reaching the
+article top expands the pill. Both sizes retain the same settings action; there is no eye button.
+Saved-progress restoration and layout changes do not count as user scrolling. There is no URL editor or keyboard in Reader Studio; returning to the
+original closes the reader before browser navigation.
+
+The Material bottom sheet contains font size, serif/sans typeface, alignment, system/light/paper/night
+colors, offline saving and library access, progress, and speech transport. Settings apply immediately;
+dismissing the sheet by Back, scrim, swipe, or Continue reading keeps the article open. Typeface is
+stored compatibly with older settings (missing/unknown font falls back to Sans). Private settings
+remain in memory.
+
+Hide controls completely removes both pills. Android Back first restores the compact pill; another
+Back closes the reader. Ordinary scrolling and taps on article text never restore controls. Pill and
+sheet state survive configuration restoration for the same source/private session. Android handles
+Back through the shared screen's platform callback. Hosts without a Back callback, including iOS,
+show an inset-aware Back button with the same restore, library, and dismissal behavior.
+
+Android wraps Reader Studio in the same default predictive Back shrink used by Settings. Gesture
+progress drives scale, horizontal translation and corner rounding; cancellation restores the reader
+without taking its Back action. Commit retains the shared restore/library/dismiss order above.
+The settings bottom sheet continues to handle its own Back gesture before the reader surface.
+
+
+Paper is the default for new, missing, or invalid theme settings; explicit saved choices are retained.
+Light remains bright regardless of the browser/system dark appearance. The article has no origin chip
+above its title; the read-only floating pill is its sole URL display. Initial content starts below the
+status icons using a spacer inside the scroll content. This spacer scrolls away, so text moves behind
+the status bar. A theme-colored status scrim and matching system-icon appearance preserve contrast;
+horizontal cutouts and the bottom navigation inset still protect controls. The offline library keeps
+its status-bar inset and enough trailing space to scroll its final entry above the pill.

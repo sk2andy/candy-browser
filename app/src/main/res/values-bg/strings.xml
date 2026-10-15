@@ -579,6 +579,9 @@
     <string name="settings_link_long_press_action">Дълго натискане на връзката</string>
     <string name="settings_address_bar_long_press_title">Дълго натискане на адресната лента</string>
     <string name="settings_address_bar_long_press_summary">Изберете какво се случва, когато докоснете и задържите адресната лента</string>
+    <string name="settings_link_peek_swipe_action">Действие при плъзгане надясно в Link Peek</string>
+    <string name="settings_link_peek_swipe_action_summary">Плъзнете надясно, за да изпълните избраното действие. Плъзнете наляво, за да затворите Link Peek.</string>
+    <string name="action_open_link_new_stack">Отвори в нова група раздели</string>
     <string name="settings_link_peek_actions_title">Бутони Link Peek</string>
     <string name="settings_link_peek_actions_summary">Изберете и организирайте до три бързи действия</string>
     <string name="settings_link_peek_actions_instructions">Дълго натискане и влагане на действия в празни слотове. Издърпайте един обратно към налични действия, за да оставите празно място. Пулсиращият + винаги остава в третия слот и отваря раздел за фон.</string>
@@ -1461,4 +1464,13 @@
     <string name="settings_menu_bottom_sheet_toolbar_summary">Изберете пет действия отляво надясно. Вече зададените действия разменят местата си. Празното място скрива бутона.</string>
     <string name="settings_menu_bottom_sheet_toolbar_slot">Действие %1$d</string>
     <string name="settings_menu_bottom_sheet_toolbar_empty">Празно място</string>
+    <string name="reader_settings">Настройки за четене</string>
+    <string name="reader_compact_controls">Компактни контроли</string>
+    <string name="reader_expand_controls">Показване на URL и контролите</string>
+    <string name="reader_hide_controls">Пълно скриване на контролите</string>
+    <string name="reader_hidden_controls_hint">Назад в Android показва контролите отново.</string>
+    <string name="reader_continue_reading">Продължаване на четенето</string>
+    <string name="reader_font_serif">Серифен</string>
+    <string name="reader_font_sans">Безсерифен</string>
+    <string name="reader_theme_light">Светла</string>
 </resources>

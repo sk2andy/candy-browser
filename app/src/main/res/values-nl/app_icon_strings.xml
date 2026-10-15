@@ -7,4 +7,6 @@
     <string name="app_icon_lemon">Citroen</string>
     <string name="app_icon_donut">Donut</string>
     <string name="app_icon_jelly_beans">Jellybeans</string>
+    <string name="app_icon_outline_light">Lichte contour</string>
+    <string name="app_icon_outline_dark">Donkere contour</string>
 </resources>

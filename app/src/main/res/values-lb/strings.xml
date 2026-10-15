@@ -579,6 +579,9 @@
     <string name="settings_link_long_press_action">Long-Press Link Aktioun</string>
     <string name="settings_address_bar_long_press_title">Long-Press Adressbar Aktioun</string>
     <string name="settings_address_bar_long_press_summary">Wielt wat geschitt wann Dir d\'Adressbar beréiert an ofhält</string>
+    <string name="settings_link_peek_swipe_action">Link Peek: Aktioun beim Wëschen no riets</string>
+    <string name="settings_link_peek_swipe_action_summary">Wësch no riets, fir déi gewielten Aktioun auszeféieren. Wësch no lénks, fir Link Peek zouzemaachen.</string>
+    <string name="action_open_link_new_stack">An engem neien Tab-Stack opmaachen</string>
     <string name="settings_link_peek_actions_title">Link Peek-Knäppercher</string>
     <string name="settings_link_peek_actions_summary">Wielt an arrangéiert bis zu dräi séier Aktiounen</string>
     <string name="settings_link_peek_actions_instructions">Long-Press an Drag-Aktiounen an eidel Plazen. Drag ee zréck op verfügbar Aktiounen fir säin Slot eidel ze loossen. D\'Pulsing + bleift ëmmer am drëtten Slot a mécht e Hannergrond Tab op.</string>
@@ -1461,4 +1464,13 @@
     <string name="settings_menu_bottom_sheet_toolbar_summary">Wiel fënnef Aktioune vu lénks no riets. Scho zougewise Aktioune wiesselen d’Plaz. Eng eidel Plaz verstoppt de Knäppchen.</string>
     <string name="settings_menu_bottom_sheet_toolbar_slot">Aktioun %1$d</string>
     <string name="settings_menu_bottom_sheet_toolbar_empty">Eidel Plaz</string>
+    <string name="reader_settings">Liesastellungen</string>
+    <string name="reader_compact_controls">Kompakt Steierung</string>
+    <string name="reader_expand_controls">URL a Steierung weisen</string>
+    <string name="reader_hide_controls">Steierung ganz verstoppen</string>
+    <string name="reader_hidden_controls_hint">Android-Zeréck weist d’Steierung erëm.</string>
+    <string name="reader_continue_reading">Weiderliesen</string>
+    <string name="reader_font_serif">Serif</string>
+    <string name="reader_font_sans">Sans</string>
+    <string name="reader_theme_light">Hell</string>
 </resources>

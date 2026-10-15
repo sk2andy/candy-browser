@@ -98,6 +98,19 @@ internal class BrowserPullToRefreshLayout(
         return intercepted
     }
 
+    override fun onTouchEvent(event: MotionEvent): Boolean {
+        val handled = super.onTouchEvent(event)
+        if (event.actionMasked == MotionEvent.ACTION_CANCEL && isEnabled && !isRefreshing) {
+            gestureOnRefresh = null
+            gestureDirection = BrowserPullGestureDirection.Undecided
+            // SwipeRefreshLayout 1.2 leaves a dragged indicator visible on Cancel.
+            // Its disable path resets that transient UI while preserving our offsets.
+            super.setEnabled(false)
+            super.setEnabled(true)
+        }
+        return handled
+    }
+
     fun update(
         enabled: Boolean,
         refreshing: Boolean,

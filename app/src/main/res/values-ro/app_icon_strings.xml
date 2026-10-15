@@ -7,4 +7,6 @@
     <string name="app_icon_lemon">Lămâie</string>
     <string name="app_icon_donut">Gogoașă</string>
     <string name="app_icon_jelly_beans">Jeleuri</string>
+    <string name="app_icon_outline_light">Contur pe fundal deschis</string>
+    <string name="app_icon_outline_dark">Contur pe fundal închis</string>
 </resources>

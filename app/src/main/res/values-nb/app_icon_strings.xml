@@ -7,4 +7,6 @@
     <string name="app_icon_lemon">Sitron</string>
     <string name="app_icon_donut">Smultring</string>
     <string name="app_icon_jelly_beans">Gelébønner</string>
+    <string name="app_icon_outline_light">Lys kontur</string>
+    <string name="app_icon_outline_dark">Mørk kontur</string>
 </resources>

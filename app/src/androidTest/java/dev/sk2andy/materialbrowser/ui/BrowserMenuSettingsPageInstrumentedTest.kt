@@ -132,7 +132,7 @@ class BrowserMenuSettingsPageInstrumentedTest {
     fun presentationAndSectionChoicesPreserveCustomActionLocations() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         var currentLayout = BrowserMenuLayoutRules.update(
-            BrowserMenuLayout.Default,
+            BrowserMenuLayout.Default.copy(presentation = BrowserMenuPresentation.Floating),
             BrowserMenuEntry.Share,
             BrowserMenuLocation.Nowhere,
         )

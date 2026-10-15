@@ -30,6 +30,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
@@ -37,6 +38,8 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import dev.sk2andy.materialbrowser.shared.browser.BrowserFeatureMenuItem
@@ -143,7 +146,7 @@ fun BrowserMenuBottomSheetContent(
                                     .then(item.testTagModifier()),
                             )
                         } else {
-                            BrowserMainMenuLibraryAction(
+                            SheetShortcutAction(
                                 item = item,
                                 resources = resources,
                                 effects = effects,
@@ -282,6 +285,54 @@ private fun SheetSectionTitle(title: String) {
         style = MaterialTheme.typography.labelLarge,
         fontWeight = FontWeight.SemiBold,
     )
+}
+
+@Composable
+private fun SheetShortcutAction(
+    item: BrowserFeatureMenuItem,
+    resources: BrowserMainMenuResources,
+    effects: BrowserMainMenuEffects,
+    onClick: () -> Unit,
+    modifier: Modifier,
+) {
+    val colors = MaterialTheme.colorScheme
+    val actionContentColor = if (item.enabled) colors.onSurface else colors.onSurface.copy(alpha = 0.38f)
+    Surface(
+        onClick = onClick,
+        modifier = modifier.heightIn(min = 80.dp),
+        enabled = item.enabled,
+        shape = RoundedCornerShape(0.dp),
+        color = Color.Transparent,
+        contentColor = actionContentColor,
+    ) {
+        Column(
+            modifier = Modifier.padding(vertical = 6.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
+            Surface(
+                shape = CircleShape,
+                color = effects.containerColor(colors.surfaceContainerLowest),
+                contentColor = actionContentColor,
+            ) {
+                Box(
+                    modifier = Modifier.size(40.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    resources.icon(item, Modifier.size(effects.style.toolbarIconSize))
+                }
+            }
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = resources.label(item),
+                minLines = 2,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                style = MaterialTheme.typography.labelSmall,
+                textAlign = TextAlign.Center,
+            )
+        }
+    }
 }
 
 @Composable

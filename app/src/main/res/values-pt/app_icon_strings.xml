@@ -7,4 +7,6 @@
     <string name="app_icon_lemon">Limão</string>
     <string name="app_icon_donut">Donut</string>
     <string name="app_icon_jelly_beans">Jujubas</string>
+    <string name="app_icon_outline_light">Contorno claro</string>
+    <string name="app_icon_outline_dark">Contorno escuro</string>
 </resources>

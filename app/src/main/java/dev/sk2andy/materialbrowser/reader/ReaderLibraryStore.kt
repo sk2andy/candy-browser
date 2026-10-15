@@ -111,7 +111,8 @@ class ReaderLibraryStore internal constructor(private val file: AtomicFile) {
             JSONObject()
                 .put("fontScale", state.settings.fontScale.toDouble())
                 .put("theme", state.settings.theme.name)
-                .put("textAlignment", state.settings.textAlignment.name),
+                .put("textAlignment", state.settings.textAlignment.name)
+                .put("font", state.settings.font.name),
         )
         .put(
             "progress",
@@ -159,10 +160,13 @@ class ReaderLibraryStore internal constructor(private val file: AtomicFile) {
         if (root.optInt("version") != CURRENT_VERSION) return ReaderLibraryState()
         val settingsJson = root.optJSONObject("settings") ?: JSONObject()
         val settings = ReaderSettings(
+            font = runCatching {
+                ReaderFont.valueOf(settingsJson.optString("font", ReaderFont.Sans.name))
+            }.getOrDefault(ReaderFont.Sans),
             fontScale = settingsJson.optDouble("fontScale", 1.0).toFloat().coerceIn(0.8f, 1.6f),
             theme = runCatching {
-                ReaderTheme.valueOf(settingsJson.optString("theme", ReaderTheme.System.name))
-            }.getOrDefault(ReaderTheme.System),
+                ReaderTheme.valueOf(settingsJson.optString("theme", ReaderTheme.Paper.name))
+            }.getOrDefault(ReaderTheme.Paper),
             textAlignment = runCatching {
                 ReaderTextAlignment.valueOf(
                     settingsJson.optString(

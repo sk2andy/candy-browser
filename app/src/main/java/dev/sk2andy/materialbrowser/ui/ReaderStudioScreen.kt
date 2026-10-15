@@ -1,13 +1,19 @@
 package dev.sk2andy.materialbrowser.ui
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.core.view.WindowInsetsControllerCompat
 import dev.sk2andy.materialbrowser.R
+import dev.sk2andy.materialbrowser.findActivity
 import dev.sk2andy.materialbrowser.reader.ReaderExtractionResult
 import dev.sk2andy.materialbrowser.reader.ReaderLibraryRepository
 import dev.sk2andy.materialbrowser.reader.ReaderSpeechController
@@ -32,23 +38,43 @@ internal fun ReaderStudioScreen(
     onOpenLink: (String) -> Unit,
 ) {
     val context = LocalContext.current
-    SharedReaderStudioScreen(
-        result = result,
-        sourceUrl = sourceUrl,
-        isPrivate = isPrivate,
-        repository = remember(repository, sourceProfileId) { repository.forProfile(sourceProfileId) },
-        resources = AndroidReaderStudioResources,
-        speechFactory = { ReaderSpeechController(context) },
-        onRetry = onRetry,
-        onDismiss = onDismiss,
-        onOpenOriginal = onOpenOriginal,
-        onOpenLink = onOpenLink,
-    )
+    val backState = rememberNativeScreenBackState()
+    Box(
+        modifier = Modifier.predictiveBackSurface(
+            progress = backState.progress.value,
+            swipeEdgeSign = backState.swipeEdgeSign,
+        ),
+    ) {
+        SharedReaderStudioScreen(
+            result = result,
+            sourceUrl = sourceUrl,
+            isPrivate = isPrivate,
+            repository = remember(repository, sourceProfileId) { repository.forProfile(sourceProfileId) },
+            resources = AndroidReaderStudioResources,
+            speechFactory = { ReaderSpeechController(context) },
+            onRetry = onRetry,
+            onDismiss = onDismiss,
+            onOpenOriginal = onOpenOriginal,
+            onOpenLink = onOpenLink,
+            backHandler = { enabled, onBack ->
+                NativeScreenBackHandler(state = backState, enabled = enabled, onBack = onBack)
+            },
+            systemBarAppearance = { darkIcons -> ReaderSystemBarAppearance(darkIcons) },
+        )
+    }
 }
 
-private object AndroidReaderStudioResources : ReaderStudioResources {
+internal object AndroidReaderStudioResources : ReaderStudioResources {
     @Composable
     override fun text(label: ReaderStudioLabel, value: Int?): String = when (label) {
+        ReaderStudioLabel.Settings -> stringResource(R.string.reader_settings)
+        ReaderStudioLabel.CompactControls -> stringResource(R.string.reader_compact_controls)
+        ReaderStudioLabel.ExpandControls -> stringResource(R.string.reader_expand_controls)
+        ReaderStudioLabel.HideControls -> stringResource(R.string.reader_hide_controls)
+        ReaderStudioLabel.HiddenControlsHint -> stringResource(R.string.reader_hidden_controls_hint)
+        ReaderStudioLabel.ContinueReading -> stringResource(R.string.reader_continue_reading)
+        ReaderStudioLabel.FontSerif -> stringResource(R.string.reader_font_serif)
+        ReaderStudioLabel.FontSans -> stringResource(R.string.reader_font_sans)
         ReaderStudioLabel.Close -> stringResource(R.string.reader_close)
         ReaderStudioLabel.Title -> stringResource(R.string.reader_studio_title)
         ReaderStudioLabel.Article -> stringResource(R.string.reader_article)
@@ -66,6 +92,7 @@ private object AndroidReaderStudioResources : ReaderStudioResources {
         ReaderStudioLabel.SaveOffline -> stringResource(R.string.reader_save_offline)
         ReaderStudioLabel.OfflineShort -> stringResource(R.string.reader_offline_short)
         ReaderStudioLabel.ThemeSystem -> stringResource(R.string.reader_theme_system)
+        ReaderStudioLabel.ThemeLight -> stringResource(R.string.reader_theme_light)
         ReaderStudioLabel.ThemePaper -> stringResource(R.string.reader_theme_paper)
         ReaderStudioLabel.ThemeNight -> stringResource(R.string.reader_theme_night)
         ReaderStudioLabel.FontDecrease -> stringResource(R.string.reader_font_decrease)
@@ -106,5 +133,24 @@ private object AndroidReaderStudioResources : ReaderStudioResources {
             contentDescription = contentDescription,
             modifier = modifier,
         )
+    }
+}
+
+@Composable
+private fun ReaderSystemBarAppearance(darkIcons: Boolean) {
+    val view = LocalView.current
+    val window = view.context.findActivity()?.window ?: return
+    val controller = WindowInsetsControllerCompat(window, window.decorView)
+    DisposableEffect(window) {
+        val previousStatus = controller.isAppearanceLightStatusBars
+        val previousNavigation = controller.isAppearanceLightNavigationBars
+        onDispose {
+            controller.isAppearanceLightStatusBars = previousStatus
+            controller.isAppearanceLightNavigationBars = previousNavigation
+        }
+    }
+    SideEffect {
+        controller.isAppearanceLightStatusBars = darkIcons
+        controller.isAppearanceLightNavigationBars = darkIcons
     }
 }

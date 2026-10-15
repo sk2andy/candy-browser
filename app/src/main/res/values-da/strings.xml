@@ -579,6 +579,9 @@
     <string name="settings_link_long_press_action">Langpresset link handling</string>
     <string name="settings_address_bar_long_press_title">Addresselinje- handling ved langt tryk</string>
     <string name="settings_address_bar_long_press_summary">Vælg, hvad der sker, når du rører og holder adresselinjen</string>
+    <string name="settings_link_peek_swipe_action">Handling ved stryg til højre i Link Peek</string>
+    <string name="settings_link_peek_swipe_action_summary">Stryg til højre for at udføre den valgte handling. Stryg til venstre for at lukke Link Peek.</string>
+    <string name="action_open_link_new_stack">Åbn i en ny fanestabel</string>
     <string name="settings_link_peek_actions_title">Link Peek-knapper</string>
     <string name="settings_link_peek_actions_summary">Vælg og arrangér op til tre hurtige handlinger</string>
     <string name="settings_link_peek_actions_instructions">Langtryk og træk handlinger i tomme slots. Træk en tilbage til Tilgængelige handlinger for at efterlade sin plads tom. Pulsing + bliver altid i den tredje slot og åbner en baggrundsfane.</string>
@@ -1461,4 +1464,13 @@
     <string name="settings_menu_bottom_sheet_toolbar_summary">Vælg fem handlinger fra venstre mod højre. Allerede tildelte handlinger bytter plads. En tom plads skjuler knappen.</string>
     <string name="settings_menu_bottom_sheet_toolbar_slot">Handling %1$d</string>
     <string name="settings_menu_bottom_sheet_toolbar_empty">Tom plads</string>
+    <string name="reader_settings">Læseindstillinger</string>
+    <string name="reader_compact_controls">Kompakte kontroller</string>
+    <string name="reader_expand_controls">Vis URL og kontroller</string>
+    <string name="reader_hide_controls">Skjul alle kontroller</string>
+    <string name="reader_hidden_controls_hint">Tilbage i Android viser kontrollerne igen.</string>
+    <string name="reader_continue_reading">Læs videre</string>
+    <string name="reader_font_serif">Serif</string>
+    <string name="reader_font_sans">Sans</string>
+    <string name="reader_theme_light">Lys</string>
 </resources>

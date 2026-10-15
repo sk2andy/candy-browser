@@ -588,6 +588,9 @@
     <string name="settings_link_long_press_action">Acțiunea de apăsare lungă a legăturii</string>
     <string name="settings_address_bar_long_press_title">Actiune cu apăsarea lungă pe bara de adrese</string>
     <string name="settings_address_bar_long_press_summary">Alegeţi ce se întâmplă când atingeţi şi ţineţi strâns bara de adrese</string>
+    <string name="settings_link_peek_swipe_action">Acțiune la glisarea spre dreapta în Link Peek</string>
+    <string name="settings_link_peek_swipe_action_summary">Glisați spre dreapta pentru a efectua acțiunea aleasă. Glisați spre stânga pentru a închide Link Peek.</string>
+    <string name="action_open_link_new_stack">Deschide într-un nou grup de file</string>
     <string name="settings_link_peek_actions_title">Butoane Link Peek</string>
     <string name="settings_link_peek_actions_summary">Alegeți și aranjați până la trei acțiuni rapide</string>
     <string name="settings_link_peek_actions_instructions">Apăsați pe distanță și trageți acțiunile în locuri goale. Trage-o înapoi la Acțiuni disponibile pentru a-i lăsa slotul gol. Pulsarea + rămâne întotdeauna în cel de-al treilea slot și deschide o filă de fundal.</string>
@@ -1477,4 +1480,13 @@
     <string name="settings_menu_bottom_sheet_toolbar_summary">Alege cinci acțiuni de la stânga la dreapta. Acțiunile deja atribuite își schimbă locurile. Un loc gol ascunde butonul.</string>
     <string name="settings_menu_bottom_sheet_toolbar_slot">Acțiunea %1$d</string>
     <string name="settings_menu_bottom_sheet_toolbar_empty">Loc gol</string>
+    <string name="reader_settings">Setări de lectură</string>
+    <string name="reader_compact_controls">Comenzi compacte</string>
+    <string name="reader_expand_controls">Arată URL și comenzile</string>
+    <string name="reader_hide_controls">Ascunde toate comenzile</string>
+    <string name="reader_hidden_controls_hint">Butonul Înapoi din Android arată din nou comenzile.</string>
+    <string name="reader_continue_reading">Continuă lectura</string>
+    <string name="reader_font_serif">Serif</string>
+    <string name="reader_font_sans">Sans</string>
+    <string name="reader_theme_light">Luminos</string>
 </resources>

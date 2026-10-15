@@ -745,6 +745,8 @@ class BrowserController(
         private set
     var linkLongPressAction by mutableStateOf(LinkLongPressAction.LinkPeek)
         private set
+    var linkPeekSwipeAction by mutableStateOf(LinkPeekSwipeAction.OpenBackground)
+        private set
     var addressBarLongPressAction by mutableStateOf(AddressBarLongPressAction.Default)
         private set
     var searxngSettings by mutableStateOf(SearxngSettings())
@@ -1524,7 +1526,8 @@ class BrowserController(
     private val externalAppLookupExecutor = Executors.newSingleThreadExecutor { task ->
         Thread(task, "external-app-lookup")
     }
-    private var automaticExternalAppRequestId = 0L
+    private var nextAutomaticExternalAppRequestId = 0L
+    private val pendingAutomaticExternalAppRequests = mutableMapOf<String, Long>()
     private val geckoFileUploadStager = GeckoFileUploadStager(activity.applicationContext)
     private val profileWallpaperExecutor = Executors.newSingleThreadExecutor { task ->
         Thread(task, "profile-wallpaper")
@@ -2616,6 +2619,7 @@ class BrowserController(
         searchEngine = store.loadSearchEngine()
         pageTranslationProvider = store.loadPageTranslationProvider()
         linkLongPressAction = store.loadLinkLongPressAction()
+        linkPeekSwipeAction = store.loadLinkPeekSwipeAction()
         addressBarLongPressAction = store.loadAddressBarLongPressAction()
         linkPeekActionLayout = store.loadLinkPeekActionLayout()
         browserMenuLayout = store.loadBrowserMenuLayout()
@@ -4957,6 +4961,7 @@ class BrowserController(
         externalLinkPreviewState = null
         runtime?.policyTab?.id?.let { policyTabId ->
             releaseDownloadChoicesForSource(policyTabId)
+            pendingAutomaticExternalAppRequests.remove(policyTabId)
             externalNavigationGrants.remove(policyTabId)
             if (pendingExternalNavigationRollback?.tabId == policyTabId) {
                 pendingExternalNavigationRollback = null
@@ -6075,6 +6080,7 @@ class BrowserController(
         openerTabId: String? = null,
         isIncognito: Boolean? = null,
         transientPopup: Boolean = false,
+        showContentActionFeedback: Boolean = true,
     ): String? {
         pruneStaleTabs()
         if (tabs.size >= MAX_TABS) {
@@ -6118,7 +6124,7 @@ class BrowserController(
         }
         if (transientPopup) transientPopupTabIds += tab.id
         persist()
-        if (!transientPopup) {
+        if (!transientPopup && showContentActionFeedback) {
             contentActions.requestAddressBarPulse()
             contentActions.dismiss()
         }
@@ -7049,6 +7055,13 @@ class BrowserController(
     val canPersistContextLink: Boolean
         get() = contextLinkSourceTab()?.isIncognito == false
 
+    val canOpenContextLinkInNewStack: Boolean
+        get() = contextLinkSourceTab()?.let { sourceTab ->
+            !isSessionEphemeralTab(sourceTab.id) &&
+                hasTabCapacity() &&
+                TabStackRules.removeTab(tabStacks, sourceTab.id).size < TabStackRules.MAX_STACKS
+        } == true
+
     val contextLinkSourceTabId: String?
         get() = contextLinkSourceTab()?.id
 
@@ -7120,6 +7133,33 @@ class BrowserController(
             return true
         }
         return false
+    }
+
+    fun openContextLinkInNewStack(url: String): Boolean {
+        val sourceTab = contextLinkSourceTab() ?: return false
+        if (!canOpenContextLinkInNewStack) return false
+        val safeUrl = BrowserUriPolicy.normalizeHttpUrl(url) ?: return false
+        val stackName = Uri.parse(safeUrl).host ?: return false
+        val tabId = createBackgroundTab(
+            initialUrl = safeUrl,
+            openerTabId = sourceTab.id,
+            showContentActionFeedback = false,
+        ) ?: return false
+        if (sourceTab.isPinned) setTabPinned(tabId, isPinned = true)
+        val stackId = createTabStack(
+            tabIds = listOf(sourceTab.id, tabId),
+            name = stackName,
+            color = TabStackColor.Grape,
+            previewTabId = tabId,
+        )
+        if (stackId == null) {
+            if (sourceTab.isPinned) setTabPinned(tabId, isPinned = false)
+            closeTab(tabId)
+            return false
+        }
+        contentActions.dismiss()
+        contentActions.requestLinkPeekNewTabPulse()
+        return true
     }
 
     fun openContextLinkInForeground(url: String): Boolean {
@@ -7325,7 +7365,9 @@ class BrowserController(
         grant: ExternalNavigationGrant?,
         isRedirect: Boolean,
     ) {
-        val requestId = ++automaticExternalAppRequestId
+        val policyTabId = source.policyTabId()
+        val requestId = ++nextAutomaticExternalAppRequestId
+        pendingAutomaticExternalAppRequests[policyTabId] = requestId
         val sourceNavigationGeneration = currentExternalAppSourceNavigationGeneration(source)
         val sourcePageUrl = currentExternalAppSourcePageUrl(source)
         val sourceDocumentGeneration =
@@ -7343,7 +7385,8 @@ class BrowserController(
             isRedirect = isRedirect,
         )
         fun completeLaunch(prepared: PreparedWebAppLaunch?) {
-            if (requestId != automaticExternalAppRequestId) return
+            if (pendingAutomaticExternalAppRequests[policyTabId] != requestId) return
+            pendingAutomaticExternalAppRequests.remove(policyTabId)
             if (
                 destroyed ||
                 externalAppLinkHandling != ExternalAppLinkHandling.Automatic ||
@@ -7873,6 +7916,7 @@ class BrowserController(
     }
 
     private fun clearExternalNavigationAuthorization(tabId: String) {
+        pendingAutomaticExternalAppRequests.remove(tabId)
         browserEngineNavigationRequestGenerations[tabId]?.let { generation ->
             browserEngineNavigationRequestGenerations[tabId] = generation + 1L
         }
@@ -9792,6 +9836,12 @@ class BrowserController(
         store.saveLinkLongPressAction(action)
     }
 
+    fun updateLinkPeekSwipeAction(action: LinkPeekSwipeAction) {
+        if (linkPeekSwipeAction == action) return
+        linkPeekSwipeAction = action
+        store.saveLinkPeekSwipeAction(action)
+    }
+
     fun updateAddressBarLongPressAction(action: AddressBarLongPressAction) {
         if (addressBarLongPressAction == action) return
         addressBarLongPressAction = action
@@ -11553,6 +11603,7 @@ class BrowserController(
         webContentStatusBarBackdrops.clear()
         firefoxExtensionOptionsTabs.clear()
         committedRecallPages.clear()
+        pendingAutomaticExternalAppRequests.clear()
         externalNavigationGrants.clear()
         pendingInitialExternalNavigationGrants.clear()
         navigationSourceTabs.clear()
@@ -13890,7 +13941,7 @@ class BrowserController(
                     return@probeTextInputOcclusion
                 }
                 if (result == TextInputOcclusionProbeResult.Occluded) {
-                    parkAddressBarOnRight()
+                    updateAddressBarDocked(true)
                     AppLogging.record(
                         if (mode == TextInputOcclusionProbeMode.FocusedTextInput) {
                             AppLogEvent.AddressBarAutoParkedForFocusedInput
@@ -14163,6 +14214,7 @@ class BrowserController(
         releaseDownloadChoicesForSource(tabId)
         nativePopupSessions.remove(tabId)
         removePendingInitialBrowserEngineNavigation(tabId)
+        pendingAutomaticExternalAppRequests.remove(tabId)
         browserEngineNavigationRequestGenerations.remove(tabId)
         browserEngineDocumentGenerations.remove(tabId)
         manuallyUnparkedAddressBarTabIds.remove(tabId)

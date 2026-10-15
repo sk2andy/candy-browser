@@ -10,11 +10,13 @@ GitHub Release body. This keeps the product presentation and the public release 
 | Source | `release-notes/<candy.versionName>.md` |
 | Language | English |
 | GitHub Actions | The `changelog` workflow input is required and must match the versioned path |
+| Nightly notes | Scheduled Nightly builds generate version-matched English notes and bundle the same Markdown published in their GitHub prerelease |
 | Android package | Markdown and referenced screenshots are bundled as offline assets |
 | Presentation | Shown once on the first regular launcher start after an app update |
 | Fresh install | Uses only the normal onboarding; bundled notes are not queued afterward |
 | Startup order | Resolve onboarding before history lifecycle initialization writes browser-session preferences; first-run history markers must not trigger existing-user migration |
 | Update dialog | **Release notes** opens the available version's GitHub Release in a new Candy tab and dismisses the dialog only when opening succeeds; **Download update** and **Later** remain separate actions |
+| Update channels | Stable builds use GitHub's latest stable release; Nightly builds inspect a bounded release list and accept only Nightly prereleases for their installed variant |
 | Persistence | Highest presented or onboarding-covered Android `versionCode`, stored in dedicated preferences |
 
 The build fails when notes are missing, empty, too large, named for another version, or reference an
@@ -59,3 +61,35 @@ is generated.
 Version `0.33` is the bootstrap exception: its tag and GitHub Release predate this shared-note
 contract, while `release-notes/0.33.md` seeds the first bundled What’s New page. Starting with the
 next release, prepare the shared Markdown file before tagging and publish it unchanged.
+
+## Nightly publication
+
+| Concern | Contract |
+| --- | --- |
+| Schedule | Daily at `00:00 UTC`, fixed `02:00 CEST`; `01:00 CET` during winter. GitHub scheduling may delay the actual start |
+| Source | Exact checked-out `main` commit |
+| Skip condition | Checked-out SHA matches the tag of the last successfully published Nightly |
+| Tag and version | Immutable `v<base-version>-nightly.<UTC YYYYMMDDHHmm>` tag; APK version name omits leading `v`; a stable release-candidate suffix is replaced by the Nightly suffix |
+| Version code | UTC minutes since `2020-01-01T00:00:00Z`, independent of the stable version code |
+| Signing | Existing release signing key and pinned certificate; optimized release-derived build types |
+| GitHub publication | Prerelease, explicitly excluded from the latest stable release; publish after signed APK checks succeed |
+| Variants | Standard universal, standard ARM64, FOSS, System WebView, and User CA |
+| Asset names | `CandyBrowser-v<base-version>-nightly.<UTC YYYYMMDDHHmm>-<variant-suffix>.apk` plus SHA-256 checksums; suffixes match stable APKs |
+| Package IDs | Stable variant ID plus `.nightly`; separate app data and launcher names |
+| Update ordering | Nightly timestamp determines recency, independently of the base version |
+| FOSS updates | In-app GitHub updater remains disabled; Obtainium can track stable or Nightly FOSS APKs |
+| Stable FOSS assets | Ordinary GitHub releases use `-foss-github-release.apk`; the separate reproducible F-Droid reference retains `-foss-release.apk`. Stable Obtainium accepts both compatible package/signature choices; Nightly FOSS uses only `-foss-release.apk` |
+| Google Play | No Nightly publication |
+| Failure | Failed builds do not advance the successfully published SHA marker; later runs retry changed `main` |
+
+The [download and Obtainium guide](../../README.md#nightly-builds) lists each package and provides
+filtered setup links for every variant and channel. Nightly links enable prereleases and filter
+Nightly release titles; stable links exclude prereleases. Both fix the expected APK suffix so an
+update cannot switch between FOSS, System WebView, standard, and User CA packages.
+
+Regenerate the Obtainium table with `python3 scripts/obtainium_links.py`. Verify the encoded settings
+and variant isolation in the actual README links with `python3 scripts/test_obtainium_links.py`.
+
+Nightly notes are generated for that build rather than using stable notes with another version
+header. They follow the same supported Markdown and offline asset validation rules. The generated
+file is the exact GitHub prerelease body and packaged What's New content.

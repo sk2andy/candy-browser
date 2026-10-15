@@ -569,6 +569,9 @@
     <string name="settings_link_long_press_action">긴 압력 연결 동작</string>
     <string name="settings_address_bar_long_press_title">길게 누르면 주소 표시줄 동작</string>
     <string name="settings_address_bar_long_press_summary">주소 표시줄을 누르고 누르면 어떤 일이 일어나는지 선택하세요</string>
+    <string name="settings_link_peek_swipe_action">Link Peek에서 오른쪽으로 스와이프할 때의 동작</string>
+    <string name="settings_link_peek_swipe_action_summary">오른쪽으로 스와이프하면 선택한 동작을 실행합니다. 왼쪽으로 스와이프하면 Link Peek을 닫습니다.</string>
+    <string name="action_open_link_new_stack">새 탭 그룹에서 열기</string>
     <string name="settings_link_peek_actions_title">Link Peek 버튼</string>
     <string name="settings_link_peek_actions_summary">최대 3개의 빠른 동작을 선택하고 구성합니다.</string>
     <string name="settings_link_peek_actions_instructions">롱프레스와 드래그 액션을 빈 슬롯에 넣습니다. 1개를 다시 사용할 수 있는 동작으로 끌고 들어가면 슬롯이 비어있습니다. 펄싱 +은 항상 세 번째 슬롯에 머물러 배경 탭을 열고 있습니다.</string>
@@ -1444,4 +1447,13 @@
     <string name="settings_menu_bottom_sheet_toolbar_summary">왼쪽에서 오른쪽으로 다섯 가지 작업을 선택하세요. 이미 지정된 작업은 위치를 서로 바꿉니다. 빈 슬롯은 버튼을 숨깁니다.</string>
     <string name="settings_menu_bottom_sheet_toolbar_slot">작업 %1$d</string>
     <string name="settings_menu_bottom_sheet_toolbar_empty">빈 슬롯</string>
+    <string name="reader_settings">읽기 설정</string>
+    <string name="reader_compact_controls">간단한 컨트롤</string>
+    <string name="reader_expand_controls">URL 및 컨트롤 표시</string>
+    <string name="reader_hide_controls">컨트롤 모두 숨기기</string>
+    <string name="reader_hidden_controls_hint">Android 뒤로 버튼을 누르면 컨트롤이 다시 표시됩니다.</string>
+    <string name="reader_continue_reading">계속 읽기</string>
+    <string name="reader_font_serif">세리프</string>
+    <string name="reader_font_sans">산세리프</string>
+    <string name="reader_theme_light">밝게</string>
 </resources>

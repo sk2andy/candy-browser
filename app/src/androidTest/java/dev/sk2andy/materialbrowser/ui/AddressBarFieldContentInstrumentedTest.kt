@@ -13,6 +13,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performImeAction
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.Density
@@ -62,11 +63,40 @@ class AddressBarFieldContentInstrumentedTest {
     }
 
     @Test
-    fun goSubmitsTypedAddressWithoutAcceptingGhostCompletion() {
+    fun goAcceptsVisibleDomainCompletion() {
         var submittedAddress: String? = null
         setAddressBarContent(
             editing = true,
-            editValue = TextFieldValue("git"),
+            editValue = TextFieldValue("git", selection = TextRange(3)),
+            ghostCompletion = "github.com",
+            onSubmitAddress = { submittedAddress = it },
+        )
+
+        composeRule.onNodeWithTag(EditorTag).performImeAction()
+
+        composeRule.runOnIdle { assertEquals("github.com", submittedAddress) }
+    }
+
+    @Test
+    fun goPreservesSearchWithoutDomainCompletion() {
+        var submittedAddress: String? = null
+        setAddressBarContent(
+            editing = true,
+            editValue = TextFieldValue("git tutorial", selection = TextRange(12)),
+            onSubmitAddress = { submittedAddress = it },
+        )
+
+        composeRule.onNodeWithTag(EditorTag).performImeAction()
+
+        composeRule.runOnIdle { assertEquals("git tutorial", submittedAddress) }
+    }
+
+    @Test
+    fun goIgnoresCompletionAfterCursorMoves() {
+        var submittedAddress: String? = null
+        setAddressBarContent(
+            editing = true,
+            editValue = TextFieldValue("git", selection = TextRange(1)),
             ghostCompletion = "github.com",
             onSubmitAddress = { submittedAddress = it },
         )

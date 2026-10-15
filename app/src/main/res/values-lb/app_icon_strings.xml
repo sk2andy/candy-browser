@@ -7,4 +7,6 @@
     <string name="app_icon_lemon">Zitroun</string>
     <string name="app_icon_donut">Donut</string>
     <string name="app_icon_jelly_beans">Jelly Beans</string>
+    <string name="app_icon_outline_light">Kontur op hellem Hannergrond</string>
+    <string name="app_icon_outline_dark">Kontur op donkelem Hannergrond</string>
 </resources>

@@ -599,6 +599,9 @@
     <string name="settings_link_long_press_action">Действие при удержании ссылки</string>
     <string name="settings_address_bar_long_press_title">Действие при удержании адресной строки</string>
     <string name="settings_address_bar_long_press_summary">Выберите действие при нажатии и удержании адресной строки</string>
+    <string name="settings_link_peek_swipe_action">Действие при смахивании вправо в Link Peek</string>
+    <string name="settings_link_peek_swipe_action_summary">Смахните вправо, чтобы выполнить выбранное действие. Смахните влево, чтобы закрыть Link Peek.</string>
+    <string name="action_open_link_new_stack">Открыть в новой группе вкладок</string>
     <string name="settings_link_peek_actions_title">Кнопки Link Peek</string>
     <string name="settings_link_peek_actions_summary">Выберите и расположите до трёх быстрых действий</string>
     <string name="settings_link_peek_actions_instructions">Нажмите и удерживайте действие, затем перетащите его на свободное место. Верните его в доступные действия, чтобы освободить место. Пульсирующий + всегда находится на третьем месте и открывает фоновую вкладку.</string>
@@ -1495,4 +1498,13 @@
     <string name="settings_menu_bottom_sheet_toolbar_summary">Выберите пять действий слева направо. Уже назначенные действия меняются местами. Пустое место скрывает кнопку.</string>
     <string name="settings_menu_bottom_sheet_toolbar_slot">Действие %1$d</string>
     <string name="settings_menu_bottom_sheet_toolbar_empty">Пустое место</string>
+    <string name="reader_settings">Настройки чтения</string>
+    <string name="reader_compact_controls">Компактное управление</string>
+    <string name="reader_expand_controls">Показать URL и управление</string>
+    <string name="reader_hide_controls">Полностью скрыть управление</string>
+    <string name="reader_hidden_controls_hint">Кнопка «Назад» Android вернёт управление.</string>
+    <string name="reader_continue_reading">Продолжить чтение</string>
+    <string name="reader_font_serif">С засечками</string>
+    <string name="reader_font_sans">Без засечек</string>
+    <string name="reader_theme_light">Светлая</string>
 </resources>

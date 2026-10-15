@@ -596,6 +596,9 @@
     <string name="settings_link_long_press_action">Działanie po przytrzymaniu linku</string>
     <string name="settings_address_bar_long_press_title">Działanie po przytrzymaniu paska adresu</string>
     <string name="settings_address_bar_long_press_summary">Wybierz działanie po dotknięciu i przytrzymaniu paska adresu</string>
+    <string name="settings_link_peek_swipe_action">Działanie po przesunięciu w prawo w Link Peek</string>
+    <string name="settings_link_peek_swipe_action_summary">Przesuń w prawo, aby wykonać wybrane działanie. Przesuń w lewo, aby zamknąć Link Peek.</string>
+    <string name="action_open_link_new_stack">Otwórz w nowym stosie kart</string>
     <string name="settings_link_peek_actions_title">Przyciski Link Peek</string>
     <string name="settings_link_peek_actions_summary">Wybierz i ułóż maksymalnie trzy szybkie działania</string>
     <string name="settings_link_peek_actions_instructions">Przytrzymaj i przeciągnij działania do pustych miejsc. Przeciągnij je z powrotem do dostępnych działań, aby zwolnić miejsce. Pulsujący + zawsze pozostaje na trzeciej pozycji i otwiera kartę w tle.</string>
@@ -1492,4 +1495,13 @@
     <string name="settings_menu_bottom_sheet_toolbar_summary">Wybierz pięć działań od lewej do prawej. Przypisane już działania zamieniają się miejscami. Puste miejsce ukrywa przycisk.</string>
     <string name="settings_menu_bottom_sheet_toolbar_slot">Działanie %1$d</string>
     <string name="settings_menu_bottom_sheet_toolbar_empty">Puste miejsce</string>
+    <string name="reader_settings">Ustawienia czytania</string>
+    <string name="reader_compact_controls">Kompaktowe sterowanie</string>
+    <string name="reader_expand_controls">Pokaż URL i sterowanie</string>
+    <string name="reader_hide_controls">Ukryj całe sterowanie</string>
+    <string name="reader_hidden_controls_hint">Przycisk Wstecz Androida ponownie pokaże sterowanie.</string>
+    <string name="reader_continue_reading">Czytaj dalej</string>
+    <string name="reader_font_serif">Szeryfowa</string>
+    <string name="reader_font_sans">Bezszeryfowa</string>
+    <string name="reader_theme_light">Jasny</string>
 </resources>

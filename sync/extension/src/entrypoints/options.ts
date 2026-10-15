@@ -62,14 +62,17 @@ const saveLockPolicyButton = element<HTMLButtonElement>("save-lock-policy");
 
 function renderLockPolicy(): void {
   element<HTMLElement>("idle-lock-field").hidden = lockPolicyInput.value !== "idle";
+  idleLockInput.disabled = lockPolicyInput.disabled || lockPolicyInput.value !== "idle";
   element<HTMLElement>("persistent-unlock-warning").hidden = lockPolicyInput.value !== "never";
 }
 
 function lockSettings() {
   const policy = lockPolicyInput.value;
   const minutes = Number(idleLockInput.value);
-  if (!isLockPolicy(policy) || !isIdleLockMinutes(minutes)) throw new Error("Choose 1–1440 whole minutes for the inactivity timeout.");
-  return { lockPolicy: policy, idleLockMinutes: minutes };
+  if (!isLockPolicy(policy) || (policy === "idle" && !isIdleLockMinutes(minutes))) {
+    throw new Error("Choose 1–1440 whole minutes for the inactivity timeout.");
+  }
+  return { lockPolicy: policy, idleLockMinutes: isIdleLockMinutes(minutes) ? minutes : DEFAULT_IDLE_LOCK_MINUTES };
 }
 
 async function backgroundRequest(message: Record<string, unknown>): Promise<void> {
@@ -88,7 +91,7 @@ function selection(): SyncSelection {
 function setBusy(busy: boolean): void {
   for (const button of [connectButton, unlockButton, saveSelectionButton, syncNowButton, lockButton, saveLockPolicyButton]) button.disabled = busy;
   lockPolicyInput.disabled = busy;
-  idleLockInput.disabled = busy;
+  idleLockInput.disabled = busy || lockPolicyInput.value !== "idle";
 }
 
 function showFeedback(message: string, kind: "error" | "success" | "neutral" = "neutral"): void {
