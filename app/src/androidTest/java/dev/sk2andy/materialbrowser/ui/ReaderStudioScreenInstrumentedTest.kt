@@ -14,6 +14,8 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.click
 import androidx.compose.ui.test.swipeUp
+import androidx.compose.ui.test.swipeDown
+import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.performScrollTo
 import androidx.test.espresso.Espresso
 import androidx.compose.ui.semantics.SemanticsActions
@@ -137,7 +139,7 @@ class ReaderStudioScreenInstrumentedTest {
     }
 
     @Test
-    fun eyeHiddenControlsBackAndSheetCancellationKeepArticleVisible() {
+    fun hiddenControlsBackAndSheetCancellationKeepArticleVisible() {
         var dismissed = false
         composeRule.setContent {
             MaterialBrowserTheme {
@@ -157,12 +159,7 @@ class ReaderStudioScreenInstrumentedTest {
         assertFalse(url.fetchSemanticsNode().config.contains(SemanticsActions.SetText))
         url.performTouchInput { click() }
         composeRule.onNodeWithTag(ReaderStudioTestTags.Sheet).assertDoesNotExist()
-        repeat(6) {
-            composeRule.onNodeWithTag(ReaderStudioTestTags.Toggle).performClick()
-            composeRule.onNodeWithTag(ReaderStudioTestTags.Url).assertDoesNotExist()
-            composeRule.onNodeWithTag(ReaderStudioTestTags.Toggle).performClick()
-            composeRule.onNodeWithTag(ReaderStudioTestTags.Url).assertExists()
-        }
+        composeRule.onNodeWithTag(ReaderStudioTestTags.Toggle).assertDoesNotExist()
         composeRule.onNodeWithTag(ReaderStudioTestTags.Settings).performClick()
         Espresso.pressBack()
         composeRule.onNodeWithTag(ReaderStudioTestTags.Sheet).assertDoesNotExist()
@@ -177,10 +174,47 @@ class ReaderStudioScreenInstrumentedTest {
         composeRule.onNodeWithTag(ReaderStudioTestTags.Pill).assertDoesNotExist()
         Espresso.pressBack()
         composeRule.onNodeWithTag(ReaderStudioTestTags.Pill).assertIsDisplayed()
-        composeRule.onNodeWithTag(ReaderStudioTestTags.Url).assertDoesNotExist()
+        composeRule.onNodeWithTag(ReaderStudioTestTags.Url).assertTextEquals("example.com")
         assertFalse(dismissed)
         Espresso.pressBack()
         composeRule.runOnIdle { assertTrue(dismissed) }
+    }
+
+    @Test
+    fun articleScrollSwitchesBetweenDomainAndFullUrlWithSettingsAvailable() {
+        val article = document().copy(blocks = List(50) { document().blocks.last() })
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                ReaderStudioScreen(
+                    result = ReaderExtractionResult.Success(article),
+                    sourceUrl = article.sourceUrl,
+                    isPrivate = true,
+                    repository = repository,
+                    onRetry = {},
+                    onDismiss = {},
+                    onOpenOriginal = {},
+                    onOpenLink = {},
+                )
+            }
+        }
+        val url = composeRule.onNodeWithTag(ReaderStudioTestTags.Url)
+        url.assertTextEquals("https://example.com/article")
+        composeRule.onNodeWithTag(ReaderStudioTestTags.Toggle).assertDoesNotExist()
+        val expandedWidth = composeRule.onNodeWithTag(ReaderStudioTestTags.Pill)
+            .fetchSemanticsNode().boundsInRoot.width
+        repeat(2) {
+            composeRule.onNodeWithTag(ReaderStudioTestTags.Article).performTouchInput { swipeUp() }
+            url.assertTextEquals("example.com")
+            val compactWidth = composeRule.onNodeWithTag(ReaderStudioTestTags.Pill)
+                .fetchSemanticsNode().boundsInRoot.width
+            assertTrue(compactWidth < expandedWidth)
+            composeRule.onNodeWithTag(ReaderStudioTestTags.Settings).performClick()
+            composeRule.onNodeWithTag(ReaderStudioTestTags.Sheet).assertIsDisplayed()
+            Espresso.pressBack()
+            url.assertTextEquals("example.com")
+            composeRule.onNodeWithTag(ReaderStudioTestTags.Article).performTouchInput { swipeDown() }
+            url.assertTextEquals("https://example.com/article")
+        }
     }
 
     @Test
@@ -212,7 +246,7 @@ class ReaderStudioScreenInstrumentedTest {
         composeRule.onNodeWithTag(ReaderStudioTestTags.Pill).assertDoesNotExist()
         composeRule.onNodeWithTag(ReaderStudioTestTags.Back).assertIsDisplayed().performClick()
         composeRule.onNodeWithTag(ReaderStudioTestTags.Pill).assertIsDisplayed()
-        composeRule.onNodeWithTag(ReaderStudioTestTags.Url).assertDoesNotExist()
+        composeRule.onNodeWithTag(ReaderStudioTestTags.Url).assertTextEquals("example.com")
         composeRule.runOnIdle { assertFalse(dismissed) }
         composeRule.onNodeWithTag(ReaderStudioTestTags.Settings).performClick()
         composeRule.onNodeWithTag(ReaderStudioTestTags.Library).performScrollTo().performClick()

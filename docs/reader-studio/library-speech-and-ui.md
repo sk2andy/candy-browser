@@ -47,8 +47,11 @@ parallel SwiftUI Reader surface exists.
 The article uses a flat surface behind the system status bar down to the navigation inset, with no
 Reader Studio header or separate settings toolbar. Text has readable internal gutters and the last
 paragraph can scroll above the floating controls. The large bottom pill displays the current article
-URL as read-only text, an eye action, and a settings action. The eye alternates between this pill and
-a compact eye/settings pill. There is no URL editor or keyboard in Reader Studio; returning to the
+URL as read-only text and an ellipsis settings action. Scrolling down accumulates 24 dp before
+switching to a compact domain/settings pill; scrolling up accumulates 16 dp before restoring the full
+URL pill, matching the browser thresholds. Direction changes reset that distance, and reaching the
+article top expands the pill. Both sizes retain the same settings action; there is no eye button.
+Saved-progress restoration and layout changes do not count as user scrolling. There is no URL editor or keyboard in Reader Studio; returning to the
 original closes the reader before browser navigation.
 
 The Material bottom sheet contains font size, serif/sans typeface, alignment, system/light/paper/night

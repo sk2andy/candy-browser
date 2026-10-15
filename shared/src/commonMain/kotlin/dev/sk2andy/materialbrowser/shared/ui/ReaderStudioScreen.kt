@@ -58,7 +58,9 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
@@ -66,6 +68,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
@@ -352,11 +358,15 @@ fun ReaderStudioScreen(
     var activeSnapshot by remember { mutableStateOf<ReaderSnapshot?>(null) }
     var libraryVisible by rememberSaveable(sourceUrl, isPrivate) { mutableStateOf(false) }
     var chrome by rememberSaveable(sourceUrl, isPrivate) { mutableStateOf(ReaderChromeMode.Expanded) }
+    var scrollDistanceDp by remember(activeDocument?.sourceUrl, isPrivate) { mutableFloatStateOf(0f) }
     var settingsVisible by rememberSaveable(sourceUrl, isPrivate) { mutableStateOf(false) }
     val onBack: () -> Unit = {
         when {
             settingsVisible -> settingsVisible = false
-            chrome == ReaderChromeMode.Hidden -> chrome = ReaderChromeRules.restore(chrome)
+            chrome == ReaderChromeMode.Hidden -> {
+                chrome = ReaderChromeRules.restore(chrome)
+                scrollDistanceDp = 0f
+            }
             libraryVisible -> libraryVisible = false
             else -> onDismiss()
         }
@@ -448,10 +458,16 @@ fun ReaderStudioScreen(
                             }
                         },
                         onOpenLink = onOpenLink,
+                        onScroll = { deltaDp, atTop ->
+                            val update = ReaderChromeRules.onScroll(chrome, scrollDistanceDp, deltaDp, atTop)
+                            chrome = update.mode
+                            scrollDistanceDp = update.accumulatedDistanceDp
+                        },
                         settingsVisible = settingsVisible,
                         onCloseSettings = { settingsVisible = false },
                         onHideControls = {
                             chrome = ReaderChromeMode.Hidden
+                            scrollDistanceDp = 0f
                             settingsVisible = false
                         },
                         onLibrary = {
@@ -501,7 +517,6 @@ fun ReaderStudioScreen(
                     sourceUrl = activeDocument?.sourceUrl ?: sourceUrl,
                     mode = chrome,
                     colors = colors,
-                    onToggle = { chrome = ReaderChromeRules.toggle(chrome) },
                     onSettings = { settingsVisible = true },
                     modifier = Modifier.align(Alignment.BottomCenter).padding(16.dp),
                 )
@@ -513,6 +528,7 @@ fun ReaderStudioScreen(
                     onDismiss = { settingsVisible = false },
                     onHide = {
                         chrome = ReaderChromeMode.Hidden
+                        scrollDistanceDp = 0f
                         settingsVisible = false
                     },
                     onLibrary = if (isPrivate) null else {
@@ -614,6 +630,7 @@ private fun ReaderArticle(
     onSettingsChanged: (ReaderSettings) -> Unit,
     onLibraryChanged: (ReaderLibraryState) -> Unit,
     onOpenLink: (String) -> Unit,
+    onScroll: (Float, Boolean) -> Unit,
     settingsVisible: Boolean,
     onCloseSettings: () -> Unit,
     onHideControls: () -> Unit,
@@ -621,6 +638,22 @@ private fun ReaderArticle(
     onOpenOriginal: () -> Unit,
 ) {
     val scrollState = rememberScrollState()
+    val density = LocalDensity.current.density
+    val currentOnScroll by rememberUpdatedState(onScroll)
+    val chromeScrollConnection = remember(document.sourceUrl, density, scrollState) {
+        object : NestedScrollConnection {
+            override fun onPostScroll(
+                consumed: Offset,
+                available: Offset,
+                source: NestedScrollSource,
+            ): Offset {
+                if (consumed.y != 0f) {
+                    currentOnScroll(-consumed.y / density, scrollState.value == 0)
+                }
+                return Offset.Zero
+            }
+        }
+    }
     val speech = remember(document.sourceUrl) { speechFactory() }
     var restored by remember(document.sourceUrl) { mutableStateOf(false) }
     val progress = ReaderLibraryRules.progress(scrollState.value, scrollState.maxValue)
@@ -690,6 +723,7 @@ private fun ReaderArticle(
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .nestedScroll(chromeScrollConnection)
                 .verticalScroll(scrollState)
                 .testTag(ReaderStudioTestTags.Article),
         ) {

@@ -1,5 +1,6 @@
 package dev.sk2andy.materialbrowser.shared.ui
 
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -12,7 +13,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -33,6 +33,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.sk2andy.materialbrowser.reader.ReaderChromeMode
+import dev.sk2andy.materialbrowser.reader.ReaderChromeRules
 
 @Composable
 internal fun ReaderPill(
@@ -40,16 +41,13 @@ internal fun ReaderPill(
     sourceUrl: String,
     mode: ReaderChromeMode,
     colors: ReaderColors,
-    onToggle: () -> Unit,
     onSettings: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val expanded = mode == ReaderChromeMode.Expanded
-    val toggleDescription = resources.text(
-        if (expanded) ReaderStudioLabel.CompactControls else ReaderStudioLabel.ExpandControls,
-    )
     Surface(
         modifier = modifier
+            .animateContentSize()
             .widthIn(max = 640.dp)
             .then(if (expanded) Modifier.fillMaxWidth() else Modifier)
             .testTag(ReaderStudioTestTags.Pill),
@@ -63,22 +61,14 @@ internal fun ReaderPill(
             modifier = Modifier.padding(6.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            if (expanded) {
-                Text(
-                    sourceUrl,
-                    modifier = Modifier.weight(1f).padding(horizontal = 16.dp)
-                        .testTag(ReaderStudioTestTags.Url),
-                    style = MaterialTheme.typography.bodyMedium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-            IconButton(
-                onClick = onToggle,
-                modifier = Modifier.size(48.dp).testTag(ReaderStudioTestTags.Toggle),
-            ) {
-                Icon(Icons.Filled.Visibility, contentDescription = toggleDescription)
-            }
+            Text(
+                text = if (expanded) sourceUrl else ReaderChromeRules.compactAddress(sourceUrl),
+                modifier = Modifier.weight(1f, fill = expanded).padding(horizontal = 16.dp)
+                    .testTag(ReaderStudioTestTags.Url),
+                style = if (expanded) MaterialTheme.typography.bodyMedium else MaterialTheme.typography.labelMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
             IconButton(
                 onClick = onSettings,
                 modifier = Modifier.size(48.dp).testTag(ReaderStudioTestTags.Settings),
