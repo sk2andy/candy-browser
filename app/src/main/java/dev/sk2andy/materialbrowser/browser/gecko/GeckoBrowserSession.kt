@@ -5,6 +5,7 @@ import android.graphics.Bitmap
 import android.view.View
 import dev.sk2andy.materialbrowser.browser.BrowserEngineAndroidPermissionRequest
 import dev.sk2andy.materialbrowser.browser.BrowserEngineAuthPromptRequest
+import dev.sk2andy.materialbrowser.browser.BrowserEngineBooleanResponse
 import dev.sk2andy.materialbrowser.browser.BrowserEngineContentPermissionRequest
 import dev.sk2andy.materialbrowser.browser.BrowserEngineDownloadResponse
 import dev.sk2andy.materialbrowser.browser.BrowserEngineFilePromptRequest
@@ -68,11 +69,14 @@ internal data class GeckoMainFrameNavigationRequest(
     val hasUserGesture: Boolean,
     val isDirectNavigation: Boolean,
     val target: BrowserEngineNavigationTarget = BrowserEngineNavigationTarget.Current,
+    /** Lets Gecko retain the original popup request while external app lookup completes. */
+    val nativePopupResponse: BrowserEngineBooleanResponse? = null,
 )
 
 internal enum class GeckoNavigationRequestDecision {
     Allow,
     Deny,
+    Pending,
 }
 
 internal fun interface GeckoNavigationRequestListener {

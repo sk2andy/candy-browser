@@ -1,5 +1,8 @@
 package dev.sk2andy.materialbrowser.browser.gecko
 
+import android.os.Handler
+import android.os.Looper
+import android.os.SystemClock
 import android.widget.FrameLayout
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.ComposeTimeoutException
@@ -16,6 +19,8 @@ import dev.sk2andy.materialbrowser.browser.EdgeToEdgeSiteFixtureServer
 import dev.sk2andy.materialbrowser.browser.ExternalAppLinkHandling
 import dev.sk2andy.materialbrowser.browser.PrivacySignalSettings
 import dev.sk2andy.materialbrowser.browser.RootTabBackDecision
+import dev.sk2andy.materialbrowser.browser.integration.ExternalAppLauncher
+import dev.sk2andy.materialbrowser.browser.integration.ExternalNavigationGrantRules
 import dev.sk2andy.materialbrowser.data.BrowserSessionStore
 import dev.sk2andy.materialbrowser.data.HistoryEntry
 import java.io.Closeable
@@ -25,6 +30,7 @@ import java.net.SocketException
 import java.nio.charset.StandardCharsets
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CountDownLatch
+import java.util.concurrent.ExecutorService
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
@@ -54,6 +60,7 @@ class GeckoPopupNavigationInstrumentedTest {
     private var originalHistory: List<HistoryEntry>? = null
     private var originalPrivacySignalSettings: PrivacySignalSettings? = null
     private var originalExternalAppLinkHandling: ExternalAppLinkHandling? = null
+    private val lookupGate = AtomicReference<LookupGate?>()
 
     @Before
     fun setUp() {
@@ -69,7 +76,22 @@ class GeckoPopupNavigationInstrumentedTest {
             store.savePrivacySignalSettings(
                 PrivacySignalSettings(doNotTrackEnabled = true, globalPrivacyControlEnabled = true),
             )
-            controller = BrowserController(composeRule.activity)
+            controller = BrowserController(
+                activity = composeRule.activity,
+                externalApps = ExternalAppLauncher(
+                    context = composeRule.activity,
+                    findExternalWebPackages = { intent ->
+                        lookupGate.get()?.takeIf { it.url == intent.dataString }?.let { gate ->
+                            gate.started.countDown()
+                            check(gate.release.await(30, TimeUnit.SECONDS)) {
+                                "External app lookup was not released"
+                            }
+                        }
+                        emptyList()
+                    },
+                    canResolveExternalActivity = { false },
+                ),
+            )
             host = FrameLayout(composeRule.activity)
             composeRule.activity.addContentView(
                 host,
@@ -84,6 +106,7 @@ class GeckoPopupNavigationInstrumentedTest {
 
     @After
     fun tearDown() {
+        lookupGate.getAndSet(null)?.release?.countDown()
         composeRule.runOnIdle {
             if (::controller.isInitialized) controller.destroy()
             val store = BrowserSessionStore(composeRule.activity)
@@ -219,6 +242,84 @@ class GeckoPopupNavigationInstrumentedTest {
             composeRule.runOnIdle {
                 assertEquals(listOf(popupUrl), nativeHistoryUrls())
                 assertFalse(controller.selectedTab.canGoBack)
+                assertNull(controller.selectedTab.error)
+            }
+        }
+    }
+
+    @Test
+    fun automaticCrossSitePostPopupPreservesBodyReferrerAndNativeOpenerAfterLookup() {
+        verifyAutomaticCrossSitePostPopup(expireNavigationGrant = false)
+    }
+
+    @Test
+    fun automaticCrossSitePostPopupPreservesBodyAfterNavigationGrantExpires() {
+        verifyAutomaticCrossSitePostPopup(expireNavigationGrant = true)
+    }
+
+    private fun verifyAutomaticCrossSitePostPopup(expireNavigationGrant: Boolean) {
+        PostPopupFixtureServer(crossSite = true).use { server ->
+            val openerUrl = server.url("/form-opener")
+            val popupUrl = server.url("/form-popup")
+            openPage(openerUrl, "POST opener")
+            val openerId = composeRule.runOnIdle {
+                controller.updateExternalAppLinkHandling(ExternalAppLinkHandling.Automatic)
+                controller.selectedTabId
+            }
+            val gate = LookupGate(popupUrl)
+            lookupGate.set(gate)
+            try {
+                tapPage()
+                assertTrue("Popup app lookup did not start", gate.started.await(5, TimeUnit.SECONDS))
+                assertNull(server.popupRequest.get())
+                if (expireNavigationGrant) {
+                    SystemClock.sleep(ExternalNavigationGrantRules.MAX_LIFETIME_MILLIS + 250)
+                }
+            } finally {
+                gate.release.countDown()
+            }
+            composeRule.waitUntil(30_000) { server.popupRequest.get() != null }
+            val request = requireNotNull(server.popupRequest.get())
+            assertEquals("POST", request.method)
+            assertEquals("payload=candy-post-fixture", request.body)
+            assertEquals("Native popup request: $request", openerUrl, request.referrer)
+            assertEquals("1", request.doNotTrack)
+            assertEquals("1", request.globalPrivacyControl)
+            awaitPopupChild(openerId, popupUrl, "POST popup with opener")
+            composeRule.runOnIdle {
+                assertEquals(listOf(popupUrl), nativeHistoryUrls())
+                assertFalse(controller.selectedTab.canGoBack)
+                assertNull(controller.selectedTab.error)
+                assertNull(controller.externalAppPrompt)
+            }
+        }
+    }
+
+    @Test
+    fun stopCancelsNativePostPopupWaitingForAutomaticAppLookup() {
+        PostPopupFixtureServer(crossSite = true).use { server ->
+            val openerUrl = server.url("/form-opener")
+            val popupUrl = server.url("/form-popup")
+            openPage(openerUrl, "POST opener")
+            val openerId = composeRule.runOnIdle {
+                controller.updateExternalAppLinkHandling(ExternalAppLinkHandling.Automatic)
+                controller.selectedTabId
+            }
+            val gate = LookupGate(popupUrl)
+            lookupGate.set(gate)
+            try {
+                tapPage()
+                assertTrue("Popup app lookup did not start", gate.started.await(5, TimeUnit.SECONDS))
+                composeRule.runOnIdle { controller.stopLoading() }
+            } finally {
+                gate.release.countDown()
+            }
+            awaitAutomaticLookupCompletion()
+            composeRule.runOnIdle {
+                assertEquals(openerId, controller.selectedTabId)
+                assertEquals(openerUrl, controller.selectedTab.url)
+                assertTrue(controller.activeTabs.none { it.openerTabId == openerId })
+                assertNull(server.popupRequest.get())
                 assertNull(controller.selectedTab.error)
             }
         }
@@ -548,6 +649,16 @@ class GeckoPopupNavigationInstrumentedTest {
         canGoBack: Boolean = false,
     ): String {
         tapPage()
+        return awaitPopupChild(openerId, url, title, historyUrls, canGoBack)
+    }
+
+    private fun awaitPopupChild(
+        openerId: String,
+        url: String,
+        title: String,
+        historyUrls: List<String> = listOf(url),
+        canGoBack: Boolean = false,
+    ): String {
         var childId: String? = null
         try {
             composeRule.waitUntil(30_000) {
@@ -572,6 +683,20 @@ class GeckoPopupNavigationInstrumentedTest {
         awaitPage(url, title)
         awaitNativeHistory(url, historyUrls, canGoBack = canGoBack)
         return popupId
+    }
+
+    private fun awaitAutomaticLookupCompletion() {
+        val completed = CountDownLatch(1)
+        val executor = composeRule.runOnIdle {
+            val field = BrowserController::class.java.getDeclaredField("externalAppLookupExecutor")
+            field.isAccessible = true
+            field.get(controller) as ExecutorService
+        }
+        executor.execute {
+            Handler(Looper.getMainLooper()).post { completed.countDown() }
+        }
+        assertTrue("Automatic app lookup did not complete", completed.await(5, TimeUnit.SECONDS))
+        composeRule.waitForIdle()
     }
 
     private fun popupDiagnostics(): String = composeRule.runOnIdle {
@@ -830,7 +955,7 @@ class GeckoPopupNavigationInstrumentedTest {
         <body>$body</body></html>
     """.trimIndent()
 
-    private class PostPopupFixtureServer : Closeable {
+    private class PostPopupFixtureServer(private val crossSite: Boolean = false) : Closeable {
         private val server = ServerSocket(0, 8, InetAddress.getByName("127.0.0.1"))
         val popupRequest = AtomicReference<PostRequest>()
         private val thread = Thread(::serve, "gecko-post-popup-fixture").apply {
@@ -838,7 +963,10 @@ class GeckoPopupNavigationInstrumentedTest {
             start()
         }
 
-        fun url(path: String): String = "http://127.0.0.1:${server.localPort}$path"
+        fun url(path: String): String {
+            val host = if (crossSite && path == "/form-popup") "localhost" else "127.0.0.1"
+            return "http://$host:${server.localPort}$path"
+        }
 
         private fun serve() {
             while (!server.isClosed) {
@@ -866,10 +994,18 @@ class GeckoPopupNavigationInstrumentedTest {
                             "/form-opener" -> """
                                 <!doctype html><html><head>
                                 <meta name="viewport" content="width=device-width,initial-scale=1">
+                                <meta name="referrer" content="unsafe-url">
                                 <title>POST opener</title>
                                 <style>button{position:fixed;inset:0;font-size:32px}</style>
                                 </head><body>
-                                <form action="/form-popup" method="post" target="_blank" rel="opener">
+                                <script>
+                                window.addEventListener('message', event => {
+                                    if (event.data === 'candy-popup-ready') {
+                                        event.source.postMessage('candy-opener-confirmed', event.origin);
+                                    }
+                                });
+                                </script>
+                                <form action="${url("/form-popup")}" method="post" target="_blank" rel="opener">
                                 <input type="hidden" name="payload" value="candy-post-fixture">
                                 <button type="submit">Open POST popup</button></form>
                                 </body></html>
@@ -887,9 +1023,18 @@ class GeckoPopupNavigationInstrumentedTest {
                                 """
                                     <!doctype html><html><head><title>POST popup missing context</title>
                                     </head><body><script>
-                                    if (window.opener && window.opener.location.pathname === '/form-opener'
-                                        && document.referrer === '${url("/form-opener")}') {
-                                        document.title = 'POST popup with opener';
+                                    document.title = 'POST popup context ' + JSON.stringify({
+                                        opener:!!window.opener, referrer:document.referrer,
+                                        expectedReferrer:'${url("/form-opener")}',
+                                    });
+                                    if (window.opener) {
+                                        window.addEventListener('message', event => {
+                                            if (event.source === window.opener &&
+                                                event.data === 'candy-opener-confirmed') {
+                                                document.title = 'POST popup with opener';
+                                            }
+                                        });
+                                        window.opener.postMessage('candy-popup-ready', '${url("/")}');
                                     }
                                     </script>POST popup loaded</body></html>
                                 """.trimIndent()
@@ -924,5 +1069,11 @@ class GeckoPopupNavigationInstrumentedTest {
         val referrer: String?,
         val doNotTrack: String?,
         val globalPrivacyControl: String?,
+    )
+
+    private data class LookupGate(
+        val url: String,
+        val started: CountDownLatch = CountDownLatch(1),
+        val release: CountDownLatch = CountDownLatch(1),
     )
 }

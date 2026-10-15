@@ -591,6 +591,100 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
     }
 
     @Test
+    fun reloadAfterStoppingPendingAddressWaitsForFreshPolicyAndLoadsTarget() {
+        composeRule.runOnIdle {
+            val (browserController, session) = createPendingLoadController()
+            browserController.submitAddress("https://pending.test/")
+            val staleCallback = session.policyReadyCallbacks.removeAt(0)
+            browserController.stopLoading()
+            browserController.reload()
+
+            assertEquals(listOf(BrowserEngineCommands.stop()), session.commands)
+            assertEquals("https://pending.test/", browserController.selectedTab.url)
+            staleCallback()
+            assertEquals(listOf(BrowserEngineCommands.stop()), session.commands)
+
+            session.policyReadyCallbacks.removeAt(0)()
+            assertEquals(
+                listOf(
+                    BrowserEngineCommands.stop(),
+                    BrowserEngineCommands.load("https://pending.test/"),
+                ),
+                session.commands,
+            )
+        }
+    }
+
+    @Test
+    fun reloadAfterStoppingDispatchedPageKeepsNativeReload() {
+        composeRule.runOnIdle {
+            val (browserController, session) = createPendingLoadController()
+            browserController.submitAddress("https://loaded.test/")
+            session.policyReadyCallbacks.removeAt(0)()
+            session.commands.clear()
+
+            browserController.stopLoading()
+            browserController.reload()
+
+            assertEquals(
+                listOf(BrowserEngineCommands.stop(), BrowserEngineCommands.reload()),
+                session.commands,
+            )
+            assertTrue(session.policyReadyCallbacks.isEmpty())
+        }
+    }
+
+    @Test
+    fun newerAddressReplacesStoppedPendingReloadTarget() {
+        composeRule.runOnIdle {
+            val (browserController, session) = createPendingLoadController()
+            browserController.submitAddress("https://stopped.test/")
+            val staleCallback = session.policyReadyCallbacks.removeAt(0)
+            browserController.stopLoading()
+            browserController.submitAddress("https://newer.test/")
+            session.policyReadyCallbacks.removeAt(0)()
+            staleCallback()
+            session.commands.clear()
+
+            browserController.reload()
+
+            assertEquals(listOf(BrowserEngineCommands.reload()), session.commands)
+            assertEquals("https://newer.test/", browserController.selectedTab.url)
+        }
+    }
+
+    @Test
+    fun replacementSessionDoesNotReplayStoppedPendingAddress() {
+        composeRule.runOnIdle {
+            val (browserController, session) = createPendingLoadController()
+            browserController.submitAddress("https://pending.test/")
+            val staleCallback = session.policyReadyCallbacks.removeAt(0)
+            browserController.stopLoading()
+            val replacement = ReentrantAttachSession(session.tabId, onFirstAttach = {})
+            browserController.installGeckoEngineSessionForTesting(replacement)
+            staleCallback()
+
+            browserController.reload()
+
+            assertEquals(listOf(BrowserEngineCommands.reload()), replacement.commands)
+        }
+    }
+
+    private fun createPendingLoadController(): Pair<BrowserController, ReentrantAttachSession> {
+        val store = BrowserSessionStore(composeRule.activity)
+        originalEngineKind = store.loadAndroidBrowserEngineKind()
+        assertTrue(store.saveAndroidBrowserEngineKind(AndroidBrowserEngineKind.GeckoView))
+        val browserController = BrowserController(composeRule.activity)
+        controller = browserController
+        val session = ReentrantAttachSession(
+            tabId = browserController.selectedTabId,
+            onFirstAttach = {},
+        ).apply { deferPolicyReadyCallbacks = true }
+        browserController.installGeckoEngineSessionForTesting(session)
+        return browserController to session
+    }
+
+    @Test
     fun focusedInputAutoParkingKeepsRememberedLeftEdgeAndHeight() {
         lateinit var session: ReentrantAttachSession
         val placement = AddressBarDockPlacement(AddressBarDockEdge.Left, 0.6f)

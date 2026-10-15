@@ -82,6 +82,48 @@ class CandyPrivacyHostInstrumentedTest {
     }
 
     @Test
+    fun stoppedInitialLoadCanReloadAfterPrivacyBootstrapCompletes() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val server = FixtureServer()
+        val loadedPage = CountDownLatch(1)
+        val latestState = AtomicReference<GeckoBrowserSessionState>()
+        lateinit var session: GeckoBrowserSession
+        lateinit var view: View
+
+        InstrumentationRegistry.getInstrumentation().runOnMainSync {
+            session = GeckoRuntimeOwner.getOrCreate(context).createSession(
+                profileId = "privacy-stopped-initial-load",
+                isPrivate = false,
+                privacyPolicy = GeckoPrivacyPolicy.Disabled.copy(pageHost = PAGE_HOST),
+            )
+            view = session.createView(context)
+            session.setStateListener { state ->
+                latestState.set(state)
+                if (state.title == ALLOWED_TITLE) loadedPage.countDown()
+            }
+            // Bootstrap callbacks cannot run before this main-thread task finishes.
+            assertTrue(session.loadUrl(server.pageUrl(PAGE_HOST)))
+            session.stop()
+            session.reload()
+        }
+
+        try {
+            assertTrue(
+                "Stopped initial target did not load: ${latestState.get()}",
+                loadedPage.await(20, TimeUnit.SECONDS),
+            )
+            assertEquals(server.pageUrl(PAGE_HOST), latestState.get().url)
+            assertNull(latestState.get().failureDescription)
+        } finally {
+            InstrumentationRegistry.getInstrumentation().runOnMainSync {
+                session.releaseView(view)
+                session.close()
+            }
+            server.close()
+        }
+    }
+
+    @Test
     fun rapidPolicyRevisionsKeepOneBootstrapAndGateOnTheCurrentRevision() {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val server = FixtureServer()

@@ -19,6 +19,7 @@ function fixture({ density = 3, nativeTop = 96, envTop = nativeTop, simulateAnim
   let ruleWrites = 0;
   const normalize = (value) => normalizePixels && /^[+-]?[\d.]+px$/.test(value) ? `${Number(Number(value.slice(0, -2)).toFixed(4))}px` : value;
   const sheets = [];
+  const selectorParts = (selector) => selector.split(/,(?![^()]*\))/);
   function ruleStyle() {
     const values = new Map();
     return { getPropertyValue: (name) => values.get(name)?.value || '',
@@ -114,10 +115,15 @@ function fixture({ density = 3, nativeTop = 96, envTop = nativeTop, simulateAnim
     }
     matches(selector) {
       selectorMatches++;
-      return selector.split(',').some((part) => {
-        const exclusions = [...part.matchAll(/:not\(:where\(\[([^\]]+)\]\)\)/g)];
-        if (exclusions.some((exclusion) => this.getAttribute(exclusion[1]) !== null)) return false;
-        for (const exclusion of exclusions) part = part.replace(exclusion[0], '');
+      return selectorParts(selector).some((part) => {
+        const conflicts = [...part.matchAll(/:not\(:where\(([^()]*)\)\)/g)];
+        for (const conflict of conflicts) {
+          if (selectorParts(conflict[1]).some((value) => {
+            const attribute = /^\[([^\]]+)\]$/.exec(value.trim());
+            return attribute ? this.getAttribute(attribute[1]) !== null : this.matches(value);
+          })) return false;
+          part = part.replace(conflict[0], '');
+        }
         const marker = /\[([^=]+)="([^"]+)"\]/.exec(part);
         if (marker) return this.getAttribute(marker[1]) === marker[2];
         const value = part.trim();
@@ -195,27 +201,34 @@ function fixture({ density = 3, nativeTop = 96, envTop = nativeTop, simulateAnim
   };
   function computed(element) {
     const result = { display: 'block', visibility: 'visible', paddingTop: '0px', backgroundColor: 'rgba(0, 0, 0, 0)', ...element.computed };
-    const accessible = (sheet) => { try { return sheet.cssRules; } catch { return []; } };
-    for (const sheet of document.styleSheets) {
-      if (sheet.disabled || (sheet.media?.mediaText && sheet.media.mediaText !== 'all')) continue;
-      for (const rule of accessible(sheet)) {
-        if (rule.type !== 1 || !element.matches(rule.selectorText)) continue;
-        for (const name of ['position', 'display']) {
-          const value = rule.style.getPropertyValue(name);
-          if (value) result[name] = value;
-        }
-      }
-    }
-    for (const [name, camel] of [['top', 'top'], ['padding-top', 'paddingTop']]) {
+    const activeRules = (rules) => Array.from(rules).flatMap((rule) =>
+      [4, 12].includes(rule.type) ? activeRules(rule.cssRules || []) : [rule]);
+    const accessible = (sheet) => { try { return activeRules(sheet.cssRules); } catch { return []; } };
+    // Model priority and simple selector specificity used by these fixtures.
+    // :where() exclusions must not raise the injected rule's specificity.
+    const specificity = (selector) => {
+      const plain = selector.replace(/:not\(:where\([^()]*\)\)/g, '');
+      return (plain.match(/#[\w-]+/g)?.length || 0) * 10000 +
+        (plain.match(/\.[\w-]+|\[[^\]]+\]|:(?!:)[\w-]+/g)?.length || 0) * 100 +
+        (plain.match(/(?:^|\s)[a-z][\w-]*/gi)?.length || 0);
+    };
+    for (const [name, camel] of [['position', 'position'], ['display', 'display'], ['top', 'top'], ['padding-top', 'paddingTop']]) {
       const inline = element.properties.get(name);
       if (inline) result[camel] = inline.value;
       if (inline?.priority === 'important' || element.authorImportant?.[name]) continue;
+      let winningPriority = inline ? 1e9 : -1;
       for (const sheet of document.styleSheets) {
         if (sheet.disabled || (sheet.media?.mediaText && sheet.media.mediaText !== 'all')) continue;
         for (const rule of accessible(sheet)) {
           const value = rule.style.getPropertyValue(name);
-          if (inline && rule.style.getPropertyPriority(name) !== 'important') continue;
-          if (rule.type === 1 && element.matches(rule.selectorText) && value) result[camel] = value;
+          if (rule.type !== 1 || !value) continue;
+          const matching = selectorParts(rule.selectorText).filter((part) => element.matches(part));
+          if (!matching.length) continue;
+          const priority = (rule.style.getPropertyPriority(name) === 'important' ? 1e12 : 0) +
+            Math.max(...matching.map(specificity));
+          if (priority < winningPriority) continue;
+          winningPriority = priority;
+          result[camel] = value;
         }
       }
     }
@@ -282,12 +295,14 @@ function fixture({ density = 3, nativeTop = 96, envTop = nativeTop, simulateAnim
     sheet(definitions, options = {}) {
       const node = body.append(new Element('static', 'auto', 'style'));
       Object.assign(node.sheet, options);
-      for (const definition of definitions) {
+      const makeRule = (definition) => {
         const style = ruleStyle();
         for (const [name, value] of Object.entries(definition.declarations || {})) style.setProperty(name, value, definition.important ? 'important' : '');
-        node.sheet.cssRules.push({ type: definition.type ?? 1, selectorText: definition.selector || 'div', style,
-          ...(definition.nested ? { cssRules: [{}] } : {}) });
-      }
+        return { type: definition.type ?? 1, selectorText: definition.selector || 'div', style,
+          ...(definition.children ? { cssRules: definition.children.map(makeRule) } :
+            definition.nested ? { cssRules: [{}] } : {}) };
+      };
+      node.sheet.cssRules.push(...definitions.map(makeRule));
       return node;
     },
     start(drain = true) { vm.runInContext(prototypeSource, context); if (drain) flush(); },
@@ -1648,7 +1663,7 @@ test('split negative class and ancestor states escape positive selectors outside
   f.start();
   assert.equal(f.computed(selected).top, '32px');
   f.event('scroll'); selected.classes = ['hidden']; f.mutate(selected, 'class'); f.flush();
-  assert.equal(f.computed(selected).top, '-80px');
+  assert.equal(f.computed(selected).top, '-64px', 'The ID selector wins over the later class selector');
   selected.classes = []; f.mutate(selected, 'class'); f.flush();
   assert.equal(f.computed(selected).top, '32px');
   selected.computed.top = '-64px';
@@ -1686,12 +1701,14 @@ test('removing a positive inline top can expose a negative author stylesheet top
 });
 
 test('negative selector exclusions retain comma-list specificity and precede pseudo-elements', () => {
-  const f = fixture();
-  f.sheet([{ selector: '#one, .two', declarations: { position: 'fixed', top: '0px' } },
-    { selector: '#pseudo::before', declarations: { position: 'fixed', top: '8px' } }]);
-  f.start();
-  const injected = f.sheets.filter((element) => element.isConnected && element.parentElement?.localName === 'html')
-    .flatMap((element) => element.sheet.cssRules).map((rule) => rule.selectorText);
+  const injected = [];
+  for (const selector of ['#one, .two', '#pseudo::before']) {
+    const f = fixture();
+    f.sheet([{ selector, declarations: { position: 'fixed', top: '0px' } }]);
+    f.start();
+    injected.push(...f.sheets.filter((element) => element.isConnected && element.parentElement?.localName === 'html')
+      .flatMap((element) => element.sheet.cssRules).map((rule) => rule.selectorText));
+  }
   assert.ok(injected.some((selector) => /^#one(?::not\(:where\(\[[^\]]+\]\)\)){2}, \.two(?::not\(:where\(\[[^\]]+\]\)\)){2}$/.test(selector)));
   assert.ok(injected.some((selector) => /^#pseudo(?::not\(:where\(\[[^\]]+\]\)\)){2}::before$/.test(selector)));
 });
@@ -2458,6 +2475,123 @@ test('full selector rules protect passive class activation and new matching node
   assert.equal(priority.computed(same).top, '52px', 'Same-priority duplicates preserve source order');
 });
 
+test('split top declarations use resolved author layout instead of a stale selector clone', () => {
+  for (const separateSheet of [false, true]) {
+    const f = fixture();
+    const initial = { selector: '.control', declarations: { position: 'fixed', top: '0px' } };
+    const override = { selector: '.control', declarations: { top: '60px' } };
+    f.sheet(separateSheet ? [initial] : [initial, override]);
+    if (separateSheet) f.sheet([override]);
+    const control = f.element('static', 'auto'); control.classes = ['control'];
+    assert.equal(f.computed(control).top, '60px');
+    f.start();
+    assert.equal(f.computed(control).top, '92px');
+    assert.equal(f.diagnostics().cssRulesApplied, 0, 'Split declarations stay on the bounded DOM path');
+    f.configure({ enabled: false });
+    assert.equal(f.computed(control).top, '60px');
+  }
+});
+
+test('selector conflicts preserve author specificity, importance and position changes', () => {
+  const cases = [
+    { name: 'more specific split top', definitions: [
+      { selector: '#control', declarations: { top: '60px' } },
+      { selector: '.control', declarations: { position: 'fixed', top: '0px' } },
+    ], position: 'fixed', before: '60px', after: '92px' },
+    { name: 'important class beats normal ID', definitions: [
+      { selector: '.control', declarations: { position: 'fixed', top: '8px' }, important: true },
+      { selector: '#control', declarations: { position: 'fixed', top: '60px' } },
+    ], position: 'fixed', before: '8px', after: '40px' },
+    { name: 'relative position overrides fixed class', definitions: [
+      { selector: '.control', declarations: { position: 'fixed', top: '0px' } },
+      { selector: '#control', declarations: { position: 'relative', top: '60px' } },
+    ], position: 'relative', before: '60px', after: '60px' },
+    { name: 'same-selector relative position', definitions: [
+      { selector: '.control', declarations: { position: 'fixed', top: '0px' } },
+      { selector: '.control', declarations: { position: 'relative' } },
+    ], position: 'relative', before: '0px', after: '0px' },
+  ];
+  for (const entry of cases) {
+    const f = fixture(); f.sheet(entry.definitions);
+    const control = f.element('static', 'auto'); control.id = 'control'; control.classes = ['control'];
+    assert.equal(f.computed(control).top, entry.before, entry.name);
+    f.start();
+    assert.equal(f.computed(control).position, entry.position, entry.name);
+    assert.equal(f.computed(control).top, entry.after, entry.name);
+    f.configure({ enabled: false });
+    assert.equal(f.computed(control).top, entry.before, entry.name);
+  }
+});
+
+test('passive conflicting selector states keep authored geometry outside DOM discovery', () => {
+  const f = fixture();
+  f.sheet([
+    { selector: '.control', declarations: { position: 'fixed', top: '0px' } },
+    { selector: '.control.shifted', declarations: { top: '60px' } },
+  ]);
+  const control = f.element('static', 'auto');
+  f.start();
+  control.classes = ['control'];
+  assert.equal(f.computed(control).top, '32px');
+  control.classes = ['control', 'shifted'];
+  assert.equal(f.computed(control).top, '60px', 'No stale important clone masks an unvisited state');
+  control.classes = ['control'];
+  assert.equal(f.computed(control).top, '32px');
+});
+
+test('late conflicting sources release stale clones and source removal restores safe protection', () => {
+  const f = fixture();
+  f.sheet([{ selector: '.control', declarations: { position: 'fixed', top: '0px' } }]);
+  const control = f.element('static', 'auto'); control.classes = ['control'];
+  f.start(); assert.equal(f.computed(control).top, '32px');
+  const override = f.sheet([{ selector: '.control', declarations: { top: '60px' } }]);
+  f.added(override); f.flush();
+  assert.equal(f.computed(control).top, '60px', 'A late split declaration cannot retain the stale 32px clone');
+  f.removed(override); f.flush();
+  assert.equal(f.computed(control).top, '32px');
+
+  const pseudo = fixture();
+  pseudo.sheet([
+    { selector: '.control::before', declarations: { position: 'fixed', top: '0px' } },
+    { selector: '#control::before', declarations: { top: '60px' } },
+  ]);
+  pseudo.start();
+  assert.equal(pseudo.diagnostics().cssRulesApplied, 0, 'Pseudo-element conflicts cannot use element-match exclusions');
+});
+
+test('conflict inventory outlives the output cap and grouped overrides exclude only affected matches', () => {
+  const capped = fixture(); capped.config.maxInitialElements = 64;
+  capped.sheet([
+    { selector: '.control', declarations: { position: 'fixed', top: '0px' } },
+    ...Array.from({ length: 70 }, (_, index) => ({ selector: `#spare${index}`, declarations: { position: 'relative' } })),
+    { selector: '#control', declarations: { top: '60px' } },
+  ]);
+  const control = capped.element('static', 'auto'); control.id = 'control'; control.classes = ['control'];
+  capped.start();
+  assert.equal(capped.computed(control).top, '92px', 'Protection-rule cap cannot truncate later conflict information');
+
+  for (const type of [4, 12]) {
+    const f = fixture();
+    f.sheet([
+      { selector: '.control', declarations: { position: 'fixed', top: '0px' } },
+      { selector: '.other', declarations: { position: 'fixed', top: '8px' } },
+      { type, children: [{ selector: '#control', declarations: { top: '60px' } }] },
+    ]);
+    const affected = f.element('static', 'auto'); affected.id = 'control'; affected.classes = ['control'];
+    const unrelated = f.element('static', 'auto');
+    assert.equal(f.computed(affected).top, '60px');
+    f.start();
+    assert.equal(f.computed(affected).top, '92px');
+    unrelated.classes = ['other'];
+    assert.equal(f.computed(unrelated).top, '40px', 'Grouping does not disable unrelated passive selector protection');
+  }
+
+  const nested = fixture();
+  nested.sheet([{ selector: '.control', declarations: { position: 'fixed', top: '0px' }, nested: true }]);
+  nested.start();
+  assert.equal(nested.diagnostics().cssRulesApplied, 0, 'Unresolved CSS nesting cannot be mistaken for complete conflict information');
+});
+
 test('selector scan skips unsupported and inaccessible contexts, consumes caps and never restarts on scroll', () => {
   const f = fixture();
   const declarations = { position: 'fixed', top: '0px' };
@@ -2466,7 +2600,6 @@ test('selector scan skips unsupported and inaccessible contexts, consumes caps a
   f.sheet([{ selector: '#media.future', declarations }], { media: { mediaText: '(min-width: 600px)' } });
   f.sheet([{ type: 4, selector: '#group.future', declarations },
     { type: 3, selector: '#import.future', declarations },
-    { selector: '#nested.future', declarations, nested: true },
     { selector: '#auto.future', declarations: { position: 'fixed', top: 'auto' } },
     { selector: '#percent.future', declarations: { position: 'fixed', top: '10%' } }]);
   const inaccessible = f.sheet([]);
@@ -2478,7 +2611,7 @@ test('selector scan skips unsupported and inaccessible contexts, consumes caps a
   for (const node of nodes) node.classes = ['future'];
   const own = f.sheets.find((node) => node !== inaccessible && node.sheet.cssRules.some((rule) => rule.selectorText.startsWith('#valid.future') && rule.style.getPropertyPriority('top') === 'important') && node.parentElement?.localName === 'html');
   assert.equal(f.computed(nodes[0]).top, '32px');
-  assert.ok(!own.sheet.cssRules.some((rule) => /#(?:disabled|media|group|import|nested|auto|percent)/.test(rule.selectorText)));
+  assert.ok(!own.sheet.cssRules.some((rule) => /^#(?:disabled|media|group|import|nested|auto|percent)/.test(rule.selectorText)));
   const count = own.sheet.cssRules.length;
   f.event('load', 'window'); f.event('scroll'); f.flush(); assert.equal(own.sheet.cssRules.length, count);
 
@@ -2594,9 +2727,20 @@ test('replaced sheet identities retain last protection through cooldown and comm
 
 test('selector and navigation-lifetime source caps remain bounded and observable', () => {
   const f = fixture(); f.config.maxInitialElements = 64;
-  f.sheet(Array.from({ length: 300 }, (_, index) => ({ selector: `#cap${index}.fixed`, declarations: { position: 'fixed', top: '0px' } })));
-  f.start(); assert.equal(f.diagnostics().cssRulesApplied, 63); assert.ok(f.diagnostics().cssBudgetHits > 0);
+  f.sheet(Array.from({ length: 200 }, (_, index) => ({ selector: `#cap${index}.fixed`, declarations: { position: 'fixed', top: '0px' } })));
+  f.start();
+  assert.ok(f.diagnostics().cssRulesApplied > 0 && f.diagnostics().cssRulesApplied <= 63);
+  assert.ok(f.diagnostics().cssBudgetHits > 0);
+  const clonedSelectors = f.sheets.filter((node) => node.parentElement?.localName === 'html')
+    .flatMap((node) => node.sheet.cssRules).filter((rule) => rule.selectorText.startsWith('#cap'));
+  assert.ok(clonedSelectors.reduce((total, rule) => total + rule.selectorText.length + 2, 0) <= 32768,
+    'Conflict exclusions share the existing selector-text budget');
   assert.equal(f.computed(f.body).paddingTop, '32px');
+  const incomplete = fixture();
+  incomplete.sheet(Array.from({ length: 300 }, (_, index) => ({ selector: `#cap${index}.fixed`, declarations: { position: 'fixed', top: '0px' } })));
+  incomplete.start();
+  assert.equal(incomplete.diagnostics().cssRulesApplied, 0, 'Truncated conflict inventory cannot prove any clone safe');
+  assert.ok(incomplete.diagnostics().cssBudgetHits > 0);
   const capped = fixture();
   const style = capped.sheet([{ selector: '#event.fixed', declarations: { position: 'fixed', top: '0px' } }]);
   capped.start();

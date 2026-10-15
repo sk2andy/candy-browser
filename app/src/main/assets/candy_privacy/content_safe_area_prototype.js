@@ -34,6 +34,7 @@
   let sourceQueue = [];
   let sourceDiscovery = null;
   let selectorBuild = null;
+  let selectorInventoryComplete = true;
   const selectorRules = new Map();
   const cssCounts = { discovered: 0, late: 0, scans: 0, rules: 0, errors: 0, unsupported: 0, capped: 0, cancelled: 0 };
   // CSS source limits are independent of the smaller DOM initial-discovery budget.
@@ -587,14 +588,15 @@
     catch { return false; }
   }
 
-  function topSelector(selector) {
+  function topSelector(selector, conflicts = "") {
     // Append zero-specificity exclusions to each complete selector, preserving
     // commas inside functional pseudo-classes, attributes and quoted strings.
     const selectors = [];
     let start = 0, depth = 0, quote = "", pseudoElement = -1;
     const append = (end) => {
       const insertion = pseudoElement >= start ? pseudoElement : end;
-      const exclusion = `:not(:where([${headerTopMarker}]))` +
+      const exclusion = (conflicts ? `:not(:where(${conflicts}))` : "") +
+        `:not(:where([${headerTopMarker}]))` +
         (configuration.addInsetToNegativeTop ? "" : `:not(:where([${negativeTopMarker}]))`);
       selectors.push(`${selector.slice(start, insertion).trimEnd()}${exclusion}${selector.slice(insertion, end)}`);
     };
@@ -828,11 +830,13 @@
     if (globalThis.CandyRedditSafeArea?.ownsSource(owner)) return;
     if (!sheet || sheet === layer?.sheet || sheet === selectorLayer?.sheet ||
         sheet === selectorBuild?.staging?.sheet || owner === layer || owner === selectorLayer || owner === selectorBuild?.staging) return;
-    if (sourceEvents >= cssLimits.lifetimeEvents || cssCounts.rules >= cssLimits.lifetimeRules) { cssCounts.capped++; return; }
+    if (sourceEvents >= cssLimits.lifetimeEvents || cssCounts.rules >= cssLimits.lifetimeRules) {
+      cssCounts.capped++; invalidateSelectorInventory(); return;
+    }
     sourceEvents++;
     let source = sources.get(sheet);
     if (!source) {
-      if (sources.size >= cssLimits.sheets) { cssCounts.capped++; return; }
+      if (sources.size >= cssLimits.sheets) { cssCounts.capped++; invalidateSelectorInventory(); return; }
       source = { sheet, owner, revision: 0, candidates: new Map(), due: 0 };
       sources.set(sheet, source);
       cssCounts.discovered++;
@@ -920,6 +924,20 @@
     globalThis.requestAnimationFrame(sample);
   }
 
+  function invalidateSelectorInventory(source = null) {
+    // A rule beyond the scan budget can override any cloned selector. Preserve
+    // authored layout instead of publishing !important guesses after a cap.
+    if (source) source.incomplete = true;
+    else selectorInventoryComplete = false;
+    selectorLayer?.remove();
+    selectorLayer = null;
+    selectorRules.clear();
+    selectorImportance.clear();
+    protectedSelectors = [];
+    selectorMatcher = "";
+    selectorBuild?.applied?.clear();
+  }
+
   function beginSelectorBuild() {
     selectorBuild?.staging?.remove();
     const ordered = [];
@@ -929,7 +947,7 @@
       if (source) ordered.push(source);
     }
     selectorBuild = { phase: "collect", sources: ordered.values(), candidates: null,
-      result: new Map(), matcherLength: 0 };
+      sourcesComplete: ordered.every((source) => !source.incomplete), result: new Map(), matcherLength: 0 };
   }
 
   function buildSelectorStep() {
@@ -943,6 +961,7 @@
           document.documentElement.appendChild(build.staging);
           if (!build.staging.sheet) { build.staging.remove(); selectorBuild = null; return; }
           build.phase = "insert";
+          build.selectorLength = 0;
           build.entries = build.result.entries();
           build.applied = new Map();
           return;
@@ -953,13 +972,15 @@
       if (next.done) { build.candidates = null; return; }
       const [selector, candidate] = next.value;
       const previous = build.result.get(selector);
-      if (!candidate.important && previous?.important) return;
-      if (!previous && (build.result.size >= Math.min(cssLimits.selectors, configuration.maxInitialElements - Math.max(1, rules.size) - knownTopSelectors.length) ||
-          build.matcherLength + selector.length + 2 > 32768)) { cssCounts.capped++; return; }
+      if (!candidate.blocked && !previous?.blocked && !candidate.important && previous?.important) return;
+      if (!previous && (build.result.size >= cssLimits.selectors ||
+          build.matcherLength + selector.length + 2 > 32768)) {
+        cssCounts.capped++; invalidateSelectorInventory(); return;
+      }
       if (!previous) build.matcherLength += selector.length + 2;
       // Map order follows the last applicable declaration's source order.
       build.result.delete(selector);
-      build.result.set(selector, candidate);
+      build.result.set(selector, previous?.blocked ? previous : candidate);
       return;
     }
     if (build.phase === "insert") {
@@ -981,21 +1002,36 @@
           selectorRules.set(selector, selectorLayer.sheet.cssRules[index++]);
           selectorImportance.set(selector, entry.important);
         }
-        protectedSelectors = [...build.applied.keys()];
+        protectedSelectors = [...build.applied.values()].map((entry) => entry.selector);
         selectorMatcher = protectedSelectors.join(", ");
         build.phase = "reconcile";
         build.elements = rules.entries();
         return;
       }
       const [selector, candidate] = next.value;
+      if (!selectorInventoryComplete || !build.sourcesComplete || candidate.blocked) return;
+      if (build.applied.size >= configuration.maxInitialElements - Math.max(1, rules.size) - knownTopSelectors.length) {
+        cssCounts.capped++; return;
+      }
+      // Pseudo-elements cannot be tested inside :where() conflict exclusions.
+      // Preserve authored geometry when their selector competes with any other.
+      if (selector.includes("::") && build.result.size > 1) { cssCounts.unsupported++; return; }
       // Retain negative candidates through source precedence to supersede an
       // earlier positive declaration of the same selector, without publishing it.
       if (candidate.top < 0 && !configuration.addInsetToNegativeTop) return;
       const sheet = build.staging.sheet;
       try {
-        const text = `${topSelector(selector)} { top: ${candidate.top + inset}px !important; }`;
+        // A cloned !important top must not outrank a different author selector.
+        // Let the bounded DOM path read the actual cascade wherever selectors
+        // overlap; keep passive CSS protection only for unambiguous matches.
+        const conflicts = [...build.result.keys()].filter((other) => other !== selector).join(", ");
+        const protectedSelector = topSelector(selector, conflicts);
+        if (build.selectorLength + protectedSelector.length + 2 > 32768) { cssCounts.capped++; return; }
+        const text = `${protectedSelector} { top: ${candidate.top + inset}px !important; }`;
         const index = sheet.insertRule(text, sheet.cssRules.length);
-        build.applied.set(selector, { rule: sheet.cssRules[index], important: candidate.important, text });
+        build.selectorLength += protectedSelector.length + 2;
+        build.applied.set(selector, { rule: sheet.cssRules[index], important: candidate.important,
+          selector: protectedSelector, text });
       } catch { cssCounts.unsupported++; }
       return;
     }
@@ -1007,34 +1043,57 @@
   function scanSelectorStep() {
     const scan = selectorScan;
     if (scan.source.revision !== scan.revision) { selectorScan = null; return; }
-    if (scan.index >= scan.list.length || scan.index >= cssLimits.rulesPerSheet || cssCounts.rules >= cssLimits.lifetimeRules) {
-      if (scan.index < scan.list.length) cssCounts.capped++;
+    if (!scan.stack.length || scan.visited >= cssLimits.rulesPerSheet || cssCounts.rules >= cssLimits.lifetimeRules) {
+      if (scan.stack.some((frame) => frame.index < frame.list.length)) {
+        cssCounts.capped++; invalidateSelectorInventory(scan.source);
+      }
       scan.source.candidates = scan.candidates;
       selectorScan = null;
       cssCounts.scans++;
       if (!sourceQueue.some((source) => source.due <= performance.now())) beginSelectorBuild();
       return;
     }
-    const rule = scan.list[scan.index++];
+    const frame = scan.stack[scan.stack.length - 1];
+    if (frame.index >= frame.list.length) { scan.stack.pop(); return; }
+    const rule = frame.list[frame.index++];
+    scan.visited++;
     cssCounts.rules++;
-    // Grouping/import/keyframe/nested rules are deliberately unsupported in this prototype.
-    if (rule.type !== 1 || rule.cssRules?.length) { cssCounts.unsupported++; return; }
+    const nested = rule.cssRules;
+    if (nested?.length) {
+      // Group conditions do not need evaluation: every possible override is a
+      // conflict, never a clone. Descendants consume the same source/work caps.
+      if (scan.stack.length >= 16 || rule.type === 1) invalidateSelectorInventory(scan.source);
+      else scan.stack.push({ list: nested, index: 0, conflictOnly: true });
+    }
+    if (rule.type !== 1 || nested?.length) {
+      cssCounts.unsupported++;
+      return;
+    }
     const position = rule.style.getPropertyValue("position");
-    const top = pixels(rule.style.getPropertyValue("top"));
+    const declaredTop = rule.style.getPropertyValue("top");
+    const top = pixels(declaredTop);
     const selector = rule.selectorText;
-    if ((position !== "fixed" && position !== "sticky") || top === null || !selector || selector.length > 2048) return;
-    if (position === "fixed" &&
-        (rule.style.getPropertyValue("bottom") || rule.style.getPropertyValue("inset"))) return;
+    if (!selector || selector.length > 2048 || selector.includes("&")) {
+      invalidateSelectorInventory(scan.source); return;
+    }
+    const otherInset = ["bottom", "inset", "inset-block", "inset-block-start", "inset-block-end", "all"]
+      .some((name) => rule.style.getPropertyValue(name));
+    if (!position && !declaredTop && !otherInset) return;
+    const blocked = frame.conflictOnly || (position !== "fixed" && position !== "sticky") || top === null || otherInset;
     const important = rule.style.getPropertyPriority("top") === "important";
-    if (!important && scan.candidates.get(selector)?.important) return;
-    if (!scan.candidates.has(selector) && scan.candidates.size >= cssLimits.selectors) { cssCounts.capped++; return; }
+    const previous = scan.candidates.get(selector);
+    if (previous?.blocked || (!blocked && !important && previous?.important)) return;
+    if (!scan.candidates.has(selector) && scan.candidates.size >= cssLimits.selectors) {
+      cssCounts.capped++; invalidateSelectorInventory(scan.source); return;
+    }
     scan.candidates.delete(selector);
-    scan.candidates.set(selector, { top, important });
+    scan.candidates.set(selector, { top, important, blocked });
   }
 
   function cssSourceStep() {
     if (sourceWork >= 131072) {
       if (selectorBuild || selectorScan || sourceDiscovery || sourceQueue.length) cssCounts.capped++;
+      invalidateSelectorInventory();
       selectorBuild?.staging?.remove();
       selectorBuild = null; selectorScan = null; sourceDiscovery = null; sourceQueue = [];
       return false;
@@ -1047,7 +1106,7 @@
           sourceDiscovery.index < cssLimits.sheets + 3) {
         queueSource(document.styleSheets[sourceDiscovery.index++], undefined, false);
       } else {
-        if (sourceDiscovery.index < document.styleSheets.length) cssCounts.capped++;
+        if (sourceDiscovery.index < document.styleSheets.length) { cssCounts.capped++; invalidateSelectorInventory(); }
         sourceDiscovery = null;
       }
       return true;
@@ -1055,17 +1114,18 @@
     const index = sourceQueue.findIndex((source) => source.due <= performance.now());
     if (index < 0) return false;
     const source = sourceQueue.splice(index, 1)[0];
+    source.incomplete = false;
     let list = [];
     try {
       if ((!source.owner || source.owner.isConnected) && !source.sheet.disabled &&
-          (source.owner?.localName !== "link" || (source.owner.getAttribute("rel") || "").toLowerCase().split(/\s+/).includes("stylesheet")) &&
-          (!source.sheet.media?.mediaText || source.sheet.media.mediaText === "all")) list = source.sheet.cssRules;
+          (source.owner?.localName !== "link" || (source.owner.getAttribute("rel") || "").toLowerCase().split(/\s+/).includes("stylesheet"))) list = source.sheet.cssRules;
       else cssCounts.unsupported++;
     } catch (error) {
       if (error?.name === "SecurityError") cssCounts.errors++;
       else cssCounts.unsupported++;
     } // No cross-origin fetch or permission bypass.
-    selectorScan = { source, revision: source.revision, list, index: 0, candidates: new Map() };
+    selectorScan = { source, revision: source.revision, visited: 0, candidates: new Map(),
+      stack: [{ list, index: 0, conflictOnly: !!source.sheet.media?.mediaText && source.sheet.media.mediaText !== "all" }] };
     return true;
   }
 
@@ -1948,6 +2008,7 @@
     selectorsScanned = false;
     sources.clear();
     selectorRules.clear();
+    selectorInventoryComplete = true;
     sourceEvents = 0;
     sourceWork = 0;
     for (const key of Object.keys(cssCounts)) cssCounts[key] = 0;

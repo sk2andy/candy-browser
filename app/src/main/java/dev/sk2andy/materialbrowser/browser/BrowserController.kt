@@ -417,6 +417,12 @@ private data class GeckoViewBinding(
     val view: View,
 )
 
+private data class StoppedBrowserEngineNavigation(
+    val session: AndroidBrowserEngineSessionPort,
+    val url: String,
+    val waitsForViewport: Boolean,
+)
+
 private class PendingInitialBrowserEngineNavigation(
     val session: AndroidBrowserEngineSessionPort,
     val command: BrowserEngineCommand?,
@@ -480,6 +486,11 @@ private data class TabFaviconFetchAttempt(
 ) {
     val cancelled = AtomicBoolean(false)
 }
+
+private data class PendingNativePopupNavigation(
+    val session: AndroidBrowserEngineSessionPort,
+    val url: String,
+)
 
 private data class PendingGeckoViewAttach(
     val token: Any,
@@ -1322,6 +1333,10 @@ class BrowserController(
         get() = navigationGenerations.getOrDefault(selectedTabId, 0)
 
     @VisibleForTesting
+    internal val externalLinkPreviewSafeAreaNavigationGenerationForTesting: Int
+        get() = requireNotNull(externalLinkPreviewRuntime).safeAreaNavigationGeneration
+
+    @VisibleForTesting
     internal fun dispatchExternalLinkPreviewPrivacyEventForTesting(event: GeckoPrivacyEvent) {
         val runtime = requireNotNull(externalLinkPreviewRuntime)
         onExternalLinkPreviewPrivacyEvent(
@@ -1349,6 +1364,7 @@ class BrowserController(
     @VisibleForTesting
     internal fun installGeckoEngineSessionForTesting(session: AndroidBrowserEngineSessionPort) {
         require(tabs.any { tab -> tab.id == session.tabId })
+        stoppedBrowserEngineNavigations.remove(session.tabId)
         removePendingInitialBrowserEngineNavigation(session.tabId)
         browserEngineSessions.put(session.tabId, session)?.execute(BrowserEngineCommands.close())
         connectBrowserEngineScrollListener(session.tabId, session)
@@ -1365,6 +1381,8 @@ class BrowserController(
     private val browserEngineSessions = mutableMapOf<String, AndroidBrowserEngineSessionPort>()
     private val pendingInitialBrowserEngineNavigations =
         mutableMapOf<String, PendingInitialBrowserEngineNavigation>()
+    private val stoppedBrowserEngineNavigations =
+        mutableMapOf<String, StoppedBrowserEngineNavigation>()
     private val browserEngineMediaSessionIds = GeckoMediaSessionIdentityRegistry()
     private var media3CapturedOwner: GeckoMediaPlaybackOwner? = null
     private var media3BackgroundOwner: GeckoMediaPlaybackOwner? = null
@@ -1469,6 +1487,7 @@ class BrowserController(
     private val pendingPopunderNavigations = mutableMapOf<String, PendingPopunderNavigation>()
     private val transientPopupTabIds = mutableSetOf<String>()
     private val nativePopupSessions = mutableMapOf<String, AndroidBrowserEngineSessionPort>()
+    private val pendingNativePopupNavigations = mutableMapOf<String, PendingNativePopupNavigation>()
     private var blockedPopupSequence = 0L
     internal var blockedPopupOffer by mutableStateOf<BlockedPopupOffer?>(null)
         private set
@@ -1528,6 +1547,7 @@ class BrowserController(
     }
     private var nextAutomaticExternalAppRequestId = 0L
     private val pendingAutomaticExternalAppRequests = mutableMapOf<String, Long>()
+    private val pendingNativePopupResponses = mutableMapOf<String, BrowserEngineBooleanResponse>()
     private val geckoFileUploadStager = GeckoFileUploadStager(activity.applicationContext)
     private val profileWallpaperExecutor = Executors.newSingleThreadExecutor { task ->
         Thread(task, "profile-wallpaper")
@@ -4648,12 +4668,20 @@ class BrowserController(
         if (event.type == BrowserEngineEventType.NavigationStarted) runtime.downloadNavigationRevision++
         val wasSafeAreaForced = isExternalLinkPreviewSafeAreaForced(runtime.binding.view)
         val safeUrl = ExternalLinkPreviewRules.safeCurrentUrl(event.address)
+        val startsSafeAreaNavigation = event.type == BrowserEngineEventType.NavigationStarted ||
+            (event.type == BrowserEngineEventType.StateChanged &&
+                safeUrl != null && safeUrl != state.currentUrl && !state.isLoading)
+        if (startsSafeAreaNavigation) {
+            runtime.safeAreaNavigationGeneration++
+            runtime.nativeTopSafeArea = false
+            runtime.nativeTopHeaderSafeArea = false
+        }
         if (event.type == BrowserEngineEventType.NavigationStarted &&
             findInPageSession?.geckoSession === session
         ) {
             closeFindInPage()
         }
-        if (event.type == BrowserEngineEventType.NavigationStarted && safeUrl != null) {
+        if (startsSafeAreaNavigation && safeUrl != null) {
             val requestContext = protectionRequestContextFor(runtime.policyTab, safeUrl)
             synchronized(privacyEventLock) {
                 protectionRequestContexts[runtime.policyTab.id] = requestContext
@@ -4664,7 +4692,7 @@ class BrowserController(
                     pageUrl = safeUrl,
                     context = requestContext,
                     topInsetPx = 0,
-                    navigationGeneration = generation,
+                    navigationGeneration = runtime.safeAreaNavigationGeneration,
                 ),
                 reloadOnCookiePermissionChange = true,
             )
@@ -4714,8 +4742,12 @@ class BrowserController(
         ) {
             completeExternalNavigationRollback(runtime.policyTab.id)
         }
-        if (wasSafeAreaForced != isExternalLinkPreviewSafeAreaForced(runtime.binding.view)) {
-            dispatchCurrentWindowInsets(runtime.binding.view, tabId = null)
+        if (startsSafeAreaNavigation ||
+            wasSafeAreaForced != isExternalLinkPreviewSafeAreaForced(runtime.binding.view)
+        ) {
+            lastWindowInsets?.let { insets ->
+                applyGeckoWindowInsets(runtime.binding.view, tabId = null, insets)
+            }
         }
     }
 
@@ -4886,12 +4918,26 @@ class BrowserController(
         session: AndroidBrowserEngineSessionPort,
         event: GeckoPrivacyEvent,
     ) {
-        if (!event.isCloudflareChallengeResponse) return
         val runtime = currentExternalLinkPreviewGeckoRuntime(
             sessionId = sessionId,
             generation = generation,
             session = session,
         ) ?: return
+        event.safeAreaFallbackNavigationGeneration?.let { navigationGeneration ->
+            if (navigationGeneration != runtime.safeAreaNavigationGeneration) return
+            if (runtime.nativeTopSafeArea &&
+                (!event.safeAreaFallbackIsTopHeader || runtime.nativeTopHeaderSafeArea)
+            ) return
+            runtime.nativeTopSafeArea = true
+            runtime.nativeTopHeaderSafeArea = runtime.nativeTopHeaderSafeArea ||
+                event.safeAreaFallbackIsTopHeader
+            lastWindowInsets?.let { insets ->
+                applyGeckoWindowInsets(runtime.binding.view, tabId = null, insets)
+            }
+            refreshExternalLinkPreviewSafeAreaPolicy(forceNativeChanged = false)
+            return
+        }
+        if (!event.isCloudflareChallengeResponse) return
         val state = externalLinkPreviewState ?: return
         val currentHost = PrivacyRequestSanitizer.webHost(state.currentUrl) ?: return
         val responseHost = PrivacyRequestSanitizer.webHost(event.requestUrl) ?: return
@@ -5038,12 +5084,17 @@ class BrowserController(
         } else {
             isExternalLinkPreviewSafeAreaForced(view)
         }
-        val nativeTopHeaderSafeArea = tabId != null &&
+        val previewRuntime = externalLinkPreviewRuntime?.takeIf { it.binding.view === view }
+        val nativeTopHeaderSafeArea = if (tabId != null) {
             webContentTopBarStates.containsKey(tabId)
-        val forceNativeTopSafeArea = tabId != null && (
-            tabId in automaticNativeTopSafeAreaTabIds ||
-                nativeTopHeaderSafeArea
-        )
+        } else {
+            previewRuntime?.nativeTopHeaderSafeArea == true
+        }
+        val forceNativeTopSafeArea = if (tabId != null) {
+            tabId in automaticNativeTopSafeAreaTabIds || nativeTopHeaderSafeArea
+        } else {
+            previewRuntime?.nativeTopSafeArea == true
+        }
         val layout = GeckoViewInsetRules.resolve(
             safeArea = safeArea,
             forceNativeSafeArea = forceNativeSafeArea,
@@ -7364,10 +7415,28 @@ class BrowserController(
         source: ExternalAppHandoffSource,
         grant: ExternalNavigationGrant?,
         isRedirect: Boolean,
+        nativePopupResponse: BrowserEngineBooleanResponse? = null,
     ) {
         val policyTabId = source.policyTabId()
+        cancelPendingAutomaticExternalAppRequest(policyTabId)
         val requestId = ++nextAutomaticExternalAppRequestId
         pendingAutomaticExternalAppRequests[policyTabId] = requestId
+        nativePopupResponse?.let { pendingNativePopupResponses[policyTabId] = it }
+        fun completeNativePopup(allowed: Boolean) {
+            if (nativePopupResponse != null &&
+                pendingNativePopupResponses[policyTabId] === nativePopupResponse
+            ) {
+                pendingNativePopupResponses.remove(policyTabId)
+                if (allowed) {
+                    ExternalNavigationGrantRules.resumeInBrowser(
+                        grant = grant,
+                        url = safeHttpUrl,
+                        nowElapsedRealtime = SystemClock.elapsedRealtime(),
+                    )?.let { externalNavigationGrants[policyTabId] = it }
+                }
+                nativePopupResponse.complete(allowed)
+            }
+        }
         val sourceNavigationGeneration = currentExternalAppSourceNavigationGeneration(source)
         val sourcePageUrl = currentExternalAppSourcePageUrl(source)
         val sourceDocumentGeneration =
@@ -7385,7 +7454,10 @@ class BrowserController(
             isRedirect = isRedirect,
         )
         fun completeLaunch(prepared: PreparedWebAppLaunch?) {
-            if (pendingAutomaticExternalAppRequests[policyTabId] != requestId) return
+            if (pendingAutomaticExternalAppRequests[policyTabId] != requestId) {
+                completeNativePopup(false)
+                return
+            }
             pendingAutomaticExternalAppRequests.remove(policyTabId)
             if (
                 destroyed ||
@@ -7400,6 +7472,7 @@ class BrowserController(
             ) {
                 clearExternalNavigationRollback(source)
                 clearExternalAppNavigationRecovery(source)
+                completeNativePopup(false)
                 return
             }
             val result = if (safeHttpUrl != null) {
@@ -7412,6 +7485,7 @@ class BrowserController(
                 ExternalLaunchResult.Launched,
                 ExternalLaunchResult.AppChooserShown,
                 -> {
+                    completeNativePopup(false)
                     pendingExternalAppHandoff = ExternalAppHandoffRules.start(
                         targetUrl = webTargetUrl,
                         nowElapsedRealtime = SystemClock.elapsedRealtime(),
@@ -7423,12 +7497,21 @@ class BrowserController(
                 is ExternalLaunchResult.OpenInBrowser -> {
                     clearExternalNavigationRollback(source)
                     clearExternalAppNavigationRecovery(source)
-                    openExternalAppFallback(source, result.url, grant)
+                    if (nativePopupResponse != null &&
+                        BrowserUriPolicy.normalizeHttpUrl(result.url) == safeHttpUrl
+                    ) {
+                        completeNativePopup(true)
+                    } else {
+                        completeNativePopup(false)
+                        openExternalAppFallback(source, result.url, grant)
+                    }
                 }
                 ExternalLaunchResult.Unsupported -> {
                     clearExternalNavigationRollback(source)
                     clearExternalAppNavigationRecovery(source)
-                    if (safeHttpUrl != null) {
+                    if (nativePopupResponse != null && safeHttpUrl != null) {
+                        completeNativePopup(true)
+                    } else if (safeHttpUrl != null) {
                         openExternalAppFallback(source, safeHttpUrl, grant)
                     } else {
                         Toast.makeText(
@@ -7453,6 +7536,11 @@ class BrowserController(
                 }
             }
         }
+    }
+
+    private fun cancelPendingAutomaticExternalAppRequest(policyTabId: String) {
+        pendingAutomaticExternalAppRequests.remove(policyTabId)
+        pendingNativePopupResponses.remove(policyTabId)?.complete(false)
     }
 
     fun confirmExternalAppPrompt(promptId: Long) {
@@ -7916,7 +8004,8 @@ class BrowserController(
     }
 
     private fun clearExternalNavigationAuthorization(tabId: String) {
-        pendingAutomaticExternalAppRequests.remove(tabId)
+        cancelPendingAutomaticExternalAppRequest(tabId)
+        pendingNativePopupNavigations.remove(tabId)
         browserEngineNavigationRequestGenerations[tabId]?.let { generation ->
             browserEngineNavigationRequestGenerations[tabId] = generation + 1L
         }
@@ -9236,6 +9325,7 @@ class BrowserController(
         val selectedTrail = CandyTrailRules.selectNode(trail, nodeId, System.currentTimeMillis())
             ?: return false
         clearExternalNavigationAuthorization(tabId)
+        stoppedBrowserEngineNavigations.remove(tabId)
         setCandyTrail(tab, selectedTrail)
         pendingCandyTrailTargets[tabId] = nodeId
         selectTab(tabId)
@@ -9269,6 +9359,7 @@ class BrowserController(
         if (!selectedTab.canGoBack) return
         val session = browserEngineSessions[selectedTabId] ?: return
         clearExternalNavigationAuthorization(selectedTabId)
+        stoppedBrowserEngineNavigations.remove(selectedTabId)
         pendingBrowserEngineLoadRequests.remove(selectedTabId)
         val capsule = activeCapsuleForTab(selectedTabId)
         val targetUrl = session.historyUrlAtOffset(-1)
@@ -9285,6 +9376,7 @@ class BrowserController(
     fun goForward() {
         if (!selectedTab.canGoForward) return
         clearExternalNavigationAuthorization(selectedTabId)
+        stoppedBrowserEngineNavigations.remove(selectedTabId)
         pendingBrowserEngineLoadRequests.remove(selectedTabId)
         val binding = candyTrailHistoryBindings[selectedTabId]
         binding?.entries?.getOrNull(binding.currentIndex + 1)?.nodeId?.let { targetNodeId ->
@@ -9305,6 +9397,22 @@ class BrowserController(
             )
         }
         val session = browserEngineSessionFor(selectedTabId)
+        val stopped = stoppedBrowserEngineNavigations.remove(selectedTabId)
+            ?.takeIf { it.session === session && it.url == selectedTab.url }
+        if (stopped != null) {
+            if (stopped.waitsForViewport) {
+                setPendingInitialBrowserEngineNavigation(
+                    selectedTabId,
+                    PendingInitialBrowserEngineNavigation(
+                        session = session,
+                        command = null,
+                        expectedUrl = stopped.url,
+                    ),
+                )
+            }
+            loadGeckoWithPrivacy(selectedTabId, session, stopped.url)
+            return
+        }
         val pending = pendingInitialBrowserEngineNavigations[selectedTabId]
         if (pending?.session !== session) session.execute(BrowserEngineCommands.reload())
     }
@@ -9322,6 +9430,7 @@ class BrowserController(
         val failedTab = selectedTab
         val command = FailedPageRetryRules.commandFor(failedTab) ?: return false
         clearExternalNavigationAuthorization(tabId)
+        stoppedBrowserEngineNavigations.remove(tabId)
         updateTab(tabId) {
             it.copy(
                 isLoading = true,
@@ -9343,9 +9452,24 @@ class BrowserController(
 
     fun stopLoading() {
         clearExternalNavigationAuthorization(selectedTabId)
-        removePendingInitialBrowserEngineNavigation(selectedTabId)
-        pendingBrowserEngineLoadRequests.remove(selectedTabId)
-        browserEngineSessions[selectedTabId]?.execute(BrowserEngineCommands.stop())
+        val pending = removePendingInitialBrowserEngineNavigation(selectedTabId)
+        val pendingLoad = pendingBrowserEngineLoadRequests.remove(selectedTabId)
+        val session = browserEngineSessions[selectedTabId]
+        // Only an undispatched URL load needs replay. Native reload must retain POST/history state
+        // once Gecko has started the document.
+        if (
+            usesGeckoEngine && session != null &&
+            (pending?.session === session || pendingLoad != null)
+        ) {
+            BrowserUriPolicy.normalizeHttpUrl(selectedTab.url)?.let { url ->
+                stoppedBrowserEngineNavigations[selectedTabId] = StoppedBrowserEngineNavigation(
+                    session = session,
+                    url = url,
+                    waitsForViewport = pending?.session === session,
+                )
+            }
+        }
+        session?.execute(BrowserEngineCommands.stop())
         updateTab(selectedTabId) { it.copy(isLoading = false) }
     }
 
@@ -11604,6 +11728,10 @@ class BrowserController(
         firefoxExtensionOptionsTabs.clear()
         committedRecallPages.clear()
         pendingAutomaticExternalAppRequests.clear()
+        val pendingPopupResponses = pendingNativePopupResponses.values.toList()
+        pendingNativePopupResponses.clear()
+        pendingNativePopupNavigations.clear()
+        pendingPopupResponses.forEach { response -> response.complete(false) }
         externalNavigationGrants.clear()
         pendingInitialExternalNavigationGrants.clear()
         navigationSourceTabs.clear()
@@ -11944,6 +12072,12 @@ class BrowserController(
         if (request.hasUserGesture) pendingBrowserEngineLoadRequests.remove(tabId)
         val scheme = runCatching { Uri.parse(request.url).scheme }.getOrNull()?.lowercase()
         val safeHttpUrl = BrowserUriPolicy.normalizeHttpUrl(request.url)
+        val pendingNativePopup = pendingNativePopupNavigations.remove(tabId)
+        val isOriginalNativePopupRequest = pendingNativePopup != null &&
+            pendingNativePopup.session === session &&
+            pendingNativePopup.url == safeHttpUrl &&
+            !request.isRedirect &&
+            request.target == BrowserEngineNavigationTarget.Current
         if (isQuarantinedPopup(tabId)) return GeckoNavigationRequestDecision.Deny
         val extensionChrome = firefoxExtensionOptionsTabs[tabId]
         val currentUrl = pageUrls[tabId] ?: tabs.firstOrNull { it.id == tabId }?.url
@@ -12024,11 +12158,18 @@ class BrowserController(
         val nowElapsedRealtime = SystemClock.elapsedRealtime()
         val currentPageUrl = pageUrls[tabId]
             ?: tabs.firstOrNull { tab -> tab.id == tabId }?.url
-        val isInitialGrantedNavigation = safeHttpUrl != null &&
-            !request.hasUserGesture && !request.isRedirect &&
-            request.target == BrowserEngineNavigationTarget.Current &&
-            activatePendingInitialExternalNavigationGrant(tabId, safeHttpUrl, nowElapsedRealtime)
-        if (!isInitialGrantedNavigation) pendingInitialExternalNavigationGrants.remove(tabId)
+        // Native POST popups can repeat the accepted request after its external grant expires.
+        // Consume that exact first request without refreshing the bounded redirect grant.
+        val isInitialGrantedNavigation = isOriginalNativePopupRequest || (
+            safeHttpUrl != null &&
+                !request.hasUserGesture &&
+                !request.isRedirect &&
+                request.target == BrowserEngineNavigationTarget.Current &&
+                activatePendingInitialExternalNavigationGrant(tabId, safeHttpUrl, nowElapsedRealtime)
+            )
+        if (isOriginalNativePopupRequest || !isInitialGrantedNavigation) {
+            pendingInitialExternalNavigationGrants.remove(tabId)
+        }
         if (safeHttpUrl != null && !isInitialGrantedNavigation) {
             updateExternalNavigationGrant(
                 tabId = tabId,
@@ -12093,6 +12234,10 @@ class BrowserController(
             }
             if (appNavigationHandling == ExternalAppNavigationHandling.Automatic) {
                 rememberExternalAppNavigationRecovery(tabId, session, request.url)
+                val nativePopupResponse = request.nativePopupResponse?.takeIf {
+                    safeHttpUrl != null && request.hasUserGesture &&
+                        request.target == BrowserEngineNavigationTarget.New
+                }
                 postAutomaticExternalAppLaunch(
                     requestUrl = request.url,
                     safeHttpUrl = safeHttpUrl,
@@ -12100,8 +12245,13 @@ class BrowserController(
                     source = requireNotNull(source),
                     grant = handoffGrant,
                     isRedirect = request.isRedirect,
+                    nativePopupResponse = nativePopupResponse,
                 )
-                return GeckoNavigationRequestDecision.Deny
+                return if (nativePopupResponse != null) {
+                    GeckoNavigationRequestDecision.Pending
+                } else {
+                    GeckoNavigationRequestDecision.Deny
+                }
             }
             if (safeHttpUrl == null) {
                 return GeckoNavigationRequestDecision.Deny
@@ -12183,11 +12333,21 @@ class BrowserController(
             closeTab(popupTabId)
             return false
         }
+        externalNavigationGrants[openerTabId]?.takeIf { grant ->
+            grant.currentUrl == BrowserUriPolicy.normalizeHttpUrl(initialUrl) &&
+                ExternalNavigationGrantRules.isActive(grant, SystemClock.elapsedRealtime())
+        }?.copy(sourceUrl = null)?.let { grant ->
+            externalNavigationGrants[popupTabId] = grant
+            pendingInitialExternalNavigationGrants[popupTabId] = grant
+        }
         val pending = requireNotNull(pendingPopupNavigations[popupTabId])
         val session = browserEngineSessionFor(popupTabId)
         nativePopupSessions[popupTabId] = session
-        // Gecko loads the initial child URI itself without another onLoadRequest callback.
-        // Route it here so an accepted target=_blank tab does not stay transient indefinitely.
+        BrowserUriPolicy.normalizeHttpUrl(initialUrl)?.let { url ->
+            pendingNativePopupNavigations[popupTabId] = PendingNativePopupNavigation(session, url)
+        }
+        // Some native windows omit a child load-request callback; POST popups can repeat it.
+        // Route the initial URI here too so accepted windows cannot stay transient indefinitely.
         if (initialUrl != BLANK_URL) handlePendingPopupNavigation(popupTabId, session, initialUrl)
         schedulePendingPopupTimeout(popupTabId, pending, preopenedBlank = initialUrl == BLANK_URL)
         return true
@@ -13061,6 +13221,7 @@ class BrowserController(
         session: AndroidBrowserEngineSessionPort,
         url: String,
     ) {
+        stoppedBrowserEngineNavigations.remove(tabId)
         val targetUrl = autoDeAmpPublisherUrl(tabId, url) ?: url
         resetWebContentSafeAreaForDomainNavigation(tabId, targetUrl)
         pageUrls[tabId] = targetUrl
@@ -13221,6 +13382,9 @@ class BrowserController(
             PrivacyRequestSanitizer.webHost(pageUrl)?.let { host -> isSafeAreaForced(tab, host) } == true ||
             tab.id in automaticNativeTopSafeAreaTabIds ||
             webContentTopBarStates.containsKey(tab.id) ||
+            externalLinkPreviewRuntime?.let { runtime ->
+                runtime.policyTab.id == tab.id && runtime.nativeTopSafeArea
+            } == true ||
             tab.id in browserEngineContentFullscreenTabIds
         ) {
             0
@@ -13304,7 +13468,7 @@ class BrowserController(
                 pageUrl = pageUrl,
                 context = context,
                 topInsetPx = 0,
-                navigationGeneration = runtime.generation,
+                navigationGeneration = runtime.safeAreaNavigationGeneration,
             ),
             onReady = dispatchUpdatedInsets,
         )
@@ -13507,6 +13671,7 @@ class BrowserController(
         ) return
         when (event.type) {
             BrowserEngineEventType.NavigationStarted -> {
+                stoppedBrowserEngineNavigations.remove(event.tabId)
                 recordSessionDiagnostic(BrowserSessionDiagnostics.Event.NavigationStarted, event.tabId)
                 cancelPendingMemorySessionCheck(event.tabId)
                 invalidateExternalAppPromptForNavigation(event.tabId)
@@ -13627,6 +13792,8 @@ class BrowserController(
                 markLocalSyncNavigationPending(event.tabId, event.address)
             }
             BrowserEngineEventType.NavigationCommitted -> {
+                // Native windows can commit their empty document before the original POST starts.
+                if (event.address != BLANK_URL) pendingNativePopupNavigations.remove(event.tabId)
                 navigationSourceTabs.remove(event.tabId)
                 externalAppNavigationRecoveries.remove(event.tabId)
                 val previousUrl = tabs.firstOrNull { it.id == event.tabId }?.url
@@ -13673,6 +13840,7 @@ class BrowserController(
                 }
             }
             BrowserEngineEventType.NavigationFailed -> {
+                pendingNativePopupNavigations.remove(event.tabId)
                 if (restoreExternalAppNavigationSource(event)) {
                     engineViewRevision++
                     return
@@ -13745,6 +13913,8 @@ class BrowserController(
                 }
             }
             BrowserEngineEventType.Crashed -> {
+                pendingNativePopupNavigations.remove(event.tabId)
+                stoppedBrowserEngineNavigations.remove(event.tabId)
                 recordSessionDiagnostic(BrowserSessionDiagnostics.Event.RendererTerminated, event.tabId)
                 cancelPendingMemorySessionCheck(event.tabId)
                 removePendingInitialBrowserEngineNavigation(event.tabId)
@@ -13779,6 +13949,8 @@ class BrowserController(
                 }
             }
             BrowserEngineEventType.Closed -> {
+                pendingNativePopupNavigations.remove(event.tabId)
+                stoppedBrowserEngineNavigations.remove(event.tabId)
                 cancelPendingMemorySessionCheck(event.tabId)
                 navigationSourceTabs.remove(event.tabId)
                 externalAppNavigationRecoveries.remove(event.tabId)
@@ -14206,6 +14378,7 @@ class BrowserController(
     }
 
     private fun closeBrowserEngineSession(tabId: String) {
+        stoppedBrowserEngineNavigations.remove(tabId)
         if (tabId in browserEngineSessions) {
             recordSessionDiagnostic(BrowserSessionDiagnostics.Event.Closed, tabId)
         }
@@ -14213,8 +14386,9 @@ class BrowserController(
         cancelPendingPopupTimeout(tabId)
         releaseDownloadChoicesForSource(tabId)
         nativePopupSessions.remove(tabId)
+        pendingNativePopupNavigations.remove(tabId)
         removePendingInitialBrowserEngineNavigation(tabId)
-        pendingAutomaticExternalAppRequests.remove(tabId)
+        cancelPendingAutomaticExternalAppRequest(tabId)
         browserEngineNavigationRequestGenerations.remove(tabId)
         browserEngineDocumentGenerations.remove(tabId)
         manuallyUnparkedAddressBarTabIds.remove(tabId)
@@ -17655,6 +17829,9 @@ class BrowserController(
         var pendingInternalNavigationUrl: String? = null,
         var downloadNavigationRevision: Int = 0,
         var backdropBlurRegion: BrowserBackdropBlurRegion? = null,
+        var safeAreaNavigationGeneration: Int = generation,
+        var nativeTopSafeArea: Boolean = false,
+        var nativeTopHeaderSafeArea: Boolean = false,
     ) {
         val geckoBinding: ExternalLinkPreviewEngineBinding.Gecko
             get() = binding as ExternalLinkPreviewEngineBinding.Gecko

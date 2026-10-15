@@ -156,6 +156,52 @@ class BrowserControllerInitialViewportInstrumentedTest {
     }
 
     @Test
+    fun stoppedFirstNavigationReloadsTargetAfterViewportAttaches() {
+        EdgeToEdgeSiteFixtureServer { HTML }.use { server ->
+            lateinit var host: FrameLayout
+            composeRule.runOnIdle {
+                val store = BrowserSessionStore(composeRule.activity)
+                originalEngineKind = store.loadAndroidBrowserEngineKind()
+                originalHistoryRecordingMode = store.loadHistoryRecordingMode()
+                store.loadTabs().let { (tabs, selectedTabId) ->
+                    originalTabs = tabs
+                    originalSelectedTabId = selectedTabId
+                }
+                assertTrue(store.saveAndroidBrowserEngineKind(AndroidBrowserEngineKind.GeckoView))
+                assertTrue(store.saveHistoryRecordingMode(HistoryRecordingMode.Disabled))
+                val restoredTab = BrowserTab(
+                    id = "stopped-before-attachment",
+                    url = server.fixtureUrl(FIXTURE_PATH),
+                    lastAccessedAt = System.currentTimeMillis(),
+                )
+                assertTrue(store.saveTabsImmediately(listOf(restoredTab), restoredTab.id))
+                val browserController = BrowserController(composeRule.activity)
+                controller = browserController
+                activeTestTabId = restoredTab.id
+                browserController.onStart()
+                browserController.onResume()
+                host = FrameLayout(composeRule.activity)
+                requireNotNull(browserController.attachSelectedBrowserEngineView(host))
+                assertTrue(browserController.isInitialNavigationWaitingForRendererForTesting())
+
+                browserController.stopLoading()
+                assertFalse(browserController.isInitialNavigationWaitingForRendererForTesting())
+                browserController.reload()
+                assertTrue(browserController.isInitialNavigationWaitingForRendererForTesting())
+                assertEquals(restoredTab.url, browserController.selectedTab.url)
+                assertEquals(0, server.documentRequestCount.get())
+
+                composeRule.activity.addContentView(host, FrameLayout.LayoutParams(600, 800))
+            }
+            composeRule.waitUntil(timeoutMillis = 30_000L) {
+                controller?.selectedTabForTesting()?.title?.startsWith(REPORT_PREFIX) == true
+            }
+            assertEquals(1, server.documentRequestCount.get())
+            assertFalse(requireNotNull(controller).isInitialNavigationWaitingForRendererForTesting())
+        }
+    }
+
+    @Test
     fun initialNavigationUsesAttachedViewportScaleWithoutReload() {
         EdgeToEdgeSiteFixtureServer { target ->
             when {

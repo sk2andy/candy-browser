@@ -1027,6 +1027,7 @@ private class GeckoViewBrowserSession(
     private var toppingHostWaitRegistered = false
     private var trackingPermissionWaitRegistered = false
     private var pendingInitialUrl: String? = null
+    private var stoppedInitialUrl: String? = null
     private var replaceBootstrapHistoryOnNextLoad = openSession
     private var latestPageIsBootstrap = false
     private var pendingFailedPageRetryUrl: String? = null
@@ -1223,6 +1224,22 @@ private class GeckoViewBrowserSession(
                 if (CandyPrivacyHostContract.isBootstrapDocumentUrl(request.uri)) {
                     return GeckoResult.deny()
                 }
+                val pendingResult = GeckoResult<AllowOrDeny>()
+                var responseCompleted = false
+                val nativePopupResponse = if (
+                    request.target == GeckoSession.NavigationDelegate.TARGET_WINDOW_NEW
+                ) {
+                    BrowserEngineBooleanResponse { allowed ->
+                        if (!responseCompleted) {
+                            responseCompleted = true
+                            pendingResult.complete(
+                                if (allowed && !closed) AllowOrDeny.ALLOW else AllowOrDeny.DENY,
+                            )
+                        }
+                    }
+                } else {
+                    null
+                }
                 val decision = navigationRequestListener?.onNavigationRequest(
                     GeckoMainFrameNavigationRequest(
                         url = request.uri,
@@ -1236,6 +1253,7 @@ private class GeckoViewBrowserSession(
                                 BrowserEngineNavigationTarget.None
                             else -> BrowserEngineNavigationTarget.Current
                         },
+                        nativePopupResponse = nativePopupResponse,
                     ),
                 ) ?: GeckoNavigationRequestDecision.Allow
                 return when (decision) {
@@ -1251,6 +1269,7 @@ private class GeckoViewBrowserSession(
                         }
                         GeckoResult.deny()
                     }
+                    GeckoNavigationRequestDecision.Pending -> pendingResult
                 }
             }
 
@@ -3336,7 +3355,12 @@ private class GeckoViewBrowserSession(
     }
 
     override fun reload() {
-        if (!closed && privacyBound) {
+        if (closed) return
+        stoppedInitialUrl?.let { url ->
+            loadValidatedUrl(url)
+            return
+        }
+        if (privacyBound) {
             pendingRestoredHttpsOnlyUrl = null
             invalidateCredentialPrompts(recreateHost = false)
             if (state.failureKind == BrowserEngineFailureKind.HttpsOnly && httpsOnlyRetryUrl != null) {
@@ -3349,15 +3373,16 @@ private class GeckoViewBrowserSession(
 
     override fun stop() {
         if (!closed) {
+            stoppedInitialUrl = pendingInitialUrl ?: stoppedInitialUrl
             pendingInitialUrl = null
             pendingFailedPageRetryUrl = null
-            latestPageIsBootstrap = false
             pendingRestoredSessionState = null
             pendingRestoredHttpsOnlyUrl = null
             finishRestoredHistoryWait()
             finishNavigation()
             invalidateCredentialPrompts(recreateHost = true)
-            session.stop()
+            // The internal bootstrap must finish binding even when the user's queued load stops.
+            if (privacyBound) session.stop()
         }
     }
 
@@ -3403,6 +3428,7 @@ private class GeckoViewBrowserSession(
         inPictureInPicture = false
         pictureInPicturePlaybackExpected = false
         pendingInitialUrl = null
+        stoppedInitialUrl = null
         pendingFailedPageRetryUrl = null
         latestPageIsBootstrap = false
         pendingRestoredSessionState = null
@@ -3527,6 +3553,7 @@ private class GeckoViewBrowserSession(
     }
 
     private fun beginNavigation(url: String) {
+        stoppedInitialUrl = null
         prepareNavigation(url, forceNewGeneration = true)
     }
 
@@ -3719,6 +3746,7 @@ private class GeckoViewBrowserSession(
         privacyBound = false
         privacyFailureDescription = description
         pendingInitialUrl = null
+        stoppedInitialUrl = null
         pendingFailedPageRetryUrl = null
         pendingRestoredSessionState = null
         pendingRestoredHttpsOnlyUrl = null
@@ -3751,6 +3779,7 @@ private class GeckoViewBrowserSession(
         boundView?.onNavigationStarted()
         invalidateDomProbe()
         pendingInitialUrl = null
+        stoppedInitialUrl = null
         pendingFailedPageRetryUrl = null
         latestPageIsBootstrap = false
         pendingRestoredSessionState = null

@@ -32,6 +32,79 @@ class GeckoSafeAreaPrototypeInstrumentedTest {
     private val instrumentation = InstrumentationRegistry.getInstrumentation()
 
     @Test
+    fun stylesheetCascadeKeepsLaterAndImportantAuthorTopAcrossProtectionToggle() {
+        val title = AtomicReference<String?>(null)
+        val policy = GeckoPrivacyPolicy.Disabled.copy(cssSafeAreaTopInsetPx = NATIVE_TOP_PX)
+        val disabledPolicy = policy.copy(geckoSafeAreaSettings = GeckoSafeAreaSettings(enabled = false))
+        EdgeToEdgeSiteFixtureServer { _ -> STYLESHEET_CASCADE_HTML }.use { server ->
+            ActivityScenario.launch(GeckoScrollTestActivity::class.java).use { scenario ->
+                lateinit var session: GeckoBrowserSession
+                lateinit var view: View
+                scenario.onActivity { activity ->
+                    WindowCompat.setDecorFitsSystemWindows(activity.window, false)
+                    session = GeckoRuntimeOwner.getOrCreate(activity).createSession(
+                        profileId = "safe-area-cascade-${UUID.randomUUID()}",
+                        isPrivate = false,
+                        privacyPolicy = disabledPolicy,
+                    )
+                    session.bindExtensionTab("safe-area-cascade-${UUID.randomUUID()}", 1)
+                    session.setStateListener { state -> title.set(state.title) }
+                    view = session.createView(activity)
+                    activity.setContentView(view)
+                    session.setActive(true)
+                    assertTrue(session.loadUrl(server.fixtureUrl("/site-matrix/stylesheet-cascade")))
+                }
+                try {
+                    awaitReport(title) { it.getBoolean("loaded") }
+                    scenario.onActivity { updateNativeTop(view) }
+                    val initial = awaitReport(title) {
+                        abs(it.getDouble("env") * it.getDouble("density") - NATIVE_TOP_PX) < 0.5
+                    }
+                    assertEquals(60.0, initial.getDouble("laterTop"), 0.02)
+                    assertEquals(8.0, initial.getDouble("importantTop"), 0.02)
+                    fun updatePolicy(next: GeckoPrivacyPolicy) {
+                        val ready = CountDownLatch(1)
+                        scenario.onActivity {
+                            session.updatePrivacyPolicy(
+                                next.copy(pageHost = URI(server.fixtureUrl("/")).host),
+                                onReady = ready::countDown,
+                            )
+                        }
+                        assertTrue("Prototype policy acknowledgement", ready.await(30, TimeUnit.SECONDS))
+                    }
+                    updatePolicy(policy)
+                    val protected = awaitReport(title) {
+                        abs(it.getDouble("laterTop") - it.getDouble("env") - 60) < 0.02 &&
+                            abs(it.getDouble("importantTop") - it.getDouble("env") - 8) < 0.02
+                    }
+                    assertEquals(protected.getDouble("env") + 60, protected.getDouble("laterY"), 0.5)
+                    assertEquals(protected.getDouble("env") + 8, protected.getDouble("importantY"), 0.5)
+                    assertTrue("Protection preserves the original stylesheet", protected.getBoolean("authorRulesIntact"))
+                    assertEquals("", protected.getString("laterInlineTop"))
+                    assertEquals("", protected.getString("importantInlineTop"))
+
+                    updatePolicy(disabledPolicy)
+                    val restored = awaitReport(title) {
+                        abs(it.getDouble("laterTop") - 60) < 0.02 &&
+                            abs(it.getDouble("importantTop") - 8) < 0.02
+                    }
+                    assertEquals(60.0, restored.getDouble("laterY"), 0.5)
+                    assertEquals(8.0, restored.getDouble("importantY"), 0.5)
+                    assertTrue("Disabling protection restores the author cascade", restored.getBoolean("authorRulesIntact"))
+                    assertEquals("", restored.getString("laterInlineTop"))
+                    assertEquals("", restored.getString("importantInlineTop"))
+                } finally {
+                    scenario.onActivity {
+                        session.releaseView(view)
+                        session.setActive(false)
+                        session.close()
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
     fun knownHeaderTracksUntrustedInlineAndAncestorTopChangesAcrossScroll() {
         val title = AtomicReference<String?>(null)
         val policy = GeckoPrivacyPolicy.Disabled.copy(cssSafeAreaTopInsetPx = NATIVE_TOP_PX)
@@ -920,6 +993,37 @@ class GeckoSafeAreaPrototypeInstrumentedTest {
     private companion object {
         const val NATIVE_TOP_PX = 137
         const val REPORT_PREFIX = "Candy prototype: "
+        val STYLESHEET_CASCADE_HTML = """
+            <!doctype html><meta name="viewport" content="width=device-width,initial-scale=1">
+            <style id="author-styles">
+              html,body { margin:0; }
+              #probe { position:absolute; visibility:hidden; padding-top:env(safe-area-inset-top); }
+              .toolbar { position:fixed; top:0; left:0; width:120px; height:24px; }
+              .toolbar { top:60px; }
+              .important { top:8px!important; }
+              #cascade-important { top:60px; left:140px; }
+            </style>
+            <body><div id="probe"></div><div id="cascade-later" class="toolbar">Later rule</div>
+            <div id="cascade-important" class="toolbar important">Important rule</div></body>
+            <script>
+              const authorStyle = document.getElementById('author-styles');
+              const originalText = authorStyle.textContent;
+              const authorRules = () => Array.from(authorStyle.sheet.cssRules, rule => rule.cssText).join('\n');
+              const originalRules = authorRules();
+              const later = document.getElementById('cascade-later');
+              const important = document.getElementById('cascade-important');
+              setInterval(() => {
+                document.title = '${REPORT_PREFIX}' + JSON.stringify({
+                  loaded:document.readyState === 'complete', density:devicePixelRatio,
+                  env:parseFloat(getComputedStyle(document.getElementById('probe')).paddingTop),
+                  laterTop:parseFloat(getComputedStyle(later).top), laterY:later.getBoundingClientRect().top,
+                  importantTop:parseFloat(getComputedStyle(important).top), importantY:important.getBoundingClientRect().top,
+                  laterInlineTop:later.style.top, importantInlineTop:important.style.top,
+                  authorRulesIntact:authorStyle.textContent === originalText && authorRules() === originalRules,
+                });
+              }, 50);
+            </script>
+        """.trimIndent()
         val KNOWN_HEADER_TOP_MUTATION_HTML = """
             <!doctype html><meta name="viewport" content="width=device-width,initial-scale=1">
             <style>
