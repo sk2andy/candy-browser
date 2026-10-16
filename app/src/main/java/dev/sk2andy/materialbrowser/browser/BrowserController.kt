@@ -4379,21 +4379,96 @@ class BrowserController(
         ) {
             return ExternalLinkPreviewCommitResult.MissingPreview
         }
-        val previousTabId = selectedTabId
-        val tabId = createTab(
-            initialUrl = safeUrl,
-            isIncognito = false,
-            openerTabId = previousTabId,
-        )
-        return if (tabId == previousTabId) {
-            ExternalLinkPreviewCommitResult.TabLimitReached
-        } else {
-            releaseExternalLinkPreviewRuntime(resumeSelectedTab = false)
-            if (isActivityResumed) {
-                browserEngineSessions[selectedTabId]?.setActive(true)
-            }
-            ExternalLinkPreviewCommitResult.Opened(tabId)
+        if (!prepareExternalLinkPreview(sessionId)) {
+            return ExternalLinkPreviewCommitResult.MissingPreview
         }
+        when (externalLinkPreviewRuntime?.lastEngineEvent?.type) {
+            BrowserEngineEventType.Crashed,
+            BrowserEngineEventType.Closed,
+            -> recreateExternalLinkPreviewRuntime(state)
+            else -> Unit
+        }
+        val runtime = externalLinkPreviewRuntime?.takeIf {
+            it.sessionId == sessionId && it.policyTab.profileId == targetProfileId
+        } ?: return ExternalLinkPreviewCommitResult.MissingPreview
+        val session = runtime.geckoBinding.session
+        val nowMillis = System.currentTimeMillis()
+        val tab = newTabState(
+            url = safeUrl,
+            nowMillis = nowMillis,
+            isIncognito = false,
+            openerTabId = selectedTabId,
+            profileId = targetProfileId,
+        ).copy(
+            id = runtime.policyTab.id,
+            title = runtime.lastEngineEvent?.title.orEmpty().ifBlank {
+                AddressResolver.displayText(safeUrl)
+            },
+            isLoading = !runtime.hasStarted || state.isLoading,
+            progress = if (runtime.hasStarted) state.progress else 0,
+            canGoBack = runtime.hasStarted && state.canGoBack,
+            canGoForward = runtime.lastEngineEvent?.canGoForward == true,
+            error = runtime.lastEngineEvent?.failureDescription,
+            failureKind = runtime.lastEngineEvent?.failureKind,
+            httpStatusCode = runtime.lastEngineEvent?.httpStatusCode,
+        )
+        leaveSiteCapsule()
+        clearPermissionActivity(selectedTabId)
+        touchTab(selectedTabId, nowMillis)
+        invalidateExternalAppPromptForNavigation(tab.id)
+        releaseDownloadChoicesForSource(tab.id)
+        pendingAutomaticExternalAppRequests.remove(tab.id)
+        externalNavigationGrants.remove(tab.id)
+        if (pendingExternalNavigationRollback?.tabId == tab.id) {
+            pendingExternalNavigationRollback = null
+        }
+        if (findInPageSession?.geckoSession === session) closeFindInPage()
+        externalLinkPreviewRuntime = null
+        externalLinkPreviewState = null
+        tabs += tab
+        browserEngineSessions[tab.id] = session
+        session.promoteToRegularTab()
+        navigationGenerations[tab.id] = runtime.safeAreaNavigationGeneration
+        pageUrls[tab.id] = safeUrl
+        if (runtime.nativeTopSafeArea) automaticNativeTopSafeAreaTabIds += tab.id
+        if (runtime.nativeTopHeaderSafeArea) {
+            webContentTopBarStates[tab.id] = WebContentTopBarState(statusBarAppearance = null)
+        }
+        val view = runtime.binding.view
+        val container = view.parent as? FrameLayout
+        if (container != null) {
+            geckoViewBindings[container] = GeckoViewBinding(tab.id, session, view)
+        } else {
+            releaseGeckoView(session, view)
+        }
+        if (!runtime.hasStarted) {
+            setPendingInitialBrowserEngineNavigation(
+                tab.id,
+                PendingInitialBrowserEngineNavigation(
+                    session = session,
+                    command = BrowserEngineCommands.load(safeUrl),
+                ),
+            )
+        }
+        markSyncedTabPending(tab)
+        updateSelectedTabId(tab.id)
+        configureBrowserEngineSession(tab, session)
+        session.setBackdropBlurRegion(null)
+        session.updatePrivacyPolicy(requireNotNull(geckoPrivacyPolicyFor(tab.id)))
+        rememberSelectedTab(targetProfileId, tab.id)
+        val historyEvent = runtime.lastHistoryEvent
+        if (historyEvent != null) {
+            onGeckoTrailHistoryEvent(session, historyEvent)
+        } else {
+            persistBrowserEngineSessionState(tab.id, session)
+        }
+        recordHistory(tab.id, safeUrl, tab.title)
+        markResidentSessionAccess(tab.id)
+        scheduleResidentSessionTrim()
+        enqueueSyncedTab(tab.id)
+        engineViewRevision++
+        persist()
+        return ExternalLinkPreviewCommitResult.Opened(tab.id)
     }
 
     fun attachExternalLinkPreview(
@@ -4504,7 +4579,7 @@ class BrowserController(
     private fun createExternalLinkPreviewRuntime(state: ExternalLinkPreviewState) {
         if (destroyed || state.targetProfileId in lockedProfileIds) return
         val policyTab = BrowserTab(
-            id = "external-preview-${state.sessionId}",
+            id = UUID.randomUUID().toString(),
             lastAccessedAt = System.currentTimeMillis(),
             profileId = state.targetProfileId,
             url = state.currentUrl,
@@ -4537,22 +4612,39 @@ class BrowserController(
             ),
             privacyEventSink = GeckoPrivacyEventSink { event ->
                 mainHandler.post {
-                    onExternalLinkPreviewPrivacyEvent(
-                        sessionId = state.sessionId,
-                        generation = state.generation,
-                        session = session,
-                        event = event,
-                    )
+                    if (browserEngineSessions[policyTab.id] === session) {
+                        onGeckoPrivacyEvent(policyTab.id, event)
+                    } else {
+                        onExternalLinkPreviewPrivacyEvent(
+                            sessionId = state.sessionId,
+                            generation = state.generation,
+                            session = session,
+                            event = event,
+                        )
+                    }
+                }
+            },
+            trailHistoryEventSink = { source, event ->
+                if (browserEngineSessions[policyTab.id] === source) {
+                    onGeckoTrailHistoryEvent(source, event)
+                } else {
+                    externalLinkPreviewRuntime
+                        ?.takeIf { it.geckoBinding.session === source }
+                        ?.lastHistoryEvent = event
                 }
             },
             eventSink = { event ->
                 mainHandler.post {
-                    onExternalLinkPreviewGeckoEvent(
-                        sessionId = state.sessionId,
-                        generation = state.generation,
-                        session = session,
-                        event = event,
-                    )
+                    if (browserEngineSessions[policyTab.id] === session) {
+                        onGeckoEngineEvent(event)
+                    } else {
+                        onExternalLinkPreviewGeckoEvent(
+                            sessionId = state.sessionId,
+                            generation = state.generation,
+                            session = session,
+                            event = event,
+                        )
+                    }
                 }
             },
         )
@@ -4589,6 +4681,10 @@ class BrowserController(
             externalNavigationGrants.remove(runtime.policyTab.id)
             routeExternalPreviewDownload(runtime, response, request)
         }
+        session.setVideoAutoplayBlocked(isVideoAutoplayBlocked)
+        session.setHttpPasswordManagerSelectionEnabled(isHttpPasswordAutofillEnabled)
+        session.setAudioMuted(isTabAudioMuted(policyTab, state.currentUrl))
+        session.setNativeVerticalScrollBarEnabled(!isScrollBarEnabled)
         session.setDesktopMode(isDesktopView(policyTab, state.currentUrl))
         val view = session.createView(activity)
         val runtime = ExternalLinkPreviewRuntime(
@@ -4664,6 +4760,7 @@ class BrowserController(
         if (event.type == BrowserEngineEventType.NavigationStarted) {
             invalidateExternalAppPromptForNavigation(runtime.policyTab.id)
         }
+        runtime.lastEngineEvent = event
         val state = externalLinkPreviewState ?: return
         if (event.type == BrowserEngineEventType.NavigationStarted) runtime.downloadNavigationRevision++
         val wasSafeAreaForced = isExternalLinkPreviewSafeAreaForced(runtime.binding.view)
@@ -11798,106 +11895,7 @@ class BrowserController(
                     residentCount = browserEngineSessions.size + 1,
                     privateBrowsing = tabs.any(BrowserTab::isIncognito),
                 )
-                session.setSelectedPriority(tab.id == selectedTabId)
-                session.setFaviconListener { pageUrl, bitmap ->
-                    mainHandler.post {
-                        onEngineFavicon(tab.id, session, pageUrl, bitmap)
-                    }
-                }
-                session.setVideoAutoplayBlocked(isVideoAutoplayBlocked)
-                session.setHttpPasswordManagerSelectionEnabled(isHttpPasswordAutofillEnabled)
-                session.setAudioMuted(isTabAudioMuted(tab, tab.url))
-                session.setNativeVerticalScrollBarEnabled(!isScrollBarEnabled)
-                connectBrowserEngineScrollListener(tab.id, session)
-                session.setMediaStateListener(
-                    GeckoMediaSessionStateListener { state ->
-                        mainHandler.post { onGeckoMediaState(tab.id, session, state) }
-                    },
-                )
-                session.setInlineVideoOpenRequestListener(
-                    GeckoInlineVideoOpenRequestListener { request ->
-                        mainHandler.post {
-                            onGeckoInlineVideoOpenRequest(
-                                tabId = tab.id,
-                                session = session,
-                                request = request,
-                            )
-                        }
-                    },
-                )
-                session.setInlineVideoGestureHapticListener(
-                    GeckoInlineVideoGestureHapticListener { haptic ->
-                        mainHandler.post {
-                            onGeckoInlineVideoGestureHaptic(
-                                tabId = tab.id,
-                                session = session,
-                                haptic = haptic,
-                            )
-                        }
-                    },
-                )
-                session.setFullscreenStateListener(
-                    GeckoFullscreenStateListener { fullscreen ->
-                        mainHandler.post {
-                            onGeckoFullscreenState(tab.id, session, fullscreen)
-                        }
-                    },
-                )
-                session.setContentTargetListener { target ->
-                    val navigationGeneration = navigationGenerations[tab.id]
-                    val touchCancellationGeneration = contentTouchCancellationGeneration
-                    mainHandler.post {
-                        onGeckoContentTarget(
-                            tabId = tab.id,
-                            session = session,
-                            navigationGeneration = navigationGeneration,
-                            touchCancellationGeneration = touchCancellationGeneration,
-                            target = target,
-                        )
-                    }
-                }
-                session.setNavigationRequestListener { request ->
-                    onGeckoNavigationRequest(tab.id, session, request)
-                }
-                session.setNewSessionListener { request ->
-                    onGeckoNewSession(tab.id, session, request)
-                }
-                session.setCloseRequestListener {
-                    mainHandler.post { onGeckoCloseRequest(tab.id, session) }
-                }
-                session.setDownloadResponseListener { response ->
-                    onGeckoDownloadResponse(tab.id, session, response)
-                }
-                session.setFilePromptListener { request ->
-                    onGeckoFilePrompt(tab.id, session, request)
-                }
-                session.setAndroidPermissionRequestListener { request ->
-                    onGeckoAndroidPermissionRequest(tab.id, session, request)
-                }
-                session.setContentPermissionRequestListener { request ->
-                    onGeckoContentPermissionRequest(tab.id, session, request)
-                }
-                session.setNotificationPermissionDecisionProvider { origin ->
-                    permissionRepository.decision(
-                        PermissionSiteKey(tab.profileId, origin),
-                        SitePermission.Notifications,
-                        tab.isIncognito,
-                    )
-                }
-                session.setMediaPermissionRequestListener { request ->
-                    onGeckoMediaPermissionRequest(tab.id, session, request)
-                }
-                session.setAuthPromptListener { request ->
-                    onGeckoAuthPrompt(tab.id, session, request)
-                }
-                session.setWebPromptListener { request ->
-                    onGeckoWebPrompt(tab.id, session, request)
-                }
-                session.setActive(
-                    isActivityResumed &&
-                        externalLinkPreviewState == null &&
-                        tab.id == selectedTabId,
-                )
+                configureBrowserEngineSession(tab, session)
                 val replacesInitialAmpUrl = isAutoDeAmpEnabled &&
                     AutoDeAmpRules.publisherUrlFor(tab.url) != null
                 // Gecko session snapshots can restore privileged about pages as about:blank.
@@ -11984,6 +11982,112 @@ class BrowserController(
             markResidentSessionAccess(tabId)
             scheduleResidentSessionTrim()
         }
+
+    private fun configureBrowserEngineSession(
+        tab: BrowserTab,
+        session: AndroidBrowserEngineSessionPort,
+    ) {
+        session.setSelectedPriority(tab.id == selectedTabId)
+        session.setFaviconListener { pageUrl, bitmap ->
+            mainHandler.post {
+                onEngineFavicon(tab.id, session, pageUrl, bitmap)
+            }
+        }
+        session.setVideoAutoplayBlocked(isVideoAutoplayBlocked)
+        session.setHttpPasswordManagerSelectionEnabled(isHttpPasswordAutofillEnabled)
+        session.setAudioMuted(isTabAudioMuted(tab, tab.url))
+        session.setNativeVerticalScrollBarEnabled(!isScrollBarEnabled)
+        connectBrowserEngineScrollListener(tab.id, session)
+        session.setMediaStateListener(
+            GeckoMediaSessionStateListener { state ->
+                mainHandler.post { onGeckoMediaState(tab.id, session, state) }
+            },
+        )
+        session.setInlineVideoOpenRequestListener(
+            GeckoInlineVideoOpenRequestListener { request ->
+                mainHandler.post {
+                    onGeckoInlineVideoOpenRequest(
+                        tabId = tab.id,
+                        session = session,
+                        request = request,
+                    )
+                }
+            },
+        )
+        session.setInlineVideoGestureHapticListener(
+            GeckoInlineVideoGestureHapticListener { haptic ->
+                mainHandler.post {
+                    onGeckoInlineVideoGestureHaptic(
+                        tabId = tab.id,
+                        session = session,
+                        haptic = haptic,
+                    )
+                }
+            },
+        )
+        session.setFullscreenStateListener(
+            GeckoFullscreenStateListener { fullscreen ->
+                mainHandler.post {
+                    onGeckoFullscreenState(tab.id, session, fullscreen)
+                }
+            },
+        )
+        session.setContentTargetListener { target ->
+            val navigationGeneration = navigationGenerations[tab.id]
+            val touchCancellationGeneration = contentTouchCancellationGeneration
+            mainHandler.post {
+                onGeckoContentTarget(
+                    tabId = tab.id,
+                    session = session,
+                    navigationGeneration = navigationGeneration,
+                    touchCancellationGeneration = touchCancellationGeneration,
+                    target = target,
+                )
+            }
+        }
+        session.setNavigationRequestListener { request ->
+            onGeckoNavigationRequest(tab.id, session, request)
+        }
+        session.setNewSessionListener { request ->
+            onGeckoNewSession(tab.id, session, request)
+        }
+        session.setCloseRequestListener {
+            mainHandler.post { onGeckoCloseRequest(tab.id, session) }
+        }
+        session.setDownloadResponseListener { response ->
+            onGeckoDownloadResponse(tab.id, session, response)
+        }
+        session.setFilePromptListener { request ->
+            onGeckoFilePrompt(tab.id, session, request)
+        }
+        session.setAndroidPermissionRequestListener { request ->
+            onGeckoAndroidPermissionRequest(tab.id, session, request)
+        }
+        session.setContentPermissionRequestListener { request ->
+            onGeckoContentPermissionRequest(tab.id, session, request)
+        }
+        session.setNotificationPermissionDecisionProvider { origin ->
+            permissionRepository.decision(
+                PermissionSiteKey(tab.profileId, origin),
+                SitePermission.Notifications,
+                tab.isIncognito,
+            )
+        }
+        session.setMediaPermissionRequestListener { request ->
+            onGeckoMediaPermissionRequest(tab.id, session, request)
+        }
+        session.setAuthPromptListener { request ->
+            onGeckoAuthPrompt(tab.id, session, request)
+        }
+        session.setWebPromptListener { request ->
+            onGeckoWebPrompt(tab.id, session, request)
+        }
+        session.setActive(
+            isActivityResumed &&
+                externalLinkPreviewState == null &&
+                tab.id == selectedTabId,
+        )
+    }
 
     private fun connectBrowserEngineScrollListener(
         tabId: String,
@@ -17825,6 +17929,8 @@ class BrowserController(
         val policyTab: BrowserTab,
         val binding: ExternalLinkPreviewEngineBinding,
         var hasStarted: Boolean = false,
+        var lastEngineEvent: BrowserEngineEvent? = null,
+        var lastHistoryEvent: GeckoCandyTrailHistoryEvent? = null,
         var downloadGrant: ExternalPreviewDownloadGrant? = null,
         var pendingInternalNavigationUrl: String? = null,
         var downloadNavigationRevision: Int = 0,

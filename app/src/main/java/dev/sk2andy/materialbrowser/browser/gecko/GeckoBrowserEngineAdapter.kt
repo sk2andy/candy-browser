@@ -126,6 +126,9 @@ internal interface AndroidBrowserEngineSessionPort :
     BrowserEngineViewPort {
     fun setActive(active: Boolean)
 
+    /** Marks an explicitly committed temporary preview as regular browsing content. */
+    fun promoteToRegularTab() = Unit
+
     fun setSelectedPriority(selected: Boolean) = Unit
 
     fun trimUiMemory() = Unit
@@ -485,6 +488,11 @@ internal class GeckoBrowserEngineSessionAdapter(
         require(tabId.isNotBlank()) { "A Gecko engine session needs a tab ID" }
         session.setStateListener(::onStateChanged)
         session.setHistoryStateListener(trailHistoryTracker::onHistoryStateChanged)
+    }
+
+    @UiThread
+    override fun promoteToRegularTab() {
+        if (!closed) session.bindToppingSession(tabId, BrowserEngineContentKind.RegularTab)
     }
 
     @UiThread
