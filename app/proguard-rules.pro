@@ -10,3 +10,6 @@
 # Class.getPackage().getName(); repackaging into the unnamed package crashes on Android.
 -keep,allowoptimization,allowshrinking class org.yaml.snakeyaml.TypeDescription {}
 -keep,allowoptimization,allowshrinking class org.yaml.snakeyaml.introspector.PropertySubstitute {}
+
+# ONNX Runtime invokes its Java API from native inference code.
+-keep class ai.onnxruntime.** { *; }

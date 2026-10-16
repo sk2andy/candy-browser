@@ -1456,4 +1456,24 @@
     <string name="reader_font_serif">Có chân</string>
     <string name="reader_font_sans">Không chân</string>
     <string name="reader_theme_light">Sáng</string>
+    <string name="constellations_title">Candy Constellations</string>
+    <string name="constellations_profile">Bản đồ của %1$s</string>
+    <string name="constellations_description">Khám phá các trang đã truy cập liên quan với nhau theo chủ đề. Candy lưu một đoạn trích ngắn và tính các biểu diễn vectơ trên thiết bị này. Mỗi hồ sơ có bản đồ riêng. Các trang riêng tư bị loại trừ.</string>
+    <string name="constellations_enable">Bật cho hồ sơ này</string>
+    <string name="constellations_disable">Tắt và xóa bản đồ này</string>
+    <string name="constellations_download_description">Tải mô hình đa ngôn ngữ (khoảng 138 MB) từ Hugging Face một lần. Nội dung trang vẫn ở trên thiết bị này. Mô hình hoạt động ngoại tuyến sau khi tải xuống.</string>
+    <string name="constellations_download_model">Tải mô hình</string>
+    <string name="constellations_downloading">Đang tải mô hình: %1$d%%</string>
+    <string name="constellations_indexing">Đang kết nối các trang của bạn…</string>
+    <string name="constellations_empty">Bản đồ phát triển khi bạn truy cập các trang có văn bản đọc được trong hồ sơ này. Lịch sử hiện có không được tải trong nền.</string>
+    <string name="constellations_error">Không thể cập nhật bản đồ. Hãy kiểm tra dung lượng trống rồi thử lại. Việc tải mô hình cũng cần kết nối internet.</string>
+    <string name="constellations_graph_hint">Chụm hoặc tách hai ngón tay để thu phóng và kéo để khám phá. Các kết nối thể hiện độ tương đồng về chủ đề, không phải sự đồng thuận. Chọn một trang bên dưới để khám phá các trang lân cận.</string>
+    <string name="constellations_pages">Các trang trong hồ sơ này</string>
+    <string name="constellations_related_pages">Các trang liên quan</string>
+    <string name="constellations_no_connections">Chưa có chủ đề nào tương đồng đủ gần.</string>
+    <string name="constellations_connection">Tương đồng chủ đề %1$d%%</string>
+    <string name="constellations_page_count">%1$d trang</string>
+    <string name="constellations_search">Tìm trong bản đồ này</string>
+    <string name="constellations_search_no_results">Không có trang phù hợp trong hồ sơ này.</string>
+    <string name="constellations_search_position">Kết quả %1$d trên %2$d</string>
 </resources>

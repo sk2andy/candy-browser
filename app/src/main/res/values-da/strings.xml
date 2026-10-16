@@ -1473,4 +1473,24 @@
     <string name="reader_font_serif">Serif</string>
     <string name="reader_font_sans">Sans</string>
     <string name="reader_theme_light">Lys</string>
+    <string name="constellations_title">Candy Constellations</string>
+    <string name="constellations_profile">Kort for %1$s</string>
+    <string name="constellations_description">Opdag tematiske forbindelser mellem dine besøgte sider. Candy gemmer et kort uddrag og genkender forbindelser på denne enhed. Hver profil har sit eget kort. Private sider udelades.</string>
+    <string name="constellations_enable">Aktivér for denne profil</string>
+    <string name="constellations_disable">Deaktivér og slet dette kort</string>
+    <string name="constellations_download_description">Download den flersprogede model (cirka 138 MB) fra Hugging Face én gang. Sidernes indhold bliver på denne enhed. Modellen virker offline efter download.</string>
+    <string name="constellations_download_model">Download model</string>
+    <string name="constellations_downloading">Downloader model: %1$d%%</string>
+    <string name="constellations_indexing">Forbinder dine sider…</string>
+    <string name="constellations_empty">Dit kort vokser, når du besøger sider med læsbar tekst i denne profil. Eksisterende historik hentes ikke i baggrunden.</string>
+    <string name="constellations_error">Kortet kunne ikke opdateres. Kontrollér ledig lagerplads, og prøv igen. Download af modellen kræver også en internetforbindelse.</string>
+    <string name="constellations_graph_hint">Knib for at zoome, og træk for at udforske. Forbindelser viser emnelighed, ikke enighed. Vælg en side nedenfor for at udforske dens naboer.</string>
+    <string name="constellations_pages">Sider i denne profil</string>
+    <string name="constellations_related_pages">Relaterede sider</string>
+    <string name="constellations_no_connections">Ingen nære emnematch endnu.</string>
+    <string name="constellations_connection">%1$d%% emnelighed</string>
+    <string name="constellations_page_count">%1$d sider</string>
+    <string name="constellations_search">Søg på dette kort</string>
+    <string name="constellations_search_no_results">Ingen matchende sider i denne profil.</string>
+    <string name="constellations_search_position">%1$d af %2$d resultater</string>
 </resources>

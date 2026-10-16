@@ -1456,4 +1456,24 @@
     <string name="reader_font_serif">세리프</string>
     <string name="reader_font_sans">산세리프</string>
     <string name="reader_theme_light">밝게</string>
+    <string name="constellations_title">Candy Constellations</string>
+    <string name="constellations_profile">%1$s의 지도</string>
+    <string name="constellations_description">방문한 페이지가 어떤 주제로 연결되는지 살펴보세요. Candy는 짧은 발췌문을 저장하고 이 기기에서 임베딩을 계산합니다. 프로필마다 별도의 지도가 있으며 비공개 페이지는 제외됩니다.</string>
+    <string name="constellations_enable">이 프로필에서 사용</string>
+    <string name="constellations_disable">사용 중지 및 이 지도 삭제</string>
+    <string name="constellations_download_description">Hugging Face에서 다국어 모델(약 138 MB)을 한 번 다운로드하세요. 페이지 콘텐츠는 이 기기에만 남습니다. 다운로드 후에는 모델이 오프라인으로 작동합니다.</string>
+    <string name="constellations_download_model">모델 다운로드</string>
+    <string name="constellations_downloading">모델 다운로드 중: %1$d%%</string>
+    <string name="constellations_indexing">페이지 연결 중…</string>
+    <string name="constellations_empty">이 프로필에서 읽을 수 있는 페이지를 방문하면 지도가 커집니다. 기존 방문 기록은 백그라운드에서 불러오지 않습니다.</string>
+    <string name="constellations_error">지도를 업데이트할 수 없습니다. 남은 저장 공간을 확인하고 다시 시도하세요. 모델 다운로드에는 인터넷 연결도 필요합니다.</string>
+    <string name="constellations_graph_hint">두 손가락을 모으거나 벌려 확대·축소하고 드래그하여 둘러보세요. 연결은 주제의 유사성을 나타내며 의견이 같다는 뜻은 아닙니다. 아래에서 페이지를 선택하여 이웃 페이지를 살펴보세요.</string>
+    <string name="constellations_pages">이 프로필의 페이지</string>
+    <string name="constellations_related_pages">관련 페이지</string>
+    <string name="constellations_no_connections">아직 주제가 가까운 페이지가 없습니다.</string>
+    <string name="constellations_connection">주제 유사도 %1$d%%</string>
+    <string name="constellations_page_count">페이지 %1$d개</string>
+    <string name="constellations_search">이 지도 검색</string>
+    <string name="constellations_search_no_results">이 프로필에 일치하는 페이지가 없습니다.</string>
+    <string name="constellations_search_position">%2$d개 결과 중 %1$d번째</string>
 </resources>

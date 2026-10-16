@@ -288,6 +288,7 @@ private fun BrowserMenuEntry.labelResource(): Int = when (this) {
     BrowserMenuEntry.ToppingCommands -> R.string.settings_menu_entry_topping_commands
     BrowserMenuEntry.FirefoxPageActions -> R.string.settings_menu_entry_firefox_page_actions
     BrowserMenuEntry.CandyTrail -> R.string.action_open_candy_trail
+    BrowserMenuEntry.Constellations -> R.string.constellations_title
     BrowserMenuEntry.AddSiteCapsule -> R.string.action_add_site_capsule
     BrowserMenuEntry.CreateSiteWidget -> R.string.site_widget_editor_title
     BrowserMenuEntry.Summarize -> R.string.action_summarize

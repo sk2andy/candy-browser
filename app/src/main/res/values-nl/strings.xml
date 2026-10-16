@@ -1473,4 +1473,24 @@
     <string name="reader_font_serif">Serif</string>
     <string name="reader_font_sans">Sans</string>
     <string name="reader_theme_light">Licht</string>
+    <string name="constellations_title">Candy Constellations</string>
+    <string name="constellations_profile">Kaart voor %1$s</string>
+    <string name="constellations_description">Ontdek thematische verbanden tussen bezochte pagina’s. Candy bewaart een kort fragment en herkent verbanden op dit apparaat. Elk profiel heeft een eigen kaart. Privépagina’s worden uitgesloten.</string>
+    <string name="constellations_enable">Inschakelen voor dit profiel</string>
+    <string name="constellations_disable">Deze kaart uitschakelen en verwijderen</string>
+    <string name="constellations_download_description">Download het meertalige model (ongeveer 138 MB) eenmalig van Hugging Face. De pagina-inhoud blijft op dit apparaat. Na het downloaden werkt het model offline.</string>
+    <string name="constellations_download_model">Model downloaden</string>
+    <string name="constellations_downloading">Model downloaden: %1$d%%</string>
+    <string name="constellations_indexing">Je pagina’s verbinden…</string>
+    <string name="constellations_empty">Je kaart groeit wanneer je pagina’s met leesbare tekst bezoekt in dit profiel. Bestaande geschiedenis wordt niet op de achtergrond opgehaald.</string>
+    <string name="constellations_error">Kan de kaart niet bijwerken. Controleer de vrije opslagruimte en probeer het opnieuw. Voor het downloaden van het model is ook een internetverbinding nodig.</string>
+    <string name="constellations_graph_hint">Knijp om te zoomen en sleep om te verkennen. Verbindingen tonen thematische gelijkenis, geen overeenstemming. Selecteer hieronder een pagina om de buren te verkennen.</string>
+    <string name="constellations_pages">Pagina’s in dit profiel</string>
+    <string name="constellations_related_pages">Gerelateerde pagina’s</string>
+    <string name="constellations_no_connections">Nog geen sterke thematische overeenkomsten.</string>
+    <string name="constellations_connection">%1$d%% thematische gelijkenis</string>
+    <string name="constellations_page_count">%1$d pagina’s</string>
+    <string name="constellations_search">Deze kaart doorzoeken</string>
+    <string name="constellations_search_no_results">Geen overeenkomende pagina’s in dit profiel.</string>
+    <string name="constellations_search_position">%1$d van %2$d resultaten</string>
 </resources>

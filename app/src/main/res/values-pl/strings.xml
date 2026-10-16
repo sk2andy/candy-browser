@@ -1504,4 +1504,24 @@
     <string name="reader_font_serif">Szeryfowa</string>
     <string name="reader_font_sans">Bezszeryfowa</string>
     <string name="reader_theme_light">Jasny</string>
+    <string name="constellations_title">Candy Constellations</string>
+    <string name="constellations_profile">Mapa dla %1$s</string>
+    <string name="constellations_description">Odkrywaj powiązania tematyczne między odwiedzanymi stronami. Candy zapisuje krótki fragment i rozpoznaje powiązania na tym urządzeniu. Każdy profil ma własną mapę. Strony prywatne są pomijane.</string>
+    <string name="constellations_enable">Włącz dla tego profilu</string>
+    <string name="constellations_disable">Wyłącz i usuń tę mapę</string>
+    <string name="constellations_download_description">Pobierz raz model wielojęzyczny (około 138 MB) z Hugging Face. Treść stron pozostaje na tym urządzeniu. Po pobraniu model działa offline.</string>
+    <string name="constellations_download_model">Pobierz model</string>
+    <string name="constellations_downloading">Pobieranie modelu: %1$d%%</string>
+    <string name="constellations_indexing">Łączenie stron…</string>
+    <string name="constellations_empty">Mapa rośnie, gdy odwiedzasz strony z czytelnym tekstem w tym profilu. Istniejąca historia nie jest pobierana w tle.</string>
+    <string name="constellations_error">Nie udało się zaktualizować mapy. Sprawdź wolne miejsce i spróbuj ponownie. Pobieranie modelu wymaga również połączenia z internetem.</string>
+    <string name="constellations_graph_hint">Zsuń lub rozsuń palce, aby zmienić powiększenie, i przeciągnij, aby przeglądać. Połączenia pokazują podobieństwo tematyczne, nie zgodność opinii. Wybierz stronę poniżej, aby zobaczyć jej sąsiadów.</string>
+    <string name="constellations_pages">Strony w tym profilu</string>
+    <string name="constellations_related_pages">Powiązane strony</string>
+    <string name="constellations_no_connections">Brak bliskich dopasowań tematycznych.</string>
+    <string name="constellations_connection">%1$d%% podobieństwa tematycznego</string>
+    <string name="constellations_page_count">%1$d stron</string>
+    <string name="constellations_search">Przeszukaj tę mapę</string>
+    <string name="constellations_search_no_results">Brak pasujących stron w tym profilu.</string>
+    <string name="constellations_search_position">%1$d z %2$d wyników</string>
 </resources>

@@ -1360,6 +1360,7 @@ final class BrowserViewModel: NSObject, ObservableObject {
             isDomainMuted: false,
             canAddSiteCapsule: false,
             canCreateSiteWidget: false,
+            canOpenConstellations: false,
             canSnooze: false,
             canDockAddressBar: false,
             overflowPageActions: [.showtabs, .newtab, .closetab],
@@ -1377,7 +1378,8 @@ final class BrowserViewModel: NSObject, ObservableObject {
             state: state,
             capabilities: BrowserFeatureMenuCapabilities(
                 supportsFirefoxExtensions: false,
-                supportsSiteWidgets: false
+                supportsSiteWidgets: false,
+                supportsConstellations: false
             )
         ).filter { item in
             isImplementedFeatureAction(item.action)

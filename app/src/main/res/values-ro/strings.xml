@@ -1489,4 +1489,24 @@
     <string name="reader_font_serif">Serif</string>
     <string name="reader_font_sans">Sans</string>
     <string name="reader_theme_light">Luminos</string>
+    <string name="constellations_title">Candy Constellations</string>
+    <string name="constellations_profile">Harta profilului %1$s</string>
+    <string name="constellations_description">Descoperă legăturile tematice dintre paginile vizitate. Candy păstrează un scurt fragment și calculează reprezentări vectoriale pe acest dispozitiv. Fiecare profil are propria hartă. Paginile private sunt excluse.</string>
+    <string name="constellations_enable">Activează pentru acest profil</string>
+    <string name="constellations_disable">Dezactivează și șterge această hartă</string>
+    <string name="constellations_download_description">Descarcă o singură dată modelul multilingv (aproximativ 138 MB) de pe Hugging Face. Conținutul paginilor rămâne pe acest dispozitiv. După descărcare, modelul funcționează offline.</string>
+    <string name="constellations_download_model">Descarcă modelul</string>
+    <string name="constellations_downloading">Se descarcă modelul: %1$d%%</string>
+    <string name="constellations_indexing">Se conectează paginile…</string>
+    <string name="constellations_empty">Harta crește pe măsură ce vizitezi pagini cu text lizibil în acest profil. Istoricul existent nu este încărcat în fundal.</string>
+    <string name="constellations_error">Harta nu a putut fi actualizată. Verifică spațiul liber și încearcă din nou. Descărcarea modelului necesită și o conexiune la internet.</string>
+    <string name="constellations_graph_hint">Apropie sau depărtează degetele pentru zoom și trage pentru explorare. Legăturile indică similaritate tematică, nu acord. Selectează o pagină de mai jos pentru a explora paginile învecinate.</string>
+    <string name="constellations_pages">Pagini din acest profil</string>
+    <string name="constellations_related_pages">Pagini asociate</string>
+    <string name="constellations_no_connections">Încă nu există potriviri tematice apropiate.</string>
+    <string name="constellations_connection">%1$d%% similaritate tematică</string>
+    <string name="constellations_page_count">%1$d pagini</string>
+    <string name="constellations_search">Caută în această hartă</string>
+    <string name="constellations_search_no_results">Nicio pagină corespunzătoare în acest profil.</string>
+    <string name="constellations_search_position">%1$d din %2$d rezultate</string>
 </resources>

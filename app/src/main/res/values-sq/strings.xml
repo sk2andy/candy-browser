@@ -1473,4 +1473,24 @@
     <string name="reader_font_serif">Serif</string>
     <string name="reader_font_sans">Sans</string>
     <string name="reader_theme_light">I çelët</string>
+    <string name="constellations_title">Candy Constellations</string>
+    <string name="constellations_profile">Harta për %1$s</string>
+    <string name="constellations_description">Zbuloni lidhjet tematike mes faqeve të vizituara. Candy ruan një fragment të shkurtër dhe llogarit përfaqësime vektoriale në këtë pajisje. Çdo profil ka hartën e vet. Faqet private përjashtohen.</string>
+    <string name="constellations_enable">Aktivizo për këtë profil</string>
+    <string name="constellations_disable">Çaktivizo dhe fshi këtë hartë</string>
+    <string name="constellations_download_description">Shkarkoni një herë modelin shumëgjuhësh (rreth 138 MB) nga Hugging Face. Përmbajtja e faqeve mbetet në këtë pajisje. Pas shkarkimit, modeli punon pa internet.</string>
+    <string name="constellations_download_model">Shkarko modelin</string>
+    <string name="constellations_downloading">Po shkarkohet modeli: %1$d%%</string>
+    <string name="constellations_indexing">Po lidhen faqet tuaja…</string>
+    <string name="constellations_empty">Harta rritet teksa vizitoni faqe me tekst të lexueshëm në këtë profil. Historiku ekzistues nuk ngarkohet në sfond.</string>
+    <string name="constellations_error">Harta nuk u përditësua. Kontrolloni hapësirën e lirë dhe provoni sërish. Shkarkimi i modelit kërkon edhe lidhje interneti.</string>
+    <string name="constellations_graph_hint">Afrojini ose largojini gishtat për zmadhim dhe tërhiqni për të eksploruar. Lidhjet tregojnë ngjashmëri tematike, jo pajtim. Zgjidhni një faqe më poshtë për të eksploruar faqet pranë saj.</string>
+    <string name="constellations_pages">Faqet në këtë profil</string>
+    <string name="constellations_related_pages">Faqe të lidhura</string>
+    <string name="constellations_no_connections">Ende nuk ka përputhje të afërta tematike.</string>
+    <string name="constellations_connection">%1$d%% ngjashmëri tematike</string>
+    <string name="constellations_page_count">%1$d faqe</string>
+    <string name="constellations_search">Kërko në këtë hartë</string>
+    <string name="constellations_search_no_results">Nuk ka faqe që përputhen në këtë profil.</string>
+    <string name="constellations_search_position">%1$d nga %2$d përputhje</string>
 </resources>

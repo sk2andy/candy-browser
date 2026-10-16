@@ -22,6 +22,7 @@ import dev.sk2andy.materialbrowser.data.AppDataArchiveRestoreResult
 import dev.sk2andy.materialbrowser.data.AppDataArchiveRules
 import dev.sk2andy.materialbrowser.data.AppDataArchiveStaging
 import dev.sk2andy.materialbrowser.data.AppDataTransferLock
+import dev.sk2andy.materialbrowser.data.ConstellationRepository
 import dev.sk2andy.materialbrowser.data.RecallRepository
 import java.io.File
 import java.io.FileInputStream
@@ -216,6 +217,9 @@ class AppDataTransferActivity : Activity() {
             check(RecallRepository.deleteStorage(this)) {
                 "Imported data but could not clear excluded Recall storage"
             }
+            check(ConstellationRepository.get(this).reset()) {
+                "Imported data but could not clear excluded Constellations storage"
+            }
             restoreApplied = true
             stagedFile.delete()
         } finally {
@@ -236,6 +240,9 @@ class AppDataTransferActivity : Activity() {
         )
         check(RecallRepository.deleteStorage(this)) {
             "Could not clear excluded Recall storage after import recovery"
+        }
+        check(ConstellationRepository.get(this).reset()) {
+            "Could not clear excluded Constellations storage after import recovery"
         }
     }
 

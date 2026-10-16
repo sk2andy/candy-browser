@@ -243,6 +243,9 @@ internal interface AndroidBrowserEngineSessionPort :
 
     fun extractPageForReader(onComplete: (String?) -> Unit)
 
+    /** Returns bounded raw JSON containing sourceUrl, title and visible page text. */
+    fun extractPageText(onComplete: (String?) -> Unit) = onComplete(null)
+
     fun probeTextInputOcclusion(
         viewportRect: BrowserViewportRect,
         mode: TextInputOcclusionProbeMode,
@@ -837,6 +840,11 @@ internal class GeckoBrowserEngineSessionAdapter(
     @UiThread
     override fun clearFindInPage() {
         if (!closed) session.clearFindInPage()
+    }
+
+    @UiThread
+    override fun extractPageText(onComplete: (String?) -> Unit) {
+        if (closed) onComplete(null) else session.extractPageText(onComplete)
     }
 
     @UiThread

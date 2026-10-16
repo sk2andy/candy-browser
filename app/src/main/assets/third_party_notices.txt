@@ -222,3 +222,14 @@ source and redistribution record is in gecko_default_extensions.NOTICE.txt.
       of your accepting any such warranty or additional liability.
 
    END OF TERMS AND CONDITIONS
+
+
+Candy Constellations: ONNX Runtime 1.24.3
+Copyright Microsoft Corporation. MIT License.
+https://github.com/microsoft/onnxruntime/blob/v1.24.3/LICENSE
+
+Candy Constellations downloadable model: distiluse-base-multilingual-cased-v2
+Sentence Transformers / Nils Reimers and Iryna Gurevych. Apache License 2.0.
+https://huggingface.co/sentence-transformers/distiluse-base-multilingual-cased-v2
+Revision: bfe45d0732ca50787611c0fe107ba278c7f3f889
+Model assets are downloaded only on request and verified with pinned SHA-256 hashes.

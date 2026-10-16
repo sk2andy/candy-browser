@@ -1484,4 +1484,25 @@
     <string name="reader_font_serif">Serif</string>
     <string name="reader_font_sans">Sans</string>
     <string name="reader_theme_light">Hell</string>
+    <!-- Profile-local semantic page map. -->
+    <string name="constellations_title">Candy Constellations</string>
+    <string name="constellations_profile">Karte für %1$s</string>
+    <string name="constellations_description">Entdecke, wie deine besuchten Seiten thematisch zusammenpassen. Candy speichert einen kurzen Auszug und erkennt Themen auf diesem Gerät. Jedes Profil hat eine eigene Karte. Private Seiten bleiben ausgeschlossen.</string>
+    <string name="constellations_enable">Für dieses Profil aktivieren</string>
+    <string name="constellations_disable">Deaktivieren und diese Karte löschen</string>
+    <string name="constellations_download_description">Mehrsprachiges Modell einmalig von Hugging Face laden (etwa 138 MB). Seiteninhalte bleiben auf diesem Gerät. Danach funktioniert das Modell offline.</string>
+    <string name="constellations_download_model">Modell herunterladen</string>
+    <string name="constellations_downloading">Modell wird geladen: %1$d%%</string>
+    <string name="constellations_indexing">Deine Seiten werden verbunden…</string>
+    <string name="constellations_empty">Deine Karte wächst mit lesbaren Seiten, die du in diesem Profil besuchst. Bestehender Verlauf wird nicht im Hintergrund abgerufen.</string>
+    <string name="constellations_error">Karte konnte nicht aktualisiert werden. Prüfe freien Speicher und versuche es erneut. Der Modelldownload benötigt auch eine Internetverbindung.</string>
+    <string name="constellations_graph_hint">Zum Zoomen zwei Finger nutzen, zum Erkunden ziehen. Verbindungen zeigen Themenähnlichkeit, keine Zustimmung. Wähle unten eine Seite und erkunde ihre Nachbarn.</string>
+    <string name="constellations_pages">Seiten in diesem Profil</string>
+    <string name="constellations_related_pages">Thematisch ähnliche Seiten</string>
+    <string name="constellations_no_connections">Noch keine engen thematischen Verbindungen.</string>
+    <string name="constellations_connection">%1$d%% Themenähnlichkeit</string>
+    <string name="constellations_page_count">%1$d Seiten</string>
+    <string name="constellations_search">Diese Karte durchsuchen</string>
+    <string name="constellations_search_no_results">Keine passenden Seiten in diesem Profil.</string>
+    <string name="constellations_search_position">%1$d von %2$d Treffern</string>
 </resources>

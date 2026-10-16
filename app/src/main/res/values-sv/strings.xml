@@ -1473,4 +1473,24 @@
     <string name="reader_font_serif">Serif</string>
     <string name="reader_font_sans">Sans</string>
     <string name="reader_theme_light">Ljust</string>
+    <string name="constellations_title">Candy Constellations</string>
+    <string name="constellations_profile">Karta för %1$s</string>
+    <string name="constellations_description">Upptäck hur dina besökta sidor hänger ihop tematiskt. Candy sparar ett kort utdrag och beräknar vektorer på den här enheten. Varje profil har sin egen karta. Privata sidor utesluts.</string>
+    <string name="constellations_enable">Aktivera för den här profilen</string>
+    <string name="constellations_disable">Inaktivera och radera den här kartan</string>
+    <string name="constellations_download_description">Hämta den flerspråkiga modellen (cirka 138 MB) från Hugging Face en gång. Sidinnehållet stannar på den här enheten. Modellen fungerar offline efter hämtningen.</string>
+    <string name="constellations_download_model">Hämta modell</string>
+    <string name="constellations_downloading">Hämtar modell: %1$d%%</string>
+    <string name="constellations_indexing">Kopplar ihop dina sidor…</string>
+    <string name="constellations_empty">Kartan växer när du besöker sidor med läsbar text i den här profilen. Befintlig historik hämtas inte i bakgrunden.</string>
+    <string name="constellations_error">Det gick inte att uppdatera kartan. Kontrollera ledigt lagringsutrymme och försök igen. Modellhämtningen kräver också en internetanslutning.</string>
+    <string name="constellations_graph_hint">Nyp för att zooma och dra för att utforska. Kopplingar visar tematisk likhet, inte enighet. Välj en sida nedan för att utforska dess grannar.</string>
+    <string name="constellations_pages">Sidor i den här profilen</string>
+    <string name="constellations_related_pages">Relaterade sidor</string>
+    <string name="constellations_no_connections">Inga nära tematiska träffar ännu.</string>
+    <string name="constellations_connection">%1$d%% tematisk likhet</string>
+    <string name="constellations_page_count">%1$d sidor</string>
+    <string name="constellations_search">Sök i den här kartan</string>
+    <string name="constellations_search_no_results">Inga matchande sidor i den här profilen.</string>
+    <string name="constellations_search_position">%1$d av %2$d träffar</string>
 </resources>

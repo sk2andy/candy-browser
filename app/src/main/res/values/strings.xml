@@ -1502,4 +1502,25 @@
     <string name="reader_font_serif">Serif</string>
     <string name="reader_font_sans">Sans</string>
     <string name="reader_theme_light">Light</string>
+    <!-- Profile-local semantic page map. -->
+    <string name="constellations_title">Candy Constellations</string>
+    <string name="constellations_profile">Map for %1$s</string>
+    <string name="constellations_description">Discover how your visited pages connect by topic. Candy stores a short excerpt and finds topic connections on this device. Each profile has its own map. Private pages are excluded.</string>
+    <string name="constellations_enable">Enable for this profile</string>
+    <string name="constellations_disable">Disable and delete this map</string>
+    <string name="constellations_download_description">Download the multilingual model (about 138 MB) from Hugging Face once. Page content stays on this device. The model works offline after download.</string>
+    <string name="constellations_download_model">Download model</string>
+    <string name="constellations_downloading">Downloading model: %1$d%%</string>
+    <string name="constellations_indexing">Connecting your pages…</string>
+    <string name="constellations_empty">Your map grows as you visit readable pages in this profile. Existing history is not fetched in the background.</string>
+    <string name="constellations_error">Could not update your map. Check free storage and retry. A model download also needs an internet connection.</string>
+    <string name="constellations_graph_hint">Pinch to zoom and drag to explore. Connections show topic similarity, not agreement. Select a page below to explore its neighbors.</string>
+    <string name="constellations_pages">Pages in this profile</string>
+    <string name="constellations_related_pages">Related pages</string>
+    <string name="constellations_no_connections">No close topic matches yet.</string>
+    <string name="constellations_connection">%1$d%% topic similarity</string>
+    <string name="constellations_page_count">%1$d pages</string>
+    <string name="constellations_search">Search this map</string>
+    <string name="constellations_search_no_results">No matching pages in this profile.</string>
+    <string name="constellations_search_position">%1$d of %2$d matches</string>
 </resources>

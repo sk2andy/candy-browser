@@ -1480,4 +1480,24 @@
     <string name="reader_font_serif">Serifa</string>
     <string name="reader_font_sans">Sem serifa</string>
     <string name="reader_theme_light">Claro</string>
+    <string name="constellations_title">Candy Constellations</string>
+    <string name="constellations_profile">Mapa de %1$s</string>
+    <string name="constellations_description">Descubra como as páginas visitadas se relacionam por tema. O Candy guarda um pequeno excerto e calcula embeddings neste dispositivo. Cada perfil tem o seu próprio mapa. As páginas privadas são excluídas.</string>
+    <string name="constellations_enable">Ativar para este perfil</string>
+    <string name="constellations_disable">Desativar e eliminar este mapa</string>
+    <string name="constellations_download_description">Transfira uma vez o modelo multilingue (cerca de 138 MB) do Hugging Face. O conteúdo das páginas permanece neste dispositivo. Após a transferência, o modelo funciona offline.</string>
+    <string name="constellations_download_model">Transferir modelo</string>
+    <string name="constellations_downloading">A transferir o modelo: %1$d%%</string>
+    <string name="constellations_indexing">A relacionar as suas páginas…</string>
+    <string name="constellations_empty">O mapa cresce à medida que visita páginas legíveis neste perfil. O histórico existente não é carregado em segundo plano.</string>
+    <string name="constellations_error">Não foi possível atualizar o mapa. Verifique o espaço livre e tente novamente. A transferência do modelo também requer uma ligação à internet.</string>
+    <string name="constellations_graph_hint">Aproxime ou afaste os dedos para ampliar e arraste para explorar. As ligações indicam semelhança temática, não concordância. Selecione uma página abaixo para explorar as páginas próximas.</string>
+    <string name="constellations_pages">Páginas neste perfil</string>
+    <string name="constellations_related_pages">Páginas relacionadas</string>
+    <string name="constellations_no_connections">Ainda não há temas suficientemente próximos.</string>
+    <string name="constellations_connection">%1$d%% de semelhança temática</string>
+    <string name="constellations_page_count">%1$d páginas</string>
+    <string name="constellations_search">Pesquisar neste mapa</string>
+    <string name="constellations_search_no_results">Nenhuma página correspondente neste perfil.</string>
+    <string name="constellations_search_position">%1$d de %2$d resultados</string>
 </resources>

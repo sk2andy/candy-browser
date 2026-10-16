@@ -1473,4 +1473,24 @@
     <string name="reader_font_serif">Serif</string>
     <string name="reader_font_sans">Sans</string>
     <string name="reader_theme_light">Açık</string>
+    <string name="constellations_title">Candy Constellations</string>
+    <string name="constellations_profile">%1$s haritası</string>
+    <string name="constellations_description">Ziyaret ettiğiniz sayfaların konu bağlantılarını keşfedin. Candy kısa bir alıntı kaydeder ve vektör temsillerini bu cihazda hesaplar. Her profilin kendi haritası vardır. Gizli sayfalar hariç tutulur.</string>
+    <string name="constellations_enable">Bu profil için etkinleştir</string>
+    <string name="constellations_disable">Devre dışı bırak ve bu haritayı sil</string>
+    <string name="constellations_download_description">Çok dilli modeli (yaklaşık 138 MB) Hugging Face üzerinden bir kez indirin. Sayfa içeriği bu cihazda kalır. Model indirildikten sonra çevrimdışı çalışır.</string>
+    <string name="constellations_download_model">Modeli indir</string>
+    <string name="constellations_downloading">Model indiriliyor: %1$d%%</string>
+    <string name="constellations_indexing">Sayfalarınız bağlanıyor…</string>
+    <string name="constellations_empty">Bu profilde okunabilir metin içeren sayfaları ziyaret ettikçe haritanız büyür. Mevcut geçmiş arka planda yüklenmez.</string>
+    <string name="constellations_error">Harita güncellenemedi. Boş depolama alanını kontrol edip yeniden deneyin. Model indirmek için internet bağlantısı da gerekir.</string>
+    <string name="constellations_graph_hint">Yakınlaştırmak için parmaklarınızı kıstırın veya açın, keşfetmek için sürükleyin. Bağlantılar fikir birliğini değil, konu benzerliğini gösterir. Komşularını keşfetmek için aşağıdan bir sayfa seçin.</string>
+    <string name="constellations_pages">Bu profildeki sayfalar</string>
+    <string name="constellations_related_pages">İlgili sayfalar</string>
+    <string name="constellations_no_connections">Henüz yakın konu eşleşmesi yok.</string>
+    <string name="constellations_connection">%1$d%% konu benzerliği</string>
+    <string name="constellations_page_count">%1$d sayfa</string>
+    <string name="constellations_search">Bu haritada ara</string>
+    <string name="constellations_search_no_results">Bu profilde eşleşen sayfa yok.</string>
+    <string name="constellations_search_position">%2$d eşleşmeden %1$d.</string>
 </resources>

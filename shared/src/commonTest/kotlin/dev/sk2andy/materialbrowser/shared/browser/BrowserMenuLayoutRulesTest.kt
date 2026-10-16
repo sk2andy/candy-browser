@@ -7,6 +7,21 @@ import kotlin.test.assertTrue
 
 class BrowserMenuLayoutRulesTest {
     @Test
+    fun `constellations belongs to configurable tab menu and cannot move to tab switcher`() {
+        val entry = BrowserMenuEntry.Constellations
+        assertEquals(BrowserMenuEntry.Constellations, BrowserMenuLayoutRules.entryForAction(BrowserFeatureMenuAction.OpenConstellations))
+        assertEquals(listOf(BrowserMenuLocation.Nowhere, BrowserMenuLocation.Tab), BrowserMenuLayoutRules.allowedLocations(entry))
+        assertTrue(BrowserMenuLayoutRules.isVisible(BrowserMenuLayout.Default, entry, BrowserMenuSurface.Tab))
+        assertFalse(BrowserMenuLayoutRules.isVisible(BrowserMenuLayout.Default, entry, BrowserMenuSurface.TabSwitcher))
+
+        val hidden = BrowserMenuLayoutRules.update(BrowserMenuLayout.Default, entry, BrowserMenuLocation.Nowhere)
+        val restored = BrowserMenuLayoutRules.fromWireValues(BrowserMenuLayoutRules.toWireValues(hidden))
+        assertFalse(BrowserMenuLayoutRules.isVisible(restored, entry, BrowserMenuSurface.Tab))
+        val invalid = BrowserMenuLayoutRules.fromWireValues(mapOf("constellations" to "both"))
+        assertFalse(BrowserMenuLayoutRules.isVisible(invalid, entry, BrowserMenuSurface.TabSwitcher))
+    }
+
+    @Test
     fun `missing or invalid presentation values use bottom sheet and scrolling defaults`() {
         assertEquals(BrowserMenuPresentation.BottomSheet, BrowserMenuLayout.Default.presentation)
 

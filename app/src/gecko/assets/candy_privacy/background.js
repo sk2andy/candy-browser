@@ -936,6 +936,43 @@ browser.tabs.onRemoved.addListener((tabId) => {
   }
 });
 
+function extractPageText(message) {
+  const policy = policiesByToken.get(message.token);
+  const post = payload => nativePort?.postMessage({
+    type: "text-extraction-result",
+    protocolVersion: PROTOCOL_VERSION,
+    token: message.token,
+    revision: message.revision,
+    navigationGeneration: message.navigationGeneration,
+    requestId: message.requestId,
+    payload,
+  });
+  if (!policy || policy.revision !== message.revision ||
+      policy.navigationGeneration !== message.navigationGeneration ||
+      typeof message.requestId !== "string" || message.requestId.length > 64) {
+    post(null);
+    return;
+  }
+  const tabEntry = Array.from(tokenByTab.entries()).find(([, token]) => token === message.token);
+  if (!tabEntry) {
+    post(null);
+    return;
+  }
+  browser.tabs.sendMessage(tabEntry[0], {
+    type: "text-extract", revision: message.revision,
+    navigationGeneration: message.navigationGeneration,
+  }, { frameId: 0 }).then(payload => {
+    const current = policiesByToken.get(message.token);
+    if (current?.revision !== message.revision ||
+        current?.navigationGeneration !== message.navigationGeneration ||
+        tokenByTab.get(tabEntry[0]) !== message.token) {
+      post(null);
+      return;
+    }
+    post(payload && JSON.stringify(payload).length <= 150000 ? payload : null);
+  }, () => post(null));
+}
+
 function postReaderResult(message, payload) {
   if (!nativePort) return;
   nativePort.postMessage({
@@ -1357,6 +1394,8 @@ function connectNative() {
           inlineVideosByTab.delete(tabId);
         }
       }
+    } else if (message.type === "text-extract" && typeof message.token === "string") {
+      extractPageText(message);
     } else if (message.type === "reader-extract" && typeof message.token === "string") {
       extractReader(message);
     } else if (

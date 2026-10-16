@@ -4,36 +4,70 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 internal object RecallExtractionScript {
-    val javascript: String = """
+    val javascript: String = javascript(maxTextChars = 70_000)
+
+    fun javascript(maxTextChars: Int): String {
+        require(maxTextChars in 1..70_000)
+        return """
         (() => {
           const root = document.body;
           if (!root) return JSON.stringify({error: 'missing-root'});
           const clean = value => (value || '').replace(/[\u0000-\u001f\u007f]+/g, ' ').replace(/\s+/g, ' ').trim();
-          const excluded = 'script,style,noscript,template,iframe,object,embed,canvas,svg,form,input,button,nav,aside,footer,video,audio,[hidden],[aria-hidden="true"]';
+          const excluded = 'script,style,noscript,template,iframe,object,embed,canvas,svg,form,input,textarea,select,button,[contenteditable],nav,aside,footer,video,audio,[hidden],[aria-hidden="true"]';
+          const readable = new WeakMap();
+          const hasReadableAncestors = element => {
+            const checked = [];
+            let current = element;
+            let allowed = true;
+            let depthLimitReached = false;
+            while (current) {
+              if (readable.has(current)) {
+                allowed = readable.get(current);
+                break;
+              }
+              if (checked.length >= 128) {
+                allowed = false;
+                depthLimitReached = true;
+                break;
+              }
+              checked.push(current);
+              const style = getComputedStyle(current);
+              if (current.matches(excluded) || style.display === 'none' ||
+                  style.visibility === 'hidden' || style.visibility === 'collapse' ||
+                  style.opacity === '0' || style.contentVisibility === 'hidden') {
+                allowed = false;
+                break;
+              }
+              current = current.parentElement;
+            }
+            // A depth rejection applies only to this path, not unrelated sibling paths.
+            if (depthLimitReached) readable.set(element, false);
+            else checked.forEach(ancestor => readable.set(ancestor, allowed));
+            return allowed;
+          };
           const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
           const parts = [];
           let length = 0;
           let visited = 0;
           let node;
-          while (visited < 20000 && length < 70000 && (node = walker.nextNode())) {
+          while (visited < 20000 && length < $maxTextChars && (node = walker.nextNode())) {
             visited += 1;
             const parent = node.parentElement;
-            if (!parent || parent.closest(excluded) || parent.getClientRects().length === 0) continue;
-            const style = getComputedStyle(parent);
-            if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') continue;
+            if (!parent || parent.getClientRects().length === 0 || !hasReadableAncestors(parent)) continue;
             const text = clean(node.nodeValue);
             if (!text) continue;
-            const remaining = 70000 - length;
+            const remaining = $maxTextChars - length;
             parts.push(text.slice(0, remaining));
             length += Math.min(text.length, remaining) + 1;
           }
           return JSON.stringify({
-            title: clean(document.querySelector('meta[property="og:title"]')?.content) || clean(document.title),
-            sourceUrl: location.href,
-            text: clean(parts.join(' ')).slice(0, 70000)
+            title: (clean(document.querySelector('meta[property="og:title"]')?.content) || clean(document.title)).slice(0, 1024),
+            sourceUrl: location.href.slice(0, 8192),
+            text: clean(parts.join(' ')).slice(0, $maxTextChars)
           });
         })()
-    """.trimIndent()
+        """.trimIndent()
+    }
 }
 
 internal object RecallExtractionParser {

@@ -209,6 +209,10 @@ The visual tab overview also adapts its previews and grid to larger screens.
   normal address input, History, or `>recall`, with no private-tab or cloud indexing
 - Background tabs, sharing, printing, external apps, assistant summaries, and built-in or external
   download managers
+- **Candy Constellations:** an optional semantic map of visited pages for each local profile.
+  Download the multilingual model once, then explore topic connections with local embeddings,
+  pan/zoom and related-page details. Private pages are excluded. See the
+  [Constellations guide](docs/browsing/constellations.md).
 - **Link Peek:** long-press a link to inspect it in a live, disposable preview without creating a
   tab or history entry, then send it to a background tab through the pulsing plus target
 - **External Link Preview:** optionally open links from other apps in a temporary Candy preview

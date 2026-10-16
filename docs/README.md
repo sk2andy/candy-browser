@@ -7,6 +7,7 @@
 | Browsing and gestures | [`browsing/README.md`](browsing/README.md) | WebView runtime, address flow, commands, Candy Recall, Link Peek, browser actions |
 | Platform engines | [`browsing/platform-engines.md`](browsing/platform-engines.md) | Shared Kotlin contracts, Android Gecko/WebExtensions, iOS WKWebView/Toppings and Liquid Glass |
 | Tabs and profiles | [`tabs-and-profiles/README.md`](tabs-and-profiles/README.md) | Tab lifecycle, previews, persistence, snoozing, profile isolation |
+| Candy Constellations | [`browsing/constellations.md`](browsing/constellations.md) | Profile-local semantic page map, on-device embeddings, model download and graph UI |
 | Candy Trails | [`candy-trails/README.md`](candy-trails/README.md) | Journey graph, history reconciliation, forks, persistence, graph UI |
 | Site Capsules | [`site-capsules/README.md`](site-capsules/README.md) | Capsule model, navigation boundary, profile ownership, shortcuts |
 | Reader Studio | [`reader-studio/README.md`](reader-studio/README.md) | Extraction, reader sessions, local library, speech |

@@ -5,7 +5,7 @@ package dev.sk2andy.materialbrowser.shared.browser
  *
  * Android renders these ordered sections with the commonMain menu composable. iOS projects the
  * same state and actions into its native Liquid Glass menu so the Apple chrome can morph without
- * duplicating browser behavior. Firefox extensions are the only Android-only addition.
+ * duplicating browser behavior. Capabilities hide platform-specific additions.
  */
 enum class BrowserFeatureMenuSection {
     Toolbar,
@@ -47,6 +47,7 @@ enum class BrowserFeatureMenuAction {
     ToggleDesktopView,
     ToggleDomainMute,
     OpenCandyTrail,
+    OpenConstellations,
     AddSiteCapsule,
     CreateSiteWidget,
     Summarize,
@@ -90,6 +91,7 @@ enum class BrowserFeatureMenuLabelKey {
     MuteDomain,
     UnmuteDomain,
     CandyTrail,
+    Constellations,
     AddSiteCapsule,
     CreateSiteWidget,
     Summarize,
@@ -155,6 +157,7 @@ data class BrowserFeatureMenuState(
     val isDomainMuted: Boolean = false,
     val canAddSiteCapsule: Boolean = false,
     val canCreateSiteWidget: Boolean = false,
+    val canOpenConstellations: Boolean = false,
     val canSnooze: Boolean = false,
     val canDockAddressBar: Boolean = true,
     val overflowPageActions: List<BrowserFeatureMenuAction> = emptyList(),
@@ -164,6 +167,7 @@ data class BrowserFeatureMenuState(
 data class BrowserFeatureMenuCapabilities(
     val supportsFirefoxExtensions: Boolean = false,
     val supportsSiteWidgets: Boolean = false,
+    val supportsConstellations: Boolean = false,
 )
 
 object BrowserFeatureMenuRules {
@@ -393,6 +397,16 @@ object BrowserFeatureMenuRules {
                 state.hasPage,
             ),
         )
+        if (capabilities.supportsConstellations) {
+            add(
+                command(
+                    BrowserFeatureMenuAction.OpenConstellations,
+                    BrowserFeatureMenuLabelKey.Constellations,
+                    BrowserFeatureMenuSection.Candy,
+                    state.canOpenConstellations,
+                ),
+            )
+        }
         add(
             command(
                 BrowserFeatureMenuAction.AddSiteCapsule,

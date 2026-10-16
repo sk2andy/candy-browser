@@ -1480,4 +1480,24 @@
     <string name="reader_font_serif">Avec empattements</string>
     <string name="reader_font_sans">Sans empattements</string>
     <string name="reader_theme_light">Clair</string>
+    <string name="constellations_title">Candy Constellations</string>
+    <string name="constellations_profile">Carte de %1$s</string>
+    <string name="constellations_description">Découvrez les liens thématiques entre les pages visitées. Candy conserve un court extrait et reconnaît les liens sur cet appareil. Chaque profil possède sa propre carte. Les pages privées sont exclues.</string>
+    <string name="constellations_enable">Activer pour ce profil</string>
+    <string name="constellations_disable">Désactiver et supprimer cette carte</string>
+    <string name="constellations_download_description">Téléchargez une fois le modèle multilingue (environ 138 MB) depuis Hugging Face. Le contenu des pages reste sur cet appareil. Le modèle fonctionne hors ligne après le téléchargement.</string>
+    <string name="constellations_download_model">Télécharger le modèle</string>
+    <string name="constellations_downloading">Téléchargement du modèle : %1$d%%</string>
+    <string name="constellations_indexing">Mise en relation de vos pages…</string>
+    <string name="constellations_empty">Votre carte grandit lorsque vous visitez des pages au texte lisible dans ce profil. L’historique existant n’est pas consulté en arrière-plan.</string>
+    <string name="constellations_error">Impossible de mettre à jour la carte. Vérifiez l’espace disponible et réessayez. Le téléchargement du modèle nécessite aussi une connexion internet.</string>
+    <string name="constellations_graph_hint">Pincez pour zoomer et faites glisser pour explorer. Les liens indiquent une proximité thématique, pas un accord. Sélectionnez une page ci-dessous pour explorer ses voisines.</string>
+    <string name="constellations_pages">Pages de ce profil</string>
+    <string name="constellations_related_pages">Pages liées</string>
+    <string name="constellations_no_connections">Aucune correspondance thématique proche pour le moment.</string>
+    <string name="constellations_connection">%1$d%% de proximité thématique</string>
+    <string name="constellations_page_count">%1$d pages</string>
+    <string name="constellations_search">Rechercher dans cette carte</string>
+    <string name="constellations_search_no_results">Aucune page correspondante dans ce profil.</string>
+    <string name="constellations_search_position">%1$d sur %2$d résultats</string>
 </resources>

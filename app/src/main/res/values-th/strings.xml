@@ -1456,4 +1456,24 @@
     <string name="reader_font_serif">มีเชิง</string>
     <string name="reader_font_sans">ไม่มีเชิง</string>
     <string name="reader_theme_light">สว่าง</string>
+    <string name="constellations_title">Candy Constellations</string>
+    <string name="constellations_profile">แผนที่ของ %1$s</string>
+    <string name="constellations_description">ค้นพบความเชื่อมโยงตามหัวข้อของหน้าที่คุณเยี่ยมชม Candy เก็บข้อความสั้น ๆ และคำนวณเวกเตอร์บนอุปกรณ์นี้ แต่ละโปรไฟล์มีแผนที่ของตนเอง ไม่รวมหน้าส่วนตัว</string>
+    <string name="constellations_enable">เปิดใช้สำหรับโปรไฟล์นี้</string>
+    <string name="constellations_disable">ปิดใช้และลบแผนที่นี้</string>
+    <string name="constellations_download_description">ดาวน์โหลดโมเดลหลายภาษา (ประมาณ 138 MB) จาก Hugging Face ครั้งเดียว เนื้อหาของหน้าจะอยู่บนอุปกรณ์นี้ หลังดาวน์โหลด โมเดลจะทำงานแบบออฟไลน์ได้</string>
+    <string name="constellations_download_model">ดาวน์โหลดโมเดล</string>
+    <string name="constellations_downloading">กำลังดาวน์โหลดโมเดล: %1$d%%</string>
+    <string name="constellations_indexing">กำลังเชื่อมโยงหน้าของคุณ…</string>
+    <string name="constellations_empty">แผนที่จะขยายเมื่อคุณเยี่ยมชมหน้าที่มีข้อความอ่านได้ในโปรไฟล์นี้ ระบบจะไม่โหลดประวัติเดิมในเบื้องหลัง</string>
+    <string name="constellations_error">อัปเดตแผนที่ไม่ได้ ตรวจสอบพื้นที่ว่างแล้วลองอีกครั้ง การดาวน์โหลดโมเดลต้องเชื่อมต่ออินเทอร์เน็ตด้วย</string>
+    <string name="constellations_graph_hint">จีบหรือกางนิ้วเพื่อซูม แล้วลากเพื่อสำรวจ เส้นเชื่อมแสดงความคล้ายคลึงของหัวข้อ ไม่ใช่ความเห็นที่ตรงกัน เลือกหน้าด้านล่างเพื่อสำรวจหน้าที่อยู่ใกล้กัน</string>
+    <string name="constellations_pages">หน้าในโปรไฟล์นี้</string>
+    <string name="constellations_related_pages">หน้าที่เกี่ยวข้อง</string>
+    <string name="constellations_no_connections">ยังไม่พบหัวข้อที่ใกล้เคียงกัน</string>
+    <string name="constellations_connection">หัวข้อคล้ายกัน %1$d%%</string>
+    <string name="constellations_page_count">%1$d หน้า</string>
+    <string name="constellations_search">ค้นหาในแผนที่นี้</string>
+    <string name="constellations_search_no_results">ไม่พบหน้าที่ตรงกันในโปรไฟล์นี้</string>
+    <string name="constellations_search_position">ผลลัพธ์ที่ %1$d จาก %2$d รายการ</string>
 </resources>

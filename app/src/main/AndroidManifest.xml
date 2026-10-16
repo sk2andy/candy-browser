@@ -544,6 +544,11 @@
             android:exported="false" />
 
         <activity
+            android:name=".ConstellationActivity"
+            android:exported="false"
+            android:label="@string/constellations_title" />
+
+        <activity
             android:name=".HistoryActivity"
             android:exported="false"
             android:windowSoftInputMode="adjustResize" />

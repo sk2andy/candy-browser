@@ -1456,4 +1456,24 @@
     <string name="reader_font_serif">襯線</string>
     <string name="reader_font_sans">無襯線</string>
     <string name="reader_theme_light">淺色</string>
+    <string name="constellations_title">Candy Constellations</string>
+    <string name="constellations_profile">%1$s 的地圖</string>
+    <string name="constellations_description">探索造訪過的網頁在主題上的關聯。Candy 會儲存簡短摘錄，並在此裝置上計算嵌入向量。每個設定檔都有獨立的地圖。私密網頁不會納入其中。</string>
+    <string name="constellations_enable">為此設定檔啟用</string>
+    <string name="constellations_disable">停用並刪除此地圖</string>
+    <string name="constellations_download_description">從 Hugging Face 一次下載多語言模型（約 138 MB）。網頁內容會留在此裝置上。下載後，模型可離線運作。</string>
+    <string name="constellations_download_model">下載模型</string>
+    <string name="constellations_downloading">正在下載模型：%1$d%%</string>
+    <string name="constellations_indexing">正在連結你的網頁…</string>
+    <string name="constellations_empty">在此設定檔中造訪含有可讀文字的網頁時，地圖會持續擴展。不會在背景載入現有的瀏覽紀錄。</string>
+    <string name="constellations_error">無法更新地圖。請檢查可用儲存空間後再試一次。下載模型也需要網際網路連線。</string>
+    <string name="constellations_graph_hint">雙指捏合縮放，拖曳探索。連線表示主題相似，而非觀點一致。選取下方網頁以探索鄰近網頁。</string>
+    <string name="constellations_pages">此設定檔中的網頁</string>
+    <string name="constellations_related_pages">相關網頁</string>
+    <string name="constellations_no_connections">尚無主題足夠相近的網頁。</string>
+    <string name="constellations_connection">主題相似度 %1$d%%</string>
+    <string name="constellations_page_count">%1$d 個網頁</string>
+    <string name="constellations_search">搜尋此地圖</string>
+    <string name="constellations_search_no_results">此個人資料中沒有相符的網頁。</string>
+    <string name="constellations_search_position">第 %1$d 項，共 %2$d 項相符結果</string>
 </resources>

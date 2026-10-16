@@ -412,6 +412,7 @@ internal interface GeckoBrowserSession {
     /** Extracts bounded article JSON through Candy's internal Gecko content-script bridge. */
     fun extractPageForReader(onComplete: (String?) -> Unit)
 
+    fun extractPageText(onComplete: (String?) -> Unit) = onComplete(null)
     /** Checks one committed document for a text editor hidden by browser chrome. */
     fun probeTextInputOcclusion(
         viewportRect: BrowserViewportRect,

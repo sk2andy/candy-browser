@@ -259,6 +259,8 @@ import dev.sk2andy.materialbrowser.data.DownloadManagerMode
 import dev.sk2andy.materialbrowser.data.PermissionRadarStore
 import dev.sk2andy.materialbrowser.data.PendingCandyTrailRedaction
 import dev.sk2andy.materialbrowser.data.ProfileWallpaperStore
+import dev.sk2andy.materialbrowser.constellations.ConstellationPageExtraction
+import dev.sk2andy.materialbrowser.data.ConstellationRepository
 import dev.sk2andy.materialbrowser.data.RecallRepository
 import dev.sk2andy.materialbrowser.data.SiteCapsuleIconStore
 import dev.sk2andy.materialbrowser.data.SiteCapsuleStore
@@ -641,6 +643,12 @@ class BrowserController(
     ) -> Unit = { _, onResult -> onResult(false) },
     private val externalApps: ExternalAppLauncher = ExternalAppLauncher(activity),
     private val capsuleWindowId: String? = null,
+    private val onOpenConstellations: (String) -> Unit = { profileId ->
+        activity.startActivity(
+            dev.sk2andy.materialbrowser.browser.integration.ConstellationActivityContract
+                .launchIntent(activity, profileId),
+        )
+    },
 ) {
     private val closeAllPrivateTabsCallback: () -> Int = ::closeAllPrivateTabs
     private val appLogPrivacyOwner = Any()
@@ -1630,6 +1638,7 @@ class BrowserController(
         ?: BrowserSessionStore(activity)
     private val historyRepository = BrowsingHistoryRepository.get(activity)
     private val recallRepository = RecallRepository.get(activity)
+    private val constellationRepository = ConstellationRepository.get(activity)
     private val snoozedTabStore = SnoozedTabStore(activity)
     private val snoozeScheduler = SnoozeScheduler(activity)
     private val snoozeRestoreCallback: (Long) -> Unit = { nowMillis ->
@@ -5378,6 +5387,21 @@ class BrowserController(
         }
         submitAddress(url)
         return true
+    }
+
+    val canOpenConstellations: Boolean
+        get() = !selectedTab.isIncognito && !isActiveProfileLocked &&
+            !isSyncedProfile(activeProfileId) && !isSessionEphemeralTab(selectedTabId) &&
+            !GuestBubbleSessionStore(activity).isLocked()
+
+    fun openConstellations() {
+        if (canOpenConstellations) onOpenConstellations(activeProfileId)
+    }
+
+    fun openConstellationPage(url: String, profileId: String): Boolean {
+        if (!canOpenConstellations || profileId != activeProfileId) return false
+        val safeUrl = BrowserUriPolicy.normalizeHttpUrl(url) ?: return false
+        return openHistoryEntryNow(safeUrl)
     }
 
     fun openHistoryEntry(
@@ -11261,6 +11285,10 @@ class BrowserController(
             store.savePendingTabClearOnTaskRemoval(pending = false)
         }
         reloadHistory()
+        history.firstOrNull { entry ->
+            entry.profileId == activeProfileId &&
+                RecallRules.canonicalUrl(entry.url) == RecallRules.canonicalUrl(selectedTab.url)
+        }?.let { entry -> indexConstellationPage(selectedTabId, entry.url, entry.lastVisitedAt) }
         applyCandyTrailRedactions(store.loadPendingCandyTrailRedactions())
         candyTrailRepository.processPendingRedactions()
         isActivityResumed = true
@@ -15624,20 +15652,63 @@ class BrowserController(
         val tab = tabs.firstOrNull { it.id == tabId }?.takeUnless(BrowserTab::isIncognito)
             ?: return false
         if (isSyncedProfile(tab.profileId)) return false
+        val visitedAt = System.currentTimeMillis()
         val result = historyRepository.record(
             HistoryEntry(
                 url = url,
                 title = title,
-                lastVisitedAt = System.currentTimeMillis(),
+                lastVisitedAt = visitedAt,
                 profileId = tab.profileId,
                 visitId = UUID.randomUUID().toString(),
             ),
         )
+        if (result.recorded) indexConstellationPage(tabId, url, visitedAt)
         val updated = result.history
         if (updated == history) return result.recorded
         history.clear()
         history += updated
         return result.recorded
+    }
+
+    private fun indexConstellationPage(tabId: String, url: String, visitedAt: Long) {
+        val tab = tabs.firstOrNull { it.id == tabId } ?: return
+        if (destroyed || !isActivityStarted || tab.isIncognito || tab.profileId in lockedProfileIds ||
+            GuestBubbleSessionStore(activity).isLocked() ||
+            isSessionEphemeralTab(tabId) || isSyncedProfile(tab.profileId) ||
+            browsingDataClearPending || historyRecordingMode == HistoryRecordingMode.Disabled ||
+            !constellationRepository.isEnabled(tab.profileId)) return
+        val expectedUrl = RecallRules.canonicalUrl(url) ?: return
+        if (RecallRules.canonicalUrl(tab.url) != expectedUrl) return
+        val session = browserEngineSessions[tabId] ?: return
+        val generation = navigationGenerations.getOrDefault(tabId, 0)
+        val cleanupEpoch = constellationRepository.captureCleanupEpoch()
+        ConstellationPageExtraction.request(
+            handler = mainHandler,
+            isCurrent = {
+                val current = tabs.firstOrNull { it.id == tabId }
+                !destroyed && isActivityStarted && current != null && !current.isIncognito &&
+                    !GuestBubbleSessionStore(activity).isLocked() &&
+                    current.profileId == tab.profileId && current.profileId !in lockedProfileIds &&
+                    !isSessionEphemeralTab(tabId) && !isSyncedProfile(current.profileId) &&
+                    !browsingDataClearPending && historyRecordingMode != HistoryRecordingMode.Disabled &&
+                    RecallRules.canonicalUrl(current.url) == expectedUrl &&
+                    navigationGenerations.getOrDefault(tabId, 0) == generation &&
+                    browserEngineSessions[tabId] === session &&
+                    constellationRepository.isEnabled(tab.profileId) &&
+                    constellationRepository.captureCleanupEpoch() == cleanupEpoch
+            },
+            extract = session::extractPageText,
+            onComplete = { rawJson ->
+                constellationRepository.indexExtracted(
+                    rawJson = rawJson,
+                    profileId = tab.profileId,
+                    expectedUrl = expectedUrl,
+                    visitedAt = visitedAt,
+                    expectedCleanupEpoch = cleanupEpoch,
+                    isPrivate = tab.isIncognito,
+                )
+            },
+        )
     }
 
     internal fun reloadHistory() {

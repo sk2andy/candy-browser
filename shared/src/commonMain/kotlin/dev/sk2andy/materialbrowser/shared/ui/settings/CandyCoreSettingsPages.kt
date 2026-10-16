@@ -238,6 +238,7 @@ internal object CandyBrowserMenuSettingsResources : BrowserMenuSettingsResources
         BrowserMenuEntry.ToppingCommands -> "Topping-Befehle"
         BrowserMenuEntry.FirefoxPageActions -> "Firefox-Seitenaktionen"
         BrowserMenuEntry.CandyTrail -> "Candy Trail"
+        BrowserMenuEntry.Constellations -> "Candy Constellations"
         BrowserMenuEntry.AddSiteCapsule -> "Site Capsule hinzufügen"
         BrowserMenuEntry.CreateSiteWidget -> "Website-Widget"
         BrowserMenuEntry.Summarize -> "Zusammenfassen"

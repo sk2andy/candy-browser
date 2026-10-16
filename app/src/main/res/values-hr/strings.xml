@@ -1489,4 +1489,24 @@
     <string name="reader_font_serif">Serif</string>
     <string name="reader_font_sans">Sans</string>
     <string name="reader_theme_light">Svijetlo</string>
+    <string name="constellations_title">Candy Constellations</string>
+    <string name="constellations_profile">Karta za %1$s</string>
+    <string name="constellations_description">Otkrijte tematske veze između posjećenih stranica. Candy sprema kratak isječak i prepoznaje veze na ovom uređaju. Svaki profil ima vlastitu kartu. Privatne stranice su isključene.</string>
+    <string name="constellations_enable">Omogući za ovaj profil</string>
+    <string name="constellations_disable">Onemogući i izbriši ovu kartu</string>
+    <string name="constellations_download_description">Jednom preuzmite višejezični model (oko 138 MB) s platforme Hugging Face. Sadržaj stranica ostaje na ovom uređaju. Nakon preuzimanja model radi izvanmrežno.</string>
+    <string name="constellations_download_model">Preuzmi model</string>
+    <string name="constellations_downloading">Preuzimanje modela: %1$d%%</string>
+    <string name="constellations_indexing">Povezivanje vaših stranica…</string>
+    <string name="constellations_empty">Karta raste dok posjećujete stranice s čitljivim tekstom u ovom profilu. Postojeća povijest ne dohvaća se u pozadini.</string>
+    <string name="constellations_error">Kartu nije moguće ažurirati. Provjerite slobodan prostor i pokušajte ponovno. Preuzimanje modela zahtijeva i internetsku vezu.</string>
+    <string name="constellations_graph_hint">Približite s dva prsta i povucite za istraživanje. Veze prikazuju sličnost tema, a ne slaganje. Odaberite stranicu ispod da istražite njezine susjede.</string>
+    <string name="constellations_pages">Stranice u ovom profilu</string>
+    <string name="constellations_related_pages">Povezane stranice</string>
+    <string name="constellations_no_connections">Još nema bliskih tematskih podudaranja.</string>
+    <string name="constellations_connection">%1$d%% tematske sličnosti</string>
+    <string name="constellations_page_count">%1$d stranica</string>
+    <string name="constellations_search">Pretraži ovu kartu</string>
+    <string name="constellations_search_no_results">Nema odgovarajućih stranica u ovom profilu.</string>
+    <string name="constellations_search_position">%1$d od %2$d podudaranja</string>
 </resources>

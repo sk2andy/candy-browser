@@ -1095,6 +1095,7 @@ private class GeckoViewBrowserSession(
     private var privacyBound = false
     private var privacyFailureDescription: String? = null
     private val privacyBinding: GeckoPrivacyBinding
+    private var contentKind: BrowserEngineContentKind? = null
     private var toppingBinding: GeckoToppingSessionBinding = GeckoToppingSessionBinding.None
     init {
         session.settings.setSuspendMediaWhenInactive(false)
@@ -2903,6 +2904,7 @@ private class GeckoViewBrowserSession(
     @UiThread
     override fun bindToppingSession(tabId: String, contentKind: BrowserEngineContentKind) {
         check(!closed) { "Cannot bind a closed Gecko session" }
+        this.contentKind = contentKind
         toppingBinding.close()
         toppingBinding = toppingHost.bindSession(
             session = session,
@@ -3100,6 +3102,17 @@ private class GeckoViewBrowserSession(
 
     override fun clearFindInPage() {
         if (!closed) session.finder.clear()
+    }
+
+    @UiThread
+    override fun extractPageText(onComplete: (String?) -> Unit) {
+        if (closed || isPrivate || !privacyBound || currentPageUrl == null ||
+            contentKind != BrowserEngineContentKind.RegularTab
+        ) {
+            onComplete(null)
+            return
+        }
+        privacyBinding.extractPageText(onComplete)
     }
 
     @UiThread

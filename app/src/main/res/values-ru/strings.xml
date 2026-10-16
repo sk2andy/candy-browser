@@ -1507,4 +1507,24 @@
     <string name="reader_font_serif">С засечками</string>
     <string name="reader_font_sans">Без засечек</string>
     <string name="reader_theme_light">Светлая</string>
+    <string name="constellations_title">Candy Constellations</string>
+    <string name="constellations_profile">Карта профиля %1$s</string>
+    <string name="constellations_description">Узнайте, как посещённые страницы связаны по темам. Candy сохраняет короткий отрывок и вычисляет векторные представления на этом устройстве. У каждого профиля своя карта. Приватные страницы исключены.</string>
+    <string name="constellations_enable">Включить для этого профиля</string>
+    <string name="constellations_disable">Отключить и удалить эту карту</string>
+    <string name="constellations_download_description">Один раз скачайте многоязычную модель (около 138 МБ) с Hugging Face. Содержимое страниц остаётся на этом устройстве. После загрузки модель работает без интернета.</string>
+    <string name="constellations_download_model">Скачать модель</string>
+    <string name="constellations_downloading">Загрузка модели: %1$d%%</string>
+    <string name="constellations_indexing">Связываем ваши страницы…</string>
+    <string name="constellations_empty">Карта растёт по мере посещения страниц с читаемым текстом в этом профиле. Существующая история не загружается в фоновом режиме.</string>
+    <string name="constellations_error">Не удалось обновить карту. Проверьте свободное место и повторите попытку. Для загрузки модели также нужно подключение к интернету.</string>
+    <string name="constellations_graph_hint">Сводите и разводите пальцы для изменения масштаба, перетаскивайте для обзора. Связи показывают сходство тем, а не согласие. Выберите страницу ниже, чтобы изучить соседние страницы.</string>
+    <string name="constellations_pages">Страницы этого профиля</string>
+    <string name="constellations_related_pages">Связанные страницы</string>
+    <string name="constellations_no_connections">Близких тематических совпадений пока нет.</string>
+    <string name="constellations_connection">Сходство тем: %1$d%%</string>
+    <string name="constellations_page_count">Страниц: %1$d</string>
+    <string name="constellations_search">Поиск по этой карте</string>
+    <string name="constellations_search_no_results">В этом профиле нет подходящих страниц.</string>
+    <string name="constellations_search_position">%1$d из %2$d совпадений</string>
 </resources>

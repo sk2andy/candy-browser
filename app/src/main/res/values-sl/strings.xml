@@ -1505,4 +1505,24 @@
     <string name="reader_font_serif">Serif</string>
     <string name="reader_font_sans">Sans</string>
     <string name="reader_theme_light">Svetlo</string>
+    <string name="constellations_title">Candy Constellations</string>
+    <string name="constellations_profile">Zemljevid za %1$s</string>
+    <string name="constellations_description">Odkrijte tematske povezave med obiskanimi stranmi. Candy shrani kratek odlomek in izračuna vektorske predstavitve v tej napravi. Vsak profil ima svoj zemljevid. Zasebne strani so izključene.</string>
+    <string name="constellations_enable">Omogoči za ta profil</string>
+    <string name="constellations_disable">Onemogoči in izbriši ta zemljevid</string>
+    <string name="constellations_download_description">Enkrat prenesite večjezični model (približno 138 MB) s Hugging Face. Vsebina strani ostane v tej napravi. Po prenosu model deluje brez povezave.</string>
+    <string name="constellations_download_model">Prenesi model</string>
+    <string name="constellations_downloading">Prenašanje modela: %1$d%%</string>
+    <string name="constellations_indexing">Povezovanje vaših strani…</string>
+    <string name="constellations_empty">Zemljevid raste med obiskovanjem strani z berljivim besedilom v tem profilu. Obstoječa zgodovina se ne nalaga v ozadju.</string>
+    <string name="constellations_error">Zemljevida ni bilo mogoče posodobiti. Preverite razpoložljivi prostor in poskusite znova. Za prenos modela je potrebna tudi internetna povezava.</string>
+    <string name="constellations_graph_hint">Z dvema prstoma spreminjajte povečavo in povlecite za raziskovanje. Povezave kažejo podobnost tem, ne strinjanja. Spodaj izberite stran in raziščite sosednje strani.</string>
+    <string name="constellations_pages">Strani v tem profilu</string>
+    <string name="constellations_related_pages">Sorodne strani</string>
+    <string name="constellations_no_connections">Tesnih tematskih ujemanj še ni.</string>
+    <string name="constellations_connection">%1$d%% tematska podobnost</string>
+    <string name="constellations_page_count">Strani: %1$d</string>
+    <string name="constellations_search">Preišči ta zemljevid</string>
+    <string name="constellations_search_no_results">V tem profilu ni ustreznih strani.</string>
+    <string name="constellations_search_position">%1$d od %2$d zadetkov</string>
 </resources>

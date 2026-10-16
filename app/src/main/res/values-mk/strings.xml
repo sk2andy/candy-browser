@@ -1473,4 +1473,24 @@
     <string name="reader_font_serif">Серифен</string>
     <string name="reader_font_sans">Безсерифен</string>
     <string name="reader_theme_light">Светло</string>
+    <string name="constellations_title">Candy Constellations</string>
+    <string name="constellations_profile">Мапа за %1$s</string>
+    <string name="constellations_description">Откријте тематски врски меѓу посетените страници. Candy зачувува краток извадок и ги препознава врските на овој уред. Секој профил има своја мапа. Приватните страници се исклучени.</string>
+    <string name="constellations_enable">Овозможи за овој профил</string>
+    <string name="constellations_disable">Оневозможи и избриши ја мапава</string>
+    <string name="constellations_download_description">Преземете го повеќејазичниот модел (околу 138 MB) од Hugging Face еднаш. Содржината на страниците останува на овој уред. По преземањето, моделот работи офлајн.</string>
+    <string name="constellations_download_model">Преземи модел</string>
+    <string name="constellations_downloading">Преземање на моделот: %1$d%%</string>
+    <string name="constellations_indexing">Поврзување на вашите страници…</string>
+    <string name="constellations_empty">Мапата расте додека посетувате страници со читлив текст во овој профил. Постојната историја не се презема во заднина.</string>
+    <string name="constellations_error">Мапата не можеше да се ажурира. Проверете го слободниот простор и обидете се повторно. За преземање на моделот е потребна и интернет-врска.</string>
+    <string name="constellations_graph_hint">Зумирајте со два прста и влечете за истражување. Врските покажуваат тематска сличност, а не согласност. Изберете страница подолу за да ги истражите нејзините соседи.</string>
+    <string name="constellations_pages">Страници во овој профил</string>
+    <string name="constellations_related_pages">Поврзани страници</string>
+    <string name="constellations_no_connections">Сè уште нема блиски тематски совпаѓања.</string>
+    <string name="constellations_connection">%1$d%% тематска сличност</string>
+    <string name="constellations_page_count">%1$d страници</string>
+    <string name="constellations_search">Пребарај ја оваа карта</string>
+    <string name="constellations_search_no_results">Нема соодветни страници во овој профил.</string>
+    <string name="constellations_search_position">%1$d од %2$d совпаѓања</string>
 </resources>

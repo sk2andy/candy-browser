@@ -1473,4 +1473,24 @@
     <string name="reader_font_serif">Серифен</string>
     <string name="reader_font_sans">Безсерифен</string>
     <string name="reader_theme_light">Светла</string>
+    <string name="constellations_title">Candy Constellations</string>
+    <string name="constellations_profile">Карта за %1$s</string>
+    <string name="constellations_description">Открийте тематичните връзки между посетените страници. Candy съхранява кратък откъс и разпознава връзките на това устройство. Всеки профил има собствена карта. Частните страници са изключени.</string>
+    <string name="constellations_enable">Активиране за този профил</string>
+    <string name="constellations_disable">Деактивиране и изтриване на тази карта</string>
+    <string name="constellations_download_description">Изтеглете многоезичния модел (около 138 MB) от Hugging Face еднократно. Съдържанието на страниците остава на това устройство. След изтегляне моделът работи офлайн.</string>
+    <string name="constellations_download_model">Изтегляне на модела</string>
+    <string name="constellations_downloading">Изтегляне на модела: %1$d%%</string>
+    <string name="constellations_indexing">Свързване на страниците…</string>
+    <string name="constellations_empty">Картата расте, докато посещавате страници с четим текст в този профил. Съществуващата история не се зарежда във фонов режим.</string>
+    <string name="constellations_error">Картата не можа да бъде обновена. Проверете свободното място и опитайте отново. Изтеглянето на модел изисква и интернет връзка.</string>
+    <string name="constellations_graph_hint">Приближете с два пръста и плъзнете, за да разгледате. Връзките показват сходство по тема, а не съгласие. Изберете страница по-долу, за да видите съседните ѝ страници.</string>
+    <string name="constellations_pages">Страници в този профил</string>
+    <string name="constellations_related_pages">Свързани страници</string>
+    <string name="constellations_no_connections">Все още няма близки тематични съвпадения.</string>
+    <string name="constellations_connection">%1$d%% тематично сходство</string>
+    <string name="constellations_page_count">%1$d страници</string>
+    <string name="constellations_search">Търсене в тази карта</string>
+    <string name="constellations_search_no_results">Няма съответстващи страници в този профил.</string>
+    <string name="constellations_search_position">%1$d от %2$d съвпадения</string>
 </resources>

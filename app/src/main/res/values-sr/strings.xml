@@ -1489,4 +1489,24 @@
     <string name="reader_font_serif">Серифни</string>
     <string name="reader_font_sans">Без серифа</string>
     <string name="reader_theme_light">Светло</string>
+    <string name="constellations_title">Candy Constellations</string>
+    <string name="constellations_profile">Мапа за %1$s</string>
+    <string name="constellations_description">Откријте како су посећене странице тематски повезане. Candy чува кратак одломак и израчунава векторске приказе на овом уређају. Сваки профил има своју мапу. Приватне странице су искључене.</string>
+    <string name="constellations_enable">Омогући за овај профил</string>
+    <string name="constellations_disable">Онемогући и избриши ову мапу</string>
+    <string name="constellations_download_description">Једном преузмите вишејезични модел (око 138 MB) са Hugging Face. Садржај страница остаје на овом уређају. Након преузимања модел ради ван мреже.</string>
+    <string name="constellations_download_model">Преузми модел</string>
+    <string name="constellations_downloading">Преузимање модела: %1$d%%</string>
+    <string name="constellations_indexing">Повезивање ваших страница…</string>
+    <string name="constellations_empty">Мапа расте док посећујете странице са читљивим текстом у овом профилу. Постојећа историја се не учитава у позадини.</string>
+    <string name="constellations_error">Мапа није ажурирана. Проверите слободан простор и покушајте поново. Преузимање модела захтева и интернет везу.</string>
+    <string name="constellations_graph_hint">Примакните или размакните прсте за зумирање и превуците за истраживање. Везе показују тематску сличност, а не слагање. Изаберите страницу испод да истражите суседне странице.</string>
+    <string name="constellations_pages">Странице у овом профилу</string>
+    <string name="constellations_related_pages">Повезане странице</string>
+    <string name="constellations_no_connections">Још нема блиских тематских поклапања.</string>
+    <string name="constellations_connection">%1$d%% тематске сличности</string>
+    <string name="constellations_page_count">Странице: %1$d</string>
+    <string name="constellations_search">Претражи ову мапу</string>
+    <string name="constellations_search_no_results">Нема одговарајућих страница у овом профилу.</string>
+    <string name="constellations_search_position">%1$d од %2$d подударања</string>
 </resources>

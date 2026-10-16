@@ -78,6 +78,7 @@ import dev.sk2andy.materialbrowser.browser.gecko.GeckoExtensionManagerCoordinato
 import dev.sk2andy.materialbrowser.browser.engine.BrowserEngineProcessRestart
 import dev.sk2andy.materialbrowser.browser.integration.CandySearchWidgetRules
 import dev.sk2andy.materialbrowser.browser.integration.FavoritesActivityContract
+import dev.sk2andy.materialbrowser.browser.integration.ConstellationActivityContract
 import dev.sk2andy.materialbrowser.browser.integration.HistoryActivityContract
 import dev.sk2andy.materialbrowser.browser.integration.IncomingBrowserIntent
 import dev.sk2andy.materialbrowser.browser.integration.IncomingBrowserRequestKind
@@ -280,6 +281,18 @@ open class MainActivity : AppCompatActivity() {
         if (GuestBubbleSessionStore(this).isLocked()) return@registerForActivityResult
         if (uri != null && ::browserController.isInitialized) stageAppDataImport(uri)
     }
+    private val constellationLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult(),
+    ) { result ->
+        if (result.resultCode != Activity.RESULT_OK || !::browserController.isInitialized) {
+            return@registerForActivityResult
+        }
+        val profileId = ConstellationActivityContract.profileId(result.data)
+            ?: return@registerForActivityResult
+        val url = ConstellationActivityContract.navigationUrl(result.data)
+            ?: return@registerForActivityResult
+        if (browserController.openConstellationPage(url, profileId)) incomingBrowserNavigationRequestId++
+    }
     private val historyLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult(),
     ) { result ->
@@ -417,6 +430,9 @@ open class MainActivity : AppCompatActivity() {
         }
         profileBiometricAuthenticator = ProfileBiometricAuthenticator(this)
         browserController = BrowserController(
+            onOpenConstellations = { profileId ->
+                constellationLauncher.launch(ConstellationActivityContract.launchIntent(this, profileId))
+            },
             activity = this,
             capsuleWindowId = capsuleWindowId,
             requestRuntimePermissions = { permissions ->

@@ -1473,4 +1473,24 @@
     <string name="reader_font_serif">Serif</string>
     <string name="reader_font_sans">Sans</string>
     <string name="reader_theme_light">Hell</string>
+    <string name="constellations_title">Candy Constellations</string>
+    <string name="constellations_profile">Kaart fir %1$s</string>
+    <string name="constellations_description">Entdeckt thematesch Verbindungen tëscht Äre besichte Säiten. Candy späichert e kuerzen Auszuch an erkennt Verbindungen op dësem Apparat. All Profil huet seng eege Kaart. Privat Säite sinn ausgeschloss.</string>
+    <string name="constellations_enable">Fir dëse Profil aktivéieren</string>
+    <string name="constellations_disable">Dës Kaart deaktivéieren a läschen</string>
+    <string name="constellations_download_description">Luet de méisproochege Modell (ongeféier 138 MB) eemol vun Hugging Face erof. Den Inhalt vun de Säite bleift op dësem Apparat. Nom Erofluede funktionéiert de Modell offline.</string>
+    <string name="constellations_download_model">Modell eroflueden</string>
+    <string name="constellations_downloading">Modell gëtt erofgelueden: %1$d%%</string>
+    <string name="constellations_indexing">Är Säite gi verbonnen…</string>
+    <string name="constellations_empty">Är Kaart wiisst, wann Dir Säite mat liesbarem Text an dësem Profil besicht. De bestoende Verlaf gëtt net am Hannergrond ofgeruff.</string>
+    <string name="constellations_error">D’Kaart konnt net aktualiséiert ginn. Kontrolléiert de fräie Späicher a probéiert nach eng Kéier. Fir de Modell erofzelueden ass och eng Internetverbindung néideg.</string>
+    <string name="constellations_graph_hint">Mat zwee Fangere zoomen an zéie fir ze entdecken. Verbindunge weisen thematesch Ähnlechkeet, keng Zoustëmmung. Wielt ënnen eng Säit fir hir Noperen ze entdecken.</string>
+    <string name="constellations_pages">Säiten an dësem Profil</string>
+    <string name="constellations_related_pages">Verbonne Säiten</string>
+    <string name="constellations_no_connections">Nach keng enk thematesch Iwwerteneestëmmungen.</string>
+    <string name="constellations_connection">%1$d%% thematesch Ähnlechkeet</string>
+    <string name="constellations_page_count">%1$d Säiten</string>
+    <string name="constellations_search">Dës Kaart duerchsichen</string>
+    <string name="constellations_search_no_results">Keng passend Säiten an dësem Profil.</string>
+    <string name="constellations_search_position">%1$d vu %2$d Treffer</string>
 </resources>

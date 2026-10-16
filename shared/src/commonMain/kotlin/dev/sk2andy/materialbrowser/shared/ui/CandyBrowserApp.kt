@@ -1798,6 +1798,7 @@ private fun BrowserMenuActionIcon(
         BrowserFeatureMenuAction.Print -> Icons.Filled.Print
         BrowserFeatureMenuAction.ToggleDomainMute -> Icons.Filled.VolumeOff
         BrowserFeatureMenuAction.OpenCandyTrail -> Icons.Filled.Route
+        BrowserFeatureMenuAction.OpenConstellations -> Icons.Filled.Route
         BrowserFeatureMenuAction.AddSiteCapsule -> Icons.Filled.AddToHomeScreen
         BrowserFeatureMenuAction.CreateSiteWidget -> Icons.Filled.AddToHomeScreen
         BrowserFeatureMenuAction.OpenFavorites -> Icons.Filled.Star
@@ -1859,6 +1860,7 @@ private fun BrowserFeatureMenuItem.localizedLabel(): String = dynamicLabel ?: wh
     BrowserFeatureMenuLabelKey.MuteDomain -> "Domain stummschalten"
     BrowserFeatureMenuLabelKey.UnmuteDomain -> "Domain aktivieren"
     BrowserFeatureMenuLabelKey.CandyTrail -> "Candy Trail"
+    BrowserFeatureMenuLabelKey.Constellations -> "Candy Constellations"
     BrowserFeatureMenuLabelKey.AddSiteCapsule -> "Site Capsule hinzufügen"
     BrowserFeatureMenuLabelKey.CreateSiteWidget -> "Website-Widget"
     BrowserFeatureMenuLabelKey.Summarize -> "Zusammenfassen"

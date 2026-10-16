@@ -105,6 +105,7 @@ enum class BrowserMenuEntry(
     ),
 
     CandyTrail("candy_trail", BrowserMenuConfigurationSection.Candy, BrowserMenuLocation.Both, true, true),
+    Constellations("constellations", BrowserMenuConfigurationSection.Candy, BrowserMenuLocation.Tab, true, false),
     AddSiteCapsule(
         "add_site_capsule",
         BrowserMenuConfigurationSection.Candy,
@@ -337,6 +338,7 @@ object BrowserMenuLayoutRules {
         BrowserFeatureMenuAction.ToggleDesktopView -> BrowserMenuEntry.DesktopView
         BrowserFeatureMenuAction.ToggleDomainMute -> BrowserMenuEntry.DomainMute
         BrowserFeatureMenuAction.OpenCandyTrail -> BrowserMenuEntry.CandyTrail
+        BrowserFeatureMenuAction.OpenConstellations -> BrowserMenuEntry.Constellations
         BrowserFeatureMenuAction.AddSiteCapsule -> BrowserMenuEntry.AddSiteCapsule
         BrowserFeatureMenuAction.CreateSiteWidget -> BrowserMenuEntry.CreateSiteWidget
         BrowserFeatureMenuAction.Summarize -> BrowserMenuEntry.Summarize

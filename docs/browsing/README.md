@@ -24,6 +24,7 @@
 | Address input, commands, gestures, Link Peek, actions | [`address-actions-and-ui.md`](address-actions-and-ui.md) | `browser/commands`, `browser/actions`, `browser/integration`, `ui/Address*` |
 | Site cookie/storage deletion and engine boundaries | [`site-data.md`](site-data.md) | `SiteDataRules`, `WebViewSiteData`, `GeckoSiteDataRuntime`, `candy_site_data`, `SiteDataConfirmationDialog` |
 | Candy Recall local full-text history search | [`recall.md`](recall.md) | `recall`, `RecallRepository`, address suggestions, History search |
+| Candy Constellations / semantic page map | [`constellations.md`](constellations.md), [`constellations-model.md`](constellations-model.md) | `constellations/`, `ConstellationRepository`, `ConstellationStore`, `ConstellationActivity`, `ui/ConstellationScreen` |
 | SearXNG search, instance configuration, suggestions, fallback | [`searxng.md`](searxng.md) | `SearxngSettings`, `SearchEngine`, `SearchSuggestionProvider`, `BrowserSessionStore` |
 | Kagi search and privacy-enhanced suggestions | [`kagi.md`](kagi.md) | `SearchEngine`, `SearchSuggestionProvider` |
 | Google AI Mode user flow, routing, persistence, and privacy | [`google-ai-mode.md`](google-ai-mode.md) | `SearchEngine`, `AddressAiModeRules`, `BrowserSessionStore`, `AddressAiModeToggle` |

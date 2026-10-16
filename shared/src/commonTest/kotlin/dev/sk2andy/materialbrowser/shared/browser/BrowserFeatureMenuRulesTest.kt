@@ -8,6 +8,27 @@ import kotlin.test.assertTrue
 
 class BrowserFeatureMenuRulesTest {
     @Test
+    fun `constellations requires platform support and follows profile availability`() {
+        val state = BrowserFeatureMenuState(canOpenConstellations = true)
+        assertFalse(BrowserFeatureMenuRules.items(state).any { it.action == BrowserFeatureMenuAction.OpenConstellations })
+
+        val capabilities = BrowserFeatureMenuCapabilities(supportsConstellations = true)
+        val items = BrowserFeatureMenuRules.items(state, capabilities)
+        val constellation = items.single { it.action == BrowserFeatureMenuAction.OpenConstellations }
+        assertTrue(constellation.enabled)
+        assertEquals(BrowserFeatureMenuLabelKey.Constellations, constellation.labelKey)
+        assertEquals(BrowserFeatureMenuSection.Candy, constellation.section)
+        assertEquals(
+            items.indexOfFirst { it.action == BrowserFeatureMenuAction.OpenCandyTrail } + 1,
+            items.indexOf(constellation),
+        )
+        val unavailable = BrowserFeatureMenuRules.items(
+            BrowserFeatureMenuState(canOpenConstellations = false), capabilities,
+        ).single { it.action == BrowserFeatureMenuAction.OpenConstellations }
+        assertFalse(unavailable.enabled)
+    }
+
+    @Test
     fun `full menu has stable section and action order`() {
         val items = BrowserFeatureMenuRules.items(
             state = BrowserFeatureMenuState(

@@ -1504,4 +1504,24 @@
     <string name="reader_font_serif">Patkové</string>
     <string name="reader_font_sans">Bezpatkové</string>
     <string name="reader_theme_light">Světlý</string>
+    <string name="constellations_title">Candy Constellations</string>
+    <string name="constellations_profile">Mapa pro %1$s</string>
+    <string name="constellations_description">Objevte tematické souvislosti mezi navštívenými stránkami. Candy ukládá krátký úryvek a rozpoznává souvislosti v tomto zařízení. Každý profil má vlastní mapu. Soukromé stránky jsou vyloučeny.</string>
+    <string name="constellations_enable">Zapnout pro tento profil</string>
+    <string name="constellations_disable">Vypnout a smazat tuto mapu</string>
+    <string name="constellations_download_description">Jednorázově stáhněte vícejazyčný model (asi 138 MB) z Hugging Face. Obsah stránek zůstává v tomto zařízení. Po stažení model funguje offline.</string>
+    <string name="constellations_download_model">Stáhnout model</string>
+    <string name="constellations_downloading">Stahování modelu: %1$d%%</string>
+    <string name="constellations_indexing">Propojování stránek…</string>
+    <string name="constellations_empty">Mapa roste při návštěvách stránek s čitelným textem v tomto profilu. Stávající historie se nenačítá na pozadí.</string>
+    <string name="constellations_error">Mapu se nepodařilo aktualizovat. Zkontrolujte volné místo a zkuste to znovu. Stažení modelu vyžaduje také připojení k internetu.</string>
+    <string name="constellations_graph_hint">Přiblížením dvěma prsty a tažením prozkoumejte mapu. Spojení ukazují podobnost témat, nikoli shodu názorů. Výběrem stránky níže zobrazíte její sousedy.</string>
+    <string name="constellations_pages">Stránky v tomto profilu</string>
+    <string name="constellations_related_pages">Související stránky</string>
+    <string name="constellations_no_connections">Zatím žádné blízké tematické shody.</string>
+    <string name="constellations_connection">%1$d%% tematická podobnost</string>
+    <string name="constellations_page_count">%1$d stránek</string>
+    <string name="constellations_search">Prohledat tuto mapu</string>
+    <string name="constellations_search_no_results">V tomto profilu nejsou žádné odpovídající stránky.</string>
+    <string name="constellations_search_position">%1$d z %2$d shod</string>
 </resources>

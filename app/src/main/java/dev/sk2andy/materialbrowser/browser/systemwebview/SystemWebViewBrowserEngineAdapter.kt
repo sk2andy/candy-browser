@@ -47,6 +47,7 @@ import dev.sk2andy.materialbrowser.blocking.ContentBlocker
 import dev.sk2andy.materialbrowser.blocking.ConsentRequestRules
 import dev.sk2andy.materialbrowser.blocking.CandyDecisionAction
 import dev.sk2andy.materialbrowser.blocking.CandyMatcherSnapshot
+import dev.sk2andy.materialbrowser.browser.PageTextExtraction
 import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineCapabilities
 import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineKind
 import dev.sk2andy.materialbrowser.browser.AntiFingerprintingRules
@@ -138,6 +139,7 @@ import dev.sk2andy.materialbrowser.data.BrowserDownloadRequestFactory
 import dev.sk2andy.materialbrowser.data.BrowserSessionStore
 import dev.sk2andy.materialbrowser.data.DownloadDirectoryRules
 import dev.sk2andy.materialbrowser.data.UserScriptValueStore
+import dev.sk2andy.materialbrowser.recall.RecallExtractionScript
 import dev.sk2andy.materialbrowser.reader.ReaderExtractionScript
 import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineCommand
 import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineCommandType
@@ -311,6 +313,7 @@ internal class SystemWebViewBrowserEngineFactory(
             profileId = profileId,
             isolationEnabled = isolationEnabled,
             isPrivate = isPrivate,
+            contentKind = contentKind,
             allowsToppings = contentKind != BrowserEngineContentKind.LinkPeek,
             incognitoProfileName = incognitoProfileName,
             multiProfileSupported = supportsMultiProfile(),
@@ -390,6 +393,7 @@ private class SystemWebViewBrowserEngineSession(
     profileId: String,
     private val isolationEnabled: Boolean,
     private val isPrivate: Boolean,
+    private var contentKind: BrowserEngineContentKind,
     private val allowsToppings: Boolean,
     incognitoProfileName: String,
     multiProfileSupported: Boolean,
@@ -420,6 +424,9 @@ private class SystemWebViewBrowserEngineSession(
         isPrivate = isPrivate,
     )
     private var closed = false
+    private var pageTextResult: ((String?) -> Unit)? = null
+    private var pageTextTimeout: Runnable? = null
+    private var pageTextRequest: Any? = null
     private var active = true
     private var desktopMode = false
     private var desktopViewportDomain: String? = null
@@ -904,6 +911,48 @@ private class SystemWebViewBrowserEngineSession(
         )
     }
 
+    override fun promoteToRegularTab() {
+        if (!closed) contentKind = BrowserEngineContentKind.RegularTab
+    }
+
+    override fun extractPageText(onComplete: (String?) -> Unit) {
+        if (closed || isPrivate || contentKind != BrowserEngineContentKind.RegularTab ||
+            currentPageUrl == null
+        ) {
+            onComplete(null)
+            return
+        }
+        finishPageTextExtraction(null)
+        val expectedGeneration = pageLoadGeneration
+        val expectedUrl = currentPageUrl
+        val request = Any()
+        pageTextRequest = request
+        pageTextResult = onComplete
+        pageTextTimeout = Runnable { finishPageTextExtraction(null) }.also {
+            webView.postDelayed(it, 5_000L)
+        }
+        runCatching {
+            webView.evaluateJavascript(
+                RecallExtractionScript.javascript(PageTextExtraction.MAX_TEXT_CHARS),
+            ) { result ->
+                if (pageTextRequest !== request) return@evaluateJavascript
+                val payload = if (!closed && expectedGeneration == pageLoadGeneration &&
+                    expectedUrl == currentPageUrl
+                ) PageTextExtraction.fromJavascriptResult(result) else null
+                finishPageTextExtraction(payload)
+            }
+        }.onFailure { finishPageTextExtraction(null) }
+    }
+
+    private fun finishPageTextExtraction(payload: String?) {
+        pageTextTimeout?.let(webView::removeCallbacks)
+        pageTextTimeout = null
+        pageTextRequest = null
+        val callback = pageTextResult
+        pageTextResult = null
+        callback?.invoke(payload)
+    }
+
     override fun extractPageForReader(onComplete: (String?) -> Unit) {
         if (closed) onComplete(null)
         else webView.evaluateJavascript(ReaderExtractionScript.javascript, onComplete)
@@ -1021,6 +1070,7 @@ private class SystemWebViewBrowserEngineSession(
             null
         }
         closed = true
+        finishPageTextExtraction(null)
         closeRequestListener = null
         newSessionListener = null
         navigationRequestListener = null
@@ -1249,6 +1299,7 @@ private class SystemWebViewBrowserEngineSession(
         }
 
         override fun onPageStarted(view: WebView, url: String?, favicon: Bitmap?) {
+            finishPageTextExtraction(null)
             // WebView skips shouldOverrideUrlLoading for a popup's initial POST.
             if (url != null && initialPopupNavigationPending && handleInitialPopupNavigation(url)) {
                 view.stopLoading()

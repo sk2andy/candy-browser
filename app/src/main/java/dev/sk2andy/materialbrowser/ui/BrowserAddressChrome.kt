@@ -579,6 +579,11 @@ internal fun BoxScope.BrowserAddressChrome(
         onTranslate = controller::translateSelectedPage,
         onReaderStudio = onReaderStudio,
         onOpenCandyTrail = onOpenCandyTrail,
+        canOpenConstellations = controller.canOpenConstellations,
+        onOpenConstellations = {
+            onAddressEditorDismiss()
+            controller.openConstellations()
+        },
         onSnooze = onSnooze,
         onAddSiteCapsule = onAddSiteCapsule,
         canCreateSiteWidget = canCreateSiteWidget,

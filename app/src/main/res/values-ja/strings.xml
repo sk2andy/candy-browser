@@ -1456,4 +1456,24 @@
     <string name="reader_font_serif">セリフ</string>
     <string name="reader_font_sans">サンセリフ</string>
     <string name="reader_theme_light">ライト</string>
+    <string name="constellations_title">Candy Constellations</string>
+    <string name="constellations_profile">%1$s のマップ</string>
+    <string name="constellations_description">訪問したページがどのような話題でつながっているかを見つけましょう。Candy は短い抜粋を保存し、この端末上で埋め込みベクトルを計算します。マップはプロファイルごとに独立しています。プライベートページは対象外です。</string>
+    <string name="constellations_enable">このプロファイルで有効にする</string>
+    <string name="constellations_disable">無効にしてこのマップを削除</string>
+    <string name="constellations_download_description">Hugging Face から多言語モデル（約 138 MB）を一度ダウンロードします。ページの内容はこの端末内に保存されます。ダウンロード後はオフラインで動作します。</string>
+    <string name="constellations_download_model">モデルをダウンロード</string>
+    <string name="constellations_downloading">モデルをダウンロード中：%1$d%%</string>
+    <string name="constellations_indexing">ページをつなげています…</string>
+    <string name="constellations_empty">このプロファイルで読み取り可能なページを訪問すると、マップが広がります。既存の履歴をバックグラウンドで取得することはありません。</string>
+    <string name="constellations_error">マップを更新できませんでした。空き容量を確認して再試行してください。モデルのダウンロードにはインターネット接続も必要です。</string>
+    <string name="constellations_graph_hint">ピンチで拡大・縮小し、ドラッグで探索できます。つながりは話題の類似性を示すもので、意見の一致を示すものではありません。下のページを選択すると、近いページを探索できます。</string>
+    <string name="constellations_pages">このプロファイルのページ</string>
+    <string name="constellations_related_pages">関連ページ</string>
+    <string name="constellations_no_connections">近い話題のページはまだありません。</string>
+    <string name="constellations_connection">話題の類似度 %1$d%%</string>
+    <string name="constellations_page_count">%1$d ページ</string>
+    <string name="constellations_search">このマップを検索</string>
+    <string name="constellations_search_no_results">このプロファイルに一致するページはありません。</string>
+    <string name="constellations_search_position">%2$d 件中 %1$d 件目</string>
 </resources>

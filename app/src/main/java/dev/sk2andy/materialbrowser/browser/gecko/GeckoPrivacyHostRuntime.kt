@@ -24,6 +24,8 @@ internal interface GeckoPrivacyBinding {
 
     fun extractPageForReader(onResult: (String?) -> Unit)
 
+    fun extractPageText(onResult: (String?) -> Unit) = onResult(null)
+
     fun probeTextInputOcclusion(
         viewportRect: BrowserViewportRect,
         mode: TextInputOcclusionProbeMode,
@@ -82,6 +84,7 @@ internal class GeckoViewPrivacyHostRuntime(
         val domProbe: GeckoDomProbeRequest,
         val textInputOcclusionProbe: GeckoTextInputOcclusionRequest,
         val userInputRequest: GeckoUserInputRequest,
+        val textExtraction: GeckoTextExtractionRequest,
         var pictureInPicturePlaybackExpected: Boolean = false,
         var pictureInPicturePlaybackRequestGeneration: Long = 0,
         var pictureInPicturePreparationRequestId: Long? = null,
@@ -223,6 +226,7 @@ internal class GeckoViewPrivacyHostRuntime(
             domProbe = GeckoDomProbeRequest(mainHandler),
             textInputOcclusionProbe = GeckoTextInputOcclusionRequest(mainHandler),
             userInputRequest = GeckoUserInputRequest(mainHandler),
+            textExtraction = GeckoTextExtractionRequest(mainHandler),
             sink = sink,
             onScrollMetrics = onScrollMetrics,
             onMainFrameResponse = onMainFrameResponse,
@@ -261,10 +265,39 @@ internal class GeckoViewPrivacyHostRuntime(
         return object : GeckoPrivacyBinding {
             override fun update(policy: GeckoPrivacyPolicy, onReady: () -> Unit) {
                 binding.userInputRequest.cancel()
+                binding.textExtraction.cancel()
                 binding.inlineVideoOpenGate.invalidatePolicy(policy, session.settings.usePrivateMode)
                 refreshInlineVideoOpenTimeout(binding)
                 binding.policy = policy
                 runWhenReady(binding) { publish(binding, policy, onReady) }
+            }
+
+            override fun extractPageText(onResult: (String?) -> Unit) {
+                if (bindings[token] !== binding || session.settings.usePrivateMode ||
+                    failureDescription != null
+                ) {
+                    onResult(null)
+                    return
+                }
+                runWhenReady(binding) {
+                    val connectedPort = port
+                    if (bindings[token] !== binding || connectedPort == null ||
+                        !binding.handshake.isCurrentPolicyAcknowledged
+                    ) {
+                        onResult(null)
+                        return@runWhenReady
+                    }
+                    binding.textExtraction.start(
+                        revision = binding.handshake.publishedRevision,
+                        navigationGeneration = binding.policy.navigationGeneration,
+                        post = { message ->
+                            connectedPort.postMessage(message
+                                .put("protocolVersion", CandyPrivacyHostContract.PROTOCOL_VERSION)
+                                .put("token", token))
+                        },
+                        onResult = onResult,
+                    )
+                }
             }
 
             override fun extractPageForReader(onResult: (String?) -> Unit) {
@@ -420,6 +453,7 @@ internal class GeckoViewPrivacyHostRuntime(
                 binding.domProbe.cancel()
                 binding.textInputOcclusionProbe.cancel()
                 binding.userInputRequest.cancel()
+                binding.textExtraction.cancel()
                 clearPictureInPicturePreparationRequest(binding)?.invoke(null)
                 clearPictureInPictureRestorationRequest(binding)?.invoke(false)
                 clearInlineVideoPresentationRequest(binding)?.invoke(false)
@@ -505,6 +539,7 @@ internal class GeckoViewPrivacyHostRuntime(
         binding.domProbe.cancel()
         binding.textInputOcclusionProbe.cancel()
         binding.userInputRequest.cancel()
+        binding.textExtraction.cancel()
         val readerResult = clearReaderRequest(binding)
         val pictureInPicturePreparationResult =
             clearPictureInPicturePreparationRequest(binding)
@@ -604,6 +639,14 @@ internal class GeckoViewPrivacyHostRuntime(
             "inline-video-presentation-result" -> acceptInlineVideoPresentationResult(value)
             "picture-in-picture-playback-result" ->
                 acceptPictureInPicturePlaybackResult(value)
+            "text-extraction-result" -> {
+                val binding = bindings[value.optString("token")] ?: return
+                if (binding.session.settings.usePrivateMode ||
+                    binding.handshake.publishedRevision != value.optLong("revision", -1) ||
+                    binding.policy.navigationGeneration != value.optInt("navigationGeneration", -1)
+                ) return
+                binding.textExtraction.accept(value)
+            }
             "reader-result" -> acceptReaderResult(value)
             "text-input-occlusion-result" -> {
                 val binding = bindings[value.optString("token")] ?: return
@@ -1324,6 +1367,7 @@ internal class GeckoViewPrivacyHostRuntime(
             binding.domProbe.cancel()
             binding.textInputOcclusionProbe.cancel()
             binding.userInputRequest.cancel()
+            binding.textExtraction.cancel()
             cancelTimeout(binding)
             clearPictureInPicturePreparationRequest(binding)?.invoke(null)
             clearInlineVideoPresentationRequest(binding)?.invoke(false)
