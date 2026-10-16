@@ -1,6 +1,7 @@
 package dev.sk2andy.materialbrowser.browser.sitewidget
 
 import android.content.Context
+import dev.sk2andy.materialbrowser.browser.guest.GuestBubbleSessionStore
 import android.graphics.Bitmap
 import dev.sk2andy.materialbrowser.BuildConfig
 import dev.sk2andy.materialbrowser.blocking.BundledSitePrivacyDefaults
@@ -153,7 +154,8 @@ internal class SiteWidgetPageRenderer(context: Context) {
     }
 
     private fun isAllowedProfile(source: SiteWidgetSource): Boolean =
-        BrowserSessionStore(appContext).loadProfiles().first.any { profile ->
+        !GuestBubbleSessionStore(appContext).isLocked() &&
+            BrowserSessionStore(appContext).loadProfiles().first.any { profile ->
             profile.id == source.profileId && !profile.isSynced && profile.protection == null &&
                 profile.isolationEnabled == source.isolationEnabled
         }

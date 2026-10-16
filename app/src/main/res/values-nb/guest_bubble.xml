@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="guest_bubble_title">Guest Bubble</string>
+    <string name="guest_bubble_start">Start Guest Bubble</string>
+    <string name="guest_bubble_settings_summary">Hold inne profilknappen + for å låne bort Candy mens dine egne profiler er låst.</string>
+    <string name="guest_bubble_requires_profiles">Slå på profiler for å bruke Guest Bubble.</string>
+    <string name="guest_bubble_requires_authentication">Konfigurer biometri eller skjermlås på enheten for å bruke Guest Bubble.</string>
+    <string name="guest_bubble_tutorial_title">Lån bort Candy med Guest Bubble</string>
+    <string name="guest_bubble_tutorial_start">1. Åpne faneoversikten og hold inne profilknappen + for å starte en gjesteøkt.</string>
+    <string name="guest_bubble_tutorial_isolation">2. Lån bort telefonen. Dine egne profiler forblir låst; gjesten surfer i en egen midlertidig økt.</string>
+    <string name="guest_bubble_tutorial_exit">3. Avslutt Guest Bubble og bekreft identiteten din med biometri eller enhetens skjermlås. Candy sletter gjestens nettleserøkt før du kommer tilbake til profilene dine.</string>
+    <string name="guest_bubble_tutorial_limits">Guest Bubble beskytter bare Candy. Andre apper og Android-enheten din er fortsatt tilgjengelige. Nedlastinger og eksport er ikke tilgjengelig i gjesteøkten.</string>
+    <string name="guest_bubble_activate">Aktiver</string>
+    <string name="guest_bubble_auth_title">Tilbake til profilene dine</string>
+    <string name="guest_bubble_auth_subtitle">Bekreft identiteten din for å slette gjesteøkten og låse opp Candy.</string>
+    <string name="guest_bubble_end">Avslutt gjesteøkt</string>
+    <string name="guest_bubble_start_failed">Candy kunne ikke klargjøre gjesteøkten. Profilene dine forblir låst.</string>
+    <string name="guest_bubble_retry">Prøv igjen</string>
+    <string name="guest_bubble_welcome">Føl deg som hjemme</string>
+    <string name="guest_bubble_private_session">Surf i din egen midlertidige økt. Eierens profiler og innlogginger forblir låst.</string>
+    <string name="guest_bubble_back">Tilbake</string>
+    <string name="guest_bubble_address">Søk eller skriv inn adresse</string>
+    <string name="guest_bubble_unavailable_action">Denne handlingen er ikke tilgjengelig i Guest Bubble.</string>
+    <string name="guest_bubble_widget_locked">Nettsted skjult under Guest Bubble</string>
+    <string name="guest_bubble_cleanup_progress">Sletter gjestens nettleserdata…</string>
+    <string name="guest_bubble_cleanup_failed">Gjestedataene kunne ikke slettes fullstendig. Nettleseren din forblir låst. Prøv igjen.</string>
+</resources>

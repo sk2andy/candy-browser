@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="guest_bubble_title">Guest Bubble</string>
+    <string name="guest_bubble_start">Guest Bubble başlat</string>
+    <string name="guest_bubble_settings_summary">Kendi profilleriniz kilitli kalırken Candy’yi ödünç vermek için profil + düğmesine uzun basın.</string>
+    <string name="guest_bubble_requires_profiles">Guest Bubble kullanmak için profilleri etkinleştirin.</string>
+    <string name="guest_bubble_requires_authentication">Guest Bubble kullanmak için biyometrik doğrulamayı veya cihaz ekran kilidini ayarlayın.</string>
+    <string name="guest_bubble_tutorial_title">Guest Bubble ile Candy’yi ödünç verin</string>
+    <string name="guest_bubble_tutorial_start">1. Sekme genel görünümünü açın ve misafir oturumu başlatmak için profil + düğmesine uzun basın.</string>
+    <string name="guest_bubble_tutorial_isolation">2. Telefonunuzu misafire verin. Kendi profilleriniz kilitli kalır; misafir ayrı ve geçici bir oturumda gezinir.</string>
+    <string name="guest_bubble_tutorial_exit">3. Guest Bubble oturumunu sonlandırın ve biyometrik doğrulama veya cihaz ekran kilidiyle onaylayın. Candy, profillerinize dönmeden önce misafirin gezinme oturumunu siler.</string>
+    <string name="guest_bubble_tutorial_limits">Guest Bubble yalnızca Candy’yi korur. Diğer uygulamalar ve Android cihazınız erişilebilir durumda kalır. Misafir oturumunda indirme ve dışa aktarma kullanılamaz.</string>
+    <string name="guest_bubble_activate">Etkinleştir</string>
+    <string name="guest_bubble_auth_title">Profillerinize dönün</string>
+    <string name="guest_bubble_auth_subtitle">Misafir oturumunu silmek ve Candy’nin kilidini açmak için kimliğinizi doğrulayın.</string>
+    <string name="guest_bubble_end">Misafir oturumunu sonlandır</string>
+    <string name="guest_bubble_start_failed">Candy, misafir oturumunu hazırlayamadı. Profilleriniz kilitli kalır.</string>
+    <string name="guest_bubble_retry">Tekrar dene</string>
+    <string name="guest_bubble_welcome">Kendinizi evinizde hissedin</string>
+    <string name="guest_bubble_private_session">Kendi geçici oturumunuzda gezinin. Cihaz sahibinin profilleri ve hesap oturumları kilitli kalır.</string>
+    <string name="guest_bubble_back">Geri</string>
+    <string name="guest_bubble_address">Arayın veya adres girin</string>
+    <string name="guest_bubble_unavailable_action">Bu işlem Guest Bubble içinde kullanılamaz.</string>
+    <string name="guest_bubble_widget_locked">Guest Bubble sırasında web sitesi gizlenir</string>
+    <string name="guest_bubble_cleanup_progress">Misafirin gezinme verileri siliniyor…</string>
+    <string name="guest_bubble_cleanup_failed">Misafir verileri tamamen silinemedi. Tarayıcınız kilitli kalır. Tekrar deneyin.</string>
+</resources>

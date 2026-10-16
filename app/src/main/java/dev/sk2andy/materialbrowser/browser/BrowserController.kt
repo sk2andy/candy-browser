@@ -235,6 +235,7 @@ import dev.sk2andy.materialbrowser.data.AppearanceSettings
 import dev.sk2andy.materialbrowser.data.AddressBarDockPlacement
 import dev.sk2andy.materialbrowser.data.BrowserSessionStore
 import dev.sk2andy.materialbrowser.data.AppDataTransferLock
+import dev.sk2andy.materialbrowser.browser.guest.GuestBubbleSessionStore
 import dev.sk2andy.materialbrowser.data.BrowsingLibraryRules
 import dev.sk2andy.materialbrowser.data.BrowsingHistoryRepository
 import dev.sk2andy.materialbrowser.data.CandyTrailRepository
@@ -1095,7 +1096,8 @@ class BrowserController(
         return GeckoMediaPlaybackPublication(
             snapshot = snapshot,
             isPrivate = tab.isIncognito,
-            isProfileLocked = tab.profileId in lockedProfileIds,
+            isProfileLocked = tab.profileId in lockedProfileIds ||
+                GuestBubbleSessionStore(activity).isLocked(),
             isAppDataTransferActive = AppDataTransferLock.isActive(activity),
             isPictureInPictureOwner = pictureInPictureTabId == owner.tabId,
         ).also { publication ->
@@ -14686,7 +14688,8 @@ class BrowserController(
             tabs.firstOrNull { tab -> tab.id == owner.tabId }?.let { tab ->
                 !tab.isIncognito && tab.profileId !in lockedProfileIds
             } == true &&
-            !AppDataTransferLock.isActive(activity)
+            !AppDataTransferLock.isActive(activity) &&
+            !GuestBubbleSessionStore(activity).isLocked()
 
     private fun invalidateMedia3OwnerFor(
         tabId: String,

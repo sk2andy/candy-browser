@@ -14,6 +14,23 @@ class AppDataArchiveRulesTest {
     val temporaryFolder = TemporaryFolder()
 
     @Test
+    fun `guest lock markers never leave device or enter through archive restore`() {
+        listOf(
+            "no_backup/guest_bubble",
+            "no_backup/guest_bubble/session",
+            "no_backup/guest_bubble/session.bak",
+            "no_backup/guest_bubble/session.new",
+            "no_backup/guest_bubble/session.guard",
+        ).forEach { path ->
+            assertFalse(path, AppDataArchiveRules.shouldExportRelativePath(path))
+            assertNull(path, AppDataArchiveRules.dataRelativePath("data/$path", isDirectory = false))
+            assertNull(path, AppDataArchiveRules.dataRelativePath("data/$path/", isDirectory = true))
+        }
+        assertTrue(AppDataArchiveRules.shouldExportRelativePath("no_backup/guest_bubble_extra/session"))
+        assertTrue(AppDataArchiveRules.shouldExportRelativePath("shared_prefs/guest_bubble.xml"))
+    }
+
+    @Test
     fun `persistent roots retain non Recall no backup data`() {
         val dataDirectory = temporaryFolder.newFolder("data")
         listOf(

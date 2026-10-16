@@ -3,6 +3,7 @@ package dev.sk2andy.materialbrowser
 import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
+import dev.sk2andy.materialbrowser.browser.guest.GuestBubbleGate
 import dev.sk2andy.materialbrowser.capsule.CapsuleIntentRules
 import dev.sk2andy.materialbrowser.capsule.CapsuleWindowRules
 import dev.sk2andy.materialbrowser.capsule.CapsuleWindowLauncher
@@ -14,6 +15,7 @@ import dev.sk2andy.materialbrowser.data.SiteCapsuleStore
 class SiteCapsuleLauncherActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (GuestBubbleGate.redirectIfLocked(this)) return
         val capsuleId = SiteCapsuleRules.opaqueId(
             intent.getStringExtra(CapsuleIntentRules.EXTRA_CAPSULE_ID),
         )

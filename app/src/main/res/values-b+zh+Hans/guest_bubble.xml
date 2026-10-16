@@ -1,0 +1,27 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="guest_bubble_title">Guest Bubble</string>
+    <string name="guest_bubble_start">启动 Guest Bubble</string>
+    <string name="guest_bubble_settings_summary">长按配置文件的 + 按钮，即可在锁定你自己的配置文件后将 Candy 借给他人使用。</string>
+    <string name="guest_bubble_requires_profiles">启用配置文件，即可使用 Guest Bubble。</string>
+    <string name="guest_bubble_requires_authentication">请先设置生物识别或设备屏幕锁定，再使用 Guest Bubble。</string>
+    <string name="guest_bubble_tutorial_title">通过 Guest Bubble 将 Candy 借给他人</string>
+    <string name="guest_bubble_tutorial_start">1. 打开标签页总览，长按添加配置文件的 + 按钮，开始访客会话。</string>
+    <string name="guest_bubble_tutorial_isolation">2. 将手机交给他人。你自己的配置文件保持锁定；访客在独立的临时会话中浏览。</string>
+    <string name="guest_bubble_tutorial_exit">3. 结束 Guest Bubble，并通过生物识别或设备屏幕锁定验证身份。Candy 会先清除访客浏览会话，再返回你的配置文件。</string>
+    <string name="guest_bubble_tutorial_limits">Guest Bubble 仅保护 Candy。其他应用和你的 Android 设备仍可访问。访客会话中无法下载或导出。</string>
+    <string name="guest_bubble_activate">启用</string>
+    <string name="guest_bubble_auth_title">返回你的配置文件</string>
+    <string name="guest_bubble_auth_subtitle">请验证身份，以清除访客会话并解锁 Candy。</string>
+    <string name="guest_bubble_end">结束访客会话</string>
+    <string name="guest_bubble_start_failed">Candy 无法准备访客会话。你的配置文件仍保持锁定。</string>
+    <string name="guest_bubble_retry">重试</string>
+    <string name="guest_bubble_welcome">随意浏览吧</string>
+    <string name="guest_bubble_private_session">在你自己的临时会话中浏览。机主的配置文件和登录状态保持锁定。</string>
+    <string name="guest_bubble_back">返回</string>
+    <string name="guest_bubble_address">搜索或输入地址</string>
+    <string name="guest_bubble_unavailable_action">Guest Bubble 中无法使用此操作。</string>
+    <string name="guest_bubble_widget_locked">使用 Guest Bubble 时隐藏网站</string>
+    <string name="guest_bubble_cleanup_progress">正在删除访客浏览数据…</string>
+    <string name="guest_bubble_cleanup_failed">无法完全删除访客数据。你的浏览器保持锁定。请重试。</string>
+</resources>

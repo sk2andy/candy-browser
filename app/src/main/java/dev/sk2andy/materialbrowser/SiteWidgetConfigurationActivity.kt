@@ -4,12 +4,14 @@ import android.app.Activity
 import android.appwidget.AppWidgetManager
 import android.content.ActivityNotFoundException
 import android.os.Bundle
+import dev.sk2andy.materialbrowser.browser.guest.GuestBubbleGate
 import dev.sk2andy.materialbrowser.browser.sitewidget.SiteWidgetConfigurationContract
 
 /** Routes the launcher's standard Reconfigure action into Candy's existing crop editor. */
 class SiteWidgetConfigurationActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (GuestBubbleGate.redirectIfLocked(this)) return
         val widgetId = intent.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID)
         val result = SiteWidgetConfigurationContract.result(widgetId)
         setResult(RESULT_CANCELED, result)

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="guest_bubble_title">Guest Bubble</string>
+    <string name="guest_bubble_start">Démarrer Guest Bubble</string>
+    <string name="guest_bubble_settings_summary">Maintenez le bouton + des profils pour prêter Candy tout en gardant vos profils verrouillés.</string>
+    <string name="guest_bubble_requires_profiles">Activez les profils pour utiliser Guest Bubble.</string>
+    <string name="guest_bubble_requires_authentication">Configurez la biométrie ou le verrouillage de l’écran de l’appareil pour utiliser Guest Bubble.</string>
+    <string name="guest_bubble_tutorial_title">Prêter Candy avec Guest Bubble</string>
+    <string name="guest_bubble_tutorial_start">1. Ouvrez la vue d’ensemble des onglets et maintenez le bouton + des profils pour démarrer une session d’invité.</string>
+    <string name="guest_bubble_tutorial_isolation">2. Prêtez votre téléphone. Vos profils restent verrouillés ; l’invité navigue dans une session temporaire séparée.</string>
+    <string name="guest_bubble_tutorial_exit">3. Terminez Guest Bubble et confirmez votre identité par biométrie ou avec le verrouillage de l’écran de l’appareil. Candy efface la session de navigation de l’invité avant de revenir à vos profils.</string>
+    <string name="guest_bubble_tutorial_limits">Guest Bubble protège uniquement Candy. Les autres applications et votre appareil Android restent accessibles. Les téléchargements et les exportations sont indisponibles dans la session d’invité.</string>
+    <string name="guest_bubble_activate">Activer</string>
+    <string name="guest_bubble_auth_title">Revenir à vos profils</string>
+    <string name="guest_bubble_auth_subtitle">Confirmez votre identité pour effacer la session d’invité et déverrouiller Candy.</string>
+    <string name="guest_bubble_end">Terminer la session d’invité</string>
+    <string name="guest_bubble_start_failed">Candy n’a pas pu préparer la session d’invité. Vos profils restent verrouillés.</string>
+    <string name="guest_bubble_retry">Réessayer</string>
+    <string name="guest_bubble_welcome">Faites comme chez vous</string>
+    <string name="guest_bubble_private_session">Naviguez dans votre propre session temporaire. Les profils et les connexions du propriétaire restent verrouillés.</string>
+    <string name="guest_bubble_back">Retour</string>
+    <string name="guest_bubble_address">Rechercher ou saisir une adresse</string>
+    <string name="guest_bubble_unavailable_action">Cette action est indisponible dans Guest Bubble.</string>
+    <string name="guest_bubble_widget_locked">Site masqué pendant Guest Bubble</string>
+    <string name="guest_bubble_cleanup_progress">Suppression des données de navigation de l’invité…</string>
+    <string name="guest_bubble_cleanup_failed">Les données de l’invité n’ont pas pu être entièrement supprimées. Votre navigateur reste verrouillé. Réessayez.</string>
+</resources>

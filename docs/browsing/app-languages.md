@@ -8,7 +8,7 @@
 | User preference | `data/AppLanguagePreferences.kt` | Android `LocaleManager` persists the app override. An empty locale list follows the device language. |
 | Picker selection | `data/AppLanguageRules.kt`, `ui/AppLanguageSettings.kt` | Prefer an exact locale, then its language/script, then its language. Chinese regional fallbacks retain the expected simplified or traditional script. |
 | Runtime changes | `MainActivity.kt`, `AndroidManifest.xml` | Locale/layout-direction updates refresh resources without recreating the browser or losing private tabs. |
-| Translated text | `res/values-*/strings.xml`, `userscript_strings.xml`, `https_only_warning.xml` | Translate all three files; preserve formatter arguments, product names, technical tokens and privacy guarantees. |
+| Translated text | `res/values-*/strings.xml`, `userscript_strings.xml`, `https_only_warning.xml`, `guest_bubble*.xml` | Translate every resource name; preserve formatter arguments, product names, technical tokens and privacy guarantees. |
 
 ## Supported languages
 

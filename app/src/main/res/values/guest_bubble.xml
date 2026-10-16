@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="guest_bubble_title">Guest Bubble</string>
+    <string name="guest_bubble_start">Start Guest Bubble</string>
+    <string name="guest_bubble_settings_summary">Long-press the profile + button to lend Candy with your own profiles locked.</string>
+    <string name="guest_bubble_requires_profiles">Enable profiles to use Guest Bubble.</string>
+    <string name="guest_bubble_requires_authentication">Set up biometrics or a device screen lock to use Guest Bubble.</string>
+    <string name="guest_bubble_tutorial_title">Lend Candy with Guest Bubble</string>
+    <string name="guest_bubble_tutorial_start">1. Open the tab overview and long-press the profile + button to start a guest session.</string>
+    <string name="guest_bubble_tutorial_isolation">2. Hand over your phone. Your own profiles stay locked; the guest browses in a separate temporary session.</string>
+    <string name="guest_bubble_tutorial_exit">3. End Guest Bubble and confirm with your biometrics or device screen lock. Candy erases the guest browsing session before returning to your profiles.</string>
+    <string name="guest_bubble_tutorial_limits">Guest Bubble protects Candy only. Other apps and your Android device remain accessible. Downloads and exports are unavailable in the guest session.</string>
+    <string name="guest_bubble_activate">Activate</string>
+</resources>

@@ -1,0 +1,27 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="guest_bubble_title">Guest Bubble</string>
+    <string name="guest_bubble_start">Запустить Guest Bubble</string>
+    <string name="guest_bubble_settings_summary">Удерживайте кнопку добавления профиля (+), чтобы дать другому человеку воспользоваться Candy, пока ваши профили заблокированы.</string>
+    <string name="guest_bubble_requires_profiles">Включите профили, чтобы использовать Guest Bubble.</string>
+    <string name="guest_bubble_requires_authentication">Настройте биометрию или блокировку экрана устройства, чтобы использовать Guest Bubble.</string>
+    <string name="guest_bubble_tutorial_title">Передайте Candy гостю с Guest Bubble</string>
+    <string name="guest_bubble_tutorial_start">1. Откройте обзор вкладок и удерживайте кнопку добавления профиля (+), чтобы начать гостевой сеанс.</string>
+    <string name="guest_bubble_tutorial_isolation">2. Передайте телефон другому человеку. Ваши профили останутся заблокированы, а гость будет пользоваться отдельным временным сеансом.</string>
+    <string name="guest_bubble_tutorial_exit">3. Завершите Guest Bubble и подтвердите личность с помощью биометрии или блокировки экрана устройства. Candy удалит гостевой сеанс перед возвратом к вашим профилям.</string>
+    <string name="guest_bubble_tutorial_limits">Guest Bubble защищает только Candy. Другие приложения и ваше устройство Android остаются доступны. В гостевом сеансе нельзя скачивать и экспортировать данные.</string>
+    <string name="guest_bubble_activate">Активировать</string>
+    <string name="guest_bubble_auth_title">Вернуться к своим профилям</string>
+    <string name="guest_bubble_auth_subtitle">Подтвердите личность, чтобы удалить гостевой сеанс и разблокировать Candy.</string>
+    <string name="guest_bubble_end">Завершить гостевой сеанс</string>
+    <string name="guest_bubble_start_failed">Candy не удалось подготовить гостевой сеанс. Ваши профили остаются заблокированы.</string>
+    <string name="guest_bubble_retry">Повторить</string>
+    <string name="guest_bubble_welcome">Чувствуйте себя как дома</string>
+    <string name="guest_bubble_private_session">Пользуйтесь своим временным сеансом. Профили и сеансы входа владельца остаются заблокированы.</string>
+    <string name="guest_bubble_back">Назад</string>
+    <string name="guest_bubble_address">Поиск или ввод адреса</string>
+    <string name="guest_bubble_unavailable_action">Это действие недоступно в Guest Bubble.</string>
+    <string name="guest_bubble_widget_locked">Сайт скрыт во время работы Guest Bubble</string>
+    <string name="guest_bubble_cleanup_progress">Удаление данных гостевого просмотра…</string>
+    <string name="guest_bubble_cleanup_failed">Не удалось полностью удалить данные гостя. Браузер остаётся заблокирован. Повторите попытку.</string>
+</resources>

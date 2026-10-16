@@ -1,6 +1,7 @@
 package dev.sk2andy.materialbrowser.browser.integration.devicesearch
 
 import android.content.Context
+import dev.sk2andy.materialbrowser.browser.guest.GuestBubbleSessionStore
 import dev.sk2andy.materialbrowser.browser.BrowserProfile
 import dev.sk2andy.materialbrowser.data.AppDataTransferLock
 import dev.sk2andy.materialbrowser.data.BrowserSessionStore
@@ -15,7 +16,7 @@ internal data class DeviceSearchSources(
 )
 
 internal fun loadDeviceSearchSources(context: Context): DeviceSearchSources {
-    if (AppDataTransferLock.isActive(context)) {
+    if (GuestBubbleSessionStore(context).isLocked() || AppDataTransferLock.isActive(context)) {
         return DeviceSearchSources(DeviceSearchSettings(), emptyList(), emptyList(), emptyList())
     }
     val settings = DeviceSearchStore(context).load()

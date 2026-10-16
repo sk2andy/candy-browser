@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="guest_bubble_title">Guest Bubble</string>
+    <string name="guest_bubble_start">Zaženi Guest Bubble</string>
+    <string name="guest_bubble_settings_summary">Dolgo pritisnite gumb + za profile, da posodite Candy, vaši profili pa ostanejo zaklenjeni.</string>
+    <string name="guest_bubble_requires_profiles">Omogočite profile za uporabo Guest Bubble.</string>
+    <string name="guest_bubble_requires_authentication">Nastavite biometrično preverjanje ali zaklepanje zaslona naprave za uporabo Guest Bubble.</string>
+    <string name="guest_bubble_tutorial_title">Posodite Candy z Guest Bubble</string>
+    <string name="guest_bubble_tutorial_start">1. Odprite pregled zavihkov in dolgo pritisnite gumb + za profile, da začnete sejo za gosta.</string>
+    <string name="guest_bubble_tutorial_isolation">2. Izročite telefon gostu. Vaši profili ostanejo zaklenjeni; gost brska v ločeni začasni seji.</string>
+    <string name="guest_bubble_tutorial_exit">3. Končajte Guest Bubble in potrdite z biometričnim preverjanjem ali zaklepanjem zaslona naprave. Candy izbriše gostovo sejo brskanja, preden se vrnete v svoje profile.</string>
+    <string name="guest_bubble_tutorial_limits">Guest Bubble ščiti samo Candy. Druge aplikacije in vaša naprava Android ostanejo dostopne. Prenosi in izvozi v gostovi seji niso na voljo.</string>
+    <string name="guest_bubble_activate">Aktiviraj</string>
+    <string name="guest_bubble_auth_title">Vrnitev v vaše profile</string>
+    <string name="guest_bubble_auth_subtitle">Potrdite svojo identiteto, da izbrišete gostovo sejo in odklenete Candy.</string>
+    <string name="guest_bubble_end">Končaj gostovo sejo</string>
+    <string name="guest_bubble_start_failed">Candy ni mogel pripraviti gostove seje. Vaši profili ostanejo zaklenjeni.</string>
+    <string name="guest_bubble_retry">Poskusi znova</string>
+    <string name="guest_bubble_welcome">Počutite se kot doma</string>
+    <string name="guest_bubble_private_session">Brskajte v svoji začasni seji. Profili in prijave lastnika ostanejo zaklenjeni.</string>
+    <string name="guest_bubble_back">Nazaj</string>
+    <string name="guest_bubble_address">Poiščite ali vnesite naslov</string>
+    <string name="guest_bubble_unavailable_action">To dejanje v Guest Bubble ni na voljo.</string>
+    <string name="guest_bubble_widget_locked">Spletno mesto je skrito med uporabo Guest Bubble</string>
+    <string name="guest_bubble_cleanup_progress">Brisanje gostovih podatkov brskanja…</string>
+    <string name="guest_bubble_cleanup_failed">Gostovih podatkov ni bilo mogoče v celoti izbrisati. Vaš brskalnik ostaja zaklenjen. Poskusite znova.</string>
+</resources>

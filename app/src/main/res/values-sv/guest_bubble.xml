@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="guest_bubble_title">Guest Bubble</string>
+    <string name="guest_bubble_start">Starta Guest Bubble</string>
+    <string name="guest_bubble_settings_summary">Håll ned profilknappen + för att låna ut Candy medan dina egna profiler är låsta.</string>
+    <string name="guest_bubble_requires_profiles">Aktivera profiler för att använda Guest Bubble.</string>
+    <string name="guest_bubble_requires_authentication">Konfigurera biometri eller skärmlås på enheten för att använda Guest Bubble.</string>
+    <string name="guest_bubble_tutorial_title">Låna ut Candy med Guest Bubble</string>
+    <string name="guest_bubble_tutorial_start">1. Öppna fliköversikten och håll ned profilknappen + för att starta en gästsession.</string>
+    <string name="guest_bubble_tutorial_isolation">2. Låna ut telefonen. Dina egna profiler förblir låsta; gästen surfar i en separat tillfällig session.</string>
+    <string name="guest_bubble_tutorial_exit">3. Avsluta Guest Bubble och bekräfta din identitet med biometri eller enhetens skärmlås. Candy raderar gästens surfsession innan du återgår till dina profiler.</string>
+    <string name="guest_bubble_tutorial_limits">Guest Bubble skyddar bara Candy. Andra appar och din Android-enhet är fortfarande tillgängliga. Nedladdningar och export är inte tillgängliga i gästsessionen.</string>
+    <string name="guest_bubble_activate">Aktivera</string>
+    <string name="guest_bubble_auth_title">Återgå till dina profiler</string>
+    <string name="guest_bubble_auth_subtitle">Bekräfta din identitet för att radera gästsessionen och låsa upp Candy.</string>
+    <string name="guest_bubble_end">Avsluta gästsession</string>
+    <string name="guest_bubble_start_failed">Candy kunde inte förbereda gästsessionen. Dina profiler förblir låsta.</string>
+    <string name="guest_bubble_retry">Försök igen</string>
+    <string name="guest_bubble_welcome">Känn dig som hemma</string>
+    <string name="guest_bubble_private_session">Surfa i din egen tillfälliga session. Ägarens profiler och inloggningar förblir låsta.</string>
+    <string name="guest_bubble_back">Tillbaka</string>
+    <string name="guest_bubble_address">Sök eller ange adress</string>
+    <string name="guest_bubble_unavailable_action">Den här åtgärden är inte tillgänglig i Guest Bubble.</string>
+    <string name="guest_bubble_widget_locked">Webbplats dold under Guest Bubble</string>
+    <string name="guest_bubble_cleanup_progress">Raderar gästens surfdata…</string>
+    <string name="guest_bubble_cleanup_failed">Gästens data kunde inte raderas helt. Din webbläsare förblir låst. Försök igen.</string>
+</resources>

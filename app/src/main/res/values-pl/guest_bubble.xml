@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="guest_bubble_title">Guest Bubble</string>
+    <string name="guest_bubble_start">Uruchom Guest Bubble</string>
+    <string name="guest_bubble_settings_summary">Przytrzymaj przycisk + profili, aby udostępnić Candy, zachowując blokadę swoich profili.</string>
+    <string name="guest_bubble_requires_profiles">Włącz profile, aby korzystać z Guest Bubble.</string>
+    <string name="guest_bubble_requires_authentication">Skonfiguruj biometrię lub blokadę ekranu urządzenia, aby korzystać z Guest Bubble.</string>
+    <string name="guest_bubble_tutorial_title">Udostępnij Candy z Guest Bubble</string>
+    <string name="guest_bubble_tutorial_start">1. Otwórz przegląd kart i przytrzymaj przycisk + profili, aby rozpocząć sesję gościa.</string>
+    <string name="guest_bubble_tutorial_isolation">2. Przekaż telefon. Twoje profile pozostaną zablokowane, a gość będzie przeglądać strony w oddzielnej sesji tymczasowej.</string>
+    <string name="guest_bubble_tutorial_exit">3. Zakończ Guest Bubble i potwierdź tożsamość biometrią lub blokadą ekranu urządzenia. Candy usunie sesję przeglądania gościa przed powrotem do Twoich profili.</string>
+    <string name="guest_bubble_tutorial_limits">Guest Bubble chroni tylko Candy. Inne aplikacje i urządzenie Android pozostają dostępne. Pobieranie i eksportowanie są niedostępne w sesji gościa.</string>
+    <string name="guest_bubble_activate">Aktywuj</string>
+    <string name="guest_bubble_auth_title">Wróć do swoich profili</string>
+    <string name="guest_bubble_auth_subtitle">Potwierdź swoją tożsamość, aby usunąć sesję gościa i odblokować Candy.</string>
+    <string name="guest_bubble_end">Zakończ sesję gościa</string>
+    <string name="guest_bubble_start_failed">Candy nie może przygotować sesji gościa. Twoje profile pozostają zablokowane.</string>
+    <string name="guest_bubble_retry">Spróbuj ponownie</string>
+    <string name="guest_bubble_welcome">Czuj się jak u siebie</string>
+    <string name="guest_bubble_private_session">Przeglądaj strony we własnej sesji tymczasowej. Profile i logowania właściciela pozostają zablokowane.</string>
+    <string name="guest_bubble_back">Wstecz</string>
+    <string name="guest_bubble_address">Wyszukaj lub wpisz adres</string>
+    <string name="guest_bubble_unavailable_action">Ta czynność jest niedostępna w Guest Bubble.</string>
+    <string name="guest_bubble_widget_locked">Witryna ukryta podczas Guest Bubble</string>
+    <string name="guest_bubble_cleanup_progress">Usuwanie danych przeglądania gościa…</string>
+    <string name="guest_bubble_cleanup_failed">Nie udało się usunąć wszystkich danych gościa. Przeglądarka pozostaje zablokowana. Spróbuj ponownie.</string>
+</resources>

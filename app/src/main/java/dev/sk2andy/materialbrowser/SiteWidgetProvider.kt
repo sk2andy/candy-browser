@@ -1,6 +1,8 @@
 package dev.sk2andy.materialbrowser
 
 import android.app.PendingIntent
+import android.app.Application
+import dev.sk2andy.materialbrowser.browser.guest.GuestBubbleSessionStore
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
@@ -122,7 +124,10 @@ open class SiteWidgetProvider : AppWidgetProvider() {
         internal fun update(context: Context, manager: AppWidgetManager, widgetId: Int) {
             val store = SiteWidgetStore(context.applicationContext)
             val snapshot = store.snapshotForWidget(widgetId)
-            SiteWidgetRefreshScheduler.schedule(context, widgetId, snapshot)
+                .takeUnless { GuestBubbleSessionStore(context).isLocked() }
+            if (Application.getProcessName() == context.packageName) {
+                SiteWidgetRefreshScheduler.schedule(context, widgetId, snapshot)
+            }
             val bitmap = snapshot?.let { store.loadBitmap(it.id) }
             try {
                 manager.updateAppWidget(widgetId, views(context, snapshot, bitmap, widgetId))
@@ -137,7 +142,8 @@ open class SiteWidgetProvider : AppWidgetProvider() {
             bitmap: Bitmap?,
             widgetId: Int = AppWidgetManager.INVALID_APPWIDGET_ID,
         ): RemoteViews = RemoteViews(context.packageName, R.layout.site_widget).apply {
-            val hasImage = snapshot != null && bitmap != null
+            val locked = GuestBubbleSessionStore(context).isLocked()
+            val hasImage = !locked && snapshot != null && bitmap != null
             setViewVisibility(R.id.site_widget_image, if (hasImage) View.VISIBLE else View.GONE)
             setViewVisibility(R.id.site_widget_empty, if (hasImage) View.GONE else View.VISIBLE)
             setViewVisibility(R.id.site_widget_refresh, if (hasImage) View.VISIBLE else View.GONE)
@@ -147,7 +153,8 @@ open class SiteWidgetProvider : AppWidgetProvider() {
             setOnClickPendingIntent(R.id.site_widget_empty, setup)
             setOnClickPendingIntent(R.id.site_widget_image, null)
             setOnClickPendingIntent(R.id.site_widget_refresh, null)
-            if (snapshot != null && bitmap != null) {
+            if (locked) setTextViewText(R.id.site_widget_empty, context.getString(R.string.guest_bubble_widget_locked))
+            if (hasImage && snapshot != null && bitmap != null) {
                 setImageViewBitmap(R.id.site_widget_image, bitmap)
                 setContentDescription(R.id.site_widget_image, snapshot.source.title)
                 if (widgetId != AppWidgetManager.INVALID_APPWIDGET_ID) {

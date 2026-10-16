@@ -1,0 +1,4 @@
+<resources>
+    <string name="guest_bubble_cleanup_progress">Deleting guest browsing data…</string>
+    <string name="guest_bubble_cleanup_failed">Guest data could not be fully deleted. Your browser stays locked. Try again.</string>
+</resources>

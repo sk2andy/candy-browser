@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="guest_bubble_title">Guest Bubble</string>
+    <string name="guest_bubble_start">Nis Guest Bubble</string>
+    <string name="guest_bubble_settings_summary">Mbani shtypur butonin + të profileve për të huazuar Candy ndërsa profilet tuaja mbeten të kyçura.</string>
+    <string name="guest_bubble_requires_profiles">Aktivizoni profilet për të përdorur Guest Bubble.</string>
+    <string name="guest_bubble_requires_authentication">Konfiguroni biometrinë ose një kyçje ekrani të pajisjes për të përdorur Guest Bubble.</string>
+    <string name="guest_bubble_tutorial_title">Huazoni Candy me Guest Bubble</string>
+    <string name="guest_bubble_tutorial_start">1. Hapni pamjen e përgjithshme të skedave dhe mbani shtypur butonin + të profileve për të nisur një seancë vizitori.</string>
+    <string name="guest_bubble_tutorial_isolation">2. Jepjani telefonin vizitorit. Profilet tuaja mbeten të kyçura; vizitori shfleton në një seancë të veçantë të përkohshme.</string>
+    <string name="guest_bubble_tutorial_exit">3. Përfundoni Guest Bubble dhe konfirmoni me biometrinë ose kyçjen e ekranit të pajisjes. Candy fshin seancën e shfletimit të vizitorit përpara se të ktheheni te profilet tuaja.</string>
+    <string name="guest_bubble_tutorial_limits">Guest Bubble mbron vetëm Candy. Aplikacionet e tjera dhe pajisja juaj Android mbeten të aksesueshme. Shkarkimet dhe eksportet nuk janë të disponueshme në seancën e vizitorit.</string>
+    <string name="guest_bubble_activate">Aktivizo</string>
+    <string name="guest_bubble_auth_title">Kthehuni te profilet tuaja</string>
+    <string name="guest_bubble_auth_subtitle">Konfirmoni identitetin tuaj për të fshirë seancën e vizitorit dhe për të zhbllokuar Candy.</string>
+    <string name="guest_bubble_end">Përfundo seancën e vizitorit</string>
+    <string name="guest_bubble_start_failed">Candy nuk mundi të përgatiste seancën e vizitorit. Profilet tuaja mbeten të kyçura.</string>
+    <string name="guest_bubble_retry">Provo sërish</string>
+    <string name="guest_bubble_welcome">Ndihuni si në shtëpi</string>
+    <string name="guest_bubble_private_session">Shfletoni në seancën tuaj të përkohshme. Profilet dhe hyrjet në llogari të pronarit mbeten të kyçura.</string>
+    <string name="guest_bubble_back">Prapa</string>
+    <string name="guest_bubble_address">Kërkoni ose futni adresën</string>
+    <string name="guest_bubble_unavailable_action">Ky veprim nuk është i disponueshëm në Guest Bubble.</string>
+    <string name="guest_bubble_widget_locked">Faqja e internetit është e fshehur gjatë Guest Bubble</string>
+    <string name="guest_bubble_cleanup_progress">Po fshihen të dhënat e shfletimit të vizitorit…</string>
+    <string name="guest_bubble_cleanup_failed">Të dhënat e vizitorit nuk mundën të fshiheshin plotësisht. Shfletuesi juaj mbetet i kyçur. Provoni sërish.</string>
+</resources>

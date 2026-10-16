@@ -8,6 +8,7 @@ import android.content.Intent
 import android.os.Bundle
 import android.os.Process
 import android.os.SystemClock
+import dev.sk2andy.materialbrowser.browser.guest.GuestBubbleGate
 
 /** Relaunches the browser from a separate process after an engine change. */
 class BrowserEngineRestartActivity : Activity() {
@@ -15,11 +16,13 @@ class BrowserEngineRestartActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (GuestBubbleGate.redirectIfLocked(this)) return
         setFinishOnTouchOutside(false)
     }
 
     override fun onResume() {
         super.onResume()
+        if (GuestBubbleGate.redirectIfLocked(this)) return
         if (relaunchStarted) return
         relaunchStarted = true
         val mainProcessId = intent.getIntExtra(EXTRA_MAIN_PROCESS_ID, INVALID_PROCESS_ID)

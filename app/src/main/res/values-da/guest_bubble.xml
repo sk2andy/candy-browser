@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="guest_bubble_title">Guest Bubble</string>
+    <string name="guest_bubble_start">Start Guest Bubble</string>
+    <string name="guest_bubble_settings_summary">Hold profilknappen + nede for at låne Candy ud, mens dine egne profiler er låst.</string>
+    <string name="guest_bubble_requires_profiles">Aktivér profiler for at bruge Guest Bubble.</string>
+    <string name="guest_bubble_requires_authentication">Konfigurer biometri eller skærmlås på enheden for at bruge Guest Bubble.</string>
+    <string name="guest_bubble_tutorial_title">Lån Candy ud med Guest Bubble</string>
+    <string name="guest_bubble_tutorial_start">1. Åbn faneoversigten, og hold profilknappen + nede for at starte en gæstesession.</string>
+    <string name="guest_bubble_tutorial_isolation">2. Lån telefonen ud. Dine egne profiler forbliver låst; gæsten surfer i en separat midlertidig session.</string>
+    <string name="guest_bubble_tutorial_exit">3. Afslut Guest Bubble, og bekræft din identitet med biometri eller enhedens skærmlås. Candy sletter gæstens browsersession, før du vender tilbage til dine profiler.</string>
+    <string name="guest_bubble_tutorial_limits">Guest Bubble beskytter kun Candy. Andre apps og din Android-enhed er stadig tilgængelige. Downloads og eksport er ikke tilgængelige i gæstesessionen.</string>
+    <string name="guest_bubble_activate">Aktivér</string>
+    <string name="guest_bubble_auth_title">Vend tilbage til dine profiler</string>
+    <string name="guest_bubble_auth_subtitle">Bekræft din identitet for at slette gæstesessionen og låse Candy op.</string>
+    <string name="guest_bubble_end">Afslut gæstesession</string>
+    <string name="guest_bubble_start_failed">Candy kunne ikke forberede gæstesessionen. Dine profiler forbliver låst.</string>
+    <string name="guest_bubble_retry">Prøv igen</string>
+    <string name="guest_bubble_welcome">Føl dig hjemme</string>
+    <string name="guest_bubble_private_session">Surf i din egen midlertidige session. Ejerens profiler og login forbliver låst.</string>
+    <string name="guest_bubble_back">Tilbage</string>
+    <string name="guest_bubble_address">Søg eller indtast adresse</string>
+    <string name="guest_bubble_unavailable_action">Denne handling er ikke tilgængelig i Guest Bubble.</string>
+    <string name="guest_bubble_widget_locked">Websted skjult under Guest Bubble</string>
+    <string name="guest_bubble_cleanup_progress">Sletter gæstens browserdata…</string>
+    <string name="guest_bubble_cleanup_failed">Gæstens data kunne ikke slettes helt. Din browser forbliver låst. Prøv igen.</string>
+</resources>

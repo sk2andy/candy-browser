@@ -6,6 +6,7 @@ import android.content.SharedPreferences
 import android.os.Bundle
 import android.os.FileObserver
 import android.view.View
+import dev.sk2andy.materialbrowser.browser.guest.GuestBubbleGate
 import dev.sk2andy.materialbrowser.capsule.CapsuleIntentRules
 import dev.sk2andy.materialbrowser.capsule.SiteCapsuleRules
 import dev.sk2andy.materialbrowser.capsule.CapsuleWindowRules
@@ -31,6 +32,7 @@ class SiteCapsuleActivity : MainActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (GuestBubbleGate.redirectIfLocked(this)) return
         val capsule = SiteCapsuleStore(this).load().firstOrNull { it.id == capsuleWindowId }
         if (capsule == null || !CapsuleWindowRules.canOpen(capsule, BrowserSessionStore(this).loadProfiles().first)) {
             discardCapsuleWindowSession()

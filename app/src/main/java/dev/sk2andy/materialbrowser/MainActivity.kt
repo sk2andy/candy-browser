@@ -64,6 +64,8 @@ import dev.sk2andy.materialbrowser.browser.BrowserMediaLifecycleTrace
 import dev.sk2andy.materialbrowser.browser.BrowserMouseButton
 import dev.sk2andy.materialbrowser.browser.FullscreenVideoRules
 import dev.sk2andy.materialbrowser.browser.ProfileBiometricAuthenticator
+import dev.sk2andy.materialbrowser.browser.guest.GuestBubbleGate
+import dev.sk2andy.materialbrowser.browser.guest.GuestBubbleSessionStore
 import dev.sk2andy.materialbrowser.browser.PrivateTabsNotifier
 import dev.sk2andy.materialbrowser.browser.ReleaseNotesPresentationRules
 import dev.sk2andy.materialbrowser.browser.StartupPresentationRules
@@ -183,11 +185,13 @@ open class MainActivity : AppCompatActivity() {
     private val webPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions(),
     ) { results ->
+        if (GuestBubbleSessionStore(this).isLocked()) return@registerForActivityResult
         if (::browserController.isInitialized) browserController.onRuntimePermissionResult(results)
     }
     private val notificationPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission(),
     ) { granted ->
+        if (GuestBubbleSessionStore(this).isLocked()) return@registerForActivityResult
         CandyDownloadNotifier(this).onPermissionResult(granted)
         if (::browserController.isInitialized && capsuleWindowId == null) {
             privateTabsNotifier.update(browserController.tabs.count { it.isIncognito })
@@ -196,6 +200,7 @@ open class MainActivity : AppCompatActivity() {
     private val fileChooserLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult(),
     ) { result ->
+        if (GuestBubbleSessionStore(this).isLocked()) return@registerForActivityResult
         if (::browserController.isInitialized) {
             browserController.onFileChooserResult(result.resultCode, result.data)
         }
@@ -203,16 +208,19 @@ open class MainActivity : AppCompatActivity() {
     private val geckoWebAuthnLauncher = registerForActivityResult(
         ActivityResultContracts.StartIntentSenderForResult(),
     ) { result ->
+        if (GuestBubbleSessionStore(this).isLocked()) return@registerForActivityResult
         geckoActivityIntegration?.onActivityResult(result.resultCode, result.data)
     }
     private val userScriptImportLauncher = registerForActivityResult(
         ActivityResultContracts.OpenDocument(),
     ) { uri ->
+        if (GuestBubbleSessionStore(this).isLocked()) return@registerForActivityResult
         if (uri != null && ::userScriptImporter.isInitialized) userScriptImporter.import(uri)
     }
     private val favoriteBookmarksImportLauncher = registerForActivityResult(
         ActivityResultContracts.OpenDocument(),
     ) { uri ->
+        if (GuestBubbleSessionStore(this).isLocked()) return@registerForActivityResult
         if (uri != null && ::favoriteBookmarksImporter.isInitialized) {
             favoriteBookmarksImporter.import(uri)
         }
@@ -220,6 +228,7 @@ open class MainActivity : AppCompatActivity() {
     private val appLogsExportLauncher = registerForActivityResult(
         ActivityResultContracts.CreateDocument("text/plain"),
     ) { uri ->
+        if (GuestBubbleSessionStore(this).isLocked()) return@registerForActivityResult
         if (uri == null || !::browserController.isInitialized) return@registerForActivityResult
         val diagnostics = browserController.developerDiagnostics() +
             "\nDevice: ${Build.MANUFACTURER} ${Build.MODEL}"
@@ -238,6 +247,7 @@ open class MainActivity : AppCompatActivity() {
     private val geckoLogsExportLauncher = registerForActivityResult(
         ActivityResultContracts.CreateDocument("text/plain"),
     ) { uri ->
+        if (GuestBubbleSessionStore(this).isLocked()) return@registerForActivityResult
         if (uri == null || !::browserController.isInitialized) return@registerForActivityResult
         val diagnostics = browserController.developerDiagnostics() +
             "\nDevice: ${Build.MANUFACTURER} ${Build.MODEL}"
@@ -254,6 +264,7 @@ open class MainActivity : AppCompatActivity() {
     private val appDataExportLauncher = registerForActivityResult(
         ActivityResultContracts.CreateDocument("application/zip"),
     ) { uri ->
+        if (GuestBubbleSessionStore(this).isLocked()) return@registerForActivityResult
         if (uri == null || !::browserController.isInitialized) return@registerForActivityResult
         browserController.authenticateProtectedProfilesForExport { authenticated ->
             if (authenticated) {
@@ -266,11 +277,13 @@ open class MainActivity : AppCompatActivity() {
     private val appDataImportLauncher = registerForActivityResult(
         ActivityResultContracts.OpenDocument(),
     ) { uri ->
+        if (GuestBubbleSessionStore(this).isLocked()) return@registerForActivityResult
         if (uri != null && ::browserController.isInitialized) stageAppDataImport(uri)
     }
     private val historyLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult(),
     ) { result ->
+        if (GuestBubbleSessionStore(this).isLocked()) return@registerForActivityResult
         if (!::browserController.isInitialized) return@registerForActivityResult
         browserController.reloadHistory()
         browserController.applyHistoryClearRequests(
@@ -286,6 +299,7 @@ open class MainActivity : AppCompatActivity() {
     private val favoritesLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult(),
     ) { result ->
+        if (GuestBubbleSessionStore(this).isLocked()) return@registerForActivityResult
         if (!::browserController.isInitialized) return@registerForActivityResult
         browserController.reloadFavorites()
         if (result.resultCode != Activity.RESULT_OK) return@registerForActivityResult
@@ -299,6 +313,7 @@ open class MainActivity : AppCompatActivity() {
             BrowserSessionStore(this).loadAppearanceSettings().appearanceMode,
         )
         super.onCreate(savedInstanceState)
+        if (GuestBubbleGate.redirectIfLocked(this)) return
         appliedNightConfiguration = resources.configuration.uiMode and
             Configuration.UI_MODE_NIGHT_MASK
         if (AppDataArchiveRestore.hasInterruptedRestore(appDataRestoreRecoveryMarker())) {
@@ -596,7 +611,9 @@ open class MainActivity : AppCompatActivity() {
                 val visibleProfileProtected = browserController.localBrowserProfiles
                     .firstOrNull { profile -> profile.id == visibleProfileId }
                     ?.protection != null
-                setRecentsScreenshotEnabled(!visibleProfileProtected)
+                setRecentsScreenshotEnabled(
+                    !visibleProfileProtected && !GuestBubbleSessionStore(this).isLocked(),
+                )
             }
             CandyTheme(settings = appearanceSettings) {
                 val launcherShortcutState = LauncherShortcutRules.state(
@@ -941,6 +958,8 @@ open class MainActivity : AppCompatActivity() {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
+        if (GuestBubbleGate.redirectIfLocked(this, finishOwner = false)) return
+        GuestBubbleGate.restoreIfUnlocked(this)
         if (appDataTransferActive) return
         setIntent(intent)
         showAppDataTransferResult(intent)
@@ -1201,7 +1220,7 @@ open class MainActivity : AppCompatActivity() {
     }
 
     override fun onUserLeaveHint() {
-        if (!appDataTransferActive) {
+        if (!appDataTransferActive && !GuestBubbleSessionStore(this).isLocked()) {
             if (
                 ::pictureInPictureController.isInitialized &&
                 pictureInPictureController.prepareAutomaticEntry()
@@ -1222,7 +1241,9 @@ open class MainActivity : AppCompatActivity() {
 
     override fun onStart() {
         super.onStart()
-        if (::browserController.isInitialized && !appDataTransferActive) {
+        if (::browserController.isInitialized && !appDataTransferActive &&
+            !GuestBubbleSessionStore(this).isLocked()
+        ) {
             reconcileAppearanceConfiguration()
             browserController.onStart()
         }
@@ -1246,7 +1267,9 @@ open class MainActivity : AppCompatActivity() {
     }
 
     override fun onPictureInPictureRequested(): Boolean {
-        if (appDataTransferActive || !::pictureInPictureController.isInitialized) return false
+        if (appDataTransferActive || GuestBubbleSessionStore(this).isLocked() ||
+            !::pictureInPictureController.isInitialized
+        ) return false
         return pictureInPictureController.requestPictureInPicture()
     }
 
@@ -1292,6 +1315,8 @@ open class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        if (GuestBubbleGate.redirectIfLocked(this, finishOwner = !::browserController.isInitialized)) return
+        GuestBubbleGate.restoreIfUnlocked(this)
         if (appDataTransferActive) return
         if (::browserController.isInitialized) {
             reconcileAppearanceConfiguration()
@@ -1306,6 +1331,11 @@ open class MainActivity : AppCompatActivity() {
         }
         geckoActivityIntegration?.onHostResumed()
         updatePictureInPictureParams()
+    }
+
+    internal fun prepareForGuestBubble() {
+        if (::browserController.isInitialized) browserController.pauseActiveMedia()
+        if (::browserMediaSystemSession.isInitialized) browserMediaSystemSession.stopAndClear()
     }
 
     private fun reconcileAppearanceConfiguration() {
@@ -1422,6 +1452,7 @@ open class MainActivity : AppCompatActivity() {
         canStart: () -> Boolean = { true },
         intent: (String) -> Intent,
     ) {
+        if (GuestBubbleSessionStore(this).isLocked()) return
         val lockToken = AppDataTransferLock.activate(this, Process.myPid())
         if (lockToken == null) {
             Toast.makeText(this, failureMessage, Toast.LENGTH_SHORT).show()
@@ -1435,7 +1466,7 @@ open class MainActivity : AppCompatActivity() {
         }
         val preparing = runCatching {
             browserController.prepareForAppDataTransfer { ready ->
-                val canStartNow = ready && canStart()
+                val canStartNow = ready && !GuestBubbleSessionStore(this).isLocked() && canStart()
                 val started = canStartNow && runCatching {
                     startActivity(intent(lockToken))
                 }.isSuccess

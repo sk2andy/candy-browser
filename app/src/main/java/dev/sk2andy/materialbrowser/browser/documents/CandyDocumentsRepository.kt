@@ -1,6 +1,7 @@
 package dev.sk2andy.materialbrowser.browser.documents
 
 import android.content.Context
+import dev.sk2andy.materialbrowser.browser.guest.GuestBubbleSessionStore
 import android.net.Uri
 import dev.sk2andy.materialbrowser.browser.isSynced
 import dev.sk2andy.materialbrowser.data.AppDataTransferLock
@@ -35,7 +36,9 @@ internal class CandyDocumentsRepository(context: Context) {
         ?.takeIf { uri -> uri.scheme == "content" && uri.authority in setOf("media", "downloads") }
 
     private fun allowedProfiles(): Set<String> {
-        if (AppDataTransferLock.isActive(appContext)) return emptySet()
+        if (GuestBubbleSessionStore(appContext).isLocked() ||
+            AppDataTransferLock.isActive(appContext)
+        ) return emptySet()
         return BrowserSessionStore(appContext).loadProfiles().first
             .filter { !it.isSynced && it.protection == null }
             .mapTo(hashSetOf()) { it.id }

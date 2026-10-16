@@ -3,12 +3,14 @@ package dev.sk2andy.materialbrowser
 import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
+import dev.sk2andy.materialbrowser.browser.guest.GuestBubbleGate
 import dev.sk2andy.materialbrowser.browser.integration.devicesearch.DeviceSearchContract
 
 /** Launcher deeplink boundary. Main browser revalidates consent and the current saved source. */
 class DeviceSearchResultActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (GuestBubbleGate.redirectIfLocked(this)) return
         val itemId = DeviceSearchContract.itemId(intent)
         if (itemId != null) {
             startActivity(

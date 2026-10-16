@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="guest_bubble_title">Guest Bubble</string>
+    <string name="guest_bubble_start">Pornește Guest Bubble</string>
+    <string name="guest_bubble_settings_summary">Apasă lung butonul + pentru profiluri ca să împrumuți Candy cu profilurile tale blocate.</string>
+    <string name="guest_bubble_requires_profiles">Activează profilurile pentru a folosi Guest Bubble.</string>
+    <string name="guest_bubble_requires_authentication">Configurează autentificarea biometrică sau blocarea ecranului dispozitivului pentru a folosi Guest Bubble.</string>
+    <string name="guest_bubble_tutorial_title">Împrumută Candy cu Guest Bubble</string>
+    <string name="guest_bubble_tutorial_start">1. Deschide prezentarea generală a filelor și apasă lung butonul + pentru profiluri ca să pornești o sesiune pentru oaspeți.</string>
+    <string name="guest_bubble_tutorial_isolation">2. Oferă telefonul oaspetelui. Profilurile tale rămân blocate; oaspetele navighează într-o sesiune temporară separată.</string>
+    <string name="guest_bubble_tutorial_exit">3. Încheie Guest Bubble și confirmă prin autentificare biometrică sau blocarea ecranului dispozitivului. Candy șterge sesiunea de navigare a oaspetelui înainte de a reveni la profilurile tale.</string>
+    <string name="guest_bubble_tutorial_limits">Guest Bubble protejează doar Candy. Celelalte aplicații și dispozitivul tău Android rămân accesibile. Descărcările și exporturile nu sunt disponibile în sesiunea oaspetelui.</string>
+    <string name="guest_bubble_activate">Activează</string>
+    <string name="guest_bubble_auth_title">Revino la profilurile tale</string>
+    <string name="guest_bubble_auth_subtitle">Confirmă-ți identitatea pentru a șterge sesiunea oaspetelui și a debloca Candy.</string>
+    <string name="guest_bubble_end">Încheie sesiunea oaspetelui</string>
+    <string name="guest_bubble_start_failed">Candy nu a putut pregăti sesiunea oaspetelui. Profilurile tale rămân blocate.</string>
+    <string name="guest_bubble_retry">Încearcă din nou</string>
+    <string name="guest_bubble_welcome">Simte-te ca acasă</string>
+    <string name="guest_bubble_private_session">Navighează în propria sesiune temporară. Profilurile și autentificările proprietarului rămân blocate.</string>
+    <string name="guest_bubble_back">Înapoi</string>
+    <string name="guest_bubble_address">Caută sau introdu adresa</string>
+    <string name="guest_bubble_unavailable_action">Această acțiune nu este disponibilă în Guest Bubble.</string>
+    <string name="guest_bubble_widget_locked">Site ascuns cât timp Guest Bubble este activ</string>
+    <string name="guest_bubble_cleanup_progress">Se șterg datele de navigare ale oaspetelui…</string>
+    <string name="guest_bubble_cleanup_failed">Datele oaspetelui nu au putut fi șterse complet. Browserul tău rămâne blocat. Încearcă din nou.</string>
+</resources>

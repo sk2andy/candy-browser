@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="guest_bubble_auth_title">Return to your profiles</string>
+    <string name="guest_bubble_auth_subtitle">Confirm it is you to erase the guest session and unlock Candy.</string>
+    <string name="guest_bubble_end">End guest session</string>
+    <string name="guest_bubble_start_failed">Candy could not prepare the guest session. Your profiles remain locked.</string>
+    <string name="guest_bubble_retry">Try again</string>
+    <string name="guest_bubble_welcome">Make yourself at home</string>
+    <string name="guest_bubble_private_session">Browse in your own temporary session. The owner’s profiles and logins stay locked.</string>
+    <string name="guest_bubble_back">Back</string>
+    <string name="guest_bubble_address">Search or enter address</string>
+    <string name="guest_bubble_unavailable_action">This action is unavailable in Guest Bubble.</string>
+    <string name="guest_bubble_widget_locked">Website hidden during Guest Bubble</string>
+</resources>

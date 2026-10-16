@@ -224,6 +224,8 @@ internal fun TabsAndGesturesSettingsPage(
             checked = profilesEnabled,
             onCheckedChange = onProfilesEnabledChanged,
         )
+        Spacer(Modifier.height(2.dp))
+        GuestBubbleSettings(profilesEnabled = profilesEnabled)
         Spacer(Modifier.height(14.dp))
         SettingsSectionTitle(stringResource(R.string.settings_section_gestures))
         Spacer(Modifier.height(2.dp))
