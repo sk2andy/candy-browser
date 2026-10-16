@@ -24,7 +24,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.union
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsBottomHeight
@@ -57,6 +59,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.browser.FavoriteAnimationSpeed
@@ -82,6 +85,7 @@ internal fun NewTabPage(
     interactive: Boolean = true,
     favoritesAlpha: () -> Float = { 1f },
     explicitSafeDrawingPadding: PaddingValues? = null,
+    contentBottomInset: Dp = 0.dp,
 ) {
     val colors = MaterialTheme.colorScheme
     val blankTabColors = BlankTabColorRules.resolve(colors)
@@ -133,7 +137,9 @@ internal fun NewTabPage(
                     if (explicitSafeDrawingPadding != null) {
                         Modifier.padding(explicitSafeDrawingPadding)
                     } else {
-                        Modifier.safeDrawingPadding()
+                        Modifier.windowInsetsPadding(
+                            WindowInsets.safeDrawing.union(WindowInsets(bottom = contentBottomInset)),
+                        )
                     },
                 ),
         ) {

@@ -581,6 +581,14 @@ internal fun BrowserViewport(
             ) {
                 key(selectedTab.id) {
                     NewTabPage(
+                        contentBottomInset = with(LocalDensity.current) {
+                            val chromeTopPx = bottomBarTopPx.floatValue
+                            if (chromeTopPx.isFinite() && chromeTopPx > 0f) {
+                                (rootHeightPx - chromeTopPx).coerceAtLeast(0f).toDp()
+                            } else {
+                                0.dp
+                            }
+                        },
                         favorites = controller.favorites,
                         favoriteLibrary = controller.favoriteLibrary,
                         favicons = controller.favoriteFavicons,

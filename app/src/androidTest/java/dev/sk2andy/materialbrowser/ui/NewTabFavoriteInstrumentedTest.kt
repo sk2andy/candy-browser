@@ -16,6 +16,8 @@ import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTouchInput
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import dev.sk2andy.materialbrowser.R
@@ -158,6 +160,44 @@ class NewTabFavoriteInstrumentedTest {
         }
         composeRule.onNodeWithContentDescription(closeAddressDescription).assertDoesNotExist()
         assertEquals(favoriteUrl, browserController.selectedTab.url)
+    }
+
+    @Test
+    fun multipleFavoriteRowsStayAboveAddressEditorWithKeyboardOpen() {
+        val favorites = (1..12).map { index ->
+            FavoriteEntry("https://127.0.0.1/favorite/$index", "Favorite $index", index.toLong())
+        }
+        val browserController = createController(FavoriteLibrary(favorites))
+        setBrowserContent(browserController)
+        composeRule.onNodeWithTag(
+            AddressBarActionTestTags.action(AddressBarAction.NewTab),
+        ).performClick()
+        composeRule.waitUntil(timeoutMillis = 10_000L) {
+            var keyboardVisible = false
+            composeRule.runOnUiThread {
+                keyboardVisible = ViewCompat.getRootWindowInsets(composeRule.activity.window.decorView)
+                    ?.isVisible(WindowInsetsCompat.Type.ime()) == true
+            }
+            keyboardVisible
+        }
+        composeRule.waitForIdle()
+        val closeEditor = composeRule.onNodeWithContentDescription(
+            composeRule.activity.getString(R.string.cd_close_address_input),
+        )
+        val grid = composeRule.onNodeWithTag(NewTabFavoritesTestTags.Container)
+        assertTrue(
+            "Favorite grid must end above address editor",
+            grid.fetchSemanticsNode().boundsInRoot.bottom <=
+                closeEditor.fetchSemanticsNode().boundsInRoot.top,
+        )
+        composeRule.onNodeWithTag(NewTabFavoritesTestTags.favorite(favorites.last().url))
+            .performScrollTo()
+            .assertIsDisplayed()
+            .performTouchInput { click() }
+        composeRule.waitUntil(timeoutMillis = 5_000L) {
+            browserController.selectedTab.url == favorites.last().url
+        }
+        closeEditor.assertDoesNotExist()
     }
 
     @Test

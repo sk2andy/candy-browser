@@ -188,7 +188,7 @@ lists the primary Ctrl chords.
 | Browser dialogs, Link Peek and content-action overlays | `ui/BrowserTransientOverlays.kt` |
 | Android engine renderer and external-preview hosting | `ui/BrowserViewport.kt` |
 | Link Peek action editor and drag policy | `ui/LinkPeekActionEditor.kt`, `ui/LinkPeekActionEditorRules.kt` |
-| New-tab content | `ui/NewTabPage.kt` |
+| New-tab content | `ui/NewTabPage.kt`; live favorites combine safe drawing insets with the measured floating address-bar boundary, keeping multiple scrollable rows above the editor and keyboard without adding the IME inset twice |
 | Compact and docked address chrome | `ui/BrowserBottomBar.kt` |
 | Expanded editor and actions | `ui/ExpandedAddressBar.kt` |
 | Recall, navigation, search and command suggestions | `ui/AddressSuggestions.kt` |
