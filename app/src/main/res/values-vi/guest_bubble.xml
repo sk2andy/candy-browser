@@ -1,0 +1,27 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="guest_bubble_title">Guest Bubble</string>
+    <string name="guest_bubble_start">Bắt đầu Guest Bubble</string>
+    <string name="guest_bubble_settings_summary">Nhấn giữ nút + của hồ sơ để cho người khác mượn Candy trong khi hồ sơ của bạn vẫn bị khóa.</string>
+    <string name="guest_bubble_requires_profiles">Bật hồ sơ để sử dụng Guest Bubble.</string>
+    <string name="guest_bubble_requires_authentication">Thiết lập sinh trắc học hoặc khóa màn hình thiết bị để sử dụng Guest Bubble.</string>
+    <string name="guest_bubble_tutorial_title">Cho mượn Candy với Guest Bubble</string>
+    <string name="guest_bubble_tutorial_start">1. Mở tổng quan thẻ và nhấn giữ nút thêm hồ sơ (+) để bắt đầu phiên khách.</string>
+    <string name="guest_bubble_tutorial_isolation">2. Đưa điện thoại cho người khác. Hồ sơ của bạn vẫn bị khóa; khách duyệt web trong một phiên tạm thời riêng biệt.</string>
+    <string name="guest_bubble_tutorial_exit">3. Kết thúc Guest Bubble và xác nhận bằng sinh trắc học hoặc khóa màn hình thiết bị. Candy xóa phiên duyệt web của khách trước khi quay lại hồ sơ của bạn.</string>
+    <string name="guest_bubble_tutorial_limits">Guest Bubble chỉ bảo vệ Candy. Các ứng dụng khác và thiết bị Android của bạn vẫn có thể được truy cập. Không thể tải xuống hoặc xuất dữ liệu trong phiên khách.</string>
+    <string name="guest_bubble_activate">Kích hoạt</string>
+    <string name="guest_bubble_auth_title">Quay lại hồ sơ của bạn</string>
+    <string name="guest_bubble_auth_subtitle">Xác nhận danh tính để xóa phiên khách và mở khóa Candy.</string>
+    <string name="guest_bubble_end">Kết thúc phiên khách</string>
+    <string name="guest_bubble_start_failed">Candy không thể chuẩn bị phiên khách. Hồ sơ của bạn vẫn bị khóa.</string>
+    <string name="guest_bubble_retry">Thử lại</string>
+    <string name="guest_bubble_welcome">Cứ tự nhiên khám phá</string>
+    <string name="guest_bubble_private_session">Duyệt web trong phiên tạm thời của riêng bạn. Hồ sơ và trạng thái đăng nhập của chủ thiết bị vẫn bị khóa.</string>
+    <string name="guest_bubble_back">Quay lại</string>
+    <string name="guest_bubble_address">Tìm kiếm hoặc nhập địa chỉ</string>
+    <string name="guest_bubble_unavailable_action">Không thể thực hiện thao tác này trong Guest Bubble.</string>
+    <string name="guest_bubble_widget_locked">Trang web bị ẩn khi dùng Guest Bubble</string>
+    <string name="guest_bubble_cleanup_progress">Đang xóa dữ liệu duyệt web của khách…</string>
+    <string name="guest_bubble_cleanup_failed">Không thể xóa hoàn toàn dữ liệu của khách. Trình duyệt của bạn vẫn bị khóa. Hãy thử lại.</string>
+</resources>

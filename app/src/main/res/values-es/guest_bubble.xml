@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="guest_bubble_title">Guest Bubble</string>
+    <string name="guest_bubble_start">Iniciar Guest Bubble</string>
+    <string name="guest_bubble_settings_summary">Mantén pulsado el botón + de los perfiles para prestar Candy con tus perfiles bloqueados.</string>
+    <string name="guest_bubble_requires_profiles">Activa los perfiles para usar Guest Bubble.</string>
+    <string name="guest_bubble_requires_authentication">Configura la biometría o el bloqueo de pantalla del dispositivo para usar Guest Bubble.</string>
+    <string name="guest_bubble_tutorial_title">Prestar Candy con Guest Bubble</string>
+    <string name="guest_bubble_tutorial_start">1. Abre la vista general de pestañas y mantén pulsado el botón + de los perfiles para iniciar una sesión de invitado.</string>
+    <string name="guest_bubble_tutorial_isolation">2. Presta tu teléfono. Tus perfiles permanecen bloqueados; el invitado navega en una sesión temporal separada.</string>
+    <string name="guest_bubble_tutorial_exit">3. Finaliza Guest Bubble y confirma tu identidad con biometría o con el bloqueo de pantalla del dispositivo. Candy borra la sesión de navegación del invitado antes de volver a tus perfiles.</string>
+    <string name="guest_bubble_tutorial_limits">Guest Bubble solo protege Candy. Las demás aplicaciones y tu dispositivo Android siguen siendo accesibles. Las descargas y exportaciones no están disponibles en la sesión de invitado.</string>
+    <string name="guest_bubble_activate">Activar</string>
+    <string name="guest_bubble_auth_title">Volver a tus perfiles</string>
+    <string name="guest_bubble_auth_subtitle">Confirma tu identidad para borrar la sesión de invitado y desbloquear Candy.</string>
+    <string name="guest_bubble_end">Finalizar sesión de invitado</string>
+    <string name="guest_bubble_start_failed">Candy no ha podido preparar la sesión de invitado. Tus perfiles permanecen bloqueados.</string>
+    <string name="guest_bubble_retry">Reintentar</string>
+    <string name="guest_bubble_welcome">Siéntete como en casa</string>
+    <string name="guest_bubble_private_session">Navega en tu propia sesión temporal. Los perfiles y las sesiones iniciadas del propietario permanecen bloqueados.</string>
+    <string name="guest_bubble_back">Atrás</string>
+    <string name="guest_bubble_address">Buscar o introducir dirección</string>
+    <string name="guest_bubble_unavailable_action">Esta acción no está disponible en Guest Bubble.</string>
+    <string name="guest_bubble_widget_locked">Sitio oculto durante Guest Bubble</string>
+    <string name="guest_bubble_cleanup_progress">Eliminando los datos de navegación del invitado…</string>
+    <string name="guest_bubble_cleanup_failed">No se han podido eliminar todos los datos del invitado. Tu navegador permanece bloqueado. Inténtalo de nuevo.</string>
+</resources>

@@ -86,6 +86,39 @@ class ProfileSwitcherInstrumentedTest {
     }
 
     @Test
+    fun addLongPressStartsGuestWithoutCreatingProfile() {
+        val addClicks = AtomicInteger()
+        val guestStarts = AtomicInteger()
+        val profile = BrowserProfile(id = "candy", emoji = "🍬")
+
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                ProfileSwitcher(
+                    profiles = listOf(profile),
+                    activeProfileId = profile.id,
+                    enabled = true,
+                    onSelect = {},
+                    onLongClick = {},
+                    onAdd = addClicks::incrementAndGet,
+                    onAddLongClick = { guestStarts.incrementAndGet() },
+                )
+            }
+        }
+
+        val addNode = composeRule.onNodeWithTag(ProfileSwitcherTestTags.Add)
+        addNode.performTouchInput { longClick() }
+        composeRule.runOnIdle {
+            assertEquals(1, guestStarts.get())
+            assertEquals(0, addClicks.get())
+        }
+        addNode.performTouchInput { click() }
+        composeRule.runOnIdle {
+            assertEquals(1, guestStarts.get())
+            assertEquals(1, addClicks.get())
+        }
+    }
+
+    @Test
     fun scrollsActiveProfileIntoView() {
         val profiles = List(8) { index ->
             BrowserProfile(id = "profile-$index", emoji = "${index + 1}️⃣")
@@ -125,6 +158,7 @@ class ProfileSwitcherInstrumentedTest {
                     onSelect = { actionCount.incrementAndGet() },
                     onLongClick = { actionCount.incrementAndGet() },
                     onAdd = actionCount::incrementAndGet,
+                    onAddLongClick = { actionCount.incrementAndGet() },
                 )
             }
         }
@@ -136,6 +170,7 @@ class ProfileSwitcherInstrumentedTest {
         profileNode.assertIsNotEnabled().performTouchInput { click() }
         profileNode.performTouchInput { longClick() }
         addNode.assertIsNotEnabled().performTouchInput { click() }
+        addNode.performTouchInput { longClick() }
 
         assertEquals(0, actionCount.get())
     }

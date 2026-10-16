@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="guest_bubble_auth_title">Zurück zu deinen Profilen</string>
+    <string name="guest_bubble_auth_subtitle">Bestätige deine Identität, um die Gastsitzung zu löschen und Candy zu entsperren.</string>
+    <string name="guest_bubble_end">Gastsitzung beenden</string>
+    <string name="guest_bubble_start_failed">Candy konnte die Gastsitzung nicht vorbereiten. Deine Profile bleiben gesperrt.</string>
+    <string name="guest_bubble_retry">Erneut versuchen</string>
+    <string name="guest_bubble_welcome">Fühl dich wie zu Hause</string>
+    <string name="guest_bubble_private_session">Surfe in deiner eigenen temporären Sitzung. Die Profile und Logins des Besitzers bleiben gesperrt.</string>
+    <string name="guest_bubble_back">Zurück</string>
+    <string name="guest_bubble_address">Suchen oder Adresse eingeben</string>
+    <string name="guest_bubble_unavailable_action">Diese Aktion ist in Guest Bubble nicht verfügbar.</string>
+    <string name="guest_bubble_widget_locked">Website während Guest Bubble ausgeblendet</string>
+</resources>

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="guest_bubble_title">Guest Bubble</string>
+    <string name="guest_bubble_start">Guest Bubble starten</string>
+    <string name="guest_bubble_settings_summary">Houd de profielknop + ingedrukt om Candy uit te lenen terwijl je eigen profielen vergrendeld blijven.</string>
+    <string name="guest_bubble_requires_profiles">Schakel profielen in om Guest Bubble te gebruiken.</string>
+    <string name="guest_bubble_requires_authentication">Stel biometrie of schermvergrendeling op je apparaat in om Guest Bubble te gebruiken.</string>
+    <string name="guest_bubble_tutorial_title">Candy uitlenen met Guest Bubble</string>
+    <string name="guest_bubble_tutorial_start">1. Open het tabbladoverzicht en houd de profielknop + ingedrukt om een gastsessie te starten.</string>
+    <string name="guest_bubble_tutorial_isolation">2. Leen je telefoon uit. Je eigen profielen blijven vergrendeld; de gast surft in een aparte tijdelijke sessie.</string>
+    <string name="guest_bubble_tutorial_exit">3. Beëindig Guest Bubble en bevestig je identiteit met biometrie of de schermvergrendeling van je apparaat. Candy wist de browsersessie van de gast voordat je terugkeert naar je profielen.</string>
+    <string name="guest_bubble_tutorial_limits">Guest Bubble beschermt alleen Candy. Andere apps en je Android-apparaat blijven toegankelijk. Downloads en exports zijn niet beschikbaar in de gastsessie.</string>
+    <string name="guest_bubble_activate">Activeren</string>
+    <string name="guest_bubble_auth_title">Terug naar je profielen</string>
+    <string name="guest_bubble_auth_subtitle">Bevestig je identiteit om de gastsessie te wissen en Candy te ontgrendelen.</string>
+    <string name="guest_bubble_end">Gastsessie beëindigen</string>
+    <string name="guest_bubble_start_failed">Candy kon de gastsessie niet voorbereiden. Je profielen blijven vergrendeld.</string>
+    <string name="guest_bubble_retry">Probeer opnieuw</string>
+    <string name="guest_bubble_welcome">Voel je thuis</string>
+    <string name="guest_bubble_private_session">Surf in je eigen tijdelijke sessie. De profielen en aanmeldingen van de eigenaar blijven vergrendeld.</string>
+    <string name="guest_bubble_back">Terug</string>
+    <string name="guest_bubble_address">Zoeken of adres invoeren</string>
+    <string name="guest_bubble_unavailable_action">Deze actie is niet beschikbaar in Guest Bubble.</string>
+    <string name="guest_bubble_widget_locked">Website verborgen tijdens Guest Bubble</string>
+    <string name="guest_bubble_cleanup_progress">Browsegegevens van de gast verwijderen…</string>
+    <string name="guest_bubble_cleanup_failed">De gegevens van de gast konden niet volledig worden verwijderd. Je browser blijft vergrendeld. Probeer opnieuw.</string>
+</resources>

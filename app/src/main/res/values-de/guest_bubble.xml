@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="guest_bubble_title">Guest Bubble</string>
+    <string name="guest_bubble_start">Guest Bubble starten</string>
+    <string name="guest_bubble_settings_summary">Profil-Plus lange drücken, um Candy mit gesperrten eigenen Profilen zu verleihen.</string>
+    <string name="guest_bubble_requires_profiles">Aktiviere Profile, um Guest Bubble zu nutzen.</string>
+    <string name="guest_bubble_requires_authentication">Richte Biometrie oder eine Gerätesperre ein, um Guest Bubble zu nutzen.</string>
+    <string name="guest_bubble_tutorial_title">Candy mit Guest Bubble verleihen</string>
+    <string name="guest_bubble_tutorial_start">1. Öffne die Tabübersicht und drücke das Profil-Plus lange, um eine Gastsitzung zu starten.</string>
+    <string name="guest_bubble_tutorial_isolation">2. Gib dein Handy weiter. Deine eigenen Profile bleiben gesperrt; der Gast surft in einer getrennten, vorübergehenden Sitzung.</string>
+    <string name="guest_bubble_tutorial_exit">3. Beende Guest Bubble und bestätige mit Biometrie oder deiner Gerätesperre. Candy löscht die Gastsitzung, bevor du zu deinen Profilen zurückkehrst.</string>
+    <string name="guest_bubble_tutorial_limits">Guest Bubble schützt nur Candy. Andere Apps und dein Android-Gerät bleiben zugänglich. Downloads und Exporte sind in der Gastsitzung nicht verfügbar.</string>
+    <string name="guest_bubble_activate">Aktivieren</string>
+</resources>

@@ -1,0 +1,27 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="guest_bubble_title">Guest Bubble</string>
+    <string name="guest_bubble_start">เริ่ม Guest Bubble</string>
+    <string name="guest_bubble_settings_summary">แตะปุ่ม + ของโปรไฟล์ค้างไว้เพื่อให้ผู้อื่นยืมใช้ Candy โดยที่โปรไฟล์ของคุณยังล็อกอยู่</string>
+    <string name="guest_bubble_requires_profiles">เปิดใช้โปรไฟล์เพื่อใช้ Guest Bubble</string>
+    <string name="guest_bubble_requires_authentication">ตั้งค่าการยืนยันตัวตนด้วยข้อมูลชีวมิติหรือการล็อกหน้าจออุปกรณ์เพื่อใช้ Guest Bubble</string>
+    <string name="guest_bubble_tutorial_title">ให้ผู้อื่นยืมใช้ Candy ด้วย Guest Bubble</string>
+    <string name="guest_bubble_tutorial_start">1. เปิดภาพรวมแท็บ แล้วแตะปุ่ม + สำหรับเพิ่มโปรไฟล์ค้างไว้เพื่อเริ่มเซสชันผู้มาเยือน</string>
+    <string name="guest_bubble_tutorial_isolation">2. ส่งโทรศัพท์ให้ผู้อื่น โปรไฟล์ของคุณจะยังคงล็อกอยู่ ส่วนผู้มาเยือนจะท่องเว็บในเซสชันชั่วคราวที่แยกต่างหาก</string>
+    <string name="guest_bubble_tutorial_exit">3. สิ้นสุด Guest Bubble และยืนยันตัวตนด้วยข้อมูลชีวมิติหรือการล็อกหน้าจออุปกรณ์ Candy จะลบเซสชันการท่องเว็บของผู้มาเยือนก่อนกลับไปยังโปรไฟล์ของคุณ</string>
+    <string name="guest_bubble_tutorial_limits">Guest Bubble ปกป้องเฉพาะ Candy เท่านั้น แอปอื่นและอุปกรณ์ Android ของคุณยังคงเข้าถึงได้ ไม่สามารถดาวน์โหลดหรือส่งออกในเซสชันผู้มาเยือน</string>
+    <string name="guest_bubble_activate">เปิดใช้งาน</string>
+    <string name="guest_bubble_auth_title">กลับไปยังโปรไฟล์ของคุณ</string>
+    <string name="guest_bubble_auth_subtitle">ยืนยันตัวตนเพื่อลบเซสชันผู้มาเยือนและปลดล็อก Candy</string>
+    <string name="guest_bubble_end">สิ้นสุดเซสชันผู้มาเยือน</string>
+    <string name="guest_bubble_start_failed">Candy ไม่สามารถเตรียมเซสชันผู้มาเยือนได้ โปรไฟล์ของคุณยังคงล็อกอยู่</string>
+    <string name="guest_bubble_retry">ลองอีกครั้ง</string>
+    <string name="guest_bubble_welcome">ท่องเว็บได้ตามสบาย</string>
+    <string name="guest_bubble_private_session">ท่องเว็บในเซสชันชั่วคราวของคุณเอง โปรไฟล์และสถานะการเข้าสู่ระบบของเจ้าของเครื่องยังคงล็อกอยู่</string>
+    <string name="guest_bubble_back">ย้อนกลับ</string>
+    <string name="guest_bubble_address">ค้นหาหรือป้อนที่อยู่</string>
+    <string name="guest_bubble_unavailable_action">ไม่สามารถดำเนินการนี้ใน Guest Bubble ได้</string>
+    <string name="guest_bubble_widget_locked">ซ่อนเว็บไซต์ขณะใช้ Guest Bubble</string>
+    <string name="guest_bubble_cleanup_progress">กำลังลบข้อมูลการท่องเว็บของผู้มาเยือน…</string>
+    <string name="guest_bubble_cleanup_failed">ไม่สามารถลบข้อมูลผู้มาเยือนได้ทั้งหมด เบราว์เซอร์ของคุณยังคงล็อกอยู่ ลองอีกครั้ง</string>
+</resources>

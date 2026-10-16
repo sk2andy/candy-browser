@@ -2,6 +2,7 @@ package dev.sk2andy.materialbrowser.browser.integration.devicesearch
 
 import android.app.appsearch.AppSearchBatchResult
 import android.app.appsearch.AppSearchManager
+import android.app.Application
 import android.app.appsearch.AppSearchSchema
 import android.app.appsearch.AppSearchSession
 import android.app.appsearch.BatchResultCallback
@@ -10,6 +11,7 @@ import android.app.appsearch.PutDocumentsRequest
 import android.app.appsearch.SearchSpec
 import android.app.appsearch.SetSchemaRequest
 import android.content.Context
+import dev.sk2andy.materialbrowser.browser.guest.GuestBubbleSessionStore
 import android.content.Intent
 import android.content.SharedPreferences
 import android.os.FileObserver
@@ -85,7 +87,9 @@ object DeviceSearchIndexer {
     private fun rebuild(context: Context, expectedGeneration: Long): Boolean {
         if (generation.get() != expectedGeneration) return false
         val sources = loadDeviceSearchSources(context)
-        DeviceSearchRefreshScheduler.update(context, sources.settings.enabled)
+        if (Application.getProcessName() == context.packageName) {
+            DeviceSearchRefreshScheduler.update(context, sources.settings.enabled)
+        }
         val validIds = sources.items.mapTo(hashSetOf(), DeviceSearchItem::id)
         val settings = sources.settings.copy(selectedIds = sources.settings.selectedIds.intersect(validIds))
         if (settings != sources.settings && !DeviceSearchStore(context).save(settings)) return false
@@ -126,7 +130,12 @@ object DeviceSearchIndexer {
                 if (!result.get(TIMEOUT_SECONDS, TimeUnit.SECONDS)) return false
             }
             if (generation.get() != expectedGeneration) return false
-            setSchema(session, displayed = settings.enabled && items.isNotEmpty())
+            setSchema(
+                session,
+                displayed = settings.enabled && items.isNotEmpty() &&
+                    !GuestBubbleSessionStore(context).isLocked(),
+            )
+            if (GuestBubbleSessionStore(context).isLocked()) setSchema(session, displayed = false)
             return true
         }
     }

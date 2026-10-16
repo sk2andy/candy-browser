@@ -4,6 +4,7 @@
 
 | Need | Detail | Main code |
 | --- | --- | --- |
+| Guest Bubble | [Activation, isolation, authentication and cleanup](guest-bubble.md) | `browser/guest/GuestBubble*`, `GuestBubbleActivity`, `GuestBubbleCleanupActivity`, shared `ProfileSwitcher`, `ui/GuestBubbleSettings` |
 | Tab state, ordering, retention, Gecko session residency, persistence | [`lifecycle-and-persistence.md`](lifecycle-and-persistence.md) | `BrowserTab`, `BrowserSessionResidencyRules` (engine-neutral policy), `data/Tab*Rules`, `BrowserSessionStore` |
 | Previews, snoozing, profiles, Gecko/WebKit context isolation | [`previews-snooze-and-isolation.md`](previews-snooze-and-isolation.md) | `TabPreview*`, `SnoozedTab*`, `BrowserProfileRules`, `GeckoProfileStorageRules`, `WKWebsiteDataStore` adapter |
 | Private-tab notification | Android keeps one privacy-safe ongoing notification while any private tab exists. A dedicated `private_tabs` channel lets users disable it independently from Snooze alerts. Tapping it closes every private tab across profiles without opening Candy. | `browser/PrivateTabsNotifier`, `BrowserController.closeAllPrivateTabs` |
@@ -33,6 +34,7 @@ Main ownership: shared `browser/BrowserMenuLayout`, `ui/settings/BrowserMenuSett
 
 | Surface | Tests |
 | --- | --- |
+| Guest Bubble settings, gesture, storage and lifecycle | `GuestBubbleRulesTest`, `GuestBubbleSessionStoreInstrumentedTest`, `GuestBubbleSettingsInstrumentedTest`, `GuestBubbleActivityInstrumentedTest`, `ProfileSwitcherInstrumentedTest` |
 | Pure tab rules | `data/Tab*Test`, `BrowserTabTest`, `BrowserSessionResidencyRulesTest` |
 | Manual tab-close undo | `ClosedTabUndoRulesTest`, `BrowserControllerClosedTabUndoInstrumentedTest`, `TabSettingsScreenInstrumentedTest` |
 | Profiles and storage assignment | `BrowserProfileRulesTest`, `BrowserTabsControllerTest`, `BrowserSessionControllerTest`, `GeckoProfileStorageRulesTest`, `BrowserControllerProfilesInstrumentedTest`, `ProfileCreationFlowInstrumentedTest` |

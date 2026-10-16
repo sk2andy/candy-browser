@@ -199,6 +199,11 @@ internal fun settingsSearchDefinitions(
             descriptionRes = R.string.settings_profiles_subtitle,
         )
         setting(
+            id = "guest_bubble_title",
+            titleRes = R.string.guest_bubble_title,
+            descriptionRes = R.string.guest_bubble_settings_summary,
+        )
+        setting(
             id = "settings_address_bar_long_press_title",
             titleRes = R.string.settings_address_bar_long_press_title,
             descriptionRes = R.string.settings_address_bar_long_press_summary,

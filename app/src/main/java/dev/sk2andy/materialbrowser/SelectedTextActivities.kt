@@ -12,6 +12,7 @@ import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import dev.sk2andy.materialbrowser.browser.guest.GuestBubbleGate
 import dev.sk2andy.materialbrowser.browser.integration.ProcessTextResearchRequest
 import dev.sk2andy.materialbrowser.browser.integration.ProcessTextRules
 import dev.sk2andy.materialbrowser.browser.integration.processTextResearchRequests
@@ -27,6 +28,7 @@ import dev.sk2andy.materialbrowser.ui.theme.setCandyContent
 class ResearchSelectedTextActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (GuestBubbleGate.redirectIfLocked(this)) return
         setResult(Activity.RESULT_CANCELED)
         val text = takeSelectedText(ProcessTextRules.MAX_RESEARCH_CHARACTERS)
         if (text == null || savedInstanceState != null || AppDataTransferLock.isActive(this)) {
@@ -79,6 +81,7 @@ class ReadSelectedTextActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (GuestBubbleGate.redirectIfLocked(this)) return
         setResult(Activity.RESULT_CANCELED)
         val text = takeSelectedText(ProcessTextRules.MAX_SPEECH_CHARACTERS)
         if (text == null || savedInstanceState != null || AppDataTransferLock.isActive(this)) {

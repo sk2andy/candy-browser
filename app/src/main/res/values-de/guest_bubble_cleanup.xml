@@ -1,0 +1,4 @@
+<resources>
+    <string name="guest_bubble_cleanup_progress">Gast-Browserdaten werden gelöscht…</string>
+    <string name="guest_bubble_cleanup_failed">Gastdaten konnten nicht vollständig gelöscht werden. Dein Browser bleibt gesperrt. Versuche es erneut.</string>
+</resources>

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="guest_bubble_title">Guest Bubble</string>
+    <string name="guest_bubble_start">Pokreni Guest Bubble</string>
+    <string name="guest_bubble_settings_summary">Dugo pritisnite gumb + za profile da posudite Candy dok vaši profili ostaju zaključani.</string>
+    <string name="guest_bubble_requires_profiles">Omogućite profile za upotrebu značajke Guest Bubble.</string>
+    <string name="guest_bubble_requires_authentication">Postavite biometrijsku provjeru ili zaključavanje zaslona uređaja za upotrebu značajke Guest Bubble.</string>
+    <string name="guest_bubble_tutorial_title">Posudite Candy uz Guest Bubble</string>
+    <string name="guest_bubble_tutorial_start">1. Otvorite pregled kartica i dugo pritisnite gumb + za profile da pokrenete sesiju gosta.</string>
+    <string name="guest_bubble_tutorial_isolation">2. Predajte telefon gostu. Vaši profili ostaju zaključani; gost pregledava u odvojenoj privremenoj sesiji.</string>
+    <string name="guest_bubble_tutorial_exit">3. Završite Guest Bubble i potvrdite biometrijskom provjerom ili zaključavanjem zaslona uređaja. Candy briše sesiju pregledavanja gosta prije povratka na vaše profile.</string>
+    <string name="guest_bubble_tutorial_limits">Guest Bubble štiti samo Candy. Druge aplikacije i vaš Android uređaj ostaju dostupni. Preuzimanja i izvozi nisu dostupni u sesiji gosta.</string>
+    <string name="guest_bubble_activate">Aktiviraj</string>
+    <string name="guest_bubble_auth_title">Povratak na vaše profile</string>
+    <string name="guest_bubble_auth_subtitle">Potvrdite svoj identitet da izbrišete sesiju gosta i otključate Candy.</string>
+    <string name="guest_bubble_end">Završi sesiju gosta</string>
+    <string name="guest_bubble_start_failed">Candy nije mogao pripremiti sesiju gosta. Vaši profili ostaju zaključani.</string>
+    <string name="guest_bubble_retry">Pokušaj ponovno</string>
+    <string name="guest_bubble_welcome">Osjećajte se kao kod kuće</string>
+    <string name="guest_bubble_private_session">Pregledavajte u vlastitoj privremenoj sesiji. Profili i prijave vlasnika ostaju zaključani.</string>
+    <string name="guest_bubble_back">Natrag</string>
+    <string name="guest_bubble_address">Pretražite ili unesite adresu</string>
+    <string name="guest_bubble_unavailable_action">Ova radnja nije dostupna u značajci Guest Bubble.</string>
+    <string name="guest_bubble_widget_locked">Web-stranica je skrivena dok je Guest Bubble aktivan</string>
+    <string name="guest_bubble_cleanup_progress">Brisanje podataka pregledavanja gosta…</string>
+    <string name="guest_bubble_cleanup_failed">Podaci gosta nisu mogli biti potpuno izbrisani. Vaš preglednik ostaje zaključan. Pokušajte ponovno.</string>
+</resources>

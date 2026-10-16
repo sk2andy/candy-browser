@@ -19,9 +19,12 @@ import dev.sk2andy.materialbrowser.shared.ui.TabOverviewChromeTestTags
 import dev.sk2andy.materialbrowser.shared.ui.TabTitleRow
 import dev.sk2andy.materialbrowser.shared.ui.CompactTabGrid
 import dev.sk2andy.materialbrowser.shared.ui.CompactTabList
+import dev.sk2andy.materialbrowser.browser.guest.GuestBubbleLauncher
+import dev.sk2andy.materialbrowser.browser.guest.GuestBubbleSessionStore
 import dev.sk2andy.materialbrowser.ui.ProfileSwitcher
 import dev.sk2andy.materialbrowser.ui.allowTopOverflow
 
+import android.app.Activity
 import android.view.HapticFeedbackConstants
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.SizeTransform
@@ -114,6 +117,7 @@ import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
@@ -193,6 +197,9 @@ internal fun TabOverview(
     onSnoozeTab: (String) -> Unit,
     onHeroPagerSnapshotObserved: ((HeroPagerSnapshotObservation) -> Unit)? = null,
 ) {
+    val context = LocalContext.current
+    val guestBubbleStore = remember(context) { GuestBubbleSessionStore(context) }
+    val guestBubbleEnabled by rememberGuestBubbleEnabled(guestBubbleStore)
     val rootView = LocalView.current
     val lifecycleOwner = LocalLifecycleOwner.current
     // Frosted content moves into a nested ComposeView whose parent already consumed these insets.
@@ -1084,6 +1091,16 @@ internal fun TabOverview(
                     onAdd = {
                         rootView.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
                         emojiPickerTargetId = NEW_PROFILE_TARGET
+                    },
+                    onAddLongClick = if (guestBubbleEnabled) {
+                        {
+                            val activity = context as? Activity
+                            if (activity != null && GuestBubbleLauncher.start(activity)) {
+                                rootView.performConfirmHaptic()
+                            }
+                        }
+                    } else {
+                        null
                     },
                     modifier = Modifier
                         .zIndex(1f)

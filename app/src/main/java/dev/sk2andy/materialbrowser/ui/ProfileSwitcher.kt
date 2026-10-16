@@ -34,6 +34,7 @@ internal fun ProfileSwitcher(
     onLongClick: (String) -> Unit,
     onAdd: () -> Unit,
     modifier: Modifier = Modifier,
+    onAddLongClick: (() -> Unit)? = null,
 ) {
     SharedProfileSwitcher(
         profiles = profiles.map { profile ->
@@ -51,6 +52,8 @@ internal fun ProfileSwitcher(
         onSelect = onSelect,
         onLongClick = onLongClick,
         onAdd = onAdd,
+        onAddLongClick = onAddLongClick,
+        onAddLongClickLabel = stringResource(R.string.guest_bubble_start),
         modifier = modifier,
         profileDescription = stringResource(R.string.cd_profile),
         editProfileDescription = stringResource(R.string.action_edit_profile),

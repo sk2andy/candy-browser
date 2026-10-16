@@ -1,0 +1,27 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="guest_bubble_title">Guest Bubble</string>
+    <string name="guest_bubble_start">Стартиране на Guest Bubble</string>
+    <string name="guest_bubble_settings_summary">Задръжте бутона за добавяне на профил (+), за да предоставите Candy на друг човек, докато вашите профили остават заключени.</string>
+    <string name="guest_bubble_requires_profiles">Активирайте профилите, за да използвате Guest Bubble.</string>
+    <string name="guest_bubble_requires_authentication">Настройте биометрично удостоверяване или заключване на екрана на устройството, за да използвате Guest Bubble.</string>
+    <string name="guest_bubble_tutorial_title">Предоставете Candy на гост с Guest Bubble</string>
+    <string name="guest_bubble_tutorial_start">1. Отворете прегледа на разделите и задръжте бутона за добавяне на профил (+), за да започнете сесия за гост.</string>
+    <string name="guest_bubble_tutorial_isolation">2. Предайте телефона на друг човек. Вашите профили остават заключени, а гостът разглежда в отделна временна сесия.</string>
+    <string name="guest_bubble_tutorial_exit">3. Прекратете Guest Bubble и потвърдете самоличността си чрез биометрично удостоверяване или заключването на екрана на устройството. Candy изтрива сесията за гост, преди да се върне към вашите профили.</string>
+    <string name="guest_bubble_tutorial_limits">Guest Bubble защитава само Candy. Другите приложения и устройството ви с Android остават достъпни. Изтеглянето и експортирането не са налични в сесията за гост.</string>
+    <string name="guest_bubble_activate">Активиране</string>
+    <string name="guest_bubble_auth_title">Връщане към вашите профили</string>
+    <string name="guest_bubble_auth_subtitle">Потвърдете самоличността си, за да изтриете сесията за гост и да отключите Candy.</string>
+    <string name="guest_bubble_end">Прекратяване на сесията за гост</string>
+    <string name="guest_bubble_start_failed">Candy не успя да подготви сесията за гост. Вашите профили остават заключени.</string>
+    <string name="guest_bubble_retry">Опитайте отново</string>
+    <string name="guest_bubble_welcome">Чувствайте се като у дома си</string>
+    <string name="guest_bubble_private_session">Разглеждайте в своя временна сесия. Профилите на собственика и достъпът до акаунтите му остават заключени.</string>
+    <string name="guest_bubble_back">Назад</string>
+    <string name="guest_bubble_address">Търсене или въвеждане на адрес</string>
+    <string name="guest_bubble_unavailable_action">Това действие не е налично в Guest Bubble.</string>
+    <string name="guest_bubble_widget_locked">Уебсайтът е скрит, докато Guest Bubble е активен</string>
+    <string name="guest_bubble_cleanup_progress">Изтриване на данните от разглеждането на госта…</string>
+    <string name="guest_bubble_cleanup_failed">Данните на госта не можаха да бъдат изтрити напълно. Браузърът ви остава заключен. Опитайте отново.</string>
+</resources>

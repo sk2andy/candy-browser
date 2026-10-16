@@ -1,0 +1,27 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="guest_bubble_title">Guest Bubble</string>
+    <string name="guest_bubble_start">Guest Bubble を開始</string>
+    <string name="guest_bubble_settings_summary">プロファイルの + ボタンを長押しすると、自分のプロファイルをロックしたまま Candy を貸し出せます。</string>
+    <string name="guest_bubble_requires_profiles">Guest Bubble を使うには、プロファイルを有効にしてください。</string>
+    <string name="guest_bubble_requires_authentication">Guest Bubble を使うには、生体認証またはデバイスの画面ロックを設定してください。</string>
+    <string name="guest_bubble_tutorial_title">Guest Bubble で Candy を貸し出す</string>
+    <string name="guest_bubble_tutorial_start">1. タブ一覧を開き、プロファイル追加の + ボタンを長押しして、ゲストセッションを開始します。</string>
+    <string name="guest_bubble_tutorial_isolation">2. スマートフォンを相手に渡します。自分のプロファイルはロックされたまま、ゲストは独立した一時セッションで閲覧できます。</string>
+    <string name="guest_bubble_tutorial_exit">3. Guest Bubble を終了し、生体認証またはデバイスの画面ロックで本人確認を行います。Candy はゲストの閲覧セッションを消去してから、自分のプロファイルに戻ります。</string>
+    <string name="guest_bubble_tutorial_limits">Guest Bubble が保護するのは Candy のみです。他のアプリや Android デバイスには引き続きアクセスできます。ゲストセッションではダウンロードとエクスポートは利用できません。</string>
+    <string name="guest_bubble_activate">有効にする</string>
+    <string name="guest_bubble_auth_title">自分のプロファイルに戻る</string>
+    <string name="guest_bubble_auth_subtitle">ゲストセッションを消去して Candy のロックを解除するには、本人確認を行ってください。</string>
+    <string name="guest_bubble_end">ゲストセッションを終了</string>
+    <string name="guest_bubble_start_failed">Candy はゲストセッションを準備できませんでした。自分のプロファイルはロックされたままです。</string>
+    <string name="guest_bubble_retry">再試行</string>
+    <string name="guest_bubble_welcome">気軽にブラウジング</string>
+    <string name="guest_bubble_private_session">専用の一時セッションで閲覧できます。所有者のプロファイルとログイン状態はロックされたままです。</string>
+    <string name="guest_bubble_back">戻る</string>
+    <string name="guest_bubble_address">検索またはアドレスを入力</string>
+    <string name="guest_bubble_unavailable_action">Guest Bubble ではこの操作は利用できません。</string>
+    <string name="guest_bubble_widget_locked">Guest Bubble の使用中はウェブサイトを非表示</string>
+    <string name="guest_bubble_cleanup_progress">ゲストの閲覧データを削除中…</string>
+    <string name="guest_bubble_cleanup_failed">ゲストデータを完全に削除できませんでした。ブラウザはロックされたままです。もう一度お試しください。</string>
+</resources>

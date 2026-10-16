@@ -11,6 +11,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import dev.sk2andy.materialbrowser.browser.guest.GuestBubbleGate
 import dev.sk2andy.materialbrowser.browser.ProfileProtectionSession
 import dev.sk2andy.materialbrowser.capsule.CapsuleCustomIconEditorContract
 import dev.sk2andy.materialbrowser.capsule.CapsuleCustomIconEditorRequest
@@ -42,6 +43,7 @@ class SiteCapsuleEditorActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (GuestBubbleGate.redirectIfLocked(this)) return
         if (AppDataTransferLock.isActive(this)) {
             finish()
             return

@@ -33,7 +33,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -85,6 +84,8 @@ fun ProfileSwitcher(
     onLongClick: (String) -> Unit,
     onAdd: () -> Unit,
     modifier: Modifier = Modifier,
+    onAddLongClick: (() -> Unit)? = null,
+    onAddLongClickLabel: String? = null,
     profileDescription: String = "Profil",
     editProfileDescription: String = "Profil bearbeiten",
     addProfileDescription: String = "Profil hinzufügen",
@@ -314,12 +315,19 @@ fun ProfileSwitcher(
                         ),
                         tonalElevation = 1.dp,
                     ) {}
-                    IconButton(
-                        onClick = onAdd,
-                        enabled = enabled,
+                    Box(
                         modifier = Modifier
                             .size(52.dp)
-                            .testTag(ProfileSwitcherTestTags.Add),
+                            .testTag(ProfileSwitcherTestTags.Add)
+                            .clip(CircleShape)
+                            .combinedClickable(
+                                enabled = enabled,
+                                role = Role.Button,
+                                onClick = onAdd,
+                                onLongClick = onAddLongClick,
+                                onLongClickLabel = onAddLongClickLabel,
+                            ),
+                        contentAlignment = Alignment.Center,
                     ) {
                         addIcon(enabled)
                     }

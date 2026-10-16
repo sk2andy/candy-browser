@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="guest_bubble_title">Guest Bubble</string>
+    <string name="guest_bubble_start">Guest Bubble starten</string>
+    <string name="guest_bubble_settings_summary">Dréck laang op de Profilknäppchen +, fir Candy ze verléinen, wärend deng eege Profiller gespaart bleiwen.</string>
+    <string name="guest_bubble_requires_profiles">Aktivéier Profiller, fir Guest Bubble ze benotzen.</string>
+    <string name="guest_bubble_requires_authentication">Riicht Biometrie oder eng Bildschiermspär um Apparat an, fir Guest Bubble ze benotzen.</string>
+    <string name="guest_bubble_tutorial_title">Candy mat Guest Bubble verléinen</string>
+    <string name="guest_bubble_tutorial_start">1. Maach d’Tab-Iwwersiicht op an dréck laang op de Profilknäppchen +, fir eng Gaaschtsessioun ze starten.</string>
+    <string name="guest_bubble_tutorial_isolation">2. Gëff däin Handy weider. Deng eege Profiller bleiwen gespaart; de Gaascht surft an enger separater temporärer Sessioun.</string>
+    <string name="guest_bubble_tutorial_exit">3. Beend Guest Bubble a bestäteg mat Biometrie oder der Bildschiermspär vum Apparat. Candy läscht d’Surfsessioun vum Gaascht, ier s du op deng Profiller zeréckkënns.</string>
+    <string name="guest_bubble_tutorial_limits">Guest Bubble schützt nëmme Candy. Aner Apps an däin Android-Apparat bleiwen zougänglech. Downloads an Exporter sinn an der Gaaschtsessioun net verfügbar.</string>
+    <string name="guest_bubble_activate">Aktivéieren</string>
+    <string name="guest_bubble_auth_title">Zeréck op deng Profiller</string>
+    <string name="guest_bubble_auth_subtitle">Bestäteg deng Identitéit, fir d’Gaaschtsessioun ze läschen a Candy ze entspären.</string>
+    <string name="guest_bubble_end">Gaaschtsessioun beenden</string>
+    <string name="guest_bubble_start_failed">Candy konnt d’Gaaschtsessioun net virbereeden. Deng Profiller bleiwen gespaart.</string>
+    <string name="guest_bubble_retry">Nach eng Kéier probéieren</string>
+    <string name="guest_bubble_welcome">Fill dech wéi doheem</string>
+    <string name="guest_bubble_private_session">Surf an denger eegener temporärer Sessioun. D’Profiller an d’Umeldunge vum Besëtzer bleiwen gespaart.</string>
+    <string name="guest_bubble_back">Zeréck</string>
+    <string name="guest_bubble_address">Sichen oder Adress aginn</string>
+    <string name="guest_bubble_unavailable_action">Dës Aktioun ass a Guest Bubble net verfügbar.</string>
+    <string name="guest_bubble_widget_locked">Websäit wärend Guest Bubble verstoppt</string>
+    <string name="guest_bubble_cleanup_progress">D’Surfdonnéeë vum Gaascht gi geläscht…</string>
+    <string name="guest_bubble_cleanup_failed">D’Gaaschtdonnéeë konnten net vollstänneg geläscht ginn. Däi Browser bleift gespaart. Probéier nach eng Kéier.</string>
+</resources>

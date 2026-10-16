@@ -1,0 +1,27 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="guest_bubble_title">Guest Bubble</string>
+    <string name="guest_bubble_start">啟動 Guest Bubble</string>
+    <string name="guest_bubble_settings_summary">長按設定檔的 + 按鈕，即可在鎖定自己的設定檔後將 Candy 借給他人使用。</string>
+    <string name="guest_bubble_requires_profiles">啟用設定檔，即可使用 Guest Bubble。</string>
+    <string name="guest_bubble_requires_authentication">請先設定生物辨識或裝置螢幕鎖定，再使用 Guest Bubble。</string>
+    <string name="guest_bubble_tutorial_title">透過 Guest Bubble 將 Candy 借給他人</string>
+    <string name="guest_bubble_tutorial_start">1. 開啟分頁總覽，長按新增設定檔的 + 按鈕，開始訪客工作階段。</string>
+    <string name="guest_bubble_tutorial_isolation">2. 將手機交給他人。你自己的設定檔保持鎖定；訪客在獨立的臨時工作階段中瀏覽。</string>
+    <string name="guest_bubble_tutorial_exit">3. 結束 Guest Bubble，並透過生物辨識或裝置螢幕鎖定驗證身分。Candy 會先清除訪客瀏覽工作階段，再返回你的設定檔。</string>
+    <string name="guest_bubble_tutorial_limits">Guest Bubble 僅保護 Candy。其他應用程式和你的 Android 裝置仍可存取。訪客工作階段中無法下載或匯出。</string>
+    <string name="guest_bubble_activate">啟用</string>
+    <string name="guest_bubble_auth_title">返回你的設定檔</string>
+    <string name="guest_bubble_auth_subtitle">請驗證身分，以清除訪客工作階段並解鎖 Candy。</string>
+    <string name="guest_bubble_end">結束訪客工作階段</string>
+    <string name="guest_bubble_start_failed">Candy 無法準備訪客工作階段。你的設定檔仍保持鎖定。</string>
+    <string name="guest_bubble_retry">重試</string>
+    <string name="guest_bubble_welcome">自在瀏覽吧</string>
+    <string name="guest_bubble_private_session">在你自己的臨時工作階段中瀏覽。機主的設定檔和登入狀態保持鎖定。</string>
+    <string name="guest_bubble_back">返回</string>
+    <string name="guest_bubble_address">搜尋或輸入網址</string>
+    <string name="guest_bubble_unavailable_action">Guest Bubble 中無法使用此操作。</string>
+    <string name="guest_bubble_widget_locked">使用 Guest Bubble 時隱藏網站</string>
+    <string name="guest_bubble_cleanup_progress">正在刪除訪客瀏覽資料…</string>
+    <string name="guest_bubble_cleanup_failed">無法完整刪除訪客資料。你的瀏覽器保持鎖定。請重試。</string>
+</resources>

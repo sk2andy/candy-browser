@@ -1,6 +1,7 @@
 package dev.sk2andy.materialbrowser
 
 import android.app.PendingIntent
+import dev.sk2andy.materialbrowser.browser.guest.GuestBubbleSessionStore
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
@@ -52,6 +53,9 @@ class CandySearchWidgetProvider : AppWidgetProvider() {
         }
 
         private fun loadState(context: Context): CandySearchWidgetState {
+            if (GuestBubbleSessionStore(context).isLocked()) {
+                return CandySearchWidgetRules.state(profiles = emptyList(), profilesEnabled = false)
+            }
             val store = BrowserSessionStore(context.applicationContext)
             return CandySearchWidgetRules.state(
                 profiles = store.loadProfiles().first,
@@ -84,6 +88,8 @@ class CandySearchWidgetProvider : AppWidgetProvider() {
                 CandySearchWidgetLayout.Large -> R.layout.candy_search_widget
             },
         ).apply {
+            val state = state.takeUnless { GuestBubbleSessionStore(context).isLocked() }
+                ?: CandySearchWidgetRules.state(profiles = emptyList(), profilesEnabled = false)
             setOnClickPendingIntent(
                 R.id.candy_widget_logo,
                 actionPendingIntent(

@@ -2,6 +2,7 @@ package dev.sk2andy.materialbrowser
 
 import android.app.Activity
 import android.os.Bundle
+import dev.sk2andy.materialbrowser.browser.guest.GuestBubbleGate
 import dev.sk2andy.materialbrowser.browser.integration.LauncherShortcutPublisher
 import dev.sk2andy.materialbrowser.browser.integration.LauncherShortcutRules
 import dev.sk2andy.materialbrowser.browser.integration.LauncherShortcutTarget
@@ -9,6 +10,7 @@ import dev.sk2andy.materialbrowser.browser.integration.LauncherShortcutTarget
 class LauncherShortcutActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (GuestBubbleGate.redirectIfLocked(this)) return
         val target = when (intent.action) {
             LauncherShortcutRules.ACTION_OPEN_APP -> LauncherShortcutTarget.OpenApp
             LauncherShortcutRules.ACTION_NEW_TAB -> LauncherShortcutTarget.NewTab

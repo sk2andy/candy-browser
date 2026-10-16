@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="guest_bubble_title">Guest Bubble</string>
+    <string name="guest_bubble_start">Spustit Guest Bubble</string>
+    <string name="guest_bubble_settings_summary">Podržením tlačítka + u profilů půjčíte Candy, zatímco vaše profily zůstanou zamčené.</string>
+    <string name="guest_bubble_requires_profiles">Chcete-li používat Guest Bubble, zapněte profily.</string>
+    <string name="guest_bubble_requires_authentication">Chcete-li používat Guest Bubble, nastavte biometrii nebo zámek obrazovky zařízení.</string>
+    <string name="guest_bubble_tutorial_title">Půjčit Candy pomocí Guest Bubble</string>
+    <string name="guest_bubble_tutorial_start">1. Otevřete přehled panelů a podržením tlačítka + u profilů spusťte relaci hosta.</string>
+    <string name="guest_bubble_tutorial_isolation">2. Půjčte telefon. Vaše profily zůstanou zamčené; host prohlíží stránky v oddělené dočasné relaci.</string>
+    <string name="guest_bubble_tutorial_exit">3. Ukončete Guest Bubble a potvrďte svou totožnost biometrií nebo zámkem obrazovky zařízení. Candy smaže relaci prohlížení hosta před návratem k vašim profilům.</string>
+    <string name="guest_bubble_tutorial_limits">Guest Bubble chrání pouze Candy. Ostatní aplikace i vaše zařízení Android zůstávají přístupné. Stahování a export nejsou v relaci hosta dostupné.</string>
+    <string name="guest_bubble_activate">Aktivovat</string>
+    <string name="guest_bubble_auth_title">Vrátit se k vašim profilům</string>
+    <string name="guest_bubble_auth_subtitle">Potvrďte svou totožnost, aby se smazala relace hosta a odemkl Candy.</string>
+    <string name="guest_bubble_end">Ukončit relaci hosta</string>
+    <string name="guest_bubble_start_failed">Candy nemohl připravit relaci hosta. Vaše profily zůstávají zamčené.</string>
+    <string name="guest_bubble_retry">Zkusit znovu</string>
+    <string name="guest_bubble_welcome">Buďte tu jako doma</string>
+    <string name="guest_bubble_private_session">Prohlížejte stránky ve vlastní dočasné relaci. Profily a přihlášení vlastníka zůstávají zamčené.</string>
+    <string name="guest_bubble_back">Zpět</string>
+    <string name="guest_bubble_address">Hledat nebo zadat adresu</string>
+    <string name="guest_bubble_unavailable_action">Tato akce není v Guest Bubble dostupná.</string>
+    <string name="guest_bubble_widget_locked">Web skrytý během Guest Bubble</string>
+    <string name="guest_bubble_cleanup_progress">Mazání dat prohlížení hosta…</string>
+    <string name="guest_bubble_cleanup_failed">Data hosta se nepodařilo zcela smazat. Prohlížeč zůstává zamčený. Zkuste to znovu.</string>
+</resources>

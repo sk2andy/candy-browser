@@ -11,6 +11,7 @@ import android.provider.DocumentsContract
 import android.view.Gravity
 import android.window.OnBackInvokedDispatcher
 import android.widget.TextView
+import dev.sk2andy.materialbrowser.browser.guest.GuestBubbleGate
 import dev.sk2andy.materialbrowser.browser.systemwebview.currentSystemWebViewIdentity
 import dev.sk2andy.materialbrowser.data.AppDataArchiveCodec
 import dev.sk2andy.materialbrowser.data.AppDataArchiveManifest
@@ -91,6 +92,7 @@ class AppDataTransferActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (GuestBubbleGate.redirectIfLocked(this)) return
         onBackInvokedDispatcher.registerOnBackInvokedCallback(
             OnBackInvokedDispatcher.PRIORITY_DEFAULT,
         ) {}
