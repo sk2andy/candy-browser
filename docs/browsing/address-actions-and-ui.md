@@ -51,7 +51,9 @@ unchanged originating tab. No Chromium/WebView fallback participates in either c
 
 The separate **Clear this site’s cookies & data** command also appears in the security/connection sheet.
 Both entries share a captured-target confirmation. Supported System WebViews clear only the chosen
-site in their bound storage context; Gecko shows the documented safety limitation without deleting.
+site in their bound storage context; Gecko uses an APK-owned privileged host to filter the site,
+session context and private mode together. Gecko retains the HTTP cache because its site-cache
+cleaner cannot filter profiles safely.
 See [`site-data.md`](site-data.md) for domain expansion, shared-storage warnings and engine boundaries.
 
 ## Configurable expanded actions

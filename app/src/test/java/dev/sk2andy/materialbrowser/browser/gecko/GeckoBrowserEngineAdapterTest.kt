@@ -538,6 +538,36 @@ class GeckoBrowserEngineAdapterTest {
     }
 
     @Test
+    fun `site data deletion forwards completion and becomes unavailable after close`() {
+        val requested = mutableListOf<String>()
+        var completion: ((Boolean) -> Unit)? = null
+        val session = object : FakeGeckoBrowserSession() {
+            override val supportsSiteDataDeletion = true
+
+            override fun clearSiteData(url: String, onComplete: (Boolean) -> Unit) {
+                requested += url
+                completion = onComplete
+            }
+        }
+        val adapter = GeckoBrowserEngineSessionAdapter(
+            tabId = "tab-1",
+            session = session,
+            eventSink = BrowserEngineEventSink { },
+        )
+        val results = mutableListOf<Boolean>()
+        assertTrue(adapter.supportsSiteDataDeletion)
+        adapter.clearSiteData("https://example.com/article", results::add)
+        assertEquals(emptyList<Boolean>(), results)
+        checkNotNull(completion)(true)
+        adapter.execute(BrowserEngineCommands.close())
+        assertFalse(adapter.supportsSiteDataDeletion)
+        adapter.clearSiteData("https://other.example", results::add)
+
+        assertEquals(listOf("https://example.com/article"), requested)
+        assertEquals(listOf(true, false), results)
+    }
+
+    @Test
     fun `active tab state is forwarded to Gecko extensions until close`() {
         val session = FakeGeckoBrowserSession()
         val adapter = GeckoBrowserEngineSessionAdapter(

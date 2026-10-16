@@ -119,6 +119,7 @@ internal class GeckoViewRuntimeHandle private constructor(
     private val privacyHost: GeckoViewPrivacyHostRuntime,
     private val downloadTransfers: GeckoDownloadTransferManager,
 ) : GeckoRuntimeHandle {
+    private val siteData = GeckoSiteDataRuntime(runtime.webExtensionController)
     private val cookieBehavior = GeckoCookieBehaviorCoordinator(
         runtime.settings.contentBlocking,
     )
@@ -147,6 +148,7 @@ internal class GeckoViewRuntimeHandle private constructor(
             downloadTransfers = downloadTransfers,
             cookieBehavior = cookieBehavior,
             trackingPermissions = trackingPermissions,
+            siteData = siteData,
             initialPrivacyPolicy = privacyPolicy,
             privacyEventSink = privacyEventSink,
         )
@@ -178,6 +180,7 @@ internal class GeckoViewRuntimeHandle private constructor(
             downloadTransfers = downloadTransfers,
             cookieBehavior = cookieBehavior,
             trackingPermissions = trackingPermissions,
+            siteData = siteData,
             initialPrivacyPolicy = privacyPolicy,
             privacyEventSink = privacyEventSink,
             session = session,
@@ -890,6 +893,7 @@ private class GeckoViewBrowserSession(
     private val downloadTransfers: GeckoDownloadTransferManager,
     private val cookieBehavior: GeckoCookieBehaviorCoordinator,
     private val trackingPermissions: GeckoTrackingPermissionCoordinator,
+    private val siteData: GeckoSiteDataRuntime,
     initialPrivacyPolicy: GeckoPrivacyPolicy,
     privacyEventSink: GeckoPrivacyEventSink,
     private val session: GeckoSession = GeckoSession(
@@ -914,6 +918,29 @@ private class GeckoViewBrowserSession(
 
     private val storageController = runtime.storageController
     private val mainHandler = Handler(Looper.getMainLooper())
+
+    override val supportsSiteDataDeletion: Boolean get() = !closed
+
+    override fun clearSiteData(url: String, onComplete: (Boolean) -> Unit) {
+        val target = BrowserUriPolicy.normalizeHttpUrl(url)
+        if (closed || target == null || target != BrowserUriPolicy.normalizeHttpUrl(state.url.orEmpty())) {
+            onComplete(false)
+            return
+        }
+        val generation = navigationGeneration
+        stop()
+        siteData.clear(
+            url = target,
+            contextId = session.settings.contextId,
+            isPrivate = isPrivate,
+            isCurrent = {
+                !closed && navigationGeneration == generation &&
+                    BrowserUriPolicy.normalizeHttpUrl(state.url.orEmpty()) == target
+            },
+            onComplete = onComplete,
+        )
+    }
+
     private val mediaRestorationReadback = GeckoMediaRestorationReadback(mainHandler)
     private val cookieBehaviorOwner = Any()
     private val trackingPermissionOwner = Any()

@@ -566,6 +566,13 @@ internal class GeckoBrowserEngineSessionAdapter(
         if (closed) onResult(null) else session.containsUserInput(onResult)
     }
 
+    override val supportsSiteDataDeletion: Boolean
+        get() = !closed && session.supportsSiteDataDeletion
+
+    override fun clearSiteData(url: String, onComplete: (Boolean) -> Unit) {
+        if (closed) onComplete(false) else session.clearSiteData(url, onComplete)
+    }
+
     @UiThread
     override fun setMediaStateListener(listener: GeckoMediaSessionStateListener?) {
         session.setMediaStateListener(if (closed) null else listener)

@@ -1,0 +1,17 @@
+[
+  {
+    "namespace": "candySiteData",
+    "functions": [
+      {
+        "name": "clear",
+        "type": "function",
+        "async": true,
+        "parameters": [
+          { "name": "url", "type": "string", "maxLength": 8192 },
+          { "name": "contextId", "type": "string", "maxLength": 2048 },
+          { "name": "isPrivate", "type": "boolean" }
+        ]
+      }
+    ]
+  }
+]

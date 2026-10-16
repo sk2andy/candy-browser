@@ -12,6 +12,7 @@ class GeckoExtensionRulesTest {
         listOf(
             CandyPrivacyHostContract.EXTENSION_ID,
             CandyToppingHostContract.EXTENSION_ID,
+            GeckoSiteDataRuntime.EXTENSION_ID,
         ).forEach { extensionId ->
             assertFalse(GeckoExtensionRules.isVisibleToUserManager(extensionId))
         }

@@ -1,0 +1,18 @@
+{
+  "manifest_version": 2,
+  "name": "Candy Site Data",
+  "version": "1.0.4",
+  "browser_specific_settings": { "gecko": { "id": "candy-site-data@sk2andy.dev" } },
+  "background": { "scripts": ["background.js"] },
+  "permissions": ["geckoViewAddons", "nativeMessaging"],
+  "experiment_apis": {
+    "candySiteData": {
+      "schema": "schema.json",
+      "parent": {
+        "scopes": ["addon_parent"],
+        "paths": [["candySiteData"]],
+        "script": "api.js"
+      }
+    }
+  }
+}

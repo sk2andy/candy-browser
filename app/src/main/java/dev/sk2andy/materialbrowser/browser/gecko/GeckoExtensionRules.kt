@@ -124,5 +124,6 @@ internal object GeckoExtensionRules {
     private val INTERNAL_EXTENSION_IDS = setOf(
         CandyPrivacyHostContract.EXTENSION_ID,
         CandyToppingHostContract.EXTENSION_ID,
+        GeckoSiteDataRuntime.EXTENSION_ID,
     )
 }
