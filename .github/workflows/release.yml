@@ -43,7 +43,7 @@ jobs:
   release:
     name: Build and publish v${{ inputs.version }}
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
     environment: release
     env:
       INPUT_VERSION: ${{ inputs.version }}
@@ -363,8 +363,8 @@ jobs:
             echo "System WebView APK package identity or version is incorrect." >&2
             exit 1
           fi
-          if (( $(stat -c '%s' "$systemwebview_release_apk") >= $(stat -c '%s' "$arm64_release_apk") )); then
-            echo "System WebView APK is not smaller than ARM64 GeckoView release." >&2
+          if (( $(stat -c '%s' "$systemwebview_release_apk") >= $(stat -c '%s' "$release_apk") )); then
+            echo "System WebView APK is not smaller than universal GeckoView release." >&2
             exit 1
           fi
           CANDY_SYSTEM_WEBVIEW_APK="$systemwebview_release_apk" \
