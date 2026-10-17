@@ -40,5 +40,11 @@
         <string>UIInterfaceOrientationLandscapeLeft</string>
         <string>UIInterfaceOrientationLandscapeRight</string>
     </array>
+	<key>NSCameraUsageDescription</key>
+	<string>Websites können nach deiner Zustimmung die Kamera verwenden, etwa für Videoanrufe oder Foto-Uploads.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Websites können nach deiner Zustimmung das Mikrofon verwenden, etwa für Sprachnachrichten oder Videoanrufe.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Websites können nach deiner Zustimmung deinen Standort verwenden, etwa für Karten und Orte in der Nähe.</string>
 </dict>
 </plist>

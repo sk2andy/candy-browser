@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -61,7 +60,7 @@ fun TabOverviewBottomChrome(
     ) {
         leadingAction()
         trailingAction()
-        Surface(
+        LocalCandyBrowserChromeEffects.current.floatingSurface(
             modifier = Modifier
                 .width(112.dp)
                 .height(56.dp)

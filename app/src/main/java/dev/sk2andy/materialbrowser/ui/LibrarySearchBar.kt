@@ -16,6 +16,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import dev.sk2andy.materialbrowser.shared.ui.LibrarySearchBar as SharedLibrarySearchBar
+import dev.sk2andy.materialbrowser.shared.ui.LibrarySearchBarRenderer
+import dev.sk2andy.materialbrowser.shared.ui.LibrarySearchBarState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -26,34 +29,50 @@ internal fun LibrarySearchBar(
     testTag: String,
     onQueryChange: (String) -> Unit,
 ) {
-    SearchBar(
-        inputField = {
-            SearchBarDefaults.InputField(
-                query = query,
-                onQueryChange = onQueryChange,
-                onSearch = {},
-                expanded = false,
-                onExpandedChange = {},
-                placeholder = { Text(placeholder) },
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-                trailingIcon = {
-                    if (query.isNotEmpty()) {
-                        IconButton(onClick = { onQueryChange("") }) {
-                            Icon(
-                                Icons.Default.Close,
-                                contentDescription = clearContentDescription,
-                            )
+    SharedLibrarySearchBar(
+        query = query,
+        placeholder = placeholder,
+        clearContentDescription = clearContentDescription,
+        testTag = testTag,
+        onQueryChange = onQueryChange,
+        renderer = AndroidLibrarySearchBarRenderer,
+    )
+}
+
+internal object AndroidLibrarySearchBarRenderer : LibrarySearchBarRenderer {
+    @OptIn(ExperimentalMaterial3Api::class)
+    @Composable
+    override fun searchBar(state: LibrarySearchBarState) {
+        val (query, placeholder, clearContentDescription, testTag, onQueryChange) = state
+        SearchBar(
+            inputField = {
+                SearchBarDefaults.InputField(
+                    query = query,
+                    onQueryChange = onQueryChange,
+                    onSearch = {},
+                    expanded = false,
+                    onExpandedChange = {},
+                    placeholder = { Text(placeholder) },
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                    trailingIcon = {
+                        if (query.isNotEmpty()) {
+                            IconButton(onClick = { onQueryChange("") }) {
+                                Icon(
+                                    Icons.Default.Close,
+                                    contentDescription = clearContentDescription,
+                                )
+                            }
                         }
-                    }
-                },
-                modifier = Modifier.testTag(testTag),
-            )
-        },
-        expanded = false,
-        onExpandedChange = {},
-        windowInsets = WindowInsets(0, 0, 0, 0),
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp),
-    ) {}
+                    },
+                    modifier = Modifier.testTag(testTag),
+                )
+            },
+            expanded = false,
+            onExpandedChange = {},
+            windowInsets = WindowInsets(0, 0, 0, 0),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+        ) {}
+    }
 }

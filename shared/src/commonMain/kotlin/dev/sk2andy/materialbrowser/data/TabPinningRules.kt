@@ -2,7 +2,7 @@ package dev.sk2andy.materialbrowser.data
 
 import dev.sk2andy.materialbrowser.browser.BrowserTab
 
-internal object TabPinningRules {
+object TabPinningRules {
     fun orderedTabs(tabs: List<BrowserTab>): List<BrowserTab> =
         tabs.filter(BrowserTab::isPinned) + tabs.filterNot(BrowserTab::isPinned)
 

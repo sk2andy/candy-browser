@@ -54,7 +54,26 @@ final class ToppingRuntime {
         tabId: String,
         sessionKind: ToppingSessionKind
     ) {
-        registrations.removeAll { $0.controller == nil || $0.controller === controller }
+        registrations.removeAll { registration in
+            guard registration.controller == nil || registration.controller === controller ||
+                    registration.tabId == tabId else { return false }
+            // A tab may replace its engine while UIKit still retains the old viewport.
+            // Retire its bridge before the new owner can authorize documents or commands.
+            if let previousController = registration.controller {
+                registration.handlers.forEach { handler in
+                    previousController.removeScriptMessageHandler(
+                        forName: handler.name, contentWorld: handler.world
+                    )
+                }
+            }
+            registration.handlers.removeAll()
+            registration.documents.removeAll()
+            registration.menuCommands.removeAll()
+            registration.installed.removeAll()
+            registration.knownScripts.removeAll()
+            registration.webView = nil
+            return true
+        }
         let registration = ToppingControllerRegistration(
             controller: controller,
             tabId: tabId,

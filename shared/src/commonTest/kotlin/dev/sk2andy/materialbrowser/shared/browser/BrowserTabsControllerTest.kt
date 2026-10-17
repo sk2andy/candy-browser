@@ -1,6 +1,9 @@
 package dev.sk2andy.materialbrowser.shared.browser
 
+import dev.sk2andy.materialbrowser.browser.BrowserProfile
 import dev.sk2andy.materialbrowser.browser.DEFAULT_PROFILE_ID
+import dev.sk2andy.materialbrowser.browser.ProfileLockTrigger
+import dev.sk2andy.materialbrowser.browser.ProfileProtection
 import dev.sk2andy.materialbrowser.sync.SyncDeviceIconDefinition
 import dev.sk2andy.materialbrowser.sync.SyncDeviceIconDescriptor
 import dev.sk2andy.materialbrowser.sync.SyncProfile
@@ -257,6 +260,108 @@ class BrowserTabsControllerTest {
         assertTrue(profile.isolationEnabled)
         assertEquals("remote-tab", tab.syncCandyId)
         assertTrue(tab.isPinned)
+    }
+
+    @Test
+    fun `private creation from remote profile survives linked sync reconciliation`() {
+        val controller = BrowserTabsController()
+        val current = SyncProfile(
+            deviceId = "phone",
+            displayName = "iPhone",
+            icon = SyncDeviceIconDescriptor("phone", 120),
+            revision = 1,
+            tabs = emptyList(),
+            lastSeenAt = "2026-09-06T12:00:00Z",
+        )
+        val remote = current.copy(
+            deviceId = "desktop",
+            displayName = "Mac",
+            tabs = listOf(SyncTab("remote-tab", 0, 0, null, true, false, "Candy", "https://example.com/")),
+        )
+        controller.reconcileSyncProfiles(listOf(current, remote), "phone", DEFAULT_PROFILE_ID, emptyList())
+        val remoteState = controller.selectProfile("synced:desktop")
+        controller.dispatch(BrowserTabsIntent.ShowOverview, null)
+
+        val created = controller.newPrivateTab()
+        val privateId = created.selectedTabId
+        val privateTab = created.tabs.single { it.id == privateId }
+        assertEquals(DEFAULT_PROFILE_ID, created.activeProfileId)
+        assertEquals(DEFAULT_PROFILE_ID, privateTab.profileId)
+        assertTrue(privateTab.isPrivate)
+        assertEquals(null, privateTab.syncCandyId)
+        assertEquals(remoteState.tabs.size + 1, created.tabs.size)
+        assertEquals(remoteState.addressFocusRequest + 1, created.addressFocusRequest)
+        assertFalse(created.isOverviewVisible)
+        assertEquals(remoteState.selectedTabId, created.profiles.single { it.id == "synced:desktop" }.selectedTabId)
+
+        val reconciled = controller.reconcileSyncProfiles(
+            listOf(current, remote), "phone", DEFAULT_PROFILE_ID, emptyList(),
+        )
+        assertEquals(privateId, reconciled.selectedTabId)
+        assertEquals(privateId, reconciled.profiles.single { it.id == DEFAULT_PROFILE_ID }.selectedTabId)
+        assertEquals(privateTab, reconciled.tabs.single { it.id == privateId })
+        assertTrue(BrowserSessionPersistenceRules.snapshot(reconciled).tabs.none { it.id == privateId })
+        assertEquals(remoteState.selectedTabId, controller.selectProfile("synced:desktop").selectedTabId)
+    }
+
+    @Test
+    fun `private fallback skips protected profiles without creating extra regular tab`() {
+        val locked = BrowserProfile(
+            "candy", "🍬", protection = ProfileProtection(ProfileLockTrigger.AppClosed),
+        )
+        val remote = BrowserProfile("remote", "💻", syncedDeviceId = "desktop")
+        val source = BrowserTabState("remote-tab", "https://example.com/", "Candy", profileId = remote.id)
+        val controller = BrowserTabsController(BrowserTabsState(
+            tabs = listOf(source),
+            selectedTabId = source.id,
+            profiles = listOf(locked, BrowserProfile("work", "💼"), remote),
+            activeProfileId = remote.id,
+        ))
+
+        val state = controller.newPrivateTab()
+
+        assertEquals("work", state.activeProfileId)
+        assertEquals(2, state.tabs.size)
+        assertTrue(state.activeTabs.single().isPrivate)
+        assertEquals(state.activeTabs.single().id, state.selectedTabId)
+    }
+
+    @Test
+    fun `private creation retains active local profile instead of default fallback`() {
+        val controller = BrowserTabsController()
+        controller.createProfile(profileId = "work", emoji = "💼")
+
+        val state = controller.newPrivateTab()
+
+        assertEquals("work", state.activeProfileId)
+        assertEquals("work", state.tabs.single { it.id == state.selectedTabId }.profileId)
+        assertTrue(state.tabs.single { it.id == state.selectedTabId }.isPrivate)
+    }
+
+    @Test
+    fun `private creation without eligible local profile leaves remote selection unchanged`() {
+        val remote = BrowserProfile("remote", "💻", syncedDeviceId = "desktop")
+        val source = BrowserTabState("remote-tab", "https://example.com/", "Candy", profileId = remote.id)
+        val controller = BrowserTabsController(BrowserTabsState(
+            tabs = listOf(source), selectedTabId = source.id, profiles = listOf(remote), activeProfileId = remote.id,
+        ))
+        val before = controller.state
+
+        assertEquals(before, controller.newPrivateTab())
+    }
+
+    @Test
+    fun `private creation at tab capacity does not switch remote profile or allocate tab`() {
+        val remote = BrowserProfile("remote", "💻", syncedDeviceId = "desktop")
+        val controller = BrowserTabsController(BrowserTabsState(
+            tabs = List(1_000) { BrowserTabState("tab-$it", "", "", profileId = remote.id) },
+            selectedTabId = "tab-0",
+            profiles = listOf(BrowserProfile(DEFAULT_PROFILE_ID, "🍬"), remote),
+            activeProfileId = remote.id,
+        ))
+        val before = controller.state
+
+        assertEquals(before, controller.newPrivateTab())
     }
 
     @Test

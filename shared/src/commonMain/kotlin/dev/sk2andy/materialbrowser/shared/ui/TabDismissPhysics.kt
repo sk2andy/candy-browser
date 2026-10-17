@@ -4,10 +4,15 @@ import kotlin.math.absoluteValue
 import kotlin.math.sign
 
 object TabDismissPhysics {
+    const val DEFAULT_RESISTANCE_PERCENT = 40
     const val DEFAULT_RESISTANCE_FRACTION = 0.4f
     const val CARD_DISMISS_THRESHOLD_FRACTION = 0.53f
     private const val RESISTANCE_MULTIPLIER = 0.55f
     private const val MAX_RELEASE_PROGRESS = 1.1f
+
+    fun resistancePercent(percent: Int): Int = percent.coerceIn(10, 90)
+
+    fun resistanceFraction(percent: Int): Float = resistancePercent(percent) / 100f
 
     fun visualDistance(
         rawDistance: Float,

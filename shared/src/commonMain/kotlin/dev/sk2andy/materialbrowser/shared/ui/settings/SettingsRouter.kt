@@ -1,6 +1,7 @@
 package dev.sk2andy.materialbrowser.shared.ui.settings
 
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
@@ -12,6 +13,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.zIndex
+import dev.sk2andy.materialbrowser.shared.ui.LocalCandyBrowserChromeEffects
 import dev.sk2andy.materialbrowser.ui.SettingsDestination
 
 @Composable
@@ -20,6 +22,7 @@ fun SettingsRouter(
     modifier: Modifier = Modifier,
     content: @Composable (SettingsDestination) -> Unit,
 ) {
+    val reduceMotion = LocalCandyBrowserChromeEffects.current.reducesMotion()
     Surface(
         modifier = modifier
             .fillMaxSize()
@@ -30,7 +33,9 @@ fun SettingsRouter(
             targetState = destination,
             modifier = Modifier.fillMaxSize(),
             transitionSpec = {
-                if (
+                if (reduceMotion) {
+                    fadeIn(tween(0)) togetherWith fadeOut(tween(0))
+                } else if (
                     targetState == SettingsDestination.Home ||
                     initialState == SettingsDestination.LinkRouting &&
                     targetState == SettingsDestination.Browser ||

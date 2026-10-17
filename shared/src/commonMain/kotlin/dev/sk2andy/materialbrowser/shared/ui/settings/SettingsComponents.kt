@@ -1,6 +1,7 @@
 package dev.sk2andy.materialbrowser.shared.ui.settings
 
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
@@ -20,6 +21,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -32,7 +34,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -47,6 +48,7 @@ import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import dev.sk2andy.materialbrowser.shared.ui.LocalCandyBrowserChromeEffects
 
 @Composable
 fun SettingsPage(
@@ -55,12 +57,13 @@ fun SettingsPage(
     onBack: () -> Unit,
     content: @Composable ColumnScope.() -> Unit,
 ) {
+    val grouped = LocalCandyBrowserChromeEffects.current.usesGroupedSettings
     Column(
         modifier = Modifier
             .fillMaxSize()
             .statusBarsPadding()
             .navigationBarsPadding()
-            .padding(horizontal = 24.dp)
+            .padding(horizontal = if (grouped) 20.dp else 24.dp)
             .padding(bottom = 24.dp)
             .verticalScroll(rememberScrollState())
             .imePadding(),
@@ -70,7 +73,8 @@ fun SettingsPage(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             IconButton(onClick = onBack) {
-                Icon(
+                LocalCandyBrowserChromeEffects.current.icon(
+                    "chevron.left",
                     Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = backContentDescription,
                 )
@@ -97,6 +101,7 @@ fun SettingsLink(
     onLongClick: (() -> Unit)? = null,
     onClick: () -> Unit,
 ) {
+    val grouped = LocalCandyBrowserChromeEffects.current.usesGroupedSettings
     Surface(
         modifier = Modifier
             .fillMaxWidth()
@@ -112,21 +117,21 @@ fun SettingsLink(
             )
             .graphicsLayer { alpha = if (enabled) 1f else 0.38f },
         shape = MaterialTheme.shapes.large,
-        color = containerColor,
+        color = if (grouped) MaterialTheme.colorScheme.surfaceContainer else containerColor,
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 18.dp, vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Surface(
-                modifier = Modifier.size(40.dp),
+                modifier = Modifier.size(if (grouped) 32.dp else 40.dp),
                 shape = MaterialTheme.shapes.medium,
-                color = MaterialTheme.colorScheme.secondaryContainer,
+                color = if (grouped) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondaryContainer,
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     icon(
-                        Modifier.size(22.dp),
-                        MaterialTheme.colorScheme.onSecondaryContainer,
+                        Modifier.size(if (grouped) 20.dp else 22.dp),
+                        if (grouped) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSecondaryContainer,
                     )
                 }
             }
@@ -140,7 +145,8 @@ fun SettingsLink(
                 )
             }
             Spacer(Modifier.width(16.dp))
-            Icon(
+            LocalCandyBrowserChromeEffects.current.icon(
+                "chevron.right",
                 Icons.AutoMirrored.Filled.KeyboardArrowRight,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.primary,
@@ -151,12 +157,13 @@ fun SettingsLink(
 
 @Composable
 fun SettingsSectionTitle(text: String) {
+    val grouped = LocalCandyBrowserChromeEffects.current.usesGroupedSettings
     Text(
         text,
         modifier = Modifier.semantics { heading() },
-        style = MaterialTheme.typography.titleMedium,
-        color = MaterialTheme.colorScheme.primary,
-        fontWeight = FontWeight.SemiBold,
+        style = if (grouped) MaterialTheme.typography.labelMedium else MaterialTheme.typography.titleMedium,
+        color = if (grouped) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.primary,
+        fontWeight = if (grouped) FontWeight.Normal else FontWeight.SemiBold,
     )
 }
 
@@ -170,9 +177,10 @@ fun SettingsChoice(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
 ) {
+    val effects = LocalCandyBrowserChromeEffects.current
     val chevronRotation by animateFloatAsState(
         targetValue = if (expanded) 180f else 0f,
-        animationSpec = spring(dampingRatio = 0.72f, stiffness = 620f),
+        animationSpec = if (effects.reducesMotion()) snap() else spring(dampingRatio = 0.72f, stiffness = 620f),
         label = "Selection indicator",
     )
     Surface(
@@ -180,7 +188,7 @@ fun SettingsChoice(
         enabled = enabled,
         modifier = modifier.fillMaxWidth().settingsSearchTarget(title),
         shape = MaterialTheme.shapes.large,
-        color = containerColor,
+        color = if (effects.usesGroupedSettings) MaterialTheme.colorScheme.surfaceContainer else containerColor,
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 18.dp, vertical = 14.dp),
@@ -206,9 +214,9 @@ fun SettingsChoice(
             }
             Spacer(Modifier.width(16.dp))
             Surface(
-                modifier = Modifier.size(42.dp),
+                modifier = Modifier.size(if (effects.usesGroupedSettings) 28.dp else 42.dp),
                 shape = MaterialTheme.shapes.medium,
-                color = MaterialTheme.colorScheme.secondaryContainer,
+                color = if (effects.usesGroupedSettings) Color.Transparent else MaterialTheme.colorScheme.secondaryContainer,
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
@@ -217,7 +225,7 @@ fun SettingsChoice(
                         modifier = Modifier
                             .size(24.dp)
                             .graphicsLayer { rotationZ = chevronRotation },
-                        tint = MaterialTheme.colorScheme.onSecondaryContainer.copy(
+                        tint = (if (effects.usesGroupedSettings) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSecondaryContainer).copy(
                             alpha = if (enabled) 1f else 0.38f,
                         ),
                     )
@@ -266,11 +274,23 @@ fun SettingsSwitch(
     onCheckedChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val effects = LocalCandyBrowserChromeEffects.current
     Row(
         modifier = modifier
             .fillMaxWidth()
             .settingsSearchTarget(title)
-            .clickable(enabled = enabled) { onCheckedChange(!checked) }
+            .then(
+                if (effects.usesGroupedSettings) {
+                    Modifier.toggleable(
+                        value = checked,
+                        enabled = enabled,
+                        role = Role.Switch,
+                        onValueChange = onCheckedChange,
+                    )
+                } else {
+                    Modifier.clickable(enabled = enabled) { onCheckedChange(!checked) }
+                },
+            )
             .padding(vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -293,7 +313,7 @@ fun SettingsSwitch(
             )
         }
         Spacer(Modifier.width(12.dp))
-        Switch(
+        effects.settingsToggle(
             checked = checked,
             enabled = enabled,
             onCheckedChange = onCheckedChange,

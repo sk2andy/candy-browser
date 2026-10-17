@@ -60,6 +60,22 @@ object BrowserMenuBottomSheetToolbarRules {
         )
     }
 
+    fun assign(
+        layout: BrowserMenuLayout,
+        slotIndex: Int,
+        entry: BrowserMenuEntry?,
+    ): BrowserMenuLayout {
+        val updated = update(layout, slotIndex, entry)
+        if (slotIndex !in 0 until SlotCount || entry == null || entry !in availableEntries()) return updated
+        val location = when (BrowserMenuLayoutRules.location(updated, entry)) {
+            BrowserMenuLocation.Nowhere -> BrowserMenuLocation.Tab
+            BrowserMenuLocation.TabSwitcher -> BrowserMenuLocation.Both
+            BrowserMenuLocation.Tab -> BrowserMenuLocation.Tab
+            BrowserMenuLocation.Both -> BrowserMenuLocation.Both
+        }
+        return BrowserMenuLayoutRules.update(updated, entry, location)
+    }
+
     fun toWireValue(entries: List<BrowserMenuEntry?>): String =
         normalize(entries).joinToString(",") { entry -> entry?.stableId.orEmpty() }
 }

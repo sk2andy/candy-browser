@@ -4,6 +4,8 @@ struct CandyBrowserChrome: ViewModifier {
     let cornerRadius: CGFloat
     let interactive: Bool
 
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+
     init(cornerRadius: CGFloat = 24, interactive: Bool = true) {
         self.cornerRadius = cornerRadius
         self.interactive = interactive
@@ -15,7 +17,9 @@ struct CandyBrowserChrome: ViewModifier {
 
     @ViewBuilder
     func body(content: Content) -> some View {
-        if #available(iOS 26.0, *) {
+        if reduceTransparency {
+            content.background(Color(uiColor: .secondarySystemBackground), in: shape)
+        } else if #available(iOS 26.0, *) {
             content
                 .glassEffect(.regular.interactive(interactive), in: shape)
         } else {

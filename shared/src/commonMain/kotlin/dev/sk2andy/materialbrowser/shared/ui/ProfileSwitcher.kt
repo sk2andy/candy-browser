@@ -6,6 +6,7 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -65,6 +66,7 @@ data class BrowserViewportProfile(
     val syncedIconEmoji: String? = null,
     val syncedIconAccentHue: Int? = null,
     val isSyncLinked: Boolean = false,
+    val canDelete: Boolean = false,
 )
 
 object ProfileSwitcherTestTags {
@@ -90,8 +92,9 @@ fun ProfileSwitcher(
     addProfileDescription: String = "Profil hinzufügen",
     containerColor: Color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.88f),
     addIcon: @Composable (Boolean) -> Unit = { isEnabled ->
-        Icon(
-            imageVector = Icons.Default.Add,
+        LocalCandyBrowserChromeEffects.current.icon(
+            symbol = "plus",
+            fallback = Icons.Default.Add,
             contentDescription = addProfileDescription,
             tint = if (isEnabled) {
                 MaterialTheme.colorScheme.primary
@@ -101,11 +104,13 @@ fun ProfileSwitcher(
         )
     },
 ) {
+    val effects = LocalCandyBrowserChromeEffects.current
+    val reduceMotion = effects.reducesMotion()
     val scrollState = rememberScrollState()
     val activeIndex = profiles.indexOfFirst { it.id == activeProfileId }.coerceAtLeast(0)
     val indicatorSlotOffset by animateDpAsState(
         targetValue = (activeIndex * PROFILE_SLOT_WIDTH).dp,
-        animationSpec = spring(dampingRatio = 0.72f, stiffness = 430f),
+        animationSpec = if (reduceMotion) snap() else spring(dampingRatio = 0.72f, stiffness = 430f),
         label = "profile-indicator-offset",
     )
     BoxWithConstraints(
@@ -132,16 +137,17 @@ fun ProfileSwitcher(
                 else -> scrollState.value
             }.coerceIn(0, scrollState.maxValue)
             if (targetScroll != scrollState.value) {
-                scrollState.animateScrollTo(targetScroll)
+                if (reduceMotion) scrollState.scrollTo(targetScroll) else scrollState.animateScrollTo(targetScroll)
             }
         }
-        Surface(
+        effects.floatingSurface(
             modifier = Modifier
                 .testTag(ProfileSwitcherTestTags.Switcher)
                 .width(barWidth)
                 .height(60.dp),
             shape = MaterialTheme.shapes.extraLarge,
             color = containerColor,
+            contentColor = MaterialTheme.colorScheme.onSurface,
             tonalElevation = 6.dp,
             shadowElevation = 4.dp,
         ) {
@@ -178,17 +184,17 @@ fun ProfileSwitcher(
                                         isSelected -> MaterialTheme.colorScheme.primaryContainer
                                         else -> MaterialTheme.colorScheme.surfaceContainerHighest
                                     },
-                                    animationSpec = tween(durationMillis = 180),
+                                    animationSpec = tween(durationMillis = CandyPresentationRules.animationDuration(180, reduceMotion)),
                                     label = "profile-container-color",
                                 )
                                 val profileElevation by animateDpAsState(
                                     targetValue = if (isSelected) 2.dp else 0.dp,
-                                    animationSpec = tween(durationMillis = 180),
+                                    animationSpec = tween(durationMillis = CandyPresentationRules.animationDuration(180, reduceMotion)),
                                     label = "profile-container-elevation",
                                 )
                                 val profileContainerSize by animateDpAsState(
                                     targetValue = if (isSelected) 48.dp else 44.dp,
-                                    animationSpec = spring(
+                                    animationSpec = if (reduceMotion) snap() else spring(
                                         dampingRatio = 0.72f,
                                         stiffness = 430f,
                                     ),
@@ -196,7 +202,7 @@ fun ProfileSwitcher(
                                 )
                                 val scale by animateFloatAsState(
                                     targetValue = if (isSelected) 1.02f else 0.92f,
-                                    animationSpec = spring(
+                                    animationSpec = if (reduceMotion) snap() else spring(
                                         dampingRatio = 0.68f,
                                         stiffness = 540f,
                                     ),
@@ -234,7 +240,8 @@ fun ProfileSwitcher(
                                     AnimatedContent(
                                         targetState = profile.syncedIconEmoji ?: profile.emoji,
                                         transitionSpec = {
-                                            fadeIn(tween(150)) togetherWith fadeOut(tween(90))
+                                            fadeIn(tween(CandyPresentationRules.animationDuration(150, reduceMotion))) togetherWith
+                                                fadeOut(tween(CandyPresentationRules.animationDuration(90, reduceMotion)))
                                         },
                                         label = "profile-emoji",
                                     ) { emoji ->

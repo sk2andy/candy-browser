@@ -4,13 +4,6 @@ import dev.sk2andy.materialbrowser.browser.BrowserProfile
 import dev.sk2andy.materialbrowser.browser.BrowserTab
 import dev.sk2andy.materialbrowser.browser.TabStack
 import dev.sk2andy.materialbrowser.browser.isFreshBlankTab
-import java.time.DayOfWeek
-import java.time.Instant
-import java.time.LocalDate
-import java.time.LocalTime
-import java.time.ZoneId
-import java.time.ZonedDateTime
-import java.time.temporal.TemporalAdjusters
 
 data class SnoozedTab(
     val tab: BrowserTab,
@@ -37,42 +30,12 @@ enum class SnoozePreset {
     NextWeek,
 }
 
-internal object SnoozeTimeRules {
-    private val MORNING = LocalTime.of(9, 0)
-
-    fun wakeAtMillis(
-        preset: SnoozePreset,
-        nowMillis: Long,
-        zoneId: ZoneId,
-    ): Long {
-        val now = Instant.ofEpochMilli(nowMillis).atZone(zoneId)
-        val wakeAt = when (preset) {
-            SnoozePreset.LaterToday -> now.plusHours(3).takeIf {
-                it.toLocalDate() == now.toLocalDate()
-            } ?: localWakeAt(now.toLocalDate(), LocalTime.MAX, zoneId)
-            SnoozePreset.Tomorrow -> localWakeAt(now.toLocalDate().plusDays(1), MORNING, zoneId)
-            SnoozePreset.NextWeek -> localWakeAt(
-                now.toLocalDate().with(TemporalAdjusters.next(DayOfWeek.MONDAY)),
-                MORNING,
-                zoneId,
-            )
-        }
-        return wakeAt.toInstant().toEpochMilli()
-    }
-
-    fun customWakeAtMillis(date: LocalDate, time: LocalTime, zoneId: ZoneId): Long =
-        localWakeAt(date, time, zoneId).toInstant().toEpochMilli()
-
-    private fun localWakeAt(date: LocalDate, time: LocalTime, zoneId: ZoneId): ZonedDateTime =
-        date.atTime(time).atZone(zoneId)
-}
-
-internal object SnoozeRules {
+object SnoozeRules {
     fun canSnooze(tab: BrowserTab, wakeAtMillis: Long, nowMillis: Long): Boolean =
         !tab.isIncognito && wakeAtMillis > nowMillis
 }
 
-internal object SnoozeMutationRules {
+object SnoozeMutationRules {
     fun rescheduled(
         tabs: List<SnoozedTab>,
         tabId: String,
@@ -91,7 +54,7 @@ internal object SnoozeMutationRules {
             ?.filterNot { it.tab.id == tabId }
 }
 
-internal data class SnoozeUndoResult(
+data class SnoozeUndoResult(
     val tabs: List<BrowserTab>,
     val selectedTabId: String,
     val snoozedTabs: List<SnoozedTab>,
@@ -99,7 +62,7 @@ internal data class SnoozeUndoResult(
     val removedReplacementTabId: String?,
 )
 
-internal object SnoozeUndoRules {
+object SnoozeUndoRules {
     fun undo(
         tabs: List<BrowserTab>,
         selectedTabId: String,
@@ -155,18 +118,18 @@ internal object SnoozeUndoRules {
     }
 }
 
-internal data class SnoozeRestoreResult(
+data class SnoozeRestoreResult(
     val tabs: List<BrowserTab>,
     val completedTabIds: Set<String>,
     val restoredTabIds: Set<String>,
 )
 
-internal data class SnoozeStartupSnapshot(
+data class SnoozeStartupSnapshot(
     val tabs: List<BrowserTab>,
     val snoozedTabs: List<SnoozedTab>,
 )
 
-internal object SnoozeRestoreRules {
+object SnoozeRestoreRules {
     fun settleStartupRestore(
         originalTabs: List<BrowserTab>,
         originalSnoozedTabs: List<SnoozedTab>,

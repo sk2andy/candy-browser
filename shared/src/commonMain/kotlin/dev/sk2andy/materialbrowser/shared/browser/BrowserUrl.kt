@@ -58,6 +58,26 @@ object BrowserUrlRules {
 
     fun normalizeHttpUrl(value: String): BrowserUrl? = parseHttpUrl(value)?.let(::BrowserUrl)
 
+    fun httpHost(value: String): String? {
+        val normalized = normalizeHttpUrl(value)?.value ?: return null
+        return normalized.substringAfter("://").substringBefore('/').substringBefore('?')
+            .substringBefore('#').hostWithoutPort()
+    }
+
+    /** Shared library identity ignores fragments and default ports, preserving path/query case. */
+    fun httpUrlKey(value: String): String? {
+        val normalized = normalizeHttpUrl(value.trim())?.value ?: return null
+        val scheme = normalized.substringBefore("://")
+        val rest = normalized.substringAfter("://").substringBefore('#')
+        val authority = rest.substringBefore('/').substringBefore('?')
+        val defaultPort = if (scheme == "https") ":443" else ":80"
+        val host = authority.removeSuffix(defaultPort)
+        val path = rest.removePrefix(authority).let { suffix ->
+            if (suffix.isEmpty() || suffix.startsWith('?')) "/$suffix" else suffix
+        }
+        return "$scheme://$host$path"
+    }
+
     fun encodeSearchQuery(value: String): String = value.percentEncoded()
 
     private fun parseHttpUrl(value: String): String? {

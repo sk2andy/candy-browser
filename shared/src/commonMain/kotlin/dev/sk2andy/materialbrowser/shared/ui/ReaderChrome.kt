@@ -13,16 +13,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -45,9 +39,10 @@ internal fun ReaderPill(
     modifier: Modifier = Modifier,
 ) {
     val expanded = mode == ReaderChromeMode.Expanded
-    Surface(
+    val effects = LocalCandyBrowserChromeEffects.current
+    effects.floatingSurface(
         modifier = modifier
-            .animateContentSize()
+            .then(if (effects.reducesMotion()) Modifier else Modifier.animateContentSize())
             .widthIn(max = 640.dp)
             .then(if (expanded) Modifier.fillMaxWidth() else Modifier)
             .testTag(ReaderStudioTestTags.Pill),
@@ -73,7 +68,11 @@ internal fun ReaderPill(
                 onClick = onSettings,
                 modifier = Modifier.size(48.dp).testTag(ReaderStudioTestTags.Settings),
             ) {
-                Icon(Icons.Filled.MoreVert, contentDescription = resources.text(ReaderStudioLabel.Settings))
+                effects.icon(
+                    "ellipsis",
+                    Icons.Filled.MoreVert,
+                    contentDescription = resources.text(ReaderStudioLabel.Settings),
+                )
             }
         }
     }
@@ -90,7 +89,7 @@ internal fun ReaderSettingsSheet(
     onOpenOriginal: () -> Unit,
     controls: @Composable () -> Unit,
 ) {
-    ModalBottomSheet(
+    CandyModalSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
         containerColor = colors.article,
@@ -108,8 +107,8 @@ internal fun ReaderSettingsSheet(
                 style = MaterialTheme.typography.headlineSmall,
             )
             controls()
-            TextButton(onClick = onHide, modifier = Modifier.testTag(ReaderStudioTestTags.Hide),
-                colors = ButtonDefaults.textButtonColors(contentColor = colors.accent)) {
+            CandyActionButton(onClick = onHide, modifier = Modifier.testTag(ReaderStudioTestTags.Hide),
+                contentColor = colors.accent) {
                 Text(resources.text(ReaderStudioLabel.HideControls))
             }
             Text(
@@ -118,17 +117,19 @@ internal fun ReaderSettingsSheet(
                 color = colors.muted,
             )
             if (onLibrary != null) {
-                TextButton(onClick = onLibrary, modifier = Modifier.testTag(ReaderStudioTestTags.Library),
-                    colors = ButtonDefaults.textButtonColors(contentColor = colors.accent)) {
+                CandyActionButton(onClick = onLibrary, modifier = Modifier.testTag(ReaderStudioTestTags.Library),
+                    contentColor = colors.accent) {
                     Text(resources.text(ReaderStudioLabel.OfflineLibrary))
                 }
             }
-            TextButton(onClick = onOpenOriginal, colors = ButtonDefaults.textButtonColors(contentColor = colors.accent)) {
+            CandyActionButton(onClick = onOpenOriginal, contentColor = colors.accent) {
                 Text(resources.text(ReaderStudioLabel.Original))
             }
-            Button(
+            CandyActionButton(
                 onClick = onDismiss,
-                colors = ButtonDefaults.buttonColors(containerColor = colors.accent, contentColor = colors.onAccent),
+                prominent = true,
+                containerColor = colors.accent,
+                contentColor = colors.onAccent,
                 modifier = Modifier.fillMaxWidth().testTag(ReaderStudioTestTags.Continue),
             ) {
                 Text(resources.text(ReaderStudioLabel.ContinueReading))

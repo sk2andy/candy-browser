@@ -1,5 +1,7 @@
 package dev.sk2andy.materialbrowser.reader
 
+import dev.sk2andy.materialbrowser.shared.browser.BrowserUrlRules
+
 interface ReaderLibraryDataSource {
     fun load(isPrivate: Boolean, onLoaded: (ReaderLibraryState) -> Unit)
 
@@ -55,6 +57,19 @@ data class ReaderLibraryState(
 
 object ReaderLibraryRules {
     const val MAX_SNAPSHOTS = 20
+    const val MAX_PROGRESS_ENTRIES = 500
+
+    fun snapshotForSourceUrl(
+        state: ReaderLibraryState,
+        sourceUrl: String,
+        isPrivate: Boolean,
+    ): ReaderSnapshot? {
+        if (isPrivate) return null
+        val key = BrowserUrlRules.httpUrlKey(sourceUrl) ?: return null
+        return state.snapshots.firstOrNull {
+            !it.isPrivate && BrowserUrlRules.httpUrlKey(it.document.sourceUrl) == key
+        }
+    }
 
     fun visibleState(state: ReaderLibraryState, isPrivate: Boolean): ReaderLibraryState =
         if (isPrivate) ReaderLibraryState() else state
@@ -67,7 +82,7 @@ object ReaderLibraryRules {
         state
     } else {
         state.copy(
-            settings = settings.copy(fontScale = settings.fontScale.coerceIn(0.8f, 1.6f)),
+            settings = settings.copy(fontScale = settings.fontScale.takeIf(Float::isFinite)?.coerceIn(0.8f, 1.6f) ?: 1f),
         )
     }
 
@@ -80,7 +95,7 @@ object ReaderLibraryRules {
         state
     } else {
         state.copy(
-            progressByUrl = (state.progressByUrl + (sourceUrl to progress.coerceIn(0f, 1f)))
+            progressByUrl = (state.progressByUrl + (sourceUrl to (progress.takeIf(Float::isFinite)?.coerceIn(0f, 1f) ?: 0f)))
                 .entries
                 .toList()
                 .takeLast(MAX_PROGRESS_ENTRIES)
@@ -129,7 +144,6 @@ object ReaderLibraryRules {
         alignment == ReaderTextAlignment.Justified &&
             (kind == ReaderBlockKind.Paragraph || kind == ReaderBlockKind.ListItem)
 
-    private const val MAX_PROGRESS_ENTRIES = 500
 }
 
 object ReaderStorageBudget {

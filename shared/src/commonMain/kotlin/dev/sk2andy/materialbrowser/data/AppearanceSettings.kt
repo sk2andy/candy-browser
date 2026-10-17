@@ -67,6 +67,18 @@ data class AppearanceSettings(
     }
 
     companion object {
+        fun fromCorePreferences(
+            appearanceModeStableId: String?,
+            animationsEnabled: Boolean,
+            webContentFontSizePercent: Int,
+        ): AppearanceSettings = AppearanceSettings(
+            appearanceMode = BrowserAppearanceMode.fromStableId(appearanceModeStableId).let { mode ->
+                if (mode == BrowserAppearanceMode.Amoled) BrowserAppearanceMode.Dark else mode
+            },
+            animationsEnabled = animationsEnabled,
+            webContentFontSizePercent = webContentFontSizePercent,
+        ).normalized()
+
         const val DEFAULT_WEB_CONTENT_FONT_SIZE_PERCENT = 100
         const val MIN_WEB_CONTENT_FONT_SIZE_PERCENT = 50
         const val MAX_WEB_CONTENT_FONT_SIZE_PERCENT = 200

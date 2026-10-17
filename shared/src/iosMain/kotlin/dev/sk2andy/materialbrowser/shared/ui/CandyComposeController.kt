@@ -8,7 +8,10 @@ import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.interop.UIKitView
+import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.viewinterop.UIKitView
+import androidx.compose.ui.viewinterop.UIKitInteropInteractionMode
+import androidx.compose.ui.viewinterop.UIKitInteropProperties
 import androidx.compose.ui.window.ComposeUIViewController
 import kotlinx.cinterop.ExperimentalForeignApi
 import platform.UIKit.UIImage
@@ -31,7 +34,8 @@ class IosBrowserViewportState(
         private set
 
     fun updateViewport(value: UIView) {
-        if (viewport !== value) {
+        // ObjC peers can acquire different Kotlin wrappers across the Swift boundary.
+        if (!viewport.isEqual(value)) {
             viewport = value
             viewportVersion += 1
         }
@@ -57,7 +61,7 @@ class IosBrowserViewportState(
     internal fun preview(tabId: String): UIImage? = previews[tabId]
 }
 
-@OptIn(ExperimentalForeignApi::class)
+@OptIn(ExperimentalForeignApi::class, ExperimentalComposeUiApi::class)
 class CandyComposeControllerFactory {
     fun create(
         state: IosBrowserViewportState,
@@ -74,6 +78,10 @@ class CandyComposeControllerFactory {
                         UIKitView(
                             factory = { state.viewport },
                             modifier = Modifier.fillMaxSize(),
+                            properties = UIKitInteropProperties(
+                                interactionMode = UIKitInteropInteractionMode.NonCooperative,
+                                isNativeAccessibilityEnabled = true,
+                            ),
                         )
                     }
                 },
@@ -93,8 +101,10 @@ class CandyComposeControllerFactory {
                                 },
                                 update = { imageView -> imageView.image = preview },
                                 modifier = modifier,
-                                interactive = false,
-                                accessibilityEnabled = false,
+                                properties = UIKitInteropProperties(
+                                    interactionMode = null,
+                                    isNativeAccessibilityEnabled = false,
+                                ),
                             )
                         }
                     }

@@ -94,11 +94,26 @@ object TabOverviewHeroRules {
     fun coverflowCardLayout(
         viewportWidth: Float,
         viewportHeight: Float,
+        reservedHeight: Float = 0f,
     ): CoverflowCardLayout = BrowserTabOverviewLayoutRules.heroCard(
         viewportWidth = viewportWidth,
         viewportHeight = viewportHeight,
     ).let { layout ->
-        CoverflowCardLayout(width = layout.width, aspectRatio = layout.aspectRatio)
+        val boundedHeight = if (
+            reservedHeight.isFinite() && reservedHeight > 0f &&
+            viewportHeight.isFinite() && viewportHeight > 0f && layout.width > 0f
+        ) {
+            minOf(
+                layout.width / layout.aspectRatio,
+                (viewportHeight - reservedHeight).coerceAtLeast(1f),
+            )
+        } else {
+            null
+        }
+        CoverflowCardLayout(
+            width = layout.width,
+            aspectRatio = boundedHeight?.let { layout.width / it } ?: layout.aspectRatio,
+        )
     }
 
     fun cardPreviewLayout(

@@ -8,6 +8,15 @@ import kotlin.test.assertNull
 
 class BrowserUrlRulesTest {
     @Test
+    fun `library URL identity ignores fragments and default ports but preserves path and query`() {
+        assertEquals("https://example.com/", BrowserUrlRules.httpUrlKey("HTTPS://EXAMPLE.COM:443#part"))
+        assertEquals("http://example.com/", BrowserUrlRules.httpUrlKey("http://example.com:80"))
+        assertEquals("https://example.com:8443/Path?Query=Case", BrowserUrlRules.httpUrlKey("https://example.com:8443/Path?Query=Case#part"))
+        assertEquals("[::1]", BrowserUrlRules.httpHost("https://[::1]:8443/path"))
+        assertNull(BrowserUrlRules.httpHost("https://user:password@example.com/"))
+    }
+
+    @Test
     fun explicitWebUrlIsNormalized() {
         val result = BrowserUrlRules.resolve("HTTPS://Example.COM/path?q=1")
 
