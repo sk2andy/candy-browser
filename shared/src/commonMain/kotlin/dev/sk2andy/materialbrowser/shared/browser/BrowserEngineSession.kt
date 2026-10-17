@@ -122,6 +122,7 @@ class BrowserSessionController(
 
         sessions[session.tabId] = session
         if (tab.address.isNotBlank()) {
+            updateTabLoading(tabId = tab.id, isLoading = true)
             session.execute(BrowserEngineCommands.load(tab.address))
         }
         return true
@@ -133,6 +134,40 @@ class BrowserSessionController(
         val nextTabIds = nextState.tabs.map(BrowserTabState::id).toSet()
         (previousTabIds - nextTabIds).forEach(::closeSession)
         return nextState
+    }
+
+    fun newPrivateTab(): BrowserTabsState = tabsController.newPrivateTab()
+
+    fun snoozeCandidate(tabId: String): dev.sk2andy.materialbrowser.browser.BrowserTab? =
+        tabsController.snoozeCandidate(tabId)
+
+    fun canSnoozeTab(tabId: String): Boolean = snoozeCandidate(tabId) != null
+
+    fun snoozeTab(tabId: String, wakeAtMillis: Long, nowMillis: Long): Boolean {
+        if (!tabsController.snoozeTab(tabId, wakeAtMillis, nowMillis)) return false
+        closeSession(tabId)
+        return true
+    }
+
+    fun rescheduleSnoozedTab(tabId: String, wakeAtMillis: Long, nowMillis: Long): Boolean =
+        tabsController.rescheduleSnoozedTab(tabId, wakeAtMillis, nowMillis)
+
+    fun openSnoozedTabNow(tabId: String, nowMillis: Long): Boolean =
+        tabsController.openSnoozedTabNow(tabId, nowMillis)
+
+    fun deleteSnoozedTab(tabId: String): Boolean = tabsController.deleteSnoozedTab(tabId)
+
+    fun restoreDueSnoozedTabs(nowMillis: Long): List<String> =
+        tabsController.restoreDueSnoozedTabs(nowMillis)
+
+    fun setTabPinned(tabId: String, pinned: Boolean): BrowserTabsState =
+        tabsController.setTabPinned(tabId, pinned)
+
+    fun persistenceSnapshot(): BrowserSessionSnapshot = BrowserSessionPersistenceRules.snapshot(state)
+
+    fun restoreSession(snapshot: BrowserSessionSnapshot): Boolean {
+        if (sessions.isNotEmpty()) return false
+        return tabsController.restoreSession(snapshot)
     }
 
     fun selectAdjacentTab(target: BrowserTabSwitchTarget): BrowserTabsState =
@@ -162,6 +197,29 @@ class BrowserSessionController(
         enabled = enabled,
         isolationSupported = isolationSupported,
     )
+
+    fun closeAllTabs(): BrowserTabsState {
+        val previousIds = state.tabs.mapTo(hashSetOf(), BrowserTabState::id)
+        val next = tabsController.closeAllTabs()
+        (previousIds - next.tabs.mapTo(hashSetOf(), BrowserTabState::id)).forEach(::closeSession)
+        return next
+    }
+
+    fun moveTabToProfile(tabId: String, profileId: String): BrowserTabsState {
+        val previous = state.tabs.firstOrNull { it.id == tabId }
+        val next = tabsController.moveTabToProfile(tabId, profileId)
+        if (previous?.profileId != next.tabs.firstOrNull { it.id == tabId }?.profileId) closeSession(tabId)
+        return next
+    }
+
+    fun deleteProfile(profileId: String): BrowserTabsState {
+        val previous = state
+        val next = tabsController.deleteProfile(profileId)
+        if (next != previous) {
+            previous.tabs.filter { it.profileId == profileId }.forEach { closeSession(it.id) }
+        }
+        return next
+    }
 
     fun selectProfile(profileId: String): BrowserTabsState = tabsController.selectProfile(profileId)
 

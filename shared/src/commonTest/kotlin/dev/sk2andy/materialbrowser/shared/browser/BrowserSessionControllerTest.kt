@@ -18,6 +18,44 @@ class BrowserSessionControllerTest {
     }
 
     @Test
+    fun `restored navigation shows loading before engine readiness callback`() {
+        val controller = BrowserSessionController()
+        val tab = BrowserTabState(id = "tab-1", address = "https://example.com", title = "Saved")
+        assertTrue(controller.restoreSession(BrowserSessionSnapshot(tabs = listOf(tab))))
+        val session = CallbackBrowserEngineSessionPort(tab.id) {
+            assertTrue(controller.state.tabs.single().isLoading)
+        }
+
+        assertTrue(controller.attach(session))
+
+        assertTrue(controller.state.tabs.single().isLoading)
+    }
+
+    @Test
+    fun `synchronous restored load failure clears loading during attachment`() {
+        val controller = BrowserSessionController()
+        val tab = BrowserTabState(id = "tab-1", address = "https://example.com", title = "Saved")
+        assertTrue(controller.restoreSession(BrowserSessionSnapshot(tabs = listOf(tab))))
+        val session = CallbackBrowserEngineSessionPort(tab.id) {
+            controller.onEngineEvent(
+                BrowserEngineEvent(
+                    tabId = tab.id,
+                    type = BrowserEngineEventType.NavigationFailed,
+                    address = tab.address,
+                    title = null,
+                    canGoBack = false,
+                    canGoForward = false,
+                    failureDescription = "Unavailable",
+                ),
+            )
+        }
+
+        assertTrue(controller.attach(session))
+
+        assertFalse(controller.state.tabs.single().isLoading)
+    }
+
+    @Test
     fun `navigation command and events update shared tab state`() {
         val controller = BrowserSessionController()
         val session = FakeBrowserEngineSessionPort(tabId = "tab-1")

@@ -407,7 +407,7 @@ private fun SheetControlGrid(
                         ),
                         contentColor = when {
                             !item.enabled -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f)
-                            item.checked == true -> MaterialTheme.colorScheme.onSecondary
+                            item.checked == true -> effects.selectedToggleContentColor()
                             else -> MaterialTheme.colorScheme.onSurface
                         },
                     ) {

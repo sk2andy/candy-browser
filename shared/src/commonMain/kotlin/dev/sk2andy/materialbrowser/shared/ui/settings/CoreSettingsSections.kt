@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -19,6 +18,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import dev.sk2andy.materialbrowser.browser.PageTranslationProvider
 import dev.sk2andy.materialbrowser.data.TabOverviewMode
+import dev.sk2andy.materialbrowser.shared.ui.LocalCandyBrowserChromeEffects
 import kotlin.math.roundToInt
 
 data class TabOverviewSettingsStrings(
@@ -97,13 +97,14 @@ fun TabDismissResistanceSettings(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            Slider(
+            LocalCandyBrowserChromeEffects.current.settingsSlider(
                 value = value,
                 onValueChange = { value = it },
                 onValueChangeFinished = { onValueChanged(value.roundToInt()) },
                 enabled = enabled,
                 valueRange = 10f..90f,
                 steps = 7,
+                backgroundColor = containerColor,
             )
         }
     }

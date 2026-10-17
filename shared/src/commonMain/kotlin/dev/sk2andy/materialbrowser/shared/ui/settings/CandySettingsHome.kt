@@ -2,18 +2,17 @@ package dev.sk2andy.materialbrowser.shared.ui.settings
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Extension
 import androidx.compose.material.icons.filled.Face
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Build
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -22,17 +21,24 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import dev.sk2andy.materialbrowser.data.TabOverviewMode
 import dev.sk2andy.materialbrowser.browser.PageTranslationProvider
 import dev.sk2andy.materialbrowser.browser.SearchEngine
-import dev.sk2andy.materialbrowser.shared.ui.BrowserViewportTopping
-import dev.sk2andy.materialbrowser.shared.topping.ToppingFrameScope
+import dev.sk2andy.materialbrowser.data.TabOverviewMode
+import dev.sk2andy.materialbrowser.data.AppearanceSettings
 import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuEntry
 import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuLayout
 import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuLocation
+import dev.sk2andy.materialbrowser.shared.topping.ToppingFrameScope
+import dev.sk2andy.materialbrowser.shared.ui.BrowserViewportTopping
+import dev.sk2andy.materialbrowser.shared.ui.LocalCandyBrowserChromeEffects
 import dev.sk2andy.materialbrowser.ui.SettingsDestination
 
 internal object CandySettingsRouteRules {
+    fun isVisible(destination: SettingsDestination): Boolean =
+        destination != SettingsDestination.Player &&
+            destination != SettingsDestination.Downloads &&
+            destination != SettingsDestination.SiteCapsules
+
     fun isEnabled(destination: SettingsDestination): Boolean =
         destination == SettingsDestination.Appearance ||
             destination == SettingsDestination.Search ||
@@ -109,8 +115,23 @@ internal fun CandySettingsHomeIcon(
         SettingsHomeIcon.DeveloperOptions -> Icons.Filled.Build
         SettingsHomeIcon.AboutLegal -> Icons.Filled.Info
     }
-    Icon(
-        imageVector = imageVector,
+    LocalCandyBrowserChromeEffects.current.icon(
+        symbol = when (icon) {
+            SettingsHomeIcon.Search -> "magnifyingglass"
+            SettingsHomeIcon.Sync -> "arrow.triangle.2.circlepath"
+            SettingsHomeIcon.TabsAndGestures -> "square.on.square"
+            SettingsHomeIcon.Appearance -> "paintpalette"
+            SettingsHomeIcon.Browser -> "globe"
+            SettingsHomeIcon.Player -> "play.rectangle"
+            SettingsHomeIcon.Downloads -> "arrow.down.circle"
+            SettingsHomeIcon.Userscripts -> "wand.and.stars"
+            SettingsHomeIcon.FirefoxExtensions -> "puzzlepiece.extension"
+            SettingsHomeIcon.SiteCapsules -> "shippingbox"
+            SettingsHomeIcon.ProtectionAndData -> "hand.raised"
+            SettingsHomeIcon.DeveloperOptions -> "hammer"
+            SettingsHomeIcon.AboutLegal -> "info.circle"
+        },
+        fallback = imageVector,
         contentDescription = null,
         modifier = modifier,
         tint = tint,
@@ -127,11 +148,16 @@ internal fun CandySettingsHome(
     onTabOverviewModeChanged: (TabOverviewMode) -> Unit,
     tabListStartsAtBottom: Boolean,
     onTabListStartsAtBottomChanged: (Boolean) -> Unit,
+    dismissResistancePercent: Int,
+    onDismissResistanceChanged: (Int) -> Unit,
+    appearanceSettings: AppearanceSettings,
+    onAppearanceSettingsChanged: (AppearanceSettings) -> Unit,
     translationProvider: PageTranslationProvider,
     onTranslationProviderChanged: (PageTranslationProvider) -> Unit,
     menuLayout: BrowserMenuLayout,
     menuConfigurableEntries: List<BrowserMenuEntry>,
     onBrowserMenuLocationChanged: (BrowserMenuEntry, BrowserMenuLocation) -> Unit,
+    onBrowserMenuLayoutChanged: (BrowserMenuLayout) -> Unit,
     toppings: List<BrowserViewportTopping>,
     onSaveTopping: (id: String?, source: String) -> Unit,
     toppingSource: (id: String) -> String?,
@@ -154,9 +180,12 @@ internal fun CandySettingsHome(
                 onDismiss = onDismiss,
                 onOpenFirefoxExtensions = null,
                 isDestinationEnabled = CandySettingsRouteRules::isEnabled,
+                isDestinationVisible = CandySettingsRouteRules::isVisible,
             )
 
             SettingsDestination.Appearance -> CandyAppearanceSettingsPage(
+                settings = appearanceSettings,
+                onSettingsChanged = onAppearanceSettingsChanged,
                 onBack = { destination = SettingsDestination.Home },
             )
 
@@ -173,6 +202,8 @@ internal fun CandySettingsHome(
                 onTabOverviewModeChanged = onTabOverviewModeChanged,
                 tabListStartsAtBottom = tabListStartsAtBottom,
                 onTabListStartsAtBottomChanged = onTabListStartsAtBottomChanged,
+                dismissResistancePercent = dismissResistancePercent,
+                onDismissResistanceChanged = onDismissResistanceChanged,
                 onMenuActions = { destination = SettingsDestination.MenuActions },
                 onBack = { destination = SettingsDestination.Home },
             )
@@ -181,6 +212,7 @@ internal fun CandySettingsHome(
                 layout = menuLayout,
                 availableEntries = menuConfigurableEntries,
                 onLocationChanged = onBrowserMenuLocationChanged,
+                onLayoutChanged = onBrowserMenuLayoutChanged,
                 onBack = { destination = SettingsDestination.TabsAndGestures },
             )
 

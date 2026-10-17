@@ -6,13 +6,24 @@ import UIKit
 struct CandyNativeBrowserChrome: View {
     @ObservedObject var browser: BrowserViewModel
 
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.accessibilityReduceMotion) private var systemReduceMotion
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @FocusState private var isAddressFocused: Bool
-    @Namespace private var glassNamespace
     @State private var addressDraft = ""
     @State private var isMenuPresented = false
     @State private var rainbowRotation = 0.0
+    @GestureState private var parkedTouchActive = false
+    @State private var parkedTouchStarted = false
+    @State private var parkedInteractionGeneration = 0
+    @State private var parkedHoldTask: Task<Void, Never>?
+    @State private var parkedHoldRejected = false
+    @State private var parkedLatestTranslation = CGSize.zero
+    @State private var dockDragOrigin = CGSize.zero
+    @State private var dockDragStart: AddressBarDockPosition?
+    @State private var dockDragPosition: AddressBarDockPosition?
+    @State private var normalAnchorReleased = false
+    @State private var normalSnapZoneActive = false
+    @State private var anchorResistance = 0.0
 
     private let horizontalInset: CGFloat = 14
     private let chromeCornerRadius: CGFloat = 20
@@ -20,23 +31,37 @@ struct CandyNativeBrowserChrome: View {
 
     var body: some View {
         if isVisible {
-            ZStack(alignment: .bottom) {
-                if isMenuPresented {
-                    Color.black.opacity(reduceTransparency ? 0.2 : 0.12)
-                        .ignoresSafeArea()
-                        .contentShape(Rectangle())
-                        .onTapGesture(perform: dismissMenu)
-                        .transition(.opacity)
-                }
+            GeometryReader { geometry in
+                ZStack(alignment: .bottom) {
+                    if isMenuPresented {
+                        Color.black.opacity(reduceTransparency ? 0.2 : 0.12)
+                            .ignoresSafeArea()
+                            .contentShape(Rectangle())
+                            .onTapGesture(perform: dismissMenu)
+                            .transition(.opacity)
+                    }
 
-                VStack(spacing: 0) {
-                    Spacer(minLength: 16)
-                    liquidGlassChrome
-                        .padding(.horizontal, horizontalInset)
-                        .padding(.bottom, 6)
+                    liquidGlassChrome(in: geometry.size)
+                        .position(chromeCenter(in: geometry.size))
+                }
+                .coordinateSpace(name: "candy-native-chrome")
+                .animation(chromeAnimation, value: browser.isAddressBarCompact)
+                .animation(chromeAnimation, value: browser.addressBarDockPlacement?.edge)
+                .animation(chromeAnimation, value: browser.addressBarDockPlacement?.verticalFraction)
+                .animation(chromeAnimation, value: isAddressFocused)
+                .onChange(of: parkedTouchActive) { _, active in
+                    guard !active else { return }
+                    let generation = parkedInteractionGeneration
+                    // GestureState may reset before onEnded. Let its drop callback finish first;
+                    // a new interaction invalidates this cancellation fallback.
+                    DispatchQueue.main.async {
+                        guard generation == parkedInteractionGeneration,
+                              !parkedTouchActive, parkedTouchStarted else { return }
+                        cancelParkedInteraction()
+                    }
                 }
             }
-            .transition(.move(edge: .bottom).combined(with: .opacity))
+            .transition(reduceMotion ? .opacity : .move(edge: .bottom).combined(with: .opacity))
             .onAppear(perform: synchronizeAddressDraft)
             .onChange(of: browser.address) { _, _ in
                 guard !isAddressFocused else { return }
@@ -46,6 +71,18 @@ struct CandyNativeBrowserChrome: View {
                 addressDraft = browser.address
                 isAddressFocused = true
             }
+            .onChange(of: isAddressFocused) { _, focused in
+                browser.setAddressBarEditing(focused)
+                if focused {
+                    addressDraft = browser.address
+                } else {
+                    synchronizeAddressDraft()
+                }
+            }
+            .onChange(of: reduceMotion) { _, _ in
+                guard browser.isLoading else { return }
+                startRainbowAnimation()
+            }
             .onChange(of: browser.isLoading) { _, isLoading in
                 guard isLoading else { return }
                 startRainbowAnimation()
@@ -53,110 +90,186 @@ struct CandyNativeBrowserChrome: View {
             .onDisappear {
                 isMenuPresented = false
                 isAddressFocused = false
+                browser.setAddressBarEditing(false)
+                cancelParkedInteraction()
             }
         }
     }
 
+    private var reduceMotion: Bool {
+        systemReduceMotion || !browser.appearanceSettings.animationsEnabled
+    }
+
     private var isVisible: Bool {
-        !browser.isTabOverviewVisible &&
+        !browser.isBrowserMenuVisible &&
+            !browser.isTabOverviewVisible &&
             !browser.isSettingsVisible &&
             !browser.isFavoritesVisible &&
+            !browser.isHistoryVisible &&
+            !browser.isSnoozedTabsVisible &&
+            browser.snoozeTab == nil &&
             browser.readerSnapshot == nil &&
             browser.candyTrailTabId == nil
     }
 
+    private var chromeAnimation: Animation? {
+        reduceMotion ? nil : .spring(
+            response: LiquidGlassPresentationRules.chromeSpringResponse,
+            dampingFraction: LiquidGlassPresentationRules.chromeSpringDamping
+        )
+    }
+
+    private var showsParkedHandle: Bool {
+        browser.canParkAddressBar && !isAddressFocused && !isMenuPresented &&
+            browser.addressBarDockPlacement != nil
+    }
+
+    private var showsCompactBar: Bool {
+        browser.canParkAddressBar && !isAddressFocused && !isMenuPresented &&
+            !showsParkedHandle && browser.isAddressBarCompact
+    }
+
+    private var rememberedDockIsLeft: Bool {
+        browser.lastAddressBarDockPlacement.edge == .left
+    }
+
+    private func chromeSize(in viewport: CGSize) -> CGSize {
+        let availableWidth = max(viewport.width - horizontalInset * 2, 1)
+        if showsParkedHandle { return CGSize(width: 52, height: 48) }
+        if isMenuPresented {
+            return CGSize(width: min(availableWidth, 390), height: min(max(viewport.height - 80, 160), 650))
+        }
+        if showsCompactBar {
+            let textWidth = (displayAddress(browser.address) as NSString).size(
+                withAttributes: [.font: UIFont.preferredFont(forTextStyle: .subheadline)]
+            ).width
+            let width = textWidth + (browser.canParkAddressBar ? 68 : 36)
+            return CGSize(width: min(availableWidth, max(152, min(width, 300))), height: 48)
+        }
+        return CGSize(width: min(availableWidth, 390), height: 56)
+    }
+
+    private func dockVerticalTravel(in viewport: CGSize) -> Double {
+        max(Double(viewport.height - 48 - 12), 0)
+    }
+
+    private func dockOffset(for position: AddressBarDockPosition, in viewport: CGSize) -> AddressBarDockOffset {
+        AddressBarDockingBridge.shared.offsetForPosition(
+            position: position,
+            maxWidth: max(Double(viewport.width - horizontalInset * 2), 0),
+            barWidth: 52,
+            verticalTravel: dockVerticalTravel(in: viewport)
+        )
+    }
+
+    private func chromeCenter(in viewport: CGSize) -> CGPoint {
+        let size = chromeSize(in: viewport)
+        guard showsParkedHandle else {
+            return CGPoint(x: viewport.width / 2, y: max(size.height / 2, viewport.height - 6 - size.height / 2))
+        }
+        let position = dockDragPosition ?? AddressBarDockingBridge.shared.positionForPlacement(
+            placement: browser.addressBarDockPlacement
+        )
+        let offset = dockOffset(for: position, in: viewport)
+        return CGPoint(x: viewport.width / 2 + offset.x, y: viewport.height - 30 + offset.y)
+    }
+
     @ViewBuilder
-    private var liquidGlassChrome: some View {
-        if #available(iOS 26.0, *) {
-            ZStack(alignment: .bottom) {
-                chromeShape
-                    .fill(
-                        Color(uiColor: .systemBackground)
-                            .opacity(isMenuPresented ? 0.14 : 0.08)
-                    )
-                    .allowsHitTesting(false)
-
-                NativeLiquidGlassBackdrop(
-                    reduceTransparency: reduceTransparency,
-                    tintOpacity: CGFloat(
-                        isMenuPresented ?
-                            LiquidGlassPresentationRules.menuTintOpacity :
-                            LiquidGlassPresentationRules.addressTintOpacity
-                    )
-                )
-                    .mask {
-                        chromeShape.fill(
-                            LinearGradient(
-                                stops: [
-                                    .init(color: .clear, location: 0),
-                                    .init(
-                                        color: .white.opacity(0.35),
-                                        location: LiquidGlassPresentationRules.edgeSofteningLocation
-                                    ),
-                                    .init(
-                                        color: .white,
-                                        location: LiquidGlassPresentationRules.edgeClearLocation
-                                    ),
-                                    .init(
-                                        color: .white,
-                                        location: 1 - LiquidGlassPresentationRules.edgeClearLocation
-                                    ),
-                                    .init(
-                                        color: .white.opacity(0.35),
-                                        location: 1 - LiquidGlassPresentationRules.edgeSofteningLocation
-                                    ),
-                                    .init(color: .clear, location: 1),
-                                ],
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
-                        )
-                    }
-                    .allowsHitTesting(false)
-
-                chromeShape
-                    .stroke(
-                        LinearGradient(
-                            colors: [.white.opacity(0.42), .white.opacity(0.08)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        ),
-                        lineWidth: 0.5
-                    )
-                    .allowsHitTesting(false)
-
-                Group {
-                    if isMenuPresented {
-                        menuPanel
-                            .transition(
-                                .opacity.combined(
-                                    with: .scale(scale: 0.975, anchor: .bottomTrailing)
-                                )
-                            )
-                    } else {
-                        addressBar
-                            .transition(
-                                .opacity.combined(
-                                    with: .scale(scale: 0.975, anchor: .bottomTrailing)
-                                )
-                            )
-                    }
-                }
+    private func liquidGlassChrome(in viewport: CGSize) -> some View {
+        let size = chromeSize(in: viewport)
+        Group {
+            if reduceTransparency {
+                chromeContent(in: viewport)
+                    .frame(width: size.width, height: size.height)
+                    .background(Color(uiColor: .secondarySystemBackground), in: chromeShape)
+            } else if #available(iOS 26.0, *) {
+                chromeContent(in: viewport)
+                    .frame(width: size.width, height: size.height)
+                    .glassEffect(.regular.interactive(), in: chromeShape)
+            } else {
+                chromeContent(in: viewport)
+                    .frame(width: size.width, height: size.height)
+                    .modifier(CandyBrowserChrome(cornerRadius: isMenuPresented ? menuCornerRadius : chromeCornerRadius))
             }
-            .frame(height: isMenuPresented ? menuHeight : 56)
-            .frame(maxWidth: 390)
-        } else if isMenuPresented {
+        }
+        .scaleEffect(
+            x: 1 + anchorResistance * 0.06,
+            y: 1 + anchorResistance * 0.12,
+            anchor: .bottom
+        )
+    }
+
+    @ViewBuilder
+    private func chromeContent(in viewport: CGSize) -> some View {
+        if isMenuPresented {
             menuPanel
-                .modifier(CandyBrowserChrome(cornerRadius: menuCornerRadius))
-                .matchedGeometryEffect(id: "candy-browser-chrome", in: glassNamespace)
+        } else if showsParkedHandle {
+            parkedHandle(in: viewport)
+        } else if showsCompactBar {
+            compactAddressBar(in: viewport)
         } else {
-            addressBar
-                .modifier(CandyBrowserChrome(cornerRadius: chromeCornerRadius))
-                .matchedGeometryEffect(id: "candy-browser-chrome", in: glassNamespace)
+            addressBar(in: viewport)
         }
     }
 
-    private var addressBar: some View {
+    private func compactAddressBar(in viewport: CGSize) -> some View {
+        HStack(spacing: 0) {
+            if browser.canParkAddressBar && rememberedDockIsLeft { compactParkButton }
+            Button {
+                withChromeAnimation { browser.restoreAddressBar() }
+            } label: {
+                Text(displayAddress(browser.address))
+                    .font(.subheadline.weight(.medium))
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                    .frame(maxWidth: .infinity, minHeight: 44)
+                    .contentShape(Rectangle())
+            }
+            .accessibilityLabel("Adressleiste einblenden")
+            .accessibilityValue(displayAddress(browser.address))
+            if browser.canParkAddressBar && !rememberedDockIsLeft { compactParkButton }
+        }
+        .buttonStyle(.plain)
+        .padding(.horizontal, 6)
+        .contentShape(chromeShape)
+        .simultaneousGesture(addressDragGesture(in: viewport))
+        .accessibilityIdentifier("address_bar_compact_content")
+    }
+
+    private var compactParkButton: some View {
+        Button {
+            withChromeAnimation { browser.parkAddressBar(onRight: false) }
+        } label: {
+            Image(systemName: rememberedDockIsLeft ? "chevron.left" : "chevron.right")
+                .font(.system(size: 17, weight: .semibold))
+                .frame(width: 44, height: 44)
+                .contentShape(Rectangle())
+        }
+        .accessibilityLabel("Adressleiste am Rand parken")
+        .accessibilityHint(rememberedDockIsLeft ? "Am linken Rand" : "Am rechten Rand")
+        .accessibilityIdentifier("address_bar_park_action")
+    }
+
+    private func parkedHandle(in viewport: CGSize) -> some View {
+        let onLeft = (dockDragPosition?.horizontalFraction ??
+            AddressBarDockingBridge.shared.positionForPlacement(placement: browser.addressBarDockPlacement).horizontalFraction) < 0
+        return Image(systemName: onLeft ? "chevron.right" : "chevron.left")
+            .font(.system(size: 20, weight: .semibold))
+            .frame(width: 52, height: 48)
+            .contentShape(Rectangle())
+            .gesture(parkedHandleGesture(in: viewport))
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("Adressleiste wiederherstellen")
+            .accessibilityHint("Tippen zum Einblenden. Halten und ziehen zum Verschieben.")
+            .accessibilityAddTraits(.isButton)
+            .accessibilityAction { restoreParkedAddressBar() }
+            .accessibilityAction(named: "Tabs anzeigen") { browser.performTabs(.showoverview) }
+            .accessibilityAction(named: "Links parken") { moveParkedHandle(to: .left) }
+            .accessibilityAction(named: "Rechts parken") { moveParkedHandle(to: .right) }
+            .accessibilityIdentifier("address_bar_edge_tab")
+    }
+
+    private func addressBar(in viewport: CGSize) -> some View {
         HStack(spacing: 6) {
             if !isAddressFocused {
                 chromeButton(
@@ -187,6 +300,15 @@ struct CandyNativeBrowserChrome: View {
                     label: "Neuer Tab",
                     action: { browser.performTabs(.newtab) }
                 )
+                .contextMenu {
+                    Button("Neuer Tab", systemImage: "plus") {
+                        browser.performTabs(.newtab)
+                    }
+                    Button("Neuer privater Tab", systemImage: "hand.raised") {
+                        browser.newPrivateTab()
+                    }
+                }
+                .accessibilityHint("Gedrückt halten für einen privaten Tab")
                 chromeButton(
                     systemName: "ellipsis",
                     label: "Mehr Aktionen",
@@ -200,15 +322,21 @@ struct CandyNativeBrowserChrome: View {
         .frame(minHeight: 56)
         .overlay { loadingBorder }
         .contentShape(RoundedRectangle(cornerRadius: chromeCornerRadius, style: .continuous))
-        .simultaneousGesture(addressDragGesture)
+        .simultaneousGesture(addressDragGesture(in: viewport))
         .accessibilityElement(children: .contain)
+    }
+
+    private var selectedTabIsPrivate: Bool {
+        browser.tabCards.first(where: { $0.id == browser.selectedTabId })?.isPrivate ?? false
     }
 
     private var addressField: some View {
         HStack(spacing: 7) {
-            Image(systemName: isAddressFocused ? "magnifyingglass" : "lock.fill")
-                .font(.system(size: isAddressFocused ? 15 : 11, weight: .semibold))
+            Image(systemName: isAddressFocused ? "magnifyingglass" : selectedTabIsPrivate ? "hand.raised.fill" : "globe")
+                .font(.system(size: 15, weight: .semibold))
                 .foregroundStyle(.secondary)
+                .accessibilityLabel(selectedTabIsPrivate ? "Privater Tab" : "Website")
+                .accessibilityHidden(isAddressFocused)
 
             TextField("Adresse oder Suche", text: $addressDraft)
                 .focused($isAddressFocused)
@@ -218,13 +346,6 @@ struct CandyNativeBrowserChrome: View {
                 .keyboardType(.URL)
                 .submitLabel(.go)
                 .onSubmit(performNavigation)
-                .onChange(of: isAddressFocused) { _, focused in
-                    if focused {
-                        addressDraft = browser.address
-                    } else {
-                        synchronizeAddressDraft()
-                    }
-                }
                 .onChange(of: addressDraft) { _, value in
                     guard isAddressFocused, value != browser.address else { return }
                     browser.editAddress(value)
@@ -307,10 +428,6 @@ struct CandyNativeBrowserChrome: View {
             }
         }
         .accessibilityElement(children: .contain)
-    }
-
-    private var menuHeight: CGFloat {
-        min(UIScreen.main.bounds.height - 180, 650)
     }
 
     private var chromeShape: RoundedRectangle {
@@ -479,7 +596,7 @@ struct CandyNativeBrowserChrome: View {
                     .opacity(0)
                 content()
             }
-            .frame(width: 40, height: 44)
+            .frame(width: 44, height: 44)
             .contentShape(Rectangle())
         }
         .accessibilityLabel(label)
@@ -497,7 +614,7 @@ struct CandyNativeBrowserChrome: View {
         }
     }
 
-    private var addressDragGesture: some Gesture {
+    private func addressDragGesture(in viewport: CGSize) -> some Gesture {
         DragGesture(minimumDistance: 12)
             .onEnded { value in
                 let predictedDelta = value.predictedEndTranslation.width - value.translation.width
@@ -505,7 +622,7 @@ struct CandyNativeBrowserChrome: View {
                     horizontal: value.translation.width,
                     vertical: value.translation.height,
                     velocityX: predictedDelta * 10,
-                    viewportWidth: max(UIScreen.main.bounds.width - horizontalInset * 2, 1),
+                    viewportWidth: max(viewport.width - horizontalInset * 2, 1),
                     isAddressEditing: isAddressFocused
                 )
                 browser.handleChromeDrag(
@@ -514,6 +631,142 @@ struct CandyNativeBrowserChrome: View {
                     isAddressEditing: isAddressFocused
                 )
             }
+    }
+
+    private func parkedHandleGesture(in viewport: CGSize) -> some Gesture {
+        DragGesture(minimumDistance: 0, coordinateSpace: .named("candy-native-chrome"))
+            .updating($parkedTouchActive) { _, active, _ in active = true }
+            .onChanged { value in
+                parkedLatestTranslation = value.translation
+                if !parkedTouchStarted {
+                    parkedInteractionGeneration += 1
+                    parkedTouchStarted = true
+                    parkedHoldRejected = false
+                    parkedHoldTask = Task { @MainActor in
+                        try? await Task.sleep(nanoseconds:
+                            UInt64(AddressBarGestureRules.shared.PARKED_REPOSITION_LONG_PRESS_MILLIS) * 1_000_000
+                        )
+                        guard !Task.isCancelled, !parkedHoldRejected,
+                              browser.canParkAddressBar, showsParkedHandle else { return }
+                        let start = AddressBarDockingBridge.shared.positionForPlacement(
+                            placement: browser.addressBarDockPlacement
+                        )
+                        dockDragOrigin = parkedLatestTranslation
+                        dockDragStart = start
+                        dockDragPosition = start
+                        normalAnchorReleased = start.verticalFraction != 0
+                        normalSnapZoneActive = start.verticalFraction == 0
+                        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                    }
+                }
+                if dockDragStart == nil {
+                    if abs(value.translation.width) > 12 || abs(value.translation.height) > 12 {
+                        parkedHoldRejected = true
+                        parkedHoldTask?.cancel()
+                    }
+                    return
+                }
+                updateParkedDrag(translation: value.translation, in: viewport)
+            }
+            .onEnded { value in
+                parkedHoldTask?.cancel()
+                if dockDragStart != nil {
+                    updateParkedDrag(translation: value.translation, in: viewport)
+                }
+                if let start = dockDragStart, let position = dockDragPosition {
+                    let distance = CGSize(
+                        width: value.translation.width - dockDragOrigin.width,
+                        height: value.translation.height - dockDragOrigin.height
+                    )
+                    if abs(distance.width) > 0.01 || abs(distance.height) > 0.01 {
+                        let placement = AddressBarDockingBridge.shared.placementAfterDrop(
+                            position: position,
+                            snapToNormalAnchor: (start.verticalFraction == 0 && !normalAnchorReleased) || normalSnapZoneActive
+                        )
+                        selectionHaptic()
+                        withChromeAnimation {
+                            browser.updateAddressBarDockPlacement(placement)
+                            resetParkedDrag()
+                        }
+                    } else {
+                        withChromeAnimation { resetParkedDrag() }
+                    }
+                } else if value.translation.height <= -CGFloat(AddressBarGestureRules.shared.PARKED_OPEN_TABS_THRESHOLD_DP),
+                          abs(value.translation.height) > abs(value.translation.width) {
+                    cancelParkedInteraction()
+                    isAddressFocused = false
+                    browser.performTabs(.showoverview)
+                } else if abs(value.translation.width) < 12 && abs(value.translation.height) < 12 {
+                    restoreParkedAddressBar()
+                } else {
+                    cancelParkedInteraction()
+                }
+                parkedTouchStarted = false
+            }
+    }
+
+    private func updateParkedDrag(translation: CGSize, in viewport: CGSize) {
+        guard let start = dockDragStart else { return }
+        let dragX = Double(translation.width - dockDragOrigin.width)
+        let dragY = Double(translation.height - dockDragOrigin.height)
+        if start.verticalFraction == 0 && !normalAnchorReleased &&
+            AddressBarDockingBridge.shared.normalAnchorBreakawayReached(dragY: dragY) {
+            normalAnchorReleased = true
+            selectionHaptic()
+        }
+        anchorResistance = start.verticalFraction == 0 && !normalAnchorReleased ?
+            AddressBarDockingBridge.shared.normalAnchorResistanceProgress(dragY: dragY) : 0
+        let edgePosition = AddressBarDockPosition(horizontalFraction: 1, verticalFraction: 0)
+        let position = AddressBarDockingBridge.shared.positionAfterDrag(
+            startPosition: start,
+            dragX: dragX,
+            dragY: dragY,
+            horizontalTravel: abs(dockOffset(for: edgePosition, in: viewport).x),
+            verticalTravel: dockVerticalTravel(in: viewport),
+            resistNormalAnchor: start.verticalFraction == 0 && !normalAnchorReleased
+        )
+        let snap = AddressBarDockingBridge.shared.normalAnchorSnap(
+            position: position,
+            verticalTravel: dockVerticalTravel(in: viewport),
+            enabled: normalAnchorReleased
+        )
+        if snap.snappedToNormalAnchor && !normalSnapZoneActive { selectionHaptic() }
+        normalSnapZoneActive = snap.snappedToNormalAnchor
+        dockDragPosition = snap.position
+    }
+
+    private func resetParkedDrag() {
+        dockDragStart = nil
+        dockDragPosition = nil
+        anchorResistance = 0
+        normalAnchorReleased = false
+        normalSnapZoneActive = false
+    }
+
+    private func cancelParkedInteraction() {
+        parkedInteractionGeneration += 1
+        parkedHoldTask?.cancel()
+        parkedHoldTask = nil
+        parkedTouchStarted = false
+        parkedHoldRejected = false
+        parkedLatestTranslation = .zero
+        withChromeAnimation { resetParkedDrag() }
+    }
+
+    private func restoreParkedAddressBar() {
+        cancelParkedInteraction()
+        selectionHaptic()
+        withChromeAnimation { browser.restoreAddressBar() }
+    }
+
+    private func moveParkedHandle(to edge: AddressBarDockEdge) {
+        cancelParkedInteraction()
+        withChromeAnimation {
+            browser.updateAddressBarDockPlacement(AddressBarDockPlacement(
+                edge: edge,
+                verticalFraction: browser.lastAddressBarDockPlacement.verticalFraction
+            ))
+        }
     }
 
     private func synchronizeAddressDraft() {
@@ -542,7 +795,11 @@ struct CandyNativeBrowserChrome: View {
     private func presentMenu() {
         isAddressFocused = false
         selectionHaptic()
-        withChromeAnimation { isMenuPresented = true }
+        if browser.menuLayout.presentation == .bottomsheet {
+            browser.showBrowserMenu()
+        } else {
+            withChromeAnimation { isMenuPresented = true }
+        }
     }
 
     private func dismissMenu() {
@@ -560,13 +817,18 @@ struct CandyNativeBrowserChrome: View {
         if reduceMotion {
             changes()
         } else {
-            withAnimation(.spring(response: 0.46, dampingFraction: 0.78), changes)
+            withAnimation(.spring(
+                response: LiquidGlassPresentationRules.chromeSpringResponse,
+                dampingFraction: LiquidGlassPresentationRules.chromeSpringDamping
+            ), changes)
         }
     }
 
     private func startRainbowAnimation() {
         guard !reduceMotion else {
-            rainbowRotation = 25
+            var transaction = Transaction(animation: nil)
+            transaction.disablesAnimations = true
+            withTransaction(transaction) { rainbowRotation = 25 }
             return
         }
         rainbowRotation = 0
@@ -600,6 +862,7 @@ struct CandyNativeBrowserChrome: View {
         if action == .togglepinned { return checked(item) ? "Tab lösen" : "Tab anheften" }
         if action == .showtabs { return "Tabs" }
         if action == .newtab { return "Neuer Tab" }
+        if action == .duplicatetab { return "Tab duplizieren" }
         if action == .closetab { return "Tab schließen" }
         if action == .openreader { return "Lesemodus" }
         if action == .translatepage { return "Übersetzen" }
@@ -637,6 +900,7 @@ struct CandyNativeBrowserChrome: View {
         if action == .togglepinned { return checked(item) ? "pin.fill" : "pin" }
         if action == .showtabs { return "square.on.square" }
         if action == .newtab { return "plus" }
+        if action == .duplicatetab { return "doc.on.doc" }
         if action == .closetab { return "xmark.circle" }
         if action == .openreader { return "book.closed" }
         if action == .translatepage { return "character.book.closed" }
@@ -672,30 +936,6 @@ struct CandyNativeBrowserChrome: View {
         if section == .toppings { return "TOPPINGS" }
         if section == .candy { return "CANDY" }
         return "BROWSER"
-    }
-}
-
-@available(iOS 26.0, *)
-private struct NativeLiquidGlassBackdrop: UIViewRepresentable {
-    let reduceTransparency: Bool
-    let tintOpacity: CGFloat
-
-    func makeUIView(context: Context) -> UIVisualEffectView {
-        let effect = UIGlassEffect(style: reduceTransparency ? .regular : .clear)
-        effect.isInteractive = true
-        effect.tintColor = reduceTransparency ?
-            .secondarySystemBackground :
-            UIColor.systemBackground.withAlphaComponent(tintOpacity)
-        return UIVisualEffectView(effect: effect)
-    }
-
-    func updateUIView(_ view: UIVisualEffectView, context: Context) {
-        let effect = UIGlassEffect(style: reduceTransparency ? .regular : .clear)
-        effect.isInteractive = true
-        effect.tintColor = reduceTransparency ?
-            .secondarySystemBackground :
-            UIColor.systemBackground.withAlphaComponent(tintOpacity)
-        view.effect = effect
     }
 }
 

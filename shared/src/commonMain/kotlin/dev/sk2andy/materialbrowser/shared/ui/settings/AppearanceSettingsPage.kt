@@ -10,7 +10,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -35,6 +34,7 @@ import dev.sk2andy.materialbrowser.data.BrowserAppearanceMode
 import dev.sk2andy.materialbrowser.data.BrowserColorPalette
 import dev.sk2andy.materialbrowser.data.BrowserShapeStyle
 import dev.sk2andy.materialbrowser.data.BrowserSurfaceStyle
+import dev.sk2andy.materialbrowser.shared.ui.LocalCandyBrowserChromeEffects
 import kotlin.math.roundToInt
 
 data class AppearanceSettingsStrings(
@@ -92,6 +92,25 @@ object SharedAppearanceSettingsTestTags {
     const val FROSTED_BLUR = "appearance_settings_frosted_blur"
 }
 
+data class AppearanceSettingsCapabilities(
+    val appearanceModes: List<BrowserAppearanceMode> = BrowserAppearanceMode.entries,
+    val forceDarkWebsites: Boolean = true,
+    val webContentFontSize: Boolean = true,
+    val customChrome: Boolean = true,
+) {
+    companion object {
+        val Core = AppearanceSettingsCapabilities(
+            appearanceModes = listOf(
+                BrowserAppearanceMode.System,
+                BrowserAppearanceMode.Light,
+                BrowserAppearanceMode.Dark,
+            ),
+            forceDarkWebsites = false,
+            customChrome = false,
+        )
+    }
+}
+
 @Composable
 fun AppearanceSettingsPage(
     settings: AppearanceSettings,
@@ -101,6 +120,7 @@ fun AppearanceSettingsPage(
     onBack: () -> Unit,
     enabled: Boolean = true,
     forceDarkWebsitesAvailable: Boolean = true,
+    capabilities: AppearanceSettingsCapabilities = AppearanceSettingsCapabilities(),
     additionalAppearanceContent: @Composable ColumnScope.() -> Unit = {},
 ) {
     var appearanceMenuExpanded by remember { mutableStateOf(false) }
@@ -137,7 +157,7 @@ fun AppearanceSettingsPage(
                 expanded = enabled && appearanceMenuExpanded,
                 onDismissRequest = { appearanceMenuExpanded = false },
             ) {
-                BrowserAppearanceMode.entries.forEach { mode ->
+                capabilities.appearanceModes.forEach { mode ->
                     SettingsDropdownItem(
                         label = strings.appearanceModeNames.getValue(mode),
                         selected = mode == settings.appearanceMode,
@@ -161,289 +181,295 @@ fun AppearanceSettingsPage(
             },
             modifier = Modifier.testTag(SharedAppearanceSettingsTestTags.ANIMATIONS),
         )
-        SettingsPageSpacer()
-        SettingsSwitch(
-            title = strings.forceDarkWebsites,
-            subtitle = strings.forceDarkWebsitesSummary,
-            checked = settings.forceDarkWebsites,
-            enabled = enabled && forceDarkWebsitesAvailable,
-            onCheckedChange = { value ->
-                onSettingsChanged(settings.copy(forceDarkWebsites = value))
-            },
-            modifier = Modifier.testTag(SharedAppearanceSettingsTestTags.FORCE_DARK_WEBSITES),
-        )
-        SettingsPageSpacer()
-        AppearanceSlider(
-            title = strings.webContentFontSize,
-            value = pendingWebContentFontSize,
-            valueRange = AppearanceSettings.MIN_WEB_CONTENT_FONT_SIZE_PERCENT.toFloat()..
-                AppearanceSettings.MAX_WEB_CONTENT_FONT_SIZE_PERCENT.toFloat(),
-            steps = (
-                AppearanceSettings.MAX_WEB_CONTENT_FONT_SIZE_PERCENT -
-                    AppearanceSettings.MIN_WEB_CONTENT_FONT_SIZE_PERCENT
-                ) / AppearanceSettings.WEB_CONTENT_FONT_SIZE_STEP_PERCENT - 1,
-            enabled = enabled,
-            containerColor = containerColor,
-            onValueChange = { value -> pendingWebContentFontSize = value },
-            onValueChangeFinished = {
-                val updated = settings.copy(
-                    webContentFontSizePercent = pendingWebContentFontSize.roundToInt(),
-                ).normalized()
-                pendingWebContentFontSize = updated.webContentFontSizePercent.toFloat()
-                if (updated != settings) onSettingsChanged(updated)
-            },
-            testTag = SharedAppearanceSettingsTestTags.WEB_CONTENT_FONT_SIZE,
-        )
-        SettingsPageSpacer()
-        Box {
-            SettingsChoice(
-                title = strings.colorPalette,
-                value = strings.colorPaletteNames.getValue(settings.colorPalette),
-                expanded = paletteMenuExpanded,
-                onClick = { paletteMenuExpanded = true },
-                containerColor = containerColor,
-                modifier = Modifier.testTag(SharedAppearanceSettingsTestTags.COLOR_PALETTE),
-                enabled = enabled,
+        if (capabilities.forceDarkWebsites) {
+            SettingsPageSpacer()
+            SettingsSwitch(
+                title = strings.forceDarkWebsites,
+                subtitle = strings.forceDarkWebsitesSummary,
+                checked = settings.forceDarkWebsites,
+                enabled = enabled && forceDarkWebsitesAvailable,
+                onCheckedChange = { value ->
+                    onSettingsChanged(settings.copy(forceDarkWebsites = value))
+                },
+                modifier = Modifier.testTag(SharedAppearanceSettingsTestTags.FORCE_DARK_WEBSITES),
             )
-            SettingsDropdown(
-                expanded = enabled && paletteMenuExpanded,
-                onDismissRequest = { paletteMenuExpanded = false },
-            ) {
-                BrowserColorPalette.entries.forEach { palette ->
-                    SettingsDropdownItem(
-                        label = strings.colorPaletteNames.getValue(palette),
-                        selected = palette == settings.colorPalette,
-                        onClick = {
-                            paletteMenuExpanded = false
-                            onSettingsChanged(settings.copy(colorPalette = palette))
-                        },
-                    )
-                }
-            }
         }
-        SettingsPageSpacer()
-        Box {
-            SettingsChoice(
-                title = strings.addressBarColor,
-                value = strings.addressBarColorPresetNames.getValue(
-                    settings.addressBarColorPreset,
-                ),
-                expanded = addressBarColorMenuExpanded,
-                onClick = { addressBarColorMenuExpanded = true },
-                containerColor = containerColor,
-                modifier = Modifier.testTag(SharedAppearanceSettingsTestTags.ADDRESS_BAR_COLOR),
+        if (capabilities.webContentFontSize) {
+            SettingsPageSpacer()
+            AppearanceSlider(
+                title = strings.webContentFontSize,
+                value = pendingWebContentFontSize,
+                valueRange = AppearanceSettings.MIN_WEB_CONTENT_FONT_SIZE_PERCENT.toFloat()..
+                    AppearanceSettings.MAX_WEB_CONTENT_FONT_SIZE_PERCENT.toFloat(),
+                steps = (
+                    AppearanceSettings.MAX_WEB_CONTENT_FONT_SIZE_PERCENT -
+                        AppearanceSettings.MIN_WEB_CONTENT_FONT_SIZE_PERCENT
+                    ) / AppearanceSettings.WEB_CONTENT_FONT_SIZE_STEP_PERCENT - 1,
                 enabled = enabled,
+                containerColor = containerColor,
+                onValueChange = { value -> pendingWebContentFontSize = value },
+                onValueChangeFinished = {
+                    val updated = settings.copy(
+                        webContentFontSizePercent = pendingWebContentFontSize.roundToInt(),
+                    ).normalized()
+                    pendingWebContentFontSize = updated.webContentFontSizePercent.toFloat()
+                    if (updated != settings) onSettingsChanged(updated)
+                },
+                testTag = SharedAppearanceSettingsTestTags.WEB_CONTENT_FONT_SIZE,
             )
-            SettingsDropdown(
-                expanded = enabled && addressBarColorMenuExpanded,
-                onDismissRequest = { addressBarColorMenuExpanded = false },
-            ) {
-                BrowserAddressBarColorPreset.entries.forEach { preset ->
-                    SettingsDropdownItem(
-                        label = strings.addressBarColorPresetNames.getValue(preset),
-                        selected = preset == settings.addressBarColorPreset,
-                        onClick = {
-                            addressBarColorMenuExpanded = false
-                            if (preset == BrowserAddressBarColorPreset.Custom) {
-                                pendingCustomAddressBarColor = settings.addressBarCustomColorHex
-                                customAddressBarColorDialogVisible = true
-                            } else {
-                                onSettingsChanged(settings.copy(addressBarColorPreset = preset))
-                            }
-                        },
-                    )
-                }
-            }
         }
-        TextButton(
-            onClick = {
-                pendingCustomAddressBarColor = ""
-                onSettingsChanged(
-                    settings.copy(
-                        addressBarColorPreset = BrowserAddressBarColorPreset.Theme,
-                        addressBarCustomColorHex = "",
-                    ),
+        if (capabilities.customChrome) {
+            SettingsPageSpacer()
+            Box {
+                SettingsChoice(
+                    title = strings.colorPalette,
+                    value = strings.colorPaletteNames.getValue(settings.colorPalette),
+                    expanded = paletteMenuExpanded,
+                    onClick = { paletteMenuExpanded = true },
+                    containerColor = containerColor,
+                    modifier = Modifier.testTag(SharedAppearanceSettingsTestTags.COLOR_PALETTE),
+                    enabled = enabled,
                 )
-            },
-            enabled = enabled && (
-                settings.addressBarColorPreset != BrowserAddressBarColorPreset.Theme ||
-                    settings.addressBarCustomColorHex.isNotEmpty()
-                ),
-            modifier = Modifier.testTag(
-                SharedAppearanceSettingsTestTags.ADDRESS_BAR_COLOR_RESET,
-            ),
-        ) {
-            Text(strings.addressBarColorReset)
-        }
-        SettingsPageSpacer()
-        Box {
-            SettingsChoice(
-                title = strings.surfaceStyle,
-                value = strings.surfaceStyleNames.getValue(settings.surfaceStyle),
-                expanded = surfaceMenuExpanded,
-                onClick = { surfaceMenuExpanded = true },
-                containerColor = containerColor,
-                modifier = Modifier.testTag(SharedAppearanceSettingsTestTags.SURFACE_STYLE),
-                enabled = enabled,
-            )
-            SettingsDropdown(
-                expanded = enabled && surfaceMenuExpanded,
-                onDismissRequest = { surfaceMenuExpanded = false },
-            ) {
-                BrowserSurfaceStyle.entries.forEach { style ->
-                    SettingsDropdownItem(
-                        label = strings.surfaceStyleNames.getValue(style),
-                        selected = style == settings.surfaceStyle,
-                        onClick = {
-                            surfaceMenuExpanded = false
-                            onSettingsChanged(settings.copy(surfaceStyle = style))
-                        },
-                    )
+                SettingsDropdown(
+                    expanded = enabled && paletteMenuExpanded,
+                    onDismissRequest = { paletteMenuExpanded = false },
+                ) {
+                    BrowserColorPalette.entries.forEach { palette ->
+                        SettingsDropdownItem(
+                            label = strings.colorPaletteNames.getValue(palette),
+                            selected = palette == settings.colorPalette,
+                            onClick = {
+                                paletteMenuExpanded = false
+                                onSettingsChanged(settings.copy(colorPalette = palette))
+                            },
+                        )
+                    }
                 }
             }
-        }
-        Text(
-            strings.surfaceStyleSummary,
-            modifier = Modifier.padding(start = 18.dp, top = 6.dp, end = 18.dp),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        if (settings.surfaceStyle == BrowserSurfaceStyle.Frosted) {
             SettingsPageSpacer()
-            AppearanceSlider(
-                title = strings.frostedTransparency,
-                value = settings.frostedTransparencyPercent.toFloat(),
-                valueRange = AppearanceSettings.MIN_FROSTED_TRANSPARENCY_PERCENT.toFloat()..
-                    AppearanceSettings.MAX_FROSTED_TRANSPARENCY_PERCENT.toFloat(),
-                steps = 7,
-                enabled = enabled,
-                containerColor = containerColor,
-                onValueChange = { value ->
-                    onSettingsChanged(settings.copy(frostedTransparencyPercent = value.roundToInt()))
-                },
-                testTag = SharedAppearanceSettingsTestTags.FROSTED_TRANSPARENCY,
-            )
-            SettingsPageSpacer()
-            AppearanceSlider(
-                title = strings.frostedAddressBarTransparency,
-                value = settings.frostedAddressBarTransparencyPercent.toFloat(),
-                valueRange = AppearanceSettings.MIN_FROSTED_TRANSPARENCY_PERCENT.toFloat()..
-                    AppearanceSettings.MAX_FROSTED_TRANSPARENCY_PERCENT.toFloat(),
-                steps = 7,
-                enabled = enabled,
-                containerColor = containerColor,
-                onValueChange = { value ->
+            Box {
+                SettingsChoice(
+                    title = strings.addressBarColor,
+                    value = strings.addressBarColorPresetNames.getValue(
+                        settings.addressBarColorPreset,
+                    ),
+                    expanded = addressBarColorMenuExpanded,
+                    onClick = { addressBarColorMenuExpanded = true },
+                    containerColor = containerColor,
+                    modifier = Modifier.testTag(SharedAppearanceSettingsTestTags.ADDRESS_BAR_COLOR),
+                    enabled = enabled,
+                )
+                SettingsDropdown(
+                    expanded = enabled && addressBarColorMenuExpanded,
+                    onDismissRequest = { addressBarColorMenuExpanded = false },
+                ) {
+                    BrowserAddressBarColorPreset.entries.forEach { preset ->
+                        SettingsDropdownItem(
+                            label = strings.addressBarColorPresetNames.getValue(preset),
+                            selected = preset == settings.addressBarColorPreset,
+                            onClick = {
+                                addressBarColorMenuExpanded = false
+                                if (preset == BrowserAddressBarColorPreset.Custom) {
+                                    pendingCustomAddressBarColor = settings.addressBarCustomColorHex
+                                    customAddressBarColorDialogVisible = true
+                                } else {
+                                    onSettingsChanged(settings.copy(addressBarColorPreset = preset))
+                                }
+                            },
+                        )
+                    }
+                }
+            }
+            TextButton(
+                onClick = {
+                    pendingCustomAddressBarColor = ""
                     onSettingsChanged(
-                        settings.copy(frostedAddressBarTransparencyPercent = value.roundToInt()),
+                        settings.copy(
+                            addressBarColorPreset = BrowserAddressBarColorPreset.Theme,
+                            addressBarCustomColorHex = "",
+                        ),
                     )
                 },
-                testTag = SharedAppearanceSettingsTestTags.FROSTED_ADDRESS_BAR_TRANSPARENCY,
-            )
+                enabled = enabled && (
+                    settings.addressBarColorPreset != BrowserAddressBarColorPreset.Theme ||
+                        settings.addressBarCustomColorHex.isNotEmpty()
+                    ),
+                modifier = Modifier.testTag(
+                    SharedAppearanceSettingsTestTags.ADDRESS_BAR_COLOR_RESET,
+                ),
+            ) {
+                Text(strings.addressBarColorReset)
+            }
             SettingsPageSpacer()
-            AppearanceSlider(
-                title = strings.frostedBlur,
-                value = settings.frostedBlurPercent.toFloat(),
-                valueRange = AppearanceSettings.MIN_FROSTED_BLUR_PERCENT.toFloat()..
-                    AppearanceSettings.MAX_FROSTED_BLUR_PERCENT.toFloat(),
-                steps = 9,
-                enabled = enabled,
-                containerColor = containerColor,
-                onValueChange = { value ->
-                    onSettingsChanged(settings.copy(frostedBlurPercent = value.roundToInt()))
-                },
-                testTag = SharedAppearanceSettingsTestTags.FROSTED_BLUR,
-            )
+            Box {
+                SettingsChoice(
+                    title = strings.surfaceStyle,
+                    value = strings.surfaceStyleNames.getValue(settings.surfaceStyle),
+                    expanded = surfaceMenuExpanded,
+                    onClick = { surfaceMenuExpanded = true },
+                    containerColor = containerColor,
+                    modifier = Modifier.testTag(SharedAppearanceSettingsTestTags.SURFACE_STYLE),
+                    enabled = enabled,
+                )
+                SettingsDropdown(
+                    expanded = enabled && surfaceMenuExpanded,
+                    onDismissRequest = { surfaceMenuExpanded = false },
+                ) {
+                    BrowserSurfaceStyle.entries.forEach { style ->
+                        SettingsDropdownItem(
+                            label = strings.surfaceStyleNames.getValue(style),
+                            selected = style == settings.surfaceStyle,
+                            onClick = {
+                                surfaceMenuExpanded = false
+                                onSettingsChanged(settings.copy(surfaceStyle = style))
+                            },
+                        )
+                    }
+                }
+            }
             Text(
-                strings.frostedBlurSummary,
+                strings.surfaceStyleSummary,
                 modifier = Modifier.padding(start = 18.dp, top = 6.dp, end = 18.dp),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-        }
-        SettingsPageSpacer()
-        Box {
-            SettingsChoice(
-                title = strings.shapeStyle,
-                value = strings.shapeStyleNames.getValue(settings.shapeStyle),
-                expanded = shapeMenuExpanded,
-                onClick = { shapeMenuExpanded = true },
-                containerColor = containerColor,
-                modifier = Modifier.testTag(SharedAppearanceSettingsTestTags.SHAPE_STYLE),
-                enabled = enabled,
-            )
-            SettingsDropdown(
-                expanded = enabled && shapeMenuExpanded,
-                onDismissRequest = { shapeMenuExpanded = false },
-            ) {
-                BrowserShapeStyle.entries.forEach { style ->
-                    SettingsDropdownItem(
-                        label = strings.shapeStyleNames.getValue(style),
-                        selected = style == settings.shapeStyle,
-                        onClick = {
-                            shapeMenuExpanded = false
-                            onSettingsChanged(settings.copy(shapeStyle = style))
-                        },
-                    )
+            if (settings.surfaceStyle == BrowserSurfaceStyle.Frosted) {
+                SettingsPageSpacer()
+                AppearanceSlider(
+                    title = strings.frostedTransparency,
+                    value = settings.frostedTransparencyPercent.toFloat(),
+                    valueRange = AppearanceSettings.MIN_FROSTED_TRANSPARENCY_PERCENT.toFloat()..
+                        AppearanceSettings.MAX_FROSTED_TRANSPARENCY_PERCENT.toFloat(),
+                    steps = 7,
+                    enabled = enabled,
+                    containerColor = containerColor,
+                    onValueChange = { value ->
+                        onSettingsChanged(settings.copy(frostedTransparencyPercent = value.roundToInt()))
+                    },
+                    testTag = SharedAppearanceSettingsTestTags.FROSTED_TRANSPARENCY,
+                )
+                SettingsPageSpacer()
+                AppearanceSlider(
+                    title = strings.frostedAddressBarTransparency,
+                    value = settings.frostedAddressBarTransparencyPercent.toFloat(),
+                    valueRange = AppearanceSettings.MIN_FROSTED_TRANSPARENCY_PERCENT.toFloat()..
+                        AppearanceSettings.MAX_FROSTED_TRANSPARENCY_PERCENT.toFloat(),
+                    steps = 7,
+                    enabled = enabled,
+                    containerColor = containerColor,
+                    onValueChange = { value ->
+                        onSettingsChanged(
+                            settings.copy(frostedAddressBarTransparencyPercent = value.roundToInt()),
+                        )
+                    },
+                    testTag = SharedAppearanceSettingsTestTags.FROSTED_ADDRESS_BAR_TRANSPARENCY,
+                )
+                SettingsPageSpacer()
+                AppearanceSlider(
+                    title = strings.frostedBlur,
+                    value = settings.frostedBlurPercent.toFloat(),
+                    valueRange = AppearanceSettings.MIN_FROSTED_BLUR_PERCENT.toFloat()..
+                        AppearanceSettings.MAX_FROSTED_BLUR_PERCENT.toFloat(),
+                    steps = 9,
+                    enabled = enabled,
+                    containerColor = containerColor,
+                    onValueChange = { value ->
+                        onSettingsChanged(settings.copy(frostedBlurPercent = value.roundToInt()))
+                    },
+                    testTag = SharedAppearanceSettingsTestTags.FROSTED_BLUR,
+                )
+                Text(
+                    strings.frostedBlurSummary,
+                    modifier = Modifier.padding(start = 18.dp, top = 6.dp, end = 18.dp),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            SettingsPageSpacer()
+            Box {
+                SettingsChoice(
+                    title = strings.shapeStyle,
+                    value = strings.shapeStyleNames.getValue(settings.shapeStyle),
+                    expanded = shapeMenuExpanded,
+                    onClick = { shapeMenuExpanded = true },
+                    containerColor = containerColor,
+                    modifier = Modifier.testTag(SharedAppearanceSettingsTestTags.SHAPE_STYLE),
+                    enabled = enabled,
+                )
+                SettingsDropdown(
+                    expanded = enabled && shapeMenuExpanded,
+                    onDismissRequest = { shapeMenuExpanded = false },
+                ) {
+                    BrowserShapeStyle.entries.forEach { style ->
+                        SettingsDropdownItem(
+                            label = strings.shapeStyleNames.getValue(style),
+                            selected = style == settings.shapeStyle,
+                            onClick = {
+                                shapeMenuExpanded = false
+                                onSettingsChanged(settings.copy(shapeStyle = style))
+                            },
+                        )
+                    }
                 }
             }
-        }
-        SettingsPageSpacer()
-        Box {
-            SettingsChoice(
-                title = strings.addressLoadStyle,
-                value = strings.addressLoadStyleNames.getValue(settings.addressLoadStyle),
-                expanded = addressLoadStyleMenuExpanded,
-                onClick = { addressLoadStyleMenuExpanded = true },
-                containerColor = containerColor,
-                modifier = Modifier.testTag(SharedAppearanceSettingsTestTags.ADDRESS_LOAD_STYLE),
-                enabled = enabled,
-            )
-            SettingsDropdown(
-                expanded = enabled && addressLoadStyleMenuExpanded,
-                onDismissRequest = { addressLoadStyleMenuExpanded = false },
-            ) {
-                BrowserAddressLoadStyle.entries.forEach { style ->
-                    SettingsDropdownItem(
-                        label = strings.addressLoadStyleNames.getValue(style),
-                        selected = style == settings.addressLoadStyle,
-                        onClick = {
-                            addressLoadStyleMenuExpanded = false
-                            onSettingsChanged(settings.copy(addressLoadStyle = style))
-                        },
-                    )
+            SettingsPageSpacer()
+            Box {
+                SettingsChoice(
+                    title = strings.addressLoadStyle,
+                    value = strings.addressLoadStyleNames.getValue(settings.addressLoadStyle),
+                    expanded = addressLoadStyleMenuExpanded,
+                    onClick = { addressLoadStyleMenuExpanded = true },
+                    containerColor = containerColor,
+                    modifier = Modifier.testTag(SharedAppearanceSettingsTestTags.ADDRESS_LOAD_STYLE),
+                    enabled = enabled,
+                )
+                SettingsDropdown(
+                    expanded = enabled && addressLoadStyleMenuExpanded,
+                    onDismissRequest = { addressLoadStyleMenuExpanded = false },
+                ) {
+                    BrowserAddressLoadStyle.entries.forEach { style ->
+                        SettingsDropdownItem(
+                            label = strings.addressLoadStyleNames.getValue(style),
+                            selected = style == settings.addressLoadStyle,
+                            onClick = {
+                                addressLoadStyleMenuExpanded = false
+                                onSettingsChanged(settings.copy(addressLoadStyle = style))
+                            },
+                        )
+                    }
                 }
             }
-        }
-        SettingsPageSpacer()
-        Box {
-            SettingsChoice(
-                title = strings.addressBarStyle,
-                value = strings.addressBarStyleNames.getValue(settings.addressBarStyle),
-                expanded = addressBarStyleMenuExpanded,
-                onClick = { addressBarStyleMenuExpanded = true },
-                containerColor = containerColor,
-                modifier = Modifier.testTag(SharedAppearanceSettingsTestTags.ADDRESS_BAR_STYLE),
-                enabled = enabled,
-            )
-            SettingsDropdown(
-                expanded = enabled && addressBarStyleMenuExpanded,
-                onDismissRequest = { addressBarStyleMenuExpanded = false },
-            ) {
-                BrowserAddressBarStyle.entries.forEach { style ->
-                    SettingsDropdownItem(
-                        label = strings.addressBarStyleNames.getValue(style),
-                        selected = style == settings.addressBarStyle,
-                        onClick = {
-                            addressBarStyleMenuExpanded = false
-                            onSettingsChanged(settings.copy(addressBarStyle = style))
-                        },
-                    )
+            SettingsPageSpacer()
+            Box {
+                SettingsChoice(
+                    title = strings.addressBarStyle,
+                    value = strings.addressBarStyleNames.getValue(settings.addressBarStyle),
+                    expanded = addressBarStyleMenuExpanded,
+                    onClick = { addressBarStyleMenuExpanded = true },
+                    containerColor = containerColor,
+                    modifier = Modifier.testTag(SharedAppearanceSettingsTestTags.ADDRESS_BAR_STYLE),
+                    enabled = enabled,
+                )
+                SettingsDropdown(
+                    expanded = enabled && addressBarStyleMenuExpanded,
+                    onDismissRequest = { addressBarStyleMenuExpanded = false },
+                ) {
+                    BrowserAddressBarStyle.entries.forEach { style ->
+                        SettingsDropdownItem(
+                            label = strings.addressBarStyleNames.getValue(style),
+                            selected = style == settings.addressBarStyle,
+                            onClick = {
+                                addressBarStyleMenuExpanded = false
+                                onSettingsChanged(settings.copy(addressBarStyle = style))
+                            },
+                        )
+                    }
                 }
             }
         }
     }
 
-    if (customAddressBarColorDialogVisible) {
+    if (capabilities.customChrome && customAddressBarColorDialogVisible) {
         val normalizedColor = AddressBarColorRules.normalizeHex(pendingCustomAddressBarColor)
         AlertDialog(
             onDismissRequest = { customAddressBarColorDialogVisible = false },
@@ -527,7 +553,7 @@ private fun AppearanceSlider(
                     color = MaterialTheme.colorScheme.primary,
                 )
             }
-            Slider(
+            LocalCandyBrowserChromeEffects.current.settingsSlider(
                 value = value,
                 onValueChange = onValueChange,
                 onValueChangeFinished = onValueChangeFinished,
@@ -535,6 +561,7 @@ private fun AppearanceSlider(
                 modifier = Modifier.testTag(testTag),
                 valueRange = valueRange,
                 steps = steps,
+                backgroundColor = containerColor,
             )
         }
     }

@@ -19,6 +19,8 @@ import dev.sk2andy.materialbrowser.data.BrowserColorPalette
 import dev.sk2andy.materialbrowser.data.BrowserShapeStyle
 import dev.sk2andy.materialbrowser.data.BrowserSurfaceStyle
 import dev.sk2andy.materialbrowser.data.TabOverviewMode
+import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuBottomSheetContentLayout
+import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuPresentation
 import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuConfigurationSection
 import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuEntry
 import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuLayout
@@ -117,14 +119,23 @@ private val candyTranslationStrings = TranslationProviderSettingsStrings(
 )
 
 @Composable
-internal fun CandyAppearanceSettingsPage(onBack: () -> Unit) {
+internal fun CandyAppearanceSettingsPage(
+    settings: AppearanceSettings,
+    onSettingsChanged: (AppearanceSettings) -> Unit,
+    onBack: () -> Unit,
+) {
     AppearanceSettingsPage(
-        settings = AppearanceSettings(),
-        strings = candyAppearanceStrings,
+        settings = settings,
+        strings = candyAppearanceStrings.copy(
+            animationsSummary =
+                "Bewegungen und Übergänge in Candy anzeigen. " +
+                    "Die Systemeinstellung zur Bewegungsreduktion bleibt wirksam.",
+            webContentFontSize = "Seitengröße",
+        ),
         containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-        onSettingsChanged = {},
+        onSettingsChanged = onSettingsChanged,
         onBack = onBack,
-        enabled = false,
+        capabilities = AppearanceSettingsCapabilities.Core,
     )
 }
 
@@ -134,6 +145,8 @@ internal fun CandyTabsAndGesturesSettingsPage(
     onTabOverviewModeChanged: (TabOverviewMode) -> Unit,
     tabListStartsAtBottom: Boolean,
     onTabListStartsAtBottomChanged: (Boolean) -> Unit,
+    dismissResistancePercent: Int,
+    onDismissResistanceChanged: (Int) -> Unit,
     onMenuActions: () -> Unit,
     onBack: () -> Unit,
 ) {
@@ -179,17 +192,53 @@ internal fun CandyTabsAndGesturesSettingsPage(
         SettingsSectionTitle("Gesten")
         Spacer(Modifier.height(2.dp))
         TabDismissResistanceSettings(
-            valuePercent = 40,
+            valuePercent = dismissResistancePercent,
             title = "Widerstand beim Schließen von Tabs",
             summary = { value -> "Widerstandsphase: $value% des Schließwegs" },
             containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-            enabled = false,
-            onValueChanged = {},
+            enabled = true,
+            onValueChanged = onDismissResistanceChanged,
         )
     }
 }
 
-internal object CandyBrowserMenuSettingsResources : BrowserMenuSettingsResources {
+internal object CandyBrowserMenuSettingsResources : BrowserMenuSettingsResources,
+    BrowserMenuPresentationSettingsResources {
+    @Composable
+    override fun presentationTitle(): String = "Menü-Darstellung"
+
+    @Composable
+    override fun presentationSummary(): String =
+        "Wähle das normale Menü oder ein Bottom Sheet mit scrollbaren Bereichen oder zwei Seiten zum Wischen."
+
+    @Composable
+    override fun presentationLabel(presentation: BrowserMenuPresentation): String = when (presentation) {
+        BrowserMenuPresentation.Floating -> "Normales Menü"
+        BrowserMenuPresentation.BottomSheet -> "Bottom Sheet"
+    }
+
+    @Composable
+    override fun contentLayoutTitle(): String = "Bereiche im Bottom Sheet"
+
+    @Composable
+    override fun contentLayoutLabel(layout: BrowserMenuBottomSheetContentLayout): String = when (layout) {
+        BrowserMenuBottomSheetContentLayout.Scroll -> "Vertikal scrollen"
+        BrowserMenuBottomSheetContentLayout.SwipePages -> "Zwei Seiten zum Wischen"
+    }
+
+    @Composable
+    override fun toolbarTitle(): String = "Werkzeugleiste im Bottom Sheet"
+
+    @Composable
+    override fun toolbarSummary(): String =
+        "Wähle fünf Aktionen von links nach rechts. Bereits belegte Aktionen tauschen ihren Platz. Ein leerer Platz blendet die Schaltfläche aus."
+
+    @Composable
+    override fun toolbarSlotTitle(position: Int): String = "Aktion $position"
+
+    @Composable
+    override fun emptySlotLabel(): String = "Leerer Platz"
+
     @Composable
     override fun title(): String = "Menü-Aktionen"
 
@@ -269,6 +318,7 @@ internal fun CandyBrowserMenuSettingsPage(
     layout: BrowserMenuLayout,
     availableEntries: List<BrowserMenuEntry>,
     onLocationChanged: (BrowserMenuEntry, BrowserMenuLocation) -> Unit,
+    onLayoutChanged: (BrowserMenuLayout) -> Unit,
     onBack: () -> Unit,
 ) {
     BrowserMenuSettingsPage(
@@ -278,6 +328,15 @@ internal fun CandyBrowserMenuSettingsPage(
         availableEntries = availableEntries,
         onLocationChanged = onLocationChanged,
         onBack = onBack,
+        presentationSettings = {
+            BrowserMenuPresentationSettings(
+                layout = layout,
+                resources = CandyBrowserMenuSettingsResources,
+                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                availableEntries = availableEntries,
+                onLayoutChanged = onLayoutChanged,
+            )
+        },
     )
 }
 

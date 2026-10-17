@@ -8,19 +8,19 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.windowInsetsTopHeight
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -47,9 +47,7 @@ import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -57,18 +55,18 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -77,36 +75,34 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.role
-import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.style.Hyphens
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.Hyphens
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.sk2andy.materialbrowser.reader.ReaderBlock
 import dev.sk2andy.materialbrowser.reader.ReaderBlockKind
+import dev.sk2andy.materialbrowser.reader.ReaderChromeMode
+import dev.sk2andy.materialbrowser.reader.ReaderChromeRules
 import dev.sk2andy.materialbrowser.reader.ReaderDocument
 import dev.sk2andy.materialbrowser.reader.ReaderExtractionFailure
 import dev.sk2andy.materialbrowser.reader.ReaderExtractionResult
+import dev.sk2andy.materialbrowser.reader.ReaderFont
+import dev.sk2andy.materialbrowser.reader.ReaderLibraryDataSource
 import dev.sk2andy.materialbrowser.reader.ReaderLibraryRules
 import dev.sk2andy.materialbrowser.reader.ReaderLibraryState
-import dev.sk2andy.materialbrowser.reader.ReaderLibraryDataSource
 import dev.sk2andy.materialbrowser.reader.ReaderSettings
 import dev.sk2andy.materialbrowser.reader.ReaderSnapshot
 import dev.sk2andy.materialbrowser.reader.ReaderSpeech
-import dev.sk2andy.materialbrowser.reader.ReaderSpeechState
 import dev.sk2andy.materialbrowser.reader.ReaderSpeechRules
+import dev.sk2andy.materialbrowser.reader.ReaderSpeechState
 import dev.sk2andy.materialbrowser.reader.ReaderSpeechStatus
-import dev.sk2andy.materialbrowser.reader.ReaderTheme
-import dev.sk2andy.materialbrowser.reader.ReaderFont
-import dev.sk2andy.materialbrowser.reader.ReaderChromeMode
-import dev.sk2andy.materialbrowser.reader.ReaderChromeRules
 import dev.sk2andy.materialbrowser.reader.ReaderTextAlignment
+import dev.sk2andy.materialbrowser.reader.ReaderTheme
 import kotlinx.coroutines.delay
 
 object ReaderStudioTestTags {
@@ -208,7 +204,7 @@ internal object DefaultReaderStudioResources : ReaderStudioResources {
         ReaderStudioLabel.CompactControls -> "Use compact controls"
         ReaderStudioLabel.ExpandControls -> "Show URL and controls"
         ReaderStudioLabel.HideControls -> "Hide controls completely"
-        ReaderStudioLabel.HiddenControlsHint -> "Android Back shows the controls again."
+        ReaderStudioLabel.HiddenControlsHint -> "Use the back button to show the controls again."
         ReaderStudioLabel.ContinueReading -> "Continue reading"
         ReaderStudioLabel.FontSerif -> "Serif"
         ReaderStudioLabel.FontSans -> "Sans"
@@ -254,8 +250,17 @@ internal object DefaultReaderStudioResources : ReaderStudioResources {
         modifier: Modifier,
         contentDescription: String?,
     ) {
-        Icon(
-            imageVector = when (icon) {
+        LocalCandyBrowserChromeEffects.current.icon(
+            symbol = when (icon) {
+                ReaderStudioIcon.Download -> "arrow.down.to.line"
+                ReaderStudioIcon.FontDecrease -> "textformat.size.smaller"
+                ReaderStudioIcon.FontIncrease -> "textformat.size.larger"
+                ReaderStudioIcon.AlignmentStart -> "text.alignleft"
+                ReaderStudioIcon.AlignmentJustified -> "text.justify"
+                ReaderStudioIcon.Pause -> "pause.fill"
+                ReaderStudioIcon.Stop -> "stop.fill"
+            },
+            fallback = when (icon) {
                 ReaderStudioIcon.Download -> Icons.Filled.Download
                 ReaderStudioIcon.FontDecrease -> Icons.Filled.Remove
                 ReaderStudioIcon.FontIncrease -> Icons.Filled.Add
@@ -352,10 +357,10 @@ fun ReaderStudioScreen(
     systemBarAppearance: @Composable (Boolean) -> Unit = {},
 ) {
     var library by remember(isPrivate) { mutableStateOf(ReaderLibraryState()) }
-    var activeDocument by remember(result) {
+    var activeDocument by remember(result, sourceUrl, isPrivate) {
         mutableStateOf((result as? ReaderExtractionResult.Success)?.document)
     }
-    var activeSnapshot by remember { mutableStateOf<ReaderSnapshot?>(null) }
+    var activeSnapshot by remember(result, sourceUrl, isPrivate) { mutableStateOf<ReaderSnapshot?>(null) }
     var libraryVisible by rememberSaveable(sourceUrl, isPrivate) { mutableStateOf(false) }
     var chrome by rememberSaveable(sourceUrl, isPrivate) { mutableStateOf(ReaderChromeMode.Expanded) }
     var scrollDistanceDp by remember(activeDocument?.sourceUrl, isPrivate) { mutableFloatStateOf(0f) }
@@ -378,12 +383,22 @@ fun ReaderStudioScreen(
     }
     val colors = readerColors(sessionSettings.theme)
     systemBarAppearance(colors.article.luminance() > 0.5f)
-    LaunchedEffect(result, isPrivate) {
+    DisposableEffect(repository, result, sourceUrl, isPrivate) {
+        var active = true
         libraryLoaded = false
         repository.load(isPrivate) { loaded ->
-            library = loaded
-            libraryLoaded = true
+            if (active) {
+                library = loaded
+                libraryLoaded = true
+                if (activeDocument == null && result is ReaderExtractionResult.Failure) {
+                    ReaderLibraryRules.snapshotForSourceUrl(loaded, sourceUrl, isPrivate)?.let { snapshot ->
+                        activeSnapshot = snapshot
+                        activeDocument = snapshot.document
+                    }
+                }
+            }
         }
+        onDispose { active = false }
     }
 
     Surface(
@@ -427,6 +442,11 @@ fun ReaderStudioScreen(
                             colors,
                             onRetry,
                             onOpenOriginal = { onOpenOriginal(sourceUrl) },
+                            onOpenLibrary = if (!isPrivate && library.snapshots.isNotEmpty()) {
+                                { libraryVisible = true }
+                            } else {
+                                null
+                            },
                         )
                     activeDocument != null -> ReaderArticle(
                         document = checkNotNull(activeDocument),
@@ -570,6 +590,7 @@ private fun ReaderError(
     colors: ReaderColors,
     onRetry: () -> Unit,
     onOpenOriginal: () -> Unit,
+    onOpenLibrary: (() -> Unit)?,
 ) {
     Box(
         modifier = Modifier
@@ -607,6 +628,14 @@ private fun ReaderError(
                     }
                     Button(onClick = onRetry) {
                         Text(resources.text(ReaderStudioLabel.Retry))
+                    }
+                }
+                if (onOpenLibrary != null) {
+                    TextButton(
+                        onClick = onOpenLibrary,
+                        modifier = Modifier.testTag(ReaderStudioTestTags.Library),
+                    ) {
+                        Text(resources.text(ReaderStudioLabel.OfflineLibrary))
                     }
                 }
             }
@@ -780,11 +809,12 @@ private fun ReaderControls(
     onStop: () -> Unit,
     onSave: () -> Unit,
 ) {
-    Surface(
+    LocalCandyBrowserChromeEffects.current.floatingSurface(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 12.dp, vertical = 8.dp),
         color = colors.card,
+        contentColor = colors.content,
         shape = RoundedCornerShape(28.dp),
         tonalElevation = 5.dp,
         shadowElevation = 2.dp,
@@ -793,28 +823,18 @@ private fun ReaderControls(
             val showSaveLabel = maxWidth >= 320.dp && LocalDensity.current.fontScale < 1.6f
             val themeColumns = if (maxWidth < 360.dp || LocalDensity.current.fontScale >= 1.6f) 2 else 4
             Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp)) {
-                SingleChoiceSegmentedButtonRow(
+                CandySegmentedControl(
+                    options = ReaderFont.entries,
+                    selected = { settings.font == it },
+                    onSelect = { onSettingsChanged(settings.copy(font = it)) },
+                    colors = readerSegmentedColors(colors),
+                    containerColor = colors.article,
+                    contentColor = colors.content,
                     modifier = Modifier.fillMaxWidth().testTag(ReaderStudioTestTags.Typeface),
-                ) {
-                    ReaderFont.entries.forEachIndexed { index, font ->
-                        SegmentedButton(
-                            selected = settings.font == font,
-                            onClick = { onSettingsChanged(settings.copy(font = font)) },
-                            shape = SegmentedButtonDefaults.itemShape(index, ReaderFont.entries.size),
-                            colors = readerSegmentedColors(colors),
-                            label = {
-                                Text(
-                                    resources.text(
-                                        if (font == ReaderFont.Serif) {
-                                            ReaderStudioLabel.FontSerif
-                                        } else {
-                                            ReaderStudioLabel.FontSans
-                                        },
-                                    ),
-                                )
-                            },
-                        )
-                    }
+                ) { font ->
+                    Text(resources.text(
+                        if (font == ReaderFont.Serif) ReaderStudioLabel.FontSerif else ReaderStudioLabel.FontSans,
+                    ))
                 }
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -863,30 +883,26 @@ private fun ReaderControls(
                 }
                 Column(modifier = Modifier.testTag(ReaderStudioTestTags.ThemeSegmented)) {
                     ReaderTheme.entries.chunked(themeColumns).forEach { themes ->
-                        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                            themes.forEachIndexed { index, theme ->
-                                SegmentedButton(
-                                    modifier = Modifier.weight(1f),
-                                    selected = settings.theme == theme,
-                                    onClick = { onSettingsChanged(settings.copy(theme = theme)) },
-                                    shape = SegmentedButtonDefaults.itemShape(index, themes.size),
-                                    label = {
-                                        Text(
-                                            resources.text(
-                                                when (theme) {
-                                                    ReaderTheme.System -> ReaderStudioLabel.ThemeSystem
-                                                    ReaderTheme.Light -> ReaderStudioLabel.ThemeLight
-                                                    ReaderTheme.Paper -> ReaderStudioLabel.ThemePaper
-                                                    ReaderTheme.Night -> ReaderStudioLabel.ThemeNight
-                                                },
-                                            ),
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis,
-                                        )
-                                    },
-                                    colors = readerSegmentedColors(colors),
-                                )
-                            }
+                        CandySegmentedControl(
+                            options = themes,
+                            equalWidths = true,
+                            selected = { settings.theme == it },
+                            onSelect = { onSettingsChanged(settings.copy(theme = it)) },
+                            colors = readerSegmentedColors(colors),
+                            containerColor = colors.article,
+                            contentColor = colors.content,
+                            modifier = Modifier.fillMaxWidth(),
+                        ) { theme ->
+                            Text(
+                                resources.text(when (theme) {
+                                    ReaderTheme.System -> ReaderStudioLabel.ThemeSystem
+                                    ReaderTheme.Light -> ReaderStudioLabel.ThemeLight
+                                    ReaderTheme.Paper -> ReaderStudioLabel.ThemePaper
+                                    ReaderTheme.Night -> ReaderStudioLabel.ThemeNight
+                                }),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
                         }
                     }
                 }
@@ -930,33 +946,23 @@ private fun ReaderFontSizeSegmented(
             onSettingsChanged(settings.copy(fontScale = settings.fontScale + 0.1f))
         },
     )
-    SingleChoiceSegmentedButtonRow(
+    CandySegmentedControl(
+        options = actions,
+        selected = { false },
+        onSelect = { it.third() },
+        colors = readerSegmentedColors(colors),
+        containerColor = colors.article,
+        contentColor = colors.content,
         modifier = modifier.testTag(ReaderStudioTestTags.FontSegmented),
-    ) {
-        actions.forEachIndexed { index, (icon, description, action) ->
-            SegmentedButton(
-                modifier = Modifier.clearAndSetSemantics {
-                    contentDescription = description
-                    role = Role.Button
-                    onClick {
-                        action()
-                        true
-                    }
-                },
-                selected = false,
-                onClick = action,
-                shape = SegmentedButtonDefaults.itemShape(index, actions.size),
-                icon = {},
-                label = {
-                    resources.icon(
-                        icon = icon,
-                        modifier = Modifier.size(if (index == 0) 18.dp else 20.dp),
-                        contentDescription = null,
-                    )
-                },
-                colors = readerSegmentedColors(colors),
-            )
-        }
+        isSelection = false,
+        showsSelectionIcon = false,
+        description = { it.second },
+    ) { (icon, _, _) ->
+        resources.icon(
+            icon = icon,
+            modifier = Modifier.size(if (icon == ReaderStudioIcon.FontDecrease) 18.dp else 20.dp),
+            contentDescription = null,
+        )
     }
 }
 
@@ -968,34 +974,23 @@ private fun ReaderAlignmentSegmented(
     onSettingsChanged: (ReaderSettings) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    SingleChoiceSegmentedButtonRow(
+    CandySegmentedControl(
+        options = ReaderTextAlignment.entries,
+        selected = { settings.textAlignment == it },
+        onSelect = { onSettingsChanged(settings.copy(textAlignment = it)) },
+        colors = readerSegmentedColors(colors),
+        containerColor = colors.article,
+        contentColor = colors.content,
         modifier = modifier.testTag(ReaderStudioTestTags.AlignmentSegmented),
-    ) {
-        ReaderTextAlignment.entries.forEachIndexed { index, alignment ->
-            val description = resources.text(
-                when (alignment) {
-                    ReaderTextAlignment.Start -> ReaderStudioLabel.AlignmentStart
-                    ReaderTextAlignment.Justified -> ReaderStudioLabel.AlignmentJustified
-                },
-            )
-            SegmentedButton(
-                selected = settings.textAlignment == alignment,
-                onClick = { onSettingsChanged(settings.copy(textAlignment = alignment)) },
-                shape = SegmentedButtonDefaults.itemShape(index, ReaderTextAlignment.entries.size),
-                icon = {},
-                label = {
-                    resources.icon(
-                        icon = when (alignment) {
-                            ReaderTextAlignment.Start -> ReaderStudioIcon.AlignmentStart
-                            ReaderTextAlignment.Justified -> ReaderStudioIcon.AlignmentJustified
-                        },
-                        contentDescription = description,
-                        modifier = Modifier.size(20.dp),
-                    )
-                },
-                colors = readerSegmentedColors(colors),
-            )
-        }
+        showsSelectionIcon = false,
+    ) { alignment ->
+        resources.icon(
+            icon = if (alignment == ReaderTextAlignment.Start) ReaderStudioIcon.AlignmentStart else ReaderStudioIcon.AlignmentJustified,
+            contentDescription = resources.text(
+                if (alignment == ReaderTextAlignment.Start) ReaderStudioLabel.AlignmentStart else ReaderStudioLabel.AlignmentJustified,
+            ),
+            modifier = Modifier.size(20.dp),
+        )
     }
 }
 
@@ -1068,7 +1063,9 @@ private fun ReaderSpeechTransport(
                         contentDescription = primaryActionDescription,
                     )
                 } else {
-                    Icon(Icons.Default.PlayArrow, contentDescription = primaryActionDescription)
+                    LocalCandyBrowserChromeEffects.current.icon(
+                        "play.fill", Icons.Default.PlayArrow, contentDescription = primaryActionDescription,
+                    )
                 }
             }
             Text(

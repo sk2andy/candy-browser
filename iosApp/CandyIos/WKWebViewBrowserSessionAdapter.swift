@@ -7,6 +7,8 @@ import WebKit
 protocol BrowserEngineEventSink: AnyObject {
     func browserEngineDidEmit(_ event: BrowserEngineEvent)
 
+    func browserEngineDidScroll(tabId: String, sessionId: UUID, scrollY: Double)
+
     func browserEngineDidUpdateHistory(
         tabId: String,
         sessionId: UUID,
@@ -37,11 +39,14 @@ final class WKWebViewBrowserSessionAdapter: NSObject, @preconcurrency BrowserEng
     let profileId: String
     let usesIsolatedProfileStorage: Bool
     weak var eventSink: BrowserEngineEventSink?
+    var desktopModeForAddress: ((String) -> Bool)?
+    var downloadFailureSink: ((String) -> Void)?
     private var stateObservations: [NSKeyValueObservation] = []
     private var blockingState = BlockingState.initializing
     private var pendingLoad: BrowserEngineCommand?
     private var activeNavigation: WKNavigation?
     private var activeNavigationIsReload = false
+    private let promptPresenter = BrowserWebPromptPresenter()
 
     init(
         tabId: String,
@@ -73,6 +78,8 @@ final class WKWebViewBrowserSessionAdapter: NSObject, @preconcurrency BrowserEng
         super.init()
         ToppingRuntime.shared.bind(webView, tabId: tabId)
         webView.navigationDelegate = self
+        webView.uiDelegate = promptPresenter
+        webView.allowsBackForwardNavigationGestures = true
         stateObservations = [
             webView.observe(\.url, options: [.new]) { [weak self] _, _ in
                 Task { @MainActor in self?.emit(type: .statechanged) }
@@ -88,6 +95,19 @@ final class WKWebViewBrowserSessionAdapter: NSObject, @preconcurrency BrowserEng
             },
             webView.observe(\.canGoForward, options: [.new]) { [weak self] _, _ in
                 Task { @MainActor in self?.emit(type: .statechanged) }
+            },
+            webView.scrollView.observe(\.contentOffset, options: [.new]) { [weak self] _, _ in
+                Task { @MainActor in
+                    guard let self else { return }
+                    // Read the latest offset after the main-actor hop, including WebKit's top inset.
+                    // Observing leaves WebKit's own UIScrollView delegate and gesture routing intact.
+                    let scrollView = self.webView.scrollView
+                    self.eventSink?.browserEngineDidScroll(
+                        tabId: self.tabId,
+                        sessionId: self.sessionId,
+                        scrollY: Double(scrollView.contentOffset.y + scrollView.adjustedContentInset.top)
+                    )
+                }
             },
         ]
         Task { [weak self, controller = configuration.userContentController] in
@@ -133,6 +153,23 @@ final class WKWebViewBrowserSessionAdapter: NSObject, @preconcurrency BrowserEng
         return WKWebsiteDataStore(forIdentifier: identifier)
     }
 
+    static func deleteProfileData(
+        profileId: String,
+        completion: @escaping @MainActor @Sendable (Bool) -> Void
+    ) {
+        let identifier = UUID(uuidString: profileId) ?? stableStoreIdentifier(profileId: profileId)
+        WKWebsiteDataStore.fetchAllDataStoreIdentifiers { identifiers in
+            guard identifiers.contains(identifier) else {
+                Task { @MainActor in completion(true) }
+                return
+            }
+            WKWebsiteDataStore.remove(forIdentifier: identifier) { error in
+                let succeeded = error == nil
+                Task { @MainActor in completion(succeeded) }
+            }
+        }
+    }
+
     private static func stableStoreIdentifier(profileId: String) -> UUID {
         var bytes = Array(SHA256.hash(data: Data("candy-profile/\(profileId)".utf8)).prefix(16))
         bytes[6] = (bytes[6] & 0x0f) | 0x50
@@ -176,14 +213,19 @@ final class WKWebViewBrowserSessionAdapter: NSObject, @preconcurrency BrowserEng
             activeNavigationIsReload = true
             activeNavigation = webView.reload()
         case .stop:
+            pendingLoad = nil
             activeNavigation = nil
             activeNavigationIsReload = false
             webView.stopLoading()
         case .close:
+            pendingLoad = nil
+            BrowserDownloadRuntime.shared.cancel(sessionId: sessionId)
+            promptPresenter.cancel()
             activeNavigation = nil
             activeNavigationIsReload = false
             webView.stopLoading()
             webView.navigationDelegate = nil
+            webView.uiDelegate = nil
             stateObservations.forEach { $0.invalidate() }
             stateObservations.removeAll()
             emit(type: .closed)
@@ -282,8 +324,65 @@ private enum BlockingState {
 extension WKWebViewBrowserSessionAdapter: WKNavigationDelegate {
     func webView(
         _ webView: WKWebView,
+        decidePolicyFor navigationAction: WKNavigationAction,
+        preferences: WKWebpagePreferences,
+        decisionHandler: @escaping @MainActor (WKNavigationActionPolicy, WKWebpagePreferences) -> Void
+    ) {
+        if navigationAction.targetFrame?.isMainFrame != false {
+            let desktop: Bool
+            if let address = navigationAction.request.url?.absoluteString {
+                desktop = desktopModeForAddress?(address) ?? false
+            } else {
+                desktop = false
+            }
+            preferences.preferredContentMode = desktop ? .desktop : .mobile
+        }
+        decisionHandler(navigationAction.shouldPerformDownload ? .download : .allow, preferences)
+    }
+
+    func webView(
+        _ webView: WKWebView,
+        decidePolicyFor navigationResponse: WKNavigationResponse,
+        decisionHandler: @escaping @MainActor @Sendable (WKNavigationResponsePolicy) -> Void
+    ) {
+        guard navigationResponse.isForMainFrame else {
+            decisionHandler(.allow)
+            return
+        }
+        let response = navigationResponse.response
+        let disposition = (response as? HTTPURLResponse)?.value(forHTTPHeaderField: "Content-Disposition")
+        let attachment = disposition?.split(separator: ";", maxSplits: 1).first?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .caseInsensitiveCompare("attachment") == .orderedSame
+        decisionHandler(attachment || !navigationResponse.canShowMIMEType ? .download : .allow)
+    }
+
+    func webView(_ webView: WKWebView, navigationAction: WKNavigationAction, didBecome download: WKDownload) {
+        attachDownload(download)
+    }
+
+    func webView(_ webView: WKWebView, navigationResponse: WKNavigationResponse, didBecome download: WKDownload) {
+        attachDownload(download)
+    }
+
+    private func attachDownload(_ download: WKDownload) {
+        activeNavigation = nil
+        activeNavigationIsReload = false
+        emit(type: .statechanged)
+        emit(type: .navigationfailed)
+        BrowserDownloadRuntime.shared.attach(
+            download,
+            sessionId: sessionId,
+            webView: webView,
+            onFailure: { [weak self] message in self?.downloadFailureSink?(message) }
+        )
+    }
+
+    func webView(
+        _ webView: WKWebView,
         didStartProvisionalNavigation navigation: WKNavigation?
     ) {
+        promptPresenter.cancel()
         activeNavigation = navigation
         emit(type: .navigationstarted)
     }
@@ -334,6 +433,8 @@ extension WKWebViewBrowserSessionAdapter: WKNavigationDelegate {
     }
 
     func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
+        BrowserDownloadRuntime.shared.cancel(sessionId: sessionId)
+        promptPresenter.cancel()
         ToppingRuntime.shared.navigationStarted(tabId: tabId)
         emit(
             type: .crashed,

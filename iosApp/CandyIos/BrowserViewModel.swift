@@ -10,6 +10,7 @@ struct BrowserTabCard: Identifiable {
     let isSelected: Bool
     let isFavorite: Bool
     let isPinned: Bool
+    let isPrivate: Bool
     let preview: UIImage?
     let profileId: String
 }
@@ -46,16 +47,34 @@ final class BrowserViewModel: NSObject, ObservableObject {
     @Published private(set) var activeProfileId = ""
     @Published private(set) var tabOverviewMode: BrowserTabOverviewMode
     @Published private(set) var tabListStartsAtBottom: Bool
+    @Published private(set) var dismissResistancePercent: Int32
+    @Published private(set) var appearanceSettings: AppearanceSettings
+    @Published private(set) var isAddressBarCompact = false
+    @Published private(set) var addressBarDockPlacement: AddressBarDockPlacement?
+    private(set) var lastAddressBarDockPlacement: AddressBarDockPlacement
     @Published private(set) var searchEngine: SearchEngine
     @Published private(set) var searxngInstanceUrl: String
     @Published private(set) var translationProvider: PageTranslationProvider
     @Published private(set) var menuLayout: BrowserMenuLayout
     @Published private(set) var menuItems: [BrowserFeatureMenuItem] = []
-    @Published private(set) var favoriteItems: [BrowserFavoriteItem] = []
-    @Published private(set) var pendingFavoriteRemoval: BrowserFavoriteRemoval?
+    @Published private(set) var isBrowserMenuVisible = false
     @Published private(set) var isTabOverviewVisible = false
     @Published private(set) var isSettingsVisible = false
     @Published private(set) var isFavoritesVisible = false
+    @Published private(set) var isHistoryVisible = false
+    @Published private(set) var snoozedTabs: [SnoozedTab] = []
+    @Published private(set) var snoozeTab: BrowserTab?
+    @Published private(set) var isSnoozedTabsVisible = false
+    @Published var isCustomSnoozeVisible = false
+    private var snoozeRescheduleId: String?
+    private lazy var snoozeNotifications: BrowserSnoozeNotifications = {
+        let notifications = BrowserSnoozeNotifications.shared
+        notifications.bind(
+            onOpen: { [weak self] tabId in self?.openSnoozedTabNow(tabId) },
+            onWake: { [weak self] in self?.resumeSnoozedTabs() }
+        )
+        return notifications
+    }()
     @Published private(set) var addressFocusRequest: Int64 = 0
     @Published var findQuery = ""
     @Published private(set) var findResultText = ""
@@ -84,10 +103,15 @@ final class BrowserViewModel: NSObject, ObservableObject {
         .share,
         .openexternal,
         .print,
+        .desktopview,
         .toppingcommands,
         .candytrail,
         .openfavorites,
+        .openhistory,
+        .snooze,
+        .opensnoozedtabs,
         .opensettings,
+        .addressbardocking,
     ]
 
     var activeWebView: WKWebView {
@@ -102,11 +126,15 @@ final class BrowserViewModel: NSObject, ObservableObject {
     private let sessionController: BrowserSessionController
     private let snapshotStore: BrowserTabSnapshotStore
     private let preferences: UserDefaults
+    private let addressBarScroll = BrowserChromeScrollController()
+    private var addressBarScrollSessionId: UUID?
+    private var isAddressBarEditing = false
+    private let localStateStore: BrowserLocalStateStore
+    private let libraryController: BrowserLibraryController
+    private let sitePreferences: BrowserSitePreferenceController
     private let syncRepository: CandySyncRepository
     private var sessions: [String: WKWebViewBrowserSessionAdapter]
     private var syncObservation: KotlinAutoCloseable?
-    private var favoriteAddresses: Set<String> = []
-    private var pinnedTabIds: Set<String> = []
     private var candyTrails: [String: CandyTrail] = [:]
     private var candyTrailHistoryBindings: [String: CandyTrailHistoryBinding] = [:]
     private var pendingCandyTrailTargets: [String: String] = [:]
@@ -114,6 +142,15 @@ final class BrowserViewModel: NSObject, ObservableObject {
     private var findRequestId: UUID?
     private var findTabId: String?
     private var findSessionId: UUID?
+    private var readerSpeechAdapter: BrowserReaderSpeechAdapter?
+    private var deletingProfileId: String?
+    private var profileCleanupAfterViewportMount: (() -> Void)?
+    private lazy var readerLibraryAdapter = BrowserReaderLibraryAdapter(
+        profileId: { [weak self] in self?.activeProfileId },
+        onFailure: { [weak self] in
+            self?.errorMessage = "Reader-Bibliothek konnte nicht gespeichert werden."
+        }
+    )
 
     private static let candyTrailProfileId = "ios-default"
     private static let localProfilesPreferenceKey = "ios.browser.local-profiles.v1"
@@ -125,6 +162,9 @@ final class BrowserViewModel: NSObject, ObservableObject {
         let sessionController = BrowserSessionController()
         let snapshotStore = BrowserTabSnapshotStore()
         let preferences = UserDefaults.standard
+        let localStateStore = BrowserLocalStateStore()
+        let libraryController = BrowserLibraryController()
+        let sitePreferences = BrowserSitePreferenceController()
         let profileIconEmojis = Self.loadProfileIconEmojis()
         let syncIconCatalog = Self.loadSyncIconCatalog()
         let syncRepository = CandySyncRepository(
@@ -142,6 +182,15 @@ final class BrowserViewModel: NSObject, ObservableObject {
             from: preferences,
             allowedEmojis: profileIconEmojis
         )
+        if let stored = localStateStore.load() {
+            _ = sessionController.restoreSession(snapshot: stored.sharedSession)
+            sitePreferences.restore(entries: (stored.desktopPreferences ?? []).map(\.sharedPreference))
+            libraryController.restore(
+                favorites: stored.favorites.map(\.sharedEntry),
+                history: stored.history.map(\.sharedEntry)
+            )
+        }
+        _ = sessionController.restoreDueSnoozedTabs(nowMillis: Int64(Date().timeIntervalSince1970 * 1_000))
         let initialSearchSettings = sessionController.updateSearchSettings(
             searchEngine: SearchEngine.companion.fromStableId(
                 stableId: BrowserSearchSettingsPreference.loadEngineStableId(
@@ -176,6 +225,13 @@ final class BrowserViewModel: NSObject, ObservableObject {
         self.sessionController = sessionController
         self.snapshotStore = snapshotStore
         self.preferences = preferences
+        let rememberedPlacement = BrowserAddressBarPreference.rememberedPlacement(from: preferences)
+        lastAddressBarDockPlacement = rememberedPlacement
+        addressBarDockPlacement = BrowserAddressBarPreference.isDocked(in: preferences)
+            ? rememberedPlacement : nil
+        self.localStateStore = localStateStore
+        self.libraryController = libraryController
+        self.sitePreferences = sitePreferences
         self.profileIconEmojis = profileIconEmojis
         self.syncIconCatalog = syncIconCatalog
         self.syncRepository = syncRepository
@@ -190,6 +246,13 @@ final class BrowserViewModel: NSObject, ObservableObject {
         tabListStartsAtBottom = BrowserTabOverviewStartsAtBottomPreference.load(
             from: preferences
         )
+        dismissResistancePercent = TabDismissPhysics.shared.resistancePercent(
+            percent: BrowserTabDismissResistancePreference.loadValue(
+                from: preferences,
+                defaultValue: TabDismissPhysics.shared.DEFAULT_RESISTANCE_PERCENT
+            )
+        )
+        appearanceSettings = BrowserAppearancePreference.load(from: preferences)
         searchEngine = initialSearchSettings.searchEngine
         searxngInstanceUrl = initialSearchSettings.searxngInstanceUrl
         translationProvider = PageTranslationProvider.companion.fromStableId(
@@ -199,9 +262,11 @@ final class BrowserViewModel: NSObject, ObservableObject {
 
         super.init()
 
+        _ = BrowserDownloadRuntime.shared
         ToppingRuntime.shared.delegate = self
         publishToppings()
         initialSession.eventSink = self
+        bindSitePreferences(to: initialSession)
         snapshotStore.attach(
             tabId: initialTab.id,
             sessionId: initialSession.sessionId
@@ -221,7 +286,52 @@ final class BrowserViewModel: NSObject, ObservableObject {
         chrome.editAddress(value: value)
     }
 
+    var canParkAddressBar: Bool {
+        sessionController.state.tabs.first(where: { $0.id == selectedTabId })?.address.isEmpty == false
+    }
+
+    func parkAddressBar(onRight: Bool = false) {
+        guard canParkAddressBar else { return }
+        let placement = AddressBarDockPlacement(
+            edge: onRight ? .right : lastAddressBarDockPlacement.edge,
+            verticalFraction: lastAddressBarDockPlacement.verticalFraction
+        )
+        updateAddressBarDockPlacement(placement)
+    }
+
+    func updateAddressBarDockPlacement(_ placement: AddressBarDockPlacement) {
+        guard canParkAddressBar else { return }
+        let normalized = placement.normalized()
+        lastAddressBarDockPlacement = normalized
+        addressBarDockPlacement = normalized
+        BrowserAddressBarPreference.save(placement: normalized, remembered: normalized, to: preferences)
+    }
+
+    func restoreAddressBar() {
+        addressBarDockPlacement = nil
+        resetAddressBarScroll()
+        BrowserAddressBarPreference.save(
+            placement: nil,
+            remembered: lastAddressBarDockPlacement,
+            to: preferences
+        )
+    }
+
+    func setAddressBarEditing(_ editing: Bool) {
+        isAddressBarEditing = editing
+        resetAddressBarScroll()
+    }
+
+    private func resetAddressBarScroll() {
+        let scrollView = sessions[selectedTabId]?.webView.scrollView
+        addressBarScroll.reset(scrollY: scrollView.map {
+            Double($0.contentOffset.y + $0.adjustedContentInset.top)
+        } ?? 0)
+        isAddressBarCompact = false
+    }
+
     func perform(_ action: BrowserChromeAction) {
+        guard deletingProfileId == nil else { return }
         if action == .navigate {
             navigate()
         } else if action == .back {
@@ -237,11 +347,13 @@ final class BrowserViewModel: NSObject, ObservableObject {
     }
 
     func performTabs(_ intent: BrowserTabsIntent, tabId: String? = nil) {
+        guard deletingProfileId == nil else { return }
         let closingTabId = tabId ?? selectedTabId
         let closingSyncTab = intent == .closetab
             ? sessionController.state.tabs.first(where: { $0.id == closingTabId })
             : nil
-        if intent == .closetab && pinnedTabIds.contains(closingTabId) {
+        if intent == .closetab,
+           sessionController.state.tabs.first(where: { $0.id == closingTabId })?.isPinned == true {
             errorMessage = "Angehefteten Tab zuerst lösen."
             return
         }
@@ -276,7 +388,129 @@ final class BrowserViewModel: NSObject, ObservableObject {
         }
     }
 
+    var snoozeSnapshot: BrowserSnoozeSnapshot? {
+        guard snoozeTab != nil || isSnoozedTabsVisible else { return nil }
+        return BrowserSnoozeSnapshot(
+            tab: isCustomSnoozeVisible ? nil : snoozeTab, tabs: snoozedTabs, profiles: profiles,
+            isLibraryVisible: isSnoozedTabsVisible,
+            wakeTimeLabels: Dictionary(uniqueKeysWithValues: snoozedTabs.map { record in
+                (record.tab.id, Date(timeIntervalSince1970: Double(record.wakeAtMillis) / 1_000)
+                    .formatted(date: .abbreviated, time: .shortened))
+            })
+        )
+    }
+
+    func canSnooze(tabId: String) -> Bool {
+        deletingProfileId == nil && sessionController.canSnoozeTab(tabId: tabId)
+    }
+
+    func showSnooze(tabId: String) {
+        guard deletingProfileId == nil else { return }
+        guard let candidate = sessionController.snoozeCandidate(tabId: tabId) else { return }
+        cancelFeaturePresentations()
+        snoozeRescheduleId = nil
+        snoozeTab = candidate
+    }
+
+    func showSnoozedTabs() {
+        cancelFeaturePresentations()
+        isSnoozedTabsVisible = true
+    }
+
+    func dismissSnooze() {
+        snoozeTab = nil
+        snoozeRescheduleId = nil
+        isCustomSnoozeVisible = false
+        isSnoozedTabsVisible = false
+    }
+
+    func applySnoozePreset(_ preset: SnoozePreset) {
+        guard let wakeAt = SnoozeClockRules.shared.wakeAtMillis(
+            preset: preset, nowMillis: currentTimeMillis, zoneId: TimeZone.current.identifier
+        ) else { return }
+        applySnooze(wakeAtMillis: wakeAt.int64Value)
+    }
+
+    func customSnooze() {
+        isCustomSnoozeVisible = snoozeTab != nil
+    }
+
+    func applyCustomSnooze(_ date: Date) {
+        applySnooze(wakeAtMillis: Int64(date.timeIntervalSince1970 * 1_000))
+    }
+
+    private func applySnooze(wakeAtMillis: Int64) {
+        guard deletingProfileId == nil else { return }
+        guard let candidate = snoozeTab else { return }
+        let succeeded: Bool
+        if let snoozeRescheduleId {
+            succeeded = sessionController.rescheduleSnoozedTab(
+                tabId: snoozeRescheduleId, wakeAtMillis: wakeAtMillis, nowMillis: currentTimeMillis
+            )
+        } else {
+            succeeded = sessionController.snoozeTab(
+                tabId: candidate.id, wakeAtMillis: wakeAtMillis, nowMillis: currentTimeMillis
+            )
+        }
+        guard succeeded else {
+            errorMessage = "Der Tab konnte nicht zurückgestellt werden. Bitte eine spätere Zeit wählen."
+            return
+        }
+        dismissSnooze()
+        synchronizeTabs()
+        snoozeNotifications.requestReminders()
+    }
+
+    func rescheduleSnoozedTab(_ tabId: String) {
+        guard deletingProfileId == nil else { return }
+        guard let record = snoozedTabs.first(where: { $0.tab.id == tabId }) else { return }
+        snoozeRescheduleId = tabId
+        snoozeTab = record.tab
+    }
+
+    func openSnoozedTabNow(_ tabId: String) {
+        guard deletingProfileId == nil else { return }
+        let restored = sessionController.openSnoozedTabNow(tabId: tabId, nowMillis: currentTimeMillis)
+        guard restored || sessionController.state.tabs.contains(where: { $0.id == tabId }) else { return }
+        dismissFind()
+        cancelFeaturePresentations()
+        if let tab = sessionController.state.tabs.first(where: { $0.id == tabId }) {
+            sessionController.selectProfile(profileId: tab.profileId)
+            sessionController.dispatchTabs(intent: .selecttab, tabId: tabId)
+        }
+        synchronizeTabs()
+    }
+
+    func deleteSnoozedTab(_ tabId: String) {
+        guard deletingProfileId == nil else { return }
+        guard sessionController.deleteSnoozedTab(tabId: tabId) else { return }
+        synchronizeTabs()
+    }
+
+    func resumeSnoozedTabs() {
+        guard deletingProfileId == nil else { return }
+        _ = sessionController.restoreDueSnoozedTabs(nowMillis: currentTimeMillis)
+        synchronizeTabs()
+        snoozeNotifications.reconcile(
+            snoozedTabs,
+            reminderRecords: SnoozeNotificationRules.shared.eligibleSnoozedTabs(
+                tabs: snoozedTabs, profiles: profiles
+            ),
+            force: true
+        )
+    }
+
+    func newPrivateTab() {
+        guard deletingProfileId == nil else { return }
+        captureSnapshot(tabId: selectedTabId)
+        dismissFind()
+        cancelFeaturePresentations()
+        sessionController.doNewPrivateTab()
+        synchronizeTabs()
+    }
+
     func selectProfile(_ profileId: String) {
+        guard deletingProfileId == nil else { return }
         guard profileId != activeProfileId else {
             return
         }
@@ -287,6 +521,7 @@ final class BrowserViewModel: NSObject, ObservableObject {
     }
 
     func createProfile(emoji: String, isolationEnabled: Bool) {
+        guard deletingProfileId == nil else { return }
         let previousProfileCount = sessionController.state.profiles.count
         sessionController.createProfile(
             profileId: UUID().uuidString.lowercased(),
@@ -308,6 +543,7 @@ final class BrowserViewModel: NSObject, ObservableObject {
     }
 
     func setProfileIsolation(profileId: String, enabled: Bool) {
+        guard deletingProfileId == nil else { return }
         guard let currentProfile = sessionController.state.profiles.first(
             where: { $0.id == profileId }
         ), currentProfile.isolationEnabled != enabled else {
@@ -326,13 +562,113 @@ final class BrowserViewModel: NSObject, ObservableObject {
         let affectedTabIds = sessionController.state.tabs
             .filter { $0.profileId == profileId }
             .map(\.id)
-        affectedTabIds.forEach { tabId in
-            _ = sessionController.detachSession(tabId: tabId)
-            sessions.removeValue(forKey: tabId)?.eventSink = nil
-            snapshotStore.invalidate(tabId: tabId)
-        }
+        retireProfileSessions(tabIds: affectedTabIds)
         synchronizeTabs()
         persistLocalProfiles()
+    }
+
+    func canDeleteProfile(profileId: String) -> Bool {
+        deletingProfileId == nil && BrowserProfileManagementRules.shared.canDeleteProfile(
+            state: sessionController.state, profileId: profileId
+        )
+    }
+
+    func moveTargetProfileIds(tabId: String) -> [String] {
+        guard deletingProfileId == nil else { return [] }
+        return BrowserProfileManagementRules.shared.moveTargets(
+            state: sessionController.state, tabId: tabId
+        ).map(\.id)
+    }
+
+    func closeAllTabs() {
+        guard deletingProfileId == nil,
+              sessionController.state.profiles.first(where: { $0.id == activeProfileId })?.protection == nil else { return }
+        let closingTabs = sessionController.state.activeTabs.filter { !$0.isPinned }
+        guard !closingTabs.isEmpty else { return }
+        dismissFind()
+        cancelFeaturePresentations()
+        closingTabs.forEach(enqueueSyncedTabClose)
+        sessionController.closeAllTabs()
+        synchronizeTabs()
+    }
+
+    func moveTabToProfile(tabId: String, profileId: String) {
+        guard deletingProfileId == nil,
+              moveTargetProfileIds(tabId: tabId).contains(profileId),
+              let source = sessionController.state.tabs.first(where: { $0.id == tabId }) else { return }
+        dismissFind()
+        cancelFeaturePresentations()
+        enqueueSyncedTabClose(source)
+        retireProfileSessions(tabIds: [tabId])
+        sessionController.moveTabToProfile(tabId: tabId, profileId: profileId)
+        sitePreferences.clearTabOverrides(tabId: tabId)
+        if !source.isPrivate, syncTargetDeviceId(profileId: profileId) != nil,
+           sessionController.state.tabs.first(where: { $0.id == tabId })?.syncCandyId == nil {
+            sessionController.assignSyncCandyId(tabId: tabId, candyId: UUID().uuidString.lowercased())
+        }
+        synchronizeTabs()
+        enqueueSyncedTab(tabId: tabId)
+    }
+
+    func deleteProfile(profileId: String) {
+        guard canDeleteProfile(profileId: profileId),
+              let profile = sessionController.state.profiles.first(where: { $0.id == profileId }),
+              let fallback = sessionController.state.profiles.first(where: {
+                  $0.id != profileId && $0.syncedDeviceId == nil && $0.protection == nil
+              }) else { return }
+        let affectedIds = sessionController.state.tabs.filter { $0.profileId == profileId }.map(\.id)
+        deletingProfileId = profileId
+        dismissFind()
+        cancelFeaturePresentations()
+        if activeProfileId == profileId { sessionController.selectProfile(profileId: fallback.id) }
+        retireProfileSessions(tabIds: affectedIds)
+        let finish: @MainActor @Sendable (Bool) -> Void = { [weak self] succeeded in
+            guard let self, self.deletingProfileId == profileId else { return }
+            guard succeeded, BrowserProfileManagementRules.shared.canDeleteProfile(
+                state: self.sessionController.state, profileId: profileId
+            ) else {
+                self.deletingProfileId = nil
+                self.profileCleanupAfterViewportMount = nil
+                self.synchronizeTabs()
+                self.errorMessage = "Das Profil konnte nicht vollständig gelöscht werden."
+                return
+            }
+            self.sessionController.deleteProfile(profileId: profileId)
+            self.libraryController.clearHistory(profileId: profileId)
+            self.sitePreferences.removeProfile(profileId: profileId, tabIds: affectedIds)
+            self.deletingProfileId = nil
+            self.profileCleanupAfterViewportMount = nil
+            self.synchronizeTabs()
+            self.persistLocalProfiles()
+        }
+        if profile.isolationEnabled {
+            profileCleanupAfterViewportMount = {
+                WKWebViewBrowserSessionAdapter.deleteProfileData(profileId: profileId, completion: finish)
+            }
+            synchronizeTabs()
+        } else {
+            finish(true)
+        }
+    }
+
+    func viewportDidMount(tabId: String) {
+        guard let deletingProfileId,
+              tabId == sessionController.state.selectedTabId,
+              sessionController.state.tabs.first(where: { $0.id == tabId })?.profileId != deletingProfileId,
+              let cleanup = profileCleanupAfterViewportMount else { return }
+        profileCleanupAfterViewportMount = nil
+        cleanup()
+    }
+
+    private func retireProfileSessions(tabIds: [String]) {
+        tabIds.forEach { tabId in
+            sessions.removeValue(forKey: tabId)?.eventSink = nil
+            _ = sessionController.detachSession(tabId: tabId)
+            snapshotStore.invalidate(tabId: tabId)
+            candyTrails.removeValue(forKey: tabId)
+            candyTrailHistoryBindings.removeValue(forKey: tabId)
+            pendingCandyTrailTargets.removeValue(forKey: tabId)
+        }
     }
 
     func showSettings() {
@@ -353,6 +689,11 @@ final class BrowserViewModel: NSObject, ObservableObject {
             entry: entry,
             location: location
         )
+        changeBrowserMenuLayout(layout: updated)
+    }
+
+    func changeBrowserMenuLayout(layout: BrowserMenuLayout) {
+        let updated = BrowserMenuLayoutRules.shared.normalize(layout: layout)
         menuLayout = updated
         BrowserMenuLayoutPreference.save(
             wireValues: BrowserMenuLayoutRules.shared.toWireValues(layout: updated),
@@ -366,57 +707,77 @@ final class BrowserViewModel: NSObject, ObservableObject {
         menuItems = featureMenuItems(for: selectedTab)
     }
 
+    func showBrowserMenu() {
+        dismissFind()
+        isBrowserMenuVisible = true
+    }
+
+    func dismissBrowserMenu() {
+        isBrowserMenuVisible = false
+    }
+
     func showFavorites() {
         cancelFeaturePresentations()
-        publishFavoriteItems()
         isFavoritesVisible = true
     }
 
-    func dismissFavorites() {
-        isFavoritesVisible = false
-        pendingFavoriteRemoval = nil
+    var librarySnapshot: BrowserLibrarySnapshot? {
+        if isFavoritesVisible {
+            return BrowserLibrarySnapshot(kind: .favorites, entries: libraryController.state.favorites)
+        }
+        if isHistoryVisible {
+            return BrowserLibrarySnapshot(
+                kind: .history,
+                entries: libraryController.state.history.filter { $0.profileId == activeProfileId }
+            )
+        }
+        return nil
     }
 
-    func openFavorite(_ item: BrowserFavoriteItem) {
-        guard favoriteAddresses.contains(item.address) else {
-            return
-        }
-        let resolution = sessionController.navigateSelected(input: item.address)
+    func showHistory() {
+        cancelFeaturePresentations()
+        isHistoryVisible = true
+    }
+
+    func dismissLibrary() {
+        isFavoritesVisible = false
+        isHistoryVisible = false
+    }
+
+    func openLibraryEntry(_ entry: BrowserLibraryEntry) {
+        guard librarySnapshot?.entries.contains(where: {
+            $0.address == entry.address && $0.profileId == entry.profileId
+        }) == true else { return }
+        let resolution = sessionController.navigateSelected(input: entry.address)
         guard let value = resolution.url?.value else {
-            errorMessage = "Dieser Favorit kann nicht geöffnet werden."
+            errorMessage = "Dieser Eintrag kann nicht geöffnet werden."
             return
         }
+        dismissLibrary()
         address = value
         errorMessage = nil
-        isFavoritesVisible = false
-        pendingFavoriteRemoval = nil
         synchronizeTabs()
     }
 
-    func deleteFavorite(_ item: BrowserFavoriteItem) {
-        guard favoriteAddresses.remove(item.address) != nil else {
-            return
+    func removeLibraryEntry(_ entry: BrowserLibraryEntry) {
+        if isFavoritesVisible {
+            libraryController.removeFavorite(address: entry.address)
+        } else if isHistoryVisible, entry.profileId == activeProfileId {
+            libraryController.removeHistory(address: entry.address, profileId: activeProfileId)
         }
-        pendingFavoriteRemoval = BrowserFavoriteRemoval(id: UUID(), item: item)
-        publishFavoriteItems()
         synchronizeTabs()
     }
 
-    func undoFavoriteRemoval(id: UUID) {
-        guard let removal = pendingFavoriteRemoval, removal.id == id else {
-            return
-        }
-        favoriteAddresses.insert(removal.item.address)
-        pendingFavoriteRemoval = nil
-        publishFavoriteItems()
+    func restoreLibraryEntry(_ entry: BrowserLibraryEntry) {
+        guard isFavoritesVisible else { return }
+        libraryController.addFavorite(entry: entry)
         synchronizeTabs()
     }
 
-    func dismissFavoriteRemoval(id: UUID) {
-        guard pendingFavoriteRemoval?.id == id else {
-            return
-        }
-        pendingFavoriteRemoval = nil
+    func clearLibraryHistory() {
+        guard isHistoryVisible else { return }
+        libraryController.clearHistory(profileId: activeProfileId)
+        synchronizeTabs()
     }
 
     var syncSettingsUiState: SyncSettingsUiState {
@@ -663,6 +1024,10 @@ final class BrowserViewModel: NSObject, ObservableObject {
             toggleFavorite(tabId: tabId)
         } else if action == .togglepinned {
             togglePinned(tabId: tabId)
+        } else if action == .snoozetab {
+            showSnooze(tabId: tabId)
+        } else if action == .toggledesktopview {
+            toggleDesktopView(tabId: tabId)
         } else if action == .share {
             cancelFeaturePresentations()
             sharePage(tabId: tabId)
@@ -701,6 +1066,12 @@ final class BrowserViewModel: NSObject, ObservableObject {
             toggleFavorite()
         } else if action == .togglepinned {
             togglePinned()
+        } else if action == .toggledesktopview {
+            toggleDesktopView(tabId: selectedTabId)
+        } else if action == .dockaddressbar {
+            parkAddressBar()
+        } else if action == .parkaddressbarright {
+            parkAddressBar(onRight: true)
         } else if action == .findinpage {
             cancelFeaturePresentations()
             showFind()
@@ -724,6 +1095,12 @@ final class BrowserViewModel: NSObject, ObservableObject {
             translateSelectedPage()
         } else if action == .openfavorites {
             showFavorites()
+        } else if action == .openhistory {
+            showHistory()
+        } else if action == .snoozetab {
+            showSnooze(tabId: selectedTabId)
+        } else if action == .opensnoozedtabs {
+            showSnoozedTabs()
         } else if action == .opensettings {
             showSettings()
         }
@@ -782,7 +1159,20 @@ final class BrowserViewModel: NSObject, ObservableObject {
         sourceSession?.webView.find("", configuration: WKFindConfiguration()) { _ in }
     }
 
+    func createReaderLibrary() -> ReaderLibraryDataSource {
+        readerLibraryAdapter
+    }
+
+    func createReaderSpeech() -> ReaderSpeech {
+        readerSpeechAdapter?.close()
+        let adapter = BrowserReaderSpeechAdapter()
+        readerSpeechAdapter = adapter
+        return adapter.bridge
+    }
+
     func dismissReader() {
+        readerSpeechAdapter?.close()
+        readerSpeechAdapter = nil
         pageExtractionRequestId = nil
         readerSnapshot = nil
     }
@@ -816,6 +1206,18 @@ final class BrowserViewModel: NSObject, ObservableObject {
     func updateTabListStartsAtBottom(_ enabled: Bool) {
         tabListStartsAtBottom = enabled
         BrowserTabOverviewStartsAtBottomPreference.save(enabled, to: preferences)
+    }
+
+    func updateDismissResistancePercent(_ value: Int32) {
+        dismissResistancePercent = TabDismissPhysics.shared.resistancePercent(percent: value)
+        BrowserTabDismissResistancePreference.saveValue(dismissResistancePercent, to: preferences)
+    }
+
+    func updateAppearanceSettings(_ value: AppearanceSettings) {
+        appearanceSettings = value.normalized()
+        BrowserAppearancePreference.save(appearanceSettings, to: preferences)
+        let zoom = CGFloat(appearanceSettings.webContentFontSizePercent) / 100
+        sessions.values.forEach { $0.webView.pageZoom = zoom }
     }
 
     func updateSearchEngine(_ engine: SearchEngine) {
@@ -948,6 +1350,7 @@ final class BrowserViewModel: NSObject, ObservableObject {
     }
 
     private func navigate() {
+        guard deletingProfileId == nil else { return }
         if isFindVisible {
             dismissFind()
         }
@@ -964,11 +1367,25 @@ final class BrowserViewModel: NSObject, ObservableObject {
     }
 
     private func synchronizeTabs() {
-        let state = sessionController.state
+        if deletingProfileId == nil {
+            _ = sessionController.restoreDueSnoozedTabs(nowMillis: currentTimeMillis)
+        }
+        var state = sessionController.state
+        sitePreferences.retainTabs(tabs: state.tabs)
+        snoozedTabs = state.snoozedTabs
+        snoozeNotifications.reconcile(
+            state.snoozedTabs,
+            reminderRecords: SnoozeNotificationRules.shared.eligibleSnoozedTabs(
+                tabs: state.snoozedTabs, profiles: state.profiles
+            )
+        )
+        persistBrowserState()
         let activeIds = Set(state.tabs.map(\.id))
         let closedTabIds = Set(sessions.keys).subtracting(activeIds)
 
-        for tab in state.tabs where sessions[tab.id] == nil {
+        // Restored tabs retain their shared records without starting hidden network requests.
+        // Create an engine only when its tab is selected; previously visited engines stay alive.
+        for tab in state.tabs where tab.id == state.selectedTabId && sessions[tab.id] == nil {
             guard let profile = state.profiles.first(where: { $0.id == tab.profileId }) else {
                 preconditionFailure("Every tab must reference an existing profile")
             }
@@ -980,10 +1397,12 @@ final class BrowserViewModel: NSObject, ObservableObject {
                 isPrivate: tab.isPrivate
             )
             session.eventSink = self
+            bindSitePreferences(to: session)
             sessions[tab.id] = session
             snapshotStore.attach(tabId: tab.id, sessionId: session.sessionId)
             precondition(sessionController.attach(session: session))
         }
+        state = sessionController.state
         sessions = sessions.filter { activeIds.contains($0.key) }
         closeCandyTrailForkDestinations(tabIds: closedTabIds)
         candyTrails = candyTrails.filter { activeIds.contains($0.key) }
@@ -992,10 +1411,16 @@ final class BrowserViewModel: NSObject, ObservableObject {
         if let candyTrailTabId, !activeIds.contains(candyTrailTabId) {
             closeCandyTrail()
         }
-        pinnedTabIds.formIntersection(activeIds)
         snapshotStore.removeTabs(notIn: activeIds)
 
+        if selectedTabId != state.selectedTabId || state.isOverviewVisible {
+            isBrowserMenuVisible = false
+        }
         selectedTabId = state.selectedTabId
+        if addressBarScrollSessionId != sessions[selectedTabId]?.sessionId {
+            addressBarScrollSessionId = sessions[selectedTabId]?.sessionId
+            resetAddressBarScroll()
+        }
         profiles = state.profiles
         activeProfileId = state.activeProfileId
         isTabOverviewVisible = state.isOverviewVisible
@@ -1019,6 +1444,21 @@ final class BrowserViewModel: NSObject, ObservableObject {
         )
         if selectedTab.isLoading {
             chrome.navigationStarted()
+        }
+    }
+
+    private func persistBrowserState() {
+        let stored = BrowserStoredState(
+            session: sessionController.persistenceSnapshot(),
+            library: libraryController.state,
+            desktopPreferences: sitePreferences.persistentEntries()
+        )
+        localStateStore.save(stored) { [weak self] succeeded in
+            if !succeeded {
+                Task { @MainActor [weak self] in
+                    self?.errorMessage = "Browser-Daten konnten nicht gespeichert werden."
+                }
+            }
         }
     }
 
@@ -1087,8 +1527,9 @@ final class BrowserViewModel: NSObject, ObservableObject {
                 title: tab.title,
                 address: tab.address,
                 isSelected: tab.id == state.selectedTabId,
-                isFavorite: favoriteAddresses.contains(tab.address),
-                isPinned: tab.isPinned || pinnedTabIds.contains(tab.id),
+                isFavorite: libraryController.isFavorite(address: tab.address),
+                isPinned: tab.isPinned,
+                isPrivate: tab.isPrivate,
                 preview: snapshotStore.image(for: tab.id),
                 profileId: tab.profileId
             )
@@ -1128,20 +1569,33 @@ final class BrowserViewModel: NSObject, ObservableObject {
         let fallbackEmoji = allowedEmojis.first ?? "🍬"
         let storedProfiles = preferences.array(forKey: localProfilesPreferenceKey)
             as? [[String: Any]] ?? []
-        storedProfiles.forEach { profile in
-            guard
-                let id = profile["id"] as? String,
-                let emoji = profile["emoji"] as? String,
-                id != "candy"
-            else {
-                return
+        BrowserLocalProfileRestore.apply(
+            storedProfiles,
+            defaultProfileId: "candy",
+            updateDefault: { profile in
+                controller.updateProfileEmoji(
+                    profileId: profile.id,
+                    emoji: allowedEmojis.contains(profile.emoji) ? profile.emoji : fallbackEmoji
+                )
+                controller.updateProfileIsolation(
+                    profileId: profile.id,
+                    enabled: profile.isolationEnabled,
+                    isolationSupported: true
+                )
+            },
+            create: { profile in
+                controller.createProfile(
+                    profileId: profile.id,
+                    emoji: allowedEmojis.contains(profile.emoji) ? profile.emoji : fallbackEmoji,
+                    isolationEnabled: profile.isolationEnabled,
+                    isolationSupported: true
+                )
             }
-            controller.createProfile(
-                profileId: id,
-                emoji: allowedEmojis.contains(emoji) ? emoji : fallbackEmoji,
-                isolationEnabled: profile["isolationEnabled"] as? Bool ?? false,
-                isolationSupported: true
-            )
+        )
+        if preferences.array(forKey: localProfilesPreferenceKey) != nil,
+           !storedProfiles.contains(where: { $0["id"] as? String == "candy" }),
+           controller.state.profiles.count > 1 {
+            controller.deleteProfile(profileId: "candy")
         }
         if let activeProfileId = preferences.string(forKey: activeProfilePreferenceKey) {
             controller.selectProfile(profileId: activeProfileId)
@@ -1235,7 +1689,7 @@ final class BrowserViewModel: NSObject, ObservableObject {
             index: Int32(index),
             groupId: nil,
             active: tab.id == selectedTabId,
-            pinned: tab.isPinned || pinnedTabIds.contains(tab.id),
+            pinned: tab.isPinned,
             title: tab.title,
             url: tab.address
         )
@@ -1337,10 +1791,10 @@ final class BrowserViewModel: NSObject, ObservableObject {
             canGoForward: tab.canGoForward,
             isLoading: tab.isLoading,
             hasPage: hasPage,
-            canCloseTab: !pinnedTabIds.contains(tab.id),
-            canToggleFavorite: hasPage,
-            isFavorite: favoriteAddresses.contains(tab.address),
-            isPinned: pinnedTabIds.contains(tab.id),
+            canCloseTab: !tab.isPinned,
+            canToggleFavorite: hasPage && !tab.isPrivate,
+            isFavorite: libraryController.isFavorite(address: tab.address),
+            isPinned: tab.isPinned,
             canOpenReader: hasPage,
             canTranslatePage: hasPage,
             canUseDocumentActions: hasPage,
@@ -1354,15 +1808,15 @@ final class BrowserViewModel: NSObject, ObservableObject {
             isForceSafeAreaEnabled: false,
             canToggleAlwaysBlockPopups: false,
             isAlwaysBlockPopupsEnabled: false,
-            canToggleDesktopView: false,
-            isDesktopView: false,
+            canToggleDesktopView: sitePreferences.canToggle(tab: tab),
+            isDesktopView: sitePreferences.isDesktop(tab: tab),
             canToggleDomainMute: false,
             isDomainMuted: false,
             canAddSiteCapsule: false,
             canCreateSiteWidget: false,
             canOpenConstellations: false,
-            canSnooze: false,
-            canDockAddressBar: false,
+            canSnooze: sessionController.canSnoozeTab(tabId: tab.id),
+            canDockAddressBar: canParkAddressBar,
             overflowPageActions: [.showtabs, .newtab, .closetab],
             toppingCommands: ToppingRuntime.shared.commands(tabId: tab.id).map { command in
                 BrowserToppingMenuCommand(
@@ -1398,6 +1852,9 @@ final class BrowserViewModel: NSObject, ObservableObject {
             action == .stop ||
             action == .togglefavorite ||
             action == .togglepinned ||
+            action == .toggledesktopview ||
+            action == .dockaddressbar ||
+            action == .parkaddressbarright ||
             action == .showtabs ||
             action == .newtab ||
             action == .duplicatetab ||
@@ -1410,6 +1867,9 @@ final class BrowserViewModel: NSObject, ObservableObject {
             action == .openexternal ||
             action == .print ||
             action == .openfavorites ||
+            action == .openhistory ||
+            action == .snoozetab ||
+            action == .opensnoozedtabs ||
             action == .opensettings ||
             action == .invoketoppingcommand
     }
@@ -1419,26 +1879,11 @@ final class BrowserViewModel: NSObject, ObservableObject {
     }
 
     private func toggleFavorite(tabId: String) {
-        let value = sessionController.state.tabs
-            .first(where: { $0.id == tabId })?
-            .address ?? ""
-        guard !value.isEmpty else {
+        guard let tab = sessionController.state.tabs.first(where: { $0.id == tabId }) else {
             return
         }
-        if favoriteAddresses.contains(value) {
-            favoriteAddresses.remove(value)
-        } else {
-            favoriteAddresses.insert(value)
-        }
-        if pendingFavoriteRemoval?.item.address == value {
-            pendingFavoriteRemoval = nil
-        }
-        publishFavoriteItems()
+        libraryController.toggleFavorite(tab: tab, nowMillis: currentTimeMillis)
         synchronizeTabs()
-    }
-
-    private func publishFavoriteItems() {
-        favoriteItems = BrowserFavoritesRules.items(from: favoriteAddresses)
     }
 
     private func togglePinned() {
@@ -1446,16 +1891,36 @@ final class BrowserViewModel: NSObject, ObservableObject {
     }
 
     private func togglePinned(tabId: String) {
-        let pinned: Bool
-        if pinnedTabIds.contains(tabId) {
-            pinnedTabIds.remove(tabId)
-            pinned = false
-        } else {
-            pinnedTabIds.insert(tabId)
-            pinned = true
+        guard let tab = sessionController.state.tabs.first(where: { $0.id == tabId }) else {
+            return
         }
+        let pinned = !tab.isPinned
+        sessionController.setTabPinned(tabId: tabId, pinned: pinned)
         synchronizeTabs()
         enqueueSyncedTabPinned(tabId: tabId, pinned: pinned)
+    }
+
+    private func bindSitePreferences(to session: WKWebViewBrowserSessionAdapter) {
+        session.webView.pageZoom = CGFloat(appearanceSettings.webContentFontSizePercent) / 100
+        let tabId = session.tabId
+        session.downloadFailureSink = { [weak self] message in
+            self?.errorMessage = message
+        }
+        session.desktopModeForAddress = { [weak self] address in
+            guard let self,
+                  let tab = self.sessionController.state.tabs.first(where: { $0.id == tabId }) else {
+                return false
+            }
+            return self.sitePreferences.isDesktopForAddress(tab: tab, address: address)
+        }
+    }
+
+    private func toggleDesktopView(tabId: String) {
+        guard let tab = sessionController.state.tabs.first(where: { $0.id == tabId }),
+              sitePreferences.canToggle(tab: tab) else { return }
+        sitePreferences.setDesktop(tab: tab, enabled: !sitePreferences.isDesktop(tab: tab))
+        synchronizeTabs()
+        sessionController.execute(tabId: tabId, command: BrowserEngineCommands.shared.reload())
     }
 
     private func showFind() {
@@ -1468,11 +1933,12 @@ final class BrowserViewModel: NSObject, ObservableObject {
     }
 
     private func cancelFeaturePresentations() {
-        pageExtractionRequestId = nil
-        readerSnapshot = nil
+        dismissBrowserMenu()
+        dismissSnooze()
+        dismissReader()
         sharePayload = nil
         isFavoritesVisible = false
-        pendingFavoriteRemoval = nil
+        isHistoryVisible = false
     }
 
     private func presentReader() {
@@ -1480,10 +1946,12 @@ final class BrowserViewModel: NSObject, ObservableObject {
         let sourceUrl = sessionController.state.tabs
             .first(where: { $0.id == selectedTabId })?
             .address ?? ""
+        let isPrivate = sessionController.state.tabs
+            .first(where: { $0.id == selectedTabId })?.isPrivate ?? true
         readerSnapshot = BrowserReaderSnapshot(
             result: nil,
             sourceUrl: sourceUrl,
-            isPrivate: false
+            isPrivate: isPrivate
         )
         extractCurrentPage { [weak self] document in
             guard let self, self.readerSnapshot != nil else {
@@ -1491,12 +1959,12 @@ final class BrowserViewModel: NSObject, ObservableObject {
             }
             self.errorMessage = nil
             if let document {
-                self.readerSnapshot = document.sharedReaderSnapshot(isPrivate: false)
+                self.readerSnapshot = document.sharedReaderSnapshot(isPrivate: isPrivate)
             } else {
                 self.readerSnapshot = BrowserReaderSnapshot(
                     result: ReaderExtractionResultFailure(reason: .emptyarticle),
                     sourceUrl: sourceUrl,
-                    isPrivate: false
+                    isPrivate: isPrivate
                 )
             }
         }
@@ -1645,6 +2113,26 @@ final class BrowserViewModel: NSObject, ObservableObject {
 }
 
 extension BrowserViewModel: BrowserEngineEventSink {
+    func browserEngineDidScroll(tabId: String, sessionId: UUID, scrollY: Double) {
+        guard
+            BrowserChromeScrollRules.shared.accepts(
+                eventTabId: tabId,
+                selectedTabId: selectedTabId,
+                tabExists: sessionController.state.tabs.contains(where: { $0.id == tabId }),
+                rendererIsCurrent: sessions[tabId]?.sessionId == sessionId,
+                destroyed: false
+            ),
+            !isAddressBarEditing,
+            !isTabOverviewVisible,
+            !isFindVisible,
+            readerSnapshot == nil
+        else { return }
+        let compact = addressBarScroll.update(scrollY: scrollY)
+        if compact != isAddressBarCompact {
+            isAddressBarCompact = compact
+        }
+    }
+
     func browserEngineDidEmit(_ event: BrowserEngineEvent) {
         if event.type == .navigationstarted {
             if event.tabId == findTabId {
@@ -1664,6 +2152,7 @@ extension BrowserViewModel: BrowserEngineEventSink {
         if event.tabId == selectedTabId {
             if event.type == .navigationstarted {
                 errorMessage = nil
+                resetAddressBarScroll()
             } else if event.type == .navigationfailed {
                 errorMessage = event.failureDescription
             }
@@ -1672,6 +2161,10 @@ extension BrowserViewModel: BrowserEngineEventSink {
         synchronizeTabs()
         if event.type == .navigationcommitted {
             let tabId = event.tabId
+            if let tab = sessionController.state.tabs.first(where: { $0.id == tabId }) {
+                libraryController.recordVisit(tab: tab, nowMillis: currentTimeMillis)
+                persistBrowserState()
+            }
             if sessionController.state.tabs.first(where: { $0.id == tabId })?.syncCandyId == nil,
                syncTargetDeviceId(
                    profileId: sessionController.state.tabs.first(where: { $0.id == tabId })?.profileId ?? ""
@@ -1770,9 +2263,11 @@ extension BrowserViewModel: BrowserEngineEventSink {
 
 extension BrowserViewModel: ToppingRuntimeDelegate {
     func toppingRuntimeDidChangeCommands(tabId: String, commands: [ToppingMenuCommand]) {
-        if tabId == selectedTabId {
-            synchronizeTabs()
-        }
+        guard tabId == selectedTabId,
+              let tab = sessionController.state.tabs.first(where: { $0.id == tabId }) else { return }
+        // Registration publishes during engine construction, before the session is attached.
+        // Command changes update presentation without starting another engine reconciliation.
+        menuItems = featureMenuItems(for: tab)
     }
 
     func toppingRuntimeOpenTab(sourceTabId: String, url: URL, active: Bool) {

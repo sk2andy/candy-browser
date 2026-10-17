@@ -199,6 +199,7 @@ fun TabOverviewHeroPager(
     titleContent: @Composable (BrowserTab, Boolean, Modifier) -> Unit,
     cardModifier: (BrowserTab) -> Modifier = { Modifier },
     modifier: Modifier = Modifier,
+    titleAbovePreview: Boolean = false,
 ) {
     val pagerFlingBehavior = PagerDefaults.flingBehavior(
         state = pagerState,
@@ -462,10 +463,23 @@ fun TabOverviewHeroPager(
                             }
                         },
                     )
-                    .padding(horizontal = 4.dp, vertical = 28.dp),
+                    .padding(
+                        horizontal = 4.dp,
+                        vertical = if (titleAbovePreview) 0.dp else 28.dp,
+                    ),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Spacer(Modifier.height(8.dp))
+                if (titleAbovePreview) {
+                    titleContent(
+                        tab,
+                        isInitialCard,
+                        Modifier
+                            .width(tabCardWidth)
+                            .padding(start = 12.dp, end = 12.dp, bottom = 12.dp),
+                    )
+                } else {
+                    Spacer(Modifier.height(8.dp))
+                }
                 Box(modifier = Modifier.width(tabCardWidth)) {
                     TabCard(
                         cardWidth = tabCardWidth,
@@ -490,13 +504,15 @@ fun TabOverviewHeroPager(
                     ) {
                         previewContent(tab)
                     }
-                    titleContent(
-                        tab,
-                        isInitialCard,
-                        Modifier
-                            .align(Alignment.TopStart)
-                            .padding(start = 12.dp, top = 4.dp, end = 12.dp),
-                    )
+                    if (!titleAbovePreview) {
+                        titleContent(
+                            tab,
+                            isInitialCard,
+                            Modifier
+                                .align(Alignment.TopStart)
+                                .padding(start = 12.dp, top = 4.dp, end = 12.dp),
+                        )
+                    }
                 }
             }
         }

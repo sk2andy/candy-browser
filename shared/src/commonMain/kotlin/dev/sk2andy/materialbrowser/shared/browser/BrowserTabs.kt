@@ -1,15 +1,21 @@
 package dev.sk2andy.materialbrowser.shared.browser
 
+import dev.sk2andy.materialbrowser.browser.BLANK_URL
 import dev.sk2andy.materialbrowser.browser.BrowserProfile
 import dev.sk2andy.materialbrowser.browser.BrowserProfileDraft
 import dev.sk2andy.materialbrowser.browser.BrowserProfileRules
 import dev.sk2andy.materialbrowser.browser.BrowserTab
-import dev.sk2andy.materialbrowser.browser.BLANK_URL
 import dev.sk2andy.materialbrowser.browser.DEFAULT_BROWSER_PROFILE
 import dev.sk2andy.materialbrowser.browser.DEFAULT_PROFILE_ID
 import dev.sk2andy.materialbrowser.browser.MAX_PROFILES
 import dev.sk2andy.materialbrowser.browser.SyncedProfileRuntimeRules
 import dev.sk2andy.materialbrowser.browser.isSynced
+import dev.sk2andy.materialbrowser.data.SnoozeMutationRules
+import dev.sk2andy.materialbrowser.data.SnoozeRestoreRules
+import dev.sk2andy.materialbrowser.data.SnoozeRules
+import dev.sk2andy.materialbrowser.data.SnoozedTab
+import dev.sk2andy.materialbrowser.data.TabDeletionRules
+import dev.sk2andy.materialbrowser.data.TabPinningRules
 import dev.sk2andy.materialbrowser.sync.SyncDeviceIconDefinition
 import dev.sk2andy.materialbrowser.sync.SyncProfile
 
@@ -33,6 +39,7 @@ data class BrowserTabsState(
     val activeProfileId: String = DEFAULT_PROFILE_ID,
     val isOverviewVisible: Boolean = false,
     val addressFocusRequest: Long = 0,
+    val snoozedTabs: List<SnoozedTab> = emptyList(),
 ) {
     val activeTabs: List<BrowserTabState>
         get() = tabs.filter { it.profileId == activeProfileId }
@@ -93,11 +100,7 @@ class BrowserTabsController {
         )
         require(initialState.tabs.all { tab -> initialState.profiles.any { it.id == tab.profileId } })
         state = initialState
-        nextTabNumber = initialState.tabs
-            .mapNotNull { tab -> tab.id.removePrefix(TAB_ID_PREFIX).toLongOrNull() }
-            .maxOrNull()
-            ?.plus(1)
-            ?: 1
+        nextTabNumber = nextAvailableTabNumber(initialState.tabs)
     }
 
     fun dispatch(intent: BrowserTabsIntent, tabId: String?): BrowserTabsState = when (intent) {
@@ -136,6 +139,38 @@ class BrowserTabsController {
                 },
             ),
         )
+    }
+
+    fun newPrivateTab(): BrowserTabsState {
+        if (state.tabs.size >= BrowserSessionPersistenceRules.MAX_TABS) return state
+        val profile = state.profiles.firstOrNull {
+            it.id == state.activeProfileId && !it.isSynced && it.protection == null
+        } ?: state.profiles.firstOrNull { !it.isSynced && it.protection == null } ?: return state
+        return addBlankTab(isPrivate = true, profileId = profile.id)
+    }
+
+    fun setTabPinned(tabId: String, pinned: Boolean): BrowserTabsState {
+        val target = state.tabs.firstOrNull { it.id == tabId } ?: return state
+        if (target.isPinned == pinned) return state
+        val sourceTabs = state.tabs.filter { it.profileId == target.profileId }
+        val byId = sourceTabs.associateBy(BrowserTabState::id)
+        val profileTabs = TabPinningRules.withPinnedState(
+            tabs = sourceTabs.map { it.toBrowserTab() },
+            tabId = tabId,
+            isPinned = pinned,
+        ).map { tab -> byId.getValue(tab.id).copy(isPinned = tab.isPinned) }.iterator()
+        return update(
+            state.copy(tabs = state.tabs.map {
+                if (it.profileId == target.profileId) profileTabs.next() else it
+            }),
+        )
+    }
+
+    fun restoreSession(snapshot: BrowserSessionSnapshot): Boolean {
+        val restored = BrowserSessionPersistenceRules.restore(snapshot, state.profiles) ?: return false
+        state = restored
+        nextTabNumber = nextAvailableTabNumber(restored.tabs)
+        return true
     }
 
     fun selectAdjacentTab(target: BrowserTabSwitchTarget): BrowserTabsState {
@@ -218,6 +253,96 @@ class BrowserTabsController {
                 profiles = state.profiles.toMutableList().also { it[index] = updatedProfile },
             ),
         )
+    }
+
+    fun closeAllTabs(): BrowserTabsState {
+        val profile = state.profiles.firstOrNull { it.id == state.activeProfileId } ?: return state
+        if (profile.protection != null) return state
+        val closingIds = TabDeletionRules.deletableTabIds(state.activeTabs.map { it.toBrowserTab() })
+        if (closingIds.isEmpty()) return state
+        val remaining = state.tabs.filterNot { it.id in closingIds }
+        val active = remaining.filter { it.profileId == state.activeProfileId }
+        if (active.isEmpty()) return addBlankTabAfterClosingLast(remaining)
+        val selectedId = state.selectedTabId.takeUnless { it in closingIds } ?: active.last().id
+        return update(state.copy(
+            tabs = remaining,
+            selectedTabId = selectedId,
+            profiles = rememberSelectedTab(state.profiles, state.activeProfileId, selectedId),
+        ))
+    }
+
+    fun moveTabToProfile(tabId: String, profileId: String): BrowserTabsState {
+        val tab = state.tabs.firstOrNull { it.id == tabId } ?: return state
+        val target = BrowserProfileManagementRules.moveTargets(state, tabId)
+            .firstOrNull { it.id == profileId } ?: return state
+        val sourceIndex = state.activeTabs.indexOfFirst { it.id == tabId }
+        val moved = tab.copy(
+            profileId = target.id,
+            canGoBack = false,
+            canGoForward = false,
+            isLoading = false,
+            syncCandyId = tab.syncCandyId.takeIf {
+                !tab.isPrivate && (target.isSynced || target.linkedSyncDeviceId != null)
+            },
+        )
+        var tabs = state.tabs.map { if (it.id == tabId) moved else it }
+        val orderedTargetTabs = tabs.filter { it.profileId == profileId }
+            .sortedByDescending(BrowserTabState::isPinned).iterator()
+        tabs = tabs.map { if (it.profileId == profileId) orderedTargetTabs.next() else it }
+        val sourceTabs = tabs.filter { it.profileId == tab.profileId }
+        var selectedId = state.selectedTabId
+        if (tabId == selectedId) {
+            selectedId = sourceTabs.getOrNull(sourceIndex.coerceAtMost(sourceTabs.lastIndex))?.id
+                ?: blankTab(tab.profileId).copy(isPrivate = tab.isPrivate).also { tabs = tabs + it }.id
+        }
+        val profiles = state.profiles.map { profile ->
+            val remembered = profile.selectedTabId?.takeIf { id ->
+                tabs.any { it.id == id && it.profileId == profile.id }
+            } ?: tabs.lastOrNull { it.profileId == profile.id }?.id
+            profile.copy(selectedTabId = if (profile.id == state.activeProfileId) selectedId else remembered)
+        }
+        return update(state.copy(tabs = tabs, selectedTabId = selectedId, profiles = profiles))
+    }
+
+    fun deleteProfile(profileId: String): BrowserTabsState {
+        if (!BrowserProfileManagementRules.canDeleteProfile(state, profileId)) return state
+        val fallback = state.profiles.firstOrNull {
+            it.id == state.activeProfileId && it.id != profileId && !it.isSynced && it.protection == null
+        } ?: state.profiles.first { it.id != profileId && !it.isSynced && it.protection == null }
+        val tabs = state.tabs.map { tab ->
+            if (tab.profileId == profileId) tab.copy(
+                profileId = fallback.id,
+                canGoBack = false,
+                canGoForward = false,
+                isLoading = false,
+                syncCandyId = null,
+            ) else tab
+        }
+        val orderedFallbackTabs = tabs.filter { it.profileId == fallback.id }
+            .sortedByDescending(BrowserTabState::isPinned).iterator()
+        val orderedTabs = tabs.map { if (it.profileId == fallback.id) orderedFallbackTabs.next() else it }
+        val activeProfileId = if (state.activeProfileId == profileId) fallback.id else state.activeProfileId
+        val selectedId = state.selectedTabId.takeIf { id ->
+            orderedTabs.any { it.id == id && it.profileId == activeProfileId }
+        } ?: fallback.selectedTabId?.takeIf { id ->
+            orderedTabs.any { it.id == id && it.profileId == activeProfileId }
+        } ?: orderedTabs.first { it.profileId == activeProfileId }.id
+        val profiles = state.profiles.filterNot { it.id == profileId }.map { profile ->
+            profile.copy(selectedTabId = if (profile.id == activeProfileId) selectedId else {
+                profile.selectedTabId?.takeIf { id -> orderedTabs.any { it.id == id && it.profileId == profile.id } }
+            })
+        }
+        return update(state.copy(
+            tabs = orderedTabs,
+            selectedTabId = selectedId,
+            profiles = profiles,
+            activeProfileId = activeProfileId,
+            snoozedTabs = state.snoozedTabs.map { snoozed ->
+                if (snoozed.tab.profileId == profileId) snoozed.copy(
+                    tab = snoozed.tab.copy(profileId = fallback.id, syncCandyId = null),
+                ) else snoozed
+            },
+        ))
     }
 
     fun selectProfile(profileId: String): BrowserTabsState {
@@ -379,17 +504,112 @@ class BrowserTabsController {
         syncCandyId = syncCandyId,
     )
 
-    private fun addBlankTab(): BrowserTabsState {
-        val tab = blankTab(profileId = state.activeProfileId)
+    fun snoozeCandidate(tabId: String): BrowserTab? {
+        val tab = state.tabs.firstOrNull { it.id == tabId } ?: return null
+        val profile = state.profiles.firstOrNull { it.id == tab.profileId } ?: return null
+        if (tab.isPrivate || profile.isSynced || profile.protection != null) return null
+        return tab.toBrowserTab()
+    }
+
+    fun snoozeTab(tabId: String, wakeAtMillis: Long, nowMillis: Long): Boolean {
+        val source = snoozeCandidate(tabId) ?: return false
+        if (!SnoozeRules.canSnooze(source, wakeAtMillis, nowMillis) || nowMillis < 0) return false
+        if (state.snoozedTabs.size >= BrowserSessionPersistenceRules.MAX_TABS) return false
+        val remaining = state.tabs.filterNot { it.id == tabId }
+        val activeRemaining = remaining.filter { it.profileId == state.activeProfileId }
+        val replacement = if (activeRemaining.isEmpty()) blankTab(state.activeProfileId) else null
+        val tabs = if (replacement != null) remaining + replacement else remaining
+        val selected = if (state.selectedTabId != tabId) state.selectedTabId else {
+            replacement?.id ?: activeRemaining[
+                state.activeTabs.indexOfFirst { it.id == tabId }.coerceIn(0, activeRemaining.lastIndex)
+            ].id
+        }
+        update(state.copy(
+            tabs = tabs,
+            selectedTabId = selected,
+            profiles = rememberSelectedTab(state.profiles, state.activeProfileId, selected),
+            snoozedTabs = (state.snoozedTabs + SnoozedTab(source, wakeAtMillis, nowMillis))
+                .sortedWith(compareBy({ it.wakeAtMillis }, { it.tab.id })),
+            addressFocusRequest = state.addressFocusRequest + if (replacement != null) 1 else 0,
+            isOverviewVisible = state.isOverviewVisible && replacement == null,
+        ))
+        return true
+    }
+
+    fun rescheduleSnoozedTab(tabId: String, wakeAtMillis: Long, nowMillis: Long): Boolean {
+        val updated = SnoozeMutationRules.rescheduled(state.snoozedTabs, tabId, wakeAtMillis, nowMillis)
+            ?: return false
+        update(state.copy(snoozedTabs = updated))
+        return true
+    }
+
+    fun deleteSnoozedTab(tabId: String): Boolean {
+        val updated = SnoozeMutationRules.deleted(state.snoozedTabs, tabId) ?: return false
+        update(state.copy(snoozedTabs = updated))
+        return true
+    }
+
+    fun restoreDueSnoozedTabs(nowMillis: Long): List<String> = restoreSnoozedTabs(
+        pending = state.snoozedTabs,
+        nowMillis = nowMillis,
+    )
+
+    fun openSnoozedTabNow(tabId: String, nowMillis: Long): Boolean {
+        val pending = state.snoozedTabs.firstOrNull { it.tab.id == tabId } ?: return false
+        val restored = restoreSnoozedTabs(listOf(pending.copy(wakeAtMillis = nowMillis)), nowMillis)
+        if (tabId !in restored) return false
+        val tab = state.tabs.first { it.id == tabId }
+        selectProfile(tab.profileId)
+        selectTab(tabId)
+        return true
+    }
+
+    private fun restoreSnoozedTabs(pending: List<SnoozedTab>, nowMillis: Long): List<String> {
+        if (nowMillis < 0) return emptyList()
+        val result = SnoozeRestoreRules.restoreDue(
+            tabs = state.tabs.map { it.toBrowserTab() },
+            snoozedTabs = pending,
+            profiles = state.profiles,
+            activeProfileId = state.activeProfileId,
+            nowMillis = nowMillis,
+            maxTabs = BrowserSessionPersistenceRules.MAX_TABS,
+        )
+        if (result.completedTabIds.isEmpty()) return emptyList()
+        val existing = state.tabs.associateBy(BrowserTabState::id)
+        update(state.copy(
+            tabs = result.tabs.map { tab -> existing[tab.id] ?: BrowserTabState(
+                id = tab.id,
+                address = tab.url.takeUnless { it == BLANK_URL }.orEmpty(),
+                title = tab.title,
+                profileId = tab.profileId,
+                isPinned = tab.isPinned,
+                syncCandyId = tab.syncCandyId,
+            ) },
+            snoozedTabs = state.snoozedTabs.filterNot { it.tab.id in result.completedTabIds },
+        ))
+        return result.restoredTabIds.toList()
+    }
+
+    private fun addBlankTab(
+        isPrivate: Boolean = false,
+        profileId: String = state.activeProfileId,
+    ): BrowserTabsState {
+        val tab = blankTab(profileId = profileId).copy(isPrivate = isPrivate)
+        val rememberedProfiles = rememberSelectedTab(
+            profiles = state.profiles,
+            profileId = state.activeProfileId,
+            tabId = state.selectedTabId,
+        )
         return update(
             state.copy(
                 tabs = state.tabs + tab,
                 selectedTabId = tab.id,
                 profiles = rememberSelectedTab(
-                    profiles = state.profiles,
-                    profileId = state.activeProfileId,
+                    profiles = rememberedProfiles,
+                    profileId = profileId,
                     tabId = tab.id,
                 ),
+                activeProfileId = profileId,
                 isOverviewVisible = false,
                 addressFocusRequest = state.addressFocusRequest + 1,
             ),
@@ -401,7 +621,7 @@ class BrowserTabsController {
             tab.id == tabId && tab.id == state.selectedTabId && tab.address.isNotBlank()
         } ?: return state
         val duplicate = BrowserTabState(
-            id = tabId(nextTabNumber++),
+            id = newTabId(),
             address = source.address,
             title = "",
             profileId = source.profileId,
@@ -442,7 +662,7 @@ class BrowserTabsController {
 
     private fun closeTab(tabId: String?): BrowserTabsState {
         val closingIndex = state.tabs.indexOfFirst { it.id == tabId }
-        if (closingIndex < 0) return state
+        if (closingIndex < 0 || state.tabs[closingIndex].isPinned) return state
 
         val remainingTabs = state.tabs.filterNot { it.id == tabId }
         val remainingActiveTabs = remainingTabs.filter { it.profileId == state.activeProfileId }
@@ -485,11 +705,19 @@ class BrowserTabsController {
     }
 
     private fun blankTab(profileId: String): BrowserTabState = BrowserTabState(
-        id = tabId(nextTabNumber++),
+        id = newTabId(),
         address = "",
         title = "",
         profileId = profileId,
     )
+
+    private fun newTabId(): String {
+        while (true) {
+            val candidate = tabId(nextTabNumber)
+            nextTabNumber = if (nextTabNumber == Long.MAX_VALUE) 1 else nextTabNumber + 1
+            if (state.tabs.none { it.id == candidate } && state.snoozedTabs.none { it.tab.id == candidate }) return candidate
+        }
+    }
 
     private fun rememberSelectedTab(
         profiles: List<BrowserProfile>,
@@ -508,5 +736,13 @@ class BrowserTabsController {
         const val TAB_ID_PREFIX = "tab-"
 
         fun tabId(number: Long): String = "$TAB_ID_PREFIX$number"
+
+        fun nextAvailableTabNumber(tabs: List<BrowserTabState>): Long {
+            val highest = tabs.mapNotNull { tab ->
+                tab.id.takeIf { it.startsWith(TAB_ID_PREFIX) }
+                    ?.removePrefix(TAB_ID_PREFIX)?.toLongOrNull()?.takeIf { it > 0 }
+            }.maxOrNull() ?: return 1
+            return if (highest == Long.MAX_VALUE) 1 else highest + 1
+        }
     }
 }

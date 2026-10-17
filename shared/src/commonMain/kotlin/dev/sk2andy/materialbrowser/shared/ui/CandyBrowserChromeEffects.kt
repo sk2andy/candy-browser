@@ -1,14 +1,22 @@
 package dev.sk2andy.materialbrowser.shared.ui
 
-import androidx.compose.material3.Surface
+import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Slider
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import dev.sk2andy.materialbrowser.shared.ui.theme.CandyLightColors
+import dev.sk2andy.materialbrowser.data.AppearanceSettings
 
 data class CandyBrowserChromeMetrics(
     val addressCornerRadius: Dp = 34.dp,
@@ -23,15 +31,94 @@ data class CandyBrowserChromeMetrics(
     val addressFieldCornerRadius: Dp = 24.dp,
 )
 
+val LocalCandyBrowserChromeEffects = staticCompositionLocalOf<CandyBrowserChromeEffects> {
+    DefaultCandyBrowserChromeEffects
+}
+
 /** Platform visual treatment for shared Candy browser chrome anatomy. */
 interface CandyBrowserChromeEffects {
+    val usesGroupedSettings: Boolean
+        get() = false
+
     val mainMenu: BrowserMainMenuEffects
+    val tabActionsMenu: TabActionsMenuEffects
+        get() = DefaultTabActionsMenuEffects
     val metrics: CandyBrowserChromeMetrics
         get() = CandyBrowserChromeMetrics()
 
     @Composable
     fun browserTheme(content: @Composable () -> Unit) {
-        MaterialTheme(colorScheme = CandyLightColors, content = content)
+        CompositionLocalProvider(LocalCandyBrowserChromeEffects provides this) {
+            MaterialTheme(colorScheme = CandyLightColors, content = content)
+        }
+    }
+
+    @Composable
+    fun browserTheme(settings: AppearanceSettings, content: @Composable () -> Unit) {
+        browserTheme(content)
+    }
+
+    @Composable
+    fun icon(
+        symbol: String,
+        fallback: ImageVector,
+        contentDescription: String?,
+        modifier: Modifier = Modifier,
+        tint: Color = LocalContentColor.current,
+    ) {
+        Icon(fallback, contentDescription = contentDescription, modifier = modifier, tint = tint)
+    }
+
+    @Composable
+    fun settingsToggle(
+        checked: Boolean,
+        enabled: Boolean,
+        onCheckedChange: (Boolean) -> Unit,
+    ) {
+        Switch(checked = checked, enabled = enabled, onCheckedChange = onCheckedChange)
+    }
+
+    @Composable
+    fun settingsSlider(
+        value: Float,
+        onValueChange: (Float) -> Unit,
+        onValueChangeFinished: (() -> Unit)?,
+        enabled: Boolean,
+        valueRange: ClosedFloatingPointRange<Float>,
+        steps: Int,
+        backgroundColor: Color,
+        modifier: Modifier = Modifier,
+    ) {
+        Slider(
+            value = value,
+            onValueChange = onValueChange,
+            onValueChangeFinished = onValueChangeFinished,
+            enabled = enabled,
+            modifier = modifier,
+            valueRange = valueRange,
+            steps = steps,
+        )
+    }
+
+    @Composable
+    fun floatingSurface(
+        modifier: Modifier,
+        shape: Shape,
+        color: Color,
+        contentColor: Color,
+        tonalElevation: Dp,
+        shadowElevation: Dp,
+        content: @Composable () -> Unit,
+    ) {
+        Surface(
+            modifier = modifier,
+            shape = shape,
+            color = color,
+            contentColor = contentColor,
+            tonalElevation = tonalElevation,
+            shadowElevation = shadowElevation,
+            content = content,
+        )
     }
 
     fun reducesMotion(): Boolean = false

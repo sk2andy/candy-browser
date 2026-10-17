@@ -26,6 +26,33 @@ class AppearanceSettingsTest {
     }
 
     @Test
+    fun `core preferences restore explicit appearance motion and bounded page size`() {
+        val restored = AppearanceSettings.fromCorePreferences(
+            appearanceModeStableId = "dark",
+            animationsEnabled = false,
+            webContentFontSizePercent = 123,
+        )
+
+        assertEquals(BrowserAppearanceMode.Dark, restored.appearanceMode)
+        assertFalse(restored.animationsEnabled)
+        assertEquals(125, restored.webContentFontSizePercent)
+        assertTrue(restored.usesDarkColors(systemDark = false))
+    }
+
+    @Test
+    fun `core preferences omit unsupported AMOLED while preserving default model`() {
+        assertEquals(AppearanceSettings(), AppearanceSettings.fromCorePreferences(null, true, 100))
+        assertEquals(
+            BrowserAppearanceMode.Dark,
+            AppearanceSettings.fromCorePreferences("amoled", true, 100).appearanceMode,
+        )
+        assertEquals(
+            BrowserAppearanceMode.System,
+            AppearanceSettings.fromCorePreferences("unknown", true, 100).appearanceMode,
+        )
+    }
+
+    @Test
     fun `stable ids round trip and unknown values use safe defaults`() {
         BrowserAppearanceMode.entries.forEach { mode ->
             assertEquals(mode, BrowserAppearanceMode.fromStableId(mode.stableId))

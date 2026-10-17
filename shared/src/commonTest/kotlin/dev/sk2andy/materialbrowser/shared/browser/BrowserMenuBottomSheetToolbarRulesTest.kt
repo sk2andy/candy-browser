@@ -7,6 +7,43 @@ import kotlin.test.assertTrue
 
 class BrowserMenuBottomSheetToolbarRulesTest {
     @Test
+    fun `assigning hidden toolbar action makes it visible in tab menu atomically`() {
+        val hidden = BrowserMenuLayoutRules.update(
+            BrowserMenuLayout.Default,
+            BrowserMenuEntry.Share,
+            BrowserMenuLocation.Nowhere,
+        )
+        val assigned = BrowserMenuBottomSheetToolbarRules.assign(hidden, 0, BrowserMenuEntry.Share)
+
+        assertEquals(BrowserMenuEntry.Share, assigned.bottomSheetToolbarEntries[0])
+        assertEquals(BrowserMenuLocation.Tab, BrowserMenuLayoutRules.location(assigned, BrowserMenuEntry.Share))
+        assertEquals(BrowserMenuLocation.Nowhere, BrowserMenuLayoutRules.location(hidden, BrowserMenuEntry.Share))
+    }
+
+    @Test
+    fun `assigning switcher action preserves switcher visibility while enabling footer`() {
+        val switcherOnly = BrowserMenuLayoutRules.update(
+            BrowserMenuLayout.Default,
+            BrowserMenuEntry.Share,
+            BrowserMenuLocation.TabSwitcher,
+        )
+        val assigned = BrowserMenuBottomSheetToolbarRules.assign(switcherOnly, 4, BrowserMenuEntry.Share)
+
+        assertEquals(BrowserMenuLocation.Both, BrowserMenuLayoutRules.location(assigned, BrowserMenuEntry.Share))
+        assertEquals(BrowserMenuEntry.Share, assigned.bottomSheetToolbarEntries[4])
+    }
+
+    @Test
+    fun `invalid toolbar assignment cannot reveal hidden action`() {
+        val hidden = BrowserMenuLayoutRules.normalize(
+            BrowserMenuLayout(locations = mapOf(BrowserMenuEntry.Share to BrowserMenuLocation.Nowhere)),
+        )
+
+        assertEquals(hidden, BrowserMenuBottomSheetToolbarRules.assign(hidden, -1, BrowserMenuEntry.Share))
+        assertEquals(hidden, BrowserMenuBottomSheetToolbarRules.assign(hidden, 5, BrowserMenuEntry.Share))
+    }
+
+    @Test
     fun `default slots preserve current page navigation toolbar`() {
         assertEquals(
             listOf(

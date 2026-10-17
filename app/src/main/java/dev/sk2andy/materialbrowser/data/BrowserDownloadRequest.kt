@@ -48,13 +48,11 @@ object BrowserDownloadRequestFactory {
             request.fileName.endsWith(".apk", ignoreCase = true)
 
     private const val MAX_COOKIE_LENGTH = 16_384
-    internal const val ANDROID_PACKAGE_MIME_TYPE = "application/vnd.android.package-archive"
+    internal const val ANDROID_PACKAGE_MIME_TYPE = DownloadFileNameRules.ANDROID_PACKAGE_MIME_TYPE
 }
 
 internal object SafeDownloadValues {
-    private val invalidFileNameCharacters = Regex("[\\\\/:*?\"<>|\\p{Cntrl}\\p{Cf}]")
     private val mimeTypePattern = Regex("^[a-zA-Z0-9!#$&^_.+-]+/[a-zA-Z0-9!#$&^_.+*-]+$")
-    private const val MAX_FILE_NAME_LENGTH = 120
 
     fun isHttpUrl(value: String): Boolean = runCatching {
         val uri = URI(value.trim())
@@ -115,23 +113,7 @@ internal object SafeDownloadValues {
         val candidate = contentDispositionFileName(contentDisposition)
             ?: urlFileName(url)
             ?: "download"
-        val sanitized = candidate
-            .replace(invalidFileNameCharacters, "_")
-            .trim()
-            .trim('.')
-            .ifEmpty { "download" }
-        val extension = extensionForMimeType(mimeType)
-        val withExtension = if (extension != null && !hasExtension(sanitized)) {
-            "$sanitized.$extension"
-        } else {
-            sanitized
-        }
-        if (withExtension.length <= MAX_FILE_NAME_LENGTH) return withExtension
-        val suffix = withExtension.substringAfterLast('.', missingDelimiterValue = "")
-            .takeIf { it.isNotEmpty() && it.length <= 10 }
-            ?.let { ".$it" }
-            .orEmpty()
-        return withExtension.take(MAX_FILE_NAME_LENGTH - suffix.length).trimEnd() + suffix
+        return DownloadFileNameRules.fileName(candidate, mimeType)
     }
 
     private fun contentDispositionFileName(value: String?): String? {
@@ -160,10 +142,6 @@ internal object SafeDownloadValues {
             ?.let { URLDecoder.decode(it.replace("+", "%2B"), StandardCharsets.UTF_8.name()) }
     }.getOrNull()
 
-    private fun hasExtension(value: String): Boolean {
-        val extension = value.substringAfterLast('.', missingDelimiterValue = "")
-        return extension.matches(Regex("^[a-zA-Z0-9][a-zA-Z0-9+_-]{0,9}$"))
-    }
 
     private fun mimeTypeFromUrl(value: String?): String? = runCatching {
         URI(value ?: return null).path.substringAfterLast('.').lowercase(Locale.ROOT)
@@ -184,18 +162,5 @@ internal object SafeDownloadValues {
         }
     }
 
-    private fun extensionForMimeType(mimeType: String): String? = when (mimeType) {
-        "image/jpeg" -> "jpg"
-        "image/png" -> "png"
-        "image/gif" -> "gif"
-        "image/webp" -> "webp"
-        "image/avif" -> "avif"
-        "image/svg+xml" -> "svg"
-        "application/pdf" -> "pdf"
-        "text/plain" -> "txt"
-        "text/html" -> "html"
-        "application/json" -> "json"
-        BrowserDownloadRequestFactory.ANDROID_PACKAGE_MIME_TYPE -> "apk"
-        else -> null
-    }
+
 }

@@ -141,6 +141,7 @@ fun SettingsHomePage(
     developerOptionsUnlocked: Boolean = false,
     onUnlockDeveloperOptions: (() -> Unit)? = null,
     isDestinationEnabled: (SettingsDestination) -> Boolean = { true },
+    isDestinationVisible: (SettingsDestination) -> Boolean = { true },
     searchContent: @Composable ColumnScope.() -> Unit = {},
     showHomeItems: Boolean = true,
 ) {
@@ -154,7 +155,7 @@ fun SettingsHomePage(
         val items = SettingsHomeRules.items(
             hasFirefoxExtensions = onOpenFirefoxExtensions != null,
             hasDeveloperOptions = developerOptionsUnlocked,
-        )
+        ).filter { item -> item.destination?.let(isDestinationVisible) != false }
         items.forEachIndexed { index, item ->
             if (index == 0 || item.group != items[index - 1].group) {
                 if (index != 0) Spacer(Modifier.height(20.dp))

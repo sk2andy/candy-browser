@@ -102,23 +102,13 @@ internal object AddressBarMotion {
         barWidth: Dp,
         verticalTravel: Dp,
     ): DpOffset {
-        val horizontalPosition = position.x
-            .takeIf(Float::isFinite)
-            ?.coerceIn(-1f, 1f)
-            ?: 0f
-        val verticalPosition = position.y
-            .takeIf(Float::isFinite)
-            ?.coerceIn(0f, 1f)
-            ?: 0f
-        val horizontalTravel = ((maxWidth - barWidth) / 2f + 12.dp).coerceAtLeast(0.dp)
-        return DpOffset(
-            x = horizontalTravel * horizontalPosition,
-            y = if (verticalPosition == 0f) {
-                0.dp
-            } else {
-                -verticalTravel.coerceAtLeast(0.dp) * verticalPosition
-            },
+        val offset = AddressBarDockingRules.offsetForPosition(
+            position = position,
+            maxWidth = maxWidth.value,
+            barWidth = barWidth.value,
+            verticalTravel = verticalTravel.value,
         )
+        return DpOffset(offset.x.dp, offset.y.dp)
     }
 
     fun usesFadeThrough(

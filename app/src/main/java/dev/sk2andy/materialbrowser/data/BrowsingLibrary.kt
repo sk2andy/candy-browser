@@ -3,6 +3,7 @@ package dev.sk2andy.materialbrowser.data
 import dev.sk2andy.materialbrowser.browser.BLANK_URL
 import dev.sk2andy.materialbrowser.browser.BrowserTab
 import dev.sk2andy.materialbrowser.browser.DEFAULT_PROFILE_ID
+import dev.sk2andy.materialbrowser.shared.browser.BrowserLibraryRules
 import java.net.URI
 import java.time.Instant
 import java.time.LocalDate
@@ -35,8 +36,8 @@ data class AddressSuggestion(
 )
 
 internal object BrowsingLibraryRules {
-    const val MAX_HISTORY_ENTRIES = 250
-    const val MAX_FAVORITES = 100
+    const val MAX_HISTORY_ENTRIES = BrowserLibraryRules.MAX_HISTORY_ENTRIES
+    const val MAX_FAVORITES = BrowserLibraryRules.MAX_FAVORITES
 
     fun addHistory(
         current: List<HistoryEntry>,
@@ -46,9 +47,11 @@ internal object BrowsingLibraryRules {
         if (historyKey(entry) == null) return current
         if (entry.profileId.isBlank()) return current
         val safeTitle = entry.title.trim().ifEmpty { displayHost(entry.url) }
-        return (listOf(entry.copy(title = safeTitle)) + current)
-            .sortedByDescending(HistoryEntry::lastVisitedAt)
-            .take(limit.coerceAtLeast(0))
+        return BrowserLibraryRules.newestHistory(
+            entries = listOf(entry.copy(title = safeTitle)) + current,
+            limit = limit,
+            visitedAt = HistoryEntry::lastVisitedAt,
+        )
     }
 
     fun suggestions(
@@ -182,13 +185,14 @@ internal object BrowsingLibraryRules {
         entry: FavoriteEntry,
         limit: Int = MAX_FAVORITES,
     ): List<FavoriteEntry> {
-        val key = urlKey(entry.url) ?: return current
-        val existing = current.any { urlKey(it.url) == key }
-        if (existing) return current.filterNot { urlKey(it.url) == key }
+        if (urlKey(entry.url) == null) return current
         val safeTitle = entry.title.trim().ifEmpty { displayHost(entry.url) }
-        return (listOf(entry.copy(title = safeTitle)) + current)
-            .distinctBy { urlKey(it.url) }
-            .take(limit.coerceAtLeast(0))
+        return BrowserLibraryRules.toggleFavorite(
+            current = current,
+            entry = entry.copy(title = safeTitle),
+            limit = limit,
+            key = { urlKey(it.url) },
+        )
     }
 
     fun isFavorite(favorites: List<FavoriteEntry>, url: String): Boolean {
@@ -231,10 +235,14 @@ internal object BrowsingHistoryRules {
                     CanonicalWebUrl.key(entry.url) != null
             }
             .filter { entry ->
-                normalizedQuery.isEmpty() ||
-                    entry.title.lowercase(Locale.ROOT).contains(normalizedQuery) ||
-                    entry.url.lowercase(Locale.ROOT).contains(normalizedQuery) ||
-                    displayHost(entry.url).lowercase(Locale.ROOT).contains(normalizedQuery)
+                BrowserLibraryRules.matchesQuery(
+                    normalizedQuery = normalizedQuery,
+                    values = listOf(
+                        entry.title.lowercase(Locale.ROOT),
+                        entry.url.lowercase(Locale.ROOT),
+                        displayHost(entry.url).lowercase(Locale.ROOT),
+                    ),
+                )
             }
             .sortedWith(newestFirst)
             .toList()

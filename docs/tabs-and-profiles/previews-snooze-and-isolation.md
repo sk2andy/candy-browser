@@ -39,11 +39,15 @@ updated after the Compose snapshot disappears; removing Compose state alone can 
 
 | Piece | Responsibility |
 | --- | --- |
-| `SnoozeTimeRules` | Convert presets/custom local times to wake instants |
+| Shared `SnoozeClockRules` / Android `SnoozeTimeRules` adapter | Convert presets/custom local times to wake instants with shared timezone/DST policy |
 | `SnoozeRules` | Permit only future, non-incognito snoozes |
 | `SnoozeMutationRules` / `SnoozeUndoRules` / `SnoozeRestoreRules` | Pure reschedule, undo and due-tab restore behavior |
 | `BrowserSessionStore.saveTabsAndSnoozedImmediately` | Commit active+snoozed snapshot together and roll back on failure |
 | `SnoozeScheduler` / `SnoozeWakeNotifier` | Android alarm and notification edges |
+| Shared session / iOS storage | `BrowserTabsState.snoozedTabs` and `BrowserSessionSnapshot` keep regular active+snoozed records in one atomic native envelope; due entries reuse the existing `SnoozeRestoreRules` |
+| Shared Snooze UI | Existing Android preset dialog, management list and card render on both platforms; Android retains localized resources, predictive Back and date/time picker types |
+| iOS reminder edge | Explicit Snooze asks OS notification authorization; up to 60 upcoming local reminders, plus foreground timers and launch/resume due restoration. A closed app restores tabs when it next runs. Private, synced and protected sources cannot create an iOS Snooze. |
+| Reminder privacy | `SnoozeNotificationRules` supplies the same protected/private content exclusion to Android and iOS; native schedulers only deliver eligible records |
 
 Link Peek can snooze its committed preview URL without first creating an active tab. Confirmation
 adds one regular local-profile tab directly to the atomic snoozed snapshot; cancellation leaves no

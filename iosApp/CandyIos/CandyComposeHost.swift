@@ -1,6 +1,7 @@
 import CandyShared
 import SwiftUI
 import UIKit
+import WebKit
 
 struct CandyComposeHost: View {
     @ObservedObject var browser: BrowserViewModel
@@ -13,19 +14,6 @@ struct CandyComposeHost: View {
 
             CandyNativeBrowserChrome(browser: browser)
                 .zIndex(10)
-
-            if browser.isFavoritesVisible {
-                BrowserFavoritesSurface(
-                    items: browser.favoriteItems,
-                    pendingRemoval: browser.pendingFavoriteRemoval,
-                    onOpen: browser.openFavorite,
-                    onDelete: browser.deleteFavorite,
-                    onUndo: browser.undoFavoriteRemoval,
-                    onDismissRemoval: browser.dismissFavoriteRemoval,
-                    onDismiss: browser.dismissFavorites
-                )
-                .zIndex(30)
-            }
 
             if let error = browser.errorMessage {
                 Text(error)
@@ -53,6 +41,7 @@ struct CandyComposeHost: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .preferredColorScheme(preferredColorScheme)
         .sheet(
             item: Binding(
                 get: { browser.sharePayload },
@@ -61,14 +50,126 @@ struct CandyComposeHost: View {
         ) { payload in
             BrowserActivitySurface(payload: payload)
         }
+        .sheet(isPresented: $browser.isCustomSnoozeVisible) {
+            BrowserSnoozeDatePicker(
+                onCancel: { browser.isCustomSnoozeVisible = false },
+                onConfirm: browser.applyCustomSnooze
+            )
+            .presentationDetents([.medium])
+        }
+    }
+
+    private var preferredColorScheme: ColorScheme? {
+        if browser.appearanceSettings.appearanceMode == .light { return .light }
+        if browser.appearanceSettings.appearanceMode == .dark ||
+            browser.appearanceSettings.appearanceMode == .amoled { return .dark }
+        return nil
     }
 
     private var composeIgnoredSafeAreaEdges: Edge.Set {
         let usesBrowserSurface = !browser.isSettingsVisible &&
             !browser.isFavoritesVisible &&
+            !browser.isHistoryVisible &&
+            !browser.isSnoozedTabsVisible &&
             browser.readerSnapshot == nil &&
             browser.candyTrailTabId == nil
         return usesBrowserSurface ? [.top, .bottom] : .top
+    }
+}
+
+/// Compose sizes this stable UIKit container; WebKit receives every initial/window bounds change.
+@MainActor
+private final class BrowserViewportContainer: UIView {
+    private var viewport: UIView?
+    private var updatingInsets = false
+
+    init(view: UIView) {
+        super.init(frame: .zero)
+        clipsToBounds = true
+        isAccessibilityElement = false
+        isUserInteractionEnabled = true
+        mount(view)
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("BrowserViewportContainer requires its engine view")
+    }
+
+    func mount(_ view: UIView) {
+        guard viewport !== view else { return }
+        viewport?.removeFromSuperview()
+        viewport = view
+        view.frame = bounds
+        view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        addSubview(view)
+        setNeedsLayout()
+    }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        if viewport?.frame != bounds { viewport?.frame = bounds }
+        updateViewportInsets()
+    }
+
+    override func safeAreaInsetsDidChange() {
+        super.safeAreaInsetsDidChange()
+        updateViewportInsets()
+    }
+
+    override func didMoveToWindow() {
+        super.didMoveToWindow()
+        guard window != nil else { return }
+        setNeedsLayout()
+        layoutIfNeeded()
+    }
+
+    private func updateViewportInsets() {
+        guard !updatingInsets, let window, let webView = viewport as? WKWebView,
+              webView.bounds.height > 0 else { return }
+        updatingInsets = true
+        defer { updatingInsets = false }
+
+        let viewportFrame = webView.convert(webView.bounds, to: window)
+        let topInset = CGFloat(BrowserViewportInsetsRules.topInset(
+            windowSafeAreaTop: Double(window.safeAreaLayoutGuide.layoutFrame.minY),
+            viewportTop: Double(viewportFrame.minY),
+            viewportHeight: Double(webView.bounds.height)
+        ))
+        let scrollView = webView.scrollView
+        let previousAdjustedTop = scrollView.adjustedContentInset.top
+        let previousOffset = scrollView.contentOffset
+        if #available(iOS 26.0, *) {
+            // Tell WebKit this area is already consumed by browser UI. This also removes it
+            // from CSS safe-area-inset-top, so viewport-fit=cover pages do not pad twice.
+            var obscuredInsets = webView.obscuredContentInsets
+            obscuredInsets.top = topInset
+            if webView.obscuredContentInsets != obscuredInsets {
+                webView.obscuredContentInsets = obscuredInsets
+            }
+        }
+        if scrollView.contentInsetAdjustmentBehavior != .never {
+            scrollView.contentInsetAdjustmentBehavior = .never
+        }
+        if scrollView.automaticallyAdjustsScrollIndicatorInsets {
+            scrollView.automaticallyAdjustsScrollIndicatorInsets = false
+        }
+        var contentInsets = scrollView.contentInset
+        contentInsets.top = topInset
+        if scrollView.contentInset != contentInsets { scrollView.contentInset = contentInsets }
+        var indicatorInsets = scrollView.verticalScrollIndicatorInsets
+        indicatorInsets.top = topInset
+        if scrollView.verticalScrollIndicatorInsets != indicatorInsets {
+            scrollView.verticalScrollIndicatorInsets = indicatorInsets
+        }
+        guard !scrollView.isDragging, !scrollView.isDecelerating else { return }
+        let offsetY = CGFloat(BrowserViewportInsetsRules.topAnchoredOffset(
+            currentOffset: Double(previousOffset.y),
+            previousAdjustedInset: Double(previousAdjustedTop),
+            newInset: Double(topInset)
+        ))
+        if offsetY != scrollView.contentOffset.y {
+            scrollView.setContentOffset(CGPoint(x: previousOffset.x, y: offsetY), animated: false)
+        }
     }
 }
 
@@ -87,7 +188,8 @@ private struct CandyComposeControllerHost: UIViewControllerRepresentable {
     }
 
     func updateUIViewController(_ uiViewController: UIViewController, context: Context) {
-        context.coordinator.state.updateViewport(value: browser.activeWebView)
+        context.coordinator.viewport.mount(browser.activeWebView)
+        browser.viewportDidMount(tabId: browser.selectedTabId)
         browser.tabCards.forEach { tab in
             context.coordinator.state.updatePreview(tabId: tab.id, value: tab.preview)
         }
@@ -113,7 +215,10 @@ private struct CandyComposeControllerHost: UIViewControllerRepresentable {
                     address: tab.address,
                     isSelected: tab.isSelected,
                     isFavorite: tab.isFavorite,
-                    isPinned: tab.isPinned
+                    isPinned: tab.isPinned,
+                    isPrivate: tab.isPrivate,
+                    moveTargetProfileIds: browser.moveTargetProfileIds(tabId: tab.id),
+                    canSnooze: browser.canSnooze(tabId: tab.id)
                 )
             },
             profiles: browser.profiles.map { profile in
@@ -125,7 +230,8 @@ private struct CandyComposeControllerHost: UIViewControllerRepresentable {
                     syncedIconEmoji: profile.syncedIconEmoji,
                     syncedIconAccentHue: profile.syncedIconAccentHue,
                     isSyncLinked: profile.syncedDeviceId != nil ||
-                        profile.linkedSyncDeviceId != nil
+                        profile.linkedSyncDeviceId != nil,
+                    canDelete: browser.canDeleteProfile(profileId: profile.id)
                 )
             },
             profileIconEmojis: browser.profileIconEmojis,
@@ -133,8 +239,11 @@ private struct CandyComposeControllerHost: UIViewControllerRepresentable {
             activeProfileId: browser.activeProfileId,
             isTabOverviewVisible: browser.isTabOverviewVisible,
             isSettingsVisible: browser.isSettingsVisible,
+            isBrowserMenuVisible: browser.isBrowserMenuVisible,
             tabOverviewMode: browser.tabOverviewMode.sharedMode,
             tabListStartsAtBottom: browser.tabListStartsAtBottom,
+            dismissResistancePercent: browser.dismissResistancePercent,
+            appearanceSettings: browser.appearanceSettings,
             addressFocusRequest: browser.addressFocusRequest,
             searchEngine: browser.searchEngine,
             searxngInstanceUrl: browser.searxngInstanceUrl,
@@ -143,6 +252,9 @@ private struct CandyComposeControllerHost: UIViewControllerRepresentable {
             menuConfigurableEntries: browser.menuConfigurableEntries,
             toppings: browser.toppings.map(\.sharedViewportTopping),
             reader: browser.readerSnapshot,
+            library: browser.librarySnapshot,
+            snooze: browser.snoozeSnapshot,
+            snoozedTabCount: Int32(browser.snoozedTabs.count),
             candyTrail: candyTrailSnapshot,
             syncSettings: browser.syncSettingsUiState
         )
@@ -170,12 +282,15 @@ private struct CandyComposeControllerHost: UIViewControllerRepresentable {
     @MainActor
     final class Coordinator: NSObject, @preconcurrency BrowserViewportActionSink {
         let state: IosBrowserViewportState
+        let viewport: BrowserViewportContainer
         private let browser: BrowserViewModel
 
         init(browser: BrowserViewModel) {
             self.browser = browser
+            let viewport = BrowserViewportContainer(view: browser.activeWebView)
+            self.viewport = viewport
             state = IosBrowserViewportState(
-                initialViewport: browser.activeWebView,
+                initialViewport: viewport,
                 initialSnapshot: BrowserViewportSnapshot(
                     address: browser.address,
                     pageTitle: browser.pageTitle,
@@ -193,7 +308,10 @@ private struct CandyComposeControllerHost: UIViewControllerRepresentable {
                             address: tab.address,
                             isSelected: tab.isSelected,
                             isFavorite: tab.isFavorite,
-                            isPinned: tab.isPinned
+                            isPinned: tab.isPinned,
+                            isPrivate: tab.isPrivate,
+                            moveTargetProfileIds: browser.moveTargetProfileIds(tabId: tab.id),
+                            canSnooze: browser.canSnooze(tabId: tab.id)
                         )
                     },
                     profiles: browser.profiles.map { profile in
@@ -205,7 +323,8 @@ private struct CandyComposeControllerHost: UIViewControllerRepresentable {
                             syncedIconEmoji: profile.syncedIconEmoji,
                             syncedIconAccentHue: profile.syncedIconAccentHue,
                             isSyncLinked: profile.syncedDeviceId != nil ||
-                                profile.linkedSyncDeviceId != nil
+                                profile.linkedSyncDeviceId != nil,
+                            canDelete: browser.canDeleteProfile(profileId: profile.id)
                         )
                     },
                     profileIconEmojis: browser.profileIconEmojis,
@@ -213,8 +332,11 @@ private struct CandyComposeControllerHost: UIViewControllerRepresentable {
                     activeProfileId: browser.activeProfileId,
                     isTabOverviewVisible: browser.isTabOverviewVisible,
                     isSettingsVisible: browser.isSettingsVisible,
+                    isBrowserMenuVisible: browser.isBrowserMenuVisible,
                     tabOverviewMode: browser.tabOverviewMode.sharedMode,
                     tabListStartsAtBottom: browser.tabListStartsAtBottom,
+                    dismissResistancePercent: browser.dismissResistancePercent,
+                    appearanceSettings: browser.appearanceSettings,
                     addressFocusRequest: browser.addressFocusRequest,
                     searchEngine: browser.searchEngine,
                     searxngInstanceUrl: browser.searxngInstanceUrl,
@@ -223,6 +345,9 @@ private struct CandyComposeControllerHost: UIViewControllerRepresentable {
                     menuConfigurableEntries: browser.menuConfigurableEntries,
                     toppings: browser.toppings.map(\.sharedViewportTopping),
                     reader: browser.readerSnapshot,
+                    library: browser.librarySnapshot,
+                    snooze: browser.snoozeSnapshot,
+                    snoozedTabCount: Int32(browser.snoozedTabs.count),
                     candyTrail: CandyComposeControllerHost.candyTrailSnapshot(browser: browser),
                     syncSettings: browser.syncSettingsUiState
                 )
@@ -311,6 +436,14 @@ private struct CandyComposeControllerHost: UIViewControllerRepresentable {
             browser.setProfileIsolation(profileId: profileId, enabled: enabled)
         }
 
+        func closeAllTabs() { browser.closeAllTabs() }
+
+        func moveTabToProfile(tabId: String, profileId: String) {
+            browser.moveTabToProfile(tabId: tabId, profileId: profileId)
+        }
+
+        func deleteProfile(profileId: String) { browser.deleteProfile(profileId: profileId) }
+
         func hideTabOverview() {
             browser.performTabs(.hideoverview)
         }
@@ -365,6 +498,21 @@ private struct CandyComposeControllerHost: UIViewControllerRepresentable {
             browser.updateTabListStartsAtBottom(enabled)
         }
 
+        func dismissSnooze() { browser.dismissSnooze() }
+        func applySnoozePreset(preset: SnoozePreset) { browser.applySnoozePreset(preset) }
+        func customSnooze() { browser.customSnooze() }
+        func rescheduleSnoozedTab(tabId: String) { browser.rescheduleSnoozedTab(tabId) }
+        func openSnoozedTabNow(tabId: String) { browser.openSnoozedTabNow(tabId) }
+        func deleteSnoozedTab(tabId: String) { browser.deleteSnoozedTab(tabId) }
+
+        func changeDismissResistancePercent(value: Int32) {
+            browser.updateDismissResistancePercent(value)
+        }
+
+        func changeAppearanceSettings(settings: AppearanceSettings) {
+            browser.updateAppearanceSettings(settings)
+        }
+
         func changeSearchEngine(searchEngine: SearchEngine) {
             browser.updateSearchEngine(searchEngine)
         }
@@ -388,6 +536,14 @@ private struct CandyComposeControllerHost: UIViewControllerRepresentable {
             browser.saveTopping(id: id, source: source)
         }
 
+        func changeBrowserMenuLayout(layout: BrowserMenuLayout) {
+            browser.changeBrowserMenuLayout(layout: layout)
+        }
+
+        func dismissBrowserMenu() {
+            browser.dismissBrowserMenu()
+        }
+
         func toppingSource(id: String) -> String? {
             browser.toppingSource(id: id)
         }
@@ -402,6 +558,34 @@ private struct CandyComposeControllerHost: UIViewControllerRepresentable {
 
         func deleteTopping(id: String) {
             browser.deleteTopping(id: id)
+        }
+
+        func dismissLibrary() {
+            browser.dismissLibrary()
+        }
+
+        func openLibraryEntry(entry: BrowserLibraryEntry) {
+            browser.openLibraryEntry(entry)
+        }
+
+        func removeLibraryEntry(entry: BrowserLibraryEntry) {
+            browser.removeLibraryEntry(entry)
+        }
+
+        func restoreLibraryEntry(entry: BrowserLibraryEntry) {
+            browser.restoreLibraryEntry(entry)
+        }
+
+        func clearLibraryHistory() {
+            browser.clearLibraryHistory()
+        }
+
+        func createReaderLibrary() -> ReaderLibraryDataSource {
+            browser.createReaderLibrary()
+        }
+
+        func createReaderSpeech() -> ReaderSpeech {
+            browser.createReaderSpeech()
         }
 
         func retryReader() {

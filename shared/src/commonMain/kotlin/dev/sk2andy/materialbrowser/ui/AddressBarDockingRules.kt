@@ -6,18 +6,18 @@ import dev.sk2andy.materialbrowser.data.AddressBarDockEdge
 import dev.sk2andy.materialbrowser.data.AddressBarDockPlacement
 
 @Immutable
-internal data class AddressBarDockState(
+data class AddressBarDockState(
     val enabled: Boolean,
     val placement: AddressBarDockPlacement?,
 )
 
 @Immutable
-internal data class AddressBarDockSnap(
+data class AddressBarDockSnap(
     val position: Offset,
     val snappedToNormalAnchor: Boolean,
 )
 
-internal object AddressBarDockingRules {
+object AddressBarDockingRules {
     const val NORMAL_ANCHOR_BREAKAWAY_DP = 72f
     const val NORMAL_ANCHOR_SNAP_DP = 28f
 
@@ -53,6 +53,20 @@ internal object AddressBarDockingRules {
 
     fun compactAddressSlackDp(dockingEnabled: Boolean): Float =
         if (dockingEnabled) 16f else 36f
+
+    fun offsetForPosition(
+        position: Offset,
+        maxWidth: Float,
+        barWidth: Float,
+        verticalTravel: Float,
+    ): Offset {
+        val safePosition = position.sanitized()
+        val horizontalTravel = ((maxWidth - barWidth) / 2f + 12f).coerceAtLeast(0f)
+        return Offset(
+            x = horizontalTravel * safePosition.x,
+            y = if (safePosition.y == 0f) 0f else -verticalTravel.coerceAtLeast(0f) * safePosition.y,
+        )
+    }
 
     fun positionAfterDrag(
         startPosition: Offset,

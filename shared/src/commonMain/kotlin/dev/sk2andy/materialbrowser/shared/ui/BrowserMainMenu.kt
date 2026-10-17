@@ -259,6 +259,9 @@ interface BrowserMainMenuEffects {
     fun selectedToolbarContentColor(): Color = MaterialTheme.colorScheme.onPrimary
 
     @Composable
+    fun selectedToggleContentColor(): Color = MaterialTheme.colorScheme.onSecondary
+
+    @Composable
     fun spatialAnimationSpec(expanding: Boolean): FiniteAnimationSpec<Float> = tween(
         durationMillis = BrowserMainMenuMotion.EXIT_DURATION_MILLIS,
         easing = if (expanding) LinearOutSlowInEasing else FastOutLinearInEasing,
@@ -1011,7 +1014,7 @@ internal fun BrowserMainMenuItemGroup(
                             frostedAlpha = 1f,
                             role = BrowserMainMenuContainerRole.Selected,
                         ),
-                        checkedContentColor = MaterialTheme.colorScheme.onSecondary,
+                        checkedContentColor = effects.selectedToggleContentColor(),
                     )
                 }
                 item.action == BrowserFeatureMenuAction.ToggleDomainMute -> {

@@ -4,6 +4,7 @@ import Foundation
 struct LiquidGlassPresentationRulesTests {
     static func main() {
         testNativeGlassStartsOnIos26()
+        testReduceTransparencyOverridesNativeGlass()
         testContainerUsesStableMergeSpacing()
         testClearGlassKeepsReadableTintAndSoftEdges()
     }
@@ -11,6 +12,15 @@ struct LiquidGlassPresentationRulesTests {
     private static func testNativeGlassStartsOnIos26() {
         precondition(!LiquidGlassPresentationRules.usesNativeGlass(systemMajorVersion: 25))
         precondition(LiquidGlassPresentationRules.usesNativeGlass(systemMajorVersion: 26))
+    }
+
+    private static func testReduceTransparencyOverridesNativeGlass() {
+        for version in [18, 25, 26, 27] {
+            precondition(!LiquidGlassPresentationRules.usesNativeGlass(
+                systemMajorVersion: version,
+                reduceTransparency: true
+            ))
+        }
     }
 
     private static func testContainerUsesStableMergeSpacing() {

@@ -21,12 +21,12 @@ flowchart TD
 
 | Concern | Shared Kotlin | Android | iOS |
 | --- | --- | --- | --- |
-| Address resolution | `CandySharedFacade` and `BrowserUrlResolver` | Consumed by the Gecko browser | Consumed by `BrowserViewModel` |
+| Address resolution | `CandySharedFacade` and `BrowserUrlRules` | Existing Android URI policy remains authoritative at its engine edges | Consumed by `BrowserViewModel`, library and site preference adapters |
 | Browser chrome behavior | Tabs, session commands/events, menu and gesture decisions; production main menu, Hero pager, Grid/List overview, overview bottom chrome, address-load rainbow and morph math | Calls the shared production composables with Android resources, images, haptics and blur effects | Calls the same composables from `CandyBrowserApp` with WebKit state and UIKit preview adapters |
-| Settings core | Destination/router/home, common controls, Search provider catalog and URL routing, Appearance page, Tabs overview/dismiss controls, Browser translation-provider control and Toppings management | Supplies localized resources, chrome colors and persisted state | Uses the same pages; persists only stable search-provider settings before shared routing emits the generic WebKit load command; Toppings CRUD is bound to the validated WebKit runtime, unavailable backend settings are disabled |
-| Web engine | No engine type crosses the boundary | `BrowserController` owns an engine port per tab; Settings selects GeckoView or Android System WebView for the next process | `BrowserViewModel` owns a WebKit adapter per tab |
+| Settings core | Destination/router/home, common controls, Search provider catalog and URL routing, Appearance model/capability form, Tabs overview/dismiss controls, Browser translation-provider control and Toppings management | Supplies localized resources, chrome colors and persisted state; full Appearance form remains available | Persists Search/SearXNG, System/Light/Dark, UI motion, global page size, overview/dismiss and translation choices. Apple capabilities omit unsupported Appearance controls; `pageZoom` scales all page content. Toppings CRUD uses the validated runtime; unavailable backend settings stay disabled. |
+| Web engine | No engine type crosses the boundary | `BrowserController` owns an engine port per tab; Settings selects GeckoView or Android System WebView for the next process | `BrowserViewModel` restores shared tab records and attaches the selected WebKit session on demand; one stable native viewport container avoids interop remounts on snapshot updates, and shared loading state includes content-rule readiness waits |
 | Customization | `Topping` metadata, frame-scope policy and injection plans | GeckoView supplies Firefox WebExtensions plus scoped Toppings; System WebView supplies scoped Toppings and Candy privacy rules | Scoped `WKUserScript` in a named content world |
-| Visual language | Shared production menu/overview structure and semantic actions | Existing Candy Material theme, metrics, effects and resource resolution | Apple-style semantic colors, typography, compact metrics and native glass supplied through platform style/effect seams; no separate SwiftUI browser, menu or tab renderer |
+| Visual language | Shared production overview, Reader, library, Settings and semantic menu actions | Existing Candy Material theme, metrics, effects and resource resolution | Native Liquid Glass address/optional floating-menu chrome projects shared state; the default bottom sheet and menu-style editor reuse Android production Compose content. Shared screens use Apple colors, symbols, toggles, glass and segmented controls through presentation seams |
 
 The executable iOS target started as a vertical slice. Menu and tab-overview parity now comes from moving
 the existing Android production composables into `commonMain`, not rebuilding them for Apple. Android and
@@ -35,11 +35,33 @@ WebKit, UIKit and resource types never enter `commonMain`; small adapters provid
 and engine actions. The exact acceptance surface and evidence are defined in
 [`platform-feature-parity.md`](platform-feature-parity.md).
 
-Remaining iOS work is orchestration and platform adaptation: profile presentation, tab reorder and
-overview entry/exit motion; favicon and incognito artwork adapters; menu actions whose settings, history,
-snooze or other feature implementations do not exist on iOS yet; and native find/reader sheets. The
-production Tab Actions menu source is present in `commonMain`, but iOS action-state wiring and platform
-call-site cutover are not complete.
+| iOS feature | Current common ownership | Native edge / remaining boundary |
+| --- | --- | --- |
+| Regular tab restore and pins | `BrowserSessionPersistenceRules` validates version, bounds, local ownership, pin state and safe selection | Protected atomic JSON stores regular URLs/titles; native back/forward history and previews are not restored; inactive restored tabs attach lazily |
+| Private tabs | Shared creation and persistence exclusion | Native plus-button context menu; non-persistent WebKit data store; previews and desktop overrides stay in memory |
+| Favorites and History | `BrowserLibraryController`, shared retention/mutation/filter rules, `BrowserLibraryScreen` and the shared `LibrarySearchBar` state/renderer contract | Atomic native record storage; Android compiles its Material search renderer in the app module; History currently shows the active profile; Android folder/import/reorder and Recall features remain richer |
+| Reader offline library | `ReaderLibraryController`, `ReaderLibraryCodec`, extraction validation, budget eviction and original profile provenance; Android uses the same codec | Protected atomic text I/O; matching saved articles recover failed extraction and the shared library remains accessible |
+| Reader speech | `ReaderSpeechRules` and common speech bridge | `AVSpeechSynthesizer` executes speech and reports ranges; private speech does not save Reader state |
+| Desktop mode | Shared bounded host preference mutations; WebKit exact-host policy | `WKWebpagePreferences.preferredContentMode` applied per navigation; private overrides are tab-local; Android retains its public-suffix domain policy |
+| Website permissions / uploads | Browser-private state stays outside Candy persistence; WebKit owns the platform permission decisions | Info.plist supplies camera/microphone/foreground-location purposes; default media prompting and Safari-style file/photo selection remain enabled without auto-grant delegates |
+| Page JavaScript prompts | `BrowserWebPromptRules` sanitizer and typed contracts | Apple alert/confirm/text presenters; navigation, dismissal and session close cancel pending completions |
+| Downloads | Android's filename sanitization, MIME extension and truncation rules are physically shared in `DownloadFileNameRules` | WebKit streams downloads to protected temporary storage, then Files exports a user-chosen copy; four transfers / 1 GiB per file, owner-bound cancellation, no private queue/history record |
+| Snooze | Android production model/mutation/undo/due rules, calendar/DST policy, preset dialog and management list/card; active+snoozed persistence projection | Native custom date/time picker, foreground/launch/resume due orchestration and up to 60 OS-authorized reminders. Authorization denial leaves due restoration working; protected titles are excluded, stale reminders are removed and cold-launch notification taps wait for browser binding |
+| Profile/tab management | Shared close-all-unpinned, move-to-profile and safe profile deletion, including pending Snooze ownership | Moving tabs retires their old engines. Isolated-store deletion waits for fallback viewport attachment; failures retain metadata. Source History/site preferences are removed, shared default-store data is retained, and profile reorder remains open |
+| Profiles, previews and Trails | Shared profiles, overview geometry/motion, action menu and Trail reconciliation | Native favicon artwork and durable Trail state remain open |
+| Address pill compaction and manual parking | Android production scroll decisions, dock placement, resistance, breakaway, snap and offset geometry are physically shared | WebKit scroll observation and SwiftUI gestures/rendering; global edge/height persistence contains no page data. Automatic control-occlusion parking remains Android-only. |
+
+| Remaining iOS feature gap | Required work |
+| --- | --- |
+| Site Capsules | Shared model/navigation/editor extraction plus native persistence and platform launch integration |
+| Snooze background limits | Up to 60 upcoming Apple reminders; foreground/launch tab restoration exists, while iOS undo and background execution remain open |
+| Download queue | Foreground WebKit-to-Files export exists; persistent history/queue, background transfer and resume remain open |
+| Advanced permissions and authentication | Basic WebKit permission prompts and file selection are available; Candy permission history/radar, custom per-origin controls and HTTP authentication presentation remain open |
+| Per-site settings | Cookie banner removal controls, per-site zoom, safe area, popup policy and domain mute backends; desktop mode and global page size are connected |
+| Advanced Settings and chrome | Unsupported destination bodies, automatic control-occlusion parking, manual tab/profile reorder and profile protection/wallpapers. Apple Appearance persists theme/UI motion/page size; website animation suppression, forced dark websites and custom palettes/effects remain Android-only. |
+| Library and Trails | Android favorite folders/import/reorder, Recall/history tools and durable Candy Trail state |
+| Platform-only capabilities | Firefox WebExtensions stay Gecko-only; Android widgets, Cast/PiP and other system integrations need separate Apple capability decisions |
+
 
 ## Android engine selection
 
@@ -113,6 +135,10 @@ call-site cutover are not complete.
   not disable page JavaScript for this compatibility fallback.
 
 ### Animation suppression
+
+On iOS, the Appearance animation switch controls Candy UI motion and combines with system Reduce
+Motion. The document policies below are implemented by the Android engine adapters; iOS does not
+yet inject website animation suppression.
 
 - Appearance settings expose one default-on animation switch. Turning it off republishes a
   browser-wide, monotonic engine policy and reloads every open HTTP(S) tab, Link Peek, and external
@@ -622,8 +648,8 @@ implements them.
 
 | Slice | Move to shared Kotlin | Keep native |
 | --- | --- | --- |
-| iOS page features | Reuse Android-tested download, prompt and permission decisions | WKNavigation/WKUIDelegate and iOS system presenters |
-| iOS profiles and persistence | Reuse storage contracts and private-mode rules | WKWebsiteDataStore containers and restoration |
+| iOS page features | Prompt contracts and filename rules are shared; connect persistent download queue, upload and origin-scoped permission contracts next | WKDownload/Files export, WKNavigation/WKUIDelegate, document providers and system permission presenters |
+| iOS profiles and persistence | Regular session, library, Reader codec and private-mode boundaries are shared; profile reorder and durable Trails remain | WKWebsiteDataStore containers and protected atomic I/O |
 | iOS chrome orchestration | Reuse address, profile, reorder and overview state | WKWebView host, native image handles, haptics and Liquid Glass effects |
 | Toppings | Keep metadata, grants, values and conformance fixtures shared | Gecko userScripts host or WebKit script/message APIs |
 | Cross-platform regression | Reuse deterministic parity fixtures | Android Gecko instrumentation and iOS simulator UI tests |

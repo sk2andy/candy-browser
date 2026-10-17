@@ -47,3 +47,16 @@ enum BrowserTabOverviewStartsAtBottomPreference {
         defaults.set(enabled, forKey: key)
     }
 }
+
+enum BrowserTabDismissResistancePreference {
+    static let key = "candy.tabs.dismiss-resistance"
+
+    static func loadValue(from defaults: UserDefaults, defaultValue: Int32) -> Int32 {
+        guard let raw = defaults.object(forKey: key) as? Int else { return defaultValue }
+        return Int32(clamping: raw)
+    }
+
+    static func saveValue(_ value: Int32, to defaults: UserDefaults) {
+        defaults.set(Int(value), forKey: key)
+    }
+}
