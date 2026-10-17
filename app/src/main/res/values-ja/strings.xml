@@ -1501,4 +1501,10 @@
     <string name="gecko_extensions_retry_search">検索を再試行</string>
     <string name="browser_menu_empty_section_message">ここにお気に入りを配置できます。設定でメニュー項目を有効にしてください。</string>
     <string name="browser_menu_empty_section_action">設定を開く</string>
+    <string name="form_drafts_available">このページで未送信のテキストを利用できます。</string>
+    <string name="form_drafts_clear_failed">保存済みの下書きを削除できませんでした。再試行してください。</string>
+    <string name="form_drafts_restore">復元</string>
+    <string name="form_drafts_restore_failed">対応する空の入力欄が見つかりません。保存したテキストは有効期限まで利用できます。</string>
+    <string name="form_drafts_settings_summary">未送信の複数行テキストを暗号化して、この端末に24時間保存します。プライベートタブの下書きは、タブを閉じるまでメモリ内にのみ保持されます。機密性の高い入力欄は対象外です。オフにするとすべての下書きが削除されます。</string>
+    <string name="form_drafts_settings_title">フォームの下書きを救出</string>
 </resources>

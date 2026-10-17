@@ -46,6 +46,7 @@ enum class BrowserMenuEntry(
     CloseTab("close_tab", BrowserMenuConfigurationSection.Page, BrowserMenuLocation.Tab, true, false),
     DuplicateTab("duplicate_tab", BrowserMenuConfigurationSection.Page, BrowserMenuLocation.Tab, true, false),
     Reader("reader", BrowserMenuConfigurationSection.Page, BrowserMenuLocation.Tab, true, false),
+    WebAnnotations("web_annotations", BrowserMenuConfigurationSection.Page, BrowserMenuLocation.Tab, true, false),
     Translate("translate", BrowserMenuConfigurationSection.Page, BrowserMenuLocation.Tab, true, false),
     FindInPage("find_in_page", BrowserMenuConfigurationSection.Page, BrowserMenuLocation.Tab, true, false),
     Share("share", BrowserMenuConfigurationSection.Page, BrowserMenuLocation.Both, true, true),
@@ -341,6 +342,7 @@ object BrowserMenuLayoutRules {
         BrowserFeatureMenuAction.ToggleStatusBarScroll -> BrowserMenuEntry.StatusBarScroll
         BrowserFeatureMenuAction.OpenCandyTrail -> BrowserMenuEntry.CandyTrail
         BrowserFeatureMenuAction.OpenConstellations -> BrowserMenuEntry.Constellations
+        BrowserFeatureMenuAction.OpenWebAnnotations -> BrowserMenuEntry.WebAnnotations
         BrowserFeatureMenuAction.AddSiteCapsule -> BrowserMenuEntry.AddSiteCapsule
         BrowserFeatureMenuAction.CreateSiteWidget -> BrowserMenuEntry.CreateSiteWidget
         BrowserFeatureMenuAction.Summarize -> BrowserMenuEntry.Summarize

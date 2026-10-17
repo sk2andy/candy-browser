@@ -43,7 +43,7 @@ updated after the Compose snapshot disappears; removing Compose state alone can 
 | `SnoozeRules` | Permit only future, non-incognito snoozes |
 | `SnoozeMutationRules` / `SnoozeUndoRules` / `SnoozeRestoreRules` | Pure reschedule, undo and due-tab restore behavior |
 | `BrowserSessionStore.saveTabsAndSnoozedImmediately` | Commit active+snoozed snapshot together and roll back on failure |
-| `SnoozeScheduler` / `SnoozeWakeNotifier` | Android alarm and notification edges |
+| `SnoozeScheduler` / `SnoozeWakeNotifier` | Android alarm and notification edges. Single-tab reminders include the purpose beneath the title; protected-profile notification filtering also protects purpose text. |
 | Shared session / iOS storage | `BrowserTabsState.snoozedTabs` and `BrowserSessionSnapshot` keep regular active+snoozed records in one atomic native envelope; due entries reuse the existing `SnoozeRestoreRules` |
 | Shared Snooze UI | Existing Android preset dialog, management list and card render on both platforms; Android retains localized resources, predictive Back and date/time picker types |
 | iOS reminder edge | Explicit Snooze asks OS notification authorization; up to 60 upcoming local reminders, plus foreground timers and launch/resume due restoration. A closed app restores tabs when it next runs. Private, synced and protected sources cannot create an iOS Snooze. |

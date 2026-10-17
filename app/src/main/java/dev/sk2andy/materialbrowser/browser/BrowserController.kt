@@ -71,6 +71,8 @@ import dev.sk2andy.materialbrowser.blocking.SiteExceptionRules
 import dev.sk2andy.materialbrowser.blocking.SitePrivacyOverrides
 import dev.sk2andy.materialbrowser.blocking.SitePrivacyOverrideRules
 import dev.sk2andy.materialbrowser.blocking.SiteProtectionState
+import dev.sk2andy.materialbrowser.browser.annotation.WebAnnotationCoordinator
+import dev.sk2andy.materialbrowser.browser.annotation.WebTextSelectionAction
 import dev.sk2andy.materialbrowser.capsule.CapsuleDeletionRules
 import dev.sk2andy.materialbrowser.capsule.CapsuleFullCandyTransition
 import dev.sk2andy.materialbrowser.capsule.CapsuleFullCandyTransitionRules
@@ -266,6 +268,7 @@ import dev.sk2andy.materialbrowser.data.RecallRepository
 import dev.sk2andy.materialbrowser.data.SiteCapsuleIconStore
 import dev.sk2andy.materialbrowser.data.SiteCapsuleStore
 import dev.sk2andy.materialbrowser.data.SnoozeRestoreRules
+import dev.sk2andy.materialbrowser.data.SnoozePurposeRules
 import dev.sk2andy.materialbrowser.data.SnoozeRules
 import dev.sk2andy.materialbrowser.data.SnoozeMutationRules
 import dev.sk2andy.materialbrowser.data.SnoozeRuntimeRegistry
@@ -1664,6 +1667,15 @@ class BrowserController(
     private val store = capsuleWindowId?.let { BrowserSessionStore(activity, it) }
         ?: BrowserSessionStore(activity)
     private val historyRepository = BrowsingHistoryRepository.get(activity)
+    internal val formDrafts = dev.sk2andy.materialbrowser.browser.formdraft.FormDraftCoordinator(
+        activity.applicationContext, store.loadFormDraftSavingEnabled(),
+    )
+    val isFormDraftSavingEnabled: Boolean get() = formDrafts.enabled
+    internal val inlineTranslation = dev.sk2andy.materialbrowser.browser.translation.InlineTranslationCoordinator(activity)
+    internal val webAnnotations = WebAnnotationCoordinator(activity)
+    val canOpenWebAnnotations: Boolean get() = webAnnotations.canOpenPageAnnotations
+    fun showPageAnnotations() = webAnnotations.showPageAnnotations()
+
     private val recallRepository = RecallRepository.get(activity)
     private val constellationRepository = ConstellationRepository.get(activity)
     private val snoozedTabStore = SnoozedTabStore(activity)
@@ -7100,7 +7112,7 @@ class BrowserController(
                 onComplete(result)
                 return@deleteProfilesAsync
             }
-            historyMutationExecutor.execute {
+                historyMutationExecutor.execute {
                 val pushCleared = runCatching {
                     runBlocking {
                         GeckoWebPushCoordinator.removeProfileSubscriptions(
@@ -7139,6 +7151,8 @@ class BrowserController(
         }
         val profileIndex = profiles.indexOfFirst { it.id == profileId }
         if (profileIndex < 0) return false
+        webAnnotations.deleteProfile(profileId)
+        formDrafts.deleteProfile(profileId)
         if (closedTabUndoOffer?.tab?.profileId == profileId) dismissClosedTabUndo()
         val remainingLocalProfiles = localProfiles.filterNot { it.id == profileId }
         val fallbackProfile = if (profileId == activeProfileId) {
@@ -7623,6 +7637,32 @@ class BrowserController(
     }
 
     fun openSelectedPageExternally() = openPageExternally(selectedTabId)
+
+    internal fun handleSelectedTextTranslation(
+        tabId: String,
+        session: AndroidBrowserEngineSessionPort,
+        text: String,
+    ) {
+        val tab = tabs.firstOrNull { it.id == tabId } ?: return
+        val url = pageUrls[tabId] ?: tab.url
+        if (BrowserUriPolicy.normalizeHttpUrl(url) == null) return
+        val generation = navigationGenerations.getOrDefault(tabId, 0)
+        inlineTranslation.open(
+            text = text,
+            url = url,
+            toggleLabel = activity.getString(R.string.inline_translation_toggle),
+            isCurrent = {
+                !destroyed && isActivityResumed && !browsingDataClearPending &&
+                    externalLinkPreviewState == null && selectedTabId == tabId &&
+                    tab.profileId !in lockedProfileIds && browserEngineSessions[tabId] === session &&
+                    navigationGenerations.getOrDefault(tabId, 0) == generation &&
+                    tabs.any { it.id == tabId && it.profileId == tab.profileId && it.isIncognito == tab.isIncognito } &&
+                    (pageUrls[tabId] ?: tabs.firstOrNull { it.id == tabId }?.url) == url
+            },
+            apply = session::executeWebTextOperation,
+            fallback = ::translateSelectedPage,
+        )
+    }
 
     fun translateSelectedPage() {
         val tab = selectedTab
@@ -9307,12 +9347,14 @@ class BrowserController(
         title: String?,
         wakeAtMillis: Long,
         sourceTabId: String,
+        purpose: String = "",
     ): SnoozeUndoToken? = snoozeContextLink(
         url = url,
         title = title,
         wakeAtMillis = wakeAtMillis,
         sourceTabId = sourceTabId,
         nowMillis = System.currentTimeMillis(),
+        purpose = purpose,
     )
 
     @VisibleForTesting
@@ -9322,6 +9364,7 @@ class BrowserController(
         wakeAtMillis: Long,
         sourceTabId: String,
         nowMillis: Long,
+        purpose: String = "",
     ): SnoozeUndoToken? {
         if (selectedTabId != sourceTabId) return null
         val sourceTab = tabs.firstOrNull { tab -> tab.id == sourceTabId } ?: return null
@@ -9338,6 +9381,7 @@ class BrowserController(
             openerTabId = sourceTab.id,
             profileId = sourceTab.profileId,
         ).copy(
+            snoozePurpose = SnoozePurposeRules.normalize(purpose),
             title = title.orEmpty().trim().take(MAX_CONTEXT_LINK_TITLE_CHARS).ifEmpty {
                 AddressResolver.displayText(safeUrl)
             },
@@ -9379,6 +9423,7 @@ class BrowserController(
         tabId: String,
         wakeAtMillis: Long,
         nowMillis: Long = System.currentTimeMillis(),
+        purpose: String? = null,
     ): SnoozeUndoToken? {
         val index = tabs.indexOfFirst { it.id == tabId }
         if (index < 0) return null
@@ -9388,7 +9433,11 @@ class BrowserController(
         if (!SnoozeRules.canSnooze(tab, wakeAtMillis, nowMillis)) return null
         val originalTabStack = tabStacks.firstOrNull { tabId in it.tabIds }
         val updatedSnoozed = (snoozedTabs.filterNot { it.tab.id == tabId } +
-            SnoozedTab(tab, wakeAtMillis, nowMillis))
+            SnoozedTab(
+                tab.copy(snoozePurpose = SnoozePurposeRules.normalize(purpose ?: tab.snoozePurpose)),
+                wakeAtMillis,
+                nowMillis,
+            ))
             .sortedWith(compareBy<SnoozedTab>({ it.wakeAtMillis }, { it.tab.id }))
         val profileIndex = activeTabs.indexOfFirst { it.id == tabId }
         val openerTabId = tab.openerTabId
@@ -9500,6 +9549,19 @@ class BrowserController(
         enqueueSyncedTab(result.restoredTab.id)
         persist()
         snoozeScheduler.schedule(result.snoozedTabs, nowMillis)
+        return true
+    }
+
+    fun updateSnoozedTabPurpose(tabId: String, purpose: String): Boolean {
+        val updated = SnoozeMutationRules.withPurpose(snoozedTabs, tabId, purpose) ?: return false
+        if (!store.saveTabsAndSnoozedImmediately(
+                tabs = persistableTabs(tabs),
+                selectedTabId = selectedTabId,
+                snoozedTabs = updated,
+            )
+        ) return false
+        snoozedTabs.clear()
+        snoozedTabs += updated
         return true
     }
 
@@ -11295,6 +11357,63 @@ class BrowserController(
         statusBarScrollTargetWidthPercent = normalized
         store.saveStatusBarScrollTargetWidthPercent(normalized)
     }
+    fun updateFormDraftSavingEnabled(enabled: Boolean) {
+        store.saveFormDraftSavingEnabled(enabled)
+        formDrafts.setEnabled(enabled) { cleared ->
+            if (!cleared) Toast.makeText(activity, R.string.form_drafts_clear_failed, Toast.LENGTH_LONG).show()
+        }
+        refreshWebAnnotationBinding()
+        refreshFormDraftBinding()
+    }
+
+    private fun refreshWebAnnotationBinding() {
+        val tab = tabs.firstOrNull { it.id == selectedTabId }
+        val session = browserEngineSessions[selectedTabId]
+        val url = tab?.let { pageUrls[it.id] ?: it.url }
+        val generation = navigationGenerations.getOrDefault(selectedTabId, 0)
+        if (tab == null || session == null || url == null || tab.isLoading || tab.isIncognito ||
+            !isActivityResumed || destroyed || isActiveProfileLocked || browsingDataClearPending ||
+            externalLinkPreviewState != null || isSyncedProfile(tab.profileId)) {
+            webAnnotations.detach()
+            return
+        }
+        webAnnotations.bind(session, tab.profileId, url, generation) {
+            !destroyed && isActivityResumed && !browsingDataClearPending && externalLinkPreviewState == null &&
+                selectedTabId == tab.id && tab.profileId !in lockedProfileIds &&
+                browserEngineSessions[tab.id] === session && navigationGenerations.getOrDefault(tab.id, 0) == generation &&
+                tabs.any { it.id == tab.id && !it.isIncognito && it.profileId == tab.profileId } &&
+                (pageUrls[tab.id] ?: tabs.firstOrNull { it.id == tab.id }?.url) == url
+        }
+    }
+
+    private fun refreshFormDraftBinding() {
+        val tab = tabs.firstOrNull { it.id == selectedTabId }
+        val session = browserEngineSessions[selectedTabId]
+        val url = tab?.let { pageUrls[it.id] ?: it.url }
+        val generation = navigationGenerations.getOrDefault(selectedTabId, 0)
+        if (tab == null || session == null || url == null || tab.isLoading ||
+            !isActivityResumed || destroyed || isActiveProfileLocked ||
+            browsingDataClearPending || externalLinkPreviewState != null || isSyncedProfile(tab.profileId)) {
+            webAnnotations.detach()
+            formDrafts.detach()
+            return
+        }
+        formDrafts.bind(
+            session = session,
+            profileId = tab.profileId,
+            url = url,
+            generation = generation,
+            tabId = tab.id,
+            isPrivate = tab.isIncognito,
+        ) {
+            !destroyed && isActivityResumed && !browsingDataClearPending &&
+                externalLinkPreviewState == null && selectedTabId == tab.id &&
+                tab.profileId !in lockedProfileIds && browserEngineSessions[tab.id] === session &&
+                navigationGenerations.getOrDefault(tab.id, 0) == generation &&
+                tabs.any { it.id == tab.id && it.isIncognito == tab.isIncognito && it.profileId == tab.profileId } &&
+                (pageUrls[tab.id] ?: tabs.firstOrNull { it.id == tab.id }?.url) == url
+        }
+    }
 
     fun updateRecallEnabled(enabled: Boolean) {
         if (recallDisablePending || isRecallEnabled == enabled) return
@@ -11481,6 +11600,8 @@ class BrowserController(
         dismissClosedTabUndo()
         if (browsingDataClearPending) return
         browsingDataClearPending = true
+        webAnnotations.detach()
+        formDrafts.detach()
         cancelPendingPermissionAccess()
         cancelPendingHttpAuthChallenge()
         cancelPendingFileChooser()
@@ -11496,13 +11617,19 @@ class BrowserController(
                 completeBrowsingDataClear(false)
                 return@clearAllData
             }
-            historyMutationExecutor.execute {
-                val pushCleared = BuildConfig.SYSTEM_WEBVIEW_ONLY || runCatching {
-                    runBlocking {
-                        GeckoWebPushCoordinator.clearAllData(activity.applicationContext)
-                    }
-                }.getOrDefault(false)
-                mainHandler.post { completeBrowsingDataClear(pushCleared) }
+            formDrafts.clear { draftsCleared ->
+                if (!draftsCleared) {
+                    completeBrowsingDataClear(false)
+                    return@clear
+                }
+                historyMutationExecutor.execute {
+                    val pushCleared = BuildConfig.SYSTEM_WEBVIEW_ONLY || runCatching {
+                        runBlocking {
+                            GeckoWebPushCoordinator.clearAllData(activity.applicationContext)
+                        }
+                    }.getOrDefault(false)
+                    mainHandler.post { completeBrowsingDataClear(pushCleared) }
+                }
             }
         }
     }
@@ -11618,6 +11745,9 @@ class BrowserController(
     }
 
     fun onPause() {
+        inlineTranslation.dismiss()
+        webAnnotations.detach()
+        formDrafts.detach()
         stopInlineVideoGestureHaptic()
         cancelAddressBarAutoDockProbe()
         contentActions.dismiss()
@@ -11695,6 +11825,8 @@ class BrowserController(
         applyCandyTrailRedactions(store.loadPendingCandyTrailRedactions())
         candyTrailRepository.processPendingRedactions()
         isActivityResumed = true
+        refreshWebAnnotationBinding()
+        refreshFormDraftBinding()
         if (!isInPictureInPicture && !pictureInPictureTransitionPending) {
             cancelPictureInPictureTransition()
         }
@@ -12133,6 +12265,9 @@ class BrowserController(
     }
 
     fun destroy(lockClosedProfiles: Boolean = false) {
+        inlineTranslation.close()
+        webAnnotations.close()
+        formDrafts.close()
         deviceSearchNavigator.close()
         incomingLinkRouter.close()
         cancelBackgroundMemoryTrim()
@@ -12425,6 +12560,25 @@ class BrowserController(
         tab: BrowserTab,
         session: AndroidBrowserEngineSessionPort,
     ) {
+        session.setSelectedTextActionListener { action, text ->
+            val current = tabs.firstOrNull { it.id == tab.id }
+            if (current != null && selectedTabId == tab.id && browserEngineSessions[tab.id] === session &&
+                !current.isLoading && !destroyed && isActivityResumed && !isActiveProfileLocked &&
+                !browsingDataClearPending && externalLinkPreviewState == null) {
+                when (action) {
+                    WebTextSelectionAction.Highlight -> {
+                        if (current.isIncognito) {
+                            Toast.makeText(activity, R.string.web_annotation_private, Toast.LENGTH_SHORT).show()
+                        } else {
+                            refreshWebAnnotationBinding()
+                            webAnnotations.select(text, current.title)
+                        }
+                    }
+                    WebTextSelectionAction.Translate ->
+                        handleSelectedTextTranslation(tab.id, session, text)
+                }
+            }
+        }
         session.setSelectedPriority(tab.id == selectedTabId)
         session.setFaviconListener { pageUrl, bitmap ->
             mainHandler.post {
@@ -14522,6 +14676,8 @@ class BrowserController(
         ) {
             completeExternalNavigationRollback(event.tabId)
         }
+        refreshWebAnnotationBinding()
+        refreshFormDraftBinding()
         handlePageTranslationEngineEvent(event)
         engineViewRevision++
     }
@@ -17570,6 +17726,7 @@ class BrowserController(
         preserveFaviconGeneration: Boolean = false,
         preserveRestorableState: Boolean = false,
     ) {
+        formDrafts.deleteTab(tabId)
         closeBrowserEngineSession(tabId)
         if (!preserveRestorableState) {
             geckoSessionStateStore.delete(tabId)
@@ -18176,6 +18333,8 @@ class BrowserController(
             browserEngineSessions[previousTabId]?.setSelectedPriority(false)
         }
         selectedTabId = tabId
+        refreshWebAnnotationBinding()
+        refreshFormDraftBinding()
         recordSessionDiagnostic(BrowserSessionDiagnostics.Event.Selected, tabId)
         if (previousTabId != tabId) {
             browserEngineSessions[tabId]?.setSelectedPriority(true)

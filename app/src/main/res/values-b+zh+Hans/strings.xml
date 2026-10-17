@@ -1501,4 +1501,10 @@
     <string name="gecko_extensions_retry_search">重试搜索</string>
     <string name="browser_menu_empty_section_message">这里可以放置收藏项。请在设置中启用菜单项。</string>
     <string name="browser_menu_empty_section_action">打开设置</string>
+    <string name="form_drafts_available">此页面有可用的未发送文本。</string>
+    <string name="form_drafts_clear_failed">无法删除已保存的草稿。请重试。</string>
+    <string name="form_drafts_restore">恢复</string>
+    <string name="form_drafts_restore_failed">未找到匹配的空字段。保存的文本在过期前仍可使用。</string>
+    <string name="form_drafts_settings_summary">将未发送的多行文本加密保存在此设备上，保留 24 小时。隐私草稿仅保留在内存中，直到标签页关闭。敏感字段不包括在内。关闭此功能会删除所有草稿。</string>
+    <string name="form_drafts_settings_title">找回表单草稿</string>
 </resources>

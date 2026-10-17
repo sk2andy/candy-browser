@@ -1525,4 +1525,10 @@
     <string name="gecko_extensions_retry_search">Réessayer la recherche</string>
     <string name="browser_menu_empty_section_message">Vous pouvez ajouter vos favoris ici. Activez des éléments de menu dans les paramètres.</string>
     <string name="browser_menu_empty_section_action">Ouvrir les paramètres</string>
+    <string name="form_drafts_available">Du texte non envoyé est disponible pour cette page.</string>
+    <string name="form_drafts_clear_failed">Impossible de supprimer les brouillons enregistrés. Réessayez.</string>
+    <string name="form_drafts_restore">Restaurer</string>
+    <string name="form_drafts_restore_failed">Aucun champ vide correspondant trouvé. Le texte enregistré reste disponible jusqu’à son expiration.</string>
+    <string name="form_drafts_settings_summary">Conservez le texte multiligne non envoyé chiffré sur cet appareil pendant 24 heures. Les brouillons privés restent uniquement en mémoire jusqu’à la fermeture de l’onglet. Les champs sensibles sont exclus. La désactivation supprime tous les brouillons.</string>
+    <string name="form_drafts_settings_title">Sauvegarder les brouillons de formulaires</string>
 </resources>

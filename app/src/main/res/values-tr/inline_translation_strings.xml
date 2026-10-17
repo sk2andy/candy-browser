@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="inline_translation_title">Seçili metni çevir</string>
+    <string name="inline_translation_local_description">Bu cihazda çevirin. Metnin dilini ve hedef dili seçin. Özgün metne dönmek için çevrilen bölüme dokunun.</string>
+    <string name="inline_translation_source">Metnin dili</string>
+    <string name="inline_translation_target">Hedef dil</string>
+    <string name="inline_translation_choose_language">Dil seç</string>
+    <string name="inline_translation_unavailable">Bu cihazın çeviri hizmetinde indirilmiş bir dil çifti yok.</string>
+    <string name="inline_translation_failed">Bu seçim sayfa içinde çevrilemedi. Sayfa değişmiş, metin birden fazla yerde geçiyor veya çeviri hizmeti kullanılamıyor olabilir.</string>
+    <string name="inline_translation_manage_languages">Android çeviri dillerini yönet</string>
+    <string name="inline_translation_apply">Burada çevir</string>
+    <string name="inline_translation_fallback_description">Alternatif olarak, sayfanın tamamını çevirmek için bu sayfanın adresini %1$s hizmetine gönderebilirsiniz.</string>
+    <string name="inline_translation_fallback">Sayfayı %1$s ile çevir</string>
+    <string name="inline_translation_toggle">Özgün metin ile çeviri arasında geçiş yap</string>
+</resources>

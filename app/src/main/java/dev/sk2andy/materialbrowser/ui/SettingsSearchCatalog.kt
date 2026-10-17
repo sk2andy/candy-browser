@@ -666,6 +666,11 @@ internal fun settingsSearchDefinitions(
             descriptionRes = R.string.history_clear_on_exit_summary,
         )
         setting(
+            id = "form_drafts_settings_title",
+            titleRes = R.string.form_drafts_settings_title,
+            descriptionRes = R.string.form_drafts_settings_summary,
+        )
+        setting(
             id = "recall_settings_title",
             titleRes = R.string.recall_settings_title,
             descriptionRes = R.string.recall_settings_summary,

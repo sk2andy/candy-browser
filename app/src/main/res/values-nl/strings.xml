@@ -1518,4 +1518,10 @@
     <string name="gecko_extensions_retry_search">Zoeken opnieuw proberen</string>
     <string name="browser_menu_empty_section_message">Hier is ruimte voor je favorieten. Schakel menu-items in bij de instellingen.</string>
     <string name="browser_menu_empty_section_action">Instellingen openen</string>
+    <string name="form_drafts_available">Er is niet-verzonden tekst beschikbaar voor deze pagina.</string>
+    <string name="form_drafts_clear_failed">Kan opgeslagen concepten niet verwijderen. Probeer het opnieuw.</string>
+    <string name="form_drafts_restore">Herstellen</string>
+    <string name="form_drafts_restore_failed">Geen geschikt leeg veld gevonden. De opgeslagen tekst blijft beschikbaar totdat deze verloopt.</string>
+    <string name="form_drafts_settings_summary">Bewaar niet-verzonden tekst met meerdere regels 24 uur versleuteld op dit apparaat. Privéconcepten blijven alleen in het geheugen totdat het tabblad wordt gesloten. Gevoelige velden worden uitgesloten. Uitschakelen verwijdert alle concepten.</string>
+    <string name="form_drafts_settings_title">Formulierconcepten bewaren</string>
 </resources>

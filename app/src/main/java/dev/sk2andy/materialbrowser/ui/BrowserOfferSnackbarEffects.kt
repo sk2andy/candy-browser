@@ -48,6 +48,31 @@ internal fun BrowserOfferSnackbarEffects(
     )
     val tryYandexLabel = stringResource(R.string.action_try_yandex_translation)
     val openOriginalLabel = stringResource(R.string.action_open_original_page)
+    val formDraftMessage = stringResource(R.string.form_drafts_available)
+    val restoreDraftLabel = stringResource(R.string.form_drafts_restore)
+    val restoreFailedMessage = stringResource(R.string.form_drafts_restore_failed)
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val formDraftOffer = controller.formDrafts.offer
+    LaunchedEffect(formDraftOffer?.token) {
+        val offer = formDraftOffer ?: return@LaunchedEffect
+        try {
+            val result = hostState.showSnackbar(
+                message = formDraftMessage,
+                actionLabel = restoreDraftLabel,
+                withDismissAction = true,
+                duration = SnackbarDuration.Indefinite,
+            )
+            if (result == SnackbarResult.ActionPerformed) {
+                controller.formDrafts.restore(offer.token) { restored ->
+                    if (!restored) android.widget.Toast.makeText(
+                        context, restoreFailedMessage, android.widget.Toast.LENGTH_LONG,
+                    ).show()
+                }
+            }
+        } finally {
+            controller.formDrafts.dismiss(offer.token)
+        }
+    }
     val blockedPopupOffer = controller.blockedPopupOffer
     LaunchedEffect(blockedPopupOffer?.token) {
         val offer = blockedPopupOffer ?: return@LaunchedEffect

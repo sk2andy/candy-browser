@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="inline_translation_title">選択したテキストを翻訳</string>
+    <string name="inline_translation_local_description">このデバイス上で翻訳します。テキストの言語と翻訳先の言語を選んでください。翻訳された箇所をタップすると原文に戻ります。</string>
+    <string name="inline_translation_source">テキストの言語</string>
+    <string name="inline_translation_target">翻訳先</string>
+    <string name="inline_translation_choose_language">言語を選択</string>
+    <string name="inline_translation_unavailable">このデバイスの翻訳サービスには、ダウンロード済みの利用可能な言語ペアがありません。</string>
+    <string name="inline_translation_failed">選択したテキストをページ内で翻訳できませんでした。ページが変更された、同じテキストが複数ある、または翻訳サービスが利用できない可能性があります。</string>
+    <string name="inline_translation_manage_languages">Android の翻訳言語を管理</string>
+    <string name="inline_translation_apply">ここで翻訳</string>
+    <string name="inline_translation_fallback_description">または、このページのアドレスを %1$s に送信して、ページ全体を翻訳できます。</string>
+    <string name="inline_translation_fallback">%1$s でページを翻訳</string>
+    <string name="inline_translation_toggle">原文と翻訳を切り替え</string>
+</resources>

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="snooze_purpose_label">Цел (незадолжително)</string>
+    <string name="snooze_purpose_hint">Проверка на враќање производ, разговор со Лиза…</string>
+    <string name="snooze_purpose_supporting">Потсетете се што сакате да направите кога ќе се врати ова јазиче.</string>
+    <string name="snooze_add_purpose">Додај цел</string>
+    <string name="snooze_edit_purpose">Уреди цел</string>
+</resources>

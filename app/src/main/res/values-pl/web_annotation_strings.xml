@@ -1,0 +1,14 @@
+<resources>
+    <string name="web_annotation_mark">Wyróżnij + notatka</string>
+    <string name="web_annotation_translate">Przetłumacz na stronie</string>
+    <string name="web_annotation_title">Wyróżnienia na stronie</string>
+    <string name="web_annotation_note">Notatka (opcjonalnie)</string>
+    <string name="web_annotation_save">Zapisz</string>
+    <string name="web_annotation_cancel">Anuluj</string>
+    <string name="web_annotation_delete">Usuń</string>
+    <string name="web_annotation_empty">Na tej stronie nie ma zapisanych wyróżnień. Zaznacz tekst, aby dodać wyróżnienie.</string>
+    <string name="web_annotation_saved_quote">Zapisany cytat — pozostaje nawet po zmianie strony.</string>
+    <string name="web_annotation_failed">Nie udało się zapisać wyróżnienia.</string>
+    <string name="web_annotation_private">Wyróżnienia nie są dostępne w kartach prywatnych.</string>
+    <string name="web_annotation_close">Zamknij</string>
+</resources>

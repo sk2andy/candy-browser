@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="inline_translation_title">แปลข้อความที่เลือก</string>
+    <string name="inline_translation_local_description">แปลบนอุปกรณ์นี้ เลือกภาษาของข้อความและภาษาเป้าหมาย แตะข้อความที่แปลแล้วเพื่อกลับไปดูต้นฉบับ</string>
+    <string name="inline_translation_source">ภาษาของข้อความ</string>
+    <string name="inline_translation_target">แปลเป็น</string>
+    <string name="inline_translation_choose_language">เลือกภาษา</string>
+    <string name="inline_translation_unavailable">บริการแปลภาษาของอุปกรณ์นี้ไม่มีคู่ภาษาที่ดาวน์โหลดไว้ให้ใช้งาน</string>
+    <string name="inline_translation_failed">ไม่สามารถแปลข้อความที่เลือกภายในหน้าเว็บได้ หน้าเว็บอาจเปลี่ยนไป ข้อความอาจปรากฏหลายครั้ง หรือบริการแปลภาษาอาจไม่พร้อมใช้งาน</string>
+    <string name="inline_translation_manage_languages">จัดการภาษาสำหรับการแปลของ Android</string>
+    <string name="inline_translation_apply">แปลที่นี่</string>
+    <string name="inline_translation_fallback_description">หรือส่งที่อยู่ของหน้าเว็บนี้ไปยัง %1$s เพื่อแปลทั้งหน้า</string>
+    <string name="inline_translation_fallback">แปลหน้าเว็บด้วย %1$s</string>
+    <string name="inline_translation_toggle">สลับระหว่างต้นฉบับกับคำแปล</string>
+</resources>

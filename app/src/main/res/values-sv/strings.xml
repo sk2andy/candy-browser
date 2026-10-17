@@ -1518,4 +1518,10 @@
     <string name="gecko_extensions_retry_search">Försök söka igen</string>
     <string name="browser_menu_empty_section_message">Här finns plats för dina favoriter. Aktivera menyalternativ i inställningarna.</string>
     <string name="browser_menu_empty_section_action">Öppna inställningar</string>
+    <string name="form_drafts_available">Oskickad text finns tillgänglig för den här sidan.</string>
+    <string name="form_drafts_clear_failed">Det gick inte att radera sparade utkast. Försök igen.</string>
+    <string name="form_drafts_restore">Återställ</string>
+    <string name="form_drafts_restore_failed">Inget matchande tomt fält hittades. Den sparade texten finns kvar tills den löper ut.</string>
+    <string name="form_drafts_settings_summary">Spara oskickad flerradig text krypterad på den här enheten i 24 timmar. Privata utkast finns bara i minnet tills fliken stängs. Känsliga fält utesluts. Om du stänger av detta raderas alla utkast.</string>
+    <string name="form_drafts_settings_title">Rädda formulärutkast</string>
 </resources>

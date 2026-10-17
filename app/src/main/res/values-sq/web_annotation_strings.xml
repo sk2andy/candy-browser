@@ -1,0 +1,14 @@
+<resources>
+    <string name="web_annotation_mark">Thekso + shënim</string>
+    <string name="web_annotation_translate">Përkthe në faqe</string>
+    <string name="web_annotation_title">Theksimet e faqes</string>
+    <string name="web_annotation_note">Shënim (opsional)</string>
+    <string name="web_annotation_save">Ruaj</string>
+    <string name="web_annotation_cancel">Anulo</string>
+    <string name="web_annotation_delete">Fshi</string>
+    <string name="web_annotation_empty">Nuk ka theksime të ruajtura në këtë faqe. Përzgjidh tekst për të shtuar një.</string>
+    <string name="web_annotation_saved_quote">Citat i ruajtur — mbetet edhe nëse faqja ndryshon.</string>
+    <string name="web_annotation_failed">Ky theksim nuk mund të ruhej.</string>
+    <string name="web_annotation_private">Theksimet nuk janë të disponueshme në skedat private.</string>
+    <string name="web_annotation_close">Mbyll</string>
+</resources>

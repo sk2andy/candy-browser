@@ -1518,4 +1518,10 @@
     <string name="gecko_extensions_retry_search">Обиди се повторно</string>
     <string name="browser_menu_empty_section_message">Има место за вашите омилени ставки. Овозможете ставки од менито во поставките.</string>
     <string name="browser_menu_empty_section_action">Отвори поставки</string>
+    <string name="form_drafts_available">Има неиспратен текст за оваа страница.</string>
+    <string name="form_drafts_clear_failed">Зачуваните нацрти не можеа да се избришат. Обидете се повторно.</string>
+    <string name="form_drafts_restore">Врати</string>
+    <string name="form_drafts_restore_failed">Не е пронајдено соодветно празно поле. Зачуваниот текст останува достапен до истекувањето на рокот.</string>
+    <string name="form_drafts_settings_summary">Чувајте неиспратен повеќереден текст шифриран на овој уред 24 часа. Приватните нацрти остануваат само во меморијата додека не се затвори јазичето. Чувствителните полиња се исклучени. Исклучувањето ги брише сите нацрти.</string>
+    <string name="form_drafts_settings_title">Зачувување на нацрти од формулари</string>
 </resources>

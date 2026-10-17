@@ -245,7 +245,15 @@ internal fun BrowserScreen(
     LaunchedEffect(controller, activeProfileLocked) {
         if (activeProfileLocked) controller.publishStatusBarScrollPageContext(visible = false)
     }
+    LaunchedEffect(controller.selectedTab, controller.isActiveProfileLocked) {
+        controller.inlineTranslation.validate()
+    }
     if (activeProfileLocked) return
+    WebAnnotationDialogs(controller.webAnnotations)
+    InlineTranslationDialog(
+        coordinator = controller.inlineTranslation,
+        providerName = controller.pageTranslationProvider.displayName,
+    )
     val hideBrowserChrome = FullscreenVideoRules.hidesBrowserChrome(
         isWebContentFullscreen = controller.isSelectedWebContentFullscreen,
         placement = controller.fullscreenVideoPlacement(videoOnlyPresentation),
@@ -1835,13 +1843,14 @@ internal fun BrowserScreen(
         SnoozeTabDialog(
             tab = pendingLinkSnooze?.displayTab()
                 ?: snoozeTabId?.let { id -> controller.tabs.firstOrNull { it.id == id } },
-            onSnooze = { wakeAtMillis ->
+            onSnooze = { wakeAtMillis, purpose ->
                 pendingLinkSnooze?.let { pending ->
                     val undoToken = controller.snoozeContextLink(
                         url = pending.url,
                         title = pending.title,
                         wakeAtMillis = wakeAtMillis,
                         sourceTabId = pending.sourceTabId,
+                        purpose = purpose,
                     )
                     if (undoToken != null) {
                         feedbackSnackbarJob?.cancel()
@@ -1858,7 +1867,7 @@ internal fun BrowserScreen(
                     return@SnoozeTabDialog undoToken != null
                 }
                 val tabId = snoozeTabId ?: return@SnoozeTabDialog false
-                val undoToken = controller.snoozeTab(tabId, wakeAtMillis)
+                val undoToken = controller.snoozeTab(tabId, wakeAtMillis, purpose = purpose)
                 if (undoToken != null) {
                     feedbackSnackbarJob?.cancel()
                     feedbackSnackbarJob = backAnimationScope.launch {

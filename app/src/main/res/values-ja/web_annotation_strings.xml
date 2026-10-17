@@ -1,0 +1,14 @@
+<resources>
+    <string name="web_annotation_mark">ハイライトとメモ</string>
+    <string name="web_annotation_translate">ページ内で翻訳</string>
+    <string name="web_annotation_title">ページのハイライト</string>
+    <string name="web_annotation_note">メモ（任意）</string>
+    <string name="web_annotation_save">保存</string>
+    <string name="web_annotation_cancel">キャンセル</string>
+    <string name="web_annotation_delete">削除</string>
+    <string name="web_annotation_empty">このページに保存されたハイライトはありません。テキストを選択して追加してください。</string>
+    <string name="web_annotation_saved_quote">保存された引用 — ページが変更されても保持されます。</string>
+    <string name="web_annotation_failed">ハイライトを保存できませんでした。</string>
+    <string name="web_annotation_private">プライベートタブではハイライトを利用できません。</string>
+    <string name="web_annotation_close">閉じる</string>
+</resources>

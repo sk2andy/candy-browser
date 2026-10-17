@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="inline_translation_title">Přeložit vybraný text</string>
+    <string name="inline_translation_local_description">Překládejte na tomto zařízení. Vyberte jazyk textu a cílový jazyk. Klepnutím na přeloženou pasáž se vrátíte k originálu.</string>
+    <string name="inline_translation_source">Jazyk textu</string>
+    <string name="inline_translation_target">Přeložit do</string>
+    <string name="inline_translation_choose_language">Vybrat jazyk</string>
+    <string name="inline_translation_unavailable">Překladatelská služba tohoto zařízení nenabízí žádnou staženou jazykovou dvojici.</string>
+    <string name="inline_translation_failed">Tento výběr se nepodařilo přeložit přímo na stránce. Stránka se mohla změnit, text se může vyskytovat vícekrát nebo je překladatelská služba nedostupná.</string>
+    <string name="inline_translation_manage_languages">Spravovat jazyky překladu Androidu</string>
+    <string name="inline_translation_apply">Přeložit zde</string>
+    <string name="inline_translation_fallback_description">Případně můžete odeslat adresu této stránky službě %1$s a přeložit celou stránku.</string>
+    <string name="inline_translation_fallback">Přeložit stránku pomocí %1$s</string>
+    <string name="inline_translation_toggle">Přepínat mezi originálem a překladem</string>
+</resources>

@@ -1501,4 +1501,10 @@
     <string name="gecko_extensions_retry_search">검색 다시 시도</string>
     <string name="browser_menu_empty_section_message">여기에 즐겨찾기를 둘 수 있습니다. 설정에서 메뉴 항목을 사용 설정하세요.</string>
     <string name="browser_menu_empty_section_action">설정 열기</string>
+    <string name="form_drafts_available">이 페이지에 보내지 않은 텍스트가 있습니다.</string>
+    <string name="form_drafts_clear_failed">저장된 초안을 삭제할 수 없습니다. 다시 시도하세요.</string>
+    <string name="form_drafts_restore">복원</string>
+    <string name="form_drafts_restore_failed">일치하는 빈 입력란을 찾지 못했습니다. 저장된 텍스트는 만료될 때까지 사용할 수 있습니다.</string>
+    <string name="form_drafts_settings_summary">보내지 않은 여러 줄 텍스트를 암호화하여 이 기기에 24시간 동안 보관합니다. 비공개 초안은 탭을 닫을 때까지 메모리에만 유지됩니다. 민감한 입력란은 제외됩니다. 이 기능을 끄면 모든 초안이 삭제됩니다.</string>
+    <string name="form_drafts_settings_title">양식 초안 복구</string>
 </resources>

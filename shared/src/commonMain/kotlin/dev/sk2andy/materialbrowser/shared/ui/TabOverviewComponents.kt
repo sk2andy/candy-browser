@@ -700,7 +700,8 @@ fun TabListHeroContent(
                             fontWeight = FontWeight.Bold,
                         )
                         Text(
-                            visuals.subtitle,
+                            tab.snoozePurpose.takeUnless { tab.isIncognito || it.isBlank() }
+                                ?: visuals.subtitle,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                             style = MaterialTheme.typography.bodySmall,
@@ -771,15 +772,25 @@ fun TabTitleRow(
                 }
             }
             Spacer(Modifier.width(10.dp))
-            Text(
-                visuals.title,
-                modifier = Modifier.weight(1f, fill = false),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                style = MaterialTheme.typography.titleSmall,
-                color = contentColor,
-                fontWeight = FontWeight.SemiBold,
-            )
+            Column(Modifier.weight(1f, fill = false)) {
+                Text(
+                    visuals.title,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    style = MaterialTheme.typography.titleSmall,
+                    color = contentColor,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                if (tab.snoozePurpose.isNotBlank() && !tab.isIncognito) {
+                    Text(
+                        tab.snoozePurpose,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = contentColor,
+                    )
+                }
+            }
             if (tab.isPinned) {
                 Spacer(Modifier.width(8.dp))
                 visuals.pinnedIcon(Modifier.size(18.dp), contentColor)

@@ -46,6 +46,45 @@ class GeckoReaderViewInstrumentedTest {
     }
 
     @Test
+    fun savedHighlightAndInlineTranslationUseDocumentBoundGeckoBridge() {
+        withLoadedSession(isPrivate = false, profileSuffix = "annotations") { session, server ->
+            InstrumentationRegistry.getInstrumentation().runOnMainSync {
+                session.bindToppingSession("annotations", BrowserEngineContentKind.RegularTab)
+            }
+            fun apply(payload: JSONObject): Boolean {
+                val finished = CountDownLatch(1)
+                val result = AtomicReference(false)
+                InstrumentationRegistry.getInstrumentation().runOnMainSync {
+                    session.executeWebTextOperation(payload.toString()) {
+                        result.set(it)
+                        finished.countDown()
+                    }
+                }
+                assertTrue("Web text operation did not complete", finished.await(10, TimeUnit.SECONDS))
+                return result.get()
+            }
+            val quote = "Readable article text from GeckoView with enough detail to pass the bounded Reader Studio extraction contract."
+            assertTrue(apply(JSONObject().put("operation", "highlights").put("url", server.url)
+                .put("annotations", org.json.JSONArray().put(JSONObject().put("quote", quote)))))
+            assertTrue(!apply(JSONObject().put("operation", "translate").put("url", server.url)
+                .put("original", "Private draft must disappear").put("replacement", "Changed")))
+            assertTrue(apply(JSONObject().put("operation", "translate").put("url", server.url)
+                .put("original", quote).put("replacement", "Translated article text from GeckoView remains readable and can be switched back to the original quotation.")))
+            val finished = CountDownLatch(1)
+            val extracted = AtomicReference<String?>()
+            InstrumentationRegistry.getInstrumentation().runOnMainSync {
+                session.extractPageText {
+                    extracted.set(it)
+                    finished.countDown()
+                }
+            }
+            assertTrue(finished.await(10, TimeUnit.SECONDS))
+            assertTrue(JSONObject(requireNotNull(extracted.get())).getString("text")
+                .contains("Translated article text from GeckoView"))
+        }
+    }
+
+    @Test
     fun loadedGeckoArticleCanBeExtractedForReaderView() {
         assertLoadedArticleCanBeExtracted(isPrivate = false)
     }

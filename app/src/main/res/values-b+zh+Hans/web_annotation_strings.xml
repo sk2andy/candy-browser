@@ -1,0 +1,14 @@
+<resources>
+    <string name="web_annotation_mark">高亮并添加备注</string>
+    <string name="web_annotation_translate">在页面内翻译</string>
+    <string name="web_annotation_title">页面高亮</string>
+    <string name="web_annotation_note">备注（可选）</string>
+    <string name="web_annotation_save">保存</string>
+    <string name="web_annotation_cancel">取消</string>
+    <string name="web_annotation_delete">删除</string>
+    <string name="web_annotation_empty">此页面暂无已保存的高亮内容。选择文字即可添加。</string>
+    <string name="web_annotation_saved_quote">已保存的引文 — 即使页面发生变化，也会保留。</string>
+    <string name="web_annotation_failed">无法保存此高亮内容。</string>
+    <string name="web_annotation_private">无痕标签页中无法使用高亮功能。</string>
+    <string name="web_annotation_close">关闭</string>
+</resources>

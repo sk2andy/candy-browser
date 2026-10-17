@@ -17,6 +17,7 @@ import dev.sk2andy.materialbrowser.browser.TextInputOcclusionProbeMode
 import dev.sk2andy.materialbrowser.browser.TextInputOcclusionProbeResult
 import dev.sk2andy.materialbrowser.browser.actions.BrowserContentTargetListener
 import dev.sk2andy.materialbrowser.browser.actions.WebContentTarget
+import dev.sk2andy.materialbrowser.browser.annotation.WebTextSelectionAction
 import dev.sk2andy.materialbrowser.browser.userscript.UserScript
 import dev.sk2andy.materialbrowser.browser.userscript.UserScriptMenuCommand
 import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineCapabilities
@@ -240,6 +241,16 @@ internal interface AndroidBrowserEngineSessionPort :
     fun goToHistoryIndex(index: Int)
 
     fun historyUrlAtOffset(offset: Int): String?
+
+    fun setSelectedTextActionListener(
+        listener: ((WebTextSelectionAction, String) -> Unit)?,
+    ) = Unit
+
+    fun executeWebTextOperation(payload: String, onComplete: (Boolean) -> Unit) = onComplete(false)
+
+    fun setFormDraftListener(listener: ((String) -> Unit)?) = Unit
+
+    fun restoreFormDraft(payload: String, onComplete: (Boolean) -> Unit) = onComplete(false)
 
     fun extractPageForReader(onComplete: (String?) -> Unit)
 
@@ -854,6 +865,24 @@ internal class GeckoBrowserEngineSessionAdapter(
             return
         }
         session.extractPageForReader(onComplete)
+    }
+
+    override fun setSelectedTextActionListener(
+        listener: ((WebTextSelectionAction, String) -> Unit)?,
+    ) {
+        if (!closed) session.setSelectedTextActionListener(listener)
+    }
+
+    override fun executeWebTextOperation(payload: String, onComplete: (Boolean) -> Unit) {
+        if (closed) onComplete(false) else session.executeWebTextOperation(payload, onComplete)
+    }
+
+    override fun setFormDraftListener(listener: ((String) -> Unit)?) {
+        if (!closed) session.setFormDraftListener(listener)
+    }
+
+    override fun restoreFormDraft(payload: String, onComplete: (Boolean) -> Unit) {
+        if (closed) onComplete(false) else session.restoreFormDraft(payload, onComplete)
     }
 
     override fun probeTextInputOcclusion(

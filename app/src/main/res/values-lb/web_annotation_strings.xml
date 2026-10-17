@@ -1,0 +1,14 @@
+<resources>
+    <string name="web_annotation_mark">Markéieren + Notiz</string>
+    <string name="web_annotation_translate">Op der Säit iwwersetzen</string>
+    <string name="web_annotation_title">Markéierungen op der Säit</string>
+    <string name="web_annotation_note">Notiz (optional)</string>
+    <string name="web_annotation_save">Späicheren</string>
+    <string name="web_annotation_cancel">Ofbriechen</string>
+    <string name="web_annotation_delete">Läschen</string>
+    <string name="web_annotation_empty">Keng gespäichert Markéierungen op dëser Säit. Wielt Text aus fir eng derbäizesetzen.</string>
+    <string name="web_annotation_saved_quote">Gespäichert Zitat — bleift erhalen, och wann dës Säit ännert.</string>
+    <string name="web_annotation_failed">Dës Markéierung konnt net gespäichert ginn.</string>
+    <string name="web_annotation_private">Markéierunge sinn a privaten Tabs net verfügbar.</string>
+    <string name="web_annotation_close">Zoumaachen</string>
+</resources>

@@ -36,6 +36,18 @@ object SnoozeRules {
 }
 
 object SnoozeMutationRules {
+    fun withPurpose(tabs: List<SnoozedTab>, tabId: String, purpose: String): List<SnoozedTab>? {
+        if (tabs.none { it.tab.id == tabId }) return null
+        val normalized = SnoozePurposeRules.normalize(purpose)
+        return tabs.map { snoozed ->
+            if (snoozed.tab.id == tabId) {
+                snoozed.copy(tab = snoozed.tab.copy(snoozePurpose = normalized))
+            } else {
+                snoozed
+            }
+        }
+    }
+
     fun rescheduled(
         tabs: List<SnoozedTab>,
         tabId: String,

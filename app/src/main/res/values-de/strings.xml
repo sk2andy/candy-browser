@@ -1542,4 +1542,10 @@
     <string name="settings_status_bar_scroll_enable_for_domain">Statusleisten-Scrollen für diese Website aktivieren</string>
     <string name="settings_status_bar_scroll_disable_for_domain">Statusleisten-Scrollen für diese Website deaktivieren</string>
     <string name="settings_translations_title">Übersetzungen</string>
+    <string name="form_drafts_available">Für diese Seite ist nicht gesendeter Text vorhanden.</string>
+    <string name="form_drafts_clear_failed">Gespeicherte Entwürfe konnten nicht gelöscht werden. Bitte erneut versuchen.</string>
+    <string name="form_drafts_restore">Wiederherstellen</string>
+    <string name="form_drafts_restore_failed">Kein passendes leeres Feld gefunden. Gespeicherter Text bleibt bis zum Ablauf verfügbar.</string>
+    <string name="form_drafts_settings_summary">Nicht gesendeten mehrzeiligen Text für 24 Stunden verschlüsselt auf diesem Gerät behalten. Private Entwürfe bleiben bis zum Schließen des Tabs nur im Arbeitsspeicher. Sensible Felder sind ausgeschlossen. Ausschalten löscht alle Entwürfe.</string>
+    <string name="form_drafts_settings_title">Formularentwürfe retten</string>
 </resources>

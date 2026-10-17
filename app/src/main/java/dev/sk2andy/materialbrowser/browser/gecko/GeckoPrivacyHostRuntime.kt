@@ -22,6 +22,12 @@ import org.mozilla.geckoview.WebExtensionController
 internal interface GeckoPrivacyBinding {
     fun update(policy: GeckoPrivacyPolicy, onReady: () -> Unit = {})
 
+    fun executeWebTextOperation(payload: String, onComplete: (Boolean) -> Unit) = onComplete(false)
+
+    fun setFormDraftListener(listener: ((String) -> Unit)?) = Unit
+
+    fun restoreFormDraft(payload: String, onComplete: (Boolean) -> Unit) = onComplete(false)
+
     fun extractPageForReader(onResult: (String?) -> Unit)
 
     fun extractPageText(onResult: (String?) -> Unit) = onResult(null)
@@ -85,6 +91,9 @@ internal class GeckoViewPrivacyHostRuntime(
         val textInputOcclusionProbe: GeckoTextInputOcclusionRequest,
         val userInputRequest: GeckoUserInputRequest,
         val textExtraction: GeckoTextExtractionRequest,
+        val webTextOperation: GeckoWebTextOperationRequest,
+        val formDraftRestore: GeckoFormDraftRestoreRequest,
+        var formDraftListener: ((String) -> Unit)? = null,
         var pictureInPicturePlaybackExpected: Boolean = false,
         var pictureInPicturePlaybackRequestGeneration: Long = 0,
         var pictureInPicturePreparationRequestId: Long? = null,
@@ -227,6 +236,8 @@ internal class GeckoViewPrivacyHostRuntime(
             textInputOcclusionProbe = GeckoTextInputOcclusionRequest(mainHandler),
             userInputRequest = GeckoUserInputRequest(mainHandler),
             textExtraction = GeckoTextExtractionRequest(mainHandler),
+            webTextOperation = GeckoWebTextOperationRequest(mainHandler),
+            formDraftRestore = GeckoFormDraftRestoreRequest(mainHandler),
             sink = sink,
             onScrollMetrics = onScrollMetrics,
             onMainFrameResponse = onMainFrameResponse,
@@ -266,10 +277,51 @@ internal class GeckoViewPrivacyHostRuntime(
             override fun update(policy: GeckoPrivacyPolicy, onReady: () -> Unit) {
                 binding.userInputRequest.cancel()
                 binding.textExtraction.cancel()
+                binding.webTextOperation.cancel()
+                binding.formDraftRestore.cancel()
                 binding.inlineVideoOpenGate.invalidatePolicy(policy, session.settings.usePrivateMode)
                 refreshInlineVideoOpenTimeout(binding)
                 binding.policy = policy
                 runWhenReady(binding) { publish(binding, policy, onReady) }
+            }
+
+            override fun executeWebTextOperation(payload: String, onComplete: (Boolean) -> Unit) {
+                if (bindings[token] !== binding || !binding.handshake.isCurrentPolicyAcknowledged ||
+                    failureDescription != null || port == null) {
+                    onComplete(false)
+                    return
+                }
+                binding.webTextOperation.start(payload, { message ->
+                    port?.postMessage(message
+                        .put("protocolVersion", CandyPrivacyHostContract.PROTOCOL_VERSION)
+                        .put("token", token)
+                        .put("revision", binding.handshake.publishedRevision)
+                        .put("navigationGeneration", binding.policy.navigationGeneration))
+                }, onComplete)
+            }
+
+            override fun setFormDraftListener(listener: ((String) -> Unit)?) {
+                if (bindings[token] !== binding) return
+                val enabled = listener != null
+                val wasEnabled = binding.formDraftListener != null
+                binding.formDraftListener = listener.takeIf { enabled }
+                if (!enabled) binding.formDraftRestore.cancel()
+                if (enabled != wasEnabled) runWhenReady(binding) { publish(binding, binding.policy) }
+            }
+
+            override fun restoreFormDraft(payload: String, onComplete: (Boolean) -> Unit) {
+                if (bindings[token] !== binding || binding.formDraftListener == null ||
+                    payload.length > 150_000) {
+                    onComplete(false)
+                    return
+                }
+                binding.formDraftRestore.start(payload, { message ->
+                    port?.postMessage(message
+                        .put("protocolVersion", CandyPrivacyHostContract.PROTOCOL_VERSION)
+                        .put("token", token)
+                        .put("revision", binding.handshake.publishedRevision)
+                        .put("navigationGeneration", binding.policy.navigationGeneration))
+                }, onComplete)
             }
 
             override fun extractPageText(onResult: (String?) -> Unit) {
@@ -454,6 +506,8 @@ internal class GeckoViewPrivacyHostRuntime(
                 binding.textInputOcclusionProbe.cancel()
                 binding.userInputRequest.cancel()
                 binding.textExtraction.cancel()
+                binding.webTextOperation.cancel()
+                binding.formDraftRestore.cancel()
                 clearPictureInPicturePreparationRequest(binding)?.invoke(null)
                 clearPictureInPictureRestorationRequest(binding)?.invoke(false)
                 clearInlineVideoPresentationRequest(binding)?.invoke(false)
@@ -540,6 +594,8 @@ internal class GeckoViewPrivacyHostRuntime(
         binding.textInputOcclusionProbe.cancel()
         binding.userInputRequest.cancel()
         binding.textExtraction.cancel()
+        binding.webTextOperation.cancel()
+        binding.formDraftRestore.cancel()
         val readerResult = clearReaderRequest(binding)
         val pictureInPicturePreparationResult =
             clearPictureInPicturePreparationRequest(binding)
@@ -563,6 +619,7 @@ internal class GeckoViewPrivacyHostRuntime(
         refreshTimeout(binding)
         port?.postMessage(
             policy.toMessage(binding.token, binding.handshake.publishedRevision)
+                .put("formDraftSavingEnabled", binding.formDraftListener != null)
                 .put("bindingMode", if (binding.nativeWindow) "native-tab" else "bootstrap")
                 .put("bindingChallenge", if (binding.nativeWindow) binding.challenge else JSONObject.NULL)
                 .put("domDiagnosticsEnabled", BuildConfig.ENABLE_PERFORMANCE_DIAGNOSTICS && !binding.session.settings.usePrivateMode)
@@ -639,6 +696,21 @@ internal class GeckoViewPrivacyHostRuntime(
             "inline-video-presentation-result" -> acceptInlineVideoPresentationResult(value)
             "picture-in-picture-playback-result" ->
                 acceptPictureInPicturePlaybackResult(value)
+            "form-draft-snapshot", "form-draft-restored" -> {
+                val binding = bindings[value.optString("token")] ?: return
+                if (binding.formDraftListener == null ||
+                    binding.handshake.publishedRevision != value.optLong("revision", -1) ||
+                    binding.policy.navigationGeneration != value.optInt("navigationGeneration", -1)) return
+                if (value.optString("type") == "form-draft-restored") binding.formDraftRestore.accept(value)
+                else value.optJSONObject("payload")?.toString()?.takeIf { it.length <= 150_000 }
+                    ?.let { binding.formDraftListener?.invoke(it) }
+            }
+            "web-text-operation-result" -> {
+                val binding = bindings[value.optString("token")] ?: return
+                if (binding.handshake.publishedRevision != value.optLong("revision", -1) ||
+                    binding.policy.navigationGeneration != value.optInt("navigationGeneration", -1)) return
+                binding.webTextOperation.accept(value)
+            }
             "text-extraction-result" -> {
                 val binding = bindings[value.optString("token")] ?: return
                 if (binding.session.settings.usePrivateMode ||
@@ -1368,6 +1440,8 @@ internal class GeckoViewPrivacyHostRuntime(
             binding.textInputOcclusionProbe.cancel()
             binding.userInputRequest.cancel()
             binding.textExtraction.cancel()
+            binding.webTextOperation.cancel()
+            binding.formDraftRestore.cancel()
             cancelTimeout(binding)
             clearPictureInPicturePreparationRequest(binding)?.invoke(null)
             clearInlineVideoPresentationRequest(binding)?.invoke(false)

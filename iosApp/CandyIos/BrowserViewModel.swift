@@ -1796,6 +1796,7 @@ final class BrowserViewModel: NSObject, ObservableObject {
             isFavorite: libraryController.isFavorite(address: tab.address),
             isPinned: tab.isPinned,
             canOpenReader: hasPage,
+            canOpenWebAnnotations: false,
             canTranslatePage: hasPage,
             canUseDocumentActions: hasPage,
             canToggleCookieBannerRemoval: false,

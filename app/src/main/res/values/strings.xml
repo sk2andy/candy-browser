@@ -1560,4 +1560,10 @@
     <string name="settings_status_bar_scroll_enable_for_domain">Enable status bar scroll for this site</string>
     <string name="settings_status_bar_scroll_disable_for_domain">Disable status bar scroll for this site</string>
     <string name="settings_translations_title">Translations</string>
+    <string name="form_drafts_available">Unsent text is available for this page.</string>
+    <string name="form_drafts_clear_failed">Saved drafts could not be deleted. Please try again.</string>
+    <string name="form_drafts_restore">Restore</string>
+    <string name="form_drafts_restore_failed">No matching empty field found. Saved text stays available until it expires.</string>
+    <string name="form_drafts_settings_summary">Keep unsent multiline text encrypted on this device for 24 hours. Private drafts stay in memory until the tab closes. Sensitive fields are excluded. Turning this off deletes all drafts.</string>
+    <string name="form_drafts_settings_title">Rescue form drafts</string>
 </resources>

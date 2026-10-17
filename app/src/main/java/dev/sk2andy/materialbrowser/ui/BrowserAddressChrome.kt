@@ -584,6 +584,11 @@ internal fun BoxScope.BrowserAddressChrome(
         onTranslate = controller::translateSelectedPage,
         onReaderStudio = onReaderStudio,
         onOpenCandyTrail = onOpenCandyTrail,
+        canOpenWebAnnotations = controller.canOpenWebAnnotations,
+        onWebAnnotations = {
+            onAddressEditorDismiss()
+            controller.showPageAnnotations()
+        },
         canOpenConstellations = controller.canOpenConstellations,
         onOpenConstellations = {
             onAddressEditorDismiss()

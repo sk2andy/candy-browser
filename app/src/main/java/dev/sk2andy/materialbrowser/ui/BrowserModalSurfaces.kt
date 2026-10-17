@@ -300,6 +300,7 @@ internal fun BoxScope.BrowserModalSurfaces(
             profiles = visibleProfiles,
             onBack = onSnoozedTabsDismiss,
             onReschedule = controller::rescheduleSnoozedTab,
+            onUpdatePurpose = controller::updateSnoozedTabPurpose,
             onOpenNow = { tabId ->
                 controller.openSnoozedTabNow(tabId)
             },

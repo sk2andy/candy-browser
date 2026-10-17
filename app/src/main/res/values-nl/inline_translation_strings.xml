@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="inline_translation_title">Geselecteerde tekst vertalen</string>
+    <string name="inline_translation_local_description">Vertaal op dit apparaat. Kies de taal van de tekst en de doeltaal. Tik op de vertaalde passage om terug te gaan naar het origineel.</string>
+    <string name="inline_translation_source">Taal van de tekst</string>
+    <string name="inline_translation_target">Vertalen naar</string>
+    <string name="inline_translation_choose_language">Taal kiezen</string>
+    <string name="inline_translation_unavailable">De vertaaldienst van dit apparaat heeft geen gedownload talenpaar beschikbaar.</string>
+    <string name="inline_translation_failed">Deze selectie kon niet rechtstreeks op de pagina worden vertaald. De pagina is mogelijk gewijzigd, de tekst komt mogelijk meerdere keren voor of de vertaaldienst is niet beschikbaar.</string>
+    <string name="inline_translation_manage_languages">Android-vertaaltalen beheren</string>
+    <string name="inline_translation_apply">Hier vertalen</string>
+    <string name="inline_translation_fallback_description">Je kunt ook het adres van deze pagina naar %1$s sturen om de hele pagina te vertalen.</string>
+    <string name="inline_translation_fallback">Pagina vertalen met %1$s</string>
+    <string name="inline_translation_toggle">Wisselen tussen origineel en vertaling</string>
+</resources>

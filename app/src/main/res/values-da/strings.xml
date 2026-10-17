@@ -1518,4 +1518,10 @@
     <string name="gecko_extensions_retry_search">Prøv søgning igen</string>
     <string name="browser_menu_empty_section_message">Her er der plads til dine favoritter. Aktivér menupunkter i indstillingerne.</string>
     <string name="browser_menu_empty_section_action">Åbn indstillinger</string>
+    <string name="form_drafts_available">Der er usendt tekst til denne side.</string>
+    <string name="form_drafts_clear_failed">Gemte kladder kunne ikke slettes. Prøv igen.</string>
+    <string name="form_drafts_restore">Gendan</string>
+    <string name="form_drafts_restore_failed">Intet passende tomt felt fundet. Den gemte tekst er tilgængelig, indtil den udløber.</string>
+    <string name="form_drafts_settings_summary">Gem usendt tekst med flere linjer krypteret på denne enhed i 24 timer. Private kladder forbliver kun i hukommelsen, indtil fanen lukkes. Følsomme felter udelades. Hvis du slår dette fra, slettes alle kladder.</string>
+    <string name="form_drafts_settings_title">Red kladder i formularer</string>
 </resources>

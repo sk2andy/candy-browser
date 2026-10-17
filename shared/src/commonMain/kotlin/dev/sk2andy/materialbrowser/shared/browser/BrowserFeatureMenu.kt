@@ -34,6 +34,7 @@ enum class BrowserFeatureMenuAction {
     CloseTab,
     ParkAddressBarRight,
     OpenReader,
+    OpenWebAnnotations,
     TranslatePage,
     FindInPage,
     Share,
@@ -78,6 +79,7 @@ enum class BrowserFeatureMenuLabelKey {
     CloseTab,
     ParkAddressBarRight,
     Reader,
+    WebAnnotations,
     Translate,
     FindInPage,
     Share,
@@ -142,6 +144,7 @@ data class BrowserFeatureMenuState(
     val isFavorite: Boolean = false,
     val isPinned: Boolean = false,
     val canOpenReader: Boolean = false,
+    val canOpenWebAnnotations: Boolean = false,
     val canTranslatePage: Boolean = false,
     val canUseDocumentActions: Boolean = false,
     val canToggleCookieBannerRemoval: Boolean = false,
@@ -173,6 +176,7 @@ data class BrowserFeatureMenuCapabilities(
     val supportsFirefoxExtensions: Boolean = false,
     val supportsSiteWidgets: Boolean = false,
     val supportsConstellations: Boolean = false,
+    val supportsWebAnnotations: Boolean = false,
 )
 
 object BrowserFeatureMenuRules {
@@ -181,7 +185,7 @@ object BrowserFeatureMenuRules {
         capabilities: BrowserFeatureMenuCapabilities = BrowserFeatureMenuCapabilities(),
     ): List<BrowserFeatureMenuItem> = buildList {
         toolbarItems(state).forEach(::add)
-        pageItems(state).forEach(::add)
+        pageItems(state, capabilities).forEach(::add)
         toppingItems(state).forEach(::add)
         candyItems(state, capabilities).forEach(::add)
         browserItems(state, capabilities).forEach(::add)
@@ -234,7 +238,10 @@ object BrowserFeatureMenuRules {
         ),
     )
 
-    private fun pageItems(state: BrowserFeatureMenuState) = buildList {
+    private fun pageItems(
+        state: BrowserFeatureMenuState,
+        capabilities: BrowserFeatureMenuCapabilities,
+    ) = buildList {
         state.overflowPageActions.forEach { action ->
             when (action) {
                 BrowserFeatureMenuAction.ShowTabs ->
@@ -268,6 +275,15 @@ object BrowserFeatureMenuRules {
                 enabled = state.canOpenReader,
             ),
         )
+        if (capabilities.supportsWebAnnotations) {
+            add(
+                command(
+                    BrowserFeatureMenuAction.OpenWebAnnotations,
+                    BrowserFeatureMenuLabelKey.WebAnnotations,
+                    enabled = state.canOpenWebAnnotations,
+                ),
+            )
+        }
         add(
             command(
                 BrowserFeatureMenuAction.TranslatePage,

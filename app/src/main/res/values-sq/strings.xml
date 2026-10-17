@@ -1518,4 +1518,10 @@
     <string name="gecko_extensions_retry_search">Provo sërish kërkimin</string>
     <string name="browser_menu_empty_section_message">Ka vend për të preferuarat e tua këtu. Aktivizo elementet e menysë te cilësimet.</string>
     <string name="browser_menu_empty_section_action">Hap cilësimet</string>
+    <string name="form_drafts_available">Ka tekst të padërguar për këtë faqe.</string>
+    <string name="form_drafts_clear_failed">Draftet e ruajtura nuk u fshinë. Provoni sërish.</string>
+    <string name="form_drafts_restore">Rikthe</string>
+    <string name="form_drafts_restore_failed">Nuk u gjet një fushë bosh përkatëse. Teksti i ruajtur mbetet i disponueshëm derisa të skadojë.</string>
+    <string name="form_drafts_settings_summary">Ruajeni tekstin e padërguar me disa rreshta të enkriptuar në këtë pajisje për 24 orë. Draftet private qëndrojnë vetëm në kujtesë derisa të mbyllet skeda. Fushat me të dhëna delikate përjashtohen. Çaktivizimi fshin të gjitha draftet.</string>
+    <string name="form_drafts_settings_title">Rikupero draftet e formularëve</string>
 </resources>

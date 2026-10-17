@@ -66,10 +66,15 @@ internal object AppDataArchiveRules {
     fun isAllowedArchiveRelativePath(path: String): Boolean =
         path != GUEST_BUBBLE_SESSION_RELATIVE_PATH &&
             !path.startsWith("$GUEST_BUBBLE_SESSION_RELATIVE_PATH/") &&
+        path != "no_backup/web_annotations.json" &&
+            path != "no_backup/web_annotations.json.bak" &&
+            path != "no_backup/web_annotations.json.new" &&
             path != "no_backup/candy_constellations.db" &&
             !path.startsWith("no_backup/candy_constellations.db-") &&
             path != "no_backup/constellation_model" &&
             !path.startsWith("no_backup/constellation_model/") &&
+            path != "no_backup/form_drafts" &&
+            !path.startsWith("no_backup/form_drafts/") &&
             path != RECALL_DATABASE_RELATIVE_PATH &&
             !path.startsWith("$RECALL_DATABASE_RELATIVE_PATH-") &&
             path != APP_LOGS_RELATIVE_PATH &&

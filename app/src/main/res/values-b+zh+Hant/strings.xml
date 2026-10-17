@@ -1501,4 +1501,10 @@
     <string name="gecko_extensions_retry_search">重試搜尋</string>
     <string name="browser_menu_empty_section_message">這裡可以放置我的最愛。請在設定中啟用選單項目。</string>
     <string name="browser_menu_empty_section_action">開啟設定</string>
+    <string name="form_drafts_available">此網頁有可用的未送出文字。</string>
+    <string name="form_drafts_clear_failed">無法刪除已儲存的草稿。請再試一次。</string>
+    <string name="form_drafts_restore">還原</string>
+    <string name="form_drafts_restore_failed">找不到相符的空白欄位。已儲存的文字在到期前仍可使用。</string>
+    <string name="form_drafts_settings_summary">將未送出的多行文字加密儲存在此裝置上，保留 24 小時。私密草稿僅保留在記憶體中，直到分頁關閉。不包含敏感欄位。關閉此功能會刪除所有草稿。</string>
+    <string name="form_drafts_settings_title">救回表單草稿</string>
 </resources>

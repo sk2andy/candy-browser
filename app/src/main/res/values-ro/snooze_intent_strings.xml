@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="snooze_purpose_label">Scop (opțional)</string>
+    <string name="snooze_purpose_hint">Verifică retururile, discută cu Lisa…</string>
+    <string name="snooze_purpose_supporting">Amintește-ți ce vrei să faci când revine această filă.</string>
+    <string name="snooze_add_purpose">Adaugă un scop</string>
+    <string name="snooze_edit_purpose">Editează scopul</string>
+</resources>

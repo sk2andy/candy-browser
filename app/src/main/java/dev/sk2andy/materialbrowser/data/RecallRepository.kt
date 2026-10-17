@@ -7,6 +7,7 @@ import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 import android.os.Handler
 import android.os.Looper
+import dev.sk2andy.materialbrowser.browser.annotation.WebAnnotationRules
 import dev.sk2andy.materialbrowser.recall.RecallDocument
 import dev.sk2andy.materialbrowser.recall.RecallExtractionParser
 import dev.sk2andy.materialbrowser.recall.RecallMatch
@@ -77,7 +78,11 @@ internal class RecallRepository private constructor(context: Context) {
                     limit = safeLimit,
                 )
             }
-            mainHandler.post { onComplete(matches) }
+            val annotations = WebAnnotationRules.search(
+                WebAnnotationStore(appContext).all(), safeProfiles, query, safeLimit,
+            )
+            val combined = (annotations + matches).distinctBy { it.profileId to it.url }.take(safeLimit)
+            mainHandler.post { onComplete(combined) }
         }
     }
 

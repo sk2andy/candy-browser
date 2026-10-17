@@ -1,0 +1,14 @@
+<resources>
+    <string name="web_annotation_mark">Markera + anteckning</string>
+    <string name="web_annotation_translate">Översätt på sidan</string>
+    <string name="web_annotation_title">Markeringar på sidan</string>
+    <string name="web_annotation_note">Anteckning (valfritt)</string>
+    <string name="web_annotation_save">Spara</string>
+    <string name="web_annotation_cancel">Avbryt</string>
+    <string name="web_annotation_delete">Ta bort</string>
+    <string name="web_annotation_empty">Inga sparade markeringar på denna sida. Välj text för att lägga till en.</string>
+    <string name="web_annotation_saved_quote">Sparat citat — behålls även om sidan ändras.</string>
+    <string name="web_annotation_failed">Det gick inte att spara markeringen.</string>
+    <string name="web_annotation_private">Markeringar är inte tillgängliga i privata flikar.</string>
+    <string name="web_annotation_close">Stäng</string>
+</resources>

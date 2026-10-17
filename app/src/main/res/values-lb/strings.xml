@@ -1518,4 +1518,10 @@
     <string name="gecko_extensions_retry_search">Sich nach eng Kéier</string>
     <string name="browser_menu_empty_section_message">Hei ass Plaz fir deng Favoritten. Aktivéier Menüelementer an den Astellungen.</string>
     <string name="browser_menu_empty_section_action">Astellungen opmaachen</string>
+    <string name="form_drafts_available">Fir dës Säit ass net geschéckten Text disponibel.</string>
+    <string name="form_drafts_clear_failed">Déi gespäichert Entwërf konnten net geläscht ginn. Probéiert nach eng Kéier.</string>
+    <string name="form_drafts_restore">Erëm hierstellen</string>
+    <string name="form_drafts_restore_failed">Kee passend eidelt Feld fonnt. De gespäicherten Text bleift disponibel, bis en ofleeft.</string>
+    <string name="form_drafts_settings_summary">Net geschéckten Text mat méi Zeile gëtt 24 Stonne verschlësselt op dësem Apparat gespäichert. Privat Entwërf bleiwen nëmmen am Aarbechtsspäicher, bis den Tab zougemaach gëtt. Sensibel Felder sinn ausgeschloss. Beim Ausschalte ginn all Entwërf geläscht.</string>
+    <string name="form_drafts_settings_title">Formularentwërf retten</string>
 </resources>

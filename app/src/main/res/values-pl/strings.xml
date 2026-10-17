@@ -1549,4 +1549,10 @@
     <string name="gecko_extensions_retry_search">Ponów wyszukiwanie</string>
     <string name="browser_menu_empty_section_message">Jest tu miejsce na ulubione. Włącz elementy menu w ustawieniach.</string>
     <string name="browser_menu_empty_section_action">Otwórz ustawienia</string>
+    <string name="form_drafts_available">Dla tej strony jest dostępny niewysłany tekst.</string>
+    <string name="form_drafts_clear_failed">Nie udało się usunąć zapisanych szkiców. Spróbuj ponownie.</string>
+    <string name="form_drafts_restore">Przywróć</string>
+    <string name="form_drafts_restore_failed">Nie znaleziono pasującego pustego pola. Zapisany tekst pozostaje dostępny do wygaśnięcia.</string>
+    <string name="form_drafts_settings_summary">Przechowuj niewysłany tekst wielowierszowy w zaszyfrowanej postaci na tym urządzeniu przez 24 godziny. Prywatne szkice pozostają wyłącznie w pamięci do zamknięcia karty. Pola z danymi wrażliwymi są pomijane. Wyłączenie usuwa wszystkie szkice.</string>
+    <string name="form_drafts_settings_title">Odzyskiwanie szkiców formularzy</string>
 </resources>

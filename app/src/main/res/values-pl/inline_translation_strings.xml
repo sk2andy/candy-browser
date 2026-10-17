@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="inline_translation_title">Przetłumacz zaznaczony tekst</string>
+    <string name="inline_translation_local_description">Tłumacz na tym urządzeniu. Wybierz język tekstu i język docelowy. Dotknij przetłumaczonego fragmentu, aby wrócić do oryginału.</string>
+    <string name="inline_translation_source">Język tekstu</string>
+    <string name="inline_translation_target">Przetłumacz na</string>
+    <string name="inline_translation_choose_language">Wybierz język</string>
+    <string name="inline_translation_unavailable">Usługa tłumaczenia na tym urządzeniu nie udostępnia żadnej pobranej pary językowej.</string>
+    <string name="inline_translation_failed">Nie udało się przetłumaczyć zaznaczenia bezpośrednio na stronie. Strona mogła się zmienić, tekst może występować wielokrotnie lub usługa tłumaczenia może być niedostępna.</string>
+    <string name="inline_translation_manage_languages">Zarządzaj językami tłumaczenia Androida</string>
+    <string name="inline_translation_apply">Przetłumacz tutaj</string>
+    <string name="inline_translation_fallback_description">Możesz też wysłać adres tej strony do %1$s, aby przetłumaczyć całą stronę.</string>
+    <string name="inline_translation_fallback">Przetłumacz stronę za pomocą %1$s</string>
+    <string name="inline_translation_toggle">Przełącz między oryginałem a tłumaczeniem</string>
+</resources>

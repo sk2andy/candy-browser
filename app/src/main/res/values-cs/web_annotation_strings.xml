@@ -1,0 +1,14 @@
+<resources>
+    <string name="web_annotation_mark">Zvýraznit + poznámka</string>
+    <string name="web_annotation_translate">Přeložit přímo na stránce</string>
+    <string name="web_annotation_title">Zvýraznění na stránce</string>
+    <string name="web_annotation_note">Poznámka (nepovinné)</string>
+    <string name="web_annotation_save">Uložit</string>
+    <string name="web_annotation_cancel">Zrušit</string>
+    <string name="web_annotation_delete">Smazat</string>
+    <string name="web_annotation_empty">Na této stránce nejsou uložená zvýraznění. Přidejte je výběrem textu.</string>
+    <string name="web_annotation_saved_quote">Uložená citace — zůstane zachována i při změně stránky.</string>
+    <string name="web_annotation_failed">Zvýraznění se nepodařilo uložit.</string>
+    <string name="web_annotation_private">Zvýraznění nejsou dostupná v anonymních kartách.</string>
+    <string name="web_annotation_close">Zavřít</string>
+</resources>

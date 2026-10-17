@@ -1,0 +1,14 @@
+<resources>
+    <string name="web_annotation_mark">Đánh dấu + ghi chú</string>
+    <string name="web_annotation_translate">Dịch ngay trên trang</string>
+    <string name="web_annotation_title">Đoạn đánh dấu trên trang</string>
+    <string name="web_annotation_note">Ghi chú (không bắt buộc)</string>
+    <string name="web_annotation_save">Lưu</string>
+    <string name="web_annotation_cancel">Hủy</string>
+    <string name="web_annotation_delete">Xóa</string>
+    <string name="web_annotation_empty">Chưa có đoạn đánh dấu nào được lưu trên trang này. Chọn văn bản để thêm.</string>
+    <string name="web_annotation_saved_quote">Trích dẫn đã lưu — vẫn được giữ lại khi trang thay đổi.</string>
+    <string name="web_annotation_failed">Không thể lưu đoạn đánh dấu này.</string>
+    <string name="web_annotation_private">Không thể đánh dấu trong thẻ riêng tư.</string>
+    <string name="web_annotation_close">Đóng</string>
+</resources>

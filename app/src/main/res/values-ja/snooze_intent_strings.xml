@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="snooze_purpose_label">目的（任意）</string>
+    <string name="snooze_purpose_hint">返品について確認、リサと相談…</string>
+    <string name="snooze_purpose_supporting">このタブが戻ったときに、やりたかったことを思い出せます。</string>
+    <string name="snooze_add_purpose">目的を追加</string>
+    <string name="snooze_edit_purpose">目的を編集</string>
+</resources>

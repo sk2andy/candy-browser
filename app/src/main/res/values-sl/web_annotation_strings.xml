@@ -1,0 +1,14 @@
+<resources>
+    <string name="web_annotation_mark">Označi + opomba</string>
+    <string name="web_annotation_translate">Prevedi na strani</string>
+    <string name="web_annotation_title">Oznake na strani</string>
+    <string name="web_annotation_note">Opomba (neobvezno)</string>
+    <string name="web_annotation_save">Shrani</string>
+    <string name="web_annotation_cancel">Prekliči</string>
+    <string name="web_annotation_delete">Izbriši</string>
+    <string name="web_annotation_empty">Na tej strani ni shranjenih oznak. Izberite besedilo, da dodate oznako.</string>
+    <string name="web_annotation_saved_quote">Shranjen citat — ostane tudi, če se stran spremeni.</string>
+    <string name="web_annotation_failed">Oznake ni bilo mogoče shraniti.</string>
+    <string name="web_annotation_private">Oznake niso na voljo v zasebnih zavihkih.</string>
+    <string name="web_annotation_close">Zapri</string>
+</resources>

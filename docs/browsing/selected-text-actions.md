@@ -7,6 +7,12 @@
 | Select text → Read aloud with Candy | Open a temporary speech screen backed by the existing Reader speech controller |
 | Pause / resume / stop | Control the selected-text speech session |
 | Leave speech screen | Stop playback; closing the activity shuts down the speech controller |
+| Select read-only page text inside Candy → Highlight + note | Save a profile-owned quote and note; see [`web-annotations.md`](web-annotations.md) |
+| Select read-only page text inside Candy → Translate here | Use the local Android translation service, with an explicit selected page-provider fallback; see [`page-translation.md`](page-translation.md) |
+
+Candy's in-page actions extend the engine-owned native selection menu. Existing copy, select-all,
+share and installed Android text actions remain available. The exported actions below serve text
+selected in other apps.
 
 ## Boundaries
 

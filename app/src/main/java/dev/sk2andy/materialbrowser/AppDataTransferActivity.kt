@@ -12,6 +12,7 @@ import android.view.Gravity
 import android.window.OnBackInvokedDispatcher
 import android.widget.TextView
 import dev.sk2andy.materialbrowser.browser.guest.GuestBubbleGate
+import dev.sk2andy.materialbrowser.data.WebAnnotationStore
 import dev.sk2andy.materialbrowser.browser.systemwebview.currentSystemWebViewIdentity
 import dev.sk2andy.materialbrowser.data.AppDataArchiveCodec
 import dev.sk2andy.materialbrowser.data.AppDataArchiveManifest
@@ -214,6 +215,9 @@ class AppDataTransferActivity : Activity() {
                     failure.failure == AppDataArchiveRestoreFailure.RollbackFailed
                 throw failure
             }
+            check(WebAnnotationStore(this).clear()) {
+                "Imported data but could not clear excluded annotation storage"
+            }
             check(RecallRepository.deleteStorage(this)) {
                 "Imported data but could not clear excluded Recall storage"
             }
@@ -238,6 +242,9 @@ class AppDataTransferActivity : Activity() {
                 recoveryMarker = restoreRecoveryMarker(),
             ),
         )
+        check(WebAnnotationStore(this).clear()) {
+            "Could not clear excluded annotation storage after import recovery"
+        }
         check(RecallRepository.deleteStorage(this)) {
             "Could not clear excluded Recall storage after import recovery"
         }

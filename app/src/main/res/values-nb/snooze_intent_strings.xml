@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="snooze_purpose_label">Formål (valgfritt)</string>
+    <string name="snooze_purpose_hint">Sjekke retur, diskutere med Lisa…</string>
+    <string name="snooze_purpose_supporting">Husk hva du vil gjøre når denne fanen kommer tilbake.</string>
+    <string name="snooze_add_purpose">Legg til formål</string>
+    <string name="snooze_edit_purpose">Rediger formål</string>
+</resources>

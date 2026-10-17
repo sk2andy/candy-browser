@@ -1534,4 +1534,10 @@
     <string name="gecko_extensions_retry_search">Ponovi pretraživanje</string>
     <string name="browser_menu_empty_section_message">Ovdje ima mjesta za vaše favorite. Uključite stavke izbornika u postavkama.</string>
     <string name="browser_menu_empty_section_action">Otvori postavke</string>
+    <string name="form_drafts_available">Za ovu stranicu dostupan je neposlani tekst.</string>
+    <string name="form_drafts_clear_failed">Spremljene skice nije moguće izbrisati. Pokušajte ponovno.</string>
+    <string name="form_drafts_restore">Vrati</string>
+    <string name="form_drafts_restore_failed">Nije pronađeno odgovarajuće prazno polje. Spremljeni tekst ostaje dostupan do isteka roka.</string>
+    <string name="form_drafts_settings_summary">Čuvajte neposlani višeredni tekst šifriran na ovom uređaju 24 sata. Privatne skice ostaju samo u memoriji dok se kartica ne zatvori. Osjetljiva polja su isključena. Isključivanjem se brišu sve skice.</string>
+    <string name="form_drafts_settings_title">Spremanje skica obrazaca</string>
 </resources>

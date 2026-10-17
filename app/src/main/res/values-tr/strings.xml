@@ -1518,4 +1518,10 @@
     <string name="gecko_extensions_retry_search">Aramayı yeniden dene</string>
     <string name="browser_menu_empty_section_message">Favorilerin için burada yer var. Ayarlardan menü öğelerini etkinleştir.</string>
     <string name="browser_menu_empty_section_action">Ayarları aç</string>
+    <string name="form_drafts_available">Bu sayfa için gönderilmemiş metin var.</string>
+    <string name="form_drafts_clear_failed">Kayıtlı taslaklar silinemedi. Lütfen yeniden deneyin.</string>
+    <string name="form_drafts_restore">Geri yükle</string>
+    <string name="form_drafts_restore_failed">Eşleşen boş alan bulunamadı. Kayıtlı metin süresi dolana kadar kullanılabilir.</string>
+    <string name="form_drafts_settings_summary">Gönderilmemiş çok satırlı metni bu cihazda 24 saat şifreli olarak saklayın. Gizli taslaklar sekme kapanana kadar yalnızca bellekte kalır. Hassas alanlar hariç tutulur. Bu seçeneği kapatmak tüm taslakları siler.</string>
+    <string name="form_drafts_settings_title">Form taslaklarını kurtar</string>
 </resources>

@@ -1518,4 +1518,10 @@
     <string name="gecko_extensions_retry_search">Повторен опит за търсене</string>
     <string name="browser_menu_empty_section_message">Тук има място за любимите ви елементи. Активирайте елементи от менюто в настройките.</string>
     <string name="browser_menu_empty_section_action">Отваряне на настройките</string>
+    <string name="form_drafts_available">За тази страница има неизпратен текст.</string>
+    <string name="form_drafts_clear_failed">Запазените чернови не можаха да бъдат изтрити. Опитайте отново.</string>
+    <string name="form_drafts_restore">Възстановяване</string>
+    <string name="form_drafts_restore_failed">Не е намерено подходящо празно поле. Запазеният текст остава наличен до изтичане на срока му.</string>
+    <string name="form_drafts_settings_summary">Пазете неизпратения многоредов текст криптиран на това устройство за 24 часа. Частните чернови остават само в оперативната памет до затварянето на раздела. Чувствителните полета са изключени. Изключването изтрива всички чернови.</string>
+    <string name="form_drafts_settings_title">Запазване на чернови на формуляри</string>
 </resources>

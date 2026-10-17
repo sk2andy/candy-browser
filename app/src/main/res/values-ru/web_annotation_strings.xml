@@ -1,0 +1,14 @@
+<resources>
+    <string name="web_annotation_mark">Выделить + заметка</string>
+    <string name="web_annotation_translate">Перевести на странице</string>
+    <string name="web_annotation_title">Выделения на странице</string>
+    <string name="web_annotation_note">Заметка (необязательно)</string>
+    <string name="web_annotation_save">Сохранить</string>
+    <string name="web_annotation_cancel">Отмена</string>
+    <string name="web_annotation_delete">Удалить</string>
+    <string name="web_annotation_empty">На этой странице нет сохранённых выделений. Выберите текст, чтобы добавить выделение.</string>
+    <string name="web_annotation_saved_quote">Сохранённая цитата — останется, даже если страница изменится.</string>
+    <string name="web_annotation_failed">Не удалось сохранить выделение.</string>
+    <string name="web_annotation_private">Выделения недоступны в приватных вкладках.</string>
+    <string name="web_annotation_close">Закрыть</string>
+</resources>

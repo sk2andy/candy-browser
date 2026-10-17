@@ -1,0 +1,14 @@
+<resources>
+    <string name="web_annotation_mark">Resaltar + nota</string>
+    <string name="web_annotation_translate">Traducir en la página</string>
+    <string name="web_annotation_title">Resaltados de la página</string>
+    <string name="web_annotation_note">Nota (opcional)</string>
+    <string name="web_annotation_save">Guardar</string>
+    <string name="web_annotation_cancel">Cancelar</string>
+    <string name="web_annotation_delete">Eliminar</string>
+    <string name="web_annotation_empty">No hay resaltados guardados en esta página. Selecciona texto para añadir uno.</string>
+    <string name="web_annotation_saved_quote">Cita guardada: se conserva aunque cambie la página.</string>
+    <string name="web_annotation_failed">No se pudo guardar este resaltado.</string>
+    <string name="web_annotation_private">Los resaltados no están disponibles en pestañas privadas.</string>
+    <string name="web_annotation_close">Cerrar</string>
+</resources>

@@ -57,6 +57,7 @@ import dev.sk2andy.materialbrowser.browser.TextInputOcclusionProbeMode
 import dev.sk2andy.materialbrowser.browser.TextInputOcclusionProbeResult
 import dev.sk2andy.materialbrowser.browser.WebContentTopInsetTransitionRules
 import dev.sk2andy.materialbrowser.browser.WebRtcProtectionMode
+import dev.sk2andy.materialbrowser.browser.annotation.WebTextSelectionAction
 import dev.sk2andy.materialbrowser.browser.smoothWebContentTopInsetChange
 import dev.sk2andy.materialbrowser.browser.actions.BrowserContentTargetKind
 import dev.sk2andy.materialbrowser.browser.actions.BrowserContentTargetListener
@@ -2959,6 +2960,17 @@ private class GeckoViewBrowserSession(
                 },
             )
             view.setSession(session)
+            AndroidCredentialPromptHost.activityContext(context)?.let { activity ->
+                val selectionDelegate = GeckoWebTextSelectionDelegate(
+                    activity = activity,
+                    actionsEnabled = { !closed && selectedTextActionListener != null && contentKind == BrowserEngineContentKind.RegularTab },
+                    canHighlight = { !isPrivate },
+                ) { action, text ->
+                    if (!closed) selectedTextActionListener?.invoke(action, text)
+                }
+                webTextSelectionDelegate = selectionDelegate
+                session.selectionActionDelegate = selectionDelegate
+            }
             if (active) credentialPromptHost = AndroidCredentialPromptHost.create(context)
         }
     }
@@ -3009,6 +3021,7 @@ private class GeckoViewBrowserSession(
         val staleCredentialPromptHost = credentialPromptHost
         credentialPromptHost = null
         geckoView.setActivityContextDelegate(null)
+        releaseTextSelectionDelegate()
         geckoView.releaseSession()
         contentPresentationGate.onSurfaceDetached()
         staleCredentialPromptHost?.close()
@@ -3122,6 +3135,37 @@ private class GeckoViewBrowserSession(
             return
         }
         privacyBinding.extractPageForReader(onComplete)
+    }
+
+    private var webTextSelectionDelegate: GeckoWebTextSelectionDelegate? = null
+
+    private fun releaseTextSelectionDelegate() {
+        val delegate = webTextSelectionDelegate ?: return
+        webTextSelectionDelegate = null
+        if (session.selectionActionDelegate === delegate) session.selectionActionDelegate = null
+        delegate.close()
+    }
+
+    private var selectedTextActionListener:
+        ((WebTextSelectionAction, String) -> Unit)? = null
+
+    override fun setSelectedTextActionListener(
+        listener: ((WebTextSelectionAction, String) -> Unit)?,
+    ) {
+        selectedTextActionListener = listener
+    }
+
+    override fun executeWebTextOperation(payload: String, onComplete: (Boolean) -> Unit) {
+        if (closed) onComplete(false) else privacyBinding.executeWebTextOperation(payload, onComplete)
+    }
+
+    override fun setFormDraftListener(listener: ((String) -> Unit)?) {
+        if (!closed) privacyBinding.setFormDraftListener(listener)
+    }
+
+    override fun restoreFormDraft(payload: String, onComplete: (Boolean) -> Unit) {
+        if (closed || !privacyBound) onComplete(false)
+        else privacyBinding.restoreFormDraft(payload, onComplete)
     }
 
     override fun probeTextInputOcclusion(
@@ -3440,6 +3484,8 @@ private class GeckoViewBrowserSession(
         extensionIdentity = null
         active = false
         invalidateCredentialPrompts(recreateHost = false)
+        selectedTextActionListener = null
+        releaseTextSelectionDelegate()
         boundView?.releaseSession()
         boundView = null
         retainedViewInsetLayout = null

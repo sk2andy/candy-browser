@@ -1,0 +1,14 @@
+<resources>
+    <string name="web_annotation_mark">Маркиране + бележка</string>
+    <string name="web_annotation_translate">Превод в страницата</string>
+    <string name="web_annotation_title">Маркирания в страницата</string>
+    <string name="web_annotation_note">Бележка (по избор)</string>
+    <string name="web_annotation_save">Запазване</string>
+    <string name="web_annotation_cancel">Отказ</string>
+    <string name="web_annotation_delete">Изтриване</string>
+    <string name="web_annotation_empty">Няма запазени маркирания на тази страница. Изберете текст, за да добавите.</string>
+    <string name="web_annotation_saved_quote">Запазен цитат — остава дори ако страницата се промени.</string>
+    <string name="web_annotation_failed">Маркирането не можа да бъде запазено.</string>
+    <string name="web_annotation_private">Маркиранията не са достъпни в частни раздели.</string>
+    <string name="web_annotation_close">Затваряне</string>
+</resources>

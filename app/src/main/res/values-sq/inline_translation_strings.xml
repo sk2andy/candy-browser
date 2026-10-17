@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="inline_translation_title">Përkthe tekstin e përzgjedhur</string>
+    <string name="inline_translation_local_description">Përkthe në këtë pajisje. Zgjidh gjuhën e tekstit dhe gjuhën e synuar. Prek pjesën e përkthyer për t’u kthyer tek origjinali.</string>
+    <string name="inline_translation_source">Gjuha e tekstit</string>
+    <string name="inline_translation_target">Përkthe në</string>
+    <string name="inline_translation_choose_language">Zgjidh gjuhën</string>
+    <string name="inline_translation_unavailable">Shërbimi i përkthimit i kësaj pajisjeje nuk ka asnjë çift gjuhësh të shkarkuar në dispozicion.</string>
+    <string name="inline_translation_failed">Kjo përzgjedhje nuk mund të përkthehej drejtpërdrejt në faqe. Faqja mund të ketë ndryshuar, teksti mund të shfaqet disa herë ose shërbimi i përkthimit mund të mos jetë i disponueshëm.</string>
+    <string name="inline_translation_manage_languages">Menaxho gjuhët e përkthimit të Android</string>
+    <string name="inline_translation_apply">Përkthe këtu</string>
+    <string name="inline_translation_fallback_description">Përndryshe, dërgo adresën e kësaj faqeje te %1$s për të përkthyer të gjithë faqen.</string>
+    <string name="inline_translation_fallback">Përkthe faqen me %1$s</string>
+    <string name="inline_translation_toggle">Kalo mes origjinalit dhe përkthimit</string>
+</resources>

@@ -1,0 +1,14 @@
+<resources>
+    <string name="web_annotation_mark">Surligner + note</string>
+    <string name="web_annotation_translate">Traduire dans la page</string>
+    <string name="web_annotation_title">Passages surlignés</string>
+    <string name="web_annotation_note">Note (facultative)</string>
+    <string name="web_annotation_save">Enregistrer</string>
+    <string name="web_annotation_cancel">Annuler</string>
+    <string name="web_annotation_delete">Supprimer</string>
+    <string name="web_annotation_empty">Aucun passage surligné enregistré sur cette page. Sélectionnez du texte pour en ajouter un.</string>
+    <string name="web_annotation_saved_quote">Citation enregistrée — conservée même si la page change.</string>
+    <string name="web_annotation_failed">Impossible d’enregistrer ce passage surligné.</string>
+    <string name="web_annotation_private">Le surlignage est indisponible dans les onglets privés.</string>
+    <string name="web_annotation_close">Fermer</string>
+</resources>

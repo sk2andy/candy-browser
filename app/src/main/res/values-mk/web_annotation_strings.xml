@@ -1,0 +1,14 @@
+<resources>
+    <string name="web_annotation_mark">Означи + белешка</string>
+    <string name="web_annotation_translate">Преведи на страницата</string>
+    <string name="web_annotation_title">Ознаки на страницата</string>
+    <string name="web_annotation_note">Белешка (изборно)</string>
+    <string name="web_annotation_save">Зачувај</string>
+    <string name="web_annotation_cancel">Откажи</string>
+    <string name="web_annotation_delete">Избриши</string>
+    <string name="web_annotation_empty">Нема зачувани ознаки на оваа страница. Изберете текст за да додадете ознака.</string>
+    <string name="web_annotation_saved_quote">Зачуван цитат — останува дури и ако страницата се промени.</string>
+    <string name="web_annotation_failed">Ознаката не можеше да се зачува.</string>
+    <string name="web_annotation_private">Ознаките не се достапни во приватни картички.</string>
+    <string name="web_annotation_close">Затвори</string>
+</resources>

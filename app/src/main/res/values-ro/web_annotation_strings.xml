@@ -1,0 +1,14 @@
+<resources>
+    <string name="web_annotation_mark">Evidențiere + notă</string>
+    <string name="web_annotation_translate">Tradu în pagină</string>
+    <string name="web_annotation_title">Evidențieri în pagină</string>
+    <string name="web_annotation_note">Notă (opțional)</string>
+    <string name="web_annotation_save">Salvează</string>
+    <string name="web_annotation_cancel">Anulează</string>
+    <string name="web_annotation_delete">Șterge</string>
+    <string name="web_annotation_empty">Nu există evidențieri salvate pe această pagină. Selectează text pentru a adăuga una.</string>
+    <string name="web_annotation_saved_quote">Citat salvat — se păstrează chiar dacă pagina se modifică.</string>
+    <string name="web_annotation_failed">Evidențierea nu a putut fi salvată.</string>
+    <string name="web_annotation_private">Evidențierile nu sunt disponibile în filele private.</string>
+    <string name="web_annotation_close">Închide</string>
+</resources>

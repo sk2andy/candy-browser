@@ -20,6 +20,7 @@ import dev.sk2andy.materialbrowser.browser.TextInputOcclusionProbeMode
 import dev.sk2andy.materialbrowser.browser.TextInputOcclusionProbeResult
 import dev.sk2andy.materialbrowser.browser.actions.BrowserContentTargetListener
 import dev.sk2andy.materialbrowser.browser.actions.WebContentTarget
+import dev.sk2andy.materialbrowser.browser.annotation.WebTextSelectionAction
 import dev.sk2andy.materialbrowser.browser.engine.BrowserEngineContentKind
 import dev.sk2andy.materialbrowser.browser.permissions.SitePermissionDecision
 import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineFailureKind
@@ -410,9 +411,20 @@ internal interface GeckoBrowserSession {
     fun clearFindInPage()
 
     /** Extracts bounded article JSON through Candy's internal Gecko content-script bridge. */
+    fun setSelectedTextActionListener(
+        listener: ((WebTextSelectionAction, String) -> Unit)?,
+    ) = Unit
+
+    fun executeWebTextOperation(payload: String, onComplete: (Boolean) -> Unit) = onComplete(false)
+
+    fun setFormDraftListener(listener: ((String) -> Unit)?) = Unit
+
+    fun restoreFormDraft(payload: String, onComplete: (Boolean) -> Unit) = onComplete(false)
+
     fun extractPageForReader(onComplete: (String?) -> Unit)
 
     fun extractPageText(onComplete: (String?) -> Unit) = onComplete(null)
+
     /** Checks one committed document for a text editor hidden by browser chrome. */
     fun probeTextInputOcclusion(
         viewportRect: BrowserViewportRect,

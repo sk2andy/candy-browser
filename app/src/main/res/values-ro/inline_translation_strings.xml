@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="inline_translation_title">Tradu textul selectat</string>
+    <string name="inline_translation_local_description">Tradu pe acest dispozitiv. Alege limba textului și limba țintă. Atinge pasajul tradus pentru a reveni la original.</string>
+    <string name="inline_translation_source">Limba textului</string>
+    <string name="inline_translation_target">Tradu în</string>
+    <string name="inline_translation_choose_language">Alege limba</string>
+    <string name="inline_translation_unavailable">Serviciul de traducere al acestui dispozitiv nu are nicio pereche de limbi descărcată disponibilă.</string>
+    <string name="inline_translation_failed">Această selecție nu a putut fi tradusă direct în pagină. Este posibil ca pagina să se fi schimbat, textul să apară de mai multe ori sau serviciul de traducere să fie indisponibil.</string>
+    <string name="inline_translation_manage_languages">Gestionează limbile de traducere Android</string>
+    <string name="inline_translation_apply">Tradu aici</string>
+    <string name="inline_translation_fallback_description">Alternativ, trimite adresa acestei pagini către %1$s pentru a traduce întreaga pagină.</string>
+    <string name="inline_translation_fallback">Tradu pagina cu %1$s</string>
+    <string name="inline_translation_toggle">Comută între original și traducere</string>
+</resources>

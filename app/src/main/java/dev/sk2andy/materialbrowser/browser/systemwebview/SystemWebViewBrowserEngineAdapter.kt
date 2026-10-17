@@ -1,5 +1,6 @@
 package dev.sk2andy.materialbrowser.browser.systemwebview
 
+import dev.sk2andy.materialbrowser.browser.annotation.WebTextSelectionAction
 import dev.sk2andy.materialbrowser.data.TabPreviewCaptureRules
 import dev.sk2andy.materialbrowser.data.AppLogEvent
 import dev.sk2andy.materialbrowser.data.AppLogging
@@ -415,6 +416,7 @@ private class SystemWebViewBrowserEngineSession(
     private val profileId = profileId
     private val webView = SystemWebViewHost(context, ::onSafeAreaFallback, ::onStatusBarBackdrop)
     private val host = webView
+    private val formDrafts = SystemWebViewFormDrafts(webView)
     private val downloadDiagnostics = SystemWebViewDownloadDiagnostics(isPrivate)
     private val blobDownloadTransfer = SystemWebViewBlobDownloadTransfer(
         appContext,
@@ -911,6 +913,50 @@ private class SystemWebViewBrowserEngineSession(
         )
     }
 
+
+    override fun setSelectedTextActionListener(
+        listener: ((WebTextSelectionAction, String) -> Unit)?,
+    ) {
+        webView.selectedTextActionListener = listener
+        webView.canHighlight = !isPrivate
+        webView.selectedTextActionsEnabled = { !closed && contentKind == BrowserEngineContentKind.RegularTab }
+    }
+
+    override fun executeWebTextOperation(payload: String, onComplete: (Boolean) -> Unit) {
+        if (closed || payload.length > 2_000_000) {
+            onComplete(false)
+            return
+        }
+        val script = appContext.assets.open("web_text_operations.js").bufferedReader().use { it.readText() }
+        val validPayload = runCatching { org.json.JSONObject(payload).toString() }.getOrNull()
+        if (validPayload == null) {
+            onComplete(false)
+            return
+        }
+        val generation = pageLoadGeneration
+        val url = webView.url
+        webView.evaluateJavascript(script + "\nCandyWebTextOperations.documentToken") { tokenResult ->
+            val token = runCatching { org.json.JSONTokener(tokenResult).nextValue() as? String }.getOrNull()
+            if (closed || generation != pageLoadGeneration || url != webView.url || token.isNullOrBlank()) {
+                onComplete(false)
+                return@evaluateJavascript
+            }
+            val guardedOperation = "globalThis.CandyWebTextOperations?.documentToken === " +
+                org.json.JSONObject.quote(token) + " && CandyWebTextOperations.apply($validPayload)"
+            webView.evaluateJavascript(guardedOperation) { applied ->
+                onComplete(!closed && generation == pageLoadGeneration && url == webView.url && applied == "true")
+            }
+        }
+    }
+
+    override fun setFormDraftListener(listener: ((String) -> Unit)?) {
+        if (!closed) formDrafts.setListener(listener)
+    }
+
+    override fun restoreFormDraft(payload: String, onComplete: (Boolean) -> Unit) {
+        if (closed) onComplete(false) else formDrafts.restore(payload, onComplete)
+    }
+
     override fun promoteToRegularTab() {
         if (!closed) contentKind = BrowserEngineContentKind.RegularTab
     }
@@ -1082,6 +1128,7 @@ private class SystemWebViewBrowserEngineSession(
         webRtcScriptHandler?.remove()
         safeAreaScriptHandler?.remove()
         desktopViewportScriptHandler?.remove()
+        formDrafts.close()
         removeMediaBridge()
         blobDownloadTransfer.close()
         dismissCustomFullscreenView(notify = false)
@@ -1299,6 +1346,7 @@ private class SystemWebViewBrowserEngineSession(
         }
 
         override fun onPageStarted(view: WebView, url: String?, favicon: Bitmap?) {
+            host.textDocumentGeneration++
             finishPageTextExtraction(null)
             // WebView skips shouldOverrideUrlLoading for a popup's initial POST.
             if (url != null && initialPopupNavigationPending && handleInitialPopupNavigation(url)) {
@@ -2245,6 +2293,26 @@ private class SystemWebViewHost(
     private val onFallback: (Int, Long, String?, Boolean) -> Unit,
     private val onBackdrop: (Int, Long, String?) -> Unit,
 ) : WebView(context), GeckoViewInsetHost {
+    var textDocumentGeneration = 0L
+    var canHighlight = false
+    var selectedTextActionsEnabled: () -> Boolean = { false }
+    var selectedTextActionListener:
+        ((WebTextSelectionAction, String) -> Unit)? = null
+
+    override fun startActionMode(callback: android.view.ActionMode.Callback): android.view.ActionMode? =
+        super.startActionMode(selectionCallback(callback))
+
+    override fun startActionMode(callback: android.view.ActionMode.Callback, type: Int): android.view.ActionMode? =
+        super.startActionMode(selectionCallback(callback), type)
+
+    private fun selectionCallback(callback: android.view.ActionMode.Callback): android.view.ActionMode.Callback {
+        if (callback is WebTextActionModeCallback || selectedTextActionListener == null ||
+            !selectedTextActionsEnabled()) return callback
+        return WebTextActionModeCallback(this, callback, { textDocumentGeneration }, { canHighlight }) { action, text ->
+            if (selectedTextActionsEnabled()) selectedTextActionListener?.invoke(action, text)
+        }
+    }
+
     val safeAreaInstallScript = SystemWebViewSafeAreaScript.installScript(context)
     private val supportsNativeCssSafeArea = SystemWebViewSafeAreaRules.supportsCssSafeAreaInsets(
         WebView.getCurrentWebViewPackage()?.versionName,

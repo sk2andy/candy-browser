@@ -1501,4 +1501,10 @@
     <string name="gecko_extensions_retry_search">ลองค้นหาอีกครั้ง</string>
     <string name="browser_menu_empty_section_message">มีที่ว่างสำหรับรายการโปรดของคุณที่นี่ เปิดใช้รายการเมนูในการตั้งค่า</string>
     <string name="browser_menu_empty_section_action">เปิดการตั้งค่า</string>
+    <string name="form_drafts_available">มีข้อความที่ยังไม่ส่งสำหรับหน้านี้</string>
+    <string name="form_drafts_clear_failed">ลบฉบับร่างที่บันทึกไว้ไม่ได้ โปรดลองอีกครั้ง</string>
+    <string name="form_drafts_restore">กู้คืน</string>
+    <string name="form_drafts_restore_failed">ไม่พบช่องว่างที่ตรงกัน ข้อความที่บันทึกไว้จะยังใช้ได้จนกว่าจะหมดอายุ</string>
+    <string name="form_drafts_settings_summary">เก็บข้อความหลายบรรทัดที่ยังไม่ส่งแบบเข้ารหัสบนอุปกรณ์นี้เป็นเวลา 24 ชั่วโมง ฉบับร่างส่วนตัวจะอยู่ในหน่วยความจำเท่านั้นจนกว่าจะปิดแท็บ ไม่รวมช่องข้อมูลที่ละเอียดอ่อน เมื่อปิดใช้ ฉบับร่างทั้งหมดจะถูกลบ</string>
+    <string name="form_drafts_settings_title">กู้คืนฉบับร่างแบบฟอร์ม</string>
 </resources>

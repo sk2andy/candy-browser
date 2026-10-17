@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="inline_translation_title">Översätt markerad text</string>
+    <string name="inline_translation_local_description">Översätt på den här enheten. Välj textens språk och målspråk. Tryck på det översatta stycket för att återgå till originalet.</string>
+    <string name="inline_translation_source">Textens språk</string>
+    <string name="inline_translation_target">Översätt till</string>
+    <string name="inline_translation_choose_language">Välj språk</string>
+    <string name="inline_translation_unavailable">Inga hämtade språkpar är tillgängliga i enhetens översättningstjänst.</string>
+    <string name="inline_translation_failed">Den markerade texten kunde inte översättas direkt på sidan. Sidan kan ha ändrats, texten kan förekomma flera gånger eller översättningstjänsten kan vara otillgänglig.</string>
+    <string name="inline_translation_manage_languages">Hantera översättningsspråk i Android</string>
+    <string name="inline_translation_apply">Översätt här</string>
+    <string name="inline_translation_fallback_description">Du kan också skicka sidans adress till %1$s för att översätta hela sidan.</string>
+    <string name="inline_translation_fallback">Översätt sidan med %1$s</string>
+    <string name="inline_translation_toggle">Växla mellan original och översättning</string>
+</resources>

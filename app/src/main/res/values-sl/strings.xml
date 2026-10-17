@@ -1550,4 +1550,10 @@
     <string name="gecko_extensions_retry_search">Ponovi iskanje</string>
     <string name="browser_menu_empty_section_message">Tukaj je prostor za priljubljene. V nastavitvah omogoči elemente menija.</string>
     <string name="browser_menu_empty_section_action">Odpri nastavitve</string>
+    <string name="form_drafts_available">Za to stran je na voljo neposlano besedilo.</string>
+    <string name="form_drafts_clear_failed">Shranjenih osnutkov ni bilo mogoče izbrisati. Poskusite znova.</string>
+    <string name="form_drafts_restore">Obnovi</string>
+    <string name="form_drafts_restore_failed">Ustreznega praznega polja ni bilo mogoče najti. Shranjeno besedilo ostane na voljo do izteka roka.</string>
+    <string name="form_drafts_settings_summary">Neposlano večvrstično besedilo hranite šifrirano v tej napravi 24 ur. Zasebni osnutki ostanejo samo v pomnilniku, dokler se zavihek ne zapre. Občutljiva polja so izključena. Izklop izbriše vse osnutke.</string>
+    <string name="form_drafts_settings_title">Obnovi osnutke obrazcev</string>
 </resources>

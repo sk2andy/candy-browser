@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="snooze_purpose_label">Цель (необязательно)</string>
+    <string name="snooze_purpose_hint">Проверить возврат товара, обсудить с Лизой…</string>
+    <string name="snooze_purpose_supporting">Вспомните, что вы хотели сделать, когда эта вкладка вернётся.</string>
+    <string name="snooze_add_purpose">Добавить цель</string>
+    <string name="snooze_edit_purpose">Изменить цель</string>
+</resources>

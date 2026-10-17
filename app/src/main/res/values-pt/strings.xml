@@ -1525,4 +1525,10 @@
     <string name="gecko_extensions_retry_search">Tentar pesquisar novamente</string>
     <string name="browser_menu_empty_section_message">Há espaço para os seus favoritos aqui. Ative itens de menu nas definições.</string>
     <string name="browser_menu_empty_section_action">Abrir definições</string>
+    <string name="form_drafts_available">Há texto não enviado disponível para esta página.</string>
+    <string name="form_drafts_clear_failed">Não foi possível eliminar os rascunhos guardados. Tente novamente.</string>
+    <string name="form_drafts_restore">Restaurar</string>
+    <string name="form_drafts_restore_failed">Não foi encontrado um campo vazio correspondente. O texto guardado continua disponível até expirar.</string>
+    <string name="form_drafts_settings_summary">Mantenha o texto de várias linhas não enviado encriptado neste dispositivo durante 24 horas. Os rascunhos privados ficam apenas na memória até fechar o separador. Os campos sensíveis são excluídos. Desativar esta opção elimina todos os rascunhos.</string>
+    <string name="form_drafts_settings_title">Recuperar rascunhos de formulários</string>
 </resources>

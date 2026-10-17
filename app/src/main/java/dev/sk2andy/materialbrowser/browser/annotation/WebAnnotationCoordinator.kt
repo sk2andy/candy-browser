@@ -1,0 +1,168 @@
+package dev.sk2andy.materialbrowser.browser.annotation
+
+import android.content.Context
+import android.os.Handler
+import android.os.Looper
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import dev.sk2andy.materialbrowser.browser.gecko.AndroidBrowserEngineSessionPort
+import dev.sk2andy.materialbrowser.data.CanonicalWebUrl
+import dev.sk2andy.materialbrowser.data.WebAnnotationStore
+import org.json.JSONArray
+import org.json.JSONObject
+import java.util.UUID
+import java.util.concurrent.Executors
+
+internal class WebAnnotationCoordinator(context: Context) : AutoCloseable {
+    private val store = WebAnnotationStore(context)
+    private val worker = Executors.newSingleThreadExecutor { Thread(it, "web-annotations-io") }
+    private val main = Handler(Looper.getMainLooper())
+    private var binding by mutableStateOf<Binding?>(null)
+    private var closed = false
+    val canOpenPageAnnotations: Boolean
+        get() = binding?.let(::current) == true
+    var editor by mutableStateOf<WebAnnotation?>(null)
+        private set
+    var pageAnnotations by mutableStateOf<List<WebAnnotation>>(emptyList())
+        private set
+    var isLibraryVisible by mutableStateOf(false)
+        private set
+    var failed by mutableStateOf(false)
+        private set
+
+    private data class Binding(
+        val session: AndroidBrowserEngineSessionPort,
+        val profileId: String,
+        val url: String,
+        val generation: Int,
+        val isCurrent: () -> Boolean,
+    )
+
+    fun bind(
+        session: AndroidBrowserEngineSessionPort,
+        profileId: String,
+        url: String,
+        generation: Int,
+        isCurrent: () -> Boolean,
+    ) {
+        val canonical = CanonicalWebUrl.key(url) ?: return detach()
+        if (closed) return
+        val old = binding
+        if (old?.session === session && old.profileId == profileId && old.url == canonical && old.generation == generation) return
+        detach()
+        val next = Binding(session, profileId, canonical, generation, isCurrent)
+        binding = next
+        load(next)
+    }
+
+    private fun load(expected: Binding) {
+        worker.execute {
+            val values = store.all().filter { it.profileId == expected.profileId && it.url == expected.url }
+            main.post {
+                if (!current(expected)) return@post
+                pageAnnotations = values
+                val quotes = JSONArray().apply {
+                    values.forEach { put(JSONObject().put("quote", it.quote)) }
+                }
+                val payload = JSONObject()
+                    .put("operation", "highlights")
+                    .put("url", expected.url)
+                    .put("annotations", quotes)
+                expected.session.executeWebTextOperation(payload.toString()) { }
+            }
+        }
+    }
+
+    fun select(text: String, title: String) {
+        val expected = binding ?: return
+        if (!current(expected) || text.isBlank() || text.length > WebAnnotationRules.MAX_QUOTE_CHARS) return
+        editor = pageAnnotations.firstOrNull { it.quote == text } ?: WebAnnotation(
+            id = UUID.randomUUID().toString(),
+            profileId = expected.profileId,
+            url = expected.url,
+            title = title.take(512),
+            quote = text,
+            note = "",
+            createdAt = System.currentTimeMillis(),
+        )
+        failed = false
+    }
+
+    fun save(note: String) {
+        val expected = binding ?: return
+        val value = editor ?: return
+        if (!current(expected) || note.length > WebAnnotationRules.MAX_NOTE_CHARS) return
+        val cleanupEpoch = WebAnnotationStore.epoch
+        worker.execute {
+            val saved = store.save(
+                annotation = value.copy(note = note),
+                isPrivate = false,
+                expectedEpoch = cleanupEpoch,
+            )
+            main.post {
+                if (!current(expected)) return@post
+                failed = !saved
+                if (saved) {
+                    editor = null
+                    load(expected)
+                }
+            }
+        }
+    }
+
+    fun delete(value: WebAnnotation) {
+        val expected = binding ?: return
+        if (!current(expected) || value.profileId != expected.profileId) return
+        worker.execute {
+            val deleted = store.delete(value.id, expected.profileId)
+            main.post {
+                if (!current(expected)) return@post
+                failed = !deleted
+                if (deleted) {
+                    editor = null
+                    load(expected)
+                }
+            }
+        }
+    }
+
+    fun showPageAnnotations() {
+        if (canOpenPageAnnotations) isLibraryVisible = true
+    }
+
+    fun edit(value: WebAnnotation) {
+        if (value !in pageAnnotations) return
+        editor = value
+        failed = false
+    }
+
+    fun dismissEditor() {
+        editor = null
+        failed = false
+    }
+
+    fun dismissLibrary() {
+        isLibraryVisible = false
+    }
+
+    fun deleteProfile(profileId: String) {
+        worker.execute { store.deleteProfile(profileId) }
+    }
+
+    fun detach() {
+        binding = null
+        editor = null
+        pageAnnotations = emptyList()
+        isLibraryVisible = false
+        failed = false
+    }
+
+    private fun current(expected: Binding): Boolean = !closed && binding === expected && expected.isCurrent()
+
+    override fun close() {
+        closed = true
+        detach()
+        worker.shutdown()
+    }
+}

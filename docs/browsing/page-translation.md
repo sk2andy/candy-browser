@@ -1,5 +1,19 @@
 # Page translation
 
+## Selected text on Android
+
+| Surface | Contract |
+| --- | --- |
+| Native selection | **Translate here** is appended to the engine's native text menu; copy, select-all and Android text actions remain available. Editable/password fields are excluded. |
+| Local translation | `AndroidInlineTranslator` queries the configured Android `TranslationManager` off the main thread. Only downloaded (`STATE_ON_DEVICE`) language pairs are offered. No Google runtime dependency is added; Full and FOSS use the same platform API. |
+| Languages | The user selects source and target languages from available pairs; the device language is preferred as target when available. Candy does not guess the source language. The platform translation settings entry manages models when the service exposes one. Returning from settings requires selecting the text again. |
+| Inline result | A unique unchanged read-only passage is replaced with a keyboard-accessible toggle between original and translated text. Ambiguous, hidden, editable or changed text fails without guessed replacements. |
+| Provider fallback | An explicit button uses the existing selected page provider (Google, Yandex or Kagi). It clearly says it sends the page address and translates the whole page. No automatic network fallback occurs. |
+| Lifecycle and privacy | Selected text and translations remain in memory, including private tabs. Dismissal, backgrounding and destruction release the request; tab/profile/session/URL/navigation checks reject stale results. No selected text is written to preferences, logs or saved-instance state. |
+| Availability | Local translation requires an installed system translation service and downloaded language pair. Unsupported devices retain the explicit page-provider fallback. iOS retains its existing page translation flow. |
+| Ownership | `browser/translation/InlineTranslationRules`, `AndroidInlineTranslator`, `InlineTranslationCoordinator`; `ui/InlineTranslationDialog`; shared engine `executeWebTextOperation` adapter contract. |
+| Tests | `InlineTranslationRulesTest`, `InlineTranslationCoordinatorInstrumentedTest`, native menu and web-text engine tests under `browser/annotation`. |
+
 ## Flow
 
 | Step | Owner | Contract |

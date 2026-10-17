@@ -1950,6 +1950,7 @@ private fun BrowserMenuActionIcon(
         BrowserFeatureMenuAction.DockAddressBar,
         -> Icons.Filled.ChevronRight
         BrowserFeatureMenuAction.OpenReader -> Icons.Filled.MenuBook
+        BrowserFeatureMenuAction.OpenWebAnnotations -> Icons.Filled.MenuBook
         BrowserFeatureMenuAction.TranslatePage -> Icons.Filled.Translate
         BrowserFeatureMenuAction.FindInPage -> Icons.Filled.Search
         BrowserFeatureMenuAction.Share -> Icons.Filled.Share
@@ -2063,6 +2064,7 @@ private fun BrowserFeatureMenuItem.localizedLabel(): String = dynamicLabel ?: wh
     BrowserFeatureMenuLabelKey.DisableStatusBarScrollForDomain -> "Statusleisten-Tipp zum Seitenanfang deaktivieren"
     BrowserFeatureMenuLabelKey.CandyTrail -> "Candy Trail"
     BrowserFeatureMenuLabelKey.Constellations -> "Candy Constellations"
+    BrowserFeatureMenuLabelKey.WebAnnotations -> "Highlights & notes"
     BrowserFeatureMenuLabelKey.AddSiteCapsule -> "Site Capsule hinzufügen"
     BrowserFeatureMenuLabelKey.CreateSiteWidget -> "Website-Widget"
     BrowserFeatureMenuLabelKey.Summarize -> "Zusammenfassen"

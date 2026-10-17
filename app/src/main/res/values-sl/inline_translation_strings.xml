@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="inline_translation_title">Prevedi izbrano besedilo</string>
+    <string name="inline_translation_local_description">Prevajajte v tej napravi. Izberite jezik besedila in ciljni jezik. Dotaknite se prevedenega odlomka, da se vrnete na izvirnik.</string>
+    <string name="inline_translation_source">Jezik besedila</string>
+    <string name="inline_translation_target">Prevedi v</string>
+    <string name="inline_translation_choose_language">Izberi jezik</string>
+    <string name="inline_translation_unavailable">Prevajalska storitev te naprave nima na voljo nobenega prenesenega jezikovnega para.</string>
+    <string name="inline_translation_failed">Tega izbora ni bilo mogoče prevesti neposredno na strani. Stran se je morda spremenila, besedilo se pojavlja večkrat ali pa prevajalska storitev ni na voljo.</string>
+    <string name="inline_translation_manage_languages">Upravljaj jezike prevajanja v Androidu</string>
+    <string name="inline_translation_apply">Prevedi tukaj</string>
+    <string name="inline_translation_fallback_description">Lahko tudi pošljete naslov te strani storitvi %1$s, da prevedete celotno stran.</string>
+    <string name="inline_translation_fallback">Prevedi stran s storitvijo %1$s</string>
+    <string name="inline_translation_toggle">Preklopi med izvirnikom in prevodom</string>
+</resources>

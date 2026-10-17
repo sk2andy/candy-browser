@@ -1,0 +1,16 @@
+<resources>
+    <string name="web_annotation_mark">Highlight + note</string>
+    <string name="web_annotation_translate">Translate inline</string>
+    <string name="web_annotation_title">Page highlights</string>
+    <string name="web_annotation_note">Note (optional)</string>
+    <string name="web_annotation_save">Save</string>
+    <string name="web_annotation_cancel">Cancel</string>
+    <string name="web_annotation_delete">Delete</string>
+    <string name="web_annotation_empty">No saved highlights on this page. Select text to add one.</string>
+    <string name="web_annotation_saved_quote">Saved quote — kept even if this page changes.</string>
+    <string name="web_annotation_failed">Could not save this highlight.</string>
+    <string name="web_annotation_private">Highlights are unavailable in private tabs.</string>
+    <string name="web_annotation_close">Close</string>
+    <item type="id" name="web_annotation_mark" />
+    <item type="id" name="web_annotation_translate" />
+</resources>

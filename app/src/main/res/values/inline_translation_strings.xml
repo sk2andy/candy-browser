@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="inline_translation_title">Translate selected text</string>
+    <string name="inline_translation_local_description">Translate on this device. Choose the text language and target language. Tap the translated passage to switch back to the original.</string>
+    <string name="inline_translation_source">Text language</string>
+    <string name="inline_translation_target">Translate to</string>
+    <string name="inline_translation_choose_language">Choose language</string>
+    <string name="inline_translation_unavailable">No downloaded language pair is available from this device’s translation service.</string>
+    <string name="inline_translation_failed">This selection could not be translated in place. The page may have changed, the text may occur more than once, or the translation service may be unavailable.</string>
+    <string name="inline_translation_manage_languages">Manage Android translation languages</string>
+    <string name="inline_translation_apply">Translate here</string>
+    <string name="inline_translation_fallback_description">Alternatively, send this page’s address to %1$s to translate the whole page.</string>
+    <string name="inline_translation_fallback">Translate page with %1$s</string>
+    <string name="inline_translation_toggle">Switch between original and translation</string>
+</resources>

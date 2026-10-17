@@ -1,0 +1,14 @@
+<resources>
+    <string name="web_annotation_mark">Markeren + notitie</string>
+    <string name="web_annotation_translate">Vertalen op de pagina</string>
+    <string name="web_annotation_title">Paginamarkeringen</string>
+    <string name="web_annotation_note">Notitie (optioneel)</string>
+    <string name="web_annotation_save">Opslaan</string>
+    <string name="web_annotation_cancel">Annuleren</string>
+    <string name="web_annotation_delete">Verwijderen</string>
+    <string name="web_annotation_empty">Geen opgeslagen markeringen op deze pagina. Selecteer tekst om er een toe te voegen.</string>
+    <string name="web_annotation_saved_quote">Opgeslagen citaat — blijft bewaard als de pagina verandert.</string>
+    <string name="web_annotation_failed">Deze markering kon niet worden opgeslagen.</string>
+    <string name="web_annotation_private">Markeringen zijn niet beschikbaar in privétabbladen.</string>
+    <string name="web_annotation_close">Sluiten</string>
+</resources>

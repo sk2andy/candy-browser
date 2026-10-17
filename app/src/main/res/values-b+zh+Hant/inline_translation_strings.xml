@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="inline_translation_title">翻譯所選文字</string>
+    <string name="inline_translation_local_description">在此裝置上翻譯。選擇文字語言和目標語言。輕觸翻譯後的段落即可切換回原文。</string>
+    <string name="inline_translation_source">文字語言</string>
+    <string name="inline_translation_target">翻譯成</string>
+    <string name="inline_translation_choose_language">選擇語言</string>
+    <string name="inline_translation_unavailable">此裝置的翻譯服務沒有可用的已下載語言配對。</string>
+    <string name="inline_translation_failed">無法在頁面內翻譯所選文字。頁面可能已變更、文字可能出現多次，或翻譯服務可能無法使用。</string>
+    <string name="inline_translation_manage_languages">管理 Android 翻譯語言</string>
+    <string name="inline_translation_apply">在此處翻譯</string>
+    <string name="inline_translation_fallback_description">也可以將此頁面的網址傳送至 %1$s，以翻譯整個頁面。</string>
+    <string name="inline_translation_fallback">使用 %1$s 翻譯頁面</string>
+    <string name="inline_translation_toggle">切換原文與譯文</string>
+</resources>

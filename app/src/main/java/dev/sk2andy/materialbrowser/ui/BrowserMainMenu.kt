@@ -315,6 +315,8 @@ internal fun BrowserMainMenu(
     onForcePageZoomingChange: (Boolean) -> Unit,
     onForceSafeAreaChange: (Boolean) -> Unit,
     onOpenCandyTrail: () -> Unit,
+    canOpenWebAnnotations: Boolean = false,
+    onWebAnnotations: (() -> Unit)? = null,
     canOpenConstellations: Boolean = false,
     onOpenConstellations: (() -> Unit)? = null,
     onAddSiteCapsule: () -> Unit,
@@ -374,6 +376,7 @@ internal fun BrowserMainMenu(
         isStatusBarScrollEnabled = isStatusBarScrollEnabled,
         canAddSiteCapsule = canAddSiteCapsule,
         canCreateSiteWidget = canCreateSiteWidget,
+        canOpenWebAnnotations = canOpenWebAnnotations,
         canOpenConstellations = canOpenConstellations,
         canSnooze = canSnooze,
         canDockAddressBar = canDockAddressBar,
@@ -388,6 +391,7 @@ internal fun BrowserMainMenu(
             capabilities = BrowserFeatureMenuCapabilities(
                 supportsSiteWidgets = true,
                 supportsConstellations = onOpenConstellations != null,
+                supportsWebAnnotations = onWebAnnotations != null,
             ),
         ),
         layout = menuLayout,
@@ -454,6 +458,7 @@ internal fun BrowserMainMenu(
                 onStatusBarScrollEnabledChange(item.checked != true)
             BrowserFeatureMenuAction.OpenCandyTrail -> onOpenCandyTrail()
             BrowserFeatureMenuAction.OpenConstellations -> onOpenConstellations?.invoke()
+            BrowserFeatureMenuAction.OpenWebAnnotations -> onWebAnnotations?.invoke()
             BrowserFeatureMenuAction.AddSiteCapsule -> onAddSiteCapsule()
             BrowserFeatureMenuAction.CreateSiteWidget -> onCreateSiteWidget()
             BrowserFeatureMenuAction.Summarize -> onSummarize()
@@ -566,6 +571,7 @@ private fun BrowserFeatureMenuLabelKey.androidStringResource(): Int = when (this
     BrowserFeatureMenuLabelKey.DisableStatusBarScrollForDomain -> R.string.settings_status_bar_scroll_disable_for_domain
     BrowserFeatureMenuLabelKey.CandyTrail -> R.string.action_open_candy_trail
     BrowserFeatureMenuLabelKey.Constellations -> R.string.constellations_title
+    BrowserFeatureMenuLabelKey.WebAnnotations -> R.string.web_annotation_title
     BrowserFeatureMenuLabelKey.AddSiteCapsule -> R.string.action_add_site_capsule
     BrowserFeatureMenuLabelKey.CreateSiteWidget -> R.string.site_widget_editor_title
     BrowserFeatureMenuLabelKey.Summarize -> R.string.action_summarize
@@ -607,6 +613,7 @@ internal fun BrowserFeatureMenuItem.androidDrawableResource(): Int = when (actio
     BrowserFeatureMenuAction.ToggleStatusBarScroll -> R.drawable.ic_symbol_vertical_scroll
     BrowserFeatureMenuAction.OpenCandyTrail -> R.drawable.ic_symbol_route
     BrowserFeatureMenuAction.OpenConstellations -> R.drawable.ic_symbol_route
+    BrowserFeatureMenuAction.OpenWebAnnotations -> R.drawable.ic_web_annotation
     BrowserFeatureMenuAction.AddSiteCapsule -> R.drawable.ic_symbol_add_to_home_screen
     BrowserFeatureMenuAction.CreateSiteWidget -> R.drawable.ic_symbol_add_to_home_screen
     BrowserFeatureMenuAction.Summarize -> R.drawable.ic_symbol_auto_awesome

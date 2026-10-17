@@ -90,6 +90,9 @@ class BrowserSessionStore internal constructor(
                             isPinned = item.optBoolean("isPinned", false),
                             title = item.optString("title", ""),
                             url = item.optString("url", BLANK_URL),
+                            snoozePurpose = SnoozePurposeRules.normalize(
+                                item.optString("snoozePurpose", ""),
+                            ),
                             syncCandyId = item.optString("syncCandyId")
                                 .takeIf(SyncTabRules::isValidCandyId),
                         ),
@@ -161,6 +164,7 @@ class BrowserSessionStore internal constructor(
                         .put("isPinned", tab.isPinned)
                         .put("title", tab.title)
                         .put("url", tab.url)
+                        .put("snoozePurpose", SnoozePurposeRules.normalize(tab.snoozePurpose))
                         .put("syncCandyId", tab.syncCandyId),
                 )
             }
@@ -819,6 +823,11 @@ class BrowserSessionStore internal constructor(
             normalizeHost = StatusBarScrollRules::normalizedDomain,
             limit = StatusBarScrollRules.MAX_DISABLED_DOMAINS_PER_PROFILE,
         )
+
+    fun loadFormDraftSavingEnabled(): Boolean = preferences.getBoolean(KEY_FORM_DRAFT_SAVING_ENABLED, false)
+
+    fun saveFormDraftSavingEnabled(enabled: Boolean) {
+        preferences.edit().putBoolean(KEY_FORM_DRAFT_SAVING_ENABLED, enabled).apply()
     }
 
     fun loadRecallEnabled(): Boolean = preferences.getBoolean(KEY_RECALL_ENABLED, false)
@@ -1695,6 +1704,8 @@ class BrowserSessionStore internal constructor(
         const val KEY_STATUS_BAR_SCROLL_PAGE_ALLOWED = "status_bar_scroll_page_allowed"
         const val KEY_STATUS_BAR_SCROLL_TARGET_WIDTH_PERCENT = "status_bar_scroll_target_width_percent"
         const val KEY_STATUS_BAR_SCROLL_DISABLED_DOMAINS = "status_bar_scroll_disabled_domains"
+
+        const val KEY_FORM_DRAFT_SAVING_ENABLED = "form_draft_saving_enabled"
         const val KEY_RECALL_ENABLED = "recall_enabled"
         const val KEY_SEARCH_SUGGESTION_PROVIDER = "search_suggestion_provider"
         const val KEY_HISTORY_SUGGESTIONS_ENABLED = "history_suggestions_enabled"

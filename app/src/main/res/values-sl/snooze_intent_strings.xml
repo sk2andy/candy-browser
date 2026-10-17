@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="snooze_purpose_label">Namen (izbirno)</string>
+    <string name="snooze_purpose_hint">Preveriti vračilo blaga, pogovoriti se z Liso…</string>
+    <string name="snooze_purpose_supporting">Spomnite se, kaj želite storiti, ko se ta zavihek vrne.</string>
+    <string name="snooze_add_purpose">Dodaj namen</string>
+    <string name="snooze_edit_purpose">Uredi namen</string>
+</resources>

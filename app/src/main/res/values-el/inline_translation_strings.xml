@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="inline_translation_title">Μετάφραση επιλεγμένου κειμένου</string>
+    <string name="inline_translation_local_description">Μετάφραση σε αυτή τη συσκευή. Επιλέξτε τη γλώσσα του κειμένου και τη γλώσσα προορισμού. Πατήστε το μεταφρασμένο απόσπασμα για επιστροφή στο πρωτότυπο.</string>
+    <string name="inline_translation_source">Γλώσσα κειμένου</string>
+    <string name="inline_translation_target">Μετάφραση σε</string>
+    <string name="inline_translation_choose_language">Επιλογή γλώσσας</string>
+    <string name="inline_translation_unavailable">Η υπηρεσία μετάφρασης αυτής της συσκευής δεν διαθέτει κανένα ζεύγος γλωσσών που έχει ληφθεί.</string>
+    <string name="inline_translation_failed">Δεν ήταν δυνατή η μετάφραση της επιλογής απευθείας στη σελίδα. Η σελίδα μπορεί να έχει αλλάξει, το κείμενο μπορεί να εμφανίζεται πολλές φορές ή η υπηρεσία μετάφρασης να μην είναι διαθέσιμη.</string>
+    <string name="inline_translation_manage_languages">Διαχείριση γλωσσών μετάφρασης Android</string>
+    <string name="inline_translation_apply">Μετάφραση εδώ</string>
+    <string name="inline_translation_fallback_description">Εναλλακτικά, στείλτε τη διεύθυνση αυτής της σελίδας στο %1$s για να μεταφράσετε ολόκληρη τη σελίδα.</string>
+    <string name="inline_translation_fallback">Μετάφραση σελίδας με %1$s</string>
+    <string name="inline_translation_toggle">Εναλλαγή μεταξύ πρωτοτύπου και μετάφρασης</string>
+</resources>

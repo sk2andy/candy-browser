@@ -1549,4 +1549,10 @@
     <string name="gecko_extensions_retry_search">Zkusit hledat znovu</string>
     <string name="browser_menu_empty_section_message">Tady je místo pro vaše oblíbené položky. Povolte položky nabídky v nastavení.</string>
     <string name="browser_menu_empty_section_action">Otevřít nastavení</string>
+    <string name="form_drafts_available">Pro tuto stránku je k dispozici neodeslaný text.</string>
+    <string name="form_drafts_clear_failed">Uložené koncepty se nepodařilo smazat. Zkuste to znovu.</string>
+    <string name="form_drafts_restore">Obnovit</string>
+    <string name="form_drafts_restore_failed">Nenalezeno odpovídající prázdné pole. Uložený text zůstane k dispozici do vypršení platnosti.</string>
+    <string name="form_drafts_settings_summary">Uchovávat neodeslaný víceřádkový text zašifrovaný v tomto zařízení po dobu 24 hodin. Soukromé koncepty zůstávají pouze v paměti do zavření karty. Citlivá pole jsou vyloučena. Vypnutím se smažou všechny koncepty.</string>
+    <string name="form_drafts_settings_title">Záchrana rozepsaných formulářů</string>
 </resources>

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="inline_translation_title">Dịch văn bản đã chọn</string>
+    <string name="inline_translation_local_description">Dịch trên thiết bị này. Chọn ngôn ngữ của văn bản và ngôn ngữ đích. Nhấn vào đoạn đã dịch để quay lại bản gốc.</string>
+    <string name="inline_translation_source">Ngôn ngữ văn bản</string>
+    <string name="inline_translation_target">Dịch sang</string>
+    <string name="inline_translation_choose_language">Chọn ngôn ngữ</string>
+    <string name="inline_translation_unavailable">Dịch vụ dịch của thiết bị này không có cặp ngôn ngữ đã tải xuống nào khả dụng.</string>
+    <string name="inline_translation_failed">Không thể dịch phần đã chọn ngay trên trang. Trang có thể đã thay đổi, văn bản có thể xuất hiện nhiều lần hoặc dịch vụ dịch không khả dụng.</string>
+    <string name="inline_translation_manage_languages">Quản lý ngôn ngữ dịch của Android</string>
+    <string name="inline_translation_apply">Dịch tại đây</string>
+    <string name="inline_translation_fallback_description">Hoặc gửi địa chỉ của trang này đến %1$s để dịch toàn bộ trang.</string>
+    <string name="inline_translation_fallback">Dịch trang bằng %1$s</string>
+    <string name="inline_translation_toggle">Chuyển giữa bản gốc và bản dịch</string>
+</resources>

@@ -1501,4 +1501,10 @@
     <string name="gecko_extensions_retry_search">Thử tìm kiếm lại</string>
     <string name="browser_menu_empty_section_message">Bạn có thể đặt mục yêu thích ở đây. Hãy bật các mục trình đơn trong phần cài đặt.</string>
     <string name="browser_menu_empty_section_action">Mở phần cài đặt</string>
+    <string name="form_drafts_available">Có văn bản chưa gửi cho trang này.</string>
+    <string name="form_drafts_clear_failed">Không thể xóa các bản nháp đã lưu. Vui lòng thử lại.</string>
+    <string name="form_drafts_restore">Khôi phục</string>
+    <string name="form_drafts_restore_failed">Không tìm thấy trường trống phù hợp. Văn bản đã lưu vẫn có sẵn cho đến khi hết hạn.</string>
+    <string name="form_drafts_settings_summary">Giữ văn bản nhiều dòng chưa gửi được mã hóa trên thiết bị này trong 24 giờ. Bản nháp riêng tư chỉ được giữ trong bộ nhớ cho đến khi đóng thẻ. Loại trừ các trường nhạy cảm. Tắt tính năng này sẽ xóa tất cả bản nháp.</string>
+    <string name="form_drafts_settings_title">Khôi phục bản nháp biểu mẫu</string>
 </resources>

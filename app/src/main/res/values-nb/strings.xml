@@ -1518,4 +1518,10 @@
     <string name="gecko_extensions_retry_search">Prøv søket på nytt</string>
     <string name="browser_menu_empty_section_message">Her er det plass til favorittene dine. Aktiver menyelementer i innstillingene.</string>
     <string name="browser_menu_empty_section_action">Åpne innstillinger</string>
+    <string name="form_drafts_available">Usendt tekst er tilgjengelig for denne siden.</string>
+    <string name="form_drafts_clear_failed">Kunne ikke slette lagrede utkast. Prøv igjen.</string>
+    <string name="form_drafts_restore">Gjenopprett</string>
+    <string name="form_drafts_restore_failed">Fant ikke et passende tomt felt. Den lagrede teksten forblir tilgjengelig til den utløper.</string>
+    <string name="form_drafts_settings_summary">Behold usendt tekst med flere linjer kryptert på denne enheten i 24 timer. Private utkast forblir bare i minnet til fanen lukkes. Sensitive felt utelates. Når du slår dette av, slettes alle utkast.</string>
+    <string name="form_drafts_settings_title">Redd skjemautkast</string>
 </resources>

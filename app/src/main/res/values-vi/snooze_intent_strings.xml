@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="snooze_purpose_label">Mục đích (không bắt buộc)</string>
+    <string name="snooze_purpose_hint">Kiểm tra việc trả hàng, trao đổi với Lisa…</string>
+    <string name="snooze_purpose_supporting">Nhớ lại việc bạn muốn làm khi thẻ này xuất hiện trở lại.</string>
+    <string name="snooze_add_purpose">Thêm mục đích</string>
+    <string name="snooze_edit_purpose">Chỉnh sửa mục đích</string>
+</resources>

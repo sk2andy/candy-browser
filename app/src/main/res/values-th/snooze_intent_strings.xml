@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="snooze_purpose_label">จุดประสงค์ (ไม่บังคับ)</string>
+    <string name="snooze_purpose_hint">ตรวจสอบการคืนสินค้า พูดคุยกับลิซ่า…</string>
+    <string name="snooze_purpose_supporting">ช่วยเตือนว่าคุณต้องการทำอะไรเมื่อแท็บนี้กลับมา</string>
+    <string name="snooze_add_purpose">เพิ่มจุดประสงค์</string>
+    <string name="snooze_edit_purpose">แก้ไขจุดประสงค์</string>
+</resources>

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="snooze_purpose_label">Namjera (neobavezno)</string>
+    <string name="snooze_purpose_hint">Provjeriti povrat robe, razgovarati s Lisom…</string>
+    <string name="snooze_purpose_supporting">Prisjetite se što želite učiniti kada se ova kartica vrati.</string>
+    <string name="snooze_add_purpose">Dodaj namjeru</string>
+    <string name="snooze_edit_purpose">Uredi namjeru</string>
+</resources>

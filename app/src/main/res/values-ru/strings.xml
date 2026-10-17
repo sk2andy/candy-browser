@@ -1552,4 +1552,10 @@
     <string name="gecko_extensions_retry_search">Повторить поиск</string>
     <string name="browser_menu_empty_section_message">Здесь есть место для избранного. Включите пункты меню в настройках.</string>
     <string name="browser_menu_empty_section_action">Открыть настройки</string>
+    <string name="form_drafts_available">Для этой страницы доступен неотправленный текст.</string>
+    <string name="form_drafts_clear_failed">Не удалось удалить сохранённые черновики. Повторите попытку.</string>
+    <string name="form_drafts_restore">Восстановить</string>
+    <string name="form_drafts_restore_failed">Подходящее пустое поле не найдено. Сохранённый текст остаётся доступным до истечения срока хранения.</string>
+    <string name="form_drafts_settings_summary">Хранить неотправленный многострочный текст в зашифрованном виде на этом устройстве в течение 24 часов. Приватные черновики остаются только в оперативной памяти до закрытия вкладки. Конфиденциальные поля исключены. Отключение удаляет все черновики.</string>
+    <string name="form_drafts_settings_title">Восстанавливать черновики форм</string>
 </resources>

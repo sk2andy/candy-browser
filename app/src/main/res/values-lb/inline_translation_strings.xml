@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="inline_translation_title">Ausgewielten Text iwwersetzen</string>
+    <string name="inline_translation_local_description">Iwwersetzung op dësem Apparat. Wielt d’Sprooch vum Text an d’Zilsprooch. Tippt op den iwwersate Passage, fir zréck op den Original ze wiesselen.</string>
+    <string name="inline_translation_source">Sprooch vum Text</string>
+    <string name="inline_translation_target">Iwwersetzen op</string>
+    <string name="inline_translation_choose_language">Sprooch wielen</string>
+    <string name="inline_translation_unavailable">Den Iwwersetzungsdéngscht vun dësem Apparat bitt kee verfügbar erofgeluedent Sproochepuer un.</string>
+    <string name="inline_translation_failed">Dës Auswiel konnt net direkt op der Säit iwwersat ginn. D’Säit huet sech méiglecherweis geännert, den Text kënnt e puer Mol vir oder den Iwwersetzungsdéngscht ass net verfügbar.</string>
+    <string name="inline_translation_manage_languages">Android-Iwwersetzungssprooche verwalten</string>
+    <string name="inline_translation_apply">Hei iwwersetzen</string>
+    <string name="inline_translation_fallback_description">Alternativ kënnt Dir d’Adress vun dëser Säit un %1$s schécken, fir déi ganz Säit ze iwwersetzen.</string>
+    <string name="inline_translation_fallback">Säit mat %1$s iwwersetzen</string>
+    <string name="inline_translation_toggle">Tëscht Original an Iwwersetzung wiesselen</string>
+</resources>

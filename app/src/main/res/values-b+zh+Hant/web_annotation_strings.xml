@@ -1,0 +1,14 @@
+<resources>
+    <string name="web_annotation_mark">標示並新增備註</string>
+    <string name="web_annotation_translate">在頁面內翻譯</string>
+    <string name="web_annotation_title">頁面標示</string>
+    <string name="web_annotation_note">備註（選填）</string>
+    <string name="web_annotation_save">儲存</string>
+    <string name="web_annotation_cancel">取消</string>
+    <string name="web_annotation_delete">刪除</string>
+    <string name="web_annotation_empty">此頁面尚無已儲存的標示內容。選取文字即可新增。</string>
+    <string name="web_annotation_saved_quote">已儲存的引文 — 即使頁面有所變更，也會保留。</string>
+    <string name="web_annotation_failed">無法儲存此標示內容。</string>
+    <string name="web_annotation_private">無痕分頁中無法使用標示功能。</string>
+    <string name="web_annotation_close">關閉</string>
+</resources>

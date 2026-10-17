@@ -1,0 +1,14 @@
+<resources>
+    <string name="web_annotation_mark">Vurgula + not</string>
+    <string name="web_annotation_translate">Sayfada çevir</string>
+    <string name="web_annotation_title">Sayfa vurguları</string>
+    <string name="web_annotation_note">Not (isteğe bağlı)</string>
+    <string name="web_annotation_save">Kaydet</string>
+    <string name="web_annotation_cancel">İptal</string>
+    <string name="web_annotation_delete">Sil</string>
+    <string name="web_annotation_empty">Bu sayfada kayıtlı vurgu yok. Eklemek için metin seçin.</string>
+    <string name="web_annotation_saved_quote">Kaydedilen alıntı — sayfa değişse bile korunur.</string>
+    <string name="web_annotation_failed">Bu vurgu kaydedilemedi.</string>
+    <string name="web_annotation_private">Gizli sekmelerde vurgular kullanılamaz.</string>
+    <string name="web_annotation_close">Kapat</string>
+</resources>

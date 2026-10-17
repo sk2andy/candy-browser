@@ -436,6 +436,7 @@ function contentPolicy(policy) {
     maxInitialElements: boundedSafeAreaInteger(policy?.maxInitialElements, 64, 2048, 512),
     navigationGeneration: Number.isSafeInteger(policy?.navigationGeneration) ?
       Math.max(0, policy.navigationGeneration) : 0,
+    formDraftSavingEnabled: policy?.formDraftSavingEnabled === true,
     scrollMetricsEnabled: policy?.scrollMetricsEnabled === true,
     inlineMediaPlayerEnabled: policy?.inlineMediaPlayerEnabled === true &&
       inlineMediaPlayerMode !== "disabled",
@@ -838,6 +839,16 @@ browser.runtime.onMessage.addListener((message, sender) => {
         token: message.token,
         revision: message.revision,
       });
+    }
+    return undefined;
+  }
+  if (message.type === "form-draft-snapshot") {
+    const token = tokenByTab.get(sender.tab.id);
+    const policy = token && policiesByToken.get(token);
+    if (sender.frameId === 0 && policy?.formDraftSavingEnabled === true &&
+        policy.revision === message.revision && policy.navigationGeneration === message.navigationGeneration &&
+        message.payload?.url === sender.url && JSON.stringify(message.payload).length <= 150000) {
+      nativePort?.postMessage({ ...message, token, protocolVersion: PROTOCOL_VERSION });
     }
     return undefined;
   }
@@ -1393,6 +1404,28 @@ function connectNative() {
           tokenByTab.delete(tabId);
           inlineVideosByTab.delete(tabId);
         }
+      }
+    } else if (message.type === "web-text-operation" && typeof message.token === "string") {
+      const policy = policiesByToken.get(message.token);
+      const entry = Array.from(tokenByTab).find(([, token]) => token === message.token);
+      if (entry && policy?.revision === message.revision &&
+          policy.navigationGeneration === message.navigationGeneration) {
+        browser.tabs.sendMessage(entry[0], message, { frameId: 0 }).then(applied => {
+          nativePort?.postMessage({ type: "web-text-operation-result", protocolVersion: PROTOCOL_VERSION,
+            token: message.token, revision: message.revision, navigationGeneration: message.navigationGeneration,
+            requestId: message.requestId, applied: applied === true });
+        }).catch(() => {});
+      }
+    } else if (message.type === "form-draft-restore" && typeof message.token === "string") {
+      const policy = policiesByToken.get(message.token);
+      const entry = Array.from(tokenByTab).find(([, token]) => token === message.token);
+      if (entry && policy?.formDraftSavingEnabled === true && policy.revision === message.revision &&
+          policy.navigationGeneration === message.navigationGeneration) {
+        browser.tabs.sendMessage(entry[0], message, { frameId: 0 }).then(restored => {
+          nativePort?.postMessage({ type: "form-draft-restored", protocolVersion: PROTOCOL_VERSION,
+            token: message.token, revision: message.revision, navigationGeneration: message.navigationGeneration,
+            requestId: message.requestId, restored: restored === true });
+        }).catch(() => {});
       }
     } else if (message.type === "text-extract" && typeof message.token === "string") {
       extractPageText(message);

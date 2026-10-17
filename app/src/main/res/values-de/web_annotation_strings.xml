@@ -1,0 +1,14 @@
+<resources>
+    <string name="web_annotation_mark">Markieren + Notiz</string>
+    <string name="web_annotation_translate">Direkt übersetzen</string>
+    <string name="web_annotation_title">Markierungen</string>
+    <string name="web_annotation_note">Notiz (optional)</string>
+    <string name="web_annotation_save">Speichern</string>
+    <string name="web_annotation_cancel">Abbrechen</string>
+    <string name="web_annotation_delete">Löschen</string>
+    <string name="web_annotation_empty">Noch keine Markierungen auf dieser Seite. Zum Hinzufügen Text auswählen.</string>
+    <string name="web_annotation_saved_quote">Gespeichertes Zitat — bleibt auch bei Änderungen der Seite erhalten.</string>
+    <string name="web_annotation_failed">Markierung konnte nicht gespeichert werden.</string>
+    <string name="web_annotation_private">Markierungen sind in privaten Tabs nicht verfügbar.</string>
+    <string name="web_annotation_close">Schließen</string>
+</resources>

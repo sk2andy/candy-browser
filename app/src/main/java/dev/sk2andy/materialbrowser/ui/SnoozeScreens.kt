@@ -68,18 +68,19 @@ internal suspend fun showSnoozeUndoFeedback(
 @Composable
 internal fun SnoozeTabDialog(
     tab: BrowserTab?,
-    onSnooze: (Long) -> Boolean,
+    onSnooze: (Long, String) -> Boolean,
     onDismiss: () -> Unit,
 ) {
     if (tab == null) return
     val zoneId = remember { ZoneId.systemDefault() }
     var customEditorVisible by remember(tab.id) { mutableStateOf(false) }
+    var purpose by remember(tab.id) { mutableStateOf(tab.snoozePurpose) }
     val customInitialMillis = remember(tab.id) {
         System.currentTimeMillis() + 24 * 60 * 60 * 1_000L
     }
     val applyPreset: (SnoozePreset) -> Unit = { preset ->
         val nowMillis = System.currentTimeMillis()
-        if (onSnooze(SnoozeTimeRules.wakeAtMillis(preset, nowMillis, zoneId))) onDismiss()
+        if (onSnooze(SnoozeTimeRules.wakeAtMillis(preset, nowMillis, zoneId), purpose)) onDismiss()
     }
 
     if (!customEditorVisible) {
@@ -97,7 +98,7 @@ internal fun SnoozeTabDialog(
         initialMillis = customInitialMillis,
         onDismiss = { customEditorVisible = false },
         onConfirm = { wakeAtMillis ->
-            onSnooze(wakeAtMillis).also { accepted ->
+            onSnooze(wakeAtMillis, purpose).also { accepted ->
                 if (accepted) {
                     customEditorVisible = false
                     onDismiss()

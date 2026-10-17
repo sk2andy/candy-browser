@@ -1534,4 +1534,10 @@
     <string name="gecko_extensions_retry_search">Reîncearcă căutarea</string>
     <string name="browser_menu_empty_section_message">Ai loc aici pentru favorite. Activează elementele de meniu în setări.</string>
     <string name="browser_menu_empty_section_action">Deschide setările</string>
+    <string name="form_drafts_available">Există text netrimis disponibil pentru această pagină.</string>
+    <string name="form_drafts_clear_failed">Ciornele salvate nu au putut fi șterse. Încearcă din nou.</string>
+    <string name="form_drafts_restore">Restabilește</string>
+    <string name="form_drafts_restore_failed">Nu s-a găsit un câmp gol corespunzător. Textul salvat rămâne disponibil până la expirare.</string>
+    <string name="form_drafts_settings_summary">Păstrează textul netrimis pe mai multe rânduri criptat pe acest dispozitiv timp de 24 de ore. Ciornele private rămân doar în memorie până la închiderea filei. Câmpurile sensibile sunt excluse. Dezactivarea șterge toate ciornele.</string>
+    <string name="form_drafts_settings_title">Recuperează ciornele formularelor</string>
 </resources>

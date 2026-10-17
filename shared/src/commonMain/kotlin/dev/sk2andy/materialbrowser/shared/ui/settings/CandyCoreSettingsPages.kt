@@ -314,6 +314,7 @@ internal object CandyBrowserMenuSettingsResources : BrowserMenuSettingsResources
         BrowserMenuEntry.FirefoxPageActions -> "Firefox-Seitenaktionen"
         BrowserMenuEntry.CandyTrail -> "Candy Trail"
         BrowserMenuEntry.Constellations -> "Candy Constellations"
+        BrowserMenuEntry.WebAnnotations -> "Highlights & notes"
         BrowserMenuEntry.AddSiteCapsule -> "Site Capsule hinzufügen"
         BrowserMenuEntry.CreateSiteWidget -> "Website-Widget"
         BrowserMenuEntry.Summarize -> "Zusammenfassen"

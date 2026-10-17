@@ -1,0 +1,14 @@
+<resources>
+    <string name="web_annotation_mark">Fremhæv + note</string>
+    <string name="web_annotation_translate">Oversæt på siden</string>
+    <string name="web_annotation_title">Fremhævninger på siden</string>
+    <string name="web_annotation_note">Note (valgfri)</string>
+    <string name="web_annotation_save">Gem</string>
+    <string name="web_annotation_cancel">Annuller</string>
+    <string name="web_annotation_delete">Slet</string>
+    <string name="web_annotation_empty">Ingen gemte fremhævninger på denne side. Vælg tekst for at tilføje en.</string>
+    <string name="web_annotation_saved_quote">Gemt citat — bevares, selv hvis siden ændres.</string>
+    <string name="web_annotation_failed">Fremhævningen kunne ikke gemmes.</string>
+    <string name="web_annotation_private">Fremhævninger er ikke tilgængelige i private faner.</string>
+    <string name="web_annotation_close">Luk</string>
+</resources>

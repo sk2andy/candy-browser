@@ -26,6 +26,22 @@ class BrowserFeatureMenuRulesTest {
     }
 
     @Test
+    fun `page annotations require support and a usable regular page`() {
+        val state = BrowserFeatureMenuState(canOpenWebAnnotations = true)
+        assertFalse(BrowserFeatureMenuRules.items(state).any { it.action == BrowserFeatureMenuAction.OpenWebAnnotations })
+        val capabilities = BrowserFeatureMenuCapabilities(supportsWebAnnotations = true)
+        val item = BrowserFeatureMenuRules.items(state, capabilities)
+            .single { it.action == BrowserFeatureMenuAction.OpenWebAnnotations }
+
+        assertTrue(item.enabled)
+        assertEquals(BrowserFeatureMenuSection.Page, item.section)
+        assertEquals(BrowserFeatureMenuLabelKey.WebAnnotations, item.labelKey)
+        val unavailable = BrowserFeatureMenuRules.items(BrowserFeatureMenuState(), capabilities)
+            .single { it.action == BrowserFeatureMenuAction.OpenWebAnnotations }
+        assertFalse(unavailable.enabled)
+    }
+
+    @Test
     fun `constellations requires platform support and follows profile availability`() {
         val state = BrowserFeatureMenuState(canOpenConstellations = true)
         assertFalse(BrowserFeatureMenuRules.items(state).any { it.action == BrowserFeatureMenuAction.OpenConstellations })

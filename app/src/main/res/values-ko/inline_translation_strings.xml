@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="inline_translation_title">선택한 텍스트 번역</string>
+    <string name="inline_translation_local_description">이 기기에서 번역합니다. 원문 언어와 번역할 언어를 선택하세요. 번역된 부분을 탭하면 원문으로 돌아갑니다.</string>
+    <string name="inline_translation_source">원문 언어</string>
+    <string name="inline_translation_target">번역할 언어</string>
+    <string name="inline_translation_choose_language">언어 선택</string>
+    <string name="inline_translation_unavailable">이 기기의 번역 서비스에 다운로드된 언어 쌍이 없습니다.</string>
+    <string name="inline_translation_failed">선택한 텍스트를 페이지 내에서 번역할 수 없습니다. 페이지가 변경되었거나, 같은 텍스트가 여러 번 나타나거나, 번역 서비스를 사용할 수 없을 수 있습니다.</string>
+    <string name="inline_translation_manage_languages">Android 번역 언어 관리</string>
+    <string name="inline_translation_apply">여기서 번역</string>
+    <string name="inline_translation_fallback_description">또는 이 페이지의 주소를 %1$s에 보내 페이지 전체를 번역할 수 있습니다.</string>
+    <string name="inline_translation_fallback">%1$s로 페이지 번역</string>
+    <string name="inline_translation_toggle">원문과 번역 전환</string>
+</resources>

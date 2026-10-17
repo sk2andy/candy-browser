@@ -475,6 +475,12 @@ tasks.matching { task ->
     dependsOn(generateSystemWebViewThirdPartyNotices)
 }
 
+val generateGeckoFormDraftAsset by tasks.registering(Copy::class) {
+    from(layout.projectDirectory.file("src/main/assets/web_text_operations.js"))
+    from(layout.projectDirectory.file("src/main/assets/form_drafts.js"))
+    into(layout.buildDirectory.dir("generated/geckoPrivacy/assets/candy_privacy"))
+}
+
 val generateGeckoPrivacyRuleAssets by tasks.registering(Sync::class) {
     val ruleAssets = listOf("candy_default_rules.txt")
     from(ruleAssets.map { fileName -> layout.projectDirectory.file("src/main/assets/$fileName") })
@@ -520,6 +526,7 @@ tasks.matching { task ->
     task.name.endsWith("Build") &&
         (task.name.startsWith("preFull") || task.name.startsWith("preFoss"))
 }.configureEach {
+    dependsOn(generateGeckoFormDraftAsset)
     dependsOn(generateGeckoPrivacyRuleAssets)
     dependsOn(generateGeckoContentTopInsetScript)
     dependsOn(verifyGeckoDefaultExtensionAssets)

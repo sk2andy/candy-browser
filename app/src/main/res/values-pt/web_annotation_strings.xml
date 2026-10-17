@@ -1,0 +1,14 @@
+<resources>
+    <string name="web_annotation_mark">Destacar + nota</string>
+    <string name="web_annotation_translate">Traduzir na página</string>
+    <string name="web_annotation_title">Destaques da página</string>
+    <string name="web_annotation_note">Nota (opcional)</string>
+    <string name="web_annotation_save">Guardar</string>
+    <string name="web_annotation_cancel">Cancelar</string>
+    <string name="web_annotation_delete">Eliminar</string>
+    <string name="web_annotation_empty">Não há destaques guardados nesta página. Selecione texto para adicionar um.</string>
+    <string name="web_annotation_saved_quote">Citação guardada — mantida mesmo que a página mude.</string>
+    <string name="web_annotation_failed">Não foi possível guardar este destaque.</string>
+    <string name="web_annotation_private">Os destaques não estão disponíveis em separadores privados.</string>
+    <string name="web_annotation_close">Fechar</string>
+</resources>

@@ -44,7 +44,7 @@ Main ownership: shared `browser/BrowserMenuLayout`, `ui/settings/BrowserMenuSett
 | Biometric profile protection | `BrowserProfileRulesTest`, `BrowserSessionStoreInstrumentedTest`, `BrowserControllerProfilesInstrumentedTest`, `ProfileProtectionUiInstrumentedTest` |
 | Resident Gecko tab interaction and resume | `GeckoContentPresentationGateTest`, `GeckoTabInteractionInstrumentedTest` (interaction, safe-area geometry and cookie-exception selection without document reload), `BrowserPageResumeInstrumentedTest` |
 | Previews | `TabPreview*Test`, `GeckoPreviewCaptureRulesTest`, `BrowserPreviewBitmapRendererInstrumentedTest` (uniform scaling, height crop and bitmap density in both engine capture paths), `TabPreviewRefreshInstrumentedTest`, `BrowserControllerProfilesInstrumentedTest` (preview authentication and relock) |
-| Snoozing | `Snooze*Test`, `Snooze*InstrumentedTest` |
+| Snoozing and optional purposes | `Snooze*Test` (including purpose normalization, reschedule, undo and wake), `Snooze*InstrumentedTest` (editor, persistence, notification) |
 | Private-tab notification | `PrivateTabsNotifierInstrumentedTest`, `PrivateTabsNotificationFlowInstrumentedTest`, `BrowserControllerProfilesInstrumentedTest` |
 | Launcher app shortcuts | `LauncherShortcutRulesTest`, `LauncherShortcutInstrumentedTest` |
 | Home-screen search widget | `CandySearchWidgetRulesTest`, `LauncherShortcutInstrumentedTest` |

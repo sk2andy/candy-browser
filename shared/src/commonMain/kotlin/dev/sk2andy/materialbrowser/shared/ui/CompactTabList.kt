@@ -212,7 +212,8 @@ private fun CompactListTabItem(
                         fontWeight = if (selected) FontWeight.Bold else FontWeight.SemiBold,
                     )
                     Text(
-                        visuals.subtitle,
+                        tab.snoozePurpose.takeUnless { tab.isIncognito || it.isBlank() }
+                            ?: visuals.subtitle,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         style = MaterialTheme.typography.bodySmall,

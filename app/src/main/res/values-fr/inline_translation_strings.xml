@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="inline_translation_title">Traduire le texte sélectionné</string>
+    <string name="inline_translation_local_description">Traduction sur cet appareil. Choisissez la langue du texte et la langue cible. Touchez le passage traduit pour revenir à l’original.</string>
+    <string name="inline_translation_source">Langue du texte</string>
+    <string name="inline_translation_target">Traduire en</string>
+    <string name="inline_translation_choose_language">Choisir une langue</string>
+    <string name="inline_translation_unavailable">Aucune paire de langues téléchargée n’est disponible dans le service de traduction de cet appareil.</string>
+    <string name="inline_translation_failed">Cette sélection n’a pas pu être traduite directement dans la page. La page a peut-être changé, le texte apparaît plusieurs fois ou le service de traduction est indisponible.</string>
+    <string name="inline_translation_manage_languages">Gérer les langues de traduction Android</string>
+    <string name="inline_translation_apply">Traduire ici</string>
+    <string name="inline_translation_fallback_description">Vous pouvez aussi envoyer l’adresse de cette page à %1$s pour traduire la page entière.</string>
+    <string name="inline_translation_fallback">Traduire la page avec %1$s</string>
+    <string name="inline_translation_toggle">Basculer entre l’original et la traduction</string>
+</resources>

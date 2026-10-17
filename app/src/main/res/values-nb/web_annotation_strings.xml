@@ -1,0 +1,14 @@
+<resources>
+    <string name="web_annotation_mark">Marker + notat</string>
+    <string name="web_annotation_translate">Oversett på siden</string>
+    <string name="web_annotation_title">Markeringer på siden</string>
+    <string name="web_annotation_note">Notat (valgfritt)</string>
+    <string name="web_annotation_save">Lagre</string>
+    <string name="web_annotation_cancel">Avbryt</string>
+    <string name="web_annotation_delete">Slett</string>
+    <string name="web_annotation_empty">Ingen lagrede markeringer på denne siden. Velg tekst for å legge til en.</string>
+    <string name="web_annotation_saved_quote">Lagret sitat — beholdes selv om siden endres.</string>
+    <string name="web_annotation_failed">Kunne ikke lagre markeringen.</string>
+    <string name="web_annotation_private">Markeringer er ikke tilgjengelige i private faner.</string>
+    <string name="web_annotation_close">Lukk</string>
+</resources>

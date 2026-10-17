@@ -233,7 +233,6 @@ class BrowserControllerConstellationsInstrumentedTest {
         }
         assertEquals(listOf(document), snapshot(HOME_PROFILE).documents)
     }
-
     private fun awaitDocument(profileId: String, url: String): ConstellationDocument {
         var document: ConstellationDocument? = null
         try {

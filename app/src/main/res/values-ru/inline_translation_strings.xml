@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="inline_translation_title">Перевести выделенный текст</string>
+    <string name="inline_translation_local_description">Перевод на этом устройстве. Выберите язык текста и язык перевода. Нажмите на переведённый фрагмент, чтобы вернуться к оригиналу.</string>
+    <string name="inline_translation_source">Язык текста</string>
+    <string name="inline_translation_target">Перевести на</string>
+    <string name="inline_translation_choose_language">Выбрать язык</string>
+    <string name="inline_translation_unavailable">В службе перевода этого устройства нет доступных загруженных языковых пар.</string>
+    <string name="inline_translation_failed">Не удалось перевести выделенный текст прямо на странице. Возможно, страница изменилась, текст встречается несколько раз или служба перевода недоступна.</string>
+    <string name="inline_translation_manage_languages">Управление языками перевода Android</string>
+    <string name="inline_translation_apply">Перевести здесь</string>
+    <string name="inline_translation_fallback_description">Также можно отправить адрес этой страницы в %1$s, чтобы перевести всю страницу.</string>
+    <string name="inline_translation_fallback">Перевести страницу с помощью %1$s</string>
+    <string name="inline_translation_toggle">Переключить между оригиналом и переводом</string>
+</resources>

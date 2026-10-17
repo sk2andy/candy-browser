@@ -1,0 +1,14 @@
+<resources>
+    <string name="web_annotation_mark">ไฮไลต์ + โน้ต</string>
+    <string name="web_annotation_translate">แปลในหน้าเว็บ</string>
+    <string name="web_annotation_title">ไฮไลต์ในหน้าเว็บ</string>
+    <string name="web_annotation_note">โน้ต (ไม่บังคับ)</string>
+    <string name="web_annotation_save">บันทึก</string>
+    <string name="web_annotation_cancel">ยกเลิก</string>
+    <string name="web_annotation_delete">ลบ</string>
+    <string name="web_annotation_empty">ยังไม่มีไฮไลต์ที่บันทึกไว้ในหน้านี้ เลือกข้อความเพื่อเพิ่มไฮไลต์</string>
+    <string name="web_annotation_saved_quote">ข้อความอ้างอิงที่บันทึกไว้ — จะคงอยู่แม้ว่าหน้าเว็บจะเปลี่ยนแปลง</string>
+    <string name="web_annotation_failed">บันทึกไฮไลต์นี้ไม่ได้</string>
+    <string name="web_annotation_private">ใช้ไฮไลต์ในแท็บส่วนตัวไม่ได้</string>
+    <string name="web_annotation_close">ปิด</string>
+</resources>

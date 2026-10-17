@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="snooze_purpose_label">목적 (선택 사항)</string>
+    <string name="snooze_purpose_hint">반품 확인, 리사와 상의…</string>
+    <string name="snooze_purpose_supporting">이 탭이 다시 열릴 때 하려던 일을 떠올려 보세요.</string>
+    <string name="snooze_add_purpose">목적 추가</string>
+    <string name="snooze_edit_purpose">목적 수정</string>
+</resources>

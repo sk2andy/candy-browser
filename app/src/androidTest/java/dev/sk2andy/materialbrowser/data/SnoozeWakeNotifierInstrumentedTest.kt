@@ -39,6 +39,7 @@ class SnoozeWakeNotifierInstrumentedTest {
             id = "notification-test",
             lastAccessedAt = 1L,
             title = "Saved page",
+            snoozePurpose = "Check returns",
             url = "https://example.com",
         )
         val notificationId = SnoozeWakeNotifier.notificationId(tab.id)
@@ -61,7 +62,7 @@ class SnoozeWakeNotifierInstrumentedTest {
             context.getString(R.string.snooze_notification_title),
             posted.extras.getString(Notification.EXTRA_TITLE),
         )
-        assertEquals("Saved page", posted.extras.getString(Notification.EXTRA_TEXT))
+        assertEquals("Saved page\nCheck returns", posted.extras.getString(Notification.EXTRA_TEXT))
         assertNotNull(posted.contentIntent)
         assertTrue(posted.flags and Notification.FLAG_AUTO_CANCEL != 0)
 

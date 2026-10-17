@@ -193,6 +193,7 @@ internal fun BrowserSettingsOverlay(
             isAiModeToggleVisible = controller.isAiModeToggleVisible,
             searchSuggestionProvider = controller.searchSuggestionProvider,
             isHistorySuggestionsEnabled = controller.isHistorySuggestionsEnabled,
+            isFormDraftSavingEnabled = controller.isFormDraftSavingEnabled,
             isRecallEnabled = controller.isRecallEnabled,
             historyRecordingMode = controller.historyRecordingMode,
             tabOverviewMode = controller.tabOverviewMode,
@@ -306,6 +307,7 @@ internal fun BrowserSettingsOverlay(
             onSearchSuggestionProviderChanged = controller::updateSearchSuggestionProvider,
             onHistorySuggestionsEnabledChanged =
                 controller::updateHistorySuggestionsEnabled,
+            onFormDraftSavingEnabledChanged = controller::updateFormDraftSavingEnabled,
             onRecallEnabledChanged = controller::updateRecallEnabled,
             onHistoryRecordingModeChanged = controller::updateHistoryRecordingMode,
             onTabOverviewModeChanged = controller::updateTabOverviewMode,

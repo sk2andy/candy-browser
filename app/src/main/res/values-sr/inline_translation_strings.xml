@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="inline_translation_title">Преведи изабрани текст</string>
+    <string name="inline_translation_local_description">Преводите на овом уређају. Изаберите језик текста и циљни језик. Додирните преведени одломак да бисте се вратили на оригинал.</string>
+    <string name="inline_translation_source">Језик текста</string>
+    <string name="inline_translation_target">Преведи на</string>
+    <string name="inline_translation_choose_language">Изабери језик</string>
+    <string name="inline_translation_unavailable">Услуга превођења овог уређаја нема доступан преузети језички пар.</string>
+    <string name="inline_translation_failed">Овај избор није могуће превести директно на страници. Страница се можда променила, текст се појављује више пута или услуга превођења није доступна.</string>
+    <string name="inline_translation_manage_languages">Управљај језицима превођења на Android-у</string>
+    <string name="inline_translation_apply">Преведи овде</string>
+    <string name="inline_translation_fallback_description">Можете и да пошаљете адресу ове странице услузи %1$s да бисте превели целу страницу.</string>
+    <string name="inline_translation_fallback">Преведи страницу помоћу %1$s</string>
+    <string name="inline_translation_toggle">Пребаци између оригинала и превода</string>
+</resources>

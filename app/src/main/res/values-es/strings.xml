@@ -1525,4 +1525,10 @@
     <string name="gecko_extensions_retry_search">Reintentar búsqueda</string>
     <string name="browser_menu_empty_section_message">Aquí hay espacio para tus favoritos. Activa elementos del menú en los ajustes.</string>
     <string name="browser_menu_empty_section_action">Abrir ajustes</string>
+    <string name="form_drafts_available">Hay texto sin enviar disponible para esta página.</string>
+    <string name="form_drafts_clear_failed">No se pudieron eliminar los borradores guardados. Inténtalo de nuevo.</string>
+    <string name="form_drafts_restore">Restaurar</string>
+    <string name="form_drafts_restore_failed">No se encontró un campo vacío adecuado. El texto guardado seguirá disponible hasta que caduque.</string>
+    <string name="form_drafts_settings_summary">Conserva el texto multilínea sin enviar cifrado en este dispositivo durante 24 horas. Los borradores privados permanecen solo en la memoria hasta que se cierra la pestaña. Se excluyen los campos sensibles. Al desactivar esta función se eliminan todos los borradores.</string>
+    <string name="form_drafts_settings_title">Rescatar borradores de formularios</string>
 </resources>

@@ -87,3 +87,9 @@ returns bounded results to the main thread.
 | Disabled-by-default setting and clear behavior | `BrowserSessionStoreInstrumentedTest`, `ui/RecallSettingsInstrumentedTest` |
 | Address section, local-only command and History excerpts | Address/History rule tests and focused Compose instrumented tests |
 | Manual and Android transfer exclusion | `AppDataArchiveRulesTest`, `AppDataArchiveCodecTest`, Android resource validation in lint/assemble |
+
+## Explicit saved annotations
+
+| Source | Search and retention |
+| --- | --- |
+| [Saved web highlights](web-annotations.md) | When Recall is enabled, profile-scoped quote/note matches join the normal results without overwriting extracted page text. Explicit annotations survive Recall/history clearing; deleting the annotation or owning profile removes them. |

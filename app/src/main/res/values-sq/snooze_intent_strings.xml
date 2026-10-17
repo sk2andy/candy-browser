@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="snooze_purpose_label">Qëllimi (opsional)</string>
+    <string name="snooze_purpose_hint">Kontrollo kthimet, diskuto me Lizën…</string>
+    <string name="snooze_purpose_supporting">Kujtoni çfarë dëshironi të bëni kur të rikthehet kjo skedë.</string>
+    <string name="snooze_add_purpose">Shto qëllim</string>
+    <string name="snooze_edit_purpose">Ndrysho qëllimin</string>
+</resources>

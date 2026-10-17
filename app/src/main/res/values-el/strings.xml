@@ -1518,4 +1518,10 @@
     <string name="gecko_extensions_retry_search">Επανάληψη αναζήτησης</string>
     <string name="browser_menu_empty_section_message">Υπάρχει χώρος για τα αγαπημένα σας εδώ. Ενεργοποιήστε στοιχεία μενού στις ρυθμίσεις.</string>
     <string name="browser_menu_empty_section_action">Άνοιγμα ρυθμίσεων</string>
+    <string name="form_drafts_available">Υπάρχει μη απεσταλμένο κείμενο για αυτή τη σελίδα.</string>
+    <string name="form_drafts_clear_failed">Δεν ήταν δυνατή η διαγραφή των αποθηκευμένων πρόχειρων. Δοκιμάστε ξανά.</string>
+    <string name="form_drafts_restore">Επαναφορά</string>
+    <string name="form_drafts_restore_failed">Δεν βρέθηκε κατάλληλο κενό πεδίο. Το αποθηκευμένο κείμενο παραμένει διαθέσιμο μέχρι να λήξει.</string>
+    <string name="form_drafts_settings_summary">Διατηρήστε μη απεσταλμένο κείμενο πολλών γραμμών κρυπτογραφημένο σε αυτή τη συσκευή για 24 ώρες. Τα ιδιωτικά πρόχειρα παραμένουν μόνο στη μνήμη μέχρι να κλείσει η καρτέλα. Τα ευαίσθητα πεδία εξαιρούνται. Η απενεργοποίηση διαγράφει όλα τα πρόχειρα.</string>
+    <string name="form_drafts_settings_title">Διάσωση πρόχειρων φορμών</string>
 </resources>

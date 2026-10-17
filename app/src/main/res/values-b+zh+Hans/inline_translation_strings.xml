@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="inline_translation_title">翻译所选文本</string>
+    <string name="inline_translation_local_description">在此设备上翻译。选择文本语言和目标语言。点按翻译后的段落可切换回原文。</string>
+    <string name="inline_translation_source">文本语言</string>
+    <string name="inline_translation_target">翻译为</string>
+    <string name="inline_translation_choose_language">选择语言</string>
+    <string name="inline_translation_unavailable">此设备的翻译服务没有可用的已下载语言对。</string>
+    <string name="inline_translation_failed">无法在页面内翻译所选文本。页面可能已更改、文本可能出现多次，或翻译服务可能不可用。</string>
+    <string name="inline_translation_manage_languages">管理 Android 翻译语言</string>
+    <string name="inline_translation_apply">在此处翻译</string>
+    <string name="inline_translation_fallback_description">也可以将此页面的地址发送至 %1$s，以翻译整个页面。</string>
+    <string name="inline_translation_fallback">使用 %1$s 翻译页面</string>
+    <string name="inline_translation_toggle">切换原文和译文</string>
+</resources>

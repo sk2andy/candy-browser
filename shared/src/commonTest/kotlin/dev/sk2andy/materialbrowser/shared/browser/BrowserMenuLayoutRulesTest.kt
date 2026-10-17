@@ -18,6 +18,18 @@ class BrowserMenuLayoutRulesTest {
     }
 
     @Test
+    fun `annotations live in page menu with persistent visibility preference`() {
+        val entry = BrowserMenuEntry.WebAnnotations
+        assertEquals(entry, BrowserMenuLayoutRules.entryForAction(BrowserFeatureMenuAction.OpenWebAnnotations))
+        assertEquals(BrowserMenuConfigurationSection.Page, entry.section)
+        assertTrue(BrowserMenuLayoutRules.isVisible(BrowserMenuLayout.Default, entry, BrowserMenuSurface.Tab))
+        assertFalse(BrowserMenuLayoutRules.isVisible(BrowserMenuLayout.Default, entry, BrowserMenuSurface.TabSwitcher))
+        val hidden = BrowserMenuLayoutRules.update(BrowserMenuLayout.Default, entry, BrowserMenuLocation.Nowhere)
+        val restored = BrowserMenuLayoutRules.fromWireValues(BrowserMenuLayoutRules.toWireValues(hidden))
+        assertFalse(BrowserMenuLayoutRules.isVisible(restored, entry, BrowserMenuSurface.Tab))
+    }
+
+    @Test
     fun `constellations belongs to configurable tab menu and cannot move to tab switcher`() {
         val entry = BrowserMenuEntry.Constellations
         assertEquals(BrowserMenuEntry.Constellations, BrowserMenuLayoutRules.entryForAction(BrowserFeatureMenuAction.OpenConstellations))

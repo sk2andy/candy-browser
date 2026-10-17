@@ -48,6 +48,7 @@ internal object ProtectionSettingsTestTags {
     const val UserCaWarning = "protection_settings_user_ca_warning"
     const val ExportAppData = "protection_settings_export_app_data"
     const val ImportAppData = "protection_settings_import_app_data"
+    const val FormDrafts = "protection_settings_form_drafts"
     const val Recall = "protection_settings_recall"
     const val SaveHistory = "protection_settings_save_history"
     const val ClearHistoryOnExit = "protection_settings_clear_history_on_exit"
@@ -78,6 +79,7 @@ internal fun ProtectionAndDataSettingsPage(
     isAutoDeAmpEnabled: Boolean = true,
     httpsOnlyMode: HttpsOnlyMode = HttpsOnlyMode.Default,
     dnsOverHttpsSettings: DnsOverHttpsSettings = DnsOverHttpsRules.Default,
+    isFormDraftSavingEnabled: Boolean = false,
     isRecallEnabled: Boolean = false,
     historyRecordingMode: HistoryRecordingMode = HistoryRecordingMode.Enabled,
     trustsUserCertificates: Boolean,
@@ -87,6 +89,7 @@ internal fun ProtectionAndDataSettingsPage(
     onAutoDeAmpEnabledChanged: (Boolean) -> Unit = {},
     onHttpsOnlyModeChanged: (HttpsOnlyMode) -> Unit = {},
     onDnsOverHttpsSettingsChanged: (DnsOverHttpsSettings) -> Unit = {},
+    onFormDraftSavingEnabledChanged: (Boolean) -> Unit = {},
     onRecallEnabledChanged: (Boolean) -> Unit = {},
     onHistoryRecordingModeChanged: (HistoryRecordingMode) -> Unit = {},
     onPrivacyXRay: () -> Unit,
@@ -436,6 +439,14 @@ internal fun ProtectionAndDataSettingsPage(
                     summary = stringResource(R.string.data_archive_import_summary),
                     onClick = onImportAppData,
                     modifier = Modifier.testTag(ProtectionSettingsTestTags.ImportAppData),
+                )
+                SettingsPreferenceDivider()
+                SettingsSwitch(
+                    title = stringResource(R.string.form_drafts_settings_title),
+                    subtitle = stringResource(R.string.form_drafts_settings_summary),
+                    checked = isFormDraftSavingEnabled,
+                    onCheckedChange = onFormDraftSavingEnabledChanged,
+                    modifier = Modifier.testTag(ProtectionSettingsTestTags.FormDrafts),
                 )
                 Spacer(Modifier.height(16.dp))
                 Surface(

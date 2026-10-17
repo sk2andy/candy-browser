@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="inline_translation_title">Ausgewählten Text übersetzen</string>
+    <string name="inline_translation_local_description">Übersetzung auf diesem Gerät. Wähle Textsprache und Zielsprache. Tippe auf die übersetzte Stelle, um zum Original zu wechseln.</string>
+    <string name="inline_translation_source">Textsprache</string>
+    <string name="inline_translation_target">Übersetzen nach</string>
+    <string name="inline_translation_choose_language">Sprache wählen</string>
+    <string name="inline_translation_unavailable">Der Übersetzungsdienst dieses Geräts bietet kein heruntergeladenes Sprachpaar an.</string>
+    <string name="inline_translation_failed">Diese Auswahl konnte nicht direkt übersetzt werden. Die Seite hat sich möglicherweise geändert, der Text kommt mehrfach vor oder der Übersetzungsdienst ist nicht verfügbar.</string>
+    <string name="inline_translation_manage_languages">Android-Übersetzungssprachen verwalten</string>
+    <string name="inline_translation_apply">Hier übersetzen</string>
+    <string name="inline_translation_fallback_description">Alternativ kannst du die Seitenadresse an %1$s senden, um die ganze Seite zu übersetzen.</string>
+    <string name="inline_translation_fallback">Seite mit %1$s übersetzen</string>
+    <string name="inline_translation_toggle">Zwischen Original und Übersetzung wechseln</string>
+</resources>

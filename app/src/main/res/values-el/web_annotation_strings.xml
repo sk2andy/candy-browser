@@ -1,0 +1,14 @@
+<resources>
+    <string name="web_annotation_mark">Επισήμανση + σημείωση</string>
+    <string name="web_annotation_translate">Μετάφραση στη σελίδα</string>
+    <string name="web_annotation_title">Επισημάνσεις σελίδας</string>
+    <string name="web_annotation_note">Σημείωση (προαιρετική)</string>
+    <string name="web_annotation_save">Αποθήκευση</string>
+    <string name="web_annotation_cancel">Ακύρωση</string>
+    <string name="web_annotation_delete">Διαγραφή</string>
+    <string name="web_annotation_empty">Δεν υπάρχουν αποθηκευμένες επισημάνσεις σε αυτή τη σελίδα. Επιλέξτε κείμενο για να προσθέσετε μία.</string>
+    <string name="web_annotation_saved_quote">Αποθηκευμένο απόσπασμα — διατηρείται ακόμη κι αν αλλάξει η σελίδα.</string>
+    <string name="web_annotation_failed">Δεν ήταν δυνατή η αποθήκευση της επισήμανσης.</string>
+    <string name="web_annotation_private">Οι επισημάνσεις δεν είναι διαθέσιμες σε ιδιωτικές καρτέλες.</string>
+    <string name="web_annotation_close">Κλείσιμο</string>
+</resources>
