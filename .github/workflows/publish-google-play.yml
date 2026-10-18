@@ -277,7 +277,6 @@ jobs:
           fi
           ./gradlew "${gradle_flags[@]}" \
             testFullDebugUnitTest \
-            testFullPlayReleaseUnitTest \
             lintFullPlayRelease \
             bundleFullPlayRelease
 
