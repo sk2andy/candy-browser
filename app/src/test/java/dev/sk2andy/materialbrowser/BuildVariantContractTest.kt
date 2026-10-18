@@ -27,9 +27,12 @@ class BuildVariantContractTest {
     }
 
     @Test
-    fun `nightly updates match build type`() {
+    fun `nightly updates match distribution channel`() {
+        val expected = BuildConfig.BUILD_TYPE in listOf("nightly", "userCaNightly") ||
+            (BuildConfig.BUILD_TYPE == "playRelease" && BuildConfig.VERSION_NAME.contains("-nightly."))
+
         assertEquals(
-            BuildConfig.BUILD_TYPE in listOf("nightly", "userCaNightly"),
+            expected,
             BuildConfig.NIGHTLY_BUILD,
         )
     }
