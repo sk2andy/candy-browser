@@ -51,7 +51,6 @@ import dev.sk2andy.materialbrowser.data.HistoryRecordingMode
 import dev.sk2andy.materialbrowser.browser.LinkPeekAction
 import dev.sk2andy.materialbrowser.browser.LinkPeekActionLayout
 import dev.sk2andy.materialbrowser.data.TabOverviewMode
-import dev.sk2andy.materialbrowser.shared.ui.settings.SettingsRouter
 import dev.sk2andy.materialbrowser.shared.topping.ToppingFrameScope
 import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuEntry
 import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuLayout
@@ -283,18 +282,10 @@ internal fun SettingsScreen(
             isFrostedSurface = appearanceSettings.surfaceStyle == BrowserSurfaceStyle.Frosted,
         ),
     )
-    val backState = rememberNativeScreenBackState()
-    NativeScreenBackHandler(
-        state = backState,
-        enabled = destination != SettingsDestination.Home,
-        onBack = { onDestinationChanged(SettingsBackRules.parentDestination(destination)) },
-    )
-    SettingsRouter(
+    SettingsBackRouter(
         destination = destination,
-        modifier = modifier.predictiveBackSurface(
-            progress = backState.progress.value,
-            swipeEdgeSign = backState.swipeEdgeSign,
-        ),
+        onDestinationChanged = onDestinationChanged,
+        modifier = modifier,
     ) { currentDestination ->
         CompositionLocalProvider(
             LocalSettingsSearchTarget provides searchTarget?.title.takeIf {

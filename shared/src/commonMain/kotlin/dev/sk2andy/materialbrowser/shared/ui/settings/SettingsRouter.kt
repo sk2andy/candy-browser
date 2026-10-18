@@ -7,11 +7,14 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.zIndex
 import dev.sk2andy.materialbrowser.shared.ui.LocalCandyBrowserChromeEffects
 import dev.sk2andy.materialbrowser.ui.SettingsDestination
@@ -20,6 +23,8 @@ import dev.sk2andy.materialbrowser.ui.SettingsDestination
 fun SettingsRouter(
     destination: SettingsDestination,
     modifier: Modifier = Modifier,
+    backPreviewDestination: SettingsDestination? = null,
+    destinationModifier: Modifier = Modifier,
     content: @Composable (SettingsDestination) -> Unit,
 ) {
     val reduceMotion = LocalCandyBrowserChromeEffects.current.reducesMotion()
@@ -29,36 +34,45 @@ fun SettingsRouter(
             .zIndex(20f),
         color = MaterialTheme.colorScheme.surface,
     ) {
-        AnimatedContent(
-            targetState = destination,
-            modifier = Modifier.fillMaxSize(),
-            transitionSpec = {
-                if (reduceMotion) {
-                    fadeIn(tween(0)) togetherWith fadeOut(tween(0))
-                } else if (
-                    targetState == SettingsDestination.Home ||
-                    initialState == SettingsDestination.LinkRouting &&
-                    targetState == SettingsDestination.Browser ||
-                    initialState == SettingsDestination.ToppingCatalog &&
-                    targetState == SettingsDestination.Userscripts ||
-                    initialState == SettingsDestination.AddressBarLongPressActions &&
-                    targetState == SettingsDestination.TabsAndGestures ||
-                    initialState == SettingsDestination.AddressBarActions &&
-                    targetState == SettingsDestination.TabsAndGestures ||
-                    initialState == SettingsDestination.MenuActions &&
-                    targetState == SettingsDestination.TabsAndGestures ||
-                    initialState == SettingsDestination.LinkPeekActions &&
-                    targetState == SettingsDestination.TabsAndGestures
-                ) {
-                    (slideInHorizontally { width -> -width / 3 } + fadeIn()) togetherWith
-                        (slideOutHorizontally { width -> width } + fadeOut())
-                } else {
-                    (slideInHorizontally { width -> width } + fadeIn()) togetherWith
-                        (slideOutHorizontally { width -> -width / 3 } + fadeOut())
+        Box(Modifier.fillMaxSize()) {
+            if (backPreviewDestination != null) {
+                Box(Modifier.fillMaxSize().clearAndSetSemantics {}) {
+                    content(backPreviewDestination)
                 }
-            },
-            label = "Settings destination",
-            content = { currentDestination -> content(currentDestination) },
-        )
+            }
+            AnimatedContent(
+                targetState = destination,
+                modifier = destinationModifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.surface),
+                transitionSpec = {
+                    if (reduceMotion) {
+                        fadeIn(tween(0)) togetherWith fadeOut(tween(0))
+                    } else if (
+                        targetState == SettingsDestination.Home ||
+                        initialState == SettingsDestination.LinkRouting &&
+                        targetState == SettingsDestination.Browser ||
+                        initialState == SettingsDestination.ToppingCatalog &&
+                        targetState == SettingsDestination.Userscripts ||
+                        initialState == SettingsDestination.AddressBarLongPressActions &&
+                        targetState == SettingsDestination.TabsAndGestures ||
+                        initialState == SettingsDestination.AddressBarActions &&
+                        targetState == SettingsDestination.TabsAndGestures ||
+                        initialState == SettingsDestination.MenuActions &&
+                        targetState == SettingsDestination.TabsAndGestures ||
+                        initialState == SettingsDestination.LinkPeekActions &&
+                        targetState == SettingsDestination.TabsAndGestures
+                    ) {
+                        (slideInHorizontally { width -> -width / 3 } + fadeIn()) togetherWith
+                            (slideOutHorizontally { width -> width } + fadeOut())
+                    } else {
+                        (slideInHorizontally { width -> width } + fadeIn()) togetherWith
+                            (slideOutHorizontally { width -> -width / 3 } + fadeOut())
+                    }
+                },
+                label = "Settings destination",
+                content = { currentDestination -> content(currentDestination) },
+            )
+        }
     }
 }
