@@ -128,7 +128,7 @@ Snoozed tabs use a rising Zzz glyph so they remain distinct from the history clo
 | --- | --- | --- |
 | State and rules | [`FindInPage.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/browser/FindInPage.kt) | Query changes reset result state; match ordinals and counts are normalized without Android dependencies. |
 | Android Gecko session | `browser/BrowserController.kt`, `browser/gecko/GeckoViewRuntimeHandle.kt` | Gecko's native finder is bound to the selected tab, exact session and navigation generation. Query, next/previous and dismissal all remain inside that session. |
-| UI | [`FindInPageBar.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/FindInPageBar.kt), `ui/BrowserMainMenu.kt` | The main menu and configurable action open the same focused search bar. It reports the current/total match, disables navigation until matches exist and closes through Back or its close action. Find mode forwards IME insets to the browser viewport so native match navigation scrolls results above the keyboard. |
+| UI | [`FindInPageBar.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/ui/FindInPageBar.kt), `ui/BrowserMainMenu.kt` | The main menu and configurable action open the same focused search bar. It reports the current/total match, disables navigation until matches exist and closes through Back or its close action. Find mode forwards IME insets to the browser viewport so native match navigation scrolls results above the keyboard. The bar enters with a short fade and 8dp slide; counting and the match count crossfade without replacing the input or restarting focus. Only the current status is exposed to accessibility. Motion follows the app animation setting; actions and dismissal remain immediate. |
 
 ## Gestures and actions
 

@@ -2,8 +2,10 @@ package dev.sk2andy.materialbrowser.ui
 
 import android.graphics.Bitmap
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
@@ -45,6 +47,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -55,6 +58,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.MotionDurationScale
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
@@ -79,6 +83,8 @@ import dev.sk2andy.materialbrowser.data.FavoriteFolderIcon
 import dev.sk2andy.materialbrowser.data.FavoriteLibrary
 import dev.sk2andy.materialbrowser.data.FavoriteLibraryEntry
 import dev.sk2andy.materialbrowser.data.FavoriteMutation
+import dev.sk2andy.materialbrowser.ui.theme.LocalCandyMotionScheme
+import kotlin.math.abs
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
@@ -117,6 +123,29 @@ internal fun FavoritesScreen(
     }
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
+    val motion = LocalCandyMotionScheme.current
+    val motionDurationScale = coroutineScope.coroutineContext[MotionDurationScale]
+    val folderEntrance = remember { Animatable(0f) }
+    var folderEntranceDirection by remember { mutableFloatStateOf(0f) }
+    var presentedFolderId by remember { mutableStateOf(parentId) }
+    LaunchedEffect(parentId) {
+        if (presentedFolderId == parentId) return@LaunchedEffect
+        presentedFolderId = parentId
+        val direction = folderEntranceDirection
+        folderEntranceDirection = 0f
+        if (motionDurationScale?.scaleFactor == 0f) {
+            folderEntrance.snapTo(0f)
+        } else {
+            folderEntrance.snapTo(direction)
+            folderEntrance.animateTo(
+                targetValue = 0f,
+                animationSpec = tween(
+                    durationMillis = motion.addressBarActionExpandMillis,
+                    easing = motion.addressBarFadeInEasing,
+                ),
+            )
+        }
+    }
     var snackbarJob by remember { mutableStateOf<Job?>(null) }
     var renameTarget by remember { mutableStateOf<FavoriteLibraryEntry?>(null) }
     var creatingFolder by rememberSaveable { mutableStateOf(false) }
@@ -126,6 +155,7 @@ internal fun FavoritesScreen(
     val undoLabel = stringResource(R.string.action_undo)
     val navigateBack = {
         if (currentFolder != null) {
+            folderEntranceDirection = -1f
             currentFolderId = currentFolder.parentFolderId
             query = ""
         } else onBack()
@@ -187,6 +217,11 @@ internal fun FavoritesScreen(
         LazyColumn(
             state = listState,
             modifier = Modifier.fillMaxSize().padding(contentPadding).navigationBarsPadding()
+                .graphicsLayer {
+                    val progress = folderEntrance.value
+                    translationX = 24.dp.toPx() * progress
+                    alpha = 1f - abs(progress) * 0.2f
+                }
                 .testTag(FavoritesScreenTestTags.List),
         ) {
             item(key = "search") {
@@ -269,7 +304,11 @@ internal fun FavoritesScreen(
                     onOpen = {
                         when (entry) {
                             is FavoriteEntry -> onOpenFavorite(entry)
-                            is FavoriteFolder -> { currentFolderId = entry.id; query = "" }
+                            is FavoriteFolder -> {
+                                folderEntranceDirection = if (entry.id != parentId) 1f else 0f
+                                currentFolderId = entry.id
+                                query = ""
+                            }
                         }
                     },
                     onDelete = {

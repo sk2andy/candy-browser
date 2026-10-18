@@ -5,8 +5,11 @@ import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -15,23 +18,29 @@ import androidx.compose.ui.test.performTextInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import dev.sk2andy.materialbrowser.R
+import dev.sk2andy.materialbrowser.data.AppearanceSettings
 import dev.sk2andy.materialbrowser.data.BrowsingFavoritesRules
 import dev.sk2andy.materialbrowser.data.FavoriteEntry
 import dev.sk2andy.materialbrowser.data.FavoriteFolder
 import dev.sk2andy.materialbrowser.data.FavoriteLibrary
 import dev.sk2andy.materialbrowser.data.FavoriteMutation
 import dev.sk2andy.materialbrowser.data.FavoriteUndoRules
+import dev.sk2andy.materialbrowser.ui.theme.CandyMotionDurationScale
 import dev.sk2andy.materialbrowser.ui.theme.MaterialBrowserTheme
 import java.util.concurrent.atomic.AtomicReference
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
+@OptIn(ExperimentalTestApi::class)
 @RunWith(AndroidJUnit4::class)
 class FavoritesScreenInstrumentedTest {
+    private val motionDurationScale = CandyMotionDurationScale(animationsEnabled = true)
+
     @get:Rule
-    val composeRule = createComposeRule()
+    val composeRule = createComposeRule(effectContext = motionDurationScale)
 
     @Test
     fun favoriteMenuRefreshesOnlySelectedIcon() {
@@ -217,6 +226,73 @@ class FavoritesScreenInstrumentedTest {
         composeRule.onNodeWithTag("favorites_destination:parent").assertDoesNotExist()
         composeRule.onNodeWithTag("favorites_destination:child").assertDoesNotExist()
         composeRule.onNodeWithTag("favorites_destination:sibling").assertIsDisplayed()
+    }
+
+    @Test
+    fun folderEntranceReversesOnBackAndKeepsOnlyCurrentActions() {
+        verifyFolderEntrance(animationsEnabled = true)
+    }
+
+    @Test
+    fun disabledMotionNavigatesFoldersImmediately() {
+        verifyFolderEntrance(animationsEnabled = false)
+    }
+
+    private fun verifyFolderEntrance(animationsEnabled: Boolean) {
+        val parent = FavoriteFolder("parent", "Parent")
+        val child = FavoriteFolder("child", "Child", parentFolderId = parent.id)
+        val nested = favorite("https://nested.example/", "Nested").copy(parentFolderId = child.id)
+        val source = FavoriteLibrary(listOf(parent, child, nested))
+        val opened = AtomicReference<FavoriteEntry?>()
+        composeRule.setContent {
+            MaterialBrowserTheme(settings = AppearanceSettings(animationsEnabled = animationsEnabled)) {
+                FavoritesScreen(
+                    favorites = source.favorites,
+                    library = source,
+                    onDeleteFavorite = { _, done -> done(null) },
+                    onUndoDelete = {},
+                    onOpenFavorite = opened::set,
+                    onBack = {},
+                )
+            }
+        }
+        composeRule.waitForIdle()
+        val initialLeft = composeRule.onNodeWithTag(FavoritesScreenTestTags.List)
+            .fetchSemanticsNode().positionInRoot.x
+        composeRule.mainClock.autoAdvance = false
+        composeRule.onNodeWithTag("favorites_folder:parent").performClick()
+        composeRule.mainClock.advanceTimeBy(32)
+        val enteringLeft = composeRule.onNodeWithTag(FavoritesScreenTestTags.List)
+            .fetchSemanticsNode().positionInRoot.x
+        if (animationsEnabled) assertTrue(enteringLeft > initialLeft)
+        else assertEquals(initialLeft, enteringLeft, 0.1f)
+        composeRule.onAllNodesWithTag(FavoritesScreenTestTags.List).assertCountEquals(1)
+        composeRule.onNodeWithTag("favorites_folder:parent").assertDoesNotExist()
+
+        // Navigation stays usable while the previous entrance is still running.
+        composeRule.onNodeWithTag("favorites_folder:child").performClick()
+        composeRule.mainClock.advanceTimeBy(32)
+        composeRule.onNodeWithTag(FavoritesScreenTestTags.favorite(nested.url)).performClick()
+        assertEquals(nested, opened.get())
+        composeRule.onNodeWithTag("favorites_parent").performClick()
+        composeRule.mainClock.advanceTimeBy(32)
+        val returningLeft = composeRule.onNodeWithTag(FavoritesScreenTestTags.List)
+            .fetchSemanticsNode().positionInRoot.x
+        if (animationsEnabled) assertTrue(returningLeft < initialLeft)
+        else assertEquals(initialLeft, returningLeft, 0.1f)
+        composeRule.onNodeWithTag(FavoritesScreenTestTags.favorite(nested.url)).assertDoesNotExist()
+        composeRule.onNodeWithTag("favorites_folder:child").assertIsDisplayed()
+
+        composeRule.mainClock.advanceTimeBy(300)
+        composeRule.onNodeWithTag(FavoritesScreenTestTags.SearchField).performTextInput("nested")
+        composeRule.mainClock.advanceTimeBy(32)
+        composeRule.onNodeWithTag(FavoritesScreenTestTags.favorite(nested.url)).assertIsDisplayed()
+        assertEquals(
+            initialLeft,
+            composeRule.onNodeWithTag(FavoritesScreenTestTags.List).fetchSemanticsNode().positionInRoot.x,
+            0.1f,
+        )
+        composeRule.mainClock.autoAdvance = true
     }
 
     private fun favorite(url: String, title: String) = FavoriteEntry(

@@ -1,12 +1,19 @@
 package dev.sk2andy.materialbrowser.ui
 
+import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
@@ -25,6 +32,7 @@ import dev.sk2andy.materialbrowser.shared.ui.ReaderStudioTestTags as SharedReade
 
 internal typealias ReaderStudioTestTags = SharedReaderStudioTestTags
 
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 internal fun ReaderStudioScreen(
     result: ReaderExtractionResult?,
@@ -39,11 +47,19 @@ internal fun ReaderStudioScreen(
 ) {
     val context = LocalContext.current
     val backState = rememberNativeScreenBackState()
+    val entryProgress = remember(sourceUrl, isPrivate) { Animatable(0f) }
+    val entrySpec = MaterialTheme.motionScheme.fastEffectsSpec<Float>()
+    LaunchedEffect(entryProgress) {
+        entryProgress.animateTo(1f, entrySpec)
+    }
     Box(
         modifier = Modifier.predictiveBackSurface(
             progress = backState.progress.value,
             swipeEdgeSign = backState.swipeEdgeSign,
-        ),
+        ).graphicsLayer {
+            alpha = entryProgress.value
+            translationY = 8.dp.toPx() * (1f - entryProgress.value)
+        },
     ) {
         SharedReaderStudioScreen(
             result = result,
