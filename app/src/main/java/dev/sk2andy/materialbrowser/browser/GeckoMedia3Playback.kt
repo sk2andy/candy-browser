@@ -9,6 +9,7 @@ import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player
 import androidx.media3.common.SimpleBasePlayer
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.common.util.Util
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import java.util.ArrayDeque
@@ -461,7 +462,7 @@ internal open class GeckoMedia3Player(
             .setMediaId(MEDIA_ITEM_ID)
             .setMediaMetadata(metadata)
             .build()
-        val durationUs = durationMillis?.times(C.MICROS_PER_SECOND) ?: C.TIME_UNSET
+        val durationUs = durationMillis?.let(Util::msToUs) ?: C.TIME_UNSET
         val period = PeriodData.Builder(snapshot.owner)
             .setDurationUs(durationUs)
             .build()

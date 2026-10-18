@@ -1,7 +1,9 @@
 package dev.sk2andy.materialbrowser.browser
 
 import android.os.Looper
+import androidx.media3.common.C
 import androidx.media3.common.Player
+import androidx.media3.common.Timeline
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.Assert.assertEquals
@@ -14,6 +16,38 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class GeckoMedia3PlayerInstrumentedTest {
     private val instrumentation = InstrumentationRegistry.getInstrumentation()
+
+    @Test
+    fun media3TimelineKeepsSeventySecondDurationAndHalfwayPositionInMatchingUnits() {
+        instrumentation.runOnMainSync {
+            val player = TestGeckoMedia3Player(Looper.getMainLooper()) { _, _ -> }
+            try {
+                val publication = publication(owner(), durationMillis = 70_000L)
+                player.publish(
+                    publication.copy(
+                        snapshot = publication.snapshot.copy(
+                            positionMillis = 35_000L,
+                            isPlaying = false,
+                        ),
+                    ),
+                )
+
+                assertEquals(70_000L, player.duration)
+                assertEquals(35_000L, player.currentPosition)
+                assertEquals(
+                    70_000_000L,
+                    player.currentTimeline.getWindow(0, Timeline.Window()).durationUs,
+                )
+                assertEquals(
+                    70_000_000L,
+                    player.currentTimeline.getPeriod(0, Timeline.Period()).durationUs,
+                )
+                assertTrue(player.isCurrentMediaItemSeekable)
+            } finally {
+                player.release()
+            }
+        }
+    }
 
     @Test
     fun media3PlayerPublishesExactCommandsAndForwardsGeckoTransportCommands() {
@@ -102,6 +136,15 @@ class GeckoMedia3PlayerInstrumentedTest {
                 )
                 assertFalse(
                     player.availableCommands.contains(Player.COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM),
+                )
+                assertEquals(C.TIME_UNSET, player.duration)
+                assertEquals(
+                    C.TIME_UNSET,
+                    player.currentTimeline.getWindow(0, Timeline.Window()).durationUs,
+                )
+                assertEquals(
+                    C.TIME_UNSET,
+                    player.currentTimeline.getPeriod(0, Timeline.Period()).durationUs,
                 )
                 player.requestSeek(
                     mediaItemIndex = 0,

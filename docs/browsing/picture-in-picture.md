@@ -324,6 +324,9 @@ navigation identity remains live. PiP therefore changes ownership precedence, no
 renderer ownership.
 
 System controls advertise only play/pause and stop, plus seek when finite duration is available.
+Engine snapshots keep position and duration in milliseconds. The Media3 adapter converts duration
+once to microseconds for both timeline windows and periods, while the player position remains in
+milliseconds. Unknown duration stays unset and does not advertise seeking.
 Commands return through the exact captured owner and are rejected after navigation, session
 replacement, close, media end or any privacy boundary. Private tabs, locked profiles and app-data
 transfer publish no system metadata and reject commands. Task removal, teardown and service
