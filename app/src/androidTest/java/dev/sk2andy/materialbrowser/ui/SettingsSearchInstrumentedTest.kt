@@ -104,7 +104,7 @@ class SettingsSearchInstrumentedTest {
         assertQuery("")
         result.assertDoesNotExist()
         composeRule.onNodeWithText(context.getString(R.string.settings_section_browser))
-            .performScrollTo().assertIsDisplayed()
+            .assertIsDisplayed()
     }
 
     @Test
@@ -122,7 +122,7 @@ class SettingsSearchInstrumentedTest {
         assertQuery("")
         composeRule.onNodeWithTag(SettingsSearchTestTags.Empty).assertDoesNotExist()
         composeRule.onNodeWithText(context.getString(R.string.settings_section_browser))
-            .performScrollTo().assertIsDisplayed()
+            .assertIsDisplayed()
 
         device.pressBack()
         advanceRoute()
@@ -206,7 +206,7 @@ class SettingsSearchInstrumentedTest {
         composeRule.onNodeWithContentDescription(context.getString(R.string.cd_more_options)).performClick()
         composeRule.mainClock.autoAdvance = false
         composeRule.onNodeWithTag(BrowserMainMenuTestTags.Settings)
-            .performScrollTo().performSemanticsAction(SemanticsActions.OnClick) { it() }
+            .assertIsDisplayed().performSemanticsAction(SemanticsActions.OnClick) { it() }
         advanceRoute()
         val title = hasText(context.getString(R.string.settings_title)) and !hasClickAction()
         composeRule.waitUntil(timeoutMillis = 10_000L) { composeRule.onNode(title).isDisplayed() }

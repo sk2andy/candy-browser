@@ -65,7 +65,7 @@ class PlayerSettingsNavigationInstrumentedTest {
         composeRule.onNodeWithContentDescription(context.getString(R.string.cd_more_options)).performClick()
         composeRule.mainClock.autoAdvance = false
         composeRule.onNodeWithTag(BrowserMainMenuTestTags.Settings)
-            .performScrollTo().performSemanticsAction(SemanticsActions.OnClick) { it() }
+            .assertIsDisplayed().performSemanticsAction(SemanticsActions.OnClick) { it() }
         advanceRoute()
         openDestination(R.string.settings_player_title)
 

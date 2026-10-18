@@ -25,20 +25,21 @@ gesture cancellation and single-step commits through nested settings destination
 | State | Observable selection and update wiring | `browser/BrowserController.kt` |
 | Theme | Platform design language, color schemes, motion, Android night resources, root/system-bar wiring, website color-scheme and font-size preferences, surface treatment, shape tokens and AMOLED surfaces | `MainActivity.kt`, `AppearanceNightMode.kt`, `browser/BrowserController.kt`, `browser/gecko/GeckoRuntimeOwner.kt`, `ui/theme/CandyDesignSystem.kt`, `ui/theme/MaterialBrowserTheme.kt` |
 | Settings routing | Shared destination model, transition, home, controls and core pages; platform resources, icons, effects and persisted state stay adapters | `shared/src/commonMain/.../SettingsDestination.kt`, `shared/src/commonMain/.../ui/settings`, Android `ui/SettingsScreen.kt` adapters |
+| Android settings organization | Settings Home separates Browsing, Tabs, Gestures, Theme & interface, Extensions, Privacy & data, and About. Tabs and Gestures have distinct subpages; App icon and History & browser data have their own routes. Search catalog entries target the same pages. Related options use connected rounded groups, and dependent rows remain visible but disabled while their parent choice is inactive. | `ui/SettingsHomePage.kt`, `ui/SettingsSearchCatalog.kt`, `ui/SettingsScreen.kt`, `shared/ui/settings/SettingsComponents.kt` |
 | Android settings search | Memory-only search on Settings Home matches localized option titles, descriptions and destination context. Capability-filtered results open existing routes and highlight/scroll common controls into view. | `ui/SettingsSearchRules.kt`, `ui/SettingsSearchCatalog.kt`, `ui/SettingsSearchField.kt`, shared `SettingsSearchTarget.kt` |
 | Android app language | Settings → Browser → App language uses native language names and a Follow device language option. Android's `LocaleManager` owns persistence and synchronization with system app-language settings. The supported list comes from `res/xml/locales_config.xml`; all supported languages and localization checks are listed in [`app-languages.md`](app-languages.md). | `data/AppLanguagePreferences.kt`, `ui/AppLanguageSettings.kt`, `ui/BrowserSettingsOverlay.kt`, `res/values-*/strings.xml` |
-| Android app icon | Settings → Appearance → App icon switches one launcher alias at a time. Android's enabled component state persists the choice; MainActivity keeps external link and share filters. The artwork is recomposed from the user supplied Candy Browser icon overview for a centered, circular launcher mask. | `data/AppIconSelection.kt`, `ui/AppIconSettings.kt`, `AndroidManifest.xml`, `res/drawable-nodpi/ic_launcher_*_art.png` |
+| Android app icon | Settings → App icon opens its own page and switches one launcher alias at a time. Android's enabled component state persists the choice; MainActivity keeps external link and share filters. The artwork is recomposed from the user supplied Candy Browser icon overview for a centered, circular launcher mask. | `data/AppIconSelection.kt`, `ui/AppIconSettings.kt`, `AndroidManifest.xml`, `res/drawable-nodpi/ic_launcher_*_art.png` |
 | Language changes | MainActivity handles locale and layout-direction configuration updates without recreation, retaining open regular/private tabs and the current settings page. Localized Android resources refresh through the existing configuration dispatch; device-language changes apply when no app override is selected. | `MainActivity.kt`, `AndroidManifest.xml`, `AppLanguageSettingsInstrumentedTest`, `AppLanguagePreferencesInstrumentedTest` |
 | Player settings | Direct Settings → Player page for video autoplay, Candy Player mode and independent seek sliders; header and Android Back return to Settings Home. Browser no longer duplicates these controls; shared/iOS keeps the unavailable route disabled. | `ui/PlayerSettingsPage.kt`, `ui/InlineMediaPlayerSeekSlider.kt`, `SettingsDestination.Player`, `PlayerSettingsPageInstrumentedTest`, `PlayerSettingsNavigationInstrumentedTest` |
 | Appearance UI | Shared production destination and controls; Android supplies live persisted state, iOS shows them disabled until it owns equivalent state | `shared/src/commonMain/.../ui/settings/AppearanceSettingsPage.kt`, Android `ui/AppearanceSettingsPage.kt` adapter |
-| Browser menu presentation | Android **Tabs & gestures → Menu actions** chooses Floating menu or Bottom sheet and Scroll or two Swipe pages; five lower-toolbar positions accept all supported individual tab-menu actions or empty slots; global stable preferences retain placement and slot order. | `BrowserMenuLayout`, `BrowserMenuSettingsPage`, `BrowserSessionStore` |
-| Address-bar actions | Persisted ordered action layout plus drag-editor navigation under Tabs & gestures | `data/AddressBarActionLayout.kt`, `ui/AddressBarActionEditor.kt`, `BrowserSessionStore` |
-| Address-pill swipe mode | Persisted opt-in under Tabs & gestures; vertical swipes on the page expand downward and compact upward, including pages without scrolling. Disabled mode retains page-scroll behavior. | `BrowserSessionStore`, `BrowserController`, `ui/TabSettingsPage`, `ui/BrowserViewport` |
+| Browser menu presentation | Android **Gestures → Menu actions** chooses Floating menu or Bottom sheet and Scroll or two Swipe pages; five lower-toolbar positions accept all supported individual tab-menu actions or empty slots; global stable preferences retain placement and slot order. | `BrowserMenuLayout`, `BrowserMenuSettingsPage`, `BrowserSessionStore` |
+| Address-bar actions | Persisted ordered action layout plus drag-editor navigation under Gestures | `data/AddressBarActionLayout.kt`, `ui/AddressBarActionEditor.kt`, `BrowserSessionStore` |
+| Address-pill swipe mode | Persisted opt-in under Gestures; vertical swipes on the page expand downward and compact upward, including pages without scrolling. Disabled mode retains page-scroll behavior. | `BrowserSessionStore`, `BrowserController`, `ui/TabSettingsPage`, `ui/BrowserViewport` |
 | Page scroll bar | Persisted opt-in, engine-neutral scroll metrics and draggable auto-hide overlay | `BrowserSessionStore`, browser-engine session ports, `ui/BrowserScrollBar` |
 | Developer options | Persisted hidden unlock, bounded safe-area fallback tuning, insecure-HTTP autofill override, process-local input diagnostics, privacy-safe runtime report, [opt-in app logging and export](app-logging.md), and presentation replay actions | `DeveloperSettings`, `BrowserSessionStore`, `AppLogging`, `BrowserInputDiagnostics`, `DeveloperDiagnosticsReport`, `BrowserController`, `MainActivity`, `ui/DeveloperOptionsSettingsPage` |
 | System bars | Status/navigation icon contrast for forced light and dark modes | `AppearanceSystemBars.kt` |
 | Toppings | Local editor/import plus explicit GitHub catalog discovery; browser runtime and remote state stay controller-owned | `ui/UserscriptManagementScreen.kt`, `ui/ToppingCatalogScreen.kt` |
-| App data archive | SAF launch and confirmation stay in the activity and Protection page; bounded ZIP policy and cold-process restore stay in focused data/transfer owners | `MainActivity.kt`, `ui/ProtectionSettingsPage.kt`, `data/AppDataArchive*`, `AppDataTransferActivity.kt` |
+| App data archive | SAF launch and confirmation stay in the activity and History & browser data page; bounded ZIP policy and cold-process restore stay in focused data/transfer owners | `MainActivity.kt`, `ui/ProtectionSettingsPage.kt`, `data/AppDataArchive*`, `AppDataTransferActivity.kt` |
 | Android backup | Encrypted cloud and device-transfer inclusion policy | `res/xml/data_extraction_rules.xml`, [`app-data-archive.md`](app-data-archive.md#android-auto-backup) |
 | Candy Recall | Disabled-by-default local readable-page indexing and clear-on-disable behavior | `BrowserSessionStore`, `RecallRepository`, [`recall.md`](recall.md) |
 
@@ -78,18 +79,14 @@ gesture cancellation and single-step commits through nested settings destination
 
 ## Cross-platform settings migration
 
-Android and iOS compile the same settings destination model, transition, page shell, controls, home
-ordering and core page renderers from `shared/src/commonMain`. The shared settings home groups
-destinations by task: Browsing, Personalization, Privacy & data, and More information. Android's
-Browser page labels Browser setup, Startup, Favorites, Web pages, and Links & apps; Protection & data labels its
-privacy tools, protection controls, history, and app-data actions. These are navigation labels only;
-setting ownership and persistence do not change. Android resolves existing localized
-resources, drawable icons, frosted container color and persisted state through thin adapters. Appearance
-is fully shared; Tabs & Gestures shares overview-mode and dismiss-resistance controls; Browser shares the
-translation-provider control. iOS routes to those shared pages without SwiftUI replacements. Its existing
-tab-overview state and translation-provider choice are live and persisted; settings without equivalent
-iOS backend state stay visibly disabled. Other
-destination bodies remain pending.
+Settings destinations, page shells, controls and core renderers live in `shared/src/commonMain`.
+Android opts into distinct Tabs, Gestures, Extensions, App icon and History & browser data entries;
+shared-home callers keep the combined Tabs & gestures entry and their existing group defaults. Android's
+Browser page labels Browser setup, Startup, Favorites, Web pages, and Links & apps. These are navigation
+labels only; setting ownership, stored keys and values do not change. Android resolves localized
+resources, drawable icons, frosted container color and persisted state through adapters. The Android
+settings organization does not change the behavior or persistence of the shared appearance and tab
+settings.
 
 ### Surface semantics
 
@@ -265,12 +262,12 @@ Frosted exposes three persisted controls while selected:
 - Full-screen platform overlays launched from Settings preserve the Settings destination below
   them. They own predictive-back handling, so a system edge gesture dismisses only the overlay and
   returns to Settings instead of reaching the underlying browser/settings back target.
-- Candy Recall is an explicit opt-in under Protection & data. Its summary states that readable text
+- On Android, Candy Recall is an explicit opt-in under History & browser data. Its summary states that readable text
   from regular pages is stored locally for search and private tabs are never included. Turning it
   off clears stored Recall text; ordinary History remains governed by its own settings.
-- Tabs & gestures owns the expanded address-bar action editor. The former standalone tab-button
+- Gestures owns the expanded address-bar action editor. The former standalone tab-button
   visibility switch is intentionally absent because **Tabs** is now an ordinary configurable action.
-- Tabs & gestures owns the global long-press link action. Invalid stored values fall back to Link
+- Gestures owns the global long-press link action. Invalid stored values fall back to Link
   Peek. Regular and private tab targets distinguish foreground from background creation. Legacy
   stored choices retain regular-background and private-foreground behavior. Image-only long presses
   keep their content sheet, and private-open falls back to Link Peek when the active profile cannot
@@ -279,7 +276,7 @@ Frosted exposes three persisted controls while selected:
 - Link Peek right-swipe action persists independently of the long-press link choice. Its dropdown
   and localized search entry appear only when Link Peek is selected. Unknown stored action IDs
   fall back to background-tab open; left always closes the preview except during commit motion.
-- Tabs & gestures also owns the Link Peek action editor. It reuses the address-action editor's
+- Gestures also owns the Link Peek action editor. It reuses the address-action editor's
   breakaway, snap, settle, haptic and accessibility behavior. Its three configurable positions may
   hold unique actions or remain empty; dragging a toolbar action back to the palette clears that
   exact position. Only empty configurable positions advertise and accept drops; occupied actions

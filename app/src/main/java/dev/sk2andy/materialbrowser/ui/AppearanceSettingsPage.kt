@@ -112,6 +112,5 @@ internal fun AppearanceSettingsPage(
         onSettingsChanged = onSettingsChanged,
         onBack = onBack,
         forceDarkWebsitesAvailable = forceDarkWebsitesAvailable,
-        additionalAppearanceContent = { AppIconSettings() },
     )
 }

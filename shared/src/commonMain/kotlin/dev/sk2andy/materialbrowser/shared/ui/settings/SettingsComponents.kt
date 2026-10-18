@@ -6,6 +6,7 @@ import androidx.compose.animation.core.spring
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -41,6 +42,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
@@ -176,6 +178,7 @@ fun SettingsChoice(
     containerColor: Color,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
+    inPreferenceGroup: Boolean = false,
 ) {
     val effects = LocalCandyBrowserChromeEffects.current
     val chevronRotation by animateFloatAsState(
@@ -187,8 +190,12 @@ fun SettingsChoice(
         onClick = onClick,
         enabled = enabled,
         modifier = modifier.fillMaxWidth().settingsSearchTarget(title),
-        shape = MaterialTheme.shapes.large,
-        color = if (effects.usesGroupedSettings) MaterialTheme.colorScheme.surfaceContainer else containerColor,
+        shape = if (inPreferenceGroup) RectangleShape else MaterialTheme.shapes.large,
+        color = if (inPreferenceGroup) Color.Transparent else if (effects.usesGroupedSettings) {
+            MaterialTheme.colorScheme.surfaceContainer
+        } else {
+            containerColor
+        },
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 18.dp, vertical = 14.dp),
@@ -324,4 +331,28 @@ fun SettingsSwitch(
 @Composable
 fun SettingsPageSpacer() {
     Spacer(Modifier.height(12.dp))
+}
+
+@Composable
+fun SettingsPreferenceGroup(
+    containerColor: Color,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.extraLarge,
+        color = containerColor,
+    ) {
+        Column(content = content)
+    }
+}
+
+@Composable
+fun SettingsPreferenceDivider() {
+    Spacer(
+        Modifier.fillMaxWidth()
+            .padding(horizontal = 18.dp)
+            .height(0.5.dp)
+            .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.65f)),
+    )
 }

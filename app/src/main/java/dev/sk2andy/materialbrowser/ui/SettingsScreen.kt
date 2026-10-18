@@ -43,8 +43,6 @@ import dev.sk2andy.materialbrowser.data.AddressBarAction
 import dev.sk2andy.materialbrowser.data.AddressBarActionLayout
 import dev.sk2andy.materialbrowser.data.BrowserDownloadSettings
 import dev.sk2andy.materialbrowser.data.DeveloperSettings
-import dev.sk2andy.materialbrowser.data.DownloadManagerMode
-import dev.sk2andy.materialbrowser.data.BrowserSurfaceStyle
 import dev.sk2andy.materialbrowser.shared.ui.settings.LocalSettingsSearchTarget
 import dev.sk2andy.materialbrowser.data.InactiveTabLifetime
 import dev.sk2andy.materialbrowser.data.HistoryRecordingMode
@@ -258,13 +256,8 @@ internal fun SettingsScreen(
             isLinkPeekEnabled = linkLongPressAction == LinkLongPressAction.LinkPeek,
             searchSuggestionProvider = searchSuggestionProvider,
             hasAppLanguages = supportedAppLocales.isNotEmpty(),
-            hasUserScriptSupport = isUserScriptSupported,
             isGeckoEngine = browserEngineKind == AndroidBrowserEngineKind.GeckoView,
             hasBrowserEngineSelection = !BuildConfig.SYSTEM_WEBVIEW_ONLY,
-            supportsAiSearch = searchEngine.supportsAiSearch,
-            hasSearxngInstance = searchEngine == SearchEngine.SearXNG ||
-                searchSuggestionProvider == SearchSuggestionProvider.SearXNG,
-            hasSearxngSuggestionFallback = searchSuggestionProvider == SearchSuggestionProvider.SearXNG,
             isDnsOverHttpsSupported = isDnsOverHttpsSupported,
             isHttpsOnlySupported = isHttpsOnlySupported,
             isVideoAutoplayBlockingSupported = isVideoAutoplayBlockingSupported,
@@ -274,15 +267,6 @@ internal fun SettingsScreen(
             isHttpPasswordAutofillSupported = isHttpPasswordAutofillSupported,
             isGeckoLoggingSupported = isGeckoLoggingSupported,
             hasFirefoxExtensions = onOpenFirefoxExtensions != null,
-            isBuiltInDownloadManager = downloadSettings.managerMode == DownloadManagerMode.BuiltIn,
-            hasOneDmSessionSharing = when (downloadSettings.managerMode) {
-                DownloadManagerMode.BuiltIn -> false
-                DownloadManagerMode.AskEveryTime -> externalDownloadManagers.any(ExternalDownloadManagerApp::isOneDm)
-                DownloadManagerMode.External -> externalDownloadManagers.firstOrNull {
-                    it.id == downloadSettings.externalManagerId
-                }?.isOneDm == true
-            },
-            isFrostedSurface = appearanceSettings.surfaceStyle == BrowserSurfaceStyle.Frosted,
         ),
     )
     SettingsBackRouter(
@@ -333,7 +317,10 @@ internal fun SettingsScreen(
                     onBack = { onDestinationChanged(SettingsDestination.Home) },
                 )
 
-                SettingsDestination.TabsAndGestures -> TabsAndGesturesSettingsPage(
+                SettingsDestination.TabsAndGestures,
+                SettingsDestination.Tabs,
+                SettingsDestination.Gestures,
+                -> TabsAndGesturesSettingsPage(
                     inactiveTabLifetime = inactiveTabLifetime,
                     residentTabLimit = residentTabLimit,
                     tabOverviewMode = tabOverviewMode,
@@ -375,6 +362,11 @@ internal fun SettingsScreen(
                         onDestinationChanged(SettingsDestination.MenuActions)
                     },
                     onBack = { onDestinationChanged(SettingsDestination.Home) },
+                    section = when (currentDestination) {
+                        SettingsDestination.Tabs -> TabSettingsSection.Tabs
+                        SettingsDestination.Gestures -> TabSettingsSection.Gestures
+                        else -> TabSettingsSection.All
+                    },
                 )
 
                 SettingsDestination.AddressBarLongPressActions ->
@@ -382,7 +374,7 @@ internal fun SettingsScreen(
                         selectedAction = addressBarLongPressAction,
                         onActionSelected = onAddressBarLongPressActionChanged,
                         onBack = {
-                            onDestinationChanged(SettingsDestination.TabsAndGestures)
+                            onDestinationChanged(SettingsDestination.Gestures)
                         },
                     )
 
@@ -395,7 +387,7 @@ internal fun SettingsScreen(
                         tabCount = tabCount,
                         onLayoutChanged = onAddressBarActionLayoutChanged,
                         onBack = {
-                            onDestinationChanged(SettingsDestination.TabsAndGestures)
+                            onDestinationChanged(SettingsDestination.Gestures)
                         },
                         backLabel = stringResource(R.string.action_back),
                         title = stringResource(R.string.settings_address_bar_actions_title),
@@ -420,7 +412,7 @@ internal fun SettingsScreen(
                     onBottomSheetContentLayoutChanged = onBrowserMenuBottomSheetContentLayoutChanged,
                     onBottomSheetToolbarEntriesChanged = onBrowserMenuBottomSheetToolbarEntriesChanged,
                     onBack = {
-                        onDestinationChanged(SettingsDestination.TabsAndGestures)
+                        onDestinationChanged(SettingsDestination.Gestures)
                     },
                 )
 
@@ -432,7 +424,7 @@ internal fun SettingsScreen(
                         layout = linkPeekActionLayout,
                         onLayoutChanged = onLinkPeekActionLayoutChanged,
                         onBack = {
-                            onDestinationChanged(SettingsDestination.TabsAndGestures)
+                            onDestinationChanged(SettingsDestination.Gestures)
                         },
                         backLabel = stringResource(R.string.action_back),
                         title = stringResource(R.string.settings_link_peek_actions_title),
@@ -464,6 +456,13 @@ internal fun SettingsScreen(
                         browserEngineKind == AndroidBrowserEngineKind.SystemWebView,
                     browserEngineKind = browserEngineKind,
                 )
+
+                SettingsDestination.AppIcon -> SettingsPage(
+                    title = stringResource(R.string.settings_app_icon),
+                    onBack = { onDestinationChanged(SettingsDestination.Home) },
+                ) {
+                    AppIconSettings()
+                }
 
                 SettingsDestination.Browser -> BrowserSettingsPage(
                     appLanguageTag = appLanguageTag,
@@ -572,7 +571,9 @@ internal fun SettingsScreen(
                     onBack = { onDestinationChanged(SettingsDestination.Home) },
                 )
 
-                SettingsDestination.ProtectionAndData -> ProtectionAndDataSettingsPage(
+                SettingsDestination.ProtectionAndData,
+                SettingsDestination.HistoryAndData,
+                -> ProtectionAndDataSettingsPage(
                     blockerSettings = blockerSettings,
                     blockedCount = blockedCount,
                     browserEngineKind = browserEngineKind,
@@ -601,6 +602,13 @@ internal fun SettingsScreen(
                     onImportAppData = onImportAppData,
                     onClearData = onClearData,
                     onBack = { onDestinationChanged(SettingsDestination.Home) },
+                    section = when (currentDestination) {
+                        SettingsDestination.ProtectionAndData ->
+                            ProtectionSettingsSection.Protection
+                        SettingsDestination.HistoryAndData ->
+                            ProtectionSettingsSection.HistoryAndData
+                        else -> ProtectionSettingsSection.All
+                    },
                 )
 
                 SettingsDestination.DeveloperOptions -> DeveloperOptionsSettingsPage(

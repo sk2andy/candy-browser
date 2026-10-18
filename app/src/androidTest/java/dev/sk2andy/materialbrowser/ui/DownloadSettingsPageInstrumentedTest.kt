@@ -1,6 +1,7 @@
 package dev.sk2andy.materialbrowser.ui
 
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
@@ -43,7 +44,9 @@ class DownloadSettingsPageInstrumentedTest {
             onChanged = {},
         )
 
-        composeRule.onNodeWithTag(DownloadSettingsTestTags.Directory).assertDoesNotExist()
+        composeRule.onNodeWithTag(DownloadSettingsTestTags.Directory)
+            .assertIsDisplayed()
+            .assertIsNotEnabled()
     }
 
     @Test

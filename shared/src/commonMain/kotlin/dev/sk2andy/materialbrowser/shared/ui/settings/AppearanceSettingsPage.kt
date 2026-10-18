@@ -22,6 +22,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -301,6 +302,7 @@ fun AppearanceSettingsPage(
                 Text(strings.addressBarColorReset)
             }
             SettingsPageSpacer()
+            SettingsPreferenceGroup(containerColor = containerColor) {
             Box {
                 SettingsChoice(
                     title = strings.surfaceStyle,
@@ -310,6 +312,7 @@ fun AppearanceSettingsPage(
                     containerColor = containerColor,
                     modifier = Modifier.testTag(SharedAppearanceSettingsTestTags.SURFACE_STYLE),
                     enabled = enabled,
+                    inPreferenceGroup = true,
                 )
                 SettingsDropdown(
                     expanded = enabled && surfaceMenuExpanded,
@@ -329,61 +332,65 @@ fun AppearanceSettingsPage(
             }
             Text(
                 strings.surfaceStyleSummary,
-                modifier = Modifier.padding(start = 18.dp, top = 6.dp, end = 18.dp),
+                modifier = Modifier.padding(horizontal = 18.dp, vertical = 8.dp),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            if (settings.surfaceStyle == BrowserSurfaceStyle.Frosted) {
-                SettingsPageSpacer()
-                AppearanceSlider(
-                    title = strings.frostedTransparency,
-                    value = settings.frostedTransparencyPercent.toFloat(),
-                    valueRange = AppearanceSettings.MIN_FROSTED_TRANSPARENCY_PERCENT.toFloat()..
-                        AppearanceSettings.MAX_FROSTED_TRANSPARENCY_PERCENT.toFloat(),
-                    steps = 7,
-                    enabled = enabled,
-                    containerColor = containerColor,
-                    onValueChange = { value ->
-                        onSettingsChanged(settings.copy(frostedTransparencyPercent = value.roundToInt()))
-                    },
-                    testTag = SharedAppearanceSettingsTestTags.FROSTED_TRANSPARENCY,
-                )
-                SettingsPageSpacer()
-                AppearanceSlider(
-                    title = strings.frostedAddressBarTransparency,
-                    value = settings.frostedAddressBarTransparencyPercent.toFloat(),
-                    valueRange = AppearanceSettings.MIN_FROSTED_TRANSPARENCY_PERCENT.toFloat()..
-                        AppearanceSettings.MAX_FROSTED_TRANSPARENCY_PERCENT.toFloat(),
-                    steps = 7,
-                    enabled = enabled,
-                    containerColor = containerColor,
-                    onValueChange = { value ->
-                        onSettingsChanged(
-                            settings.copy(frostedAddressBarTransparencyPercent = value.roundToInt()),
-                        )
-                    },
-                    testTag = SharedAppearanceSettingsTestTags.FROSTED_ADDRESS_BAR_TRANSPARENCY,
-                )
-                SettingsPageSpacer()
-                AppearanceSlider(
-                    title = strings.frostedBlur,
-                    value = settings.frostedBlurPercent.toFloat(),
-                    valueRange = AppearanceSettings.MIN_FROSTED_BLUR_PERCENT.toFloat()..
-                        AppearanceSettings.MAX_FROSTED_BLUR_PERCENT.toFloat(),
-                    steps = 9,
-                    enabled = enabled,
-                    containerColor = containerColor,
-                    onValueChange = { value ->
-                        onSettingsChanged(settings.copy(frostedBlurPercent = value.roundToInt()))
-                    },
-                    testTag = SharedAppearanceSettingsTestTags.FROSTED_BLUR,
-                )
-                Text(
-                    strings.frostedBlurSummary,
-                    modifier = Modifier.padding(start = 18.dp, top = 6.dp, end = 18.dp),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+            SettingsPreferenceDivider()
+            AppearanceSlider(
+                title = strings.frostedTransparency,
+                value = settings.frostedTransparencyPercent.toFloat(),
+                valueRange = AppearanceSettings.MIN_FROSTED_TRANSPARENCY_PERCENT.toFloat()..
+                    AppearanceSettings.MAX_FROSTED_TRANSPARENCY_PERCENT.toFloat(),
+                steps = 7,
+                enabled = enabled && settings.surfaceStyle == BrowserSurfaceStyle.Frosted,
+                containerColor = containerColor,
+                onValueChange = { value ->
+                    onSettingsChanged(settings.copy(frostedTransparencyPercent = value.roundToInt()))
+                },
+                testTag = SharedAppearanceSettingsTestTags.FROSTED_TRANSPARENCY,
+                inPreferenceGroup = true,
+            )
+            SettingsPreferenceDivider()
+            AppearanceSlider(
+                title = strings.frostedAddressBarTransparency,
+                value = settings.frostedAddressBarTransparencyPercent.toFloat(),
+                valueRange = AppearanceSettings.MIN_FROSTED_TRANSPARENCY_PERCENT.toFloat()..
+                    AppearanceSettings.MAX_FROSTED_TRANSPARENCY_PERCENT.toFloat(),
+                steps = 7,
+                enabled = enabled && settings.surfaceStyle == BrowserSurfaceStyle.Frosted,
+                containerColor = containerColor,
+                onValueChange = { value ->
+                    onSettingsChanged(
+                        settings.copy(frostedAddressBarTransparencyPercent = value.roundToInt()),
+                    )
+                },
+                testTag = SharedAppearanceSettingsTestTags.FROSTED_ADDRESS_BAR_TRANSPARENCY,
+                inPreferenceGroup = true,
+            )
+            SettingsPreferenceDivider()
+            AppearanceSlider(
+                title = strings.frostedBlur,
+                value = settings.frostedBlurPercent.toFloat(),
+                valueRange = AppearanceSettings.MIN_FROSTED_BLUR_PERCENT.toFloat()..
+                    AppearanceSettings.MAX_FROSTED_BLUR_PERCENT.toFloat(),
+                steps = 9,
+                enabled = enabled && settings.surfaceStyle == BrowserSurfaceStyle.Frosted,
+                containerColor = containerColor,
+                onValueChange = { value ->
+                    onSettingsChanged(settings.copy(frostedBlurPercent = value.roundToInt()))
+                },
+                testTag = SharedAppearanceSettingsTestTags.FROSTED_BLUR,
+                inPreferenceGroup = true,
+            )
+            Text(
+                strings.frostedBlurSummary,
+                modifier = Modifier.padding(horizontal = 18.dp, vertical = 8.dp),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(
+                    alpha = if (settings.surfaceStyle == BrowserSurfaceStyle.Frosted) 1f else 0.6f,
+                ),
+            )
             }
             SettingsPageSpacer()
             Box {
@@ -534,11 +541,12 @@ private fun AppearanceSlider(
     onValueChange: (Float) -> Unit,
     onValueChangeFinished: (() -> Unit)? = null,
     testTag: String,
+    inPreferenceGroup: Boolean = false,
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth().settingsSearchTarget(title),
-        shape = MaterialTheme.shapes.large,
-        color = containerColor,
+        shape = if (inPreferenceGroup) RectangleShape else MaterialTheme.shapes.large,
+        color = if (inPreferenceGroup) Color.Transparent else containerColor,
     ) {
         Column(modifier = Modifier.padding(horizontal = 18.dp, vertical = 12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -550,7 +558,9 @@ private fun AppearanceSlider(
                 Text(
                     "${value.roundToInt()} %",
                     style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary,
+                    color = if (enabled) MaterialTheme.colorScheme.primary else {
+                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                    },
                 )
             }
             LocalCandyBrowserChromeEffects.current.settingsSlider(

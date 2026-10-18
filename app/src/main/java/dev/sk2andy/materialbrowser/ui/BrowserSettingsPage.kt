@@ -367,20 +367,21 @@ internal fun BrowserSettingsPage(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Spacer(Modifier.height(8.dp))
-        SettingsSwitch(
-            title = stringResource(R.string.settings_external_link_preview_title),
-            subtitle = stringResource(R.string.settings_external_link_preview_subtitle),
-            checked = isExternalLinkPreviewEnabled,
-            onCheckedChange = onExternalLinkPreviewEnabledChanged,
-            modifier = Modifier.testTag(BrowserSettingsTestTags.ExternalLinkPreview),
-        )
-        Spacer(Modifier.height(8.dp))
         var previewProfileMenuExpanded by remember { mutableStateOf(false) }
         val selectedPreviewProfile = externalLinkPreviewProfiles.firstOrNull {
             it.id == externalLinkPreviewProfileId
         }
         val previewProfileUnavailable =
             externalLinkPreviewProfileId != null && selectedPreviewProfile == null
+        SettingsPreferenceGroup {
+        SettingsSwitch(
+            title = stringResource(R.string.settings_external_link_preview_title),
+            subtitle = stringResource(R.string.settings_external_link_preview_subtitle),
+            checked = isExternalLinkPreviewEnabled,
+            onCheckedChange = onExternalLinkPreviewEnabledChanged,
+            modifier = Modifier.padding(horizontal = 18.dp).testTag(BrowserSettingsTestTags.ExternalLinkPreview),
+        )
+        SettingsPreferenceDivider()
         Box {
             SettingsChoice(
                 title = stringResource(R.string.settings_external_link_preview_profile_title),
@@ -392,9 +393,11 @@ internal fun BrowserSettingsPage(
                             R.string.settings_external_link_preview_profile_last_used
                         },
                     ),
-                expanded = previewProfileMenuExpanded,
-                onClick = { previewProfileMenuExpanded = true },
+                expanded = isExternalLinkPreviewEnabled && previewProfileMenuExpanded,
+                onClick = { if (isExternalLinkPreviewEnabled) previewProfileMenuExpanded = true },
                 modifier = Modifier.testTag(BrowserSettingsTestTags.ExternalLinkPreviewProfile),
+                enabled = isExternalLinkPreviewEnabled,
+                inPreferenceGroup = true,
             )
             SettingsDropdown(
                 expanded = previewProfileMenuExpanded,
@@ -419,6 +422,7 @@ internal fun BrowserSettingsPage(
                     )
                 }
             }
+        }
         }
     }
 }

@@ -31,31 +31,65 @@ class SettingsSearchCatalogTest {
     }
 
     @Test
-    fun `catalog hides engine and flavor capabilities that are not available`() {
+    fun `catalog keeps visible unsupported controls searchable`() {
         val ids = ids(SettingsSearchAvailability())
 
         assertFalse("settings_browser_engine_title" in ids)
-        assertFalse("settings_dns_over_https_title" in ids)
-        assertFalse("settings_https_only_title" in ids)
-        assertFalse("settings_video_autoplay_title" in ids)
-        assertFalse("settings_inline_media_player_title" in ids)
-        assertFalse("settings_inline_media_player_seek_backward" in ids)
-        assertFalse("settings_force_dark_websites" in ids)
+        assertTrue("settings_dns_over_https_title" in ids)
+        assertTrue("settings_https_only_title" in ids)
+        assertTrue("settings_video_autoplay_title" in ids)
+        assertTrue("settings_inline_media_player_title" in ids)
+        assertTrue("settings_inline_media_player_seek_backward" in ids)
+        assertTrue("settings_force_dark_websites" in ids)
         assertFalse("gecko_extensions_title" in ids)
         assertFalse("settings_app_language" in ids)
         assertTrue("settings_scroll_bar_title" in ids)
         assertTrue("settings_webrtc_protection_title" in ids)
+
+        val definitions = settingsSearchDefinitions(SettingsSearchAvailability()).associateBy { it.id }
+        assertEquals(
+            R.string.settings_dns_over_https_system_webview_summary,
+            definitions.getValue("settings_dns_over_https_title").descriptionRes,
+        )
+        assertEquals(
+            R.string.settings_https_only_system_webview_summary,
+            definitions.getValue("settings_https_only_title").descriptionRes,
+        )
+        assertEquals(
+            R.string.settings_video_autoplay_unsupported,
+            definitions.getValue("settings_video_autoplay_title").descriptionRes,
+        )
+        assertEquals(
+            R.string.settings_force_dark_websites_system_webview_only,
+            definitions.getValue("settings_force_dark_websites").descriptionRes,
+        )
     }
 
     @Test
-    fun `address pill swipe mode is searchable under tabs and gestures for either engine`() {
+    fun `developer settings that are disabled remain searchable while unlocked`() {
+        val definitions = settingsSearchDefinitions(
+            SettingsSearchAvailability(isDeveloperOptionsUnlocked = true),
+        ).associateBy { it.id }
+        assertEquals(
+            R.string.settings_http_password_autofill_system_webview_summary,
+            definitions.getValue("settings_http_password_autofill_title").descriptionRes,
+        )
+        assertEquals(
+            R.string.developer_options_gecko_logging_unsupported,
+            definitions.getValue("developer_options_gecko_logging").descriptionRes,
+        )
+        assertTrue("developer_options_gecko_logging_modules" in definitions)
+    }
+
+    @Test
+    fun `address pill swipe mode is searchable under gestures and controls for either engine`() {
         listOf(false, true).forEach { isGeckoEngine ->
             val definition = settingsSearchDefinitions(
                 SettingsSearchAvailability(isGeckoEngine = isGeckoEngine),
             ).single { it.id == "settings_address_bar_swipe_mode_title" }
 
-            assertEquals(SettingsDestination.TabsAndGestures, definition.destination)
-            assertEquals(R.string.settings_tabs_gestures_title, definition.contextRes)
+            assertEquals(SettingsDestination.Gestures, definition.destination)
+            assertEquals(R.string.settings_home_gestures_title, definition.contextRes)
             assertEquals(R.string.settings_address_bar_swipe_mode_title, definition.titleRes)
             assertEquals(R.string.settings_address_bar_swipe_mode_summary, definition.descriptionRes)
         }
@@ -105,23 +139,15 @@ class SettingsSearchCatalogTest {
     }
 
     @Test
-    fun `AI and SearXNG controls follow separate current search provider gates`() {
+    fun `AI and SearXNG controls remain searchable when inactive`() {
         val defaultIds = ids(SettingsSearchAvailability())
-        assertFalse("settings_ai_mode_toggle_title" in defaultIds)
-        assertFalse("settings_searxng_instance_url" in defaultIds)
-        assertFalse("settings_searxng_suggestion_fallback" in defaultIds)
+        assertTrue("settings_ai_mode_toggle_title" in defaultIds)
+        assertTrue("settings_searxng_instance_url" in defaultIds)
+        assertTrue("settings_searxng_suggestion_fallback" in defaultIds)
 
-        val engineIds = ids(SettingsSearchAvailability(supportsAiSearch = true, hasSearxngInstance = true))
-        assertTrue("settings_ai_mode_toggle_title" in engineIds)
-        assertTrue("settings_searxng_instance_url" in engineIds)
-        assertFalse("settings_searxng_suggestion_fallback" in engineIds)
-
-        val suggestionIds = ids(
-            SettingsSearchAvailability(hasSearxngInstance = true, hasSearxngSuggestionFallback = true),
-        )
-        assertFalse("settings_ai_mode_toggle_title" in suggestionIds)
-        assertTrue("settings_searxng_instance_url" in suggestionIds)
-        assertTrue("settings_searxng_suggestion_fallback" in suggestionIds)
+        assertTrue("settings_ai_mode_toggle_title" in defaultIds)
+        assertTrue("settings_searxng_instance_url" in defaultIds)
+        assertTrue("settings_searxng_suggestion_fallback" in defaultIds)
     }
 
     @Test
@@ -165,9 +191,9 @@ class SettingsSearchCatalogTest {
 
         val unlockedIds = ids(SettingsSearchAvailability(isDeveloperOptionsUnlocked = true))
         assertTrue("developer_options_app_logging" in unlockedIds)
-        assertFalse("settings_http_password_autofill_title" in unlockedIds)
-        assertFalse("developer_options_gecko_logging_modules" in unlockedIds)
-        assertFalse("developer_options_gecko_safe_area_enabled" in unlockedIds)
+        assertTrue("settings_http_password_autofill_title" in unlockedIds)
+        assertTrue("developer_options_gecko_logging_modules" in unlockedIds)
+        assertTrue("developer_options_gecko_safe_area_enabled" in unlockedIds)
 
         val geckoIds = ids(
             SettingsSearchAvailability(
@@ -183,9 +209,8 @@ class SettingsSearchCatalogTest {
     }
 
     @Test
-    fun `frosted settings require frosted surface and use current engine description`() {
-        assertFalse("settings_frosted_blur" in ids(SettingsSearchAvailability()))
-        val systemEntries = settingsSearchDefinitions(SettingsSearchAvailability(isFrostedSurface = true))
+    fun `frosted settings remain searchable while their surface is inactive`() {
+        val systemEntries = settingsSearchDefinitions(SettingsSearchAvailability())
             .associateBy { it.id }
         assertTrue("settings_frosted_transparency" in systemEntries)
         assertTrue("settings_frosted_address_bar_transparency" in systemEntries)
@@ -195,7 +220,7 @@ class SettingsSearchCatalogTest {
         )
 
         val geckoEntries = settingsSearchDefinitions(
-            SettingsSearchAvailability(isFrostedSurface = true, isGeckoEngine = true),
+            SettingsSearchAvailability(isGeckoEngine = true),
         ).associateBy { it.id }
         assertEquals(
             R.string.settings_frosted_blur_summary_gecko,
@@ -204,19 +229,15 @@ class SettingsSearchCatalogTest {
     }
 
     @Test
-    fun `download folder and 1DM sharing reflect current manager selection`() {
-        val externalIds = ids(SettingsSearchAvailability(hasOneDmSessionSharing = true))
-        assertFalse("settings_download_folder_title" in externalIds)
-        assertTrue("settings_download_one_dm_session_title" in externalIds)
-
-        val builtInIds = ids(SettingsSearchAvailability(isBuiltInDownloadManager = true))
-        assertTrue("settings_download_folder_title" in builtInIds)
-        assertFalse("settings_download_one_dm_session_title" in builtInIds)
+    fun `download dependent options stay searchable when inactive`() {
+        val defaultIds = ids(SettingsSearchAvailability())
+        assertTrue("settings_download_folder_title" in defaultIds)
+        assertTrue("settings_download_one_dm_session_title" in defaultIds)
     }
 
     @Test
     fun `nested settings routes preserve parent context and stable unique identity`() {
-        val entries = settingsSearchDefinitions(SettingsSearchAvailability(hasUserScriptSupport = true))
+        val entries = settingsSearchDefinitions(SettingsSearchAvailability())
             .associateBy { it.id }
         assertEquals(
             SettingsDestination.AddressBarLongPressActions,
@@ -235,19 +256,16 @@ class SettingsSearchCatalogTest {
             entries.getValue("settings_menu_actions_title").destination,
         )
         assertEquals(
-            R.string.settings_tabs_gestures_title,
+            R.string.settings_home_gestures_title,
             entries.getValue("settings_menu_actions_title").contextRes,
         )
         assertEquals(SettingsDestination.ToppingCatalog, entries.getValue("topping_discover").destination)
-        assertFalse("topping_discover" in ids(SettingsSearchAvailability()))
+        assertTrue("topping_discover" in ids(SettingsSearchAvailability()))
 
         val allEntries = settingsSearchDefinitions(
             SettingsSearchAvailability(
                 hasAppLanguages = true,
                 hasBrowserEngineSelection = true,
-                supportsAiSearch = true,
-                hasSearxngInstance = true,
-                hasSearxngSuggestionFallback = true,
                 isDnsOverHttpsSupported = true,
                 isHttpsOnlySupported = true,
                 isVideoAutoplayBlockingSupported = true,
@@ -257,14 +275,27 @@ class SettingsSearchCatalogTest {
                 isHttpPasswordAutofillSupported = true,
                 isGeckoLoggingSupported = true,
                 hasFirefoxExtensions = true,
-                isBuiltInDownloadManager = true,
-                hasOneDmSessionSharing = true,
-                isFrostedSurface = true,
-                hasUserScriptSupport = true,
                 isGeckoEngine = true,
             ),
         )
         assertEquals(allEntries.size, allEntries.map { it.id }.toSet().size)
+    }
+
+    @Test
+    fun `history and browser data options open their own page`() {
+        val entries = settingsSearchDefinitions(SettingsSearchAvailability()).associateBy { it.id }
+
+        listOf(
+            "history_save_title",
+            "history_clear_on_exit_title",
+            "recall_settings_title",
+            "data_archive_export_title",
+            "data_archive_import_title",
+            "action_clear_browsing_data",
+        ).forEach { id ->
+            assertEquals(SettingsDestination.HistoryAndData, entries.getValue(id).destination)
+            assertEquals(R.string.settings_home_history_title, entries.getValue(id).contextRes)
+        }
     }
 
     private fun ids(availability: SettingsSearchAvailability): Set<String> =

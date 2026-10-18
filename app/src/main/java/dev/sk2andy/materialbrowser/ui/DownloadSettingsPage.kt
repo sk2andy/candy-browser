@@ -46,12 +46,14 @@ internal fun DownloadsSettingsPage(
         title = stringResource(R.string.settings_downloads_title),
         onBack = onBack,
     ) {
+        SettingsPreferenceGroup {
         Box {
             SettingsChoice(
                 title = stringResource(R.string.settings_download_manager_title),
                 value = settings.displayName(externalManagers),
                 expanded = managerMenuExpanded,
                 onClick = { managerMenuExpanded = true },
+                inPreferenceGroup = true,
             )
             SettingsDropdown(
                 expanded = managerMenuExpanded,
@@ -106,11 +108,12 @@ internal fun DownloadsSettingsPage(
                 stringResource(R.string.settings_download_no_external_managers),
                 modifier = Modifier.padding(start = 18.dp, top = 8.dp, end = 18.dp),
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(
+                    alpha = if (settings.managerMode == DownloadManagerMode.BuiltIn) 1f else 0.6f,
+                ),
             )
         }
-        if (settings.managerMode == DownloadManagerMode.BuiltIn) {
-            Spacer(Modifier.height(18.dp))
+            SettingsPreferenceDivider()
             SettingsChoice(
                 title = stringResource(R.string.settings_download_folder_title),
                 value = settings.downloadSubdirectory?.let { relativePath ->
@@ -118,20 +121,31 @@ internal fun DownloadsSettingsPage(
                 } ?: stringResource(R.string.settings_download_folder_default),
                 expanded = false,
                 onClick = {
-                    directoryDraft = settings.downloadSubdirectory.orEmpty()
-                    directoryDialogVisible = true
+                    if (settings.managerMode == DownloadManagerMode.BuiltIn) {
+                        directoryDraft = settings.downloadSubdirectory.orEmpty()
+                        directoryDialogVisible = true
+                    }
                 },
                 modifier = Modifier.testTag(DownloadSettingsTestTags.Directory),
+                enabled = settings.managerMode == DownloadManagerMode.BuiltIn,
+                inPreferenceGroup = true,
             )
             Text(
                 stringResource(R.string.settings_download_folder_summary),
                 modifier = Modifier.padding(start = 18.dp, top = 8.dp, end = 18.dp),
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(
+                    alpha = if (settings.managerMode == DownloadManagerMode.BuiltIn) 1f else 0.6f,
+                ),
             )
             if (settings.downloadSubdirectory != null) {
                 TextButton(
-                    onClick = { onSettingsChanged(settings.copy(downloadSubdirectory = null)) },
+                    onClick = {
+                        if (settings.managerMode == DownloadManagerMode.BuiltIn) {
+                            onSettingsChanged(settings.copy(downloadSubdirectory = null))
+                        }
+                    },
+                    enabled = settings.managerMode == DownloadManagerMode.BuiltIn,
                     modifier = Modifier
                         .padding(horizontal = 6.dp)
                         .testTag(DownloadSettingsTestTags.DirectoryReset),
@@ -139,16 +153,16 @@ internal fun DownloadsSettingsPage(
                     Text(stringResource(R.string.settings_download_folder_reset))
                 }
             }
-        }
-        if (oneDmRelevant) {
-            Spacer(Modifier.height(18.dp))
+            SettingsPreferenceDivider()
             SettingsSwitch(
                 title = stringResource(R.string.settings_download_one_dm_session_title),
                 subtitle = stringResource(R.string.settings_download_one_dm_session_summary),
                 checked = settings.shareSessionDataWithOneDm,
+                enabled = oneDmRelevant,
                 onCheckedChange = {
                     onSettingsChanged(settings.copy(shareSessionDataWithOneDm = it))
                 },
+                modifier = Modifier.padding(horizontal = 18.dp),
             )
         }
     }

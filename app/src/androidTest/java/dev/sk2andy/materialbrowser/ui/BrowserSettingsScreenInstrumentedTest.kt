@@ -7,6 +7,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -102,6 +103,33 @@ class BrowserSettingsScreenInstrumentedTest {
     }
 
     @Test
+    fun externalPreviewProfileRemainsVisibleButDisabledWhenPreviewIsOff() {
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                BrowserSettingsPage(
+                    pageTranslationProvider = PageTranslationProvider.Google,
+                    isExternalLinkPreviewEnabled = false,
+                    externalLinkPreviewProfiles = listOf(BrowserProfile(id = "work", emoji = "💼")),
+                    isFullImmersiveModeEnabled = false,
+                    isStartupAnimationEnabled = true,
+                    isScrollBarEnabled = false,
+                    isDefaultBrowser = false,
+                    onFullImmersiveModeEnabledChanged = {},
+                    onStartupAnimationEnabledChanged = {},
+                    onScrollBarEnabledChanged = {},
+                    onPageTranslationProviderChanged = {},
+                    onOpenDefaultBrowserSettings = {},
+                    onBack = {},
+                )
+            }
+        }
+        composeRule.onNodeWithTag(BrowserSettingsTestTags.ExternalLinkPreviewProfile)
+            .performScrollTo()
+            .assertIsDisplayed()
+            .assertIsNotEnabled()
+    }
+
+    @Test
     fun startupAnimationSwitchUpdatesSetting() {
         var enabled by mutableStateOf(true)
         composeRule.setContent {
@@ -133,6 +161,7 @@ class BrowserSettingsScreenInstrumentedTest {
         composeRule.setContent {
             MaterialBrowserTheme {
                 BrowserSettingsPage(
+                    isExternalLinkPreviewEnabled = true,
                     pageTranslationProvider = PageTranslationProvider.Google,
                     isFullImmersiveModeEnabled = false,
                     isStartupAnimationEnabled = true,
@@ -167,6 +196,7 @@ class BrowserSettingsScreenInstrumentedTest {
         composeRule.setContent {
             MaterialBrowserTheme {
                 BrowserSettingsPage(
+                    isExternalLinkPreviewEnabled = true,
                     pageTranslationProvider = PageTranslationProvider.Google,
                     isFullImmersiveModeEnabled = false,
                     isStartupAnimationEnabled = true,

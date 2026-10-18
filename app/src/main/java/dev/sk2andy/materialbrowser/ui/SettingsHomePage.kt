@@ -57,6 +57,10 @@ internal fun SettingsHomePage(
         onOpenFirefoxExtensions = onOpenFirefoxExtensions,
         developerOptionsUnlocked = developerOptionsUnlocked,
         onUnlockDeveloperOptions = onUnlockDeveloperOptions,
+        separateTabControls = true,
+        hasAppIconSetting = true,
+        separateHistoryData = true,
+        separateExtensionsGroup = true,
         showHomeItems = searchQuery.isBlank(),
         searchContent = {
             SettingsSearchField(
@@ -76,8 +80,11 @@ private object AndroidSettingsHomeResources : SettingsHomeResources {
             SettingsHomeLabel.Title -> R.string.settings_title
             SettingsHomeLabel.Back -> R.string.action_back
             SettingsHomeLabel.BrowsingGroup -> R.string.settings_home_group_browsing
+            SettingsHomeLabel.TabsGroup -> R.string.settings_home_group_tabs
+            SettingsHomeLabel.ControlsGroup -> R.string.settings_home_group_controls
             SettingsHomeLabel.PersonalizationGroup ->
                 R.string.settings_home_group_personalization
+            SettingsHomeLabel.ExtensionsGroup -> R.string.settings_home_group_extensions
             SettingsHomeLabel.PrivacyDataGroup -> R.string.settings_home_group_privacy_data
             SettingsHomeLabel.AboutGroup -> R.string.settings_home_group_about
             SettingsHomeLabel.SearchTitle -> R.string.settings_section_search
@@ -87,8 +94,14 @@ private object AndroidSettingsHomeResources : SettingsHomeResources {
             SettingsHomeLabel.TabsAndGesturesTitle -> R.string.settings_tabs_gestures_title
             SettingsHomeLabel.TabsAndGesturesSummary ->
                 R.string.settings_home_tabs_gestures_summary
+            SettingsHomeLabel.TabsTitle -> R.string.settings_home_tabs_title
+            SettingsHomeLabel.TabsSummary -> R.string.settings_home_tabs_summary
+            SettingsHomeLabel.GesturesTitle -> R.string.settings_home_gestures_title
+            SettingsHomeLabel.GesturesSummary -> R.string.settings_home_gestures_summary
             SettingsHomeLabel.AppearanceTitle -> R.string.settings_appearance_title
             SettingsHomeLabel.AppearanceSummary -> R.string.settings_home_appearance_summary
+            SettingsHomeLabel.AppIconTitle -> R.string.settings_app_icon
+            SettingsHomeLabel.AppIconSummary -> R.string.settings_home_app_icon_summary
             SettingsHomeLabel.BrowserTitle -> R.string.settings_section_browser
             SettingsHomeLabel.BrowserSummary -> R.string.settings_home_browser_summary
             SettingsHomeLabel.PlayerTitle -> R.string.settings_player_title
@@ -104,6 +117,8 @@ private object AndroidSettingsHomeResources : SettingsHomeResources {
                 R.string.settings_protection_data_title
             SettingsHomeLabel.ProtectionAndDataSummary ->
                 R.string.settings_home_protection_summary
+            SettingsHomeLabel.HistoryAndDataTitle -> R.string.settings_home_history_title
+            SettingsHomeLabel.HistoryAndDataSummary -> R.string.settings_home_history_summary
             SettingsHomeLabel.DeveloperOptionsTitle -> R.string.developer_options_title
             SettingsHomeLabel.DeveloperOptionsSummary -> R.string.developer_options_summary
             SettingsHomeLabel.UnlockDeveloperOptions ->
@@ -123,8 +138,11 @@ private fun AndroidSettingsHomeIcon(
     val vector = when (icon) {
         SettingsHomeIcon.Search -> Icons.Default.Search
         SettingsHomeIcon.Sync -> Icons.Default.Refresh
+        SettingsHomeIcon.Tabs -> Icons.AutoMirrored.Filled.List
+        SettingsHomeIcon.Gestures -> Icons.Default.Settings
         SettingsHomeIcon.TabsAndGestures -> Icons.AutoMirrored.Filled.List
         SettingsHomeIcon.Appearance -> Icons.Default.Face
+        SettingsHomeIcon.AppIcon -> Icons.Default.Face
         SettingsHomeIcon.Browser -> Icons.Default.Settings
         SettingsHomeIcon.Player -> Icons.Default.PlayArrow
         SettingsHomeIcon.Downloads -> ImageVector.vectorResource(R.drawable.ic_reader_download)
@@ -133,6 +151,7 @@ private fun AndroidSettingsHomeIcon(
         -> ImageVector.vectorResource(R.drawable.ic_symbol_extension)
         SettingsHomeIcon.SiteCapsules -> Icons.Default.Favorite
         SettingsHomeIcon.ProtectionAndData -> Icons.Default.Lock
+        SettingsHomeIcon.HistoryAndData -> Icons.AutoMirrored.Filled.List
         SettingsHomeIcon.DeveloperOptions -> Icons.Default.Build
         SettingsHomeIcon.AboutLegal -> Icons.Default.Info
     }

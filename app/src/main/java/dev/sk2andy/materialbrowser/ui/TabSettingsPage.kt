@@ -50,6 +50,12 @@ internal object TabSettingsTestTags {
     const val LinkPeekSwipeAction = "tab_settings_link_peek_swipe_action"
 }
 
+internal enum class TabSettingsSection {
+    All,
+    Tabs,
+    Gestures,
+}
+
 @Composable
 internal fun TabsAndGesturesSettingsPage(
     inactiveTabLifetime: InactiveTabLifetime,
@@ -84,6 +90,7 @@ internal fun TabsAndGesturesSettingsPage(
     onAddressBarActions: () -> Unit,
     onMenuActions: () -> Unit = {},
     onBack: () -> Unit,
+    section: TabSettingsSection = TabSettingsSection.All,
 ) {
     var lifetimeMenuExpanded by remember { mutableStateOf(false) }
     var stackFolderModeMenuExpanded by remember { mutableStateOf(false) }
@@ -93,9 +100,16 @@ internal fun TabsAndGesturesSettingsPage(
         mutableFloatStateOf(residentTabLimit.toFloat())
     }
     SettingsPage(
-        title = stringResource(R.string.settings_tabs_gestures_title),
+        title = stringResource(
+            when (section) {
+                TabSettingsSection.All -> R.string.settings_tabs_gestures_title
+                TabSettingsSection.Tabs -> R.string.settings_home_tabs_title
+                TabSettingsSection.Gestures -> R.string.settings_home_gestures_title
+            },
+        ),
         onBack = onBack,
     ) {
+        if (section != TabSettingsSection.Gestures) {
         SettingsSectionTitle(stringResource(R.string.settings_section_tabs))
         Spacer(Modifier.height(8.dp))
         TabOverviewSettings(
@@ -218,15 +232,20 @@ internal fun TabsAndGesturesSettingsPage(
             }
         }
         SettingsPageSpacer()
+        SettingsPreferenceGroup {
         SettingsSwitch(
             title = stringResource(R.string.settings_profiles_title),
             subtitle = stringResource(R.string.settings_profiles_subtitle),
             checked = profilesEnabled,
             onCheckedChange = onProfilesEnabledChanged,
+            modifier = Modifier.padding(horizontal = 18.dp),
         )
-        Spacer(Modifier.height(2.dp))
+        SettingsPreferenceDivider()
         GuestBubbleSettings(profilesEnabled = profilesEnabled)
+        }
         Spacer(Modifier.height(14.dp))
+        }
+        if (section != TabSettingsSection.Tabs) {
         SettingsSectionTitle(stringResource(R.string.settings_section_gestures))
         Spacer(Modifier.height(2.dp))
         Box(modifier = Modifier.testTag(TabSettingsTestTags.AddressBarLongPressAction)) {
@@ -347,6 +366,7 @@ internal fun TabsAndGesturesSettingsPage(
             enabled = true,
             onValueChanged = onDismissResistancePercentChanged,
         )
+        }
     }
 }
 

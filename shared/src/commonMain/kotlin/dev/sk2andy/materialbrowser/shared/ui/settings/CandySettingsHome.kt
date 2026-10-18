@@ -55,7 +55,10 @@ internal object CandySettingsHomeResources : SettingsHomeResources {
         SettingsHomeLabel.Title -> "Einstellungen"
         SettingsHomeLabel.Back -> "Zurück"
         SettingsHomeLabel.BrowsingGroup -> "Surfen"
+        SettingsHomeLabel.TabsGroup -> "Tabs"
+        SettingsHomeLabel.ControlsGroup -> "Gesten & Bedienelemente"
         SettingsHomeLabel.PersonalizationGroup -> "Personalisierung"
+        SettingsHomeLabel.ExtensionsGroup -> "Erweiterungen & Sync"
         SettingsHomeLabel.PrivacyDataGroup -> "Datenschutz & Daten"
         SettingsHomeLabel.AboutGroup -> "Weitere Informationen"
         SettingsHomeLabel.SearchTitle -> "Suche"
@@ -66,11 +69,17 @@ internal object CandySettingsHomeResources : SettingsHomeResources {
         SettingsHomeLabel.TabsAndGesturesTitle -> "Tabs & Gesten"
         SettingsHomeLabel.TabsAndGesturesSummary ->
             "Tab-Layout, Aufbewahrung, Profile und Bedienelemente"
-        SettingsHomeLabel.AppearanceTitle -> "Darstellung"
-        SettingsHomeLabel.AppearanceSummary -> "Farben, Oberflächen und Form"
-        SettingsHomeLabel.BrowserTitle -> "Browser"
+        SettingsHomeLabel.TabsTitle -> "Tabs"
+        SettingsHomeLabel.TabsSummary -> "Layout, Organisation, Profile und Aufbewahrung"
+        SettingsHomeLabel.GesturesTitle -> "Gesten & Bedienelemente"
+        SettingsHomeLabel.GesturesSummary -> "Adressleiste, Linkaktionen und Menüs anpassen"
+        SettingsHomeLabel.AppearanceTitle -> "Theme & Oberfläche"
+        SettingsHomeLabel.AppearanceSummary -> "Farben, Oberflächen, Animationen und Schriftgröße"
+        SettingsHomeLabel.AppIconTitle -> "App-Symbol"
+        SettingsHomeLabel.AppIconSummary -> "Candy-Symbol im Launcher auswählen"
+        SettingsHomeLabel.BrowserTitle -> "Browser-Verhalten"
         SettingsHomeLabel.BrowserSummary ->
-            "Seitenübersetzung; weitere Browseroptionen in Vorbereitung"
+            "Start, Favoriten, Webseiten, Links und Standardbrowser"
         SettingsHomeLabel.PlayerTitle -> "Player"
         SettingsHomeLabel.PlayerSummary -> "Videowiedergabe, Autoplay und Doppeltipp-Sprünge"
         SettingsHomeLabel.DownloadsTitle -> "Downloads"
@@ -85,6 +94,9 @@ internal object CandySettingsHomeResources : SettingsHomeResources {
         SettingsHomeLabel.ProtectionAndDataTitle -> "Schutz & Daten"
         SettingsHomeLabel.ProtectionAndDataSummary ->
             "Tracking-Schutz, Cookies, Berechtigungen und Browserdaten"
+        SettingsHomeLabel.HistoryAndDataTitle -> "Verlauf & Browserdaten"
+        SettingsHomeLabel.HistoryAndDataSummary ->
+            "Verlauf, Verlauf beim Beenden und Browserdaten verwalten"
         SettingsHomeLabel.DeveloperOptionsTitle -> "Entwickleroptionen"
         SettingsHomeLabel.DeveloperOptionsSummary -> "Interne Browser- und Layoutparameter"
         SettingsHomeLabel.UnlockDeveloperOptions -> "Entwickleroptionen freischalten"
@@ -102,8 +114,11 @@ internal fun CandySettingsHomeIcon(
     val imageVector = when (icon) {
         SettingsHomeIcon.Search -> Icons.Filled.Search
         SettingsHomeIcon.Sync -> Icons.Filled.Refresh
+        SettingsHomeIcon.Tabs -> Icons.AutoMirrored.Filled.List
+        SettingsHomeIcon.Gestures -> Icons.Filled.Settings
         SettingsHomeIcon.TabsAndGestures -> Icons.AutoMirrored.Filled.List
         SettingsHomeIcon.Appearance -> Icons.Filled.Face
+        SettingsHomeIcon.AppIcon -> Icons.Filled.Face
         SettingsHomeIcon.Browser -> Icons.Filled.Settings
         SettingsHomeIcon.Player -> Icons.Filled.PlayArrow
         SettingsHomeIcon.Downloads -> Icons.Filled.Download
@@ -112,6 +127,7 @@ internal fun CandySettingsHomeIcon(
         -> Icons.Filled.Extension
         SettingsHomeIcon.SiteCapsules -> Icons.Filled.Favorite
         SettingsHomeIcon.ProtectionAndData -> Icons.Filled.Lock
+        SettingsHomeIcon.HistoryAndData -> Icons.AutoMirrored.Filled.List
         SettingsHomeIcon.DeveloperOptions -> Icons.Filled.Build
         SettingsHomeIcon.AboutLegal -> Icons.Filled.Info
     }
@@ -119,8 +135,11 @@ internal fun CandySettingsHomeIcon(
         symbol = when (icon) {
             SettingsHomeIcon.Search -> "magnifyingglass"
             SettingsHomeIcon.Sync -> "arrow.triangle.2.circlepath"
+            SettingsHomeIcon.Tabs -> "square.on.square"
+            SettingsHomeIcon.Gestures -> "hand.draw"
             SettingsHomeIcon.TabsAndGestures -> "square.on.square"
             SettingsHomeIcon.Appearance -> "paintpalette"
+            SettingsHomeIcon.AppIcon -> "app"
             SettingsHomeIcon.Browser -> "globe"
             SettingsHomeIcon.Player -> "play.rectangle"
             SettingsHomeIcon.Downloads -> "arrow.down.circle"
@@ -128,6 +147,7 @@ internal fun CandySettingsHomeIcon(
             SettingsHomeIcon.FirefoxExtensions -> "puzzlepiece.extension"
             SettingsHomeIcon.SiteCapsules -> "shippingbox"
             SettingsHomeIcon.ProtectionAndData -> "hand.raised"
+            SettingsHomeIcon.HistoryAndData -> "clock"
             SettingsHomeIcon.DeveloperOptions -> "hammer"
             SettingsHomeIcon.AboutLegal -> "info.circle"
         },

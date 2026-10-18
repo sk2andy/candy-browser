@@ -3,12 +3,15 @@ package dev.sk2andy.materialbrowser.ui
 enum class SettingsDestination {
     Home,
     Search,
+    Tabs,
+    Gestures,
     TabsAndGestures,
     AddressBarLongPressActions,
     AddressBarActions,
     MenuActions,
     LinkPeekActions,
     Appearance,
+    AppIcon,
     Browser,
     LinkRouting,
     Player,
@@ -18,6 +21,7 @@ enum class SettingsDestination {
     SiteCapsules,
     Sync,
     ProtectionAndData,
+    HistoryAndData,
     DeveloperOptions,
     AboutLegal,
 }

@@ -13,7 +13,7 @@ class SettingsBackRulesTest {
     }
 
     @Test
-    fun `nested action pages return to tabs and gestures`() {
+    fun `nested action pages return to gestures and controls`() {
         listOf(
             SettingsDestination.AddressBarLongPressActions,
             SettingsDestination.AddressBarActions,
@@ -21,7 +21,7 @@ class SettingsBackRulesTest {
             SettingsDestination.LinkPeekActions,
         ).forEach { destination ->
             assertEquals(
-                SettingsDestination.TabsAndGestures,
+                SettingsDestination.Gestures,
                 SettingsBackRules.parentDestination(destination),
             )
         }
@@ -39,8 +39,11 @@ class SettingsBackRulesTest {
     fun `top level pages return home`() {
         listOf(
             SettingsDestination.Search,
+            SettingsDestination.Tabs,
+            SettingsDestination.Gestures,
             SettingsDestination.TabsAndGestures,
             SettingsDestination.Appearance,
+            SettingsDestination.AppIcon,
             SettingsDestination.Browser,
             SettingsDestination.Player,
             SettingsDestination.Downloads,
@@ -48,6 +51,7 @@ class SettingsBackRulesTest {
             SettingsDestination.SiteCapsules,
             SettingsDestination.Sync,
             SettingsDestination.ProtectionAndData,
+            SettingsDestination.HistoryAndData,
             SettingsDestination.DeveloperOptions,
             SettingsDestination.AboutLegal,
         ).forEach { destination ->

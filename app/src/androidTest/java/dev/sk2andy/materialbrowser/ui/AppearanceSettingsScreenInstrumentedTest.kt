@@ -53,11 +53,10 @@ class AppearanceSettingsScreenInstrumentedTest {
         try {
             composeRule.setContent {
                 MaterialBrowserTheme(settings = AppearanceSettings()) {
-                    AppearanceSettingsPage(
-                        settings = AppearanceSettings(),
-                        onSettingsChanged = {},
+                    SettingsPage(
+                        title = context.getString(R.string.settings_app_icon),
                         onBack = {},
-                    )
+                    ) { AppIconSettings() }
                 }
             }
 
@@ -171,7 +170,14 @@ class AppearanceSettingsScreenInstrumentedTest {
 
         composeRule.onNodeWithTag(AppearanceSettingsTestTags.SurfaceStyle).performClick()
         composeRule.onNodeWithTag(AppearanceSettingsTestTags.FrostedTransparency)
-            .assertDoesNotExist()
+            .assertExists()
+            .assertIsNotEnabled()
+        composeRule.onNodeWithTag(AppearanceSettingsTestTags.FrostedAddressBarTransparency)
+            .assertExists()
+            .assertIsNotEnabled()
+        composeRule.onNodeWithTag(AppearanceSettingsTestTags.FrostedBlur)
+            .assertExists()
+            .assertIsNotEnabled()
         composeRule.onNodeWithText(context.getString(R.string.surface_style_frosted)).performClick()
         assertEquals(BrowserSurfaceStyle.Frosted, settings.surfaceStyle)
         composeRule.onNodeWithTag(AppearanceSettingsTestTags.FrostedTransparency)

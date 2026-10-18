@@ -320,7 +320,10 @@
     <string name="download_notification_complete">Download abgeschlossen</string>
     <string name="settings_title">Einstellungen</string>
     <string name="settings_home_group_browsing">Surfen</string>
+    <string name="settings_home_group_tabs">Tabs</string>
+    <string name="settings_home_group_controls">Gesten &amp; Bedienelemente</string>
     <string name="settings_home_group_personalization">Personalisierung</string>
+    <string name="settings_home_group_extensions">Erweiterungen</string>
     <string name="settings_home_group_privacy_data">Datenschutz &amp; Daten</string>
     <string name="settings_home_group_about">Weitere Informationen</string>
     <string name="settings_browser_group_general">Browser einrichten</string>
@@ -330,7 +333,14 @@
     <string name="settings_browser_group_links">Links &amp; Apps</string>
     <string name="settings_protection_group_tools">Datenschutz-Werkzeuge</string>
     <string name="settings_protection_group_app_data">App-Daten</string>
-    <string name="settings_appearance_title">Darstellung</string>
+    <string name="settings_appearance_title">Theme &amp; Oberfläche</string>
+    <string name="settings_home_tabs_title">Tabs</string>
+    <string name="settings_home_tabs_summary">Layout, Organisation, Profile und Aufbewahrung</string>
+    <string name="settings_home_gestures_title">Gesten &amp; Bedienelemente</string>
+    <string name="settings_home_gestures_summary">Adressleiste, Linkaktionen und Menüs</string>
+    <string name="settings_home_app_icon_summary">Candy-Symbol im Launcher auswählen</string>
+    <string name="settings_home_history_title">Verlauf &amp; Browserdaten</string>
+    <string name="settings_home_history_summary">Verlauf, Löschen beim Beenden und Browserdaten</string>
     <string name="settings_home_appearance_summary">Farben, Website-Schrift, Oberflächen und Form</string>
     <string name="settings_appearance_mode">Erscheinungsbild</string>
     <string name="settings_app_icon">App-Symbol</string>
@@ -390,8 +400,8 @@
     <string name="settings_home_browser_summary">Start, Favoriten, Webseiten, Links und Standardbrowser</string>
     <string name="settings_downloads_title">Downloads</string>
     <string name="settings_home_capsules_summary">Gespeicherte Site Capsules und Verknüpfungen verwalten</string>
-    <string name="settings_protection_data_title">Schutz &amp; Daten</string>
-    <string name="settings_home_protection_summary">Tracking-Schutz, Cookies, Berechtigungen und Browserdaten</string>
+    <string name="settings_protection_data_title">Schutz</string>
+    <string name="settings_home_protection_summary">Tracking-Schutz, Cookies und Berechtigungen</string>
     <string name="data_archive_export_title">Alle App-Daten exportieren</string>
     <string name="data_archive_export_summary">Einstellungen, Tabs, Regeln, Cookies und Website-Speicher als ZIP sichern</string>
     <string name="data_archive_import_title">App-Daten importieren</string>
@@ -478,7 +488,7 @@
     <string name="settings_searxng_suggestion_fallback">Vorschlags-Fallback</string>
     <string name="settings_searxng_suggestion_fallback_summary">Wird nur genutzt, wenn die SearXNG-Vorschlagsanfrage fehlschlägt. Die Eingabe geht dann auch an den Fallback-Anbieter. In privaten Tabs deaktiviert.</string>
     <string name="toast_searxng_instance_required">Lege zuerst eine gültige SearXNG-Instanz-URL fest</string>
-    <string name="settings_section_browser">Browser</string>
+    <string name="settings_section_browser">Browser-Verhalten</string>
     <string name="settings_browser_engine_title">Web-Engine</string>
     <string name="settings_browser_engine_gecko">Erweiterungen · GeckoView</string>
     <string name="settings_browser_engine_system">Speichersparend · Android System WebView</string>

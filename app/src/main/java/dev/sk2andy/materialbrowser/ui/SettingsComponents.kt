@@ -219,6 +219,7 @@ internal fun SettingsChoice(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
+    inPreferenceGroup: Boolean = false,
 ) {
     dev.sk2andy.materialbrowser.shared.ui.settings.SettingsChoice(
         title = title,
@@ -228,7 +229,21 @@ internal fun SettingsChoice(
         containerColor = browserChromeColor(MaterialTheme.colorScheme.surfaceContainerHigh),
         modifier = modifier,
         enabled = enabled,
+        inPreferenceGroup = inPreferenceGroup,
     )
+}
+
+@Composable
+internal fun SettingsPreferenceGroup(content: @Composable ColumnScope.() -> Unit) {
+    dev.sk2andy.materialbrowser.shared.ui.settings.SettingsPreferenceGroup(
+        containerColor = browserChromeColor(MaterialTheme.colorScheme.surfaceContainerHigh),
+        content = content,
+    )
+}
+
+@Composable
+internal fun SettingsPreferenceDivider() {
+    dev.sk2andy.materialbrowser.shared.ui.settings.SettingsPreferenceDivider()
 }
 
 @Composable

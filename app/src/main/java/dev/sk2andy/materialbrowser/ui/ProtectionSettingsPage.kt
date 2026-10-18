@@ -62,6 +62,12 @@ internal object ProtectionSettingsTestTags {
     const val CustomDnsEndpoint = "protection_settings_custom_dns_endpoint"
 }
 
+internal enum class ProtectionSettingsSection {
+    All,
+    Protection,
+    HistoryAndData,
+}
+
 @Composable
 internal fun ProtectionAndDataSettingsPage(
     blockerSettings: BlockerSettings,
@@ -92,6 +98,7 @@ internal fun ProtectionAndDataSettingsPage(
     onImportAppData: () -> Unit = {},
     onClearData: () -> Unit,
     onBack: () -> Unit,
+    section: ProtectionSettingsSection = ProtectionSettingsSection.All,
 ) {
     var webRtcMenuExpanded by remember { mutableStateOf(false) }
     var dnsMenuExpanded by remember { mutableStateOf(false) }
@@ -113,9 +120,17 @@ internal fun ProtectionAndDataSettingsPage(
         )
     }
     SettingsPage(
-        title = stringResource(R.string.settings_protection_data_title),
+        title = stringResource(
+            when (section) {
+                ProtectionSettingsSection.All,
+                ProtectionSettingsSection.Protection,
+                -> R.string.settings_protection_data_title
+                ProtectionSettingsSection.HistoryAndData -> R.string.settings_home_history_title
+            },
+        ),
         onBack = onBack,
     ) {
+        if (section != ProtectionSettingsSection.HistoryAndData) {
         SettingsSectionTitle(stringResource(R.string.settings_protection_group_tools))
         Spacer(Modifier.height(8.dp))
         Surface(
@@ -412,6 +427,8 @@ internal fun ProtectionAndDataSettingsPage(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Spacer(Modifier.height(16.dp))
+        }
+        if (section != ProtectionSettingsSection.Protection) {
         SettingsSectionTitle(stringResource(R.string.history_title))
         SettingsSwitch(
             title = stringResource(R.string.history_save_title),
@@ -481,6 +498,7 @@ internal fun ProtectionAndDataSettingsPage(
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.SemiBold,
             )
+        }
         }
     }
 }

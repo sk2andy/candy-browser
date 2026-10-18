@@ -54,12 +54,14 @@ internal fun SearchSettingsPage(
         title = stringResource(R.string.settings_section_search),
         onBack = onBack,
     ) {
+        SettingsPreferenceGroup {
         Box {
             SettingsChoice(
                 title = stringResource(R.string.settings_search_engine),
                 value = searchEngine.displayName,
                 expanded = searchEngineMenuExpanded,
                 onClick = { searchEngineMenuExpanded = true },
+                inPreferenceGroup = true,
             )
             SettingsDropdown(
                 expanded = searchEngineMenuExpanded,
@@ -77,20 +79,17 @@ internal fun SearchSettingsPage(
                 }
             }
         }
-        if (searchEngine.supportsAiSearch) {
-            SettingsPageSpacer()
-            SettingsSwitch(
+        SettingsPreferenceDivider()
+        SettingsSwitch(
                 title = stringResource(R.string.settings_ai_mode_toggle_title),
                 subtitle = stringResource(R.string.settings_ai_mode_toggle_subtitle),
                 checked = isAiModeToggleVisible,
+                enabled = searchEngine.supportsAiSearch,
                 onCheckedChange = onAiModeToggleVisibleChanged,
+                modifier = Modifier.padding(horizontal = 18.dp),
             )
-        }
-        if (
-            searchEngine == SearchEngine.SearXNG ||
-            searchSuggestionProvider == SearchSuggestionProvider.SearXNG
-        ) {
-            SettingsPageSpacer()
+        run {
+            SettingsPreferenceDivider()
             val normalizedInstanceUrl = SearxngRules.normalizedInstanceUrl(
                 instanceUrlDraft,
             )
@@ -111,6 +110,7 @@ internal fun SearchSettingsPage(
                 },
                 modifier = Modifier
                     .fillMaxWidth()
+                    .padding(horizontal = 18.dp, vertical = 8.dp)
                     .testTag(SearchSettingsTestTags.SearxngInstanceUrl)
                     .settingsSearchTarget(stringResource(R.string.settings_searxng_instance_url)),
                 label = { Text(stringResource(R.string.settings_searxng_instance_url)) },
@@ -130,12 +130,15 @@ internal fun SearchSettingsPage(
                 },
                 isError = instanceUrlDraft.isNotBlank() &&
                     normalizedInstanceUrl == null,
+                enabled = searchEngine == SearchEngine.SearXNG ||
+                    searchSuggestionProvider == SearchSuggestionProvider.SearXNG,
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Uri,
                     imeAction = ImeAction.Done,
                 ),
                 singleLine = true,
             )
+        }
         }
         SettingsPageSpacer()
         SettingsSwitch(
@@ -146,6 +149,7 @@ internal fun SearchSettingsPage(
             modifier = Modifier.testTag(SearchSettingsTestTags.HistorySuggestions),
         )
         SettingsPageSpacer()
+        SettingsPreferenceGroup {
         Box {
             SettingsChoice(
                 title = stringResource(R.string.settings_search_suggestions),
@@ -153,6 +157,7 @@ internal fun SearchSettingsPage(
                 expanded = searchSuggestionMenuExpanded,
                 onClick = { searchSuggestionMenuExpanded = true },
                 modifier = Modifier.testTag(SearchSettingsTestTags.SuggestionProvider),
+                inPreferenceGroup = true,
             )
             SettingsDropdown(
                 expanded = searchSuggestionMenuExpanded,
@@ -184,15 +189,21 @@ internal fun SearchSettingsPage(
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        if (searchSuggestionProvider == SearchSuggestionProvider.SearXNG) {
-            SettingsPageSpacer()
+        run {
+            SettingsPreferenceDivider()
             Box {
                 SettingsChoice(
                     title = stringResource(R.string.settings_searxng_suggestion_fallback),
                     value = searxngSettings.suggestionFallback.displayName(),
                     expanded = fallbackMenuExpanded,
-                    onClick = { fallbackMenuExpanded = true },
+                    onClick = {
+                        if (searchSuggestionProvider == SearchSuggestionProvider.SearXNG) {
+                            fallbackMenuExpanded = true
+                        }
+                    },
                     modifier = Modifier.testTag(SearchSettingsTestTags.SearxngFallback),
+                    enabled = searchSuggestionProvider == SearchSuggestionProvider.SearXNG,
+                    inPreferenceGroup = true,
                 )
                 SettingsDropdown(
                     expanded = fallbackMenuExpanded,
@@ -220,6 +231,7 @@ internal fun SearchSettingsPage(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+        }
         }
     }
 }

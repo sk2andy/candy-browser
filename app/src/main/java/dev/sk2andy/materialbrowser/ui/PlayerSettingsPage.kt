@@ -58,7 +58,8 @@ internal fun PlayerSettingsPage(
             onCheckedChange = onVideoAutoplayBlockedChanged,
             modifier = Modifier.testTag(PlayerSettingsTestTags.VideoAutoplay),
         )
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(18.dp))
+        SettingsPreferenceGroup {
         Box {
             SettingsChoice(
                 title = stringResource(R.string.settings_inline_media_player_title),
@@ -67,6 +68,7 @@ internal fun PlayerSettingsPage(
                 onClick = { inlineMediaPlayerMenuExpanded = true },
                 enabled = isInlineMediaPlayerSupported,
                 modifier = Modifier.testTag(PlayerSettingsTestTags.InlineMediaPlayer),
+                inPreferenceGroup = true,
             )
             SettingsDropdown(
                 expanded = inlineMediaPlayerMenuExpanded,
@@ -98,7 +100,7 @@ internal fun PlayerSettingsPage(
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        Spacer(Modifier.height(8.dp))
+        SettingsPreferenceDivider()
         InlineMediaPlayerSeekSlider(
             title = stringResource(R.string.settings_inline_media_player_seek_backward),
             seconds = inlineMediaPlayerSeekSettings.backwardSeconds,
@@ -110,8 +112,9 @@ internal fun PlayerSettingsPage(
                 )
             },
             modifier = Modifier.testTag(PlayerSettingsTestTags.InlineMediaPlayerSeekBackward),
+            inPreferenceGroup = true,
         )
-        Spacer(Modifier.height(8.dp))
+        SettingsPreferenceDivider()
         InlineMediaPlayerSeekSlider(
             title = stringResource(R.string.settings_inline_media_player_seek_forward),
             seconds = inlineMediaPlayerSeekSettings.forwardSeconds,
@@ -123,13 +126,15 @@ internal fun PlayerSettingsPage(
                 )
             },
             modifier = Modifier.testTag(PlayerSettingsTestTags.InlineMediaPlayerSeekForward),
+            inPreferenceGroup = true,
         )
         Text(
             text = stringResource(R.string.settings_inline_media_player_seek_subtitle),
-            modifier = Modifier.padding(start = 18.dp, top = 8.dp, end = 18.dp),
+            modifier = Modifier.padding(horizontal = 18.dp, vertical = 8.dp),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+        }
     }
 }
 

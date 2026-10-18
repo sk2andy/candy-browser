@@ -12,8 +12,11 @@ import dev.sk2andy.materialbrowser.ui.SettingsDestination
 enum class SettingsHomeIcon {
     Search,
     Sync,
+    Tabs,
+    Gestures,
     TabsAndGestures,
     Appearance,
+    AppIcon,
     Browser,
     Player,
     Downloads,
@@ -21,6 +24,7 @@ enum class SettingsHomeIcon {
     FirefoxExtensions,
     SiteCapsules,
     ProtectionAndData,
+    HistoryAndData,
     DeveloperOptions,
     AboutLegal,
 }
@@ -29,7 +33,10 @@ enum class SettingsHomeLabel {
     Title,
     Back,
     BrowsingGroup,
+    TabsGroup,
+    ControlsGroup,
     PersonalizationGroup,
+    ExtensionsGroup,
     PrivacyDataGroup,
     AboutGroup,
     SearchTitle,
@@ -38,8 +45,14 @@ enum class SettingsHomeLabel {
     SyncSummary,
     TabsAndGesturesTitle,
     TabsAndGesturesSummary,
+    TabsTitle,
+    TabsSummary,
+    GesturesTitle,
+    GesturesSummary,
     AppearanceTitle,
     AppearanceSummary,
+    AppIconTitle,
+    AppIconSummary,
     BrowserTitle,
     BrowserSummary,
     PlayerTitle,
@@ -53,6 +66,8 @@ enum class SettingsHomeLabel {
     SiteCapsulesSummary,
     ProtectionAndDataTitle,
     ProtectionAndDataSummary,
+    HistoryAndDataTitle,
+    HistoryAndDataSummary,
     DeveloperOptionsTitle,
     DeveloperOptionsSummary,
     UnlockDeveloperOptions,
@@ -62,7 +77,10 @@ enum class SettingsHomeLabel {
 
 enum class SettingsHomeGroup(val label: SettingsHomeLabel) {
     Browsing(SettingsHomeLabel.BrowsingGroup),
+    Tabs(SettingsHomeLabel.TabsGroup),
+    Controls(SettingsHomeLabel.ControlsGroup),
     Personalization(SettingsHomeLabel.PersonalizationGroup),
+    Extensions(SettingsHomeLabel.ExtensionsGroup),
     PrivacyData(SettingsHomeLabel.PrivacyDataGroup),
     About(SettingsHomeLabel.AboutGroup),
 }
@@ -85,19 +103,36 @@ object SettingsHomeRules {
     fun items(
         hasFirefoxExtensions: Boolean,
         hasDeveloperOptions: Boolean = false,
+        separateTabControls: Boolean = false,
+        hasAppIconSetting: Boolean = false,
+        separateHistoryData: Boolean = false,
+        separateExtensionsGroup: Boolean = false,
     ): List<SettingsHomeItem> = buildList {
+        val extensionsGroup = if (separateExtensionsGroup) {
+            SettingsHomeGroup.Extensions
+        } else {
+            SettingsHomeGroup.Personalization
+        }
         add(item(SettingsHomeGroup.Browsing, SettingsDestination.Search, SettingsHomeIcon.Search, SettingsHomeLabel.SearchTitle, SettingsHomeLabel.SearchSummary))
-        add(item(SettingsHomeGroup.Browsing, SettingsDestination.TabsAndGestures, SettingsHomeIcon.TabsAndGestures, SettingsHomeLabel.TabsAndGesturesTitle, SettingsHomeLabel.TabsAndGesturesSummary))
         add(item(SettingsHomeGroup.Browsing, SettingsDestination.Browser, SettingsHomeIcon.Browser, SettingsHomeLabel.BrowserTitle, SettingsHomeLabel.BrowserSummary))
         add(item(SettingsHomeGroup.Browsing, SettingsDestination.Player, SettingsHomeIcon.Player, SettingsHomeLabel.PlayerTitle, SettingsHomeLabel.PlayerSummary))
         add(item(SettingsHomeGroup.Browsing, SettingsDestination.Downloads, SettingsHomeIcon.Downloads, SettingsHomeLabel.DownloadsTitle, null))
+        if (separateTabControls) {
+            add(item(SettingsHomeGroup.Tabs, SettingsDestination.Tabs, SettingsHomeIcon.Tabs, SettingsHomeLabel.TabsTitle, SettingsHomeLabel.TabsSummary))
+            add(item(SettingsHomeGroup.Controls, SettingsDestination.Gestures, SettingsHomeIcon.Gestures, SettingsHomeLabel.GesturesTitle, SettingsHomeLabel.GesturesSummary))
+        } else {
+            add(item(SettingsHomeGroup.Browsing, SettingsDestination.TabsAndGestures, SettingsHomeIcon.TabsAndGestures, SettingsHomeLabel.TabsAndGesturesTitle, SettingsHomeLabel.TabsAndGesturesSummary))
+        }
         add(item(SettingsHomeGroup.Personalization, SettingsDestination.Appearance, SettingsHomeIcon.Appearance, SettingsHomeLabel.AppearanceTitle, SettingsHomeLabel.AppearanceSummary))
-        add(item(SettingsHomeGroup.Personalization, SettingsDestination.SiteCapsules, SettingsHomeIcon.SiteCapsules, SettingsHomeLabel.SiteCapsulesTitle, SettingsHomeLabel.SiteCapsulesSummary))
-        add(item(SettingsHomeGroup.Personalization, SettingsDestination.Userscripts, SettingsHomeIcon.Userscripts, SettingsHomeLabel.UserscriptsTitle, SettingsHomeLabel.UserscriptsSummary))
+        if (hasAppIconSetting) {
+            add(item(SettingsHomeGroup.Personalization, SettingsDestination.AppIcon, SettingsHomeIcon.AppIcon, SettingsHomeLabel.AppIconTitle, SettingsHomeLabel.AppIconSummary))
+        }
+        add(item(extensionsGroup, SettingsDestination.SiteCapsules, SettingsHomeIcon.SiteCapsules, SettingsHomeLabel.SiteCapsulesTitle, SettingsHomeLabel.SiteCapsulesSummary))
+        add(item(extensionsGroup, SettingsDestination.Userscripts, SettingsHomeIcon.Userscripts, SettingsHomeLabel.UserscriptsTitle, SettingsHomeLabel.UserscriptsSummary))
         if (hasFirefoxExtensions) {
             add(
                 SettingsHomeItem(
-                    group = SettingsHomeGroup.Personalization,
+                    group = extensionsGroup,
                     destination = null,
                     icon = SettingsHomeIcon.FirefoxExtensions,
                     title = SettingsHomeLabel.FirefoxExtensionsTitle,
@@ -106,8 +141,11 @@ object SettingsHomeRules {
                 ),
             )
         }
-        add(item(SettingsHomeGroup.PrivacyData, SettingsDestination.ProtectionAndData, SettingsHomeIcon.ProtectionAndData, SettingsHomeLabel.ProtectionAndDataTitle, SettingsHomeLabel.ProtectionAndDataSummary))
         add(item(SettingsHomeGroup.PrivacyData, SettingsDestination.Sync, SettingsHomeIcon.Sync, SettingsHomeLabel.SyncTitle, SettingsHomeLabel.SyncSummary))
+        add(item(SettingsHomeGroup.PrivacyData, SettingsDestination.ProtectionAndData, SettingsHomeIcon.ProtectionAndData, SettingsHomeLabel.ProtectionAndDataTitle, SettingsHomeLabel.ProtectionAndDataSummary))
+        if (separateHistoryData) {
+            add(item(SettingsHomeGroup.PrivacyData, SettingsDestination.HistoryAndData, SettingsHomeIcon.HistoryAndData, SettingsHomeLabel.HistoryAndDataTitle, SettingsHomeLabel.HistoryAndDataSummary))
+        }
         if (hasDeveloperOptions) {
             add(item(SettingsHomeGroup.About, SettingsDestination.DeveloperOptions, SettingsHomeIcon.DeveloperOptions, SettingsHomeLabel.DeveloperOptionsTitle, SettingsHomeLabel.DeveloperOptionsSummary))
         }
@@ -142,6 +180,10 @@ fun SettingsHomePage(
     onUnlockDeveloperOptions: (() -> Unit)? = null,
     isDestinationEnabled: (SettingsDestination) -> Boolean = { true },
     isDestinationVisible: (SettingsDestination) -> Boolean = { true },
+    separateTabControls: Boolean = false,
+    hasAppIconSetting: Boolean = false,
+    separateHistoryData: Boolean = false,
+    separateExtensionsGroup: Boolean = false,
     searchContent: @Composable ColumnScope.() -> Unit = {},
     showHomeItems: Boolean = true,
 ) {
@@ -155,6 +197,10 @@ fun SettingsHomePage(
         val items = SettingsHomeRules.items(
             hasFirefoxExtensions = onOpenFirefoxExtensions != null,
             hasDeveloperOptions = developerOptionsUnlocked,
+            separateTabControls = separateTabControls,
+            hasAppIconSetting = hasAppIconSetting,
+            separateHistoryData = separateHistoryData,
+            separateExtensionsGroup = separateExtensionsGroup,
         ).filter { item -> item.destination?.let(isDestinationVisible) != false }
         items.forEachIndexed { index, item ->
             if (index == 0 || item.group != items[index - 1].group) {

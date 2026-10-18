@@ -3,6 +3,7 @@ package dev.sk2andy.materialbrowser.ui
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
@@ -88,6 +89,7 @@ internal fun GuestBubbleSettingsControl(
             }
         },
         modifier = Modifier.testTag(GuestBubbleSettingsTestTags.Toggle)
+            .padding(horizontal = 18.dp)
             .settingsSearchTarget(stringResource(R.string.guest_bubble_title)),
     )
     if (tutorialVisible && available) {
