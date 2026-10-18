@@ -11,5 +11,6 @@ Highlights:
 • Customize compatible sites with reviewed, explicitly installed Toppings.
 • Switch to Android System WebView when you prefer the system-managed engine.
 • Choose from several search engines or configure a SearXNG instance.
+• Download APK files from websites and, when you choose to open them, continue with Android's system installer.
 
 Remote search suggestions are disabled by default and can be enabled explicitly in settings. Candy is open source under the Mozilla Public License 2.0.

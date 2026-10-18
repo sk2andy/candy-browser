@@ -106,3 +106,24 @@ file is the exact GitHub prerelease body and packaged What's New content.
 | Ordering | Stable code strictly above latest published Nightly; Nightly code strictly above source stable code; shared publication lock |
 | Retry | Rerun failed Play job or manually publish exact Nightly version with `nightly=true`, `alpha`, `completed`; unchanged main skips rebuilding |
 | Availability | Google processing/review may delay delivery; leaving test requires waiting for a newer stable version or reinstalling |
+
+## First Play permission declaration and manual recovery
+
+Google requires a [Permissions Declaration Form](https://support.google.com/googleplay/android-developer/answer/9214102)
+for restricted permissions. The initial API upload can fail at commit while
+`REQUEST_INSTALL_PACKAGES` is undeclared. Complete the first release in Play Console and submit
+the declaration for [user-initiated APK installation during web browsing](https://support.google.com/googleplay/android-developer/answer/12085295).
+The store descriptions document this download-and-open flow; Play builds keep Candy's GitHub
+self-updater disabled. Google must review the declaration before publication can proceed.
+
+| Step | Action |
+| --- | --- |
+| Retrieve | Download `candy-google-play-signed-<run_id>-<run_attempt>` from the publishing run within three days; it is saved after signing and certificate verification, before Google authentication or API upload |
+| Verify | Extract the artifact and run `sha256sum --check SHA256SUMS`; these checksums cover the signed AAB and included R8 mapping, unlike the earlier unsigned build artifact |
+| Upload | Upload `CandyBrowser-v<version>-play.aab` to the intended existing test track in Play Console; attach `mapping.txt` if present |
+| Declare | Complete the permissions declaration for the actual browser download flow and submit the release for Google review |
+| Resume | After approval, later versions can use the normal automated workflow; inspect Play Console before retrying a version that may already be uploaded |
+
+The recovery artifact contains only the signed AAB, optional `mapping.txt`, and `SHA256SUMS`.
+Keystores, passwords, and Google credentials are excluded. It is an authenticated Actions download,
+not a GitHub Release asset. If signing or verification fails, no recovery artifact is created.

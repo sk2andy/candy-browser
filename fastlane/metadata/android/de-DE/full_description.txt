@@ -11,5 +11,6 @@ Highlights:
 • Passe kompatible Websites mit geprüften, ausdrücklich installierten Toppings an.
 • Wechsle zu Android System WebView, wenn du die vom System verwaltete Engine bevorzugst.
 • Wähle zwischen mehreren Suchmaschinen oder konfiguriere eine SearXNG-Instanz.
+• Lade APK-Dateien von Websites herunter und öffne sie auf Wunsch mit dem Android-Systeminstaller.
 
 Externe Suchvorschläge sind standardmäßig deaktiviert und können in den Einstellungen ausdrücklich aktiviert werden. Candy ist unter der Mozilla Public License 2.0 quelloffen.
