@@ -174,6 +174,9 @@ val missingPlayUploadSigningValues = playUploadSigningValues.filterValues { it =
 val hasPlayUploadSigning = missingPlayUploadSigningValues.isEmpty()
 val candyVersionCode = providers.gradleProperty("candy.versionCode").orElse("1")
 val candyVersionName = providers.gradleProperty("candy.versionName").orElse("0.1")
+val playNightly = providers.gradleProperty("candy.playNightly")
+    .map(String::toBooleanStrict)
+    .orElse(false)
 val candyReleaseNotesFile = providers.gradleProperty("candy.releaseNotesFile")
     .orElse(candyVersionName.map { version -> "release-notes/$version.md" })
 val releaseNotesImageSyntax = Regex("""!\[([^]]+)]\(([^)]+)\)""")
@@ -327,6 +330,7 @@ android {
         create("playRelease") {
             initWith(getByName("release"))
             buildConfigField("boolean", "ENABLE_GITHUB_UPDATES", "false")
+            buildConfigField("boolean", "NIGHTLY_BUILD", playNightly.get().toString())
             signingConfig = signingConfigs.findByName("playUpload")
             matchingFallbacks += listOf("release")
         }
