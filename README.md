@@ -370,7 +370,8 @@ Nightly builds publish to [GitHub Releases](https://github.com/sk2andy/candy-bro
 **00:00 UTC daily (02:00 CEST; 01:00 CET in winter)** when `main` has new commits since the last
 successfully published Nightly. GitHub may start scheduled jobs later than the requested time.
 Each build is a signed, optimized prerelease with an immutable
-`v<base-version>-nightly.<UTC YYYYMMDDHHmm>` tag. Nightlies do not publish to Google Play.
+`v<base-version>-nightly.<UTC YYYYMMDDHHmm>` tag. The standard Nightly also updates the existing
+Candy app through the closed Google Play test.
 
 | Variant | Stable application ID | Nightly application ID | Nightly launcher name |
 | --- | --- | --- | --- |
@@ -610,6 +611,29 @@ release, pass `-f publish_play=false`; the signed APK and release checks still r
 
 ### Google Play releases
 
+#### Join the Nightly test
+
+1. Join [Candy Browser Testers](https://groups.google.com/g/candy-browser-testers).
+2. [Opt in on Google Play](https://play.google.com/apps/testing/dev.sk2andy.materialbrowser)
+   with the same Google account, then install or update Candy Browser.
+
+Play Nightlies use the standard package `dev.sk2andy.materialbrowser` and update the existing app.
+The separate `.nightly` packages remain available from GitHub for parallel installations.
+The closed `alpha` track receives a verified Play bundle after each changed-source Nightly succeeds;
+Google review and processing can delay availability. Leaving the test does not downgrade Android:
+wait for a newer stable version, or reinstall after exporting your data.
+
+The group permits self-service joining; only the owner can view its membership list. Closed tests
+still require Google opt-in. An unrestricted open test needs production access; this account must
+first complete Google's required closed test.
+
+If Play publication fails after the GitHub Nightly was published, rerun the failed Play jobs or
+manually dispatch `publish-google-play.yml` with the exact Nightly version, `nightly=true`,
+`track=alpha`, and `status=completed`. An unchanged-source Nightly run deliberately does not rebuild
+or upload again. Never blindly re-upload a version already accepted by Play.
+
+#### Build and publish
+
 The Play build uses the standard application ID `dev.sk2andy.materialbrowser`, targets API 36,
 and disables Candy's GitHub update prompt. `bundleFullPlayRelease` produces one Android App Bundle
 containing ARM64, ARMv7, x86, and x86_64 libraries; Google Play generates and serves only the
@@ -695,8 +719,22 @@ Before each later F-Droid release, add its exact tag and immutable commit to the
 through normal code review, then dispatch the workflow.
 
 Android `versionCode` is stored in source so GitHub and F-Droid can build identical version
-metadata from a tag. Tags and releases are created only after full and FOSS tests, release build
-checks, APK signing, certificate pinning, and signature verification succeed. Back up the original
+metadata from a tag. New stable releases use UTC minutes since 2020-01-01, the same sequence as
+Nightlies; the number is independent of the semantic version name. During release preparation,
+fetch published releases, choose the current minute with the helper, store it as
+`candy.versionCode`, and create the matching DE/EN Play changelog files:
+
+```bash
+gh api --paginate --slurp 'repos/sk2andy/candy-browser/releases?per_page=100' > /tmp/candy-releases.json
+python3 scripts/release_version_code.py --releases /tmp/candy-releases.json
+```
+
+The stable workflow rejects a stored code at or below the latest published Nightly. Prepare a newer
+code if Nightlies have advanced since release preparation. The Nightly workflow also requires a code
+above the current source value; same-minute attempts must wait for a later minute. Release and
+Nightly workflows share one publication lock to prevent races. Old tags and their codes stay fixed.
+Tags and releases are created only after full and FOSS tests, release build checks, APK signing,
+certificate pinning, and signature verification succeed. Back up the original
 keystore and credentials securely: Android updates must always use the same signing key.
 
 ## Privacy and limitations

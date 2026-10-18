@@ -36,7 +36,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: android-release
+  group: android-publication
   cancel-in-progress: false
 
 jobs:
@@ -79,6 +79,15 @@ jobs:
             echo "Version code must be between 1 and 2100000000." >&2
             exit 1
           fi
+
+          # Play Nightlies update the standard package; stable must update those installs too.
+          gh api --paginate --slurp \
+            "repos/${GITHUB_REPOSITORY}/releases?per_page=100" \
+            > "$RUNNER_TEMP/published-releases.json"
+          python3 scripts/test_release_version_code.py
+          python3 scripts/release_version_code.py \
+            --releases "$RUNNER_TEMP/published-releases.json" \
+            --version-code "$version_code"
 
           if [[ "$version" != "$project_version" ]]; then
             echo "Workflow version ${version} does not match gradle.properties ${project_version}." >&2

@@ -34,6 +34,16 @@ Android build embeds it for offline display.
 Use tag-pinned GitHub links for README sections. Keep links useful outside the app and stable after the
 default branch moves.
 
+## Prepare the version code
+
+Stable and Play Nightly builds update the same package. Before preparing a release, fetch all
+published GitHub releases with `gh api --paginate --slurp` and run
+`scripts/release_version_code.py --releases <json-file>`. Store the suggested UTC minute since
+2020-01-01 as `candy.versionCode` and use that code for both localized Play changelog filenames.
+Version codes are independent of the semantic version name. Do not change existing release tags.
+If a newer Nightly publishes before release dispatch, prepare a newer stored code; the workflow
+rejects stable codes at or below the latest Nightly.
+
 ## Verify
 
 Run:

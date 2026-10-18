@@ -120,14 +120,26 @@ def prepare(arguments: argparse.Namespace) -> None:
     if sha == previous_sha:
         arguments.output.write_text("build=false\n", encoding="utf-8")
         return
+    properties = Path("gradle.properties").read_text(encoding="utf-8")
     base_versions = re.findall(
         r"^candy\.versionName=(.+)$",
-        Path("gradle.properties").read_text(encoding="utf-8"), re.MULTILINE,
+        properties, re.MULTILINE,
     )
     if len(base_versions) != 1:
         raise ValueError("Expected one candy.versionName in gradle.properties.")
     instant = datetime.fromisoformat(arguments.now.replace("Z", "+00:00"))
     version, code = nightly_version(base_versions[0], instant)
+    source_codes = re.findall(r"^candy\.versionCode=(.*)$", properties, re.MULTILINE)
+    if len(source_codes) != 1 or re.fullmatch(r"[1-9][0-9]*", source_codes[0]) is None:
+        raise ValueError("Expected one valid candy.versionCode in gradle.properties.")
+    source_code = int(source_codes[0])
+    if source_code > 2_100_000_000:
+        raise ValueError("Source version code must be between 1 and 2100000000.")
+    if code <= source_code:
+        raise ValueError(
+            f"Nightly version code {code} must be greater than stored source version code "
+            f"{source_code}. Wait for a later UTC minute or correct a future source code."
+        )
     if previous:
         previous_stamp = NIGHTLY_TAG.fullmatch(previous["tag_name"]).group(1)
         if version.rsplit(".", 1)[1] <= previous_stamp:

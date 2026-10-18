@@ -90,7 +90,9 @@ class NightlyReleaseTest(unittest.TestCase):
                 self._git("init", "--quiet")
                 self._git("config", "user.email", "test@example.com")
                 self._git("config", "user.name", "Test")
-                Path("gradle.properties").write_text("candy.versionName=0.45.1\n", encoding="utf-8")
+                Path("gradle.properties").write_text(
+                    "candy.versionName=0.45.1\ncandy.versionCode=45001\n", encoding="utf-8",
+                )
                 self._git("add", "gradle.properties")
                 self._git("commit", "--quiet", "-m", "feat: Initial browser")
                 tag = "v0.45.1-nightly.202610110000"
@@ -114,6 +116,60 @@ class NightlyReleaseTest(unittest.TestCase):
                 self.assertIn(previous_sha, notes)
                 self.assertEqual("", self._git("diff", "--", "gradle.properties"))
                 self.assertEqual(tag, self._git("tag", "--list"))
+            finally:
+                os.chdir(original_directory)
+
+    def test_prepare_requires_valid_source_code_below_nightly_code(self):
+        with tempfile.TemporaryDirectory() as directory:
+            original_directory = Path.cwd()
+            os.chdir(directory)
+            try:
+                self._git("init", "--quiet")
+                self._git("config", "user.email", "test@example.com")
+                self._git("config", "user.name", "Test")
+                self._git("commit", "--quiet", "--allow-empty", "-m", "Initial")
+                tag = "v0.45.1-nightly.202610110000"
+                self._git("tag", tag)
+                self._git("commit", "--quiet", "--allow-empty", "-m", "fix: New source")
+                arguments = self._arguments(directory, tag)
+                for code_property in (
+                    "", "candy.versionCode=\n", "candy.versionCode=invalid\n",
+                    "candy.versionCode=0\n", "candy.versionCode=-1\n",
+                    "candy.versionCode=2100000001\n", "candy.versionCode=3565440\n",
+                    "candy.versionCode=3565441\n",
+                    "candy.versionCode=45001\ncandy.versionCode=45002\n",
+                ):
+                    with self.subTest(code_property=code_property):
+                        Path("gradle.properties").write_text(
+                            "candy.versionName=0.45.1\n" + code_property, encoding="utf-8",
+                        )
+                        with self.assertRaises(ValueError):
+                            prepare(arguments)
+                        self.assertFalse(arguments.output.exists())
+                        self.assertFalse(Path("release-notes").exists())
+                Path("gradle.properties").write_text(
+                    "candy.versionName=0.45.1\ncandy.versionCode=3565439\n", encoding="utf-8",
+                )
+                prepare(arguments)
+                self.assertIn("version_code=3565440\n", arguments.output.read_text())
+            finally:
+                os.chdir(original_directory)
+
+    def test_prepare_skips_unchanged_source_before_reading_source_code(self):
+        with tempfile.TemporaryDirectory() as directory:
+            original_directory = Path.cwd()
+            os.chdir(directory)
+            try:
+                self._git("init", "--quiet")
+                self._git("config", "user.email", "test@example.com")
+                self._git("config", "user.name", "Test")
+                self._git("commit", "--quiet", "--allow-empty", "-m", "Initial")
+                tag = "v0.45.1-nightly.202610110000"
+                self._git("tag", tag)
+                arguments = self._arguments(directory, tag)
+                prepare(arguments)
+                self.assertEqual("build=false\n", arguments.output.read_text())
+                self.assertFalse(Path("release-notes").exists())
             finally:
                 os.chdir(original_directory)
 
