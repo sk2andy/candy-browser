@@ -7,6 +7,7 @@ import dev.sk2andy.materialbrowser.capsule.CapsuleIconColor
 import dev.sk2andy.materialbrowser.capsule.CapsuleIconMode
 import dev.sk2andy.materialbrowser.capsule.CapsuleNavigationMode
 import dev.sk2andy.materialbrowser.capsule.SiteCapsule
+import dev.sk2andy.materialbrowser.capsule.SiteCapsuleDraft
 import dev.sk2andy.materialbrowser.capsule.SiteCapsuleRules
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -53,6 +54,40 @@ class SiteCapsuleStoreInstrumentedTest {
         store.save(listOf(capsule))
 
         assertEquals(listOf(capsule), SiteCapsuleStore(context).load())
+    }
+
+    @Test
+    fun editedCapsuleSurvivesReloadWithItsOriginalIdentity() {
+        val existing = SiteCapsule(
+            id = "04a74ad8-7533-460c-bfbf-a135968940d5",
+            name = "Mail",
+            startUrl = "https://mail.example/inbox",
+            profileId = "work",
+            createdAtMillis = 10L,
+            updatedAtMillis = 20L,
+        )
+        val edited = requireNotNull(
+            SiteCapsuleRules.update(
+                existing = existing,
+                draft = SiteCapsuleDraft(
+                    id = existing.id,
+                    name = "Updated Mail",
+                    startUrl = "https://mail.example/new-inbox",
+                    profileId = existing.profileId,
+                ),
+                nowMillis = 30L,
+                multiProfileSupported = true,
+            ),
+        )
+
+        store.save(listOf(edited))
+
+        assertEquals(edited, SiteCapsuleStore(context).load().single())
+        assertEquals(existing.id, edited.id)
+        assertEquals(existing.createdAtMillis, edited.createdAtMillis)
+        assertEquals(30L, edited.updatedAtMillis)
+        assertEquals("Updated Mail", edited.name)
+        assertEquals("https://mail.example/new-inbox", edited.startUrl)
     }
 
     @Test

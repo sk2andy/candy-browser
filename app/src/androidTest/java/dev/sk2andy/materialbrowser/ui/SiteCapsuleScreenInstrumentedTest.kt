@@ -12,7 +12,9 @@ import androidx.compose.ui.test.assertContentDescriptionEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextReplacement
@@ -97,6 +99,125 @@ class SiteCapsuleScreenInstrumentedTest {
 
         composeRule.onNodeWithTag(SiteCapsuleTestTags.WebContent).assertIsDisplayed()
         composeRule.onNodeWithTag(SiteCapsuleTestTags.Chrome).assertDoesNotExist()
+    }
+
+    @Test
+    fun settingsListShowsExplicitEditActionForExistingCapsule() {
+        val capsule = SiteCapsule(
+            id = "04a74ad8-7533-460c-bfbf-a135968940d5",
+            name = "Example Capsule",
+            startUrl = "https://example.com/start",
+            profileId = "candy",
+            createdAtMillis = 1L,
+            updatedAtMillis = 2L,
+        )
+        val edited = AtomicReference<SiteCapsule?>()
+        val deleted = AtomicReference<SiteCapsule?>()
+        composeRule.setContent {
+            MaterialTheme {
+                SiteCapsulesSettingsPage(
+                    siteCapsules = listOf(capsule),
+                    onEditCapsule = edited::set,
+                    onDeleteCapsule = deleted::set,
+                    onBack = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithContentDescription(
+            composeRule.activity.getString(R.string.capsule_edit_title),
+        ).assertIsDisplayed().performClick()
+
+        assertEquals(capsule, edited.get())
+        assertNull(deleted.get())
+        composeRule.onNodeWithContentDescription(
+            composeRule.activity.getString(R.string.capsule_delete_title),
+        ).assertIsDisplayed()
+    }
+
+    @Test
+    fun existingCapsuleCanBeEditedAndSavedWithoutLosingItsIdentity() {
+        val existing = SiteCapsule(
+            id = "04a74ad8-7533-460c-bfbf-a135968940d5",
+            name = "Original Capsule",
+            startUrl = "https://example.com/start",
+            profileId = "candy",
+            createdAtMillis = 1L,
+            updatedAtMillis = 2L,
+        )
+        val submission = AtomicReference<dev.sk2andy.materialbrowser.capsule.SiteCapsuleEditorSubmission?>()
+        composeRule.setContent {
+            MaterialTheme {
+                SiteCapsuleEditorScreen(
+                    request = SiteCapsuleEditorRequest(
+                        existing = existing,
+                        sourceTabId = null,
+                        sourceTitle = "",
+                        sourceUrl = "",
+                        profiles = listOf(BrowserProfile("candy", "🍬")),
+                        activeProfileId = "candy",
+                        profileIsolationSupported = true,
+                        pinningSupported = true,
+                        canCreate = true,
+                        canCreateDedicatedProfile = true,
+                        previewIcon = null,
+                    ),
+                    onSubmit = submission::set,
+                    onDismiss = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("Original Capsule").performScrollTo()
+            .performTextReplacement("Renamed Capsule")
+        composeRule.onNodeWithTag(SiteCapsuleTestTags.Save)
+            .performScrollTo()
+            .performClick()
+
+        assertEquals(existing.id, submission.get()?.existingId)
+        assertEquals("Renamed Capsule", submission.get()?.name)
+        assertEquals(existing.startUrl, submission.get()?.startUrl)
+    }
+
+    @Test
+    fun editorBackActionCancelsWithoutSubmittingChanges() {
+        var dismissed = false
+        val submission = AtomicReference<dev.sk2andy.materialbrowser.capsule.SiteCapsuleEditorSubmission?>()
+        composeRule.setContent {
+            MaterialTheme {
+                SiteCapsuleEditorScreen(
+                    request = SiteCapsuleEditorRequest(
+                        existing = SiteCapsule(
+                            id = "04a74ad8-7533-460c-bfbf-a135968940d5",
+                            name = "Original Capsule",
+                            startUrl = "https://example.com/start",
+                            profileId = "candy",
+                            createdAtMillis = 1L,
+                            updatedAtMillis = 2L,
+                        ),
+                        sourceTabId = null,
+                        sourceTitle = "",
+                        sourceUrl = "",
+                        profiles = listOf(BrowserProfile("candy", "🍬")),
+                        activeProfileId = "candy",
+                        profileIsolationSupported = true,
+                        pinningSupported = true,
+                        canCreate = true,
+                        canCreateDedicatedProfile = true,
+                        previewIcon = null,
+                    ),
+                    onSubmit = submission::set,
+                    onDismiss = { dismissed = true },
+                )
+            }
+        }
+
+        composeRule.onNodeWithContentDescription(
+            composeRule.activity.getString(R.string.action_back),
+        ).performClick()
+
+        assertEquals(true, dismissed)
+        assertNull(submission.get())
     }
 
     @Test

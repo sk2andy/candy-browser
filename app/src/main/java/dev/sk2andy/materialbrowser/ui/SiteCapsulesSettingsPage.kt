@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -75,6 +76,12 @@ internal fun SiteCapsulesSettingsPage(
                                 overflow = TextOverflow.Ellipsis,
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        IconButton(onClick = { onEditCapsule(capsule) }) {
+                            Icon(
+                                Icons.Default.Edit,
+                                contentDescription = stringResource(R.string.capsule_edit_title),
                             )
                         }
                         IconButton(onClick = { onDeleteCapsule(capsule) }) {
