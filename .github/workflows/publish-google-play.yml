@@ -94,6 +94,22 @@ jobs:
       PRODUCTION_CONFIRMATION: ${{ inputs.production_confirmation }}
 
     steps:
+      - name: Check out trusted Nightly publishing tools
+        if: inputs.nightly
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.workflow_sha }}
+          fetch-depth: 1
+
+      - name: Preserve Nightly publishing tools before checking out older source
+        if: inputs.nightly
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/play-nightly-tools"
+          cp scripts/nightly_release.py scripts/prepare_play_nightly.py \
+            scripts/test_prepare_play_nightly.py "$RUNNER_TEMP/play-nightly-tools/"
+
       - name: Check out release tag
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -154,8 +170,8 @@ jobs:
               --repo "$GITHUB_REPOSITORY" \
               --json tagName,isDraft,isPrerelease,body \
               > "$RUNNER_TEMP/play-nightly-release.json"
-            python3 scripts/test_prepare_play_nightly.py
-            python3 scripts/prepare_play_nightly.py \
+            python3 "$RUNNER_TEMP/play-nightly-tools/test_prepare_play_nightly.py"
+            python3 "$RUNNER_TEMP/play-nightly-tools/prepare_play_nightly.py" \
               --release "$RUNNER_TEMP/play-nightly-release.json" \
               --version "$input_version" \
               --repository "$GITHUB_REPOSITORY" \
@@ -261,6 +277,7 @@ jobs:
           fi
           ./gradlew "${gradle_flags[@]}" \
             testFullDebugUnitTest \
+            testFullPlayReleaseUnitTest \
             lintFullPlayRelease \
             bundleFullPlayRelease
 
