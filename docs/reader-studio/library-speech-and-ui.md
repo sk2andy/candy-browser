@@ -84,3 +84,17 @@ status icons using a spacer inside the scroll content. This spacer scrolls away,
 the status bar. A theme-colored status scrim and matching system-icon appearance preserve contrast;
 horizontal cutouts and the bottom navigation inset still protect controls. The offline library keeps
 its status-bar inset and enough trailing space to scroll its final entry above the pill.
+
+## Motion and save feedback
+
+| Surface | Behavior | State boundary |
+| --- | --- | --- |
+| Android reader entry | Short fade with an 8 dp upward settle; controls remain immediately available | No delayed dismissal or extra reader session |
+| Extraction | Article gently fades in after loading | No additional extraction or repository operation |
+| Offline library | Short horizontal transition; Back reverses direction | Article and library retain their scroll positions; restored progress is not reapplied on return |
+| Save offline | Download icon crossfades to a checkmark after the repository callback returns the matching document snapshot; one small pulse acknowledges completion | Empty, evicted, private, or mismatching snapshots never confirm a save; no new persistence |
+| Reduced motion | iOS Reduce Motion skips content/icon transitions and pulse; Android uses the existing animation duration policy | Saved state and navigation remain available with animations disabled |
+
+Only the current destination remains composed during navigation; outgoing content cannot intercept touches or accessibility actions. The save checkmark also
+exposes the localized offline state on its button. Returning to settings retains the checkmark without
+starting another save. A save completed while the library is open still updates its list. Pulse feedback remains bound to the article; closing or replacing the Reader session rejects its stale library callback.

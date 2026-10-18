@@ -1,6 +1,8 @@
 package dev.sk2andy.materialbrowser.ui
 
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
@@ -19,6 +21,7 @@ import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.performScrollTo
 import androidx.test.espresso.Espresso
 import androidx.compose.ui.semantics.SemanticsActions
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import androidx.compose.ui.unit.Density
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -28,6 +31,12 @@ import dev.sk2andy.materialbrowser.reader.ReaderBlock
 import dev.sk2andy.materialbrowser.reader.ReaderBlockKind
 import dev.sk2andy.materialbrowser.reader.ReaderDocument
 import dev.sk2andy.materialbrowser.reader.ReaderExtractionResult
+import dev.sk2andy.materialbrowser.reader.ReaderLibraryDataSource
+import dev.sk2andy.materialbrowser.reader.ReaderLibraryState
+import dev.sk2andy.materialbrowser.reader.ReaderSnapshot
+import dev.sk2andy.materialbrowser.shared.ui.CandyBrowserChromeEffects
+import dev.sk2andy.materialbrowser.shared.ui.DefaultCandyBrowserChromeEffects
+import dev.sk2andy.materialbrowser.shared.ui.LocalCandyBrowserChromeEffects
 import dev.sk2andy.materialbrowser.reader.ReaderLibraryStore
 import dev.sk2andy.materialbrowser.reader.ReaderLibraryRepository
 import dev.sk2andy.materialbrowser.reader.ReaderSpeechController
@@ -256,6 +265,173 @@ class ReaderStudioScreenInstrumentedTest {
         composeRule.runOnIdle { assertFalse(dismissed) }
         composeRule.onNodeWithTag(ReaderStudioTestTags.Back).performClick()
         composeRule.runOnIdle { assertTrue(dismissed) }
+    }
+
+    @Test
+    fun offlineSaveFeedbackWaitsForConfirmedMatchingSnapshot() {
+        val article = document()
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        var completeSave: ((ReaderLibraryState) -> Unit)? = null
+        val dataSource = object : ReaderLibraryDataSource by repository {
+            override fun load(isPrivate: Boolean, onLoaded: (ReaderLibraryState) -> Unit) {
+                onLoaded(ReaderLibraryState())
+            }
+
+            override fun saveSnapshot(
+                document: ReaderDocument,
+                progress: Float,
+                isPrivate: Boolean,
+                onUpdated: (ReaderLibraryState) -> Unit,
+            ) {
+                completeSave = onUpdated
+            }
+        }
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                SharedReaderStudioScreen(
+                    result = ReaderExtractionResult.Success(article),
+                    sourceUrl = article.sourceUrl,
+                    isPrivate = false,
+                    repository = dataSource,
+                    resources = AndroidReaderStudioResources,
+                    speechFactory = { ReaderSpeechController(context) },
+                    onRetry = {},
+                    onDismiss = {},
+                    onOpenOriginal = {},
+                    onOpenLink = {},
+                )
+            }
+        }
+        composeRule.onNodeWithTag(ReaderStudioTestTags.Settings).performClick()
+        composeRule.onNodeWithTag(ReaderStudioTestTags.Save).performClick()
+        composeRule.onNodeWithTag(ReaderStudioTestTags.Saved, useUnmergedTree = true).assertDoesNotExist()
+        composeRule.runOnIdle { checkNotNull(completeSave)(ReaderLibraryState()) }
+        composeRule.onNodeWithTag(ReaderStudioTestTags.Saved, useUnmergedTree = true).assertDoesNotExist()
+        composeRule.onNodeWithTag(ReaderStudioTestTags.Save).performClick()
+        composeRule.mainClock.autoAdvance = false
+        composeRule.runOnIdle {
+            checkNotNull(completeSave)(
+                ReaderLibraryState(snapshots = listOf(ReaderSnapshot("confirmed", article, 0f, 1L))),
+            )
+        }
+        composeRule.mainClock.advanceTimeBy(64)
+        composeRule.onNodeWithTag(ReaderStudioTestTags.Saved, useUnmergedTree = true).assertIsDisplayed()
+        composeRule.mainClock.advanceTimeBy(400)
+        composeRule.mainClock.autoAdvance = true
+        composeRule.onNodeWithTag(ReaderStudioTestTags.Continue).performScrollTo().performClick()
+        composeRule.onNodeWithTag(ReaderStudioTestTags.Settings).performClick()
+        composeRule.onNodeWithTag(ReaderStudioTestTags.Saved, useUnmergedTree = true).assertIsDisplayed()
+    }
+
+    @Test
+    fun pendingSaveUpdatesLibraryAfterArticleCloses() {
+        val article = document()
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        var completeSave: ((ReaderLibraryState) -> Unit)? = null
+        val dataSource = object : ReaderLibraryDataSource by repository {
+            override fun load(isPrivate: Boolean, onLoaded: (ReaderLibraryState) -> Unit) {
+                onLoaded(ReaderLibraryState())
+            }
+
+            override fun saveSnapshot(
+                document: ReaderDocument,
+                progress: Float,
+                isPrivate: Boolean,
+                onUpdated: (ReaderLibraryState) -> Unit,
+            ) {
+                completeSave = onUpdated
+            }
+        }
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                SharedReaderStudioScreen(
+                    result = ReaderExtractionResult.Success(article),
+                    sourceUrl = article.sourceUrl,
+                    isPrivate = false,
+                    repository = dataSource,
+                    resources = AndroidReaderStudioResources,
+                    speechFactory = { ReaderSpeechController(context) },
+                    onRetry = {},
+                    onDismiss = {},
+                    onOpenOriginal = {},
+                    onOpenLink = {},
+                )
+            }
+        }
+        composeRule.onNodeWithTag(ReaderStudioTestTags.Settings).performClick()
+        composeRule.onNodeWithTag(ReaderStudioTestTags.Save).performClick()
+        composeRule.onNodeWithTag(ReaderStudioTestTags.Library).performScrollTo().performClick()
+        composeRule.onNodeWithTag(ReaderStudioTestTags.Article).assertDoesNotExist()
+        composeRule.onNodeWithText(article.title).assertDoesNotExist()
+        composeRule.runOnIdle {
+            checkNotNull(completeSave)(
+                ReaderLibraryState(snapshots = listOf(ReaderSnapshot("confirmed", article, 0f, 1L))),
+            )
+        }
+        composeRule.onNodeWithText(article.title).assertIsDisplayed().performClick()
+        composeRule.onNodeWithTag(ReaderStudioTestTags.Article).assertIsDisplayed()
+        composeRule.onNodeWithTag(ReaderStudioTestTags.Settings).performClick()
+        composeRule.onNodeWithTag(ReaderStudioTestTags.Saved, useUnmergedTree = true).assertIsDisplayed()
+    }
+
+    @Test
+    fun loadingAndLibraryTransitionsPreserveScrollWithReducedMotion() {
+        verifyLoadingAndLibraryScroll(reduceMotion = true)
+    }
+
+    @Test
+    fun loadingAndLibraryTransitionsPreserveScrollWithMotion() {
+        verifyLoadingAndLibraryScroll(reduceMotion = false)
+    }
+
+    private fun verifyLoadingAndLibraryScroll(reduceMotion: Boolean) {
+        val article = document().copy(blocks = List(50) { document().blocks.last() })
+        val result = mutableStateOf<ReaderExtractionResult?>(null)
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val effects = object : CandyBrowserChromeEffects by DefaultCandyBrowserChromeEffects {
+            override fun reducesMotion() = reduceMotion
+        }
+        val dataSource = object : ReaderLibraryDataSource by repository {
+            override fun load(isPrivate: Boolean, onLoaded: (ReaderLibraryState) -> Unit) {
+                onLoaded(ReaderLibraryState())
+            }
+
+            override fun updateProgress(sourceUrl: String, progress: Float, isPrivate: Boolean) = Unit
+        }
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                CompositionLocalProvider(LocalCandyBrowserChromeEffects provides effects) {
+                    SharedReaderStudioScreen(
+                        result = result.value,
+                        sourceUrl = article.sourceUrl,
+                        isPrivate = false,
+                        repository = dataSource,
+                        resources = AndroidReaderStudioResources,
+                        speechFactory = { ReaderSpeechController(context) },
+                        onRetry = {},
+                        onDismiss = {},
+                        onOpenOriginal = {},
+                        onOpenLink = {},
+                    )
+                }
+            }
+        }
+        composeRule.onNodeWithTag(ReaderStudioTestTags.Loading).assertIsDisplayed()
+        composeRule.runOnIdle { result.value = ReaderExtractionResult.Success(article) }
+        composeRule.onNodeWithTag(ReaderStudioTestTags.Loading).assertDoesNotExist()
+        val articleNode = composeRule.onNodeWithTag(ReaderStudioTestTags.Article)
+        articleNode.performTouchInput { swipeUp() }
+        val scrollBefore = articleNode.fetchSemanticsNode().config[SemanticsProperties.VerticalScrollAxisRange].value()
+        assertTrue(scrollBefore > 0f)
+        composeRule.onNodeWithTag(ReaderStudioTestTags.Settings).performClick()
+        composeRule.onNodeWithTag(ReaderStudioTestTags.Library).performScrollTo().performClick()
+        composeRule.onNodeWithTag(ReaderStudioTestTags.LibraryContent).assertIsDisplayed()
+        articleNode.assertDoesNotExist()
+        composeRule.onNodeWithTag(ReaderStudioTestTags.Back).performClick()
+        composeRule.onNodeWithTag(ReaderStudioTestTags.LibraryContent).assertDoesNotExist()
+        articleNode.assertIsDisplayed()
+        val scrollAfter = articleNode.fetchSemanticsNode().config[SemanticsProperties.VerticalScrollAxisRange].value()
+        assertEquals(scrollBefore, scrollAfter, 1f)
     }
 
     private fun document() = ReaderDocument(

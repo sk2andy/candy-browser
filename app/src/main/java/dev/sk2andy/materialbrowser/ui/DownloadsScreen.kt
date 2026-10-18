@@ -2,6 +2,12 @@ package dev.sk2andy.materialbrowser.ui
 
 import android.net.Uri
 import android.text.format.Formatter
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -15,12 +21,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
@@ -35,6 +41,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -49,6 +56,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -169,6 +177,7 @@ internal fun DownloadsScreen(
                 items(items = visibleDownloads, key = DownloadEntry::id) { entry ->
                     DownloadRow(
                         entry = entry,
+                        modifier = Modifier.animateItem(),
                         dateTime = dateTimeFormatter.format(
                             Instant.ofEpochMilli(entry.lastModified).atZone(zoneId),
                         ),
@@ -222,11 +231,19 @@ private fun DownloadRow(
     onOpen: () -> Unit,
     onCancel: () -> Unit,
     onTogglePause: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    val progress = DownloadHistoryRules.progress(entry)
+    // Keep outgoing controls and progress stable until the active area finishes collapsing.
+    var lastActiveEntry by remember(entry.id) { mutableStateOf(entry) }
+    SideEffect {
+        if (entry.status.isActive) lastActiveEntry = entry
+    }
+    val activeEntry = if (entry.status.isActive) entry else lastActiveEntry
+    val progress = DownloadHistoryRules.progress(activeEntry)
     val statusColor = downloadStatusColor(entry.status)
+    val motionScheme = MaterialTheme.motionScheme
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .clickable(
                 enabled = entry.status == DownloadStatus.Successful,
@@ -257,12 +274,27 @@ private fun DownloadRow(
                 }
             },
             leadingContent = {
-                Icon(
-                    painter = painterResource(R.drawable.ic_reader_download),
-                    contentDescription = null,
-                    modifier = Modifier.size(24.dp),
-                    tint = statusColor,
-                )
+                Crossfade(
+                    targetState = entry.status == DownloadStatus.Successful,
+                    animationSpec = motionScheme.fastEffectsSpec(),
+                    label = "downloadCompletion",
+                ) { completed ->
+                    if (completed) {
+                        Icon(
+                            imageVector = Icons.Default.Check,
+                            contentDescription = null,
+                            modifier = Modifier.size(24.dp),
+                            tint = statusColor,
+                        )
+                    } else {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_reader_download),
+                            contentDescription = null,
+                            modifier = Modifier.size(24.dp),
+                            tint = statusColor,
+                        )
+                    }
+                }
             },
             trailingContent = {
                 Text(
@@ -272,50 +304,67 @@ private fun DownloadRow(
                 )
             },
         )
-        if (entry.status.isActive && (entry.supportsPause || entry.supportsCancel)) {
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.End,
+        AnimatedVisibility(
+            visible = entry.status.isActive,
+            enter = fadeIn(motionScheme.fastEffectsSpec()) +
+                expandVertically(motionScheme.fastSpatialSpec()),
+            exit = fadeOut(motionScheme.fastEffectsSpec()) +
+                shrinkVertically(motionScheme.fastSpatialSpec()),
+        ) {
+            Column(
+                modifier = if (entry.status.isActive) Modifier else Modifier.clearAndSetSemantics {},
             ) {
-                if (entry.supportsPause) {
-                    TextButton(
-                        onClick = onTogglePause,
-                        modifier = Modifier.testTag(DownloadsScreenTestTags.pause(entry.id)),
+                if (activeEntry.supportsPause || activeEntry.supportsCancel) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                        horizontalArrangement = Arrangement.End,
                     ) {
-                        Text(stringResource(
-                            if (entry.status == DownloadStatus.Paused) R.string.downloads_resume
-                            else R.string.downloads_pause,
-                        ))
+                        if (activeEntry.supportsPause) {
+                            TextButton(
+                                onClick = onTogglePause,
+                                enabled = entry.status.isActive,
+                                modifier = Modifier.testTag(DownloadsScreenTestTags.pause(entry.id)),
+                            ) {
+                                Text(
+                                    stringResource(
+                                        if (activeEntry.status == DownloadStatus.Paused) {
+                                            R.string.downloads_resume
+                                        } else {
+                                            R.string.downloads_pause
+                                        },
+                                    ),
+                                )
+                            }
+                        }
+                        if (activeEntry.supportsCancel) {
+                            TextButton(
+                                onClick = onCancel,
+                                enabled = entry.status.isActive,
+                                modifier = Modifier.testTag(DownloadsScreenTestTags.cancel(entry.id)),
+                            ) {
+                                Text(stringResource(R.string.action_cancel))
+                            }
+                        }
                     }
                 }
-                if (entry.supportsCancel) {
-                    TextButton(
-                        onClick = onCancel,
-                        modifier = Modifier.testTag(DownloadsScreenTestTags.cancel(entry.id)),
-                    ) {
-                        Text(stringResource(R.string.action_cancel))
-                    }
+                if (progress == null) {
+                    LinearWavyProgressIndicator(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp)
+                            .testTag(DownloadsScreenTestTags.progress(entry.id)),
+                    )
+                } else {
+                    LinearWavyProgressIndicator(
+                        progress = { progress },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp)
+                            .testTag(DownloadsScreenTestTags.progress(entry.id)),
+                    )
                 }
+                Spacer(Modifier.height(8.dp))
             }
-        }
-        if (entry.status.isActive) {
-            if (progress == null) {
-                LinearWavyProgressIndicator(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp)
-                        .testTag(DownloadsScreenTestTags.progress(entry.id)),
-                )
-            } else {
-                LinearWavyProgressIndicator(
-                    progress = { progress },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp)
-                        .testTag(DownloadsScreenTestTags.progress(entry.id)),
-                )
-            }
-            Spacer(Modifier.height(8.dp))
         }
     }
 }

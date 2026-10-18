@@ -1,5 +1,9 @@
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3ExpressiveApi::class)
+
 package dev.sk2andy.materialbrowser.ui
 
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -28,9 +32,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
@@ -64,6 +70,11 @@ internal fun FindInPageBar(
     val focusRequester = remember { FocusRequester() }
     val keyboard = LocalSoftwareKeyboardController.current
     val chromeTokens = browserChromeSurfaceTokens(BrowserChromeSurfaceRole.AddressBar)
+    val entryProgress = remember { Animatable(0f) }
+    val entrySpec = MaterialTheme.motionScheme.fastEffectsSpec<Float>()
+    LaunchedEffect(Unit) {
+        entryProgress.animateTo(1f, entrySpec)
+    }
     LaunchedEffect(autoFocus, focusNonce) {
         if (autoFocus) {
             withFrameNanos { }
@@ -78,6 +89,10 @@ internal fun FindInPageBar(
         modifier = modifier
             .widthIn(max = 600.dp)
             .fillMaxWidth()
+            .graphicsLayer {
+                alpha = entryProgress.value
+                translationY = -8.dp.toPx() * (1f - entryProgress.value)
+            }
             .testTag(FindInPageBarTestTags.Bar),
         shape = MaterialTheme.shapes.extraLarge,
         blurCornerRadius = chromeTokens.largeCornerRadius,
@@ -120,34 +135,44 @@ internal fun FindInPageBar(
                     }
                 },
             )
-            Box(
+            Crossfade(
+                targetState = isCounting,
                 modifier = Modifier.widthIn(min = 52.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                if (isCounting) {
-                    CircularProgressIndicator(
-                        modifier = Modifier
-                            .size(18.dp)
-                            .progressSemantics()
-                            .semantics {
-                                contentDescription = countingContentDescription
-                                liveRegion = LiveRegionMode.Polite
-                            }
-                            .testTag(FindInPageBarTestTags.Progress),
-                        strokeWidth = 2.dp,
-                        color = chromeTokens.accentColor,
-                    )
-                } else {
-                    Text(
-                        text = matchText,
-                        modifier = Modifier
-                            .semantics { liveRegion = LiveRegionMode.Polite }
-                            .testTag(FindInPageBarTestTags.MatchCount),
-                        color = chromeTokens.secondaryContentColor,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        style = MaterialTheme.typography.labelMedium,
-                    )
+                animationSpec = MaterialTheme.motionScheme.fastEffectsSpec(),
+                label = "Find match status",
+            ) { counting ->
+                val statusSemantics = if (counting == isCounting) Modifier else {
+                    Modifier.clearAndSetSemantics { }
+                }
+                Box(
+                    modifier = Modifier.widthIn(min = 52.dp).then(statusSemantics),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    if (counting) {
+                        CircularProgressIndicator(
+                            modifier = Modifier
+                                .size(18.dp)
+                                .progressSemantics()
+                                .semantics {
+                                    contentDescription = countingContentDescription
+                                    liveRegion = LiveRegionMode.Polite
+                                }
+                                .testTag(FindInPageBarTestTags.Progress),
+                            strokeWidth = 2.dp,
+                            color = chromeTokens.accentColor,
+                        )
+                    } else {
+                        Text(
+                            text = matchText,
+                            modifier = Modifier
+                                .semantics { liveRegion = LiveRegionMode.Polite }
+                                .testTag(FindInPageBarTestTags.MatchCount),
+                            color = chromeTokens.secondaryContentColor,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            style = MaterialTheme.typography.labelMedium,
+                        )
+                    }
                 }
             }
             IconButton(

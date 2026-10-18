@@ -1,5 +1,12 @@
 package dev.sk2andy.materialbrowser.shared.ui
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -27,6 +34,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
@@ -54,7 +62,9 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.key
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -66,6 +76,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
@@ -73,6 +84,7 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.role
@@ -123,6 +135,8 @@ object ReaderStudioTestTags {
     const val Article = "reader_studio_article"
     const val Progress = "reader_studio_progress"
     const val Save = "reader_studio_save"
+    const val Saved = "reader_studio_saved"
+    const val LibraryContent = "reader_studio_library_content"
     const val Library = "reader_studio_library"
     const val PrivateNotice = "reader_studio_private_notice"
     const val SpeechPlay = "reader_studio_speech_play"
@@ -341,6 +355,8 @@ internal class UnavailableReaderSpeech : ReaderSpeech {
     }
 }
 
+private enum class ReaderContent { Loading, Error, Article, Library }
+
 @Composable
 fun ReaderStudioScreen(
     result: ReaderExtractionResult?,
@@ -357,6 +373,10 @@ fun ReaderStudioScreen(
     systemBarAppearance: @Composable (Boolean) -> Unit = {},
 ) {
     var library by remember(isPrivate) { mutableStateOf(ReaderLibraryState()) }
+    val sessionActive = remember(repository, result, sourceUrl, isPrivate) { mutableStateOf(true) }
+    DisposableEffect(sessionActive) {
+        onDispose { sessionActive.value = false }
+    }
     var activeDocument by remember(result, sourceUrl, isPrivate) {
         mutableStateOf((result as? ReaderExtractionResult.Success)?.document)
     }
@@ -382,6 +402,16 @@ fun ReaderStudioScreen(
         mutableStateOf(library.settings)
     }
     val colors = readerColors(sessionSettings.theme)
+    val reduceMotion = LocalCandyBrowserChromeEffects.current.reducesMotion()
+    val articleScrollState = key(activeDocument?.sourceUrl, isPrivate) { rememberScrollState() }
+    val libraryScrollState = rememberScrollState()
+    var articleScrollRestored by remember(activeDocument?.sourceUrl, isPrivate) { mutableStateOf(false) }
+    val content = when {
+        libraryVisible && !isPrivate -> ReaderContent.Library
+        activeDocument != null -> ReaderContent.Article
+        result is ReaderExtractionResult.Failure -> ReaderContent.Error
+        else -> ReaderContent.Loading
+    }
     systemBarAppearance(colors.article.luminance() > 0.5f)
     DisposableEffect(repository, result, sourceUrl, isPrivate) {
         var active = true
@@ -413,89 +443,98 @@ fun ReaderStudioScreen(
                 WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom),
             ),
         ) {
-            if (libraryVisible && !isPrivate) {
-                ReaderLibraryContent(
-                    resources = resources,
-                    snapshots = library.snapshots,
-                    progressByUrl = library.progressByUrl,
-                    colors = colors,
-                    backButtonVisible = backHandler == null,
-                    onOpen = { snapshot ->
-                        activeSnapshot = snapshot
-                        activeDocument = snapshot.document
-                        libraryVisible = false
-                    },
-                    onDelete = { snapshot ->
-                        if (activeSnapshot?.id == snapshot.id) activeSnapshot = null
-                        repository.deleteSnapshot(snapshot.id, isPrivate = false) { updated ->
-                            library = updated
-                        }
-                    },
-                )
-            } else {
-                when {
-                    result == null && activeDocument == null -> ReaderLoading(resources, colors)
-                    result is ReaderExtractionResult.Failure && activeDocument == null ->
-                        ReaderError(
-                            resources,
-                            result.reason,
-                            colors,
-                            onRetry,
-                            onOpenOriginal = { onOpenOriginal(sourceUrl) },
-                            onOpenLibrary = if (!isPrivate && library.snapshots.isNotEmpty()) {
-                                { libraryVisible = true }
-                            } else {
-                                null
-                            },
-                        )
-                    activeDocument != null -> ReaderArticle(
-                        document = checkNotNull(activeDocument),
-                        snapshotProgress = activeSnapshot?.progress,
-                        isPrivate = isPrivate,
-                        settings = sessionSettings,
-                        library = library,
-                        libraryLoaded = libraryLoaded,
-                        repository = repository,
+            ReaderContentTransition(content, reduceMotion) {
+                if (content == ReaderContent.Library) {
+                    ReaderLibraryContent(
                         resources = resources,
-                        speechFactory = speechFactory,
+                        snapshots = library.snapshots,
+                        scrollState = libraryScrollState,
+                        progressByUrl = library.progressByUrl,
                         colors = colors,
                         backButtonVisible = backHandler == null,
-                        onSettingsChanged = { settings ->
-                            sessionSettings = settings.copy(fontScale = settings.fontScale.coerceIn(0.8f, 1.6f))
-                            if (!isPrivate) {
-                                repository.updateSettings(
-                                    sessionSettings,
-                                    isPrivate = false,
-                                ) { updated ->
-                                    library = updated
-                                }
+                        onOpen = { snapshot ->
+                            activeSnapshot = snapshot
+                            activeDocument = snapshot.document
+                            libraryVisible = false
+                        },
+                        onDelete = { snapshot ->
+                            if (activeSnapshot?.id == snapshot.id) activeSnapshot = null
+                            repository.deleteSnapshot(snapshot.id, isPrivate = false) { updated ->
+                                library = updated
                             }
                         },
-                        onLibraryChanged = { updatedLibrary ->
-                            library = updatedLibrary
-                            activeSnapshot = library.snapshots.firstOrNull {
-                                it.document.sourceUrl == activeDocument?.sourceUrl
-                            }
-                        },
-                        onOpenLink = onOpenLink,
-                        onScroll = { deltaDp, atTop ->
-                            val update = ReaderChromeRules.onScroll(chrome, scrollDistanceDp, deltaDp, atTop)
-                            chrome = update.mode
-                            scrollDistanceDp = update.accumulatedDistanceDp
-                        },
-                        settingsVisible = settingsVisible,
-                        onCloseSettings = { settingsVisible = false },
-                        onHideControls = {
-                            chrome = ReaderChromeMode.Hidden
-                            scrollDistanceDp = 0f
-                            settingsVisible = false
-                        },
-                        onLibrary = {
-                            settingsVisible = false
-                            libraryVisible = true
-                        },
-                        onOpenOriginal = { onOpenOriginal(checkNotNull(activeDocument).sourceUrl) },
                     )
+                } else {
+                    when {
+                        content == ReaderContent.Loading -> ReaderLoading(resources, colors)
+                        content == ReaderContent.Error ->
+                            ReaderError(
+                                resources,
+                                (result as? ReaderExtractionResult.Failure)?.reason
+                                    ?: ReaderExtractionFailure.InvalidResponse,
+                                colors,
+                                onRetry,
+                                onOpenOriginal = { onOpenOriginal(sourceUrl) },
+                                onOpenLibrary = if (!isPrivate && library.snapshots.isNotEmpty()) {
+                                    { libraryVisible = true }
+                                } else {
+                                    null
+                                },
+                            )
+                        activeDocument != null -> ReaderArticle(
+                            document = checkNotNull(activeDocument),
+                            scrollState = articleScrollState,
+                            restored = articleScrollRestored,
+                            onScrollRestored = { articleScrollRestored = true },
+                            snapshotProgress = activeSnapshot?.progress,
+                            isPrivate = isPrivate,
+                            settings = sessionSettings,
+                            library = library,
+                            libraryLoaded = libraryLoaded,
+                            repository = repository,
+                            resources = resources,
+                            speechFactory = speechFactory,
+                            colors = colors,
+                            backButtonVisible = backHandler == null,
+                            onSettingsChanged = { settings ->
+                                sessionSettings = settings.copy(fontScale = settings.fontScale.coerceIn(0.8f, 1.6f))
+                                if (!isPrivate) {
+                                    repository.updateSettings(
+                                        sessionSettings,
+                                        isPrivate = false,
+                                    ) { updated ->
+                                        library = updated
+                                    }
+                                }
+                            },
+                            onLibraryChanged = { updatedLibrary ->
+                                if (sessionActive.value) {
+                                    library = updatedLibrary
+                                    activeSnapshot = library.snapshots.firstOrNull {
+                                        it.document.sourceUrl == activeDocument?.sourceUrl
+                                    }
+                                }
+                            },
+                            onOpenLink = onOpenLink,
+                            onScroll = { deltaDp, atTop ->
+                                val update = ReaderChromeRules.onScroll(chrome, scrollDistanceDp, deltaDp, atTop)
+                                chrome = update.mode
+                                scrollDistanceDp = update.accumulatedDistanceDp
+                            },
+                            settingsVisible = settingsVisible,
+                            onCloseSettings = { settingsVisible = false },
+                            onHideControls = {
+                                chrome = ReaderChromeMode.Hidden
+                                scrollDistanceDp = 0f
+                                settingsVisible = false
+                            },
+                            onLibrary = {
+                                settingsVisible = false
+                                libraryVisible = true
+                            },
+                            onOpenOriginal = { onOpenOriginal(checkNotNull(activeDocument).sourceUrl) },
+                        )
+                    }
                 }
             }
             Box(
@@ -561,6 +600,40 @@ fun ReaderStudioScreen(
                 ) {}
             }
         }
+    }
+}
+
+@Composable
+private fun ReaderContentTransition(
+    destination: ReaderContent,
+    reduceMotion: Boolean,
+    content: @Composable () -> Unit,
+) {
+    var previousDestination by remember { mutableStateOf(destination) }
+    var direction by remember { mutableFloatStateOf(0f) }
+    val progress = remember { Animatable(1f) }
+    LaunchedEffect(destination, reduceMotion) {
+        direction = when {
+            destination == ReaderContent.Library -> 1f
+            previousDestination == ReaderContent.Library -> -1f
+            else -> 0f
+        }
+        val changed = previousDestination != destination
+        previousDestination = destination
+        if (reduceMotion || !changed) {
+            progress.snapTo(1f)
+        } else {
+            progress.snapTo(0f)
+            progress.animateTo(1f, tween(220))
+        }
+    }
+    Box(
+        modifier = Modifier.fillMaxSize().graphicsLayer {
+            alpha = progress.value
+            translationX = 24.dp.toPx() * direction * (1f - progress.value)
+        },
+    ) {
+        content()
     }
 }
 
@@ -646,6 +719,9 @@ private fun ReaderError(
 @Composable
 private fun ReaderArticle(
     document: ReaderDocument,
+    scrollState: ScrollState,
+    restored: Boolean,
+    onScrollRestored: () -> Unit,
     snapshotProgress: Float?,
     isPrivate: Boolean,
     settings: ReaderSettings,
@@ -666,7 +742,6 @@ private fun ReaderArticle(
     onLibrary: () -> Unit,
     onOpenOriginal: () -> Unit,
 ) {
-    val scrollState = rememberScrollState()
     val density = LocalDensity.current.density
     val currentOnScroll by rememberUpdatedState(onScroll)
     val chromeScrollConnection = remember(document.sourceUrl, density, scrollState) {
@@ -684,7 +759,23 @@ private fun ReaderArticle(
         }
     }
     val speech = remember(document.sourceUrl) { speechFactory() }
-    var restored by remember(document.sourceUrl) { mutableStateOf(false) }
+    var saveConfirmation by remember(document.sourceUrl) { mutableIntStateOf(0) }
+    val reduceMotion = LocalCandyBrowserChromeEffects.current.reducesMotion()
+    val saveScale = remember(document.sourceUrl) { Animatable(1f) }
+    LaunchedEffect(saveConfirmation, reduceMotion) {
+        saveScale.snapTo(1f)
+        if (saveConfirmation > 0 && !reduceMotion) {
+            saveScale.animateTo(1.12f, tween(120))
+            saveScale.animateTo(1f, tween(180))
+        }
+    }
+    var articleActive by remember(document.sourceUrl, isPrivate) { mutableStateOf(true) }
+    DisposableEffect(document.sourceUrl, isPrivate) {
+        articleActive = true
+        onDispose { articleActive = false }
+    }
+    val savedOffline = ReaderLibraryRules.snapshotForSourceUrl(library, document.sourceUrl, isPrivate)
+        ?.document == document
     val progress = ReaderLibraryRules.progress(scrollState.value, scrollState.maxValue)
 
     DisposableEffect(speech) { onDispose(speech::close) }
@@ -696,7 +787,7 @@ private fun ReaderArticle(
             sourceUrl = document.sourceUrl,
         )
         scrollState.scrollTo((scrollState.maxValue * savedProgress).toInt())
-        restored = true
+        onScrollRestored()
     }
     LaunchedEffect(scrollState.isScrollInProgress, restored) {
         if (restored && !scrollState.isScrollInProgress) {
@@ -732,6 +823,8 @@ private fun ReaderArticle(
                 resources = resources,
                 settings = settings,
                 isPrivate = isPrivate,
+                savedOffline = savedOffline,
+                saveScale = saveScale.value,
                 speechStatus = speech.state.status,
                 speechExcerpt = ReaderSpeechRules.currentExcerpt(
                     document.speechText,
@@ -743,7 +836,16 @@ private fun ReaderArticle(
                 onPause = speech::pause,
                 onStop = speech::stop,
                 onSave = {
-                    repository.saveSnapshot(document, progress, isPrivate, onLibraryChanged)
+                    repository.saveSnapshot(document, progress, isPrivate) { updated ->
+                        onLibraryChanged(updated)
+                        if (articleActive) {
+                            if (ReaderLibraryRules.snapshotForSourceUrl(updated, document.sourceUrl, isPrivate)
+                                    ?.document == document
+                            ) {
+                                saveConfirmation++
+                            }
+                        }
+                    }
                 },
             )
         }
@@ -800,6 +902,8 @@ private fun ReaderControls(
     resources: ReaderStudioResources,
     settings: ReaderSettings,
     isPrivate: Boolean,
+    savedOffline: Boolean,
+    saveScale: Float,
     speechStatus: ReaderSpeechStatus,
     speechExcerpt: String,
     colors: ReaderColors,
@@ -857,11 +961,15 @@ private fun ReaderControls(
                     )
                     if (!isPrivate) {
                         val saveDescription = resources.text(ReaderStudioLabel.SaveOffline)
+                        val saveDescriptionOffline = resources.text(ReaderStudioLabel.OfflineShort)
                         FilledTonalButton(
                             onClick = onSave,
                             modifier = Modifier
                                 .weight(1f)
-                                .testTag(ReaderStudioTestTags.Save),
+                                .testTag(ReaderStudioTestTags.Save)
+                                .semantics {
+                                    if (savedOffline) stateDescription = saveDescriptionOffline
+                                },
                             shape = CircleShape,
                             contentPadding = PaddingValues(horizontal = 12.dp),
                             colors = ButtonDefaults.filledTonalButtonColors(
@@ -869,9 +977,10 @@ private fun ReaderControls(
                                 contentColor = colors.onAccent,
                             ),
                         ) {
-                            resources.icon(
-                                icon = ReaderStudioIcon.Download,
-                                modifier = Modifier.size(20.dp),
+                            ReaderSaveIcon(
+                                resources = resources,
+                                savedOffline = savedOffline,
+                                scale = saveScale,
                                 contentDescription = saveDescription.takeUnless { showSaveLabel },
                             )
                             if (showSaveLabel) {
@@ -924,6 +1033,44 @@ private fun ReaderControls(
                     )
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun ReaderSaveIcon(
+    resources: ReaderStudioResources,
+    savedOffline: Boolean,
+    scale: Float,
+    contentDescription: String?,
+) {
+    val effects = LocalCandyBrowserChromeEffects.current
+    val reduceMotion = effects.reducesMotion()
+    AnimatedContent(
+        targetState = savedOffline,
+        modifier = Modifier.size(20.dp).graphicsLayer {
+            scaleX = scale
+            scaleY = scale
+        },
+        transitionSpec = {
+            fadeIn(tween(if (reduceMotion) 0 else 160)) togetherWith
+                fadeOut(tween(if (reduceMotion) 0 else 120))
+        },
+        label = "Reader offline confirmation",
+    ) { saved ->
+        if (saved) {
+            effects.icon(
+                symbol = "checkmark",
+                fallback = Icons.Filled.Check,
+                modifier = Modifier.size(20.dp).testTag(ReaderStudioTestTags.Saved),
+                contentDescription = contentDescription,
+            )
+        } else {
+            resources.icon(
+                icon = ReaderStudioIcon.Download,
+                modifier = Modifier.size(20.dp),
+                contentDescription = contentDescription,
+            )
         }
     }
 }
@@ -1180,6 +1327,7 @@ private fun ReaderBlockContent(
 private fun ReaderLibraryContent(
     resources: ReaderStudioResources,
     snapshots: List<ReaderSnapshot>,
+    scrollState: ScrollState,
     progressByUrl: Map<String, Float>,
     colors: ReaderColors,
     backButtonVisible: Boolean,
@@ -1189,7 +1337,8 @@ private fun ReaderLibraryContent(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .verticalScroll(rememberScrollState())
+            .verticalScroll(scrollState)
+            .testTag(ReaderStudioTestTags.LibraryContent)
             .windowInsetsPadding(WindowInsets.statusBars)
             .padding(18.dp),
     ) {
