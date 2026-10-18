@@ -921,6 +921,13 @@ class BrowserSessionStore internal constructor(
         preferences.edit().putBoolean(KEY_EXTERNAL_LINK_PREVIEW_ENABLED, enabled).apply()
     }
 
+    fun loadExternalLinkPreviewProfileId(): String? =
+        preferences.getString(KEY_EXTERNAL_LINK_PREVIEW_PROFILE_ID, null)
+
+    fun saveExternalLinkPreviewProfileId(profileId: String?) {
+        preferences.edit().putString(KEY_EXTERNAL_LINK_PREVIEW_PROFILE_ID, profileId).apply()
+    }
+
     fun loadExternalAppLinkHandling(): ExternalAppLinkHandling =
         ExternalAppLinkHandling.fromStableId(
             preferences.getString(KEY_EXTERNAL_APP_LINK_HANDLING, null),
@@ -1640,6 +1647,7 @@ class BrowserSessionStore internal constructor(
         const val KEY_ADDRESS_BAR_DOCKING_ENABLED = "address_bar_docking_enabled"
         const val KEY_ADDRESS_BAR_SWIPE_MODE_ENABLED = "address_bar_swipe_mode_enabled"
         const val KEY_EXTERNAL_LINK_PREVIEW_ENABLED = "external_link_preview_enabled"
+        const val KEY_EXTERNAL_LINK_PREVIEW_PROFILE_ID = "external_link_preview_profile_id"
         const val KEY_EXTERNAL_APP_LINK_HANDLING = "external_app_link_handling"
         const val KEY_LINK_LONG_PRESS_ACTION = "link_long_press_action"
         const val KEY_LINK_PEEK_SWIPE_ACTION = "link_peek_swipe_action"

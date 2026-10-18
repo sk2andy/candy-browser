@@ -17,6 +17,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineKind
+import dev.sk2andy.materialbrowser.browser.BrowserProfile
 import dev.sk2andy.materialbrowser.browser.ExternalAppLinkHandling
 import dev.sk2andy.materialbrowser.browser.FavoriteAnimationSpeed
 import dev.sk2andy.materialbrowser.browser.PageTranslationProvider
@@ -124,6 +125,80 @@ class BrowserSettingsScreenInstrumentedTest {
         composeRule.onNodeWithTag(BrowserSettingsTestTags.StartupAnimation).performClick()
 
         assertFalse(enabled)
+    }
+
+    @Test
+    fun externalPreviewDefaultProfileCanBeSelected() {
+        var profileId by mutableStateOf<String?>(null)
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                BrowserSettingsPage(
+                    pageTranslationProvider = PageTranslationProvider.Google,
+                    isFullImmersiveModeEnabled = false,
+                    isStartupAnimationEnabled = true,
+                    isScrollBarEnabled = false,
+                    isDefaultBrowser = false,
+                    externalLinkPreviewProfiles = listOf(
+                        BrowserProfile(id = "work", emoji = "💼"),
+                    ),
+                    externalLinkPreviewProfileId = profileId,
+                    onExternalLinkPreviewProfileChanged = { profileId = it },
+                    onFullImmersiveModeEnabledChanged = {},
+                    onStartupAnimationEnabledChanged = {},
+                    onScrollBarEnabledChanged = {},
+                    onPageTranslationProviderChanged = {},
+                    onOpenDefaultBrowserSettings = {},
+                    onBack = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(BrowserSettingsTestTags.ExternalLinkPreviewProfile)
+            .performScrollTo()
+            .performClick()
+        composeRule.onNodeWithText("💼").performClick()
+
+        assertEquals("work", profileId)
+    }
+
+    @Test
+    fun unavailablePreviewDefaultClearlyShowsUnlockedFallback() {
+        var profileId by mutableStateOf<String?>("locked")
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                BrowserSettingsPage(
+                    pageTranslationProvider = PageTranslationProvider.Google,
+                    isFullImmersiveModeEnabled = false,
+                    isStartupAnimationEnabled = true,
+                    isScrollBarEnabled = false,
+                    isDefaultBrowser = false,
+                    externalLinkPreviewProfiles = listOf(
+                        BrowserProfile(id = "home", emoji = "🏠"),
+                    ),
+                    externalLinkPreviewProfileId = profileId,
+                    onExternalLinkPreviewProfileChanged = { profileId = it },
+                    onFullImmersiveModeEnabledChanged = {},
+                    onStartupAnimationEnabledChanged = {},
+                    onScrollBarEnabledChanged = {},
+                    onPageTranslationProviderChanged = {},
+                    onOpenDefaultBrowserSettings = {},
+                    onBack = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(BrowserSettingsTestTags.ExternalLinkPreviewProfile)
+            .performScrollTo()
+        composeRule.onNodeWithText(
+            context.getString(R.string.settings_external_link_preview_profile_unavailable),
+        ).assertIsDisplayed()
+        composeRule.onNodeWithTag(BrowserSettingsTestTags.ExternalLinkPreviewProfile)
+            .performClick()
+        composeRule.onNodeWithText(
+            context.getString(R.string.settings_external_link_preview_profile_last_used),
+        ).performClick()
+
+        assertEquals(null, profileId)
     }
 
     @Test

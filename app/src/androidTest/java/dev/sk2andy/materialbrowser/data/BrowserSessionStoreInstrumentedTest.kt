@@ -114,6 +114,17 @@ class BrowserSessionStoreInstrumentedTest {
     }
 
     @Test
+    fun externalLinkPreviewProfilePreferenceRoundTripsAndClears() {
+        val store = BrowserSessionStore(context)
+
+        assertNull(store.loadExternalLinkPreviewProfileId())
+        store.saveExternalLinkPreviewProfileId("work")
+        assertEquals("work", BrowserSessionStore(context).loadExternalLinkPreviewProfileId())
+        store.saveExternalLinkPreviewProfileId(null)
+        assertNull(BrowserSessionStore(context).loadExternalLinkPreviewProfileId())
+    }
+
+    @Test
     fun linkedLocalTabKeepsStableSyncIdentityAcrossRestart() {
         val store = BrowserSessionStore(context)
         store.saveTabs(

@@ -26,6 +26,41 @@ class ExternalLinkPreviewRulesTest {
     }
 
     @Test
+    fun `target profile reuses saved selection for each external link`() {
+        val targets = List(3) {
+            ExternalLinkPreviewRules.targetProfileId(
+                profiles = profiles,
+                profilesEnabled = true,
+                requestedProfileId = "work",
+                activeProfileId = "default",
+            )
+        }
+        assertEquals(listOf("work", "work", "work"), targets)
+    }
+
+    @Test
+    fun `target profile keeps saved choice when active profile changes`() {
+        assertEquals(
+            "default",
+            ExternalLinkPreviewRules.targetProfileId(
+                profiles = profiles,
+                profilesEnabled = true,
+                requestedProfileId = "default",
+                activeProfileId = "work",
+            ),
+        )
+        assertEquals(
+            "default",
+            ExternalLinkPreviewRules.targetProfileId(
+                profiles = profiles,
+                profilesEnabled = true,
+                requestedProfileId = "default",
+                activeProfileId = "default",
+            ),
+        )
+    }
+
+    @Test
     fun `target profile falls back to active profile for stale request`() {
         assertEquals(
             "default",
@@ -59,6 +94,43 @@ class ExternalLinkPreviewRulesTest {
                 profilesEnabled = true,
                 requestedProfileId = null,
                 activeProfileId = "default",
+            ),
+        )
+    }
+
+    @Test
+    fun `target profile falls back from removed or locked default to unlocked active`() {
+        assertEquals(
+            "default",
+            ExternalLinkPreviewRules.targetProfileId(
+                profiles = profiles,
+                profilesEnabled = true,
+                requestedProfileId = "removed",
+                activeProfileId = "default",
+                lockedProfileIds = setOf("work"),
+            ),
+        )
+        assertEquals(
+            "default",
+            ExternalLinkPreviewRules.targetProfileId(
+                profiles = profiles,
+                profilesEnabled = true,
+                requestedProfileId = "work",
+                activeProfileId = "work",
+                lockedProfileIds = setOf("work"),
+            ),
+        )
+    }
+
+    @Test
+    fun `target profile is absent when every profile is locked`() {
+        assertNull(
+            ExternalLinkPreviewRules.targetProfileId(
+                profiles = profiles,
+                profilesEnabled = true,
+                requestedProfileId = "work",
+                activeProfileId = "default",
+                lockedProfileIds = setOf("default", "work"),
             ),
         )
     }

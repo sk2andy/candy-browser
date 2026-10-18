@@ -812,6 +812,10 @@ class BrowserController(
         private set
     var isExternalLinkPreviewEnabled by mutableStateOf(false)
         private set
+    var externalLinkPreviewProfileId by mutableStateOf<String?>(null)
+        private set
+    val externalLinkPreviewProfiles: List<BrowserProfile>
+        get() = localBrowserProfiles.filter { it.id !in lockedProfileIds }
     var externalAppLinkHandling by mutableStateOf(ExternalAppLinkHandling.Default)
         private set
     var externalAppPrompt by mutableStateOf<ExternalAppPrompt?>(null)
@@ -2670,6 +2674,7 @@ class BrowserController(
         isClosedTabUndoEnabled = store.loadClosedTabUndoEnabled()
         isAddressBarDockingEnabled = store.loadAddressBarDockingEnabled()
         isExternalLinkPreviewEnabled = store.loadExternalLinkPreviewEnabled()
+        externalLinkPreviewProfileId = store.loadExternalLinkPreviewProfileId()
         externalAppLinkHandling = store.loadExternalAppLinkHandling()
         val storedAddressBarDockPlacement = store.loadAddressBarDockPlacement()
         lastAddressBarDockPlacement = store.loadLastAddressBarDockPlacement()
@@ -4225,8 +4230,9 @@ class BrowserController(
         val targetProfileId = ExternalLinkPreviewRules.targetProfileId(
             profiles = localBrowserProfiles,
             profilesEnabled = profilesEnabled,
-            requestedProfileId = null,
+            requestedProfileId = externalLinkPreviewProfileId,
             activeProfileId = activeProfileId,
+            lockedProfileIds = lockedProfileIds,
         ) ?: return false
         leaveSiteCapsule()
         closeFindInPage()
@@ -10068,6 +10074,15 @@ class BrowserController(
         isExternalLinkPreviewEnabled = enabled
         store.saveExternalLinkPreviewEnabled(enabled)
         if (!enabled) dismissExternalLinkPreview()
+    }
+
+    fun updateExternalLinkPreviewProfile(profileId: String?) {
+        val validProfileId = profileId?.takeIf { requested ->
+            localBrowserProfiles.any { it.id == requested } && requested !in lockedProfileIds
+        }
+        if (externalLinkPreviewProfileId == validProfileId) return
+        externalLinkPreviewProfileId = validProfileId
+        store.saveExternalLinkPreviewProfileId(validProfileId)
     }
 
     fun updateExternalAppLinkHandling(handling: ExternalAppLinkHandling) {

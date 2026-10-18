@@ -25,6 +25,7 @@ import dev.sk2andy.materialbrowser.BuildConfig
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.shared.ui.settings.settingsSearchTarget
 import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineKind
+import dev.sk2andy.materialbrowser.browser.BrowserProfile
 import dev.sk2andy.materialbrowser.browser.ExternalAppLinkHandling
 import dev.sk2andy.materialbrowser.browser.FavoriteAnimationSpeed
 import dev.sk2andy.materialbrowser.browser.PageTranslationProvider
@@ -44,6 +45,7 @@ internal object BrowserSettingsTestTags {
     const val ScrollBar = "browser_settings_scroll_bar"
     const val TranslationProvider = "browser_settings_translation_provider"
     const val ExternalLinkPreview = "browser_settings_external_link_preview"
+    const val ExternalLinkPreviewProfile = "browser_settings_external_link_preview_profile"
     const val ExternalAppLinks = "browser_settings_external_app_links"
     const val BrowserEngine = "browser_settings_engine"
 }
@@ -56,6 +58,8 @@ internal fun BrowserSettingsPage(
     browserEngineKind: AndroidBrowserEngineKind = AndroidBrowserEngineKind.GeckoView,
     pageTranslationProvider: PageTranslationProvider,
     isExternalLinkPreviewEnabled: Boolean = false,
+    externalLinkPreviewProfileId: String? = null,
+    externalLinkPreviewProfiles: List<BrowserProfile> = emptyList(),
     externalAppLinkHandling: ExternalAppLinkHandling = ExternalAppLinkHandling.Default,
     isFullImmersiveModeEnabled: Boolean,
     isStartupAnimationEnabled: Boolean,
@@ -67,6 +71,7 @@ internal fun BrowserSettingsPage(
     isDefaultBrowser: Boolean,
     onBrowserEngineKindChanged: (AndroidBrowserEngineKind) -> Unit = {},
     onExternalLinkPreviewEnabledChanged: (Boolean) -> Unit = {},
+    onExternalLinkPreviewProfileChanged: (String?) -> Unit = {},
     onExternalAppLinkHandlingChanged: (ExternalAppLinkHandling) -> Unit = {},
     onFullImmersiveModeEnabledChanged: (Boolean) -> Unit,
     onStartupAnimationEnabledChanged: (Boolean) -> Unit,
@@ -369,6 +374,52 @@ internal fun BrowserSettingsPage(
             onCheckedChange = onExternalLinkPreviewEnabledChanged,
             modifier = Modifier.testTag(BrowserSettingsTestTags.ExternalLinkPreview),
         )
+        Spacer(Modifier.height(8.dp))
+        var previewProfileMenuExpanded by remember { mutableStateOf(false) }
+        val selectedPreviewProfile = externalLinkPreviewProfiles.firstOrNull {
+            it.id == externalLinkPreviewProfileId
+        }
+        val previewProfileUnavailable =
+            externalLinkPreviewProfileId != null && selectedPreviewProfile == null
+        Box {
+            SettingsChoice(
+                title = stringResource(R.string.settings_external_link_preview_profile_title),
+                value = selectedPreviewProfile?.emoji
+                    ?: stringResource(
+                        if (previewProfileUnavailable) {
+                            R.string.settings_external_link_preview_profile_unavailable
+                        } else {
+                            R.string.settings_external_link_preview_profile_last_used
+                        },
+                    ),
+                expanded = previewProfileMenuExpanded,
+                onClick = { previewProfileMenuExpanded = true },
+                modifier = Modifier.testTag(BrowserSettingsTestTags.ExternalLinkPreviewProfile),
+            )
+            SettingsDropdown(
+                expanded = previewProfileMenuExpanded,
+                onDismissRequest = { previewProfileMenuExpanded = false },
+            ) {
+                SettingsDropdownItem(
+                    label = stringResource(R.string.settings_external_link_preview_profile_last_used),
+                    selected = externalLinkPreviewProfileId == null || previewProfileUnavailable,
+                    onClick = {
+                        previewProfileMenuExpanded = false
+                        onExternalLinkPreviewProfileChanged(null)
+                    },
+                )
+                externalLinkPreviewProfiles.forEach { profile ->
+                    SettingsDropdownItem(
+                        label = profile.emoji,
+                        selected = profile.id == externalLinkPreviewProfileId,
+                        onClick = {
+                            previewProfileMenuExpanded = false
+                            onExternalLinkPreviewProfileChanged(profile.id)
+                        },
+                    )
+                }
+            }
+        }
     }
 }
 

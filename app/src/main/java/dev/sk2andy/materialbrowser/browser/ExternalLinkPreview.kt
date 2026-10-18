@@ -32,12 +32,13 @@ internal object ExternalLinkPreviewRules {
         profilesEnabled: Boolean,
         requestedProfileId: String?,
         activeProfileId: String,
+        lockedProfileIds: Set<String> = emptySet(),
     ): String? {
-        val firstProfileId = profiles.firstOrNull()?.id ?: return null
+        val firstProfileId = profiles.firstOrNull { it.id !in lockedProfileIds }?.id ?: return null
         if (!profilesEnabled) return firstProfileId
         return requestedProfileId
-            ?.takeIf { requested -> profiles.any { it.id == requested } }
-            ?: activeProfileId.takeIf { active -> profiles.any { it.id == active } }
+            ?.takeIf { requested -> profiles.any { it.id == requested } && requested !in lockedProfileIds }
+            ?: activeProfileId.takeIf { active -> profiles.any { it.id == active } && active !in lockedProfileIds }
             ?: firstProfileId
     }
 

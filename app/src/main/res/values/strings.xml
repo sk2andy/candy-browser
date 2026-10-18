@@ -1211,6 +1211,9 @@
     <string name="settings_translation_provider_kagi_summary">Kagi Translate currently requires an active Kagi subscription. On translate, the full page address is sent to Kagi.</string>
     <string name="settings_external_link_preview_title">Preview links from other apps</string>
     <string name="settings_external_link_preview_subtitle">Open external links without creating a new tab first.</string>
+    <string name="settings_external_link_preview_profile_title">Default profile for previews</string>
+    <string name="settings_external_link_preview_profile_last_used">Last used unlocked profile</string>
+    <string name="settings_external_link_preview_profile_unavailable">Saved profile unavailable · using last used unlocked profile</string>
     <string name="external_link_preview_close_description">Close preview</string>
     <string name="external_link_preview_open_description">Open in Candy with profile %1$s</string>
     <string name="external_link_preview_profile_description">Choose target profile, %1$s selected</string>

@@ -209,6 +209,8 @@ internal fun BrowserSettingsOverlay(
             isAddressBarDockingEnabled = controller.isAddressBarDockingEnabled,
             isAddressBarSwipeModeEnabled = controller.isAddressBarSwipeModeEnabled,
             isExternalLinkPreviewEnabled = controller.isExternalLinkPreviewEnabled,
+            externalLinkPreviewProfileId = controller.externalLinkPreviewProfileId,
+            externalLinkPreviewProfiles = controller.externalLinkPreviewProfiles,
             externalAppLinkHandling = controller.externalAppLinkHandling,
             linkRoutingRules = controller.incomingLinkRouter.rules,
             onLinkRoutingRulesChanged = controller.incomingLinkRouter::updateRules,
@@ -306,6 +308,7 @@ internal fun BrowserSettingsOverlay(
                 controller::updateAddressBarSwipeModeEnabled,
             onExternalLinkPreviewEnabledChanged =
                 controller::updateExternalLinkPreviewEnabled,
+            onExternalLinkPreviewProfileChanged = controller::updateExternalLinkPreviewProfile,
             onExternalAppLinkHandlingChanged = controller::updateExternalAppLinkHandling,
             onFullImmersiveModeEnabledChanged =
                 controller::updateFullImmersiveModeEnabled,
