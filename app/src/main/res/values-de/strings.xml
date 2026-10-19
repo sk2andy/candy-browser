@@ -1298,6 +1298,8 @@
     <string name="gecko_extensions_available">Auf Firefox Add-ons verfügbar</string>
     <string name="gecko_extensions_search_failed">Firefox Add-ons konnten nicht durchsucht werden. Prüfe die Verbindung und versuche es erneut.</string>
     <string name="gecko_extensions_no_results">Keine passenden Add-ons gefunden.</string>
+    <string name="gecko_extensions_all_installed">Alle passenden Add-ons sind bereits installiert.</string>
+    <string name="gecko_extensions_retry_search">Suche wiederholen</string>
     <string name="gecko_extension_no_options">Keine Optionsseite verfügbar</string>
     <string name="gecko_extension_install">Erweiterung installieren</string>
     <string name="gecko_extension_install_hint">Füge die HTTPS-Adresse eines von Mozilla signierten XPI-Pakets ein.</string>

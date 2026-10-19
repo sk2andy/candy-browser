@@ -64,10 +64,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.withContext
-import java.net.HttpURLConnection
-import java.net.URL
-import java.net.URLEncoder
-import org.json.JSONObject
+import kotlinx.coroutines.CancellationException
 
 internal object FirefoxExtensionManagerTestTags {
     const val Overlay = "firefox_extension_manager"
@@ -91,26 +88,38 @@ internal fun FirefoxExtensionManagerOverlay(
 ) {
     var installDialogVisible by remember { mutableStateOf(false) }
     var search by remember { mutableStateOf("") }
+    var retryToken by remember { mutableStateOf(0) }
     var available by remember { mutableStateOf<List<AvailableFirefoxExtension>>(emptyList()) }
     var searchBusy by remember { mutableStateOf(false) }
     var searchFailed by remember { mutableStateOf(false) }
-    LaunchedEffect(search) {
-        val query = search.trim().take(100)
-        if (query.isBlank()) {
+    LaunchedEffect(search, retryToken) {
+        val query = FirefoxExtensionSearchRules.normalizeQuery(search)
+        if (query == null) {
             available = emptyList()
             searchFailed = false
             searchBusy = false
         } else {
-            delay(350)
-            searchBusy = true
+            available = emptyList()
             searchFailed = false
+            searchBusy = false
+            delay(350)
+            if (!FirefoxExtensionSearchRules.isCurrentQuery(query, search)) return@LaunchedEffect
+            searchBusy = true
             try {
-                available = withContext(Dispatchers.IO) { searchFirefoxAddons(query) }
-            } catch (_: Exception) {
-                available = emptyList()
-                searchFailed = true
+                val outcome = withContext(Dispatchers.IO) {
+                    FirefoxExtensionSearchRules.execute(query) { searchFirefoxAddons(it) }
+                }
+                if (!FirefoxExtensionSearchRules.isCurrentQuery(query, search)) return@LaunchedEffect
+                when (outcome) {
+                    is FirefoxExtensionSearchOutcome.Results -> available = outcome.entries
+                    FirefoxExtensionSearchOutcome.Failed -> searchFailed = true
+                }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
             } finally {
-                searchBusy = false
+                if (FirefoxExtensionSearchRules.isCurrentQuery(query, search)) {
+                    searchBusy = false
+                }
             }
         }
     }
@@ -141,6 +150,18 @@ internal fun FirefoxExtensionManagerOverlay(
                 modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
                 singleLine = true,
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                trailingIcon = if (search.isNotBlank()) {
+                    {
+                        IconButton(onClick = { retryToken++ }) {
+                            Icon(
+                                Icons.Default.Refresh,
+                                contentDescription = stringResource(R.string.gecko_extensions_retry_search),
+                            )
+                        }
+                    }
+                } else {
+                    null
+                },
                 placeholder = { Text(stringResource(R.string.gecko_extensions_search)) },
                 keyboardOptions = KeyboardOptions(
                     capitalization = KeyboardCapitalization.None,
@@ -261,12 +282,33 @@ internal fun FirefoxExtensionManagerOverlay(
                     when {
                         searchBusy -> item { LinearProgressIndicator(Modifier.fillMaxWidth()) }
                         searchFailed -> item {
-                            Text(stringResource(R.string.gecko_extensions_search_failed), color = MaterialTheme.colorScheme.error)
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    stringResource(R.string.gecko_extensions_search_failed),
+                                    modifier = Modifier.weight(1f),
+                                    color = MaterialTheme.colorScheme.error,
+                                )
+                                TextButton(onClick = { retryToken++ }) {
+                                    Text(stringResource(R.string.gecko_extensions_retry_search))
+                                }
+                            }
+                        }
+                        FirefoxExtensionSearchRules.available(
+                            available,
+                            state.snapshot.extensions.mapTo(mutableSetOf(), GeckoExtension::id),
+                        ).isEmpty() && available.isNotEmpty() -> item {
+                            Text(stringResource(R.string.gecko_extensions_all_installed), color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         available.isEmpty() -> item {
                             Text(stringResource(R.string.gecko_extensions_no_results), color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
-                        else -> items(available, key = AvailableFirefoxExtension::id) { addon ->
+                        else -> items(
+                            FirefoxExtensionSearchRules.available(
+                                available,
+                                state.snapshot.extensions.mapTo(mutableSetOf(), GeckoExtension::id),
+                            ),
+                            key = AvailableFirefoxExtension::id,
+                        ) { addon ->
                             Card(
                                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
                             ) {
@@ -310,43 +352,6 @@ internal fun FirefoxExtensionManagerOverlay(
             request = request,
             onDecision = onPermissionDecision,
         )
-    }
-}
-
-private data class AvailableFirefoxExtension(val id: String, val name: String, val summary: String, val xpiUrl: String)
-
-private fun searchFirefoxAddons(query: String): List<AvailableFirefoxExtension> {
-    val encoded = URLEncoder.encode(query, Charsets.UTF_8.name())
-    val connection = (URL("https://addons.mozilla.org/api/v5/addons/search/?q=$encoded&app=android&type=extension&page_size=10").openConnection() as HttpURLConnection).apply {
-        connectTimeout = 8_000
-        readTimeout = 8_000
-        requestMethod = "GET"
-        setRequestProperty("Accept", "application/json")
-        setRequestProperty("User-Agent", "CandyBrowser")
-    }
-    try {
-        if (connection.responseCode !in 200..299) error("AMO search request failed")
-        val response = JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
-        val results = response.optJSONArray("results") ?: return emptyList()
-        return (0 until results.length()).mapNotNull { index ->
-            val addon = results.optJSONObject(index) ?: return@mapNotNull null
-            val current = addon.optJSONObject("current_version") ?: return@mapNotNull null
-            val xpi = current.optJSONObject("file")?.optString("url")
-                ?: current.optJSONArray("files")?.optJSONObject(0)?.optString("url")
-                ?: ""
-            if (!xpi.startsWith("https://addons.mozilla.org/")) return@mapNotNull null
-            AvailableFirefoxExtension(
-                id = addon.optString("guid", addon.optString("slug", index.toString())),
-                name = addon.optJSONObject("name")?.optString("en-US")?.takeIf(String::isNotBlank)
-                    ?: addon.optJSONObject("name")?.optString("en-us")?.takeIf(String::isNotBlank)
-                    ?: addon.optString("name"),
-                summary = addon.optJSONObject("summary")?.optString("en-US")?.takeIf(String::isNotBlank)
-                    ?: addon.optJSONObject("summary")?.optString("en-us").orEmpty(),
-                xpiUrl = xpi,
-            ).takeIf { it.name.isNotBlank() }
-        }
-    } finally {
-        connection.disconnect()
     }
 }
 
