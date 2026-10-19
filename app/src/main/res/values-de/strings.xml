@@ -1529,4 +1529,16 @@
     <string name="constellations_search">Diese Karte durchsuchen</string>
     <string name="constellations_search_no_results">Keine passenden Seiten in diesem Profil.</string>
     <string name="constellations_search_position">%1$d von %2$d Treffern</string>
+    <string name="status_bar_scroll_accessibility_service_label">Candy: Statusleisten-Scrollen</string>
+    <string name="status_bar_scroll_accessibility_service_description">Ein Tippen in der Mitte der Statusleiste scrollt die aktuelle Candy-Seite nach oben. Candy liest keine Fensterinhalte.</string>
+    <string name="status_bar_scroll_target_description">Aktuelle Seite nach oben scrollen</string>
+    <string name="settings_status_bar_scroll_title">Statusleiste tippen, um nach oben zu scrollen</string>
+    <string name="settings_status_bar_scroll_summary">Ergänzt eine unsichtbare Tippfläche in der Mitte der Android-Statusleiste. Dafür ist der Android-Bedienungshilfedienst von Candy erforderlich.</string>
+    <string name="settings_status_bar_scroll_width_title">Breite der Tippfläche</string>
+    <string name="settings_status_bar_scroll_width_summary">%1$d%% der Bildschirmbreite</string>
+    <string name="settings_status_bar_scroll_accessibility_dialog_title">Candy-Bedienungshilfe aktivieren?</string>
+    <string name="settings_status_bar_scroll_accessibility_dialog_message">Android benötigt einen Bedienungshilfedienst, um Tippen in der Systemstatusleiste zu empfangen. Öffne die Android-Einstellungen für Bedienungshilfen und aktiviere dort Candy: Statusleisten-Scrollen. Candy verwendet den Dienst nur für diesen Tipp und liest keine Fensterinhalte.</string>
+    <string name="settings_status_bar_scroll_accessibility_open">Bedienungshilfen öffnen</string>
+    <string name="settings_status_bar_scroll_enable_for_domain">Statusleisten-Scrollen für diese Website aktivieren</string>
+    <string name="settings_status_bar_scroll_disable_for_domain">Statusleisten-Scrollen für diese Website deaktivieren</string>
 </resources>

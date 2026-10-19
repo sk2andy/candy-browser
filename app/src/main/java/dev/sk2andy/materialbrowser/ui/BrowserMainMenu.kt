@@ -270,6 +270,8 @@ internal fun BrowserMainMenu(
     canTranslatePage: Boolean,
     canToggleDomainMute: Boolean,
     isDomainMuted: Boolean,
+    canToggleStatusBarScroll: Boolean = false,
+    isStatusBarScrollEnabled: Boolean = false,
     canToggleAlwaysBlockPopups: Boolean,
     isAlwaysBlockPopupsEnabled: Boolean,
     canToggleDesktopView: Boolean,
@@ -305,6 +307,7 @@ internal fun BrowserMainMenu(
     onTranslate: () -> Unit,
     onFindInPage: () -> Unit = {},
     onDomainMutedChange: (Boolean) -> Unit,
+    onStatusBarScrollEnabledChange: (Boolean) -> Unit = {},
     onAlwaysBlockPopupsChange: (Boolean) -> Unit,
     onDesktopViewChange: (Boolean) -> Unit,
     onCookieBannerRemovalEnabledChange: (Boolean) -> Unit,
@@ -367,6 +370,8 @@ internal fun BrowserMainMenu(
         isDesktopView = isDesktopView,
         canToggleDomainMute = canToggleDomainMute,
         isDomainMuted = isDomainMuted,
+        canToggleStatusBarScroll = canToggleStatusBarScroll,
+        isStatusBarScrollEnabled = isStatusBarScrollEnabled,
         canAddSiteCapsule = canAddSiteCapsule,
         canCreateSiteWidget = canCreateSiteWidget,
         canOpenConstellations = canOpenConstellations,
@@ -445,6 +450,8 @@ internal fun BrowserMainMenu(
                 onDesktopViewChange(item.checked != true)
             BrowserFeatureMenuAction.ToggleDomainMute ->
                 onDomainMutedChange(item.checked != true)
+            BrowserFeatureMenuAction.ToggleStatusBarScroll ->
+                onStatusBarScrollEnabledChange(item.checked != true)
             BrowserFeatureMenuAction.OpenCandyTrail -> onOpenCandyTrail()
             BrowserFeatureMenuAction.OpenConstellations -> onOpenConstellations?.invoke()
             BrowserFeatureMenuAction.AddSiteCapsule -> onAddSiteCapsule()
@@ -555,6 +562,8 @@ private fun BrowserFeatureMenuLabelKey.androidStringResource(): Int = when (this
     BrowserFeatureMenuLabelKey.MuteDomain,
     BrowserFeatureMenuLabelKey.UnmuteDomain,
     -> R.string.action_mute_domain
+    BrowserFeatureMenuLabelKey.EnableStatusBarScrollForDomain -> R.string.settings_status_bar_scroll_enable_for_domain
+    BrowserFeatureMenuLabelKey.DisableStatusBarScrollForDomain -> R.string.settings_status_bar_scroll_disable_for_domain
     BrowserFeatureMenuLabelKey.CandyTrail -> R.string.action_open_candy_trail
     BrowserFeatureMenuLabelKey.Constellations -> R.string.constellations_title
     BrowserFeatureMenuLabelKey.AddSiteCapsule -> R.string.action_add_site_capsule
@@ -595,6 +604,7 @@ internal fun BrowserFeatureMenuItem.androidDrawableResource(): Int = when (actio
     BrowserFeatureMenuAction.OpenExternal -> R.drawable.ic_symbol_open_in_new
     BrowserFeatureMenuAction.Print -> R.drawable.ic_symbol_print
     BrowserFeatureMenuAction.ToggleDomainMute -> R.drawable.ic_symbol_volume_off
+    BrowserFeatureMenuAction.ToggleStatusBarScroll -> R.drawable.ic_symbol_vertical_scroll
     BrowserFeatureMenuAction.OpenCandyTrail -> R.drawable.ic_symbol_route
     BrowserFeatureMenuAction.OpenConstellations -> R.drawable.ic_symbol_route
     BrowserFeatureMenuAction.AddSiteCapsule -> R.drawable.ic_symbol_add_to_home_screen

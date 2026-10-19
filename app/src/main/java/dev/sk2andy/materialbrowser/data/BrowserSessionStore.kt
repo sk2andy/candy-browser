@@ -34,6 +34,7 @@ import dev.sk2andy.materialbrowser.browser.ProfileProtection
 import dev.sk2andy.materialbrowser.browser.ProfileProtectionRules
 import dev.sk2andy.materialbrowser.browser.PrivacySignalSettings
 import dev.sk2andy.materialbrowser.browser.SearchEngine
+import dev.sk2andy.materialbrowser.browser.StatusBarScrollRules
 import dev.sk2andy.materialbrowser.browser.StartupAddressFocusMode
 import dev.sk2andy.materialbrowser.browser.SearxngRules
 import dev.sk2andy.materialbrowser.browser.SearxngSettings
@@ -771,6 +772,52 @@ class BrowserSessionStore internal constructor(
 
     fun saveAiModeToggleVisible(visible: Boolean) {
         preferences.edit().putBoolean(KEY_AI_MODE_TOGGLE_VISIBLE, visible).apply()
+    }
+
+    fun loadStatusBarScrollEnabled(): Boolean =
+        preferences.getBoolean(KEY_STATUS_BAR_SCROLL_ENABLED, false)
+
+    fun saveStatusBarScrollEnabled(enabled: Boolean) {
+        preferences.edit().putBoolean(KEY_STATUS_BAR_SCROLL_ENABLED, enabled).apply()
+    }
+
+    fun loadStatusBarScrollPageAllowed(): Boolean =
+        preferences.getBoolean(KEY_STATUS_BAR_SCROLL_PAGE_ALLOWED, false)
+
+    fun saveStatusBarScrollPageAllowed(allowed: Boolean) {
+        preferences.edit().putBoolean(KEY_STATUS_BAR_SCROLL_PAGE_ALLOWED, allowed).apply()
+    }
+
+    fun loadStatusBarScrollTargetWidthPercent(): Int = StatusBarScrollRules.targetWidthPercent(
+        preferences.getInt(
+            KEY_STATUS_BAR_SCROLL_TARGET_WIDTH_PERCENT,
+            StatusBarScrollRules.DEFAULT_TARGET_WIDTH_PERCENT,
+        ),
+    )
+
+    fun saveStatusBarScrollTargetWidthPercent(widthPercent: Int) {
+        preferences.edit().putInt(
+            KEY_STATUS_BAR_SCROLL_TARGET_WIDTH_PERCENT,
+            StatusBarScrollRules.targetWidthPercent(widthPercent),
+        ).apply()
+    }
+
+    @Synchronized
+    fun loadStatusBarScrollDisabledDomains(): Map<String, Set<String>> =
+        loadProfileHosts(
+            key = KEY_STATUS_BAR_SCROLL_DISABLED_DOMAINS,
+            normalizeHost = StatusBarScrollRules::normalizedDomain,
+            limit = StatusBarScrollRules.MAX_DISABLED_DOMAINS_PER_PROFILE,
+        )
+
+    @Synchronized
+    fun saveStatusBarScrollDisabledDomains(domainsByProfile: Map<String, Set<String>>) {
+        saveProfileHosts(
+            key = KEY_STATUS_BAR_SCROLL_DISABLED_DOMAINS,
+            hostsByProfile = domainsByProfile,
+            normalizeHost = StatusBarScrollRules::normalizedDomain,
+            limit = StatusBarScrollRules.MAX_DISABLED_DOMAINS_PER_PROFILE,
+        )
     }
 
     fun loadRecallEnabled(): Boolean = preferences.getBoolean(KEY_RECALL_ENABLED, false)
@@ -1631,6 +1678,10 @@ class BrowserSessionStore internal constructor(
         const val KEY_SEARXNG_INSTANCE_URL = "searxng_instance_url"
         const val KEY_SEARXNG_SUGGESTION_FALLBACK = "searxng_suggestion_fallback"
         const val KEY_AI_MODE_TOGGLE_VISIBLE = "ai_mode_toggle_visible"
+        const val KEY_STATUS_BAR_SCROLL_ENABLED = "status_bar_scroll_enabled"
+        const val KEY_STATUS_BAR_SCROLL_PAGE_ALLOWED = "status_bar_scroll_page_allowed"
+        const val KEY_STATUS_BAR_SCROLL_TARGET_WIDTH_PERCENT = "status_bar_scroll_target_width_percent"
+        const val KEY_STATUS_BAR_SCROLL_DISABLED_DOMAINS = "status_bar_scroll_disabled_domains"
         const val KEY_RECALL_ENABLED = "recall_enabled"
         const val KEY_SEARCH_SUGGESTION_PROVIDER = "search_suggestion_provider"
         const val KEY_HISTORY_SUGGESTIONS_ENABLED = "history_suggestions_enabled"

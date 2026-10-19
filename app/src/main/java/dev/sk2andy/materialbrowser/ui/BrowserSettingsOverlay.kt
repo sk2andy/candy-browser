@@ -8,6 +8,7 @@ package dev.sk2andy.materialbrowser.ui
 
 import android.widget.Toast
 import android.content.Intent
+import dev.sk2andy.materialbrowser.StatusBarScrollAccessibilityContract
 import dev.sk2andy.materialbrowser.DeviceSearchSettingsActivity
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ExitTransition
@@ -206,6 +207,21 @@ internal fun BrowserSettingsOverlay(
             tabCount = controller.activeTabs.size,
             addressBarActionLayout = controller.addressBarActionLayout,
             browserMenuLayout = controller.browserMenuLayout,
+            isStatusBarScrollEnabled = controller.isStatusBarScrollEnabled,
+            statusBarScrollTargetWidthPercent = controller.statusBarScrollTargetWidthPercent,
+            onStatusBarScrollEnabledChanged = controller::updateStatusBarScrollEnabled,
+            onStatusBarScrollTargetWidthPercentChanged = controller::updateStatusBarScrollTargetWidthPercent,
+            onStatusBarScrollTargetWidthPreview = { widthPercent, finished ->
+                context.sendBroadcast(
+                    Intent(StatusBarScrollAccessibilityContract.ACTION_PREVIEW_TARGET)
+                        .setPackage(context.packageName)
+                        .putExtra(StatusBarScrollAccessibilityContract.EXTRA_TARGET_WIDTH_PERCENT, widthPercent)
+                        .putExtra(StatusBarScrollAccessibilityContract.EXTRA_PREVIEW_FINISHED, finished),
+                )
+            },
+            onOpenStatusBarScrollAccessibilitySettings = {
+                context.startActivity(Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS))
+            },
             isAddressBarDockingEnabled = controller.isAddressBarDockingEnabled,
             isAddressBarSwipeModeEnabled = controller.isAddressBarSwipeModeEnabled,
             isExternalLinkPreviewEnabled = controller.isExternalLinkPreviewEnabled,

@@ -31,6 +31,7 @@ import dev.sk2andy.materialbrowser.browser.PrivacySignalSettings
 import dev.sk2andy.materialbrowser.browser.SearchEngine
 import dev.sk2andy.materialbrowser.browser.SearxngSettings
 import dev.sk2andy.materialbrowser.browser.StartupAddressFocusMode
+import dev.sk2andy.materialbrowser.browser.StatusBarScrollRules
 import dev.sk2andy.materialbrowser.browser.WebRtcProtectionMode
 import dev.sk2andy.materialbrowser.browser.isSynced
 import dev.sk2andy.materialbrowser.browser.actions.ExternalDownloadManagerApp
@@ -106,6 +107,8 @@ internal fun SettingsScreen(
     tabCount: Int,
     addressBarActionLayout: AddressBarActionLayout,
     browserMenuLayout: BrowserMenuLayout = BrowserMenuLayout.Default,
+    isStatusBarScrollEnabled: Boolean = false,
+    statusBarScrollTargetWidthPercent: Int = StatusBarScrollRules.DEFAULT_TARGET_WIDTH_PERCENT,
     isAddressBarDockingEnabled: Boolean,
     isAddressBarSwipeModeEnabled: Boolean = false,
     isExternalLinkPreviewEnabled: Boolean = false,
@@ -176,6 +179,10 @@ internal fun SettingsScreen(
     onBrowserMenuPresentationChanged: (BrowserMenuPresentation) -> Unit = {},
     onBrowserMenuBottomSheetContentLayoutChanged: (BrowserMenuBottomSheetContentLayout) -> Unit = {},
     onBrowserMenuBottomSheetToolbarEntriesChanged: (List<BrowserMenuEntry?>) -> Unit = {},
+    onStatusBarScrollEnabledChanged: (Boolean) -> Unit = {},
+    onStatusBarScrollTargetWidthPercentChanged: (Int) -> Unit = {},
+    onStatusBarScrollTargetWidthPreview: (widthPercent: Int, finished: Boolean) -> Unit = { _, _ -> },
+    onOpenStatusBarScrollAccessibilitySettings: () -> Unit = {},
     onAddressBarDockingEnabledChanged: (Boolean) -> Unit,
     onAddressBarSwipeModeEnabledChanged: (Boolean) -> Unit = {},
     onExternalLinkPreviewEnabledChanged: (Boolean) -> Unit = {},
@@ -335,6 +342,8 @@ internal fun SettingsScreen(
                     addressBarLongPressAction = addressBarLongPressAction,
                     linkLongPressAction = linkLongPressAction,
                     linkPeekSwipeAction = linkPeekSwipeAction,
+                    isStatusBarScrollEnabled = isStatusBarScrollEnabled,
+                    statusBarScrollTargetWidthPercent = statusBarScrollTargetWidthPercent,
                     onInactiveTabLifetimeChanged = onInactiveTabLifetimeChanged,
                     onResidentTabLimitChanged = onResidentTabLimitChanged,
                     onTabOverviewModeChanged = onTabOverviewModeChanged,
@@ -352,6 +361,10 @@ internal fun SettingsScreen(
                     },
                     onLinkLongPressActionChanged = onLinkLongPressActionChanged,
                     onLinkPeekSwipeActionChanged = onLinkPeekSwipeActionChanged,
+                    onStatusBarScrollEnabledChanged = onStatusBarScrollEnabledChanged,
+                    onStatusBarScrollTargetWidthPercentChanged = onStatusBarScrollTargetWidthPercentChanged,
+                    onStatusBarScrollTargetWidthPreview = onStatusBarScrollTargetWidthPreview,
+                    onOpenStatusBarScrollAccessibilitySettings = onOpenStatusBarScrollAccessibilitySettings,
                     onLinkPeekActions = {
                         onDestinationChanged(SettingsDestination.LinkPeekActions)
                     },
@@ -407,6 +420,7 @@ internal fun SettingsScreen(
 
                 SettingsDestination.MenuActions -> BrowserMenuSettingsPage(
                     layout = browserMenuLayout,
+                    statusBarScrollEnabled = isStatusBarScrollEnabled,
                     onLocationChanged = onBrowserMenuLocationChanged,
                     onPresentationChanged = onBrowserMenuPresentationChanged,
                     onBottomSheetContentLayoutChanged = onBrowserMenuBottomSheetContentLayoutChanged,

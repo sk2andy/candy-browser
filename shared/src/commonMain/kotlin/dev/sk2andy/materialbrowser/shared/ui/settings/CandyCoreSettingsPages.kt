@@ -284,6 +284,7 @@ internal object CandyBrowserMenuSettingsResources : BrowserMenuSettingsResources
         BrowserMenuEntry.AlwaysBlockPopups -> "Pop-ups immer blockieren"
         BrowserMenuEntry.DesktopView -> "Desktop-Ansicht"
         BrowserMenuEntry.DomainMute -> "Website stummschalten"
+        BrowserMenuEntry.StatusBarScroll -> "Statusleisten-Tipp zum Seitenanfang"
         BrowserMenuEntry.ToppingCommands -> "Topping-Befehle"
         BrowserMenuEntry.FirefoxPageActions -> "Firefox-Seitenaktionen"
         BrowserMenuEntry.CandyTrail -> "Candy Trail"

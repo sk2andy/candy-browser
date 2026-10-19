@@ -90,6 +90,7 @@ private object AndroidBrowserMenuSettingsResources : BrowserMenuSettingsResource
 @Composable
 internal fun BrowserMenuSettingsPage(
     layout: BrowserMenuLayout,
+    statusBarScrollEnabled: Boolean = false,
     onLocationChanged: (BrowserMenuEntry, BrowserMenuLocation) -> Unit,
     onBack: () -> Unit,
     onPresentationChanged: (BrowserMenuPresentation) -> Unit = {},
@@ -101,7 +102,8 @@ internal fun BrowserMenuSettingsPage(
         resources = AndroidBrowserMenuSettingsResources,
         containerColor = browserChromeColor(MaterialTheme.colorScheme.surfaceContainerHigh),
         availableEntries = BrowserMenuEntry.entries.filterNot { entry ->
-            entry == BrowserMenuEntry.OpenFirefoxExtensions
+            entry == BrowserMenuEntry.OpenFirefoxExtensions ||
+                (entry == BrowserMenuEntry.StatusBarScroll && !statusBarScrollEnabled)
         },
         onLocationChanged = onLocationChanged,
         onBack = onBack,
@@ -111,7 +113,8 @@ internal fun BrowserMenuSettingsPage(
                 resources = AndroidBrowserMenuSettingsResources,
                 containerColor = browserChromeColor(MaterialTheme.colorScheme.surfaceContainerHigh),
                 availableEntries = BrowserMenuEntry.entries.filterNot { entry ->
-                    entry == BrowserMenuEntry.OpenFirefoxExtensions
+                    entry == BrowserMenuEntry.OpenFirefoxExtensions ||
+                        (entry == BrowserMenuEntry.StatusBarScroll && !statusBarScrollEnabled)
                 },
                 onLayoutChanged = { updated ->
                     if (updated.presentation != layout.presentation) onPresentationChanged(updated.presentation)
@@ -172,6 +175,7 @@ private fun BrowserMenuEntry.labelResource(): Int = when (this) {
     BrowserMenuEntry.AlwaysBlockPopups -> R.string.action_always_block_popups
     BrowserMenuEntry.DesktopView -> R.string.action_desktop_view
     BrowserMenuEntry.DomainMute -> R.string.action_mute_domain
+    BrowserMenuEntry.StatusBarScroll -> R.string.settings_status_bar_scroll_title
     BrowserMenuEntry.ToppingCommands -> R.string.settings_menu_entry_topping_commands
     BrowserMenuEntry.FirefoxPageActions -> R.string.settings_menu_entry_firefox_page_actions
     BrowserMenuEntry.CandyTrail -> R.string.action_open_candy_trail
