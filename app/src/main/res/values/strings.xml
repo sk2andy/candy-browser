@@ -1334,6 +1334,12 @@
     <string name="gecko_extensions_manager_summary">Mozilla-signed XPI packages for the Gecko browser</string>
     <string name="gecko_extensions_options_summary">Open an installed extension’s own options page</string>
     <string name="gecko_extensions_empty">No Firefox extension installed yet.</string>
+    <string name="gecko_extensions_search">Search Firefox add-ons</string>
+    <string name="gecko_extensions_compatibility_note">Only some Firefox add-ons work in Candy. Support depends on Android compatibility and the APIs provided by Candy’s Gecko engine.</string>
+    <string name="gecko_extensions_installed">Installed</string>
+    <string name="gecko_extensions_available">Available on Firefox Add-ons</string>
+    <string name="gecko_extensions_search_failed">Could not search Firefox Add-ons. Check your connection and try again.</string>
+    <string name="gecko_extensions_no_results">No matching add-ons found.</string>
     <string name="gecko_extension_no_options">No options page available</string>
     <string name="gecko_extension_install">Install extension</string>
     <string name="gecko_extension_install_hint">Paste the HTTPS address of a Mozilla-signed XPI package.</string>
