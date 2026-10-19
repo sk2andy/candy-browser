@@ -7,6 +7,11 @@ import java.net.URI
 import java.nio.ByteBuffer
 
 internal class FaviconClient {
+    fun fetchMozillaAddonImage(imageUrl: String): Bitmap? =
+        FaviconFetchRules.allowedMozillaAddonImageUrl(imageUrl)
+            ?.let { url -> fetchBytes(url, "image/*", MAX_FILE_SIZE_BYTES) }
+            ?.let(::decode)
+
     fun fetchFavorite(pageUrl: String): Bitmap? {
         val originUrl = FaviconPageIconRules.originPageUrl(pageUrl) ?: return null
         val page = fetchBytes(originUrl, "text/html", MAX_PAGE_PREFIX_BYTES, allowPrefix = true)

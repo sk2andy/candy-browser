@@ -503,8 +503,12 @@ and [native Android IPC connector](https://github.com/mozilla-firefox/firefox/bl
   The manager groups installed add-ons separately from live Firefox Add-ons search results. Search
   uses Mozilla's public Android add-on catalog and installs only its HTTPS XPI file through the
   same signed-install and permission-prompt path as a pasted URL. Catalog membership does not
-  guarantee that an add-on runs in Candy; Android compatibility and GeckoView 155 API support still
-  apply, and Gecko's reported install failure category is shown when it rejects a package.
+  guarantee that an add-on runs in Candy; Android compatibility and the APIs exposed by Candy's
+  GeckoView engine still apply, and Gecko's reported install failure category is shown when it
+  rejects a package. Installed rows use GeckoView's extension icon; available rows use the AMO
+  catalog icon from Mozilla hosts with a generic extension icon when unavailable. Icon downloads
+  use the bounded image loader and do not request additional permissions. Rows and dividers share
+  consistent inner horizontal spacing.
   Each installed extension with a valid options target exposes a Settings action beside its
   management controls. Dismissing that overlay returns to Settings instead of exposing the browser
   tab. Selecting that action opens the extension's options page in a session-only Candy tab. That

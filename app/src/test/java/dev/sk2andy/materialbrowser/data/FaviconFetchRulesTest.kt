@@ -7,6 +7,24 @@ import org.junit.Test
 
 class FaviconFetchRulesTest {
     @Test
+    fun `accepts HTTPS Mozilla add-on image URLs only`() {
+        assertEquals(
+            "https://addons.mozilla.org/user-media/addon_icons/a.png",
+            FaviconFetchRules.allowedMozillaAddonImageUrl(
+                "https://addons.mozilla.org/user-media/addon_icons/a.png",
+            ),
+        )
+        assertEquals(
+            "https://addons.cdn.mozilla.net/a.png",
+            FaviconFetchRules.allowedMozillaAddonImageUrl("https://addons.cdn.mozilla.net/a.png"),
+        )
+        assertNull(FaviconFetchRules.allowedMozillaAddonImageUrl("http://addons.mozilla.org/a.png"))
+        assertNull(FaviconFetchRules.allowedMozillaAddonImageUrl("https://eviladdons.mozilla.org/a.png"))
+        assertNull(FaviconFetchRules.allowedMozillaAddonImageUrl("https://addons.mozilla.org.evil/a.png"))
+        assertNull(FaviconFetchRules.allowedMozillaAddonImageUrl("https://user@addons.mozilla.org/a.png"))
+    }
+
+    @Test
     fun `builds first party icon url from page origin`() {
         assertEquals(
             "https://example.com/favicon.ico",

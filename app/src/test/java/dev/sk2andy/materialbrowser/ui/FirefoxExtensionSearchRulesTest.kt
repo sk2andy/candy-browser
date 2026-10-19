@@ -45,7 +45,8 @@ class FirefoxExtensionSearchRulesTest {
     fun `official response with singular current file becomes an install result`() {
         val response = """
             {"results":[{"guid":"ublock@test","name":{"de":"uBlock Origin","en-US":"uBlock Origin"},
-            "summary":{"en-US":"Blocks ads"},"current_version":{"file":{"url":"https://addons.mozilla.org/firefox/downloads/file/123/ublock.xpi"}}}]}
+            "summary":{"en-US":"Blocks ads"},"icon_url":"https://addons.mozilla.org/user-media/addon_icons/ublock.png",
+            "current_version":{"file":{"url":"https://addons.mozilla.org/firefox/downloads/file/123/ublock.xpi"}}}]}
         """.trimIndent()
 
         assertEquals(
@@ -55,6 +56,7 @@ class FirefoxExtensionSearchRulesTest {
                     name = "uBlock Origin",
                     summary = "Blocks ads",
                     xpiUrl = "https://addons.mozilla.org/firefox/downloads/file/123/ublock.xpi",
+                    iconUrl = "https://addons.mozilla.org/user-media/addon_icons/ublock.png",
                 ),
             ),
             FirefoxExtensionSearchRules.responseEntries(response),
@@ -77,8 +79,8 @@ class FirefoxExtensionSearchRulesTest {
     @Test
     fun `already installed add-ons are hidden regardless of id casing`() {
         val results = listOf(
-            AvailableFirefoxExtension("uBlock@test", "uBlock", "", "https://addons.mozilla.org/u.xpi"),
-            AvailableFirefoxExtension("new@test", "New", "", "https://addons.mozilla.org/n.xpi"),
+            AvailableFirefoxExtension("uBlock@test", "uBlock", "", "https://addons.mozilla.org/u.xpi", null),
+            AvailableFirefoxExtension("new@test", "New", "", "https://addons.mozilla.org/n.xpi", null),
         )
 
         assertEquals(

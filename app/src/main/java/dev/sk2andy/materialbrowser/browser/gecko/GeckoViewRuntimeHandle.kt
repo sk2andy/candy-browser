@@ -685,7 +685,7 @@ internal class GeckoViewExtensionRuntime(
             .filterNot { extension ->
                 !GeckoExtensionRules.isVisibleToUserManager(extension.id)
             }
-            .map(WebExtension::toCandyExtension)
+            .map { it.toCandyExtension() }
     }
 
     override suspend fun installSignedXpi(
@@ -4450,7 +4450,7 @@ private object GeckoProfileRules {
     private const val MAX_PROFILE_ID_LENGTH = 256
 }
 
-private fun WebExtension.toCandyExtension() = GeckoExtension(
+private suspend fun WebExtension.toCandyExtension() = GeckoExtension(
     id = id,
     name = metaData.name,
     version = metaData.version,
@@ -4464,6 +4464,7 @@ private fun WebExtension.toCandyExtension() = GeckoExtension(
     baseUrl = metaData.baseUrl,
     optionsPageUrl = metaData.optionsPageUrl,
     opensOptionsPageInTab = metaData.openOptionsPageInTab,
+    icon = runCatching { metaData.icon.getBitmap(64).await() }.getOrNull(),
 )
 
 private fun WebExtension.InstallException.toCandyInstallException() =

@@ -11,6 +11,7 @@ internal data class AvailableFirefoxExtension(
     val name: String,
     val summary: String,
     val xpiUrl: String,
+    val iconUrl: String?,
 )
 
 internal sealed interface FirefoxExtensionSearchOutcome {
@@ -57,6 +58,7 @@ internal object FirefoxExtensionSearchRules {
                 name = name,
                 summary = addon.localizedField("summary"),
                 xpiUrl = xpiUrl,
+                iconUrl = addon.optString("icon_url").takeIf(String::isNotBlank),
             )
         }
     }

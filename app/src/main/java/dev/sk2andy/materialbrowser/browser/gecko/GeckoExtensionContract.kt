@@ -1,5 +1,7 @@
 package dev.sk2andy.materialbrowser.browser.gecko
 
+import android.graphics.Bitmap
+
 internal data class GeckoExtension(
     val id: String,
     val name: String?,
@@ -14,6 +16,7 @@ internal data class GeckoExtension(
     val baseUrl: String? = null,
     val optionsPageUrl: String? = null,
     val opensOptionsPageInTab: Boolean = false,
+    val icon: Bitmap? = null,
 )
 
 internal data class GeckoExtensionSnapshot(

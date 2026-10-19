@@ -3,14 +3,21 @@
 package dev.sk2andy.materialbrowser.ui
 
 import androidx.activity.compose.PredictiveBackHandler
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Card
@@ -45,10 +52,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -61,11 +73,12 @@ import dev.sk2andy.materialbrowser.browser.gecko.GeckoExtensionChromeRules
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoExtensionManagerMessage
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoExtensionManagerState
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoExtensionPermissionRequest
-import kotlinx.coroutines.delay
+import dev.sk2andy.materialbrowser.data.FaviconClient
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.CancellationException
 
 internal object FirefoxExtensionManagerTestTags {
     const val Overlay = "firefox_extension_manager"
@@ -270,8 +283,8 @@ internal fun FirefoxExtensionManagerOverlay(
                                         onUpdate = { onUpdate(extension) },
                                         onUninstall = { onUninstall(extension) },
                                     )
-                                    if (index < state.snapshot.extensions.lastIndex) {
-                                        HorizontalDivider(Modifier.padding(horizontal = 16.dp))
+                if (index < state.snapshot.extensions.lastIndex) {
+                    HorizontalDivider(Modifier.padding(horizontal = 16.dp))
                                     }
                                 }
                             }
@@ -324,6 +337,7 @@ internal fun FirefoxExtensionManagerOverlay(
                                     Modifier.fillMaxWidth().padding(16.dp),
                                     verticalAlignment = Alignment.CenterVertically,
                                 ) {
+                                    ExtensionIcon(icon = null, iconUrl = addon.iconUrl)
                                     Column(Modifier.weight(1f)) {
                                         Text(addon.name, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                                         if (addon.summary.isNotBlank()) Text(
@@ -428,10 +442,11 @@ private fun GeckoExtensionRow(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 10.dp),
+            .padding(horizontal = 16.dp, vertical = 10.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
+            ExtensionIcon(icon = extension.icon, iconUrl = null)
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     extension.name ?: extension.id,
@@ -492,6 +507,39 @@ private fun GeckoExtensionRow(
             }
         }
     }
+}
+
+@Composable
+private fun ExtensionIcon(icon: android.graphics.Bitmap?, iconUrl: String?) {
+    val loadedIcon by produceState(initialValue = icon, icon, iconUrl) {
+        if (icon == null && iconUrl != null) {
+            value = withContext(Dispatchers.IO) {
+                FaviconClient().fetchMozillaAddonImage(iconUrl)
+            }
+        }
+    }
+    if (loadedIcon != null && !loadedIcon!!.isRecycled) {
+        Image(
+            bitmap = loadedIcon!!.asImageBitmap(),
+            contentDescription = null,
+            modifier = Modifier.size(40.dp).clip(CircleShape),
+            contentScale = ContentScale.Crop,
+        )
+    } else {
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .background(MaterialTheme.colorScheme.secondaryContainer, CircleShape),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                painter = painterResource(R.drawable.ic_symbol_extension),
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSecondaryContainer,
+            )
+        }
+    }
+    Spacer(Modifier.size(12.dp))
 }
 
 @Composable

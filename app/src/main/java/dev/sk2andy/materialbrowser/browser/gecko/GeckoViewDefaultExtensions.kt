@@ -146,7 +146,7 @@ internal class GeckoViewDefaultExtensionInstaller(
     private var pendingInstall: GeckoDefaultExtension? = null
 
     override suspend fun listInstalled(): List<GeckoExtension> =
-        controller.list().awaitDefaultExtensionResult().map(WebExtension::toDefaultExtension)
+        controller.list().awaitDefaultExtensionResult().map { it.toDefaultExtension() }
 
     override suspend fun install(extension: GeckoDefaultExtension): GeckoExtension =
         installMutex.withLock {
@@ -366,7 +366,7 @@ private val GeckoDefaultExtensionProvisioningResult.hasFailure: Boolean
         outcome == GeckoDefaultExtensionProvisioningOutcome.Failed
     }
 
-private fun WebExtension.toDefaultExtension() = GeckoExtension(
+private suspend fun WebExtension.toDefaultExtension() = GeckoExtension(
     id = id,
     name = metaData.name,
     version = metaData.version,
@@ -380,6 +380,7 @@ private fun WebExtension.toDefaultExtension() = GeckoExtension(
     baseUrl = metaData.baseUrl,
     optionsPageUrl = metaData.optionsPageUrl,
     opensOptionsPageInTab = metaData.openOptionsPageInTab,
+    icon = runCatching { metaData.icon.getBitmap(64).awaitDefaultExtensionResult() }.getOrNull(),
 )
 
 private suspend fun <T> GeckoResult<T>.awaitDefaultExtensionResult(): T =

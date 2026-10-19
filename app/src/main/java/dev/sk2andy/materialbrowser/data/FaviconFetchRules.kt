@@ -5,6 +5,18 @@ import java.nio.charset.StandardCharsets
 import java.util.UUID
 
 internal object FaviconFetchRules {
+    fun allowedMozillaAddonImageUrl(imageUrl: String): String? {
+        val uri = runCatching { URI(imageUrl.trim()) }.getOrNull() ?: return null
+        val host = uri.host?.lowercase() ?: return null
+        if (
+            uri.scheme?.lowercase() != "https" || uri.rawUserInfo != null ||
+            (uri.port != -1 && uri.port != 443) || host !in MOZILLA_ADDON_IMAGE_HOSTS
+        ) {
+            return null
+        }
+        return uri.toASCIIString()
+    }
+
     fun originIconUrl(pageUrl: String): String? {
         val page = runCatching { URI(pageUrl.trim()) }.getOrNull() ?: return null
         val scheme = page.scheme?.lowercase()?.takeIf { it == "http" || it == "https" }
@@ -43,5 +55,11 @@ internal object FaviconFetchRules {
         val scheme: String,
         val host: String,
         val port: Int,
+    )
+
+    private val MOZILLA_ADDON_IMAGE_HOSTS = setOf(
+        "addons.mozilla.org",
+        "addons.cdn.mozilla.net",
+        "addons.mozilla.net",
     )
 }
