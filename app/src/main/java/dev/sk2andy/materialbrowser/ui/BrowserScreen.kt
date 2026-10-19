@@ -1659,6 +1659,10 @@ internal fun BrowserScreen(
                 settingsDestination = SettingsDestination.Home
                 settingsVisible = true
             },
+            onOpenMenuSettings = {
+                settingsDestination = SettingsDestination.MenuActions
+                settingsVisible = true
+            },
             onPrivacyXRay = {
                 privacyXRayTabId = selectedTab.id
                 permissionRadarOrigin = null

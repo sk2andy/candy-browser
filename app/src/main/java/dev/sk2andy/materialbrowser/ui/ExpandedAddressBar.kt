@@ -233,6 +233,7 @@ internal fun ExpandedBottomBarContent(
     menuLayout: BrowserMenuLayout,
     onFirefoxExtensionAction: (GeckoExtensionActionKey) -> Unit,
     onSettings: () -> Unit,
+    onOpenMenuSettings: () -> Unit = onSettings,
     onPrivacyXRay: () -> Unit,
     permissionActivityVisible: Boolean,
     onOpenExternal: () -> Unit,
@@ -777,6 +778,7 @@ internal fun ExpandedBottomBarContent(
                                 menuLayout = menuLayout,
                                 onFirefoxExtensionAction = onFirefoxExtensionAction,
                                 onSettings = onSettings,
+                                onOpenMenuSettings = onOpenMenuSettings,
                                 bottomSheetAnchorBounds = addressBarBounds,
                                 onBottomSheetVisibleChange = onMenuSheetVisibleChange,
                                 bottomSheetAddressBar = { commit ->

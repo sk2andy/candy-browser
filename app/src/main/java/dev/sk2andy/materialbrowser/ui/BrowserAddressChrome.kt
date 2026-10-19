@@ -123,6 +123,7 @@ internal fun BoxScope.BrowserAddressChrome(
     onOpenDownloads: () -> Unit,
     onOpenHistory: () -> Unit,
     onSettings: () -> Unit,
+    onOpenMenuSettings: () -> Unit = onSettings,
     onPrivacyXRay: () -> Unit,
     onNewTabButtonBoundsChanged: (Rect?) -> Unit,
     onReaderStudio: () -> Unit,
@@ -278,6 +279,7 @@ internal fun BoxScope.BrowserAddressChrome(
         onDispose(controller::clearAddressBarBoundsInViewport)
     }
     BrowserBottomBar(
+        onOpenMenuSettings = onOpenMenuSettings,
         menuDismissRequestId = menuDismissRequestId,
         tab = selectedTab,
         pageTranslationProvider = controller.pageTranslationProvider,

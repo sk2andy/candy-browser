@@ -1484,6 +1484,8 @@
     <string name="browser_menu_page_controls">Seitensteuerung</string>
     <string name="browser_menu_dismiss">Menü schließen</string>
     <string name="browser_menu_page_actions">Seitenaktionen</string>
+    <string name="browser_menu_empty_section_message">Hier ist noch Platz für deine Favoriten. Aktiviere Menüeinträge in den Einstellungen.</string>
+    <string name="browser_menu_empty_section_action">Einstellungen öffnen</string>
     <string name="settings_menu_bottom_sheet_toolbar_title">Werkzeugleiste im Bottom Sheet</string>
     <string name="settings_menu_bottom_sheet_toolbar_summary">Wähle fünf Aktionen von links nach rechts. Bereits belegte Aktionen tauschen ihren Platz. Ein leerer Platz blendet die Schaltfläche aus.</string>
     <string name="settings_menu_bottom_sheet_toolbar_slot">Aktion %1$d</string>

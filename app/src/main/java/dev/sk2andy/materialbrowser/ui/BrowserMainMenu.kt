@@ -330,6 +330,7 @@ internal fun BrowserMainMenu(
     menuLayout: BrowserMenuLayout = BrowserMenuLayout.Default,
     onFirefoxExtensionAction: (GeckoExtensionActionKey) -> Unit = {},
     onSettings: () -> Unit,
+    onOpenMenuSettings: () -> Unit = onSettings,
     bottomSheetAddressBar: (@Composable ((() -> Unit) -> Unit) -> Unit)? = null,
     bottomSheetAnchorBounds: Rect? = null,
     onBottomSheetVisibleChange: (Boolean) -> Unit = {},
@@ -481,6 +482,7 @@ internal fun BrowserMainMenu(
             effects = effects,
             snoozedTabCount = snoozedTabCount,
             onAction = onMenuAction,
+            onOpenMenuSettings = onOpenMenuSettings,
             onVisibleChange = onBottomSheetVisibleChange,
             extensionContent = extensionContent,
         )

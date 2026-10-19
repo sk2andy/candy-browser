@@ -68,6 +68,9 @@ internal fun CandyBrowserMenuSheet(
             quickActionsTitle = "Schnellzugriff",
             pageActionsTitle = "Seitenaktionen",
             pageControlsTitle = "Seitensteuerung",
+            emptySectionMessage = "Hier ist noch Platz für deine Favoriten. Aktiviere Menüeinträge in den Einstellungen.",
+            emptySectionActionLabel = "Einstellungen öffnen",
+            onOpenMenuSettings = { commit { actionSink.showSettings() } },
             handleDescription = "Menü schließen",
             handleModifier = Modifier.clickable { commit {} },
             addressBar = {

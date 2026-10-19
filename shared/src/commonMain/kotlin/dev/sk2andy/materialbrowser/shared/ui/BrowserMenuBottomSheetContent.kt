@@ -25,6 +25,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.rememberCoroutineScope
@@ -63,6 +64,9 @@ fun BrowserMenuBottomSheetContent(
     quickActionsTitle: String,
     pageActionsTitle: String,
     pageControlsTitle: String,
+    emptySectionMessage: String,
+    emptySectionActionLabel: String,
+    onOpenMenuSettings: () -> Unit,
     handleDescription: String,
     addressBar: @Composable () -> Unit,
     onCommand: (BrowserFeatureMenuItem) -> Unit,
@@ -209,12 +213,20 @@ fun BrowserMenuBottomSheetContent(
                         ),
                 ) {
                     if (page == 0) {
-                        SheetActionGroups(
-                            sections.pageActions, resources, effects, snoozedTabCount, onCommand, onToggle,
-                        )
+                        if (sections.pageActions.isEmpty()) {
+                            EmptyMenuSection(emptySectionMessage, emptySectionActionLabel, onOpenMenuSettings)
+                        } else {
+                            SheetActionGroups(
+                                sections.pageActions, resources, effects, snoozedTabCount, onCommand, onToggle,
+                            )
+                        }
                         extensionContent(onExtensionCommit)
                     } else {
-                        SheetControlGrid(sections.pageControls, resources, effects, onToggle)
+                        if (sections.pageControls.isEmpty()) {
+                            EmptyMenuSection(emptySectionMessage, emptySectionActionLabel, onOpenMenuSettings)
+                        } else {
+                            SheetControlGrid(sections.pageControls, resources, effects, onToggle)
+                        }
                     }
                 }
             }
@@ -228,17 +240,28 @@ fun BrowserMenuBottomSheetContent(
                     .padding(horizontal = 16.dp, vertical = 8.dp)
                     .testTag(BrowserMenuBottomSheetTestTags.Content),
             ) {
-                if (sections.pageActions.isNotEmpty()) {
+                val bothPageSectionsEmpty =
+                    sections.pageActions.isEmpty() && sections.pageControls.isEmpty()
+                if (bothPageSectionsEmpty) {
+                    EmptyMenuSection(emptySectionMessage, emptySectionActionLabel, onOpenMenuSettings)
+                } else if (sections.pageActions.isEmpty()) {
+                    EmptyMenuSection(emptySectionMessage, emptySectionActionLabel, onOpenMenuSettings)
+                } else {
                     SheetSectionTitle(pageActionsTitle)
                     SheetActionGroups(
                         sections.pageActions, resources, effects, snoozedTabCount, onCommand, onToggle,
                     )
                 }
                 extensionContent(onExtensionCommit)
-                if (sections.pageControls.isNotEmpty()) {
-                    Spacer(Modifier.height(16.dp))
-                    SheetSectionTitle(pageControlsTitle)
-                    SheetControlGrid(sections.pageControls, resources, effects, onToggle)
+                if (!bothPageSectionsEmpty) {
+                    if (sections.pageControls.isNotEmpty()) {
+                        Spacer(Modifier.height(16.dp))
+                        SheetSectionTitle(pageControlsTitle)
+                        SheetControlGrid(sections.pageControls, resources, effects, onToggle)
+                    } else {
+                        Spacer(Modifier.height(16.dp))
+                        EmptyMenuSection(emptySectionMessage, emptySectionActionLabel, onOpenMenuSettings)
+                    }
                 }
             }
         }
@@ -274,6 +297,22 @@ fun BrowserMenuBottomSheetContent(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun EmptyMenuSection(
+    message: String,
+    actionLabel: String,
+    onOpenSettings: () -> Unit,
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Text(message, style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center)
+        TextButton(onClick = onOpenSettings) { Text(actionLabel) }
     }
 }
 

@@ -1502,6 +1502,8 @@
     <string name="browser_menu_page_controls">Page controls</string>
     <string name="browser_menu_dismiss">Close menu</string>
     <string name="browser_menu_page_actions">Page actions</string>
+    <string name="browser_menu_empty_section_message">There’s room for your favorites here. Enable menu items in settings.</string>
+    <string name="browser_menu_empty_section_action">Open settings</string>
     <string name="settings_menu_bottom_sheet_toolbar_title">Bottom sheet toolbar</string>
     <string name="settings_menu_bottom_sheet_toolbar_summary">Choose five actions from left to right. Actions already assigned to another slot swap places. Leave a slot empty to hide its button.</string>
     <string name="settings_menu_bottom_sheet_toolbar_slot">Action %1$d</string>
