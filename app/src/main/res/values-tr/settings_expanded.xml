@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_colors_title">Renkler</string>
+    <string name="settings_surfaces_shapes_title">Yüzeyler ve şekiller</string>
+    <string name="settings_link_long_press_explanation">Bir bağlantıya uzun basıldığında ne olacağını seçin. Ön planda yeni sekmeye geçersiniz; arka planda mevcut sayfada kalırsınız.</string>
+    <string name="settings_gesture_preview_group">Önizleme</string>
+    <string name="settings_gesture_normal_tabs_group">Normal sekmeler</string>
+    <string name="settings_gesture_private_tabs_group">Gizli sekmeler</string>
+    <string name="settings_gesture_link_actions_group">Bağlantı işlemleri</string>
+    <string name="settings_player_disabled_explanation">Web sitesinin oynatıcısını kullanmaya devam et.</string>
+    <string name="settings_player_button_fullscreen_explanation">Bir düğme, algılanan videoları Candy Player’da tam ekran açar.</string>
+    <string name="settings_player_button_inline_explanation">Bir düğme videoyu sayfanın içinde başlatır. Oynatıcıda tam ekran seçeneği kullanılabilir.</string>
+    <string name="settings_player_fullscreen_explanation">Web sitesi bir videoyu tam ekran açtığında Candy Player’ı kullan.</string>
+    <string name="settings_player_automatic_explanation">Oynatılabilir bir video algılandığında Candy Player’ı otomatik olarak aç.</string>
+</resources>

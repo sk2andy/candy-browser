@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_colors_title">顏色</string>
+    <string name="settings_surfaces_shapes_title">表面與形狀</string>
+    <string name="settings_link_long_press_explanation">選擇長按連結時執行的操作。在前景開啟會切換到新分頁；在背景開啟則停留在目前頁面。</string>
+    <string name="settings_gesture_preview_group">預覽</string>
+    <string name="settings_gesture_normal_tabs_group">一般分頁</string>
+    <string name="settings_gesture_private_tabs_group">私密分頁</string>
+    <string name="settings_gesture_link_actions_group">連結操作</string>
+    <string name="settings_player_disabled_explanation">繼續使用網站的播放器。</string>
+    <string name="settings_player_button_fullscreen_explanation">點選按鈕，在 Candy Player 中以全螢幕開啟偵測到的影片。</string>
+    <string name="settings_player_button_inline_explanation">點選按鈕，在頁面內播放影片。仍可在播放器中切換至全螢幕。</string>
+    <string name="settings_player_fullscreen_explanation">網站以全螢幕開啟影片時使用 Candy Player。</string>
+    <string name="settings_player_automatic_explanation">偵測到可播放的影片時，自動開啟 Candy Player。</string>
+</resources>

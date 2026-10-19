@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_colors_title">Colores</string>
+    <string name="settings_surfaces_shapes_title">Superficies y formas</string>
+    <string name="settings_link_long_press_explanation">Elige qué ocurre al mantener pulsado un enlace. En primer plano cambias a la pestaña nueva; en segundo plano permaneces en la página actual.</string>
+    <string name="settings_gesture_preview_group">Vista previa</string>
+    <string name="settings_gesture_normal_tabs_group">Pestañas normales</string>
+    <string name="settings_gesture_private_tabs_group">Pestañas privadas</string>
+    <string name="settings_gesture_link_actions_group">Acciones de enlaces</string>
+    <string name="settings_player_disabled_explanation">Seguir usando el reproductor del sitio web.</string>
+    <string name="settings_player_button_fullscreen_explanation">Un botón abre los vídeos detectados a pantalla completa en Candy Player.</string>
+    <string name="settings_player_button_inline_explanation">Un botón inicia el vídeo dentro de la página. La pantalla completa sigue disponible en el reproductor.</string>
+    <string name="settings_player_fullscreen_explanation">Usar Candy Player cuando el sitio web abre un vídeo a pantalla completa.</string>
+    <string name="settings_player_automatic_explanation">Abrir Candy Player automáticamente al detectar un vídeo reproducible.</string>
+</resources>

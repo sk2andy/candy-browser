@@ -202,44 +202,50 @@ fun SettingsHomePage(
             separateHistoryData = separateHistoryData,
             separateExtensionsGroup = separateExtensionsGroup,
         ).filter { item -> item.destination?.let(isDestinationVisible) != false }
-        items.forEachIndexed { index, item ->
-            if (index == 0 || item.group != items[index - 1].group) {
-                if (index != 0) Spacer(Modifier.height(20.dp))
-                SettingsSectionTitle(resources.text(item.group.label))
-                Spacer(Modifier.height(8.dp))
-            }
-            val summary = item.summary
-            val destination = item.destination
-            SettingsLink(
-                title = resources.text(item.title),
-                subtitle = if (summary == null) {
-                    downloadSummary
-                } else {
-                    resources.text(summary)
-                },
-                containerColor = linkContainerColor,
-                icon = { modifier, tint -> icon(item.icon, modifier, tint) },
-                enabled = item.isFirefoxExtensionsAction ||
-                    destination?.let(isDestinationEnabled) == true,
-                onLongClickLabel = resources.text(SettingsHomeLabel.UnlockDeveloperOptions)
-                    .takeIf {
-                        destination == SettingsDestination.AboutLegal &&
-                            !developerOptionsUnlocked &&
-                            onUnlockDeveloperOptions != null
-                    },
-                onLongClick = onUnlockDeveloperOptions.takeIf {
-                    destination == SettingsDestination.AboutLegal && !developerOptionsUnlocked
-                },
-                onClick = {
-                    if (item.isFirefoxExtensionsAction) {
-                        onOpenFirefoxExtensions?.invoke()
-                    } else {
-                        destination?.let(onDestinationChanged)
+        val groups = items.fold(mutableListOf<MutableList<SettingsHomeItem>>()) { groups, item ->
+            if (groups.lastOrNull()?.lastOrNull()?.group != item.group) groups.add(mutableListOf())
+            groups.last().add(item)
+            groups
+        }
+        groups.forEachIndexed { groupIndex, groupItems ->
+            if (groupIndex != 0) Spacer(Modifier.height(24.dp))
+            SettingsSectionTitle(resources.text(groupItems.first().group.label))
+            SettingsPreferenceGroup(containerColor = linkContainerColor) {
+                groupItems.forEachIndexed { index, item ->
+                    val summary = item.summary
+                    val destination = item.destination
+                    SettingsLink(
+                        title = resources.text(item.title),
+                        subtitle = if (summary == null) {
+                            downloadSummary
+                        } else {
+                            resources.text(summary)
+                        },
+                        containerColor = linkContainerColor,
+                        icon = { modifier, tint -> icon(item.icon, modifier, tint) },
+                        enabled = item.isFirefoxExtensionsAction ||
+                            destination?.let(isDestinationEnabled) == true,
+                        onLongClickLabel = resources.text(SettingsHomeLabel.UnlockDeveloperOptions)
+                            .takeIf {
+                                destination == SettingsDestination.AboutLegal &&
+                                    !developerOptionsUnlocked &&
+                                    onUnlockDeveloperOptions != null
+                            },
+                        onLongClick = onUnlockDeveloperOptions.takeIf {
+                            destination == SettingsDestination.AboutLegal && !developerOptionsUnlocked
+                        },
+                        onClick = {
+                            if (item.isFirefoxExtensionsAction) {
+                                onOpenFirefoxExtensions?.invoke()
+                            } else {
+                                destination?.let(onDestinationChanged)
+                            }
+                        },
+                    )
+                    if (index != groupItems.lastIndex) {
+                        SettingsPreferenceDivider()
                     }
-                },
-            )
-            if (index != items.lastIndex && item.group == items[index + 1].group) {
-                SettingsPageSpacer()
+                }
             }
         }
     }

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="status_bar_scroll_accessibility_service_label">Превъртане чрез лентата на състоянието в Candy</string>
+    <string name="status_bar_scroll_accessibility_service_description">Докосването в центъра на лентата на състоянието превърта текущата страница в Candy до началото. Candy не чете съдържанието на прозорците.</string>
+    <string name="status_bar_scroll_target_description">Превъртане на текущата страница до началото</string>
+    <string name="settings_status_bar_scroll_title">Докоснете лентата на състоянието за превъртане до началото</string>
+    <string name="settings_status_bar_scroll_summary">Добавя невидима зона за докосване в центъра на лентата на състоянието на Android. Изисква достъп на Candy до функциите за достъпност.</string>
+    <string name="settings_status_bar_scroll_width_title">Ширина на зоната за докосване</string>
+    <string name="settings_status_bar_scroll_width_summary">%1$d%% от ширината на екрана</string>
+    <string name="settings_status_bar_scroll_accessibility_dialog_title">Разрешаване на достъп на Candy до функциите за достъпност?</string>
+    <string name="settings_status_bar_scroll_accessibility_dialog_message">Android изисква услуга за достъпност за получаване на докосвания върху системната лента на състоянието. Отворете настройките за достъпност на Android и включете превъртането чрез лентата на състоянието в Candy. Candy използва услугата само за тези докосвания и не чете съдържанието на прозорците.</string>
+    <string name="settings_status_bar_scroll_accessibility_open">Отваряне на настройките за достъпност</string>
+    <string name="settings_status_bar_scroll_enable_for_domain">Включване на превъртането чрез лентата на състоянието за този сайт</string>
+    <string name="settings_status_bar_scroll_disable_for_domain">Изключване на превъртането чрез лентата на състоянието за този сайт</string>
+</resources>

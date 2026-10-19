@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_colors_title">Barvy</string>
+    <string name="settings_surfaces_shapes_title">Povrchy a tvary</string>
+    <string name="settings_link_long_press_explanation">Vyberte, co se stane při dlouhém stisknutí odkazu. Na popředí přejdete na novou kartu; na pozadí zůstanete na aktuální stránce.</string>
+    <string name="settings_gesture_preview_group">Náhled</string>
+    <string name="settings_gesture_normal_tabs_group">Běžné karty</string>
+    <string name="settings_gesture_private_tabs_group">Soukromé karty</string>
+    <string name="settings_gesture_link_actions_group">Akce odkazů</string>
+    <string name="settings_player_disabled_explanation">Nadále používat přehrávač webu.</string>
+    <string name="settings_player_button_fullscreen_explanation">Tlačítko otevře rozpoznaná videa na celou obrazovku v Candy Player.</string>
+    <string name="settings_player_button_inline_explanation">Tlačítko spustí video uvnitř stránky. Celá obrazovka zůstává dostupná v přehrávači.</string>
+    <string name="settings_player_fullscreen_explanation">Použít Candy Player, když web otevře video na celou obrazovku.</string>
+    <string name="settings_player_automatic_explanation">Automaticky otevřít Candy Player po rozpoznání přehratelného videa.</string>
+</resources>

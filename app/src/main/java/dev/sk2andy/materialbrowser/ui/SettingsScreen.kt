@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
+import dev.sk2andy.materialbrowser.shared.ui.settings.AppearanceSettingsSection
 import dev.sk2andy.materialbrowser.BuildConfig
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoLoggingStatus
@@ -276,7 +277,15 @@ internal fun SettingsScreen(
             hasFirefoxExtensions = onOpenFirefoxExtensions != null,
         ),
     )
+    val settingsParent: (SettingsDestination) -> SettingsDestination = { page ->
+        if (searchTarget?.destination == page && searchQuery.isNotBlank()) {
+            SettingsDestination.Home
+        } else {
+            SettingsBackRules.parentDestination(page)
+        }
+    }
     SettingsBackRouter(
+        parentDestination = settingsParent(destination),
         destination = destination,
         onDestinationChanged = onDestinationChanged,
         modifier = modifier,
@@ -321,7 +330,7 @@ internal fun SettingsScreen(
                     onSearchSuggestionProviderChanged = onSearchSuggestionProviderChanged,
                     onHistorySuggestionsEnabledChanged =
                         onHistorySuggestionsEnabledChanged,
-                    onBack = { onDestinationChanged(SettingsDestination.Home) },
+                    onBack = { onDestinationChanged(settingsParent(currentDestination)) },
                 )
 
                 SettingsDestination.TabsAndGestures,
@@ -374,7 +383,12 @@ internal fun SettingsScreen(
                     onMenuActions = {
                         onDestinationChanged(SettingsDestination.MenuActions)
                     },
-                    onBack = { onDestinationChanged(SettingsDestination.Home) },
+                    onTabOverview = { onDestinationChanged(SettingsDestination.TabOverview) },
+                    onTabStackFolder = { onDestinationChanged(SettingsDestination.TabStackFolder) },
+                    onClosedTabUndo = { onDestinationChanged(SettingsDestination.ClosedTabUndo) },
+                    onLinkLongPress = { onDestinationChanged(SettingsDestination.LinkLongPress) },
+                    onLinkPeekSwipe = { onDestinationChanged(SettingsDestination.LinkPeekSwipe) },
+                    onBack = { onDestinationChanged(settingsParent(currentDestination)) },
                     section = when (currentDestination) {
                         SettingsDestination.Tabs -> TabSettingsSection.Tabs
                         SettingsDestination.Gestures -> TabSettingsSection.Gestures
@@ -386,9 +400,7 @@ internal fun SettingsScreen(
                     AddressBarLongPressSettingsPage(
                         selectedAction = addressBarLongPressAction,
                         onActionSelected = onAddressBarLongPressActionChanged,
-                        onBack = {
-                            onDestinationChanged(SettingsDestination.Gestures)
-                        },
+                        onBack = { onDestinationChanged(settingsParent(currentDestination)) },
                     )
 
                 SettingsDestination.AddressBarActions -> {
@@ -399,9 +411,7 @@ internal fun SettingsScreen(
                         layout = addressBarActionLayout,
                         tabCount = tabCount,
                         onLayoutChanged = onAddressBarActionLayoutChanged,
-                        onBack = {
-                            onDestinationChanged(SettingsDestination.Gestures)
-                        },
+                        onBack = { onDestinationChanged(settingsParent(currentDestination)) },
                         backLabel = stringResource(R.string.action_back),
                         title = stringResource(R.string.settings_address_bar_actions_title),
                         instructions = stringResource(
@@ -425,11 +435,61 @@ internal fun SettingsScreen(
                     onPresentationChanged = onBrowserMenuPresentationChanged,
                     onBottomSheetContentLayoutChanged = onBrowserMenuBottomSheetContentLayoutChanged,
                     onBottomSheetToolbarEntriesChanged = onBrowserMenuBottomSheetToolbarEntriesChanged,
-                    onBack = {
-                        onDestinationChanged(SettingsDestination.Gestures)
-                    },
+                    onOpenPresentation = { onDestinationChanged(SettingsDestination.MenuStyle) },
+                    onOpenContentLayout = { onDestinationChanged(SettingsDestination.MenuContentLayout) },
+                    onBack = { onDestinationChanged(settingsParent(currentDestination)) },
                 )
 
+                SettingsDestination.MenuStyle -> dev.sk2andy.materialbrowser.shared.ui.settings.BrowserMenuStyleSettingsPage(
+                    layout = browserMenuLayout,
+                    resources = AndroidBrowserMenuSettingsResources,
+                    backContentDescription = stringResource(R.string.action_back),
+                    onBack = { onDestinationChanged(settingsParent(currentDestination)) },
+                    onPresentationChanged = onBrowserMenuPresentationChanged,
+                )
+
+                SettingsDestination.MenuContentLayout -> dev.sk2andy.materialbrowser.shared.ui.settings.BrowserMenuContentLayoutSettingsPage(
+                    layout = browserMenuLayout,
+                    resources = AndroidBrowserMenuSettingsResources,
+                    backContentDescription = stringResource(R.string.action_back),
+                    onBack = { onDestinationChanged(settingsParent(currentDestination)) },
+                    onContentLayoutChanged = onBrowserMenuBottomSheetContentLayoutChanged,
+                )
+
+                SettingsDestination.TabOverview -> dev.sk2andy.materialbrowser.shared.ui.settings.TabOverviewSelectionPage(
+                    mode = tabOverviewMode,
+                    strings = androidTabOverviewSettingsStrings(),
+                    backContentDescription = stringResource(R.string.action_back),
+                    onBack = { onDestinationChanged(settingsParent(currentDestination)) },
+                    onModeChanged = onTabOverviewModeChanged,
+                )
+
+                SettingsDestination.TabStackFolder -> dev.sk2andy.materialbrowser.shared.ui.settings.TabOverviewSelectionPage(
+                    mode = tabStackFolderMode,
+                    strings = androidTabOverviewSettingsStrings().copy(
+                        overviewMode = stringResource(R.string.settings_tab_stack_folder_mode),
+                    ),
+                    backContentDescription = stringResource(R.string.action_back),
+                    onModeChanged = onTabStackFolderModeChanged,
+                    onBack = { onDestinationChanged(settingsParent(currentDestination)) },
+                    testTagPrefix = "tab_stack_folder_option",
+                )
+                SettingsDestination.ClosedTabUndo -> ClosedTabUndoSettingsPage(
+                    enabled = isClosedTabUndoEnabled,
+                    onEnabledChanged = onClosedTabUndoEnabledChanged,
+                    onBack = { onDestinationChanged(settingsParent(currentDestination)) },
+                )
+                SettingsDestination.LinkLongPress -> LinkLongPressSettingsPage(
+                    action = linkLongPressAction,
+                    onActionChanged = onLinkLongPressActionChanged,
+                    onBack = { onDestinationChanged(settingsParent(currentDestination)) },
+                )
+                SettingsDestination.LinkPeekSwipe -> LinkPeekSwipeSettingsPage(
+                    action = linkPeekSwipeAction,
+                    enabled = linkLongPressAction == LinkLongPressAction.LinkPeek,
+                    onActionChanged = onLinkPeekSwipeActionChanged,
+                    onBack = { onDestinationChanged(settingsParent(currentDestination)) },
+                )
                 SettingsDestination.LinkPeekActions -> {
                     val actionLabels = LinkPeekAction.entries.associateWith { action ->
                         stringResource(action.labelRes())
@@ -437,9 +497,7 @@ internal fun SettingsScreen(
                     LinkPeekActionEditorPage(
                         layout = linkPeekActionLayout,
                         onLayoutChanged = onLinkPeekActionLayoutChanged,
-                        onBack = {
-                            onDestinationChanged(SettingsDestination.Gestures)
-                        },
+                        onBack = { onDestinationChanged(settingsParent(currentDestination)) },
                         backLabel = stringResource(R.string.action_back),
                         title = stringResource(R.string.settings_link_peek_actions_title),
                         instructions = stringResource(
@@ -462,10 +520,26 @@ internal fun SettingsScreen(
                     )
                 }
 
-                SettingsDestination.Appearance -> AppearanceSettingsPage(
+                SettingsDestination.Appearance,
+                SettingsDestination.AppearanceColors,
+                SettingsDestination.AppearanceSurfaces,
+                SettingsDestination.AppearanceAddressBar,
+                SettingsDestination.AppearanceWebsites -> AppearanceSettingsPage(
+                    section = when (currentDestination) {
+                        SettingsDestination.AppearanceColors -> AppearanceSettingsSection.Colors
+                        SettingsDestination.AppearanceSurfaces -> AppearanceSettingsSection.Surfaces
+                        SettingsDestination.AppearanceAddressBar -> AppearanceSettingsSection.AddressBar
+                        SettingsDestination.AppearanceWebsites -> AppearanceSettingsSection.Websites
+                        else -> AppearanceSettingsSection.Theme
+                    },
+                    navigationContent = {
+                        if (currentDestination == SettingsDestination.Appearance) {
+                            AppearanceSubpageLinks(onDestinationChanged)
+                        }
+                    },
                     settings = appearanceSettings,
                     onSettingsChanged = onAppearanceSettingsChanged,
-                    onBack = { onDestinationChanged(SettingsDestination.Home) },
+                    onBack = { onDestinationChanged(settingsParent(currentDestination)) },
                     forceDarkWebsitesAvailable =
                         browserEngineKind == AndroidBrowserEngineKind.SystemWebView,
                     browserEngineKind = browserEngineKind,
@@ -473,12 +547,30 @@ internal fun SettingsScreen(
 
                 SettingsDestination.AppIcon -> SettingsPage(
                     title = stringResource(R.string.settings_app_icon),
-                    onBack = { onDestinationChanged(SettingsDestination.Home) },
+                    onBack = { onDestinationChanged(settingsParent(currentDestination)) },
                 ) {
-                    AppIconSettings()
+                    SettingsPreferenceGroup {
+                        AppIconSettings()
+                    }
                 }
 
-                SettingsDestination.Browser -> BrowserSettingsPage(
+                SettingsDestination.Browser,
+                SettingsDestination.BrowserStartup,
+                SettingsDestination.BrowserFavorites,
+                SettingsDestination.BrowserWebsites,
+                SettingsDestination.BrowserLinks -> BrowserSettingsPage(
+                    section = when (currentDestination) {
+                        SettingsDestination.BrowserStartup -> BrowserSettingsSection.Startup
+                        SettingsDestination.BrowserFavorites -> BrowserSettingsSection.Favorites
+                        SettingsDestination.BrowserWebsites -> BrowserSettingsSection.Websites
+                        SettingsDestination.BrowserLinks -> BrowserSettingsSection.Links
+                        else -> BrowserSettingsSection.Overview
+                    },
+                    navigationContent = {
+                        if (currentDestination == SettingsDestination.Browser) {
+                            BrowserSubpageLinks(onDestinationChanged)
+                        }
+                    },
                     appLanguageTag = appLanguageTag,
                     supportedAppLocales = supportedAppLocales,
                     onAppLanguageChanged = onAppLanguageChanged,
@@ -503,6 +595,7 @@ internal fun SettingsScreen(
                     onExternalAppLinkHandlingChanged = onExternalAppLinkHandlingChanged,
                     onLinkRouting = { onDestinationChanged(SettingsDestination.LinkRouting) },
                     onDeviceSearch = onOpenDeviceSearch,
+                    onExternalLinkPreview = { onDestinationChanged(SettingsDestination.ExternalLinkPreview) },
                     onFullImmersiveModeEnabledChanged = onFullImmersiveModeEnabledChanged,
                     onStartupAnimationEnabledChanged = onStartupAnimationEnabledChanged,
                     onStartupAddressFocusModeChanged = onStartupAddressFocusModeChanged,
@@ -515,7 +608,16 @@ internal fun SettingsScreen(
                     onScrollBarEnabledChanged = onScrollBarEnabledChanged,
                     onPageTranslationProviderChanged = onPageTranslationProviderChanged,
                     onOpenDefaultBrowserSettings = onOpenDefaultBrowserSettings,
-                    onBack = { onDestinationChanged(SettingsDestination.Home) },
+                    onBack = { onDestinationChanged(settingsParent(currentDestination)) },
+                )
+
+                SettingsDestination.ExternalLinkPreview -> ExternalLinkPreviewSettingsPage(
+                    isExternalLinkPreviewEnabled = isExternalLinkPreviewEnabled,
+                    externalLinkPreviewProfileId = externalLinkPreviewProfileId,
+                    externalLinkPreviewProfiles = externalLinkPreviewProfiles,
+                    onExternalLinkPreviewEnabledChanged = onExternalLinkPreviewEnabledChanged,
+                    onExternalLinkPreviewProfileChanged = onExternalLinkPreviewProfileChanged,
+                    onBack = { onDestinationChanged(settingsParent(currentDestination)) },
                 )
 
                 SettingsDestination.LinkRouting -> LinkRoutingSettingsPage(
@@ -523,10 +625,11 @@ internal fun SettingsScreen(
                     profiles = profiles.filter { profilesEnabled || it.id == activeProfileId },
                     capsules = siteCapsules,
                     onRulesChanged = onLinkRoutingRulesChanged,
-                    onBack = { onDestinationChanged(SettingsDestination.Browser) },
+                    onBack = { onDestinationChanged(settingsParent(currentDestination)) },
                 )
 
                 SettingsDestination.Player -> PlayerSettingsPage(
+                    onPlayerMode = { onDestinationChanged(SettingsDestination.PlayerMode) },
                     isVideoAutoplayBlocked = isVideoAutoplayBlocked,
                     isVideoAutoplayBlockingSupported = isVideoAutoplayBlockingSupported,
                     inlineMediaPlayerMode = inlineMediaPlayerMode,
@@ -535,14 +638,21 @@ internal fun SettingsScreen(
                     onVideoAutoplayBlockedChanged = onVideoAutoplayBlockedChanged,
                     onInlineMediaPlayerModeChanged = onInlineMediaPlayerModeChanged,
                     onInlineMediaPlayerSeekSettingsChanged = onInlineMediaPlayerSeekSettingsChanged,
-                    onBack = { onDestinationChanged(SettingsDestination.Home) },
+                    onBack = { onDestinationChanged(settingsParent(currentDestination)) },
+                )
+
+                SettingsDestination.PlayerMode -> PlayerModeSettingsPage(
+                    mode = inlineMediaPlayerMode,
+                    enabled = isInlineMediaPlayerSupported,
+                    onModeChanged = onInlineMediaPlayerModeChanged,
+                    onBack = { onDestinationChanged(settingsParent(currentDestination)) },
                 )
 
                 SettingsDestination.Downloads -> DownloadsSettingsPage(
                     settings = downloadSettings,
                     externalManagers = externalDownloadManagers,
                     onSettingsChanged = onDownloadSettingsChanged,
-                    onBack = { onDestinationChanged(SettingsDestination.Home) },
+                    onBack = { onDestinationChanged(settingsParent(currentDestination)) },
                 )
 
                 SettingsDestination.Userscripts -> UserscriptManagementScreen(
@@ -569,7 +679,7 @@ internal fun SettingsScreen(
                     siteCapsules = siteCapsules,
                     onEditCapsule = onEditCapsule,
                     onDeleteCapsule = onDeleteCapsule,
-                    onBack = { onDestinationChanged(SettingsDestination.Home) },
+                    onBack = { onDestinationChanged(settingsParent(currentDestination)) },
                 )
 
                 SettingsDestination.Sync -> SyncSettingsPage(
@@ -582,7 +692,7 @@ internal fun SettingsScreen(
                     onRefresh = onRefreshSync,
                     onOpenDocumentation = onOpenLegalUrl,
                     onShareExtensionLink = onShareSyncExtensionLink,
-                    onBack = { onDestinationChanged(SettingsDestination.Home) },
+                    onBack = { onDestinationChanged(settingsParent(currentDestination)) },
                 )
 
                 SettingsDestination.ProtectionAndData,
@@ -615,7 +725,7 @@ internal fun SettingsScreen(
                     onExportAppData = onExportAppData,
                     onImportAppData = onImportAppData,
                     onClearData = onClearData,
-                    onBack = { onDestinationChanged(SettingsDestination.Home) },
+                    onBack = { onDestinationChanged(settingsParent(currentDestination)) },
                     section = when (currentDestination) {
                         SettingsDestination.ProtectionAndData ->
                             ProtectionSettingsSection.Protection
@@ -643,12 +753,12 @@ internal fun SettingsScreen(
                     onClearGeckoLogs = onClearGeckoLogs,
                     onShowOnboarding = onShowGestureOnboarding,
                     onShowReleaseNotes = onShowReleaseNotes,
-                    onBack = { onDestinationChanged(SettingsDestination.Home) },
+                    onBack = { onDestinationChanged(settingsParent(currentDestination)) },
                 )
 
                 SettingsDestination.AboutLegal -> SettingsPage(
                     title = stringResource(R.string.settings_section_about_legal),
-                    onBack = { onDestinationChanged(SettingsDestination.Home) },
+                    onBack = { onDestinationChanged(settingsParent(currentDestination)) },
                 ) {
                     AboutLegalSection(
                         onOpenUrl = onOpenLegalUrl,

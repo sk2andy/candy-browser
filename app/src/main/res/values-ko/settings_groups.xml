@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_group_tab_lifecycle">탭 수명 주기</string>
+    <string name="settings_group_link_interactions">링크 상호작용</string>
+</resources>

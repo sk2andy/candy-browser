@@ -96,7 +96,7 @@ private fun SettingsSearchDefinition.localizedDescription(): String = when (id) 
 
 internal fun settingsSearchDefinitions(
     availability: SettingsSearchAvailability,
-): List<SettingsSearchDefinition> = buildList {
+): List<SettingsSearchDefinition> = buildList<SettingsSearchDefinition> {
     settingsPage(
         destination = SettingsDestination.Search,
         id = "settings_section_search",
@@ -149,6 +149,7 @@ internal fun settingsSearchDefinitions(
             id = "settings_tab_overview_mode",
             titleRes = R.string.settings_tab_overview_mode,
             descriptionRes = R.string.settings_home_tabs_gestures_summary,
+            destination = SettingsDestination.TabOverview,
         )
         setting(
             id = "settings_tab_list_starts_at_bottom_title",
@@ -238,13 +239,13 @@ internal fun settingsSearchDefinitions(
             id = "settings_menu_presentation_title",
             titleRes = R.string.settings_menu_presentation_title,
             descriptionRes = R.string.settings_menu_presentation_summary,
-            destination = SettingsDestination.MenuActions,
+            destination = SettingsDestination.MenuStyle,
         )
         setting(
             id = "settings_menu_bottom_sheet_layout_title",
             titleRes = R.string.settings_menu_bottom_sheet_layout_title,
             descriptionRes = R.string.settings_menu_presentation_summary,
-            destination = SettingsDestination.MenuActions,
+            destination = SettingsDestination.MenuContentLayout,
         )
         setting(
             id = "settings_menu_bottom_sheet_toolbar_title",
@@ -261,6 +262,16 @@ internal fun settingsSearchDefinitions(
             id = "settings_address_bar_swipe_mode_title",
             titleRes = R.string.settings_address_bar_swipe_mode_title,
             descriptionRes = R.string.settings_address_bar_swipe_mode_summary,
+        )
+        setting(
+            id = "settings_status_bar_scroll_title",
+            titleRes = R.string.settings_status_bar_scroll_title,
+            descriptionRes = R.string.settings_status_bar_scroll_summary,
+        )
+        setting(
+            id = "settings_status_bar_scroll_width_title",
+            titleRes = R.string.settings_status_bar_scroll_width_title,
+            descriptionRes = R.string.settings_status_bar_scroll_summary,
         )
         setting(
             id = "settings_tab_dismiss_resistance",
@@ -922,6 +933,26 @@ internal fun settingsSearchDefinitions(
             descriptionRes = R.string.settings_uassets_source_summary,
         )
     }
+}.map { definition ->
+    val destination = when (definition.id) {
+        "settings_tab_stack_folder_mode" -> SettingsDestination.TabStackFolder
+        "settings_closed_tab_undo_title" -> SettingsDestination.ClosedTabUndo
+        "settings_link_long_press_action" -> SettingsDestination.LinkLongPress
+        "settings_link_peek_swipe_action" -> SettingsDestination.LinkPeekSwipe
+        "settings_inline_media_player_title" -> SettingsDestination.PlayerMode
+        "settings_external_link_preview_title" -> SettingsDestination.ExternalLinkPreview
+        "settings_appearance_mode", "settings_color_palette" -> SettingsDestination.AppearanceColors
+        "settings_shape_style" -> SettingsDestination.AppearanceSurfaces
+        "settings_surface_style", "settings_frosted_transparency", "settings_frosted_address_bar_transparency", "settings_frosted_blur" -> SettingsDestination.AppearanceSurfaces
+        "settings_address_bar_color", "settings_address_load_style", "settings_address_bar_style" -> SettingsDestination.AppearanceAddressBar
+        "settings_force_dark_websites", "settings_web_content_font_size" -> SettingsDestination.AppearanceWebsites
+        "settings_startup_animation_title", "settings_startup_address_focus_title", "settings_open_home_on_startup_title" -> SettingsDestination.BrowserStartup
+        "settings_favorite_launch_animation_title", "settings_favorite_animation_speed_title", "settings_favorite_bookmark_import_title" -> SettingsDestination.BrowserFavorites
+        "settings_full_immersive_mode_title", "settings_scroll_bar_title", "settings_translation_provider", "device_search_title" -> SettingsDestination.BrowserWebsites
+        "settings_external_app_links_title" -> SettingsDestination.BrowserLinks
+        else -> definition.destination
+    }
+    definition.copy(destination = destination)
 }
 
 private fun MutableList<SettingsSearchDefinition>.settingsPage(

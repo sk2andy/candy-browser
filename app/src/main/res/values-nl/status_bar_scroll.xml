@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="status_bar_scroll_accessibility_service_label">Candy-scrollen via de statusbalk</string>
+    <string name="status_bar_scroll_accessibility_service_description">Tik midden op de statusbalk om naar de bovenkant van de huidige Candy-pagina te scrollen. Candy leest geen vensterinhoud.</string>
+    <string name="status_bar_scroll_target_description">Naar de bovenkant van de huidige pagina scrollen</string>
+    <string name="settings_status_bar_scroll_title">Tik op de statusbalk om naar boven te scrollen</string>
+    <string name="settings_status_bar_scroll_summary">Voegt een onzichtbaar tikgebied toe in het midden van de Android-statusbalk. Candy heeft toegankelijkheidstoegang nodig.</string>
+    <string name="settings_status_bar_scroll_width_title">Breedte van het tikgebied</string>
+    <string name="settings_status_bar_scroll_width_summary">%1$d%% van de schermbreedte</string>
+    <string name="settings_status_bar_scroll_accessibility_dialog_title">Candy toegang tot toegankelijkheid geven?</string>
+    <string name="settings_status_bar_scroll_accessibility_dialog_message">Android vereist een toegankelijkheidsservice om tikken op de systeemstatusbalk te ontvangen. Open de toegankelijkheidsinstellingen van Android en schakel Candy-scrollen via de statusbalk in. Candy gebruikt de service alleen voor deze tikken en leest geen vensterinhoud.</string>
+    <string name="settings_status_bar_scroll_accessibility_open">Toegankelijkheidsinstellingen openen</string>
+    <string name="settings_status_bar_scroll_enable_for_domain">Scrollen via de statusbalk inschakelen voor deze site</string>
+    <string name="settings_status_bar_scroll_disable_for_domain">Scrollen via de statusbalk uitschakelen voor deze site</string>
+</resources>

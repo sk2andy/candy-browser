@@ -2,6 +2,8 @@ package dev.sk2andy.materialbrowser.ui
 
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -97,8 +99,9 @@ class DnsOverHttpsSettingsInstrumentedTest {
         composeRule.onNodeWithText(
             context.getString(R.string.settings_dns_over_https_system_webview_summary),
         ).assertExists()
-        composeRule.onNodeWithText(
-            context.getString(R.string.settings_dns_over_https_unavailable),
+        composeRule.onNode(
+            hasTestTag(ProtectionSettingsTestTags.DnsOverHttps) and
+                hasText(context.getString(R.string.settings_dns_over_https_unavailable)),
         ).assertExists()
         composeRule.onNodeWithText(
             context.getString(R.string.settings_dns_over_https_provider_cloudflare),

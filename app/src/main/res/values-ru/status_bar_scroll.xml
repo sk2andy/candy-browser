@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="status_bar_scroll_accessibility_service_label">Прокрутка через строку состояния Candy</string>
+    <string name="status_bar_scroll_accessibility_service_description">Нажатие в центре строки состояния прокручивает текущую страницу Candy в начало. Candy не читает содержимое окон.</string>
+    <string name="status_bar_scroll_target_description">Прокрутить текущую страницу в начало</string>
+    <string name="settings_status_bar_scroll_title">Нажатие на строку состояния для прокрутки в начало</string>
+    <string name="settings_status_bar_scroll_summary">Добавляет невидимую область нажатия в центре строки состояния Android. Требуется доступ Candy к специальным возможностям.</string>
+    <string name="settings_status_bar_scroll_width_title">Ширина области нажатия</string>
+    <string name="settings_status_bar_scroll_width_summary">%1$d%% ширины экрана</string>
+    <string name="settings_status_bar_scroll_accessibility_dialog_title">Разрешить Candy доступ к специальным возможностям?</string>
+    <string name="settings_status_bar_scroll_accessibility_dialog_message">Для обработки нажатий на системную строку состояния Android требуется служба специальных возможностей. Откройте настройки специальных возможностей Android и включите прокрутку через строку состояния Candy. Candy использует службу только для этих нажатий и не читает содержимое окон.</string>
+    <string name="settings_status_bar_scroll_accessibility_open">Открыть настройки специальных возможностей</string>
+    <string name="settings_status_bar_scroll_enable_for_domain">Включить прокрутку через строку состояния для этого сайта</string>
+    <string name="settings_status_bar_scroll_disable_for_domain">Отключить прокрутку через строку состояния для этого сайта</string>
+</resources>

@@ -16,12 +16,12 @@ class BrowserFeatureMenuRulesTest {
         val enabled = BrowserFeatureMenuRules.items(
             BrowserFeatureMenuState(canToggleStatusBarScroll = true, isStatusBarScrollEnabled = true),
         ).single { it.action == BrowserFeatureMenuAction.ToggleStatusBarScroll }
-        assertTrue(enabled.checked)
+        assertEquals(true, enabled.checked)
         assertEquals(BrowserFeatureMenuLabelKey.DisableStatusBarScrollForDomain, enabled.labelKey)
         val disabled = BrowserFeatureMenuRules.items(
             BrowserFeatureMenuState(canToggleStatusBarScroll = true, isStatusBarScrollEnabled = false),
         ).single { it.action == BrowserFeatureMenuAction.ToggleStatusBarScroll }
-        assertFalse(disabled.checked)
+        assertEquals(false, disabled.checked)
         assertEquals(BrowserFeatureMenuLabelKey.EnableStatusBarScrollForDomain, disabled.labelKey)
     }
 

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_colors_title">Χρώματα</string>
+    <string name="settings_surfaces_shapes_title">Επιφάνειες και σχήματα</string>
+    <string name="settings_link_long_press_explanation">Επιλέξτε τι συμβαίνει με παρατεταμένο πάτημα σε έναν σύνδεσμο. Στο προσκήνιο μεταβαίνετε στη νέα καρτέλα· στο παρασκήνιο παραμένετε στην τρέχουσα σελίδα.</string>
+    <string name="settings_gesture_preview_group">Προεπισκόπηση</string>
+    <string name="settings_gesture_normal_tabs_group">Κανονικές καρτέλες</string>
+    <string name="settings_gesture_private_tabs_group">Ιδιωτικές καρτέλες</string>
+    <string name="settings_gesture_link_actions_group">Ενέργειες συνδέσμων</string>
+    <string name="settings_player_disabled_explanation">Συνέχεια χρήσης του προγράμματος αναπαραγωγής του ιστοτόπου.</string>
+    <string name="settings_player_button_fullscreen_explanation">Ένα κουμπί ανοίγει τα εντοπισμένα βίντεο σε πλήρη οθόνη στο Candy Player.</string>
+    <string name="settings_player_button_inline_explanation">Ένα κουμπί ξεκινά το βίντεο μέσα στη σελίδα. Η πλήρης οθόνη παραμένει διαθέσιμη στο πρόγραμμα αναπαραγωγής.</string>
+    <string name="settings_player_fullscreen_explanation">Χρήση του Candy Player όταν ο ιστότοπος ανοίγει ένα βίντεο σε πλήρη οθόνη.</string>
+    <string name="settings_player_automatic_explanation">Αυτόματο άνοιγμα του Candy Player όταν εντοπίζεται βίντεο με δυνατότητα αναπαραγωγής.</string>
+</resources>

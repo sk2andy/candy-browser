@@ -2,10 +2,7 @@ package dev.sk2andy.materialbrowser.ui
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
@@ -20,8 +17,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -102,13 +101,15 @@ internal fun TabsAndGesturesSettingsPage(
     onLinkPeekActions: () -> Unit = {},
     onAddressBarActions: () -> Unit,
     onMenuActions: () -> Unit = {},
+    onTabOverview: () -> Unit = {},
+    onTabStackFolder: () -> Unit = {},
+    onClosedTabUndo: () -> Unit = {},
+    onLinkLongPress: () -> Unit = {},
+    onLinkPeekSwipe: () -> Unit = {},
     onBack: () -> Unit,
     section: TabSettingsSection = TabSettingsSection.All,
 ) {
     var lifetimeMenuExpanded by remember { mutableStateOf(false) }
-    var stackFolderModeMenuExpanded by remember { mutableStateOf(false) }
-    var linkLongPressActionMenuExpanded by remember { mutableStateOf(false) }
-    var linkPeekSwipeActionMenuExpanded by remember { mutableStateOf(false) }
     var residentLimit by remember(residentTabLimit) {
         mutableFloatStateOf(residentTabLimit.toFloat())
     }
@@ -127,320 +128,269 @@ internal fun TabsAndGesturesSettingsPage(
         onBack = onBack,
     ) {
         if (section != TabSettingsSection.Gestures) {
-        SettingsSectionTitle(stringResource(R.string.settings_section_tabs))
-        Spacer(Modifier.height(8.dp))
-        TabOverviewSettings(
-            mode = tabOverviewMode,
-            listStartsAtBottom = tabListStartsAtBottom,
-            strings = TabOverviewSettingsStrings(
-                overviewMode = stringResource(R.string.settings_tab_overview_mode),
-                modeNames = TabOverviewMode.entries.associateWith { it.displayName() },
-                listStartsAtBottom = stringResource(
-                    R.string.settings_tab_list_starts_at_bottom_title,
-                ),
-                listStartsAtBottomSummary = stringResource(
-                    R.string.settings_tab_list_starts_at_bottom_subtitle,
-                ),
-            ),
-            containerColor = browserChromeColor(MaterialTheme.colorScheme.surfaceContainerHigh),
-            onModeChanged = onTabOverviewModeChanged,
-            onListStartsAtBottomChanged = onTabListStartsAtBottomChanged,
-            listStartsAtBottomModifier = Modifier.testTag(
-                TabSettingsTestTags.ListStartsAtBottom,
-            ),
-        )
-        Spacer(Modifier.height(8.dp))
-        Box(modifier = Modifier.testTag(TabSettingsTestTags.StackFolderMode)) {
-            SettingsChoice(
-                title = stringResource(R.string.settings_tab_stack_folder_mode),
-                value = tabStackFolderMode.displayName(),
-                expanded = stackFolderModeMenuExpanded,
-                onClick = { stackFolderModeMenuExpanded = true },
-            )
-            SettingsDropdown(
-                expanded = stackFolderModeMenuExpanded,
-                onDismissRequest = { stackFolderModeMenuExpanded = false },
-            ) {
-                TabOverviewMode.entries.forEach { mode ->
-                    SettingsDropdownItem(
-                        label = mode.displayName(),
-                        selected = mode == tabStackFolderMode,
-                        onClick = {
-                            stackFolderModeMenuExpanded = false
-                            onTabStackFolderModeChanged(mode)
-                        },
-                    )
-                }
-            }
-        }
-        Spacer(Modifier.height(2.dp))
-        SettingsSwitch(
-            title = stringResource(R.string.settings_automatic_tab_sorting_title),
-            subtitle = stringResource(R.string.settings_automatic_tab_sorting_subtitle),
-            checked = automaticTabSortingEnabled,
-            onCheckedChange = onAutomaticTabSortingEnabledChanged,
-            modifier = Modifier.testTag(TabSettingsTestTags.AutomaticSorting),
-        )
-        Spacer(Modifier.height(2.dp))
-        SettingsSwitch(
-            title = stringResource(R.string.settings_closed_tab_undo_title),
-            subtitle = stringResource(R.string.settings_closed_tab_undo_summary),
-            checked = isClosedTabUndoEnabled,
-            onCheckedChange = onClosedTabUndoEnabledChanged,
-            modifier = Modifier.testTag(TabSettingsTestTags.ClosedTabUndo),
-        )
-        SettingsPageSpacer()
-        Surface(
-            modifier = Modifier.fillMaxWidth()
-                .settingsSearchTarget(stringResource(R.string.settings_resident_tab_limit)),
-            shape = MaterialTheme.shapes.large,
-            color = browserChromeColor(MaterialTheme.colorScheme.surfaceContainerHigh),
-        ) {
-            Column(modifier = Modifier.padding(horizontal = 18.dp, vertical = 14.dp)) {
-                Text(
-                    stringResource(R.string.settings_resident_tab_limit),
-                    style = MaterialTheme.typography.titleSmall,
-                )
-                Text(
-                    pluralStringResource(
-                        R.plurals.settings_resident_tab_limit_summary,
-                        residentLimit.roundToInt(),
-                        residentLimit.roundToInt(),
+            SettingsSectionTitle(stringResource(R.string.settings_tab_overview_mode))
+            SettingsPreferenceGroup {
+                TabOverviewSettings(
+                    mode = tabOverviewMode,
+                    listStartsAtBottom = tabListStartsAtBottom,
+                    strings = androidTabOverviewSettingsStrings(),
+                    containerColor = browserChromeColor(MaterialTheme.colorScheme.surfaceContainerHigh),
+                    onOpenMode = onTabOverview,
+                    onListStartsAtBottomChanged = onTabListStartsAtBottomChanged,
+                    listStartsAtBottomModifier = Modifier.testTag(
+                        TabSettingsTestTags.ListStartsAtBottom,
                     ),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                Slider(
-                    value = residentLimit,
-                    onValueChange = { residentLimit = it },
-                    onValueChangeFinished = {
-                        onResidentTabLimitChanged(residentLimit.roundToInt())
-                    },
-                    modifier = Modifier.testTag(TabSettingsTestTags.ResidentTabLimit),
-                    valueRange = BrowserSessionResidencyRules.MIN_LIMIT.toFloat()..
-                        BrowserSessionResidencyRules.MAX_LIMIT.toFloat(),
-                    steps = BrowserSessionResidencyRules.MAX_LIMIT -
-                        BrowserSessionResidencyRules.MIN_LIMIT - 1,
+                SettingsPreferenceDivider()
+                dev.sk2andy.materialbrowser.shared.ui.settings.SettingsSelectionLink(
+                    title = stringResource(R.string.settings_tab_stack_folder_mode),
+                    value = tabStackFolderMode.displayName(), onClick = onTabStackFolder, enabled = true,
+                    modifier = Modifier.testTag(TabSettingsTestTags.StackFolderMode),
+                )
+                SettingsPreferenceDivider()
+                SettingsSwitch(
+                    title = stringResource(R.string.settings_automatic_tab_sorting_title),
+                    subtitle = stringResource(R.string.settings_automatic_tab_sorting_subtitle),
+                    checked = automaticTabSortingEnabled,
+                    onCheckedChange = onAutomaticTabSortingEnabledChanged,
+                    modifier = Modifier.testTag(TabSettingsTestTags.AutomaticSorting),
                 )
             }
-        }
-        SettingsPageSpacer()
-        Box {
-            SettingsChoice(
-                title = stringResource(R.string.settings_auto_close_tabs),
-                value = inactiveTabLifetime.displayName(),
-                expanded = lifetimeMenuExpanded,
-                onClick = { lifetimeMenuExpanded = true },
-            )
-            SettingsDropdown(
-                expanded = lifetimeMenuExpanded,
-                onDismissRequest = { lifetimeMenuExpanded = false },
-            ) {
-                InactiveTabLifetime.entries.forEach { lifetime ->
-                    SettingsDropdownItem(
-                        label = lifetime.displayName(),
-                        selected = lifetime == inactiveTabLifetime,
-                        onClick = {
-                            lifetimeMenuExpanded = false
-                            onInactiveTabLifetimeChanged(lifetime)
-                        },
-                    )
-                }
-            }
-        }
-        SettingsPageSpacer()
-        SettingsPreferenceGroup {
-        SettingsSwitch(
-            title = stringResource(R.string.settings_profiles_title),
-            subtitle = stringResource(R.string.settings_profiles_subtitle),
-            checked = profilesEnabled,
-            onCheckedChange = onProfilesEnabledChanged,
-            modifier = Modifier.padding(horizontal = 18.dp),
-        )
-        SettingsPreferenceDivider()
-        GuestBubbleSettings(profilesEnabled = profilesEnabled)
-        }
-        Spacer(Modifier.height(14.dp))
-        }
-        if (section != TabSettingsSection.Tabs) {
-        SettingsSectionTitle(stringResource(R.string.settings_section_gestures))
-        Spacer(Modifier.height(2.dp))
-        Box(modifier = Modifier.testTag(TabSettingsTestTags.AddressBarLongPressAction)) {
-            SettingsLink(
-                icon = ImageVector.vectorResource(R.drawable.ic_symbol_route),
-                title = stringResource(R.string.settings_address_bar_long_press_title),
-                subtitle = stringResource(addressBarLongPressAction.labelRes()),
-                onClick = onAddressBarLongPressActions,
-            )
-        }
-        Spacer(Modifier.height(2.dp))
-        Box(modifier = Modifier.testTag(TabSettingsTestTags.LinkLongPressAction)) {
-            SettingsChoice(
-                title = stringResource(R.string.settings_link_long_press_action),
-                value = stringResource(linkLongPressAction.labelRes()),
-                expanded = linkLongPressActionMenuExpanded,
-                onClick = { linkLongPressActionMenuExpanded = true },
-            )
-            SettingsDropdown(
-                expanded = linkLongPressActionMenuExpanded,
-                onDismissRequest = { linkLongPressActionMenuExpanded = false },
-            ) {
-                LinkLongPressAction.entries.forEach { action ->
-                    SettingsDropdownItem(
-                        label = stringResource(action.labelRes()),
-                        selected = action == linkLongPressAction,
-                        onClick = {
-                            linkLongPressActionMenuExpanded = false
-                            onLinkLongPressActionChanged(action)
-                        },
-                    )
-                }
-            }
-        }
-        if (linkLongPressAction == LinkLongPressAction.LinkPeek) {
-            Spacer(Modifier.height(2.dp))
-            Box(
-                modifier = Modifier
-                    .testTag(TabSettingsTestTags.LinkPeekSwipeAction)
-                    .settingsSearchTarget(
-                        stringResource(R.string.settings_link_peek_swipe_action),
-                    ),
-            ) {
-                SettingsChoice(
-                    title = stringResource(R.string.settings_link_peek_swipe_action),
-                    value = stringResource(linkPeekSwipeAction.labelRes()),
-                    expanded = linkPeekSwipeActionMenuExpanded,
-                    onClick = { linkPeekSwipeActionMenuExpanded = true },
+            SettingsPageSpacer()
+            SettingsSectionTitle(stringResource(R.string.settings_group_tab_lifecycle))
+            SettingsPreferenceGroup {
+                dev.sk2andy.materialbrowser.shared.ui.settings.SettingsSelectionLink(
+                    title = stringResource(R.string.settings_closed_tab_undo_title),
+                    value = stringResource(R.string.settings_closed_tab_undo_summary),
+                    onClick = onClosedTabUndo,
+                    modifier = Modifier.testTag(TabSettingsTestTags.ClosedTabUndo),
                 )
-                SettingsDropdown(
-                    expanded = linkPeekSwipeActionMenuExpanded,
-                    onDismissRequest = { linkPeekSwipeActionMenuExpanded = false },
+                SettingsPageSpacer()
+                Surface(
+                    modifier = Modifier.fillMaxWidth()
+                        .settingsSearchTarget(stringResource(R.string.settings_resident_tab_limit)),
+                    shape = dev.sk2andy.materialbrowser.shared.ui.settings.settingsRowShape(),
+                    color = dev.sk2andy.materialbrowser.shared.ui.settings.settingsRowColor(),
                 ) {
-                    LinkPeekSwipeAction.entries.forEach { action ->
-                        SettingsDropdownItem(
-                            label = stringResource(action.labelRes()),
-                            selected = action == linkPeekSwipeAction,
-                            onClick = {
-                                linkPeekSwipeActionMenuExpanded = false
-                                onLinkPeekSwipeActionChanged(action)
+                    Column(modifier = Modifier.padding(horizontal = 18.dp, vertical = 14.dp)) {
+                        val residentTitle = stringResource(R.string.settings_resident_tab_limit)
+                        val residentValue = pluralStringResource(
+                            R.plurals.settings_resident_tab_limit_summary,
+                            residentLimit.roundToInt(),
+                            residentLimit.roundToInt(),
+                        )
+                        Text(
+                            residentTitle,
+                            style = MaterialTheme.typography.titleSmall,
+                        )
+                        Text(
+                            residentValue,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Slider(
+                            value = residentLimit,
+                            onValueChange = { residentLimit = it },
+                            onValueChangeFinished = {
+                                onResidentTabLimitChanged(residentLimit.roundToInt())
                             },
+                            modifier = Modifier.testTag(TabSettingsTestTags.ResidentTabLimit).semantics {
+                                contentDescription = residentTitle
+                                stateDescription = residentValue
+                            },
+                            valueRange = BrowserSessionResidencyRules.MIN_LIMIT.toFloat()..
+                                BrowserSessionResidencyRules.MAX_LIMIT.toFloat(),
+                            steps = BrowserSessionResidencyRules.MAX_LIMIT -
+                                BrowserSessionResidencyRules.MIN_LIMIT - 1,
                         )
                     }
                 }
+                SettingsPageSpacer()
+                Box {
+                    SettingsChoice(
+                        title = stringResource(R.string.settings_auto_close_tabs),
+                        value = inactiveTabLifetime.displayName(),
+                        expanded = lifetimeMenuExpanded,
+                        onClick = { lifetimeMenuExpanded = true },
+                    )
+                    SettingsDropdown(
+                        expanded = lifetimeMenuExpanded,
+                        onDismissRequest = { lifetimeMenuExpanded = false },
+                    ) {
+                        InactiveTabLifetime.entries.forEach { lifetime ->
+                            SettingsDropdownItem(
+                                label = lifetime.displayName(),
+                                selected = lifetime == inactiveTabLifetime,
+                                onClick = {
+                                    lifetimeMenuExpanded = false
+                                    onInactiveTabLifetimeChanged(lifetime)
+                                },
+                            )
+                        }
+                    }
+                }
             }
-            Text(
-                text = stringResource(R.string.settings_link_peek_swipe_action_summary),
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            SettingsPageSpacer()
+            SettingsSectionTitle(stringResource(R.string.profile_actions_title))
+            SettingsPreferenceGroup {
+                SettingsSwitch(
+                    title = stringResource(R.string.settings_profiles_title),
+                    subtitle = stringResource(R.string.settings_profiles_subtitle),
+                    checked = profilesEnabled,
+                    onCheckedChange = onProfilesEnabledChanged,
+                    modifier = Modifier,
+                )
+                SettingsPreferenceDivider()
+                GuestBubbleSettings(profilesEnabled = profilesEnabled)
+            }
         }
-        Spacer(Modifier.height(2.dp))
-        SettingsLink(
-            icon = ImageVector.vectorResource(R.drawable.ic_symbol_open_in_new),
-            title = stringResource(R.string.settings_link_peek_actions_title),
-            subtitle = stringResource(R.string.settings_link_peek_actions_summary),
-            onClick = onLinkPeekActions,
-        )
-        Spacer(Modifier.height(2.dp))
-        SettingsLink(
-            icon = ImageVector.vectorResource(R.drawable.ic_switch_to_tab),
-            title = stringResource(R.string.settings_address_bar_actions_title),
-            subtitle = stringResource(R.string.settings_address_bar_actions_summary),
-            onClick = onAddressBarActions,
-        )
-        Spacer(Modifier.height(2.dp))
-        SettingsLink(
-            icon = ImageVector.vectorResource(R.drawable.ic_visibility),
-            title = stringResource(R.string.settings_menu_actions_title),
-            subtitle = stringResource(R.string.settings_menu_actions_summary),
-            onClick = onMenuActions,
-        )
-        Spacer(Modifier.height(2.dp))
-        SettingsSwitch(
-            title = stringResource(R.string.settings_address_bar_docking_title),
-            subtitle = stringResource(R.string.settings_address_bar_docking_subtitle),
-            checked = isAddressBarDockingEnabled,
-            onCheckedChange = onAddressBarDockingEnabledChanged,
-            modifier = Modifier.testTag(TabSettingsTestTags.AddressBarDocking),
-        )
-        Spacer(Modifier.height(2.dp))
-        SettingsSwitch(
-            title = stringResource(R.string.settings_address_bar_swipe_mode_title),
-            subtitle = stringResource(R.string.settings_address_bar_swipe_mode_summary),
-            checked = isAddressBarSwipeModeEnabled,
-            onCheckedChange = onAddressBarSwipeModeEnabledChanged,
-            modifier = Modifier.testTag(TabSettingsTestTags.AddressBarSwipeMode),
-        )
-        Spacer(Modifier.height(2.dp))
-        SettingsPreferenceGroup {
-            SettingsSwitch(
-                title = stringResource(R.string.settings_status_bar_scroll_title),
-                subtitle = stringResource(R.string.settings_status_bar_scroll_summary),
-                checked = isStatusBarScrollEnabled,
-                onCheckedChange = { enabled ->
-                    onStatusBarScrollEnabledChanged(enabled)
-                    if (enabled) showStatusBarScrollAccessibilityDialog = true
-                },
-                modifier = Modifier.padding(horizontal = 18.dp)
-                    .testTag(TabSettingsTestTags.StatusBarScrollEnabled),
-            )
-            SettingsPreferenceDivider()
-            Column(
-                modifier = Modifier.fillMaxWidth()
-                    .settingsSearchTarget(stringResource(R.string.settings_status_bar_scroll_width_title))
-                    .padding(horizontal = 18.dp, vertical = 12.dp),
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+        if (section != TabSettingsSection.Tabs) {
+            SettingsSectionTitle(stringResource(R.string.settings_group_link_interactions))
+            SettingsPreferenceGroup {
+                dev.sk2andy.materialbrowser.shared.ui.settings.SettingsSelectionLink(
+                    title = stringResource(R.string.settings_link_long_press_action),
+                    value = stringResource(linkLongPressAction.labelRes()), onClick = onLinkLongPress, enabled = true,
+                    modifier = Modifier.testTag(TabSettingsTestTags.LinkLongPressAction),
+                )
+                run {
+                    SettingsPreferenceDivider()
+                    dev.sk2andy.materialbrowser.shared.ui.settings.SettingsSelectionLink(
+                    title = stringResource(R.string.settings_link_peek_swipe_action),
+                    value = stringResource(linkPeekSwipeAction.labelRes()), onClick = onLinkPeekSwipe, enabled = linkLongPressAction == LinkLongPressAction.LinkPeek,
+                    modifier = Modifier.testTag(TabSettingsTestTags.LinkPeekSwipeAction),
+                )
                     Text(
-                        stringResource(R.string.settings_status_bar_scroll_width_title),
-                        modifier = Modifier.weight(1f),
+                        text = stringResource(R.string.settings_link_peek_swipe_action_summary),
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                SettingsPreferenceDivider()
+                SettingsLink(
+                    icon = ImageVector.vectorResource(R.drawable.ic_symbol_open_in_new),
+                    title = stringResource(R.string.settings_link_peek_actions_title),
+                    subtitle = stringResource(R.string.settings_link_peek_actions_summary),
+                    onClick = onLinkPeekActions,
+                )
+            }
+            SettingsPageSpacer()
+            SettingsSectionTitle(stringResource(R.string.settings_address_bar_actions_title))
+            SettingsPreferenceGroup {
+                Box(modifier = Modifier.testTag(TabSettingsTestTags.AddressBarLongPressAction)) {
+                    SettingsLink(
+                        icon = ImageVector.vectorResource(R.drawable.ic_symbol_route),
+                        title = stringResource(R.string.settings_address_bar_long_press_title),
+                        subtitle = stringResource(addressBarLongPressAction.labelRes()),
+                        onClick = onAddressBarLongPressActions,
+                    )
+                }
+                SettingsPreferenceDivider()
+                SettingsLink(
+                    icon = ImageVector.vectorResource(R.drawable.ic_switch_to_tab),
+                    title = stringResource(R.string.settings_address_bar_actions_title),
+                    subtitle = stringResource(R.string.settings_address_bar_actions_summary),
+                    onClick = onAddressBarActions,
+                )
+                SettingsPreferenceDivider()
+                SettingsLink(
+                    icon = ImageVector.vectorResource(R.drawable.ic_visibility),
+                    title = stringResource(R.string.settings_menu_actions_title),
+                    subtitle = stringResource(R.string.settings_menu_actions_summary),
+                    onClick = onMenuActions,
+                )
+            }
+            SettingsPageSpacer()
+            SettingsSectionTitle(stringResource(R.string.settings_section_gestures))
+            SettingsPreferenceGroup {
+                SettingsSwitch(
+                    title = stringResource(R.string.settings_address_bar_docking_title),
+                    subtitle = stringResource(R.string.settings_address_bar_docking_subtitle),
+                    checked = isAddressBarDockingEnabled,
+                    onCheckedChange = onAddressBarDockingEnabledChanged,
+                    modifier = Modifier.testTag(TabSettingsTestTags.AddressBarDocking),
+                )
+                SettingsPreferenceDivider()
+                SettingsSwitch(
+                    title = stringResource(R.string.settings_address_bar_swipe_mode_title),
+                    subtitle = stringResource(R.string.settings_address_bar_swipe_mode_summary),
+                    checked = isAddressBarSwipeModeEnabled,
+                    onCheckedChange = onAddressBarSwipeModeEnabledChanged,
+                    modifier = Modifier.testTag(TabSettingsTestTags.AddressBarSwipeMode),
+                )
+                SettingsPreferenceDivider()
+                TabDismissResistanceSettings(
+                    valuePercent = dismissResistancePercent,
+                    title = stringResource(R.string.settings_tab_dismiss_resistance),
+                    summary = { value ->
+                        stringResource(R.string.settings_tab_dismiss_resistance_summary, value)
+                    },
+                    containerColor = browserChromeColor(MaterialTheme.colorScheme.surfaceContainerHigh),
+                    enabled = true,
+                    onValueChanged = onDismissResistancePercentChanged,
+                )
+            }
+            SettingsPageSpacer()
+            SettingsPreferenceGroup {
+                SettingsSwitch(
+                    title = stringResource(R.string.settings_status_bar_scroll_title),
+                    subtitle = stringResource(R.string.settings_status_bar_scroll_summary),
+                    checked = isStatusBarScrollEnabled,
+                    onCheckedChange = { enabled ->
+                        onStatusBarScrollEnabledChanged(enabled)
+                        if (enabled) showStatusBarScrollAccessibilityDialog = true
+                    },
+                    modifier = Modifier.testTag(TabSettingsTestTags.StatusBarScrollEnabled),
+                )
+                SettingsPreferenceDivider()
+                Column(
+                    modifier = Modifier.fillMaxWidth()
+                        .settingsSearchTarget(stringResource(R.string.settings_status_bar_scroll_width_title))
+                        .padding(horizontal = 18.dp, vertical = 12.dp),
+                ) {
+                    val widthTitle = stringResource(R.string.settings_status_bar_scroll_width_title)
+                    val widthDescription = stringResource(
+                        R.string.settings_status_bar_scroll_width_summary,
+                        statusBarScrollWidth.roundToInt(),
+                    )
+                    Text(
+                        widthTitle,
+                        modifier = Modifier.fillMaxWidth(),
                         style = MaterialTheme.typography.titleSmall,
                     )
                     Text(
-                        stringResource(
-                            R.string.settings_status_bar_scroll_width_summary,
-                            statusBarScrollWidth.roundToInt(),
-                        ),
+                        widthDescription,
+                        modifier = Modifier.fillMaxWidth(),
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.primary,
                     )
+                    Slider(
+                        enabled = isStatusBarScrollEnabled,
+                        value = statusBarScrollWidth,
+                        onValueChange = { value ->
+                            if (isStatusBarScrollEnabled) {
+                                statusBarScrollWidth = value
+                                onStatusBarScrollTargetWidthPreview(value.roundToInt(), false)
+                            }
+                        },
+                        onValueChangeFinished = {
+                            if (isStatusBarScrollEnabled) {
+                                val widthPercent = statusBarScrollWidth.roundToInt()
+                                onStatusBarScrollTargetWidthPercentChanged(widthPercent)
+                                onStatusBarScrollTargetWidthPreview(widthPercent, true)
+                            }
+                        },
+                        modifier = Modifier.testTag(TabSettingsTestTags.StatusBarScrollWidth).semantics {
+                            contentDescription = widthTitle
+                            stateDescription = widthDescription
+                        },
+                        valueRange = StatusBarScrollRules.MIN_TARGET_WIDTH_PERCENT.toFloat()..
+                            StatusBarScrollRules.MAX_TARGET_WIDTH_PERCENT.toFloat(),
+                        steps = StatusBarScrollRules.MAX_TARGET_WIDTH_PERCENT -
+                            StatusBarScrollRules.MIN_TARGET_WIDTH_PERCENT - 1,
+                    )
                 }
-                Slider(
-                    value = statusBarScrollWidth,
-                    onValueChange = { value ->
-                        if (isStatusBarScrollEnabled) {
-                            statusBarScrollWidth = value
-                            onStatusBarScrollTargetWidthPreview(value.roundToInt(), false)
-                        }
-                    },
-                    onValueChangeFinished = {
-                        if (isStatusBarScrollEnabled) {
-                            val widthPercent = statusBarScrollWidth.roundToInt()
-                            onStatusBarScrollTargetWidthPercentChanged(widthPercent)
-                            onStatusBarScrollTargetWidthPreview(widthPercent, true)
-                        }
-                    },
-                    enabled = isStatusBarScrollEnabled,
-                    modifier = Modifier.testTag(TabSettingsTestTags.StatusBarScrollWidth),
-                    valueRange = StatusBarScrollRules.MIN_TARGET_WIDTH_PERCENT.toFloat()..
-                        StatusBarScrollRules.MAX_TARGET_WIDTH_PERCENT.toFloat(),
-                    steps = StatusBarScrollRules.MAX_TARGET_WIDTH_PERCENT -
-                        StatusBarScrollRules.MIN_TARGET_WIDTH_PERCENT - 1,
-                )
             }
-        }
-        Spacer(Modifier.height(2.dp))
-        TabDismissResistanceSettings(
-            valuePercent = dismissResistancePercent,
-            title = stringResource(R.string.settings_tab_dismiss_resistance),
-            summary = { value ->
-                stringResource(R.string.settings_tab_dismiss_resistance_summary, value)
-            },
-            containerColor = browserChromeColor(MaterialTheme.colorScheme.surfaceContainerHigh),
-            enabled = true,
-            onValueChanged = onDismissResistancePercentChanged,
-        )
         }
     }
     if (showStatusBarScrollAccessibilityDialog) {
@@ -471,7 +421,7 @@ internal fun TabsAndGesturesSettingsPage(
     }
 }
 
-private fun LinkLongPressAction.labelRes(): Int = when (this) {
+internal fun LinkLongPressAction.labelRes(): Int = when (this) {
     LinkLongPressAction.LinkPeek -> R.string.link_peek_title
     LinkLongPressAction.CopyLink -> R.string.external_link_preview_copy_link
     LinkLongPressAction.Share -> R.string.action_share
@@ -484,7 +434,7 @@ private fun LinkLongPressAction.labelRes(): Int = when (this) {
         R.string.action_open_link_private_foreground_tab
 }
 
-private fun LinkPeekSwipeAction.labelRes(): Int = when (this) {
+internal fun LinkPeekSwipeAction.labelRes(): Int = when (this) {
     LinkPeekSwipeAction.OpenBackground -> R.string.action_open_link_background_tab
     LinkPeekSwipeAction.OpenForeground -> R.string.action_open_link_foreground_tab
     LinkPeekSwipeAction.OpenNewStack -> R.string.action_open_link_new_stack
@@ -495,3 +445,11 @@ private fun LinkPeekSwipeAction.labelRes(): Int = when (this) {
     LinkPeekSwipeAction.Snooze -> R.string.action_snooze_tab
     LinkPeekSwipeAction.ReaderLater -> R.string.reader_save_offline
 }
+
+@Composable
+internal fun androidTabOverviewSettingsStrings() = TabOverviewSettingsStrings(
+    overviewMode = stringResource(R.string.settings_tab_overview_mode),
+    modeNames = TabOverviewMode.entries.associateWith { it.displayName() },
+    listStartsAtBottom = stringResource(R.string.settings_tab_list_starts_at_bottom_title),
+    listStartsAtBottomSummary = stringResource(R.string.settings_tab_list_starts_at_bottom_subtitle),
+)

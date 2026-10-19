@@ -3,27 +3,16 @@ package dev.sk2andy.materialbrowser.ui
 import android.view.View
 import android.widget.ImageView
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.Icon
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import dev.sk2andy.materialbrowser.R
@@ -55,33 +44,25 @@ internal fun AppIconSettings() {
             onDismissRequest = { expanded = false },
         ) {
             AppIconOption.entries.forEach { option ->
-                DropdownMenuItem(
-                    text = {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            AndroidView(
-                                factory = { previewContext ->
-                                    ImageView(previewContext).apply {
-                                        setImageResource(option.iconRes)
-                                        scaleType = ImageView.ScaleType.FIT_CENTER
-                                        importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
-                                    }
-                                },
-                                modifier = Modifier.size(40.dp),
-                            )
-                            Spacer(Modifier.width(12.dp))
-                            Text(option.label())
-                        }
+                SettingsDropdownItem(
+                    label = option.label(),
+                    selected = option == selected,
+                    leadingIcon = {
+                        AndroidView(
+                            factory = { previewContext ->
+                                ImageView(previewContext).apply {
+                                    setImageResource(option.iconRes)
+                                    scaleType = ImageView.ScaleType.FIT_CENTER
+                                    importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+                                }
+                            },
+                            modifier = Modifier.size(24.dp),
+                        )
                     },
                     onClick = {
                         selection.select(option)
                         selected = option
                         expanded = false
-                    },
-                    modifier = Modifier.semantics { this.selected = option == selected },
-                    trailingIcon = {
-                        if (option == selected) {
-                            Icon(Icons.Default.Check, contentDescription = null)
-                        }
                     },
                 )
             }

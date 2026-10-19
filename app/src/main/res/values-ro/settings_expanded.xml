@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_colors_title">Culori</string>
+    <string name="settings_surfaces_shapes_title">Suprafețe și forme</string>
+    <string name="settings_link_long_press_explanation">Alege ce se întâmplă când apeși lung un link. În prim-plan treci la fila nouă; în fundal rămâi pe pagina curentă.</string>
+    <string name="settings_gesture_preview_group">Previzualizare</string>
+    <string name="settings_gesture_normal_tabs_group">File normale</string>
+    <string name="settings_gesture_private_tabs_group">File private</string>
+    <string name="settings_gesture_link_actions_group">Acțiuni pentru linkuri</string>
+    <string name="settings_player_disabled_explanation">Continuă să folosești playerul site-ului.</string>
+    <string name="settings_player_button_fullscreen_explanation">Un buton deschide videoclipurile detectate pe tot ecranul în Candy Player.</string>
+    <string name="settings_player_button_inline_explanation">Un buton pornește videoclipul în pagină. Modul pe tot ecranul rămâne disponibil în player.</string>
+    <string name="settings_player_fullscreen_explanation">Folosește Candy Player când site-ul deschide un videoclip pe tot ecranul.</string>
+    <string name="settings_player_automatic_explanation">Deschide automat Candy Player când este detectat un videoclip care poate fi redat.</string>
+</resources>

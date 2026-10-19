@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="status_bar_scroll_accessibility_service_label">Pomicanje putem statusne trake u Candyju</string>
+    <string name="status_bar_scroll_accessibility_service_description">Dodir sredine statusne trake pomiče trenutačnu stranicu u Candyju na vrh. Candy ne čita sadržaj prozora.</string>
+    <string name="status_bar_scroll_target_description">Pomakni trenutačnu stranicu na vrh</string>
+    <string name="settings_status_bar_scroll_title">Dodirni statusnu traku za pomicanje na vrh</string>
+    <string name="settings_status_bar_scroll_summary">Dodaje nevidljivo područje dodira u sredinu Androidove statusne trake. Potreban je pristup pristupačnosti za Candy.</string>
+    <string name="settings_status_bar_scroll_width_title">Širina područja dodira</string>
+    <string name="settings_status_bar_scroll_width_summary">%1$d%% širine zaslona</string>
+    <string name="settings_status_bar_scroll_accessibility_dialog_title">Dopustiti Candyju pristup pristupačnosti?</string>
+    <string name="settings_status_bar_scroll_accessibility_dialog_message">Android zahtijeva uslugu pristupačnosti za primanje dodira na statusnoj traci sustava. Otvorite Androidove postavke pristupačnosti i uključite pomicanje putem statusne trake u Candyju. Candy koristi uslugu samo za te dodire i ne čita sadržaj prozora.</string>
+    <string name="settings_status_bar_scroll_accessibility_open">Otvori postavke pristupačnosti</string>
+    <string name="settings_status_bar_scroll_enable_for_domain">Uključi pomicanje putem statusne trake za ovu stranicu</string>
+    <string name="settings_status_bar_scroll_disable_for_domain">Isključi pomicanje putem statusne trake za ovu stranicu</string>
+</resources>

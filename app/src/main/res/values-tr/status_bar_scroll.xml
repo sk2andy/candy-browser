@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="status_bar_scroll_accessibility_service_label">Candy durum çubuğundan kaydırma</string>
+    <string name="status_bar_scroll_accessibility_service_description">Durum çubuğunun ortasına dokunarak geçerli Candy sayfasının başına dönmenizi sağlar. Candy pencere içeriğini okumaz.</string>
+    <string name="status_bar_scroll_target_description">Geçerli sayfanın başına dön</string>
+    <string name="settings_status_bar_scroll_title">Başa dönmek için durum çubuğuna dokun</string>
+    <string name="settings_status_bar_scroll_summary">Android durum çubuğunun ortasına görünmez bir dokunma alanı ekler. Candy için Erişilebilirlik erişimi gerekir.</string>
+    <string name="settings_status_bar_scroll_width_title">Dokunma alanının genişliği</string>
+    <string name="settings_status_bar_scroll_width_summary">Ekran genişliğinin %1$d%% kadarı</string>
+    <string name="settings_status_bar_scroll_accessibility_dialog_title">Candy için Erişilebilirlik erişimi etkinleştirilsin mi?</string>
+    <string name="settings_status_bar_scroll_accessibility_dialog_message">Android, sistem durum çubuğundaki dokunuşları almak için bir Erişilebilirlik hizmeti gerektirir. Android Erişilebilirlik ayarlarını açıp Candy durum çubuğundan kaydırmayı etkinleştirin. Candy hizmeti yalnızca bu dokunuşlar için kullanır ve pencere içeriğini okumaz.</string>
+    <string name="settings_status_bar_scroll_accessibility_open">Erişilebilirlik ayarlarını aç</string>
+    <string name="settings_status_bar_scroll_enable_for_domain">Bu site için durum çubuğundan kaydırmayı etkinleştir</string>
+    <string name="settings_status_bar_scroll_disable_for_domain">Bu site için durum çubuğundan kaydırmayı devre dışı bırak</string>
+</resources>

@@ -5,9 +5,15 @@ import org.junit.Test
 
 class SettingsBackRulesTest {
     @Test
-    fun `link routing returns to browser settings`() {
+    fun `selection pages return to the menu and tab settings`() {
+        assertEquals(SettingsDestination.MenuActions, SettingsBackRules.parentDestination(SettingsDestination.MenuStyle))
+        assertEquals(SettingsDestination.MenuActions, SettingsBackRules.parentDestination(SettingsDestination.MenuContentLayout))
+        assertEquals(SettingsDestination.Tabs, SettingsBackRules.parentDestination(SettingsDestination.TabOverview))
+    }
+    @Test
+    fun `link routing returns to website behavior`() {
         assertEquals(
-            SettingsDestination.Browser,
+            SettingsDestination.BrowserWebsites,
             SettingsBackRules.parentDestination(SettingsDestination.LinkRouting),
         )
     }
@@ -58,4 +64,23 @@ class SettingsBackRulesTest {
             assertEquals(SettingsDestination.Home, SettingsBackRules.parentDestination(destination))
         }
     }
+    @Test
+    fun `appearance details return to theme and browser details return to browser`() {
+        listOf(
+            SettingsDestination.AppearanceSurfaces,
+            SettingsDestination.AppearanceAddressBar,
+            SettingsDestination.AppearanceWebsites,
+        ).forEach { destination ->
+            assertEquals(SettingsDestination.Appearance, SettingsBackRules.parentDestination(destination))
+        }
+        listOf(
+            SettingsDestination.BrowserStartup,
+            SettingsDestination.BrowserFavorites,
+            SettingsDestination.BrowserWebsites,
+            SettingsDestination.BrowserLinks,
+        ).forEach { destination ->
+            assertEquals(SettingsDestination.Browser, SettingsBackRules.parentDestination(destination))
+        }
+    }
+
 }

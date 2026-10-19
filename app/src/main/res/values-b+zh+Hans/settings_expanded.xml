@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_colors_title">颜色</string>
+    <string name="settings_surfaces_shapes_title">表面和形状</string>
+    <string name="settings_link_long_press_explanation">选择长按链接时执行的操作。在前台打开会切换到新标签页；在后台打开则停留在当前页面。</string>
+    <string name="settings_gesture_preview_group">预览</string>
+    <string name="settings_gesture_normal_tabs_group">普通标签页</string>
+    <string name="settings_gesture_private_tabs_group">隐私标签页</string>
+    <string name="settings_gesture_link_actions_group">链接操作</string>
+    <string name="settings_player_disabled_explanation">继续使用网站的播放器。</string>
+    <string name="settings_player_button_fullscreen_explanation">点击按钮，在 Candy Player 中全屏打开检测到的视频。</string>
+    <string name="settings_player_button_inline_explanation">点击按钮，在页面内播放视频。仍可在播放器中切换到全屏。</string>
+    <string name="settings_player_fullscreen_explanation">网站全屏打开视频时使用 Candy Player。</string>
+    <string name="settings_player_automatic_explanation">检测到可播放的视频时，自动打开 Candy Player。</string>
+</resources>

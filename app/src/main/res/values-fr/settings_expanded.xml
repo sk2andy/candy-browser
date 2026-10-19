@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_colors_title">Couleurs</string>
+    <string name="settings_surfaces_shapes_title">Surfaces et formes</string>
+    <string name="settings_link_long_press_explanation">Choisissez ce qui se passe après un appui long sur un lien. Au premier plan, vous passez au nouvel onglet ; en arrière-plan, vous restez sur la page actuelle.</string>
+    <string name="settings_gesture_preview_group">Aperçu</string>
+    <string name="settings_gesture_normal_tabs_group">Onglets normaux</string>
+    <string name="settings_gesture_private_tabs_group">Onglets privés</string>
+    <string name="settings_gesture_link_actions_group">Actions sur les liens</string>
+    <string name="settings_player_disabled_explanation">Continuer à utiliser le lecteur du site.</string>
+    <string name="settings_player_button_fullscreen_explanation">Un bouton ouvre les vidéos détectées en plein écran dans Candy Player.</string>
+    <string name="settings_player_button_inline_explanation">Un bouton lance la vidéo dans la page. Le plein écran reste disponible dans le lecteur.</string>
+    <string name="settings_player_fullscreen_explanation">Utiliser Candy Player lorsque le site ouvre une vidéo en plein écran.</string>
+    <string name="settings_player_automatic_explanation">Ouvrir automatiquement Candy Player dès qu’une vidéo lisible est détectée.</string>
+</resources>

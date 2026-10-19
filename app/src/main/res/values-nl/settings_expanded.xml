@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_colors_title">Kleuren</string>
+    <string name="settings_surfaces_shapes_title">Oppervlakken en vormen</string>
+    <string name="settings_link_long_press_explanation">Kies wat er gebeurt als je een link lang indrukt. Op de voorgrond ga je naar het nieuwe tabblad; op de achtergrond blijf je op de huidige pagina.</string>
+    <string name="settings_gesture_preview_group">Voorbeeld</string>
+    <string name="settings_gesture_normal_tabs_group">Normale tabbladen</string>
+    <string name="settings_gesture_private_tabs_group">Privétabbladen</string>
+    <string name="settings_gesture_link_actions_group">Linkacties</string>
+    <string name="settings_player_disabled_explanation">De speler van de website blijven gebruiken.</string>
+    <string name="settings_player_button_fullscreen_explanation">Een knop opent gedetecteerde video’s op volledig scherm in Candy Player.</string>
+    <string name="settings_player_button_inline_explanation">Een knop start de video binnen de pagina. Volledig scherm blijft beschikbaar in de speler.</string>
+    <string name="settings_player_fullscreen_explanation">Candy Player gebruiken wanneer de website een video op volledig scherm opent.</string>
+    <string name="settings_player_automatic_explanation">Candy Player automatisch openen zodra een afspeelbare video wordt gedetecteerd.</string>
+</resources>

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="status_bar_scroll_accessibility_service_label">Derulare prin bara de stare Candy</string>
+    <string name="status_bar_scroll_accessibility_service_description">O atingere în centrul barei de stare derulează pagina Candy curentă la început. Candy nu citește conținutul ferestrelor.</string>
+    <string name="status_bar_scroll_target_description">Derulează pagina curentă la început</string>
+    <string name="settings_status_bar_scroll_title">Atinge bara de stare pentru a derula la început</string>
+    <string name="settings_status_bar_scroll_summary">Adaugă o zonă de atingere invizibilă în centrul barei de stare Android. Necesită accesul Candy la accesibilitate.</string>
+    <string name="settings_status_bar_scroll_width_title">Lățimea zonei de atingere</string>
+    <string name="settings_status_bar_scroll_width_summary">%1$d%% din lățimea ecranului</string>
+    <string name="settings_status_bar_scroll_accessibility_dialog_title">Permiți accesul Candy la accesibilitate?</string>
+    <string name="settings_status_bar_scroll_accessibility_dialog_message">Android necesită un serviciu de accesibilitate pentru a primi atingeri pe bara de stare a sistemului. Deschide setările de accesibilitate Android și activează derularea prin bara de stare Candy. Candy utilizează serviciul numai pentru aceste atingeri și nu citește conținutul ferestrelor.</string>
+    <string name="settings_status_bar_scroll_accessibility_open">Deschide setările de accesibilitate</string>
+    <string name="settings_status_bar_scroll_enable_for_domain">Activează derularea prin bara de stare pentru acest site</string>
+    <string name="settings_status_bar_scroll_disable_for_domain">Dezactivează derularea prin bara de stare pentru acest site</string>
+</resources>

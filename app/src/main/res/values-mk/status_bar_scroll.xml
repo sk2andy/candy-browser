@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="status_bar_scroll_accessibility_service_label">Лизгање преку статусната лента во Candy</string>
+    <string name="status_bar_scroll_accessibility_service_description">Допир во средината на статусната лента ја лизга тековната страница во Candy до врвот. Candy не ја чита содржината на прозорците.</string>
+    <string name="status_bar_scroll_target_description">Лизгај ја тековната страница до врвот</string>
+    <string name="settings_status_bar_scroll_title">Допрете ја статусната лента за лизгање до врвот</string>
+    <string name="settings_status_bar_scroll_summary">Додава невидлива област за допир во средината на статусната лента на Android. Потребен е пристап на Candy до пристапноста.</string>
+    <string name="settings_status_bar_scroll_width_title">Ширина на областа за допир</string>
+    <string name="settings_status_bar_scroll_width_summary">%1$d%% од ширината на екранот</string>
+    <string name="settings_status_bar_scroll_accessibility_dialog_title">Да се дозволи пристап на Candy до пристапноста?</string>
+    <string name="settings_status_bar_scroll_accessibility_dialog_message">Android бара услуга за пристапност за да прима допири на системската статусна лента. Отворете ги поставките за пристапност на Android и вклучете лизгање преку статусната лента во Candy. Candy ја користи услугата само за овие допири и не ја чита содржината на прозорците.</string>
+    <string name="settings_status_bar_scroll_accessibility_open">Отвори ги поставките за пристапност</string>
+    <string name="settings_status_bar_scroll_enable_for_domain">Вклучи лизгање преку статусната лента за оваа страница</string>
+    <string name="settings_status_bar_scroll_disable_for_domain">Исклучи лизгање преку статусната лента за оваа страница</string>
+</resources>

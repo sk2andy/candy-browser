@@ -106,19 +106,12 @@ class BrowserSettingsScreenInstrumentedTest {
     fun externalPreviewProfileRemainsVisibleButDisabledWhenPreviewIsOff() {
         composeRule.setContent {
             MaterialBrowserTheme {
-                BrowserSettingsPage(
-                    pageTranslationProvider = PageTranslationProvider.Google,
+                ExternalLinkPreviewSettingsPage(
                     isExternalLinkPreviewEnabled = false,
                     externalLinkPreviewProfiles = listOf(BrowserProfile(id = "work", emoji = "💼")),
-                    isFullImmersiveModeEnabled = false,
-                    isStartupAnimationEnabled = true,
-                    isScrollBarEnabled = false,
-                    isDefaultBrowser = false,
-                    onFullImmersiveModeEnabledChanged = {},
-                    onStartupAnimationEnabledChanged = {},
-                    onScrollBarEnabledChanged = {},
-                    onPageTranslationProviderChanged = {},
-                    onOpenDefaultBrowserSettings = {},
+                    onExternalLinkPreviewEnabledChanged = {},
+                    externalLinkPreviewProfileId = null,
+                    onExternalLinkPreviewProfileChanged = {},
                     onBack = {},
                 )
             }
@@ -160,23 +153,14 @@ class BrowserSettingsScreenInstrumentedTest {
         var profileId by mutableStateOf<String?>(null)
         composeRule.setContent {
             MaterialBrowserTheme {
-                BrowserSettingsPage(
+                ExternalLinkPreviewSettingsPage(
                     isExternalLinkPreviewEnabled = true,
-                    pageTranslationProvider = PageTranslationProvider.Google,
-                    isFullImmersiveModeEnabled = false,
-                    isStartupAnimationEnabled = true,
-                    isScrollBarEnabled = false,
-                    isDefaultBrowser = false,
                     externalLinkPreviewProfiles = listOf(
                         BrowserProfile(id = "work", emoji = "💼"),
                     ),
                     externalLinkPreviewProfileId = profileId,
                     onExternalLinkPreviewProfileChanged = { profileId = it },
-                    onFullImmersiveModeEnabledChanged = {},
-                    onStartupAnimationEnabledChanged = {},
-                    onScrollBarEnabledChanged = {},
-                    onPageTranslationProviderChanged = {},
-                    onOpenDefaultBrowserSettings = {},
+                    onExternalLinkPreviewEnabledChanged = {},
                     onBack = {},
                 )
             }
@@ -195,23 +179,14 @@ class BrowserSettingsScreenInstrumentedTest {
         var profileId by mutableStateOf<String?>("locked")
         composeRule.setContent {
             MaterialBrowserTheme {
-                BrowserSettingsPage(
+                ExternalLinkPreviewSettingsPage(
                     isExternalLinkPreviewEnabled = true,
-                    pageTranslationProvider = PageTranslationProvider.Google,
-                    isFullImmersiveModeEnabled = false,
-                    isStartupAnimationEnabled = true,
-                    isScrollBarEnabled = false,
-                    isDefaultBrowser = false,
                     externalLinkPreviewProfiles = listOf(
                         BrowserProfile(id = "home", emoji = "🏠"),
                     ),
                     externalLinkPreviewProfileId = profileId,
                     onExternalLinkPreviewProfileChanged = { profileId = it },
-                    onFullImmersiveModeEnabledChanged = {},
-                    onStartupAnimationEnabledChanged = {},
-                    onScrollBarEnabledChanged = {},
-                    onPageTranslationProviderChanged = {},
-                    onOpenDefaultBrowserSettings = {},
+                    onExternalLinkPreviewEnabledChanged = {},
                     onBack = {},
                 )
             }
@@ -427,19 +402,12 @@ class BrowserSettingsScreenInstrumentedTest {
         var enabled by mutableStateOf(false)
         composeRule.setContent {
             MaterialBrowserTheme {
-                BrowserSettingsPage(
-                    pageTranslationProvider = PageTranslationProvider.Google,
+                ExternalLinkPreviewSettingsPage(
                     isExternalLinkPreviewEnabled = enabled,
-                    isFullImmersiveModeEnabled = false,
-                    isStartupAnimationEnabled = true,
-                    isScrollBarEnabled = false,
-                    isDefaultBrowser = false,
                     onExternalLinkPreviewEnabledChanged = { enabled = it },
-                    onFullImmersiveModeEnabledChanged = {},
-                    onStartupAnimationEnabledChanged = {},
-                    onScrollBarEnabledChanged = {},
-                    onPageTranslationProviderChanged = {},
-                    onOpenDefaultBrowserSettings = {},
+                    externalLinkPreviewProfileId = null,
+                    onExternalLinkPreviewProfileChanged = {},
+                    externalLinkPreviewProfiles = emptyList(),
                     onBack = {},
                 )
             }

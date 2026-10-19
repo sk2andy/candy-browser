@@ -92,7 +92,7 @@ internal fun AboutLegalSection(
         Surface(
             modifier = Modifier.fillMaxWidth(),
             shape = MaterialTheme.shapes.extraLarge,
-            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            color = dev.sk2andy.materialbrowser.shared.ui.settings.settingsRowColor(),
         ) {
             Column {
                 AboutLegalRow(
@@ -169,7 +169,7 @@ private fun AboutLegalRow(
             .settingsSearchTarget(title)
             .sizeIn(minHeight = 64.dp)
             .testTag(tag),
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        color = dev.sk2andy.materialbrowser.shared.ui.settings.settingsRowColor(),
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 18.dp, vertical = 14.dp),

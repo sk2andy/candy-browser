@@ -50,8 +50,8 @@ internal fun AddressBarLongPressSettingsPage(
             SettingsSectionTitle(stringResource(section.labelRes()))
             Spacer(Modifier.height(8.dp))
             Surface(
-                shape = MaterialTheme.shapes.large,
-                color = browserChromeColor(MaterialTheme.colorScheme.surfaceContainerHigh),
+                shape = MaterialTheme.shapes.extraLarge,
+                color = dev.sk2andy.materialbrowser.shared.ui.settings.settingsRowColor(),
             ) {
                 Column {
                     val actions = AddressBarLongPressAction.entries.filter { action ->
@@ -80,7 +80,7 @@ internal fun AddressBarLongPressSettingsPage(
                                 style = MaterialTheme.typography.bodyLarge,
                             )
                         }
-                        if (actionIndex != actions.lastIndex) HorizontalDivider()
+                        if (actionIndex != actions.lastIndex) SettingsPreferenceDivider()
                     }
                 }
             }

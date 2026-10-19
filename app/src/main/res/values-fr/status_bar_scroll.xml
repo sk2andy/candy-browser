@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="status_bar_scroll_accessibility_service_label">Défilement par barre d’état Candy</string>
+    <string name="status_bar_scroll_accessibility_service_description">Un appui au centre de la barre d’état ramène la page Candy actuelle en haut. Candy ne lit pas le contenu des fenêtres.</string>
+    <string name="status_bar_scroll_target_description">Revenir en haut de la page actuelle</string>
+    <string name="settings_status_bar_scroll_title">Toucher la barre d’état pour revenir en haut</string>
+    <string name="settings_status_bar_scroll_summary">Ajoute une zone tactile invisible au centre de la barre d’état Android. L’accès Accessibilité de Candy est requis.</string>
+    <string name="settings_status_bar_scroll_width_title">Largeur de la zone tactile</string>
+    <string name="settings_status_bar_scroll_width_summary">%1$d%% de la largeur de l’écran</string>
+    <string name="settings_status_bar_scroll_accessibility_dialog_title">Autoriser l’accès Accessibilité de Candy ?</string>
+    <string name="settings_status_bar_scroll_accessibility_dialog_message">Android exige un service d’accessibilité pour recevoir les appuis sur la barre d’état système. Ouvrez les paramètres d’accessibilité Android, puis activez le défilement par barre d’état Candy. Candy utilise ce service uniquement pour ces appuis et ne lit pas le contenu des fenêtres.</string>
+    <string name="settings_status_bar_scroll_accessibility_open">Ouvrir les paramètres d’accessibilité</string>
+    <string name="settings_status_bar_scroll_enable_for_domain">Activer le défilement par barre d’état pour ce site</string>
+    <string name="settings_status_bar_scroll_disable_for_domain">Désactiver le défilement par barre d’état pour ce site</string>
+</resources>

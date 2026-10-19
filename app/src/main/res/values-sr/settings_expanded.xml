@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_colors_title">Боје</string>
+    <string name="settings_surfaces_shapes_title">Површине и облици</string>
+    <string name="settings_link_long_press_explanation">Изаберите шта се дешава дугим притиском на везу. У првом плану прелазите на нову картицу; у позадини остајете на тренутној страници.</string>
+    <string name="settings_gesture_preview_group">Преглед</string>
+    <string name="settings_gesture_normal_tabs_group">Обичне картице</string>
+    <string name="settings_gesture_private_tabs_group">Приватне картице</string>
+    <string name="settings_gesture_link_actions_group">Радње са везама</string>
+    <string name="settings_player_disabled_explanation">Наставите да користите плејер сајта.</string>
+    <string name="settings_player_button_fullscreen_explanation">Дугме отвара откривене видео-снимке преко целог екрана у Candy Player-у.</string>
+    <string name="settings_player_button_inline_explanation">Дугме покреће видео унутар странице. Приказ преко целог екрана остаје доступан у плејеру.</string>
+    <string name="settings_player_fullscreen_explanation">Користите Candy Player када сајт отвори видео преко целог екрана.</string>
+    <string name="settings_player_automatic_explanation">Аутоматски отворите Candy Player када се открије видео који може да се репродукује.</string>
+</resources>

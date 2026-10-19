@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="status_bar_scroll_accessibility_service_label">Candy 状态栏滚动</string>
+    <string name="status_bar_scroll_accessibility_service_description">轻点状态栏中央即可将当前 Candy 页面滚动到顶部。Candy 不会读取窗口内容。</string>
+    <string name="status_bar_scroll_target_description">将当前页面滚动到顶部</string>
+    <string name="settings_status_bar_scroll_title">轻点状态栏以滚动到顶部</string>
+    <string name="settings_status_bar_scroll_summary">在 Android 状态栏中央添加一个不可见的点按区域。需要授予 Candy 无障碍访问权限。</string>
+    <string name="settings_status_bar_scroll_width_title">点按区域宽度</string>
+    <string name="settings_status_bar_scroll_width_summary">屏幕宽度的 %1$d%%</string>
+    <string name="settings_status_bar_scroll_accessibility_dialog_title">允许 Candy 使用无障碍服务？</string>
+    <string name="settings_status_bar_scroll_accessibility_dialog_message">Android 需要无障碍服务才能接收系统状态栏上的点按。请打开 Android 无障碍设置，然后启用“Candy 状态栏滚动”。Candy 仅使用此服务处理这些点按，不会读取窗口内容。</string>
+    <string name="settings_status_bar_scroll_accessibility_open">打开无障碍设置</string>
+    <string name="settings_status_bar_scroll_enable_for_domain">为此网站启用状态栏滚动</string>
+    <string name="settings_status_bar_scroll_disable_for_domain">为此网站停用状态栏滚动</string>
+</resources>

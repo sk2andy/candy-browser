@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_colors_title">Barve</string>
+    <string name="settings_surfaces_shapes_title">Površine in oblike</string>
+    <string name="settings_link_long_press_explanation">Izberite, kaj se zgodi ob dolgem pritisku na povezavo. V ospredju preklopite na nov zavihek; v ozadju ostanete na trenutni strani.</string>
+    <string name="settings_gesture_preview_group">Predogled</string>
+    <string name="settings_gesture_normal_tabs_group">Običajni zavihki</string>
+    <string name="settings_gesture_private_tabs_group">Zasebni zavihki</string>
+    <string name="settings_gesture_link_actions_group">Dejanja povezav</string>
+    <string name="settings_player_disabled_explanation">Še naprej uporabljaj predvajalnik spletnega mesta.</string>
+    <string name="settings_player_button_fullscreen_explanation">Gumb odpre zaznane videoposnetke čez celoten zaslon v Candy Playerju.</string>
+    <string name="settings_player_button_inline_explanation">Gumb zažene videoposnetek znotraj strani. Celozaslonski način ostane na voljo v predvajalniku.</string>
+    <string name="settings_player_fullscreen_explanation">Uporabi Candy Player, ko spletno mesto odpre videoposnetek čez celoten zaslon.</string>
+    <string name="settings_player_automatic_explanation">Samodejno odpri Candy Player, ko je zaznan videoposnetek, ki ga je mogoče predvajati.</string>
+</resources>

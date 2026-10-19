@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_colors_title">สี</string>
+    <string name="settings_surfaces_shapes_title">พื้นผิวและรูปทรง</string>
+    <string name="settings_link_long_press_explanation">เลือกการทำงานเมื่อกดลิงก์ค้างไว้ การเปิดในเบื้องหน้าจะสลับไปยังแท็บใหม่ ส่วนการเปิดในเบื้องหลังจะคงอยู่ที่หน้าปัจจุบัน</string>
+    <string name="settings_gesture_preview_group">ตัวอย่าง</string>
+    <string name="settings_gesture_normal_tabs_group">แท็บปกติ</string>
+    <string name="settings_gesture_private_tabs_group">แท็บส่วนตัว</string>
+    <string name="settings_gesture_link_actions_group">การทำงานของลิงก์</string>
+    <string name="settings_player_disabled_explanation">ใช้โปรแกรมเล่นของเว็บไซต์ต่อไป</string>
+    <string name="settings_player_button_fullscreen_explanation">ปุ่มจะเปิดวิดีโอที่ตรวจพบแบบเต็มหน้าจอใน Candy Player</string>
+    <string name="settings_player_button_inline_explanation">ปุ่มจะเริ่มเล่นวิดีโอภายในหน้าเว็บ โดยยังสามารถเปลี่ยนเป็นเต็มหน้าจอในโปรแกรมเล่นได้</string>
+    <string name="settings_player_fullscreen_explanation">ใช้ Candy Player เมื่อเว็บไซต์เปิดวิดีโอแบบเต็มหน้าจอ</string>
+    <string name="settings_player_automatic_explanation">เปิด Candy Player โดยอัตโนมัติเมื่อตรวจพบวิดีโอที่เล่นได้</string>
+</resources>

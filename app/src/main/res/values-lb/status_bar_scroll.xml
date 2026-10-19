@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="status_bar_scroll_accessibility_service_label">Candy-Scrollen iwwer d’Statusläischt</string>
+    <string name="status_bar_scroll_accessibility_service_description">En Tipp an der Mëtt vun der Statusläischt scrollt déi aktuell Candy-Säit ganz no uewen. Candy liest kee Fënsterinhalt.</string>
+    <string name="status_bar_scroll_target_description">Déi aktuell Säit ganz no uewen scrollen</string>
+    <string name="settings_status_bar_scroll_title">Op d’Statusläischt tippen, fir no uewen ze scrollen</string>
+    <string name="settings_status_bar_scroll_summary">Füügt en onsichtbaren Tippberäich an der Mëtt vun der Android-Statusläischt derbäi. Candy brauch Zougrëff op d’Bedienungshëllefen.</string>
+    <string name="settings_status_bar_scroll_width_title">Breet vum Tippberäich</string>
+    <string name="settings_status_bar_scroll_width_summary">%1$d%% vun der Bildschiermbreet</string>
+    <string name="settings_status_bar_scroll_accessibility_dialog_title">Candy Zougrëff op d’Bedienungshëllefe ginn?</string>
+    <string name="settings_status_bar_scroll_accessibility_dialog_message">Android brauch e Bedienungshëllefsdéngscht, fir Tippen op d’Systemstatusläischt z’erkennen. Maacht d’Android-Astellunge fir Bedienungshëllefen op an aktivéiert Candy-Scrollen iwwer d’Statusläischt. Candy benotzt den Déngscht nëmme fir dës Tippen a liest kee Fënsterinhalt.</string>
+    <string name="settings_status_bar_scroll_accessibility_open">Bedienungshëllefen opmaachen</string>
+    <string name="settings_status_bar_scroll_enable_for_domain">Scrollen iwwer d’Statusläischt fir dëse Site aktivéieren</string>
+    <string name="settings_status_bar_scroll_disable_for_domain">Scrollen iwwer d’Statusläischt fir dëse Site deaktivéieren</string>
+</resources>

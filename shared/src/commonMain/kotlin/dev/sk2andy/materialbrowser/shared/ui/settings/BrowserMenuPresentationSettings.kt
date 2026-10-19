@@ -4,6 +4,40 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.automirrored.filled.AddToHomeScreen
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.ArrowUpward
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Block
+import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.CropFree
+import androidx.compose.material.icons.filled.DesktopWindows
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Extension
+import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.automirrored.filled.MenuBook
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
+import androidx.compose.material.icons.filled.Print
+import androidx.compose.material.icons.filled.PushPin
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Route
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Snooze
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.ViewCarousel
+import androidx.compose.material.icons.automirrored.filled.VolumeOff
+import androidx.compose.material.icons.filled.ZoomIn
+import androidx.compose.material.icons.filled.Translate
+import androidx.compose.material.icons.filled.SwapVert
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -17,6 +51,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuBottomSheetContentLayout
 import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuBottomSheetToolbarRules
+import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuConfigurationSection
 import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuEntry
 import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuLayout
 import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuPresentation
@@ -67,78 +102,40 @@ fun BrowserMenuPresentationSettings(
     containerColor: Color,
     availableEntries: List<BrowserMenuEntry>,
     onLayoutChanged: (BrowserMenuLayout) -> Unit,
+    onOpenPresentation: () -> Unit,
+    onOpenContentLayout: () -> Unit,
 ) {
-    var presentationExpanded by remember { mutableStateOf(false) }
-    var contentLayoutExpanded by remember { mutableStateOf(false) }
-    Box {
-        SettingsChoice(
+    SettingsPreferenceGroup(containerColor = containerColor) {
+        SettingsSelectionLink(
             title = resources.presentationTitle(),
             value = resources.presentationLabel(layout.presentation),
-            expanded = presentationExpanded,
-            onClick = { presentationExpanded = true },
-            containerColor = containerColor,
             modifier = Modifier.testTag(BrowserMenuPresentationSettingsTestTags.Presentation),
+            onClick = onOpenPresentation,
         )
-        SettingsDropdown(
-            expanded = presentationExpanded,
-            onDismissRequest = { presentationExpanded = false },
-        ) {
-            BrowserMenuPresentation.entries.forEach { presentation ->
-                SettingsDropdownItem(
-                    label = resources.presentationLabel(presentation),
-                    selected = presentation == layout.presentation,
-                    onClick = {
-                        presentationExpanded = false
-                        if (presentation != layout.presentation) onLayoutChanged(layout.copy(presentation = presentation))
-                    },
-                )
-            }
-        }
-    }
-    Spacer(Modifier.height(8.dp))
-    Box {
-        SettingsChoice(
+        SettingsPreferenceDivider()
+        SettingsSelectionLink(
             title = resources.contentLayoutTitle(),
             value = resources.contentLayoutLabel(layout.bottomSheetContentLayout),
-            expanded = contentLayoutExpanded,
-            onClick = { contentLayoutExpanded = true },
-            containerColor = containerColor,
             modifier = Modifier.testTag(BrowserMenuPresentationSettingsTestTags.ContentLayout),
+            enabled = layout.presentation == BrowserMenuPresentation.BottomSheet,
+            onClick = onOpenContentLayout,
         )
-        SettingsDropdown(
-            expanded = contentLayoutExpanded,
-            onDismissRequest = { contentLayoutExpanded = false },
-        ) {
-            BrowserMenuBottomSheetContentLayout.entries.forEach { contentLayout ->
-                SettingsDropdownItem(
-                    label = resources.contentLayoutLabel(contentLayout),
-                    selected = contentLayout == layout.bottomSheetContentLayout,
-                    onClick = {
-                        contentLayoutExpanded = false
-                        if (contentLayout != layout.bottomSheetContentLayout) {
-                            onLayoutChanged(layout.copy(bottomSheetContentLayout = contentLayout))
-                        }
-                    },
-                )
-            }
-        }
+        Text(
+            text = resources.presentationSummary(),
+            modifier = Modifier.padding(start = 18.dp, top = 8.dp, end = 18.dp, bottom = 14.dp),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
-    Text(
-        text = resources.presentationSummary(),
-        modifier = Modifier.padding(start = 18.dp, top = 8.dp, end = 18.dp),
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-    )
     Spacer(Modifier.height(16.dp))
-    if (layout.presentation == BrowserMenuPresentation.BottomSheet) {
-        BrowserMenuBottomSheetToolbarSettings(
-            layout = layout,
-            resources = resources,
-            containerColor = containerColor,
-            availableEntries = availableEntries,
-            onLayoutChanged = onLayoutChanged,
-        )
-    }
+    BrowserMenuBottomSheetToolbarSettings(
+        layout = layout,
+        resources = resources,
+        containerColor = containerColor,
+        availableEntries = availableEntries,
+        enabled = layout.presentation == BrowserMenuPresentation.BottomSheet,
+        onLayoutChanged = onLayoutChanged,
+    )
 }
 
 @Composable
@@ -147,6 +144,7 @@ private fun BrowserMenuBottomSheetToolbarSettings(
     resources: BrowserMenuPresentationSettingsResources,
     containerColor: Color,
     availableEntries: List<BrowserMenuEntry>,
+    enabled: Boolean,
     onLayoutChanged: (BrowserMenuLayout) -> Unit,
 ) {
     var expandedSlot by remember { mutableStateOf<Int?>(null) }
@@ -154,45 +152,114 @@ private fun BrowserMenuBottomSheetToolbarSettings(
     val toolbarEntries = BrowserMenuBottomSheetToolbarRules.availableEntries().filter(availableEntries::contains)
     SettingsSectionTitle(resources.toolbarTitle())
     Spacer(Modifier.height(8.dp))
-    entries.forEachIndexed { index, currentEntry ->
-        Box {
-            SettingsChoice(
-                title = resources.toolbarSlotTitle(index + 1),
-                value = currentEntry?.let { entry -> resources.entryLabel(entry) }
-                    ?: resources.emptySlotLabel(),
-                expanded = expandedSlot == index,
-                onClick = { expandedSlot = index },
-                containerColor = containerColor,
-                modifier = Modifier.testTag(BrowserMenuPresentationSettingsTestTags.toolbarSlot(index)),
-            )
-            SettingsDropdown(
-                expanded = expandedSlot == index,
-                onDismissRequest = { expandedSlot = null },
-            ) {
-                (listOf(null) + toolbarEntries).forEach { entry ->
+    SettingsPreferenceGroup(containerColor = containerColor) {
+        entries.forEachIndexed { index, currentEntry ->
+            Box {
+                SettingsChoice(
+                    title = resources.toolbarSlotTitle(index + 1),
+                    value = currentEntry?.let { entry -> resources.entryLabel(entry) }
+                        ?: resources.emptySlotLabel(),
+                    expanded = enabled && expandedSlot == index,
+                    onClick = { expandedSlot = index },
+                    containerColor = containerColor,
+                    modifier = Modifier.testTag(BrowserMenuPresentationSettingsTestTags.toolbarSlot(index)),
+                    enabled = enabled,
+                )
+                SettingsDropdown(
+                    expanded = enabled && expandedSlot == index,
+                    onDismissRequest = { expandedSlot = null },
+                ) {
                     SettingsDropdownItem(
-                        label = entry?.let { resources.entryLabel(it) }
-                            ?: resources.emptySlotLabel(),
-                        selected = entry == currentEntry,
+                        label = resources.emptySlotLabel(),
+                        selected = currentEntry == null,
+                        leadingIcon = { Icon(Icons.Default.Block, contentDescription = null) },
                         onClick = {
                             expandedSlot = null
-                            if (entry != currentEntry) {
-                                onLayoutChanged(
-                                    BrowserMenuBottomSheetToolbarRules.assign(layout, index, entry),
-                                )
+                            if (currentEntry != null) {
+                                onLayoutChanged(BrowserMenuBottomSheetToolbarRules.assign(layout, index, null))
                             }
                         },
                     )
+                    BrowserMenuConfigurationSection.entries.forEach { section ->
+                        val sectionEntries = toolbarEntries.filter { it.section == section }
+                        if (sectionEntries.isNotEmpty()) {
+                            SettingsDropdownDivider()
+                            sectionEntries.forEach { entry ->
+                                SettingsDropdownItem(
+                                    label = resources.entryLabel(entry),
+                                    selected = entry == currentEntry,
+                                    leadingIcon = { BrowserMenuSettingsEntryIcon(entry) },
+                                    onClick = {
+                                        expandedSlot = null
+                                        if (entry != currentEntry) {
+                                            onLayoutChanged(
+                                                BrowserMenuBottomSheetToolbarRules.assign(layout, index, entry),
+                                            )
+                                        }
+                                    },
+                                )
+                            }
+                        }
+                    }
                 }
             }
+            if (index != entries.lastIndex) SettingsPreferenceDivider()
         }
-        if (index != entries.lastIndex) Spacer(Modifier.height(4.dp))
+        Text(
+            text = resources.toolbarSummary(),
+            modifier = Modifier.padding(start = 18.dp, top = 8.dp, end = 18.dp, bottom = 14.dp),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
-    Text(
-        text = resources.toolbarSummary(),
-        modifier = Modifier.padding(start = 18.dp, top = 8.dp, end = 18.dp),
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-    )
     Spacer(Modifier.height(16.dp))
+}
+
+/** Static action identity; choosing a toolbar slot must not depend on current page state. */
+@Composable
+internal fun BrowserMenuSettingsEntryIcon(entry: BrowserMenuEntry) {
+    val imageVector = when (entry) {
+        BrowserMenuEntry.Back -> Icons.AutoMirrored.Filled.ArrowBack
+        BrowserMenuEntry.Forward -> Icons.AutoMirrored.Filled.ArrowForward
+        BrowserMenuEntry.Reload -> Icons.Default.Refresh
+        BrowserMenuEntry.Favorite -> Icons.Default.Star
+        BrowserMenuEntry.Pin -> Icons.Default.PushPin
+        BrowserMenuEntry.ShowTabs -> Icons.Default.ViewCarousel
+        BrowserMenuEntry.NewTab -> Icons.Default.Add
+        BrowserMenuEntry.CloseTab -> Icons.Default.Close
+        BrowserMenuEntry.DuplicateTab -> Icons.Default.ContentCopy
+        BrowserMenuEntry.Reader -> Icons.AutoMirrored.Filled.MenuBook
+        BrowserMenuEntry.Translate -> Icons.Default.Translate
+        BrowserMenuEntry.FindInPage -> Icons.Default.Search
+        BrowserMenuEntry.Share -> Icons.Default.Share
+        BrowserMenuEntry.OpenExternal -> Icons.AutoMirrored.Filled.OpenInNew
+        BrowserMenuEntry.Print -> Icons.Default.Print
+        BrowserMenuEntry.CookieBannerRemoval -> Icons.Default.Block
+        BrowserMenuEntry.ForceVerticalScrolling -> Icons.Default.SwapVert
+        BrowserMenuEntry.ForcePageZooming -> Icons.Default.ZoomIn
+        BrowserMenuEntry.ForceSafeArea -> Icons.Default.CropFree
+        BrowserMenuEntry.AlwaysBlockPopups -> Icons.Default.Block
+        BrowserMenuEntry.DesktopView -> Icons.Default.DesktopWindows
+        BrowserMenuEntry.DomainMute -> Icons.AutoMirrored.Filled.VolumeOff
+        BrowserMenuEntry.StatusBarScroll -> Icons.Default.ArrowUpward
+        BrowserMenuEntry.ToppingCommands -> Icons.Default.Extension
+        BrowserMenuEntry.FirefoxPageActions -> Icons.Default.Extension
+        BrowserMenuEntry.CandyTrail -> Icons.Default.Route
+        BrowserMenuEntry.Constellations -> Icons.Default.Route
+        BrowserMenuEntry.AddSiteCapsule -> Icons.AutoMirrored.Filled.AddToHomeScreen
+        BrowserMenuEntry.CreateSiteWidget -> Icons.AutoMirrored.Filled.AddToHomeScreen
+        BrowserMenuEntry.Summarize -> Icons.Default.AutoAwesome
+        BrowserMenuEntry.Snooze -> Icons.Default.Snooze
+        BrowserMenuEntry.AddressBarDocking -> Icons.Default.ChevronRight
+        BrowserMenuEntry.OpenSnoozedTabs -> Icons.Default.Snooze
+        BrowserMenuEntry.OpenFavorites -> Icons.Default.Star
+        BrowserMenuEntry.OpenDownloads -> Icons.Default.Download
+        BrowserMenuEntry.OpenHistory -> Icons.Default.History
+        BrowserMenuEntry.OpenFirefoxExtensions -> Icons.Default.Extension
+        BrowserMenuEntry.OpenSettings -> Icons.Default.Settings
+        BrowserMenuEntry.MoveToProfile -> Icons.AutoMirrored.Filled.OpenInNew
+        BrowserMenuEntry.TabStacks -> Icons.Default.ViewCarousel
+        BrowserMenuEntry.CloseAllTabs -> Icons.Default.Close
+    }
+    Icon(imageVector = imageVector, contentDescription = null)
 }

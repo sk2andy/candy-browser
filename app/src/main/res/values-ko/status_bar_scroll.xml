@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="status_bar_scroll_accessibility_service_label">Candy 상태 표시줄 스크롤</string>
+    <string name="status_bar_scroll_accessibility_service_description">상태 표시줄 중앙을 탭하면 현재 Candy 페이지의 맨 위로 이동합니다. Candy는 창 내용을 읽지 않습니다.</string>
+    <string name="status_bar_scroll_target_description">현재 페이지의 맨 위로 이동</string>
+    <string name="settings_status_bar_scroll_title">상태 표시줄을 탭하여 맨 위로 이동</string>
+    <string name="settings_status_bar_scroll_summary">Android 상태 표시줄 중앙에 보이지 않는 탭 영역을 추가합니다. Candy 접근성 권한이 필요합니다.</string>
+    <string name="settings_status_bar_scroll_width_title">탭 영역 너비</string>
+    <string name="settings_status_bar_scroll_width_summary">화면 너비의 %1$d%%</string>
+    <string name="settings_status_bar_scroll_accessibility_dialog_title">Candy 접근성 권한을 허용할까요?</string>
+    <string name="settings_status_bar_scroll_accessibility_dialog_message">시스템 상태 표시줄의 탭을 감지하려면 Android 접근성 서비스가 필요합니다. Android 접근성 설정을 열고 Candy 상태 표시줄 스크롤을 켜세요. Candy는 이 탭에만 서비스를 사용하며 창 내용을 읽지 않습니다.</string>
+    <string name="settings_status_bar_scroll_accessibility_open">접근성 설정 열기</string>
+    <string name="settings_status_bar_scroll_enable_for_domain">이 사이트에서 상태 표시줄 스크롤 켜기</string>
+    <string name="settings_status_bar_scroll_disable_for_domain">이 사이트에서 상태 표시줄 스크롤 끄기</string>
+</resources>

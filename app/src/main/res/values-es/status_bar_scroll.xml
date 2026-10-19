@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="status_bar_scroll_accessibility_service_label">Desplazamiento desde la barra de estado de Candy</string>
+    <string name="status_bar_scroll_accessibility_service_description">Permite tocar el centro de la barra de estado para volver al inicio de la página actual de Candy. Candy no lee el contenido de las ventanas.</string>
+    <string name="status_bar_scroll_target_description">Volver al inicio de la página actual</string>
+    <string name="settings_status_bar_scroll_title">Tocar la barra de estado para volver al inicio</string>
+    <string name="settings_status_bar_scroll_summary">Añade un área táctil invisible en el centro de la barra de estado de Android. Requiere acceso de accesibilidad para Candy.</string>
+    <string name="settings_status_bar_scroll_width_title">Anchura del área táctil</string>
+    <string name="settings_status_bar_scroll_width_summary">%1$d%% del ancho de la pantalla</string>
+    <string name="settings_status_bar_scroll_accessibility_dialog_title">¿Permitir el acceso de accesibilidad a Candy?</string>
+    <string name="settings_status_bar_scroll_accessibility_dialog_message">Android requiere un servicio de accesibilidad para recibir toques en la barra de estado del sistema. Abre los ajustes de accesibilidad de Android y activa el desplazamiento desde la barra de estado de Candy. Candy solo usa el servicio para estos toques y no lee el contenido de las ventanas.</string>
+    <string name="settings_status_bar_scroll_accessibility_open">Abrir ajustes de accesibilidad</string>
+    <string name="settings_status_bar_scroll_enable_for_domain">Activar el desplazamiento desde la barra de estado para este sitio</string>
+    <string name="settings_status_bar_scroll_disable_for_domain">Desactivar el desplazamiento desde la barra de estado para este sitio</string>
+</resources>

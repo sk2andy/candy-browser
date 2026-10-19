@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_colors_title">Farger</string>
+    <string name="settings_surfaces_shapes_title">Overflater og former</string>
+    <string name="settings_link_long_press_explanation">Velg hva som skjer når du trykker lenge på en lenke. I forgrunnen bytter du til den nye fanen; i bakgrunnen blir du på den gjeldende siden.</string>
+    <string name="settings_gesture_preview_group">Forhåndsvisning</string>
+    <string name="settings_gesture_normal_tabs_group">Vanlige faner</string>
+    <string name="settings_gesture_private_tabs_group">Private faner</string>
+    <string name="settings_gesture_link_actions_group">Lenkehandlinger</string>
+    <string name="settings_player_disabled_explanation">Fortsett å bruke nettstedets spiller.</string>
+    <string name="settings_player_button_fullscreen_explanation">En knapp åpner oppdagede videoer i fullskjerm i Candy Player.</string>
+    <string name="settings_player_button_inline_explanation">En knapp starter videoen på siden. Fullskjerm er fortsatt tilgjengelig i spilleren.</string>
+    <string name="settings_player_fullscreen_explanation">Bruk Candy Player når nettstedet åpner en video i fullskjerm.</string>
+    <string name="settings_player_automatic_explanation">Åpne Candy Player automatisk når en avspillbar video oppdages.</string>
+</resources>

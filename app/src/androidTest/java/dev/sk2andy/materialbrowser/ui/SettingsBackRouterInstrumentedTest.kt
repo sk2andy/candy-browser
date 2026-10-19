@@ -90,24 +90,34 @@ class SettingsBackRouterInstrumentedTest {
         assertPixel(Color.Blue, top = true)
 
         startGesture(BackEventCompat.EDGE_RIGHT)
-        assertPixel(Color.Cyan, top = true)
+        assertPixel(Color.Red, top = true)
         assertPixel(Color.Blue, top = false)
+        composeRule.runOnIdle { composeRule.activity.onBackPressedDispatcher.onBackPressed() }
+        composeRule.waitForIdle()
+        assertPixel(Color.Red, top = true)
+        composeRule.runOnIdle {
+            assertEquals(SettingsDestination.BrowserWebsites, destination)
+            assertEquals(1, navigationCalls)
+        }
+
+        startGesture(BackEventCompat.EDGE_LEFT)
+        assertPixel(Color.Cyan, top = true)
         composeRule.runOnIdle { composeRule.activity.onBackPressedDispatcher.onBackPressed() }
         composeRule.waitForIdle()
         assertPixel(Color.Cyan, top = true)
         composeRule.runOnIdle {
             assertEquals(SettingsDestination.Browser, destination)
-            assertEquals(1, navigationCalls)
+            assertEquals(2, navigationCalls)
         }
 
-        startGesture(BackEventCompat.EDGE_LEFT)
+        startGesture(BackEventCompat.EDGE_RIGHT)
         assertPixel(Color.Green, top = true)
         composeRule.runOnIdle { composeRule.activity.onBackPressedDispatcher.onBackPressed() }
         composeRule.waitForIdle()
         assertPixel(Color.Green, top = true)
         composeRule.runOnIdle {
             assertEquals(SettingsDestination.Home, destination)
-            assertEquals(2, navigationCalls)
+            assertEquals(3, navigationCalls)
         }
     }
 
@@ -117,7 +127,7 @@ class SettingsBackRouterInstrumentedTest {
         onDestinationChanged: (SettingsDestination) -> Unit,
     ) {
         composeRule.setContent {
-            MaterialTheme(colorScheme = lightColorScheme(surface = Color.Yellow)) {
+            MaterialTheme(colorScheme = lightColorScheme(surface = Color.Yellow, surfaceContainerLow = Color.Yellow)) {
                 Box(Modifier.fillMaxSize().testTag(CONTAINER_TAG).background(Color.Magenta)) {
                     SettingsBackRouter(
                         destination = destination(),
@@ -129,6 +139,7 @@ class SettingsBackRouterInstrumentedTest {
                             val color = when (currentDestination) {
                                 SettingsDestination.Home -> Color.Green
                                 SettingsDestination.Browser -> Color.Cyan
+                                SettingsDestination.BrowserWebsites -> Color.Red
                                 else -> Color.Blue
                             }
                             Box(Modifier.fillMaxSize().background(color))

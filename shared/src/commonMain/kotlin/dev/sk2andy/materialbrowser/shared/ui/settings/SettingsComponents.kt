@@ -4,9 +4,11 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -27,30 +29,51 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import dev.sk2andy.materialbrowser.shared.ui.LocalCandyBrowserChromeEffects
+
+/** Group membership is presentation only; individual controls keep their own semantics. */
+val LocalSettingsPreferenceGroup = staticCompositionLocalOf { false }
+
+@Composable
+fun settingsPageColor(): Color = MaterialTheme.colorScheme.surfaceContainerLow
+
+@Composable
+fun settingsRowColor(): Color = MaterialTheme.colorScheme.surfaceContainerLowest
+
+@Composable
+fun settingsRowShape() = if (LocalSettingsPreferenceGroup.current) {
+    MaterialTheme.shapes.extraSmall
+} else {
+    MaterialTheme.shapes.extraLarge
+}
 
 @Composable
 fun SettingsPage(
@@ -59,13 +82,13 @@ fun SettingsPage(
     onBack: () -> Unit,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    val grouped = LocalCandyBrowserChromeEffects.current.usesGroupedSettings
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .background(settingsPageColor())
             .statusBarsPadding()
             .navigationBarsPadding()
-            .padding(horizontal = if (grouped) 20.dp else 24.dp)
+            .padding(horizontal = 16.dp)
             .padding(bottom = 24.dp)
             .verticalScroll(rememberScrollState())
             .imePadding(),
@@ -74,7 +97,7 @@ fun SettingsPage(
             modifier = Modifier.padding(top = 8.dp, bottom = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            IconButton(onClick = onBack) {
+            IconButton(onClick = onBack, modifier = Modifier.testTag("settings_page_back")) {
                 LocalCandyBrowserChromeEffects.current.icon(
                     "chevron.left",
                     Icons.AutoMirrored.Filled.ArrowBack,
@@ -83,6 +106,7 @@ fun SettingsPage(
             }
             Text(
                 title,
+                modifier = Modifier.weight(1f),
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.SemiBold,
             )
@@ -99,16 +123,17 @@ fun SettingsLink(
     containerColor: Color,
     icon: @Composable (Modifier, Color) -> Unit,
     enabled: Boolean = true,
+    modifier: Modifier = Modifier,
     onLongClickLabel: String? = null,
     onLongClick: (() -> Unit)? = null,
     onClick: () -> Unit,
 ) {
     val grouped = LocalCandyBrowserChromeEffects.current.usesGroupedSettings
     Surface(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .settingsSearchTarget(title)
-            .clip(MaterialTheme.shapes.large)
+            .clip(settingsRowShape())
             .combinedClickable(
                 enabled = enabled,
                 onClickLabel = null,
@@ -118,8 +143,8 @@ fun SettingsLink(
                 onClick = onClick,
             )
             .graphicsLayer { alpha = if (enabled) 1f else 0.38f },
-        shape = MaterialTheme.shapes.large,
-        color = if (grouped) MaterialTheme.colorScheme.surfaceContainer else containerColor,
+        shape = settingsRowShape(),
+        color = settingsRowColor(),
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 18.dp, vertical = 14.dp),
@@ -159,13 +184,12 @@ fun SettingsLink(
 
 @Composable
 fun SettingsSectionTitle(text: String) {
-    val grouped = LocalCandyBrowserChromeEffects.current.usesGroupedSettings
     Text(
         text,
-        modifier = Modifier.semantics { heading() },
-        style = if (grouped) MaterialTheme.typography.labelMedium else MaterialTheme.typography.titleMedium,
-        color = if (grouped) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.primary,
-        fontWeight = if (grouped) FontWeight.Normal else FontWeight.SemiBold,
+        modifier = Modifier.padding(start = 16.dp, top = 8.dp, bottom = 8.dp).semantics { heading() },
+        style = MaterialTheme.typography.titleSmall,
+        color = MaterialTheme.colorScheme.onSurface,
+        fontWeight = FontWeight.Medium,
     )
 }
 
@@ -190,12 +214,8 @@ fun SettingsChoice(
         onClick = onClick,
         enabled = enabled,
         modifier = modifier.fillMaxWidth().settingsSearchTarget(title),
-        shape = if (inPreferenceGroup) RectangleShape else MaterialTheme.shapes.large,
-        color = if (inPreferenceGroup) Color.Transparent else if (effects.usesGroupedSettings) {
-            MaterialTheme.colorScheme.surfaceContainer
-        } else {
-            containerColor
-        },
+        shape = settingsRowShape(),
+        color = settingsRowColor(),
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 18.dp, vertical = 14.dp),
@@ -251,7 +271,8 @@ fun SettingsDropdown(
     DropdownMenu(
         expanded = expanded,
         onDismissRequest = onDismissRequest,
-        shape = MaterialTheme.shapes.extraLarge,
+        shape = MaterialTheme.shapes.large,
+        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
         content = content,
     )
 }
@@ -261,14 +282,69 @@ fun SettingsDropdownItem(
     label: String,
     selected: Boolean,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    leadingIcon: @Composable (() -> Unit)? = null,
+    supportingText: String? = null,
+    enabled: Boolean = true,
 ) {
+    val colors = MaterialTheme.colorScheme
+    val contentColor = colors.onSurface
+    val secondaryColor = colors.onSurfaceVariant
+    val disabledColor = contentColor.copy(alpha = 0.38f)
     DropdownMenuItem(
-        text = { Text(label) },
-        onClick = onClick,
-        modifier = Modifier.semantics { this.selected = selected },
-        trailingIcon = {
-            if (selected) Icon(Icons.Default.Check, contentDescription = null)
+        text = {
+            Column {
+                Text(label)
+                if (supportingText != null) {
+                    Text(
+                        text = supportingText,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (enabled) secondaryColor else disabledColor,
+                    )
+                }
+            }
         },
+        onClick = onClick,
+        enabled = enabled,
+        modifier = modifier
+            .padding(horizontal = 4.dp)
+            .clip(MaterialTheme.shapes.medium)
+            .background(Color.Transparent)
+            .heightIn(min = 48.dp)
+            .semantics {
+                role = Role.RadioButton
+                this.selected = selected
+            },
+        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 12.dp),
+        colors = MenuDefaults.itemColors(
+            textColor = contentColor,
+            leadingIconColor = secondaryColor,
+            disabledTextColor = disabledColor,
+            disabledLeadingIconColor = disabledColor,
+        ),
+        leadingIcon = {
+            Box(Modifier.size(24.dp).clearAndSetSemantics { }, contentAlignment = Alignment.Center) {
+                if (leadingIcon != null) {
+                    leadingIcon()
+                }
+            }
+        },
+        trailingIcon = {
+            androidx.compose.material3.RadioButton(
+                selected = selected,
+                onClick = null,
+                enabled = enabled,
+                modifier = Modifier.clearAndSetSemantics { },
+            )
+        },
+    )
+}
+
+@Composable
+fun SettingsDropdownDivider() {
+    HorizontalDivider(
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+        color = MaterialTheme.colorScheme.outlineVariant,
     )
 }
 
@@ -280,25 +356,32 @@ fun SettingsSwitch(
     enabled: Boolean = true,
     onCheckedChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
+    prominent: Boolean = false,
 ) {
     val effects = LocalCandyBrowserChromeEffects.current
+    val titleColor = if (prominent) {
+        MaterialTheme.colorScheme.onSecondaryContainer
+    } else {
+        MaterialTheme.colorScheme.onSurface
+    }
+    val subtitleColor = if (prominent) {
+        MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f)
+    } else {
+        MaterialTheme.colorScheme.onSurfaceVariant
+    }
     Row(
         modifier = modifier
             .fillMaxWidth()
             .settingsSearchTarget(title)
-            .then(
-                if (effects.usesGroupedSettings) {
-                    Modifier.toggleable(
-                        value = checked,
-                        enabled = enabled,
-                        role = Role.Switch,
-                        onValueChange = onCheckedChange,
-                    )
-                } else {
-                    Modifier.clickable(enabled = enabled) { onCheckedChange(!checked) }
-                },
+            .clip(if (prominent) RoundedCornerShape(48.dp) else settingsRowShape())
+            .background(if (prominent) MaterialTheme.colorScheme.secondaryContainer else settingsRowColor())
+            .toggleable(
+                value = checked,
+                enabled = enabled,
+                role = Role.Switch,
+                onValueChange = onCheckedChange,
             )
-            .padding(vertical = 10.dp),
+            .padding(horizontal = 18.dp, vertical = if (prominent) 24.dp else 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = Modifier.weight(1f)) {
@@ -306,31 +389,34 @@ fun SettingsSwitch(
                 title,
                 style = MaterialTheme.typography.titleMedium,
                 color = if (enabled) {
-                    MaterialTheme.colorScheme.onSurface
+                    titleColor
                 } else {
-                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                    titleColor.copy(alpha = 0.38f)
                 },
             )
             Text(
                 subtitle,
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(
-                    alpha = if (enabled) 1f else 0.6f,
+                color = subtitleColor.copy(
+                    alpha = subtitleColor.alpha * if (enabled) 1f else 0.6f,
                 ),
             )
         }
         Spacer(Modifier.width(12.dp))
-        effects.settingsToggle(
-            checked = checked,
-            enabled = enabled,
-            onCheckedChange = onCheckedChange,
-        )
+        Box(Modifier.clearAndSetSemantics {}) {
+            effects.settingsToggle(
+                checked = checked,
+                enabled = enabled,
+                onCheckedChange = onCheckedChange,
+            )
+        }
     }
 }
 
 @Composable
 fun SettingsPageSpacer() {
-    Spacer(Modifier.height(12.dp))
+    if (LocalSettingsPreferenceGroup.current) SettingsPreferenceDivider()
+    else Spacer(Modifier.height(16.dp))
 }
 
 @Composable
@@ -338,12 +424,18 @@ fun SettingsPreferenceGroup(
     containerColor: Color,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.extraLarge,
-        color = containerColor,
-    ) {
+    if (LocalSettingsPreferenceGroup.current) {
         Column(content = content)
+        return
+    }
+    Surface(
+        modifier = Modifier.fillMaxWidth().testTag("settings_preference_group"),
+        shape = MaterialTheme.shapes.extraLarge,
+        color = settingsRowColor(),
+    ) {
+        CompositionLocalProvider(LocalSettingsPreferenceGroup provides true) {
+            Column(content = content)
+        }
     }
 }
 
@@ -351,8 +443,20 @@ fun SettingsPreferenceGroup(
 fun SettingsPreferenceDivider() {
     Spacer(
         Modifier.fillMaxWidth()
-            .padding(horizontal = 18.dp)
-            .height(0.5.dp)
-            .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.65f)),
+            .height(2.dp)
+            .background(settingsPageColor()),
+    )
+}
+
+/** First/last rows provide the exterior of a lazy connected group. */
+@Composable
+fun settingsConnectedShape(index: Int, count: Int): RoundedCornerShape {
+    val outer = MaterialTheme.shapes.extraLarge
+    val inner = MaterialTheme.shapes.extraSmall
+    return RoundedCornerShape(
+        topStart = if (index == 0) outer.topStart else inner.topStart,
+        topEnd = if (index == 0) outer.topEnd else inner.topEnd,
+        bottomStart = if (index == count - 1) outer.bottomStart else inner.bottomStart,
+        bottomEnd = if (index == count - 1) outer.bottomEnd else inner.bottomEnd,
     )
 }

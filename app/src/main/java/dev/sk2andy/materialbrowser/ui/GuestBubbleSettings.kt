@@ -89,7 +89,6 @@ internal fun GuestBubbleSettingsControl(
             }
         },
         modifier = Modifier.testTag(GuestBubbleSettingsTestTags.Toggle)
-            .padding(horizontal = 18.dp)
             .settingsSearchTarget(stringResource(R.string.guest_bubble_title)),
     )
     if (tutorialVisible && available) {

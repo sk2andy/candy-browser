@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_colors_title">Цветове</string>
+    <string name="settings_surfaces_shapes_title">Повърхности и форми</string>
+    <string name="settings_link_long_press_explanation">Изберете какво да става при продължително натискане на връзка. На преден план преминавате към новия раздел; във фонов режим оставате на текущата страница.</string>
+    <string name="settings_gesture_preview_group">Визуализация</string>
+    <string name="settings_gesture_normal_tabs_group">Обикновени раздели</string>
+    <string name="settings_gesture_private_tabs_group">Поверителни раздели</string>
+    <string name="settings_gesture_link_actions_group">Действия с връзки</string>
+    <string name="settings_player_disabled_explanation">Продължете да използвате плейъра на сайта.</string>
+    <string name="settings_player_button_fullscreen_explanation">Бутон отваря откритите видеоклипове на цял екран в Candy Player.</string>
+    <string name="settings_player_button_inline_explanation">Бутон стартира видеоклипа в страницата. Режимът на цял екран остава наличен в плейъра.</string>
+    <string name="settings_player_fullscreen_explanation">Използвайте Candy Player, когато сайтът отваря видеоклип на цял екран.</string>
+    <string name="settings_player_automatic_explanation">Автоматично отваряйте Candy Player при откриване на видеоклип, който може да бъде възпроизведен.</string>
+</resources>

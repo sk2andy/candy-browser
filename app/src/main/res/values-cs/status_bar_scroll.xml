@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="status_bar_scroll_accessibility_service_label">Posouvání stavovým řádkem Candy</string>
+    <string name="status_bar_scroll_accessibility_service_description">Klepnutí na střed stavového řádku posune aktuální stránku Candy na začátek. Candy nečte obsah oken.</string>
+    <string name="status_bar_scroll_target_description">Posunout aktuální stránku na začátek</string>
+    <string name="settings_status_bar_scroll_title">Klepnutím na stavový řádek posunout na začátek</string>
+    <string name="settings_status_bar_scroll_summary">Přidá neviditelnou oblast klepnutí doprostřed stavového řádku Androidu. Vyžaduje přístup Candy k usnadnění.</string>
+    <string name="settings_status_bar_scroll_width_title">Šířka oblasti klepnutí</string>
+    <string name="settings_status_bar_scroll_width_summary">%1$d%% šířky obrazovky</string>
+    <string name="settings_status_bar_scroll_accessibility_dialog_title">Povolit Candy přístup k usnadnění?</string>
+    <string name="settings_status_bar_scroll_accessibility_dialog_message">Android vyžaduje službu usnadnění pro příjem klepnutí na systémový stavový řádek. Otevřete nastavení usnadnění Androidu a zapněte posouvání stavovým řádkem Candy. Candy službu používá jen pro tato klepnutí a nečte obsah oken.</string>
+    <string name="settings_status_bar_scroll_accessibility_open">Otevřít nastavení usnadnění</string>
+    <string name="settings_status_bar_scroll_enable_for_domain">Zapnout posouvání stavovým řádkem pro tento web</string>
+    <string name="settings_status_bar_scroll_disable_for_domain">Vypnout posouvání stavovým řádkem pro tento web</string>
+</resources>

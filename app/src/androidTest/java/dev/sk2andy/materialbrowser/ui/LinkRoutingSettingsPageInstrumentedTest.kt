@@ -7,6 +7,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertContentDescriptionEquals
+import androidx.compose.ui.test.assertIsOn
+import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
@@ -53,7 +56,11 @@ class LinkRoutingSettingsPageInstrumentedTest {
         val rule = saved.get().single()
         assertEquals("news.example", rule.domain)
         assertEquals(LinkRoutingTargetKind.Reader, rule.target.kind)
-        composeRule.onNodeWithTag(LinkRoutingTestTags.enabled(rule.id)).performClick()
+        composeRule.onNodeWithTag(LinkRoutingTestTags.enabled(rule.id))
+            .assertContentDescriptionEquals("news.example")
+            .assertIsOn()
+            .performClick()
+            .assertIsOff()
         assertEquals(false, saved.get().single().enabled)
     }
 }

@@ -230,11 +230,18 @@ class StatusBarScrollAccessibilityService : AccessibilityService() {
                         true
                     }
 
+                    MotionEvent.ACTION_POINTER_UP -> {
+                        multiTouchStartY = null
+                        touchMoved = true
+                        downwardGestureHandled = true
+                        true
+                    }
+
                     MotionEvent.ACTION_MOVE -> {
                         val touchSlop = ViewConfiguration
                             .get(this@StatusBarScrollAccessibilityService)
                             .scaledTouchSlop
-                        val twoFingerDelta = multiTouchStartY?.let { startY ->
+                        val twoFingerDelta = multiTouchStartY?.takeIf { event.pointerCount >= 2 }?.let { startY ->
                             ((event.getY(0) + event.getY(1)) / 2f) - startY
                         }
                         if (twoFingerDelta != null && abs(twoFingerDelta) > touchSlop) {

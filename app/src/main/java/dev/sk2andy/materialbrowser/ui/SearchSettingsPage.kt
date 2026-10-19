@@ -55,183 +55,183 @@ internal fun SearchSettingsPage(
         onBack = onBack,
     ) {
         SettingsPreferenceGroup {
-        Box {
-            SettingsChoice(
-                title = stringResource(R.string.settings_search_engine),
-                value = searchEngine.displayName,
-                expanded = searchEngineMenuExpanded,
-                onClick = { searchEngineMenuExpanded = true },
-                inPreferenceGroup = true,
-            )
-            SettingsDropdown(
-                expanded = searchEngineMenuExpanded,
-                onDismissRequest = { searchEngineMenuExpanded = false },
-            ) {
-                SearchEngine.entries.forEach { engine ->
-                    SettingsDropdownItem(
-                        label = engine.displayName,
-                        selected = engine == searchEngine,
-                        onClick = {
-                            searchEngineMenuExpanded = false
-                            onSearchEngineChanged(engine)
-                        },
-                    )
-                }
-            }
-        }
-        SettingsPreferenceDivider()
-        SettingsSwitch(
-                title = stringResource(R.string.settings_ai_mode_toggle_title),
-                subtitle = stringResource(R.string.settings_ai_mode_toggle_subtitle),
-                checked = isAiModeToggleVisible,
-                enabled = searchEngine.supportsAiSearch,
-                onCheckedChange = onAiModeToggleVisibleChanged,
-                modifier = Modifier.padding(horizontal = 18.dp),
-            )
-        run {
-            SettingsPreferenceDivider()
-            val normalizedInstanceUrl = SearxngRules.normalizedInstanceUrl(
-                instanceUrlDraft,
-            )
-            OutlinedTextField(
-                value = instanceUrlDraft,
-                onValueChange = { value ->
-                    val boundedValue = value.take(SearxngRules.MAX_INSTANCE_URL_LENGTH)
-                    val normalizedValue = SearxngRules.normalizedInstanceUrl(boundedValue)
-                    instanceUrlDraft = boundedValue
-                    when {
-                        boundedValue.isBlank() -> onSearxngSettingsChanged(
-                            searxngSettings.copy(instanceUrl = ""),
-                        )
-                        normalizedValue != null -> onSearxngSettingsChanged(
-                            searxngSettings.copy(instanceUrl = normalizedValue),
-                        )
-                    }
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 18.dp, vertical = 8.dp)
-                    .testTag(SearchSettingsTestTags.SearxngInstanceUrl)
-                    .settingsSearchTarget(stringResource(R.string.settings_searxng_instance_url)),
-                label = { Text(stringResource(R.string.settings_searxng_instance_url)) },
-                supportingText = {
-                    Text(
-                        stringResource(
-                            if (
-                                instanceUrlDraft.isNotBlank() &&
-                                normalizedInstanceUrl == null
-                            ) {
-                                R.string.settings_searxng_instance_url_invalid
-                            } else {
-                                R.string.settings_searxng_instance_url_summary
-                            },
-                        ),
-                    )
-                },
-                isError = instanceUrlDraft.isNotBlank() &&
-                    normalizedInstanceUrl == null,
-                enabled = searchEngine == SearchEngine.SearXNG ||
-                    searchSuggestionProvider == SearchSuggestionProvider.SearXNG,
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Uri,
-                    imeAction = ImeAction.Done,
-                ),
-                singleLine = true,
-            )
-        }
-        }
-        SettingsPageSpacer()
-        SettingsSwitch(
-            title = stringResource(R.string.settings_history_suggestions_title),
-            subtitle = stringResource(R.string.settings_history_suggestions_summary),
-            checked = isHistorySuggestionsEnabled,
-            onCheckedChange = onHistorySuggestionsEnabledChanged,
-            modifier = Modifier.testTag(SearchSettingsTestTags.HistorySuggestions),
-        )
-        SettingsPageSpacer()
-        SettingsPreferenceGroup {
-        Box {
-            SettingsChoice(
-                title = stringResource(R.string.settings_search_suggestions),
-                value = searchSuggestionProvider.displayName(),
-                expanded = searchSuggestionMenuExpanded,
-                onClick = { searchSuggestionMenuExpanded = true },
-                modifier = Modifier.testTag(SearchSettingsTestTags.SuggestionProvider),
-                inPreferenceGroup = true,
-            )
-            SettingsDropdown(
-                expanded = searchSuggestionMenuExpanded,
-                onDismissRequest = { searchSuggestionMenuExpanded = false },
-            ) {
-                SearchSuggestionProvider.entries.forEach { provider ->
-                    SettingsDropdownItem(
-                        label = provider.displayName(),
-                        selected = provider == searchSuggestionProvider,
-                        onClick = {
-                            searchSuggestionMenuExpanded = false
-                            onSearchSuggestionProviderChanged(provider)
-                        },
-                    )
-                }
-            }
-        }
-        Text(
-            stringResource(
-                if (searchSuggestionProvider == SearchSuggestionProvider.None) {
-                    R.string.settings_search_suggestions_none_summary
-                } else if (searchSuggestionProvider == SearchSuggestionProvider.SearXNG) {
-                    R.string.settings_searxng_search_suggestions_summary
-                } else {
-                    R.string.settings_search_suggestions_summary
-                },
-            ),
-            modifier = Modifier.padding(start = 18.dp, top = 6.dp, end = 18.dp),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        run {
-            SettingsPreferenceDivider()
             Box {
                 SettingsChoice(
-                    title = stringResource(R.string.settings_searxng_suggestion_fallback),
-                    value = searxngSettings.suggestionFallback.displayName(),
-                    expanded = fallbackMenuExpanded,
-                    onClick = {
-                        if (searchSuggestionProvider == SearchSuggestionProvider.SearXNG) {
-                            fallbackMenuExpanded = true
-                        }
-                    },
-                    modifier = Modifier.testTag(SearchSettingsTestTags.SearxngFallback),
-                    enabled = searchSuggestionProvider == SearchSuggestionProvider.SearXNG,
+                    title = stringResource(R.string.settings_search_engine),
+                    value = searchEngine.displayName,
+                    expanded = searchEngineMenuExpanded,
+                    onClick = { searchEngineMenuExpanded = true },
                     inPreferenceGroup = true,
                 )
                 SettingsDropdown(
-                    expanded = fallbackMenuExpanded,
-                    onDismissRequest = { fallbackMenuExpanded = false },
+                    expanded = searchEngineMenuExpanded,
+                    onDismissRequest = { searchEngineMenuExpanded = false },
                 ) {
-                    SearchSuggestionProvider.entries
-                        .filterNot { it == SearchSuggestionProvider.SearXNG }
-                        .forEach { provider ->
-                            SettingsDropdownItem(
-                                label = provider.displayName(),
-                                selected = provider == searxngSettings.suggestionFallback,
-                                onClick = {
-                                    fallbackMenuExpanded = false
-                                    onSearxngSettingsChanged(
-                                        searxngSettings.copy(suggestionFallback = provider),
-                                    )
-                                },
+                    SearchEngine.entries.forEach { engine ->
+                        SettingsDropdownItem(
+                            label = engine.displayName,
+                            selected = engine == searchEngine,
+                            onClick = {
+                                searchEngineMenuExpanded = false
+                                onSearchEngineChanged(engine)
+                            },
+                        )
+                    }
+                }
+            }
+            SettingsPreferenceDivider()
+            SettingsSwitch(
+                    title = stringResource(R.string.settings_ai_mode_toggle_title),
+                    subtitle = stringResource(R.string.settings_ai_mode_toggle_subtitle),
+                    checked = isAiModeToggleVisible,
+                    enabled = searchEngine.supportsAiSearch,
+                    onCheckedChange = onAiModeToggleVisibleChanged,
+                    modifier = Modifier,
+                )
+            run {
+                SettingsPreferenceDivider()
+                val normalizedInstanceUrl = SearxngRules.normalizedInstanceUrl(
+                    instanceUrlDraft,
+                )
+                OutlinedTextField(
+                    value = instanceUrlDraft,
+                    onValueChange = { value ->
+                        val boundedValue = value.take(SearxngRules.MAX_INSTANCE_URL_LENGTH)
+                        val normalizedValue = SearxngRules.normalizedInstanceUrl(boundedValue)
+                        instanceUrlDraft = boundedValue
+                        when {
+                            boundedValue.isBlank() -> onSearxngSettingsChanged(
+                                searxngSettings.copy(instanceUrl = ""),
+                            )
+                            normalizedValue != null -> onSearxngSettingsChanged(
+                                searxngSettings.copy(instanceUrl = normalizedValue),
                             )
                         }
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 18.dp, vertical = 8.dp)
+                        .testTag(SearchSettingsTestTags.SearxngInstanceUrl)
+                        .settingsSearchTarget(stringResource(R.string.settings_searxng_instance_url)),
+                    label = { Text(stringResource(R.string.settings_searxng_instance_url)) },
+                    supportingText = {
+                        Text(
+                            stringResource(
+                                if (
+                                    instanceUrlDraft.isNotBlank() &&
+                                    normalizedInstanceUrl == null
+                                ) {
+                                    R.string.settings_searxng_instance_url_invalid
+                                } else {
+                                    R.string.settings_searxng_instance_url_summary
+                                },
+                            ),
+                        )
+                    },
+                    isError = instanceUrlDraft.isNotBlank() &&
+                        normalizedInstanceUrl == null,
+                    enabled = searchEngine == SearchEngine.SearXNG ||
+                        searchSuggestionProvider == SearchSuggestionProvider.SearXNG,
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Uri,
+                        imeAction = ImeAction.Done,
+                    ),
+                    singleLine = true,
+                )
+            }
+        }
+        SettingsPageSpacer()
+        SettingsPreferenceGroup {
+            SettingsSwitch(
+                title = stringResource(R.string.settings_history_suggestions_title),
+                subtitle = stringResource(R.string.settings_history_suggestions_summary),
+                checked = isHistorySuggestionsEnabled,
+                onCheckedChange = onHistorySuggestionsEnabledChanged,
+                modifier = Modifier.testTag(SearchSettingsTestTags.HistorySuggestions),
+            )
+            SettingsPreferenceDivider()
+            Box {
+                SettingsChoice(
+                    title = stringResource(R.string.settings_search_suggestions),
+                    value = searchSuggestionProvider.displayName(),
+                    expanded = searchSuggestionMenuExpanded,
+                    onClick = { searchSuggestionMenuExpanded = true },
+                    modifier = Modifier.testTag(SearchSettingsTestTags.SuggestionProvider),
+                    inPreferenceGroup = true,
+                )
+                SettingsDropdown(
+                    expanded = searchSuggestionMenuExpanded,
+                    onDismissRequest = { searchSuggestionMenuExpanded = false },
+                ) {
+                    SearchSuggestionProvider.entries.forEach { provider ->
+                        SettingsDropdownItem(
+                            label = provider.displayName(),
+                            selected = provider == searchSuggestionProvider,
+                            onClick = {
+                                searchSuggestionMenuExpanded = false
+                                onSearchSuggestionProviderChanged(provider)
+                            },
+                        )
+                    }
                 }
             }
             Text(
-                stringResource(R.string.settings_searxng_suggestion_fallback_summary),
+                stringResource(
+                    if (searchSuggestionProvider == SearchSuggestionProvider.None) {
+                        R.string.settings_search_suggestions_none_summary
+                    } else if (searchSuggestionProvider == SearchSuggestionProvider.SearXNG) {
+                        R.string.settings_searxng_search_suggestions_summary
+                    } else {
+                        R.string.settings_search_suggestions_summary
+                    },
+                ),
                 modifier = Modifier.padding(start = 18.dp, top = 6.dp, end = 18.dp),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-        }
+            run {
+                SettingsPreferenceDivider()
+                Box {
+                    SettingsChoice(
+                        title = stringResource(R.string.settings_searxng_suggestion_fallback),
+                        value = searxngSettings.suggestionFallback.displayName(),
+                        expanded = fallbackMenuExpanded,
+                        onClick = {
+                            if (searchSuggestionProvider == SearchSuggestionProvider.SearXNG) {
+                                fallbackMenuExpanded = true
+                            }
+                        },
+                        modifier = Modifier.testTag(SearchSettingsTestTags.SearxngFallback),
+                        enabled = searchSuggestionProvider == SearchSuggestionProvider.SearXNG,
+                        inPreferenceGroup = true,
+                    )
+                    SettingsDropdown(
+                        expanded = fallbackMenuExpanded,
+                        onDismissRequest = { fallbackMenuExpanded = false },
+                    ) {
+                        SearchSuggestionProvider.entries
+                            .filterNot { it == SearchSuggestionProvider.SearXNG }
+                            .forEach { provider ->
+                                SettingsDropdownItem(
+                                    label = provider.displayName(),
+                                    selected = provider == searxngSettings.suggestionFallback,
+                                    onClick = {
+                                        fallbackMenuExpanded = false
+                                        onSearxngSettingsChanged(
+                                            searxngSettings.copy(suggestionFallback = provider),
+                                        )
+                                    },
+                                )
+                            }
+                    }
+                }
+                Text(
+                    stringResource(R.string.settings_searxng_suggestion_fallback_summary),
+                    modifier = Modifier.padding(start = 18.dp, top = 6.dp, end = 18.dp, bottom = 14.dp),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
     }
 }

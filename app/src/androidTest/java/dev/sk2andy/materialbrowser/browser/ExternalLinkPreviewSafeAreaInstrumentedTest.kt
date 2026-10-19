@@ -1,11 +1,13 @@
 package dev.sk2andy.materialbrowser.browser
 
 import android.content.Context
+import android.widget.FrameLayout
 import androidx.activity.ComponentActivity
 import androidx.core.graphics.Insets
 import androidx.core.view.WindowInsetsCompat
 import androidx.test.ext.junit.rules.ActivityScenarioRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
 import dev.sk2andy.materialbrowser.browser.gecko.CandyGeckoView
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoPrivacyEvent
 import dev.sk2andy.materialbrowser.data.BrowserSessionStore
@@ -24,20 +26,38 @@ class ExternalLinkPreviewSafeAreaInstrumentedTest {
     @get:Rule
     val activityRule = ActivityScenarioRule(ComponentActivity::class.java)
     private var controller: BrowserController? = null
+    private val preferences = InstrumentationRegistry.getInstrumentation().targetContext
+        .getSharedPreferences(BrowserSessionStore.PREFERENCES_NAME, Context.MODE_PRIVATE)
+    private val originalPreferences = preferences.all.toMap()
 
     @After
     fun tearDown() {
-        activityRule.scenario.onActivity { activity ->
-            controller?.destroy()
-            activity.getSharedPreferences(BrowserSessionStore.PREFERENCES_NAME, Context.MODE_PRIVATE)
-                .edit().clear().commit()
+        activityRule.scenario.onActivity { controller?.destroy() }
+        val editor = preferences.edit()
+        // Restore the fixture without clearing unrelated existing browser settings.
+        (preferences.all.keys - originalPreferences.keys).forEach(editor::remove)
+        originalPreferences.forEach { (key, value) ->
+            when (value) {
+                is Boolean -> editor.putBoolean(key, value)
+                is Int -> editor.putInt(key, value)
+                is Long -> editor.putLong(key, value)
+                is Float -> editor.putFloat(key, value)
+                is String -> editor.putString(key, value)
+                is Set<*> -> editor.putStringSet(key, value.filterIsInstance<String>().toSet())
+            }
         }
+        assertTrue(editor.commit())
+        assertEquals(originalPreferences, preferences.all)
     }
 
     @Test
     fun hiddenKeyboardInsetDoesNotShrinkExternalPreview() {
         activityRule.scenario.onActivity { activity ->
             val browser = preparePreview(activity)
+            val container = FrameLayout(activity)
+            activity.setContentView(container)
+            browser.attachExternalLinkPreview(container)
+            assertTrue(previewView(browser).isAttachedToWindow)
             val hiddenKeyboardInsets = WindowInsetsCompat.Builder()
                 .setInsets(WindowInsetsCompat.Type.ime(), Insets.of(0, 0, 0, 360))
                 .setVisible(WindowInsetsCompat.Type.ime(), false)

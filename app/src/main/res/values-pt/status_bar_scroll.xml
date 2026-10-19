@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="status_bar_scroll_accessibility_service_label">Rolagem pela barra de status do Candy</string>
+    <string name="status_bar_scroll_accessibility_service_description">Permite tocar no centro da barra de status para voltar ao topo da página atual do Candy. O Candy não lê o conteúdo das janelas.</string>
+    <string name="status_bar_scroll_target_description">Voltar ao topo da página atual</string>
+    <string name="settings_status_bar_scroll_title">Tocar na barra de status para voltar ao topo</string>
+    <string name="settings_status_bar_scroll_summary">Adiciona uma área de toque invisível no centro da barra de status do Android. Requer acesso de acessibilidade para o Candy.</string>
+    <string name="settings_status_bar_scroll_width_title">Largura da área de toque</string>
+    <string name="settings_status_bar_scroll_width_summary">%1$d%% da largura da tela</string>
+    <string name="settings_status_bar_scroll_accessibility_dialog_title">Permitir acesso de acessibilidade ao Candy?</string>
+    <string name="settings_status_bar_scroll_accessibility_dialog_message">O Android exige um serviço de acessibilidade para receber toques na barra de status do sistema. Abra as configurações de acessibilidade do Android e ative a rolagem pela barra de status do Candy. O Candy usa o serviço apenas para esses toques e não lê o conteúdo das janelas.</string>
+    <string name="settings_status_bar_scroll_accessibility_open">Abrir configurações de acessibilidade</string>
+    <string name="settings_status_bar_scroll_enable_for_domain">Ativar rolagem pela barra de status neste site</string>
+    <string name="settings_status_bar_scroll_disable_for_domain">Desativar rolagem pela barra de status neste site</string>
+</resources>

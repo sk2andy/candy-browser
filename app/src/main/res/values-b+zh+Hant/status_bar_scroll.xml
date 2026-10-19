@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="status_bar_scroll_accessibility_service_label">Candy 狀態列捲動</string>
+    <string name="status_bar_scroll_accessibility_service_description">輕觸狀態列中央即可將目前的 Candy 頁面捲動至頂端。Candy 不會讀取視窗內容。</string>
+    <string name="status_bar_scroll_target_description">將目前頁面捲動至頂端</string>
+    <string name="settings_status_bar_scroll_title">輕觸狀態列以捲動至頂端</string>
+    <string name="settings_status_bar_scroll_summary">在 Android 狀態列中央新增一個隱形的輕觸區域。需要授予 Candy 無障礙存取權。</string>
+    <string name="settings_status_bar_scroll_width_title">輕觸區域寬度</string>
+    <string name="settings_status_bar_scroll_width_summary">螢幕寬度的 %1$d%%</string>
+    <string name="settings_status_bar_scroll_accessibility_dialog_title">允許 Candy 使用無障礙服務？</string>
+    <string name="settings_status_bar_scroll_accessibility_dialog_message">Android 需要無障礙服務才能接收系統狀態列上的輕觸。請開啟 Android 無障礙設定，然後啟用「Candy 狀態列捲動」。Candy 僅使用此服務處理這些輕觸，不會讀取視窗內容。</string>
+    <string name="settings_status_bar_scroll_accessibility_open">開啟無障礙設定</string>
+    <string name="settings_status_bar_scroll_enable_for_domain">為此網站啟用狀態列捲動</string>
+    <string name="settings_status_bar_scroll_disable_for_domain">為此網站停用狀態列捲動</string>
+</resources>

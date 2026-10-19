@@ -36,36 +36,29 @@ class PlayerSettingsPageInstrumentedTest {
         var mode by mutableStateOf(InlineMediaPlayerMode.ButtonFullscreen)
         composeRule.setContent {
             MaterialBrowserTheme {
-                PlayerSettingsPage(
-                    isVideoAutoplayBlocked = false,
-                    isVideoAutoplayBlockingSupported = true,
-                    inlineMediaPlayerMode = mode,
-                    isInlineMediaPlayerSupported = true,
-                    onVideoAutoplayBlockedChanged = {},
-                    onInlineMediaPlayerModeChanged = { mode = it },
+                PlayerModeSettingsPage(
+                    mode = mode,
+                    enabled = true,
+                    onModeChanged = { mode = it },
                     onBack = {},
                 )
             }
         }
 
-        composeRule.onNodeWithTag(PlayerSettingsTestTags.InlineMediaPlayer)
-            .performScrollTo()
-            .performClick()
         composeRule.onNodeWithText(
             context.getString(
                 R.string.settings_inline_media_player_mode_button_inline_fullscreen,
             ),
-        ).performClick()
+        ).performScrollTo().performClick()
 
         assertEquals(InlineMediaPlayerMode.ButtonInlineAndFullscreen, mode)
         val evidencePauseMillis = InstrumentationRegistry.getArguments()
             .getString("evidencePauseMillis")?.toLongOrNull()?.coerceIn(0L, 5_000L) ?: 0L
-        composeRule.onNodeWithTag(PlayerSettingsTestTags.InlineMediaPlayer).performClick()
         composeRule.waitForIdle()
         if (evidencePauseMillis > 0) SystemClock.sleep(evidencePauseMillis)
         composeRule.onNodeWithText(
             context.getString(R.string.settings_inline_media_player_mode_disabled),
-        ).performClick()
+        ).performScrollTo().performClick()
         assertEquals(InlineMediaPlayerMode.Disabled, mode)
         composeRule.waitForIdle()
         if (evidencePauseMillis > 0) SystemClock.sleep(evidencePauseMillis)

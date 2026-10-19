@@ -3,6 +3,12 @@ package dev.sk2andy.materialbrowser.shared.ui.settings
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Block
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.ViewCarousel
+import androidx.compose.material.icons.filled.Web
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -95,6 +101,17 @@ fun BrowserMenuSettingsPage(
                                 SettingsDropdownItem(
                                     label = resources.locationLabel(location),
                                     selected = currentLocation == location,
+                                    leadingIcon = {
+                                        Icon(
+                                            imageVector = when (location) {
+                                                BrowserMenuLocation.Nowhere -> Icons.Default.Block
+                                                BrowserMenuLocation.Tab -> Icons.Default.Web
+                                                BrowserMenuLocation.TabSwitcher -> Icons.Default.ViewCarousel
+                                                BrowserMenuLocation.Both -> Icons.Default.ContentCopy
+                                            },
+                                            contentDescription = null,
+                                        )
+                                    },
                                     onClick = {
                                         expandedEntry = null
                                         if (location != currentLocation) {
@@ -105,9 +122,7 @@ fun BrowserMenuSettingsPage(
                             }
                         }
                     }
-                    if (index != entries.lastIndex) {
-                        SettingsPreferenceDivider()
-                    }
+                    if (index != entries.lastIndex) SettingsPreferenceDivider()
                 }
             }
             if (section != BrowserMenuConfigurationSection.entries.last()) {

@@ -1,7 +1,6 @@
 package dev.sk2andy.materialbrowser.ui
 
 import androidx.annotation.StringRes
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import dev.sk2andy.materialbrowser.R
@@ -16,12 +15,12 @@ import dev.sk2andy.materialbrowser.shared.ui.settings.BrowserMenuSettingsResourc
 import dev.sk2andy.materialbrowser.shared.ui.settings.BrowserMenuPresentationSettings
 import dev.sk2andy.materialbrowser.shared.ui.settings.BrowserMenuPresentationSettingsResources
 import dev.sk2andy.materialbrowser.shared.ui.settings.BrowserMenuSettingsPage as SharedBrowserMenuSettingsPage
-import dev.sk2andy.materialbrowser.ui.theme.browserChromeColor
+import dev.sk2andy.materialbrowser.shared.ui.settings.settingsRowColor
 
 internal typealias BrowserMenuPresentationSettingsTestTags =
     dev.sk2andy.materialbrowser.shared.ui.settings.BrowserMenuPresentationSettingsTestTags
 
-private object AndroidBrowserMenuSettingsResources : BrowserMenuSettingsResources,
+internal object AndroidBrowserMenuSettingsResources : BrowserMenuSettingsResources,
     BrowserMenuPresentationSettingsResources {
     @Composable
     override fun presentationTitle(): String = stringResource(R.string.settings_menu_presentation_title)
@@ -96,11 +95,13 @@ internal fun BrowserMenuSettingsPage(
     onPresentationChanged: (BrowserMenuPresentation) -> Unit = {},
     onBottomSheetContentLayoutChanged: (BrowserMenuBottomSheetContentLayout) -> Unit = {},
     onBottomSheetToolbarEntriesChanged: (List<BrowserMenuEntry?>) -> Unit = {},
+    onOpenPresentation: () -> Unit = {},
+    onOpenContentLayout: () -> Unit = {},
 ) {
     SharedBrowserMenuSettingsPage(
         layout = layout,
         resources = AndroidBrowserMenuSettingsResources,
-        containerColor = browserChromeColor(MaterialTheme.colorScheme.surfaceContainerHigh),
+        containerColor = settingsRowColor(),
         availableEntries = BrowserMenuEntry.entries.filterNot { entry ->
             entry == BrowserMenuEntry.OpenFirefoxExtensions ||
                 (entry == BrowserMenuEntry.StatusBarScroll && !statusBarScrollEnabled)
@@ -111,11 +112,13 @@ internal fun BrowserMenuSettingsPage(
             BrowserMenuPresentationSettings(
                 layout = layout,
                 resources = AndroidBrowserMenuSettingsResources,
-                containerColor = browserChromeColor(MaterialTheme.colorScheme.surfaceContainerHigh),
+                containerColor = settingsRowColor(),
                 availableEntries = BrowserMenuEntry.entries.filterNot { entry ->
                     entry == BrowserMenuEntry.OpenFirefoxExtensions ||
                         (entry == BrowserMenuEntry.StatusBarScroll && !statusBarScrollEnabled)
                 },
+                onOpenPresentation = onOpenPresentation,
+                onOpenContentLayout = onOpenContentLayout,
                 onLayoutChanged = { updated ->
                     if (updated.presentation != layout.presentation) onPresentationChanged(updated.presentation)
                     if (updated.bottomSheetContentLayout != layout.bottomSheetContentLayout) {

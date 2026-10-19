@@ -1,6 +1,8 @@
 package dev.sk2andy.materialbrowser.ui
 
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.material3.MaterialTheme
+import dev.sk2andy.materialbrowser.shared.ui.settings.AppearanceSettingsSection
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import dev.sk2andy.materialbrowser.R
@@ -40,6 +42,8 @@ internal object AppearanceSettingsTestTags {
 @Composable
 internal fun AppearanceSettingsPage(
     settings: AppearanceSettings,
+    section: AppearanceSettingsSection = AppearanceSettingsSection.All,
+    navigationContent: @Composable ColumnScope.() -> Unit = {},
     onSettingsChanged: (AppearanceSettings) -> Unit,
     onBack: () -> Unit,
     forceDarkWebsitesAvailable: Boolean = true,
@@ -47,8 +51,16 @@ internal fun AppearanceSettingsPage(
 ) {
     SharedAppearanceSettingsPage(
         settings = settings,
+        section = section,
+        navigationContent = navigationContent,
         strings = AppearanceSettingsStrings(
-            title = stringResource(R.string.settings_appearance_title),
+            title = stringResource(when (section) {
+                AppearanceSettingsSection.Colors -> R.string.settings_colors_title
+                AppearanceSettingsSection.Surfaces -> R.string.settings_surfaces_shapes_title
+                AppearanceSettingsSection.AddressBar -> R.string.settings_address_bar_style
+                AppearanceSettingsSection.Websites -> R.string.settings_browser_group_websites
+                else -> R.string.settings_appearance_title
+            }),
             back = stringResource(R.string.action_back),
             appearanceMode = stringResource(R.string.settings_appearance_mode),
             appearanceModeNames = BrowserAppearanceMode.entries.associateWith { it.displayName() },

@@ -48,21 +48,7 @@ fun SettingsRouter(
                 transitionSpec = {
                     if (reduceMotion) {
                         fadeIn(tween(0)) togetherWith fadeOut(tween(0))
-                    } else if (
-                        targetState == SettingsDestination.Home ||
-                        initialState == SettingsDestination.LinkRouting &&
-                        targetState == SettingsDestination.Browser ||
-                        initialState == SettingsDestination.ToppingCatalog &&
-                        targetState == SettingsDestination.Userscripts ||
-                        initialState == SettingsDestination.AddressBarLongPressActions &&
-                        targetState == SettingsDestination.TabsAndGestures ||
-                        initialState == SettingsDestination.AddressBarActions &&
-                        targetState == SettingsDestination.TabsAndGestures ||
-                        initialState == SettingsDestination.MenuActions &&
-                        targetState == SettingsDestination.TabsAndGestures ||
-                        initialState == SettingsDestination.LinkPeekActions &&
-                        targetState == SettingsDestination.TabsAndGestures
-                    ) {
+                    } else if (SettingsNavigationRules.isBackNavigation(initialState, targetState)) {
                         (slideInHorizontally { width -> -width / 3 } + fadeIn()) togetherWith
                             (slideOutHorizontally { width -> width } + fadeOut())
                     } else {

@@ -18,6 +18,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import dev.sk2andy.materialbrowser.shared.ui.settings.SettingsFeatureIllustration
+import dev.sk2andy.materialbrowser.shared.ui.settings.SettingsIllustrationKind
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.browser.BrowserProfile
 import dev.sk2andy.materialbrowser.browser.integration.devicesearch.DeviceSearchItem
@@ -45,10 +47,16 @@ internal fun DeviceSearchSettingsPage(
             style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.padding(bottom = 12.dp),
         )
+        SettingsFeatureIllustration(
+            SettingsIllustrationKind.DeviceSearch,
+            active = settings.enabled,
+        )
+        SettingsPageSpacer()
         SettingsSwitch(
             title = stringResource(R.string.device_search_enable),
             subtitle = stringResource(R.string.device_search_enable_summary),
             checked = settings.enabled,
+            prominent = true,
             enabled = !busy,
             onCheckedChange = { if (!busy) onSettingsChanged(settings.copy(enabled = it)) },
             modifier = Modifier.testTag(DeviceSearchTestTags.Enabled),
@@ -61,15 +69,17 @@ internal fun DeviceSearchSettingsPage(
         )
         if (profiles.isNotEmpty()) {
             SettingsSectionTitle(stringResource(R.string.device_search_bookmark_profile))
-            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())) {
-                profiles.forEach { profile ->
-                    FilterChip(
-                        selected = settings.bookmarkProfileId == profile.id,
-                        onClick = { onSettingsChanged(settings.copy(bookmarkProfileId = profile.id)) },
-                        enabled = !busy,
-                        label = { Text(profile.emoji) },
-                        modifier = Modifier.padding(end = 8.dp),
-                    )
+            SettingsPreferenceGroup {
+                Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp).horizontalScroll(rememberScrollState())) {
+                    profiles.forEach { profile ->
+                        FilterChip(
+                            selected = settings.bookmarkProfileId == profile.id,
+                            onClick = { onSettingsChanged(settings.copy(bookmarkProfileId = profile.id)) },
+                            enabled = !busy && settings.enabled,
+                            label = { Text(profile.emoji) },
+                            modifier = Modifier.padding(end = 8.dp),
+                        )
+                    }
                 }
             }
         }
@@ -93,25 +103,28 @@ internal fun DeviceSearchSettingsPage(
                     modifier = Modifier.padding(vertical = 8.dp),
                 )
             }
-            sectionItems.forEach { item ->
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Column(Modifier.weight(1f)) {
-                        Text(item.title, style = MaterialTheme.typography.titleSmall)
-                        Text(item.sourceUrl, style = MaterialTheme.typography.bodySmall, maxLines = 2)
+            SettingsPreferenceGroup {
+                sectionItems.forEachIndexed { index, item ->
+                    if (index > 0) SettingsPreferenceDivider()
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column(Modifier.weight(1f)) {
+                            Text(item.title, style = MaterialTheme.typography.titleSmall)
+                            Text(item.sourceUrl, style = MaterialTheme.typography.bodySmall, maxLines = 2)
+                        }
+                        Checkbox(
+                            checked = item.id in settings.selectedIds,
+                            enabled = !busy && settings.enabled,
+                            onCheckedChange = { selected ->
+                                onSettingsChanged(settings.copy(
+                                    selectedIds = if (selected) settings.selectedIds + item.id else settings.selectedIds - item.id,
+                                ))
+                            },
+                            modifier = Modifier.testTag(DeviceSearchTestTags.item(item.id)).semantics { contentDescription = item.title },
+                        )
                     }
-                    Checkbox(
-                        checked = item.id in settings.selectedIds,
-                        enabled = !busy,
-                        onCheckedChange = { selected ->
-                            onSettingsChanged(settings.copy(
-                                selectedIds = if (selected) settings.selectedIds + item.id else settings.selectedIds - item.id,
-                            ))
-                        },
-                        modifier = Modifier.testTag(DeviceSearchTestTags.item(item.id)).semantics { contentDescription = item.title },
-                    )
                 }
             }
         }

@@ -47,123 +47,123 @@ internal fun DownloadsSettingsPage(
         onBack = onBack,
     ) {
         SettingsPreferenceGroup {
-        Box {
-            SettingsChoice(
-                title = stringResource(R.string.settings_download_manager_title),
-                value = settings.displayName(externalManagers),
-                expanded = managerMenuExpanded,
-                onClick = { managerMenuExpanded = true },
-                inPreferenceGroup = true,
-            )
-            SettingsDropdown(
-                expanded = managerMenuExpanded,
-                onDismissRequest = { managerMenuExpanded = false },
-            ) {
-                SettingsDropdownItem(
-                    label = stringResource(R.string.settings_download_manager_builtin),
-                    selected = settings.managerMode == DownloadManagerMode.BuiltIn,
-                    onClick = {
-                        managerMenuExpanded = false
-                        onSettingsChanged(
-                            settings.copy(
-                                managerMode = DownloadManagerMode.BuiltIn,
-                                externalManagerId = null,
-                            ),
-                        )
-                    },
+            Box {
+                SettingsChoice(
+                    title = stringResource(R.string.settings_download_manager_title),
+                    value = settings.displayName(externalManagers),
+                    expanded = managerMenuExpanded,
+                    onClick = { managerMenuExpanded = true },
+                    inPreferenceGroup = true,
                 )
-                SettingsDropdownItem(
-                    label = stringResource(R.string.settings_download_manager_ask),
-                    selected = settings.managerMode == DownloadManagerMode.AskEveryTime,
-                    onClick = {
-                        managerMenuExpanded = false
-                        onSettingsChanged(
-                            settings.copy(
-                                managerMode = DownloadManagerMode.AskEveryTime,
-                                externalManagerId = null,
-                            ),
-                        )
-                    },
-                )
-                externalManagers.forEach { manager ->
+                SettingsDropdown(
+                    expanded = managerMenuExpanded,
+                    onDismissRequest = { managerMenuExpanded = false },
+                ) {
                     SettingsDropdownItem(
-                        label = manager.label,
-                        selected = settings.managerMode == DownloadManagerMode.External &&
-                            settings.externalManagerId == manager.id,
+                        label = stringResource(R.string.settings_download_manager_builtin),
+                        selected = settings.managerMode == DownloadManagerMode.BuiltIn,
                         onClick = {
                             managerMenuExpanded = false
                             onSettingsChanged(
                                 settings.copy(
-                                    managerMode = DownloadManagerMode.External,
-                                    externalManagerId = manager.id,
+                                    managerMode = DownloadManagerMode.BuiltIn,
+                                    externalManagerId = null,
                                 ),
                             )
                         },
                     )
+                    SettingsDropdownItem(
+                        label = stringResource(R.string.settings_download_manager_ask),
+                        selected = settings.managerMode == DownloadManagerMode.AskEveryTime,
+                        onClick = {
+                            managerMenuExpanded = false
+                            onSettingsChanged(
+                                settings.copy(
+                                    managerMode = DownloadManagerMode.AskEveryTime,
+                                    externalManagerId = null,
+                                ),
+                            )
+                        },
+                    )
+                    externalManagers.forEach { manager ->
+                        SettingsDropdownItem(
+                            label = manager.label,
+                            selected = settings.managerMode == DownloadManagerMode.External &&
+                                settings.externalManagerId == manager.id,
+                            onClick = {
+                                managerMenuExpanded = false
+                                onSettingsChanged(
+                                    settings.copy(
+                                        managerMode = DownloadManagerMode.External,
+                                        externalManagerId = manager.id,
+                                    ),
+                                )
+                            },
+                        )
+                    }
                 }
             }
-        }
-        if (externalManagers.isEmpty()) {
-            Text(
-                stringResource(R.string.settings_download_no_external_managers),
-                modifier = Modifier.padding(start = 18.dp, top = 8.dp, end = 18.dp),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(
-                    alpha = if (settings.managerMode == DownloadManagerMode.BuiltIn) 1f else 0.6f,
-                ),
-            )
-        }
-            SettingsPreferenceDivider()
-            SettingsChoice(
-                title = stringResource(R.string.settings_download_folder_title),
-                value = settings.downloadSubdirectory?.let { relativePath ->
-                    stringResource(R.string.settings_download_folder_path, relativePath)
-                } ?: stringResource(R.string.settings_download_folder_default),
-                expanded = false,
-                onClick = {
-                    if (settings.managerMode == DownloadManagerMode.BuiltIn) {
-                        directoryDraft = settings.downloadSubdirectory.orEmpty()
-                        directoryDialogVisible = true
-                    }
-                },
-                modifier = Modifier.testTag(DownloadSettingsTestTags.Directory),
-                enabled = settings.managerMode == DownloadManagerMode.BuiltIn,
-                inPreferenceGroup = true,
-            )
-            Text(
-                stringResource(R.string.settings_download_folder_summary),
-                modifier = Modifier.padding(start = 18.dp, top = 8.dp, end = 18.dp),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(
-                    alpha = if (settings.managerMode == DownloadManagerMode.BuiltIn) 1f else 0.6f,
-                ),
-            )
-            if (settings.downloadSubdirectory != null) {
-                TextButton(
+            if (externalManagers.isEmpty()) {
+                Text(
+                    stringResource(R.string.settings_download_no_external_managers),
+                    modifier = Modifier.padding(start = 18.dp, top = 8.dp, end = 18.dp),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(
+                        alpha = if (settings.managerMode == DownloadManagerMode.BuiltIn) 1f else 0.6f,
+                    ),
+                )
+            }
+                SettingsPreferenceDivider()
+                SettingsChoice(
+                    title = stringResource(R.string.settings_download_folder_title),
+                    value = settings.downloadSubdirectory?.let { relativePath ->
+                        stringResource(R.string.settings_download_folder_path, relativePath)
+                    } ?: stringResource(R.string.settings_download_folder_default),
+                    expanded = false,
                     onClick = {
                         if (settings.managerMode == DownloadManagerMode.BuiltIn) {
-                            onSettingsChanged(settings.copy(downloadSubdirectory = null))
+                            directoryDraft = settings.downloadSubdirectory.orEmpty()
+                            directoryDialogVisible = true
                         }
                     },
+                    modifier = Modifier.testTag(DownloadSettingsTestTags.Directory),
                     enabled = settings.managerMode == DownloadManagerMode.BuiltIn,
-                    modifier = Modifier
-                        .padding(horizontal = 6.dp)
-                        .testTag(DownloadSettingsTestTags.DirectoryReset),
-                ) {
-                    Text(stringResource(R.string.settings_download_folder_reset))
+                    inPreferenceGroup = true,
+                )
+                Text(
+                    stringResource(R.string.settings_download_folder_summary),
+                    modifier = Modifier.padding(start = 18.dp, top = 8.dp, end = 18.dp),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(
+                        alpha = if (settings.managerMode == DownloadManagerMode.BuiltIn) 1f else 0.6f,
+                    ),
+                )
+                if (settings.downloadSubdirectory != null) {
+                    TextButton(
+                        onClick = {
+                            if (settings.managerMode == DownloadManagerMode.BuiltIn) {
+                                onSettingsChanged(settings.copy(downloadSubdirectory = null))
+                            }
+                        },
+                        enabled = settings.managerMode == DownloadManagerMode.BuiltIn,
+                        modifier = Modifier
+                            .padding(horizontal = 6.dp)
+                            .testTag(DownloadSettingsTestTags.DirectoryReset),
+                    ) {
+                        Text(stringResource(R.string.settings_download_folder_reset))
+                    }
                 }
-            }
-            SettingsPreferenceDivider()
-            SettingsSwitch(
-                title = stringResource(R.string.settings_download_one_dm_session_title),
-                subtitle = stringResource(R.string.settings_download_one_dm_session_summary),
-                checked = settings.shareSessionDataWithOneDm,
-                enabled = oneDmRelevant,
-                onCheckedChange = {
-                    onSettingsChanged(settings.copy(shareSessionDataWithOneDm = it))
-                },
-                modifier = Modifier.padding(horizontal = 18.dp),
-            )
+                SettingsPreferenceDivider()
+                SettingsSwitch(
+                    title = stringResource(R.string.settings_download_one_dm_session_title),
+                    subtitle = stringResource(R.string.settings_download_one_dm_session_summary),
+                    checked = settings.shareSessionDataWithOneDm,
+                    enabled = oneDmRelevant,
+                    onCheckedChange = {
+                        onSettingsChanged(settings.copy(shareSessionDataWithOneDm = it))
+                    },
+                    modifier = Modifier,
+                )
         }
     }
     if (directoryDialogVisible) {

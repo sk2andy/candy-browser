@@ -27,7 +27,7 @@ import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuLayout
 import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuLocation
 
 private val candyAppearanceStrings = AppearanceSettingsStrings(
-    title = "Darstellung",
+    title = "Theme & Oberfläche",
     back = "Zurück",
     appearanceMode = "Erscheinungsbild",
     appearanceModeNames = mapOf(
@@ -93,7 +93,7 @@ private val candyAppearanceStrings = AppearanceSettingsStrings(
     ),
 )
 
-private val candyTabOverviewStrings = TabOverviewSettingsStrings(
+internal val candyTabOverviewStrings = TabOverviewSettingsStrings(
     overviewMode = "Darstellung der Tab-Übersicht",
     modeNames = mapOf(
         TabOverviewMode.Hero to "Coverflow",
@@ -123,10 +123,30 @@ internal fun CandyAppearanceSettingsPage(
     settings: AppearanceSettings,
     onSettingsChanged: (AppearanceSettings) -> Unit,
     onBack: () -> Unit,
+    section: AppearanceSettingsSection = AppearanceSettingsSection.Theme,
+    onDestinationChanged: (dev.sk2andy.materialbrowser.ui.SettingsDestination) -> Unit = {},
 ) {
     AppearanceSettingsPage(
         settings = settings,
+        section = section,
+        navigationContent = {
+            if (section == AppearanceSettingsSection.Theme) {
+                SettingsPageSpacer()
+                SettingsPreferenceGroup(containerColor = settingsRowColor()) {
+                    SettingsSelectionLink("Farben", "Hell, dunkel oder Systemeinstellung",
+                        onClick = { onDestinationChanged(dev.sk2andy.materialbrowser.ui.SettingsDestination.AppearanceColors) })
+                    SettingsPreferenceDivider()
+                    SettingsSelectionLink("Webseiten", "Seitengröße",
+                        onClick = { onDestinationChanged(dev.sk2andy.materialbrowser.ui.SettingsDestination.AppearanceWebsites) })
+                }
+            }
+        },
         strings = candyAppearanceStrings.copy(
+            title = when (section) {
+                AppearanceSettingsSection.Colors -> "Farben"
+                AppearanceSettingsSection.Websites -> "Webseiten"
+                else -> candyAppearanceStrings.title
+            },
             animationsSummary =
                 "Bewegungen und Übergänge in Candy anzeigen. " +
                     "Die Systemeinstellung zur Bewegungsreduktion bleibt wirksam.",
@@ -148,6 +168,7 @@ internal fun CandyTabsAndGesturesSettingsPage(
     dismissResistancePercent: Int,
     onDismissResistanceChanged: (Int) -> Unit,
     onMenuActions: () -> Unit,
+    onTabOverview: () -> Unit,
     onBack: () -> Unit,
 ) {
     SettingsPage(
@@ -157,48 +178,52 @@ internal fun CandyTabsAndGesturesSettingsPage(
     ) {
         SettingsSectionTitle("Tabs")
         Spacer(Modifier.height(8.dp))
-        TabOverviewSettings(
-            mode = tabOverviewMode,
-            listStartsAtBottom = tabListStartsAtBottom,
-            strings = candyTabOverviewStrings,
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-            onModeChanged = onTabOverviewModeChanged,
-            onListStartsAtBottomChanged = onTabListStartsAtBottomChanged,
-        )
-        Spacer(Modifier.height(2.dp))
-        SettingsSwitch(
-            title = "Tabs nach letzter Nutzung sortieren",
-            subtitle = "Pins bleiben vorn; manuelles Sortieren ist dann aus.",
-            checked = false,
-            enabled = false,
-            onCheckedChange = {},
-        )
-        Spacer(Modifier.height(8.dp))
-        SettingsLink(
-            title = "Menü-Aktionen",
-            subtitle = "Aktionen für Tab- und Tab-Switcher-Menü auswählen",
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-            icon = { modifier, tint ->
-                Icon(
-                    imageVector = Icons.Filled.MoreVert,
-                    contentDescription = null,
-                    modifier = modifier,
-                    tint = tint,
-                )
-            },
-            onClick = onMenuActions,
-        )
-        Spacer(Modifier.height(14.dp))
+        SettingsPreferenceGroup(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh) {
+            TabOverviewSettings(
+                mode = tabOverviewMode,
+                listStartsAtBottom = tabListStartsAtBottom,
+                strings = candyTabOverviewStrings,
+                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                onOpenMode = onTabOverview,
+                onListStartsAtBottomChanged = onTabListStartsAtBottomChanged,
+            )
+            SettingsPreferenceDivider()
+            SettingsSwitch(
+                title = "Tabs nach letzter Nutzung sortieren",
+                subtitle = "Pins bleiben vorn; manuelles Sortieren ist dann aus.",
+                checked = false,
+                enabled = false,
+                onCheckedChange = {},
+            )
+        }
+        SettingsPageSpacer()
         SettingsSectionTitle("Gesten")
-        Spacer(Modifier.height(2.dp))
-        TabDismissResistanceSettings(
-            valuePercent = dismissResistancePercent,
-            title = "Widerstand beim Schließen von Tabs",
-            summary = { value -> "Widerstandsphase: $value% des Schließwegs" },
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-            enabled = true,
-            onValueChanged = onDismissResistanceChanged,
-        )
+        Spacer(Modifier.height(8.dp))
+        SettingsPreferenceGroup(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh) {
+            SettingsLink(
+                title = "Menü-Aktionen",
+                subtitle = "Aktionen für Tab- und Tab-Switcher-Menü auswählen",
+                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                icon = { modifier, tint ->
+                    Icon(
+                        imageVector = Icons.Filled.MoreVert,
+                        contentDescription = null,
+                        modifier = modifier,
+                        tint = tint,
+                    )
+                },
+                onClick = onMenuActions,
+            )
+            SettingsPreferenceDivider()
+            TabDismissResistanceSettings(
+                valuePercent = dismissResistancePercent,
+                title = "Widerstand beim Schließen von Tabs",
+                summary = { value -> "Widerstandsphase: $value% des Schließwegs" },
+                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                enabled = true,
+                onValueChanged = onDismissResistanceChanged,
+            )
+        }
     }
 }
 
@@ -320,6 +345,8 @@ internal fun CandyBrowserMenuSettingsPage(
     availableEntries: List<BrowserMenuEntry>,
     onLocationChanged: (BrowserMenuEntry, BrowserMenuLocation) -> Unit,
     onLayoutChanged: (BrowserMenuLayout) -> Unit,
+    onOpenPresentation: () -> Unit,
+    onOpenContentLayout: () -> Unit,
     onBack: () -> Unit,
 ) {
     BrowserMenuSettingsPage(
@@ -336,6 +363,8 @@ internal fun CandyBrowserMenuSettingsPage(
                 containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                 availableEntries = availableEntries,
                 onLayoutChanged = onLayoutChanged,
+                onOpenPresentation = onOpenPresentation,
+                onOpenContentLayout = onOpenContentLayout,
             )
         },
     )
@@ -352,36 +381,44 @@ internal fun CandyBrowserSettingsPage(
         backContentDescription = "Zurück",
         onBack = onBack,
     ) {
-        SettingsSwitch(
-            title = "Startanimation",
-            subtitle = "Zeigt die Candy-Animation beim normalen App-Start.",
-            checked = false,
-            enabled = false,
-            onCheckedChange = {},
-        )
+        SettingsSectionTitle("Start")
         Spacer(Modifier.height(8.dp))
-        SettingsSwitch(
-            title = "Beim Start Startseite öffnen",
-            subtitle = "Öffnet beim Start einen neuen leeren Tab.",
-            checked = false,
-            enabled = false,
-            onCheckedChange = {},
-        )
+        SettingsPreferenceGroup(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh) {
+            SettingsSwitch(
+                title = "Startanimation",
+                subtitle = "Zeigt die Candy-Animation beim normalen App-Start.",
+                checked = false,
+                enabled = false,
+                onCheckedChange = {},
+            )
+            SettingsPreferenceDivider()
+            SettingsSwitch(
+                title = "Beim Start Startseite öffnen",
+                subtitle = "Öffnet beim Start einen neuen leeren Tab.",
+                checked = false,
+                enabled = false,
+                onCheckedChange = {},
+            )
+        }
+        SettingsPageSpacer()
+        SettingsSectionTitle("Webseiten")
         Spacer(Modifier.height(8.dp))
-        SettingsSwitch(
-            title = "Ziehbare Scrollleiste",
-            subtitle = "Erscheint beim Scrollen und blendet sich danach aus.",
-            checked = false,
-            enabled = false,
-            onCheckedChange = {},
-        )
-        Spacer(Modifier.height(8.dp))
-        TranslationProviderSettings(
-            provider = translationProvider,
-            strings = candyTranslationStrings,
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-            enabled = true,
-            onProviderChanged = onTranslationProviderChanged,
-        )
+        SettingsPreferenceGroup(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh) {
+            SettingsSwitch(
+                title = "Ziehbare Scrollleiste",
+                subtitle = "Erscheint beim Scrollen und blendet sich danach aus.",
+                checked = false,
+                enabled = false,
+                onCheckedChange = {},
+            )
+            SettingsPreferenceDivider()
+            TranslationProviderSettings(
+                provider = translationProvider,
+                strings = candyTranslationStrings,
+                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                enabled = true,
+                onProviderChanged = onTranslationProviderChanged,
+            )
+        }
     }
 }

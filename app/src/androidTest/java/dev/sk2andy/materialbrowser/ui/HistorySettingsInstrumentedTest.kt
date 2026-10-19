@@ -7,7 +7,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
-import androidx.compose.ui.test.hasParent
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.isToggleable
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -51,16 +50,16 @@ class HistorySettingsInstrumentedTest {
         composeRule.onNodeWithTag(ProtectionSettingsTestTags.ClearHistoryOnExit)
             .performScrollTo()
         composeRule.onNode(
-            hasParent(hasTestTag(ProtectionSettingsTestTags.ClearHistoryOnExit)) and isToggleable(),
+            hasTestTag(ProtectionSettingsTestTags.ClearHistoryOnExit) and isToggleable(),
         ).assertIsOn()
         composeRule.onNodeWithTag(ProtectionSettingsTestTags.SaveHistory)
             .performScrollTo()
             .performClick()
         composeRule.onNode(
-            hasParent(hasTestTag(ProtectionSettingsTestTags.SaveHistory)) and isToggleable(),
+            hasTestTag(ProtectionSettingsTestTags.SaveHistory) and isToggleable(),
         ).assertIsOff()
         composeRule.onNode(
-            hasParent(hasTestTag(ProtectionSettingsTestTags.ClearHistoryOnExit)) and isToggleable(),
+            hasTestTag(ProtectionSettingsTestTags.ClearHistoryOnExit) and isToggleable(),
         )
             .assertIsOff()
             .assertIsNotEnabled()

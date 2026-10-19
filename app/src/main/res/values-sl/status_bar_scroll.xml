@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="status_bar_scroll_accessibility_service_label">Pomikanje prek vrstice stanja v Candyju</string>
+    <string name="status_bar_scroll_accessibility_service_description">Dotik sredine vrstice stanja pomakne trenutno stran v Candyju na vrh. Candy ne bere vsebine oken.</string>
+    <string name="status_bar_scroll_target_description">Pomakni trenutno stran na vrh</string>
+    <string name="settings_status_bar_scroll_title">Dotaknite se vrstice stanja za pomik na vrh</string>
+    <string name="settings_status_bar_scroll_summary">Doda nevidno območje dotika na sredino vrstice stanja Androida. Candy potrebuje dostop do funkcij dostopnosti.</string>
+    <string name="settings_status_bar_scroll_width_title">Širina območja dotika</string>
+    <string name="settings_status_bar_scroll_width_summary">%1$d%% širine zaslona</string>
+    <string name="settings_status_bar_scroll_accessibility_dialog_title">Dovolite Candyju dostop do funkcij dostopnosti?</string>
+    <string name="settings_status_bar_scroll_accessibility_dialog_message">Android za zaznavanje dotikov sistemske vrstice stanja zahteva storitev dostopnosti. Odprite nastavitve dostopnosti Androida in vklopite pomikanje prek vrstice stanja v Candyju. Candy storitev uporablja samo za te dotike in ne bere vsebine oken.</string>
+    <string name="settings_status_bar_scroll_accessibility_open">Odpri nastavitve dostopnosti</string>
+    <string name="settings_status_bar_scroll_enable_for_domain">Vklopi pomikanje prek vrstice stanja za to spletno mesto</string>
+    <string name="settings_status_bar_scroll_disable_for_domain">Izklopi pomikanje prek vrstice stanja za to spletno mesto</string>
+</resources>

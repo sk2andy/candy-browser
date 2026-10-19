@@ -1,12 +1,15 @@
 # Appearance and settings
 
+The complete option inventory, old-to-new grouping, dependent controls and capability boundaries are
+recorded in [Settings option map](settings-option-map.md).
+
 ## Android predictive Back
 
 | Surface | Behavior | Owner |
 | --- | --- | --- |
 | Settings home | Existing shrink preview reveals the browser; a nonempty settings search clears first | `BrowserScreen`, `BrowserSettingsOverlay` |
 | Settings subpages | Only the current page shrinks; its parent settings page fills the background throughout the gesture. Cancellation restores the page, commit returns to its parent. | `SettingsBackRouter`, shared `SettingsRouter`, `NativeScreenBackHandler`, `SettingsBackRules` |
-| Nested action pages / Topping catalog | Return to Tabs & gestures / Toppings respectively before Settings home | `SettingsBackRules` |
+| Nested settings | Theme details return to Theme & interface; browser details return to Browser behavior; Link routing returns to Web pages; action editors return to Gestures; Topping catalog returns to Toppings. An active search result returns directly to the preserved Settings search. | shared `SettingsNavigationRules`, `SettingsBackRules`, `SettingsScreen` |
 | Snoozed tabs | Default shrink, followed by the existing dismissal fade; rescheduling dialogs retain Back priority | `SnoozedTabsScreen`, `NativeScreenBackHandler` |
 
 The shared motion keeps the existing 0.9 minimum scale, edge-directed translation and rounded
@@ -64,7 +67,7 @@ gesture cancellation and single-step commits through nested settings destination
 | Address focus on launch | When startup animation is off, every launch, never | When startup animation is off |
 | Open home page on startup | Off, on | Off |
 | Long-press link action | Link Peek, copy, share, download, regular foreground/background tab, private foreground/background tab | Link Peek |
-| Link Peek right-swipe action | Background tab, foreground tab, new stack with source, private tab, copy, share, favorite, snooze, Reader offline; shown only when Link Peek is selected | Background tab |
+| Link Peek right-swipe action | Background tab, foreground tab, new stack with source, private tab, copy, share, favorite, snooze, Reader offline; visible disabled unless Link Peek is selected | Background tab |
 | Switch address pill with swipes | Off: follows page scrolling; on: swipe down expands, swipe up compacts | Off |
 | Candy Recall | Off, on | Off |
 | Page translation provider | Google Translate, Yandex Translate, Kagi Translate | Yandex Translate on Android; Google Translate on iOS |
@@ -82,8 +85,10 @@ gesture cancellation and single-step commits through nested settings destination
 Settings destinations, page shells, controls and core renderers live in `shared/src/commonMain`.
 Android opts into distinct Tabs, Gestures, Extensions, App icon and History & browser data entries;
 shared-home callers keep the combined Tabs & gestures entry and their existing group defaults. Android's
-Browser page labels Browser setup, Startup, Favorites, Web pages, and Links & apps. These are navigation
-labels only; setting ownership, stored keys and values do not change. Android resolves localized
+Browser setup links to Startup, Favorites, Web pages, and Links & apps detail pages. Theme & interface
+links to Colors, Surfaces and shapes, Address bar style, and Web pages. Tabs groups overview/layout, lifecycle and profile
+controls separately; Gestures groups link interactions, action editors and gesture controls. These are
+presentation routes only; setting ownership, stored keys and values do not change. Android resolves localized
 resources, drawable icons, frosted container color and persisted state through adapters. The Android
 settings organization does not change the behavior or persistence of the shared appearance and tab
 settings.
@@ -114,7 +119,7 @@ not get copied.
 | Clear | Opaque neutral containers with standard elevation |
 | Frosted | Light translucent glass chrome; live website blur depends on engine and Android version |
 
-Frosted exposes three persisted controls while selected:
+Frosted keeps three persisted controls together in its surface group. They remain visible and disabled under Clear:
 
 | Control | Range | Default |
 | --- | --- | --- |
@@ -273,8 +278,8 @@ Frosted exposes three persisted controls while selected:
   keep their content sheet, and private-open falls back to Link Peek when the active profile cannot
   create private tabs. Direct downloads reuse the source tab's engine-scoped context-download path;
   Gecko retains its referrer and private session context.
-- Link Peek right-swipe action persists independently of the long-press link choice. Its dropdown
-  and localized search entry appear only when Link Peek is selected. Unknown stored action IDs
+- Link Peek right-swipe action persists independently of the long-press link choice. Its selection-page link remains visible and disabled outside Link Peek;
+  its localized search entry retains its existing Link Peek availability filter. Unknown stored action IDs
   fall back to background-tab open; left always closes the preview except during commit motion.
 - Gestures also owns the Link Peek action editor. It reuses the address-action editor's
   breakaway, snap, settle, haptic and accessibility behavior. Its three configurable positions may
@@ -352,3 +357,55 @@ path defect found while reviewing #204 and the measured verification scope.
 | Privacy | Query and target use `remember`, never saved state, preferences, history, logs or remote suggestions. Closing Settings discards them, including when opened from private browsing. |
 | Verification | `SettingsSearchRulesTest`, `SettingsSearchCatalogTest`, `SettingsSearchInstrumentedTest`, `scripts/test_localization.py`. |
 | Executed checks and screenshots | [`Settings search audit`](../audits/issue-253-settings-search.md). |
+
+## Connected settings groups
+
+Menu presentation and content layout form a connected group; all five lower-toolbar slots form a
+second group. Bottom Sheet-specific choices stay visible and disabled under Floating, preserving
+their values. Action-location choices retain their existing section order, platform availability,
+allowed locations and change-only callbacks. Shared Core browser, tabs/gestures, search and Topping
+pages use the same groups. Unsupported shared-platform controls remain disabled; each Topping switch
+is labeled by name, and its frame scope is disabled while the Topping is off without changing the
+saved allowance. Edit and Delete remain independent management actions.
+
+`BrowserMenuSettingsPageInstrumentedTest` covers five-slot visibility, retained values and large text;
+`SharedCoreSettingsInstrumentedTest` exercises the public shared platform host for browser capability
+boundaries, search validation, tab/menu navigation and Topping semantics.
+
+`SettingsPreferenceGroup` supplies the theme’s extra-large exterior and keeps child control semantics
+separate. Rows use the theme’s extra-small corners, preserving the existing Shape preference.
+`SettingsPreferenceDivider` supplies the narrow page-colored gaps; shared controls inherit group
+membership without requiring each caller to coordinate shapes. Settings pages use neutral
+`surfaceContainerLow` backgrounds and opaque `surfaceContainerLowest` groups, independently of the
+browser's frosted chrome preference. Lazy script/catalog rows use the same first/last corner rule.
+Navigation rows consistently combine an icon, title, subtitle and trailing direction indicator.
+Headers and preference labels wrap at larger font sizes.
+
+Dependent choices remain visible and keep their stored values when inactive. This includes favorite
+animation speed, Link Peek swipe action, frosted sliders, preview profile, download folder/1DM,
+profile Guest Bubble, list origin, player seek and developer CSS controls. Device Search keeps selected
+items visible but disabled while its master is off. Capability limitations still come from the existing
+engine/platform state; this layout does not add engine support or change private persistence.
+
+`SettingsGroupsInstrumentedTest` covers independent labeled switch semantics, retained disabled
+checked values, rejected disabled writes and text wrapping at 200% font scale. Existing navigation,
+search, capability and persistence tests continue to own their contracts. The source inventory is
+captured before edits so reviewers can compare every prior option and dynamic enum owner.
+
+
+### Explanatory selection pages
+
+Colors, surfaces/shapes and address-bar choices use inline radio groups with a Candy browser preview.
+Tab-stack folders reuse the Hero/Grid/List preview. Long-press link and Link Peek swipe choices have
+separate pages grouped by normal tabs, private tabs and other link actions. Foreground/background
+choices keep their existing distinct labels. Candy Player has five explained modes, while autoplay
+and the two seek values stay on its parent page. External preview and closed-tab undo have illustrated
+feature pages with prominent master switches. Device Search keeps its existing controls with a larger
+functional search/result illustration.
+
+Selected radio rows use exactly the same neutral background as unselected rows. The primary-colored
+indicator and selected semantics communicate state. Dropdown selections likewise share their neutral
+menu surface, using a trailing radio indicator. The existing theme, disabled colors, values, write
+callbacks and storage remain authoritative. Search targets move with the controls; the shared parent
+map drives header, system/predictive Back and reverse route transitions. The complete option and
+capability map is in [settings-option-map.md](settings-option-map.md).

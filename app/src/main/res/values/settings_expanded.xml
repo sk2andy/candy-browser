@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_colors_title">Colors</string>
+    <string name="settings_surfaces_shapes_title">Surfaces and shapes</string>
+    <string name="settings_link_long_press_explanation">Choose what happens when you press and hold a link. Foreground opens and switches to the new tab; background keeps you on the current page.</string>
+    <string name="settings_gesture_preview_group">Preview</string>
+    <string name="settings_gesture_normal_tabs_group">Normal tabs</string>
+    <string name="settings_gesture_private_tabs_group">Private tabs</string>
+    <string name="settings_gesture_link_actions_group">Link actions</string>
+    <string name="settings_player_disabled_explanation">Keep using the website’s own player.</string>
+    <string name="settings_player_button_fullscreen_explanation">Show a button that opens a detected video in Candy’s fullscreen player.</string>
+    <string name="settings_player_button_inline_explanation">Show a button to play within the page. Fullscreen remains available in the player.</string>
+    <string name="settings_player_fullscreen_explanation">Use Candy Player when the website requests fullscreen video.</string>
+    <string name="settings_player_automatic_explanation">Open Candy Player automatically when a playable video is detected.</string>
+</resources>

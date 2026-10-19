@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_colors_title">Kolory</string>
+    <string name="settings_surfaces_shapes_title">Powierzchnie i kształty</string>
+    <string name="settings_link_long_press_explanation">Wybierz działanie po przytrzymaniu linku. Na pierwszym planie przechodzisz do nowej karty; w tle pozostajesz na bieżącej stronie.</string>
+    <string name="settings_gesture_preview_group">Podgląd</string>
+    <string name="settings_gesture_normal_tabs_group">Zwykłe karty</string>
+    <string name="settings_gesture_private_tabs_group">Karty prywatne</string>
+    <string name="settings_gesture_link_actions_group">Działania linków</string>
+    <string name="settings_player_disabled_explanation">Nadal używaj odtwarzacza witryny.</string>
+    <string name="settings_player_button_fullscreen_explanation">Przycisk otwiera wykryte filmy na pełnym ekranie w Candy Player.</string>
+    <string name="settings_player_button_inline_explanation">Przycisk uruchamia film wewnątrz strony. Pełny ekran pozostaje dostępny w odtwarzaczu.</string>
+    <string name="settings_player_fullscreen_explanation">Używaj Candy Player, gdy witryna otwiera film na pełnym ekranie.</string>
+    <string name="settings_player_automatic_explanation">Automatycznie otwieraj Candy Player po wykryciu filmu, który można odtworzyć.</string>
+</resources>

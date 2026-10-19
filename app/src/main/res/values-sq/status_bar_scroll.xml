@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="status_bar_scroll_accessibility_service_label">Lëvizja përmes shiritit të statusit në Candy</string>
+    <string name="status_bar_scroll_accessibility_service_description">Një prekje në qendër të shiritit të statusit e çon faqen aktuale të Candy në krye. Candy nuk lexon përmbajtjen e dritareve.</string>
+    <string name="status_bar_scroll_target_description">Çoje faqen aktuale në krye</string>
+    <string name="settings_status_bar_scroll_title">Prek shiritin e statusit për të shkuar në krye</string>
+    <string name="settings_status_bar_scroll_summary">Shton një zonë të padukshme prekëse në qendër të shiritit të statusit të Android. Kërkohet qasja e Candy në aksesueshmëri.</string>
+    <string name="settings_status_bar_scroll_width_title">Gjerësia e zonës prekëse</string>
+    <string name="settings_status_bar_scroll_width_summary">%1$d%% e gjerësisë së ekranit</string>
+    <string name="settings_status_bar_scroll_accessibility_dialog_title">T’i lejohet Candy qasja në aksesueshmëri?</string>
+    <string name="settings_status_bar_scroll_accessibility_dialog_message">Android kërkon një shërbim aksesueshmërie për të marrë prekjet në shiritin e statusit të sistemit. Hap cilësimet e aksesueshmërisë së Android dhe aktivizo lëvizjen përmes shiritit të statusit në Candy. Candy e përdor shërbimin vetëm për këto prekje dhe nuk lexon përmbajtjen e dritareve.</string>
+    <string name="settings_status_bar_scroll_accessibility_open">Hap cilësimet e aksesueshmërisë</string>
+    <string name="settings_status_bar_scroll_enable_for_domain">Aktivizo lëvizjen përmes shiritit të statusit për këtë sajt</string>
+    <string name="settings_status_bar_scroll_disable_for_domain">Çaktivizo lëvizjen përmes shiritit të statusit për këtë sajt</string>
+</resources>

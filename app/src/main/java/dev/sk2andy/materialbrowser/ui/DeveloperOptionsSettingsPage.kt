@@ -23,6 +23,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -106,228 +109,233 @@ internal fun DeveloperOptionsSettingsPage(
         onBack = onBack,
     ) {
         SettingsSectionTitle(stringResource(R.string.developer_options_security_section))
-        Spacer(Modifier.height(8.dp))
-        SettingsSwitch(
-            title = stringResource(R.string.settings_http_password_autofill_title),
-            subtitle = stringResource(
-                if (isHttpPasswordAutofillSupported) {
-                    R.string.settings_http_password_autofill_gecko_summary
-                } else {
-                    R.string.settings_http_password_autofill_system_webview_summary
+        SettingsPreferenceGroup {
+            SettingsSwitch(
+                title = stringResource(R.string.settings_http_password_autofill_title),
+                subtitle = stringResource(
+                    if (isHttpPasswordAutofillSupported) {
+                        R.string.settings_http_password_autofill_gecko_summary
+                    } else {
+                        R.string.settings_http_password_autofill_system_webview_summary
+                    },
+                ),
+                checked = isHttpPasswordAutofillSupported && isHttpPasswordAutofillEnabled,
+                enabled = isHttpPasswordAutofillSupported,
+                onCheckedChange = { enabled ->
+                    if (enabled) httpAutofillConfirmationVisible = true
+                    else onHttpPasswordAutofillEnabledChanged(false)
                 },
-            ),
-            checked = isHttpPasswordAutofillSupported && isHttpPasswordAutofillEnabled,
-            enabled = isHttpPasswordAutofillSupported,
-            onCheckedChange = { enabled ->
-                if (enabled) httpAutofillConfirmationVisible = true
-                else onHttpPasswordAutofillEnabledChanged(false)
-            },
-            modifier = Modifier.testTag(DeveloperOptionsTestTags.HttpPasswordAutofill),
-        )
-        Text(
-            text = stringResource(R.string.settings_http_password_autofill_warning),
-            modifier = Modifier.padding(start = 18.dp, top = 8.dp, end = 18.dp),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.error,
-        )
+                modifier = Modifier.testTag(DeveloperOptionsTestTags.HttpPasswordAutofill),
+            )
+            Text(
+                text = stringResource(R.string.settings_http_password_autofill_warning),
+                modifier = Modifier.padding(start = 18.dp, top = 8.dp, end = 18.dp, bottom = 14.dp),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+            )
+        }
         Spacer(Modifier.height(18.dp))
         SettingsSectionTitle(stringResource(R.string.developer_options_diagnostics_section))
-        Spacer(Modifier.height(8.dp))
-        SettingsSwitch(
-            title = stringResource(R.string.developer_options_app_logging),
-            subtitle = stringResource(R.string.developer_options_app_logging_summary),
-            checked = settings.appLoggingEnabled,
-            onCheckedChange = { enabled ->
-                onSettingsChanged(settings.copy(appLoggingEnabled = enabled))
-            },
-            modifier = Modifier.testTag(DeveloperOptionsTestTags.AppLogging),
-        )
-        SettingsPageSpacer()
-        DeveloperAction(
-            title = stringResource(R.string.developer_options_export_logs),
-            summary = stringResource(R.string.developer_options_export_logs_summary),
-            onClick = onExportLogs,
-            modifier = Modifier.testTag(DeveloperOptionsTestTags.ExportLogs),
-        )
-        SettingsPageSpacer()
-        DeveloperAction(
-            title = stringResource(R.string.developer_options_clear_logs),
-            summary = stringResource(R.string.developer_options_clear_logs_summary),
-            onClick = onClearLogs,
-            modifier = Modifier.testTag(DeveloperOptionsTestTags.ClearLogs),
-        )
-        SettingsPageSpacer()
-        SettingsSwitch(
-            title = stringResource(R.string.developer_options_gecko_logging),
-            subtitle = stringResource(
-                if (isGeckoLoggingSupported) {
-                    R.string.developer_options_gecko_logging_summary
-                } else {
-                    R.string.developer_options_gecko_logging_unsupported
+        SettingsPreferenceGroup {
+            SettingsSwitch(
+                title = stringResource(R.string.developer_options_app_logging),
+                subtitle = stringResource(R.string.developer_options_app_logging_summary),
+                checked = settings.appLoggingEnabled,
+                onCheckedChange = { enabled ->
+                    onSettingsChanged(settings.copy(appLoggingEnabled = enabled))
                 },
-            ),
-            checked = isGeckoLoggingSupported && settings.geckoLoggingEnabled,
-            enabled = isGeckoLoggingSupported,
-            onCheckedChange = { enabled ->
-                onSettingsChanged(settings.copy(geckoLoggingEnabled = enabled))
-            },
-            modifier = Modifier.testTag(DeveloperOptionsTestTags.GeckoLogging),
-        )
-        if (isGeckoLoggingSupported) {
+                modifier = Modifier.testTag(DeveloperOptionsTestTags.AppLogging),
+            )
+            SettingsPageSpacer()
+            DeveloperAction(
+                title = stringResource(R.string.developer_options_export_logs),
+                summary = stringResource(R.string.developer_options_export_logs_summary),
+                onClick = onExportLogs,
+                modifier = Modifier.testTag(DeveloperOptionsTestTags.ExportLogs),
+            )
+            SettingsPageSpacer()
+            DeveloperAction(
+                title = stringResource(R.string.developer_options_clear_logs),
+                summary = stringResource(R.string.developer_options_clear_logs_summary),
+                onClick = onClearLogs,
+                modifier = Modifier.testTag(DeveloperOptionsTestTags.ClearLogs),
+            )
+            SettingsPageSpacer()
+            SettingsSwitch(
+                title = stringResource(R.string.developer_options_gecko_logging),
+                subtitle = stringResource(
+                    if (isGeckoLoggingSupported) {
+                        R.string.developer_options_gecko_logging_summary
+                    } else {
+                        R.string.developer_options_gecko_logging_unsupported
+                    },
+                ),
+                checked = isGeckoLoggingSupported && settings.geckoLoggingEnabled,
+                enabled = isGeckoLoggingSupported,
+                onCheckedChange = { enabled ->
+                    onSettingsChanged(settings.copy(geckoLoggingEnabled = enabled))
+                },
+                modifier = Modifier.testTag(DeveloperOptionsTestTags.GeckoLogging),
+            )
+            if (isGeckoLoggingSupported) {
+                Text(
+                    text = stringResource(geckoLoggingStatus.labelResource()),
+                    modifier = Modifier
+                        .padding(start = 18.dp, top = 8.dp, end = 18.dp)
+                        .testTag(DeveloperOptionsTestTags.GeckoLoggingStatus),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
             Text(
-                text = stringResource(geckoLoggingStatus.labelResource()),
+                text = stringResource(R.string.developer_options_gecko_logging_warning),
                 modifier = Modifier
                     .padding(start = 18.dp, top = 8.dp, end = 18.dp)
-                    .testTag(DeveloperOptionsTestTags.GeckoLoggingStatus),
+                    .testTag(DeveloperOptionsTestTags.GeckoLoggingWarning),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+            )
+            SettingsPageSpacer()
+            val validGeckoModules = GeckoLoggingRules.isValidModules(geckoModulesDraft)
+            OutlinedTextField(
+                value = geckoModulesDraft,
+                onValueChange = { value ->
+                    geckoModulesDraft = value.take(GeckoLoggingRules.MAX_MODULES_LENGTH)
+                },
+                enabled = isGeckoLoggingSupported && settings.geckoLoggingEnabled,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag(DeveloperOptionsTestTags.GeckoLoggingModules)
+                    .settingsSearchTarget(stringResource(R.string.developer_options_gecko_logging_modules)),
+                label = { Text(stringResource(R.string.developer_options_gecko_logging_modules)) },
+                supportingText = {
+                    Text(
+                        stringResource(
+                            if (validGeckoModules) {
+                                R.string.developer_options_gecko_logging_modules_summary
+                            } else {
+                                R.string.developer_options_gecko_logging_modules_invalid
+                            },
+                        ),
+                    )
+                },
+                isError = !validGeckoModules,
+                singleLine = true,
+            )
+            Button(
+                onClick = {
+                    onSettingsChanged(
+                        settings.copy(
+                            geckoLoggingModules = GeckoLoggingRules.normalizedModules(geckoModulesDraft),
+                        ),
+                    )
+                },
+                enabled = isGeckoLoggingSupported && settings.geckoLoggingEnabled && validGeckoModules &&
+                    GeckoLoggingRules.normalizedModules(geckoModulesDraft) != settings.geckoLoggingModules,
+                modifier = Modifier.testTag(DeveloperOptionsTestTags.ApplyGeckoLoggingModules),
+            ) {
+                Text(stringResource(R.string.developer_options_gecko_logging_modules_apply))
+            }
+            SettingsPageSpacer()
+            DeveloperAction(
+                title = stringResource(R.string.developer_options_export_gecko_logs),
+                summary = stringResource(R.string.developer_options_export_gecko_logs_summary),
+                onClick = onExportGeckoLogs,
+                modifier = Modifier.testTag(DeveloperOptionsTestTags.ExportGeckoLogs),
+            )
+            SettingsPageSpacer()
+            DeveloperAction(
+                title = stringResource(R.string.developer_options_clear_gecko_logs),
+                summary = stringResource(R.string.developer_options_clear_gecko_logs_summary),
+                onClick = onClearGeckoLogs,
+                modifier = Modifier.testTag(DeveloperOptionsTestTags.ClearGeckoLogs),
+            )
+            SettingsPageSpacer()
+            SettingsSwitch(
+                title = stringResource(R.string.developer_options_input_diagnostics),
+                subtitle = stringResource(R.string.developer_options_input_diagnostics_summary),
+                checked = isInputDiagnosticsEnabled,
+                onCheckedChange = onInputDiagnosticsEnabledChanged,
+                modifier = Modifier.testTag(DeveloperOptionsTestTags.InputDiagnostics),
+            )
+            SettingsPageSpacer()
+            DeveloperAction(
+                title = stringResource(R.string.developer_options_copy_diagnostics),
+                summary = stringResource(R.string.developer_options_copy_diagnostics_summary),
+                onClick = onCopyDiagnostics,
+                modifier = Modifier.testTag(DeveloperOptionsTestTags.CopyDiagnostics),
+            )
+        }
+        Spacer(Modifier.height(18.dp))
+        SettingsSectionTitle(stringResource(R.string.developer_options_presentations_section))
+        SettingsPreferenceGroup {
+            DeveloperAction(
+                title = stringResource(R.string.developer_options_show_onboarding),
+                summary = stringResource(R.string.developer_options_show_onboarding_summary),
+                onClick = onShowOnboarding,
+                modifier = Modifier.testTag(DeveloperOptionsTestTags.ShowOnboarding),
+            )
+            SettingsPageSpacer()
+            DeveloperAction(
+                title = stringResource(R.string.developer_options_show_release_notes),
+                summary = stringResource(R.string.developer_options_show_release_notes_summary),
+                onClick = onShowReleaseNotes,
+                modifier = Modifier.testTag(DeveloperOptionsTestTags.ShowReleaseNotes),
+            )
+        }
+        Spacer(Modifier.height(18.dp))
+        SettingsSectionTitle(stringResource(R.string.developer_options_experiments_section))
+        SettingsPreferenceGroup {
+            SettingsSwitch(
+                title = stringResource(R.string.developer_options_force_safe_area_fallback),
+                subtitle = stringResource(
+                    R.string.developer_options_force_safe_area_fallback_summary,
+                ),
+                checked = settings.forceSafeAreaFallback,
+                onCheckedChange = { enabled ->
+                    onSettingsChanged(settings.copy(forceSafeAreaFallback = enabled))
+                },
+                modifier = Modifier.testTag(DeveloperOptionsTestTags.ForceSafeAreaFallback),
+            )
+        }
+        Spacer(Modifier.height(18.dp))
+        SettingsSectionTitle(stringResource(R.string.developer_options_performance_section))
+        SettingsPreferenceGroup {
+            Box {
+                SettingsChoice(
+                    title = stringResource(R.string.developer_options_scroll_dispatch_mode),
+                    value = settings.browserChromeScrollDispatchMode.displayName(),
+                    expanded = scrollDispatchMenuExpanded,
+                    onClick = { scrollDispatchMenuExpanded = true },
+                    modifier = Modifier.testTag(
+                        DeveloperOptionsTestTags.BrowserChromeScrollDispatchMode,
+                    ),
+                )
+                SettingsDropdown(
+                    expanded = scrollDispatchMenuExpanded,
+                    onDismissRequest = { scrollDispatchMenuExpanded = false },
+                ) {
+                    BrowserChromeScrollDispatchMode.entries.forEach { mode ->
+                        SettingsDropdownItem(
+                            label = mode.displayName(),
+                            selected = mode == settings.browserChromeScrollDispatchMode,
+                            onClick = {
+                                scrollDispatchMenuExpanded = false
+                                onSettingsChanged(
+                                    settings.copy(browserChromeScrollDispatchMode = mode),
+                                )
+                            },
+                        )
+                    }
+                }
+            }
+            Text(
+                text = stringResource(R.string.developer_options_scroll_dispatch_mode_summary),
+                modifier = Modifier.padding(start = 18.dp, top = 8.dp, end = 18.dp, bottom = 14.dp),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        Text(
-            text = stringResource(R.string.developer_options_gecko_logging_warning),
-            modifier = Modifier
-                .padding(start = 18.dp, top = 8.dp, end = 18.dp)
-                .testTag(DeveloperOptionsTestTags.GeckoLoggingWarning),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.error,
-        )
-        SettingsPageSpacer()
-        val validGeckoModules = GeckoLoggingRules.isValidModules(geckoModulesDraft)
-        OutlinedTextField(
-            value = geckoModulesDraft,
-            onValueChange = { value ->
-                geckoModulesDraft = value.take(GeckoLoggingRules.MAX_MODULES_LENGTH)
-            },
-            enabled = isGeckoLoggingSupported,
-            modifier = Modifier
-                .fillMaxWidth()
-                .testTag(DeveloperOptionsTestTags.GeckoLoggingModules)
-                .settingsSearchTarget(stringResource(R.string.developer_options_gecko_logging_modules)),
-            label = { Text(stringResource(R.string.developer_options_gecko_logging_modules)) },
-            supportingText = {
-                Text(
-                    stringResource(
-                        if (validGeckoModules) {
-                            R.string.developer_options_gecko_logging_modules_summary
-                        } else {
-                            R.string.developer_options_gecko_logging_modules_invalid
-                        },
-                    ),
-                )
-            },
-            isError = !validGeckoModules,
-            singleLine = true,
-        )
-        Button(
-            onClick = {
-                onSettingsChanged(
-                    settings.copy(
-                        geckoLoggingModules = GeckoLoggingRules.normalizedModules(geckoModulesDraft),
-                    ),
-                )
-            },
-            enabled = isGeckoLoggingSupported && validGeckoModules &&
-                GeckoLoggingRules.normalizedModules(geckoModulesDraft) != settings.geckoLoggingModules,
-            modifier = Modifier.testTag(DeveloperOptionsTestTags.ApplyGeckoLoggingModules),
-        ) {
-            Text(stringResource(R.string.developer_options_gecko_logging_modules_apply))
-        }
-        SettingsPageSpacer()
-        DeveloperAction(
-            title = stringResource(R.string.developer_options_export_gecko_logs),
-            summary = stringResource(R.string.developer_options_export_gecko_logs_summary),
-            onClick = onExportGeckoLogs,
-            modifier = Modifier.testTag(DeveloperOptionsTestTags.ExportGeckoLogs),
-        )
-        SettingsPageSpacer()
-        DeveloperAction(
-            title = stringResource(R.string.developer_options_clear_gecko_logs),
-            summary = stringResource(R.string.developer_options_clear_gecko_logs_summary),
-            onClick = onClearGeckoLogs,
-            modifier = Modifier.testTag(DeveloperOptionsTestTags.ClearGeckoLogs),
-        )
-        SettingsPageSpacer()
-        SettingsSwitch(
-            title = stringResource(R.string.developer_options_input_diagnostics),
-            subtitle = stringResource(R.string.developer_options_input_diagnostics_summary),
-            checked = isInputDiagnosticsEnabled,
-            onCheckedChange = onInputDiagnosticsEnabledChanged,
-            modifier = Modifier.testTag(DeveloperOptionsTestTags.InputDiagnostics),
-        )
-        SettingsPageSpacer()
-        DeveloperAction(
-            title = stringResource(R.string.developer_options_copy_diagnostics),
-            summary = stringResource(R.string.developer_options_copy_diagnostics_summary),
-            onClick = onCopyDiagnostics,
-            modifier = Modifier.testTag(DeveloperOptionsTestTags.CopyDiagnostics),
-        )
-        Spacer(Modifier.height(18.dp))
-        SettingsSectionTitle(stringResource(R.string.developer_options_presentations_section))
-        Spacer(Modifier.height(8.dp))
-        DeveloperAction(
-            title = stringResource(R.string.developer_options_show_onboarding),
-            summary = stringResource(R.string.developer_options_show_onboarding_summary),
-            onClick = onShowOnboarding,
-            modifier = Modifier.testTag(DeveloperOptionsTestTags.ShowOnboarding),
-        )
-        SettingsPageSpacer()
-        DeveloperAction(
-            title = stringResource(R.string.developer_options_show_release_notes),
-            summary = stringResource(R.string.developer_options_show_release_notes_summary),
-            onClick = onShowReleaseNotes,
-            modifier = Modifier.testTag(DeveloperOptionsTestTags.ShowReleaseNotes),
-        )
-        Spacer(Modifier.height(18.dp))
-        SettingsSectionTitle(stringResource(R.string.developer_options_experiments_section))
-        Spacer(Modifier.height(8.dp))
-        SettingsSwitch(
-            title = stringResource(R.string.developer_options_force_safe_area_fallback),
-            subtitle = stringResource(
-                R.string.developer_options_force_safe_area_fallback_summary,
-            ),
-            checked = settings.forceSafeAreaFallback,
-            onCheckedChange = { enabled ->
-                onSettingsChanged(settings.copy(forceSafeAreaFallback = enabled))
-            },
-            modifier = Modifier.testTag(DeveloperOptionsTestTags.ForceSafeAreaFallback),
-        )
-        Spacer(Modifier.height(18.dp))
-        SettingsSectionTitle(stringResource(R.string.developer_options_performance_section))
-        Spacer(Modifier.height(8.dp))
-        Box {
-            SettingsChoice(
-                title = stringResource(R.string.developer_options_scroll_dispatch_mode),
-                value = settings.browserChromeScrollDispatchMode.displayName(),
-                expanded = scrollDispatchMenuExpanded,
-                onClick = { scrollDispatchMenuExpanded = true },
-                modifier = Modifier.testTag(
-                    DeveloperOptionsTestTags.BrowserChromeScrollDispatchMode,
-                ),
-            )
-            SettingsDropdown(
-                expanded = scrollDispatchMenuExpanded,
-                onDismissRequest = { scrollDispatchMenuExpanded = false },
-            ) {
-                BrowserChromeScrollDispatchMode.entries.forEach { mode ->
-                    SettingsDropdownItem(
-                        label = mode.displayName(),
-                        selected = mode == settings.browserChromeScrollDispatchMode,
-                        onClick = {
-                            scrollDispatchMenuExpanded = false
-                            onSettingsChanged(
-                                settings.copy(browserChromeScrollDispatchMode = mode),
-                            )
-                        },
-                    )
-                }
-            }
-        }
-        Text(
-            text = stringResource(R.string.developer_options_scroll_dispatch_mode_summary),
-            modifier = Modifier.padding(start = 18.dp, top = 8.dp, end = 18.dp),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
         Spacer(Modifier.height(18.dp))
         BrowserMemorySettingsSection(
             settings = settings.browserMemorySettings,
@@ -337,60 +345,62 @@ internal fun DeveloperOptionsSettingsPage(
         )
         Spacer(Modifier.height(18.dp))
         SettingsSectionTitle(stringResource(R.string.developer_options_safe_area_section))
-        Text(
-            stringResource(R.string.developer_options_safe_area_summary),
-            modifier = Modifier.padding(top = 6.dp, bottom = 12.dp),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        DeveloperSettingsSlider(
-            title = stringResource(R.string.developer_options_layout_quiet_period),
-            summary = stringResource(
-                R.string.developer_options_layout_quiet_period_summary,
-            ),
-            valueLabel = stringResource(
-                R.string.developer_options_milliseconds_value,
-                settings.safeAreaLayoutQuietPeriodMillis,
-            ),
-            value = settings.safeAreaLayoutQuietPeriodMillis,
-            range = DeveloperSettings.MIN_SAFE_AREA_LAYOUT_QUIET_PERIOD_MILLIS..
-                DeveloperSettings.MAX_SAFE_AREA_LAYOUT_QUIET_PERIOD_MILLIS,
-            step = DeveloperSettings.SAFE_AREA_LAYOUT_QUIET_PERIOD_STEP_MILLIS,
-            testTag = DeveloperOptionsTestTags.LayoutQuietPeriod,
-            onValueChanged = { value ->
-                onSettingsChanged(
-                    settings.copy(safeAreaLayoutQuietPeriodMillis = value),
-                )
-            },
-        )
-        SettingsPageSpacer()
-        DeveloperSettingsSlider(
-            title = stringResource(R.string.developer_options_required_failures),
-            summary = stringResource(R.string.developer_options_required_failures_summary),
-            valueLabel = pluralStringResource(
-                R.plurals.developer_options_failed_checks_value,
-                settings.safeAreaRequiredFailureCount,
-                settings.safeAreaRequiredFailureCount,
-            ),
-            value = settings.safeAreaRequiredFailureCount,
-            range = DeveloperSettings.MIN_SAFE_AREA_REQUIRED_FAILURE_COUNT..
-                DeveloperSettings.MAX_SAFE_AREA_REQUIRED_FAILURE_COUNT,
-            step = 1,
-            testTag = DeveloperOptionsTestTags.RequiredFailures,
-            onValueChanged = { value ->
-                onSettingsChanged(
-                    settings.copy(safeAreaRequiredFailureCount = value),
-                )
-            },
-        )
-        TextButton(
-            onClick = { onSettingsChanged(settings.withDefaultSafeAreaSettings()) },
-            enabled = !settings.hasDefaultSafeAreaSettings,
-            modifier = Modifier
-                .align(Alignment.End)
-                .testTag(DeveloperOptionsTestTags.Reset),
-        ) {
-            Text(stringResource(R.string.developer_options_reset_safe_area))
+        SettingsPreferenceGroup {
+            Text(
+                stringResource(R.string.developer_options_safe_area_summary),
+                modifier = Modifier.padding(top = 6.dp, bottom = 12.dp),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            DeveloperSettingsSlider(
+                title = stringResource(R.string.developer_options_layout_quiet_period),
+                summary = stringResource(
+                    R.string.developer_options_layout_quiet_period_summary,
+                ),
+                valueLabel = stringResource(
+                    R.string.developer_options_milliseconds_value,
+                    settings.safeAreaLayoutQuietPeriodMillis,
+                ),
+                value = settings.safeAreaLayoutQuietPeriodMillis,
+                range = DeveloperSettings.MIN_SAFE_AREA_LAYOUT_QUIET_PERIOD_MILLIS..
+                    DeveloperSettings.MAX_SAFE_AREA_LAYOUT_QUIET_PERIOD_MILLIS,
+                step = DeveloperSettings.SAFE_AREA_LAYOUT_QUIET_PERIOD_STEP_MILLIS,
+                testTag = DeveloperOptionsTestTags.LayoutQuietPeriod,
+                onValueChanged = { value ->
+                    onSettingsChanged(
+                        settings.copy(safeAreaLayoutQuietPeriodMillis = value),
+                    )
+                },
+            )
+            SettingsPageSpacer()
+            DeveloperSettingsSlider(
+                title = stringResource(R.string.developer_options_required_failures),
+                summary = stringResource(R.string.developer_options_required_failures_summary),
+                valueLabel = pluralStringResource(
+                    R.plurals.developer_options_failed_checks_value,
+                    settings.safeAreaRequiredFailureCount,
+                    settings.safeAreaRequiredFailureCount,
+                ),
+                value = settings.safeAreaRequiredFailureCount,
+                range = DeveloperSettings.MIN_SAFE_AREA_REQUIRED_FAILURE_COUNT..
+                    DeveloperSettings.MAX_SAFE_AREA_REQUIRED_FAILURE_COUNT,
+                step = 1,
+                testTag = DeveloperOptionsTestTags.RequiredFailures,
+                onValueChanged = { value ->
+                    onSettingsChanged(
+                        settings.copy(safeAreaRequiredFailureCount = value),
+                    )
+                },
+            )
+            TextButton(
+                onClick = { onSettingsChanged(settings.withDefaultSafeAreaSettings()) },
+                enabled = !settings.hasDefaultSafeAreaSettings,
+                modifier = Modifier
+                    .align(Alignment.End)
+                    .testTag(DeveloperOptionsTestTags.Reset),
+            ) {
+                Text(stringResource(R.string.developer_options_reset_safe_area))
+            }
         }
         Spacer(Modifier.height(18.dp))
         GeckoSafeAreaSettingsSection(
@@ -442,154 +452,157 @@ private fun GeckoSafeAreaSettingsSection(
 ) {
     Column {
         SettingsSectionTitle(stringResource(R.string.developer_options_gecko_safe_area_section))
-        Text(
-            text = stringResource(R.string.developer_options_gecko_safe_area_summary),
-            modifier = Modifier.padding(top = 6.dp, bottom = 12.dp),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        SettingsSwitch(
-            title = stringResource(R.string.developer_options_gecko_safe_area_enabled),
-            subtitle = stringResource(R.string.developer_options_gecko_safe_area_enabled_summary),
-            checked = settings.enabled,
-            onCheckedChange = { onSettingsChanged(settings.copy(enabled = it)) },
-            modifier = Modifier.testTag(DeveloperOptionsTestTags.GeckoSafeAreaEnabled),
-        )
-        SettingsPageSpacer()
-        SettingsSwitch(
-            title = stringResource(R.string.developer_options_gecko_add_inset_to_negative_top),
-            subtitle = stringResource(
-                R.string.developer_options_gecko_add_inset_to_negative_top_summary,
-            ),
-            checked = settings.addInsetToNegativeTop,
-            enabled = settings.enabled,
-            onCheckedChange = { onSettingsChanged(settings.copy(addInsetToNegativeTop = it)) },
-            modifier = Modifier.testTag(DeveloperOptionsTestTags.GeckoAddInsetToNegativeTop),
-        )
-        SettingsPageSpacer()
-        SettingsSwitch(
-            title = stringResource(R.string.developer_options_gecko_recheck_added_elements),
-            subtitle = stringResource(R.string.developer_options_gecko_recheck_added_elements_summary),
-            checked = settings.recheckAddedElements,
-            enabled = settings.enabled,
-            onCheckedChange = { onSettingsChanged(settings.copy(recheckAddedElements = it)) },
-            modifier = Modifier.testTag(DeveloperOptionsTestTags.GeckoRecheckAddedElements),
-        )
-        SettingsPageSpacer()
-        SettingsSwitch(
-            title = stringResource(R.string.developer_options_gecko_recheck_changed_elements),
-            subtitle = stringResource(R.string.developer_options_gecko_recheck_changed_elements_summary),
-            checked = settings.recheckChangedElements,
-            enabled = settings.enabled,
-            onCheckedChange = { onSettingsChanged(settings.copy(recheckChangedElements = it)) },
-            modifier = Modifier.testTag(DeveloperOptionsTestTags.GeckoRecheckChangedElements),
-        )
-        SettingsPageSpacer()
-        SettingsSwitch(
-            title = stringResource(R.string.developer_options_gecko_require_interaction),
-            subtitle = stringResource(R.string.developer_options_gecko_require_interaction_summary),
-            checked = settings.requireInteractionForUpdates,
-            enabled = settings.enabled,
-            onCheckedChange = { onSettingsChanged(settings.copy(requireInteractionForUpdates = it)) },
-            modifier = Modifier.testTag(DeveloperOptionsTestTags.GeckoRequireInteraction),
-        )
-        SettingsPageSpacer()
-        SettingsSwitch(
-            title = stringResource(R.string.developer_options_gecko_recheck_on_resize),
-            subtitle = stringResource(R.string.developer_options_gecko_recheck_on_resize_summary),
-            checked = settings.recheckOnResize,
-            enabled = settings.enabled,
-            onCheckedChange = { onSettingsChanged(settings.copy(recheckOnResize = it)) },
-            modifier = Modifier.testTag(DeveloperOptionsTestTags.GeckoRecheckOnResize),
-        )
-        SettingsPageSpacer()
-        DeveloperSettingsSlider(
-            title = stringResource(R.string.developer_options_gecko_interaction_window),
-            summary = stringResource(R.string.developer_options_gecko_interaction_window_summary),
-            valueLabel = stringResource(
-                R.string.developer_options_milliseconds_value,
-                settings.interactionWindowMillis,
-            ),
-            value = settings.interactionWindowMillis,
-            range = GeckoSafeAreaSettings.MIN_INTERACTION_WINDOW_MILLIS..
-                GeckoSafeAreaSettings.MAX_INTERACTION_WINDOW_MILLIS,
-            step = GeckoSafeAreaSettings.INTERACTION_WINDOW_STEP_MILLIS,
-            testTag = DeveloperOptionsTestTags.GeckoInteractionWindow,
-            enabled = settings.enabled,
-            onValueChanged = { onSettingsChanged(settings.copy(interactionWindowMillis = it)) },
-        )
-        SettingsPageSpacer()
-        DeveloperSettingsSlider(
-            title = stringResource(R.string.developer_options_gecko_mutation_debounce),
-            summary = stringResource(R.string.developer_options_gecko_mutation_debounce_summary),
-            valueLabel = stringResource(
-                R.string.developer_options_milliseconds_value,
-                settings.mutationDebounceMillis,
-            ),
-            value = settings.mutationDebounceMillis,
-            range = GeckoSafeAreaSettings.MIN_MUTATION_DEBOUNCE_MILLIS..
-                GeckoSafeAreaSettings.MAX_MUTATION_DEBOUNCE_MILLIS,
-            step = GeckoSafeAreaSettings.MUTATION_DEBOUNCE_STEP_MILLIS,
-            testTag = DeveloperOptionsTestTags.GeckoMutationDebounce,
-            enabled = settings.enabled,
-            onValueChanged = { onSettingsChanged(settings.copy(mutationDebounceMillis = it)) },
-        )
-        SettingsPageSpacer()
-        DeveloperSettingsSlider(
-            title = stringResource(R.string.developer_options_gecko_max_elements_per_batch),
-            summary = stringResource(R.string.developer_options_gecko_max_elements_per_batch_summary),
-            valueLabel = pluralStringResource(
-                R.plurals.developer_options_gecko_elements_value,
-                settings.maxElementsPerBatch,
-                settings.maxElementsPerBatch,
-            ),
-            value = settings.maxElementsPerBatch,
-            range = GeckoSafeAreaSettings.MIN_MAX_ELEMENTS_PER_BATCH..
-                GeckoSafeAreaSettings.MAX_MAX_ELEMENTS_PER_BATCH,
-            step = GeckoSafeAreaSettings.MAX_ELEMENTS_PER_BATCH_STEP,
-            testTag = DeveloperOptionsTestTags.GeckoMaxElementsPerBatch,
-            enabled = settings.enabled,
-            onValueChanged = { onSettingsChanged(settings.copy(maxElementsPerBatch = it)) },
-        )
-        SettingsPageSpacer()
-        DeveloperSettingsSlider(
-            title = stringResource(R.string.developer_options_gecko_max_batch_duration),
-            summary = stringResource(R.string.developer_options_gecko_max_batch_duration_summary),
-            valueLabel = stringResource(
-                R.string.developer_options_milliseconds_value,
-                settings.maxBatchDurationMillis,
-            ),
-            value = settings.maxBatchDurationMillis,
-            range = GeckoSafeAreaSettings.MIN_MAX_BATCH_DURATION_MILLIS..
-                GeckoSafeAreaSettings.MAX_MAX_BATCH_DURATION_MILLIS,
-            step = GeckoSafeAreaSettings.MAX_BATCH_DURATION_STEP_MILLIS,
-            testTag = DeveloperOptionsTestTags.GeckoMaxBatchDuration,
-            enabled = settings.enabled,
-            onValueChanged = { onSettingsChanged(settings.copy(maxBatchDurationMillis = it)) },
-        )
-        SettingsPageSpacer()
-        DeveloperSettingsSlider(
-            title = stringResource(R.string.developer_options_gecko_max_initial_elements),
-            summary = stringResource(R.string.developer_options_gecko_max_initial_elements_summary),
-            valueLabel = pluralStringResource(
-                R.plurals.developer_options_gecko_elements_value,
-                settings.maxInitialElements,
-                settings.maxInitialElements,
-            ),
-            value = settings.maxInitialElements,
-            range = GeckoSafeAreaSettings.MIN_MAX_INITIAL_ELEMENTS..
-                GeckoSafeAreaSettings.MAX_MAX_INITIAL_ELEMENTS,
-            step = GeckoSafeAreaSettings.MAX_INITIAL_ELEMENTS_STEP,
-            testTag = DeveloperOptionsTestTags.GeckoMaxInitialElements,
-            enabled = settings.enabled,
-            onValueChanged = { onSettingsChanged(settings.copy(maxInitialElements = it)) },
-        )
-        TextButton(
-            onClick = { onSettingsChanged(settings.withDefaults()) },
-            enabled = !settings.hasDefaultSettings,
-            modifier = Modifier.align(Alignment.End).testTag(DeveloperOptionsTestTags.GeckoReset),
-        ) {
-            Text(stringResource(R.string.developer_options_gecko_reset))
+        SettingsPreferenceGroup {
+            Text(
+                text = stringResource(R.string.developer_options_gecko_safe_area_summary),
+                modifier = Modifier.padding(top = 6.dp, bottom = 12.dp),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            SettingsPreferenceDivider()
+            SettingsSwitch(
+                title = stringResource(R.string.developer_options_gecko_safe_area_enabled),
+                subtitle = stringResource(R.string.developer_options_gecko_safe_area_enabled_summary),
+                checked = settings.enabled,
+                onCheckedChange = { onSettingsChanged(settings.copy(enabled = it)) },
+                modifier = Modifier.testTag(DeveloperOptionsTestTags.GeckoSafeAreaEnabled),
+            )
+            SettingsPageSpacer()
+            SettingsSwitch(
+                title = stringResource(R.string.developer_options_gecko_add_inset_to_negative_top),
+                subtitle = stringResource(
+                    R.string.developer_options_gecko_add_inset_to_negative_top_summary,
+                ),
+                checked = settings.addInsetToNegativeTop,
+                enabled = settings.enabled,
+                onCheckedChange = { onSettingsChanged(settings.copy(addInsetToNegativeTop = it)) },
+                modifier = Modifier.testTag(DeveloperOptionsTestTags.GeckoAddInsetToNegativeTop),
+            )
+            SettingsPageSpacer()
+            SettingsSwitch(
+                title = stringResource(R.string.developer_options_gecko_recheck_added_elements),
+                subtitle = stringResource(R.string.developer_options_gecko_recheck_added_elements_summary),
+                checked = settings.recheckAddedElements,
+                enabled = settings.enabled,
+                onCheckedChange = { onSettingsChanged(settings.copy(recheckAddedElements = it)) },
+                modifier = Modifier.testTag(DeveloperOptionsTestTags.GeckoRecheckAddedElements),
+            )
+            SettingsPageSpacer()
+            SettingsSwitch(
+                title = stringResource(R.string.developer_options_gecko_recheck_changed_elements),
+                subtitle = stringResource(R.string.developer_options_gecko_recheck_changed_elements_summary),
+                checked = settings.recheckChangedElements,
+                enabled = settings.enabled,
+                onCheckedChange = { onSettingsChanged(settings.copy(recheckChangedElements = it)) },
+                modifier = Modifier.testTag(DeveloperOptionsTestTags.GeckoRecheckChangedElements),
+            )
+            SettingsPageSpacer()
+            SettingsSwitch(
+                title = stringResource(R.string.developer_options_gecko_require_interaction),
+                subtitle = stringResource(R.string.developer_options_gecko_require_interaction_summary),
+                checked = settings.requireInteractionForUpdates,
+                enabled = settings.enabled,
+                onCheckedChange = { onSettingsChanged(settings.copy(requireInteractionForUpdates = it)) },
+                modifier = Modifier.testTag(DeveloperOptionsTestTags.GeckoRequireInteraction),
+            )
+            SettingsPageSpacer()
+            SettingsSwitch(
+                title = stringResource(R.string.developer_options_gecko_recheck_on_resize),
+                subtitle = stringResource(R.string.developer_options_gecko_recheck_on_resize_summary),
+                checked = settings.recheckOnResize,
+                enabled = settings.enabled,
+                onCheckedChange = { onSettingsChanged(settings.copy(recheckOnResize = it)) },
+                modifier = Modifier.testTag(DeveloperOptionsTestTags.GeckoRecheckOnResize),
+            )
+            SettingsPageSpacer()
+            DeveloperSettingsSlider(
+                title = stringResource(R.string.developer_options_gecko_interaction_window),
+                summary = stringResource(R.string.developer_options_gecko_interaction_window_summary),
+                valueLabel = stringResource(
+                    R.string.developer_options_milliseconds_value,
+                    settings.interactionWindowMillis,
+                ),
+                value = settings.interactionWindowMillis,
+                range = GeckoSafeAreaSettings.MIN_INTERACTION_WINDOW_MILLIS..
+                    GeckoSafeAreaSettings.MAX_INTERACTION_WINDOW_MILLIS,
+                step = GeckoSafeAreaSettings.INTERACTION_WINDOW_STEP_MILLIS,
+                testTag = DeveloperOptionsTestTags.GeckoInteractionWindow,
+                enabled = settings.enabled,
+                onValueChanged = { onSettingsChanged(settings.copy(interactionWindowMillis = it)) },
+            )
+            SettingsPageSpacer()
+            DeveloperSettingsSlider(
+                title = stringResource(R.string.developer_options_gecko_mutation_debounce),
+                summary = stringResource(R.string.developer_options_gecko_mutation_debounce_summary),
+                valueLabel = stringResource(
+                    R.string.developer_options_milliseconds_value,
+                    settings.mutationDebounceMillis,
+                ),
+                value = settings.mutationDebounceMillis,
+                range = GeckoSafeAreaSettings.MIN_MUTATION_DEBOUNCE_MILLIS..
+                    GeckoSafeAreaSettings.MAX_MUTATION_DEBOUNCE_MILLIS,
+                step = GeckoSafeAreaSettings.MUTATION_DEBOUNCE_STEP_MILLIS,
+                testTag = DeveloperOptionsTestTags.GeckoMutationDebounce,
+                enabled = settings.enabled,
+                onValueChanged = { onSettingsChanged(settings.copy(mutationDebounceMillis = it)) },
+            )
+            SettingsPageSpacer()
+            DeveloperSettingsSlider(
+                title = stringResource(R.string.developer_options_gecko_max_elements_per_batch),
+                summary = stringResource(R.string.developer_options_gecko_max_elements_per_batch_summary),
+                valueLabel = pluralStringResource(
+                    R.plurals.developer_options_gecko_elements_value,
+                    settings.maxElementsPerBatch,
+                    settings.maxElementsPerBatch,
+                ),
+                value = settings.maxElementsPerBatch,
+                range = GeckoSafeAreaSettings.MIN_MAX_ELEMENTS_PER_BATCH..
+                    GeckoSafeAreaSettings.MAX_MAX_ELEMENTS_PER_BATCH,
+                step = GeckoSafeAreaSettings.MAX_ELEMENTS_PER_BATCH_STEP,
+                testTag = DeveloperOptionsTestTags.GeckoMaxElementsPerBatch,
+                enabled = settings.enabled,
+                onValueChanged = { onSettingsChanged(settings.copy(maxElementsPerBatch = it)) },
+            )
+            SettingsPageSpacer()
+            DeveloperSettingsSlider(
+                title = stringResource(R.string.developer_options_gecko_max_batch_duration),
+                summary = stringResource(R.string.developer_options_gecko_max_batch_duration_summary),
+                valueLabel = stringResource(
+                    R.string.developer_options_milliseconds_value,
+                    settings.maxBatchDurationMillis,
+                ),
+                value = settings.maxBatchDurationMillis,
+                range = GeckoSafeAreaSettings.MIN_MAX_BATCH_DURATION_MILLIS..
+                    GeckoSafeAreaSettings.MAX_MAX_BATCH_DURATION_MILLIS,
+                step = GeckoSafeAreaSettings.MAX_BATCH_DURATION_STEP_MILLIS,
+                testTag = DeveloperOptionsTestTags.GeckoMaxBatchDuration,
+                enabled = settings.enabled,
+                onValueChanged = { onSettingsChanged(settings.copy(maxBatchDurationMillis = it)) },
+            )
+            SettingsPageSpacer()
+            DeveloperSettingsSlider(
+                title = stringResource(R.string.developer_options_gecko_max_initial_elements),
+                summary = stringResource(R.string.developer_options_gecko_max_initial_elements_summary),
+                valueLabel = pluralStringResource(
+                    R.plurals.developer_options_gecko_elements_value,
+                    settings.maxInitialElements,
+                    settings.maxInitialElements,
+                ),
+                value = settings.maxInitialElements,
+                range = GeckoSafeAreaSettings.MIN_MAX_INITIAL_ELEMENTS..
+                    GeckoSafeAreaSettings.MAX_MAX_INITIAL_ELEMENTS,
+                step = GeckoSafeAreaSettings.MAX_INITIAL_ELEMENTS_STEP,
+                testTag = DeveloperOptionsTestTags.GeckoMaxInitialElements,
+                enabled = settings.enabled,
+                onValueChanged = { onSettingsChanged(settings.copy(maxInitialElements = it)) },
+            )
+            TextButton(
+                onClick = { onSettingsChanged(settings.withDefaults()) },
+                enabled = !settings.hasDefaultSettings,
+                modifier = Modifier.align(Alignment.End).testTag(DeveloperOptionsTestTags.GeckoReset),
+            ) {
+                Text(stringResource(R.string.developer_options_gecko_reset))
+            }
         }
     }
 }
@@ -635,8 +648,8 @@ private fun DeveloperAction(
     Surface(
         onClick = onClick,
         modifier = modifier.fillMaxWidth().settingsSearchTarget(title),
-        shape = MaterialTheme.shapes.large,
-        color = browserChromeColor(MaterialTheme.colorScheme.surfaceContainerHigh),
+        shape = dev.sk2andy.materialbrowser.shared.ui.settings.settingsRowShape(),
+        color = dev.sk2andy.materialbrowser.shared.ui.settings.settingsRowColor(),
     ) {
         Column(modifier = Modifier.padding(horizontal = 18.dp, vertical = 14.dp)) {
             Text(title, style = MaterialTheme.typography.titleSmall)
@@ -655,57 +668,58 @@ private fun BrowserMemorySettingsSection(
     onSettingsChanged: (BrowserMemorySettings) -> Unit,
 ) {
     SettingsSectionTitle(stringResource(R.string.developer_options_memory_section))
-    Spacer(Modifier.height(8.dp))
-    DeveloperSettingsSlider(
-        title = stringResource(R.string.developer_options_foreground_tab_idle_timeout),
-        summary = stringResource(R.string.developer_options_foreground_tab_idle_timeout_summary),
-        valueLabel = stringResource(
-            R.string.developer_options_minutes_value,
-            settings.foregroundTabIdleTimeoutMinutes,
-        ),
-        value = settings.foregroundTabIdleTimeoutMinutes,
-        range = BrowserMemorySettings.MIN_FOREGROUND_TAB_IDLE_TIMEOUT_MINUTES..
-            BrowserMemorySettings.MAX_FOREGROUND_TAB_IDLE_TIMEOUT_MINUTES,
-        step = 1,
-        testTag = DeveloperOptionsTestTags.ForegroundTabIdleTimeout,
-        onValueChanged = { value ->
-            onSettingsChanged(settings.copy(foregroundTabIdleTimeoutMinutes = value))
-        },
-    )
-    SettingsPageSpacer()
-    DeveloperSettingsSlider(
-        title = stringResource(R.string.developer_options_background_warm_tab_count),
-        summary = stringResource(R.string.developer_options_background_warm_tab_count_summary),
-        valueLabel = stringResource(
-            R.string.developer_options_tabs_value,
-            settings.backgroundWarmTabCount,
-        ),
-        value = settings.backgroundWarmTabCount,
-        range = BrowserMemorySettings.MIN_BACKGROUND_WARM_TAB_COUNT..
-            BrowserMemorySettings.MAX_BACKGROUND_WARM_TAB_COUNT,
-        step = 1,
-        testTag = DeveloperOptionsTestTags.BackgroundWarmTabCount,
-        onValueChanged = { value ->
-            onSettingsChanged(settings.copy(backgroundWarmTabCount = value))
-        },
-    )
-    SettingsPageSpacer()
-    DeveloperSettingsSlider(
-        title = stringResource(R.string.developer_options_history_cache_lifetime),
-        summary = stringResource(R.string.developer_options_history_cache_lifetime_summary),
-        valueLabel = stringResource(
-            R.string.developer_options_minutes_value,
-            settings.historyCacheLifetimeMinutes,
-        ),
-        value = settings.historyCacheLifetimeMinutes,
-        range = BrowserMemorySettings.MIN_HISTORY_CACHE_LIFETIME_MINUTES..
-            BrowserMemorySettings.MAX_HISTORY_CACHE_LIFETIME_MINUTES,
-        step = 1,
-        testTag = DeveloperOptionsTestTags.HistoryCacheLifetime,
-        onValueChanged = { value ->
-            onSettingsChanged(settings.copy(historyCacheLifetimeMinutes = value))
-        },
-    )
+        SettingsPreferenceGroup {
+            DeveloperSettingsSlider(
+                title = stringResource(R.string.developer_options_foreground_tab_idle_timeout),
+                summary = stringResource(R.string.developer_options_foreground_tab_idle_timeout_summary),
+                valueLabel = stringResource(
+                    R.string.developer_options_minutes_value,
+                    settings.foregroundTabIdleTimeoutMinutes,
+                ),
+                value = settings.foregroundTabIdleTimeoutMinutes,
+                range = BrowserMemorySettings.MIN_FOREGROUND_TAB_IDLE_TIMEOUT_MINUTES..
+                    BrowserMemorySettings.MAX_FOREGROUND_TAB_IDLE_TIMEOUT_MINUTES,
+                step = 1,
+                testTag = DeveloperOptionsTestTags.ForegroundTabIdleTimeout,
+                onValueChanged = { value ->
+                    onSettingsChanged(settings.copy(foregroundTabIdleTimeoutMinutes = value))
+                },
+            )
+            SettingsPageSpacer()
+            DeveloperSettingsSlider(
+                title = stringResource(R.string.developer_options_background_warm_tab_count),
+                summary = stringResource(R.string.developer_options_background_warm_tab_count_summary),
+                valueLabel = stringResource(
+                    R.string.developer_options_tabs_value,
+                    settings.backgroundWarmTabCount,
+                ),
+                value = settings.backgroundWarmTabCount,
+                range = BrowserMemorySettings.MIN_BACKGROUND_WARM_TAB_COUNT..
+                    BrowserMemorySettings.MAX_BACKGROUND_WARM_TAB_COUNT,
+                step = 1,
+                testTag = DeveloperOptionsTestTags.BackgroundWarmTabCount,
+                onValueChanged = { value ->
+                    onSettingsChanged(settings.copy(backgroundWarmTabCount = value))
+                },
+            )
+            SettingsPageSpacer()
+            DeveloperSettingsSlider(
+                title = stringResource(R.string.developer_options_history_cache_lifetime),
+                summary = stringResource(R.string.developer_options_history_cache_lifetime_summary),
+                valueLabel = stringResource(
+                    R.string.developer_options_minutes_value,
+                    settings.historyCacheLifetimeMinutes,
+                ),
+                value = settings.historyCacheLifetimeMinutes,
+                range = BrowserMemorySettings.MIN_HISTORY_CACHE_LIFETIME_MINUTES..
+                    BrowserMemorySettings.MAX_HISTORY_CACHE_LIFETIME_MINUTES,
+                step = 1,
+                testTag = DeveloperOptionsTestTags.HistoryCacheLifetime,
+                onValueChanged = { value ->
+                    onSettingsChanged(settings.copy(historyCacheLifetimeMinutes = value))
+                },
+            )
+        }
 }
 
 @Composable
@@ -722,8 +736,8 @@ private fun DeveloperSettingsSlider(
 ) {
     Surface(
         modifier = Modifier.settingsSearchTarget(title).fillMaxWidth(),
-        shape = MaterialTheme.shapes.large,
-        color = browserChromeColor(MaterialTheme.colorScheme.surfaceContainerHigh),
+        shape = dev.sk2andy.materialbrowser.shared.ui.settings.settingsRowShape(),
+        color = dev.sk2andy.materialbrowser.shared.ui.settings.settingsRowColor(),
     ) {
         Column(modifier = Modifier.padding(horizontal = 18.dp, vertical = 12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -751,7 +765,10 @@ private fun DeveloperSettingsSlider(
                         ((candidate - range.first) / step).roundToInt() * step
                     onValueChanged(snapped.coerceIn(range))
                 },
-                modifier = Modifier.testTag(testTag),
+                modifier = Modifier.testTag(testTag).semantics {
+                    contentDescription = title
+                    stateDescription = valueLabel
+                },
                 valueRange = range.first.toFloat()..range.last.toFloat(),
                 steps = ((range.last - range.first) / step - 1).coerceAtLeast(0),
             )

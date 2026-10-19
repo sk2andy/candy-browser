@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_colors_title">Cores</string>
+    <string name="settings_surfaces_shapes_title">Superfícies e formas</string>
+    <string name="settings_link_long_press_explanation">Escolha o que acontece ao manter uma ligação premida. Em primeiro plano, muda para o novo separador; em segundo plano, permanece na página atual.</string>
+    <string name="settings_gesture_preview_group">Pré-visualização</string>
+    <string name="settings_gesture_normal_tabs_group">Separadores normais</string>
+    <string name="settings_gesture_private_tabs_group">Separadores privados</string>
+    <string name="settings_gesture_link_actions_group">Ações de ligações</string>
+    <string name="settings_player_disabled_explanation">Continuar a utilizar o leitor do site.</string>
+    <string name="settings_player_button_fullscreen_explanation">Um botão abre os vídeos detetados em ecrã inteiro no Candy Player.</string>
+    <string name="settings_player_button_inline_explanation">Um botão inicia o vídeo dentro da página. O ecrã inteiro continua disponível no leitor.</string>
+    <string name="settings_player_fullscreen_explanation">Utilizar o Candy Player quando o site abre um vídeo em ecrã inteiro.</string>
+    <string name="settings_player_automatic_explanation">Abrir automaticamente o Candy Player quando for detetado um vídeo reproduzível.</string>
+</resources>

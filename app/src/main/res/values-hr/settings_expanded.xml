@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_colors_title">Boje</string>
+    <string name="settings_surfaces_shapes_title">Površine i oblici</string>
+    <string name="settings_link_long_press_explanation">Odaberite što se događa dugim pritiskom na poveznicu. U prvom planu prelazite na novu karticu; u pozadini ostajete na trenutačnoj stranici.</string>
+    <string name="settings_gesture_preview_group">Pretpregled</string>
+    <string name="settings_gesture_normal_tabs_group">Uobičajene kartice</string>
+    <string name="settings_gesture_private_tabs_group">Privatne kartice</string>
+    <string name="settings_gesture_link_actions_group">Radnje s poveznicama</string>
+    <string name="settings_player_disabled_explanation">Nastavite upotrebljavati reproduktor web-mjesta.</string>
+    <string name="settings_player_button_fullscreen_explanation">Gumb otvara otkrivene videozapise preko cijelog zaslona u Candy Playeru.</string>
+    <string name="settings_player_button_inline_explanation">Gumb pokreće videozapis unutar stranice. Prikaz preko cijelog zaslona ostaje dostupan u reproduktoru.</string>
+    <string name="settings_player_fullscreen_explanation">Upotrebljavajte Candy Player kada web-mjesto otvori videozapis preko cijelog zaslona.</string>
+    <string name="settings_player_automatic_explanation">Automatski otvorite Candy Player kada se otkrije videozapis koji se može reproducirati.</string>
+</resources>

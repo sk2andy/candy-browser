@@ -2,6 +2,7 @@ package dev.sk2andy.materialbrowser.shared.ui.settings
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -29,7 +30,6 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -39,10 +39,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.sk2andy.materialbrowser.shared.ui.BrowserViewportTopping
 import dev.sk2andy.materialbrowser.shared.topping.ToppingFrameScope
@@ -83,7 +84,7 @@ internal fun CandyToppingsSettingsPage(
         modifier = Modifier
             .fillMaxSize()
             .testTag(CandyToppingsSettingsTestTags.Screen),
-        color = MaterialTheme.colorScheme.surface,
+        color = settingsPageColor(),
     ) {
         Column(
             modifier = Modifier
@@ -299,61 +300,51 @@ private fun ToppingCard(
     onEdit: () -> Unit,
     onDelete: () -> Unit,
 ) {
-    Surface(
+    Box(
         modifier = Modifier
             .fillMaxWidth()
             .testTag(CandyToppingsSettingsTestTags.topping(topping.id)),
-        shape = MaterialTheme.shapes.large,
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
     ) {
-        Row(
-            modifier = Modifier.padding(start = 16.dp, top = 12.dp, bottom = 12.dp, end = 6.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    topping.name,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Text(
-                    topping.id,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+        SettingsPreferenceGroup(containerColor = settingsRowColor()) {
+            SettingsSwitch(
+                title = topping.name,
+                subtitle = topping.id,
+                checked = topping.enabled,
+                onCheckedChange = { enabled -> onSetEnabled(topping.id, enabled) },
+                modifier = Modifier
+                    .testTag(CandyToppingsSettingsTestTags.toggle(topping.id))
+                    .semantics { contentDescription = topping.name },
+            )
+            SettingsPreferenceDivider()
+            Row(
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
                 TextButton(
                     onClick = onFrameScope,
-                    enabled = topping.declaredFrameScope != ToppingFrameScope.Top,
-                    modifier = Modifier.testTag(CandyToppingsSettingsTestTags.frameScope(topping.id)),
-                    contentPadding = PaddingValues(horizontal = 0.dp, vertical = 2.dp),
+                    enabled = topping.enabled && topping.declaredFrameScope != ToppingFrameScope.Top,
+                    modifier = Modifier.weight(1f)
+                        .testTag(CandyToppingsSettingsTestTags.frameScope(topping.id)),
+                    contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp),
                 ) {
                     Text("Frames: ${topping.allowedFrameScope.label()}")
                 }
-            }
-            Switch(
-                checked = topping.enabled,
-                onCheckedChange = { enabled -> onSetEnabled(topping.id, enabled) },
-                modifier = Modifier.testTag(CandyToppingsSettingsTestTags.toggle(topping.id)),
-            )
-            IconButton(
-                onClick = onEdit,
-                modifier = Modifier.testTag(CandyToppingsSettingsTestTags.edit(topping.id)),
-            ) {
-                Icon(Icons.Default.Edit, contentDescription = "${topping.name} bearbeiten")
-            }
-            IconButton(
-                onClick = onDelete,
-                modifier = Modifier.testTag(CandyToppingsSettingsTestTags.delete(topping.id)),
-            ) {
-                Icon(
-                    Icons.Default.Delete,
-                    contentDescription = "${topping.name} löschen",
-                    tint = MaterialTheme.colorScheme.error,
-                )
+                IconButton(
+                    onClick = onEdit,
+                    modifier = Modifier.testTag(CandyToppingsSettingsTestTags.edit(topping.id)),
+                ) {
+                    Icon(Icons.Default.Edit, contentDescription = "${topping.name} bearbeiten")
+                }
+                IconButton(
+                    onClick = onDelete,
+                    modifier = Modifier.testTag(CandyToppingsSettingsTestTags.delete(topping.id)),
+                ) {
+                    Icon(
+                        Icons.Default.Delete,
+                        contentDescription = "${topping.name} löschen",
+                        tint = MaterialTheme.colorScheme.error,
+                    )
+                }
             }
         }
     }

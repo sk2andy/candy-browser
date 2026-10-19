@@ -36,7 +36,7 @@ class DeviceSearchSettingsPageInstrumentedTest {
 
     @Test
     fun selectionAndGlobalConsentAreSeparateUserActions() {
-        var settings by mutableStateOf(DeviceSearchSettings())
+        var settings by mutableStateOf(DeviceSearchSettings(selectedIds = setOf(item.id)))
         composeRule.setContent {
             MaterialTheme {
                 DeviceSearchSettingsPage(
@@ -50,13 +50,33 @@ class DeviceSearchSettingsPageInstrumentedTest {
                 )
             }
         }
-        composeRule.onNodeWithTag(DeviceSearchTestTags.item(item.id)).performScrollTo().assertIsOff().performClick().assertIsOn()
+        composeRule.onNodeWithTag(DeviceSearchTestTags.item(item.id))
+            .performScrollTo()
+            .assertIsOn()
+            .assertIsNotEnabled()
+            .performClick()
         composeRule.runOnIdle {
             assertEquals(setOf(item.id), settings.selectedIds)
             assertEquals(false, settings.enabled)
         }
         composeRule.onNodeWithTag(DeviceSearchTestTags.Enabled).performScrollTo().performClick()
         composeRule.runOnIdle { assertEquals(true, settings.enabled) }
+        composeRule.onNodeWithTag(DeviceSearchTestTags.item(item.id))
+            .performScrollTo()
+            .assertIsOn()
+            .performClick()
+            .assertIsOff()
+        composeRule.runOnIdle { assertEquals(emptySet<String>(), settings.selectedIds) }
+        composeRule.onNodeWithTag(DeviceSearchTestTags.item(item.id)).performClick().assertIsOn()
+        composeRule.onNodeWithTag(DeviceSearchTestTags.Enabled).performScrollTo().performClick()
+        composeRule.onNodeWithTag(DeviceSearchTestTags.item(item.id))
+            .performScrollTo()
+            .assertIsOn()
+            .assertIsNotEnabled()
+        composeRule.runOnIdle {
+            assertEquals(setOf(item.id), settings.selectedIds)
+            assertEquals(false, settings.enabled)
+        }
     }
 
     @Test

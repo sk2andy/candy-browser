@@ -1,6 +1,8 @@
 package dev.sk2andy.materialbrowser.ui
 
+import android.Manifest
 import android.content.Context
+import android.content.pm.PackageManager
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
@@ -64,6 +66,24 @@ class SettingsSearchInstrumentedTest {
     fun tearDown() {
         composeRule.activityRule.scenario.close()
         clearPreferences()
+    }
+
+    @Test
+    fun menuStyleSearchOpensRadioPageAndBackRestoresSearch() {
+        openSettings()
+        val query = context.getString(R.string.settings_menu_presentation_title)
+        search(query)
+        val result = composeRule.onNodeWithTag(SettingsSearchTestTags.result("settings_menu_presentation_title"))
+        result.performSemanticsAction(SemanticsActions.OnClick) { it() }
+        advanceRoute()
+        composeRule.onNodeWithTag(
+            dev.sk2andy.materialbrowser.shared.ui.settings.BrowserMenuSelectionTestTags.presentation(
+                dev.sk2andy.materialbrowser.shared.browser.BrowserMenuPresentation.BottomSheet,
+            ),
+        ).performScrollTo().assertIsDisplayed()
+        headerBack()
+        assertQuery(query)
+        result.assertIsDisplayed()
     }
 
     @Test
@@ -178,6 +198,17 @@ class SettingsSearchInstrumentedTest {
 
     @Test
     fun privateSearchIsBoundedAndDiscardedOnActivityRecreation() {
+        // The first private tab requests notification permission; keep that system dialog
+        // out of this settings-search test, whose assertions cover private query handling.
+        InstrumentationRegistry.getInstrumentation().uiAutomation.grantRuntimePermission(
+            context.packageName,
+            Manifest.permission.POST_NOTIFICATIONS,
+        )
+        assertTrue(
+            context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) ==
+                PackageManager.PERMISSION_GRANTED,
+        )
+        waitForBrowserChrome()
         composeRule.activityRule.scenario.onActivity { activity ->
             val controller = activity.browserControllerForTesting()
             controller.createTab(isIncognito = true)
@@ -199,11 +230,16 @@ class SettingsSearchInstrumentedTest {
 
     private fun openSettings() {
         composeRule.mainClock.autoAdvance = true
+        waitForBrowserChrome()
         val closeAddress = context.getString(R.string.cd_close_address_input)
         if (composeRule.onAllNodesWithContentDescription(closeAddress).fetchSemanticsNodes().isNotEmpty()) {
             composeRule.onNodeWithContentDescription(closeAddress).performClick()
         }
         composeRule.onNodeWithContentDescription(context.getString(R.string.cd_more_options)).performClick()
+        // Let the menu finish appearing before pausing the clock for route assertions.
+        composeRule.waitUntil(timeoutMillis = 10_000L) {
+            composeRule.onNodeWithTag(BrowserMainMenuTestTags.Settings).isDisplayed()
+        }
         composeRule.mainClock.autoAdvance = false
         composeRule.onNodeWithTag(BrowserMainMenuTestTags.Settings)
             .assertIsDisplayed().performSemanticsAction(SemanticsActions.OnClick) { it() }
@@ -211,6 +247,24 @@ class SettingsSearchInstrumentedTest {
         val title = hasText(context.getString(R.string.settings_title)) and !hasClickAction()
         composeRule.waitUntil(timeoutMillis = 10_000L) { composeRule.onNode(title).isDisplayed() }
         composeRule.onNodeWithTag(SettingsSearchTestTags.Query).assertIsDisplayed()
+    }
+
+    private fun waitForBrowserChrome() {
+        // MainActivity installs its lifecycle-aware recomposer before its first composition.
+        // A resumed activity alone does not guarantee that browser chrome is available yet.
+        val startupControls = listOf(
+            context.getString(R.string.cd_close_address_input),
+            context.getString(R.string.cd_more_options),
+        )
+        composeRule.waitUntil(timeoutMillis = 10_000L) {
+            // Startup may focus the address editor, which replaces the More button.
+            startupControls.any { description ->
+                composeRule.onAllNodesWithContentDescription(description)
+                    .fetchSemanticsNodes(atLeastOneRootRequired = false)
+                    .isNotEmpty() &&
+                    composeRule.onNodeWithContentDescription(description).isDisplayed()
+            }
+        }
     }
 
     private fun search(query: String) {

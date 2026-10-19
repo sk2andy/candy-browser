@@ -42,78 +42,81 @@ internal fun CandySearchSettingsPage(
         backContentDescription = "Zurück",
         onBack = onBack,
     ) {
-        Box {
-            SettingsChoice(
-                title = "Suchmaschine",
-                value = searchEngine.displayName,
-                expanded = engineMenuExpanded,
-                onClick = { engineMenuExpanded = true },
-                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                modifier = Modifier.testTag(CandySearchSettingsTestTags.SEARCH_ENGINE),
-            )
-            SettingsDropdown(
-                expanded = engineMenuExpanded,
-                onDismissRequest = { engineMenuExpanded = false },
-            ) {
-                SearchEngine.entries.forEach { candidate ->
-                    SettingsDropdownItem(
-                        label = candidate.displayName,
-                        selected = candidate == searchEngine,
-                        onClick = {
-                            engineMenuExpanded = false
-                            onSearchEngineChanged(candidate)
-                        },
-                    )
+        SettingsPreferenceGroup(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh) {
+            Box {
+                SettingsChoice(
+                    title = "Suchmaschine",
+                    value = searchEngine.displayName,
+                    expanded = engineMenuExpanded,
+                    onClick = { engineMenuExpanded = true },
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    modifier = Modifier.testTag(CandySearchSettingsTestTags.SEARCH_ENGINE),
+                )
+                SettingsDropdown(
+                    expanded = engineMenuExpanded,
+                    onDismissRequest = { engineMenuExpanded = false },
+                ) {
+                    SearchEngine.entries.forEach { candidate ->
+                        SettingsDropdownItem(
+                            label = candidate.displayName,
+                            selected = candidate == searchEngine,
+                            onClick = {
+                                engineMenuExpanded = false
+                                onSearchEngineChanged(candidate)
+                            },
+                        )
+                    }
                 }
             }
-        }
 
-        if (searchEngine == SearchEngine.SearXNG) {
-            SettingsPageSpacer()
-            val normalizedInstanceUrl = SearchSettingsRules.normalizedSearxngInstanceUrl(
-                instanceUrlDraft,
-            )
-            OutlinedTextField(
-                value = instanceUrlDraft,
-                onValueChange = { value ->
-                    val boundedValue = value.take(
-                        SearchSettingsRules.MAX_SEARXNG_INSTANCE_URL_LENGTH,
-                    )
-                    val normalizedValue = SearchSettingsRules.normalizedSearxngInstanceUrl(
-                        boundedValue,
-                    )
-                    instanceUrlDraft = boundedValue
-                    when {
-                        boundedValue.isBlank() -> onSearxngInstanceUrlChanged("")
-                        normalizedValue != null -> onSearxngInstanceUrlChanged(normalizedValue)
-                    }
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag(CandySearchSettingsTestTags.SEARXNG_INSTANCE_URL),
-                label = { Text("SearXNG-Instanz-URL") },
-                supportingText = {
-                    Text(
-                        if (instanceUrlDraft.isNotBlank() && normalizedInstanceUrl == null) {
-                            "Gib eine gültige HTTP- oder HTTPS-URL ohne Zugangsdaten, Abfrage oder Fragment ein."
-                        } else {
-                            "Basis-URL, optional mit Pfad. HTTPS wird empfohlen."
-                        },
-                    )
-                },
-                isError = instanceUrlDraft.isNotBlank() && normalizedInstanceUrl == null,
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Uri,
-                    imeAction = ImeAction.Done,
-                ),
-                singleLine = true,
-            )
-            Text(
-                "Suchanfragen werden direkt in der ausgewählten Instanz geöffnet.",
-                modifier = Modifier.padding(start = 18.dp, top = 6.dp, end = 18.dp),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            if (searchEngine == SearchEngine.SearXNG) {
+                SettingsPageSpacer()
+                val normalizedInstanceUrl = SearchSettingsRules.normalizedSearxngInstanceUrl(
+                    instanceUrlDraft,
+                )
+                OutlinedTextField(
+                    value = instanceUrlDraft,
+                    onValueChange = { value ->
+                        val boundedValue = value.take(
+                            SearchSettingsRules.MAX_SEARXNG_INSTANCE_URL_LENGTH,
+                        )
+                        val normalizedValue = SearchSettingsRules.normalizedSearxngInstanceUrl(
+                            boundedValue,
+                        )
+                        instanceUrlDraft = boundedValue
+                        when {
+                            boundedValue.isBlank() -> onSearxngInstanceUrlChanged("")
+                            normalizedValue != null -> onSearxngInstanceUrlChanged(normalizedValue)
+                        }
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 18.dp, vertical = 8.dp)
+                        .testTag(CandySearchSettingsTestTags.SEARXNG_INSTANCE_URL),
+                    label = { Text("SearXNG-Instanz-URL") },
+                    supportingText = {
+                        Text(
+                            if (instanceUrlDraft.isNotBlank() && normalizedInstanceUrl == null) {
+                                "Gib eine gültige HTTP- oder HTTPS-URL ohne Zugangsdaten, Abfrage oder Fragment ein."
+                            } else {
+                                "Basis-URL, optional mit Pfad. HTTPS wird empfohlen."
+                            },
+                        )
+                    },
+                    isError = instanceUrlDraft.isNotBlank() && normalizedInstanceUrl == null,
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Uri,
+                        imeAction = ImeAction.Done,
+                    ),
+                    singleLine = true,
+                )
+                Text(
+                    "Suchanfragen werden direkt in der ausgewählten Instanz geöffnet.",
+                    modifier = Modifier.padding(start = 18.dp, top = 6.dp, end = 18.dp, bottom = 14.dp),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
     }
 }

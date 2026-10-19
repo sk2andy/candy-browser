@@ -41,9 +41,14 @@ internal object CandySettingsRouteRules {
 
     fun isEnabled(destination: SettingsDestination): Boolean =
         destination == SettingsDestination.Appearance ||
+            destination == SettingsDestination.AppearanceColors ||
+            destination == SettingsDestination.AppearanceWebsites ||
             destination == SettingsDestination.Search ||
             destination == SettingsDestination.TabsAndGestures ||
             destination == SettingsDestination.MenuActions ||
+            destination == SettingsDestination.MenuStyle ||
+            destination == SettingsDestination.MenuContentLayout ||
+            destination == SettingsDestination.TabOverview ||
             destination == SettingsDestination.Browser ||
             destination == SettingsDestination.Userscripts ||
             destination == SettingsDestination.Sync
@@ -203,10 +208,18 @@ internal fun CandySettingsHome(
                 isDestinationVisible = CandySettingsRouteRules::isVisible,
             )
 
-            SettingsDestination.Appearance -> CandyAppearanceSettingsPage(
+            SettingsDestination.Appearance,
+            SettingsDestination.AppearanceColors,
+            SettingsDestination.AppearanceWebsites -> CandyAppearanceSettingsPage(
                 settings = appearanceSettings,
+                section = when (currentDestination) {
+                    SettingsDestination.AppearanceColors -> AppearanceSettingsSection.Colors
+                    SettingsDestination.AppearanceWebsites -> AppearanceSettingsSection.Websites
+                    else -> AppearanceSettingsSection.Theme
+                },
+                onDestinationChanged = { destination = it },
                 onSettingsChanged = onAppearanceSettingsChanged,
-                onBack = { destination = SettingsDestination.Home },
+                onBack = { destination = SettingsNavigationRules.parentDestination(currentDestination) },
             )
 
             SettingsDestination.Search -> CandySearchSettingsPage(
@@ -225,6 +238,7 @@ internal fun CandySettingsHome(
                 dismissResistancePercent = dismissResistancePercent,
                 onDismissResistanceChanged = onDismissResistanceChanged,
                 onMenuActions = { destination = SettingsDestination.MenuActions },
+                onTabOverview = { destination = SettingsDestination.TabOverview },
                 onBack = { destination = SettingsDestination.Home },
             )
 
@@ -233,7 +247,33 @@ internal fun CandySettingsHome(
                 availableEntries = menuConfigurableEntries,
                 onLocationChanged = onBrowserMenuLocationChanged,
                 onLayoutChanged = onBrowserMenuLayoutChanged,
+                onOpenPresentation = { destination = SettingsDestination.MenuStyle },
+                onOpenContentLayout = { destination = SettingsDestination.MenuContentLayout },
                 onBack = { destination = SettingsDestination.TabsAndGestures },
+            )
+
+            SettingsDestination.MenuStyle -> BrowserMenuStyleSettingsPage(
+                layout = menuLayout,
+                resources = CandyBrowserMenuSettingsResources,
+                backContentDescription = "Zurück",
+                onBack = { destination = SettingsDestination.MenuActions },
+                onPresentationChanged = { onBrowserMenuLayoutChanged(menuLayout.copy(presentation = it)) },
+            )
+
+            SettingsDestination.MenuContentLayout -> BrowserMenuContentLayoutSettingsPage(
+                layout = menuLayout,
+                resources = CandyBrowserMenuSettingsResources,
+                backContentDescription = "Zurück",
+                onBack = { destination = SettingsDestination.MenuActions },
+                onContentLayoutChanged = { onBrowserMenuLayoutChanged(menuLayout.copy(bottomSheetContentLayout = it)) },
+            )
+
+            SettingsDestination.TabOverview -> TabOverviewSelectionPage(
+                mode = tabOverviewMode,
+                strings = candyTabOverviewStrings,
+                backContentDescription = "Zurück",
+                onBack = { destination = SettingsDestination.TabsAndGestures },
+                onModeChanged = onTabOverviewModeChanged,
             )
 
             SettingsDestination.Browser -> CandyBrowserSettingsPage(

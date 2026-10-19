@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="status_bar_scroll_accessibility_service_label">Cuộn bằng thanh trạng thái Candy</string>
+    <string name="status_bar_scroll_accessibility_service_description">Chạm vào giữa thanh trạng thái để cuộn trang Candy hiện tại lên đầu. Candy không đọc nội dung cửa sổ.</string>
+    <string name="status_bar_scroll_target_description">Cuộn trang hiện tại lên đầu</string>
+    <string name="settings_status_bar_scroll_title">Chạm thanh trạng thái để cuộn lên đầu</string>
+    <string name="settings_status_bar_scroll_summary">Thêm vùng chạm vô hình ở giữa thanh trạng thái Android. Cần cấp quyền Trợ năng cho Candy.</string>
+    <string name="settings_status_bar_scroll_width_title">Chiều rộng vùng chạm</string>
+    <string name="settings_status_bar_scroll_width_summary">%1$d%% chiều rộng màn hình</string>
+    <string name="settings_status_bar_scroll_accessibility_dialog_title">Cho phép Candy truy cập Trợ năng?</string>
+    <string name="settings_status_bar_scroll_accessibility_dialog_message">Android cần dịch vụ Trợ năng để nhận thao tác chạm trên thanh trạng thái hệ thống. Mở phần cài đặt Trợ năng của Android, rồi bật tính năng cuộn bằng thanh trạng thái Candy. Candy chỉ dùng dịch vụ cho các thao tác chạm này và không đọc nội dung cửa sổ.</string>
+    <string name="settings_status_bar_scroll_accessibility_open">Mở cài đặt Trợ năng</string>
+    <string name="settings_status_bar_scroll_enable_for_domain">Bật cuộn bằng thanh trạng thái cho trang web này</string>
+    <string name="settings_status_bar_scroll_disable_for_domain">Tắt cuộn bằng thanh trạng thái cho trang web này</string>
+</resources>

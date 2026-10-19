@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_colors_title">색상</string>
+    <string name="settings_surfaces_shapes_title">표면과 모양</string>
+    <string name="settings_link_long_press_explanation">링크를 길게 누를 때 수행할 동작을 선택하세요. 포그라운드에서는 새 탭으로 이동하고, 백그라운드에서는 현재 페이지에 머무릅니다.</string>
+    <string name="settings_gesture_preview_group">미리보기</string>
+    <string name="settings_gesture_normal_tabs_group">일반 탭</string>
+    <string name="settings_gesture_private_tabs_group">비공개 탭</string>
+    <string name="settings_gesture_link_actions_group">링크 동작</string>
+    <string name="settings_player_disabled_explanation">웹사이트의 플레이어를 계속 사용합니다.</string>
+    <string name="settings_player_button_fullscreen_explanation">버튼을 누르면 감지된 동영상이 Candy Player에서 전체 화면으로 열립니다.</string>
+    <string name="settings_player_button_inline_explanation">버튼을 누르면 페이지 안에서 동영상이 시작됩니다. 플레이어에서 전체 화면으로 전환할 수도 있습니다.</string>
+    <string name="settings_player_fullscreen_explanation">웹사이트가 동영상을 전체 화면으로 열 때 Candy Player를 사용합니다.</string>
+    <string name="settings_player_automatic_explanation">재생 가능한 동영상이 감지되면 Candy Player를 자동으로 엽니다.</string>
+</resources>

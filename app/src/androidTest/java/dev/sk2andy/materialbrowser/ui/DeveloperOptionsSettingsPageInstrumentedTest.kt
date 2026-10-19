@@ -1,5 +1,7 @@
 package dev.sk2andy.materialbrowser.ui
 
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.assertContentDescriptionEquals
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -11,7 +13,6 @@ import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
-import androidx.compose.ui.test.hasParent
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.isToggleable
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -114,6 +115,13 @@ class DeveloperOptionsSettingsPageInstrumentedTest {
                     setProgress(value)
                 }
         }
+
+        composeRule.onNodeWithTag(DeveloperOptionsTestTags.ForegroundTabIdleTimeout)
+            .assertContentDescriptionEquals(context.getString(R.string.developer_options_foreground_tab_idle_timeout))
+            .assert(SemanticsMatcher.expectValue(
+                SemanticsProperties.StateDescription,
+                context.getString(R.string.developer_options_minutes_value, 7),
+            ))
 
         assertEquals(
             original.copy(
@@ -348,17 +356,17 @@ class DeveloperOptionsSettingsPageInstrumentedTest {
         }
         val tag = DeveloperOptionsTestTags.GeckoAddInsetToNegativeTop
         composeRule.onNodeWithTag(tag).performScrollTo()
-        composeRule.onNode(hasParent(hasTestTag(tag)) and isToggleable()).assertIsOff()
+        composeRule.onNode(hasTestTag(tag) and isToggleable()).assertIsOff()
 
         composeRule.onNodeWithTag(tag).performClick()
-        composeRule.onNode(hasParent(hasTestTag(tag)) and isToggleable()).assertIsOn()
+        composeRule.onNode(hasTestTag(tag) and isToggleable()).assertIsOn()
         assertEquals(
             original.copy(geckoSafeAreaSettings = GeckoSafeAreaSettings(addInsetToNegativeTop = true)),
             settings,
         )
 
         composeRule.onNodeWithTag(tag).performClick()
-        composeRule.onNode(hasParent(hasTestTag(tag)) and isToggleable()).assertIsOff()
+        composeRule.onNode(hasTestTag(tag) and isToggleable()).assertIsOff()
         assertEquals(original, settings)
 
         composeRule.onNodeWithTag(tag).performClick()
@@ -368,7 +376,7 @@ class DeveloperOptionsSettingsPageInstrumentedTest {
             .performClick()
         assertEquals(original, settings)
         composeRule.onNodeWithTag(tag).performScrollTo()
-        composeRule.onNode(hasParent(hasTestTag(tag)) and isToggleable()).assertIsOff()
+        composeRule.onNode(hasTestTag(tag) and isToggleable()).assertIsOff()
     }
 
     @Test
@@ -495,12 +503,12 @@ class DeveloperOptionsSettingsPageInstrumentedTest {
         composeRule.onNodeWithTag(DeveloperOptionsTestTags.AppLogging)
             .performScrollTo()
         composeRule.onNode(
-            hasParent(hasTestTag(DeveloperOptionsTestTags.AppLogging)) and isToggleable(),
+            hasTestTag(DeveloperOptionsTestTags.AppLogging) and isToggleable(),
         ).assertIsOff()
         composeRule.onNodeWithTag(DeveloperOptionsTestTags.AppLogging)
             .performClick()
         composeRule.onNode(
-            hasParent(hasTestTag(DeveloperOptionsTestTags.AppLogging)) and isToggleable(),
+            hasTestTag(DeveloperOptionsTestTags.AppLogging) and isToggleable(),
         ).assertIsOn()
         assertEquals(original.copy(appLoggingEnabled = true), settings)
         composeRule.onNodeWithTag(DeveloperOptionsTestTags.ExportLogs)
@@ -513,7 +521,7 @@ class DeveloperOptionsSettingsPageInstrumentedTest {
             .performScrollTo()
             .performClick()
         composeRule.onNode(
-            hasParent(hasTestTag(DeveloperOptionsTestTags.AppLogging)) and isToggleable(),
+            hasTestTag(DeveloperOptionsTestTags.AppLogging) and isToggleable(),
         ).assertIsOff()
         assertEquals(original, settings)
         composeRule.onNodeWithTag(DeveloperOptionsTestTags.ExportLogs)
@@ -609,7 +617,7 @@ class DeveloperOptionsSettingsPageInstrumentedTest {
         ).assertIsDisplayed()
         composeRule.onNodeWithTag(DeveloperOptionsTestTags.GeckoLogging).performScrollTo()
         composeRule.onNode(
-            hasParent(hasTestTag(DeveloperOptionsTestTags.GeckoLogging)) and isToggleable(),
+            hasTestTag(DeveloperOptionsTestTags.GeckoLogging) and isToggleable(),
         ).assertIsOn()
     }
 

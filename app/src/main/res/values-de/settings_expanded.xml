@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_colors_title">Farben</string>
+    <string name="settings_surfaces_shapes_title">Oberflächen und Formen</string>
+    <string name="settings_link_long_press_explanation">Wähle, was beim langen Drücken auf einen Link passiert. Im Vordergrund wechselst du zum neuen Tab, im Hintergrund bleibst du auf der aktuellen Seite.</string>
+    <string name="settings_gesture_preview_group">Vorschau</string>
+    <string name="settings_gesture_normal_tabs_group">Normale Tabs</string>
+    <string name="settings_gesture_private_tabs_group">Private Tabs</string>
+    <string name="settings_gesture_link_actions_group">Link-Aktionen</string>
+    <string name="settings_player_disabled_explanation">Weiterhin den Player der Website verwenden.</string>
+    <string name="settings_player_button_fullscreen_explanation">Eine Schaltfläche öffnet erkannte Videos im Vollbild von Candy Player.</string>
+    <string name="settings_player_button_inline_explanation">Eine Schaltfläche startet das Video innerhalb der Seite. Vollbild bleibt im Player verfügbar.</string>
+    <string name="settings_player_fullscreen_explanation">Candy Player verwenden, wenn die Website ein Video im Vollbild öffnet.</string>
+    <string name="settings_player_automatic_explanation">Candy Player automatisch öffnen, sobald ein abspielbares Video erkannt wird.</string>
+</resources>

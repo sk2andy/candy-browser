@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="status_bar_scroll_accessibility_service_label">Przewijanie paskiem stanu Candy</string>
+    <string name="status_bar_scroll_accessibility_service_description">Dotknięcie środka paska stanu przewija bieżącą stronę Candy na początek. Candy nie odczytuje zawartości okien.</string>
+    <string name="status_bar_scroll_target_description">Przewiń bieżącą stronę na początek</string>
+    <string name="settings_status_bar_scroll_title">Dotknij paska stanu, aby przewinąć na początek</string>
+    <string name="settings_status_bar_scroll_summary">Dodaje niewidoczny obszar dotyku na środku paska stanu Androida. Wymaga dostępu Candy do ułatwień dostępu.</string>
+    <string name="settings_status_bar_scroll_width_title">Szerokość obszaru dotyku</string>
+    <string name="settings_status_bar_scroll_width_summary">%1$d%% szerokości ekranu</string>
+    <string name="settings_status_bar_scroll_accessibility_dialog_title">Zezwolić Candy na dostęp do ułatwień dostępu?</string>
+    <string name="settings_status_bar_scroll_accessibility_dialog_message">Android wymaga usługi ułatwień dostępu do odbierania dotknięć systemowego paska stanu. Otwórz ustawienia ułatwień dostępu Androida i włącz przewijanie paskiem stanu Candy. Candy używa usługi tylko do tych dotknięć i nie odczytuje zawartości okien.</string>
+    <string name="settings_status_bar_scroll_accessibility_open">Otwórz ustawienia ułatwień dostępu</string>
+    <string name="settings_status_bar_scroll_enable_for_domain">Włącz przewijanie paskiem stanu dla tej witryny</string>
+    <string name="settings_status_bar_scroll_disable_for_domain">Wyłącz przewijanie paskiem stanu dla tej witryny</string>
+</resources>

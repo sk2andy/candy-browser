@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="status_bar_scroll_accessibility_service_label">Candy ステータスバーでスクロール</string>
+    <string name="status_bar_scroll_accessibility_service_description">ステータスバーの中央をタップすると、現在の Candy ページの先頭に移動します。Candy はウィンドウの内容を読み取りません。</string>
+    <string name="status_bar_scroll_target_description">現在のページの先頭に移動</string>
+    <string name="settings_status_bar_scroll_title">ステータスバーをタップして先頭に移動</string>
+    <string name="settings_status_bar_scroll_summary">Android のステータスバー中央に、見えないタップ領域を追加します。Candy のユーザー補助へのアクセスが必要です。</string>
+    <string name="settings_status_bar_scroll_width_title">タップ領域の幅</string>
+    <string name="settings_status_bar_scroll_width_summary">画面幅の %1$d%%</string>
+    <string name="settings_status_bar_scroll_accessibility_dialog_title">Candy のユーザー補助へのアクセスを許可しますか？</string>
+    <string name="settings_status_bar_scroll_accessibility_dialog_message">システムのステータスバーへのタップを受け取るには、Android のユーザー補助サービスが必要です。Android のユーザー補助設定を開き、「Candy ステータスバーでスクロール」を有効にしてください。Candy はこのタップのためだけにサービスを使用し、ウィンドウの内容を読み取りません。</string>
+    <string name="settings_status_bar_scroll_accessibility_open">ユーザー補助設定を開く</string>
+    <string name="settings_status_bar_scroll_enable_for_domain">このサイトでステータスバーによるスクロールを有効にする</string>
+    <string name="settings_status_bar_scroll_disable_for_domain">このサイトでステータスバーによるスクロールを無効にする</string>
+</resources>

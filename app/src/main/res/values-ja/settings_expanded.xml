@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_colors_title">色</string>
+    <string name="settings_surfaces_shapes_title">サーフェスと形状</string>
+    <string name="settings_link_long_press_explanation">リンクを長押ししたときの動作を選択します。前面で開くと新しいタブに切り替わり、バックグラウンドで開くと現在のページに留まります。</string>
+    <string name="settings_gesture_preview_group">プレビュー</string>
+    <string name="settings_gesture_normal_tabs_group">通常のタブ</string>
+    <string name="settings_gesture_private_tabs_group">プライベートタブ</string>
+    <string name="settings_gesture_link_actions_group">リンクの操作</string>
+    <string name="settings_player_disabled_explanation">ウェブサイトのプレーヤーを引き続き使用します。</string>
+    <string name="settings_player_button_fullscreen_explanation">ボタンを押すと、検出した動画を Candy Player で全画面表示します。</string>
+    <string name="settings_player_button_inline_explanation">ボタンを押すと、ページ内で動画を再生します。プレーヤーから全画面表示に切り替えることもできます。</string>
+    <string name="settings_player_fullscreen_explanation">ウェブサイトが動画を全画面表示するときに Candy Player を使用します。</string>
+    <string name="settings_player_automatic_explanation">再生可能な動画を検出すると、Candy Player を自動的に開きます。</string>
+</resources>

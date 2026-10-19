@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_colors_title">Màu sắc</string>
+    <string name="settings_surfaces_shapes_title">Bề mặt và hình dạng</string>
+    <string name="settings_link_long_press_explanation">Chọn thao tác khi nhấn giữ một liên kết. Mở ở phía trước sẽ chuyển sang thẻ mới; mở trong nền sẽ giữ nguyên trang hiện tại.</string>
+    <string name="settings_gesture_preview_group">Xem trước</string>
+    <string name="settings_gesture_normal_tabs_group">Thẻ thông thường</string>
+    <string name="settings_gesture_private_tabs_group">Thẻ riêng tư</string>
+    <string name="settings_gesture_link_actions_group">Thao tác với liên kết</string>
+    <string name="settings_player_disabled_explanation">Tiếp tục sử dụng trình phát của trang web.</string>
+    <string name="settings_player_button_fullscreen_explanation">Một nút mở video được phát hiện ở chế độ toàn màn hình trong Candy Player.</string>
+    <string name="settings_player_button_inline_explanation">Một nút bắt đầu phát video ngay trong trang. Bạn vẫn có thể chuyển sang toàn màn hình trong trình phát.</string>
+    <string name="settings_player_fullscreen_explanation">Sử dụng Candy Player khi trang web mở video ở chế độ toàn màn hình.</string>
+    <string name="settings_player_automatic_explanation">Tự động mở Candy Player khi phát hiện video có thể phát.</string>
+</resources>

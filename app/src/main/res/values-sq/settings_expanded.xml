@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_colors_title">Ngjyrat</string>
+    <string name="settings_surfaces_shapes_title">Sipërfaqet dhe format</string>
+    <string name="settings_link_long_press_explanation">Zgjidhni çfarë ndodh kur mbani shtypur një lidhje. Në plan të parë kaloni te skeda e re; në sfond qëndroni në faqen aktuale.</string>
+    <string name="settings_gesture_preview_group">Parapamje</string>
+    <string name="settings_gesture_normal_tabs_group">Skeda normale</string>
+    <string name="settings_gesture_private_tabs_group">Skeda private</string>
+    <string name="settings_gesture_link_actions_group">Veprime me lidhjet</string>
+    <string name="settings_player_disabled_explanation">Vazhdoni të përdorni luajtësin e faqes.</string>
+    <string name="settings_player_button_fullscreen_explanation">Një buton hap videot e zbuluara në ekran të plotë në Candy Player.</string>
+    <string name="settings_player_button_inline_explanation">Një buton nis videon brenda faqes. Ekrani i plotë mbetet i disponueshëm në luajtës.</string>
+    <string name="settings_player_fullscreen_explanation">Përdorni Candy Player kur faqja hap një video në ekran të plotë.</string>
+    <string name="settings_player_automatic_explanation">Hapni automatikisht Candy Player kur zbulohet një video që mund të luhet.</string>
+</resources>

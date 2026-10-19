@@ -96,39 +96,13 @@ internal fun PrivacyXRaySettingsCounter(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Surface(
+    SettingsLink(
+        icon = Icons.Default.Check,
+        title = stringResource(R.string.privacy_xray_title),
+        subtitle = pluralStringResource(R.plurals.blocked_requests_count, blockedCount, blockedCount),
         onClick = onClick,
-        modifier = modifier
-            .fillMaxWidth()
-            .sizeIn(minHeight = 48.dp)
-            .settingsSearchTarget(stringResource(R.string.privacy_xray_title))
-            .testTag(PrivacyXRayTestTags.SettingsCounter),
-        shape = MaterialTheme.shapes.large,
-        color = MaterialTheme.colorScheme.primaryContainer,
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 18.dp, vertical = 13.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                pluralStringResource(
-                    R.plurals.blocked_requests_count,
-                    blockedCount,
-                    blockedCount,
-                ),
-                modifier = Modifier.weight(1f),
-                color = MaterialTheme.colorScheme.onPrimaryContainer,
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-            )
-            Text(
-                "◈",
-                color = MaterialTheme.colorScheme.primary,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-            )
-        }
-    }
+        modifier = modifier.testTag(PrivacyXRayTestTags.SettingsCounter),
+    )
 }
 
 @Composable
@@ -226,7 +200,7 @@ internal fun SettingsChoice(
         value = value,
         expanded = expanded,
         onClick = onClick,
-        containerColor = browserChromeColor(MaterialTheme.colorScheme.surfaceContainerHigh),
+        containerColor = dev.sk2andy.materialbrowser.shared.ui.settings.settingsRowColor(),
         modifier = modifier,
         enabled = enabled,
         inPreferenceGroup = inPreferenceGroup,
@@ -235,11 +209,11 @@ internal fun SettingsChoice(
 
 @Composable
 internal fun SettingsPreferenceGroup(content: @Composable ColumnScope.() -> Unit) {
-    dev.sk2andy.materialbrowser.shared.ui.settings.SettingsPreferenceGroup(
-        containerColor = browserChromeColor(MaterialTheme.colorScheme.surfaceContainerHigh),
-        content = content,
-    )
-}
+                 dev.sk2andy.materialbrowser.shared.ui.settings.SettingsPreferenceGroup(
+                     containerColor = dev.sk2andy.materialbrowser.shared.ui.settings.settingsRowColor(),
+                     content = content,
+                 )
+             }
 
 @Composable
 internal fun SettingsPreferenceDivider() {
@@ -264,11 +238,19 @@ internal fun SettingsDropdownItem(
     label: String,
     selected: Boolean,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    leadingIcon: @Composable (() -> Unit)? = null,
+    supportingText: String? = null,
+    enabled: Boolean = true,
 ) {
     dev.sk2andy.materialbrowser.shared.ui.settings.SettingsDropdownItem(
         label = label,
         selected = selected,
         onClick = onClick,
+        leadingIcon = leadingIcon,
+        supportingText = supportingText,
+        modifier = modifier,
+        enabled = enabled,
     )
 }
 
@@ -278,11 +260,13 @@ internal fun SettingsLink(
     title: String,
     subtitle: String,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     dev.sk2andy.materialbrowser.shared.ui.settings.SettingsLink(
         title = title,
+        modifier = modifier,
         subtitle = subtitle,
-        containerColor = browserChromeColor(MaterialTheme.colorScheme.surfaceContainerHigh),
+        containerColor = dev.sk2andy.materialbrowser.shared.ui.settings.settingsRowColor(),
         icon = { modifier, tint ->
             Icon(
                 imageVector = icon,
@@ -303,6 +287,7 @@ internal fun SettingsSwitch(
     enabled: Boolean = true,
     onCheckedChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
+    prominent: Boolean = false,
 ) {
     dev.sk2andy.materialbrowser.shared.ui.settings.SettingsSwitch(
         title = title,
@@ -311,6 +296,7 @@ internal fun SettingsSwitch(
         enabled = enabled,
         onCheckedChange = onCheckedChange,
         modifier = modifier,
+        prominent = prominent,
     )
 }
 

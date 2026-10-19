@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_colors_title">Цвета</string>
+    <string name="settings_surfaces_shapes_title">Поверхности и формы</string>
+    <string name="settings_link_long_press_explanation">Выберите действие при долгом нажатии на ссылку. На переднем плане вы переходите на новую вкладку; в фоне — остаётесь на текущей странице.</string>
+    <string name="settings_gesture_preview_group">Предпросмотр</string>
+    <string name="settings_gesture_normal_tabs_group">Обычные вкладки</string>
+    <string name="settings_gesture_private_tabs_group">Приватные вкладки</string>
+    <string name="settings_gesture_link_actions_group">Действия со ссылками</string>
+    <string name="settings_player_disabled_explanation">Продолжать использовать проигрыватель сайта.</string>
+    <string name="settings_player_button_fullscreen_explanation">Кнопка открывает обнаруженные видео на весь экран в Candy Player.</string>
+    <string name="settings_player_button_inline_explanation">Кнопка запускает видео внутри страницы. Полноэкранный режим остаётся доступен в проигрывателе.</string>
+    <string name="settings_player_fullscreen_explanation">Использовать Candy Player, когда сайт открывает видео на весь экран.</string>
+    <string name="settings_player_automatic_explanation">Автоматически открывать Candy Player при обнаружении доступного для воспроизведения видео.</string>
+</resources>

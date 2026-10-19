@@ -20,14 +20,17 @@ class SettingsSearchCatalogTest {
     }
 
     @Test
-    fun `menu presentation and sheet sections search opens menu settings`() {
+    fun `menu and tab layout search opens the dedicated selection pages`() {
         val entries = settingsSearchDefinitions(SettingsSearchAvailability()).associateBy { it.id }
 
-        listOf("settings_menu_presentation_title", "settings_menu_bottom_sheet_layout_title")
-            .forEach { id ->
-                assertEquals(SettingsDestination.MenuActions, entries.getValue(id).destination)
+        mapOf(
+            "settings_menu_presentation_title" to SettingsDestination.MenuStyle,
+            "settings_menu_bottom_sheet_layout_title" to SettingsDestination.MenuContentLayout,
+        ).forEach { (id, destination) ->
+                assertEquals(destination, entries.getValue(id).destination)
                 assertEquals(R.string.settings_menu_presentation_summary, entries.getValue(id).descriptionRes)
             }
+        assertEquals(SettingsDestination.TabOverview, entries.getValue("settings_tab_overview_mode").destination)
     }
 
     @Test
@@ -131,7 +134,7 @@ class SettingsSearchCatalogTest {
             entries.getValue("settings_inline_media_player_seek_backward").destination,
         )
         assertEquals(
-            SettingsDestination.Appearance,
+            SettingsDestination.AppearanceWebsites,
             entries.getValue("settings_force_dark_websites").destination,
         )
         assertNull(entries.getValue("gecko_extensions_title").destination)
@@ -298,6 +301,38 @@ class SettingsSearchCatalogTest {
         }
     }
 
+    @Test
+    fun `expanded detail routes preserve every search identifier and owning section`() {
+        val entries = settingsSearchDefinitions(SettingsSearchAvailability()).associateBy { it.id }
+        val expected = mapOf(
+            "settings_tab_stack_folder_mode" to SettingsDestination.TabStackFolder,
+            "settings_closed_tab_undo_title" to SettingsDestination.ClosedTabUndo,
+            "settings_link_long_press_action" to SettingsDestination.LinkLongPress,
+            "settings_link_peek_swipe_action" to SettingsDestination.LinkPeekSwipe,
+            "settings_inline_media_player_title" to SettingsDestination.PlayerMode,
+            "settings_external_link_preview_title" to SettingsDestination.ExternalLinkPreview,
+            "settings_appearance_mode" to SettingsDestination.AppearanceColors,
+            "settings_color_palette" to SettingsDestination.AppearanceColors,
+            "settings_shape_style" to SettingsDestination.AppearanceSurfaces,
+        )
+        expected.forEach { (id, destination) ->
+            assertEquals(id, destination, entries.getValue(id).destination)
+        }
+        assertEquals(SettingsDestination.Player, entries.getValue("settings_inline_media_player_seek_forward").destination)
+        assertEquals(SettingsDestination.Appearance, entries.getValue("settings_animations").destination)
+    }
+
     private fun ids(availability: SettingsSearchAvailability): Set<String> =
         settingsSearchDefinitions(availability).map { it.id }.toSet()
+    @Test
+    fun `search targets actual detail pages while retaining stable identifiers`() {
+        val entries = settingsSearchDefinitions(SettingsSearchAvailability()).associateBy { it.id }
+        assertEquals(SettingsDestination.AppearanceSurfaces, entries.getValue("settings_frosted_blur").destination)
+        assertEquals(SettingsDestination.AppearanceAddressBar, entries.getValue("settings_address_bar_color").destination)
+        assertEquals(SettingsDestination.BrowserStartup, entries.getValue("settings_startup_address_focus_title").destination)
+        assertEquals(SettingsDestination.BrowserFavorites, entries.getValue("settings_favorite_animation_speed_title").destination)
+        assertEquals(SettingsDestination.BrowserWebsites, entries.getValue("settings_scroll_bar_title").destination)
+        assertEquals(SettingsDestination.ExternalLinkPreview, entries.getValue("settings_external_link_preview_title").destination)
+    }
+
 }

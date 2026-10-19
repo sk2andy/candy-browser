@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="status_bar_scroll_accessibility_service_label">Candy-rullning via statusfältet</string>
+    <string name="status_bar_scroll_accessibility_service_description">Tryck mitt på statusfältet för att rulla den aktuella Candy-sidan till toppen. Candy läser inte fönsterinnehåll.</string>
+    <string name="status_bar_scroll_target_description">Rulla den aktuella sidan till toppen</string>
+    <string name="settings_status_bar_scroll_title">Tryck på statusfältet för att rulla till toppen</string>
+    <string name="settings_status_bar_scroll_summary">Lägger till ett osynligt tryckområde mitt på Androids statusfält. Kräver tillgänglighetsåtkomst för Candy.</string>
+    <string name="settings_status_bar_scroll_width_title">Tryckområdets bredd</string>
+    <string name="settings_status_bar_scroll_width_summary">%1$d%% av skärmbredden</string>
+    <string name="settings_status_bar_scroll_accessibility_dialog_title">Ge Candy tillgänglighetsåtkomst?</string>
+    <string name="settings_status_bar_scroll_accessibility_dialog_message">Android kräver en tillgänglighetstjänst för att ta emot tryck på systemets statusfält. Öppna Androids tillgänglighetsinställningar och aktivera Candy-rullning via statusfältet. Candy använder tjänsten enbart för dessa tryck och läser inte fönsterinnehåll.</string>
+    <string name="settings_status_bar_scroll_accessibility_open">Öppna tillgänglighetsinställningar</string>
+    <string name="settings_status_bar_scroll_enable_for_domain">Aktivera rullning via statusfältet för den här webbplatsen</string>
+    <string name="settings_status_bar_scroll_disable_for_domain">Inaktivera rullning via statusfältet för den här webbplatsen</string>
+</resources>

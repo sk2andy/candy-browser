@@ -42,54 +42,57 @@ internal fun SiteCapsulesSettingsPage(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Spacer(Modifier.height(8.dp))
-        if (siteCapsules.isEmpty()) {
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = MaterialTheme.shapes.large,
-                color = browserChromeColor(MaterialTheme.colorScheme.surfaceContainerHigh),
-            ) {
-                Text(
-                    stringResource(R.string.capsule_settings_empty),
-                    modifier = Modifier.padding(horizontal = 18.dp, vertical = 16.dp),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        } else {
-            siteCapsules.forEach { capsule ->
+        SettingsPreferenceGroup {
+            if (siteCapsules.isEmpty()) {
                 Surface(
-                    onClick = { onEditCapsule(capsule) },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 4.dp),
-                    shape = MaterialTheme.shapes.large,
-                    color = browserChromeColor(MaterialTheme.colorScheme.surfaceContainerHigh),
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = dev.sk2andy.materialbrowser.shared.ui.settings.settingsRowShape(),
+                    color = dev.sk2andy.materialbrowser.shared.ui.settings.settingsRowColor(),
                 ) {
-                    Row(
-                        modifier = Modifier.padding(start = 18.dp, top = 8.dp, bottom = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
+                    Text(
+                        stringResource(R.string.capsule_settings_empty),
+                        modifier = Modifier.padding(horizontal = 18.dp, vertical = 16.dp),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            } else {
+                siteCapsules.forEachIndexed { index, capsule ->
+                    if (index > 0) SettingsPreferenceDivider()
+                    Surface(
+                        onClick = { onEditCapsule(capsule) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 0.dp),
+                        shape = dev.sk2andy.materialbrowser.shared.ui.settings.settingsRowShape(),
+                        color = dev.sk2andy.materialbrowser.shared.ui.settings.settingsRowColor(),
                     ) {
-                        Column(Modifier.weight(1f)) {
-                            Text(capsule.name, style = MaterialTheme.typography.titleSmall)
-                            Text(
-                                AddressResolver.displayText(capsule.startUrl),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                        IconButton(onClick = { onEditCapsule(capsule) }) {
-                            Icon(
-                                Icons.Default.Edit,
-                                contentDescription = stringResource(R.string.capsule_edit_title),
-                            )
-                        }
-                        IconButton(onClick = { onDeleteCapsule(capsule) }) {
-                            Icon(
-                                Icons.Default.Close,
-                                contentDescription = stringResource(R.string.capsule_delete_title),
-                                tint = MaterialTheme.colorScheme.error,
-                            )
+                        Row(
+                            modifier = Modifier.padding(start = 18.dp, top = 8.dp, bottom = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Column(Modifier.weight(1f)) {
+                                Text(capsule.name, style = MaterialTheme.typography.titleSmall)
+                                Text(
+                                    AddressResolver.displayText(capsule.startUrl),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            IconButton(onClick = { onEditCapsule(capsule) }) {
+                                Icon(
+                                    Icons.Default.Edit,
+                                    contentDescription = stringResource(R.string.capsule_edit_title),
+                                )
+                            }
+                            IconButton(onClick = { onDeleteCapsule(capsule) }) {
+                                Icon(
+                                    Icons.Default.Close,
+                                    contentDescription = stringResource(R.string.capsule_delete_title),
+                                    tint = MaterialTheme.colorScheme.error,
+                                )
+                            }
                         }
                     }
                 }

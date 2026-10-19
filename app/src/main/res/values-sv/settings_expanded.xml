@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_colors_title">Färger</string>
+    <string name="settings_surfaces_shapes_title">Ytor och former</string>
+    <string name="settings_link_long_press_explanation">Välj vad som händer när du trycker länge på en länk. I förgrunden växlar du till den nya fliken; i bakgrunden stannar du på den aktuella sidan.</string>
+    <string name="settings_gesture_preview_group">Förhandsvisning</string>
+    <string name="settings_gesture_normal_tabs_group">Vanliga flikar</string>
+    <string name="settings_gesture_private_tabs_group">Privata flikar</string>
+    <string name="settings_gesture_link_actions_group">Länkåtgärder</string>
+    <string name="settings_player_disabled_explanation">Fortsätt använda webbplatsens spelare.</string>
+    <string name="settings_player_button_fullscreen_explanation">En knapp öppnar upptäckta videor i helskärm i Candy Player.</string>
+    <string name="settings_player_button_inline_explanation">En knapp startar videon på sidan. Helskärm är fortfarande tillgängligt i spelaren.</string>
+    <string name="settings_player_fullscreen_explanation">Använd Candy Player när webbplatsen öppnar en video i helskärm.</string>
+    <string name="settings_player_automatic_explanation">Öppna Candy Player automatiskt när en spelbar video upptäcks.</string>
+</resources>
