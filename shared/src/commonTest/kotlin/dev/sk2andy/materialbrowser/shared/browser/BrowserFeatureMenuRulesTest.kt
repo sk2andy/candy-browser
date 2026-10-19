@@ -8,6 +8,24 @@ import kotlin.test.assertTrue
 
 class BrowserFeatureMenuRulesTest {
     @Test
+    fun `status bar scroll action is hidden unless global feature and domain are enabled`() {
+        assertFalse(
+            BrowserFeatureMenuRules.items(BrowserFeatureMenuState())
+                .any { it.action == BrowserFeatureMenuAction.ToggleStatusBarScroll },
+        )
+        val enabled = BrowserFeatureMenuRules.items(
+            BrowserFeatureMenuState(canToggleStatusBarScroll = true, isStatusBarScrollEnabled = true),
+        ).single { it.action == BrowserFeatureMenuAction.ToggleStatusBarScroll }
+        assertTrue(enabled.checked)
+        assertEquals(BrowserFeatureMenuLabelKey.DisableStatusBarScrollForDomain, enabled.labelKey)
+        val disabled = BrowserFeatureMenuRules.items(
+            BrowserFeatureMenuState(canToggleStatusBarScroll = true, isStatusBarScrollEnabled = false),
+        ).single { it.action == BrowserFeatureMenuAction.ToggleStatusBarScroll }
+        assertFalse(disabled.checked)
+        assertEquals(BrowserFeatureMenuLabelKey.EnableStatusBarScrollForDomain, disabled.labelKey)
+    }
+
+    @Test
     fun `constellations requires platform support and follows profile availability`() {
         val state = BrowserFeatureMenuState(canOpenConstellations = true)
         assertFalse(BrowserFeatureMenuRules.items(state).any { it.action == BrowserFeatureMenuAction.OpenConstellations })

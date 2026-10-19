@@ -38,6 +38,7 @@ import androidx.core.view.OneShotPreDrawListener
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.doOnAttach
+import dev.sk2andy.materialbrowser.StatusBarScrollAccessibilityContract
 import dev.sk2andy.materialbrowser.BuildConfig
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.blocking.BlockerSettings
@@ -772,6 +773,12 @@ class BrowserController(
     var searxngSettings by mutableStateOf(SearxngSettings())
         private set
     var isAiModeToggleVisible by mutableStateOf(false)
+        private set
+    var isStatusBarScrollEnabled by mutableStateOf(false)
+        private set
+    var statusBarScrollTargetWidthPercent by mutableIntStateOf(
+        StatusBarScrollRules.DEFAULT_TARGET_WIDTH_PERCENT,
+    )
         private set
     var isRecallEnabled by mutableStateOf(false)
         private set
@@ -1654,6 +1661,10 @@ class BrowserController(
         putAll(store.loadMutedDomains())
     }
     private val temporaryMutedDomains = mutableStateMapOf<String, Set<String>>()
+    private val permanentStatusBarScrollDisabledDomains = mutableStateMapOf<String, Set<String>>().apply {
+        putAll(store.loadStatusBarScrollDisabledDomains())
+    }
+    private val temporaryStatusBarScrollDisabledDomains = mutableStateMapOf<String, Set<String>>()
     private val extensionTabMuteOverrides = mutableMapOf<String, Boolean>()
     private val permanentDesktopViewDomains = mutableStateMapOf<String, Set<String>>().apply {
         putAll(store.loadDesktopViewDomains())
@@ -1830,6 +1841,12 @@ class BrowserController(
     val isSelectedDomainMuted: Boolean
         get() = isDomainMuted(selectedTabId)
 
+    val canToggleSelectedStatusBarScroll: Boolean
+        get() = canToggleStatusBarScroll(selectedTabId)
+
+    val isSelectedStatusBarScrollEnabled: Boolean
+        get() = isStatusBarScrollDomainEnabled(selectedTabId)
+
     val canToggleSelectedAlwaysBlockPopups: Boolean
         get() = supportsPageContentActions && canToggleAlwaysBlockPopups(selectedTabId)
 
@@ -1863,6 +1880,31 @@ class BrowserController(
         siteExceptionRevision
         val tab = tabs.firstOrNull { it.id == tabId } ?: return false
         return isDomainMuted(tab, pageUrls[tabId] ?: tab.url)
+    }
+
+    fun canToggleStatusBarScroll(tabId: String): Boolean {
+        if (!isStatusBarScrollEnabled) return false
+        val tab = tabs.firstOrNull { it.id == tabId } ?: return false
+        return SiteDomainRules.domainForUrl(pageUrls[tabId] ?: tab.url) != null
+    }
+
+    fun isStatusBarScrollDomainEnabled(tabId: String): Boolean {
+        val tab = tabs.firstOrNull { it.id == tabId } ?: return false
+        val disabledDomains = if (tab.isIncognito) {
+            temporaryStatusBarScrollDisabledDomains[tab.profileId]
+        } else {
+            permanentStatusBarScrollDisabledDomains[tab.profileId]
+        }
+        return StatusBarScrollRules.isEnabled(
+            pageUrls[tabId] ?: tab.url,
+            disabledDomains.orEmpty(),
+        )
+    }
+
+    fun publishStatusBarScrollPageContext(visible: Boolean) {
+        val allowed = visible && isStatusBarScrollEnabled &&
+            isStatusBarScrollDomainEnabled(selectedTabId)
+        store.saveStatusBarScrollPageAllowed(allowed)
     }
 
     fun canToggleAlwaysBlockPopups(tabId: String): Boolean {
@@ -2659,6 +2701,8 @@ class BrowserController(
         linkPeekActionLayout = store.loadLinkPeekActionLayout()
         browserMenuLayout = store.loadBrowserMenuLayout()
         isAiModeToggleVisible = store.loadAiModeToggleVisible()
+        isStatusBarScrollEnabled = store.loadStatusBarScrollEnabled()
+        statusBarScrollTargetWidthPercent = store.loadStatusBarScrollTargetWidthPercent()
         isRecallEnabled = store.loadRecallEnabled()
         historyRecordingMode = historyRepository.recordingMode()
         if (!isRecallEnabled) recallRepository.clearAsync()
@@ -7024,6 +7068,12 @@ class BrowserController(
             store.saveMutedDomains(permanentMutedDomains.toMap())
         }
         temporaryMutedDomains.remove(profileId)
+        permanentStatusBarScrollDisabledDomains.remove(profileId)?.let {
+            store.saveStatusBarScrollDisabledDomains(
+                permanentStatusBarScrollDisabledDomains.toMap(),
+            )
+        }
+        temporaryStatusBarScrollDisabledDomains.remove(profileId)
         if (permanentDesktopViewDomains.remove(profileId) != null) {
             store.saveDesktopViewDomains(permanentDesktopViewDomains.toMap())
         }
@@ -10941,6 +10991,19 @@ class BrowserController(
         store.saveAiModeToggleVisible(visible)
     }
 
+    fun updateStatusBarScrollEnabled(enabled: Boolean) {
+        if (isStatusBarScrollEnabled == enabled) return
+        isStatusBarScrollEnabled = enabled
+        store.saveStatusBarScrollEnabled(enabled)
+    }
+
+    fun updateStatusBarScrollTargetWidthPercent(widthPercent: Int) {
+        val normalized = StatusBarScrollRules.targetWidthPercent(widthPercent)
+        if (statusBarScrollTargetWidthPercent == normalized) return
+        statusBarScrollTargetWidthPercent = normalized
+        store.saveStatusBarScrollTargetWidthPercent(normalized)
+    }
+
     fun updateRecallEnabled(enabled: Boolean) {
         if (recallDisablePending || isRecallEnabled == enabled) return
         if (enabled) {
@@ -11059,6 +11122,36 @@ class BrowserController(
         return true
     }
 
+    fun setStatusBarScrollEnabled(tabId: String, enabled: Boolean): Boolean {
+        if (!isStatusBarScrollEnabled) return false
+        val tab = tabs.firstOrNull { it.id == tabId } ?: return false
+        val pageUrl = pageUrls[tabId] ?: tab.url
+        val domain = SiteDomainRules.domainForUrl(pageUrl) ?: return false
+        if (isStatusBarScrollDomainEnabled(tabId) == enabled) return false
+        val domainsByProfile = if (tab.isIncognito) {
+            temporaryStatusBarScrollDisabledDomains
+        } else {
+            permanentStatusBarScrollDisabledDomains
+        }
+        val updated = StatusBarScrollRules.withEnabledState(
+            disabledDomains = domainsByProfile[tab.profileId].orEmpty(),
+            domain = domain,
+            enabled = enabled,
+        )
+        if (updated.isEmpty()) domainsByProfile.remove(tab.profileId)
+        else domainsByProfile[tab.profileId] = updated
+        if (!tab.isIncognito) {
+            store.saveStatusBarScrollDisabledDomains(
+                permanentStatusBarScrollDisabledDomains.toMap(),
+            )
+        }
+        publishStatusBarScrollPageContext(visible = true)
+        return true
+    }
+
+    fun setSelectedStatusBarScrollEnabled(enabled: Boolean): Boolean =
+        setStatusBarScrollEnabled(selectedTabId, enabled)
+
     fun setSelectedDesktopView(enabled: Boolean): Boolean =
         setDesktopView(selectedTabId, enabled)
 
@@ -11167,6 +11260,9 @@ class BrowserController(
         temporaryMutedDomains.clear()
         permanentMutedDomains.clear()
         store.saveMutedDomains(emptyMap())
+        temporaryStatusBarScrollDisabledDomains.clear()
+        permanentStatusBarScrollDisabledDomains.clear()
+        store.saveStatusBarScrollDisabledDomains(emptyMap())
         temporaryDesktopViewDomains.clear()
         permanentDesktopViewDomains.clear()
         store.saveDesktopViewDomains(emptyMap())
@@ -11846,6 +11942,7 @@ class BrowserController(
         temporarySiteExceptions.clear()
         temporarySitePrivacyOverrides.clear()
         temporaryMutedDomains.clear()
+        temporaryStatusBarScrollDisabledDomains.clear()
         temporaryDesktopViewDomains.clear()
         temporaryAlwaysBlockPopupDomains.clear()
         savePersistentFilterRules()
@@ -17740,6 +17837,7 @@ class BrowserController(
         browserEngineSessionFactory.clearPrivateData()
         incognitoRuleHits.clear()
         temporaryMutedDomains.clear()
+        temporaryStatusBarScrollDisabledDomains.clear()
         temporaryDesktopViewDomains.clear()
         temporaryAlwaysBlockPopupDomains.clear()
         permissionRepository.clearPrivateSession()

@@ -88,6 +88,7 @@ enum class BrowserMenuEntry(
     ),
     DesktopView("desktop_view", BrowserMenuConfigurationSection.Page, BrowserMenuLocation.Tab, true, false),
     DomainMute("domain_mute", BrowserMenuConfigurationSection.Page, BrowserMenuLocation.Both, true, true),
+    StatusBarScroll("status_bar_scroll", BrowserMenuConfigurationSection.Page, BrowserMenuLocation.Tab, true, false),
 
     ToppingCommands(
         "topping_commands",
@@ -337,6 +338,7 @@ object BrowserMenuLayoutRules {
         BrowserFeatureMenuAction.ToggleAlwaysBlockPopups -> BrowserMenuEntry.AlwaysBlockPopups
         BrowserFeatureMenuAction.ToggleDesktopView -> BrowserMenuEntry.DesktopView
         BrowserFeatureMenuAction.ToggleDomainMute -> BrowserMenuEntry.DomainMute
+        BrowserFeatureMenuAction.ToggleStatusBarScroll -> BrowserMenuEntry.StatusBarScroll
         BrowserFeatureMenuAction.OpenCandyTrail -> BrowserMenuEntry.CandyTrail
         BrowserFeatureMenuAction.OpenConstellations -> BrowserMenuEntry.Constellations
         BrowserFeatureMenuAction.AddSiteCapsule -> BrowserMenuEntry.AddSiteCapsule

@@ -2,14 +2,17 @@ package dev.sk2andy.materialbrowser.ui
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -18,6 +21,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -30,6 +34,7 @@ import dev.sk2andy.materialbrowser.browser.LinkLongPressAction
 import dev.sk2andy.materialbrowser.browser.LinkPeekSwipeAction
 import dev.sk2andy.materialbrowser.data.InactiveTabLifetime
 import dev.sk2andy.materialbrowser.data.TabOverviewMode
+import dev.sk2andy.materialbrowser.browser.StatusBarScrollRules
 import dev.sk2andy.materialbrowser.shared.browser.AddressBarLongPressAction
 import dev.sk2andy.materialbrowser.shared.ui.settings.TabDismissResistanceSettings
 import dev.sk2andy.materialbrowser.shared.ui.settings.TabOverviewSettings
@@ -48,6 +53,8 @@ internal object TabSettingsTestTags {
     const val AddressBarLongPressAction = "tab_settings_address_bar_long_press_action"
     const val LinkLongPressAction = "tab_settings_link_long_press_action"
     const val LinkPeekSwipeAction = "tab_settings_link_peek_swipe_action"
+    const val StatusBarScrollEnabled = "tab_settings_status_bar_scroll_enabled"
+    const val StatusBarScrollWidth = "tab_settings_status_bar_scroll_width"
 }
 
 internal enum class TabSettingsSection {
@@ -72,6 +79,8 @@ internal fun TabsAndGesturesSettingsPage(
     addressBarLongPressAction: AddressBarLongPressAction = AddressBarLongPressAction.Default,
     linkLongPressAction: LinkLongPressAction = LinkLongPressAction.LinkPeek,
     linkPeekSwipeAction: LinkPeekSwipeAction = LinkPeekSwipeAction.OpenBackground,
+    isStatusBarScrollEnabled: Boolean = false,
+    statusBarScrollTargetWidthPercent: Int = StatusBarScrollRules.DEFAULT_TARGET_WIDTH_PERCENT,
     onInactiveTabLifetimeChanged: (InactiveTabLifetime) -> Unit,
     onResidentTabLimitChanged: (Int) -> Unit,
     onTabOverviewModeChanged: (TabOverviewMode) -> Unit,
@@ -86,6 +95,10 @@ internal fun TabsAndGesturesSettingsPage(
     onAddressBarLongPressActions: () -> Unit = {},
     onLinkLongPressActionChanged: (LinkLongPressAction) -> Unit = {},
     onLinkPeekSwipeActionChanged: (LinkPeekSwipeAction) -> Unit = {},
+    onStatusBarScrollEnabledChanged: (Boolean) -> Unit = {},
+    onStatusBarScrollTargetWidthPercentChanged: (Int) -> Unit = {},
+    onStatusBarScrollTargetWidthPreview: (widthPercent: Int, finished: Boolean) -> Unit = { _, _ -> },
+    onOpenStatusBarScrollAccessibilitySettings: () -> Unit = {},
     onLinkPeekActions: () -> Unit = {},
     onAddressBarActions: () -> Unit,
     onMenuActions: () -> Unit = {},
@@ -99,6 +112,10 @@ internal fun TabsAndGesturesSettingsPage(
     var residentLimit by remember(residentTabLimit) {
         mutableFloatStateOf(residentTabLimit.toFloat())
     }
+    var statusBarScrollWidth by remember(statusBarScrollTargetWidthPercent) {
+        mutableFloatStateOf(statusBarScrollTargetWidthPercent.toFloat())
+    }
+    var showStatusBarScrollAccessibilityDialog by remember { mutableStateOf(false) }
     SettingsPage(
         title = stringResource(
             when (section) {
@@ -356,6 +373,64 @@ internal fun TabsAndGesturesSettingsPage(
             modifier = Modifier.testTag(TabSettingsTestTags.AddressBarSwipeMode),
         )
         Spacer(Modifier.height(2.dp))
+        SettingsPreferenceGroup {
+            SettingsSwitch(
+                title = stringResource(R.string.settings_status_bar_scroll_title),
+                subtitle = stringResource(R.string.settings_status_bar_scroll_summary),
+                checked = isStatusBarScrollEnabled,
+                onCheckedChange = { enabled ->
+                    onStatusBarScrollEnabledChanged(enabled)
+                    if (enabled) showStatusBarScrollAccessibilityDialog = true
+                },
+                modifier = Modifier.padding(horizontal = 18.dp)
+                    .testTag(TabSettingsTestTags.StatusBarScrollEnabled),
+            )
+            SettingsPreferenceDivider()
+            Column(
+                modifier = Modifier.fillMaxWidth()
+                    .settingsSearchTarget(stringResource(R.string.settings_status_bar_scroll_width_title))
+                    .padding(horizontal = 18.dp, vertical = 12.dp),
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        stringResource(R.string.settings_status_bar_scroll_width_title),
+                        modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.titleSmall,
+                    )
+                    Text(
+                        stringResource(
+                            R.string.settings_status_bar_scroll_width_summary,
+                            statusBarScrollWidth.roundToInt(),
+                        ),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
+                Slider(
+                    value = statusBarScrollWidth,
+                    onValueChange = { value ->
+                        if (isStatusBarScrollEnabled) {
+                            statusBarScrollWidth = value
+                            onStatusBarScrollTargetWidthPreview(value.roundToInt(), false)
+                        }
+                    },
+                    onValueChangeFinished = {
+                        if (isStatusBarScrollEnabled) {
+                            val widthPercent = statusBarScrollWidth.roundToInt()
+                            onStatusBarScrollTargetWidthPercentChanged(widthPercent)
+                            onStatusBarScrollTargetWidthPreview(widthPercent, true)
+                        }
+                    },
+                    enabled = isStatusBarScrollEnabled,
+                    modifier = Modifier.testTag(TabSettingsTestTags.StatusBarScrollWidth),
+                    valueRange = StatusBarScrollRules.MIN_TARGET_WIDTH_PERCENT.toFloat()..
+                        StatusBarScrollRules.MAX_TARGET_WIDTH_PERCENT.toFloat(),
+                    steps = StatusBarScrollRules.MAX_TARGET_WIDTH_PERCENT -
+                        StatusBarScrollRules.MIN_TARGET_WIDTH_PERCENT - 1,
+                )
+            }
+        }
+        Spacer(Modifier.height(2.dp))
         TabDismissResistanceSettings(
             valuePercent = dismissResistancePercent,
             title = stringResource(R.string.settings_tab_dismiss_resistance),
@@ -367,6 +442,32 @@ internal fun TabsAndGesturesSettingsPage(
             onValueChanged = onDismissResistancePercentChanged,
         )
         }
+    }
+    if (showStatusBarScrollAccessibilityDialog) {
+        AlertDialog(
+            onDismissRequest = { showStatusBarScrollAccessibilityDialog = false },
+            title = {
+                Text(stringResource(R.string.settings_status_bar_scroll_accessibility_dialog_title))
+            },
+            text = {
+                Text(stringResource(R.string.settings_status_bar_scroll_accessibility_dialog_message))
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showStatusBarScrollAccessibilityDialog = false
+                        onOpenStatusBarScrollAccessibilitySettings()
+                    },
+                ) {
+                    Text(stringResource(R.string.settings_status_bar_scroll_accessibility_open))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showStatusBarScrollAccessibilityDialog = false }) {
+                    Text(stringResource(R.string.action_cancel))
+                }
+            },
+        )
     }
 }
 
