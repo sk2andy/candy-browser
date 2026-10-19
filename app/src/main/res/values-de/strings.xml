@@ -1293,6 +1293,7 @@
     <string name="gecko_extensions_options_summary">Öffne die eigene Optionsseite einer installierten Erweiterung</string>
     <string name="gecko_extensions_empty">Noch keine Firefox-Erweiterung installiert.</string>
     <string name="gecko_extensions_search">Firefox-Add-ons durchsuchen</string>
+    <string name="gecko_extensions_clear_search">Suche löschen</string>
     <string name="gecko_extensions_compatibility_note">Nur einige Firefox-Add-ons funktionieren in Candy. Die Unterstützung hängt von der Android-Kompatibilität und den APIs der Gecko-Engine in Candy ab.</string>
     <string name="gecko_extensions_installed">Installiert</string>
     <string name="gecko_extensions_available">Auf Firefox Add-ons verfügbar</string>

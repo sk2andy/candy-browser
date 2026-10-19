@@ -10,12 +10,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -35,6 +35,8 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SearchBar
+import androidx.compose.material3.SearchBarDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -51,7 +53,6 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.sk2andy.materialbrowser.R
@@ -68,6 +69,7 @@ import kotlinx.coroutines.CancellationException
 
 internal object FirefoxExtensionManagerTestTags {
     const val Overlay = "firefox_extension_manager"
+    const val Search = "firefox_extension_search"
     const val InstallUrl = "gecko_extension_install_url"
     const val PermissionPrompt = "gecko_extension_permission_prompt"
 
@@ -144,32 +146,38 @@ internal fun FirefoxExtensionManagerOverlay(
                 onInstall = { installDialogVisible = true },
                 onDismiss = onDismiss,
             )
-            OutlinedTextField(
-                value = search,
-                onValueChange = { search = it },
-                modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
-                singleLine = true,
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-                trailingIcon = if (search.isNotBlank()) {
-                    {
-                        IconButton(onClick = { retryToken++ }) {
-                            Icon(
-                                Icons.Default.Refresh,
-                                contentDescription = stringResource(R.string.gecko_extensions_retry_search),
-                            )
-                        }
-                    }
-                } else {
-                    null
+            SearchBar(
+                inputField = {
+                    SearchBarDefaults.InputField(
+                        query = search,
+                        onQueryChange = { search = it },
+                        onSearch = { search = it },
+                        expanded = false,
+                        onExpandedChange = {},
+                        placeholder = { Text(stringResource(R.string.gecko_extensions_search)) },
+                        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                        trailingIcon = if (search.isNotEmpty()) {
+                            {
+                                IconButton(onClick = { search = "" }) {
+                                    Icon(
+                                        Icons.Default.Close,
+                                        contentDescription = stringResource(R.string.gecko_extensions_clear_search),
+                                    )
+                                }
+                            }
+                        } else {
+                            null
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag(FirefoxExtensionManagerTestTags.Search),
+                    )
                 },
-                placeholder = { Text(stringResource(R.string.gecko_extensions_search)) },
-                keyboardOptions = KeyboardOptions(
-                    capitalization = KeyboardCapitalization.None,
-                    imeAction = ImeAction.Search,
-                ),
-                shape = RoundedCornerShape(24.dp),
-                colors = OutlinedTextFieldDefaults.colors(),
-            )
+                expanded = false,
+                onExpandedChange = {},
+                windowInsets = WindowInsets(0, 0, 0, 0),
+                modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+            ) {}
             Text(
                 text = stringResource(R.string.gecko_extensions_compatibility_note),
                 style = MaterialTheme.typography.bodySmall,
