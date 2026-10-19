@@ -1547,4 +1547,16 @@
     <string name="constellations_search">Search this map</string>
     <string name="constellations_search_no_results">No matching pages in this profile.</string>
     <string name="constellations_search_position">%1$d of %2$d matches</string>
+    <string name="status_bar_scroll_accessibility_service_label" translatable="false">Candy status bar scroll</string>
+    <string name="status_bar_scroll_accessibility_service_description" translatable="false">Allows a tap in the center of the status bar to scroll the current Candy page to the top. Candy does not read window content.</string>
+    <string name="status_bar_scroll_target_description" translatable="false">Scroll the current page to the top</string>
+    <string name="settings_status_bar_scroll_title" translatable="false">Tap the status bar to scroll to the top</string>
+    <string name="settings_status_bar_scroll_summary" translatable="false">Adds an invisible tap area in the center of the Android status bar. Candy Accessibility access is required.</string>
+    <string name="settings_status_bar_scroll_width_title" translatable="false">Tap area width</string>
+    <string name="settings_status_bar_scroll_width_summary" translatable="false">%1$d%% of screen width</string>
+    <string name="settings_status_bar_scroll_accessibility_dialog_title" translatable="false">Enable Candy Accessibility access?</string>
+    <string name="settings_status_bar_scroll_accessibility_dialog_message" translatable="false">Android requires an Accessibility service to receive taps in the system status bar. Continue to Android Accessibility settings, then turn on Candy status bar scroll. Candy uses the service only for this tap and does not read window content.</string>
+    <string name="settings_status_bar_scroll_accessibility_open" translatable="false">Open Accessibility settings</string>
+    <string name="settings_status_bar_scroll_enable_for_domain" translatable="false">Enable status bar scroll for this site</string>
+    <string name="settings_status_bar_scroll_disable_for_domain" translatable="false">Disable status bar scroll for this site</string>
 </resources>

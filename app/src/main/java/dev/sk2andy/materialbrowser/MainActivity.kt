@@ -3,7 +3,9 @@ package dev.sk2andy.materialbrowser
 import android.Manifest
 import android.app.Activity
 import android.app.PictureInPictureUiState
+import android.content.BroadcastReceiver
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.ActivityInfo
 import android.content.res.Configuration
 import android.graphics.Rect
@@ -44,6 +46,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.core.view.ViewCompat
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ProcessLifecycleOwner
@@ -131,6 +134,17 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
 open class MainActivity : AppCompatActivity() {
+    private val issue323ScrollTopReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: android.content.Context, intent: Intent) {
+            if (
+                intent.action == StatusBarScrollAccessibilityContract.ACTION_SCROLL_TO_TOP &&
+                ::browserController.isInitialized
+            ) {
+                browserController.scrollSelectedBrowserEngineToVerticalOffset(0)
+            }
+        }
+    }
+    private var issue323ScrollTopReceiverRegistered = false
     protected open val capsuleWindowId: String? = null
     private lateinit var browserController: BrowserController
     private lateinit var browserMediaSystemSession: BrowserMediaSystemSession
@@ -1213,6 +1227,11 @@ open class MainActivity : AppCompatActivity() {
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
+        sendBroadcast(
+            Intent(StatusBarScrollAccessibilityContract.ACTION_APP_VISIBILITY)
+                .setPackage(packageName)
+                .putExtra(StatusBarScrollAccessibilityContract.EXTRA_APP_VISIBLE, hasFocus),
+        )
         BrowserInputDiagnostics.activityWindowFocus(hasFocus, currentFocus)
         if (hasFocus &&
             ::browserController.isInitialized &&
@@ -1224,6 +1243,11 @@ open class MainActivity : AppCompatActivity() {
     }
 
     override fun onPause() {
+        sendBroadcast(
+            Intent(StatusBarScrollAccessibilityContract.ACTION_APP_VISIBILITY)
+                .setPackage(packageName)
+                .putExtra(StatusBarScrollAccessibilityContract.EXTRA_APP_VISIBLE, false),
+        )
         window.decorView.stopRubberbandHaptic()
         if (!::browserController.isInitialized || appDataTransferActive) {
             super.onPause()
@@ -1257,6 +1281,17 @@ open class MainActivity : AppCompatActivity() {
 
     override fun onStart() {
         super.onStart()
+        if (!issue323ScrollTopReceiverRegistered) {
+            ContextCompat.registerReceiver(
+                this,
+                issue323ScrollTopReceiver,
+                IntentFilter(StatusBarScrollAccessibilityContract.ACTION_SCROLL_TO_TOP),
+                StatusBarScrollAccessibilityContract.STATUS_BAR_SCROLL_CONTROL_PERMISSION,
+                null,
+                ContextCompat.RECEIVER_EXPORTED,
+            )
+            issue323ScrollTopReceiverRegistered = true
+        }
         if (::browserController.isInitialized && !appDataTransferActive &&
             !GuestBubbleSessionStore(this).isLocked()
         ) {
@@ -1273,6 +1308,10 @@ open class MainActivity : AppCompatActivity() {
     }
 
     override fun onStop() {
+        if (issue323ScrollTopReceiverRegistered) {
+            unregisterReceiver(issue323ScrollTopReceiver)
+            issue323ScrollTopReceiverRegistered = false
+        }
         if (::browserController.isInitialized && !appDataTransferActive) {
             browserController.onStop(
                 isInPictureInPictureMode = isInPictureInPictureMode,
@@ -1331,6 +1370,11 @@ open class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        sendBroadcast(
+            Intent(StatusBarScrollAccessibilityContract.ACTION_APP_VISIBILITY)
+                .setPackage(packageName)
+                .putExtra(StatusBarScrollAccessibilityContract.EXTRA_APP_VISIBLE, true),
+        )
         if (GuestBubbleGate.redirectIfLocked(this, finishOwner = !::browserController.isInitialized)) return
         GuestBubbleGate.restoreIfUnlocked(this)
         if (appDataTransferActive) return

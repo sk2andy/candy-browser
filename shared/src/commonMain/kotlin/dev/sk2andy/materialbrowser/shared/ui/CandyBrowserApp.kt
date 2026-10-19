@@ -1956,6 +1956,7 @@ private fun BrowserMenuActionIcon(
         BrowserFeatureMenuAction.OpenExternal -> Icons.Filled.OpenInNew
         BrowserFeatureMenuAction.Print -> Icons.Filled.Print
         BrowserFeatureMenuAction.ToggleDomainMute -> Icons.Filled.VolumeOff
+        BrowserFeatureMenuAction.ToggleStatusBarScroll -> Icons.Filled.Settings
         BrowserFeatureMenuAction.OpenCandyTrail -> Icons.Filled.Route
         BrowserFeatureMenuAction.OpenConstellations -> Icons.Filled.Route
         BrowserFeatureMenuAction.AddSiteCapsule -> Icons.Filled.AddToHomeScreen
@@ -1997,6 +1998,7 @@ private fun BrowserMenuActionIcon(
         BrowserFeatureMenuAction.OpenExternal -> "arrow.up.right.square"
         BrowserFeatureMenuAction.Print -> "printer"
         BrowserFeatureMenuAction.ToggleDomainMute -> "speaker.slash"
+        BrowserFeatureMenuAction.ToggleStatusBarScroll -> "arrow.up.to.line"
         BrowserFeatureMenuAction.OpenCandyTrail -> "point.topleft.down.curvedto.point.bottomright.up"
         BrowserFeatureMenuAction.OpenConstellations -> "point.topleft.down.curvedto.point.bottomright.up"
         BrowserFeatureMenuAction.AddSiteCapsule, BrowserFeatureMenuAction.CreateSiteWidget -> "shippingbox"
@@ -2057,6 +2059,8 @@ private fun BrowserFeatureMenuItem.localizedLabel(): String = dynamicLabel ?: wh
     BrowserFeatureMenuLabelKey.DesktopView -> "Desktop-Ansicht"
     BrowserFeatureMenuLabelKey.MuteDomain -> "Domain stummschalten"
     BrowserFeatureMenuLabelKey.UnmuteDomain -> "Domain aktivieren"
+    BrowserFeatureMenuLabelKey.EnableStatusBarScrollForDomain -> "Statusleisten-Tipp zum Seitenanfang aktivieren"
+    BrowserFeatureMenuLabelKey.DisableStatusBarScrollForDomain -> "Statusleisten-Tipp zum Seitenanfang deaktivieren"
     BrowserFeatureMenuLabelKey.CandyTrail -> "Candy Trail"
     BrowserFeatureMenuLabelKey.Constellations -> "Candy Constellations"
     BrowserFeatureMenuLabelKey.AddSiteCapsule -> "Site Capsule hinzufügen"

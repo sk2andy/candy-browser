@@ -241,7 +241,11 @@ internal fun BrowserScreen(
     launcherAddressEditorRequestId: Int = 0,
     hardwareTabChangeRequestId: Int = 0,
 ) {
-    if (controller.isActiveProfileLocked) return
+    val activeProfileLocked = controller.isActiveProfileLocked
+    LaunchedEffect(controller, activeProfileLocked) {
+        if (activeProfileLocked) controller.publishStatusBarScrollPageContext(visible = false)
+    }
+    if (activeProfileLocked) return
     val hideBrowserChrome = FullscreenVideoRules.hidesBrowserChrome(
         isWebContentFullscreen = controller.isSelectedWebContentFullscreen,
         placement = controller.fullscreenVideoPlacement(videoOnlyPresentation),
@@ -364,6 +368,18 @@ internal fun BrowserScreen(
         exitHeroVisible = overviewExitHeroVisible,
     )
     val selectedTab = controller.selectedTab
+    val statusBarScrollPageVisible = !settingsVisible && !tabOverviewVisible &&
+        !addressEditorVisible && !hideBrowserChrome
+    LaunchedEffect(
+        controller,
+        selectedTab.id,
+        selectedTab.url,
+        controller.isStatusBarScrollEnabled,
+        controller.isSelectedStatusBarScrollEnabled,
+        statusBarScrollPageVisible,
+    ) {
+        controller.publishStatusBarScrollPageContext(statusBarScrollPageVisible)
+    }
     val activeLocalProfile = controller.localBrowserProfiles
         .firstOrNull { profile -> profile.id == controller.activeProfileId }
     val profileWallpaperRuntime = activeLocalProfile

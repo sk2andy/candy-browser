@@ -75,35 +75,40 @@ fun BrowserMenuSettingsPage(
             if (entries.isEmpty()) return@forEach
             SettingsSectionTitle(resources.sectionTitle(section))
             Spacer(Modifier.height(8.dp))
-            entries.forEachIndexed { index, entry ->
-                val currentLocation = BrowserMenuLayoutRules.location(layout, entry)
-                Box(modifier = Modifier.testTag(BrowserMenuSettingsTestTags.entry(entry))) {
-                    SettingsChoice(
-                        title = resources.entryLabel(entry),
-                        value = resources.locationLabel(currentLocation),
-                        expanded = expandedEntry == entry,
-                        onClick = { expandedEntry = entry },
-                        containerColor = containerColor,
-                    )
-                    SettingsDropdown(
-                        expanded = expandedEntry == entry,
-                        onDismissRequest = { expandedEntry = null },
-                    ) {
-                        BrowserMenuLayoutRules.allowedLocations(entry).forEach { location ->
-                            SettingsDropdownItem(
-                                label = resources.locationLabel(location),
-                                selected = currentLocation == location,
-                                onClick = {
-                                    expandedEntry = null
-                                    if (location != currentLocation) {
-                                        onLocationChanged(entry, location)
-                                    }
-                                },
-                            )
+            SettingsPreferenceGroup(containerColor = containerColor) {
+                entries.forEachIndexed { index, entry ->
+                    val currentLocation = BrowserMenuLayoutRules.location(layout, entry)
+                    Box(modifier = Modifier.testTag(BrowserMenuSettingsTestTags.entry(entry))) {
+                        SettingsChoice(
+                            title = resources.entryLabel(entry),
+                            value = resources.locationLabel(currentLocation),
+                            expanded = expandedEntry == entry,
+                            onClick = { expandedEntry = entry },
+                            containerColor = containerColor,
+                            inPreferenceGroup = true,
+                        )
+                        SettingsDropdown(
+                            expanded = expandedEntry == entry,
+                            onDismissRequest = { expandedEntry = null },
+                        ) {
+                            BrowserMenuLayoutRules.allowedLocations(entry).forEach { location ->
+                                SettingsDropdownItem(
+                                    label = resources.locationLabel(location),
+                                    selected = currentLocation == location,
+                                    onClick = {
+                                        expandedEntry = null
+                                        if (location != currentLocation) {
+                                            onLocationChanged(entry, location)
+                                        }
+                                    },
+                                )
+                            }
                         }
                     }
+                    if (index != entries.lastIndex) {
+                        SettingsPreferenceDivider()
+                    }
                 }
-                if (index != entries.lastIndex) Spacer(Modifier.height(4.dp))
             }
             if (section != BrowserMenuConfigurationSection.entries.last()) {
                 Spacer(Modifier.height(16.dp))

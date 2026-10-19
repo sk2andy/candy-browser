@@ -46,6 +46,7 @@ enum class BrowserFeatureMenuAction {
     ToggleAlwaysBlockPopups,
     ToggleDesktopView,
     ToggleDomainMute,
+    ToggleStatusBarScroll,
     OpenCandyTrail,
     OpenConstellations,
     AddSiteCapsule,
@@ -90,6 +91,8 @@ enum class BrowserFeatureMenuLabelKey {
     DesktopView,
     MuteDomain,
     UnmuteDomain,
+    EnableStatusBarScrollForDomain,
+    DisableStatusBarScrollForDomain,
     CandyTrail,
     Constellations,
     AddSiteCapsule,
@@ -155,6 +158,8 @@ data class BrowserFeatureMenuState(
     val isDesktopView: Boolean = false,
     val canToggleDomainMute: Boolean = false,
     val isDomainMuted: Boolean = false,
+    val canToggleStatusBarScroll: Boolean = false,
+    val isStatusBarScrollEnabled: Boolean = false,
     val canAddSiteCapsule: Boolean = false,
     val canCreateSiteWidget: Boolean = false,
     val canOpenConstellations: Boolean = false,
@@ -364,6 +369,15 @@ object BrowserFeatureMenuRules {
                 state.isDomainMuted,
             ),
         )
+        if (state.canToggleStatusBarScroll) {
+            add(toggle(
+                BrowserFeatureMenuAction.ToggleStatusBarScroll,
+                if (state.isStatusBarScrollEnabled) BrowserFeatureMenuLabelKey.DisableStatusBarScrollForDomain
+                else BrowserFeatureMenuLabelKey.EnableStatusBarScrollForDomain,
+                true,
+                state.isStatusBarScrollEnabled,
+            ))
+        }
     }
 
     private fun toppingItems(state: BrowserFeatureMenuState) = state.toppingCommands.map { command ->

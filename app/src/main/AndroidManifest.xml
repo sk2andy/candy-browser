@@ -1,6 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
+    <uses-permission android:name="dev.sk2andy.materialbrowser.permission.STATUS_BAR_SCROLL_CONTROL" />
+    <permission
+        android:name="dev.sk2andy.materialbrowser.permission.STATUS_BAR_SCROLL_CONTROL"
+        android:protectionLevel="signature" />
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.VIBRATE" />
@@ -155,6 +159,19 @@
         tools:targetApi="s"
         tools:ignore="CredManMissingDal">
         <profileable android:shell="${performanceDiagnosticsEnabled}" />
+        <service
+            android:name=".StatusBarScrollAccessibilityService"
+            android:description="@string/status_bar_scroll_accessibility_service_description"
+            android:exported="true"
+            android:label="@string/status_bar_scroll_accessibility_service_label"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/status_bar_scroll_accessibility_service" />
+        </service>
         <receiver
             android:name=".browser.guest.GuestBubbleRestoreReceiver"
             android:exported="false" />
