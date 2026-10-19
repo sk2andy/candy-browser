@@ -35,6 +35,28 @@ class ExternalLinkPreviewSafeAreaInstrumentedTest {
     }
 
     @Test
+    fun hiddenKeyboardInsetDoesNotShrinkExternalPreview() {
+        activityRule.scenario.onActivity { activity ->
+            val browser = preparePreview(activity)
+            val hiddenKeyboardInsets = WindowInsetsCompat.Builder()
+                .setInsets(WindowInsetsCompat.Type.ime(), Insets.of(0, 0, 0, 360))
+                .setVisible(WindowInsetsCompat.Type.ime(), false)
+                .build()
+
+            browser.onWindowInsetsChanged(hiddenKeyboardInsets)
+
+            assertEquals(0, previewView(browser).insetLayoutSnapshot().margins.bottom)
+
+            val visibleKeyboardInsets = WindowInsetsCompat.Builder(hiddenKeyboardInsets)
+                .setVisible(WindowInsetsCompat.Type.ime(), true)
+                .build()
+            browser.onWindowInsetsChanged(visibleKeyboardInsets)
+
+            assertEquals(360, previewView(browser).insetLayoutSnapshot().margins.bottom)
+        }
+    }
+
+    @Test
     fun lateHeaderFallbackMovesPreviewRendererWithoutNavigating() {
         activityRule.scenario.onActivity { activity ->
             val browser = preparePreview(activity)

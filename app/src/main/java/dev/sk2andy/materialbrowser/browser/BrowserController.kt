@@ -5262,7 +5262,10 @@ class BrowserController(
             isInsideSafeDrawingHost = isInsideSafeDrawingHost ||
                 (isFullscreenContent && fullscreenVideoInsideSafeDrawingHost),
             useNativeCssSafeArea = true,
-            keyboardBottomInsetPx = if (usesGeckoEngine) {
+            keyboardBottomInsetPx = if (
+                usesGeckoEngine &&
+                effectiveInsets.isVisible(WindowInsetsCompat.Type.ime())
+            ) {
                 effectiveInsets.getInsets(WindowInsetsCompat.Type.ime()).bottom
             } else {
                 0

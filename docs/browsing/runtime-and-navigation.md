@@ -108,7 +108,9 @@
   margins with their maximum; a Compose safe-drawing host already owns keyboard space.
   On Activity resume and window-focus restoration, reconcile the current root insets and request
   a fresh content traversal. A hidden-IME callback missed while stopped or behind another window
-  must not leave the inner renderer cropped by the previous keyboard height.
+  must not leave the inner renderer cropped by the previous keyboard height. Ignore a nonzero IME
+  bottom inset whenever the effective insets report the keyboard hidden; some app handoffs retain
+  the stale height after dismissal.
   Address editing and Find in page retain chrome-owned
   IME suppression, so their keyboards do not resize the underlying website.
 - When an address suggestion selects an existing Gecko tab, dismiss the address editor and
