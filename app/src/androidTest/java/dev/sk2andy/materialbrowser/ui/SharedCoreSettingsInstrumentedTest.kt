@@ -64,12 +64,14 @@ class SharedCoreSettingsInstrumentedTest {
             composeRule.onNodeWithText(label).performScrollTo().assertIsNotEnabled().performClick()
         }
         capture("shared-core-browser")
-        composeRule.onNodeWithText("Anbieter für Seitenübersetzung").performScrollTo().performClick()
-        composeRule.onNodeWithText(PageTranslationProvider.Google.displayName).performClick()
+        composeRule.onNodeWithText("Übersetzungen").performScrollTo().performClick()
+        composeRule.onNodeWithText(PageTranslationProvider.Google.displayName).performScrollTo().performClick()
         composeRule.runOnIdle {
             assertEquals(PageTranslationProvider.Google, host.snapshot.translationProvider)
             assertEquals(listOf("translation:Google"), host.writes)
         }
+        back()
+        composeRule.onNodeWithText("Browser").assertIsDisplayed()
         back()
         composeRule.onNodeWithText("Einstellungen").assertIsDisplayed()
     }
@@ -109,7 +111,8 @@ class SharedCoreSettingsInstrumentedTest {
     fun searchGroupPreservesInstanceValidationAndEngineSelection() {
         val host = showSettings()
         open("Suche")
-        composeRule.onNodeWithTag("search_settings_search_engine").performClick()
+        composeRule.onNodeWithTag("settings_header_artwork_searchengines").assertIsDisplayed()
+        capture("shared-core-search-approved-header")
         composeRule.onNodeWithText(SearchEngine.SearXNG.displayName).performScrollTo().performClick()
         composeRule.onNodeWithTag("search_settings_searxng_instance_url")
             .performScrollTo().performTextReplacement("https://search.example.test/")
@@ -125,8 +128,7 @@ class SharedCoreSettingsInstrumentedTest {
         UiDevice.getInstance(InstrumentationRegistry.getInstrumentation()).pressBack()
         composeRule.waitForIdle()
         capture("shared-core-search")
-        composeRule.onNodeWithTag("search_settings_search_engine").performScrollTo().performClick()
-        composeRule.onNodeWithText(SearchEngine.Google.displayName).performClick()
+        composeRule.onNodeWithText(SearchEngine.Google.displayName).performScrollTo().performClick()
         composeRule.onNodeWithTag("search_settings_searxng_instance_url").assertDoesNotExist()
         composeRule.runOnIdle { assertEquals("https://search.example.test", host.snapshot.searxngInstanceUrl) }
     }

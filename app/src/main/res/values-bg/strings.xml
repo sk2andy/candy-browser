@@ -1493,4 +1493,5 @@
     <string name="constellations_search">Търсене в тази карта</string>
     <string name="constellations_search_no_results">Няма съответстващи страници в този профил.</string>
     <string name="constellations_search_position">%1$d от %2$d съвпадения</string>
+    <string name="settings_translations_title">Преводи</string>
 </resources>

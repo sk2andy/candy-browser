@@ -1493,4 +1493,5 @@
     <string name="constellations_search">Deze kaart doorzoeken</string>
     <string name="constellations_search_no_results">Geen overeenkomende pagina’s in dit profiel.</string>
     <string name="constellations_search_position">%1$d van %2$d resultaten</string>
+    <string name="settings_translations_title">Vertalingen</string>
 </resources>

@@ -1493,4 +1493,5 @@
     <string name="constellations_search">Kërko në këtë hartë</string>
     <string name="constellations_search_no_results">Nuk ka faqe që përputhen në këtë profil.</string>
     <string name="constellations_search_position">%1$d nga %2$d përputhje</string>
+    <string name="settings_translations_title">Përkthime</string>
 </resources>

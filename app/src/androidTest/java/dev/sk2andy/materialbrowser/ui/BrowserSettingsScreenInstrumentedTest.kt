@@ -60,10 +60,9 @@ class BrowserSettingsScreenInstrumentedTest {
             }
         }
 
-        composeRule.onNodeWithTag(BrowserSettingsTestTags.BrowserEngine).performClick()
         composeRule.onNodeWithText(
             context.getString(R.string.settings_browser_engine_system),
-        ).performClick()
+        ).performScrollTo().performClick()
 
         assertEquals(AndroidBrowserEngineKind.SystemWebView, engine)
         composeRule.onNodeWithText(
@@ -97,7 +96,7 @@ class BrowserSettingsScreenInstrumentedTest {
 
         composeRule.onNodeWithTag(BrowserSettingsTestTags.ScrollBar)
             .performScrollTo()
-            .performClick()
+            .performScrollTo().performClick()
 
         assertTrue(enabled)
     }
@@ -143,7 +142,7 @@ class BrowserSettingsScreenInstrumentedTest {
             }
         }
 
-        composeRule.onNodeWithTag(BrowserSettingsTestTags.StartupAnimation).performClick()
+        composeRule.onNodeWithTag(BrowserSettingsTestTags.StartupAnimation).performScrollTo().performClick()
 
         assertFalse(enabled)
     }
@@ -166,10 +165,7 @@ class BrowserSettingsScreenInstrumentedTest {
             }
         }
 
-        composeRule.onNodeWithTag(BrowserSettingsTestTags.ExternalLinkPreviewProfile)
-            .performScrollTo()
-            .performClick()
-        composeRule.onNodeWithText("💼").performClick()
+        composeRule.onNodeWithText("💼").performScrollTo().performClick()
 
         assertEquals("work", profileId)
     }
@@ -197,11 +193,9 @@ class BrowserSettingsScreenInstrumentedTest {
         composeRule.onNodeWithText(
             context.getString(R.string.settings_external_link_preview_profile_unavailable),
         ).assertIsDisplayed()
-        composeRule.onNodeWithTag(BrowserSettingsTestTags.ExternalLinkPreviewProfile)
-            .performClick()
         composeRule.onNodeWithText(
             context.getString(R.string.settings_external_link_preview_profile_last_used),
-        ).performClick()
+        ).performScrollTo().performClick()
 
         assertEquals(null, profileId)
     }
@@ -229,11 +223,9 @@ class BrowserSettingsScreenInstrumentedTest {
             }
         }
 
-        composeRule.onNodeWithTag(BrowserSettingsTestTags.StartupAddressFocus)
-            .performClick()
         composeRule.onNodeWithText(
             context.getString(R.string.settings_startup_address_focus_never),
-        ).performClick()
+        ).performScrollTo().performClick()
 
         assertEquals(StartupAddressFocusMode.Never, mode)
     }
@@ -261,7 +253,7 @@ class BrowserSettingsScreenInstrumentedTest {
             }
         }
 
-        composeRule.onNodeWithTag(BrowserSettingsTestTags.FavoriteLaunchAnimation).performClick()
+        composeRule.onNodeWithTag(BrowserSettingsTestTags.FavoriteLaunchAnimation).performScrollTo().performClick()
 
         assertFalse(enabled)
     }
@@ -289,12 +281,9 @@ class BrowserSettingsScreenInstrumentedTest {
             }
         }
 
-        composeRule.onNodeWithTag(BrowserSettingsTestTags.FavoriteAnimationSpeed)
-            .performScrollTo()
-            .performClick()
         composeRule.onNodeWithText(
             context.getString(R.string.settings_favorite_animation_speed_fast),
-        ).performClick()
+        ).performScrollTo().performClick()
 
         assertEquals(FavoriteAnimationSpeed.Fast, speed)
     }
@@ -351,7 +340,7 @@ class BrowserSettingsScreenInstrumentedTest {
             }
         }
 
-        composeRule.onNodeWithTag(BrowserSettingsTestTags.OpenHomeOnStartup).performClick()
+        composeRule.onNodeWithTag(BrowserSettingsTestTags.OpenHomeOnStartup).performScrollTo().performClick()
 
         assertTrue(enabled)
     }
@@ -380,7 +369,6 @@ class BrowserSettingsScreenInstrumentedTest {
         composeRule.onNodeWithText(
             context.getString(R.string.settings_translation_provider_google_summary),
         ).performScrollTo().assertIsDisplayed()
-        composeRule.onNodeWithTag(BrowserSettingsTestTags.TranslationProvider).performClick()
         composeRule.onNode(
             hasText(PageTranslationProvider.Google.displayName) and
                 SemanticsMatcher.expectValue(SemanticsProperties.Selected, true),
@@ -389,12 +377,12 @@ class BrowserSettingsScreenInstrumentedTest {
             hasText(PageTranslationProvider.Kagi.displayName) and
                 SemanticsMatcher.expectValue(SemanticsProperties.Selected, false),
         ).assertExists()
-        composeRule.onNodeWithText(PageTranslationProvider.Kagi.displayName).performClick()
+        composeRule.onNodeWithText(PageTranslationProvider.Kagi.displayName).performScrollTo().performClick()
 
         assertEquals(PageTranslationProvider.Kagi, provider)
         composeRule.onNodeWithText(
             context.getString(R.string.settings_translation_provider_kagi_summary),
-        ).assertIsDisplayed()
+        ).performScrollTo().assertIsDisplayed()
     }
 
     @Test
@@ -415,7 +403,7 @@ class BrowserSettingsScreenInstrumentedTest {
 
         composeRule.onNodeWithTag(BrowserSettingsTestTags.ExternalLinkPreview)
             .performScrollTo()
-            .performClick()
+            .performScrollTo().performClick()
 
         assertTrue(enabled)
     }
@@ -443,12 +431,9 @@ class BrowserSettingsScreenInstrumentedTest {
             }
         }
 
-        composeRule.onNodeWithTag(BrowserSettingsTestTags.ExternalAppLinks)
-            .performScrollTo()
-            .performClick()
         composeRule.onNodeWithText(
             context.getString(R.string.settings_external_app_links_ask_every_time),
-        ).performClick()
+        ).performScrollTo().performClick()
 
         assertEquals(ExternalAppLinkHandling.AskEveryTime, handling)
     }

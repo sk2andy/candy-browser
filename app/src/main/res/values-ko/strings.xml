@@ -1476,4 +1476,5 @@
     <string name="constellations_search">이 지도 검색</string>
     <string name="constellations_search_no_results">이 프로필에 일치하는 페이지가 없습니다.</string>
     <string name="constellations_search_position">%2$d개 결과 중 %1$d번째</string>
+    <string name="settings_translations_title">번역</string>
 </resources>

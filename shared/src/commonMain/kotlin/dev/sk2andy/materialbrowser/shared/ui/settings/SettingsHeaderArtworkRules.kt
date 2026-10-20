@@ -8,7 +8,10 @@ import androidx.compose.ui.unit.IntSize
 import kotlin.math.min
 import kotlin.math.roundToInt
 
-enum class SettingsHeaderArtwork { Appearance, Tabs, Player }
+enum class SettingsHeaderArtwork {
+    Appearance, Tabs, Player, SearchEngines, Translations, Downloads, Profiles, Gestures, LinkPreview,
+    TabLifecycle, PersonalLinkRules,
+}
 
 /** Source windows refer to the original, unmodified imagegen PNGs, in image pixels. */
 internal object SettingsHeaderArtworkRules {
@@ -16,6 +19,15 @@ internal object SettingsHeaderArtworkRules {
         SettingsHeaderArtwork.Appearance -> IntRect(160, 80, 860, 610)
         SettingsHeaderArtwork.Tabs -> IntRect(160, 615, 860, 1060)
         SettingsHeaderArtwork.Player -> IntRect(160, 245, 1376, 780)
+        SettingsHeaderArtwork.SearchEngines -> IntRect(160, 250, 1376, 750)
+        SettingsHeaderArtwork.Translations -> IntRect(220, 250, 1320, 770)
+        SettingsHeaderArtwork.Downloads -> IntRect(260, 140, 1300, 880)
+        SettingsHeaderArtwork.Profiles -> IntRect(50, 270, 1486, 700)
+        SettingsHeaderArtwork.Gestures -> IntRect(160, 245, 1376, 780)
+        // The approved hand extends almost to the original's bottom edge.
+        SettingsHeaderArtwork.LinkPreview -> IntRect(0, 0, 1536, 1024)
+        SettingsHeaderArtwork.TabLifecycle -> IntRect(340, 115, 1210, 910)
+        SettingsHeaderArtwork.PersonalLinkRules -> IntRect(140, 225, 1400, 795)
     }
 
     fun destinationWindow(source: IntSize, available: IntSize): IntRect {

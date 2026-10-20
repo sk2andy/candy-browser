@@ -1,6 +1,5 @@
 package dev.sk2andy.materialbrowser.shared.ui.settings
 
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -61,9 +60,16 @@ object BrowserMenuPresentationSettingsTestTags {
     const val ContentLayout = "browser_menu_settings_content_layout"
 
     fun toolbarSlot(index: Int): String = "browser_menu_settings_toolbar_slot_$index"
+    fun toolbarEntry(entry: BrowserMenuEntry?): String = "browser_menu_settings_toolbar_entry_${entry?.stableId ?: "empty"}"
 }
 
 interface BrowserMenuPresentationSettingsResources {
+    @Composable
+    fun back(): String
+
+    @Composable
+    fun sectionTitle(section: BrowserMenuConfigurationSection): String
+
     @Composable
     fun presentationTitle(): String
 
@@ -154,55 +160,14 @@ private fun BrowserMenuBottomSheetToolbarSettings(
     Spacer(Modifier.height(8.dp))
     SettingsPreferenceGroup(containerColor = containerColor) {
         entries.forEachIndexed { index, currentEntry ->
-            Box {
-                SettingsChoice(
-                    title = resources.toolbarSlotTitle(index + 1),
-                    value = currentEntry?.let { entry -> resources.entryLabel(entry) }
-                        ?: resources.emptySlotLabel(),
-                    expanded = enabled && expandedSlot == index,
-                    onClick = { expandedSlot = index },
-                    containerColor = containerColor,
-                    modifier = Modifier.testTag(BrowserMenuPresentationSettingsTestTags.toolbarSlot(index)),
-                    enabled = enabled,
-                )
-                SettingsDropdown(
-                    expanded = enabled && expandedSlot == index,
-                    onDismissRequest = { expandedSlot = null },
-                ) {
-                    SettingsDropdownItem(
-                        label = resources.emptySlotLabel(),
-                        selected = currentEntry == null,
-                        leadingIcon = { Icon(Icons.Default.Block, contentDescription = null) },
-                        onClick = {
-                            expandedSlot = null
-                            if (currentEntry != null) {
-                                onLayoutChanged(BrowserMenuBottomSheetToolbarRules.assign(layout, index, null))
-                            }
-                        },
-                    )
-                    BrowserMenuConfigurationSection.entries.forEach { section ->
-                        val sectionEntries = toolbarEntries.filter { it.section == section }
-                        if (sectionEntries.isNotEmpty()) {
-                            SettingsDropdownDivider()
-                            sectionEntries.forEach { entry ->
-                                SettingsDropdownItem(
-                                    label = resources.entryLabel(entry),
-                                    selected = entry == currentEntry,
-                                    leadingIcon = { BrowserMenuSettingsEntryIcon(entry) },
-                                    onClick = {
-                                        expandedSlot = null
-                                        if (entry != currentEntry) {
-                                            onLayoutChanged(
-                                                BrowserMenuBottomSheetToolbarRules.assign(layout, index, entry),
-                                            )
-                                        }
-                                    },
-                                )
-                            }
-                        }
-                    }
-                }
-            }
+            SettingsSelectionLink(
+                title = resources.toolbarSlotTitle(index + 1),
+                value = currentEntry?.let { entry -> resources.entryLabel(entry) }
+                    ?: resources.emptySlotLabel(),
+                onClick = { expandedSlot = index },
+                modifier = Modifier.testTag(BrowserMenuPresentationSettingsTestTags.toolbarSlot(index)),
+                enabled = enabled,
+            )
             if (index != entries.lastIndex) SettingsPreferenceDivider()
         }
         Text(
@@ -213,6 +178,49 @@ private fun BrowserMenuBottomSheetToolbarSettings(
         )
     }
     Spacer(Modifier.height(16.dp))
+    expandedSlot?.takeIf { enabled && it in entries.indices }?.let { index ->
+        val currentEntry = entries[index]
+        SettingsSelectionDialog(
+            title = resources.toolbarSlotTitle(index + 1),
+            backContentDescription = resources.back(),
+            artwork = SettingsHeaderArtwork.Gestures,
+            onDismissRequest = { expandedSlot = null },
+        ) {
+            SettingsRadioOption(
+                label = resources.emptySlotLabel(),
+                selected = currentEntry == null,
+                leadingIcon = { Icon(Icons.Default.Block, contentDescription = null) },
+                modifier = Modifier.testTag(BrowserMenuPresentationSettingsTestTags.toolbarEntry(null)),
+                onClick = {
+                    expandedSlot = null
+                    if (currentEntry != null) {
+                        onLayoutChanged(BrowserMenuBottomSheetToolbarRules.assign(layout, index, null))
+                    }
+                },
+            )
+            BrowserMenuConfigurationSection.entries.forEach { section ->
+                val sectionEntries = toolbarEntries.filter { it.section == section }
+                if (sectionEntries.isNotEmpty()) {
+                    SettingsSectionTitle(resources.sectionTitle(section))
+                    sectionEntries.forEach { entry ->
+                        SettingsPreferenceDivider()
+                        SettingsRadioOption(
+                            label = resources.entryLabel(entry),
+                            selected = entry == currentEntry,
+                            leadingIcon = { BrowserMenuSettingsEntryIcon(entry) },
+                            modifier = Modifier.testTag(BrowserMenuPresentationSettingsTestTags.toolbarEntry(entry)),
+                            onClick = {
+                                expandedSlot = null
+                                if (entry != currentEntry) {
+                                    onLayoutChanged(BrowserMenuBottomSheetToolbarRules.assign(layout, index, entry))
+                                }
+                            },
+                        )
+                    }
+                }
+            }
+        }
+    }
 }
 
 /** Static action identity; choosing a toolbar slot must not depend on current page state. */

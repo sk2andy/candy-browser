@@ -1476,4 +1476,5 @@
     <string name="constellations_search">搜尋此地圖</string>
     <string name="constellations_search_no_results">此個人資料中沒有相符的網頁。</string>
     <string name="constellations_search_position">第 %1$d 項，共 %2$d 項相符結果</string>
+    <string name="settings_translations_title">翻譯</string>
 </resources>

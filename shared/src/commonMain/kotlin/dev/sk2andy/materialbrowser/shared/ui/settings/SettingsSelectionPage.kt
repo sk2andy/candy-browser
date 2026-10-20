@@ -62,6 +62,7 @@ fun SettingsRadioOption(
     modifier: Modifier = Modifier,
     supportingText: String? = null,
     enabled: Boolean = true,
+    leadingIcon: (@Composable () -> Unit)? = null,
 ) {
     Surface(
         modifier = modifier
@@ -84,6 +85,10 @@ fun SettingsRadioOption(
                 modifier = Modifier.clearAndSetSemantics { },
             )
             Spacer(Modifier.width(16.dp))
+            if (leadingIcon != null) {
+                leadingIcon()
+                Spacer(Modifier.width(16.dp))
+            }
             Column(Modifier.weight(1f)) {
                 Text(label, style = MaterialTheme.typography.titleMedium)
                 if (supportingText != null) {

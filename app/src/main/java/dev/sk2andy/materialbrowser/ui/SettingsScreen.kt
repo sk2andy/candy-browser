@@ -335,7 +335,12 @@ internal fun SettingsScreen(
 
                 SettingsDestination.TabsAndGestures,
                 SettingsDestination.Tabs,
+                SettingsDestination.TabLifecycle,
+                SettingsDestination.ProfileOptions,
                 SettingsDestination.Gestures,
+                SettingsDestination.GestureLinks,
+                SettingsDestination.GestureAddressBar,
+                SettingsDestination.GestureControls,
                 -> TabsAndGesturesSettingsPage(
                     inactiveTabLifetime = inactiveTabLifetime,
                     residentTabLimit = residentTabLimit,
@@ -384,6 +389,11 @@ internal fun SettingsScreen(
                         onDestinationChanged(SettingsDestination.MenuActions)
                     },
                     onTabOverview = { onDestinationChanged(SettingsDestination.TabOverview) },
+                    onTabLifecycle = { onDestinationChanged(SettingsDestination.TabLifecycle) },
+                    onProfileOptions = { onDestinationChanged(SettingsDestination.ProfileOptions) },
+                    onLinkInteractions = { onDestinationChanged(SettingsDestination.GestureLinks) },
+                    onAddressBarButtons = { onDestinationChanged(SettingsDestination.GestureAddressBar) },
+                    onGestureControls = { onDestinationChanged(SettingsDestination.GestureControls) },
                     onTabStackFolder = { onDestinationChanged(SettingsDestination.TabStackFolder) },
                     onClosedTabUndo = { onDestinationChanged(SettingsDestination.ClosedTabUndo) },
                     onLinkLongPress = { onDestinationChanged(SettingsDestination.LinkLongPress) },
@@ -391,7 +401,12 @@ internal fun SettingsScreen(
                     onBack = { onDestinationChanged(settingsParent(currentDestination)) },
                     section = when (currentDestination) {
                         SettingsDestination.Tabs -> TabSettingsSection.Tabs
+                        SettingsDestination.TabLifecycle -> TabSettingsSection.Lifecycle
+                        SettingsDestination.ProfileOptions -> TabSettingsSection.Profiles
                         SettingsDestination.Gestures -> TabSettingsSection.Gestures
+                        SettingsDestination.GestureLinks -> TabSettingsSection.LinkInteractions
+                        SettingsDestination.GestureAddressBar -> TabSettingsSection.AddressBarButtons
+                        SettingsDestination.GestureControls -> TabSettingsSection.GestureControls
                         else -> TabSettingsSection.All
                     },
                 )
@@ -558,11 +573,13 @@ internal fun SettingsScreen(
                 SettingsDestination.BrowserStartup,
                 SettingsDestination.BrowserFavorites,
                 SettingsDestination.BrowserWebsites,
+                SettingsDestination.Translations,
                 SettingsDestination.BrowserLinks -> BrowserSettingsPage(
                     section = when (currentDestination) {
                         SettingsDestination.BrowserStartup -> BrowserSettingsSection.Startup
                         SettingsDestination.BrowserFavorites -> BrowserSettingsSection.Favorites
                         SettingsDestination.BrowserWebsites -> BrowserSettingsSection.Websites
+                        SettingsDestination.Translations -> BrowserSettingsSection.Translations
                         SettingsDestination.BrowserLinks -> BrowserSettingsSection.Links
                         else -> BrowserSettingsSection.Overview
                     },
@@ -596,6 +613,7 @@ internal fun SettingsScreen(
                     onLinkRouting = { onDestinationChanged(SettingsDestination.LinkRouting) },
                     onDeviceSearch = onOpenDeviceSearch,
                     onExternalLinkPreview = { onDestinationChanged(SettingsDestination.ExternalLinkPreview) },
+                    onTranslations = { onDestinationChanged(SettingsDestination.Translations) },
                     onFullImmersiveModeEnabledChanged = onFullImmersiveModeEnabledChanged,
                     onStartupAnimationEnabledChanged = onStartupAnimationEnabledChanged,
                     onStartupAddressFocusModeChanged = onStartupAddressFocusModeChanged,

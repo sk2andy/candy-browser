@@ -937,6 +937,11 @@ internal fun settingsSearchDefinitions(
     val destination = when (definition.id) {
         "settings_tab_stack_folder_mode" -> SettingsDestination.TabStackFolder
         "settings_closed_tab_undo_title" -> SettingsDestination.ClosedTabUndo
+        "settings_resident_tab_limit", "settings_auto_close_tabs" -> SettingsDestination.TabLifecycle
+        "settings_profiles_title", "guest_bubble_title" -> SettingsDestination.ProfileOptions
+        "settings_address_bar_docking_title", "settings_address_bar_swipe_mode_title",
+        "settings_tab_dismiss_resistance", "settings_status_bar_scroll_title",
+        "settings_status_bar_scroll_width_title" -> SettingsDestination.GestureControls
         "settings_link_long_press_action" -> SettingsDestination.LinkLongPress
         "settings_link_peek_swipe_action" -> SettingsDestination.LinkPeekSwipe
         "settings_inline_media_player_title" -> SettingsDestination.PlayerMode
@@ -948,7 +953,8 @@ internal fun settingsSearchDefinitions(
         "settings_force_dark_websites", "settings_web_content_font_size" -> SettingsDestination.AppearanceWebsites
         "settings_startup_animation_title", "settings_startup_address_focus_title", "settings_open_home_on_startup_title" -> SettingsDestination.BrowserStartup
         "settings_favorite_launch_animation_title", "settings_favorite_animation_speed_title", "settings_favorite_bookmark_import_title" -> SettingsDestination.BrowserFavorites
-        "settings_full_immersive_mode_title", "settings_scroll_bar_title", "settings_translation_provider", "device_search_title" -> SettingsDestination.BrowserWebsites
+        "settings_full_immersive_mode_title", "settings_scroll_bar_title", "device_search_title" -> SettingsDestination.BrowserWebsites
+        "settings_translation_provider" -> SettingsDestination.Translations
         "settings_external_app_links_title" -> SettingsDestination.BrowserLinks
         else -> definition.destination
     }

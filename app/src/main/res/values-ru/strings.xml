@@ -1527,4 +1527,5 @@
     <string name="constellations_search">Поиск по этой карте</string>
     <string name="constellations_search_no_results">В этом профиле нет подходящих страниц.</string>
     <string name="constellations_search_position">%1$d из %2$d совпадений</string>
+    <string name="settings_translations_title">Переводы</string>
 </resources>

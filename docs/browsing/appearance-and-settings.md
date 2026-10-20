@@ -35,7 +35,7 @@ gesture cancellation and single-step commits through nested settings destination
 | Language changes | MainActivity handles locale and layout-direction configuration updates without recreation, retaining open regular/private tabs and the current settings page. Localized Android resources refresh through the existing configuration dispatch; device-language changes apply when no app override is selected. | `MainActivity.kt`, `AndroidManifest.xml`, `AppLanguageSettingsInstrumentedTest`, `AppLanguagePreferencesInstrumentedTest` |
 | Player settings | Direct Settings → Player page for video autoplay, Candy Player mode and independent seek sliders; header and Android Back return to Settings Home. Browser no longer duplicates these controls; shared/iOS keeps the unavailable route disabled. | `ui/PlayerSettingsPage.kt`, `ui/InlineMediaPlayerSeekSlider.kt`, `SettingsDestination.Player`, `PlayerSettingsPageInstrumentedTest`, `PlayerSettingsNavigationInstrumentedTest` |
 | Appearance UI | Shared production destination and controls; Android supplies live persisted state, iOS shows them disabled until it owns equivalent state | `shared/src/commonMain/.../ui/settings/AppearanceSettingsPage.kt`, Android `ui/AppearanceSettingsPage.kt` adapter |
-| Browser menu presentation | Android **Gestures → Menu actions** chooses Floating menu or Bottom sheet and Scroll or two Swipe pages; five lower-toolbar positions accept all supported individual tab-menu actions or empty slots; global stable preferences retain placement and slot order. | `BrowserMenuLayout`, `BrowserMenuSettingsPage`, `BrowserSessionStore` |
+| Browser menu presentation | Android **Gestures → Address bar buttons → Menu actions** chooses Floating menu or Bottom sheet and Scroll or two Swipe pages; five lower-toolbar positions accept all supported individual tab-menu actions or empty slots; global stable preferences retain placement and slot order. | `BrowserMenuLayout`, `BrowserMenuSettingsPage`, `BrowserSessionStore` |
 | Address-bar actions | Persisted ordered action layout plus drag-editor navigation under Gestures | `data/AddressBarActionLayout.kt`, `ui/AddressBarActionEditor.kt`, `BrowserSessionStore` |
 | Address-pill swipe mode | Persisted opt-in under Gestures; vertical swipes on the page expand downward and compact upward, including pages without scrolling. Disabled mode retains page-scroll behavior. | `BrowserSessionStore`, `BrowserController`, `ui/TabSettingsPage`, `ui/BrowserViewport` |
 | Page scroll bar | Persisted opt-in, engine-neutral scroll metrics and draggable auto-hide overlay | `BrowserSessionStore`, browser-engine session ports, `ui/BrowserScrollBar` |
@@ -363,7 +363,11 @@ path defect found while reviewing #204 and the measured verification scope.
 Menu presentation and content layout form a connected group; all five lower-toolbar slots form a
 second group. Bottom Sheet-specific choices stay visible and disabled under Floating, preserving
 their values. Action-location choices retain their existing section order, platform availability,
-allowed locations and change-only callbacks. Shared Core browser, tabs/gestures, search and Topping
+allowed locations and change-only callbacks. Toolbar slots and action locations now open focused,
+full-size selection dialogs with an approved Gestures header, existing icons and radio choices.
+Selecting a value returns to Menu actions; header/device Back dismisses without writing. Empty slots,
+entry filtering, normalization and disabled controls retain their prior behavior.
+Shared Core browser, tabs/gestures, search and Topping
 pages use the same groups. Unsupported shared-platform controls remain disabled; each Topping switch
 is labeled by name, and its frame scope is disabled while the Topping is off without changing the
 saved allowance. Edit and Delete remain independent management actions.
@@ -399,27 +403,65 @@ Colors, surfaces/shapes and address-bar choices use inline radio groups with a C
 Tab-stack folders reuse the Hero/Grid/List preview. Long-press link and Link Peek swipe choices have
 separate pages grouped by normal tabs, private tabs and other link actions. Foreground/background
 choices keep their existing distinct labels. Candy Player has five explained modes, while autoplay
-and the two seek values stay on its parent page. External preview and closed-tab undo have illustrated
-feature pages with prominent master switches. Device Search keeps its existing controls with a larger
-functional search/result illustration.
+and the two seek values stay on its parent page. Closed-tab undo retains its functional illustration;
+Device Search retains its controls and search/result illustration.
 
-Selected radio rows use exactly the same neutral background as unselected rows. The primary-colored
-indicator and selected semantics communicate state. Dropdown selections likewise share their neutral
-menu surface, using a trailing radio indicator. The existing theme, disabled colors, values, write
-callbacks and storage remain authoritative. Search targets move with the controls; the shared parent
-map drives header, system/predictive Back and reverse route transitions. The complete option and
-capability map is in [settings-option-map.md](settings-option-map.md).
+The bounded settings hierarchy now separates the following sections:
+
+| Parent | Focused page | Retained controls |
+| --- | --- | --- |
+| Tabs | Tab lifecycle | Closed-tab undo link, resident limit and auto-close lifetime |
+| Tabs | Profile options | Profiles master and dependent Guest Bubble |
+| Gestures | Link interactions | Link long press, Link Peek swipe and Link Peek buttons |
+| Gestures | Address bar buttons | Address long press, Address bar actions and Menu actions |
+| Gestures | Gestures | Docking, viewport swipe, dismissal resistance and status-bar master/width |
+| Browser → Web pages | Translations | All translation providers, explanations and capability guard |
+| Browser → Web pages | Personal link rules | Existing rule list, editor, ordering and validation |
+| Browser → Links & apps | External link preview | Master and dependent profile selection |
+
+Each new section page begins with its approved artwork. Tab lifecycle and Personal link rules have
+newly approved originals; the three gesture sections reuse the approved Gestures motif. External link
+preview has exactly one v8 header: the older active/inactive graphic and the pill-shaped enclosing
+master treatment are removed. The existing master, profile fallback and disabled-value behavior remain.
+
+Search engines, suggestions/fallback, download managers, translation providers, auto-close lifetime
+and preview profiles use inline radio choices. The four fixed Browser choices (engine, startup address
+focus, favorite speed and external-app handling) also use radios. The download folder keeps its
+existing edit dialog, reached through a right-chevron row. Menu slots/action locations use the focused
+selection dialogs described above. Sync, security, developer, app-icon and language UI remain outside
+this bounded change.
+
+Selected radio rows share the neutral background of unselected rows; the primary-colored indicator
+and selected semantics communicate state. Existing theme, disabled colors, values, callbacks and
+storage remain authoritative. `SettingsRouter` retains saveable page state by destination so returning
+to a parent restores its scroll position. Search targets move with their controls and retain all 146
+existing static catalog IDs. The shared parent map drives header, system/predictive Back and reverse
+transitions; opening a search result retains the existing return-to-search override. Search query
+privacy is unchanged. The complete option and capability map is in
+[settings-option-map.md](settings-option-map.md).
+
+The preservation audit found all 117 keys in the complete `BrowserSessionStore` and its source
+unchanged from the current base. This is a store-state inventory, not a count of visible settings.
+The older 101-key count is historical and is not asserted as newly verified. The final affected
+device suite passed 67 tests and skipped one permission-dependent case, with no failures.
+Build, unit-test, lint and visual scope are recorded in the option map's
+[current validation](settings-option-map.md#current-validation); older results apply only to
+their explicitly identified revisions.
 
 ### Approved settings header artwork
 
-The parent **Theme & interface**, **Tabs**, and **Player** pages show the approved imagegen
-illustrations: the swatch fan, overlapping tab cards, and the revised waveform player.
-`SettingsHeaderIllustration` owns their shared Compose rendering. They are decorative, have no
-accessibility announcement or interaction, and use a centered, aspect-preserving window within a
-200 dp header capped at 360 dp wide. Narrow layouts retain the complete shape. They scroll with the
-existing page; the preferences, callbacks and storage are unchanged.
+The **Theme & interface**, **Tabs**, **Player**, **Search**, **Downloads**, **Gestures**,
+**Profile options**, **Translations**, **Tab lifecycle**, **Personal link rules** and
+**External link preview** pages show approved imagegen illustrations. Profiles and Translations
+now begin their own focused pages with full headers; they are no longer compact inline section art.
+Android and shared Core Search use the same approved Search illustration and built-in engine choices.
+`SettingsHeaderIllustration` owns shared Compose rendering. The images are decorative, have no
+accessibility announcement or interaction, and use a centered, aspect-preserving runtime window in a
+200 dp header capped at 360 dp wide. Narrow layouts retain the complete shape. Artwork scrolls with
+the page. The External link preview page uses only its approved v8 decorative header; its redundant
+older graphic is removed without removing controls.
 
-The two PNGs in `shared/src/commonMain/composeResources/drawable` are byte-identical original
+The ten PNGs in `shared/src/commonMain/composeResources/drawable` are byte-identical original
 downloads. No pixels were cropped, recolored, redrawn or regenerated in the source files. The
 Appearance and Tabs windows reference the first sheet; the rejected rounded Player on that sheet
 is outside both windows. Player references only the separately approved waveform image.
@@ -428,15 +470,38 @@ is outside both windows. Player references only the separately approved waveform
 | --- | --- | --- | --- |
 | `settings_approved_appearance_tabs.png` | 1024 × 1536 | Appearance `(160, 80, 860, 610)`; Tabs `(160, 615, 860, 1060)` | `f550651600031493d981511ea9ef0b0b7e38a1c608ec911597d12f824dd3eafc` |
 | `settings_approved_player_waveform.png` | 1536 × 1024 | Player `(160, 245, 1376, 780)` | `852cdeed7a16d1fc54c75e5dda13138bcbf83fd8f96acfbb5321e0c760b88a02` |
+| `settings_approved_search_engines.png` | 1536 × 1024 | Search `(160, 250, 1376, 750)` | `65fd3d6b9e012ea768f71046b52a17bca96a606c75097c778e1589b743644d25` |
+| `settings_approved_translations.png` | 1536 × 1024 | Translations `(220, 250, 1320, 770)` | `b1e0da1d08e3f5054b1d252404d3b7fd549a402be6d5e01f9f7dd879740fd438` |
+| `settings_approved_downloads_v2.png` | 1536 × 1024 | Downloads `(260, 140, 1300, 880)` | `866d7e36ecc1c21ba6602572748af2cf80551050633c10620d9384ebef3c925f` |
+| `settings_approved_profiles_v2.png` | 1536 × 1024 | Profiles `(50, 270, 1486, 700)` | `8cd254c78c0663487bcef495b50f6456ac7e8a2bd8097c27669184e48365f828` |
+| `settings_approved_gestures.png` | 1536 × 1024 | Gestures `(160, 245, 1376, 780)` | `3f20d792611da34ee2aecc42cee5e499cea90382c8149474770815a0cdf6e696` |
+| `settings_approved_link_preview_final_v8.png` | 1536 × 1024 | Link Preview `(0, 0, 1536, 1024)` | `96d31d9d40b7e48b5cedde34da2ce48e3b8f2169663bdb3f2324111743c5648a` |
+| `settings_approved_tab_lifecycle.png` | 1536 × 1024 | Tab lifecycle `(340, 115, 1210, 910)` | `0178005781cbd91cec822e02480b276de186d1dc172d2e1d39bff7f57d49ebf5` |
+| `settings_approved_personal_link_rules.png` | 1536 × 1024 | Personal link rules `(140, 225, 1400, 795)` | `63e9bd5762063cce660ad691b6afdb153f5b3e9378e5601ceb71792e0b08fad0` |
 
 The original Library IDs are `libfile_46c900dcd0448191a03ae81118385873` and
 `libfile_48290d7ff1088191aacd6d776d5db0db`, respectively. These are user-approved imagegen
 outputs, not third-party illustration downloads.
 
+The six additional originals use Library IDs `libfile_ab3362e52d6081919f27fac1fa7be5b8`
+(Search), `libfile_60e06317312c81919708dcab3dd91cd6` (Translations),
+`libfile_d1903c491e74819194cf6df706277922` (Downloads v2),
+`libfile_3923a9b6d6608191ab14636ac216ac87` (Profiles v2),
+`libfile_444e2ee636808191b0688c9dafbf2fbc` (Gestures), and
+`libfile_d3e00e4f6340819189a159113a486d6e` (Link Preview final v8).
+The two later approved originals use `libfile_f834b2fd22248191a2c216913635f9f0` (Tab lifecycle)
+and `libfile_1c6153dd3f7c8191966fcc18569aaf93` (Personal link rules). Their original and resource bytes
+were verified identical; the runtime windows retain their complete artwork with paper around the
+edges (minimum sampled border luminance 252 and 253 respectively). No source pixel edit was made.
+
+The Downloads window includes the cloud, complete dotted trail and folder. Link Preview deliberately
+uses the full original so the hand and wrist near its bottom edge are never clipped.
+
 The nearly monochrome originals contain opaque offwhite paper with slight RGB variation. At draw
 time, a luminance matrix maps the paper's white point of 244/255 to white, retaining lower tonal
 detail. A separate layer maps black to the current Material `primary` and white to the actual
-`settingsPageColor()` (`surfaceContainerLow`). The intermediate clamp is necessary: combining
+`settingsPageColor()` (`surfaceContainerLow`), including the now-separate Translations page.
+The intermediate clamp is necessary: combining
 these matrices would extrapolate the offwhite background beyond the page color in dark palettes.
 Both passes keep the alpha row unchanged, and color-matrix offsets use the API's 0–255 units.
 The matrices update with the live Material palette, including Dynamic, Candy, Neutral, dark and
@@ -444,9 +509,20 @@ AMOLED. This is a tonal filter, rather than a flat silhouette tint.
 
 `SettingsHeaderArtworkRulesTest` checks source boundaries, aspect-preserving fit, paper normalization,
 tonal and alpha preservation, and palette changes. `SettingsHeaderArtworkInstrumentedTest` captures
-the actual parent page composables in all nine palette/mode combinations, checks the rendered border
-pixels and tonal detail, and exercises scrolling and settings changes at 320 dp / 200% font scale.
-Its unscaled screenshots and capture inventory are saved in the test app's external-files
-`settings-header-artwork` directory. These are Compose page captures, not browser-navigation tests.
+the actual page composables for all eleven illustrations in all nine palette/mode combinations,
+checks the rendered border pixels, live theme colors and tonal detail, and exercises scrolling and
+settings changes at 320 dp / 200% font scale. The Link Preview original has softer dark grays, and its
+contrast assertion reflects those approved source tones. `SharedCoreSettingsInstrumentedTest` also
+captures the shared Search header and exercises its existing provider/instance validation flow.
+The artwork suite's unscaled screenshots and capture inventory are saved in the test app's
+external-files `settings-header-artwork` directory; the shared-host capture is in
+`settings-combined-evidence`. The artwork suite uses Compose page captures, not browser-navigation tests.
+The suite retains live theme changes in the same composition and waits for a rendered frame after
+header pixel checks before saving the full-page capture. The final eleven-motif device run passed
+all 99 theme combinations and all 11 narrow/large-text cases. Prior nine-motif screenshots remain
+evidence only for their earlier layout. Real-app navigation, Back behavior and persistence passed
+separately in `PlayerSettingsNavigationInstrumentedTest` and the affected settings/search suites;
+they are not established by artwork captures alone. One private-search recreation case skipped
+because notification permission was not already granted.
 The existing Colors, Surfaces/shapes, Address bar, tab layout and Player mode explanatory previews
 continue to use their functional illustrations; Gestures does not receive the Tabs header.

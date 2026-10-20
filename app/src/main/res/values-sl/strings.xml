@@ -1525,4 +1525,5 @@
     <string name="constellations_search">Preišči ta zemljevid</string>
     <string name="constellations_search_no_results">V tem profilu ni ustreznih strani.</string>
     <string name="constellations_search_position">%1$d od %2$d zadetkov</string>
+    <string name="settings_translations_title">Prevodi</string>
 </resources>

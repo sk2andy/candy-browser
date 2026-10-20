@@ -1500,4 +1500,5 @@
     <string name="constellations_search">Pesquisar neste mapa</string>
     <string name="constellations_search_no_results">Nenhuma página correspondente neste perfil.</string>
     <string name="constellations_search_position">%1$d de %2$d resultados</string>
+    <string name="settings_translations_title">Traduções</string>
 </resources>

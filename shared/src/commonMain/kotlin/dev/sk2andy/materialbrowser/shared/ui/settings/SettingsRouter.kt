@@ -2,6 +2,7 @@ package dev.sk2andy.materialbrowser.shared.ui.settings
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.updateTransition
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
@@ -13,6 +14,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.movableContentOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.zIndex
@@ -28,6 +34,23 @@ fun SettingsRouter(
     content: @Composable (SettingsDestination) -> Unit,
 ) {
     val reduceMotion = LocalCandyBrowserChromeEffects.current.reducesMotion()
+    val pageState = rememberSaveableStateHolder()
+    val currentContent by rememberUpdatedState(content)
+    val pages = remember(pageState) {
+        SettingsDestination.entries.associateWith { page ->
+            movableContentOf {
+                pageState.SaveableStateProvider(page.name) {
+                    currentContent(page)
+                }
+            }
+        }
+    }
+    val transition = updateTransition(destination, label = "Settings destination")
+    // Interrupted AnimatedContent transitions can retain more than two routes. Wait until all
+    // outgoing content is gone before moving a saved page into the predictive background.
+    val preview = backPreviewDestination?.takeIf {
+        it != destination && transition.currentState == transition.targetState && !transition.isRunning
+    }
     Surface(
         modifier = modifier
             .fillMaxSize()
@@ -35,13 +58,12 @@ fun SettingsRouter(
         color = MaterialTheme.colorScheme.surface,
     ) {
         Box(Modifier.fillMaxSize()) {
-            if (backPreviewDestination != null) {
+            if (preview != null) {
                 Box(Modifier.fillMaxSize().clearAndSetSemantics {}) {
-                    content(backPreviewDestination)
+                    pages.getValue(preview)()
                 }
             }
-            AnimatedContent(
-                targetState = destination,
+            transition.AnimatedContent(
                 modifier = destinationModifier
                     .fillMaxSize()
                     .background(MaterialTheme.colorScheme.surface),
@@ -56,8 +78,11 @@ fun SettingsRouter(
                             (slideOutHorizontally { width -> -width / 3 } + fadeOut())
                     }
                 },
-                label = "Settings destination",
-                content = { currentDestination -> content(currentDestination) },
+                content = { currentDestination ->
+                    // The same movable instance also owns a predictive preview, so moving it
+                    // here on commit never registers a second provider for the same page.
+                    pages.getValue(currentDestination)()
+                },
             )
         }
     }

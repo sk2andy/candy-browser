@@ -10,6 +10,32 @@ import kotlin.test.assertTrue
 
 class SettingsHeaderArtworkRulesTest {
     @Test
+    fun addedWindowsPreserveCloudTrailProfileCardsAndCompleteHand() {
+        // Visible bounds independently inspected in the approved 1536 x 1024 originals.
+        val visibleBounds = mapOf(
+            SettingsHeaderArtwork.SearchEngines to IntRect(200, 294, 1336, 708),
+            SettingsHeaderArtwork.Translations to IntRect(260, 296, 1278, 724),
+            SettingsHeaderArtwork.Downloads to IntRect(309, 184, 1245, 836),
+            SettingsHeaderArtwork.Profiles to IntRect(94, 314, 1442, 646),
+            SettingsHeaderArtwork.Gestures to IntRect(208, 292, 1329, 732),
+            SettingsHeaderArtwork.LinkPreview to IntRect(83, 141, 1454, 1001),
+            SettingsHeaderArtwork.TabLifecycle to IntRect(394, 162, 1166, 866),
+            SettingsHeaderArtwork.PersonalLinkRules to IntRect(185, 272, 1352, 753),
+        )
+        visibleBounds.forEach { (artwork, visible) ->
+            val window = SettingsHeaderArtworkRules.sourceWindow(artwork)
+            assertTrue(window.left <= visible.left && window.top <= visible.top, artwork.name)
+            assertTrue(window.right >= visible.right && window.bottom >= visible.bottom, artwork.name)
+            assertTrue(window.left >= 0 && window.top >= 0, artwork.name)
+            assertTrue(window.right <= 1536 && window.bottom <= 1024, artwork.name)
+        }
+        assertEquals(
+            IntRect(0, 0, 1536, 1024),
+            SettingsHeaderArtworkRules.sourceWindow(SettingsHeaderArtwork.LinkPreview),
+        )
+    }
+
+    @Test
     fun originalWindowsExcludeNeighboringAndRejectedArtwork() {
         val appearance = SettingsHeaderArtworkRules.sourceWindow(SettingsHeaderArtwork.Appearance)
         val tabs = SettingsHeaderArtworkRules.sourceWindow(SettingsHeaderArtwork.Tabs)

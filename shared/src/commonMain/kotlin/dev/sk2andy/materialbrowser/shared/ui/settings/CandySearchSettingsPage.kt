@@ -1,6 +1,7 @@
 package dev.sk2andy.materialbrowser.shared.ui.settings
 
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
@@ -33,7 +34,6 @@ internal fun CandySearchSettingsPage(
     onSearxngInstanceUrlChanged: (String) -> Unit,
     onBack: () -> Unit,
 ) {
-    var engineMenuExpanded by remember { mutableStateOf(false) }
     var instanceUrlDraft by remember(searxngInstanceUrl) {
         mutableStateOf(searxngInstanceUrl)
     }
@@ -42,32 +42,15 @@ internal fun CandySearchSettingsPage(
         backContentDescription = "Zurück",
         onBack = onBack,
     ) {
+        SettingsHeaderIllustration(SettingsHeaderArtwork.SearchEngines)
+        SettingsPageSpacer()
         SettingsPreferenceGroup(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh) {
-            Box {
-                SettingsChoice(
-                    title = "Suchmaschine",
-                    value = searchEngine.displayName,
-                    expanded = engineMenuExpanded,
-                    onClick = { engineMenuExpanded = true },
-                    containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                    modifier = Modifier.testTag(CandySearchSettingsTestTags.SEARCH_ENGINE),
-                )
-                SettingsDropdown(
-                    expanded = engineMenuExpanded,
-                    onDismissRequest = { engineMenuExpanded = false },
-                ) {
-                    SearchEngine.entries.forEach { candidate ->
-                        SettingsDropdownItem(
-                            label = candidate.displayName,
-                            selected = candidate == searchEngine,
-                            onClick = {
-                                engineMenuExpanded = false
-                                onSearchEngineChanged(candidate)
-                            },
-                        )
-                    }
-                }
-            }
+            SearchEngineRadioOptions(
+                title = "Suchmaschine",
+                searchEngine = searchEngine,
+                onSearchEngineChanged = onSearchEngineChanged,
+                modifier = Modifier.testTag(CandySearchSettingsTestTags.SEARCH_ENGINE),
+            )
 
             if (searchEngine == SearchEngine.SearXNG) {
                 SettingsPageSpacer()
@@ -117,6 +100,28 @@ internal fun CandySearchSettingsPage(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
+        }
+    }
+}
+
+/** Shared built-in engine choices for the Android and Core settings surfaces. */
+@Composable
+fun SearchEngineRadioOptions(
+    title: String,
+    searchEngine: SearchEngine,
+    onSearchEngineChanged: (SearchEngine) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier.settingsSearchTarget(title).selectableGroup()) {
+        SettingsSectionTitle(title)
+        SearchEngine.entries.forEachIndexed { index, engine ->
+            if (index > 0) SettingsPreferenceDivider()
+            SettingsRadioOption(
+                label = engine.displayName,
+                selected = engine == searchEngine,
+                onClick = { onSearchEngineChanged(engine) },
+                modifier = Modifier.testTag("search_settings_engine_${engine.stableId}"),
+            )
         }
     }
 }

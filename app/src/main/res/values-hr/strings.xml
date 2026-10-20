@@ -1509,4 +1509,5 @@
     <string name="constellations_search">Pretraži ovu kartu</string>
     <string name="constellations_search_no_results">Nema odgovarajućih stranica u ovom profilu.</string>
     <string name="constellations_search_position">%1$d od %2$d podudaranja</string>
+    <string name="settings_translations_title">Prijevodi</string>
 </resources>

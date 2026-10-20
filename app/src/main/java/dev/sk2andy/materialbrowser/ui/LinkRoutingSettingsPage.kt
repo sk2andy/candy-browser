@@ -1,13 +1,13 @@
 package dev.sk2andy.materialbrowser.ui
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -45,6 +45,9 @@ import dev.sk2andy.materialbrowser.browser.integration.linkrouting.LinkRoutingRu
 import dev.sk2andy.materialbrowser.browser.integration.linkrouting.LinkRoutingTarget
 import dev.sk2andy.materialbrowser.browser.integration.linkrouting.LinkRoutingTargetKind
 import dev.sk2andy.materialbrowser.capsule.SiteCapsule
+import dev.sk2andy.materialbrowser.shared.ui.settings.SettingsHeaderArtwork
+import dev.sk2andy.materialbrowser.shared.ui.settings.SettingsHeaderIllustration
+import dev.sk2andy.materialbrowser.shared.ui.settings.SettingsRadioOption
 import java.util.UUID
 
 @Composable
@@ -61,6 +64,8 @@ internal fun LinkRoutingSettingsPage(
     val eligibleProfileIds = eligibleProfiles.mapTo(hashSetOf(), BrowserProfile::id)
     val eligibleCapsules = capsules.filter { it.profileId in eligibleProfileIds }
     SettingsPage(title = stringResource(R.string.link_routing_title), onBack = onBack) {
+        SettingsHeaderIllustration(SettingsHeaderArtwork.PersonalLinkRules)
+        SettingsPageSpacer()
         Text(
             stringResource(R.string.link_routing_summary),
             style = MaterialTheme.typography.bodyMedium,
@@ -176,8 +181,6 @@ private fun LinkRoutingRuleDialog(
     var domain by remember(initial) { mutableStateOf(initial?.domain.orEmpty()) }
     var subdomains by remember(initial) { mutableStateOf(initial?.includeSubdomains ?: false) }
     var target by remember(initial) { mutableStateOf(initial?.target ?: LinkRoutingTarget(LinkRoutingTargetKind.Reader)) }
-    var kindMenu by remember { mutableStateOf(false) }
-    var targetMenu by remember { mutableStateOf(false) }
     val candidate = LinkRoutingRules.sanitize(
         LinkRoutingRule(id, domain, subdomains, target, initial?.enabled ?: true),
     )
@@ -211,55 +214,44 @@ private fun LinkRoutingRuleDialog(
                     checked = subdomains,
                     onCheckedChange = { subdomains = it },
                 )
-                Box {
-                    SettingsChoice(
-                        title = stringResource(R.string.link_routing_target),
-                        value = linkRoutingKindLabel(target.kind),
-                        expanded = kindMenu,
-                        onClick = { kindMenu = true },
-                        modifier = Modifier.testTag(LinkRoutingTestTags.Kind),
-                    )
-                    SettingsDropdown(expanded = kindMenu, onDismissRequest = { kindMenu = false }) {
+                SettingsSectionTitle(stringResource(R.string.link_routing_target))
+                Column(Modifier.selectableGroup().testTag(LinkRoutingTestTags.Kind)) {
+                    SettingsPreferenceGroup {
                         LinkRoutingTargetKind.entries.forEach { kind ->
-                            SettingsDropdownItem(
+                            SettingsRadioOption(
                                 label = linkRoutingKindLabel(kind),
                                 selected = kind == target.kind,
                                 onClick = {
-                                    kindMenu = false
-                                    target = LinkRoutingTarget(
-                                        kind,
-                                        when (kind) {
-                                            LinkRoutingTargetKind.Profile -> profiles.firstOrNull()?.id
-                                            LinkRoutingTargetKind.Capsule -> capsules.firstOrNull()?.id
-                                            LinkRoutingTargetKind.Reader -> null
-                                        },
-                                    )
+                                    if (kind != target.kind) {
+                                        target = LinkRoutingTarget(
+                                            kind,
+                                            when (kind) {
+                                                LinkRoutingTargetKind.Profile -> profiles.firstOrNull()?.id
+                                                LinkRoutingTargetKind.Capsule -> capsules.firstOrNull()?.id
+                                                LinkRoutingTargetKind.Reader -> null
+                                            },
+                                        )
+                                    }
                                 },
                             )
                         }
                     }
                 }
                 if (target.kind != LinkRoutingTargetKind.Reader) {
-                    Box {
-                        SettingsChoice(
-                            title = stringResource(R.string.link_routing_destination),
-                            value = linkRoutingTargetLabel(target, profiles, capsules),
-                            expanded = targetMenu,
-                            onClick = { targetMenu = true },
-                        )
-                        SettingsDropdown(expanded = targetMenu, onDismissRequest = { targetMenu = false }) {
+                    SettingsSectionTitle(stringResource(R.string.link_routing_destination))
+                    Column(Modifier.selectableGroup()) {
+                        SettingsPreferenceGroup {
                             val options = if (target.kind == LinkRoutingTargetKind.Profile) {
                                 profiles.map { it.id to it.emoji }
                             } else {
                                 capsules.map { it.id to it.name }
                             }
                             options.forEach { (targetId, label) ->
-                                SettingsDropdownItem(
+                                SettingsRadioOption(
                                     label = label,
                                     selected = target.id == targetId,
                                     onClick = {
                                         target = target.copy(id = targetId)
-                                        targetMenu = false
                                     },
                                 )
                             }

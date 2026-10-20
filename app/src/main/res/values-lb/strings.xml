@@ -1493,4 +1493,5 @@
     <string name="constellations_search">Dës Kaart duerchsichen</string>
     <string name="constellations_search_no_results">Keng passend Säiten an dësem Profil.</string>
     <string name="constellations_search_position">%1$d vu %2$d Treffer</string>
+    <string name="settings_translations_title">Iwwersetzungen</string>
 </resources>

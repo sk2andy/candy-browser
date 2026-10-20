@@ -1,8 +1,7 @@
 package dev.sk2andy.materialbrowser.ui
 
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
@@ -23,6 +22,11 @@ import dev.sk2andy.materialbrowser.browser.actions.ExternalDownloadManagerApp
 import dev.sk2andy.materialbrowser.data.BrowserDownloadSettings
 import dev.sk2andy.materialbrowser.data.DownloadDirectoryRules
 import dev.sk2andy.materialbrowser.data.DownloadManagerMode
+import dev.sk2andy.materialbrowser.shared.ui.settings.SettingsHeaderArtwork
+import dev.sk2andy.materialbrowser.shared.ui.settings.SettingsHeaderIllustration
+import dev.sk2andy.materialbrowser.shared.ui.settings.SettingsRadioOption
+import dev.sk2andy.materialbrowser.shared.ui.settings.SettingsSelectionLink
+import dev.sk2andy.materialbrowser.shared.ui.settings.settingsSearchTarget
 
 @Composable
 internal fun DownloadsSettingsPage(
@@ -31,7 +35,6 @@ internal fun DownloadsSettingsPage(
     onSettingsChanged: (BrowserDownloadSettings) -> Unit,
     onBack: () -> Unit,
 ) {
-    var managerMenuExpanded by remember { mutableStateOf(false) }
     var directoryDialogVisible by remember { mutableStateOf(false) }
     var directoryDraft by remember { mutableStateOf("") }
     val selectedExternalManager = externalManagers.firstOrNull {
@@ -46,61 +49,51 @@ internal fun DownloadsSettingsPage(
         title = stringResource(R.string.settings_downloads_title),
         onBack = onBack,
     ) {
+        SettingsHeaderIllustration(SettingsHeaderArtwork.Downloads)
+        SettingsPageSpacer()
         SettingsPreferenceGroup {
-            Box {
-                SettingsChoice(
-                    title = stringResource(R.string.settings_download_manager_title),
-                    value = settings.displayName(externalManagers),
-                    expanded = managerMenuExpanded,
-                    onClick = { managerMenuExpanded = true },
-                    inPreferenceGroup = true,
+            Column(
+                Modifier.settingsSearchTarget(stringResource(R.string.settings_download_manager_title))
+                    .selectableGroup(),
+            ) {
+                SettingsSectionTitle(stringResource(R.string.settings_download_manager_title))
+                SettingsRadioOption(
+                    label = stringResource(R.string.settings_download_manager_builtin),
+                    selected = settings.managerMode == DownloadManagerMode.BuiltIn,
+                    modifier = Modifier.testTag(DownloadSettingsTestTags.BuiltIn),
+                    onClick = {
+                        onSettingsChanged(settings.copy(
+                            managerMode = DownloadManagerMode.BuiltIn,
+                            externalManagerId = null,
+                        ))
+                    },
                 )
-                SettingsDropdown(
-                    expanded = managerMenuExpanded,
-                    onDismissRequest = { managerMenuExpanded = false },
-                ) {
-                    SettingsDropdownItem(
-                        label = stringResource(R.string.settings_download_manager_builtin),
-                        selected = settings.managerMode == DownloadManagerMode.BuiltIn,
+                SettingsPreferenceDivider()
+                SettingsRadioOption(
+                    label = stringResource(R.string.settings_download_manager_ask),
+                    selected = settings.managerMode == DownloadManagerMode.AskEveryTime,
+                    modifier = Modifier.testTag(DownloadSettingsTestTags.AskEveryTime),
+                    onClick = {
+                        onSettingsChanged(settings.copy(
+                            managerMode = DownloadManagerMode.AskEveryTime,
+                            externalManagerId = null,
+                        ))
+                    },
+                )
+                externalManagers.forEach { manager ->
+                    SettingsPreferenceDivider()
+                    SettingsRadioOption(
+                        label = manager.label,
+                        selected = settings.managerMode == DownloadManagerMode.External &&
+                            settings.externalManagerId == manager.id,
+                        modifier = Modifier.testTag(DownloadSettingsTestTags.externalManager(manager.id)),
                         onClick = {
-                            managerMenuExpanded = false
-                            onSettingsChanged(
-                                settings.copy(
-                                    managerMode = DownloadManagerMode.BuiltIn,
-                                    externalManagerId = null,
-                                ),
-                            )
+                            onSettingsChanged(settings.copy(
+                                managerMode = DownloadManagerMode.External,
+                                externalManagerId = manager.id,
+                            ))
                         },
                     )
-                    SettingsDropdownItem(
-                        label = stringResource(R.string.settings_download_manager_ask),
-                        selected = settings.managerMode == DownloadManagerMode.AskEveryTime,
-                        onClick = {
-                            managerMenuExpanded = false
-                            onSettingsChanged(
-                                settings.copy(
-                                    managerMode = DownloadManagerMode.AskEveryTime,
-                                    externalManagerId = null,
-                                ),
-                            )
-                        },
-                    )
-                    externalManagers.forEach { manager ->
-                        SettingsDropdownItem(
-                            label = manager.label,
-                            selected = settings.managerMode == DownloadManagerMode.External &&
-                                settings.externalManagerId == manager.id,
-                            onClick = {
-                                managerMenuExpanded = false
-                                onSettingsChanged(
-                                    settings.copy(
-                                        managerMode = DownloadManagerMode.External,
-                                        externalManagerId = manager.id,
-                                    ),
-                                )
-                            },
-                        )
-                    }
                 }
             }
             if (externalManagers.isEmpty()) {
@@ -114,12 +107,11 @@ internal fun DownloadsSettingsPage(
                 )
             }
                 SettingsPreferenceDivider()
-                SettingsChoice(
+                SettingsSelectionLink(
                     title = stringResource(R.string.settings_download_folder_title),
                     value = settings.downloadSubdirectory?.let { relativePath ->
                         stringResource(R.string.settings_download_folder_path, relativePath)
                     } ?: stringResource(R.string.settings_download_folder_default),
-                    expanded = false,
                     onClick = {
                         if (settings.managerMode == DownloadManagerMode.BuiltIn) {
                             directoryDraft = settings.downloadSubdirectory.orEmpty()
@@ -128,7 +120,6 @@ internal fun DownloadsSettingsPage(
                     },
                     modifier = Modifier.testTag(DownloadSettingsTestTags.Directory),
                     enabled = settings.managerMode == DownloadManagerMode.BuiltIn,
-                    inPreferenceGroup = true,
                 )
                 Text(
                     stringResource(R.string.settings_download_folder_summary),
@@ -162,7 +153,7 @@ internal fun DownloadsSettingsPage(
                     onCheckedChange = {
                         onSettingsChanged(settings.copy(shareSessionDataWithOneDm = it))
                     },
-                    modifier = Modifier,
+                    modifier = Modifier.testTag(DownloadSettingsTestTags.OneDmSession),
                 )
         }
     }
@@ -214,6 +205,10 @@ internal fun DownloadsSettingsPage(
 }
 
 internal object DownloadSettingsTestTags {
+    const val BuiltIn = "download_settings_manager_builtin"
+    const val AskEveryTime = "download_settings_manager_ask"
+    const val OneDmSession = "download_settings_one_dm_session"
+    fun externalManager(id: String) = "download_settings_manager_$id"
     const val Directory = "download_settings_directory"
     const val DirectoryReset = "download_settings_directory_reset"
     const val DirectoryDialog = "download_settings_directory_dialog"

@@ -10,6 +10,7 @@ import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -22,19 +23,31 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsOff
+import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import androidx.test.uiautomator.UiDevice
 import dev.sk2andy.materialbrowser.R
+import dev.sk2andy.materialbrowser.browser.integration.linkrouting.LinkRoutingRule
+import dev.sk2andy.materialbrowser.browser.BrowserProfile
+import dev.sk2andy.materialbrowser.browser.PageTranslationProvider
+import dev.sk2andy.materialbrowser.browser.SearchEngine
+import dev.sk2andy.materialbrowser.browser.SearxngSettings
+import dev.sk2andy.materialbrowser.browser.suggestions.SearchSuggestionProvider
 import dev.sk2andy.materialbrowser.data.AppearanceSettings
+import dev.sk2andy.materialbrowser.data.BrowserDownloadSettings
 import dev.sk2andy.materialbrowser.data.BrowserAppearanceMode
 import dev.sk2andy.materialbrowser.data.BrowserColorPalette
 import dev.sk2andy.materialbrowser.data.InactiveTabLifetime
@@ -91,16 +104,20 @@ class SettingsHeaderArtworkInstrumentedTest {
                     }
                     composeRule.waitForIdle()
                     val node = composeRule.onNodeWithTag(tag(kind))
+                        .performScrollTo()
                         .assertIsDisplayed()
                         .assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.ContentDescription))
                     val header = node.captureToImage().toPixelMap()
                     assertPaperMatchesPage(header, pageColor)
-                    assertTonalArtwork(header, pageColor, primaryColor)
+                    assertTonalArtwork(header, pageColor, primaryColor, kind)
                     if (firstHeader == null) {
                         firstHeader = header
                     } else if (palette == BrowserColorPalette.Candy && mode == BrowserAppearanceMode.Dark) {
                         assertTrue("The live theme must recolor the header", differs(firstHeader, header))
                     }
+                    // Allow a frame between the isolated header capture and the full page capture.
+                    composeRule.mainClock.advanceTimeByFrame()
+                    composeRule.waitForIdle()
                     val screen = composeRule.onRoot().captureToImage()
                     val name = "${kind.name.lowercase()}_${palette.name.lowercase()}_${mode.name.lowercase()}"
                     saveImage("$name.png", screen)
@@ -121,6 +138,7 @@ class SettingsHeaderArtworkInstrumentedTest {
         ))
         var autoplayBlocked by mutableStateOf(false)
         var profilesEnabled by mutableStateOf(true)
+        var lastInteraction: SettingsHeaderArtwork? = null
         composeRule.setContent {
             val density = LocalDensity.current
             CompositionLocalProvider(LocalDensity provides Density(density.density, fontScale = 2f)) {
@@ -135,6 +153,7 @@ class SettingsHeaderArtworkInstrumentedTest {
                                 onAutoplayChanged = { autoplayBlocked = it },
                                 profilesEnabled = profilesEnabled,
                                 onProfilesChanged = { profilesEnabled = it },
+                                onInteraction = { lastInteraction = it },
                             )
                         }
                     }
@@ -143,8 +162,15 @@ class SettingsHeaderArtworkInstrumentedTest {
         }
         for (kind in SettingsHeaderArtwork.entries) {
             composeRule.runOnIdle { artwork = kind }
-            composeRule.onNodeWithTag(tag(kind)).assertIsDisplayed()
-            saveImage("${kind.name.lowercase()}_narrow_200_percent.png", composeRule.onRoot().captureToImage())
+            composeRule.onNodeWithTag(tag(kind)).performScrollTo().assertIsDisplayed()
+            composeRule.mainClock.advanceTimeByFrame()
+            composeRule.waitForIdle()
+            val name = "${kind.name.lowercase()}_narrow_200_percent"
+            saveImage("$name.png", composeRule.onRoot().captureToImage())
+            assertTrue(
+                UiDevice.getInstance(InstrumentationRegistry.getInstrumentation())
+                    .takeScreenshot(File(evidenceDirectory(), "${name}_device.png")),
+            )
             when (kind) {
                 SettingsHeaderArtwork.Appearance -> {
                     composeRule.onNodeWithTag(AppearanceSettingsTestTags.Animations)
@@ -152,15 +178,67 @@ class SettingsHeaderArtworkInstrumentedTest {
                     composeRule.runOnIdle { assertTrue(settings.animationsEnabled) }
                 }
                 SettingsHeaderArtwork.Tabs -> {
-                    composeRule.onNodeWithText(context.getString(R.string.settings_profiles_title))
+                    composeRule.onNodeWithText(context.getString(R.string.settings_group_tab_lifecycle))
                         .performScrollTo().performClick()
-                    composeRule.runOnIdle { assertTrue(!profilesEnabled) }
+                    composeRule.runOnIdle { assertEquals(kind, lastInteraction) }
                 }
                 SettingsHeaderArtwork.Player -> {
                     composeRule.onNodeWithTag(PlayerSettingsTestTags.VideoAutoplay)
                         .performScrollTo().performClick()
                     composeRule.runOnIdle { assertTrue(autoplayBlocked) }
                 }
+                SettingsHeaderArtwork.SearchEngines -> {
+                    composeRule.onNodeWithTag(SearchSettingsTestTags.HistorySuggestions)
+                        .performScrollTo().performClick().assertIsOff()
+                }
+                SettingsHeaderArtwork.Translations -> {
+                    composeRule.onNodeWithText(PageTranslationProvider.Kagi.displayName)
+                        .performScrollTo().performClick()
+                    composeRule.onNodeWithText(
+                        context.getString(R.string.settings_translation_provider_kagi_summary),
+                    ).performScrollTo().assertIsDisplayed()
+                }
+                SettingsHeaderArtwork.Downloads -> {
+                    composeRule.onNodeWithTag(DownloadSettingsTestTags.DirectoryReset)
+                        .performScrollTo().performClick()
+                    composeRule.onNodeWithTag(DownloadSettingsTestTags.DirectoryReset).assertDoesNotExist()
+                }
+                SettingsHeaderArtwork.Profiles -> {
+                    composeRule.onNodeWithText(context.getString(R.string.settings_profiles_title))
+                        .performScrollTo().performClick()
+                    composeRule.runOnIdle { assertTrue(!profilesEnabled) }
+                }
+                SettingsHeaderArtwork.Gestures -> {
+                    composeRule.onNodeWithTag(TabSettingsTestTags.AddressBarDocking)
+                        .performScrollTo().performClick().assertIsOff()
+                }
+                SettingsHeaderArtwork.TabLifecycle -> {
+                    composeRule.onNodeWithText(context.resources.getQuantityString(R.plurals.tab_lifetime_days, 1, 1))
+                        .performScrollTo().performClick()
+                    composeRule.runOnIdle { assertEquals(kind, lastInteraction) }
+                }
+                SettingsHeaderArtwork.PersonalLinkRules -> {
+                    composeRule.onNodeWithTag(LinkRoutingTestTags.Add).performScrollTo().performClick()
+                    composeRule.onNodeWithTag(LinkRoutingTestTags.Domain).performTextInput("artwork.example")
+                    composeRule.onNodeWithTag(LinkRoutingTestTags.Save).performClick()
+                    composeRule.runOnIdle { assertEquals(kind, lastInteraction) }
+                }
+                SettingsHeaderArtwork.LinkPreview -> {
+                    composeRule.onNodeWithTag(BrowserSettingsTestTags.ExternalLinkPreview)
+                        .performScrollTo().performClick().assertIsOn()
+                    composeRule.onNodeWithTag(BrowserSettingsTestTags.ExternalLinkPreviewProfile)
+                        .performScrollTo().assertIsEnabled()
+                }
+            }
+            if (kind in setOf(
+                    SettingsHeaderArtwork.SearchEngines,
+                    SettingsHeaderArtwork.Translations,
+                    SettingsHeaderArtwork.Downloads,
+                    SettingsHeaderArtwork.Gestures,
+                    SettingsHeaderArtwork.LinkPreview,
+                )
+            ) {
+                composeRule.runOnIdle { assertEquals(kind, lastInteraction) }
             }
         }
     }
@@ -173,6 +251,7 @@ class SettingsHeaderArtworkInstrumentedTest {
             }
         }
         composeRule.onNodeWithTag(tag(SettingsHeaderArtwork.Tabs)).assertDoesNotExist()
+        composeRule.onNodeWithTag(tag(SettingsHeaderArtwork.Gestures)).assertIsDisplayed()
         composeRule.onNodeWithText(context.getString(R.string.settings_home_gestures_title))
             .assertIsDisplayed()
     }
@@ -186,6 +265,7 @@ class SettingsHeaderArtworkInstrumentedTest {
         onAutoplayChanged: (Boolean) -> Unit = {},
         profilesEnabled: Boolean = true,
         onProfilesChanged: (Boolean) -> Unit = {},
+        onInteraction: (SettingsHeaderArtwork) -> Unit = {},
     ) {
         when (artwork) {
             SettingsHeaderArtwork.Appearance -> AppearanceSettingsPage(
@@ -195,7 +275,9 @@ class SettingsHeaderArtworkInstrumentedTest {
                 onSettingsChanged = onSettingsChanged,
                 onBack = {},
             )
-            SettingsHeaderArtwork.Tabs -> TabsPage(
+            SettingsHeaderArtwork.Tabs, SettingsHeaderArtwork.Profiles -> TabsPage(
+                section = if (artwork == SettingsHeaderArtwork.Profiles) TabSettingsSection.Profiles else TabSettingsSection.Tabs,
+                onTabLifecycle = { onInteraction(artwork) },
                 profilesEnabled = profilesEnabled,
                 onProfilesChanged = onProfilesChanged,
             )
@@ -205,6 +287,99 @@ class SettingsHeaderArtworkInstrumentedTest {
                 onVideoAutoplayBlockedChanged = onAutoplayChanged,
                 onBack = {},
             )
+            SettingsHeaderArtwork.SearchEngines -> {
+                var historyEnabled by remember { mutableStateOf(true) }
+                SearchSettingsPage(
+                    searchEngine = SearchEngine.Google,
+                    searxngSettings = SearxngSettings(),
+                    isAiModeToggleVisible = false,
+                    searchSuggestionProvider = SearchSuggestionProvider.Google,
+                    isHistorySuggestionsEnabled = historyEnabled,
+                    onSearchEngineChanged = {},
+                    onSearxngSettingsChanged = {},
+                    onAiModeToggleVisibleChanged = {},
+                    onSearchSuggestionProviderChanged = {},
+                    onHistorySuggestionsEnabledChanged = {
+                        historyEnabled = it
+                        onInteraction(artwork)
+                    },
+                    onBack = {},
+                )
+            }
+            SettingsHeaderArtwork.Translations -> {
+                var provider by remember { mutableStateOf(PageTranslationProvider.Google) }
+                BrowserSettingsPage(
+                    section = BrowserSettingsSection.Translations,
+                    pageTranslationProvider = provider,
+                    isFullImmersiveModeEnabled = false,
+                    isStartupAnimationEnabled = false,
+                    isScrollBarEnabled = false,
+                    isDefaultBrowser = false,
+                    onFullImmersiveModeEnabledChanged = {},
+                    onStartupAnimationEnabledChanged = {},
+                    onScrollBarEnabledChanged = {},
+                    onPageTranslationProviderChanged = {
+                        provider = it
+                        onInteraction(artwork)
+                    },
+                    onOpenDefaultBrowserSettings = {},
+                    onBack = {},
+                )
+            }
+            SettingsHeaderArtwork.Downloads -> {
+                var downloads by remember {
+                    mutableStateOf(BrowserDownloadSettings(downloadSubdirectory = "Candy/Documents"))
+                }
+                DownloadsSettingsPage(
+                    settings = downloads,
+                    externalManagers = emptyList(),
+                    onSettingsChanged = {
+                        downloads = it
+                        onInteraction(artwork)
+                    },
+                    onBack = {},
+                )
+            }
+            SettingsHeaderArtwork.Gestures -> {
+                var dockingEnabled by remember { mutableStateOf(true) }
+                TabsPage(
+                    section = TabSettingsSection.GestureControls,
+                    dockingEnabled = dockingEnabled,
+                    onDockingChanged = {
+                        dockingEnabled = it
+                        onInteraction(artwork)
+                    },
+                )
+            }
+            SettingsHeaderArtwork.TabLifecycle -> {
+                var lifetime by remember { mutableStateOf(InactiveTabLifetime.Never) }
+                TabsPage(
+                    section = TabSettingsSection.Lifecycle,
+                    inactiveTabLifetime = lifetime,
+                    onInactiveTabLifetimeChanged = { lifetime = it; onInteraction(artwork) },
+                )
+            }
+            SettingsHeaderArtwork.PersonalLinkRules -> {
+                var rules by remember { mutableStateOf(emptyList<LinkRoutingRule>()) }
+                LinkRoutingSettingsPage(
+                    rules = rules, profiles = emptyList(), capsules = emptyList(),
+                    onRulesChanged = { rules = it; onInteraction(artwork) }, onBack = {},
+                )
+            }
+            SettingsHeaderArtwork.LinkPreview -> {
+                var previewEnabled by remember { mutableStateOf(false) }
+                ExternalLinkPreviewSettingsPage(
+                    isExternalLinkPreviewEnabled = previewEnabled,
+                    externalLinkPreviewProfileId = null,
+                    externalLinkPreviewProfiles = listOf(BrowserProfile(id = "work", emoji = "💼")),
+                    onExternalLinkPreviewEnabledChanged = {
+                        previewEnabled = it
+                        onInteraction(artwork)
+                    },
+                    onExternalLinkPreviewProfileChanged = {},
+                    onBack = {},
+                )
+            }
         }
     }
 
@@ -213,10 +388,15 @@ class SettingsHeaderArtworkInstrumentedTest {
         section: TabSettingsSection = TabSettingsSection.Tabs,
         profilesEnabled: Boolean = true,
         onProfilesChanged: (Boolean) -> Unit = {},
+        dockingEnabled: Boolean = true,
+        onDockingChanged: (Boolean) -> Unit = {},
+        onTabLifecycle: () -> Unit = {},
+        inactiveTabLifetime: InactiveTabLifetime = InactiveTabLifetime.Never,
+        onInactiveTabLifetimeChanged: (InactiveTabLifetime) -> Unit = {},
     ) {
         TabsAndGesturesSettingsPage(
             section = section,
-            inactiveTabLifetime = InactiveTabLifetime.Never,
+            inactiveTabLifetime = inactiveTabLifetime,
             residentTabLimit = 10,
             tabOverviewMode = TabOverviewMode.Grid,
             tabStackFolderMode = TabOverviewMode.Grid,
@@ -224,8 +404,9 @@ class SettingsHeaderArtworkInstrumentedTest {
             automaticTabSortingEnabled = false,
             dismissResistancePercent = 40,
             profilesEnabled = profilesEnabled,
-            isAddressBarDockingEnabled = true,
-            onInactiveTabLifetimeChanged = {},
+            isAddressBarDockingEnabled = dockingEnabled,
+            onInactiveTabLifetimeChanged = onInactiveTabLifetimeChanged,
+            onTabLifecycle = onTabLifecycle,
             onResidentTabLimitChanged = {},
             onTabOverviewModeChanged = {},
             onTabStackFolderModeChanged = {},
@@ -233,7 +414,7 @@ class SettingsHeaderArtworkInstrumentedTest {
             onAutomaticTabSortingEnabledChanged = {},
             onDismissResistancePercentChanged = {},
             onProfilesEnabledChanged = onProfilesChanged,
-            onAddressBarDockingEnabledChanged = {},
+            onAddressBarDockingEnabledChanged = onDockingChanged,
             onAddressBarActions = {},
             onBack = {},
         )
@@ -250,15 +431,23 @@ class SettingsHeaderArtworkInstrumentedTest {
         }
     }
 
-    private fun assertTonalArtwork(pixels: PixelMap, page: Color, ink: Color) {
+    private fun assertTonalArtwork(
+        pixels: PixelMap,
+        page: Color,
+        ink: Color,
+        artwork: SettingsHeaderArtwork,
+    ) {
         val contrast = distance(page, ink)
+        // The final approved hand/link artwork deliberately uses softer grays than the other
+        // originals. Its main dark detail is about 80/255, rather than their near-black ink.
+        val darkThreshold = if (artwork in setOf(SettingsHeaderArtwork.LinkPreview, SettingsHeaderArtwork.TabLifecycle)) 0.55f else 0.7f
         var darkDetails = 0
         var midtones = 0
         for (y in 0 until pixels.height step 4) {
             for (x in 0 until pixels.width step 4) {
                 val pixel = pixels[x, y]
                 val amount = distance(page, pixel) / contrast
-                if (amount > 0.7f) darkDetails++
+                if (amount > darkThreshold) darkDetails++
                 if (amount in 0.15f..0.65f) midtones++
                 if (amount > 0.15f) {
                     val tone = amount.coerceIn(0f, 1f)

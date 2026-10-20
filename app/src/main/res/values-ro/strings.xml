@@ -1509,4 +1509,5 @@
     <string name="constellations_search">Caută în această hartă</string>
     <string name="constellations_search_no_results">Nicio pagină corespunzătoare în acest profil.</string>
     <string name="constellations_search_position">%1$d din %2$d rezultate</string>
+    <string name="settings_translations_title">Traduceri</string>
 </resources>

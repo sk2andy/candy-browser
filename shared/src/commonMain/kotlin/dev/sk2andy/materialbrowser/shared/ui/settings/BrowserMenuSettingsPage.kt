@@ -1,6 +1,5 @@
 package dev.sk2andy.materialbrowser.shared.ui.settings
 
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.material.icons.Icons
@@ -30,6 +29,7 @@ object BrowserMenuSettingsTestTags {
     const val Intro = "browser_menu_settings_intro"
 
     fun entry(entry: BrowserMenuEntry): String = "browser_menu_settings_${entry.stableId}"
+    fun location(location: BrowserMenuLocation): String = "browser_menu_settings_location_${location.stableId}"
 }
 
 interface BrowserMenuSettingsResources {
@@ -84,49 +84,50 @@ fun BrowserMenuSettingsPage(
             SettingsPreferenceGroup(containerColor = containerColor) {
                 entries.forEachIndexed { index, entry ->
                     val currentLocation = BrowserMenuLayoutRules.location(layout, entry)
-                    Box(modifier = Modifier.testTag(BrowserMenuSettingsTestTags.entry(entry))) {
-                        SettingsChoice(
-                            title = resources.entryLabel(entry),
-                            value = resources.locationLabel(currentLocation),
-                            expanded = expandedEntry == entry,
-                            onClick = { expandedEntry = entry },
-                            containerColor = containerColor,
-                            inPreferenceGroup = true,
-                        )
-                        SettingsDropdown(
-                            expanded = expandedEntry == entry,
-                            onDismissRequest = { expandedEntry = null },
-                        ) {
-                            BrowserMenuLayoutRules.allowedLocations(entry).forEach { location ->
-                                SettingsDropdownItem(
-                                    label = resources.locationLabel(location),
-                                    selected = currentLocation == location,
-                                    leadingIcon = {
-                                        Icon(
-                                            imageVector = when (location) {
-                                                BrowserMenuLocation.Nowhere -> Icons.Default.Block
-                                                BrowserMenuLocation.Tab -> Icons.Default.Web
-                                                BrowserMenuLocation.TabSwitcher -> Icons.Default.ViewCarousel
-                                                BrowserMenuLocation.Both -> Icons.Default.ContentCopy
-                                            },
-                                            contentDescription = null,
-                                        )
-                                    },
-                                    onClick = {
-                                        expandedEntry = null
-                                        if (location != currentLocation) {
-                                            onLocationChanged(entry, location)
-                                        }
-                                    },
-                                )
-                            }
-                        }
-                    }
+                    SettingsSelectionLink(
+                        title = resources.entryLabel(entry),
+                        value = resources.locationLabel(currentLocation),
+                        modifier = Modifier.testTag(BrowserMenuSettingsTestTags.entry(entry)),
+                        onClick = { expandedEntry = entry },
+                    )
                     if (index != entries.lastIndex) SettingsPreferenceDivider()
                 }
             }
             if (section != BrowserMenuConfigurationSection.entries.last()) {
                 Spacer(Modifier.height(16.dp))
+            }
+        }
+    }
+    expandedEntry?.takeIf(availableEntries::contains)?.let { entry ->
+        val currentLocation = BrowserMenuLayoutRules.location(layout, entry)
+        SettingsSelectionDialog(
+            title = resources.entryLabel(entry),
+            backContentDescription = resources.back(),
+            artwork = SettingsHeaderArtwork.Gestures,
+            onDismissRequest = { expandedEntry = null },
+        ) {
+            BrowserMenuLayoutRules.allowedLocations(entry).forEachIndexed { index, location ->
+                if (index > 0) SettingsPreferenceDivider()
+                SettingsRadioOption(
+                    label = resources.locationLabel(location),
+                    selected = currentLocation == location,
+                    modifier = Modifier.testTag(BrowserMenuSettingsTestTags.location(location)),
+                    leadingIcon = {
+                        Icon(
+                            imageVector = when (location) {
+                                BrowserMenuLocation.Nowhere -> Icons.Default.Block
+                                BrowserMenuLocation.Tab -> Icons.Default.Web
+                                BrowserMenuLocation.TabSwitcher -> Icons.Default.ViewCarousel
+                                BrowserMenuLocation.Both -> Icons.Default.ContentCopy
+                            },
+                            contentDescription = null,
+                        )
+                    },
+                    onClick = {
+                        expandedEntry = null
+                        if (location != currentLocation) onLocationChanged(entry, location)
+                    },
+                )
             }
         }
     }

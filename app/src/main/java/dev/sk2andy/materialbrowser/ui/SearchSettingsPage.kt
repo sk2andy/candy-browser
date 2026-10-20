@@ -1,7 +1,10 @@
 package dev.sk2andy.materialbrowser.ui
 
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.ui.semantics.disabled
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
@@ -20,12 +23,20 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.shared.ui.settings.settingsSearchTarget
+import dev.sk2andy.materialbrowser.shared.ui.settings.SettingsHeaderArtwork
+import dev.sk2andy.materialbrowser.shared.ui.settings.SettingsHeaderIllustration
+import dev.sk2andy.materialbrowser.shared.ui.settings.SettingsRadioOption
+import dev.sk2andy.materialbrowser.shared.ui.settings.SearchEngineRadioOptions
 import dev.sk2andy.materialbrowser.browser.SearchEngine
 import dev.sk2andy.materialbrowser.browser.SearxngRules
 import dev.sk2andy.materialbrowser.browser.SearxngSettings
 import dev.sk2andy.materialbrowser.browser.suggestions.SearchSuggestionProvider
 
 internal object SearchSettingsTestTags {
+    const val SearchEngine = "search_settings_search_engine"
+    const val AiMode = "search_settings_ai_mode"
+    fun suggestion(provider: SearchSuggestionProvider) = "search_settings_suggestion_${provider.stableId}"
+    fun fallback(provider: SearchSuggestionProvider) = "search_settings_fallback_${provider.stableId}"
     const val SearxngInstanceUrl = "search_settings_searxng_instance_url"
     const val SearxngFallback = "search_settings_searxng_fallback"
     const val HistorySuggestions = "search_settings_history_suggestions"
@@ -46,39 +57,20 @@ internal fun SearchSettingsPage(
     onHistorySuggestionsEnabledChanged: (Boolean) -> Unit,
     onBack: () -> Unit,
 ) {
-    var searchEngineMenuExpanded by remember { mutableStateOf(false) }
-    var searchSuggestionMenuExpanded by remember { mutableStateOf(false) }
-    var fallbackMenuExpanded by remember { mutableStateOf(false) }
     var instanceUrlDraft by remember { mutableStateOf(searxngSettings.instanceUrl) }
     SettingsPage(
         title = stringResource(R.string.settings_section_search),
         onBack = onBack,
     ) {
+        SettingsHeaderIllustration(SettingsHeaderArtwork.SearchEngines)
+        SettingsPageSpacer()
         SettingsPreferenceGroup {
-            Box {
-                SettingsChoice(
-                    title = stringResource(R.string.settings_search_engine),
-                    value = searchEngine.displayName,
-                    expanded = searchEngineMenuExpanded,
-                    onClick = { searchEngineMenuExpanded = true },
-                    inPreferenceGroup = true,
-                )
-                SettingsDropdown(
-                    expanded = searchEngineMenuExpanded,
-                    onDismissRequest = { searchEngineMenuExpanded = false },
-                ) {
-                    SearchEngine.entries.forEach { engine ->
-                        SettingsDropdownItem(
-                            label = engine.displayName,
-                            selected = engine == searchEngine,
-                            onClick = {
-                                searchEngineMenuExpanded = false
-                                onSearchEngineChanged(engine)
-                            },
-                        )
-                    }
-                }
-            }
+            SearchEngineRadioOptions(
+                title = stringResource(R.string.settings_search_engine),
+                searchEngine = searchEngine,
+                onSearchEngineChanged = onSearchEngineChanged,
+                modifier = Modifier.testTag(SearchSettingsTestTags.SearchEngine),
+            )
             SettingsPreferenceDivider()
             SettingsSwitch(
                     title = stringResource(R.string.settings_ai_mode_toggle_title),
@@ -86,7 +78,7 @@ internal fun SearchSettingsPage(
                     checked = isAiModeToggleVisible,
                     enabled = searchEngine.supportsAiSearch,
                     onCheckedChange = onAiModeToggleVisibleChanged,
-                    modifier = Modifier,
+                    modifier = Modifier.testTag(SearchSettingsTestTags.AiMode),
                 )
             run {
                 SettingsPreferenceDivider()
@@ -150,29 +142,20 @@ internal fun SearchSettingsPage(
                 modifier = Modifier.testTag(SearchSettingsTestTags.HistorySuggestions),
             )
             SettingsPreferenceDivider()
-            Box {
-                SettingsChoice(
-                    title = stringResource(R.string.settings_search_suggestions),
-                    value = searchSuggestionProvider.displayName(),
-                    expanded = searchSuggestionMenuExpanded,
-                    onClick = { searchSuggestionMenuExpanded = true },
-                    modifier = Modifier.testTag(SearchSettingsTestTags.SuggestionProvider),
-                    inPreferenceGroup = true,
-                )
-                SettingsDropdown(
-                    expanded = searchSuggestionMenuExpanded,
-                    onDismissRequest = { searchSuggestionMenuExpanded = false },
-                ) {
-                    SearchSuggestionProvider.entries.forEach { provider ->
-                        SettingsDropdownItem(
-                            label = provider.displayName(),
-                            selected = provider == searchSuggestionProvider,
-                            onClick = {
-                                searchSuggestionMenuExpanded = false
-                                onSearchSuggestionProviderChanged(provider)
-                            },
-                        )
-                    }
+            Column(
+                Modifier.testTag(SearchSettingsTestTags.SuggestionProvider)
+                    .settingsSearchTarget(stringResource(R.string.settings_search_suggestions))
+                    .selectableGroup(),
+            ) {
+                SettingsSectionTitle(stringResource(R.string.settings_search_suggestions))
+                SearchSuggestionProvider.entries.forEachIndexed { index, provider ->
+                    if (index > 0) SettingsPreferenceDivider()
+                    SettingsRadioOption(
+                        label = provider.displayName(),
+                        selected = provider == searchSuggestionProvider,
+                        onClick = { onSearchSuggestionProviderChanged(provider) },
+                        modifier = Modifier.testTag(SearchSettingsTestTags.suggestion(provider)),
+                    )
                 }
             }
             Text(
@@ -191,39 +174,30 @@ internal fun SearchSettingsPage(
             )
             run {
                 SettingsPreferenceDivider()
-                Box {
-                    SettingsChoice(
-                        title = stringResource(R.string.settings_searxng_suggestion_fallback),
-                        value = searxngSettings.suggestionFallback.displayName(),
-                        expanded = fallbackMenuExpanded,
-                        onClick = {
-                            if (searchSuggestionProvider == SearchSuggestionProvider.SearXNG) {
-                                fallbackMenuExpanded = true
-                            }
-                        },
-                        modifier = Modifier.testTag(SearchSettingsTestTags.SearxngFallback),
-                        enabled = searchSuggestionProvider == SearchSuggestionProvider.SearXNG,
-                        inPreferenceGroup = true,
-                    )
-                    SettingsDropdown(
-                        expanded = fallbackMenuExpanded,
-                        onDismissRequest = { fallbackMenuExpanded = false },
-                    ) {
-                        SearchSuggestionProvider.entries
-                            .filterNot { it == SearchSuggestionProvider.SearXNG }
-                            .forEach { provider ->
-                                SettingsDropdownItem(
-                                    label = provider.displayName(),
-                                    selected = provider == searxngSettings.suggestionFallback,
-                                    onClick = {
-                                        fallbackMenuExpanded = false
-                                        onSearxngSettingsChanged(
-                                            searxngSettings.copy(suggestionFallback = provider),
-                                        )
-                                    },
-                                )
-                            }
-                    }
+                val fallbackEnabled = searchSuggestionProvider == SearchSuggestionProvider.SearXNG
+                Column(
+                    Modifier.testTag(SearchSettingsTestTags.SearxngFallback)
+                        .settingsSearchTarget(stringResource(R.string.settings_searxng_suggestion_fallback))
+                        .selectableGroup()
+                        .semantics { if (!fallbackEnabled) disabled() },
+                ) {
+                    SettingsSectionTitle(stringResource(R.string.settings_searxng_suggestion_fallback))
+                    SearchSuggestionProvider.entries
+                        .filterNot { it == SearchSuggestionProvider.SearXNG }
+                        .forEachIndexed { index, provider ->
+                            if (index > 0) SettingsPreferenceDivider()
+                            SettingsRadioOption(
+                                label = provider.displayName(),
+                                selected = provider == searxngSettings.suggestionFallback,
+                                enabled = fallbackEnabled,
+                                modifier = Modifier.testTag(SearchSettingsTestTags.fallback(provider)),
+                                onClick = {
+                                    onSearxngSettingsChanged(
+                                        searxngSettings.copy(suggestionFallback = provider),
+                                    )
+                                },
+                            )
+                        }
                 }
                 Text(
                     stringResource(R.string.settings_searxng_suggestion_fallback_summary),

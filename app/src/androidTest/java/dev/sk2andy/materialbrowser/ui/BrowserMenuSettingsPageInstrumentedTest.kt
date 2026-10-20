@@ -14,6 +14,7 @@ import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.hasAnyAncestor
@@ -88,6 +89,7 @@ class BrowserMenuSettingsPageInstrumentedTest {
         composeRule.onNode(
             hasText(context.getString(R.string.settings_menu_location_nowhere)) and
                 hasAnyAncestor(hasTestTag(BrowserMenuSettingsTestTags.entry(BrowserMenuEntry.StatusBarScroll))),
+            useUnmergedTree = true,
         ).assertExists()
         composeRule.runOnIdle { enabled = false }
         entry.assertDoesNotExist()
@@ -185,6 +187,7 @@ class BrowserMenuSettingsPageInstrumentedTest {
                 .performScrollTo().assertIsDisplayed().assertIsNotEnabled().performClick()
         }
         composeRule.onAllNodes(isPopup()).assertCountEquals(0)
+        composeRule.onNodeWithTag("settings_selection_dialog").assertDoesNotExist()
         composeRule.onNodeWithTag(BrowserMenuPresentationSettingsTestTags.Presentation)
             .performScrollTo().performClick()
         composeRule.onNodeWithText(context.getString(R.string.settings_menu_presentation_bottom_sheet))
@@ -245,6 +248,7 @@ class BrowserMenuSettingsPageInstrumentedTest {
             .performScrollTo().assertTextContains(context.getString(R.string.settings_menu_bottom_sheet_toolbar_empty))
             .assertIsNotEnabled().performClick()
         composeRule.onAllNodes(isPopup()).assertCountEquals(0)
+        composeRule.onNodeWithTag("settings_selection_dialog").assertDoesNotExist()
         composeRule.onNodeWithTag(BrowserMenuPresentationSettingsTestTags.Presentation)
             .performScrollTo().performClick()
         composeRule.onNodeWithText(context.getString(R.string.settings_menu_presentation_bottom_sheet))
@@ -382,15 +386,98 @@ class BrowserMenuSettingsPageInstrumentedTest {
         composeRule.onNodeWithTag(
             BrowserMenuSettingsTestTags.entry(BrowserMenuEntry.Share),
         ).performScrollTo().assertIsDisplayed().performClick()
-        composeRule.onNodeWithText(
-            context.getString(R.string.settings_menu_location_nowhere),
-        ).performClick()
+        composeRule.onNodeWithTag(BrowserMenuSettingsTestTags.location(BrowserMenuLocation.Nowhere))
+            .performScrollTo().performClick()
+        composeRule.onNodeWithTag("settings_selection_dialog").assertDoesNotExist()
 
         composeRule.runOnIdle {
             assertEquals(
                 BrowserMenuLocation.Nowhere,
                 BrowserMenuLayoutRules.location(currentLayout, BrowserMenuEntry.Share),
             )
+        }
+    }
+
+    @Test
+    fun focusedSelectorsPreserveChoicesAndBothBackActionsReturnWithoutWrites() {
+        var layout by mutableStateOf(BrowserMenuLayout.Default.copy(presentation = BrowserMenuPresentation.BottomSheet))
+        var writes = 0
+        var parentBacks = 0
+        composeRule.setContent {
+            MaterialBrowserTheme(settings = AppearanceSettings()) {
+                TestMenuSettingsHost(
+                    layout = layout,
+                    onLocationChanged = { entry, location ->
+                        layout = BrowserMenuLayoutRules.update(layout, entry, location)
+                        writes++
+                    },
+                    onBottomSheetToolbarEntriesChanged = { entries ->
+                        layout = layout.copy(bottomSheetToolbarEntries = entries)
+                        writes++
+                    },
+                    onBack = { parentBacks++ },
+                )
+            }
+        }
+        val dialog = composeRule.onNodeWithTag("settings_selection_dialog")
+        fun openSlot() {
+            composeRule.onNodeWithTag(BrowserMenuPresentationSettingsTestTags.toolbarSlot(0))
+                .performScrollTo().performClick()
+            dialog.assertIsDisplayed()
+        }
+        openSlot()
+        composeRule.onNodeWithTag(BrowserMenuPresentationSettingsTestTags.toolbarEntry(BrowserMenuEntry.Back))
+            .assertIsSelected()
+        composeRule.onNodeWithTag(BrowserMenuPresentationSettingsTestTags.toolbarEntry(BrowserMenuEntry.StatusBarScroll))
+            .assertDoesNotExist()
+        composeRule.onNodeWithTag(BrowserMenuPresentationSettingsTestTags.toolbarEntry(BrowserMenuEntry.OpenFirefoxExtensions))
+            .assertDoesNotExist()
+        composeRule.onNode(hasTestTag("settings_page_back") and hasAnyAncestor(hasTestTag("settings_selection_dialog")))
+            .performScrollTo().performClick()
+        dialog.assertDoesNotExist()
+        openSlot()
+        UiDevice.getInstance(InstrumentationRegistry.getInstrumentation()).pressBack()
+        composeRule.waitForIdle()
+        dialog.assertDoesNotExist()
+        openSlot()
+        composeRule.onNodeWithTag(BrowserMenuPresentationSettingsTestTags.toolbarEntry(BrowserMenuEntry.Back))
+            .performScrollTo().performClick()
+        dialog.assertDoesNotExist()
+        composeRule.runOnIdle {
+            assertEquals(0, writes)
+            assertEquals(0, parentBacks)
+        }
+        composeRule.onNodeWithTag(BrowserMenuSettingsTestTags.entry(BrowserMenuEntry.Reload))
+            .performScrollTo().performClick()
+        composeRule.onNodeWithTag(BrowserMenuSettingsTestTags.location(BrowserMenuLocation.Tab)).assertIsSelected()
+        composeRule.onNodeWithTag(BrowserMenuSettingsTestTags.location(BrowserMenuLocation.TabSwitcher)).assertDoesNotExist()
+        composeRule.onNodeWithTag(BrowserMenuSettingsTestTags.location(BrowserMenuLocation.Both)).assertDoesNotExist()
+        composeRule.onNodeWithTag(BrowserMenuSettingsTestTags.location(BrowserMenuLocation.Nowhere))
+            .performScrollTo().performClick()
+        dialog.assertDoesNotExist()
+        composeRule.onNodeWithTag(BrowserMenuSettingsTestTags.entry(BrowserMenuEntry.Reload))
+            .performScrollTo().performClick()
+        composeRule.onNodeWithTag(BrowserMenuSettingsTestTags.location(BrowserMenuLocation.Nowhere)).assertIsSelected()
+        UiDevice.getInstance(InstrumentationRegistry.getInstrumentation()).pressBack()
+        composeRule.waitForIdle()
+        dialog.assertDoesNotExist()
+        composeRule.runOnIdle {
+            assertEquals(1, writes)
+            assertEquals(0, parentBacks)
+            assertEquals(BrowserMenuLocation.Nowhere, BrowserMenuLayoutRules.location(layout, BrowserMenuEntry.Reload))
+        }
+        for (location in BrowserMenuLocation.entries) {
+            composeRule.onNodeWithTag(BrowserMenuSettingsTestTags.entry(BrowserMenuEntry.Share))
+                .performScrollTo().performClick()
+            BrowserMenuLocation.entries.forEach { available ->
+                composeRule.onNodeWithTag(BrowserMenuSettingsTestTags.location(available)).assertExists()
+            }
+            composeRule.onNodeWithTag(BrowserMenuSettingsTestTags.location(location))
+                .performScrollTo().performClick()
+            dialog.assertDoesNotExist()
+            composeRule.runOnIdle {
+                assertEquals(location, BrowserMenuLayoutRules.location(layout, BrowserMenuEntry.Share))
+            }
         }
     }
 
@@ -402,7 +489,7 @@ class BrowserMenuSettingsPageInstrumentedTest {
     private fun chooseToolbarEntry(index: Int, label: String) {
         composeRule.onNodeWithTag(BrowserMenuPresentationSettingsTestTags.toolbarSlot(index))
             .performScrollTo().performClick()
-        composeRule.onNode(hasText(label) and hasAnyAncestor(isPopup()))
+        composeRule.onNode(hasText(label) and hasAnyAncestor(hasTestTag("settings_selection_dialog")))
             .performScrollTo().performClick()
     }
 }

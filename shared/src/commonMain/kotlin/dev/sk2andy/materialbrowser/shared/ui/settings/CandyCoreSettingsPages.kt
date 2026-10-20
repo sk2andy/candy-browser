@@ -375,6 +375,7 @@ internal fun CandyBrowserSettingsPage(
     translationProvider: PageTranslationProvider,
     onTranslationProviderChanged: (PageTranslationProvider) -> Unit,
     onBack: () -> Unit,
+    onTranslations: () -> Unit = {},
 ) {
     SettingsPage(
         title = "Browser",
@@ -412,12 +413,31 @@ internal fun CandyBrowserSettingsPage(
                 onCheckedChange = {},
             )
             SettingsPreferenceDivider()
+            SettingsSelectionLink(
+                title = "Übersetzungen",
+                value = translationProvider.displayName,
+                onClick = onTranslations,
+            )
+        }
+    }
+}
+
+@Composable
+internal fun CandyTranslationSettingsPage(
+    provider: PageTranslationProvider,
+    onProviderChanged: (PageTranslationProvider) -> Unit,
+    onBack: () -> Unit,
+) {
+    SettingsPage(title = "Übersetzungen", backContentDescription = "Zurück", onBack = onBack) {
+        SettingsHeaderIllustration(SettingsHeaderArtwork.Translations)
+        SettingsPageSpacer()
+        SettingsPreferenceGroup(containerColor = settingsRowColor()) {
             TranslationProviderSettings(
-                provider = translationProvider,
+                provider = provider,
                 strings = candyTranslationStrings,
-                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                containerColor = settingsRowColor(),
                 enabled = true,
-                onProviderChanged = onTranslationProviderChanged,
+                onProviderChanged = onProviderChanged,
             )
         }
     }

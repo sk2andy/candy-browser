@@ -19,18 +19,25 @@ class SettingsBackRulesTest {
     }
 
     @Test
-    fun `nested action pages return to gestures and controls`() {
+    fun `nested action pages return to their focused section`() {
         listOf(
             SettingsDestination.AddressBarLongPressActions,
             SettingsDestination.AddressBarActions,
             SettingsDestination.MenuActions,
-            SettingsDestination.LinkPeekActions,
         ).forEach { destination ->
             assertEquals(
-                SettingsDestination.Gestures,
+                SettingsDestination.GestureAddressBar,
                 SettingsBackRules.parentDestination(destination),
             )
         }
+        listOf(SettingsDestination.LinkLongPress, SettingsDestination.LinkPeekSwipe, SettingsDestination.LinkPeekActions)
+            .forEach { assertEquals(SettingsDestination.GestureLinks, SettingsBackRules.parentDestination(it)) }
+        assertEquals(SettingsDestination.TabLifecycle, SettingsBackRules.parentDestination(SettingsDestination.ClosedTabUndo))
+        assertEquals(SettingsDestination.BrowserWebsites, SettingsBackRules.parentDestination(SettingsDestination.Translations))
+        listOf(SettingsDestination.TabLifecycle, SettingsDestination.ProfileOptions)
+            .forEach { assertEquals(SettingsDestination.Tabs, SettingsBackRules.parentDestination(it)) }
+        listOf(SettingsDestination.GestureLinks, SettingsDestination.GestureAddressBar, SettingsDestination.GestureControls)
+            .forEach { assertEquals(SettingsDestination.Gestures, SettingsBackRules.parentDestination(it)) }
     }
 
     @Test

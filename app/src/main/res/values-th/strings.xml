@@ -1476,4 +1476,5 @@
     <string name="constellations_search">ค้นหาในแผนที่นี้</string>
     <string name="constellations_search_no_results">ไม่พบหน้าที่ตรงกันในโปรไฟล์นี้</string>
     <string name="constellations_search_position">ผลลัพธ์ที่ %1$d จาก %2$d รายการ</string>
+    <string name="settings_translations_title">การแปล</string>
 </resources>

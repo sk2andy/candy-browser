@@ -1524,4 +1524,5 @@
     <string name="constellations_search">Przeszukaj tę mapę</string>
     <string name="constellations_search_no_results">Brak pasujących stron w tym profilu.</string>
     <string name="constellations_search_position">%1$d z %2$d wyników</string>
+    <string name="settings_translations_title">Tłumaczenia</string>
 </resources>

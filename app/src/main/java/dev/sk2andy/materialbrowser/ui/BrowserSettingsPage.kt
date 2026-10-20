@@ -1,7 +1,11 @@
 package dev.sk2andy.materialbrowser.ui
 
-import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.ui.semantics.disabled
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -11,19 +15,17 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import dev.sk2andy.materialbrowser.BuildConfig
-import dev.sk2andy.materialbrowser.shared.ui.settings.SettingsFeatureIllustration
-import dev.sk2andy.materialbrowser.shared.ui.settings.SettingsIllustrationKind
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.shared.ui.settings.settingsSearchTarget
+import dev.sk2andy.materialbrowser.shared.ui.settings.SettingsHeaderArtwork
+import dev.sk2andy.materialbrowser.shared.ui.settings.SettingsHeaderIllustration
+import dev.sk2andy.materialbrowser.shared.ui.settings.SettingsRadioOption
+import dev.sk2andy.materialbrowser.shared.ui.settings.SettingsSelectionLink
 import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineKind
 import dev.sk2andy.materialbrowser.browser.BrowserProfile
 import dev.sk2andy.materialbrowser.browser.ExternalAppLinkHandling
@@ -50,7 +52,7 @@ internal object BrowserSettingsTestTags {
     const val BrowserEngine = "browser_settings_engine"
 }
 
-internal enum class BrowserSettingsSection { All, Overview, Startup, Favorites, Websites, Links }
+internal enum class BrowserSettingsSection { All, Overview, Startup, Favorites, Websites, Links, Translations }
 
 @Composable
 internal fun BrowserSettingsPage(
@@ -91,17 +93,15 @@ internal fun BrowserSettingsPage(
     onLinkRouting: () -> Unit = {},
     onDeviceSearch: () -> Unit = {},
     onExternalLinkPreview: () -> Unit = {},
+    onTranslations: () -> Unit = {},
 ) {
-    var engineMenuExpanded by remember { mutableStateOf(false) }
-    var startupAddressFocusMenuExpanded by remember { mutableStateOf(false) }
-    var favoriteSpeedMenuExpanded by remember { mutableStateOf(false) }
-    var externalAppLinksMenuExpanded by remember { mutableStateOf(false) }
     SettingsPage(
         title = stringResource(when (section) {
             BrowserSettingsSection.Startup -> R.string.settings_browser_group_startup
             BrowserSettingsSection.Favorites -> R.string.settings_browser_group_favorites
             BrowserSettingsSection.Websites -> R.string.settings_browser_group_websites
             BrowserSettingsSection.Links -> R.string.settings_browser_group_links
+            BrowserSettingsSection.Translations -> R.string.settings_translations_title
             else -> R.string.settings_section_browser
         }),
         onBack = onBack,
@@ -118,30 +118,15 @@ internal fun BrowserSettingsPage(
                     SettingsPreferenceDivider()
                 }
                 if (!BuildConfig.SYSTEM_WEBVIEW_ONLY) {
-                    Box {
-                        SettingsChoice(
-                            title = stringResource(R.string.settings_browser_engine_title),
-                            value = browserEngineKind.displayName(),
-                            expanded = engineMenuExpanded,
-                            onClick = { engineMenuExpanded = true },
-                            modifier = Modifier.testTag(BrowserSettingsTestTags.BrowserEngine),
-                        )
-                        SettingsDropdown(
-                            expanded = engineMenuExpanded,
-                            onDismissRequest = { engineMenuExpanded = false },
-                        ) {
-                            AndroidBrowserEngineKind.entries.forEach { kind ->
-                                SettingsDropdownItem(
-                                    label = kind.displayName(),
-                                    selected = kind == browserEngineKind,
-                                    onClick = {
-                                        engineMenuExpanded = false
-                                        if (kind != browserEngineKind) onBrowserEngineKindChanged(kind)
-                                    },
-                                )
-                            }
-                        }
-                    }
+                    BrowserRadioChoices(
+                        title = stringResource(R.string.settings_browser_engine_title),
+                        selected = browserEngineKind,
+                        choices = AndroidBrowserEngineKind.entries,
+                        label = { it.displayName() },
+                        enabled = true,
+                        onSelected = onBrowserEngineKindChanged,
+                        modifier = Modifier.testTag(BrowserSettingsTestTags.BrowserEngine),
+                    )
                     Text(
                         text = stringResource(
                             when (browserEngineKind) {
@@ -186,32 +171,15 @@ internal fun BrowserSettingsPage(
                     modifier = Modifier.testTag(BrowserSettingsTestTags.StartupAnimation),
                 )
                 SettingsPreferenceDivider()
-                Box {
-                    SettingsChoice(
-                        title = stringResource(R.string.settings_startup_address_focus_title),
-                        value = startupAddressFocusMode.displayName(),
-                        expanded = startupAddressFocusMenuExpanded,
-                        onClick = { startupAddressFocusMenuExpanded = true },
-                        modifier = Modifier.testTag(BrowserSettingsTestTags.StartupAddressFocus),
-                    )
-                    SettingsDropdown(
-                        expanded = startupAddressFocusMenuExpanded,
-                        onDismissRequest = { startupAddressFocusMenuExpanded = false },
-                    ) {
-                        StartupAddressFocusMode.entries.forEach { mode ->
-                            SettingsDropdownItem(
-                                label = mode.displayName(),
-                                selected = mode == startupAddressFocusMode,
-                                onClick = {
-                                    startupAddressFocusMenuExpanded = false
-                                    if (mode != startupAddressFocusMode) {
-                                        onStartupAddressFocusModeChanged(mode)
-                                    }
-                                },
-                            )
-                        }
-                    }
-                }
+                BrowserRadioChoices(
+                    title = stringResource(R.string.settings_startup_address_focus_title),
+                    selected = startupAddressFocusMode,
+                    choices = StartupAddressFocusMode.entries,
+                    label = { it.displayName() },
+                    enabled = true,
+                    onSelected = onStartupAddressFocusModeChanged,
+                    modifier = Modifier.testTag(BrowserSettingsTestTags.StartupAddressFocus),
+                )
                 Text(
                     text = stringResource(R.string.settings_startup_address_focus_summary),
                     modifier = Modifier.padding(start = 18.dp, top = 8.dp, end = 18.dp),
@@ -240,33 +208,15 @@ internal fun BrowserSettingsPage(
                     modifier = Modifier.testTag(BrowserSettingsTestTags.FavoriteLaunchAnimation),
                 )
                 SettingsPreferenceDivider()
-                Box {
-                    SettingsChoice(
-                        title = stringResource(R.string.settings_favorite_animation_speed_title),
-                        value = favoriteAnimationSpeed.displayName(),
-                        expanded = isFavoriteLaunchAnimationEnabled && favoriteSpeedMenuExpanded,
-                        onClick = { favoriteSpeedMenuExpanded = true },
-                        modifier = Modifier.testTag(BrowserSettingsTestTags.FavoriteAnimationSpeed),
-                        enabled = isFavoriteLaunchAnimationEnabled,
-                    )
-                    SettingsDropdown(
-                        expanded = isFavoriteLaunchAnimationEnabled && favoriteSpeedMenuExpanded,
-                        onDismissRequest = { favoriteSpeedMenuExpanded = false },
-                    ) {
-                        FavoriteAnimationSpeed.entries.forEach { speed ->
-                            SettingsDropdownItem(
-                                label = speed.displayName(),
-                                selected = speed == favoriteAnimationSpeed,
-                                onClick = {
-                                    favoriteSpeedMenuExpanded = false
-                                    if (speed != favoriteAnimationSpeed) {
-                                        onFavoriteAnimationSpeedChanged(speed)
-                                    }
-                                },
-                            )
-                        }
-                    }
-                }
+                BrowserRadioChoices(
+                    title = stringResource(R.string.settings_favorite_animation_speed_title),
+                    selected = favoriteAnimationSpeed,
+                    choices = FavoriteAnimationSpeed.entries,
+                    label = { it.displayName() },
+                    enabled = isFavoriteLaunchAnimationEnabled,
+                    onSelected = onFavoriteAnimationSpeedChanged,
+                    modifier = Modifier.testTag(BrowserSettingsTestTags.FavoriteAnimationSpeed),
+                )
                 SettingsPreferenceDivider()
                 SettingsLink(
                     icon = Icons.Filled.Favorite,
@@ -310,61 +260,57 @@ internal fun BrowserSettingsPage(
                     onCheckedChange = onScrollBarEnabledChanged,
                     modifier = Modifier.testTag(BrowserSettingsTestTags.ScrollBar),
                 )
-                SettingsPreferenceDivider()
-                TranslationProviderSettings(
-                    provider = pageTranslationProvider,
-                    strings = TranslationProviderSettingsStrings(
-                        title = stringResource(R.string.settings_translation_provider),
-                        providerNames = PageTranslationProvider.entries.associateWith { it.displayName },
-                        providerSummaries = mapOf(
-                            PageTranslationProvider.Google to stringResource(
-                                R.string.settings_translation_provider_google_summary,
-                            ),
-                            PageTranslationProvider.Yandex to stringResource(
-                                R.string.settings_translation_provider_summary,
-                            ),
-                            PageTranslationProvider.Kagi to stringResource(
-                                R.string.settings_translation_provider_kagi_summary,
-                            ),
-                        ),
-                    ),
-                    containerColor = browserChromeColor(MaterialTheme.colorScheme.surfaceContainerHigh),
-                    enabled = true,
-                    onProviderChanged = onPageTranslationProviderChanged,
-                    modifier = Modifier.testTag(BrowserSettingsTestTags.TranslationProvider),
-                )
+                if (section == BrowserSettingsSection.Websites) {
+                    SettingsPreferenceDivider()
+                    SettingsSelectionLink(
+                        title = stringResource(R.string.settings_translations_title),
+                        value = pageTranslationProvider.displayName,
+                        onClick = onTranslations,
+                        modifier = Modifier.testTag(BrowserSettingsTestTags.TranslationProvider),
+                    )
+                }
             }
             Spacer(Modifier.height(18.dp))
+        }
+        if (section == BrowserSettingsSection.All || section == BrowserSettingsSection.Translations) {
+            SettingsHeaderIllustration(SettingsHeaderArtwork.Translations)
+            SettingsPageSpacer()
+            TranslationProviderSettings(
+                provider = pageTranslationProvider,
+                strings = TranslationProviderSettingsStrings(
+                    title = stringResource(R.string.settings_translation_provider),
+                    providerNames = PageTranslationProvider.entries.associateWith { it.displayName },
+                    providerSummaries = mapOf(
+                        PageTranslationProvider.Google to stringResource(
+                            R.string.settings_translation_provider_google_summary,
+                        ),
+                        PageTranslationProvider.Yandex to stringResource(
+                            R.string.settings_translation_provider_summary,
+                        ),
+                        PageTranslationProvider.Kagi to stringResource(
+                            R.string.settings_translation_provider_kagi_summary,
+                        ),
+                    ),
+                ),
+                containerColor = browserChromeColor(MaterialTheme.colorScheme.surfaceContainerHigh),
+                enabled = true,
+                onProviderChanged = onPageTranslationProviderChanged,
+                modifier = Modifier.testTag(BrowserSettingsTestTags.TranslationProvider),
+            )
+            SettingsPageSpacer()
         }
         if (section == BrowserSettingsSection.All || section == BrowserSettingsSection.Links) {
             SettingsSectionTitle(stringResource(R.string.settings_browser_group_links))
             SettingsPreferenceGroup {
-                Box {
-                    SettingsChoice(
-                        title = stringResource(R.string.settings_external_app_links_title),
-                        value = externalAppLinkHandling.displayName(),
-                        expanded = externalAppLinksMenuExpanded,
-                        onClick = { externalAppLinksMenuExpanded = true },
-                        modifier = Modifier.testTag(BrowserSettingsTestTags.ExternalAppLinks),
-                    )
-                    SettingsDropdown(
-                        expanded = externalAppLinksMenuExpanded,
-                        onDismissRequest = { externalAppLinksMenuExpanded = false },
-                    ) {
-                        ExternalAppLinkHandling.entries.forEach { handling ->
-                            SettingsDropdownItem(
-                                label = handling.displayName(),
-                                selected = handling == externalAppLinkHandling,
-                                onClick = {
-                                    externalAppLinksMenuExpanded = false
-                                    if (handling != externalAppLinkHandling) {
-                                        onExternalAppLinkHandlingChanged(handling)
-                                    }
-                                },
-                            )
-                        }
-                    }
-                }
+                BrowserRadioChoices(
+                    title = stringResource(R.string.settings_external_app_links_title),
+                    selected = externalAppLinkHandling,
+                    choices = ExternalAppLinkHandling.entries,
+                    label = { it.displayName() },
+                    enabled = true,
+                    onSelected = onExternalAppLinkHandlingChanged,
+                    modifier = Modifier.testTag(BrowserSettingsTestTags.ExternalAppLinks),
+                )
                 Text(
                     text = stringResource(R.string.settings_external_app_links_summary),
                     modifier = Modifier.padding(start = 18.dp, top = 8.dp, end = 18.dp),
@@ -430,14 +376,8 @@ internal fun ExternalLinkPreviewSettingsPage(
     onBack: () -> Unit,
 ) {
     SettingsPage(title = stringResource(R.string.settings_external_link_preview_title), onBack = onBack) {
-        Text(stringResource(R.string.settings_external_link_preview_subtitle), style = MaterialTheme.typography.bodyMedium)
+        SettingsHeaderIllustration(SettingsHeaderArtwork.LinkPreview)
         SettingsPageSpacer()
-        SettingsFeatureIllustration(
-            SettingsIllustrationKind.LinkPreview,
-            active = isExternalLinkPreviewEnabled,
-        )
-        SettingsPageSpacer()
-        var previewProfileMenuExpanded by remember { mutableStateOf(false) }
         val selectedPreviewProfile = externalLinkPreviewProfiles.firstOrNull {
             it.id == externalLinkPreviewProfileId
         }
@@ -448,52 +388,60 @@ internal fun ExternalLinkPreviewSettingsPage(
                 title = stringResource(R.string.settings_external_link_preview_title),
                 subtitle = stringResource(R.string.settings_external_link_preview_subtitle),
                 checked = isExternalLinkPreviewEnabled,
-                prominent = true,
                 onCheckedChange = onExternalLinkPreviewEnabledChanged,
                 modifier = Modifier.testTag(BrowserSettingsTestTags.ExternalLinkPreview),
             )
             SettingsPreferenceDivider()
-            Box {
-                SettingsChoice(
-                    title = stringResource(R.string.settings_external_link_preview_profile_title),
-                    value = selectedPreviewProfile?.emoji
-                        ?: stringResource(
-                            if (previewProfileUnavailable) {
-                                R.string.settings_external_link_preview_profile_unavailable
-                            } else {
-                                R.string.settings_external_link_preview_profile_last_used
-                            },
-                        ),
-                    expanded = isExternalLinkPreviewEnabled && previewProfileMenuExpanded,
-                    onClick = { if (isExternalLinkPreviewEnabled) previewProfileMenuExpanded = true },
-                    modifier = Modifier.testTag(BrowserSettingsTestTags.ExternalLinkPreviewProfile),
+            Column(
+                Modifier.testTag(BrowserSettingsTestTags.ExternalLinkPreviewProfile)
+                    .settingsSearchTarget(stringResource(R.string.settings_external_link_preview_profile_title))
+                    .selectableGroup()
+                    .semantics { if (!isExternalLinkPreviewEnabled) disabled() },
+            ) {
+                SettingsSectionTitle(stringResource(R.string.settings_external_link_preview_profile_title))
+                SettingsRadioOption(
+                    label = stringResource(R.string.settings_external_link_preview_profile_last_used),
+                    supportingText = if (previewProfileUnavailable) {
+                        stringResource(R.string.settings_external_link_preview_profile_unavailable)
+                    } else {
+                        null
+                    },
+                    selected = externalLinkPreviewProfileId == null || previewProfileUnavailable,
                     enabled = isExternalLinkPreviewEnabled,
-                    inPreferenceGroup = true,
+                    onClick = { onExternalLinkPreviewProfileChanged(null) },
                 )
-                SettingsDropdown(
-                    expanded = isExternalLinkPreviewEnabled && previewProfileMenuExpanded,
-                    onDismissRequest = { previewProfileMenuExpanded = false },
-                ) {
-                    SettingsDropdownItem(
-                        label = stringResource(R.string.settings_external_link_preview_profile_last_used),
-                        selected = externalLinkPreviewProfileId == null || previewProfileUnavailable,
-                        onClick = {
-                            previewProfileMenuExpanded = false
-                            onExternalLinkPreviewProfileChanged(null)
-                        },
+                externalLinkPreviewProfiles.forEach { profile ->
+                    SettingsPreferenceDivider()
+                    SettingsRadioOption(
+                        label = profile.emoji,
+                        selected = profile.id == externalLinkPreviewProfileId,
+                        enabled = isExternalLinkPreviewEnabled,
+                        onClick = { onExternalLinkPreviewProfileChanged(profile.id) },
                     )
-                    externalLinkPreviewProfiles.forEach { profile ->
-                        SettingsDropdownItem(
-                            label = profile.emoji,
-                            selected = profile.id == externalLinkPreviewProfileId,
-                            onClick = {
-                                previewProfileMenuExpanded = false
-                                onExternalLinkPreviewProfileChanged(profile.id)
-                            },
-                        )
-                    }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun <T> BrowserRadioChoices(
+    title: String,
+    selected: T,
+    choices: List<T>,
+    label: @Composable (T) -> String,
+    enabled: Boolean,
+    onSelected: (T) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier.settingsSearchTarget(title).selectableGroup().semantics { if (!enabled) disabled() }) {
+        SettingsSectionTitle(title)
+        choices.forEachIndexed { index, choice ->
+            if (index > 0) SettingsPreferenceDivider()
+            SettingsRadioOption(
+                label = label(choice), selected = choice == selected, enabled = enabled,
+                onClick = { if (choice != selected) onSelected(choice) },
+            )
         }
     }
 }

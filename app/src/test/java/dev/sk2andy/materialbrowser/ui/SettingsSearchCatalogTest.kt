@@ -91,7 +91,7 @@ class SettingsSearchCatalogTest {
                 SettingsSearchAvailability(isGeckoEngine = isGeckoEngine),
             ).single { it.id == "settings_address_bar_swipe_mode_title" }
 
-            assertEquals(SettingsDestination.Gestures, definition.destination)
+            assertEquals(SettingsDestination.GestureControls, definition.destination)
             assertEquals(R.string.settings_home_gestures_title, definition.contextRes)
             assertEquals(R.string.settings_address_bar_swipe_mode_title, definition.titleRes)
             assertEquals(R.string.settings_address_bar_swipe_mode_summary, definition.descriptionRes)
@@ -307,6 +307,16 @@ class SettingsSearchCatalogTest {
         val expected = mapOf(
             "settings_tab_stack_folder_mode" to SettingsDestination.TabStackFolder,
             "settings_closed_tab_undo_title" to SettingsDestination.ClosedTabUndo,
+            "settings_resident_tab_limit" to SettingsDestination.TabLifecycle,
+            "settings_auto_close_tabs" to SettingsDestination.TabLifecycle,
+            "settings_profiles_title" to SettingsDestination.ProfileOptions,
+            "guest_bubble_title" to SettingsDestination.ProfileOptions,
+            "settings_translation_provider" to SettingsDestination.Translations,
+            "settings_address_bar_docking_title" to SettingsDestination.GestureControls,
+            "settings_address_bar_swipe_mode_title" to SettingsDestination.GestureControls,
+            "settings_tab_dismiss_resistance" to SettingsDestination.GestureControls,
+            "settings_status_bar_scroll_title" to SettingsDestination.GestureControls,
+            "settings_status_bar_scroll_width_title" to SettingsDestination.GestureControls,
             "settings_link_long_press_action" to SettingsDestination.LinkLongPress,
             "settings_link_peek_swipe_action" to SettingsDestination.LinkPeekSwipe,
             "settings_inline_media_player_title" to SettingsDestination.PlayerMode,

@@ -1524,4 +1524,5 @@
     <string name="constellations_search">Prohledat tuto mapu</string>
     <string name="constellations_search_no_results">V tomto profilu nejsou žádné odpovídající stránky.</string>
     <string name="constellations_search_position">%1$d z %2$d shod</string>
+    <string name="settings_translations_title">Překlady</string>
 </resources>

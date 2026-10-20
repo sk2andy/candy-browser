@@ -1493,4 +1493,5 @@
     <string name="constellations_search">Søg på dette kort</string>
     <string name="constellations_search_no_results">Ingen matchende sider i denne profil.</string>
     <string name="constellations_search_position">%1$d af %2$d resultater</string>
+    <string name="settings_translations_title">Oversættelser</string>
 </resources>

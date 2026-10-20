@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
@@ -40,6 +41,8 @@ import dev.sk2andy.materialbrowser.shared.browser.AddressBarLongPressAction
 import dev.sk2andy.materialbrowser.shared.ui.settings.TabDismissResistanceSettings
 import dev.sk2andy.materialbrowser.shared.ui.settings.TabOverviewSettings
 import dev.sk2andy.materialbrowser.shared.ui.settings.TabOverviewSettingsStrings
+import dev.sk2andy.materialbrowser.shared.ui.settings.SettingsRadioOption
+import dev.sk2andy.materialbrowser.shared.ui.settings.SettingsSelectionLink
 import dev.sk2andy.materialbrowser.ui.theme.browserChromeColor
 import kotlin.math.roundToInt
 
@@ -62,6 +65,11 @@ internal enum class TabSettingsSection {
     All,
     Tabs,
     Gestures,
+    Lifecycle,
+    Profiles,
+    LinkInteractions,
+    AddressBarButtons,
+    GestureControls,
 }
 
 @Composable
@@ -108,10 +116,14 @@ internal fun TabsAndGesturesSettingsPage(
     onClosedTabUndo: () -> Unit = {},
     onLinkLongPress: () -> Unit = {},
     onLinkPeekSwipe: () -> Unit = {},
+    onTabLifecycle: () -> Unit = {},
+    onProfileOptions: () -> Unit = {},
+    onLinkInteractions: () -> Unit = {},
+    onAddressBarButtons: () -> Unit = {},
+    onGestureControls: () -> Unit = {},
     onBack: () -> Unit,
     section: TabSettingsSection = TabSettingsSection.All,
 ) {
-    var lifetimeMenuExpanded by remember { mutableStateOf(false) }
     var residentLimit by remember(residentTabLimit) {
         mutableFloatStateOf(residentTabLimit.toFloat())
     }
@@ -125,11 +137,16 @@ internal fun TabsAndGesturesSettingsPage(
                 TabSettingsSection.All -> R.string.settings_tabs_gestures_title
                 TabSettingsSection.Tabs -> R.string.settings_home_tabs_title
                 TabSettingsSection.Gestures -> R.string.settings_home_gestures_title
+                TabSettingsSection.Lifecycle -> R.string.settings_group_tab_lifecycle
+                TabSettingsSection.Profiles -> R.string.profile_actions_title
+                TabSettingsSection.LinkInteractions -> R.string.settings_group_link_interactions
+                TabSettingsSection.AddressBarButtons -> R.string.settings_address_bar_actions_title
+                TabSettingsSection.GestureControls -> R.string.settings_section_gestures
             },
         ),
         onBack = onBack,
     ) {
-        if (section != TabSettingsSection.Gestures) {
+        if (section == TabSettingsSection.All || section == TabSettingsSection.Tabs) {
             SettingsHeaderIllustration(SettingsHeaderArtwork.Tabs)
             SettingsPageSpacer()
             SettingsSectionTitle(stringResource(R.string.settings_tab_overview_mode))
@@ -161,7 +178,28 @@ internal fun TabsAndGesturesSettingsPage(
                 )
             }
             SettingsPageSpacer()
-            SettingsSectionTitle(stringResource(R.string.settings_group_tab_lifecycle))
+            if (section == TabSettingsSection.Tabs) {
+                SettingsPreferenceGroup {
+                    SettingsSelectionLink(
+                        title = stringResource(R.string.settings_group_tab_lifecycle),
+                        value = stringResource(R.string.settings_resident_tab_limit),
+                        onClick = onTabLifecycle,
+                    )
+                    SettingsPreferenceDivider()
+                    SettingsSelectionLink(
+                        title = stringResource(R.string.profile_actions_title),
+                        value = stringResource(R.string.settings_profiles_subtitle),
+                        onClick = onProfileOptions,
+                    )
+                }
+            }
+        }
+        if (section == TabSettingsSection.All || section == TabSettingsSection.Lifecycle) {
+            SettingsHeaderIllustration(SettingsHeaderArtwork.TabLifecycle)
+            SettingsPageSpacer()
+            if (section == TabSettingsSection.All) {
+                SettingsSectionTitle(stringResource(R.string.settings_group_tab_lifecycle))
+            }
             SettingsPreferenceGroup {
                 dev.sk2andy.materialbrowser.shared.ui.settings.SettingsSelectionLink(
                     title = stringResource(R.string.settings_closed_tab_undo_title),
@@ -210,32 +248,29 @@ internal fun TabsAndGesturesSettingsPage(
                     }
                 }
                 SettingsPageSpacer()
-                Box {
-                    SettingsChoice(
-                        title = stringResource(R.string.settings_auto_close_tabs),
-                        value = inactiveTabLifetime.displayName(),
-                        expanded = lifetimeMenuExpanded,
-                        onClick = { lifetimeMenuExpanded = true },
-                    )
-                    SettingsDropdown(
-                        expanded = lifetimeMenuExpanded,
-                        onDismissRequest = { lifetimeMenuExpanded = false },
-                    ) {
-                        InactiveTabLifetime.entries.forEach { lifetime ->
-                            SettingsDropdownItem(
-                                label = lifetime.displayName(),
-                                selected = lifetime == inactiveTabLifetime,
-                                onClick = {
-                                    lifetimeMenuExpanded = false
-                                    onInactiveTabLifetimeChanged(lifetime)
-                                },
-                            )
-                        }
+                SettingsSectionTitle(stringResource(R.string.settings_auto_close_tabs))
+                Column(
+                    Modifier.settingsSearchTarget(stringResource(R.string.settings_auto_close_tabs))
+                        .selectableGroup(),
+                ) {
+                    InactiveTabLifetime.entries.forEachIndexed { index, lifetime ->
+                        if (index > 0) SettingsPreferenceDivider()
+                        SettingsRadioOption(
+                            label = lifetime.displayName(),
+                            selected = lifetime == inactiveTabLifetime,
+                            onClick = { onInactiveTabLifetimeChanged(lifetime) },
+                        )
                     }
                 }
             }
             SettingsPageSpacer()
-            SettingsSectionTitle(stringResource(R.string.profile_actions_title))
+        }
+        if (section == TabSettingsSection.All || section == TabSettingsSection.Profiles) {
+            SettingsHeaderIllustration(SettingsHeaderArtwork.Profiles)
+            SettingsPageSpacer()
+            if (section == TabSettingsSection.All) {
+                SettingsSectionTitle(stringResource(R.string.profile_actions_title))
+            }
             SettingsPreferenceGroup {
                 SettingsSwitch(
                     title = stringResource(R.string.settings_profiles_title),
@@ -248,7 +283,39 @@ internal fun TabsAndGesturesSettingsPage(
                 GuestBubbleSettings(profilesEnabled = profilesEnabled)
             }
         }
-        if (section != TabSettingsSection.Tabs) {
+        if (section in setOf(
+                TabSettingsSection.All,
+                TabSettingsSection.Gestures,
+                TabSettingsSection.LinkInteractions,
+                TabSettingsSection.AddressBarButtons,
+                TabSettingsSection.GestureControls,
+            )
+        ) {
+            SettingsHeaderIllustration(SettingsHeaderArtwork.Gestures)
+            SettingsPageSpacer()
+            if (section == TabSettingsSection.Gestures) {
+                SettingsPreferenceGroup {
+                    SettingsSelectionLink(
+                        title = stringResource(R.string.settings_group_link_interactions),
+                        value = stringResource(R.string.settings_link_long_press_action),
+                        onClick = onLinkInteractions,
+                    )
+                    SettingsPreferenceDivider()
+                    SettingsSelectionLink(
+                        title = stringResource(R.string.settings_address_bar_actions_title),
+                        value = stringResource(R.string.settings_address_bar_actions_summary),
+                        onClick = onAddressBarButtons,
+                    )
+                    SettingsPreferenceDivider()
+                    SettingsSelectionLink(
+                        title = stringResource(R.string.settings_section_gestures),
+                        value = stringResource(R.string.settings_address_bar_docking_title),
+                        onClick = onGestureControls,
+                    )
+                }
+            }
+        }
+        if (section == TabSettingsSection.All || section == TabSettingsSection.LinkInteractions) {
             SettingsSectionTitle(stringResource(R.string.settings_group_link_interactions))
             SettingsPreferenceGroup {
                 dev.sk2andy.materialbrowser.shared.ui.settings.SettingsSelectionLink(
@@ -279,6 +346,8 @@ internal fun TabsAndGesturesSettingsPage(
                 )
             }
             SettingsPageSpacer()
+        }
+        if (section == TabSettingsSection.All || section == TabSettingsSection.AddressBarButtons) {
             SettingsSectionTitle(stringResource(R.string.settings_address_bar_actions_title))
             SettingsPreferenceGroup {
                 Box(modifier = Modifier.testTag(TabSettingsTestTags.AddressBarLongPressAction)) {
@@ -305,6 +374,8 @@ internal fun TabsAndGesturesSettingsPage(
                 )
             }
             SettingsPageSpacer()
+        }
+        if (section == TabSettingsSection.All || section == TabSettingsSection.GestureControls) {
             SettingsSectionTitle(stringResource(R.string.settings_section_gestures))
             SettingsPreferenceGroup {
                 SettingsSwitch(

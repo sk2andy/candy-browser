@@ -11,6 +11,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.Paint
@@ -18,21 +19,42 @@ import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import dev.sk2andy.materialbrowser.shared.resources.Res
 import dev.sk2andy.materialbrowser.shared.resources.settings_approved_appearance_tabs
 import dev.sk2andy.materialbrowser.shared.resources.settings_approved_player_waveform
+import dev.sk2andy.materialbrowser.shared.resources.settings_approved_search_engines
+import dev.sk2andy.materialbrowser.shared.resources.settings_approved_translations
+import dev.sk2andy.materialbrowser.shared.resources.settings_approved_downloads_v2
+import dev.sk2andy.materialbrowser.shared.resources.settings_approved_profiles_v2
+import dev.sk2andy.materialbrowser.shared.resources.settings_approved_gestures
+import dev.sk2andy.materialbrowser.shared.resources.settings_approved_link_preview_final_v8
+import dev.sk2andy.materialbrowser.shared.resources.settings_approved_tab_lifecycle
+import dev.sk2andy.materialbrowser.shared.resources.settings_approved_personal_link_rules
 import org.jetbrains.compose.resources.imageResource
 import kotlin.math.roundToInt
 
 /** Decorative approved raster artwork; instructional previews remain separate components. */
 @Composable
-fun SettingsHeaderIllustration(artwork: SettingsHeaderArtwork) {
+fun SettingsHeaderIllustration(
+    artwork: SettingsHeaderArtwork,
+    backgroundColor: Color = settingsPageColor(),
+    height: Dp = 200.dp,
+) {
     val image = imageResource(
         when (artwork) {
             SettingsHeaderArtwork.Appearance, SettingsHeaderArtwork.Tabs ->
                 Res.drawable.settings_approved_appearance_tabs
             SettingsHeaderArtwork.Player -> Res.drawable.settings_approved_player_waveform
+            SettingsHeaderArtwork.SearchEngines -> Res.drawable.settings_approved_search_engines
+            SettingsHeaderArtwork.Translations -> Res.drawable.settings_approved_translations
+            SettingsHeaderArtwork.Downloads -> Res.drawable.settings_approved_downloads_v2
+            SettingsHeaderArtwork.Profiles -> Res.drawable.settings_approved_profiles_v2
+            SettingsHeaderArtwork.Gestures -> Res.drawable.settings_approved_gestures
+            SettingsHeaderArtwork.LinkPreview -> Res.drawable.settings_approved_link_preview_final_v8
+            SettingsHeaderArtwork.TabLifecycle -> Res.drawable.settings_approved_tab_lifecycle
+            SettingsHeaderArtwork.PersonalLinkRules -> Res.drawable.settings_approved_personal_link_rules
         },
     )
     val source = remember(artwork) { SettingsHeaderArtworkRules.sourceWindow(artwork) }
@@ -40,7 +62,7 @@ fun SettingsHeaderIllustration(artwork: SettingsHeaderArtwork) {
         ColorFilter.colorMatrix(SettingsHeaderArtworkRules.backgroundNormalization())
     }
     val ink = MaterialTheme.colorScheme.primary
-    val page = settingsPageColor()
+    val page = backgroundColor
     val paint = remember(ink, page) {
         Paint().apply {
             colorFilter = ColorFilter.colorMatrix(SettingsHeaderArtworkRules.themeColors(ink, page))
@@ -51,7 +73,7 @@ fun SettingsHeaderIllustration(artwork: SettingsHeaderArtwork) {
             Modifier
                 .widthIn(max = 360.dp)
                 .fillMaxWidth()
-                .height(200.dp)
+                .height(height)
                 .testTag("settings_header_artwork_${artwork.name.lowercase()}")
                 .clearAndSetSemantics { },
         ) {

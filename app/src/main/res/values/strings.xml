@@ -1559,4 +1559,5 @@
     <string name="settings_status_bar_scroll_accessibility_open">Open Accessibility settings</string>
     <string name="settings_status_bar_scroll_enable_for_domain">Enable status bar scroll for this site</string>
     <string name="settings_status_bar_scroll_disable_for_domain">Disable status bar scroll for this site</string>
+    <string name="settings_translations_title">Translations</string>
 </resources>

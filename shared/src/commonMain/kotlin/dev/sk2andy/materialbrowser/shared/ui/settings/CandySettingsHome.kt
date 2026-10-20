@@ -50,6 +50,7 @@ internal object CandySettingsRouteRules {
             destination == SettingsDestination.MenuContentLayout ||
             destination == SettingsDestination.TabOverview ||
             destination == SettingsDestination.Browser ||
+            destination == SettingsDestination.Translations ||
             destination == SettingsDestination.Userscripts ||
             destination == SettingsDestination.Sync
 }
@@ -279,7 +280,14 @@ internal fun CandySettingsHome(
             SettingsDestination.Browser -> CandyBrowserSettingsPage(
                 translationProvider = translationProvider,
                 onTranslationProviderChanged = onTranslationProviderChanged,
+                onTranslations = { destination = SettingsDestination.Translations },
                 onBack = { destination = SettingsDestination.Home },
+            )
+
+            SettingsDestination.Translations -> CandyTranslationSettingsPage(
+                provider = translationProvider,
+                onProviderChanged = onTranslationProviderChanged,
+                onBack = { destination = SettingsDestination.Browser },
             )
 
             SettingsDestination.Userscripts -> CandyToppingsSettingsPage(

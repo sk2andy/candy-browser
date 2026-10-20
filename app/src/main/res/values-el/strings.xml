@@ -1493,4 +1493,5 @@
     <string name="constellations_search">Αναζήτηση σε αυτόν τον χάρτη</string>
     <string name="constellations_search_no_results">Δεν υπάρχουν αντίστοιχες σελίδες σε αυτό το προφίλ.</string>
     <string name="constellations_search_position">%1$d από %2$d αποτελέσματα</string>
+    <string name="settings_translations_title">Μεταφράσεις</string>
 </resources>

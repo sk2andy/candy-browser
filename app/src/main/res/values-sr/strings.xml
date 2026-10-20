@@ -1509,4 +1509,5 @@
     <string name="constellations_search">Претражи ову мапу</string>
     <string name="constellations_search_no_results">Нема одговарајућих страница у овом профилу.</string>
     <string name="constellations_search_position">%1$d од %2$d подударања</string>
+    <string name="settings_translations_title">Преводи</string>
 </resources>
