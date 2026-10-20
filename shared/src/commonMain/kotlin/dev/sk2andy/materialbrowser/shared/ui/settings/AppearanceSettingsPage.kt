@@ -143,6 +143,10 @@ fun AppearanceSettingsPage(
         backContentDescription = strings.back,
         onBack = onBack,
     ) {
+        if (section == AppearanceSettingsSection.All || section == AppearanceSettingsSection.Theme) {
+            SettingsHeaderIllustration(SettingsHeaderArtwork.Appearance)
+            SettingsPageSpacer()
+        }
         if (section in setOf(
                 AppearanceSettingsSection.Colors,
                 AppearanceSettingsSection.Surfaces,

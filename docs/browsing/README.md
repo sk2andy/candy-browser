@@ -31,6 +31,7 @@
 | Page translation providers, URL routing, persistence, and privacy | [`page-translation.md`](page-translation.md) | `PageTranslationRules`, `BrowserController`, `BrowserSessionStore`, `BrowserMainMenu`, `BrowserSettingsPage` |
 | Settings option inventory, groups and dependencies | [`settings-option-map.md`](settings-option-map.md) | Settings pages, action editors, shared `SettingsNavigationRules` |
 | Appearance and browser theme | [`appearance-and-settings.md`](appearance-and-settings.md) | `AppearanceSettings`, `MaterialBrowserTheme`, `AppearanceNightMode`, `SettingsScreen`, `AppearanceSettingsPage` |
+| Approved Appearance, Tabs and Player header artwork | [`appearance-and-settings.md`](appearance-and-settings.md#approved-settings-header-artwork) | `SettingsHeaderIllustration`, `SettingsHeaderArtworkRules`, `SettingsHeaderArtworkRulesTest`, `SettingsHeaderArtworkInstrumentedTest` |
 | Localized settings search and capability-filtered navigation | [`appearance-and-settings.md`](appearance-and-settings.md#settings-search) | `SettingsSearchRules`, `SettingsSearchCatalog`, `SettingsSearchField`, shared `SettingsSearchTarget` |
 | Profile-scoped browsing history and retention controls | [`history.md`](history.md) | `BrowsingHistoryRepository`, `HistoryActivity`, `HistoryScreen` |
 | Local download progress, search and cleanup | [`downloads.md`](downloads.md) | `DownloadRepository`, `DownloadsActivity`, `DownloadsScreen` |

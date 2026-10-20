@@ -33,12 +33,17 @@ kotlin {
             implementation(compose.material3)
             implementation(compose.materialIconsExtended)
             implementation(compose.ui)
+            implementation(compose.components.resources)
         }
 
         commonTest.dependencies {
             implementation(kotlin("test"))
         }
     }
+}
+
+compose.resources {
+    packageOfResClass = "dev.sk2andy.materialbrowser.shared.resources"
 }
 
 tasks.register<Exec>("iosSimulatorArm64IsolatedTest") {

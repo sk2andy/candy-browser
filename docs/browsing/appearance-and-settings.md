@@ -409,3 +409,44 @@ menu surface, using a trailing radio indicator. The existing theme, disabled col
 callbacks and storage remain authoritative. Search targets move with the controls; the shared parent
 map drives header, system/predictive Back and reverse route transitions. The complete option and
 capability map is in [settings-option-map.md](settings-option-map.md).
+
+### Approved settings header artwork
+
+The parent **Theme & interface**, **Tabs**, and **Player** pages show the approved imagegen
+illustrations: the swatch fan, overlapping tab cards, and the revised waveform player.
+`SettingsHeaderIllustration` owns their shared Compose rendering. They are decorative, have no
+accessibility announcement or interaction, and use a centered, aspect-preserving window within a
+200 dp header capped at 360 dp wide. Narrow layouts retain the complete shape. They scroll with the
+existing page; the preferences, callbacks and storage are unchanged.
+
+The two PNGs in `shared/src/commonMain/composeResources/drawable` are byte-identical original
+downloads. No pixels were cropped, recolored, redrawn or regenerated in the source files. The
+Appearance and Tabs windows reference the first sheet; the rejected rounded Player on that sheet
+is outside both windows. Player references only the separately approved waveform image.
+
+| Resource | Original pixels | Source window `(left, top, right, bottom)` | SHA-256 |
+| --- | --- | --- | --- |
+| `settings_approved_appearance_tabs.png` | 1024 × 1536 | Appearance `(160, 80, 860, 610)`; Tabs `(160, 615, 860, 1060)` | `f550651600031493d981511ea9ef0b0b7e38a1c608ec911597d12f824dd3eafc` |
+| `settings_approved_player_waveform.png` | 1536 × 1024 | Player `(160, 245, 1376, 780)` | `852cdeed7a16d1fc54c75e5dda13138bcbf83fd8f96acfbb5321e0c760b88a02` |
+
+The original Library IDs are `libfile_46c900dcd0448191a03ae81118385873` and
+`libfile_48290d7ff1088191aacd6d776d5db0db`, respectively. These are user-approved imagegen
+outputs, not third-party illustration downloads.
+
+The nearly monochrome originals contain opaque offwhite paper with slight RGB variation. At draw
+time, a luminance matrix maps the paper's white point of 244/255 to white, retaining lower tonal
+detail. A separate layer maps black to the current Material `primary` and white to the actual
+`settingsPageColor()` (`surfaceContainerLow`). The intermediate clamp is necessary: combining
+these matrices would extrapolate the offwhite background beyond the page color in dark palettes.
+Both passes keep the alpha row unchanged, and color-matrix offsets use the API's 0–255 units.
+The matrices update with the live Material palette, including Dynamic, Candy, Neutral, dark and
+AMOLED. This is a tonal filter, rather than a flat silhouette tint.
+
+`SettingsHeaderArtworkRulesTest` checks source boundaries, aspect-preserving fit, paper normalization,
+tonal and alpha preservation, and palette changes. `SettingsHeaderArtworkInstrumentedTest` captures
+the actual parent page composables in all nine palette/mode combinations, checks the rendered border
+pixels and tonal detail, and exercises scrolling and settings changes at 320 dp / 200% font scale.
+Its unscaled screenshots and capture inventory are saved in the test app's external-files
+`settings-header-artwork` directory. These are Compose page captures, not browser-navigation tests.
+The existing Colors, Surfaces/shapes, Address bar, tab layout and Player mode explanatory previews
+continue to use their functional illustrations; Gestures does not receive the Tabs header.

@@ -12,6 +12,8 @@ import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.browser.InlineMediaPlayerMode
 import dev.sk2andy.materialbrowser.browser.InlineMediaPlayerModeRules
 import dev.sk2andy.materialbrowser.browser.InlineMediaPlayerSeekSettings
+import dev.sk2andy.materialbrowser.shared.ui.settings.SettingsHeaderArtwork
+import dev.sk2andy.materialbrowser.shared.ui.settings.SettingsHeaderIllustration
 
 internal object PlayerSettingsTestTags {
     const val VideoAutoplay = "player_settings_video_autoplay"
@@ -37,6 +39,8 @@ internal fun PlayerSettingsPage(
         title = stringResource(R.string.settings_player_title),
         onBack = onBack,
     ) {
+        SettingsHeaderIllustration(SettingsHeaderArtwork.Player)
+        SettingsPageSpacer()
         SettingsPreferenceGroup {
             SettingsSwitch(
                 title = stringResource(R.string.settings_video_autoplay_title),

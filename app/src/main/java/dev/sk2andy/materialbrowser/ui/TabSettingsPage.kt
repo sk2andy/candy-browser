@@ -1,5 +1,7 @@
 package dev.sk2andy.materialbrowser.ui
 
+import dev.sk2andy.materialbrowser.shared.ui.settings.SettingsHeaderArtwork
+import dev.sk2andy.materialbrowser.shared.ui.settings.SettingsHeaderIllustration
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -128,6 +130,8 @@ internal fun TabsAndGesturesSettingsPage(
         onBack = onBack,
     ) {
         if (section != TabSettingsSection.Gestures) {
+            SettingsHeaderIllustration(SettingsHeaderArtwork.Tabs)
+            SettingsPageSpacer()
             SettingsSectionTitle(stringResource(R.string.settings_tab_overview_mode))
             SettingsPreferenceGroup {
                 TabOverviewSettings(
