@@ -8,7 +8,7 @@ const redditSource = readFileSync(new URL('../app/src/main/assets/candy_privacy/
 
 function fixture({ density = 3, nativeTop = 96, envTop = nativeTop, simulateAnimationFrames = false,
   normalizePixels = false, reparseStyles = false, prototypeSource = source, hostname = '',
-  viewportContent = null, themeColor = null } = {}) {
+  viewportContent = null, themeColor = null, mediaMatches = () => true } = {}) {
   let clock = 0; let timerId = 0; let observer;
   const observers = [];
   let deliveredEnvTop = envTop;
@@ -33,6 +33,7 @@ function fixture({ density = 3, nativeTop = 96, envTop = nativeTop, simulateAnim
       this.content = '';
       this.isConnected = true; this.computed = { position, top }; this.properties = new Map();
       this.attributes = new Map();
+      this.eventListeners = new Map(); this.disabled = false;
       if (tag === 'style') {
         this.sheet = { cssRules: [], ownerNode: this, media: { get mediaText() { return this.owner.getAttribute('media') || ''; }, owner: this },
           insertRule: (selector, index) => {
@@ -102,6 +103,11 @@ function fixture({ density = 3, nativeTop = 96, envTop = nativeTop, simulateAnim
     }
     setAttribute(name, value) { this.attributes.set(name, value); if (name === 'media') this.reparse(); }
     removeAttribute(name) { this.attributes.delete(name); if (name === 'media') this.reparse(); }
+    hasAttribute(name) { return this.attributes.has(name); }
+    addEventListener(type, callback) {
+      const callbacks = this.eventListeners.get(type) || new Set(); callbacks.add(callback); this.eventListeners.set(type, callbacks);
+    }
+    removeEventListener(type, callback) { this.eventListeners.get(type)?.delete(callback); }
     set textContent(value) { this.content = value; this.reparse(); }
     get textContent() { return this.content; }
     get firstChild() {
@@ -187,6 +193,15 @@ function fixture({ density = 3, nativeTop = 96, envTop = nativeTop, simulateAnim
     querySelectorAll: (selector) => {
       if (selector === 'meta[name="theme-color" i]') return theme ? [theme] : [];
       if (selector === 'meta[name="viewport" i]') return viewport ? [viewport] : [];
+      if (selector === 'link[rel~="stylesheet"]') {
+        const pending = [root]; const links = [];
+        while (pending.length) {
+          const element = pending.pop();
+          if (element.localName === 'link' && (element.getAttribute('rel') || '').split(/\s+/).includes('stylesheet')) links.push(element);
+          pending.push(...element.children);
+        }
+        return links;
+      }
       if (!["header, nav, [role=\"banner\"], [role=\"navigation\"]",
         'reddit-header-small, reddit-header-large, shreddit-header', 'shreddit-app', 'main'].includes(selector)) return [];
       reads.selector++;
@@ -245,6 +260,7 @@ function fixture({ density = 3, nativeTop = 96, envTop = nativeTop, simulateAnim
     innerHeight: 800,
     scrollY: 0,
     devicePixelRatio: density,
+    matchMedia: (media) => ({ matches: mediaMatches(media) }),
     CandyContentTopInset: {
       cssSafeAreaConfiguration: () => ({ ...config }),
       domDiagnosticsEnabled: () => true,
@@ -2312,6 +2328,167 @@ test('stylesheet load and viewport changes recheck cached headers without networ
   }
   f.flush();
   assert.deepEqual({ reads: { ...f.reads }, rules: f.ruleWrites() }, before);
+});
+
+test('pending parser stylesheet defers safe-area layout probes until load settles', () => {
+  const f = fixture({ viewportContent: 'width=device-width,viewport-fit=cover' });
+  f.context.document.readyState = 'interactive';
+  const link = f.context.document.createElement('link');
+  link.setAttribute('rel', 'stylesheet');
+  link.setAttribute('href', 'https://fixture.invalid/delayed.css');
+  f.body.append(link);
+  const header = f.element('sticky', '0px', 'header');
+  header.rect = { top: 0, left: 0, width: 800, height: 40, right: 800, bottom: 40 };
+
+  f.start();
+  assert.equal(f.reads.style, 0, 'Cover classifier and body style reads wait while the parser stylesheet is pending');
+  assert.equal(f.reads.rect, 0, 'No layout geometry is forced before stylesheet completion');
+
+  f.event('load', 'document', link);
+  f.flush();
+  assert.ok(f.reads.style > 0, 'Safe-area classification resumes after stylesheet load');
+  assert.ok(f.reads.rect > 0, 'Header geometry is checked after stylesheet load');
+});
+
+test('stylesheet error releases deferred safe-area measurements', () => {
+  const f = fixture({ viewportContent: 'width=device-width,viewport-fit=cover' });
+  f.context.document.readyState = 'interactive';
+  const link = f.context.document.createElement('link');
+  link.setAttribute('rel', 'stylesheet'); link.setAttribute('href', 'https://fixture.invalid/failing.css'); f.body.append(link);
+  f.start();
+  assert.equal(f.reads.style, 0);
+  f.event('error', 'document', link);
+  assert.ok(f.reads.style > 0, 'A failed stylesheet must not hold safe-area work');
+
+  const completed = fixture({ viewportContent: 'width=device-width,viewport-fit=cover' });
+  completed.context.document.readyState = 'interactive';
+  const pending = completed.context.document.createElement('link');
+  pending.setAttribute('rel', 'stylesheet'); pending.setAttribute('href', 'https://fixture.invalid/missed-event.css'); completed.body.append(pending);
+  completed.start(); assert.equal(completed.reads.style, 0);
+  completed.context.document.readyState = 'complete';
+  completed.event('load', 'window'); completed.flush();
+  assert.ok(completed.reads.style > 0, 'Window load is a final release for any missed per-link event');
+});
+
+test('disabled, removed, and non-rendering media stylesheets do not hold readiness', () => {
+  const disabled = fixture({ viewportContent: 'width=device-width,viewport-fit=cover' });
+  disabled.context.document.readyState = 'interactive';
+  const disabledLink = disabled.context.document.createElement('link');
+  disabledLink.setAttribute('rel', 'stylesheet'); disabledLink.setAttribute('href', 'https://fixture.invalid/disabled.css'); disabled.body.append(disabledLink);
+  disabled.start(); assert.equal(disabled.reads.style, 0);
+  disabledLink.disabled = true; disabled.mutate(disabledLink, 'disabled');
+  assert.ok(disabled.reads.style > 0, 'A disabled pending sheet must release the gate');
+
+  const removed = fixture({ viewportContent: 'width=device-width,viewport-fit=cover' });
+  removed.context.document.readyState = 'interactive';
+  const removedLink = removed.context.document.createElement('link');
+  removedLink.setAttribute('rel', 'stylesheet'); removedLink.setAttribute('href', 'https://fixture.invalid/removed.css'); removed.body.append(removedLink);
+  removed.start(); assert.equal(removed.reads.style, 0);
+  removedLink.remove();
+  removed.dispatchMutations([{ type: 'childList', target: removed.body, addedNodes: [], removedNodes: [removedLink] }]);
+  assert.ok(removed.reads.style > 0, 'Removal/abort must release the gate');
+
+  const print = fixture({ viewportContent: 'width=device-width,viewport-fit=cover' });
+  print.context.document.readyState = 'interactive';
+  const printLink = print.context.document.createElement('link');
+  printLink.setAttribute('rel', 'stylesheet'); printLink.setAttribute('href', 'https://fixture.invalid/print.css'); printLink.setAttribute('media', 'print'); print.body.append(printLink);
+  print.start(); assert.ok(print.reads.style > 0, 'A non-rendering print sheet is not a readiness dependency');
+
+  let queryMatches = false;
+  const media = fixture({ viewportContent: 'width=device-width,viewport-fit=cover', mediaMatches: () => queryMatches });
+  media.context.document.readyState = 'interactive';
+  const mediaLink = media.context.document.createElement('link');
+  mediaLink.setAttribute('rel', 'stylesheet'); mediaLink.setAttribute('href', 'https://fixture.invalid/media.css'); mediaLink.setAttribute('media', '(min-width: 900px)'); media.body.append(mediaLink);
+  media.start(); assert.ok(media.reads.style > 0, 'A currently non-matching media query is not a dependency');
+  const mediaReadsBeforeMatch = media.reads.style;
+  queryMatches = true; media.mutate(mediaLink, 'media');
+  assert.equal(media.reads.style, mediaReadsBeforeMatch, 'Once the media query matches, new measurements defer');
+  media.event('load', 'document', mediaLink); media.flush();
+  assert.ok(media.reads.style > mediaReadsBeforeMatch, 'Matching media sheet releases after loading');
+});
+
+test('stylesheet readiness ignores empty links and settled sheets without waiting for window load', () => {
+  for (const href of [null, '']) {
+    const f = fixture({ viewportContent: 'width=device-width,viewport-fit=cover' });
+    f.context.document.readyState = 'interactive';
+    const link = f.context.document.createElement('link');
+    link.setAttribute('rel', 'stylesheet');
+    if (href !== null) link.setAttribute('href', href);
+    f.body.append(link);
+    f.start();
+    assert.ok(f.reads.style > 0, `A stylesheet link with ${href === null ? 'no href' : 'an empty href'} must not hold measured work`);
+    assert.ok(f.reads.rect > 0, 'The no-load case must proceed without a window load event');
+  }
+
+  const cached = fixture({ viewportContent: 'width=device-width,viewport-fit=cover' });
+  cached.context.document.readyState = 'interactive';
+  const link = cached.context.document.createElement('link');
+  link.setAttribute('rel', 'stylesheet');
+  link.setAttribute('href', 'https://fixture.invalid/cached-parser.css');
+  let sheetReads = 0;
+  Object.defineProperty(link, 'sheet', { configurable: true, get() { sheetReads++; return {}; } });
+  cached.body.append(link);
+  cached.start();
+  assert.ok(sheetReads > 0, 'The associated CSSStyleSheet is a non-layout loaded-sheet indicator');
+  assert.ok(cached.reads.style > 0, 'A cached parser sheet already associated at registration does not wait for window load');
+  assert.ok(cached.reads.rect > 0, 'Safe-area geometry proceeds after the cached sheet is recognized');
+
+  const inert = fixture();
+  inert.context.document.readyState = 'loading'; inert.config.enabled = false;
+  const inertLink = inert.context.document.createElement('link');
+  inertLink.setAttribute('rel', 'stylesheet');
+  inertLink.setAttribute('href', 'https://fixture.invalid/cached-without-layout.css');
+  Object.defineProperty(inertLink, 'sheet', { configurable: true, get() { return {}; } });
+  inert.body.append(inertLink);
+  inert.start();
+  assert.equal(inert.reads.style, 0, 'Reading the associated sheet does not query computed style');
+  assert.equal(inert.reads.rect, 0, 'Reading the associated sheet does not force layout geometry');
+});
+
+test('stylesheet href changes register the new request before resuming deferred measurements', () => {
+  const pending = fixture({ viewportContent: 'width=device-width,viewport-fit=cover' });
+  pending.context.document.readyState = 'interactive';
+  const pendingLink = pending.context.document.createElement('link');
+  pendingLink.setAttribute('rel', 'stylesheet');
+  pendingLink.setAttribute('href', 'https://fixture.invalid/old-pending.css');
+  pending.body.append(pendingLink);
+  pending.start();
+  assert.equal(pending.reads.style, 0);
+  assert.equal(pending.reads.rect, 0);
+
+  // A link can still expose its old associated sheet while the href mutation
+  // has started a replacement request. That stale association must not open a
+  // synchronous measurement window between settling the old watcher and
+  // registering the new one.
+  Object.defineProperty(pendingLink, 'sheet', { configurable: true, get() { return {}; } });
+  pendingLink.setAttribute('href', 'https://fixture.invalid/new-pending.css');
+  pending.mutate(pendingLink, 'href');
+  pending.flush();
+  assert.equal(pending.reads.style, 0, 'A replacement request stays gated during the href mutation');
+  assert.equal(pending.reads.rect, 0, 'The old sheet association must not force geometry before replacement load');
+  pending.event('load', 'document', pendingLink);
+  pending.flush();
+  assert.ok(pending.reads.style > 0, 'Measurements resume when the replacement stylesheet settles');
+
+  const loaded = fixture({ viewportContent: 'width=device-width,viewport-fit=cover' });
+  loaded.context.document.readyState = 'interactive';
+  const loadedLink = loaded.context.document.createElement('link');
+  loadedLink.setAttribute('rel', 'stylesheet');
+  loadedLink.setAttribute('href', 'https://fixture.invalid/loaded-old.css');
+  Object.defineProperty(loadedLink, 'sheet', { configurable: true, get() { return {}; } });
+  loaded.body.append(loadedLink);
+  loaded.start();
+  assert.ok(loaded.reads.style > 0, 'The already-loaded original sheet does not gate initial work');
+  const styleReads = loaded.reads.style;
+  const rectReads = loaded.reads.rect;
+  loadedLink.setAttribute('href', 'https://fixture.invalid/loaded-new.css');
+  loaded.mutate(loadedLink, 'href');
+  loaded.flush();
+  assert.equal(loaded.reads.style, styleReads, 'An href change before document complete waits for the replacement');
+  assert.equal(loaded.reads.rect, rectReads, 'The replacement link is not treated as settled from the old sheet');
+  loaded.event('load', 'document', loadedLink);
+  loaded.flush();
+  assert.ok(loaded.reads.style > styleReads, 'Replacement completion releases deferred work');
 });
 
 test('inserted and removed stylesheets refresh existing per-element header rules', () => {

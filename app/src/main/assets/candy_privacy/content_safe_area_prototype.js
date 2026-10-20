@@ -79,6 +79,10 @@
   let reportedStatusBarBackdropColor = null;
   let reportedStatusBarBackdropRevision = null;
   let statusBarBackdropPending = false;
+  const pendingStyleSheets = new Set();
+  const styleSheetSettlers = new WeakMap();
+  const settledStyleSheetLinks = new WeakSet();
+  let safeAreaMeasurementsDeferred = false;
   const themeMediaWatchers = new Map();
   let fixedHeaderCandidates = new Map();
   let semanticHeaderCandidates = new Set();
@@ -122,6 +126,82 @@
     const content = document.querySelector('meta[name="viewport" i]')?.getAttribute("content");
     return typeof content === "string" &&
       /(?:^|[\s,;])viewport-fit\s*=\s*cover(?=$|[\s,;])/i.test(content);
+  }
+
+  function isStyleSheetLink(node) {
+    const relations = (node?.getAttribute?.("rel") || "").toLowerCase().split(/\s+/);
+    return node?.nodeType === 1 && node.localName === "link" &&
+      relations.includes("stylesheet") && !relations.includes("alternate");
+  }
+
+  function styleSheetApplies(link) {
+    if (!isStyleSheetLink(link) || link.disabled || link.hasAttribute?.("disabled")) return false;
+    const href = link.getAttribute("href");
+    if (typeof href !== "string" || !href.trim()) return false;
+    const media = link.getAttribute("media");
+    if (!media) return true;
+    if (/^\s*print\s*$/i.test(media)) return false;
+    if (!globalThis.matchMedia) return true;
+    try { return globalThis.matchMedia(media).matches; } catch (_error) { return true; }
+  }
+
+  function settleStyleSheet(link, resume = true) {
+    if (!pendingStyleSheets.delete(link)) return false;
+    const settled = styleSheetSettlers.get(link);
+    if (settled) {
+      link.removeEventListener?.("load", settled);
+      link.removeEventListener?.("error", settled);
+      styleSheetSettlers.delete(link);
+    }
+    if (resume && !pendingStyleSheets.size) resumeDeferredSafeAreaMeasurements();
+    return true;
+  }
+
+  function watchStyleSheet(link, checkExistingSheet = true) {
+    if (!link?.isConnected) return;
+    if (!styleSheetApplies(link)) {
+      settleStyleSheet(link);
+      return;
+    }
+    if (pendingStyleSheets.has(link)) return;
+    if (typeof link.addEventListener !== "function") return;
+    if (settledStyleSheetLinks.has(link) || document.readyState === "complete") return;
+    if (checkExistingSheet && link.sheet) {
+      settledStyleSheetLinks.add(link);
+      return;
+    }
+    const settled = () => settleStyleSheet(link);
+    styleSheetSettlers.set(link, settled);
+    pendingStyleSheets.add(link);
+    link.addEventListener("load", settled, { once: true });
+    link.addEventListener("error", settled, { once: true });
+  }
+
+  function discoverStyleSheets(node) {
+    if (node?.nodeType !== 1) return;
+    watchStyleSheet(node);
+    for (const link of node.querySelectorAll?.('link[rel~="stylesheet"]') || []) watchStyleSheet(link);
+  }
+
+  function safeAreaMeasurementsMustWait() {
+    return pendingStyleSheets.size > 0;
+  }
+
+  function startStyleSheetTracking() {
+    for (const link of document.querySelectorAll('link[rel~="stylesheet"]')) watchStyleSheet(link);
+  }
+
+  function resumeDeferredSafeAreaMeasurements() {
+    if (!safeAreaMeasurementsDeferred || safeAreaMeasurementsMustWait()) return;
+    safeAreaMeasurementsDeferred = false;
+    configure(true);
+    if (configuration?.active) {
+      bodyPending = true;
+      protectBody();
+    }
+    if (configuration?.cover) watchCoverNativeInset();
+    requestSemanticHeaderCheck();
+    schedule();
   }
 
   function visibleNearTop(element, style, safeTop) {
@@ -890,6 +970,10 @@
       coverEnvProbe = null;
       return;
     }
+    if (safeAreaMeasurementsMustWait()) {
+      safeAreaMeasurementsDeferred = true;
+      return;
+    }
     if (!document.body || !globalThis.requestAnimationFrame) return;
     if (!coverEnvProbe?.isConnected) {
       coverEnvProbe = document.createElement("div");
@@ -1465,6 +1549,11 @@
         !document.body || !document.documentElement) return;
     bodyPending = cleanup.length > 0;
     if (!cleanup.length) apply(document.documentElement, "--candy-safe-area-inset-top", `${inset}px`);
+    if (safeAreaMeasurementsMustWait()) {
+      safeAreaMeasurementsDeferred = true;
+      bodyPending = true;
+      return;
+    }
     const flowProtected = globalThis.CandyRedditSafeArea?.flowProtected() === true;
     if ((refreshBodyAtReady && document.readyState !== "loading") || flowProtected !== redditFlowProtected) {
       // Do not measure our early padding as author padding. Remove/read/republish
@@ -1504,6 +1593,10 @@
         restore(element, entries);
         count++;
         continue;
+      }
+      if (safeAreaMeasurementsMustWait()) {
+        safeAreaMeasurementsDeferred = true;
+        return;
       }
       if (dirtyHeaderTops.size && performance.now() >= headerTopCheckDue) {
         refreshHeaderTops();
@@ -1644,6 +1737,28 @@
   }
 
   function mutations(records) {
+    for (const record of records) {
+      if (record.type === "attributes" && record.target?.localName === "link" &&
+          ["rel", "disabled", "media", "href"].includes(record.attributeName)) {
+        const hrefChanged = record.attributeName === "href";
+        if (hrefChanged) settledStyleSheetLinks.delete(record.target);
+        if (!styleSheetApplies(record.target)) {
+          settleStyleSheet(record.target, !hrefChanged);
+        } else {
+          if (hrefChanged) settleStyleSheet(record.target, false);
+          watchStyleSheet(record.target, !hrefChanged);
+        }
+        if (hrefChanged && !pendingStyleSheets.size) resumeDeferredSafeAreaMeasurements();
+      } else if (record.type === "childList") {
+        for (const node of record.addedNodes || []) discoverStyleSheets(node);
+        for (const node of record.removedNodes || []) {
+          if (isStyleSheetLink(node) && !node.isConnected) settleStyleSheet(node);
+          for (const link of node.querySelectorAll?.('link[rel~="stylesheet"]') || []) {
+            if (!link.isConnected) settleStyleSheet(link);
+          }
+        }
+      }
+    }
     if (records.some((record) => record.type === "childList" && record.removedNodes?.length)) {
       releaseDetachedElements();
     }
@@ -1900,6 +2015,7 @@
   }
 
   function configure(resize = false) {
+    startStyleSheetTracking();
     const incoming = globalThis.CandyContentTopInset?.cssSafeAreaConfiguration?.();
     if (!incoming) return;
     const scale = Number.isFinite(globalThis.devicePixelRatio) && globalThis.devicePixelRatio > 0 ? globalThis.devicePixelRatio : 1;
@@ -1914,7 +2030,9 @@
     const cover = viewportFitCoversSafeArea();
     const recheckCover = cover && document.body &&
       (routeChanged || coverCheckedRevision !== coverLayoutRevision || coverCheckedInset !== nextInset);
-    if (recheckCover) {
+    if (recheckCover && safeAreaMeasurementsMustWait()) {
+      safeAreaMeasurementsDeferred = true;
+    } else if (recheckCover) {
       // Restore the current protection in this task. An unchanged cover decision
       // must not detach its stylesheet and wait for the worker to rebuild it.
       coverNeedsProtection = withAuthorTopStyles(() => coverTopNeedsProtection(nextInset));
@@ -2018,6 +2136,9 @@
     configurationKey = key;
     updateScrollListeners();
     inset = nextInset;
+    if (next.safeAreaEnabled && !cleanup.length && document.documentElement) {
+      apply(document.documentElement, "--candy-safe-area-inset-top", `${inset}px`);
+    }
     if (next.active && !firstInitialization) firstInitialization = { readyState: document.readyState, atMillis: performance.now() };
     bodyPending = next.active && !!document.body;
     semanticCheckPending = false;
@@ -2169,8 +2290,21 @@
       if (!headerTopCandidates.size) requestSemanticHeaderCheck();
       schedule();
     }
+    if (isStyleSheetLink(event.target)) {
+      settledStyleSheetLinks.add(event.target);
+      settleStyleSheet(event.target);
+    }
+  }, true);
+  document.addEventListener("error", (event) => {
+    if (!isStyleSheetLink(event.target)) return;
+    settledStyleSheetLinks.add(event.target);
+    settleStyleSheet(event.target);
   }, true);
   globalThis.addEventListener("load", () => {
+    for (const link of pendingStyleSheets) {
+      settledStyleSheetLinks.add(link);
+      settleStyleSheet(link);
+    }
     globalThis.CandyRedditSafeArea?.sync();
     if (configuration?.cover) coverLayoutRevision++;
     configure();
@@ -2183,6 +2317,7 @@
     if (configuration?.cover) coverLayoutRevision++;
     if (configuration?.recheckOnResize || configuration?.cover) configure(true);
   }, { passive: true });
+  startStyleSheetTracking();
   configure();
   globalThis.CandyCssSafeAreaDiagnostics = Object.freeze({
     sample: () => globalThis.CandyContentTopInset?.domDiagnosticsEnabled?.() === true ? {
