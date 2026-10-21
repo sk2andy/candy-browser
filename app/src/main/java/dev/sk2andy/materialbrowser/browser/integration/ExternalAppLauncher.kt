@@ -105,13 +105,15 @@ class ExternalAppLauncher(
     }
 
     fun openWebUrlInChosenApp(prepared: PreparedWebAppLaunch): ExternalLaunchResult {
+        val appUrl = ExternalAppWebUrlRules.forAndroidApp(prepared.url)
+            ?: return ExternalLaunchResult.Unsupported
         if (prepared.hasDefaultHandler) {
             return openWebUrlExternally(prepared.url)
         }
         val packages = prepared.matchingPackages
         if (packages.isEmpty()) return ExternalLaunchResult.Unsupported
         val appIntents = packages.map { packageName ->
-            Intent(Intent.ACTION_VIEW, Uri.parse(prepared.url))
+            Intent(Intent.ACTION_VIEW, Uri.parse(appUrl))
                 .addCategory(Intent.CATEGORY_BROWSABLE)
                 .setPackage(packageName)
                 .addFlags(Intent.FLAG_ACTIVITY_REQUIRE_NON_BROWSER)
@@ -171,7 +173,14 @@ class ExternalAppLauncher(
         }
         if (parsed.`package` == context.packageName) return fallback(fallbackUrl)
 
-        val safeIntent = Intent(Intent.ACTION_VIEW, data)
+        val appData = if (isWebLink) {
+            val appUrl = ExternalAppWebUrlRules.forAndroidApp(data.toString())
+                ?: return fallback(fallbackUrl)
+            Uri.parse(appUrl)
+        } else {
+            data
+        }
+        val safeIntent = Intent(Intent.ACTION_VIEW, appData)
             .addCategory(Intent.CATEGORY_BROWSABLE)
             .apply { parsed.`package`?.let(::setPackage) }
         if (isWebLink) {
@@ -198,7 +207,10 @@ class ExternalAppLauncher(
     }
 
     private fun webIntent(normalizedUrl: String): Intent =
-        Intent(Intent.ACTION_VIEW, Uri.parse(normalizedUrl))
+        Intent(
+            Intent.ACTION_VIEW,
+            Uri.parse(requireNotNull(ExternalAppWebUrlRules.forAndroidApp(normalizedUrl))),
+        )
             .addCategory(Intent.CATEGORY_BROWSABLE)
             .apply {
                 if (GooglePlayAppLinkRules.shouldOpenInPlayStore(normalizedUrl)) {

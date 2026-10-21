@@ -43,6 +43,10 @@
 
     <queries>
         <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+        <intent>
             <action android:name="org.chromium.intent.action.PAY" />
         </intent>
         <intent>

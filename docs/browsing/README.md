@@ -11,6 +11,7 @@
 | Gecko page continuity across tab switches and long background intervals | [`runtime-and-navigation.md`](runtime-and-navigation.md) | `GeckoContentPresentationGate`, `GeckoResumeCover`, `GeckoTabInteractionInstrumentedTest`, `BrowserPageResumeInstrumentedTest` |
 | Explicit address-bar URLs, URL suggestions and QR app handoffs | [`runtime-and-navigation.md`](runtime-and-navigation.md#navigation-paths) | `BrowserController.submitAddressFromAddressBar`, `BrowserScreen`, `BrowserAddressChrome`, `ExternalAppLauncher` |
 | External-app return Snackbar, global website exceptions and reset settings | [`runtime-and-navigation.md`](runtime-and-navigation.md#external-app-return-and-website-exceptions) | `ExternalAppSiteRules`, `ExternalAppFeedback`, `ExternalAppFeedbackSnackbar`, `ExternalAppLinksSettingsPage`, `BrowserSessionStore` |
+| Installed app lookup and empty-root-path compatibility | [`runtime-and-navigation.md`](runtime-and-navigation.md#invariants) | `ExternalAppWebUrlRules`, `ExternalAppLauncher`, opt-in `InstalledGitHubAppInstrumentedTest` |
 | App-link source identity when an engine reports the target before its request | [`runtime-and-navigation.md`](runtime-and-navigation.md#invariants) | `BrowserController`, `BrowserUriPolicy`, `BrowserControllerGeckoViewBindingInstrumentedTest` |
 | Default-on Auto De-AMP navigation and trusted URL shapes | [`runtime-and-navigation.md`](runtime-and-navigation.md#navigation-paths) | `AutoDeAmpRules`, `BrowserController`, `BrowserSessionStore`, `ProtectionSettingsPage` |
 | Android Gecko, Firefox extensions and iOS WebKit boundary | [`platform-engines.md`](platform-engines.md) | `BrowserController`, `browser/gecko`, `shared`, `iosApp` |
@@ -79,6 +80,9 @@ Issue 239's Google identity popup routing, native close lifecycle and live Claud
 
 Issue 259's System WebView OAuth popup adoption, POST/opener preservation and scoped login
 compatibility checks are recorded in [`../audits/issue-259-system-webview-google-login.md`](../audits/issue-259-system-webview-google-login.md).
+
+Real installed GitHub discovery and empty-root-path reproduction are recorded in
+[`../audits/github-installed-app-resolution.md`](../audits/github-installed-app-resolution.md).
 
 Issue 222's search-link History API race and navigation cancellation checks are recorded in
 [`../audits/issue-222-external-app-navigation.md`](../audits/issue-222-external-app-navigation.md).

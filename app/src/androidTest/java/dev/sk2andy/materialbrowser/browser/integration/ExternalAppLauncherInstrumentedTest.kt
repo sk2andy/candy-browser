@@ -109,6 +109,55 @@ class ExternalAppLauncherInstrumentedTest {
     }
 
     @Test
+    fun rootAddressFindsInstalledPathHandlerAndPreservesOriginalTarget() {
+        val testPackage = InstrumentationRegistry.getInstrumentation().context.packageName
+        val targetUrl = "https://root-path.candy.test?view=%2F#section"
+        val installedLauncher = ExternalAppLauncher(context, canResolveExternalActivity = { false })
+
+        val prepared = requireNotNull(installedLauncher.prepareWebUrlInChosenApp(targetUrl))
+
+        assertEquals(targetUrl, prepared.url)
+        assertEquals(listOf(testPackage), prepared.matchingPackages)
+        assertEquals(ExternalLaunchResult.Launched, installedLauncher.openWebUrlInChosenApp(prepared))
+        assertEquals("https://root-path.candy.test/?view=%2F#section", context.lastIntent?.dataString)
+        assertEquals(testPackage, context.lastIntent?.`package`)
+    }
+
+    @Test
+    fun defaultHandlerAvailabilityAndStartUseSameRootPath() {
+        val resolvedUrls = mutableListOf<String?>()
+        val defaultLauncher = ExternalAppLauncher(
+            context = context,
+            canResolveExternalActivity = { intent ->
+                resolvedUrls += intent.dataString
+                intent.data?.path == "/"
+            },
+        )
+
+        assertTrue(defaultLauncher.canOpenWebUrlExternally("https://root-path.candy.test"))
+        assertEquals(
+            ExternalLaunchResult.Launched,
+            defaultLauncher.openWebUrlExternally("https://root-path.candy.test"),
+        )
+        assertEquals(listOf("https://root-path.candy.test/", "https://root-path.candy.test/"), resolvedUrls)
+        assertEquals("https://root-path.candy.test/", context.lastIntent?.dataString)
+    }
+
+    @Test
+    fun packagedWebIntentAddsRootPathWithoutChangingBrowserFallback() {
+        assertEquals(
+            ExternalLaunchResult.Launched,
+            launcher.open(Uri.parse("intent://github.com#Intent;scheme=https;package=com.github.android;end")),
+        )
+        assertEquals("https://github.com/", context.lastIntent?.dataString)
+        assertEquals("com.github.android", context.lastIntent?.`package`)
+        assertEquals(
+            ExternalLaunchResult.OpenInBrowser("https://github.com"),
+            launcher.open(Uri.parse("https://github.com")),
+        )
+    }
+
+    @Test
     fun explicitOpenInAppDoesNotSelectGenericBrowser() {
         val unavailableLauncher = ExternalAppLauncher(
             context = context,

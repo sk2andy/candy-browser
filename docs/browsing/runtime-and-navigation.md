@@ -205,7 +205,11 @@
 - In `Automatic` mode, use Android's direct non-browser default handler when one exists. Otherwise,
   search installed apps for a host-specific HTTP(S) handler off the UI thread. Open a sole matching
   app directly, or show Android's app chooser when several match; unavailable links continue in Candy.
-  Apps installed while Candy remains open are immediately eligible. Recheck the source after lookup
+  Also declare visibility for launchable apps: on Android 15 a real app using URI-relative filter
+  groups (such as GitHub) can remain invisible to scheme-only web queries. Candidate selection still
+  requires the requested URL to resolve to a host-specific handler; launcher visibility alone never
+  authorizes a web handoff. Apps installed while Candy remains open are immediately eligible.
+  Recheck the source after lookup
   and show handoff feedback only after Android accepts the external launch.
   Bind a regular-tab lookup to the exact engine session, document-start generation and main-frame
   request revision, while retaining selected-tab/profile/private-surface checks. A same-document
@@ -219,6 +223,12 @@
   the initial URL nor its automatic redirect chain receives an external-navigation grant; this prevents
   the calling app from returning the same link to Candy indefinitely. A subsequent user tap in the
   preview or regular tab follows the normal bounded external-navigation policy.
+- Normalize an empty HTTP(S) path to `/` only at Android app lookup/start boundaries through
+  `ExternalAppWebUrlRules`. Real app filters can require a slash (`https://github.com/`) and reject
+  the equivalent slashless web address. Apply the same target to default resolution, installed-app
+  scanning, explicit package launches and web-data `intent://` requests. Preserve raw query/fragment
+  escaping and retain the original address in browser fallback, handoff and feedback state. App-owned
+  routing can still return unsupported pages to a browser after Android accepts the launch.
 - Launch external activities with `FLAG_ACTIVITY_NEW_TASK` even from an Activity so standard-mode
   app activities use their own task affinity rather than joining Candy's Recents entry. Rebuild
   `intent://` requests with only `ACTION_VIEW`, browsable data, and the requested external package;

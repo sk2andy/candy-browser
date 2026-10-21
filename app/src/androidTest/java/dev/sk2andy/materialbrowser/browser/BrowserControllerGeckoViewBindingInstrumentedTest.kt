@@ -3254,7 +3254,7 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
 
         composeRule.waitUntil(5_000L) { fixture.context.lastIntent != null }
         composeRule.runOnIdle {
-            assertEquals("https://github.com", fixture.context.lastIntent?.dataString)
+            assertEquals("https://github.com/", fixture.context.lastIntent?.dataString)
             assertEquals("com.github.android", fixture.context.lastIntent?.`package`)
             assertTrue(requireNotNull(fixture.session).commands.none { it.type == BrowserEngineCommandType.Load })
         }
@@ -3337,7 +3337,7 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
             assertEquals("github.com", prompt.destination)
             assertTrue(requireNotNull(fixture.session).commands.none { it.type == BrowserEngineCommandType.Load })
             fixture.browser.confirmExternalAppPrompt(prompt.id)
-            assertEquals("https://github.com", fixture.context.lastIntent?.dataString)
+            assertEquals("https://github.com/", fixture.context.lastIntent?.dataString)
         }
     }
 
@@ -3381,7 +3381,7 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
         }
         composeRule.waitUntil(5_000L) { fixture.context.lastIntent != null }
         composeRule.runOnIdle {
-            assertEquals("https://github.com", fixture.context.lastIntent?.dataString)
+            assertEquals("https://github.com/", fixture.context.lastIntent?.dataString)
         }
     }
 
