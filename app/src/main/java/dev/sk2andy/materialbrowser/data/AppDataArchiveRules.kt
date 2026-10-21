@@ -99,8 +99,10 @@ internal object AppDataArchiveRules {
             !path.startsWith("$SITE_WIDGET_SNAPSHOTS_RELATIVE_PATH/") &&
             path != DOWNLOAD_DOCUMENT_SOURCES_RELATIVE_PATH &&
             path != "$DOWNLOAD_DOCUMENT_SOURCES_RELATIVE_PATH.bak" &&
-            path != DEVICE_SEARCH_CONSENT_RELATIVE_PATH &&
-            path != "$DEVICE_SEARCH_CONSENT_RELATIVE_PATH.bak" &&
+            path != SYNC_VAULT_RELATIVE_PATH &&
+            path != "$SYNC_VAULT_RELATIVE_PATH.bak" &&
+            path != SYNC_CACHE_RELATIVE_PATH &&
+            path != "$SYNC_CACHE_RELATIVE_PATH.bak" &&
             path != APP_LOG_CAPTURE_RELATIVE_PATH &&
             path != "$APP_LOG_CAPTURE_RELATIVE_PATH.bak"
 
@@ -200,6 +202,7 @@ internal object AppDataArchiveRules {
     private const val GECKO_LOGS_RELATIVE_PATH = "no_backup/gecko_logs"
     private const val SITE_WIDGET_SNAPSHOTS_RELATIVE_PATH = "no_backup/site_widget_snapshots_v1"
     private const val DOWNLOAD_DOCUMENT_SOURCES_RELATIVE_PATH = "no_backup/download_document_sources_v1.json"
-    private const val DEVICE_SEARCH_CONSENT_RELATIVE_PATH = "shared_prefs/device_search.xml"
+    private const val SYNC_VAULT_RELATIVE_PATH = "no_backup/candy_sync_vault_v1"
+    private const val SYNC_CACHE_RELATIVE_PATH = "no_backup/candy_sync_cache_v1"
     private const val APP_LOG_CAPTURE_RELATIVE_PATH = "shared_prefs/app_logging_capture.xml"
 }

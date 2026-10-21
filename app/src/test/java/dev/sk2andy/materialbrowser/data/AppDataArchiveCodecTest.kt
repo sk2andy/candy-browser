@@ -31,6 +31,10 @@ class AppDataArchiveCodecTest {
             dataDirectory.resolve("shared_prefs/settings.xml"),
             "settings".toByteArray(StandardCharsets.UTF_8),
         )
+        Files.write(
+            dataDirectory.resolve("shared_prefs/device_search.xml"),
+            "enabled=true".toByteArray(StandardCharsets.UTF_8),
+        )
         listOf("app_logging_capture.xml", "app_logging_capture.xml.bak").forEach { name ->
             Files.write(
                 dataDirectory.resolve("shared_prefs/$name"),
@@ -44,6 +48,8 @@ class AppDataArchiveCodecTest {
             dataDirectory.resolve("no_backup/candy_trails/trail.json"),
             "trail".toByteArray(StandardCharsets.UTF_8),
         )
+        Files.write(dataDirectory.resolve("no_backup/candy_sync_vault_v1"), byteArrayOf(7, 7, 7))
+        Files.write(dataDirectory.resolve("no_backup/candy_sync_cache_v1"), byteArrayOf(8, 8, 8))
         Files.createDirectories(dataDirectory.resolve("files/mozilla/profile"))
         Files.write(dataDirectory.resolve("files/mozilla/profile/cookies.sqlite"), byteArrayOf(9, 8, 7))
         Files.createDirectories(dataDirectory.resolve("app_webview/Default"))
@@ -101,6 +107,8 @@ class AppDataArchiveCodecTest {
         assertFalse(inspection.entries.any { entry -> entry.relativePath.startsWith("app_textures") })
         assertFalse(inspection.entries.any { entry -> entry.relativePath.contains("candy_recall.db") })
         assertFalse(inspection.entries.any { entry -> entry.relativePath.startsWith("no_backup/app_logs") })
+        assertFalse(inspection.entries.any { entry -> entry.relativePath.contains("candy_sync_") })
+        assertTrue(inspection.entries.any { entry -> entry.relativePath == "shared_prefs/device_search.xml" })
         listOf("app_logging_capture.xml", "app_logging_capture.xml.bak").forEach { name ->
             assertFalse(inspection.entries.any { entry -> entry.relativePath == "shared_prefs/$name" })
         }
@@ -133,6 +141,12 @@ class AppDataArchiveCodecTest {
         )
         assertFalse(Files.exists(target.resolve("no_backup/candy_recall.db")))
         assertFalse(Files.exists(target.resolve("no_backup/app_logs")))
+        assertFalse(Files.exists(target.resolve("no_backup/candy_sync_vault_v1")))
+        assertFalse(Files.exists(target.resolve("no_backup/candy_sync_cache_v1")))
+        assertEquals(
+            "enabled=true",
+            String(Files.readAllBytes(target.resolve("shared_prefs/device_search.xml")), StandardCharsets.UTF_8),
+        )
         assertFalse(Files.exists(target.resolve("shared_prefs/app_logging_capture.xml")))
         assertFalse(Files.exists(target.resolve("shared_prefs/app_logging_capture.xml.bak")))
         assertFalse(Files.exists(target.resolve("cache")))

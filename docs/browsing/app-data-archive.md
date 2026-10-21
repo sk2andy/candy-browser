@@ -29,21 +29,20 @@ validation and restore-root discovery enforce the same exclusions.
 
 | Data | Examples |
 | --- | --- |
-| Candy settings | Appearance, search, downloads, protection and domain-specific settings in persistent app stores |
+| Candy settings | Appearance, search (including Device Search selection), downloads, protection and domain-specific settings in persistent app stores |
 | Browser state | Regular tabs, profiles, history, favorites, trails, snoozes and previews |
 | Local content | Reader library, Site Capsules, icons, userscripts and Candy Rules |
 | Profile presentation | Separate per-profile new-tab and tab-switcher wallpaper images with independent crop/zoom metadata |
 | Website state (v3) | Gecko/WebView profile files and tab snapshots, including engine-managed cookies, local storage, IndexedDB, CacheStorage, login state and site permissions when stored by the engine. These are opaque engine files and are only attempted on restore; they are not a portable login format. |
 
 Private in-memory state, Android runtime permissions, default-browser role, notification
-settings, device search-consent choice, system password/passkey stores, public downloads and APK
+settings, system password/passkey stores, public downloads and APK
 assets are not portable app data and are not archived. Export is blocked while private tabs exist
 so an active incognito WebView profile cannot enter the ZIP. Guest Bubble state and its isolated
 WebView profile are also excluded.
 
 | Local-only data | Excluded archive paths |
 | --- | --- |
-| Device search consent | `shared_prefs/device_search.xml` and `.xml.bak`; consent must be decided on each device |
 | In-progress form drafts | `no_backup/form_drafts` and descendants; transient form contents stay local |
 | Constellation graph/model cache | `no_backup/candy_constellations.db`, `no_backup/constellation_model` and descendants |
 | Web annotations | `no_backup/web_annotations.json` and atomic-write sidecars |
@@ -53,6 +52,7 @@ WebView profile are also excluded.
 | Guest Bubble session and profile | `no_backup/guest_bubble` and `app_webview_guest_bubble` |
 | Homescreen website widgets | `no_backup/site_widget_snapshots_v1` and descendants, including images, source metadata and launcher widget bindings |
 | Download document-picker provenance | `no_backup/download_document_sources_v1.json` and its atomic backup; backend IDs remain device-local |
+| Candy Sync encrypted vault/cache | `no_backup/candy_sync_vault_v1` and `no_backup/candy_sync_cache_v1`; ciphertext depends on an Android Keystore key that does not migrate |
 
 These exclusions apply to both export and incoming archive entries. Website widget captures
 remain device-local; launcher widget IDs and captured page pixels never migrate through the ZIP.
@@ -126,9 +126,11 @@ are provider-specific and can exceed Android's 25 MB cloud quota. The manual ZIP
 full, user-controlled route for cookies and website storage. Auto Backup timing and restore
 availability are controlled by Android and the active backup transport.
 
-Manual archives include all persistent Candy preferences except local consent/diagnostic controls.
+Manual archives include persistent Candy preferences except device-bound security and diagnostic data.
 Runtime/system state and biometric keys cannot be copied as preferences. As with engine state,
-restoring a profile lock preference does not migrate a device's secure keystore material.
+restoring a profile lock preference does not migrate a device's secure keystore material. Device
+Search preferences are included in manual archives; Android's separate automatic backup policy
+still excludes them.
 
 Profile wallpaper files remain outside cloud backup to avoid consuming Android's small shared
 quota with user images. Each slot's profile metadata can still restore through shared preferences;

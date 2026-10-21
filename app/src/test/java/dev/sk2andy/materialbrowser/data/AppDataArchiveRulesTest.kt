@@ -86,12 +86,24 @@ class AppDataArchiveRulesTest {
     }
 
     @Test
-    fun `device search consent stays on its device and rejects import paths`() {
-        listOf("shared_prefs/device_search.xml", "shared_prefs/device_search.xml.bak").forEach { path ->
-            assertFalse(AppDataArchiveRules.shouldExportRelativePath(path))
-            assertNull(AppDataArchiveRules.dataRelativePath("data/$path", isDirectory = false))
-        }
+    fun `persistent device search settings join manual archive`() {
+        val path = "shared_prefs/device_search.xml"
+        assertTrue(AppDataArchiveRules.shouldExportRelativePath(path))
+        assertEquals(path, AppDataArchiveRules.dataRelativePath("data/$path", isDirectory = false))
         assertTrue(AppDataArchiveRules.shouldExportRelativePath("shared_prefs/device_search_extra.xml"))
+    }
+
+    @Test
+    fun `keystore-bound sync secrets stay on their source device`() {
+        listOf(
+            "no_backup/candy_sync_vault_v1",
+            "no_backup/candy_sync_vault_v1.bak",
+            "no_backup/candy_sync_cache_v1",
+            "no_backup/candy_sync_cache_v1.bak",
+        ).forEach { path ->
+            assertFalse(path, AppDataArchiveRules.shouldExportRelativePath(path))
+            assertNull(path, AppDataArchiveRules.dataRelativePath("data/$path", isDirectory = false))
+        }
     }
 
     @Test
