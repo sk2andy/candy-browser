@@ -1,8 +1,13 @@
 package dev.sk2andy.materialbrowser.shared.ui.settings
 
-import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -207,46 +212,135 @@ fun SettingsHomePage(
             groups.last().add(item)
             groups
         }
-        groups.forEachIndexed { groupIndex, groupItems ->
-            if (groupIndex != 0) Spacer(Modifier.height(24.dp))
-            SettingsSectionTitle(resources.text(groupItems.first().group.label))
-            SettingsPreferenceGroup(containerColor = linkContainerColor) {
-                groupItems.forEachIndexed { index, item ->
-                    val summary = item.summary
-                    val destination = item.destination
-                    SettingsLink(
-                        title = resources.text(item.title),
-                        subtitle = if (summary == null) {
-                            downloadSummary
-                        } else {
-                            resources.text(summary)
-                        },
-                        containerColor = linkContainerColor,
-                        icon = { modifier, tint -> icon(item.icon, modifier, tint) },
-                        enabled = item.isFirefoxExtensionsAction ||
-                            destination?.let(isDestinationEnabled) == true,
-                        onLongClickLabel = resources.text(SettingsHomeLabel.UnlockDeveloperOptions)
-                            .takeIf {
-                                destination == SettingsDestination.AboutLegal &&
-                                    !developerOptionsUnlocked &&
-                                    onUnlockDeveloperOptions != null
-                            },
-                        onLongClick = onUnlockDeveloperOptions.takeIf {
-                            destination == SettingsDestination.AboutLegal && !developerOptionsUnlocked
-                        },
-                        onClick = {
-                            if (item.isFirefoxExtensionsAction) {
-                                onOpenFirefoxExtensions?.invoke()
-                            } else {
-                                destination?.let(onDestinationChanged)
-                            }
-                        },
+        BoxWithConstraints {
+            if (maxWidth >= 840.dp) {
+                val columns = groups.withIndex().partition { it.index % 2 == 0 }
+                Row {
+                    SettingsHomeColumn(
+                        groups = columns.first.map { it.value },
+                        downloadSummary = downloadSummary,
+                        resources = resources,
+                        linkContainerColor = linkContainerColor,
+                        icon = icon,
+                        onDestinationChanged = onDestinationChanged,
+                        onOpenFirefoxExtensions = onOpenFirefoxExtensions,
+                        developerOptionsUnlocked = developerOptionsUnlocked,
+                        onUnlockDeveloperOptions = onUnlockDeveloperOptions,
+                        isDestinationEnabled = isDestinationEnabled,
                     )
-                    if (index != groupItems.lastIndex) {
-                        SettingsPreferenceDivider()
+                    Spacer(Modifier.width(16.dp))
+                    SettingsHomeColumn(
+                        groups = columns.second.map { it.value },
+                        downloadSummary = downloadSummary,
+                        resources = resources,
+                        linkContainerColor = linkContainerColor,
+                        icon = icon,
+                        onDestinationChanged = onDestinationChanged,
+                        onOpenFirefoxExtensions = onOpenFirefoxExtensions,
+                        developerOptionsUnlocked = developerOptionsUnlocked,
+                        onUnlockDeveloperOptions = onUnlockDeveloperOptions,
+                        isDestinationEnabled = isDestinationEnabled,
+                    )
+                }
+            } else {
+                Column {
+                    groups.forEachIndexed { groupIndex, groupItems ->
+                        SettingsHomeGroupSection(
+                            groupItems = groupItems,
+                            groupIndex = groupIndex,
+                            downloadSummary = downloadSummary,
+                            resources = resources,
+                            linkContainerColor = linkContainerColor,
+                            icon = icon,
+                            onDestinationChanged = onDestinationChanged,
+                            onOpenFirefoxExtensions = onOpenFirefoxExtensions,
+                            developerOptionsUnlocked = developerOptionsUnlocked,
+                            onUnlockDeveloperOptions = onUnlockDeveloperOptions,
+                            isDestinationEnabled = isDestinationEnabled,
+                        )
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun RowScope.SettingsHomeColumn(
+    groups: List<List<SettingsHomeItem>>,
+    downloadSummary: String,
+    resources: SettingsHomeResources,
+    linkContainerColor: Color,
+    icon: @Composable (SettingsHomeIcon, Modifier, Color) -> Unit,
+    onDestinationChanged: (SettingsDestination) -> Unit,
+    onOpenFirefoxExtensions: (() -> Unit)?,
+    developerOptionsUnlocked: Boolean,
+    onUnlockDeveloperOptions: (() -> Unit)?,
+    isDestinationEnabled: (SettingsDestination) -> Boolean,
+) {
+    Column(modifier = Modifier.weight(1f)) {
+        groups.forEachIndexed { groupIndex, groupItems ->
+            SettingsHomeGroupSection(
+                groupItems = groupItems,
+                groupIndex = groupIndex,
+                downloadSummary = downloadSummary,
+                resources = resources,
+                linkContainerColor = linkContainerColor,
+                icon = icon,
+                onDestinationChanged = onDestinationChanged,
+                onOpenFirefoxExtensions = onOpenFirefoxExtensions,
+                developerOptionsUnlocked = developerOptionsUnlocked,
+                onUnlockDeveloperOptions = onUnlockDeveloperOptions,
+                isDestinationEnabled = isDestinationEnabled,
+            )
+        }
+    }
+}
+
+@Composable
+private fun SettingsHomeGroupSection(
+    groupItems: List<SettingsHomeItem>,
+    groupIndex: Int,
+    downloadSummary: String,
+    resources: SettingsHomeResources,
+    linkContainerColor: Color,
+    icon: @Composable (SettingsHomeIcon, Modifier, Color) -> Unit,
+    onDestinationChanged: (SettingsDestination) -> Unit,
+    onOpenFirefoxExtensions: (() -> Unit)?,
+    developerOptionsUnlocked: Boolean,
+    onUnlockDeveloperOptions: (() -> Unit)?,
+    isDestinationEnabled: (SettingsDestination) -> Boolean,
+) {
+    if (groupIndex != 0) Spacer(Modifier.height(24.dp))
+    SettingsSectionTitle(resources.text(groupItems.first().group.label))
+    SettingsPreferenceGroup(containerColor = linkContainerColor) {
+        groupItems.forEachIndexed { index, item ->
+            val destination = item.destination
+            SettingsLink(
+                title = resources.text(item.title),
+                subtitle = if (item.summary == null) downloadSummary else resources.text(item.summary),
+                containerColor = linkContainerColor,
+                icon = { modifier, tint -> icon(item.icon, modifier, tint) },
+                enabled = item.isFirefoxExtensionsAction ||
+                    destination?.let(isDestinationEnabled) == true,
+                onLongClickLabel = resources.text(SettingsHomeLabel.UnlockDeveloperOptions)
+                    .takeIf {
+                        destination == SettingsDestination.AboutLegal &&
+                            !developerOptionsUnlocked &&
+                            onUnlockDeveloperOptions != null
+                    },
+                onLongClick = onUnlockDeveloperOptions.takeIf {
+                    destination == SettingsDestination.AboutLegal && !developerOptionsUnlocked
+                },
+                onClick = {
+                    if (item.isFirefoxExtensionsAction) {
+                        onOpenFirefoxExtensions?.invoke()
+                    } else {
+                        destination?.let(onDestinationChanged)
+                    }
+                },
+            )
+            if (index != groupItems.lastIndex) SettingsPreferenceDivider()
         }
     }
 }
