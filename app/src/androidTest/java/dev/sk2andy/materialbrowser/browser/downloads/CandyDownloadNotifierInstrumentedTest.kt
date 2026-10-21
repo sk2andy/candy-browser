@@ -9,6 +9,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.SystemClock
 import android.text.format.Formatter
+import androidx.core.app.NotificationCompat
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import dev.sk2andy.materialbrowser.R
@@ -20,6 +21,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
 import org.junit.Test
@@ -96,11 +98,17 @@ class CandyDownloadNotifierInstrumentedTest {
             assertEquals("expressive-download.bin", running.extras.getString(Notification.EXTRA_TITLE))
             assertEquals(100, running.extras.getInt(Notification.EXTRA_PROGRESS_MAX))
             assertEquals(50, running.extras.getInt(Notification.EXTRA_PROGRESS))
+            assertTrue(NotificationCompat.isRequestPromotedOngoing(running))
+            assertEquals("50%", NotificationCompat.getShortCriticalText(running))
+            assertFalse(running.extras.getBoolean(Notification.EXTRA_COLORIZED))
             if (Build.VERSION.SDK_INT >= 36) {
                 assertEquals(
                     Notification.ProgressStyle::class.java.name,
                     running.extras.getString(Notification.EXTRA_TEMPLATE),
                 )
+                if (Build.VERSION.SDK_INT_FULL >= Build.VERSION_CODES_FULL.BAKLAVA_1) {
+                    assertTrue(running.hasPromotableCharacteristics())
+                }
             }
             assertTrue(running.flags and Notification.FLAG_ONGOING_EVENT != 0)
             assertNotNull(running.contentIntent)
@@ -125,12 +133,72 @@ class CandyDownloadNotifierInstrumentedTest {
                 ),
                 paused.extras.getString(Notification.EXTRA_TEXT),
             )
+            assertFalse(NotificationCompat.isRequestPromotedOngoing(paused))
+            assertNull(NotificationCompat.getShortCriticalText(paused))
 
-            requireNotNull(paused.actions).last().actionIntent.send()
+            requireNotNull(paused.actions).first().actionIntent.send()
+            awaitStatus(transferId, DownloadStatus.Running)
+            val resumed = awaitNotification(manager, notificationId) { notification ->
+                notification.actions?.firstOrNull()?.title == context.getString(R.string.downloads_pause)
+            }
+            assertTrue(NotificationCompat.isRequestPromotedOngoing(resumed))
+            assertEquals("50%", NotificationCompat.getShortCriticalText(resumed))
+
+            requireNotNull(resumed.actions).last().actionIntent.send()
             awaitCondition { cancelled.get() }
             assertTrue(cancelled.get())
         } finally {
             DownloadRuntimeRegistry.completed(transferId)
+            notifier.cancel(transferId)
+        }
+    }
+
+    @Test
+    fun unknownTotalRequestsLiveUpdateWithoutInventedPercentageAndCompletionClearsIt() {
+        val context = notificationContext()
+        val manager = context.getSystemService(NotificationManager::class.java)
+        val notifier = CandyDownloadNotifier(context)
+        val transferId = DownloadRuntimeRegistry.nextTransferId()
+        val notificationId = CandyDownloadNotifier.notificationId(transferId)
+        val entry = DownloadEntry(
+            id = -91_004L,
+            name = "unknown-size.bin",
+            source = "https://example.com/unknown-size.bin",
+            status = DownloadStatus.Running,
+            bytes = 10L,
+            total = -1L,
+            lastModified = 15L,
+            mime = "application/octet-stream",
+            supportsCancel = true,
+        )
+
+        try {
+            notifier.active(transferId, entry)
+            val running = awaitNotification(manager, notificationId)
+            assertTrue(NotificationCompat.isRequestPromotedOngoing(running))
+            assertNull(NotificationCompat.getShortCriticalText(running))
+            assertTrue(running.extras.getBoolean(Notification.EXTRA_PROGRESS_INDETERMINATE))
+            if (
+                Build.VERSION.SDK_INT >= 36 &&
+                Build.VERSION.SDK_INT_FULL >= Build.VERSION_CODES_FULL.BAKLAVA_1
+            ) {
+                assertTrue(running.hasPromotableCharacteristics())
+            }
+
+            notifier.complete(
+                transferId = transferId,
+                fileName = entry.name,
+                mimeType = entry.mime,
+                uri = Uri.parse("content://media/external/downloads/91004"),
+            )
+            val completed = awaitNotification(manager, notificationId) { notification ->
+                notification.extras.getString(Notification.EXTRA_TEXT) ==
+                    context.getString(R.string.download_notification_complete)
+            }
+            assertFalse(NotificationCompat.isRequestPromotedOngoing(completed))
+            assertNull(NotificationCompat.getShortCriticalText(completed))
+            assertEquals(0, completed.flags and Notification.FLAG_ONGOING_EVENT)
+        } finally {
             notifier.cancel(transferId)
         }
     }
@@ -183,6 +251,8 @@ class CandyDownloadNotifierInstrumentedTest {
             }
             assertEquals(0, completed.flags and Notification.FLAG_ONGOING_EVENT)
             assertTrue(completed.flags and Notification.FLAG_AUTO_CANCEL != 0)
+            assertFalse(NotificationCompat.isRequestPromotedOngoing(completed))
+            assertNull(NotificationCompat.getShortCriticalText(completed))
         } finally {
             notifier.onPermissionResult(granted = false)
             notifier.cancel(transferId)

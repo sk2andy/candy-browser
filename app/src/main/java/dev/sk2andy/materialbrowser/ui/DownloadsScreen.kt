@@ -37,6 +37,8 @@ import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -82,6 +84,8 @@ internal fun DownloadsScreen(
     onTogglePauseDownload: (DownloadEntry) -> Unit = {},
 ) {
     val context = LocalContext.current
+    val snackbarHostState = remember { SnackbarHostState() }
+    DownloadCompletionSnackbarEffect(snackbarHostState)
     val locale = LocalConfiguration.current.locales[0]
     val zoneId = remember { ZoneId.systemDefault() }
     val dateTimeFormatter = remember(locale) {
@@ -106,6 +110,7 @@ internal fun DownloadsScreen(
     }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.downloads_title)) },

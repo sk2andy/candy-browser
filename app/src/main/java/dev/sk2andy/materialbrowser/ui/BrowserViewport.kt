@@ -133,6 +133,7 @@ internal fun ExternalLinkPreviewScreen(
     var blurTarget by remember { mutableStateOf<BlurTarget?>(null) }
     val feedbackSnackbarHostState = remember { SnackbarHostState() }
     ExternalAppFeedbackSnackbarEffect(controller, feedbackSnackbarHostState)
+    DownloadCompletionSnackbarEffect(feedbackSnackbarHostState)
     val profiles = if (controller.profilesEnabled) {
         controller.localBrowserProfiles
     } else {

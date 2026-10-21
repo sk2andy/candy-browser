@@ -771,6 +771,10 @@
     <string name="downloads_status_cancelled">Cancelled · %1$s</string>
     <string name="toast_download_handed_off">Sent to %1$s</string>
     <string name="download_manager_chooser_title">Download with</string>
+    <string name="download_again_title">Download again?</string>
+    <string name="download_again_message">A file named “%1$s” is already in Downloads. Do you want to download it again?</string>
+    <string name="download_again_action">Download again</string>
+    <string name="download_open_existing">Open existing file</string>
     <string name="error_download_invalid_address">Invalid download address</string>
     <string name="error_download_start_failed">Download could not be started</string>
     <string name="error_page_unreachable">Website not found</string>

@@ -730,6 +730,10 @@
     <string name="downloads_status_cancelled">Abgebrochen · %1$s</string>
     <string name="toast_download_handed_off">An %1$s übergeben</string>
     <string name="download_manager_chooser_title">Herunterladen mit</string>
+    <string name="download_again_title">Erneut herunterladen?</string>
+    <string name="download_again_message">Eine Datei namens „%1$s“ liegt bereits in Downloads. Möchtest du sie erneut herunterladen?</string>
+    <string name="download_again_action">Erneut herunterladen</string>
+    <string name="download_open_existing">Vorhandene Datei öffnen</string>
     <string name="error_download_invalid_address">Download-Adresse ist ungültig</string>
     <string name="error_download_start_failed">Download konnte nicht gestartet werden</string>
     <string name="error_page_unreachable">Website nicht gefunden</string>

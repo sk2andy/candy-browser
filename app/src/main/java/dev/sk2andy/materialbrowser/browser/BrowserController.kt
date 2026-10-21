@@ -259,6 +259,9 @@ import dev.sk2andy.materialbrowser.data.HistoryEntry
 import dev.sk2andy.materialbrowser.data.HistoryRecordingMode
 import dev.sk2andy.materialbrowser.data.InactiveTabLifetime
 import dev.sk2andy.materialbrowser.data.DownloadManagerMode
+import dev.sk2andy.materialbrowser.data.DownloadRepository
+import dev.sk2andy.materialbrowser.data.ExistingDownload
+import dev.sk2andy.materialbrowser.data.SafeDownloadValues
 import dev.sk2andy.materialbrowser.data.PermissionRadarStore
 import dev.sk2andy.materialbrowser.data.PendingCandyTrailRedaction
 import dev.sk2andy.materialbrowser.data.ProfileWallpaperStore
@@ -1582,6 +1585,9 @@ class BrowserController(
         }
     }
     private val fileChooserValidationExecutor = Executors.newSingleThreadExecutor()
+    private val downloadDuplicateLookupExecutor = Executors.newSingleThreadExecutor { task ->
+        Thread(task, "download-duplicate-lookup")
+    }
     private val externalAppLookupExecutor = Executors.newSingleThreadExecutor { task ->
         Thread(task, "external-app-lookup")
     }
@@ -1723,10 +1729,14 @@ class BrowserController(
     private val toppingCatalogRepository = ToppingCatalogRepository.get(activity)
     private val bundledSitePrivacyDefaults = BundledSitePrivacyDefaults.load(activity)
     private val downloadManager = BrowserDownloadManager(activity)
+    private val downloadRepository = DownloadRepository(activity)
     private val externalDownloadManager = ExternalDownloadManager(activity)
 
     @VisibleForTesting
     internal var externalDownloadDiscoveryForTesting: ((BrowserDownloadRequest?) -> List<ExternalDownloadManagerApp>)? = null
+
+    @VisibleForTesting
+    internal var downloadDuplicateLookupForTesting: ((BrowserDownloadRequest) -> ExistingDownload?)? = null
 
     @VisibleForTesting
     internal fun dispatchSelectedDownloadResponseForTesting(response: GeckoExternalDownloadResponse) {
@@ -7470,6 +7480,11 @@ class BrowserController(
             showNextDownloadChoice()
             return
         }
+        choice.downloadAgain?.let { downloadAgain ->
+            downloadAgain()?.let(::showDownloadResult)
+            showNextDownloadChoice()
+            return
+        }
         val builtInDownload = choice.builtInDownload ?: { downloadManager.enqueue(choice.request) }
         val result = if (managerId == null) {
             builtInDownload()
@@ -7497,6 +7512,26 @@ class BrowserController(
         pendingDownloadChoice = null
         choice.releaseResponse?.invoke()
         showNextDownloadChoice()
+    }
+
+    fun openExistingDownload(expectedChoice: PendingDownloadChoice) {
+        val choice = pendingDownloadChoice?.takeIf { it === expectedChoice } ?: return
+        val existing = choice.existingDownload ?: return
+        if (choice.isSourceCurrent?.invoke() == false) {
+            dismissDownloadChoice(choice)
+            return
+        }
+        runCatching {
+            activity.startActivity(
+                Intent(Intent.ACTION_VIEW)
+                    .setDataAndType(existing.uri, existing.mimeType.ifBlank { "*/*" })
+                    .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION),
+            )
+        }.onSuccess {
+            dismissDownloadChoice(choice)
+        }.onFailure {
+            Toast.makeText(activity, R.string.downloads_open_failed, Toast.LENGTH_SHORT).show()
+        }
     }
 
     fun openContextLinkInBackground() {
@@ -12346,6 +12381,7 @@ class BrowserController(
         cancelPendingWebPrompt()
         cancelPendingFileChooser()
         fileChooserValidationExecutor.shutdownNow()
+        downloadDuplicateLookupExecutor.shutdownNow()
         externalAppLookupExecutor.shutdownNow()
         geckoFileUploadStager.releaseAll()
         profileWallpaperLoadGeneration++
@@ -13118,11 +13154,15 @@ class BrowserController(
                 tabs.firstOrNull { it.id == tabId }?.url == sourceUrl
         }
         val request = BrowserEngineDownloadRules.request(response.metadata, referrerFor(tabId))
-        if (request == null) {
-            runCatching(requestDownloadNotificationPermission)
-            startBuiltInDownloadResponse(response)
-            return
-        }
+            ?: BrowserDownloadRequest(
+                url = response.metadata.url,
+                fileName = SafeDownloadValues.fileName(
+                    response.metadata.url,
+                    response.metadata.contentDisposition,
+                    SafeDownloadValues.mimeType(response.metadata.mimeType),
+                ),
+                mimeType = SafeDownloadValues.mimeType(response.metadata.mimeType),
+            )
         routeDownload(
             request = request,
             tabId = tabId,
@@ -15977,13 +16017,68 @@ class BrowserController(
         builtInDownload: (() -> DownloadActionResult?)? = null,
         releaseResponse: (() -> Unit)? = null,
         isSourceCurrent: (() -> Boolean)? = null,
+        checkExistingDownload: Boolean = true,
     ): DownloadActionResult? {
         val sourceTab = tabs.firstOrNull { it.id == tabId }
         val ownedRequest = request.copy(sourceProfileId = sourceTab?.profileId, isPrivate = sourceTab?.isIncognito != false)
+        if (checkExistingDownload) {
+            val duplicateLookup = downloadDuplicateLookupForTesting
+            if (duplicateLookup != null) {
+                val existing = duplicateLookup(ownedRequest)
+                if (existing != null) {
+                    enqueueExistingDownloadChoice(
+                        ownedRequest = ownedRequest,
+                        request = request,
+                        tabId = tabId,
+                        builtInDownload = builtInDownload,
+                        releaseResponse = releaseResponse,
+                        isSourceCurrent = isSourceCurrent,
+                        existing = existing,
+                    )
+                    return null
+                }
+            } else {
+                runCatching {
+                    downloadDuplicateLookupExecutor.execute {
+                        val existing = runCatching {
+                            downloadRepository.existingDownload(ownedRequest)
+                        }.getOrNull()
+                        mainHandler.post {
+                            if (destroyed || isSourceCurrent?.invoke() == false) {
+                                releaseResponse?.invoke()
+                            } else if (existing != null) {
+                                enqueueExistingDownloadChoice(
+                                    ownedRequest = ownedRequest,
+                                    request = request,
+                                    tabId = tabId,
+                                    builtInDownload = builtInDownload,
+                                    releaseResponse = releaseResponse,
+                                    isSourceCurrent = isSourceCurrent,
+                                    existing = existing,
+                                )
+                            } else {
+                                routeDownload(
+                                    request,
+                                    tabId,
+                                    builtInDownload,
+                                    releaseResponse,
+                                    isSourceCurrent,
+                                    false,
+                                )?.let(::showDownloadResult)
+                            }
+                        }
+                    }
+                }.onFailure {
+                    releaseResponse?.invoke()
+                }
+                return null
+            }
+        }
         val startBuiltInDownload = {
             runCatching(requestDownloadNotificationPermission)
             if (builtInDownload != null) builtInDownload() else downloadManager.enqueue(ownedRequest)
         }
+        if (!SafeDownloadValues.isHttpUrl(request.url)) return startBuiltInDownload()
         return when (downloadSettings.managerMode) {
             DownloadManagerMode.BuiltIn -> startBuiltInDownload()
             DownloadManagerMode.AskEveryTime -> {
@@ -16030,6 +16125,31 @@ class BrowserController(
         } else {
             queuedDownloadChoices.addLast(choice)
         }
+    }
+
+    private fun enqueueExistingDownloadChoice(
+        ownedRequest: BrowserDownloadRequest,
+        request: BrowserDownloadRequest,
+        tabId: String,
+        builtInDownload: (() -> DownloadActionResult?)?,
+        releaseResponse: (() -> Unit)?,
+        isSourceCurrent: (() -> Boolean)?,
+        existing: ExistingDownload,
+    ) {
+        enqueueDownloadChoice(
+            PendingDownloadChoice(
+                request = ownedRequest,
+                apps = emptyList(),
+                isIncognito = ownedRequest.isPrivate,
+                releaseResponse = releaseResponse,
+                isSourceCurrent = isSourceCurrent,
+                sourceTabId = tabId,
+                existingDownload = existing,
+                downloadAgain = {
+                    routeDownload(request, tabId, builtInDownload, releaseResponse, isSourceCurrent, false)
+                },
+            ),
+        )
     }
 
     private fun showNextDownloadChoice() {

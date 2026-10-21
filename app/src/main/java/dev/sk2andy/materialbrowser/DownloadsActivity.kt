@@ -1,6 +1,5 @@
 package dev.sk2andy.materialbrowser
 
-import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -14,6 +13,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import dev.sk2andy.materialbrowser.browser.guest.GuestBubbleGate
+import dev.sk2andy.materialbrowser.browser.downloads.DownloadFileOpener
 import dev.sk2andy.materialbrowser.data.AppDataTransferLock
 import dev.sk2andy.materialbrowser.data.BrowserSessionStore
 import dev.sk2andy.materialbrowser.data.DownloadEntry
@@ -106,18 +106,7 @@ class DownloadsActivity : ComponentActivity() {
             Toast.makeText(this, R.string.downloads_open_failed, Toast.LENGTH_SHORT).show()
             return
         }
-        val mime = entry.mime.takeIf(String::isNotBlank)
-            ?: contentResolver.getType(uri)
-            ?: "*/*"
-        runCatching {
-            startActivity(
-                Intent(Intent.ACTION_VIEW)
-                    .setDataAndType(uri, mime)
-                    .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION),
-            )
-        }.onFailure {
-            Toast.makeText(this, R.string.downloads_open_failed, Toast.LENGTH_SHORT).show()
-        }
+        DownloadFileOpener.open(this, uri, entry.mime)
     }
 
     private fun updateDownload(action: () -> Boolean) {
