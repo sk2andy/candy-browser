@@ -1224,6 +1224,7 @@ internal fun TabOverview(
                     cardModifier = { tab ->
                         Modifier.testTag(SnoozeTestTags.overviewTab(tab.id))
                     },
+                    titleOverlayTopOffset = (-12).dp,
                     modifier = Modifier
                         .weight(1f)
                         .graphicsLayer {
