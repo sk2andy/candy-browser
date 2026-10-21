@@ -767,7 +767,8 @@ internal fun AddressBarActionEditorPage(
                     .verticalScroll(rememberScrollState())
                     .testTag(AddressBarActionEditorTestTags.Palette)
                     .semantics { contentDescription = availableTitle }
-                    .onGloballyPositioned { paletteBounds = it.boundsInRoot() },
+                    .onGloballyPositioned { paletteBounds = it.boundsInRoot() }
+                    .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 available.chunked(PALETTE_COLUMNS).forEach { rowActions ->
