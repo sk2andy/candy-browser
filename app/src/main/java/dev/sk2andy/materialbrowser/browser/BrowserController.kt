@@ -782,6 +782,8 @@ class BrowserController(
         private set
     var searchEngine by mutableStateOf(SearchEngine.Google)
         private set
+    var searchShortcuts by mutableStateOf<List<SearchShortcut>>(emptyList())
+        private set
     var pageTranslationProvider by mutableStateOf(PageTranslationProvider.Google)
         private set
     private val customWorkflowRuntime by lazy { BrowserCustomWorkflowRuntime(activity, this) }
@@ -2788,6 +2790,7 @@ class BrowserController(
         searxngSettings = store.loadSearxngSettings()
         residentTabLimit = store.loadResidentTabLimit()
         searchEngine = store.loadSearchEngine()
+        searchShortcuts = store.loadSearchShortcuts()
         pageTranslationProvider = store.loadPageTranslationProvider()
         customWorkflowRuntime.load()
         linkLongPressAction = store.loadLinkLongPressAction()
@@ -5576,6 +5579,7 @@ class BrowserController(
             null -> {
                 if (
                     searchEngine == SearchEngine.SearXNG &&
+                    SearchShortcutRules.resolve(input, searchShortcuts) == null &&
                     AddressResolver.isSearchQuery(input, allowGeckoInternalPages = usesGeckoEngine) &&
                     SearxngRules.normalizedInstanceUrl(searxngSettings.instanceUrl) == null
                 ) {
@@ -5592,6 +5596,7 @@ class BrowserController(
                     searchMode = searchMode,
                     searxngInstanceUrl = searxngSettings.instanceUrl,
                     allowGeckoInternalPages = usesGeckoEngine,
+                    searchShortcuts = searchShortcuts,
                 )
             }
         }
@@ -11452,6 +11457,11 @@ class BrowserController(
     fun updateSearchEngine(engine: SearchEngine) {
         searchEngine = engine
         store.saveSearchEngine(engine)
+    }
+
+    fun updateSearchShortcuts(shortcuts: List<SearchShortcut>) {
+        searchShortcuts = SearchShortcutRules.sanitize(shortcuts)
+        store.saveSearchShortcuts(searchShortcuts)
     }
 
     fun updatePageTranslationProvider(provider: PageTranslationProvider) {

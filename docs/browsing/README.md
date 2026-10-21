@@ -31,6 +31,7 @@
 | Opt-in text rescue, encrypted regular drafts and private memory-only recovery | [`form-drafts.md`](form-drafts.md) | `browser/formdraft`, `FormDraftStore`, engine draft bridges |
 | Candy Constellations / semantic page map | [`constellations.md`](constellations.md), [`constellations-model.md`](constellations-model.md) | `constellations/`, `ConstellationRepository`, `ConstellationStore`, `ConstellationActivity`, `ui/ConstellationScreen` |
 | SearXNG search, instance configuration, suggestions, fallback | [`searxng.md`](searxng.md) | `SearxngSettings`, `SearchEngine`, `SearchSuggestionProvider`, `BrowserSessionStore` |
+| User-defined search keywords and URL templates | [`searxng.md`](searxng.md#user-search-shortcuts) | `SearchShortcutRules`, `AddressResolver`, `SearchSettingsPage`, `BrowserSessionStore` |
 | Kagi search and privacy-enhanced suggestions | [`kagi.md`](kagi.md) | `SearchEngine`, `SearchSuggestionProvider` |
 | Google AI Mode user flow, routing, persistence, and privacy | [`google-ai-mode.md`](google-ai-mode.md) | `SearchEngine`, `AddressAiModeRules`, `BrowserSessionStore`, `AddressAiModeToggle` |
 | Page translation providers, URL routing, persistence, and privacy | [`page-translation.md`](page-translation.md) | `PageTranslationRules`, `BrowserController`, `BrowserSessionStore`, `BrowserMainMenu`, `BrowserSettingsPage` |

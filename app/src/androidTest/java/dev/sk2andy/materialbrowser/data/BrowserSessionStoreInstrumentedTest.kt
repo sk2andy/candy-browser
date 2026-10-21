@@ -23,6 +23,7 @@ import dev.sk2andy.materialbrowser.browser.ProfileWallpaper
 import dev.sk2andy.materialbrowser.browser.ProfileLockTrigger
 import dev.sk2andy.materialbrowser.browser.ProfileProtection
 import dev.sk2andy.materialbrowser.browser.SearchEngine
+import dev.sk2andy.materialbrowser.browser.SearchShortcut
 import dev.sk2andy.materialbrowser.browser.SearxngRules
 import dev.sk2andy.materialbrowser.browser.SearxngSettings
 import dev.sk2andy.materialbrowser.browser.StartupAddressFocusMode
@@ -1163,6 +1164,22 @@ class BrowserSessionStoreInstrumentedTest {
 
         preferences.edit().putString("search_engine", "unknown").commit()
         assertEquals(SearchEngine.Google, store.loadSearchEngine())
+    }
+
+    @Test
+    fun searchShortcutsRoundTripAndInvalidPersistedValuesAreDropped() {
+        val store = BrowserSessionStore(context)
+        val shortcut = SearchShortcut("gh", "https://github.com/search?q=%s")
+        store.saveSearchShortcuts(listOf(shortcut))
+        assertEquals(listOf(shortcut), store.loadSearchShortcuts())
+
+        preferences.edit().putString(
+            "search_shortcuts",
+            "[{\"keyword\":\"gh\",\"template\":\"https://github.com/search?q=%s\"}," +
+                "{\"keyword\":\"GH\",\"template\":\"https://other.example/?q=%s\"}," +
+                "{\"keyword\":\"bad\",\"template\":\"javascript:alert(%s)\"}]",
+        ).commit()
+        assertEquals(listOf(shortcut), store.loadSearchShortcuts())
     }
 
     @Test
