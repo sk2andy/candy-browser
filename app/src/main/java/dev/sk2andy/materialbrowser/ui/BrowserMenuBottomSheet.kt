@@ -159,10 +159,11 @@ internal fun BrowserMenuBottomSheet(
                 val compactHeight = BrowserMenuBottomSheetMotionRules.isCompactHeight(maxHeight.value)
                 val sheetHeight = maxHeight * BrowserMenuBottomSheetMotionRules.heightFraction(maxHeight.value)
                 val cornerRadius = browserChromeSurfaceTokens().cornerRadius
+                val expandedWidth = if (maxWidth > maxHeight) maxWidth.coerceAtMost(640.dp) else maxWidth
                 var availableBounds by remember { mutableStateOf<Rect?>(null) }
                 val collapsedWidth = openingAnchor?.let { with(density) { it.width.toDp() } }
-                    ?.coerceIn(0.dp, maxWidth) ?: (maxWidth - 32.dp).coerceAtLeast(0.dp)
-                val horizontalInset = (maxWidth - collapsedWidth) / 2 * (1f - presentedProgress)
+                    ?.coerceIn(0.dp, expandedWidth) ?: (expandedWidth - 32.dp).coerceAtLeast(0.dp)
+                val horizontalInset = (expandedWidth - collapsedWidth) / 2 * (1f - presentedProgress)
                 val sheetHeightPx = with(density) { sheetHeight.toPx() }
                 val targetTop = availableBounds?.let { it.bottom - sheetHeightPx } ?: 0f
                 val collapsedOffsetPx = BrowserMenuBottomSheetMotionRules.translationY(
@@ -176,8 +177,8 @@ internal fun BrowserMenuBottomSheet(
                 val shape = RoundedCornerShape(
                     topStart = cornerRadius,
                     topEnd = cornerRadius,
-                    bottomStart = horizontalInset,
-                    bottomEnd = horizontalInset,
+                    bottomStart = if (expandedWidth < maxWidth) 0.dp else horizontalInset,
+                    bottomEnd = if (expandedWidth < maxWidth) 0.dp else horizontalInset,
                 )
                 Box(
                     Modifier.fillMaxSize().onGloballyPositioned {
@@ -186,8 +187,45 @@ internal fun BrowserMenuBottomSheet(
                 )
                 Box(
                     modifier = Modifier
-                        .width(maxWidth - horizontalInset * 2)
+                        .width(expandedWidth - horizontalInset * 2)
                         .height(sheetHeight)
+                        .draggable(
+                            state = rememberDraggableState { delta ->
+                                if (dragging && currentExpanded) {
+                                    dragProgress = BrowserMenuBottomSheetMotionRules.dragProgress(
+                                        progress = dragProgress,
+                                        deltaPx = delta,
+                                        collapsedOffsetPx = collapsedOffsetPx,
+                                    )
+                                }
+                            },
+                            orientation = Orientation.Vertical,
+                            enabled = expanded && !actionCommitted,
+                            startDragImmediately = progress.isRunning,
+                            onDragStarted = {
+                                if (currentExpanded && !actionCommitted) {
+                                    progress.stop()
+                                    if (currentExpanded && !actionCommitted) {
+                                        dragProgress = progress.value.coerceIn(0f, 1f)
+                                        dragging = true
+                                    }
+                                }
+                            },
+                            onDragStopped = { velocity ->
+                                if (!currentExpanded || actionCommitted || !dragging) return@draggable
+                                progress.snapTo(dragProgress)
+                                dragging = false
+                                if (BrowserMenuBottomSheetMotionRules.shouldDismiss(
+                                        progress = dragProgress,
+                                        velocityDpPerSecond = velocity / density.density,
+                                    )
+                                ) {
+                                    onDismissRequest()
+                                } else {
+                                    progress.animateTo(1f, returnAnimationSpec)
+                                }
+                            },
+                        )
                         .graphicsLayer {
                             val anchor = openingAnchor
                             val bounds = availableBounds
@@ -243,43 +281,6 @@ internal fun BrowserMenuBottomSheet(
                                 onClickLabel = stringResource(R.string.browser_menu_dismiss),
                                 role = Role.Button,
                                 onClick = onDismissRequest,
-                            )
-                            .draggable(
-                                state = rememberDraggableState { delta ->
-                                    if (dragging && currentExpanded) {
-                                        dragProgress = BrowserMenuBottomSheetMotionRules.dragProgress(
-                                            progress = dragProgress,
-                                            deltaPx = delta,
-                                            collapsedOffsetPx = collapsedOffsetPx,
-                                        )
-                                    }
-                                },
-                                orientation = Orientation.Vertical,
-                                enabled = expanded && !actionCommitted,
-                                startDragImmediately = progress.isRunning,
-                                onDragStarted = {
-                                    if (currentExpanded && !actionCommitted) {
-                                        progress.stop()
-                                        if (currentExpanded && !actionCommitted) {
-                                            dragProgress = progress.value.coerceIn(0f, 1f)
-                                            dragging = true
-                                        }
-                                    }
-                                },
-                                onDragStopped = { velocity ->
-                                    if (!currentExpanded || actionCommitted || !dragging) return@draggable
-                                    progress.snapTo(dragProgress)
-                                    dragging = false
-                                    if (BrowserMenuBottomSheetMotionRules.shouldDismiss(
-                                            progress = dragProgress,
-                                            velocityDpPerSecond = velocity / density.density,
-                                        )
-                                    ) {
-                                        onDismissRequest()
-                                    } else {
-                                        progress.animateTo(1f, returnAnimationSpec)
-                                    }
-                                },
                             ),
                         extensionContent = extensionContent,
                     )
