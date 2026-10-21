@@ -32,6 +32,7 @@ import dev.sk2andy.materialbrowser.shared.resources.settings_approved_gestures
 import dev.sk2andy.materialbrowser.shared.resources.settings_approved_link_preview_final_v8
 import dev.sk2andy.materialbrowser.shared.resources.settings_approved_tab_lifecycle
 import dev.sk2andy.materialbrowser.shared.resources.settings_approved_personal_link_rules
+import dev.sk2andy.materialbrowser.shared.resources.settings_external_app_links
 import org.jetbrains.compose.resources.imageResource
 import kotlin.math.roundToInt
 
@@ -55,6 +56,7 @@ fun SettingsHeaderIllustration(
             SettingsHeaderArtwork.LinkPreview -> Res.drawable.settings_approved_link_preview_final_v8
             SettingsHeaderArtwork.TabLifecycle -> Res.drawable.settings_approved_tab_lifecycle
             SettingsHeaderArtwork.PersonalLinkRules -> Res.drawable.settings_approved_personal_link_rules
+            SettingsHeaderArtwork.ExternalApps -> Res.drawable.settings_external_app_links
         },
     )
     val source = remember(artwork) { SettingsHeaderArtworkRules.sourceWindow(artwork) }

@@ -452,7 +452,9 @@ their explicitly identified revisions.
 
 The **Theme & interface**, **Tabs**, **Player**, **Search**, **Downloads**, **Gestures**,
 **Profile options**, **Translations**, **Tab lifecycle**, **Personal link rules** and
-**External link preview** pages show approved imagegen illustrations. Profiles and Translations
+**External link preview** pages show approved imagegen illustrations.
+**Open links in apps** uses a matching generated browser/app-return motif; its source and prompt
+are recorded in [`../design/external-app-links-artwork.md`](../design/external-app-links-artwork.md). Profiles and Translations
 now begin their own focused pages with full headers; they are no longer compact inline section art.
 Android and shared Core Search use the same approved Search illustration and built-in engine choices.
 `SettingsHeaderIllustration` owns shared Compose rendering. The images are decorative, have no
@@ -461,7 +463,7 @@ accessibility announcement or interaction, and use a centered, aspect-preserving
 the page. The External link preview page uses only its approved v8 decorative header; its redundant
 older graphic is removed without removing controls.
 
-The ten PNGs in `shared/src/commonMain/composeResources/drawable` are byte-identical original
+The eleven PNGs in `shared/src/commonMain/composeResources/drawable` are byte-identical original
 downloads. No pixels were cropped, recolored, redrawn or regenerated in the source files. The
 Appearance and Tabs windows reference the first sheet; the rejected rounded Player on that sheet
 is outside both windows. Player references only the separately approved waveform image.
@@ -478,6 +480,7 @@ is outside both windows. Player references only the separately approved waveform
 | `settings_approved_link_preview_final_v8.png` | 1536 × 1024 | Link Preview `(0, 0, 1536, 1024)` | `96d31d9d40b7e48b5cedde34da2ce48e3b8f2169663bdb3f2324111743c5648a` |
 | `settings_approved_tab_lifecycle.png` | 1536 × 1024 | Tab lifecycle `(340, 115, 1210, 910)` | `0178005781cbd91cec822e02480b276de186d1dc172d2e1d39bff7f57d49ebf5` |
 | `settings_approved_personal_link_rules.png` | 1536 × 1024 | Personal link rules `(140, 225, 1400, 795)` | `63e9bd5762063cce660ad691b6afdb153f5b3e9378e5601ceb71792e0b08fad0` |
+| `settings_external_app_links.png` | 1536 × 1024 | Open links in apps `(160, 205, 1385, 815)` | `288d106373b03999124b7aaeaa0342197d108aea3b8b4aace783c660e8fba6fe` |
 
 The original Library IDs are `libfile_46c900dcd0448191a03ae81118385873` and
 `libfile_48290d7ff1088191aacd6d776d5db0db`, respectively. These are user-approved imagegen

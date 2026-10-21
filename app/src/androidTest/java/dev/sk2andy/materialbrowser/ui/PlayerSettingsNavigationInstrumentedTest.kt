@@ -165,6 +165,8 @@ class PlayerSettingsNavigationInstrumentedTest {
             listOf(R.string.settings_appearance_title, R.string.settings_address_bar_style),
             listOf(R.string.settings_section_browser, R.string.settings_browser_group_links,
                 R.string.settings_external_link_preview_title),
+            listOf(R.string.settings_section_browser, R.string.settings_browser_group_links,
+                R.string.settings_external_app_links_title),
             listOf(R.string.settings_player_title, R.string.settings_inline_media_player_title),
         )
         paths.forEach { path ->

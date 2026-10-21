@@ -21,6 +21,7 @@ import dev.sk2andy.materialbrowser.browser.DnsOverHttpsSettings
 import dev.sk2andy.materialbrowser.browser.HttpsOnlyMode
 import dev.sk2andy.materialbrowser.browser.DomainMuteRules
 import dev.sk2andy.materialbrowser.browser.ExternalAppLinkHandling
+import dev.sk2andy.materialbrowser.browser.ExternalAppSiteRules
 import dev.sk2andy.materialbrowser.browser.FavoriteAnimationSpeed
 import dev.sk2andy.materialbrowser.browser.InlineMediaPlayerMode
 import dev.sk2andy.materialbrowser.browser.InlineMediaPlayerSeekSettings
@@ -984,6 +985,18 @@ class BrowserSessionStore internal constructor(
         preferences.edit().putString(KEY_EXTERNAL_APP_LINK_HANDLING, handling.stableId).apply()
     }
 
+    fun loadExternalAppSiteExceptions(): List<String> = ExternalAppSiteRules.normalizedSites(
+        runCatching { preferences.getStringSet(KEY_EXTERNAL_APP_SITE_EXCEPTIONS, null) }
+            .getOrNull().orEmpty(),
+    )
+
+    fun saveExternalAppSiteExceptions(domains: Collection<String>) {
+        preferences.edit().putStringSet(
+            KEY_EXTERNAL_APP_SITE_EXCEPTIONS,
+            ExternalAppSiteRules.normalizedSites(domains).toSet(),
+        ).apply()
+    }
+
     fun loadLinkLongPressAction(): LinkLongPressAction = LinkLongPressAction.fromStableId(
         preferences.getString(KEY_LINK_LONG_PRESS_ACTION, null),
     )
@@ -1700,6 +1713,7 @@ class BrowserSessionStore internal constructor(
         const val KEY_EXTERNAL_LINK_PREVIEW_ENABLED = "external_link_preview_enabled"
         const val KEY_EXTERNAL_LINK_PREVIEW_PROFILE_ID = "external_link_preview_profile_id"
         const val KEY_EXTERNAL_APP_LINK_HANDLING = "external_app_link_handling"
+        const val KEY_EXTERNAL_APP_SITE_EXCEPTIONS = "external_app_site_exceptions"
         const val KEY_LINK_LONG_PRESS_ACTION = "link_long_press_action"
         const val KEY_LINK_PEEK_SWIPE_ACTION = "link_peek_swipe_action"
         const val KEY_ADDRESS_BAR_LONG_PRESS_ACTION = "address_bar_long_press_action"

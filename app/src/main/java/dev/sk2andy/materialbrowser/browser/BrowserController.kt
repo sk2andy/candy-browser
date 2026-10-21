@@ -597,6 +597,13 @@ private data class PendingExternalAppHandoff(
     val source: ExternalAppHandoffSource,
 )
 
+private data class PendingExternalAppFeedback(
+    val feedback: ExternalAppFeedback,
+    val url: String,
+    val source: ExternalAppHandoffSource,
+    val sourcePageUrl: String?,
+)
+
 private data class PendingExternalAppPrompt(
     val prompt: ExternalAppPrompt,
     val requestUrl: String,
@@ -612,6 +619,7 @@ private data class PendingExternalAppPrompt(
 private enum class ExternalAppNavigationHandling {
     Automatic,
     Prompted,
+    OpenedInCandy,
     Unavailable,
 }
 
@@ -826,6 +834,10 @@ class BrowserController(
     var externalAppLinkHandling by mutableStateOf(ExternalAppLinkHandling.Default)
         private set
     var externalAppPrompt by mutableStateOf<ExternalAppPrompt?>(null)
+        private set
+    var externalAppSiteExceptions by mutableStateOf<List<String>>(emptyList())
+        private set
+    internal var externalAppFeedback by mutableStateOf<ExternalAppFeedback?>(null)
         private set
     var addressBarActionLayout by mutableStateOf(AddressBarActionLayout.Default)
         private set
@@ -1495,6 +1507,10 @@ class BrowserController(
     private var pendingExternalAppHandoff: PendingExternalAppHandoff? = null
     private var pendingExternalAppPrompt: PendingExternalAppPrompt? = null
     private var externalAppPromptSequence = 0L
+    private var pendingExternalAppFeedback: PendingExternalAppFeedback? = null
+    private var externalAppFeedbackSequence = 0L
+    private var privateExternalAppSiteExceptions = emptyList<String>()
+    private val browserOnlyExternalAppSites = mutableMapOf<String, String>()
     private var pendingExternalNavigationRollback: ExternalNavigationRollback? = null
     private val navigationSourceTabs = mutableMapOf<String, BrowserTab>()
     private val externalAppNavigationRecoveries =
@@ -1713,6 +1729,43 @@ class BrowserController(
             BrowserEngineDownloadRules.request(response.metadata, externalLinkPreviewState?.currentUrl),
         )
         routeExternalPreviewDownload(runtime, response, request)
+    }
+
+    @VisibleForTesting
+    internal fun installExternalPreviewEngineSessionForTesting(session: AndroidBrowserEngineSessionPort) {
+        check(usesGeckoEngine)
+        check(externalLinkPreviewRuntime == null)
+        val state = requireNotNull(externalLinkPreviewState)
+        val policyTab = BrowserTab(
+            id = session.tabId,
+            lastAccessedAt = System.currentTimeMillis(),
+            profileId = state.targetProfileId,
+            url = state.currentUrl,
+            isLoading = true,
+        )
+        externalLinkPreviewRuntime = ExternalLinkPreviewRuntime(
+            sessionId = state.sessionId,
+            generation = state.generation,
+            policyTab = policyTab,
+            binding = ExternalLinkPreviewEngineBinding.Gecko(
+                session = session,
+                view = session.createView(activity),
+            ),
+        )
+        externalLinkPreviewState = state.copy(isContentReady = true)
+    }
+
+    @VisibleForTesting
+    internal fun dispatchExternalPreviewNavigationRequestForTesting(
+        request: GeckoMainFrameNavigationRequest,
+    ): GeckoNavigationRequestDecision {
+        val runtime = requireNotNull(externalLinkPreviewRuntime)
+        return onExternalLinkPreviewGeckoNavigationRequest(
+            sessionId = runtime.sessionId,
+            generation = runtime.generation,
+            session = runtime.geckoBinding.session,
+            request = request,
+        )
     }
 
     @VisibleForTesting
@@ -2720,6 +2773,7 @@ class BrowserController(
         isExternalLinkPreviewEnabled = store.loadExternalLinkPreviewEnabled()
         externalLinkPreviewProfileId = store.loadExternalLinkPreviewProfileId()
         externalAppLinkHandling = store.loadExternalAppLinkHandling()
+        externalAppSiteExceptions = store.loadExternalAppSiteExceptions()
         val storedAddressBarDockPlacement = store.loadAddressBarDockPlacement()
         lastAddressBarDockPlacement = store.loadLastAddressBarDockPlacement()
             ?: storedAddressBarDockPlacement
@@ -4380,6 +4434,7 @@ class BrowserController(
             ?: return false
         runtime.geckoBinding.let { binding ->
             if (externalLinkPreviewState?.canGoBack != true) return false
+            clearExternalNavigationAuthorization(runtime.policyTab.id)
             runtime.downloadGrant = null
             externalNavigationGrants.remove(runtime.policyTab.id)
             clearExternalLinkPreviewAppHandoff(sessionId)
@@ -4638,6 +4693,7 @@ class BrowserController(
     }
 
     private fun createExternalLinkPreviewRuntime(state: ExternalLinkPreviewState) {
+        externalAppFeedback?.let { dismissExternalAppFeedback(it.id) }
         if (destroyed || state.targetProfileId in lockedProfileIds) return
         val policyTab = BrowserTab(
             id = UUID.randomUUID().toString(),
@@ -4820,6 +4876,7 @@ class BrowserController(
         ) ?: return
         if (event.type == BrowserEngineEventType.NavigationStarted) {
             invalidateExternalAppPromptForNavigation(runtime.policyTab.id)
+            invalidateExternalAppFeedbackForNavigation(runtime.policyTab.id, event.address)
         }
         runtime.lastEngineEvent = event
         val state = externalLinkPreviewState ?: return
@@ -4981,7 +5038,9 @@ class BrowserController(
             } else {
                 ExternalAppNavigationHandling.Unavailable
             }
-            if (appNavigationHandling == ExternalAppNavigationHandling.Prompted) {
+            if (appNavigationHandling == ExternalAppNavigationHandling.Prompted ||
+                appNavigationHandling == ExternalAppNavigationHandling.OpenedInCandy
+            ) {
                 clearExternalLinkPreviewAppHandoff(sessionId)
                 return GeckoNavigationRequestDecision.Deny
             }
@@ -5030,6 +5089,7 @@ class BrowserController(
             )
         ) {
             ExternalAppNavigationHandling.Prompted,
+            ExternalAppNavigationHandling.OpenedInCandy,
             ExternalAppNavigationHandling.Unavailable,
             -> GeckoNavigationRequestDecision.Deny
             ExternalAppNavigationHandling.Automatic -> {
@@ -5111,6 +5171,13 @@ class BrowserController(
         val safeUrl = ExternalLinkPreviewRules.safeCurrentUrl(url) ?: return
         val binding = runtime.geckoBinding
         if (externalLinkPreviewRuntime !== runtime) return
+        pendingExternalAppFeedback?.takeIf { it.source.policyTabId() == runtime.policyTab.id }
+            ?.let { dismissExternalAppFeedback(it.feedback.id) }
+        externalLinkPreviewState = externalLinkPreviewState?.copy(
+            currentUrl = safeUrl,
+            progress = 0,
+            isLoading = true,
+        )
         runtime.pendingInternalNavigationUrl = safeUrl
         binding.session.setDesktopMode(isDesktopView(runtime.policyTab, safeUrl))
         binding.session.execute(BrowserEngineCommands.stop())
@@ -5164,6 +5231,7 @@ class BrowserController(
         externalLinkPreviewRuntime = null
         externalLinkPreviewState = null
         runtime?.policyTab?.id?.let { policyTabId ->
+            clearExternalNavigationAuthorization(policyTabId)
             releaseDownloadChoicesForSource(policyTabId)
             pendingAutomaticExternalAppRequests.remove(policyTabId)
             externalNavigationGrants.remove(policyTabId)
@@ -5330,9 +5398,11 @@ class BrowserController(
         pendingExternalAppHandoff = null
         clearExternalNavigationAuthorization(selectedTabId)
         val externalUri = BrowserUriPolicy.normalizeExternalUri(input)?.let(Uri::parse)
+        var externalSource: ExternalAppHandoffSource? = null
         val externalResult = externalUri?.let { uri ->
             val tab = selectedTab
-            val source = browserEngineSessions[tab.id]?.let { session ->
+            val source = (browserEngineSessions[tab.id]
+                ?: externalApps.webTargetUrl(uri)?.let { browserEngineSessionFor(tab.id) })?.let { session ->
                 ExternalAppHandoffSource.Tab(
                     tabId = tab.id,
                     profileId = tab.profileId,
@@ -5340,6 +5410,7 @@ class BrowserController(
                     session = session,
                 )
             }
+            externalSource = source
             if (externalAppLinkHandling == ExternalAppLinkHandling.AskEveryTime && source == null) {
                 return
             }
@@ -5353,13 +5424,18 @@ class BrowserController(
                         grant = null,
                         isRedirect = false,
                     )
-                } == ExternalAppNavigationHandling.Prompted
+                }?.let { handling ->
+                    handling == ExternalAppNavigationHandling.Prompted ||
+                        handling == ExternalAppNavigationHandling.OpenedInCandy
+                } == true
             ) return
             externalApps.open(uri)
         }
         val target = when (val result = externalResult) {
             ExternalLaunchResult.Launched -> {
-                showExternalAppOpenedToast()
+                externalSource?.let { source ->
+                    showExternalAppFeedback(externalApps.webTargetUrl(requireNotNull(externalUri)), source)
+                } ?: showExternalAppOpenedToast()
                 return
             }
             ExternalLaunchResult.AppChooserShown -> return
@@ -5442,7 +5518,9 @@ class BrowserController(
                     )
                     return
                 }
-                ExternalAppNavigationHandling.Prompted -> return
+                ExternalAppNavigationHandling.Prompted,
+                ExternalAppNavigationHandling.OpenedInCandy,
+                -> return
                 ExternalAppNavigationHandling.Unavailable -> grant
             }
         } else {
@@ -7596,6 +7674,123 @@ class BrowserController(
         if (pageTranslationRecoveryOffer?.token == token) pageTranslationRecoveryOffer = null
     }
 
+    fun resetExternalAppSiteException(domain: String) {
+        externalAppSiteExceptions = ExternalAppSiteRules.withState(
+            externalAppSiteExceptions, domain, enabled = false,
+        )
+        store.saveExternalAppSiteExceptions(externalAppSiteExceptions)
+    }
+
+    fun resetAllExternalAppSiteExceptions() {
+        externalAppSiteExceptions = emptyList()
+        store.saveExternalAppSiteExceptions(externalAppSiteExceptions)
+    }
+
+    private fun showExternalAppFeedback(url: String?, source: ExternalAppHandoffSource) {
+        val safeUrl = BrowserUriPolicy.normalizeHttpUrl(url)
+        if (safeUrl == null) {
+            showExternalAppOpenedToast()
+            return
+        }
+        if (!isExternalAppSourceCurrent(source)) return
+        val feedback = ExternalAppFeedback(
+            id = ++externalAppFeedbackSequence,
+            stage = ExternalAppFeedbackStage.Opened,
+            site = ExternalAppSiteRules.siteForUrl(safeUrl),
+            isPrivate = source is ExternalAppHandoffSource.Tab && source.isPrivate,
+        )
+        pendingExternalAppFeedback = PendingExternalAppFeedback(
+            feedback = feedback,
+            url = safeUrl,
+            source = source,
+            sourcePageUrl = BrowserUriPolicy.normalizeHttpUrl(source.engineSession().historyUrlAtOffset(0))
+                ?: currentExternalAppSourcePageUrl(source),
+        )
+        externalAppFeedback = feedback
+    }
+
+    internal fun openExternalAppInCandy(id: Long) {
+        val pending = pendingExternalAppFeedback?.takeIf {
+            it.feedback.id == id && it.feedback.stage == ExternalAppFeedbackStage.Opened
+        } ?: return
+        dismissExternalAppFeedback(id)
+        if (!isExternalAppSourceCurrent(pending.source)) return
+        pendingExternalAppHandoff = null
+        clearExternalNavigationRollback(pending.source)
+        clearExternalAppNavigationRecovery(pending.source)
+        // The explicit return action opens the exact target in the source browsing context.
+        val source = when (val original = pending.source) {
+            is ExternalAppHandoffSource.Tab -> original.copy(target = BrowserEngineNavigationTarget.Current)
+            is ExternalAppHandoffSource.Preview -> original
+        }
+        openExternalAppFallback(source, pending.url, grant = null)
+        val site = pending.feedback.site ?: return
+        browserOnlyExternalAppSites[source.policyTabId()] = site
+        val feedback = pending.feedback.copy(
+            id = ++externalAppFeedbackSequence,
+            stage = ExternalAppFeedbackStage.ConfirmAlwaysInCandy,
+        )
+        pendingExternalAppFeedback = pending.copy(feedback = feedback, source = source)
+        externalAppFeedback = feedback
+    }
+
+    internal fun confirmAlwaysOpenInCandy(id: Long) {
+        val pending = pendingExternalAppFeedback?.takeIf {
+            it.feedback.id == id && it.feedback.stage == ExternalAppFeedbackStage.ConfirmAlwaysInCandy
+        } ?: return
+        dismissExternalAppFeedback(id)
+        if (!isExternalAppSourceCurrent(pending.source)) return
+        val site = pending.feedback.site ?: return
+        val currentUrl = when (val source = pending.source) {
+            is ExternalAppHandoffSource.Tab -> tabs.firstOrNull { it.id == source.tabId }?.url
+            is ExternalAppHandoffSource.Preview -> externalLinkPreviewState?.currentUrl
+        }
+        if (ExternalAppSiteRules.siteForUrl(currentUrl) != site) return
+        if (pending.feedback.isPrivate) {
+            privateExternalAppSiteExceptions = ExternalAppSiteRules.withState(
+                privateExternalAppSiteExceptions, site, enabled = true,
+            )
+        } else {
+            externalAppSiteExceptions = ExternalAppSiteRules.withState(
+                externalAppSiteExceptions, site, enabled = true,
+            )
+            store.saveExternalAppSiteExceptions(externalAppSiteExceptions)
+        }
+    }
+
+    internal fun dismissExternalAppFeedback(id: Long) {
+        if (pendingExternalAppFeedback?.feedback?.id != id) return
+        pendingExternalAppFeedback = null
+        externalAppFeedback = null
+    }
+
+    private fun invalidateExternalAppFeedbackForNavigation(policyTabId: String, url: String?) {
+        val pending = pendingExternalAppFeedback?.takeIf { it.source.policyTabId() == policyTabId }
+            ?: return
+        if (url == null) return
+        val safeUrl = BrowserUriPolicy.normalizeHttpUrl(url)
+        if (safeUrl == null) {
+            if (pending.feedback.stage != ExternalAppFeedbackStage.Opened || url != pending.sourcePageUrl) {
+                dismissExternalAppFeedback(pending.feedback.id)
+            }
+            return
+        }
+        val expectedNavigation = when (pending.feedback.stage) {
+            ExternalAppFeedbackStage.Opened -> safeUrl == pending.url || safeUrl == pending.sourcePageUrl
+            ExternalAppFeedbackStage.ConfirmAlwaysInCandy ->
+                ExternalAppSiteRules.siteForUrl(safeUrl) == pending.feedback.site
+        }
+        if (!expectedNavigation) dismissExternalAppFeedback(pending.feedback.id)
+    }
+
+    private fun shouldKeepExternalAppInCandy(url: String?, source: ExternalAppHandoffSource): Boolean =
+        ExternalAppSiteRules.contains(url, externalAppSiteExceptions) ||
+            (source is ExternalAppHandoffSource.Tab && source.isPrivate &&
+                ExternalAppSiteRules.contains(url, privateExternalAppSiteExceptions)) ||
+            ExternalAppSiteRules.siteForUrl(url)?.let { site ->
+                browserOnlyExternalAppSites[source.policyTabId()] == site
+            } == true
+
     private fun showExternalAppOpenedToast() {
         Toast.makeText(
             activity,
@@ -7612,6 +7807,29 @@ class BrowserController(
         grant: ExternalNavigationGrant?,
         isRedirect: Boolean,
     ): ExternalAppNavigationHandling {
+        if (shouldKeepExternalAppInCandy(webTargetUrl, source)) {
+            if (safeHttpUrl != null) return ExternalAppNavigationHandling.Unavailable
+            val safeTarget = BrowserUriPolicy.normalizeHttpUrl(webTargetUrl)
+                ?: return ExternalAppNavigationHandling.Unavailable
+            val documentGeneration = browserEngineDocumentGenerations.getOrDefault(source.policyTabId(), 0L)
+            val requestGeneration = when (source) {
+                is ExternalAppHandoffSource.Tab ->
+                    browserEngineNavigationRequestGenerations.getOrPut(source.tabId) { 0L }
+                is ExternalAppHandoffSource.Preview -> 0L
+            }
+            val navigationGeneration = currentExternalAppSourceNavigationGeneration(source)
+            val pageUrl = currentExternalAppSourcePageUrl(source)
+            mainHandler.post {
+                if (!destroyed && isAutomaticExternalAppSourceCurrent(
+                        source, documentGeneration, requestGeneration, navigationGeneration, pageUrl,
+                    )
+                ) {
+                    openExternalAppFallback(source, safeTarget, grant = null)
+                }
+            }
+            return ExternalAppNavigationHandling.OpenedInCandy
+        }
+        externalAppFeedback?.let { dismissExternalAppFeedback(it.id) }
         if (
             safeHttpUrl != null &&
             externalAppLinkHandling == ExternalAppLinkHandling.AskEveryTime &&
@@ -7729,7 +7947,9 @@ class BrowserController(
                     )?.let { handoff ->
                         PendingExternalAppHandoff(match = handoff, source = source)
                     }
-                    if (result == ExternalLaunchResult.Launched) showExternalAppOpenedToast()
+                    if (result == ExternalLaunchResult.Launched) {
+                        showExternalAppFeedback(webTargetUrl, source)
+                    }
                 }
                 is ExternalLaunchResult.OpenInBrowser -> {
                     clearExternalNavigationRollback(source)
@@ -7801,7 +8021,9 @@ class BrowserController(
                 )?.let { handoff ->
                     PendingExternalAppHandoff(match = handoff, source = pending.source)
                 }
-                if (result == ExternalLaunchResult.Launched) showExternalAppOpenedToast()
+                if (result == ExternalLaunchResult.Launched) {
+                    showExternalAppFeedback(pending.webTargetUrl, pending.source)
+                }
             }
             is ExternalLaunchResult.OpenInBrowser -> {
                 clearExternalNavigationRollback(pending.source)
@@ -8083,7 +8305,7 @@ class BrowserController(
 
     private fun ExternalAppHandoffSource.policyTabId(): String = when (this) {
         is ExternalAppHandoffSource.Tab -> tabId
-        is ExternalAppHandoffSource.Preview -> "external-preview-$sessionId"
+        is ExternalAppHandoffSource.Preview -> session.tabId
     }
 
     private fun ExternalAppHandoffSource.engineSession(): AndroidBrowserEngineSessionPort =
@@ -8101,6 +8323,11 @@ class BrowserController(
         isRedirect: Boolean,
         nowElapsedRealtime: Long,
     ) {
+        if (isForMainFrame && hasGesture) {
+            browserOnlyExternalAppSites.remove(tabId)
+            pendingExternalAppFeedback?.takeIf { it.source.policyTabId() == tabId }
+                ?.let { dismissExternalAppFeedback(it.feedback.id) }
+        }
         val updatedGrant = if (isForMainFrame && hasGesture) {
             ExternalNavigationGrantRules.start(
                 url = url,
@@ -8241,6 +8468,9 @@ class BrowserController(
     }
 
     private fun clearExternalNavigationAuthorization(tabId: String) {
+        pendingExternalAppFeedback?.takeIf { it.source.policyTabId() == tabId }
+            ?.let { dismissExternalAppFeedback(it.feedback.id) }
+        browserOnlyExternalAppSites.remove(tabId)
         cancelPendingAutomaticExternalAppRequest(tabId)
         pendingNativePopupNavigations.remove(tabId)
         browserEngineNavigationRequestGenerations[tabId]?.let { generation ->
@@ -8297,9 +8527,13 @@ class BrowserController(
                     }
                 ) return@post
                 when (prepared?.let(externalApps::openWebUrlInChosenApp)) {
-                    ExternalLaunchResult.Launched,
-                    ExternalLaunchResult.AppChooserShown,
-                    -> Unit
+                    ExternalLaunchResult.Launched -> browserEngineSessions[tabId]?.let { session ->
+                        showExternalAppFeedback(
+                            url,
+                            ExternalAppHandoffSource.Tab(tabId, profileId, isPrivate, session),
+                        )
+                    }
+                    ExternalLaunchResult.AppChooserShown -> Unit
                     is ExternalLaunchResult.OpenInBrowser,
                     ExternalLaunchResult.Unsupported,
                     null,
@@ -12034,6 +12268,10 @@ class BrowserController(
         navigationSourceTabs.clear()
         externalAppNavigationRecoveries.clear()
         pendingExternalAppHandoff = null
+        pendingExternalAppFeedback = null
+        externalAppFeedback = null
+        privateExternalAppSiteExceptions = emptyList()
+        browserOnlyExternalAppSites.clear()
         pendingExternalAppPrompt = null
         externalAppPrompt = null
         pendingExternalNavigationRollback = null
@@ -12534,7 +12772,9 @@ class BrowserController(
                     isRedirect = request.isRedirect,
                 )
             } ?: ExternalAppNavigationHandling.Unavailable
-            if (appNavigationHandling == ExternalAppNavigationHandling.Prompted) {
+            if (appNavigationHandling == ExternalAppNavigationHandling.Prompted ||
+                appNavigationHandling == ExternalAppNavigationHandling.OpenedInCandy
+            ) {
                 rememberExternalAppNavigationRecovery(tabId, session, request.url)
                 return GeckoNavigationRequestDecision.Deny
             }
@@ -13981,6 +14221,7 @@ class BrowserController(
                 recordSessionDiagnostic(BrowserSessionDiagnostics.Event.NavigationStarted, event.tabId)
                 cancelPendingMemorySessionCheck(event.tabId)
                 invalidateExternalAppPromptForNavigation(event.tabId)
+                invalidateExternalAppFeedbackForNavigation(event.tabId, event.address)
                 cancelAddressBarAutoDockProbe(event.tabId)
                 manuallyUnparkedAddressBarTabIds.remove(event.tabId)
                 val navigatingSession = browserEngineSessions[event.tabId] ?: return
@@ -17895,6 +18136,9 @@ class BrowserController(
 
     private fun clearIncognitoProfile() {
         browserEngineSessionFactory.clearPrivateData()
+        privateExternalAppSiteExceptions = emptyList()
+        pendingExternalAppFeedback?.takeIf { it.feedback.isPrivate }
+            ?.let { dismissExternalAppFeedback(it.feedback.id) }
         incognitoRuleHits.clear()
         temporaryMutedDomains.clear()
         temporaryStatusBarScrollDisabledDomains.clear()
@@ -17910,7 +18154,10 @@ class BrowserController(
     }
 
     private fun updateSelectedTabId(tabId: String) {
-        if (selectedTabId != tabId) cancelPendingHttpAuthChallenge()
+        if (selectedTabId != tabId) {
+            cancelPendingHttpAuthChallenge()
+            externalAppFeedback?.let { dismissExternalAppFeedback(it.id) }
+        }
         if (contentActions.sourceTabId != null && contentActions.sourceTabId != tabId) {
             contentActions.dismiss()
         }

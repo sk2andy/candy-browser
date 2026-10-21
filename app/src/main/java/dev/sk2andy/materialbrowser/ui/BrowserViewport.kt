@@ -38,6 +38,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -50,6 +51,8 @@ import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.SideEffect
@@ -128,6 +131,8 @@ internal fun ExternalLinkPreviewScreen(
 ) {
     var rootBottomInWindowPx by remember { mutableIntStateOf(0) }
     var blurTarget by remember { mutableStateOf<BlurTarget?>(null) }
+    val feedbackSnackbarHostState = remember { SnackbarHostState() }
+    ExternalAppFeedbackSnackbarEffect(controller, feedbackSnackbarHostState)
     val profiles = if (controller.profilesEnabled) {
         controller.localBrowserProfiles
     } else {
@@ -201,6 +206,15 @@ internal fun ExternalLinkPreviewScreen(
             rootBottomInWindowPx = rootBottomInWindowPx,
             onReturnToExternalApp = onReturnToExternalApp,
             onCommitted = onCommitted,
+        )
+        SnackbarHost(
+            hostState = feedbackSnackbarHostState,
+            snackbar = { data -> BrowserFeedbackSnackbar(data) },
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .navigationBarsPadding()
+                .padding(horizontal = 16.dp, vertical = 84.dp)
+                .zIndex(30f),
         )
     }
 }

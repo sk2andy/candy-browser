@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_external_app_sites_title">Immer in Candy öffnen</string>
+    <string name="settings_external_app_sites_summary">Diese Websites bleiben in allen Profilen in Candy, einschließlich ihrer Subdomains und Unterseiten, auch wenn eine installierte App sie unterstützt. Setze eine Website zurück, damit wieder deine Einstellung für App-Links gilt.</string>
+    <string name="settings_external_app_sites_empty">Noch keine Websites gespeichert. Wähle nach dem Öffnen eines Links in einer anderen App „In Candy öffnen“, um eine Präferenz zu speichern.</string>
+    <string name="settings_external_app_site_always_candy">Alle Profile · Inklusive Subdomains und Unterseiten</string>
+    <string name="settings_external_app_site_reset">Zurücksetzen</string>
+    <string name="settings_external_app_sites_reset_all">Alle Websites zurücksetzen</string>
+    <string name="settings_external_app_sites_reset_all_message">Für alle gespeicherten Websites gilt wieder deine Einstellung für App-Links.</string>
+    <string name="settings_external_app_site_reset_description">%1$s zurücksetzen</string>
+</resources>

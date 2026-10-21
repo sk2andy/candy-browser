@@ -116,6 +116,7 @@ internal fun SettingsScreen(
     externalLinkPreviewProfileId: String? = null,
     externalLinkPreviewProfiles: List<BrowserProfile> = emptyList(),
     externalAppLinkHandling: ExternalAppLinkHandling = ExternalAppLinkHandling.Default,
+    externalAppSiteExceptions: List<String> = emptyList(),
     isFullImmersiveModeEnabled: Boolean,
     isStartupAnimationEnabled: Boolean,
     startupAddressFocusMode: StartupAddressFocusMode = StartupAddressFocusMode.Default,
@@ -189,6 +190,8 @@ internal fun SettingsScreen(
     onExternalLinkPreviewEnabledChanged: (Boolean) -> Unit = {},
     onExternalLinkPreviewProfileChanged: (String?) -> Unit = {},
     onExternalAppLinkHandlingChanged: (ExternalAppLinkHandling) -> Unit = {},
+    onResetExternalAppSiteException: (String) -> Unit = {},
+    onResetAllExternalAppSiteExceptions: () -> Unit = {},
     onFullImmersiveModeEnabledChanged: (Boolean) -> Unit,
     onStartupAnimationEnabledChanged: (Boolean) -> Unit,
     onStartupAddressFocusModeChanged: (StartupAddressFocusMode) -> Unit = {},
@@ -609,10 +612,10 @@ internal fun SettingsScreen(
                     onExternalLinkPreviewEnabledChanged =
                         onExternalLinkPreviewEnabledChanged,
                     onExternalLinkPreviewProfileChanged = onExternalLinkPreviewProfileChanged,
-                    onExternalAppLinkHandlingChanged = onExternalAppLinkHandlingChanged,
                     onLinkRouting = { onDestinationChanged(SettingsDestination.LinkRouting) },
                     onDeviceSearch = onOpenDeviceSearch,
                     onExternalLinkPreview = { onDestinationChanged(SettingsDestination.ExternalLinkPreview) },
+                    onExternalAppLinks = { onDestinationChanged(SettingsDestination.ExternalAppLinks) },
                     onTranslations = { onDestinationChanged(SettingsDestination.Translations) },
                     onFullImmersiveModeEnabledChanged = onFullImmersiveModeEnabledChanged,
                     onStartupAnimationEnabledChanged = onStartupAnimationEnabledChanged,
@@ -626,6 +629,15 @@ internal fun SettingsScreen(
                     onScrollBarEnabledChanged = onScrollBarEnabledChanged,
                     onPageTranslationProviderChanged = onPageTranslationProviderChanged,
                     onOpenDefaultBrowserSettings = onOpenDefaultBrowserSettings,
+                    onBack = { onDestinationChanged(settingsParent(currentDestination)) },
+                )
+
+                SettingsDestination.ExternalAppLinks -> ExternalAppLinksSettingsPage(
+                    externalAppLinkHandling = externalAppLinkHandling,
+                    siteExceptions = externalAppSiteExceptions,
+                    onExternalAppLinkHandlingChanged = onExternalAppLinkHandlingChanged,
+                    onResetSiteException = onResetExternalAppSiteException,
+                    onResetAllSiteExceptions = onResetAllExternalAppSiteExceptions,
                     onBack = { onDestinationChanged(settingsParent(currentDestination)) },
                 )
 

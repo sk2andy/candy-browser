@@ -282,6 +282,7 @@ internal fun BoxScope.BrowserModalSurfaces(
 
     SnackbarHost(
         hostState = feedbackSnackbarHostState,
+        snackbar = { data -> BrowserFeedbackSnackbar(data) },
         modifier = Modifier
             .align(Alignment.BottomCenter)
             .navigationBarsPadding()

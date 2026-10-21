@@ -22,6 +22,7 @@ object SettingsNavigationRules {
         SettingsDestination.BrowserLinks -> SettingsDestination.Browser
         SettingsDestination.LinkRouting,
         SettingsDestination.Translations -> SettingsDestination.BrowserWebsites
+        SettingsDestination.ExternalAppLinks,
         SettingsDestination.ExternalLinkPreview -> SettingsDestination.BrowserLinks
         SettingsDestination.PlayerMode -> SettingsDestination.Player
         SettingsDestination.ToppingCatalog -> SettingsDestination.Userscripts

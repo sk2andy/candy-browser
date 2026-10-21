@@ -372,6 +372,13 @@ internal fun settingsSearchDefinitions(
     }
 
     settingsPage(
+        destination = SettingsDestination.ExternalAppLinks,
+        id = "settings_external_app_sites_title",
+        titleRes = R.string.settings_external_app_sites_title,
+        descriptionRes = R.string.settings_external_app_sites_summary,
+    ) {}
+
+    settingsPage(
         destination = SettingsDestination.LinkRouting,
         id = "link_routing_title",
         titleRes = R.string.link_routing_title,
@@ -955,7 +962,7 @@ internal fun settingsSearchDefinitions(
         "settings_favorite_launch_animation_title", "settings_favorite_animation_speed_title", "settings_favorite_bookmark_import_title" -> SettingsDestination.BrowserFavorites
         "settings_full_immersive_mode_title", "settings_scroll_bar_title", "device_search_title" -> SettingsDestination.BrowserWebsites
         "settings_translation_provider" -> SettingsDestination.Translations
-        "settings_external_app_links_title" -> SettingsDestination.BrowserLinks
+        "settings_external_app_links_title" -> SettingsDestination.ExternalAppLinks
         else -> definition.destination
     }
     definition.copy(destination = destination)

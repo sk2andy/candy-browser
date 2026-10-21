@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
+    <string name="external_app_feedback_opened">Opened in app</string>
+    <string name="external_app_feedback_open_in_candy">Open in Candy</string>
+    <string name="external_app_feedback_always">Do you want to always open this site in Candy?</string>
+    <string name="external_app_feedback_always_private">Always open this site in Candy for this private session?</string>
+    <string name="external_app_feedback_yes">Yes</string>
+</resources>

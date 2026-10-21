@@ -671,6 +671,7 @@ internal fun BrowserScreen(
     }
     BrowserOfferSnackbarEffects(controller, feedbackSnackbarHostState)
     ClosedTabUndoSnackbarEffect(controller, feedbackSnackbarHostState)
+    ExternalAppFeedbackSnackbarEffect(controller, feedbackSnackbarHostState)
     val tabSwitchGapPx = with(density) { 8.dp.toPx() }
     val tabSwitchTravelPx = browserWidthPx + tabSwitchGapPx
     val settleOverviewGesture: () -> Unit = {

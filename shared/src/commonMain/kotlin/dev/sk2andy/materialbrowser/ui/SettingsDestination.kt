@@ -35,6 +35,7 @@ enum class SettingsDestination {
     Translations,
     BrowserLinks,
     ExternalLinkPreview,
+    ExternalAppLinks,
     LinkRouting,
     Player,
     PlayerMode,

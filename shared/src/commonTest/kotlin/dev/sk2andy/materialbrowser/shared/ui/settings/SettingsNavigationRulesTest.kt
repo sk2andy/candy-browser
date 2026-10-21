@@ -28,6 +28,7 @@ class SettingsNavigationRulesTest {
             SettingsDestination.AppearanceColors to SettingsDestination.Appearance,
             SettingsDestination.AppearanceSurfaces to SettingsDestination.Appearance,
             SettingsDestination.AppearanceAddressBar to SettingsDestination.Appearance,
+            SettingsDestination.ExternalAppLinks to SettingsDestination.BrowserLinks,
             SettingsDestination.ExternalLinkPreview to SettingsDestination.BrowserLinks,
             SettingsDestination.PlayerMode to SettingsDestination.Player,
             SettingsDestination.LinkLongPress to SettingsDestination.GestureLinks,

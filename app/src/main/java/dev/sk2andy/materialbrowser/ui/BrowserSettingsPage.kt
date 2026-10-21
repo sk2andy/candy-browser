@@ -78,7 +78,6 @@ internal fun BrowserSettingsPage(
     onBrowserEngineKindChanged: (AndroidBrowserEngineKind) -> Unit = {},
     onExternalLinkPreviewEnabledChanged: (Boolean) -> Unit = {},
     onExternalLinkPreviewProfileChanged: (String?) -> Unit = {},
-    onExternalAppLinkHandlingChanged: (ExternalAppLinkHandling) -> Unit = {},
     onFullImmersiveModeEnabledChanged: (Boolean) -> Unit,
     onStartupAnimationEnabledChanged: (Boolean) -> Unit,
     onStartupAddressFocusModeChanged: (StartupAddressFocusMode) -> Unit = {},
@@ -93,6 +92,7 @@ internal fun BrowserSettingsPage(
     onLinkRouting: () -> Unit = {},
     onDeviceSearch: () -> Unit = {},
     onExternalLinkPreview: () -> Unit = {},
+    onExternalAppLinks: () -> Unit = {},
     onTranslations: () -> Unit = {},
 ) {
     SettingsPage(
@@ -302,20 +302,11 @@ internal fun BrowserSettingsPage(
         if (section == BrowserSettingsSection.All || section == BrowserSettingsSection.Links) {
             SettingsSectionTitle(stringResource(R.string.settings_browser_group_links))
             SettingsPreferenceGroup {
-                BrowserRadioChoices(
+                SettingsSelectionLink(
                     title = stringResource(R.string.settings_external_app_links_title),
-                    selected = externalAppLinkHandling,
-                    choices = ExternalAppLinkHandling.entries,
-                    label = { it.displayName() },
-                    enabled = true,
-                    onSelected = onExternalAppLinkHandlingChanged,
+                    value = externalAppLinkHandling.displayName(),
+                    onClick = onExternalAppLinks,
                     modifier = Modifier.testTag(BrowserSettingsTestTags.ExternalAppLinks),
-                )
-                Text(
-                    text = stringResource(R.string.settings_external_app_links_summary),
-                    modifier = Modifier.padding(start = 18.dp, top = 8.dp, end = 18.dp),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 SettingsPreferenceDivider()
                 dev.sk2andy.materialbrowser.shared.ui.settings.SettingsSelectionLink(
@@ -359,7 +350,7 @@ private fun StartupAddressFocusMode.displayName(): String = when (this) {
 }
 
 @Composable
-private fun ExternalAppLinkHandling.displayName(): String = when (this) {
+internal fun ExternalAppLinkHandling.displayName(): String = when (this) {
     ExternalAppLinkHandling.Automatic ->
         stringResource(R.string.settings_external_app_links_automatic)
     ExternalAppLinkHandling.AskEveryTime ->
@@ -425,7 +416,7 @@ internal fun ExternalLinkPreviewSettingsPage(
 }
 
 @Composable
-private fun <T> BrowserRadioChoices(
+internal fun <T> BrowserRadioChoices(
     title: String,
     selected: T,
     choices: List<T>,
