@@ -11,13 +11,14 @@ internal data class AppDataArchiveManifest(
     val webViewVersion: String?,
     val sdkInt: Int,
     val exportedAtEpochMillis: Long,
-    val websiteState: AppDataArchiveWebsiteState = AppDataArchiveWebsiteState.CandyOwnedOnly,
+    val websiteState: AppDataArchiveWebsiteState = AppDataArchiveWebsiteState.EngineStateIncluded,
 )
 
 /** Archive contract for browser-engine bytes; Candy-owned records stay portable across engines. */
 internal enum class AppDataArchiveWebsiteState {
     CandyOwnedOnly,
     LegacyWebsiteStateExcluded,
+    EngineStateIncluded,
 }
 
 internal data class AppDataArchiveEnvironment(
@@ -37,7 +38,8 @@ internal enum class AppDataArchiveCompatibility {
 
 internal object AppDataArchiveRules {
     const val TRANSFER_STATE_DIRECTORY_NAME = "app_data_transfer"
-    const val FORMAT_VERSION = 2
+    const val FORMAT_VERSION = 3
+    const val PREVIOUS_FORMAT_VERSION = 2
     const val LEGACY_FORMAT_VERSION = 1
     const val MANIFEST_ENTRY_NAME = "manifest.json"
     const val DATA_ENTRY_PREFIX = "data/"
@@ -61,7 +63,17 @@ internal object AppDataArchiveRules {
         name.isNotEmpty() && name !in excludedTopLevelNames
 
     fun shouldExportRelativePath(path: String): Boolean =
-        isAllowedArchiveRelativePath(path) && !isEngineSpecificWebsiteState(path)
+        isAllowedArchiveRelativePath(path) &&
+            (!isEngineSpecificWebsiteState(path) || isSupportedEngineDataPath(path))
+
+    /** Includes regular Gecko/WebView profiles and tab snapshots; guest WebView stays local. */
+    fun isSupportedEngineDataPath(path: String): Boolean =
+        path == "files/mozilla" || path.startsWith("files/mozilla/") ||
+            path == "app_webview" || path.startsWith("app_webview/") ||
+            path == "no_backup/tab_webview_states" ||
+            path.startsWith("no_backup/tab_webview_states/") ||
+            path == "no_backup/gecko_session_states" ||
+            path.startsWith("no_backup/gecko_session_states/")
 
     fun isAllowedArchiveRelativePath(path: String): Boolean =
         path != GUEST_BUBBLE_SESSION_RELATIVE_PATH &&
@@ -111,9 +123,10 @@ internal object AppDataArchiveRules {
         formatVersion: Int,
         entries: List<AppDataArchiveEntry>,
     ): AppDataArchiveWebsiteState = when {
-        formatVersion == LEGACY_FORMAT_VERSION && entries.any { entry ->
+        formatVersion < FORMAT_VERSION && entries.any { entry ->
             isEngineSpecificWebsiteState(entry.relativePath)
         } -> AppDataArchiveWebsiteState.LegacyWebsiteStateExcluded
+        formatVersion >= FORMAT_VERSION -> AppDataArchiveWebsiteState.EngineStateIncluded
         else -> AppDataArchiveWebsiteState.CandyOwnedOnly
     }
 
@@ -173,7 +186,7 @@ internal object AppDataArchiveRules {
         current.packageName != archive.packageName ||
             current.appVersionName != archive.appVersionName ||
             current.appVersionCode != archive.appVersionCode -> AppDataArchiveCompatibility.AppMismatch
-        archive.websiteState != AppDataArchiveWebsiteState.CandyOwnedOnly &&
+        archive.websiteState == AppDataArchiveWebsiteState.EngineStateIncluded &&
             current.webViewVersion != archive.webViewVersion ->
             AppDataArchiveCompatibility.BrowserEngineMismatch
         current.sdkInt != archive.sdkInt -> AppDataArchiveCompatibility.PlatformMismatch

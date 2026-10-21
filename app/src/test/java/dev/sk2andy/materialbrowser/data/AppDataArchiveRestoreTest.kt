@@ -27,6 +27,10 @@ class AppDataArchiveRestoreTest {
             parentFile?.mkdirs()
             writeText("cache")
         }
+        File(data, "app_webview/Default/Cookies").apply {
+            parentFile?.mkdirs()
+            writeText("current engine cookie")
+        }
         val extracted = temporaryFolder.newFolder("extracted")
         File(extracted, "shared_prefs/current.xml").apply {
             parentFile?.mkdirs()
@@ -35,6 +39,14 @@ class AppDataArchiveRestoreTest {
         File(extracted, "files/saved.json").apply {
             parentFile?.mkdirs()
             writeText("saved")
+        }
+        File(extracted, "app_webview/Default/Cookies").apply {
+            parentFile?.mkdirs()
+            writeText("restored engine cookie")
+        }
+        File(extracted, "files/mozilla/profile/cookies.sqlite").apply {
+            parentFile?.mkdirs()
+            writeText("restored Gecko cookie database")
         }
         val backup = File(temporaryFolder.root, "backup")
         val marker = File(temporaryFolder.root, "restore.json")
@@ -46,9 +58,15 @@ class AppDataArchiveRestoreTest {
 
         assertEquals("restored", File(data, "shared_prefs/current.xml").readText())
         assertEquals("saved", File(data, "files/saved.json").readText())
+        assertEquals("restored engine cookie", File(data, "app_webview/Default/Cookies").readText())
+        assertEquals(
+            "restored Gecko cookie database",
+            File(data, "files/mozilla/profile/cookies.sqlite").readText(),
+        )
         assertFalse(File(data, "future_store").exists())
         assertEquals("cache", File(data, "cache/keep").readText())
         assertEquals("current", File(backup, "shared_prefs/current.xml").readText())
+        assertEquals("current engine cookie", File(backup, "app_webview/Default/Cookies").readText())
         assertFalse(marker.exists())
     }
 

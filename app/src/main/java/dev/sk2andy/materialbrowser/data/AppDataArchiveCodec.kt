@@ -64,7 +64,7 @@ internal enum class AppDataArchiveFailure {
     TargetNotEmpty,
     TargetSymbolicLink,
     EmptyArchive,
-    UnsupportedLegacyWebsiteState,
+    UnsupportedEngineState,
     ArchiveIo,
 }
 
@@ -142,15 +142,20 @@ internal object AppDataArchiveCodec {
             input = input,
             requireSupportedFormatBeforeEntries = true,
             consumeEntry = { manifest, relativePath, isDirectory, entryInput ->
-                if (AppDataArchiveRules.isEngineSpecificWebsiteState(relativePath)) {
-                    if (manifest.formatVersion != AppDataArchiveRules.LEGACY_FORMAT_VERSION) {
+                if (AppDataArchiveRules.isEngineSpecificWebsiteState(relativePath) &&
+                    !AppDataArchiveRules.isSupportedEngineDataPath(relativePath)
+                ) {
+                    if (manifest.formatVersion >= AppDataArchiveRules.FORMAT_VERSION) {
                         throw AppDataArchiveException(
-                            AppDataArchiveFailure.UnsupportedLegacyWebsiteState,
+                            AppDataArchiveFailure.UnsupportedEngineState,
                             relativePath,
                         )
                     }
                     return@readArchive
                 }
+                if (AppDataArchiveRules.isEngineSpecificWebsiteState(relativePath) &&
+                    manifest.formatVersion < AppDataArchiveRules.FORMAT_VERSION
+                ) return@readArchive
                 val destination = safeDestination(target, relativePath)
                 ensureNoSymbolicLinkInPath(target, destination)
                 if (isDirectory) {
@@ -315,6 +320,15 @@ internal object AppDataArchiveCodec {
                     AppDataArchiveFailure.InvalidEntryPath,
                     zipEntry.name,
                 )
+                if (manifest.formatVersion >= AppDataArchiveRules.FORMAT_VERSION &&
+                    AppDataArchiveRules.isEngineSpecificWebsiteState(relativePath) &&
+                    !AppDataArchiveRules.isSupportedEngineDataPath(relativePath)
+                ) {
+                    throw AppDataArchiveException(
+                        AppDataArchiveFailure.UnsupportedEngineState,
+                        zipEntry.name,
+                    )
+                }
                 validateUniqueHierarchy(
                     relativePath = relativePath,
                     isDirectory = zipEntry.isDirectory,
@@ -582,6 +596,8 @@ internal object AppDataArchiveCodec {
             websiteState = when (formatVersion) {
                 AppDataArchiveRules.LEGACY_FORMAT_VERSION ->
                     AppDataArchiveWebsiteState.LegacyWebsiteStateExcluded
+                AppDataArchiveRules.PREVIOUS_FORMAT_VERSION ->
+                    json.requiredNonBlankString("websiteState").toWebsiteState()
                 AppDataArchiveRules.FORMAT_VERSION ->
                     json.requiredNonBlankString("websiteState").toWebsiteState()
                 else -> AppDataArchiveWebsiteState.CandyOwnedOnly
@@ -609,6 +625,7 @@ internal object AppDataArchiveCodec {
     private fun ensureSupportedManifest(manifest: AppDataArchiveManifest) {
         if (
             manifest.formatVersion != AppDataArchiveRules.FORMAT_VERSION &&
+            manifest.formatVersion != AppDataArchiveRules.PREVIOUS_FORMAT_VERSION &&
             manifest.formatVersion != AppDataArchiveRules.LEGACY_FORMAT_VERSION
         ) {
             throw AppDataArchiveException(AppDataArchiveFailure.UnsupportedFormatVersion)
@@ -626,8 +643,10 @@ internal object AppDataArchiveCodec {
             throw AppDataArchiveException(AppDataArchiveFailure.InvalidManifest)
         }
         if (
+            manifest.formatVersion == AppDataArchiveRules.PREVIOUS_FORMAT_VERSION &&
+            manifest.websiteState != AppDataArchiveWebsiteState.CandyOwnedOnly ||
             manifest.formatVersion == AppDataArchiveRules.FORMAT_VERSION &&
-            manifest.websiteState != AppDataArchiveWebsiteState.CandyOwnedOnly
+            manifest.websiteState != AppDataArchiveWebsiteState.EngineStateIncluded
         ) {
             throw AppDataArchiveException(AppDataArchiveFailure.InvalidManifest)
         }
@@ -636,11 +655,13 @@ internal object AppDataArchiveCodec {
     private fun AppDataArchiveWebsiteState.toWireValue(): String = when (this) {
         AppDataArchiveWebsiteState.CandyOwnedOnly -> "candy-owned-only"
         AppDataArchiveWebsiteState.LegacyWebsiteStateExcluded -> "legacy-website-state-excluded"
+        AppDataArchiveWebsiteState.EngineStateIncluded -> "engine-state-included"
     }
 
     private fun String.toWebsiteState(): AppDataArchiveWebsiteState = when (this) {
         "candy-owned-only" -> AppDataArchiveWebsiteState.CandyOwnedOnly
         "legacy-website-state-excluded" -> AppDataArchiveWebsiteState.LegacyWebsiteStateExcluded
+        "engine-state-included" -> AppDataArchiveWebsiteState.EngineStateIncluded
         else -> error("Unknown website-state contract")
     }
 
