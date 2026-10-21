@@ -35,6 +35,8 @@ import dev.sk2andy.materialbrowser.browser.ProfileProtection
 import dev.sk2andy.materialbrowser.browser.ProfileProtectionRules
 import dev.sk2andy.materialbrowser.browser.PrivacySignalSettings
 import dev.sk2andy.materialbrowser.browser.SearchEngine
+import dev.sk2andy.materialbrowser.browser.SearchShortcut
+import dev.sk2andy.materialbrowser.browser.SearchShortcutRules
 import dev.sk2andy.materialbrowser.browser.StatusBarScrollRules
 import dev.sk2andy.materialbrowser.browser.StartupAddressFocusMode
 import dev.sk2andy.materialbrowser.browser.SearxngRules
@@ -740,6 +742,23 @@ class BrowserSessionStore internal constructor(
 
     fun saveSearchEngine(searchEngine: SearchEngine) {
         preferences.edit().putString(KEY_SEARCH_ENGINE, searchEngine.stableId).apply()
+    }
+
+    fun loadSearchShortcuts(): List<SearchShortcut> = runCatching {
+        val array = JSONArray(preferences.getString(KEY_SEARCH_SHORTCUTS, "[]"))
+        List(array.length()) { index ->
+            array.getJSONObject(index).let { item ->
+                SearchShortcut(item.optString("keyword"), item.optString("template"))
+            }
+        }
+    }.getOrDefault(emptyList()).let(SearchShortcutRules::sanitize)
+
+    fun saveSearchShortcuts(shortcuts: List<SearchShortcut>) {
+        val array = JSONArray()
+        SearchShortcutRules.sanitize(shortcuts).forEach { shortcut ->
+            array.put(JSONObject().put("keyword", shortcut.keyword).put("template", shortcut.template))
+        }
+        preferences.edit().putString(KEY_SEARCH_SHORTCUTS, array.toString()).apply()
     }
 
     fun loadPageTranslationProvider(): PageTranslationProvider =
@@ -1697,6 +1716,7 @@ class BrowserSessionStore internal constructor(
             "pending_tab_clear_on_task_removal"
         const val KEY_RESIDENT_TAB_LIMIT = "resident_tab_limit"
         const val KEY_SEARCH_ENGINE = "search_engine"
+        const val KEY_SEARCH_SHORTCUTS = "search_shortcuts"
         const val KEY_PAGE_TRANSLATION_PROVIDER = "page_translation_provider"
         const val KEY_SEARXNG_INSTANCE_URL = "searxng_instance_url"
         const val KEY_SEARXNG_SUGGESTION_FALLBACK = "searxng_suggestion_fallback"

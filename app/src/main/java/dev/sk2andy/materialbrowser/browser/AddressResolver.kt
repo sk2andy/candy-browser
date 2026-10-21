@@ -18,14 +18,18 @@ object AddressResolver {
         searchMode: SearchMode = SearchMode.Web,
         searxngInstanceUrl: String = "",
         allowGeckoInternalPages: Boolean = false,
-    ): String = when (val target = classify(input, allowGeckoInternalPages)) {
-        AddressTarget.Blank -> BLANK_URL
-        is AddressTarget.Url -> target.value
-        is AddressTarget.Search -> searchEngine.buildSearchUrl(
-            query = target.query,
-            mode = searchMode,
-            searxngInstanceUrl = searxngInstanceUrl,
-        )
+        searchShortcuts: List<SearchShortcut> = emptyList(),
+    ): String {
+        SearchShortcutRules.resolve(input, searchShortcuts)?.let { return it }
+        return when (val target = classify(input, allowGeckoInternalPages)) {
+            AddressTarget.Blank -> BLANK_URL
+            is AddressTarget.Url -> target.value
+            is AddressTarget.Search -> searchEngine.buildSearchUrl(
+                query = target.query,
+                mode = searchMode,
+                searxngInstanceUrl = searxngInstanceUrl,
+            )
+        }
     }
 
     fun isSearchQuery(input: String, allowGeckoInternalPages: Boolean = false): Boolean =

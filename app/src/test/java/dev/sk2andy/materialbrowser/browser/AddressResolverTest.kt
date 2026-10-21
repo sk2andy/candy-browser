@@ -140,6 +140,20 @@ class AddressResolverTest {
     }
 
     @Test
+    fun `custom search shortcut encodes query and preserves ordinary resolution`() {
+        val shortcuts = listOf(SearchShortcut("gh", "https://github.com/search?q=%s"))
+        assertEquals(
+            "https://github.com/search?q=compose%20%26%20%E2%9C%93",
+            AddressResolver.resolve("gh compose & ✓", SearchEngine.Google, searchShortcuts = shortcuts),
+        )
+        assertEquals("https://example.com/path", AddressResolver.resolve("example.com/path", SearchEngine.Google, searchShortcuts = shortcuts))
+        assertEquals(
+            "https://www.google.com/search?q=gh%20compose",
+            AddressResolver.resolve("gh compose"),
+        )
+    }
+
+    @Test
     fun `displays host when tracking query contains uri-invalid characters`() {
         assertEquals(
             "centerparcs.de",

@@ -2,6 +2,14 @@
 
 ## Contract
 
+### User search shortcuts
+
+| Concern | Rule | Owner |
+| --- | --- | --- |
+| Definition | Search settings store up to 30 user-defined keyword and URL-template pairs. A template must be valid HTTP(S) and contain exactly one `%s`; aliases are case-insensitive, unique, and cannot use built-in engine IDs. | `SearchShortcutRules`, `SearchSettingsPage` |
+| Address input | `keyword search terms` uses matching shortcut. Search terms are UTF-8 percent-encoded before replacing `%s`. No match or missing terms falls through to ordinary URL/search resolution. | `AddressResolver`, `SearchShortcutRules` |
+| Persistence | Sanitized shortcuts are saved in regular browser preferences. Private input is used only for the current navigation; no query or tab state is added to persistence. | `BrowserSessionStore` |
+
 | Concern | Rule | Owner |
 | --- | --- | --- |
 | Name | The user-facing search and suggestion option is `SearXNG`. | `SearchEngine`, `SearchSuggestionProvider` |

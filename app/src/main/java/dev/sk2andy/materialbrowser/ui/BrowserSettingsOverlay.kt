@@ -184,6 +184,7 @@ internal fun BrowserSettingsOverlay(
             inactiveTabLifetime = controller.inactiveTabLifetime,
             residentTabLimit = controller.residentTabLimit,
             searchEngine = controller.searchEngine,
+            searchShortcuts = controller.searchShortcuts,
             pageTranslationProvider = controller.pageTranslationProvider,
             addressBarLongPressAction = controller.addressBarLongPressAction,
             linkLongPressAction = controller.linkLongPressAction,
@@ -296,6 +297,7 @@ internal fun BrowserSettingsOverlay(
             onInactiveTabLifetimeChanged = controller::updateInactiveTabLifetime,
             onResidentTabLimitChanged = controller::updateResidentTabLimit,
             onSearchEngineChanged = controller::updateSearchEngine,
+            onSearchShortcutsChanged = controller::updateSearchShortcuts,
             onPageTranslationProviderChanged = controller::updatePageTranslationProvider,
             onAddressBarLongPressActionChanged =
                 controller::updateAddressBarLongPressAction,
