@@ -370,7 +370,7 @@ internal fun BoxScope.BrowserAddressChrome(
                                 Toast.LENGTH_SHORT,
                             ).show()
                         } else {
-                            controller.submitAddress(scannedValue)
+                            controller.submitAddressFromAddressBar(scannedValue)
                             onAddressEditorDismiss()
                         }
                     },
