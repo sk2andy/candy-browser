@@ -467,6 +467,11 @@ accessibility announcement or interaction, and use a centered, aspect-preserving
 the page. The External link preview page uses only its approved v8 decorative header; its redundant
 older graphic is removed without removing controls.
 
+The **Gestures & controls** overview retains its swipe-arrow header. Its **Gestures** child uses a
+hand dragging a floating address pill, while **Address-bar buttons** uses floating shortcut tiles
+and placement slots. These three pages have independent artwork; the new originals and exact
+prompts are recorded in [Gesture and address-bar artwork](../design/gesture-controls-artwork.md).
+
 The eleven PNGs in `shared/src/commonMain/composeResources/drawable` are byte-identical original
 downloads. No pixels were cropped, recolored, redrawn or regenerated in the source files. The
 Appearance and Tabs windows reference the first sheet; the rejected rounded Player on that sheet

@@ -1,0 +1,9 @@
+Use case: stylized-concept
+Asset type: Candy Browser settings decorative header, one standalone landscape 1536x1024 illustration
+Primary request: a creative clear illustration of repositioning a floating address pill with a touch gesture. Clearly different from a horizontal swipe arrow.
+Scene/backdrop: pure white #FFFFFF, opaque, ample clean blank margin on all four sides.
+Subject: a pale rounded browser page panel, three light gray content strokes near top; on its right edge a small dark floating horizontal address pill with a small round icon and short white address stroke. A simple friendly rounded hand rises from below and its index fingertip touches that pill. A delicate curved vertical dotted motion path leads from a faint ghost pill below up to the dark pill, with a small upward arrowhead, communicating drag and dock. Keep the complete hand and wrist inside the canvas.
+Style/medium: polished flat grayscale editorial UI illustration. Rounded solid shapes, restrained mid-gray shades, crisp simple silhouettes, subtle paper softness, no outlines around everything. No 3D or lighting effects.
+Composition/framing: compact wide arrangement in central area, all artwork inside x=140..1396 and y=150..890, white outside. Main hand and pill dark charcoal 25/255, page panel pale gray, middle tones retain detail. Artwork readable at 360x200dp.
+Text: none, no letters, no words, no digits.
+Constraints: monochrome grayscale only, no colored pixels, no device bezel, no screenshot, no surrounding UI, no watermark. Background border must be pure white. Single illustration only.

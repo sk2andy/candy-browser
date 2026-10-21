@@ -10,7 +10,7 @@ import kotlin.math.roundToInt
 
 enum class SettingsHeaderArtwork {
     Appearance, Tabs, Player, SearchEngines, Translations, Downloads, Profiles, Gestures, LinkPreview,
-    TabLifecycle, PersonalLinkRules, ExternalApps,
+    TabLifecycle, PersonalLinkRules, ExternalApps, GestureControls, AddressBarButtons,
 }
 
 /** Source windows refer to the original, unmodified imagegen PNGs, in image pixels. */
@@ -24,6 +24,8 @@ internal object SettingsHeaderArtworkRules {
         SettingsHeaderArtwork.Downloads -> IntRect(260, 140, 1300, 880)
         SettingsHeaderArtwork.Profiles -> IntRect(50, 270, 1486, 700)
         SettingsHeaderArtwork.Gestures -> IntRect(160, 245, 1376, 780)
+        SettingsHeaderArtwork.GestureControls -> IntRect(180, 140, 1380, 900)
+        SettingsHeaderArtwork.AddressBarButtons -> IntRect(80, 150, 1460, 830)
         // The approved hand extends almost to the original's bottom edge.
         SettingsHeaderArtwork.LinkPreview -> IntRect(0, 0, 1536, 1024)
         SettingsHeaderArtwork.TabLifecycle -> IntRect(340, 115, 1210, 910)

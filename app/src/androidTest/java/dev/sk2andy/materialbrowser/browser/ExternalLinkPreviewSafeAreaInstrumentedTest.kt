@@ -77,7 +77,7 @@ class ExternalLinkPreviewSafeAreaInstrumentedTest {
     }
 
     @Test
-    fun hiddenKeyboardInsetDoesNotShrinkExternalPreview() {
+    fun hiddenKeyboardInsetDoesNotShrinkDetachedExternalPreview() {
         activityRule.scenario.onActivity { activity ->
             val browser = preparePreview(activity)
             val hiddenKeyboardInsets = WindowInsetsCompat.Builder()
