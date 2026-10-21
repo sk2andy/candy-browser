@@ -91,3 +91,11 @@ internal object DownloadHistoryRules {
         return earliestDate.atStartOfDay(zoneId).toInstant().toEpochMilli()
     }
 }
+
+internal object DownloadSourceRules {
+    fun canOpenSource(entry: DownloadEntry): Boolean =
+        !entry.isPrivate &&
+            entry.sourceProfileId == null &&
+            (entry.status == DownloadStatus.Failed || entry.status == DownloadStatus.Cancelled) &&
+            SafeDownloadValues.isHttpUrl(entry.source)
+}

@@ -1,5 +1,7 @@
 package dev.sk2andy.materialbrowser
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -18,6 +20,7 @@ import dev.sk2andy.materialbrowser.data.AppDataTransferLock
 import dev.sk2andy.materialbrowser.data.BrowserSessionStore
 import dev.sk2andy.materialbrowser.data.DownloadEntry
 import dev.sk2andy.materialbrowser.data.DownloadRepository
+import dev.sk2andy.materialbrowser.data.DownloadSourceRules
 import dev.sk2andy.materialbrowser.ui.DownloadsScreen
 import dev.sk2andy.materialbrowser.ui.theme.CandyTheme
 import dev.sk2andy.materialbrowser.ui.theme.setCandyContent
@@ -58,6 +61,7 @@ class DownloadsActivity : ComponentActivity() {
                     onBack = ::finish,
                     onCancelDownload = { entry -> updateDownload { repository.cancel(entry) } },
                     onTogglePauseDownload = { entry -> updateDownload { repository.togglePause(entry) } },
+                    onOpenSource = ::openSource,
                 )
             }
         }
@@ -107,6 +111,15 @@ class DownloadsActivity : ComponentActivity() {
             return
         }
         DownloadFileOpener.open(this, uri, entry.mime)
+    }
+
+    private fun openSource(entry: DownloadEntry) {
+        if (!DownloadSourceRules.canOpenSource(entry)) return
+        startActivity(
+            Intent(this, MainActivity::class.java)
+                .setAction(Intent.ACTION_VIEW)
+                .setData(Uri.parse(entry.source)),
+        )
     }
 
     private fun updateDownload(action: () -> Boolean) {

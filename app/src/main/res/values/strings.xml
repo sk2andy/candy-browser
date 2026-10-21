@@ -762,6 +762,7 @@
     <string name="downloads_pause">Pause</string>
     <string name="downloads_resume">Resume</string>
     <string name="downloads_control_failed">Download could not be updated</string>
+    <string name="downloads_open_source">Open source</string>
     <string name="downloads_open_failed">No app can open this download</string>
     <string name="downloads_status_pending">Pending · %1$s</string>
     <string name="downloads_status_running">Downloading · %1$s</string>

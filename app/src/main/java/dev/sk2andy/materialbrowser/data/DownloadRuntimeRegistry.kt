@@ -29,6 +29,7 @@ internal object DownloadRuntimeRegistry {
         cancel: (() -> Unit)? = null,
         pause: (() -> Boolean)? = null,
         resume: (() -> Boolean)? = null,
+        isPrivate: Boolean = false,
     ) {
         entries[id] = DownloadEntry(
             id = mediaStoreId?.let(DownloadEntryIds::encodeMediaStoreId) ?: encodeRuntimeId(id),
@@ -41,6 +42,7 @@ internal object DownloadRuntimeRegistry {
             mime = mime,
             supportsPause = pause != null && resume != null,
             supportsCancel = cancel != null,
+            isPrivate = isPrivate,
         )
         if (cancel != null) controls[id] = Controls(cancel, pause, resume)
     }

@@ -178,6 +178,26 @@ class DownloadRepositoryInstrumentedTest {
         mediaUris.remove(uri)
     }
 
+    @Test
+    fun orphanedPendingRowAfterProcessLossIsNotExposedAsCompletedOrRetryable() {
+        val name = "orphaned-gecko-${UUID.randomUUID()}.bin"
+        val uri = requireNotNull(
+            resolver.insert(
+                MediaStore.Downloads.EXTERNAL_CONTENT_URI,
+                ContentValues().apply {
+                    put(MediaStore.Downloads.DISPLAY_NAME, name)
+                    put(MediaStore.Downloads.MIME_TYPE, "application/octet-stream")
+                    put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
+                    put(MediaStore.Downloads.IS_PENDING, 1)
+                },
+            ),
+        )
+        mediaUris += uri
+        repository = DownloadRepository(context, ownerPackageName = ownerPackage(uri))
+
+        assertFalse(repository.snapshot().any { entry -> entry.name == name })
+    }
+
     private fun ownerPackage(uri: Uri): String = requireNotNull(
         resolver.query(
             uri,
