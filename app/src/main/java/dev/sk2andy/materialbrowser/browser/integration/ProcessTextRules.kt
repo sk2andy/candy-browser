@@ -9,6 +9,7 @@ internal object ProcessTextRules {
     const val MAX_RESEARCH_CHARACTERS = 2_000
     const val MAX_SPEECH_CHARACTERS = 20_000
     const val ACTION_RESEARCH = "dev.sk2andy.materialbrowser.action.RESEARCH_SELECTED_TEXT"
+    const val ACTION_READ_ALOUD = "dev.sk2andy.materialbrowser.action.READ_SELECTED_TEXT"
     const val EXTRA_REQUEST_TOKEN = "selected_text_request_token"
 
     fun selectedText(value: CharSequence?, maximumCharacters: Int): String? {

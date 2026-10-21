@@ -32,7 +32,10 @@ page before persistence. Private tabs never expose this action.
 | Piece | Responsibility |
 | --- | --- |
 | `ReaderSpeechRules` | Pure status reducer and current excerpt selection |
-| `ReaderSpeechController` | Android `TextToSpeech`, chunk queue, range callbacks and cleanup |
+| `ReaderSpeechController` | Shared first-use voice choice, backend routing, pending-play cancellation and cleanup |
+| `AndroidReaderSpeechController` | Android `TextToSpeech`, chunk queue and range callbacks |
+| `OfflineReaderSpeechController`, `OfflineSpeechEngine` | Bounded sentence synthesis with Supertonic 3 / ONNX Runtime and memory-only PCM playback |
+| `ReaderSpeechModelRepository`, `OfflineSpeechModelFiles` | App-wide voice preference; explicit, pinned, integrity-checked model download and deletion |
 | `ReaderDocument.speechText` | Stable title+block text projection |
 
 The iOS host maps its tab/session-bound WebKit extraction into `ReaderExtractionResult` and renders this
@@ -42,6 +45,16 @@ parallel SwiftUI Reader surface exists.
 - Drive state transitions through `ReaderSpeechEvent`; keep Android callbacks out of reducer logic.
 - Close speech controller with screen/session lifecycle.
 - Test reducer/library behavior on JVM; test store, TTS wiring and Compose semantics only where platform behavior matters.
+
+| Offline speech behavior | Contract |
+| --- | --- |
+| First request | Reader and selected-text speech share one choice: download the local model or use Android voices. Dismissal cancels playback without recording a choice. |
+| Download | Explicit public model download, about 145 MB; never sends article text. Pinned individual assets are size/SHA-256 checked before use; partial files are cleaned up. |
+| Settings | Browser → Read aloud offers download, delete and enable/disable. Disabling preserves files and uses Android voices. Deleting disables local speech and removes model assets. |
+| Private content | Text and generated audio stay in memory. Only the app-wide voice choice and public model files persist; model files are excluded from backup. |
+| Playback | Language-agnostic multilingual input, bounded sentence chunks with one sentence prepared ahead of playback; pause resumes from the current sentence. No word-level timing is fabricated. |
+| Lifecycle | Leaving the screen or backgrounding cancels pending playback and active audio. Download completion cannot restart a cancelled session. Native inference resources close after playback. Audio-focus loss pauses speech. |
+| License | Supertonic 3 model weights use OpenRAIL-M; reference inference code is MIT. Notices and license text ship with the app. |
 
 Android selected-text actions reuse `ReaderSpeechController` for temporary read-aloud sessions without creating
 Reader documents or library snapshots. These sessions stop when their activity leaves the foreground and
@@ -98,3 +111,17 @@ its status-bar inset and enough trailing space to scroll its final entry above t
 Only the current destination remains composed during navigation; outgoing content cannot intercept touches or accessibility actions. The save checkmark also
 exposes the localized offline state on its button. Returning to settings retains the checkmark without
 starting another save. A save completed while the library is open still updates its list. Pulse feedback remains bound to the article; closing or replacing the Reader session rejects its stale library callback.
+
+## Offline speech model provenance
+
+| Asset or contract | Source / invariant |
+| --- | --- |
+| Inference | Supertonic 3, existing ONNX Runtime Android 1.24.3 CPU provider; no separate native runtime |
+| Reference algorithm | [Supertone Java example](https://github.com/supertone-oss-archive/supertonic/tree/main/java), MIT; notice included in both app variants |
+| Weights | [sherpa-onnx INT8 conversion](https://huggingface.co/csukuangfj2/sherpa-onnx-supertonic-3-tts-int8-2026-05-11), revision `cca5a0e6c96e1d2c720986bf7e75fcc81dee3ae4` |
+| Model license | [Open RAIL-M](https://huggingface.co/supertone-oss-archive/supertonic-3/blob/aafc6e32416a594460b32413efc49d7fe4ce6d46/LICENSE), bundled and downloaded; distinct from the reference code's MIT license |
+| Transfer | 145,310,775 bytes across individually pinned files, including license; `.part` files never count as ready |
+| Audio | 44,100 Hz mono float PCM, matching the pinned model configuration; first preset F1 |
+| Text | At most 300 UTF-16 characters per inference, NFKD normalization, language-agnostic `<na>` tags for local multilingual synthesis |
+| Limits | Eight denoising steps, two CPU inference threads, bounded 45-second prediction per chunk; cancellation checked between stages and steps |
+| Verification | `OfflineSpeechModelFilesTest`, `OfflineSpeechTextRulesTest`, `OfflineSpeechModelFilesInstrumentedTest`; optional `OfflineSpeechEngineInstrumentedTest` requires preloaded assets and `offlineSpeechModelDirectory` instrumentation argument |

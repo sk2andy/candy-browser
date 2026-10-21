@@ -41,6 +41,7 @@ import androidx.core.view.doOnAttach
 import dev.sk2andy.materialbrowser.StatusBarScrollAccessibilityContract
 import dev.sk2andy.materialbrowser.BuildConfig
 import dev.sk2andy.materialbrowser.R
+import dev.sk2andy.materialbrowser.startSelectedTextSpeech
 import dev.sk2andy.materialbrowser.blocking.BlockerSettings
 import dev.sk2andy.materialbrowser.blocking.BundledSitePrivacyDefaults
 import dev.sk2andy.materialbrowser.blocking.CandyDecisionAction
@@ -12576,6 +12577,7 @@ class BrowserController(
                     }
                     WebTextSelectionAction.Translate ->
                         handleSelectedTextTranslation(tab.id, session, text)
+                    WebTextSelectionAction.ReadAloud -> activity.startSelectedTextSpeech(text)
                 }
             }
         }

@@ -371,6 +371,7 @@ fun ReaderStudioScreen(
     onOpenLink: (String) -> Unit,
     backHandler: (@Composable (Boolean, () -> Unit) -> Unit)? = null,
     systemBarAppearance: @Composable (Boolean) -> Unit = {},
+    speechOptions: @Composable (ReaderSpeech) -> Unit = {},
 ) {
     var library by remember(isPrivate) { mutableStateOf(ReaderLibraryState()) }
     val sessionActive = remember(repository, result, sourceUrl, isPrivate) { mutableStateOf(true) }
@@ -494,6 +495,7 @@ fun ReaderStudioScreen(
                             repository = repository,
                             resources = resources,
                             speechFactory = speechFactory,
+                            speechOptions = speechOptions,
                             colors = colors,
                             backButtonVisible = backHandler == null,
                             onSettingsChanged = { settings ->
@@ -730,6 +732,7 @@ private fun ReaderArticle(
     repository: ReaderLibraryDataSource,
     resources: ReaderStudioResources,
     speechFactory: () -> ReaderSpeech,
+    speechOptions: @Composable (ReaderSpeech) -> Unit,
     colors: ReaderColors,
     backButtonVisible: Boolean,
     onSettingsChanged: (ReaderSettings) -> Unit,
@@ -779,6 +782,7 @@ private fun ReaderArticle(
     val progress = ReaderLibraryRules.progress(scrollState.value, scrollState.maxValue)
 
     DisposableEffect(speech) { onDispose(speech::close) }
+    speechOptions(speech)
     LaunchedEffect(document.sourceUrl, scrollState.maxValue, libraryLoaded) {
         if (restored || !libraryLoaded || scrollState.maxValue <= 0) return@LaunchedEffect
         val savedProgress = ReaderLibraryRules.resumeProgress(

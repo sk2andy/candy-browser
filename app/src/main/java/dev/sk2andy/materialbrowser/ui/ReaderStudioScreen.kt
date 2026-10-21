@@ -68,6 +68,9 @@ internal fun ReaderStudioScreen(
             repository = remember(repository, sourceProfileId) { repository.forProfile(sourceProfileId) },
             resources = AndroidReaderStudioResources,
             speechFactory = { ReaderSpeechController(context) },
+            speechOptions = { speech ->
+                if (speech is ReaderSpeechController) ReaderSpeechOptions(speech)
+            },
             onRetry = onRetry,
             onDismiss = onDismiss,
             onOpenOriginal = onOpenOriginal,

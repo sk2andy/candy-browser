@@ -98,7 +98,7 @@ internal fun SelectedTextSpeechScreen(
             }
         }
         if (status == ReaderSpeechStatus.Unavailable) {
-            Text(stringResource(R.string.process_text_speech_unavailable), color = MaterialTheme.colorScheme.error)
+            Text(stringResource(R.string.reader_voice_unavailable), color = MaterialTheme.colorScheme.error)
         }
         Text(text, modifier = Modifier.padding(top = 16.dp), style = MaterialTheme.typography.bodyLarge)
     }

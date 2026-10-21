@@ -33,6 +33,7 @@ enum class SettingsDestination {
     BrowserFavorites,
     BrowserWebsites,
     Translations,
+    ReadAloud,
     BrowserLinks,
     ExternalLinkPreview,
     ExternalAppLinks,

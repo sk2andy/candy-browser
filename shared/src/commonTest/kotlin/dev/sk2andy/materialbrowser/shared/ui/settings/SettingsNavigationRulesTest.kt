@@ -22,6 +22,7 @@ class SettingsNavigationRulesTest {
             SettingsDestination.TabLifecycle to SettingsDestination.Tabs,
             SettingsDestination.ProfileOptions to SettingsDestination.Tabs,
             SettingsDestination.Translations to SettingsDestination.BrowserWebsites,
+            SettingsDestination.ReadAloud to SettingsDestination.Browser,
             SettingsDestination.GestureLinks to SettingsDestination.Gestures,
             SettingsDestination.GestureAddressBar to SettingsDestination.Gestures,
             SettingsDestination.GestureControls to SettingsDestination.Gestures,

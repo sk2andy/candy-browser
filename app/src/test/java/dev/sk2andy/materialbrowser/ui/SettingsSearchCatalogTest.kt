@@ -10,6 +10,16 @@ import org.junit.Test
 
 class SettingsSearchCatalogTest {
     @Test
+    fun `offline speech controls open their model settings page`() {
+        val entries = settingsSearchDefinitions(SettingsSearchAvailability()).associateBy { it.id }
+        listOf(
+            "reader_voice_settings_title", "reader_voice_enabled_title", "reader_voice_download", "reader_voice_delete",
+        ).forEach { id ->
+            assertEquals(SettingsDestination.ReadAloud, entries.getValue(id).destination)
+        }
+    }
+
+    @Test
     fun `link peek swipe action appears only when link peek enabled`() {
         assertTrue("settings_link_peek_swipe_action" in ids(SettingsSearchAvailability()))
         assertFalse(

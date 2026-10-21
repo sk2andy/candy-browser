@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reader_voice_settings_title">Vorlesen</string>
+    <string name="reader_voice_settings_summary">Wähle, wie Candy Artikel und markierten Text vorliest. Lade das mehrsprachige Sprachmodell einmal herunter, um vollständig auf deinem Gerät vorzulesen.</string>
+    <string name="reader_voice_choice_title">Stimme auswählen</string>
+    <string name="reader_voice_choice_summary">Lade ein mehrsprachiges Sprachmodell zum Offline-Vorlesen herunter oder nutze deine Android-Stimme. Deine Auswahl gilt für Artikel und markierten Text. Du kannst sie unter Einstellungen → Browser → Vorlesen ändern.</string>
+    <string name="reader_voice_use_offline">Offline-Stimme verwenden</string>
+    <string name="reader_voice_use_system">Android-Stimme verwenden</string>
+    <string name="reader_voice_download">Sprachmodell herunterladen</string>
+    <string name="reader_voice_delete">Sprachmodell löschen</string>
+    <string name="reader_voice_enabled_title">Offline-Sprachmodell verwenden</string>
+    <string name="reader_voice_enabled_summary">Ausgeschaltet verwendet Candy deine Android-Stimme. Das heruntergeladene Modell bleibt dabei erhalten.</string>
+    <string name="reader_voice_checking">Sprachmodell wird geprüft…</string>
+    <string name="reader_voice_working">Sprachmodell wird aktualisiert…</string>
+    <string name="reader_voice_downloading">Sprachmodell wird heruntergeladen: %1$d%%</string>
+    <string name="reader_voice_model_error">Das Sprachmodell konnte nicht heruntergeladen oder aktualisiert werden. Prüfe Verbindung und freien Speicher und versuche es erneut.</string>
+    <string name="reader_voice_ready">Sprachmodell heruntergeladen. Bereit zum Offline-Vorlesen.</string>
+    <string name="reader_voice_missing">Sprachmodell nicht heruntergeladen.</string>
+    <string name="reader_voice_model_details">Supertonic 3 · ca. 145 MB Download · 31 Sprachen, darunter Deutsch und Englisch. Artikeltexte bleiben beim Offline-Vorlesen auf deinem Gerät. Wenn du das Modell löschst, verwendet Candy wieder Android-Stimmen.</string>
+    <string name="reader_voice_model_terms">Durch Herunterladen oder Aktivieren des Modells stimmst du der OpenRAIL-M-Lizenz einschließlich ihrer Nutzungsbeschränkungen zu. Die Stimme ist KI-generiert.</string>
+    <string name="reader_voice_playback_error">Diese Stimme konnte den Text nicht vorlesen. Versuche es erneut oder wechsle die Stimme.</string>
+    <string name="reader_voice_model_license">Modelllizenz: OpenRAIL-M</string>
+    <string name="reader_voice_unavailable">Vorlesen ist nicht verfügbar. Prüfe das Sprachmodell unter Einstellungen → Browser → Vorlesen oder die Android-Einstellungen für Text-in-Sprache.</string>
+</resources>

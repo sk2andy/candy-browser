@@ -30,13 +30,16 @@ internal class WebTextActionModeCallback(
         val kind = when (item.itemId) {
             R.id.web_annotation_mark -> WebTextSelectionAction.Highlight
             R.id.web_annotation_translate -> WebTextSelectionAction.Translate
+            R.id.web_text_read_aloud -> WebTextSelectionAction.ReadAloud
             else -> return delegate.onActionItemClicked(mode, item)
         }
         if (documentGeneration() != generation) return true
         val url = webView.url
         webView.evaluateJavascript(SELECTION_SCRIPT) { result ->
             val text = runCatching { JSONTokener(result).nextValue() as? String }.getOrNull()
-            if (documentGeneration() == generation && url == webView.url && !text.isNullOrBlank() && text.length <= 8_000) onAction(kind, text)
+            if (documentGeneration() == generation && url == webView.url &&
+                !text.isNullOrBlank() && text.length <= kind.maximumCharacters
+            ) onAction(kind, text)
             mode.finish()
         }
         return true
@@ -53,6 +56,7 @@ internal class WebTextActionModeCallback(
         if (menu.findItem(android.R.id.cut) != null || menu.findItem(android.R.id.paste) != null) {
             menu.removeItem(R.id.web_annotation_mark)
             menu.removeItem(R.id.web_annotation_translate)
+            menu.removeItem(R.id.web_text_read_aloud)
             return
         }
         if (canHighlight() && menu.findItem(R.id.web_annotation_mark) == null) {
@@ -60,6 +64,9 @@ internal class WebTextActionModeCallback(
         }
         if (menu.findItem(R.id.web_annotation_translate) == null) {
             menu.add(Menu.NONE, R.id.web_annotation_translate, Menu.NONE, R.string.web_annotation_translate)
+        }
+        if (menu.findItem(R.id.web_text_read_aloud) == null) {
+            menu.add(Menu.NONE, R.id.web_text_read_aloud, Menu.NONE, R.string.process_text_read_aloud)
         }
     }
 
@@ -72,7 +79,7 @@ internal class WebTextActionModeCallback(
               const e = n => n.nodeType === 1 ? n : n.parentElement;
               const unsafe = n => e(n)?.closest('input,textarea,select,[contenteditable]:not([contenteditable="false"])');
               if (unsafe(r.startContainer) || unsafe(r.endContainer) || unsafe(document.activeElement)) return '';
-              return s.toString().slice(0, 8001);
+              return s.toString().slice(0, ${WebTextSelectionAction.ReadAloud.maximumCharacters + 1});
             })()
         """.trimIndent()
     }

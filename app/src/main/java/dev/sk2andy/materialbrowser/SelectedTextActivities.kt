@@ -16,10 +16,11 @@ import dev.sk2andy.materialbrowser.browser.guest.GuestBubbleGate
 import dev.sk2andy.materialbrowser.browser.integration.ProcessTextResearchRequest
 import dev.sk2andy.materialbrowser.browser.integration.ProcessTextRules
 import dev.sk2andy.materialbrowser.browser.integration.processTextResearchRequests
+import dev.sk2andy.materialbrowser.browser.integration.processTextSpeechRequests
 import dev.sk2andy.materialbrowser.data.AppDataTransferLock
 import dev.sk2andy.materialbrowser.data.BrowserSessionStore
 import dev.sk2andy.materialbrowser.reader.ReaderSpeechController
-import dev.sk2andy.materialbrowser.reader.ReaderSpeechStatus
+import dev.sk2andy.materialbrowser.ui.ReaderSpeechOptions
 import dev.sk2andy.materialbrowser.ui.SelectedTextResearchScreen
 import dev.sk2andy.materialbrowser.ui.SelectedTextSpeechScreen
 import dev.sk2andy.materialbrowser.ui.theme.CandyTheme
@@ -83,7 +84,7 @@ class ReadSelectedTextActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         if (GuestBubbleGate.redirectIfLocked(this)) return
         setResult(Activity.RESULT_CANCELED)
-        val text = takeSelectedText(ProcessTextRules.MAX_SPEECH_CHARACTERS)
+        val text = takeSpeechText()
         if (text == null || savedInstanceState != null || AppDataTransferLock.isActive(this)) {
             finish()
             return
@@ -97,6 +98,7 @@ class ReadSelectedTextActivity : ComponentActivity() {
             SideEffect { applyAppearanceSystemBars(appearanceDark) }
             CandyTheme(settings = appearanceSettings) {
                 SelectedTextSpeechScreen(text, controller, onDismiss = ::finish, playbackAllowed = playbackAllowed)
+                ReaderSpeechOptions(controller)
             }
         }
     }
@@ -108,9 +110,7 @@ class ReadSelectedTextActivity : ComponentActivity() {
 
     override fun onStop() {
         playbackAllowed = false
-        if (speech?.state?.status in setOf(ReaderSpeechStatus.Speaking, ReaderSpeechStatus.Paused)) {
-            speech?.stop()
-        }
+        speech?.stop()
         super.onStop()
     }
 
@@ -127,4 +127,14 @@ private fun Activity.takeSelectedText(maximumCharacters: Int): String? {
     if (incoming.action != Intent.ACTION_PROCESS_TEXT || incoming.type != "text/plain") return null
     val selected = runCatching { incoming.getCharSequenceExtra(Intent.EXTRA_PROCESS_TEXT) }.getOrNull()
     return ProcessTextRules.selectedText(selected, maximumCharacters)
+}
+
+private fun Activity.takeSpeechText(): String? {
+    val incoming = intent
+    if (incoming.action != ProcessTextRules.ACTION_READ_ALOUD) {
+        return takeSelectedText(ProcessTextRules.MAX_SPEECH_CHARACTERS)
+    }
+    setIntent(Intent())
+    val token = runCatching { incoming.getStringExtra(ProcessTextRules.EXTRA_REQUEST_TOKEN) }.getOrNull()
+    return processTextSpeechRequests.take(token, SystemClock.elapsedRealtime())
 }

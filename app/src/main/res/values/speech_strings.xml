@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
+    <string name="reader_voice_settings_title">Read aloud</string>
+    <string name="reader_voice_settings_summary">Choose how Candy reads articles and selected text. Download the multilingual voice model once to read aloud entirely on your device.</string>
+    <string name="reader_voice_choice_title">Choose a voice</string>
+    <string name="reader_voice_choice_summary">Download a multilingual voice model for offline reading, or use your Android voice. Your choice applies to articles and selected text. You can change it in Settings → Browser → Read aloud.</string>
+    <string name="reader_voice_use_offline">Use offline voice</string>
+    <string name="reader_voice_use_system">Use Android voice</string>
+    <string name="reader_voice_download">Download voice model</string>
+    <string name="reader_voice_delete">Delete voice model</string>
+    <string name="reader_voice_enabled_title">Use offline voice model</string>
+    <string name="reader_voice_enabled_summary">When off, Candy uses your Android voice. Turning this off keeps the downloaded model.</string>
+    <string name="reader_voice_checking">Checking the voice model…</string>
+    <string name="reader_voice_working">Updating the voice model…</string>
+    <string name="reader_voice_downloading">Downloading voice model: %1$d%%</string>
+    <string name="reader_voice_model_error">The voice model could not be downloaded or updated. Check your connection and free storage, then try again.</string>
+    <string name="reader_voice_ready">Voice model downloaded. Ready for offline reading.</string>
+    <string name="reader_voice_missing">Voice model not downloaded.</string>
+    <string name="reader_voice_model_details">Supertonic 3 · approximately 145 MB download · 31 languages including English and German. Article text stays on your device when using the offline model. Deleting the model switches back to Android voices.</string>
+    <string name="reader_voice_model_terms">By downloading or enabling the model, you agree to its OpenRAIL-M license, including its use restrictions. The voice is AI-generated.</string>
+    <string name="reader_voice_playback_error">This voice could not read the text. Try again or switch voices.</string>
+    <string name="reader_voice_model_license">Model license: OpenRAIL-M</string>
+    <string name="reader_voice_unavailable">Reading aloud is unavailable. Check the voice model in Settings → Browser → Read aloud, or your Android text-to-speech settings.</string>
+</resources>

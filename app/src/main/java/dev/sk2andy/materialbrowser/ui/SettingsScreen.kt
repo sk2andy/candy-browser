@@ -634,6 +634,10 @@ internal fun SettingsScreen(
                     onBack = { onDestinationChanged(settingsParent(currentDestination)) },
                 )
 
+                SettingsDestination.ReadAloud -> ReaderSpeechSettingsPage(
+                    onBack = { onDestinationChanged(settingsParent(currentDestination)) },
+                )
+
                 SettingsDestination.ExternalAppLinks -> ExternalAppLinksSettingsPage(
                     externalAppLinkHandling = externalAppLinkHandling,
                     siteExceptions = externalAppSiteExceptions,

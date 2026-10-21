@@ -23,6 +23,7 @@ import java.util.concurrent.atomic.AtomicReference
 import org.json.JSONArray
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -60,13 +61,14 @@ class WebTextOperationsInstrumentedTest {
                 val callback = WebTextActionModeCallback(view, native, { 1L }) { _, _ -> error("Unexpected Candy action") }
                 assertTrue(callback.onCreateActionMode(mode, menu))
                 callback.onPrepareActionMode(mode, menu)
-                assertEquals(4, menu.size())
+                assertEquals(5, menu.size())
                 assertTrue(callback.onActionItemClicked(mode, menu.findItem(android.R.id.selectAll)))
                 assertEquals(android.R.id.selectAll, selected)
                 assertTrue(callback.onActionItemClicked(mode, menu.findItem(7351)))
                 assertEquals(7351, selected)
                 assertTrue(menu.findItem(R.id.web_annotation_mark) != null)
                 assertTrue(menu.findItem(R.id.web_annotation_translate) != null)
+                assertTrue(menu.findItem(R.id.web_text_read_aloud) != null)
                 val rect = Rect()
                 callback.onGetContentRect(mode, view, rect)
                 assertEquals(Rect(1, 2, 30, 40), rect)
@@ -76,6 +78,70 @@ class WebTextOperationsInstrumentedTest {
                 view.destroy()
             }
         }
+    }
+
+    @Test
+    fun readAloudPassesLongReadOnlySelectionWithoutReplacingNativeActions() {
+        withPage { view ->
+            evaluate(view, """
+                (() => {
+                  const paragraph = document.querySelector('p');
+                  paragraph.textContent = 'a'.repeat(9000);
+                  const range = document.createRange();
+                  range.selectNodeContents(paragraph);
+                  const selection = window.getSelection();
+                  selection.removeAllRanges();
+                  selection.addRange(range);
+                })()
+            """.trimIndent())
+            val action = AtomicReference<WebTextSelectionAction>()
+            val selected = AtomicReference<String>()
+            val received = CountDownLatch(1)
+            composeRule.runOnUiThread {
+                val menu = PopupMenu(composeRule.activity, view).menu
+                val mode = TestActionMode(menu)
+                val callback = WebTextActionModeCallback(view, nativeSelectionCallback(), { 1L }) { kind, text ->
+                    action.set(kind)
+                    selected.set(text)
+                    received.countDown()
+                }
+                assertTrue(callback.onCreateActionMode(mode, menu))
+                assertTrue(callback.onActionItemClicked(mode, menu.findItem(R.id.web_text_read_aloud)))
+            }
+            assertTrue(received.await(5, TimeUnit.SECONDS))
+            assertEquals(WebTextSelectionAction.ReadAloud, action.get())
+            assertEquals("a".repeat(9000), selected.get())
+        }
+    }
+
+    @Test
+    fun editableSelectionRetainsOnlyProviderActions() {
+        composeRule.runOnUiThread {
+            val view = WebView(composeRule.activity)
+            try {
+                val menu = PopupMenu(composeRule.activity, view).menu
+                val mode = TestActionMode(menu)
+                val callback = WebTextActionModeCallback(view, nativeSelectionCallback(), { 1L }) { _, _ ->
+                    error("Editable text must not trigger Candy actions")
+                }
+                callback.onCreateActionMode(mode, menu)
+                menu.add(0, android.R.id.cut, 0, "Cut")
+                callback.onPrepareActionMode(mode, menu)
+                assertNull(menu.findItem(R.id.web_text_read_aloud))
+                assertNull(menu.findItem(R.id.web_annotation_mark))
+                assertNull(menu.findItem(R.id.web_annotation_translate))
+                assertTrue(menu.findItem(android.R.id.cut) != null)
+            } finally {
+                view.destroy()
+            }
+        }
+    }
+
+    private fun nativeSelectionCallback() = object : ActionMode.Callback {
+        override fun onCreateActionMode(mode: ActionMode, menu: Menu) = true
+        override fun onPrepareActionMode(mode: ActionMode, menu: Menu) = true
+        override fun onActionItemClicked(mode: ActionMode, item: MenuItem) = false
+        override fun onDestroyActionMode(mode: ActionMode) = Unit
     }
 
     @Test

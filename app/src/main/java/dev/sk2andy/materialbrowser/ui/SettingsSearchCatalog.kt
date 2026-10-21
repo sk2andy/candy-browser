@@ -372,6 +372,29 @@ internal fun settingsSearchDefinitions(
     }
 
     settingsPage(
+        destination = SettingsDestination.ReadAloud,
+        id = "reader_voice_settings_title",
+        titleRes = R.string.reader_voice_settings_title,
+        descriptionRes = R.string.reader_voice_settings_summary,
+    ) {
+        setting(
+            id = "reader_voice_enabled_title",
+            titleRes = R.string.reader_voice_enabled_title,
+            descriptionRes = R.string.reader_voice_enabled_summary,
+        )
+        setting(
+            id = "reader_voice_download",
+            titleRes = R.string.reader_voice_download,
+            descriptionRes = R.string.reader_voice_model_details,
+        )
+        setting(
+            id = "reader_voice_delete",
+            titleRes = R.string.reader_voice_delete,
+            descriptionRes = R.string.reader_voice_model_details,
+        )
+    }
+
+    settingsPage(
         destination = SettingsDestination.ExternalAppLinks,
         id = "settings_external_app_sites_title",
         titleRes = R.string.settings_external_app_sites_title,

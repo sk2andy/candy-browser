@@ -81,5 +81,12 @@ internal fun BrowserSubpageLinks(onDestinationChanged: (SettingsDestination) -> 
                 stringResource(R.string.settings_external_link_preview_title),
             onClick = { onDestinationChanged(SettingsDestination.BrowserLinks) },
         )
+        SettingsPreferenceDivider()
+        SettingsLink(
+            icon = ImageVector.vectorResource(R.drawable.ic_player_volume),
+            title = stringResource(R.string.reader_voice_settings_title),
+            subtitle = stringResource(R.string.reader_voice_settings_summary),
+            onClick = { onDestinationChanged(SettingsDestination.ReadAloud) },
+        )
     }
 }
