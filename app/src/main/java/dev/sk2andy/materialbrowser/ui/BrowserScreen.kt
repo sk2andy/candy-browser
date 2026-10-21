@@ -1062,7 +1062,7 @@ internal fun BrowserScreen(
         addressEditorVisible = false
         if (target == null) {
             rootView.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
-            controller.submitAddress(suggestion.url)
+            controller.submitAddressFromAddressBar(suggestion.url)
         } else {
             val sourceTabId = controller.selectedTabId
             val sourceProfileId = controller.activeProfileId
@@ -1087,7 +1087,7 @@ internal fun BrowserScreen(
                     backAnimationScope.launch { tabHandoffAlpha.snapTo(1f) }
                     rootView.performConfirmHaptic()
                 } else {
-                    controller.submitAddress(suggestion.url)
+                    controller.submitAddressFromAddressBar(suggestion.url)
                 }
             }
             if (controller.usesGeckoEngine) {
@@ -1150,7 +1150,7 @@ internal fun BrowserScreen(
         ) {
             is AddressSubmission.Select -> selectSuggestion(submission.suggestion)
             is AddressSubmission.Navigate -> {
-                controller.submitAddress(submission.input, searchModeFor(submission.input))
+                controller.submitAddressFromAddressBar(submission.input, searchModeFor(submission.input))
                 addressEditorVisible = false
             }
             AddressSubmission.None -> Unit

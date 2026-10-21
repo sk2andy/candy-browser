@@ -5305,6 +5305,16 @@ class BrowserController(
             previous.isVisible(type) == current.isVisible(type)
     }
 
+    fun submitAddressFromAddressBar(
+        input: String,
+        searchMode: SearchMode = SearchMode.Web,
+    ) = submitAddress(
+        input,
+        searchMode,
+        initialExternalNavigationGrant = null,
+        allowExternalApps = true,
+    )
+
     fun submitAddress(
         input: String,
         searchMode: SearchMode = SearchMode.Web,
@@ -5314,6 +5324,7 @@ class BrowserController(
         input: String,
         searchMode: SearchMode,
         initialExternalNavigationGrant: ExternalNavigationGrant?,
+        allowExternalApps: Boolean = false,
     ) {
         bottomBarCompactStates[selectedTabId] = false
         pendingExternalAppHandoff = null
@@ -5393,9 +5404,53 @@ class BrowserController(
             }
         }
         val tabId = selectedTabId
+        val explicitWebUrl = target.takeIf {
+            allowExternalApps &&
+                !AddressResolver.isSearchQuery(input, allowGeckoInternalPages = usesGeckoEngine)
+        }?.let(BrowserUriPolicy::normalizeHttpUrl)
+        val navigationGrant = if (explicitWebUrl != null) {
+            val tab = selectedTab
+            val session = browserEngineSessionFor(tabId)
+            stopLoading()
+            val source = ExternalAppHandoffSource.Tab(
+                tabId = tabId,
+                profileId = tab.profileId,
+                isPrivate = tab.isIncognito,
+                session = session,
+            )
+            val grant = ExternalNavigationGrantRules.start(
+                url = explicitWebUrl,
+                sourceUrl = session.historyUrlAtOffset(0) ?: tab.url,
+                nowElapsedRealtime = SystemClock.elapsedRealtime(),
+            )
+            when (prepareExternalAppNavigation(
+                requestUrl = explicitWebUrl,
+                safeHttpUrl = explicitWebUrl,
+                webTargetUrl = explicitWebUrl,
+                source = source,
+                grant = grant,
+                isRedirect = false,
+            )) {
+                ExternalAppNavigationHandling.Automatic -> {
+                    postAutomaticExternalAppLaunch(
+                        requestUrl = explicitWebUrl,
+                        safeHttpUrl = explicitWebUrl,
+                        webTargetUrl = explicitWebUrl,
+                        source = source,
+                        grant = grant,
+                        isRedirect = false,
+                    )
+                    return
+                }
+                ExternalAppNavigationHandling.Prompted -> return
+                ExternalAppNavigationHandling.Unavailable -> grant
+            }
+        } else {
+            initialExternalNavigationGrant
+        }
         pendingBootstrapRecoveryTabIds.remove(tabId)
         val existingSession = browserEngineSessions[tabId]
-        initialExternalNavigationGrant?.let { grant ->
+        navigationGrant?.let { grant ->
             externalNavigationGrants[tabId] = grant
             pendingInitialExternalNavigationGrants[tabId] = grant
         }
@@ -12405,7 +12460,9 @@ class BrowserController(
             return GeckoNavigationRequestDecision.Deny
         }
         val nowElapsedRealtime = SystemClock.elapsedRealtime()
-        val currentPageUrl = pageUrls[tabId]
+        // The engine can report the target as started before asking whether to load it.
+        val currentPageUrl = BrowserUriPolicy.normalizeHttpUrl(session.historyUrlAtOffset(0))
+            ?: pageUrls[tabId]
             ?: tabs.firstOrNull { tab -> tab.id == tabId }?.url
         // Native POST popups can repeat the accepted request after its external grant expires.
         // Consume that exact first request without refreshing the bounded redirect grant.
