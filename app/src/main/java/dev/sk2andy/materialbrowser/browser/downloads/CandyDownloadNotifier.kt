@@ -138,6 +138,7 @@ internal class CandyDownloadNotifier(
     internal fun active(transferId: Int, entry: DownloadEntry) {
         if (!entry.status.isActive) return
         val progress = progressPercent(entry.bytes, entry.total)
+        val running = entry.status == DownloadStatus.Running
         val progressStyle = NotificationCompat.ProgressStyle()
             .setStyledByProgress(true)
             .setProgressIndeterminate(progress == null)
@@ -157,7 +158,8 @@ internal class CandyDownloadNotifier(
             .setContentIntent(openDownloadsIntent(transferId))
             .setOngoing(true)
             .setAutoCancel(false)
-            .setColorized(true)
+            .setRequestPromotedOngoing(running)
+            .setShortCriticalText(progress?.takeIf { running }?.let { "$it%" })
             .setStyle(progressStyle)
         if (progress == null) {
             builder.setProgress(0, 0, true)
