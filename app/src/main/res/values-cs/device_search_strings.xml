@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="device_search_title">Vyhledávání v zařízení</string>
+    <string name="device_search_settings_summary">Vyberte záložky a uložené články pro vyhledávání v Androidu</string>
+    <string name="device_search_summary">Vyberte jednotlivé záložky a uložené články, které chcete sdílet se systémovým vyhledáváním. Historie procházení a text článků zůstávají v Candy. Soukromý obsah a chráněné profily jsou vyloučeny.</string>
+    <string name="device_search_enable">Sdílet s vyhledáváním v zařízení</string>
+    <string name="device_search_enable_summary">Publikovány jsou pouze vybrané položky. Vypnutím je odstraníte z indexu.</string>
+    <string name="device_search_launcher_note">Výsledky se zobrazí pouze ve spouštěčích nebo aplikacích pro vyhledávání v systému, které podporují Android AppSearch. Dostupnost závisí na vašem zařízení.</string>
+    <string name="device_search_bookmark_profile">Otevřít záložky v tomto profilu</string>
+    <string name="device_search_bookmarks">Záložky</string>
+    <string name="device_search_articles">Uložené články</string>
+    <string name="device_search_empty">Žádné vhodné položky. Uložené články vyžadují známý, nechráněný místní profil.</string>
+    <string name="device_search_saving">Aktualizace vyhledávání v zařízení…</string>
+    <string name="device_search_failed">Vyhledávání v zařízení se nepodařilo aktualizovat. Zkuste znovu změnit výběr.</string>
+    <string name="device_search_item_unavailable">Tato položka již není sdílena ani dostupná.</string>
+    <string name="device_search_open">Otevřít v Candy</string>
+</resources>

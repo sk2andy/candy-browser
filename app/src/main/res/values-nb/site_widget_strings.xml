@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="site_widget_name">Nettstedbeskjæring (prototype)</string>
+    <string name="site_widget_name_square">Nettstedbeskjæring 4×4 (prototype)</string>
+    <string name="site_widget_description">Hold et valgt nettstedsområde på startskjermen</string>
+    <string name="site_widget_empty">Åpne en side i Candy, og trykk deretter her for å velge et område.</string>
+    <string name="site_widget_open">Åpne siden</string>
+    <string name="site_widget_refresh">Oppdater</string>
+    <string name="site_widget_unavailable">Denne siden kan ikke lagres som en widget. Bruk en vanlig, ubeskyttet lokal profil.</string>
+    <string name="site_widget_pin_failed">Kunne ikke legge til denne widgeten. Prøv igjen.</string>
+    <string name="site_widget_pin_requested">Bekreft å legge til widgeten på startskjermen.</string>
+    <string name="site_widget_editor_title">Nettside-widget</string>
+    <string name="site_widget_editor_instructions">Velg kolonner og rader. Klyp eller bruk zoomglidebryteren, og flytt deretter siden under rammen.</string>
+    <string name="site_widget_format_four_by_three">4 × 3</string>
+    <string name="site_widget_format_four_by_four">4 × 4</string>
+    <string name="site_widget_editor_size">Utvalgsstørrelse</string>
+    <string name="site_widget_editor_pin">Legg til på startskjermen</string>
+    <string name="site_widget_editor_interaction_hint">Widgeten viser et øyeblikksbilde. Trykk på den for å åpne siden i Candy.</string>
+    <string name="site_widget_private_unavailable">Nettstedswidgeter er utilgjengelige i private faner.</string>
+    <string name="site_widget_capture_failed">Kunne ikke fange denne siden. Prøv igjen når den er ferdig lastet.</string>
+    <string name="site_widget_pin_unavailable">Denne lanseringen støtter ikke å legge til widgets direkte. Legg til Candy-nettstedets widget fra widgetvelgeren.</string>
+    <string name="site_widget_save_failed">Kunne ikke lagre denne widgeten. Prøv igjen.</string>
+    <string name="site_widget_reselect">Rediger beskjæring</string>
+    <string name="site_widget_refresh_failed">Oppdatering mislyktes. Det siste øyeblikksbildet vises fortsatt.</string>
+    <string name="site_widget_refreshing">Oppdaterer …</string>
+    <string name="site_widget_editor_columns">Kolonner: %1$d</string>
+    <string name="site_widget_editor_rows">Rader: %1$d</string>
+    <string name="site_widget_editor_zoom">Zoom</string>
+    <string name="site_widget_editor_zoom_value">Zoom: %1$.1f×</string>
+    <string name="site_widget_editor_interval">Oppdateringsintervall</string>
+    <string name="site_widget_editor_interval_value">Oppdater: %1$s</string>
+    <string name="site_widget_editor_interval_hint">Android kan forsinke automatiske oppdateringer, for eksempel i batterisparemodus.</string>
+    <string name="site_widget_interval_manual">Kun manuell</string>
+    <string name="site_widget_interval_minutes">Hvert %1$d minutt</string>
+    <string name="site_widget_interval_hours">Hver %1$d time</string>
+</resources>

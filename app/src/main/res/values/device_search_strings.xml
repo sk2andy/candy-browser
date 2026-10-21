@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
+<resources>
     <string name="device_search_title">Device search</string>
     <string name="device_search_settings_summary">Choose bookmarks and saved articles for Android search</string>
     <string name="device_search_summary">Choose individual bookmarks and saved articles to share with system search. Browsing history and article text stay in Candy. Private content and protected profiles are excluded.</string>

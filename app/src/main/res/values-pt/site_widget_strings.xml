@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="site_widget_name">Corte do site (protótipo)</string>
+    <string name="site_widget_name_square">Corte do site 4×4 (protótipo)</string>
+    <string name="site_widget_description">Mantenha uma área selecionada do site na tela inicial</string>
+    <string name="site_widget_empty">Abra uma página em Candy e toque aqui para selecionar uma área.</string>
+    <string name="site_widget_open">Abrir página</string>
+    <string name="site_widget_refresh">Atualizar</string>
+    <string name="site_widget_unavailable">Esta página não pode ser salva como widget. Use um perfil local normal e desprotegido.</string>
+    <string name="site_widget_pin_failed">Não foi possível adicionar este widget. Por favor, tente novamente.</string>
+    <string name="site_widget_pin_requested">Confirme a adição do widget à sua tela inicial.</string>
+    <string name="site_widget_editor_title">Widget do site</string>
+    <string name="site_widget_editor_instructions">Escolha colunas e linhas. Aperte ou use o controle deslizante de zoom e mova a página abaixo do quadro.</string>
+    <string name="site_widget_format_four_by_three">4×3</string>
+    <string name="site_widget_format_four_by_four">4×4</string>
+    <string name="site_widget_editor_size">Tamanho da seleção</string>
+    <string name="site_widget_editor_pin">Adicionar à tela inicial</string>
+    <string name="site_widget_editor_interaction_hint">O widget mostra um instantâneo. Toque nele para abrir a página em Candy.</string>
+    <string name="site_widget_private_unavailable">Os widgets do site não estão disponíveis nas guias privadas.</string>
+    <string name="site_widget_capture_failed">Não foi possível capturar esta página. Tente novamente quando terminar de carregar.</string>
+    <string name="site_widget_pin_unavailable">Este iniciador não oferece suporte à adição direta de widgets. Adicione o widget do site Candy de seu seletor de widget.</string>
+    <string name="site_widget_save_failed">Não foi possível salvar este widget. Por favor, tente novamente.</string>
+    <string name="site_widget_reselect">Editar corte</string>
+    <string name="site_widget_refresh_failed">Falha na atualização. O último instantâneo ainda é mostrado.</string>
+    <string name="site_widget_refreshing">A atualizar…</string>
+    <string name="site_widget_editor_columns">Colunas: %1$d</string>
+    <string name="site_widget_editor_rows">Linhas: %1$d</string>
+    <string name="site_widget_editor_zoom">Zoom</string>
+    <string name="site_widget_editor_zoom_value">Zoom: %1$.1f×</string>
+    <string name="site_widget_editor_interval">Intervalo de atualização</string>
+    <string name="site_widget_editor_interval_value">Atualizar: %1$s</string>
+    <string name="site_widget_editor_interval_hint">O Android pode atrasar as atualizações automáticas, por exemplo, no modo de economia de bateria.</string>
+    <string name="site_widget_interval_manual">Somente manual</string>
+    <string name="site_widget_interval_minutes">A cada %1$d minutos</string>
+    <string name="site_widget_interval_hours">Cada %1$d h</string>
+</resources>

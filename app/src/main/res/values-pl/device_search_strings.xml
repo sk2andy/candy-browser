@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="device_search_title">Wyszukiwanie urządzenia</string>
+    <string name="device_search_settings_summary">Wybierz zakładki i zapisane artykuły do ​​wyszukiwania w Androidzie</string>
+    <string name="device_search_summary">Wybierz pojedyncze zakładki i zapisane artykuły, aby udostępnić je wyszukiwarce systemowej. Historia przeglądania i tekst artykułu pozostają w Candy. Treści prywatne i profile chronione są wykluczone.</string>
+    <string name="device_search_enable">Udostępnij w wyszukiwarce urządzeń</string>
+    <string name="device_search_enable_summary">Publikowane są tylko wybrane pozycje. Wyłączenie tej opcji powoduje usunięcie ich z indeksu.</string>
+    <string name="device_search_launcher_note">Wyniki pojawiają się tylko w programach uruchamiających lub aplikacjach wyszukiwania systemowego obsługujących Android AppSearch. Dostępność zależy od Twojego urządzenia.</string>
+    <string name="device_search_bookmark_profile">Otwórz zakładki w tym profilu</string>
+    <string name="device_search_bookmarks">Zakładki</string>
+    <string name="device_search_articles">Zapisane artykuły</string>
+    <string name="device_search_empty">Brak kwalifikujących się elementów. Zapisane artykuły wymagają znanego, niechronionego profilu lokalnego.</string>
+    <string name="device_search_saving">Aktualizuję wyszukiwanie urządzeń…</string>
+    <string name="device_search_failed">Nie można zaktualizować wyszukiwania urządzeń. Spróbuj ponownie zmienić wybór.</string>
+    <string name="device_search_item_unavailable">Ten element nie jest już udostępniany ani dostępny.</string>
+    <string name="device_search_open">Otwórz w Candy</string>
+</resources>

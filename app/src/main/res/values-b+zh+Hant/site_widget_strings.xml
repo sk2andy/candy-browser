@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="site_widget_name">網站裁切（原型）</string>
+    <string name="site_widget_name_square">網站裁切 4×4（原型）</string>
+    <string name="site_widget_description">在主畫面上保留選定的網站區域</string>
+    <string name="site_widget_empty">在 Candy 中開啟一個頁面，然後點擊此處選擇一個區域。</string>
+    <string name="site_widget_open">開啟頁面</string>
+    <string name="site_widget_refresh">重新整理</string>
+    <string name="site_widget_unavailable">該頁面無法另存為小工具。使用常規的、不受保護的本機設定檔。</string>
+    <string name="site_widget_pin_failed">無法新增此小工具。請再試一次。</string>
+    <string name="site_widget_pin_requested">確認在主畫面上新增小工具。</string>
+    <string name="site_widget_editor_title">網站小工具</string>
+    <string name="site_widget_editor_instructions">選擇列和行。捏合或使用縮放滑桿，然後將頁面移到框架下方。</string>
+    <string name="site_widget_format_four_by_three">4×3</string>
+    <string name="site_widget_format_four_by_four">4×4</string>
+    <string name="site_widget_editor_size">選擇尺寸</string>
+    <string name="site_widget_editor_pin">新增到主螢幕</string>
+    <string name="site_widget_editor_interaction_hint">小工具顯示快照。點擊它可以打開 Candy 中的頁面。</string>
+    <string name="site_widget_private_unavailable">網站小工具在私人選項卡中不可用。</string>
+    <string name="site_widget_capture_failed">無法捕獲此頁面。加載完成後重試。</string>
+    <string name="site_widget_pin_unavailable">此啟動器不支援直接添加小部件。從小部件選擇器中新增 Candy 網站小工具。</string>
+    <string name="site_widget_save_failed">無法儲存此小工具。請再試一次。</string>
+    <string name="site_widget_reselect">編輯裁切</string>
+    <string name="site_widget_refresh_failed">刷新失敗。仍然顯示最後的快照。</string>
+    <string name="site_widget_refreshing">正在重新整理…</string>
+    <string name="site_widget_editor_columns">列：%1$d</string>
+    <string name="site_widget_editor_rows">行：%1$d</string>
+    <string name="site_widget_editor_zoom">縮放</string>
+    <string name="site_widget_editor_zoom_value">縮放：%1$.1f×</string>
+    <string name="site_widget_editor_interval">刷新間隔</string>
+    <string name="site_widget_editor_interval_value">刷新：%1$s</string>
+    <string name="site_widget_editor_interval_hint">Android 可能會延遲自動更新，例如在省電模式下。</string>
+    <string name="site_widget_interval_manual">僅手動</string>
+    <string name="site_widget_interval_minutes">每%1$d分鐘</string>
+    <string name="site_widget_interval_hours">每%1$d小時</string>
+</resources>

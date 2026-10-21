@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="site_widget_name">웹사이트 자르기(프로토타입)</string>
+    <string name="site_widget_name_square">웹사이트 자르기 4×4(프로토타입)</string>
+    <string name="site_widget_description">선택한 웹사이트 영역을 홈 화면에 유지</string>
+    <string name="site_widget_empty">Candy에서 페이지를 연 다음 여기를 탭하여 영역을 선택하세요.</string>
+    <string name="site_widget_open">페이지 열기</string>
+    <string name="site_widget_refresh">새로 고치다</string>
+    <string name="site_widget_unavailable">이 페이지는 위젯으로 저장할 수 없습니다. 보호되지 않는 일반 로컬 프로필을 사용하세요.</string>
+    <string name="site_widget_pin_failed">이 위젯을 추가할 수 없습니다. 다시 시도해 주세요.</string>
+    <string name="site_widget_pin_requested">홈 화면에 위젯 추가를 확인하세요.</string>
+    <string name="site_widget_editor_title">웹사이트 위젯</string>
+    <string name="site_widget_editor_instructions">열과 행을 선택합니다. 확대/축소 슬라이더를 핀치하거나 사용한 다음 페이지를 프레임 아래로 이동합니다.</string>
+    <string name="site_widget_format_four_by_three">4×3</string>
+    <string name="site_widget_format_four_by_four">4×4</string>
+    <string name="site_widget_editor_size">선택 크기</string>
+    <string name="site_widget_editor_pin">홈 화면에 추가</string>
+    <string name="site_widget_editor_interaction_hint">위젯에 스냅샷이 표시됩니다. Candy의 페이지를 열려면 탭하세요.</string>
+    <string name="site_widget_private_unavailable">비공개 탭에서는 웹사이트 위젯을 사용할 수 없습니다.</string>
+    <string name="site_widget_capture_failed">이 페이지를 캡처할 수 없습니다. 로딩이 완료되면 다시 시도해 보세요.</string>
+    <string name="site_widget_pin_unavailable">이 런처는 위젯 직접 추가를 지원하지 않습니다. 위젯 선택기에서 Candy 웹사이트 위젯을 추가하세요.</string>
+    <string name="site_widget_save_failed">이 위젯을 저장할 수 없습니다. 다시 시도해 주세요.</string>
+    <string name="site_widget_reselect">자르기 편집</string>
+    <string name="site_widget_refresh_failed">새로고침에 실패했습니다. 마지막 스냅샷이 계속 표시됩니다.</string>
+    <string name="site_widget_refreshing">새로 고치는 중…</string>
+    <string name="site_widget_editor_columns">열: %1$d</string>
+    <string name="site_widget_editor_rows">행: %1$d</string>
+    <string name="site_widget_editor_zoom">줌</string>
+    <string name="site_widget_editor_zoom_value">줌: %1$.1f×</string>
+    <string name="site_widget_editor_interval">새로 고침 간격</string>
+    <string name="site_widget_editor_interval_value">새로 고침: %1$s</string>
+    <string name="site_widget_editor_interval_hint">Android는 배터리 절약 모드 등에서 자동 업데이트를 지연할 수 있습니다.</string>
+    <string name="site_widget_interval_manual">수동으로만</string>
+    <string name="site_widget_interval_minutes">%1$d분마다</string>
+    <string name="site_widget_interval_hours">%1$d 시간마다</string>
+</resources>

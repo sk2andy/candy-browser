@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="site_widget_name">Περικοπή ιστότοπου (πρωτότυπο)</string>
+    <string name="site_widget_name_square">Περικοπή ιστότοπου 4×4 (πρωτότυπο)</string>
+    <string name="site_widget_description">Διατηρήστε μια επιλεγμένη περιοχή ιστότοπου στην αρχική οθόνη σας</string>
+    <string name="site_widget_empty">Ανοίξτε μια σελίδα στο Candy και, στη συνέχεια, πατήστε εδώ για να επιλέξετε μια περιοχή.</string>
+    <string name="site_widget_open">Άνοιγμα σελίδας</string>
+    <string name="site_widget_refresh">Ανανέωση</string>
+    <string name="site_widget_unavailable">Αυτή η σελίδα δεν μπορεί να αποθηκευτεί ως γραφικό στοιχείο. Χρησιμοποιήστε ένα κανονικό, απροστάτευτο τοπικό προφίλ.</string>
+    <string name="site_widget_pin_failed">Δεν ήταν δυνατή η προσθήκη αυτού του γραφικού στοιχείου. Δοκιμάστε ξανά.</string>
+    <string name="site_widget_pin_requested">Επιβεβαιώστε την προσθήκη του γραφικού στοιχείου στην αρχική σας οθόνη.</string>
+    <string name="site_widget_editor_title">Γραφικό στοιχείο ιστότοπου</string>
+    <string name="site_widget_editor_instructions">Επιλέξτε στήλες και γραμμές. Κάντε μεγέθυνση ή σμίκρυνση με δύο δάχτυλα ή χρησιμοποιήστε το ρυθμιστικό ζουμ και, στη συνέχεια, μετακινήστε τη σελίδα κάτω από το πλαίσιο.</string>
+    <string name="site_widget_format_four_by_three">4 × 3</string>
+    <string name="site_widget_format_four_by_four">4 × 4</string>
+    <string name="site_widget_editor_size">Μέγεθος επιλογής</string>
+    <string name="site_widget_editor_pin">Προσθήκη στην αρχική οθόνη</string>
+    <string name="site_widget_editor_interaction_hint">Το γραφικό στοιχείο εμφανίζει ένα στιγμιότυπο. Πατήστε το για να ανοίξετε τη σελίδα στο Candy.</string>
+    <string name="site_widget_private_unavailable">Τα γραφικά στοιχεία ιστότοπου δεν είναι διαθέσιμα σε ιδιωτικές καρτέλες.</string>
+    <string name="site_widget_capture_failed">Δεν ήταν δυνατή η λήψη αυτής της σελίδας. Δοκιμάστε ξανά όταν ολοκληρωθεί η φόρτωσή της.</string>
+    <string name="site_widget_pin_unavailable">Αυτή η εφαρμογή εκκίνησης δεν υποστηρίζει την απευθείας προσθήκη γραφικών στοιχείων. Προσθέστε το γραφικό στοιχείο ιστότοπου Candy από το εργαλείο επιλογής γραφικών στοιχείων.</string>
+    <string name="site_widget_save_failed">Δεν ήταν δυνατή η αποθήκευση αυτού του γραφικού στοιχείου. Δοκιμάστε ξανά.</string>
+    <string name="site_widget_reselect">Επεξεργασία περικοπής</string>
+    <string name="site_widget_refresh_failed">Η ανανέωση απέτυχε. Το τελευταίο στιγμιότυπο εξακολουθεί να εμφανίζεται.</string>
+    <string name="site_widget_refreshing">Ανανέωση…</string>
+    <string name="site_widget_editor_columns">Στήλες: %1$d</string>
+    <string name="site_widget_editor_rows">Σειρές: %1$d</string>
+    <string name="site_widget_editor_zoom">Ζουμ</string>
+    <string name="site_widget_editor_zoom_value">Ζουμ: %1$.1f×</string>
+    <string name="site_widget_editor_interval">Διάστημα ανανέωσης</string>
+    <string name="site_widget_editor_interval_value">Ανανέωση: %1$s</string>
+    <string name="site_widget_editor_interval_hint">Το Android ενδέχεται να καθυστερήσει τις αυτόματες ενημερώσεις, για παράδειγμα στη λειτουργία εξοικονόμησης μπαταρίας.</string>
+    <string name="site_widget_interval_manual">Μόνο χειροκίνητα</string>
+    <string name="site_widget_interval_minutes">Κάθε %1$d λεπτά</string>
+    <string name="site_widget_interval_hours">Κάθε %1$d ω</string>
+</resources>

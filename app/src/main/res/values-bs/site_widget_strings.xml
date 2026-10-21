@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="site_widget_name">Izrezivanje web stranice (prototip)</string>
+    <string name="site_widget_name_square">Izrezivanje web stranice 4×4 (prototip)</string>
+    <string name="site_widget_description">Zadržite odabrano područje web stranice na početnom ekranu</string>
+    <string name="site_widget_empty">Otvorite stranicu u Candyju, a zatim dodirnite ovdje da odaberete područje.</string>
+    <string name="site_widget_open">Otvori stranicu</string>
+    <string name="site_widget_refresh">Osvježi</string>
+    <string name="site_widget_unavailable">Ova stranica se ne može sačuvati kao vidžet. Koristite običan, nezaštićen lokalni profil.</string>
+    <string name="site_widget_pin_failed">Nije moguće dodati ovaj vidžet. Molimo pokušajte ponovo.</string>
+    <string name="site_widget_pin_requested">Potvrdite dodavanje vidžeta na početni ekran.</string>
+    <string name="site_widget_editor_title">Vidžet web-stranice</string>
+    <string name="site_widget_editor_instructions">Odaberite kolone i redove. Približite ili razmaknite dva prsta ili upotrijebite klizač za zumiranje, a zatim pomjerite stranicu ispod okvira.</string>
+    <string name="site_widget_format_four_by_three">4 × 3</string>
+    <string name="site_widget_format_four_by_four">4 × 4</string>
+    <string name="site_widget_editor_size">Veličina odabira</string>
+    <string name="site_widget_editor_pin">Dodaj na početni ekran</string>
+    <string name="site_widget_editor_interaction_hint">Vidžet prikazuje snimak. Dodirnite ga da otvorite stranicu u Candy.</string>
+    <string name="site_widget_private_unavailable">Vidžeti web stranice nisu dostupni u privatnim karticama.</string>
+    <string name="site_widget_capture_failed">Nije moguće snimiti ovu stranicu. Pokušajte ponovo kada završi učitavanje.</string>
+    <string name="site_widget_pin_unavailable">Ovaj pokretač ne podržava direktno dodavanje vidžeta. Dodajte vidžet web-stranice Candy iz njegovog birača vidžeta.</string>
+    <string name="site_widget_save_failed">Nije moguće sačuvati ovaj vidžet. Molimo pokušajte ponovo.</string>
+    <string name="site_widget_reselect">Uredi izrezivanje</string>
+    <string name="site_widget_refresh_failed">Osvježavanje nije uspjelo. Posljednji snimak je i dalje prikazan.</string>
+    <string name="site_widget_refreshing">Osvježavanje…</string>
+    <string name="site_widget_editor_columns">Kolone: %1$d</string>
+    <string name="site_widget_editor_rows">Redovi: %1$d</string>
+    <string name="site_widget_editor_zoom">Zumiranje</string>
+    <string name="site_widget_editor_zoom_value">Zumiranje: %1$.1f×</string>
+    <string name="site_widget_editor_interval">Interval osvježavanja</string>
+    <string name="site_widget_editor_interval_value">Osvježi: %1$s</string>
+    <string name="site_widget_editor_interval_hint">Android može odgoditi automatska ažuriranja, na primjer u načinu rada za uštedu baterije.</string>
+    <string name="site_widget_interval_manual">Samo ručno</string>
+    <string name="site_widget_interval_minutes">Svakih %1$d minuta</string>
+    <string name="site_widget_interval_hours">Svakih %1$d h</string>
+</resources>

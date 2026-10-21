@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="device_search_title">设备搜索</string>
+    <string name="device_search_settings_summary">选择书签和保存的文章以进行 Android 搜索</string>
+    <string name="device_search_summary">选择单独的书签和保存的文章以与系统搜索共享。浏览历史记录和文章文本保留在 Candy 中。私人内容和受保护的配置文件被排除在外。</string>
+    <string name="device_search_enable">与设备搜索共享</string>
+    <string name="device_search_enable_summary">仅发布选定的项目。关闭此功能会将它们从索引中删除。</string>
+    <string name="device_search_launcher_note">结果仅显示在支持 Android AppSearch 的启动器或系统搜索应用程序中。可用性取决于您的设备。</string>
+    <string name="device_search_bookmark_profile">打开此个人资料中的书签</string>
+    <string name="device_search_bookmarks">书签</string>
+    <string name="device_search_articles">已保存的文章</string>
+    <string name="device_search_empty">没有符合条件的物品。保存的文章需要已知的、不受保护的本地配置文件。</string>
+    <string name="device_search_saving">正在更新设备搜索...</string>
+    <string name="device_search_failed">无法更新设备搜索。再次尝试更改选择。</string>
+    <string name="device_search_item_unavailable">该项目不再共享或可用。</string>
+    <string name="device_search_open">在 Candy 中打开</string>
+</resources>

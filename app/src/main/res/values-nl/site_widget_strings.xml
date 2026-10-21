@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="site_widget_name">Website bijsnijden (prototype)</string>
+    <string name="site_widget_name_square">Website bijsnijden 4×4 (prototype)</string>
+    <string name="site_widget_description">Houd een geselecteerd websitegebied op uw startscherm</string>
+    <string name="site_widget_empty">Open een pagina in Candy en tik vervolgens hier om een ​​gebied te selecteren.</string>
+    <string name="site_widget_open">Pagina openen</string>
+    <string name="site_widget_refresh">Vernieuwen</string>
+    <string name="site_widget_unavailable">Deze pagina kan niet als widget worden opgeslagen. Gebruik een normaal, onbeschermd lokaal profiel.</string>
+    <string name="site_widget_pin_failed">Kan deze widget niet toevoegen. Probeer het opnieuw.</string>
+    <string name="site_widget_pin_requested">Bevestig het toevoegen van de widget op uw startscherm.</string>
+    <string name="site_widget_editor_title">Websitewidget</string>
+    <string name="site_widget_editor_instructions">Kies kolommen en rijen. Knijp of gebruik de zoomschuifregelaar en verplaats vervolgens de pagina onder het frame.</string>
+    <string name="site_widget_format_four_by_three">4 × 3</string>
+    <string name="site_widget_format_four_by_four">4 × 4</string>
+    <string name="site_widget_editor_size">Selectie maat</string>
+    <string name="site_widget_editor_pin">Toevoegen aan startscherm</string>
+    <string name="site_widget_editor_interaction_hint">De widget toont een momentopname. Tik erop om de pagina in Candy te openen.</string>
+    <string name="site_widget_private_unavailable">Websitewidgets zijn niet beschikbaar op privétabbladen.</string>
+    <string name="site_widget_capture_failed">Kan deze pagina niet vastleggen. Probeer het opnieuw als het laden is voltooid.</string>
+    <string name="site_widget_pin_unavailable">Dit opstartprogramma biedt geen ondersteuning voor het rechtstreeks toevoegen van widgets. Voeg de Candy-websitewidget toe vanuit de widgetkiezer.</string>
+    <string name="site_widget_save_failed">Kan deze widget niet opslaan. Probeer het opnieuw.</string>
+    <string name="site_widget_reselect">Bijsnijden bewerken</string>
+    <string name="site_widget_refresh_failed">Vernieuwen mislukt. De laatste momentopname wordt nog steeds weergegeven.</string>
+    <string name="site_widget_refreshing">Verfrissend…</string>
+    <string name="site_widget_editor_columns">Kolommen: %1$d</string>
+    <string name="site_widget_editor_rows">Rijen: %1$d</string>
+    <string name="site_widget_editor_zoom">Zoom</string>
+    <string name="site_widget_editor_zoom_value">Zoomen: %1$.1f×</string>
+    <string name="site_widget_editor_interval">Vernieuwingsinterval</string>
+    <string name="site_widget_editor_interval_value">Vernieuwen: %1$s</string>
+    <string name="site_widget_editor_interval_hint">Android kan automatische updates vertragen, bijvoorbeeld in de batterijbesparingsmodus.</string>
+    <string name="site_widget_interval_manual">Alleen handmatig</string>
+    <string name="site_widget_interval_minutes">Elke %1$d minuten</string>
+    <string name="site_widget_interval_hours">Elke %1$d h</string>
+</resources>

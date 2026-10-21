@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="device_search_title">Претрага уређаја</string>
+    <string name="device_search_settings_summary">Изаберите обележиваче и сачуване чланке за Андроид претрагу</string>
+    <string name="device_search_summary">Одаберите појединачне обележиваче и сачуване чланке које ћете делити са системском претрагом. Историја прегледања и текст чланка остају у Candy. Приватни садржај и заштићени профили су искључени.</string>
+    <string name="device_search_enable">Делите са претрагом уређаја</string>
+    <string name="device_search_enable_summary">Само одабране ставке се објављују. Ако ово искључите, уклањате их из индекса.</string>
+    <string name="device_search_launcher_note">Резултати се приказују само у покретачима апликација или системским апликацијама за претрагу које подржавају Android AppSearch. Доступност зависи од уређаја.</string>
+    <string name="device_search_bookmark_profile">Отворите обележиваче у овом профилу</string>
+    <string name="device_search_bookmarks">Обележивачи</string>
+    <string name="device_search_articles">Сачувани чланци</string>
+    <string name="device_search_empty">Нема прихватљивих ставки. Сачуваним чланцима је потребан познати, незаштићени локални профил.</string>
+    <string name="device_search_saving">Претрага уређаја се ажурира…</string>
+    <string name="device_search_failed">Није могуће ажурирати претрагу уређаја. Покушајте поново да промените избор.</string>
+    <string name="device_search_item_unavailable">Ова ставка се више не дели нити је доступна.</string>
+    <string name="device_search_open">Отвори у Candy</string>
+</resources>

@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="site_widget_name">Izrezivanje web stranice (prototip)</string>
+    <string name="site_widget_name_square">Izrezivanje web stranice 4×4 (prototip)</string>
+    <string name="site_widget_description">Držite odabrano područje web stranice na početnom zaslonu</string>
+    <string name="site_widget_empty">Otvorite stranicu u Candyju, zatim dodirnite ovdje za odabir područja.</string>
+    <string name="site_widget_open">Otvori stranicu</string>
+    <string name="site_widget_refresh">Osvježi</string>
+    <string name="site_widget_unavailable">Ovu stranicu nije moguće spremiti kao widget. Koristite uobičajeni, nezaštićeni lokalni profil.</string>
+    <string name="site_widget_pin_failed">Nije moguće dodati ovaj widget. Molimo pokušajte ponovo.</string>
+    <string name="site_widget_pin_requested">Potvrdite dodavanje widgeta na početni zaslon.</string>
+    <string name="site_widget_editor_title">Widget web stranice</string>
+    <string name="site_widget_editor_instructions">Odaberite stupce i retke. Stisnite prste ili koristite klizač za zumiranje, zatim pomaknite stranicu ispod okvira.</string>
+    <string name="site_widget_format_four_by_three">4 × 3</string>
+    <string name="site_widget_format_four_by_four">4 × 4</string>
+    <string name="site_widget_editor_size">Veličina odabira</string>
+    <string name="site_widget_editor_pin">Dodaj na početni zaslon</string>
+    <string name="site_widget_editor_interaction_hint">Widget prikazuje snimku. Dodirnite ga da biste otvorili stranicu u Candyju.</string>
+    <string name="site_widget_private_unavailable">Widgeti web stranice nisu dostupni u privatnim karticama.</string>
+    <string name="site_widget_capture_failed">Ovu stranicu nije moguće snimiti. Pokušajte ponovno nakon što se učita.</string>
+    <string name="site_widget_pin_unavailable">Ovaj pokretač ne podržava izravno dodavanje widgeta. Dodajte widget web stranice Candy iz njegovog alata za odabir widgeta.</string>
+    <string name="site_widget_save_failed">Nije moguće spremiti ovaj widget. Molimo pokušajte ponovo.</string>
+    <string name="site_widget_reselect">Uredi obrezivanje</string>
+    <string name="site_widget_refresh_failed">Osvježavanje nije uspjelo. Posljednja snimka je još uvijek prikazana.</string>
+    <string name="site_widget_refreshing">Osvježavanje…</string>
+    <string name="site_widget_editor_columns">Stupci: %1$d</string>
+    <string name="site_widget_editor_rows">Redovi: %1$d</string>
+    <string name="site_widget_editor_zoom">Zumiranje</string>
+    <string name="site_widget_editor_zoom_value">Zumiranje: %1$.1f×</string>
+    <string name="site_widget_editor_interval">Interval osvježavanja</string>
+    <string name="site_widget_editor_interval_value">Osvježi: %1$s</string>
+    <string name="site_widget_editor_interval_hint">Android može odgoditi automatska ažuriranja, primjerice u načinu rada za uštedu baterije.</string>
+    <string name="site_widget_interval_manual">Samo ručno</string>
+    <string name="site_widget_interval_minutes">Svakih %1$d minuta</string>
+    <string name="site_widget_interval_hours">Svakih %1$d h</string>
+</resources>

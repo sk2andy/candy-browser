@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="external_app_feedback_opened">U hap në aplikacion</string>
+    <string name="external_app_feedback_open_in_candy">Hape në Candy</string>
+    <string name="external_app_feedback_always">Dëshiron ta hapësh gjithmonë këtë sajt në Candy?</string>
+    <string name="external_app_feedback_always_private">Të hapet gjithmonë kjo faqe në Candy për këtë sesion privat?</string>
+    <string name="external_app_feedback_yes">po</string>
+</resources>

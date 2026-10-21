@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="device_search_title">Поиск устройств</string>
+    <string name="device_search_settings_summary">Выбирайте закладки и сохраненные статьи для поиска Android.</string>
+    <string name="device_search_summary">Выбирайте отдельные закладки и сохраненные статьи, чтобы поделиться ими с помощью системного поиска. История просмотров и текст статьи остаются в Candy. Частный контент и защищенные профили исключены.</string>
+    <string name="device_search_enable">Поделиться с помощью поиска устройств</string>
+    <string name="device_search_enable_summary">Публикуются только избранные элементы. Отключение этого параметра удаляет их из индекса.</string>
+    <string name="device_search_launcher_note">Результаты появляются только в программах запуска или приложениях системного поиска, поддерживающих Android AppSearch. Доступность зависит от вашего устройства.</string>
+    <string name="device_search_bookmark_profile">Открыть закладки в этом профиле</string>
+    <string name="device_search_bookmarks">Закладки</string>
+    <string name="device_search_articles">Сохраненные статьи</string>
+    <string name="device_search_empty">Нет подходящих товаров. Для сохраненных статей необходим известный незащищенный локальный профиль.</string>
+    <string name="device_search_saving">Обновление поиска устройств…</string>
+    <string name="device_search_failed">Не удалось обновить поиск устройств. Попробуйте изменить выбор еще раз.</string>
+    <string name="device_search_item_unavailable">Этот элемент больше не предоставляется для поиска или недоступен.</string>
+    <string name="device_search_open">Открыть в Candy</string>
+</resources>

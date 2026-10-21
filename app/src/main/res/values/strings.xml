@@ -20,7 +20,7 @@
     <string name="onboarding_title">Learn Candy gestures</string>
     <string name="onboarding_progress">%1$d of %2$d</string>
     <string name="onboarding_try_here">Try the gesture in the card</string>
-    <string name="onboarding_required_hint">All three gestures are required to continue.</string>
+    <string name="onboarding_required_hint">You can practice any of these gestures, or skip the tutorial at any time.</string>
     <string name="onboarding_accessibility_complete_action">Mark this gesture as completed</string>
     <string name="onboarding_switch_tabs_title">Switch tabs</string>
     <string name="onboarding_switch_tabs_description">Swipe the address bar left or right.</string>

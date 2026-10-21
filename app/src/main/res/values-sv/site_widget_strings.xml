@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="site_widget_name">Webbplatsbeskärning (prototyp)</string>
+    <string name="site_widget_name_square">Webbplatsbeskärning 4×4 (prototyp)</string>
+    <string name="site_widget_description">Behåll ett valt webbplatsområde på din startskärm</string>
+    <string name="site_widget_empty">Öppna en sida i Candy och tryck sedan här för att välja ett område.</string>
+    <string name="site_widget_open">Öppna sidan</string>
+    <string name="site_widget_refresh">Uppdatera</string>
+    <string name="site_widget_unavailable">Den här sidan kan inte sparas som en widget. Använd en vanlig, oskyddad lokal profil.</string>
+    <string name="site_widget_pin_failed">Det gick inte att lägga till den här widgeten. Försök igen.</string>
+    <string name="site_widget_pin_requested">Bekräfta att du lägger till widgeten på din startskärm.</string>
+    <string name="site_widget_editor_title">Webbplatswidget</string>
+    <string name="site_widget_editor_instructions">Välj kolumner och rader. Nyp eller använd zoomreglaget och flytta sedan sidan under ramen.</string>
+    <string name="site_widget_format_four_by_three">4 × 3</string>
+    <string name="site_widget_format_four_by_four">4 × 4</string>
+    <string name="site_widget_editor_size">Urvalsstorlek</string>
+    <string name="site_widget_editor_pin">Lägg till på startskärmen</string>
+    <string name="site_widget_editor_interaction_hint">Widgeten visar en ögonblicksbild. Tryck på den för att öppna sidan i Candy.</string>
+    <string name="site_widget_private_unavailable">Webbplatswidgetar är inte tillgängliga på privata flikar.</string>
+    <string name="site_widget_capture_failed">Det gick inte att fånga den här sidan. Försök igen när den har laddats klart.</string>
+    <string name="site_widget_pin_unavailable">Den här startprogrammet stöder inte att lägga till widgets direkt. Lägg till Candy-webbplatswidgeten från dess widgetväljare.</string>
+    <string name="site_widget_save_failed">Det gick inte att spara den här widgeten. Försök igen.</string>
+    <string name="site_widget_reselect">Redigera beskärning</string>
+    <string name="site_widget_refresh_failed">Uppdateringen misslyckades. Den sista ögonblicksbilden visas fortfarande.</string>
+    <string name="site_widget_refreshing">Uppdaterar…</string>
+    <string name="site_widget_editor_columns">Kolumner: %1$d</string>
+    <string name="site_widget_editor_rows">Rader: %1$d</string>
+    <string name="site_widget_editor_zoom">Zoom</string>
+    <string name="site_widget_editor_zoom_value">Zoom: %1$.1f×</string>
+    <string name="site_widget_editor_interval">Uppdateringsintervall</string>
+    <string name="site_widget_editor_interval_value">Uppdatera: %1$s</string>
+    <string name="site_widget_editor_interval_hint">Android kan fördröja automatiska uppdateringar, till exempel i batterisparläge.</string>
+    <string name="site_widget_interval_manual">Endast manuell</string>
+    <string name="site_widget_interval_minutes">Varje %1$d minut</string>
+    <string name="site_widget_interval_hours">Varje %1$d timme</string>
+</resources>

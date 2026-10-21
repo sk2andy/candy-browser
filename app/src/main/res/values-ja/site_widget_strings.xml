@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="site_widget_name">ウェブサイトのクロップ（プロトタイプ）</string>
+    <string name="site_widget_name_square">ウェブサイトクロップ4×4（プロトタイプ）</string>
+    <string name="site_widget_description">選択した Web サイト領域をホーム画面に保持します</string>
+    <string name="site_widget_empty">Candy でページを開き、ここをタップしてエリアを選択します。</string>
+    <string name="site_widget_open">ページを開く</string>
+    <string name="site_widget_refresh">リフレッシュ</string>
+    <string name="site_widget_unavailable">このページはウィジェットとして保存できません。通常の保護されていないローカル プロファイルを使用します。</string>
+    <string name="site_widget_pin_failed">このウィジェットを追加できませんでした。もう一度試してください。</string>
+    <string name="site_widget_pin_requested">ホーム画面にウィジェットを追加することを確認します。</string>
+    <string name="site_widget_editor_title">ウェブサイトウィジェット</string>
+    <string name="site_widget_editor_instructions">列と行を選択します。ピンチするかズーム スライダーを使用して、ページをフレームの下に移動します。</string>
+    <string name="site_widget_format_four_by_three">4×3</string>
+    <string name="site_widget_format_four_by_four">4×4</string>
+    <string name="site_widget_editor_size">選択サイズ</string>
+    <string name="site_widget_editor_pin">ホーム画面に追加</string>
+    <string name="site_widget_editor_interaction_hint">ウィジェットにはスナップショットが表示されます。それをタップして、Candy のページを開きます。</string>
+    <string name="site_widget_private_unavailable">Web サイトのウィジェットはプライベート タブでは使用できません。</string>
+    <string name="site_widget_capture_failed">このページをキャプチャできませんでした。読み込みが完了したら、もう一度お試しください。</string>
+    <string name="site_widget_pin_unavailable">このランチャーはウィジェットの直接追加をサポートしていません。ウィジェット ピッカーから Candy Web サイト ウィジェットを追加します。</string>
+    <string name="site_widget_save_failed">このウィジェットを保存できませんでした。もう一度お試しください。</string>
+    <string name="site_widget_reselect">トリミングを編集する</string>
+    <string name="site_widget_refresh_failed">更新に失敗しました。最後のスナップショットはまだ表示されています。</string>
+    <string name="site_widget_refreshing">更新中…</string>
+    <string name="site_widget_editor_columns">列: %1$d</string>
+    <string name="site_widget_editor_rows">行: %1$d</string>
+    <string name="site_widget_editor_zoom">ズーム</string>
+    <string name="site_widget_editor_zoom_value">ズーム: %1$.1f×</string>
+    <string name="site_widget_editor_interval">リフレッシュ間隔</string>
+    <string name="site_widget_editor_interval_value">更新: %1$s</string>
+    <string name="site_widget_editor_interval_hint">Android では、バッテリー セーバー モードなどで自動更新が遅れることがあります。</string>
+    <string name="site_widget_interval_manual">マニュアルのみ</string>
+    <string name="site_widget_interval_minutes">%1$d 分ごと</string>
+    <string name="site_widget_interval_hours">%1$d 時間ごと</string>
+</resources>

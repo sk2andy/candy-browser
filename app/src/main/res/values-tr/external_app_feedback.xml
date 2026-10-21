@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="external_app_feedback_opened">Uygulamada açıldı</string>
+    <string name="external_app_feedback_open_in_candy">"Candy'de aç"</string>
+    <string name="external_app_feedback_always">"Bu siteyi her zaman Candy'de açmak istiyor musunuz?"</string>
+    <string name="external_app_feedback_always_private">"Bu özel oturum için bu site her zaman Candy'de açılsın mı?"</string>
+    <string name="external_app_feedback_yes">Evet</string>
+</resources>

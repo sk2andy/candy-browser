@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="device_search_title">장치 검색</string>
+    <string name="device_search_settings_summary">Android 검색을 위한 북마크 및 저장된 기사 선택</string>
+    <string name="device_search_summary">개별 북마크와 저장된 기사를 선택하여 시스템 검색과 공유하세요. 검색 기록과 기사 텍스트는 Candy에 유지됩니다. 비공개 콘텐츠와 보호된 프로필은 제외됩니다.</string>
+    <string name="device_search_enable">기기 검색으로 공유</string>
+    <string name="device_search_enable_summary">선택한 항목만 게시됩니다. 이 기능을 끄면 색인에서 해당 항목이 제거됩니다.</string>
+    <string name="device_search_launcher_note">결과는 Android AppSearch를 지원하는 런처 또는 시스템 검색 앱에만 표시됩니다. 사용 가능 여부는 장치에 따라 다릅니다.</string>
+    <string name="device_search_bookmark_profile">이 프로필에서 북마크 열기</string>
+    <string name="device_search_bookmarks">북마크</string>
+    <string name="device_search_articles">저장된 기사</string>
+    <string name="device_search_empty">해당 항목이 없습니다. 저장된 기사를 사용하려면 인식된 비보호 로컬 프로필이 필요합니다.</string>
+    <string name="device_search_saving">기기 검색 업데이트 중…</string>
+    <string name="device_search_failed">기기 검색을 업데이트할 수 없습니다. 선택 항목을 다시 변경해 보세요.</string>
+    <string name="device_search_item_unavailable">이 항목은 더 이상 공유되거나 사용할 수 없습니다.</string>
+    <string name="device_search_open">Candy에서 열기</string>
+</resources>

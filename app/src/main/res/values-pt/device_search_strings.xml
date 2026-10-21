@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="device_search_title">Pesquisa de dispositivos</string>
+    <string name="device_search_settings_summary">Escolha os marcadores e artigos guardados para a pesquisa do Android</string>
+    <string name="device_search_summary">Escolha marcadores individuais e artigos salvos para compartilhar com a pesquisa do sistema. O histórico de navegação e o texto do artigo permanecem em Candy. Conteúdo privado e perfis protegidos estão excluídos.</string>
+    <string name="device_search_enable">Compartilhar com pesquisa de dispositivos</string>
+    <string name="device_search_enable_summary">Apenas os itens selecionados são publicados. Desativar isso os remove do índice.</string>
+    <string name="device_search_launcher_note">Os resultados só aparecem em lançadores de aplicações ou aplicações de pesquisa do sistema compatíveis com o Android AppSearch. A disponibilidade depende do seu dispositivo.</string>
+    <string name="device_search_bookmark_profile">Abra favoritos neste perfil</string>
+    <string name="device_search_bookmarks">Favoritos</string>
+    <string name="device_search_articles">Artigos salvos</string>
+    <string name="device_search_empty">Nenhum item elegível. Os artigos salvos precisam de um perfil local conhecido e desprotegido.</string>
+    <string name="device_search_saving">Atualizando pesquisa de dispositivos…</string>
+    <string name="device_search_failed">A pesquisa de dispositivos não pôde ser atualizada. Tente alterar a seleção novamente.</string>
+    <string name="device_search_item_unavailable">Este item não está mais compartilhado ou disponível.</string>
+    <string name="device_search_open">Abrir em Candy</string>
+</resources>

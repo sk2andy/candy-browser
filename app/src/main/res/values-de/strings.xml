@@ -18,7 +18,7 @@
     <string name="onboarding_title">Candy-Gesten lernen</string>
     <string name="onboarding_progress">%1$d von %2$d</string>
     <string name="onboarding_try_here">Probiere die Geste in der Karte aus</string>
-    <string name="onboarding_required_hint">Zum Fortfahren sind alle drei Gesten erforderlich.</string>
+    <string name="onboarding_required_hint">Du kannst die Gesten üben oder das Tutorial jederzeit überspringen.</string>
     <string name="onboarding_accessibility_complete_action">Diese Geste als erledigt markieren</string>
     <string name="onboarding_switch_tabs_title">Tabs wechseln</string>
     <string name="onboarding_switch_tabs_description">Wische auf der Adressleiste nach links oder rechts.</string>
@@ -721,6 +721,7 @@
     <string name="downloads_pause">Pausieren</string>
     <string name="downloads_resume">Fortsetzen</string>
     <string name="downloads_control_failed">Download konnte nicht geändert werden</string>
+    <string name="downloads_open_source">Quelle öffnen</string>
     <string name="downloads_open_failed">Keine App kann diesen Download öffnen</string>
     <string name="downloads_status_pending">Wartet · %1$s</string>
     <string name="downloads_status_running">Wird geladen · %1$s</string>

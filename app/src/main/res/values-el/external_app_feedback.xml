@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="external_app_feedback_opened">Άνοιξε στην εφαρμογή</string>
+    <string name="external_app_feedback_open_in_candy">Ανοίξτε στο Candy</string>
+    <string name="external_app_feedback_always">Θέλετε να ανοίγετε πάντα αυτόν τον ιστότοπο στο Candy;</string>
+    <string name="external_app_feedback_always_private">Να ανοίγει πάντα αυτός ο ιστότοπος στο Candy για αυτήν την ιδιωτική συνεδρία;</string>
+    <string name="external_app_feedback_yes">Ναι</string>
+</resources>
