@@ -64,8 +64,7 @@ class AppearanceSettingsScreenInstrumentedTest {
                 }
             }
 
-            composeRule.onNodeWithTag(AppIconSettingsTestTags.Choice).performClick()
-            composeRule.onNodeWithText(context.getString(R.string.app_icon_cookie)).performClick()
+            composeRule.onNodeWithText(context.getString(R.string.app_icon_cookie)).performScrollTo().performClick()
             assertEquals(AppIconOption.Cookie, selection.selected())
             assertEquals(AppIconOption.Cookie, AppIconSelection(context).selected())
             assertEquals(
@@ -109,14 +108,12 @@ class AppearanceSettingsScreenInstrumentedTest {
                 ).any { it.activityInfo.name == "dev.sk2andy.materialbrowser.MainActivity" },
             )
 
-            composeRule.onNodeWithTag(AppIconSettingsTestTags.Choice).performClick()
             composeRule.onNodeWithText(
                 context.getString(R.string.app_icon_cookie) + " · " +
                     context.getString(R.string.app_icon_variant_maxed),
-            ).performClick()
+            ).performScrollTo().performClick()
             assertEquals(AppIconOption.CookieMaxed, selection.selected())
 
-            composeRule.onNodeWithTag(AppIconSettingsTestTags.Choice).performClick()
             composeRule.onNodeWithText(
                 context.getString(R.string.app_icon_cotton_candy) + " · " +
                     context.getString(R.string.app_icon_variant_freeform),
