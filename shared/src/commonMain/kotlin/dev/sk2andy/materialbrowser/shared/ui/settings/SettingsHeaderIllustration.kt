@@ -14,12 +14,14 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.FilterQuality
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.clearAndSetSemantics
-import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntRect
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import dev.sk2andy.materialbrowser.shared.resources.Res
 import dev.sk2andy.materialbrowser.shared.resources.settings_approved_appearance_tabs
@@ -60,6 +62,25 @@ fun SettingsHeaderIllustration(
         },
     )
     val source = remember(artwork) { SettingsHeaderArtworkRules.sourceWindow(artwork) }
+    SettingsRasterIllustration(
+        image = image,
+        source = source,
+        backgroundColor = backgroundColor,
+        height = height,
+        tag = "settings_header_artwork_${artwork.name.lowercase()}",
+    )
+}
+
+/** Keeps generated grayscale artwork aligned with the live settings palette. */
+@Composable
+internal fun SettingsRasterIllustration(
+    image: ImageBitmap,
+    source: IntRect,
+    tag: String,
+    backgroundColor: Color = settingsPageColor(),
+    height: Dp = 200.dp,
+    maxWidth: Dp = 360.dp,
+) {
     val normalization = remember {
         ColorFilter.colorMatrix(SettingsHeaderArtworkRules.backgroundNormalization())
     }
@@ -73,10 +94,10 @@ fun SettingsHeaderIllustration(
     Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
         Canvas(
             Modifier
-                .widthIn(max = 360.dp)
+                .widthIn(max = maxWidth)
                 .fillMaxWidth()
                 .height(height)
-                .testTag("settings_header_artwork_${artwork.name.lowercase()}")
+                .testTag(tag)
                 .clearAndSetSemantics { },
         ) {
             val destination = SettingsHeaderArtworkRules.destinationWindow(

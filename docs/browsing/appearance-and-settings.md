@@ -527,5 +527,8 @@ evidence only for their earlier layout. Real-app navigation, Back behavior and p
 separately in `PlayerSettingsNavigationInstrumentedTest` and the affected settings/search suites;
 they are not established by artwork captures alone. One private-search recreation case skipped
 because notification permission was not already granted.
-The existing Colors, Surfaces/shapes, Address bar, tab layout and Player mode explanatory previews
-continue to use their functional illustrations; Gestures does not receive the Tabs header.
+The existing Colors, Surfaces/shapes, Address bar and tab layout explanatory previews continue to
+use their functional illustrations; Gestures does not receive the Tabs header. Candy Player mode
+uses five generated flat Material Expressive images, one per selection, in the former 400 dp ×
+240 dp preview slot. They share the approved headers' live theme coloring and retain the complete
+original images. Sources, prompts and checks are in [Player mode artwork](../design/player-mode-artwork.md).

@@ -13,6 +13,8 @@ import dev.sk2andy.materialbrowser.browser.InlineMediaPlayerMode
 import dev.sk2andy.materialbrowser.browser.LinkLongPressAction
 import dev.sk2andy.materialbrowser.browser.LinkPeekSwipeAction
 import dev.sk2andy.materialbrowser.shared.ui.settings.SettingsFeatureIllustration
+import dev.sk2andy.materialbrowser.shared.ui.settings.SettingsPlayerModeArtwork
+import dev.sk2andy.materialbrowser.shared.ui.settings.SettingsPlayerModeIllustration
 import dev.sk2andy.materialbrowser.shared.ui.settings.SettingsIllustrationKind
 import dev.sk2andy.materialbrowser.shared.ui.settings.SettingsRadioOption
 import dev.sk2andy.materialbrowser.shared.ui.settings.SettingsSelectionPage
@@ -124,8 +126,15 @@ internal fun PlayerModeSettingsPage(
         backContentDescription = stringResource(R.string.action_back),
         onBack = onBack,
         preview = {
-            SettingsFeatureIllustration(SettingsIllustrationKind.Player,
-                active = mode != InlineMediaPlayerMode.Disabled, variant = mode.ordinal)
+            SettingsPlayerModeIllustration(
+                when (mode) {
+                    InlineMediaPlayerMode.Disabled -> SettingsPlayerModeArtwork.Disabled
+                    InlineMediaPlayerMode.ButtonFullscreen -> SettingsPlayerModeArtwork.ButtonFullscreen
+                    InlineMediaPlayerMode.ButtonInlineAndFullscreen -> SettingsPlayerModeArtwork.ButtonInlineAndFullscreen
+                    InlineMediaPlayerMode.AlwaysForFullscreen -> SettingsPlayerModeArtwork.AlwaysForFullscreen
+                    InlineMediaPlayerMode.Automatic -> SettingsPlayerModeArtwork.Automatic
+                },
+            )
         },
     ) {
         InlineMediaPlayerMode.entries.forEachIndexed { index, candidate ->

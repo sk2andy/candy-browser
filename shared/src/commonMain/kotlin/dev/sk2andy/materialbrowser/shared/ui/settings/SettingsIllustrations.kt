@@ -13,7 +13,6 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.dp
@@ -22,14 +21,13 @@ import dev.sk2andy.materialbrowser.data.BrowserAddressBarStyle
 import dev.sk2andy.materialbrowser.data.BrowserShapeStyle
 import dev.sk2andy.materialbrowser.data.BrowserSurfaceStyle
 
-enum class SettingsIllustrationKind { LinkGesture, LinkPreview, UndoTab, DeviceSearch, Player }
+enum class SettingsIllustrationKind { LinkGesture, LinkPreview, UndoTab, DeviceSearch }
 
 /** Decorative diagrams show the feature's location and result, using the live Candy palette. */
 @Composable
 fun SettingsFeatureIllustration(
     kind: SettingsIllustrationKind,
     active: Boolean = true,
-    variant: Int = 0,
 ) {
     val colors = MaterialTheme.colorScheme
     Box(Modifier.fillMaxWidth().clearAndSetSemantics { }, contentAlignment = Alignment.Center) {
@@ -88,25 +86,6 @@ fun SettingsFeatureIllustration(
                         panel(0.21f, 0.38f + index * 0.15f, 0.11f, 0.1f,
                             if (active) colors.primaryContainer else colors.surfaceContainerHigh)
                         panel(0.37f, 0.4f + index * 0.15f, 0.35f, 0.025f, colors.onSurfaceVariant)
-                    }
-                }
-                SettingsIllustrationKind.Player -> {
-                    val fullscreen = variant == 1 || variant == 3
-                    val y = if (fullscreen) 0.3f else 0.4f
-                    panel(0.19f, y, 0.62f, if (fullscreen) 0.48f else 0.3f,
-                        if (active) colors.primaryContainer else colors.surfaceContainerHigh)
-                    val centerY = y + if (fullscreen) 0.2f else 0.12f
-                    val play = Path().apply {
-                        moveTo(size.width * 0.47f, size.height * (centerY - 0.05f))
-                        lineTo(size.width * 0.47f, size.height * (centerY + 0.05f))
-                        lineTo(size.width * 0.55f, size.height * centerY)
-                        close()
-                    }
-                    drawPath(play, colors.onPrimaryContainer)
-                    panel(0.25f, y + if (fullscreen) 0.38f else 0.23f, 0.5f, 0.015f, colors.primary)
-                    if (variant == 1 || variant == 2) {
-                        drawCircle(colors.primary, size.minDimension * 0.05f,
-                            Offset(size.width * 0.72f, size.height * 0.79f))
                     }
                 }
             }
