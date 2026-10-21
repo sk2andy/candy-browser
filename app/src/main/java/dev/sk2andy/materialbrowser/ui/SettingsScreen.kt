@@ -691,6 +691,10 @@ internal fun SettingsScreen(
                     onBack = { onDestinationChanged(settingsParent(currentDestination)) },
                 )
 
+                SettingsDestination.RssFeeds -> RssSettingsPage(
+                    onBack = { onDestinationChanged(settingsParent(currentDestination)) },
+                )
+
                 SettingsDestination.Userscripts -> UserscriptManagementScreen(
                     scripts = userScripts,
                     isRuntimeSupported = isUserScriptSupported,

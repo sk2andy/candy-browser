@@ -41,6 +41,7 @@ enum class SettingsDestination {
     Player,
     PlayerMode,
     Downloads,
+    RssFeeds,
     Userscripts,
     ToppingCatalog,
     SiteCapsules,

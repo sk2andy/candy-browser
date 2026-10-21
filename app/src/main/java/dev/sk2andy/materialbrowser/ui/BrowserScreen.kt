@@ -226,6 +226,7 @@ internal fun BrowserScreen(
     onOpenFavorites: () -> Unit = {},
     onOpenDownloads: () -> Unit = {},
     onOpenHistory: () -> Unit = {},
+    onOpenRssFeeds: (String, Boolean) -> Unit = { _, _ -> },
     onImportUserScript: () -> Unit = {},
     onImportFavoriteBookmarks: () -> Unit = {},
     onExportAppData: () -> Unit = {},
@@ -1680,6 +1681,9 @@ internal fun BrowserScreen(
             onOpenFavorites = onOpenFavorites,
             onOpenDownloads = onOpenDownloads,
             onOpenHistory = onOpenHistory,
+            onOpenRssFeeds = if (selectedTab.isIncognito) null else {
+                { onOpenRssFeeds(selectedTab.url, selectedTab.isIncognito) }
+            },
             onSettings = {
                 settingsDestination = SettingsDestination.Home
                 settingsVisible = true

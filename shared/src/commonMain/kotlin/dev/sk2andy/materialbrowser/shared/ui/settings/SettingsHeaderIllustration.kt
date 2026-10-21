@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.dp
 import dev.sk2andy.materialbrowser.shared.resources.Res
 import dev.sk2andy.materialbrowser.shared.resources.settings_approved_appearance_tabs
 import dev.sk2andy.materialbrowser.shared.resources.settings_approved_player_waveform
+import dev.sk2andy.materialbrowser.shared.resources.settings_approved_rss
 import dev.sk2andy.materialbrowser.shared.resources.settings_approved_search_engines
 import dev.sk2andy.materialbrowser.shared.resources.settings_approved_translations
 import dev.sk2andy.materialbrowser.shared.resources.settings_approved_downloads_v2
@@ -59,6 +60,7 @@ fun SettingsHeaderIllustration(
             SettingsHeaderArtwork.TabLifecycle -> Res.drawable.settings_approved_tab_lifecycle
             SettingsHeaderArtwork.PersonalLinkRules -> Res.drawable.settings_approved_personal_link_rules
             SettingsHeaderArtwork.ExternalApps -> Res.drawable.settings_external_app_links
+            SettingsHeaderArtwork.Rss -> Res.drawable.settings_approved_rss
         },
     )
     val source = remember(artwork) { SettingsHeaderArtworkRules.sourceWindow(artwork) }

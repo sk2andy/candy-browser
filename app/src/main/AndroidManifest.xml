@@ -212,6 +212,21 @@
             android:exported="true"
             android:permission="android.permission.DUMP" />
         <activity
+            android:name=".RssFeedsActivity"
+            android:exported="false" />
+        <receiver
+            android:name=".RssFeedWidgetProvider"
+            android:exported="true"
+            android:label="@string/rss_widget_title"
+            android:permission="android.permission.BIND_APPWIDGET">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/rss_feed_widget_info" />
+        </receiver>
+        <activity
             android:name=".MainActivity"
             android:configChanges="layoutDirection|locale|orientation|screenLayout|screenSize|smallestScreenSize|uiMode"
             android:exported="true"

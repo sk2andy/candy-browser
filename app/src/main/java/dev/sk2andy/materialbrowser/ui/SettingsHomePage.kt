@@ -107,6 +107,8 @@ private object AndroidSettingsHomeResources : SettingsHomeResources {
             SettingsHomeLabel.PlayerTitle -> R.string.settings_player_title
             SettingsHomeLabel.PlayerSummary -> R.string.settings_home_player_summary
             SettingsHomeLabel.DownloadsTitle -> R.string.settings_downloads_title
+            SettingsHomeLabel.RssFeedsTitle -> R.string.rss_settings_title
+            SettingsHomeLabel.RssFeedsSummary -> R.string.rss_settings_summary
             SettingsHomeLabel.UserscriptsTitle -> R.string.userscript_title
             SettingsHomeLabel.UserscriptsSummary -> R.string.settings_home_userscripts_summary
             SettingsHomeLabel.FirefoxExtensionsTitle -> R.string.gecko_extensions_title
@@ -146,6 +148,7 @@ private fun AndroidSettingsHomeIcon(
         SettingsHomeIcon.Browser -> Icons.Default.Settings
         SettingsHomeIcon.Player -> Icons.Default.PlayArrow
         SettingsHomeIcon.Downloads -> ImageVector.vectorResource(R.drawable.ic_reader_download)
+        SettingsHomeIcon.RssFeeds -> ImageVector.vectorResource(R.drawable.ic_rss)
         SettingsHomeIcon.Userscripts -> ImageVector.vectorResource(R.drawable.ic_symbol_auto_awesome)
         SettingsHomeIcon.FirefoxExtensions -> ImageVector.vectorResource(R.drawable.ic_symbol_extension)
         SettingsHomeIcon.SiteCapsules -> Icons.Default.Favorite

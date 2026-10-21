@@ -122,6 +122,7 @@ internal fun BoxScope.BrowserAddressChrome(
     onOpenFavorites: () -> Unit,
     onOpenDownloads: () -> Unit,
     onOpenHistory: () -> Unit,
+    onOpenRssFeeds: (() -> Unit)? = null,
     onSettings: () -> Unit,
     onOpenMenuSettings: () -> Unit = onSettings,
     onPrivacyXRay: () -> Unit,
@@ -558,6 +559,12 @@ internal fun BoxScope.BrowserAddressChrome(
         onHistory = {
             onAddressEditorDismiss()
             onOpenHistory()
+        },
+        onOpenRssFeeds = onOpenRssFeeds?.let { openFeeds ->
+            {
+                onAddressEditorDismiss()
+                openFeeds()
+            }
         },
         firefoxExtensionActions = controller.firefoxExtensionActions,
         menuLayout = controller.browserMenuLayout,

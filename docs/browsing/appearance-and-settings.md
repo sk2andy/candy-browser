@@ -465,8 +465,9 @@ accessibility announcement or interaction, and use a centered, aspect-preserving
 the page. The External link preview page uses only its approved v8 decorative header; its redundant
 older graphic is removed without removing controls.
 
-The eleven PNGs in `shared/src/commonMain/composeResources/drawable` are byte-identical original
-downloads. No pixels were cropped, recolored, redrawn or regenerated in the source files. The
+The original eleven PNGs in `shared/src/commonMain/composeResources/drawable` remain byte-identical
+downloads. The RSS settings illustration is a new generated asset, with its prompt recorded in
+[`../design/rss-settings-artwork.md`](../design/rss-settings-artwork.md). No original asset changed. The
 Appearance and Tabs windows reference the first sheet; the rejected rounded Player on that sheet
 is outside both windows. Player references only the separately approved waveform image.
 
@@ -483,6 +484,7 @@ is outside both windows. Player references only the separately approved waveform
 | `settings_approved_tab_lifecycle.png` | 1536 × 1024 | Tab lifecycle `(340, 115, 1210, 910)` | `0178005781cbd91cec822e02480b276de186d1dc172d2e1d39bff7f57d49ebf5` |
 | `settings_approved_personal_link_rules.png` | 1536 × 1024 | Personal link rules `(140, 225, 1400, 795)` | `63e9bd5762063cce660ad691b6afdb153f5b3e9378e5601ceb71792e0b08fad0` |
 | `settings_external_app_links.png` | 1536 × 1024 | Open links in apps `(160, 205, 1385, 815)` | `288d106373b03999124b7aaeaa0342197d108aea3b8b4aace783c660e8fba6fe` |
+| `settings_approved_rss.png` | 1536 × 1024 | RSS `(0, 0, 1536, 1024)` | `d8be0aebb3d99ef19f31b4c1bccdb6a9753b6e741f3639d97e28629106be3d79` |
 
 The original Library IDs are `libfile_46c900dcd0448191a03ae81118385873` and
 `libfile_48290d7ff1088191aacd6d776d5db0db`, respectively. These are user-approved imagegen

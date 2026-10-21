@@ -775,6 +775,9 @@ open class MainActivity : AppCompatActivity() {
                                 HistoryActivityContract.launchIntent(this@MainActivity),
                             )
                         },
+                        onOpenRssFeeds = { pageUrl, isPrivate ->
+                            startActivity(RssFeedsActivity.intent(this@MainActivity, pageUrl, isPrivate))
+                        },
                         onImportUserScript = {
                             userScriptImportLauncher.launch(
                                 arrayOf(
@@ -1625,6 +1628,15 @@ open class MainActivity : AppCompatActivity() {
 
     private fun openIntent(intent: Intent) {
         browserController.cancelDeviceSearchNavigation()
+        if (intent.action == dev.sk2andy.materialbrowser.reader.rss.RssFeedNotifier.ACTION_OPEN_ARTICLE) {
+            val articleUrl = intent.getStringExtra(
+                dev.sk2andy.materialbrowser.reader.rss.RssFeedNotifier.EXTRA_ARTICLE_URL,
+            ) ?: intent.dataString
+            if (articleUrl != null && browserController.incomingLinkRouter.openInReader(articleUrl)) {
+                showIncomingBrowserNavigation()
+            }
+            return
+        }
         if (intent.action == DeviceSearchContract.ACTION_OPEN) {
             browserController.openDeviceSearchItem(
                 intent.getStringExtra(DeviceSearchContract.EXTRA_ITEM_ID),

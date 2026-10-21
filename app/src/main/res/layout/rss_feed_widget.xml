@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@drawable/bg_candy_widget"
+    android:padding="16dp">
+    <TextView
+        android:id="@+id/rss_widget_title"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/rss_widget_title"
+        android:textColor="@color/candy_widget_on_surface"
+        android:textSize="16sp"
+        android:textStyle="bold" />
+    <TextView
+        android:id="@+id/rss_widget_empty"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:text="@string/rss_widget_empty"
+        android:textColor="@color/candy_widget_on_surface_variant"
+        android:textSize="14sp" />
+    <TextView
+        android:id="@+id/rss_widget_article_one"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:ellipsize="end"
+        android:maxLines="2"
+        android:textColor="@color/candy_widget_on_surface"
+        android:textSize="14sp" />
+    <TextView
+        android:id="@+id/rss_widget_article_two"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:ellipsize="end"
+        android:maxLines="2"
+        android:textColor="@color/candy_widget_on_surface"
+        android:textSize="14sp" />
+    <TextView
+        android:id="@+id/rss_widget_article_three"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:ellipsize="end"
+        android:maxLines="2"
+        android:textColor="@color/candy_widget_on_surface"
+        android:textSize="14sp" />
+</LinearLayout>

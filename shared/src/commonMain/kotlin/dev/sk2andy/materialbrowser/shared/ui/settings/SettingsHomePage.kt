@@ -20,6 +20,7 @@ enum class SettingsHomeIcon {
     Browser,
     Player,
     Downloads,
+    RssFeeds,
     Userscripts,
     FirefoxExtensions,
     SiteCapsules,
@@ -58,6 +59,8 @@ enum class SettingsHomeLabel {
     PlayerTitle,
     PlayerSummary,
     DownloadsTitle,
+    RssFeedsTitle,
+    RssFeedsSummary,
     UserscriptsTitle,
     UserscriptsSummary,
     FirefoxExtensionsTitle,
@@ -117,6 +120,7 @@ object SettingsHomeRules {
         add(item(SettingsHomeGroup.Browsing, SettingsDestination.Browser, SettingsHomeIcon.Browser, SettingsHomeLabel.BrowserTitle, SettingsHomeLabel.BrowserSummary))
         add(item(SettingsHomeGroup.Browsing, SettingsDestination.Player, SettingsHomeIcon.Player, SettingsHomeLabel.PlayerTitle, SettingsHomeLabel.PlayerSummary))
         add(item(SettingsHomeGroup.Browsing, SettingsDestination.Downloads, SettingsHomeIcon.Downloads, SettingsHomeLabel.DownloadsTitle, null))
+        add(item(SettingsHomeGroup.Browsing, SettingsDestination.RssFeeds, SettingsHomeIcon.RssFeeds, SettingsHomeLabel.RssFeedsTitle, SettingsHomeLabel.RssFeedsSummary))
         if (separateTabControls) {
             add(item(SettingsHomeGroup.Tabs, SettingsDestination.Tabs, SettingsHomeIcon.Tabs, SettingsHomeLabel.TabsTitle, SettingsHomeLabel.TabsSummary))
             add(item(SettingsHomeGroup.Controls, SettingsDestination.Gestures, SettingsHomeIcon.Gestures, SettingsHomeLabel.GesturesTitle, SettingsHomeLabel.GesturesSummary))

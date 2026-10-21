@@ -3,8 +3,10 @@ package dev.sk2andy.materialbrowser.ui
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Text
 import androidx.compose.material3.TooltipBox
@@ -49,6 +51,7 @@ import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuPresentation
 import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuSurface
 import dev.sk2andy.materialbrowser.shared.browser.BrowserToppingMenuCommand
 import dev.sk2andy.materialbrowser.shared.ui.BrowserMainMenu as SharedBrowserMainMenu
+import dev.sk2andy.materialbrowser.shared.ui.BrowserMenuRow
 import dev.sk2andy.materialbrowser.shared.ui.BrowserMainMenuContainerRole
 import dev.sk2andy.materialbrowser.shared.ui.BrowserMainMenuEffects
 import dev.sk2andy.materialbrowser.shared.ui.BrowserMainMenuResources
@@ -331,6 +334,7 @@ internal fun BrowserMainMenu(
     onFavorites: () -> Unit = {},
     onDownloads: () -> Unit = {},
     onHistory: () -> Unit,
+    onOpenRssFeeds: (() -> Unit)? = null,
     firefoxExtensionActions: List<GeckoExtensionActionState> = emptyList(),
     menuLayout: BrowserMenuLayout = BrowserMenuLayout.Default,
     onFirefoxExtensionAction: (GeckoExtensionActionKey) -> Unit = {},
@@ -402,20 +406,37 @@ internal fun BrowserMainMenu(
     if (expanded && presentedExtensionActions != extensionSnapshot) {
         presentedExtensionActions = extensionSnapshot
     }
-    val extensionContent: @Composable ColumnScope.((() -> Unit) -> Unit) -> Unit = if (
-        BrowserMenuLayoutRules.isVisible(
+    val showFirefoxActions = BrowserMenuLayoutRules.isVisible(
             menuLayout,
             BrowserMenuEntry.FirefoxPageActions,
             BrowserMenuSurface.Tab,
         )
+    val extensionContent: @Composable ColumnScope.((() -> Unit) -> Unit) -> Unit = if (
+        showFirefoxActions || onOpenRssFeeds != null
     ) {
         { commit ->
-            FirefoxExtensionMenuSection(
-                actions = presentedExtensionActions,
-                onAction = { actionKey ->
-                    commit { onFirefoxExtensionAction(actionKey) }
-                },
-            )
+            if (onOpenRssFeeds != null) {
+                BrowserMenuRow(
+                    label = stringResource(R.string.rss_feeds_title),
+                    icon = {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_rss),
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp),
+                        )
+                    },
+                    shape = MaterialTheme.shapes.large,
+                    onClick = { commit(onOpenRssFeeds) },
+                )
+            }
+            if (showFirefoxActions) {
+                FirefoxExtensionMenuSection(
+                    actions = presentedExtensionActions,
+                    onAction = { actionKey ->
+                        commit { onFirefoxExtensionAction(actionKey) }
+                    },
+                )
+            }
         }
     } else {
         {}

@@ -9,6 +9,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.browser.BrowserController
+import dev.sk2andy.materialbrowser.browser.integration.BrowserUriPolicy
 import dev.sk2andy.materialbrowser.data.LinkRoutingStore
 import java.util.concurrent.Executors
 
@@ -70,6 +71,18 @@ internal class IncomingLinkRouter(context: Context, private val controller: Brow
         if (resolution.target.kind == LinkRoutingTargetKind.Reader) {
             readerRequest = LinkRoutingReaderRequest(tabId, resolution.url)
         }
+        return true
+    }
+
+    fun openInReader(url: String): Boolean {
+        val safeUrl = BrowserUriPolicy.normalizeHttpUrl(url) ?: return false
+        clearReaderRequest()
+        controller.dismissExternalLinkPreview()
+        controller.leaveSiteCapsule()
+        val previousTabId = controller.selectedTabId
+        val tabId = controller.createTab(initialUrl = safeUrl, isIncognito = false)
+        if (tabId == previousTabId) return false
+        readerRequest = LinkRoutingReaderRequest(tabId, safeUrl)
         return true
     }
 
