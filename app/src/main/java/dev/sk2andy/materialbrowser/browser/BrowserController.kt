@@ -11011,6 +11011,14 @@ class BrowserController(
         if (externalPreview != null) recreateExternalLinkPreviewRuntime(externalPreview)
     }
 
+    fun onViewportAspectRatioChanged() {
+        previewEpoch++
+        invalidateRestorationPreview()
+        pendingGeckoPreviewCaptures.keys.toList().forEach(::cancelPendingGeckoPreviewCapture)
+        previews.clear()
+        previewRepository.clear()
+    }
+
     private fun applyWebContentAppearance(settings: AppearanceSettings) {
         browserEngineSessionFactory.setWebContentColorScheme(
             BrowserWebContentAppearanceRules.colorScheme(

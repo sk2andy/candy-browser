@@ -55,6 +55,7 @@ import dev.sk2andy.materialbrowser.browser.BLANK_URL
 import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineKind
 import dev.sk2andy.materialbrowser.browser.BrowserActivityResultIdentity
 import dev.sk2andy.materialbrowser.browser.BrowserController
+import dev.sk2andy.materialbrowser.browser.TabPreviewViewportRules
 import dev.sk2andy.materialbrowser.browser.BrowserGestureHapticFeedback
 import dev.sk2andy.materialbrowser.browser.BrowserHardwareInputAction
 import dev.sk2andy.materialbrowser.browser.BrowserHardwareInputRules
@@ -197,6 +198,7 @@ open class MainActivity : AppCompatActivity() {
     }
     private val privateTabsNotifier by lazy { PrivateTabsNotifier(this) }
     private var appliedNightConfiguration = Configuration.UI_MODE_NIGHT_UNDEFINED
+    private var appliedPreviewViewportSize: Pair<Int, Int>? = null
     private val webPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions(),
     ) { results ->
@@ -343,6 +345,7 @@ open class MainActivity : AppCompatActivity() {
         if (GuestBubbleGate.redirectIfLocked(this)) return
         appliedNightConfiguration = resources.configuration.uiMode and
             Configuration.UI_MODE_NIGHT_MASK
+        appliedPreviewViewportSize = resources.configuration.previewViewportSize()
         if (AppDataArchiveRestore.hasInterruptedRestore(appDataRestoreRecoveryMarker())) {
             val lockToken = AppDataTransferLock.activate(this, Process.myPid())
             if (lockToken != null) {
@@ -1346,6 +1349,20 @@ open class MainActivity : AppCompatActivity() {
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
         if (appDataTransferActive) return
+        val newPreviewViewportSize = newConfig.previewViewportSize()
+        val previousPreviewViewportSize = appliedPreviewViewportSize
+        appliedPreviewViewportSize = newPreviewViewportSize
+        if (
+            previousPreviewViewportSize != null &&
+            TabPreviewViewportRules.hasAspectRatioChanged(
+                previousWidthDp = previousPreviewViewportSize.first,
+                previousHeightDp = previousPreviewViewportSize.second,
+                currentWidthDp = newPreviewViewportSize.first,
+                currentHeightDp = newPreviewViewportSize.second,
+            ) && ::browserController.isInitialized
+        ) {
+            browserController.onViewportAspectRatioChanged()
+        }
         synchronizeAppearanceConfiguration()
         window.decorView.dispatchConfigurationChanged(Configuration(resources.configuration))
         applyBrowserSystemUi()
@@ -1353,6 +1370,9 @@ open class MainActivity : AppCompatActivity() {
             pictureInPictureController.onConfigurationChanged()
         }
     }
+
+    private fun Configuration.previewViewportSize(): Pair<Int, Int> =
+        screenWidthDp to screenHeightDp
 
     private fun synchronizeAppearanceConfiguration() {
         val previousNightConfiguration = appliedNightConfiguration

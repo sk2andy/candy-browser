@@ -27,6 +27,7 @@ import dev.sk2andy.materialbrowser.data.HistoryRecordingMode
 import dev.sk2andy.materialbrowser.data.InactiveTabLifetime
 import dev.sk2andy.materialbrowser.data.ProfileWallpaperStore
 import dev.sk2andy.materialbrowser.data.TabPreviewRepository
+import dev.sk2andy.materialbrowser.data.TabPreviewStore
 import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineCommand
 import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineCommandType
 import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineEvent
@@ -813,6 +814,28 @@ class BrowserControllerBackgroundMemoryInstrumentedTest {
             )
             assertSame(privatePreview, browserController.previews[privateSession.tabId])
             assertSame(privateFavicon, browserController.favicons[privateSession.tabId])
+        }
+    }
+
+    @Test
+    fun viewportAspectRatioChangeClearsMemoryAndPersistedPreviews() {
+        lateinit var session: MemorySession
+        val repository = TabPreviewRepository.get(composeRule.activity)
+        val store = TabPreviewStore(composeRule.activity)
+        composeRule.runOnIdle {
+            val browserController = requireNotNull(controller)
+            session = installSelectedSession()
+            val preview = colorfulBitmap()
+            browserController.previews[session.tabId] = preview
+            repository.save(session.tabId, preview)
+            assertTrue(repository.flush())
+
+            browserController.onViewportAspectRatioChanged()
+
+            assertTrue(browserController.previews.isEmpty())
+            assertTrue(repository.flush())
+            assertNull(store.load(session.tabId))
+            preview.recycle()
         }
     }
 
