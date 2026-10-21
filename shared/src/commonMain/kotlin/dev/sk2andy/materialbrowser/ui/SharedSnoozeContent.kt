@@ -58,6 +58,7 @@ data class SnoozeScreenStrings(
     val reschedule: String = "Verschieben",
     val openNow: String = "Jetzt öffnen",
     val delete: String = "Löschen",
+    val addPurpose: String = "Vorhaben ergänzen",
 )
 
 @Composable
@@ -67,6 +68,7 @@ fun SharedSnoozeTabDialog(
     onCustom: () -> Unit,
     onDismiss: () -> Unit,
     strings: SnoozeScreenStrings = SnoozeScreenStrings(),
+    purposeContent: (@Composable () -> Unit)? = null,
 ) {
     if (tab == null) return
     val enabled = !tab.isIncognito
@@ -88,6 +90,10 @@ fun SharedSnoozeTabDialog(
         text = {
             Column(Modifier.verticalScroll(rememberScrollState()).testTag(SnoozeTestTags.Dialog)) {
                 if (!enabled) Text(strings.privateUnavailable, color = MaterialTheme.colorScheme.error)
+                if (purposeContent != null) {
+                    purposeContent()
+                    Spacer(Modifier.height(12.dp))
+                }
                 Row(
                     modifier = Modifier.fillMaxWidth().testTag(SnoozeTestTags.PresetGroup),
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -125,6 +131,7 @@ fun SharedSnoozedTabsContent(
     modifier: Modifier = Modifier,
     strings: SnoozeScreenStrings = SnoozeScreenStrings(),
     header: (@Composable () -> Unit)? = null,
+    onEditPurpose: ((String) -> Unit)? = null,
 ) {
     Column(modifier.fillMaxSize().testTag(SnoozeTestTags.Management)) {
         if (header != null) header() else CandyPageHeader(strings.managementTitle, strings.back, onBack)
@@ -151,6 +158,7 @@ fun SharedSnoozedTabsContent(
                         onReschedule = { onReschedule(item.tab.id) },
                         onOpenNow = { onOpenNow(item.tab.id) },
                         onDelete = { onDelete(item.tab.id) },
+                        onEditPurpose = onEditPurpose?.let { edit -> { edit(item.tab.id) } },
                     )
                 }
                 item { Spacer(Modifier.height(12.dp)) }
@@ -198,6 +206,7 @@ private fun SnoozedTabCard(
     onReschedule: () -> Unit,
     onOpenNow: () -> Unit,
     onDelete: () -> Unit,
+    onEditPurpose: (() -> Unit)?,
 ) {
     Card(
         modifier = Modifier
@@ -236,6 +245,19 @@ private fun SnoozedTabCard(
                     style = MaterialTheme.typography.bodySmall,
                 )
             }
+            if (onEditPurpose != null) {
+                TextButton(
+                    onClick = onEditPurpose,
+                    modifier = Modifier.testTag(SnoozeTestTags.purpose(snoozed.tab.id)),
+                ) {
+                    Text(
+                        snoozed.tab.snoozePurpose.ifBlank { strings.addPurpose },
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+            } else if (snoozed.tab.snoozePurpose.isNotBlank()) {
+                Text(snoozed.tab.snoozePurpose, style = MaterialTheme.typography.bodyMedium)
+            }
             Text(
                 wakeLabel,
                 modifier = Modifier.padding(top = 10.dp),
@@ -267,6 +289,7 @@ private fun SnoozedTabCard(
 
 object SnoozeTestTags {
     const val Dialog = "snooze_dialog"
+    const val PurposeInput = "snooze_purpose_input"
     const val PresetGroup = "snooze_preset_group"
     const val LaterToday = "snooze_later_today"
     const val Tomorrow = "snooze_tomorrow"
@@ -278,5 +301,6 @@ object SnoozeTestTags {
     fun overviewTab(tabId: String) = "overview_tab:$tabId"
     fun overviewTitle(tabId: String) = "overview_title:$tabId"
     fun overviewClose(tabId: String) = "overview_close:$tabId"
+    fun purpose(tabId: String) = "snooze_purpose:$tabId"
     fun card(tabId: String) = "snoozed_tab:$tabId"
 }

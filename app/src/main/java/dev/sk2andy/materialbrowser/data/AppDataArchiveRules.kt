@@ -69,6 +69,8 @@ internal object AppDataArchiveRules {
         path != "no_backup/web_annotations.json" &&
             path != "no_backup/web_annotations.json.bak" &&
             path != "no_backup/web_annotations.json.new" &&
+            path != GUEST_BUBBLE_SESSION_RELATIVE_PATH &&
+            !path.startsWith("$GUEST_BUBBLE_SESSION_RELATIVE_PATH/") &&
             path != "no_backup/candy_constellations.db" &&
             !path.startsWith("no_backup/candy_constellations.db-") &&
             path != "no_backup/constellation_model" &&

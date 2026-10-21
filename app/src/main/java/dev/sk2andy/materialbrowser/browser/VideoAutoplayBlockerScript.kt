@@ -61,7 +61,8 @@ internal object VideoAutoplayBlockerScript {
               ? [root]
               : root.querySelectorAll?.('video[autoplay]') ?? [];
             for (const video of videos) {
-              if (video.autoplay) video.autoplay = false;
+              if (!video.autoplay) continue;
+              video.autoplay = false;
               if (!video.paused) originalPause.call(video);
             }
           };

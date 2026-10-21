@@ -1,6 +1,6 @@
 package dev.sk2andy.materialbrowser.data
 
-internal object SnoozePurposeRules {
+object SnoozePurposeRules {
     const val MAX_LENGTH = 240
 
     fun normalize(value: String): String = value

@@ -1993,6 +1993,7 @@ private fun BrowserMenuActionIcon(
         BrowserFeatureMenuAction.DuplicateTab -> "doc.on.doc"
         BrowserFeatureMenuAction.CloseTab -> "xmark.circle"
         BrowserFeatureMenuAction.OpenReader -> "book.closed"
+        BrowserFeatureMenuAction.OpenWebAnnotations -> "highlighter"
         BrowserFeatureMenuAction.TranslatePage -> "character.book.closed"
         BrowserFeatureMenuAction.FindInPage -> "magnifyingglass"
         BrowserFeatureMenuAction.Share -> "square.and.arrow.up"

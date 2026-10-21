@@ -17,6 +17,7 @@ import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.CropFree
 import androidx.compose.material.icons.filled.DesktopWindows
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Extension
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Menu
@@ -237,6 +238,7 @@ internal fun BrowserMenuSettingsEntryIcon(entry: BrowserMenuEntry) {
         BrowserMenuEntry.CloseTab -> Icons.Default.Close
         BrowserMenuEntry.DuplicateTab -> Icons.Default.ContentCopy
         BrowserMenuEntry.Reader -> Icons.AutoMirrored.Filled.MenuBook
+        BrowserMenuEntry.WebAnnotations -> Icons.Default.Edit
         BrowserMenuEntry.Translate -> Icons.Default.Translate
         BrowserMenuEntry.FindInPage -> Icons.Default.Search
         BrowserMenuEntry.Share -> Icons.Default.Share

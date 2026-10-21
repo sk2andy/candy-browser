@@ -4,6 +4,7 @@ package dev.sk2andy.materialbrowser.ui
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -18,6 +19,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
@@ -34,6 +36,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -41,6 +44,7 @@ import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.browser.BrowserProfile
 import dev.sk2andy.materialbrowser.browser.BrowserTab
 import dev.sk2andy.materialbrowser.data.SnoozePreset
+import dev.sk2andy.materialbrowser.data.SnoozePurposeRules
 import dev.sk2andy.materialbrowser.data.SnoozeTimeRules
 import dev.sk2andy.materialbrowser.data.SnoozedTab
 import java.text.DateFormat
@@ -87,6 +91,13 @@ internal fun SnoozeTabDialog(
         SharedSnoozeTabDialog(
             tab = tab,
             onPreset = applyPreset,
+            purposeContent = {
+                SnoozePurposeField(
+                    purpose = purpose,
+                    onPurposeChange = { purpose = it },
+                    enabled = !tab.isIncognito,
+                )
+            },
             onCustom = { customEditorVisible = true },
             onDismiss = onDismiss,
             strings = androidSnoozeStrings(),
@@ -116,8 +127,10 @@ internal fun SnoozedTabsScreen(
     onReschedule: (String, Long) -> Boolean,
     onOpenNow: (String) -> Boolean,
     onDelete: (String) -> Boolean,
+    onUpdatePurpose: (String, String) -> Boolean = { _, _ -> false },
     modifier: Modifier = Modifier,
 ) {
+    var purposeTab by remember { mutableStateOf<SnoozedTab?>(null) }
     var editingTab by remember { mutableStateOf<SnoozedTab?>(null) }
     val backState = rememberNativeScreenBackState()
     NativeScreenBackHandler(state = backState, retainProgressOnBack = true, onBack = onBack)
@@ -141,6 +154,7 @@ internal fun SnoozedTabsScreen(
             onReschedule = { id -> editingTab = snoozedTabs.firstOrNull { it.tab.id == id } },
             onOpenNow = { id -> if (onOpenNow(id)) onBack() },
             onDelete = { onDelete(it) },
+            onEditPurpose = { id -> purposeTab = snoozedTabs.firstOrNull { it.tab.id == id } },
             modifier = Modifier.statusBarsPadding().navigationBarsPadding().padding(horizontal = 20.dp),
             strings = androidSnoozeStrings(),
             header = {
@@ -161,6 +175,14 @@ internal fun SnoozedTabsScreen(
         )
     }
 
+    purposeTab?.let { snoozed ->
+        SnoozePurposeDialog(
+            tab = snoozed.tab,
+            onSave = { purpose -> onUpdatePurpose(snoozed.tab.id, purpose) },
+            onDismiss = { purposeTab = null },
+        )
+    }
+
     val editing = editingTab
     SnoozeDateTimeDialogs(
         visible = editing != null,
@@ -170,6 +192,49 @@ internal fun SnoozedTabsScreen(
             val accepted = editing != null && onReschedule(editing.tab.id, wakeAtMillis)
             if (accepted) editingTab = null
             accepted
+        },
+    )
+}
+
+@Composable
+private fun SnoozePurposeField(
+    purpose: String,
+    onPurposeChange: (String) -> Unit,
+    enabled: Boolean = true,
+) {
+    OutlinedTextField(
+        value = purpose,
+        onValueChange = { onPurposeChange(it.take(SnoozePurposeRules.MAX_LENGTH)) },
+        modifier = Modifier.fillMaxWidth().testTag(SnoozeTestTags.PurposeInput),
+        enabled = enabled,
+        label = { Text(stringResource(R.string.snooze_purpose_label)) },
+        placeholder = { Text(stringResource(R.string.snooze_purpose_hint)) },
+        supportingText = { Text(stringResource(R.string.snooze_purpose_supporting)) },
+        minLines = 1,
+        maxLines = 3,
+    )
+}
+
+@Composable
+private fun SnoozePurposeDialog(
+    tab: BrowserTab,
+    onSave: (String) -> Boolean,
+    onDismiss: () -> Unit,
+) {
+    var purpose by remember(tab.id) { mutableStateOf(tab.snoozePurpose) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.snooze_edit_purpose)) },
+        text = { SnoozePurposeField(purpose, onPurposeChange = { purpose = it }) },
+        confirmButton = {
+            TextButton(onClick = { if (onSave(purpose)) onDismiss() }) {
+                Text(stringResource(R.string.action_save))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.action_cancel))
+            }
         },
     )
 }
@@ -293,4 +358,5 @@ private fun androidSnoozeStrings(): SnoozeScreenStrings = SnoozeScreenStrings(
     reschedule = stringResource(R.string.action_reschedule),
     openNow = stringResource(R.string.action_open_now),
     delete = stringResource(R.string.action_delete),
+    addPurpose = stringResource(R.string.snooze_add_purpose),
 )

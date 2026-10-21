@@ -99,6 +99,11 @@ and engine actions. The exact acceptance surface and evidence are defined in
   profile and are removed on clean shutdown or before the next System-WebView process starts.
 - Both Android engines prevent video autoplay by default. Turning that policy off is an explicit
   user choice because autoplay can increase page CPU/GPU work and battery use.
+- System WebView's autoplay observer acts only while a video actually has `autoplay` enabled.
+  Clearing that attribute must preserve manually started playback; DOM insertion without autoplay
+  must not introduce a Candy-owned pause. Trusted playback grants remain video-scoped and temporary.
+  `scripts/video_autoplay_blocker.test.mjs` covers mutation handling; decoded playback, held 2× speed
+  and comment-overlay input are exercised by `SystemWebViewVideoPlaybackInstrumentedTest`.
 - WKWebView remains the fixed iOS adapter, making the product's three adapters GeckoView, Android
   System WebView and WKWebView while only Android presents an engine selector.
 

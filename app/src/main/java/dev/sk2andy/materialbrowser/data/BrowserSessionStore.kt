@@ -823,6 +823,7 @@ class BrowserSessionStore internal constructor(
             normalizeHost = StatusBarScrollRules::normalizedDomain,
             limit = StatusBarScrollRules.MAX_DISABLED_DOMAINS_PER_PROFILE,
         )
+    }
 
     fun loadFormDraftSavingEnabled(): Boolean = preferences.getBoolean(KEY_FORM_DRAFT_SAVING_ENABLED, false)
 

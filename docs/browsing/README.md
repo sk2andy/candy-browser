@@ -44,6 +44,7 @@
 | Local download progress, search and cleanup | [`downloads.md`](downloads.md) | `DownloadRepository`, `DownloadsActivity`, `DownloadsScreen` |
 | Saved Reader PDFs and completed files in Android's document picker | [`documents-provider.md`](documents-provider.md) | `CandyDocumentsProvider`, `browser/documents`, `DownloadProvenanceStore` |
 | Favorite library, search and deletion undo | [`favorites.md`](favorites.md) | `BrowserSessionStore`, `BrowsingFavoritesRules`, `FavoritesActivity`, `FavoritesScreen` |
+| Persistent page highlights and native inline text actions | [`web-annotations.md`](web-annotations.md) | `browser/annotation`, `WebAnnotationStore`, native selection delegates and `web_text_operations.js` |
 | Android selected-text research and speech | [`selected-text-actions.md`](selected-text-actions.md) | `SelectedTextActivities`, `ProcessTextRules`, `ProcessTextResearchIntentHandler`, `ReaderSpeechController` |
 | Selected bookmarks/articles in system search | [`device-search.md`](device-search.md) | `browser/integration/devicesearch`, `DeviceSearchSettingsActivity` |
 | Personal incoming-link rules | [`link-routing.md`](link-routing.md) | `browser/integration/linkrouting`, `LinkRoutingStore`, `LinkRoutingSettingsPage` |
