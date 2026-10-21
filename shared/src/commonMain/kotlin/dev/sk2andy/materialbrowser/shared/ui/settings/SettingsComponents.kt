@@ -80,6 +80,7 @@ fun SettingsPage(
     title: String,
     backContentDescription: String,
     onBack: () -> Unit,
+    actions: @Composable () -> Unit = {},
     content: @Composable ColumnScope.() -> Unit,
 ) {
     Column(
@@ -110,6 +111,7 @@ fun SettingsPage(
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.SemiBold,
             )
+            actions()
         }
         content()
     }

@@ -8,6 +8,8 @@
         <include domain="file" path="candy_filter_rules.json.bak" />
         <include domain="file" path="user_scripts.json" />
         <include domain="file" path="user_scripts.json.bak" />
+        <include domain="file" path="custom_workflows_v1.json" />
+        <include domain="file" path="custom_workflows_v1.json.bak" />
         <include domain="file" path="site_capsules_v1.json" />
         <include domain="file" path="site_capsules_v1.json.bak" />
         <include domain="file" path="site_capsule_icons" />

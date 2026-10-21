@@ -13,6 +13,7 @@ enum class SettingsDestination {
     TabsAndGestures,
     AddressBarLongPressActions,
     AddressBarActions,
+    CustomWorkflows,
     MenuActions,
     MenuStyle,
     MenuContentLayout,

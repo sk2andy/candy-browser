@@ -1,5 +1,11 @@
 package dev.sk2andy.materialbrowser.browser
 
+import dev.sk2andy.materialbrowser.browser.workflow.BrowserCustomWorkflowRuntime
+import dev.sk2andy.materialbrowser.browser.workflow.CustomWorkflowConfiguration
+import dev.sk2andy.materialbrowser.browser.workflow.CustomWorkflowPlacement
+import dev.sk2andy.materialbrowser.browser.workflow.CustomWorkflowRules
+import dev.sk2andy.materialbrowser.data.CustomWorkflowRepository
+
 import android.Manifest
 import android.app.Activity
 import android.content.ClipData
@@ -118,6 +124,7 @@ import dev.sk2andy.materialbrowser.browser.credentials.HttpAuthPromptRules
 import dev.sk2andy.materialbrowser.browser.engine.AndroidBrowserEngineFactory
 import dev.sk2andy.materialbrowser.browser.engine.BrowserEngineContentKind
 import dev.sk2andy.materialbrowser.browser.engine.BrowserWebContentAppearanceRules
+import dev.sk2andy.materialbrowser.browser.gecko.BrowserEngineOffscreenSurface
 import dev.sk2andy.materialbrowser.browser.gecko.AndroidBrowserEngineSessionPort
 import dev.sk2andy.materialbrowser.browser.gecko.BrowserEnginePreviewCapture
 import dev.sk2andy.materialbrowser.browser.sitewidget.SiteWidgetCapture
@@ -553,6 +560,7 @@ private data class GeckoLinkPeekBinding(
     val session: AndroidBrowserEngineSessionPort,
     val view: View,
     var committedUrl: String,
+    val offscreenSurface: BrowserEngineOffscreenSurface? = null,
     var title: String? = null,
     var progress: Int = 0,
     var isLoading: Boolean = true,
@@ -776,6 +784,26 @@ class BrowserController(
         private set
     var pageTranslationProvider by mutableStateOf(PageTranslationProvider.Google)
         private set
+    private val customWorkflowRuntime by lazy { BrowserCustomWorkflowRuntime(activity, this) }
+    internal val customWorkflowConfiguration get() = customWorkflowRuntime.configuration
+    internal val customWorkflowRunState get() = customWorkflowRuntime.runState
+    internal val pendingCustomWorkflowReader get() = customWorkflowRuntime.readerRequest
+    internal val canRunCustomWorkflow: Boolean
+        get() = !destroyed && isActivityResumed && externalLinkPreviewState == null &&
+            !isSyncedProfile(selectedTab.profileId) && !isSessionEphemeralTab(selectedTabId)
+
+    internal fun updateCustomWorkflowConfiguration(
+        configuration: CustomWorkflowConfiguration,
+        onResult: (Boolean) -> Unit = {},
+    ) = customWorkflowRuntime.update(configuration, onResult)
+
+    internal fun runCustomWorkflow(id: String, inputUrl: String? = null, previewView: View? = null) =
+        customWorkflowRuntime.run(id, inputUrl, previewView)
+
+    internal fun cancelCustomWorkflow() = customWorkflowRuntime.cancel()
+    internal fun dismissCustomWorkflowResult() = customWorkflowRuntime.dismissResult()
+    internal fun consumeCustomWorkflowReader() = customWorkflowRuntime.consumeReader()
+
     var linkLongPressAction by mutableStateOf(LinkLongPressAction.LinkPeek)
         private set
     var linkPeekSwipeAction by mutableStateOf(LinkPeekSwipeAction.OpenBackground)
@@ -2761,6 +2789,7 @@ class BrowserController(
         residentTabLimit = store.loadResidentTabLimit()
         searchEngine = store.loadSearchEngine()
         pageTranslationProvider = store.loadPageTranslationProvider()
+        customWorkflowRuntime.load()
         linkLongPressAction = store.loadLinkLongPressAction()
         linkPeekSwipeAction = store.loadLinkPeekSwipeAction()
         addressBarLongPressAction = store.loadAddressBarLongPressAction()
@@ -4238,9 +4267,82 @@ class BrowserController(
 
     fun releaseLinkPeekPreviewView(view: View) {
         geckoLinkPeekBindings.remove(view)?.let { binding ->
-            releaseGeckoView(binding.session, binding.view)
+            if (binding.offscreenSurface != null) binding.offscreenSurface.close()
+            else releaseGeckoView(binding.session, binding.view)
             binding.session.execute(BrowserEngineCommands.close())
             return
+        }
+    }
+
+    /** Extract a clicked URL without navigating or persisting its containing tab. */
+    internal fun extractCustomWorkflowLink(
+        url: String,
+        previewView: View?,
+        onResult: (ReaderExtractionResult) -> Unit,
+    ): () -> Unit {
+        val safeUrl = BrowserUriPolicy.normalizeHttpUrl(url)
+        val identity = selectedActivityResultIdentity()
+        if (safeUrl == null || identity == null) {
+            onResult(ReaderExtractionResult.Failure(ReaderExtractionFailure.UnsupportedPage))
+            return {}
+        }
+        var ownedView: View? = null
+        var cancelled = false
+        var delivered = false
+        val revision = contentActions.revision
+        fun extract(view: View) {
+            if (cancelled || delivered) return
+            val binding = geckoLinkPeekBindings[view]
+            val expectedUrl = binding?.committedUrl
+            fun current(): Boolean = !cancelled && isActivityResultIdentityCurrent(identity) &&
+                geckoLinkPeekBindings[view] === binding && binding != null &&
+                binding.sourceTabId == identity.tabId && !binding.isLoading &&
+                binding.progress == 100 && binding.committedUrl == expectedUrl &&
+                (previewView == null || contentActions.revision == revision)
+            if (!current() || expectedUrl == null) {
+                delivered = true
+                onResult(ReaderExtractionResult.Failure(ReaderExtractionFailure.InvalidResponse))
+                return
+            }
+            delivered = true
+            fun request(attempt: Int) {
+                if (cancelled) return
+                if (!current()) {
+                    onResult(ReaderExtractionResult.Failure(ReaderExtractionFailure.InvalidResponse))
+                    return
+                }
+                requireNotNull(binding).session.extractPageForReader { raw ->
+                    if (cancelled) return@extractPageForReader
+                    // Gecko may commit before its document-side Reader bridge is connected.
+                    if (raw == null && current() && attempt < 5) {
+                        mainHandler.postDelayed({ request(attempt + 1) }, 100L)
+                        return@extractPageForReader
+                    }
+                    val result = ReaderExtractionParser.parseJson(raw)
+                    val document = (result as? ReaderExtractionResult.Success)?.document
+                    onResult(if (current() && (document == null ||
+                        BrowserUriPolicy.normalizeHttpUrl(document.sourceUrl) == expectedUrl)
+                    ) result else ReaderExtractionResult.Failure(ReaderExtractionFailure.InvalidResponse))
+                }
+            }
+            request(0)
+        }
+        if (previewView != null) extract(previewView)
+        else {
+            ownedView = createGeckoLinkPeekPreview(
+                sourceTab = selectedTab,
+                url = safeUrl,
+                onProgressChanged = { progress ->
+                    if (progress == 100) mainHandler.post { ownedView?.let(::extract) }
+                },
+                onCommittedUrlChanged = {},
+                offscreen = true,
+            )
+        }
+        return {
+            cancelled = true
+            ownedView?.let(::releaseLinkPeekPreviewView)
+            ownedView = null
         }
     }
 
@@ -4249,6 +4351,7 @@ class BrowserController(
         url: String,
         onProgressChanged: (Int) -> Unit,
         onCommittedUrlChanged: (String) -> Unit,
+        offscreen: Boolean = false,
     ): View {
         val previewTabId = "link-peek-${++nextGeckoLinkPeekId}"
         var binding: GeckoLinkPeekBinding? = null
@@ -4291,9 +4394,12 @@ class BrowserController(
                     BrowserEngineEventType.NavigationCommitted,
                     BrowserEngineEventType.NavigationFailed,
                     -> {
-                        binding?.isLoading = false
-                        binding?.progress = 100
-                        onProgressChanged(100)
+                        // Ignore Gecko's internal bootstrap document before the requested page.
+                        if (BrowserUriPolicy.normalizeHttpUrl(event.address.orEmpty()) != null) {
+                            binding?.isLoading = false
+                            binding?.progress = 100
+                            onProgressChanged(100)
+                        }
                     }
                     BrowserEngineEventType.StateChanged,
                     BrowserEngineEventType.Crashed,
@@ -4302,14 +4408,19 @@ class BrowserController(
                 }
             },
         )
-        val view = session.createView(activity).apply {
+        val offscreenSurface = if (offscreen) session.createOffscreenSurface(
+            activity.resources.displayMetrics.widthPixels.coerceAtLeast(1),
+            activity.resources.displayMetrics.heightPixels.coerceAtLeast(1),
+        ) else null
+        val view = (if (offscreenSurface != null) View(activity) else session.createView(activity)).apply {
             isFocusable = false
             isFocusableInTouchMode = false
             isEnabled = false
             isLongClickable = false
             importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
         }
-        session.setVideoAutoplayBlocked(isVideoAutoplayBlocked)
+        if (offscreen) session.setAudioMuted(true)
+        session.setVideoAutoplayBlocked(offscreen || isVideoAutoplayBlocked)
         session.setDesktopMode(isDesktopView(sourceTab, url))
         binding = GeckoLinkPeekBinding(
             sourceTabId = sourceTab.id,
@@ -4317,6 +4428,7 @@ class BrowserController(
             session = session,
             view = view,
             committedUrl = url,
+            offscreenSurface = offscreenSurface,
         )
         geckoLinkPeekBindings[view] = binding
         dispatchCurrentWindowInsets(view, tabId = null, isInsideSafeDrawingHost = true)
@@ -7556,6 +7668,17 @@ class BrowserController(
     }
 
     private fun handleWebContentLongPress(target: WebContentTarget, tabId: String) {
+        val workflowBinding = CustomWorkflowRules.binding(
+            customWorkflowConfiguration, CustomWorkflowPlacement.LinkLongPress,
+        )
+        if (target.linkUrl != null && workflowBinding != null) {
+            if (selectedTabId == tabId) {
+                contentActions.requestLongPressActionHaptic()
+                contentActions.dismiss()
+                runCustomWorkflow(workflowBinding.workflowId, inputUrl = target.linkUrl)
+            }
+            return
+        }
         val outcome = LinkLongPressRules.outcome(
             action = linkLongPressAction,
             hasLinkTarget = target.linkUrl != null,
@@ -11746,6 +11869,7 @@ class BrowserController(
     }
 
     fun onPause() {
+        customWorkflowRuntime.cancel()
         inlineTranslation.dismiss()
         webAnnotations.detach()
         formDrafts.detach()
@@ -11779,22 +11903,25 @@ class BrowserController(
     }
 
     fun prepareForAppDataTransfer(onReady: (Boolean) -> Unit) {
-        ReaderLibraryRepository.get(activity).awaitIdle {
-            externalLinkPreviewRuntime?.geckoBinding?.session?.setActive(false)
-            browserEngineSessions.forEach(::persistBrowserEngineSessionState)
-            persist()
-            val persistentWritersReady = listOf(
-                previewRepository.flush(),
-                faviconRepository.flush(),
-                candyTrailRepository.flush(),
-                candyRuleRepository.flush(),
-                userScriptRepository.flush(),
-                store.flush(),
-                permissionStore.flush(),
-                webViewStateRepository.flush(),
-            ).all { ready -> ready }
-            if (!persistentWritersReady) resumeEngineSessionsAfterTransferPreparationFailure()
-            onReady(persistentWritersReady)
+        customWorkflowRuntime.cancel()
+        CustomWorkflowRepository.get(activity).awaitIdle {
+            ReaderLibraryRepository.get(activity).awaitIdle {
+                externalLinkPreviewRuntime?.geckoBinding?.session?.setActive(false)
+                browserEngineSessions.forEach(::persistBrowserEngineSessionState)
+                persist()
+                val persistentWritersReady = listOf(
+                    previewRepository.flush(),
+                    faviconRepository.flush(),
+                    candyTrailRepository.flush(),
+                    candyRuleRepository.flush(),
+                    userScriptRepository.flush(),
+                    store.flush(),
+                    permissionStore.flush(),
+                    webViewStateRepository.flush(),
+                ).all { ready -> ready }
+                if (!persistentWritersReady) resumeEngineSessionsAfterTransferPreparationFailure()
+                onReady(persistentWritersReady)
+            }
         }
     }
 
@@ -12266,6 +12393,7 @@ class BrowserController(
     }
 
     fun destroy(lockClosedProfiles: Boolean = false) {
+        customWorkflowRuntime.close()
         inlineTranslation.close()
         webAnnotations.close()
         formDrafts.close()

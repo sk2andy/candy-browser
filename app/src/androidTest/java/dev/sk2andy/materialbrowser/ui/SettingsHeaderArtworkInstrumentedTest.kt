@@ -173,6 +173,7 @@ class SettingsHeaderArtworkInstrumentedTest {
                     .takeScreenshot(File(evidenceDirectory(), "${name}_device.png")),
             )
             when (kind) {
+                SettingsHeaderArtwork.Rss -> Unit
                 SettingsHeaderArtwork.Appearance -> {
                     composeRule.onNodeWithTag(AppearanceSettingsTestTags.Animations)
                         .performScrollTo().performClick()
@@ -289,6 +290,7 @@ class SettingsHeaderArtworkInstrumentedTest {
         onInteraction: (SettingsHeaderArtwork) -> Unit = {},
     ) {
         when (artwork) {
+            SettingsHeaderArtwork.Rss -> RssSettingsPage(onBack = {})
             SettingsHeaderArtwork.Appearance -> AppearanceSettingsPage(
                 settings = settings,
                 section = AppearanceSettingsSection.Theme,

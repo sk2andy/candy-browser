@@ -230,6 +230,12 @@ internal fun settingsSearchDefinitions(
             destination = SettingsDestination.AddressBarActions,
         )
         setting(
+            id = "custom_workflows",
+            titleRes = R.string.workflow_title,
+            descriptionRes = R.string.workflow_assignments_summary,
+            destination = SettingsDestination.CustomWorkflows,
+        )
+        setting(
             id = "settings_menu_actions_title",
             titleRes = R.string.settings_menu_actions_title,
             descriptionRes = R.string.settings_menu_actions_summary,

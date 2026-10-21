@@ -123,6 +123,7 @@ internal fun BoxScope.BrowserAddressChrome(
     onOpenDownloads: () -> Unit,
     onOpenHistory: () -> Unit,
     onOpenRssFeeds: (() -> Unit)? = null,
+    onManageWorkflows: (() -> Unit)? = null,
     onSettings: () -> Unit,
     onOpenMenuSettings: () -> Unit = onSettings,
     onPrivacyXRay: () -> Unit,
@@ -560,6 +561,9 @@ internal fun BoxScope.BrowserAddressChrome(
             onAddressEditorDismiss()
             onOpenHistory()
         },
+        workflowActions = controller.customWorkflowConfiguration.surfaceActions(),
+        onWorkflow = { id -> controller.runCustomWorkflow(id) },
+        onManageWorkflows = onManageWorkflows,
         onOpenRssFeeds = onOpenRssFeeds?.let { openFeeds ->
             {
                 onAddressEditorDismiss()

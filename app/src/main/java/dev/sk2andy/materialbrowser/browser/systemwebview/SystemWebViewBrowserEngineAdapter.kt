@@ -1001,7 +1001,13 @@ private class SystemWebViewBrowserEngineSession(
 
     override fun extractPageForReader(onComplete: (String?) -> Unit) {
         if (closed) onComplete(null)
-        else webView.evaluateJavascript(ReaderExtractionScript.javascript, onComplete)
+        else webView.evaluateJavascript(ReaderExtractionScript.javascript) { encoded ->
+            // The engine port returns JSON text; WebView wraps JavaScript strings once more.
+            val json = encoded?.takeIf { it.length <= 4_000_000 }?.let {
+                runCatching { org.json.JSONTokener(it).nextValue() as? String }.getOrNull()
+            }
+            onComplete(json)
+        }
     }
 
     override fun probeTextInputOcclusion(

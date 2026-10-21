@@ -107,6 +107,33 @@ class ReaderLibraryRepository private constructor(context: Context) : ReaderLibr
             }
         }
 
+    internal fun saveWorkflowSnapshot(
+        document: ReaderDocument,
+        sourceProfileId: String,
+        isPrivate: Boolean,
+        isCurrent: () -> Boolean,
+        onSaved: (ReaderSnapshot?) -> Unit,
+    ) {
+        enqueue {
+            val admitted = withContext(Dispatchers.Main.immediate) { isCurrent() }
+            val snapshot = if (!admitted) null else try {
+                store.saveSnapshot(
+                    document = document,
+                    progress = 0f,
+                    isPrivate = isPrivate,
+                    sourceProfileId = sourceProfileId,
+                    allowEviction = false,
+                )
+            } catch (cancellation: CancellationException) {
+                throw cancellation
+            } catch (error: java.io.IOException) {
+                Log.e(TAG, "Workflow snapshot save failed", error)
+                null
+            }
+            onMain { onSaved(snapshot) }
+        }
+    }
+
     override fun deleteSnapshot(
         snapshotId: String,
         isPrivate: Boolean,

@@ -30,6 +30,7 @@ and restore-root discovery enforce the same exclusions.
 | Candy settings | Appearance, search, downloads, protection and domain-specific settings |
 | Browser state | Regular tabs, profiles, history, favorites, trails, snoozes and previews |
 | Local content | Reader library, Site Capsules, icons, userscripts and Candy Rules |
+| Custom workflows | `files/custom_workflows_v1.json`: named step sequences, icons, menu visibility and stable slot/gesture bindings, including references to deleted workflows |
 | Profile presentation | Separate per-profile new-tab and tab-switcher wallpaper images with independent crop/zoom metadata |
 | Website state | Not exported as raw engine bytes. Candy-owned tab URL, profile, history, favorites, trails and settings stay portable; opaque Gecko/WebView sessions, cookies, local storage, IndexedDB, CacheStorage and profile permissions stay device/engine-local. |
 
@@ -37,6 +38,15 @@ Private in-memory state, Android runtime permissions, default-browser role, noti
 settings, system password/passkey stores, public downloads and APK assets are not portable
 app data and are not archived. Export is blocked while private tabs exist so an active
 incognito WebView profile cannot enter the ZIP.
+
+Custom workflow definitions and bindings share one versioned atomic file, so archive restore
+preserves both their IDs and placement. Deleting a workflow intentionally keeps its bindings:
+restored unresolved button slots remain empty and unresolved link gestures do nothing. Import
+does not execute workflows. The loader bounds and validates definitions; an unknown step rejects
+its entire workflow rather than removing a prerequisite and leaving a later close step active.
+Execution state, page input and results are never stored in this configuration file. Older
+archives without it restore an empty workflow configuration through the existing cold-process
+replacement boundary.
 
 | Local-only data | Excluded archive paths |
 | --- | --- |
@@ -102,6 +112,9 @@ client-side encryption and includes shared preferences, Candy Rules, userscripts
 Capsules. This covers settings, domain exceptions, regular tabs, snoozes and Filter Studio
 state. Rules and userscripts migrate once from `noBackupFilesDir` to `filesDir` so Android can
 include them.
+
+Custom workflow definitions and bindings are also explicitly included in encrypted cloud backup;
+the file-wide device transfer rule and manual ZIP export include them automatically.
 
 The local native capture preferences `app_logging_capture.xml` and their `.xml.bak` copy are
 explicitly excluded from cloud backup and device-to-device transfer alongside diagnostic logs.

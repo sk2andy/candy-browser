@@ -14,14 +14,14 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.absoluteOffset
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.absoluteOffset
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -56,6 +56,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
@@ -73,14 +74,15 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.util.lerp
 import androidx.compose.ui.viewinterop.AndroidView
 import dev.sk2andy.materialbrowser.R
-import dev.sk2andy.materialbrowser.browser.integration.BrowserUriPolicy
 import dev.sk2andy.materialbrowser.browser.LinkPeekAction
 import dev.sk2andy.materialbrowser.browser.LinkPeekActionLayout
-import dev.sk2andy.materialbrowser.browser.LinkPeekActionLayoutRules as LinkPeekActionSelectionRules
-import dev.sk2andy.materialbrowser.browser.LinkPeekSwipeAction
 import dev.sk2andy.materialbrowser.browser.LinkPeekActionSlot
+import dev.sk2andy.materialbrowser.browser.LinkPeekSwipeAction
+import dev.sk2andy.materialbrowser.browser.integration.BrowserUriPolicy
+import dev.sk2andy.materialbrowser.shared.ui.BrowserCustomAction
 import java.net.URI
 import kotlin.math.roundToInt
+import dev.sk2andy.materialbrowser.browser.LinkPeekActionLayoutRules as LinkPeekActionSelectionRules
 
 internal object LinkPeekTestTags {
     const val Root = "link_peek"
@@ -122,6 +124,10 @@ internal fun <T : View> LinkPeekOverlay(
     onOpenForeground: (String) -> Unit = {},
     actionLayout: LinkPeekActionLayout = LinkPeekActionLayout.Default,
     rightSwipeAction: LinkPeekSwipeAction = LinkPeekSwipeAction.OpenBackground,
+    customActionSlots: Map<Int, BrowserCustomAction?> = emptyMap(),
+    hasCustomSwipeAction: Boolean = false,
+    customSwipeAction: BrowserCustomAction? = null,
+    onCustomAction: (String, String, T?) -> Unit = { _, _, _ -> },
     onOpenNewStack: (String) -> Unit = {},
     isFavorite: (String) -> Boolean = { false },
     canSaveReaderOffline: Boolean = true,
@@ -226,7 +232,11 @@ internal fun <T : View> LinkPeekOverlay(
         openOnce()
     }
 
-    val rightSwipeEnabled = when (rightSwipeAction) {
+    fun customActionEnabled(action: BrowserCustomAction?): Boolean = action != null &&
+        action.enabled && (!action.requiresLoadedPage || (previewProgress >= 100 && previewView != null))
+    val rightSwipeEnabled = if (hasCustomSwipeAction) {
+        customActionEnabled(customSwipeAction)
+    } else when (rightSwipeAction) {
         LinkPeekSwipeAction.ReaderLater ->
             canSaveReaderOffline && previewProgress >= 100 && previewView != null
         LinkPeekSwipeAction.OpenPrivate -> canOpenInPrivate
@@ -302,7 +312,12 @@ internal fun <T : View> LinkPeekOverlay(
                                 LinkPeekSwipeOutcome.RightAction -> if (
                                     rightSwipeEnabled && !commitRequested && !swipeHandled
                                 ) {
-                                    when (rightSwipeAction) {
+                                    if (hasCustomSwipeAction) {
+                                        customSwipeAction?.let { action ->
+                                            swipeHandled = true
+                                            onCustomAction(action.id, committedUrl, previewView)
+                                        }
+                                    } else when (rightSwipeAction) {
                                         LinkPeekSwipeAction.OpenBackground -> {
                                             commitRequested = true
                                             onCommitRequested()
@@ -510,7 +525,25 @@ internal fun <T : View> LinkPeekOverlay(
             val favoriteSelected = canFavorite && isFavorite(committedUrl)
             runtimeSlots.forEachIndexed { index, slot ->
                 val bounds = visualSlotBounds.getOrNull(index) ?: return@forEachIndexed
-                if (slot is LinkPeekActionSlot.Action) {
+                val customIndex = when (slot) {
+                    is LinkPeekActionSlot.Action -> slot.actionIndex
+                    is LinkPeekActionSlot.Empty -> slot.actionIndex
+                    LinkPeekActionSlot.FixedPlus -> null
+                }
+                if (customIndex != null && customActionSlots.containsKey(customIndex)) {
+                    customActionSlots[customIndex]?.let { action ->
+                        LinkPeekActionTarget(
+                            targetBounds = bounds,
+                            icon = R.drawable.ic_reader_download,
+                            customIcon = action.icon,
+                            contentDescription = action.label,
+                            testTag = "custom_workflow_peek:$customIndex",
+                            enabled = !committing && customActionEnabled(action),
+                            alpha = 1f - flyProgress,
+                            onClick = { onCustomAction(action.id, committedUrl, previewView) },
+                        )
+                    }
+                } else if (slot is LinkPeekActionSlot.Action) {
                     val action = slot.action
                     LinkPeekActionTarget(
                         targetBounds = bounds,
@@ -669,6 +702,7 @@ private fun BoxScope.LinkPeekActionTarget(
     enabled: Boolean,
     alpha: Float,
     onClick: () -> Unit,
+    customIcon: ImageVector? = null,
 ) {
     val density = LocalDensity.current
     val targetWidth = with(density) { targetBounds.width.toDp() }
@@ -699,14 +733,12 @@ private fun BoxScope.LinkPeekActionTarget(
                     .fillMaxSize()
                     .testTag(testTag),
             ) {
-                Icon(
-                    painter = painterResource(icon),
-                    contentDescription = contentDescription,
-                    modifier = Modifier.size(24.dp),
-                    tint = MaterialTheme.colorScheme.onSurface.copy(
-                        alpha = if (enabled) 1f else 0.38f,
-                    ),
-                )
+                val tint = MaterialTheme.colorScheme.onSurface.copy(alpha = if (enabled) 1f else 0.38f)
+                if (customIcon != null) {
+                    Icon(customIcon, contentDescription, Modifier.size(24.dp), tint = tint)
+                } else {
+                    Icon(painterResource(icon), contentDescription, Modifier.size(24.dp), tint = tint)
+                }
             }
         }
     }

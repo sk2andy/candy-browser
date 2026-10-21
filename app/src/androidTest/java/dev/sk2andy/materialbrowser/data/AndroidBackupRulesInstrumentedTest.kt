@@ -48,6 +48,8 @@ class AndroidBackupRulesInstrumentedTest {
         assertTrue(("sharedpref" to ".") in included)
         assertTrue(("file" to "candy_filter_rules.json") in included)
         assertTrue(("file" to "user_scripts.json") in included)
+        assertTrue(("file" to "custom_workflows_v1.json") in included)
+        assertTrue(("file" to "custom_workflows_v1.json.bak") in included)
         assertFalse(("root" to ".") in included)
     }
 }

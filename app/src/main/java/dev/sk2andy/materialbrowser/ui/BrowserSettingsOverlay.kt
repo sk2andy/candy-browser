@@ -449,6 +449,8 @@ internal fun BrowserSettingsOverlay(
             onShareSyncExtensionLink = controller::shareLink,
             onDismiss = onDismiss,
             onOpenFirefoxExtensions = onOpenFirefoxExtensions,
+            customWorkflowConfiguration = controller.customWorkflowConfiguration,
+            onCustomWorkflowConfigurationChanged = controller::updateCustomWorkflowConfiguration,
             modifier = Modifier.predictiveBackSurface(
                     predictiveBackProgress,
                     predictiveBackEdgeSign,

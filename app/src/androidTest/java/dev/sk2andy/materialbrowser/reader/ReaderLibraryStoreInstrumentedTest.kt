@@ -180,6 +180,26 @@ class ReaderLibraryStoreInstrumentedTest {
         assertEquals(2, ReaderLibraryStore(context).load(false).snapshots.size)
     }
 
+    @Test
+    fun workflowSaveRefusesEvictionAndReturnsOnlyPersistedSnapshots() {
+        repeat(ReaderLibraryRules.MAX_SNAPSHOTS) { index ->
+            store.saveSnapshot(document("https://example.com/$index"), 0f, false, nowMillis = index.toLong())
+        }
+        val before = store.load(false)
+        assertNull(store.saveSnapshot(
+            document("https://example.com/overflow"), 0f, false,
+            nowMillis = 100L, allowEviction = false,
+        ))
+        assertEquals(before, store.load(false))
+        val replacement = store.saveSnapshot(
+            document("https://example.com/0"), 0f, false,
+            nowMillis = 101L, allowEviction = false,
+        )
+        assertTrue(replacement != null)
+        assertEquals(ReaderLibraryRules.MAX_SNAPSHOTS, store.load(false).snapshots.size)
+        assertTrue(store.load(false).snapshots.contains(replacement))
+    }
+
     private fun document(url: String) = ReaderDocument(
         title = "Stored article",
         sourceUrl = url,

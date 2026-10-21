@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import dev.sk2andy.materialbrowser.shared.ui.BrowserCustomAction
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -77,6 +78,10 @@ internal fun BrowserMenuBottomSheet(
     onVisibleChange: (Boolean) -> Unit,
     extensionContent: @Composable ColumnScope.((() -> Unit) -> Unit) -> Unit,
     toolbarEntries: List<BrowserMenuEntry?> = BrowserMenuBottomSheetToolbarRules.DefaultEntries,
+    customShortcutSlots: Map<Int, BrowserCustomAction?> = emptyMap(),
+    customFooterSlots: Map<Int, BrowserCustomAction?> = emptyMap(),
+    onCustomAction: (String) -> Unit = {},
+    customContent: @Composable ColumnScope.((() -> Unit) -> Unit) -> Unit = {},
 ) {
     var visible by remember { mutableStateOf(expanded) }
     var actionCommitted by remember { mutableStateOf(false) }
@@ -282,6 +287,10 @@ internal fun BrowserMenuBottomSheet(
                                 },
                             ),
                         extensionContent = extensionContent,
+                        customShortcutSlots = customShortcutSlots,
+                        customFooterSlots = customFooterSlots,
+                        onCustomAction = { id -> commit { onCustomAction(id) } },
+                        customContent = customContent,
                     )
                 }
             }

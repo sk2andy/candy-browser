@@ -1,4 +1,4 @@
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name">Candy Browser</string>
     <string name="widget_name">Candy search</string>
     <string name="widget_description">Open Candy, start a search, or create a tab in a profile</string>
@@ -438,40 +438,40 @@
     <string name="settings_home_player_summary">Video playback, autoplay, and double-tap skips</string>
     <string name="settings_home_browser_summary">Startup, favorites, web pages, links, and default browser</string>
     <string name="settings_downloads_title">Downloads</string>
-    <string name="rss_settings_title">RSS feeds</string>
-    <string name="rss_settings_summary">Follow feeds and get new articles in Reader Studio</string>
-    <string name="rss_feeds_title">RSS feeds</string>
-    <string name="rss_discovery_title">Find feeds on this page</string>
-    <string name="rss_discover_action">Find feeds</string>
-    <string name="rss_available_feeds">Available feeds</string>
-    <string name="rss_subscribe_action">Follow</string>
-    <string name="rss_subscribed_feeds">Following</string>
-    <string name="rss_empty_state">No feeds yet. Open a page and look for its feeds here.</string>
-    <string name="rss_no_feed_found">No RSS or Atom feed found on this page.</string>
-    <string name="rss_load_failed">Could not load feed. Check the address or connection and try again.</string>
-    <string name="rss_subscribed">Following %1$s</string>
-    <string name="rss_already_subscribed">You already follow this feed.</string>
-    <string name="rss_remove_feed">Remove feed</string>
-    <string name="rss_notifications_per_feed">Notify me about new articles</string>
-    <string name="rss_notifications_permission_denied">Allow Candy notifications in Android settings to receive feed alerts.</string>
-    <string name="rss_no_articles">No articles yet. Feed updates run in the background.</string>
-    <string name="rss_feed_address">Feed address</string>
-    <string name="rss_refresh_interval">Check for new articles</string>
-    <string name="rss_refresh_interval_summary">Choose how often Candy checks followed feeds.</string>
-    <string name="rss_refresh_android_note">Android may delay background checks to save battery or while offline.</string>
-    <string name="rss_manage_feeds">Manage feeds</string>
-    <string name="rss_widget_title">Recent articles</string>
-    <string name="rss_widget_empty">Follow a feed to see its latest articles here.</string>
-    <string name="rss_widget_description">Recent articles from followed feeds</string>
-    <string name="rss_notifications_channel_name">RSS updates</string>
-    <string name="rss_notifications_channel_description">New articles from feeds you chose to notify you.</string>
-    <string name="rss_refresh_15">15 minutes</string>
-    <string name="rss_refresh_30">30 minutes</string>
-    <string name="rss_refresh_60">1 hour</string>
-    <string name="rss_refresh_180">3 hours</string>
-    <string name="rss_refresh_360">6 hours</string>
-    <string name="rss_refresh_720">12 hours</string>
-    <string name="rss_refresh_1440">24 hours</string>
+    <string name="rss_settings_title" tools:ignore="MissingTranslation">RSS feeds</string>
+    <string name="rss_settings_summary" tools:ignore="MissingTranslation">Follow feeds and get new articles in Reader Studio</string>
+    <string name="rss_feeds_title" tools:ignore="MissingTranslation">RSS feeds</string>
+    <string name="rss_discovery_title" tools:ignore="MissingTranslation">Find feeds on this page</string>
+    <string name="rss_discover_action" tools:ignore="MissingTranslation">Find feeds</string>
+    <string name="rss_available_feeds" tools:ignore="MissingTranslation">Available feeds</string>
+    <string name="rss_subscribe_action" tools:ignore="MissingTranslation">Follow</string>
+    <string name="rss_subscribed_feeds" tools:ignore="MissingTranslation">Following</string>
+    <string name="rss_empty_state" tools:ignore="MissingTranslation">No feeds yet. Open a page and look for its feeds here.</string>
+    <string name="rss_no_feed_found" tools:ignore="MissingTranslation">No RSS or Atom feed found on this page.</string>
+    <string name="rss_load_failed" tools:ignore="MissingTranslation">Could not load feed. Check the address or connection and try again.</string>
+    <string name="rss_subscribed" tools:ignore="MissingTranslation">Following %1$s</string>
+    <string name="rss_already_subscribed" tools:ignore="MissingTranslation">You already follow this feed.</string>
+    <string name="rss_remove_feed" tools:ignore="MissingTranslation">Remove feed</string>
+    <string name="rss_notifications_per_feed" tools:ignore="MissingTranslation">Notify me about new articles</string>
+    <string name="rss_notifications_permission_denied" tools:ignore="MissingTranslation">Allow Candy notifications in Android settings to receive feed alerts.</string>
+    <string name="rss_no_articles" tools:ignore="MissingTranslation">No articles yet. Feed updates run in the background.</string>
+    <string name="rss_feed_address" tools:ignore="MissingTranslation">Feed address</string>
+    <string name="rss_refresh_interval" tools:ignore="MissingTranslation">Check for new articles</string>
+    <string name="rss_refresh_interval_summary" tools:ignore="MissingTranslation">Choose how often Candy checks followed feeds.</string>
+    <string name="rss_refresh_android_note" tools:ignore="MissingTranslation">Android may delay background checks to save battery or while offline.</string>
+    <string name="rss_manage_feeds" tools:ignore="MissingTranslation">Manage feeds</string>
+    <string name="rss_widget_title" tools:ignore="MissingTranslation">Recent articles</string>
+    <string name="rss_widget_empty" tools:ignore="MissingTranslation">Follow a feed to see its latest articles here.</string>
+    <string name="rss_widget_description" tools:ignore="MissingTranslation">Recent articles from followed feeds</string>
+    <string name="rss_notifications_channel_name" tools:ignore="MissingTranslation">RSS updates</string>
+    <string name="rss_notifications_channel_description" tools:ignore="MissingTranslation">New articles from feeds you chose to notify you.</string>
+    <string name="rss_refresh_15" tools:ignore="MissingTranslation">15 minutes</string>
+    <string name="rss_refresh_30" tools:ignore="MissingTranslation">30 minutes</string>
+    <string name="rss_refresh_60" tools:ignore="MissingTranslation">1 hour</string>
+    <string name="rss_refresh_180" tools:ignore="MissingTranslation">3 hours</string>
+    <string name="rss_refresh_360" tools:ignore="MissingTranslation">6 hours</string>
+    <string name="rss_refresh_720" tools:ignore="MissingTranslation">12 hours</string>
+    <string name="rss_refresh_1440" tools:ignore="MissingTranslation">24 hours</string>
     <string name="settings_home_capsules_summary">Manage saved Site Capsules and shortcuts</string>
     <string name="settings_protection_data_title">Protection</string>
     <string name="settings_home_protection_summary">Tracking protection, cookies, and permissions</string>

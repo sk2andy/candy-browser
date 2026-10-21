@@ -1,0 +1,20 @@
+<resources>
+    <string name="workflow_run_details">Details</string>
+    <string name="workflow_run_dismiss">Schließen</string>
+    <string name="workflow_run_done">Alle Schritte erledigt</string>
+    <string name="workflow_run_waiting">Wartet</string>
+    <string name="workflow_run_running">Läuft…</string>
+    <string name="workflow_run_succeeded">Erledigt</string>
+    <string name="workflow_run_failed">Aktion fehlgeschlagen</string>
+    <string name="workflow_run_skipped">Nicht ausgeführt</string>
+    <string name="workflow_run_cancelling">Wird nach dem laufenden Vorgang gestoppt…</string>
+    <string name="workflow_run_cancelled">Gestoppt. Erledigte Schritte bleiben erhalten.</string>
+    <string name="workflow_run_invalid">Dieser Ablauf ist ungültig.</string>
+    <string name="workflow_run_unsupported">Für diese Seite nicht verfügbar.</string>
+    <string name="workflow_run_private">Dieser Ablauf speichert Daten und ist privat nicht verfügbar.</string>
+    <string name="workflow_run_pinned">Angeheftete Tabs können nicht geschlossen werden.</string>
+    <string name="workflow_run_changed">Die Quellseite wurde geändert. Weitere Schritte wurden gestoppt.</string>
+    <string name="workflow_run_empty">Kein lesbarer Artikel gefunden.</string>
+    <string name="workflow_run_save_failed">Speichern fehlgeschlagen. Gerätespeicher und Platz in der Reader-Bibliothek prüfen. Die Eingabe bleibt geöffnet.</string>
+    <string name="workflow_run_timeout">Zeitlimit erreicht. Weitere Schritte wurden gestoppt.</string>
+</resources>

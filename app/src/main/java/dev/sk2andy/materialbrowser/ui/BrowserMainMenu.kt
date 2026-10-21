@@ -3,12 +3,18 @@ package dev.sk2andy.materialbrowser.ui
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.TooltipDefaults
 import androidx.compose.material3.rememberTooltipState
@@ -17,6 +23,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
@@ -43,21 +50,21 @@ import dev.sk2andy.materialbrowser.shared.browser.BrowserFeatureMenuLabelKey
 import dev.sk2andy.materialbrowser.shared.browser.BrowserFeatureMenuRules
 import dev.sk2andy.materialbrowser.shared.browser.BrowserFeatureMenuSection
 import dev.sk2andy.materialbrowser.shared.browser.BrowserFeatureMenuState
+import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuBottomSheetToolbarRules
 import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuEntry
 import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuLayout
 import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuLayoutRules
-import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuBottomSheetToolbarRules
 import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuPresentation
 import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuSurface
 import dev.sk2andy.materialbrowser.shared.browser.BrowserToppingMenuCommand
-import dev.sk2andy.materialbrowser.shared.ui.BrowserMainMenu as SharedBrowserMainMenu
-import dev.sk2andy.materialbrowser.shared.ui.BrowserMenuRow
 import dev.sk2andy.materialbrowser.shared.ui.BrowserMainMenuContainerRole
 import dev.sk2andy.materialbrowser.shared.ui.BrowserMainMenuEffects
 import dev.sk2andy.materialbrowser.shared.ui.BrowserMainMenuResources
 import dev.sk2andy.materialbrowser.shared.ui.BrowserMainMenuStyle
+import dev.sk2andy.materialbrowser.shared.ui.BrowserMenuRow
 import dev.sk2andy.materialbrowser.ui.theme.browserChromeColor
 import dev.sk2andy.materialbrowser.ui.theme.browserChromeSurfaceTokens
+import dev.sk2andy.materialbrowser.shared.ui.BrowserMainMenu as SharedBrowserMainMenu
 
 internal typealias BrowserMainMenuMotion =
     dev.sk2andy.materialbrowser.shared.ui.BrowserMainMenuMotion
@@ -335,6 +342,9 @@ internal fun BrowserMainMenu(
     onDownloads: () -> Unit = {},
     onHistory: () -> Unit,
     onOpenRssFeeds: (() -> Unit)? = null,
+    workflowActions: CustomWorkflowSurfaceActions = CustomWorkflowSurfaceActions.Empty,
+    onWorkflow: (String) -> Unit = {},
+    onManageWorkflows: (() -> Unit)? = null,
     firefoxExtensionActions: List<GeckoExtensionActionState> = emptyList(),
     menuLayout: BrowserMenuLayout = BrowserMenuLayout.Default,
     onFirefoxExtensionAction: (GeckoExtensionActionKey) -> Unit = {},
@@ -441,6 +451,36 @@ internal fun BrowserMainMenu(
     } else {
         {}
     }
+    val workflowContent: @Composable ColumnScope.((() -> Unit) -> Unit) -> Unit = { commit ->
+        if (workflowActions.menuActions.isNotEmpty() || onManageWorkflows != null) {
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    stringResource(R.string.workflow_surface_group),
+                    modifier = Modifier.weight(1f),
+                    style = MaterialTheme.typography.titleSmall,
+                )
+                if (onManageWorkflows != null) {
+                    TextButton(onClick = { commit(onManageWorkflows) }) {
+                        Text(stringResource(R.string.workflow_surface_manage))
+                    }
+                }
+            }
+            workflowActions.menuActions.forEach { action ->
+                BrowserMenuRow(
+                    label = action.label,
+                    icon = { Icon(action.icon, null, Modifier.size(20.dp)) },
+                    shape = MaterialTheme.shapes.large,
+                    enabled = action.enabled,
+                    onClick = { commit { onWorkflow(action.id) } },
+                )
+                Spacer(Modifier.height(2.dp))
+            }
+            Spacer(Modifier.height(8.dp))
+        }
+    }
     val onMenuAction: (BrowserFeatureMenuItem) -> Unit = { item ->
         when (item.action) {
             BrowserFeatureMenuAction.Back -> onBack()
@@ -511,6 +551,9 @@ internal fun BrowserMainMenu(
             items = items,
             contentLayout = menuLayout.bottomSheetContentLayout,
             toolbarEntries = menuLayout.bottomSheetToolbarEntries,
+            customShortcutSlots = workflowActions.menuShortcutSlots,
+            customFooterSlots = workflowActions.menuFooterSlots,
+            onCustomAction = onWorkflow,
             resources = AndroidBrowserMainMenuResources,
             effects = effects,
             snoozedTabCount = snoozedTabCount,
@@ -518,6 +561,7 @@ internal fun BrowserMainMenu(
             onOpenMenuSettings = onOpenMenuSettings,
             onVisibleChange = onBottomSheetVisibleChange,
             extensionContent = extensionContent,
+            customContent = workflowContent,
         )
     } else {
         SharedBrowserMainMenu(
@@ -530,6 +574,9 @@ internal fun BrowserMainMenu(
             resources = AndroidBrowserMainMenuResources,
             effects = effects,
             extensionContent = extensionContent,
+            customContent = workflowContent,
+            customShortcutSlots = workflowActions.menuShortcutSlots,
+            onCustomAction = onWorkflow,
             onAction = onMenuAction,
         )
     }

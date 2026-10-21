@@ -29,6 +29,7 @@ object SettingsNavigationRules {
         SettingsDestination.ToppingCatalog -> SettingsDestination.Userscripts
         SettingsDestination.AddressBarLongPressActions,
         SettingsDestination.AddressBarActions,
+        SettingsDestination.CustomWorkflows,
         SettingsDestination.MenuActions -> SettingsDestination.GestureAddressBar
         SettingsDestination.LinkLongPress,
         SettingsDestination.LinkPeekSwipe,
@@ -45,6 +46,7 @@ object SettingsNavigationRules {
                 SettingsDestination.TabOverview,
                 SettingsDestination.AddressBarLongPressActions,
                 SettingsDestination.AddressBarActions,
+                SettingsDestination.CustomWorkflows,
                 SettingsDestination.MenuActions,
                 SettingsDestination.LinkPeekActions,
             )

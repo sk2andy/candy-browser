@@ -22,6 +22,7 @@ import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -79,6 +80,10 @@ fun BrowserMenuBottomSheetContent(
     addressBarHorizontalPadding: Dp = 16.dp,
     toolbarEntries: List<BrowserMenuEntry?> = BrowserMenuBottomSheetToolbarRules.DefaultEntries,
     extensionContent: @Composable ColumnScope.((() -> Unit) -> Unit) -> Unit = {},
+    customShortcutSlots: Map<Int, BrowserCustomAction?> = emptyMap(),
+    customFooterSlots: Map<Int, BrowserCustomAction?> = emptyMap(),
+    onCustomAction: (String) -> Unit = {},
+    customContent: @Composable ColumnScope.((() -> Unit) -> Unit) -> Unit = {},
 ) {
     val sections = BrowserMenuBottomSheetRules.sections(items, toolbarEntries)
     val scrollState = rememberScrollState()
@@ -118,7 +123,7 @@ fun BrowserMenuBottomSheetContent(
         ) {
             addressBar()
         }
-        if (sections.shortcuts.isNotEmpty()) {
+        if (sections.shortcuts.isNotEmpty() || customShortcutSlots.isNotEmpty()) {
             Column(
                 Modifier
                     .then(fadingContent)
@@ -127,9 +132,34 @@ fun BrowserMenuBottomSheetContent(
                     .testTag(BrowserMenuBottomSheetTestTags.Shortcuts),
             ) {
                 if (!compactHeight) SheetSectionTitle(quickActionsTitle)
-                Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
-                    sections.shortcutSlots.forEach { item ->
-                        if (item == null) {
+                Row(
+                    Modifier.fillMaxWidth()
+                        .heightIn(min = if (compactHeight) 48.dp else 80.dp)
+                        .height(IntrinsicSize.Min),
+                ) {
+                    sections.shortcutSlots.forEachIndexed { index, item ->
+                        if (customShortcutSlots.containsKey(index)) {
+                            val action = customShortcutSlots[index]
+                            if (action == null) {
+                                Spacer(Modifier.weight(1f))
+                            } else {
+                                BrowserMenuToolbarAction(
+                                    label = action.label,
+                                    icon = { Icon(action.icon, null, Modifier.size(24.dp)) },
+                                    onClick = { onCustomAction(action.id) },
+                                    enabled = action.enabled,
+                                    accessibilityLabel = action.label,
+                                    showLabel = !compactHeight,
+                                    minHeight = if (compactHeight) 48.dp else 80.dp,
+                                    shape = CircleShape,
+                                    containerColor = effects.containerColor(
+                                        MaterialTheme.colorScheme.surfaceContainerLowest,
+                                    ),
+                                    modifier = Modifier.weight(1f).fillMaxHeight()
+                                        .testTag("custom_workflow_shortcut:$index"),
+                                )
+                            }
+                        } else if (item == null) {
                             Spacer(Modifier.weight(1f))
                         } else if (compactHeight) {
                             BrowserMenuToolbarAction(
@@ -213,6 +243,7 @@ fun BrowserMenuBottomSheetContent(
                         ),
                 ) {
                     if (page == 0) {
+                        customContent(onExtensionCommit)
                         if (sections.pageActions.isEmpty()) {
                             EmptyMenuSection(emptySectionMessage, emptySectionActionLabel, onOpenMenuSettings)
                         } else {
@@ -240,6 +271,7 @@ fun BrowserMenuBottomSheetContent(
                     .padding(horizontal = 16.dp, vertical = 8.dp)
                     .testTag(BrowserMenuBottomSheetTestTags.Content),
             ) {
+                customContent(onExtensionCommit)
                 val bothPageSectionsEmpty =
                     sections.pageActions.isEmpty() && sections.pageControls.isEmpty()
                 if (bothPageSectionsEmpty) {
@@ -265,7 +297,7 @@ fun BrowserMenuBottomSheetContent(
                 }
             }
         }
-        if (sections.footer.isNotEmpty()) {
+        if (sections.footer.isNotEmpty() || customFooterSlots.isNotEmpty()) {
             Box(
                 Modifier
                     .then(fadingContent)
@@ -274,9 +306,16 @@ fun BrowserMenuBottomSheetContent(
                     .testTag(BrowserMenuBottomSheetTestTags.Footer),
             ) {
                 Row(Modifier.fillMaxWidth().testTag(BrowserMainMenuTestTags.Toolbar)) {
-                    sections.footerSlots.forEach { item ->
+                    sections.footerSlots.forEachIndexed { index, item ->
                         Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                            if (item != null) {
+                            if (customFooterSlots.containsKey(index)) {
+                                BrowserCustomActionButton(
+                                    action = customFooterSlots[index],
+                                    onAction = onCustomAction,
+                                    modifier = Modifier.size(effects.style.toolbarButtonSize)
+                                        .testTag("custom_workflow_footer:$index"),
+                                )
+                            } else if (item != null) {
                                 BrowserMainMenuToolbarItem(
                                     item = item,
                                     resources = resources,

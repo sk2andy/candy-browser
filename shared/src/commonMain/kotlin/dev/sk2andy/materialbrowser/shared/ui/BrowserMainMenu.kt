@@ -325,6 +325,9 @@ fun BrowserMainMenu(
     morphAnchorSize: DpSize? = null,
     morphProgress: Float? = null,
     extensionContent: @Composable ColumnScope.((() -> Unit) -> Unit) -> Unit = {},
+    customContent: @Composable ColumnScope.((() -> Unit) -> Unit) -> Unit = {},
+    customShortcutSlots: Map<Int, BrowserCustomAction?> = emptyMap(),
+    onCustomAction: (String) -> Unit = {},
 ) {
     val style = effects.style
     val menuShape = RoundedCornerShape(style.menuCornerRadius)
@@ -558,6 +561,9 @@ fun BrowserMainMenu(
                     onCommand = ::dismissThen,
                     onToggle = onAction,
                     extensionContent = extensionContent,
+                    customContent = customContent,
+                    customShortcutSlots = customShortcutSlots,
+                    onCustomAction = { id -> commit { onCustomAction(id) } },
                     onExtensionCommit = ::commit,
                     modifier = Modifier
                         .graphicsLayer {
@@ -586,6 +592,9 @@ private fun BrowserMainMenuContent(
     onCommand: (BrowserFeatureMenuItem) -> Unit,
     onToggle: (BrowserFeatureMenuItem) -> Unit,
     extensionContent: @Composable ColumnScope.((() -> Unit) -> Unit) -> Unit,
+    customContent: @Composable ColumnScope.((() -> Unit) -> Unit) -> Unit,
+    customShortcutSlots: Map<Int, BrowserCustomAction?>,
+    onCustomAction: (String) -> Unit,
     onExtensionCommit: (() -> Unit) -> Unit,
     modifier: Modifier,
 ) {
@@ -609,6 +618,7 @@ private fun BrowserMainMenuContent(
                 )
                 .testTag(BrowserMainMenuTestTags.ScrollContent),
         ) {
+            customContent(onExtensionCommit)
             if (effects.style.showHeader) {
                 Text(
                     text = resources.title(),
@@ -625,9 +635,11 @@ private fun BrowserMainMenuContent(
                 )
                 Spacer(Modifier.height(10.dp))
             }
-            if (libraryItems.isNotEmpty()) {
+            if (libraryItems.isNotEmpty() || customShortcutSlots.isNotEmpty()) {
                 BrowserMainMenuLibraries(
                     items = libraryItems,
+                    customSlots = customShortcutSlots,
+                    onCustomAction = onCustomAction,
                     compact = compactToolbar,
                     resources = resources,
                     effects = effects,
@@ -751,6 +763,8 @@ private val LIBRARY_ACTIONS = listOf(
 @Composable
 private fun BrowserMainMenuLibraries(
     items: List<BrowserFeatureMenuItem>,
+    customSlots: Map<Int, BrowserCustomAction?>,
+    onCustomAction: (String) -> Unit,
     compact: Boolean,
     resources: BrowserMainMenuResources,
     effects: BrowserMainMenuEffects,
@@ -764,19 +778,34 @@ private fun BrowserMainMenuLibraries(
         color = effects.containerColor(MaterialTheme.colorScheme.surfaceContainer),
     ) {
         Column {
-            val rows = if (compact) items.chunked(3) else listOf(items)
+            val slotCount = maxOf(items.size, (customSlots.keys.maxOrNull() ?: -1) + 1)
+                .coerceAtMost(LIBRARY_ACTIONS.size)
+            val slots = (0 until slotCount).toList()
+            val rows = if (compact) slots.chunked(3) else listOf(slots)
             rows.forEach { row ->
                 Row(modifier = Modifier.fillMaxWidth().height(48.dp)) {
-                    row.forEach { item ->
-                        BrowserMainMenuLibraryAction(
-                            item = item,
-                            resources = resources,
-                            effects = effects,
-                            onClick = { onClick(item) },
-                            modifier = Modifier
-                                .weight(1f)
-                                .fillMaxHeight(),
-                        )
+                    row.forEach { index ->
+                        val modifier = Modifier.weight(1f).fillMaxHeight()
+                        val item = items.getOrNull(index)
+                        if (customSlots.containsKey(index)) {
+                            Box(modifier = modifier, contentAlignment = Alignment.Center) {
+                                BrowserCustomActionButton(
+                                    action = customSlots[index],
+                                    onAction = onCustomAction,
+                                    modifier = Modifier.testTag("custom_workflow_shortcut:$index"),
+                                )
+                            }
+                        } else if (item != null) {
+                            BrowserMainMenuLibraryAction(
+                                item = item,
+                                resources = resources,
+                                effects = effects,
+                                onClick = { onClick(item) },
+                                modifier = modifier,
+                            )
+                        } else {
+                            Spacer(modifier)
+                        }
                     }
                 }
             }

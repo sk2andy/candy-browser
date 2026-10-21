@@ -20,6 +20,7 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -1245,6 +1246,22 @@ internal fun BrowserScreen(
         }
     }
 
+    LaunchedEffect(controller.pendingCustomWorkflowReader, selectedTab.id) {
+        val request = controller.consumeCustomWorkflowReader() ?: return@LaunchedEffect
+        if (request.input.tabId == selectedTab.id && request.input.profileId == selectedTab.profileId &&
+            request.input.isPrivate == selectedTab.isIncognito
+        ) {
+            readerStudioSession = ReaderStudioSession(
+                tabId = selectedTab.id,
+                sourceUrl = request.document.sourceUrl,
+                isPrivate = request.input.isPrivate,
+                sourceProfileId = request.input.profileId,
+                requestId = ++readerStudioRequestId,
+            )
+            readerStudioResult = ReaderExtractionResult.Success(request.document)
+        }
+    }
+
     LaunchedEffect(controller.deviceSearchReaderSnapshot, selectedTab.id) {
         val snapshot = controller.consumeDeviceSearchReaderSnapshot() ?: return@LaunchedEffect
         if (!selectedTab.isIncognito && selectedTab.profileId == snapshot.sourceProfileId) {
@@ -1688,6 +1705,10 @@ internal fun BrowserScreen(
                 settingsDestination = SettingsDestination.Home
                 settingsVisible = true
             },
+            onManageWorkflows = {
+                settingsDestination = SettingsDestination.CustomWorkflows
+                settingsVisible = true
+            },
             onOpenMenuSettings = {
                 settingsDestination = SettingsDestination.MenuActions
                 settingsVisible = true
@@ -2003,6 +2024,17 @@ internal fun BrowserScreen(
             },
             onSnoozedTabsDismiss = { snoozedTabsVisible = false },
         )
+
+        if (!settingsVisible) controller.customWorkflowRunState?.let { state ->
+            CustomWorkflowFeedback(
+                state = state,
+                onCancel = controller::cancelCustomWorkflow,
+                onDismiss = controller::dismissCustomWorkflowResult,
+                modifier = Modifier.align(Alignment.BottomCenter)
+                    .navigationBarsPadding().padding(start = 12.dp, end = 12.dp, bottom = 88.dp)
+                    .zIndex(30f),
+            )
+        }
 
     }
 

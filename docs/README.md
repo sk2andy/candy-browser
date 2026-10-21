@@ -5,6 +5,7 @@
 | Feature | Start here | Owns |
 | --- | --- | --- |
 | Browsing and gestures | [`browsing/README.md`](browsing/README.md) | WebView runtime, address flow, commands, Candy Recall, Link Peek, browser actions |
+| Custom workflows | [`browsing/custom-workflows.md`](browsing/custom-workflows.md) | Ordered browser actions, link inputs, surface bindings and backup |
 | Platform engines | [`browsing/platform-engines.md`](browsing/platform-engines.md) | Shared Kotlin contracts, Android Gecko/WebExtensions, iOS WKWebView/Toppings and Liquid Glass |
 | Tabs and profiles | [`tabs-and-profiles/README.md`](tabs-and-profiles/README.md) | Tab lifecycle, previews, persistence, snoozing, profile isolation |
 | Candy Constellations | [`browsing/constellations.md`](browsing/constellations.md) | Profile-local semantic page map, on-device embeddings, model download and graph UI |

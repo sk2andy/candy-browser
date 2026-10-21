@@ -111,6 +111,7 @@ internal fun TabsAndGesturesSettingsPage(
     onLinkPeekActions: () -> Unit = {},
     onAddressBarActions: () -> Unit,
     onMenuActions: () -> Unit = {},
+    onCustomWorkflows: () -> Unit = {},
     onTabOverview: () -> Unit = {},
     onTabStackFolder: () -> Unit = {},
     onClosedTabUndo: () -> Unit = {},
@@ -377,6 +378,13 @@ internal fun TabsAndGesturesSettingsPage(
                     title = stringResource(R.string.settings_menu_actions_title),
                     subtitle = stringResource(R.string.settings_menu_actions_summary),
                     onClick = onMenuActions,
+                )
+                SettingsPreferenceDivider()
+                SettingsLink(
+                    icon = ImageVector.vectorResource(R.drawable.ic_symbol_route),
+                    title = stringResource(R.string.workflow_title),
+                    subtitle = stringResource(R.string.workflow_summary),
+                    onClick = onCustomWorkflows,
                 )
             }
             SettingsPageSpacer()

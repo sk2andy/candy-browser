@@ -68,12 +68,14 @@ import dev.sk2andy.materialbrowser.ui.theme.browserChromeColor
 internal fun SettingsPage(
     title: String,
     onBack: () -> Unit,
+    actions: @Composable () -> Unit = {},
     content: @Composable ColumnScope.() -> Unit,
 ) {
     dev.sk2andy.materialbrowser.shared.ui.settings.SettingsPage(
         title = title,
         backContentDescription = stringResource(R.string.action_back),
         onBack = onBack,
+        actions = actions,
         content = content,
     )
 }

@@ -1,0 +1,20 @@
+<resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
+    <string name="workflow_run_details">Details</string>
+    <string name="workflow_run_dismiss">Dismiss</string>
+    <string name="workflow_run_done">All steps completed</string>
+    <string name="workflow_run_waiting">Waiting</string>
+    <string name="workflow_run_running">Running…</string>
+    <string name="workflow_run_succeeded">Completed</string>
+    <string name="workflow_run_failed">Action failed</string>
+    <string name="workflow_run_skipped">Not executed</string>
+    <string name="workflow_run_cancelling">Stopping after the current operation…</string>
+    <string name="workflow_run_cancelled">Stopped. Completed steps are kept.</string>
+    <string name="workflow_run_invalid">This workflow is invalid.</string>
+    <string name="workflow_run_unsupported">Not available for this page.</string>
+    <string name="workflow_run_private">This workflow saves data and cannot run privately.</string>
+    <string name="workflow_run_pinned">Pinned tabs cannot be closed.</string>
+    <string name="workflow_run_changed">The source page changed. Remaining steps were stopped.</string>
+    <string name="workflow_run_empty">No readable article found.</string>
+    <string name="workflow_run_save_failed">Could not save. Check storage and free space in the Reader library. The input stays open.</string>
+    <string name="workflow_run_timeout">The operation timed out. Remaining steps were stopped.</string>
+</resources>

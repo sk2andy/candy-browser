@@ -28,6 +28,7 @@ import dev.sk2andy.materialbrowser.browser.commands.BrowserCommand
 import dev.sk2andy.materialbrowser.browser.commands.CommandConfirmation
 import dev.sk2andy.materialbrowser.browser.commands.CommandCookieScope
 import dev.sk2andy.materialbrowser.browser.commands.CommandSuggestion
+import dev.sk2andy.materialbrowser.browser.workflow.CustomWorkflowPlacement
 import dev.sk2andy.materialbrowser.capsule.SiteCapsule
 import dev.sk2andy.materialbrowser.reader.ReaderExtractionFailure
 import dev.sk2andy.materialbrowser.reader.ReaderExtractionResult
@@ -215,6 +216,14 @@ internal fun BrowserTransientOverlays(
             },
             actionLayout = controller.linkPeekActionLayout,
             rightSwipeAction = controller.linkPeekSwipeAction,
+            customActionSlots = controller.customWorkflowConfiguration.surfaceSlots(CustomWorkflowPlacement.LinkPeekToolbar),
+            hasCustomSwipeAction = controller.customWorkflowConfiguration.bindings.any {
+                it.placement == CustomWorkflowPlacement.LinkPeekSwipe && it.slot == 0
+            },
+            customSwipeAction = controller.customWorkflowConfiguration.surfaceSlots(CustomWorkflowPlacement.LinkPeekSwipe)[0],
+            onCustomAction = { id, currentUrl, previewView ->
+                controller.runCustomWorkflow(id, inputUrl = currentUrl, previewView = previewView)
+            },
             canOpenNewStack = controller.canOpenContextLinkInNewStack,
             onOpenNewStack = { currentUrl ->
                 if (controller.openContextLinkInNewStack(currentUrl)) {

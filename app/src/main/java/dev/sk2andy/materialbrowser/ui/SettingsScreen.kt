@@ -23,6 +23,7 @@ import dev.sk2andy.materialbrowser.browser.DnsOverHttpsSettings
 import dev.sk2andy.materialbrowser.browser.HttpsOnlyMode
 import dev.sk2andy.materialbrowser.browser.BrowserProfile
 import dev.sk2andy.materialbrowser.browser.integration.linkrouting.LinkRoutingRule
+import dev.sk2andy.materialbrowser.browser.workflow.CustomWorkflowConfiguration
 import dev.sk2andy.materialbrowser.browser.ExternalAppLinkHandling
 import dev.sk2andy.materialbrowser.browser.FavoriteAnimationSpeed
 import dev.sk2andy.materialbrowser.browser.InlineMediaPlayerMode
@@ -247,6 +248,8 @@ internal fun SettingsScreen(
     onOpenFirefoxExtensions: (() -> Unit)? = null,
     linkRoutingRules: List<LinkRoutingRule> = emptyList(),
     onLinkRoutingRulesChanged: (List<LinkRoutingRule>) -> Unit = {},
+    customWorkflowConfiguration: CustomWorkflowConfiguration = CustomWorkflowConfiguration(),
+    onCustomWorkflowConfigurationChanged: (CustomWorkflowConfiguration, (Boolean) -> Unit) -> Unit = { _, result -> result(false) },
     modifier: Modifier = Modifier,
 ) {
     var searchQuery by remember { mutableStateOf("") }
@@ -393,6 +396,9 @@ internal fun SettingsScreen(
                     onMenuActions = {
                         onDestinationChanged(SettingsDestination.MenuActions)
                     },
+                    onCustomWorkflows = {
+                        onDestinationChanged(SettingsDestination.CustomWorkflows)
+                    },
                     onTabOverview = { onDestinationChanged(SettingsDestination.TabOverview) },
                     onTabLifecycle = { onDestinationChanged(SettingsDestination.TabLifecycle) },
                     onProfileOptions = { onDestinationChanged(SettingsDestination.ProfileOptions) },
@@ -447,6 +453,12 @@ internal fun SettingsScreen(
                         actionLabel = actionLabels::getValue,
                     )
                 }
+
+                SettingsDestination.CustomWorkflows -> CustomWorkflowSettingsPage(
+                    configuration = customWorkflowConfiguration,
+                    onConfigurationChanged = onCustomWorkflowConfigurationChanged,
+                    onBack = { onDestinationChanged(settingsParent(currentDestination)) },
+                )
 
                 SettingsDestination.MenuActions -> BrowserMenuSettingsPage(
                     layout = browserMenuLayout,

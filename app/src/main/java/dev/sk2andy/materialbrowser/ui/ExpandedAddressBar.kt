@@ -10,23 +10,23 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.togetherWith
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.Orientation
-import androidx.compose.foundation.gestures.draggable
-import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -67,35 +67,35 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
-import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.layout.boundsInWindow
-import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.layout
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.TextFieldValue
@@ -121,6 +121,7 @@ import dev.sk2andy.materialbrowser.data.TabDeletionRules
 import dev.sk2andy.materialbrowser.reader.ReaderStudioSessionRules
 import dev.sk2andy.materialbrowser.shared.browser.BrowserMenuLayout
 import dev.sk2andy.materialbrowser.shared.ui.AddressBarFieldContent
+import dev.sk2andy.materialbrowser.shared.ui.BrowserCustomActionButton
 import dev.sk2andy.materialbrowser.ui.theme.BrowserChromeSurfaceRole
 import dev.sk2andy.materialbrowser.ui.theme.LocalCandyMotionScheme
 import dev.sk2andy.materialbrowser.ui.theme.browserChromeSurfaceTokens
@@ -251,6 +252,9 @@ internal fun ExpandedBottomBarContent(
     canOpenConstellations: Boolean = false,
     onOpenConstellations: (() -> Unit)? = null,
     onOpenRssFeeds: (() -> Unit)? = null,
+    workflowActions: CustomWorkflowSurfaceActions = CustomWorkflowSurfaceActions.Empty,
+    onWorkflow: (String) -> Unit = {},
+    onManageWorkflows: (() -> Unit)? = null,
     onSnooze: () -> Unit,
     onAddSiteCapsule: () -> Unit,
     canCreateSiteWidget: Boolean = false,
@@ -309,6 +313,11 @@ internal fun ExpandedBottomBarContent(
     val visibleActionLayout = AddressBarActionLayoutRules.reserveDynamicSlots(
         layout = actionLayout,
         dynamicSlotCount = dynamicSlotCount,
+    )
+    val workflowAddressSlots = CustomWorkflowAddressSlotRules.slots(
+        layout = visibleActionLayout,
+        boundSlots = workflowActions.addressSlots.keys,
+        reservedSlots = dynamicSlotCount,
     )
     val overflowAddressBarActions = if (showCastButton) {
         AddressBarActionLayoutRules.temporarilyHiddenActions(
@@ -419,7 +428,7 @@ internal fun ExpandedBottomBarContent(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             AnimatedVisibility(
-                visible = visibleActionLayout.beforeAddress.isNotEmpty() &&
+                visible = workflowAddressSlots.beforeAddress.isNotEmpty() &&
                     !editorUsesFullWidth &&
                     !segmentedEditorActive,
                 enter = fadeIn(tween(motionScheme.addressBarActionFadeInMillis)) +
@@ -428,12 +437,14 @@ internal fun ExpandedBottomBarContent(
                     shrinkHorizontally(tween(motionScheme.addressBarActionExpandMillis)),
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    visibleActionLayout.beforeAddress.forEach { action ->
-                        AddressBarActionButton(
-                            action = action,
-                            state = actionState,
-                            callbacks = actionCallbacks,
-                        )
+                    workflowAddressSlots.beforeAddress.forEach { slot ->
+                        if (slot.overridden) {
+                            BrowserCustomActionButton(workflowActions.addressSlots[slot.index], onWorkflow)
+                        } else if (slot.builtinAction != null) {
+                            AddressBarActionButton(slot.builtinAction, actionState, actionCallbacks)
+                        } else {
+                            Box(Modifier.size(48.dp))
+                        }
                     }
                 }
             }
@@ -643,12 +654,14 @@ internal fun ExpandedBottomBarContent(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     if (!editing || tab.url != BLANK_URL) {
-                        visibleActionLayout.afterAddress.forEach { action ->
-                            AddressBarActionButton(
-                                action = action,
-                                state = actionState,
-                                callbacks = actionCallbacks,
-                            )
+                        workflowAddressSlots.afterAddress.forEach { slot ->
+                            if (slot.overridden) {
+                                BrowserCustomActionButton(workflowActions.addressSlots[slot.index], onWorkflow)
+                            } else if (slot.builtinAction != null) {
+                                AddressBarActionButton(slot.builtinAction, actionState, actionCallbacks)
+                            } else {
+                                Box(Modifier.size(48.dp))
+                            }
                         }
                         if (showCastButton) CastRouteButton()
                     }
@@ -775,6 +788,9 @@ internal fun ExpandedBottomBarContent(
                                 canOpenConstellations = canOpenConstellations,
                                 onOpenConstellations = onOpenConstellations,
                                 onOpenRssFeeds = onOpenRssFeeds,
+                                workflowActions = workflowActions,
+                                onWorkflow = onWorkflow,
+                                onManageWorkflows = onManageWorkflows,
                                 onAddSiteCapsule = onAddSiteCapsule,
                                 onCreateSiteWidget = onCreateSiteWidget,
                                 onSummarize = onSummarizeWithAssistant,
@@ -800,6 +816,9 @@ internal fun ExpandedBottomBarContent(
                                         actionLayout = snapshot.actionLayout,
                                         actionState = snapshot.actionState,
                                         actionCallbacks = actionCallbacks,
+                                        customSlots = workflowActions.addressSlots,
+                                        reservedSlots = dynamicSlotCount,
+                                        onCustomAction = onWorkflow,
                                         commit = commit,
                                         onAddress = onAddress,
                                         onDismissRequest = { onMenuExpandedChange(false) },

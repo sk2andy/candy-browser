@@ -30,6 +30,7 @@ class ReaderLibraryStore internal constructor(private val file: AtomicFile) {
         nowMillis: Long = System.currentTimeMillis(),
         sourceProfileId: String? = null,
         preserveExistingProvenance: Boolean = false,
+        allowEviction: Boolean = true,
     ): ReaderSnapshot? = synchronized(lock) {
         if (isPrivate) return@synchronized null
         val before = read()
@@ -45,8 +46,17 @@ class ReaderLibraryStore internal constructor(private val file: AtomicFile) {
             },
         )
         val after = ReaderLibraryRules.saveSnapshot(before, snapshot, isPrivate = false)
+        if (!allowEviction) {
+            val retained = ReaderLibraryCodec.bounded(after).snapshots
+            val requiredIds = before.snapshots.filterNot {
+                it.document.sourceUrl == document.sourceUrl
+            }.map { it.id }.toSet()
+            if (retained.none { it.id == snapshot.id } ||
+                !retained.map { it.id }.toSet().containsAll(requiredIds)
+            ) return@synchronized null
+        }
         if (after != before) write(after)
-        snapshot
+        read().snapshots.firstOrNull { it.id == snapshot.id && it.document == document }
     }
 
     fun deleteSnapshot(snapshotId: String, isPrivate: Boolean): Boolean = synchronized(lock) {
