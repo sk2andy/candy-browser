@@ -3,8 +3,6 @@ package dev.sk2andy.materialbrowser.ui
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.selection.selectableGroup
-import androidx.compose.ui.semantics.disabled
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
@@ -172,14 +170,12 @@ internal fun SearchSettingsPage(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            run {
+            if (searchSuggestionProvider == SearchSuggestionProvider.SearXNG) {
                 SettingsPreferenceDivider()
-                val fallbackEnabled = searchSuggestionProvider == SearchSuggestionProvider.SearXNG
                 Column(
                     Modifier.testTag(SearchSettingsTestTags.SearxngFallback)
                         .settingsSearchTarget(stringResource(R.string.settings_searxng_suggestion_fallback))
-                        .selectableGroup()
-                        .semantics { if (!fallbackEnabled) disabled() },
+                        .selectableGroup(),
                 ) {
                     SettingsSectionTitle(stringResource(R.string.settings_searxng_suggestion_fallback))
                     SearchSuggestionProvider.entries
@@ -189,7 +185,6 @@ internal fun SearchSettingsPage(
                             SettingsRadioOption(
                                 label = provider.displayName(),
                                 selected = provider == searxngSettings.suggestionFallback,
-                                enabled = fallbackEnabled,
                                 modifier = Modifier.testTag(SearchSettingsTestTags.fallback(provider)),
                                 onClick = {
                                     onSearxngSettingsChanged(

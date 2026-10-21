@@ -8,10 +8,13 @@ import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextReplacement
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
+import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.browser.SearchEngine
 import dev.sk2andy.materialbrowser.browser.SearxngSettings
 import dev.sk2andy.materialbrowser.browser.suggestions.SearchSuggestionProvider
@@ -166,11 +169,11 @@ class SearchSettingsScreenInstrumentedTest {
             composeRule.runOnIdle { assertEquals(candidate, provider) }
             val fallback = composeRule.onNodeWithTag(
                 SearchSettingsTestTags.fallback(SearchSuggestionProvider.Brave),
-            ).performScrollTo()
+            )
             if (candidate == SearchSuggestionProvider.SearXNG) {
-                fallback.assertIsEnabled()
+                fallback.performScrollTo().assertIsEnabled()
             } else {
-                fallback.assertIsNotEnabled().performClick()
+                fallback.assertDoesNotExist()
                 composeRule.runOnIdle { assertEquals(0, settingsWrites) }
             }
             val instance = composeRule.onNodeWithTag(SearchSettingsTestTags.SearxngInstanceUrl)
@@ -191,4 +194,83 @@ class SearchSettingsScreenInstrumentedTest {
             .assertDoesNotExist()
     }
 
+    @Test
+    fun fallbackIsAbsentForEveryNonSearxngSuggestionProvider() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        var provider by mutableStateOf(SearchSuggestionProvider.None)
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                SearchSettingsPage(
+                    searchEngine = SearchEngine.SearXNG,
+                    searxngSettings = SearxngSettings(
+                        suggestionFallback = SearchSuggestionProvider.Brave,
+                    ),
+                    isAiModeToggleVisible = false,
+                    searchSuggestionProvider = provider,
+                    isHistorySuggestionsEnabled = true,
+                    onSearchEngineChanged = {},
+                    onSearxngSettingsChanged = {},
+                    onAiModeToggleVisibleChanged = {},
+                    onSearchSuggestionProviderChanged = { provider = it },
+                    onHistorySuggestionsEnabledChanged = {},
+                    onBack = {},
+                )
+            }
+        }
+
+        SearchSuggestionProvider.entries
+            .filterNot { it == SearchSuggestionProvider.SearXNG }
+            .forEach { candidate ->
+                composeRule.runOnIdle { provider = candidate }
+
+                composeRule.onNodeWithTag(SearchSettingsTestTags.SearxngFallback)
+                    .assertDoesNotExist()
+                composeRule.onNodeWithText(
+                    context.getString(R.string.settings_searxng_suggestion_fallback),
+                ).assertDoesNotExist()
+                composeRule.onNodeWithText(
+                    context.getString(R.string.settings_searxng_suggestion_fallback_summary),
+                ).assertDoesNotExist()
+            }
+    }
+
+    @Test
+    fun changingSuggestionProviderHidesAndRestoresSavedFallback() {
+        var provider by mutableStateOf(SearchSuggestionProvider.SearXNG)
+        var settings by mutableStateOf(
+            SearxngSettings(suggestionFallback = SearchSuggestionProvider.Brave),
+        )
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                SearchSettingsPage(
+                    searchEngine = SearchEngine.Google,
+                    searxngSettings = settings,
+                    isAiModeToggleVisible = false,
+                    searchSuggestionProvider = provider,
+                    isHistorySuggestionsEnabled = true,
+                    onSearchEngineChanged = {},
+                    onSearxngSettingsChanged = { settings = it },
+                    onAiModeToggleVisibleChanged = {},
+                    onSearchSuggestionProviderChanged = { provider = it },
+                    onHistorySuggestionsEnabledChanged = {},
+                    onBack = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(SearchSettingsTestTags.fallback(SearchSuggestionProvider.Brave))
+            .performScrollTo().assertIsSelected()
+        composeRule.onNodeWithTag(SearchSettingsTestTags.suggestion(SearchSuggestionProvider.Google))
+            .performScrollTo().performClick()
+
+        composeRule.onNodeWithTag(SearchSettingsTestTags.SearxngFallback).assertDoesNotExist()
+        assertEquals(SearchSuggestionProvider.Brave, settings.suggestionFallback)
+
+        composeRule.onNodeWithTag(SearchSettingsTestTags.suggestion(SearchSuggestionProvider.SearXNG))
+            .performScrollTo().performClick()
+
+        composeRule.onNodeWithTag(SearchSettingsTestTags.fallback(SearchSuggestionProvider.Brave))
+            .performScrollTo().assertIsSelected()
+        assertEquals(SearchSuggestionProvider.Brave, settings.suggestionFallback)
+    }
 }
