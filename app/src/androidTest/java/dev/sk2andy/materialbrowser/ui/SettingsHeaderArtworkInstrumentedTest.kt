@@ -266,6 +266,17 @@ class SettingsHeaderArtworkInstrumentedTest {
             .assertIsDisplayed()
     }
 
+    @Test
+    fun linkInteractionsPageUsesLinkPreviewArtwork() {
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                TabsPage(section = TabSettingsSection.LinkInteractions)
+            }
+        }
+        composeRule.onNodeWithTag(tag(SettingsHeaderArtwork.Gestures)).assertDoesNotExist()
+        composeRule.onNodeWithTag(tag(SettingsHeaderArtwork.LinkPreview)).assertIsDisplayed()
+    }
+
     @Composable
     private fun ParentPage(
         artwork: SettingsHeaderArtwork,

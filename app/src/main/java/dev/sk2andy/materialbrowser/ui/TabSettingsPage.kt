@@ -291,7 +291,13 @@ internal fun TabsAndGesturesSettingsPage(
                 TabSettingsSection.GestureControls,
             )
         ) {
-            SettingsHeaderIllustration(SettingsHeaderArtwork.Gestures)
+            SettingsHeaderIllustration(
+                if (section == TabSettingsSection.LinkInteractions) {
+                    SettingsHeaderArtwork.LinkPreview
+                } else {
+                    SettingsHeaderArtwork.Gestures
+                },
+            )
             SettingsPageSpacer()
             if (section == TabSettingsSection.Gestures) {
                 SettingsPreferenceGroup {
