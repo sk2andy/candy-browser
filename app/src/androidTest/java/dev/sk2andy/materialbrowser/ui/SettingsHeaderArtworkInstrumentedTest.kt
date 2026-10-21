@@ -42,6 +42,7 @@ import androidx.test.uiautomator.UiDevice
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.browser.integration.linkrouting.LinkRoutingRule
 import dev.sk2andy.materialbrowser.browser.BrowserProfile
+import dev.sk2andy.materialbrowser.browser.ExternalAppLinkHandling
 import dev.sk2andy.materialbrowser.browser.PageTranslationProvider
 import dev.sk2andy.materialbrowser.browser.SearchEngine
 import dev.sk2andy.materialbrowser.browser.SearxngSettings
@@ -217,6 +218,15 @@ class SettingsHeaderArtworkInstrumentedTest {
                         .performScrollTo().performClick()
                     composeRule.runOnIdle { assertEquals(kind, lastInteraction) }
                 }
+                SettingsHeaderArtwork.ExternalApps -> {
+                    composeRule.onNodeWithText(context.getString(R.string.settings_external_app_links_ask_every_time))
+                        .performScrollTo().performClick()
+                    composeRule.runOnIdle { assertEquals(kind, lastInteraction) }
+                    composeRule.onNodeWithTag(ExternalAppLinksSettingsTestTags.reset("github.com"))
+                        .performScrollTo().performClick()
+                    composeRule.onNodeWithTag(ExternalAppLinksSettingsTestTags.Empty)
+                        .performScrollTo().assertIsDisplayed()
+                }
                 SettingsHeaderArtwork.PersonalLinkRules -> {
                     composeRule.onNodeWithTag(LinkRoutingTestTags.Add).performScrollTo().performClick()
                     composeRule.onNodeWithTag(LinkRoutingTestTags.Domain).performTextInput("artwork.example")
@@ -357,6 +367,18 @@ class SettingsHeaderArtworkInstrumentedTest {
                     section = TabSettingsSection.Lifecycle,
                     inactiveTabLifetime = lifetime,
                     onInactiveTabLifetimeChanged = { lifetime = it; onInteraction(artwork) },
+                )
+            }
+            SettingsHeaderArtwork.ExternalApps -> {
+                var handling by remember { mutableStateOf(ExternalAppLinkHandling.Automatic) }
+                var sites by remember { mutableStateOf(listOf("github.com")) }
+                ExternalAppLinksSettingsPage(
+                    externalAppLinkHandling = handling,
+                    siteExceptions = sites,
+                    onExternalAppLinkHandlingChanged = { handling = it; onInteraction(artwork) },
+                    onResetSiteException = { domain -> sites = sites - domain; onInteraction(artwork) },
+                    onResetAllSiteExceptions = { sites = emptyList(); onInteraction(artwork) },
+                    onBack = {},
                 )
             }
             SettingsHeaderArtwork.PersonalLinkRules -> {

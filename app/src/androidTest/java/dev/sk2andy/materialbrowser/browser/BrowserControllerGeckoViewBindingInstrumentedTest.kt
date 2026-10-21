@@ -72,9 +72,11 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
     private var controller: BrowserController? = null
     private var originalEngineKind: AndroidBrowserEngineKind? = null
     private var originalProfiles: Pair<List<BrowserProfile>, String>? = null
+    private var originalProfilesEnabled: Boolean? = null
     private var originalHistory: List<HistoryEntry>? = null
     private var originalHistoryRecordingMode: HistoryRecordingMode? = null
     private var originalExternalAppLinkHandling: ExternalAppLinkHandling? = null
+    private var originalExternalAppSiteExceptions: List<String>? = null
     private var originalAutoDeAmpEnabled: Boolean? = null
     private var originalAppLoggingEnabled: Boolean? = null
     private var originalAddressBarDockingEnabled: Boolean? = null
@@ -1323,6 +1325,7 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
                 originalProfiles?.let { (profiles, activeProfileId) ->
                     store.saveProfiles(profiles, activeProfileId)
                 }
+                originalProfilesEnabled?.let(store::saveProfilesEnabled)
                 originalHistoryRecordingMode?.let { mode ->
                     assertTrue(store.saveHistoryRecordingMode(mode))
                 }
@@ -1330,6 +1333,7 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
                     assertTrue(store.commitHistory(history))
                 }
                 originalExternalAppLinkHandling?.let(store::saveExternalAppLinkHandling)
+                originalExternalAppSiteExceptions?.let(store::saveExternalAppSiteExceptions)
                 originalAutoDeAmpEnabled?.let(store::saveAutoDeAmpEnabled)
                 originalLastAddressBarDockPlacement?.let(store::saveAddressBarDockPlacement)
                 originalAddressBarDocked?.let(store::saveAddressBarDocked)
@@ -3400,6 +3404,500 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
         }
     }
 
+    @Test
+    fun savedSitePreferenceKeepsTypedIntentTargetInCandyFromBlankTab() {
+        val fixture = composeRule.runOnIdle {
+            createAddressAppFixture(installSession = false, siteExceptions = listOf("github.com"))
+        }
+        composeRule.runOnIdle {
+            fixture.browser.submitAddressFromAddressBar(
+                "intent://github.com/sk2andy/candy-browser#Intent;scheme=https;package=com.github.android;end",
+            )
+        }
+        composeRule.waitUntil(5_000L) {
+            fixture.browser.selectedTab.url == "https://github.com/sk2andy/candy-browser"
+        }
+        composeRule.runOnIdle {
+            assertNull(fixture.context.lastIntent)
+            assertNull(fixture.browser.externalAppPrompt)
+            assertNull(fixture.browser.externalAppFeedback)
+            assertEquals(listOf("github.com"), fixture.browser.externalAppSiteExceptions)
+        }
+    }
+
+    @Test
+    fun queuedIntentCandyFallbackCannotReplaceNewerBrowserNavigation() {
+        val fixture = composeRule.runOnIdle {
+            createAddressAppFixture(siteExceptions = listOf("github.com"))
+        }
+        composeRule.runOnIdle {
+            fixture.browser.submitAddressFromAddressBar(
+                "intent://github.com/sk2andy/candy-browser#Intent;scheme=https;package=com.github.android;end",
+            )
+            fixture.browser.submitAddress("https://newer.candy.test/intent-replacement")
+        }
+        composeRule.waitForIdle()
+        composeRule.runOnIdle {
+            assertEquals("https://newer.candy.test/intent-replacement", fixture.browser.selectedTab.url)
+            assertNull(fixture.context.lastIntent)
+            assertEquals(
+                listOf("https://newer.candy.test/intent-replacement"),
+                requireNotNull(fixture.session).commands
+                    .filter { it.type == BrowserEngineCommandType.Load }.map { it.address },
+            )
+        }
+    }
+
+    @Test
+    fun previewOpenInCandyAcceptsYesBeforeEngineReportsTarget() {
+        val fixture = composeRule.runOnIdle { createAddressAppFixture() }
+        val target = "https://github.com/sk2andy/candy-browser/issues/329?source=preview#details"
+        val (opened, previewSession) = launchPreviewAppFeedback(fixture, target)
+        composeRule.runOnIdle {
+            val previewId = requireNotNull(fixture.browser.externalLinkPreviewState).sessionId
+            fixture.browser.openExternalAppInCandy(opened.id)
+            val confirmation = requireNotNull(fixture.browser.externalAppFeedback)
+            assertEquals(ExternalAppFeedbackStage.ConfirmAlwaysInCandy, confirmation.stage)
+            assertEquals(previewId, fixture.browser.externalLinkPreviewState?.sessionId)
+            assertEquals(target, fixture.browser.externalLinkPreviewState?.currentUrl)
+            assertEquals(
+                listOf(target),
+                previewSession.commands.filter { it.type == BrowserEngineCommandType.Load }.map { it.address },
+            )
+            fixture.browser.confirmAlwaysOpenInCandy(confirmation.id)
+
+            assertEquals(listOf("github.com"), BrowserSessionStore(composeRule.activity).loadExternalAppSiteExceptions())
+            assertNull(fixture.browser.externalAppFeedback)
+            assertEquals(1, fixture.context.launchedIntents.size)
+            assertEquals("about:blank", fixture.browser.selectedTab.url)
+        }
+    }
+
+    @Test
+    fun previewCloseInvalidatesOpenedFeedbackAndItsActions() {
+        val fixture = composeRule.runOnIdle { createAddressAppFixture() }
+        val (opened, _) = launchPreviewAppFeedback(fixture, "https://github.com/sk2andy/candy-browser")
+        composeRule.runOnIdle {
+            val previewId = requireNotNull(fixture.browser.externalLinkPreviewState).sessionId
+            assertTrue(fixture.browser.dismissExternalLinkPreview(previewId))
+            fixture.browser.openExternalAppInCandy(opened.id)
+            fixture.browser.confirmAlwaysOpenInCandy(opened.id)
+
+            assertNull(fixture.browser.externalLinkPreviewState)
+            assertNull(fixture.browser.externalAppFeedback)
+            assertEquals("about:blank", fixture.browser.selectedTab.url)
+            assertTrue(requireNotNull(fixture.session).commands.none { it.type == BrowserEngineCommandType.Load })
+            assertTrue(BrowserSessionStore(composeRule.activity).loadExternalAppSiteExceptions().isEmpty())
+        }
+    }
+
+    @Test
+    fun previewBackInvalidatesAlwaysInCandyConfirmation() {
+        val fixture = composeRule.runOnIdle { createAddressAppFixture() }
+        val (opened, _) = launchPreviewAppFeedback(fixture, "https://github.com/sk2andy/candy-browser")
+        composeRule.runOnIdle {
+            fixture.browser.openExternalAppInCandy(opened.id)
+            val confirmation = requireNotNull(fixture.browser.externalAppFeedback)
+            val state = requireNotNull(fixture.browser.externalLinkPreviewState)
+            assertTrue(state.canGoBack)
+            assertTrue(fixture.browser.goBackInExternalLinkPreview(state.sessionId))
+            fixture.browser.confirmAlwaysOpenInCandy(confirmation.id)
+
+            assertNull(fixture.browser.externalAppFeedback)
+            assertNotNull(fixture.browser.externalLinkPreviewState)
+            assertTrue(BrowserSessionStore(composeRule.activity).loadExternalAppSiteExceptions().isEmpty())
+        }
+    }
+
+    private fun launchPreviewAppFeedback(
+        fixture: AddressAppFixture,
+        address: String,
+    ): Pair<ExternalAppFeedback, ReentrantAttachSession> {
+        lateinit var previewSession: ReentrantAttachSession
+        composeRule.runOnIdle {
+            val sourceUrl = "https://www.google.com/search?q=github"
+            assertTrue(fixture.browser.openExternalLinkPreview(sourceUrl))
+            val state = requireNotNull(fixture.browser.externalLinkPreviewState)
+            previewSession = ReentrantAttachSession(
+                tabId = "external-app-preview-test",
+                onFirstAttach = {},
+                historyUrls = mapOf(0 to sourceUrl, -1 to sourceUrl),
+            )
+            fixture.browser.installExternalPreviewEngineSessionForTesting(previewSession)
+            assertTrue(fixture.browser.prepareExternalLinkPreview(state.sessionId))
+            fixture.browser.dispatchExternalPreviewEventForTesting(
+                BrowserEngineEvent(
+                    tabId = "external-app-preview-test",
+                    type = BrowserEngineEventType.StateChanged,
+                    address = "https://www.google.com/search?q=github",
+                    title = "Google",
+                    canGoBack = true,
+                    canGoForward = false,
+                    failureDescription = null,
+                ),
+            )
+            assertEquals(
+                GeckoNavigationRequestDecision.Deny,
+                fixture.browser.dispatchExternalPreviewNavigationRequestForTesting(
+                    GeckoMainFrameNavigationRequest(
+                        url = address,
+                        isRedirect = false,
+                        hasUserGesture = true,
+                        isDirectNavigation = false,
+                    ),
+                ),
+            )
+        }
+        composeRule.waitUntil(5_000L) { fixture.context.lastIntent != null }
+        return composeRule.runOnIdle {
+            assertEquals(address, fixture.context.lastIntent?.dataString)
+            requireNotNull(fixture.browser.externalAppFeedback) to previewSession
+        }
+    }
+
+    @Test
+    fun successfulAppLaunchOffersExactAddressInCandyOnlyOnce() {
+        val target = "https://github.com/sk2andy/candy-browser/issues/329?source=google#details"
+        val fixture = composeRule.runOnIdle { createAddressAppFixture() }
+        val opened = launchAddressAppFeedback(fixture, target)
+
+        composeRule.runOnIdle {
+            assertEquals(ExternalAppFeedbackStage.Opened, opened.stage)
+            assertEquals("github.com", opened.site)
+            assertFalse(opened.isPrivate)
+            assertTrue(requireNotNull(fixture.session).commands.none { it.type == BrowserEngineCommandType.Load })
+            fixture.browser.openExternalAppInCandy(opened.id)
+            fixture.browser.openExternalAppInCandy(opened.id)
+
+            val confirmation = requireNotNull(fixture.browser.externalAppFeedback)
+            assertEquals(ExternalAppFeedbackStage.ConfirmAlwaysInCandy, confirmation.stage)
+            assertEquals("github.com", confirmation.site)
+            assertEquals(target, fixture.browser.selectedTab.url)
+            assertEquals(
+                listOf(target),
+                requireNotNull(fixture.session).commands
+                    .filter { it.type == BrowserEngineCommandType.Load }.map { it.address },
+            )
+            assertEquals(1, fixture.context.launchedIntents.size)
+        }
+    }
+
+    @Test
+    fun cancellingAlwaysInCandyDoesNotSaveSitePreference() {
+        val fixture = composeRule.runOnIdle { createAddressAppFixture() }
+        val opened = launchAddressAppFeedback(fixture, "https://github.com/sk2andy/candy-browser")
+        composeRule.runOnIdle {
+            fixture.browser.openExternalAppInCandy(opened.id)
+            val confirmation = requireNotNull(fixture.browser.externalAppFeedback)
+            fixture.browser.dismissExternalAppFeedback(confirmation.id)
+
+            assertNull(fixture.browser.externalAppFeedback)
+            assertTrue(fixture.browser.externalAppSiteExceptions.isEmpty())
+            assertTrue(BrowserSessionStore(composeRule.activity).loadExternalAppSiteExceptions().isEmpty())
+            fixture.browser.submitAddressFromAddressBar("https://github.com/settings/profile")
+        }
+        composeRule.waitUntil(5_000L) { fixture.context.launchedIntents.size == 2 }
+        composeRule.runOnIdle {
+            assertEquals("https://github.com/settings/profile", fixture.context.lastIntent?.dataString)
+        }
+    }
+
+    @Test
+    fun confirmedSitePreferenceCoversSubdomainsAndPathsInBothAppLinkModes() {
+        var lookupCount = 0
+        val fixture = composeRule.runOnIdle { createAddressAppFixture(onLookup = { lookupCount++ }) }
+        val opened = launchAddressAppFeedback(fixture, "https://github.com/sk2andy/candy-browser")
+        composeRule.runOnIdle {
+            fixture.browser.openExternalAppInCandy(opened.id)
+            fixture.browser.confirmAlwaysOpenInCandy(requireNotNull(fixture.browser.externalAppFeedback).id)
+
+            assertEquals(listOf("github.com"), fixture.browser.externalAppSiteExceptions)
+            assertEquals(listOf("github.com"), BrowserSessionStore(composeRule.activity).loadExternalAppSiteExceptions())
+            assertNull(fixture.browser.externalAppFeedback)
+            ExternalAppLinkHandling.entries.forEach { handling ->
+                fixture.browser.updateExternalAppLinkHandling(handling)
+                val target = "https://gist.github.com/sk2andy/${handling.name}?view=all#content"
+                fixture.browser.submitAddressFromAddressBar(target)
+                assertEquals(target, fixture.browser.selectedTab.url)
+                assertNull(fixture.browser.externalAppPrompt)
+                assertNull(fixture.browser.externalAppFeedback)
+            }
+            assertEquals(1, lookupCount)
+            assertEquals(1, fixture.context.launchedIntents.size)
+            assertEquals(
+                listOf(
+                    "https://github.com/sk2andy/candy-browser",
+                    "https://gist.github.com/sk2andy/Automatic?view=all#content",
+                    "https://gist.github.com/sk2andy/AskEveryTime?view=all#content",
+                ),
+                requireNotNull(fixture.session).commands
+                    .filter { it.type == BrowserEngineCommandType.Load }.map { it.address },
+            )
+        }
+    }
+
+    @Test
+    fun savedAppSitePreferenceAppliesAfterSwitchingProfiles() {
+        val fixture = composeRule.runOnIdle {
+            val store = BrowserSessionStore(composeRule.activity)
+            originalProfiles = store.loadProfiles()
+            originalProfilesEnabled = store.loadProfilesEnabled()
+            store.saveProfiles(
+                listOf(DEFAULT_BROWSER_PROFILE, BrowserProfile(id = "app-links-work", emoji = "💼")),
+                DEFAULT_PROFILE_ID,
+            )
+            store.saveProfilesEnabled(true)
+            createAddressAppFixture()
+        }
+        val opened = launchAddressAppFeedback(fixture, "https://github.com/sk2andy/candy-browser")
+        composeRule.runOnIdle {
+            fixture.browser.openExternalAppInCandy(opened.id)
+            fixture.browser.confirmAlwaysOpenInCandy(requireNotNull(fixture.browser.externalAppFeedback).id)
+            assertTrue(fixture.browser.selectProfile("app-links-work"))
+            val targetTab = fixture.browser.createTab(initialUrl = "about:blank")
+            val targetSession = ReentrantAttachSession(tabId = targetTab, onFirstAttach = {})
+            fixture.browser.installGeckoEngineSessionForTesting(targetSession)
+            fixture.browser.submitAddressFromAddressBar("https://gist.github.com/work/example")
+
+            assertEquals("app-links-work", fixture.browser.activeProfileId)
+            assertEquals("https://gist.github.com/work/example", fixture.browser.selectedTab.url)
+            assertEquals(1, fixture.context.launchedIntents.size)
+            assertNull(fixture.browser.externalAppPrompt)
+            assertEquals(
+                listOf("https://gist.github.com/work/example"),
+                targetSession.commands.filter { it.type == BrowserEngineCommandType.Load }.map { it.address },
+            )
+        }
+    }
+
+    @Test
+    fun resettingSitePreferenceRestoresAutomaticAppHandoff() {
+        val fixture = composeRule.runOnIdle { createAddressAppFixture() }
+        val opened = launchAddressAppFeedback(fixture, "https://github.com/sk2andy/candy-browser")
+        composeRule.runOnIdle {
+            fixture.browser.openExternalAppInCandy(opened.id)
+            fixture.browser.confirmAlwaysOpenInCandy(requireNotNull(fixture.browser.externalAppFeedback).id)
+            fixture.browser.resetExternalAppSiteException("github.com")
+
+            assertTrue(fixture.browser.externalAppSiteExceptions.isEmpty())
+            assertTrue(BrowserSessionStore(composeRule.activity).loadExternalAppSiteExceptions().isEmpty())
+            fixture.browser.submitAddressFromAddressBar("https://gist.github.com/sk2andy/example")
+        }
+        composeRule.waitUntil(5_000L) { fixture.context.launchedIntents.size == 2 }
+        composeRule.runOnIdle {
+            assertEquals("https://gist.github.com/sk2andy/example", fixture.context.lastIntent?.dataString)
+        }
+    }
+
+    @Test
+    fun privateAlwaysInCandyPreferenceStaysMemoryOnlyAcrossPrivateTabs() {
+        val fixture = composeRule.runOnIdle { createAddressAppFixture(isPrivate = true) }
+        val opened = launchAddressAppFeedback(fixture, "https://github.com/private/project")
+        composeRule.runOnIdle {
+            assertTrue(opened.isPrivate)
+            fixture.browser.openExternalAppInCandy(opened.id)
+            val confirmation = requireNotNull(fixture.browser.externalAppFeedback)
+            assertTrue(confirmation.isPrivate)
+            fixture.browser.confirmAlwaysOpenInCandy(confirmation.id)
+            assertTrue(BrowserSessionStore(composeRule.activity).loadExternalAppSiteExceptions().isEmpty())
+
+            val privateTabId = fixture.browser.createTab(initialUrl = "about:blank", isIncognito = true)
+            val privateSession = ReentrantAttachSession(tabId = privateTabId, onFirstAttach = {})
+            fixture.browser.installGeckoEngineSessionForTesting(privateSession)
+            fixture.browser.submitAddressFromAddressBar("https://gist.github.com/private/other")
+            assertEquals("https://gist.github.com/private/other", fixture.browser.selectedTab.url)
+            assertEquals(1, fixture.context.launchedIntents.size)
+            assertEquals(
+                listOf("https://gist.github.com/private/other"),
+                privateSession.commands.filter { it.type == BrowserEngineCommandType.Load }.map { it.address },
+            )
+            fixture.browser.createTab(initialUrl = "about:blank", isIncognito = false)
+            fixture.browser.submitAddressFromAddressBar("https://github.com/normal/project")
+        }
+        composeRule.waitUntil(5_000L) { fixture.context.launchedIntents.size == 2 }
+        composeRule.runOnIdle {
+            assertEquals("https://github.com/normal/project", fixture.context.lastIntent?.dataString)
+            assertTrue(BrowserSessionStore(composeRule.activity).loadExternalAppSiteExceptions().isEmpty())
+        }
+    }
+
+    @Test
+    fun privateSitePreferenceClearsWhenLastPrivateTabCloses() {
+        val fixture = composeRule.runOnIdle { createAddressAppFixture(isPrivate = true) }
+        val opened = launchAddressAppFeedback(fixture, "https://github.com/private/project")
+        composeRule.runOnIdle {
+            fixture.browser.openExternalAppInCandy(opened.id)
+            fixture.browser.confirmAlwaysOpenInCandy(requireNotNull(fixture.browser.externalAppFeedback).id)
+            fixture.browser.closeTab(fixture.browser.selectedTabId)
+            assertTrue(fixture.browser.tabs.none { it.isIncognito })
+            fixture.browser.createTab(initialUrl = "about:blank", isIncognito = true)
+            fixture.browser.submitAddressFromAddressBar("https://github.com/private/new-session")
+        }
+        composeRule.waitUntil(5_000L) { fixture.context.launchedIntents.size == 2 }
+        composeRule.runOnIdle {
+            assertEquals("https://github.com/private/new-session", fixture.context.lastIntent?.dataString)
+            assertTrue(BrowserSessionStore(composeRule.activity).loadExternalAppSiteExceptions().isEmpty())
+        }
+    }
+
+    @Test
+    fun failedAppLaunchDoesNotOfferOpenedFeedback() {
+        val fixture = composeRule.runOnIdle { createAddressAppFixture() }
+        composeRule.runOnIdle {
+            fixture.context.availableAppUrl = "https://different-app.example/"
+            fixture.browser.submitAddressFromAddressBar("https://github.com/sk2andy/candy-browser")
+        }
+        awaitAddressAppLookup(fixture.browser)
+        composeRule.runOnIdle {
+            assertNull(fixture.context.lastIntent)
+            assertNull(fixture.browser.externalAppFeedback)
+            assertEquals(
+                listOf("https://github.com/sk2andy/candy-browser"),
+                requireNotNull(fixture.session).commands
+                    .filter { it.type == BrowserEngineCommandType.Load }.map { it.address },
+            )
+        }
+    }
+
+    @Test
+    fun staleFeedbackIdCannotNavigateOrSavePreference() {
+        val fixture = composeRule.runOnIdle { createAddressAppFixture() }
+        val opened = launchAddressAppFeedback(fixture, "https://github.com/sk2andy/candy-browser")
+        composeRule.runOnIdle {
+            fixture.browser.openExternalAppInCandy(opened.id + 1_000L)
+            fixture.browser.confirmAlwaysOpenInCandy(opened.id)
+            assertEquals(opened, fixture.browser.externalAppFeedback)
+            assertTrue(requireNotNull(fixture.session).commands.none { it.type == BrowserEngineCommandType.Load })
+
+            fixture.browser.openExternalAppInCandy(opened.id)
+            val confirmation = requireNotNull(fixture.browser.externalAppFeedback)
+            fixture.browser.confirmAlwaysOpenInCandy(confirmation.id + 1_000L)
+            assertEquals(confirmation, fixture.browser.externalAppFeedback)
+            assertTrue(BrowserSessionStore(composeRule.activity).loadExternalAppSiteExceptions().isEmpty())
+        }
+    }
+
+    @Test
+    fun newTabInvalidatesOpenedAppFeedbackBeforeCandyAction() {
+        val fixture = composeRule.runOnIdle { createAddressAppFixture() }
+        val opened = launchAddressAppFeedback(fixture, "https://github.com/sk2andy/candy-browser")
+        composeRule.runOnIdle {
+            val newTab = fixture.browser.createTab(initialUrl = "about:blank")
+            fixture.browser.openExternalAppInCandy(opened.id)
+            fixture.browser.confirmAlwaysOpenInCandy(opened.id)
+
+            assertEquals(newTab, fixture.browser.selectedTabId)
+            assertEquals("about:blank", fixture.browser.selectedTab.url)
+            assertNull(fixture.browser.externalAppFeedback)
+            assertTrue(requireNotNull(fixture.session).commands.none { it.type == BrowserEngineCommandType.Load })
+            assertTrue(BrowserSessionStore(composeRule.activity).loadExternalAppSiteExceptions().isEmpty())
+        }
+    }
+
+    @Test
+    fun newTabInvalidatesAlwaysInCandyConfirmation() {
+        val fixture = composeRule.runOnIdle { createAddressAppFixture() }
+        val opened = launchAddressAppFeedback(fixture, "https://github.com/sk2andy/candy-browser")
+        composeRule.runOnIdle {
+            fixture.browser.openExternalAppInCandy(opened.id)
+            val confirmation = requireNotNull(fixture.browser.externalAppFeedback)
+            fixture.browser.createTab(initialUrl = "about:blank")
+            fixture.browser.confirmAlwaysOpenInCandy(confirmation.id)
+
+            assertNull(fixture.browser.externalAppFeedback)
+            assertTrue(BrowserSessionStore(composeRule.activity).loadExternalAppSiteExceptions().isEmpty())
+        }
+    }
+
+    @Test
+    fun newerBrowserNavigationInvalidatesOpenedAppFeedback() {
+        val fixture = composeRule.runOnIdle { createAddressAppFixture() }
+        val opened = launchAddressAppFeedback(fixture, "https://github.com/sk2andy/candy-browser")
+        composeRule.runOnIdle {
+            fixture.browser.submitAddress("https://newer.candy.test/current")
+            fixture.browser.openExternalAppInCandy(opened.id)
+            fixture.browser.confirmAlwaysOpenInCandy(opened.id)
+
+            assertEquals("https://newer.candy.test/current", fixture.browser.selectedTab.url)
+            assertNull(fixture.browser.externalAppFeedback)
+            assertEquals(
+                listOf("https://newer.candy.test/current"),
+                requireNotNull(fixture.session).commands
+                    .filter { it.type == BrowserEngineCommandType.Load }.map { it.address },
+            )
+            assertTrue(BrowserSessionStore(composeRule.activity).loadExternalAppSiteExceptions().isEmpty())
+        }
+    }
+
+    @Test
+    fun unrelatedEngineNavigationInvalidatesOpenedAppFeedback() {
+        val fixture = composeRule.runOnIdle { createAddressAppFixture() }
+        val opened = launchAddressAppFeedback(fixture, "https://github.com/sk2andy/candy-browser")
+        composeRule.runOnIdle {
+            dispatchSiteDataNavigation(
+                browserController = fixture.browser,
+                tabId = fixture.browser.selectedTabId,
+                type = BrowserEngineEventType.NavigationStarted,
+                address = "https://newer.candy.test/engine-navigation",
+            )
+            fixture.browser.openExternalAppInCandy(opened.id)
+            fixture.browser.confirmAlwaysOpenInCandy(opened.id)
+
+            assertNull(fixture.browser.externalAppFeedback)
+            assertTrue(requireNotNull(fixture.session).commands.none { it.type == BrowserEngineCommandType.Load })
+            assertTrue(BrowserSessionStore(composeRule.activity).loadExternalAppSiteExceptions().isEmpty())
+        }
+    }
+
+    @Test
+    fun expectedCandyEngineNavigationKeepsAlwaysInCandyConfirmation() {
+        val target = "https://github.com/sk2andy/candy-browser"
+        val fixture = composeRule.runOnIdle { createAddressAppFixture() }
+        val opened = launchAddressAppFeedback(fixture, target)
+        composeRule.runOnIdle {
+            fixture.browser.openExternalAppInCandy(opened.id)
+            val confirmation = requireNotNull(fixture.browser.externalAppFeedback)
+            listOf(BrowserEngineEventType.NavigationStarted, BrowserEngineEventType.NavigationCommitted).forEach { type ->
+                dispatchSiteDataNavigation(
+                    browserController = fixture.browser,
+                    tabId = fixture.browser.selectedTabId,
+                    type = type,
+                    address = target,
+                )
+                assertEquals(confirmation, fixture.browser.externalAppFeedback)
+            }
+            fixture.browser.confirmAlwaysOpenInCandy(confirmation.id)
+
+            assertEquals(listOf("github.com"), BrowserSessionStore(composeRule.activity).loadExternalAppSiteExceptions())
+            assertNull(fixture.browser.externalAppFeedback)
+        }
+    }
+
+    @Test
+    fun newerBrowserNavigationInvalidatesAlwaysInCandyConfirmation() {
+        val fixture = composeRule.runOnIdle { createAddressAppFixture() }
+        val opened = launchAddressAppFeedback(fixture, "https://github.com/sk2andy/candy-browser")
+        composeRule.runOnIdle {
+            fixture.browser.openExternalAppInCandy(opened.id)
+            val confirmation = requireNotNull(fixture.browser.externalAppFeedback)
+            fixture.browser.submitAddress("https://newer.candy.test/current")
+            fixture.browser.confirmAlwaysOpenInCandy(confirmation.id)
+
+            assertEquals("https://newer.candy.test/current", fixture.browser.selectedTab.url)
+            assertNull(fixture.browser.externalAppFeedback)
+            assertTrue(BrowserSessionStore(composeRule.activity).loadExternalAppSiteExceptions().isEmpty())
+        }
+    }
+
+    private fun launchAddressAppFeedback(fixture: AddressAppFixture, address: String): ExternalAppFeedback {
+        composeRule.runOnIdle { fixture.browser.submitAddressFromAddressBar(address) }
+        composeRule.waitUntil(5_000L) { fixture.context.lastIntent != null }
+        return composeRule.runOnIdle {
+            assertEquals(address, fixture.context.lastIntent?.dataString)
+            requireNotNull(fixture.browser.externalAppFeedback)
+        }
+    }
+
     private fun awaitAddressAppLookup(browser: BrowserController) {
         val executor = composeRule.runOnIdle {
             BrowserController::class.java.getDeclaredField("externalAppLookupExecutor").let { field ->
@@ -3417,12 +3915,15 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
         hasDefaultHandler: Boolean = false,
         installSession: Boolean = true,
         isPrivate: Boolean = false,
+        siteExceptions: List<String> = emptyList(),
         onLookup: () -> Unit = {},
     ): AddressAppFixture {
         val activity = composeRule.activity
         val store = BrowserSessionStore(activity)
         originalEngineKind = store.loadAndroidBrowserEngineKind()
         originalExternalAppLinkHandling = store.loadExternalAppLinkHandling()
+        originalExternalAppSiteExceptions = store.loadExternalAppSiteExceptions()
+        store.saveExternalAppSiteExceptions(siteExceptions)
         assertTrue(store.saveAndroidBrowserEngineKind(AndroidBrowserEngineKind.GeckoView))
         val context = RecordingContext(activity)
         val browser = BrowserController(

@@ -845,3 +845,28 @@ WebView request state.
 | Long background/resume page continuity | `GeckoContentPresentationGateTest` and `BrowserPageResumeInstrumentedTest` on a dedicated API 34+ emulator; repeated 31-second intervals, real input/rendered pixels, scroll/history, no reload, regular/private Gecko and System WebView |
 | Android intent routing | `IncomingBrowserIntentInstrumentedTest`, `ExternalAppLauncherInstrumentedTest`, and `MainActivityIncomingNavigationInstrumentedTest` for cold/warm incoming links, initial redirects, and subsequent tapped handoffs |
 | Distribution and TLS channels | `./gradlew testFullDebugUnitTest testFossDebugUnitTest testFullUserCaDebugUnitTest assembleFullDebug assembleFossDebug assembleFullUserCaDebug`, then `python3 scripts/test_network_security_apks.py` |
+
+
+## External-app return and website exceptions
+
+| Contract | Behavior / owner |
+| --- | --- |
+| Accepted app handoff | Only `ExternalLaunchResult.Launched` offers **Opened in app → Open in Candy**; an unresolved lookup, unsupported app or unconfirmed Android chooser does not claim success |
+| Return action | The exact safe HTTP(S) target opens in the original tab/private context or external-link preview; no external launch lookup for this return |
+| Follow-up | **Do you want to always open this site in Candy?** offers visible **Yes** and **Cancel**; cancel changes no saved preference |
+| Scope | One registrable website, including all subdomains and paths, across all profiles; `ExternalAppSiteRules` reuses `SiteDomainRules` and the public-suffix boundary |
+| Routing | Saved exceptions override both Automatically and Always ask for HTTP(S) links and app intents with a safe web target; explicit **Open in app** remains available |
+| Lifetime | Snackbar offer survives background/resume. Token and tab/profile/session checks reject stale actions; new explicit navigation or tab selection dismisses the previous offer |
+| Private mode | Existing global exceptions apply. New private confirmations stay in memory for the private session, clear with private data, and never enter preferences or archives |
+| Storage | `BrowserSessionStore` stores at most 64 normalized sorted website domains in global `external_app_site_exceptions`; no paths or private targets are saved |
+| Settings | Browser → Links & apps → Open links in apps contains the existing global mode, individual exception reset and confirmed reset-all; reset restores the chosen global mode |
+| Presentation | `ExternalAppFeedbackSnackbar` owns lifecycle-aware feedback; `ExternalAppLinksSettingsPage` and shared `ExternalApps` artwork use existing Material theme mapping |
+| Tests | `ExternalAppSiteRulesTest`, focused `BrowserSessionStoreInstrumentedTest` / `BrowserControllerGeckoViewBindingInstrumentedTest`, `ExternalAppFeedbackSnackbarInstrumentedTest`, `ExternalAppLinksSettingsPageInstrumentedTest` |
+
+
+| Verification (2026-10-21) | Result |
+| --- | --- |
+| Full / Foss JVM suites | 2,067 tests each; shared Android JVM suite: 342 tests |
+| Controlled Android API 35 tests | 54 distinct passing cases across controller/store, Snackbar, settings navigation and header artwork; failed fixture setups were corrected and their four cases passed on rerun |
+| Visual coverage | All three palettes × Light/Dark/AMOLED for all headers; external-app page at 320 dp / 200% text; Snackbar confirmation at 100/200% text in Light/Dark |
+| Launch boundary | Controller tests use recording app-launch contexts and fake engine sessions for deterministic handoff/source checks; header and navigation tests render real Compose screens |

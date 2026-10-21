@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
+    <string name="settings_external_app_sites_title">Always open in Candy</string>
+    <string name="settings_external_app_sites_summary">These websites stay in Candy across all profiles, including their subdomains and pages, even when an installed app supports them. Reset a website to use your app-link setting again.</string>
+    <string name="settings_external_app_sites_empty">No saved sites yet. After opening a link in another app, choose “Open in Candy” to save a preference.</string>
+    <string name="settings_external_app_site_always_candy">All profiles · Includes subdomains and pages</string>
+    <string name="settings_external_app_site_reset">Reset</string>
+    <string name="settings_external_app_sites_reset_all">Reset all sites</string>
+    <string name="settings_external_app_sites_reset_all_message">All saved sites will use your app-link setting again.</string>
+    <string name="settings_external_app_site_reset_description">Reset %1$s</string>
+</resources>

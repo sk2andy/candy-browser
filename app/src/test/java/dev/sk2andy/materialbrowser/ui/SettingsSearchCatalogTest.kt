@@ -321,6 +321,8 @@ class SettingsSearchCatalogTest {
             "settings_link_peek_swipe_action" to SettingsDestination.LinkPeekSwipe,
             "settings_inline_media_player_title" to SettingsDestination.PlayerMode,
             "settings_external_link_preview_title" to SettingsDestination.ExternalLinkPreview,
+            "settings_external_app_links_title" to SettingsDestination.ExternalAppLinks,
+            "settings_external_app_sites_title" to SettingsDestination.ExternalAppLinks,
             "settings_appearance_mode" to SettingsDestination.AppearanceColors,
             "settings_color_palette" to SettingsDestination.AppearanceColors,
             "settings_shape_style" to SettingsDestination.AppearanceSurfaces,

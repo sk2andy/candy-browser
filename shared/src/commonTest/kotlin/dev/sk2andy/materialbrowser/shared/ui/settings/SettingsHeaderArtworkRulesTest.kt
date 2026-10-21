@@ -21,6 +21,7 @@ class SettingsHeaderArtworkRulesTest {
             SettingsHeaderArtwork.LinkPreview to IntRect(83, 141, 1454, 1001),
             SettingsHeaderArtwork.TabLifecycle to IntRect(394, 162, 1166, 866),
             SettingsHeaderArtwork.PersonalLinkRules to IntRect(185, 272, 1352, 753),
+            SettingsHeaderArtwork.ExternalApps to IntRect(185, 240, 1350, 790),
         )
         visibleBounds.forEach { (artwork, visible) ->
             val window = SettingsHeaderArtworkRules.sourceWindow(artwork)

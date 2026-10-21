@@ -1861,6 +1861,45 @@ class BrowserSessionStoreInstrumentedTest {
     }
 
     @Test
+    fun externalAppSiteExceptionsDefaultEmptyAndRoundTripGlobally() {
+        val store = BrowserSessionStore(context)
+        val capsuleStore = BrowserSessionStore(context, "157f006a-8e24-4baa-b143-bf9ed154639f")
+
+        assertEquals(emptyList<String>(), store.loadExternalAppSiteExceptions())
+        store.saveExternalAppSiteExceptions(
+            listOf("WWW.GITHUB.COM", "mobile.example.co.uk", "github.com", "invalid host.test"),
+        )
+
+        assertEquals(listOf("example.co.uk", "github.com"), store.loadExternalAppSiteExceptions())
+        assertEquals(listOf("example.co.uk", "github.com"), capsuleStore.loadExternalAppSiteExceptions())
+        assertEquals(
+            setOf("example.co.uk", "github.com"),
+            preferences.getStringSet("external_app_site_exceptions", null),
+        )
+
+        capsuleStore.saveExternalAppSiteExceptions(emptyList())
+        assertEquals(emptyList<String>(), store.loadExternalAppSiteExceptions())
+    }
+
+    @Test
+    fun externalAppSiteExceptionsNormalizeAndBoundPersistedInput() {
+        val store = BrowserSessionStore(context)
+        preferences.edit().putStringSet(
+            "external_app_site_exceptions",
+            ((1..80).map { "site${it.toString().padStart(2, '0')}.example" } +
+                listOf("www.github.com", "github.com", "invalid host.test")).toSet(),
+        ).commit()
+
+        val sites = store.loadExternalAppSiteExceptions()
+        assertEquals(64, sites.size)
+        assertEquals("github.com", sites.first())
+        assertEquals("site63.example", sites.last())
+
+        preferences.edit().putString("external_app_site_exceptions", "corrupt").commit()
+        assertEquals(emptyList<String>(), store.loadExternalAppSiteExceptions())
+    }
+
+    @Test
     fun browserMenuLayoutDefaultsAndRoundTripsStableLocations() {
         val store = BrowserSessionStore(context)
 

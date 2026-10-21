@@ -409,18 +409,19 @@ class BrowserSettingsScreenInstrumentedTest {
     }
 
     @Test
-    fun externalAppLinkChoiceUpdatesSetting() {
-        var handling by mutableStateOf(ExternalAppLinkHandling.Automatic)
+    fun externalAppLinksOpenDedicatedSettingsPage() {
+        var opened = false
         composeRule.setContent {
             MaterialBrowserTheme {
                 BrowserSettingsPage(
+                    section = BrowserSettingsSection.Links,
                     pageTranslationProvider = PageTranslationProvider.Google,
-                    externalAppLinkHandling = handling,
+                    externalAppLinkHandling = ExternalAppLinkHandling.Automatic,
                     isFullImmersiveModeEnabled = false,
                     isStartupAnimationEnabled = true,
                     isScrollBarEnabled = false,
                     isDefaultBrowser = false,
-                    onExternalAppLinkHandlingChanged = { handling = it },
+                    onExternalAppLinks = { opened = true },
                     onFullImmersiveModeEnabledChanged = {},
                     onStartupAnimationEnabledChanged = {},
                     onScrollBarEnabledChanged = {},
@@ -431,10 +432,11 @@ class BrowserSettingsScreenInstrumentedTest {
             }
         }
 
-        composeRule.onNodeWithText(
-            context.getString(R.string.settings_external_app_links_ask_every_time),
-        ).performScrollTo().performClick()
+        composeRule.onNodeWithTag(BrowserSettingsTestTags.ExternalAppLinks)
+            .performScrollTo().performClick()
 
-        assertEquals(ExternalAppLinkHandling.AskEveryTime, handling)
+        composeRule.runOnIdle { assertTrue(opened) }
+        composeRule.onNodeWithText(context.getString(R.string.settings_external_app_links_ask_every_time))
+            .assertDoesNotExist()
     }
 }
