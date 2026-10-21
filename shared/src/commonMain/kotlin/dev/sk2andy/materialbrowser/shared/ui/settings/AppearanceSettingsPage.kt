@@ -153,7 +153,11 @@ fun AppearanceSettingsPage(
                 AppearanceSettingsSection.AddressBar,
             )
         ) {
-            AppearanceSettingsIllustration(settings)
+            if (section == AppearanceSettingsSection.AddressBar) {
+                SettingsAddressBarIllustration()
+            } else {
+                AppearanceSettingsIllustration(settings)
+            }
             SettingsPageSpacer()
         }
         if (section == AppearanceSettingsSection.All || section == AppearanceSettingsSection.Colors) {

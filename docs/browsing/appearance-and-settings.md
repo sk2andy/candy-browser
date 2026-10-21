@@ -401,7 +401,9 @@ captured before edits so reviewers can compare every prior option and dynamic en
 
 ### Explanatory selection pages
 
-Colors, surfaces/shapes and address-bar choices use inline radio groups with a Candy browser preview.
+Colors and surfaces/shapes use inline radio groups with a Candy browser preview. Address-bar choices
+use a generated classic/segmented motif with the shared artwork renderer's live theme coloring;
+the illustration is decorative and displays both styles independently of the selection.
 Tab-stack folders reuse the Hero/Grid/List preview. Long-press link and Link Peek swipe choices have
 separate pages grouped by normal tabs, private tabs and other link actions. Foreground/background
 choices keep their existing distinct labels. Candy Player has five explained modes, while autoplay
