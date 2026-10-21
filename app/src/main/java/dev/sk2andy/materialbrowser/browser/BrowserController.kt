@@ -16749,10 +16749,14 @@ class BrowserController(
                     val dimensions = requireNotNull(TabPreviewCaptureRules.resolveBitmapDimensions(
                         sourceWidthPx = bitmap.width,
                         sourceHeightPx = bitmap.height,
-                        targetWidthPx = TabPreviewCaptureRules.COMPACT_TARGET_WIDTH_PX,
-                        maximumTargetHeightPx = TabPreviewCaptureRules.maximumTargetHeightPx(
-                            TabPreviewCaptureRules.COMPACT_TARGET_WIDTH_PX,
-                        ),
+                        targetWidthPx = previewBitmapTargetWidthPx(),
+                        maximumTargetHeightPx = if (isLandscapePreviewLayout()) {
+                            TabPreviewCaptureRules.MAX_BITMAP_DIMENSION
+                        } else {
+                            TabPreviewCaptureRules.maximumTargetHeightPx(
+                                TabPreviewCaptureRules.COMPACT_TARGET_WIDTH_PX,
+                            )
+                        },
                     ))
                     val thumbnail = Bitmap.createScaledBitmap(
                         bitmap,
@@ -16890,6 +16894,7 @@ class BrowserController(
         previewRepository.restore(
             validTabIds = restoredTabIds,
             retainedTabIds = BrowserSessionStore.allPersistentTabIds(activity),
+            targetWidthPx = previewBitmapTargetWidthPx(),
         ) { tabId, bitmap ->
             mainHandler.post {
                 if (
@@ -16911,6 +16916,16 @@ class BrowserController(
             }
         }
     }
+
+    private fun previewBitmapTargetWidthPx(): Int =
+        if (isLandscapePreviewLayout()) {
+            TabPreviewCaptureRules.MAX_TARGET_WIDTH_PX
+        } else {
+            TabPreviewCaptureRules.COMPACT_TARGET_WIDTH_PX
+        }
+
+    private fun isLandscapePreviewLayout(): Boolean =
+        activity.resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
     private fun restorePersistedFavicons() {
         val restoredTabIds = tabs.asSequence()
