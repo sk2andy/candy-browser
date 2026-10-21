@@ -10,12 +10,15 @@ import android.graphics.Path
 import android.graphics.drawable.AdaptiveIconDrawable
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
-import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.assertIsNotSelected
+import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.hasText
-import androidx.compose.ui.test.hasTestTag
-import androidx.compose.ui.test.isSelected
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.UiDevice
@@ -53,6 +56,7 @@ class AppIconSettingsInstrumentedTest {
         val choices = listOf(
             AppIconOption.OutlineLight to R.string.app_icon_outline_light,
             AppIconOption.OutlineDark to R.string.app_icon_outline_dark,
+            AppIconOption.JellyBeans to R.string.app_icon_jelly_beans,
             AppIconOption.OutlineLight to R.string.app_icon_outline_light,
             AppIconOption.OutlineDark to R.string.app_icon_outline_dark,
         ) + listOf(evidenceChoice ?: (AppIconOption.Classic to R.string.app_icon_classic))
@@ -60,25 +64,32 @@ class AppIconSettingsInstrumentedTest {
         try {
             composeRule.setContent {
                 MaterialBrowserTheme(settings = AppearanceSettings()) {
-                    AppIconSettings()
+                    SettingsPage(
+                        title = context.getString(R.string.settings_app_icon),
+                        onBack = {},
+                    ) { AppIconSettings() }
                 }
             }
+            composeRule.onNodeWithTag(AppIconSettingsTestTags.choice(AppIconOption.Classic))
+                .assertIsSelected()
             choices.forEach { (option, label) ->
-                composeRule.onNodeWithTag(AppIconSettingsTestTags.Choice).performClick()
-                composeRule.onNode(
-                    hasText(context.getString(label)) and !hasTestTag(AppIconSettingsTestTags.Choice),
-                ).performClick()
+                composeRule.onNodeWithTag(AppIconSettingsTestTags.choice(option))
+                    .performScrollTo()
+                    .assert(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.RadioButton))
+                    .performClick()
+                    .assertIsSelected()
+                AppIconOption.entries.filter { it != option }.forEach { other ->
+                    composeRule.onNodeWithTag(AppIconSettingsTestTags.choice(other)).assertIsNotSelected()
+                }
                 assertEquals(option, selection.selected())
                 assertEquals(option, AppIconSelection(context).selected())
                 assertLauncherContracts(option)
-                composeRule.onNodeWithTag(AppIconSettingsTestTags.Choice).performClick()
-                composeRule.onNode(hasText(context.getString(label)) and isSelected()).assertIsSelected()
+                composeRule.onNode(hasText(context.getString(label))).assertIsSelected()
                 composeRule.waitForIdle()
                 evidenceDirectory.mkdirs()
                 UiDevice.getInstance(instrumentation).takeScreenshot(
                     File(evidenceDirectory, "settings-${option.name}.png"),
                 )
-                composeRule.onNode(hasText(context.getString(label)) and isSelected()).performClick()
             }
         } finally {
             if (evidenceChoice == null) selection.select(AppIconOption.Classic)

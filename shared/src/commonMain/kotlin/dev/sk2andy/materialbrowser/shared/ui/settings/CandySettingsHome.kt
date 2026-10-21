@@ -2,11 +2,15 @@ package dev.sk2andy.materialbrowser.shared.ui.settings
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.filled.Apps
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Extension
 import androidx.compose.material.icons.filled.Face
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Gesture
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.PlayArrow
@@ -121,19 +125,18 @@ internal fun CandySettingsHomeIcon(
         SettingsHomeIcon.Search -> Icons.Filled.Search
         SettingsHomeIcon.Sync -> Icons.Filled.Refresh
         SettingsHomeIcon.Tabs -> Icons.AutoMirrored.Filled.List
-        SettingsHomeIcon.Gestures -> Icons.Filled.Settings
+        SettingsHomeIcon.Gestures -> Icons.Filled.Gesture
         SettingsHomeIcon.TabsAndGestures -> Icons.AutoMirrored.Filled.List
         SettingsHomeIcon.Appearance -> Icons.Filled.Face
-        SettingsHomeIcon.AppIcon -> Icons.Filled.Face
+        SettingsHomeIcon.AppIcon -> Icons.Filled.Apps
         SettingsHomeIcon.Browser -> Icons.Filled.Settings
         SettingsHomeIcon.Player -> Icons.Filled.PlayArrow
         SettingsHomeIcon.Downloads -> Icons.Filled.Download
-        SettingsHomeIcon.Userscripts,
-        SettingsHomeIcon.FirefoxExtensions,
-        -> Icons.Filled.Extension
+        SettingsHomeIcon.Userscripts -> Icons.Filled.AutoAwesome
+        SettingsHomeIcon.FirefoxExtensions -> Icons.Filled.Extension
         SettingsHomeIcon.SiteCapsules -> Icons.Filled.Favorite
         SettingsHomeIcon.ProtectionAndData -> Icons.Filled.Lock
-        SettingsHomeIcon.HistoryAndData -> Icons.AutoMirrored.Filled.List
+        SettingsHomeIcon.HistoryAndData -> Icons.Filled.History
         SettingsHomeIcon.DeveloperOptions -> Icons.Filled.Build
         SettingsHomeIcon.AboutLegal -> Icons.Filled.Info
     }

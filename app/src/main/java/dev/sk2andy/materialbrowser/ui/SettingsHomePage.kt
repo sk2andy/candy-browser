@@ -139,19 +139,18 @@ private fun AndroidSettingsHomeIcon(
         SettingsHomeIcon.Search -> Icons.Default.Search
         SettingsHomeIcon.Sync -> Icons.Default.Refresh
         SettingsHomeIcon.Tabs -> Icons.AutoMirrored.Filled.List
-        SettingsHomeIcon.Gestures -> Icons.Default.Settings
+        SettingsHomeIcon.Gestures -> ImageVector.vectorResource(R.drawable.ic_gesture)
         SettingsHomeIcon.TabsAndGestures -> Icons.AutoMirrored.Filled.List
         SettingsHomeIcon.Appearance -> Icons.Default.Face
-        SettingsHomeIcon.AppIcon -> Icons.Default.Face
+        SettingsHomeIcon.AppIcon -> ImageVector.vectorResource(R.drawable.ic_app_icon)
         SettingsHomeIcon.Browser -> Icons.Default.Settings
         SettingsHomeIcon.Player -> Icons.Default.PlayArrow
         SettingsHomeIcon.Downloads -> ImageVector.vectorResource(R.drawable.ic_reader_download)
-        SettingsHomeIcon.Userscripts,
-        SettingsHomeIcon.FirefoxExtensions,
-        -> ImageVector.vectorResource(R.drawable.ic_symbol_extension)
+        SettingsHomeIcon.Userscripts -> ImageVector.vectorResource(R.drawable.ic_symbol_auto_awesome)
+        SettingsHomeIcon.FirefoxExtensions -> ImageVector.vectorResource(R.drawable.ic_symbol_extension)
         SettingsHomeIcon.SiteCapsules -> Icons.Default.Favorite
         SettingsHomeIcon.ProtectionAndData -> Icons.Default.Lock
-        SettingsHomeIcon.HistoryAndData -> Icons.AutoMirrored.Filled.List
+        SettingsHomeIcon.HistoryAndData -> ImageVector.vectorResource(R.drawable.ic_history)
         SettingsHomeIcon.DeveloperOptions -> Icons.Default.Build
         SettingsHomeIcon.AboutLegal -> Icons.Default.Info
     }

@@ -2,26 +2,35 @@ package dev.sk2andy.materialbrowser.ui
 
 import android.view.View
 import android.widget.ImageView
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.data.AppIconOption
 import dev.sk2andy.materialbrowser.data.AppIconSelection
-import dev.sk2andy.materialbrowser.shared.ui.settings.SettingsPageSpacer
 
 internal object AppIconSettingsTestTags {
-    const val Choice = "appearance_settings_app_icon"
+    fun choice(option: AppIconOption): String = "appearance_settings_app_icon_${option.name}"
 }
 
 @Composable
@@ -29,46 +38,46 @@ internal fun AppIconSettings() {
     val context = LocalContext.current
     val selection = remember(context) { AppIconSelection(context) }
     var selected by remember(selection) { mutableStateOf(selection.selected()) }
-    var expanded by remember { mutableStateOf(false) }
 
-    Box {
-        SettingsChoice(
-            title = stringResource(R.string.settings_app_icon),
-            value = selected.label(),
-            expanded = expanded,
-            onClick = { expanded = true },
-            modifier = Modifier.testTag(AppIconSettingsTestTags.Choice),
-        )
-        SettingsDropdown(
-            expanded = expanded,
-            onDismissRequest = { expanded = false },
-        ) {
-            AppIconOption.entries.forEach { option ->
-                SettingsDropdownItem(
-                    label = option.label(),
-                    selected = option == selected,
-                    leadingIcon = {
-                        AndroidView(
-                            factory = { previewContext ->
-                                ImageView(previewContext).apply {
-                                    setImageResource(option.iconRes)
-                                    scaleType = ImageView.ScaleType.FIT_CENTER
-                                    importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
-                                }
+    SettingsPreferenceGroup {
+        Column(Modifier.selectableGroup()) {
+            AppIconOption.entries.forEachIndexed { index, option ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag(AppIconSettingsTestTags.choice(option))
+                        .selectable(
+                            selected = option == selected,
+                            role = Role.RadioButton,
+                            onClick = {
+                                selection.select(option)
+                                selected = option
                             },
-                            modifier = Modifier.size(24.dp),
                         )
-                    },
-                    onClick = {
-                        selection.select(option)
-                        selected = option
-                        expanded = false
-                    },
-                )
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    AndroidView(
+                        factory = { previewContext ->
+                            ImageView(previewContext).apply {
+                                setImageResource(option.iconRes)
+                                scaleType = ImageView.ScaleType.FIT_CENTER
+                                importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+                            }
+                        },
+                        modifier = Modifier.size(40.dp),
+                    )
+                    Text(
+                        text = option.label(),
+                        modifier = Modifier.weight(1f).padding(horizontal = 16.dp),
+                        style = MaterialTheme.typography.bodyLarge,
+                    )
+                    RadioButton(selected = option == selected, onClick = null)
+                }
+                if (index != AppIconOption.entries.lastIndex) SettingsPreferenceDivider()
             }
         }
     }
-    SettingsPageSpacer()
 }
 
 @Composable
