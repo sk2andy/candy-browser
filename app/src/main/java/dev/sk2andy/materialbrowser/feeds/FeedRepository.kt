@@ -26,6 +26,27 @@ private constructor(context: Context, val profileId: String, val isPrivate: Bool
     private val refreshMutex = Mutex()
     private val mutableState = MutableStateFlow(FeedState())
     val state: StateFlow<FeedState> = mutableState.asStateFlow()
+    private val catalog =
+        FeedCatalogClient(
+            requireAccess = {
+                FeedCatalogRules.requireNormalProfile(isPrivate)
+                requireAccess()
+            }
+        )
+
+    suspend fun searchCatalog(query: FeedCatalogQuery): Result<FeedCatalogPage> =
+        try {
+            FeedCatalogRules.requireNormalProfile(isPrivate)
+            requireAccess()
+            val page = catalog.search(query)
+            requireAccess()
+            Result.success(page)
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (error: Exception) {
+            // A discovery outage must not leave an unrelated error in the subscription inbox.
+            Result.failure(error)
+        }
 
     suspend fun load(): Result<Unit> = outcome {
         withContext(Dispatchers.IO) {

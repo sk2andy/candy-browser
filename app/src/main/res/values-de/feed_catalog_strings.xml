@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feed_catalog_title">Quellen entdecken</string>
+    <string name="feed_catalog_eyebrow">NEUGIER. OHNE GRENZEN.</string>
+    <string name="feed_catalog_headline">Dein nächster\nLieblingsfeed.</string>
+    <string name="feed_catalog_intro">Große Geschichten. Unabhängige Stimmen. Finde etwas, dem du gerne folgst.</string>
+    <string name="feed_catalog_search_hint">Thema, Name oder Website</string>
+    <string name="feed_catalog_search">Quellen suchen</string>
+    <string name="feed_catalog_clear">Suchbegriff löschen</string>
+    <string name="feed_catalog_manual">Feed-Adresse</string>
+    <string name="feed_catalog_topics">Worauf bist du neugierig?</string>
+    <string name="feed_catalog_technology">Technik</string>
+    <string name="feed_catalog_science">Wissen</string>
+    <string name="feed_catalog_design">Design &amp; Kultur</string>
+    <string name="feed_catalog_food">Essen</string>
+    <string name="feed_catalog_travel">Unterwegs</string>
+    <string name="feed_catalog_nature">Natur</string>
+    <string name="feed_catalog_all_sources">Alle Quellen</string>
+    <string name="feed_catalog_blogs">Blogs</string>
+    <string name="feed_catalog_news">Nachrichten</string>
+    <string name="feed_catalog_all_languages">Alle Sprachen</string>
+    <plurals name="feed_catalog_languages_count">
+        <item quantity="one">%1$d Sprache</item>
+        <item quantity="other">%1$d Sprachen</item>
+    </plurals>
+    <string name="feed_catalog_languages_title">Deine Lesesprachen</string>
+    <string name="feed_catalog_languages_intro">Eine Sprache, mehrere oder die ganze Welt.</string>
+    <string name="feed_catalog_language_search">Sprache finden</string>
+    <string name="feed_catalog_language_unknown">Sprache nicht angegeben</string>
+    <string name="feed_catalog_language_none">Keine Sprache gefunden. Versuche ihren Namen oder das Sprachkürzel.</string>
+    <string name="feed_catalog_language_apply">Auswahl übernehmen</string>
+    <plurals name="feed_catalog_languages_selection">
+        <item quantity="one">%1$d Sprache ausgewählt</item>
+        <item quantity="other">%1$d Sprachen ausgewählt</item>
+    </plurals>
+    <string name="feed_catalog_world_selected">Die ganze Welt ist dabei</string>
+    <string name="feed_catalog_results">Quellen zu „%1$s“</string>
+    <plurals name="feed_catalog_loaded_count">
+        <item quantity="one">%1$d Quelle in dieser Auswahl</item>
+        <item quantity="other">%1$d Quellen in dieser Auswahl</item>
+    </plurals>
+    <string name="feed_catalog_language_subset">Sprachen filtern die bisher geladene Auswahl. Lade weitere Quellen, um mehr passende Stimmen zu entdecken.</string>
+    <string name="feed_catalog_preview">Vorschau</string>
+    <string name="feed_catalog_subscribed">Abonniert</string>
+    <string name="feed_catalog_loading">Neue Stimmen finden …</string>
+    <string name="feed_catalog_loading_hint">Deine nächste gute Quelle ist vielleicht schon dabei.</string>
+    <string name="feed_catalog_error_title">Die Welt wartet kurz.</string>
+    <string name="feed_catalog_error_body">Der Katalog ist gerade nicht erreichbar. Deine Abos bleiben erhalten.</string>
+    <string name="feed_catalog_retry">Erneut versuchen</string>
+    <string name="feed_catalog_empty_title">Noch nicht das Richtige?</string>
+    <string name="feed_catalog_empty_body">Versuche einen anderen Begriff, wähle ein Thema oder erweitere deine Sprachen.</string>
+    <string name="feed_catalog_more">Weitere Quellen laden</string>
+    <string name="feed_catalog_more_failed">Weitere Quellen konnten nicht geladen werden. Deine Ergebnisse bleiben erhalten.</string>
+    <string name="feed_catalog_reset">Themen entdecken</string>
+    <string name="feed_catalog_credit">Quellen entdecken mit RSS Amplifier</string>
+    <string name="feed_catalog_privacy">Suchbegriffe werden erst beim Suchen oder Auswählen eines Themas an RSS Amplifier gesendet.</string>
+    <string name="feed_catalog_private_title">Im normalen Tab entdecken</string>
+    <string name="feed_catalog_private_body">Die Online-Quellensuche ist im privaten Browsermodus aus. Eine Feed-Adresse kannst du weiterhin ansehen, ohne ein Abo zu speichern.</string>
+    <string name="feed_catalog_no_description">Lerne diese Quelle in der Vorschau kennen.</string>
+    <string name="feed_catalog_close_languages">Lesesprachen schließen</string>
+    <string name="feed_catalog_website_unknown">Originalfeed</string>
+</resources>

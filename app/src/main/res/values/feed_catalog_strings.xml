@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
+    <string name="feed_catalog_title">Discover sources</string>
+    <string name="feed_catalog_eyebrow">CURIOSITY. WITHOUT BORDERS.</string>
+    <string name="feed_catalog_headline">Your next\nfavorite feed.</string>
+    <string name="feed_catalog_intro">Big stories. Independent voices. Find something worth following.</string>
+    <string name="feed_catalog_search_hint">Topic, name, or website</string>
+    <string name="feed_catalog_search">Search sources</string>
+    <string name="feed_catalog_clear">Clear search</string>
+    <string name="feed_catalog_manual">Feed address</string>
+    <string name="feed_catalog_topics">What are you curious about?</string>
+    <string name="feed_catalog_technology">Technology</string>
+    <string name="feed_catalog_science">Science</string>
+    <string name="feed_catalog_design">Design &amp; culture</string>
+    <string name="feed_catalog_food">Food</string>
+    <string name="feed_catalog_travel">Travel</string>
+    <string name="feed_catalog_nature">Nature</string>
+    <string name="feed_catalog_all_sources">All sources</string>
+    <string name="feed_catalog_blogs">Blogs</string>
+    <string name="feed_catalog_news">News</string>
+    <string name="feed_catalog_all_languages">All languages</string>
+    <plurals name="feed_catalog_languages_count">
+        <item quantity="one">%1$d language</item>
+        <item quantity="other">%1$d languages</item>
+    </plurals>
+    <string name="feed_catalog_languages_title">Your reading languages</string>
+    <string name="feed_catalog_languages_intro">Choose one, several, or the whole world.</string>
+    <string name="feed_catalog_language_search">Find a language</string>
+    <string name="feed_catalog_language_unknown">Language not provided</string>
+    <string name="feed_catalog_language_none">No language found. Try its name or language code.</string>
+    <string name="feed_catalog_language_apply">Apply languages</string>
+    <plurals name="feed_catalog_languages_selection">
+        <item quantity="one">%1$d language selected</item>
+        <item quantity="other">%1$d languages selected</item>
+    </plurals>
+    <string name="feed_catalog_world_selected">The whole world is included</string>
+    <string name="feed_catalog_results">Sources for “%1$s”</string>
+    <plurals name="feed_catalog_loaded_count">
+        <item quantity="one">%1$d source in this selection</item>
+        <item quantity="other">%1$d sources in this selection</item>
+    </plurals>
+    <string name="feed_catalog_language_subset">Languages filter the sources loaded so far. Load more to discover further matches.</string>
+    <string name="feed_catalog_preview">Preview</string>
+    <string name="feed_catalog_subscribed">Subscribed</string>
+    <string name="feed_catalog_loading">Finding new voices…</string>
+    <string name="feed_catalog_loading_hint">Your next good source could be just around the corner.</string>
+    <string name="feed_catalog_error_title">The world can wait a moment.</string>
+    <string name="feed_catalog_error_body">The directory could not be reached. Your subscriptions are safe.</string>
+    <string name="feed_catalog_retry">Try again</string>
+    <string name="feed_catalog_empty_title">Not quite what you had in mind?</string>
+    <string name="feed_catalog_empty_body">Try another term, choose a topic, or broaden your languages.</string>
+    <string name="feed_catalog_more">Load more sources</string>
+    <string name="feed_catalog_more_failed">More sources could not be loaded. Your results are still here.</string>
+    <string name="feed_catalog_reset">Explore topics</string>
+    <string name="feed_catalog_credit">Source discovery powered by RSS Amplifier</string>
+    <string name="feed_catalog_privacy">Search terms are sent to RSS Amplifier only when you search or choose a topic.</string>
+    <string name="feed_catalog_private_title">Discover in a regular tab</string>
+    <string name="feed_catalog_private_body">Online source discovery is off in private browsing. You can still preview a feed address without saving a subscription.</string>
+    <string name="feed_catalog_no_description">Open a preview to get to know this source.</string>
+    <string name="feed_catalog_close_languages">Close reading languages</string>
+    <string name="feed_catalog_website_unknown">Original feed</string>
+</resources>

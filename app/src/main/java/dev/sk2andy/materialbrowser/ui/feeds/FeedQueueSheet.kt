@@ -1,9 +1,7 @@
 package dev.sk2andy.materialbrowser.ui.feeds
 
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
@@ -13,19 +11,15 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.feeds.FeedPlaybackManager
 import dev.sk2andy.materialbrowser.feeds.FeedRepository
 import dev.sk2andy.materialbrowser.reader.ReaderSpeechStatus
-import dev.sk2andy.materialbrowser.shared.ui.CandySheetDragIndicator
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -44,16 +38,9 @@ internal fun FeedQueueSheet(repository: FeedRepository, onDismiss: () -> Unit) {
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         dragHandle = {
-            Box(
-                Modifier.fillMaxWidth()
-                    .height(48.dp)
-                    .semantics { contentDescription = dismissDescription }
-                    .testTag("feeds_queue_handle"),
-                contentAlignment = Alignment.Center,
-            ) {
-                CandySheetDragIndicator()
-            }
+            FeedSheetDragHandle(dismissDescription, Modifier.testTag("feeds_queue_handle"))
         },
+        sheetMaxWidth = 640.dp,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
         modifier = Modifier.fillMaxHeight().statusBarsPadding(),
     ) {

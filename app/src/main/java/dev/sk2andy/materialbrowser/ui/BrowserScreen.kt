@@ -79,6 +79,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.feeds.FeedRepository
 import dev.sk2andy.materialbrowser.ui.feeds.FeedsEntry
+import dev.sk2andy.materialbrowser.ui.feeds.rememberFeedsEntryState
 import dev.sk2andy.materialbrowser.ui.feeds.FeedsHost
 import dev.sk2andy.materialbrowser.browser.AddressResolver
 import dev.sk2andy.materialbrowser.browser.BLANK_URL
@@ -403,12 +404,16 @@ internal fun BrowserScreen(
         exitHeroVisible = overviewExitHeroVisible,
     )
     val selectedTab = controller.selectedTab
-    var feedsEntry by remember(controller.activeProfileId, selectedTab.id, selectedTab.isIncognito) {
-        mutableStateOf<FeedsEntry?>(null)
-    }
-    var feedsReturnEntry by remember(controller.activeProfileId, selectedTab.id, selectedTab.isIncognito) {
-        mutableStateOf<FeedsEntry?>(null)
-    }
+    var feedsEntry by rememberFeedsEntryState(
+        controller.activeProfileId,
+        selectedTab.id,
+        selectedTab.isIncognito,
+    )
+    var feedsReturnEntry by rememberFeedsEntryState(
+        controller.activeProfileId,
+        selectedTab.id,
+        selectedTab.isIncognito,
+    )
     val feedsSavedState = rememberSaveableStateHolder()
     val feedsProgressScope = rememberCoroutineScope()
     val statusBarScrollPageVisible = !settingsVisible && !tabOverviewVisible &&

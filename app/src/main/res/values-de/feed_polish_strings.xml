@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feeds_manual_address">Feed-Adresse eingeben</string>
+    <string name="feeds_manual_note">Bring eine Quelle mit, die du magst. Website oder RSS-/Atom-Adresse eingeben und vor dem Abonnieren kennenlernen.</string>
+    <string name="feeds_latest_articles">Neueste Artikel</string>
+    <string name="feeds_subscription_failed">Die Quelle konnte nicht gespeichert werden. Deine Abos bleiben unverändert. Versuche es erneut.</string>
+    <string name="feeds_sources_empty_title">Platz für gute Stimmen.</string>
+    <string name="feeds_sources_empty_note">Entdecke eine Quelle aus aller Welt oder bring deine eigene Feed-Adresse mit. Neue Artikel findest du in deiner Inbox.</string>
+</resources>

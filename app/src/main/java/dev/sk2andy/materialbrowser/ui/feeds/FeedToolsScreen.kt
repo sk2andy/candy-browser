@@ -1,6 +1,8 @@
 package dev.sk2andy.materialbrowser.ui.feeds
 
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -47,9 +49,9 @@ internal fun FeedToolsScreen(
     onNotificationPermission: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var editingSearch by remember { mutableStateOf<FeedSearch?>(null) }
-    var editingRule by remember { mutableStateOf<FeedRule?>(null) }
-    var settingsVisible by remember { mutableStateOf(false) }
+    var editingSearch by remember { mutableStateOf<FeedEditorSession<FeedSearch>?>(null) }
+    var editingRule by remember { mutableStateOf<FeedEditorSession<FeedRule>?>(null) }
+    var settingsEditor by remember { mutableStateOf<FeedEditorSession<FeedSettings>?>(null) }
     LazyColumn(
         modifier,
         contentPadding = PaddingValues(20.dp),
@@ -59,8 +61,8 @@ internal fun FeedToolsScreen(
             FeedToolSection(R.string.feeds_searches) {
                 state.searches.forEach { search ->
                     TextButton(onClick = { onOpenSearch(search) }) { Text(search.name) }
-                    Row {
-                        TextButton(onClick = { editingSearch = search }) {
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        TextButton(onClick = { editingSearch = FeedEditorSession(search) }) {
                             Text(stringResource(R.string.feeds_edit))
                         }
                         TextButton(onClick = { mutate { repository.removeSearch(search.id) } }) {
@@ -69,7 +71,7 @@ internal fun FeedToolsScreen(
                     }
                 }
                 TextButton(
-                    onClick = { editingSearch = FeedSearch(UUID.randomUUID().toString(), "") }
+                    onClick = { editingSearch = FeedEditorSession(FeedSearch(UUID.randomUUID().toString(), "")) }
                 ) {
                     Text(stringResource(R.string.feeds_new_search))
                 }
@@ -93,8 +95,8 @@ internal fun FeedToolsScreen(
                     FeedSwitchRow(R.string.feeds_enabled, rule.enabled) { enabled ->
                         mutate { repository.saveRule(rule.copy(enabled = enabled)) }
                     }
-                    Row {
-                        TextButton(onClick = { editingRule = rule }) {
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        TextButton(onClick = { editingRule = FeedEditorSession(rule) }) {
                             Text(stringResource(R.string.feeds_edit))
                         }
                         TextButton(onClick = { mutate { repository.removeRule(rule.id) } }) {
@@ -105,7 +107,7 @@ internal fun FeedToolsScreen(
                 TextButton(
                     onClick = {
                         editingRule =
-                            FeedRule(UUID.randomUUID().toString(), "", "", FeedRuleAction.Star)
+                            FeedEditorSession(FeedRule(UUID.randomUUID().toString(), "", "", FeedRuleAction.Star))
                     }
                 ) {
                     Text(stringResource(R.string.feeds_add_rule))
@@ -133,7 +135,7 @@ internal fun FeedToolsScreen(
         }
         item {
             FeedToolSection(R.string.feeds_settings) {
-                TextButton(onClick = { settingsVisible = true }) {
+                TextButton(onClick = { settingsEditor = FeedEditorSession(state.settings) }) {
                     Text(stringResource(R.string.feeds_storage))
                 }
                 FeedSwitchRow(R.string.feeds_refresh_open, state.settings.refreshOnOpen) {
@@ -151,38 +153,50 @@ internal fun FeedToolsScreen(
             }
         }
     }
-    editingSearch?.let { search ->
+    editingSearch?.let { session ->
+        val search = session.value
         FeedSearchEditor(
             search,
             state,
             onSave = {
-                mutate { repository.saveSearch(it) }
-                editingSearch = null
+                mutate {
+                    repository.saveSearch(it).also { result ->
+                        if (result.isSuccess && editingSearch === session) editingSearch = null
+                    }
+                }
             },
             onDismiss = { editingSearch = null },
         )
     }
-    editingRule?.let { rule ->
+    editingRule?.let { session ->
+        val rule = session.value
         FeedRuleEditor(
             rule,
             state,
             onSave = {
                 if (it.action == FeedRuleAction.Notify) onNotificationPermission()
-                mutate { repository.saveRule(it) }
-                editingRule = null
+                mutate {
+                    repository.saveRule(it).also { result ->
+                        if (result.isSuccess && editingRule === session) editingRule = null
+                    }
+                }
             },
             onDismiss = { editingRule = null },
         )
     }
-    if (settingsVisible)
+    settingsEditor?.let { session ->
         FeedSettingsDialog(
-            state.settings,
+            session.value,
             onSave = {
-                mutate { repository.updateSettings(it) }
-                settingsVisible = false
+                mutate {
+                    repository.updateSettings(it).also { result ->
+                        if (result.isSuccess && settingsEditor === session) settingsEditor = null
+                    }
+                }
             },
-            onDismiss = { settingsVisible = false },
+            onDismiss = { settingsEditor = null },
         )
+    }
 }
 
 @Composable
@@ -312,24 +326,29 @@ private fun FeedRuleEditor(
                     stringResource(R.string.feeds_rule_action),
                     style = MaterialTheme.typography.titleSmall,
                 )
-                FeedRuleAction.entries.forEach { value ->
-                    FilterChip(
-                        action == value,
-                        { action = value },
-                        label = {
-                            Text(
-                                stringResource(
-                                    when (value) {
-                                        FeedRuleAction.MarkRead -> R.string.feeds_rule_read
-                                        FeedRuleAction.Star -> R.string.feeds_rule_star
-                                        FeedRuleAction.Hide -> R.string.feeds_rule_hide
-                                        FeedRuleAction.Tag -> R.string.feeds_rule_tag
-                                        FeedRuleAction.Notify -> R.string.feeds_rule_notify
-                                    }
+                Row(
+                    Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    FeedRuleAction.entries.forEach { value ->
+                        FilterChip(
+                            action == value,
+                            { action = value },
+                            label = {
+                                Text(
+                                    stringResource(
+                                        when (value) {
+                                            FeedRuleAction.MarkRead -> R.string.feeds_rule_read
+                                            FeedRuleAction.Star -> R.string.feeds_rule_star
+                                            FeedRuleAction.Hide -> R.string.feeds_rule_hide
+                                            FeedRuleAction.Tag -> R.string.feeds_rule_tag
+                                            FeedRuleAction.Notify -> R.string.feeds_rule_notify
+                                        }
+                                    )
                                 )
-                            )
-                        },
-                    )
+                            },
+                        )
+                    }
                 }
                 if (action == FeedRuleAction.Tag)
                     OutlinedTextField(
@@ -371,13 +390,18 @@ private fun FeedScopeChoice(
     onFolder: (String?) -> Unit,
 ) {
     Text(stringResource(R.string.feeds_source), style = MaterialTheme.typography.titleSmall)
-    FilterChip(
-        source == null,
-        { onSource(null) },
-        label = { Text(stringResource(R.string.feeds_any_source)) },
-    )
-    state.sources.forEach { item ->
-        FilterChip(item.id == source, { onSource(item.id) }, label = { Text(item.title) })
+    Row(
+        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        FilterChip(
+            source == null,
+            { onSource(null) },
+            label = { Text(stringResource(R.string.feeds_any_source)) },
+        )
+        state.sources.forEach { item ->
+            FilterChip(item.id == source, { onSource(item.id) }, label = { Text(item.title) })
+        }
     }
     FeedFolderChoice(state, folder, onFolder)
 }

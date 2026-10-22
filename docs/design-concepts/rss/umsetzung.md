@@ -6,12 +6,76 @@ Stand: 22. Oktober 2026. Entwurf zur Abstimmung, keine implementierte App-Funkti
 | --- | --- |
 | [Klickbarer Entwurf](entwurf.html) | Android-Vorschau, helle/dunkle Darstellung, interaktive Beispieldaten |
 | [Ursprüngliches Konzept](index.html) | Bestehender erster Entwurf; unverändert erhalten |
+| [Internationaler Quellenkatalog](entwurf.html#catalog) | Themen, Sprachwahl, Quellen-Vorschau; optional echte RSS-Amplifier-Suche |
 | [Reader Studio](../../reader-studio/README.md) | Bestehende Reader-, Speicher- und Vorleseverträge |
 
 ## Ziel und Navigation
 
 Eigene Quellen abonnieren, Nachrichtenflut begrenzen und ausgewählte Artikel in Ruhe lesen.
 Feed-Erkennung bleibt im Browser-Seitenmenü. „Feeds“ öffnet abonnierte Quellen, „Bibliothek“ die gemeinsame Sammlung. Reader Mode bleibt als Aktion für die aktuelle Website erhalten.
+
+## Internationaler Quellenkatalog — neuer Entwurf
+
+Entdecken liegt unter **Quellen → Quellen hinzufügen**, zusätzlich über den Inbox-Einstieg.
+**Feed-Adresse eingeben** steht zusätzlich direkt auf der Quellen-Seite und im Katalog bereit.
+Dieser manuelle Weg benötigt keinen Katalogeintrag; Adresse, Ordner und simuliertes Abo sind klickbar.
+Die bestehende Feed-Erkennung einer besuchten Website bleibt eine eigene Vorschau.
+Dieser Ausbau ändert nur den HTML-Entwurf; keine Android-Integration, persistenten Abos oder Zahlungen.
+
+| Oberfläche | Entscheidung im Entwurf |
+| --- | --- |
+| Einstieg | Eigene Entdecken-Ansicht mit typografischem Hero, Globus und Themenkacheln |
+| Suche | Gefüllte Material-Suche, Suchsymbol, Löschen, explizites Absenden per Enter oder Pfeil |
+| Themen | Technik, Wissen, Design/Kultur, Essen, Unterwegs, Natur als redaktionelle Einstiegsauswahl |
+| Suchergebnisse | Tabs Alle Quellen / Blogs / Nachrichten; Themenchips horizontal in einer Zeile |
+| Sprachen | Standard **Alle Sprachen** unabhängig von App-Sprache, Mehrfachauswahl im Sheet; Suche nach deutschen, englischen und muttersprachlichen Namen sowie Kürzeln |
+| Quellenkarten | Name, Domain, Kurzbeschreibung, Sprache und Quellentyp; Vorschau statt sofortiger Abo-Aktion |
+| Vorschau | Originaltitel, Beschreibung, letzte Beitragstitel, Originalseite, Ordnerwahl und Quelle abonnieren |
+| Abo-Rückmeldung | „Eine gute Stimme mehr.“; anschließend weiter entdecken oder Quelle in Quellenliste finden |
+| Fehler / leer | Wiederholen, andere Suchbegriffe, Sprachen erweitern; vorhandene Abos bleiben erhalten |
+| Schrift / RTL | Originaltitel und Beschreibungen mit automatischer Textrichtung; UI bleibt in der gewählten App-Sprache |
+
+### Beispieldaten und echte API
+
+Standardmäßig zeigt der Entwurf ausdrücklich gekennzeichnete Beispieldaten einschließlich
+beispielhafter Artikelüberschriften. Der Schalter **Echte RSS-Amplifier-Suche** außerhalb des
+Telefonrahmens aktiviert optional echte, nur lesende Anfragen. Erst Absenden oder Themenwahl
+startet die Suche; Umschalten allein sendet nichts. Suchtext wird nicht beim Tippen übertragen.
+Kein API-Key, keine Cookies, kein persistenter Suchverlauf. Abos sind in beiden Modi nur simuliert
+und gehen beim Neuladen verloren. Im privaten Demo-Tab sind Online-Suche und Online-Vorschau
+gesperrt, Abos ebenfalls. Zurück/Navigation/Wechsel der Vorschau brechen laufende Anfragen ab.
+
+| Geprüfter API-Zugang | Nutzung im Entwurf / Grenze |
+| --- | --- |
+| `GET /api/search?q=…&kind=blogs|news&limit=6&offset=…` | Zwei Quellentypen, keine Podcast- oder Videosuche. Verwendet Quellen aus `blogs`, nicht Beitragsresultate aus `posts`. |
+| `GET /api/topics/{slug}?limit=16&offset=…` | Themenauswahl; auf Blogs/Nachrichten begrenzen. Redaktionelle Themenbezeichnungen sind Candy-Entscheidungen. |
+| `GET /api/feeds/{slug}` | Original-Feed-Adresse, Sprache, Beschreibung, Status und letzte Beiträge. Höchstens vier parallele Detailabrufe. |
+| Sprache | Kein bestätigter globaler Sprachfilter im API-Vertrag. Sprachwahl filtert ausschließlich geladene Quellen; UI kennzeichnet „Sprachfilter für diese Auswahl“. Weitere Quellen nachladbar. |
+| Trefferzahlen | Zeigt nur tatsächlich geladene, gefilterte, nach Feed-Adresse deduplizierte Quellen. Keine vermeintlich vollständigen weltweiten Trefferzahlen. |
+| Externe Daten | Als Text darstellen, HTML nicht ausführen. Nur HTTP(S)-Links ohne Zugangsdaten; Originalfeed statt Amplifier-Aggregationsfeed für späteres Abo. |
+| Vorschau-Abbruch | Sheet-Wechsel, Escape und Zurück invalidieren ausstehende Antworten; alte Ergebnisse dürfen keine neue Oberfläche überschreiben. |
+
+API und CORS am 22. Oktober 2026 im Browser überprüft. Für die App-Implementierung bleiben
+Abdeckung/Qualität der Suchergebnisse, echte globale Sprachfilterung und Profilgrenzen zu lösen.
+Auch der große Provider-Katalog ist keine Garantie vollständiger Abdeckung jeder Sprache.
+
+Lokale Vorschau: `python3 docs/design-concepts/rss/preview_server.py` startet auf
+`http://127.0.0.1:8770/docs/design-concepts/rss/entwurf.html#catalog`. Die bereits geöffnete
+Vorschau auf Port 8769 verwendet denselben lokalen API-Relay. Er bindet ausschließlich an
+Loopback, akzeptiert nur die drei oben genannten Endpunktfamilien und leitet nur Lesezugriffe
+an den fest vorgegebenen Provider weiter. Keine fremden URLs, Cookies oder API-Schlüssel.
+So bleibt die echte Suche unabhängig von den HTTPS-Einschränkungen des Vorschau-Browsers
+testbar. Andere Hosts verwenden die öffentliche API direkt. Ist der Relay nicht gestartet,
+funktioniert der Beispielkatalog weiter und Live-Suche zeigt den Fehlerzustand mit Wiederholen.
+
+**Aus M3:** Search als gefüllte, abgerundete Oberfläche; Tabs für Inhaltskategorien;
+Filterchips, Checkboxen für Mehrfachauswahl, semantische Farbrollen und Expressive-Bewegung.
+**Candy-Designentscheidung:** Globusillustration, Themenauswahl, Kartenkomposition,
+einzeilig scrollende Themenchips, Sprachwahl und Abo-Bestätigung. Maße und Komposition
+des HTML-Telefons sind Vorschauwerte, keine neue normative Android-Designspezifikation.
+
+Quellen: [RSS-Amplifier-API und Formate](https://rssamplifier.com/llms.txt),
+[öffentliche API](https://rssamplifier.com/api/feeds), [Nutzungsbedingungen](https://rssamplifier.com/terms).
 
 | Hauptbereich | Aufgabe | Unteransichten |
 | --- | --- | --- |

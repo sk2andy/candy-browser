@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
+    <string name="feeds_manual_address">Enter feed address</string>
+    <string name="feeds_manual_note">Bring a source you love. Enter its website or RSS/Atom feed address, then take a look before subscribing.</string>
+    <string name="feeds_latest_articles">Latest articles</string>
+    <string name="feeds_subscription_failed">This source could not be saved. Your subscriptions are unchanged. Try again.</string>
+    <string name="feeds_sources_empty_title">Make room for good voices.</string>
+    <string name="feeds_sources_empty_note">Discover a source from around the world, or bring your own feed address. New articles will arrive in your inbox.</string>
+</resources>

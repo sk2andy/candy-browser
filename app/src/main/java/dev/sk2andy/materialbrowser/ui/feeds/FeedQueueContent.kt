@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -52,6 +51,7 @@ import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.feeds.FeedArticle
@@ -216,7 +216,6 @@ private fun QueuePlayer(
                     favicon = favicon,
                     source = article?.let { queueSource(it, state) }.orEmpty(),
                 )
-                Spacer(Modifier.weight(1f))
                 Text(
                     stringResource(
                         when {
@@ -228,7 +227,11 @@ private fun QueuePlayer(
                             else -> R.string.feeds_player_ready
                         }
                     ),
+                    modifier = Modifier.weight(1f).padding(start = 12.dp),
                     style = MaterialTheme.typography.labelLarge,
+                    textAlign = TextAlign.End,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
             Column(

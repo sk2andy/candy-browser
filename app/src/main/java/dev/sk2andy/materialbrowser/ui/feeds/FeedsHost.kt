@@ -46,6 +46,7 @@ import dev.sk2andy.materialbrowser.reader.ReaderExtractionResult
 import dev.sk2andy.materialbrowser.reader.ReaderLibraryRepository
 import dev.sk2andy.materialbrowser.reader.ReaderLibraryState
 import dev.sk2andy.materialbrowser.ui.ReaderStudioScreen
+import java.util.UUID
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -56,6 +57,7 @@ internal data class FeedsEntry(
     val libraryOnly: Boolean = false,
     val discoveryUrl: String? = null,
     val queueRequestId: Int = 0,
+    val invocationToken: String = UUID.randomUUID().toString(),
 )
 
 /** Owns platform launchers and Reader transitions without creating browser history entries. */
@@ -88,11 +90,10 @@ internal fun FeedsHost(
             }
         }
     var importPreview by remember { mutableStateOf<FeedImportPreview?>(null) }
-    var discoveryCandidates by remember { mutableStateOf<List<String>>(emptyList()) }
-    var selectedFeedUrl by remember(entry) { mutableStateOf<String?>(null) }
-    var queueVisible by remember { mutableStateOf(entry.queueRequestId > 0) }
-    LaunchedEffect(entry.queueRequestId) {
-        if (entry.queueRequestId > 0 && !repository.isPrivate) queueVisible = true
+    val launchState = rememberFeedLaunchState(repository.profileId, repository.isPrivate)
+    LaunchedEffect(repository, entry.invocationToken, entry.queueRequestId) {
+        if (!repository.isPrivate)
+            launchState.acceptQueueRequest(entry.invocationToken, entry.queueRequestId)
     }
     var loadingArticle by remember { mutableStateOf(false) }
     var libraryRequest by remember { mutableStateOf(0) }
@@ -148,21 +149,24 @@ internal fun FeedsHost(
         if (!repository.isPrivate && state.loaded)
             FeedWorkScheduler.update(context, repository.profileId, state)
     }
-    LaunchedEffect(entry.discoveryUrl) {
-        entry.discoveryUrl?.let { url ->
-            repository
-                .discover(url)
-                .onSuccess { candidates ->
-                    if (candidates.size == 1) selectedFeedUrl = candidates.first().url
-                    else if (candidates.isNotEmpty())
-                        discoveryCandidates = candidates.map { it.url }
-                    else selectedFeedUrl = url
-                }
-                .onFailure {
-                    selectedFeedUrl = url
-                    showFailure()
-                }
-        }
+    LaunchedEffect(repository, entry.invocationToken, entry.discoveryUrl) {
+        entry.discoveryUrl
+            ?.takeIf { launchState.needsDiscovery(entry.invocationToken, it) }
+            ?.let { url ->
+                repository
+                    .discover(url)
+                    .onSuccess { candidates ->
+                        launchState.completeDiscovery(
+                            entry.invocationToken,
+                            url,
+                            candidates.map { it.url },
+                        )
+                    }
+                    .onFailure {
+                        launchState.completeDiscovery(entry.invocationToken, url, emptyList())
+                        showFailure()
+                    }
+            }
     }
     val importLauncher =
         rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
@@ -253,7 +257,8 @@ internal fun FeedsHost(
             legacySnapshots =
                 library.snapshots.filter { it.sourceProfileId == null && !it.isPrivate },
             libraryOnly = entry.libraryOnly,
-            initialFeedUrl = selectedFeedUrl,
+            initialFeedUrl = launchState.selectedFeedUrl,
+            onInitialFeedConsumed = launchState::consumeSelectedFeed,
             libraryRequest = libraryRequest,
             onOpenArticle = ::openArticle,
             onOpenSnapshot = {
@@ -270,7 +275,7 @@ internal fun FeedsHost(
             onRemoveSnapshot = { snapshot ->
                 reader.deleteSnapshot(snapshot.id, false) { library = it }
             },
-            onPlayQueue = { if (!repository.isPrivate) queueVisible = true },
+            onPlayQueue = { if (!repository.isPrivate) launchState.queueVisible = true },
             onImportOpml = {
                 importLauncher.launch(
                     arrayOf("text/*", "application/xml", "application/octet-stream")
@@ -284,7 +289,7 @@ internal fun FeedsHost(
             onDismiss = onDismiss,
         )
         document
-            ?.takeUnless { queueVisible }
+            ?.takeUnless { launchState.queueVisible }
             ?.let { opened ->
                 ReaderStudioScreen(
                     result = ReaderExtractionResult.Success(opened),
@@ -359,7 +364,7 @@ internal fun FeedsHost(
                                         modifier = Modifier.testTag("feed_reader_queue"),
                                     )
                                     TextButton(
-                                        onClick = { queueVisible = true },
+                                        onClick = { launchState.queueVisible = true },
                                         modifier = Modifier.testTag("feed_reader_open_queue"),
                                     ) {
                                         Text(stringResource(R.string.feeds_queue))
@@ -378,7 +383,8 @@ internal fun FeedsHost(
                 )
             }
         if (loadingArticle) LinearProgressIndicator(Modifier.fillMaxWidth())
-        if (queueVisible) FeedQueueSheet(repository, onDismiss = { queueVisible = false })
+        if (launchState.queueVisible)
+            FeedQueueSheet(repository, onDismiss = { launchState.queueVisible = false })
     }
     importPreview?.let { preview ->
         FeedImportDialog(
@@ -392,26 +398,19 @@ internal fun FeedsHost(
             onDismiss = { importPreview = null },
         )
     }
-    if (discoveryCandidates.isNotEmpty())
+    if (launchState.discoveryCandidates.isNotEmpty())
         AlertDialog(
-            onDismissRequest = { discoveryCandidates = emptyList() },
+            onDismissRequest = launchState::dismissCandidates,
             title = { Text(stringResource(R.string.feeds_sources)) },
             text = {
                 androidx.compose.foundation.layout.Column {
-                    discoveryCandidates.forEach { url ->
-                        TextButton(
-                            onClick = {
-                                selectedFeedUrl = url
-                                discoveryCandidates = emptyList()
-                            }
-                        ) {
-                            Text(url)
-                        }
+                    launchState.discoveryCandidates.forEach { url ->
+                        TextButton(onClick = { launchState.selectCandidate(url) }) { Text(url) }
                     }
                 }
             },
             confirmButton = {
-                TextButton(onClick = { discoveryCandidates = emptyList() }) {
+                TextButton(onClick = launchState::dismissCandidates) {
                     Text(stringResource(android.R.string.cancel))
                 }
             },
