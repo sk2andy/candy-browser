@@ -3,56 +3,298 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Candy RSS – Lesemodi</title>
+<title>Candy Reader Studio · Bibliothek & Feeds</title>
 <style>
-:root{color-scheme:light;--bg:#f0eff7;--surface:#fff;--surface2:#e7e8f0;--ink:#272a35;--muted:#626778;--blue:#50618f;--line:#d9dbe5;--pink:#ed3d79}*{box-sizing:border-box}body{margin:0;background:#e6e6ef;color:var(--ink);font:15px/1.45 system-ui,-apple-system,sans-serif}.page{max-width:1100px;margin:auto;padding:30px 24px 48px}.eyebrow{display:inline-flex;padding:7px 12px;border-radius:24px;background:var(--surface2);color:var(--blue);font-weight:700;font-size:12px;letter-spacing:.04em}.intro h1{font-size:32px;line-height:1.15;margin:14px 0 8px}.intro p{max-width:720px;margin:0;color:var(--muted)}.switch{display:flex;gap:8px;margin:25px 0 18px}.switch button{border:0;border-radius:24px;padding:11px 16px;background:#dedfe9;color:var(--ink);font:600 14px system-ui;cursor:pointer}.switch button[aria-selected=true]{background:var(--blue);color:#fff}.design{display:none;grid-template-columns:minmax(280px,390px) minmax(250px,1fr);gap:28px;align-items:start}.design.active{display:grid}.phone{padding:18px 14px 20px;border:8px solid #23242a;border-radius:38px;background:var(--bg);box-shadow:0 18px 45px #24263028;min-height:730px;overflow:hidden}.status{font-size:11px;color:#5b6070;padding:2px 8px 14px;display:flex;justify-content:space-between}.top{display:flex;align-items:center;gap:12px;padding:5px 5px 14px}.back{font-size:25px;color:var(--blue)}.top strong{font-size:21px;flex:1}.more{font-size:22px;color:var(--blue)}.segmented{display:flex;padding:4px;background:#e4e5ee;border-radius:30px;margin:2px 3px 18px}.segmented span{flex:1;text-align:center;border-radius:24px;padding:8px 6px;font-weight:650;color:var(--muted);font-size:13px}.segmented .on{background:#fff;color:var(--blue);box-shadow:0 2px 8px #20233412}.filters{display:flex;gap:7px;overflow:hidden;margin:0 4px 13px}.chip{white-space:nowrap;border-radius:24px;background:#e5e6ef;color:var(--muted);padding:7px 11px;font-size:12px;font-weight:650}.chip.on{background:#dfe2f0;color:var(--blue)}.article{background:var(--surface);border-radius:19px;padding:14px 15px;margin:9px 2px;box-shadow:0 3px 12px #20233410}.source{display:flex;align-items:center;gap:8px;color:var(--blue);font-size:12px;font-weight:700}.dot{width:8px;height:8px;border-radius:100%;background:var(--pink)}.article h3{font-size:16px;line-height:1.3;margin:8px 0 5px}.article p{font-size:13px;color:var(--muted);margin:0 0 8px}.meta{font-size:11px;color:var(--muted)}.source-row{display:flex;align-items:center;gap:12px;background:#fff;border-radius:17px;padding:13px;margin:8px 2px;box-shadow:0 2px 8px #2023340c}.circle{display:grid;place-items:center;flex:none;width:42px;height:42px;border-radius:50%;background:var(--surface2);color:var(--blue);font-size:20px}.grow{flex:1;min-width:0}.source-row b{display:block;font-size:14px}.source-row small{display:block;color:var(--muted);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.arrow{color:var(--muted);font-size:20px}.profile-tabs{display:flex;justify-content:space-around;margin:0 0 18px;padding:10px 0 12px;border-bottom:1px solid var(--line);font-size:12px;color:var(--muted)}.profile-tabs b{color:var(--blue);border-bottom:2px solid var(--blue);padding:0 4px 9px}.note{background:#e8e9f1;border-radius:16px;padding:14px 16px;margin-top:15px;color:#4e5364}.note b{display:block;margin-bottom:5px;color:var(--ink)}.details h2{font-size:22px;margin:2px 0 10px}.details p{margin:0 0 13px;color:var(--muted)}.details ul{padding-left:20px;margin:10px 0 0}.details li{padding:5px 0}.tag{font-size:11px;font-weight:750;letter-spacing:.05em;text-transform:uppercase;color:var(--blue)}.hint{font-size:13px;color:var(--muted)}@media(max-width:760px){.page{padding:22px 16px}.intro h1{font-size:27px}.design.active{grid-template-columns:1fr;justify-items:center}.details{max-width:390px}.phone{width:min(100%,390px)}}
+:root{color-scheme:light;--page:#e8e8f0;--bg:#f5f4fa;--surface:#fff;--tonal:#e4e7f2;--ink:#272a35;--muted:#626778;--primary:#50618f;--line:#dadce6;--pink:#c9346b}
+*{box-sizing:border-box}body{margin:0;background:var(--page);color:var(--ink);font:15px/1.5 system-ui,-apple-system,sans-serif}button,input{font:inherit}button{cursor:pointer;color:inherit;-webkit-tap-highlight-color:transparent}button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(--primary);outline-offset:3px}svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.page{max-width:1120px;margin:auto;padding:32px 28px 56px}.intro{max-width:760px;margin-bottom:28px}.eyebrow{color:var(--primary);font-size:12px;font-weight:750;letter-spacing:.08em;text-transform:uppercase}h1{font-size:34px;line-height:1.15;letter-spacing:-.035em;margin:12px 0}p{margin:0;color:var(--muted)}.layout{display:grid;grid-template-columns:410px minmax(280px,1fr);gap:44px;align-items:start}
+.phone{height:796px;width:410px;border:8px solid #272930;border-radius:42px;background:var(--bg);box-shadow:0 18px 48px #24263020;overflow:hidden;position:relative;display:flex;flex-direction:column;isolation:isolate}.status{height:34px;padding:10px 23px 3px;display:flex;justify-content:space-between;align-items:center;font-size:12px;font-weight:650;flex:none}.chrome{background:var(--bg);z-index:2;flex:none}.appbar{height:58px;display:flex;align-items:center;padding:0 8px;gap:4px}.icon-button{width:48px;height:48px;border:0;background:transparent;display:grid;place-items:center;border-radius:50%;flex:none}.icon-button:hover{background:#50618f0c}.appbar h2{font-size:22px;line-height:1.2;font-weight:650;letter-spacing:-.04em;margin:0;flex:1}.tabs{display:flex;height:48px;border-bottom:1px solid var(--line)}.tab{position:relative;flex:1;display:flex;justify-content:center;align-items:center;border:0;background:transparent;color:var(--muted);font-size:14px;font-weight:650;gap:9px}.tab svg{width:20px;height:20px}.tab[aria-selected=true]{color:var(--primary)}
+.tab-label{height:100%;display:flex;align-items:center;position:relative}.tab[aria-selected=true] .tab-label::after{content:"";position:absolute;height:3px;bottom:0;left:2px;right:2px;min-width:24px;border-radius:3px 3px 0 0;background:var(--primary)}
+.feed-controls{padding:14px 16px 0}.source-button{height:48px;width:100%;border:0;border-radius:12px;background:var(--tonal);color:var(--primary);display:flex;align-items:center;gap:11px;text-align:left;padding:0 14px;font-size:14px;font-weight:650}.source-label{flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}.source-button .chevron{width:18px;height:18px}.chips{display:flex;gap:8px;padding:4px 0;min-height:52px;align-items:center}.chip-target{height:48px;display:inline-flex;align-items:center;border:0;padding:0;background:none}.chip{display:flex;align-items:center;gap:7px;height:32px;padding:0 12px;border:1px solid var(--line);border-radius:8px;font-size:13px;font-weight:600;color:var(--muted)}.chip-target[aria-pressed=true] .chip{background:var(--tonal);border-color:transparent;color:var(--primary)}.chip svg{width:16px;height:16px}.chip-target[aria-pressed=false] svg{display:none}.count{font-size:11px;border-radius:8px;background:#50618f12;min-width:19px;text-align:center;padding:0 4px;font-variant-numeric:tabular-nums}
+.list{flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#c8cbd8 transparent;padding:0 16px 20px}.list-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 1px 10px;color:var(--muted);font-size:11px}.list-heading span:first-child{font-weight:650;font-size:12px}.article{width:100%;display:block;text-align:left;background:var(--surface);border:0;border-radius:18px;padding:16px;margin-bottom:10px}.article:hover{background:#fcfcff}.source{display:flex;align-items:center;gap:6px;color:var(--primary);font-size:11px;font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.unread{width:6px;height:6px;background:var(--pink);border-radius:50%;flex:none}.article h3{font-size:16px;line-height:1.35;letter-spacing:-.01em;margin:8px 0 6px;font-weight:650}.article p{font-size:12px;line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.meta{display:flex;align-items:center;gap:6px;margin-top:10px;color:var(--muted);font-size:11px}.meta svg{width:13px;height:13px;margin-left:auto}.end{padding:18px 10px 25px;text-align:center;font-size:12px;color:var(--muted)}.end svg{display:block;margin:0 auto 8px;color:var(--primary);width:20px;height:20px}.home{height:17px;display:grid;place-items:center;flex:none;background:var(--bg)}.home::before{content:"";width:100px;height:4px;border-radius:5px;background:#444650}.empty{padding:52px 16px;text-align:center}.empty h3{font-size:17px;margin:0 0 7px}.empty p{font-size:13px}
+.shade{position:absolute;inset:0;background:#15182455;z-index:5;display:flex;align-items:flex-end}[hidden]{display:none!important}.sheet{background:var(--bg);border-radius:28px 28px 0 0;width:100%;max-height:86%;display:flex;flex-direction:column;box-shadow:0 -8px 30px #24263015}.handle{width:32px;height:4px;border-radius:3px;background:#b9bdca;margin:10px auto 0;flex:none}.sheet-top{display:flex;align-items:center;gap:8px;padding:4px 9px 0 22px}.sheet-top h3{font-size:20px;font-weight:650;flex:1;margin:0}.sheet-caption{font-size:12px;color:var(--muted);padding:0 22px 12px}.search{display:flex;align-items:center;gap:10px;background:var(--surface);border-radius:28px;margin:0 16px 12px;padding:0 14px;height:48px;flex:none;color:var(--muted)}.search svg{width:20px;height:20px}.search input{width:100%;min-width:0;background:none;border:0;outline:0;font-size:14px;color:var(--ink)}.search:focus-within{outline:2px solid var(--primary)}.sources{overflow:auto;min-height:0;padding:0 12px 8px}.feed-row{display:flex;align-items:center;gap:12px;border:0;width:100%;background:transparent;text-align:left;border-radius:14px;min-height:70px;padding:10px}.feed-row[aria-checked=true]{background:var(--tonal)}.avatar{width:38px;height:38px;display:grid;place-items:center;border-radius:50%;background:#e7e8f0;color:var(--primary);flex:none;font-size:15px;font-weight:700}.avatar svg{width:20px;height:20px}.feed-row[aria-checked=true] .avatar{background:#f5f6fc}.feed-name{flex:1;min-width:0}.feed-name b{display:block;font-size:13px;font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.feed-name small{display:block;color:var(--muted);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.radio{height:19px;width:19px;border:2px solid #878d9c;border-radius:50%;flex:none}.feed-row[aria-checked=true] .radio{border:6px solid var(--primary)}.feed-count{font-size:11px;color:var(--muted)}.sheet-footer{border-top:1px solid var(--line);padding:8px 16px 18px;flex:none}.manage{display:flex;align-items:center;justify-content:center;gap:8px;height:48px;border:1px solid var(--line);background:none;color:var(--primary);border-radius:24px;width:100%;font-size:13px;font-weight:650}.manage svg{width:18px;height:18px}.manage-note{font-size:12px;text-align:center;padding:12px 7px 0;color:var(--muted)}
+.sheet::after{content:"";width:100px;height:4px;min-height:4px;margin:0 auto max(8px,env(safe-area-inset-bottom));border-radius:5px;background:#444650}
+.reader{position:absolute;inset:34px 0 17px;z-index:4;background:var(--bg);display:flex;flex-direction:column}.reader .appbar h2{font-size:15px}.reader-body{overflow:auto;padding:16px 24px 32px}.reader-body h3{font:700 29px/1.2 Georgia,serif;letter-spacing:-.025em;margin:18px 0}.reader-body p{font:17px/1.8 Georgia,serif;color:#454854;margin-top:20px}.reader-body .reader-kicker{font:600 11px/1.4 system-ui;color:var(--primary);letter-spacing:.06em;text-transform:uppercase}.reader-body .demo-note{font:12px/1.5 system-ui;color:var(--muted);padding:14px;background:var(--tonal);border-radius:12px}.reader .save[aria-pressed=true]{background:var(--tonal);color:var(--primary)}
+.details{padding-top:6px}.details h2{font-size:25px;letter-spacing:-.025em;line-height:1.25;margin:8px 0 12px}.details p{font-size:14px;line-height:1.65}.explanation{display:grid;grid-template-columns:30px 1fr;gap:12px;margin:23px 0}.number{height:28px;width:28px;display:grid;place-items:center;background:var(--tonal);color:var(--primary);border-radius:50%;font-size:12px;font-weight:750}.explanation h3{font-size:15px;margin:1px 0 5px}.explanation p{font-size:13px}.demo-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:23px}.demo-button{border:1px solid #b8bece;background:transparent;border-radius:24px;padding:11px 15px;color:var(--primary);font-size:13px;font-weight:650}.demo-button.primary{background:var(--primary);border-color:var(--primary);color:#fff}.limit{margin:23px 0;background:#f4f4fa;border-radius:18px;padding:18px}.limit b{font-size:13px;display:block;margin-bottom:7px}.limit p{font-size:12px}.refs{display:flex;gap:14px;flex-wrap:wrap;margin:20px 0;font-size:12px}.refs a{color:var(--primary)}.prototype-label{font-size:11px;margin-top:14px;color:var(--muted)}
+@media(max-width:820px){.page{padding:24px 16px 40px}.intro h1{font-size:29px}.layout{grid-template-columns:1fr;justify-items:center;gap:28px}.details{max-width:500px}.phone{width:min(410px,100%);height:780px}.intro{max-width:500px;margin:0 auto 24px}}@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
 </style>
 </head>
 <body>
+<svg aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden"><defs>
+  <symbol id="back" viewBox="0 0 24 24"><path d="m14 6-6 6 6 6"/></symbol>
+  <symbol id="close" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol>
+  <symbol id="rss" viewBox="0 0 24 24"><path d="M5 11a8 8 0 0 1 8 8M5 5a14 14 0 0 1 14 14"/><circle cx="5" cy="19" r="1" fill="currentColor"/></symbol>
+  <symbol id="library" viewBox="0 0 24 24"><path d="M4 4v16M9 4v16M14 4l5 16M3 7h7M3 17h7"/></symbol>
+  <symbol id="bookmark" viewBox="0 0 24 24"><path d="M6 4h12v16l-6-4-6 4Z"/></symbol>
+  <symbol id="check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+  <symbol id="down" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+  <symbol id="search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4 4"/></symbol>
+  <symbol id="settings" viewBox="0 0 24 24"><path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3" fill="var(--bg)"/><circle cx="15" cy="17" r="3" fill="var(--bg)"/></symbol>
+  <symbol id="plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+</defs></svg>
 <main class="page">
-  <header class="intro">
-    <span class="eyebrow">Candy Browser · RSS-Konzept</span>
-    <h1>Wo sollen abonnierte Feeds leben?</h1>
-    <p>Beide Entwürfe zeigen dieselbe Inbox und dieselbe Feed-Auswahl. Der Unterschied liegt im Einstieg und in der Erwartung: Lesen im Reader Studio oder ein eigener „Feeds“-Bereich neben Tabs.</p>
-  </header>
-  <nav class="switch" aria-label="Designvariante">
-    <button aria-selected="true" data-design="reader">1 · Reader Studio</button>
-    <button aria-selected="false" data-design="switcher">2 · Tab-Switcher</button>
-  </nav>
-
-  <section class="design active" id="reader">
-    <div class="phone" aria-label="Reader Studio Feeds Entwurf">
+  <header class="intro"><span class="eyebrow">Candy Browser · Reader Studio · Entwurf 02</span><h1>Weiterlesen. Quellen immer griffbereit.</h1><p>Bibliothek und Feeds als feste Tabs. Darunter eine erreichbare Quellenwahl und echte Filter. Nur die Artikelliste scrollt.</p></header>
+  <div class="layout">
+    <section class="phone" aria-label="Interaktiver Reader-Studio-Entwurf">
       <div class="status"><span>09:41</span><span>▮▮▮ ◉ ▰</span></div>
-      <div class="top"><span class="back">‹</span><strong>Reader Studio</strong><span class="more">＋</span></div>
-      <div class="segmented"><span>Bibliothek</span><span class="on">Feeds</span></div>
-      <div class="filters"><span class="chip on">Alle</span><span class="chip">Ungelesen</span><span class="chip">Following</span></div>
-      <div class="article"><div class="source"><span class="dot"></span>Candy Browser Blog</div><h3>Reader Studio bekommt neue Stimme</h3><p>Was sich beim Lesen, Vorlesen und Speichern ändert.</p><div class="meta">Vor 2 Std. · 4 Min. · ungelesen</div></div>
-      <div class="article"><div class="source">Android Developers</div><h3>Neue Werkzeuge für Android-Entwickler</h3><p>Die wichtigsten Updates aus dem Android-Team.</p><div class="meta">Gestern · 6 Min.</div></div>
-      <div class="article"><div class="source">The Privacy Blog</div><h3>Was sich bei privatem Browsen ändert</h3><p>Ein Überblick zu neuen Schutzfunktionen.</p><div class="meta">21. Okt. · 3 Min.</div></div>
-      <div class="note"><b>Feed auswählen</b><div class="source-row"><span class="circle">◉</span><span class="grow"><b>Android Developers</b><small>android-developers.googleblog.com</small></span><span class="arrow">›</span></div><div class="source-row"><span class="circle">⌘</span><span class="grow"><b>The Privacy Blog</b><small>privacy.example</small></span><span class="arrow">›</span></div></div>
-    </div>
-    <div class="details"><span class="tag">Variante 1</span><h2>Feeds im Reader Studio</h2><p>Bestehender Leseort bekommt einen zweiten Bereich. Feed-Inbox und gespeicherte Artikel liegen nebeneinander; Quellenverwaltung bleibt erreichbar über „＋“.</p><ul><li>Passt zu Reader Studio und vorhandenen Leseaktionen.</li><li>Feeds lassen sich global verwalten, ohne Browser-Profile zu verändern.</li><li>Wenig neue Navigation; geringstes Risiko für Datenschutz- und Profil-Erwartungen.</li><li>Feed-Abos bleiben in der ersten Ausbaustufe geräteweit, wie sie jetzt gespeichert sind.</li></ul><div class="note"><b>Lesefluss</b>Reader Studio → Feeds → Artikel → bestehende Reader-Ansicht. Zurück führt direkt zur Inbox.</div></div>
-  </section>
-
-  <section class="design" id="switcher">
-    <div class="phone" aria-label="Tab-Switcher Feeds Entwurf">
-      <div class="status"><span>09:41</span><span>▮▮▮ ◉ ▰</span></div>
-      <div class="top"><span class="back">×</span><strong>Übersicht</strong><span class="more">⋮</span></div>
-      <div class="profile-tabs"><span>Privat</span><span>Arbeit</span><b>Feeds</b></div>
-      <div class="filters"><span class="chip on">Inbox · 8</span><span class="chip">Ungelesen</span><span class="chip">Quellen</span></div>
-      <div class="article"><div class="source"><span class="dot"></span>Candy Browser Blog</div><h3>Reader Studio bekommt neue Stimme</h3><p>Was sich beim Lesen, Vorlesen und Speichern ändert.</p><div class="meta">Vor 2 Std. · 4 Min. · ungelesen</div></div>
-      <div class="article"><div class="source">Android Developers</div><h3>Neue Werkzeuge für Android-Entwickler</h3><p>Die wichtigsten Updates aus dem Android-Team.</p><div class="meta">Gestern · 6 Min.</div></div>
-      <div class="article"><div class="source">The Privacy Blog</div><h3>Was sich bei privatem Browsen ändert</h3><p>Ein Überblick zu neuen Schutzfunktionen.</p><div class="meta">21. Okt. · 3 Min.</div></div>
-      <div class="note"><b>Abonnierte Quellen</b><div class="source-row"><span class="circle">◉</span><span class="grow"><b>Candy Browser Blog</b><small>candy-browser.dev</small></span><span class="arrow">›</span></div><div class="source-row"><span class="circle">✦</span><span class="grow"><b>Android Developers</b><small>android-developers.googleblog.com</small></span><span class="arrow">›</span></div></div>
-    </div>
-    <div class="details"><span class="tag">Variante 2</span><h2>„Feeds“ im Tab-Switcher</h2><p>Ein eigener Bereich neben den Browser-Profilen. Er öffnet eine Inbox mit Quellenliste, aber zunächst keine normalen Web-Tabs.</p><ul><li>Sehr schnell aus der Tab-Übersicht erreichbar.</li><li>Feeds wirken wie ein eigener Leseraum mit Inbox und Quellen.</li><li>Risiko: „Profil“ klingt nach getrennten Cookies, Verlauf und Feed-Abos.</li><li>Für echte Profil-Isolation müssten Abos, Lesestatus und Benachrichtigungen profilgebunden werden.</li></ul><div class="note"><b>Produktentscheidung</b>Als virtueller Bereich „Feeds“ ist das technisch klar. Als echtes Profil braucht es eigene Speicher- und Datenschutzregeln. Der Entwurf markiert es deshalb als Sonderbereich, nicht als normales Profil.</div></div>
-  </section>
+      <header class="chrome">
+        <div class="appbar"><button class="icon-button" aria-label="Zurück zur Übersicht" id="home-button"><svg aria-hidden="true"><use href="#back"/></svg></button><h2>Reader Studio</h2><button class="icon-button" id="add-feed" aria-label="Feed hinzufügen"><svg aria-hidden="true"><use href="#plus"/></svg></button></div>
+        <div class="tabs" role="tablist" aria-label="Reader-Studio-Bereiche">
+          <button class="tab" id="library-tab" role="tab" aria-selected="false" aria-controls="article-list" tabindex="-1"><span class="tab-label">Bibliothek</span></button>
+          <button class="tab" id="feeds-tab" role="tab" aria-selected="true" aria-controls="article-list"><span class="tab-label">Feeds</span></button>
+        </div>
+        <div class="feed-controls" id="feed-controls">
+          <button class="source-button" id="source-button" aria-haspopup="dialog" aria-expanded="false"><svg aria-hidden="true"><use href="#rss"/></svg><span class="source-label" id="source-label">Alle Feeds</span><svg class="chevron" aria-hidden="true"><use href="#down"/></svg></button>
+          <div class="chips" role="group" aria-label="Artikel filtern">
+            <button class="chip-target" id="all-filter" aria-pressed="true"><span class="chip"><svg aria-hidden="true"><use href="#check"/></svg>Alle Beiträge</span></button>
+            <button class="chip-target" id="unread-filter" aria-pressed="false"><span class="chip"><svg aria-hidden="true"><use href="#check"/></svg>Ungelesen <span class="count" id="unread-count">0</span></span></button>
+          </div>
+        </div>
+      </header>
+      <div class="list" id="article-list" role="tabpanel" aria-labelledby="feeds-tab" tabindex="0"></div>
+      <div class="home" aria-hidden="true"></div>
+      <div class="shade" id="source-shade" hidden>
+        <section class="sheet" id="source-sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title" tabindex="-1">
+          <div class="handle" aria-hidden="true"></div>
+          <div class="sheet-top"><h3 id="sheet-title">Feed auswählen</h3><button class="icon-button" id="close-sheet" aria-label="Feed-Auswahl schließen"><svg aria-hidden="true"><use href="#close"/></svg></button></div>
+          <p class="sheet-caption">Eine Quelle oder alle Feeds zusammen lesen.</p>
+          <label class="search"><svg aria-hidden="true"><use href="#search"/></svg><input id="source-search" type="search" autocomplete="off" placeholder="Feeds durchsuchen" aria-label="Feeds durchsuchen"></label>
+          <div class="sources" id="source-list" role="radiogroup" aria-label="Abonnierte Feeds"></div>
+          <div class="sheet-footer"><button class="manage" id="manage-feeds"><svg aria-hidden="true"><use href="#settings"/></svg>Feeds verwalten</button><p class="manage-note" id="manage-note" hidden></p></div>
+        </section>
+      </div>
+      <section class="reader" id="reader" aria-label="Artikel lesen" hidden>
+        <div class="appbar"><button class="icon-button" id="back-to-list" aria-label="Zurück zur Artikelliste"><svg aria-hidden="true"><use href="#back"/></svg></button><h2 id="reader-source"></h2><button class="icon-button save" id="save-article" aria-label="Artikel offline speichern" aria-pressed="false"><svg aria-hidden="true"><use href="#bookmark"/></svg></button></div>
+        <div class="reader-body" id="reader-body"></div>
+      </section>
+    </section>
+    <aside class="details">
+      <span class="eyebrow">Empfohlener Aufbau</span><h2>Quelle wählen, ohne zum Listenende zu müssen.</h2><p>Die Quellenwahl steht über der Liste. Ein Tippen öffnet ein Bottom Sheet mit Suche und allen Abos. Die Auswahl wirkt sofort auf die Artikel darunter.</p>
+      <div class="explanation"><span class="number">1</span><div><h3>Tabs wechseln den Bereich</h3><p><b>Bibliothek</b> enthält gespeicherte Offline-Artikel. <b>Feeds</b> enthält abonnierte Beiträge. Material-3-Tabs mit Unterstreichung zeigen die aktive Ansicht.</p></div></div>
+      <div class="explanation"><span class="number">2</span><div><h3>Quelle wählen, Auswahl klar sehen</h3><p><b>Alle Feeds ⌄</b> bleibt oben stehen. Nach Auswahl steht dort etwa <b>Golem.de ⌄</b>. Im Sheet führt <b>Alle Feeds</b> zurück zur gemeinsamen Inbox. Die ganze Zeile öffnet die Auswahl.</p></div></div>
+      <div class="explanation"><span class="number">3</span><div><h3>Chips filtern die aktuelle Liste</h3><p><b>Alle Beiträge</b> oder <b>Ungelesen</b>: genau ein Filter aktiv, mit Häkchen. Beide wirken innerhalb der gewählten Quelle. „Following“ entfällt, weil ohnehin nur abonnierte Feeds erscheinen.</p></div></div>
+      <div class="explanation"><span class="number">4</span><div><h3>Fortlaufend scrollen</h3><p>Neueste Beiträge zuerst, weitere beim Scrollen einblenden. Quellenwahl und Filter bleiben erreichbar. Artikel öffnen und zurück: dieselbe Listenposition bleibt erhalten. Im Ungelesen-Filter verschwindet ein gelesener Beitrag erst beim nächsten Filtern.</p></div></div>
+      <div class="demo-actions"><button class="demo-button primary" id="demo-picker">Feed-Auswahl ausprobieren</button><button class="demo-button" id="demo-scroll">Weiter nach unten scrollen</button></div>
+      <div class="limit"><b>Fortlaufende Liste, ehrliches Ende</b><p>RSS liefert meist nur die letzten Beiträge, keine beliebig abrufbare Historie. Die aktuelle Speicherung hält bis zu 40 Beiträge je Feed. Alle verfügbaren Beiträge sind scrollbar; am Ende folgt ein Hinweis. Ein größeres lokales Archiv wäre eine eigene Erweiterung.</p></div>
+      <div class="refs"><a href="https://m3.material.io/components/tabs/guidelines" target="_blank" rel="noreferrer">Material 3 · Tabs ↗</a><a href="https://m3.material.io/components/chips/guidelines" target="_blank" rel="noreferrer">Material 3 · Filter-Chips ↗</a></div>
+      <p class="prototype-label">Klickbarer Entwurf mit Beispieldaten. Feed-Auswahl, Suche, Filter, Tabs, schrittweises Nachladen und Artikel-Zurückweg sind bedienbar. Keine Änderungen an echten Abos.</p>
+    </aside>
+  </div>
 </main>
 <script>
-document.querySelectorAll('.switch button').forEach(button=>button.addEventListener('click',()=>{
-  document.querySelectorAll('.switch button').forEach(item=>item.setAttribute('aria-selected',String(item===button)));
-  document.querySelectorAll('.design').forEach(section=>section.classList.toggle('active',section.id===button.dataset.design));
+const icon = name => `<svg aria-hidden="true"><use href="#${name}"/></svg>`;
+const sources = [
+  {id:'candy',name:'Candy Browser Blog',host:'candy-browser.dev',initial:'C'},
+  {id:'android',name:'Android Developers',host:'android-developers.googleblog.com',initial:'A'},
+  {id:'golem',name:'Golem.de',host:'golem.de',initial:'G'},
+  {id:'privacy',name:'The Privacy Blog',host:'privacy.example',initial:'P'},
+  {id:'heise',name:'heise online',host:'heise.de',initial:'h'},
+  {id:'kotlin',name:'Kotlin Blog',host:'blog.jetbrains.com/kotlin',initial:'K'},
+  {id:'web',name:'web.dev',host:'web.dev',initial:'w'},
+  {id:'netz',name:'netzpolitik.org',host:'netzpolitik.org',initial:'n'},
+];
+const headlines = [
+  ['Reader Studio bekommt eine neue Stimme','Was sich beim Lesen, Vorlesen und Speichern von Artikeln ändert.'],
+  ['Neue Werkzeuge für Android-Entwickler','Ein Überblick über Bibliotheken, Plattform und neue Möglichkeiten.'],
+  ['Open Source: Kleine Projekte, große Wirkung','Wie gemeinsames Entwickeln den Alltag einfacher machen kann.'],
+  ['Was sich beim privaten Browsen ändert','Neue Ansätze für mehr Kontrolle über die eigenen Daten.'],
+  ['Das Web ein Stück zugänglicher machen','Praktische Ideen für verständliche und gut bedienbare Oberflächen.'],
+  ['Kotlin im Alltag: Weniger Code, klare Strukturen','Erfahrungen und Tipps aus der täglichen Entwicklung.'],
+  ['Schnellere Seiten auf mobilen Geräten','Wie eine gute Struktur das Laden und Lesen verbessert.'],
+  ['Digitale Öffentlichkeit braucht offene Standards','Warum gemeinsame Formate wichtig für ein unabhängiges Netz sind.'],
+  ['Lesen ohne Ablenkung: Die kleinen Details zählen','Schrift, Abstand und Navigation machen den Unterschied.'],
+  ['Updates aus der Entwickler-Community','Aktuelle Projekte, neue Ideen und ein Blick hinter die Kulissen.'],
+  ['Software pflegen, Wissen teilen','Wie langfristige Zusammenarbeit nachhaltige Werkzeuge entstehen lässt.'],
+  ['Mehr Überblick über die eigenen Einstellungen','Ein neuer Blick auf verständliche Auswahl und klare Entscheidungen.'],
+];
+const articles = Array.from({length:64},(_,index)=>({
+  id:index,source:sources[index%sources.length],title:headlines[index%headlines.length][0],
+  summary:headlines[index%headlines.length][1],read:index%3===1,saved:[2,5,10].includes(index),
+  time:index<4?`Vor ${index+1} Std.`:index<12?'Gestern':`${21-Math.floor(index/8)}. Okt.`,
 }));
+const list = document.getElementById('article-list');
+const shade = document.getElementById('source-shade');
+const sheet = document.getElementById('source-sheet');
+const sourceButton = document.getElementById('source-button');
+const search = document.getElementById('source-search');
+let activeTab = 'feeds';
+let selectedSource = 'all';
+let unreadOnly = false;
+let visibleCount = 12;
+let currentArticle = null;
+let sheetReturnFocus = null;
+let currentRows = [];
+const scrollPositions = {feeds:0,library:0};
+const filteredArticles = () => articles.filter(article => activeTab==='library'
+  ? article.saved
+  : (selectedSource==='all'||article.source.id===selectedSource)&&(!unreadOnly||!article.read));
+const observer = new IntersectionObserver(entries=>{
+  if(entries.some(entry=>entry.isIntersecting)&&visibleCount<currentRows.length){
+    visibleCount+=12;
+    renderList();
+  }
+},{root:list,rootMargin:'160px'});
+
+function renderList(refreshRows=false){
+  observer.disconnect();
+  if(refreshRows) currentRows=filteredArticles();
+  const rows=currentRows;
+  const heading=activeTab==='library'?'Offline gespeichert':`${rows.length} Beiträge`;
+  const nodes=rows.slice(0,visibleCount).map(article=>`<button class="article" data-article="${article.id}" aria-label="${article.title}">
+    <div class="source">${article.read?'':'<span class="unread" aria-label="Ungelesen"></span>'}${article.source.name}</div>
+    <h3>${article.title}</h3><p>${article.summary}</p>
+    <div class="meta">${article.time}${article.read?' · Gelesen':''}${article.saved?icon('bookmark'):''}</div></button>`).join('');
+  list.innerHTML=`<div class="list-heading"><span>${heading}</span><span>Neueste zuerst</span></div>${nodes||`<div class="empty"><h3>${activeTab==='library'?'Deine Bibliothek ist noch leer':unreadOnly?'Alles gelesen':'Noch keine Beiträge'}</h3><p>${activeTab==='library'?'Gespeicherte Artikel erscheinen hier.':unreadOnly?'In dieser Auswahl gibt es keine ungelesenen Beiträge.':'Neue Beiträge dieser Quelle erscheinen hier.'}</p></div>`}${rows.length?visibleCount<rows.length?'<div class="end" id="load-more" role="status">Weitere Beiträge laden …</div>':`<div class="end">${icon('check')}${activeTab==='library'?'Alle gespeicherten Artikel angezeigt':'Alle verfügbaren Beiträge angezeigt'}</div>`:''}`;
+  list.querySelectorAll('[data-article]').forEach(button=>button.addEventListener('click',()=>openArticle(Number(button.dataset.article))));
+  const sentinel=document.getElementById('load-more');
+  if(sentinel) observer.observe(sentinel);
+  document.getElementById('unread-count').textContent=articles.filter(article=>!article.read&&(selectedSource==='all'||article.source.id===selectedSource)).length;
+}
+
+function setTab(tab){
+  if(!document.getElementById('reader').hidden) closeArticle();
+  scrollPositions[activeTab]=list.scrollTop;
+  activeTab=tab;
+  document.getElementById('feed-controls').hidden=tab!=='feeds';
+  ['library','feeds'].forEach(name=>{
+    const button=document.getElementById(`${name}-tab`);
+    button.setAttribute('aria-selected',String(name===tab));
+    button.tabIndex=name===tab?0:-1;
+  });
+  document.getElementById('add-feed').hidden=tab!=='feeds';
+  list.setAttribute('aria-labelledby',`${tab}-tab`);
+  renderList(true);
+  list.scrollTop=scrollPositions[tab];
+}
+
+function setFilter(unread){
+  unreadOnly=unread;
+  visibleCount=12;
+  document.getElementById('all-filter').setAttribute('aria-pressed',String(!unread));
+  document.getElementById('unread-filter').setAttribute('aria-pressed',String(unread));
+  renderList(true);
+  list.scrollTop=0;
+}
+
+function renderSources(){
+  const query=search.value.trim().toLocaleLowerCase('de');
+  const options=[{id:'all',name:'Alle Feeds',host:`${sources.length} abonnierte Quellen`,initial:null},...sources]
+    .filter(source=>source.id==='all'||`${source.name} ${source.host}`.toLocaleLowerCase('de').includes(query));
+  const focusableId=options.some(source=>source.id===selectedSource)?selectedSource:options[0].id;
+  document.getElementById('source-list').innerHTML=options.map(source=>{
+    const unread=articles.filter(article=>(source.id==='all'||article.source.id===source.id)&&!article.read).length;
+    return `<button class="feed-row" role="radio" aria-checked="${source.id===selectedSource}" data-source="${source.id}" tabindex="${source.id===focusableId?0:-1}">
+      <span class="avatar">${source.initial||icon('rss')}</span><span class="feed-name"><b>${source.name}</b><small>${source.host}</small></span><span class="feed-count" aria-label="${unread} ungelesene Beiträge">${unread}</span><span class="radio" aria-hidden="true"></span></button>`;
+  }).join('')+(options.length===1&&query?'<div class="end" role="status">Kein Feed gefunden.</div>':'');
+  document.querySelectorAll('[data-source]').forEach(button=>button.addEventListener('click',()=>{
+    selectSource(button.dataset.source);
+    closeSheet();
+  }));
+}
+
+function selectSource(sourceId){
+  selectedSource=sourceId;
+  document.getElementById('source-label').textContent=selectedSource==='all'?'Alle Feeds':sources.find(source=>source.id===selectedSource).name;
+  visibleCount=12;
+  renderList(true);
+  list.scrollTop=0;
+}
+
+function openSheet(){
+  if(!document.getElementById('reader').hidden) closeArticle();
+  if(activeTab!=='feeds') setTab('feeds');
+  sheetReturnFocus=sourceButton;
+  search.value='';
+  document.getElementById('manage-note').hidden=true;
+  renderSources();
+  shade.hidden=false;
+  sourceButton.setAttribute('aria-expanded','true');
+  document.querySelector('.chrome').inert=true;
+  list.inert=true;
+  document.getElementById('close-sheet').focus({preventScroll:true});
+}
+function closeSheet(){
+  shade.hidden=true;
+  sourceButton.setAttribute('aria-expanded','false');
+  document.querySelector('.chrome').inert=false;
+  list.inert=false;
+  if(sheetReturnFocus?.isConnected) sheetReturnFocus.focus({preventScroll:true});
+}
+
+function openArticle(id){
+  currentArticle=articles.find(article=>article.id===id);
+  currentArticle.read=true;
+  document.getElementById('reader-source').textContent=currentArticle.source.name;
+  document.getElementById('reader-body').innerHTML=`<div class="reader-kicker">${currentArticle.source.name} · ${currentArticle.time}</div><h3>${currentArticle.title}</h3><p>${currentArticle.summary}</p><p>Eine gute Leseansicht lässt dem Text Platz. Sie hält die wichtigsten Aktionen griffbereit und merkt sich, wo du gerade gelesen hast.</p><p>Zurück führt direkt zu deinen Beiträgen. Quelle, Filter und Listenposition bleiben erhalten.</p><p class="demo-note">Beispielartikel im Entwurf. Das Lesezeichen legt ihn in die Bibliothek bzw. entfernt ihn dort.</p>`;
+  updateSaveButton();
+  document.getElementById('reader').hidden=false;
+  document.querySelector('.chrome').inert=true;
+  list.inert=true;
+  document.getElementById('back-to-list').focus({preventScroll:true});
+  document.getElementById('reader-body').scrollTop=0;
+}
+function closeArticle(){
+  const previousTop=list.scrollTop;
+  const previousId=currentArticle?.id;
+  document.getElementById('reader').hidden=true;
+  document.querySelector('.chrome').inert=false;
+  list.inert=false;
+  // Keep read items in the current unread batch until the filter is reapplied.
+  renderList(activeTab==='library');
+  list.scrollTop=previousTop;
+  (list.querySelector(`[data-article="${previousId}"]`)||list).focus({preventScroll:true});
+}
+function updateSaveButton(){
+  const button=document.getElementById('save-article');
+  button.setAttribute('aria-pressed',String(currentArticle.saved));
+  button.setAttribute('aria-label',currentArticle.saved?'Offline-Artikel entfernen':'Artikel offline speichern');
+}
+
+sourceButton.addEventListener('click',openSheet);
+document.getElementById('close-sheet').addEventListener('click',closeSheet);
+shade.addEventListener('click',event=>{if(event.target===shade) closeSheet();});
+search.addEventListener('input',renderSources);
+document.getElementById('all-filter').addEventListener('click',()=>setFilter(false));
+document.getElementById('unread-filter').addEventListener('click',()=>setFilter(true));
+['library','feeds'].forEach(tab=>document.getElementById(`${tab}-tab`).addEventListener('click',()=>setTab(tab)));
+document.querySelector('.tabs').addEventListener('keydown',event=>{
+  if(['ArrowLeft','ArrowRight','Home','End'].includes(event.key)){
+    event.preventDefault();
+    const tab=event.key==='Home'?'library':event.key==='End'?'feeds':activeTab==='feeds'?'library':'feeds';
+    setTab(tab);
+    document.getElementById(`${tab}-tab`).focus();
+  }
+});
+sheet.addEventListener('keydown',event=>{
+  const rows=[...sheet.querySelectorAll('[role="radio"]')];
+  if(event.target.matches('[role="radio"]')&&['ArrowDown','ArrowUp','ArrowLeft','ArrowRight'].includes(event.key)){
+    event.preventDefault();
+    const direction=['ArrowDown','ArrowRight'].includes(event.key)?1:-1;
+    const next=rows[(rows.indexOf(event.target)+direction+rows.length)%rows.length];
+    selectSource(next.dataset.source);
+    renderSources();
+    document.querySelector(`[data-source="${selectedSource}"]`).focus();
+  }
+  if(event.key==='Tab'){
+    const focusable=[...sheet.querySelectorAll('button,input')].filter(element=>element.tabIndex>=0);
+    if(event.shiftKey&&(document.activeElement===focusable[0]||document.activeElement===sheet)){event.preventDefault();focusable.at(-1).focus();}
+    else if(!event.shiftKey&&document.activeElement===focusable.at(-1)){event.preventDefault();focusable[0].focus();}
+  }
+});
+document.addEventListener('keydown',event=>{
+  if(event.key==='Escape'){
+    if(!shade.hidden) closeSheet();
+    else if(!document.getElementById('reader').hidden) closeArticle();
+  }
+});
+document.getElementById('manage-feeds').addEventListener('click',()=>{const note=document.getElementById('manage-note');note.textContent='Hier öffnet sich die bestehende Verwaltung für Abos und Benachrichtigungen.';note.hidden=false;});
+document.getElementById('add-feed').addEventListener('click',()=>{openSheet();const note=document.getElementById('manage-note');note.hidden=false;note.textContent='Hier öffnet sich das Hinzufügen eines Feeds. Abos werden in diesem Entwurf nicht verändert.';});
+document.getElementById('home-button').addEventListener('click',()=>{setTab('feeds');list.scrollTop=0;});
+document.getElementById('demo-picker').addEventListener('click',openSheet);
+document.getElementById('demo-scroll').addEventListener('click',()=>{if(!shade.hidden) closeSheet();if(!document.getElementById('reader').hidden) closeArticle();setTab('feeds');list.scrollBy({top:850,behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});});
+document.getElementById('back-to-list').addEventListener('click',closeArticle);
+document.getElementById('save-article').addEventListener('click',()=>{currentArticle.saved=!currentArticle.saved;updateSaveButton();});
+renderList(true);
 </script>
 </body>
 </html>
