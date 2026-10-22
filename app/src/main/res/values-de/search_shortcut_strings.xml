@@ -1,0 +1,10 @@
+<resources>
+    <string name="settings_search_shortcuts_title">Suchkürzel</string>
+    <string name="settings_search_shortcuts_summary" formatted="false">Gib ein Kürzel und Suchbegriffe in die Adressleiste ein, zum Beispiel „gh compose“. Setze %s dort in die URL, wo die Suchbegriffe eingefügt werden sollen.</string>
+    <string name="settings_search_shortcut_keyword">Kürzel</string>
+    <string name="settings_search_shortcut_keyword_summary">Verwende Buchstaben, Zahlen, Bindestriche oder Unterstriche. Kürzel müssen eindeutig sein und dürfen keiner integrierten Suchmaschine entsprechen.</string>
+    <string name="settings_search_shortcut_template">Vorlage für die Such-URL</string>
+    <string name="settings_search_shortcut_template_summary" formatted="false">Verwende genau einen %s-Platzhalter in einer HTTP- oder HTTPS-URL.</string>
+    <string name="settings_search_shortcut_add">Suchkürzel hinzufügen</string>
+    <string name="settings_search_shortcut_remove">Entfernen</string>
+</resources>

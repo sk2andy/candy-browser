@@ -1,0 +1,10 @@
+<resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
+    <string name="settings_search_shortcuts_title">Search shortcuts</string>
+    <string name="settings_search_shortcuts_summary" formatted="false">Type a keyword and search terms in the address bar, for example “gh compose”. Use %s where the search terms belong in the URL.</string>
+    <string name="settings_search_shortcut_keyword">Keyword</string>
+    <string name="settings_search_shortcut_keyword_summary">Use letters, numbers, hyphens, or underscores. Keywords must be unique and cannot match a built-in search engine.</string>
+    <string name="settings_search_shortcut_template">Search URL template</string>
+    <string name="settings_search_shortcut_template_summary" formatted="false">Use one %s placeholder in an HTTP or HTTPS URL.</string>
+    <string name="settings_search_shortcut_add">Add shortcut</string>
+    <string name="settings_search_shortcut_remove">Remove</string>
+</resources>

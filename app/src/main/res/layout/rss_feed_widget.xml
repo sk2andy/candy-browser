@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/bg_rss_widget"
@@ -12,6 +13,7 @@
         android:gravity="center_vertical"
         android:orientation="horizontal">
 
+        <!-- RemoteViews inflates a framework ImageView, so tint must use the Android attribute. -->
         <ImageView
             android:layout_width="38dp"
             android:layout_height="38dp"
@@ -19,7 +21,8 @@
             android:contentDescription="@null"
             android:padding="9dp"
             android:src="@drawable/ic_rss"
-            android:tint="@color/candy_widget_accent" />
+            android:tint="@color/candy_widget_accent"
+            tools:ignore="UseAppTint" />
 
         <TextView
             android:id="@+id/rss_widget_title"
@@ -44,7 +47,7 @@
             android:textStyle="bold" />
     </LinearLayout>
 
-    <View
+    <TextView
         android:layout_width="match_parent"
         android:layout_height="1dp"
         android:layout_marginTop="10dp"
@@ -84,7 +87,7 @@
                 android:fontFamily="sans-serif-medium" />
         </LinearLayout>
 
-        <View
+        <TextView
             android:id="@+id/rss_widget_divider_one"
             android:layout_width="match_parent"
             android:layout_height="1dp"
@@ -117,7 +120,7 @@
                 android:fontFamily="sans-serif-medium" />
         </LinearLayout>
 
-        <View
+        <TextView
             android:id="@+id/rss_widget_divider_two"
             android:layout_width="match_parent"
             android:layout_height="1dp"
