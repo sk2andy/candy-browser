@@ -1,0 +1,9 @@
+<resources>
+    <string name="feeds_next_unread">Nächster ungelesener Artikel</string>
+    <string name="feeds_notifications_denied">Android-Hinweise sind deaktiviert. Deine Auswahl bleibt gespeichert.</string>
+    <string name="feeds_notification_channel">Candy Feeds</string>
+    <string name="feeds_notification_count">%1$d ungelesene Artikel warten.</string>
+    <string name="feeds_speech_next">Nächster Artikel</string>
+    <string name="feeds_speech_speed">Vorlesetempo: %1$s×</string>
+    <string name="feeds_speech_unavailable">Keine Vorlesestimme verfügbar. Prüfe die Android-Sprachausgabe.</string>
+</resources>

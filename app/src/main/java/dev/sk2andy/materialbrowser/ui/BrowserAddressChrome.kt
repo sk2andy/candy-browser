@@ -119,6 +119,10 @@ internal fun BoxScope.BrowserAddressChrome(
     toggleFavoriteWithFeedback: (String) -> Unit,
     onBlankTabModeRevealOriginChanged: (Offset) -> Unit,
     onSnoozedTabs: () -> Unit,
+    onOpenFeeds: (() -> Unit)? = null,
+    onOpenLibrary: (() -> Unit)? = null,
+    onDiscoverFeeds: (() -> Unit)? = null,
+    unreadFeedCount: Int = 0,
     onOpenFavorites: () -> Unit,
     onOpenDownloads: () -> Unit,
     onOpenHistory: () -> Unit,
@@ -549,6 +553,11 @@ internal fun BoxScope.BrowserAddressChrome(
             onAddressEditorDismiss()
             onSnoozedTabs()
         },
+        onOpenFeeds = onOpenFeeds,
+        onOpenLibrary = onOpenLibrary,
+        onDiscoverFeeds = onDiscoverFeeds,
+        unreadFeedCount = unreadFeedCount,
+        canDiscoverFeeds = ReaderStudioSessionRules.isSupportedSource(selectedTab.url),
         onFavorites = {
             onAddressEditorDismiss()
             onOpenFavorites()

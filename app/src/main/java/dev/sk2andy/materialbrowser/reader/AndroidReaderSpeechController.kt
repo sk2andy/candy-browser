@@ -1,6 +1,7 @@
 package dev.sk2andy.materialbrowser.reader
 
 import android.content.Context
+import android.media.AudioAttributes
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -12,7 +13,9 @@ import androidx.compose.runtime.setValue
 
 internal class AndroidReaderSpeechController(
     context: Context,
-    private val onInitialized: (Boolean) -> Unit,
+    private val onInitialized: (Boolean) -> Unit = {},
+    private val audioAttributes: AudioAttributes? = null,
+    private val onCompleted: () -> Unit = {},
 ) : ReaderSpeech {
     override var state by mutableStateOf(ReaderSpeechState())
         private set
@@ -28,6 +31,7 @@ internal class AndroidReaderSpeechController(
             handler.post {
                 if (state.status == ReaderSpeechStatus.Closed) return@post
                 if (result == TextToSpeech.SUCCESS) {
+                    audioAttributes?.let { engine?.setAudioAttributes(it) }
                     engine?.setOnUtteranceProgressListener(listener)
                     dispatch(ReaderSpeechEvent.Initialized)
                     onInitialized(true)
@@ -74,7 +78,23 @@ internal class AndroidReaderSpeechController(
     override fun stop() {
         chunkStarts = emptyMap()
         engine?.stop()
-        dispatch(ReaderSpeechEvent.Stop)
+        generation++
+        if (state.status != ReaderSpeechStatus.Initializing) dispatch(ReaderSpeechEvent.Stop)
+    }
+
+    fun playFrom(content: String, progress: Float) {
+        if (state.status == ReaderSpeechStatus.Ready) {
+            text = content
+            state = state.copy(characterOffset = (content.length * progress.coerceIn(0f, 1f)).toInt())
+        }
+        play(content)
+    }
+
+    fun setRate(rate: Float) {
+        val wasSpeaking = state.status == ReaderSpeechStatus.Speaking
+        if (wasSpeaking) pause()
+        engine?.setSpeechRate(rate.coerceIn(0.5f, 2f))
+        if (wasSpeaking) play(text)
     }
 
     override fun close() {
@@ -91,8 +111,11 @@ internal class AndroidReaderSpeechController(
 
         override fun onDone(utteranceId: String?) {
             handler.post {
-                if (utteranceId != null && utteranceId == chunkStarts.keys.lastOrNull()) {
+                if (utteranceId != null && utteranceId == chunkStarts.keys.lastOrNull() &&
+                    state.status == ReaderSpeechStatus.Speaking
+                ) {
                     dispatch(ReaderSpeechEvent.Completed)
+                    onCompleted()
                 }
             }
         }

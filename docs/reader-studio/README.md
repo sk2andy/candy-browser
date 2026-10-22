@@ -8,6 +8,7 @@
 | Library, offline snapshots, settings, speech, Compose UI and motion | [`library-speech-and-ui.md`](library-speech-and-ui.md) | `ReaderLibrary*`, `ReaderSpeech`, `ReaderStudioScreen` |
 | Android entry, Library/Feeds tabs, source chooser and unread inbox | [`../rss/README.md`](../rss/README.md) | `ReaderStudioHomeHost`, `ReaderStudioHomeScreen`, `RssInbox*` |
 | RSS article handoff into Reader Studio | [`../rss/README.md`](../rss/README.md) | `IncomingLinkRouter.openInReader`, RSS activity, feed widget and notifications |
+| Shared website/feed collection and browser entry | [`../feeds/README.md`](../feeds/README.md) | `FeedsHost`, `FeedReaderDataSource`, `FeedsScreen` |
 
 ## Test lookup
 

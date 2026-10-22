@@ -39,6 +39,22 @@ scheme-swap rule. Those are always your design decisions.
 
 ## Quick reference
 
+### Candy search and filters
+
+- Use the [Material 3 Search component](https://m3.material.io/components/search/overview)
+  for in-app content search: a filled, rounded search bar with a leading search icon, hint text,
+  and a clear action when populated. Read the Search section in
+  [`references/components/input.md`](references/components/input.md) for anatomy and behavior.
+- In Android Compose, reuse Candy's `ui/LibrarySearchBar.kt` (`SearchBar` with
+  `SearchBarDefaults.InputField`) for collection search. Preserve existing theme roles and
+  search interactions. Do not substitute an `OutlinedTextField` or a custom outlined pill.
+  Form inputs and the browser address bar retain their separate contracts.
+- **Candy product choice, not a universal M3 rule:** keep collection filter chips in one
+  horizontally scrollable row. Use tabs for top-level content categories (for example,
+  library All / Websites / Feeds), and chips for filters within the selected tab.
+  Each chip set has one “All” reset; a separate “All” tab is valid because it controls
+  a different dimension. Keep tab and filter selections independent.
+
 | Decision | Answer |
 |---|---|
 | Motion scheme | **Expressive** for most products, hero moments, key interactions. **Standard** only for utilitarian products. |

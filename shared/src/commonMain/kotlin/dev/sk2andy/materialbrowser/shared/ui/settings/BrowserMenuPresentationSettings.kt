@@ -237,6 +237,9 @@ internal fun BrowserMenuSettingsEntryIcon(entry: BrowserMenuEntry) {
         BrowserMenuEntry.NewTab -> Icons.Default.Add
         BrowserMenuEntry.CloseTab -> Icons.Default.Close
         BrowserMenuEntry.DuplicateTab -> Icons.Default.ContentCopy
+        BrowserMenuEntry.OpenFeeds -> Icons.AutoMirrored.Filled.MenuBook
+        BrowserMenuEntry.OpenLibrary -> Icons.AutoMirrored.Filled.MenuBook
+        BrowserMenuEntry.DiscoverFeeds -> Icons.Default.Search
         BrowserMenuEntry.Reader -> Icons.AutoMirrored.Filled.MenuBook
         BrowserMenuEntry.WebAnnotations -> Icons.Default.Edit
         BrowserMenuEntry.Translate -> Icons.Default.Translate

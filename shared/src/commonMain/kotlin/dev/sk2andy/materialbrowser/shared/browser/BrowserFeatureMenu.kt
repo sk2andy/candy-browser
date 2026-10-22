@@ -13,6 +13,7 @@ enum class BrowserFeatureMenuSection {
     Toppings,
     Candy,
     Browser,
+    Reading,
 }
 
 enum class BrowserFeatureMenuItemKind {
@@ -34,6 +35,9 @@ enum class BrowserFeatureMenuAction {
     CloseTab,
     ParkAddressBarRight,
     OpenReader,
+    OpenFeeds,
+    OpenLibrary,
+    DiscoverFeeds,
     OpenWebAnnotations,
     TranslatePage,
     FindInPage,
@@ -79,6 +83,9 @@ enum class BrowserFeatureMenuLabelKey {
     CloseTab,
     ParkAddressBarRight,
     Reader,
+    Feeds,
+    Library,
+    DiscoverFeeds,
     WebAnnotations,
     Translate,
     FindInPage,
@@ -118,6 +125,7 @@ data class BrowserFeatureMenuItem(
     val section: BrowserFeatureMenuSection,
     val kind: BrowserFeatureMenuItemKind,
     val enabled: Boolean,
+    val unreadCount: Int = 0,
     val checked: Boolean? = null,
     val dynamicLabel: String? = null,
     val supportingText: String? = null,
@@ -144,6 +152,8 @@ data class BrowserFeatureMenuState(
     val isFavorite: Boolean = false,
     val isPinned: Boolean = false,
     val canOpenReader: Boolean = false,
+    val canDiscoverFeeds: Boolean = false,
+    val unreadFeedCount: Int = 0,
     val canOpenWebAnnotations: Boolean = false,
     val canTranslatePage: Boolean = false,
     val canUseDocumentActions: Boolean = false,
@@ -173,6 +183,9 @@ data class BrowserFeatureMenuState(
 )
 
 data class BrowserFeatureMenuCapabilities(
+    val supportsFeeds: Boolean = false,
+    val supportsFeedDiscovery: Boolean = false,
+    val supportsLibrary: Boolean = false,
     val supportsFirefoxExtensions: Boolean = false,
     val supportsSiteWidgets: Boolean = false,
     val supportsConstellations: Boolean = false,
@@ -186,9 +199,10 @@ object BrowserFeatureMenuRules {
     ): List<BrowserFeatureMenuItem> = buildList {
         toolbarItems(state).forEach(::add)
         pageItems(state, capabilities).forEach(::add)
-        toppingItems(state).forEach(::add)
         candyItems(state, capabilities).forEach(::add)
         browserItems(state, capabilities).forEach(::add)
+        readingItems(state, capabilities).forEach(::add)
+        toppingItems(state).forEach(::add)
     }
 
     private fun toolbarItems(state: BrowserFeatureMenuState) = listOf(
@@ -275,6 +289,9 @@ object BrowserFeatureMenuRules {
                 enabled = state.canOpenReader,
             ),
         )
+        if ((capabilities.supportsFeeds || capabilities.supportsFeedDiscovery) && state.canDiscoverFeeds) {
+            add(command(BrowserFeatureMenuAction.DiscoverFeeds, BrowserFeatureMenuLabelKey.DiscoverFeeds))
+        }
         if (capabilities.supportsWebAnnotations) {
             add(
                 command(
@@ -392,6 +409,23 @@ object BrowserFeatureMenuRules {
                 else BrowserFeatureMenuLabelKey.EnableStatusBarScrollForDomain,
                 true,
                 state.isStatusBarScrollEnabled,
+            ))
+        }
+    }
+
+    private fun readingItems(
+        state: BrowserFeatureMenuState,
+        capabilities: BrowserFeatureMenuCapabilities,
+    ) = buildList {
+        if (capabilities.supportsFeeds) {
+            add(navigation(BrowserFeatureMenuAction.OpenFeeds, BrowserFeatureMenuLabelKey.Feeds).copy(
+                section = BrowserFeatureMenuSection.Reading,
+                unreadCount = state.unreadFeedCount.coerceAtLeast(0),
+            ))
+        }
+        if (capabilities.supportsLibrary) {
+            add(navigation(BrowserFeatureMenuAction.OpenLibrary, BrowserFeatureMenuLabelKey.Library).copy(
+                section = BrowserFeatureMenuSection.Reading,
             ))
         }
     }

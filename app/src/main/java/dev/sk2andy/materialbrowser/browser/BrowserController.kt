@@ -7383,6 +7383,8 @@ class BrowserController(
         profiles.removeAt(profileIndex)
         lockedProfileIds -= profileId
         ProfileProtectionSession.forget(profileId)
+        dev.sk2andy.materialbrowser.feeds.FeedPlaybackManager.get(activity.applicationContext).invalidate(profileId)
+        dev.sk2andy.materialbrowser.feeds.FeedRepository.invalidate(setOf(profileId))
         profileWallpaperExecutor.execute { profileWallpaperStore.delete(profileId) }
         val profileTrailRedactions = store.loadPendingCandyTrailRedactions().filter { redaction ->
             redaction.tabIds.any(removedProfileTrailTabIds::contains)
@@ -7407,6 +7409,7 @@ class BrowserController(
         }
         reconcileCandyTrailForks(System.currentTimeMillis())
         persist()
+        dev.sk2andy.materialbrowser.feeds.FeedProfileLifecycle.remove(activity.applicationContext, profileId)
         previewToRecreate?.let(::createExternalLinkPreviewRuntime)
         return true
     }
@@ -17251,7 +17254,11 @@ class BrowserController(
         if (tabs.firstOrNull { it.id == restorationPreviewTabId }?.profileId in profileIds) {
             invalidateRestorationPreview()
         }
+        profileIds.forEach { profileId ->
+            dev.sk2andy.materialbrowser.feeds.FeedPlaybackManager.get(activity.applicationContext).invalidate(profileId)
+        }
         ProfileProtectionSession.lock(profileIds)
+        dev.sk2andy.materialbrowser.feeds.FeedRepository.invalidate(profileIds)
         lockedProfileIds += profileIds
         if (externalLinkPreviewState?.targetProfileId in profileIds) {
             releaseExternalLinkPreviewRuntime(resumeSelectedTab = false)

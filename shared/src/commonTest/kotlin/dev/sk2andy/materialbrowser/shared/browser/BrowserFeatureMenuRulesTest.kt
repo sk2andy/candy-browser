@@ -8,6 +8,54 @@ import kotlin.test.assertTrue
 
 class BrowserFeatureMenuRulesTest {
     @Test
+    fun `reading destinations require platform support and unread count stays nonnegative`() {
+        val state = BrowserFeatureMenuState(canDiscoverFeeds = true, unreadFeedCount = 12)
+        val unsupported = BrowserFeatureMenuRules.items(state)
+        assertFalse(unsupported.any { it.section == BrowserFeatureMenuSection.Reading })
+        assertFalse(unsupported.any { it.action == BrowserFeatureMenuAction.DiscoverFeeds })
+
+        val capabilities = BrowserFeatureMenuCapabilities(supportsFeeds = true, supportsLibrary = true)
+        val supported = BrowserFeatureMenuRules.items(state, capabilities)
+        assertEquals(12, supported.single { it.action == BrowserFeatureMenuAction.OpenFeeds }.unreadCount)
+        assertEquals(
+            listOf(BrowserFeatureMenuAction.OpenFeeds, BrowserFeatureMenuAction.OpenLibrary),
+            supported.filter { it.section == BrowserFeatureMenuSection.Reading }.map { it.action },
+        )
+        val noUnread = BrowserFeatureMenuRules.items(state.copy(unreadFeedCount = -1), capabilities)
+        assertEquals(0, noUnread.single { it.action == BrowserFeatureMenuAction.OpenFeeds }.unreadCount)
+    }
+
+    @Test
+    fun `discovery requires a supported page while collection does not`() {
+        val capabilities = BrowserFeatureMenuCapabilities(supportsFeeds = true, supportsLibrary = true)
+        val blank = BrowserFeatureMenuRules.items(BrowserFeatureMenuState(), capabilities)
+        assertFalse(blank.any { it.action == BrowserFeatureMenuAction.DiscoverFeeds })
+        assertTrue(blank.single { it.action == BrowserFeatureMenuAction.OpenLibrary }.enabled)
+        val page = BrowserFeatureMenuRules.items(BrowserFeatureMenuState(canDiscoverFeeds = true), capabilities)
+        assertEquals(BrowserFeatureMenuSection.Page, page.single {
+            it.action == BrowserFeatureMenuAction.DiscoverFeeds
+        }.section)
+    }
+
+    @Test
+    fun `reading collection follows page actions and custom workflows are last`() {
+        val items = BrowserFeatureMenuRules.items(
+            BrowserFeatureMenuState(toppingCommands = listOf(BrowserToppingMenuCommand("tools", "focus", "Focus", "Tools"))),
+            BrowserFeatureMenuCapabilities(supportsFeeds = true, supportsLibrary = true),
+        )
+        val readingIndex = items.indexOfFirst { it.section == BrowserFeatureMenuSection.Reading }
+        assertTrue(items.indexOfLast { it.section == BrowserFeatureMenuSection.Page } < readingIndex)
+        assertEquals(BrowserFeatureMenuSection.Toppings, items.last().section)
+        val hiddenFeeds = BrowserMenuLayoutRules.visibleItems(
+            items,
+            BrowserMenuLayoutRules.update(BrowserMenuLayout.Default, BrowserMenuEntry.OpenFeeds, BrowserMenuLocation.Nowhere),
+            BrowserMenuSurface.Tab,
+        )
+        assertFalse(hiddenFeeds.any { it.action == BrowserFeatureMenuAction.OpenFeeds })
+        assertTrue(hiddenFeeds.any { it.action == BrowserFeatureMenuAction.OpenLibrary })
+    }
+
+    @Test
     fun `status bar scroll action is hidden unless global feature and domain are enabled`() {
         assertFalse(
             BrowserFeatureMenuRules.items(BrowserFeatureMenuState())

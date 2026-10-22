@@ -1,0 +1,9 @@
+<resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
+    <string name="feeds_next_unread">Next unread article</string>
+    <string name="feeds_notifications_denied">Notifications are disabled in Android. Your selection is saved.</string>
+    <string name="feeds_notification_channel">Candy Feeds</string>
+    <string name="feeds_notification_count">%1$d unread articles are waiting.</string>
+    <string name="feeds_speech_next">Next article</string>
+    <string name="feeds_speech_speed">Reading speed: %1$s×</string>
+    <string name="feeds_speech_unavailable">No speech voice is available. Check Android text-to-speech settings.</string>
+</resources>

@@ -1,5 +1,7 @@
 package dev.sk2andy.materialbrowser
 
+import dev.sk2andy.materialbrowser.feeds.FeedLaunchContract
+import dev.sk2andy.materialbrowser.feeds.FeedPlaybackManager
 import dev.sk2andy.materialbrowser.reader.rss.RssReaderLaunchRequest
 import dev.sk2andy.materialbrowser.reader.rss.RssReaderNavigation
 import dev.sk2andy.materialbrowser.reader.rss.RssFeedNotifier
@@ -181,6 +183,8 @@ open class MainActivity : AppCompatActivity() {
     private var incomingBrowserNavigationRequestId by mutableIntStateOf(0)
     private var rssReaderLaunchRequest by mutableStateOf<RssReaderLaunchRequest?>(null)
     private var rssReaderLaunchSequence = 0
+    private var openFeedsRequestId by mutableIntStateOf(0)
+    private var openFeedQueue by mutableStateOf(false)
     private var launcherAddressEditorRequestId by mutableIntStateOf(0)
     private var hardwareTabChangeRequestId by mutableIntStateOf(0)
     private var onboardingVisible by mutableStateOf(false)
@@ -354,6 +358,7 @@ open class MainActivity : AppCompatActivity() {
             val lockToken = AppDataTransferLock.activate(this, Process.myPid())
             if (lockToken != null) {
                 appDataTransferActive = true
+                FeedPlaybackManager.get(applicationContext).invalidate()
                 BrowserMediaPlaybackService.clearForAppDataTransfer(applicationContext)
                 val started = runCatching {
                     startActivity(
@@ -471,6 +476,9 @@ open class MainActivity : AppCompatActivity() {
                         val publication = browserController.media3Publication(
                             traceSource = "MainActivity.onMediaStateChanged",
                         )
+                        if (publication?.snapshot?.isPlaying == true) {
+                            FeedPlaybackManager.get(applicationContext).pause()
+                        }
                         if (browserController.consumeMedia3PictureInPictureRestore()) {
                             BrowserMediaLifecycleTrace.record(
                                 source = "MainActivity.onMediaStateChanged",
@@ -763,6 +771,8 @@ open class MainActivity : AppCompatActivity() {
                         onRssReaderLaunchConsumed = { requestId ->
                             if (rssReaderLaunchRequest?.id == requestId) rssReaderLaunchRequest = null
                         },
+                        openFeedsRequestId = openFeedsRequestId,
+                        openFeedQueue = openFeedQueue,
                         externalLaunchTabId = externalLaunchTabId,
                         onReturnToExternalApp = {
                             browserController.dismissExternalLinkPreview()
@@ -1408,6 +1418,7 @@ open class MainActivity : AppCompatActivity() {
     }
 
     internal fun prepareForGuestBubble() {
+        FeedPlaybackManager.get(applicationContext).invalidate()
         if (::browserController.isInitialized) browserController.pauseActiveMedia()
         if (::browserMediaSystemSession.isInitialized) browserMediaSystemSession.stopAndClear()
     }
@@ -1533,6 +1544,7 @@ open class MainActivity : AppCompatActivity() {
             return
         }
         appDataTransferActive = true
+        FeedPlaybackManager.get(applicationContext).invalidate()
         if (::browserMediaSystemSession.isInitialized) {
             browserMediaSystemSession.clearForAppDataTransfer()
         } else {
@@ -1638,6 +1650,26 @@ open class MainActivity : AppCompatActivity() {
         File(applicationInfo.dataDir, AppDataArchiveRules.TRANSFER_STATE_DIRECTORY_NAME)
 
     private fun openIntent(intent: Intent) {
+        if (intent.action == FeedLaunchContract.ACTION_OPEN) {
+            val profileId = intent.getStringExtra(FeedLaunchContract.EXTRA_PROFILE)
+            val profile = browserController.localBrowserProfiles.firstOrNull { it.id == profileId }
+            if (dev.sk2andy.materialbrowser.browser.ProfileProtectionSession.isAccessible(profile) &&
+                profileId != null &&
+                (profileId == browserController.activeProfileId || browserController.selectProfile(profileId))
+            ) {
+                if (browserController.selectedTab.isIncognito) {
+                    browserController.createTab(isIncognito = false)
+                }
+                browserController.cancelDeviceSearchNavigation()
+                browserController.dismissExternalLinkPreview()
+                browserController.leaveSiteCapsule()
+                rssReaderLaunchRequest = null
+                showIncomingBrowserNavigation()
+                openFeedQueue = intent.getBooleanExtra(FeedLaunchContract.EXTRA_QUEUE, false)
+                openFeedsRequestId++
+            }
+            return
+        }
         browserController.cancelDeviceSearchNavigation()
         if (intent.action == RssFeedNotifier.ACTION_OPEN_ARTICLE ||
             intent.action == RssReaderNavigation.ACTION_OPEN_FEEDS

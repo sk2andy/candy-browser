@@ -36,7 +36,7 @@ internal object BrowserMediaControllerAuthRules {
 }
 
 /**
- * The only Android system-media owner. Gecko remains the decoder: [GeckoMedia3Player] exposes
+ * The Android system-media owner for browser playback. Gecko remains the decoder: [GeckoMedia3Player] exposes
  * its state and transports commands back through the current, memory-only owner identity.
  */
 @OptIn(markerClass = [UnstableApi::class])

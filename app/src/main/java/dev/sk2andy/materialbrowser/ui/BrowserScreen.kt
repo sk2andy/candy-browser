@@ -38,16 +38,19 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.key
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
+import androidx.compose.runtime.saveable.LocalSaveableStateRegistry
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
@@ -74,6 +77,9 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import dev.sk2andy.materialbrowser.R
+import dev.sk2andy.materialbrowser.feeds.FeedRepository
+import dev.sk2andy.materialbrowser.ui.feeds.FeedsEntry
+import dev.sk2andy.materialbrowser.ui.feeds.FeedsHost
 import dev.sk2andy.materialbrowser.browser.AddressResolver
 import dev.sk2andy.materialbrowser.browser.BLANK_URL
 import dev.sk2andy.materialbrowser.browser.integration.linkrouting.LinkRoutingRules
@@ -143,6 +149,7 @@ import kotlin.coroutines.resume
 
 private enum class BrowserBackTarget {
     ReaderStudio,
+    FeedsReturn,
     FilterStudio,
     SnoozedTabs,
     SettingsSubpage,
@@ -251,6 +258,8 @@ internal fun BrowserScreen(
     openAddressEditorOnLaunch: Boolean = false,
     launcherAddressEditorRequestId: Int = 0,
     hardwareTabChangeRequestId: Int = 0,
+    openFeedsRequestId: Int = 0,
+    openFeedQueue: Boolean = false,
 ) {
     val activeProfileLocked = controller.isActiveProfileLocked
     LaunchedEffect(controller, activeProfileLocked) {
@@ -394,8 +403,16 @@ internal fun BrowserScreen(
         exitHeroVisible = overviewExitHeroVisible,
     )
     val selectedTab = controller.selectedTab
+    var feedsEntry by remember(controller.activeProfileId, selectedTab.id, selectedTab.isIncognito) {
+        mutableStateOf<FeedsEntry?>(null)
+    }
+    var feedsReturnEntry by remember(controller.activeProfileId, selectedTab.id, selectedTab.isIncognito) {
+        mutableStateOf<FeedsEntry?>(null)
+    }
+    val feedsSavedState = rememberSaveableStateHolder()
+    val feedsProgressScope = rememberCoroutineScope()
     val statusBarScrollPageVisible = !settingsVisible && !tabOverviewVisible &&
-        !addressEditorVisible && !hideBrowserChrome
+        !addressEditorVisible && !hideBrowserChrome && feedsEntry == null
     LaunchedEffect(
         controller,
         selectedTab.id,
@@ -456,6 +473,11 @@ internal fun BrowserScreen(
     val context = LocalContext.current
     val readerLibraryRepository = remember(context) { ReaderLibraryRepository.get(context) }
     val rssInboxRepository = remember(context) { RssInboxRepository.get(context) }
+    val feedRepository = remember(controller.activeProfileId, selectedTab.isIncognito) {
+        FeedRepository.get(context, controller.activeProfileId, selectedTab.isIncognito)
+    }
+    val feedState by feedRepository.state.collectAsState()
+    LaunchedEffect(feedRepository) { feedRepository.load() }
     val accessibilityManager = remember(context) {
         context.getSystemService(AccessibilityManager::class.java)
     }
@@ -752,6 +774,8 @@ internal fun BrowserScreen(
             activeCommandExecutionId = null
             pendingCommand = null
             commandFeedback = null
+            feedsEntry = null
+            feedsReturnEntry = null
             readerStudioSession = null
             readerStudioHomeVisible = false
             pendingFeedReader = null
@@ -845,6 +869,12 @@ internal fun BrowserScreen(
         readerStudioFeedSourceUrl = null
         readerStudioRequestId++
     }
+    fun openFeedCollection(entry: FeedsEntry) {
+        dismissReaderStudioArticle()
+        readerStudioHomeVisible = false
+        feedsReturnEntry = null
+        feedsEntry = entry
+    }
     fun openReaderStudio(fromFeed: Boolean = false) {
         if (!fromFeed) {
             pendingFeedReader = null
@@ -887,9 +917,19 @@ internal fun BrowserScreen(
             requestId = ++readerStudioRequestId,
         )
     }
+    LaunchedEffect(openFeedsRequestId) {
+        if (openFeedsRequestId > 0 && !selectedTab.isIncognito) {
+            closeTabOverview()
+            openFeedCollection(
+                FeedsEntry(queueRequestId = openFeedsRequestId.takeIf { openFeedQueue } ?: 0),
+            )
+        }
+    }
     LaunchedEffect(rssReaderLaunchRequest?.id) {
         val request = rssReaderLaunchRequest ?: return@LaunchedEffect
         onRssReaderLaunchConsumed(request.id)
+        feedsEntry = null
+        feedsReturnEntry = null
         if (request.articleUrl == null && controller.selectedTab.isIncognito) {
             controller.createTab(initialUrl = BLANK_URL, isIncognito = false)
             if (controller.selectedTab.isIncognito) return@LaunchedEffect
@@ -1455,6 +1495,7 @@ internal fun BrowserScreen(
             candyTrailTabId != null -> BrowserBackTarget.CandyTrail
             tabOverviewVisible || tabOverviewOpening -> BrowserBackTarget.TabOverview
             controller.isSelectedWebContentFullscreen -> BrowserBackTarget.WebContentFullscreen
+            feedsReturnEntry != null -> BrowserBackTarget.FeedsReturn
             selectedTab.canGoBack -> BrowserBackTarget.WebHistory
             selectedTab.id == externalLaunchTabId -> BrowserBackTarget.ExternalApp
             controller.selectedRootTabBackDecision ==
@@ -1462,7 +1503,7 @@ internal fun BrowserScreen(
             else -> BrowserBackTarget.RootTab
         },
     )
-    PredictiveBackHandler(enabled = currentBackTarget != BrowserBackTarget.System) { events ->
+    PredictiveBackHandler(enabled = feedsEntry == null && currentBackTarget != BrowserBackTarget.System) { events ->
         controller.cancelSelectedBrowserEngineTouch()
         val target = currentBackTarget
         var receivedProgress = false
@@ -1483,6 +1524,10 @@ internal fun BrowserScreen(
                 BrowserBackTarget.ReaderStudio -> {
                     if (readerStudioSession != null) dismissReaderStudioArticle()
                     else readerStudioHomeVisible = false
+                }
+                BrowserBackTarget.FeedsReturn -> {
+                    feedsEntry = feedsReturnEntry
+                    feedsReturnEntry = null
                 }
                 BrowserBackTarget.FilterStudio -> filterStudioVisible = false
                 BrowserBackTarget.SnoozedTabs -> snoozedTabsVisible = false
@@ -1741,7 +1786,7 @@ internal fun BrowserScreen(
             )
         }
 
-        if (firefoxExtensionOptionsTitle == null && !hideBrowserChrome) {
+        if (firefoxExtensionOptionsTitle == null && !hideBrowserChrome && feedsEntry == null) {
             BrowserAddressChrome(
             controller = controller,
             selectedTab = selectedTab,
@@ -1813,6 +1858,14 @@ internal fun BrowserScreen(
             onOpenRssFeeds = if (selectedTab.isIncognito) null else {
                 { onOpenRssFeeds(selectedTab.url, selectedTab.isIncognito) }
             },
+            onOpenFeeds = if (selectedTab.isIncognito) null else {
+                { openFeedCollection(FeedsEntry()) }
+            },
+            onOpenLibrary = if (selectedTab.isIncognito) null else {
+                { openFeedCollection(FeedsEntry(libraryOnly = true)) }
+            },
+            onDiscoverFeeds = { openFeedCollection(FeedsEntry(discoveryUrl = selectedTab.url)) },
+            unreadFeedCount = feedState.unreadCount,
             onSettings = {
                 settingsDestination = SettingsDestination.Home
                 settingsVisible = true
@@ -1845,6 +1898,37 @@ internal fun BrowserScreen(
         }
 
         SiteWidgetEditorHost(controller)
+
+        feedsEntry?.let { entry ->
+            val content: @Composable () -> Unit = {
+                key(feedRepository) {
+                    FeedsHost(
+                        repository = feedRepository,
+                        entry = entry,
+                        progressScope = feedsProgressScope,
+                        onOpenOriginal = { url ->
+                            feedsReturnEntry = entry.copy(discoveryUrl = null, queueRequestId = 0)
+                            feedsEntry = null
+                            dismissReaderStudioArticle()
+                            readerStudioHomeVisible = false
+                            controller.openUrl(url)
+                        },
+                        onDismiss = {
+                            feedsEntry = null
+                            feedsReturnEntry = null
+                        },
+                    )
+                }
+            }
+            if (feedRepository.isPrivate) {
+                CompositionLocalProvider(LocalSaveableStateRegistry provides null, content = content)
+            } else {
+                feedsSavedState.SaveableStateProvider(
+                    "${controller.activeProfileId}:${selectedTab.id}:${entry.libraryOnly}",
+                    content,
+                )
+            }
+        }
 
         fun selectOverviewTab(tabId: String, forceHandoff: Boolean) {
             val target = controller.activeTabs.firstOrNull { tab -> tab.id == tabId }
@@ -1949,7 +2033,7 @@ internal fun BrowserScreen(
             )
         }
 
-        if (readerStudioHomeVisible) {
+        if (readerStudioHomeVisible && feedsEntry == null) {
             key(readerStudioHomeGeneration) {
                 ReaderStudioHomeHost(
                     repository = readerLibraryRepository,
@@ -1980,7 +2064,7 @@ internal fun BrowserScreen(
             }
         }
 
-        readerStudioSession?.let { session ->
+        readerStudioSession?.takeIf { feedsEntry == null }?.let { session ->
             ReaderStudioScreen(
                 result = readerStudioResult,
                 sourceUrl = session.sourceUrl,
@@ -1990,10 +2074,15 @@ internal fun BrowserScreen(
                 initialSnapshot = readerStudioSnapshot,
                 onOpenLibrary = if (session.isPrivate) null else {
                     {
+                        val returnToEarlierCollection = readerStudioHomeVisible
                         dismissReaderStudioArticle()
-                        readerStudioHomeInitialTab = ReaderStudioHomeTab.Library
-                        readerStudioHomeGeneration++
-                        readerStudioHomeVisible = true
+                        if (returnToEarlierCollection) {
+                            readerStudioHomeInitialTab = ReaderStudioHomeTab.Library
+                            readerStudioHomeGeneration++
+                        } else {
+                            feedsReturnEntry = null
+                            feedsEntry = FeedsEntry(libraryOnly = true)
+                        }
                     }
                 },
                 onRetry = {

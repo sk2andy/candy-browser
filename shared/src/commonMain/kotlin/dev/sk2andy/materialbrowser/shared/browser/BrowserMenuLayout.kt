@@ -46,6 +46,9 @@ enum class BrowserMenuEntry(
     CloseTab("close_tab", BrowserMenuConfigurationSection.Page, BrowserMenuLocation.Tab, true, false),
     DuplicateTab("duplicate_tab", BrowserMenuConfigurationSection.Page, BrowserMenuLocation.Tab, true, false),
     Reader("reader", BrowserMenuConfigurationSection.Page, BrowserMenuLocation.Tab, true, false),
+    DiscoverFeeds("discover_feeds", BrowserMenuConfigurationSection.Page, BrowserMenuLocation.Tab, true, false),
+    OpenFeeds("open_feeds", BrowserMenuConfigurationSection.Browser, BrowserMenuLocation.Tab, true, false),
+    OpenLibrary("open_library", BrowserMenuConfigurationSection.Browser, BrowserMenuLocation.Tab, true, false),
     WebAnnotations("web_annotations", BrowserMenuConfigurationSection.Page, BrowserMenuLocation.Tab, true, false),
     Translate("translate", BrowserMenuConfigurationSection.Page, BrowserMenuLocation.Tab, true, false),
     FindInPage("find_in_page", BrowserMenuConfigurationSection.Page, BrowserMenuLocation.Tab, true, false),
@@ -326,6 +329,9 @@ object BrowserMenuLayoutRules {
         BrowserFeatureMenuAction.ParkAddressBarRight,
         BrowserFeatureMenuAction.DockAddressBar,
         -> BrowserMenuEntry.AddressBarDocking
+        BrowserFeatureMenuAction.OpenFeeds -> BrowserMenuEntry.OpenFeeds
+        BrowserFeatureMenuAction.OpenLibrary -> BrowserMenuEntry.OpenLibrary
+        BrowserFeatureMenuAction.DiscoverFeeds -> BrowserMenuEntry.DiscoverFeeds
         BrowserFeatureMenuAction.OpenReader -> BrowserMenuEntry.Reader
         BrowserFeatureMenuAction.TranslatePage -> BrowserMenuEntry.Translate
         BrowserFeatureMenuAction.FindInPage -> BrowserMenuEntry.FindInPage

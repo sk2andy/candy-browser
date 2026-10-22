@@ -374,6 +374,7 @@ fun ReaderStudioScreen(
     speechOptions: @Composable (ReaderSpeech) -> Unit = {},
     initialSnapshot: ReaderSnapshot? = null,
     onOpenCollection: (() -> Unit)? = null,
+    extraActions: @Composable () -> Unit = {},
 ) {
     var library by remember(isPrivate) { mutableStateOf(ReaderLibraryState()) }
     val sessionActive = remember(repository, result, sourceUrl, isPrivate) { mutableStateOf(true) }
@@ -544,6 +545,7 @@ fun ReaderStudioScreen(
                                 if (onOpenCollection != null) onOpenCollection() else libraryVisible = true
                             },
                             onOpenOriginal = { onOpenOriginal(checkNotNull(activeDocument).sourceUrl) },
+                            extraActions = extraActions,
                         )
                     }
                 }
@@ -603,7 +605,7 @@ fun ReaderStudioScreen(
                     },
                     onLibrary = if (isPrivate) null else {
                         {
-                            libraryVisible = !libraryVisible
+                            if (onOpenCollection != null) onOpenCollection() else libraryVisible = !libraryVisible
                             settingsVisible = false
                         }
                     },
@@ -753,6 +755,7 @@ private fun ReaderArticle(
     onHideControls: () -> Unit,
     onLibrary: () -> Unit,
     onOpenOriginal: () -> Unit,
+    extraActions: @Composable () -> Unit,
 ) {
     val density = LocalDensity.current.density
     val currentOnScroll by rememberUpdatedState(onScroll)
@@ -825,6 +828,7 @@ private fun ReaderArticle(
             onLibrary = onLibrary.takeUnless { isPrivate },
             onOpenOriginal = onOpenOriginal,
         ) {
+            extraActions()
             LinearProgressIndicator(
                 progress = { progress },
                 modifier = Modifier.fillMaxWidth().testTag(ReaderStudioTestTags.Progress),

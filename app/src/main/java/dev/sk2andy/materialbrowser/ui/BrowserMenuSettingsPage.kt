@@ -165,6 +165,9 @@ private fun BrowserMenuEntry.labelResource(): Int = when (this) {
     BrowserMenuEntry.NewTab -> R.string.cd_new_tab
     BrowserMenuEntry.CloseTab -> R.string.cd_close_tab
     BrowserMenuEntry.DuplicateTab -> R.string.action_duplicate_tab
+    BrowserMenuEntry.OpenFeeds -> R.string.browser_menu_feeds
+    BrowserMenuEntry.OpenLibrary -> R.string.browser_menu_library
+    BrowserMenuEntry.DiscoverFeeds -> R.string.browser_menu_discover_feeds
     BrowserMenuEntry.Reader -> R.string.reader_open_action
     BrowserMenuEntry.Translate -> R.string.action_translate_page
     BrowserMenuEntry.FindInPage -> R.string.action_find_in_page

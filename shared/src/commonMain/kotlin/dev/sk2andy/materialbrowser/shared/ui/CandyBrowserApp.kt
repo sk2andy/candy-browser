@@ -1949,6 +1949,9 @@ private fun BrowserMenuActionIcon(
         BrowserFeatureMenuAction.ParkAddressBarRight,
         BrowserFeatureMenuAction.DockAddressBar,
         -> Icons.Filled.ChevronRight
+        BrowserFeatureMenuAction.OpenFeeds -> Icons.Filled.MenuBook
+        BrowserFeatureMenuAction.OpenLibrary -> Icons.Filled.MenuBook
+        BrowserFeatureMenuAction.DiscoverFeeds -> Icons.Filled.Search
         BrowserFeatureMenuAction.OpenReader -> Icons.Filled.MenuBook
         BrowserFeatureMenuAction.OpenWebAnnotations -> Icons.Filled.MenuBook
         BrowserFeatureMenuAction.TranslatePage -> Icons.Filled.Translate
@@ -1992,6 +1995,9 @@ private fun BrowserMenuActionIcon(
         BrowserFeatureMenuAction.NewTab -> "plus"
         BrowserFeatureMenuAction.DuplicateTab -> "doc.on.doc"
         BrowserFeatureMenuAction.CloseTab -> "xmark.circle"
+        BrowserFeatureMenuAction.OpenFeeds -> "dot.radiowaves.up.forward"
+        BrowserFeatureMenuAction.OpenLibrary -> "books.vertical"
+        BrowserFeatureMenuAction.DiscoverFeeds -> "magnifyingglass"
         BrowserFeatureMenuAction.OpenReader -> "book.closed"
         BrowserFeatureMenuAction.OpenWebAnnotations -> "highlighter"
         BrowserFeatureMenuAction.TranslatePage -> "character.book.closed"
@@ -2031,6 +2037,7 @@ private fun BrowserFeatureMenuSection.localizedTitle(): String = when (this) {
     BrowserFeatureMenuSection.Toppings -> "Toppings"
     BrowserFeatureMenuSection.Candy -> "Candy"
     BrowserFeatureMenuSection.Browser -> "Browser"
+    BrowserFeatureMenuSection.Reading -> "Lesen & sammeln"
 }
 
 private fun BrowserFeatureMenuItem.localizedLabel(): String = dynamicLabel ?: when (labelKey) {
@@ -2047,6 +2054,9 @@ private fun BrowserFeatureMenuItem.localizedLabel(): String = dynamicLabel ?: wh
     BrowserFeatureMenuLabelKey.DuplicateTab -> "Tab duplizieren"
     BrowserFeatureMenuLabelKey.CloseTab -> "Tab schließen"
     BrowserFeatureMenuLabelKey.ParkAddressBarRight -> "Adressleiste rechts parken"
+    BrowserFeatureMenuLabelKey.Feeds -> "Feeds"
+    BrowserFeatureMenuLabelKey.Library -> "Bibliothek"
+    BrowserFeatureMenuLabelKey.DiscoverFeeds -> "Feeds auf dieser Seite finden"
     BrowserFeatureMenuLabelKey.Reader -> "Lesemodus"
     BrowserFeatureMenuLabelKey.Translate -> "Übersetzen"
     BrowserFeatureMenuLabelKey.FindInPage -> "Auf Seite suchen"
