@@ -29,7 +29,7 @@ internal object SettingsHeaderArtworkRules {
         SettingsHeaderArtwork.TabLifecycle -> IntRect(340, 115, 1210, 910)
         SettingsHeaderArtwork.PersonalLinkRules -> IntRect(140, 225, 1400, 795)
         SettingsHeaderArtwork.ExternalApps -> IntRect(160, 205, 1385, 815)
-        SettingsHeaderArtwork.Rss -> IntRect(0, 0, 1536, 1024)
+        SettingsHeaderArtwork.Rss -> IntRect(35, 130, 1500, 865)
     }
 
     fun destinationWindow(source: IntSize, available: IntSize): IntRect {

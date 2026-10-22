@@ -456,11 +456,17 @@
     <string name="rss_notifications_permission_denied" tools:ignore="MissingTranslation">Allow Candy notifications in Android settings to receive feed alerts.</string>
     <string name="rss_no_articles" tools:ignore="MissingTranslation">No articles yet. Feed updates run in the background.</string>
     <string name="rss_feed_address" tools:ignore="MissingTranslation">Feed address</string>
+    <string name="rss_feed_address_hint" tools:ignore="MissingTranslation">https://example.com/feed.xml</string>
+    <string name="rss_manual_entry_action" tools:ignore="MissingTranslation">Enter feed address</string>
+    <string name="rss_open_feed" tools:ignore="MissingTranslation">Open %1$s feed</string>
+    <string name="rss_notifications_feed_hint" tools:ignore="MissingTranslation">Show new articles from this feed</string>
     <string name="rss_refresh_interval" tools:ignore="MissingTranslation">Check for new articles</string>
     <string name="rss_refresh_interval_summary" tools:ignore="MissingTranslation">Choose how often Candy checks followed feeds.</string>
     <string name="rss_refresh_android_note" tools:ignore="MissingTranslation">Android may delay background checks to save battery or while offline.</string>
     <string name="rss_manage_feeds" tools:ignore="MissingTranslation">Manage feeds</string>
     <string name="rss_widget_title" tools:ignore="MissingTranslation">Recent articles</string>
+    <string name="rss_widget_count" tools:ignore="MissingTranslation">%1$d articles</string>
+    <string name="rss_widget_all_feeds" tools:ignore="MissingTranslation">View all feeds</string>
     <string name="rss_widget_empty" tools:ignore="MissingTranslation">Follow a feed to see its latest articles here.</string>
     <string name="rss_widget_description" tools:ignore="MissingTranslation">Recent articles from followed feeds</string>
     <string name="rss_notifications_channel_name" tools:ignore="MissingTranslation">RSS updates</string>

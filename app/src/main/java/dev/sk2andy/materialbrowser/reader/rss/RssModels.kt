@@ -1,6 +1,7 @@
 package dev.sk2andy.materialbrowser.reader.rss
 
 import android.util.Xml
+import androidx.core.text.HtmlCompat
 import org.xmlpull.v1.XmlPullParser
 import java.io.StringReader
 import java.net.URI
@@ -50,13 +51,9 @@ internal object RssFeedRules {
         (guid?.takeIf(String::isNotBlank) ?: url?.takeIf(String::isNotBlank) ?: title)
             .take(2_048)
 
-    fun cleanText(value: String?, limit: Int): String = value.orEmpty()
-        .replace("&nbsp;", " ")
-        .replace("&amp;", "&")
-        .replace("&lt;", "<")
-        .replace("&gt;", ">")
-        .replace("&quot;", "\"")
-        .replace(Regex("<[^>]*>"), " ")
+    fun cleanText(value: String?, limit: Int): String = HtmlCompat
+        .fromHtml(value.orEmpty(), HtmlCompat.FROM_HTML_MODE_LEGACY)
+        .toString()
         .replace(Regex("[\\u0000-\\u001f\\u007f]+"), " ")
         .replace(Regex("\\s+"), " ")
         .trim()

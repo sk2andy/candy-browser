@@ -2,50 +2,173 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@drawable/bg_rss_widget"
     android:orientation="vertical"
-    android:background="@drawable/bg_candy_widget"
     android:padding="16dp">
-    <TextView
-        android:id="@+id/rss_widget_title"
+
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/rss_widget_title"
-        android:textColor="@color/candy_widget_on_surface"
-        android:textSize="16sp"
-        android:textStyle="bold" />
-    <TextView
-        android:id="@+id/rss_widget_empty"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <ImageView
+            android:layout_width="38dp"
+            android:layout_height="38dp"
+            android:background="@drawable/bg_rss_widget_icon"
+            android:contentDescription="@null"
+            android:padding="9dp"
+            android:src="@drawable/ic_rss"
+            android:tint="@color/candy_widget_accent" />
+
+        <TextView
+            android:id="@+id/rss_widget_title"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:layout_weight="1"
+            android:text="@string/rss_widget_title"
+            android:textColor="@color/candy_widget_on_surface"
+            android:textSize="16sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/rss_widget_count"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_rss_widget_badge"
+            android:paddingHorizontal="10dp"
+            android:paddingVertical="5dp"
+            android:textColor="@color/candy_widget_accent"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <View
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
-        android:text="@string/rss_widget_empty"
-        android:textColor="@color/candy_widget_on_surface_variant"
-        android:textSize="14sp" />
-    <TextView
-        android:id="@+id/rss_widget_article_one"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="1dp"
         android:layout_marginTop="10dp"
-        android:ellipsize="end"
-        android:maxLines="2"
-        android:textColor="@color/candy_widget_on_surface"
-        android:textSize="14sp" />
+        android:background="@color/candy_widget_divider" />
+
+    <LinearLayout
+        android:id="@+id/rss_widget_articles"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <LinearLayout
+            android:id="@+id/rss_widget_row_one"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:gravity="center_vertical"
+            android:orientation="vertical"
+            android:paddingVertical="5dp">
+            <TextView
+                android:id="@+id/rss_widget_feed_one"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:textColor="@color/candy_widget_on_surface_variant"
+                android:textSize="11sp" />
+            <TextView
+                android:id="@+id/rss_widget_article_one"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:maxLines="2"
+                android:textColor="@color/candy_widget_on_surface"
+                android:textSize="14sp"
+                android:fontFamily="sans-serif-medium" />
+        </LinearLayout>
+
+        <View
+            android:id="@+id/rss_widget_divider_one"
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="@color/candy_widget_divider" />
+
+        <LinearLayout
+            android:id="@+id/rss_widget_row_two"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:gravity="center_vertical"
+            android:orientation="vertical"
+            android:paddingVertical="5dp">
+            <TextView
+                android:id="@+id/rss_widget_feed_two"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:textColor="@color/candy_widget_on_surface_variant"
+                android:textSize="11sp" />
+            <TextView
+                android:id="@+id/rss_widget_article_two"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:maxLines="2"
+                android:textColor="@color/candy_widget_on_surface"
+                android:textSize="14sp"
+                android:fontFamily="sans-serif-medium" />
+        </LinearLayout>
+
+        <View
+            android:id="@+id/rss_widget_divider_two"
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="@color/candy_widget_divider" />
+
+        <LinearLayout
+            android:id="@+id/rss_widget_row_three"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:gravity="center_vertical"
+            android:orientation="vertical"
+            android:paddingVertical="5dp">
+            <TextView
+                android:id="@+id/rss_widget_feed_three"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:textColor="@color/candy_widget_on_surface_variant"
+                android:textSize="11sp" />
+            <TextView
+                android:id="@+id/rss_widget_article_three"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:maxLines="2"
+                android:textColor="@color/candy_widget_on_surface"
+                android:textSize="14sp"
+                android:fontFamily="sans-serif-medium" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/rss_widget_empty"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:gravity="center"
+            android:text="@string/rss_widget_empty"
+            android:textColor="@color/candy_widget_on_surface_variant"
+            android:textSize="14sp"
+            android:visibility="gone" />
+    </LinearLayout>
+
     <TextView
-        android:id="@+id/rss_widget_article_two"
+        android:id="@+id/rss_widget_all_feeds"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:ellipsize="end"
-        android:maxLines="2"
-        android:textColor="@color/candy_widget_on_surface"
-        android:textSize="14sp" />
-    <TextView
-        android:id="@+id/rss_widget_article_three"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:ellipsize="end"
-        android:maxLines="2"
-        android:textColor="@color/candy_widget_on_surface"
-        android:textSize="14sp" />
+        android:gravity="end"
+        android:paddingTop="8dp"
+        android:text="@string/rss_widget_all_feeds"
+        android:textColor="@color/candy_widget_accent"
+        android:textSize="12sp"
+        android:textStyle="bold" />
 </LinearLayout>

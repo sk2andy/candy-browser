@@ -417,11 +417,17 @@
     <string name="rss_notifications_permission_denied">Erlaube Candy-Benachrichtigungen in den Android-Einstellungen, um Feed-Hinweise zu erhalten.</string>
     <string name="rss_no_articles">Noch keine Beiträge. Feeds werden im Hintergrund aktualisiert.</string>
     <string name="rss_feed_address">Feed-Adresse</string>
+    <string name="rss_feed_address_hint">https://beispiel.de/feed.xml</string>
+    <string name="rss_manual_entry_action">Feed-Adresse eingeben</string>
+    <string name="rss_open_feed">Feed %1$s öffnen</string>
+    <string name="rss_notifications_feed_hint">Neue Beiträge dieses Feeds anzeigen</string>
     <string name="rss_refresh_interval">Nach neuen Beiträgen suchen</string>
     <string name="rss_refresh_interval_summary">Lege fest, wie oft Candy abonnierte Feeds prüft.</string>
     <string name="rss_refresh_android_note">Android kann Hintergrundprüfungen zum Energiesparen oder ohne Verbindung verzögern.</string>
     <string name="rss_manage_feeds">Feeds verwalten</string>
     <string name="rss_widget_title">Neueste Beiträge</string>
+    <string name="rss_widget_count">%1$d Beiträge</string>
+    <string name="rss_widget_all_feeds">Alle Feeds ansehen</string>
     <string name="rss_widget_empty">Folge einem Feed, um neue Beiträge hier zu sehen.</string>
     <string name="rss_widget_description">Neueste Beiträge aus abonnierten Feeds</string>
     <string name="rss_notifications_channel_name">RSS-Aktualisierungen</string>

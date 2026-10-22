@@ -5,4 +5,6 @@
     <color name="candy_widget_divider">#FFD9E0</color>
     <color name="candy_widget_on_surface">#FF24212A</color>
     <color name="candy_widget_on_surface_variant">#FF5F5A66</color>
+    <color name="candy_widget_accent">#FF50618F</color>
+    <color name="candy_widget_accent_container">#FFE7E9F3</color>
 </resources>

@@ -35,18 +35,38 @@ class RssFeedWidgetProvider : AppWidgetProvider() {
                 .sortedByDescending { (_, article) -> article.publishedAt }
                 .take(MAX_ARTICLES)
             views.setTextViewText(R.id.rss_widget_title, context.getString(R.string.rss_widget_title))
-            val titleIds = listOf(R.id.rss_widget_article_one, R.id.rss_widget_article_two, R.id.rss_widget_article_three)
-            titleIds.forEachIndexed { index, viewId ->
+            views.setTextViewText(R.id.rss_widget_count, context.getString(R.string.rss_widget_count, recent.size))
+            val rows = listOf(
+                Triple(R.id.rss_widget_row_one, R.id.rss_widget_feed_one, R.id.rss_widget_article_one),
+                Triple(R.id.rss_widget_row_two, R.id.rss_widget_feed_two, R.id.rss_widget_article_two),
+                Triple(R.id.rss_widget_row_three, R.id.rss_widget_feed_three, R.id.rss_widget_article_three),
+            )
+            rows.forEachIndexed { index, (rowId, feedViewId, articleViewId) ->
                 val entry = recent.getOrNull(index)
-                views.setViewVisibility(viewId, if (entry == null) android.view.View.GONE else android.view.View.VISIBLE)
+                views.setViewVisibility(
+                    rowId,
+                    if (entry == null) android.view.View.GONE else android.view.View.VISIBLE,
+                )
                 if (entry != null) {
-                    views.setTextViewText(viewId, entry.second.title)
-                    views.setOnClickPendingIntent(viewId, articleIntent(context, entry.first, entry.second))
+                    views.setTextViewText(feedViewId, entry.first.title)
+                    views.setTextViewText(articleViewId, entry.second.title)
+                    views.setOnClickPendingIntent(
+                        rowId,
+                        articleIntent(context, entry.first, entry.second),
+                    )
                 }
             }
             views.setViewVisibility(R.id.rss_widget_empty, if (recent.isEmpty()) android.view.View.VISIBLE else android.view.View.GONE)
+            views.setViewVisibility(
+                R.id.rss_widget_divider_one,
+                if (recent.size > 1) android.view.View.VISIBLE else android.view.View.GONE,
+            )
+            views.setViewVisibility(
+                R.id.rss_widget_divider_two,
+                if (recent.size > 2) android.view.View.VISIBLE else android.view.View.GONE,
+            )
             views.setOnClickPendingIntent(
-                R.id.rss_widget_title,
+                R.id.rss_widget_all_feeds,
                 PendingIntent.getActivity(
                     context,
                     OPEN_FEEDS_REQUEST_CODE,

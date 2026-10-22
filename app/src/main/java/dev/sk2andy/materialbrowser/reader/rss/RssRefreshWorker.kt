@@ -8,6 +8,8 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import androidx.work.Constraints
+import java.nio.charset.Charset
+import java.nio.charset.StandardCharsets
 import dev.sk2andy.materialbrowser.data.RssFeedStore
 import dev.sk2andy.materialbrowser.RssFeedWidgetProvider
 import androidx.work.ExistingWorkPolicy
@@ -71,7 +73,7 @@ internal object RssFeedNetwork {
                 val xml = connection.inputStream.use { input ->
                     val bytes = input.readBounded(RssFeedRules.MAX_FEED_BYTES)
                         ?: return null
-                    bytes.toString(Charsets.UTF_8)
+                    decodeXml(bytes, connection.contentType)
                 }
                 return RssFeedParser.parse(xml, currentUrl)
             } catch (_: Exception) {
@@ -126,6 +128,38 @@ internal object RssFeedNetwork {
         }
         return output.toByteArray()
     }
+
+    private fun decodeXml(bytes: ByteArray, contentType: String?): String {
+        val byteOrderMark = when {
+            bytes.startsWith(byteArrayOf(0xEF.toByte(), 0xBB.toByte(), 0xBF.toByte())) ->
+                StandardCharsets.UTF_8 to 3
+            bytes.startsWith(byteArrayOf(0xFE.toByte(), 0xFF.toByte())) ->
+                StandardCharsets.UTF_16BE to 2
+            bytes.startsWith(byteArrayOf(0xFF.toByte(), 0xFE.toByte())) ->
+                StandardCharsets.UTF_16LE to 2
+            else -> null
+        }
+        val declaredCharset = contentType
+            ?.let { CONTENT_CHARSET.find(it)?.groupValues?.getOrNull(1) }
+            ?.let { runCatching { Charset.forName(it) }.getOrNull() }
+        val xmlDeclaration = bytes
+            .take(256)
+            .toByteArray()
+            .toString(StandardCharsets.US_ASCII)
+            .let(XML_CHARSET::find)
+            ?.groupValues
+            ?.getOrNull(1)
+            ?.let { runCatching { Charset.forName(it) }.getOrNull() }
+        val charset = byteOrderMark?.first ?: declaredCharset ?: xmlDeclaration ?: StandardCharsets.UTF_8
+        val offset = byteOrderMark?.second ?: 0
+        return String(bytes, offset, bytes.size - offset, charset)
+    }
+
+    private fun ByteArray.startsWith(prefix: ByteArray): Boolean =
+        size >= prefix.size && prefix.indices.all { this[it] == prefix[it] }
+
+    private val CONTENT_CHARSET = Regex("charset\\s*=\\s*['\\\"]?([^;\\s'\\\"]+)", RegexOption.IGNORE_CASE)
+    private val XML_CHARSET = Regex("encoding\\s*=\\s*['\\\"]([^'\\\"]+)['\\\"]", RegexOption.IGNORE_CASE)
 }
 
 internal object RssRefreshScheduler {

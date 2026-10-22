@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Candy RSS – Lesemodi</title>
+<style>
+:root{color-scheme:light;--bg:#f0eff7;--surface:#fff;--surface2:#e7e8f0;--ink:#272a35;--muted:#626778;--blue:#50618f;--line:#d9dbe5;--pink:#ed3d79}*{box-sizing:border-box}body{margin:0;background:#e6e6ef;color:var(--ink);font:15px/1.45 system-ui,-apple-system,sans-serif}.page{max-width:1100px;margin:auto;padding:30px 24px 48px}.eyebrow{display:inline-flex;padding:7px 12px;border-radius:24px;background:var(--surface2);color:var(--blue);font-weight:700;font-size:12px;letter-spacing:.04em}.intro h1{font-size:32px;line-height:1.15;margin:14px 0 8px}.intro p{max-width:720px;margin:0;color:var(--muted)}.switch{display:flex;gap:8px;margin:25px 0 18px}.switch button{border:0;border-radius:24px;padding:11px 16px;background:#dedfe9;color:var(--ink);font:600 14px system-ui;cursor:pointer}.switch button[aria-selected=true]{background:var(--blue);color:#fff}.design{display:none;grid-template-columns:minmax(280px,390px) minmax(250px,1fr);gap:28px;align-items:start}.design.active{display:grid}.phone{padding:18px 14px 20px;border:8px solid #23242a;border-radius:38px;background:var(--bg);box-shadow:0 18px 45px #24263028;min-height:730px;overflow:hidden}.status{font-size:11px;color:#5b6070;padding:2px 8px 14px;display:flex;justify-content:space-between}.top{display:flex;align-items:center;gap:12px;padding:5px 5px 14px}.back{font-size:25px;color:var(--blue)}.top strong{font-size:21px;flex:1}.more{font-size:22px;color:var(--blue)}.segmented{display:flex;padding:4px;background:#e4e5ee;border-radius:30px;margin:2px 3px 18px}.segmented span{flex:1;text-align:center;border-radius:24px;padding:8px 6px;font-weight:650;color:var(--muted);font-size:13px}.segmented .on{background:#fff;color:var(--blue);box-shadow:0 2px 8px #20233412}.filters{display:flex;gap:7px;overflow:hidden;margin:0 4px 13px}.chip{white-space:nowrap;border-radius:24px;background:#e5e6ef;color:var(--muted);padding:7px 11px;font-size:12px;font-weight:650}.chip.on{background:#dfe2f0;color:var(--blue)}.article{background:var(--surface);border-radius:19px;padding:14px 15px;margin:9px 2px;box-shadow:0 3px 12px #20233410}.source{display:flex;align-items:center;gap:8px;color:var(--blue);font-size:12px;font-weight:700}.dot{width:8px;height:8px;border-radius:100%;background:var(--pink)}.article h3{font-size:16px;line-height:1.3;margin:8px 0 5px}.article p{font-size:13px;color:var(--muted);margin:0 0 8px}.meta{font-size:11px;color:var(--muted)}.source-row{display:flex;align-items:center;gap:12px;background:#fff;border-radius:17px;padding:13px;margin:8px 2px;box-shadow:0 2px 8px #2023340c}.circle{display:grid;place-items:center;flex:none;width:42px;height:42px;border-radius:50%;background:var(--surface2);color:var(--blue);font-size:20px}.grow{flex:1;min-width:0}.source-row b{display:block;font-size:14px}.source-row small{display:block;color:var(--muted);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.arrow{color:var(--muted);font-size:20px}.profile-tabs{display:flex;justify-content:space-around;margin:0 0 18px;padding:10px 0 12px;border-bottom:1px solid var(--line);font-size:12px;color:var(--muted)}.profile-tabs b{color:var(--blue);border-bottom:2px solid var(--blue);padding:0 4px 9px}.note{background:#e8e9f1;border-radius:16px;padding:14px 16px;margin-top:15px;color:#4e5364}.note b{display:block;margin-bottom:5px;color:var(--ink)}.details h2{font-size:22px;margin:2px 0 10px}.details p{margin:0 0 13px;color:var(--muted)}.details ul{padding-left:20px;margin:10px 0 0}.details li{padding:5px 0}.tag{font-size:11px;font-weight:750;letter-spacing:.05em;text-transform:uppercase;color:var(--blue)}.hint{font-size:13px;color:var(--muted)}@media(max-width:760px){.page{padding:22px 16px}.intro h1{font-size:27px}.design.active{grid-template-columns:1fr;justify-items:center}.details{max-width:390px}.phone{width:min(100%,390px)}}
+</style>
+</head>
+<body>
+<main class="page">
+  <header class="intro">
+    <span class="eyebrow">Candy Browser · RSS-Konzept</span>
+    <h1>Wo sollen abonnierte Feeds leben?</h1>
+    <p>Beide Entwürfe zeigen dieselbe Inbox und dieselbe Feed-Auswahl. Der Unterschied liegt im Einstieg und in der Erwartung: Lesen im Reader Studio oder ein eigener „Feeds“-Bereich neben Tabs.</p>
+  </header>
+  <nav class="switch" aria-label="Designvariante">
+    <button aria-selected="true" data-design="reader">1 · Reader Studio</button>
+    <button aria-selected="false" data-design="switcher">2 · Tab-Switcher</button>
+  </nav>
+
+  <section class="design active" id="reader">
+    <div class="phone" aria-label="Reader Studio Feeds Entwurf">
+      <div class="status"><span>09:41</span><span>▮▮▮ ◉ ▰</span></div>
+      <div class="top"><span class="back">‹</span><strong>Reader Studio</strong><span class="more">＋</span></div>
+      <div class="segmented"><span>Bibliothek</span><span class="on">Feeds</span></div>
+      <div class="filters"><span class="chip on">Alle</span><span class="chip">Ungelesen</span><span class="chip">Following</span></div>
+      <div class="article"><div class="source"><span class="dot"></span>Candy Browser Blog</div><h3>Reader Studio bekommt neue Stimme</h3><p>Was sich beim Lesen, Vorlesen und Speichern ändert.</p><div class="meta">Vor 2 Std. · 4 Min. · ungelesen</div></div>
+      <div class="article"><div class="source">Android Developers</div><h3>Neue Werkzeuge für Android-Entwickler</h3><p>Die wichtigsten Updates aus dem Android-Team.</p><div class="meta">Gestern · 6 Min.</div></div>
+      <div class="article"><div class="source">The Privacy Blog</div><h3>Was sich bei privatem Browsen ändert</h3><p>Ein Überblick zu neuen Schutzfunktionen.</p><div class="meta">21. Okt. · 3 Min.</div></div>
+      <div class="note"><b>Feed auswählen</b><div class="source-row"><span class="circle">◉</span><span class="grow"><b>Android Developers</b><small>android-developers.googleblog.com</small></span><span class="arrow">›</span></div><div class="source-row"><span class="circle">⌘</span><span class="grow"><b>The Privacy Blog</b><small>privacy.example</small></span><span class="arrow">›</span></div></div>
+    </div>
+    <div class="details"><span class="tag">Variante 1</span><h2>Feeds im Reader Studio</h2><p>Bestehender Leseort bekommt einen zweiten Bereich. Feed-Inbox und gespeicherte Artikel liegen nebeneinander; Quellenverwaltung bleibt erreichbar über „＋“.</p><ul><li>Passt zu Reader Studio und vorhandenen Leseaktionen.</li><li>Feeds lassen sich global verwalten, ohne Browser-Profile zu verändern.</li><li>Wenig neue Navigation; geringstes Risiko für Datenschutz- und Profil-Erwartungen.</li><li>Feed-Abos bleiben in der ersten Ausbaustufe geräteweit, wie sie jetzt gespeichert sind.</li></ul><div class="note"><b>Lesefluss</b>Reader Studio → Feeds → Artikel → bestehende Reader-Ansicht. Zurück führt direkt zur Inbox.</div></div>
+  </section>
+
+  <section class="design" id="switcher">
+    <div class="phone" aria-label="Tab-Switcher Feeds Entwurf">
+      <div class="status"><span>09:41</span><span>▮▮▮ ◉ ▰</span></div>
+      <div class="top"><span class="back">×</span><strong>Übersicht</strong><span class="more">⋮</span></div>
+      <div class="profile-tabs"><span>Privat</span><span>Arbeit</span><b>Feeds</b></div>
+      <div class="filters"><span class="chip on">Inbox · 8</span><span class="chip">Ungelesen</span><span class="chip">Quellen</span></div>
+      <div class="article"><div class="source"><span class="dot"></span>Candy Browser Blog</div><h3>Reader Studio bekommt neue Stimme</h3><p>Was sich beim Lesen, Vorlesen und Speichern ändert.</p><div class="meta">Vor 2 Std. · 4 Min. · ungelesen</div></div>
+      <div class="article"><div class="source">Android Developers</div><h3>Neue Werkzeuge für Android-Entwickler</h3><p>Die wichtigsten Updates aus dem Android-Team.</p><div class="meta">Gestern · 6 Min.</div></div>
+      <div class="article"><div class="source">The Privacy Blog</div><h3>Was sich bei privatem Browsen ändert</h3><p>Ein Überblick zu neuen Schutzfunktionen.</p><div class="meta">21. Okt. · 3 Min.</div></div>
+      <div class="note"><b>Abonnierte Quellen</b><div class="source-row"><span class="circle">◉</span><span class="grow"><b>Candy Browser Blog</b><small>candy-browser.dev</small></span><span class="arrow">›</span></div><div class="source-row"><span class="circle">✦</span><span class="grow"><b>Android Developers</b><small>android-developers.googleblog.com</small></span><span class="arrow">›</span></div></div>
+    </div>
+    <div class="details"><span class="tag">Variante 2</span><h2>„Feeds“ im Tab-Switcher</h2><p>Ein eigener Bereich neben den Browser-Profilen. Er öffnet eine Inbox mit Quellenliste, aber zunächst keine normalen Web-Tabs.</p><ul><li>Sehr schnell aus der Tab-Übersicht erreichbar.</li><li>Feeds wirken wie ein eigener Leseraum mit Inbox und Quellen.</li><li>Risiko: „Profil“ klingt nach getrennten Cookies, Verlauf und Feed-Abos.</li><li>Für echte Profil-Isolation müssten Abos, Lesestatus und Benachrichtigungen profilgebunden werden.</li></ul><div class="note"><b>Produktentscheidung</b>Als virtueller Bereich „Feeds“ ist das technisch klar. Als echtes Profil braucht es eigene Speicher- und Datenschutzregeln. Der Entwurf markiert es deshalb als Sonderbereich, nicht als normales Profil.</div></div>
+  </section>
+</main>
+<script>
+document.querySelectorAll('.switch button').forEach(button=>button.addEventListener('click',()=>{
+  document.querySelectorAll('.switch button').forEach(item=>item.setAttribute('aria-selected',String(item===button)));
+  document.querySelectorAll('.design').forEach(section=>section.classList.toggle('active',section.id===button.dataset.design));
+}));
+</script>
+</body>
+</html>

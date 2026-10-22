@@ -1,8 +1,12 @@
 package dev.sk2andy.materialbrowser.ui
 
 import android.content.Intent
+import android.net.Uri
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -12,24 +16,31 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
@@ -38,11 +49,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.data.RssSettingsStore
+import dev.sk2andy.materialbrowser.reader.rss.RssArticle
 import dev.sk2andy.materialbrowser.reader.rss.RssFeed
 import dev.sk2andy.materialbrowser.reader.rss.RssRefreshScheduler
 import dev.sk2andy.materialbrowser.shared.ui.settings.SettingsHeaderArtwork
@@ -65,6 +80,26 @@ internal fun RssFeedsScreen(
     onOpenArticle: (String) -> Unit,
 ) {
     var manualFeedUrl by remember { mutableStateOf("") }
+    var showManualEntry by remember { mutableStateOf(false) }
+    var selectedFeedId by remember { mutableStateOf<String?>(null) }
+    val selectedFeed = feeds.firstOrNull { it.id == selectedFeedId }
+
+    BackHandler(enabled = selectedFeed != null) { selectedFeedId = null }
+
+    if (selectedFeed != null) {
+        RssFeedDetailScreen(
+            feed = selectedFeed,
+            onBack = { selectedFeedId = null },
+            onOpenArticle = onOpenArticle,
+            onRemove = {
+                onRemove(selectedFeed.id)
+                selectedFeedId = null
+            },
+            onNotificationsChanged = { onNotificationsChanged(selectedFeed.id, it) },
+        )
+        return
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -99,18 +134,16 @@ internal fun RssFeedsScreen(
                 }
             }
             item {
-                OutlinedTextField(
-                    value = manualFeedUrl,
-                    onValueChange = { manualFeedUrl = it },
+                FilledTonalButton(
+                    onClick = { showManualEntry = true },
                     modifier = Modifier.fillMaxWidth(),
-                    label = { Text(stringResource(R.string.rss_feed_address)) },
-                    singleLine = true,
-                    trailingIcon = {
-                        TextButton(onClick = { onSubscribe(manualFeedUrl) }, enabled = !isWorking) {
-                            Text(stringResource(R.string.rss_subscribe_action))
-                        }
-                    },
-                )
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = null)
+                    Text(
+                        stringResource(R.string.rss_manual_entry_action),
+                        Modifier.padding(start = 8.dp),
+                    )
+                }
             }
             if (candidates.isNotEmpty()) {
                 item { Text(stringResource(R.string.rss_available_feeds), style = MaterialTheme.typography.titleMedium) }
@@ -138,42 +171,150 @@ internal fun RssFeedsScreen(
                 item { Text(stringResource(R.string.rss_empty_state), style = MaterialTheme.typography.bodyMedium) }
             }
             items(feeds, key = RssFeed::id) { feed ->
-                Card(Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(14.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Column(Modifier.weight(1f)) {
-                                Text(feed.title, style = MaterialTheme.typography.titleMedium)
-                                Text(feed.feedUrl, style = MaterialTheme.typography.bodySmall, maxLines = 1)
-                            }
-                            IconButton(onClick = { onRemove(feed.id) }) {
-                                Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.rss_remove_feed))
-                            }
-                        }
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Switch(
-                                checked = feed.notify,
-                                onCheckedChange = { onNotificationsChanged(feed.id, it) },
-                            )
-                            Text(stringResource(R.string.rss_notifications_per_feed))
-                        }
-                        if (feed.articles.isEmpty()) {
-                            Text(stringResource(R.string.rss_no_articles), style = MaterialTheme.typography.bodySmall)
-                        }
-                        feed.articles.take(5).forEachIndexed { index, article ->
-                            if (index > 0) HorizontalDivider()
-                            Column(
-                                Modifier.fillMaxWidth().clickable { onOpenArticle(article.url) }.padding(vertical = 10.dp),
-                            ) {
-                                Text(article.title, style = MaterialTheme.typography.bodyLarge)
-                                if (article.summary.isNotBlank()) {
-                                    Text(article.summary, style = MaterialTheme.typography.bodySmall, maxLines = 2)
-                                }
-                            }
-                        }
-                    }
-                }
+                RssFeedSourceRow(feed = feed, onClick = { selectedFeedId = feed.id })
             }
             item { Spacer(Modifier.size(16.dp)) }
+        }
+    }
+
+    if (showManualEntry) {
+        AlertDialog(
+            onDismissRequest = { showManualEntry = false },
+            title = { Text(stringResource(R.string.rss_feed_address)) },
+            text = {
+                OutlinedTextField(
+                    value = manualFeedUrl,
+                    onValueChange = { manualFeedUrl = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = { Text(stringResource(R.string.rss_feed_address_hint)) },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showManualEntry = false
+                        onSubscribe(manualFeedUrl.trim())
+                        manualFeedUrl = ""
+                    },
+                    enabled = !isWorking && manualFeedUrl.isNotBlank(),
+                ) {
+                    Text(stringResource(R.string.rss_subscribe_action))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showManualEntry = false }) {
+                    Text(stringResource(android.R.string.cancel))
+                }
+            },
+        )
+    }
+}
+
+@Composable
+private fun RssFeedSourceRow(feed: RssFeed, onClick: () -> Unit) {
+    val host = Uri.parse(feed.siteUrl.ifBlank { feed.feedUrl }).host.orEmpty()
+    Card(
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+    ) {
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
+            Box(
+                Modifier.size(56.dp).clip(CircleShape).background(MaterialTheme.colorScheme.secondaryContainer),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_rss),
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                    modifier = Modifier.size(24.dp),
+                )
+            }
+            Column(Modifier.weight(1f)) {
+                Text(feed.title, style = MaterialTheme.typography.titleMedium, maxLines = 1)
+                Text(
+                    host,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                )
+            }
+            Icon(
+                Icons.AutoMirrored.Filled.ArrowForward,
+                contentDescription = stringResource(R.string.rss_open_feed, feed.title),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun RssFeedDetailScreen(
+    feed: RssFeed,
+    onBack: () -> Unit,
+    onOpenArticle: (String) -> Unit,
+    onRemove: () -> Unit,
+    onNotificationsChanged: (Boolean) -> Unit,
+) {
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(feed.title, maxLines = 1) },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
+                    }
+                },
+                actions = {
+                    IconButton(onClick = onRemove) {
+                        Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.rss_remove_feed))
+                    }
+                },
+            )
+        },
+    ) { insets ->
+        LazyColumn(
+            modifier = Modifier.fillMaxSize().padding(insets),
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            item {
+                Row(
+                    Modifier.fillMaxWidth().clickable { onNotificationsChanged(!feed.notify) }.padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text(stringResource(R.string.rss_notifications_per_feed), style = MaterialTheme.typography.titleSmall)
+                        Text(stringResource(R.string.rss_notifications_feed_hint), style = MaterialTheme.typography.bodySmall)
+                    }
+                    Switch(checked = feed.notify, onCheckedChange = onNotificationsChanged)
+                }
+            }
+            if (feed.articles.isEmpty()) {
+                item { Text(stringResource(R.string.rss_no_articles), style = MaterialTheme.typography.bodyMedium) }
+            }
+            items(feed.articles, key = RssArticle::id) { article ->
+                Column(
+                    Modifier.fillMaxWidth().clickable { onOpenArticle(article.url) }.padding(vertical = 10.dp),
+                ) {
+                    Text(article.title, style = MaterialTheme.typography.titleMedium)
+                    if (article.summary.isNotBlank()) {
+                        Text(
+                            article.summary,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 3,
+                        )
+                    }
+                }
+                HorizontalDivider()
+            }
         }
     }
 }
