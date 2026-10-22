@@ -260,7 +260,7 @@ internal fun BrowserScreen(
         controller.inlineTranslation.validate()
     }
     if (activeProfileLocked) return
-    WebAnnotationDialogs(controller.webAnnotations)
+    WebAnnotationDialogs(controller.webAnnotations, onOpenLink = controller::openWebAnnotationLink)
     InlineTranslationDialog(
         coordinator = controller.inlineTranslation,
         providerName = controller.pageTranslationProvider.displayName,

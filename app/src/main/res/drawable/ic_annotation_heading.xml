@@ -1,0 +1,15 @@
+<!--
+    Google Material Design Icons. SPDX-License-Identifier: Apache-2.0
+    License: https://www.apache.org/licenses/LICENSE-2.0
+    Source: https://github.com/google/material-design-icons/blob/49d4db35df873165d6bd6ba09b063c7dafbac2f4/android/editor/title/materialicons/black/res/drawable/baseline_title_24.xml
+    Adapted for Candy: removed framework theme tint and set a black fill for Compose tinting.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+  <path
+      android:fillColor="#FF000000"
+      android:pathData="M5,4v3h5.5v12h3V7H19V4z"/>
+</vector>

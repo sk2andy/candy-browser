@@ -11,4 +11,22 @@
     <string name="web_annotation_failed">Oznake ni bilo mogoče shraniti.</string>
     <string name="web_annotation_private">Oznake niso na voljo v zasebnih zavihkih.</string>
     <string name="web_annotation_close">Zapri</string>
+    <string name="web_annotation_read">Preberi opombo</string>
+    <string name="web_annotation_edit">Uredi</string>
+    <string name="web_annotation_go_to">Pojdi na oznako</string>
+    <string name="web_annotation_list_hint">Tapnite citat, da se pomaknete na njegovo mesto na strani.</string>
+    <string name="web_annotation_no_note">Opombe še ni. Tapnite Uredi, da jo dodate.</string>
+    <string name="web_annotation_not_found">Tega citata na strani ni bilo mogoče enolično najti. Shranjena opomba je še vedno na voljo.</string>
+    <string name="web_annotation_markdown_hint">Podprt je Markdown: **krepko**, *ležeče*, seznami in [povezave](https://example.com).</string>
+    <string name="web_annotation_preview">Predogled</string>
+    <string name="web_annotation_format_bold">Krepko</string>
+    <string name="web_annotation_format_italic">Ležeče</string>
+    <string name="web_annotation_format_heading">Naslov</string>
+    <string name="web_annotation_format_list">Označen seznam</string>
+    <string name="web_annotation_format_link">Vstavi povezavo</string>
+    <string name="web_annotation_format_code">Koda v besedilu</string>
+    <string name="web_annotation_discard_title">Zavrzi spremembe?</string>
+    <string name="web_annotation_discard_message">Neshranjene spremembe opombe bodo izgubljene.</string>
+    <string name="web_annotation_discard">Zavrzi</string>
+    <string name="web_annotation_keep_editing">Nadaljuj urejanje</string>
 </resources>

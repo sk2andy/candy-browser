@@ -11,4 +11,22 @@
     <string name="web_annotation_failed">Bu vurgu kaydedilemedi.</string>
     <string name="web_annotation_private">Gizli sekmelerde vurgular kullanılamaz.</string>
     <string name="web_annotation_close">Kapat</string>
+    <string name="web_annotation_read">Notu oku</string>
+    <string name="web_annotation_edit">Düzenle</string>
+    <string name="web_annotation_go_to">Vurguya git</string>
+    <string name="web_annotation_list_hint">Sayfadaki konumuna gitmek için bir alıntıya dokunun.</string>
+    <string name="web_annotation_no_note">Henüz not yok. Eklemek için Düzenle’ye dokunun.</string>
+    <string name="web_annotation_not_found">Bu alıntının sayfadaki konumu kesin olarak belirlenemedi. Kaydedilen notunuz hâlâ kullanılabilir.</string>
+    <string name="web_annotation_markdown_hint">Markdown desteklenir: **kalın**, *italik*, listeler ve [bağlantılar](https://example.com).</string>
+    <string name="web_annotation_preview">Önizleme</string>
+    <string name="web_annotation_format_bold">Kalın</string>
+    <string name="web_annotation_format_italic">İtalik</string>
+    <string name="web_annotation_format_heading">Başlık</string>
+    <string name="web_annotation_format_list">Madde işaretli liste</string>
+    <string name="web_annotation_format_link">Bağlantı ekle</string>
+    <string name="web_annotation_format_code">Satır içi kod</string>
+    <string name="web_annotation_discard_title">Değişikliklerden vazgeçilsin mi?</string>
+    <string name="web_annotation_discard_message">Notunuzda kaydedilmemiş değişiklikler kaybolacak.</string>
+    <string name="web_annotation_discard">Vazgeç</string>
+    <string name="web_annotation_keep_editing">Düzenlemeye devam et</string>
 </resources>

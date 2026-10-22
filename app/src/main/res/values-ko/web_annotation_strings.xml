@@ -11,4 +11,22 @@
     <string name="web_annotation_failed">강조 표시를 저장하지 못했습니다.</string>
     <string name="web_annotation_private">비공개 탭에서는 강조 표시를 사용할 수 없습니다.</string>
     <string name="web_annotation_close">닫기</string>
+    <string name="web_annotation_read">메모 읽기</string>
+    <string name="web_annotation_edit">편집</string>
+    <string name="web_annotation_go_to">강조 표시로 이동</string>
+    <string name="web_annotation_list_hint">인용문을 탭하면 페이지의 해당 위치로 이동합니다.</string>
+    <string name="web_annotation_no_note">아직 메모가 없습니다. 편집을 탭하여 추가하세요.</string>
+    <string name="web_annotation_not_found">페이지에서 이 인용문의 위치를 하나로 특정할 수 없습니다. 저장된 메모는 계속 사용할 수 있습니다.</string>
+    <string name="web_annotation_markdown_hint">Markdown 지원: **굵게**, *기울임*, 목록 및 [링크](https://example.com).</string>
+    <string name="web_annotation_preview">미리보기</string>
+    <string name="web_annotation_format_bold">굵게</string>
+    <string name="web_annotation_format_italic">기울임꼴</string>
+    <string name="web_annotation_format_heading">제목</string>
+    <string name="web_annotation_format_list">글머리 기호 목록</string>
+    <string name="web_annotation_format_link">링크 삽입</string>
+    <string name="web_annotation_format_code">인라인 코드</string>
+    <string name="web_annotation_discard_title">변경사항을 취소할까요?</string>
+    <string name="web_annotation_discard_message">메모에서 저장하지 않은 변경사항이 사라집니다.</string>
+    <string name="web_annotation_discard">변경사항 취소</string>
+    <string name="web_annotation_keep_editing">계속 편집</string>
 </resources>

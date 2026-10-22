@@ -65,7 +65,11 @@ class GeckoReaderViewInstrumentedTest {
             }
             val quote = "Readable article text from GeckoView with enough detail to pass the bounded Reader Studio extraction contract."
             assertTrue(apply(JSONObject().put("operation", "highlights").put("url", server.url)
-                .put("annotations", org.json.JSONArray().put(JSONObject().put("quote", quote)))))
+                .put("annotations", org.json.JSONArray().put(JSONObject().put("id", "saved-quote").put("quote", quote)))))
+            assertTrue(apply(JSONObject().put("operation", "scroll-to-annotation").put("url", server.url)
+                .put("id", "saved-quote").put("quote", quote)))
+            assertTrue(!apply(JSONObject().put("operation", "scroll-to-annotation").put("url", server.url)
+                .put("id", "missing").put("quote", "Changed quote")))
             assertTrue(!apply(JSONObject().put("operation", "translate").put("url", server.url)
                 .put("original", "Private draft must disappear").put("replacement", "Changed")))
             assertTrue(apply(JSONObject().put("operation", "translate").put("url", server.url)

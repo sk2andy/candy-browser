@@ -11,4 +11,22 @@
     <string name="web_annotation_failed">Dës Markéierung konnt net gespäichert ginn.</string>
     <string name="web_annotation_private">Markéierunge sinn a privaten Tabs net verfügbar.</string>
     <string name="web_annotation_close">Zoumaachen</string>
+    <string name="web_annotation_read">Notiz liesen</string>
+    <string name="web_annotation_edit">Beaarbechten</string>
+    <string name="web_annotation_go_to">Bei d’Markéierung goen</string>
+    <string name="web_annotation_list_hint">Tippt op en Zitat fir bei seng Plaz op der Säit ze sprangen.</string>
+    <string name="web_annotation_no_note">Nach keng Notiz. Tippt op Beaarbechten fir eng derbäizesetzen.</string>
+    <string name="web_annotation_not_found">Dëst Zitat konnt net eendeiteg op der Säit fonnt ginn. Är gespäichert Notiz bleift disponibel.</string>
+    <string name="web_annotation_markdown_hint">Markdown gëtt ënnerstëtzt: **fett**, *kursiv*, Lëschten an [Linken](https://example.com).</string>
+    <string name="web_annotation_preview">Virschau</string>
+    <string name="web_annotation_format_bold">Fett</string>
+    <string name="web_annotation_format_italic">Kursiv</string>
+    <string name="web_annotation_format_heading">Iwwerschrëft</string>
+    <string name="web_annotation_format_list">Opzielung</string>
+    <string name="web_annotation_format_link">Link afügen</string>
+    <string name="web_annotation_format_code">Code am Text</string>
+    <string name="web_annotation_discard_title">Ännerunge verwerfen?</string>
+    <string name="web_annotation_discard_message">Är net gespäichert Ännerungen un der Notiz gi verluer.</string>
+    <string name="web_annotation_discard">Verwerfen</string>
+    <string name="web_annotation_keep_editing">Weider beaarbechten</string>
 </resources>

@@ -11,4 +11,22 @@
     <string name="web_annotation_failed">Δεν ήταν δυνατή η αποθήκευση της επισήμανσης.</string>
     <string name="web_annotation_private">Οι επισημάνσεις δεν είναι διαθέσιμες σε ιδιωτικές καρτέλες.</string>
     <string name="web_annotation_close">Κλείσιμο</string>
+    <string name="web_annotation_read">Ανάγνωση σημείωσης</string>
+    <string name="web_annotation_edit">Επεξεργασία</string>
+    <string name="web_annotation_go_to">Μετάβαση στην επισήμανση</string>
+    <string name="web_annotation_list_hint">Πατήστε ένα απόσπασμα για να μεταβείτε στη θέση του στη σελίδα.</string>
+    <string name="web_annotation_no_note">Δεν υπάρχει ακόμη σημείωση. Πατήστε Επεξεργασία για να προσθέσετε μία.</string>
+    <string name="web_annotation_not_found">Δεν ήταν δυνατός ο μοναδικός εντοπισμός αυτού του αποσπάσματος στη σελίδα. Η αποθηκευμένη σημείωσή σας παραμένει διαθέσιμη.</string>
+    <string name="web_annotation_markdown_hint">Υποστηρίζεται Markdown: **έντονα**, *πλάγια*, λίστες και [σύνδεσμοι](https://example.com).</string>
+    <string name="web_annotation_preview">Προεπισκόπηση</string>
+    <string name="web_annotation_format_bold">Έντονα</string>
+    <string name="web_annotation_format_italic">Πλάγια</string>
+    <string name="web_annotation_format_heading">Επικεφαλίδα</string>
+    <string name="web_annotation_format_list">Λίστα με κουκκίδες</string>
+    <string name="web_annotation_format_link">Εισαγωγή συνδέσμου</string>
+    <string name="web_annotation_format_code">Κώδικας μέσα στο κείμενο</string>
+    <string name="web_annotation_discard_title">Απόρριψη αλλαγών;</string>
+    <string name="web_annotation_discard_message">Οι μη αποθηκευμένες αλλαγές στη σημείωσή σας θα χαθούν.</string>
+    <string name="web_annotation_discard">Απόρριψη</string>
+    <string name="web_annotation_keep_editing">Συνέχιση επεξεργασίας</string>
 </resources>

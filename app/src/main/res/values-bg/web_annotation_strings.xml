@@ -11,4 +11,22 @@
     <string name="web_annotation_failed">Маркирането не можа да бъде запазено.</string>
     <string name="web_annotation_private">Маркиранията не са достъпни в частни раздели.</string>
     <string name="web_annotation_close">Затваряне</string>
+    <string name="web_annotation_read">Прочитане на бележката</string>
+    <string name="web_annotation_edit">Редактиране</string>
+    <string name="web_annotation_go_to">Към маркирането</string>
+    <string name="web_annotation_list_hint">Докоснете цитат, за да отидете до мястото му на страницата.</string>
+    <string name="web_annotation_no_note">Все още няма бележка. Докоснете „Редактиране“, за да добавите.</string>
+    <string name="web_annotation_not_found">Този цитат не може да бъде еднозначно открит на страницата. Запазената ви бележка остава достъпна.</string>
+    <string name="web_annotation_markdown_hint">Поддържа се Markdown: **получер**, *курсив*, списъци и [връзки](https://example.com).</string>
+    <string name="web_annotation_preview">Преглед</string>
+    <string name="web_annotation_format_bold">Получер</string>
+    <string name="web_annotation_format_italic">Курсив</string>
+    <string name="web_annotation_format_heading">Заглавие</string>
+    <string name="web_annotation_format_list">Списък с водещи символи</string>
+    <string name="web_annotation_format_link">Вмъкване на връзка</string>
+    <string name="web_annotation_format_code">Код в текста</string>
+    <string name="web_annotation_discard_title">Отхвърляне на промените?</string>
+    <string name="web_annotation_discard_message">Незаписаните промени в бележката ще бъдат загубени.</string>
+    <string name="web_annotation_discard">Отхвърляне</string>
+    <string name="web_annotation_keep_editing">Продължаване на редактирането</string>
 </resources>

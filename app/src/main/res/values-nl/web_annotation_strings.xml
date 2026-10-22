@@ -11,4 +11,22 @@
     <string name="web_annotation_failed">Deze markering kon niet worden opgeslagen.</string>
     <string name="web_annotation_private">Markeringen zijn niet beschikbaar in privétabbladen.</string>
     <string name="web_annotation_close">Sluiten</string>
+    <string name="web_annotation_read">Notitie lezen</string>
+    <string name="web_annotation_edit">Bewerken</string>
+    <string name="web_annotation_go_to">Naar markering</string>
+    <string name="web_annotation_list_hint">Tik op een citaat om naar de bijbehorende plek op de pagina te gaan.</string>
+    <string name="web_annotation_no_note">Nog geen notitie. Tik op Bewerken om er een toe te voegen.</string>
+    <string name="web_annotation_not_found">Dit citaat kon niet eenduidig op de pagina worden gevonden. Je opgeslagen notitie blijft beschikbaar.</string>
+    <string name="web_annotation_markdown_hint">Markdown wordt ondersteund: **vet**, *cursief*, lijsten en [links](https://example.com).</string>
+    <string name="web_annotation_preview">Voorbeeld</string>
+    <string name="web_annotation_format_bold">Vet</string>
+    <string name="web_annotation_format_italic">Cursief</string>
+    <string name="web_annotation_format_heading">Kop</string>
+    <string name="web_annotation_format_list">Opsommingslijst</string>
+    <string name="web_annotation_format_link">Link invoegen</string>
+    <string name="web_annotation_format_code">Inlinecode</string>
+    <string name="web_annotation_discard_title">Wijzigingen verwerpen?</string>
+    <string name="web_annotation_discard_message">Je niet-opgeslagen wijzigingen in de notitie gaan verloren.</string>
+    <string name="web_annotation_discard">Verwerpen</string>
+    <string name="web_annotation_keep_editing">Verder bewerken</string>
 </resources>

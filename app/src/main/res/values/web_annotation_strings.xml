@@ -11,6 +11,24 @@
     <string name="web_annotation_failed">Could not save this highlight.</string>
     <string name="web_annotation_private">Highlights are unavailable in private tabs.</string>
     <string name="web_annotation_close">Close</string>
+    <string name="web_annotation_read">Read note</string>
+    <string name="web_annotation_edit">Edit</string>
+    <string name="web_annotation_go_to">Go to highlight</string>
+    <string name="web_annotation_list_hint">Tap a quote to jump to its place on the page.</string>
+    <string name="web_annotation_no_note">No note yet. Tap Edit to add one.</string>
+    <string name="web_annotation_not_found">This quote could not be located uniquely on the page. Your saved note is still available.</string>
+    <string name="web_annotation_markdown_hint">Markdown supported: **bold**, *italic*, lists and [links](https://example.com).</string>
     <item type="id" name="web_annotation_mark" />
     <item type="id" name="web_annotation_translate" />
+    <string name="web_annotation_preview">Preview</string>
+    <string name="web_annotation_format_bold">Bold</string>
+    <string name="web_annotation_format_italic">Italic</string>
+    <string name="web_annotation_format_heading">Heading</string>
+    <string name="web_annotation_format_list">Bulleted list</string>
+    <string name="web_annotation_format_link">Insert link</string>
+    <string name="web_annotation_format_code">Inline code</string>
+    <string name="web_annotation_discard_title">Discard changes?</string>
+    <string name="web_annotation_discard_message">Your unsaved note changes will be lost.</string>
+    <string name="web_annotation_discard">Discard</string>
+    <string name="web_annotation_keep_editing">Keep editing</string>
 </resources>

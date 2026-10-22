@@ -248,6 +248,8 @@ internal interface AndroidBrowserEngineSessionPort :
 
     fun executeWebTextOperation(payload: String, onComplete: (Boolean) -> Unit) = onComplete(false)
 
+    fun setWebAnnotationClickListener(listener: ((String) -> Unit)?) = Unit
+
     fun setFormDraftListener(listener: ((String) -> Unit)?) = Unit
 
     fun restoreFormDraft(payload: String, onComplete: (Boolean) -> Unit) = onComplete(false)
@@ -875,6 +877,10 @@ internal class GeckoBrowserEngineSessionAdapter(
 
     override fun executeWebTextOperation(payload: String, onComplete: (Boolean) -> Unit) {
         if (closed) onComplete(false) else session.executeWebTextOperation(payload, onComplete)
+    }
+
+    override fun setWebAnnotationClickListener(listener: ((String) -> Unit)?) {
+        if (!closed) session.setWebAnnotationClickListener(listener)
     }
 
     override fun setFormDraftListener(listener: ((String) -> Unit)?) {

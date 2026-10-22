@@ -417,6 +417,8 @@ internal interface GeckoBrowserSession {
 
     fun executeWebTextOperation(payload: String, onComplete: (Boolean) -> Unit) = onComplete(false)
 
+    fun setWebAnnotationClickListener(listener: ((String) -> Unit)?) = Unit
+
     fun setFormDraftListener(listener: ((String) -> Unit)?) = Unit
 
     fun restoreFormDraft(payload: String, onComplete: (Boolean) -> Unit) = onComplete(false)

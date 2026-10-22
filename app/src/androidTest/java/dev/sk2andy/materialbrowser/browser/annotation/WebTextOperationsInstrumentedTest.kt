@@ -185,6 +185,60 @@ class WebTextOperationsInstrumentedTest {
     }
 
     @Test
+    fun savedHighlightRequiresTrustedTapAndListNavigationFindsExactQuote() {
+        withPage { view ->
+            val annotations = JSONArray().put(JSONObject().put("id", "saved-quote").put("quote", "Distant saved quote"))
+            assertEquals("true", evaluate(view, operation("highlights", "annotations" to annotations)))
+            evaluate(view, "globalThis.clickedAnnotations = []; CandyWebTextOperations.setAnnotationClickListener(id => clickedAnnotations.push(id))")
+            assertEquals("true", evaluate(view, operation("scroll-to-annotation", "id" to "saved-quote", "quote" to "Distant saved quote")))
+            assertEquals("true", evaluate(view, "scrollY > 500"))
+            assertEquals("false", evaluate(view, operation("scroll-to-annotation", "id" to "missing", "quote" to "Duplicate")))
+            assertEquals("false", evaluate(view, operation("scroll-to-annotation", "id" to "hidden", "quote" to "Only hidden quote")))
+            evaluate(view, "document.getElementById('distant').click()")
+            assertEquals("0", evaluate(view, "clickedAnnotations.length"))
+            awaitVisualState(view)
+            tap(view, "document.getElementById('distant')")
+            composeRule.waitUntil(5_000) { evaluate(view, "clickedAnnotations[0]") == "\"saved-quote\"" }
+            evaluate(view, "const overlay = document.createElement('div'); overlay.style = 'position:fixed;inset:0;z-index:9999'; document.body.appendChild(overlay)")
+            awaitVisualState(view)
+            tap(view, "document.getElementById('distant')")
+            assertEquals("1", evaluate(view, "clickedAnnotations.length"))
+            assertEquals("false", evaluate(view, "CandyWebTextOperations.apply({operation:'scroll-to-annotation',url:'https://other.example/',id:'saved-quote',quote:'Distant saved quote'})"))
+        }
+    }
+
+    @Test
+    fun annotationNavigationScrollsNestedOverflowContainer() {
+        withPage { view ->
+            evaluate(view, """
+                const container = document.createElement('div');
+                container.id = 'scroller'; container.style = 'height:180px;overflow:auto';
+                container.innerHTML = '<div style="height:900px"></div><p>Nested saved quote</p><div style="height:900px"></div>';
+                document.body.prepend(container);
+            """.trimIndent())
+            assertEquals("true", evaluate(view, operation("scroll-to-annotation", "id" to "nested", "quote" to "Nested saved quote")))
+            assertEquals("true", evaluate(view, "document.getElementById('scroller').scrollTop > 500"))
+        }
+    }
+
+    private fun tap(view: WebView, target: String) {
+        val position = JSONArray(evaluate(view, """
+            (() => {
+              const range = document.createRange();
+              range.selectNodeContents($target);
+              const rect = Array.from(range.getClientRects()).find(r => r.width > 0 && r.height > 0);
+              return [rect.left + rect.width / 2, rect.top + rect.height / 2, window.devicePixelRatio];
+            })()
+        """.trimIndent()))
+        val location = IntArray(2)
+        composeRule.runOnUiThread { view.getLocationOnScreen(location) }
+        assertTrue(UiDevice.getInstance(InstrumentationRegistry.getInstrumentation()).click(
+            location[0] + (position.getDouble(0) * position.getDouble(2)).toInt(),
+            location[1] + (position.getDouble(1) * position.getDouble(2)).toInt(),
+        ))
+    }
+
+    @Test
     fun staleUrlAndHiddenAncestorQuotesCannotModifyPage() {
         withPage { view ->
             assertEquals("false", evaluate(view, operation("translate", "original" to "Only hidden quote", "replacement" to "Changed")))
@@ -215,7 +269,8 @@ class WebTextOperationsInstrumentedTest {
                 <html><head><meta name="viewport" content="width=device-width, initial-scale=1"></head>
                 <body style="padding:80px 16px 32px"><p>Visible <b>original</b> quote</p><p>Duplicate</p><p>Duplicate</p>
                 <div style="display:none"><span>Only hidden quote</span><span>Visible original quote</span></div>
-                <textarea>Editable secret</textarea><div contenteditable="true">Editable secret</div></body></html>
+                <textarea>Editable secret</textarea><div contenteditable="true">Editable secret</div>
+                <p id="distant" style="margin-top:2000px;margin-bottom:1000px">Distant saved quote</p></body></html>
             """.trimIndent(), "text/html", "UTF-8", null)
         }
         try {

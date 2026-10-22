@@ -6,6 +6,11 @@
     if (!next || !Number.isSafeInteger(next.revision) || !Number.isSafeInteger(next.navigationGeneration)) return;
     if (!policy || next.revision >= policy.revision) policy = next;
   }
+  CandyWebTextOperations.setAnnotationClickListener(id => {
+    if (!policy) return;
+    browser.runtime.sendMessage({ type: 'web-annotation-click', id, url: location.href,
+      revision: policy.revision, navigationGeneration: policy.navigationGeneration }).catch(() => {});
+  });
   browser.runtime.onMessage.addListener(message => {
     if (message?.type === 'content-policy') configure(message);
     if (message?.type !== 'web-text-operation' || !policy ||

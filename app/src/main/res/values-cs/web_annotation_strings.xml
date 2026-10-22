@@ -11,4 +11,22 @@
     <string name="web_annotation_failed">Zvýraznění se nepodařilo uložit.</string>
     <string name="web_annotation_private">Zvýraznění nejsou dostupná v anonymních kartách.</string>
     <string name="web_annotation_close">Zavřít</string>
+    <string name="web_annotation_read">Přečíst poznámku</string>
+    <string name="web_annotation_edit">Upravit</string>
+    <string name="web_annotation_go_to">Přejít na zvýraznění</string>
+    <string name="web_annotation_list_hint">Klepnutím na citaci přejdete na její místo na stránce.</string>
+    <string name="web_annotation_no_note">Zatím žádná poznámka. Klepnutím na Upravit ji přidáte.</string>
+    <string name="web_annotation_not_found">Tuto citaci se na stránce nepodařilo jednoznačně najít. Uložená poznámka je stále dostupná.</string>
+    <string name="web_annotation_markdown_hint">Podporován je Markdown: **tučné**, *kurzíva*, seznamy a [odkazy](https://example.com).</string>
+    <string name="web_annotation_preview">Náhled</string>
+    <string name="web_annotation_format_bold">Tučné</string>
+    <string name="web_annotation_format_italic">Kurzíva</string>
+    <string name="web_annotation_format_heading">Nadpis</string>
+    <string name="web_annotation_format_list">Seznam s odrážkami</string>
+    <string name="web_annotation_format_link">Vložit odkaz</string>
+    <string name="web_annotation_format_code">Kód v textu</string>
+    <string name="web_annotation_discard_title">Zahodit změny?</string>
+    <string name="web_annotation_discard_message">Neuložené změny poznámky budou ztraceny.</string>
+    <string name="web_annotation_discard">Zahodit</string>
+    <string name="web_annotation_keep_editing">Pokračovat v úpravách</string>
 </resources>

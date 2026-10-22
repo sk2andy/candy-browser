@@ -11,4 +11,22 @@
     <string name="web_annotation_failed">Ознаку није могуће сачувати.</string>
     <string name="web_annotation_private">Ознаке нису доступне у приватним картицама.</string>
     <string name="web_annotation_close">Затвори</string>
+    <string name="web_annotation_read">Прочитај белешку</string>
+    <string name="web_annotation_edit">Уреди</string>
+    <string name="web_annotation_go_to">Иди на ознаку</string>
+    <string name="web_annotation_list_hint">Додирните цитат да бисте отишли на његово место на страници.</string>
+    <string name="web_annotation_no_note">Још нема белешке. Додирните Уреди да је додате.</string>
+    <string name="web_annotation_not_found">Овај цитат није могуће једнозначно пронаћи на страници. Ваша сачувана белешка је и даље доступна.</string>
+    <string name="web_annotation_markdown_hint">Подржан је Markdown: **подебљано**, *курзив*, листе и [везе](https://example.com).</string>
+    <string name="web_annotation_preview">Преглед</string>
+    <string name="web_annotation_format_bold">Подебљано</string>
+    <string name="web_annotation_format_italic">Курзив</string>
+    <string name="web_annotation_format_heading">Наслов</string>
+    <string name="web_annotation_format_list">Листа са ознакама</string>
+    <string name="web_annotation_format_link">Уметни везу</string>
+    <string name="web_annotation_format_code">Код у тексту</string>
+    <string name="web_annotation_discard_title">Одбацити измене?</string>
+    <string name="web_annotation_discard_message">Несачуване измене белешке ће бити изгубљене.</string>
+    <string name="web_annotation_discard">Одбаци</string>
+    <string name="web_annotation_keep_editing">Настави уређивање</string>
 </resources>

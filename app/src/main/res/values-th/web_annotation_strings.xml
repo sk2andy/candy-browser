@@ -11,4 +11,22 @@
     <string name="web_annotation_failed">บันทึกไฮไลต์นี้ไม่ได้</string>
     <string name="web_annotation_private">ใช้ไฮไลต์ในแท็บส่วนตัวไม่ได้</string>
     <string name="web_annotation_close">ปิด</string>
+    <string name="web_annotation_read">อ่านบันทึก</string>
+    <string name="web_annotation_edit">แก้ไข</string>
+    <string name="web_annotation_go_to">ไปที่ไฮไลต์</string>
+    <string name="web_annotation_list_hint">แตะข้อความอ้างอิงเพื่อไปยังตำแหน่งนั้นในหน้าเว็บ</string>
+    <string name="web_annotation_no_note">ยังไม่มีบันทึก แตะแก้ไขเพื่อเพิ่มบันทึก</string>
+    <string name="web_annotation_not_found">ไม่สามารถระบุตำแหน่งของข้อความอ้างอิงนี้ในหน้าเว็บได้อย่างชัดเจน บันทึกที่บันทึกไว้ยังคงใช้งานได้</string>
+    <string name="web_annotation_markdown_hint">รองรับ Markdown: **ตัวหนา**, *ตัวเอียง*, รายการ และ[ลิงก์](https://example.com)</string>
+    <string name="web_annotation_preview">แสดงตัวอย่าง</string>
+    <string name="web_annotation_format_bold">ตัวหนา</string>
+    <string name="web_annotation_format_italic">ตัวเอียง</string>
+    <string name="web_annotation_format_heading">หัวเรื่อง</string>
+    <string name="web_annotation_format_list">รายการหัวข้อย่อย</string>
+    <string name="web_annotation_format_link">แทรกลิงก์</string>
+    <string name="web_annotation_format_code">โค้ดในบรรทัด</string>
+    <string name="web_annotation_discard_title">ละทิ้งการเปลี่ยนแปลงไหม</string>
+    <string name="web_annotation_discard_message">การเปลี่ยนแปลงบันทึกที่ยังไม่ได้บันทึกจะสูญหาย</string>
+    <string name="web_annotation_discard">ละทิ้ง</string>
+    <string name="web_annotation_keep_editing">แก้ไขต่อ</string>
 </resources>

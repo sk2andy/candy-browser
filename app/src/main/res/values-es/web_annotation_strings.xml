@@ -11,4 +11,22 @@
     <string name="web_annotation_failed">No se pudo guardar este resaltado.</string>
     <string name="web_annotation_private">Los resaltados no están disponibles en pestañas privadas.</string>
     <string name="web_annotation_close">Cerrar</string>
+    <string name="web_annotation_read">Leer nota</string>
+    <string name="web_annotation_edit">Editar</string>
+    <string name="web_annotation_go_to">Ir al resaltado</string>
+    <string name="web_annotation_list_hint">Toca una cita para ir a su posición en la página.</string>
+    <string name="web_annotation_no_note">Aún no hay ninguna nota. Toca Editar para añadir una.</string>
+    <string name="web_annotation_not_found">No se pudo localizar esta cita de forma inequívoca en la página. Tu nota guardada sigue disponible.</string>
+    <string name="web_annotation_markdown_hint">Admite Markdown: **negrita**, *cursiva*, listas y [enlaces](https://example.com).</string>
+    <string name="web_annotation_preview">Vista previa</string>
+    <string name="web_annotation_format_bold">Negrita</string>
+    <string name="web_annotation_format_italic">Cursiva</string>
+    <string name="web_annotation_format_heading">Encabezado</string>
+    <string name="web_annotation_format_list">Lista con viñetas</string>
+    <string name="web_annotation_format_link">Insertar enlace</string>
+    <string name="web_annotation_format_code">Código en línea</string>
+    <string name="web_annotation_discard_title">¿Descartar los cambios?</string>
+    <string name="web_annotation_discard_message">Se perderán los cambios sin guardar de tu nota.</string>
+    <string name="web_annotation_discard">Descartar</string>
+    <string name="web_annotation_keep_editing">Seguir editando</string>
 </resources>
