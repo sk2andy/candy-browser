@@ -41,14 +41,18 @@ internal data class SiteWidgetPixelBounds(
 internal object SiteWidgetCropRules {
     const val MINIMUM_SIZE_FRACTION = 0.1f
     const val MAXIMUM_ZOOM = 10f
+    const val DEFAULT_CELL_ASPECT_RATIO = 1f
 
     fun initialCrop(
         format: SiteWidgetFormat,
         viewportWidth: Int,
         viewportHeight: Int,
+        cellAspectRatio: Float = DEFAULT_CELL_ASPECT_RATIO,
     ): SiteWidgetCrop? {
-        if (!format.isValid || viewportWidth <= 0 || viewportHeight <= 0) return null
-        val normalizedAspect = normalizedAspect(format, viewportWidth, viewportHeight)
+        if (!format.isValid || viewportWidth <= 0 || viewportHeight <= 0 || !isValidCellAspectRatio(cellAspectRatio)) {
+            return null
+        }
+        val normalizedAspect = normalizedAspect(format, viewportWidth, viewportHeight, cellAspectRatio)
         val width = minOf(1.0, normalizedAspect).toFloat()
         val height = minOf(1.0, 1.0 / normalizedAspect).toFloat()
         return SiteWidgetCrop(
@@ -85,12 +89,13 @@ internal object SiteWidgetCropRules {
         format: SiteWidgetFormat,
         viewportWidth: Int,
         viewportHeight: Int,
+        cellAspectRatio: Float = DEFAULT_CELL_ASPECT_RATIO,
     ): SiteWidgetCrop? {
         if (
             sanitize(crop) == null || !format.isValid || !scale.isFinite() || scale <= 0f ||
-            viewportWidth <= 0 || viewportHeight <= 0
+            viewportWidth <= 0 || viewportHeight <= 0 || !isValidCellAspectRatio(cellAspectRatio)
         ) return null
-        val normalizedAspect = normalizedAspect(format, viewportWidth, viewportHeight)
+        val normalizedAspect = normalizedAspect(format, viewportWidth, viewportHeight, cellAspectRatio)
         val maximumWidth = minOf(1.0, normalizedAspect)
         val width = (crop.width.toDouble() * scale)
             .coerceIn(maximumWidth * MINIMUM_SIZE_FRACTION, maximumWidth).toFloat()
@@ -110,10 +115,18 @@ internal object SiteWidgetCropRules {
         format: SiteWidgetFormat,
         viewportWidth: Int,
         viewportHeight: Int,
+        cellAspectRatio: Float = DEFAULT_CELL_ASPECT_RATIO,
     ): SiteWidgetCrop? {
-        val previousMaximum = initialCrop(previousFormat, viewportWidth, viewportHeight) ?: return null
-        val maximum = initialCrop(format, viewportWidth, viewportHeight) ?: return null
-        return resizeCrop(crop, maximum.width / previousMaximum.width, format, viewportWidth, viewportHeight)
+        val previousMaximum = initialCrop(previousFormat, viewportWidth, viewportHeight, cellAspectRatio) ?: return null
+        val maximum = initialCrop(format, viewportWidth, viewportHeight, cellAspectRatio) ?: return null
+        return resizeCrop(
+            crop,
+            maximum.width / previousMaximum.width,
+            format,
+            viewportWidth,
+            viewportHeight,
+            cellAspectRatio,
+        )
     }
 
     fun zoomCrop(
@@ -122,15 +135,17 @@ internal object SiteWidgetCropRules {
         format: SiteWidgetFormat,
         viewportWidth: Int,
         viewportHeight: Int,
+        cellAspectRatio: Float = DEFAULT_CELL_ASPECT_RATIO,
     ): SiteWidgetCrop? {
         if (!zoom.isFinite() || zoom <= 0f || sanitize(crop) == null) return null
-        val maximum = initialCrop(format, viewportWidth, viewportHeight) ?: return null
+        val maximum = initialCrop(format, viewportWidth, viewportHeight, cellAspectRatio) ?: return null
         return resizeCrop(
             crop,
             maximum.width / zoom.coerceIn(1f, MAXIMUM_ZOOM) / crop.width,
             format,
             viewportWidth,
             viewportHeight,
+            cellAspectRatio,
         )
     }
 
@@ -145,6 +160,24 @@ internal object SiteWidgetCropRules {
         return SiteWidgetPixelBounds(left = left, top = top, width = right - left, height = bottom - top)
     }
 
-    private fun normalizedAspect(format: SiteWidgetFormat, viewportWidth: Int, viewportHeight: Int): Double =
-        format.columns.toDouble() / format.rows * viewportHeight / viewportWidth
+    private fun normalizedAspect(
+        format: SiteWidgetFormat,
+        viewportWidth: Int,
+        viewportHeight: Int,
+        cellAspectRatio: Float,
+    ): Double = format.columns.toDouble() / format.rows * cellAspectRatio * viewportHeight / viewportWidth
+
+    private fun isValidCellAspectRatio(value: Float): Boolean =
+        value.isFinite() && value in MINIMUM_CELL_ASPECT_RATIO..MAXIMUM_CELL_ASPECT_RATIO
+
+    private const val MINIMUM_CELL_ASPECT_RATIO = 0.5f
+    private const val MAXIMUM_CELL_ASPECT_RATIO = 2f
+}
+
+internal object SiteWidgetGridSizingRules {
+    fun cellAspectRatio(widthDp: Int, heightDp: Int, format: SiteWidgetFormat): Float? {
+        if (!format.isValid || widthDp <= 0 || heightDp <= 0) return null
+        val ratio = widthDp.toDouble() * format.rows / (heightDp.toDouble() * format.columns)
+        return ratio.toFloat().takeIf { it.isFinite() && it in 0.5f..2f }
+    }
 }

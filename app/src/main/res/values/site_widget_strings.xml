@@ -11,6 +11,8 @@
     <string name="site_widget_pin_requested">Confirm adding the widget on your home screen.</string>
     <string name="site_widget_editor_title">Website widget</string>
     <string name="site_widget_editor_instructions">Choose columns and rows. Pinch or use the zoom slider, then move the page beneath the frame.</string>
+    <string name="site_widget_editor_sizing_learning">The first preview may not match your launcher exactly. After adding this widget, we’ll use the launcher’s reported size to improve the next preview.</string>
+    <string name="site_widget_editor_sizing_learned">This preview uses the proportions learned from your launcher. It may still vary if the launcher layout changes.</string>
     <string name="site_widget_format_four_by_three">4 × 3</string>
     <string name="site_widget_format_four_by_four">4 × 4</string>
     <string name="site_widget_editor_size">Selection size</string>

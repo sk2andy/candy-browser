@@ -10,6 +10,8 @@
     <string name="site_widget_pin_requested">Bestätige das Hinzufügen des Widgets auf deinem Startbildschirm.</string>
     <string name="site_widget_editor_title">Website-Widget</string>
     <string name="site_widget_editor_instructions">Wähle Spalten und Reihen. Zoome mit zwei Fingern oder dem Regler und verschiebe die Seite unter dem Rahmen.</string>
+    <string name="site_widget_editor_sizing_learning">Die erste Vorschau kann noch von deinem Launcher abweichen. Nach dem Hinzufügen übernehmen wir seine Größenangaben für eine bessere Vorschau beim nächsten Widget.</string>
+    <string name="site_widget_editor_sizing_learned">Diese Vorschau nutzt das beim letzten Widget gelernte Größenverhältnis. Änderungen am Launcher können weiterhin zu Abweichungen führen.</string>
     <string name="site_widget_format_four_by_three">4 × 3</string>
     <string name="site_widget_format_four_by_four">4 × 4</string>
     <string name="site_widget_editor_size">Größe des Ausschnitts</string>

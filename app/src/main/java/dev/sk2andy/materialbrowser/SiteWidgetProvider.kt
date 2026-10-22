@@ -13,9 +13,11 @@ import android.net.Uri
 import android.view.View
 import android.widget.RemoteViews
 import dev.sk2andy.materialbrowser.browser.sitewidget.SiteWidgetFormat
+import dev.sk2andy.materialbrowser.browser.sitewidget.SiteWidgetGridSizingRules
 import dev.sk2andy.materialbrowser.browser.sitewidget.SiteWidgetSnapshot
 import dev.sk2andy.materialbrowser.browser.sitewidget.SiteWidgetRefreshScheduler
 import dev.sk2andy.materialbrowser.data.SiteWidgetStore
+import dev.sk2andy.materialbrowser.data.SiteWidgetGridSizingStore
 import java.util.concurrent.Executors
 
 open class SiteWidgetProvider : AppWidgetProvider() {
@@ -69,7 +71,10 @@ open class SiteWidgetProvider : AppWidgetProvider() {
                 if (manager.getAppWidgetInfo(widgetId)?.provider != component(context, snapshot.format)) {
                     return@execute
                 }
-                if (store.bind(widgetId, id)) update(context, manager, widgetId)
+                if (store.bind(widgetId, id)) {
+                    rememberLauncherCellAspect(context, manager, widgetId, snapshot.format, store)
+                    update(context, manager, widgetId)
+                }
             } finally {
                 pending.finish()
             }
@@ -134,6 +139,23 @@ open class SiteWidgetProvider : AppWidgetProvider() {
             } finally {
                 bitmap?.recycle()
             }
+        }
+
+        private fun rememberLauncherCellAspect(
+            context: Context,
+            manager: AppWidgetManager,
+            widgetId: Int,
+            format: SiteWidgetFormat,
+            store: SiteWidgetStore,
+        ) {
+            val options = manager.getAppWidgetOptions(widgetId)
+            val ratio = SiteWidgetGridSizingRules.cellAspectRatio(
+                widthDp = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH),
+                heightDp = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT),
+                format = format,
+            ) ?: return
+            val launcherPackage = SiteWidgetGridSizingStore(context).currentLauncherPackage() ?: return
+            store.saveLauncherCellAspectRatio(launcherPackage, ratio)
         }
 
         internal fun views(

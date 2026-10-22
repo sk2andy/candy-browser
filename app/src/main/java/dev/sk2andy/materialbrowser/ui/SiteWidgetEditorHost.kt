@@ -29,6 +29,7 @@ import dev.sk2andy.materialbrowser.browser.sitewidget.SiteWidgetCapture
 import dev.sk2andy.materialbrowser.browser.sitewidget.SiteWidgetFormat
 import dev.sk2andy.materialbrowser.browser.sitewidget.SiteWidgetPublisher
 import dev.sk2andy.materialbrowser.data.SiteWidgetStore
+import dev.sk2andy.materialbrowser.data.SiteWidgetGridSizingStore
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -45,6 +46,11 @@ internal fun SiteWidgetEditorHost(controller: BrowserController) {
 private fun SiteWidgetEditorRequest(controller: BrowserController, requestId: Int, widgetId: Int) {
     val context = LocalContext.current
     val publisher = remember(context) { SiteWidgetPublisher(context) }
+    val sizingStore = remember(context) { SiteWidgetGridSizingStore(context) }
+    val learnedCellAspectRatio = remember(context) {
+        sizingStore.cellAspectRatio(sizingStore.currentLauncherPackage())
+    }
+    val launcherCellAspectRatio = learnedCellAspectRatio ?: 1f
     val scope = rememberCoroutineScope()
     var capture by remember(requestId) { mutableStateOf<SiteWidgetCapture?>(null) }
     var captureHandle by remember(requestId) { mutableStateOf<BrowserEnginePreviewCapture?>(null) }
@@ -102,6 +108,8 @@ private fun SiteWidgetEditorRequest(controller: BrowserController, requestId: In
             initialFormat = initialFormat,
             initialRefreshIntervalMinutes = initialInterval,
             formatChangeEnabled = widgetId == AppWidgetManager.INVALID_APPWIDGET_ID,
+            launcherCellAspectRatio = launcherCellAspectRatio,
+            launcherCellAspectRatioLearned = learnedCellAspectRatio != null,
             saving = saving,
             error = error,
             onDismiss = controller::dismissSiteWidgetEditor,
