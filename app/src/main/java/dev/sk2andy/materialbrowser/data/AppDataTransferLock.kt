@@ -56,6 +56,9 @@ internal object AppDataTransferLock {
         }
     }
 
+    // FileChannel locks arbitrate processes, but overlapping locks in one JVM throw instead
+    // of waiting. Serialize local callers before acquiring the cross-process guard.
+    @Synchronized
     private fun <T> withGuard(context: Context, action: () -> T): T? = runCatching {
         FileChannel.open(
             guardFile(context).toPath(),
