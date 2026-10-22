@@ -627,7 +627,7 @@ internal fun BoxScope.BrowserAddressChrome(
                 when {
                     commandFeedback != null && !tabOverviewVisible -> 30f
                     addressBarMorphInFront -> 20f
-                    else -> 0f
+                    else -> 1f
                 },
             ),
     )
