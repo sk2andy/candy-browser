@@ -36,6 +36,8 @@ page before persistence. Private tabs never expose this action.
 | `AndroidReaderSpeechController` | Android `TextToSpeech`, chunk queue and range callbacks |
 | `OfflineReaderSpeechController`, `OfflineSpeechEngine` | Bounded sentence synthesis with Supertonic 3 / ONNX Runtime and memory-only PCM playback |
 | `ReaderSpeechModelRepository`, `OfflineSpeechModelFiles` | App-wide voice preference; explicit, pinned, integrity-checked model download and deletion |
+| `ReaderSpeechPreparationRepository`, `PlatformReaderSpeechPreparation` | Optional Gemini Nano availability, Android-managed download, adult confirmation and bounded foreground inference; FOSS reports unavailable |
+| `ReaderSpeechPreparationRules` | Fixed German/English abbreviation and number readings; strict model-choice validation and original-text offset mapping |
 | `ReaderDocument.speechText` | Stable title+block text projection |
 
 The iOS host maps its tab/session-bound WebKit extraction into `ReaderExtractionResult` and renders this
@@ -55,6 +57,21 @@ parallel SwiftUI Reader surface exists.
 | Playback | Language-agnostic multilingual input, bounded sentence chunks with one sentence prepared ahead of playback; pause resumes from the current sentence. No word-level timing is fabricated. |
 | Lifecycle | Leaving the screen or backgrounding cancels pending playback and active audio. Download completion cannot restart a cancelled session. Native inference resources close after playback. Audio-focus loss pauses speech. |
 | License | Supertonic 3 model weights use OpenRAIL-M; reference inference code is MIT. Notices and license text ship with the app. |
+
+| Optional Gemini Nano preparation | Contract |
+| --- | --- |
+| Availability | Full and System WebView query ML Kit Prompt API 1.0.0-beta4 at runtime, rather than maintaining a phone allowlist. FOSS has no Google ML Kit dependency or Nano controls. |
+| Choice | Disabled by default. Available/downloadable models appear beside the first voice choice and in Browser → Read aloud. Enabling or downloading first requires confirmation of age 18 or older; this device-local confirmation is excluded from cloud backup and device transfer. It is a self-declaration, not age verification. |
+| Download | Explicit Android-managed shared model download. Candy displays bytes received, supports cancelling its own request, and can refresh the status of a download managed by Android or another app. Download success enables preparation but never starts speech by itself. |
+| Model ownership | Android/AICore owns the model shared by apps. Candy can disable its use, but has no model deletion control. |
+| Text boundary | Only the first 24 supported candidates within the first 20,000 UTF-16 characters can be prepared. A prompt of at most 6,000 characters contains bounded context and fixed reading choices. German/English abbreviations, integers 0–9,999 and euro amounts are supported; other text, dates, URLs and versions remain untouched. |
+| Response boundary | Nano returns only indexed choices. Invalid/incomplete/oversized responses are rejected; generated prose never enters the article. The visible article remains unchanged, and speech progress maps to original offsets. |
+| Fallback | Six-second preparation limit, foreground-only requests, cancellation on stop/close, and original-text playback after unavailable/busy/error/invalid response. Preference changes invalidate cached preparation. No inference retries or automatic model download during playback. |
+| Privacy | Article text, prompts, model responses, prepared text and audio remain in memory. Inference is local. Google's SDK/AICore can process device, usage and performance metrics; the UI and privacy policy disclose this separately from article processing. |
+| Distribution | Candy's declared Play target audience is 18+ with Restrict Minor Access enabled. Play review controls when the declaration becomes effective; this setting does not enforce age on outside-store APKs or remove existing installations. Nano's own opt-in confirmation also applies to those installations. |
+
+Sentence chunking preserves common abbreviations, initials, decimal/date separators and URL punctuation
+within the existing bounded chunks. This improves the default local voice even when Nano is disabled.
 
 Android selected-text actions reuse `ReaderSpeechController` for temporary read-aloud sessions without creating
 Reader documents or library snapshots. These sessions stop when their activity leaves the foreground and

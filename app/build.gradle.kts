@@ -758,11 +758,13 @@ dependencies {
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-tooling-preview")
     "fullImplementation"("com.google.android.gms:play-services-code-scanner:16.1.0")
+    "fullImplementation"("com.google.mlkit:genai-prompt:1.0.0-beta4")
     "fullImplementation"("androidx.credentials:credentials-play-services-auth:1.5.0")
     "fullImplementation"("com.google.android.gms:play-services-cast-framework:21.4.0") {
         exclude(group = "org.jetbrains.kotlin", module = "kotlin-stdlib")
     }
     "systemwebviewImplementation"("com.google.android.gms:play-services-code-scanner:16.1.0")
+    "systemwebviewImplementation"("com.google.mlkit:genai-prompt:1.0.0-beta4")
     "systemwebviewImplementation"("androidx.credentials:credentials-play-services-auth:1.5.0")
     "systemwebviewImplementation"("com.google.android.gms:play-services-cast-framework:21.4.0") {
         exclude(group = "org.jetbrains.kotlin", module = "kotlin-stdlib")

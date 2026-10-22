@@ -26,6 +26,12 @@ Google Code Scanner, ML Kit, Google Play services, and related binary SDK compon
 are governed by the Google APIs Terms of Service rather than represented as open source:
 https://developers.google.com/terms
 
+Optional Gemini Nano text preparation uses ML Kit GenAI Prompt API 1.0.0-beta4 and
+the shared Android AICore service. ML Kit and GenAI additional terms apply:
+https://developers.google.com/ml-kit/terms
+https://developers.google.com/ml-kit/genai-terms
+The system manages Gemini Nano; its model weights are not bundled with Candy Browser.
+
 Filter data
 -----------
 

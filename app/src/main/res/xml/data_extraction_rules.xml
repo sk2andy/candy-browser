@@ -4,6 +4,7 @@
         <include domain="sharedpref" path="." />
         <exclude domain="sharedpref" path="app_logging_capture.xml" />
         <exclude domain="sharedpref" path="device_search.xml" />
+        <exclude domain="sharedpref" path="reader_speech_preparation.xml" />
         <include domain="file" path="candy_filter_rules.json" />
         <include domain="file" path="candy_filter_rules.json.bak" />
         <include domain="file" path="user_scripts.json" />
@@ -19,6 +20,7 @@
         <include domain="sharedpref" path="." />
         <exclude domain="sharedpref" path="app_logging_capture.xml" />
         <exclude domain="sharedpref" path="device_search.xml" />
+        <exclude domain="sharedpref" path="reader_speech_preparation.xml" />
         <include domain="file" path="." />
         <include domain="database" path="." />
     </device-transfer>

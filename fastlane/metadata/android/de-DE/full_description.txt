@@ -1,4 +1,4 @@
-Candy Browser ist ein gestenorientierter Material 3 Expressive Browser für Android 13 und neuer. Er nutzt standardmäßig GeckoView, unterstützt kompatible, von Mozilla signierte Firefox-Add-ons und speichert Tabs, Verlauf, Favoriten, Profile, Website-Berechtigungen, Leselisten und Datenschutzdaten lokal auf deinem Gerät.
+Candy Browser ist ein gestenorientierter Material 3 Expressive Browser für Erwachsene ab 18 Jahren auf Android 13 und neuer. Er nutzt standardmäßig GeckoView, unterstützt kompatible, von Mozilla signierte Firefox-Add-ons und speichert Tabs, Verlauf, Favoriten, Profile, Website-Berechtigungen, Leselisten und Datenschutzdaten lokal auf deinem Gerät.
 
 Highlights:
 • Wechsle per Wischgeste zwischen Tabs und nutze Cover-Flow-, Raster- oder Listenansicht.

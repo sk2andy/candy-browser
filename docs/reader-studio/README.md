@@ -16,6 +16,8 @@
 | Session, library, speech rules | `reader/*RulesTest` |
 | Offline speech choice, lifecycle, model integrity and inference | `ReaderSpeechControllerInstrumentedTest`, `OfflineSpeechModelFilesInstrumentedTest`, opt-in `OfflineSpeechEngineInstrumentedTest` |
 | Voice choice and model settings | `ReaderSpeechOptionsInstrumentedTest` |
+| Nano opt-in, download, fallback, cancellation and original offsets | `ReaderSpeechPreparationInstrumentedTest`, `ReaderSpeechPreparationRulesTest` |
+| Nano availability, adult confirmation and settings | `ReaderSpeechPreparationOptionsInstrumentedTest` |
 | Persistence | `ReaderLibraryStoreInstrumentedTest` |
 | Compose UI | `ReaderStudioScreenInstrumentedTest` |
 

@@ -14,6 +14,29 @@ import org.xmlpull.v1.XmlPullParser
 @RunWith(AndroidJUnit4::class)
 class AndroidBackupRulesInstrumentedTest {
     @Test
+    fun nanoConsentAndOptInNeverTransferToAnotherDevice() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val parser = context.resources.getXml(R.xml.data_extraction_rules)
+        val excludedSections = mutableSetOf<String>()
+        var section = ""
+        while (parser.eventType != XmlPullParser.END_DOCUMENT) {
+            if (parser.eventType == XmlPullParser.START_TAG) {
+                if (parser.name == "cloud-backup" || parser.name == "device-transfer") {
+                    section = parser.name
+                } else if (parser.name == "exclude" &&
+                    parser.getAttributeValue(null, "domain") == "sharedpref" &&
+                    parser.getAttributeValue(null, "path") == "reader_speech_preparation.xml"
+                ) {
+                    excludedSections += section
+                }
+            }
+            parser.next()
+        }
+        assertTrue("cloud-backup" in excludedSections)
+        assertTrue("device-transfer" in excludedSections)
+    }
+
+    @Test
     fun encryptedCloudBackupIncludesPortableStateButNotWebViewRoot() {
         val context = ApplicationProvider.getApplicationContext<Context>()
         assertTrue(context.applicationInfo.flags and ApplicationInfo.FLAG_ALLOW_BACKUP != 0)

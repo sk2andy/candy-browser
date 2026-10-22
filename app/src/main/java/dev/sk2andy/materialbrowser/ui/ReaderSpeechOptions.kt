@@ -30,15 +30,24 @@ import dev.sk2andy.materialbrowser.reader.OfflineSpeechModelFiles
 import dev.sk2andy.materialbrowser.reader.ReaderSpeechController
 import dev.sk2andy.materialbrowser.reader.ReaderSpeechModelRepository
 import dev.sk2andy.materialbrowser.reader.ReaderSpeechModelState
+import dev.sk2andy.materialbrowser.reader.ReaderSpeechPreparationRepository
+import dev.sk2andy.materialbrowser.reader.ReaderSpeechPreparationState
 
 @Composable
 internal fun ReaderSpeechOptions(speech: ReaderSpeechController) {
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner, speech) {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_STOP) speech.stop()
+            when (event) {
+                Lifecycle.Event.ON_RESUME -> speech.refreshPreparationAvailability()
+                Lifecycle.Event.ON_STOP -> speech.stop()
+                else -> Unit
+            }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
+        if (lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
+            speech.refreshPreparationAvailability()
+        }
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
     if (speech.choiceRequested) {
@@ -48,6 +57,17 @@ internal fun ReaderSpeechOptions(speech: ReaderSpeechController) {
             onOfflineVoice = speech::chooseOfflineVoice,
             onSystemVoice = speech::chooseSystemVoice,
             onDismiss = speech::dismissChoice,
+            preparationState = speech.preparationState,
+            onPreparationEnabledChanged = speech::setPreparationEnabled,
+            onPreparationDownload = speech::downloadPreparationModel,
+            onPreparationCancelDownload = speech::cancelPreparationDownload,
+            onPreparationConfirmAdult = speech::confirmPreparationAdult,
+            onPreparationRefresh = speech::refreshPreparationAvailability,
+        )
+    } else {
+        ReaderSpeechPreparationPlaybackStatus(
+            preparing = speech.preparingText,
+            fallback = speech.preparationFallback,
         )
     }
 }
@@ -59,6 +79,12 @@ internal fun ReaderSpeechChoiceDialog(
     onSystemVoice: () -> Unit,
     onDismiss: () -> Unit,
     playbackFailed: Boolean = false,
+    preparationState: ReaderSpeechPreparationState = ReaderSpeechPreparationState(),
+    onPreparationEnabledChanged: (Boolean) -> Unit = {},
+    onPreparationDownload: () -> Unit = {},
+    onPreparationCancelDownload: () -> Unit = {},
+    onPreparationConfirmAdult: () -> Unit = {},
+    onPreparationRefresh: () -> Unit = {},
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -77,6 +103,14 @@ internal fun ReaderSpeechChoiceDialog(
                         modifier = Modifier.testTag(ReaderSpeechOptionsTestTags.PlaybackError),
                     )
                 }
+                ReaderSpeechPreparationOptions(
+                    state = preparationState,
+                    onEnabledChanged = onPreparationEnabledChanged,
+                    onDownload = onPreparationDownload,
+                    onCancelDownload = onPreparationCancelDownload,
+                    onConfirmAdult = onPreparationConfirmAdult,
+                    onRefresh = onPreparationRefresh,
+                )
                 ReaderSpeechModelDetails()
             }
         },
@@ -109,12 +143,33 @@ internal fun ReaderSpeechSettingsPage(onBack: () -> Unit) {
     val repository = remember(context.applicationContext) {
         ReaderSpeechModelRepository.get(context)
     }
+    val preparation = remember(context.applicationContext) {
+        ReaderSpeechPreparationRepository.get(context)
+    }
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner, preparation) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) preparation.refresh()
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        if (lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) preparation.refresh()
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
     SettingsPage(title = stringResource(R.string.reader_voice_settings_title), onBack = onBack) {
         ReaderSpeechSettingsContent(
             state = repository.state,
             onEnabledChanged = repository::setEnabled,
             onDownload = repository::download,
             onDelete = repository::delete,
+        )
+        ReaderSpeechPreparationOptions(
+            state = preparation.state,
+            onEnabledChanged = preparation::setEnabled,
+            onDownload = preparation::download,
+            onCancelDownload = preparation::cancelDownload,
+            onConfirmAdult = preparation::confirmAdult,
+            onRefresh = preparation::refresh,
+            modifier = Modifier.padding(top = 24.dp),
         )
     }
 }

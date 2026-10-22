@@ -36,6 +36,36 @@ class OfflineSpeechRulesTest {
     }
 
     @Test
+    fun `abbreviations stay with their sentence`() {
+        listOf(
+            "Dr. Müller liest z. B. Bücher.",
+            "Prof. Smith reads, e.g. novels, i.e. fiction.",
+            "Die Zahl beträgt ca. fünf bzw. sechs.",
+        ).forEach { sentence ->
+            assertEquals(sentence, OfflineSpeechRules.nextChunk("$sentence Danach.", 0)?.text)
+        }
+    }
+
+    @Test
+    fun `decimal dates and web addresses stay intact`() {
+        listOf(
+            "Am 12.10.2026 kostet es 3.50 Euro.",
+            "Am 12. Oktober besucht J. Müller example.org.",
+            "Siehe https://example.org/path?a=1&b=2 und weiter.",
+        ).forEach { sentence ->
+            assertEquals(sentence, OfflineSpeechRules.nextChunk("$sentence Danach.", 0)?.text)
+        }
+    }
+
+    @Test
+    fun `hard boundary remains bounded when space is exactly at limit`() {
+        val text = "a".repeat(240) + " rest"
+        val chunk = requireNotNull(OfflineSpeechRules.nextChunk(text, 0))
+        assertEquals(240, chunk.text.length)
+        assertEquals("rest", OfflineSpeechRules.nextChunk(text, chunk.end)?.text)
+    }
+
+    @Test
     fun `empty and out of range offsets are safe`() {
         assertNull(OfflineSpeechRules.nextChunk("   ", -1))
         assertNull(OfflineSpeechRules.nextChunk("text", 100))

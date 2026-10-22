@@ -615,6 +615,13 @@ release, pass `-f publish_play=false`; the signed APK and release checks still r
 
 ### Google Play releases
 
+Candy's Google Play target audience is **18 years and older**, with **Restrict Minor Access** enabled
+under App content → Target audience and content. This is separate from the truthful IARC content
+rating. Changes must be submitted through Publishing overview and take effect after Google's review.
+GitHub and other outside-store downloads do not inherit Play's availability restrictions. The optional
+Gemini Nano speech preparation also requires an adult confirmation in the app.
+See [Reader speech](docs/reader-studio/library-speech-and-ui.md#speech).
+
 #### Join the Nightly test
 
 1. Join [Candy Browser Testers](https://groups.google.com/g/candy-browser-testers).

@@ -4,6 +4,12 @@ import android.content.Context
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 
 /** One first-use choice shared by Reader and Android selected-text speech. */
 internal class ReaderSpeechController(
@@ -15,6 +21,7 @@ internal class ReaderSpeechController(
     private val createOfflineSpeech: () -> ReaderSpeech = {
         OfflineReaderSpeechController(context.applicationContext, repository)
     },
+    private val preparation: ReaderSpeechPreparationRepository = ReaderSpeechPreparationRepository.get(context),
 ) : ReaderSpeech {
     private var delegate by mutableStateOf<ReaderSpeech?>(null)
     private var idleState by mutableStateOf(ReaderSpeechState(ReaderSpeechStatus.Ready))
@@ -25,20 +32,50 @@ internal class ReaderSpeechController(
     private var closed = false
     private var delegateGeneration = 0L
     private val modelListener: () -> Unit = ::modelChanged
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    private var preparationJob: Job? = null
+    private var preparationGeneration = 0L
+    private var preparedText: PreparedReaderSpeechText? = null
+    private var preparedChoiceRevision = -1L
+
+    var preparingText by mutableStateOf(false)
+        private set
+    var preparationFallback by mutableStateOf(false)
+        private set
 
     val playbackFailed: Boolean get() = delegate?.state?.status == ReaderSpeechStatus.Unavailable
     val choiceRequested: Boolean get() = setupRequested || playbackFailed
     val modelState: ReaderSpeechModelState get() = repository.state
-    override val state: ReaderSpeechState get() = delegate?.state ?: idleState
+    val preparationState: ReaderSpeechPreparationState get() = preparation.state
+    override val state: ReaderSpeechState get() {
+        // Keep pause and stop available while the optional preparation is running.
+        if (preparingText) return ReaderSpeechState(ReaderSpeechStatus.Speaking)
+        val current = delegate?.state ?: idleState
+        return current.copy(characterOffset = preparedText?.originalOffset(current.characterOffset)
+            ?: current.characterOffset)
+    }
 
     init { repository.addListener(modelListener) }
 
     override fun play(content: String) {
         if (closed || content.isBlank()) return
+        if (content != playbackText || preparedChoiceRevision != preparation.choiceRevision) {
+            cancelPreparation()
+            preparedText = null
+            if (delegate?.state?.status in setOf(ReaderSpeechStatus.Speaking, ReaderSpeechStatus.Paused)) {
+                delegate?.stop()
+            }
+        }
         playbackText = content
         pendingText = content
         continuePlayback()
     }
+
+    fun refreshPreparationAvailability() = preparation.refresh()
+    fun confirmPreparationAdult() = preparation.confirmAdult()
+    fun setPreparationEnabled(enabled: Boolean) = preparation.setEnabled(enabled)
+    fun downloadPreparationModel() = preparation.download()
+    fun cancelPreparationDownload() = preparation.cancelDownload()
 
     fun chooseOfflineVoice() {
         if (closed) return
@@ -56,6 +93,9 @@ internal class ReaderSpeechController(
     }
 
     fun dismissChoice() {
+        cancelPreparation()
+        preparedText = null
+        preparationFallback = false
         pendingText = null
         playbackText = null
         setupRequested = false
@@ -63,7 +103,13 @@ internal class ReaderSpeechController(
     }
 
     override fun pause() {
+        val wasPreparing = preparingText
+        cancelPreparation()
         pendingText = null
+        if (wasPreparing) {
+            preparedText = null
+            delegate?.stop()
+        }
         delegate?.pause()
     }
 
@@ -79,6 +125,7 @@ internal class ReaderSpeechController(
         dismissChoice()
         repository.removeListener(modelListener)
         resetDelegate()
+        scope.cancel()
         idleState = ReaderSpeechState(ReaderSpeechStatus.Closed)
     }
 
@@ -89,6 +136,8 @@ internal class ReaderSpeechController(
     }
 
     private fun resetDelegate() {
+        cancelPreparation()
+        preparedText = null
         delegateGeneration++
         delegate?.close()
         delegate = null
@@ -124,7 +173,36 @@ internal class ReaderSpeechController(
         }
         val current = delegate ?: return
         if (current.state.status == ReaderSpeechStatus.Initializing) return
-        pendingText = null
-        current.play(text)
+        val cached = preparedText?.takeIf { it.original == text }
+        if (cached != null || !preparationState.enabled) {
+            preparedText = cached ?: ReaderSpeechPreparationRules.unchanged(text)
+            preparedChoiceRevision = preparation.choiceRevision
+            pendingText = null
+            current.play(requireNotNull(preparedText).text)
+            return
+        }
+        if (preparingText) return
+        val expected = ++preparationGeneration
+        preparingText = true
+        preparationFallback = false
+        preparationJob = scope.launch {
+            val result = preparation.prepare(text)
+            if (closed || expected != preparationGeneration || pendingText != text || delegate !== current) {
+                return@launch
+            }
+            preparingText = false
+            preparationFallback = result.fallback
+            preparedText = result.prepared
+            preparedChoiceRevision = preparation.choiceRevision
+            pendingText = null
+            current.play(result.prepared.text)
+        }
+    }
+
+    private fun cancelPreparation() {
+        preparationGeneration++
+        preparationJob?.cancel()
+        preparationJob = null
+        preparingText = false
     }
 }

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
+    <string name="reader_nano_enabled_title">Prepare text with Gemini Nano</string>
+    <string name="reader_nano_enabled_summary">Experimental: prepares common German and English abbreviations and numbers locally for your selected voice. May delay playback.</string>
+    <string name="reader_nano_system_managed">Android manages this model and shares it with other apps. Turning this off only disables its use in Candy.</string>
+    <string name="reader_nano_download_summary">Your phone supports Gemini Nano. Download the model through Android to enable text preparation.</string>
+    <string name="reader_nano_download">Download and enable Gemini Nano</string>
+    <string name="reader_nano_retry_download">Retry Gemini Nano download</string>
+    <string name="reader_nano_cancel_download">Cancel download</string>
+    <string name="reader_nano_downloading">Gemini Nano: %1$s downloaded</string>
+    <string name="reader_nano_error">Gemini Nano could not be prepared. You can continue reading aloud without it.</string>
+    <string name="reader_nano_unavailable">Gemini Nano is currently unavailable. Reading aloud continues without text preparation.</string>
+    <string name="reader_nano_preparing">Preparing text locally with Gemini Nano…</string>
+    <string name="reader_nano_fallback">Reading aloud without Gemini Nano preparation.</string>
+    <string name="reader_nano_metrics_notice">Google processes usage and performance metrics. Text preparation takes place on your device.</string>
+    <string name="reader_nano_terms">Google terms and privacy</string>
+    <string name="reader_nano_system_downloading">Android is downloading Gemini Nano. Check the status to see whether it has finished.</string>
+    <string name="reader_nano_refresh">Check download status</string>
+    <string name="reader_nano_adult_title">Gemini Nano is for adults</string>
+    <string name="reader_nano_adult_summary">Google requires users of this feature to be 18 or older. Confirm your age before enabling Gemini Nano. Reading aloud without Nano remains available.</string>
+    <string name="reader_nano_adult_confirm">I am 18 or older</string>
+    <string name="reader_nano_adult_cancel">Not now</string>
+</resources>

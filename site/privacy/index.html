@@ -43,7 +43,7 @@
     <aside class="legal-aside">
       <p class="eyebrow">Candy Browser</p>
       <h1>Privacy Policy</h1>
-      <p>Last updated: 12 October 2026</p>
+      <p>Last updated: 22 October 2026</p>
       <nav aria-label="Privacy policy sections">
         <a href="#summary">Summary</a>
         <a href="#browser-data">Browser data</a>
@@ -116,6 +116,12 @@
         <h2>5. Websites and optional external services</h2>
         <p>Browsing sends requests to the websites you choose. Optional features such as search suggestions, search providers, translation, sharing, external applications, or third-party extensions contact their respective services only when configured, enabled, or invoked. Data sent to those services is governed by their privacy policies.</p>
         <p>In the Full app flavor, using Google Cast activates Google's Cast Sender SDK. The SDK processes interactions with Cast devices and may send diagnostic or usage information to Google's logging services to operate and improve Cast. Media URLs and metadata are sent to the Cast device you explicitly select; Candy does not persist or log them. Google's processing is governed by the <a href="https://policies.google.com/privacy">Google Privacy Policy</a>.</p>
+        <h3>Reading aloud</h3>
+        <p>Reading aloud works with Reader articles and selected text. If you choose Android's system voice, Candy passes that text to your selected text-to-speech engine. That engine may offer local or network voices and is governed by its provider's privacy policy and your Android settings.</p>
+        <p>You can instead download the optional Supertonic local voice model. Its files are downloaded from <a href="https://huggingface.co/privacy">Hugging Face</a>, which receives the download request and network information such as your IP address. After download, speech generation runs on your device. Candy keeps speech input and generated audio in memory and does not upload them for synthesis. Articles you explicitly save to your reading library remain subject to the local storage described above.</p>
+        <h3>Optional Gemini Nano preparation</h3>
+        <p>Full and System WebView builds can check whether a supported Android device provides Gemini Nano. Adults can optionally enable it to prepare abbreviations and numbers before the selected voice reads the text. Nano is off by default and requires a separate age-18-or-older confirmation. The FOSS build does not include this Google integration.</p>
+        <p>Preparation runs on the device through Google's ML Kit and Android's AICore. Candy does not persist prompts or model responses. ML Kit does not send input text or generated output to Google servers. Google components may contact Google for model downloads, updates and compatibility information, and send device, usage and performance metrics. See the <a href="https://developers.google.com/ml-kit/genai-terms">ML Kit GenAI terms</a>, <a href="https://developers.google.com/ml-kit/terms">ML Kit privacy terms</a> and <a href="https://policies.google.com/privacy">Google Privacy Policy</a>.</p>
         <p>Candy does not sell personal information and does not use browser data for advertising, credit decisions, or profiling unrelated to user-facing browser features.</p>
         <p>Candy Sync's use and transfer of information received from Google APIs adheres to the Chrome Web Store User Data Policy, including its Limited Use requirements.</p>
       </section>
@@ -124,6 +130,7 @@
         <h2>6. Retention and your control</h2>
         <p>Local data remains until you clear it, remove the relevant profile, reset the feature, or uninstall the app or extension, subject to platform backup behavior. Candy Sync ciphertext remains on your selected server until it is removed according to that server's operation and backup policy.</p>
         <p>You can disable sync scopes, revoke extension permissions, clear browser data, remove the extension, or delete the self-hosted server data. Losing the Candy Sync E2EE passphrase makes encrypted workspace data unrecoverable.</p>
+        <p>In Read aloud settings, you can download or delete the local voice model and switch between local and system speech. You can also disable Gemini Nano preparation. Android manages Nano as a shared model used by multiple apps; Candy cannot delete that shared model. Candy stores only the Nano enablement preference and adult confirmation for this option, excludes both from Android cloud backup and device transfer, and does not store your date of birth.</p>
       </section>
 
       <section id="security">
@@ -134,7 +141,7 @@
 
       <section id="children">
         <h2>8. Children's privacy</h2>
-        <p>Candy Browser is a general-purpose browser and is not directed to children. The project does not knowingly collect personal information from children through a Candy-operated service.</p>
+        <p>Candy Browser is intended for adults aged 18 and older and is not directed to children. Its Google Play target audience is 18 and older, with access restricted for users Google identifies as minors, subject to Play review and enforcement. Downloads outside Google Play do not inherit Play's age restrictions. Optional Gemini Nano preparation requires a separate adult confirmation in Candy. The project does not knowingly collect personal information from children through a Candy-operated service.</p>
       </section>
 
       <section id="changes">
