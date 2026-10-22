@@ -178,6 +178,7 @@ internal fun TabOverview(
     onSelectDismissAnchor: (String) -> Unit = onSelect,
     onNewTab: () -> Unit,
     onOpenSettings: () -> Unit,
+    onOpenReaderStudio: () -> Unit = {},
     onOpenSyncSettings: () -> Unit = onOpenSettings,
     onEditProfileWallpaper: (String, ProfileWallpaperTarget) -> Unit = { _, _ -> },
     onConfigureCreatedProfile: (String, ProfileCreationOptions) -> Unit = { _, _ -> },
@@ -1465,51 +1466,71 @@ internal fun TabOverview(
                     )
                 },
                 leadingAction = {
-                    TabOverviewEdgeAction(
-                        visible = pinnedTabsJumpVisible,
-                        enabled = chromeEnabled,
-                        contentDescription = stringResource(R.string.cd_scroll_to_pinned_tabs),
-                        testTag = TabOverviewChromeTestTags.PinnedTabsJump,
-                        animationLabel = "pinned-tabs-jump-alpha",
-                        onHaptic = {
-                            rootView.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
-                        },
-                        onClick = {
-                            overviewScope.launch {
-                                when (controller.tabOverviewMode) {
-                                    TabOverviewMode.Hero ->
-                                        pagerState.animateScrollToPage(
-                                            page = 0,
-                                            animationSpec = spring(
-                                                dampingRatio = 0.86f,
-                                                stiffness = 720f,
-                                            ),
-                                        )
-                                    TabOverviewMode.Grid -> gridState.animateScrollToItem(0)
-                                    TabOverviewMode.List -> listState.animateScrollToItem(0)
-                                }
-                            }
-                        },
-                        modifier = Modifier
-                            .align(Alignment.CenterStart)
-                            .zIndex(1f),
+                    Row(
+                        modifier = Modifier.align(Alignment.CenterStart).zIndex(1f),
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Icon(
-                            imageVector = if (controller.tabOverviewMode == TabOverviewMode.Hero) {
-                                Icons.AutoMirrored.Filled.KeyboardArrowLeft
-                            } else {
-                                Icons.Default.KeyboardArrowUp
+                        TabOverviewEdgeAction(
+                            visible = destinationChromeVisible && !controller.selectedTab.isIncognito,
+                            enabled = chromeEnabled,
+                            contentDescription = stringResource(R.string.reader_studio_title),
+                            testTag = TabOverviewChromeTestTags.ReaderStudio,
+                            animationLabel = "tab-overview-reader-alpha",
+                            onHaptic = {
+                                rootView.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
                             },
-                            contentDescription = null,
-                            modifier = Modifier.size(17.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.76f),
-                        )
-                        Icon(
-                            painter = painterResource(R.drawable.ic_push_pin),
-                            contentDescription = null,
-                            modifier = Modifier.size(17.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.76f),
-                        )
+                            onClick = onOpenReaderStudio,
+                        ) {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_reader_studio),
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.76f),
+                            )
+                        }
+                        TabOverviewEdgeAction(
+                            visible = pinnedTabsJumpVisible,
+                            enabled = chromeEnabled,
+                            contentDescription = stringResource(R.string.cd_scroll_to_pinned_tabs),
+                            testTag = TabOverviewChromeTestTags.PinnedTabsJump,
+                            animationLabel = "pinned-tabs-jump-alpha",
+                            onHaptic = {
+                                rootView.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                            },
+                            onClick = {
+                                overviewScope.launch {
+                                    when (controller.tabOverviewMode) {
+                                        TabOverviewMode.Hero ->
+                                            pagerState.animateScrollToPage(
+                                                page = 0,
+                                                animationSpec = spring(
+                                                    dampingRatio = 0.86f,
+                                                    stiffness = 720f,
+                                                ),
+                                            )
+                                        TabOverviewMode.Grid -> gridState.animateScrollToItem(0)
+                                        TabOverviewMode.List -> listState.animateScrollToItem(0)
+                                    }
+                                }
+                            },
+                        ) {
+                            Icon(
+                                imageVector = if (controller.tabOverviewMode == TabOverviewMode.Hero) {
+                                    Icons.AutoMirrored.Filled.KeyboardArrowLeft
+                                } else {
+                                    Icons.Default.KeyboardArrowUp
+                                },
+                                contentDescription = null,
+                                modifier = Modifier.size(17.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.76f),
+                            )
+                            Icon(
+                                painter = painterResource(R.drawable.ic_push_pin),
+                                contentDescription = null,
+                                modifier = Modifier.size(17.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.76f),
+                            )
+                        }
                     }
                 },
                 trailingAction = {

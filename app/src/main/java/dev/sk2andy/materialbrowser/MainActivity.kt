@@ -1,5 +1,10 @@
 package dev.sk2andy.materialbrowser
 
+import dev.sk2andy.materialbrowser.reader.rss.RssReaderLaunchRequest
+import dev.sk2andy.materialbrowser.reader.rss.RssReaderNavigation
+import dev.sk2andy.materialbrowser.reader.rss.RssFeedNotifier
+import dev.sk2andy.materialbrowser.reader.rss.RssFeedRules
+
 import android.Manifest
 import android.app.Activity
 import android.app.PictureInPictureUiState
@@ -174,6 +179,8 @@ open class MainActivity : AppCompatActivity() {
     private var pictureInPictureReturnRestorationPending by mutableStateOf(false)
     private var isTabOverviewPortraitLocked = false
     private var incomingBrowserNavigationRequestId by mutableIntStateOf(0)
+    private var rssReaderLaunchRequest by mutableStateOf<RssReaderLaunchRequest?>(null)
+    private var rssReaderLaunchSequence = 0
     private var launcherAddressEditorRequestId by mutableIntStateOf(0)
     private var hardwareTabChangeRequestId by mutableIntStateOf(0)
     private var onboardingVisible by mutableStateOf(false)
@@ -752,6 +759,10 @@ open class MainActivity : AppCompatActivity() {
                             .takeIf { fullscreenVideoGesturesActive },
                         incomingBrowserNavigationRequestId =
                             incomingBrowserNavigationRequestId,
+                        rssReaderLaunchRequest = rssReaderLaunchRequest,
+                        onRssReaderLaunchConsumed = { requestId ->
+                            if (rssReaderLaunchRequest?.id == requestId) rssReaderLaunchRequest = null
+                        },
                         externalLaunchTabId = externalLaunchTabId,
                         onReturnToExternalApp = {
                             browserController.dismissExternalLinkPreview()
@@ -1628,13 +1639,27 @@ open class MainActivity : AppCompatActivity() {
 
     private fun openIntent(intent: Intent) {
         browserController.cancelDeviceSearchNavigation()
-        if (intent.action == dev.sk2andy.materialbrowser.reader.rss.RssFeedNotifier.ACTION_OPEN_ARTICLE) {
-            val articleUrl = intent.getStringExtra(
-                dev.sk2andy.materialbrowser.reader.rss.RssFeedNotifier.EXTRA_ARTICLE_URL,
+        if (intent.action == RssFeedNotifier.ACTION_OPEN_ARTICLE ||
+            intent.action == RssReaderNavigation.ACTION_OPEN_FEEDS
+        ) {
+            val incomingArticleUrl = intent.getStringExtra(
+                RssFeedNotifier.EXTRA_ARTICLE_URL,
             ) ?: intent.dataString
-            if (articleUrl != null && browserController.incomingLinkRouter.openInReader(articleUrl)) {
-                showIncomingBrowserNavigation()
+            val articleUrl = if (intent.action ==
+                RssFeedNotifier.ACTION_OPEN_ARTICLE
+            ) {
+                RssFeedRules.safeHttpUrl(incomingArticleUrl)
+                    ?: return
+            } else {
+                null
             }
+            browserController.dismissExternalLinkPreview()
+            browserController.leaveSiteCapsule()
+            showIncomingBrowserNavigation()
+            rssReaderLaunchRequest = RssReaderLaunchRequest(
+                id = ++rssReaderLaunchSequence,
+                articleUrl = articleUrl,
+            )
             return
         }
         if (intent.action == DeviceSearchContract.ACTION_OPEN) {

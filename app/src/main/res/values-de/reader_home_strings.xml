@@ -1,0 +1,28 @@
+<resources>
+    <string name="reader_home_title">Reader Studio</string>
+    <string name="reader_home_back">Zurück</string>
+    <string name="reader_home_manage_feeds">Feeds verwalten</string>
+    <string name="reader_home_library_tab">Bibliothek</string>
+    <string name="reader_home_feeds_tab">Feeds</string>
+    <string name="reader_home_all_feeds">Alle Feeds</string>
+    <string name="reader_home_all_posts">Alle Beiträge</string>
+    <string name="reader_home_unread_count">Ungelesen (%1$d)</string>
+    <string name="reader_home_article_count">Beiträge: %1$d</string>
+    <string name="reader_home_newest_first">Neueste zuerst</string>
+    <string name="reader_home_all_available_shown">Alle verfügbaren Beiträge angezeigt</string>
+    <string name="reader_home_no_feeds_title">Noch keine Feeds</string>
+    <string name="reader_home_no_feeds_message">Abonniere einen Feed, um seine neuesten Beiträge hier zu lesen.</string>
+    <string name="reader_home_all_read_title">Alles gelesen</string>
+    <string name="reader_home_all_read_message">In dieser Auswahl gibt es keine ungelesenen Beiträge.</string>
+    <string name="reader_home_no_articles_title">Noch keine Beiträge</string>
+    <string name="reader_home_no_articles_message">Neue Beiträge aus diesen Feeds erscheinen hier.</string>
+    <string name="reader_home_library_empty_title">Deine Bibliothek ist leer</string>
+    <string name="reader_home_library_empty_message">Offline gespeicherte Artikel erscheinen hier.</string>
+    <string name="reader_home_progress">%1$d%% gelesen</string>
+    <string name="reader_home_delete_article">Gespeicherten Artikel löschen</string>
+    <string name="reader_home_choose_feed">Feed auswählen</string>
+    <string name="reader_home_feed_count">Abonnierte Feeds: %1$d</string>
+    <string name="reader_home_source_subtitle">%1$s · %2$d ungelesen</string>
+    <string name="reader_home_search_feeds">Feeds durchsuchen</string>
+    <string name="reader_home_no_feed_match">Keine passenden Feeds gefunden</string>
+</resources>

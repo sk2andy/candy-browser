@@ -8,6 +8,8 @@ import dev.sk2andy.materialbrowser.reader.rss.RssFeedRules
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
 internal class RssFeedStore(context: Context) {
     private val file = AtomicFile(File(context.applicationContext.filesDir, FILE_NAME))
@@ -77,6 +79,7 @@ internal class RssFeedStore(context: Context) {
         try {
             stream.write(root.toString().toByteArray(Charsets.UTF_8))
             file.finishWrite(stream)
+            generation.value++
         } catch (error: Throwable) {
             file.failWrite(stream)
             throw error
@@ -137,5 +140,7 @@ internal class RssFeedStore(context: Context) {
     companion object {
         private const val FILE_NAME = "rss-feeds.json"
         private val LOCK = Any()
+        private val generation = MutableStateFlow(0L)
+        val changes = generation.asStateFlow()
     }
 }

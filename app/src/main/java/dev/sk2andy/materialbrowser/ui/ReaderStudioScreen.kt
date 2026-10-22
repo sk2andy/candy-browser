@@ -12,6 +12,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalContext
@@ -24,6 +25,7 @@ import dev.sk2andy.materialbrowser.findActivity
 import dev.sk2andy.materialbrowser.reader.ReaderExtractionResult
 import dev.sk2andy.materialbrowser.reader.ReaderLibraryRepository
 import dev.sk2andy.materialbrowser.reader.ReaderSpeechController
+import dev.sk2andy.materialbrowser.reader.ReaderSnapshot
 import dev.sk2andy.materialbrowser.shared.ui.ReaderStudioIcon
 import dev.sk2andy.materialbrowser.shared.ui.ReaderStudioLabel
 import dev.sk2andy.materialbrowser.shared.ui.ReaderStudioResources
@@ -44,6 +46,8 @@ internal fun ReaderStudioScreen(
     onDismiss: () -> Unit,
     onOpenOriginal: (String) -> Unit,
     onOpenLink: (String) -> Unit,
+    initialSnapshot: ReaderSnapshot? = null,
+    onOpenLibrary: (() -> Unit)? = null,
 ) {
     val context = LocalContext.current
     val backState = rememberNativeScreenBackState()
@@ -53,7 +57,7 @@ internal fun ReaderStudioScreen(
         entryProgress.animateTo(1f, entrySpec)
     }
     Box(
-        modifier = Modifier.predictiveBackSurface(
+        modifier = Modifier.zIndex(21f).predictiveBackSurface(
             progress = backState.progress.value,
             swipeEdgeSign = backState.swipeEdgeSign,
         ).graphicsLayer {
@@ -75,6 +79,8 @@ internal fun ReaderStudioScreen(
             onDismiss = onDismiss,
             onOpenOriginal = onOpenOriginal,
             onOpenLink = onOpenLink,
+            initialSnapshot = initialSnapshot,
+            onOpenCollection = onOpenLibrary,
             backHandler = { enabled, onBack ->
                 NativeScreenBackHandler(state = backState, enabled = enabled, onBack = onBack)
             },

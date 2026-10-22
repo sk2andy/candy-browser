@@ -1,0 +1,28 @@
+<resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
+    <string name="reader_home_title">Reader Studio</string>
+    <string name="reader_home_back">Back</string>
+    <string name="reader_home_manage_feeds">Manage feeds</string>
+    <string name="reader_home_library_tab">Library</string>
+    <string name="reader_home_feeds_tab">Feeds</string>
+    <string name="reader_home_all_feeds">All feeds</string>
+    <string name="reader_home_all_posts">All posts</string>
+    <string name="reader_home_unread_count">Unread (%1$d)</string>
+    <string name="reader_home_article_count">Articles: %1$d</string>
+    <string name="reader_home_newest_first">Newest first</string>
+    <string name="reader_home_all_available_shown">All available articles shown</string>
+    <string name="reader_home_no_feeds_title">No feeds yet</string>
+    <string name="reader_home_no_feeds_message">Follow a feed to see its latest articles here.</string>
+    <string name="reader_home_all_read_title">You’re all caught up</string>
+    <string name="reader_home_all_read_message">There are no unread articles in this selection.</string>
+    <string name="reader_home_no_articles_title">No articles yet</string>
+    <string name="reader_home_no_articles_message">New articles from these feeds will appear here.</string>
+    <string name="reader_home_library_empty_title">Your library is empty</string>
+    <string name="reader_home_library_empty_message">Articles you save for offline reading will appear here.</string>
+    <string name="reader_home_progress">%1$d%% read</string>
+    <string name="reader_home_delete_article">Delete saved article</string>
+    <string name="reader_home_choose_feed">Choose a feed</string>
+    <string name="reader_home_feed_count">Subscribed feeds: %1$d</string>
+    <string name="reader_home_source_subtitle">%1$s · %2$d unread</string>
+    <string name="reader_home_search_feeds">Search feeds</string>
+    <string name="reader_home_no_feed_match">No matching feeds</string>
+</resources>

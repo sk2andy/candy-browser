@@ -32,6 +32,7 @@ object TabOverviewChromeTestTags {
     const val More = "tab_overview_more"
     const val PinnedTabsJump = "tab_overview_pinned_tabs_jump"
     const val Settings = "tab_overview_settings"
+    const val ReaderStudio = "tab_overview_reader_studio"
 }
 
 @Composable

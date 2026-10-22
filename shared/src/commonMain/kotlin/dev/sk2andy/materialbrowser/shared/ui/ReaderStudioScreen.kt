@@ -372,16 +372,23 @@ fun ReaderStudioScreen(
     backHandler: (@Composable (Boolean, () -> Unit) -> Unit)? = null,
     systemBarAppearance: @Composable (Boolean) -> Unit = {},
     speechOptions: @Composable (ReaderSpeech) -> Unit = {},
+    initialSnapshot: ReaderSnapshot? = null,
+    onOpenCollection: (() -> Unit)? = null,
 ) {
     var library by remember(isPrivate) { mutableStateOf(ReaderLibraryState()) }
     val sessionActive = remember(repository, result, sourceUrl, isPrivate) { mutableStateOf(true) }
     DisposableEffect(sessionActive) {
         onDispose { sessionActive.value = false }
     }
-    var activeDocument by remember(result, sourceUrl, isPrivate) {
-        mutableStateOf((result as? ReaderExtractionResult.Success)?.document)
+    val restoredSnapshot = initialSnapshot?.takeIf {
+        !isPrivate && !it.isPrivate && it.document.sourceUrl == sourceUrl
     }
-    var activeSnapshot by remember(result, sourceUrl, isPrivate) { mutableStateOf<ReaderSnapshot?>(null) }
+    var activeDocument by remember(result, sourceUrl, isPrivate, restoredSnapshot) {
+        mutableStateOf(restoredSnapshot?.document ?: (result as? ReaderExtractionResult.Success)?.document)
+    }
+    var activeSnapshot by remember(result, sourceUrl, isPrivate, restoredSnapshot) {
+        mutableStateOf(restoredSnapshot)
+    }
     var libraryVisible by rememberSaveable(sourceUrl, isPrivate) { mutableStateOf(false) }
     var chrome by rememberSaveable(sourceUrl, isPrivate) { mutableStateOf(ReaderChromeMode.Expanded) }
     var scrollDistanceDp by remember(activeDocument?.sourceUrl, isPrivate) { mutableFloatStateOf(0f) }
@@ -476,8 +483,10 @@ fun ReaderStudioScreen(
                                 colors,
                                 onRetry,
                                 onOpenOriginal = { onOpenOriginal(sourceUrl) },
-                                onOpenLibrary = if (!isPrivate && library.snapshots.isNotEmpty()) {
-                                    { libraryVisible = true }
+                                onOpenLibrary = if (!isPrivate &&
+                                    (library.snapshots.isNotEmpty() || onOpenCollection != null)
+                                ) {
+                                    { onOpenCollection?.invoke() ?: run { libraryVisible = true } }
                                 } else {
                                     null
                                 },
@@ -532,7 +541,7 @@ fun ReaderStudioScreen(
                             },
                             onLibrary = {
                                 settingsVisible = false
-                                libraryVisible = true
+                                if (onOpenCollection != null) onOpenCollection() else libraryVisible = true
                             },
                             onOpenOriginal = { onOpenOriginal(checkNotNull(activeDocument).sourceUrl) },
                         )

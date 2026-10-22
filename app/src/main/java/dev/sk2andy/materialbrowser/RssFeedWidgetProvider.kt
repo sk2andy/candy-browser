@@ -13,6 +13,7 @@ import dev.sk2andy.materialbrowser.reader.rss.RssArticle
 import dev.sk2andy.materialbrowser.reader.rss.RssFeed
 import dev.sk2andy.materialbrowser.reader.rss.RssFeedNotifier
 import dev.sk2andy.materialbrowser.reader.rss.RssRefreshScheduler
+import dev.sk2andy.materialbrowser.reader.rss.RssReaderNavigation
 
 class RssFeedWidgetProvider : AppWidgetProvider() {
     override fun onUpdate(context: Context, manager: AppWidgetManager, ids: IntArray) {
@@ -70,7 +71,7 @@ class RssFeedWidgetProvider : AppWidgetProvider() {
                 PendingIntent.getActivity(
                     context,
                     OPEN_FEEDS_REQUEST_CODE,
-                    Intent(context, RssFeedsActivity::class.java),
+                    RssReaderNavigation.feedsIntent(context),
                     PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
                 ),
             )
