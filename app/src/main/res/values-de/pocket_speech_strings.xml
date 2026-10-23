@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
+    <string name="reader_pocket_title">Pocket TTS Offline-Stimme</string>
+    <string name="reader_pocket_summary">Wählt das heruntergeladene Modell passend zur Artikelsprache. Ausschalten behält die Sprachpakete.</string>
+    <string name="reader_pocket_download_summary">Lade eine oder mehrere Sprachen herunter. Artikel und erzeugtes Audio bleiben auf deinem Gerät. Fehlt eine Sprache oder ist sie unklar, fragt Candy nach. Downloads starten nur auf deine Auswahl.</string>
+    <string name="reader_pocket_unknown_language">Wähle für diesen Text eine heruntergeladene Sprache oder eine andere Stimme.</string>
+    <string name="reader_pocket_unsupported_language">Erkannte Sprache: %1$s. Dafür ist kein Pocket-Modell verfügbar. Nutze eine andere Stimme oder korrigiere die Sprache.</string>
+    <string name="reader_pocket_article_language">Artikelsprache: %1$s. Lade das passende Modell oder korrigiere die Erkennung durch Auswahl einer heruntergeladenen Sprache.</string>
+    <string name="reader_pocket_download_size">Download: %1$d MB · Speicher: %2$d MB</string>
+    <string name="reader_pocket_cancel">Abbrechen</string>
+    <string name="reader_pocket_use_language">In dieser Sprache vorlesen</string>
+    <string name="reader_pocket_remove">Sprache entfernen</string>
+    <string name="reader_pocket_downloaded">Heruntergeladen · offline verfügbar</string>
+    <string name="reader_pocket_license_summary">Pocket TTS von Kyutai. Mit dem Download akzeptierst du Modelllizenz und Bedingungen zur Namensnennung der Stimme. Diese Stimme ist KI-generiert.</string>
+    <string name="reader_pocket_license">Modell- und Stimmlizenzen</string>
+</resources>

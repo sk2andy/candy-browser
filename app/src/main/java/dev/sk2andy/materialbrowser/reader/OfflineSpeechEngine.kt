@@ -11,15 +11,15 @@ import java.nio.LongBuffer
 import java.util.Random
 
 /** CPU-only Supertonic 3 inference. Own and close serially on the speech executor. */
-internal class OfflineSpeechEngine(private val files: OfflineSpeechModelFiles) : AutoCloseable {
-    val sampleRate: Int = 44_100
+internal class OfflineSpeechEngine(private val files: OfflineSpeechModelFiles) : LocalSpeechEngine {
+    override val sampleRate: Int = 44_100
     private val environment = OrtEnvironment.getEnvironment()
     private val sessions = mutableListOf<OrtSession>()
     private var indexer: IntArray? = null
     private var voice: Voice? = null
     private var closed = false
 
-    fun synthesize(text: String, isCancelled: () -> Boolean): FloatArray {
+    override fun synthesize(text: String, isCancelled: () -> Boolean): FloatArray {
         check(!closed)
         val prepared = OfflineSpeechTextRules.prepare(text)
         if (prepared.isEmpty()) return FloatArray(0)

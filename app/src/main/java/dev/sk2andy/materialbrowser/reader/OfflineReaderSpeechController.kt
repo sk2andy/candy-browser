@@ -22,6 +22,9 @@ internal class OfflineReaderSpeechController(
     private val repository: ReaderSpeechModelRepository,
     private val onCompleted: () -> Unit = {},
     private val manageAudioFocus: Boolean = true,
+    private val withEngine: ((LocalSpeechEngine) -> Unit) -> Unit = { block ->
+        repository.withEngine(block)
+    },
 ) : ReaderSpeechTransport {
     override var state by mutableStateOf(ReaderSpeechState(ReaderSpeechStatus.Ready))
         private set
@@ -74,7 +77,7 @@ internal class OfflineReaderSpeechController(
         worker.execute {
             if (!isCurrent(expected)) return@execute
             try {
-                repository.withEngine { engine ->
+                withEngine { engine ->
                     var cursor = offset
                     var playing: Future<*>? = null
                     while (isCurrent(expected)) {

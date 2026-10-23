@@ -35,6 +35,9 @@ page before persistence. Private tabs never expose this action.
 | `ReaderSpeechController` | Shared first-use voice choice, backend routing, pending-play cancellation and cleanup |
 | `AndroidReaderSpeechController` | Android `TextToSpeech`, chunk queue and range callbacks |
 | `OfflineReaderSpeechController`, `OfflineSpeechEngine` | Bounded sentence synthesis with Supertonic 3 / ONNX Runtime and memory-only PCM playback |
+| `PocketSpeechEngine`, `pocket-runtime` | CPU-only Pocket TTS synthesis through pinned native ONNX/SentencePiece code |
+| `PocketSpeechCatalog`, `PocketSpeechModelRepository`, `PocketSpeechModelFiles` | Independent integrity-checked language downloads, cancellation, deletion and model leases |
+| `ReaderSpeechLanguageDetector` | Bounded on-device language detection using bundled profiles, without persisting article text |
 | `ReaderSpeechModelRepository`, `OfflineSpeechModelFiles` | App-wide voice preference; explicit, pinned, integrity-checked model download and deletion |
 | `ReaderSpeechPreparationRepository`, `PlatformReaderSpeechPreparation` | Optional Gemini Nano availability, Android-managed download, adult confirmation and bounded foreground inference; FOSS reports unavailable |
 | `ReaderSpeechPreparationRules` | Fixed German/English abbreviation and number readings; strict model-choice validation and original-text offset mapping |
@@ -57,6 +60,17 @@ parallel SwiftUI Reader surface exists.
 | Playback | Language-agnostic multilingual input, bounded sentence chunks with one sentence prepared ahead of playback; pause resumes from the current sentence. No word-level timing is fabricated. |
 | Lifecycle | Leaving the screen or backgrounding cancels pending playback and active audio. Download completion cannot restart a cancelled session. Native inference resources close after playback. Audio-focus loss pauses speech. |
 | License | Supertonic 3 model weights use OpenRAIL-M; reference inference code is MIT. Notices and license text ship with the app. |
+
+| Pocket TTS alternative | Contract |
+| --- | --- |
+| Choice | Optional alongside Android and existing Supertonic. Existing choices migrate unchanged. Switching back retains downloaded Pocket packs. |
+| Languages | English, German, Italian, Portuguese and Spanish; each is an explicit independent download of approximately 207 MB. Multiple packs can coexist. |
+| Routing | Detect the original article language locally before Nano preparation; choose only its installed Pocket model. Unsupported, missing or uncertain languages show voice/language selection instead of silently reading in another language. A manual correction applies only to the current session. |
+| Detection | Bundled Optimaize character n-gram profiles include unsupported languages. Samples cover beginning, middle and end within 9,002 characters. Low-confidence or short input requires a manual choice. Profiles are loaded off-main, then released; article text is neither uploaded nor stored. |
+| Downloads | Pinned v0.5.4 FP32 archives and per-file SHA-256 values. Validate bounded archive entries and paths, clean partial data on error/cancellation, publish only complete models. No download starts from language detection. |
+| Removal | Deleting a language stops playback using that model before native resources and its directory are removed. Other language packs and the existing Supertonic model remain independent. |
+| Playback | Reuses bounded sentence buffering, focus handling, speed and lifecycle cancellation. Pocket emits 24 kHz PCM; text/audio stay in memory and native voice caches never write to disk. |
+| Licenses | Model weights and bundled reference voices: CC BY 4.0. Native adapter: MIT, SentencePiece: Apache 2.0; notices and complete licenses ship in assets. |
 
 | Optional Gemini Nano preparation | Contract |
 | --- | --- |

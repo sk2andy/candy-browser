@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
     <string name="reader_voice_settings_title">Read aloud</string>
-    <string name="reader_voice_settings_summary">Choose how Candy reads articles and selected text. Download the multilingual voice model once to read aloud entirely on your device.</string>
+    <string name="reader_voice_settings_summary">Choose Android voices, Supertonic or Pocket TTS for articles and selected text. Local models work offline after download.</string>
     <string name="reader_voice_choice_title">Choose a voice</string>
-    <string name="reader_voice_choice_summary">Download a multilingual voice model for offline reading, or use your Android voice. Your choice applies to articles and selected text. You can change it in Settings → Browser → Read aloud.</string>
-    <string name="reader_voice_use_offline">Use offline voice</string>
+    <string name="reader_voice_choice_summary">Choose Supertonic, Pocket TTS with downloadable languages, or your Android voice. You can change this in Settings → Browser → Read aloud.</string>
+    <string name="reader_voice_use_offline">Use Supertonic</string>
     <string name="reader_voice_use_system">Use Android voice</string>
     <string name="reader_voice_download">Download voice model</string>
     <string name="reader_voice_delete">Delete voice model</string>
-    <string name="reader_voice_enabled_title">Use offline voice model</string>
+    <string name="reader_voice_enabled_title">Supertonic offline voice</string>
     <string name="reader_voice_enabled_summary">When off, Candy uses your Android voice. Turning this off keeps the downloaded model.</string>
     <string name="reader_voice_checking">Checking the voice model…</string>
     <string name="reader_voice_working">Updating the voice model…</string>

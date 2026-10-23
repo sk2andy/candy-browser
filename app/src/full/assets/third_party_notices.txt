@@ -32,6 +32,12 @@ https://developers.google.com/ml-kit/terms
 https://developers.google.com/ml-kit/genai-terms
 The system manages Gemini Nano; its model weights are not bundled with Candy Browser.
 
+Offline speech
+--------------
+
+Pocket TTS runtime and model/voice attribution: licenses/pocket-speech-runtime.txt and pocket_speech_model_notices.txt.
+Optimaize local language detection: licenses/optimaize-language-detector-apache-2.txt.
+
 Filter data
 -----------
 

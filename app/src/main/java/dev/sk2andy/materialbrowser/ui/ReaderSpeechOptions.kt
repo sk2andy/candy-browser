@@ -26,6 +26,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import dev.sk2andy.materialbrowser.R
+import dev.sk2andy.materialbrowser.reader.PocketSpeechModelRepository
 import dev.sk2andy.materialbrowser.reader.OfflineSpeechModelFiles
 import dev.sk2andy.materialbrowser.reader.ReaderSpeechController
 import dev.sk2andy.materialbrowser.reader.ReaderSpeechModelRepository
@@ -67,6 +68,18 @@ internal fun ReaderSpeechOptions(
             onPreparationCancelDownload = speech::cancelPreparationDownload,
             onPreparationConfirmAdult = speech::confirmPreparationAdult,
             onPreparationRefresh = speech::refreshPreparationAvailability,
+            pocketOptions = {
+                PocketSpeechOptions(
+                    state = speech.pocketModelState,
+                    selected = speech.modelState.pocket,
+                    onEnabledChanged = { if (it) speech.choosePocketVoice() else speech.chooseSystemVoice() },
+                    onDownload = speech::downloadPocketModel,
+                    onCancel = speech::cancelPocketDownload,
+                    onDelete = speech::deletePocketModel,
+                    articleLanguage = speech.pocketLanguage,
+                    onUseLanguage = { speech.choosePocketVoice(it) },
+                )
+            },
         )
     } else {
         ReaderSpeechPreparationPlaybackStatus(
@@ -89,6 +102,7 @@ internal fun ReaderSpeechChoiceDialog(
     onPreparationCancelDownload: () -> Unit = {},
     onPreparationConfirmAdult: () -> Unit = {},
     onPreparationRefresh: () -> Unit = {},
+    pocketOptions: @Composable () -> Unit = {},
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -107,6 +121,7 @@ internal fun ReaderSpeechChoiceDialog(
                         modifier = Modifier.testTag(ReaderSpeechOptionsTestTags.PlaybackError),
                     )
                 }
+                pocketOptions()
                 ReaderSpeechPreparationOptions(
                     state = preparationState,
                     onEnabledChanged = onPreparationEnabledChanged,
@@ -149,6 +164,7 @@ internal fun ReaderSpeechSettingsPage(onBack: () -> Unit) {
     val context = LocalContext.current
     val repository =
         remember(context.applicationContext) { ReaderSpeechModelRepository.get(context) }
+    val pocket = remember(context.applicationContext) { PocketSpeechModelRepository.get(context) }
     val preparation =
         remember(context.applicationContext) { ReaderSpeechPreparationRepository.get(context) }
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -167,6 +183,15 @@ internal fun ReaderSpeechSettingsPage(onBack: () -> Unit) {
             onEnabledChanged = repository::setEnabled,
             onDownload = repository::download,
             onDelete = repository::delete,
+        )
+        PocketSpeechOptions(
+            state = pocket.state,
+            selected = repository.state.pocket,
+            onEnabledChanged = { if (it) repository.choosePocketVoice() else repository.chooseSystemVoice() },
+            onDownload = pocket::download,
+            onCancel = pocket::cancelDownload,
+            onDelete = pocket::delete,
+            modifier = Modifier.padding(top = 24.dp),
         )
         ReaderSpeechPreparationOptions(
             state = preparation.state,

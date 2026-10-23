@@ -25,3 +25,5 @@ dependencyResolutionManagement {
 rootProject.name = "MaterialBrowser"
 include(":app")
 include(":shared")
+
+include(":pocket-runtime")

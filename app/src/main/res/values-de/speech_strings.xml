@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="reader_voice_settings_title">Vorlesen</string>
-    <string name="reader_voice_settings_summary">Wähle, wie Candy Artikel und markierten Text vorliest. Lade das mehrsprachige Sprachmodell einmal herunter, um vollständig auf deinem Gerät vorzulesen.</string>
+    <string name="reader_voice_settings_summary">Wähle Android-Stimmen, Supertonic oder Pocket TTS für Artikel und markierten Text. Lokale Modelle funktionieren nach dem Download offline.</string>
     <string name="reader_voice_choice_title">Stimme auswählen</string>
-    <string name="reader_voice_choice_summary">Lade ein mehrsprachiges Sprachmodell zum Offline-Vorlesen herunter oder nutze deine Android-Stimme. Deine Auswahl gilt für Artikel und markierten Text. Du kannst sie unter Einstellungen → Browser → Vorlesen ändern.</string>
-    <string name="reader_voice_use_offline">Offline-Stimme verwenden</string>
+    <string name="reader_voice_choice_summary">Wähle Supertonic, Pocket TTS mit herunterladbaren Sprachen oder deine Android-Stimme. Du kannst dies unter Einstellungen → Browser → Vorlesen ändern.</string>
+    <string name="reader_voice_use_offline">Supertonic verwenden</string>
     <string name="reader_voice_use_system">Android-Stimme verwenden</string>
     <string name="reader_voice_download">Sprachmodell herunterladen</string>
     <string name="reader_voice_delete">Sprachmodell löschen</string>
-    <string name="reader_voice_enabled_title">Offline-Sprachmodell verwenden</string>
+    <string name="reader_voice_enabled_title">Supertonic Offline-Stimme</string>
     <string name="reader_voice_enabled_summary">Ausgeschaltet verwendet Candy deine Android-Stimme. Das heruntergeladene Modell bleibt dabei erhalten.</string>
     <string name="reader_voice_checking">Sprachmodell wird geprüft…</string>
     <string name="reader_voice_working">Sprachmodell wird aktualisiert…</string>

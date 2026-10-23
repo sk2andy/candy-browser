@@ -16,6 +16,7 @@ internal data class ReaderSpeechModelState(
     val offered: Boolean = false,
     val enabled: Boolean = false,
     val ready: Boolean = false,
+    val pocket: Boolean = false,
     val busy: Boolean = false,
     val progress: Float? = null,
     val error: Boolean = false,
@@ -39,8 +40,17 @@ internal class ReaderSpeechModelRepository(
         io.execute {
             val offered = preferenceEnabled("offered")
             val enabled = preferenceEnabled("enabled")
+            val pocket = preferenceEnabled("pocket")
             val ready = synchronized(modelLock) { files.isReady() }
-            main.post { update(state.copy(loaded = true, offered = offered, enabled = enabled, ready = ready)) }
+            main.post {
+                update(state.copy(
+                    loaded = true,
+                    offered = offered,
+                    enabled = enabled && !pocket,
+                    ready = ready,
+                    pocket = pocket,
+                ))
+            }
         }
     }
 
@@ -49,10 +59,24 @@ internal class ReaderSpeechModelRepository(
 
     fun chooseSystemVoice() = setEnabled(false)
 
+    fun choosePocketVoice() {
+        if (!state.loaded) return
+        preferences.edit()
+            .putBoolean("offered", true)
+            .putBoolean("enabled", false)
+            .putBoolean("pocket", true)
+            .apply()
+        update(state.copy(offered = true, enabled = false, pocket = true, error = false))
+    }
+
     fun setEnabled(enabled: Boolean) {
         if (!state.loaded) return
-        preferences.edit().putBoolean("offered", true).putBoolean("enabled", enabled).apply()
-        update(state.copy(offered = true, enabled = enabled, error = false))
+        preferences.edit()
+            .putBoolean("offered", true)
+            .putBoolean("enabled", enabled)
+            .putBoolean("pocket", false)
+            .apply()
+        update(state.copy(offered = true, enabled = enabled, pocket = false, error = false))
     }
 
     fun download() {
@@ -77,7 +101,7 @@ internal class ReaderSpeechModelRepository(
 
     fun delete() {
         if (!state.loaded || state.busy) return
-        setEnabled(false)
+        if (!state.pocket) setEnabled(false)
         update(state.copy(busy = true, ready = false, error = false))
         io.execute {
             val deleted = synchronized(modelLock) { files.delete() }

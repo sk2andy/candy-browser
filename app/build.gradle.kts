@@ -223,6 +223,7 @@ val performanceDiagnostics = providers.gradleProperty("candy.performanceDiagnost
 
 android {
     namespace = "dev.sk2andy.materialbrowser"
+    ndkVersion = "27.2.12479018"
     compileSdk = 37
     compileSdkMinor = 1
 
@@ -725,6 +726,10 @@ val geckoViewDependency = "org.mozilla.geckoview:geckoview:157.0.20260924084938"
 
 dependencies {
     implementation(project(":shared"))
+    implementation(project(":pocket-runtime"))
+    implementation("com.optimaize.languagedetector:language-detector:0.6") {
+        exclude(group = "com.intellij", module = "annotations")
+    }
     implementation("androidx.activity:activity-compose:1.9.3")
     implementation("androidx.appcompat:appcompat:1.7.1")
     implementation("androidx.biometric:biometric:1.1.0")

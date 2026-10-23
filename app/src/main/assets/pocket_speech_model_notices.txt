@@ -1,0 +1,71 @@
+Pocket TTS language models and official reference voices
+
+# Model license and use conditions
+
+The Pocket TTS model weights and converted ONNX derivatives are not covered by
+this repository's MIT software license.
+
+The original model weights are published by Kyutai under the
+[Creative Commons Attribution 4.0 International license](https://creativecommons.org/licenses/by/4.0/)
+and are distributed from the gated
+[kyutai/pocket-tts model repository](https://huggingface.co/kyutai/pocket-tts).
+Converted ONNX files remain subject to that model license and its attribution
+requirements.
+
+## Attribution
+
+Pocket TTS was created by Manu Orsini, Simon Rouard, Gabriel De Marmiesse,
+Vaclav Volhejn, Neil Zeghidour, and Alexandre Defossez at Kyutai.
+
+- Project: https://github.com/kyutai-labs/pocket-tts
+- Model: https://huggingface.co/kyutai/pocket-tts
+- Paper: https://arxiv.org/abs/2509.06926
+- License: https://creativecommons.org/licenses/by/4.0/
+
+Changes made by this project include exporting the PyTorch model graph to ONNX
+for Android inference and packaging the resulting files in an Android-importable
+archive. No training or fine-tuning is performed.
+
+## Required responsible use
+
+Use of Pocket TTS must comply with applicable laws and the conditions shown on
+the upstream model page. In particular, do not clone or impersonate a voice
+without explicit, lawful consent. Do not use generated speech for fraud,
+deception, harassment, privacy invasion, misinformation, or other harmful or
+unauthorized activity.
+
+Voice recordings have their own copyright, privacy, publicity, and consent
+requirements. Release packs may include the official Pocket TTS default voices
+under CC BY 4.0 with the attribution documented in
+[`VOICE_ATTRIBUTION.md`](VOICE_ATTRIBUTION.md). For any additional recording,
+only import audio that you created yourself or are authorized to use.
+
+# Bundled official Pocket TTS voices
+
+The release model packs bundle only the official default reference voices
+defined by Kyutai Pocket TTS. They do not contain user-imported recordings.
+
+| Pack | Voice | Upstream recording | License and attribution |
+| --- | --- | --- | --- |
+| English | Alba | [`alba-mackenna/casual.wav`](https://huggingface.co/kyutai/tts-voices/blob/main/alba-mackenna/casual.wav) | Voice performance by Alba MacKenna; CC BY 4.0 |
+| German | Jürgen | [`de-DE-juergen.mp3`](https://huggingface.co/kyutai/pocket-tts/blob/64ab7d24c479d736a83b8cc666c4a776fca30fda/de-DE-juergen.mp3) | Kyutai Pocket TTS model repository; CC BY 4.0 |
+| Italian | Giovanni | [`common_voice_it_36520747-enhanced-v2.mp3`](https://huggingface.co/kyutai/pocket-tts/blob/64ab7d24c479d736a83b8cc666c4a776fca30fda/common_voice_it_36520747-enhanced-v2.mp3) | Kyutai Pocket TTS model repository; CC BY 4.0 |
+| Portuguese | Rafael | [`g-Vi8PgmSY0-enhanced-v2.wav`](https://huggingface.co/kyutai/pocket-tts/blob/64ab7d24c479d736a83b8cc666c4a776fca30fda/g-Vi8PgmSY0-enhanced-v2.wav) | Kyutai Pocket TTS model repository; CC BY 4.0 |
+| Spanish | Lola | [`common_voice_es_19762977-enhanced-v2.mp3`](https://huggingface.co/kyutai/pocket-tts/blob/64ab7d24c479d736a83b8cc666c4a776fca30fda/common_voice_es_19762977-enhanced-v2.mp3) | Kyutai Pocket TTS model repository; CC BY 4.0 |
+
+License: https://creativecommons.org/licenses/by/4.0/
+
+Changes made for the Android packs: each upstream recording is converted to
+24 kHz mono 16-bit PCM WAV and renamed to its stable Pocket TTS voice ID. No
+voice is synthesized, edited to impersonate another speaker, or mixed with a
+user recording during packaging.
+
+The names above are Pocket TTS catalog identifiers. Their inclusion does not
+imply endorsement by Kyutai or by any recorded speaker. Other rights, including
+privacy, publicity, and moral rights, may still apply. Use the voices lawfully
+and do not present generated speech as an authentic recording of a real person.
+
+Candy downloads the unmodified FP32 language packs from version 0.5.4 of
+https://github.com/The-unknown-Shadowman/PocketTTS-Android-Engine
+Archive and per-file SHA-256 checksums are pinned in PocketSpeechCatalog.
+The model files and reference recordings are not bundled into the Candy APK.

@@ -5,6 +5,7 @@ import android.media.AudioAttributes
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -36,6 +37,22 @@ internal class ReaderSpeechController(
             manageAudioFocus,
         )
     },
+    private val pocketRepository: PocketSpeechModelRepository = PocketSpeechModelRepository.get(context),
+    private val identifyLanguage: suspend (String) -> String? = ReaderSpeechLanguageDetector::detect,
+    private val createPocketSpeech: (String) -> ReaderSpeech = { language ->
+        OfflineReaderSpeechController(
+            context.applicationContext,
+            repository,
+            onCompleted,
+            manageAudioFocus,
+            withEngine = { block ->
+                pocketRepository.withModel(language) { directory ->
+                    val voice = requireNotNull(PocketSpeechCatalog.languages.find { it.code == language }).voiceId
+                    PocketSpeechEngine(directory, voice).use(block)
+                }
+            },
+        )
+    },
     private val preparation: ReaderSpeechPreparationRepository =
         ReaderSpeechPreparationRepository.get(context),
 ) : ReaderSpeechTransport {
@@ -45,6 +62,16 @@ internal class ReaderSpeechController(
     private var pendingText: String? = null
     private var playbackText: String? = null
     private var localVoice = false
+    private var pocketVoice = false
+    private var delegateLanguage: String? = null
+    private var languageText: String? = null
+    private var languageJob: Job? = null
+    private var languageGeneration = 0L
+    private var languageIdentified = false
+    var pocketLanguage: String? by mutableStateOf(null)
+        private set
+    var identifyingLanguage by mutableStateOf(false)
+        private set
     private var closed = false
     private var delegateGeneration = 0L
     private val modelListener: () -> Unit = ::modelChanged
@@ -71,13 +98,16 @@ internal class ReaderSpeechController(
     val modelState: ReaderSpeechModelState
         get() = repository.state
 
+    val pocketModelState: PocketSpeechModelState
+        get() = pocketRepository.state
+
     val preparationState: ReaderSpeechPreparationState
         get() = preparation.state
 
     override val state: ReaderSpeechState
         get() {
             // Keep pause and stop available while the optional preparation is running.
-            if (preparingText) return ReaderSpeechState(ReaderSpeechStatus.Speaking, startOffset)
+            if (preparingText || identifyingLanguage) return ReaderSpeechState(ReaderSpeechStatus.Speaking, startOffset)
             val current = delegate?.state ?: idleState
             return current.copy(
                 characterOffset =
@@ -87,6 +117,7 @@ internal class ReaderSpeechController(
 
     init {
         repository.addListener(modelListener)
+        pocketRepository.addListener(modelListener)
     }
 
     override fun play(content: String) {
@@ -102,6 +133,12 @@ internal class ReaderSpeechController(
             }
         }
         if (content != playbackText) startOffset = 0
+        if (content != languageText) {
+            cancelLanguageIdentification()
+            languageText = content
+            languageIdentified = false
+            pocketLanguage = null
+        }
         playbackText = content
         pendingText = content
         continuePlayback()
@@ -141,6 +178,24 @@ internal class ReaderSpeechController(
 
     fun cancelPreparationDownload() = preparation.cancelDownload()
 
+    fun choosePocketVoice(language: String? = null) {
+        if (closed) return
+        retryFailedPlayback()
+        if (language != null && PocketSpeechCatalog.languages.any { it.code == language }) {
+            cancelLanguageIdentification()
+            languageIdentified = true
+            pocketLanguage = language
+        }
+        repository.choosePocketVoice()
+        continuePlayback()
+    }
+
+    fun downloadPocketModel(language: String) = pocketRepository.download(language)
+
+    fun cancelPocketDownload(language: String) = pocketRepository.cancelDownload(language)
+
+    fun deletePocketModel(language: String) = pocketRepository.delete(language)
+
     fun chooseOfflineVoice() {
         if (closed) return
         retryFailedPlayback()
@@ -157,6 +212,10 @@ internal class ReaderSpeechController(
     }
 
     fun dismissChoice() {
+        cancelLanguageIdentification()
+        languageText = null
+        languageIdentified = false
+        pocketLanguage = null
         cancelPreparation()
         preparedText = null
         preparationFallback = false
@@ -168,7 +227,8 @@ internal class ReaderSpeechController(
     }
 
     override fun pause() {
-        val wasPreparing = preparingText
+        val wasPreparing = preparingText || identifyingLanguage
+        cancelLanguageIdentification()
         cancelPreparation()
         pendingText = null
         if (wasPreparing) {
@@ -189,6 +249,7 @@ internal class ReaderSpeechController(
         closed = true
         dismissChoice()
         repository.removeListener(modelListener)
+        pocketRepository.removeListener(modelListener)
         resetDelegate()
         scope.cancel()
         idleState = ReaderSpeechState(ReaderSpeechStatus.Closed)
@@ -211,7 +272,12 @@ internal class ReaderSpeechController(
 
     private fun modelChanged() {
         if (closed) return
-        if (delegate != null && localVoice != modelState.enabled) resetDelegate()
+        if (!modelState.pocket) cancelLanguageIdentification()
+        if (delegate != null && (
+                localVoice != modelState.enabled || pocketVoice != modelState.pocket ||
+                    (pocketVoice && (delegateLanguage != pocketLanguage ||
+                        pocketModelState.languages[delegateLanguage]?.ready != true))
+            )) resetDelegate()
         continuePlayback()
     }
 
@@ -222,12 +288,28 @@ internal class ReaderSpeechController(
             setupRequested = true
             return
         }
+        if (modelState.pocket) {
+            if (!pocketModelState.loaded) return
+            if (!languageIdentified) {
+                identifyArticleLanguage(text)
+                return
+            }
+            if (pocketLanguage == null || pocketModelState.languages[pocketLanguage]?.ready != true) {
+                setupRequested = true
+                return
+            }
+        }
         setupRequested = false
+        if (delegate != null && pocketVoice && delegateLanguage != pocketLanguage) resetDelegate()
         if (delegate == null) {
             localVoice = modelState.enabled
+            pocketVoice = modelState.pocket
+            delegateLanguage = pocketLanguage
             val expectedGeneration = ++delegateGeneration
             delegate =
-                if (localVoice) {
+                if (pocketVoice) {
+                    createPocketSpeech(requireNotNull(pocketLanguage))
+                } else if (localVoice) {
                     createOfflineSpeech()
                 } else {
                     createAndroidSpeech { success ->
@@ -292,6 +374,33 @@ internal class ReaderSpeechController(
                 transport.playFrom(prepared.text, progress)
             }
         }
+    }
+
+    private fun identifyArticleLanguage(text: String) {
+        if (identifyingLanguage) return
+        val expected = ++languageGeneration
+        identifyingLanguage = true
+        languageJob = scope.launch {
+            val language = try {
+                identifyLanguage(text)
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                null
+            }
+            if (closed || expected != languageGeneration || pendingText != text) return@launch
+            identifyingLanguage = false
+            languageIdentified = true
+            pocketLanguage = language
+            continuePlayback()
+        }
+    }
+
+    private fun cancelLanguageIdentification() {
+        languageGeneration++
+        languageJob?.cancel()
+        languageJob = null
+        identifyingLanguage = false
     }
 
     private fun cancelPreparation() {

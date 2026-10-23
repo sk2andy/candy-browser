@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
+    <string name="reader_pocket_title">Pocket TTS offline voice</string>
+    <string name="reader_pocket_summary">Choose the downloaded model that matches each article’s language. Turning this off keeps your language packs.</string>
+    <string name="reader_pocket_download_summary">Download one or more languages. Articles and generated audio stay on your device. A missing or uncertain language prompts you to choose; no language downloads start automatically.</string>
+    <string name="reader_pocket_unknown_language">Choose a downloaded language for this text, or use another voice.</string>
+    <string name="reader_pocket_unsupported_language">Detected language: %1$s. No Pocket model is available for it. Use another voice, or choose a language if detection was incorrect.</string>
+    <string name="reader_pocket_article_language">Article language: %1$s. Download its model, or choose a downloaded language to correct detection.</string>
+    <string name="reader_pocket_download_size">Download: %1$d MB · storage: %2$d MB</string>
+    <string name="reader_pocket_cancel">Cancel</string>
+    <string name="reader_pocket_use_language">Read in this language</string>
+    <string name="reader_pocket_remove">Remove language</string>
+    <string name="reader_pocket_downloaded">Downloaded · available offline</string>
+    <string name="reader_pocket_license_summary">Pocket TTS by Kyutai. Downloading accepts the model license and voice attribution terms. This voice is AI-generated.</string>
+    <string name="reader_pocket_license">Model and voice licenses</string>
+</resources>

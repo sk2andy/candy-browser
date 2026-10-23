@@ -17,6 +17,12 @@ Apache License 2.0 components
 
 License and terms links for current component groups are shown in Settings > About & legal.
 
+Offline speech
+--------------
+
+Pocket TTS runtime and model/voice attribution: licenses/pocket-speech-runtime.txt and pocket_speech_model_notices.txt.
+Optimaize local language detection: licenses/optimaize-language-detector-apache-2.txt.
+
 Filter data
 -----------
 

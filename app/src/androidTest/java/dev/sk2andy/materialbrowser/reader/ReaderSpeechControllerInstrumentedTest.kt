@@ -11,9 +11,13 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import kotlin.coroutines.Continuation
+import kotlin.coroutines.resume
+import kotlin.coroutines.suspendCoroutine
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -26,12 +30,16 @@ class ReaderSpeechControllerInstrumentedTest {
     private lateinit var context: IsolatedSpeechContext
     private lateinit var io: ExecutorService
     private lateinit var repository: ReaderSpeechModelRepository
+    private lateinit var pocketRepository: PocketSpeechModelRepository
 
     @Before
     fun setUp() {
         context = IsolatedSpeechContext(instrumentation.targetContext)
         io = Executors.newSingleThreadExecutor()
-        onMain { repository = ReaderSpeechModelRepository(context, io) }
+        onMain {
+            repository = ReaderSpeechModelRepository(context, io)
+            pocketRepository = PocketSpeechModelRepository(context, io)
+        }
         awaitStorage()
     }
 
@@ -311,14 +319,243 @@ class ReaderSpeechControllerInstrumentedTest {
         assertTrue(preferences.getBoolean("offered", false))
     }
 
-    private fun controller(voices: MutableList<RecordingSpeech>): ReaderSpeechController =
+    @Test
+    fun missingUnsupportedAndUnknownPocketLanguagesNeverSilentlySelectAnotherVoice() {
+        val voices = mutableListOf<RecordingSpeech>()
+        onMain {
+            repository.choosePocketVoice()
+            for (language in listOf("de", "fr", null)) {
+                val speech = controller(voices, identifyLanguage = { language })
+                speech.play("An article whose language must match its downloaded voice model.")
+                assertTrue(speech.choiceRequested)
+                assertEquals(language, speech.pocketLanguage)
+                assertTrue(speech.modelState.pocket)
+                assertTrue(voices.isEmpty())
+                speech.dismissChoice()
+            }
+        }
+    }
+
+    @Test
+    fun pauseRejectsNonCancellableLateLanguageDetection() {
+        val voices = mutableListOf<RecordingSpeech>()
+        lateinit var result: Continuation<String?>
+        onMain {
+            repository.choosePocketVoice()
+            val speech = controller(voices) { suspendCoroutine { result = it } }
+            speech.play("Do not resume this article after its language check is paused.")
+            assertTrue(speech.identifyingLanguage)
+            speech.pause()
+            result.resume("de")
+            assertFalse(speech.identifyingLanguage)
+            assertFalse(speech.choiceRequested)
+            assertNull(speech.pocketLanguage)
+            assertTrue(voices.isEmpty())
+        }
+    }
+
+    @Test
+    fun closeRejectsNonCancellableLateLanguageDetection() {
+        val voices = mutableListOf<RecordingSpeech>()
+        lateinit var result: Continuation<String?>
+        onMain {
+            repository.choosePocketVoice()
+            val speech = controller(voices) { suspendCoroutine { result = it } }
+            speech.play("Do not retain or replay this private article after closing.")
+            assertTrue(speech.identifyingLanguage)
+            speech.close()
+            result.resume("en")
+            assertEquals(ReaderSpeechStatus.Closed, speech.state.status)
+            assertFalse(speech.identifyingLanguage)
+            assertFalse(speech.choiceRequested)
+            assertNull(speech.pocketLanguage)
+            assertTrue(voices.isEmpty())
+        }
+    }
+
+    @Test
+    fun changingArticlesRejectsThePreviousLanguageResult() {
+        val voices = mutableListOf<RecordingSpeech>()
+        val results = mutableListOf<Continuation<String?>>()
+        onMain {
+            repository.choosePocketVoice()
+            val speech = controller(voices) { suspendCoroutine { results += it } }
+            speech.play("The first article is replaced while its language is being checked.")
+            speech.play("El segundo artículo tiene un idioma diferente y debe utilizar su propio modelo.")
+            assertEquals(2, results.size)
+            results[0].resume("en")
+            assertNull(speech.pocketLanguage)
+            assertTrue(speech.identifyingLanguage)
+            results[1].resume("es")
+            assertEquals("es", speech.pocketLanguage)
+            assertFalse(speech.identifyingLanguage)
+            assertTrue(speech.choiceRequested)
+            assertTrue(voices.isEmpty())
+        }
+    }
+
+    @Test
+    fun choosingSystemDuringLanguageDetectionRejectsItsLateResult() {
+        val voices = mutableListOf<RecordingSpeech>()
+        lateinit var result: Continuation<String?>
+        onMain {
+            repository.choosePocketVoice()
+            val speech = controller(voices) { suspendCoroutine { result = it } }
+            val text = "Use the system voice chosen while the language detection was pending."
+            speech.play(text)
+            speech.chooseSystemVoice()
+            voices.single().initialize()
+            result.resume("de")
+            assertEquals(listOf(text), voices.single().spoken)
+            assertNull(speech.pocketLanguage)
+            assertFalse(speech.modelState.pocket)
+            assertFalse(speech.identifyingLanguage)
+            assertFalse(speech.choiceRequested)
+        }
+    }
+
+    @Test
+    fun pocketChoicePersistsAndDeletingInactiveSupertonicKeepsItSelected() {
+        onMain { repository.choosePocketVoice() }
+        lateinit var restored: ReaderSpeechModelRepository
+        onMain { restored = ReaderSpeechModelRepository(context, io) }
+        awaitStorage()
+        onMain {
+            assertTrue(restored.state.offered)
+            assertTrue(restored.state.pocket)
+            assertFalse(restored.state.enabled)
+            restored.delete()
+        }
+        awaitStorage()
+        onMain {
+            assertTrue(restored.state.pocket)
+            assertFalse(restored.state.enabled)
+            assertFalse(restored.state.ready)
+            assertFalse(restored.state.busy)
+        }
+        assertTrue(context.getSharedPreferences("reader_speech_model", Context.MODE_PRIVATE)
+            .getBoolean("pocket", false))
+    }
+
+    @Test
+    fun installedPocketModelsFollowArticleLanguageAndCloseThePreviousVoice() {
+        installPocketModelFixtures()
+        val voices = mutableListOf<Pair<String, RecordingSpeech>>()
+        val german = "Dieser deutsche Artikel verwendet das heruntergeladene deutsche Sprachmodell."
+        val english = "This English article uses its own downloaded English speech model."
+        onMain {
+            repository.choosePocketVoice()
+            val speech = pocketController(voices) { if (it == german) "de" else "en" }
+            speech.setRate(1.25f)
+            speech.playFrom(german, 0.25f)
+            assertEquals(listOf("de"), voices.map { it.first })
+            assertEquals(listOf(german), voices.single().second.spoken)
+            assertEquals(1.25f, voices.single().second.requestedRate)
+            assertEquals(0.25f, voices.single().second.progress, 0.02f)
+            assertFalse(speech.choiceRequested)
+
+            speech.play(english)
+            assertEquals(listOf("de", "en"), voices.map { it.first })
+            assertTrue(voices.first().second.closed)
+            assertEquals(listOf(english), voices.last().second.spoken)
+            assertEquals(0f, voices.last().second.progress, 0f)
+            assertFalse(speech.choiceRequested)
+            assertEquals(ReaderSpeechStatus.Speaking, speech.state.status)
+        }
+    }
+
+    @Test
+    fun deletingPausedOrStoppedPocketModelCannotResumeAnArticle() {
+        installPocketModelFixtures()
+        val voices = mutableListOf<Pair<String, RecordingSpeech>>()
+        val german = "Dieser deutsche Artikel bleibt nach einer Pause angehalten."
+        val english = "This English article stays stopped after its language model is removed."
+        lateinit var speech: ReaderSpeechController
+        onMain {
+            repository.choosePocketVoice()
+            speech = pocketController(voices) { if (it == german) "de" else "en" }
+            speech.play(german)
+            speech.pause()
+            assertEquals(ReaderSpeechStatus.Paused, speech.state.status)
+            pocketRepository.delete("de")
+        }
+        awaitStorage()
+        onMain {
+            assertTrue(voices.single().second.closed)
+            assertEquals(listOf(german), voices.single().second.spoken)
+            assertFalse(speech.choiceRequested)
+            assertEquals(ReaderSpeechStatus.Ready, speech.state.status)
+            speech.play(english)
+            speech.stop()
+            pocketRepository.delete("en")
+        }
+        awaitStorage()
+        onMain {
+            assertEquals(listOf("de", "en"), voices.map { it.first })
+            assertTrue(voices.last().second.closed)
+            assertEquals(listOf(english), voices.last().second.spoken)
+            assertFalse(speech.choiceRequested)
+            assertEquals(ReaderSpeechStatus.Ready, speech.state.status)
+        }
+    }
+
+    private fun installPocketModelFixtures() {
+        val root = File(context.noBackupFilesDir, "pocket-routing-fixtures")
+        val languages = listOf("de", "en").map { code ->
+            val model = File(root, "$code/models/model.onnx")
+            check(model.parentFile!!.mkdirs())
+            model.writeText("abc")
+            PocketSpeechLanguage(
+                code = code,
+                languageTag = if (code == "de") "de-DE" else "en-US",
+                voiceId = "fixture",
+                archiveName = "$code.zip",
+                downloadBytes = 3L,
+                sha256 = "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+                files = listOf(PocketSpeechArtifact(
+                    name = "models/model.onnx",
+                    size = 3L,
+                    sha256 = "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+                )),
+            )
+        }
+        onMain { pocketRepository = PocketSpeechModelRepository(context, io, root, languages) }
+        awaitStorage()
+        onMain { assertTrue(pocketRepository.state.languages.values.all { it.ready }) }
+    }
+
+    private fun pocketController(
+        voices: MutableList<Pair<String, RecordingSpeech>>,
+        identifyLanguage: suspend (String) -> String?,
+    ): ReaderSpeechController = ReaderSpeechController(
+        context = context,
+        repository = repository,
+        pocketRepository = pocketRepository,
+        identifyLanguage = identifyLanguage,
+        createAndroidSpeech = { error("Pocket playback must not use a system voice") },
+        createOfflineSpeech = { error("Pocket playback must not use Supertonic") },
+        createPocketSpeech = { language ->
+            RecordingSpeech {}.also { voice ->
+                voice.initialize()
+                voices += language to voice
+            }
+        },
+    ).also(controllers::add)
+
+    private fun controller(
+        voices: MutableList<RecordingSpeech>,
+        identifyLanguage: suspend (String) -> String? = ReaderSpeechLanguageDetector::detect,
+    ): ReaderSpeechController =
         ReaderSpeechController(
                 context = context,
                 repository = repository,
+                pocketRepository = pocketRepository,
+                identifyLanguage = identifyLanguage,
                 createAndroidSpeech = { initialized ->
                     RecordingSpeech(initialized).also(voices::add)
                 },
                 createOfflineSpeech = { error("No model was downloaded by these tests") },
+                createPocketSpeech = { error("No Pocket model was downloaded by these tests") },
             )
             .also(controllers::add)
 
