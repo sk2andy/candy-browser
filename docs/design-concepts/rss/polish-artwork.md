@@ -5,7 +5,7 @@
 | `feed_topic_atlas.png` | Six local topic photographs, cropped by native BitmapPainter source regions | Built-in Imagegen, 2026-10-23 |
 | `settings_approved_rss_v2.png` | Minimal grayscale settings header, tinted by existing theme mapping | Built-in Imagegen, 2026-10-23 |
 
-Selected design: **Formenspiel** in `themen-entwuerfe.html`. Reference: [Material shape principles](https://m3.material.io/styles/shape/overview-principles). Original MaterialShapes image masks; labels remain outside masks.
+Selected design: **Formenspiel** in `themen-entwuerfe.html`. Reference: [Material shape principles](https://m3.material.io/styles/shape/overview-principles). Edge-to-edge photographs in asymmetric rounded cards, inspired by the user’s photo-card reference and varied photo mosaics. A tall lead image sits beside two stacked details, followed by a full-width panorama and two unequal cards. White titles sit directly over photos, protected by a dark gradient scrim. Science and travel titles sit at the bottom trailing edge with the gradient reversed; “Oh, spannend!” replaces the eyebrow/subtitle hierarchy. Theme spring corner feedback respects reduced motion.
 
 Topic prompt: 3×2 equal-panel editorial photographic atlas, no text/gutters: cobalt semiconductor wafer; orange planet/space; cobalt arch and peach sphere; citrus/green leaves; Mediterranean coast; sunlit fern forest. Vivid coherent colors, each panel independent, landscape 1536×1024.
 

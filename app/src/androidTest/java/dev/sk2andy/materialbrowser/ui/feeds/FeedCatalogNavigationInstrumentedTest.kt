@@ -3,14 +3,18 @@ package dev.sk2andy.materialbrowser.ui.feeds
 import android.content.Context
 import androidx.activity.BackEventCompat
 import androidx.activity.ComponentActivity
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performImeAction
 import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.unit.Density
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.espresso.Espresso.pressBack
@@ -44,7 +48,10 @@ class FeedCatalogNavigationInstrumentedTest {
         composeRule.onNodeWithTag("feeds_destination_sources").assertIsSelected()
         composeRule.onNodeWithTag("feeds_sources_add").performClick()
         composeRule.onNodeWithTag("feed_catalog_screen").assertIsDisplayed()
-        composeRule.onNodeWithTag("feed_catalog_manual").performClick()
+        composeRule
+            .onNodeWithTag("feed_catalog_search")
+            .performTextInput("https://example.invalid/feed")
+        composeRule.onNodeWithTag("feed_catalog_search").performImeAction()
         composeRule.onNodeWithTag("feeds_subscribe_url").assertIsDisplayed()
         pressBack()
         composeRule.onNodeWithTag("feed_catalog_screen").assertIsDisplayed()
@@ -53,15 +60,34 @@ class FeedCatalogNavigationInstrumentedTest {
     }
 
     @Test
-    fun toolbarCatalogPreservesManualAddressAndInvalidAddressDoesNotDismiss() {
+    fun toolbarCatalogRecognizesAddressAndInvalidAddressDoesNotDismiss() {
         showFeeds()
         composeRule.onNodeWithTag("feeds_add_source").performClick()
         composeRule.onNodeWithTag("feed_catalog_screen").assertIsDisplayed()
-        composeRule.onNodeWithTag("feed_catalog_manual").performClick()
-        composeRule.onNodeWithTag("feeds_subscribe_url").performTextInput("not a feed address")
-        composeRule.onNodeWithTag("feeds_subscribe_confirm").performClick()
-        composeRule.onNodeWithTag("feeds_subscribe_error").assertIsDisplayed()
+        composeRule.onNodeWithTag("feed_catalog_search").performTextInput("https://")
+        composeRule.onNodeWithTag("feed_catalog_search").performImeAction()
+        composeRule.onNodeWithTag("feed_catalog_input_error").assertIsDisplayed()
+        composeRule.onNodeWithTag("feeds_subscribe_url").assertDoesNotExist()
+        composeRule
+            .onNodeWithTag("feed_catalog_search")
+            .performTextReplacement("example.invalid/feed")
+        composeRule.onNodeWithTag("feed_catalog_search").performImeAction()
         composeRule.onNodeWithTag("feeds_subscribe_url").assertIsDisplayed()
+    }
+
+    @Test
+    fun privateAddressPreviewDoesNotRestoreItsSheetOrAddress() {
+        val restoration = StateRestorationTester(composeRule)
+        showFeeds(isPrivate = true, restoration = restoration)
+        composeRule.onNodeWithTag("feeds_add_source").performClick()
+        composeRule
+            .onNodeWithTag("feed_catalog_search")
+            .performTextInput("https://example.invalid/feed")
+        composeRule.onNodeWithTag("feed_catalog_search").performImeAction()
+        composeRule.onNodeWithTag("feeds_subscribe_url").assertIsDisplayed()
+        restoration.emulateSavedInstanceStateRestore()
+        composeRule.onNodeWithTag("feeds_subscribe_url").assertDoesNotExist()
+        composeRule.onNodeWithTag("feed_catalog_search").assertIsDisplayed()
     }
 
     @Test
@@ -148,9 +174,15 @@ class FeedCatalogNavigationInstrumentedTest {
         composeRule.waitForIdle()
     }
 
-    private fun showFeeds(fontScale: Float = 1f, onDismiss: () -> Unit = {}) {
-        val repository = FeedRepository.get(context, "catalog-navigation-${UUID.randomUUID()}")
-        composeRule.setContent {
+    private fun showFeeds(
+        fontScale: Float = 1f,
+        onDismiss: () -> Unit = {},
+        isPrivate: Boolean = false,
+        restoration: StateRestorationTester? = null,
+    ) {
+        val repository =
+            FeedRepository.get(context, "catalog-navigation-${UUID.randomUUID()}", isPrivate)
+        val content: @Composable () -> Unit = {
             MaterialBrowserTheme {
                 CompositionLocalProvider(
                     LocalDensity provides Density(LocalDensity.current.density, fontScale)
@@ -171,5 +203,7 @@ class FeedCatalogNavigationInstrumentedTest {
                 }
             }
         }
+        if (restoration != null) restoration.setContent(content)
+        else composeRule.setContent(content)
     }
 }

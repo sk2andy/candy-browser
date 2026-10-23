@@ -123,8 +123,14 @@ internal fun FeedsScreen(
     var libraryFilter by rememberSaveable { mutableStateOf("all") }
     var origin by rememberSaveable { mutableStateOf("all") }
     var legacyExpanded by rememberSaveable { mutableStateOf(false) }
-    var addSource by rememberSaveable { mutableStateOf(initialFeedUrl != null) }
-    var sourceUrl by rememberSaveable { mutableStateOf(initialFeedUrl.orEmpty()) }
+    val addSourceState =
+        if (repository.isPrivate) remember(repository) { mutableStateOf(initialFeedUrl != null) }
+        else rememberSaveable(repository) { mutableStateOf(initialFeedUrl != null) }
+    var addSource by addSourceState
+    val sourceUrlState =
+        if (repository.isPrivate) remember(repository) { mutableStateOf(initialFeedUrl.orEmpty()) }
+        else rememberSaveable(repository) { mutableStateOf(initialFeedUrl.orEmpty()) }
+    var sourceUrl by sourceUrlState
     var catalogVisible by rememberSaveable(repository, libraryOnly) { mutableStateOf(false) }
     LaunchedEffect(initialFeedUrl) {
         if (initialFeedUrl != null) {
@@ -699,10 +705,6 @@ internal fun FeedsScreen(
                 repository = repository,
                 onPreview = { url ->
                     sourceUrl = url
-                    addSource = true
-                },
-                onManual = {
-                    sourceUrl = ""
                     addSource = true
                 },
                 onDismiss = { catalogVisible = false },

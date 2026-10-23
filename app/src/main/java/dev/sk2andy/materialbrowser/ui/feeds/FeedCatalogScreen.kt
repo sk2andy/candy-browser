@@ -22,7 +22,6 @@ import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -63,6 +62,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.sk2andy.materialbrowser.R
+import dev.sk2andy.materialbrowser.feeds.FeedCatalogInput
+import dev.sk2andy.materialbrowser.feeds.FeedCatalogInputRules
 import dev.sk2andy.materialbrowser.feeds.FeedCatalogPage
 import dev.sk2andy.materialbrowser.feeds.FeedCatalogQuery
 import dev.sk2andy.materialbrowser.feeds.FeedCatalogSource
@@ -81,7 +82,6 @@ import kotlinx.coroutines.launch
 internal fun FeedCatalogScreen(
     repository: FeedRepository,
     onPreview: (String) -> Unit,
-    onManual: () -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
     searchCatalog: suspend (FeedCatalogQuery) -> Result<FeedCatalogPage> =
@@ -93,7 +93,13 @@ internal fun FeedCatalogScreen(
     val focus = LocalFocusManager.current
     val keyboard = LocalSoftwareKeyboardController.current
     val locale = LocalConfiguration.current.locales[0] ?: Locale.getDefault()
-    var input by rememberSaveable(repository) { mutableStateOf("") }
+    val inputState =
+        if (repository.isPrivate) remember(repository) { mutableStateOf("") }
+        else rememberSaveable(repository) { mutableStateOf("") }
+    var input by inputState
+    var inputError by remember(repository) { mutableStateOf<Int?>(null) }
+    val classifiedInput =
+        remember(input, repository) { FeedCatalogInputRules.classify(input, repository.isPrivate) }
     // Keep only the explicitly submitted intent in saved state. Results stay out of the Bundle.
     var submittedText by rememberSaveable(repository) { mutableStateOf<String?>(null) }
     var submittedTopic by rememberSaveable(repository) { mutableStateOf<String?>(null) }
@@ -225,37 +231,48 @@ internal fun FeedCatalogScreen(
                             overflow = TextOverflow.Ellipsis,
                         )
                     }
-                    if (!repository.isPrivate) {
-                        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                            Column(
-                                Modifier.widthIn(max = 720.dp)
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 16.dp)
-                            ) {
-                                FeedCatalogSearchField(
-                                    query = input,
-                                    onQueryChange = { input = it.take(200) },
-                                    onSearch = {
-                                        input
-                                            .trim()
-                                            .takeIf { it.isNotBlank() }
-                                            ?.let { search(FeedCatalogQuery(text = it)) }
-                                    },
-                                )
-                                Row(
-                                    Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                ) {
-                                    TextButton(
-                                        onClick = onManual,
-                                        modifier = Modifier.testTag("feed_catalog_manual"),
-                                    ) {
-                                        Icon(Icons.Default.Add, contentDescription = null)
-                                        Text(stringResource(R.string.feed_catalog_manual))
+                    Column(
+                        Modifier.widthIn(max = 720.dp)
+                            .fillMaxWidth()
+                            .align(Alignment.CenterHorizontally)
+                            .padding(horizontal = 16.dp)
+                    ) {
+                        FeedCatalogSearchField(
+                            query = input,
+                            onQueryChange = {
+                                input = it.take(FeedCatalogInputRules.MAX_DRAFT_LENGTH)
+                                inputError = null
+                            },
+                            isAddress = classifiedInput is FeedCatalogInput.Address,
+                            onSearch = {
+                                when (val submission = classifiedInput) {
+                                    is FeedCatalogInput.Address -> {
+                                        focus.clearFocus()
+                                        keyboard?.hide()
+                                        job?.cancel()
+                                        requestId++
+                                        loading = false
+                                        onPreview(submission.url)
                                     }
+                                    is FeedCatalogInput.Search ->
+                                        search(FeedCatalogQuery(text = submission.text))
+                                    FeedCatalogInput.Invalid ->
+                                        inputError = R.string.feeds_preview_invalid
+                                    FeedCatalogInput.PrivateSearch ->
+                                        inputError = R.string.feed_catalog_private_body
+                                    FeedCatalogInput.Empty -> Unit
                                 }
-                            }
+                            },
+                        )
+                        inputError?.let {
+                            Text(
+                                stringResource(it),
+                                modifier =
+                                    Modifier.padding(top = 8.dp)
+                                        .testTag("feed_catalog_input_error"),
+                                color = MaterialTheme.colorScheme.error,
+                                style = MaterialTheme.typography.bodySmall,
+                            )
                         }
                     }
                     LazyVerticalGrid(
@@ -272,45 +289,20 @@ internal fun FeedCatalogScreen(
                                 FeedCatalogMessage(
                                     stringResource(R.string.feed_catalog_private_title),
                                     stringResource(R.string.feed_catalog_private_body),
-                                ) {
-                                    FilledTonalButton(
-                                        onClick = onManual,
-                                        modifier = Modifier.testTag("feed_catalog_manual"),
-                                    ) {
-                                        Text(stringResource(R.string.feed_catalog_manual))
-                                    }
-                                }
+                                )
                             }
                         } else if (appliedQuery == null) {
                             item(span = { GridItemSpan(maxLineSpan) }) { FeedCatalogHero() }
                             item(span = { GridItemSpan(maxLineSpan) }) {
-                                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                                    feedCatalogTopics
-                                        .chunked(
-                                            if (columns > 1) 3 else if (fontScale > 1.3f) 1 else 2
-                                        )
-                                        .forEach { row ->
-                                            Row(
-                                                horizontalArrangement = Arrangement.spacedBy(10.dp)
-                                            ) {
-                                                row.forEach { topic ->
-                                                    FeedCatalogTopicCard(
-                                                        topic,
-                                                        feedCatalogTopics.indexOf(topic),
-                                                        onClick = {
-                                                            input = ""
-                                                            search(
-                                                                FeedCatalogQuery(topic = topic.slug)
-                                                            )
-                                                        },
-                                                        modifier = Modifier.weight(1f),
-                                                        imageSize =
-                                                            if (columns > 1) 112.dp else 80.dp,
-                                                    )
-                                                }
-                                            }
-                                        }
-                                }
+                                FeedCatalogTopics(
+                                    columns =
+                                        if (columns > 1) 3 else if (fontScale > 1.3f) 1 else 2,
+                                    onTopicSelected = {
+                                        input = ""
+                                        inputError = null
+                                        search(FeedCatalogQuery(topic = it.slug))
+                                    },
+                                )
                             }
                             item(span = { GridItemSpan(maxLineSpan) }) {
                                 Text(
@@ -425,11 +417,7 @@ internal fun FeedCatalogScreen(
                                             stringResource(R.string.feed_catalog_empty_title),
                                             stringResource(R.string.feed_catalog_empty_body),
                                             Modifier.testTag("feed_catalog_empty"),
-                                        ) {
-                                            TextButton(onClick = onManual) {
-                                                Text(stringResource(R.string.feed_catalog_manual))
-                                            }
-                                        }
+                                        )
                                     }
                                 if (nextOffset != null)
                                     item(span = { GridItemSpan(maxLineSpan) }) {

@@ -60,22 +60,13 @@ internal val feedCatalogTopics =
 
 @Composable
 internal fun FeedCatalogHero(modifier: Modifier = Modifier) {
-    Column(
-        modifier.fillMaxWidth().padding(vertical = 6.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        Text(
-            stringResource(R.string.feed_catalog_eyebrow),
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.primary,
-        )
-        Text(
-            stringResource(R.string.feed_catalog_topics),
-            Modifier.semantics { heading() },
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold,
-        )
-    }
+    Text(
+        stringResource(R.string.feed_catalog_topics),
+        modifier.fillMaxWidth().padding(vertical = 8.dp).semantics { heading() },
+        style = MaterialTheme.typography.headlineLarge,
+        fontWeight = FontWeight.ExtraBold,
+        color = MaterialTheme.colorScheme.primary,
+    )
 }
 
 @Composable
@@ -117,58 +108,72 @@ internal fun FeedCatalogSearchField(
     onQueryChange: (String) -> Unit,
     onSearch: () -> Unit,
     modifier: Modifier = Modifier,
+    isAddress: Boolean = false,
 ) {
     // Same native Search anatomy as LibrarySearchBar. Catalog queries have an explicit submit
     // contract.
-    SearchBar(
-        inputField = {
-            SearchBarDefaults.InputField(
-                query = query,
-                onQueryChange = onQueryChange,
-                onSearch = { onSearch() },
-                expanded = false,
-                onExpandedChange = {},
-                placeholder = {
-                    Text(
-                        stringResource(R.string.feed_catalog_search_hint),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                },
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-                trailingIcon = {
-                    Row {
-                        if (query.isNotEmpty())
+    Column(modifier.fillMaxWidth()) {
+        SearchBar(
+            inputField = {
+                SearchBarDefaults.InputField(
+                    query = query,
+                    onQueryChange = onQueryChange,
+                    onSearch = { onSearch() },
+                    expanded = false,
+                    onExpandedChange = {},
+                    placeholder = {
+                        Text(
+                            stringResource(R.string.feed_catalog_search_hint),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    },
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                    trailingIcon = {
+                        Row {
+                            if (query.isNotEmpty())
+                                IconButton(
+                                    onClick = { onQueryChange("") },
+                                    modifier = Modifier.testTag("feed_catalog_clear"),
+                                ) {
+                                    Icon(
+                                        Icons.Default.Close,
+                                        stringResource(R.string.feed_catalog_clear),
+                                    )
+                                }
                             IconButton(
-                                onClick = { onQueryChange("") },
-                                modifier = Modifier.testTag("feed_catalog_clear"),
+                                onClick = onSearch,
+                                enabled = query.isNotBlank(),
+                                modifier = Modifier.testTag("feed_catalog_submit"),
                             ) {
                                 Icon(
-                                    Icons.Default.Close,
-                                    stringResource(R.string.feed_catalog_clear),
+                                    Icons.AutoMirrored.Filled.ArrowForward,
+                                    stringResource(
+                                        if (isAddress) R.string.feed_catalog_preview
+                                        else R.string.feed_catalog_search
+                                    ),
+                                    tint = MaterialTheme.colorScheme.primary,
                                 )
                             }
-                        IconButton(
-                            onClick = onSearch,
-                            enabled = query.isNotBlank(),
-                            modifier = Modifier.testTag("feed_catalog_submit"),
-                        ) {
-                            Icon(
-                                Icons.AutoMirrored.Filled.ArrowForward,
-                                stringResource(R.string.feed_catalog_search),
-                                tint = MaterialTheme.colorScheme.primary,
-                            )
                         }
-                    }
-                },
-                modifier = Modifier.testTag("feed_catalog_search"),
+                    },
+                    modifier = Modifier.testTag("feed_catalog_search"),
+                )
+            },
+            expanded = false,
+            onExpandedChange = {},
+            windowInsets = WindowInsets(0, 0, 0, 0),
+            modifier = Modifier.fillMaxWidth(),
+        ) {}
+        if (isAddress)
+            Text(
+                stringResource(R.string.feed_catalog_address_detected),
+                Modifier.padding(start = 20.dp, top = 6.dp)
+                    .testTag("feed_catalog_address_detected"),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.primary,
             )
-        },
-        expanded = false,
-        onExpandedChange = {},
-        windowInsets = WindowInsets(0, 0, 0, 0),
-        modifier = modifier.fillMaxWidth(),
-    ) {}
+    }
 }
 
 @Composable

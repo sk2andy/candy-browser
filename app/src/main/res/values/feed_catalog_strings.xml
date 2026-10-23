@@ -4,11 +4,11 @@
     <string name="feed_catalog_eyebrow">CURIOSITY. WITHOUT BORDERS.</string>
     <string name="feed_catalog_headline">Your next\nfavorite feed.</string>
     <string name="feed_catalog_intro">Big stories. Independent voices. Find something worth following.</string>
-    <string name="feed_catalog_search_hint">Topic, name, or website</string>
+    <string name="feed_catalog_search_hint">Topic, name, or feed address</string>
     <string name="feed_catalog_search">Search sources</string>
     <string name="feed_catalog_clear">Clear search</string>
     <string name="feed_catalog_manual">Feed address</string>
-    <string name="feed_catalog_topics">What are you curious about?</string>
+    <string name="feed_catalog_topics">Ooh, interesting!</string>
     <string name="feed_catalog_technology">Technology</string>
     <string name="feed_catalog_science">Science</string>
     <string name="feed_catalog_design">Design &amp; culture</string>
@@ -48,15 +48,16 @@
     <string name="feed_catalog_error_body">The local catalog could not be loaded. You can still add a feed address.</string>
     <string name="feed_catalog_retry">Try again</string>
     <string name="feed_catalog_empty_title">Not quite what you had in mind?</string>
-    <string name="feed_catalog_empty_body">This source is not in the Plenary catalog yet. Try its name or add the feed address directly.</string>
+    <string name="feed_catalog_empty_body">This source is not in the Plenary catalog yet. Try its name or paste its website or feed address into the search field.</string>
     <string name="feed_catalog_more">Load more sources</string>
     <string name="feed_catalog_more_failed">More sources could not be loaded. Your results are still here.</string>
     <string name="feed_catalog_reset">Explore topics</string>
     <string name="feed_catalog_credit">Curated sources from Plenary · CC0</string>
     <string name="feed_catalog_privacy">Search the bundled Plenary catalog privately, even offline. Only opening a feed preview connects to its publisher.</string>
     <string name="feed_catalog_private_title">Discover in a regular tab</string>
-    <string name="feed_catalog_private_body">Open a regular tab to manage sources. You can still preview a feed address here without saving a subscription.</string>
+    <string name="feed_catalog_private_body">Open a regular tab to manage sources. To preview without saving a subscription, paste a website or feed address into the search field.</string>
     <string name="feed_catalog_no_description">Open a preview to get to know this source.</string>
     <string name="feed_catalog_close_languages">Close reading languages</string>
     <string name="feed_catalog_website_unknown">Original feed</string>
+    <string name="feed_catalog_address_detected">Address detected · Open preview</string>
 </resources>

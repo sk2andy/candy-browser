@@ -1,6 +1,7 @@
 package dev.sk2andy.materialbrowser.ui.feeds
 
 import android.content.Context
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.hasTestTag
@@ -11,6 +12,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performImeAction
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.performTextReplacement
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import dev.sk2andy.materialbrowser.feeds.FeedCatalogKind
@@ -34,9 +36,7 @@ class FeedCatalogScreenInstrumentedTest {
     @Test
     fun allSixTopicsFitWithoutScrollingAtDefaultTextSize() {
         val repository = FeedRepository.get(context, "catalog-fit-${UUID.randomUUID()}")
-        composeRule.setContent {
-            MaterialBrowserTheme { FeedCatalogScreen(repository, {}, {}, {}) }
-        }
+        composeRule.setContent { MaterialBrowserTheme { FeedCatalogScreen(repository, {}, {}) } }
         val viewport =
             composeRule.onNodeWithTag("feed_catalog_results").fetchSemanticsNode().boundsInRoot
         feedCatalogTopics.forEach { topic ->
@@ -68,7 +68,6 @@ class FeedCatalogScreenInstrumentedTest {
                 FeedCatalogScreen(
                     repository,
                     onPreview = { opened = it },
-                    onManual = {},
                     onDismiss = {},
                     searchCatalog = { query ->
                         requests += query
@@ -93,17 +92,17 @@ class FeedCatalogScreenInstrumentedTest {
     }
 
     @Test
-    fun catalogOmitsUnsupportedMetadataFiltersAndManualEntryKeepsDraft() {
+    fun addressInputPreviewsOnlyOnSubmitWithoutCatalogSearch() {
         val requests = mutableListOf<FeedCatalogQuery>()
-        var manualOpened = false
-        val repository = FeedRepository.get(context, "catalog-ui-${UUID.randomUUID()}")
-        composeRule.setContent {
+        val previews = mutableListOf<String>()
+        val restoration = StateRestorationTester(composeRule)
+        val repository = FeedRepository.get(context, "catalog-url-${UUID.randomUUID()}")
+        restoration.setContent {
             MaterialBrowserTheme {
                 FeedCatalogScreen(
                     repository,
-                    {},
-                    { manualOpened = true },
-                    {},
+                    onPreview = { previews += it },
+                    onDismiss = {},
                     searchCatalog = { query ->
                         requests += query
                         Result.success(FeedCatalogPage(emptyList(), null))
@@ -111,30 +110,37 @@ class FeedCatalogScreenInstrumentedTest {
                 )
             }
         }
-        composeRule.onNodeWithTag("feed_catalog_search").performTextInput("not submitted")
+        composeRule.onNodeWithTag("feed_catalog_search").performTextInput("www.golem.de/rss.php")
+        composeRule.onNodeWithTag("feed_catalog_manual").assertDoesNotExist()
         composeRule.onNodeWithTag("feed_catalog_languages").assertDoesNotExist()
         composeRule.onNodeWithTag("feed_catalog_kind_Blog").assertDoesNotExist()
-        composeRule.onNodeWithTag("feed_catalog_manual").performClick()
-        composeRule.onNodeWithTag("feed_catalog_search").assertTextContains("not submitted")
         composeRule.runOnIdle {
-            assertEquals(0, requests.size)
-            assertTrue(manualOpened)
+            assertTrue(requests.isEmpty())
+            assertTrue(previews.isEmpty())
+        }
+        composeRule.onNodeWithTag("feed_catalog_search").performImeAction()
+        composeRule.runOnIdle { assertEquals(listOf("https://www.golem.de/rss.php"), previews) }
+        restoration.emulateSavedInstanceStateRestore()
+        composeRule.onNodeWithTag("feed_catalog_search").assertTextContains("www.golem.de/rss.php")
+        composeRule.runOnIdle {
+            assertTrue(requests.isEmpty())
+            assertEquals(1, previews.size)
         }
     }
 
     @Test
-    fun privateCatalogHasNoSearchOrNetworkAndKeepsManualEntry() {
+    fun privateCatalogAllowsExplicitPreviewButNeverSearchesOrRestoresPrivateDraft() {
         var searches = 0
-        var manual = false
+        val previews = mutableListOf<String>()
+        val restoration = StateRestorationTester(composeRule)
         val repository =
-            FeedRepository.get(context, "catalog-ui-${UUID.randomUUID()}", isPrivate = true)
-        composeRule.setContent {
+            FeedRepository.get(context, "catalog-private-${UUID.randomUUID()}", isPrivate = true)
+        restoration.setContent {
             MaterialBrowserTheme {
                 FeedCatalogScreen(
                     repository,
-                    {},
-                    { manual = true },
-                    {},
+                    onPreview = { previews += it },
+                    onDismiss = {},
                     searchCatalog = {
                         searches++
                         Result.success(FeedCatalogPage(emptyList(), null))
@@ -142,16 +148,53 @@ class FeedCatalogScreenInstrumentedTest {
                 )
             }
         }
-        composeRule.onNodeWithTag("feed_catalog_search").assertDoesNotExist()
-        composeRule.onNodeWithTag("feed_catalog_screen").assertIsDisplayed()
-        composeRule
-            .onNodeWithTag("feed_catalog_results")
-            .performScrollToNode(hasTestTag("feed_catalog_manual"))
-        composeRule.onNodeWithTag("feed_catalog_manual").performClick()
+        composeRule.onNodeWithTag("feed_catalog_search").performTextInput("private subject")
+        composeRule.onNodeWithTag("feed_catalog_search").performImeAction()
+        composeRule.onNodeWithTag("feed_catalog_input_error").assertIsDisplayed()
+        composeRule.onNodeWithTag("feed_catalog_search").performTextReplacement("example.com/feed")
+        composeRule.runOnIdle { assertTrue(previews.isEmpty()) }
+        composeRule.onNodeWithTag("feed_catalog_search").performImeAction()
         composeRule.runOnIdle {
             assertEquals(0, searches)
-            assertEquals(true, manual)
+            assertEquals(listOf("https://example.com/feed"), previews)
         }
+        restoration.emulateSavedInstanceStateRestore()
+        assertEquals(
+            "",
+            composeRule
+                .onNodeWithTag("feed_catalog_search")
+                .fetchSemanticsNode()
+                .config[SemanticsProperties.EditableText]
+                .text,
+        )
+        composeRule.onNodeWithTag("feed_catalog_manual").assertDoesNotExist()
+        composeRule.runOnIdle {
+            assertEquals(0, searches)
+            assertEquals(1, previews.size)
+        }
+    }
+
+    @Test
+    fun unsafeAddressShowsValidationWithoutStartingPreviewOrSearch() {
+        var requests = 0
+        val repository = FeedRepository.get(context, "catalog-invalid-${UUID.randomUUID()}")
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                FeedCatalogScreen(
+                    repository,
+                    onPreview = { requests++ },
+                    onDismiss = {},
+                    searchCatalog = {
+                        requests++
+                        Result.success(FeedCatalogPage(emptyList(), null))
+                    },
+                )
+            }
+        }
+        composeRule.onNodeWithTag("feed_catalog_search").performTextInput("javascript:alert(1)")
+        composeRule.onNodeWithTag("feed_catalog_search").performImeAction()
+        composeRule.onNodeWithTag("feed_catalog_input_error").assertIsDisplayed()
+        composeRule.runOnIdle { assertEquals(0, requests) }
     }
 
     @Test
@@ -162,7 +205,6 @@ class FeedCatalogScreenInstrumentedTest {
             MaterialBrowserTheme {
                 FeedCatalogScreen(
                     repository,
-                    {},
                     {},
                     {},
                     searchCatalog = { query ->
@@ -201,7 +243,6 @@ class FeedCatalogScreenInstrumentedTest {
             MaterialBrowserTheme {
                 FeedCatalogScreen(
                     repository,
-                    {},
                     {},
                     {},
                     searchCatalog = { query ->
@@ -251,7 +292,6 @@ class FeedCatalogScreenInstrumentedTest {
                     repository,
                     {},
                     {},
-                    {},
                     searchCatalog = { query ->
                         requests += query
                         Result.success(
@@ -285,7 +325,6 @@ class FeedCatalogScreenInstrumentedTest {
             MaterialBrowserTheme {
                 FeedCatalogScreen(
                     repository,
-                    {},
                     {},
                     {},
                     searchCatalog = {
