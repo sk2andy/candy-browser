@@ -5,7 +5,7 @@
 | Need | Detail | Main code |
 | --- | --- | --- |
 | Browser entry, Reader and return navigation | [Navigation and storage](navigation-and-storage.md) | `FeedsHost`, `FeedsScreen`, `BrowserMainMenu` |
-| International source catalog, explicit search and manual feed entry | [Catalog](catalog.md) | `FeedCatalogClient`, `FeedCatalogNetwork`, `FeedCatalogScreen`, `FeedSubscribeSheet` |
+| International source catalog, explicit search and manual feed entry | [Catalog](catalog.md) | `FeedCuratedCatalog`, `FeedCatalogScreen`, `FeedSubscribeSheet` |
 | RSS/Atom, subscriptions, OPML, filters and privacy | [Feed contracts](feed-contracts.md) | `FeedParser`, `FeedRepository`, `FeedRules`, `FeedOpml` |
 | Offline copies, speech and opt-in background work | [Navigation and storage](navigation-and-storage.md) | `FeedArticleLoader`, `FeedReaderDataSource`, `FeedPlaybackManager`, `FeedMediaPlaybackService`, `FeedRefreshWorker` |
 | Approved interactive design | [Product draft](../design-concepts/rss/umsetzung.md) | `docs/design-concepts/rss/entwurf.html` |
@@ -17,7 +17,7 @@
 
 | Surface | Tests |
 | --- | --- |
-| Catalog requests, cancellation, privacy, URL/language validation | `FeedCatalogClientTest`, `FeedCatalogLanguageRulesTest` |
+| Bundled catalog ranking, pagination, privacy and URL validation | `FeedCuratedCatalogTest`, `FeedCatalogClientTest` |
 | Catalog search, restoration, pagination and original-feed preview | `FeedCatalogScreenInstrumentedTest` |
 | Sources/catalog/manual navigation and large text | `FeedCatalogNavigationInstrumentedTest` |
 | Subscribe preview, stale URL requests, failed save and private access | `FeedSubscribeSheetInstrumentedTest` |

@@ -116,6 +116,7 @@ object FeedRules {
                         offlineStatus = old.offlineStatus,
                         offlineDocument = old.offlineDocument,
                         offlineDocumentId = old.offlineDocumentId,
+                        offlineContentVersion = old.offlineContentVersion,
                     )
                 }
             // Rules apply to new items only. Refresh never resets an explicit reader decision.

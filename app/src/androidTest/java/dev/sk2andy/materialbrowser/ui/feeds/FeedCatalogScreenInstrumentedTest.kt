@@ -2,8 +2,6 @@ package dev.sk2andy.materialbrowser.ui.feeds
 
 import android.content.Context
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.assertIsOn
-import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.StateRestorationTester
@@ -32,6 +30,25 @@ import org.junit.runner.RunWith
 class FeedCatalogScreenInstrumentedTest {
     @get:Rule val composeRule = createComposeRule()
     private val context: Context = ApplicationProvider.getApplicationContext()
+
+    @Test
+    fun allSixTopicsFitWithoutScrollingAtDefaultTextSize() {
+        val repository = FeedRepository.get(context, "catalog-fit-${UUID.randomUUID()}")
+        composeRule.setContent {
+            MaterialBrowserTheme { FeedCatalogScreen(repository, {}, {}, {}) }
+        }
+        val viewport =
+            composeRule.onNodeWithTag("feed_catalog_results").fetchSemanticsNode().boundsInRoot
+        feedCatalogTopics.forEach { topic ->
+            val card =
+                composeRule.onNodeWithTag("feed_catalog_topic_${topic.slug}").assertIsDisplayed()
+            val bounds = card.fetchSemanticsNode().boundsInRoot
+            assertTrue(
+                "${topic.slug} must fit entirely without scrolling",
+                bounds.top >= viewport.top && bounds.bottom <= viewport.bottom,
+            )
+        }
+    }
 
     @Test
     fun androidLanguageChoicesHaveVisibleNamesAndExcludeTheRootLocale() {
@@ -76,15 +93,16 @@ class FeedCatalogScreenInstrumentedTest {
     }
 
     @Test
-    fun nativeLanguageSearchAndSelectionKeepUnsubmittedQuery() {
+    fun catalogOmitsUnsupportedMetadataFiltersAndManualEntryKeepsDraft() {
         val requests = mutableListOf<FeedCatalogQuery>()
+        var manualOpened = false
         val repository = FeedRepository.get(context, "catalog-ui-${UUID.randomUUID()}")
         composeRule.setContent {
             MaterialBrowserTheme {
                 FeedCatalogScreen(
                     repository,
                     {},
-                    {},
+                    { manualOpened = true },
                     {},
                     searchCatalog = { query ->
                         requests += query
@@ -94,15 +112,14 @@ class FeedCatalogScreenInstrumentedTest {
             }
         }
         composeRule.onNodeWithTag("feed_catalog_search").performTextInput("not submitted")
-        composeRule.onNodeWithTag("feed_catalog_languages").performClick()
-        composeRule.onNodeWithTag("feed_catalog_language_search").performTextInput("日本語")
-        composeRule
-            .onNodeWithTag("feed_catalog_language_list")
-            .performScrollToNode(hasTestTag("feed_catalog_language_ja"))
-        composeRule.onNodeWithTag("feed_catalog_language_ja").performClick()
-        composeRule.onNodeWithTag("feed_catalog_language_apply").performClick()
+        composeRule.onNodeWithTag("feed_catalog_languages").assertDoesNotExist()
+        composeRule.onNodeWithTag("feed_catalog_kind_Blog").assertDoesNotExist()
+        composeRule.onNodeWithTag("feed_catalog_manual").performClick()
         composeRule.onNodeWithTag("feed_catalog_search").assertTextContains("not submitted")
-        composeRule.runOnIdle { assertEquals(0, requests.size) }
+        composeRule.runOnIdle {
+            assertEquals(0, requests.size)
+            assertTrue(manualOpened)
+        }
     }
 
     @Test
@@ -224,7 +241,7 @@ class FeedCatalogScreenInstrumentedTest {
     }
 
     @Test
-    fun recreationRestoresSubmittedTopicTypeAndLanguagesWithoutSubmittingDraft() {
+    fun recreationRestoresSubmittedTopicWithoutSubmittingDraft() {
         val restoration = StateRestorationTester(composeRule)
         val requests = mutableListOf<FeedCatalogQuery>()
         val repository = FeedRepository.get(context, "catalog-ui-${UUID.randomUUID()}")
@@ -248,40 +265,15 @@ class FeedCatalogScreenInstrumentedTest {
             .onNodeWithTag("feed_catalog_results")
             .performScrollToNode(hasTestTag("feed_catalog_topic_science"))
         composeRule.onNodeWithTag("feed_catalog_topic_science").performClick()
-        composeRule
-            .onNodeWithTag("feed_catalog_results")
-            .performScrollToNode(hasTestTag("feed_catalog_kind_Blog"))
-        composeRule.onNodeWithTag("feed_catalog_kind_Blog").performClick()
-        composeRule.onNodeWithTag("feed_catalog_languages").performClick()
-        composeRule.onNodeWithTag("feed_catalog_language_search").performTextInput("日本語")
-        composeRule
-            .onNodeWithTag("feed_catalog_language_list")
-            .performScrollToNode(hasTestTag("feed_catalog_language_ja"))
-        composeRule.onNodeWithTag("feed_catalog_language_ja").performClick()
-        composeRule.onNodeWithTag("feed_catalog_language_apply").performClick()
         composeRule.onNodeWithTag("feed_catalog_search").performTextInput("not submitted")
         restoration.emulateSavedInstanceStateRestore()
-        composeRule.waitUntil { requests.size == 3 }
+        composeRule.waitUntil { requests.size == 2 }
         composeRule.onNodeWithTag("feed_catalog_search").assertTextContains("not submitted")
         composeRule
             .onNodeWithTag("feed_catalog_results")
-            .performScrollToNode(hasTestTag("feed_catalog_kind_Blog"))
-        composeRule.onNodeWithTag("feed_catalog_kind_Blog").assertIsSelected()
-        composeRule
-            .onNodeWithTag("feed_catalog_results")
             .performScrollToNode(hasTestTag("feed_catalog_source_japanese"))
-        composeRule.onNodeWithTag("feed_catalog_languages").performClick()
-        composeRule.onNodeWithTag("feed_catalog_language_search").performTextInput("日本語")
-        composeRule
-            .onNodeWithTag("feed_catalog_language_list")
-            .performScrollToNode(hasTestTag("feed_catalog_language_ja"))
-        composeRule.onNodeWithTag("feed_catalog_language_ja").assertIsOn()
-        composeRule.runOnIdle {
-            assertEquals(
-                FeedCatalogQuery(topic = "science", kind = FeedCatalogKind.Blog),
-                requests.last(),
-            )
-        }
+        composeRule.onNodeWithTag("feed_catalog_source_japanese").assertIsDisplayed()
+        composeRule.runOnIdle { assertEquals(FeedCatalogQuery(topic = "science"), requests.last()) }
     }
 
     @Test

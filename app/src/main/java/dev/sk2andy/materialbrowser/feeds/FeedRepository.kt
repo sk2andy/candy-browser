@@ -5,6 +5,7 @@ import dev.sk2andy.materialbrowser.browser.ProfileProtectionSession
 import dev.sk2andy.materialbrowser.data.AppDataTransferLock
 import dev.sk2andy.materialbrowser.data.BrowserSessionStore
 import dev.sk2andy.materialbrowser.reader.ReaderDocument
+import dev.sk2andy.materialbrowser.reader.ReaderLibraryStore
 import dev.sk2andy.materialbrowser.reader.ReaderSnapshot
 import java.util.UUID
 import kotlinx.coroutines.CancellationException
@@ -26,19 +27,19 @@ private constructor(context: Context, val profileId: String, val isPrivate: Bool
     private val refreshMutex = Mutex()
     private val mutableState = MutableStateFlow(FeedState())
     val state: StateFlow<FeedState> = mutableState.asStateFlow()
-    private val catalog =
-        FeedCatalogClient(
-            requireAccess = {
-                FeedCatalogRules.requireNormalProfile(isPrivate)
-                requireAccess()
+    private val catalog by lazy {
+        FeedCuratedCatalog {
+            appContext.assets.open("feed_catalog/plenary.json").bufferedReader().use {
+                it.readText()
             }
-        )
+        }
+    }
 
     suspend fun searchCatalog(query: FeedCatalogQuery): Result<FeedCatalogPage> =
         try {
             FeedCatalogRules.requireNormalProfile(isPrivate)
             requireAccess()
-            val page = catalog.search(query)
+            val page = withContext(Dispatchers.IO) { catalog.search(query) }
             requireAccess()
             Result.success(page)
         } catch (cancelled: CancellationException) {
@@ -211,6 +212,93 @@ private constructor(context: Context, val profileId: String, val isPrivate: Bool
     suspend fun setStarred(id: String, starred: Boolean): Result<Unit> =
         updateArticle(id) { it.copy(isStarred = starred) }
 
+    /** Explicit Reader action: retain the full document and apply only the requested marker. */
+    suspend fun saveWebsiteArticle(
+        document: ReaderDocument,
+        starred: Boolean? = null,
+        queued: Boolean? = null,
+    ): Result<Unit> = mutate { before ->
+        val url = requireNotNull(FeedRules.safeUrl(document.sourceUrl))
+        val id = FeedRules.identity(url)
+        val existing = before.articles.firstOrNull { it.id == id }
+        require(existing != null || before.articles.size < 20_000)
+        require(queued != true || id in before.queue || before.queue.size < 500)
+        val article =
+            (existing
+                    ?: FeedArticle(
+                        id = id,
+                        sourceIds = emptySet(),
+                        url = url,
+                        title = document.title.take(1_000),
+                        origin = FeedArticleOrigin.Website,
+                        content =
+                            document.blocks
+                                .joinToString("\n\n") { it.text }
+                                .take(FeedRules.MAX_TEXT_CHARS),
+                        receivedAtMillis = System.currentTimeMillis(),
+                    ))
+                .copy(
+                    origin = FeedArticleOrigin.Website,
+                    isStarred = starred ?: existing?.isStarred ?: false,
+                    offlineStatus = FeedOfflineStatus.Ready,
+                    offlineDocument = document,
+                    offlineContentVersion = 1,
+                )
+        before.copy(
+            articles = before.articles.filterNot { it.id == id } + article,
+            queue =
+                when (queued) {
+                    true -> (before.queue + id).distinct()
+                    false -> before.queue - id
+                    null -> before.queue
+                },
+        )
+    }
+
+    /**
+     * Tombstones prevent pending legacy imports from resurrecting an explicitly deleted article.
+     */
+    suspend fun removeWebsiteArticle(id: String): Result<Unit> = mutate { before ->
+        val article = before.articles.firstOrNull { it.id == id } ?: return@mutate before
+        require(article.origin == FeedArticleOrigin.Website)
+        // The Reader copy may not have finished importing when the user deletes this article.
+        val earlierCopies =
+            ReaderLibraryStore(appContext)
+                .load(isPrivate = false)
+                .snapshots
+                .filter {
+                    !it.isPrivate &&
+                        it.sourceProfileId == profileId &&
+                        FeedRules.identity(it.document.sourceUrl) == id
+                }
+                .map { it.id }
+        val deleted =
+            before.deletedWebsiteSnapshotIds +
+                earlierCopies +
+                listOfNotNull(article.websiteSnapshotId)
+        require(deleted.size <= 20_000) { "Deleted snapshot limit reached" }
+        before.copy(
+            articles =
+                before.articles.mapNotNull {
+                    when {
+                        it.id != id -> it
+                        it.sourceIds.isEmpty() -> null
+                        else ->
+                            it.copy(
+                                origin = FeedArticleOrigin.Feed,
+                                websiteSnapshotId = null,
+                                isStarred = false,
+                                offlineStatus = FeedOfflineStatus.None,
+                                offlineDocument = null,
+                                offlineDocumentId = null,
+                            )
+                    }
+                },
+            queue = before.queue - id,
+            deletedWebsiteSnapshotIds = deleted,
+        )
+    }
+
     suspend fun setHidden(id: String, hidden: Boolean): Result<Unit> =
         updateArticle(id) { it.copy(isHidden = hidden) }
 
@@ -298,6 +386,7 @@ private constructor(context: Context, val profileId: String, val isPrivate: Bool
         require(!snapshot.isPrivate && snapshot.sourceProfileId == profileId) {
             "Snapshot does not belong to this profile"
         }
+        if (snapshot.id in before.deletedWebsiteSnapshotIds) return@mutate before
         val url =
             requireNotNull(FeedRules.safeUrl(snapshot.document.sourceUrl)) { "Invalid article URL" }
         val id = FeedRules.identity(url)
@@ -330,6 +419,7 @@ private constructor(context: Context, val profileId: String, val isPrivate: Bool
                             snapshot.progress.takeIf(Float::isFinite)?.coerceIn(0f, 1f) ?: 0f,
                         offlineStatus = FeedOfflineStatus.Ready,
                         offlineDocument = snapshot.document,
+                        offlineContentVersion = 1,
                     )
                 }
             return@mutate before.copy(
@@ -341,12 +431,8 @@ private constructor(context: Context, val profileId: String, val isPrivate: Bool
                 existing.copy(
                     origin = FeedArticleOrigin.Website,
                     websiteSnapshotId = snapshot.id,
-                    offlineDocument =
-                        if (
-                            existing.offlineDocumentId == null && existing.offlineDocument == null
-                        ) {
-                            snapshot.document
-                        } else existing.offlineDocument,
+                    offlineDocument = snapshot.document,
+                    offlineContentVersion = 1,
                     offlineStatus = FeedOfflineStatus.Ready,
                 )
             return@mutate before.copy(
@@ -371,6 +457,7 @@ private constructor(context: Context, val profileId: String, val isPrivate: Bool
                 readingProgress = snapshot.progress.takeIf(Float::isFinite)?.coerceIn(0f, 1f) ?: 0f,
                 offlineStatus = FeedOfflineStatus.Ready,
                 offlineDocument = snapshot.document,
+                offlineContentVersion = 1,
             )
         before.copy(articles = before.articles + article)
     }
@@ -398,6 +485,7 @@ private constructor(context: Context, val profileId: String, val isPrivate: Bool
         val updated =
             article.copy(
                 offlineStatus = status,
+                offlineContentVersion = if (status == FeedOfflineStatus.Ready) 1 else 0,
                 offlineDocument = document,
                 offlineDocumentId =
                     article.offlineDocumentId.takeUnless { status == FeedOfflineStatus.None },

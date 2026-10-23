@@ -59,6 +59,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -144,10 +145,7 @@ internal fun FeedsScreen(
         scope.launch { if (operation().isFailure) snackbar.showSnackbar(failure) }
     }
     val back = rememberNativeScreenBackState()
-    NativeScreenBackHandler(
-        back,
-        onBack = { if (catalogVisible) catalogVisible = false else onDismiss() },
-    )
+    NativeScreenBackHandler(back, enabled = !catalogVisible, onBack = onDismiss)
     val articles =
         remember(state, filter, query, sourceId, folderId, tag) {
             FeedRules.filter(state, filter, query, sourceId, folderId, tag)
@@ -163,488 +161,553 @@ internal fun FeedsScreen(
         filter = if (search.unreadOnly) FeedInboxFilter.Unread else FeedInboxFilter.All
         destination = FeedDestination.Inbox
     }
-    if (catalogVisible && !libraryOnly) {
-        FeedCatalogScreen(
-            repository = repository,
-            onPreview = { url ->
-                sourceUrl = url
-                addSource = true
-            },
-            onManual = {
-                sourceUrl = ""
-                addSource = true
-            },
-            onDismiss = { catalogVisible = false },
-            modifier = modifier,
-        )
-        if (addSource) {
-            FeedSubscribeDialog(repository, state, sourceUrl, mutate, { addSource = false })
-        }
-        return
-    }
-    Surface(
-        modifier =
-            modifier
-                .fillMaxSize()
-                .testTag("feeds_screen")
-                .predictiveBackSurface(back.progress.value, back.swipeEdgeSign),
-        color = MaterialTheme.colorScheme.surface,
-    ) {
-        BoxWithConstraints(Modifier.fillMaxSize().statusBarsPadding()) {
-            val useRail = !libraryOnly && maxWidth >= 840.dp
-            Row(Modifier.fillMaxSize()) {
-                if (useRail) {
-                    NavigationRail {
-                        FeedDestination.entries.forEach { item ->
-                            NavigationRailItem(
-                                modifier =
-                                    Modifier.testTag("feeds_destination_${item.name.lowercase()}"),
-                                selected = destination == item,
-                                onClick = { destination = item },
-                                icon = { DestinationIcon(item, state.unreadCount) },
-                                label = { Text(stringResource(item.label)) },
-                            )
-                        }
-                    }
-                }
-                Box(Modifier.weight(1f).fillMaxSize(), contentAlignment = Alignment.TopCenter) {
-                    Column(Modifier.widthIn(max = 960.dp).fillMaxSize()) {
-                        Row(
-                            Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            IconButton(onClick = onDismiss) {
-                                Icon(
-                                    Icons.AutoMirrored.Filled.ArrowBack,
-                                    stringResource(R.string.action_back),
+    Box(modifier.fillMaxSize()) {
+        Surface(
+            modifier =
+                Modifier.fillMaxSize()
+                    .then(if (catalogVisible) Modifier.clearAndSetSemantics {} else Modifier)
+                    .testTag("feeds_screen")
+                    .predictiveBackSurface(back.progress.value, back.swipeEdgeSign),
+            color = MaterialTheme.colorScheme.surface,
+        ) {
+            BoxWithConstraints(Modifier.fillMaxSize().statusBarsPadding()) {
+                val useRail = !libraryOnly && maxWidth >= 840.dp
+                Row(Modifier.fillMaxSize()) {
+                    if (useRail) {
+                        NavigationRail {
+                            FeedDestination.entries.forEach { item ->
+                                NavigationRailItem(
+                                    modifier =
+                                        Modifier.testTag(
+                                            "feeds_destination_${item.name.lowercase()}"
+                                        ),
+                                    selected = destination == item,
+                                    onClick = { destination = item },
+                                    icon = { DestinationIcon(item, state.unreadCount) },
+                                    label = { Text(stringResource(item.label)) },
                                 )
                             }
-                            Text(
-                                stringResource(destination.label),
-                                Modifier.weight(1f),
-                                style = MaterialTheme.typography.headlineSmall,
-                                fontWeight = FontWeight.Bold,
-                                maxLines = 2,
-                                overflow = TextOverflow.Ellipsis,
-                            )
-                            IconButton(
-                                onClick = onPlayQueue,
-                                enabled = !repository.isPrivate,
-                                modifier = Modifier.testTag("feeds_open_queue"),
-                            ) {
-                                BadgedBox(
-                                    badge = {
-                                        if (state.queue.isNotEmpty())
-                                            Badge { Text(state.queue.size.toString()) }
-                                    }
-                                ) {
-                                    Icon(
-                                        painterResource(R.drawable.ic_feed_queue),
-                                        stringResource(R.string.feeds_queue),
-                                    )
-                                }
-                            }
-                            if (!libraryOnly) {
-                                IconButton(
-                                    onClick = { mutate { repository.refresh() } },
-                                    enabled = !state.refreshing && !repository.isPrivate,
-                                ) {
-                                    Icon(
-                                        Icons.Default.Refresh,
-                                        stringResource(R.string.feeds_refresh),
-                                    )
-                                }
-                                IconButton(
-                                    onClick = { catalogVisible = true },
-                                    modifier = Modifier.testTag("feeds_add_source"),
-                                ) {
-                                    Icon(Icons.Default.Add, stringResource(R.string.feeds_add))
-                                }
-                            }
                         }
-                        if (state.refreshing) LinearProgressIndicator(Modifier.fillMaxWidth())
-                        if (state.error != null)
-                            Text(
-                                failure,
-                                Modifier.padding(horizontal = 20.dp),
-                                color = MaterialTheme.colorScheme.error,
-                                style = MaterialTheme.typography.bodySmall,
-                            )
-                        when (destination) {
-                            FeedDestination.Inbox ->
-                                Column(Modifier.weight(1f)) {
-                                    FeedSearchField(query, { query = it })
-                                    val tags =
-                                        remember(state.articles) {
-                                            state.articles.flatMap { it.tags }.distinct().sorted()
-                                        }
-                                    FeedFilterRow(
-                                        filter = filter,
-                                        onFilter = {
-                                            filter = it
-                                            if (it == FeedInboxFilter.All) {
-                                                sourceId = null
-                                                folderId = null
-                                                tag = null
-                                            }
-                                        },
-                                        hasScopeFilter = sourceId != null || folderId != null,
-                                        tags = tags,
-                                        selectedTag = tag,
-                                        onTag = { tag = if (tag == it) null else it },
+                    }
+                    Box(Modifier.weight(1f).fillMaxSize(), contentAlignment = Alignment.TopCenter) {
+                        Column(Modifier.widthIn(max = 960.dp).fillMaxSize()) {
+                            Row(
+                                Modifier.fillMaxWidth()
+                                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                IconButton(onClick = onDismiss) {
+                                    Icon(
+                                        Icons.AutoMirrored.Filled.ArrowBack,
+                                        stringResource(R.string.action_back),
                                     )
-                                    FlowRow(Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
-                                        TextButton(
-                                            onClick = {
-                                                val ids =
-                                                    articles
-                                                        .filterNot(FeedArticle::isRead)
-                                                        .map(FeedArticle::id)
-                                                        .toSet()
-                                                scope.launch {
-                                                    if (repository.setRead(ids, true).isFailure)
-                                                        snackbar.showSnackbar(failure)
-                                                    else if (
-                                                        snackbar.showSnackbar(markedRead, undo) ==
-                                                            SnackbarResult.ActionPerformed
-                                                    ) {
-                                                        if (
-                                                            repository.setRead(ids, false).isFailure
-                                                        )
-                                                            snackbar.showSnackbar(failure)
-                                                    }
-                                                }
-                                            },
-                                            enabled = articles.any { !it.isRead },
-                                        ) {
-                                            Text(stringResource(R.string.feeds_mark_all))
+                                }
+                                Text(
+                                    stringResource(destination.label),
+                                    Modifier.weight(1f),
+                                    style = MaterialTheme.typography.headlineSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                                IconButton(
+                                    onClick = onPlayQueue,
+                                    enabled = !repository.isPrivate,
+                                    modifier = Modifier.testTag("feeds_open_queue"),
+                                ) {
+                                    BadgedBox(
+                                        badge = {
+                                            if (state.queue.isNotEmpty())
+                                                Badge { Text(state.queue.size.toString()) }
                                         }
-                                        if (query.isNotBlank())
-                                            TextButton(
-                                                onClick = {
-                                                    searchEditor =
-                                                        FeedEditorSession(
-                                                            FeedSearch(
-                                                                java.util.UUID.randomUUID()
-                                                                    .toString(),
-                                                                query,
-                                                                query,
-                                                                sourceId,
-                                                                folderId,
-                                                                filter == FeedInboxFilter.Unread,
-                                                                tag,
-                                                            )
-                                                        )
-                                                }
-                                            ) {
-                                                Text(stringResource(R.string.feeds_save_search))
-                                            }
-                                    }
-                                    LazyColumn(
-                                        state = inboxListState,
-                                        contentPadding = PaddingValues(20.dp),
-                                        verticalArrangement = Arrangement.spacedBy(10.dp),
                                     ) {
-                                        if (articles.isEmpty())
-                                            item {
-                                                FeedEmptyState(
-                                                    title =
-                                                        stringResource(
-                                                            if (state.sources.isEmpty())
-                                                                R.string.feeds_empty_title
-                                                            else R.string.feeds_no_matches
-                                                        ),
-                                                    body =
-                                                        if (state.sources.isEmpty())
-                                                            stringResource(
-                                                                R.string.feeds_empty_body
-                                                            )
-                                                        else "",
-                                                )
-                                                if (state.sources.isEmpty()) {
-                                                    FilledTonalButton(
-                                                        onClick = { catalogVisible = true },
-                                                        modifier =
-                                                            Modifier.fillMaxWidth()
-                                                                .testTag("feeds_empty_discover"),
-                                                    ) {
-                                                        Icon(
-                                                            Icons.Default.Add,
-                                                            contentDescription = null,
-                                                        )
-                                                        Text(
-                                                            stringResource(R.string.feeds_add),
-                                                            Modifier.padding(start = 8.dp),
-                                                        )
-                                                    }
-                                                }
-                                            }
-                                        items(articleGroups, key = FeedSimilarityRules.Group::id) {
-                                            group ->
-                                            var expanded by
-                                                rememberSaveable(group.id) { mutableStateOf(false) }
-                                            val first = group.articles.first()
-                                            FeedArticleRow(
-                                                first,
-                                                state,
-                                                { onOpenArticle(first) },
-                                                { articleActions = first },
-                                                onToggleSaved = {
-                                                    mutate {
-                                                        repository.setStarred(
-                                                            first.id,
-                                                            !first.isStarred,
-                                                        )
-                                                    }
-                                                },
-                                                onToggleQueue = {
-                                                    mutate {
-                                                        repository.setQueued(
-                                                            first.id,
-                                                            first.id !in state.queue,
-                                                        )
-                                                    }
-                                                },
-                                            )
-                                            if (group.articles.size > 1) {
-                                                TextButton(onClick = { expanded = !expanded }) {
-                                                    Text(
-                                                        stringResource(
-                                                            R.string.feeds_similar_articles,
-                                                            group.articles.size - 1,
-                                                        )
-                                                    )
-                                                }
-                                                if (expanded)
-                                                    group.articles.drop(1).forEach { related ->
-                                                        FeedArticleRow(
-                                                            related,
-                                                            state,
-                                                            { onOpenArticle(related) },
-                                                            { articleActions = related },
-                                                            onToggleSaved = {
-                                                                mutate {
-                                                                    repository.setStarred(
-                                                                        related.id,
-                                                                        !related.isStarred,
-                                                                    )
-                                                                }
-                                                            },
-                                                            onToggleQueue = {
-                                                                mutate {
-                                                                    repository.setQueued(
-                                                                        related.id,
-                                                                        related.id !in state.queue,
-                                                                    )
-                                                                }
-                                                            },
-                                                        )
-                                                    }
-                                            }
-                                        }
+                                        Icon(
+                                            painterResource(R.drawable.ic_feed_queue),
+                                            stringResource(R.string.feeds_queue),
+                                        )
                                     }
                                 }
-                            FeedDestination.Library ->
-                                Column(Modifier.weight(1f)) {
-                                    FeedLibraryTabs(origin, { origin = it })
-                                    FeedSearchField(query, { query = it })
-                                    FeedLibraryFilters(
-                                        filter = libraryFilter,
-                                        onFilter = { libraryFilter = it },
-                                    )
-                                    val feedItems =
-                                        state.articles.filter { article ->
-                                            (article.origin == FeedArticleOrigin.Website ||
-                                                article.isStarred ||
-                                                article.offlineStatus != FeedOfflineStatus.None) &&
-                                                when (origin) {
-                                                    "web" ->
-                                                        article.origin == FeedArticleOrigin.Website
-                                                    "feed" ->
-                                                        article.origin == FeedArticleOrigin.Feed ||
-                                                            article.sourceIds.isNotEmpty()
-                                                    else -> true
-                                                } &&
-                                                article.title.contains(query, true) &&
-                                                when (libraryFilter) {
-                                                    "offline" ->
-                                                        article.offlineStatus ==
-                                                            FeedOfflineStatus.Ready
-                                                    "unread" -> !article.isRead
-                                                    "saved" -> article.isStarred
-                                                    else -> true
-                                                }
-                                        }
-                                    val pendingDownloads =
-                                        state.articles.filter {
-                                            it.isStarred &&
-                                                it.offlineStatus in
-                                                    setOf(
-                                                        FeedOfflineStatus.None,
-                                                        FeedOfflineStatus.Failed,
-                                                    )
-                                        }
-                                    if (pendingDownloads.isNotEmpty()) {
-                                        TextButton(
-                                            onClick = {
-                                                pendingDownloads.forEach(onDownloadArticle)
-                                            },
-                                            modifier = Modifier.padding(horizontal = 20.dp),
-                                        ) {
-                                            Text(stringResource(R.string.feeds_download_saved))
-                                        }
-                                    }
-                                    val snapshots =
-                                        library.snapshots.filter { snapshot ->
-                                            origin != "feed" &&
-                                                libraryFilter != "saved" &&
-                                                (libraryFilter != "unread" ||
-                                                    snapshot.progress < 1f) &&
-                                                snapshot.document.title.contains(query, true)
-                                        }
-                                    LazyColumn(
-                                        state = libraryListState,
-                                        contentPadding = PaddingValues(20.dp),
-                                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                                if (!libraryOnly) {
+                                    IconButton(
+                                        onClick = { mutate { repository.refresh() } },
+                                        enabled = !state.refreshing && !repository.isPrivate,
                                     ) {
-                                        if (snapshots.isEmpty() && feedItems.isEmpty())
-                                            item {
-                                                FeedEmptyState(
-                                                    stringResource(R.string.feeds_no_matches)
-                                                )
-                                            }
-                                        items(snapshots, key = { "snapshot:${it.id}" }) { snapshot
-                                            ->
-                                            FeedSnapshotRow(
-                                                snapshot,
-                                                { onOpenSnapshot(snapshot) },
-                                                { onRemoveSnapshot(snapshot) },
-                                            )
-                                        }
-                                        items(feedItems, key = FeedArticle::id) { article ->
-                                            FeedArticleRow(
-                                                article,
-                                                state,
-                                                { onOpenArticle(article) },
-                                                { articleActions = article },
-                                                onToggleSaved = {
-                                                    mutate {
-                                                        repository.setStarred(
-                                                            article.id,
-                                                            !article.isStarred,
-                                                        )
-                                                    }
-                                                },
-                                                onToggleQueue = {
-                                                    mutate {
-                                                        repository.setQueued(
-                                                            article.id,
-                                                            article.id !in state.queue,
-                                                        )
-                                                    }
-                                                },
-                                            )
-                                        }
-                                        item(key = "queue-entry") {
-                                            FilledTonalButton(
-                                                onClick = onPlayQueue,
-                                                modifier =
-                                                    Modifier.fillMaxWidth()
-                                                        .testTag("feeds_library_queue"),
-                                            ) {
-                                                Icon(
-                                                    painterResource(R.drawable.ic_feed_queue),
-                                                    contentDescription = null,
-                                                )
-                                                Text(
-                                                    stringResource(R.string.feeds_queue),
-                                                    Modifier.padding(horizontal = 12.dp),
-                                                )
-                                                if (state.queue.isNotEmpty())
-                                                    Badge { Text(state.queue.size.toString()) }
-                                            }
-                                        }
-                                        if (legacySnapshots.isNotEmpty() && origin != "feed") {
-                                            item {
-                                                TextButton(
-                                                    onClick = { legacyExpanded = !legacyExpanded },
-                                                    modifier =
-                                                        Modifier.testTag("feeds_legacy_toggle"),
-                                                ) {
-                                                    Text(stringResource(R.string.feeds_legacy))
+                                        Icon(
+                                            Icons.Default.Refresh,
+                                            stringResource(R.string.feeds_refresh),
+                                        )
+                                    }
+                                    IconButton(
+                                        onClick = { catalogVisible = true },
+                                        modifier = Modifier.testTag("feeds_add_source"),
+                                    ) {
+                                        Icon(Icons.Default.Add, stringResource(R.string.feeds_add))
+                                    }
+                                }
+                            }
+                            if (state.refreshing) LinearProgressIndicator(Modifier.fillMaxWidth())
+                            if (state.error != null)
+                                Text(
+                                    failure,
+                                    Modifier.padding(horizontal = 20.dp),
+                                    color = MaterialTheme.colorScheme.error,
+                                    style = MaterialTheme.typography.bodySmall,
+                                )
+                            FeedDestinationTransition(destination, Modifier.weight(1f)) {
+                                visibleDestination ->
+                                when (visibleDestination) {
+                                    FeedDestination.Inbox ->
+                                        Column(Modifier.weight(1f)) {
+                                            FeedSearchField(query, { query = it })
+                                            val tags =
+                                                remember(state.articles) {
+                                                    state.articles
+                                                        .flatMap { it.tags }
+                                                        .distinct()
+                                                        .sorted()
                                                 }
-                                                if (legacyExpanded)
-                                                    Text(
-                                                        stringResource(R.string.feeds_legacy_note),
-                                                        style = MaterialTheme.typography.bodySmall,
-                                                    )
+                                            FeedFilterRow(
+                                                filter = filter,
+                                                onFilter = {
+                                                    filter = it
+                                                    if (it == FeedInboxFilter.All) {
+                                                        sourceId = null
+                                                        folderId = null
+                                                        tag = null
+                                                    }
+                                                },
+                                                hasScopeFilter =
+                                                    sourceId != null || folderId != null,
+                                                tags = tags,
+                                                selectedTag = tag,
+                                                onTag = { tag = if (tag == it) null else it },
+                                            )
+                                            FlowRow(
+                                                Modifier.fillMaxWidth().padding(horizontal = 20.dp)
+                                            ) {
+                                                TextButton(
+                                                    onClick = {
+                                                        val ids =
+                                                            articles
+                                                                .filterNot(FeedArticle::isRead)
+                                                                .map(FeedArticle::id)
+                                                                .toSet()
+                                                        scope.launch {
+                                                            if (
+                                                                repository
+                                                                    .setRead(ids, true)
+                                                                    .isFailure
+                                                            )
+                                                                snackbar.showSnackbar(failure)
+                                                            else if (
+                                                                snackbar.showSnackbar(
+                                                                    markedRead,
+                                                                    undo,
+                                                                ) == SnackbarResult.ActionPerformed
+                                                            ) {
+                                                                if (
+                                                                    repository
+                                                                        .setRead(ids, false)
+                                                                        .isFailure
+                                                                )
+                                                                    snackbar.showSnackbar(failure)
+                                                            }
+                                                        }
+                                                    },
+                                                    enabled = articles.any { !it.isRead },
+                                                ) {
+                                                    Text(stringResource(R.string.feeds_mark_all))
+                                                }
+                                                if (query.isNotBlank())
+                                                    TextButton(
+                                                        onClick = {
+                                                            searchEditor =
+                                                                FeedEditorSession(
+                                                                    FeedSearch(
+                                                                        java.util.UUID.randomUUID()
+                                                                            .toString(),
+                                                                        query,
+                                                                        query,
+                                                                        sourceId,
+                                                                        folderId,
+                                                                        filter ==
+                                                                            FeedInboxFilter.Unread,
+                                                                        tag,
+                                                                    )
+                                                                )
+                                                        }
+                                                    ) {
+                                                        Text(
+                                                            stringResource(
+                                                                R.string.feeds_save_search
+                                                            )
+                                                        )
+                                                    }
                                             }
-                                            if (legacyExpanded)
+                                            LazyColumn(
+                                                state = inboxListState,
+                                                contentPadding = PaddingValues(20.dp),
+                                                verticalArrangement = Arrangement.spacedBy(10.dp),
+                                            ) {
+                                                if (articles.isEmpty())
+                                                    item {
+                                                        FeedEmptyState(
+                                                            title =
+                                                                stringResource(
+                                                                    if (state.sources.isEmpty())
+                                                                        R.string.feeds_empty_title
+                                                                    else R.string.feeds_no_matches
+                                                                ),
+                                                            body =
+                                                                if (state.sources.isEmpty())
+                                                                    stringResource(
+                                                                        R.string.feeds_empty_body
+                                                                    )
+                                                                else "",
+                                                        )
+                                                        if (state.sources.isEmpty()) {
+                                                            FilledTonalButton(
+                                                                onClick = { catalogVisible = true },
+                                                                modifier =
+                                                                    Modifier.fillMaxWidth()
+                                                                        .testTag(
+                                                                            "feeds_empty_discover"
+                                                                        ),
+                                                            ) {
+                                                                Icon(
+                                                                    Icons.Default.Add,
+                                                                    contentDescription = null,
+                                                                )
+                                                                Text(
+                                                                    stringResource(
+                                                                        R.string.feeds_add
+                                                                    ),
+                                                                    Modifier.padding(start = 8.dp),
+                                                                )
+                                                            }
+                                                        }
+                                                    }
                                                 items(
-                                                    legacySnapshots,
-                                                    key = { "legacy:${it.id}" },
-                                                ) { snapshot ->
+                                                    articleGroups,
+                                                    key = FeedSimilarityRules.Group::id,
+                                                ) { group ->
+                                                    var expanded by
+                                                        rememberSaveable(group.id) {
+                                                            mutableStateOf(false)
+                                                        }
+                                                    val first = group.articles.first()
+                                                    FeedArticleRow(
+                                                        first,
+                                                        state,
+                                                        { onOpenArticle(first) },
+                                                        { articleActions = first },
+                                                        onToggleSaved = {
+                                                            mutate {
+                                                                repository.setStarred(
+                                                                    first.id,
+                                                                    !first.isStarred,
+                                                                )
+                                                            }
+                                                        },
+                                                        onToggleQueue = {
+                                                            mutate {
+                                                                repository.setQueued(
+                                                                    first.id,
+                                                                    first.id !in state.queue,
+                                                                )
+                                                            }
+                                                        },
+                                                    )
+                                                    if (group.articles.size > 1) {
+                                                        TextButton(
+                                                            onClick = { expanded = !expanded }
+                                                        ) {
+                                                            Text(
+                                                                stringResource(
+                                                                    R.string.feeds_similar_articles,
+                                                                    group.articles.size - 1,
+                                                                )
+                                                            )
+                                                        }
+                                                        if (expanded)
+                                                            group.articles.drop(1).forEach { related
+                                                                ->
+                                                                FeedArticleRow(
+                                                                    related,
+                                                                    state,
+                                                                    { onOpenArticle(related) },
+                                                                    { articleActions = related },
+                                                                    onToggleSaved = {
+                                                                        mutate {
+                                                                            repository.setStarred(
+                                                                                related.id,
+                                                                                !related.isStarred,
+                                                                            )
+                                                                        }
+                                                                    },
+                                                                    onToggleQueue = {
+                                                                        mutate {
+                                                                            repository.setQueued(
+                                                                                related.id,
+                                                                                related.id !in
+                                                                                    state.queue,
+                                                                            )
+                                                                        }
+                                                                    },
+                                                                )
+                                                            }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    FeedDestination.Library ->
+                                        Column(Modifier.weight(1f)) {
+                                            FeedLibraryTabs(origin, { origin = it })
+                                            FeedSearchField(query, { query = it })
+                                            FeedLibraryFilters(
+                                                filter = libraryFilter,
+                                                onFilter = { libraryFilter = it },
+                                            )
+                                            val feedItems =
+                                                state.articles.filter { article ->
+                                                    (article.origin == FeedArticleOrigin.Website ||
+                                                        article.isStarred ||
+                                                        article.offlineStatus !=
+                                                            FeedOfflineStatus.None) &&
+                                                        when (origin) {
+                                                            "web" ->
+                                                                article.origin ==
+                                                                    FeedArticleOrigin.Website
+                                                            "feed" ->
+                                                                article.origin ==
+                                                                    FeedArticleOrigin.Feed ||
+                                                                    article.sourceIds.isNotEmpty()
+                                                            else -> true
+                                                        } &&
+                                                        article.title.contains(query, true) &&
+                                                        when (libraryFilter) {
+                                                            "offline" ->
+                                                                article.offlineStatus ==
+                                                                    FeedOfflineStatus.Ready
+                                                            "unread" -> !article.isRead
+                                                            "saved" -> article.isStarred
+                                                            else -> true
+                                                        }
+                                                }
+                                            val pendingDownloads =
+                                                state.articles.filter {
+                                                    it.isStarred &&
+                                                        it.offlineStatus in
+                                                            setOf(
+                                                                FeedOfflineStatus.None,
+                                                                FeedOfflineStatus.Failed,
+                                                            )
+                                                }
+                                            if (pendingDownloads.isNotEmpty()) {
+                                                TextButton(
+                                                    onClick = {
+                                                        pendingDownloads.forEach(onDownloadArticle)
+                                                    },
+                                                    modifier = Modifier.padding(horizontal = 20.dp),
+                                                ) {
+                                                    Text(
+                                                        stringResource(
+                                                            R.string.feeds_download_saved
+                                                        )
+                                                    )
+                                                }
+                                            }
+                                            val snapshots =
+                                                library.snapshots.filter { snapshot ->
+                                                    origin != "feed" &&
+                                                        libraryFilter != "saved" &&
+                                                        (libraryFilter != "unread" ||
+                                                            snapshot.progress < 1f) &&
+                                                        snapshot.document.title.contains(
+                                                            query,
+                                                            true,
+                                                        )
+                                                }
+                                            LazyColumn(
+                                                state = libraryListState,
+                                                contentPadding = PaddingValues(20.dp),
+                                                verticalArrangement = Arrangement.spacedBy(10.dp),
+                                            ) {
+                                                if (snapshots.isEmpty() && feedItems.isEmpty())
+                                                    item {
+                                                        FeedEmptyState(
+                                                            stringResource(
+                                                                R.string.feeds_no_matches
+                                                            )
+                                                        )
+                                                    }
+                                                items(snapshots, key = { "snapshot:${it.id}" }) {
+                                                    snapshot ->
                                                     FeedSnapshotRow(
                                                         snapshot,
                                                         { onOpenSnapshot(snapshot) },
                                                         { onRemoveSnapshot(snapshot) },
                                                     )
                                                 }
+                                                items(feedItems, key = FeedArticle::id) { article ->
+                                                    FeedArticleRow(
+                                                        article,
+                                                        state,
+                                                        { onOpenArticle(article) },
+                                                        { articleActions = article },
+                                                        onToggleSaved = {
+                                                            mutate {
+                                                                repository.setStarred(
+                                                                    article.id,
+                                                                    !article.isStarred,
+                                                                )
+                                                            }
+                                                        },
+                                                        onToggleQueue = {
+                                                            mutate {
+                                                                repository.setQueued(
+                                                                    article.id,
+                                                                    article.id !in state.queue,
+                                                                )
+                                                            }
+                                                        },
+                                                    )
+                                                }
+                                                item(key = "queue-entry") {
+                                                    FilledTonalButton(
+                                                        onClick = onPlayQueue,
+                                                        modifier =
+                                                            Modifier.fillMaxWidth()
+                                                                .testTag("feeds_library_queue"),
+                                                    ) {
+                                                        Icon(
+                                                            painterResource(
+                                                                R.drawable.ic_feed_queue
+                                                            ),
+                                                            contentDescription = null,
+                                                        )
+                                                        Text(
+                                                            stringResource(R.string.feeds_queue),
+                                                            Modifier.padding(horizontal = 12.dp),
+                                                        )
+                                                        if (state.queue.isNotEmpty())
+                                                            Badge {
+                                                                Text(state.queue.size.toString())
+                                                            }
+                                                    }
+                                                }
+                                                if (
+                                                    legacySnapshots.isNotEmpty() && origin != "feed"
+                                                ) {
+                                                    item {
+                                                        TextButton(
+                                                            onClick = {
+                                                                legacyExpanded = !legacyExpanded
+                                                            },
+                                                            modifier =
+                                                                Modifier.testTag(
+                                                                    "feeds_legacy_toggle"
+                                                                ),
+                                                        ) {
+                                                            Text(
+                                                                stringResource(
+                                                                    R.string.feeds_legacy
+                                                                )
+                                                            )
+                                                        }
+                                                        if (legacyExpanded)
+                                                            Text(
+                                                                stringResource(
+                                                                    R.string.feeds_legacy_note
+                                                                ),
+                                                                style =
+                                                                    MaterialTheme.typography
+                                                                        .bodySmall,
+                                                            )
+                                                    }
+                                                    if (legacyExpanded)
+                                                        items(
+                                                            legacySnapshots,
+                                                            key = { "legacy:${it.id}" },
+                                                        ) { snapshot ->
+                                                            FeedSnapshotRow(
+                                                                snapshot,
+                                                                { onOpenSnapshot(snapshot) },
+                                                                { onRemoveSnapshot(snapshot) },
+                                                            )
+                                                        }
+                                                }
+                                            }
                                         }
-                                    }
-                                }
-                            FeedDestination.Sources ->
-                                FeedSourcesScreen(
-                                    state,
-                                    repository,
-                                    mutate,
-                                    { catalogVisible = true },
-                                    onOpenSource = {
-                                        sourceId = it
-                                        folderId = null
-                                        filter = FeedInboxFilter.All
-                                        destination = FeedDestination.Inbox
-                                    },
-                                    onNotificationPermission = onNotificationPermission,
-                                    modifier = Modifier.weight(1f),
-                                    onManual = {
-                                        sourceUrl = ""
-                                        addSource = true
-                                    },
-                                )
-                            FeedDestination.Tools ->
-                                FeedToolsScreen(
-                                    state,
-                                    repository,
-                                    mutate,
-                                    openSearch,
-                                    onPlayQueue,
-                                    onImportOpml,
-                                    onExportOpml,
-                                    onNotificationPermission,
-                                    Modifier.weight(1f),
-                                )
-                        }
-                        SnackbarHost(snackbar)
-                        if (!libraryOnly && !useRail) {
-                            NavigationBar {
-                                FeedDestination.entries.forEach { item ->
-                                    NavigationBarItem(
-                                        modifier =
-                                            Modifier.testTag(
-                                                "feeds_destination_${item.name.lowercase()}"
-                                            ),
-                                        selected = destination == item,
-                                        onClick = { destination = item },
-                                        icon = { DestinationIcon(item, state.unreadCount) },
-                                        label = { Text(stringResource(item.label)) },
-                                    )
+                                    FeedDestination.Sources ->
+                                        FeedSourcesScreen(
+                                            state,
+                                            repository,
+                                            mutate,
+                                            { catalogVisible = true },
+                                            onOpenSource = {
+                                                sourceId = it
+                                                folderId = null
+                                                filter = FeedInboxFilter.All
+                                                destination = FeedDestination.Inbox
+                                            },
+                                            onNotificationPermission = onNotificationPermission,
+                                            modifier = Modifier.weight(1f),
+                                            onManual = {
+                                                sourceUrl = ""
+                                                addSource = true
+                                            },
+                                        )
+                                    FeedDestination.Tools ->
+                                        FeedToolsScreen(
+                                            state,
+                                            repository,
+                                            mutate,
+                                            openSearch,
+                                            onPlayQueue,
+                                            onImportOpml,
+                                            onExportOpml,
+                                            onNotificationPermission,
+                                            Modifier.weight(1f),
+                                        )
                                 }
                             }
-                        } else Column(Modifier.navigationBarsPadding()) {}
+                            SnackbarHost(snackbar)
+                            if (!libraryOnly && !useRail) {
+                                NavigationBar {
+                                    FeedDestination.entries.forEach { item ->
+                                        NavigationBarItem(
+                                            modifier =
+                                                Modifier.testTag(
+                                                    "feeds_destination_${item.name.lowercase()}"
+                                                ),
+                                            selected = destination == item,
+                                            onClick = { destination = item },
+                                            icon = { DestinationIcon(item, state.unreadCount) },
+                                            label = { Text(stringResource(item.label)) },
+                                        )
+                                    }
+                                }
+                            } else Column(Modifier.navigationBarsPadding()) {}
+                        }
                     }
                 }
             }
+        }
+        FeedCatalogTransition(visible = catalogVisible && !libraryOnly) {
+            FeedCatalogScreen(
+                repository = repository,
+                onPreview = { url ->
+                    sourceUrl = url
+                    addSource = true
+                },
+                onManual = {
+                    sourceUrl = ""
+                    addSource = true
+                },
+                onDismiss = { catalogVisible = false },
+                backEnabled = catalogVisible,
+            )
         }
     }
     if (addSource) FeedSubscribeDialog(repository, state, sourceUrl, mutate, { addSource = false })

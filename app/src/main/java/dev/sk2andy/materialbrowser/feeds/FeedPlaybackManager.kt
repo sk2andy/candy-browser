@@ -2,10 +2,13 @@ package dev.sk2andy.materialbrowser.feeds
 
 import android.content.Context
 import android.content.Intent
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import dev.sk2andy.materialbrowser.browser.BrowserMediaPlaybackService
 import dev.sk2andy.materialbrowser.browser.guest.GuestBubbleSessionStore
-import dev.sk2andy.materialbrowser.reader.AndroidReaderSpeechController
+import dev.sk2andy.materialbrowser.reader.ReaderSpeechController
 import dev.sk2andy.materialbrowser.reader.ReaderSpeechStatus
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -43,8 +46,14 @@ class FeedPlaybackManager private constructor(private val context: Context) {
     private var documentJob: Job? = null
     private var speechJob: Job? = null
     private var accessJob: Job? = null
+    private var speechStartJob: Job? = null
     private var service: FeedMediaPlaybackService? = null
-    private var speech: AndroidReaderSpeechController? = null
+    internal var speechController by mutableStateOf<ReaderSpeechController?>(null)
+        private set
+
+    private val speech: ReaderSpeechController?
+        get() = speechController
+
     private var text = ""
     private var wantsPlay = false
     private var completing = false
@@ -107,6 +116,7 @@ class FeedPlaybackManager private constructor(private val context: Context) {
     }
 
     fun pause() {
+        speechStartJob?.cancel()
         wantsPlay = false
         speech?.pause()
         saveProgress()
@@ -188,11 +198,13 @@ class FeedPlaybackManager private constructor(private val context: Context) {
     internal fun attach(attached: FeedMediaPlaybackService) {
         if (service === attached) return
         service = attached
-        speech =
-            AndroidReaderSpeechController(
+        speechController =
+            ReaderSpeechController(
                 context,
                 onCompleted = ::completeArticle,
                 audioAttributes = attached.speechAudioAttributes,
+                manageAudioFocus = false,
+                playbackGate = ::startSpeechWhenAllowed,
             )
         speechJob =
             scope.launch {
@@ -232,6 +244,7 @@ class FeedPlaybackManager private constructor(private val context: Context) {
 
     internal fun detach(detached: FeedMediaPlaybackService) {
         if (service !== detached) return
+        speechStartJob?.cancel()
         accessJob?.cancel()
         accessJob = null
         saveProgress()
@@ -240,7 +253,7 @@ class FeedPlaybackManager private constructor(private val context: Context) {
         speechJob?.cancel()
         speechJob = null
         speech?.close()
-        speech = null
+        speechController = null
         documentJob?.cancel()
         generation++
         mutableState.value =
@@ -264,6 +277,7 @@ class FeedPlaybackManager private constructor(private val context: Context) {
 
     private fun selectArticle(id: String?, force: Boolean = false) {
         if (id == state.value.articleId && !force) return
+        speechStartJob?.cancel()
         accessJob?.cancel()
         accessJob = null
         documentJob?.cancel()
@@ -350,6 +364,37 @@ class FeedPlaybackManager private constructor(private val context: Context) {
                 if (!attached.acquireAudioFocus()) return@launch
                 speaker.setRate(state.value.speed)
                 speaker.playFrom(text, state.value.progress.takeIf { it < 1f } ?: 0f)
+            }
+    }
+
+    private fun startSpeechWhenAllowed(start: () -> Unit) {
+        speechStartJob?.cancel()
+        val selected = repository ?: return
+        val attached = service ?: return
+        val speaker = speech ?: return
+        val token = generation
+        speechStartJob =
+            scope.launch {
+                try {
+                    selected.requireAccess()
+                    check(!GuestBubbleSessionStore(context).isLocked())
+                } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                    throw cancelled
+                } catch (_: Exception) {
+                    if (repository === selected) invalidate(selected.profileId)
+                    return@launch
+                }
+                if (
+                    token != generation ||
+                        repository !== selected ||
+                        service !== attached ||
+                        speech !== speaker ||
+                        !wantsPlay ||
+                        completing ||
+                        state.value.busy
+                )
+                    return@launch
+                if (attached.acquireAudioFocus()) start()
             }
     }
 

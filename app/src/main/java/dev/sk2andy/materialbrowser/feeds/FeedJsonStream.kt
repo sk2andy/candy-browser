@@ -157,6 +157,6 @@ internal object FeedJsonStream {
     }
 
     private val ROOT_FIELDS =
-        setOf("version", "sources", "folders", "searches", "rules", "settings", "queue")
+        setOf("version", "sources", "folders", "searches", "rules", "settings", "queue", "deletedWebsiteSnapshotIds")
     private const val MAX_ARTICLES = 20_000
 }

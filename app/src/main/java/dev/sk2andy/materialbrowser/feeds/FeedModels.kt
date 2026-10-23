@@ -43,7 +43,7 @@ data class FeedSource(
     val title: String,
     val siteUrl: String = "",
     val folderId: String? = null,
-    val readingMode: FeedReadingMode = FeedReadingMode.Feed,
+    val readingMode: FeedReadingMode = FeedReadingMode.Reader,
     val lastCheckedMillis: Long = 0,
     val lastSuccessMillis: Long = 0,
     val error: String? = null,
@@ -74,6 +74,8 @@ data class FeedArticle(
     val offlineStatus: FeedOfflineStatus = FeedOfflineStatus.None,
     val offlineDocument: ReaderDocument? = null,
     val offlineDocumentId: String? = null,
+    val offlineContentVersion: Int = 0,
+    val contentIsSummary: Boolean = content.trim() == summary.trim(),
 )
 
 data class FeedSearch(
@@ -119,6 +121,7 @@ data class FeedState(
     val refreshing: Boolean = false,
     val loaded: Boolean = false,
     val error: String? = null,
+    val deletedWebsiteSnapshotIds: Set<String> = emptySet(),
 ) {
     val unreadCount: Int
         get() =

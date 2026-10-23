@@ -1,6 +1,5 @@
 package dev.sk2andy.materialbrowser.ui.feeds
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -33,9 +32,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -66,12 +63,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.sk2andy.materialbrowser.R
-import dev.sk2andy.materialbrowser.feeds.FeedCatalogKind
 import dev.sk2andy.materialbrowser.feeds.FeedCatalogPage
 import dev.sk2andy.materialbrowser.feeds.FeedCatalogQuery
 import dev.sk2andy.materialbrowser.feeds.FeedCatalogSource
 import dev.sk2andy.materialbrowser.feeds.FeedRepository
 import dev.sk2andy.materialbrowser.feeds.FeedRules
+import dev.sk2andy.materialbrowser.ui.NativeScreenBackHandler
+import dev.sk2andy.materialbrowser.ui.predictiveBackSurface
+import dev.sk2andy.materialbrowser.ui.rememberNativeScreenBackState
 import java.util.Locale
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
@@ -85,7 +84,9 @@ internal fun FeedCatalogScreen(
     onManual: () -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
-    searchCatalog: suspend (FeedCatalogQuery) -> Result<FeedCatalogPage> = repository::searchCatalog,
+    searchCatalog: suspend (FeedCatalogQuery) -> Result<FeedCatalogPage> =
+        repository::searchCatalog,
+    backEnabled: Boolean = true,
 ) {
     val state by repository.state.collectAsState()
     val scope = rememberCoroutineScope()
@@ -93,9 +94,6 @@ internal fun FeedCatalogScreen(
     val keyboard = LocalSoftwareKeyboardController.current
     val locale = LocalConfiguration.current.locales[0] ?: Locale.getDefault()
     var input by rememberSaveable(repository) { mutableStateOf("") }
-    var languages by rememberSaveable(repository) { mutableStateOf(emptyList<String>()) }
-    var languagePicker by rememberSaveable(repository) { mutableStateOf(false) }
-    var kind by rememberSaveable(repository) { mutableStateOf<FeedCatalogKind?>(null) }
     // Keep only the explicitly submitted intent in saved state. Results stay out of the Bundle.
     var submittedText by rememberSaveable(repository) { mutableStateOf<String?>(null) }
     var submittedTopic by rememberSaveable(repository) { mutableStateOf<String?>(null) }
@@ -103,11 +101,7 @@ internal fun FeedCatalogScreen(
         remember(repository) {
             mutableStateOf(
                 if (submittedText != null || submittedTopic != null)
-                    FeedCatalogQuery(
-                        text = submittedText.orEmpty(),
-                        topic = submittedTopic,
-                        kind = kind,
-                    )
+                    FeedCatalogQuery(text = submittedText.orEmpty(), topic = submittedTopic)
                 else null
             )
         }
@@ -169,7 +163,6 @@ internal fun FeedCatalogScreen(
         job?.cancel()
         requestId++
         input = ""
-        kind = null
         submittedText = null
         submittedTopic = null
         appliedQuery = null
@@ -185,28 +178,20 @@ internal fun FeedCatalogScreen(
         // Do not replace input: it may contain a different, still unsubmitted draft.
         appliedQuery?.let { query -> search(query.copy(offset = 0)) }
     }
-    BackHandler(onBack = onDismiss)
-    val filtered =
-        remember(sources, languages, kind) {
-            sources.filter { source ->
-                (kind == null || source.kind == kind) &&
-                    (languages.isEmpty() ||
-                        FeedCatalogLanguageRules.baseLanguage(source.language) in languages)
-            }
-        }
-    val languageLabel =
-        when (languages.size) {
-            0 -> stringResource(R.string.feed_catalog_all_languages)
-            1 -> Locale.forLanguageTag(languages.first()).getDisplayLanguage(locale)
-            else ->
-                pluralStringResource(
-                    R.plurals.feed_catalog_languages_count,
-                    languages.size,
-                    languages.size,
-                )
-        }
+    val back = rememberNativeScreenBackState()
+    LaunchedEffect(backEnabled) { if (backEnabled) back.progress.snapTo(0f) }
+    NativeScreenBackHandler(
+        state = back,
+        enabled = backEnabled,
+        retainProgressOnBack = true,
+        onBack = onDismiss,
+    )
+    val filtered = sources
     Surface(
-        modifier.fillMaxSize().testTag("feed_catalog_screen"),
+        modifier
+            .fillMaxSize()
+            .testTag("feed_catalog_screen")
+            .predictiveBackSurface(back.progress.value, back.swipeEdgeSign),
         color = MaterialTheme.colorScheme.surface,
     ) {
         BoxWithConstraints(
@@ -254,9 +239,7 @@ internal fun FeedCatalogScreen(
                                         input
                                             .trim()
                                             .takeIf { it.isNotBlank() }
-                                            ?.let {
-                                                search(FeedCatalogQuery(text = it, kind = kind))
-                                            }
+                                            ?.let { search(FeedCatalogQuery(text = it)) }
                                     },
                                 )
                                 Row(
@@ -264,12 +247,6 @@ internal fun FeedCatalogScreen(
                                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                                     verticalAlignment = Alignment.CenterVertically,
                                 ) {
-                                    FilterChip(
-                                        selected = languages.isNotEmpty(),
-                                        onClick = { languagePicker = true },
-                                        label = { Text(languageLabel) },
-                                        modifier = Modifier.testTag("feed_catalog_languages"),
-                                    )
                                     TextButton(
                                         onClick = onManual,
                                         modifier = Modifier.testTag("feed_catalog_manual"),
@@ -307,14 +284,6 @@ internal fun FeedCatalogScreen(
                         } else if (appliedQuery == null) {
                             item(span = { GridItemSpan(maxLineSpan) }) { FeedCatalogHero() }
                             item(span = { GridItemSpan(maxLineSpan) }) {
-                                Text(
-                                    stringResource(R.string.feed_catalog_topics),
-                                    style = MaterialTheme.typography.titleLarge,
-                                    fontWeight = FontWeight.Bold,
-                                    modifier = Modifier.padding(top = 8.dp).semantics { heading() },
-                                )
-                            }
-                            item(span = { GridItemSpan(maxLineSpan) }) {
                                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                                     feedCatalogTopics
                                         .chunked(
@@ -331,13 +300,12 @@ internal fun FeedCatalogScreen(
                                                         onClick = {
                                                             input = ""
                                                             search(
-                                                                FeedCatalogQuery(
-                                                                    topic = topic.slug,
-                                                                    kind = kind,
-                                                                )
+                                                                FeedCatalogQuery(topic = topic.slug)
                                                             )
                                                         },
                                                         modifier = Modifier.weight(1f),
+                                                        imageSize =
+                                                            if (columns > 1) 112.dp else 80.dp,
                                                     )
                                                 }
                                             }
@@ -377,46 +345,6 @@ internal fun FeedCatalogScreen(
                                             Text(stringResource(R.string.feed_catalog_reset))
                                         }
                                     }
-                                    val tabs =
-                                        listOf<FeedCatalogKind?>(
-                                            null,
-                                            FeedCatalogKind.Blog,
-                                            FeedCatalogKind.News,
-                                        )
-                                    PrimaryTabRow(selectedTabIndex = tabs.indexOf(kind)) {
-                                        tabs.forEach { item ->
-                                            Tab(
-                                                selected = kind == item,
-                                                onClick = {
-                                                    if (kind != item) {
-                                                        kind = item
-                                                        appliedQuery?.let {
-                                                            search(it.copy(kind = item, offset = 0))
-                                                        }
-                                                    }
-                                                },
-                                                text = {
-                                                    Text(
-                                                        stringResource(
-                                                            when (item) {
-                                                                FeedCatalogKind.Blog ->
-                                                                    R.string.feed_catalog_blogs
-                                                                FeedCatalogKind.News ->
-                                                                    R.string.feed_catalog_news
-                                                                null ->
-                                                                    R.string
-                                                                        .feed_catalog_all_sources
-                                                            }
-                                                        )
-                                                    )
-                                                },
-                                                modifier =
-                                                    Modifier.testTag(
-                                                        "feed_catalog_kind_${item?.name ?: "all"}"
-                                                    ),
-                                            )
-                                        }
-                                    }
                                     Row(
                                         Modifier.fillMaxWidth()
                                             .horizontalScroll(rememberScrollState())
@@ -428,12 +356,7 @@ internal fun FeedCatalogScreen(
                                                 selected = appliedQuery?.topic == topic.slug,
                                                 onClick = {
                                                     input = ""
-                                                    search(
-                                                        FeedCatalogQuery(
-                                                            topic = topic.slug,
-                                                            kind = kind,
-                                                        )
-                                                    )
+                                                    search(FeedCatalogQuery(topic = topic.slug))
                                                 },
                                                 label = { Text(stringResource(topic.label)) },
                                             )
@@ -451,12 +374,6 @@ internal fun FeedCatalogScreen(
                                                 Modifier.semantics {
                                                     liveRegion = LiveRegionMode.Polite
                                                 },
-                                        )
-                                    if (languages.isNotEmpty())
-                                        Text(
-                                            stringResource(R.string.feed_catalog_language_subset),
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         )
                                     if (loading && sources.isNotEmpty())
                                         LinearProgressIndicator(Modifier.fillMaxWidth())
@@ -509,14 +426,9 @@ internal fun FeedCatalogScreen(
                                             stringResource(R.string.feed_catalog_empty_body),
                                             Modifier.testTag("feed_catalog_empty"),
                                         ) {
-                                            if (languages.isNotEmpty())
-                                                TextButton(onClick = { languages = emptyList() }) {
-                                                    Text(
-                                                        stringResource(
-                                                            R.string.feed_catalog_all_languages
-                                                        )
-                                                    )
-                                                }
+                                            TextButton(onClick = onManual) {
+                                                Text(stringResource(R.string.feed_catalog_manual))
+                                            }
                                         }
                                     }
                                 if (nextOffset != null)
@@ -572,13 +484,4 @@ internal fun FeedCatalogScreen(
             }
         }
     }
-    if (languagePicker && !repository.isPrivate)
-        FeedCatalogLanguageSheet(
-            languages,
-            onApply = {
-                languages = it
-                languagePicker = false
-            },
-            onDismiss = { languagePicker = false },
-        )
 }

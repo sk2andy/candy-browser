@@ -375,6 +375,7 @@ fun ReaderStudioScreen(
     initialSnapshot: ReaderSnapshot? = null,
     onOpenCollection: (() -> Unit)? = null,
     extraActions: @Composable () -> Unit = {},
+    documentActions: @Composable (ReaderDocument) -> Unit = {},
 ) {
     var library by remember(isPrivate) { mutableStateOf(ReaderLibraryState()) }
     val sessionActive = remember(repository, result, sourceUrl, isPrivate) { mutableStateOf(true) }
@@ -545,7 +546,10 @@ fun ReaderStudioScreen(
                                 if (onOpenCollection != null) onOpenCollection() else libraryVisible = true
                             },
                             onOpenOriginal = { onOpenOriginal(checkNotNull(activeDocument).sourceUrl) },
-                            extraActions = extraActions,
+                            extraActions = {
+                                documentActions(checkNotNull(activeDocument))
+                                extraActions()
+                            },
                         )
                     }
                 }
@@ -590,7 +594,7 @@ fun ReaderStudioScreen(
                     mode = chrome,
                     colors = colors,
                     onSettings = { settingsVisible = true },
-                    modifier = Modifier.align(Alignment.BottomCenter).padding(16.dp),
+                    modifier = Modifier.align(Alignment.BottomCenter).padding(4.dp),
                 )
             }
             if (settingsVisible && (libraryVisible || activeDocument == null)) {

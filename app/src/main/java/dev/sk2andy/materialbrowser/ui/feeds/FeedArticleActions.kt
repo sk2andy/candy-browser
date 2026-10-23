@@ -3,29 +3,30 @@ package dev.sk2andy.materialbrowser.ui.feeds
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.feeds.FeedArticle
+import dev.sk2andy.materialbrowser.feeds.FeedArticleOrigin
 import dev.sk2andy.materialbrowser.feeds.FeedImportPreview
 import dev.sk2andy.materialbrowser.feeds.FeedImportStatus
 import dev.sk2andy.materialbrowser.feeds.FeedOfflineStatus
@@ -51,11 +52,15 @@ internal fun FeedArticleActions(
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
         modifier = Modifier.statusBarsPadding(),
         dragHandle = {
-            FeedSheetDragHandle(stringResource(R.string.feeds_cancel), Modifier.testTag("feeds_article_actions_handle"))
+            FeedSheetDragHandle(
+                stringResource(R.string.feeds_cancel),
+                Modifier.testTag("feeds_article_actions_handle"),
+            )
         },
     ) {
         Column(
-            Modifier.fillMaxWidth().verticalScroll(rememberScrollState())
+            Modifier.fillMaxWidth()
+                .verticalScroll(rememberScrollState())
                 .padding(horizontal = 24.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
@@ -109,9 +114,7 @@ internal fun FeedArticleActions(
             }
             TextButton(
                 onClick = {
-                    mutate {
-                        repository.setQueued(article.id, article.id !in state.queue)
-                    }
+                    mutate { repository.setQueued(article.id, article.id !in state.queue) }
                     onDismiss()
                 }
             ) {
@@ -138,6 +141,23 @@ internal fun FeedArticleActions(
                 TextButton(onClick = { revisionVisible = true }) {
                     Text(stringResource(R.string.feeds_revision))
                 }
+            if (article.origin == FeedArticleOrigin.Website) {
+                TextButton(
+                    onClick = {
+                        mutate {
+                            repository.removeWebsiteArticle(article.id).also {
+                                if (it.isSuccess) onDismiss()
+                            }
+                        }
+                    },
+                    modifier = Modifier.testTag("feed_article_delete"),
+                ) {
+                    Text(
+                        stringResource(R.string.feeds_delete_article),
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
+            }
             TextButton(
                 onClick = {
                     onDismiss()

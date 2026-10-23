@@ -80,7 +80,11 @@ internal object FeedCodec {
                     }
                     .toString()
             )
-        output.append(",\"queue\":").append(JSONArray(state.queue).toString()).append('}')
+        output.append(",\"queue\":").append(JSONArray(state.queue).toString())
+        output
+            .append(",\"deletedWebsiteSnapshotIds\":")
+            .append(JSONArray(state.deletedWebsiteSnapshotIds.toList()).toString())
+            .append('}')
     }
 
     private fun article(article: FeedArticle): JSONObject =
@@ -94,6 +98,7 @@ internal object FeedCodec {
             "websiteSnapshotId" to article.websiteSnapshotId,
             "summary" to article.summary,
             "content" to article.content,
+            "contentIsSummary" to article.contentIsSummary,
             "publishedAtMillis" to article.publishedAtMillis,
             "receivedAtMillis" to article.receivedAtMillis,
             "updatedAtMillis" to article.updatedAtMillis,
@@ -106,6 +111,7 @@ internal object FeedCodec {
             "offlineStatus" to article.offlineStatus.name,
             "offlineDocument" to article.offlineDocument?.let(::document),
             "offlineDocumentId" to article.offlineDocumentId,
+            "offlineContentVersion" to article.offlineContentVersion,
         )
 
     fun decode(json: String): FeedState = decode(JSONObject(json))
@@ -124,7 +130,7 @@ internal object FeedCodec {
                         title = source.string("title", 500),
                         siteUrl = FeedRules.safeUrl(source.string("siteUrl", 2048)).orEmpty(),
                         folderId = source.optional("folderId"),
-                        readingMode = enumValue(source, "readingMode", FeedReadingMode.Feed),
+                        readingMode = enumValue(source, "readingMode", FeedReadingMode.Reader),
                         lastCheckedMillis = source.optLong("lastCheckedMillis").coerceAtLeast(0),
                         lastSuccessMillis = source.optLong("lastSuccessMillis").coerceAtLeast(0),
                         error = source.optional("error", 500),
@@ -182,6 +188,11 @@ internal object FeedCodec {
                 ),
             queue =
                 root.strings("queue", 500).filter { id -> articles.any { it.id == id } }.distinct(),
+            deletedWebsiteSnapshotIds =
+                root
+                    .strings("deletedWebsiteSnapshotIds", 20_000, 256)
+                    .filter { it.isNotBlank() && it.length <= 256 }
+                    .toSet(),
             loaded = true,
         )
     }
@@ -193,6 +204,8 @@ internal object FeedCodec {
                 FeedRules.identity(it.sourceUrl) == FeedRules.identity(url)
             }
         val reference = article.optional("offlineDocumentId")?.takeIf(::validDocumentId)
+        val summary = article.string("summary", 4000)
+        val content = article.string("content", FeedRules.MAX_TEXT_CHARS)
         return FeedArticle(
             id = FeedRules.identity(url),
             sourceIds = article.strings("sourceIds", 500).toSet(),
@@ -201,8 +214,14 @@ internal object FeedCodec {
             origin = enumValue(article, "origin", FeedArticleOrigin.Feed),
             websiteSnapshotId = article.optional("websiteSnapshotId", 256),
             author = article.string("author", 500),
-            summary = article.string("summary", 4000),
-            content = article.string("content", FeedRules.MAX_TEXT_CHARS),
+            summary = summary,
+            content = content,
+            contentIsSummary =
+                article.optBoolean(
+                    "contentIsSummary",
+                    content.trim() == summary.trim() ||
+                        (summary.length == 4000 && content.startsWith(summary)),
+                ),
             publishedAtMillis = article.optLong("publishedAtMillis").coerceAtLeast(0),
             receivedAtMillis = article.optLong("receivedAtMillis").coerceAtLeast(0),
             updatedAtMillis = article.optLong("updatedAtMillis").coerceAtLeast(0),
@@ -227,6 +246,7 @@ internal object FeedCodec {
                     },
             offlineDocument = document,
             offlineDocumentId = reference,
+            offlineContentVersion = article.optInt("offlineContentVersion").coerceIn(0, 1),
         )
     }
 

@@ -2,8 +2,8 @@ package dev.sk2andy.materialbrowser.ui.feeds
 
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -29,8 +29,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.feeds.FeedFolder
@@ -63,12 +63,19 @@ internal fun FeedSourcesScreen(
     ) {
         item {
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(onClick = onAdd, modifier = Modifier.testTag("feeds_sources_add")) { Text(stringResource(R.string.feeds_add)) }
-                TextButton(onClick = onManual, modifier = Modifier.testTag("feeds_sources_manual")) {
+                Button(onClick = onAdd, modifier = Modifier.testTag("feeds_sources_add")) {
+                    Text(stringResource(R.string.feeds_add))
+                }
+                TextButton(
+                    onClick = onManual,
+                    modifier = Modifier.testTag("feeds_sources_manual"),
+                ) {
                     Text(stringResource(R.string.feeds_manual_address))
                 }
                 TextButton(
-                    onClick = { editFolder = FeedEditorSession(FeedFolder(UUID.randomUUID().toString(), "")) }
+                    onClick = {
+                        editFolder = FeedEditorSession(FeedFolder(UUID.randomUUID().toString(), ""))
+                    }
                 ) {
                     Text(stringResource(R.string.feeds_add_folder))
                 }
@@ -76,10 +83,22 @@ internal fun FeedSourcesScreen(
         }
         if (state.sources.isEmpty()) {
             item {
-                Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = MaterialTheme.shapes.large) {
-                    Column(Modifier.fillMaxWidth().padding(20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text(stringResource(R.string.feeds_sources_empty_title), style = MaterialTheme.typography.titleLarge)
-                        Text(stringResource(R.string.feeds_sources_empty_note), style = MaterialTheme.typography.bodyMedium)
+                Surface(
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    shape = MaterialTheme.shapes.large,
+                ) {
+                    Column(
+                        Modifier.fillMaxWidth().padding(20.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        Text(
+                            stringResource(R.string.feeds_sources_empty_title),
+                            style = MaterialTheme.typography.titleLarge,
+                        )
+                        Text(
+                            stringResource(R.string.feeds_sources_empty_note),
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
                     }
                 }
             }
@@ -98,8 +117,17 @@ internal fun FeedSourcesScreen(
                             style = MaterialTheme.typography.titleMedium,
                         )
                         if (folder != null) {
-                            TextButton(onClick = { editFolder = FeedEditorSession(folder) }, modifier = Modifier.testTag("feeds_folder_edit_${folder.id}")) { Text(stringResource(R.string.feeds_edit)) }
-                            TextButton(onClick = { mutate { repository.removeFolder(folder.id) } }) { Text(stringResource(R.string.feeds_delete)) }
+                            TextButton(
+                                onClick = { editFolder = FeedEditorSession(folder) },
+                                modifier = Modifier.testTag("feeds_folder_edit_${folder.id}"),
+                            ) {
+                                Text(stringResource(R.string.feeds_edit))
+                            }
+                            TextButton(
+                                onClick = { mutate { repository.removeFolder(folder.id) } }
+                            ) {
+                                Text(stringResource(R.string.feeds_delete))
+                            }
                         }
                     }
                 }
@@ -160,7 +188,8 @@ internal fun FeedSourcesScreen(
                     onClick = {
                         mutate {
                             repository.removeSource(source.id).also { result ->
-                                if (result.isSuccess && deleteSource === session) deleteSource = null
+                                if (result.isSuccess && deleteSource === session)
+                                    deleteSource = null
                             }
                         }
                     }
@@ -191,25 +220,46 @@ private fun FeedSourceCard(
         color = MaterialTheme.colorScheme.surfaceContainerLow,
         modifier = Modifier.fillMaxWidth().testTag("feeds_source_${source.id}"),
     ) {
-        Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Column(
+            Modifier.fillMaxWidth().padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
             TextButton(onClick = onOpen, modifier = Modifier.fillMaxWidth()) {
-                Text(source.title, Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
+                Text(
+                    source.title,
+                    Modifier.weight(1f),
+                    style = MaterialTheme.typography.titleMedium,
+                )
             }
-            Text(source.url, style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            Text(
+                source.url,
+                style = MaterialTheme.typography.bodySmall,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
             Text(
                 if (source.error != null) stringResource(R.string.feeds_source_error)
-                else if (source.lastSuccessMillis == 0L) stringResource(R.string.feeds_never_refreshed)
-                else stringResource(
-                    R.string.feeds_last_refresh,
-                    DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(source.lastSuccessMillis)),
-                ),
+                else if (source.lastSuccessMillis == 0L)
+                    stringResource(R.string.feeds_never_refreshed)
+                else
+                    stringResource(
+                        R.string.feeds_last_refresh,
+                        DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT)
+                            .format(Date(source.lastSuccessMillis)),
+                    ),
                 style = MaterialTheme.typography.labelSmall,
-                color = if (source.error != null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+                color =
+                    if (source.error != null) MaterialTheme.colorScheme.error
+                    else MaterialTheme.colorScheme.onSurfaceVariant,
             )
             FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 TextButton(onClick = onEdit) { Text(stringResource(R.string.feeds_edit)) }
-                TextButton(onClick = onRefresh, enabled = !refreshing) { Text(stringResource(R.string.feeds_refresh)) }
-                TextButton(onClick = onDelete) { Text(stringResource(R.string.feeds_remove_source)) }
+                TextButton(onClick = onRefresh, enabled = !refreshing) {
+                    Text(stringResource(R.string.feeds_refresh))
+                }
+                TextButton(onClick = onDelete) {
+                    Text(stringResource(R.string.feeds_remove_source))
+                }
             }
         }
     }
@@ -225,7 +275,11 @@ private fun FeedSourceEditor(
 ) {
     var title by remember { mutableStateOf(source.title) }
     var folder by remember { mutableStateOf(source.folderId) }
-    var mode by remember { mutableStateOf(source.readingMode) }
+    var mode by remember {
+        mutableStateOf(
+            source.readingMode.takeUnless { it == FeedReadingMode.Feed } ?: FeedReadingMode.Reader
+        )
+    }
     var notifications by remember { mutableStateOf(source.notificationsEnabled) }
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -249,7 +303,7 @@ private fun FeedSourceEditor(
                     Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    FeedReadingMode.entries.forEach { value ->
+                    listOf(FeedReadingMode.Reader, FeedReadingMode.Original).forEach { value ->
                         FilterChip(
                             mode == value,
                             { mode = value },
@@ -300,7 +354,9 @@ private fun FeedSourceEditor(
 internal fun FeedFolderChoice(state: FeedState, selected: String?, onSelected: (String?) -> Unit) {
     Text(stringResource(R.string.feeds_folder), style = MaterialTheme.typography.titleSmall)
     Row(
-        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).testTag("feeds_folder_choices"),
+        Modifier.fillMaxWidth()
+            .horizontalScroll(rememberScrollState())
+            .testTag("feeds_folder_choices"),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         FilterChip(

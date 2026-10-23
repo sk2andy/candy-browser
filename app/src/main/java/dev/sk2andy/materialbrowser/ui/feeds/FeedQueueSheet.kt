@@ -1,7 +1,6 @@
 package dev.sk2andy.materialbrowser.ui.feeds
 
 import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
@@ -20,6 +19,7 @@ import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.feeds.FeedPlaybackManager
 import dev.sk2andy.materialbrowser.feeds.FeedRepository
 import dev.sk2andy.materialbrowser.reader.ReaderSpeechStatus
+import dev.sk2andy.materialbrowser.ui.ReaderSpeechOptions
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -35,6 +35,17 @@ internal fun FeedQueueSheet(repository: FeedRepository, onDismiss: () -> Unit) {
     val favicon = rememberFeedQueueFavicon(repository, article)
     val dismissDescription = stringResource(R.string.feeds_player_close)
     LaunchedEffect(repository) { manager.prepare(repository.profileId) }
+    if (ownsPlayback)
+        manager.speechController?.let { speech ->
+            ReaderSpeechOptions(
+                speech = speech,
+                stopOnBackground = false,
+                onDismissChoice = {
+                    speech.dismissChoice()
+                    manager.pause()
+                },
+            )
+        }
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         dragHandle = {

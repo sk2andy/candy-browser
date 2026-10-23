@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="reader_nano_enabled_title">Text mit Gemini Nano vorbereiten</string>
-    <string name="reader_nano_enabled_summary">Experimentell: Bereitet gängige deutsche und englische Abkürzungen und Zahlen lokal für die gewählte Stimme auf. Kann den Start verzögern.</string>
+    <string name="reader_nano_enabled_summary">Experimentell: Verbessert die Aussprache gängiger deutscher und englischer Abkürzungen und Zahlen. Nano erzeugt keine Stimme: Deine gewählte System- oder Offline-Stimme bleibt gleich. Kann den Start verzögern.</string>
     <string name="reader_nano_system_managed">Android verwaltet dieses Modell und teilt es mit anderen Apps. Ausschalten beendet nur die Nutzung in Candy.</string>
-    <string name="reader_nano_download_summary">Dein Telefon unterstützt Gemini Nano. Lade das Modell über Android herunter, um die Textvorbereitung zu aktivieren.</string>
+    <string name="reader_nano_download_summary">Dein Telefon unterstützt Gemini Nano. Lade es zur lokalen Aussprachevorbereitung herunter. Dadurch wird keine neue Vorlesestimme geladen oder ausgewählt.</string>
     <string name="reader_nano_download">Gemini Nano herunterladen und aktivieren</string>
     <string name="reader_nano_retry_download">Gemini-Nano-Download erneut versuchen</string>
     <string name="reader_nano_cancel_download">Download abbrechen</string>

@@ -16,6 +16,7 @@ import androidx.test.platform.app.InstrumentationRegistry
 import dev.sk2andy.materialbrowser.MainActivity
 import dev.sk2andy.materialbrowser.browser.BrowserProfile
 import dev.sk2andy.materialbrowser.data.BrowserSessionStore
+import dev.sk2andy.materialbrowser.reader.ReaderSpeechModelRepository
 import dev.sk2andy.materialbrowser.reader.ReaderSpeechStatus
 import java.util.UUID
 import java.util.concurrent.TimeUnit
@@ -54,6 +55,14 @@ class FeedMediaPlaybackServiceInstrumentedTest {
                 )
             )
             .getOrThrow()
+        repository.state.value.articles.forEach { article ->
+            repository
+                .updateOffline(article.id, FeedOfflineStatus.Ready, FeedRules.document(article))
+                .getOrThrow()
+        }
+        val voice = ReaderSpeechModelRepository.get(context)
+        await("Voice settings did not load") { voice.state.loaded }
+        instrumentation.runOnMainSync { voice.chooseSystemVoice() }
         articleIds = repository.state.value.articles.map { it.id }
         repository.setQueue(articleIds).getOrThrow()
     }

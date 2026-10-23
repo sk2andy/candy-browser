@@ -2,6 +2,7 @@ package dev.sk2andy.materialbrowser.shared.ui
 
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -40,39 +41,47 @@ internal fun ReaderPill(
 ) {
     val expanded = mode == ReaderChromeMode.Expanded
     val effects = LocalCandyBrowserChromeEffects.current
-    effects.floatingSurface(
-        modifier = modifier
-            .then(if (effects.reducesMotion()) Modifier else Modifier.animateContentSize())
-            .widthIn(max = 640.dp)
-            .then(if (expanded) Modifier.fillMaxWidth() else Modifier)
-            .testTag(ReaderStudioTestTags.Pill),
-        shape = CircleShape,
-        color = colors.card,
-        contentColor = colors.content,
-        tonalElevation = 3.dp,
-        shadowElevation = 5.dp,
+    // animateContentSize clips its children; reserve shadow space outside the elevated pill.
+    Box(
+        modifier =
+            modifier
+                .then(if (effects.reducesMotion()) Modifier else Modifier.animateContentSize())
+                .padding(12.dp)
     ) {
-        Row(
-            modifier = Modifier.padding(6.dp),
-            verticalAlignment = Alignment.CenterVertically,
+        effects.floatingSurface(
+            modifier =
+                Modifier.widthIn(max = 640.dp)
+                    .then(if (expanded) Modifier.fillMaxWidth() else Modifier)
+                    .testTag(ReaderStudioTestTags.Pill),
+            shape = CircleShape,
+            color = colors.card,
+            contentColor = colors.content,
+            tonalElevation = 3.dp,
+            shadowElevation = 5.dp,
         ) {
-            Text(
-                text = if (expanded) sourceUrl else ReaderChromeRules.compactAddress(sourceUrl),
-                modifier = Modifier.weight(1f, fill = expanded).padding(horizontal = 16.dp)
-                    .testTag(ReaderStudioTestTags.Url),
-                style = if (expanded) MaterialTheme.typography.bodyMedium else MaterialTheme.typography.labelMedium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            IconButton(
-                onClick = onSettings,
-                modifier = Modifier.size(48.dp).testTag(ReaderStudioTestTags.Settings),
-            ) {
-                effects.icon(
-                    "ellipsis",
-                    Icons.Filled.MoreVert,
-                    contentDescription = resources.text(ReaderStudioLabel.Settings),
+            Row(modifier = Modifier.padding(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = if (expanded) sourceUrl else ReaderChromeRules.compactAddress(sourceUrl),
+                    modifier =
+                        Modifier.weight(1f, fill = expanded)
+                            .padding(horizontal = 16.dp)
+                            .testTag(ReaderStudioTestTags.Url),
+                    style =
+                        if (expanded) MaterialTheme.typography.bodyMedium
+                        else MaterialTheme.typography.labelMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
+                IconButton(
+                    onClick = onSettings,
+                    modifier = Modifier.size(48.dp).testTag(ReaderStudioTestTags.Settings),
+                ) {
+                    effects.icon(
+                        "ellipsis",
+                        Icons.Filled.MoreVert,
+                        contentDescription = resources.text(ReaderStudioLabel.Settings),
+                    )
+                }
             }
         }
     }
@@ -97,8 +106,10 @@ internal fun ReaderSettingsSheet(
         modifier = Modifier.testTag(ReaderStudioTestTags.Sheet),
     ) {
         Column(
-            modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp, vertical = 12.dp),
+            modifier =
+                Modifier.fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 20.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text(
@@ -107,8 +118,11 @@ internal fun ReaderSettingsSheet(
                 style = MaterialTheme.typography.headlineSmall,
             )
             controls()
-            CandyActionButton(onClick = onHide, modifier = Modifier.testTag(ReaderStudioTestTags.Hide),
-                contentColor = colors.accent) {
+            CandyActionButton(
+                onClick = onHide,
+                modifier = Modifier.testTag(ReaderStudioTestTags.Hide),
+                contentColor = colors.accent,
+            ) {
                 Text(resources.text(ReaderStudioLabel.HideControls))
             }
             Text(
@@ -117,8 +131,11 @@ internal fun ReaderSettingsSheet(
                 color = colors.muted,
             )
             if (onLibrary != null) {
-                CandyActionButton(onClick = onLibrary, modifier = Modifier.testTag(ReaderStudioTestTags.Library),
-                    contentColor = colors.accent) {
+                CandyActionButton(
+                    onClick = onLibrary,
+                    modifier = Modifier.testTag(ReaderStudioTestTags.Library),
+                    contentColor = colors.accent,
+                ) {
                     Text(resources.text(ReaderStudioLabel.OfflineLibrary))
                 }
             }

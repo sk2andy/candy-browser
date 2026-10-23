@@ -88,6 +88,8 @@ class ReaderStudioScreenInstrumentedTest {
         composeRule.onAllNodesWithText("Reader test article").assertCountEquals(1)
         composeRule.onNodeWithTag(ReaderStudioTestTags.Settings).performClick()
         composeRule.onNodeWithTag(ReaderStudioTestTags.PrivateNotice).assertExists()
+        composeRule.onNodeWithTag("reader_collection_bookmark").assertDoesNotExist()
+        composeRule.onNodeWithTag("reader_collection_queue").assertDoesNotExist()
         composeRule.onNodeWithTag(ReaderStudioTestTags.Save).assertDoesNotExist()
         composeRule.onNodeWithTag(ReaderStudioTestTags.Library).assertDoesNotExist()
     }

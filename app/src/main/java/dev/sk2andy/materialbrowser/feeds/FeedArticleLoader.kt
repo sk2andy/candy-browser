@@ -4,42 +4,61 @@ import android.content.Context
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import dev.sk2andy.materialbrowser.reader.ReaderDocument
-import dev.sk2andy.materialbrowser.reader.ReaderExtractionBlock
-import dev.sk2andy.materialbrowser.reader.ReaderExtractionContract
-import dev.sk2andy.materialbrowser.reader.ReaderExtractionPayload
-import dev.sk2andy.materialbrowser.reader.ReaderExtractionResult
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.withContext
 
 /** Fetches inert HTML, never creates a browser tab or executes publisher scripts. */
-class FeedArticleLoader(context: Context, private val repository: FeedRepository) {
+class FeedArticleLoader(
+    context: Context,
+    private val repository: FeedRepository,
+    private val fetchHtml: suspend (String) -> String = FeedNetwork::fetch,
+) {
     private val connectivity =
         context.applicationContext.getSystemService(ConnectivityManager::class.java)
 
     suspend fun read(article: FeedArticle): ReaderDocument {
+        check(!repository.isPrivate) { "Private sessions have no saved feed collection" }
         repository.requireAccess()
-        article.offlineDocument?.let {
-            return it
+        val stored =
+            article.offlineDocument
+                ?: if (
+                    article.offlineDocumentId != null &&
+                        article.offlineStatus == FeedOfflineStatus.Ready
+                )
+                    repository.loadOfflineDocument(article.id).getOrThrow()
+                else null
+        val legacyPreview =
+            stored != null && FeedArticleContentRules.isLegacyPreview(article, stored)
+        if (stored != null && !legacyPreview) return stored
+        // Opening an article and listening both request the publisher's full Reader document.
+        // A source's feed-text preference must not turn the listening queue into a teaser queue.
+        val document =
+            try {
+                val html = fetchHtml(article.url)
+                repository.requireAccess()
+                withContext(Dispatchers.Default) { extract(article, html) }
+                    ?: fullFeedDocument(article)
+                    ?: error("Full article unavailable")
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                repository.requireAccess()
+                fullFeedDocument(article) ?: throw error
+            }
+        repository.requireAccess()
+        if (legacyPreview) {
+            // Repair an already-saved legacy preview. A failed replacement keeps the old file;
+            // the successfully fetched full text can still be read in this session.
+            repository.updateOffline(article.id, FeedOfflineStatus.Ready, document)
         }
-        if (article.offlineDocumentId != null && article.offlineStatus == FeedOfflineStatus.Ready) {
-            return repository.loadOfflineDocument(article.id).getOrThrow()
-                ?: error("Offline article unavailable")
-        }
-        val source = repository.state.value.sources.firstOrNull { it.id in article.sourceIds }
-        if (source?.readingMode != FeedReadingMode.Reader) return FeedRules.document(article)
-        return try {
-            val html = FeedNetwork.fetch(article.url)
-            repository.requireAccess()
-            withContext(Dispatchers.Default) { extract(article, html) }
-                ?: FeedRules.document(article)
-        } catch (cancelled: CancellationException) {
-            throw cancelled
-        } catch (_: Exception) {
-            FeedRules.document(article)
-        }
+        repository.requireAccess()
+        return document
     }
+
+    private fun fullFeedDocument(article: FeedArticle): ReaderDocument? =
+        FeedRules.document(article).takeIf { FeedArticleContentRules.hasFeedBody(article) }
 
     suspend fun download(article: FeedArticle): Result<Unit> {
         if (repository.state.value.settings.wifiOnly && !onWifi()) {
@@ -75,57 +94,7 @@ class FeedArticleLoader(context: Context, private val repository: FeedRepository
     }
 
     companion object {
-        internal fun extract(article: FeedArticle, html: String): ReaderDocument? {
-            val inert =
-                html
-                    .take(FeedRules.MAX_FEED_BYTES)
-                    .replace(
-                        Regex(
-                            "<(script|style|noscript|nav|aside|footer)\\b[^>]*>.*?</\\1\\s*>",
-                            setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL),
-                        ),
-                        "",
-                    )
-            val body =
-                Regex(
-                        "<(article|main)\\b[^>]*>(.*?)</\\1\\s*>",
-                        setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL),
-                    )
-                    .find(inert)
-                    ?.groupValues
-                    ?.get(2) ?: return null
-            val blocks =
-                Regex(
-                        "<(h[1-6]|p|blockquote|li)\\b[^>]*>(.*?)</\\1\\s*>",
-                        setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL),
-                    )
-                    .findAll(body)
-                    .take(ReaderExtractionContract.MAX_BLOCKS)
-                    .map { match ->
-                        val tag = match.groupValues[1].lowercase()
-                        ReaderExtractionBlock(
-                            kind =
-                                when {
-                                    tag.startsWith("h") -> "heading"
-                                    tag == "li" -> "listitem"
-                                    tag == "blockquote" -> "quote"
-                                    else -> "paragraph"
-                                },
-                            text = FeedParser.plain(match.groupValues[2]),
-                            level = tag.removePrefix("h").toIntOrNull() ?: 0,
-                        )
-                    }
-                    .toList()
-            val result =
-                ReaderExtractionContract.sanitize(
-                    ReaderExtractionPayload(
-                        title = article.title,
-                        sourceUrl = article.url,
-                        siteName = java.net.URI(article.url).host,
-                        blocks = blocks,
-                    )
-                )
-            return (result as? ReaderExtractionResult.Success)?.document
-        }
+        internal fun extract(article: FeedArticle, html: String): ReaderDocument? =
+            FeedArticleExtraction.extract(article, html)
     }
 }

@@ -20,7 +20,7 @@ data class FeedCatalogSource(
     val siteUrl: String,
     val feedUrl: String,
     val language: String,
-    val kind: FeedCatalogKind,
+    val kind: FeedCatalogKind?,
 )
 
 /** The provider has no global language filter; these are the sources actually loaded. */

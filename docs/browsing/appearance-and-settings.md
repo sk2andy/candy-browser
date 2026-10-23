@@ -11,6 +11,10 @@ recorded in [Settings option map](settings-option-map.md).
 | Settings subpages | Only the current page shrinks; its parent settings page fills the background throughout the gesture. Cancellation restores the page, commit returns to its parent. | `SettingsBackRouter`, shared `SettingsRouter`, `NativeScreenBackHandler`, `SettingsBackRules` |
 | Nested settings | Theme details return to Theme & interface; browser details return to Browser behavior; Link routing returns to Web pages; action editors return to Gestures; Topping catalog returns to Toppings. An active search result returns directly to the preserved Settings search. | shared `SettingsNavigationRules`, `SettingsBackRules`, `SettingsScreen` |
 | Snoozed tabs | Default shrink, followed by the existing dismissal fade; rescheduling dialogs retain Back priority | `SnoozedTabsScreen`, `NativeScreenBackHandler` |
+| History and Favorites activity roots | Idle root Back delegates to Android's cross-activity preview. A pending write alone temporarily blocks activity dismissal. History publishes committed mutation results before dismissal; selection clearing stays local. | `HistoryActivity`, `FavoritesActivity`, `HistoryScreen`, `FavoritesScreen` |
+| Favorites folders | The current folder follows gesture progress; cancel keeps it, commit returns one folder level without finishing the activity. | `FavoritesScreen`, `NativeScreenBackHandler` |
+| Legacy RSS source detail | Retains the source list beneath the detail, animates entry/exit, and reveals the list during predictive Back. Root Back remains Android-owned. | `RssFeedsScreen`, `NativeScreenBackHandler` |
+| Feed catalog and release notes | Catalog retains its parent collection under the gesture; release notes reveal the existing browser. Both cancel without navigation and commit once. | `FeedsScreen`, `FeedCatalogScreen`, `ReleaseNotesScreen` |
 
 The shared motion keeps the existing 0.9 minimum scale, edge-directed translation and rounded
 corners. A canceled gesture restores the surface without navigation. Button/three-button Back
@@ -18,6 +22,10 @@ continues to navigate without waiting for a gesture animation.
 
 `SettingsBackRouterInstrumentedTest` checks the visible parent preview, opaque foreground,
 gesture cancellation and single-step commits through nested settings destinations.
+`CollectionBackNavigationInstrumentedTest` covers activity-root delegation, selection/folder
+priority, legacy RSS detail cancellation/commit, and release-note gesture progress.
+`FeedCatalogNavigationInstrumentedTest` covers catalog entry motion and returning to the retained
+collection after a committed or cancelled gesture.
 
 ## Ownership
 
@@ -466,8 +474,10 @@ the page. The External link preview page uses only its approved v8 decorative he
 older graphic is removed without removing controls.
 
 The original eleven PNGs in `shared/src/commonMain/composeResources/drawable` remain byte-identical
-downloads. The RSS settings illustration is a new generated asset, with its prompt recorded in
-[`../design/rss-settings-artwork.md`](../design/rss-settings-artwork.md). No original asset changed. The
+downloads. RSS uses the matching flat v2 illustration, with its prompt recorded in
+[`../design-concepts/rss/polish-artwork.md`](../design-concepts/rss/polish-artwork.md).
+Its page uses the same scrolling `SettingsPage` container and background as the other settings;
+all interval choices remain reachable at large text sizes. No original asset changed. The
 Appearance and Tabs windows reference the first sheet; the rejected rounded Player on that sheet
 is outside both windows. Player references only the separately approved waveform image.
 
@@ -484,7 +494,7 @@ is outside both windows. Player references only the separately approved waveform
 | `settings_approved_tab_lifecycle.png` | 1536 × 1024 | Tab lifecycle `(340, 115, 1210, 910)` | `0178005781cbd91cec822e02480b276de186d1dc172d2e1d39bff7f57d49ebf5` |
 | `settings_approved_personal_link_rules.png` | 1536 × 1024 | Personal link rules `(140, 225, 1400, 795)` | `63e9bd5762063cce660ad691b6afdb153f5b3e9378e5601ceb71792e0b08fad0` |
 | `settings_external_app_links.png` | 1536 × 1024 | Open links in apps `(160, 205, 1385, 815)` | `288d106373b03999124b7aaeaa0342197d108aea3b8b4aace783c660e8fba6fe` |
-| `settings_approved_rss.png` | 1536 × 1024 | RSS `(0, 0, 1536, 1024)` | `d8be0aebb3d99ef19f31b4c1bccdb6a9753b6e741f3639d97e28629106be3d79` |
+| `settings_approved_rss_v2.png` | 1536 × 1024 | RSS `(100, 250, 1435, 760)` | `cf421de93977b7a3f02ed829675a7d64fe297fdbd38e75aba1508bdd5c927448` |
 
 The original Library IDs are `libfile_46c900dcd0448191a03ae81118385873` and
 `libfile_48290d7ff1088191aacd6d776d5db0db`, respectively. These are user-approved imagegen

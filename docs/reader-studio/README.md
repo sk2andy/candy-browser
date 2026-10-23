@@ -21,6 +21,7 @@
 | Nano opt-in, download, fallback, cancellation and original offsets | `ReaderSpeechPreparationInstrumentedTest`, `ReaderSpeechPreparationRulesTest` |
 | Nano availability, adult confirmation and settings | `ReaderSpeechPreparationOptionsInstrumentedTest` |
 | Persistence | `ReaderLibraryStoreInstrumentedTest` |
+| Browser Reader bookmark, listening queue and website deletion | `ReaderCollectionActionsInstrumentedTest`, `FeedRepositoryInstrumentedTest` |
 | Compose UI and inbox navigation | `ReaderStudioScreenInstrumentedTest`, `ReaderStudioHomeScreenInstrumentedTest`, `BrowserRootBackInstrumentedTest` |
 | RSS read state and article loading | `RssReadStoreInstrumentedTest`, `RssInboxRulesTest`, `RssReaderLoadRulesTest` |
 

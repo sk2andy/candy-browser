@@ -96,6 +96,7 @@ internal fun FeedsHost(
             launchState.acceptQueueRequest(entry.invocationToken, entry.queueRequestId)
     }
     var loadingArticle by remember { mutableStateOf(false) }
+    var failedArticle by remember { mutableStateOf<FeedArticle?>(null) }
     var libraryRequest by remember { mutableStateOf(0) }
     val errorText = stringResource(R.string.feeds_error)
     fun showFailure() {
@@ -124,6 +125,7 @@ internal fun FeedsHost(
         repository,
         library.snapshots,
         state.articles.map { Triple(it.id, it.offlineStatus, it.websiteSnapshotId) },
+        state.deletedWebsiteSnapshotIds,
     ) {
         // Removing a website download also removes its earlier Reader copy.
         val removed =
@@ -136,7 +138,8 @@ internal fun FeedsHost(
         library.snapshots
             .filter {
                 it.sourceProfileId == repository.profileId &&
-                    removed[FeedRules.identity(it.document.sourceUrl)] == it.id
+                    (removed[FeedRules.identity(it.document.sourceUrl)] == it.id ||
+                        it.id in state.deletedWebsiteSnapshotIds)
             }
             .forEach { snapshot -> reader.deleteSnapshot(snapshot.id, false) { library = it } }
     }
@@ -232,7 +235,7 @@ internal fun FeedsHost(
                 } catch (cancelled: CancellationException) {
                     throw cancelled
                 } catch (_: Exception) {
-                    showFailure()
+                    failedArticle = article
                 } finally {
                     loadingArticle = false
                 }
@@ -247,6 +250,7 @@ internal fun FeedsHost(
                         library.snapshots.filter { snapshot ->
                             snapshot.sourceProfileId == repository.profileId &&
                                 !snapshot.isPrivate &&
+                                snapshot.id !in state.deletedWebsiteSnapshotIds &&
                                 state.articles.none {
                                     it.origin == FeedArticleOrigin.Website &&
                                         it.id == FeedRules.identity(snapshot.document.sourceUrl) &&
@@ -385,6 +389,28 @@ internal fun FeedsHost(
         if (loadingArticle) LinearProgressIndicator(Modifier.fillMaxWidth())
         if (launchState.queueVisible)
             FeedQueueSheet(repository, onDismiss = { launchState.queueVisible = false })
+    }
+    failedArticle?.let { article ->
+        AlertDialog(
+            onDismissRequest = { failedArticle = null },
+            title = { Text(stringResource(R.string.feeds_full_article_unavailable)) },
+            text = { Text(stringResource(R.string.feeds_full_article_unavailable_summary)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        failedArticle = null
+                        onOpenOriginal(article.url)
+                    }
+                ) {
+                    Text(stringResource(R.string.feeds_original))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { failedArticle = null }) {
+                    Text(stringResource(android.R.string.cancel))
+                }
+            },
+        )
     }
     importPreview?.let { preview ->
         FeedImportDialog(

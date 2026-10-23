@@ -84,6 +84,11 @@ internal fun ReaderStudioScreen(
             onOpenLink = onOpenLink,
             initialSnapshot = initialSnapshot,
             onOpenCollection = onOpenLibrary,
+            documentActions = { document ->
+                if (libraryDataSource == null && !isPrivate && sourceProfileId != null) {
+                    ReaderCollectionActions(document, sourceProfileId)
+                }
+            },
             extraActions = extraActions,
             backHandler = { enabled, onBack ->
                 NativeScreenBackHandler(state = backState, enabled = enabled, onBack = onBack)

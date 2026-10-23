@@ -7,6 +7,7 @@ import dev.sk2andy.materialbrowser.browser.ProfileLockTrigger
 import dev.sk2andy.materialbrowser.browser.ProfileProtection
 import dev.sk2andy.materialbrowser.browser.ProfileProtectionSession
 import dev.sk2andy.materialbrowser.data.BrowserSessionStore
+import dev.sk2andy.materialbrowser.reader.ReaderLibraryStore
 import dev.sk2andy.materialbrowser.reader.ReaderSnapshot
 import java.util.UUID
 import kotlinx.coroutines.coroutineScope
@@ -52,6 +53,127 @@ class FeedRepositoryInstrumentedTest {
         ProfileProtectionSession.forget(firstId)
         ProfileProtectionSession.forget(secondId)
         profiles.saveProfiles(savedProfiles.first, savedProfiles.second)
+    }
+
+    @Test
+    fun browserReaderActionsKeepFullDocumentAndShareTheListeningQueue() = runBlocking {
+        val repository = FeedRepository.get(context, firstId)
+        val document = FeedRules.document(preview().articles.single())
+        repository.saveWebsiteArticle(document, starred = true, queued = true).getOrThrow()
+        val article = repository.state.value.articles.single()
+        assertEquals(FeedArticleOrigin.Website, article.origin)
+        assertTrue(article.isStarred)
+        assertEquals(listOf(article.id), repository.state.value.queue)
+        assertEquals(document, repository.loadOfflineDocument(article.id).getOrThrow())
+        repository.saveWebsiteArticle(document, queued = false).getOrThrow()
+        assertTrue(repository.state.value.articles.single().isStarred)
+        assertTrue(repository.state.value.queue.isEmpty())
+        val privateRepository = FeedRepository.get(context, firstId, isPrivate = true)
+        assertTrue(privateRepository.saveWebsiteArticle(document, starred = true).isFailure)
+    }
+
+    @Test
+    fun deletingWebsiteRemovesDocumentAndQueueWithoutLegacyImportResurrection() = runBlocking {
+        val repository = FeedRepository.get(context, firstId)
+        val document = FeedRules.document(preview().articles.single())
+        val snapshot =
+            ReaderSnapshot("deleted-reader-copy", document, 0f, 1L, sourceProfileId = firstId)
+        repository.importWebsiteSnapshot(snapshot).getOrThrow()
+        val id = repository.state.value.articles.single().id
+        repository.setQueued(id, true).getOrThrow()
+        repository.removeWebsiteArticle(id).getOrThrow()
+        assertTrue(repository.state.value.articles.isEmpty())
+        assertTrue(repository.state.value.queue.isEmpty())
+        assertTrue(repository.loadOfflineDocument(id).getOrNull() == null)
+        val restored = FeedStore(context, firstId).read()
+        assertEquals(setOf("deleted-reader-copy"), restored.deletedWebsiteSnapshotIds)
+        repository.importWebsiteSnapshot(snapshot).getOrThrow()
+        assertTrue(repository.state.value.articles.isEmpty())
+        repository.importWebsiteSnapshot(snapshot.copy(id = "explicit-new-save")).getOrThrow()
+        assertEquals(document, repository.loadOfflineDocument(id).getOrThrow())
+    }
+
+    @Test
+    fun deletingBeforeLegacyImportStillRejectsThatEarlierSnapshot() = runBlocking {
+        val repository = FeedRepository.get(context, firstId)
+        // Legacy Reader persistence sanitizes extracted documents and requires 80 readable chars.
+        val document =
+            FeedRules.document(
+                preview()
+                    .articles
+                    .single()
+                    .copy(
+                        content =
+                            "A complete saved article from the browser, with enough readable text to pass " +
+                                "the Reader extraction contract and remain available without a network connection."
+                    )
+            )
+        val readerStore = ReaderLibraryStore(context)
+        val snapshot =
+            requireNotNull(
+                readerStore.saveSnapshot(
+                    document,
+                    0f,
+                    isPrivate = false,
+                    sourceProfileId = firstId,
+                    allowEviction = false,
+                )
+            )
+        try {
+            repository.saveWebsiteArticle(document, starred = true).getOrThrow()
+            repository.removeWebsiteArticle(FeedRules.identity(document.sourceUrl)).getOrThrow()
+            repository.importWebsiteSnapshot(snapshot).getOrThrow()
+            assertTrue(repository.state.value.articles.isEmpty())
+            assertTrue(snapshot.id in repository.state.value.deletedWebsiteSnapshotIds)
+        } finally {
+            readerStore.deleteSnapshot(snapshot.id, isPrivate = false)
+        }
+    }
+
+    @Test
+    fun browserReaderSaveJoinsFeedIdentityAndReplacesItsOlderDocument() = runBlocking {
+        val repository = FeedRepository.get(context, firstId)
+        repository.subscribe(preview()).getOrThrow()
+        val article = repository.state.value.articles.single()
+        val excerpt = FeedRules.document(article)
+        repository.updateOffline(article.id, FeedOfflineStatus.Ready, excerpt).getOrThrow()
+        val full = excerpt.copy(title = "Full browser article")
+        repository.saveWebsiteArticle(full, starred = true).getOrThrow()
+        assertEquals(FeedArticleOrigin.Website, repository.state.value.articles.single().origin)
+        assertEquals(article.sourceIds, repository.state.value.articles.single().sourceIds)
+        assertEquals(full, repository.loadOfflineDocument(article.id).getOrThrow())
+        repository.removeWebsiteArticle(article.id).getOrThrow()
+        repository.updateOffline(article.id, FeedOfflineStatus.Ready, excerpt).getOrThrow()
+        repository
+            .importWebsiteSnapshot(
+                ReaderSnapshot("new-browser-snapshot", full, 0f, 1L, sourceProfileId = firstId)
+            )
+            .getOrThrow()
+        assertEquals(full, repository.loadOfflineDocument(article.id).getOrThrow())
+    }
+
+    @Test
+    fun deletingWebsiteAlsoInAFeedPreservesItsInboxEntry() = runBlocking {
+        val repository = FeedRepository.get(context, firstId)
+        repository.subscribe(preview()).getOrThrow()
+        val article = repository.state.value.articles.single()
+        val snapshot =
+            ReaderSnapshot(
+                "mixed-copy",
+                FeedRules.document(article),
+                0f,
+                1L,
+                sourceProfileId = firstId,
+            )
+        repository.importWebsiteSnapshot(snapshot).getOrThrow()
+        repository.setStarred(article.id, true).getOrThrow()
+        repository.removeWebsiteArticle(article.id).getOrThrow()
+        val remaining = repository.state.value.articles.single()
+        assertEquals(FeedArticleOrigin.Feed, remaining.origin)
+        assertEquals(article.sourceIds, remaining.sourceIds)
+        assertFalse(remaining.isStarred)
+        assertEquals(FeedOfflineStatus.None, remaining.offlineStatus)
+        assertTrue(remaining.offlineDocumentId == null)
     }
 
     @Test

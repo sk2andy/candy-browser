@@ -1,7 +1,6 @@
 package dev.sk2andy.materialbrowser.ui
 
 import android.graphics.Bitmap
-import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
@@ -160,7 +159,13 @@ internal fun FavoritesScreen(
             query = ""
         } else onBack()
     }
-    BackHandler(onBack = navigateBack)
+    val backState = rememberNativeScreenBackState()
+    // Root dismissal belongs to the Activity; only folder navigation is handled in Compose.
+    NativeScreenBackHandler(
+        state = backState,
+        enabled = currentFolder != null,
+        onBack = navigateBack,
+    )
 
     if (creatingFolder || renameTarget != null) {
         FavoriteNameDialog(
@@ -197,6 +202,7 @@ internal fun FavoritesScreen(
     var destinationId by remember { mutableStateOf<String?>(null) }
     val currentReorder by rememberUpdatedState(onReorderEntry)
     Scaffold(
+        modifier = Modifier.predictiveBackSurface(backState.progress.value, backState.swipeEdgeSign),
         topBar = {
             TopAppBar(
                 title = { Text(currentFolder?.title ?: stringResource(R.string.favorites_title)) },

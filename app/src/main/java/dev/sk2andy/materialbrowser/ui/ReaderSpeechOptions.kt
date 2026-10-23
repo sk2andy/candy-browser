@@ -34,13 +34,17 @@ import dev.sk2andy.materialbrowser.reader.ReaderSpeechPreparationRepository
 import dev.sk2andy.materialbrowser.reader.ReaderSpeechPreparationState
 
 @Composable
-internal fun ReaderSpeechOptions(speech: ReaderSpeechController) {
+internal fun ReaderSpeechOptions(
+    speech: ReaderSpeechController,
+    stopOnBackground: Boolean = true,
+    onDismissChoice: () -> Unit = speech::dismissChoice,
+) {
     val lifecycleOwner = LocalLifecycleOwner.current
-    DisposableEffect(lifecycleOwner, speech) {
+    DisposableEffect(lifecycleOwner, speech, stopOnBackground) {
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
                 Lifecycle.Event.ON_RESUME -> speech.refreshPreparationAvailability()
-                Lifecycle.Event.ON_STOP -> speech.stop()
+                Lifecycle.Event.ON_STOP -> if (stopOnBackground) speech.stop()
                 else -> Unit
             }
         }
@@ -56,7 +60,7 @@ internal fun ReaderSpeechOptions(speech: ReaderSpeechController) {
             playbackFailed = speech.playbackFailed,
             onOfflineVoice = speech::chooseOfflineVoice,
             onSystemVoice = speech::chooseSystemVoice,
-            onDismiss = speech::dismissChoice,
+            onDismiss = onDismissChoice,
             preparationState = speech.preparationState,
             onPreparationEnabledChanged = speech::setPreparationEnabled,
             onPreparationDownload = speech::downloadPreparationModel,
@@ -120,9 +124,12 @@ internal fun ReaderSpeechChoiceDialog(
                 enabled = state.loaded && !state.busy,
                 modifier = Modifier.testTag(ReaderSpeechOptionsTestTags.ChooseOffline),
             ) {
-                Text(stringResource(
-                    if (state.ready) R.string.reader_voice_use_offline else R.string.reader_voice_download,
-                ))
+                Text(
+                    stringResource(
+                        if (state.ready) R.string.reader_voice_use_offline
+                        else R.string.reader_voice_download
+                    )
+                )
             }
         },
         dismissButton = {
@@ -140,19 +147,18 @@ internal fun ReaderSpeechChoiceDialog(
 @Composable
 internal fun ReaderSpeechSettingsPage(onBack: () -> Unit) {
     val context = LocalContext.current
-    val repository = remember(context.applicationContext) {
-        ReaderSpeechModelRepository.get(context)
-    }
-    val preparation = remember(context.applicationContext) {
-        ReaderSpeechPreparationRepository.get(context)
-    }
+    val repository =
+        remember(context.applicationContext) { ReaderSpeechModelRepository.get(context) }
+    val preparation =
+        remember(context.applicationContext) { ReaderSpeechPreparationRepository.get(context) }
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner, preparation) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) preparation.refresh()
         }
         lifecycleOwner.lifecycle.addObserver(observer)
-        if (lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) preparation.refresh()
+        if (lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED))
+            preparation.refresh()
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
     SettingsPage(title = stringResource(R.string.reader_voice_settings_title), onBack = onBack) {
@@ -258,14 +264,18 @@ private fun ReaderSpeechModelStatus(state: ReaderSpeechModelState) {
                 )
             }
         }
-        state.error -> Text(
-            stringResource(R.string.reader_voice_model_error),
-            color = MaterialTheme.colorScheme.error,
-            modifier = Modifier.testTag(ReaderSpeechOptionsTestTags.Error),
-        )
-        else -> Text(stringResource(
-            if (state.ready) R.string.reader_voice_ready else R.string.reader_voice_missing,
-        ))
+        state.error ->
+            Text(
+                stringResource(R.string.reader_voice_model_error),
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.testTag(ReaderSpeechOptionsTestTags.Error),
+            )
+        else ->
+            Text(
+                stringResource(
+                    if (state.ready) R.string.reader_voice_ready else R.string.reader_voice_missing
+                )
+            )
     }
 }
 

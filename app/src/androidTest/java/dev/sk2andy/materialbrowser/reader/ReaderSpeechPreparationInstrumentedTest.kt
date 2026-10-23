@@ -324,6 +324,27 @@ class ReaderSpeechPreparationInstrumentedTest {
     }
 
     @Test
+    fun preparingResumedQueueArticleKeepsItsSavedOriginalOffset() = runBlocking {
+        val backend = BackendState()
+        backend.generationGate = CompletableDeferred()
+        val fixture = controller(enabledRepository(backend))
+        val text = "Dr. Müller liest."
+        withContext(Dispatchers.Main) {
+            fixture.controller.playFrom(text, 0.5f)
+            fixture.voice.initialize()
+        }
+        withTimeout(5_000) { backend.generationStarted.await() }
+        withContext(Dispatchers.Main) {
+            assertTrue(fixture.controller.preparingText)
+            assertEquals(text.length / 2, fixture.controller.state.characterOffset)
+            fixture.controller.pause()
+            backend.generationGate?.complete("0:1")
+        }
+        withTimeout(5_000) { backend.generationFinished.await() }
+        withContext(Dispatchers.Main) { assertTrue(fixture.voice.spoken.isEmpty()) }
+    }
+
+    @Test
     fun closeWhilePreparationPendingCannotStartLateSpeech() = runBlocking {
         val backend = BackendState()
         backend.generationGate = CompletableDeferred()

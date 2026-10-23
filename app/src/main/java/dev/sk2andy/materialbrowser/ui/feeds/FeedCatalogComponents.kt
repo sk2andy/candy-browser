@@ -3,7 +3,6 @@ package dev.sk2andy.materialbrowser.ui.feeds
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -32,7 +31,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -62,39 +60,21 @@ internal val feedCatalogTopics =
 
 @Composable
 internal fun FeedCatalogHero(modifier: Modifier = Modifier) {
-    Surface(
-        modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.extraLarge,
-        color = MaterialTheme.colorScheme.primaryContainer,
+    Column(
+        modifier.fillMaxWidth().padding(vertical = 6.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        BoxWithConstraints {
-            val showArtwork = maxWidth >= 340.dp && LocalDensity.current.fontScale <= 1.3f
-            Row(
-                Modifier.padding(24.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text(
-                        stringResource(R.string.feed_catalog_eyebrow),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer,
-                    )
-                    Text(
-                        stringResource(R.string.feed_catalog_headline),
-                        style = MaterialTheme.typography.headlineLarge,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer,
-                    )
-                    Text(
-                        stringResource(R.string.feed_catalog_intro),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer,
-                    )
-                }
-                if (showArtwork) FeedCatalogGlobe(Modifier.size(80.dp).clearAndSetSemantics {})
-            }
-        }
+        Text(
+            stringResource(R.string.feed_catalog_eyebrow),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.primary,
+        )
+        Text(
+            stringResource(R.string.feed_catalog_topics),
+            Modifier.semantics { heading() },
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold,
+        )
     }
 }
 
@@ -127,51 +107,6 @@ internal fun FeedCatalogGlobe(modifier: Modifier = Modifier) {
             Offset(size.width * .85f, size.height * .7f),
             stroke.width,
         )
-    }
-}
-
-@Composable
-internal fun FeedCatalogTopicCard(
-    topic: FeedCatalogTopic,
-    index: Int,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val colors = MaterialTheme.colorScheme
-    val background =
-        when (index % 3) {
-            0 -> colors.primaryContainer
-            1 -> colors.surfaceContainerHigh
-            else -> colors.tertiaryContainer
-        }
-    val foreground =
-        when (index % 3) {
-            0 -> colors.onPrimaryContainer
-            1 -> colors.onSurface
-            else -> colors.onTertiaryContainer
-        }
-    Surface(
-        onClick = onClick,
-        modifier = modifier.testTag("feed_catalog_topic_${topic.slug}"),
-        shape = MaterialTheme.shapes.large,
-        color = background,
-        contentColor = foreground,
-    ) {
-        Column(
-            Modifier.fillMaxWidth().padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Text(
-                topic.symbol,
-                Modifier.align(Alignment.End).clearAndSetSemantics {},
-                style = MaterialTheme.typography.headlineMedium,
-            )
-            Text(
-                stringResource(topic.label),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-            )
-        }
     }
 }
 
@@ -310,16 +245,21 @@ internal fun FeedCatalogSourceCard(
                 maxLines = 3,
                 overflow = TextOverflow.Ellipsis,
             )
-            Text(
-                language +
-                    " · " +
-                    stringResource(
-                        if (source.kind == FeedCatalogKind.News) R.string.feed_catalog_news
-                        else R.string.feed_catalog_blogs
-                    ),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            if (source.kind != null || source.language.isNotBlank())
+                Text(
+                    listOfNotNull(
+                            language.takeIf { source.language.isNotBlank() },
+                            source.kind?.let {
+                                stringResource(
+                                    if (it == FeedCatalogKind.News) R.string.feed_catalog_news
+                                    else R.string.feed_catalog_blogs
+                                )
+                            },
+                        )
+                        .joinToString(" · "),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             TextButton(
                 onClick = onPreview,
                 modifier =

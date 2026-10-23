@@ -142,3 +142,12 @@ starting another save. A save completed while the library is open still updates 
 | Text | At most 300 UTF-16 characters per inference, NFKD normalization, language-agnostic `<na>` tags for local multilingual synthesis |
 | Limits | Eight denoising steps, two CPU inference threads, bounded 45-second prediction per chunk; cancellation checked between stages and steps |
 | Verification | `OfflineSpeechModelFilesTest`, `OfflineSpeechTextRulesTest`, `OfflineSpeechModelFilesInstrumentedTest`; optional `OfflineSpeechEngineInstrumentedTest` requires preloaded assets and `offlineSpeechModelDirectory` instrumentation argument |
+
+## Shared listening voice
+
+| Concern | Contract |
+| --- | --- |
+| Voice selection | Reader, selected text and the feed listening queue use `ReaderSpeechController` and the same persisted voice choice. A missing selected offline model opens setup; it never silently substitutes Android TTS |
+| Background queue | `FeedMediaPlaybackService` owns audio focus, lifecycle and completion for both Android TTS and local synthesis. Queue speech options do not stop speech when the Activity backgrounds; ordinary Reader speech retains its existing foreground-only behavior |
+| Transport | Android-local `ReaderSpeechTransport` adds saved-position resume and rate for both engines. Nano-expanded speech offsets map in both directions to the unchanged article |
+| Gemini Nano | Optional pronunciation preparation for abbreviations and numbers, not a voice model. Settings explicitly retain the chosen system or offline voice |

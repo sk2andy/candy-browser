@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
     <string name="reader_nano_enabled_title">Prepare text with Gemini Nano</string>
-    <string name="reader_nano_enabled_summary">Experimental: prepares common German and English abbreviations and numbers locally for your selected voice. May delay playback.</string>
+    <string name="reader_nano_enabled_summary">Experimental: improves how common German and English abbreviations and numbers are read. Nano does not generate a voice: your selected system or offline voice stays the same. May delay playback.</string>
     <string name="reader_nano_system_managed">Android manages this model and shares it with other apps. Turning this off only disables its use in Candy.</string>
-    <string name="reader_nano_download_summary">Your phone supports Gemini Nano. Download the model through Android to enable text preparation.</string>
+    <string name="reader_nano_download_summary">Your phone supports Gemini Nano. Download it to prepare pronunciation locally. This does not download or change the speaking voice.</string>
     <string name="reader_nano_download">Download and enable Gemini Nano</string>
     <string name="reader_nano_retry_download">Retry Gemini Nano download</string>
     <string name="reader_nano_cancel_download">Cancel download</string>

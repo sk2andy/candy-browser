@@ -4,35 +4,36 @@
 
 | Surface | Contract |
 | --- | --- |
-| Entry | Add sources opens the catalog; Feed address is also directly available in Sources and inside the catalog |
-| Search | Native filled Candy M3 SearchBar. Opening, typing and changing only the local language selection send no request. Submitting text or choosing a topic is explicit consent to the provider lookup |
-| Scope | Blogs and news sources, all languages by default, independent of the app language. Podcasts and article-search hits are excluded |
-| Languages | Native, English and current UI-language names plus language codes are searchable. Multiple selections filter the loaded source selection, not a claimed global provider total |
-| Types and topics | Tabs select All / Blogs / News; topics use a single horizontally scrollable chip row. Changing type after a submitted query explicitly reloads that query |
-| Preview | A source opens the original publisher feed preview. Subscription remains an explicit action, supports a folder, and uses the existing repository rather than catalog metadata as feed content |
-| Feedback | Loading, empty selection, errors, retry, existing subscription and save failure have visible states. No demo sources appear in production |
-| Restoration | Save only submitted query/topic, selected type/languages and typed draft. Activity recreation reloads page zero only when a query was previously submitted. Normal manual address drafts are restored without submitting them. Source payloads never enter the saved-state Bundle |
-| Pagination | Text search has no reliable offset contract and is a finite selection. Topic requests use verified group-specific offsets. Duplicate-only intermediate pages retain the next valid cursor; UI retention is bounded to 500 sources |
+| Source | Bundled Plenary `awesome-rss-feeds`, pinned to `9ab2482cae9031a5a39635c887fcfc8ece7e130a`; 837 supplied addresses, 832 after canonical URL deduplication, all supplied countries and topics. No RSS Amplifier calls and no additional sources |
+| Search | Native filled M3 SearchBar. Local title, publisher/feed host, category and description matching; all query tokens must match. Exact publisher/title matches rank first. Search never connects to a server |
+| Coverage | A curated starting set, not the entire web. Golem is absent in this pinned list; an empty result offers manual feed-address entry. New catalogs can be added later through the focused catalog adapter |
+| Metadata | Plenary does not reliably specify language or blog/news type. Do not infer language from country or show filters that cannot work. Preserve international text and source descriptions |
+| Topics | Six topic groups, horizontal single-row filters. Image masks use MaterialShapes Arch, Gem, Slanted, Cookie4Sided, Fan and Triangle; pressed images morph toward Square with theme spatial springs. Stable hit areas and unmasked text. Compact square photos keep all six topics visible on a regular phone; large text can scroll for accessibility |
+| Images | One bundled six-scene atlas, drawn by source region. No remote image requests. Labels/colors follow current Candy theme; one/two/three-column layouts adapt to width and text scale |
+| Preview | Original publisher feed preview; network only on preview/open/refresh. Subscription remains explicit and supports folders; manual addresses always available |
+| Restoration | Submitted query/topic and typed draft survive recreation; restored explicit searches read the local catalog again. Source payloads stay out of the saved-state Bundle |
+| Pagination | Deterministic local pages of 40, canonical URL deduplication. Never fabricate a provider result or a global search total |
+| Back | Catalog retains the collection underneath its spring transition. Predictive back reveals that parent; cancellation keeps catalog state. Sheet back remains owned by Material |
+| Access | Normal profile ownership and transfer/lock checks run before/after lookup. Private preview remains memory-only. No query history is saved |
 
-## Provider and trust boundaries
+## Data maintenance
 
-| Boundary | Implementation |
+| Item | Location / rule |
 | --- | --- |
-| Provider | [RSS Amplifier API](https://rssamplifier.com/llms.txt), [terms](https://rssamplifier.com/terms). Public source discovery, no API key; the UI attributes the provider and explains that submitted queries are shared with it |
-| Requests | Fixed HTTPS host `rssamplifier.com`, port 443; `/api/search`, group-filtered `/api/topics/{slug}` and `/api/feeds/{slug}`. No browser cookies, authentication or redirects |
-| Limits | Query 200 characters, validated topic/slug, 2 MiB response limit, finite connect/read/call timeouts, at most four concurrent metadata requests; topic offset and retained sources bounded |
-| Source metadata | URLs use the existing HTTP(S) policy, reject credentials, and canonicalize international hosts. Provider HTML becomes inert text. Feed identity deduplicates canonical original feed URLs |
-| Cancellation | A new query cancels the old request; coroutine cancellation cancels its HTTP call. Stale responses cannot replace current results. Closing the catalog cancels its UI work |
-| Private and locks | Private browsing cannot use the remote catalog. Access is checked before and after each provider request; locked, deleted or transferring profiles cannot publish results. Manual preview retains the existing private memory-only contract |
-| Storage | No catalog search history, cached provider index or automatic background lookup. Catalog failures stay local to the catalog and do not replace the inbox error state |
+| Upstream | [Plenary awesome-rss-feeds](https://github.com/plenaryapp/awesome-rss-feeds/tree/9ab2482cae9031a5a39635c887fcfc8ece7e130a), CC0-1.0 |
+| Generator | `scripts/generate_feed_catalog.py`; pinned archive, bounded file/source counts, deterministic sorting, URL validation, exact documented repair of upstream malformed XML |
+| Runtime asset | `app/src/main/assets/feed_catalog/plenary.json`; shipped license beside asset |
+| Refresh | Deliberately update pinned revision, inspect category/schema changes, run generator and catalog regressions; never silently update at app startup |
+| User additions | Manual subscriptions use existing repository; no changes to bundled list or downloaded search index |
 
 ## Ownership
 
 | Area | Files |
 | --- | --- |
-| DTOs and validation | `feeds/FeedCatalogModels.kt`, `FeedCatalogRules.kt` |
-| Bounded source-only API adapter | `feeds/FeedCatalogClient.kt`, `FeedCatalogNetwork.kt` |
-| Profile access | `feeds/FeedRepository.kt#searchCatalog` |
-| Catalog and language UI | `ui/feeds/FeedCatalogScreen.kt`, `FeedCatalogComponents.kt`, `FeedCatalogLanguages.kt` |
-| Original feed preview and save | `ui/feeds/FeedSubscribeSheet.kt` |
-| Draft only | `docs/design-concepts/rss/katalog.js`, `katalog.css`, `preview_server.py`; the localhost preview relay is never used by Android |
+| Local search | `FeedCuratedCatalog`, `FeedCatalogRules`, `FeedCatalogModels` |
+| Profile access | `FeedRepository#searchCatalog` |
+| UI | `FeedCatalogScreen`, `FeedCatalogComponents`, `FeedCatalogTopicCard` |
+| Original preview | `FeedSubscribeSheet` |
+| Older adapter | `FeedCatalogClient` and `FeedCatalogNetwork` retained but no production caller; API tests document its old contract |
+| Tests | `FeedCuratedCatalogTest`, `FeedCatalogScreenInstrumentedTest`, `FeedCatalogNavigationInstrumentedTest` |
+| Approved style exploration | `docs/design-concepts/rss/themen-entwuerfe.html` (Formenspiel selected) |

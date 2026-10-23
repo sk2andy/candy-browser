@@ -128,8 +128,8 @@ object FeedParser {
                             }
                     if (articleUrl.isBlank()) return@mapNotNull null
                     val summary = plain(node.value(if (atom) "summary" else "description"))
-                    val content =
-                        plain(node.value(if (atom) "content" else "encoded")).ifBlank { summary }
+                    val body = plain(node.value(if (atom) "content" else "encoded"))
+                    val content = body.ifBlank { summary }
                     FeedArticle(
                         id = FeedRules.identity(articleUrl),
                         sourceIds = setOf(sourceId),
@@ -144,6 +144,7 @@ object FeedParser {
                                 .take(500),
                         summary = summary.take(4_000),
                         content = content.take(FeedRules.MAX_TEXT_CHARS),
+                        contentIsSummary = body.isBlank(),
                         publishedAtMillis =
                             date(
                                 node.value(if (atom) "published" else "pubdate").ifBlank {
