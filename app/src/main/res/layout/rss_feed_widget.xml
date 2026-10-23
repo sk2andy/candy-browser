@@ -53,105 +53,18 @@
         android:layout_marginTop="10dp"
         android:background="@color/candy_widget_divider" />
 
-    <LinearLayout
-        android:id="@+id/rss_widget_articles"
+    <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1"
-        android:orientation="vertical">
+        android:layout_weight="1">
 
-        <LinearLayout
-            android:id="@+id/rss_widget_row_one"
+        <ListView
+            android:id="@+id/rss_widget_articles"
             android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1"
-            android:gravity="center_vertical"
-            android:orientation="vertical"
-            android:paddingVertical="5dp">
-            <TextView
-                android:id="@+id/rss_widget_feed_one"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:ellipsize="end"
-                android:maxLines="1"
-                android:textColor="@color/candy_widget_on_surface_variant"
-                android:textSize="11sp" />
-            <TextView
-                android:id="@+id/rss_widget_article_one"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:ellipsize="end"
-                android:maxLines="2"
-                android:textColor="@color/candy_widget_on_surface"
-                android:textSize="14sp"
-                android:fontFamily="sans-serif-medium" />
-        </LinearLayout>
-
-        <TextView
-            android:id="@+id/rss_widget_divider_one"
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:background="@color/candy_widget_divider" />
-
-        <LinearLayout
-            android:id="@+id/rss_widget_row_two"
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1"
-            android:gravity="center_vertical"
-            android:orientation="vertical"
-            android:paddingVertical="5dp">
-            <TextView
-                android:id="@+id/rss_widget_feed_two"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:ellipsize="end"
-                android:maxLines="1"
-                android:textColor="@color/candy_widget_on_surface_variant"
-                android:textSize="11sp" />
-            <TextView
-                android:id="@+id/rss_widget_article_two"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:ellipsize="end"
-                android:maxLines="2"
-                android:textColor="@color/candy_widget_on_surface"
-                android:textSize="14sp"
-                android:fontFamily="sans-serif-medium" />
-        </LinearLayout>
-
-        <TextView
-            android:id="@+id/rss_widget_divider_two"
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:background="@color/candy_widget_divider" />
-
-        <LinearLayout
-            android:id="@+id/rss_widget_row_three"
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1"
-            android:gravity="center_vertical"
-            android:orientation="vertical"
-            android:paddingVertical="5dp">
-            <TextView
-                android:id="@+id/rss_widget_feed_three"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:ellipsize="end"
-                android:maxLines="1"
-                android:textColor="@color/candy_widget_on_surface_variant"
-                android:textSize="11sp" />
-            <TextView
-                android:id="@+id/rss_widget_article_three"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:ellipsize="end"
-                android:maxLines="2"
-                android:textColor="@color/candy_widget_on_surface"
-                android:textSize="14sp"
-                android:fontFamily="sans-serif-medium" />
-        </LinearLayout>
+            android:layout_height="match_parent"
+            android:divider="@color/candy_widget_divider"
+            android:dividerHeight="1dp"
+            android:scrollbars="vertical" />
 
         <TextView
             android:id="@+id/rss_widget_empty"
@@ -162,7 +75,7 @@
             android:textColor="@color/candy_widget_on_surface_variant"
             android:textSize="14sp"
             android:visibility="gone" />
-    </LinearLayout>
+    </FrameLayout>
 
     <TextView
         android:id="@+id/rss_widget_all_feeds"
