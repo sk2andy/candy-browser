@@ -144,11 +144,8 @@ jobs:
           )
           ./gradlew "${gradle_flags[@]}" \
             testFullDebugUnitTest testFossDebugUnitTest testSystemwebviewDebugUnitTest \
-            lintFullNightly lintFossNightly lintSystemwebviewNightly lintFullUserCaNightly
-          ./gradlew "${gradle_flags[@]}" assembleFullNightly
-          ./gradlew "${gradle_flags[@]}" assembleFossNightly
-          ./gradlew "${gradle_flags[@]}" assembleSystemwebviewNightly
-          ./gradlew "${gradle_flags[@]}" assembleFullUserCaNightly
+            lintFullNightly lintFossNightly lintSystemwebviewNightly lintFullUserCaNightly \
+            assembleFullNightly assembleFossNightly assembleSystemwebviewNightly assembleFullUserCaNightly
           CANDY_STANDARD_APK="app/build/outputs/apk/full/nightly/app-full-nightly.apk" \
             CANDY_FOSS_APK="app/build/outputs/apk/foss/nightly/app-foss-nightly.apk" \
             CANDY_USER_CA_APK="app/build/outputs/apk/full/userCaNightly/app-full-userCaNightly.apk" \
