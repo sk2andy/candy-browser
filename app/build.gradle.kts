@@ -730,6 +730,8 @@ dependencies {
     implementation("com.optimaize.languagedetector:language-detector:0.6") {
         exclude(group = "com.intellij", module = "annotations")
     }
+    // Optimaize requires an SLF4J 1.x binding in minified builds. Keep detector logging silent.
+    runtimeOnly("org.slf4j:slf4j-nop:1.7.36")
     implementation("androidx.activity:activity-compose:1.9.3")
     implementation("androidx.appcompat:appcompat:1.7.1")
     implementation("androidx.biometric:biometric:1.1.0")
