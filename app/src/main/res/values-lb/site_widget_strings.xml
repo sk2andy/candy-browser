@@ -11,6 +11,8 @@
     <string name="site_widget_pin_requested">"Bestätegt d'Additioun vum Widget op Ärem Heembildschierm."</string>
     <string name="site_widget_editor_title">Websäit Widget</string>
     <string name="site_widget_editor_instructions">"Wielt Kolonnen a Reihen. Pinch oder benotzt den Zoom-Schieber, bewegt dann d'Säit ënner dem Frame."</string>
+    <string name="site_widget_editor_sizing_learning">Déi éischt Virschau entsprécht eventuell net genee Ärem Launcher. Nodeems Dir dëse Widget derbäigesat hutt, benotze mir d’Gréisst, déi de Launcher mellt, fir déi nächst Virschau ze verbesseren.</string>
+    <string name="site_widget_editor_sizing_learned">Dës Virschau benotzt d’Proportiounen, déi mir vun Ärem Launcher kritt hunn. Si kann nach ëmmer ofwäichen, wann de Layout vum Launcher ännert.</string>
     <string name="site_widget_format_four_by_three">4 x3</string>
     <string name="site_widget_format_four_by_four">4 x4</string>
     <string name="site_widget_editor_size">Auswiel Gréisst</string>

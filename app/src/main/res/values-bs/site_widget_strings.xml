@@ -11,6 +11,8 @@
     <string name="site_widget_pin_requested">Potvrdite dodavanje vidžeta na početni ekran.</string>
     <string name="site_widget_editor_title">Vidžet web-stranice</string>
     <string name="site_widget_editor_instructions">Odaberite kolone i redove. Približite ili razmaknite dva prsta ili upotrijebite klizač za zumiranje, a zatim pomjerite stranicu ispod okvira.</string>
+    <string name="site_widget_editor_sizing_learning">Prvi pregled možda neće potpuno odgovarati vašem pokretaču. Nakon dodavanja ovog vidžeta koristit ćemo veličinu koju prijavi pokretač da poboljšamo sljedeći pregled.</string>
+    <string name="site_widget_editor_sizing_learned">Ovaj pregled koristi omjere dobivene od vašeg pokretača. I dalje su moguća odstupanja ako se promijeni raspored u pokretaču.</string>
     <string name="site_widget_format_four_by_three">4 × 3</string>
     <string name="site_widget_format_four_by_four">4 × 4</string>
     <string name="site_widget_editor_size">Veličina odabira</string>

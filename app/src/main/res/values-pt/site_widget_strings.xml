@@ -11,6 +11,8 @@
     <string name="site_widget_pin_requested">Confirme a adição do widget à sua tela inicial.</string>
     <string name="site_widget_editor_title">Widget do site</string>
     <string name="site_widget_editor_instructions">Escolha colunas e linhas. Aperte ou use o controle deslizante de zoom e mova a página abaixo do quadro.</string>
+    <string name="site_widget_editor_sizing_learning">A primeira prévia pode não corresponder exatamente ao seu iniciador. Depois de adicionar este widget, usaremos o tamanho informado pelo iniciador para melhorar a próxima prévia.</string>
+    <string name="site_widget_editor_sizing_learned">Esta prévia usa as proporções obtidas do seu iniciador. Ela ainda pode variar se o layout do iniciador mudar.</string>
     <string name="site_widget_format_four_by_three">4×3</string>
     <string name="site_widget_format_four_by_four">4×4</string>
     <string name="site_widget_editor_size">Tamanho da seleção</string>

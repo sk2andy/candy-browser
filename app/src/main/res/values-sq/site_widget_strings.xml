@@ -11,6 +11,8 @@
     <string name="site_widget_pin_requested">Konfirmoni shtimin e miniaplikacionit në ekranin tuaj bazë.</string>
     <string name="site_widget_editor_title">Miniaplikacioni i faqes në internet</string>
     <string name="site_widget_editor_instructions">Zgjidhni kolonat dhe rreshtat. Afroni ose largoni dy gishta, ose përdorni rrëshqitësin e zmadhimit; më pas lëvizeni faqen poshtë kornizës.</string>
+    <string name="site_widget_editor_sizing_learning">Pamja e parë paraprake mund të mos përputhet plotësisht me lëshuesin tuaj. Pas shtimit të këtij miniaplikacioni, do të përdorim madhësinë e raportuar nga lëshuesi për të përmirësuar pamjen e ardhshme paraprake.</string>
+    <string name="site_widget_editor_sizing_learned">Kjo pamje paraprake përdor përpjesëtimet e marra nga lëshuesi juaj. Mund të ketë ende dallime nëse ndryshon paraqitja e lëshuesit.</string>
     <string name="site_widget_format_four_by_three">4 × 3</string>
     <string name="site_widget_format_four_by_four">4 × 4</string>
     <string name="site_widget_editor_size">Madhësia e përzgjedhjes</string>

@@ -11,6 +11,8 @@
     <string name="site_widget_pin_requested">Подтвердите добавление виджета на главный экран.</string>
     <string name="site_widget_editor_title">Виджет сайта</string>
     <string name="site_widget_editor_instructions">Выберите столбцы и строки. Сожмите или используйте ползунок масштабирования, а затем переместите страницу под рамку.</string>
+    <string name="site_widget_editor_sizing_learning">Первый предварительный просмотр может не совсем соответствовать вашему лаунчеру. После добавления виджета мы используем размер, сообщённый лаунчером, чтобы улучшить следующий предварительный просмотр.</string>
+    <string name="site_widget_editor_sizing_learned">Этот предварительный просмотр использует пропорции, полученные от вашего лаунчера. Они могут отличаться, если расположение элементов в лаунчере изменится.</string>
     <string name="site_widget_format_four_by_three">4 × 3</string>
     <string name="site_widget_format_four_by_four">4 × 4</string>
     <string name="site_widget_editor_size">Размер выбора</string>

@@ -11,6 +11,8 @@
     <string name="site_widget_pin_requested">ยืนยันการเพิ่มวิดเจ็ตบนหน้าจอหลักของคุณ</string>
     <string name="site_widget_editor_title">วิดเจ็ตเว็บไซต์</string>
     <string name="site_widget_editor_instructions">เลือกคอลัมน์และแถว หนีบนิ้วหรือใช้แถบเลื่อนการซูม จากนั้นเลื่อนหน้าไปข้างใต้กรอบ</string>
+    <string name="site_widget_editor_sizing_learning">ตัวอย่างแรกอาจไม่ตรงกับการแสดงผลในตัวเรียกใช้งานของคุณทั้งหมด หลังจากเพิ่มวิดเจ็ตนี้ เราจะใช้ขนาดที่ตัวเรียกใช้งานรายงานเพื่อปรับปรุงตัวอย่างครั้งถัดไป</string>
+    <string name="site_widget_editor_sizing_learned">ตัวอย่างนี้ใช้สัดส่วนที่ได้เรียนรู้จากตัวเรียกใช้งานของคุณ หากเค้าโครงของตัวเรียกใช้งานเปลี่ยนไป ตัวอย่างอาจยังมีความแตกต่างจากการแสดงผลจริง</string>
     <string name="site_widget_format_four_by_three">4 × 3</string>
     <string name="site_widget_format_four_by_four">4 × 4</string>
     <string name="site_widget_editor_size">ขนาดการเลือก</string>

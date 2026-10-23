@@ -11,6 +11,8 @@
     <string name="site_widget_pin_requested">Потврдете го додавањето на виџетот на вашиот почетен екран.</string>
     <string name="site_widget_editor_title">Виџет за веб-страница</string>
     <string name="site_widget_editor_instructions">Изберете колони и редови. Стиснете или користете го лизгачот за зумирање, а потоа поместете ја страницата под рамката.</string>
+    <string name="site_widget_editor_sizing_learning">Првиот преглед можеби нема точно да одговара на вашиот фрлач. По додавањето на овој виџет, ќе ја користиме големината пријавена од фрлачот за да го подобриме следниот преглед.</string>
+    <string name="site_widget_editor_sizing_learned">Овој преглед ги користи пропорциите добиени од вашиот фрлач. Сè уште се можни разлики ако се промени распоредот на фрлачот.</string>
     <string name="site_widget_format_four_by_three">4 × 3</string>
     <string name="site_widget_format_four_by_four">4 × 4</string>
     <string name="site_widget_editor_size">Големина на избор</string>

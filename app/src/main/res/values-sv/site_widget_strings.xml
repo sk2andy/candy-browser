@@ -11,6 +11,8 @@
     <string name="site_widget_pin_requested">Bekräfta att du lägger till widgeten på din startskärm.</string>
     <string name="site_widget_editor_title">Webbplatswidget</string>
     <string name="site_widget_editor_instructions">Välj kolumner och rader. Nyp eller använd zoomreglaget och flytta sedan sidan under ramen.</string>
+    <string name="site_widget_editor_sizing_learning">Den första förhandsvisningen kanske inte stämmer helt överens med ditt startprogram. När du har lagt till den här widgeten använder vi storleken som startprogrammet rapporterar för att förbättra nästa förhandsvisning.</string>
+    <string name="site_widget_editor_sizing_learned">Den här förhandsvisningen använder proportionerna som vi har fått från ditt startprogram. Den kan fortfarande avvika om startprogrammets layout ändras.</string>
     <string name="site_widget_format_four_by_three">4 × 3</string>
     <string name="site_widget_format_four_by_four">4 × 4</string>
     <string name="site_widget_editor_size">Urvalsstorlek</string>

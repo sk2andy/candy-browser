@@ -11,6 +11,8 @@
     <string name="site_widget_pin_requested">Confirmați adăugarea widget-ului pe ecranul de pornire.</string>
     <string name="site_widget_editor_title">Widget pentru site-ul web</string>
     <string name="site_widget_editor_instructions">Alegeți coloane și rânduri. Ciupiți sau utilizați glisorul de zoom, apoi mutați pagina sub cadru.</string>
+    <string name="site_widget_editor_sizing_learning">Prima previzualizare poate să nu corespundă exact lansatorului dumneavoastră. După adăugarea acestui widget, vom folosi dimensiunea raportată de lansator pentru a îmbunătăți următoarea previzualizare.</string>
+    <string name="site_widget_editor_sizing_learned">Această previzualizare folosește proporțiile obținute de la lansatorul dumneavoastră. Pot exista în continuare diferențe dacă se schimbă aspectul lansatorului.</string>
     <string name="site_widget_format_four_by_three">4 × 3</string>
     <string name="site_widget_format_four_by_four">4 × 4</string>
     <string name="site_widget_editor_size">Mărimea selecției</string>

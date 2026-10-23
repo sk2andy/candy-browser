@@ -11,6 +11,8 @@
     <string name="site_widget_pin_requested">Bevestig het toevoegen van de widget op uw startscherm.</string>
     <string name="site_widget_editor_title">Websitewidget</string>
     <string name="site_widget_editor_instructions">Kies kolommen en rijen. Knijp of gebruik de zoomschuifregelaar en verplaats vervolgens de pagina onder het frame.</string>
+    <string name="site_widget_editor_sizing_learning">Het eerste voorbeeld komt mogelijk niet precies overeen met uw opstartprogramma. Nadat u deze widget hebt toegevoegd, gebruiken we de door het opstartprogramma gemelde afmetingen om het volgende voorbeeld te verbeteren.</string>
+    <string name="site_widget_editor_sizing_learned">Dit voorbeeld gebruikt de verhoudingen die we van uw opstartprogramma hebben verkregen. Het kan nog steeds afwijken als de indeling van het opstartprogramma verandert.</string>
     <string name="site_widget_format_four_by_three">4 × 3</string>
     <string name="site_widget_format_four_by_four">4 × 4</string>
     <string name="site_widget_editor_size">Selectie maat</string>

@@ -11,6 +11,8 @@
     <string name="site_widget_pin_requested">"Confirmez l'ajout du widget sur votre écran d'accueil."</string>
     <string name="site_widget_editor_title">Widget de site Web</string>
     <string name="site_widget_editor_instructions">Choisissez des colonnes et des lignes. Pincez ou utilisez le curseur de zoom, puis déplacez la page sous le cadre.</string>
+    <string name="site_widget_editor_sizing_learning">Le premier aperçu peut ne pas correspondre exactement à votre lanceur. Après l’ajout de ce widget, nous utiliserons la taille indiquée par le lanceur pour améliorer le prochain aperçu.</string>
+    <string name="site_widget_editor_sizing_learned">Cet aperçu utilise les proportions obtenues à partir de votre lanceur. Il peut encore varier si la disposition du lanceur change.</string>
     <string name="site_widget_format_four_by_three">4 × 3</string>
     <string name="site_widget_format_four_by_four">4 × 4</string>
     <string name="site_widget_editor_size">Taille de sélection</string>

@@ -11,6 +11,8 @@
     <string name="site_widget_pin_requested">Bekreft å legge til widgeten på startskjermen.</string>
     <string name="site_widget_editor_title">Nettside-widget</string>
     <string name="site_widget_editor_instructions">Velg kolonner og rader. Klyp eller bruk zoomglidebryteren, og flytt deretter siden under rammen.</string>
+    <string name="site_widget_editor_sizing_learning">Den første forhåndsvisningen samsvarer kanskje ikke helt med startprogrammet ditt. Når du har lagt til denne widgeten, bruker vi størrelsen som startprogrammet rapporterer, til å forbedre neste forhåndsvisning.</string>
+    <string name="site_widget_editor_sizing_learned">Denne forhåndsvisningen bruker proporsjonene vi har fått fra startprogrammet ditt. Den kan fortsatt avvike hvis oppsettet i startprogrammet endres.</string>
     <string name="site_widget_format_four_by_three">4 × 3</string>
     <string name="site_widget_format_four_by_four">4 × 4</string>
     <string name="site_widget_editor_size">Utvalgsstørrelse</string>

@@ -11,6 +11,8 @@
     <string name="site_widget_pin_requested">ホーム画面にウィジェットを追加することを確認します。</string>
     <string name="site_widget_editor_title">ウェブサイトウィジェット</string>
     <string name="site_widget_editor_instructions">列と行を選択します。ピンチするかズーム スライダーを使用して、ページをフレームの下に移動します。</string>
+    <string name="site_widget_editor_sizing_learning">最初のプレビューは、ランチャーでの実際の表示と完全には一致しない場合があります。このウィジェットを追加すると、ランチャーから取得したサイズを使って次回のプレビューを改善します。</string>
+    <string name="site_widget_editor_sizing_learned">このプレビューは、ランチャーから学習した縦横比を使用しています。ランチャーのレイアウトが変わると、実際の表示と異なる場合があります。</string>
     <string name="site_widget_format_four_by_three">4×3</string>
     <string name="site_widget_format_four_by_four">4×4</string>
     <string name="site_widget_editor_size">選択サイズ</string>

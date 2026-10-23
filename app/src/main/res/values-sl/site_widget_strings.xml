@@ -11,6 +11,8 @@
     <string name="site_widget_pin_requested">Potrdite dodajanje pripomočka na začetni zaslon.</string>
     <string name="site_widget_editor_title">Gradnik spletnega mesta</string>
     <string name="site_widget_editor_instructions">Izberite stolpce in vrstice. Stisnite ali uporabite drsnik za povečavo, nato premaknite stran pod okvir.</string>
+    <string name="site_widget_editor_sizing_learning">Prvi predogled se morda ne bo povsem ujemal z vašim zaganjalnikom. Po dodajanju tega gradnika bomo za izboljšanje naslednjega predogleda uporabili velikost, ki jo sporoči zaganjalnik.</string>
+    <string name="site_widget_editor_sizing_learned">Ta predogled uporablja razmerja, pridobljena iz vašega zaganjalnika. Če se postavitev zaganjalnika spremeni, so še vedno mogoča odstopanja.</string>
     <string name="site_widget_format_four_by_three">4 × 3</string>
     <string name="site_widget_format_four_by_four">4 × 4</string>
     <string name="site_widget_editor_size">Velikost izbire</string>

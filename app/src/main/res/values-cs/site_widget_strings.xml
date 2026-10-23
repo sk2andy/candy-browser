@@ -11,6 +11,8 @@
     <string name="site_widget_pin_requested">Potvrďte přidání widgetu na domovskou obrazovku.</string>
     <string name="site_widget_editor_title">Widget pro webové stránky</string>
     <string name="site_widget_editor_instructions">Vyberte sloupce a řádky. Pro přiblížení nebo oddálení použijte gesto dvěma prsty nebo posuvník a poté posuňte stránku pod rámečkem.</string>
+    <string name="site_widget_editor_sizing_learning">První náhled nemusí přesně odpovídat vašemu spouštěči. Po přidání tohoto widgetu použijeme velikost nahlášenou spouštěčem ke zpřesnění dalšího náhledu.</string>
+    <string name="site_widget_editor_sizing_learned">Tento náhled používá poměry stran získané z vašeho spouštěče. Pokud se rozvržení spouštěče změní, může se náhled stále lišit.</string>
     <string name="site_widget_format_four_by_three">4 × 3</string>
     <string name="site_widget_format_four_by_four">4 × 4</string>
     <string name="site_widget_editor_size">Velikost výběru</string>

@@ -11,6 +11,8 @@
     <string name="site_widget_pin_requested">Potwierdź dodanie widżetu na ekranie głównym.</string>
     <string name="site_widget_editor_title">Widżet strony internetowej</string>
     <string name="site_widget_editor_instructions">Wybierz kolumny i wiersze. Zsuń lub użyj suwaka powiększenia, a następnie przesuń stronę pod ramkę.</string>
+    <string name="site_widget_editor_sizing_learning">Pierwszy podgląd może nie odpowiadać dokładnie układowi w programie uruchamiającym. Po dodaniu tego widżetu wykorzystamy rozmiar podany przez program uruchamiający, aby poprawić kolejny podgląd.</string>
+    <string name="site_widget_editor_sizing_learned">Ten podgląd wykorzystuje proporcje uzyskane z programu uruchamiającego. Nadal mogą występować różnice, jeśli układ w programie uruchamiającym się zmieni.</string>
     <string name="site_widget_format_four_by_three">4 × 3</string>
     <string name="site_widget_format_four_by_four">4 × 4</string>
     <string name="site_widget_editor_size">Rozmiar wyboru</string>

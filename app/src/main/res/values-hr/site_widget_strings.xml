@@ -11,6 +11,8 @@
     <string name="site_widget_pin_requested">Potvrdite dodavanje widgeta na početni zaslon.</string>
     <string name="site_widget_editor_title">Widget web stranice</string>
     <string name="site_widget_editor_instructions">Odaberite stupce i retke. Stisnite prste ili koristite klizač za zumiranje, zatim pomaknite stranicu ispod okvira.</string>
+    <string name="site_widget_editor_sizing_learning">Prvi pregled možda neće točno odgovarati vašem pokretaču. Nakon dodavanja ovog widgeta upotrijebit ćemo veličinu koju prijavi pokretač kako bismo poboljšali sljedeći pregled.</string>
+    <string name="site_widget_editor_sizing_learned">Ovaj pregled koristi omjere dobivene od vašeg pokretača. I dalje su moguća odstupanja ako se promijeni raspored u pokretaču.</string>
     <string name="site_widget_format_four_by_three">4 × 3</string>
     <string name="site_widget_format_four_by_four">4 × 4</string>
     <string name="site_widget_editor_size">Veličina odabira</string>

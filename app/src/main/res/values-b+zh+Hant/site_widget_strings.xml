@@ -11,6 +11,8 @@
     <string name="site_widget_pin_requested">確認在主畫面上新增小工具。</string>
     <string name="site_widget_editor_title">網站小工具</string>
     <string name="site_widget_editor_instructions">選擇列和行。捏合或使用縮放滑桿，然後將頁面移到框架下方。</string>
+    <string name="site_widget_editor_sizing_learning">首次預覽可能與啟動器中的實際顯示不完全一致。新增此小工具後，我們會使用啟動器提供的尺寸來改善下次預覽。</string>
+    <string name="site_widget_editor_sizing_learned">此預覽採用從啟動器取得的比例。如果啟動器配置發生變化，預覽仍可能與實際顯示有所差異。</string>
     <string name="site_widget_format_four_by_three">4×3</string>
     <string name="site_widget_format_four_by_four">4×4</string>
     <string name="site_widget_editor_size">選擇尺寸</string>

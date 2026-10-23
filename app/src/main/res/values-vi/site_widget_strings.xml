@@ -11,6 +11,8 @@
     <string name="site_widget_pin_requested">Xác nhận thêm tiện ích trên màn hình chính của bạn.</string>
     <string name="site_widget_editor_title">Tiện ích trang web</string>
     <string name="site_widget_editor_instructions">Chọn cột và hàng. Chụm hoặc sử dụng thanh trượt thu phóng, sau đó di chuyển trang bên dưới khung.</string>
+    <string name="site_widget_editor_sizing_learning">Bản xem trước đầu tiên có thể không khớp hoàn toàn với cách hiển thị trong trình khởi chạy. Sau khi bạn thêm tiện ích này, chúng tôi sẽ sử dụng kích thước do trình khởi chạy cung cấp để cải thiện bản xem trước tiếp theo.</string>
+    <string name="site_widget_editor_sizing_learned">Bản xem trước này sử dụng tỷ lệ xác định được từ trình khởi chạy. Vẫn có thể có khác biệt nếu bố cục của trình khởi chạy thay đổi.</string>
     <string name="site_widget_format_four_by_three">4 × 3</string>
     <string name="site_widget_format_four_by_four">4 × 4</string>
     <string name="site_widget_editor_size">Kích thước lựa chọn</string>

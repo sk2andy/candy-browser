@@ -11,6 +11,8 @@
     <string name="site_widget_pin_requested">Потврдите додавање виџета на почетни екран.</string>
     <string name="site_widget_editor_title">Веб сајт виџет</string>
     <string name="site_widget_editor_instructions">Изаберите колоне и редове. Стисните или користите клизач за зумирање, а затим померите страницу испод оквира.</string>
+    <string name="site_widget_editor_sizing_learning">Први преглед можда неће потпуно одговарати вашем покретачу. Након додавања овог виџета користићемо величину коју пријави покретач да побољшамо следећи преглед.</string>
+    <string name="site_widget_editor_sizing_learned">Овај преглед користи пропорције добијене од вашег покретача. И даље су могућа одступања ако се промени распоред у покретачу.</string>
     <string name="site_widget_format_four_by_three">4 × 3</string>
     <string name="site_widget_format_four_by_four">4 × 4</string>
     <string name="site_widget_editor_size">Величина избора</string>

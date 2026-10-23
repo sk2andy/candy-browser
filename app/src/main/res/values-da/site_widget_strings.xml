@@ -11,6 +11,8 @@
     <string name="site_widget_pin_requested">Bekræft tilføjelse af widgetten på din startskærm.</string>
     <string name="site_widget_editor_title">Webstedswidget</string>
     <string name="site_widget_editor_instructions">Vælg kolonner og rækker. Knib sammen eller brug zoomskyderen, og flyt derefter siden under rammen.</string>
+    <string name="site_widget_editor_sizing_learning">Den første forhåndsvisning passer muligvis ikke helt til din launcher. Når du har tilføjet denne widget, bruger vi den størrelse, launcheren oplyser, til at forbedre den næste forhåndsvisning.</string>
+    <string name="site_widget_editor_sizing_learned">Denne forhåndsvisning bruger de proportioner, vi har fået fra din launcher. Den kan stadig afvige, hvis launcherens layout ændres.</string>
     <string name="site_widget_format_four_by_three">4 × 3</string>
     <string name="site_widget_format_four_by_four">4 × 4</string>
     <string name="site_widget_editor_size">Markeringens størrelse</string>

@@ -11,6 +11,8 @@
     <string name="site_widget_pin_requested">Потвърдете добавянето на джаджата към началния екран.</string>
     <string name="site_widget_editor_title">Джаджа за уебсайт</string>
     <string name="site_widget_editor_instructions">Изберете колони и редове. Съберете или раздалечете два пръста или използвайте плъзгача за мащабиране, след което преместете страницата под рамката.</string>
+    <string name="site_widget_editor_sizing_learning">Първият преглед може да не съответства точно на програмата ви за начален екран. След добавянето на тази джаджа ще използваме размера, подаден от програмата, за да подобрим следващия преглед.</string>
+    <string name="site_widget_editor_sizing_learned">Този преглед използва пропорциите, получени от програмата ви за начален екран. Възможни са разлики, ако оформлението на началния екран се промени.</string>
     <string name="site_widget_format_four_by_three">4 × 3</string>
     <string name="site_widget_format_four_by_four">4 × 4</string>
     <string name="site_widget_editor_size">Размер на избора</string>

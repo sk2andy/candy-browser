@@ -11,6 +11,8 @@
     <string name="site_widget_pin_requested">"Widget'ın ana ekranınıza eklenmesini onaylayın."</string>
     <string name="site_widget_editor_title">"Web sitesi widget'ı"</string>
     <string name="site_widget_editor_instructions">Sütunları ve satırları seçin. Yakınlaştırma kaydırıcısını sıkıştırın veya kullanın, ardından sayfayı çerçevenin altına taşıyın.</string>
+    <string name="site_widget_editor_sizing_learning">İlk önizleme, başlatıcınızdaki görünümle tam olarak eşleşmeyebilir. Bu widget eklendikten sonra, bir sonraki önizlemeyi iyileştirmek için başlatıcının bildirdiği boyutu kullanacağız.</string>
+    <string name="site_widget_editor_sizing_learned">Bu önizleme, başlatıcınızdan öğrenilen oranları kullanır. Başlatıcının düzeni değişirse yine de farklılıklar olabilir.</string>
     <string name="site_widget_format_four_by_three">4×3</string>
     <string name="site_widget_format_four_by_four">4×4</string>
     <string name="site_widget_editor_size">Seçim boyutu</string>

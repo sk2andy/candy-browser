@@ -11,6 +11,8 @@
     <string name="site_widget_pin_requested">Confirma agregar el widget en tu pantalla de inicio.</string>
     <string name="site_widget_editor_title">Widget del sitio web</string>
     <string name="site_widget_editor_instructions">Elija columnas y filas. Pellizque o use el control deslizante de zoom y luego mueva la página debajo del marco.</string>
+    <string name="site_widget_editor_sizing_learning">La primera vista previa puede no coincidir exactamente con su iniciador. Después de añadir este widget, usaremos el tamaño indicado por el iniciador para mejorar la próxima vista previa.</string>
+    <string name="site_widget_editor_sizing_learned">Esta vista previa utiliza las proporciones obtenidas de su iniciador. Aún puede variar si cambia la disposición del iniciador.</string>
     <string name="site_widget_format_four_by_three">4×3</string>
     <string name="site_widget_format_four_by_four">4×4</string>
     <string name="site_widget_editor_size">Tamaño de selección</string>

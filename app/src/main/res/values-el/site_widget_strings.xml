@@ -11,6 +11,8 @@
     <string name="site_widget_pin_requested">Επιβεβαιώστε την προσθήκη του γραφικού στοιχείου στην αρχική σας οθόνη.</string>
     <string name="site_widget_editor_title">Γραφικό στοιχείο ιστότοπου</string>
     <string name="site_widget_editor_instructions">Επιλέξτε στήλες και γραμμές. Κάντε μεγέθυνση ή σμίκρυνση με δύο δάχτυλα ή χρησιμοποιήστε το ρυθμιστικό ζουμ και, στη συνέχεια, μετακινήστε τη σελίδα κάτω από το πλαίσιο.</string>
+    <string name="site_widget_editor_sizing_learning">Η πρώτη προεπισκόπηση ενδέχεται να μην αντιστοιχεί ακριβώς στην εμφάνιση στην εφαρμογή εκκίνησης. Αφού προσθέσετε αυτό το γραφικό στοιχείο, θα χρησιμοποιήσουμε το μέγεθος που αναφέρει η εφαρμογή εκκίνησης για να βελτιώσουμε την επόμενη προεπισκόπηση.</string>
+    <string name="site_widget_editor_sizing_learned">Αυτή η προεπισκόπηση χρησιμοποιεί τις αναλογίες που προσδιορίστηκαν από την εφαρμογή εκκίνησης. Ενδέχεται να εξακολουθούν να υπάρχουν διαφορές αν αλλάξει η διάταξή της.</string>
     <string name="site_widget_format_four_by_three">4 × 3</string>
     <string name="site_widget_format_four_by_four">4 × 4</string>
     <string name="site_widget_editor_size">Μέγεθος επιλογής</string>

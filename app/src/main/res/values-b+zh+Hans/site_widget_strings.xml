@@ -11,6 +11,8 @@
     <string name="site_widget_pin_requested">确认在主屏幕上添加小部件。</string>
     <string name="site_widget_editor_title">网站小部件</string>
     <string name="site_widget_editor_instructions">选择列和行。捏合或使用缩放滑块，然后将页面移动到框架下方。</string>
+    <string name="site_widget_editor_sizing_learning">首次预览可能与启动器中的实际显示不完全一致。添加此小部件后，我们会使用启动器提供的尺寸来改善下次预览。</string>
+    <string name="site_widget_editor_sizing_learned">此预览采用从启动器获取的比例。如果启动器布局发生变化，预览仍可能与实际显示有所差异。</string>
     <string name="site_widget_format_four_by_three">4×3</string>
     <string name="site_widget_format_four_by_four">4×4</string>
     <string name="site_widget_editor_size">选择尺寸</string>
