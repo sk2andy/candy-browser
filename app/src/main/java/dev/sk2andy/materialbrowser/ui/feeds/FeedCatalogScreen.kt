@@ -204,6 +204,7 @@ internal fun FeedCatalogScreen(
             Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().imePadding()
         ) {
             val fontScale = LocalDensity.current.fontScale.coerceIn(1f, 1.6f)
+            val discoveryMaxWidth = 720.dp
             val columns =
                 if (maxWidth >= 1000.dp * fontScale) 3
                 else if (maxWidth >= 640.dp * fontScale) 2 else 1
@@ -232,7 +233,7 @@ internal fun FeedCatalogScreen(
                         )
                     }
                     Column(
-                        Modifier.widthIn(max = 720.dp)
+                        Modifier.widthIn(max = discoveryMaxWidth)
                             .fillMaxWidth()
                             .align(Alignment.CenterHorizontally)
                             .padding(horizontal = 16.dp)
@@ -278,9 +279,21 @@ internal fun FeedCatalogScreen(
                     LazyVerticalGrid(
                         columns = GridCells.Fixed(columns),
                         state = gridState,
-                        modifier = Modifier.weight(1f).testTag("feed_catalog_results"),
+                        modifier =
+                            Modifier.widthIn(
+                                    max = if (appliedQuery == null) discoveryMaxWidth else 1200.dp
+                                )
+                                .fillMaxWidth()
+                                .align(Alignment.CenterHorizontally)
+                                .weight(1f)
+                                .testTag("feed_catalog_results"),
                         contentPadding =
-                            PaddingValues(start = 20.dp, end = 20.dp, bottom = 24.dp, top = 8.dp),
+                            PaddingValues(
+                                start = if (appliedQuery == null) 16.dp else 20.dp,
+                                end = if (appliedQuery == null) 16.dp else 20.dp,
+                                bottom = 24.dp,
+                                top = 8.dp,
+                            ),
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                     ) {

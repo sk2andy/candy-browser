@@ -80,7 +80,7 @@ internal fun FeedCatalogTopics(columns: Int, onTopicSelected: (FeedCatalogTopic)
                 Tile(it, 160.dp * textScale, Modifier.fillMaxWidth())
             }
         } else {
-            val leadHeight = if (large) 244.dp else 214.dp
+            val leadHeight = if (large) 300.dp else 214.dp
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(gap)) {
                 Tile(0, leadHeight, Modifier.weight(1.8f))
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(gap)) {
@@ -88,9 +88,9 @@ internal fun FeedCatalogTopics(columns: Int, onTopicSelected: (FeedCatalogTopic)
                     Tile(2, (leadHeight - gap) / 2, Modifier.fillMaxWidth())
                 }
             }
-            Tile(4, if (large) 116.dp else 92.dp, Modifier.fillMaxWidth())
+            Tile(4, if (large) 136.dp else 92.dp, Modifier.fillMaxWidth())
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(gap)) {
-                val height = if (large) 160.dp else 128.dp
+                val height = if (large) 184.dp else 128.dp
                 Tile(3, height, Modifier.weight(1f))
                 Tile(5, height, Modifier.weight(1.5f))
             }
