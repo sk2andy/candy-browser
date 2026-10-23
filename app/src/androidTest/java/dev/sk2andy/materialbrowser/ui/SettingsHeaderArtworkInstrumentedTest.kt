@@ -26,6 +26,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
+import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -43,6 +44,7 @@ import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.browser.integration.linkrouting.LinkRoutingRule
 import dev.sk2andy.materialbrowser.browser.BrowserProfile
 import dev.sk2andy.materialbrowser.browser.ExternalAppLinkHandling
+import dev.sk2andy.materialbrowser.browser.LinkLongPressAction
 import dev.sk2andy.materialbrowser.browser.PageTranslationProvider
 import dev.sk2andy.materialbrowser.browser.SearchEngine
 import dev.sk2andy.materialbrowser.browser.SearxngSettings
@@ -248,6 +250,11 @@ class SettingsHeaderArtworkInstrumentedTest {
                         .performScrollTo().performClick().assertIsOn()
                     composeRule.onNodeWithTag(BrowserSettingsTestTags.ExternalLinkPreviewProfile)
                         .performScrollTo().assertIsEnabled()
+                }
+                SettingsHeaderArtwork.LinkLongPress -> {
+                    composeRule.onNodeWithTag("gesture_choice_${LinkLongPressAction.CopyLink}")
+                        .performScrollTo().performClick().assertIsSelected()
+                    composeRule.runOnIdle { assertEquals(kind, lastInteraction) }
                 }
             }
             if (kind in setOf(
@@ -479,6 +486,14 @@ class SettingsHeaderArtworkInstrumentedTest {
                         onInteraction(artwork)
                     },
                     onExternalLinkPreviewProfileChanged = {},
+                    onBack = {},
+                )
+            }
+            SettingsHeaderArtwork.LinkLongPress -> {
+                var action by remember { mutableStateOf(LinkLongPressAction.LinkPeek) }
+                LinkLongPressSettingsPage(
+                    action = action,
+                    onActionChanged = { action = it; onInteraction(artwork) },
                     onBack = {},
                 )
             }

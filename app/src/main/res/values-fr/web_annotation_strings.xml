@@ -11,4 +11,22 @@
     <string name="web_annotation_failed">Impossible d’enregistrer ce passage surligné.</string>
     <string name="web_annotation_private">Le surlignage est indisponible dans les onglets privés.</string>
     <string name="web_annotation_close">Fermer</string>
+    <string name="web_annotation_read">Lire la note</string>
+    <string name="web_annotation_edit">Modifier</string>
+    <string name="web_annotation_go_to">Aller au passage surligné</string>
+    <string name="web_annotation_list_hint">Touchez une citation pour accéder à son emplacement sur la page.</string>
+    <string name="web_annotation_no_note">Aucune note pour le moment. Touchez Modifier pour en ajouter une.</string>
+    <string name="web_annotation_not_found">Cette citation n’a pas pu être localisée de manière unique sur la page. Votre note enregistrée reste disponible.</string>
+    <string name="web_annotation_markdown_hint">Markdown pris en charge : **gras**, *italique*, listes et [liens](https://example.com).</string>
+    <string name="web_annotation_preview">Aperçu</string>
+    <string name="web_annotation_format_bold">Gras</string>
+    <string name="web_annotation_format_italic">Italique</string>
+    <string name="web_annotation_format_heading">Titre</string>
+    <string name="web_annotation_format_list">Liste à puces</string>
+    <string name="web_annotation_format_link">Insérer un lien</string>
+    <string name="web_annotation_format_code">Code en ligne</string>
+    <string name="web_annotation_discard_title">Abandonner les modifications ?</string>
+    <string name="web_annotation_discard_message">Les modifications non enregistrées de votre note seront perdues.</string>
+    <string name="web_annotation_discard">Abandonner</string>
+    <string name="web_annotation_keep_editing">Continuer à modifier</string>
 </resources>

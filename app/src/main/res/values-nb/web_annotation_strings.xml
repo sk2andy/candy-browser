@@ -11,4 +11,22 @@
     <string name="web_annotation_failed">Kunne ikke lagre markeringen.</string>
     <string name="web_annotation_private">Markeringer er ikke tilgjengelige i private faner.</string>
     <string name="web_annotation_close">Lukk</string>
+    <string name="web_annotation_read">Les notat</string>
+    <string name="web_annotation_edit">Rediger</string>
+    <string name="web_annotation_go_to">Gå til markering</string>
+    <string name="web_annotation_list_hint">Trykk på et sitat for å gå til plasseringen på siden.</string>
+    <string name="web_annotation_no_note">Ingen notater ennå. Trykk på Rediger for å legge til et.</string>
+    <string name="web_annotation_not_found">Dette sitatet kunne ikke lokaliseres entydig på siden. Det lagrede notatet ditt er fortsatt tilgjengelig.</string>
+    <string name="web_annotation_markdown_hint">Markdown støttes: **fet**, *kursiv*, lister og [lenker](https://example.com).</string>
+    <string name="web_annotation_preview">Forhåndsvisning</string>
+    <string name="web_annotation_format_bold">Fet</string>
+    <string name="web_annotation_format_italic">Kursiv</string>
+    <string name="web_annotation_format_heading">Overskrift</string>
+    <string name="web_annotation_format_list">Punktliste</string>
+    <string name="web_annotation_format_link">Sett inn lenke</string>
+    <string name="web_annotation_format_code">Kode i teksten</string>
+    <string name="web_annotation_discard_title">Forkaste endringene?</string>
+    <string name="web_annotation_discard_message">Endringer i notatet som ikke er lagret, går tapt.</string>
+    <string name="web_annotation_discard">Forkast</string>
+    <string name="web_annotation_keep_editing">Fortsett å redigere</string>
 </resources>

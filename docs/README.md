@@ -11,6 +11,7 @@
 | Candy Trails | [`candy-trails/README.md`](candy-trails/README.md) | Journey graph, history reconciliation, forks, persistence, graph UI |
 | Site Capsules | [`site-capsules/README.md`](site-capsules/README.md) | Capsule model, navigation boundary, profile ownership, shortcuts |
 | Reader Studio | [`reader-studio/README.md`](reader-studio/README.md) | Extraction, reader sessions, local library, speech |
+| Feeds and library | [`feeds/README.md`](feeds/README.md) | RSS/Atom, subscriptions, inbox, shared saved articles, OPML, offline and opt-in notifications |
 | Privacy protection | [`privacy-protection/README.md`](privacy-protection/README.md) | Request/cosmetic blocking, Candy Rules, X-Ray, Permission Radar |
 | Candy Sync | [`sync/README.md`](sync/README.md) | Self-hosted server, browser extension, Android integration, and E2EE protocol |
 

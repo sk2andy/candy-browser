@@ -14,6 +14,9 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performImeAction
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performScrollToNode
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipe
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.text.AnnotatedString
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -92,9 +95,12 @@ class ConstellationScreenInstrumentedTest {
                 .fetchSemanticsNodes().isNotEmpty()
         }
         composeRule.onNodeWithText("Work secret").assertDoesNotExist()
-        composeRule.onNodeWithTag(ConstellationTestTags.Body)
+        composeRule.onNodeWithTag(ConstellationTestTags.ListToggle).performClick()
+        composeRule.onNodeWithTag(ConstellationTestTags.PageList)
             .performScrollToNode(androidx.compose.ui.test.hasTestTag(ConstellationTestTags.page(personal.url)))
         composeRule.onNodeWithTag(ConstellationTestTags.page(personal.url)).performClick()
+        composeRule.onNodeWithTag(ConstellationTestTags.Graph).assertIsDisplayed()
+        composeRule.onNodeWithTag(ConstellationTestTags.Details).assertIsDisplayed()
         composeRule.onNodeWithTag(ConstellationTestTags.OpenPage).assertIsDisplayed().performClick()
         composeRule.runOnIdle { assertEquals(personal.url, opened) }
 
@@ -158,19 +164,18 @@ class ConstellationScreenInstrumentedTest {
         }
         waitForSearchField()
         composeRule.onNodeWithTag(ConstellationTestTags.Search)
-            .performScrollTo().performTextReplacement("CAFE")
+            .performTextReplacement("CAFE")
         composeRule.onNodeWithTag(ConstellationTestTags.Search).performImeAction()
         composeRule.onNodeWithText(composeRule.activity.getString(R.string.constellations_search_position, 1, 2))
             .assertIsDisplayed()
         composeRule.onNodeWithTag(ConstellationTestTags.SearchFocus).assertTextEquals("Café local")
-        composeRule.onNodeWithTag(ConstellationTestTags.SearchNext).performScrollTo().performClick()
+        composeRule.onNodeWithTag(ConstellationTestTags.SearchNext).performClick()
         composeRule.onNodeWithTag(ConstellationTestTags.SearchFocus).assertTextEquals("Café privé")
         composeRule.onNodeWithTag(ConstellationTestTags.SearchPrevious).performClick()
         composeRule.onNodeWithTag(ConstellationTestTags.SearchFocus).assertTextEquals("Café local")
         composeRule.onNodeWithTag(ConstellationTestTags.OpenPage).assertDoesNotExist()
         composeRule.onNodeWithText("Café work secret").assertDoesNotExist()
 
-        composeRule.onNodeWithTag(ConstellationTestTags.Search).performScrollTo()
         composeRule.onNodeWithTag(ConstellationTestTags.SearchClear).performClick()
         assertSearchQuery("")
         composeRule.onNodeWithTag(ConstellationTestTags.SearchFocus).assertDoesNotExist()
@@ -179,8 +184,6 @@ class ConstellationScreenInstrumentedTest {
         composeRule.onNodeWithTag(ConstellationTestTags.Search).performImeAction()
         composeRule.onNodeWithText(composeRule.activity.getString(R.string.constellations_search_no_results))
             .assertIsDisplayed()
-        composeRule.onNodeWithTag(ConstellationTestTags.Body)
-            .performScrollToNode(androidx.compose.ui.test.hasTestTag(ConstellationTestTags.Graph))
         composeRule.onNodeWithTag(ConstellationTestTags.Graph).assertIsDisplayed()
 
         composeRule.runOnIdle {
@@ -192,6 +195,58 @@ class ConstellationScreenInstrumentedTest {
         assertSearchQuery("")
         composeRule.onNodeWithTag(ConstellationTestTags.SearchFocus).assertDoesNotExist()
         composeRule.onNodeWithText("Café local").assertDoesNotExist()
+    }
+
+    @Test
+    fun detailsRemainAlongsideMapAndDeletingSelectionRemovesDetailsImmediately() {
+        val first = page("personal", "Kotlin coroutines", "https://a.example")
+        val second = page("personal", "Kotlin flows", "https://b.example")
+        val snapshot = mutableStateOf(ConstellationSnapshot("personal", enabled = true, modelReady = true,
+            documents = listOf(first, second)))
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                ConstellationScreen("Personal", snapshot.value, {}, {}, {}, {}, {})
+            }
+        }
+        waitForSearchField()
+        composeRule.onNodeWithTag(ConstellationTestTags.Expand).performClick()
+        composeRule.onNodeWithTag(ConstellationTestTags.Graph).assertIsDisplayed()
+        composeRule.onNodeWithTag(ConstellationTestTags.ListToggle).performClick()
+        composeRule.onNodeWithTag(ConstellationTestTags.PageList)
+            .performScrollToNode(androidx.compose.ui.test.hasTestTag(ConstellationTestTags.page(first.url)))
+        composeRule.onNodeWithTag(ConstellationTestTags.page(first.url)).performClick()
+        composeRule.onNodeWithTag(ConstellationTestTags.Graph).assertIsDisplayed()
+        composeRule.onNodeWithTag(ConstellationTestTags.Details).assertIsDisplayed()
+        composeRule.runOnIdle { snapshot.value = snapshot.value.copy(documents = listOf(second)) }
+        composeRule.onNodeWithTag(ConstellationTestTags.Details).assertDoesNotExist()
+        composeRule.onNodeWithTag(ConstellationTestTags.Graph).assertIsDisplayed()
+        composeRule.onNodeWithTag(ConstellationTestTags.FitAll).performClick()
+    }
+
+    @Test
+    fun clearingSearchRestoresExploredViewport() {
+        val first = page("personal", "Kotlin coroutines", "https://a.example")
+        val second = page("personal", "Kotlin flows", "https://b.example")
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                ConstellationScreen("Personal", ConstellationSnapshot("personal", enabled = true,
+                    modelReady = true, documents = listOf(first, second)), {}, {}, {}, {}, {})
+            }
+        }
+        waitForSearchField()
+        composeRule.onNodeWithTag(ConstellationTestTags.Graph).performTouchInput {
+            swipe(Offset(center.x, center.y), Offset(center.x + 80f, center.y + 30f))
+        }
+        composeRule.waitForIdle()
+        val before = composeRule.onNodeWithTag(ConstellationTestTags.Graph).fetchSemanticsNode().config[ConstellationViewportKey]
+        composeRule.onNodeWithTag(ConstellationTestTags.Search).performTextReplacement("coroutines")
+        composeRule.onNodeWithTag(ConstellationTestTags.Search).performImeAction()
+        composeRule.onNodeWithTag(ConstellationTestTags.SearchClear).performClick()
+        composeRule.waitForIdle()
+        val after = composeRule.onNodeWithTag(ConstellationTestTags.Graph).fetchSemanticsNode().config[ConstellationViewportKey]
+        assertEquals(before.scale, after.scale, 0.01f)
+        assertEquals(before.panX, after.panX, 0.1f)
+        assertEquals(before.panY, after.panY, 0.1f)
     }
 
     private fun waitForSearchField() {

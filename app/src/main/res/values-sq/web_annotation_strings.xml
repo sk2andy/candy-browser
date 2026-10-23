@@ -11,4 +11,22 @@
     <string name="web_annotation_failed">Ky theksim nuk mund të ruhej.</string>
     <string name="web_annotation_private">Theksimet nuk janë të disponueshme në skedat private.</string>
     <string name="web_annotation_close">Mbyll</string>
+    <string name="web_annotation_read">Lexo shënimin</string>
+    <string name="web_annotation_edit">Ndrysho</string>
+    <string name="web_annotation_go_to">Shko te theksimi</string>
+    <string name="web_annotation_list_hint">Prek një citat për të shkuar te vendndodhja e tij në faqe.</string>
+    <string name="web_annotation_no_note">Ende nuk ka shënim. Prek Ndrysho për të shtuar një.</string>
+    <string name="web_annotation_not_found">Ky citat nuk mund të gjendej në mënyrë të njëkuptimtë në faqe. Shënimi yt i ruajtur është ende i disponueshëm.</string>
+    <string name="web_annotation_markdown_hint">Mbështetet Markdown: **të trasha**, *të pjerrëta*, lista dhe [lidhje](https://example.com).</string>
+    <string name="web_annotation_preview">Pamje paraprake</string>
+    <string name="web_annotation_format_bold">Të trasha</string>
+    <string name="web_annotation_format_italic">Të pjerrëta</string>
+    <string name="web_annotation_format_heading">Titull</string>
+    <string name="web_annotation_format_list">Listë me pika</string>
+    <string name="web_annotation_format_link">Fut lidhje</string>
+    <string name="web_annotation_format_code">Kod brenda tekstit</string>
+    <string name="web_annotation_discard_title">Të hidhen poshtë ndryshimet?</string>
+    <string name="web_annotation_discard_message">Ndryshimet e paruajtura të shënimit do të humbasin.</string>
+    <string name="web_annotation_discard">Hidh poshtë</string>
+    <string name="web_annotation_keep_editing">Vazhdo redaktimin</string>
 </resources>

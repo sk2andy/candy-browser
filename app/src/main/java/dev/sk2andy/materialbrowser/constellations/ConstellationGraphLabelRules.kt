@@ -8,6 +8,7 @@ internal data class ConstellationGraphLabelAnchor(
     val labelWidth: Float = 0f,
     val labelHeight: Float = 0f,
     val selected: Boolean = false,
+    val priority: Int = 0,
 )
 
 internal data class ConstellationGraphLabelPlacement(
@@ -46,7 +47,8 @@ internal object ConstellationGraphLabelRules {
                     anchor.labelWidth <= width - padding * 2 &&
                     anchor.labelHeight <= height - padding * 2
             }
-            .sortedWith(compareByDescending<ConstellationGraphLabelAnchor> { it.selected }.thenBy { it.id })
+            .sortedWith(compareByDescending<ConstellationGraphLabelAnchor> { it.selected }
+                .thenByDescending { it.priority }.thenBy { it.id })
             .forEach { anchor ->
                 val placement = candidates(anchor, gap).map { (left, top) ->
                     ConstellationGraphLabelPlacement(

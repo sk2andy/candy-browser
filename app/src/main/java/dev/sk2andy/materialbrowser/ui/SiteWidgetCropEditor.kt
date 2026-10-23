@@ -66,6 +66,8 @@ import kotlin.math.roundToInt
 internal fun SiteWidgetCropEditor(
     bitmap: ImageBitmap,
     initialFormat: SiteWidgetFormat = SiteWidgetFormat.FourByThree,
+    launcherCellAspectRatio: Float = SiteWidgetCropRules.DEFAULT_CELL_ASPECT_RATIO,
+    launcherCellAspectRatioLearned: Boolean = false,
     formatChangeEnabled: Boolean = true,
     initialRefreshIntervalMinutes: Int = 0,
     saving: Boolean = false,
@@ -77,10 +79,10 @@ internal fun SiteWidgetCropEditor(
     var refreshIntervalMinutes by rememberSaveable(bitmap) {
         mutableStateOf(initialRefreshIntervalMinutes.takeIf { it in SiteWidgetRefreshIntervals } ?: 0)
     }
-    val maximumCrop = remember(bitmap, format) {
-        SiteWidgetCropRules.initialCrop(format, bitmap.width, bitmap.height)!!
+    val maximumCrop = remember(bitmap, format, launcherCellAspectRatio) {
+        SiteWidgetCropRules.initialCrop(format, bitmap.width, bitmap.height, launcherCellAspectRatio)!!
     }
-    var crop by rememberSaveable(bitmap, stateSaver = SiteWidgetCropSaver) {
+    var crop by rememberSaveable(bitmap, launcherCellAspectRatio, stateSaver = SiteWidgetCropSaver) {
         mutableStateOf(maximumCrop)
     }
     var viewportSize by remember(bitmap) { mutableStateOf(IntSize.Zero) }
@@ -91,8 +93,22 @@ internal fun SiteWidgetCropEditor(
     val rowsDescription = stringResource(R.string.site_widget_editor_rows, format.rows)
     val zoomDescription = stringResource(R.string.site_widget_editor_zoom)
     val intervalDescription = stringResource(R.string.site_widget_editor_interval)
+    val sizingHint = stringResource(
+        if (launcherCellAspectRatioLearned) {
+            R.string.site_widget_editor_sizing_learned
+        } else {
+            R.string.site_widget_editor_sizing_learning
+        },
+    )
     fun updateFormat(next: SiteWidgetFormat) {
-        crop = SiteWidgetCropRules.reformatCrop(crop, format, next, bitmap.width, bitmap.height) ?: crop
+        crop = SiteWidgetCropRules.reformatCrop(
+            crop,
+            format,
+            next,
+            bitmap.width,
+            bitmap.height,
+            launcherCellAspectRatio,
+        ) ?: crop
         format = next
     }
     BackHandler {
@@ -144,6 +160,7 @@ internal fun SiteWidgetCropEditor(
                                     format = format,
                                     viewportWidth = bitmap.width,
                                     viewportHeight = bitmap.height,
+                                    cellAspectRatio = launcherCellAspectRatio,
                                 ) ?: crop
                                 val previewZoom = maximumCrop.width / resized.width
                                 crop = SiteWidgetCropRules.moveCrop(
@@ -211,6 +228,11 @@ internal fun SiteWidgetCropEditor(
                         stringResource(R.string.site_widget_editor_instructions),
                         style = MaterialTheme.typography.bodyMedium,
                     )
+                    Text(
+                        sizingHint,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                     Text(columnsDescription, style = MaterialTheme.typography.labelLarge)
                     Slider(
                         value = format.columns.toFloat(),
@@ -241,7 +263,12 @@ internal fun SiteWidgetCropEditor(
                         value = zoom,
                         onValueChange = { value ->
                             crop = SiteWidgetCropRules.zoomCrop(
-                                crop, value, format, bitmap.width, bitmap.height,
+                                crop,
+                                value,
+                                format,
+                                bitmap.width,
+                                bitmap.height,
+                                launcherCellAspectRatio,
                             ) ?: crop
                         },
                         enabled = !saving,

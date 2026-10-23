@@ -1,6 +1,7 @@
 package dev.sk2andy.materialbrowser.reader
 
 import android.content.Context
+import android.media.AudioAttributes
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -10,7 +11,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 
-class ReaderSpeechController(context: Context) : ReaderSpeech {
+class ReaderSpeechController(
+    context: Context,
+    private val audioAttributes: AudioAttributes? = null,
+    private val onCompleted: () -> Unit = {},
+) : ReaderSpeech {
     override var state by mutableStateOf(ReaderSpeechState())
         private set
 
@@ -18,12 +23,14 @@ class ReaderSpeechController(context: Context) : ReaderSpeech {
     private var engine: TextToSpeech? = null
     private var text: String = ""
     private var chunkStarts: Map<String, Int> = emptyMap()
+    private var utteranceGeneration = 0L
 
     init {
         engine = TextToSpeech(context.applicationContext) { result ->
             handler.post {
                 if (state.status == ReaderSpeechStatus.Closed) return@post
                 if (result == TextToSpeech.SUCCESS) {
+                    audioAttributes?.let { engine?.setAudioAttributes(it) }
                     engine?.setOnUtteranceProgressListener(listener)
                     dispatch(ReaderSpeechEvent.Initialized)
                 } else {
@@ -65,7 +72,23 @@ class ReaderSpeechController(context: Context) : ReaderSpeech {
 
     override fun stop() {
         engine?.stop()
-        dispatch(ReaderSpeechEvent.Stop)
+        utteranceGeneration++
+        chunkStarts = emptyMap()
+        if (state.status != ReaderSpeechStatus.Initializing) dispatch(ReaderSpeechEvent.Stop)
+    }
+
+    fun playFrom(content: String, progress: Float) {
+        if (state.status == ReaderSpeechStatus.Ready) {
+            state = state.copy(characterOffset = (content.length * progress.coerceIn(0f, 1f)).toInt())
+        }
+        play(content)
+    }
+
+    fun setRate(rate: Float) {
+        val wasSpeaking = state.status == ReaderSpeechStatus.Speaking
+        if (wasSpeaking) pause()
+        engine?.setSpeechRate(rate.coerceIn(0.5f, 2f))
+        if (wasSpeaking) play(text)
     }
 
     override fun close() {
@@ -80,12 +103,19 @@ class ReaderSpeechController(context: Context) : ReaderSpeech {
 
         override fun onDone(utteranceId: String?) {
             val finalId = chunkStarts.keys.lastOrNull()
-            if (utteranceId == finalId) handler.post { dispatch(ReaderSpeechEvent.Completed) }
+            if (utteranceId == finalId) handler.post {
+                if (utteranceId == chunkStarts.keys.lastOrNull() && state.status == ReaderSpeechStatus.Speaking) {
+                    dispatch(ReaderSpeechEvent.Completed)
+                    onCompleted()
+                }
+            }
         }
 
         @Deprecated("Deprecated in Android")
         override fun onError(utteranceId: String?) {
-            handler.post { dispatch(ReaderSpeechEvent.InitializationFailed) }
+            handler.post {
+                if (utteranceId in chunkStarts) dispatch(ReaderSpeechEvent.InitializationFailed)
+            }
         }
 
         override fun onRangeStart(
@@ -95,7 +125,11 @@ class ReaderSpeechController(context: Context) : ReaderSpeech {
             frame: Int,
         ) {
             val base = chunkStarts[utteranceId] ?: return
-            handler.post { dispatch(ReaderSpeechEvent.RangeStarted(base + start)) }
+            handler.post {
+                if (chunkStarts[utteranceId] == base) {
+                    dispatch(ReaderSpeechEvent.RangeStarted(base + start))
+                }
+            }
         }
     }
 
@@ -104,6 +138,7 @@ class ReaderSpeechController(context: Context) : ReaderSpeech {
     }
 
     private fun chunks(content: String, startOffset: Int, maxLength: Int): List<Triple<String, Int, String>> {
+        val generation = ++utteranceGeneration
         val result = mutableListOf<Triple<String, Int, String>>()
         var cursor = startOffset
         var ordinal = 0
@@ -117,7 +152,7 @@ class ReaderSpeechController(context: Context) : ReaderSpeech {
                     ?.plus(1)
                     ?: hardEnd
             }
-            result += Triple("reader-$ordinal-$cursor", cursor, content.substring(cursor, split))
+            result += Triple("reader-$generation-$ordinal-$cursor", cursor, content.substring(cursor, split))
             cursor = split
             ordinal++
         }

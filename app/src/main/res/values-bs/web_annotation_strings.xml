@@ -11,4 +11,22 @@
     <string name="web_annotation_failed">Oznaku nije moguće sačuvati.</string>
     <string name="web_annotation_private">Oznake nisu dostupne u privatnim karticama.</string>
     <string name="web_annotation_close">Zatvori</string>
+    <string name="web_annotation_read">Pročitaj bilješku</string>
+    <string name="web_annotation_edit">Uredi</string>
+    <string name="web_annotation_go_to">Idi na oznaku</string>
+    <string name="web_annotation_list_hint">Dodirnite citat da odete na njegovo mjesto na stranici.</string>
+    <string name="web_annotation_no_note">Još nema bilješke. Dodirnite Uredi da je dodate.</string>
+    <string name="web_annotation_not_found">Ovaj citat nije moguće jednoznačno pronaći na stranici. Vaša sačuvana bilješka je i dalje dostupna.</string>
+    <string name="web_annotation_markdown_hint">Podržan je Markdown: **podebljano**, *kurziv*, liste i [linkovi](https://example.com).</string>
+    <string name="web_annotation_preview">Pregled</string>
+    <string name="web_annotation_format_bold">Podebljano</string>
+    <string name="web_annotation_format_italic">Kurziv</string>
+    <string name="web_annotation_format_heading">Naslov</string>
+    <string name="web_annotation_format_list">Lista s oznakama</string>
+    <string name="web_annotation_format_link">Umetni link</string>
+    <string name="web_annotation_format_code">Kod u tekstu</string>
+    <string name="web_annotation_discard_title">Odbaciti izmjene?</string>
+    <string name="web_annotation_discard_message">Nesačuvane izmjene bilješke bit će izgubljene.</string>
+    <string name="web_annotation_discard">Odbaci</string>
+    <string name="web_annotation_keep_editing">Nastavi uređivati</string>
 </resources>

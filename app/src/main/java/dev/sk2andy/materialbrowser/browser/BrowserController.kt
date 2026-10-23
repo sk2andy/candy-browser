@@ -1684,6 +1684,12 @@ class BrowserController(
     val canOpenWebAnnotations: Boolean get() = webAnnotations.canOpenPageAnnotations
     fun showPageAnnotations() = webAnnotations.showPageAnnotations()
 
+    fun openWebAnnotationLink(url: String) {
+        if (!webAnnotations.canOpenPageAnnotations) return
+        val target = BrowserUriPolicy.normalizeHttpUrl(url) ?: return
+        createTab(initialUrl = target, isIncognito = false, openerTabId = selectedTabId)
+    }
+
     private val recallRepository = RecallRepository.get(activity)
     private val constellationRepository = ConstellationRepository.get(activity)
     private val snoozedTabStore = SnoozedTabStore(activity)
@@ -7274,6 +7280,8 @@ class BrowserController(
         profiles.removeAt(profileIndex)
         lockedProfileIds -= profileId
         ProfileProtectionSession.forget(profileId)
+        dev.sk2andy.materialbrowser.feeds.FeedPlaybackManager.get(activity.applicationContext).invalidate(profileId)
+        dev.sk2andy.materialbrowser.feeds.FeedRepository.invalidate(setOf(profileId))
         profileWallpaperExecutor.execute { profileWallpaperStore.delete(profileId) }
         val profileTrailRedactions = store.loadPendingCandyTrailRedactions().filter { redaction ->
             redaction.tabIds.any(removedProfileTrailTabIds::contains)
@@ -7298,6 +7306,7 @@ class BrowserController(
         }
         reconcileCandyTrailForks(System.currentTimeMillis())
         persist()
+        dev.sk2andy.materialbrowser.feeds.FeedProfileLifecycle.remove(activity.applicationContext, profileId)
         previewToRecreate?.let(::createExternalLinkPreviewRuntime)
         return true
     }
@@ -11425,12 +11434,12 @@ class BrowserController(
         val url = tab?.let { pageUrls[it.id] ?: it.url }
         val generation = navigationGenerations.getOrDefault(selectedTabId, 0)
         if (tab == null || session == null || url == null || tab.isLoading || tab.isIncognito ||
-            !isActivityResumed || destroyed || isActiveProfileLocked || browsingDataClearPending ||
+            destroyed || isActiveProfileLocked || browsingDataClearPending ||
             externalLinkPreviewState != null || isSyncedProfile(tab.profileId)) {
             webAnnotations.detach()
             return
         }
-        webAnnotations.bind(session, tab.profileId, url, generation) {
+        webAnnotations.bind(session, tab.profileId, url, generation, isActive = isActivityResumed) {
             !destroyed && isActivityResumed && !browsingDataClearPending && externalLinkPreviewState == null &&
                 selectedTabId == tab.id && tab.profileId !in lockedProfileIds &&
                 browserEngineSessions[tab.id] === session && navigationGenerations.getOrDefault(tab.id, 0) == generation &&
@@ -11447,7 +11456,6 @@ class BrowserController(
         if (tab == null || session == null || url == null || tab.isLoading ||
             !isActivityResumed || destroyed || isActiveProfileLocked ||
             browsingDataClearPending || externalLinkPreviewState != null || isSyncedProfile(tab.profileId)) {
-            webAnnotations.detach()
             formDrafts.detach()
             return
         }
@@ -11799,7 +11807,7 @@ class BrowserController(
 
     fun onPause() {
         inlineTranslation.dismiss()
-        webAnnotations.detach()
+        webAnnotations.suspend()
         formDrafts.detach()
         stopInlineVideoGestureHaptic()
         cancelAddressBarAutoDockProbe()
@@ -17259,7 +17267,11 @@ class BrowserController(
         if (tabs.firstOrNull { it.id == restorationPreviewTabId }?.profileId in profileIds) {
             invalidateRestorationPreview()
         }
+        profileIds.forEach { profileId ->
+            dev.sk2andy.materialbrowser.feeds.FeedPlaybackManager.get(activity.applicationContext).invalidate(profileId)
+        }
         ProfileProtectionSession.lock(profileIds)
+        dev.sk2andy.materialbrowser.feeds.FeedRepository.invalidate(profileIds)
         lockedProfileIds += profileIds
         if (externalLinkPreviewState?.targetProfileId in profileIds) {
             releaseExternalLinkPreviewRuntime(resumeSelectedTab = false)

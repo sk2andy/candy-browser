@@ -11,4 +11,22 @@
     <string name="web_annotation_failed">ハイライトを保存できませんでした。</string>
     <string name="web_annotation_private">プライベートタブではハイライトを利用できません。</string>
     <string name="web_annotation_close">閉じる</string>
+    <string name="web_annotation_read">メモを読む</string>
+    <string name="web_annotation_edit">編集</string>
+    <string name="web_annotation_go_to">ハイライトに移動</string>
+    <string name="web_annotation_list_hint">引用をタップすると、ページ内の該当箇所に移動します。</string>
+    <string name="web_annotation_no_note">メモはまだありません。「編集」をタップして追加してください。</string>
+    <string name="web_annotation_not_found">ページ内でこの引用の位置を一意に特定できませんでした。保存したメモは引き続き利用できます。</string>
+    <string name="web_annotation_markdown_hint">Markdown対応：**太字**、*斜体*、リスト、[リンク](https://example.com)。</string>
+    <string name="web_annotation_preview">プレビュー</string>
+    <string name="web_annotation_format_bold">太字</string>
+    <string name="web_annotation_format_italic">斜体</string>
+    <string name="web_annotation_format_heading">見出し</string>
+    <string name="web_annotation_format_list">箇条書き</string>
+    <string name="web_annotation_format_link">リンクを挿入</string>
+    <string name="web_annotation_format_code">インラインコード</string>
+    <string name="web_annotation_discard_title">変更を破棄しますか？</string>
+    <string name="web_annotation_discard_message">メモの未保存の変更は失われます。</string>
+    <string name="web_annotation_discard">破棄</string>
+    <string name="web_annotation_keep_editing">編集を続ける</string>
 </resources>

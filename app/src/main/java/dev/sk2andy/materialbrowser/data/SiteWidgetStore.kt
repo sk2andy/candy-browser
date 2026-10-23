@@ -87,6 +87,28 @@ internal class SiteWidgetStore(context: Context) {
         readBindings().mapNotNull { (widgetId, id) -> loadSnapshot(id)?.let { widgetId to it } }.toMap()
     }
 
+    fun launcherCellAspectRatio(launcherPackage: String): Float? = synchronized(lock) {
+        if (!isValidLauncherPackage(launcherPackage)) return null
+        val ratios = readJson(sizingFile())?.takeIf { it.optInt("version") == CURRENT_VERSION }
+            ?.optJSONObject("launchers") ?: return null
+        ratios.optDouble(launcherPackage, Double.NaN).toFloat()
+            .takeIf { it.isFinite() && it in MINIMUM_CELL_ASPECT_RATIO..MAXIMUM_CELL_ASPECT_RATIO }
+    }
+
+    fun saveLauncherCellAspectRatio(launcherPackage: String, ratio: Float): Boolean = synchronized(lock) {
+        if (!isValidLauncherPackage(launcherPackage) || ratio !in MINIMUM_CELL_ASPECT_RATIO..MAXIMUM_CELL_ASPECT_RATIO) {
+            return false
+        }
+        if (!ensureDirectory()) return false
+        val ratios = readJson(sizingFile())?.takeIf { it.optInt("version") == CURRENT_VERSION }
+            ?.optJSONObject("launchers") ?: JSONObject()
+        if (!ratios.has(launcherPackage) && ratios.length() >= MAX_LEARNED_LAUNCHERS) {
+            ratios.keys().asSequence().firstOrNull()?.let(ratios::remove)
+        }
+        ratios.put(launcherPackage, ratio.toDouble())
+        writeJson(sizingFile(), JSONObject().put("version", CURRENT_VERSION).put("launchers", ratios))
+    }
+
     fun replaceIfCurrent(
         widgetId: Int,
         expectedSnapshotId: String,
@@ -246,6 +268,11 @@ internal class SiteWidgetStore(context: Context) {
 
     private fun bindingsFile(): AtomicFile = AtomicFile(File(directory, BINDINGS_FILE))
 
+    private fun sizingFile(): AtomicFile = AtomicFile(File(directory, SIZING_FILE))
+
+    private fun isValidLauncherPackage(value: String): Boolean =
+        value.length in 3..255 && value.matches(Regex("[A-Za-z0-9_]+(\\.[A-Za-z0-9_]+)+"))
+
     private fun ensureDirectory(): Boolean = directory.isDirectory || directory.mkdirs()
 
     private fun readJson(file: AtomicFile): JSONObject? = readBytes(file, MAX_JSON_BYTES)?.let { bytes ->
@@ -265,10 +292,14 @@ internal class SiteWidgetStore(context: Context) {
         val lock = Any()
         const val DIRECTORY_NAME = "site_widget_snapshots_v1"
         const val BINDINGS_FILE = "bindings.json"
+        const val SIZING_FILE = "launcher_sizing.json"
         const val CURRENT_VERSION = 1
         const val MAX_JSON_BYTES = 32 * 1_024
         const val MAX_IMAGE_BYTES = 3 * 1_024 * 1_024
         const val MAX_BINDINGS = 64
+        const val MAX_LEARNED_LAUNCHERS = 16
+        const val MINIMUM_CELL_ASPECT_RATIO = 0.5f
+        const val MAXIMUM_CELL_ASPECT_RATIO = 2f
         const val DRAFT_LIFETIME_MILLIS = 24L * 60L * 60L * 1_000L
     }
 }

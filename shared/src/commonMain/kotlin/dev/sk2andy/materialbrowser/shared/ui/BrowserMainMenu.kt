@@ -30,6 +30,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.TooltipDefaults
 import androidx.compose.material3.rememberTooltipState
@@ -58,6 +59,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.toggleableState
 import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.text.font.FontWeight
@@ -186,6 +188,12 @@ interface BrowserMainMenuResources {
 
     @Composable
     fun accessibilityLabel(item: BrowserFeatureMenuItem): String? = null
+
+    @Composable
+    fun unreadCountLabel(count: Int): String = count.toString()
+
+    @Composable
+    fun sectionExpansionLabel(expanded: Boolean): String = if (expanded) "Expanded" else "Collapsed"
 
     @Composable
     fun supportingText(item: BrowserFeatureMenuItem, snoozedTabCount: Int): String?
@@ -654,27 +662,6 @@ private fun BrowserMainMenuContent(
                 )
             }
 
-            val toppingItems = groupedItems[BrowserFeatureMenuSection.Toppings].orEmpty()
-            if (toppingItems.isNotEmpty()) {
-                BrowserMainMenuSectionTitle(
-                    title = resources.sectionTitle(BrowserFeatureMenuSection.Toppings),
-                    topPadding = 8,
-                    effects = effects,
-                )
-                BrowserMainMenuItemGroup(
-                    items = toppingItems,
-                    resources = resources,
-                    effects = effects,
-                    snoozedTabCount = snapshot.snoozedTabCount,
-                    firstItemShape = firstItemShape,
-                    innerCorners = innerCorners,
-                    lastItemShape = lastItemShape,
-                    onCommand = onCommand,
-                    onToggle = onToggle,
-                    modifier = Modifier.testTag(BrowserMainMenuTestTags.ToppingsGroup),
-                )
-            }
-
             if (candyItems.isNotEmpty()) {
                 Spacer(Modifier.height(8.dp))
                 BrowserMainMenuItemGroup(
@@ -715,6 +702,34 @@ private fun BrowserMainMenuContent(
                     modifier = Modifier.testTag(BrowserMainMenuTestTags.BrowserGroup),
                 )
             }
+            val readingItems = groupedItems[BrowserFeatureMenuSection.Reading].orEmpty()
+            if (readingItems.isNotEmpty()) {
+                BrowserMainMenuSectionTitle(
+                    title = resources.sectionTitle(BrowserFeatureMenuSection.Reading),
+                    topPadding = 12,
+                    effects = effects,
+                )
+                BrowserMainMenuItemGroup(
+                    items = readingItems,
+                    resources = resources,
+                    effects = effects,
+                    snoozedTabCount = snapshot.snoozedTabCount,
+                    firstItemShape = firstItemShape,
+                    innerCorners = innerCorners,
+                    lastItemShape = lastItemShape,
+                    onCommand = onCommand,
+                    onToggle = onToggle,
+                    modifier = Modifier.testTag(BrowserMainMenuTestTags.ReadingGroup),
+                )
+            }
+            BrowserMainMenuWorkflows(
+                items = groupedItems[BrowserFeatureMenuSection.Toppings].orEmpty(),
+                resources = resources,
+                effects = effects,
+                snoozedTabCount = snapshot.snoozedTabCount,
+                onCommand = onCommand,
+                onToggle = onToggle,
+            )
         }
         if (toolbarItems.isNotEmpty()) {
             Surface(
@@ -1071,8 +1086,28 @@ internal fun BrowserMainMenuItemGroup(
                         ),
                         contentColor = contentColor,
                         supportingText = resources.supportingText(item, snoozedTabCount),
-                        trailingContent = if (item.hasTrailingIcon()) {
-                            { resources.trailingIcon(Modifier.size(20.dp)) }
+                        trailingContent = if (item.hasTrailingIcon() || item.unreadCount > 0) {
+                            {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                ) {
+                                    if (item.unreadCount > 0) {
+                                        Surface(
+                                            shape = CircleShape,
+                                            color = MaterialTheme.colorScheme.secondaryContainer,
+                                            contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                                        ) {
+                                            Text(
+                                                text = resources.unreadCountLabel(item.unreadCount),
+                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                                style = MaterialTheme.typography.labelMedium,
+                                            )
+                                        }
+                                    }
+                                    if (item.hasTrailingIcon()) resources.trailingIcon(Modifier.size(20.dp))
+                                }
+                            }
                         } else {
                             null
                         },
@@ -1088,7 +1123,56 @@ internal fun BrowserMainMenuItemGroup(
     }
 }
 
+/** Optional user commands stay out of the main page-action flow. */
+@Composable
+internal fun BrowserMainMenuWorkflows(
+    items: List<BrowserFeatureMenuItem>,
+    resources: BrowserMainMenuResources,
+    effects: BrowserMainMenuEffects,
+    snoozedTabCount: Int,
+    onCommand: (BrowserFeatureMenuItem) -> Unit,
+    onToggle: (BrowserFeatureMenuItem) -> Unit,
+) {
+    if (items.isEmpty()) return
+    var expanded by remember { mutableStateOf(false) }
+    val expansionLabel = resources.sectionExpansionLabel(expanded)
+    val outer = effects.style.groupCornerRadius
+    val inner = effects.style.groupInnerCornerRadius
+    Spacer(Modifier.height(12.dp))
+    TextButton(
+        onClick = { expanded = !expanded },
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag(BrowserMainMenuTestTags.WorkflowsToggle)
+            .semantics { stateDescription = expansionLabel },
+    ) {
+        Text(
+            resources.sectionTitle(BrowserFeatureMenuSection.Toppings),
+            modifier = Modifier.weight(1f),
+            style = MaterialTheme.typography.labelLarge,
+        )
+        resources.trailingIcon(Modifier.size(20.dp).graphicsLayer { rotationZ = if (expanded) 90f else 0f })
+    }
+    if (expanded) {
+        BrowserMainMenuItemGroup(
+            items = items,
+            resources = resources,
+            effects = effects,
+            snoozedTabCount = snoozedTabCount,
+            firstItemShape = RoundedCornerShape(outer, outer, inner, inner),
+            innerCorners = RoundedCornerShape(inner),
+            lastItemShape = RoundedCornerShape(inner, inner, outer, outer),
+            onCommand = onCommand,
+            onToggle = onToggle,
+            modifier = Modifier.fillMaxWidth().testTag(BrowserMainMenuTestTags.ToppingsGroup),
+        )
+    }
+}
+
 private fun BrowserFeatureMenuItem.hasTrailingIcon(): Boolean = action in setOf(
+    BrowserFeatureMenuAction.OpenFeeds,
+    BrowserFeatureMenuAction.OpenLibrary,
+    BrowserFeatureMenuAction.DiscoverFeeds,
     BrowserFeatureMenuAction.OpenSnoozedTabs,
     BrowserFeatureMenuAction.OpenFavorites,
     BrowserFeatureMenuAction.OpenDownloads,
@@ -1098,6 +1182,9 @@ private fun BrowserFeatureMenuItem.hasTrailingIcon(): Boolean = action in setOf(
 )
 
 internal fun BrowserFeatureMenuItem.testTagModifier(): Modifier = when (action) {
+    BrowserFeatureMenuAction.OpenFeeds -> Modifier.testTag(BrowserMainMenuTestTags.Feeds)
+    BrowserFeatureMenuAction.OpenLibrary -> Modifier.testTag(BrowserMainMenuTestTags.Library)
+    BrowserFeatureMenuAction.DiscoverFeeds -> Modifier.testTag(BrowserMainMenuTestTags.DiscoverFeeds)
     BrowserFeatureMenuAction.ToggleFavorite -> Modifier.testTag(BrowserMainMenuTestTags.Favorite)
     BrowserFeatureMenuAction.TogglePinned -> Modifier.testTag(BrowserMainMenuTestTags.Pin)
     BrowserFeatureMenuAction.TranslatePage -> Modifier.testTag(BrowserMainMenuTestTags.Translate)
@@ -1130,6 +1217,11 @@ internal fun BrowserFeatureMenuItem.testTagModifier(): Modifier = when (action) 
 }
 
 object BrowserMainMenuTestTags {
+    const val Feeds = "browser_main_menu_feeds"
+    const val Library = "browser_main_menu_library"
+    const val DiscoverFeeds = "browser_main_menu_discover_feeds"
+    const val ReadingGroup = "browser_main_menu_reading_group"
+    const val WorkflowsToggle = "browser_main_menu_workflows_toggle"
     const val Menu = "browser_main_menu"
     const val Toolbar = "browser_main_menu_toolbar"
     const val Footer = "browser_main_menu_footer"

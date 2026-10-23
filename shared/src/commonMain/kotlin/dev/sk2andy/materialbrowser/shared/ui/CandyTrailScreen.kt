@@ -1,21 +1,28 @@
-@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@file:OptIn(
+    androidx.compose.material3.ExperimentalMaterial3Api::class,
+)
 
 package dev.sk2andy.materialbrowser.shared.ui
 
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -35,6 +42,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.MyLocation
+import androidx.compose.material.icons.filled.FitScreen
+import androidx.compose.material.icons.filled.AccountTree
+import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -49,7 +63,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
@@ -69,6 +82,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -94,6 +108,7 @@ import dev.sk2andy.materialbrowser.ui.CandyTrailMotionRules
 import dev.sk2andy.materialbrowser.ui.CandyTrailNodePosition
 import dev.sk2andy.materialbrowser.ui.CandyTrailPathSegment
 import dev.sk2andy.materialbrowser.ui.CandyTrailViewportRules
+import dev.sk2andy.materialbrowser.ui.CandyTrailPresentationRules
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 
@@ -111,6 +126,15 @@ data class CandyTrailStrings(
     val zoomOut: String,
     val resetZoom: String,
     val zoomIn: String,
+    val fitAll: String,
+    val currentPage: String,
+    val graphView: String,
+    val listView: String,
+    val focusRoute: String,
+    val allBranches: String,
+    val collapseBranch: String,
+    val expandBranch: String,
+    val hiddenPages: (Int) -> String,
 )
 
 enum class CandyTrailHaptic {
@@ -136,8 +160,39 @@ fun CandyTrailScreenContent(
     onHaptic: (CandyTrailHaptic) -> Unit,
     platformSurfaceModifier: Modifier = Modifier,
     modifier: Modifier = Modifier,
+    pageFavicons: Map<String, ImageBitmap> = emptyMap(),
 ) {
-    val layout = remember(trail.nodes, trail.forks) { CandyTrailLayoutRules.layout(trail) }
+    var focusRoute by rememberSaveable(tab.id) { mutableStateOf(false) }
+    var listVisible by rememberSaveable(tab.id) { mutableStateOf(false) }
+    var collapsedNodeIds by rememberSaveable(tab.id) { mutableStateOf(emptyList<String>()) }
+    val visibleTrail = remember(trail, focusRoute, collapsedNodeIds) {
+        CandyTrailPresentationRules.visibleTrail(trail, focusRoute, collapsedNodeIds.toSet())
+    }
+    val hiddenCounts = remember(trail, collapsedNodeIds) {
+        collapsedNodeIds.associateWith { CandyTrailPresentationRules.hiddenCount(trail, it) }
+    }
+    val targetLayout = remember(visibleTrail.nodes, visibleTrail.forks) {
+        CandyTrailLayoutRules.layout(visibleTrail)
+    }
+    val layoutProgress = remember(tab.id) { Animatable(1f) }
+    var layoutFrom by remember(tab.id) { mutableStateOf(targetLayout) }
+    var layoutTo by remember(tab.id) { mutableStateOf(targetLayout) }
+    val layout = CandyTrailPresentationRules.interpolate(layoutFrom, layoutTo, layoutProgress.value)
+    // M3 Expressive default spatial / fast effects tokens. Shared Material 3 has no MotionScheme yet.
+    val spatialSpec = spring<Float>(
+        dampingRatio = CandyTrailGraphMotionRules.TARGET_SPRING_DAMPING_RATIO,
+        stiffness = CandyTrailGraphMotionRules.TARGET_SPRING_STIFFNESS,
+    )
+    val effectsSpec = spring<Float>(
+        dampingRatio = 1f,
+        stiffness = CandyTrailGraphMotionRules.EFFECTS_SPRING_STIFFNESS,
+    )
+    LaunchedEffect(targetLayout) {
+        layoutFrom = CandyTrailPresentationRules.interpolate(layoutFrom, layoutTo, layoutProgress.value)
+        layoutTo = targetLayout
+        layoutProgress.snapTo(0f)
+        layoutProgress.animateTo(1f, spatialSpec)
+    }
     val entryProgress = remember(tab.id) { Animatable(0f) }
     val edgeRevealProgress = remember(tab.id) {
         Animatable(1f).apply { updateBounds(lowerBound = 0f, upperBound = 1f) }
@@ -148,12 +203,13 @@ fun CandyTrailScreenContent(
     val pathPulseProgress = remember(tab.id) {
         Animatable(0f).apply { updateBounds(lowerBound = 0f, upperBound = 1f) }
     }
-    val scope = rememberCoroutineScope()
     var scale by rememberSaveable(tab.id) { mutableFloatStateOf(1f) }
     var panX by rememberSaveable(tab.id) { mutableFloatStateOf(0f) }
     var panY by rememberSaveable(tab.id) { mutableFloatStateOf(0f) }
     var viewportInitialized by rememberSaveable(tab.id) { mutableFloatStateOf(0f) }
     var viewportSignature by rememberSaveable(tab.id) { mutableFloatStateOf(0f) }
+    var headerHeightPx by remember { mutableFloatStateOf(0f) }
+    var controlsHeightPx by remember { mutableFloatStateOf(0f) }
     var actionNodeId by remember(tab.id) { mutableStateOf<String?>(null) }
     var revealTargets by remember(tab.id) { mutableStateOf(emptySet<CandyTrailGraphTarget>()) }
     var pulsePath by remember(tab.id) { mutableStateOf(emptyList<CandyTrailDirectedEdge>()) }
@@ -184,19 +240,13 @@ fun CandyTrailScreenContent(
                 launch {
                     edgeRevealProgress.animateTo(
                         targetValue = 1f,
-                        animationSpec = tween(
-                            durationMillis = CandyTrailGraphMotionRules.EDGE_DRAW_DURATION_MILLIS,
-                            easing = FastOutSlowInEasing,
-                        ),
+                        animationSpec = effectsSpec,
                     )
                 }
                 launch {
                     targetRevealProgress.animateTo(
                         targetValue = 1f,
-                        animationSpec = spring(
-                            dampingRatio = CandyTrailGraphMotionRules.TARGET_SPRING_DAMPING_RATIO,
-                            stiffness = CandyTrailGraphMotionRules.TARGET_SPRING_STIFFNESS,
-                        ),
+                        animationSpec = spatialSpec,
                     )
                 }
             }
@@ -225,22 +275,34 @@ fun CandyTrailScreenContent(
         }
     }
 
-    suspend fun pulseSelectedPath(target: CandyTrailGraphTarget) {
-        runPathPulse(
-            CandyTrailGraphMotionRules.selectionPath(
-                trail = trail,
-                fromNodeId = trail.currentNodeId,
-                target = target,
-            ),
-        )
+    fun selectNode(nodeId: String) {
+        if (commitInFlight) return
+        commitInFlight = true
+        try {
+            if (onSelectNode(nodeId)) {
+                onHaptic(CandyTrailHaptic.Confirm)
+                onNodeSelectionFinished()
+            }
+        } finally {
+            commitInFlight = false
+        }
     }
 
-    suspend fun exitGraph() {
-        entryProgress.animateTo(0f, tween(180, easing = FastOutSlowInEasing))
+    fun selectFork(forkId: String) {
+        if (commitInFlight) return
+        commitInFlight = true
+        try {
+            onSelectFork(forkId)?.let { destinationId ->
+                onHaptic(CandyTrailHaptic.Confirm)
+                onForkSelectionFinished(destinationId)
+            }
+        } finally {
+            commitInFlight = false
+        }
     }
 
     LaunchedEffect(tab.id) {
-        entryProgress.animateTo(1f, tween(220, easing = FastOutSlowInEasing))
+        entryProgress.animateTo(1f, effectsSpec)
         val currentNodeId = trail.currentNodeId ?: return@LaunchedEffect
         val activeRoute = CandyTrailGraphMotionRules.pathTargets(
             trail = trail,
@@ -273,37 +335,40 @@ fun CandyTrailScreenContent(
     ) {
         val viewportWidthPx = with(density) { maxWidth.toPx() }
         val viewportHeightPx = with(density) { maxHeight.toPx() }
-        val graphWidthPx = with(density) { layout.width.dp.toPx() }
-        val graphHeightPx = with(density) { layout.height.dp.toPx() }
+        val graphWidthPx = with(density) { targetLayout.width.dp.toPx() }
+        val graphHeightPx = with(density) { targetLayout.height.dp.toPx() }
         LaunchedEffect(
             tab.id,
             graphWidthPx,
             graphHeightPx,
             viewportWidthPx,
             viewportHeightPx,
+            headerHeightPx,
+            controlsHeightPx,
             viewportInitialized,
         ) {
-            val nextViewportSignature = viewportWidthPx * 31f + viewportHeightPx
+            val nextViewportSignature = viewportWidthPx * 31f + viewportHeightPx + headerHeightPx * 17f + controlsHeightPx * 13f
             if (viewportSignature != 0f && viewportSignature != nextViewportSignature) {
                 viewportInitialized = 0f
             }
             viewportSignature = nextViewportSignature
             if (viewportInitialized == 0f && graphWidthPx > 0f && graphHeightPx > 0f) {
                 val minimumVisible = with(density) { 72.dp.toPx() }
+                val availableHeight = (viewportHeightPx - headerHeightPx - controlsHeightPx).coerceAtLeast(1f)
                 val fitScale = minOf(
                     (viewportWidthPx - with(density) { 32.dp.toPx() }) / graphWidthPx,
-                    (viewportHeightPx - with(density) { 184.dp.toPx() }) / graphHeightPx,
+                    (availableHeight - with(density) { 32.dp.toPx() }).coerceAtLeast(1f) / graphHeightPx,
                     1f,
                 )
                 scale = CandyTrailViewportRules.scale(fitScale)
-                val currentPosition = layout.positions
+                val currentPosition = targetLayout.positions
                     .firstOrNull { it.nodeId == trail.currentNodeId }
                 val focusCurrent = fitScale < CandyTrailViewportRules.MIN_SCALE &&
                     currentPosition != null
                 panX = if (focusCurrent) {
                     CandyTrailViewportRules.centeredPan(
                         contentCenter = with(density) {
-                            (currentPosition!!.x + CandyTrailLayoutRules.NODE_WIDTH / 2f).dp.toPx()
+                            (currentPosition.x + CandyTrailLayoutRules.NODE_WIDTH / 2f).dp.toPx()
                         },
                         viewportSize = viewportWidthPx,
                         graphSize = graphWidthPx,
@@ -316,7 +381,7 @@ fun CandyTrailScreenContent(
                 panY = if (focusCurrent) {
                     CandyTrailViewportRules.centeredPan(
                         contentCenter = with(density) {
-                            (currentPosition!!.y + CandyTrailLayoutRules.NODE_HEIGHT / 2f).dp.toPx()
+                            (currentPosition.y + CandyTrailLayoutRules.NODE_HEIGHT / 2f).dp.toPx()
                         },
                         viewportSize = viewportHeightPx,
                         graphSize = graphHeightPx,
@@ -324,8 +389,7 @@ fun CandyTrailScreenContent(
                         minimumVisible = minimumVisible,
                     )
                 } else {
-                    (viewportHeightPx - graphHeightPx * scale) / 2f +
-                        with(density) { 36.dp.toPx() }
+                    headerHeightPx + (availableHeight - graphHeightPx * scale) / 2f
                 }
                 viewportInitialized = 1f
             }
@@ -356,10 +420,60 @@ fun CandyTrailScreenContent(
             scale = newScale
         }
 
-        Box(
+        fun focusPosition(x: Float, y: Float) {
+            val minimumVisible = with(density) { 72.dp.toPx() }
+            scale = 1f
+            panX = CandyTrailViewportRules.centeredPan(
+                with(density) { (x + CandyTrailLayoutRules.NODE_WIDTH / 2f).dp.toPx() },
+                viewportWidthPx, graphWidthPx, scale, minimumVisible,
+            )
+            val centerY = headerHeightPx + (viewportHeightPx - headerHeightPx - controlsHeightPx) / 2f
+            panY = CandyTrailViewportRules.pan(
+                centerY - with(density) { (y + CandyTrailLayoutRules.NODE_HEIGHT / 2f).dp.toPx() },
+                viewportHeightPx, graphHeightPx, scale, minimumVisible,
+            )
+        }
+
+        fun focusNode(nodeId: String) {
+            targetLayout.positions.firstOrNull { it.nodeId == nodeId }?.let {
+                focusPosition(it.x, it.y)
+            }
+        }
+
+        if (listVisible) {
+            CandyTrailList(
+                trail = visibleTrail,
+                favicon = favicon,
+                pageFavicons = pageFavicons,
+                forkFavicons = forkFavicons,
+                strings = strings,
+                onSelectNode = ::selectNode,
+                onSelectFork = ::selectFork,
+                onMore = { actionNodeId = it },
+                hiddenCounts = hiddenCounts,
+                headerHeight = with(density) { headerHeightPx.toDp() },
+            )
+        } else Box(
             modifier = Modifier
                 .fillMaxSize()
-                .pointerInput(tab.id) {
+                .pointerInput(tab.id, layout, scale < CandyTrailPresentationRules.OVERVIEW_SCALE) {
+                    if (scale < CandyTrailPresentationRules.OVERVIEW_SCALE) {
+                        detectTapGestures { point ->
+                            val target = CandyTrailPresentationRules.nearestTarget(
+                                layout,
+                                (point.x - panX) / scale / density.density,
+                                (point.y - panY) / scale / density.density,
+                            )
+                            when (target) {
+                                is CandyTrailGraphTarget.Node -> focusNode(target.id)
+                                is CandyTrailGraphTarget.Fork -> layout.forkPositions.firstOrNull { it.forkId == target.id }
+                                    ?.let { focusPosition(it.x, it.y) }
+                                null -> Unit
+                            }
+                        }
+                    }
+                }
+                .pointerInput(tab.id, graphWidthPx, graphHeightPx, viewportWidthPx, viewportHeightPx) {
                     detectTransformGestures { centroid, pan, zoom, _ ->
                         val oldScale = scale
                         val newScale = CandyTrailViewportRules.scale(scale * zoom)
@@ -408,7 +522,7 @@ fun CandyTrailScreenContent(
                         trail.nodes.associateBy(CandyTrailNode::id)
                     }
                     CandyTrailEdges(
-                        trail = trail,
+                        trail = visibleTrail,
                         layout = layout,
                         progress = { entryProgress.value },
                         revealTargets = revealTargets,
@@ -420,15 +534,19 @@ fun CandyTrailScreenContent(
                         openForkEdgeColor = openForkEdgeColor,
                         closedForkEdgeColor = closedForkEdgeColor,
                         pulseColor = pulseColor,
+                        compactScale = scale.takeIf(CandyTrailPresentationRules::compact),
                     )
                     layout.positions.forEachIndexed { index, position ->
-                        val node = nodeById.getValue(position.nodeId)
+                        val node = nodeById[position.nodeId] ?: return@forEachIndexed
                         val isCurrent = node.id == trail.currentNodeId
                         CandyTrailNodeCard(
                             node = node,
                             isCurrent = isCurrent,
-                            favicon = favicon.takeIf { isCurrent },
+                            favicon = pageFavicons[node.url] ?: favicon.takeIf { isCurrent },
                             strings = strings,
+                            compactScale = scale.takeIf(CandyTrailPresentationRules::compact),
+                            onInspect = { focusNode(node.id) },
+                            hiddenCount = hiddenCounts[node.id] ?: 0,
                             modifier = Modifier
                                 .offset(position.x.dp, position.y.dp)
                                 .graphicsLayer {
@@ -450,27 +568,7 @@ fun CandyTrailScreenContent(
                                     scaleY = scaleX
                                     translationY = (1f - stagger) * 34f
                                 },
-                            onClick = {
-                                if (commitInFlight) return@CandyTrailNodeCard
-                                commitInFlight = true
-                                scope.launch {
-                                    try {
-                                        pulseSelectedPath(CandyTrailGraphTarget.Node(node.id))
-                                        exitGraph()
-                                        if (!onSelectNode(node.id)) {
-                                            entryProgress.animateTo(
-                                                1f,
-                                                tween(180, easing = FastOutSlowInEasing),
-                                            )
-                                            return@launch
-                                        }
-                                        onHaptic(CandyTrailHaptic.Confirm)
-                                        onNodeSelectionFinished()
-                                    } finally {
-                                        commitInFlight = false
-                                    }
-                                }
-                            },
+                            onClick = { selectNode(node.id) },
                             onMore = { actionNodeId = node.id },
                         )
                     }
@@ -478,11 +576,13 @@ fun CandyTrailScreenContent(
                         trail.forks.associateBy(CandyTrailFork::id)
                     }
                     layout.forkPositions.forEachIndexed { index, position ->
-                        val fork = forkById.getValue(position.forkId)
+                        val fork = forkById[position.forkId] ?: return@forEachIndexed
                         CandyTrailForkCard(
                             fork = fork,
                             favicon = fork.destinationTabId?.let(forkFavicons::get),
                             strings = strings,
+                            compactScale = scale.takeIf(CandyTrailPresentationRules::compact),
+                            onInspect = { focusPosition(position.x, position.y) },
                             modifier = Modifier
                                 .offset(position.x.dp, position.y.dp)
                                 .graphicsLayer {
@@ -504,28 +604,7 @@ fun CandyTrailScreenContent(
                                     scaleY = scaleX
                                     translationX = (1f - stagger) * -42f
                                 },
-                            onClick = {
-                                if (commitInFlight) return@CandyTrailForkCard
-                                commitInFlight = true
-                                scope.launch {
-                                    try {
-                                        pulseSelectedPath(CandyTrailGraphTarget.Fork(fork.id))
-                                        exitGraph()
-                                        val destinationId = onSelectFork(fork.id)
-                                        if (destinationId == null) {
-                                            entryProgress.animateTo(
-                                                1f,
-                                                tween(180, easing = FastOutSlowInEasing),
-                                            )
-                                            return@launch
-                                        }
-                                        onHaptic(CandyTrailHaptic.Confirm)
-                                        onForkSelectionFinished(destinationId)
-                                    } finally {
-                                        commitInFlight = false
-                                    }
-                                }
-                            },
+                            onClick = { selectFork(fork.id) },
                         )
                     }
                 }
@@ -536,9 +615,16 @@ fun CandyTrailScreenContent(
             tab = tab,
             onBack = onDismiss,
             strings = strings,
-            modifier = Modifier.align(Alignment.TopCenter),
+            listVisible = listVisible,
+            focusRoute = focusRoute,
+            onListVisibleChange = { listVisible = it },
+            onFocusRouteChange = {
+                focusRoute = it
+                viewportInitialized = 0f
+            },
+            modifier = Modifier.align(Alignment.TopCenter).onSizeChanged { headerHeightPx = it.height.toFloat() },
         )
-        CandyTrailZoomControls(
+        if (!listVisible) CandyTrailZoomControls(
             onZoomOut = {
                 zoomAroundViewportCenter(1f / 1.2f)
                 onHaptic(CandyTrailHaptic.VirtualKey)
@@ -547,12 +633,16 @@ fun CandyTrailScreenContent(
                 viewportInitialized = 0f
                 onHaptic(CandyTrailHaptic.VirtualKey)
             },
+            onCurrent = {
+                trail.currentNodeId?.let(::focusNode)
+                onHaptic(CandyTrailHaptic.VirtualKey)
+            },
             onZoomIn = {
                 zoomAroundViewportCenter(1.2f)
                 onHaptic(CandyTrailHaptic.VirtualKey)
             },
             strings = strings,
-            modifier = Modifier.align(Alignment.BottomCenter),
+            modifier = Modifier.align(Alignment.BottomCenter).onSizeChanged { controlsHeightPx = it.height.toFloat() },
         )
         CandyTrailNodeActionsSheet(
             node = actionNodeId?.let { nodeId -> trail.nodes.firstOrNull { it.id == nodeId } },
@@ -560,27 +650,22 @@ fun CandyTrailScreenContent(
                 actionNodeId = null
                 if (commitInFlight) return@CandyTrailNodeActionsSheet
                 commitInFlight = true
-                scope.launch {
-                    var committedDestinationId: String? = null
-                    try {
-                        val target = CandyTrailGraphTarget.Fork("f${trail.nextForkOrdinal}")
-                        val destinationId = onForkNode(nodeId) ?: return@launch
-                        committedDestinationId = destinationId
-                        knownGraphSnapshot = knownGraphSnapshot.copy(
-                            forkIds = knownGraphSnapshot.forkIds + target.id,
-                        )
+                try {
+                    onForkNode(nodeId)?.let { destinationId ->
                         onHaptic(CandyTrailHaptic.Confirm)
-                        revealCreatedTargets(setOf(target))
-                        exitGraph()
-                    } finally {
-                        // Creation commits before its edge can render. Complete the handoff even
-                        // when system back removes this composition during the bounded reveal.
-                        committedDestinationId?.let(onForkCreationFinished)
-                        commitInFlight = false
+                        onForkCreationFinished(destinationId)
                     }
+                } finally {
+                    commitInFlight = false
                 }
             },
             onDismiss = { actionNodeId = null },
+            canCollapse = actionNodeId?.let { CandyTrailPresentationRules.hiddenCount(trail, it) > 0 } == true,
+            isCollapsed = actionNodeId in collapsedNodeIds,
+            onToggleCollapse = { nodeId ->
+                collapsedNodeIds = if (nodeId in collapsedNodeIds) collapsedNodeIds - nodeId else collapsedNodeIds + nodeId
+                actionNodeId = null
+            },
             strings = strings,
             containerColor = nodeActionsContainerColor,
         )
@@ -601,6 +686,7 @@ private fun CandyTrailEdges(
     openForkEdgeColor: Color,
     closedForkEdgeColor: Color,
     pulseColor: Color,
+    compactScale: Float?,
 ) {
     val density = LocalDensity.current
     val positions = remember(layout.positions) { layout.positions.associateBy(CandyTrailNodePosition::nodeId) }
@@ -612,16 +698,20 @@ private fun CandyTrailEdges(
             ).toSet()
         }.orEmpty()
     }
-    val edgePaths = remember(trail.nodes, positions, density.density) {
+    val halfWidth = compactScale?.let { 24f / CandyTrailPresentationRules.symbolScale(it) }
+        ?: (CandyTrailLayoutRules.NODE_WIDTH / 2f)
+    val startInset = CandyTrailLayoutRules.NODE_WIDTH / 2f + halfWidth
+    val endInset = CandyTrailLayoutRules.NODE_WIDTH / 2f - halfWidth
+    val edgePaths = remember(trail.nodes, positions, density.density, halfWidth) {
         trail.nodes.mapIndexedNotNull { index, node ->
             val parent = node.parentId?.let(positions::get) ?: return@mapIndexedNotNull null
             val child = positions[node.id] ?: return@mapIndexedNotNull null
             val start = Offset(
-                x = (parent.x + CandyTrailLayoutRules.NODE_WIDTH) * density.density,
+                x = (parent.x + startInset) * density.density,
                 y = (parent.y + CandyTrailLayoutRules.NODE_HEIGHT / 2f) * density.density,
             )
             val end = Offset(
-                x = child.x * density.density,
+                x = (child.x + endInset) * density.density,
                 y = (child.y + CandyTrailLayoutRules.NODE_HEIGHT / 2f) * density.density,
             )
             val geometry = CandyTrailGraphMotionRules.edgeGeometry(
@@ -659,16 +749,16 @@ private fun CandyTrailEdges(
     val forkPositions = remember(layout.forkPositions) {
         layout.forkPositions.associateBy(CandyTrailForkPosition::forkId)
     }
-    val forkEdgePaths = remember(trail.forks, positions, forkPositions, density.density) {
+    val forkEdgePaths = remember(trail.forks, positions, forkPositions, density.density, halfWidth) {
         trail.forks.mapIndexedNotNull { index, fork ->
             val parent = positions[fork.originNodeId] ?: return@mapIndexedNotNull null
             val child = forkPositions[fork.id] ?: return@mapIndexedNotNull null
             val start = Offset(
-                x = (parent.x + CandyTrailLayoutRules.NODE_WIDTH) * density.density,
+                x = (parent.x + startInset) * density.density,
                 y = (parent.y + CandyTrailLayoutRules.NODE_HEIGHT / 2f) * density.density,
             )
             val end = Offset(
-                x = child.x * density.density,
+                x = (child.x + endInset) * density.density,
                 y = (child.y + CandyTrailLayoutRules.NODE_HEIGHT / 2f) * density.density,
             )
             val geometry = CandyTrailGraphMotionRules.edgeGeometry(
@@ -864,6 +954,123 @@ private fun DrawScope.drawCandyTrailEdgeSegment(
 }
 
 @Composable
+private fun CandyTrailPageIcon(
+    favicon: ImageBitmap?,
+    host: String,
+    modifier: Modifier,
+) {
+    if (favicon != null) {
+        Image(favicon, null, modifier, contentScale = ContentScale.Fit)
+    } else {
+        Box(
+            modifier.clip(RoundedCornerShape(12.dp)).background(MaterialTheme.colorScheme.tertiaryContainer),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                host.take(1).uppercase().ifBlank { "•" },
+                color = MaterialTheme.colorScheme.onTertiaryContainer,
+                fontWeight = FontWeight.Bold,
+            )
+        }
+    }
+}
+
+@Composable
+private fun CandyTrailCompactNode(
+    title: String,
+    description: String,
+    favicon: ImageBitmap?,
+    current: Boolean,
+    fork: Boolean,
+    scale: Float,
+    modifier: Modifier,
+    onClick: () -> Unit,
+) {
+    // Keep symbols readable until the dense overview, where tapping the surrounding graph zooms in.
+    val safeScale = CandyTrailPresentationRules.symbolScale(scale)
+    Box(
+        modifier = modifier.size(CandyTrailLayoutRules.NODE_WIDTH.dp, CandyTrailLayoutRules.NODE_HEIGHT.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        if (current && scale < CandyTrailPresentationRules.OVERVIEW_SCALE) {
+            Box(
+                Modifier
+                    .size(18.dp)
+                    .graphicsLayer { scaleX = 1f / scale; scaleY = scaleX }
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.22f), CircleShape)
+                    .border(2.dp, MaterialTheme.colorScheme.primary, CircleShape),
+            )
+        }
+        Surface(
+            modifier = Modifier
+                .size(48.dp)
+                .graphicsLayer { scaleX = 1f / safeScale; scaleY = scaleX }
+                .semantics { contentDescription = description; selected = current }
+                .clickable(role = Role.Button, onClick = onClick),
+            shape = if (fork) RoundedCornerShape(16.dp, 8.dp, 16.dp, 8.dp) else CircleShape,
+            color = when {
+                current -> MaterialTheme.colorScheme.primaryContainer
+                fork -> MaterialTheme.colorScheme.tertiaryContainer
+                else -> MaterialTheme.colorScheme.surfaceContainerHigh
+            },
+            border = if (current) androidx.compose.foundation.BorderStroke(3.dp, MaterialTheme.colorScheme.primary) else null,
+            shadowElevation = if (current) 4.dp else 0.dp,
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                if (favicon != null) {
+                    Image(favicon, null, Modifier.size(28.dp), contentScale = ContentScale.Fit)
+                } else {
+                    Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CandyTrailList(
+    trail: CandyTrail,
+    favicon: ImageBitmap?,
+    pageFavicons: Map<String, ImageBitmap>,
+    forkFavicons: Map<String, ImageBitmap>,
+    strings: CandyTrailStrings,
+    onSelectNode: (String) -> Unit,
+    onSelectFork: (String) -> Unit,
+    onMore: (String) -> Unit,
+    hiddenCounts: Map<String, Int>,
+    headerHeight: androidx.compose.ui.unit.Dp,
+) {
+    LazyColumn(
+        modifier = Modifier.fillMaxSize().navigationBarsPadding(),
+        contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = headerHeight + 16.dp, bottom = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        items(trail.nodes.sortedByDescending { it.visitedAt }, key = { "node:${it.id}" }) { node ->
+            val current = node.id == trail.currentNodeId
+            CandyTrailNodeCard(
+                node = node,
+                isCurrent = current,
+                favicon = pageFavicons[node.url] ?: favicon.takeIf { current },
+                strings = strings,
+                modifier = Modifier.fillMaxWidth(),
+                onClick = { onSelectNode(node.id) },
+                onMore = { onMore(node.id) },
+                hiddenCount = hiddenCounts[node.id] ?: 0,
+            )
+        }
+        items(trail.forks.sortedByDescending { it.createdAt }, key = { "fork:${it.id}" }) { fork ->
+            CandyTrailForkCard(
+                fork = fork,
+                favicon = fork.destinationTabId?.let(forkFavicons::get),
+                strings = strings,
+                modifier = Modifier.fillMaxWidth(),
+                onClick = { onSelectFork(fork.id) },
+            )
+        }
+    }
+}
+
+@Composable
 private fun CandyTrailNodeCard(
     node: CandyTrailNode,
     isCurrent: Boolean,
@@ -872,10 +1079,26 @@ private fun CandyTrailNodeCard(
     modifier: Modifier,
     onClick: () -> Unit,
     onMore: () -> Unit,
+    compactScale: Float? = null,
+    onInspect: () -> Unit = onClick,
+    hiddenCount: Int = 0,
 ) {
     val host = remember(node.url) { node.url.browserHost() }
     val title = node.title.ifBlank { host.ifBlank { node.url } }
     val description = strings.nodeDescription(isCurrent, title, host)
+    if (compactScale != null) {
+        CandyTrailCompactNode(
+            title = host.take(1).uppercase().ifBlank { "•" },
+            description = description,
+            favicon = favicon,
+            current = isCurrent,
+            fork = false,
+            scale = compactScale,
+            modifier = modifier,
+            onClick = onInspect,
+        )
+        return
+    }
     Surface(
         modifier = modifier
             .width(CandyTrailLayoutRules.NODE_WIDTH.dp)
@@ -900,53 +1123,34 @@ private fun CandyTrailNodeCard(
         },
         tonalElevation = if (isCurrent) 8.dp else 2.dp,
     ) {
-        Row(
-            modifier = Modifier.padding(14.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            if (favicon != null) {
-                Image(
-                    bitmap = favicon,
-                    contentDescription = null,
-                    modifier = Modifier.size(36.dp),
-                    contentScale = ContentScale.Fit,
-                )
-            } else {
-                Box(
-                    modifier = Modifier
-                        .size(36.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(MaterialTheme.colorScheme.tertiary),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        text = host.take(1).uppercase().ifBlank { "•" },
-                        color = MaterialTheme.colorScheme.onTertiary,
-                        fontWeight = FontWeight.Bold,
-                    )
-                }
-            }
-            Spacer(Modifier.width(10.dp))
-            Column(Modifier.weight(1f)) {
+        Column(Modifier.padding(14.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                CandyTrailPageIcon(favicon, host, Modifier.size(32.dp))
+                Spacer(Modifier.width(8.dp))
                 Text(
-                    text = title,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.SemiBold,
-                )
-                Text(
-                    text = host,
+                    text = if (isCurrent) strings.currentPage else host,
+                    modifier = Modifier.weight(1f),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    style = MaterialTheme.typography.labelSmall,
+                    style = MaterialTheme.typography.labelMedium,
                 )
+                IconButton(onClick = onMore) {
+                    Icon(Icons.Default.MoreVert, strings.nodeActionsDescription(title))
+                }
             }
-            IconButton(onClick = onMore) {
-                Icon(
-                    Icons.Default.MoreVert,
-                    contentDescription = strings.nodeActionsDescription(title),
+            Text(
+                text = title,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Medium,
+            )
+            if (hiddenCount > 0) {
+                Text(
+                    strings.hiddenPages(hiddenCount),
+                    color = MaterialTheme.colorScheme.primary,
+                    style = MaterialTheme.typography.labelMedium,
                 )
             }
         }
@@ -960,12 +1164,27 @@ private fun CandyTrailForkCard(
     strings: CandyTrailStrings,
     modifier: Modifier,
     onClick: () -> Unit,
+    compactScale: Float? = null,
+    onInspect: () -> Unit = onClick,
 ) {
     val host = remember(fork.url) { fork.url.browserHost() }
     val title = fork.title.ifBlank { host.ifBlank { fork.url } }
     val isOpen = fork.lifecycle == CandyTrailForkLifecycle.Open
     val status = strings.forkStatus(isOpen)
     val description = strings.forkDescription(isOpen, title, host)
+    if (compactScale != null) {
+        CandyTrailCompactNode(
+            title = "↗",
+            description = description,
+            favicon = favicon,
+            current = false,
+            fork = true,
+            scale = compactScale,
+            modifier = modifier,
+            onClick = onInspect,
+        )
+        return
+    }
     Surface(
         modifier = modifier
             .width(CandyTrailLayoutRules.NODE_WIDTH.dp)
@@ -1036,6 +1255,9 @@ private fun CandyTrailNodeActionsSheet(
     node: CandyTrailNode?,
     onFork: (String) -> Unit,
     onDismiss: () -> Unit,
+    canCollapse: Boolean,
+    isCollapsed: Boolean,
+    onToggleCollapse: (String) -> Unit,
     strings: CandyTrailStrings,
     containerColor: Color,
 ) {
@@ -1047,15 +1269,20 @@ private fun CandyTrailNodeActionsSheet(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
                 .navigationBarsPadding()
                 .padding(start = 20.dp, end = 20.dp, bottom = 20.dp),
         ) {
             Text(
                 node.title.ifBlank { node.url },
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.SemiBold,
+            )
+            Text(
+                node.url,
+                modifier = Modifier.padding(top = 6.dp),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Text(
                 strings.forkUrlOnlyDisclaimer,
@@ -1063,6 +1290,14 @@ private fun CandyTrailNodeActionsSheet(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 style = MaterialTheme.typography.bodySmall,
             )
+            if (canCollapse || isCollapsed) {
+                FilledTonalButton(
+                    onClick = { onToggleCollapse(node.id) },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(if (isCollapsed) strings.expandBranch else strings.collapseBranch)
+                }
+            }
             TextButton(
                 onClick = { onFork(node.id) },
                 modifier = Modifier.fillMaxWidth(),
@@ -1078,39 +1313,83 @@ private fun CandyTrailTopBar(
     tab: BrowserTab,
     onBack: () -> Unit,
     strings: CandyTrailStrings,
+    listVisible: Boolean,
+    focusRoute: Boolean,
+    onListVisibleChange: (Boolean) -> Unit,
+    onFocusRouteChange: (Boolean) -> Unit,
     modifier: Modifier,
 ) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .statusBarsPadding()
-            .padding(horizontal = 12.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.96f),
+        shape = RoundedCornerShape(bottomStart = 32.dp, bottomEnd = 32.dp),
     ) {
-        IconButton(onClick = onBack) {
-            Icon(Icons.AutoMirrored.Filled.ArrowBack, strings.close)
-        }
-        Column(Modifier.weight(1f)) {
-            Text(
-                strings.title,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-            )
-            Text(
-                tab.title.ifBlank { strings.newTabTitle },
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                style = MaterialTheme.typography.labelLarge,
+        Column(Modifier.statusBarsPadding().padding(horizontal = 12.dp, vertical = 8.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = onBack) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, strings.close)
+                }
+                Column(Modifier.weight(1f)) {
+                    Text(strings.title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                    Text(
+                        tab.title.ifBlank { strings.newTabTitle },
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.labelLarge,
+                    )
+                }
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                CandyTrailViewButton(
+                    selected = !listVisible,
+                    onClick = { onListVisibleChange(false) },
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Icon(Icons.Default.AccountTree, null, Modifier.size(20.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text(strings.graphView)
+                }
+                CandyTrailViewButton(
+                    selected = listVisible,
+                    onClick = { onListVisibleChange(true) },
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Icon(Icons.AutoMirrored.Filled.List, null, Modifier.size(20.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text(strings.listView)
+                }
+            }
+            FilterChip(
+                selected = focusRoute,
+                onClick = { onFocusRouteChange(!focusRoute) },
+                label = { Text(if (focusRoute) strings.allBranches else strings.focusRoute) },
+                modifier = Modifier.padding(start = 8.dp),
             )
         }
     }
 }
 
 @Composable
+private fun CandyTrailViewButton(
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier,
+    content: @Composable androidx.compose.foundation.layout.RowScope.() -> Unit,
+) {
+    val semantics = modifier.semantics { this.selected = selected }
+    if (selected) FilledTonalButton(onClick, semantics, content = content)
+    else OutlinedButton(onClick, semantics, content = content)
+}
+
+@Composable
 private fun CandyTrailZoomControls(
     onZoomOut: () -> Unit,
     onReset: () -> Unit,
+    onCurrent: () -> Unit,
     onZoomIn: () -> Unit,
     strings: CandyTrailStrings,
     modifier: Modifier,
@@ -1134,11 +1413,11 @@ private fun CandyTrailZoomControls(
             ) {
                 Text("−", fontWeight = FontWeight.Bold)
             }
-            FilledIconButton(
-                onClick = onReset,
-                modifier = Modifier.semantics { contentDescription = strings.resetZoom },
-            ) {
-                Text("◎", fontWeight = FontWeight.Bold)
+            IconButton(onClick = onReset) {
+                Icon(Icons.Default.FitScreen, strings.fitAll)
+            }
+            FilledIconButton(onClick = onCurrent) {
+                Icon(Icons.Default.MyLocation, strings.currentPage)
             }
             IconButton(onClick = onZoomIn) {
                 Icon(Icons.Default.Add, strings.zoomIn)

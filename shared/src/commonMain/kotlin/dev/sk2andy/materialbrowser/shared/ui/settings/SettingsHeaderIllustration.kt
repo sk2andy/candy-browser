@@ -35,6 +35,7 @@ import dev.sk2andy.materialbrowser.shared.resources.settings_approved_link_previ
 import dev.sk2andy.materialbrowser.shared.resources.settings_approved_tab_lifecycle
 import dev.sk2andy.materialbrowser.shared.resources.settings_approved_personal_link_rules
 import dev.sk2andy.materialbrowser.shared.resources.settings_external_app_links
+import dev.sk2andy.materialbrowser.shared.resources.settings_link_long_press
 import dev.sk2andy.materialbrowser.shared.resources.settings_gesture_controls
 import dev.sk2andy.materialbrowser.shared.resources.settings_address_bar_buttons
 import org.jetbrains.compose.resources.imageResource
@@ -63,6 +64,7 @@ fun SettingsHeaderIllustration(
             SettingsHeaderArtwork.TabLifecycle -> Res.drawable.settings_approved_tab_lifecycle
             SettingsHeaderArtwork.PersonalLinkRules -> Res.drawable.settings_approved_personal_link_rules
             SettingsHeaderArtwork.ExternalApps -> Res.drawable.settings_external_app_links
+            SettingsHeaderArtwork.LinkLongPress -> Res.drawable.settings_link_long_press
         },
     )
     val source = remember(artwork) { SettingsHeaderArtworkRules.sourceWindow(artwork) }

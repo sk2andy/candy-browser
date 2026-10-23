@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feeds_player_open">Vorleseliste öffnen</string>
+    <string name="feeds_player_close">Vorleseliste schließen</string>
+    <string name="feeds_player_up_next">Warteschlange · %1$d</string>
+    <string name="feeds_player_import_saved">Gemerkte hinzufügen</string>
+    <string name="feeds_player_empty">Ein Moment für dich</string>
+    <string name="feeds_player_empty_title">Dein nächster guter Hörmoment.</string>
+    <string name="feeds_player_empty_hint">Füge Artikel über das Vorleselisten-Symbol hinzu. Auch deine gemerkten Artikel können mitkommen.</string>
+    <string name="feeds_player_preparing">Wird vorbereitet</string>
+    <string name="feeds_player_listening">Wird vorgelesen</string>
+    <string name="feeds_player_ready">Bereit, wenn du es bist</string>
+    <string name="feeds_player_progress">%1$d%% vorgelesen</string>
+    <string name="feeds_player_rate">%1$s×</string>
+    <string name="feeds_player_current">Als Erstes · %1$s</string>
+    <string name="feeds_player_move_up">Nach oben verschieben: %1$s</string>
+    <string name="feeds_player_remove">Aus Vorleseliste entfernen: %1$s</string>
+    <string name="feeds_player_load_failed">Dieser Artikel konnte nicht zum Vorlesen vorbereitet werden.</string>
+    <string name="feeds_player_retry">Erneut versuchen</string>
+    <string name="feeds_player_foreground">Höre auch im Hintergrund weiter. Du kannst die Wiedergabe ebenso über die Android-Mediensteuerung bedienen.</string>
+</resources>

@@ -11,4 +11,22 @@
     <string name="web_annotation_failed">Nie udało się zapisać wyróżnienia.</string>
     <string name="web_annotation_private">Wyróżnienia nie są dostępne w kartach prywatnych.</string>
     <string name="web_annotation_close">Zamknij</string>
+    <string name="web_annotation_read">Czytaj notatkę</string>
+    <string name="web_annotation_edit">Edytuj</string>
+    <string name="web_annotation_go_to">Przejdź do wyróżnienia</string>
+    <string name="web_annotation_list_hint">Dotknij cytatu, aby przejść do jego miejsca na stronie.</string>
+    <string name="web_annotation_no_note">Nie ma jeszcze notatki. Dotknij Edytuj, aby ją dodać.</string>
+    <string name="web_annotation_not_found">Nie udało się jednoznacznie znaleźć tego cytatu na stronie. Zapisana notatka jest nadal dostępna.</string>
+    <string name="web_annotation_markdown_hint">Obsługiwany Markdown: **pogrubienie**, *kursywa*, listy i [linki](https://example.com).</string>
+    <string name="web_annotation_preview">Podgląd</string>
+    <string name="web_annotation_format_bold">Pogrubienie</string>
+    <string name="web_annotation_format_italic">Kursywa</string>
+    <string name="web_annotation_format_heading">Nagłówek</string>
+    <string name="web_annotation_format_list">Lista punktowana</string>
+    <string name="web_annotation_format_link">Wstaw link</string>
+    <string name="web_annotation_format_code">Kod w tekście</string>
+    <string name="web_annotation_discard_title">Odrzucić zmiany?</string>
+    <string name="web_annotation_discard_message">Niezapisane zmiany w notatce zostaną utracone.</string>
+    <string name="web_annotation_discard">Odrzuć</string>
+    <string name="web_annotation_keep_editing">Edytuj dalej</string>
 </resources>

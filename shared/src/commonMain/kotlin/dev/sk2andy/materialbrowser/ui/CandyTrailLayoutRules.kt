@@ -30,8 +30,8 @@ internal data class CandyTrailLayout(
 )
 
 internal object CandyTrailLayoutRules {
-    const val NODE_WIDTH = 188f
-    const val NODE_HEIGHT = 112f
+    const val NODE_WIDTH = 216f
+    const val NODE_HEIGHT = 136f
     private const val HORIZONTAL_GAP = 104f
     private const val VERTICAL_GAP = 34f
     private const val MARGIN = 56f
@@ -136,7 +136,7 @@ private data class CandyTrailLayoutChild(
 )
 
 internal object CandyTrailViewportRules {
-    const val MIN_SCALE = 0.15f
+    const val MIN_SCALE = 0.01f
     const val MAX_SCALE = 2.25f
 
     fun scale(value: Float): Float = value.coerceIn(MIN_SCALE, MAX_SCALE)

@@ -11,4 +11,22 @@
     <string name="web_annotation_failed">Det gick inte att spara markeringen.</string>
     <string name="web_annotation_private">Markeringar är inte tillgängliga i privata flikar.</string>
     <string name="web_annotation_close">Stäng</string>
+    <string name="web_annotation_read">Läs anteckning</string>
+    <string name="web_annotation_edit">Redigera</string>
+    <string name="web_annotation_go_to">Gå till markering</string>
+    <string name="web_annotation_list_hint">Tryck på ett citat för att gå till dess plats på sidan.</string>
+    <string name="web_annotation_no_note">Ingen anteckning ännu. Tryck på Redigera för att lägga till en.</string>
+    <string name="web_annotation_not_found">Det gick inte att hitta citatet entydigt på sidan. Din sparade anteckning är fortfarande tillgänglig.</string>
+    <string name="web_annotation_markdown_hint">Markdown stöds: **fetstil**, *kursiv*, listor och [länkar](https://example.com).</string>
+    <string name="web_annotation_preview">Förhandsvisning</string>
+    <string name="web_annotation_format_bold">Fetstil</string>
+    <string name="web_annotation_format_italic">Kursiv</string>
+    <string name="web_annotation_format_heading">Rubrik</string>
+    <string name="web_annotation_format_list">Punktlista</string>
+    <string name="web_annotation_format_link">Infoga länk</string>
+    <string name="web_annotation_format_code">Kod i texten</string>
+    <string name="web_annotation_discard_title">Kassera ändringarna?</string>
+    <string name="web_annotation_discard_message">Dina osparade ändringar i anteckningen går förlorade.</string>
+    <string name="web_annotation_discard">Kassera</string>
+    <string name="web_annotation_keep_editing">Fortsätt redigera</string>
 </resources>

@@ -1,6 +1,5 @@
 package dev.sk2andy.materialbrowser.shared.ui
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -81,6 +80,11 @@ fun BrowserMenuBottomSheetContent(
     extensionContent: @Composable ColumnScope.((() -> Unit) -> Unit) -> Unit = {},
 ) {
     val sections = BrowserMenuBottomSheetRules.sections(items, toolbarEntries)
+    val primaryActions = sections.pageActions.filterNot {
+        it.section == BrowserFeatureMenuSection.Reading || it.section == BrowserFeatureMenuSection.Toppings
+    }
+    val readingActions = sections.pageActions.filter { it.section == BrowserFeatureMenuSection.Reading }
+    val workflows = sections.pageActions.filter { it.section == BrowserFeatureMenuSection.Toppings }
     val scrollState = rememberScrollState()
     val pagerState = rememberPagerState { 2 }
     val scope = rememberCoroutineScope()
@@ -101,14 +105,7 @@ fun BrowserMenuBottomSheetContent(
                 .testTag(BrowserMenuBottomSheetTestTags.Handle),
             contentAlignment = Alignment.Center,
         ) {
-            Box(
-                Modifier
-                    .size(36.dp, 4.dp)
-                    .background(
-                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
-                        CircleShape,
-                    ),
-            )
+            CandySheetDragIndicator()
         }
         Box(
             modifier = Modifier
@@ -213,14 +210,16 @@ fun BrowserMenuBottomSheetContent(
                         ),
                 ) {
                     if (page == 0) {
-                        if (sections.pageActions.isEmpty()) {
+                        if (primaryActions.isEmpty()) {
                             EmptyMenuSection(emptySectionMessage, emptySectionActionLabel, onOpenMenuSettings)
                         } else {
                             SheetActionGroups(
-                                sections.pageActions, resources, effects, snoozedTabCount, onCommand, onToggle,
+                                primaryActions, resources, effects, snoozedTabCount, onCommand, onToggle,
                             )
                         }
                         extensionContent(onExtensionCommit)
+                        SheetActionGroups(readingActions, resources, effects, snoozedTabCount, onCommand, onToggle)
+                        BrowserMainMenuWorkflows(workflows, resources, effects, snoozedTabCount, onCommand, onToggle)
                     } else {
                         if (sections.pageControls.isEmpty()) {
                             EmptyMenuSection(emptySectionMessage, emptySectionActionLabel, onOpenMenuSettings)
@@ -241,15 +240,15 @@ fun BrowserMenuBottomSheetContent(
                     .testTag(BrowserMenuBottomSheetTestTags.Content),
             ) {
                 val bothPageSectionsEmpty =
-                    sections.pageActions.isEmpty() && sections.pageControls.isEmpty()
+                    primaryActions.isEmpty() && sections.pageControls.isEmpty()
                 if (bothPageSectionsEmpty) {
                     EmptyMenuSection(emptySectionMessage, emptySectionActionLabel, onOpenMenuSettings)
-                } else if (sections.pageActions.isEmpty()) {
+                } else if (primaryActions.isEmpty()) {
                     EmptyMenuSection(emptySectionMessage, emptySectionActionLabel, onOpenMenuSettings)
                 } else {
                     SheetSectionTitle(pageActionsTitle)
                     SheetActionGroups(
-                        sections.pageActions, resources, effects, snoozedTabCount, onCommand, onToggle,
+                        primaryActions, resources, effects, snoozedTabCount, onCommand, onToggle,
                     )
                 }
                 extensionContent(onExtensionCommit)
@@ -263,6 +262,8 @@ fun BrowserMenuBottomSheetContent(
                         EmptyMenuSection(emptySectionMessage, emptySectionActionLabel, onOpenMenuSettings)
                     }
                 }
+                SheetActionGroups(readingActions, resources, effects, snoozedTabCount, onCommand, onToggle)
+                BrowserMainMenuWorkflows(workflows, resources, effects, snoozedTabCount, onCommand, onToggle)
             }
         }
         if (sections.footer.isNotEmpty()) {

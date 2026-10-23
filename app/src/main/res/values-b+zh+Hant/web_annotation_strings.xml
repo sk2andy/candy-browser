@@ -11,4 +11,22 @@
     <string name="web_annotation_failed">無法儲存此標示內容。</string>
     <string name="web_annotation_private">無痕分頁中無法使用標示功能。</string>
     <string name="web_annotation_close">關閉</string>
+    <string name="web_annotation_read">閱讀筆記</string>
+    <string name="web_annotation_edit">編輯</string>
+    <string name="web_annotation_go_to">前往標示位置</string>
+    <string name="web_annotation_list_hint">輕觸引文即可跳至頁面中的對應位置。</string>
+    <string name="web_annotation_no_note">尚無筆記。輕觸「編輯」即可新增。</string>
+    <string name="web_annotation_not_found">無法在頁面中唯一定位此引文。你儲存的筆記仍然可用。</string>
+    <string name="web_annotation_markdown_hint">支援 Markdown：**粗體**、*斜體*、清單和[連結](https://example.com)。</string>
+    <string name="web_annotation_preview">預覽</string>
+    <string name="web_annotation_format_bold">粗體</string>
+    <string name="web_annotation_format_italic">斜體</string>
+    <string name="web_annotation_format_heading">標題</string>
+    <string name="web_annotation_format_list">項目符號清單</string>
+    <string name="web_annotation_format_link">插入連結</string>
+    <string name="web_annotation_format_code">行內程式碼</string>
+    <string name="web_annotation_discard_title">捨棄變更？</string>
+    <string name="web_annotation_discard_message">尚未儲存的筆記變更將會遺失。</string>
+    <string name="web_annotation_discard">捨棄</string>
+    <string name="web_annotation_keep_editing">繼續編輯</string>
 </resources>

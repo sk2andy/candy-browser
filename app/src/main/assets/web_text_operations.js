@@ -51,6 +51,44 @@
     if (fragment.querySelector?.(excluded)) return null;
     return range;
   }
+  let savedRanges = [];
+  let annotationClickListener = null;
+  let pointerStart = null;
+  document.addEventListener('pointerdown', event => {
+    pointerStart = event.isTrusted && event.isPrimary ? { x: event.clientX, y: event.clientY, time: event.timeStamp } : null;
+  }, true);
+  document.addEventListener('pointermove', event => {
+    if (pointerStart && Math.hypot(event.clientX - pointerStart.x, event.clientY - pointerStart.y) > 10) pointerStart = null;
+  }, true);
+  document.addEventListener('pointercancel', () => { pointerStart = null; }, true);
+  document.addEventListener('click', event => {
+    const start = pointerStart;
+    pointerStart = null;
+    if (!event.isTrusted || !annotationClickListener || !start || event.timeStamp - start.time > 700 ||
+        Math.hypot(event.clientX - start.x, event.clientY - start.y) > 10 || !getSelection()?.isCollapsed) return;
+    const match = savedRanges.find(({ range }) => Array.from(range.getClientRects()).some(rect =>
+      event.clientX >= rect.left && event.clientX <= rect.right && event.clientY >= rect.top && event.clientY <= rect.bottom));
+    if (!match || !match.id || !match.range.startContainer.isConnected || match.range.toString() !== match.quote ||
+        !visible(match.range.startContainer.parentElement, new WeakMap())) return;
+    const hit = document.elementFromPoint(event.clientX, event.clientY);
+    if (!hit || !match.range.intersectsNode(hit) || hit.closest(excluded)) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    annotationClickListener(match.id);
+  }, true);
+  function scrollToAnnotation(payload) {
+    if (typeof payload.id !== 'string' || payload.id.length < 1 || payload.id.length > 64) return false;
+    const range = findRange(payload.quote);
+    if (!range || !Array.from(range.getClientRects()).some(value => value.width > 0 && value.height > 0)) return false;
+    for (let parent = range.startContainer.parentElement; parent && parent !== document.body; parent = parent.parentElement) {
+      if (parent.scrollHeight <= parent.clientHeight || !/auto|scroll/.test(getComputedStyle(parent).overflowY)) continue;
+      const rect = range.getBoundingClientRect(), container = parent.getBoundingClientRect();
+      parent.scrollBy({ top: rect.top - container.top - parent.clientHeight / 2 + rect.height / 2, behavior: 'instant' });
+    }
+    const rect = range.getBoundingClientRect();
+    window.scrollBy({ top: rect.top - window.innerHeight / 2 + rect.height / 2, behavior: 'instant' });
+    return true;
+  }
   function highlights(payload) {
     if (!globalThis.CSS?.highlights || typeof Highlight !== 'function' || !Array.isArray(payload.annotations)) return false;
     let style = document.getElementById('__candy_highlight_style');
@@ -61,8 +99,12 @@
       (document.head || document.documentElement).appendChild(style);
     }
     const index = textIndex();
-    const ranges = payload.annotations.slice(0, 200).map(a => findRange(a.quote, index)).filter(Boolean);
-    CSS.highlights.set('candy-saved', new Highlight(...ranges));
+    savedRanges = payload.annotations.slice(0, 200).map(annotation => ({
+      quote: annotation.quote,
+      id: typeof annotation.id === 'string' && annotation.id.length <= 64 ? annotation.id : null,
+      range: findRange(annotation.quote, index),
+    })).filter(value => value.range);
+    CSS.highlights.set('candy-saved', new Highlight(...savedRanges.map(value => value.range)));
     return true;
   }
   function translate(payload) {
@@ -95,9 +137,13 @@
   const documentToken = Array.from(crypto.getRandomValues(new Uint32Array(4)), n => n.toString(16)).join('-');
   globalThis.CandyWebTextOperations = {
     documentToken,
+    setAnnotationClickListener(listener) {
+      annotationClickListener = typeof listener === 'function' ? listener : null;
+    },
     apply(payload) {
       if (!payload || canonical(payload.url) !== canonical(location.href) || !canonical(payload.url)) return false;
       if (payload.operation === 'highlights') return highlights(payload);
+      if (payload.operation === 'scroll-to-annotation') return scrollToAnnotation(payload);
       if (payload.operation === 'translate') return translate(payload);
       return false;
     }

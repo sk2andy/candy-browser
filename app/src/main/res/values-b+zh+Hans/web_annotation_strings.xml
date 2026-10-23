@@ -11,4 +11,22 @@
     <string name="web_annotation_failed">无法保存此高亮内容。</string>
     <string name="web_annotation_private">无痕标签页中无法使用高亮功能。</string>
     <string name="web_annotation_close">关闭</string>
+    <string name="web_annotation_read">阅读笔记</string>
+    <string name="web_annotation_edit">编辑</string>
+    <string name="web_annotation_go_to">跳转到高亮内容</string>
+    <string name="web_annotation_list_hint">点按引文即可跳转到页面中的对应位置。</string>
+    <string name="web_annotation_no_note">暂无笔记。点按“编辑”添加笔记。</string>
+    <string name="web_annotation_not_found">无法在页面中唯一定位此引文。你保存的笔记仍然可用。</string>
+    <string name="web_annotation_markdown_hint">支持 Markdown：**粗体**、*斜体*、列表和[链接](https://example.com)。</string>
+    <string name="web_annotation_preview">预览</string>
+    <string name="web_annotation_format_bold">粗体</string>
+    <string name="web_annotation_format_italic">斜体</string>
+    <string name="web_annotation_format_heading">标题</string>
+    <string name="web_annotation_format_list">项目符号列表</string>
+    <string name="web_annotation_format_link">插入链接</string>
+    <string name="web_annotation_format_code">行内代码</string>
+    <string name="web_annotation_discard_title">放弃更改？</string>
+    <string name="web_annotation_discard_message">尚未保存的笔记更改将会丢失。</string>
+    <string name="web_annotation_discard">放弃</string>
+    <string name="web_annotation_keep_editing">继续编辑</string>
 </resources>

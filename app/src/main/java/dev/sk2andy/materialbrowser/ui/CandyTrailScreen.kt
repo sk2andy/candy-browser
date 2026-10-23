@@ -34,6 +34,7 @@ internal fun CandyTrailScreen(
     onForkSelectionFinished: (String) -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
+    pageFavicons: Map<String, Bitmap> = emptyMap(),
 ) {
     val context = LocalContext.current
     val rootView = LocalView.current
@@ -75,6 +76,15 @@ internal fun CandyTrailScreen(
         zoomOut = stringResource(R.string.cd_zoom_out),
         resetZoom = stringResource(R.string.action_reset_zoom),
         zoomIn = stringResource(R.string.cd_zoom_in),
+        fitAll = stringResource(R.string.candy_trail_fit_all),
+        currentPage = stringResource(R.string.candy_trail_current_page),
+        graphView = stringResource(R.string.candy_trail_graph_view),
+        listView = stringResource(R.string.candy_trail_list_view),
+        focusRoute = stringResource(R.string.candy_trail_focus_route),
+        allBranches = stringResource(R.string.candy_trail_all_branches),
+        collapseBranch = stringResource(R.string.candy_trail_collapse_branch),
+        expandBranch = stringResource(R.string.candy_trail_expand_branch),
+        hiddenPages = { count -> context.getString(R.string.candy_trail_hidden_pages, count) },
     )
     CandyTrailScreenContent(
         tab = tab,
@@ -82,6 +92,9 @@ internal fun CandyTrailScreen(
         favicon = favicon?.takeUnless(Bitmap::isRecycled)?.asImageBitmap(),
         forkFavicons = forkFavicons.mapNotNull { (tabId, bitmap) ->
             bitmap.takeUnless(Bitmap::isRecycled)?.asImageBitmap()?.let { tabId to it }
+        }.toMap(),
+        pageFavicons = pageFavicons.mapNotNull { (url, bitmap) ->
+            bitmap.takeUnless(Bitmap::isRecycled)?.asImageBitmap()?.let { url to it }
         }.toMap(),
         strings = strings,
         nodeActionsContainerColor = browserChromeColor(

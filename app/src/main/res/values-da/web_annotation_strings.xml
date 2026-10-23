@@ -11,4 +11,22 @@
     <string name="web_annotation_failed">Fremhævningen kunne ikke gemmes.</string>
     <string name="web_annotation_private">Fremhævninger er ikke tilgængelige i private faner.</string>
     <string name="web_annotation_close">Luk</string>
+    <string name="web_annotation_read">Læs note</string>
+    <string name="web_annotation_edit">Rediger</string>
+    <string name="web_annotation_go_to">Gå til fremhævning</string>
+    <string name="web_annotation_list_hint">Tryk på et citat for at gå til dets placering på siden.</string>
+    <string name="web_annotation_no_note">Ingen note endnu. Tryk på Rediger for at tilføje en.</string>
+    <string name="web_annotation_not_found">Dette citat kunne ikke findes entydigt på siden. Din gemte note er stadig tilgængelig.</string>
+    <string name="web_annotation_markdown_hint">Markdown understøttes: **fed**, *kursiv*, lister og [links](https://example.com).</string>
+    <string name="web_annotation_preview">Forhåndsvisning</string>
+    <string name="web_annotation_format_bold">Fed</string>
+    <string name="web_annotation_format_italic">Kursiv</string>
+    <string name="web_annotation_format_heading">Overskrift</string>
+    <string name="web_annotation_format_list">Punktopstilling</string>
+    <string name="web_annotation_format_link">Indsæt link</string>
+    <string name="web_annotation_format_code">Kode i teksten</string>
+    <string name="web_annotation_discard_title">Kassér ændringer?</string>
+    <string name="web_annotation_discard_message">Dine ikke-gemte ændringer i noten går tabt.</string>
+    <string name="web_annotation_discard">Kassér</string>
+    <string name="web_annotation_keep_editing">Fortsæt redigering</string>
 </resources>

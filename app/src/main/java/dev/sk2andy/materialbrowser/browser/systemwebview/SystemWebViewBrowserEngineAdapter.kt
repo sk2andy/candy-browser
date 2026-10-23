@@ -417,6 +417,10 @@ private class SystemWebViewBrowserEngineSession(
     private val webView = SystemWebViewHost(context, ::onSafeAreaFallback, ::onStatusBarBackdrop)
     private val host = webView
     private val formDrafts = SystemWebViewFormDrafts(webView)
+    private val annotations = SystemWebViewAnnotations(webView) { generation, url ->
+        !closed && !isPrivate && contentKind == BrowserEngineContentKind.RegularTab &&
+            generation == pageLoadGeneration && url == webView.url
+    }
     private val downloadDiagnostics = SystemWebViewDownloadDiagnostics(isPrivate)
     private val blobDownloadTransfer = SystemWebViewBlobDownloadTransfer(
         appContext,
@@ -927,8 +931,15 @@ private class SystemWebViewBrowserEngineSession(
             onComplete(false)
             return
         }
+        val parsedPayload = runCatching { org.json.JSONObject(payload) }.getOrNull()
+        val operation = parsedPayload?.optString("operation")
+        if (operation in setOf("highlights", "scroll-to-annotation") &&
+            (isPrivate || contentKind != BrowserEngineContentKind.RegularTab)) {
+            onComplete(false)
+            return
+        }
         val script = appContext.assets.open("web_text_operations.js").bufferedReader().use { it.readText() }
-        val validPayload = runCatching { org.json.JSONObject(payload).toString() }.getOrNull()
+        val validPayload = parsedPayload?.toString()
         if (validPayload == null) {
             onComplete(false)
             return
@@ -941,12 +952,17 @@ private class SystemWebViewBrowserEngineSession(
                 onComplete(false)
                 return@evaluateJavascript
             }
-            val guardedOperation = "globalThis.CandyWebTextOperations?.documentToken === " +
-                org.json.JSONObject.quote(token) + " && CandyWebTextOperations.apply($validPayload)"
+            val guardedOperation = "(() => { if (globalThis.CandyWebTextOperations?.documentToken !== " +
+                org.json.JSONObject.quote(token) + ") return false; " + annotations.script(generation, url) +
+                "return CandyWebTextOperations.apply($validPayload); })()"
             webView.evaluateJavascript(guardedOperation) { applied ->
                 onComplete(!closed && generation == pageLoadGeneration && url == webView.url && applied == "true")
             }
         }
+    }
+
+    override fun setWebAnnotationClickListener(listener: ((String) -> Unit)?) {
+        if (!closed) annotations.setListener(listener.takeIf { !isPrivate && contentKind == BrowserEngineContentKind.RegularTab })
     }
 
     override fun setFormDraftListener(listener: ((String) -> Unit)?) {
@@ -1129,6 +1145,7 @@ private class SystemWebViewBrowserEngineSession(
         safeAreaScriptHandler?.remove()
         desktopViewportScriptHandler?.remove()
         formDrafts.close()
+        annotations.close()
         removeMediaBridge()
         blobDownloadTransfer.close()
         dismissCustomFullscreenView(notify = false)

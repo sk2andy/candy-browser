@@ -44,8 +44,9 @@ internal data class CandyTrailDirectedEdge(
 internal object CandyTrailGraphMotionRules {
     const val EDGE_DRAW_DURATION_MILLIS = 260
     const val PATH_PULSE_DURATION_MILLIS = 650
-    const val TARGET_SPRING_DAMPING_RATIO = 0.72f
-    const val TARGET_SPRING_STIFFNESS = 520f
+    const val TARGET_SPRING_DAMPING_RATIO = 0.8f
+    const val TARGET_SPRING_STIFFNESS = 380f
+    const val EFFECTS_SPRING_STIFFNESS = 3_800f
 
     private const val CONTROL_DISTANCE_FRACTION = 0.52f
     private const val PULSE_LENGTH_FRACTION = 0.28f

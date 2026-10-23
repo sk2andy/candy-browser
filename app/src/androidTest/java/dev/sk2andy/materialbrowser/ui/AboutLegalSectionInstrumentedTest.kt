@@ -27,7 +27,7 @@ class AboutLegalSectionInstrumentedTest {
     val composeRule = createComposeRule()
 
     @Test
-    fun sectionOffersThreeAccessibleDestinations() {
+    fun sectionOffersFourAccessibleDestinations() {
         composeRule.setContent {
             MaterialBrowserTheme {
                 AboutLegalSection(onOpenUrl = {})
@@ -35,6 +35,7 @@ class AboutLegalSectionInstrumentedTest {
         }
 
         listOf(
+            AboutLegalTestTags.PrivacyPolicy,
             AboutLegalTestTags.Imprint,
             AboutLegalTestTags.OpenSource,
             AboutLegalTestTags.Uassets,
@@ -44,6 +45,20 @@ class AboutLegalSectionInstrumentedTest {
                 .assertHasClickAction()
                 .assertHeightIsAtLeast(48.dp)
         }
+    }
+
+    @Test
+    fun privacyPolicyOpensPublishedGitHubPagesDeclaration() {
+        val openedUrl = AtomicReference<String>()
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                AboutLegalSection(onOpenUrl = openedUrl::set)
+            }
+        }
+
+        composeRule.onNodeWithTag(AboutLegalTestTags.PrivacyPolicy).performClick()
+
+        assertEquals("https://sk2andy.github.io/candy-browser/privacy/", openedUrl.get())
     }
 
     @Test

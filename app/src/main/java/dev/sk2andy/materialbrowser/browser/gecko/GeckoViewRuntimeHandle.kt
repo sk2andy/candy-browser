@@ -3156,7 +3156,21 @@ private class GeckoViewBrowserSession(
     }
 
     override fun executeWebTextOperation(payload: String, onComplete: (Boolean) -> Unit) {
-        if (closed) onComplete(false) else privacyBinding.executeWebTextOperation(payload, onComplete)
+        if (closed || payload.length > 2_000_000) {
+            onComplete(false)
+            return
+        }
+        val operation = runCatching { JSONObject(payload).optString("operation") }.getOrNull()
+        if (operation in setOf("highlights", "scroll-to-annotation") &&
+            (session.settings.usePrivateMode || contentKind != BrowserEngineContentKind.RegularTab)) {
+            onComplete(false)
+        } else privacyBinding.executeWebTextOperation(payload, onComplete)
+    }
+
+    override fun setWebAnnotationClickListener(listener: ((String) -> Unit)?) {
+        if (!closed) privacyBinding.setWebAnnotationClickListener(listener?.let { next ->
+            { id -> if (!closed && !session.settings.usePrivateMode && contentKind == BrowserEngineContentKind.RegularTab) next(id) }
+        })
     }
 
     override fun setFormDraftListener(listener: ((String) -> Unit)?) {

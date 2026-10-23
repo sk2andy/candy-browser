@@ -23,6 +23,7 @@ import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.findActivity
 import dev.sk2andy.materialbrowser.reader.ReaderExtractionResult
 import dev.sk2andy.materialbrowser.reader.ReaderLibraryRepository
+import dev.sk2andy.materialbrowser.reader.ReaderLibraryDataSource
 import dev.sk2andy.materialbrowser.reader.ReaderSpeechController
 import dev.sk2andy.materialbrowser.shared.ui.ReaderStudioIcon
 import dev.sk2andy.materialbrowser.shared.ui.ReaderStudioLabel
@@ -44,6 +45,9 @@ internal fun ReaderStudioScreen(
     onDismiss: () -> Unit,
     onOpenOriginal: (String) -> Unit,
     onOpenLink: (String) -> Unit,
+    onOpenLibrary: (() -> Unit)? = null,
+    libraryDataSource: ReaderLibraryDataSource? = null,
+    extraActions: @Composable () -> Unit = {},
 ) {
     val context = LocalContext.current
     val backState = rememberNativeScreenBackState()
@@ -65,13 +69,15 @@ internal fun ReaderStudioScreen(
             result = result,
             sourceUrl = sourceUrl,
             isPrivate = isPrivate,
-            repository = remember(repository, sourceProfileId) { repository.forProfile(sourceProfileId) },
+            repository = libraryDataSource ?: remember(repository, sourceProfileId) { repository.forProfile(sourceProfileId) },
             resources = AndroidReaderStudioResources,
             speechFactory = { ReaderSpeechController(context) },
             onRetry = onRetry,
             onDismiss = onDismiss,
             onOpenOriginal = onOpenOriginal,
             onOpenLink = onOpenLink,
+            onOpenLibrary = onOpenLibrary,
+            extraActions = extraActions,
             backHandler = { enabled, onBack ->
                 NativeScreenBackHandler(state = backState, enabled = enabled, onBack = onBack)
             },
@@ -121,7 +127,7 @@ internal object AndroidReaderStudioResources : ReaderStudioResources {
         ReaderStudioLabel.SpeechPause -> stringResource(R.string.reader_speech_pause)
         ReaderStudioLabel.SpeechStop -> stringResource(R.string.reader_speech_stop)
         ReaderStudioLabel.PrivateNotice -> stringResource(R.string.reader_private_notice)
-        ReaderStudioLabel.OfflineLibrary -> stringResource(R.string.reader_offline_library)
+        ReaderStudioLabel.OfflineLibrary -> stringResource(R.string.feeds_library)
         ReaderStudioLabel.OfflineEmpty -> stringResource(R.string.reader_offline_empty)
         ReaderStudioLabel.ProgressPercent ->
             stringResource(R.string.reader_progress_percent, requireNotNull(value))

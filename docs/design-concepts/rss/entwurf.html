@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Candy · Browser, Feeds & Bibliothek</title>
+  <link rel="stylesheet" href="entwurf.css">
+  <link rel="stylesheet" href="katalog.css">
+  <script src="katalog.js" defer></script>
+  <script src="entwurf.js" defer></script>
+</head>
+<body>
+  <header class="masthead"><a class="brand" href="#browser"><span class="brandmark">c</span>candy<span class="brand-divider"></span><span class="brand-sub">Lesen & sammeln</span></a><span class="edition">PRODUKTENTWURF / 22.10.2026</span><button id="theme" class="quiet">◐ <span>Dunkel ansehen</span></button></header>
+  <main class="workspace">
+    <aside class="guide">
+      <div class="eyebrow">DEIN WEB. DEIN TEMPO.</div>
+      <h1>Mehr lesen. <br>Weniger <br><em>verpassen.</em></h1>
+      <p class="lede">Browser, Feeds und Reader Mode. Eine gemeinsame Bibliothek für alles, was du behalten möchtest.</p>
+      <nav id="scenarios" aria-label="Entwurfsansichten"></nav>
+      <div class="guide-foot"><span class="live-dot"></span> Klickbarer Entwurf · Beispieldaten<br><small>Änderungen gelten nur bis zum Neuladen.</small></div>
+    </aside>
+    <section class="preview" aria-label="Interaktive App-Vorschau">
+      <div class="preview-label"><span>ANDROID · CANDY BROWSER</span><span>PROFIL PRIVAT</span></div>
+      <div id="location-trail" class="location-trail" aria-live="polite"></div>
+      <div class="phone">
+        <div class="statusbar" aria-hidden="true"><b>09:41</b><span>▂▄▆ &nbsp; ◒ &nbsp; ▰</span></div>
+        <div id="screen" tabindex="-1"></div>
+        <nav id="bottom-nav" aria-label="App-Navigation"></nav>
+        <div class="gesture" aria-hidden="true"></div>
+        <div id="toast" role="status" aria-live="polite" hidden></div>
+        <dialog id="sheet"><div class="handle"></div><button class="sheet-close icon-btn" aria-label="Schließen">×</button><div id="sheet-content"></div></dialog>
+      </div>
+      <div class="prototype-controls"><button id="system-back" data-action="back">‹ Android Zurück</button><span>Beispieldaten · keine echten Tabs</span></div>
+      <div id="catalog-demo-controls" hidden><label><input type="checkbox" id="catalog-live"> Echte RSS-Amplifier-Suche</label><span id="catalog-data-status" role="status">Beispielkatalog · Abos nur simuliert</span></div>
+      <p class="preview-hint">Quellen → Entdecken: Themen, Sprachen, Vorschau und Abo ausprobieren.</p>
+    </section>
+    <aside class="notes" aria-label="Erläuterung zum Entwurf"><span class="eyebrow">SO IST ES GEDACHT</span><div id="notes-content"></div><a class="spec-link" href="umsetzung.md">Umfang & Umsetzung ↗</a></aside>
+  </main>
+  <footer class="page-footer"><span>Klickbarer Entwurf · Abos nur simuliert. Live-Suche auf Wunsch über RSS Amplifier.</span><span>M3 Expressive · international · profilgebunden</span></footer>
+</body>
+</html>

@@ -11,4 +11,22 @@
     <string name="web_annotation_failed">Không thể lưu đoạn đánh dấu này.</string>
     <string name="web_annotation_private">Không thể đánh dấu trong thẻ riêng tư.</string>
     <string name="web_annotation_close">Đóng</string>
+    <string name="web_annotation_read">Đọc ghi chú</string>
+    <string name="web_annotation_edit">Chỉnh sửa</string>
+    <string name="web_annotation_go_to">Đến đoạn đánh dấu</string>
+    <string name="web_annotation_list_hint">Nhấn vào trích dẫn để chuyển đến vị trí của nó trên trang.</string>
+    <string name="web_annotation_no_note">Chưa có ghi chú. Nhấn Chỉnh sửa để thêm.</string>
+    <string name="web_annotation_not_found">Không thể xác định duy nhất vị trí của trích dẫn này trên trang. Ghi chú đã lưu của bạn vẫn có sẵn.</string>
+    <string name="web_annotation_markdown_hint">Hỗ trợ Markdown: **đậm**, *nghiêng*, danh sách và [liên kết](https://example.com).</string>
+    <string name="web_annotation_preview">Xem trước</string>
+    <string name="web_annotation_format_bold">In đậm</string>
+    <string name="web_annotation_format_italic">In nghiêng</string>
+    <string name="web_annotation_format_heading">Tiêu đề</string>
+    <string name="web_annotation_format_list">Danh sách dấu đầu dòng</string>
+    <string name="web_annotation_format_link">Chèn liên kết</string>
+    <string name="web_annotation_format_code">Mã nội dòng</string>
+    <string name="web_annotation_discard_title">Hủy thay đổi?</string>
+    <string name="web_annotation_discard_message">Các thay đổi chưa lưu trong ghi chú sẽ bị mất.</string>
+    <string name="web_annotation_discard">Hủy thay đổi</string>
+    <string name="web_annotation_keep_editing">Tiếp tục chỉnh sửa</string>
 </resources>

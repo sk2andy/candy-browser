@@ -11,4 +11,22 @@
     <string name="web_annotation_failed">Markierung konnte nicht gespeichert werden.</string>
     <string name="web_annotation_private">Markierungen sind in privaten Tabs nicht verfügbar.</string>
     <string name="web_annotation_close">Schließen</string>
+    <string name="web_annotation_read">Notiz lesen</string>
+    <string name="web_annotation_edit">Bearbeiten</string>
+    <string name="web_annotation_go_to">Zur Markierung</string>
+    <string name="web_annotation_list_hint">Zitat antippen, um zur Textstelle auf der Seite zu springen.</string>
+    <string name="web_annotation_no_note">Noch keine Notiz. Über Bearbeiten kannst du eine hinzufügen.</string>
+    <string name="web_annotation_not_found">Diese Textstelle wurde auf der Seite nicht eindeutig gefunden. Deine gespeicherte Notiz bleibt verfügbar.</string>
+    <string name="web_annotation_markdown_hint">Markdown unterstützt: **fett**, *kursiv*, Listen und [Links](https://example.com).</string>
+    <string name="web_annotation_preview">Vorschau</string>
+    <string name="web_annotation_format_bold">Fett</string>
+    <string name="web_annotation_format_italic">Kursiv</string>
+    <string name="web_annotation_format_heading">Überschrift</string>
+    <string name="web_annotation_format_list">Aufzählung</string>
+    <string name="web_annotation_format_link">Link einfügen</string>
+    <string name="web_annotation_format_code">Inline-Code</string>
+    <string name="web_annotation_discard_title">Änderungen verwerfen?</string>
+    <string name="web_annotation_discard_message">Deine ungespeicherten Änderungen an der Notiz gehen verloren.</string>
+    <string name="web_annotation_discard">Verwerfen</string>
+    <string name="web_annotation_keep_editing">Weiter bearbeiten</string>
 </resources>

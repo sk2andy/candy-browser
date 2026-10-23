@@ -46,6 +46,7 @@ import dev.sk2andy.materialbrowser.legal.ThirdPartyNotice
 internal object AboutLegalTestTags {
     const val Section = "about_legal_section"
     const val Imprint = "about_legal_imprint"
+    const val PrivacyPolicy = "about_legal_privacy_policy"
     const val OpenSource = "about_legal_open_source"
     const val Uassets = "about_legal_uassets"
     const val ImprintDialog = "about_legal_imprint_dialog"
@@ -95,6 +96,16 @@ internal fun AboutLegalSection(
             color = dev.sk2andy.materialbrowser.shared.ui.settings.settingsRowColor(),
         ) {
             Column {
+                AboutLegalRow(
+                    title = stringResource(R.string.settings_privacy_policy_title),
+                    summary = stringResource(R.string.settings_privacy_policy_summary),
+                    tag = AboutLegalTestTags.PrivacyPolicy,
+                    onClick = { onOpenUrl(CandyLegalSources.PRIVACY_POLICY_URL) },
+                )
+                HorizontalDivider(
+                    modifier = Modifier.padding(horizontal = 18.dp),
+                    color = MaterialTheme.colorScheme.outlineVariant,
+                )
                 AboutLegalRow(
                     title = stringResource(R.string.settings_imprint_title),
                     summary = stringResource(R.string.settings_imprint_summary),

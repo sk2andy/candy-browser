@@ -11,4 +11,22 @@
     <string name="web_annotation_failed">Ознаката не можеше да се зачува.</string>
     <string name="web_annotation_private">Ознаките не се достапни во приватни картички.</string>
     <string name="web_annotation_close">Затвори</string>
+    <string name="web_annotation_read">Прочитај белешка</string>
+    <string name="web_annotation_edit">Уреди</string>
+    <string name="web_annotation_go_to">Оди до ознаката</string>
+    <string name="web_annotation_list_hint">Допрете цитат за да отидете до неговото место на страницата.</string>
+    <string name="web_annotation_no_note">Сè уште нема белешка. Допрете Уреди за да додадете.</string>
+    <string name="web_annotation_not_found">Овој цитат не може еднозначно да се најде на страницата. Вашата зачувана белешка е сè уште достапна.</string>
+    <string name="web_annotation_markdown_hint">Поддржан е Markdown: **задебелено**, *закосено*, списоци и [врски](https://example.com).</string>
+    <string name="web_annotation_preview">Преглед</string>
+    <string name="web_annotation_format_bold">Задебелено</string>
+    <string name="web_annotation_format_italic">Закосено</string>
+    <string name="web_annotation_format_heading">Наслов</string>
+    <string name="web_annotation_format_list">Листа со точки</string>
+    <string name="web_annotation_format_link">Вметни врска</string>
+    <string name="web_annotation_format_code">Код во текстот</string>
+    <string name="web_annotation_discard_title">Да се отфрлат промените?</string>
+    <string name="web_annotation_discard_message">Незачуваните промени во белешката ќе се изгубат.</string>
+    <string name="web_annotation_discard">Отфрли</string>
+    <string name="web_annotation_keep_editing">Продолжи со уредување</string>
 </resources>

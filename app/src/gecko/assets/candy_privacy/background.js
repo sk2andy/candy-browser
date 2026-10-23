@@ -842,6 +842,17 @@ browser.runtime.onMessage.addListener((message, sender) => {
     }
     return undefined;
   }
+  if (message.type === "web-annotation-click") {
+    const token = tokenByTab.get(sender.tab.id);
+    const policy = token && policiesByToken.get(token);
+    if (sender.frameId === 0 && policy && policy.revision === message.revision &&
+        policy.navigationGeneration === message.navigationGeneration && message.url === sender.url &&
+        typeof message.id === "string" && message.id.length >= 1 && message.id.length <= 64) {
+      nativePort?.postMessage({ type: "web-annotation-click", token, protocolVersion: PROTOCOL_VERSION,
+        revision: message.revision, navigationGeneration: message.navigationGeneration, id: message.id });
+    }
+    return undefined;
+  }
   if (message.type === "form-draft-snapshot") {
     const token = tokenByTab.get(sender.tab.id);
     const policy = token && policiesByToken.get(token);

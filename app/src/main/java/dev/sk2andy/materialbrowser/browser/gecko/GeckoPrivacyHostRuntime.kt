@@ -24,6 +24,8 @@ internal interface GeckoPrivacyBinding {
 
     fun executeWebTextOperation(payload: String, onComplete: (Boolean) -> Unit) = onComplete(false)
 
+    fun setWebAnnotationClickListener(listener: ((String) -> Unit)?) = Unit
+
     fun setFormDraftListener(listener: ((String) -> Unit)?) = Unit
 
     fun restoreFormDraft(payload: String, onComplete: (Boolean) -> Unit) = onComplete(false)
@@ -93,6 +95,7 @@ internal class GeckoViewPrivacyHostRuntime(
         val textExtraction: GeckoTextExtractionRequest,
         val webTextOperation: GeckoWebTextOperationRequest,
         val formDraftRestore: GeckoFormDraftRestoreRequest,
+        var annotationClickListener: ((String) -> Unit)? = null,
         var formDraftListener: ((String) -> Unit)? = null,
         var pictureInPicturePlaybackExpected: Boolean = false,
         var pictureInPicturePlaybackRequestGeneration: Long = 0,
@@ -298,6 +301,11 @@ internal class GeckoViewPrivacyHostRuntime(
                         .put("revision", binding.handshake.publishedRevision)
                         .put("navigationGeneration", binding.policy.navigationGeneration))
                 }, onComplete)
+            }
+
+            override fun setWebAnnotationClickListener(listener: ((String) -> Unit)?) {
+                if (bindings[token] !== binding) return
+                binding.annotationClickListener = listener.takeUnless { session.settings.usePrivateMode }
             }
 
             override fun setFormDraftListener(listener: ((String) -> Unit)?) {
@@ -704,6 +712,14 @@ internal class GeckoViewPrivacyHostRuntime(
                 if (value.optString("type") == "form-draft-restored") binding.formDraftRestore.accept(value)
                 else value.optJSONObject("payload")?.toString()?.takeIf { it.length <= 150_000 }
                     ?.let { binding.formDraftListener?.invoke(it) }
+            }
+            "web-annotation-click" -> {
+                val binding = bindings[value.optString("token")] ?: return
+                if (binding.session.settings.usePrivateMode ||
+                    binding.handshake.publishedRevision != value.optLong("revision", -1) ||
+                    binding.policy.navigationGeneration != value.optInt("navigationGeneration", -1)) return
+                value.optString("id").takeIf { it.length in 1..64 }
+                    ?.let { binding.annotationClickListener?.invoke(it) }
             }
             "web-text-operation-result" -> {
                 val binding = bindings[value.optString("token")] ?: return

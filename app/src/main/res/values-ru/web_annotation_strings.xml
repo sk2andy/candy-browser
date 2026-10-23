@@ -11,4 +11,22 @@
     <string name="web_annotation_failed">Не удалось сохранить выделение.</string>
     <string name="web_annotation_private">Выделения недоступны в приватных вкладках.</string>
     <string name="web_annotation_close">Закрыть</string>
+    <string name="web_annotation_read">Прочитать заметку</string>
+    <string name="web_annotation_edit">Изменить</string>
+    <string name="web_annotation_go_to">Перейти к выделению</string>
+    <string name="web_annotation_list_hint">Нажмите на цитату, чтобы перейти к её месту на странице.</string>
+    <string name="web_annotation_no_note">Заметки пока нет. Нажмите «Изменить», чтобы добавить её.</string>
+    <string name="web_annotation_not_found">Не удалось однозначно найти эту цитату на странице. Сохранённая заметка по-прежнему доступна.</string>
+    <string name="web_annotation_markdown_hint">Поддерживается Markdown: **жирный**, *курсив*, списки и [ссылки](https://example.com).</string>
+    <string name="web_annotation_preview">Предпросмотр</string>
+    <string name="web_annotation_format_bold">Жирный</string>
+    <string name="web_annotation_format_italic">Курсив</string>
+    <string name="web_annotation_format_heading">Заголовок</string>
+    <string name="web_annotation_format_list">Маркированный список</string>
+    <string name="web_annotation_format_link">Вставить ссылку</string>
+    <string name="web_annotation_format_code">Код в строке</string>
+    <string name="web_annotation_discard_title">Отменить изменения?</string>
+    <string name="web_annotation_discard_message">Несохранённые изменения заметки будут потеряны.</string>
+    <string name="web_annotation_discard">Отменить изменения</string>
+    <string name="web_annotation_keep_editing">Продолжить редактирование</string>
 </resources>

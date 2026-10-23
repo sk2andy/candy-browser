@@ -11,4 +11,22 @@
     <string name="web_annotation_failed">Evidențierea nu a putut fi salvată.</string>
     <string name="web_annotation_private">Evidențierile nu sunt disponibile în filele private.</string>
     <string name="web_annotation_close">Închide</string>
+    <string name="web_annotation_read">Citește nota</string>
+    <string name="web_annotation_edit">Editează</string>
+    <string name="web_annotation_go_to">Mergi la evidențiere</string>
+    <string name="web_annotation_list_hint">Atinge un citat pentru a merge la locul său în pagină.</string>
+    <string name="web_annotation_no_note">Încă nu există nicio notă. Atinge Editează pentru a adăuga una.</string>
+    <string name="web_annotation_not_found">Acest citat nu a putut fi localizat în mod unic pe pagină. Nota salvată este în continuare disponibilă.</string>
+    <string name="web_annotation_markdown_hint">Markdown acceptat: **aldin**, *cursiv*, liste și [linkuri](https://example.com).</string>
+    <string name="web_annotation_preview">Previzualizare</string>
+    <string name="web_annotation_format_bold">Aldin</string>
+    <string name="web_annotation_format_italic">Cursiv</string>
+    <string name="web_annotation_format_heading">Titlu</string>
+    <string name="web_annotation_format_list">Listă cu marcatori</string>
+    <string name="web_annotation_format_link">Inserează un link</string>
+    <string name="web_annotation_format_code">Cod în text</string>
+    <string name="web_annotation_discard_title">Renunți la modificări?</string>
+    <string name="web_annotation_discard_message">Modificările nesalvate ale notei se vor pierde.</string>
+    <string name="web_annotation_discard">Renunță</string>
+    <string name="web_annotation_keep_editing">Continuă editarea</string>
 </resources>

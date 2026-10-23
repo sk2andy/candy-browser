@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
+    <string name="feeds_player_open">Open listening queue</string>
+    <string name="feeds_player_close">Close listening queue</string>
+    <string name="feeds_player_up_next">Queue · %1$d</string>
+    <string name="feeds_player_import_saved">Add saved</string>
+    <string name="feeds_player_empty">A moment for you</string>
+    <string name="feeds_player_empty_title">Your next good listen.</string>
+    <string name="feeds_player_empty_hint">Use the listening-list icon on an article to add it here. Your bookmarks can join in too.</string>
+    <string name="feeds_player_preparing">Getting ready</string>
+    <string name="feeds_player_listening">Now reading aloud</string>
+    <string name="feeds_player_ready">Ready when you are</string>
+    <string name="feeds_player_progress">%1$d%% read aloud</string>
+    <string name="feeds_player_rate">%1$s×</string>
+    <string name="feeds_player_current">First up · %1$s</string>
+    <string name="feeds_player_move_up">Move up: %1$s</string>
+    <string name="feeds_player_remove">Remove from listening queue: %1$s</string>
+    <string name="feeds_player_load_failed">This article could not be prepared for reading aloud.</string>
+    <string name="feeds_player_retry">Try again</string>
+    <string name="feeds_player_foreground">Keep listening with the app in the background. Playback controls are also available in Android’s media notification.</string>
+</resources>

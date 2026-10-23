@@ -441,6 +441,33 @@ class BrowserMenuBottomSheetInstrumentedTest {
     }
 
     @Test
+    fun feedsUnreadChipTracksCountAndOpensDestination() {
+        val opens = AtomicInteger()
+        val count = mutableStateOf(3)
+        showMenu(
+            unreadFeedCount = { count.value },
+            onOpenFeeds = { opens.incrementAndGet() },
+            onOpenLibrary = {},
+        )
+        openMenu()
+        composeRule.onNodeWithTag(BrowserMainMenuTestTags.Feeds).performScrollTo()
+        composeRule.onNodeWithText(composeRule.activity.getString(R.string.browser_menu_feed_unread_count, 3))
+            .assertIsDisplayed()
+        composeRule.onNodeWithTag(BrowserMainMenuTestTags.Library).assertExists()
+        composeRule.onNodeWithTag(BrowserMainMenuTestTags.Feeds).performClick()
+        composeRule.onNodeWithTag(BrowserMainMenuTestTags.Menu).assertDoesNotExist()
+        assertEquals(1, opens.get())
+
+        composeRule.runOnIdle { count.value = 0 }
+        openMenu()
+        composeRule.onNodeWithTag(BrowserMainMenuTestTags.Feeds).performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithText(composeRule.activity.getString(R.string.browser_menu_feed_unread_count, 0))
+            .assertDoesNotExist()
+        composeRule.onNodeWithText(composeRule.activity.getString(R.string.browser_menu_feed_unread_count, 3))
+            .assertDoesNotExist()
+    }
+
+    @Test
     fun downloadsShortcutClosesSheetAndRunsAction() {
         val downloads = AtomicInteger()
         showMenu(onDownloads = { downloads.incrementAndGet() })
@@ -760,6 +787,9 @@ class BrowserMenuBottomSheetInstrumentedTest {
         onDesktopChanged: () -> Unit = {},
         onDuplicate: () -> Unit = {},
         onDownloads: () -> Unit = {},
+        onOpenFeeds: (() -> Unit)? = null,
+        onOpenLibrary: (() -> Unit)? = null,
+        unreadFeedCount: () -> Int = { 0 },
         onShare: () -> Unit = {},
         onFindInPage: () -> Unit = {},
         onTabs: () -> Unit = {},
@@ -841,6 +871,9 @@ class BrowserMenuBottomSheetInstrumentedTest {
                             onOpenExternal = {},
                             onPrint = {},
                             onOpenReader = {},
+                            onOpenFeeds = onOpenFeeds,
+                            onOpenLibrary = onOpenLibrary,
+                            unreadFeedCount = unreadFeedCount(),
                             onTranslate = {},
                             onDomainMutedChange = {},
                             onAlwaysBlockPopupsChange = {},

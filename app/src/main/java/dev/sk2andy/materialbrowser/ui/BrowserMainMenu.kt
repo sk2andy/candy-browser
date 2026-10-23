@@ -80,8 +80,9 @@ private val AndroidBrowserMainMenuResources = object : BrowserMainMenuResources 
     @Composable
     override fun sectionTitle(section: BrowserFeatureMenuSection): String = stringResource(
         when (section) {
+            BrowserFeatureMenuSection.Reading -> R.string.browser_menu_reading_group
             BrowserFeatureMenuSection.Page -> R.string.browser_menu_page_group
-            BrowserFeatureMenuSection.Toppings -> R.string.browser_menu_toppings_group
+            BrowserFeatureMenuSection.Toppings -> R.string.browser_menu_workflows_group
             BrowserFeatureMenuSection.Browser -> R.string.browser_menu_browser_group
             BrowserFeatureMenuSection.Toolbar,
             BrowserFeatureMenuSection.Candy,
@@ -100,6 +101,15 @@ private val AndroidBrowserMainMenuResources = object : BrowserMainMenuResources 
         }
         return stringResource(item.labelKey.androidStringResource())
     }
+
+    @Composable
+    override fun sectionExpansionLabel(expanded: Boolean): String = stringResource(
+        if (expanded) R.string.browser_menu_section_expanded else R.string.browser_menu_section_collapsed,
+    )
+
+    @Composable
+    override fun unreadCountLabel(count: Int): String =
+        stringResource(R.string.browser_menu_feed_unread_count, count)
 
     @Composable
     override fun accessibilityLabel(item: BrowserFeatureMenuItem): String? = when (item.action) {
@@ -304,6 +314,11 @@ internal fun BrowserMainMenu(
     onOpenExternal: () -> Unit,
     onPrint: () -> Unit,
     onOpenReader: () -> Unit,
+    onOpenFeeds: (() -> Unit)? = null,
+    onOpenLibrary: (() -> Unit)? = null,
+    onDiscoverFeeds: (() -> Unit)? = null,
+    unreadFeedCount: Int = 0,
+    canDiscoverFeeds: Boolean = false,
     onTranslate: () -> Unit,
     onFindInPage: () -> Unit = {},
     onDomainMutedChange: (Boolean) -> Unit,
@@ -356,6 +371,8 @@ internal fun BrowserMainMenu(
         isFavorite = isFavorite,
         isPinned = isPinned,
         canOpenReader = canOpenReader,
+        canDiscoverFeeds = canDiscoverFeeds && onDiscoverFeeds != null,
+        unreadFeedCount = unreadFeedCount,
         canTranslatePage = canTranslatePage,
         canUseDocumentActions = canUseDocumentActions,
         canToggleCookieBannerRemoval = canToggleCookieBannerRemoval,
@@ -389,6 +406,9 @@ internal fun BrowserMainMenu(
         items = BrowserFeatureMenuRules.items(
             state = menuState,
             capabilities = BrowserFeatureMenuCapabilities(
+                supportsFeeds = onOpenFeeds != null,
+                supportsFeedDiscovery = onDiscoverFeeds != null,
+                supportsLibrary = onOpenLibrary != null,
                 supportsSiteWidgets = true,
                 supportsConstellations = onOpenConstellations != null,
                 supportsWebAnnotations = onWebAnnotations != null,
@@ -434,6 +454,9 @@ internal fun BrowserMainMenu(
             BrowserFeatureMenuAction.DuplicateTab -> onDuplicateTab()
             BrowserFeatureMenuAction.CloseTab -> onCloseTab()
             BrowserFeatureMenuAction.ParkAddressBarRight -> onParkAddressBarRight()
+            BrowserFeatureMenuAction.OpenFeeds -> onOpenFeeds?.invoke()
+            BrowserFeatureMenuAction.OpenLibrary -> onOpenLibrary?.invoke()
+            BrowserFeatureMenuAction.DiscoverFeeds -> onDiscoverFeeds?.invoke()
             BrowserFeatureMenuAction.OpenReader -> onOpenReader()
             BrowserFeatureMenuAction.TranslatePage -> onTranslate()
             BrowserFeatureMenuAction.FindInPage -> onFindInPage()
@@ -552,6 +575,9 @@ private fun BrowserFeatureMenuLabelKey.androidStringResource(): Int = when (this
     BrowserFeatureMenuLabelKey.DuplicateTab -> R.string.action_duplicate_tab
     BrowserFeatureMenuLabelKey.CloseTab -> R.string.cd_close_tab
     BrowserFeatureMenuLabelKey.ParkAddressBarRight -> R.string.action_park_address_pill_right
+    BrowserFeatureMenuLabelKey.Feeds -> R.string.browser_menu_feeds
+    BrowserFeatureMenuLabelKey.Library -> R.string.browser_menu_library
+    BrowserFeatureMenuLabelKey.DiscoverFeeds -> R.string.browser_menu_discover_feeds
     BrowserFeatureMenuLabelKey.Reader -> R.string.reader_open_action
     BrowserFeatureMenuLabelKey.Translate -> R.string.action_translate_page
     BrowserFeatureMenuLabelKey.FindInPage -> R.string.action_find_in_page
@@ -603,6 +629,9 @@ internal fun BrowserFeatureMenuItem.androidDrawableResource(): Int = when (actio
     BrowserFeatureMenuAction.DuplicateTab -> R.drawable.ic_content_copy
     BrowserFeatureMenuAction.CloseTab -> R.drawable.ic_symbol_close
     BrowserFeatureMenuAction.ParkAddressBarRight -> R.drawable.ic_symbol_chevron_physical_right
+    BrowserFeatureMenuAction.OpenFeeds -> R.drawable.ic_rss_feed
+    BrowserFeatureMenuAction.OpenLibrary -> R.drawable.ic_reader_library
+    BrowserFeatureMenuAction.DiscoverFeeds -> R.drawable.ic_rss_feed
     BrowserFeatureMenuAction.OpenReader -> R.drawable.ic_reader_align_start
     BrowserFeatureMenuAction.TranslatePage -> R.drawable.ic_symbol_translate
     BrowserFeatureMenuAction.FindInPage -> R.drawable.ic_symbol_find_in_page
