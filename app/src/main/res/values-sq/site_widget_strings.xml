@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="site_widget_name">Prerja e faqes së internetit (prototip)</string>
+    <string name="site_widget_name_square">Prerja e faqes së internetit 4×4 (prototip)</string>
+    <string name="site_widget_description">Mbani një zonë të zgjedhur të uebsajtit në ekranin tuaj bazë</string>
+    <string name="site_widget_empty">Hapni një faqe në Candy, më pas prekni këtu për të zgjedhur një zonë.</string>
+    <string name="site_widget_open">Hap faqen</string>
+    <string name="site_widget_refresh">Rifresko</string>
+    <string name="site_widget_unavailable">Kjo faqe nuk mund të ruhet si një miniaplikacion. Përdorni një profil lokal të rregullt, të pambrojtur.</string>
+    <string name="site_widget_pin_failed">Ky miniaplikacion nuk mund të shtohej. Ju lutemi provoni përsëri.</string>
+    <string name="site_widget_pin_requested">Konfirmoni shtimin e miniaplikacionit në ekranin tuaj bazë.</string>
+    <string name="site_widget_editor_title">Miniaplikacioni i faqes në internet</string>
+    <string name="site_widget_editor_instructions">Zgjidhni kolonat dhe rreshtat. Afroni ose largoni dy gishta, ose përdorni rrëshqitësin e zmadhimit; më pas lëvizeni faqen poshtë kornizës.</string>
+    <string name="site_widget_format_four_by_three">4 × 3</string>
+    <string name="site_widget_format_four_by_four">4 × 4</string>
+    <string name="site_widget_editor_size">Madhësia e përzgjedhjes</string>
+    <string name="site_widget_editor_pin">Shto në ekranin bazë</string>
+    <string name="site_widget_editor_interaction_hint">Miniaplikacioni tregon një fotografi. Prekni atë për të hapur faqen në Candy.</string>
+    <string name="site_widget_private_unavailable">Miniaplikacionet e sajtit nuk janë të disponueshëm në skedat private.</string>
+    <string name="site_widget_capture_failed">Kjo faqe nuk mund të kapej. Provo sërish kur të ketë përfunduar ngarkimi.</string>
+    <string name="site_widget_pin_unavailable">Ky lëshues nuk mbështet shtimin e drejtpërdrejtë të miniaplikacioneve. Shtoni miniaplikacionin e faqes së internetit Candy nga zgjedhësi i tij i miniaplikacioneve.</string>
+    <string name="site_widget_save_failed">Ky miniaplikacion nuk mund të ruhej. Ju lutemi provoni përsëri.</string>
+    <string name="site_widget_reselect">Redakto prerjen</string>
+    <string name="site_widget_refresh_failed">Rifreskimi dështoi. Pamja e fundit shfaqet ende.</string>
+    <string name="site_widget_refreshing">Po rifreskohet…</string>
+    <string name="site_widget_editor_columns">Kolonat: %1$d</string>
+    <string name="site_widget_editor_rows">Rreshtat: %1$d</string>
+    <string name="site_widget_editor_zoom">Zmadhoni</string>
+    <string name="site_widget_editor_zoom_value">Zmadhimi: %1$.1f×</string>
+    <string name="site_widget_editor_interval">Intervali i rifreskimit</string>
+    <string name="site_widget_editor_interval_value">Rifresko: %1$s</string>
+    <string name="site_widget_editor_interval_hint">Android mund të vonojë përditësimet automatike, për shembull në modalitetin e kursimit të baterisë.</string>
+    <string name="site_widget_interval_manual">Vetëm manual</string>
+    <string name="site_widget_interval_minutes">Çdo %1$d minuta</string>
+    <string name="site_widget_interval_hours">Çdo %1$d orë</string>
+</resources>

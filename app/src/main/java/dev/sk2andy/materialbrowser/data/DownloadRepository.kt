@@ -53,6 +53,16 @@ internal class DownloadRepository(
         else -> mediaStoreUri(entry.id)
     }
 
+    fun existingDownload(request: BrowserDownloadRequest): ExistingDownload? =
+        DownloadDuplicateRules.candidates(snapshot(), request).firstNotNullOfOrNull { entry ->
+            runCatching {
+                val uri = contentUri(entry) ?: return@runCatching null
+                resolver.openFileDescriptor(uri, "r")?.use {
+                    ExistingDownload(uri, entry.name, entry.mime)
+                }
+            }.getOrNull()
+        }
+
     fun cancel(entry: DownloadEntry): Boolean = runCatching {
         val current = snapshot().firstOrNull { it.id == entry.id && it.status.isActive }
             ?: return false
@@ -64,8 +74,13 @@ internal class DownloadRepository(
         DownloadRuntimeRegistry.togglePause(entry.id)
     }.getOrDefault(false)
 
-    private fun querySystemDownloads(): List<DownloadEntry> = runCatching {
-        manager.query(DownloadManager.Query())?.use { cursor ->
+    fun completedSystemDownload(id: Long): DownloadEntry? = querySystemDownloads(id)
+        .firstOrNull { it.status == DownloadStatus.Successful }
+
+    private fun querySystemDownloads(id: Long? = null): List<DownloadEntry> = runCatching {
+        val query = DownloadManager.Query()
+        if (id != null) query.setFilterById(id)
+        manager.query(query)?.use { cursor ->
             buildList {
                 while (cursor.moveToNext()) cursor.systemDownload()?.let(::add)
             }

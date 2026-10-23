@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="site_widget_name">Web sitesi kırpma (prototip)</string>
+    <string name="site_widget_name_square">Web sitesi kırpma 4×4 (prototip)</string>
+    <string name="site_widget_description">Seçilen bir web sitesi alanını ana ekranınızda tutun</string>
+    <string name="site_widget_empty">"Candy'de bir sayfa açın ve ardından bir alan seçmek için buraya dokunun."</string>
+    <string name="site_widget_open">Sayfayı aç</string>
+    <string name="site_widget_refresh">Yenile</string>
+    <string name="site_widget_unavailable">Bu sayfa widget olarak kaydedilemez. Düzenli, korumasız bir yerel profil kullanın.</string>
+    <string name="site_widget_pin_failed">Bu widget eklenemedi. Lütfen tekrar deneyin.</string>
+    <string name="site_widget_pin_requested">"Widget'ın ana ekranınıza eklenmesini onaylayın."</string>
+    <string name="site_widget_editor_title">"Web sitesi widget'ı"</string>
+    <string name="site_widget_editor_instructions">Sütunları ve satırları seçin. Yakınlaştırma kaydırıcısını sıkıştırın veya kullanın, ardından sayfayı çerçevenin altına taşıyın.</string>
+    <string name="site_widget_format_four_by_three">4×3</string>
+    <string name="site_widget_format_four_by_four">4×4</string>
+    <string name="site_widget_editor_size">Seçim boyutu</string>
+    <string name="site_widget_editor_pin">Ana ekrana ekle</string>
+    <string name="site_widget_editor_interaction_hint">"Widget bir anlık görüntü gösterir. Sayfayı Candy'de açmak için buna dokunun."</string>
+    <string name="site_widget_private_unavailable">"Web sitesi widget'ları özel sekmelerde kullanılamaz."</string>
+    <string name="site_widget_capture_failed">Bu sayfa yakalanamadı. Yükleme bittiğinde tekrar deneyin.</string>
+    <string name="site_widget_pin_unavailable">"Bu başlatıcı doğrudan widget eklemeyi desteklemiyor. Candy web sitesi widget'ını widget seçiciden ekleyin."</string>
+    <string name="site_widget_save_failed">Bu widget kaydedilemedi. Lütfen tekrar deneyin.</string>
+    <string name="site_widget_reselect">Kırpmayı düzenle</string>
+    <string name="site_widget_refresh_failed">Yenileme başarısız oldu. Son anlık görüntü hâlâ gösteriliyor.</string>
+    <string name="site_widget_refreshing">Yenileniyor…</string>
+    <string name="site_widget_editor_columns">Sütunlar: %1$d</string>
+    <string name="site_widget_editor_rows">Satırlar: %1$d</string>
+    <string name="site_widget_editor_zoom">Yakınlaştır</string>
+    <string name="site_widget_editor_zoom_value">Yakınlaştırma: %1$.1f×</string>
+    <string name="site_widget_editor_interval">Yenileme aralığı</string>
+    <string name="site_widget_editor_interval_value">Yenile: %1$s</string>
+    <string name="site_widget_editor_interval_hint">Android, örneğin pil tasarrufu modunda otomatik güncellemeleri geciktirebilir.</string>
+    <string name="site_widget_interval_manual">Yalnızca manuel</string>
+    <string name="site_widget_interval_minutes">Her %1$d dakikada bir</string>
+    <string name="site_widget_interval_hours">Her %1$d saat</string>
+</resources>

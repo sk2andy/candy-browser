@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="device_search_title">Enhetssökning</string>
+    <string name="device_search_settings_summary">Välj bokmärken och sparade artiklar för Android-sökning</string>
+    <string name="device_search_summary">Välj enskilda bokmärken och sparade artiklar att dela med systemsökning. Webbhistorik och artikeltext stannar i Candy. Privat innehåll och skyddade profiler är undantagna.</string>
+    <string name="device_search_enable">Dela med enhetssökning</string>
+    <string name="device_search_enable_summary">Endast utvalda objekt publiceras. Om du stänger av detta tas de bort från indexet.</string>
+    <string name="device_search_launcher_note">Resultat visas bara i startprogram eller systemsökappar som stöder Android AppSearch. Tillgänglighet beror på din enhet.</string>
+    <string name="device_search_bookmark_profile">Öppna bokmärken i den här profilen</string>
+    <string name="device_search_bookmarks">Bokmärken</string>
+    <string name="device_search_articles">Sparade artiklar</string>
+    <string name="device_search_empty">Inga kvalificerade föremål. Sparade artiklar behöver en känd, oskyddad lokal profil.</string>
+    <string name="device_search_saving">Uppdaterar enhetssökning...</string>
+    <string name="device_search_failed">Enhetssökning kunde inte uppdateras. Försök att ändra valet igen.</string>
+    <string name="device_search_item_unavailable">Det här objektet är inte längre delat eller tillgängligt.</string>
+    <string name="device_search_open">Öppet i Candy</string>
+</resources>

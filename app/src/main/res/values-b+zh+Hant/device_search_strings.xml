@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="device_search_title">設備搜尋</string>
+    <string name="device_search_settings_summary">選擇書籤和保存的文章以進行 Android 搜索</string>
+    <string name="device_search_summary">選擇單獨的書籤和已儲存的文章以與系統搜尋分享。瀏覽歷史記錄和文章文字保留在 Candy 中。私人內容和受保護的設定檔被排除在外。</string>
+    <string name="device_search_enable">與設備搜尋共享</string>
+    <string name="device_search_enable_summary">僅發布選定的項目。關閉此功能會將它們從索引中刪除。</string>
+    <string name="device_search_launcher_note">結果僅顯示在支援 Android AppSearch 的啟動器或系統搜尋應用程式中。可用性取決於您的設備。</string>
+    <string name="device_search_bookmark_profile">打開此個人資料中的書籤</string>
+    <string name="device_search_bookmarks">書籤</string>
+    <string name="device_search_articles">已儲存的文章</string>
+    <string name="device_search_empty">沒有符合條件的物品。已儲存的文章需要已知的、不受保護的本機設定檔。</string>
+    <string name="device_search_saving">正在更新設備搜尋...</string>
+    <string name="device_search_failed">無法更新裝置搜尋。再次嘗試更改選擇。</string>
+    <string name="device_search_item_unavailable">該項目不再共享或可用。</string>
+    <string name="device_search_open">在 Candy 中開啟</string>
+</resources>

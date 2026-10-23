@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="external_app_feedback_opened">Otvoreno u aplikaciji</string>
+    <string name="external_app_feedback_open_in_candy">Otvori u Candyju</string>
+    <string name="external_app_feedback_always">Želite li uvijek otvoriti ovu stranicu u Candyju?</string>
+    <string name="external_app_feedback_always_private">Uvijek otvoriti ovu stranicu u Candyju za ovu privatnu sesiju?</string>
+    <string name="external_app_feedback_yes">Da</string>
+</resources>

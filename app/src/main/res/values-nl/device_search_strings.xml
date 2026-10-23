@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="device_search_title">Apparaat zoeken</string>
+    <string name="device_search_settings_summary">Kies bladwijzers en opgeslagen artikelen voor Android-zoekopdrachten</string>
+    <string name="device_search_summary">Kies individuele bladwijzers en opgeslagen artikelen om te delen met systeemzoekopdrachten. Browsegeschiedenis en artikeltekst blijven in Candy. Privé-inhoud en beveiligde profielen zijn uitgesloten.</string>
+    <string name="device_search_enable">Delen met zoeken naar apparaten</string>
+    <string name="device_search_enable_summary">Alleen geselecteerde items worden gepubliceerd. Als u dit uitschakelt, worden ze uit de index verwijderd.</string>
+    <string name="device_search_launcher_note">Resultaten worden alleen weergegeven in appstarters of systeemzoekapps die Android AppSearch ondersteunen. De beschikbaarheid hangt af van je apparaat.</string>
+    <string name="device_search_bookmark_profile">Open bladwijzers in dit profiel</string>
+    <string name="device_search_bookmarks">Bladwijzers</string>
+    <string name="device_search_articles">Opgeslagen artikelen</string>
+    <string name="device_search_empty">Geen in aanmerking komende items. Opgeslagen artikelen hebben een bekend, onbeschermd lokaal profiel nodig.</string>
+    <string name="device_search_saving">Apparaatzoekfunctie bijwerken…</string>
+    <string name="device_search_failed">Apparaatzoekopdracht kan niet worden bijgewerkt. Probeer de selectie opnieuw te wijzigen.</string>
+    <string name="device_search_item_unavailable">Dit item wordt niet langer gedeeld of beschikbaar.</string>
+    <string name="device_search_open">Openen in Candy</string>
+</resources>

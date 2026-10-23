@@ -1,5 +1,4 @@
-<!-- Prototype: English/German UI; other locales use these English defaults. -->
-<resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
+<resources>
     <string name="site_widget_name">Website crop (prototype)</string>
     <string name="site_widget_name_square">Website crop 4×4 (prototype)</string>
     <string name="site_widget_description">Keep a selected website area on your home screen</string>

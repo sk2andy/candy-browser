@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="site_widget_name">网站裁剪（原型）</string>
+    <string name="site_widget_name_square">网站裁剪 4×4（原型）</string>
+    <string name="site_widget_description">在主屏幕上保留选定的网站区域</string>
+    <string name="site_widget_empty">在 Candy 中打开一个页面，然后点击此处选择一个区域。</string>
+    <string name="site_widget_open">打开页面</string>
+    <string name="site_widget_refresh">刷新</string>
+    <string name="site_widget_unavailable">该页面无法另存为小部件。使用常规的、不受保护的本地配置文件。</string>
+    <string name="site_widget_pin_failed">无法添加此小部件。请再试一次。</string>
+    <string name="site_widget_pin_requested">确认在主屏幕上添加小部件。</string>
+    <string name="site_widget_editor_title">网站小部件</string>
+    <string name="site_widget_editor_instructions">选择列和行。捏合或使用缩放滑块，然后将页面移动到框架下方。</string>
+    <string name="site_widget_format_four_by_three">4×3</string>
+    <string name="site_widget_format_four_by_four">4×4</string>
+    <string name="site_widget_editor_size">选择尺寸</string>
+    <string name="site_widget_editor_pin">添加到主屏幕</string>
+    <string name="site_widget_editor_interaction_hint">小部件显示快照。点击它可以打开 Candy 中的页面。</string>
+    <string name="site_widget_private_unavailable">网站小部件在私人选项卡中不可用。</string>
+    <string name="site_widget_capture_failed">无法捕获此页面。加载完成后重试。</string>
+    <string name="site_widget_pin_unavailable">该启动器不支持直接添加小部件。从小部件选择器中添加 Candy 网站小部件。</string>
+    <string name="site_widget_save_failed">无法保存此小部件。请再试一次。</string>
+    <string name="site_widget_reselect">编辑裁剪</string>
+    <string name="site_widget_refresh_failed">刷新失败。仍然显示最后的快照。</string>
+    <string name="site_widget_refreshing">正在刷新…</string>
+    <string name="site_widget_editor_columns">列：%1$d</string>
+    <string name="site_widget_editor_rows">行：%1$d</string>
+    <string name="site_widget_editor_zoom">缩放</string>
+    <string name="site_widget_editor_zoom_value">缩放：%1$.1f×</string>
+    <string name="site_widget_editor_interval">刷新间隔</string>
+    <string name="site_widget_editor_interval_value">刷新：%1$s</string>
+    <string name="site_widget_editor_interval_hint">Android 可能会延迟自动更新，例如在省电模式下。</string>
+    <string name="site_widget_interval_manual">仅手动</string>
+    <string name="site_widget_interval_minutes">每%1$d分钟</string>
+    <string name="site_widget_interval_hours">每%1$d小时</string>
+</resources>

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_privacy_policy_title">隱私權政策</string>
+    <string name="settings_privacy_policy_summary">Candy 如何處理你的資料</string>
+</resources>

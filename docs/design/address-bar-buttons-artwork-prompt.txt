@@ -1,0 +1,9 @@
+Use case: stylized-concept
+Asset type: Candy Browser settings decorative header, one standalone landscape 1536x1024 illustration
+Primary request: a creative modular address-bar action-button arrangement, distinctly different from a touch-hand gesture or swipe arrow.
+Scene/backdrop: pure white #FFFFFF, opaque, ample clean blank margin on all four sides.
+Subject: a large horizontal pill-shaped browser address bar in lower middle, containing a small dark circular search symbol and one short gray address line with no text. Three separate rounded-square action tiles float above it at slightly different heights: a dark star tile to left, a light-gray share-node tile in center, a charcoal three-dot menu tile to right. Delicate curved dotted guide paths connect floating tiles down to three matching empty rounded-square slots around the address bar, suggesting choosing and rearranging shortcuts. Tasteful tiny sparkle between tiles, playful but restrained. No hands.
+Style/medium: polished flat grayscale editorial UI illustration. Rounded solid shapes, restrained mid-gray shades, crisp simple silhouettes, subtle paper softness. No 3D perspective, no lighting effects, no heavy outlines.
+Composition/framing: compact wide centered arrangement, all artwork inside x=140..1396 and y=210..810, white outside. Dark tiles charcoal 25/255 with white symbols; bar pale gray, address line middle gray. Main bar wide and rounded. Artwork readable at 360x200dp.
+Text: none, no letters, no words, no digits.
+Constraints: monochrome grayscale only, no colored pixels, no device bezel, no screenshot, no surrounding settings UI, no watermark. Pure white background border. Single illustration only.

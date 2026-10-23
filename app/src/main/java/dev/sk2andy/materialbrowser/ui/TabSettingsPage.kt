@@ -293,10 +293,11 @@ internal fun TabsAndGesturesSettingsPage(
             )
         ) {
             SettingsHeaderIllustration(
-                if (section == TabSettingsSection.LinkInteractions) {
-                    SettingsHeaderArtwork.LinkPreview
-                } else {
-                    SettingsHeaderArtwork.Gestures
+                when (section) {
+                    TabSettingsSection.LinkInteractions -> SettingsHeaderArtwork.LinkPreview
+                    TabSettingsSection.GestureControls -> SettingsHeaderArtwork.GestureControls
+                    TabSettingsSection.AddressBarButtons -> SettingsHeaderArtwork.AddressBarButtons
+                    else -> SettingsHeaderArtwork.Gestures
                 },
             )
             SettingsPageSpacer()

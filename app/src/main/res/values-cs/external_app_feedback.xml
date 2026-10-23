@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="external_app_feedback_opened">Otevřeno v aplikaci</string>
+    <string name="external_app_feedback_open_in_candy">Otevřít v Candy</string>
+    <string name="external_app_feedback_always">Chcete tento web vždy otevírat v Candy?</string>
+    <string name="external_app_feedback_always_private">Vždy otevřít tento web v Candy pro tuto soukromou relaci?</string>
+    <string name="external_app_feedback_yes">Ano</string>
+</resources>

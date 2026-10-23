@@ -31,6 +31,10 @@ class AppDataArchiveCodecTest {
             dataDirectory.resolve("shared_prefs/settings.xml"),
             "settings".toByteArray(StandardCharsets.UTF_8),
         )
+        Files.write(
+            dataDirectory.resolve("shared_prefs/device_search.xml"),
+            "enabled=true".toByteArray(StandardCharsets.UTF_8),
+        )
         listOf("app_logging_capture.xml", "app_logging_capture.xml.bak").forEach { name ->
             Files.write(
                 dataDirectory.resolve("shared_prefs/$name"),
@@ -44,6 +48,14 @@ class AppDataArchiveCodecTest {
             dataDirectory.resolve("no_backup/candy_trails/trail.json"),
             "trail".toByteArray(StandardCharsets.UTF_8),
         )
+        Files.write(dataDirectory.resolve("no_backup/candy_sync_vault_v1"), byteArrayOf(7, 7, 7))
+        Files.write(dataDirectory.resolve("no_backup/candy_sync_cache_v1"), byteArrayOf(8, 8, 8))
+        Files.createDirectories(dataDirectory.resolve("files/mozilla/profile"))
+        Files.write(dataDirectory.resolve("files/mozilla/profile/cookies.sqlite"), byteArrayOf(9, 8, 7))
+        Files.createDirectories(dataDirectory.resolve("app_webview/Default"))
+        Files.write(dataDirectory.resolve("app_webview/Default/Local Storage"), byteArrayOf(6, 5))
+        Files.createDirectories(dataDirectory.resolve("app_webview_guest_bubble"))
+        Files.write(dataDirectory.resolve("app_webview_guest_bubble/Cookies"), byteArrayOf(4))
         Files.write(
             dataDirectory.resolve("no_backup/candy_recall.db"),
             "sensitive recall text".toByteArray(StandardCharsets.UTF_8),
@@ -75,27 +87,35 @@ class AppDataArchiveCodecTest {
         ZipInputStream(ByteArrayInputStream(archiveBytes)).use { zip ->
             assertEquals(AppDataArchiveRules.MANIFEST_ENTRY_NAME, zip.nextEntry.name)
             val manifestJson = JSONObject(String(zip.readBytes(), StandardCharsets.UTF_8))
-            assertEquals(2, manifestJson.getInt("formatVersion"))
+            assertEquals(3, manifestJson.getInt("formatVersion"))
             assertEquals("dev.example.browser", manifestJson.getString("packageName"))
             assertEquals("1.2.3", manifestJson.getString("appVersionName"))
             assertEquals(42L, manifestJson.getLong("appVersionCode"))
             assertEquals("125.0", manifestJson.getString("webViewVersion"))
             assertEquals(35, manifestJson.getInt("sdkInt"))
             assertEquals(1_723_456_789_000L, manifestJson.getLong("exportedAtEpochMillis"))
-            assertEquals("candy-owned-only", manifestJson.getString("websiteState"))
+            assertEquals("engine-state-included", manifestJson.getString("websiteState"))
         }
 
         val inspection = AppDataArchiveCodec.inspect(ByteArrayInputStream(archiveBytes))
         assertEquals(manifest(), inspection.manifest)
-        assertEquals(setOf("databases", "no_backup", "shared_prefs"), inspection.archivedRootNames)
+        assertEquals(
+            setOf("app_webview", "databases", "files", "no_backup", "shared_prefs"),
+            inspection.archivedRootNames,
+        )
         assertFalse(inspection.entries.any { entry -> entry.relativePath.startsWith("cache") })
         assertFalse(inspection.entries.any { entry -> entry.relativePath.startsWith("app_textures") })
         assertFalse(inspection.entries.any { entry -> entry.relativePath.contains("candy_recall.db") })
         assertFalse(inspection.entries.any { entry -> entry.relativePath.startsWith("no_backup/app_logs") })
+        assertFalse(inspection.entries.any { entry -> entry.relativePath.contains("candy_sync_") })
+        assertTrue(inspection.entries.any { entry -> entry.relativePath == "shared_prefs/device_search.xml" })
         listOf("app_logging_capture.xml", "app_logging_capture.xml.bak").forEach { name ->
             assertFalse(inspection.entries.any { entry -> entry.relativePath == "shared_prefs/$name" })
         }
         assertTrue(inspection.entries.any { entry -> entry.relativePath.endsWith("trail.json") })
+        assertTrue(inspection.entries.any { entry -> entry.relativePath.endsWith("cookies.sqlite") })
+        assertTrue(inspection.entries.any { entry -> entry.relativePath.endsWith("Local Storage") })
+        assertFalse(inspection.entries.any { entry -> entry.relativePath.contains("guest_bubble") })
 
         val target = temporaryFolder.newFolder("target").toPath()
         val extraction = AppDataArchiveCodec.extract(ByteArrayInputStream(archiveBytes), target)
@@ -109,6 +129,9 @@ class AppDataArchiveCodecTest {
         )
         assertArrayEquals(byteArrayOf(0, 1, 2, 3), Files.readAllBytes(target.resolve("databases/browser.db")))
         assertTrue(Files.isDirectory(target.resolve("databases/empty")))
+        assertArrayEquals(byteArrayOf(9, 8, 7), Files.readAllBytes(target.resolve("files/mozilla/profile/cookies.sqlite")))
+        assertArrayEquals(byteArrayOf(6, 5), Files.readAllBytes(target.resolve("app_webview/Default/Local Storage")))
+        assertFalse(Files.exists(target.resolve("app_webview_guest_bubble")))
         assertEquals(
             "trail",
             String(
@@ -118,6 +141,12 @@ class AppDataArchiveCodecTest {
         )
         assertFalse(Files.exists(target.resolve("no_backup/candy_recall.db")))
         assertFalse(Files.exists(target.resolve("no_backup/app_logs")))
+        assertFalse(Files.exists(target.resolve("no_backup/candy_sync_vault_v1")))
+        assertFalse(Files.exists(target.resolve("no_backup/candy_sync_cache_v1")))
+        assertEquals(
+            "enabled=true",
+            String(Files.readAllBytes(target.resolve("shared_prefs/device_search.xml")), StandardCharsets.UTF_8),
+        )
         assertFalse(Files.exists(target.resolve("shared_prefs/app_logging_capture.xml")))
         assertFalse(Files.exists(target.resolve("shared_prefs/app_logging_capture.xml.bak")))
         assertFalse(Files.exists(target.resolve("cache")))
@@ -222,7 +251,7 @@ class AppDataArchiveCodecTest {
             }.failure,
         )
 
-        val futureManifest = manifestJson(formatVersion = 3)
+        val futureManifest = manifestJson(formatVersion = 4)
         assertEquals(
             AppDataArchiveFailure.UnsupportedFormatVersion,
             assertThrows(AppDataArchiveException::class.java) {
@@ -289,7 +318,7 @@ class AppDataArchiveCodecTest {
 
         val futureTarget = temporaryFolder.newFolder("future-target").toPath()
         val futureArchive = rawZipOf(
-            AppDataArchiveRules.MANIFEST_ENTRY_NAME to manifestJson(formatVersion = 3),
+            AppDataArchiveRules.MANIFEST_ENTRY_NAME to manifestJson(formatVersion = 4),
             "data/files/value" to byteArrayOf(1),
         )
         val futureFailure = assertThrows(AppDataArchiveException::class.java) {
@@ -322,6 +351,36 @@ class AppDataArchiveCodecTest {
         assertFalse(Files.exists(target.resolve("no_backup/tab_webview_states/tab.bin")))
     }
 
+    @Test
+    fun `format two remains settings-only when it contains recognized engine paths`() {
+        val archive = rawZipOf(
+            AppDataArchiveRules.MANIFEST_ENTRY_NAME to manifestJson(formatVersion = 2),
+            "data/shared_prefs/settings.xml" to "settings".toByteArray(StandardCharsets.UTF_8),
+            "data/files/mozilla/profile/cookies.sqlite" to byteArrayOf(1, 2, 3),
+        )
+        val target = temporaryFolder.newFolder("v2-target").toPath()
+
+        val extraction = AppDataArchiveCodec.extract(ByteArrayInputStream(archive), target)
+
+        assertEquals(AppDataArchiveWebsiteState.LegacyWebsiteStateExcluded, extraction.websiteState)
+        assertEquals(
+            "settings",
+            String(Files.readAllBytes(target.resolve("shared_prefs/settings.xml")), StandardCharsets.UTF_8),
+        )
+        assertFalse(Files.exists(target.resolve("files/mozilla")))
+    }
+
+    @Test
+    fun `inspect rejects isolated guest engine profile before confirmation`() {
+        val archive = zipOf("data/app_webview_guest_bubble/Cookies" to byteArrayOf(1))
+
+        val failure = assertThrows(AppDataArchiveException::class.java) {
+            AppDataArchiveCodec.inspect(ByteArrayInputStream(archive))
+        }
+
+        assertEquals(AppDataArchiveFailure.UnsupportedEngineState, failure.failure)
+    }
+
     private fun manifest() = AppDataArchiveManifest(
         packageName = "dev.example.browser",
         appVersionName = "1.2.3",
@@ -331,7 +390,7 @@ class AppDataArchiveCodecTest {
         exportedAtEpochMillis = 1_723_456_789_000L,
     )
 
-    private fun manifestJson(formatVersion: Int = 2): ByteArray = JSONObject()
+    private fun manifestJson(formatVersion: Int = AppDataArchiveRules.FORMAT_VERSION): ByteArray = JSONObject()
         .put("formatVersion", formatVersion)
         .put("packageName", "dev.example.browser")
         .put("appVersionName", "1.2.3")
@@ -340,7 +399,10 @@ class AppDataArchiveCodecTest {
         .put("sdkInt", 35)
         .put("exportedAtEpochMillis", 1_723_456_789_000L)
         .apply {
-            if (formatVersion == 2) put("websiteState", "candy-owned-only")
+            when (formatVersion) {
+                2 -> put("websiteState", "candy-owned-only")
+                3 -> put("websiteState", "engine-state-included")
+            }
         }
         .toString()
         .toByteArray(StandardCharsets.UTF_8)

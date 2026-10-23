@@ -409,7 +409,9 @@ captured before edits so reviewers can compare every prior option and dynamic en
 
 ### Explanatory selection pages
 
-Colors, surfaces/shapes and address-bar choices use inline radio groups with a Candy browser preview.
+Colors and surfaces/shapes use inline radio groups with a Candy browser preview. Address-bar choices
+use a generated classic/segmented motif with the shared artwork renderer's live theme coloring;
+the illustration is decorative and displays both styles independently of the selection.
 Tab-stack folders reuse the Hero/Grid/List preview. Long-press link and Link Peek swipe choices have
 separate pages grouped by normal tabs, private tabs and other link actions. Foreground/background
 choices keep their existing distinct labels. Candy Player has five explained modes, while autoplay
@@ -467,6 +469,9 @@ The **Theme & interface**, **Tabs**, **Player**, **Search**, **Downloads**, **Ge
 are recorded in [`../design/external-app-links-artwork.md`](../design/external-app-links-artwork.md). Profiles and Translations
 now begin their own focused pages with full headers; they are no longer compact inline section art.
 Android and shared Core Search use the same approved Search illustration and built-in engine choices.
+**Long-press link action** uses a matching generated hand/link/action-card motif instead of the
+older geometric preview. Its original, exact prompt and rendering contract are recorded in
+[`../design/link-long-press-artwork.md`](../design/link-long-press-artwork.md).
 `SettingsHeaderIllustration` owns shared Compose rendering. The images are decorative, have no
 accessibility announcement or interaction, and use a centered, aspect-preserving runtime window in a
 200 dp header capped at 360 dp wide. Narrow layouts retain the complete shape. Artwork scrolls with
@@ -541,8 +546,14 @@ evidence only for their earlier layout. Real-app navigation, Back behavior and p
 separately in `PlayerSettingsNavigationInstrumentedTest` and the affected settings/search suites;
 they are not established by artwork captures alone. One private-search recreation case skipped
 because notification permission was not already granted.
-The existing Colors, Surfaces/shapes, Address bar and tab layout explanatory previews continue to
-use their functional illustrations; Gestures does not receive the Tabs header. Candy Player mode
+The existing Colors and Surfaces/shapes previews continue to use their functional illustrations;
+Gestures does not receive the Tabs header. Address bar uses the generated motif documented in
+[Address-bar artwork](../design/address-bar-artwork.md). Candy Player mode
 uses five generated flat Material Expressive images, one per selection, in the former 400 dp ×
 240 dp preview slot. They share the approved headers' live theme coloring and retain the complete
 original images. Sources, prompts and checks are in [Player mode artwork](../design/player-mode-artwork.md).
+
+Tab overview selection uses three matching flat Material Expressive images for Coverflow, Grid
+and List, retaining the 400 dp × 260 dp preview slot. The same shared renderer applies live theme
+coloring and fits each original in full. Sources, prompts and checks are in
+[Tab overview artwork](../design/tab-overview-artwork.md).

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="device_search_title">Kërkimi i pajisjes</string>
+    <string name="device_search_settings_summary">Zgjidhni faqeshënuesit dhe artikujt e ruajtur për kërkimin në Android</string>
+    <string name="device_search_summary">"Zgjidhni faqeshënuesit individualë dhe artikujt e ruajtur për t'i ndarë me kërkimin e sistemit. Historia e shfletimit dhe teksti i artikullit qëndrojnë në Candy. Përmbajtja private dhe profilet e mbrojtura janë të përjashtuara."</string>
+    <string name="device_search_enable">Ndani me kërkimin e pajisjes</string>
+    <string name="device_search_enable_summary">Publikohen vetëm artikujt e përzgjedhur. Çaktivizimi i kësaj i heq ato nga indeksi.</string>
+    <string name="device_search_launcher_note">Rezultatet shfaqen vetëm në lëshuesit ose aplikacionet e kërkimit të sistemit që mbështesin Android AppSearch. Disponueshmëria varet nga pajisja juaj.</string>
+    <string name="device_search_bookmark_profile">Hap faqeshënuesit në këtë profil</string>
+    <string name="device_search_bookmarks">Faqeshënuesit</string>
+    <string name="device_search_articles">Artikujt e ruajtur</string>
+    <string name="device_search_empty">Nuk ka artikuj të përshtatshëm. Artikujt e ruajtur kanë nevojë për një profil lokal të njohur dhe të pambrojtur.</string>
+    <string name="device_search_saving">Po përditëson kërkimin e pajisjes…</string>
+    <string name="device_search_failed">Kërkimi i pajisjes nuk mund të përditësohej. Provoni të ndryshoni përsëri përzgjedhjen.</string>
+    <string name="device_search_item_unavailable">Ky artikull nuk është më i ndarë ose i disponueshëm.</string>
+    <string name="device_search_open">Hape në Candy</string>
+</resources>

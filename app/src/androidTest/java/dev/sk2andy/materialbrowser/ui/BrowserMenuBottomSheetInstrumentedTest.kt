@@ -570,6 +570,29 @@ class BrowserMenuBottomSheetInstrumentedTest {
     }
 
     @Test
+    fun footerDragDismissesSheetWithoutTouchingHandle() {
+        showMenu(anchoredAddressBar = true)
+        openMenu()
+        val before = addressBounds()
+        val travel = collapsedAddressBounds().top - before.top
+        val footer = composeRule.onNodeWithTag(BrowserMenuBottomSheetTestTags.Footer)
+        footer.performTouchInput {
+            down(center)
+            moveBy(Offset(0f, travel * 0.8f), delayMillis = 600L)
+        }
+        composeRule.waitForIdle()
+
+        assertTrue("footer drag moves sheet", addressBounds().top - before.top > travel * 0.7f)
+        footer.performTouchInput {
+            advanceEventTime(200L)
+            up()
+        }
+        composeRule.waitForIdle()
+
+        composeRule.onNodeWithTag(BrowserMainMenuTestTags.Menu).assertDoesNotExist()
+    }
+
+    @Test
     fun upwardHandleDragKeepsExpandedSheetPosition() {
         showMenu(anchoredAddressBar = true)
         openMenu()

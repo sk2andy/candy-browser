@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="external_app_feedback_opened">在应用程序中打开</string>
+    <string name="external_app_feedback_open_in_candy">在 Candy 中打开</string>
+    <string name="external_app_feedback_always">您想始终在 Candy 中打开此网站吗？</string>
+    <string name="external_app_feedback_always_private">始终在 Candy 中打开此站点来进行此私人会话？</string>
+    <string name="external_app_feedback_yes">是的</string>
+</resources>

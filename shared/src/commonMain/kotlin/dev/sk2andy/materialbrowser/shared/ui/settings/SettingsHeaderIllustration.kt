@@ -36,6 +36,9 @@ import dev.sk2andy.materialbrowser.shared.resources.settings_approved_link_previ
 import dev.sk2andy.materialbrowser.shared.resources.settings_approved_tab_lifecycle
 import dev.sk2andy.materialbrowser.shared.resources.settings_approved_personal_link_rules
 import dev.sk2andy.materialbrowser.shared.resources.settings_external_app_links
+import dev.sk2andy.materialbrowser.shared.resources.settings_link_long_press
+import dev.sk2andy.materialbrowser.shared.resources.settings_gesture_controls
+import dev.sk2andy.materialbrowser.shared.resources.settings_address_bar_buttons
 import org.jetbrains.compose.resources.imageResource
 import kotlin.math.roundToInt
 
@@ -56,6 +59,8 @@ fun SettingsHeaderIllustration(
             SettingsHeaderArtwork.Downloads -> Res.drawable.settings_approved_downloads_v2
             SettingsHeaderArtwork.Profiles -> Res.drawable.settings_approved_profiles_v2
             SettingsHeaderArtwork.Gestures -> Res.drawable.settings_approved_gestures
+            SettingsHeaderArtwork.GestureControls -> Res.drawable.settings_gesture_controls
+            SettingsHeaderArtwork.AddressBarButtons -> Res.drawable.settings_address_bar_buttons
             SettingsHeaderArtwork.LinkPreview -> Res.drawable.settings_approved_link_preview_final_v8
             SettingsHeaderArtwork.TabLifecycle -> Res.drawable.settings_approved_tab_lifecycle
             SettingsHeaderArtwork.PersonalLinkRules -> Res.drawable.settings_approved_personal_link_rules

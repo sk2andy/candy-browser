@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="device_search_title">Căutare dispozitiv</string>
+    <string name="device_search_settings_summary">Alegeți marcaje și articolele salvate pentru căutarea Android</string>
+    <string name="device_search_summary">Alegeți marcaje individuale și articolele salvate pentru a le partaja prin căutarea sistemului. Istoricul de navigare și textul articolului rămân în Candy. Conținutul privat și profilurile protejate sunt excluse.</string>
+    <string name="device_search_enable">Distribuie prin căutarea dispozitivului</string>
+    <string name="device_search_enable_summary">Sunt publicate doar articolele selectate. Dezactivarea acestei opțiuni le elimină din index.</string>
+    <string name="device_search_launcher_note">Rezultatele apar numai în lansatoarele sau în aplicațiile de căutare de sistem care acceptă Android AppSearch. Disponibilitatea depinde de dispozitivul dvs.</string>
+    <string name="device_search_bookmark_profile">Deschideți marcaje în acest profil</string>
+    <string name="device_search_bookmarks">Marcaje</string>
+    <string name="device_search_articles">Articole salvate</string>
+    <string name="device_search_empty">Nu există articole eligibile. Articolele salvate au nevoie de un profil local cunoscut, neprotejat.</string>
+    <string name="device_search_saving">Se actualizează căutarea dispozitivului...</string>
+    <string name="device_search_failed">Căutarea dispozitivului nu a putut fi actualizată. Încercați să schimbați din nou selecția.</string>
+    <string name="device_search_item_unavailable">Acest articol nu mai este partajat sau disponibil.</string>
+    <string name="device_search_open">Deschideți în Candy</string>
+</resources>

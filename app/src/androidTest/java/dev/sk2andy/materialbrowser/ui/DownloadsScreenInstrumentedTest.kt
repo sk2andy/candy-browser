@@ -213,6 +213,31 @@ class DownloadsScreenInstrumentedTest {
         assertEquals(null, opened.get())
     }
 
+    @Test
+    fun failedDownloadOffersSourceOnlyForSafePublicHttpSource() {
+        val failed = entry(id = 8, name = "failed.zip", status = DownloadStatus.Failed)
+        val download = mutableStateOf(failed)
+        val openedSource = AtomicReference<DownloadEntry>()
+        composeRule.setContent {
+            MaterialBrowserTheme(settings = AppearanceSettings()) {
+                DownloadsScreen(
+                    downloads = listOf(download.value),
+                    onClearFinished = {},
+                    onOpenDownload = {},
+                    onOpenSource = openedSource::set,
+                    onBack = {},
+                )
+            }
+        }
+        composeRule.onNodeWithTag(DownloadsScreenTestTags.openSource(failed.id)).assertIsDisplayed().performClick()
+        assertEquals(failed, openedSource.get())
+
+        for (unsafe in listOf(failed.copy(isPrivate = true), failed.copy(source = "blob:https://example.com/id"))) {
+            composeRule.runOnIdle { download.value = unsafe }
+            composeRule.onNodeWithTag(DownloadsScreenTestTags.openSource(failed.id)).assertDoesNotExist()
+        }
+    }
+
     private fun entry(
         id: Long,
         name: String,

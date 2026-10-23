@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="external_app_feedback_opened">Đã mở trong ứng dụng</string>
+    <string name="external_app_feedback_open_in_candy">Mở trong Candy</string>
+    <string name="external_app_feedback_always">Bạn có muốn luôn mở trang này trong Candy không?</string>
+    <string name="external_app_feedback_always_private">Luôn mở trang này trong Candy cho phiên riêng tư này?</string>
+    <string name="external_app_feedback_yes">Đúng</string>
+</resources>

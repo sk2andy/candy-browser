@@ -117,6 +117,18 @@ class DownloadHistoryRulesTest {
         )
     }
 
+    @Test
+    fun `only failed or cancelled nonprivate http sources can be reopened`() {
+        val failed = entry(id = 1, status = DownloadStatus.Failed)
+        assertTrue(DownloadSourceRules.canOpenSource(failed))
+        assertTrue(DownloadSourceRules.canOpenSource(failed.copy(status = DownloadStatus.Cancelled)))
+        assertFalse(DownloadSourceRules.canOpenSource(failed.copy(isPrivate = true)))
+        assertFalse(DownloadSourceRules.canOpenSource(failed.copy(sourceProfileId = "work")))
+        assertFalse(DownloadSourceRules.canOpenSource(failed.copy(source = "blob:https://example.com/id")))
+        assertFalse(DownloadSourceRules.canOpenSource(failed.copy(source = "https://user:pass@example.com/file")))
+        assertFalse(DownloadSourceRules.canOpenSource(failed.copy(status = DownloadStatus.Running)))
+    }
+
     private fun visible(
         entries: List<DownloadEntry>,
         query: String = "",

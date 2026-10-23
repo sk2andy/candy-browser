@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="device_search_title">Пребарување уред</string>
+    <string name="device_search_settings_summary">Изберете обележувачи и зачувани статии за пребарување на Android</string>
+    <string name="device_search_summary">Изберете поединечни обележувачи и зачувани статии за споделување со системското пребарување. Историјата на прелистување и текстот на статијата остануваат во Candy. Приватните содржини и заштитените профили се исклучени.</string>
+    <string name="device_search_enable">Споделете со пребарување на уред</string>
+    <string name="device_search_enable_summary">Се објавуваат само избрани ставки. Исклучувањето на ова ги отстранува од индексот.</string>
+    <string name="device_search_launcher_note">Резултатите се појавуваат само во стартери или апликации за системско пребарување што поддржуваат Android AppSearch. Достапноста зависи од вашиот уред.</string>
+    <string name="device_search_bookmark_profile">Отворете ги обележувачите во овој профил</string>
+    <string name="device_search_bookmarks">Обележувачи</string>
+    <string name="device_search_articles">Зачувани статии</string>
+    <string name="device_search_empty">Нема подобни ставки. На зачуваните статии им треба познат, незаштитен локален профил.</string>
+    <string name="device_search_saving">Се ажурира пребарувањето на уредот…</string>
+    <string name="device_search_failed">Пребарувањето на уредот не може да се ажурира. Обидете се повторно да го промените изборот.</string>
+    <string name="device_search_item_unavailable">Оваа ставка повеќе не е споделена или достапна.</string>
+    <string name="device_search_open">Отворете во Candy</string>
+</resources>

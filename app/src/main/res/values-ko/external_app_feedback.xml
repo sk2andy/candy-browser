@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="external_app_feedback_opened">앱에서 열림</string>
+    <string name="external_app_feedback_open_in_candy">Candy에서 열기</string>
+    <string name="external_app_feedback_always">이 사이트를 항상 Candy에서 열겠습니까?</string>
+    <string name="external_app_feedback_always_private">이 비공개 세션을 위해 항상 Candy에서 이 사이트를 여시겠습니까?</string>
+    <string name="external_app_feedback_yes">예</string>
+</resources>

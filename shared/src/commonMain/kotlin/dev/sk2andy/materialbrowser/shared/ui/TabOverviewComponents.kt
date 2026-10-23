@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -200,6 +201,7 @@ fun TabOverviewHeroPager(
     cardModifier: (BrowserTab) -> Modifier = { Modifier },
     modifier: Modifier = Modifier,
     titleAbovePreview: Boolean = false,
+    titleOverlayTopOffset: Dp = 0.dp,
 ) {
     val pagerFlingBehavior = PagerDefaults.flingBehavior(
         state = pagerState,
@@ -510,6 +512,7 @@ fun TabOverviewHeroPager(
                             isInitialCard,
                             Modifier
                                 .align(Alignment.TopStart)
+                                .offset(y = titleOverlayTopOffset)
                                 .padding(start = 12.dp, top = 4.dp, end = 12.dp),
                         )
                     }

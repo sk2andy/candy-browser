@@ -22,8 +22,6 @@ import java.io.OutputStream
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
-import java.util.concurrent.locks.ReentrantLock
-import kotlin.concurrent.withLock
 import org.mozilla.geckoview.GeckoWebExecutor
 import org.mozilla.geckoview.WebRequest
 import org.mozilla.geckoview.WebResponse
@@ -176,9 +174,6 @@ internal class GeckoDownloadTransferManager(
     ) {
         @Volatile var response: WebResponse? = null
         @Volatile var entry: GeckoDownloadStreamEntry? = null
-        val pauseLock = ReentrantLock()
-        val pauseChanged = pauseLock.newCondition()
-        var paused = false
     }
 
     private val io = Executors.newCachedThreadPool { runnable ->
@@ -348,8 +343,7 @@ internal class GeckoDownloadTransferManager(
                 startedAt = started.startedAtMillis,
                 mediaStoreId = runCatching { ContentUris.parseId(entry.uri) }.getOrNull(),
                 cancel = { cancel(id, operation, listener) },
-                pause = { setPaused(id, operation, started, paused = true) },
-                resume = { setPaused(id, operation, started, paused = false) },
+                isPrivate = operation.isPrivate,
             )
             dispatch { listener.onStarted(started) }
             notifier.started(started.id)
@@ -371,11 +365,6 @@ internal class GeckoDownloadTransferManager(
                 entry.output.use { output ->
                     val buffer = ByteArray(COPY_BUFFER_BYTES)
                     while (true) {
-                        operation.pauseLock.withLock {
-                            while (operation.paused && !operation.cancelled.get()) {
-                                operation.pauseChanged.await()
-                            }
-                        }
                         if (operation.cancelled.get()) throw DownloadCancelledException()
                         val count = input.read(buffer)
                         if (count < 0) break
@@ -437,7 +426,6 @@ internal class GeckoDownloadTransferManager(
         synchronized(operation) {
             if (!operation.terminal.compareAndSet(false, true)) return
             operation.cancelled.set(true)
-            operation.pauseLock.withLock { operation.pauseChanged.signalAll() }
             runCatching { operation.response?.body?.close() }
             runCatching { operation.entry?.abort() }
             operations.remove(id, operation)
@@ -450,23 +438,6 @@ internal class GeckoDownloadTransferManager(
             listener?.let { target -> dispatch { target.onFailed(GeckoDownloadFailure.Cancelled) } }
         }
     }
-
-    private fun setPaused(
-        id: Int,
-        operation: Operation,
-        started: GeckoDownloadTransferStart,
-        paused: Boolean,
-    ): Boolean =
-        synchronized(operation) {
-            if (operation.terminal.get()) return false
-            operation.pauseLock.withLock {
-                operation.paused = paused
-                operation.pauseChanged.signalAll()
-            }
-            DownloadRuntimeRegistry.paused(id, paused, System.currentTimeMillis())
-            notifier.paused(started.id)
-            true
-        }
 
     private fun fail(
         id: Int,

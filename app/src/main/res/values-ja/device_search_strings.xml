@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="device_search_title">デバイス検索</string>
+    <string name="device_search_settings_summary">Android 検索用のブックマークと保存した記事を選択する</string>
+    <string name="device_search_summary">システム検索で共有する個々のブックマークと保存された記事を選択します。閲覧履歴と記事本文はCandyに残ります。プライベート コンテンツと保護されたプロファイルは除外されます。</string>
+    <string name="device_search_enable">デバイス検索で共有する</string>
+    <string name="device_search_enable_summary">選択した項目だけが公開されます。この機能をオフにすると、項目はインデックスから削除されます。</string>
+    <string name="device_search_launcher_note">結果は、Android AppSearch をサポートするランチャーまたはシステム検索アプリでのみ表示されます。利用できるかどうかはデバイスによって異なります。</string>
+    <string name="device_search_bookmark_profile">このプロフィールのブックマークを開く</string>
+    <string name="device_search_bookmarks">ブックマーク</string>
+    <string name="device_search_articles">保存された記事</string>
+    <string name="device_search_empty">対象となる項目はありません。保存した記事を共有するには、認識済みの保護されていないローカルプロフィールが必要です。</string>
+    <string name="device_search_saving">デバイス検索を更新しています…</string>
+    <string name="device_search_failed">デバイス検索を更新できませんでした。選択を再度変更してみてください。</string>
+    <string name="device_search_item_unavailable">このアイテムは共有または利用できなくなりました。</string>
+    <string name="device_search_open">Candy で開く</string>
+</resources>

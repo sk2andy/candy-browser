@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="site_widget_name">Oříznutí webu (prototyp)</string>
+    <string name="site_widget_name_square">Oříznutí webu 4×4 (prototyp)</string>
+    <string name="site_widget_description">Udržujte vybranou oblast webu na domovské obrazovce</string>
+    <string name="site_widget_empty">Otevřete stránku v Candy a potom klepnutím sem vyberte oblast.</string>
+    <string name="site_widget_open">Otevřít stránku</string>
+    <string name="site_widget_refresh">Obnovit</string>
+    <string name="site_widget_unavailable">Tuto stránku nelze uložit jako widget. Použijte běžný, nechráněný místní profil.</string>
+    <string name="site_widget_pin_failed">Tento widget nelze přidat. Zkuste to prosím znovu.</string>
+    <string name="site_widget_pin_requested">Potvrďte přidání widgetu na domovskou obrazovku.</string>
+    <string name="site_widget_editor_title">Widget pro webové stránky</string>
+    <string name="site_widget_editor_instructions">Vyberte sloupce a řádky. Pro přiblížení nebo oddálení použijte gesto dvěma prsty nebo posuvník a poté posuňte stránku pod rámečkem.</string>
+    <string name="site_widget_format_four_by_three">4 × 3</string>
+    <string name="site_widget_format_four_by_four">4 × 4</string>
+    <string name="site_widget_editor_size">Velikost výběru</string>
+    <string name="site_widget_editor_pin">Přidat na domovskou obrazovku</string>
+    <string name="site_widget_editor_interaction_hint">Widget zobrazuje snímek. Klepnutím na něj otevřete stránku v Candy.</string>
+    <string name="site_widget_private_unavailable">Widgety webových stránek nejsou dostupné na soukromých kartách.</string>
+    <string name="site_widget_capture_failed">Tuto stránku se nepodařilo zachytit. Po dokončení načítání to zkuste znovu.</string>
+    <string name="site_widget_pin_unavailable">Tento spouštěč nepodporuje přímé přidávání widgetů. Přidejte widget webu Candy z jeho nástroje pro výběr widgetů.</string>
+    <string name="site_widget_save_failed">Tento widget se nepodařilo uložit. Zkuste to prosím znovu.</string>
+    <string name="site_widget_reselect">Upravit oříznutí</string>
+    <string name="site_widget_refresh_failed">Obnovení se nezdařilo. Stále je zobrazen poslední snímek.</string>
+    <string name="site_widget_refreshing">Obnovování…</string>
+    <string name="site_widget_editor_columns">Sloupce: %1$d</string>
+    <string name="site_widget_editor_rows">Řádky: %1$d</string>
+    <string name="site_widget_editor_zoom">Přiblížení</string>
+    <string name="site_widget_editor_zoom_value">Přiblížení: %1$.1f×</string>
+    <string name="site_widget_editor_interval">Interval obnovy</string>
+    <string name="site_widget_editor_interval_value">Obnovení: %1$s</string>
+    <string name="site_widget_editor_interval_hint">Android může zpozdit automatické aktualizace, například v režimu spořiče baterie.</string>
+    <string name="site_widget_interval_manual">Pouze ručně</string>
+    <string name="site_widget_interval_minutes">Každých %1$d minut</string>
+    <string name="site_widget_interval_hours">Každých %1$d h</string>
+</resources>

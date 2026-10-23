@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="site_widget_name">Отсекување на веб-страница (прототип)</string>
+    <string name="site_widget_name_square">Отсекување на веб-локација 4×4 (прототип)</string>
+    <string name="site_widget_description">Чувајте избрана област на веб-локација на вашиот почетен екран</string>
+    <string name="site_widget_empty">Отворете страница во Candy, а потоа допрете овде за да изберете област.</string>
+    <string name="site_widget_open">Отворете ја страницата</string>
+    <string name="site_widget_refresh">Освежи</string>
+    <string name="site_widget_unavailable">Оваа страница не може да се зачува како графичка контрола. Користете редовен, незаштитен локален профил.</string>
+    <string name="site_widget_pin_failed">Не може да се додаде овој додаток. Ве молиме обидете се повторно.</string>
+    <string name="site_widget_pin_requested">Потврдете го додавањето на виџетот на вашиот почетен екран.</string>
+    <string name="site_widget_editor_title">Виџет за веб-страница</string>
+    <string name="site_widget_editor_instructions">Изберете колони и редови. Стиснете или користете го лизгачот за зумирање, а потоа поместете ја страницата под рамката.</string>
+    <string name="site_widget_format_four_by_three">4 × 3</string>
+    <string name="site_widget_format_four_by_four">4 × 4</string>
+    <string name="site_widget_editor_size">Големина на избор</string>
+    <string name="site_widget_editor_pin">Додај на почетниот екран</string>
+    <string name="site_widget_editor_interaction_hint">Виџетот прикажува слика. Допрете го за да ја отворите страницата во Candy.</string>
+    <string name="site_widget_private_unavailable">Додатоци за веб-локации се недостапни во приватните јазичиња.</string>
+    <string name="site_widget_capture_failed">Не може да се сними оваа страница. Обидете се повторно кога ќе заврши со вчитување.</string>
+    <string name="site_widget_pin_unavailable">Овој фрлач не поддржува директно додавање виџети. Додајте го додатокот за веб-локација Candy од неговиот избирач на виџети.</string>
+    <string name="site_widget_save_failed">Не може да се зачува овој додаток. Ве молиме обидете се повторно.</string>
+    <string name="site_widget_reselect">Изменете го исечокот</string>
+    <string name="site_widget_refresh_failed">Освежувањето не успеа. Последната слика сè уште е прикажана.</string>
+    <string name="site_widget_refreshing">Се освежува…</string>
+    <string name="site_widget_editor_columns">Колони: %1$d</string>
+    <string name="site_widget_editor_rows">Редови: %1$d</string>
+    <string name="site_widget_editor_zoom">Зумирајте</string>
+    <string name="site_widget_editor_zoom_value">Зум: %1$.1f×</string>
+    <string name="site_widget_editor_interval">Интервал на освежување</string>
+    <string name="site_widget_editor_interval_value">Освежи: %1$s</string>
+    <string name="site_widget_editor_interval_hint">Андроид може да го одложи автоматското ажурирање, на пример во режимот за заштеда на батерија.</string>
+    <string name="site_widget_interval_manual">Само рачно</string>
+    <string name="site_widget_interval_minutes">На секои %1$d минути</string>
+    <string name="site_widget_interval_hours">Секој %1$d ч</string>
+</resources>

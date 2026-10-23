@@ -11,13 +11,14 @@ internal data class AppDataArchiveManifest(
     val webViewVersion: String?,
     val sdkInt: Int,
     val exportedAtEpochMillis: Long,
-    val websiteState: AppDataArchiveWebsiteState = AppDataArchiveWebsiteState.CandyOwnedOnly,
+    val websiteState: AppDataArchiveWebsiteState = AppDataArchiveWebsiteState.EngineStateIncluded,
 )
 
 /** Archive contract for browser-engine bytes; Candy-owned records stay portable across engines. */
 internal enum class AppDataArchiveWebsiteState {
     CandyOwnedOnly,
     LegacyWebsiteStateExcluded,
+    EngineStateIncluded,
 }
 
 internal data class AppDataArchiveEnvironment(
@@ -37,7 +38,8 @@ internal enum class AppDataArchiveCompatibility {
 
 internal object AppDataArchiveRules {
     const val TRANSFER_STATE_DIRECTORY_NAME = "app_data_transfer"
-    const val FORMAT_VERSION = 2
+    const val FORMAT_VERSION = 3
+    const val PREVIOUS_FORMAT_VERSION = 2
     const val LEGACY_FORMAT_VERSION = 1
     const val MANIFEST_ENTRY_NAME = "manifest.json"
     const val DATA_ENTRY_PREFIX = "data/"
@@ -61,7 +63,17 @@ internal object AppDataArchiveRules {
         name.isNotEmpty() && name !in excludedTopLevelNames
 
     fun shouldExportRelativePath(path: String): Boolean =
-        isAllowedArchiveRelativePath(path) && !isEngineSpecificWebsiteState(path)
+        isAllowedArchiveRelativePath(path) &&
+            (!isEngineSpecificWebsiteState(path) || isSupportedEngineDataPath(path))
+
+    /** Includes regular Gecko/WebView profiles and tab snapshots; guest WebView stays local. */
+    fun isSupportedEngineDataPath(path: String): Boolean =
+        path == "files/mozilla" || path.startsWith("files/mozilla/") ||
+            path == "app_webview" || path.startsWith("app_webview/") ||
+            path == "no_backup/tab_webview_states" ||
+            path.startsWith("no_backup/tab_webview_states/") ||
+            path == "no_backup/gecko_session_states" ||
+            path.startsWith("no_backup/gecko_session_states/")
 
     fun isAllowedArchiveRelativePath(path: String): Boolean =
         path != GUEST_BUBBLE_SESSION_RELATIVE_PATH &&
@@ -87,8 +99,10 @@ internal object AppDataArchiveRules {
             !path.startsWith("$SITE_WIDGET_SNAPSHOTS_RELATIVE_PATH/") &&
             path != DOWNLOAD_DOCUMENT_SOURCES_RELATIVE_PATH &&
             path != "$DOWNLOAD_DOCUMENT_SOURCES_RELATIVE_PATH.bak" &&
-            path != DEVICE_SEARCH_CONSENT_RELATIVE_PATH &&
-            path != "$DEVICE_SEARCH_CONSENT_RELATIVE_PATH.bak" &&
+            path != SYNC_VAULT_RELATIVE_PATH &&
+            path != "$SYNC_VAULT_RELATIVE_PATH.bak" &&
+            path != SYNC_CACHE_RELATIVE_PATH &&
+            path != "$SYNC_CACHE_RELATIVE_PATH.bak" &&
             path != APP_LOG_CAPTURE_RELATIVE_PATH &&
             path != "$APP_LOG_CAPTURE_RELATIVE_PATH.bak"
 
@@ -111,9 +125,10 @@ internal object AppDataArchiveRules {
         formatVersion: Int,
         entries: List<AppDataArchiveEntry>,
     ): AppDataArchiveWebsiteState = when {
-        formatVersion == LEGACY_FORMAT_VERSION && entries.any { entry ->
+        formatVersion < FORMAT_VERSION && entries.any { entry ->
             isEngineSpecificWebsiteState(entry.relativePath)
         } -> AppDataArchiveWebsiteState.LegacyWebsiteStateExcluded
+        formatVersion >= FORMAT_VERSION -> AppDataArchiveWebsiteState.EngineStateIncluded
         else -> AppDataArchiveWebsiteState.CandyOwnedOnly
     }
 
@@ -173,7 +188,7 @@ internal object AppDataArchiveRules {
         current.packageName != archive.packageName ||
             current.appVersionName != archive.appVersionName ||
             current.appVersionCode != archive.appVersionCode -> AppDataArchiveCompatibility.AppMismatch
-        archive.websiteState != AppDataArchiveWebsiteState.CandyOwnedOnly &&
+        archive.websiteState == AppDataArchiveWebsiteState.EngineStateIncluded &&
             current.webViewVersion != archive.webViewVersion ->
             AppDataArchiveCompatibility.BrowserEngineMismatch
         current.sdkInt != archive.sdkInt -> AppDataArchiveCompatibility.PlatformMismatch
@@ -187,6 +202,7 @@ internal object AppDataArchiveRules {
     private const val GECKO_LOGS_RELATIVE_PATH = "no_backup/gecko_logs"
     private const val SITE_WIDGET_SNAPSHOTS_RELATIVE_PATH = "no_backup/site_widget_snapshots_v1"
     private const val DOWNLOAD_DOCUMENT_SOURCES_RELATIVE_PATH = "no_backup/download_document_sources_v1.json"
-    private const val DEVICE_SEARCH_CONSENT_RELATIVE_PATH = "shared_prefs/device_search.xml"
+    private const val SYNC_VAULT_RELATIVE_PATH = "no_backup/candy_sync_vault_v1"
+    private const val SYNC_CACHE_RELATIVE_PATH = "no_backup/candy_sync_cache_v1"
     private const val APP_LOG_CAPTURE_RELATIVE_PATH = "shared_prefs/app_logging_capture.xml"
 }

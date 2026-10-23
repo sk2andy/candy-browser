@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="device_search_title">Търсене в устройството</string>
+    <string name="device_search_settings_summary">Изберете отметки и запазени статии за търсенето в Android</string>
+    <string name="device_search_summary">Изберете отделни отметки и запазени статии, които да споделите със системното търсене. Историята на сърфирането и текстът на статията остават в Candy. Частното съдържание и защитените профили са изключени.</string>
+    <string name="device_search_enable">Споделяне с търсенето в устройството</string>
+    <string name="device_search_enable_summary">Публикуват се само избрани елементи. Изключването на това ги премахва от индекса.</string>
+    <string name="device_search_launcher_note">Резултатите се показват само в програми за стартиране или приложения за системно търсене, които поддържат Android AppSearch. Наличността зависи от вашето устройство.</string>
+    <string name="device_search_bookmark_profile">Отворете отметките в този профил</string>
+    <string name="device_search_bookmarks">Отметки</string>
+    <string name="device_search_articles">Запазени статии</string>
+    <string name="device_search_empty">Няма отговарящи на условията елементи. Запазените статии се нуждаят от известен, незащитен локален профил.</string>
+    <string name="device_search_saving">Актуализиране на търсенето в устройството…</string>
+    <string name="device_search_failed">Търсенето в устройството не можа да бъде актуализирано. Опитайте да промените избора отново.</string>
+    <string name="device_search_item_unavailable">Този елемент вече не се споделя или не е наличен.</string>
+    <string name="device_search_open">Отворете в Candy</string>
+</resources>

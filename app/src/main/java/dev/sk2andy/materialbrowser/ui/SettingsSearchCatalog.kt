@@ -959,6 +959,11 @@ internal fun settingsSearchDefinitions(
         descriptionRes = R.string.settings_home_about_summary,
     ) {
         setting(
+            id = "settings_privacy_policy_title",
+            titleRes = R.string.settings_privacy_policy_title,
+            descriptionRes = R.string.settings_privacy_policy_summary,
+        )
+        setting(
             id = "settings_imprint_title",
             titleRes = R.string.settings_imprint_title,
             descriptionRes = R.string.settings_imprint_summary,

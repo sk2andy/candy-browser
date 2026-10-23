@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="site_widget_name">Decuparea site-ului web (prototip)</string>
+    <string name="site_widget_name_square">Decuparea site-ului web 4×4 (prototip)</string>
+    <string name="site_widget_description">Păstrați o zonă de site selectată pe ecranul de pornire</string>
+    <string name="site_widget_empty">Deschideți o pagină în Candy, apoi atingeți aici pentru a selecta o zonă.</string>
+    <string name="site_widget_open">Deschide pagina</string>
+    <string name="site_widget_refresh">Reîmprospătează</string>
+    <string name="site_widget_unavailable">Această pagină nu poate fi salvată ca widget. Utilizați un profil local obișnuit, neprotejat.</string>
+    <string name="site_widget_pin_failed">Nu s-a putut adăuga acest widget. Vă rugăm să încercați din nou.</string>
+    <string name="site_widget_pin_requested">Confirmați adăugarea widget-ului pe ecranul de pornire.</string>
+    <string name="site_widget_editor_title">Widget pentru site-ul web</string>
+    <string name="site_widget_editor_instructions">Alegeți coloane și rânduri. Ciupiți sau utilizați glisorul de zoom, apoi mutați pagina sub cadru.</string>
+    <string name="site_widget_format_four_by_three">4 × 3</string>
+    <string name="site_widget_format_four_by_four">4 × 4</string>
+    <string name="site_widget_editor_size">Mărimea selecției</string>
+    <string name="site_widget_editor_pin">Adăugați pe ecranul de start</string>
+    <string name="site_widget_editor_interaction_hint">Widgetul afișează un instantaneu. Atingeți-l pentru a deschide pagina în Candy.</string>
+    <string name="site_widget_private_unavailable">Widgeturile de site-uri web nu sunt disponibile în filele private.</string>
+    <string name="site_widget_capture_failed">Această pagină nu a putut fi capturată. Încercați din nou când s-a terminat de încărcat.</string>
+    <string name="site_widget_pin_unavailable">Acest lansator nu acceptă adăugarea directă a widget-urilor. Adăugați widgetul pentru site-ul web Candy din selectorul său de widget-uri.</string>
+    <string name="site_widget_save_failed">Acest widget nu a putut fi salvat. Vă rugăm să încercați din nou.</string>
+    <string name="site_widget_reselect">Editați decuparea</string>
+    <string name="site_widget_refresh_failed">Reîmprospătarea a eșuat. Ultimul instantaneu este încă afișat.</string>
+    <string name="site_widget_refreshing">Se actualizează…</string>
+    <string name="site_widget_editor_columns">Coloane: %1$d</string>
+    <string name="site_widget_editor_rows">Rânduri: %1$d</string>
+    <string name="site_widget_editor_zoom">Zoom</string>
+    <string name="site_widget_editor_zoom_value">Zoom: %1$.1f×</string>
+    <string name="site_widget_editor_interval">Interval de reîmprospătare</string>
+    <string name="site_widget_editor_interval_value">Actualizează: %1$s</string>
+    <string name="site_widget_editor_interval_hint">Android poate întârzia actualizările automate, de exemplu în modul de economisire a bateriei.</string>
+    <string name="site_widget_interval_manual">Doar manual</string>
+    <string name="site_widget_interval_minutes">La fiecare %1$d minute</string>
+    <string name="site_widget_interval_hours">Fiecare %1$d h</string>
+</resources>

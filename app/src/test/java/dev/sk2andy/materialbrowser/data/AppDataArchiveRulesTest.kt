@@ -59,7 +59,7 @@ class AppDataArchiveRulesTest {
     }
 
     @Test
-    fun `archive excludes Recall and engine files from no backup`() {
+    fun `archive includes supported engine files but excludes Recall and guest state`() {
         listOf(
             "candy_recall.db",
             "candy_recall.db-journal",
@@ -74,22 +74,36 @@ class AppDataArchiveRulesTest {
         assertTrue(
             AppDataArchiveRules.shouldExportRelativePath("no_backup/candy_trails/trail.json"),
         )
-        assertFalse(
+        assertTrue(
             AppDataArchiveRules.shouldExportRelativePath("no_backup/gecko_session_states/tab.json"),
         )
-        assertFalse(
+        assertTrue(
             AppDataArchiveRules.shouldExportRelativePath("no_backup/tab_webview_states/tab.bin"),
         )
-        assertFalse(AppDataArchiveRules.shouldExportRelativePath("files/mozilla/profile"))
+        assertTrue(AppDataArchiveRules.shouldExportRelativePath("files/mozilla/profile"))
+        assertTrue(AppDataArchiveRules.shouldExportRelativePath("app_webview/Cookies"))
+        assertFalse(AppDataArchiveRules.shouldExportRelativePath("app_webview_guest_bubble/Cookies"))
     }
 
     @Test
-    fun `device search consent stays on its device and rejects import paths`() {
-        listOf("shared_prefs/device_search.xml", "shared_prefs/device_search.xml.bak").forEach { path ->
-            assertFalse(AppDataArchiveRules.shouldExportRelativePath(path))
-            assertNull(AppDataArchiveRules.dataRelativePath("data/$path", isDirectory = false))
-        }
+    fun `persistent device search settings join manual archive`() {
+        val path = "shared_prefs/device_search.xml"
+        assertTrue(AppDataArchiveRules.shouldExportRelativePath(path))
+        assertEquals(path, AppDataArchiveRules.dataRelativePath("data/$path", isDirectory = false))
         assertTrue(AppDataArchiveRules.shouldExportRelativePath("shared_prefs/device_search_extra.xml"))
+    }
+
+    @Test
+    fun `keystore-bound sync secrets stay on their source device`() {
+        listOf(
+            "no_backup/candy_sync_vault_v1",
+            "no_backup/candy_sync_vault_v1.bak",
+            "no_backup/candy_sync_cache_v1",
+            "no_backup/candy_sync_cache_v1.bak",
+        ).forEach { path ->
+            assertFalse(path, AppDataArchiveRules.shouldExportRelativePath(path))
+            assertNull(path, AppDataArchiveRules.dataRelativePath("data/$path", isDirectory = false))
+        }
     }
 
     @Test
@@ -247,7 +261,7 @@ class AppDataArchiveRulesTest {
                 current,
                 manifest().copy(
                     webViewVersion = "126.0",
-                    websiteState = AppDataArchiveWebsiteState.LegacyWebsiteStateExcluded,
+                    websiteState = AppDataArchiveWebsiteState.EngineStateIncluded,
                 ),
             ),
         )
@@ -255,7 +269,10 @@ class AppDataArchiveRulesTest {
             AppDataArchiveCompatibility.Same,
             AppDataArchiveRules.compatibility(
                 current,
-                manifest().copy(webViewVersion = "126.0"),
+                manifest().copy(
+                    webViewVersion = "126.0",
+                    websiteState = AppDataArchiveWebsiteState.CandyOwnedOnly,
+                ),
             ),
         )
         assertEquals(
@@ -294,9 +311,16 @@ class AppDataArchiveRulesTest {
             ),
         )
         assertEquals(
-            AppDataArchiveWebsiteState.CandyOwnedOnly,
+            AppDataArchiveWebsiteState.EngineStateIncluded,
             AppDataArchiveRules.websiteStateFor(
                 formatVersion = AppDataArchiveRules.FORMAT_VERSION,
+                entries = emptyList(),
+            ),
+        )
+        assertEquals(
+            AppDataArchiveWebsiteState.CandyOwnedOnly,
+            AppDataArchiveRules.websiteStateFor(
+                formatVersion = AppDataArchiveRules.PREVIOUS_FORMAT_VERSION,
                 entries = emptyList(),
             ),
         )

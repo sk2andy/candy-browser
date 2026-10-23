@@ -20,7 +20,7 @@
     <string name="onboarding_title">Learn Candy gestures</string>
     <string name="onboarding_progress">%1$d of %2$d</string>
     <string name="onboarding_try_here">Try the gesture in the card</string>
-    <string name="onboarding_required_hint">All three gestures are required to continue.</string>
+    <string name="onboarding_required_hint">You can practice any of these gestures, or skip the tutorial at any time.</string>
     <string name="onboarding_accessibility_complete_action">Mark this gesture as completed</string>
     <string name="onboarding_switch_tabs_title">Switch tabs</string>
     <string name="onboarding_switch_tabs_description">Swipe the address bar left or right.</string>
@@ -486,12 +486,12 @@
     <string name="data_archive_import_title">Import app data</string>
     <string name="data_archive_import_summary">Replace current data from a Candy ZIP backup</string>
     <string name="data_archive_export_warning_title">Export sensitive app data?</string>
-    <string name="data_archive_export_warning_message">The ZIP contains website logins, cookies, local storage, browsing data, settings, and rules. Anyone with the file may be able to access your accounts. Store it somewhere protected. Candy restarts once to create a consistent backup.</string>
-    <string name="data_archive_export_protected_warning_message">At least one profile uses biometric protection. After choosing a location, strong biometric authentication is required. Protected profile data is written readable into the ZIP; the ZIP itself is not biometrically protected or encrypted. Anyone with the file can read its contents. Candy restarts once to create a consistent backup.</string>
+    <string name="data_archive_export_warning_message">The unencrypted ZIP contains persistent Candy settings and data, plus raw Gecko and WebView profile files such as cookies and site storage. Anyone with the file may be able to read them or access accounts. Store it somewhere protected. Website logins may not work after restore, especially on another device or browser-engine version. Candy restarts once to create a consistent backup.</string>
+    <string name="data_archive_export_protected_warning_message">At least one profile uses biometric protection. After choosing a location, strong biometric authentication is required. The unencrypted ZIP contains persistent Candy settings and data, plus raw Gecko and WebView profile files, including protected profile contents. Anyone with the file can read them or may access accounts. Website logins may not work after restore, especially on another device or browser-engine version. Candy restarts once to create a consistent backup.</string>
     <string name="data_archive_export_action">Choose storage location</string>
     <string name="data_archive_import_confirm_title">Replace all Candy data?</string>
     <string name="data_archive_import_confirm_message">Only import a backup you created or trust. It may contain enabled userscripts that run code on websites. This backup was created by Candy %1$s and contains %2$d files. Import replaces current settings, tabs, snoozes, rules, cookies, and website storage. Candy restarts afterward.</string>
-    <string name="data_archive_import_version_warning">Warning: this backup was created with a different app, Android, or browser-engine version. Website sessions or newer settings may not restore correctly.</string>
+    <string name="data_archive_import_version_warning">Warning: this backup was created with a different app, Android, or browser-engine version. Raw website sessions may fail to restore; sites can also bind logins to the original device.</string>
     <string name="data_archive_import_action">Import and restart</string>
     <string name="data_archive_import_mismatch_action">Import anyway</string>
     <string name="data_archive_preparing">Preparing app data…</string>
@@ -552,6 +552,14 @@
     </plurals>
     <string name="settings_section_search">Search</string>
     <string name="settings_search_engine">Search engine</string>
+    <string name="settings_search_shortcuts_title">Search shortcuts</string>
+    <string name="settings_search_shortcuts_summary" formatted="false">Type a keyword and search terms in the address bar, for example “gh compose”. Use %s where the search terms belong in the URL.</string>
+    <string name="settings_search_shortcut_keyword">Keyword</string>
+    <string name="settings_search_shortcut_keyword_summary">Use letters, numbers, hyphens, or underscores. Keywords must be unique and cannot match a built-in search engine.</string>
+    <string name="settings_search_shortcut_template">Search URL template</string>
+    <string name="settings_search_shortcut_template_summary" formatted="false">Use one %s placeholder in an HTTP or HTTPS URL.</string>
+    <string name="settings_search_shortcut_add">Add shortcut</string>
+    <string name="settings_search_shortcut_remove">Remove</string>
     <string name="settings_ai_mode_toggle_title">Show AI Mode logo</string>
     <string name="settings_ai_mode_toggle_subtitle">Tap the logo in the address bar to switch the current query between Google Search and AI Mode.</string>
     <string name="settings_history_suggestions_title">Show browsing history suggestions</string>
@@ -802,6 +810,7 @@
     <string name="downloads_pause">Pause</string>
     <string name="downloads_resume">Resume</string>
     <string name="downloads_control_failed">Download could not be updated</string>
+    <string name="downloads_open_source">Open source</string>
     <string name="downloads_open_failed">No app can open this download</string>
     <string name="downloads_status_pending">Pending · %1$s</string>
     <string name="downloads_status_running">Downloading · %1$s</string>
@@ -811,6 +820,10 @@
     <string name="downloads_status_cancelled">Cancelled · %1$s</string>
     <string name="toast_download_handed_off">Sent to %1$s</string>
     <string name="download_manager_chooser_title">Download with</string>
+    <string name="download_again_title">Download again?</string>
+    <string name="download_again_message">A file named “%1$s” is already in Downloads. Do you want to download it again?</string>
+    <string name="download_again_action">Download again</string>
+    <string name="download_open_existing">Open existing file</string>
     <string name="error_download_invalid_address">Invalid download address</string>
     <string name="error_download_start_failed">Download could not be started</string>
     <string name="error_page_unreachable">Website not found</string>

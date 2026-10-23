@@ -675,7 +675,8 @@ internal fun LinkPeekActionEditorPage(
                     .onGloballyPositioned { coordinates ->
                         paletteBounds = coordinates.boundsInRoot()
                     }
-                    .semantics { contentDescription = availableTitle },
+                    .semantics { contentDescription = availableTitle }
+                    .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 available.chunked(PALETTE_COLUMNS).forEach { rowActions ->

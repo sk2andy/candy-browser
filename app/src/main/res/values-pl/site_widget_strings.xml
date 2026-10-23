@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="site_widget_name">Przycięcie strony internetowej (prototyp)</string>
+    <string name="site_widget_name_square">Przycięcie strony internetowej 4×4 (prototyp)</string>
+    <string name="site_widget_description">Zachowaj wybrany obszar witryny na ekranie głównym</string>
+    <string name="site_widget_empty">Otwórz stronę w Candy, a następnie dotknij tutaj, aby wybrać obszar.</string>
+    <string name="site_widget_open">Otwórz stronę</string>
+    <string name="site_widget_refresh">Odśwież</string>
+    <string name="site_widget_unavailable">Tej strony nie można zapisać jako widgetu. Użyj zwykłego, niezabezpieczonego profilu lokalnego.</string>
+    <string name="site_widget_pin_failed">Nie można dodać tego widżetu. Spróbuj ponownie.</string>
+    <string name="site_widget_pin_requested">Potwierdź dodanie widżetu na ekranie głównym.</string>
+    <string name="site_widget_editor_title">Widżet strony internetowej</string>
+    <string name="site_widget_editor_instructions">Wybierz kolumny i wiersze. Zsuń lub użyj suwaka powiększenia, a następnie przesuń stronę pod ramkę.</string>
+    <string name="site_widget_format_four_by_three">4 × 3</string>
+    <string name="site_widget_format_four_by_four">4 × 4</string>
+    <string name="site_widget_editor_size">Rozmiar wyboru</string>
+    <string name="site_widget_editor_pin">Dodaj do ekranu głównego</string>
+    <string name="site_widget_editor_interaction_hint">Widżet wyświetla migawkę. Stuknij, aby otworzyć stronę w Candy.</string>
+    <string name="site_widget_private_unavailable">Widżety witryny internetowej są niedostępne w zakładkach prywatnych.</string>
+    <string name="site_widget_capture_failed">Nie udało się przechwycić tej strony. Spróbuj ponownie po zakończeniu ładowania.</string>
+    <string name="site_widget_pin_unavailable">Ten program uruchamiający nie obsługuje bezpośredniego dodawania widżetów. Dodaj widżet witryny internetowej Candy z selektora widżetów.</string>
+    <string name="site_widget_save_failed">Nie można zapisać tego widżetu. Spróbuj ponownie.</string>
+    <string name="site_widget_reselect">Edytuj przycięcie</string>
+    <string name="site_widget_refresh_failed">Odświeżanie nie powiodło się. Ostatni zrzut ekranu jest nadal wyświetlany.</string>
+    <string name="site_widget_refreshing">Odświeżanie…</string>
+    <string name="site_widget_editor_columns">Kolumny: %1$d</string>
+    <string name="site_widget_editor_rows">Wiersze: %1$d</string>
+    <string name="site_widget_editor_zoom">Powiększenie</string>
+    <string name="site_widget_editor_zoom_value">Powiększenie: %1$.1f×</string>
+    <string name="site_widget_editor_interval">Interwał odświeżania</string>
+    <string name="site_widget_editor_interval_value">Odśwież: %1$s</string>
+    <string name="site_widget_editor_interval_hint">Android może opóźniać automatyczne aktualizacje, na przykład w trybie oszczędzania baterii.</string>
+    <string name="site_widget_interval_manual">Tylko ręczne</string>
+    <string name="site_widget_interval_minutes">Co %1$d minut</string>
+    <string name="site_widget_interval_hours">Każdy %1$d godz</string>
+</resources>

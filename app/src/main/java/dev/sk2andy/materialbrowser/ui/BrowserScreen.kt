@@ -726,6 +726,7 @@ internal fun BrowserScreen(
     BrowserOfferSnackbarEffects(controller, feedbackSnackbarHostState)
     ClosedTabUndoSnackbarEffect(controller, feedbackSnackbarHostState)
     ExternalAppFeedbackSnackbarEffect(controller, feedbackSnackbarHostState)
+    DownloadCompletionSnackbarEffect(feedbackSnackbarHostState)
     val tabSwitchGapPx = with(density) { 8.dp.toPx() }
     val tabSwitchTravelPx = browserWidthPx + tabSwitchGapPx
     val settleOverviewGesture: () -> Unit = {
@@ -1932,6 +1933,30 @@ internal fun BrowserScreen(
                     "${controller.activeProfileId}:${selectedTab.id}:${entry.libraryOnly}",
                     content,
                 )
+            }
+        }
+
+        feedsEntry?.let { entry ->
+            val content: @Composable () -> Unit = {
+                key(feedRepository) {
+                    FeedsHost(
+                        repository = feedRepository,
+                        entry = entry,
+                        progressScope = feedsProgressScope,
+                        onOpenOriginal = { url ->
+                            feedsReturnEntry = entry.copy(discoveryUrl = null, queueRequestId = 0)
+                            feedsEntry = null
+                            readerStudioSession = null
+                            controller.openUrl(url)
+                        },
+                        onDismiss = { feedsEntry = null; feedsReturnEntry = null },
+                    )
+                }
+            }
+            if (feedRepository.isPrivate) {
+                CompositionLocalProvider(LocalSaveableStateRegistry provides null, content = content)
+            } else {
+                feedsSavedState.SaveableStateProvider("${controller.activeProfileId}:${selectedTab.id}:${entry.libraryOnly}", content)
             }
         }
 

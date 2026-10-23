@@ -43,6 +43,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -117,6 +119,8 @@ fun SiteCapsuleBrowserScreen(
     videoOnlyPresentation: Boolean = webViewVideoOnlyPresentation,
 ) {
     val tab = controller.selectedTab
+    val snackbarHostState = remember { SnackbarHostState() }
+    DownloadCompletionSnackbarEffect(snackbarHostState)
     val entrance = remember(capsule.id) { Animatable(0f) }
     LaunchedEffect(capsule.id) {
         entrance.animateTo(1f, spring(dampingRatio = 0.84f, stiffness = 520f))
@@ -176,6 +180,16 @@ fun SiteCapsuleBrowserScreen(
                 modifier = Modifier.align(Alignment.BottomCenter),
             )
         }
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .navigationBarsPadding()
+                .padding(
+                    horizontal = 16.dp,
+                    vertical = if (!videoOnlyPresentation && capsule.chromeMode.showsControls) 84.dp else 16.dp,
+                ),
+        )
     }
 }
 

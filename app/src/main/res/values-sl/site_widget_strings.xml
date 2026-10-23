@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="site_widget_name">Obrez spletnega mesta (prototip)</string>
+    <string name="site_widget_name_square">Obrez spletne strani 4×4 (prototip)</string>
+    <string name="site_widget_description">Obdržite izbrano spletno mesto na domačem zaslonu</string>
+    <string name="site_widget_empty">Odprite stran v Candy, nato tapnite tukaj, da izberete območje.</string>
+    <string name="site_widget_open">Odpri stran</string>
+    <string name="site_widget_refresh">Osveži</string>
+    <string name="site_widget_unavailable">Te strani ni mogoče shraniti kot pripomoček. Uporabite običajni, nezaščiten lokalni profil.</string>
+    <string name="site_widget_pin_failed">Tega pripomočka ni bilo mogoče dodati. Poskusite znova.</string>
+    <string name="site_widget_pin_requested">Potrdite dodajanje pripomočka na začetni zaslon.</string>
+    <string name="site_widget_editor_title">Gradnik spletnega mesta</string>
+    <string name="site_widget_editor_instructions">Izberite stolpce in vrstice. Stisnite ali uporabite drsnik za povečavo, nato premaknite stran pod okvir.</string>
+    <string name="site_widget_format_four_by_three">4 × 3</string>
+    <string name="site_widget_format_four_by_four">4 × 4</string>
+    <string name="site_widget_editor_size">Velikost izbire</string>
+    <string name="site_widget_editor_pin">Dodaj na začetni zaslon</string>
+    <string name="site_widget_editor_interaction_hint">Pripomoček prikazuje posnetek. Tapnite ga, da odprete stran v Candy.</string>
+    <string name="site_widget_private_unavailable">Pripomočki spletnega mesta niso na voljo v zasebnih zavihkih.</string>
+    <string name="site_widget_capture_failed">Te strani ni bilo mogoče zajeti. Poskusite znova, ko se nalaganje konča.</string>
+    <string name="site_widget_pin_unavailable">Ta zaganjalnik ne podpira neposrednega dodajanja pripomočkov. Dodajte gradnik spletnega mesta Candy iz izbirnika gradnikov.</string>
+    <string name="site_widget_save_failed">Tega pripomočka ni bilo mogoče shraniti. Poskusite znova.</string>
+    <string name="site_widget_reselect">Uredi obrezovanje</string>
+    <string name="site_widget_refresh_failed">Osvežitev ni uspela. Še vedno je prikazan zadnji posnetek.</string>
+    <string name="site_widget_refreshing">Osvežitev ...</string>
+    <string name="site_widget_editor_columns">Stolpci: %1$d</string>
+    <string name="site_widget_editor_rows">Vrstice: %1$d</string>
+    <string name="site_widget_editor_zoom">Povečava</string>
+    <string name="site_widget_editor_zoom_value">Povečava: %1$.1f×</string>
+    <string name="site_widget_editor_interval">Interval osveževanja</string>
+    <string name="site_widget_editor_interval_value">Osveži: %1$s</string>
+    <string name="site_widget_editor_interval_hint">Android lahko odloži samodejne posodobitve, na primer v načinu varčevanja z baterijo.</string>
+    <string name="site_widget_interval_manual">Samo ročno</string>
+    <string name="site_widget_interval_minutes">Vsakih %1$d minut</string>
+    <string name="site_widget_interval_hours">Vsak %1$d h</string>
+</resources>

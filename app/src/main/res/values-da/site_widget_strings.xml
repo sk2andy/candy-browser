@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="site_widget_name">Hjemmesidebeskæring (prototype)</string>
+    <string name="site_widget_name_square">Hjemmesidebeskæring 4×4 (prototype)</string>
+    <string name="site_widget_description">Behold et valgt webstedsområde på din startskærm</string>
+    <string name="site_widget_empty">Åbn en side i Candy, og tryk derefter her for at vælge et område.</string>
+    <string name="site_widget_open">Åbn side</string>
+    <string name="site_widget_refresh">Opdater</string>
+    <string name="site_widget_unavailable">Denne side kan ikke gemmes som en widget. Brug en almindelig, ubeskyttet lokal profil.</string>
+    <string name="site_widget_pin_failed">Kunne ikke tilføje denne widget. Prøv venligst igen.</string>
+    <string name="site_widget_pin_requested">Bekræft tilføjelse af widgetten på din startskærm.</string>
+    <string name="site_widget_editor_title">Webstedswidget</string>
+    <string name="site_widget_editor_instructions">Vælg kolonner og rækker. Knib sammen eller brug zoomskyderen, og flyt derefter siden under rammen.</string>
+    <string name="site_widget_format_four_by_three">4 × 3</string>
+    <string name="site_widget_format_four_by_four">4 × 4</string>
+    <string name="site_widget_editor_size">Markeringens størrelse</string>
+    <string name="site_widget_editor_pin">Tilføj til startskærmen</string>
+    <string name="site_widget_editor_interaction_hint">Widgetten viser et øjebliksbillede. Tryk på den for at åbne siden i Candy.</string>
+    <string name="site_widget_private_unavailable">Webstedswidgets er ikke tilgængelige på private faner.</string>
+    <string name="site_widget_capture_failed">Kunne ikke fange denne side. Prøv igen, når den er færdig med at indlæse.</string>
+    <string name="site_widget_pin_unavailable">Denne launcher understøtter ikke tilføjelse af widgets direkte. Tilføj Candy-webstedets widget fra dens widgetvælger.</string>
+    <string name="site_widget_save_failed">Kunne ikke gemme denne widget. Prøv venligst igen.</string>
+    <string name="site_widget_reselect">Rediger beskæring</string>
+    <string name="site_widget_refresh_failed">Opdatering mislykkedes. Det sidste øjebliksbillede vises stadig.</string>
+    <string name="site_widget_refreshing">Opdaterer…</string>
+    <string name="site_widget_editor_columns">Kolonner: %1$d</string>
+    <string name="site_widget_editor_rows">Rækker: %1$d</string>
+    <string name="site_widget_editor_zoom">Zoom</string>
+    <string name="site_widget_editor_zoom_value">Zoom: %1$.1f×</string>
+    <string name="site_widget_editor_interval">Opdateringsinterval</string>
+    <string name="site_widget_editor_interval_value">Opdater: %1$s</string>
+    <string name="site_widget_editor_interval_hint">Android kan forsinke automatiske opdateringer, for eksempel i batterisparetilstand.</string>
+    <string name="site_widget_interval_manual">Kun manuelt</string>
+    <string name="site_widget_interval_minutes">Hvert %1$d. minut</string>
+    <string name="site_widget_interval_hours">Hver %1$d. time</string>
+</resources>

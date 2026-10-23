@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_privacy_policy_title">Politika privatnosti</string>
+    <string name="settings_privacy_policy_summary">Kako Candy postupa s vašim podacima</string>
+</resources>

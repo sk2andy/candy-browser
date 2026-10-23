@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="site_widget_name">Websäit crop (Prototyp)</string>
+    <string name="site_widget_name_square">Websäit crop 4×4 (Prototyp)</string>
+    <string name="site_widget_description">Halt e gewielte Websäitgebitt op Ärem Heembildschierm</string>
+    <string name="site_widget_empty">Öffnen eng Säit an Candy, tippt dann hei fir e Gebitt ze wielen.</string>
+    <string name="site_widget_open">Opzemaachen Säit</string>
+    <string name="site_widget_refresh">Erfrëschen</string>
+    <string name="site_widget_unavailable">Dës Säit kann net als Widget gespäichert ginn. Benotzt e regelméissegen, ongeschützte lokale Profil.</string>
+    <string name="site_widget_pin_failed">Konnt dëse Widget net derbäisetzen. Probéiert w.e.g. nach eng Kéier.</string>
+    <string name="site_widget_pin_requested">"Bestätegt d'Additioun vum Widget op Ärem Heembildschierm."</string>
+    <string name="site_widget_editor_title">Websäit Widget</string>
+    <string name="site_widget_editor_instructions">"Wielt Kolonnen a Reihen. Pinch oder benotzt den Zoom-Schieber, bewegt dann d'Säit ënner dem Frame."</string>
+    <string name="site_widget_format_four_by_three">4 x3</string>
+    <string name="site_widget_format_four_by_four">4 x4</string>
+    <string name="site_widget_editor_size">Auswiel Gréisst</string>
+    <string name="site_widget_editor_pin">Füügt op den Heembildschierm</string>
+    <string name="site_widget_editor_interaction_hint">"De Widget weist e Schnappschëss. Tippen op fir d'Säit op Candy opzemaachen."</string>
+    <string name="site_widget_private_unavailable">Websäit Widgets sinn net op private Tabs verfügbar.</string>
+    <string name="site_widget_capture_failed">Konnt dës Säit net erfaassen. Probéiert nach eng Kéier wann et fäerdeg ass ze lueden.</string>
+    <string name="site_widget_pin_unavailable">Dëse Launcher ënnerstëtzt net Widgets direkt derbäi. Füügt den Candy Websäit Widget vu sengem Widget Picker.</string>
+    <string name="site_widget_save_failed">Konnt dëse Widget net späicheren. Probéiert w.e.g. nach eng Kéier.</string>
+    <string name="site_widget_reselect">Crop änneren</string>
+    <string name="site_widget_refresh_failed">Erfrëschen ass gescheitert. De leschte Schnappschëss gëtt nach ëmmer gewisen.</string>
+    <string name="site_widget_refreshing">Erfrëschend…</string>
+    <string name="site_widget_editor_columns">Kolonnen: %1$d</string>
+    <string name="site_widget_editor_rows">Zeile: %1$d</string>
+    <string name="site_widget_editor_zoom">Zoom</string>
+    <string name="site_widget_editor_zoom_value">Zoom: %1$.1f×</string>
+    <string name="site_widget_editor_interval">Erfrëschungsintervall</string>
+    <string name="site_widget_editor_interval_value">Erfrëschen: %1$s</string>
+    <string name="site_widget_editor_interval_hint">Android kann automatesch Updates verzögeren, zum Beispill am Batteriesparmodus.</string>
+    <string name="site_widget_interval_manual">Nëmme manuell</string>
+    <string name="site_widget_interval_minutes">All %1$d Minutten</string>
+    <string name="site_widget_interval_hours">All %1$d h</string>
+</resources>

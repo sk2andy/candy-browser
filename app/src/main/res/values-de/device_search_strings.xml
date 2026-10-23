@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
+<resources>
     <string name="device_search_title">Gerätesuche</string>
     <string name="device_search_settings_summary">Lesezeichen und gespeicherte Artikel für die Android-Suche auswählen</string>
     <string name="device_search_summary">Einzelne Lesezeichen und gespeicherte Artikel für die Systemsuche freigeben. Browserverlauf und Artikeltext bleiben in Candy. Private Inhalte und geschützte Profile sind ausgeschlossen.</string>

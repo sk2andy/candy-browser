@@ -18,7 +18,7 @@
     <string name="onboarding_title">Candy-Gesten lernen</string>
     <string name="onboarding_progress">%1$d von %2$d</string>
     <string name="onboarding_try_here">Probiere die Geste in der Karte aus</string>
-    <string name="onboarding_required_hint">Zum Fortfahren sind alle drei Gesten erforderlich.</string>
+    <string name="onboarding_required_hint">Du kannst die Gesten üben oder das Tutorial jederzeit überspringen.</string>
     <string name="onboarding_accessibility_complete_action">Diese Geste als erledigt markieren</string>
     <string name="onboarding_switch_tabs_title">Tabs wechseln</string>
     <string name="onboarding_switch_tabs_description">Wische auf der Adressleiste nach links oder rechts.</string>
@@ -447,12 +447,12 @@
     <string name="data_archive_import_title">App-Daten importieren</string>
     <string name="data_archive_import_summary">Aktuelle Daten durch ein Candy-ZIP-Backup ersetzen</string>
     <string name="data_archive_export_warning_title">Sensible App-Daten exportieren?</string>
-    <string name="data_archive_export_warning_message">Das ZIP enthält Website-Logins, Cookies, lokalen Speicher, Browserdaten, Einstellungen und Regeln. Wer die Datei besitzt, kann möglicherweise auf deine Konten zugreifen. Bewahre sie geschützt auf. Candy startet einmal neu, um ein konsistentes Backup zu erstellen.</string>
-    <string name="data_archive_export_protected_warning_message">Mindestens ein Profil ist biometrisch geschützt. Nach Wahl des Speicherorts ist starke biometrische Authentifizierung erforderlich. Geschützte Profildaten werden lesbar in das ZIP geschrieben; das ZIP selbst ist weder biometrisch geschützt noch verschlüsselt. Wer die Datei besitzt, kann ihren Inhalt lesen. Candy startet einmal neu, um ein konsistentes Backup zu erstellen.</string>
+    <string name="data_archive_export_warning_message">Das unverschlüsselte ZIP enthält persistente Candy-Einstellungen und -Daten sowie rohe Gecko- und WebView-Profildateien wie Cookies und Website-Speicher. Wer die Datei besitzt, kann diese Daten lesen oder möglicherweise auf Konten zugreifen. Bewahre sie geschützt auf. Website-Logins lassen sich nach dem Import möglicherweise nicht nutzen, besonders auf einem anderen Gerät oder mit einer anderen Browser-Engine-Version. Candy startet einmal neu, um ein konsistentes Backup zu erstellen.</string>
+    <string name="data_archive_export_protected_warning_message">Mindestens ein Profil ist biometrisch geschützt. Nach Wahl des Speicherorts ist starke biometrische Authentifizierung erforderlich. Das unverschlüsselte ZIP enthält persistente Candy-Einstellungen und -Daten sowie rohe Gecko- und WebView-Profildateien einschließlich geschützter Profilinhalte. Wer die Datei besitzt, kann diese Daten lesen oder möglicherweise auf Konten zugreifen. Website-Logins lassen sich nach dem Import möglicherweise nicht nutzen, besonders auf einem anderen Gerät oder mit einer anderen Browser-Engine-Version. Candy startet einmal neu, um ein konsistentes Backup zu erstellen.</string>
     <string name="data_archive_export_action">Speicherort wählen</string>
     <string name="data_archive_import_confirm_title">Alle Candy-Daten ersetzen?</string>
     <string name="data_archive_import_confirm_message">Importiere nur ein selbst erstelltes oder vertrauenswürdiges Backup. Es kann aktivierte Userscripts enthalten, die Code auf Websites ausführen. Dieses Backup wurde mit Candy %1$s erstellt und enthält %2$d Dateien. Der Import ersetzt aktuelle Einstellungen, Tabs, Snoozes, Regeln, Cookies und Website-Speicher. Candy startet danach neu.</string>
-    <string name="data_archive_import_version_warning">Warnung: Dieses Backup wurde mit einer anderen App-, Android- oder Browser-Engine-Version erstellt. Website-Sitzungen oder neuere Einstellungen lassen sich möglicherweise nicht korrekt wiederherstellen.</string>
+    <string name="data_archive_import_version_warning">Warnung: Dieses Backup wurde mit einer anderen App-, Android- oder Browser-Engine-Version erstellt. Rohe Website-Sitzungen lassen sich möglicherweise nicht wiederherstellen; Websites können Logins außerdem an das ursprüngliche Gerät binden.</string>
     <string name="data_archive_import_action">Importieren und neu starten</string>
     <string name="data_archive_import_mismatch_action">Trotzdem importieren</string>
     <string name="data_archive_preparing">App-Daten werden vorbereitet…</string>
@@ -761,6 +761,7 @@
     <string name="downloads_pause">Pausieren</string>
     <string name="downloads_resume">Fortsetzen</string>
     <string name="downloads_control_failed">Download konnte nicht geändert werden</string>
+    <string name="downloads_open_source">Quelle öffnen</string>
     <string name="downloads_open_failed">Keine App kann diesen Download öffnen</string>
     <string name="downloads_status_pending">Wartet · %1$s</string>
     <string name="downloads_status_running">Wird geladen · %1$s</string>
@@ -770,6 +771,10 @@
     <string name="downloads_status_cancelled">Abgebrochen · %1$s</string>
     <string name="toast_download_handed_off">An %1$s übergeben</string>
     <string name="download_manager_chooser_title">Herunterladen mit</string>
+    <string name="download_again_title">Erneut herunterladen?</string>
+    <string name="download_again_message">Eine Datei namens „%1$s“ liegt bereits in Downloads. Möchtest du sie erneut herunterladen?</string>
+    <string name="download_again_action">Erneut herunterladen</string>
+    <string name="download_open_existing">Vorhandene Datei öffnen</string>
     <string name="error_download_invalid_address">Download-Adresse ist ungültig</string>
     <string name="error_download_start_failed">Download konnte nicht gestartet werden</string>
     <string name="error_page_unreachable">Website nicht gefunden</string>

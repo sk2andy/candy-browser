@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="device_search_title">Αναζήτηση συσκευής</string>
+    <string name="device_search_settings_summary">Επιλέξτε σελιδοδείκτες και αποθηκευμένα άρθρα για αναζήτηση Android</string>
+    <string name="device_search_summary">Επιλέξτε μεμονωμένους σελιδοδείκτες και αποθηκευμένα άρθρα για κοινή χρήση με την αναζήτηση συστήματος. Το ιστορικό περιήγησης και το κείμενο των άρθρων παραμένουν στο Candy. Το ιδιωτικό περιεχόμενο και τα προστατευμένα προφίλ εξαιρούνται.</string>
+    <string name="device_search_enable">Κοινή χρήση με την αναζήτηση συσκευής</string>
+    <string name="device_search_enable_summary">Δημοσιεύονται μόνο επιλεγμένα στοιχεία. Η απενεργοποίηση τους αφαιρεί από το ευρετήριο.</string>
+    <string name="device_search_launcher_note">Τα αποτελέσματα εμφανίζονται μόνο σε εφαρμογές εκκίνησης ή αναζήτησης συστήματος που υποστηρίζουν το Android AppSearch. Η διαθεσιμότητα εξαρτάται από τη συσκευή σας.</string>
+    <string name="device_search_bookmark_profile">Ανοίξτε τους σελιδοδείκτες σε αυτό το προφίλ</string>
+    <string name="device_search_bookmarks">Σελιδοδείκτες</string>
+    <string name="device_search_articles">Αποθηκευμένα άρθρα</string>
+    <string name="device_search_empty">Δεν υπάρχουν κατάλληλα στοιχεία. Τα αποθηκευμένα άρθρα χρειάζονται ένα γνωστό, μη προστατευμένο τοπικό προφίλ.</string>
+    <string name="device_search_saving">Ενημέρωση αναζήτησης συσκευής…</string>
+    <string name="device_search_failed">Δεν ήταν δυνατή η ενημέρωση της αναζήτησης συσκευής. Δοκιμάστε να αλλάξετε ξανά την επιλογή.</string>
+    <string name="device_search_item_unavailable">Αυτό το στοιχείο δεν κοινοποιείται πλέον ή δεν είναι διαθέσιμο.</string>
+    <string name="device_search_open">Ανοίξτε στο Candy</string>
+</resources>

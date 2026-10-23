@@ -18,10 +18,13 @@ class SettingsHeaderArtworkRulesTest {
             SettingsHeaderArtwork.Downloads to IntRect(309, 184, 1245, 836),
             SettingsHeaderArtwork.Profiles to IntRect(94, 314, 1442, 646),
             SettingsHeaderArtwork.Gestures to IntRect(208, 292, 1329, 732),
+            SettingsHeaderArtwork.GestureControls to IntRect(278, 210, 1300, 828),
+            SettingsHeaderArtwork.AddressBarButtons to IntRect(145, 210, 1392, 765),
             SettingsHeaderArtwork.LinkPreview to IntRect(83, 141, 1454, 1001),
             SettingsHeaderArtwork.TabLifecycle to IntRect(394, 162, 1166, 866),
             SettingsHeaderArtwork.PersonalLinkRules to IntRect(185, 272, 1352, 753),
             SettingsHeaderArtwork.ExternalApps to IntRect(185, 240, 1350, 790),
+            SettingsHeaderArtwork.LinkLongPress to IntRect(139, 188, 1407, 957),
         )
         visibleBounds.forEach { (artwork, visible) ->
             val window = SettingsHeaderArtworkRules.sourceWindow(artwork)

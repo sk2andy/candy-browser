@@ -1,6 +1,7 @@
 package dev.sk2andy.materialbrowser
 
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -14,10 +15,12 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import dev.sk2andy.materialbrowser.browser.guest.GuestBubbleGate
+import dev.sk2andy.materialbrowser.browser.downloads.DownloadFileOpener
 import dev.sk2andy.materialbrowser.data.AppDataTransferLock
 import dev.sk2andy.materialbrowser.data.BrowserSessionStore
 import dev.sk2andy.materialbrowser.data.DownloadEntry
 import dev.sk2andy.materialbrowser.data.DownloadRepository
+import dev.sk2andy.materialbrowser.data.DownloadSourceRules
 import dev.sk2andy.materialbrowser.ui.DownloadsScreen
 import dev.sk2andy.materialbrowser.ui.theme.CandyTheme
 import dev.sk2andy.materialbrowser.ui.theme.setCandyContent
@@ -58,6 +61,7 @@ class DownloadsActivity : ComponentActivity() {
                     onBack = ::finish,
                     onCancelDownload = { entry -> updateDownload { repository.cancel(entry) } },
                     onTogglePauseDownload = { entry -> updateDownload { repository.togglePause(entry) } },
+                    onOpenSource = ::openSource,
                 )
             }
         }
@@ -106,18 +110,16 @@ class DownloadsActivity : ComponentActivity() {
             Toast.makeText(this, R.string.downloads_open_failed, Toast.LENGTH_SHORT).show()
             return
         }
-        val mime = entry.mime.takeIf(String::isNotBlank)
-            ?: contentResolver.getType(uri)
-            ?: "*/*"
-        runCatching {
-            startActivity(
-                Intent(Intent.ACTION_VIEW)
-                    .setDataAndType(uri, mime)
-                    .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION),
-            )
-        }.onFailure {
-            Toast.makeText(this, R.string.downloads_open_failed, Toast.LENGTH_SHORT).show()
-        }
+        DownloadFileOpener.open(this, uri, entry.mime)
+    }
+
+    private fun openSource(entry: DownloadEntry) {
+        if (!DownloadSourceRules.canOpenSource(entry)) return
+        startActivity(
+            Intent(this, MainActivity::class.java)
+                .setAction(Intent.ACTION_VIEW)
+                .setData(Uri.parse(entry.source)),
+        )
     }
 
     private fun updateDownload(action: () -> Boolean) {

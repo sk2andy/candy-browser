@@ -16,12 +16,13 @@ class TabPreviewRepository private constructor(context: Context) {
     fun restore(
         validTabIds: Set<String>,
         retainedTabIds: Set<String> = emptySet(),
+        targetWidthPx: Int = TabPreviewCaptureRules.COMPACT_TARGET_WIDTH_PX,
         onLoaded: (String, Bitmap) -> Unit,
     ) {
         executor.execute {
             store.prune(validTabIds + retainedTabIds)
             validTabIds.forEach { tabId ->
-                store.load(tabId)?.let { bitmap -> onLoaded(tabId, bitmap) }
+                store.load(tabId, targetWidthPx)?.let { bitmap -> onLoaded(tabId, bitmap) }
             }
         }
     }

@@ -4,6 +4,7 @@
 
 | Need | Detail | Main code |
 | --- | --- | --- |
+| App privacy policy | Settings → About & legal → Privacy policy opens the canonical [GitHub Pages declaration](https://sk2andy.github.io/candy-browser/privacy/); the localized entry is also available through Settings search | `ui/AboutLegalSection`, `ui/SettingsSearchCatalog`, `legal/CandyLegalSources` |
 | Request/cosmetic blocking, Candy Rules, validation and precedence | [`blocking-and-rules.md`](blocking-and-rules.md) | `blocking/ContentBlocker`, `RequestBlocker`, `CandyRule*` |
 | Privacy X-Ray, Permission Radar, asset maintenance and audits | [`xray-permissions-and-maintenance.md`](xray-permissions-and-maintenance.md) | `PrivacyXRay`, `browser/permissions`, `scripts/`, `docs/audits/` |
 | WebRTC IP protection and engine fallbacks | [`../browsing/platform-engines.md`](../browsing/platform-engines.md#webrtc-protection) | `WebRtcProtectionMode`, engine factories, Gecko Privacy host |

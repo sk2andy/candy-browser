@@ -26,6 +26,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
+import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -43,6 +44,7 @@ import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.browser.integration.linkrouting.LinkRoutingRule
 import dev.sk2andy.materialbrowser.browser.BrowserProfile
 import dev.sk2andy.materialbrowser.browser.ExternalAppLinkHandling
+import dev.sk2andy.materialbrowser.browser.LinkLongPressAction
 import dev.sk2andy.materialbrowser.browser.PageTranslationProvider
 import dev.sk2andy.materialbrowser.browser.SearchEngine
 import dev.sk2andy.materialbrowser.browser.SearxngSettings
@@ -211,6 +213,16 @@ class SettingsHeaderArtworkInstrumentedTest {
                     composeRule.runOnIdle { assertTrue(!profilesEnabled) }
                 }
                 SettingsHeaderArtwork.Gestures -> {
+                    composeRule.onNodeWithText(context.getString(R.string.settings_group_link_interactions))
+                        .performScrollTo().performClick()
+                    composeRule.runOnIdle { assertEquals(kind, lastInteraction) }
+                }
+                SettingsHeaderArtwork.AddressBarButtons -> {
+                    composeRule.onNodeWithText(context.getString(R.string.settings_address_bar_actions_summary))
+                        .performScrollTo().performClick()
+                    composeRule.runOnIdle { assertEquals(kind, lastInteraction) }
+                }
+                SettingsHeaderArtwork.GestureControls -> {
                     composeRule.onNodeWithTag(TabSettingsTestTags.AddressBarDocking)
                         .performScrollTo().performClick().assertIsOff()
                 }
@@ -240,16 +252,68 @@ class SettingsHeaderArtworkInstrumentedTest {
                     composeRule.onNodeWithTag(BrowserSettingsTestTags.ExternalLinkPreviewProfile)
                         .performScrollTo().assertIsEnabled()
                 }
+                SettingsHeaderArtwork.LinkLongPress -> {
+                    composeRule.onNodeWithTag("gesture_choice_${LinkLongPressAction.CopyLink}")
+                        .performScrollTo().performClick().assertIsSelected()
+                    composeRule.runOnIdle { assertEquals(kind, lastInteraction) }
+                }
             }
             if (kind in setOf(
                     SettingsHeaderArtwork.SearchEngines,
                     SettingsHeaderArtwork.Translations,
                     SettingsHeaderArtwork.Downloads,
                     SettingsHeaderArtwork.Gestures,
+                    SettingsHeaderArtwork.GestureControls,
                     SettingsHeaderArtwork.LinkPreview,
                 )
             ) {
                 composeRule.runOnIdle { assertEquals(kind, lastInteraction) }
+            }
+        }
+    }
+
+    @Test
+    fun gestureSectionsUseDistinctArtworkAcrossThemes() {
+        var artwork by mutableStateOf(SettingsHeaderArtwork.Gestures)
+        var settings by mutableStateOf(AppearanceSettings(animationsEnabled = false))
+        var pageColor = Color.Unspecified
+        var primaryColor = Color.Unspecified
+        composeRule.setContent {
+            MaterialBrowserTheme(settings = settings) {
+                val colors = MaterialTheme.colorScheme
+                SideEffect {
+                    pageColor = colors.surfaceContainerLow
+                    primaryColor = colors.primary
+                }
+                key(artwork) { ParentPage(artwork, settings) }
+            }
+        }
+        val headers = listOf(
+            SettingsHeaderArtwork.Gestures,
+            SettingsHeaderArtwork.GestureControls,
+            SettingsHeaderArtwork.AddressBarButtons,
+        )
+        for (mode in listOf(
+            BrowserAppearanceMode.Light,
+            BrowserAppearanceMode.Dark,
+            BrowserAppearanceMode.Amoled,
+        )) {
+            composeRule.runOnIdle { settings = settings.copy(appearanceMode = mode) }
+            val captures = mutableListOf<PixelMap>()
+            for (kind in headers) {
+                composeRule.runOnIdle { artwork = kind }
+                val node = composeRule.onNodeWithTag(tag(kind)).performScrollTo().assertIsDisplayed()
+                for (other in headers - kind) {
+                    composeRule.onNodeWithTag(tag(other)).assertDoesNotExist()
+                }
+                val pixels = node.captureToImage().toPixelMap()
+                assertPaperMatchesPage(pixels, pageColor)
+                assertTonalArtwork(pixels, pageColor, primaryColor, kind)
+                assertTrue("Each section needs its own motif: $kind", captures.all { differs(it, pixels) })
+                captures.add(pixels)
+                composeRule.mainClock.advanceTimeByFrame()
+                composeRule.waitForIdle()
+                saveImage("${kind.name.lowercase()}_${mode.name.lowercase()}.png", composeRule.onRoot().captureToImage())
             }
         }
     }
@@ -364,6 +428,18 @@ class SettingsHeaderArtworkInstrumentedTest {
                 )
             }
             SettingsHeaderArtwork.Gestures -> {
+                TabsPage(
+                    section = TabSettingsSection.Gestures,
+                    onLinkInteractions = { onInteraction(artwork) },
+                )
+            }
+            SettingsHeaderArtwork.AddressBarButtons -> {
+                TabsPage(
+                    section = TabSettingsSection.AddressBarButtons,
+                    onAddressBarActions = { onInteraction(artwork) },
+                )
+            }
+            SettingsHeaderArtwork.GestureControls -> {
                 var dockingEnabled by remember { mutableStateOf(true) }
                 TabsPage(
                     section = TabSettingsSection.GestureControls,
@@ -415,6 +491,14 @@ class SettingsHeaderArtworkInstrumentedTest {
                     onBack = {},
                 )
             }
+            SettingsHeaderArtwork.LinkLongPress -> {
+                var action by remember { mutableStateOf(LinkLongPressAction.LinkPeek) }
+                LinkLongPressSettingsPage(
+                    action = action,
+                    onActionChanged = { action = it; onInteraction(artwork) },
+                    onBack = {},
+                )
+            }
         }
     }
 
@@ -426,6 +510,8 @@ class SettingsHeaderArtworkInstrumentedTest {
         dockingEnabled: Boolean = true,
         onDockingChanged: (Boolean) -> Unit = {},
         onTabLifecycle: () -> Unit = {},
+        onLinkInteractions: () -> Unit = {},
+        onAddressBarActions: () -> Unit = {},
         inactiveTabLifetime: InactiveTabLifetime = InactiveTabLifetime.Never,
         onInactiveTabLifetimeChanged: (InactiveTabLifetime) -> Unit = {},
     ) {
@@ -442,6 +528,7 @@ class SettingsHeaderArtworkInstrumentedTest {
             isAddressBarDockingEnabled = dockingEnabled,
             onInactiveTabLifetimeChanged = onInactiveTabLifetimeChanged,
             onTabLifecycle = onTabLifecycle,
+            onLinkInteractions = onLinkInteractions,
             onResidentTabLimitChanged = {},
             onTabOverviewModeChanged = {},
             onTabStackFolderModeChanged = {},
@@ -450,7 +537,7 @@ class SettingsHeaderArtworkInstrumentedTest {
             onDismissResistancePercentChanged = {},
             onProfilesEnabledChanged = onProfilesChanged,
             onAddressBarDockingEnabledChanged = onDockingChanged,
-            onAddressBarActions = {},
+            onAddressBarActions = onAddressBarActions,
             onBack = {},
         )
     }

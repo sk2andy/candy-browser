@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="site_widget_name">Обрезка сайта (прототип)</string>
+    <string name="site_widget_name_square">Кадрирование сайта 4×4 (прототип)</string>
+    <string name="site_widget_description">Сохраняйте выбранную область веб-сайта на главном экране</string>
+    <string name="site_widget_empty">Откройте страницу в Candy, затем нажмите здесь, чтобы выбрать область.</string>
+    <string name="site_widget_open">Открыть страницу</string>
+    <string name="site_widget_refresh">Обновить</string>
+    <string name="site_widget_unavailable">Эту страницу нельзя сохранить как виджет. Используйте обычный незащищенный локальный профиль.</string>
+    <string name="site_widget_pin_failed">Не удалось добавить этот виджет. Пожалуйста, попробуйте еще раз.</string>
+    <string name="site_widget_pin_requested">Подтвердите добавление виджета на главный экран.</string>
+    <string name="site_widget_editor_title">Виджет сайта</string>
+    <string name="site_widget_editor_instructions">Выберите столбцы и строки. Сожмите или используйте ползунок масштабирования, а затем переместите страницу под рамку.</string>
+    <string name="site_widget_format_four_by_three">4 × 3</string>
+    <string name="site_widget_format_four_by_four">4 × 4</string>
+    <string name="site_widget_editor_size">Размер выбора</string>
+    <string name="site_widget_editor_pin">Добавить на главный экран</string>
+    <string name="site_widget_editor_interaction_hint">Виджет показывает снимок. Коснитесь его, чтобы открыть страницу в Candy.</string>
+    <string name="site_widget_private_unavailable">Виджеты сайта недоступны в личных вкладках.</string>
+    <string name="site_widget_capture_failed">Не удалось захватить эту страницу. Попробуйте еще раз, когда загрузка закончится.</string>
+    <string name="site_widget_pin_unavailable">Этот лаунчер не поддерживает добавление виджетов напрямую. Добавьте виджет веб-сайта Candy из окна выбора виджетов.</string>
+    <string name="site_widget_save_failed">Не удалось сохранить этот виджет. Пожалуйста, попробуйте еще раз.</string>
+    <string name="site_widget_reselect">Редактировать обрезку</string>
+    <string name="site_widget_refresh_failed">Обновить не удалось. Последний снимок все еще отображается.</string>
+    <string name="site_widget_refreshing">Обновление…</string>
+    <string name="site_widget_editor_columns">Столбцы: %1$d</string>
+    <string name="site_widget_editor_rows">Строки: %1$d</string>
+    <string name="site_widget_editor_zoom">Масштаб</string>
+    <string name="site_widget_editor_zoom_value">Масштаб: %1$.1f×</string>
+    <string name="site_widget_editor_interval">Интервал обновления</string>
+    <string name="site_widget_editor_interval_value">Обновить: %1$s</string>
+    <string name="site_widget_editor_interval_hint">Android может задерживать автоматические обновления, например, в режиме экономии заряда батареи.</string>
+    <string name="site_widget_interval_manual">Только вручную</string>
+    <string name="site_widget_interval_minutes">Каждые %1$d минут</string>
+    <string name="site_widget_interval_hours">Каждый %1$d час</string>
+</resources>

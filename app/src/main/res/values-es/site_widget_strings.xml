@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="site_widget_name">Recorte del sitio web (prototipo)</string>
+    <string name="site_widget_name_square">Recorte de sitio web 4×4 (prototipo)</string>
+    <string name="site_widget_description">Mantenga un área de sitio web seleccionada en su pantalla de inicio</string>
+    <string name="site_widget_empty">Abra una página en Candy, luego toque aquí para seleccionar un área.</string>
+    <string name="site_widget_open">Abrir página</string>
+    <string name="site_widget_refresh">Actualizar</string>
+    <string name="site_widget_unavailable">Esta página no se puede guardar como un widget. Utilice un perfil local normal y desprotegido.</string>
+    <string name="site_widget_pin_failed">No se pudo agregar este widget. Por favor inténtalo de nuevo.</string>
+    <string name="site_widget_pin_requested">Confirma agregar el widget en tu pantalla de inicio.</string>
+    <string name="site_widget_editor_title">Widget del sitio web</string>
+    <string name="site_widget_editor_instructions">Elija columnas y filas. Pellizque o use el control deslizante de zoom y luego mueva la página debajo del marco.</string>
+    <string name="site_widget_format_four_by_three">4×3</string>
+    <string name="site_widget_format_four_by_four">4×4</string>
+    <string name="site_widget_editor_size">Tamaño de selección</string>
+    <string name="site_widget_editor_pin">Agregar a la pantalla de inicio</string>
+    <string name="site_widget_editor_interaction_hint">El widget muestra una instantánea. Tócalo para abrir la página en Candy.</string>
+    <string name="site_widget_private_unavailable">Los widgets del sitio web no están disponibles en pestañas privadas.</string>
+    <string name="site_widget_capture_failed">No se pudo capturar esta página. Vuelve a intentarlo cuando haya terminado de cargarse.</string>
+    <string name="site_widget_pin_unavailable">Este iniciador no admite la adición de widgets directamente. Agregue el widget del sitio web de Candy desde su selector de widgets.</string>
+    <string name="site_widget_save_failed">No se pudo guardar este widget. Por favor inténtalo de nuevo.</string>
+    <string name="site_widget_reselect">Editar recorte</string>
+    <string name="site_widget_refresh_failed">Error al actualizar. La última instantánea todavía se muestra.</string>
+    <string name="site_widget_refreshing">Actualizando…</string>
+    <string name="site_widget_editor_columns">Columnas: %1$d</string>
+    <string name="site_widget_editor_rows">Filas: %1$d</string>
+    <string name="site_widget_editor_zoom">Zoom</string>
+    <string name="site_widget_editor_zoom_value">Zoom: %1$.1f×</string>
+    <string name="site_widget_editor_interval">Intervalo de actualización</string>
+    <string name="site_widget_editor_interval_value">Actualizar: %1$s</string>
+    <string name="site_widget_editor_interval_hint">Android puede retrasar las actualizaciones automáticas, por ejemplo en el modo de ahorro de batería.</string>
+    <string name="site_widget_interval_manual">Sólo manual</string>
+    <string name="site_widget_interval_minutes">Cada %1$d minutos</string>
+    <string name="site_widget_interval_hours">Cada %1$d h</string>
+</resources>

@@ -37,6 +37,8 @@ import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -64,6 +66,7 @@ import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.data.DownloadEntry
 import dev.sk2andy.materialbrowser.data.DownloadHistoryRules
 import dev.sk2andy.materialbrowser.data.DownloadStatus
+import dev.sk2andy.materialbrowser.data.DownloadSourceRules
 import dev.sk2andy.materialbrowser.data.DownloadTimeFilter
 import java.time.Instant
 import java.time.ZoneId
@@ -80,8 +83,11 @@ internal fun DownloadsScreen(
     onBack: () -> Unit,
     onCancelDownload: (DownloadEntry) -> Unit = {},
     onTogglePauseDownload: (DownloadEntry) -> Unit = {},
+    onOpenSource: (DownloadEntry) -> Unit = {},
 ) {
     val context = LocalContext.current
+    val snackbarHostState = remember { SnackbarHostState() }
+    DownloadCompletionSnackbarEffect(snackbarHostState)
     val locale = LocalConfiguration.current.locales[0]
     val zoneId = remember { ZoneId.systemDefault() }
     val dateTimeFormatter = remember(locale) {
@@ -106,6 +112,7 @@ internal fun DownloadsScreen(
     }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.downloads_title)) },
@@ -188,6 +195,7 @@ internal fun DownloadsScreen(
                         onOpen = { onOpenDownload(entry) },
                         onCancel = { onCancelDownload(entry) },
                         onTogglePause = { onTogglePauseDownload(entry) },
+                        onOpenSource = { onOpenSource(entry) },
                     )
                 }
             }
@@ -231,6 +239,7 @@ private fun DownloadRow(
     onOpen: () -> Unit,
     onCancel: () -> Unit,
     onTogglePause: () -> Unit,
+    onOpenSource: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     // Keep outgoing controls and progress stable until the active area finishes collapsing.
@@ -366,6 +375,19 @@ private fun DownloadRow(
                 Spacer(Modifier.height(8.dp))
             }
         }
+        if (DownloadSourceRules.canOpenSource(entry)) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.End,
+            ) {
+                TextButton(
+                    onClick = onOpenSource,
+                    modifier = Modifier.testTag(DownloadsScreenTestTags.openSource(entry.id)),
+                ) {
+                    Text(stringResource(R.string.downloads_open_source))
+                }
+            }
+        }
     }
 }
 
@@ -440,4 +462,6 @@ internal object DownloadsScreenTestTags {
     fun cancel(id: Long): String = "downloads_cancel:$id"
 
     fun pause(id: Long): String = "downloads_pause:$id"
+
+    fun openSource(id: Long): String = "downloads_open_source:$id"
 }

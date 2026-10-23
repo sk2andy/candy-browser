@@ -5,6 +5,7 @@ import android.provider.MediaStore
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import androidx.test.uiautomator.UiDevice
 import dev.sk2andy.materialbrowser.data.DownloadRuntimeRegistry
 import dev.sk2andy.materialbrowser.data.DownloadStatus
 import java.io.ByteArrayInputStream
@@ -283,20 +284,34 @@ class GeckoDownloadTransferInstrumentedTest {
     }
 
     @Test
-    fun pausesOriginalResponseBeforeCopyThenResumesWithoutRefetch() {
-        val bodyRead = CountDownLatch(1)
+    fun largeTransferCompletesWhileDisplayIsOff() {
+        val byteCount = 12 * 1024 * 1024
         val completed = CountDownLatch(1)
-        val started = AtomicReference<GeckoDownloadTransferStart>()
-        val savedBytes = ByteArrayOutputStream()
-        val body = object : ByteArrayInputStream("paused-body".encodeToByteArray()) {
+        val received = AtomicReference<Long>()
+        val body = object : java.io.InputStream() {
+            private var remaining = byteCount
+
+            override fun read(): Int {
+                if (remaining == 0) return -1
+                remaining--
+                return 1
+            }
+
             override fun read(buffer: ByteArray, offset: Int, length: Int): Int {
-                bodyRead.countDown()
-                return super.read(buffer, offset, length)
+                if (remaining == 0) return -1
+                val count = minOf(length, remaining)
+                buffer.fill(1, offset, offset + count)
+                remaining -= count
+                return count
             }
         }
+        var outputBytes = 0L
         val entry = object : GeckoDownloadStreamEntry {
-            override val uri = android.net.Uri.parse("content://media/external/downloads/45")
-            override val output = savedBytes
+            override val uri = android.net.Uri.parse("content://media/external/downloads/47")
+            override val output = object : java.io.OutputStream() {
+                override fun write(value: Int) { outputBytes++ }
+                override fun write(buffer: ByteArray, offset: Int, length: Int) { outputBytes += length }
+            }
             override fun commit() = Unit
             override fun abort() = Unit
             override fun close() = Unit
@@ -312,51 +327,55 @@ class GeckoDownloadTransferInstrumentedTest {
             )
             managerRef.set(manager)
             manager.startResponse(
-                owner = GeckoDownloadOwner("test-profile", isPrivate = true, sessionKey = this),
-                response = WebResponse.Builder("https://example.com/paused.bin")
+                owner = GeckoDownloadOwner("test-profile", isPrivate = false, sessionKey = this),
+                response = WebResponse.Builder("https://example.com/large.bin")
                     .statusCode(200)
                     .header("Content-Type", "application/octet-stream")
+                    .header("Content-Length", byteCount.toString())
                     .body(body)
                     .build(),
                 referrer = null,
                 listener = object : GeckoDownloadTransferListener {
-                    override fun onStarted(start: GeckoDownloadTransferStart) {
-                        started.set(start)
-                        assertTrue(DownloadRuntimeRegistry.togglePause(-46L))
-                    }
+                    override fun onStarted(start: GeckoDownloadTransferStart) = Unit
 
                     override fun onComplete(bytesReceived: Long) {
+                        received.set(bytesReceived)
                         completed.countDown()
                     }
                 },
             )
         }
-        val manager = requireNotNull(managerRef.get())
         try {
-            assertNotNull(started.get())
-            assertEquals(DownloadStatus.Paused, DownloadRuntimeRegistry.snapshot().single { it.id == -46L }.status)
-            assertFalse("paused response was read", bodyRead.await(100, TimeUnit.MILLISECONDS))
-            assertTrue(DownloadRuntimeRegistry.togglePause(-46L))
-            assertTrue("resumed transfer did not complete", completed.await(10, TimeUnit.SECONDS))
-            assertArrayEquals("paused-body".encodeToByteArray(), savedBytes.toByteArray())
+            val device = UiDevice.getInstance(InstrumentationRegistry.getInstrumentation())
+            device.pressHome()
+            device.sleep()
+            assertTrue("large transfer did not finish", completed.await(20, TimeUnit.SECONDS))
+            assertEquals(byteCount.toLong(), received.get())
+            assertEquals(byteCount.toLong(), outputBytes)
         } finally {
-            manager.close()
+            UiDevice.getInstance(InstrumentationRegistry.getInstrumentation()).wakeUp()
+            managerRef.get()?.close()
         }
     }
 
     @Test
-    fun cancelsPausedResponseAndDeletesIncompleteSink() {
+    fun interruptedStreamFailsAndAbortsPartialStorage() {
         val failed = CountDownLatch(1)
         val aborted = AtomicBoolean(false)
         val failure = AtomicReference<GeckoDownloadFailure>()
-        val entry = object : GeckoDownloadStreamEntry {
-            override val uri = android.net.Uri.parse("content://media/external/downloads/46")
-            override val output = ByteArrayOutputStream()
-            override fun commit() = error("Cancelled transfer must not commit")
-            override fun abort() {
-                aborted.set(true)
+        val partialOutput = ByteArrayOutputStream()
+        val body = object : ByteArrayInputStream(ByteArray(64 * 1024)) {
+            override fun read(buffer: ByteArray, offset: Int, length: Int): Int {
+                if (this.pos >= 16 * 1024) throw java.io.IOException("connection reset")
+                return super.read(buffer, offset, minOf(length, 16 * 1024 - this.pos))
             }
-            override fun close() = abort()
+        }
+        val entry = object : GeckoDownloadStreamEntry {
+            override val uri = android.net.Uri.parse("content://media/external/downloads/45")
+            override val output = partialOutput
+            override fun commit() = error("Interrupted transfer must not commit")
+            override fun abort() { aborted.set(true) }
+            override fun close() = Unit
         }
         val managerRef = AtomicReference<GeckoDownloadTransferManager>()
         InstrumentationRegistry.getInstrumentation().runOnMainSync {
@@ -369,16 +388,16 @@ class GeckoDownloadTransferInstrumentedTest {
             )
             managerRef.set(manager)
             manager.startResponse(
-                owner = GeckoDownloadOwner("test-profile", isPrivate = false, sessionKey = this),
-                response = WebResponse.Builder("https://example.com/cancel-paused.bin")
+                owner = GeckoDownloadOwner("test-profile", isPrivate = true, sessionKey = this),
+                response = WebResponse.Builder("https://example.com/interrupted.bin")
                     .statusCode(200)
                     .header("Content-Type", "application/octet-stream")
-                    .body(ByteArrayInputStream("cancel".encodeToByteArray()))
+                    .body(body)
                     .build(),
                 referrer = null,
                 listener = object : GeckoDownloadTransferListener {
                     override fun onStarted(start: GeckoDownloadTransferStart) {
-                        assertTrue(DownloadRuntimeRegistry.togglePause(-47L))
+                        assertFalse(DownloadRuntimeRegistry.entryForTransfer(start.id)?.supportsPause ?: true)
                     }
 
                     override fun onFailed(reason: GeckoDownloadFailure) {
@@ -390,14 +409,13 @@ class GeckoDownloadTransferInstrumentedTest {
         }
         val manager = requireNotNull(managerRef.get())
         try {
-            assertTrue(DownloadRuntimeRegistry.cancel(-47L))
-            assertTrue("cancel callback missing", failed.await(10, TimeUnit.SECONDS))
-            assertEquals(GeckoDownloadFailure.Cancelled, failure.get())
+            assertTrue("interrupted transfer did not fail", failed.await(10, TimeUnit.SECONDS))
+            assertEquals(GeckoDownloadFailure.Network, failure.get())
+            assertEquals(16 * 1024, partialOutput.size())
             assertTrue(aborted.get())
-            assertFalse(DownloadRuntimeRegistry.togglePause(-47L))
-            val cancelled = DownloadRuntimeRegistry.snapshot().single { it.id == -47L }
-            assertEquals(DownloadStatus.Cancelled, cancelled.status)
-            DownloadRuntimeRegistry.clear(listOf(cancelled.id))
+            val terminal = DownloadRuntimeRegistry.snapshot().single { it.name == "interrupted.bin" }
+            assertEquals(DownloadStatus.Failed, terminal.status)
+            DownloadRuntimeRegistry.clear(listOf(terminal.id))
         } finally {
             manager.close()
         }

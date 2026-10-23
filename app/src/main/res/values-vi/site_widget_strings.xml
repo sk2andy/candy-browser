@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="site_widget_name">Cắt trang web (nguyên mẫu)</string>
+    <string name="site_widget_name_square">Trang web cắt 4x4 (nguyên mẫu)</string>
+    <string name="site_widget_description">Giữ khu vực trang web đã chọn trên màn hình chính của bạn</string>
+    <string name="site_widget_empty">Mở một trang trong Candy, sau đó nhấn vào đây để chọn một khu vực.</string>
+    <string name="site_widget_open">Mở trang</string>
+    <string name="site_widget_refresh">Làm mới</string>
+    <string name="site_widget_unavailable">Không thể lưu trang này dưới dạng tiện ích. Sử dụng hồ sơ cục bộ thông thường, không được bảo vệ.</string>
+    <string name="site_widget_pin_failed">Không thể thêm tiện ích này. Vui lòng thử lại.</string>
+    <string name="site_widget_pin_requested">Xác nhận thêm tiện ích trên màn hình chính của bạn.</string>
+    <string name="site_widget_editor_title">Tiện ích trang web</string>
+    <string name="site_widget_editor_instructions">Chọn cột và hàng. Chụm hoặc sử dụng thanh trượt thu phóng, sau đó di chuyển trang bên dưới khung.</string>
+    <string name="site_widget_format_four_by_three">4 × 3</string>
+    <string name="site_widget_format_four_by_four">4 × 4</string>
+    <string name="site_widget_editor_size">Kích thước lựa chọn</string>
+    <string name="site_widget_editor_pin">Thêm vào màn hình chính</string>
+    <string name="site_widget_editor_interaction_hint">Tiện ích hiển thị ảnh chụp nhanh. Nhấn vào nó để mở trang trong Candy.</string>
+    <string name="site_widget_private_unavailable">Các tiện ích trang web không có sẵn trong các tab riêng tư.</string>
+    <string name="site_widget_capture_failed">Không thể chụp trang này. Hãy thử lại khi tải xong.</string>
+    <string name="site_widget_pin_unavailable">Trình khởi chạy này không hỗ trợ thêm tiện ích trực tiếp. Thêm tiện ích trang web Candy từ bộ chọn tiện ích của nó.</string>
+    <string name="site_widget_save_failed">Không thể lưu tiện ích này. Vui lòng thử lại.</string>
+    <string name="site_widget_reselect">Chỉnh sửa cắt</string>
+    <string name="site_widget_refresh_failed">Làm mới không thành công. Ảnh chụp nhanh cuối cùng vẫn được hiển thị.</string>
+    <string name="site_widget_refreshing">Đang làm mới…</string>
+    <string name="site_widget_editor_columns">Cột: %1$d</string>
+    <string name="site_widget_editor_rows">Hàng: %1$d</string>
+    <string name="site_widget_editor_zoom">Thu phóng</string>
+    <string name="site_widget_editor_zoom_value">Thu phóng: %1$.1f×</string>
+    <string name="site_widget_editor_interval">Khoảng thời gian làm mới</string>
+    <string name="site_widget_editor_interval_value">Làm mới: %1$s</string>
+    <string name="site_widget_editor_interval_hint">Android có thể trì hoãn cập nhật tự động, chẳng hạn như ở chế độ tiết kiệm pin.</string>
+    <string name="site_widget_interval_manual">Chỉ thủ công</string>
+    <string name="site_widget_interval_minutes">Mỗi %1$d phút</string>
+    <string name="site_widget_interval_hours">Mỗi %1$d giờ</string>
+</resources>

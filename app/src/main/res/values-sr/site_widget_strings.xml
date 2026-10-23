@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="site_widget_name">Обрезивање веб странице (прототип)</string>
+    <string name="site_widget_name_square">Обрезивање веб странице 4×4 (прототип)</string>
+    <string name="site_widget_description">Задржите изабрану област веб локације на почетном екрану</string>
+    <string name="site_widget_empty">Отворите страницу у Candy, а затим додирните овде да бисте изабрали област.</string>
+    <string name="site_widget_open">Отвори страницу</string>
+    <string name="site_widget_refresh">Освежи</string>
+    <string name="site_widget_unavailable">Ова страница не може да се сачува као виџет. Користите обичан, незаштићени локални профил.</string>
+    <string name="site_widget_pin_failed">Није могуће додати овај виџет. Покушајте поново.</string>
+    <string name="site_widget_pin_requested">Потврдите додавање виџета на почетни екран.</string>
+    <string name="site_widget_editor_title">Веб сајт виџет</string>
+    <string name="site_widget_editor_instructions">Изаберите колоне и редове. Стисните или користите клизач за зумирање, а затим померите страницу испод оквира.</string>
+    <string name="site_widget_format_four_by_three">4 × 3</string>
+    <string name="site_widget_format_four_by_four">4 × 4</string>
+    <string name="site_widget_editor_size">Величина избора</string>
+    <string name="site_widget_editor_pin">Додај на почетни екран</string>
+    <string name="site_widget_editor_interaction_hint">Виџет приказује снимак. Додирните га да бисте отворили страницу у Candy.</string>
+    <string name="site_widget_private_unavailable">Виџети веб странице нису доступни у приватним картицама.</string>
+    <string name="site_widget_capture_failed">Није могуће снимити ову страницу. Покушајте поново када заврши учитавање.</string>
+    <string name="site_widget_pin_unavailable">Овај покретач не подржава директно додавање виџета. Додајте виџет за веб локацију Candy из његовог бирача виџета.</string>
+    <string name="site_widget_save_failed">Није могуће сачувати овај виџет. Покушајте поново.</string>
+    <string name="site_widget_reselect">Уреди исецање</string>
+    <string name="site_widget_refresh_failed">Освежавање није успело. Последњи снимак је и даље приказан.</string>
+    <string name="site_widget_refreshing">Освежавање…</string>
+    <string name="site_widget_editor_columns">Колоне: %1$d</string>
+    <string name="site_widget_editor_rows">Редови: %1$d</string>
+    <string name="site_widget_editor_zoom">Зоом</string>
+    <string name="site_widget_editor_zoom_value">Зум: %1$.1f×</string>
+    <string name="site_widget_editor_interval">Интервал освежавања</string>
+    <string name="site_widget_editor_interval_value">Освежи: %1$s</string>
+    <string name="site_widget_editor_interval_hint">Андроид може да одложи аутоматска ажурирања, на пример у режиму уштеде батерије.</string>
+    <string name="site_widget_interval_manual">Само ручно</string>
+    <string name="site_widget_interval_minutes">Сваких %1$d минута</string>
+    <string name="site_widget_interval_hours">Сваки %1$d х</string>
+</resources>

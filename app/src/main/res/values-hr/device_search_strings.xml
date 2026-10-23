@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="device_search_title">Pretraživanje na uređaju</string>
+    <string name="device_search_settings_summary">Odaberite oznake i spremljene članke za Android pretraživanje</string>
+    <string name="device_search_summary">Odaberite pojedinačne knjižne oznake i spremljene članke za dijeljenje s pretraživanjem sustava. Povijest pregledavanja i tekst članka ostaju u Candyju. Privatni sadržaj i zaštićeni profili su isključeni.</string>
+    <string name="device_search_enable">Dijeli s pretraživanjem na uređaju</string>
+    <string name="device_search_enable_summary">Objavljene su samo odabrane stavke. Isključivanjem ove opcije uklanjaju se iz indeksa.</string>
+    <string name="device_search_launcher_note">Rezultati se pojavljuju samo u pokretačima ili aplikacijama za pretraživanje sustava koje podržavaju Android AppSearch. Dostupnost ovisi o vašem uređaju.</string>
+    <string name="device_search_bookmark_profile">Otvori oznake u ovom profilu</string>
+    <string name="device_search_bookmarks">Knjižne oznake</string>
+    <string name="device_search_articles">Spremljeni članci</string>
+    <string name="device_search_empty">Nema prihvatljivih stavki. Spremljeni članci trebaju poznati, nezaštićeni lokalni profil.</string>
+    <string name="device_search_saving">Ažuriranje pretraživanja na uređaju…</string>
+    <string name="device_search_failed">Pretraživanje na uređaju nije moguće ažurirati. Pokušajte ponovno promijeniti odabir.</string>
+    <string name="device_search_item_unavailable">Ova se stavka više ne dijeli niti je dostupna.</string>
+    <string name="device_search_open">Otvorite u Candyju</string>
+</resources>

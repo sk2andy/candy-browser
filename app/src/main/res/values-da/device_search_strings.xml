@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="device_search_title">Enhedssøgning</string>
+    <string name="device_search_settings_summary">Vælg bogmærker og gemte artikler til Android-søgning</string>
+    <string name="device_search_summary">Vælg individuelle bogmærker og gemte artikler til at dele med systemsøgning. Browserhistorik og artikeltekst bliver i Candy. Privat indhold og beskyttede profiler er udelukket.</string>
+    <string name="device_search_enable">Del med enhedssøgning</string>
+    <string name="device_search_enable_summary">Kun valgte elementer offentliggøres. De fjernes fra indekset, når du slår funktionen fra.</string>
+    <string name="device_search_launcher_note">Resultaterne vises kun i launchers eller systemsøgeapps, der understøtter Android AppSearch. Tilgængelighed afhænger af din enhed.</string>
+    <string name="device_search_bookmark_profile">Åbn bogmærker i denne profil</string>
+    <string name="device_search_bookmarks">Bogmærker</string>
+    <string name="device_search_articles">Gemte artikler</string>
+    <string name="device_search_empty">Ingen egnede elementer. Gemte artikler kræver en kendt, ubeskyttet lokal profil.</string>
+    <string name="device_search_saving">Opdaterer enhedssøgning...</string>
+    <string name="device_search_failed">Enhedssøgning kunne ikke opdateres. Prøv at ændre valget igen.</string>
+    <string name="device_search_item_unavailable">Dette element deles ikke længere eller er ikke tilgængeligt.</string>
+    <string name="device_search_open">Åbn i Candy</string>
+</resources>

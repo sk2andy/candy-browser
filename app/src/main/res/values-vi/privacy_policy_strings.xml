@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_privacy_policy_title">Chính sách quyền riêng tư</string>
+    <string name="settings_privacy_policy_summary">Cách Candy xử lý dữ liệu của bạn</string>
+</resources>

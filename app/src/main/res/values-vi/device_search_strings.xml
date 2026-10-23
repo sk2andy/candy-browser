@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="device_search_title">Tìm kiếm thiết bị</string>
+    <string name="device_search_settings_summary">Chọn dấu trang và bài viết đã lưu cho tìm kiếm trên Android</string>
+    <string name="device_search_summary">Chọn từng dấu trang và bài viết đã lưu để chia sẻ với tìm kiếm hệ thống. Lịch sử duyệt web và văn bản bài viết vẫn còn trong Candy. Nội dung riêng tư và hồ sơ được bảo vệ bị loại trừ.</string>
+    <string name="device_search_enable">Chia sẻ với tìm kiếm thiết bị</string>
+    <string name="device_search_enable_summary">Chỉ các mục được chọn mới được xuất bản. Việc tắt tính năng này sẽ xóa chúng khỏi chỉ mục.</string>
+    <string name="device_search_launcher_note">Kết quả chỉ xuất hiện trong trình khởi chạy hoặc ứng dụng tìm kiếm hệ thống hỗ trợ Tìm kiếm ứng dụng Android. Tính khả dụng tùy thuộc vào thiết bị của bạn.</string>
+    <string name="device_search_bookmark_profile">Mở dấu trang trong hồ sơ này</string>
+    <string name="device_search_bookmarks">Dấu trang</string>
+    <string name="device_search_articles">Bài viết đã lưu</string>
+    <string name="device_search_empty">Không có mặt hàng đủ điều kiện. Các bài viết đã lưu cần có hồ sơ địa phương đã biết và không được bảo vệ.</string>
+    <string name="device_search_saving">Đang cập nhật tìm kiếm thiết bị…</string>
+    <string name="device_search_failed">Không thể cập nhật tìm kiếm thiết bị. Hãy thử thay đổi lựa chọn một lần nữa.</string>
+    <string name="device_search_item_unavailable">Mục này không còn được chia sẻ hoặc có sẵn.</string>
+    <string name="device_search_open">Mở trong Candy</string>
+</resources>

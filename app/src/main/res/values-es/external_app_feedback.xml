@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="external_app_feedback_opened">Abierto en la aplicación</string>
+    <string name="external_app_feedback_open_in_candy">Abrir en Candy</string>
+    <string name="external_app_feedback_always">¿Quieres abrir siempre este sitio en Candy?</string>
+    <string name="external_app_feedback_always_private">¿Siempre abrir este sitio en Candy para esta sesión privada?</string>
+    <string name="external_app_feedback_yes">Sí</string>
+</resources>

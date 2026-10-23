@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="external_app_feedback_opened">Opgemaach an App</string>
+    <string name="external_app_feedback_open_in_candy">Opzemaachen an Candy</string>
+    <string name="external_app_feedback_always">Wëllt Dir dëse Site ëmmer op Candy opmaachen?</string>
+    <string name="external_app_feedback_always_private">Wëllt Dir dëse Site ëmmer fir dës privat Sëtzung an Candy opmaachen?</string>
+    <string name="external_app_feedback_yes">Jo</string>
+</resources>

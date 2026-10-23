@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="device_search_title">Apparat Sich</string>
+    <string name="device_search_settings_summary">Wielt Lieszeechen a gespäichert Artikelen fir Android Sich</string>
+    <string name="device_search_summary">Wielt individuell Lieszeeche a gespäichert Artikelen fir mat System Sich ze deelen. Consultatioun Geschicht an Artikel Text bleiwen an Candy. Privaten Inhalt a geschützte Profiler sinn ausgeschloss.</string>
+    <string name="device_search_enable">Deelen mat Apparat Sich</string>
+    <string name="device_search_enable_summary">Nëmme ausgewielt Elementer ginn publizéiert. Wann Dir dëst ausschalt, läscht se aus dem Index.</string>
+    <string name="device_search_launcher_note">Resultater schéngen nëmmen a Startënnerlagen oder System Sich Apps déi Android AppSearch ënnerstëtzen. Disponibilitéit hänkt vun Ärem Apparat of.</string>
+    <string name="device_search_bookmark_profile">Lieszeechen an dësem Profil opmaachen</string>
+    <string name="device_search_bookmarks">Lieszeeche</string>
+    <string name="device_search_articles">Gespäichert Artikelen</string>
+    <string name="device_search_empty">Keng berechtegt Artikelen. Gespäichert Artikele brauchen e bekannten, ongeschützte lokale Profil.</string>
+    <string name="device_search_saving">Gerät Sich aktualiséiert…</string>
+    <string name="device_search_failed">"Apparat Sich konnt net aktualiséiert ginn. Probéiert d'Auswiel nach eng Kéier z'änneren."</string>
+    <string name="device_search_item_unavailable">Dësen Artikel ass net méi gedeelt oder verfügbar.</string>
+    <string name="device_search_open">Opzemaachen an Candy</string>
+</resources>

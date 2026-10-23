@@ -10,6 +10,7 @@ import android.net.Uri
 import androidx.annotation.VisibleForTesting
 import dev.sk2andy.materialbrowser.data.BrowserDownloadRequest
 import dev.sk2andy.materialbrowser.data.BrowserDownloadSettings
+import dev.sk2andy.materialbrowser.data.ExistingDownload
 import java.util.Locale
 
 enum class ExternalDownloadProtocol(val stableId: String) {
@@ -33,6 +34,8 @@ data class PendingDownloadChoice(
     val releaseResponse: (() -> Unit)? = null,
     val isSourceCurrent: (() -> Boolean)? = null,
     val sourceTabId: String? = null,
+    val existingDownload: ExistingDownload? = null,
+    val downloadAgain: (() -> DownloadActionResult?)? = null,
 )
 
 sealed interface ExternalDownloadLaunchResult {

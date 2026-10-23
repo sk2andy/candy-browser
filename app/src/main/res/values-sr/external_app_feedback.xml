@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="external_app_feedback_opened">Отворено у апликацији</string>
+    <string name="external_app_feedback_open_in_candy">Отвори у Candy</string>
+    <string name="external_app_feedback_always">Да ли желите да увек отварате ову локацију у Candy?</string>
+    <string name="external_app_feedback_always_private">Увек отварати ову локацију у Candy за ову приватну сесију?</string>
+    <string name="external_app_feedback_yes">Да</string>
+</resources>

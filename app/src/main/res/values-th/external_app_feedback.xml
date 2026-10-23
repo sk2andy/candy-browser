@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="external_app_feedback_opened">เปิดในแอปแล้ว</string>
+    <string name="external_app_feedback_open_in_candy">เปิดใน Candy</string>
+    <string name="external_app_feedback_always">คุณต้องการเปิดเว็บไซต์นี้ใน Candy เสมอหรือไม่?</string>
+    <string name="external_app_feedback_always_private">เปิดไซต์นี้ใน Candy สำหรับเซสชันส่วนตัวนี้เสมอหรือไม่</string>
+    <string name="external_app_feedback_yes">ใช่</string>
+</resources>

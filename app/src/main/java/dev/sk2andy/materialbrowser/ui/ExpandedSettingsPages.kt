@@ -13,6 +13,8 @@ import dev.sk2andy.materialbrowser.browser.InlineMediaPlayerMode
 import dev.sk2andy.materialbrowser.browser.LinkLongPressAction
 import dev.sk2andy.materialbrowser.browser.LinkPeekSwipeAction
 import dev.sk2andy.materialbrowser.shared.ui.settings.SettingsFeatureIllustration
+import dev.sk2andy.materialbrowser.shared.ui.settings.SettingsHeaderArtwork
+import dev.sk2andy.materialbrowser.shared.ui.settings.SettingsHeaderIllustration
 import dev.sk2andy.materialbrowser.shared.ui.settings.SettingsPlayerModeArtwork
 import dev.sk2andy.materialbrowser.shared.ui.settings.SettingsPlayerModeIllustration
 import dev.sk2andy.materialbrowser.shared.ui.settings.SettingsIllustrationKind
@@ -29,6 +31,7 @@ internal fun LinkLongPressSettingsPage(
     GestureChoicesPage(
         title = stringResource(R.string.settings_link_long_press_action),
         summary = stringResource(R.string.settings_link_long_press_explanation),
+        preview = { SettingsHeaderIllustration(SettingsHeaderArtwork.LinkLongPress) },
         selected = action,
         groups = listOf(
             R.string.settings_gesture_preview_group to listOf(LinkLongPressAction.LinkPeek),
@@ -87,11 +90,12 @@ private fun <T> GestureChoicesPage(
     onSelected: (T) -> Unit,
     onBack: () -> Unit,
     enabled: Boolean = true,
+    preview: @Composable () -> Unit = { SettingsFeatureIllustration(SettingsIllustrationKind.LinkGesture) },
 ) {
     SettingsPage(title = title, onBack = onBack) {
         Text(summary, modifier = Modifier.settingsSearchTarget(title), style = MaterialTheme.typography.bodyMedium)
         SettingsPageSpacer()
-        SettingsFeatureIllustration(SettingsIllustrationKind.LinkGesture)
+        preview()
         SettingsPageSpacer()
         Column(Modifier.selectableGroup()) {
             groups.forEach { (heading, choices) ->
