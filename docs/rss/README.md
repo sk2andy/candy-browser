@@ -17,7 +17,8 @@
 | Open an article | Show reader loading immediately, navigate to its source in a regular tab, follow HTTP redirects within that tab, then extract the loaded page; Back cancels pending extraction |
 | Enable feed notifications | Ask for Android notification permission when needed; notify once per feed using stable tag and ID |
 | A later article arrives | Replace the existing notification for that feed and update its title/body without starting a second alert |
-| Add RSS widget | Show up to three latest cached articles with their source names; tapping an article opens it in Reader Studio |
+| Add RSS widget | Show the 50 latest cached articles with their source names in a scrollable list; tapping an article opens it in Reader Studio |
+| Resize RSS widget | More height reveals more article rows; shorter widgets keep the remaining articles reachable by scrolling, with the header and All feeds action fixed |
 | Widget All feeds or notification article | Open the Reader Studio Feeds inbox, optionally with the requested article above it; it is available again on Back |
 | Change check interval | Settings → RSS feeds; WorkManager checks every 15 minutes to 24 hours, subject to Android scheduling |
 
@@ -32,7 +33,8 @@
 | Reader overview and lifecycle refresh | `ui/ReaderStudioHomeScreen.kt`, `ui/ReaderStudioHomeHost.kt` |
 | Periodic network refresh and HTTP/XML charset decoding | `reader/rss/RssRefreshWorker.kt` |
 | Stable notification replacement | `reader/rss/RssFeedNotifier.kt` |
-| Homescreen widget | `RssFeedWidgetProvider`, `rss_feed_widget.xml` |
+| Homescreen widget | `RssFeedWidgetProvider`, `rss_feed_widget.xml`, `rss_feed_widget_article.xml` |
+| Widget resize, scrolling, recent-article limit and empty-state regression coverage | `RssFeedWidgetLayoutInstrumentedTest` |
 | Feed management and discovery | `RssFeedsActivity`, `ui/RssFeedScreens.kt` |
 | Refresh preference | `data/RssSettingsStore.kt`, Settings → RSS feeds |
 | Reader handoff and one-shot launch | `RssReaderNavigation`, `RssReaderLoadRules`, `IncomingLinkRouter.openInReader`, existing Reader Studio extraction flow |

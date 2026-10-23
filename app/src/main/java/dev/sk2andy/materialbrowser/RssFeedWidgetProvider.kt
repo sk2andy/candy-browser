@@ -7,9 +7,9 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.Bundle
 import android.widget.RemoteViews
 import dev.sk2andy.materialbrowser.data.RssFeedStore
-import dev.sk2andy.materialbrowser.reader.rss.RssArticle
 import dev.sk2andy.materialbrowser.reader.rss.RssFeed
 import dev.sk2andy.materialbrowser.reader.rss.RssFeedNotifier
 import dev.sk2andy.materialbrowser.reader.rss.RssRefreshScheduler
@@ -21,6 +21,15 @@ class RssFeedWidgetProvider : AppWidgetProvider() {
         RssRefreshScheduler.schedule(context)
     }
 
+    override fun onAppWidgetOptionsChanged(
+        context: Context,
+        manager: AppWidgetManager,
+        appWidgetId: Int,
+        newOptions: Bundle,
+    ) {
+        update(context, manager, appWidgetId)
+    }
+
     companion object {
         internal fun updateAll(context: Context) {
             val appContext = context.applicationContext
@@ -30,42 +39,32 @@ class RssFeedWidgetProvider : AppWidgetProvider() {
         }
 
         private fun update(context: Context, manager: AppWidgetManager, widgetId: Int) {
+            manager.updateAppWidget(widgetId, createViews(context, RssFeedStore(context).feeds(), widgetId))
+        }
+
+        internal fun createViews(context: Context, feeds: List<RssFeed>, widgetId: Int): RemoteViews {
             val views = RemoteViews(context.packageName, R.layout.rss_feed_widget)
-            val feeds = RssFeedStore(context).feeds()
             val recent = feeds.flatMap { feed -> feed.articles.map { feed to it } }
                 .sortedByDescending { (_, article) -> article.publishedAt }
                 .take(MAX_ARTICLES)
             views.setTextViewText(R.id.rss_widget_title, context.getString(R.string.rss_widget_title))
             views.setTextViewText(R.id.rss_widget_count, context.getString(R.string.rss_widget_count, recent.size))
-            val rows = listOf(
-                Triple(R.id.rss_widget_row_one, R.id.rss_widget_feed_one, R.id.rss_widget_article_one),
-                Triple(R.id.rss_widget_row_two, R.id.rss_widget_feed_two, R.id.rss_widget_article_two),
-                Triple(R.id.rss_widget_row_three, R.id.rss_widget_feed_three, R.id.rss_widget_article_three),
-            )
-            rows.forEachIndexed { index, (rowId, feedViewId, articleViewId) ->
-                val entry = recent.getOrNull(index)
-                views.setViewVisibility(
-                    rowId,
-                    if (entry == null) android.view.View.GONE else android.view.View.VISIBLE,
+            val items = RemoteViews.RemoteCollectionItems.Builder().setViewTypeCount(1)
+            recent.forEachIndexed { index, (feed, article) ->
+                val row = RemoteViews(context.packageName, R.layout.rss_feed_widget_article)
+                row.setTextViewText(R.id.rss_widget_feed, feed.title)
+                row.setTextViewText(R.id.rss_widget_article, article.title)
+                row.setOnClickFillInIntent(
+                    R.id.rss_widget_row,
+                    Intent()
+                        .setData(Uri.parse(article.url))
+                        .putExtra(RssFeedNotifier.EXTRA_ARTICLE_URL, article.url),
                 )
-                if (entry != null) {
-                    views.setTextViewText(feedViewId, entry.first.title)
-                    views.setTextViewText(articleViewId, entry.second.title)
-                    views.setOnClickPendingIntent(
-                        rowId,
-                        articleIntent(context, entry.first, entry.second),
-                    )
-                }
+                items.addItem(index.toLong(), row)
             }
-            views.setViewVisibility(R.id.rss_widget_empty, if (recent.isEmpty()) android.view.View.VISIBLE else android.view.View.GONE)
-            views.setViewVisibility(
-                R.id.rss_widget_divider_one,
-                if (recent.size > 1) android.view.View.VISIBLE else android.view.View.GONE,
-            )
-            views.setViewVisibility(
-                R.id.rss_widget_divider_two,
-                if (recent.size > 2) android.view.View.VISIBLE else android.view.View.GONE,
-            )
+            views.setPendingIntentTemplate(R.id.rss_widget_articles, articleIntent(context, widgetId))
+            views.setRemoteAdapter(R.id.rss_widget_articles, items.build())
+            views.setEmptyView(R.id.rss_widget_articles, R.id.rss_widget_empty)
             views.setOnClickPendingIntent(
                 R.id.rss_widget_all_feeds,
                 PendingIntent.getActivity(
@@ -75,22 +74,22 @@ class RssFeedWidgetProvider : AppWidgetProvider() {
                     PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
                 ),
             )
-            manager.updateAppWidget(widgetId, views)
+            return views
         }
 
-        private fun articleIntent(context: Context, feed: RssFeed, article: RssArticle): PendingIntent =
+        private fun articleIntent(context: Context, widgetId: Int): PendingIntent =
             PendingIntent.getActivity(
                 context,
-                RssFeedNotifier.notificationId(feed.id + article.id),
+                widgetId,
                 Intent(context, MainActivity::class.java)
                     .setAction(RssFeedNotifier.ACTION_OPEN_ARTICLE)
-                    .setData(Uri.parse(article.url))
-                    .putExtra(RssFeedNotifier.EXTRA_ARTICLE_URL, article.url)
                     .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP),
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+                // Collection rows supply their article URL through a fill-in intent.
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE,
             )
 
         private const val OPEN_FEEDS_REQUEST_CODE = 501
-        private const val MAX_ARTICLES = 3
+        // Keep the RemoteViews payload bounded when many feeds are subscribed.
+        private const val MAX_ARTICLES = 50
     }
 }
