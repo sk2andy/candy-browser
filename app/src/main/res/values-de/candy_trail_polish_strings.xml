@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="candy_trail_fit_all">Alles zeigen</string>
+    <string name="candy_trail_current_page">Aktuelle Seite</string>
+    <string name="candy_trail_graph_view">Graph</string>
+    <string name="candy_trail_list_view">Liste</string>
+    <string name="candy_trail_focus_route">Aktuellen Pfad fokussieren</string>
+    <string name="candy_trail_all_branches">Alle Abzweigungen zeigen</string>
+    <string name="candy_trail_collapse_branch">Nebenäste einklappen</string>
+    <string name="candy_trail_expand_branch">Nebenäste aufklappen</string>
+    <string name="candy_trail_hidden_pages">Ausgeblendet: %1$d</string>
+</resources>

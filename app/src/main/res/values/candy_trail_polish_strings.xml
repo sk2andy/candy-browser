@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
+    <string name="candy_trail_fit_all">Show all</string>
+    <string name="candy_trail_current_page">Current page</string>
+    <string name="candy_trail_graph_view">Graph</string>
+    <string name="candy_trail_list_view">List</string>
+    <string name="candy_trail_focus_route">Focus current path</string>
+    <string name="candy_trail_all_branches">Show all branches</string>
+    <string name="candy_trail_collapse_branch">Collapse side branches</string>
+    <string name="candy_trail_expand_branch">Expand side branches</string>
+    <string name="candy_trail_hidden_pages">Hidden: %1$d</string>
+</resources>

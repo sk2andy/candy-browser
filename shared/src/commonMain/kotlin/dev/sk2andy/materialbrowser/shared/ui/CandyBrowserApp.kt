@@ -1921,6 +1921,15 @@ private val candyBrowserTrailStrings = CandyTrailStrings(
     zoomOut = "Verkleinern",
     resetZoom = "Zoom zurücksetzen",
     zoomIn = "Vergrößern",
+    fitAll = "Alles zeigen",
+    currentPage = "Aktuelle Seite",
+    graphView = "Graph",
+    listView = "Liste",
+    focusRoute = "Aktuellen Pfad fokussieren",
+    allBranches = "Alle Abzweigungen zeigen",
+    collapseBranch = "Nebenäste einklappen",
+    expandBranch = "Nebenäste aufklappen",
+    hiddenPages = { count -> "$count ausgeblendet" },
 )
 
 @Composable

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
+    <string name="constellations_explore">Explore your connections</string>
+    <string name="constellations_show_list">Show page list</string>
+    <string name="constellations_hide_list">Hide page list</string>
+    <string name="constellations_expand_map">Expand map</string>
+    <string name="constellations_collapse_map">Collapse map</string>
+    <string name="constellations_all_topics">All topics</string>
+    <string name="constellations_close_details">Close page details</string>
+    <string name="constellations_fit_all">Show all</string>
+    <string name="constellations_explore_hint">Pinch to zoom and drag to explore. Tap a page to see related pages. Connections show topic similarity.</string>
+    <string name="constellations_map_description">Pages on the map: %1$d. Use the page list to explore with accessibility controls.</string>
+</resources>

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
+    <string name="constellations_explore">Entdecke Zusammenhänge</string>
+    <string name="constellations_show_list">Seitenliste anzeigen</string>
+    <string name="constellations_hide_list">Seitenliste ausblenden</string>
+    <string name="constellations_expand_map">Karte vergrößern</string>
+    <string name="constellations_collapse_map">Karte verkleinern</string>
+    <string name="constellations_all_topics">Alle Themen</string>
+    <string name="constellations_close_details">Seitendetails schließen</string>
+    <string name="constellations_fit_all">Alles zeigen</string>
+    <string name="constellations_explore_hint">Mit zwei Fingern zoomen und die Karte verschieben. Tippe auf eine Seite, um verwandte Seiten zu sehen. Verbindungen zeigen thematische Ähnlichkeit.</string>
+    <string name="constellations_map_description">Seiten auf der Karte: %1$d. Die Seitenliste ermöglicht eine barrierefreie Bedienung.</string>
+</resources>

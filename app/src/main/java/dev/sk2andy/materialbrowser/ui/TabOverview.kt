@@ -1802,6 +1802,17 @@ internal fun TabOverview(
                     tab = candyTrailTab,
                     trail = candyTrail,
                     favicon = controller.favicons[candyTrailTab.id],
+                    pageFavicons = controller.activeTabs.asSequence()
+                        .filter { candidate ->
+                            candidate.profileId == candyTrailTab.profileId &&
+                                candidate.isIncognito == candyTrailTab.isIncognito &&
+                                candyTrail.nodes.any { it.url == candidate.url }
+                        }
+                        .mapNotNull { candidate ->
+                            controller.favicons[candidate.id]?.takeUnless { it.isRecycled }
+                                ?.let { candidate.url to it }
+                        }
+                        .toMap(),
                     forkFavicons = candyTrail.forks.mapNotNull { fork ->
                         val destinationId = fork.destinationTabId ?: return@mapNotNull null
                         controller.favicons[destinationId]?.let { destinationId to it }
