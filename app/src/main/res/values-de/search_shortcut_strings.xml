@@ -1,10 +1,19 @@
 <resources>
     <string name="settings_search_shortcuts_title">Suchkürzel</string>
-    <string name="settings_search_shortcuts_summary" formatted="false">Gib ein Kürzel und Suchbegriffe in die Adressleiste ein, zum Beispiel „gh compose“. Setze %s dort in die URL, wo die Suchbegriffe eingefügt werden sollen.</string>
+    <string name="settings_search_shortcuts_summary">Erstelle eigene Kürzel, etwa !gh für GitHub oder !yt für YouTube. Tippe ein Kürzel und ein Leerzeichen, damit es als Chip erscheint. Suchvorschläge funktionieren weiter. Bei leerem Suchtext entfernt die Rücktaste den Chip.</string>
     <string name="settings_search_shortcut_keyword">Kürzel</string>
-    <string name="settings_search_shortcut_keyword_summary">Verwende Buchstaben, Zahlen, Bindestriche oder Unterstriche. Kürzel müssen eindeutig sein und dürfen keiner integrierten Suchmaschine entsprechen.</string>
+    <string name="settings_search_shortcut_keyword_summary">Zum Beispiel !gh. Verwende bis zu 32 Buchstaben, Zahlen, Bindestriche oder Unterstriche. Nach ! muss ein Buchstabe oder eine Zahl folgen.</string>
     <string name="settings_search_shortcut_template">Vorlage für die Such-URL</string>
-    <string name="settings_search_shortcut_template_summary" formatted="false">Verwende genau einen %s-Platzhalter in einer HTTP- oder HTTPS-URL.</string>
+    <string name="settings_search_shortcut_template_summary" formatted="false">Kopiere die Such-URL einer Website und ersetze die Suchbegriffe durch %s. Verwende genau ein %s in einer HTTP- oder HTTPS-URL.</string>
     <string name="settings_search_shortcut_add">Suchkürzel hinzufügen</string>
+    <string name="settings_search_shortcut_edit">Suchkürzel bearbeiten</string>
     <string name="settings_search_shortcut_remove">Entfernen</string>
+    <string name="settings_search_shortcut_edit_description">Suchkürzel !%1$s bearbeiten</string>
+    <string name="settings_search_shortcut_remove_description">Suchkürzel !%1$s entfernen</string>
+    <string name="settings_search_shortcut_invalid" formatted="false">Wähle ein eindeutiges Kürzel, das keiner integrierten Suchmaschine entspricht, und eine gültige Such-URL mit genau einem %s.</string>
+    <string name="settings_search_shortcut_examples">Mit einer Website starten</string>
+    <string name="settings_search_shortcut_github">GitHub · !gh</string>
+    <string name="settings_search_shortcut_youtube">YouTube · !yt</string>
+    <string name="settings_search_shortcut_amazon">Amazon · !amazon</string>
+    <string name="search_shortcut_chip_remove">Suchkürzel !%1$s entfernen</string>
 </resources>

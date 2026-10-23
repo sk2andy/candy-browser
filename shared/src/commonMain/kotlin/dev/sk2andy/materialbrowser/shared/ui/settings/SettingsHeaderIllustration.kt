@@ -62,6 +62,7 @@ fun SettingsHeaderIllustration(
             SettingsHeaderArtwork.GestureControls -> Res.drawable.settings_gesture_controls
             SettingsHeaderArtwork.AddressBarButtons -> Res.drawable.settings_address_bar_buttons
             SettingsHeaderArtwork.LinkPreview -> Res.drawable.settings_approved_link_preview_final_v8
+            SettingsHeaderArtwork.LinkLongPress -> Res.drawable.settings_link_long_press
             SettingsHeaderArtwork.TabLifecycle -> Res.drawable.settings_approved_tab_lifecycle
             SettingsHeaderArtwork.PersonalLinkRules -> Res.drawable.settings_approved_personal_link_rules
             SettingsHeaderArtwork.ExternalApps -> Res.drawable.settings_external_app_links

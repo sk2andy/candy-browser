@@ -82,6 +82,7 @@ import dev.sk2andy.materialbrowser.ui.feeds.FeedsEntry
 import dev.sk2andy.materialbrowser.ui.feeds.rememberFeedsEntryState
 import dev.sk2andy.materialbrowser.ui.feeds.FeedsHost
 import dev.sk2andy.materialbrowser.browser.AddressResolver
+import dev.sk2andy.materialbrowser.browser.SearchShortcutRules
 import dev.sk2andy.materialbrowser.browser.BLANK_URL
 import dev.sk2andy.materialbrowser.browser.integration.linkrouting.LinkRoutingRules
 import dev.sk2andy.materialbrowser.browser.integration.linkrouting.LinkRoutingReaderRequest
@@ -991,9 +992,11 @@ internal fun BrowserScreen(
                 openSiteCapsuleEditor(existing = null, sourceTab = selectedTab)
         }
     }
+    val activeSearchShortcut = SearchShortcutRules.match(addressValue.text, controller.searchShortcuts)
+    val addressSuggestionQuery = activeSearchShortcut?.query ?: addressValue.text
     LaunchedEffect(
         addressEditorVisible,
-        addressValue.text,
+        addressSuggestionQuery,
         controller.searchSuggestionProvider,
         controller.searxngSettings,
         selectedTab.id,
@@ -1003,7 +1006,7 @@ internal fun BrowserScreen(
         if (
             !addressEditorVisible ||
             !SearchSuggestionRules.shouldRequest(
-                query = addressValue.text,
+                query = addressSuggestionQuery,
                 provider = controller.searchSuggestionProvider,
                 isIncognito = selectedTab.isIncognito,
                 searxngInstanceUrl = controller.searxngSettings.instanceUrl,
@@ -1015,13 +1018,14 @@ internal fun BrowserScreen(
         delay(SearchSuggestionRules.DEBOUNCE_MILLIS)
         remoteSearchSuggestions = searchSuggestionClient.suggestions(
             provider = controller.searchSuggestionProvider,
-            query = addressValue.text.trim(),
+            query = addressSuggestionQuery.trim(),
             searxngSettings = controller.searxngSettings,
         )
     }
     LaunchedEffect(
         addressEditorVisible,
         addressValue.text,
+        controller.searchShortcuts,
         selectedTab.id,
         selectedTab.profileId,
         selectedTab.isIncognito,
@@ -1029,7 +1033,7 @@ internal fun BrowserScreen(
         controller.isHistorySuggestionsEnabled,
     ) {
         localRecallMatches = emptyList()
-        if (!addressEditorVisible) return@LaunchedEffect
+        if (!addressEditorVisible || activeSearchShortcut != null) return@LaunchedEffect
         localRecallMatches = suspendCancellableCoroutine { continuation ->
             controller.searchRecallForAddress(addressValue.text) { matches ->
                 if (continuation.isActive) continuation.resume(matches)
@@ -1052,6 +1056,7 @@ internal fun BrowserScreen(
     }
     val domainCompletion = if (
         addressEditorVisible &&
+        activeSearchShortcut == null &&
         addressValue.selection.start == addressValue.selection.end &&
         addressValue.selection.end == addressValue.text.length
     ) {
@@ -1059,7 +1064,7 @@ internal fun BrowserScreen(
     } else {
         null
     }
-    val showAiModeToggle = addressEditorVisible && AddressAiModeRules.isToggleVisible(
+    val showAiModeToggle = addressEditorVisible && activeSearchShortcut == null && AddressAiModeRules.isToggleVisible(
         input = addressValue.text,
         searchEngine = controller.searchEngine,
         settingEnabled = controller.isAiModeToggleVisible,
@@ -1240,7 +1245,8 @@ internal fun BrowserScreen(
             is AddressSuggestionItem.Command -> selectCommand(item.suggestion)
             is AddressSuggestionItem.Search -> {
                 rootView.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
-                controller.submitAddress(item.query, searchModeFor(item.query))
+                val input = AddressSearchShortcutRules.fill(addressValue.text, item.query, controller.searchShortcuts)
+                controller.submitAddress(input, searchModeFor(input))
                 addressEditorVisible = false
             }
             is AddressSuggestionItem.Recall -> selectNavigation(
@@ -1255,7 +1261,11 @@ internal fun BrowserScreen(
     fun fillAddressFromSuggestion(item: AddressSuggestionItem): Unit {
         val text = when (item) {
             is AddressSuggestionItem.Navigation -> item.suggestion.url
-            is AddressSuggestionItem.Search -> item.query
+            is AddressSuggestionItem.Search -> AddressSearchShortcutRules.fill(
+                addressValue.text,
+                item.query,
+                controller.searchShortcuts,
+            )
             is AddressSuggestionItem.Recall -> item.match.url
             is AddressSuggestionItem.Command -> return
         }
@@ -1266,6 +1276,7 @@ internal fun BrowserScreen(
     }
 
     fun submitAddressOrCommand(input: String): Unit {
+        if (SearchShortcutRules.match(input, controller.searchShortcuts)?.query?.isBlank() == true) return
         when (
             val submission = AddressSubmissionRules.resolve(
                 input = input,
@@ -1832,7 +1843,9 @@ internal fun BrowserScreen(
             onDisconnectCast = onDisconnectCast,
             openAddressEditor = openAddressEditor,
             onAddressEditorDismiss = { addressEditorVisible = false },
-            onAddressValueChanged = { addressValue = it },
+            onAddressValueChanged = {
+                addressValue = AddressSearchShortcutRules.edit(addressValue, it, controller.searchShortcuts)
+            },
             onHighlightedSuggestionChanged = { highlightedSuggestionIndex = it },
             selectSuggestion = ::selectSuggestion,
             fillAddressFromSuggestion = ::fillAddressFromSuggestion,

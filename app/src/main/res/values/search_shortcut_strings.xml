@@ -1,10 +1,19 @@
 <resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
     <string name="settings_search_shortcuts_title">Search shortcuts</string>
-    <string name="settings_search_shortcuts_summary" formatted="false">Type a keyword and search terms in the address bar, for example “gh compose”. Use %s where the search terms belong in the URL.</string>
-    <string name="settings_search_shortcut_keyword">Keyword</string>
-    <string name="settings_search_shortcut_keyword_summary">Use letters, numbers, hyphens, or underscores. Keywords must be unique and cannot match a built-in search engine.</string>
+    <string name="settings_search_shortcuts_summary">Create your own shortcuts, such as !gh for GitHub or !yt for YouTube. Type a shortcut followed by a space to turn it into a chip. Search suggestions keep working. Backspace on an empty query removes the chip.</string>
+    <string name="settings_search_shortcut_keyword">Shortcut</string>
+    <string name="settings_search_shortcut_keyword_summary">For example !gh. Use up to 32 letters, numbers, hyphens, or underscores. Start with a letter or number after !.</string>
     <string name="settings_search_shortcut_template">Search URL template</string>
-    <string name="settings_search_shortcut_template_summary" formatted="false">Use one %s placeholder in an HTTP or HTTPS URL.</string>
+    <string name="settings_search_shortcut_template_summary" formatted="false">Copy a website’s search URL and replace the search terms with %s. Use exactly one %s in an HTTP or HTTPS URL.</string>
     <string name="settings_search_shortcut_add">Add shortcut</string>
+    <string name="settings_search_shortcut_edit">Edit shortcut</string>
     <string name="settings_search_shortcut_remove">Remove</string>
+    <string name="settings_search_shortcut_edit_description">Edit !%1$s shortcut</string>
+    <string name="settings_search_shortcut_remove_description">Remove !%1$s shortcut</string>
+    <string name="settings_search_shortcut_invalid" formatted="false">Choose a unique shortcut that does not match a built-in search engine, and a valid search URL with exactly one %s.</string>
+    <string name="settings_search_shortcut_examples">Start with a website</string>
+    <string name="settings_search_shortcut_github">GitHub · !gh</string>
+    <string name="settings_search_shortcut_youtube">YouTube · !yt</string>
+    <string name="settings_search_shortcut_amazon">Amazon · !amazon</string>
+    <string name="search_shortcut_chip_remove">Remove !%1$s search shortcut</string>
 </resources>

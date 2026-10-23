@@ -98,6 +98,7 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -173,6 +174,7 @@ internal fun ExpandedBottomBarContent(
     editValue: TextFieldValue,
     onEditValueChange: (TextFieldValue) -> Unit,
     ghostCompletion: String?,
+    searchShortcutKeyword: String? = null,
     onAcceptGhostCompletion: () -> Unit,
     focusRequester: androidx.compose.ui.focus.FocusRequester,
     addressFocusNonce: Int,
@@ -530,6 +532,7 @@ internal fun ExpandedBottomBarContent(
                             editValue = editValue,
                             onEditValueChange = onEditValueChange,
                             ghostCompletion = ghostCompletion,
+                            hiddenPrefixLength = searchShortcutKeyword?.let { it.length + 2 } ?: 0,
                             placeholder = stringResource(R.string.search_or_enter_url),
                             displayText = if (tab.url == BLANK_URL) {
                                 stringResource(R.string.address_empty_hint)
@@ -593,7 +596,25 @@ internal fun ExpandedBottomBarContent(
                                 longPressLabel = addressBarLongPressLabel,
                             ),
                             editorLeadingContent = {
-                                if (segmentedAddressBar) {
+                                AddressSearchShortcutChip(
+                                    keyword = searchShortcutKeyword,
+                                    onRemove = {
+                                        val prefixLength = searchShortcutKeyword
+                                            ?.let { it.length + 2 } ?: 0
+                                        onEditValueChange(
+                                            TextFieldValue(
+                                                text = editValue.text.drop(prefixLength),
+                                                selection = TextRange(
+                                                    (editValue.selection.start - prefixLength)
+                                                        .coerceAtLeast(0),
+                                                    (editValue.selection.end - prefixLength)
+                                                        .coerceAtLeast(0),
+                                                ),
+                                            ),
+                                        )
+                                    },
+                                )
+                                if (segmentedAddressBar && searchShortcutKeyword == null) {
                                     Icon(
                                         Icons.Default.Search,
                                         contentDescription = null,

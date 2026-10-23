@@ -2,14 +2,11 @@ package dev.sk2andy.materialbrowser.ui
 
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -30,7 +27,6 @@ import dev.sk2andy.materialbrowser.shared.ui.settings.SettingsRadioOption
 import dev.sk2andy.materialbrowser.shared.ui.settings.SearchEngineRadioOptions
 import dev.sk2andy.materialbrowser.browser.SearchEngine
 import dev.sk2andy.materialbrowser.browser.SearchShortcut
-import dev.sk2andy.materialbrowser.browser.SearchShortcutRules
 import dev.sk2andy.materialbrowser.browser.SearxngRules
 import dev.sk2andy.materialbrowser.browser.SearxngSettings
 import dev.sk2andy.materialbrowser.browser.suggestions.SearchSuggestionProvider
@@ -63,8 +59,6 @@ internal fun SearchSettingsPage(
     onBack: () -> Unit,
 ) {
     var instanceUrlDraft by remember { mutableStateOf(searxngSettings.instanceUrl) }
-    var keywordDraft by remember { mutableStateOf("") }
-    var templateDraft by remember { mutableStateOf("") }
     SettingsPage(
         title = stringResource(R.string.settings_section_search),
         onBack = onBack,
@@ -78,65 +72,6 @@ internal fun SearchSettingsPage(
                 onSearchEngineChanged = onSearchEngineChanged,
                 modifier = Modifier.testTag(SearchSettingsTestTags.SearchEngine),
             )
-            SettingsPreferenceDivider()
-            SettingsSectionTitle(stringResource(R.string.settings_search_shortcuts_title))
-            Text(
-                stringResource(R.string.settings_search_shortcuts_summary),
-                modifier = Modifier.padding(horizontal = 18.dp, vertical = 6.dp),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            OutlinedTextField(
-                value = keywordDraft,
-                onValueChange = { keywordDraft = it.take(SearchShortcutRules.MAX_KEYWORD_LENGTH) },
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 4.dp),
-                label = { Text(stringResource(R.string.settings_search_shortcut_keyword)) },
-                supportingText = {
-                    Text(stringResource(R.string.settings_search_shortcut_keyword_summary))
-                },
-                singleLine = true,
-            )
-            OutlinedTextField(
-                value = templateDraft,
-                onValueChange = { templateDraft = it.take(SearchShortcutRules.MAX_TEMPLATE_LENGTH) },
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 4.dp),
-                label = { Text(stringResource(R.string.settings_search_shortcut_template)) },
-                supportingText = { Text(stringResource(R.string.settings_search_shortcut_template_summary)) },
-                singleLine = true,
-            )
-            val canAddShortcut = SearchShortcutRules.add(searchShortcuts, keywordDraft, templateDraft) != null
-            OutlinedButton(
-                onClick = {
-                    SearchShortcutRules.add(searchShortcuts, keywordDraft, templateDraft)?.let {
-                        onSearchShortcutsChanged(it)
-                        keywordDraft = ""
-                        templateDraft = ""
-                    }
-                },
-                enabled = canAddShortcut,
-                modifier = Modifier.padding(horizontal = 18.dp, vertical = 4.dp),
-            ) { Text(stringResource(R.string.settings_search_shortcut_add)) }
-            searchShortcuts.forEach { shortcut ->
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 4.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    Text(
-                        "${shortcut.keyword}  ·  ${shortcut.template}",
-                        modifier = Modifier.weight(1f),
-                        maxLines = 2,
-                    )
-                    OutlinedButton(
-                        onClick = {
-                            onSearchShortcutsChanged(
-                                searchShortcuts.filterNot { it.keyword == shortcut.keyword },
-                            )
-                        },
-                    ) {
-                        Text(stringResource(R.string.settings_search_shortcut_remove))
-                    }
-                }
-            }
             SettingsPreferenceDivider()
             SettingsSwitch(
                     title = stringResource(R.string.settings_ai_mode_toggle_title),
@@ -198,6 +133,11 @@ internal fun SearchSettingsPage(
                 )
             }
         }
+        SettingsPageSpacer()
+        SearchShortcutsSettings(
+            shortcuts = searchShortcuts,
+            onShortcutsChanged = onSearchShortcutsChanged,
+        )
         SettingsPageSpacer()
         SettingsPreferenceGroup {
             SettingsSwitch(

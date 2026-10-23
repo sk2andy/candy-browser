@@ -10300,6 +10300,9 @@ class BrowserController(
         recallMatches: List<RecallMatch> = emptyList(),
         limit: Int = 10,
     ): List<AddressSuggestionItem> {
+        if (SearchShortcutRules.match(query, searchShortcuts) != null) {
+            return searchQueries.take(limit.coerceAtLeast(0)).map(AddressSuggestionItem::Search)
+        }
         if (RecallRules.isExplicitCommand(query)) {
             return AddressSuggestionComposer.compose(
                 query = query,

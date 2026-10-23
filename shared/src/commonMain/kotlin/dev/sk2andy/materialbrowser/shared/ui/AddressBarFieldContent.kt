@@ -12,10 +12,16 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
@@ -52,7 +58,12 @@ fun AddressBarFieldContent(
     contentColor: Color = MaterialTheme.colorScheme.onSurface,
     secondaryContentColor: Color = MaterialTheme.colorScheme.onSurfaceVariant,
     cursorColor: Color = MaterialTheme.colorScheme.primary,
+    hiddenPrefixLength: Int = 0,
 ) {
+    val prefixLength = hiddenPrefixLength.coerceIn(0, editValue.text.length)
+    val visualTransformation = remember(prefixLength) {
+        AddressBarPrefixVisualTransformation(prefixLength)
+    }
     Box(modifier = modifier.height(fieldHeight)) {
         if (editing) {
             Row(
@@ -65,8 +76,22 @@ fun AddressBarFieldContent(
                     onValueChange = onEditValueChange,
                     modifier = editorModifier
                         .weight(1f)
-                        .fillMaxHeight(),
+                        .fillMaxHeight()
+                        .onPreviewKeyEvent { event ->
+                            if (
+                                event.key == Key.Backspace &&
+                                event.type == KeyEventType.KeyDown &&
+                                prefixLength > 0 &&
+                                editValue.text.length == prefixLength
+                            ) {
+                                onEditValueChange(TextFieldValue())
+                                true
+                            } else {
+                                false
+                            }
+                        },
                     singleLine = true,
+                    visualTransformation = visualTransformation,
                     textStyle = MaterialTheme.typography.bodyLarge.copy(
                         color = contentColor,
                     ),
@@ -94,7 +119,7 @@ fun AddressBarFieldContent(
                                 .padding(start = 8.dp),
                             contentAlignment = Alignment.CenterStart,
                         ) {
-                            if (editValue.text.isEmpty()) {
+                            if (editValue.text.length == prefixLength) {
                                 Text(
                                     placeholder,
                                     color = secondaryContentColor,
@@ -104,7 +129,7 @@ fun AddressBarFieldContent(
                             } else if (ghostCompletion != null) {
                                 Row {
                                     Text(
-                                        editValue.text,
+                                        editValue.text.drop(prefixLength),
                                         color = Color.Transparent,
                                         maxLines = 1,
                                         style = MaterialTheme.typography.bodyLarge,

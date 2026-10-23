@@ -109,6 +109,11 @@ internal fun settingsSearchDefinitions(
             descriptionRes = R.string.settings_home_search_summary,
         )
         setting(
+            id = "settings_search_shortcuts_title",
+            titleRes = R.string.settings_search_shortcuts_title,
+            descriptionRes = R.string.settings_search_shortcuts_summary,
+        )
+        setting(
                 id = "settings_ai_mode_toggle_title",
                 titleRes = R.string.settings_ai_mode_toggle_title,
                 descriptionRes = R.string.settings_ai_mode_toggle_subtitle,

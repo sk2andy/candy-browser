@@ -50,6 +50,7 @@ import dev.sk2andy.materialbrowser.BuildConfig
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.browser.BLANK_URL
 import dev.sk2andy.materialbrowser.browser.AddressResolver
+import dev.sk2andy.materialbrowser.browser.SearchShortcutRules
 import dev.sk2andy.materialbrowser.browser.BrowserController
 import dev.sk2andy.materialbrowser.browser.BrowserTab
 import dev.sk2andy.materialbrowser.browser.cast.CastUiState
@@ -329,6 +330,8 @@ internal fun BoxScope.BrowserAddressChrome(
         onAddressBarLongPress = {
             onAddressBarLongPressAction(addressBarLongPressAction)
         },
+        searchShortcutKeyword = SearchShortcutRules.match(addressValue.text, controller.searchShortcuts)
+            ?.shortcut?.keyword,
         editValue = addressValue,
         onEditValueChange = onAddressValueChanged,
         ghostCompletion = domainCompletion,

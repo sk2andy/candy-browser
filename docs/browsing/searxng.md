@@ -6,8 +6,10 @@
 
 | Concern | Rule | Owner |
 | --- | --- | --- |
-| Definition | Search settings store up to 30 user-defined keyword and URL-template pairs. A template must be valid HTTP(S) and contain exactly one `%s`; aliases are case-insensitive, unique, and cannot use built-in engine IDs. | `SearchShortcutRules`, `SearchSettingsPage` |
-| Address input | `keyword search terms` uses matching shortcut. Search terms are UTF-8 percent-encoded before replacing `%s`. No match or missing terms falls through to ordinary URL/search resolution. | `AddressResolver`, `SearchShortcutRules` |
+| Definition | Search settings store up to 30 user-defined keyword and URL-template pairs. The dedicated section supports creating, editing and removing shortcuts; GitHub, YouTube and Amazon examples prefill an editable draft. A template must be valid HTTP(S) and contain exactly one `%s`; aliases accept an optional leading `!`, are case-insensitive, unique, and cannot use built-in engine IDs. | `SearchShortcutRules`, `SearchSettingsPage` |
+| Address input | `!keyword ` commits a registered shortcut as an animated leading chip; the space permits overlapping aliases. Only the remaining query is visible in the editor. Unknown or unfinished aliases remain ordinary text. Legacy `keyword search terms` remains supported. Search terms are UTF-8 percent-encoded before replacing `%s`. | `AddressResolver`, `SearchShortcutRules`, `AddressSearchShortcutRules`, `AddressSearchShortcutChip` |
+| Editing | Backspace deletes query text first, then removes the chip on the next press when the query is empty, for software and hardware keyboards. Tapping the chip removes its search scope while retaining query text. Submitting an empty chip does nothing. | `AddressBarFieldContent`, `AddressBarPrefixVisualTransformation`, `AddressSearchShortcutRules`, `BrowserScreen` |
+| Autocomplete | The configured suggestion provider receives only query text under the usual length, debounce and private-mode rules. Selecting or filling a suggestion retains the shortcut. Scoped queries omit unrelated navigation, Recall and browser-command suggestions, domain ghost completion and the AI-mode toggle. No per-site suggestion endpoint is contacted. | `BrowserScreen`, `BrowserController.addressSuggestionItems`, `SearchSuggestionRules` |
 | Persistence | Sanitized shortcuts are saved in regular browser preferences. Private input is used only for the current navigation; no query or tab state is added to persistence. | `BrowserSessionStore` |
 
 | Concern | Rule | Owner |
