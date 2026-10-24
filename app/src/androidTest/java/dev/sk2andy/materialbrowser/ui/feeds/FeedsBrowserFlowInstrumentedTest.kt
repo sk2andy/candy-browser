@@ -122,6 +122,49 @@ class FeedsBrowserFlowInstrumentedTest {
     }
 
     @Test
+    fun widgetArticleLaunchOpensCurrentReaderAndReturnsToCollection() {
+        var profileId = ""
+        composeRule.activityRule.scenario.onActivity { activity ->
+            val controller = activity.browserControllerForTesting()
+            if (controller.selectedTab.isIncognito) controller.createTab(isIncognito = false)
+            profileId = controller.activeProfileId
+        }
+        val feeds = FeedRepository.get(context, profileId)
+        repository = feeds
+        val article = runBlocking {
+            feeds.updateSettings(FeedSettings(refreshOnOpen = false)).getOrThrow()
+            feeds.subscribe(FeedParser.parse(
+                """<rss><channel><title>Widget source</title><item><title>Widget article</title><link>https://example.org/widget</link><description>A cached widget article opens in the profile-owned Reader without a network request.</description></item></channel></rss>""",
+                "https://example.org/widget-feed",
+            )).getOrThrow()
+            feeds.state.value.articles.single().also {
+                feeds.updateOffline(it.id, FeedOfflineStatus.Ready, FeedRules.document(it)).getOrThrow()
+            }
+        }
+        val launchIntent = composeRule.activity.intent
+        repeat(2) {
+            composeRule.activityRule.scenario.onActivity { activity ->
+                activity.startActivity(
+                    Intent(activity, MainActivity::class.java)
+                        .setAction(FeedLaunchContract.ACTION_OPEN)
+                        .putExtra(FeedLaunchContract.EXTRA_PROFILE, profileId)
+                        .putExtra(FeedLaunchContract.EXTRA_ARTICLE, article.id)
+                        .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP),
+                )
+            }
+            composeRule.waitUntil(15_000) {
+                composeRule.onAllNodesWithTag(ReaderStudioTestTags.Article).fetchSemanticsNodes().isNotEmpty()
+            }
+            composeRule.onNodeWithTag(ReaderStudioTestTags.Article).assertIsDisplayed()
+            composeRule.waitUntil(5_000) { feeds.state.value.articles.single().isRead }
+            Espresso.pressBack()
+            composeRule.onNodeWithTag(ReaderStudioTestTags.Article).assertDoesNotExist()
+            composeRule.onNodeWithTag("feeds_screen").assertIsDisplayed()
+        }
+        composeRule.activityRule.scenario.onActivity { it.intent = launchIntent }
+    }
+
+    @Test
     fun directBookmarksAndListeningQueuePersistAndReturnToReader() {
         var profileId = ""
         composeRule.activityRule.scenario.onActivity { activity ->

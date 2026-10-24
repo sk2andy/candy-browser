@@ -22,6 +22,17 @@ class FeedEntryStateRulesTest {
     }
 
     @Test
+    fun `widget article restores its collection without replaying the article launch`() {
+        val entry = FeedsEntry(articleId = "a".repeat(64))
+        val saved = requireNotNull(FeedEntryStateRules.save(entry, "profile", "tab", false))
+
+        assertEquals(
+            entry.copy(articleId = null),
+            FeedEntryStateRules.restore(saved, "profile", "tab", false),
+        )
+    }
+
+    @Test
     fun `catalog entry restores and old entries keep their inbox destination`() {
         val entry = FeedsEntry(openCatalog = true)
         val saved = requireNotNull(FeedEntryStateRules.save(entry, "profile", "tab", false))

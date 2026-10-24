@@ -22,6 +22,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -58,6 +59,8 @@ internal data class FeedsEntry(
     val discoveryUrl: String? = null,
     val queueRequestId: Int = 0,
     val openCatalog: Boolean = false,
+    // Article selection is a one-shot launch, not a restored collection destination.
+    val articleId: String? = null,
     val invocationToken: String = UUID.randomUUID().toString(),
 )
 
@@ -69,6 +72,8 @@ internal fun FeedsHost(
     progressScope: CoroutineScope,
     onOpenOriginal: (String) -> Unit,
     onDismiss: () -> Unit,
+    catalogOnly: Boolean = false,
+    modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -242,7 +247,20 @@ internal fun FeedsHost(
                 }
             }
     }
-    Box(Modifier.fillMaxSize()) {
+    var handledArticleToken by rememberSaveable(repository.profileId, repository.isPrivate) {
+        mutableStateOf<String?>(null)
+    }
+    LaunchedEffect(repository, entry.invocationToken, entry.articleId) {
+        if (repository.isPrivate || entry.articleId == null ||
+            handledArticleToken == entry.invocationToken
+        ) return@LaunchedEffect
+        if (repository.load().isFailure) return@LaunchedEffect
+        handledArticleToken = entry.invocationToken
+        repository.state.value.articles.firstOrNull {
+            it.id == entry.articleId && !it.isHidden && it.sourceIds.isNotEmpty()
+        }?.let(::openArticle)
+    }
+    Box(modifier.fillMaxSize()) {
         FeedsScreen(
             repository = repository,
             library =
@@ -263,6 +281,7 @@ internal fun FeedsHost(
                 library.snapshots.filter { it.sourceProfileId == null && !it.isPrivate },
             libraryOnly = entry.libraryOnly,
             initialCatalog = entry.openCatalog,
+            catalogOnly = catalogOnly,
             catalogRequestToken = entry.invocationToken,
             initialFeedUrl = launchState.selectedFeedUrl,
             onInitialFeedConsumed = launchState::consumeSelectedFeed,

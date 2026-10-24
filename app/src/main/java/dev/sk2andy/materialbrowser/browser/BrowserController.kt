@@ -1859,6 +1859,7 @@ class BrowserController(
     internal var siteWidgetEditingWidgetId by mutableIntStateOf(AppWidgetManager.INVALID_APPWIDGET_ID)
         private set
     private var siteWidgetAllowedProfileIds: Set<String>? = null
+    private var rssWidgetProfile: Pair<String, Boolean>? = null
 
     internal val canCreateSiteWidget: Boolean
         get() = selectedTab.let { tab ->
@@ -17366,6 +17367,12 @@ class BrowserController(
             ?: persistentProfiles.first().id
         if (capsuleWindowId == null) {
             store.saveProfiles(persistentProfiles, persistentActiveProfileId)
+        }
+        val currentRssWidgetProfile = persistentActiveProfileId to
+            persistentProfiles.any { it.id == persistentActiveProfileId && it.protection == null }
+        if (capsuleWindowId == null && rssWidgetProfile != currentRssWidgetProfile) {
+            rssWidgetProfile = currentRssWidgetProfile
+            dev.sk2andy.materialbrowser.RssFeedWidgetProvider.updateAll(activity.applicationContext)
         }
         val allowedWidgetProfiles = persistentProfiles
             .filter { it.protection == null }

@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.Intent
 import android.util.Log
 import dev.sk2andy.materialbrowser.CandySearchWidgetProvider
+import dev.sk2andy.materialbrowser.RssFeedWidgetProvider
 import dev.sk2andy.materialbrowser.SiteWidgetProvider
 import dev.sk2andy.materialbrowser.browser.integration.CandySearchWidgetRules
 import dev.sk2andy.materialbrowser.browser.integration.devicesearch.DeviceSearchIndexer
@@ -25,6 +26,7 @@ internal object GuestBubblePublicSurfaces {
                     manager.getAppWidgetIds(SiteWidgetProvider.component(context, format))
                         .forEach { id -> SiteWidgetProvider.update(context, manager, id) }
                 }
+                RssFeedWidgetProvider.updateAllNow(context)
                 CandySearchWidgetProvider.updateAll(
                     context,
                     CandySearchWidgetRules.state(profiles = emptyList(), profilesEnabled = false),
@@ -47,6 +49,7 @@ internal object GuestBubblePublicSurfaces {
         }
         if (GuestBubbleSessionStore(context).isLocked()) return
         SiteWidgetProvider.refreshAll(context)
+        RssFeedWidgetProvider.updateAll(context)
         val store = BrowserSessionStore(context)
         CandySearchWidgetProvider.updateAll(
             context,

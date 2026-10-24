@@ -19,7 +19,8 @@
 | --- | --- |
 | Bundled catalog ranking, pagination, privacy and URL validation | `FeedCuratedCatalogTest`, `FeedCatalogClientTest` |
 | Catalog search, restoration, pagination and original-feed preview | `FeedCatalogScreenInstrumentedTest` |
-| Sources/catalog/manual navigation and large text | `FeedCatalogNavigationInstrumentedTest` |
+| Sources/catalog/manual navigation, category expansion, predictive back and large text | `FeedCatalogNavigationInstrumentedTest`, `FeedCatalogMorphRulesTest` |
+| RSS settings discovery returns to its invoking settings page | `BrowserRootBackInstrumentedTest#settingsFeedDiscoveryReturnsToRssSettingsForToolbarAndSystemBack` |
 | Subscribe preview, stale URL requests, failed save and private access | `FeedSubscribeSheetInstrumentedTest` |
 | Normal navigation restoration and private/context isolation | `FeedEntryStateRulesTest`, `FeedEntryStateInstrumentedTest`, `FeedLaunchStateInstrumentedTest` |
 | Delayed saves preserve newer and reopened drafts | `FeedEditorSessionInstrumentedTest` |
@@ -32,6 +33,7 @@
 | Player controls, queue and unavailable voice | `FeedQueueContentInstrumentedTest`, `FeedQueueArtworkInstrumentedTest` |
 | Background speech, native media controls and access invalidation | `FeedMediaPlaybackServiceInstrumentedTest` |
 | Browser menu collection entries and external catalog launches | `FeedsBrowserFlowInstrumentedTest` |
+| Homescreen widget source, visibility, profile isolation and article return | `FeedWidgetRulesTest`, `RssFeedWidgetDataInstrumentedTest`, `RssFeedWidgetLayoutInstrumentedTest`, `FeedsBrowserFlowInstrumentedTest#widgetArticleLaunchOpensCurrentReaderAndReturnsToCollection` |
 | Browser menu unread badge | `BrowserMenuBottomSheetInstrumentedTest#feedsUnreadChipTracksCountAndOpensDestination` |
 
 Android owns this feature. Shared menu capabilities default off on other platforms. Newsletter reception, podcasts and device sync remain separate work.

@@ -20,9 +20,14 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
@@ -46,20 +51,24 @@ import dev.sk2andy.materialbrowser.shared.ui.LocalCandyBrowserChromeEffects
 
 /** A photo mosaic with a tall lead image, stacked details and a full-width panorama. */
 @Composable
-internal fun FeedCatalogTopics(columns: Int, onTopicSelected: (FeedCatalogTopic) -> Unit) {
+internal fun FeedCatalogTopics(
+    columns: Int,
+    onTopicSelected: (FeedCatalogTopic, Rect) -> Unit,
+) {
     val gap = 10.dp
     val large = columns > 2
     val textScale = LocalDensity.current.fontScale.coerceAtLeast(1f)
     @Composable
     fun Tile(index: Int, height: Dp, modifier: Modifier = Modifier) {
         val topic = feedCatalogTopics[index]
+        var bounds by remember { mutableStateOf(Rect.Zero) }
         FeedCatalogTopicCard(
             topic = topic,
             index = index,
-            onClick = { onTopicSelected(topic) },
+            onClick = { onTopicSelected(topic, bounds) },
             imageHeight = height,
             modifier =
-                modifier.semantics {
+                modifier.onGloballyPositioned { bounds = it.boundsInRoot() }.semantics {
                     traversalIndex =
                         if (columns == 1) index.toFloat()
                         else
@@ -122,15 +131,7 @@ internal fun FeedCatalogTopicCard(
                 if (reduceMotion) snap() else MaterialTheme.motionScheme.fastSpatialSpec(),
             label = "Feed topic corner",
         )
-    val shape =
-        when (index % 6) {
-            0 -> RoundedCornerShape(12.dp, corner, 16.dp, 16.dp)
-            1 -> RoundedCornerShape(corner, 12.dp, 16.dp, 16.dp)
-            2 -> RoundedCornerShape(12.dp, 12.dp, 32.dp, 12.dp)
-            3 -> RoundedCornerShape(28.dp, corner, 12.dp, 28.dp)
-            4 -> RoundedCornerShape(corner, 12.dp, 28.dp, 12.dp)
-            else -> RoundedCornerShape(12.dp, corner, 12.dp, 32.dp)
-        }
+    val shape = feedCatalogTopicShape(index, corner)
     val image = ImageBitmap.imageResource(R.drawable.feed_topic_atlas)
     val cell = IntSize(image.width / 3, image.height / 2)
     val painter =
@@ -185,3 +186,13 @@ internal fun FeedCatalogTopicCard(
         }
     }
 }
+
+internal fun feedCatalogTopicShape(index: Int, corner: Dp): RoundedCornerShape =
+    when (index % 6) {
+        0 -> RoundedCornerShape(12.dp, corner, 16.dp, 16.dp)
+        1 -> RoundedCornerShape(corner, 12.dp, 16.dp, 16.dp)
+        2 -> RoundedCornerShape(12.dp, 12.dp, 32.dp, 12.dp)
+        3 -> RoundedCornerShape(28.dp, corner, 12.dp, 28.dp)
+        4 -> RoundedCornerShape(corner, 12.dp, 28.dp, 12.dp)
+        else -> RoundedCornerShape(12.dp, corner, 12.dp, 32.dp)
+    }

@@ -9,13 +9,14 @@ internal fun SettingsBackRouter(
     destination: SettingsDestination,
     onDestinationChanged: (SettingsDestination) -> Unit,
     modifier: Modifier = Modifier,
+    backEnabled: Boolean = true,
     parentDestination: SettingsDestination = SettingsBackRules.parentDestination(destination),
     content: @Composable (SettingsDestination) -> Unit,
 ) {
     val backState = rememberNativeScreenBackState()
     NativeScreenBackHandler(
         state = backState,
-        enabled = destination != SettingsDestination.Home,
+        enabled = backEnabled && destination != SettingsDestination.Home,
         onBack = { onDestinationChanged(parentDestination) },
     )
     SettingsRouter(

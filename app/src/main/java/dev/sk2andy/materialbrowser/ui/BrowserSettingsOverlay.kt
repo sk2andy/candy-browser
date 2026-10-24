@@ -27,6 +27,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.zIndex
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalConfiguration
@@ -48,6 +49,7 @@ import kotlin.math.roundToInt
 internal fun BrowserSettingsOverlay(
     controller: BrowserController,
     visible: Boolean,
+    backEnabled: Boolean = true,
     destination: SettingsDestination,
     predictiveBackCommitted: Boolean,
     predictiveBackProgress: Float,
@@ -56,6 +58,7 @@ internal fun BrowserSettingsOverlay(
     visibleProfileIds: Set<String>,
     onDestinationChanged: (SettingsDestination) -> Unit,
     onOpenPrivacyXRay: () -> Unit,
+    onDiscoverFeeds: () -> Unit,
     onOpenPermissionRadar: () -> Unit,
     onEditCapsule: (SiteCapsule) -> Unit,
     onDeleteCapsule: (SiteCapsule) -> Unit,
@@ -133,7 +136,8 @@ internal fun BrowserSettingsOverlay(
 
     AnimatedVisibility(
             visible = visible,
-        modifier = Modifier.zIndex(20f),
+        modifier = Modifier.zIndex(20f)
+            .then(if (backEnabled) Modifier else Modifier.clearAndSetSemantics {}),
         enter = slideInHorizontally(
             initialOffsetX = { width ->
                 PredictiveBackMotion.entryTranslation(
@@ -159,6 +163,8 @@ internal fun BrowserSettingsOverlay(
         },
     ) {
         SettingsScreen(
+            backEnabled = backEnabled,
+            onDiscoverFeeds = onDiscoverFeeds,
             onOpenDeviceSearch = {
                 context.startActivity(Intent(context, DeviceSearchSettingsActivity::class.java))
             },

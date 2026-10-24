@@ -6,8 +6,9 @@ import android.widget.ListView
 import android.widget.TextView
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
-import dev.sk2andy.materialbrowser.reader.rss.RssArticle
-import dev.sk2andy.materialbrowser.reader.rss.RssFeed
+import dev.sk2andy.materialbrowser.feeds.FeedArticle
+import dev.sk2andy.materialbrowser.feeds.FeedSource
+import dev.sk2andy.materialbrowser.feeds.FeedState
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -24,7 +25,7 @@ class RssFeedWidgetLayoutInstrumentedTest {
     @Test
     fun resizingShowsMoreArticlesWithoutStretchingTheExistingRows() {
         instrumentation.runOnMainSync {
-            val host = createWidget(listOf(feed()))
+            val host = createWidget(feed())
             layout(host, heightDp = 240)
             val articles = host.findViewById<ListView>(R.id.rss_widget_articles)
             val compactCount = fullyVisibleRows(articles)
@@ -46,7 +47,7 @@ class RssFeedWidgetLayoutInstrumentedTest {
     @Test
     fun articleListScrollsPastTheOriginalThreeEntries() {
         instrumentation.runOnMainSync {
-            val host = createWidget(listOf(feed()))
+            val host = createWidget(feed())
             layout(host, heightDp = 240)
             val articles = host.findViewById<ListView>(R.id.rss_widget_articles)
             assertEquals(12, articles.count)
@@ -67,9 +68,12 @@ class RssFeedWidgetLayoutInstrumentedTest {
     @Test
     fun recentLimitIncludesNewestArticlesAcrossAllFeedsAndMatchesTheBadge() {
         instrumentation.runOnMainSync {
-            val olderFeed = feed(1..40).copy(id = "older-feed", title = "Older source")
-            val newerFeed = feed(41..80).copy(id = "newer-feed", title = "Newer source")
-            val host = createWidget(listOf(olderFeed, newerFeed))
+            val olderFeed = feed(1..40, sourceId = "older-feed", sourceTitle = "Older source")
+            val newerFeed = feed(41..80, sourceId = "newer-feed", sourceTitle = "Newer source")
+            val host = createWidget(FeedState(
+                sources = olderFeed.sources + newerFeed.sources,
+                articles = olderFeed.articles + newerFeed.articles,
+            ))
             layout(host, heightDp = 240)
             val articles = host.findViewById<ListView>(R.id.rss_widget_articles)
 
@@ -99,7 +103,7 @@ class RssFeedWidgetLayoutInstrumentedTest {
     @Test
     fun emptyFeedShowsTheEmptyStateAndReapplyRestoresTheList() {
         instrumentation.runOnMainSync {
-            val host = createWidget(emptyList())
+            val host = createWidget(FeedState())
             layout(host, heightDp = 240)
             val articles = host.findViewById<ListView>(R.id.rss_widget_articles)
             val empty = host.findViewById<TextView>(R.id.rss_widget_empty)
@@ -107,7 +111,7 @@ class RssFeedWidgetLayoutInstrumentedTest {
             assertEquals(View.GONE, articles.visibility)
             assertEquals(0, articles.count)
 
-            RssFeedWidgetProvider.createViews(context, listOf(feed()), widgetId = 501)
+            RssFeedWidgetProvider.createViews(context, feed(), widgetId = 501)
                 .reapply(context, host.getChildAt(0))
             layout(host, heightDp = 240)
 
@@ -116,7 +120,7 @@ class RssFeedWidgetLayoutInstrumentedTest {
             assertEquals(12, articles.count)
             assertTrue(host.findViewById<View>(R.id.rss_widget_all_feeds).hasOnClickListeners())
 
-            RssFeedWidgetProvider.createViews(context, emptyList(), widgetId = 501)
+            RssFeedWidgetProvider.createViews(context, FeedState(), widgetId = 501)
                 .reapply(context, host.getChildAt(0))
             layout(host, heightDp = 240)
 
@@ -126,9 +130,9 @@ class RssFeedWidgetLayoutInstrumentedTest {
         }
     }
 
-    private fun createWidget(feeds: List<RssFeed>): AppWidgetHostView =
+    private fun createWidget(state: FeedState): AppWidgetHostView =
         AppWidgetHostView(context).apply {
-            addView(RssFeedWidgetProvider.createViews(context, feeds, widgetId = 501).apply(context, this))
+            addView(RssFeedWidgetProvider.createViews(context, state, widgetId = 501).apply(context, this))
         }
 
     private fun layout(host: AppWidgetHostView, heightDp: Int) {
@@ -151,18 +155,19 @@ class RssFeedWidgetLayoutInstrumentedTest {
     private fun articleTitle(row: View): String =
         row.findViewById<TextView>(R.id.rss_widget_article).text.toString()
 
-    private fun feed(articleNumbers: IntRange = 1..12): RssFeed = RssFeed(
-        id = "widget-feed",
-        title = "Example feed",
-        feedUrl = "https://example.com/feed.xml",
-        siteUrl = "https://example.com",
+    private fun feed(
+        articleNumbers: IntRange = 1..12,
+        sourceId: String = "widget-feed",
+        sourceTitle: String = "Example feed",
+    ): FeedState = FeedState(
+        sources = listOf(FeedSource(sourceId, "https://example.com/feed.xml", sourceTitle)),
         articles = articleNumbers.map { index ->
-            RssArticle(
+            FeedArticle(
                 id = "article-$index",
+                sourceIds = setOf(sourceId),
                 title = "Article $index",
                 url = "https://example.com/articles/$index",
-                summary = "",
-                publishedAt = index.toLong(),
+                publishedAtMillis = index.toLong(),
             )
         },
     )

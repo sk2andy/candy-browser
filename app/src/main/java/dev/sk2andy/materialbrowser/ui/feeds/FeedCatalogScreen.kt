@@ -119,6 +119,8 @@ internal fun FeedCatalogScreen(
     var requestId by remember(repository) { mutableIntStateOf(0) }
     var job by remember(repository) { mutableStateOf<Job?>(null) }
     val gridState = rememberLazyGridState()
+    val discoveryGridState = rememberLazyGridState()
+    var topicOrigin by remember(repository) { mutableStateOf<FeedCatalogTopicOrigin?>(null) }
     DisposableEffect(repository) { onDispose { job?.cancel() } }
     fun search(query: FeedCatalogQuery, append: Boolean = false) {
         if (repository.isPrivate || query.text.isBlank() && query.topic.isNullOrBlank()) return
@@ -185,10 +187,12 @@ internal fun FeedCatalogScreen(
         appliedQuery?.let { query -> search(query.copy(offset = 0)) }
     }
     val back = rememberNativeScreenBackState()
-    LaunchedEffect(backEnabled) { if (backEnabled) back.progress.snapTo(0f) }
+    LaunchedEffect(backEnabled, appliedQuery == null) {
+        if (backEnabled) back.progress.snapTo(0f)
+    }
     NativeScreenBackHandler(
         state = back,
-        enabled = backEnabled,
+        enabled = backEnabled && appliedQuery == null,
         retainProgressOnBack = true,
         onBack = onDismiss,
     )
@@ -200,285 +204,295 @@ internal fun FeedCatalogScreen(
             .predictiveBackSurface(back.progress.value, back.swipeEdgeSign),
         color = MaterialTheme.colorScheme.surface,
     ) {
-        BoxWithConstraints(
-            Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().imePadding()
-        ) {
-            val fontScale = LocalDensity.current.fontScale.coerceIn(1f, 1.6f)
-            val discoveryMaxWidth = 720.dp
-            val columns =
-                if (maxWidth >= 1000.dp * fontScale) 3
-                else if (maxWidth >= 640.dp * fontScale) 2 else 1
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
-                Column(Modifier.widthIn(max = 1200.dp).fillMaxSize()) {
-                    Row(
-                        Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        IconButton(
-                            onClick = onDismiss,
-                            modifier = Modifier.testTag("feed_catalog_back"),
+        FeedCatalogResultsTransition(
+            visible = appliedQuery != null,
+            origin = topicOrigin,
+            backEnabled = backEnabled,
+            onBack = ::reset,
+        ) { showResults ->
+            BoxWithConstraints(
+                Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().imePadding()
+            ) {
+                val fontScale = LocalDensity.current.fontScale.coerceIn(1f, 1.6f)
+                val discoveryMaxWidth = 720.dp
+                val columns =
+                    if (maxWidth >= 1000.dp * fontScale) 3
+                    else if (maxWidth >= 640.dp * fontScale) 2 else 1
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
+                    Column(Modifier.widthIn(max = 1200.dp).fillMaxSize()) {
+                        Row(
+                            Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Icon(
-                                Icons.AutoMirrored.Filled.ArrowBack,
-                                stringResource(R.string.action_back),
-                            )
-                        }
-                        Text(
-                            stringResource(R.string.feed_catalog_title),
-                            Modifier.weight(1f),
-                            style = MaterialTheme.typography.headlineSmall,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    }
-                    Column(
-                        Modifier.widthIn(max = discoveryMaxWidth)
-                            .fillMaxWidth()
-                            .align(Alignment.CenterHorizontally)
-                            .padding(horizontal = 16.dp)
-                    ) {
-                        FeedCatalogSearchField(
-                            query = input,
-                            onQueryChange = {
-                                input = it.take(FeedCatalogInputRules.MAX_DRAFT_LENGTH)
-                                inputError = null
-                            },
-                            isAddress = classifiedInput is FeedCatalogInput.Address,
-                            onSearch = {
-                                when (val submission = classifiedInput) {
-                                    is FeedCatalogInput.Address -> {
-                                        focus.clearFocus()
-                                        keyboard?.hide()
-                                        job?.cancel()
-                                        requestId++
-                                        loading = false
-                                        onPreview(submission.url)
-                                    }
-                                    is FeedCatalogInput.Search ->
-                                        search(FeedCatalogQuery(text = submission.text))
-                                    FeedCatalogInput.Invalid ->
-                                        inputError = R.string.feeds_preview_invalid
-                                    FeedCatalogInput.PrivateSearch ->
-                                        inputError = R.string.feed_catalog_private_body
-                                    FeedCatalogInput.Empty -> Unit
-                                }
-                            },
-                        )
-                        inputError?.let {
-                            Text(
-                                stringResource(it),
-                                modifier =
-                                    Modifier.padding(top = 8.dp)
-                                        .testTag("feed_catalog_input_error"),
-                                color = MaterialTheme.colorScheme.error,
-                                style = MaterialTheme.typography.bodySmall,
-                            )
-                        }
-                    }
-                    LazyVerticalGrid(
-                        columns = GridCells.Fixed(columns),
-                        state = gridState,
-                        modifier =
-                            Modifier.widthIn(
-                                    max = if (appliedQuery == null) discoveryMaxWidth else 1200.dp
+                            IconButton(
+                                onClick = { if (showResults) reset() else onDismiss() },
+                                modifier = Modifier.testTag("feed_catalog_back"),
+                            ) {
+                                Icon(
+                                    Icons.AutoMirrored.Filled.ArrowBack,
+                                    stringResource(R.string.action_back),
                                 )
+                            }
+                            Text(
+                                stringResource(R.string.feed_catalog_title),
+                                Modifier.weight(1f),
+                                style = MaterialTheme.typography.headlineSmall,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                        Column(
+                            Modifier.widthIn(max = discoveryMaxWidth)
                                 .fillMaxWidth()
                                 .align(Alignment.CenterHorizontally)
-                                .weight(1f)
-                                .testTag("feed_catalog_results"),
-                        contentPadding =
-                            PaddingValues(
-                                start = if (appliedQuery == null) 16.dp else 20.dp,
-                                end = if (appliedQuery == null) 16.dp else 20.dp,
-                                bottom = 24.dp,
-                                top = 8.dp,
-                            ),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
-                    ) {
-                        if (repository.isPrivate) {
-                            item(span = { GridItemSpan(maxLineSpan) }) {
-                                FeedCatalogMessage(
-                                    stringResource(R.string.feed_catalog_private_title),
-                                    stringResource(R.string.feed_catalog_private_body),
-                                )
-                            }
-                        } else if (appliedQuery == null) {
-                            item(span = { GridItemSpan(maxLineSpan) }) { FeedCatalogHero() }
-                            item(span = { GridItemSpan(maxLineSpan) }) {
-                                FeedCatalogTopics(
-                                    columns =
-                                        if (columns > 1) 3 else if (fontScale > 1.3f) 1 else 2,
-                                    onTopicSelected = {
-                                        input = ""
-                                        inputError = null
-                                        search(FeedCatalogQuery(topic = it.slug))
-                                    },
-                                )
-                            }
-                            item(span = { GridItemSpan(maxLineSpan) }) {
+                                .padding(horizontal = 16.dp)
+                        ) {
+                            FeedCatalogSearchField(
+                                query = input,
+                                onQueryChange = {
+                                    input = it.take(FeedCatalogInputRules.MAX_DRAFT_LENGTH)
+                                    inputError = null
+                                },
+                                isAddress = classifiedInput is FeedCatalogInput.Address,
+                                onSearch = {
+                                    when (val submission = classifiedInput) {
+                                        is FeedCatalogInput.Address -> {
+                                            focus.clearFocus()
+                                            keyboard?.hide()
+                                            job?.cancel()
+                                            requestId++
+                                            loading = false
+                                            onPreview(submission.url)
+                                        }
+                                        is FeedCatalogInput.Search -> {
+                                            topicOrigin = null
+                                            search(FeedCatalogQuery(text = submission.text))
+                                        }
+                                        FeedCatalogInput.Invalid ->
+                                            inputError = R.string.feeds_preview_invalid
+                                        FeedCatalogInput.PrivateSearch ->
+                                            inputError = R.string.feed_catalog_private_body
+                                        FeedCatalogInput.Empty -> Unit
+                                    }
+                                },
+                            )
+                            inputError?.let {
                                 Text(
-                                    stringResource(R.string.feed_catalog_privacy),
+                                    stringResource(it),
+                                    modifier =
+                                        Modifier.padding(top = 8.dp)
+                                            .testTag("feed_catalog_input_error"),
+                                    color = MaterialTheme.colorScheme.error,
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.padding(vertical = 8.dp),
                                 )
                             }
-                        } else {
-                            item(span = { GridItemSpan(maxLineSpan) }) {
-                                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    val topic =
-                                        feedCatalogTopics.firstOrNull {
-                                            it.slug == appliedQuery?.topic
-                                        }
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Text(
-                                            topic?.let { stringResource(it.label) }
-                                                ?: stringResource(
-                                                    R.string.feed_catalog_results,
-                                                    appliedQuery?.text.orEmpty(),
-                                                ),
-                                            Modifier.weight(1f).semantics { heading() },
-                                            style = MaterialTheme.typography.titleLarge,
-                                            fontWeight = FontWeight.Bold,
-                                        )
-                                        TextButton(
-                                            onClick = ::reset,
-                                            modifier = Modifier.testTag("feed_catalog_reset"),
-                                        ) {
-                                            Text(stringResource(R.string.feed_catalog_reset))
-                                        }
-                                    }
-                                    Row(
-                                        Modifier.fillMaxWidth()
-                                            .horizontalScroll(rememberScrollState())
-                                            .testTag("feed_catalog_topic_filters"),
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                    ) {
-                                        feedCatalogTopics.forEach { topic ->
-                                            FilterChip(
-                                                selected = appliedQuery?.topic == topic.slug,
-                                                onClick = {
-                                                    input = ""
-                                                    search(FeedCatalogQuery(topic = topic.slug))
-                                                },
-                                                label = { Text(stringResource(topic.label)) },
-                                            )
-                                        }
-                                    }
-                                    if (!loading || sources.isNotEmpty())
-                                        Text(
-                                            pluralStringResource(
-                                                R.plurals.feed_catalog_loaded_count,
-                                                filtered.size,
-                                                filtered.size,
-                                            ),
-                                            style = MaterialTheme.typography.titleSmall,
-                                            modifier =
-                                                Modifier.semantics {
-                                                    liveRegion = LiveRegionMode.Polite
-                                                },
-                                        )
-                                    if (loading && sources.isNotEmpty())
-                                        LinearProgressIndicator(Modifier.fillMaxWidth())
-                                }
-                            }
-                            if (loading && sources.isEmpty())
+                        }
+                        LazyVerticalGrid(
+                            columns = GridCells.Fixed(columns),
+                            state = if (showResults) gridState else discoveryGridState,
+                            modifier =
+                                Modifier.widthIn(
+                                        max = if (!showResults) discoveryMaxWidth else 1200.dp
+                                    )
+                                    .fillMaxWidth()
+                                    .align(Alignment.CenterHorizontally)
+                                    .weight(1f)
+                                    .testTag("feed_catalog_results"),
+                            contentPadding =
+                                PaddingValues(
+                                    start = if (!showResults) 16.dp else 20.dp,
+                                    end = if (!showResults) 16.dp else 20.dp,
+                                    bottom = 24.dp,
+                                    top = 8.dp,
+                                ),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                        ) {
+                            if (repository.isPrivate) {
                                 item(span = { GridItemSpan(maxLineSpan) }) {
                                     FeedCatalogMessage(
-                                        stringResource(R.string.feed_catalog_loading),
-                                        stringResource(R.string.feed_catalog_loading_hint),
-                                        Modifier.testTag("feed_catalog_loading"),
-                                    ) {
-                                        CircularProgressIndicator()
-                                    }
+                                        stringResource(R.string.feed_catalog_private_title),
+                                        stringResource(R.string.feed_catalog_private_body),
+                                    )
                                 }
-                            else if (failed)
+                            } else if (!showResults) {
+                                item(span = { GridItemSpan(maxLineSpan) }) { FeedCatalogHero() }
                                 item(span = { GridItemSpan(maxLineSpan) }) {
-                                    FeedCatalogMessage(
-                                        stringResource(R.string.feed_catalog_error_title),
-                                        stringResource(R.string.feed_catalog_error_body),
-                                        Modifier.testTag("feed_catalog_error"),
-                                    ) {
-                                        Button(
-                                            onClick = { appliedQuery?.let { search(it) } },
-                                            modifier = Modifier.testTag("feed_catalog_retry"),
-                                        ) {
-                                            Text(stringResource(R.string.feed_catalog_retry))
-                                        }
-                                    }
-                                }
-                            else {
-                                items(filtered, key = { it.feedUrl }) { source ->
-                                    FeedCatalogSourceCard(
-                                        source = source,
-                                        subscribed =
-                                            state.sources.any {
-                                                FeedRules.identity(it.url) ==
-                                                    FeedRules.identity(source.feedUrl)
-                                            },
-                                        displayLocale = locale,
-                                        onPreview = {
-                                            if (!repository.isPrivate) onPreview(source.feedUrl)
+                                    FeedCatalogTopics(
+                                        columns =
+                                            if (columns > 1) 3 else if (fontScale > 1.3f) 1 else 2,
+                                        onTopicSelected = { topic, bounds ->
+                                            topicOrigin = FeedCatalogTopicOrigin(bounds, feedCatalogTopics.indexOf(topic))
+                                            input = ""
+                                            inputError = null
+                                            search(FeedCatalogQuery(topic = topic.slug))
                                         },
                                     )
                                 }
-                                if (filtered.isEmpty())
-                                    item(span = { GridItemSpan(maxLineSpan) }) {
-                                        FeedCatalogMessage(
-                                            stringResource(R.string.feed_catalog_empty_title),
-                                            stringResource(R.string.feed_catalog_empty_body),
-                                            Modifier.testTag("feed_catalog_empty"),
-                                        )
-                                    }
-                                if (nextOffset != null)
-                                    item(span = { GridItemSpan(maxLineSpan) }) {
-                                        Column(
-                                            horizontalAlignment = Alignment.CenterHorizontally,
-                                            verticalArrangement = Arrangement.spacedBy(8.dp),
-                                            modifier = Modifier.fillMaxWidth(),
-                                        ) {
-                                            if (moreFailed)
-                                                Text(
-                                                    stringResource(
-                                                        R.string.feed_catalog_more_failed
+                                item(span = { GridItemSpan(maxLineSpan) }) {
+                                    Text(
+                                        stringResource(R.string.feed_catalog_privacy),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.padding(vertical = 8.dp),
+                                    )
+                                }
+                            } else {
+                                item(span = { GridItemSpan(maxLineSpan) }) {
+                                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        val topic =
+                                            feedCatalogTopics.firstOrNull {
+                                                it.slug == appliedQuery?.topic
+                                            }
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Text(
+                                                topic?.let { stringResource(it.label) }
+                                                    ?: stringResource(
+                                                        R.string.feed_catalog_results,
+                                                        appliedQuery?.text.orEmpty(),
                                                     ),
-                                                    color = MaterialTheme.colorScheme.error,
-                                                    style = MaterialTheme.typography.bodySmall,
-                                                )
-                                            FilledTonalButton(
-                                                onClick = {
-                                                    appliedQuery?.let { query ->
-                                                        nextOffset?.let { offset ->
-                                                            search(
-                                                                query.copy(offset = offset),
-                                                                append = true,
-                                                            )
-                                                        }
-                                                    }
-                                                },
-                                                enabled = !loading,
-                                                modifier = Modifier.testTag("feed_catalog_more"),
+                                                Modifier.weight(1f).semantics { heading() },
+                                                style = MaterialTheme.typography.titleLarge,
+                                                fontWeight = FontWeight.Bold,
+                                            )
+                                            TextButton(
+                                                onClick = ::reset,
+                                                modifier = Modifier.testTag("feed_catalog_reset"),
                                             ) {
-                                                Text(
-                                                    stringResource(
-                                                        if (moreFailed) R.string.feed_catalog_retry
-                                                        else R.string.feed_catalog_more
-                                                    )
+                                                Text(stringResource(R.string.feed_catalog_reset))
+                                            }
+                                        }
+                                        Row(
+                                            Modifier.fillMaxWidth()
+                                                .horizontalScroll(rememberScrollState())
+                                                .testTag("feed_catalog_topic_filters"),
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        ) {
+                                            feedCatalogTopics.forEach { topic ->
+                                                FilterChip(
+                                                    selected = appliedQuery?.topic == topic.slug,
+                                                    onClick = {
+                                                        input = ""
+                                                        search(FeedCatalogQuery(topic = topic.slug))
+                                                    },
+                                                    label = { Text(stringResource(topic.label)) },
                                                 )
                                             }
                                         }
+                                        if (!loading || sources.isNotEmpty())
+                                            Text(
+                                                pluralStringResource(
+                                                    R.plurals.feed_catalog_loaded_count,
+                                                    filtered.size,
+                                                    filtered.size,
+                                                ),
+                                                style = MaterialTheme.typography.titleSmall,
+                                                modifier =
+                                                    Modifier.semantics {
+                                                        liveRegion = LiveRegionMode.Polite
+                                                    },
+                                            )
+                                        if (loading && sources.isNotEmpty())
+                                            LinearProgressIndicator(Modifier.fillMaxWidth())
                                     }
+                                }
+                                if (loading && sources.isEmpty())
+                                    item(span = { GridItemSpan(maxLineSpan) }) {
+                                        FeedCatalogMessage(
+                                            stringResource(R.string.feed_catalog_loading),
+                                            stringResource(R.string.feed_catalog_loading_hint),
+                                            Modifier.testTag("feed_catalog_loading"),
+                                        ) {
+                                            CircularProgressIndicator()
+                                        }
+                                    }
+                                else if (failed)
+                                    item(span = { GridItemSpan(maxLineSpan) }) {
+                                        FeedCatalogMessage(
+                                            stringResource(R.string.feed_catalog_error_title),
+                                            stringResource(R.string.feed_catalog_error_body),
+                                            Modifier.testTag("feed_catalog_error"),
+                                        ) {
+                                            Button(
+                                                onClick = { appliedQuery?.let { search(it) } },
+                                                modifier = Modifier.testTag("feed_catalog_retry"),
+                                            ) {
+                                                Text(stringResource(R.string.feed_catalog_retry))
+                                            }
+                                        }
+                                    }
+                                else {
+                                    items(filtered, key = { it.feedUrl }) { source ->
+                                        FeedCatalogSourceCard(
+                                            source = source,
+                                            subscribed =
+                                                state.sources.any {
+                                                    FeedRules.identity(it.url) ==
+                                                        FeedRules.identity(source.feedUrl)
+                                                },
+                                            displayLocale = locale,
+                                            onPreview = {
+                                                if (!repository.isPrivate) onPreview(source.feedUrl)
+                                            },
+                                        )
+                                    }
+                                    if (filtered.isEmpty())
+                                        item(span = { GridItemSpan(maxLineSpan) }) {
+                                            FeedCatalogMessage(
+                                                stringResource(R.string.feed_catalog_empty_title),
+                                                stringResource(R.string.feed_catalog_empty_body),
+                                                Modifier.testTag("feed_catalog_empty"),
+                                            )
+                                        }
+                                    if (nextOffset != null)
+                                        item(span = { GridItemSpan(maxLineSpan) }) {
+                                            Column(
+                                                horizontalAlignment = Alignment.CenterHorizontally,
+                                                verticalArrangement = Arrangement.spacedBy(8.dp),
+                                                modifier = Modifier.fillMaxWidth(),
+                                            ) {
+                                                if (moreFailed)
+                                                    Text(
+                                                        stringResource(
+                                                            R.string.feed_catalog_more_failed
+                                                        ),
+                                                        color = MaterialTheme.colorScheme.error,
+                                                        style = MaterialTheme.typography.bodySmall,
+                                                    )
+                                                FilledTonalButton(
+                                                    onClick = {
+                                                        appliedQuery?.let { query ->
+                                                            nextOffset?.let { offset ->
+                                                                search(
+                                                                    query.copy(offset = offset),
+                                                                    append = true,
+                                                                )
+                                                            }
+                                                        }
+                                                    },
+                                                    enabled = !loading,
+                                                    modifier = Modifier.testTag("feed_catalog_more"),
+                                                ) {
+                                                    Text(
+                                                        stringResource(
+                                                            if (moreFailed) R.string.feed_catalog_retry
+                                                            else R.string.feed_catalog_more
+                                                        )
+                                                    )
+                                                }
+                                            }
+                                        }
+                                }
                             }
-                        }
-                        item(span = { GridItemSpan(maxLineSpan) }) {
-                            Text(
-                                stringResource(R.string.feed_catalog_credit),
-                                Modifier.fillMaxWidth().padding(top = 12.dp),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
+                            item(span = { GridItemSpan(maxLineSpan) }) {
+                                Text(
+                                    stringResource(R.string.feed_catalog_credit),
+                                    Modifier.fillMaxWidth().padding(top = 12.dp),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
                         }
                     }
                 }

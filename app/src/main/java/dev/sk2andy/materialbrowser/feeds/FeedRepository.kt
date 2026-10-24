@@ -1,6 +1,7 @@
 package dev.sk2andy.materialbrowser.feeds
 
 import android.content.Context
+import dev.sk2andy.materialbrowser.RssFeedWidgetProvider
 import dev.sk2andy.materialbrowser.browser.ProfileProtectionSession
 import dev.sk2andy.materialbrowser.data.AppDataTransferLock
 import dev.sk2andy.materialbrowser.data.BrowserSessionStore
@@ -554,6 +555,7 @@ private constructor(context: Context, val profileId: String, val isPrivate: Bool
                 val committed = if (after != before) store.write(after, before) else before
                 requireAccess()
                 mutableState.value = committed
+                if (committed != before) RssFeedWidgetProvider.updateAll(appContext)
             }
         }
     }

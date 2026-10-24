@@ -9,6 +9,7 @@ object FeedLaunchContract {
     const val EXTRA_CATALOG = "feeds_open_catalog"
     const val EXTRA_QUEUE = "feeds_open_queue"
     const val EXTRA_PROFILE = "feeds_profile_id"
+    const val EXTRA_ARTICLE = "feeds_article_id"
 
     fun discoverIntent(context: Context): Intent =
         Intent(context, MainActivity::class.java)

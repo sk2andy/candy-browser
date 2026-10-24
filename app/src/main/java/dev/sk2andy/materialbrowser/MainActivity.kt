@@ -187,6 +187,7 @@ open class MainActivity : AppCompatActivity() {
     private var openFeedsRequestId by mutableIntStateOf(0)
     private var openFeedQueue by mutableStateOf(false)
     private var openFeedCatalog by mutableStateOf(false)
+    private var openFeedArticleId by mutableStateOf<String?>(null)
     private var launcherAddressEditorRequestId by mutableIntStateOf(0)
     private var hardwareTabChangeRequestId by mutableIntStateOf(0)
     private var onboardingVisible by mutableStateOf(false)
@@ -778,6 +779,7 @@ open class MainActivity : AppCompatActivity() {
                         openFeedsRequestId = openFeedsRequestId,
                         openFeedQueue = openFeedQueue,
                         openFeedCatalog = openFeedCatalog,
+                        openFeedArticleId = openFeedArticleId,
                         externalLaunchTabId = externalLaunchTabId,
                         onReturnToExternalApp = {
                             browserController.dismissExternalLinkPreview()
@@ -1691,6 +1693,8 @@ open class MainActivity : AppCompatActivity() {
                 showIncomingBrowserNavigation()
                 openFeedQueue = intent.getBooleanExtra(FeedLaunchContract.EXTRA_QUEUE, false)
                 openFeedCatalog = openCatalog
+                openFeedArticleId = intent.getStringExtra(FeedLaunchContract.EXTRA_ARTICLE)
+                    ?.takeIf { it.length == 64 && it.all { char -> char in "0123456789abcdef" } }
                 openFeedsRequestId++
             }
             return

@@ -14,7 +14,8 @@
 | Preview | Original publisher feed preview; network only on preview/open/refresh. Subscription remains explicit and supports folders; manual addresses always available |
 | Restoration | In normal profiles, submitted query/topic and typed draft survive recreation; private drafts stay in memory only. Restored explicit searches read the local catalog again. Source payloads stay out of the saved-state Bundle |
 | Pagination | Deterministic local pages of 40, canonical URL deduplication. Never fabricate a provider result or a global search total |
-| Back | Catalog retains the collection underneath its spring transition. Predictive back reveals that parent; cancellation keeps catalog state. Sheet back remains owned by Material |
+| Topic navigation | A selected photo tile expands into the results screen with the theme spatial spring, retaining its asymmetric corners during expansion. Discovery stays composed beneath the results. Reduced motion and restored searches open directly |
+| Back | Results use native predictive back to reveal discovery; cancellation retains the query and results. Catalog back returns to the invoking collection or RSS settings. Sheet back remains owned by Material |
 | Access | Normal profile ownership and transfer/lock checks run before/after lookup. Private preview and address drafts remain memory-only; private search terms never call the catalog. No query history is saved |
 
 ## Data maintenance
@@ -33,7 +34,7 @@
 | --- | --- |
 | Local search | `FeedCuratedCatalog`, `FeedCatalogRules`, `FeedCatalogInputRules`, `FeedCatalogModels` |
 | Profile access | `FeedRepository#searchCatalog` |
-| UI | `FeedCatalogScreen`, `FeedCatalogComponents`, `FeedCatalogTopicCard` |
+| UI | `FeedCatalogScreen`, `FeedCatalogComponents`, `FeedCatalogTopicCard`, `FeedCatalogResultsTransition`, `FeedCatalogMorphRules` |
 | Original preview | `FeedSubscribeSheet` |
 | Older adapter | `FeedCatalogClient` and `FeedCatalogNetwork` retained but no production caller; API tests document its old contract |
 | Tests | `FeedCuratedCatalogTest`, `FeedCatalogInputRulesTest`, `FeedCatalogScreenInstrumentedTest`, `FeedCatalogNavigationInstrumentedTest` |

@@ -68,7 +68,6 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.data.RssSettingsStore
-import dev.sk2andy.materialbrowser.feeds.FeedLaunchContract
 import dev.sk2andy.materialbrowser.reader.rss.RssArticle
 import dev.sk2andy.materialbrowser.reader.rss.RssFeed
 import dev.sk2andy.materialbrowser.reader.rss.RssRefreshScheduler
@@ -423,7 +422,7 @@ private fun RssFeedDetailScreen(
 }
 
 @Composable
-internal fun RssSettingsPage(onBack: () -> Unit) {
+internal fun RssSettingsPage(onBack: () -> Unit, onDiscoverFeeds: () -> Unit) {
     val context = LocalContext.current
     val store = remember(context) { RssSettingsStore(context) }
     var interval by remember(store) { mutableLongStateOf(store.refreshIntervalMinutes()) }
@@ -460,11 +459,8 @@ internal fun RssSettingsPage(onBack: () -> Unit) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Button(
-                onClick = {
-                    context.startActivity(
-                        FeedLaunchContract.discoverIntent(context),
-                    )
-                }
+                onClick = onDiscoverFeeds,
+                modifier = Modifier.testTag("rss_settings_discover"),
             ) {
                 Text(stringResource(R.string.browser_menu_discover_feeds))
             }

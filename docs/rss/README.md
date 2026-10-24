@@ -17,7 +17,7 @@
 | Open an article | Show reader loading immediately, navigate to its source in a regular tab, follow HTTP redirects within that tab, then extract the loaded page; Back cancels pending extraction |
 | Enable feed notifications | Ask for Android notification permission when needed; notify once per feed using stable tag and ID |
 | A later article arrives | Replace the existing notification for that feed and update its title/body without starting a second alert |
-| Add RSS widget | Show the 50 latest cached articles with their source names in a scrollable list; tapping an article opens it in Reader Studio |
+| Add RSS widget | Show up to 50 latest visible articles from the active regular profile’s Feeds collection; tapping an article opens its profile-owned Reader and returns to the collection on Back |
 | Resize RSS widget | More height reveals more article rows; shorter widgets keep the remaining articles reachable by scrolling, with the header and Discover feeds action fixed |
 | Widget Discover feeds | Open the profile-owned source catalog; existing widget articles retain their Reader Studio handoff |
 | Notification article | Open the Reader Studio Feeds inbox with the requested article above it; it is available again on Back |
@@ -34,7 +34,8 @@
 | Reader overview and lifecycle refresh | `ui/ReaderStudioHomeScreen.kt`, `ui/ReaderStudioHomeHost.kt` |
 | Periodic network refresh and HTTP/XML charset decoding | `reader/rss/RssRefreshWorker.kt` |
 | Stable notification replacement | `reader/rss/RssFeedNotifier.kt` |
-| Homescreen widget | `RssFeedWidgetProvider`, `rss_feed_widget.xml`, `rss_feed_widget_article.xml` |
+| Homescreen widget | `RssFeedWidgetProvider`, `feeds/FeedWidgetRules.kt`, `FeedRepository`, `rss_feed_widget.xml`, `rss_feed_widget_article.xml` |
+| Widget profile isolation and new-subscription integration | `RssFeedWidgetDataInstrumentedTest`, `FeedWidgetRulesTest` |
 | Widget resize, scrolling, recent-article limit and empty-state regression coverage | `RssFeedWidgetLayoutInstrumentedTest` |
 | Feed management and discovery | `RssFeedsActivity`, `ui/RssFeedScreens.kt` |
 | Refresh preference | `data/RssSettingsStore.kt`, Settings → RSS feeds |
@@ -42,7 +43,10 @@
 
 ## Privacy and limits
 
-Subscriptions are device-local and shared across regular Candy profiles. Private tabs cannot start
+Earlier RSS subscriptions are device-local and shared across regular Candy profiles. The homescreen
+widget instead uses the current profile-owned Feeds collection; protected profiles never publish
+launcher titles, even while unlocked. Profile switches and subscription changes refresh its cache.
+Private tabs cannot start
 feed discovery or save subscriptions. Background refresh uses direct HTTP(S) requests without
 browser cookies, so feeds that require a signed-in session are unsupported. The widget shows cached
 article titles and source names; article content is loaded by the existing Reader Studio from the

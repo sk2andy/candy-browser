@@ -183,6 +183,51 @@ class FeedCatalogNavigationInstrumentedTest {
         composeRule.onNodeWithTag("feed_catalog_screen").assertIsDisplayed()
     }
 
+    @Test
+    fun topicExpandsFromTileAndPredictiveBackReturnsToDiscovery() {
+        showFeeds(initialCatalog = true)
+        val topicTag = "feed_catalog_topic_${feedCatalogTopics.first().slug}"
+        val tile = composeRule.onNodeWithTag(topicTag).fetchSemanticsNode().boundsInRoot
+        composeRule.mainClock.autoAdvance = false
+        composeRule.onNodeWithTag(topicTag).performClick()
+        composeRule.mainClock.advanceTimeBy(32)
+        val entering = composeRule.onNodeWithTag("feed_catalog_search")
+            .fetchSemanticsNode().boundsInRoot
+        composeRule.mainClock.advanceTimeBy(2000)
+        val settled = composeRule.onNodeWithTag("feed_catalog_search")
+            .fetchSemanticsNode().boundsInRoot
+        assertTrue(
+            "Results expand from tile $tile: entering=$entering, settled=$settled",
+            entering.width < settled.width,
+        )
+        assertTrue("Entry starts near the selected tile", entering.top > settled.top)
+        assertTrue("Tile is narrower than the resulting screen", tile.width < settled.width)
+        composeRule.mainClock.autoAdvance = true
+
+        startGesture(0.7f)
+        val preview = composeRule.onNodeWithTag("feed_catalog_search")
+            .fetchSemanticsNode().boundsInRoot
+        assertTrue(
+            "Results follow predictive back: preview=$preview, settled=$settled",
+            preview.width < settled.width,
+        )
+        composeRule.runOnIdle {
+            composeRule.activity.onBackPressedDispatcher.dispatchOnBackCancelled()
+        }
+        composeRule.waitForIdle()
+        composeRule.onNodeWithTag("feed_catalog_results_screen").assertIsDisplayed()
+        assertEquals(settled.width, composeRule.onNodeWithTag("feed_catalog_search")
+            .fetchSemanticsNode().boundsInRoot.width, 1f)
+
+        startGesture(0.6f)
+        composeRule.runOnIdle { composeRule.activity.onBackPressedDispatcher.onBackPressed() }
+        composeRule.onNodeWithTag("feed_catalog_results_screen").assertDoesNotExist()
+        composeRule.onNodeWithTag(topicTag).assertIsDisplayed()
+        composeRule.onNodeWithTag("feed_catalog_screen").assertIsDisplayed()
+        composeRule.onNodeWithTag("feed_catalog_back").performClick()
+        composeRule.onNodeWithTag("feed_catalog_screen").assertDoesNotExist()
+    }
+
     private fun startGesture(progress: Float) {
         composeRule.runOnIdle {
             composeRule.activity.onBackPressedDispatcher.dispatchOnBackStarted(

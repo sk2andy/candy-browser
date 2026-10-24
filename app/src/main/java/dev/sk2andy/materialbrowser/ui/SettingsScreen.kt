@@ -221,6 +221,7 @@ internal fun SettingsScreen(
     onUnlockDeveloperOptions: () -> Unit = {},
     onOpenDefaultBrowserSettings: () -> Unit,
     onOpenDeviceSearch: () -> Unit = {},
+    onDiscoverFeeds: () -> Unit = {},
     onPrivacyXRay: () -> Unit,
     onPermissionRadar: () -> Unit,
     onEditCapsule: (SiteCapsule) -> Unit,
@@ -253,6 +254,7 @@ internal fun SettingsScreen(
     customWorkflowConfiguration: CustomWorkflowConfiguration = CustomWorkflowConfiguration(),
     onCustomWorkflowConfigurationChanged: (CustomWorkflowConfiguration, (Boolean) -> Unit) -> Unit = { _, result -> result(false) },
     modifier: Modifier = Modifier,
+    backEnabled: Boolean = true,
 ) {
     var searchQuery by remember { mutableStateOf("") }
     var searchTarget by remember { mutableStateOf<SettingsSearchEntry?>(null) }
@@ -266,7 +268,7 @@ internal fun SettingsScreen(
     LaunchedEffect(destination) {
         if (searchTarget?.destination != destination) searchTarget = null
     }
-    BackHandler(enabled = destination == SettingsDestination.Home && searchQuery.isNotEmpty()) {
+    BackHandler(enabled = backEnabled && destination == SettingsDestination.Home && searchQuery.isNotEmpty()) {
         clearSearch()
     }
     val searchEntries = settingsSearchEntries(
@@ -295,6 +297,7 @@ internal fun SettingsScreen(
         }
     }
     SettingsBackRouter(
+        backEnabled = backEnabled,
         parentDestination = settingsParent(destination),
         destination = destination,
         onDestinationChanged = onDestinationChanged,
@@ -708,6 +711,7 @@ internal fun SettingsScreen(
                 )
 
                 SettingsDestination.RssFeeds -> RssSettingsPage(
+                    onDiscoverFeeds = onDiscoverFeeds,
                     onBack = { onDestinationChanged(settingsParent(currentDestination)) },
                 )
 

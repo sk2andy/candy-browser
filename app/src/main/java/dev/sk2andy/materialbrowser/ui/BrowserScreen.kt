@@ -263,6 +263,7 @@ internal fun BrowserScreen(
     openFeedsRequestId: Int = 0,
     openFeedQueue: Boolean = false,
     openFeedCatalog: Boolean = false,
+    openFeedArticleId: String? = null,
 ) {
     val activeProfileLocked = controller.isActiveProfileLocked
     LaunchedEffect(controller, activeProfileLocked) {
@@ -313,7 +314,7 @@ internal fun BrowserScreen(
     var candyTrailSourceBounds by remember { mutableStateOf<Rect?>(null) }
     var addressEditorVisible by remember { mutableStateOf(openAddressEditorOnLaunch) }
     val aiModeSelectedState = remember { mutableStateOf(false) }
-    var settingsVisible by remember { mutableStateOf(false) }
+    var settingsVisible by rememberSaveable { mutableStateOf(false) }
     var settingsDestination by rememberSaveable { mutableStateOf(SettingsDestination.Home) }
     var snoozedTabsVisible by rememberSaveable { mutableStateOf(false) }
     var snoozeTabId by remember { mutableStateOf<String?>(null) }
@@ -932,6 +933,7 @@ internal fun BrowserScreen(
                 FeedsEntry(
                     queueRequestId = openFeedsRequestId.takeIf { openFeedQueue } ?: 0,
                     openCatalog = openFeedCatalog,
+                    articleId = openFeedArticleId,
                 ),
             )
         }
@@ -1928,9 +1930,12 @@ internal fun BrowserScreen(
                     FeedsHost(
                         repository = feedRepository,
                         entry = entry,
+                        catalogOnly = settingsVisible,
+                        modifier = Modifier.zIndex(if (settingsVisible) 21f else 0f),
                         progressScope = feedsProgressScope,
                         onOpenOriginal = { url ->
-                            feedsReturnEntry = entry.copy(discoveryUrl = null, queueRequestId = 0)
+                            settingsVisible = false
+                            feedsReturnEntry = entry.copy(discoveryUrl = null, queueRequestId = 0, articleId = null)
                             feedsEntry = null
                             dismissReaderStudioArticle()
                             readerStudioHomeVisible = false
@@ -2204,6 +2209,7 @@ internal fun BrowserScreen(
         BrowserSettingsOverlay(
             controller = controller,
             visible = settingsVisible,
+            backEnabled = feedsEntry == null,
             destination = settingsDestination,
             predictiveBackCommitted = settingsPredictiveBackCommitted,
             predictiveBackProgress = settingsBackProgress.value,
@@ -2211,6 +2217,7 @@ internal fun BrowserScreen(
             selectedTab = selectedTab,
             visibleProfileIds = visibleProfileIds,
             onDestinationChanged = { settingsDestination = it },
+            onDiscoverFeeds = { openFeedCollection(FeedsEntry(openCatalog = true)) },
             onOpenPrivacyXRay = {
                 privacyXRayTabId = selectedTab.id
                 rootView.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)

@@ -95,6 +95,7 @@ internal fun FeedsScreen(
     library: ReaderLibraryState,
     libraryOnly: Boolean = false,
     initialCatalog: Boolean = false,
+    catalogOnly: Boolean = false,
     catalogRequestToken: String? = null,
     initialFeedUrl: String? = null,
     onInitialFeedConsumed: () -> Unit = {},
@@ -179,7 +180,7 @@ internal fun FeedsScreen(
         destination = FeedDestination.Inbox
     }
     Box(modifier.fillMaxSize()) {
-        Surface(
+        if (!catalogOnly) Surface(
             modifier =
                 Modifier.fillMaxSize()
                     .then(if (catalogVisible) Modifier.clearAndSetSemantics {} else Modifier)
@@ -718,7 +719,7 @@ internal fun FeedsScreen(
                     sourceUrl = url
                     addSource = true
                 },
-                onDismiss = { catalogVisible = false },
+                onDismiss = { if (catalogOnly) onDismiss() else catalogVisible = false },
                 backEnabled = catalogVisible,
             )
         }

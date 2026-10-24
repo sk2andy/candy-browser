@@ -354,7 +354,7 @@ class SettingsHeaderArtworkInstrumentedTest {
         onInteraction: (SettingsHeaderArtwork) -> Unit = {},
     ) {
         when (artwork) {
-            SettingsHeaderArtwork.Rss -> RssSettingsPage(onBack = {})
+            SettingsHeaderArtwork.Rss -> RssSettingsPage(onBack = {}, onDiscoverFeeds = {})
             SettingsHeaderArtwork.Appearance -> AppearanceSettingsPage(
                 settings = settings,
                 section = AppearanceSettingsSection.Theme,
