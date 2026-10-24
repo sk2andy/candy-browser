@@ -8,8 +8,10 @@ import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.net.Uri
+import android.os.Bundle
 import android.view.View
 import android.widget.RemoteViews
 import dev.sk2andy.materialbrowser.browser.sitewidget.SiteWidgetFormat
@@ -21,6 +23,15 @@ import dev.sk2andy.materialbrowser.data.SiteWidgetGridSizingStore
 import java.util.concurrent.Executors
 
 open class SiteWidgetProvider : AppWidgetProvider() {
+    override fun onAppWidgetOptionsChanged(
+        context: Context,
+        appWidgetManager: AppWidgetManager,
+        appWidgetId: Int,
+        newOptions: Bundle,
+    ) {
+        onUpdate(context, appWidgetManager, intArrayOf(appWidgetId))
+    }
+
     override fun onUpdate(context: Context, manager: AppWidgetManager, appWidgetIds: IntArray) {
         val pending = goAsync()
         execute {
@@ -72,7 +83,6 @@ open class SiteWidgetProvider : AppWidgetProvider() {
                     return@execute
                 }
                 if (store.bind(widgetId, id)) {
-                    rememberLauncherCellAspect(context, manager, widgetId, snapshot.format, store)
                     update(context, manager, widgetId)
                 }
             } finally {
@@ -128,6 +138,10 @@ open class SiteWidgetProvider : AppWidgetProvider() {
 
         internal fun update(context: Context, manager: AppWidgetManager, widgetId: Int) {
             val store = SiteWidgetStore(context.applicationContext)
+            val provider = manager.getAppWidgetInfo(widgetId)?.provider
+            SiteWidgetFormat.entries.firstOrNull { component(context, it) == provider }?.let { format ->
+                rememberLauncherCellAspect(context, manager, widgetId, format, store)
+            }
             val snapshot = store.snapshotForWidget(widgetId)
                 .takeUnless { GuestBubbleSessionStore(context).isLocked() }
             if (Application.getProcessName() == context.packageName) {
@@ -150,8 +164,11 @@ open class SiteWidgetProvider : AppWidgetProvider() {
         ) {
             val options = manager.getAppWidgetOptions(widgetId)
             val ratio = SiteWidgetGridSizingRules.cellAspectRatio(
-                widthDp = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH),
-                heightDp = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT),
+                minWidthDp = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH),
+                minHeightDp = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT),
+                maxWidthDp = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH),
+                maxHeightDp = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT),
+                isLandscape = context.resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE,
                 format = format,
             ) ?: return
             val launcherPackage = SiteWidgetGridSizingStore(context).currentLauncherPackage() ?: return

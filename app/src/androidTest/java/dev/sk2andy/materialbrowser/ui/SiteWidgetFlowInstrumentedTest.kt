@@ -290,7 +290,9 @@ class SiteWidgetFlowInstrumentedTest {
         try {
             assertTrue(image.width in 1..1_280)
             assertTrue(image.height in 1..1_280)
-            assertTrue("Saved crop must have physical 4:3 aspect", abs(image.width - image.height * 4f / 3f) <= 2f)
+            val selectedAspect = snapshot.crop.width * snapshot.source.viewportWidthPx /
+                (snapshot.crop.height * snapshot.source.viewportHeightPx)
+            assertTrue("Saved image must match the calibrated crop aspect", abs(image.width - image.height * selectedAspect) <= 2f)
             assertTrue("Dashboard crop must contain visible color", image.getPixel(image.width / 2, image.height / 2) != 0)
         } finally {
             image.recycle()

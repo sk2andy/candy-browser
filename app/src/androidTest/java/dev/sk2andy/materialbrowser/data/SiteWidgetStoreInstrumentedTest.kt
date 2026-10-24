@@ -11,7 +11,9 @@ import dev.sk2andy.materialbrowser.browser.BrowserProfile
 import dev.sk2andy.materialbrowser.browser.ProfileLockTrigger
 import dev.sk2andy.materialbrowser.browser.ProfileProtection
 import dev.sk2andy.materialbrowser.browser.sitewidget.SiteWidgetCrop
+import dev.sk2andy.materialbrowser.browser.sitewidget.SiteWidgetCropRules
 import dev.sk2andy.materialbrowser.browser.sitewidget.SiteWidgetFormat
+import dev.sk2andy.materialbrowser.browser.sitewidget.SiteWidgetGridSizingRules
 import dev.sk2andy.materialbrowser.browser.sitewidget.SiteWidgetSnapshot
 import dev.sk2andy.materialbrowser.browser.sitewidget.SiteWidgetSource
 import java.io.File
@@ -57,6 +59,33 @@ class SiteWidgetStoreInstrumentedTest {
         File(baseContext.applicationInfo.dataDir, "shared_prefs").listFiles()
             ?.filter { it.name.startsWith("site-widget-test-$testId-") }
             ?.forEach(File::delete)
+    }
+
+    @Test
+    fun learnedLauncherGeometryPersistsForNextWidgetGrid() {
+        val launcherPackage = "dev.example.launcher"
+        val ratio = requireNotNull(
+            SiteWidgetGridSizingRules.cellAspectRatio(
+                minWidthDp = 320,
+                minHeightDp = 180,
+                maxWidthDp = 480,
+                maxHeightDp = 360,
+                isLandscape = false,
+                format = SiteWidgetFormat.FourByThree,
+            ),
+        )
+        assertTrue(store.saveLauncherCellAspectRatio(launcherPackage, ratio))
+
+        val sizingStore = SiteWidgetGridSizingStore(context)
+        val learnedRatio = requireNotNull(sizingStore.cellAspectRatio(launcherPackage))
+        val nextCrop = requireNotNull(
+            SiteWidgetCropRules.initialCrop(SiteWidgetFormat(3, 2), 400, 800, learnedRatio),
+        )
+        assertEquals(1f, nextCrop.width, 0.0001f)
+        assertEquals(0.5f, nextCrop.height, 0.0001f)
+        assertNull(sizingStore.cellAspectRatio("dev.other.launcher"))
+        assertFalse(store.saveLauncherCellAspectRatio(launcherPackage, Float.NaN))
+        assertEquals(learnedRatio, sizingStore.cellAspectRatio(launcherPackage))
     }
 
     @Test

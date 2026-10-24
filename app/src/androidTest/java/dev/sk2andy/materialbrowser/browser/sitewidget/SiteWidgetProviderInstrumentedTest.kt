@@ -5,7 +5,6 @@ import android.appwidget.AppWidgetProviderInfo
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
-import android.graphics.Rect
 import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.BitmapDrawable
 import android.view.View
@@ -18,6 +17,7 @@ import androidx.test.filters.SdkSuppress
 import androidx.test.platform.app.InstrumentationRegistry
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.SiteWidgetProvider
+import dev.sk2andy.materialbrowser.data.SiteWidgetGridSizingStore
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -30,6 +30,11 @@ import org.junit.runner.RunWith
 class SiteWidgetProviderInstrumentedTest {
     private val instrumentation = InstrumentationRegistry.getInstrumentation()
     private val context = instrumentation.targetContext
+
+    @Test
+    fun currentLauncherIsVisibleForLearningWidgetDimensions() {
+        assertNotNull(SiteWidgetGridSizingStore(context).currentLauncherPackage())
+    }
 
     @Test
     fun installedProvidersExposeEverySelectableGridSize() {
@@ -77,7 +82,7 @@ class SiteWidgetProviderInstrumentedTest {
                 assertEquals(View.GONE, empty.visibility)
                 assertEquals(View.VISIBLE, refresh.visibility)
                 assertEquals(source.title, image.contentDescription.toString())
-                assertEquals(ImageView.ScaleType.FIT_CENTER, image.scaleType)
+                assertEquals(ImageView.ScaleType.CENTER_CROP, image.scaleType)
                 assertEquals(0, root.paddingTop)
                 assertEquals(0, root.paddingBottom)
                 assertTrue(root.clipToOutline)
@@ -118,7 +123,7 @@ class SiteWidgetProviderInstrumentedTest {
     }
 
     @Test
-    fun launcherAspectRatiosPreserveSelectedImageEdgesAndProportions() {
+    fun launcherAspectRatiosFillEveryPixelWithoutDistortingImage() {
         val snapshot = SiteWidgetSnapshot(
             id = "bf7f3b28-4ce5-4f97-9352-389714cd668c",
             source = SiteWidgetSource(
@@ -145,12 +150,7 @@ class SiteWidgetProviderInstrumentedTest {
             instrumentation.runOnMainSync {
                 val root = SiteWidgetProvider.views(context, snapshot, bitmap).apply(context, FrameLayout(context))
                 val image = root.findViewById<ImageView>(R.id.site_widget_image)
-                listOf(
-                    Rect(0, 50, 200, 250) to (200 to 300),
-                    Rect(50, 0, 250, 200) to (300 to 200),
-                    Rect(0, 0, 200, 200) to (200 to 200),
-                ).forEach { (expectedBounds, hostSize) ->
-                    val (width, height) = hostSize
+                listOf(200 to 300, 300 to 200, 200 to 200).forEach { (width, height) ->
                     root.measure(
                         View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY),
                         View.MeasureSpec.makeMeasureSpec(height, View.MeasureSpec.EXACTLY),
@@ -159,21 +159,18 @@ class SiteWidgetProviderInstrumentedTest {
                     val rendered = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
                     try {
                         image.draw(Canvas(rendered))
-                        val centerX = expectedBounds.centerX()
-                        val centerY = expectedBounds.centerY()
-                        assertEquals(Color.RED, rendered.getPixel(expectedBounds.left, centerY))
-                        assertEquals(Color.BLUE, rendered.getPixel(expectedBounds.right - 1, centerY))
-                        assertEquals(Color.YELLOW, rendered.getPixel(centerX, expectedBounds.top))
-                        assertEquals(Color.MAGENTA, rendered.getPixel(centerX, expectedBounds.bottom - 1))
-                        assertEquals(Color.GREEN, rendered.getPixel(centerX, centerY))
-                        if (expectedBounds.top > 0) {
-                            assertEquals(Color.TRANSPARENT, rendered.getPixel(centerX, expectedBounds.top - 1))
-                            assertEquals(Color.TRANSPARENT, rendered.getPixel(centerX, expectedBounds.bottom))
+                        for (x in 0 until width) {
+                            assertEquals(255, Color.alpha(rendered.getPixel(x, 0)))
+                            assertEquals(255, Color.alpha(rendered.getPixel(x, height - 1)))
                         }
-                        if (expectedBounds.left > 0) {
-                            assertEquals(Color.TRANSPARENT, rendered.getPixel(expectedBounds.left - 1, centerY))
-                            assertEquals(Color.TRANSPARENT, rendered.getPixel(expectedBounds.right, centerY))
+                        for (y in 0 until height) {
+                            assertEquals(255, Color.alpha(rendered.getPixel(0, y)))
+                            assertEquals(255, Color.alpha(rendered.getPixel(width - 1, y)))
                         }
+                        assertEquals(Color.GREEN, rendered.getPixel(width / 2, height / 2))
+                        val matrixValues = FloatArray(9)
+                        image.imageMatrix.getValues(matrixValues)
+                        assertEquals(matrixValues[0], matrixValues[4], 0.0001f)
                     } finally {
                         rendered.recycle()
                     }

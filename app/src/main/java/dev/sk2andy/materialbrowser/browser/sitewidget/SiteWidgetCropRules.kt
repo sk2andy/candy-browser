@@ -175,6 +175,20 @@ internal object SiteWidgetCropRules {
 }
 
 internal object SiteWidgetGridSizingRules {
+    fun cellAspectRatio(
+        minWidthDp: Int,
+        minHeightDp: Int,
+        maxWidthDp: Int,
+        maxHeightDp: Int,
+        isLandscape: Boolean,
+        format: SiteWidgetFormat,
+    ): Float? {
+        // The bounds describe both orientations, not one minimum-size rectangle.
+        val widthDp = if (isLandscape) maxWidthDp.takeIf { it > 0 } ?: minWidthDp else minWidthDp
+        val heightDp = if (isLandscape) minHeightDp else maxHeightDp.takeIf { it > 0 } ?: minHeightDp
+        return cellAspectRatio(widthDp, heightDp, format)
+    }
+
     fun cellAspectRatio(widthDp: Int, heightDp: Int, format: SiteWidgetFormat): Float? {
         if (!format.isValid || widthDp <= 0 || heightDp <= 0) return null
         val ratio = widthDp.toDouble() * format.rows / (heightDp.toDouble() * format.columns)

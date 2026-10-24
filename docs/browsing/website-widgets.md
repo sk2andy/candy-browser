@@ -23,8 +23,8 @@
 | System WebView refresh surface | An app-owned, private `VirtualDisplay` hosts the temporary same-profile WebView in an app-themed `Presentation`. This gives Chromium an attached hardware surface without a window on the user's main display. Capture waits for `postVisualStateCallback`, then uses `PixelCopy` on that private window. No MediaProjection, global whole-document drawing or activity launch is used. |
 | Renderer lifetime | At most 20 seconds per attempt; cancellation closes the temporary session, display/surface and presentation. Image queues are drained while rendering. The returned bitmap contains only the bounded source viewport before the saved crop is applied. |
 | Selection | Visible viewport rectangle, not a DOM-element anchor; scrolling or layout changes require reselection |
-| Size | 25 grid-specific providers (2–6 rows and columns), preserving existing 4×3 and 4×4 component names; actual cell dimensions and padding depend on the launcher. The complete selected image fits inside the rounded widget with its proportions preserved. Different launcher proportions leave theme-colored space around the image instead of cropping its edges. The sole visible control is a circular refresh button inset 12 dp from the top-right corner. |
-| Launcher sizing estimate | Before the first widget is placed, the editor uses a square-cell estimate and explains that its preview may be off. After pinning, the app stores the launcher's reported widget dimensions and derives an approximate cell aspect ratio. The next preview uses that ratio; different launchers and layout changes can still vary. |
+| Size | 25 grid-specific providers (2–6 rows and columns), preserving existing 4×3 and 4×4 component names; actual cell dimensions and padding depend on the launcher. The image fills the rounded widget edge to edge with its proportions preserved. Any remaining launcher aspect difference crops image edges instead of adding borders; outer placement gaps remain launcher-controlled. The sole visible control is a circular refresh button inset 12 dp from the top-right corner. |
+| Launcher sizing estimate | Before the first widget is placed, the editor uses a square-cell estimate and explains that its preview may be off. Pinning, picker placement, and launcher size updates learn an approximate cell aspect ratio from the launcher's paired dimensions: minimum width / maximum height in portrait, maximum width / minimum height in landscape. The next preview applies the learned ratio to its chosen columns and rows. Launcher padding and grid gaps can still vary between formats; the image always fills the final widget bounds. |
 | Source identity | Tab, profile, document URL, navigation generation, session, attached view and view dimensions checked at capture; document identity rechecked before publication |
 | Private content | Private, ephemeral, synced and protected-profile sources cannot be captured |
 | Later profile protection / deletion | Invalidate saved captures and republish blank widget content when allowed profile ownership changes |
@@ -54,7 +54,7 @@
 
 | Surface | Tests |
 | --- | --- |
-| Geometry, malformed crop/source inputs | `SiteWidgetCropRulesTest`, `SiteWidgetSnapshotRulesTest` |
+| Geometry, malformed crop/source inputs | `SiteWidgetCropRulesTest`, `SiteWidgetGridSizingRulesTest`, `SiteWidgetSnapshotRulesTest` |
 | Fixed format and crop gestures | `SiteWidgetCropEditorInstrumentedTest` |
 | Persistence, profile gates, binding cleanup and expiry | `SiteWidgetStoreInstrumentedTest` |
 | Real Gecko/System WebView capture, reload, restored scroll, cookie isolation and private-mode rejection | `SiteWidgetCaptureInstrumentedTest`, `SiteWidgetPageRendererInstrumentedTest` |
