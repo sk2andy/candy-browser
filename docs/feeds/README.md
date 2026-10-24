@@ -31,6 +31,7 @@
 | Direct article bookmark and listening queue controls | `FeedArticleRowInstrumentedTest` |
 | Player controls, queue and unavailable voice | `FeedQueueContentInstrumentedTest`, `FeedQueueArtworkInstrumentedTest` |
 | Background speech, native media controls and access invalidation | `FeedMediaPlaybackServiceInstrumentedTest` |
+| Browser menu collection entries and external catalog launches | `FeedsBrowserFlowInstrumentedTest` |
 | Browser menu unread badge | `BrowserMenuBottomSheetInstrumentedTest#feedsUnreadChipTracksCountAndOpensDestination` |
 
 Android owns this feature. Shared menu capabilities default off on other platforms. Newsletter reception, podcasts and device sync remain separate work.

@@ -22,6 +22,21 @@ class FeedEntryStateRulesTest {
     }
 
     @Test
+    fun `catalog entry restores and old entries keep their inbox destination`() {
+        val entry = FeedsEntry(openCatalog = true)
+        val saved = requireNotNull(FeedEntryStateRules.save(entry, "profile", "tab", false))
+        assertEquals(entry, FeedEntryStateRules.restore(saved, "profile", "tab", false))
+        val previous = listOf("2", "profile", "tab", "false", "", "0", entry.invocationToken)
+        assertEquals(
+            entry.copy(openCatalog = false),
+            FeedEntryStateRules.restore(previous, "profile", "tab", false),
+        )
+        assertNull(
+            FeedEntryStateRules.restore(saved.dropLast(1) + "invalid", "profile", "tab", false)
+        )
+    }
+
+    @Test
     fun `new invocation differs while copies and restored entries retain launch identity`() {
         val entry = FeedsEntry(discoveryUrl = "https://publisher.example/feed")
         assertNotEquals(

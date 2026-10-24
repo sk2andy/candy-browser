@@ -83,7 +83,7 @@
         android:layout_height="wrap_content"
         android:gravity="end"
         android:paddingTop="8dp"
-        android:text="@string/rss_widget_all_feeds"
+        android:text="@string/browser_menu_discover_feeds"
         android:textColor="@color/candy_widget_accent"
         android:textSize="12sp"
         android:textStyle="bold" />

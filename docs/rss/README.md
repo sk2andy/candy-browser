@@ -4,7 +4,7 @@
 
 | User action | Result |
 | --- | --- |
-| Browser menu → RSS feeds on a regular page | Candy scans page markup for alternate RSS/Atom links and shows candidates; private tabs do not expose this action |
+| Browser menu / RSS settings / Reader home / widget → Discover feeds | Open the shared profile-owned source catalog; private browser tabs do not expose discovery |
 | Regular tab switcher → left Reader Studio button | Open Reader Studio directly to Library, without requiring an article; Settings stays on the right and the pinned-tabs jump stays beside the reader action |
 | Reader Studio → Feeds tab | Show all cached articles, newest first, in a lazy scrolling list; tabs, source selector and filter chips remain above the list |
 | All feeds selector | Open a searchable source sheet; choosing a source filters the list, choosing All feeds restores the combined inbox |
@@ -18,8 +18,9 @@
 | Enable feed notifications | Ask for Android notification permission when needed; notify once per feed using stable tag and ID |
 | A later article arrives | Replace the existing notification for that feed and update its title/body without starting a second alert |
 | Add RSS widget | Show the 50 latest cached articles with their source names in a scrollable list; tapping an article opens it in Reader Studio |
-| Resize RSS widget | More height reveals more article rows; shorter widgets keep the remaining articles reachable by scrolling, with the header and All feeds action fixed |
-| Widget All feeds or notification article | Open the Reader Studio Feeds inbox, optionally with the requested article above it; it is available again on Back |
+| Resize RSS widget | More height reveals more article rows; shorter widgets keep the remaining articles reachable by scrolling, with the header and Discover feeds action fixed |
+| Widget Discover feeds | Open the profile-owned source catalog; existing widget articles retain their Reader Studio handoff |
+| Notification article | Open the Reader Studio Feeds inbox with the requested article above it; it is available again on Back |
 | Change check interval | Settings → RSS feeds; WorkManager checks every 15 minutes to 24 hours, subject to Android scheduling |
 
 ## Ownership

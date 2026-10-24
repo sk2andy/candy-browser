@@ -171,7 +171,7 @@ internal fun ReaderStudioHomeScreen(
                     IconButton(onClick = onManageFeeds) {
                         Icon(
                             Icons.Default.Add,
-                            contentDescription = stringResource(R.string.reader_home_manage_feeds),
+                            contentDescription = stringResource(R.string.browser_menu_discover_feeds),
                         )
                     }
                 },
@@ -269,7 +269,7 @@ internal fun ReaderStudioHomeScreen(
                     feeds.isEmpty() -> ReaderHomeEmpty(
                         title = stringResource(R.string.reader_home_no_feeds_title),
                         message = stringResource(R.string.reader_home_no_feeds_message),
-                        action = stringResource(R.string.reader_home_manage_feeds),
+                        action = stringResource(R.string.browser_menu_discover_feeds),
                         onAction = onManageFeeds,
                         modifier = Modifier.weight(1f),
                     )
@@ -284,7 +284,7 @@ internal fun ReaderStudioHomeScreen(
                         } else {
                             stringResource(R.string.reader_home_no_articles_message)
                         },
-                        action = stringResource(R.string.reader_home_manage_feeds),
+                        action = stringResource(R.string.browser_menu_discover_feeds),
                         onAction = onManageFeeds,
                         modifier = Modifier.weight(1f),
                     )
@@ -615,7 +615,7 @@ private fun FeedSourcePicker(
         ) {
             Icon(Icons.Default.Settings, contentDescription = null)
             Spacer(Modifier.width(8.dp))
-            Text(stringResource(R.string.reader_home_manage_feeds))
+            Text(stringResource(R.string.browser_menu_discover_feeds))
         }
     }
 }

@@ -2065,7 +2065,7 @@ private fun BrowserFeatureMenuItem.localizedLabel(): String = dynamicLabel ?: wh
     BrowserFeatureMenuLabelKey.ParkAddressBarRight -> "Adressleiste rechts parken"
     BrowserFeatureMenuLabelKey.Feeds -> "Feeds"
     BrowserFeatureMenuLabelKey.Library -> "Bibliothek"
-    BrowserFeatureMenuLabelKey.DiscoverFeeds -> "Feeds auf dieser Seite finden"
+    BrowserFeatureMenuLabelKey.DiscoverFeeds -> "Feeds entdecken"
     BrowserFeatureMenuLabelKey.Reader -> "Lesemodus"
     BrowserFeatureMenuLabelKey.Translate -> "Übersetzen"
     BrowserFeatureMenuLabelKey.FindInPage -> "Auf Seite suchen"

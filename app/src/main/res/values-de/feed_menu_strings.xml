@@ -4,7 +4,7 @@
     <string name="browser_menu_workflows_group">Eigene Abläufe</string>
     <string name="browser_menu_feeds">Feeds</string>
     <string name="browser_menu_library">Bibliothek</string>
-    <string name="browser_menu_discover_feeds">Feeds auf dieser Seite finden</string>
+    <string name="browser_menu_discover_feeds">Feeds entdecken</string>
     <string name="browser_menu_feed_unread_count">%1$d ungelesen</string>
     <string name="browser_menu_section_expanded">Ausgeklappt</string>
     <string name="browser_menu_section_collapsed">Eingeklappt</string>

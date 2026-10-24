@@ -560,7 +560,7 @@ internal fun BoxScope.BrowserAddressChrome(
         onOpenLibrary = onOpenLibrary,
         onDiscoverFeeds = onDiscoverFeeds,
         unreadFeedCount = unreadFeedCount,
-        canDiscoverFeeds = ReaderStudioSessionRules.isSupportedSource(selectedTab.url),
+        canDiscoverFeeds = !selectedTab.isIncognito,
         onFavorites = {
             onAddressEditorDismiss()
             onOpenFavorites()

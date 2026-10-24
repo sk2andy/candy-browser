@@ -262,6 +262,7 @@ internal fun BrowserScreen(
     hardwareTabChangeRequestId: Int = 0,
     openFeedsRequestId: Int = 0,
     openFeedQueue: Boolean = false,
+    openFeedCatalog: Boolean = false,
 ) {
     val activeProfileLocked = controller.isActiveProfileLocked
     LaunchedEffect(controller, activeProfileLocked) {
@@ -928,7 +929,10 @@ internal fun BrowserScreen(
         if (openFeedsRequestId > 0 && !selectedTab.isIncognito) {
             closeTabOverview()
             openFeedCollection(
-                FeedsEntry(queueRequestId = openFeedsRequestId.takeIf { openFeedQueue } ?: 0),
+                FeedsEntry(
+                    queueRequestId = openFeedsRequestId.takeIf { openFeedQueue } ?: 0,
+                    openCatalog = openFeedCatalog,
+                ),
             )
         }
     }
@@ -1883,7 +1887,7 @@ internal fun BrowserScreen(
             onOpenLibrary = if (selectedTab.isIncognito) null else {
                 { openFeedCollection(FeedsEntry(libraryOnly = true)) }
             },
-            onDiscoverFeeds = { openFeedCollection(FeedsEntry(discoveryUrl = selectedTab.url)) },
+            onDiscoverFeeds = { openFeedCollection(FeedsEntry(openCatalog = true)) },
             unreadFeedCount = feedState.unreadCount,
             onSettings = {
                 settingsDestination = SettingsDestination.Home
@@ -1946,30 +1950,6 @@ internal fun BrowserScreen(
                     "${controller.activeProfileId}:${selectedTab.id}:${entry.libraryOnly}",
                     content,
                 )
-            }
-        }
-
-        feedsEntry?.let { entry ->
-            val content: @Composable () -> Unit = {
-                key(feedRepository) {
-                    FeedsHost(
-                        repository = feedRepository,
-                        entry = entry,
-                        progressScope = feedsProgressScope,
-                        onOpenOriginal = { url ->
-                            feedsReturnEntry = entry.copy(discoveryUrl = null, queueRequestId = 0)
-                            feedsEntry = null
-                            readerStudioSession = null
-                            controller.openUrl(url)
-                        },
-                        onDismiss = { feedsEntry = null; feedsReturnEntry = null },
-                    )
-                }
-            }
-            if (feedRepository.isPrivate) {
-                CompositionLocalProvider(LocalSaveableStateRegistry provides null, content = content)
-            } else {
-                feedsSavedState.SaveableStateProvider("${controller.activeProfileId}:${selectedTab.id}:${entry.libraryOnly}", content)
             }
         }
 
@@ -2099,9 +2079,7 @@ internal fun BrowserScreen(
                     },
                     initialTab = readerStudioHomeInitialTab,
                     onManageFeeds = {
-                        context.startActivity(
-                            dev.sk2andy.materialbrowser.RssFeedsActivity.intent(context, "", false),
-                        )
+                        openFeedCollection(FeedsEntry(openCatalog = true))
                     },
                 )
             }

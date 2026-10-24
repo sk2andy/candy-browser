@@ -3,6 +3,7 @@ package dev.sk2andy.materialbrowser.ui.feeds
 import android.content.Intent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsOn
@@ -74,6 +75,50 @@ class FeedsBrowserFlowInstrumentedTest {
         repository?.let {
             runBlocking { FeedRepository.deleteProfile(context, it.profileId).getOrThrow() }
         }
+    }
+
+    @Test
+    fun overflowFeedsAndLibraryOpenSingleHostAndReopenAfterBack() {
+        composeRule.activityRule.scenario.onActivity { activity ->
+            val controller = activity.browserControllerForTesting()
+            if (controller.selectedTab.isIncognito) controller.createTab(isIncognito = false)
+        }
+        val closeInput = context.getString(R.string.cd_close_address_input)
+        if (
+            composeRule
+                .onAllNodesWithContentDescription(closeInput)
+                .fetchSemanticsNodes()
+                .isNotEmpty()
+        ) {
+            composeRule.onNodeWithContentDescription(closeInput).performClick()
+        }
+        listOf(R.string.browser_menu_feeds, R.string.browser_menu_library, R.string.browser_menu_feeds)
+            .forEach { destination ->
+                openMenuItem(destination)
+                composeRule.onAllNodesWithTag("feeds_screen").assertCountEquals(1)
+                composeRule.onNodeWithTag("feeds_screen").assertIsDisplayed()
+                Espresso.pressBack()
+                composeRule.onNodeWithTag("feeds_screen").assertDoesNotExist()
+            }
+    }
+
+    @Test
+    fun discoverIntentReopensCatalogAfterReturningToCollection() {
+        val launchIntent = composeRule.activity.intent
+        repeat(2) {
+            composeRule.activityRule.scenario.onActivity { activity ->
+                activity.startActivity(FeedLaunchContract.discoverIntent(activity))
+            }
+            composeRule.waitUntil(15_000) {
+                composeRule.onAllNodesWithTag("feed_catalog_screen").fetchSemanticsNodes().isNotEmpty()
+            }
+            composeRule.onAllNodesWithTag("feed_catalog_screen").assertCountEquals(1)
+            composeRule.onNodeWithTag("feed_catalog_screen").assertIsDisplayed()
+            composeRule.onNodeWithTag("feed_catalog_back").performClick()
+            composeRule.onNodeWithTag("feed_catalog_screen").assertDoesNotExist()
+            composeRule.onNodeWithTag("feeds_screen").assertIsDisplayed()
+        }
+        composeRule.activityRule.scenario.onActivity { it.intent = launchIntent }
     }
 
     @Test

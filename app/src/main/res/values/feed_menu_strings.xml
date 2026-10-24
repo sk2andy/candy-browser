@@ -4,7 +4,7 @@
     <string name="browser_menu_workflows_group">Your workflows</string>
     <string name="browser_menu_feeds">Feeds</string>
     <string name="browser_menu_library">Library</string>
-    <string name="browser_menu_discover_feeds">Find feeds on this page</string>
+    <string name="browser_menu_discover_feeds">Discover feeds</string>
     <string name="browser_menu_feed_unread_count">%1$d unread</string>
     <string name="browser_menu_section_expanded">Expanded</string>
     <string name="browser_menu_section_collapsed">Collapsed</string>

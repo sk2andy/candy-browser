@@ -1,6 +1,5 @@
 package dev.sk2andy.materialbrowser.ui
 
-import android.content.Intent
 import android.net.Uri
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.EnterTransition
@@ -69,6 +68,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.data.RssSettingsStore
+import dev.sk2andy.materialbrowser.feeds.FeedLaunchContract
 import dev.sk2andy.materialbrowser.reader.rss.RssArticle
 import dev.sk2andy.materialbrowser.reader.rss.RssFeed
 import dev.sk2andy.materialbrowser.reader.rss.RssRefreshScheduler
@@ -462,11 +462,11 @@ internal fun RssSettingsPage(onBack: () -> Unit) {
             Button(
                 onClick = {
                     context.startActivity(
-                        Intent(context, dev.sk2andy.materialbrowser.RssFeedsActivity::class.java)
+                        FeedLaunchContract.discoverIntent(context),
                     )
                 }
             ) {
-                Text(stringResource(R.string.rss_manage_feeds))
+                Text(stringResource(R.string.browser_menu_discover_feeds))
             }
         }
     }

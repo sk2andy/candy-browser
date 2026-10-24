@@ -94,6 +94,8 @@ internal fun FeedsScreen(
     repository: FeedRepository,
     library: ReaderLibraryState,
     libraryOnly: Boolean = false,
+    initialCatalog: Boolean = false,
+    catalogRequestToken: String? = null,
     initialFeedUrl: String? = null,
     onInitialFeedConsumed: () -> Unit = {},
     libraryRequest: Int = 0,
@@ -131,7 +133,16 @@ internal fun FeedsScreen(
         if (repository.isPrivate) remember(repository) { mutableStateOf(initialFeedUrl.orEmpty()) }
         else rememberSaveable(repository) { mutableStateOf(initialFeedUrl.orEmpty()) }
     var sourceUrl by sourceUrlState
-    var catalogVisible by rememberSaveable(repository, libraryOnly) { mutableStateOf(false) }
+    var catalogVisible by rememberSaveable(repository, libraryOnly) {
+        mutableStateOf(initialCatalog && !libraryOnly)
+    }
+    var handledCatalogRequest by rememberSaveable(repository) { mutableStateOf<String?>(null) }
+    LaunchedEffect(initialCatalog, catalogRequestToken) {
+        if (initialCatalog && !libraryOnly && catalogRequestToken != handledCatalogRequest) {
+            catalogVisible = true
+            handledCatalogRequest = catalogRequestToken
+        }
+    }
     LaunchedEffect(initialFeedUrl) {
         if (initialFeedUrl != null) {
             sourceUrl = initialFeedUrl

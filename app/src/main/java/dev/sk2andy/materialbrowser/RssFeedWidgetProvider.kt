@@ -10,10 +10,10 @@ import android.net.Uri
 import android.os.Bundle
 import android.widget.RemoteViews
 import dev.sk2andy.materialbrowser.data.RssFeedStore
+import dev.sk2andy.materialbrowser.feeds.FeedLaunchContract
 import dev.sk2andy.materialbrowser.reader.rss.RssFeed
 import dev.sk2andy.materialbrowser.reader.rss.RssFeedNotifier
 import dev.sk2andy.materialbrowser.reader.rss.RssRefreshScheduler
-import dev.sk2andy.materialbrowser.reader.rss.RssReaderNavigation
 
 class RssFeedWidgetProvider : AppWidgetProvider() {
     override fun onUpdate(context: Context, manager: AppWidgetManager, ids: IntArray) {
@@ -70,7 +70,7 @@ class RssFeedWidgetProvider : AppWidgetProvider() {
                 PendingIntent.getActivity(
                     context,
                     OPEN_FEEDS_REQUEST_CODE,
-                    RssReaderNavigation.feedsIntent(context),
+                    FeedLaunchContract.discoverIntent(context),
                     PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
                 ),
             )

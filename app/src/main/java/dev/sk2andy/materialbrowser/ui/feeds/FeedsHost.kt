@@ -57,6 +57,7 @@ internal data class FeedsEntry(
     val libraryOnly: Boolean = false,
     val discoveryUrl: String? = null,
     val queueRequestId: Int = 0,
+    val openCatalog: Boolean = false,
     val invocationToken: String = UUID.randomUUID().toString(),
 )
 
@@ -261,6 +262,8 @@ internal fun FeedsHost(
             legacySnapshots =
                 library.snapshots.filter { it.sourceProfileId == null && !it.isPrivate },
             libraryOnly = entry.libraryOnly,
+            initialCatalog = entry.openCatalog,
+            catalogRequestToken = entry.invocationToken,
             initialFeedUrl = launchState.selectedFeedUrl,
             onInitialFeedConsumed = launchState::consumeSelectedFeed,
             libraryRequest = libraryRequest,

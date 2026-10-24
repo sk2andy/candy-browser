@@ -5,6 +5,7 @@ import androidx.activity.BackEventCompat
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsSelected
@@ -34,6 +35,28 @@ import org.junit.runner.RunWith
 class FeedCatalogNavigationInstrumentedTest {
     @get:Rule val composeRule = createAndroidComposeRule<ComponentActivity>()
     private val context: Context = ApplicationProvider.getApplicationContext()
+
+    @Test
+    fun directCatalogEntryRestoresDismissalWithoutReopening() {
+        val restoration = StateRestorationTester(composeRule)
+        showFeeds(initialCatalog = true, restoration = restoration)
+        composeRule.onNodeWithTag("feed_catalog_screen").assertIsDisplayed()
+        composeRule.onNodeWithTag("feed_catalog_back").performClick()
+        restoration.emulateSavedInstanceStateRestore()
+        composeRule.onNodeWithTag("feed_catalog_screen").assertDoesNotExist()
+        composeRule.onNodeWithTag("feeds_destination_inbox").assertIsSelected()
+    }
+
+    @Test
+    fun freshCatalogRequestReopensAfterPreviousDismissal() {
+        val request = mutableStateOf("first-launch")
+        showFeeds(initialCatalog = true, catalogRequestToken = { request.value })
+        composeRule.onNodeWithTag("feed_catalog_screen").assertIsDisplayed()
+        composeRule.onNodeWithTag("feed_catalog_back").performClick()
+        composeRule.onNodeWithTag("feed_catalog_screen").assertDoesNotExist()
+        composeRule.runOnIdle { request.value = "second-launch" }
+        composeRule.onNodeWithTag("feed_catalog_screen").assertIsDisplayed()
+    }
 
     @Test
     fun sourcesOfferCatalogAndDirectManualEntryWithoutLosingReturnDestination() {
@@ -178,6 +201,8 @@ class FeedCatalogNavigationInstrumentedTest {
         fontScale: Float = 1f,
         onDismiss: () -> Unit = {},
         isPrivate: Boolean = false,
+        initialCatalog: Boolean = false,
+        catalogRequestToken: () -> String = { "catalog-launch" },
         restoration: StateRestorationTester? = null,
     ) {
         val repository =
@@ -190,6 +215,8 @@ class FeedCatalogNavigationInstrumentedTest {
                     FeedsScreen(
                         repository = repository,
                         library = ReaderLibraryState(),
+                        initialCatalog = initialCatalog,
+                        catalogRequestToken = catalogRequestToken(),
                         onOpenArticle = {},
                         onOpenSnapshot = {},
                         onOpenOriginal = {},

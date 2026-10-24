@@ -298,7 +298,7 @@ internal object CandyBrowserMenuSettingsResources : BrowserMenuSettingsResources
         BrowserMenuEntry.DuplicateTab -> "Tab duplizieren"
         BrowserMenuEntry.OpenFeeds -> "Feeds"
         BrowserMenuEntry.OpenLibrary -> "Bibliothek"
-        BrowserMenuEntry.DiscoverFeeds -> "Feeds auf dieser Seite finden"
+        BrowserMenuEntry.DiscoverFeeds -> "Feeds entdecken"
         BrowserMenuEntry.Reader -> "Reader öffnen"
         BrowserMenuEntry.Translate -> "Seite übersetzen"
         BrowserMenuEntry.FindInPage -> "Auf Seite suchen"

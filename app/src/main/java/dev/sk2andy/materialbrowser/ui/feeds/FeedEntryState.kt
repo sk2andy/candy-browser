@@ -26,13 +26,14 @@ internal object FeedEntryStateRules {
         )
             return null
         return listOf(
-            "2",
+            "3",
             profileId,
             tabId,
             entry.libraryOnly.toString(),
             entry.discoveryUrl?.takeIf { it.length <= 4096 }?.let(FeedRules::safeUrl).orEmpty(),
             entry.queueRequestId.coerceAtLeast(0).toString(),
             entry.invocationToken,
+            entry.openCatalog.toString(),
         )
     }
 
@@ -46,8 +47,8 @@ internal object FeedEntryStateRules {
             isPrivate ||
                 profileId.isBlank() ||
                 tabId.isBlank() ||
-                values.size != 7 ||
-                values[0] != "2" ||
+                !((values.size == 7 && values[0] == "2") ||
+                    (values.size == 8 && values[0] == "3")) ||
                 values[1] != profileId ||
                 values[2] != tabId
         )
@@ -60,6 +61,8 @@ internal object FeedEntryStateRules {
             discoveryUrl = values[4].takeIf { it.length <= 4096 }?.let(FeedRules::safeUrl),
             queueRequestId = queueRequestId,
             invocationToken = values[6],
+            openCatalog =
+                if (values.size == 8) values[7].toBooleanStrictOrNull() ?: return null else false,
         )
     }
 }

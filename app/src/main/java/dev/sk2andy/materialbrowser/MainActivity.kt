@@ -186,6 +186,7 @@ open class MainActivity : AppCompatActivity() {
     private var rssReaderLaunchSequence = 0
     private var openFeedsRequestId by mutableIntStateOf(0)
     private var openFeedQueue by mutableStateOf(false)
+    private var openFeedCatalog by mutableStateOf(false)
     private var launcherAddressEditorRequestId by mutableIntStateOf(0)
     private var hardwareTabChangeRequestId by mutableIntStateOf(0)
     private var onboardingVisible by mutableStateOf(false)
@@ -776,6 +777,7 @@ open class MainActivity : AppCompatActivity() {
                         },
                         openFeedsRequestId = openFeedsRequestId,
                         openFeedQueue = openFeedQueue,
+                        openFeedCatalog = openFeedCatalog,
                         externalLaunchTabId = externalLaunchTabId,
                         onReturnToExternalApp = {
                             browserController.dismissExternalLinkPreview()
@@ -1671,7 +1673,9 @@ open class MainActivity : AppCompatActivity() {
 
     private fun openIntent(intent: Intent) {
         if (intent.action == FeedLaunchContract.ACTION_OPEN) {
+            val openCatalog = intent.getBooleanExtra(FeedLaunchContract.EXTRA_CATALOG, false)
             val profileId = intent.getStringExtra(FeedLaunchContract.EXTRA_PROFILE)
+                ?: browserController.activeProfileId.takeIf { openCatalog }
             val profile = browserController.localBrowserProfiles.firstOrNull { it.id == profileId }
             if (dev.sk2andy.materialbrowser.browser.ProfileProtectionSession.isAccessible(profile) &&
                 profileId != null &&
@@ -1686,6 +1690,7 @@ open class MainActivity : AppCompatActivity() {
                 rssReaderLaunchRequest = null
                 showIncomingBrowserNavigation()
                 openFeedQueue = intent.getBooleanExtra(FeedLaunchContract.EXTRA_QUEUE, false)
+                openFeedCatalog = openCatalog
                 openFeedsRequestId++
             }
             return
