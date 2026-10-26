@@ -445,6 +445,8 @@
     <string name="settings_download_folder_invalid">Bruk et relativt mappenavn uten . eller .. segmenter.</string>
     <string name="settings_download_one_dm_session_title">Del øktdata med 1DM</string>
     <string name="settings_download_one_dm_session_summary">Deler informasjonskapsler, brukeragent og henvisningsadresse med 1DM, slik at nedlastinger som krever innlogging, kan fungere. Appen kan bruke dem for å få tilgang til økten din. Øktdata deles aldri under privat nettlesing.</string>
+    <string name="settings_download_flux_down_session_title">Del øktdata med FluxDown</string>
+    <string name="settings_download_flux_down_session_summary">Deler informasjonskapsler, brukeragent og henvisningsadresse med FluxDown, slik at nedlastinger som krever innlogging, kan fungere. Appen kan bruke dem for å få tilgang til økten din. Øktdata deles aldri under privat nettlesing.</string>
     <string name="settings_section_tabs">Faner</string>
     <string name="settings_tab_overview_mode">Oppsett av faneoversikt</string>
     <string name="settings_tab_stack_folder_mode">Stabelmappeutlegg</string>

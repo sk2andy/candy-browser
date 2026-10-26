@@ -445,6 +445,8 @@
     <string name="settings_download_folder_invalid">Brug et relativt mappenavn uden . eller .. segmenter.</string>
     <string name="settings_download_one_dm_session_title">Del sessionsdata med 1DM</string>
     <string name="settings_download_one_dm_session_summary">Deler cookies, brugeragent og henvisningsadresse med 1DM, så downloads, der kræver login, kan virke. Appen kan bruge dem til at få adgang til din session. Sessionsdata deles aldrig under privat browsing.</string>
+    <string name="settings_download_flux_down_session_title">Del sessionsdata med FluxDown</string>
+    <string name="settings_download_flux_down_session_summary">Deler cookies, brugeragent og henvisningsadresse med FluxDown, så downloads, der kræver login, kan virke. Appen kan bruge dem til at få adgang til din session. Sessionsdata deles aldrig under privat browsing.</string>
     <string name="settings_section_tabs">Faneblade</string>
     <string name="settings_tab_overview_mode">Faneoversigtslayout</string>
     <string name="settings_tab_stack_folder_mode">Stabelmappelayout</string>

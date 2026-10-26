@@ -445,6 +445,8 @@
     <string name="settings_download_folder_invalid">Използвайте относително име на папката без . Или... сегменти.</string>
     <string name="settings_download_one_dm_session_title">Споделяне на данни от сесията с 1DM</string>
     <string name="settings_download_one_dm_session_summary">Споделя бисквитки, идентификатор на браузъра и реферер с 1DM за изтегляния с вход в профил. Приложението може да ги използва за достъп до сесията ви. Данните на сесията никога не се споделят при частно сърфиране.</string>
+    <string name="settings_download_flux_down_session_title">Споделяне на данни от сесията с FluxDown</string>
+    <string name="settings_download_flux_down_session_summary">Споделя бисквитки, идентификатор на браузъра и реферер с FluxDown за изтегляния с вход в профил. Приложението може да ги използва за достъп до сесията ви. Данните на сесията никога не се споделят при частно сърфиране.</string>
     <string name="settings_section_tabs">Раздели</string>
     <string name="settings_tab_overview_mode">Дизайн на преглед на раздела</string>
     <string name="settings_tab_stack_folder_mode">Дизайн на папката</string>

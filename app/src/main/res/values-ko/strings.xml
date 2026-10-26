@@ -440,6 +440,8 @@
     <string name="settings_download_folder_invalid">관련 폴더 이름을 사용하지 않습니다 . 아니면.. 세그먼트</string>
     <string name="settings_download_one_dm_session_title">세션 데이터를 1DM와 공유합니다.</string>
     <string name="settings_download_one_dm_session_summary">로그인이 필요한 다운로드를 지원하기 위해 쿠키, 사용자 에이전트 및 참조 페이지를 1DM과 공유합니다. 해당 앱이 이 정보로 세션에 접근할 수 있습니다. 시크릿 브라우징에서는 세션 데이터를 공유하지 않습니다.</string>
+    <string name="settings_download_flux_down_session_title">세션 데이터를 FluxDown와 공유합니다.</string>
+    <string name="settings_download_flux_down_session_summary">로그인이 필요한 다운로드를 지원하기 위해 쿠키, 사용자 에이전트 및 참조 페이지를 FluxDown과 공유합니다. 해당 앱이 이 정보로 세션에 접근할 수 있습니다. 시크릿 브라우징에서는 세션 데이터를 공유하지 않습니다.</string>
     <string name="settings_section_tabs">탭</string>
     <string name="settings_tab_overview_mode">탭 개요 레이아웃</string>
     <string name="settings_tab_stack_folder_mode">스택 폴더 레이아웃</string>

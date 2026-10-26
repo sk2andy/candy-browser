@@ -455,6 +455,8 @@
     <string name="settings_download_folder_invalid">Используйте относительное имя папки без сегментов . и ..</string>
     <string name="settings_download_one_dm_session_title">Передавать данные сеанса в 1DM</string>
     <string name="settings_download_one_dm_session_summary">Передавать в 1DM файлы cookie, user agent и referrer для загрузок, требующих входа в аккаунт. Приложение может использовать их для доступа к вашему сеансу. В приватном режиме данные сеанса никогда не передаются.</string>
+    <string name="settings_download_flux_down_session_title">Передавать данные сеанса в FluxDown</string>
+    <string name="settings_download_flux_down_session_summary">Передавать в FluxDown файлы cookie, user agent и referrer для загрузок, требующих входа в аккаунт. Приложение может использовать их для доступа к вашему сеансу. В приватном режиме данные сеанса никогда не передаются.</string>
     <string name="settings_section_tabs">Вкладки</string>
     <string name="settings_tab_overview_mode">Вид обзора вкладок</string>
     <string name="settings_tab_stack_folder_mode">Вид папки группы вкладок</string>

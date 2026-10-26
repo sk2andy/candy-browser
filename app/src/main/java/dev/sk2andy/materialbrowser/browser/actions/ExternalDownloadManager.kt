@@ -24,7 +24,10 @@ data class ExternalDownloadManagerApp(
     val label: String,
     val protocol: ExternalDownloadProtocol,
     val isOneDm: Boolean,
-)
+) {
+    val isFluxDown: Boolean
+        get() = packageName == "com.fluxdown.app"
+}
 
 data class PendingDownloadChoice(
     val request: BrowserDownloadRequest,
@@ -52,6 +55,7 @@ class ExternalDownloadManager(private val context: Context) {
         } + listOfNotNull(
             knownApp(GOPEED_PACKAGE, GOPEED_ACTIVITY),
             knownApp(ARIA2_APP_PACKAGE, ARIA2_APP_ACTIVITY),
+            knownApp(FLUXDOWN_PACKAGE, FLUXDOWN_ACTIVITY),
         )
         val knownPackages = knownApps.mapTo(hashSetOf(), ExternalDownloadManagerApp::packageName)
         val mimeTypes = request?.mimeType?.let(::listOf) ?: PROBE_MIME_TYPES
@@ -106,6 +110,11 @@ class ExternalDownloadManager(private val context: Context) {
             Intent(Intent.ACTION_VIEW).apply {
                 component = ComponentName(app.packageName, app.activityName)
                 setDataAndType(Uri.parse(request.url), request.mimeType)
+                if (app.isFluxDown && settings.shareSessionDataWithFluxDown && allowSessionData) {
+                    request.cookies?.let { putExtra(FLUXDOWN_EXTRA_COOKIES, it) }
+                    request.userAgent?.let { putExtra(FLUXDOWN_EXTRA_USER_AGENT, it) }
+                    request.referrer?.let { putExtra(FLUXDOWN_EXTRA_REFERRER, it) }
+                }
             }
         }
 
@@ -208,6 +217,11 @@ class ExternalDownloadManager(private val context: Context) {
         const val GOPEED_ACTIVITY = "com.gopeed.gopeed.MainActivity"
         const val ARIA2_APP_PACKAGE = "com.gianlu.aria2app"
         const val ARIA2_APP_ACTIVITY = "com.gianlu.aria2app.LoadingActivity"
+        const val FLUXDOWN_PACKAGE = "com.fluxdown.app"
+        const val FLUXDOWN_ACTIVITY = "com.fluxdown.app.MainActivity"
+        const val FLUXDOWN_EXTRA_COOKIES = "Cookie"
+        const val FLUXDOWN_EXTRA_USER_AGENT = "User-Agent"
+        const val FLUXDOWN_EXTRA_REFERRER = "Referer"
         const val EXTRA_FILENAME = "extra_filename"
         const val EXTRA_COOKIES = "extra_cookies"
         const val EXTRA_USER_AGENT = "extra_useragent"

@@ -453,6 +453,8 @@
     <string name="settings_download_folder_invalid">Uporabi relativno ime mape brez . Ali pa ... segmentov.</string>
     <string name="settings_download_one_dm_session_title">Delitev podatkov o seji z 1DM</string>
     <string name="settings_download_one_dm_session_summary">Deli piškotke, identifikator brskalnika in napotitelja z 1DM, da omogoči prenose ob prijavi. Aplikacija jih lahko uporabi za dostop do vaše seje. Pri zasebnem brskanju se podatki seje nikoli ne delijo.</string>
+    <string name="settings_download_flux_down_session_title">Delitev podatkov o seji z FluxDown</string>
+    <string name="settings_download_flux_down_session_summary">Deli piškotke, identifikator brskalnika in napotitelja z FluxDown, da omogoči prenose ob prijavi. Aplikacija jih lahko uporabi za dostop do vaše seje. Pri zasebnem brskanju se podatki seje nikoli ne delijo.</string>
     <string name="settings_section_tabs">Zavihki</string>
     <string name="settings_tab_overview_mode">Načrt pregleda za zavihke</string>
     <string name="settings_tab_stack_folder_mode">Postavitev mape v kompletu</string>

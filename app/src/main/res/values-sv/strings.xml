@@ -445,6 +445,8 @@
     <string name="settings_download_folder_invalid">Använd ett relativt katalognamn utan . eller .. segment.</string>
     <string name="settings_download_one_dm_session_title">Dela sessionsdata med 1DM</string>
     <string name="settings_download_one_dm_session_summary">Delar kakor, användaragent och hänvisningsadress med 1DM så att hämtningar som kräver inloggning kan fungera. Appen kan använda dem för att komma åt din session. Sessionsdata delas aldrig vid privat surfning.</string>
+    <string name="settings_download_flux_down_session_title">Dela sessionsdata med FluxDown</string>
+    <string name="settings_download_flux_down_session_summary">Delar kakor, användaragent och hänvisningsadress med FluxDown så att hämtningar som kräver inloggning kan fungera. Appen kan använda dem för att komma åt din session. Sessionsdata delas aldrig vid privat surfning.</string>
     <string name="settings_section_tabs">Flikar</string>
     <string name="settings_tab_overview_mode">Fliköversiktslayout</string>
     <string name="settings_tab_stack_folder_mode">Stacka mappelayout</string>

@@ -425,6 +425,8 @@
     <string name="settings_download_folder_invalid">Usa un nombre de carpeta relativo sin segmentos . ni ...</string>
     <string name="settings_download_one_dm_session_title">Compartir datos de sesión con 1DM</string>
     <string name="settings_download_one_dm_session_summary">Comparte cookies, agente de usuario y referente con 1DM para permitir descargas con sesión iniciada. La aplicación puede usarlos para acceder a tu sesión. Los datos de sesión nunca se comparten en la navegación privada.</string>
+    <string name="settings_download_flux_down_session_title">Compartir datos de sesión con FluxDown</string>
+    <string name="settings_download_flux_down_session_summary">Comparte cookies, agente de usuario y referente con FluxDown para permitir descargas con sesión iniciada. La aplicación puede usarlos para acceder a tu sesión. Los datos de sesión nunca se comparten en la navegación privada.</string>
     <string name="settings_section_tabs">Pestañas</string>
     <string name="settings_tab_overview_mode">Diseño de la vista de pestañas</string>
     <string name="settings_tab_stack_folder_mode">Diseño de las carpetas de pilas</string>

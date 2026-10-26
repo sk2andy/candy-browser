@@ -14,6 +14,7 @@ class BrowserDownloadSettingsTest {
         assertEquals(DownloadManagerMode.BuiltIn, settings.managerMode)
         assertNull(settings.externalManagerId)
         assertFalse(settings.shareSessionDataWithOneDm)
+        assertFalse(settings.shareSessionDataWithFluxDown)
         assertNull(settings.downloadSubdirectory)
     }
 
@@ -23,11 +24,28 @@ class BrowserDownloadSettingsTest {
             managerMode = DownloadManagerMode.External,
             externalManagerId = "\n",
             shareSessionDataWithOneDm = true,
+            shareSessionDataWithFluxDown = true,
         ).normalized()
 
         assertEquals(DownloadManagerMode.BuiltIn, settings.managerMode)
         assertNull(settings.externalManagerId)
         assertTrue(settings.shareSessionDataWithOneDm)
+        assertTrue(settings.shareSessionDataWithFluxDown)
+    }
+
+    @Test
+    fun `session sharing preferences remain independent during normalization`() {
+        val fluxDownSettings = BrowserDownloadSettings(
+            shareSessionDataWithFluxDown = true,
+        ).normalized()
+        val oneDmSettings = BrowserDownloadSettings(
+            shareSessionDataWithOneDm = true,
+        ).normalized()
+
+        assertTrue(fluxDownSettings.shareSessionDataWithFluxDown)
+        assertFalse(fluxDownSettings.shareSessionDataWithOneDm)
+        assertTrue(oneDmSettings.shareSessionDataWithOneDm)
+        assertFalse(oneDmSettings.shareSessionDataWithFluxDown)
     }
 
     @Test

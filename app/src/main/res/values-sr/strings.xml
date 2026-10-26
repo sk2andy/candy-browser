@@ -449,6 +449,8 @@
     <string name="settings_download_folder_invalid">Користи име релативне фајлове без . или .. сегменти.</string>
     <string name="settings_download_one_dm_session_title">Споделите податке о сесији са 1DM</string>
     <string name="settings_download_one_dm_session_summary">Дели колачиће, идентификатор прегледача и реферер са 1DM-ом за преузимања уз пријаву. Апликација може да их користи за приступ вашој сесији. Подаци сесије никада се не деле током приватног прегледања.</string>
+    <string name="settings_download_flux_down_session_title">Споделите податке о сесији са FluxDown</string>
+    <string name="settings_download_flux_down_session_summary">Дели колачиће, идентификатор прегледача и реферер са FluxDown-ом за преузимања уз пријаву. Апликација може да их користи за приступ вашој сесији. Подаци сесије никада се не деле током приватног прегледања.</string>
     <string name="settings_section_tabs">Картице</string>
     <string name="settings_tab_overview_mode">Дизајн прегледа табела</string>
     <string name="settings_tab_stack_folder_mode">Дизајн папки за спал</string>

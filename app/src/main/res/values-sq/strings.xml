@@ -445,6 +445,8 @@
     <string name="settings_download_folder_invalid">Përdorni emrin e dosjes relative pa . apo .. segmentet.</string>
     <string name="settings_download_one_dm_session_title">Shpërndarja e të dhënave të seancës me 1DM</string>
     <string name="settings_download_one_dm_session_summary">Ndan cookies, identifikuesin e shfletuesit dhe referuesin me 1DM për të mundësuar shkarkimet me hyrje në llogari. Aplikacioni mund t’i përdorë për të hyrë në sesionin tuaj. Të dhënat e sesionit nuk ndahen kurrë gjatë shfletimit privat.</string>
+    <string name="settings_download_flux_down_session_title">Shpërndarja e të dhënave të seancës me FluxDown</string>
+    <string name="settings_download_flux_down_session_summary">Ndan cookies, identifikuesin e shfletuesit dhe referuesin me FluxDown për të mundësuar shkarkimet me hyrje në llogari. Aplikacioni mund t’i përdorë për të hyrë në sesionin tuaj. Të dhënat e sesionit nuk ndahen kurrë gjatë shfletimit privat.</string>
     <string name="settings_section_tabs">Skedat</string>
     <string name="settings_tab_overview_mode">Përshkrimi i tabelës</string>
     <string name="settings_tab_stack_folder_mode">Përzgjedhja e dosjeve të stalit</string>

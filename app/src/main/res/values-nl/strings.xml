@@ -445,6 +445,8 @@
     <string name="settings_download_folder_invalid">Gebruik een relatieve mapnaam zonder . of .. segmenten.</string>
     <string name="settings_download_one_dm_session_title">Sessiegegevens delen met 1DM</string>
     <string name="settings_download_one_dm_session_summary">Deelt cookies, user-agent en verwijzende URL met 1DM zodat downloads waarvoor je aangemeld moet zijn, werken. De app kan deze gebruiken om je sessie te openen. Sessiedata worden nooit gedeeld bij privébrowsen.</string>
+    <string name="settings_download_flux_down_session_title">Sessiegegevens delen met FluxDown</string>
+    <string name="settings_download_flux_down_session_summary">Deelt cookies, user-agent en verwijzende URL met FluxDown zodat downloads waarvoor je aangemeld moet zijn, werken. De app kan deze gebruiken om je sessie te openen. Sessiedata worden nooit gedeeld bij privébrowsen.</string>
     <string name="settings_section_tabs">Tabs</string>
     <string name="settings_tab_overview_mode">Taboverzicht-indeling</string>
     <string name="settings_tab_stack_folder_mode">Map-indeling stapelen</string>

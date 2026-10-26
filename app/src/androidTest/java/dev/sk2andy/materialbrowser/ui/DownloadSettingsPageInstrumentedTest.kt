@@ -6,6 +6,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsOn
+import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -121,7 +122,7 @@ class DownloadSettingsPageInstrumentedTest {
         composeRule.onNodeWithTag(DownloadSettingsTestTags.AskEveryTime)
             .performScrollTo().performClick().assertIsSelected()
         composeRule.onNodeWithTag(DownloadSettingsTestTags.OneDmSession)
-            .assertIsEnabled().assertIsOn()
+            .performScrollTo().assertIsEnabled().assertIsOn()
         composeRule.runOnIdle {
             assertEquals(DownloadManagerMode.AskEveryTime, settings.managerMode)
             assertNull(settings.externalManagerId)
@@ -138,6 +139,75 @@ class DownloadSettingsPageInstrumentedTest {
             assertNull(settings.externalManagerId)
             assertEquals("Candy/Documents", settings.downloadSubdirectory)
             assertEquals(true, settings.shareSessionDataWithOneDm)
+        }
+    }
+
+    @Test
+    fun fluxDownSessionSharingStaysIndependentAndRetainedWhenIrrelevant() {
+        var managers by mutableStateOf(listOf(
+            ExternalDownloadManagerApp(
+                id = "one-dm", packageName = "test.one.dm", activityName = "Download",
+                label = "1DM", protocol = ExternalDownloadProtocol.View, isOneDm = true,
+            ),
+            ExternalDownloadManagerApp(
+                id = "flux-down", packageName = "com.fluxdown.app", activityName = "MainActivity",
+                label = "FluxDown", protocol = ExternalDownloadProtocol.View, isOneDm = false,
+            ),
+            ExternalDownloadManagerApp(
+                id = "other", packageName = "test.other", activityName = "Download",
+                label = "Other downloader", protocol = ExternalDownloadProtocol.View, isOneDm = false,
+            ),
+        ))
+        var settings by mutableStateOf(BrowserDownloadSettings())
+        composeRule.setContent {
+            MaterialBrowserTheme(settings = AppearanceSettings()) {
+                DownloadsSettingsPage(
+                    settings = settings,
+                    externalManagers = managers,
+                    onSettingsChanged = { settings = it },
+                    onBack = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(DownloadSettingsTestTags.FluxDownSession)
+            .performScrollTo().assertIsNotEnabled().assertIsOff()
+        composeRule.onNodeWithTag(DownloadSettingsTestTags.AskEveryTime)
+            .performScrollTo().performClick()
+        composeRule.onNodeWithTag(DownloadSettingsTestTags.FluxDownSession)
+            .performScrollTo().assertIsEnabled().performClick().assertIsOn()
+        composeRule.onNodeWithTag(DownloadSettingsTestTags.OneDmSession)
+            .performScrollTo().assertIsEnabled().assertIsOff()
+
+        composeRule.onNodeWithTag(DownloadSettingsTestTags.externalManager("one-dm"))
+            .performScrollTo().performClick()
+        composeRule.onNodeWithTag(DownloadSettingsTestTags.FluxDownSession)
+            .performScrollTo().assertIsNotEnabled().assertIsOn().performClick()
+        composeRule.onNodeWithTag(DownloadSettingsTestTags.OneDmSession)
+            .performScrollTo().assertIsEnabled().performClick().assertIsOn()
+        composeRule.onNodeWithTag(DownloadSettingsTestTags.externalManager("flux-down"))
+            .performScrollTo().performClick()
+        composeRule.onNodeWithTag(DownloadSettingsTestTags.FluxDownSession)
+            .performScrollTo().assertIsEnabled().assertIsOn()
+        composeRule.onNodeWithTag(DownloadSettingsTestTags.OneDmSession)
+            .performScrollTo().assertIsNotEnabled().assertIsOn()
+
+        composeRule.onNodeWithTag(DownloadSettingsTestTags.externalManager("other"))
+            .performScrollTo().performClick()
+        composeRule.onNodeWithTag(DownloadSettingsTestTags.FluxDownSession)
+            .performScrollTo().assertIsNotEnabled().assertIsOn().performClick()
+        composeRule.onNodeWithTag(DownloadSettingsTestTags.BuiltIn)
+            .performScrollTo().performClick()
+        composeRule.onNodeWithTag(DownloadSettingsTestTags.FluxDownSession)
+            .performScrollTo().assertIsNotEnabled().assertIsOn()
+        composeRule.onNodeWithTag(DownloadSettingsTestTags.AskEveryTime)
+            .performScrollTo().performClick()
+        composeRule.runOnIdle { managers = emptyList() }
+        composeRule.onNodeWithTag(DownloadSettingsTestTags.FluxDownSession)
+            .performScrollTo().assertIsNotEnabled().assertIsOn()
+        composeRule.runOnIdle {
+            assertEquals(true, settings.shareSessionDataWithOneDm)
+            assertEquals(true, settings.shareSessionDataWithFluxDown)
         }
     }
 

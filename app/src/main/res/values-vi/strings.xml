@@ -440,6 +440,8 @@
     <string name="settings_download_folder_invalid">Sử dụng tên thư mục tương đối mà không cần . Hay là... các phân đoạn.</string>
     <string name="settings_download_one_dm_session_title">Chia sẻ dữ liệu phiên với 1DM</string>
     <string name="settings_download_one_dm_session_summary">Chia sẻ cookie, chuỗi nhận diện trình duyệt và trang giới thiệu với 1DM để tải xuống khi đã đăng nhập. Ứng dụng đó có thể dùng chúng để truy cập phiên của bạn. Dữ liệu phiên không bao giờ được chia sẻ khi duyệt web ẩn danh.</string>
+    <string name="settings_download_flux_down_session_title">Chia sẻ dữ liệu phiên với FluxDown</string>
+    <string name="settings_download_flux_down_session_summary">Chia sẻ cookie, chuỗi nhận diện trình duyệt và trang giới thiệu với FluxDown để tải xuống khi đã đăng nhập. Ứng dụng đó có thể dùng chúng để truy cập phiên của bạn. Dữ liệu phiên không bao giờ được chia sẻ khi duyệt web ẩn danh.</string>
     <string name="settings_section_tabs">Thẻ</string>
     <string name="settings_tab_overview_mode">Định dạng tổng quan tab</string>
     <string name="settings_tab_stack_folder_mode">Định dạng thư mục ngăn xếp</string>

@@ -445,6 +445,8 @@
     <string name="settings_download_folder_invalid">Користете релативно име на папка без тоа . Или... сегменти.</string>
     <string name="settings_download_one_dm_session_title">Споделување на податоците од сесијата со 1DM</string>
     <string name="settings_download_one_dm_session_summary">Споделува колачиња, идентификатор на прелистувачот и упатувач со 1DM за преземања со најава. Апликацијата може да ги користи за пристап до вашата сесија. Податоците од сесијата никогаш не се споделуваат при приватно прелистување.</string>
+    <string name="settings_download_flux_down_session_title">Споделување на податоците од сесијата со FluxDown</string>
+    <string name="settings_download_flux_down_session_summary">Споделува колачиња, идентификатор на прелистувачот и упатувач со FluxDown за преземања со најава. Апликацијата може да ги користи за пристап до вашата сесија. Податоците од сесијата никогаш не се споделуваат при приватно прелистување.</string>
     <string name="settings_section_tabs">Јазичиња</string>
     <string name="settings_tab_overview_mode">Дизајн на преглед на табела</string>
     <string name="settings_tab_stack_folder_mode">Дизајн на папката</string>

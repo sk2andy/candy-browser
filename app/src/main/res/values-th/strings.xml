@@ -440,6 +440,8 @@
     <string name="settings_download_folder_invalid">ใช้ชื่อแฟ้มญาติโดยไม่ต้อง หรือ.. หมวดหมู่</string>
     <string name="settings_download_one_dm_session_title">แบ่งปันข้อมูลการประชุมกับ 1DM</string>
     <string name="settings_download_one_dm_session_summary">แชร์คุกกี้ ข้อมูลตัวแทนผู้ใช้ และหน้าอ้างอิงกับ 1DM เพื่อให้ดาวน์โหลดที่ต้องเข้าสู่ระบบได้ แอปนั้นอาจใช้ข้อมูลเหล่านี้เข้าถึงเซสชันของคุณ ข้อมูลเซสชันจะไม่ถูกแชร์ในการท่องเว็บแบบไม่ระบุตัวตน</string>
+    <string name="settings_download_flux_down_session_title">แบ่งปันข้อมูลการประชุมกับ FluxDown</string>
+    <string name="settings_download_flux_down_session_summary">แชร์คุกกี้ ข้อมูลตัวแทนผู้ใช้ และหน้าอ้างอิงกับ FluxDown เพื่อให้ดาวน์โหลดที่ต้องเข้าสู่ระบบได้ แอปนั้นอาจใช้ข้อมูลเหล่านี้เข้าถึงเซสชันของคุณ ข้อมูลเซสชันจะไม่ถูกแชร์ในการท่องเว็บแบบไม่ระบุตัวตน</string>
     <string name="settings_section_tabs">แท็บ</string>
     <string name="settings_tab_overview_mode">การจัดทําภาพรวมแท็บ</string>
     <string name="settings_tab_stack_folder_mode">การจัดทําแฟ้มสตั๊ก</string>

@@ -440,6 +440,8 @@
     <string name="settings_download_folder_invalid">関連フォルダ名を使用する . もしくは... パーツ</string>
     <string name="settings_download_one_dm_session_title">セッションデータを 1DM と共有する</string>
     <string name="settings_download_one_dm_session_summary">ログインが必要なダウンロードを可能にするため、Cookie、ユーザーエージェント、参照元を 1DM と共有します。このアプリはそれらを使ってセッションにアクセスできる可能性があります。シークレットブラウジングではセッションデータは共有されません。</string>
+    <string name="settings_download_flux_down_session_title">セッションデータを FluxDown と共有する</string>
+    <string name="settings_download_flux_down_session_summary">ログインが必要なダウンロードを可能にするため、Cookie、ユーザーエージェント、参照元を FluxDown と共有します。このアプリはそれらを使ってセッションにアクセスできる可能性があります。シークレットブラウジングではセッションデータは共有されません。</string>
     <string name="settings_section_tabs">タブ</string>
     <string name="settings_tab_overview_mode">タブ概要のレイアウト</string>
     <string name="settings_tab_stack_folder_mode">スタックフォルダのレイアウト</string>

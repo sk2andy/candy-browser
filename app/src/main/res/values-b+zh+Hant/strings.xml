@@ -440,6 +440,8 @@
     <string name="settings_download_folder_invalid">使用無相對檔名稱 . 或是... 部分.</string>
     <string name="settings_download_one_dm_session_title">與 1DM 分享工作階段資料</string>
     <string name="settings_download_one_dm_session_summary">向 1DM 共享 Cookie、使用者代理和來源頁面，以便下載需要登入的內容。該應用可能使用這些資料訪問你的工作階段。無痕瀏覽期間絕不會共享工作階段資料。</string>
+    <string name="settings_download_flux_down_session_title">與 FluxDown 分享工作階段資料</string>
+    <string name="settings_download_flux_down_session_summary">向 FluxDown 共享 Cookie、使用者代理和來源頁面，以便下載需要登入的內容。該應用可能使用這些資料訪問你的工作階段。無痕瀏覽期間絕不會共享工作階段資料。</string>
     <string name="settings_section_tabs">分頁</string>
     <string name="settings_tab_overview_mode">標籤概述佈局</string>
     <string name="settings_tab_stack_folder_mode">堆檔案佈局</string>

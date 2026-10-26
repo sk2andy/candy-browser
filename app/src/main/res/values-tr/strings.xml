@@ -445,6 +445,8 @@
     <string name="settings_download_folder_invalid">İsimsiz bir dosya adı kullanın . Ya da ... Bölümler.</string>
     <string name="settings_download_one_dm_session_title">Oturum verilerini 1DM ile paylaşın</string>
     <string name="settings_download_one_dm_session_summary">Oturum gerektiren indirmelerin çalışması için çerezleri, kullanıcı aracısını ve yönlendiren adresi 1DM ile paylaşır. Uygulama bunları oturumunuza erişmek için kullanabilir. Gizli gezinmede oturum verileri asla paylaşılmaz.</string>
+    <string name="settings_download_flux_down_session_title">Oturum verilerini FluxDown ile paylaşın</string>
+    <string name="settings_download_flux_down_session_summary">Oturum gerektiren indirmelerin çalışması için çerezleri, kullanıcı aracısını ve yönlendiren adresi FluxDown ile paylaşır. Uygulama bunları oturumunuza erişmek için kullanabilir. Gizli gezinmede oturum verileri asla paylaşılmaz.</string>
     <string name="settings_section_tabs">Sekmeler</string>
     <string name="settings_tab_overview_mode">Sekme Özet Düzenlemesi</string>
     <string name="settings_tab_stack_folder_mode">Yığın klasör düzeni</string>
