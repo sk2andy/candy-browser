@@ -425,6 +425,8 @@
     <string name="settings_download_folder_invalid">Use um nome de pasta relativo sem segmentos . ou ...</string>
     <string name="settings_download_one_dm_session_title">Partilhar dados da sessão com o 1DM</string>
     <string name="settings_download_one_dm_session_summary">Partilha cookies, agente do utilizador e referenciador com o 1DM para permitir transferências com sessão iniciada. A aplicação pode usá-los para aceder à sua sessão. Os dados da sessão nunca são partilhados na navegação privada.</string>
+    <string name="settings_download_flux_down_session_title">Partilhar dados da sessão com o FluxDown</string>
+    <string name="settings_download_flux_down_session_summary">Partilha cookies, agente do utilizador e referenciador com o FluxDown para permitir transferências com sessão iniciada. A aplicação pode usá-los para aceder à sua sessão. Os dados da sessão nunca são partilhados na navegação privada.</string>
     <string name="settings_section_tabs">Separadores</string>
     <string name="settings_tab_overview_mode">Disposição da vista de separadores</string>
     <string name="settings_tab_stack_folder_mode">Disposição das pastas de pilhas</string>

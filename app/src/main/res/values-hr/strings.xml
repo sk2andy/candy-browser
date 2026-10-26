@@ -449,6 +449,8 @@
     <string name="settings_download_folder_invalid">Upotrijebite relativno ime fascikla bez toga . Ili... segmentima.</string>
     <string name="settings_download_one_dm_session_title">Podatke o sesiji podijeliti s 1DM</string>
     <string name="settings_download_one_dm_session_summary">Dijeli kolačiće, identifikator preglednika i referer s 1DM-om za preuzimanja uz prijavu. Aplikacija ih može koristiti za pristup vašoj sesiji. Podaci sesije nikad se ne dijele tijekom privatnog pregledavanja.</string>
+    <string name="settings_download_flux_down_session_title">Podatke o sesiji podijeliti s FluxDown</string>
+    <string name="settings_download_flux_down_session_summary">Dijeli kolačiće, identifikator preglednika i referer s FluxDown-om za preuzimanja uz prijavu. Aplikacija ih može koristiti za pristup vašoj sesiji. Podaci sesije nikad se ne dijele tijekom privatnog pregledavanja.</string>
     <string name="settings_section_tabs">Kartice</string>
     <string name="settings_tab_overview_mode">Raspored pregleda kartice</string>
     <string name="settings_tab_stack_folder_mode">Raspored fascikla u hrpi</string>

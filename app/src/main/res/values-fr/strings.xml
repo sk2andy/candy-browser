@@ -425,6 +425,8 @@
     <string name="settings_download_folder_invalid">Utilisez un nom de dossier relatif sans segments . ou ...</string>
     <string name="settings_download_one_dm_session_title">Partager les données de session avec 1DM</string>
     <string name="settings_download_one_dm_session_summary">Partage les cookies, l’agent utilisateur et le référent avec 1DM pour permettre les téléchargements connectés. L’application peut les utiliser pour accéder à votre session. Les données de session ne sont jamais partagées en navigation privée.</string>
+    <string name="settings_download_flux_down_session_title">Partager les données de session avec FluxDown</string>
+    <string name="settings_download_flux_down_session_summary">Partage les cookies, l’agent utilisateur et le référent avec FluxDown pour permettre les téléchargements connectés. L’application peut les utiliser pour accéder à votre session. Les données de session ne sont jamais partagées en navigation privée.</string>
     <string name="settings_section_tabs">Onglets</string>
     <string name="settings_tab_overview_mode">Disposition de l’aperçu des onglets</string>
     <string name="settings_tab_stack_folder_mode">Disposition des dossiers de piles</string>

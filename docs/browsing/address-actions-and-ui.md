@@ -200,17 +200,19 @@ lists the primary Ctrl chords.
 | Tab-actions presentation | `shared/src/commonMain/.../ui/TabActionsMenu.kt`; platform call-site cutover and iOS action-state wiring remain open |
 
 External download routing supports the built-in downloader, per-download selection, or one persisted
-verified manager. Verified external targets are 1DM, Gopeed, Aria2App, ADM, and Download Navi.
+verified manager. Verified external targets are 1DM, Gopeed, Aria2App, FluxDown, ADM, and Download Navi.
 Gopeed, Aria2App, ADM, and Download Navi receive only the normalized HTTP(S) URL and MIME type
-through an explicit `ACTION_VIEW` intent. 1DM
-session sharing remains separately opt-in and is never allowed for private tabs. If a selected app is
+through an explicit `ACTION_VIEW` intent. FluxDown receives the same URL/MIME handoff, with cookies,
+User-Agent and referrer only when its separate session-sharing setting is enabled. Both 1DM and
+FluxDown session sharing default to off and are never allowed for private tabs. If a selected app is
 missing or cannot be started, Candy falls back to the built-in downloader.
 
 | Manager discovery | Contract |
 | --- | --- |
-| 1DM, Gopeed, and Aria2App | Check the known exported, enabled activity directly, independent of MIME intent filters |
+| 1DM, Gopeed, Aria2App, and FluxDown | Check the known exported, enabled activity directly, independent of MIME intent filters |
 | Gopeed | Declare package visibility for `com.gopeed.gopeed`; target `com.gopeed.gopeed.MainActivity` without session or filename extras |
 | Aria2App | Declare package visibility for `com.gianlu.aria2app`; target its exported `com.gianlu.aria2app.LoadingActivity` without session or filename extras |
+| FluxDown | Declare package visibility for `com.fluxdown.app`; target its stable exported `com.fluxdown.app.MainActivity` with URL/MIME and opt-in `Cookie`, `User-Agent`, `Referer` string extras, matching the [v0.6.3 intake contract](https://github.com/zerx-lab/FluxDown/blob/v0.6.3/mobile/Android/app/src/main/java/com/fluxdown/app/ExternalDownloadActivity.kt); no filename extra |
 | ADM and Download Navi | Query compatible HTTP(S)/MIME handlers within the verified package allowlist |
 
 ## Change pattern

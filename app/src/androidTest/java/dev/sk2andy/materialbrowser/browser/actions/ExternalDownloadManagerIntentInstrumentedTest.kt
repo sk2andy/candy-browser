@@ -50,7 +50,10 @@ class ExternalDownloadManagerIntentInstrumentedTest {
         val intent = manager.createIntent(
             request,
             naviApp(),
-            BrowserDownloadSettings(shareSessionDataWithOneDm = true),
+            BrowserDownloadSettings(
+                shareSessionDataWithOneDm = true,
+                shareSessionDataWithFluxDown = true,
+            ),
             allowSessionData = true,
         )
 
@@ -69,7 +72,10 @@ class ExternalDownloadManagerIntentInstrumentedTest {
             val intent = manager.createIntent(
                 request,
                 gopeedApp(),
-                BrowserDownloadSettings(shareSessionDataWithOneDm = true),
+                BrowserDownloadSettings(
+                    shareSessionDataWithOneDm = true,
+                    shareSessionDataWithFluxDown = true,
+                ),
                 allowSessionData = allowSessionData,
             )
 
@@ -88,7 +94,10 @@ class ExternalDownloadManagerIntentInstrumentedTest {
             val intent = manager.createIntent(
                 request,
                 aria2App(),
-                BrowserDownloadSettings(shareSessionDataWithOneDm = true),
+                BrowserDownloadSettings(
+                    shareSessionDataWithOneDm = true,
+                    shareSessionDataWithFluxDown = true,
+                ),
                 allowSessionData = allowSessionData,
             )
 
@@ -98,6 +107,88 @@ class ExternalDownloadManagerIntentInstrumentedTest {
             assertEquals(ARIA2_APP_PACKAGE, intent.component?.packageName)
             assertEquals(ARIA2_APP_ACTIVITY, intent.component?.className)
             assertNull(intent.extras)
+        }
+    }
+
+    @Test
+    fun fluxDownUsesExplicitViewProtocolAndIndependentSessionOptIn() {
+        for (shareSessionData in listOf(true, false)) {
+            for (allowSessionData in listOf(true, false)) {
+                val intent = manager.createIntent(
+                    request,
+                    fluxDownApp(),
+                    BrowserDownloadSettings(
+                        shareSessionDataWithOneDm = true,
+                        shareSessionDataWithFluxDown = shareSessionData,
+                    ),
+                    allowSessionData = allowSessionData,
+                )
+
+                assertEquals("android.intent.action.VIEW", intent.action)
+                assertEquals("https://example.com/private.pdf", intent.dataString)
+                assertEquals("application/pdf", intent.type)
+                assertEquals(FLUXDOWN_PACKAGE, intent.component?.packageName)
+                assertEquals(FLUXDOWN_ACTIVITY, intent.component?.className)
+                if (shareSessionData && allowSessionData) {
+                    assertEquals("session=secret", intent.getStringExtra("Cookie"))
+                    assertEquals("Candy/1", intent.getStringExtra("User-Agent"))
+                    assertEquals("https://example.com/account", intent.getStringExtra("Referer"))
+                    assertEquals(setOf("Cookie", "User-Agent", "Referer"), intent.extras?.keySet())
+                } else {
+                    assertNull(intent.extras)
+                }
+            }
+        }
+    }
+
+    @Test
+    fun fluxDownSessionOptInDoesNotEnableOneDmSharing() {
+        val intent = manager.createIntent(
+            request,
+            oneDmApp(),
+            BrowserDownloadSettings(shareSessionDataWithFluxDown = true),
+            allowSessionData = true,
+        )
+
+        assertFalse(intent.hasExtra("extra_cookies"))
+        assertFalse(intent.hasExtra("extra_useragent"))
+        assertFalse(intent.hasExtra("extra_referer"))
+    }
+
+    @Test
+    fun fluxDownOmitsMissingSessionData() {
+        val intent = manager.createIntent(
+            request.copy(cookies = null, userAgent = null, referrer = null),
+            fluxDownApp(),
+            BrowserDownloadSettings(shareSessionDataWithFluxDown = true),
+            allowSessionData = true,
+        )
+
+        assertNull(intent.extras)
+    }
+
+    @Test
+    fun installedFluxDownIsDiscoveredWithoutMimeFilterMatching() {
+        assumeTrue("Requires real FluxDown installation", isPackageInstalled(FLUXDOWN_PACKAGE))
+
+        for (downloadRequest in listOf(null, request, request.copy(mimeType = "application/zip"))) {
+            val fluxDown = manager.discover(downloadRequest)
+                .singleOrNull { it.packageName == FLUXDOWN_PACKAGE }
+
+            assertNotNull(fluxDown)
+            assertTrue(requireNotNull(fluxDown).isFluxDown)
+            assertFalse(fluxDown.isOneDm)
+            assertEquals("view|$FLUXDOWN_PACKAGE", fluxDown.id)
+            assertEquals(FLUXDOWN_ACTIVITY, fluxDown.activityName)
+            assertTrue(fluxDown.label.isNotBlank())
+            assertNotNull(
+                manager.createIntent(
+                    downloadRequest ?: request,
+                    fluxDown,
+                    BrowserDownloadSettings(),
+                    allowSessionData = false,
+                ).resolveActivity(context.packageManager),
+            )
         }
     }
 
@@ -238,6 +329,15 @@ class ExternalDownloadManagerIntentInstrumentedTest {
         isOneDm = false,
     )
 
+    private fun fluxDownApp() = ExternalDownloadManagerApp(
+        id = "view|$FLUXDOWN_PACKAGE",
+        packageName = FLUXDOWN_PACKAGE,
+        activityName = FLUXDOWN_ACTIVITY,
+        label = "FluxDown",
+        protocol = ExternalDownloadProtocol.View,
+        isOneDm = false,
+    )
+
     private fun isPackageInstalled(packageName: String): Boolean {
         require(packageName.matches(Regex("[A-Za-z0-9._]+")))
         val output = ParcelFileDescriptor.AutoCloseInputStream(
@@ -251,6 +351,8 @@ class ExternalDownloadManagerIntentInstrumentedTest {
         const val GOPEED_ACTIVITY = "com.gopeed.gopeed.MainActivity"
         const val ARIA2_APP_PACKAGE = "com.gianlu.aria2app"
         const val ARIA2_APP_ACTIVITY = "com.gianlu.aria2app.LoadingActivity"
+        const val FLUXDOWN_PACKAGE = "com.fluxdown.app"
+        const val FLUXDOWN_ACTIVITY = "com.fluxdown.app.MainActivity"
         const val NAVI_PACKAGE = "com.tachibana.downloader"
         const val NAVI_ACTIVITY = "com.tachibana.downloader.ui.adddownload.AddDownloadActivity"
     }

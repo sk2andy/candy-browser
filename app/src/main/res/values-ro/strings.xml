@@ -449,6 +449,8 @@
     <string name="settings_download_folder_invalid">Foloseşte un nume de dosar relativ fără . Sau ... segmente.</string>
     <string name="settings_download_one_dm_session_title">Partajarea datelor de sesiune cu 1DM</string>
     <string name="settings_download_one_dm_session_summary">Partajează cookie-uri, identificatorul browserului și referentul cu 1DM pentru descărcări cu autentificare. Aplicația le poate folosi pentru a accesa sesiunea dvs. Datele sesiunii nu sunt partajate niciodată în navigarea privată.</string>
+    <string name="settings_download_flux_down_session_title">Partajarea datelor de sesiune cu FluxDown</string>
+    <string name="settings_download_flux_down_session_summary">Partajează cookie-uri, identificatorul browserului și referentul cu FluxDown pentru descărcări cu autentificare. Aplicația le poate folosi pentru a accesa sesiunea dvs. Datele sesiunii nu sunt partajate niciodată în navigarea privată.</string>
     <string name="settings_section_tabs">File</string>
     <string name="settings_tab_overview_mode">Layout de vizualizare tabă</string>
     <string name="settings_tab_stack_folder_mode">Dispoziția dosarului stack</string>

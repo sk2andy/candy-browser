@@ -45,6 +45,11 @@ internal fun DownloadsSettingsPage(
         DownloadManagerMode.AskEveryTime -> externalManagers.any(ExternalDownloadManagerApp::isOneDm)
         DownloadManagerMode.External -> selectedExternalManager?.isOneDm == true
     }
+    val fluxDownRelevant = when (settings.managerMode) {
+        DownloadManagerMode.BuiltIn -> false
+        DownloadManagerMode.AskEveryTime -> externalManagers.any(ExternalDownloadManagerApp::isFluxDown)
+        DownloadManagerMode.External -> selectedExternalManager?.isFluxDown == true
+    }
     SettingsPage(
         title = stringResource(R.string.settings_downloads_title),
         onBack = onBack,
@@ -155,6 +160,17 @@ internal fun DownloadsSettingsPage(
                     },
                     modifier = Modifier.testTag(DownloadSettingsTestTags.OneDmSession),
                 )
+                SettingsPreferenceDivider()
+                SettingsSwitch(
+                    title = stringResource(R.string.settings_download_flux_down_session_title),
+                    subtitle = stringResource(R.string.settings_download_flux_down_session_summary),
+                    checked = settings.shareSessionDataWithFluxDown,
+                    enabled = fluxDownRelevant,
+                    onCheckedChange = {
+                        onSettingsChanged(settings.copy(shareSessionDataWithFluxDown = it))
+                    },
+                    modifier = Modifier.testTag(DownloadSettingsTestTags.FluxDownSession),
+                )
         }
     }
     if (directoryDialogVisible) {
@@ -208,6 +224,7 @@ internal object DownloadSettingsTestTags {
     const val BuiltIn = "download_settings_manager_builtin"
     const val AskEveryTime = "download_settings_manager_ask"
     const val OneDmSession = "download_settings_one_dm_session"
+    const val FluxDownSession = "download_settings_flux_down_session"
     fun externalManager(id: String) = "download_settings_manager_$id"
     const val Directory = "download_settings_directory"
     const val DirectoryReset = "download_settings_directory_reset"

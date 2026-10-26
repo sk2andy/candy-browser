@@ -481,6 +481,8 @@
     <string name="settings_download_folder_invalid">Relativen Ordnernamen ohne .- oder ..-Segmente verwenden.</string>
     <string name="settings_download_one_dm_session_title">Sitzungsdaten mit 1DM teilen</string>
     <string name="settings_download_one_dm_session_summary">Teilt Cookies, User-Agent und Referrer mit 1DM, damit angemeldete Downloads funktionieren. Die App kann damit auf deine Sitzung zugreifen. Im privaten Modus werden Sitzungsdaten nie geteilt.</string>
+    <string name="settings_download_flux_down_session_title">Sitzungsdaten mit FluxDown teilen</string>
+    <string name="settings_download_flux_down_session_summary">Teilt Cookies, User-Agent und Referrer mit FluxDown, damit angemeldete Downloads funktionieren. Die App kann damit auf deine Sitzung zugreifen. Im privaten Modus werden Sitzungsdaten nie geteilt.</string>
     <string name="settings_section_tabs">Tabs</string>
     <string name="settings_tab_overview_mode">Darstellung der Tab-Übersicht</string>
     <string name="settings_tab_stack_folder_mode">Darstellung der Stack-Ordner</string>

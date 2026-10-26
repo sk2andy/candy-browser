@@ -491,11 +491,45 @@ class BrowserSessionStoreInstrumentedTest {
             managerMode = DownloadManagerMode.External,
             externalManagerId = "view|idm.internet.download.manager|idm.internet.download.manager.Downloader",
             shareSessionDataWithOneDm = true,
+            shareSessionDataWithFluxDown = true,
             downloadSubdirectory = "Candy/Documents",
         )
         store.saveDownloadSettings(settings)
 
         assertEquals(settings, store.loadDownloadSettings())
+    }
+
+    @Test
+    fun fluxDownSessionSharingDefaultsOffForExistingOneDmOptIn() {
+        preferences.edit()
+            .putBoolean("share_session_data_with_one_dm", true)
+            .commit()
+
+        val settings = BrowserSessionStore(context).loadDownloadSettings()
+
+        assertTrue(settings.shareSessionDataWithOneDm)
+        assertFalse(settings.shareSessionDataWithFluxDown)
+    }
+
+    @Test
+    fun fluxDownSessionSharingRoundTripsIndependently() {
+        val store = BrowserSessionStore(context)
+        val settings = BrowserDownloadSettings(
+            managerMode = DownloadManagerMode.External,
+            externalManagerId = "view|com.fluxdown.app",
+            shareSessionDataWithFluxDown = true,
+        )
+        store.saveDownloadSettings(settings)
+
+        assertEquals(settings, BrowserSessionStore(context).loadDownloadSettings())
+
+        val changed = settings.copy(
+            shareSessionDataWithOneDm = true,
+            shareSessionDataWithFluxDown = false,
+        )
+        store.saveDownloadSettings(changed)
+
+        assertEquals(changed, BrowserSessionStore(context).loadDownloadSettings())
     }
 
     @Test

@@ -1576,6 +1576,10 @@ class BrowserSessionStore internal constructor(
             KEY_SHARE_SESSION_DATA_WITH_ONE_DM,
             false,
         ),
+        shareSessionDataWithFluxDown = preferences.getBoolean(
+            KEY_SHARE_SESSION_DATA_WITH_FLUX_DOWN,
+            false,
+        ),
         downloadSubdirectory = preferences.getString(KEY_DOWNLOAD_SUBDIRECTORY, null),
     ).normalized()
 
@@ -1593,6 +1597,10 @@ class BrowserSessionStore internal constructor(
             .putBoolean(
                 KEY_SHARE_SESSION_DATA_WITH_ONE_DM,
                 normalized.shareSessionDataWithOneDm,
+            )
+            .putBoolean(
+                KEY_SHARE_SESSION_DATA_WITH_FLUX_DOWN,
+                normalized.shareSessionDataWithFluxDown,
             )
             .apply {
                 if (normalized.downloadSubdirectory == null) {
@@ -1828,6 +1836,7 @@ class BrowserSessionStore internal constructor(
         const val KEY_EXTERNAL_DOWNLOAD_MANAGER_ID = "external_download_manager_id"
         const val KEY_DOWNLOAD_SUBDIRECTORY = "download_subdirectory"
         const val KEY_SHARE_SESSION_DATA_WITH_ONE_DM = "share_session_data_with_one_dm"
+        const val KEY_SHARE_SESSION_DATA_WITH_FLUX_DOWN = "share_session_data_with_flux_down"
         const val KEY_WEB_CONTENT_EDGE_TO_EDGE = "web_content_edge_to_edge"
         const val DEFAULT_DISMISS_RESISTANCE_START_PERCENT = 40
         const val MIN_DISMISS_RESISTANCE_START_PERCENT = 10

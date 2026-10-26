@@ -445,6 +445,8 @@
     <string name="settings_download_folder_invalid">Χρησιμοποιήστε ένα σχετικό όνομα φακέλου χωρίς . ή .. Τμήματα.</string>
     <string name="settings_download_one_dm_session_title">Στοιχεία συνεδρίας Share με 1DM</string>
     <string name="settings_download_one_dm_session_summary">Μοιράζεται cookies, αναγνωριστικό προγράμματος περιήγησης και παραπέμπουσα διεύθυνση με το 1DM για λήψεις που απαιτούν σύνδεση. Η εφαρμογή μπορεί να τα χρησιμοποιήσει για πρόσβαση στη συνεδρία σας. Τα δεδομένα συνεδρίας δεν μοιράζονται ποτέ στην ιδιωτική περιήγηση.</string>
+    <string name="settings_download_flux_down_session_title">Στοιχεία συνεδρίας Share με FluxDown</string>
+    <string name="settings_download_flux_down_session_summary">Μοιράζεται cookies, αναγνωριστικό προγράμματος περιήγησης και παραπέμπουσα διεύθυνση με το FluxDown για λήψεις που απαιτούν σύνδεση. Η εφαρμογή μπορεί να τα χρησιμοποιήσει για πρόσβαση στη συνεδρία σας. Τα δεδομένα συνεδρίας δεν μοιράζονται ποτέ στην ιδιωτική περιήγηση.</string>
     <string name="settings_section_tabs">Καρτέλες</string>
     <string name="settings_tab_overview_mode">Διάταξη επισκόπησης καρτελών</string>
     <string name="settings_tab_stack_folder_mode">Διάταξη φακέλου στοίβας</string>

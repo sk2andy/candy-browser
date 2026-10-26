@@ -445,6 +445,8 @@
     <string name="settings_download_folder_invalid">Benotzt e relative Ordnernumm ouni . oder ... Segmenter.</string>
     <string name="settings_download_one_dm_session_title">Sessiounsdaten mat 1DM deelen</string>
     <string name="settings_download_one_dm_session_summary">Deelt Cookien, User-Agent a Referrer mat 1DM, fir datt Downloads mat Umeldung funktionéieren. D’App kann domat op deng Sessioun zougräifen. Sessiounsdate ginn ni beim private Surfe gedeelt.</string>
+    <string name="settings_download_flux_down_session_title">Sessiounsdaten mat FluxDown deelen</string>
+    <string name="settings_download_flux_down_session_summary">Deelt Cookien, User-Agent a Referrer mat FluxDown, fir datt Downloads mat Umeldung funktionéieren. D’App kann domat op deng Sessioun zougräifen. Sessiounsdate ginn ni beim private Surfe gedeelt.</string>
     <string name="settings_section_tabs">Tabs</string>
     <string name="settings_tab_overview_mode">Tab Iwwersiicht Layout</string>
     <string name="settings_tab_stack_folder_mode">Stack Ordner Layout</string>

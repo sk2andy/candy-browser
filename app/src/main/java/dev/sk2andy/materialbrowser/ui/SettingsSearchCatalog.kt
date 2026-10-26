@@ -476,6 +476,11 @@ internal fun settingsSearchDefinitions(
                 titleRes = R.string.settings_download_one_dm_session_title,
                 descriptionRes = R.string.settings_download_one_dm_session_summary,
             )
+        setting(
+                id = "settings_download_flux_down_session_title",
+                titleRes = R.string.settings_download_flux_down_session_title,
+                descriptionRes = R.string.settings_download_flux_down_session_summary,
+            )
     }
 
     settingsPage(

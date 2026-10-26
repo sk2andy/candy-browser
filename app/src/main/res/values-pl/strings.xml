@@ -452,6 +452,8 @@
     <string name="settings_download_folder_invalid">Użyj względnej nazwy folderu bez segmentów . lub ..</string>
     <string name="settings_download_one_dm_session_title">Udostępniaj dane sesji aplikacji 1DM</string>
     <string name="settings_download_one_dm_session_summary">Udostępnia pliki cookie, identyfikator przeglądarki i adres odsyłający aplikacji 1DM, aby działało pobieranie po zalogowaniu. Aplikacja może użyć ich do dostępu do Twojej sesji. Dane sesji nigdy nie są udostępniane w trybie prywatnym.</string>
+    <string name="settings_download_flux_down_session_title">Udostępniaj dane sesji aplikacji FluxDown</string>
+    <string name="settings_download_flux_down_session_summary">Udostępnia pliki cookie, identyfikator przeglądarki i adres odsyłający aplikacji FluxDown, aby działało pobieranie po zalogowaniu. Aplikacja może użyć ich do dostępu do Twojej sesji. Dane sesji nigdy nie są udostępniane w trybie prywatnym.</string>
     <string name="settings_section_tabs">Karty</string>
     <string name="settings_tab_overview_mode">Układ przeglądu kart</string>
     <string name="settings_tab_stack_folder_mode">Układ folderu stosu</string>

@@ -4,6 +4,7 @@ data class BrowserDownloadSettings(
     val managerMode: DownloadManagerMode = DownloadManagerMode.BuiltIn,
     val externalManagerId: String? = null,
     val shareSessionDataWithOneDm: Boolean = false,
+    val shareSessionDataWithFluxDown: Boolean = false,
     val downloadSubdirectory: String? = null,
 ) {
     fun normalized(): BrowserDownloadSettings {

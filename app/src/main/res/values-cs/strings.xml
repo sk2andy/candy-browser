@@ -452,6 +452,8 @@
     <string name="settings_download_folder_invalid">Použijte relativní název složky bez částí . nebo ..</string>
     <string name="settings_download_one_dm_session_title">Sdílet data relace s 1DM</string>
     <string name="settings_download_one_dm_session_summary">Sdílí cookies, identifikátor prohlížeče a odkazující stránku s 1DM, aby fungovalo stahování po přihlášení. Aplikace je může použít k přístupu k vaší relaci. Při soukromém prohlížení se data relace nikdy nesdílejí.</string>
+    <string name="settings_download_flux_down_session_title">Sdílet data relace s FluxDown</string>
+    <string name="settings_download_flux_down_session_summary">Sdílí cookies, identifikátor prohlížeče a odkazující stránku s FluxDown, aby fungovalo stahování po přihlášení. Aplikace je může použít k přístupu k vaší relaci. Při soukromém prohlížení se data relace nikdy nesdílejí.</string>
     <string name="settings_section_tabs">Panely</string>
     <string name="settings_tab_overview_mode">Rozložení přehledu panelů</string>
     <string name="settings_tab_stack_folder_mode">Rozložení složek skupin</string>
