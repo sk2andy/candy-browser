@@ -118,6 +118,12 @@ class StatusBarScrollAccessibilityService : AccessibilityService() {
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         if (event == null || event.eventType !in FOREGROUND_EVENT_TYPES) return
+        if (!BrowserSessionStore(this).loadStatusBarScrollEnabled()) {
+            candyIsForeground = false
+            stateRefreshHandler.removeCallbacks(refreshPageState)
+            removeOverlay()
+            return
+        }
         when (event.packageName?.toString()) {
             packageName -> {
                 candyIsForeground = true

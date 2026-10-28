@@ -8,8 +8,8 @@
     <string name="settings_status_bar_scroll_width_title">Πλάτος περιοχής αφής</string>
     <string name="settings_status_bar_scroll_width_summary">%1$d%% του πλάτους της οθόνης</string>
     <string name="settings_status_bar_scroll_accessibility_dialog_title">Να επιτραπεί η πρόσβαση προσβασιμότητας στο Candy;</string>
-    <string name="settings_status_bar_scroll_accessibility_dialog_message">Το Android απαιτεί μια υπηρεσία προσβασιμότητας για τη λήψη πατημάτων στη γραμμή κατάστασης του συστήματος. Ανοίξτε τις ρυθμίσεις προσβασιμότητας του Android και ενεργοποιήστε την κύλιση από τη γραμμή κατάστασης του Candy. Το Candy χρησιμοποιεί την υπηρεσία μόνο για αυτά τα πατήματα και δεν διαβάζει το περιεχόμενο των παραθύρων.</string>
-    <string name="settings_status_bar_scroll_accessibility_open">Άνοιγμα ρυθμίσεων προσβασιμότητας</string>
+    <string name="settings_status_bar_scroll_accessibility_dialog_message">Το Candy χρησιμοποιεί μια υπηρεσία προσβασιμότητας Android που ελέγχει τα ονόματα πακέτων από συμβάντα παραθύρων, για να διαπιστώσει αν το Candy βρίσκεται στο προσκήνιο. Ένα πάτημα στη γραμμή κατάστασης μεταφέρει τη σελίδα στην αρχή και ένα σύρσιμο ανοίγει τις ειδοποιήσεις ή τις γρήγορες ρυθμίσεις. Η υπηρεσία δεν διαβάζει περιεχόμενο παραθύρων ούτε κοινοποιεί αυτά τα δεδομένα. Συνεχίστε για να την ενεργοποιήσετε στις ρυθμίσεις Android.</string>
+    <string name="settings_status_bar_scroll_accessibility_open">Συμφωνώ και ανοίγω τις ρυθμίσεις</string>
     <string name="settings_status_bar_scroll_enable_for_domain">Ενεργοποίηση κύλισης από τη γραμμή κατάστασης για αυτόν τον ιστότοπο</string>
     <string name="settings_status_bar_scroll_disable_for_domain">Απενεργοποίηση κύλισης από τη γραμμή κατάστασης για αυτόν τον ιστότοπο</string>
 </resources>

@@ -2,6 +2,8 @@ package dev.sk2andy.materialbrowser.ui
 
 import dev.sk2andy.materialbrowser.shared.ui.settings.SettingsHeaderArtwork
 import dev.sk2andy.materialbrowser.shared.ui.settings.SettingsHeaderIllustration
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -427,8 +429,11 @@ internal fun TabsAndGesturesSettingsPage(
                     subtitle = stringResource(R.string.settings_status_bar_scroll_summary),
                     checked = isStatusBarScrollEnabled,
                     onCheckedChange = { enabled ->
-                        onStatusBarScrollEnabledChanged(enabled)
-                        if (enabled) showStatusBarScrollAccessibilityDialog = true
+                        if (enabled) {
+                            showStatusBarScrollAccessibilityDialog = true
+                        } else {
+                            onStatusBarScrollEnabledChanged(false)
+                        }
                     },
                     modifier = Modifier.testTag(TabSettingsTestTags.StatusBarScrollEnabled),
                 )
@@ -490,12 +495,16 @@ internal fun TabsAndGesturesSettingsPage(
                 Text(stringResource(R.string.settings_status_bar_scroll_accessibility_dialog_title))
             },
             text = {
-                Text(stringResource(R.string.settings_status_bar_scroll_accessibility_dialog_message))
+                Text(
+                    stringResource(R.string.settings_status_bar_scroll_accessibility_dialog_message),
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                )
             },
             confirmButton = {
                 TextButton(
                     onClick = {
                         showStatusBarScrollAccessibilityDialog = false
+                        onStatusBarScrollEnabledChanged(true)
                         onOpenStatusBarScrollAccessibilitySettings()
                     },
                 ) {

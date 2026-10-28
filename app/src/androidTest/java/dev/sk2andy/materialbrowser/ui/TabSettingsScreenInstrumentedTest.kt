@@ -128,6 +128,13 @@ class TabSettingsScreenInstrumentedTest {
             assertTrue(saves.isEmpty())
             assertTrue(previews.isEmpty())
         }
+        composeRule.onNodeWithTag(TabSettingsTestTags.StatusBarScrollEnabled)
+            .performScrollTo().performClick()
+        composeRule.onNodeWithText(context.getString(R.string.settings_status_bar_scroll_accessibility_dialog_message))
+            .assertIsDisplayed()
+        composeRule.onNodeWithText(context.getString(R.string.action_cancel)).assertIsDisplayed()
+        composeRule.onNodeWithText(context.getString(R.string.settings_status_bar_scroll_accessibility_open))
+            .assertIsDisplayed()
     }
 
     @Test
@@ -184,6 +191,13 @@ class TabSettingsScreenInstrumentedTest {
         composeRule.onNodeWithTag(TabSettingsTestTags.StatusBarScrollEnabled)
             .performScrollTo().performClick()
         composeRule.onNodeWithText(context.getString(R.string.action_cancel)).performClick()
+        composeRule.runOnIdle { assertFalse(enabled) }
+        slider.performScrollTo().assertIsNotEnabled()
+        composeRule.onNodeWithTag(TabSettingsTestTags.StatusBarScrollEnabled)
+            .performScrollTo().performClick()
+        composeRule.onNodeWithText(context.getString(R.string.settings_status_bar_scroll_accessibility_open))
+            .performClick()
+        composeRule.runOnIdle { assertTrue(enabled) }
         slider.performScrollTo().assertIsEnabled()
             .performSemanticsAction(SemanticsActions.SetProgress) { it(45f) }
         composeRule.runOnIdle {

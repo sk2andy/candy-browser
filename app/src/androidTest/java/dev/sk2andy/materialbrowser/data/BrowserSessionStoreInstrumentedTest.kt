@@ -69,6 +69,19 @@ class BrowserSessionStoreInstrumentedTest {
     }
 
     @Test
+    fun legacyStatusBarScrollRequiresNewConsent() {
+        preferences.edit().putBoolean("status_bar_scroll_enabled", true).commit()
+        val store = BrowserSessionStore(context)
+
+        assertFalse(store.loadStatusBarScrollEnabled())
+        store.saveStatusBarScrollEnabled(true)
+        assertTrue(BrowserSessionStore(context).loadStatusBarScrollEnabled())
+        store.saveStatusBarScrollEnabled(false)
+        assertFalse(BrowserSessionStore(context).loadStatusBarScrollEnabled())
+        assertTrue(preferences.getBoolean("status_bar_scroll_enabled", false))
+    }
+
+    @Test
     fun legacyTabGetsCurrentTimestampAndRoundTrips() {
         preferences.edit()
             .putString("tabs", """[{"id":"legacy","title":"Alt","url":"https://example.com"}]""")

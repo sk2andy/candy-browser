@@ -541,6 +541,7 @@ The authoritative #323 patch (SHA-256 `1135e69f695f5fc8307adefaa2af6ffa2b4240529
 | --- | --- | --- |
 | Status-bar tap to scroll to top | Gestures → Gestures / status-bar group | Global enabled setting; enabling shows the existing accessibility explanation. Platform service remains Android-only. |
 | Status-bar target width | Same group | Existing bounded percent range/default from `StatusBarScrollRules`; always visible, disabled while global feature is off. Saved width retained, no preview/save writes while disabled. Drag previews; release saves and signals completion. |
+| Status-bar scroll consent | Same group | Enabling first shows the accessibility disclosure; cancellation leaves the feature off. Agreement enables it and opens Android accessibility settings. Existing installations must opt in again after the disclosure changes; their target width and per-site choices remain saved. |
 | Status-bar menu action location | Menu actions / Page | Available only while feature enabled; saved location is retained when hidden. Existing Android Firefox-extension exclusion is unchanged. |
 
 Both title and width are discoverable through Settings search with stable resource-based identifiers under Gestures. The width slider exposes its localized title and displayed percentage to accessibility services. The runtime/service/store/manifest wiring comes from the supplied #323 patch; #320 grouping, navigation, search return behavior, five retained toolbar slots and shared Core restrictions remain intact.

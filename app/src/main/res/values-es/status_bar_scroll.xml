@@ -8,8 +8,8 @@
     <string name="settings_status_bar_scroll_width_title">Anchura del área táctil</string>
     <string name="settings_status_bar_scroll_width_summary">%1$d%% del ancho de la pantalla</string>
     <string name="settings_status_bar_scroll_accessibility_dialog_title">¿Permitir el acceso de accesibilidad a Candy?</string>
-    <string name="settings_status_bar_scroll_accessibility_dialog_message">Android requiere un servicio de accesibilidad para recibir toques en la barra de estado del sistema. Abre los ajustes de accesibilidad de Android y activa el desplazamiento desde la barra de estado de Candy. Candy solo usa el servicio para estos toques y no lee el contenido de las ventanas.</string>
-    <string name="settings_status_bar_scroll_accessibility_open">Abrir ajustes de accesibilidad</string>
+    <string name="settings_status_bar_scroll_accessibility_dialog_message">Candy usa un servicio de accesibilidad de Android que comprueba los nombres de paquetes de los eventos de ventana para saber si Candy está en primer plano. Un toque en la barra de estado desplaza la página al inicio y un deslizamiento abre las notificaciones o los ajustes rápidos. El servicio no lee el contenido de las ventanas ni comparte estos datos. Continúa para activarlo en los ajustes de Android.</string>
+    <string name="settings_status_bar_scroll_accessibility_open">Aceptar y abrir ajustes</string>
     <string name="settings_status_bar_scroll_enable_for_domain">Activar el desplazamiento desde la barra de estado para este sitio</string>
     <string name="settings_status_bar_scroll_disable_for_domain">Desactivar el desplazamiento desde la barra de estado para este sitio</string>
 </resources>

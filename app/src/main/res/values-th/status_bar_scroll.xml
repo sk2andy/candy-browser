@@ -8,8 +8,8 @@
     <string name="settings_status_bar_scroll_width_title">ความกว้างของพื้นที่แตะ</string>
     <string name="settings_status_bar_scroll_width_summary">%1$d%% ของความกว้างหน้าจอ</string>
     <string name="settings_status_bar_scroll_accessibility_dialog_title">อนุญาตให้ Candy เข้าถึงการช่วยเหลือพิเศษไหม</string>
-    <string name="settings_status_bar_scroll_accessibility_dialog_message">Android ต้องใช้บริการการช่วยเหลือพิเศษเพื่อรับการแตะบนแถบสถานะของระบบ เปิดการตั้งค่าการช่วยเหลือพิเศษของ Android แล้วเปิดการเลื่อนผ่านแถบสถานะของ Candy Candy ใช้บริการนี้เฉพาะกับการแตะเหล่านี้ และไม่อ่านเนื้อหาหน้าต่าง</string>
-    <string name="settings_status_bar_scroll_accessibility_open">เปิดการตั้งค่าการช่วยเหลือพิเศษ</string>
+    <string name="settings_status_bar_scroll_accessibility_dialog_message">Candy ใช้บริการการช่วยเหลือพิเศษของ Android เพื่อตรวจสอบชื่อแพ็กเกจจากเหตุการณ์ของหน้าต่างว่า Candy อยู่เบื้องหน้าหรือไม่ การแตะแถบสถานะจะเลื่อนหน้าไปด้านบน และการปัดจะเปิดการแจ้งเตือนหรือการตั้งค่าด่วน บริการนี้ไม่อ่านเนื้อหาหน้าต่างและไม่แชร์ข้อมูลดังกล่าว ดำเนินการต่อเพื่อเปิดบริการในการตั้งค่า Android</string>
+    <string name="settings_status_bar_scroll_accessibility_open">ยอมรับและเปิดการตั้งค่า</string>
     <string name="settings_status_bar_scroll_enable_for_domain">เปิดการเลื่อนผ่านแถบสถานะสำหรับเว็บไซต์นี้</string>
     <string name="settings_status_bar_scroll_disable_for_domain">ปิดการเลื่อนผ่านแถบสถานะสำหรับเว็บไซต์นี้</string>
 </resources>
