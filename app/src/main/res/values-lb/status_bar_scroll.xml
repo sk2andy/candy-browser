@@ -8,8 +8,8 @@
     <string name="settings_status_bar_scroll_width_title">Breet vum Tippberäich</string>
     <string name="settings_status_bar_scroll_width_summary">%1$d%% vun der Bildschiermbreet</string>
     <string name="settings_status_bar_scroll_accessibility_dialog_title">Candy Zougrëff op d’Bedienungshëllefe ginn?</string>
-    <string name="settings_status_bar_scroll_accessibility_dialog_message">Android brauch e Bedienungshëllefsdéngscht, fir Tippen op d’Systemstatusläischt z’erkennen. Maacht d’Android-Astellunge fir Bedienungshëllefen op an aktivéiert Candy-Scrollen iwwer d’Statusläischt. Candy benotzt den Déngscht nëmme fir dës Tippen a liest kee Fënsterinhalt.</string>
-    <string name="settings_status_bar_scroll_accessibility_open">Bedienungshëllefen opmaachen</string>
+    <string name="settings_status_bar_scroll_accessibility_dialog_message">Candy benotzt en Android-Bedienungshëllefsdéngscht, dee Paknimm vu Fënsterevenementer iwwerpréift, fir ze erkennen, ob Candy am Virdergrond ass. En Tipp op d’Statusläischt scrollt d’Säit no uewen; e Sträiche mécht d’Notifikatiounen oder d’Schnellastellungen op. Den Déngscht liest kee Fënsterinhalt an deelt dës Donnéeën net. Fuert weider, fir en an den Android-Astellungen z’aktivéieren.</string>
+    <string name="settings_status_bar_scroll_accessibility_open">Zoustëmmen an Astellungen opmaachen</string>
     <string name="settings_status_bar_scroll_enable_for_domain">Scrollen iwwer d’Statusläischt fir dëse Site aktivéieren</string>
     <string name="settings_status_bar_scroll_disable_for_domain">Scrollen iwwer d’Statusläischt fir dëse Site deaktivéieren</string>
 </resources>

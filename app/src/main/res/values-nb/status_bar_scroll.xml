@@ -8,8 +8,8 @@
     <string name="settings_status_bar_scroll_width_title">Bredde på trykkområdet</string>
     <string name="settings_status_bar_scroll_width_summary">%1$d%% av skjermbredden</string>
     <string name="settings_status_bar_scroll_accessibility_dialog_title">Gi Candy tilgjengelighetstilgang?</string>
-    <string name="settings_status_bar_scroll_accessibility_dialog_message">Android krever en tilgjengelighetstjeneste for å motta trykk på systemets statuslinje. Åpne tilgjengelighetsinnstillingene i Android, og aktiver Candy-rulling via statuslinjen. Candy bruker tjenesten bare til disse trykkene og leser ikke vindusinnhold.</string>
-    <string name="settings_status_bar_scroll_accessibility_open">Åpne tilgjengelighetsinnstillinger</string>
+    <string name="settings_status_bar_scroll_accessibility_dialog_message">Candy bruker en Android-tilgjengelighetstjeneste som sjekker pakkenavn fra vindushendelser for å se om Candy er i forgrunnen. Et trykk på statuslinjen ruller siden til toppen, og et sveip åpner varsler eller hurtiginnstillinger. Tjenesten leser ikke vindusinnhold og deler ikke disse dataene. Fortsett for å slå den på i Android-innstillingene.</string>
+    <string name="settings_status_bar_scroll_accessibility_open">Godta og åpne innstillinger</string>
     <string name="settings_status_bar_scroll_enable_for_domain">Aktiver rulling via statuslinjen for dette nettstedet</string>
     <string name="settings_status_bar_scroll_disable_for_domain">Deaktiver rulling via statuslinjen for dette nettstedet</string>
 </resources>

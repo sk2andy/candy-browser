@@ -8,8 +8,8 @@
     <string name="settings_status_bar_scroll_width_title">Szerokość obszaru dotyku</string>
     <string name="settings_status_bar_scroll_width_summary">%1$d%% szerokości ekranu</string>
     <string name="settings_status_bar_scroll_accessibility_dialog_title">Zezwolić Candy na dostęp do ułatwień dostępu?</string>
-    <string name="settings_status_bar_scroll_accessibility_dialog_message">Android wymaga usługi ułatwień dostępu do odbierania dotknięć systemowego paska stanu. Otwórz ustawienia ułatwień dostępu Androida i włącz przewijanie paskiem stanu Candy. Candy używa usługi tylko do tych dotknięć i nie odczytuje zawartości okien.</string>
-    <string name="settings_status_bar_scroll_accessibility_open">Otwórz ustawienia ułatwień dostępu</string>
+    <string name="settings_status_bar_scroll_accessibility_dialog_message">Candy korzysta z usługi ułatwień dostępu Androida, która sprawdza nazwy pakietów ze zdarzeń okien, aby ustalić, czy Candy jest na pierwszym planie. Dotknięcie paska stanu przewija stronę na górę, a przesunięcie otwiera powiadomienia lub szybkie ustawienia. Usługa nie odczytuje zawartości okien ani nie udostępnia tych danych. Kontynuuj, aby włączyć ją w ustawieniach Androida.</string>
+    <string name="settings_status_bar_scroll_accessibility_open">Zgadzam się i otwieram ustawienia</string>
     <string name="settings_status_bar_scroll_enable_for_domain">Włącz przewijanie paskiem stanu dla tej witryny</string>
     <string name="settings_status_bar_scroll_disable_for_domain">Wyłącz przewijanie paskiem stanu dla tej witryny</string>
 </resources>

@@ -108,13 +108,14 @@ class StatusBarScrollAcceptanceInstrumentedTest {
         assertEquals("Disabled width control must retain its saved value", 20, targetWidthPercent.intValue)
         toggle.performClick()
         composeRule.waitForIdle()
-        assertEquals(true, enabled.value)
+        assertEquals(false, enabled.value)
         composeRule.onNodeWithText(
             composeRule.activity.getString(R.string.settings_status_bar_scroll_accessibility_dialog_title),
         ).assertIsDisplayed()
         composeRule.onNodeWithText(
             composeRule.activity.getString(R.string.settings_status_bar_scroll_accessibility_open),
         ).performClick()
+        assertEquals(true, enabled.value)
         assertEquals(true, openedAccessibilitySettings)
 
         composeRule.waitForIdle()

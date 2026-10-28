@@ -1582,8 +1582,8 @@
     <string name="settings_status_bar_scroll_width_title">Breite der Tippfläche</string>
     <string name="settings_status_bar_scroll_width_summary">%1$d%% der Bildschirmbreite</string>
     <string name="settings_status_bar_scroll_accessibility_dialog_title">Candy-Bedienungshilfe aktivieren?</string>
-    <string name="settings_status_bar_scroll_accessibility_dialog_message">Android benötigt einen Bedienungshilfedienst, um Tippen in der Systemstatusleiste zu empfangen. Öffne die Android-Einstellungen für Bedienungshilfen und aktiviere dort Candy: Statusleisten-Scrollen. Candy verwendet den Dienst nur für diesen Tipp und liest keine Fensterinhalte.</string>
-    <string name="settings_status_bar_scroll_accessibility_open">Bedienungshilfen öffnen</string>
+    <string name="settings_status_bar_scroll_accessibility_dialog_message">Candy verwendet einen Android-Bedienungshilfedienst, um anhand von Paketnamen aus Fensterereignissen zu erkennen, ob Candy im Vordergrund ist. Damit kannst du durch Tippen auf die Statusleiste nach oben scrollen und durch Wischen Benachrichtigungen oder Schnelleinstellungen öffnen. Der Dienst liest keine Fensterinhalte und gibt diese Daten nicht weiter. Stimme zu, um die Android-Bedienungshilfen zu öffnen und Candy: Statusleisten-Scrollen zu aktivieren.</string>
+    <string name="settings_status_bar_scroll_accessibility_open">Zustimmen und Einstellungen öffnen</string>
     <string name="settings_status_bar_scroll_enable_for_domain">Statusleisten-Scrollen für diese Website aktivieren</string>
     <string name="settings_status_bar_scroll_disable_for_domain">Statusleisten-Scrollen für diese Website deaktivieren</string>
     <string name="settings_translations_title">Übersetzungen</string>

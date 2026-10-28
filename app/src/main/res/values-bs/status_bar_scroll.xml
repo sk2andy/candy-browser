@@ -8,8 +8,8 @@
     <string name="settings_status_bar_scroll_width_title">Širina područja dodira</string>
     <string name="settings_status_bar_scroll_width_summary">%1$d%% širine ekrana</string>
     <string name="settings_status_bar_scroll_accessibility_dialog_title">Dozvoliti Candyju pristup pristupačnosti?</string>
-    <string name="settings_status_bar_scroll_accessibility_dialog_message">Android zahtijeva uslugu pristupačnosti za primanje dodira na sistemskoj statusnoj traci. Otvorite Androidove postavke pristupačnosti i uključite pomjeranje putem statusne trake u Candyju. Candy koristi uslugu samo za te dodire i ne čita sadržaj prozora.</string>
-    <string name="settings_status_bar_scroll_accessibility_open">Otvori postavke pristupačnosti</string>
+    <string name="settings_status_bar_scroll_accessibility_dialog_message">Candy koristi Androidovu uslugu pristupačnosti koja provjerava nazive paketa iz događaja prozora kako bi utvrdila je li Candy u prvom planu. Dodir statusne trake pomjera stranicu na vrh, a prevlačenje otvara obavještenja ili brze postavke. Usluga ne čita sadržaj prozora niti dijeli ove podatke. Nastavite da biste je uključili u Androidovim postavkama.</string>
+    <string name="settings_status_bar_scroll_accessibility_open">Prihvatam i otvaram postavke</string>
     <string name="settings_status_bar_scroll_enable_for_domain">Uključi pomjeranje putem statusne trake za ovu stranicu</string>
     <string name="settings_status_bar_scroll_disable_for_domain">Isključi pomjeranje putem statusne trake za ovu stranicu</string>
 </resources>

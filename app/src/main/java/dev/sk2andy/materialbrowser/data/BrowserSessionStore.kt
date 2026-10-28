@@ -1721,7 +1721,7 @@ class BrowserSessionStore internal constructor(
         const val KEY_SEARXNG_INSTANCE_URL = "searxng_instance_url"
         const val KEY_SEARXNG_SUGGESTION_FALLBACK = "searxng_suggestion_fallback"
         const val KEY_AI_MODE_TOGGLE_VISIBLE = "ai_mode_toggle_visible"
-        const val KEY_STATUS_BAR_SCROLL_ENABLED = "status_bar_scroll_enabled"
+        const val KEY_STATUS_BAR_SCROLL_ENABLED = "status_bar_scroll_enabled_with_disclosure"
         const val KEY_STATUS_BAR_SCROLL_PAGE_ALLOWED = "status_bar_scroll_page_allowed"
         const val KEY_STATUS_BAR_SCROLL_TARGET_WIDTH_PERCENT = "status_bar_scroll_target_width_percent"
         const val KEY_STATUS_BAR_SCROLL_DISABLED_DOMAINS = "status_bar_scroll_disabled_domains"
