@@ -69,6 +69,12 @@
   let coverSemanticSeeded = false;
   let initialDomSeeded = false;
   let protectedBody = null;
+  let bodyProtectionTimer = 0;
+  let bodyProtectionEpoch = 0;
+  let bodyProtectionResizeObserver = null;
+  let bodyProtectionResizeTimer = 0;
+  let lastBodyProtectionResizeCheck = -Infinity;
+  let lastBodyProtectionScroll = -Infinity;
   let redditFlowProtected = false;
   let refreshBodyAtReady = false;
   let cssTurn = true;
@@ -103,6 +109,8 @@
   let viewportOverlayCandidates = [];
   const knownViewportOverlays = new Set();
   const viewportOverlayContents = new WeakMap();
+  const topBannerHeaders = new Set();
+  const topBannerOwners = new Map();
   let scrollListenersAttached = false;
   let headerVerificationPending = false;
   let scrollGeneration = 0;
@@ -834,6 +842,7 @@
   function queueKnownHeaderTopChecks() {
     pruneHeaderTopCandidates();
     for (const header of headerTopCandidates) queueHeaderTopCheck(header);
+    for (const header of topBannerHeaders) queueViewportOverlayCandidate(header);
     schedule();
   }
 
@@ -1304,6 +1313,93 @@
     viewportOverlayCandidates.push(element);
   }
 
+  function isTopBannerHeader(element) {
+    return element?.localName === "header" || element?.localName === "nav" ||
+      ["banner", "navigation"].includes(element?.getAttribute?.("role"));
+  }
+
+  function rememberTopBannerHeader(element) {
+    if (!(element instanceof Element) || !element.isConnected ||
+        !isTopBannerHeader(element)) return;
+    topBannerHeaders.delete(element);
+    topBannerHeaders.add(element);
+    if (topBannerHeaders.size > 8) {
+      const oldest = topBannerHeaders.values().next().value;
+      topBannerHeaders.delete(oldest);
+      releaseTopBanner(oldest);
+    }
+    queueViewportOverlayCandidate(element);
+  }
+
+  function releaseTopBanner(header) {
+    const owner = topBannerOwners.get(header);
+    topBannerOwners.delete(header);
+    if (owner && rules.get(owner.element) === owner.entry &&
+        owner.entry.rule.style.getPropertyValue("top") === owner.applied) {
+      releaseElementTop(owner.element);
+      for (const other of topBannerHeaders) {
+        if (other !== header && owner.element.contains(other)) queueViewportOverlayCandidate(other);
+      }
+    }
+  }
+
+  function protectTopBanner(header) {
+    if (!configuration?.active || !header.isConnected || inset <= 0 || document.fullscreenElement) {
+      releaseTopBanner(header);
+      return;
+    }
+    const findUnsafeBanner = () => {
+      let control = header.firstElementChild;
+      let unsafeControl = false;
+      for (let inspected = 0; control && inspected < 32; inspected++, control = nextElement(control, header)) {
+        if (control.localName !== "button" && control.getAttribute("role") !== "button" &&
+            !(control.localName === "a" && control.hasAttribute("href"))) continue;
+        const controlStyle = getComputedStyle(control);
+        if (controlStyle.pointerEvents !== "none" && visibleNearTop(control, controlStyle, inset)) {
+          unsafeControl = true;
+          break;
+        }
+      }
+      if (!unsafeControl) return null;
+      const width = Math.max(1, globalThis.innerWidth || document.documentElement.clientWidth || 0);
+      const height = Math.max(1, globalThis.innerHeight || document.documentElement.clientHeight || 0);
+      for (let element = header, depth = 0; element && element !== document.body && depth < 8;
+          element = element.parentElement, depth++) {
+        const style = getComputedStyle(element);
+        if (style.position !== "fixed") continue;
+        const top = pixels(style.top);
+        const rect = element.getBoundingClientRect();
+        if (top === null || top < 0 || top >= inset - 0.5 ||
+            rect.width < width * 0.5 || rect.height <= 1 || rect.height > height * 0.5 ||
+            !visibleNearTop(element, style, inset)) return null;
+        return { element, top };
+      }
+      return null;
+    };
+    const previous = topBannerOwners.get(header);
+    let banner;
+    if (previous && rules.get(previous.element) === previous.entry &&
+        previous.entry.rule.style.getPropertyValue("top") === previous.applied) {
+      const ruleStyle = previous.entry.rule.style;
+      const priority = ruleStyle.getPropertyPriority("top");
+      ruleStyle.removeProperty("top");
+      try { banner = findUnsafeBanner(); }
+      finally { ruleStyle.setProperty("top", previous.applied, priority); }
+    } else banner = findUnsafeBanner();
+    if (!banner || (previous && previous.element !== banner.element)) releaseTopBanner(header);
+    if (!banner) return;
+    const entry = rules.get(banner.element);
+    if (entry?.rule.style.getPropertyValue("top") &&
+        (!previous || previous.element !== banner.element || previous.entry !== entry)) return;
+    // A temporary announcement must not become a native scrolling-header fallback.
+    applyRule(banner.element, "top", `${banner.top + inset}px`, !!previous);
+    const applied = rules.get(banner.element);
+    if (applied?.rule.style.getPropertyValue("top")) {
+      topBannerOwners.set(header, { element: banner.element, entry: applied,
+        applied: applied.rule.style.getPropertyValue("top") });
+    }
+  }
+
   function hasInlineFullViewportInset(element) {
     const inline = element?.getAttribute?.("style");
     if (!inline || !/(?:inset|top|bottom)/i.test(inline)) return false;
@@ -1326,9 +1422,15 @@
     let remaining = 16;
     for (const record of records.slice(-32).reverse()) {
       if (remaining <= 0) break;
-      if (record.type === "attributes" && ["style", "class", "role", "aria-modal"].includes(record.attributeName)) {
+      if (record.type === "attributes" && ["style", "class", "hidden", "role", "aria-modal"].includes(record.attributeName)) {
         const target = record.target;
         remaining--;
+        for (const header of topBannerHeaders) {
+          if (target === header || header.contains(target) ||
+              (target !== document.body && target !== document.documentElement && target?.contains?.(header))) {
+            queueViewportOverlayCandidate(header);
+          }
+        }
         const known = knownViewportOverlays.has(target) ? target :
           (knownViewportOverlays.has(target.parentElement) ? target.parentElement : null);
         if (known) {
@@ -1344,6 +1446,14 @@
         continue;
       }
       if (record.type !== "childList") continue;
+      for (const header of topBannerHeaders) {
+        if (record.target === header || header.contains(record.target) ||
+            (record.target !== document.body && record.target !== document.documentElement &&
+              record.target?.contains?.(header))) {
+          queueViewportOverlayCandidate(header);
+        }
+      }
+      if (isTopBannerHeader(record.target)) rememberTopBannerHeader(record.target);
       if (knownViewportOverlays.has(record.target)) {
         queueViewportOverlayCandidate(record.target, true);
       } else if (knownViewportOverlays.has(record.target?.parentElement)) {
@@ -1355,12 +1465,13 @@
         const { element, depth } = pending.shift();
         remaining--;
         if (!(element instanceof Element) || isOwnSource(element)) continue;
+        if (isTopBannerHeader(element)) rememberTopBannerHeader(element);
         if (hasInlineFullViewportInset(element) || hasViewportOverlayHint(element)) {
           queueViewportOverlayCandidate(element);
         }
-        if (depth >= 2) continue;
+        if (depth >= 6) continue;
         for (const child of Array.from(element.children || []).slice(-4).reverse()) {
-          pending.push({ element: child, depth: depth + 1 });
+          pending.unshift({ element: child, depth: depth + 1 });
         }
       }
     }
@@ -1544,6 +1655,66 @@
     if (job) { job.next = nextElement(document.body, document.body); job.remaining -= 9; }
   }
 
+  function verifyBodyProtection() {
+    if (!configuration?.active || configuration.cover || document.hidden || !document.body || protectedBody !== document.body ||
+        typeof globalThis.CandyContentTopInset?.protectBodyWithUserCss !== "function") return;
+    const entry = rules.get(document.body);
+    if (!entry || document.body.getAttribute(entry.attribute) !== entry.id) return;
+    const expected = pixels(entry.rule.style.getPropertyValue("padding-top"));
+    if (expected === null || expected <= 0) return;
+    const actual = pixels(getComputedStyle(document.body).paddingTop);
+    if (actual !== null && actual < expected - 0.5) {
+      globalThis.CandyContentTopInset.protectBodyWithUserCss(
+        document.body, expected, configuration.navigationGeneration, configuration.revision);
+    }
+  }
+
+  function watchBodyProtection() {
+    if (bodyProtectionTimer) clearTimeout(bodyProtectionTimer);
+    bodyProtectionTimer = 0;
+    const epoch = ++bodyProtectionEpoch;
+    if (!configuration?.active || configuration.cover ||
+        typeof globalThis.CandyContentTopInset?.protectBodyWithUserCss !== "function") return;
+    verifyBodyProtection();
+    const delays = [100, 400, 1000];
+    let index = 0;
+    const recheck = () => {
+      bodyProtectionTimer = 0;
+      if (epoch !== bodyProtectionEpoch || !configuration?.active) return;
+      verifyBodyProtection();
+      if (index < delays.length) bodyProtectionTimer = setTimeout(recheck, delays[index++]);
+    };
+    bodyProtectionTimer = setTimeout(recheck, delays[index++]);
+  }
+
+  function watchBodyProtectionSize() {
+    bodyProtectionResizeObserver?.disconnect();
+    bodyProtectionResizeObserver = null;
+    if (bodyProtectionResizeTimer) clearTimeout(bodyProtectionResizeTimer);
+    bodyProtectionResizeTimer = 0;
+    if (!configuration?.active || configuration.cover || !document.body ||
+        typeof globalThis.CandyContentTopInset?.protectBodyWithUserCss !== "function" ||
+        typeof globalThis.ResizeObserver !== "function") return;
+    const body = document.body;
+    const queueResizeCheck = () => {
+      if (bodyProtectionResizeTimer || body !== document.body || !configuration?.active || document.hidden) return;
+      const now = performance.now();
+      const delay = Math.max(100, lastBodyProtectionResizeCheck + 500 - now,
+        lastBodyProtectionScroll + 300 - now);
+      bodyProtectionResizeTimer = setTimeout(() => {
+        bodyProtectionResizeTimer = 0;
+        if (body !== document.body || !configuration?.active || document.hidden) return;
+        if (performance.now() < lastBodyProtectionScroll + 300) { queueResizeCheck(); return; }
+        lastBodyProtectionResizeCheck = performance.now();
+        verifyBodyProtection();
+      }, delay);
+    };
+    bodyProtectionResizeObserver = new ResizeObserver(() => {
+      queueResizeCheck();
+    });
+    bodyProtectionResizeObserver.observe(body, { box: "border-box" });
+  }
+
   function protectBody() {
     if (!configuration?.active || (cleanup.length && !configuration.cover) ||
         !document.body || !document.documentElement) return;
@@ -1554,10 +1725,15 @@
       bodyPending = true;
       return;
     }
+    const bodyChanged = protectedBody !== document.body;
+    if (protectedBody && bodyChanged) {
+      globalThis.CandyContentTopInset?.clearBodyUserCss?.();
+    }
     const flowProtected = globalThis.CandyRedditSafeArea?.flowProtected() === true;
     if ((refreshBodyAtReady && document.readyState !== "loading") || flowProtected !== redditFlowProtected) {
       // Do not measure our early padding as author padding. Remove/read/republish
       // in this same task, so later parser CSS is preserved without a paint gap.
+      globalThis.CandyContentTopInset?.clearBodyUserCss?.();
       rules.get(document.body)?.rule.style.removeProperty("padding-top");
       refreshBodyAtReady = false;
     }
@@ -1569,6 +1745,8 @@
     redditFlowProtected = flowProtected;
     classify(document.body, style);
     protectedBody = document.body;
+    if (bodyChanged) { watchBodyProtection(); watchBodyProtectionSize(); }
+    else verifyBodyProtection();
     if (document.readyState === "loading") refreshBodyAtReady = true;
     // Cover flow can start with an SVG logo and need no body padding. Its
     // sticky header still needs protection before the parser's first paint.
@@ -1624,6 +1802,9 @@
       if (viewportOverlayCandidates.length) {
         const element = viewportOverlayCandidates.shift();
         if (element.isConnected) {
+          if (topBannerHeaders.has(element)) {
+            protectTopBanner(element);
+          }
           const wasKnown = knownViewportOverlays.has(element);
           if (wasKnown) {
             releaseViewportOverlayRules(element);
@@ -1722,6 +1903,11 @@
     }
     backdropPriorityCandidates = backdropPriorityCandidates.filter((element) => element.isConnected);
     viewportOverlayCandidates = viewportOverlayCandidates.filter((element) => element.isConnected);
+    for (const header of topBannerHeaders) {
+      if (header.isConnected) continue;
+      releaseTopBanner(header);
+      topBannerHeaders.delete(header);
+    }
     jobs = jobs.filter((job) => job.root.isConnected);
     let removedSources = false;
     for (const [sheet, source] of sources) {
@@ -2094,6 +2280,17 @@
       publishStatusBarBackdrop(null, next);
     }
     cancel();
+    if (bodyProtectionTimer) clearTimeout(bodyProtectionTimer);
+    bodyProtectionTimer = 0;
+    bodyProtectionEpoch++;
+    bodyProtectionResizeObserver?.disconnect();
+    bodyProtectionResizeObserver = null;
+    if (bodyProtectionResizeTimer) clearTimeout(bodyProtectionResizeTimer);
+    bodyProtectionResizeTimer = 0;
+    lastBodyProtectionResizeCheck = -Infinity;
+    lastBodyProtectionScroll = -Infinity;
+    globalThis.CandyContentTopInset?.clearBodyUserCss?.();
+    topBannerOwners.clear();
     viewportOverlayCandidates = [];
     observer?.disconnect();
     observer = null;
@@ -2166,9 +2363,11 @@
       if (!cleanup.length) apply(document.documentElement, "--candy-safe-area-inset-top", `${inset}px`);
       if (next.active) protectBody();
     }
+    watchBodyProtection();
     startSelectorScan();
     observe();
     if (next.safeAreaEnabled && document.body) {
+      for (const header of topBannerHeaders) queueViewportOverlayCandidate(header);
       for (const element of knownViewportOverlays) queueViewportOverlayCandidate(element, true);
       for (const child of Array.from(document.body.children || []).slice(-8)) {
         if (hasInlineFullViewportInset(child) || hasViewportOverlayHint(child)) {
@@ -2233,10 +2432,13 @@
       enqueue(previous, true);
       schedule();
     }
+    for (const header of topBannerHeaders) queueViewportOverlayCandidate(header);
+    schedule();
   }
 
   function scroll() {
     scrollGeneration++;
+    if (bodyProtectionResizeObserver) lastBodyProtectionScroll = performance.now();
     const semanticWasPending = semanticCheckPending;
     const backdropWasPending = statusBarBackdropPending;
     const coverLayoutWasPending = coverLayoutPending;
@@ -2259,6 +2461,9 @@
   }
 
   globalThis.__candyConfigureCssSafeArea = configure;
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden && bodyProtectionResizeObserver) watchBodyProtection();
+  });
   document.addEventListener("fullscreenchange", fullscreenChanged);
   document.addEventListener("DOMContentLoaded", () => {
     globalThis.CandyRedditSafeArea?.sync();
@@ -2270,6 +2475,7 @@
       bodyPending = true;
       protectBody();
     }
+    watchBodyProtection();
     seedInitialDom();
     requestSemanticHeaderCheck();
     schedule();
@@ -2308,6 +2514,7 @@
     globalThis.CandyRedditSafeArea?.sync();
     if (configuration?.cover) coverLayoutRevision++;
     configure();
+    watchBodyProtection();
     startSelectorScan();
     seedInitialDom();
     requestSemanticHeaderCheck();
@@ -2316,6 +2523,8 @@
   globalThis.addEventListener("resize", () => {
     if (configuration?.cover) coverLayoutRevision++;
     if (configuration?.recheckOnResize || configuration?.cover) configure(true);
+    for (const header of topBannerHeaders) queueViewportOverlayCandidate(header);
+    schedule();
   }, { passive: true });
   startStyleSheetTracking();
   configure();

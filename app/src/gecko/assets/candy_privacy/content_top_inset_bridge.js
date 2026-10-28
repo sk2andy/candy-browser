@@ -27,6 +27,55 @@ let policyReady = false;
 let policyRetryIndex = 0;
 let policyRetryTimer = 0;
 let scrollMetricsFrame = 0;
+let bodyUserCssPromise = null;
+let guardedBody = null;
+
+function clearBodyUserCss() {
+  if (!guardedBody) return;
+  const { body, attribute, value, priority, applied } = guardedBody;
+  if (body.getAttribute("data-candy-safe-area-user-body") === "true") {
+    if (attribute === null) body.removeAttribute("data-candy-safe-area-user-body");
+    else body.setAttribute("data-candy-safe-area-user-body", attribute);
+  }
+  if (body.style.getPropertyValue("--candy-safe-area-user-body-padding") === applied &&
+      body.style.getPropertyPriority("--candy-safe-area-user-body-padding") === "important") {
+    if (value) body.style.setProperty("--candy-safe-area-user-body-padding", value, priority);
+    else body.style.removeProperty("--candy-safe-area-user-body-padding");
+  }
+  guardedBody = null;
+}
+
+function protectBodyWithUserCss(body, padding, navigationGeneration, revision) {
+  if (!policyReady || !state.enabled || body !== document.body || !body.isConnected ||
+      navigationGeneration !== state.navigationGeneration || revision !== state.revision ||
+      !Number.isFinite(padding) || padding <= 0) return;
+  if (guardedBody && guardedBody.body !== body) clearBodyUserCss();
+  const attribute = body.getAttribute("data-candy-safe-area-user-body");
+  const value = body.style.getPropertyValue("--candy-safe-area-user-body-padding");
+  const priority = body.style.getPropertyPriority("--candy-safe-area-user-body-padding");
+  if (guardedBody?.applied === `${padding}px` && value === guardedBody.applied &&
+      priority === "important" && attribute === "true" && bodyUserCssPromise) return;
+  if (!guardedBody) {
+    guardedBody = { body, attribute, value, priority, applied: "" };
+  } else {
+    if (attribute !== "true") guardedBody.attribute = attribute;
+    if (value !== guardedBody.applied || priority !== "important") {
+      guardedBody.value = value;
+      guardedBody.priority = priority;
+    }
+  }
+  body.style.setProperty("--candy-safe-area-user-body-padding", `${padding}px`, "important");
+  guardedBody.applied = body.style.getPropertyValue("--candy-safe-area-user-body-padding");
+  body.setAttribute("data-candy-safe-area-user-body", "true");
+  if (!bodyUserCssPromise) {
+    bodyUserCssPromise = browser.runtime.sendMessage({
+      type: "safe-area-user-body-css", navigationGeneration, revision,
+    }).then((installed) => {
+      if (installed !== true) bodyUserCssPromise = null;
+      return installed;
+    }).catch(() => { bodyUserCssPromise = null; return false; });
+  }
+}
 
 function publishScrollMetrics() {
   scrollMetricsFrame = 0;
@@ -180,6 +229,8 @@ globalThis.CandyContentTopInset = Object.freeze({
   safeAreaRequiredFailureCount: () => state.safeAreaRequiredFailureCount,
   performanceDiagnosticsEnabled: () => state.performanceDiagnosticsEnabled,
   domDiagnosticsEnabled: () => state.domDiagnosticsEnabled,
+  protectBodyWithUserCss,
+  clearBodyUserCss,
   fallbackToNative: (navigationGeneration, revision, themeColor = null, topHeader = false) => {
     if (
       navigationGeneration !== state.navigationGeneration ||

@@ -5,6 +5,27 @@ let primaryPage = null;
 let optionsReady = false;
 let conformanceStarted = false;
 
+// Reproduce an extension's user-origin CSS only on the dedicated local fixture.
+browser.webNavigation.onCompleted.addListener(async ({ tabId, frameId, url }) => {
+  let page;
+  try { page = new URL(url); } catch (_) { return; }
+  if (frameId !== 0 || page.hostname !== "127.0.0.1" ||
+      page.pathname !== "/site-matrix/user-origin-conflict") return;
+  try {
+    await browser.tabs.insertCSS(tabId, {
+      frameId: 0,
+      cssOrigin: "user",
+      code: "html > body { padding-top: 0 !important; }",
+    });
+    await browser.tabs.executeScript(tabId, {
+      frameId: 0,
+      code: "document.documentElement.dataset.candyFixtureUserCss = 'installed';",
+    });
+  } catch (_) {
+    // A navigation can replace the fixture before the extension has injected CSS.
+  }
+});
+
 function maybeStartConformance() {
   if (primaryPage == null || !optionsReady || conformanceStarted) return false;
   conformanceStarted = true;
