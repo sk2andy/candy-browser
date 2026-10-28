@@ -315,6 +315,8 @@ internal interface GeckoBrowserSession {
     /** Scrolls the Gecko document without synthesizing touch events. */
     fun scrollToVerticalOffset(offsetPx: Int) = Unit
 
+    fun scrollToTopSmoothly() = Unit
+
     /** Scrolls the Gecko document by a relative hardware-input delta. */
     fun scrollByVerticalOffset(deltaPx: Int) = Unit
 

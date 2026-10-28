@@ -2985,6 +2985,11 @@ private class GeckoViewBrowserSession(
     }
 
     @UiThread
+    override fun scrollToTopSmoothly() {
+        boundView?.scrollToVerticalOffset(0, smooth = true)
+    }
+
+    @UiThread
     override fun scrollByVerticalOffset(deltaPx: Int) {
         val currentOffsetPx = privacyBinding.scrollMetrics()?.offsetPx ?: 0
         boundView?.scrollToVerticalOffset(
@@ -4067,11 +4072,15 @@ internal class CandyGeckoView(
     fun dispatchEngineGenericMotionEvent(event: MotionEvent): Boolean =
         engineView.dispatchGenericMotionEvent(event)
 
-    fun scrollToVerticalOffset(offsetPx: Int) {
+    fun scrollToVerticalOffset(offsetPx: Int, smooth: Boolean = false) {
         engineView.panZoomController.scrollTo(
             ScreenLength.fromPixels(0.0),
             ScreenLength.fromPixels(offsetPx.coerceAtLeast(0).toDouble()),
-            PanZoomController.SCROLL_BEHAVIOR_AUTO,
+            if (smooth) {
+                PanZoomController.SCROLL_BEHAVIOR_SMOOTH
+            } else {
+                PanZoomController.SCROLL_BEHAVIOR_AUTO
+            },
         )
     }
 

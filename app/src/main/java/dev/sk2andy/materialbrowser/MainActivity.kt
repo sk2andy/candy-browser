@@ -148,7 +148,7 @@ open class MainActivity : AppCompatActivity() {
                 intent.action == StatusBarScrollAccessibilityContract.ACTION_SCROLL_TO_TOP &&
                 ::browserController.isInitialized
             ) {
-                browserController.scrollSelectedBrowserEngineToVerticalOffset(0)
+                browserController.scrollSelectedBrowserEngineToTopSmoothly()
             }
         }
     }

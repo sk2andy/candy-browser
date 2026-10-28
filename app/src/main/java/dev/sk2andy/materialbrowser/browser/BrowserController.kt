@@ -10874,6 +10874,10 @@ class BrowserController(
         return true
     }
 
+    internal fun scrollSelectedBrowserEngineToTopSmoothly() {
+        browserEngineSessions[selectedTabId]?.scrollToTopSmoothly()
+    }
+
     internal fun scrollSelectedBrowserEngineByVerticalOffset(deltaPx: Int): Boolean {
         val session = browserEngineSessions[selectedTabId] ?: return false
         session.scrollByVerticalOffset(deltaPx)

@@ -539,7 +539,7 @@ The authoritative #323 patch (SHA-256 `1135e69f695f5fc8307adefaa2af6ffa2b4240529
 
 | Setting | Destination/group | Dependency and retained state |
 | --- | --- | --- |
-| Status-bar tap to scroll to top | Gestures → Gestures / status-bar group | Global enabled setting; enabling shows the existing accessibility explanation. Platform service remains Android-only. |
+| Status-bar tap to scroll to top | Gestures → Gestures / status-bar group | Smoothly scrolls the selected page to the top. Global enabled setting; enabling shows the existing accessibility explanation. Platform service remains Android-only. |
 | Status-bar target width | Same group | Existing bounded percent range/default from `StatusBarScrollRules`; always visible, disabled while global feature is off. Saved width retained, no preview/save writes while disabled. Drag previews; release saves and signals completion. |
 | Status-bar menu action location | Menu actions / Page | Available only while feature enabled; saved location is retained when hidden. Existing Android Firefox-extension exclusion is unchanged. |
 

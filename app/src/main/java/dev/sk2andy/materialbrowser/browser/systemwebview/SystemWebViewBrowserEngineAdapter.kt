@@ -860,6 +860,10 @@ private class SystemWebViewBrowserEngineSession(
         webView.scrollTo(webView.scrollX, offsetPx.coerceAtLeast(0))
     }
 
+    override fun scrollToTopSmoothly() {
+        webView.pageUp(true)
+    }
+
     override fun scrollByVerticalOffset(deltaPx: Int) {
         webView.scrollBy(0, deltaPx)
     }
