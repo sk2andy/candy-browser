@@ -36,6 +36,16 @@ class PageShareLauncher(private val context: Context) {
                     putExtra(Intent.EXTRA_SUBJECT, title)
                 }
             }
+        return launchChooser(target)
+    }
+
+    fun launchText(text: String): PageShareResult = launchChooser(
+        Intent(Intent.ACTION_SEND)
+            .setType("text/plain")
+            .putExtra(Intent.EXTRA_TEXT, text),
+    )
+
+    private fun launchChooser(target: Intent): PageShareResult {
         val chooser = Intent.createChooser(target, null).apply {
             if (context !is Activity) addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }

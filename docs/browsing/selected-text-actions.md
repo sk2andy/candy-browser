@@ -5,6 +5,8 @@
 | Select text in a compatible Android app → Research in Candy | Show the selected phrase and require an explicit regular-profile choice |
 | Choose a profile | Build a normal encoded search URL using the configured search engine and open a new regular tab in that profile |
 | Select text → Read aloud with Candy | Open a temporary speech screen backed by the Reader speech controller; the first request offers the same optional offline model as Reader Studio |
+| Select read-only page text inside Candy → Search | Resolve text with the configured search engine, or open a selected web address, in a new tab in the current profile and private mode; no profile picker |
+| Select read-only page text inside Candy → Share | Open the Android text sharesheet with the selected text; no page title or page URL is added |
 | Select read-only page text inside Candy → Read aloud with Candy | Gecko and System WebView expose an explicit action, including in private tabs; launch transfers only a one-use token |
 | Pause / resume / stop | Control the selected-text speech session |
 | Leave speech screen | Stop playback; closing the activity shuts down the speech controller |
@@ -12,7 +14,9 @@
 | Select read-only page text inside Candy → Translate here | Use the local Android translation service, with an explicit selected page-provider fallback; see [`page-translation.md`](page-translation.md) |
 
 Candy's in-page actions extend the engine-owned native selection menu. Existing copy, select-all,
-share and installed Android text actions remain available. The exported actions below serve text
+and installed Android text actions remain available. Gecko and System WebView supply Candy Search and Share;
+System WebView suppresses provider Search and Share while Candy actions are enabled to avoid duplicates.
+Search and Share accept nonblank read-only selections up to 8,000 characters. The exported actions below serve text
 selected in other apps.
 
 ## Boundaries
@@ -38,7 +42,8 @@ selected in other apps.
 | Concern | Source / test |
 | --- | --- |
 | Bounds, search URL, allowed profiles, one-use handoff | `ProcessTextRules`, `ProcessTextResearchRequestStore`, `ProcessTextSpeechRequestStore`, `ProcessTextRulesTest`, `ProcessTextSpeechRequestStoreTest` |
-| In-browser native selection | `GeckoWebTextSelectionDelegate`, `WebTextActionModeCallback`, `WebTextOperationsInstrumentedTest` |
+| In-browser native selection | `GeckoWebTextSelectionDelegate`, `WebTextActionModeCallback`, `GeckoWebTextSelectionDelegateInstrumentedTest`, `WebTextOperationsInstrumentedTest` |
+| In-browser search and text sharing | `BrowserControllerSearchSettingsInstrumentedTest`, `PageShareLauncherInstrumentedTest` |
 | Android entry and lifecycle | `ResearchSelectedTextActivity`, `ReadSelectedTextActivity`, `ProcessTextResearchIntentHandler` |
 | Profile selection and speech controls | `SelectedTextScreens`, `SelectedTextScreensInstrumentedTest` |
 | Installed Android text-menu actions | `ProcessTextManifestInstrumentedTest` |

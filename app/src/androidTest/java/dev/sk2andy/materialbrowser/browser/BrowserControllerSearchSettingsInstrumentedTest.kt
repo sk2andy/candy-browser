@@ -8,6 +8,7 @@ import androidx.test.platform.app.InstrumentationRegistry
 import dev.sk2andy.materialbrowser.data.BrowserSessionStore
 import dev.sk2andy.materialbrowser.data.HistoryEntry
 import org.junit.After
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -31,6 +32,33 @@ class BrowserControllerSearchSettingsInstrumentedTest {
                 BrowserSessionStore.PREFERENCES_NAME,
                 Context.MODE_PRIVATE,
             ).edit().clear().commit()
+        }
+    }
+
+    @Test
+    fun selectionNavigationResolvesTextAndWebAddressesWithoutLeavingPrivateMode() {
+        activityRule.scenario.onActivity { activity ->
+            controller = BrowserController(activity).also { browserController ->
+                browserController.updateSearchEngine(SearchEngine.DuckDuckGo)
+                val profileId = browserController.activeProfileId
+                val sourceId = browserController.selectedTabId
+                browserController.createTab(
+                    initialUrl = "selected words",
+                    isIncognito = true,
+                    openerTabId = sourceId,
+                )
+                assertEquals("https://duckduckgo.com/?q=selected%20words", browserController.selectedTab.url)
+                assertTrue(browserController.selectedTab.isIncognito)
+                assertEquals(profileId, browserController.selectedTab.profileId)
+                browserController.createTab(
+                    initialUrl = "example.org/article?q=one",
+                    isIncognito = true,
+                    openerTabId = sourceId,
+                )
+                assertEquals("https://example.org/article?q=one", browserController.selectedTab.url)
+                assertTrue(browserController.selectedTab.isIncognito)
+                assertEquals(profileId, browserController.selectedTab.profileId)
+            }
         }
     }
 

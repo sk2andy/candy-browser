@@ -2333,8 +2333,14 @@ private class SystemWebViewHost(
         super.startActionMode(selectionCallback(callback), type)
 
     private fun selectionCallback(callback: android.view.ActionMode.Callback): android.view.ActionMode.Callback {
-        if (callback is WebTextActionModeCallback || selectedTextActionListener == null ||
-            !selectedTextActionsEnabled()) return callback
+        val actionsEnabled = selectedTextActionListener != null && selectedTextActionsEnabled()
+        val candyMenuItems = WebSettings.MENU_ITEM_WEB_SEARCH or WebSettings.MENU_ITEM_SHARE
+        settings.disabledActionModeMenuItems = if (actionsEnabled) {
+            settings.disabledActionModeMenuItems or candyMenuItems
+        } else {
+            settings.disabledActionModeMenuItems and candyMenuItems.inv()
+        }
+        if (callback is WebTextActionModeCallback || !actionsEnabled) return callback
         return WebTextActionModeCallback(this, callback, { textDocumentGeneration }, { canHighlight }) { action, text ->
             if (selectedTextActionsEnabled()) selectedTextActionListener?.invoke(action, text)
         }

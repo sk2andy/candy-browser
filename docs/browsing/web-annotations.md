@@ -4,7 +4,7 @@
 
 | Entry point | Behavior |
 | --- | --- |
-| Android native text selection → Highlight + note | Saves the original selected quote and an optional note in the current regular profile. Native copy, Select all, share and installed PROCESS_TEXT apps remain engine-owned. |
+| Android native text selection → Highlight + note | Saves the original selected quote and an optional note in the current regular profile. Native copy, Select all and installed PROCESS_TEXT apps remain engine-owned; Search and Share are described in [`selected-text-actions.md`](selected-text-actions.md). |
 | Android native text selection → Translate inline | Starts the inline translation flow; the translation coordinator selects the backend and validates the pending document identity. |
 | Page menu → Highlights | Shows a Material bottom sheet with compact segmented list items: quote, readable note preview and a trailing menu for Read note / Edit. Tap the row to scroll to its unique visible text match and close the list. Missing or ambiguous text opens the saved note with an explanation. |
 | Tap a page highlight | A trusted short tap opens the native note reader. Selection, dragging and synthetic clicks do not open notes. Edit remains a separate action. |

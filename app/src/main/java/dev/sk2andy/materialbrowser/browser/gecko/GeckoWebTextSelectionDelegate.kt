@@ -14,7 +14,11 @@ internal class GeckoWebTextSelectionDelegate(
     private val canHighlight: () -> Boolean,
     private val onAction: (WebTextSelectionAction, String) -> Unit,
 ) : BasicSelectionActionDelegate(activity), AutoCloseable {
-    override fun getAllActions(): Array<String> = super.getAllActions() + arrayOf(HIGHLIGHT, TRANSLATE, READ_ALOUD)
+    override fun getAllActions(): Array<String> = super.getAllActions().toMutableList().apply {
+        val externalActionsIndex = indexOf(ACTION_PROCESS_TEXT).takeIf { it >= 0 } ?: size
+        addAll(externalActionsIndex, listOf(SEARCH, SHARE))
+        addAll(listOf(HIGHLIGHT, TRANSLATE, READ_ALOUD))
+    }.toTypedArray()
 
     override fun isActionAvailable(action: String): Boolean {
         val kind = actionKind(action) ?: return super.isActionAvailable(action)
@@ -29,6 +33,8 @@ internal class GeckoWebTextSelectionDelegate(
 
     override fun prepareAction(action: String, item: MenuItem) {
         when (action) {
+            SEARCH -> item.setTitle(R.string.settings_section_search)
+            SHARE -> item.setTitle(R.string.action_share)
             HIGHLIGHT -> item.setTitle(R.string.web_annotation_mark)
             TRANSLATE -> item.setTitle(R.string.web_annotation_translate)
             READ_ALOUD -> item.setTitle(R.string.process_text_read_aloud)
@@ -46,6 +52,8 @@ internal class GeckoWebTextSelectionDelegate(
     }
 
     private fun actionKind(action: String): WebTextSelectionAction? = when (action) {
+        SEARCH -> WebTextSelectionAction.Search
+        SHARE -> WebTextSelectionAction.Share
         HIGHLIGHT -> WebTextSelectionAction.Highlight
         TRANSLATE -> WebTextSelectionAction.Translate
         READ_ALOUD -> WebTextSelectionAction.ReadAloud
@@ -61,6 +69,8 @@ internal class GeckoWebTextSelectionDelegate(
     }
 
     private companion object {
+        const val SEARCH = "candy.search"
+        const val SHARE = "candy.share"
         const val HIGHLIGHT = "candy.highlight"
         const val TRANSLATE = "candy.translate"
         const val READ_ALOUD = "candy.read_aloud"

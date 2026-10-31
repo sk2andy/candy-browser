@@ -10,7 +10,7 @@ import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.browser.annotation.WebTextSelectionAction
 import org.json.JSONTokener
 
-/** Decorates the provider callback; Select all, copy, share and installed apps remain provider-owned. */
+/** Decorates the provider callback; Select all, copy and installed apps remain provider-owned. */
 internal class WebTextActionModeCallback(
     private val webView: WebView,
     private val delegate: ActionMode.Callback,
@@ -28,6 +28,8 @@ internal class WebTextActionModeCallback(
 
     override fun onActionItemClicked(mode: ActionMode, item: MenuItem): Boolean {
         val kind = when (item.itemId) {
+            R.id.web_text_search -> WebTextSelectionAction.Search
+            R.id.web_text_share -> WebTextSelectionAction.Share
             R.id.web_annotation_mark -> WebTextSelectionAction.Highlight
             R.id.web_annotation_translate -> WebTextSelectionAction.Translate
             R.id.web_text_read_aloud -> WebTextSelectionAction.ReadAloud
@@ -54,10 +56,20 @@ internal class WebTextActionModeCallback(
 
     private fun append(menu: Menu) {
         if (menu.findItem(android.R.id.cut) != null || menu.findItem(android.R.id.paste) != null) {
+            menu.removeItem(R.id.web_text_search)
+            menu.removeItem(R.id.web_text_share)
             menu.removeItem(R.id.web_annotation_mark)
             menu.removeItem(R.id.web_annotation_translate)
             menu.removeItem(R.id.web_text_read_aloud)
             return
+        }
+        if (menu.findItem(R.id.web_text_search) == null) {
+            menu.add(Menu.NONE, R.id.web_text_search, Menu.NONE, R.string.settings_section_search)
+        }
+        if (menu.findItem(android.R.id.shareText) != null) {
+            menu.removeItem(R.id.web_text_share)
+        } else if (menu.findItem(R.id.web_text_share) == null) {
+            menu.add(Menu.NONE, R.id.web_text_share, Menu.NONE, R.string.action_share)
         }
         if (canHighlight() && menu.findItem(R.id.web_annotation_mark) == null) {
             menu.add(Menu.NONE, R.id.web_annotation_mark, Menu.NONE, R.string.web_annotation_mark)

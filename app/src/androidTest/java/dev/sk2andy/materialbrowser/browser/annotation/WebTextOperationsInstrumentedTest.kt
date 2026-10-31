@@ -61,7 +61,7 @@ class WebTextOperationsInstrumentedTest {
                 val callback = WebTextActionModeCallback(view, native, { 1L }) { _, _ -> error("Unexpected Candy action") }
                 assertTrue(callback.onCreateActionMode(mode, menu))
                 callback.onPrepareActionMode(mode, menu)
-                assertEquals(5, menu.size())
+                assertEquals(7, menu.size())
                 assertTrue(callback.onActionItemClicked(mode, menu.findItem(android.R.id.selectAll)))
                 assertEquals(android.R.id.selectAll, selected)
                 assertTrue(callback.onActionItemClicked(mode, menu.findItem(7351)))
@@ -76,6 +76,60 @@ class WebTextOperationsInstrumentedTest {
                 assertTrue(destroyed)
             } finally {
                 view.destroy()
+            }
+        }
+    }
+
+    @Test
+    fun searchAndSharePassReadOnlySelectionAndKeepProviderShare() {
+        withPage { view ->
+            evaluate(view, """
+                (() => {
+                  const paragraph = document.querySelector('p');
+                  paragraph.textContent = 'example.org/path';
+                  const range = document.createRange();
+                  range.selectNodeContents(paragraph);
+                  const selection = window.getSelection();
+                  selection.removeAllRanges();
+                  selection.addRange(range);
+                })()
+            """.trimIndent())
+            for ((id, expected) in listOf(
+                R.id.web_text_search to WebTextSelectionAction.Search,
+                R.id.web_text_share to WebTextSelectionAction.Share,
+            )) {
+                val received = CountDownLatch(1)
+                val action = AtomicReference<WebTextSelectionAction>()
+                val selected = AtomicReference<String>()
+                composeRule.runOnUiThread {
+                    val menu = PopupMenu(composeRule.activity, view).menu
+                    val mode = TestActionMode(menu)
+                    val callback = WebTextActionModeCallback(view, nativeSelectionCallback(), { 1L }) { kind, text ->
+                        action.set(kind)
+                        selected.set(text)
+                        received.countDown()
+                    }
+                    assertTrue(callback.onCreateActionMode(mode, menu))
+                    callback.onPrepareActionMode(mode, menu)
+                    assertEquals(5, menu.size())
+                    assertTrue(callback.onActionItemClicked(mode, menu.findItem(id)))
+                }
+                assertTrue(received.await(5, TimeUnit.SECONDS))
+                assertEquals(expected, action.get())
+                assertEquals("example.org/path", selected.get())
+            }
+            composeRule.runOnUiThread {
+                val menu = PopupMenu(composeRule.activity, view).menu
+                val mode = TestActionMode(menu)
+                val callback = WebTextActionModeCallback(view, nativeSelectionCallback(), { 1L }) { _, _ ->
+                    error("Native sharing must remain provider-owned")
+                }
+                callback.onCreateActionMode(mode, menu)
+                menu.add(0, android.R.id.shareText, 0, "Share")
+                callback.onPrepareActionMode(mode, menu)
+                assertNull(menu.findItem(R.id.web_text_share))
+                assertTrue(menu.findItem(android.R.id.shareText) != null)
+                assertTrue(menu.findItem(R.id.web_text_search) != null)
             }
         }
     }
@@ -127,6 +181,8 @@ class WebTextOperationsInstrumentedTest {
                 callback.onCreateActionMode(mode, menu)
                 menu.add(0, android.R.id.cut, 0, "Cut")
                 callback.onPrepareActionMode(mode, menu)
+                assertNull(menu.findItem(R.id.web_text_search))
+                assertNull(menu.findItem(R.id.web_text_share))
                 assertNull(menu.findItem(R.id.web_text_read_aloud))
                 assertNull(menu.findItem(R.id.web_annotation_mark))
                 assertNull(menu.findItem(R.id.web_annotation_translate))

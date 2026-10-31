@@ -12765,6 +12765,16 @@ class BrowserController(
                 !current.isLoading && !destroyed && isActivityResumed && !isActiveProfileLocked &&
                 !browsingDataClearPending && externalLinkPreviewState == null) {
                 when (action) {
+                    WebTextSelectionAction.Search -> createTab(
+                        initialUrl = text,
+                        isIncognito = current.isIncognito,
+                        openerTabId = current.id,
+                    )
+                    WebTextSelectionAction.Share -> {
+                        if (pageShare.launchText(text) == PageShareResult.Unsupported) {
+                            Toast.makeText(activity, R.string.toast_no_matching_app, Toast.LENGTH_SHORT).show()
+                        }
+                    }
                     WebTextSelectionAction.Highlight -> {
                         if (current.isIncognito) {
                             Toast.makeText(activity, R.string.web_annotation_private, Toast.LENGTH_SHORT).show()
