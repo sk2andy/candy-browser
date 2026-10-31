@@ -111,6 +111,12 @@
   const viewportOverlayContents = new WeakMap();
   const topBannerHeaders = new Set();
   const topBannerOwners = new Map();
+  const sideDrawers = new Map();
+  const dirtySideDrawers = new Set();
+  let sideDrawerCheckDue = 0;
+  let sideDrawerDiscoverySeeded = false;
+  let lastSideDrawerCheck = -Infinity;
+  let sideDrawerMutationStates = new WeakMap();
   let scrollListenersAttached = false;
   let headerVerificationPending = false;
   let scrollGeneration = 0;
@@ -780,6 +786,9 @@
     }
     // Known headers use the coalesced author-layout pass, including positive tops.
     for (const element of headerTopCandidates) changed.delete(element);
+    for (const element of sideDrawers.keys()) {
+      if (!rules.get(element)?.rule.style.getPropertyValue("top")) changed.delete(element);
+    }
     if (!changed.size) return;
     const authorTops = withAuthorTopStyles(() => Array.from(changed).slice(0, 16).map((element) =>
       [element, pixels(getComputedStyle(element).top)]));
@@ -1267,7 +1276,7 @@
     const otherWorkPending = cleanup.length > 0 || bodyPending || jobs.length > 0 || !!selectorScan ||
       !!selectorBuild || !!sourceDiscovery || sourceQueue.length > 0 || semanticCheckPending ||
       headerVerificationPending || statusBarBackdropPending || coverLayoutPending || viewportOverlayCandidates.length > 0;
-    if (!otherWorkPending && !dirtyHeaderTops.size) return;
+    if (!otherWorkPending && !dirtyHeaderTops.size && !dirtySideDrawers.size) return;
     if (coverLayoutPending && !cleanup.length && !bodyPending && !jobs.length && !selectorScan &&
         !selectorBuild && !sourceDiscovery && !sourceQueue.length && !semanticCheckPending &&
         !headerVerificationPending && !statusBarBackdropPending && !viewportOverlayCandidates.length) {
@@ -1279,9 +1288,11 @@
         sourceQueue.length) {
       delay = Math.max(delay, Math.max(0, Math.min(...sourceQueue.map((source) => source.due)) - performance.now()));
     }
-    if (dirtyHeaderTops.size) {
-      const headerDelay = Math.max(0, headerTopCheckDue - performance.now());
-      delay = otherWorkPending ? Math.min(delay, headerDelay) : headerDelay;
+    if (dirtyHeaderTops.size || dirtySideDrawers.size) {
+      const due = Math.min(dirtyHeaderTops.size ? headerTopCheckDue : Infinity,
+        dirtySideDrawers.size ? sideDrawerCheckDue : Infinity);
+      const localDelay = Math.max(0, due - performance.now());
+      delay = otherWorkPending ? Math.min(delay, localDelay) : localDelay;
     }
     const due = performance.now() + Math.max(0, delay);
     if (timer && timerDue <= due) return;
@@ -1400,6 +1411,116 @@
     }
   }
 
+  function seedSideDrawers() {
+    if (sideDrawerDiscoverySeeded || !configuration?.safeAreaEnabled || configuration.active ||
+        !document.body || document.readyState === "loading") return;
+    sideDrawerDiscoverySeeded = true;
+    // Cover pages may protect normal flow while an offscreen drawer remains unsafe.
+    const pending = [document.body];
+    for (let inspected = 0; pending.length && inspected < 64; inspected++) {
+      const element = pending.shift();
+      if (isSideDrawer(element)) queueViewportOverlayCandidate(element);
+      for (const child of Array.from(element.children || []).slice(0, 16)) {
+        if (pending.length < 64) pending.push(child);
+      }
+    }
+  }
+
+  function isSideDrawer(element) {
+    return element?.localName === "aside" || element?.localName === "nav" ||
+      element?.getAttribute?.("role") === "navigation";
+  }
+
+  function forgetSideDrawer(element) {
+    const state = sideDrawers.get(element);
+    if (!state) return;
+    element.removeEventListener("transitionend", state.settled);
+    element.removeEventListener("transitioncancel", state.settled);
+    sideDrawers.delete(element);
+    dirtySideDrawers.delete(element);
+  }
+
+  function protectSideDrawer(element) {
+    const previous = sideDrawers.get(element);
+    const protection = withAuthorTopStyles(() => {
+      if (document.fullscreenElement?.contains(element)) return null;
+      const style = getComputedStyle(element);
+      const top = pixels(style.top);
+      const bottom = pixels(style.bottom);
+      const height = globalThis.innerHeight;
+      if (!isSideDrawer(element) || style.position !== "fixed" || top === null ||
+          top < 0 || top >= inset || bottom === null || bottom > 1) return null;
+      const rect = element.getBoundingClientRect();
+      if (rect.height < height * 0.75 && style.display !== "none") return null;
+      if (!previous && sideDrawers.size < 8) {
+        const state = { pendingTransition: true, protected: false, settled: (event) => {
+          if (event.target !== element || !state.pendingTransition ||
+              !["left", "right", "transform", "translate", "visibility", "opacity"].includes(event.propertyName)) return;
+          state.pendingTransition = false;
+          queueSideDrawerCheck(element);
+        } };
+        sideDrawers.set(element, state);
+        element.addEventListener("transitionend", state.settled);
+        element.addEventListener("transitioncancel", state.settled);
+      }
+      if (!sideDrawers.has(element) || style.boxSizing !== "border-box" ||
+          !visibleNearTop(element, style, inset) || rect.right <= 1 || rect.left >= globalThis.innerWidth - 1 ||
+          rect.width >= globalThis.innerWidth - 2 ||
+          (rect.left > 2 && rect.right < globalThis.innerWidth - 2)) return null;
+      const padding = pixels(style.paddingTop);
+      if (padding === null || rect.top + padding >= inset - 0.5) return null;
+      // Inspect a bounded menu subtree; hidden skeleton links must not mask live controls.
+      for (let control = element.firstElementChild, inspected = 0;
+          control && inspected < 64; control = nextElement(control, element), inspected++) {
+        if (!["a", "button", "input", "select"].includes(control.localName) &&
+            !["button", "link", "menuitem"].includes(control.getAttribute("role"))) continue;
+        const controlStyle = getComputedStyle(control);
+        if (!visibleNearTop(control, controlStyle, inset)) continue;
+        const controlRect = control.getBoundingClientRect();
+        if (controlRect.right <= Math.max(0, rect.left) ||
+            controlRect.left >= Math.min(globalThis.innerWidth, rect.right)) continue;
+        let parent = control;
+        for (let depth = 0; parent !== element && parent && depth < 8; depth++, parent = parent.parentElement) {
+          const position = parent === control ? controlStyle.position : getComputedStyle(parent).position;
+          if (position === "absolute" || position === "fixed") break;
+        }
+        if (parent === element) return `${Math.max(padding, inset - rect.top)}px`;
+      }
+      return null;
+    });
+    const state = sideDrawers.get(element);
+    if (protection) {
+      applyRule(element, "padding-top", protection, true);
+      state.protected = true;
+    } else if (state?.protected) {
+      rules.get(element)?.rule.style.removeProperty("padding-top");
+      state.protected = false;
+    }
+  }
+
+  function queueSideDrawerCheck(element) {
+    dirtySideDrawers.add(element);
+    sideDrawerCheckDue = Math.max(performance.now(), lastSideDrawerCheck + minimumHeaderTopCheckIntervalMillis);
+    schedule(sideDrawerCheckDue - performance.now());
+  }
+
+  function queueSideDrawerMutations(records) {
+    for (const record of records.slice(0, 32)) {
+      if (record.type !== "attributes" || !["class", "style", "hidden", "aria-hidden"].includes(record.attributeName) ||
+          record.oldValue === record.target.getAttribute(record.attributeName)) continue;
+      const affected = Array.from(sideDrawers.keys()).filter((element) =>
+        record.target === element || record.target.contains(element) || element.contains(record.target));
+      const state = JSON.stringify([record.attributeName, record.target.getAttribute(record.attributeName)]);
+      if (!affected.length || sideDrawerMutationStates.get(record.target) === state) continue;
+      sideDrawerMutationStates.set(record.target, state);
+      for (const element of affected) {
+        sideDrawers.get(element).pendingTransition = true;
+        queueSideDrawerCheck(element);
+      }
+    }
+    if (viewportOverlayCandidates.length) schedule(configuration.mutationDebounceMillis);
+  }
+
   function hasInlineFullViewportInset(element) {
     const inline = element?.getAttribute?.("style");
     if (!inline || !/(?:inset|top|bottom)/i.test(inline)) return false;
@@ -1412,7 +1533,7 @@
   }
 
   function hasViewportOverlayHint(element) {
-    return element?.getAttribute?.("role") === "dialog" ||
+    return isSideDrawer(element) || element?.getAttribute?.("role") === "dialog" ||
       element?.getAttribute?.("aria-modal") === "true" ||
       /(?:modal|dialog|interstitial)/i.test(`${element?.id || ""} ${element?.className || ""}`);
   }
@@ -1435,13 +1556,14 @@
           (knownViewportOverlays.has(target.parentElement) ? target.parentElement : null);
         if (known) {
           if (record.oldValue !== target.getAttribute(record.attributeName)) {
-            queueViewportOverlayCandidate(known, true);
+            if (sideDrawers.has(known)) queueSideDrawerCheck(known);
+            else queueViewportOverlayCandidate(known, true);
           }
         } else if (["role", "aria-modal"].includes(record.attributeName) &&
             hasViewportOverlayHint(target.parentElement)) {
           queueViewportOverlayCandidate(target.parentElement);
         } else if (hasInlineFullViewportInset(target) || hasViewportOverlayHint(target)) {
-          queueViewportOverlayCandidate(target);
+          if (!sideDrawers.has(target)) queueViewportOverlayCandidate(target);
         }
         continue;
       }
@@ -1613,6 +1735,7 @@
         entry.rule.style.getPropertyValue("top")) return;
     if (entry && (!layer?.isConnected || element.getAttribute(entry.attribute) !== entry.id)) releaseRule(element);
     style ??= getComputedStyle(element);
+    if (isSideDrawer(element) && !sideDrawers.has(element)) queueViewportOverlayCandidate(element);
     if (style.position !== "fixed") fixedHeaderCandidates.delete(element);
     const top = pixels(style.top);
     const rootAbsoluteHeader = isRootAbsoluteHeader(element, style, top);
@@ -1776,6 +1899,19 @@
         safeAreaMeasurementsDeferred = true;
         return;
       }
+      if (dirtySideDrawers.size && performance.now() >= sideDrawerCheckDue) {
+        const candidates = Array.from(dirtySideDrawers).slice(0, Math.min(8, configuration.maxElementsPerBatch));
+        lastSideDrawerCheck = performance.now();
+        sideDrawerCheckDue = lastSideDrawerCheck + minimumHeaderTopCheckIntervalMillis;
+        for (const element of candidates) {
+          dirtySideDrawers.delete(element);
+          if (!element.isConnected) forgetSideDrawer(element);
+          else if (knownViewportOverlays.has(element)) queueViewportOverlayCandidate(element, true);
+          else protectSideDrawer(element);
+        }
+        count += candidates.length;
+        continue;
+      }
       if (dirtyHeaderTops.size && performance.now() >= headerTopCheckDue) {
         refreshHeaderTops();
         count += Math.min(maxHeaderTopCandidates, configuration.maxElementsPerBatch);
@@ -1809,6 +1945,7 @@
           if (wasKnown) {
             releaseViewportOverlayRules(element);
           }
+          if (isSideDrawer(element) || sideDrawers.has(element)) protectSideDrawer(element);
           const style = getComputedStyle(element);
           const content = viewportDialogContent(element, style);
           if (content || isViewportModalSurface(element, style)) {
@@ -1901,6 +2038,9 @@
         if (!element.isConnected) candidates.delete(element);
       }
     }
+    for (const element of sideDrawers.keys()) {
+      if (!element.isConnected) forgetSideDrawer(element);
+    }
     backdropPriorityCandidates = backdropPriorityCandidates.filter((element) => element.isConnected);
     viewportOverlayCandidates = viewportOverlayCandidates.filter((element) => element.isConnected);
     for (const header of topBannerHeaders) {
@@ -1948,6 +2088,7 @@
     if (records.some((record) => record.type === "childList" && record.removedNodes?.length)) {
       releaseDetachedElements();
     }
+    queueSideDrawerMutations(records);
     queueHeaderTopMutations(records);
     recheckNegativeTopMutations(records);
     const wasCover = configuration?.cover === true;
@@ -2184,7 +2325,7 @@
     observer = new MutationObserver(mutations);
     observer.observe(document.documentElement, { childList: true, subtree: true,
       characterData: true, attributes: true, attributeOldValue: true,
-      attributeFilter: ["class", "style", "hidden", "role", "aria-modal", "href", "rel", "media", "disabled", "content"] });
+      attributeFilter: ["class", "style", "hidden", "aria-hidden", "role", "aria-modal", "href", "rel", "media", "disabled", "content"] });
   }
 
   function updateScrollListeners() {
@@ -2291,6 +2432,11 @@
     lastBodyProtectionScroll = -Infinity;
     globalThis.CandyContentTopInset?.clearBodyUserCss?.();
     topBannerOwners.clear();
+    for (const element of sideDrawers.keys()) forgetSideDrawer(element);
+    sideDrawerMutationStates = new WeakMap();
+    dirtySideDrawers.clear();
+    sideDrawerDiscoverySeeded = false;
+    lastSideDrawerCheck = -Infinity;
     viewportOverlayCandidates = [];
     observer?.disconnect();
     observer = null;
@@ -2367,6 +2513,7 @@
     startSelectorScan();
     observe();
     if (next.safeAreaEnabled && document.body) {
+      seedSideDrawers();
       for (const header of topBannerHeaders) queueViewportOverlayCandidate(header);
       for (const element of knownViewportOverlays) queueViewportOverlayCandidate(element, true);
       for (const child of Array.from(document.body.children || []).slice(-8)) {
@@ -2433,6 +2580,7 @@
       schedule();
     }
     for (const header of topBannerHeaders) queueViewportOverlayCandidate(header);
+    for (const element of sideDrawers.keys()) queueSideDrawerCheck(element);
     schedule();
   }
 
@@ -2451,7 +2599,7 @@
     headerVerificationPending = configuration?.active === true && !configuration.cover &&
       (fixedHeaderCandidates.size > 0 || semanticHeaderCandidates.size > 0);
     if (headerVerificationPending || statusBarBackdropPending || semanticCheckPending ||
-        coverLayoutPending || viewportOverlayCandidates.length || dirtyHeaderTops.size) {
+        coverLayoutPending || viewportOverlayCandidates.length || dirtyHeaderTops.size || dirtySideDrawers.size) {
       schedule(Math.max(
         minimumHeaderVerificationQuietMillis,
         configuration?.mutationDebounceMillis || minimumHeaderVerificationQuietMillis,
@@ -2477,6 +2625,7 @@
     }
     watchBodyProtection();
     seedInitialDom();
+    seedSideDrawers();
     requestSemanticHeaderCheck();
     schedule();
   }, { once: true });
@@ -2517,6 +2666,7 @@
     watchBodyProtection();
     startSelectorScan();
     seedInitialDom();
+    seedSideDrawers();
     requestSemanticHeaderCheck();
     schedule();
   }, { once: true });

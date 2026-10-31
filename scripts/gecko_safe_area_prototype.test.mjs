@@ -372,6 +372,15 @@ function fixture({ density = 3, nativeTop = 96, envTop = nativeTop, simulateAnim
       const [id, timer] = [...timers].sort((a, b) => a[1].at - b[1].at)[0] || [];
       if (timer) { timers.delete(id); clock = Math.max(clock, timer.at); timer.callback(); }
     },
+    runReady() {
+      for (let count = 0; count < 1000; count++) {
+        if (mutations.length && observer?.connected) { observer.callback(mutations.splice(0)); continue; }
+        const [id, timer] = [...timers].sort((a, b) => a[1].at - b[1].at)[0] || [];
+        if (!timer || timer.at > clock) return;
+        timers.delete(id); timer.callback();
+      }
+      assert.fail('Ready callbacks must terminate');
+    },
     now: () => clock,
     advance: (millis) => { clock += millis; },
     setUserBodyPadding: (value) => { userBodyPadding = value; },
@@ -3435,4 +3444,296 @@ test('body bootstrap runs synchronously on arrival and preserves parser author p
   assert.equal(f.computed(f.body).paddingTop, '120px', 'Disable exposes latest author inline padding');
   const existing = fixture(); existing.body.computed.paddingTop = '100px'; existing.start(false);
   assert.equal(existing.computed(existing.body).paddingTop, '100px', 'First configure protects an existing body synchronously');
+});
+
+function sideDrawerFixture({ tag = 'aside', padding = '0px', visible = false, cover = false } = {}) {
+  const f = fixture({ viewportContent: cover ? 'viewport-fit=cover' : null });
+  if (cover) f.body.style.setProperty('padding-top', 'env(safe-area-inset-top)');
+  f.context.innerWidth = 412;
+  const drawer = f.element('fixed', '0px', tag);
+  Object.assign(drawer.computed, { bottom: '-60px', boxSizing: 'border-box', paddingTop: padding });
+  const place = (open) => {
+    drawer.rect = { top: 0, left: open ? 60 : 472, width: 352, height: 860,
+      right: open ? 412 : 824, bottom: 860 };
+    control.rect = { top: 0, left: open ? 75 : 487, width: 322, height: 60,
+      right: open ? 397 : 809, bottom: 60 };
+  };
+  const skeleton = f.context.document.createElement('div');
+  drawer.append(skeleton);
+  for (let index = 0; index < 10; index++) {
+    const hidden = f.context.document.createElement('a');
+    hidden.rect = { top: 0, left: 0, width: 0, height: 0, right: 0, bottom: 0 };
+    skeleton.append(hidden);
+  }
+  const header = f.context.document.createElement('div');
+  header.computed.position = 'relative';
+  drawer.append(header);
+  const control = f.context.document.createElement('a');
+  header.append(control);
+  place(visible);
+  const toggle = (open) => {
+    const root = f.context.document.documentElement;
+    const oldValue = root.getAttribute('class');
+    root.setAttribute('class', open ? 'sidebar_open' : '');
+    f.dispatchMutations([{ type: 'attributes', target: root, attributeName: 'class', oldValue }]);
+  };
+  const settle = (propertyName = 'right', target = drawer, type = 'transitionend') => {
+    for (const callback of drawer.eventListeners.get(type) || []) callback({ target, propertyName });
+  };
+  return { ...f, drawer, control, place, toggle, settle };
+}
+
+test('side menu opens through ancestor class and keeps its full-bleed background', () => {
+  const f = sideDrawerFixture();
+  f.start();
+  assert.equal(f.computed(f.drawer).paddingTop, '0px');
+  f.place(true);
+  f.toggle(true);
+  f.flush();
+  assert.equal(f.computed(f.drawer).paddingTop, '32px');
+  assert.equal(f.computed(f.drawer).top, '0px');
+  assert.equal(f.computed(f.drawer).bottom, '-60px');
+  assert.equal(f.drawer.style.getPropertyValue('padding-top'), '');
+  f.place(false);
+  f.toggle(false);
+  f.flush();
+  assert.equal(f.computed(f.drawer).paddingTop, '0px');
+});
+
+test('delayed side menu transition rechecks once after it enters the viewport', () => {
+  const f = sideDrawerFixture();
+  f.start();
+  f.toggle(true);
+  f.flush();
+  assert.equal(f.computed(f.drawer).paddingTop, '0px', 'Drawer remains offscreen during transition delay');
+  f.place(true);
+  f.settle('right', f.control);
+  f.settle('color');
+  f.flush();
+  assert.equal(f.computed(f.drawer).paddingTop, '0px');
+  f.settle();
+  f.flush();
+  assert.equal(f.computed(f.drawer).paddingTop, '32px');
+  const before = { ...f.reads };
+  for (let index = 0; index < 100; index++) f.settle();
+  f.flush();
+  assert.deepEqual(f.reads, before, 'Repeated transition events do not request work');
+});
+
+test('side menu respects author inset and ignores arbitrary narrow panels', () => {
+  for (const options of [{ padding: '40px', visible: true }, { tag: 'div', visible: true }]) {
+    const f = sideDrawerFixture(options);
+    f.start();
+    assert.equal(f.computed(f.drawer).paddingTop, options.padding || '0px');
+    assert.equal(f.computed(f.drawer).top, '0px');
+  }
+  const f = sideDrawerFixture({ visible: true });
+  f.control.rect.top = 40;
+  f.start();
+  assert.equal(f.computed(f.drawer).paddingTop, '0px', 'Already safe menu controls need no extra inset');
+});
+
+test('side menu measurements remain idle on scroll and unrelated or unchanged mutations', () => {
+  const f = sideDrawerFixture();
+  const noise = f.element('static', 'auto');
+  f.start();
+  const before = { ...f.reads };
+  for (let index = 0; index < 100; index++) {
+    noise.setAttribute('class', `product-${index}`);
+    f.mutate(noise, 'class');
+    f.event('scroll');
+  }
+  f.flush();
+  assert.deepEqual(f.reads, before);
+  f.place(true);
+  f.toggle(true);
+  f.flush();
+  const opened = { ...f.reads };
+  const root = f.context.document.documentElement;
+  for (let index = 0; index < 100; index++) {
+    f.dispatchMutations([{ type: 'attributes', target: root, attributeName: 'class', oldValue: 'sidebar_open' }]);
+  }
+  f.flush();
+  assert.deepEqual(f.reads, opened);
+});
+
+test('side menu listeners and padding release on removal or disabled policy', () => {
+  for (const disable of [false, true]) {
+    const f = sideDrawerFixture({ visible: true });
+    f.start();
+    assert.equal(f.computed(f.drawer).paddingTop, '32px');
+    if (disable) f.configure({ enabled: false, revision: 2 });
+    else f.removed(f.drawer);
+    f.flush();
+    assert.equal(f.drawer.eventListeners.get('transitionend')?.size, 0);
+    assert.equal(f.drawer.eventListeners.get('transitioncancel')?.size, 0);
+    assert.equal(f.computed(f.drawer).paddingTop, '0px');
+    const before = { ...f.reads };
+    f.settle();
+    f.flush();
+    assert.deepEqual(f.reads, before);
+  }
+});
+
+
+test('otherwise safe cover page discovers an offscreen menu without enabling broad DOM work', () => {
+  const f = sideDrawerFixture({ cover: true });
+  const wrapper = f.element('static', 'auto');
+  const earlier = f.context.document.createElement('div');
+  wrapper.append(earlier);
+  for (let index = 0; index < 80; index++) earlier.append(f.context.document.createElement('span'));
+  wrapper.append(f.drawer);
+  f.start();
+  assert.equal(f.diagnostics().active, false);
+  f.toggle(true);
+  f.flush();
+  f.place(true);
+  f.settle();
+  f.flush();
+  assert.equal(f.computed(f.drawer).paddingTop, '32px');
+  assert.equal(f.diagnostics().active, false);
+  f.place(false);
+  f.toggle(false);
+  f.flush();
+  assert.equal(f.computed(f.drawer).paddingTop, '0px');
+});
+
+test('changing ancestor classes cannot bypass the side menu measurement rate limit', () => {
+  const f = sideDrawerFixture();
+  f.start();
+  f.place(true);
+  f.toggle(true);
+  f.flush();
+  const root = f.context.document.documentElement;
+  const before = { ...f.reads };
+  for (let index = 0; index < 40; index++) {
+    const oldValue = root.getAttribute('class');
+    root.setAttribute('class', `sidebar_open scrolling-${index}`);
+    f.dispatchMutations([{ type: 'attributes', target: root, attributeName: 'class', oldValue }]);
+    f.runReady();
+    f.advance(1);
+  }
+  assert.deepEqual(f.reads, before, 'No new measurement before the 50ms local deadline');
+  f.flush();
+  const after = { ...f.reads };
+  assert.ok(after.style > before.style, 'Last changed state receives a deferred check');
+  f.advance(1000);
+  f.runReady();
+  assert.deepEqual(f.reads, after, 'No recurring polling after the check');
+});
+
+test('semantic full-screen modal becoming a side menu releases top before adding content padding', () => {
+  const f = sideDrawerFixture({ visible: true });
+  f.drawer.computed.bottom = '0px';
+  f.drawer.rect = { top: 0, left: 0, width: 412, height: 800, right: 412, bottom: 800 };
+  f.start();
+  assert.equal(f.computed(f.drawer).top, '32px');
+  f.place(true);
+  f.toggle(true);
+  f.flush();
+  assert.equal(f.computed(f.drawer).top, '0px');
+  assert.equal(f.computed(f.drawer).paddingTop, '32px');
+});
+
+
+test('side menu cache stays capped and detached candidates free a slot without measurements', () => {
+  const f = sideDrawerFixture();
+  const drawers = [f.drawer];
+  for (let index = 0; index < 12; index++) {
+    const drawer = f.element('fixed', '0px', 'aside');
+    drawer.computed = { ...f.drawer.computed };
+    drawer.rect = { ...f.drawer.rect };
+    drawers.push(drawer);
+  }
+  f.start();
+  const tracked = drawers.filter((drawer) => drawer.eventListeners.get('transitionend')?.size);
+  assert.equal(tracked.length, 8);
+  const before = { ...f.reads };
+  f.removed(tracked[0]);
+  f.flush();
+  assert.deepEqual(f.reads, before);
+  const replacement = f.element('fixed', '0px', 'aside');
+  replacement.computed = { ...f.drawer.computed };
+  replacement.rect = { ...f.drawer.rect };
+  f.added(replacement);
+  f.flush();
+  assert.equal(replacement.eventListeners.get('transitionend')?.size, 1);
+});
+
+test('initially display-none side menu responds to ancestor reveal and empty hidden attributes', () => {
+  const f = sideDrawerFixture();
+  f.drawer.computed.display = 'none';
+  f.drawer.rect = { top: 0, left: 0, width: 0, height: 0, right: 0, bottom: 0 };
+  f.start();
+  f.place(true);
+  f.drawer.computed.display = 'block';
+  f.toggle(true);
+  f.flush();
+  assert.equal(f.computed(f.drawer).paddingTop, '32px');
+  for (let index = 0; index < 2; index++) {
+    f.drawer.computed.display = 'none';
+    f.drawer.setAttribute('hidden', '');
+    f.dispatchMutations([{ type: 'attributes', target: f.drawer, attributeName: 'hidden', oldValue: null }]);
+    f.flush();
+    assert.equal(f.computed(f.drawer).paddingTop, '0px');
+    f.drawer.computed.display = 'block';
+    f.drawer.removeAttribute('hidden');
+    f.dispatchMutations([{ type: 'attributes', target: f.drawer, attributeName: 'hidden', oldValue: '' }]);
+    f.flush();
+    assert.equal(f.computed(f.drawer).paddingTop, '32px');
+  }
+});
+
+test('side menu padding releases in DOM fullscreen and returns afterwards', () => {
+  const f = sideDrawerFixture({ visible: true });
+  f.start();
+  assert.equal(f.computed(f.drawer).paddingTop, '32px');
+  f.context.document.fullscreenElement = f.drawer;
+  f.event('fullscreenchange');
+  f.flush();
+  assert.equal(f.computed(f.drawer).paddingTop, '0px');
+  f.context.document.fullscreenElement = null;
+  f.event('fullscreenchange');
+  f.flush();
+  assert.equal(f.computed(f.drawer).paddingTop, '32px');
+});
+
+
+test('pending side menu check survives scroll cancellation without starting new scroll work', () => {
+  const f = sideDrawerFixture();
+  f.start();
+  f.place(true);
+  f.toggle(true);
+  f.event('scroll');
+  f.flush();
+  assert.equal(f.computed(f.drawer).paddingTop, '32px');
+  const before = { ...f.reads };
+  for (let index = 0; index < 100; index++) f.event('scroll');
+  f.flush();
+  assert.deepEqual(f.reads, before);
+});
+
+
+test('document-start cover policy seeds parser-created menus once at DOM readiness', () => {
+  const f = sideDrawerFixture({ cover: true });
+  f.context.document.readyState = 'loading';
+  f.context.document.documentElement.children.splice(f.context.document.documentElement.children.indexOf(f.body), 1);
+  f.context.document.body = null;
+  f.start();
+  f.context.document.body = f.body;
+  f.context.document.documentElement.append(f.body);
+  f.context.document.readyState = 'interactive';
+  f.event('DOMContentLoaded');
+  f.flush();
+  assert.equal(f.diagnostics().active, false);
+  assert.equal(f.drawer.eventListeners.get('transitionend')?.size, 1);
+  f.place(true);
+  f.toggle(true);
+  f.flush();
+  assert.equal(f.computed(f.drawer).paddingTop, '32px');
+  const before = f.drawer.eventListeners.get('transitionend').size;
+  f.context.document.readyState = 'complete';
+  f.event('load', 'window');
+  f.flush();
+  assert.equal(f.drawer.eventListeners.get('transitionend').size, before);
 });

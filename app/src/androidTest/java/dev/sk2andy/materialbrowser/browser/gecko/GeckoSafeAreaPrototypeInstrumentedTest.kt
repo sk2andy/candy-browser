@@ -615,6 +615,16 @@ class GeckoSafeAreaPrototypeInstrumentedTest {
     }
 
     @Test
+    fun ancestorOpenedSideMenuProtectsContentAcrossTransitionsAndPolicyDisable() {
+        verifyAncestorSideMenu(cover = false)
+    }
+
+    @Test
+    fun safeCoverPageDetectsAncestorOpenedSideMenuAcrossTransitionsAndPolicyDisable() {
+        verifyAncestorSideMenu(cover = true)
+    }
+
+    @Test
     fun initialAndAutomaticFullViewportModalsStayBelowStatusBar() {
         val title = AtomicReference<String?>(null)
         val policy = GeckoPrivacyPolicy.Disabled.copy(cssSafeAreaTopInsetPx = NATIVE_TOP_PX)
@@ -1086,6 +1096,73 @@ class GeckoSafeAreaPrototypeInstrumentedTest {
         }
     }
 
+    private fun verifyAncestorSideMenu(cover: Boolean) {
+        val title = AtomicReference<String?>(null)
+        val policy = GeckoPrivacyPolicy.Disabled.copy(cssSafeAreaTopInsetPx = NATIVE_TOP_PX)
+        EdgeToEdgeSiteFixtureServer { _ -> ancestorSideMenuHtml(cover) }.use { server ->
+            ActivityScenario.launch(GeckoScrollTestActivity::class.java).use { scenario ->
+                lateinit var session: GeckoBrowserSession
+                lateinit var view: View
+                scenario.onActivity { activity ->
+                    WindowCompat.setDecorFitsSystemWindows(activity.window, false)
+                    session = GeckoRuntimeOwner.getOrCreate(activity).createSession(
+                        profileId = "safe-area-side-menu-${UUID.randomUUID()}",
+                        isPrivate = false,
+                        privacyPolicy = policy,
+                    )
+                    session.bindExtensionTab("safe-area-side-menu-${UUID.randomUUID()}", 1)
+                    session.setStateListener { state -> title.set(state.title) }
+                    view = session.createView(activity)
+                    activity.setContentView(view)
+                    session.setActive(true)
+                    assertTrue(session.loadUrl(server.fixtureUrl("/site-matrix/ancestor-side-menu")))
+                }
+                try {
+                    awaitReport(title) { it.getBoolean("loaded") }
+                    scenario.onActivity { updateNativeTop(view) }
+                    val reopened = awaitReport(title) {
+                        it.getInt("stage") == 3 && abs(it.getDouble("linkTop") - it.getDouble("env")) < 0.5
+                    }
+                    val safeTop = NATIVE_TOP_PX / reopened.getDouble("density")
+                    assertEquals("The first opening protects the navigation links", safeTop, reopened.getDouble("firstLinkTop"), 0.5)
+                    assertEquals("Closing releases the hidden menu's padding", 0.0, reopened.getDouble("closedPadding"), 0.5)
+                    assertEquals("Reopening applies exactly one inset", safeTop, reopened.getDouble("linkTop"), 0.5)
+                    assertEquals("The menu background stays edge to edge", 0.0, reopened.getDouble("panelTop"), 0.5)
+                    assertEquals("The menu keeps its authored bottom", -60.0, reopened.getDouble("bottom"), 0.5)
+                    assertEquals("Detection does not require a trusted click", 0, reopened.getInt("trustedClicks"))
+                    assertTrue("Each delayed horizontal transition completed", reopened.getInt("transitions") >= 3)
+                    assertEquals("", reopened.getString("inlinePadding"))
+                    assertEquals("The page keeps exactly one safe-area inset", safeTop, reopened.getDouble("bodyPadding"), 0.5)
+
+                    val ready = CountDownLatch(1)
+                    scenario.onActivity {
+                        session.updatePrivacyPolicy(
+                            policy.copy(
+                                pageHost = URI(server.fixtureUrl("/")).host,
+                                geckoSafeAreaSettings = GeckoSafeAreaSettings(enabled = false),
+                            ),
+                            onReady = ready::countDown,
+                        )
+                    }
+                    assertTrue("Prototype policy acknowledgement", ready.await(30, TimeUnit.SECONDS))
+                    val restored = awaitReport(title) {
+                        it.getInt("stage") == 3 && abs(it.getDouble("padding")) < 0.5
+                    }
+                    assertEquals("Disabling restores author content geometry", 0.0, restored.getDouble("linkTop"), 0.5)
+                    assertEquals(0.0, restored.getDouble("panelTop"), 0.5)
+                    assertEquals("", restored.getString("inlinePadding"))
+                    println("Prototype ancestor side menu: $reopened; disabled: $restored")
+                } finally {
+                    scenario.onActivity {
+                        session.releaseView(view)
+                        session.setActive(false)
+                        session.close()
+                    }
+                }
+            }
+        }
+    }
+
     private fun tapButton(scenario: ActivityScenario<GeckoScrollTestActivity>, view: View, report: JSONObject) {
         val location = IntArray(2)
         scenario.onActivity { view.getLocationOnScreen(location) }
@@ -1144,6 +1221,67 @@ class GeckoSafeAreaPrototypeInstrumentedTest {
     private companion object {
         const val NATIVE_TOP_PX = 137
         const val REPORT_PREFIX = "Candy prototype: "
+        fun ancestorSideMenuHtml(cover: Boolean): String = """
+            <!doctype html><meta name="viewport" content="width=device-width,initial-scale=1${if (cover) ",viewport-fit=cover" else ""}">
+            <style>
+              html,body { margin:0; }
+              body { padding-top:${if (cover) "env(safe-area-inset-top)" else "0px"}; }
+              main { height:2400px; }
+              #probe { position:absolute; visibility:hidden; padding-top:env(safe-area-inset-top); }
+              aside { position:fixed; top:0; bottom:-60px; right:-100%; width:calc(100% - 60px);
+                box-sizing:border-box; padding:0 15px 120px; background:white; z-index:10;
+                transition:right .2s .2s; }
+              html.sidebar_open aside { right:0; }
+              .menu-tabs { position:relative; top:0; height:60px; }
+              .menu-tabs a { display:block; height:60px; line-height:60px; }
+            </style>
+            <body><main>Page content</main><div id="probe"></div>
+              <aside><div hidden><a href="#hidden">Hidden menu item</a></div>
+                <div class="menu-tabs"><a id="menu-link" href="#menu">Menu</a></div>
+                <nav><a href="#categories">Categories</a></nav>
+              </aside>
+            <script>
+              const panel = document.querySelector('aside');
+              const link = document.getElementById('menu-link');
+              let stage = 0, transitions = 0, trustedClicks = 0, openAfter = 0;
+              let firstLinkTop = null, closedPadding = null;
+              panel.addEventListener('transitionend', event => {
+                if (event.target === panel && event.propertyName === 'right') transitions++;
+              });
+              document.addEventListener('click', event => { if (event.isTrusted) trustedClicks++; });
+              setInterval(() => {
+                const env = parseFloat(getComputedStyle(document.getElementById('probe')).paddingTop);
+                const style = getComputedStyle(panel);
+                const rect = panel.getBoundingClientRect();
+                const linkTop = link.getBoundingClientRect().top;
+                const padding = parseFloat(style.paddingTop);
+                if (stage === 0 && env > 0 && document.readyState === 'complete') {
+                  if (!openAfter) openAfter = performance.now() + 1100;
+                  if (performance.now() >= openAfter) {
+                    document.documentElement.classList.add('sidebar_open');
+                    stage = 1;
+                  }
+                } else if (stage === 1 && transitions >= 1 && Math.abs(rect.right - innerWidth) < .5 &&
+                    Math.abs(linkTop - env) < .5) {
+                  firstLinkTop = linkTop;
+                  document.documentElement.classList.remove('sidebar_open');
+                  stage = 2;
+                } else if (stage === 2 && transitions >= 2 && rect.left >= innerWidth && padding < .5) {
+                  closedPadding = padding;
+                  document.documentElement.classList.add('sidebar_open');
+                  stage = 3;
+                }
+                document.title = '${REPORT_PREFIX}' + JSON.stringify({
+                  loaded:document.readyState === 'complete',
+                  stage:stage === 3 && (transitions < 3 || Math.abs(rect.right - innerWidth) >= .5) ? 2 : stage,
+                  density:devicePixelRatio, env, transitions, trustedClicks, firstLinkTop, closedPadding,
+                  panelTop:rect.top, linkTop, padding, bottom:parseFloat(style.bottom),
+                  bodyPadding:parseFloat(getComputedStyle(document.body).paddingTop),
+                  inlinePadding:panel.style.paddingTop,
+                });
+              }, 50);
+            </script>
+        """.trimIndent()
         val LATE_NESTED_TOP_BANNER_HTML = """
             <!doctype html><meta name="viewport" content="width=device-width,initial-scale=1">
             <style>
