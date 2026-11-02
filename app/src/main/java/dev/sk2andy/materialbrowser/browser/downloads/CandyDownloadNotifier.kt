@@ -13,7 +13,6 @@ import android.net.Uri
 import android.text.format.Formatter
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
-import androidx.core.graphics.drawable.IconCompat
 import dev.sk2andy.materialbrowser.DownloadsActivity
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.data.DownloadEntry
@@ -147,11 +146,7 @@ internal class CandyDownloadNotifier(
                 NotificationCompat.ProgressStyle.Segment(PROGRESS_MAX).setColor(accentColor),
             )
         if (progress != null) {
-            progressStyle
-                .setProgress(progress)
-                .setProgressTrackerIcon(
-                    IconCompat.createWithResource(appContext, R.drawable.ic_reader_download),
-                )
+            progressStyle.setProgress(progress)
         }
         val builder = baseBuilder(entry.name)
             .setContentText(statusText(entry, progress))

@@ -8,13 +8,16 @@ const redditSource = readFileSync(new URL('../app/src/main/assets/candy_privacy/
 
 function fixture({ density = 3, nativeTop = 96, envTop = nativeTop, simulateAnimationFrames = false,
   normalizePixels = false, reparseStyles = false, prototypeSource = source, hostname = '',
-  viewportContent = null, themeColor = null, mediaMatches = () => true } = {}) {
+  viewportContent = null, themeColor = null, mediaMatches = () => true, userCssBridge = false } = {}) {
   let clock = 0; let timerId = 0; let observer;
   const observers = [];
+  const resizeObservers = [];
   let deliveredEnvTop = envTop;
   const frameCallbacks = [];
   const timers = new Map(); const listeners = new Map(); const mutations = []; const registrations = [];
   const reads = { style: 0, rect: 0, selector: 0 }; const fallbacks = []; const backdrops = []; let writes = 0;
+  const userCssRequests = [];
+  let userBodyPadding = null;
   let selectorMatches = 0;
   let ruleWrites = 0;
   const normalize = (value) => normalizePixels && /^[+-]?[\d.]+px$/.test(value) ? `${Number(Number(value.slice(0, -2)).toFixed(4))}px` : value;
@@ -166,7 +169,7 @@ function fixture({ density = 3, nativeTop = 96, envTop = nativeTop, simulateAnim
   const config = { ready: true, enabled: true, cssSafeAreaTopInsetPx: nativeTop, navigationGeneration: 1, revision: 1,
     recheckAddedElements: true, recheckChangedElements: true, recheckOnResize: true,
     interactionWindowMillis: 1000, mutationDebounceMillis: 150, maxElementsPerBatch: 16, maxInitialElements: 512 };
-  const document = { documentElement: root, body, readyState: 'complete',
+  const document = { documentElement: root, body, readyState: 'complete', visibilityState: 'visible', hidden: false,
     get styleSheets() {
       const pending = [root]; const result = [];
       while (pending.length) {
@@ -251,6 +254,8 @@ function fixture({ density = 3, nativeTop = 96, envTop = nativeTop, simulateAnim
       if (result[name] === 'env(safe-area-inset-top)') result[name] = `${deliveredEnvTop / density}px`;
       if (result[name] === 'env(safe-area-inset-top, 0px)') result[name] = `${deliveredEnvTop / density}px`;
     }
+    // Gecko User-Origin !important overrides author CSS without modifying the DOM.
+    if (element === document.body && userBodyPadding !== null) result.paddingTop = userBodyPadding;
     return result;
   }
   const windowProxy = {};
@@ -275,7 +280,7 @@ function fixture({ density = 3, nativeTop = 96, envTop = nativeTop, simulateAnim
     requestAnimationFrame: simulateAnimationFrames ? (callback) => frameCallbacks.push(callback) : undefined,
     setTimeout: (callback, delay = 0) => {
       const id = ++timerId; timers.set(id, { callback, at: clock + delay });
-      assert.ok(timers.size <= 1, 'Only one prototype worker may be pending'); return id;
+      assert.ok(timers.size <= (userCssBridge ? 2 : 1), 'Only bounded prototype workers may be pending'); return id;
     },
     clearTimeout: (id) => timers.delete(id),
     addEventListener: (type, callback, options) => {
@@ -289,7 +294,19 @@ function fixture({ density = 3, nativeTop = 96, envTop = nativeTop, simulateAnim
       observe(target) { this.connected = true; (this.targets ||= new Set()).add(target); }
       disconnect() { this.connected = false; mutations.length = 0; }
     },
+    ResizeObserver: class {
+      constructor(callback) { this.callback = callback; this.targets = new Set(); resizeObservers.push(this); }
+      observe(target) { this.targets.add(target); }
+      unobserve(target) { this.targets.delete(target); }
+      disconnect() { this.targets.clear(); }
+    },
   });
+  if (userCssBridge) {
+    context.CandyContentTopInset.protectBodyWithUserCss = (...args) => {
+      userCssRequests.push(args);
+      return Promise.resolve(true);
+    };
+  }
   const flush = () => {
     for (let steps = 0; steps < 12000; steps++) {
       if (mutations.length && observer?.connected) { observer.callback(mutations.splice(0)); continue; }
@@ -299,7 +316,7 @@ function fixture({ density = 3, nativeTop = 96, envTop = nativeTop, simulateAnim
     }
     assert.fail('Prototype work or own-style mutation loop did not terminate');
   };
-  return { body, viewport, theme, context, config, reads, timers, registrations, flush, computed, sheets, fallbacks, backdrops,
+  return { body, viewport, theme, context, config, reads, timers, registrations, flush, computed, sheets, fallbacks, backdrops, userCssRequests,
     matches: () => selectorMatches,
     setEnvTop: (value) => { deliveredEnvTop = value; },
     frame(count = 1) {
@@ -357,9 +374,172 @@ function fixture({ density = 3, nativeTop = 96, envTop = nativeTop, simulateAnim
     },
     now: () => clock,
     advance: (millis) => { clock += millis; },
+    setUserBodyPadding: (value) => { userBodyPadding = value; },
+    setVisibility: (state) => { document.visibilityState = state; document.hidden = state === 'hidden'; },
+    hasBodyResizeObserver: () => resizeObservers.some((watcher) => watcher.targets.has(document.body)),
+    resizeBody() {
+      for (const watcher of resizeObservers) {
+        if (watcher.targets.has(document.body)) {
+          watcher.callback([{ target: document.body, contentRect: document.body.getBoundingClientRect() }]);
+        }
+      }
+    },
+    runDue() {
+      for (let steps = 0; steps < 12000; steps++) {
+        if (mutations.length && observer?.connected) { observer.callback(mutations.splice(0)); continue; }
+        const [id, timer] = [...timers].sort((a, b) => a[1].at - b[1].at || a[0] - b[0])[0] || [];
+        if (!timer || timer.at > clock) return;
+        timers.delete(id); timer.callback();
+      }
+      assert.fail('Prototype due work did not terminate');
+    },
     diagnostics: () => context.CandyCssSafeAreaDiagnostics.sample(),
   };
 }
+
+test('user CSS protection is unnecessary when the computed body padding matches Candy protection', () => {
+  const f = fixture({ userCssBridge: true });
+  f.start();
+  assert.equal(f.computed(f.body).paddingTop, '32px');
+  assert.equal(f.userCssRequests.length, 0);
+});
+
+test('late user-origin body reset requests protection during bounded checks', () => {
+  const f = fixture({ userCssBridge: true });
+  f.start(false);
+  f.advance(100); f.runDue();
+  assert.equal(f.userCssRequests.length, 0);
+  f.setUserBodyPadding('0px');
+  f.advance(400); f.runDue();
+  assert.equal(f.userCssRequests.length, 1);
+  assert.deepEqual(f.userCssRequests[0], [f.body, 32, 1, 1]);
+});
+
+test('a body resize detects a user-origin reset after startup checks have ended', () => {
+  const f = fixture({ userCssBridge: true });
+  f.body.rect = { top: 0, left: 0, width: 360, height: 500, right: 360, bottom: 500 };
+  f.start();
+  assert.equal(f.hasBodyResizeObserver(), true);
+  f.resizeBody();
+  f.advance(100); f.runDue();
+  assert.equal(f.userCssRequests.length, 0);
+  f.advance(5000);
+  f.setUserBodyPadding('0px');
+  f.body.rect = { top: 0, left: 0, width: 360, height: 468, right: 360, bottom: 468 };
+  f.resizeBody();
+  f.advance(100); f.runDue();
+  assert.equal(f.userCssRequests.length, 1);
+  assert.deepEqual(f.userCssRequests[0], [f.body, 32, 1, 1]);
+});
+
+test('body resize observation stops when CSS protection is disabled', () => {
+  const f = fixture({ userCssBridge: true });
+  f.start();
+  assert.equal(f.hasBodyResizeObserver(), true);
+  f.configure({ enabled: false, revision: 2 });
+  assert.equal(f.hasBodyResizeObserver(), false);
+  f.setUserBodyPadding('0px');
+  f.resizeBody();
+  f.advance(100); f.runDue();
+  assert.equal(f.userCssRequests.length, 0);
+});
+
+test('body resize verification waits until scrolling has been quiet for 300 ms', () => {
+  const f = fixture({ userCssBridge: true });
+  f.start();
+  f.advance(1000);
+  f.scrollTo(10);
+  f.event('scroll');
+  f.setUserBodyPadding('0px');
+  f.resizeBody();
+  f.advance(200); f.runDue();
+  f.scrollTo(20);
+  f.event('scroll');
+  f.advance(100); f.runDue();
+  f.advance(199); f.runDue();
+  assert.equal(f.userCssRequests.length, 0);
+  f.advance(1); f.runDue();
+  assert.equal(f.userCssRequests.length, 1);
+  assert.deepEqual(f.userCssRequests[0], [f.body, 32, 1, 1]);
+});
+
+test('body resize bursts perform at most one verification per 500 ms', () => {
+  const f = fixture({ userCssBridge: true });
+  f.start();
+  f.advance(1000);
+  f.resizeBody();
+  f.advance(100); f.runDue();
+  const readsAfterFirstCheck = f.reads.style;
+  for (let index = 0; index < 50; index++) f.resizeBody();
+  f.advance(499); f.runDue();
+  assert.equal(f.reads.style, readsAfterFirstCheck);
+  f.advance(1); f.runDue();
+  assert.equal(f.reads.style, readsAfterFirstCheck + 1);
+});
+
+test('hidden tabs skip body resize checks and recheck after becoming visible', () => {
+  const f = fixture({ userCssBridge: true });
+  f.start();
+  f.setVisibility('hidden');
+  f.event('visibilitychange', 'document');
+  f.setUserBodyPadding('0px');
+  const readsBeforeResize = f.reads.style;
+  f.resizeBody();
+  f.advance(2000); f.runDue();
+  assert.equal(f.userCssRequests.length, 0);
+  assert.equal(f.reads.style, readsBeforeResize, 'Hidden body resize must not read computed styles');
+  f.setVisibility('visible');
+  f.event('visibilitychange', 'document');
+  f.advance(500); f.runDue();
+  assert.ok(f.userCssRequests.length >= 1);
+  assert.deepEqual(f.userCssRequests[0], [f.body, 32, 1, 1]);
+});
+
+test('user CSS protection preserves body padding larger than the system inset', () => {
+  const f = fixture({ userCssBridge: true });
+  f.body.style.setProperty('padding-top', '80px');
+  f.start(false);
+  f.setUserBodyPadding('0px');
+  f.advance(100); f.runDue();
+  assert.equal(f.userCssRequests.length, 1);
+  assert.deepEqual(f.userCssRequests[0], [f.body, 80, 1, 1]);
+});
+
+test('a user-origin reset before page load requests protection on load', () => {
+  const f = fixture({ userCssBridge: true });
+  f.start();
+  f.setUserBodyPadding('0px');
+  f.event('load', 'window');
+  f.runDue();
+  assert.equal(f.userCssRequests.length, 1);
+  assert.deepEqual(f.userCssRequests[0], [f.body, 32, 1, 1]);
+});
+
+test('disabling CSS protection prevents a late body conflict from requesting user CSS', () => {
+  const f = fixture({ userCssBridge: true });
+  f.start(false);
+  f.configure({ enabled: false, revision: 2 });
+  f.setUserBodyPadding('0px');
+  f.event('load', 'window');
+  f.flush();
+  assert.equal(f.userCssRequests.length, 0);
+});
+
+test('viewport-fit cover does not request user CSS for a conflicting body reset', () => {
+  const f = fixture({ userCssBridge: true, viewportContent: 'width=device-width, viewport-fit=cover' });
+  const main = f.element('static', 'auto', 'main');
+  main.textContent = 'Page content';
+  main.rect = { top: 0, left: 0, width: 800, height: 400, right: 800, bottom: 400 };
+  f.start(false);
+  assert.equal(f.computed(f.body).paddingTop, '32px', 'Fixture must start with an active body protection rule');
+  assert.equal(f.hasBodyResizeObserver(), false);
+  f.setUserBodyPadding('0px');
+  f.resizeBody();
+  f.event('load', 'window');
+  f.flush();
+  assert.equal(f.computed(f.body).paddingTop, '0px', 'Fixture must simulate the competing User-Origin rule');
+  assert.equal(f.userCssRequests.length, 0);
+});
 
 test('removal-only mutations release protected subtrees without a trusted interaction or geometry reads', () => {
   const f = fixture();
@@ -1789,6 +1969,267 @@ test('automatic inline modal insertion bypasses the click discovery gate', () =>
 
   assert.equal(f.computed(modal).top, '32px');
   assert.equal(f.computed(modal).bottom, '0px');
+});
+
+function lateTopBannerFixture(options = {}) {
+  const f = fixture();
+  // Existing page headers fill the ordinary semantic discovery budget before
+  // the separate announcement is inserted by its own script.
+  for (let index = 0; index < 8; index++) f.element('static', 'auto', 'header');
+  for (let index = 0; index < (options.precedingNodes ?? 0); index++) f.element('static', 'auto', 'div');
+  f.start();
+  const banner = f.context.document.createElement('div');
+  const header = f.context.document.createElement('header');
+  const close = f.context.document.createElement('button');
+  const top = options.top ?? 0;
+  const controlTop = options.controlTop ?? top;
+  const width = options.width ?? 800;
+  const height = options.height ?? 240;
+  banner.computed = { position: 'fixed', top: `${top}px`, bottom: `${800 - top - height}px`,
+    display: options.display ?? 'block', visibility: options.visibility ?? 'visible' };
+  banner.rect = { top, left: 0, width, height, right: width, bottom: top + height };
+  header.rect = { top, left: 0, width, height: 40, right: width, bottom: top + 40 };
+  close.setAttribute('aria-label', 'Close');
+  close.computed.display = options.controlDisplay ?? 'block';
+  close.rect = { top: controlTop, left: width - 32, width: 32, height: 32,
+    right: width, bottom: controlTop + 32 };
+  header.append(close);
+  if (!options.deferHeader) banner.append(header);
+  f.body.append(banner);
+  f.added(banner);
+  f.flush();
+  return { f, banner, header, close };
+}
+
+test('late wide fixed banner with a header control is protected without user interaction', () => {
+  const { f, banner, close } = lateTopBannerFixture();
+  assert.equal(f.computed(banner).top, '32px');
+  assert.equal(close.style.getPropertyValue('top'), '', 'The control moves with its container');
+  assert.equal(f.fallbacks.length, 0, 'A temporary banner does not require a native viewport fallback');
+});
+
+test('late header inserted into an existing fixed banner protects its ancestor', () => {
+  const { f, banner, header } = lateTopBannerFixture({ deferHeader: true });
+  assert.equal(f.computed(banner).top, '0px');
+  f.childAdded(banner, header);
+  f.flush();
+  assert.equal(f.computed(banner).top, '32px');
+});
+
+test('late narrow, bottom, already safe and hidden banner controls do not gain a top offset', () => {
+  for (const [name, options, expected] of [
+    ['narrow drawer', { width: 250 }, '0px'],
+    ['bottom anchored', { top: 650, height: 150 }, '650px'],
+    ['already safe', { top: 32 }, '32px'],
+    ['control already below inset', { controlTop: 32 }, '0px'],
+    ['hidden', { display: 'none' }, '0px'],
+    ['invisible', { visibility: 'hidden' }, '0px'],
+  ]) {
+    const { f, banner } = lateTopBannerFixture(options);
+    assert.equal(f.computed(banner).top, expected, name);
+  }
+});
+
+test('previously hidden late banner gains protection when its class or inline style makes it visible', () => {
+  for (const attributeName of ['class', 'style']) {
+    const { f, banner } = lateTopBannerFixture({ display: 'none' });
+    assert.equal(f.computed(banner).top, '0px');
+    banner.computed.display = 'block';
+    if (attributeName === 'class') banner.setAttribute('class', 'visible');
+    else banner.style.setProperty('display', 'block');
+    f.mutate(banner, attributeName);
+    f.flush();
+    assert.equal(f.computed(banner).top, '32px', attributeName);
+  }
+});
+
+test('late banner is protected when its initially hidden header control becomes visible', () => {
+  const { f, banner, close } = lateTopBannerFixture({ controlDisplay: 'none' });
+  assert.equal(f.computed(banner).top, '0px');
+  close.style.setProperty('display', 'block');
+  f.mutate(close, 'style');
+  f.flush();
+  assert.equal(f.computed(banner).top, '32px');
+});
+
+test('late banner releases protection when its header is hidden or removed', () => {
+  const hidden = lateTopBannerFixture();
+  hidden.header.style.setProperty('display', 'none');
+  hidden.header.rect = { top: 0, left: 0, width: 0, height: 0, right: 0, bottom: 0 };
+  hidden.close.rect = { top: 0, left: 0, width: 0, height: 0, right: 0, bottom: 0 };
+  hidden.f.mutate(hidden.header, 'style');
+  hidden.f.flush();
+  assert.equal(hidden.f.computed(hidden.banner).top, '0px', 'Hidden header');
+
+  const removed = lateTopBannerFixture();
+  removed.header.remove();
+  removed.f.dispatchMutations([{ type: 'childList', target: removed.banner,
+    addedNodes: [], removedNodes: [removed.header] }]);
+  removed.f.flush();
+  assert.equal(removed.f.computed(removed.banner).top, '0px', 'Removed header');
+});
+
+test('a second unsafe header retains protection when the first is hidden or removed', () => {
+  for (const action of ['hidden', 'removed']) {
+    const { f, banner, header, close } = lateTopBannerFixture();
+    const second = f.context.document.createElement('header');
+    second.rect = { top: 0, left: 0, width: 800, height: 40, right: 800, bottom: 40 };
+    const secondClose = f.context.document.createElement('button');
+    secondClose.rect = { top: 0, left: 768, width: 32, height: 32, right: 800, bottom: 32 };
+    second.append(secondClose);
+    f.childAdded(banner, second);
+    f.flush();
+    assert.equal(f.computed(banner).top, '32px');
+    if (action === 'hidden') {
+      header.style.setProperty('display', 'none');
+      header.rect = { top: 0, left: 0, width: 0, height: 0, right: 0, bottom: 0 };
+      close.rect = { top: 0, left: 0, width: 0, height: 0, right: 0, bottom: 0 };
+      f.mutate(header, 'style');
+    } else {
+      header.remove();
+      f.dispatchMutations([{ type: 'childList', target: banner,
+        addedNodes: [], removedNodes: [header] }]);
+    }
+    f.flush();
+    assert.equal(f.computed(banner).top, '32px', action);
+  }
+});
+
+test('unrelated body insertions do not remeasure known banners', () => {
+  const { f, banner } = lateTopBannerFixture();
+  assert.equal(f.computed(banner).top, '32px');
+  const before = { style: f.reads.style, rect: f.reads.rect };
+  const unrelated = Array.from({ length: 3 }, () => f.context.document.createElement('div'));
+  for (const node of unrelated) f.body.append(node);
+  f.dispatchMutations([{ type: 'childList', target: f.body, addedNodes: unrelated, removedNodes: [] }]);
+  f.flush();
+  assert.deepEqual({ style: f.reads.style, rect: f.reads.rect }, before);
+});
+
+test('late banner responds when a stylesheet hides it and media stops applying', () => {
+  const { f, banner } = lateTopBannerFixture();
+  banner.id = 'announcement';
+  const sheet = f.sheet([{ selector: '#announcement', declarations: { display: 'none' } }]);
+  f.added(sheet);
+  f.flush();
+  assert.equal(f.computed(banner).display, 'none');
+  assert.equal(f.computed(banner).top, '0px', 'Hidden by an inserted stylesheet');
+  sheet.setAttribute('media', 'not all');
+  f.mutate(sheet, 'media');
+  f.flush();
+  assert.equal(f.computed(banner).display, 'block');
+  assert.equal(f.computed(banner).top, '32px', 'Revealed when the stylesheet no longer applies');
+});
+
+test('late banner reacts to viewport resize even when general resize rechecks are disabled', () => {
+  const { f, banner } = lateTopBannerFixture({ width: 500 });
+  f.configure({ recheckOnResize: false });
+  assert.equal(f.computed(banner).top, '32px');
+  f.context.innerWidth = 1200;
+  f.event('resize');
+  f.flush();
+  assert.equal(f.computed(banner).top, '0px', 'Narrow compared with the resized viewport');
+  f.context.innerWidth = 800;
+  f.event('resize');
+  f.flush();
+  assert.equal(f.computed(banner).top, '32px', 'Wide again in the original viewport');
+});
+
+test('late banner releases protection when its control is removed or hidden and reapplies on reveal', () => {
+  const removed = lateTopBannerFixture();
+  removed.close.remove();
+  removed.f.dispatchMutations([{ type: 'childList', target: removed.header,
+    addedNodes: [], removedNodes: [removed.close] }]);
+  removed.f.flush();
+  assert.equal(removed.f.computed(removed.banner).top, '0px', 'Removed control');
+
+  const hidden = lateTopBannerFixture();
+  hidden.close.style.setProperty('display', 'none');
+  hidden.f.mutate(hidden.close, 'style');
+  hidden.f.flush();
+  assert.equal(hidden.f.computed(hidden.banner).top, '0px', 'Hidden control');
+  hidden.close.style.setProperty('display', 'block');
+  hidden.f.mutate(hidden.close, 'style');
+  hidden.f.flush();
+  assert.equal(hidden.f.computed(hidden.banner).top, '32px', 'Revealed control');
+});
+
+test('late banner protection tracks inset changes', () => {
+  const { f, banner } = lateTopBannerFixture();
+  assert.equal(f.computed(banner).top, '32px');
+  f.configure({ cssSafeAreaTopInsetPx: 144 });
+  assert.equal(f.computed(banner).top, '48px');
+});
+
+test('semantic header that is also a fullscreen dialog retains modal protection', () => {
+  const f = fixture();
+  f.start();
+  const dialog = f.context.document.createElement('header');
+  dialog.setAttribute('role', 'dialog');
+  dialog.computed = { position: 'fixed', top: '0px', bottom: '0px' };
+  dialog.rect = { top: 0, left: 0, width: 800, height: 800, right: 800, bottom: 800 };
+  dialog.style.setProperty('inset', '0px');
+  f.body.append(dialog);
+  f.added(dialog);
+  f.flush();
+  assert.equal(f.computed(dialog).top, '32px');
+  assert.equal(f.computed(dialog).bottom, '0px');
+});
+
+test('scrolling a late fixed banner does not request native header fallback', () => {
+  const { f, banner } = lateTopBannerFixture();
+  assert.equal(f.computed(banner).top, '32px');
+  f.scrollTo(600);
+  f.event('scroll');
+  f.flush();
+  assert.equal(f.fallbacks.length, 0);
+  assert.equal(f.computed(banner).top, '32px');
+});
+
+test('late banner protection is released on disable and detached-node cleanup', () => {
+  const first = lateTopBannerFixture();
+  assert.equal(first.f.computed(first.banner).top, '32px');
+  first.f.configure({ enabled: false });
+  assert.equal(first.f.computed(first.banner).top, '0px');
+
+  const second = lateTopBannerFixture();
+  assert.equal(second.f.computed(second.banner).top, '32px');
+  second.banner.remove();
+  second.f.dispatchMutations([{ type: 'childList', target: second.f.body,
+    addedNodes: [], removedNodes: [second.banner] }]);
+  second.f.flush();
+  assert.equal(second.f.computed(second.banner).top, '0px');
+});
+
+test('late banner beyond the initial traversal limit regains protection when reenabled', () => {
+  const { f, banner } = lateTopBannerFixture({ precedingNodes: 550 });
+  assert.equal(f.computed(banner).top, '32px');
+  f.configure({ enabled: false });
+  assert.equal(f.computed(banner).top, '0px');
+  f.configure({ enabled: true });
+  assert.equal(f.computed(banner).top, '32px');
+});
+
+test('late top banner activates protection on an otherwise safe viewport-cover page', () => {
+  const f = fixture({ viewportContent: 'width=device-width, viewport-fit=cover' });
+  f.body.style.setProperty('padding-top', 'env(safe-area-inset-top)');
+  for (let index = 0; index < 8; index++) f.element('static', 'auto', 'header');
+  for (let index = 0; index < 70; index++) f.element('static', 'auto', 'div');
+  f.start();
+  const banner = f.context.document.createElement('div');
+  banner.computed = { position: 'fixed', top: '0px', bottom: '560px' };
+  banner.rect = { top: 0, left: 0, width: 800, height: 240, right: 800, bottom: 240 };
+  const header = f.context.document.createElement('header');
+  const close = f.context.document.createElement('button');
+  header.rect = { top: 0, left: 0, width: 800, height: 40, right: 800, bottom: 40 };
+  close.rect = { top: 0, left: 768, width: 32, height: 32, right: 800, bottom: 32 };
+  header.append(close);
+  banner.append(header);
+  f.body.append(banner);
+  f.added(banner);
+  f.flush();
+  assert.equal(f.computed(banner).top, '32px');
+  assert.equal(f.fallbacks.length, 0);
 });
 
 test('clicked class modal and automatic interstitial both receive the top inset', () => {

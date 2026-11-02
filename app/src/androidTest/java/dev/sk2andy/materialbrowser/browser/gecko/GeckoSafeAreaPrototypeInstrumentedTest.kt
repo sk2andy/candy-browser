@@ -1,5 +1,7 @@
 package dev.sk2andy.materialbrowser.browser.gecko
 
+import android.os.Handler
+import android.os.Looper
 import android.os.SystemClock
 import android.view.InputDevice
 import android.view.MotionEvent
@@ -30,6 +32,104 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class GeckoSafeAreaPrototypeInstrumentedTest {
     private val instrumentation = InstrumentationRegistry.getInstrumentation()
+
+    @Test
+    fun userOriginBodyResetKeepsProtectionAcrossPolicyAndNavigationChanges() {
+        val title = AtomicReference<String?>(null)
+        val policy = GeckoPrivacyPolicy.Disabled.copy(cssSafeAreaTopInsetPx = NATIVE_TOP_PX)
+        val disabledPolicy = policy.copy(geckoSafeAreaSettings = GeckoSafeAreaSettings(enabled = false))
+        EdgeToEdgeSiteFixtureServer { _ -> USER_ORIGIN_BODY_RESET_HTML }.use { server ->
+            ActivityScenario.launch(GeckoScrollTestActivity::class.java).use { scenario ->
+                val installed = CountDownLatch(1)
+                val installError = AtomicReference<Throwable?>(null)
+                lateinit var session: GeckoBrowserSession
+                lateinit var view: View
+                scenario.onActivity { activity ->
+                    val runtime = GeckoRuntimeOwner.getOrCreate(activity) as GeckoViewRuntimeHandle
+                    runtime.ensureBuiltInExtensionFixture()
+                        .withHandler(Handler(Looper.getMainLooper()))
+                        .accept(
+                            { installed.countDown() },
+                            { error -> installError.set(error); installed.countDown() },
+                        )
+                }
+                assertTrue("Test extension did not finish installing", installed.await(20, TimeUnit.SECONDS))
+                installError.get()?.let { throw AssertionError("Test extension installation failed", it) }
+                val conflictUrl = server.fixtureUrl("/site-matrix/user-origin-conflict")
+                val controlUrl = server.fixtureUrl("/site-matrix/user-origin-control")
+                scenario.onActivity { activity ->
+                    WindowCompat.setDecorFitsSystemWindows(activity.window, false)
+                    session = GeckoRuntimeOwner.getOrCreate(activity).createSession(
+                        profileId = "safe-area-user-origin-${UUID.randomUUID()}",
+                        isPrivate = false,
+                        privacyPolicy = disabledPolicy,
+                    )
+                    session.bindExtensionTab("safe-area-user-origin-${UUID.randomUUID()}", 1)
+                    session.setStateListener { state -> title.set(state.title) }
+                    view = session.createView(activity)
+                    activity.setContentView(view)
+                    session.setActive(true)
+                    assertTrue(session.loadUrl(conflictUrl))
+                }
+                try {
+                    awaitReport(title) { it.getString("page") == "conflict" && it.getBoolean("loaded") }
+                    scenario.onActivity { updateNativeTop(view) }
+                    val blocked = awaitReport(title) {
+                        it.getString("page") == "conflict" && it.getBoolean("injected") &&
+                            abs(it.getDouble("padding")) < 0.02 &&
+                            abs(it.getDouble("env") * it.getDouble("density") - NATIVE_TOP_PX) < 0.5
+                    }
+                    assertEquals("User-origin CSS overrides the 12px author padding", 0.0, blocked.getDouble("padding"), 0.02)
+                    assertEquals(0.0, blocked.getDouble("contentY"), 0.5)
+
+                    fun updatePolicy(next: GeckoPrivacyPolicy) {
+                        val ready = CountDownLatch(1)
+                        scenario.onActivity {
+                            session.updatePrivacyPolicy(
+                                next.copy(pageHost = URI(conflictUrl).host),
+                                onReady = ready::countDown,
+                            )
+                        }
+                        assertTrue("Prototype policy acknowledgement", ready.await(30, TimeUnit.SECONDS))
+                    }
+                    updatePolicy(policy)
+                    val protected = awaitReport(title) {
+                        it.getString("page") == "conflict" && it.getBoolean("injected") &&
+                            abs(it.getDouble("padding") - it.getDouble("env")) < 0.5
+                    }
+                    assertEquals("Content stays below the status bar", protected.getDouble("env"), protected.getDouble("contentY"), 0.5)
+
+                    updatePolicy(disabledPolicy)
+                    awaitReport(title) {
+                        it.getString("page") == "conflict" && it.getBoolean("injected") &&
+                            abs(it.getDouble("padding")) < 0.02
+                    }
+                    scenario.onActivity { assertTrue(session.loadUrl(controlUrl)) }
+                    val control = awaitReport(title) { it.getString("page") == "control" && it.getBoolean("loaded") }
+                    assertEquals("Navigation removes the extension's previous user CSS", 12.0, control.getDouble("padding"), 0.02)
+                    assertEquals(12.0, control.getDouble("contentY"), 0.5)
+
+                    updatePolicy(policy)
+                    awaitReport(title) {
+                        it.getString("page") == "control" &&
+                            abs(it.getDouble("padding") - it.getDouble("env")) < 0.5
+                    }
+                    scenario.onActivity { assertTrue(session.loadUrl(conflictUrl)) }
+                    val reloaded = awaitReport(title) {
+                        it.getString("page") == "conflict" && it.getBoolean("injected") &&
+                            abs(it.getDouble("padding") - it.getDouble("env")) < 0.5
+                    }
+                    assertEquals(reloaded.getDouble("env"), reloaded.getDouble("contentY"), 0.5)
+                } finally {
+                    scenario.onActivity {
+                        session.releaseView(view)
+                        session.setActive(false)
+                        session.close()
+                    }
+                }
+            }
+        }
+    }
 
     @Test
     fun stylesheetCascadeKeepsLaterAndImportantAuthorTopAcrossProtectionToggle() {
@@ -452,6 +552,57 @@ class GeckoSafeAreaPrototypeInstrumentedTest {
                     assertEquals(original.getDouble("navigationRectBottom"), protected.getDouble("navigationRectBottom"), 0.5)
                     assertEquals(original.getDouble("panelTop"), protected.getDouble("panelTop"), 0.5)
                     assertEquals("", protected.getString("navigationInlineTop"))
+                } finally {
+                    scenario.onActivity {
+                        session.releaseView(view)
+                        session.setActive(false)
+                        session.close()
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
+    fun lateNestedTopBannerKeepsItsCloseButtonReachable() {
+        val title = AtomicReference<String?>(null)
+        val policy = GeckoPrivacyPolicy.Disabled.copy(cssSafeAreaTopInsetPx = NATIVE_TOP_PX)
+        EdgeToEdgeSiteFixtureServer { _ -> LATE_NESTED_TOP_BANNER_HTML }.use { server ->
+            ActivityScenario.launch(GeckoScrollTestActivity::class.java).use { scenario ->
+                lateinit var session: GeckoBrowserSession
+                lateinit var view: View
+                scenario.onActivity { activity ->
+                    WindowCompat.setDecorFitsSystemWindows(activity.window, false)
+                    session = GeckoRuntimeOwner.getOrCreate(activity).createSession(
+                        profileId = "safe-area-nested-top-banner-${UUID.randomUUID()}",
+                        isPrivate = false,
+                        privacyPolicy = policy,
+                    )
+                    session.bindExtensionTab("safe-area-nested-top-banner-${UUID.randomUUID()}", 1)
+                    session.setStateListener { state -> title.set(state.title) }
+                    view = session.createView(activity)
+                    activity.setContentView(view)
+                    session.setActive(true)
+                    assertTrue(session.loadUrl(server.fixtureUrl("/site-matrix/late-nested-top-banner")))
+                }
+                try {
+                    awaitReport(title) { it.getBoolean("loaded") }
+                    scenario.onActivity { updateNativeTop(view) }
+                    val protected = awaitReport(title) {
+                        it.getBoolean("bannerReady") && it.getDouble("env") > 0 &&
+                            it.getDouble("headerTop") >= it.getDouble("env") - 0.5 &&
+                            it.getDouble("buttonTop") >= it.getDouble("env") - 0.5
+                    }
+                    assertEquals("Normal page flow retains exactly one inset", protected.getDouble("env"), protected.getDouble("bodyPadding"), 0.5)
+                    assertEquals(protected.getDouble("env"), protected.getDouble("contentTop"), 0.5)
+                    scenario.onActivity { session.scrollToVerticalOffset(450) }
+                    val scrolled = awaitReport(title) { it.getDouble("scrollY") > 50 }
+                    assertTrue("Fixed banner header stays below the status bar while scrolling", scrolled.getDouble("headerTop") >= scrolled.getDouble("env") - 0.5)
+                    assertTrue("The close button stays below the status bar while scrolling", scrolled.getDouble("buttonTop") >= scrolled.getDouble("env") - 0.5)
+                    tapButton(scenario, view, scrolled)
+                    val closed = awaitReport(title) { it.getBoolean("bannerClosed") }
+                    assertEquals("The real touch reaches the close button", 1, closed.getInt("trustedClicks"))
+                    assertEquals("Closing the banner retains the page inset", closed.getDouble("env"), closed.getDouble("bodyPadding"), 0.5)
                 } finally {
                     scenario.onActivity {
                         session.releaseView(view)
@@ -993,6 +1144,74 @@ class GeckoSafeAreaPrototypeInstrumentedTest {
     private companion object {
         const val NATIVE_TOP_PX = 137
         const val REPORT_PREFIX = "Candy prototype: "
+        val LATE_NESTED_TOP_BANNER_HTML = """
+            <!doctype html><meta name="viewport" content="width=device-width,initial-scale=1">
+            <style>
+              html, body { margin:0; }
+              #probe { position:absolute; visibility:hidden; padding-top:env(safe-area-inset-top); }
+              #campaign { position:fixed; top:0; left:0; right:0; height:339px; background:white; z-index:10; }
+              #campaign header { position:relative; height:48px; }
+              #close { position:absolute; top:0; right:0; width:48px; height:48px; }
+              main { height:2400px; }
+            </style>
+            <body><main>Page content</main><div id="probe"></div><script>
+              let trustedClicks = 0;
+              let bannerClosed = false;
+              setTimeout(() => {
+                const campaign = document.createElement('div');
+                campaign.id = 'campaign';
+                campaign.innerHTML = '<div><div><div><header><span>Why donate?</span><button id="close">Close</button></header><div>Donation message</div></div></div></div>';
+                document.body.append(campaign);
+                document.getElementById('close').addEventListener('click', event => {
+                  if (event.isTrusted) trustedClicks++;
+                  campaign.remove();
+                  bannerClosed = true;
+                });
+              }, 1000);
+              setInterval(() => {
+                const header = document.querySelector('#campaign header');
+                const button = document.getElementById('close');
+                const buttonRect = button?.getBoundingClientRect();
+                document.title = '${REPORT_PREFIX}' + JSON.stringify({
+                  loaded:document.readyState === 'complete',
+                  env:parseFloat(getComputedStyle(document.getElementById('probe')).paddingTop),
+                  density:devicePixelRatio,
+                  bannerReady:!!header,
+                  bannerClosed,
+                  trustedClicks,
+                  headerTop:header?.getBoundingClientRect().top ?? null,
+                  buttonTop:buttonRect?.top ?? null,
+                  buttonX:buttonRect ? buttonRect.left + buttonRect.width / 2 : null,
+                  buttonY:buttonRect ? buttonRect.top + buttonRect.height / 2 : null,
+                  bodyPadding:parseFloat(getComputedStyle(document.body).paddingTop),
+                  contentTop:document.querySelector('main').getBoundingClientRect().top,
+                  scrollY:scrollY,
+                });
+              }, 50);
+            </script>
+        """.trimIndent()
+        val USER_ORIGIN_BODY_RESET_HTML = """
+            <!doctype html><meta name="viewport" content="width=device-width,initial-scale=1">
+            <style>
+              html, body { margin:0; }
+              body { padding-top:12px !important; }
+              #probe { position:absolute; visibility:hidden; padding-top:env(safe-area-inset-top); }
+            </style>
+            <body><div id="probe"></div><div id="content">Fixture content</div></body>
+            <script>
+              setInterval(() => {
+                document.title = '${REPORT_PREFIX}' + JSON.stringify({
+                  page:location.pathname.endsWith('user-origin-conflict') ? 'conflict' : 'control',
+                  loaded:document.readyState === 'complete',
+                  injected:document.documentElement.dataset.candyFixtureUserCss === 'installed',
+                  density:devicePixelRatio,
+                  env:parseFloat(getComputedStyle(document.getElementById('probe')).paddingTop),
+                  padding:parseFloat(getComputedStyle(document.body).paddingTop),
+                  contentY:document.getElementById('content').getBoundingClientRect().top,
+                });
+              }, 50);
+            </script>
+        """.trimIndent()
         val STYLESHEET_CASCADE_HTML = """
             <!doctype html><meta name="viewport" content="width=device-width,initial-scale=1">
             <style id="author-styles">

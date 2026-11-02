@@ -36,7 +36,9 @@ import java.net.Socket
 import java.nio.charset.StandardCharsets
 import java.util.Base64
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.abs
 import org.json.JSONObject
@@ -67,6 +69,51 @@ class GeckoIoPromptsInstrumentedTest {
         BrowserSessionStore(context).saveStartupAnimationEnabled(false)
         ReleaseNotesStore(context).markHandled(BuildConfig.VERSION_CODE.toLong())
         testEngineView = null
+    }
+
+    @Test
+    fun previewApkDownloadCompletesAfterPreviewCloses() {
+        FixtureServer().use { server ->
+            seedSelectedTab("about:blank")
+            launchMainActivity().use { scenario ->
+                deleteStoredDownload(DOWNLOAD_FILE_NAME)
+                try {
+                    scenario.onActivity { activity ->
+                        val controller = activity.browserControllerForTesting()
+                        assertTrue(controller.openExternalLinkPreview(server.url("/slow-download-start")))
+                    }
+                    awaitValue("preview page loaded") {
+                        scenario.value { controller ->
+                            controller.externalLinkPreviewState?.takeIf { !it.isLoading }
+                        }
+                    }
+                    awaitValue("visible preview") {
+                        scenario.value { controller ->
+                            controller.externalLinkPreviewEngineViewForTesting()?.also { testEngineView = it }
+                        }?.takeIf { it.isAttachedToWindow && it.isShown && it.width > 0 && it.height > 0 }
+                    }
+                    awaitValue("preview APK request") {
+                        if (server.slowDownloadRequested.get()) {
+                            true
+                        } else {
+                            tapPreviewDownloadLink()
+                            SystemClock.sleep(500)
+                            null
+                        }
+                    }
+                    awaitValue("preview dismissed after download starts") {
+                        scenario.value { controller -> true.takeIf { controller.externalLinkPreviewState == null } }
+                    }
+                    server.finishSlowDownload.countDown()
+                    assertEquals("candy-gecko-download", requireNotNull(awaitValue("completed preview APK") {
+                        storedDownload(DOWNLOAD_FILE_NAME)
+                    }).decodeToString())
+                } finally {
+                    server.finishSlowDownload.countDown()
+                    deleteStoredDownload(DOWNLOAD_FILE_NAME)
+                }
+            }
+        }
     }
 
     @Test
@@ -453,6 +500,19 @@ class GeckoIoPromptsInstrumentedTest {
         SystemClock.sleep(250)
     }
 
+    private fun tapPreviewDownloadLink() {
+        val target = requireNotNull(testEngineView)
+        val location = IntArray(2)
+        instrumentation.runOnMainSync {
+            target.requestFocus()
+            target.getLocationOnScreen(location)
+        }
+        val density = context.resources.displayMetrics.density
+        val x = location[0] + (30 * density).toInt()
+        val y = location[1] + (57 * density).toInt()
+        instrumentation.uiAutomation.executeShellCommand("input tap $x $y").close()
+    }
+
     private fun geckoEngineView(): ViewGroup =
         (requireNotNull(testEngineView) as ViewGroup).getChildAt(0) as ViewGroup
 
@@ -545,6 +605,8 @@ class GeckoIoPromptsInstrumentedTest {
         private val closed = AtomicBoolean()
         val authorized = AtomicBoolean()
         val downloadRequested = AtomicBoolean()
+        val slowDownloadRequested = AtomicBoolean()
+        val finishSlowDownload = CountDownLatch(1)
         private val expectedAuth = "Basic " + Base64.getEncoder().encodeToString(
             "candy:secret".toByteArray(StandardCharsets.UTF_8),
         )
@@ -586,6 +648,33 @@ class GeckoIoPromptsInstrumentedTest {
                 if (path == "/download") downloadRequested.set(true)
                 when (path) {
                     "/download-start" -> write(connection, "200 OK", "text/html", DOWNLOAD_HTML)
+                    "/slow-download-start" -> write(
+                        connection,
+                        "200 OK",
+                        "text/html",
+                        DOWNLOAD_HTML.replace("/download", "/slow-redirect"),
+                    )
+                    "/slow-redirect" -> connection.getOutputStream().use { output ->
+                        output.write(
+                            ("HTTP/1.1 302 Found\r\nLocation: /slow-download\r\n" +
+                                "Content-Length: 0\r\nConnection: close\r\n\r\n").toByteArray(),
+                        )
+                    }
+                    "/slow-download" -> {
+                        slowDownloadRequested.set(true)
+                        val body = "candy-gecko-download".toByteArray(StandardCharsets.UTF_8)
+                        connection.getOutputStream().use { output ->
+                            output.write(
+                                ("HTTP/1.1 200 OK\r\nContent-Type: application/vnd.android.package-archive\r\n" +
+                                    "Content-Disposition: attachment; filename=\"gecko.apk\"\r\n" +
+                                    "Content-Length: ${body.size}\r\nConnection: close\r\n\r\n").toByteArray(),
+                            )
+                            output.write(body, 0, 1)
+                            output.flush()
+                            finishSlowDownload.await(90, TimeUnit.SECONDS)
+                            output.write(body, 1, body.size - 1)
+                        }
+                    }
                     "/download" -> write(
                         connection,
                         "200 OK",

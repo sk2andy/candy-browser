@@ -868,6 +868,20 @@ browser.runtime.onMessage.addListener((message, sender) => {
     const policy = token && policiesByToken.get(token);
     return Promise.resolve(contentPolicy(policy));
   }
+  if (message.type === "safe-area-user-body-css") {
+    const token = tokenByTab.get(sender.tab.id);
+    const policy = token && policiesByToken.get(token);
+    if (!policy || sender.frameId !== 0 || policy.geckoSafeAreaEnabled !== true ||
+        policy.navigationGeneration !== message.navigationGeneration ||
+        policy.revision !== message.revision || hostFromUrl(sender.url) !== policy.pageHost) {
+      return Promise.resolve(false);
+    }
+    return browser.tabs.insertCSS(sender.tab.id, {
+      code: ':root:root body[data-candy-safe-area-user-body="true"] { padding-top: var(--candy-safe-area-user-body-padding) !important; }',
+      cssOrigin: "user",
+      frameId: 0,
+    }).then(() => true, () => false);
+  }
   if (message.type === "inline-video-state") {
     updateInlineVideoState(message, sender);
     return undefined;

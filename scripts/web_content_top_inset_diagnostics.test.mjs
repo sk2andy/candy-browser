@@ -92,6 +92,120 @@ function bridgeHarness(performance) {
   return context;
 }
 
+function userBodyCssHarness() {
+  const harness = bridgeHarness(performanceFixture().api);
+  const requests = [];
+  harness.browser.runtime.sendMessage = (message) => {
+    requests.push({ ...message });
+    return Promise.resolve(true);
+  };
+  harness.applyPolicy({ type: 'content-policy', ready: true, revision: 4, navigationGeneration: 2,
+    cssSafeAreaTopInsetPx: 96, geckoSafeAreaEnabled: true });
+  const makeBody = () => {
+    const attributes = new Map();
+    const properties = new Map();
+    return {
+      isConnected: true,
+      getAttribute: (name) => attributes.get(name) ?? null,
+      setAttribute: (name, value) => attributes.set(name, value),
+      removeAttribute: (name) => attributes.delete(name),
+      style: {
+        getPropertyValue: (name) => properties.get(name)?.value || '',
+        getPropertyPriority: (name) => properties.get(name)?.priority || '',
+        setProperty: (name, value, priority = '') => properties.set(name, { value, priority }),
+        removeProperty: (name) => properties.delete(name),
+      },
+    };
+  };
+  const body = makeBody();
+  harness.document.body = body;
+  return { harness, body, requests, makeBody };
+}
+
+test('body User-CSS is requested only on explicit conflict and only once per document', () => {
+  const { harness, body, requests } = userBodyCssHarness();
+  assert.equal(requests.length, 0);
+  harness.CandyContentTopInset.protectBodyWithUserCss(body, 32, 2, 4);
+  harness.CandyContentTopInset.protectBodyWithUserCss(body, 32, 2, 4);
+  assert.deepEqual(requests, [{ type: 'safe-area-user-body-css', navigationGeneration: 2, revision: 4 }]);
+  assert.equal(body.getAttribute('data-candy-safe-area-user-body'), 'true');
+  assert.equal(body.style.getPropertyValue('--candy-safe-area-user-body-padding'), '32px');
+  assert.equal(body.style.getPropertyPriority('--candy-safe-area-user-body-padding'), 'important');
+});
+
+test('stale body User-CSS requests cannot mutate the body or send messages', () => {
+  const { harness, body, requests } = userBodyCssHarness();
+  harness.CandyContentTopInset.protectBodyWithUserCss(body, 32, 2, 3);
+  harness.CandyContentTopInset.protectBodyWithUserCss(body, 32, 1, 4);
+  assert.equal(requests.length, 0);
+  assert.equal(body.getAttribute('data-candy-safe-area-user-body'), null);
+  assert.equal(body.style.getPropertyValue('--candy-safe-area-user-body-padding'), '');
+});
+
+test('clearing body User-CSS restores prior author values without overwriting newer ones', () => {
+  const { harness, body } = userBodyCssHarness();
+  const name = '--candy-safe-area-user-body-padding';
+  body.setAttribute('data-candy-safe-area-user-body', 'author');
+  body.style.setProperty(name, '11px');
+  harness.CandyContentTopInset.protectBodyWithUserCss(body, 32, 2, 4);
+  harness.CandyContentTopInset.clearBodyUserCss();
+  assert.equal(body.getAttribute('data-candy-safe-area-user-body'), 'author');
+  assert.equal(body.style.getPropertyValue(name), '11px');
+  assert.equal(body.style.getPropertyPriority(name), '');
+  harness.CandyContentTopInset.protectBodyWithUserCss(body, 32, 2, 4);
+  body.setAttribute('data-candy-safe-area-user-body', 'newer');
+  body.style.setProperty(name, '27px', 'important');
+  harness.CandyContentTopInset.clearBodyUserCss();
+  assert.equal(body.getAttribute('data-candy-safe-area-user-body'), 'newer');
+  assert.equal(body.style.getPropertyValue(name), '27px');
+  assert.equal(body.style.getPropertyPriority(name), 'important');
+});
+
+test('a damaged body guard is repaired and cleanup preserves the latest author values', () => {
+  const { harness, body, requests } = userBodyCssHarness();
+  const marker = 'data-candy-safe-area-user-body';
+  const name = '--candy-safe-area-user-body-padding';
+  body.setAttribute(marker, 'author');
+  body.style.setProperty(name, '11px', 'important');
+  harness.CandyContentTopInset.protectBodyWithUserCss(body, 32, 2, 4);
+  body.removeAttribute(marker);
+  body.style.setProperty(name, '27px');
+  harness.CandyContentTopInset.protectBodyWithUserCss(body, 32, 2, 4);
+  assert.equal(body.getAttribute(marker), 'true');
+  assert.equal(body.style.getPropertyValue(name), '32px');
+  assert.equal(body.style.getPropertyPriority(name), 'important');
+  assert.equal(requests.length, 1, 'Repair must reuse the existing User-CSS installation');
+  harness.CandyContentTopInset.clearBodyUserCss();
+  assert.equal(body.getAttribute(marker), null);
+  assert.equal(body.style.getPropertyValue(name), '27px');
+  assert.equal(body.style.getPropertyPriority(name), '');
+});
+
+test('replacing the body releases its protection and guards the replacement', () => {
+  const { harness, body, makeBody, requests } = userBodyCssHarness();
+  harness.CandyContentTopInset.protectBodyWithUserCss(body, 32, 2, 4);
+  const nextBody = makeBody();
+  harness.document.body = nextBody;
+  body.isConnected = false;
+  harness.CandyContentTopInset.protectBodyWithUserCss(body, 32, 2, 4);
+  harness.CandyContentTopInset.protectBodyWithUserCss(nextBody, 48, 2, 4);
+  assert.equal(body.getAttribute('data-candy-safe-area-user-body'), null);
+  assert.equal(body.style.getPropertyValue('--candy-safe-area-user-body-padding'), '');
+  assert.equal(nextBody.getAttribute('data-candy-safe-area-user-body'), 'true');
+  assert.equal(nextBody.style.getPropertyValue('--candy-safe-area-user-body-padding'), '48px');
+  assert.equal(requests.length, 1);
+});
+
+test('disabled CSS protection rejects body User-CSS requests', () => {
+  const { harness, body, requests } = userBodyCssHarness();
+  harness.applyPolicy({ type: 'content-policy', ready: true, revision: 5, navigationGeneration: 2,
+    cssSafeAreaTopInsetPx: 96, geckoSafeAreaEnabled: false });
+  harness.CandyContentTopInset.protectBodyWithUserCss(body, 32, 2, 5);
+  assert.equal(requests.length, 0);
+  assert.equal(body.getAttribute('data-candy-safe-area-user-body'), null);
+  assert.equal(body.style.getPropertyValue('--candy-safe-area-user-body-padding'), '');
+});
+
 test('cross-domain policies cannot overwrite outgoing or incoming document state', () => {
   const harness = bridgeHarness(performanceFixture().api);
   harness.URL = URL;

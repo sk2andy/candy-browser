@@ -1,0 +1,1 @@
+Feeds and saved articles in one library, background listening, optional offline voices, highlights with Markdown notes, custom workflows and search shortcuts. Adds FluxDown support and improves preview downloads, widgets and page safe areas.

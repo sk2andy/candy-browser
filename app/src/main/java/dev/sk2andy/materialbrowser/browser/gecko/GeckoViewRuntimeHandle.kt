@@ -1178,8 +1178,10 @@ private class GeckoViewBrowserSession(
                             mimeType = contentType,
                         ),
                         startTransfer = { transferListener ->
+                            // Preview closes on start; its accepted transfer must outlive that session.
+                            val ownerKey = if (contentKind == BrowserEngineContentKind.ExternalPreview) Any() else session
                             downloadTransfers.startResponse(
-                                owner = GeckoDownloadOwner(profileId, isPrivate, session),
+                                owner = GeckoDownloadOwner(profileId, isPrivate, ownerKey),
                                 response = response,
                                 referrer = currentPageUrl,
                                 listener = transferListener,

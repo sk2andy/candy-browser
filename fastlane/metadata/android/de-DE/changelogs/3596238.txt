@@ -1,0 +1,1 @@
+Feeds und gespeicherte Artikel in einer Bibliothek, Hintergrundwiedergabe, optionale Offline-Stimmen, Markierungen mit Markdown-Notizen, eigene Abläufe und Suchkürzel. Neu: FluxDown-Unterstützung. Verbesserte Vorschau-Downloads, Widgets und Seitenabstände.

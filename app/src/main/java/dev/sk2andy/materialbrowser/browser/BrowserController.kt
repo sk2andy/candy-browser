@@ -1791,6 +1791,11 @@ class BrowserController(
     }
 
     @VisibleForTesting
+    internal fun dispatchExternalPreviewDownloadResponseForTesting(response: GeckoExternalDownloadResponse) {
+        onExternalPreviewDownloadResponse(requireNotNull(externalLinkPreviewRuntime), response)
+    }
+
+    @VisibleForTesting
     internal fun installExternalPreviewEngineSessionForTesting(session: AndroidBrowserEngineSessionPort) {
         check(usesGeckoEngine)
         check(externalLinkPreviewRuntime == null)
@@ -4924,24 +4929,7 @@ class BrowserController(
                 generation = state.generation,
                 session = session,
             ) ?: return@setDownloadResponseListener response.close()
-            val metadata = response.metadata
-            val nowElapsedRealtime = SystemClock.elapsedRealtime()
-            if (!ExternalPreviewDownloadGrantRules.canConsume(
-                    grant = runtime.downloadGrant,
-                    url = metadata.url,
-                    nowElapsedRealtime = nowElapsedRealtime,
-                )
-            ) return@setDownloadResponseListener response.close()
-            val request = BrowserEngineDownloadRules.request(
-                response = metadata,
-                referrer = externalLinkPreviewState?.currentUrl,
-            ) ?: return@setDownloadResponseListener response.close()
-            if (!BrowserDownloadRequestFactory.isAndroidPackage(request)) {
-                return@setDownloadResponseListener response.close()
-            }
-            runtime.downloadGrant = null
-            externalNavigationGrants.remove(runtime.policyTab.id)
-            routeExternalPreviewDownload(runtime, response, request)
+            onExternalPreviewDownloadResponse(runtime, response)
         }
         session.setVideoAutoplayBlocked(isVideoAutoplayBlocked)
         session.setHttpPasswordManagerSelectionEnabled(isHttpPasswordAutofillEnabled)
@@ -4961,6 +4949,26 @@ class BrowserController(
         externalLinkPreviewRuntime = runtime
         externalLinkPreviewState = state.copy(isContentReady = true)
         view.doOnAttach { startExternalLinkPreviewIfReady(runtime) }
+    }
+
+    private fun onExternalPreviewDownloadResponse(
+        runtime: ExternalLinkPreviewRuntime,
+        response: GeckoExternalDownloadResponse,
+    ) {
+        val metadata = response.metadata
+        if (!ExternalPreviewDownloadGrantRules.canConsume(
+                grant = runtime.downloadGrant,
+                url = metadata.url,
+                nowElapsedRealtime = SystemClock.elapsedRealtime(),
+            )
+        ) return response.close()
+        val request = BrowserEngineDownloadRules.request(
+            response = metadata,
+            referrer = externalLinkPreviewState?.currentUrl,
+        ) ?: return response.close()
+        runtime.downloadGrant = null
+        externalNavigationGrants.remove(runtime.policyTab.id)
+        routeExternalPreviewDownload(runtime, response, request)
     }
 
     private fun routeExternalPreviewDownload(

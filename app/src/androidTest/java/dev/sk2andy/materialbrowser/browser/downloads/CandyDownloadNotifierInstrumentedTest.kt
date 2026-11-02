@@ -106,6 +106,8 @@ class CandyDownloadNotifierInstrumentedTest {
                     Notification.ProgressStyle::class.java.name,
                     running.extras.getString(Notification.EXTRA_TEMPLATE),
                 )
+                val style = Notification.Builder.recoverBuilder(context, running).style as Notification.ProgressStyle
+                assertNull(style.progressTrackerIcon)
                 if (Build.VERSION.SDK_INT_FULL >= Build.VERSION_CODES_FULL.BAKLAVA_1) {
                     assertTrue(running.hasPromotableCharacteristics())
                 }
