@@ -93,7 +93,9 @@ class CandyDownloadNotifierInstrumentedTest {
             DownloadRuntimeRegistry.progress(transferId, bytes = 100L, total = 200L, updatedAt = 15L)
             notifier.progress(start.id)
 
-            val running = awaitNotification(manager, notificationId)
+            val running = awaitNotification(manager, notificationId) { notification ->
+                notification.extras.getInt(Notification.EXTRA_PROGRESS) == 50
+            }
             assertEquals(CandyDownloadNotifier.CHANNEL_ID, running.channelId)
             assertEquals("expressive-download.bin", running.extras.getString(Notification.EXTRA_TITLE))
             assertEquals(100, running.extras.getInt(Notification.EXTRA_PROGRESS_MAX))

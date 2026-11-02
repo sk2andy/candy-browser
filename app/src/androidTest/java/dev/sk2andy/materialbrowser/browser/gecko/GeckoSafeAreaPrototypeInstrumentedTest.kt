@@ -1720,8 +1720,9 @@ class GeckoSafeAreaPrototypeInstrumentedTest {
               #fixed { position:fixed; top:8px; left:0; height:20px; } #equal { position:fixed; top:env(safe-area-inset-top); left:80px; }
               #above { position:fixed; top:80px; left:160px; }
               #reset, #boundary { position:fixed; top:8px; left:220px; }
-              #latent { position:static; top:auto; display:none; }
-              #late-style, #late-link { position:static; top:auto; display:none; }
+              /* Passive clones require unambiguous position/top selectors; hidden states use CSS defaults. */
+              #latent { display:none; }
+              #late-style, #late-link { display:none; }
               #latent.persistent-header { position:fixed!important; top:0px!important; display:block; left:0; height:24px; }
               #new-latent.persistent-header { position:fixed!important; top:0px!important; left:100px; }
               #sticky { position:sticky; top:0px; height:30px; } #tail { height:2400px; }
