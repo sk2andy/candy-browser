@@ -59,7 +59,7 @@ class GuestBubbleCleanupActivity : ComponentActivity() {
             GuestBubblePhase.Closing -> Unit
         }
         enableEdgeToEdge()
-        setRecentsScreenshotEnabled(false)
+        setCandyRecentsScreenshotEnabled(false)
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() = Unit
         })

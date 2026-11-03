@@ -1,5 +1,6 @@
 package dev.sk2andy.materialbrowser.data
 
+import dev.sk2andy.materialbrowser.readAtMost
 import java.io.File
 import java.io.FileOutputStream
 
@@ -48,7 +49,7 @@ internal class AppLogStore(private val directory: File) {
     fun snapshot(): String = listOf(previousFile, currentFile).joinToString("") { file ->
         if (!file.isFile) return@joinToString ""
         file.inputStream().use { input ->
-            input.readNBytes(AppLogRules.MAX_FILE_BYTES).toString(Charsets.UTF_8)
+            input.readAtMost(AppLogRules.MAX_FILE_BYTES).toString(Charsets.UTF_8)
         }
     }
 

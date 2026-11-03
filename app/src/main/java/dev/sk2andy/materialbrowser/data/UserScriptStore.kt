@@ -6,6 +6,7 @@ import dev.sk2andy.materialbrowser.browser.userscript.UserScriptParseResult
 import dev.sk2andy.materialbrowser.browser.userscript.UserScriptParser
 import dev.sk2andy.materialbrowser.browser.userscript.UserScriptRules
 import dev.sk2andy.materialbrowser.shared.topping.ToppingFrameScope
+import dev.sk2andy.materialbrowser.readAtMost
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.FileNotFoundException
@@ -22,7 +23,7 @@ internal class UserScriptStore(context: Context) {
     @Synchronized
     fun load(): List<UserScript> {
         return try {
-            val bytes = atomicFile.openRead().use { input -> input.readNBytes(MAX_FILE_BYTES + 1) }
+            val bytes = atomicFile.openRead().use { input -> input.readAtMost(MAX_FILE_BYTES + 1) }
             if (bytes.size !in 1..MAX_FILE_BYTES) {
                 atomicFile.delete()
                 return emptyList()

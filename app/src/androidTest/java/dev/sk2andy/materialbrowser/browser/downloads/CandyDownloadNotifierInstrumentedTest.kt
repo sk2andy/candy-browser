@@ -318,7 +318,8 @@ class CandyDownloadNotifierInstrumentedTest {
             )
         }
         assumeTrue(
-            context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) ==
+            Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+                context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) ==
                 PackageManager.PERMISSION_GRANTED,
         )
         return context

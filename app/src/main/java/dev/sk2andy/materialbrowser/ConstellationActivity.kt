@@ -37,7 +37,7 @@ class ConstellationActivity : ComponentActivity() {
         val profile = accessibleProfile() ?: return finish()
         snapshot = ConstellationSnapshot(profileId = profile.id)
         enableEdgeToEdge()
-        setRecentsScreenshotEnabled(profile.protection == null)
+        setCandyRecentsScreenshotEnabled(profile.protection == null)
         val appearance = BrowserSessionStore(this).loadAppearanceSettings()
         setCandyContent(animationsEnabled = appearance.animationsEnabled) {
             val dark = appearance.usesDarkColors(isSystemInDarkTheme())

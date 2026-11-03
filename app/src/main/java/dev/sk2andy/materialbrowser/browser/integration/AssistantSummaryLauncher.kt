@@ -88,7 +88,7 @@ class AssistantSummaryLauncher(private val context: Context) {
     private fun activeVoiceServicePackage(): String? =
         context.packageManager.queryIntentServices(
             Intent(VoiceInteractionService.SERVICE_INTERFACE),
-            PackageManager.ResolveInfoFlags.of(0L),
+            0,
         ).firstNotNullOfOrNull { resolvedService ->
             val service = resolvedService.serviceInfo ?: return@firstNotNullOfOrNull null
             val component = ComponentName(service.packageName, service.name)

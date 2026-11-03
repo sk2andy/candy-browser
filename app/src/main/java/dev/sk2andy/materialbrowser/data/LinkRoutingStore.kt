@@ -6,6 +6,7 @@ import dev.sk2andy.materialbrowser.browser.integration.linkrouting.LinkRoutingRu
 import dev.sk2andy.materialbrowser.browser.integration.linkrouting.LinkRoutingRules
 import dev.sk2andy.materialbrowser.browser.integration.linkrouting.LinkRoutingTarget
 import dev.sk2andy.materialbrowser.browser.integration.linkrouting.LinkRoutingTargetKind
+import dev.sk2andy.materialbrowser.readAtMost
 import java.io.File
 import org.json.JSONArray
 import org.json.JSONObject
@@ -16,7 +17,7 @@ internal class LinkRoutingStore(context: Context) {
     @Synchronized
     fun load(): List<LinkRoutingRule> {
         if (file.baseFile.length() > MAX_JSON_BYTES) return emptyList()
-        val bytes = runCatching { file.openRead().use { it.readNBytes(MAX_JSON_BYTES + 1) } }
+        val bytes = runCatching { file.openRead().use { it.readAtMost(MAX_JSON_BYTES + 1) } }
             .getOrNull() ?: return emptyList()
         if (bytes.size > MAX_JSON_BYTES) return emptyList()
         return runCatching {

@@ -121,7 +121,7 @@ class SyncHttpClient(endpoint: String) : SyncTransport {
 
     override fun pull(token: String, cursor: String): SyncPullPage = SyncProtocolCodec.decodePull(
         request(
-            path = "v1/sync/pull?after=${java.net.URLEncoder.encode(cursor, StandardCharsets.UTF_8)}&limit=100",
+            path = "v1/sync/pull?after=${java.net.URLEncoder.encode(cursor, StandardCharsets.UTF_8.name())}&limit=100",
             method = "GET",
             authorization = bearer(token),
         ),
@@ -165,7 +165,7 @@ class SyncHttpClient(endpoint: String) : SyncTransport {
     override fun pullDeltas(token: String, cursor: String): SyncDeltaPullPage =
         SyncProtocolCodec.decodeDeltaPull(
             request(
-                path = "v2/sync/pull?after=${java.net.URLEncoder.encode(cursor, StandardCharsets.UTF_8)}&limit=100",
+                path = "v2/sync/pull?after=${java.net.URLEncoder.encode(cursor, StandardCharsets.UTF_8.name())}&limit=100",
                 method = "GET",
                 authorization = bearer(token),
             ),
@@ -218,7 +218,7 @@ class SyncHttpClient(endpoint: String) : SyncTransport {
         onClosed: (Throwable?) -> Unit,
     ): AutoCloseable {
         val realtimeHttp = endpoint.resolve(
-            "v2/realtime?ticket=${java.net.URLEncoder.encode(ticket.ticket, StandardCharsets.UTF_8)}",
+            "v2/realtime?ticket=${java.net.URLEncoder.encode(ticket.ticket, StandardCharsets.UTF_8.name())}",
         )
         val scheme = when (realtimeHttp.scheme) {
             "https" -> "wss"

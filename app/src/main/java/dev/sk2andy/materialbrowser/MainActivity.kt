@@ -661,7 +661,7 @@ open class MainActivity : AppCompatActivity() {
                 val visibleProfileProtected = browserController.localBrowserProfiles
                     .firstOrNull { profile -> profile.id == visibleProfileId }
                     ?.protection != null
-                setRecentsScreenshotEnabled(
+                setCandyRecentsScreenshotEnabled(
                     !visibleProfileProtected && !GuestBubbleSessionStore(this).isLocked(),
                 )
             }

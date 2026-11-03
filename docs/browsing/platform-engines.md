@@ -647,7 +647,7 @@ implements them.
   navigation waits for its bounded initialization gate so cold-start `document-start` scripts are
   not missed.
 - GeckoView `157.0.20260924084938` is pinned with Android SDK 37.1, AGP 9.4.0 and Gradle 9.6.0.
-  `minSdk` remains 33 and `targetSdk` remains 36. Gecko upgrades stay coordinated toolchain changes,
+  `minSdk` remains 31 and `targetSdk` remains 36. Gecko upgrades stay coordinated toolchain changes,
   not floating dependency bumps.
   The [155 to 157 upgrade audit](../audits/geckoview-157-upgrade.md) records API compatibility,
   transitive dependency changes, upstream fixes and device regression evidence.

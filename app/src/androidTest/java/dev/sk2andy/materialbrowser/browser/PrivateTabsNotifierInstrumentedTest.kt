@@ -4,6 +4,7 @@ import android.Manifest
 import android.app.Notification
 import android.app.NotificationManager
 import android.content.pm.PackageManager
+import android.os.Build
 import android.os.SystemClock
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -33,7 +34,8 @@ class PrivateTabsNotifierInstrumentedTest {
             )
         }
         assumeTrue(
-            context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) ==
+            Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+                context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) ==
                 PackageManager.PERMISSION_GRANTED,
         )
         val manager = context.getSystemService(NotificationManager::class.java)

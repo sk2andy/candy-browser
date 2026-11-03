@@ -2,6 +2,7 @@ package dev.sk2andy.materialbrowser.data
 
 import android.content.SharedPreferences
 import android.util.AtomicFile
+import dev.sk2andy.materialbrowser.readAtMost
 import java.io.File
 
 /** Capture cutoff is durable before private browsing starts; corrupt/missing state rejects history. */
@@ -84,7 +85,7 @@ internal class NativeCrashHistoryStore(
 
     private fun load(): NativeCrashCaptureCheckpoint = runCatching {
         val lines = file.openRead().use { input ->
-            input.readNBytes(128).toString(Charsets.UTF_8).lines()
+            input.readAtMost(128).toString(Charsets.UTF_8).lines()
         }
         require(lines.size == 4 && lines[0] == FORMAT && lines[3].isEmpty())
         val since = if (lines[1] == "blocked") null else lines[1].toLong().also { require(it >= 0L) }

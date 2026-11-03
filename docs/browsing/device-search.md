@@ -24,7 +24,7 @@
 | Platform schema | `builtin:WebPage` with nested `builtin:PotentialAction`; opaque Candy deeplinks preserve source validation rather than exposing a bypass URL |
 | Refresh | Local WorkManager job every three hours; no network constraint or network requests. Disable cancels recurring work |
 | Expiry | Documents expire after six hours if refresh cannot run; Android may delay background work and temporarily remove results |
-| Device support | Android platform AppSearch, API 33+; actual discovery/rendering depends on a compatible system search/launcher. Pixel Launcher support is not assumed |
+| Device support | Android platform AppSearch, API 31+; actual discovery/rendering depends on a compatible system search/launcher. Pixel Launcher support is not assumed |
 | Transfers | Source reads and result opening reject active app-data transfers; consent preferences are excluded from Android cloud backup, device transfer and Candy ZIP export/import |
 | Localization | Prototype English/German strings; other app locales use English fallback |
 

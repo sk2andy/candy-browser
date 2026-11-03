@@ -3,6 +3,7 @@ package dev.sk2andy.materialbrowser.data
 import android.app.ActivityManager
 import android.app.ApplicationExitInfo
 import android.content.Context
+import dev.sk2andy.materialbrowser.readAtMost
 import java.time.Instant
 
 internal class NativeCrashHistory(
@@ -30,7 +31,7 @@ internal class NativeCrashHistory(
         eligibleExits.forEach { exit ->
             val trace = runCatching {
                 exit.traceInputStream?.use { input ->
-                    val bytes = input.readNBytes(NativeCrashTraceRules.MAX_INPUT_BYTES + 1)
+                    val bytes = input.readAtMost(NativeCrashTraceRules.MAX_INPUT_BYTES + 1)
                     NativeCrashTraceRules.parse(bytes)
                 }
             }.getOrNull() ?: return@forEach

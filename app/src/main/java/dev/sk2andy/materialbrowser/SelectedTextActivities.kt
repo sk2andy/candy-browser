@@ -37,7 +37,7 @@ class ResearchSelectedTextActivity : ComponentActivity() {
             return
         }
         enableEdgeToEdge()
-        setRecentsScreenshotEnabled(false)
+        setCandyRecentsScreenshotEnabled(false)
         val store = BrowserSessionStore(this)
         val appearanceSettings = store.loadAppearanceSettings()
         val (profiles, activeProfileId) = store.loadProfiles()
@@ -90,7 +90,7 @@ class ReadSelectedTextActivity : ComponentActivity() {
             return
         }
         enableEdgeToEdge()
-        setRecentsScreenshotEnabled(false)
+        setCandyRecentsScreenshotEnabled(false)
         val appearanceSettings = BrowserSessionStore(this).loadAppearanceSettings()
         val controller = ReaderSpeechController(this).also { speech = it }
         setCandyContent(animationsEnabled = appearanceSettings.animationsEnabled) {

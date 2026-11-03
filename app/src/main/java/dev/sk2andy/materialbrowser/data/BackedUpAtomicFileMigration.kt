@@ -2,6 +2,7 @@ package dev.sk2andy.materialbrowser.data
 
 import android.content.Context
 import android.util.AtomicFile
+import dev.sk2andy.materialbrowser.readAtMost
 import java.io.File
 import java.io.FileOutputStream
 import java.nio.channels.FileChannel
@@ -25,7 +26,7 @@ internal object BackedUpAtomicFileMigration {
         }
         if (!legacy.hasState()) return target
         val bytes = runCatching {
-            legacy.openRead().use { input -> input.readNBytes(maxBytes + 1) }
+            legacy.openRead().use { input -> input.readAtMost(maxBytes + 1) }
         }.getOrNull()
         if (bytes == null || bytes.size !in 1..maxBytes || !writeAtomically(target.baseFile, bytes)) {
             return legacy

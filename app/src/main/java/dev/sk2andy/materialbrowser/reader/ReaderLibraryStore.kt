@@ -2,6 +2,7 @@ package dev.sk2andy.materialbrowser.reader
 
 import android.content.Context
 import android.util.AtomicFile
+import dev.sk2andy.materialbrowser.readAtMost
 import java.io.File
 import java.nio.charset.StandardCharsets
 import java.util.UUID
@@ -84,7 +85,7 @@ class ReaderLibraryStore internal constructor(private val file: AtomicFile) {
             return ReaderLibraryState()
         }
         val bytes = runCatching {
-            file.openRead().use { it.readNBytes(MAX_JSON_BYTES + 1) }
+            file.openRead().use { it.readAtMost(MAX_JSON_BYTES + 1) }
         }.getOrNull() ?: return ReaderLibraryState()
         if (bytes.size > MAX_JSON_BYTES) return ReaderLibraryState()
         return ReaderLibraryCodec.decode(bytes.toString(StandardCharsets.UTF_8))

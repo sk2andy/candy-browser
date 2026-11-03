@@ -1,5 +1,6 @@
 package dev.sk2andy.materialbrowser
 
+import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
@@ -95,9 +96,11 @@ class AppDataTransferActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         if (GuestBubbleGate.redirectIfLocked(this)) return
-        onBackInvokedDispatcher.registerOnBackInvokedCallback(
-            OnBackInvokedDispatcher.PRIORITY_DEFAULT,
-        ) {}
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            onBackInvokedDispatcher.registerOnBackInvokedCallback(
+                OnBackInvokedDispatcher.PRIORITY_DEFAULT,
+            ) {}
+        }
         var request = requestFrom(intent)
         if (request == null) {
             finishAndRemoveTask()
@@ -170,6 +173,10 @@ class AppDataTransferActivity : Activity() {
             runOnUiThread { restartMain(result) }
         }.start()
     }
+
+    @SuppressLint("GestureBackNavigation")
+    @Deprecated("Back is disabled while application data is transferred")
+    override fun onBackPressed() = Unit
 
     private fun export(destination: Uri) {
         try {

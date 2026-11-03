@@ -1,6 +1,5 @@
 package dev.sk2andy.materialbrowser.browser
 
-import android.Manifest
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -8,8 +7,8 @@ import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
 import dev.sk2andy.materialbrowser.R
+import dev.sk2andy.materialbrowser.hasNotificationPermission
 
 internal class PrivateTabsNotifier(context: Context) {
     private val appContext = context.applicationContext
@@ -31,8 +30,7 @@ internal class PrivateTabsNotifier(context: Context) {
     }
 
     fun hasPostNotificationPermission(): Boolean =
-        appContext.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) ==
-            PackageManager.PERMISSION_GRANTED
+        appContext.hasNotificationPermission()
 
     fun update(privateTabCount: Int): Boolean {
         if (privateTabCount <= 0) {

@@ -134,7 +134,7 @@ class ExternalDownloadManager(private val context: Context) {
         val activityInfo = runCatching {
             packageManager.getActivityInfo(
                 component,
-                PackageManager.ComponentInfoFlags.of(0),
+                0,
             )
         }.getOrNull()?.takeIf { it.enabled && it.exported } ?: return null
         val label = runCatching { activityInfo.loadLabel(packageManager).toString() }
@@ -183,7 +183,7 @@ class ExternalDownloadManager(private val context: Context) {
 
     private fun query(intent: Intent): List<ResolveInfo> = packageManager.queryIntentActivities(
         intent,
-        PackageManager.ResolveInfoFlags.of(PackageManager.MATCH_DEFAULT_ONLY.toLong()),
+        PackageManager.MATCH_DEFAULT_ONLY,
     )
 
     private companion object {

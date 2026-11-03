@@ -3,6 +3,7 @@ package dev.sk2andy.materialbrowser.data
 import dev.sk2andy.materialbrowser.browser.userscript.UserScriptDependencyFetch
 import dev.sk2andy.materialbrowser.browser.userscript.UserScriptDependencyFetcher
 import dev.sk2andy.materialbrowser.browser.userscript.UserScriptDependencyRules
+import dev.sk2andy.materialbrowser.readAtMost
 import java.net.HttpURLConnection
 import java.net.InetAddress
 import java.net.URL
@@ -43,7 +44,7 @@ internal class UserScriptDependencyClient : UserScriptDependencyFetcher {
                 if (declaredLength > maxBytes) {
                     return UserScriptDependencyFetch(ByteArray(maxBytes + 1))
                 }
-                val bytes = connection.inputStream.use { input -> input.readNBytes(maxBytes + 1) }
+                val bytes = connection.inputStream.use { input -> input.readAtMost(maxBytes + 1) }
                 return UserScriptDependencyFetch(
                     bytes = bytes,
                     mimeType = connection.contentType,

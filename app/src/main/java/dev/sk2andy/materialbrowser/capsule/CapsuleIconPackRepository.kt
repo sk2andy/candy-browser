@@ -3,12 +3,12 @@ package dev.sk2andy.materialbrowser.capsule
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.content.res.Resources
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.util.LruCache
 import android.util.Xml
+import dev.sk2andy.materialbrowser.readAtMost
 import java.io.ByteArrayInputStream
 
 @SuppressLint("DiscouragedApi", "UseCompatLoadingForDrawables")
@@ -27,7 +27,7 @@ class CapsuleIconPackRepository(context: Context) {
                     Intent(intentSpec.action).apply {
                         intentSpec.category?.let(::addCategory)
                     },
-                    PackageManager.ResolveInfoFlags.of(0),
+                    0,
                 )
             }.getOrDefault(emptyList()).asSequence()
         }
@@ -65,7 +65,7 @@ class CapsuleIconPackRepository(context: Context) {
         if (!hasCatalog(resources, packageName)) return null
         val applicationInfo = packageManager.getApplicationInfo(
             packageName,
-            PackageManager.ApplicationInfoFlags.of(0),
+            0,
         )
         CapsuleIconPack(
             packageName = packageName,
@@ -107,7 +107,7 @@ class CapsuleIconPackRepository(context: Context) {
                 resources.openRawResource(rawResourceId).use { input ->
                     parseStreamCatalog(
                         packageName,
-                        input.readNBytes(MAX_CATALOG_BYTES + 1),
+                        input.readAtMost(MAX_CATALOG_BYTES + 1),
                     )?.let(entries::addAll)
                 }
             }
@@ -122,7 +122,7 @@ class CapsuleIconPackRepository(context: Context) {
     ): List<CapsuleIconPackEntry>? {
         val encoded = runCatching {
             resources.assets.open("$catalogName.xml").use { input ->
-                input.readNBytes(MAX_CATALOG_BYTES + 1)
+                input.readAtMost(MAX_CATALOG_BYTES + 1)
             }
         }.getOrNull() ?: return null
         return parseStreamCatalog(packageName, encoded)

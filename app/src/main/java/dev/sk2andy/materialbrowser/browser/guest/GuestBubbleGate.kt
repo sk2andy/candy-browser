@@ -2,11 +2,13 @@ package dev.sk2andy.materialbrowser.browser.guest
 
 import android.app.Activity
 import android.app.Application
+import android.os.Build
 import android.os.Bundle
 import android.view.WindowManager
 import dev.sk2andy.materialbrowser.GuestBubbleActivity
 import dev.sk2andy.materialbrowser.GuestBubbleCleanupActivity
 import dev.sk2andy.materialbrowser.MainActivity
+import dev.sk2andy.materialbrowser.setCandyRecentsScreenshotEnabled
 import java.util.WeakHashMap
 
 /** Shields every owner task, including warm activities outside the main browser task. */
@@ -54,7 +56,9 @@ internal object GuestBubbleGate : Application.ActivityLifecycleCallbacks {
             activity.window.attributes.flags and WindowManager.LayoutParams.FLAG_SECURE != 0,
         )
         activity.window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
-        activity.setRecentsScreenshotEnabled(false)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            activity.setRecentsScreenshotEnabled(false)
+        }
         activity.setVisible(false)
     }
 

@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.AtomicFile
 import android.util.Log
 import dev.sk2andy.materialbrowser.reader.ReaderDocument
+import dev.sk2andy.materialbrowser.readAtMost
 import java.io.File
 import java.io.FilterOutputStream
 import java.io.IOException
@@ -116,7 +117,7 @@ internal class FeedStore(context: Context, profileId: String) {
             atomic.openRead().use { input ->
                 if (input.channel.size() > MAX_DOCUMENT_BYTES)
                     throw IOException("Offline document too large")
-                input.readNBytes(MAX_DOCUMENT_BYTES + 1)
+                input.readAtMost(MAX_DOCUMENT_BYTES + 1)
             }
         if (bytes.size > MAX_DOCUMENT_BYTES) throw IOException("Offline document too large")
         val document =

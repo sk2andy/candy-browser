@@ -89,7 +89,7 @@ class ProfileWallpaperEditorActivity : ComponentActivity() {
             finish()
             return
         }
-        setRecentsScreenshotEnabled(profile?.protection == null)
+        setCandyRecentsScreenshotEnabled(profile?.protection == null)
         initialWallpaper = request.wallpaper ?: ProfileWallpaper()
         hasStoredWallpaper = request.wallpaper != null
         wallpaperStore = ProfileWallpaperStore(applicationContext)

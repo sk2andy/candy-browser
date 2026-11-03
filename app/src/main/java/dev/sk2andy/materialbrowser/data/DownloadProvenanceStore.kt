@@ -2,6 +2,7 @@ package dev.sk2andy.materialbrowser.data
 
 import android.content.Context
 import android.util.AtomicFile
+import dev.sk2andy.materialbrowser.readAtMost
 import java.io.File
 import org.json.JSONArray
 import org.json.JSONObject
@@ -42,7 +43,7 @@ internal class DownloadProvenanceStore(context: Context) {
     fun snapshot(): List<DownloadProvenance> = synchronized(lock) { read() }
 
     private fun read(): List<DownloadProvenance> = runCatching {
-        val bytes = file.openRead().use { it.readNBytes(MAX_BYTES + 1) }
+        val bytes = file.openRead().use { it.readAtMost(MAX_BYTES + 1) }
         if (bytes.size > MAX_BYTES) return emptyList()
         val array = JSONArray(bytes.toString(Charsets.UTF_8))
         buildList {

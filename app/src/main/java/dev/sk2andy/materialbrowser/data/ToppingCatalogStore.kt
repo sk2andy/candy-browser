@@ -6,6 +6,7 @@ import dev.sk2andy.materialbrowser.browser.userscript.ToppingCatalog
 import dev.sk2andy.materialbrowser.browser.userscript.ToppingCatalogParseResult
 import dev.sk2andy.materialbrowser.browser.userscript.ToppingCatalogParser
 import dev.sk2andy.materialbrowser.browser.userscript.ToppingVerifier
+import dev.sk2andy.materialbrowser.readAtMost
 import java.io.File
 import java.io.FileNotFoundException
 import java.io.FileOutputStream
@@ -25,7 +26,7 @@ internal class ToppingCatalogStore(
     fun load(): CachedToppingCatalog? {
         return try {
             val bytes = atomicFile.openRead().use { input ->
-                input.readNBytes(ToppingCatalogParser.MAX_MANIFEST_BYTES + 1)
+                input.readAtMost(ToppingCatalogParser.MAX_MANIFEST_BYTES + 1)
             }
             val catalog = parse(bytes) ?: run {
                 atomicFile.delete()

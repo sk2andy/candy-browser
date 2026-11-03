@@ -3,6 +3,7 @@ package dev.sk2andy.materialbrowser.data
 import android.content.Context
 import android.util.AtomicFile
 import dev.sk2andy.materialbrowser.browser.workflow.CustomWorkflowConfiguration
+import dev.sk2andy.materialbrowser.readAtMost
 import java.io.File
 import java.io.IOException
 
@@ -13,7 +14,7 @@ internal class CustomWorkflowStore internal constructor(file: File) {
 
     fun load(): CustomWorkflowConfiguration = synchronized(lock) {
         val bytes = try {
-            file.openRead().use { input -> input.readNBytes(CustomWorkflowCodec.MAX_JSON_BYTES + 1) }
+            file.openRead().use { input -> input.readAtMost(CustomWorkflowCodec.MAX_JSON_BYTES + 1) }
         } catch (_: IOException) {
             return@synchronized CustomWorkflowConfiguration()
         }

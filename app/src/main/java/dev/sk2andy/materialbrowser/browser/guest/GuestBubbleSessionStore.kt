@@ -7,6 +7,7 @@ import android.content.SharedPreferences
 import android.os.Process
 import android.os.SystemClock
 import android.util.AtomicFile
+import dev.sk2andy.materialbrowser.readAtMost
 import java.io.File
 import java.io.IOException
 import java.nio.channels.FileChannel
@@ -169,7 +170,7 @@ internal class GuestBubbleSessionStore(context: Context) {
         if (!markerExists()) return null
         return try {
             atomicMarker.openRead().use { input ->
-                val bytes = input.readNBytes(GuestBubbleRules.MAX_MARKER_BYTES + 1)
+                val bytes = input.readAtMost(GuestBubbleRules.MAX_MARKER_BYTES + 1)
                 if (bytes.size > GuestBubbleRules.MAX_MARKER_BYTES) {
                     GuestBubbleRules.recoverySession
                 } else {

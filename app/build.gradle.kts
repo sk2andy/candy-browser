@@ -229,7 +229,7 @@ android {
 
     defaultConfig {
         applicationId = "dev.sk2andy.materialbrowser"
-        minSdk = 33
+        minSdk = 31
         targetSdk = 36
         versionCode = candyVersionCode.get().toInt()
         versionName = candyVersionName.get()

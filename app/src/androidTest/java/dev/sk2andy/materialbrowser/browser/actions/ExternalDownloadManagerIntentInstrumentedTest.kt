@@ -30,6 +30,11 @@ class ExternalDownloadManagerIntentInstrumentedTest {
     )
 
     @Test
+    fun discoveryWorksWithoutInstalledDownloadManagers() {
+        assertTrue(manager.discover(request).all { it.packageName.isNotBlank() })
+    }
+
+    @Test
     fun oneDmReceivesSessionDataOnlyWhenExplicitlyAllowed() {
         val app = oneDmApp()
         val optedIn = BrowserDownloadSettings(shareSessionDataWithOneDm = true)

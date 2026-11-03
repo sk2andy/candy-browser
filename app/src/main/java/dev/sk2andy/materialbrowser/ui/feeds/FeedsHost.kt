@@ -47,6 +47,7 @@ import dev.sk2andy.materialbrowser.reader.ReaderExtractionResult
 import dev.sk2andy.materialbrowser.reader.ReaderLibraryRepository
 import dev.sk2andy.materialbrowser.reader.ReaderLibraryState
 import dev.sk2andy.materialbrowser.ui.ReaderStudioScreen
+import dev.sk2andy.materialbrowser.readAtMost
 import java.util.UUID
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -186,7 +187,7 @@ internal fun FeedsHost(
                             runCatching {
                                 val bytes =
                                     context.contentResolver.openInputStream(uri)?.use {
-                                        it.readNBytes(FeedRules.MAX_FEED_BYTES + 1)
+                                        it.readAtMost(FeedRules.MAX_FEED_BYTES + 1)
                                     } ?: error("Cannot open document")
                                 require(bytes.size <= FeedRules.MAX_FEED_BYTES)
                                 repository.previewOpml(bytes.toString(Charsets.UTF_8)).getOrThrow()

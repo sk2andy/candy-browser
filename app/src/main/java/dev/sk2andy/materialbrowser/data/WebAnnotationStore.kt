@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.AtomicFile
 import dev.sk2andy.materialbrowser.browser.annotation.WebAnnotation
 import dev.sk2andy.materialbrowser.browser.annotation.WebAnnotationRules
+import dev.sk2andy.materialbrowser.readAtMost
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -43,7 +44,7 @@ internal class WebAnnotationStore(context: Context) {
 
     private fun read(): List<WebAnnotation> = runCatching {
         if (!file.baseFile.exists() && !File(file.baseFile.path + ".bak").exists()) return emptyList()
-        val bytes = file.openRead().use { it.readNBytes(MAX_BYTES + 1) }
+        val bytes = file.openRead().use { it.readAtMost(MAX_BYTES + 1) }
         require(bytes.size <= MAX_BYTES)
         val array = JSONArray(bytes.toString(Charsets.UTF_8))
         require(array.length() <= WebAnnotationRules.MAX_ENTRIES)

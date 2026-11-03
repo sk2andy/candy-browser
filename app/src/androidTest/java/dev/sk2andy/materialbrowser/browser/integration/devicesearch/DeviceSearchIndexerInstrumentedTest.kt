@@ -6,6 +6,7 @@ import android.app.appsearch.GenericDocument
 import android.app.appsearch.SearchSpec
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import dev.sk2andy.materialbrowser.browser.BrowserProfile
@@ -61,19 +62,23 @@ class DeviceSearchIndexerInstrumentedTest {
         val action = requireNotNull(document.getPropertyDocument("potentialActions"))
         val openIntent = Intent.parseUri(action.getPropertyString("uri"), Intent.URI_INTENT_SCHEME)
         assertEquals(itemId, DeviceSearchContract.itemId(openIntent))
-        session().use { session ->
-            val hidden = CompletableFuture<Set<String>>()
-            session.getSchema(direct) { result -> hidden.complete(requireNotNull(result.resultValue).schemaTypesNotDisplayedBySystem) }
-            assertFalse(DeviceSearchIndexer.PAGE_SCHEMA in hidden.get(10L, TimeUnit.SECONDS))
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            session().use { session ->
+                val hidden = CompletableFuture<Set<String>>()
+                session.getSchema(direct) { result -> hidden.complete(requireNotNull(result.resultValue).schemaTypesNotDisplayedBySystem) }
+                assertFalse(DeviceSearchIndexer.PAGE_SCHEMA in hidden.get(10L, TimeUnit.SECONDS))
+            }
         }
 
         DeviceSearchStore(context).save(DeviceSearchSettings(enabled = false, selectedIds = setOf(itemId)))
         refreshIndex()
         assertTrue(documents().isEmpty())
-        session().use { session ->
-            val hidden = CompletableFuture<Set<String>>()
-            session.getSchema(direct) { result -> hidden.complete(requireNotNull(result.resultValue).schemaTypesNotDisplayedBySystem) }
-            assertTrue(DeviceSearchIndexer.PAGE_SCHEMA in hidden.get(10L, TimeUnit.SECONDS))
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            session().use { session ->
+                val hidden = CompletableFuture<Set<String>>()
+                session.getSchema(direct) { result -> hidden.complete(requireNotNull(result.resultValue).schemaTypesNotDisplayedBySystem) }
+                assertTrue(DeviceSearchIndexer.PAGE_SCHEMA in hidden.get(10L, TimeUnit.SECONDS))
+            }
         }
     }
 

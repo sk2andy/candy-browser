@@ -8,6 +8,7 @@ import android.graphics.Paint
 import android.graphics.Rect
 import android.graphics.RectF
 import android.net.Uri
+import dev.sk2andy.materialbrowser.readAtMost
 import java.nio.ByteBuffer
 
 object CapsuleCustomIconProcessor {
@@ -18,7 +19,7 @@ object CapsuleCustomIconProcessor {
         if (mimeType != null && !mimeType.startsWith("image/")) return null
         return decodeCatchingMemoryFailure {
             val encoded = contentResolver.openInputStream(uri)?.use { input ->
-                input.readNBytes((MAX_SOURCE_BYTES + 1L).toInt())
+                input.readAtMost((MAX_SOURCE_BYTES + 1L).toInt())
             } ?: return null
             if (encoded.size.toLong() > MAX_SOURCE_BYTES) return null
             val source = ImageDecoder.createSource(ByteBuffer.wrap(encoded))

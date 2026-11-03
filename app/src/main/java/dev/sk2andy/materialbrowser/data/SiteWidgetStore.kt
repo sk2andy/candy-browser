@@ -10,6 +10,7 @@ import dev.sk2andy.materialbrowser.browser.sitewidget.SiteWidgetFormat
 import dev.sk2andy.materialbrowser.browser.sitewidget.SiteWidgetSnapshot
 import dev.sk2andy.materialbrowser.browser.sitewidget.SiteWidgetSnapshotRules
 import dev.sk2andy.materialbrowser.browser.sitewidget.SiteWidgetSource
+import dev.sk2andy.materialbrowser.readAtMost
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.nio.charset.StandardCharsets
@@ -280,7 +281,7 @@ internal class SiteWidgetStore(context: Context) {
     }
 
     private fun readBytes(file: AtomicFile, limit: Int): ByteArray? = runCatching {
-        file.openRead().use { it.readNBytes(limit + 1) }.takeIf { it.size in 1..limit }
+        file.openRead().use { it.readAtMost(limit + 1) }.takeIf { it.size in 1..limit }
     }.getOrNull()
 
     private fun writeJson(file: AtomicFile, value: JSONObject): Boolean {

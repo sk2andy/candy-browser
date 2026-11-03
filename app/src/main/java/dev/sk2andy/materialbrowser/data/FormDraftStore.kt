@@ -6,6 +6,7 @@ import dev.sk2andy.materialbrowser.browser.formdraft.FormDraft
 import dev.sk2andy.materialbrowser.browser.formdraft.FormDraftCodec
 import dev.sk2andy.materialbrowser.browser.formdraft.FormDraftRules
 import dev.sk2andy.materialbrowser.data.sync.AndroidSyncSecretProtector
+import dev.sk2andy.materialbrowser.readAtMost
 import java.io.File
 
 /** Call on a serialized worker. Draft content never enters portable app data or logs. */
@@ -51,7 +52,7 @@ internal class FormDraftStore(context: Context) {
     private fun read(): List<FormDraft> = runCatching {
         if (!file.baseFile.exists() && !File(directory, "drafts.enc.bak").exists()) return emptyList()
         val encrypted = file.openRead().use { input ->
-            val bytes = input.readNBytes(MAX_ENCRYPTED_BYTES + 1)
+            val bytes = input.readAtMost(MAX_ENCRYPTED_BYTES + 1)
             require(bytes.size <= MAX_ENCRYPTED_BYTES)
             bytes
         }

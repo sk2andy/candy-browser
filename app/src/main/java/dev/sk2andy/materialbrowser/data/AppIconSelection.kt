@@ -3,6 +3,7 @@ package dev.sk2andy.materialbrowser.data
 import android.content.ComponentName
 import android.content.Context
 import android.content.pm.PackageManager
+import android.os.Build
 
 /** The enabled launcher alias is the persisted icon choice. */
 internal enum class AppIconOption(
@@ -38,18 +39,33 @@ internal class AppIconSelection(private val context: Context) {
     } ?: AppIconOption.Classic
 
     fun select(option: AppIconOption) {
-        packageManager.setComponentEnabledSettings(
-            AppIconOption.entries.map { entry ->
-                PackageManager.ComponentEnabledSetting(
-                    entry.componentName(context),
-                    if (entry == option) {
-                        PackageManager.COMPONENT_ENABLED_STATE_ENABLED
-                    } else {
-                        PackageManager.COMPONENT_ENABLED_STATE_DISABLED
-                    },
-                    PackageManager.DONT_KILL_APP,
-                )
-            },
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            packageManager.setComponentEnabledSettings(
+                AppIconOption.entries.map { entry ->
+                    PackageManager.ComponentEnabledSetting(
+                        entry.componentName(context),
+                        if (entry == option) {
+                            PackageManager.COMPONENT_ENABLED_STATE_ENABLED
+                        } else {
+                            PackageManager.COMPONENT_ENABLED_STATE_DISABLED
+                        },
+                        PackageManager.DONT_KILL_APP,
+                    )
+                },
+            )
+            return
+        }
+        packageManager.setComponentEnabledSetting(
+            option.componentName(context),
+            PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
+            PackageManager.DONT_KILL_APP,
         )
+        AppIconOption.entries.filter { it != option }.forEach { entry ->
+            packageManager.setComponentEnabledSetting(
+                entry.componentName(context),
+                PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
+                PackageManager.DONT_KILL_APP,
+            )
+        }
     }
 }

@@ -9,6 +9,7 @@ import android.os.Looper
 import android.os.ParcelFileDescriptor
 import androidx.annotation.AnyThread
 import androidx.annotation.UiThread
+import androidx.core.content.ContextCompat
 import dev.sk2andy.materialbrowser.BuildConfig
 import dev.sk2andy.materialbrowser.browser.BrowserPerformanceTrace
 import java.io.File
@@ -81,12 +82,13 @@ internal object GeckoPerformanceDiagnostics {
         initialized = true
         applicationContext = context.applicationContext
         if (BuildConfig.ENABLE_PERFORMANCE_DIAGNOSTICS) {
-            context.applicationContext.registerReceiver(
+            ContextCompat.registerReceiver(
+                context.applicationContext,
                 profilerStateReceiver,
                 IntentFilter(PROFILER_STATE_ACTION),
                 "${context.packageName}.permission.PROFILER_INTERNAL",
                 handler,
-                Context.RECEIVER_NOT_EXPORTED,
+                ContextCompat.RECEIVER_NOT_EXPORTED,
             )
         }
         if (!deleteProfiles(context.applicationContext)) updateStatus("cleanup_failed")

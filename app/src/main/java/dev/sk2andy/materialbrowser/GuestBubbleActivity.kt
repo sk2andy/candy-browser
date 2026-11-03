@@ -43,7 +43,7 @@ class GuestBubbleActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
-        setRecentsScreenshotEnabled(false)
+        setCandyRecentsScreenshotEnabled(false)
         store = GuestBubbleSessionStore(this)
         authenticator = GuestBubbleAuthenticator(this)
         if (!store.isLocked()) {

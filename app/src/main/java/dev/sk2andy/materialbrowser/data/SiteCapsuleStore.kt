@@ -8,6 +8,7 @@ import dev.sk2andy.materialbrowser.capsule.CapsuleIconMode
 import dev.sk2andy.materialbrowser.capsule.CapsuleNavigationMode
 import dev.sk2andy.materialbrowser.capsule.SiteCapsule
 import dev.sk2andy.materialbrowser.capsule.SiteCapsuleRules
+import dev.sk2andy.materialbrowser.readAtMost
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -20,7 +21,7 @@ class SiteCapsuleStore(context: Context) {
     fun load(): List<SiteCapsule> {
         if (file.baseFile.isFile && file.baseFile.length() > MAX_JSON_BYTES) return emptyList()
         val bytes = runCatching {
-            file.openRead().use { input -> input.readNBytes(MAX_JSON_BYTES + 1) }
+            file.openRead().use { input -> input.readAtMost(MAX_JSON_BYTES + 1) }
         }
             .getOrNull()
             ?: return emptyList()
