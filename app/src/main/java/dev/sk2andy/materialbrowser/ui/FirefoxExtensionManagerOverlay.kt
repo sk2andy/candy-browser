@@ -23,7 +23,6 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
@@ -51,6 +50,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
@@ -86,6 +86,7 @@ internal object FirefoxExtensionManagerTestTags {
     const val InstallUrl = "gecko_extension_install_url"
     const val PermissionPrompt = "gecko_extension_permission_prompt"
 
+    fun extension(extensionId: String): String = "gecko_extension:$extensionId"
     fun optionsPage(extensionId: String): String = "gecko_extension_options:$extensionId"
 }
 
@@ -442,6 +443,7 @@ private fun GeckoExtensionRow(
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            .testTag(FirefoxExtensionManagerTestTags.extension(extension.id))
             .padding(horizontal = 16.dp, vertical = 10.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
@@ -511,10 +513,12 @@ private fun GeckoExtensionRow(
 
 @Composable
 private fun ExtensionIcon(icon: android.graphics.Bitmap?, iconUrl: String?) {
-    val loadedIcon by produceState(initialValue = icon, icon, iconUrl) {
-        if (icon == null && iconUrl != null) {
-            value = withContext(Dispatchers.IO) {
-                FaviconClient().fetchMozillaAddonImage(iconUrl)
+    val loadedIcon by key(icon, iconUrl) {
+        produceState(initialValue = icon) {
+            if (icon == null && iconUrl != null) {
+                value = withContext(Dispatchers.IO) {
+                    FaviconClient().fetchMozillaAddonImage(iconUrl)
+                }
             }
         }
     }
