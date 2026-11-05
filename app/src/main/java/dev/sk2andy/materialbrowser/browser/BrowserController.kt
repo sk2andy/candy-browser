@@ -14121,7 +14121,7 @@ class BrowserController(
         session: AndroidBrowserEngineSessionPort,
         url: String,
     ) {
-        stoppedBrowserEngineNavigations.remove(tabId)
+        val stopped = stoppedBrowserEngineNavigations.remove(tabId)
         val targetUrl = autoDeAmpPublisherUrl(tabId, url) ?: url
         resetWebContentSafeAreaForDomainNavigation(tabId, targetUrl)
         pageUrls[tabId] = targetUrl
@@ -14129,7 +14129,9 @@ class BrowserController(
         val policy = geckoPrivacyPolicyFor(tabId) ?: return
         val pending = pendingInitialBrowserEngineNavigations[tabId]
             ?.takeIf { candidate -> candidate.session === session }
-        val waitingForPolicy = pending?.let {
+        val waitingForPolicy = if (
+            pending != null || stopped?.let { it.session === session && it.waitsForViewport } == true
+        ) {
             PendingInitialBrowserEngineNavigation(
                 session = session,
                 command = null,
@@ -14137,7 +14139,7 @@ class BrowserController(
             ).also { waiting ->
                 setPendingInitialBrowserEngineNavigation(tabId, waiting)
             }
-        }
+        } else null
         val requestId = ++nextBrowserEngineLoadRequestId
         pendingBrowserEngineLoadRequests[tabId] = requestId
         if (!usesGeckoEngine) session.execute(BrowserEngineCommands.stop())
