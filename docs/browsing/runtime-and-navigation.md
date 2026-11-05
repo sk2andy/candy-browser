@@ -16,7 +16,8 @@
 
 - Initial Gecko loads wait for an attached, measured viewport. Readiness is checked on both layout
   and attachment, so a view measured before attachment loads without waiting for a keyboard resize.
-  Replacing or canceling the pending load removes both observers.
+  Replacing or canceling the pending load removes both observers; an address-bar replacement keeps
+  the viewport requirement for its new target.
 - A restored web tab waiting for its first viewport-bound load ignores initial `about:blank`
   navigation/location callbacks. Those engine placeholders cannot replace its saved URL and remove
   the page viewport before the queued load starts. Blank tabs, popups, explicit later blank

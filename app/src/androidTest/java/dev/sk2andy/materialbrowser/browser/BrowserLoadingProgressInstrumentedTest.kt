@@ -51,6 +51,46 @@ class BrowserLoadingProgressInstrumentedTest {
         assertEngineProgress(AndroidBrowserEngineKind.SystemWebView)
     }
 
+    @Test
+    fun geckoNavigatesToNewAddressWhilePreviousPageIsLoading() {
+        SlowResourceServer().use { server ->
+            lateinit var browserController: BrowserController
+            composeRule.runOnIdle {
+                val activity = composeRule.activity
+                activity.getSharedPreferences(
+                    BrowserSessionStore.PREFERENCES_NAME,
+                    Context.MODE_PRIVATE,
+                ).edit().clear()
+                    .putString(BrowserSessionStore.KEY_ANDROID_BROWSER_ENGINE, AndroidBrowserEngineKind.GeckoView.stableId)
+                    .commit()
+                browserController = BrowserController(activity)
+                controller = browserController
+                val host = FrameLayout(activity)
+                activity.addContentView(
+                    host,
+                    FrameLayout.LayoutParams(
+                        FrameLayout.LayoutParams.MATCH_PARENT,
+                        FrameLayout.LayoutParams.MATCH_PARENT,
+                    ),
+                )
+                browserController.attachSelectedBrowserEngineView(host)
+                browserController.submitAddress(server.url)
+            }
+            awaitIntermediateProgress(browserController, server, expectedRequests = 1)
+            composeRule.runOnIdle { browserController.submitAddressFromAddressBar(server.nextUrl) }
+            composeRule.waitUntil(timeoutMillis = TIMEOUT_MILLIS) {
+                val tab = browserController.selectedTab
+                tab.url == server.nextUrl && tab.title == "Next page" && !tab.isLoading
+            }
+            server.releaseDocument()
+            composeRule.runOnIdle {
+                assertEquals(server.nextUrl, browserController.selectedTab.url)
+                assertEquals("Next page", browserController.selectedTab.title)
+                assertFalse(browserController.selectedTab.isLoading)
+            }
+        }
+    }
+
     private fun assertEngineProgress(engine: AndroidBrowserEngineKind) {
         SlowResourceServer().use { server ->
             lateinit var browserController: BrowserController
@@ -145,6 +185,7 @@ class BrowserLoadingProgressInstrumentedTest {
         val documentRequests = AtomicInteger()
         val resourceRequests = AtomicInteger()
         val url = "http://127.0.0.1:${server.localPort}/index.html"
+        val nextUrl = "http://127.0.0.1:${server.localPort}/next.html"
         private val thread = Thread({
             while (!server.isClosed) {
                 val socket = try {
@@ -168,6 +209,7 @@ class BrowserLoadingProgressInstrumentedTest {
                         val body = when {
                             image -> SVG_BODY
                             document -> HTML_PREFIX + HTML_SUFFIX
+                            path.startsWith("/next.html") -> "<title>Next page</title>"
                             else -> ""
                         }.toByteArray()
                         val type = if (image) "image/svg+xml" else "text/html"

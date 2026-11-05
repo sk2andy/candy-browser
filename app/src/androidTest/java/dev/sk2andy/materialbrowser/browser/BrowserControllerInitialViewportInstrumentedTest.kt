@@ -202,6 +202,55 @@ class BrowserControllerInitialViewportInstrumentedTest {
     }
 
     @Test
+    fun addressBarReplacementWaitsForInitialViewport() {
+        EdgeToEdgeSiteFixtureServer { HTML }.use { server ->
+            lateinit var host: FrameLayout
+            val target = server.fixtureUrl(FIXTURE_PATH)
+            composeRule.runOnIdle {
+                val store = BrowserSessionStore(composeRule.activity)
+                originalEngineKind = store.loadAndroidBrowserEngineKind()
+                originalHistoryRecordingMode = store.loadHistoryRecordingMode()
+                store.loadTabs().let { (tabs, selectedTabId) ->
+                    originalTabs = tabs
+                    originalSelectedTabId = selectedTabId
+                }
+                assertTrue(store.saveAndroidBrowserEngineKind(AndroidBrowserEngineKind.GeckoView))
+                assertTrue(store.saveHistoryRecordingMode(HistoryRecordingMode.Disabled))
+                val restoredTab = BrowserTab(
+                    id = "replaced-before-attachment",
+                    url = server.fixtureUrl("/site-matrix/previous"),
+                    lastAccessedAt = System.currentTimeMillis(),
+                )
+                assertTrue(store.saveTabsImmediately(listOf(restoredTab), restoredTab.id))
+                val browserController = BrowserController(composeRule.activity)
+                controller = browserController
+                activeTestTabId = restoredTab.id
+                browserController.onStart()
+                browserController.onResume()
+                host = FrameLayout(composeRule.activity)
+                requireNotNull(browserController.attachSelectedBrowserEngineView(host))
+                assertTrue(browserController.isInitialNavigationWaitingForRendererForTesting())
+
+                browserController.submitAddressFromAddressBar(target)
+            }
+            composeRule.waitUntil(timeoutMillis = 30_000L) {
+                controller?.selectedTabForTesting()?.url == target
+            }
+            assertTrue(requireNotNull(controller).isInitialNavigationWaitingForRendererForTesting())
+            SystemClock.sleep(1_000)
+            assertEquals(0, server.documentRequestCount.get())
+            composeRule.runOnIdle {
+                composeRule.activity.addContentView(host, FrameLayout.LayoutParams(600, 800))
+            }
+            composeRule.waitUntil(timeoutMillis = 30_000L) {
+                controller?.selectedTabForTesting()?.title?.startsWith(REPORT_PREFIX) == true
+            }
+            assertEquals(1, server.documentRequestCount.get())
+            assertEquals(target, requireNotNull(controller).selectedTabForTesting().url)
+        }
+    }
+
+    @Test
     fun initialNavigationUsesAttachedViewportScaleWithoutReload() {
         EdgeToEdgeSiteFixtureServer { target ->
             when {
