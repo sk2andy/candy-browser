@@ -407,8 +407,9 @@ and [native Android IPC connector](https://github.com/mozilla-firefox/firefox/bl
 - GeckoView 155 prompt policy is explicit. Candy presents alert, confirm, text, before-unload, repost,
   file and host-auth prompts. Explicit image/video capture uses a scoped MediaStore URI and honors
   Gecko's front (`USER`) versus rear (`ENVIRONMENT`) camera hint; cancellation, navigation, tab changes
-  and lifecycle loss delete the pending row. Regular HTTPS login save/select uses Android Credential Manager without
-  an app credential database; GeckoView also exposes its native virtual Autofill structure. FedCM
+  and lifecycle loss delete the pending row. On Android 14 and newer, regular HTTPS login save/select uses
+  Android Credential Manager without an app credential database. GeckoView also exposes native virtual
+  Autofill nodes, including on Android 13 and older where origin-bound Credential Manager calls are unavailable. FedCM
   provider, account and privacy-policy prompts use the engine-neutral credential host and reject
   private, inactive, cross-origin or stale requests. Address/card autocomplete, HTML automatic
   popups and client certificates remain fail closed. Choice, color, date/time and folder
@@ -421,7 +422,7 @@ and [native Android IPC connector](https://github.com/mozilla-firefox/firefox/bl
   no prompt silently falls through a nullable Gecko delegate default.
 - Cleartext HTTP password-manager access is an explicit, default-off GeckoView-only Developer
   option with a separate warning confirmation. A user must tap a login field before Candy can open the default Android password manager;
-  automatic filling and saving remain disabled. The option never expands FedCM, passkeys, private
+  it requires Android 14 or newer, and automatic filling and saving remain disabled. The option never expands FedCM, passkeys, private
   tabs, Link Peek or external-link previews. Android System WebView keeps Android Autofill enabled for
   supported secure pages, but its public API cannot mark selected HTTP origins as secure, so Candy
   shows the option disabled in that engine and recommends HTTPS or GeckoView.

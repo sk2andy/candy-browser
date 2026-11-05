@@ -480,6 +480,24 @@ class DeveloperOptionsSettingsPageInstrumentedTest {
     }
 
     @Test
+    fun unsupportedGeckoHttpPasswordAutofillExplainsAndroidVersion() {
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                DeveloperOptionsSettingsPage(
+                    settings = DeveloperSettings(),
+                    isGeckoEngine = true,
+                    onSettingsChanged = {},
+                    onBack = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag(DeveloperOptionsTestTags.HttpPasswordAutofill).assertIsNotEnabled()
+        composeRule.onNodeWithText(context.getString(R.string.settings_http_password_autofill_android_summary))
+            .assertIsDisplayed()
+    }
+
+    @Test
     fun appLoggingTogglePreservesOtherSettingsAndLogActionsEmitCallbacks() {
         val original = DeveloperSettings(
             browserChromeScrollDispatchMode = BrowserChromeScrollDispatchMode.Fixed30Hz,

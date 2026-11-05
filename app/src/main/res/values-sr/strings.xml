@@ -515,6 +515,7 @@
     <string name="external_app_prompt_confirm">Отвори</string>
     <string name="external_app_prompt_fallback_destination">ове везе</string>
     <string name="settings_http_password_autofill_title">Управљач лозинкама на сајтовима HTTP</string>
+    <string name="settings_http_password_autofill_android_summary">GeckoView: Избор управљача лозинкама на HTTP сајтовима захтева Android 14 или новији.</string>
     <string name="settings_http_password_autofill_gecko_summary">GeckoView само: Након што додирнете логин поље, Candy можете отворити свој подразумевани Android менаџер лозинке. Нема аутоматског попуњавања или штедње на HTTP.</string>
     <string name="settings_http_password_autofill_system_webview_summary">Android System WebView: није подржано. Јавни API не омогућава избор управљача лозинкама на HTTP веб-сајтовима. Пређите на GeckoView или користите HTTPS.</string>
     <string name="settings_http_password_autofill_warning">HTTP шаље корисничка имена и лозинке без шифровања преноса. Свако ко може да пресретне везу може да их прочита.</string>

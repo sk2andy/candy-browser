@@ -369,8 +369,10 @@
   declared for GeckoView's passkey lookup, origin-bound WebAuthn, and Candy's password Credential
   Manager bridge. GeckoView 155 uses Android's framework Credential Manager for passkeys on API 34+
   when `android.software.credentials` exists. Regular HTTPS Gecko views expose
-  native virtual Autofill nodes; private views do not. Developer options provide a default-off
-  **Password manager on HTTP sites** override only when GeckoView is selected. Enabling it requires
+  native virtual Autofill nodes; private views do not. Android 13 and older use native Autofill
+  instead of Candy's password Credential Manager save/select calls, because those calls cannot bind
+  the website origin on those Android versions. FedCM prompts are unaffected. Developer options provide a default-off
+  **Password manager on HTTP sites** override only with GeckoView on Android 14 or newer. Enabling it requires
   an explicit cleartext-HTTP warning confirmation. Once enabled, an
   explicit tap on an HTTP login field may open the default Android password manager for login
   selection. It never enables automatic HTTP filling, HTTP login saving, FedCM, passkeys, private

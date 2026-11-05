@@ -984,7 +984,8 @@ class BrowserController(
         get() = usesGeckoEngine
 
     val isHttpPasswordAutofillSupported: Boolean
-        get() = browserEngineCapabilities.insecureHttpPasswordManagerSelection
+        get() = Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE &&
+            browserEngineCapabilities.insecureHttpPasswordManagerSelection
 
     val isUserScriptSupported: Boolean
         get() = isUserScriptSupportedState

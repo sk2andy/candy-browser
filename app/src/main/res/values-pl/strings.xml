@@ -521,6 +521,7 @@
     <string name="external_app_prompt_confirm">Otwórz</string>
     <string name="external_app_prompt_fallback_destination">ten link</string>
     <string name="settings_http_password_autofill_title">Menedżer haseł w witrynach HTTP</string>
+    <string name="settings_http_password_autofill_android_summary">GeckoView: Wybór menedżera haseł na stronach HTTP wymaga systemu Android 14 lub nowszego.</string>
     <string name="settings_http_password_autofill_gecko_summary">Tylko GeckoView: po dotknięciu pola logowania Candy może otworzyć domyślnego menedżera haseł Androida. Brak automatycznego wypełniania i zapisywania w HTTP.</string>
     <string name="settings_http_password_autofill_system_webview_summary">Android System WebView: nieobsługiwane. Publiczny interfejs API nie pozwala włączyć wyboru menedżera haseł w witrynach HTTP. Przełącz na GeckoView lub użyj HTTPS.</string>
     <string name="settings_http_password_autofill_warning">HTTP wysyła nazwy użytkowników i hasła bez szyfrowania transmisji. Każdy, kto przechwyci połączenie, może je odczytać.</string>

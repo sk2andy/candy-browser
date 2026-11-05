@@ -500,6 +500,7 @@
     <string name="external_app_prompt_confirm">開啟</string>
     <string name="external_app_prompt_fallback_destination">這個連結</string>
     <string name="settings_http_password_autofill_title">在 HTTP 網站上的密碼管理器</string>
+    <string name="settings_http_password_autofill_android_summary">GeckoView：在 HTTP 網站上選擇密碼管理員需要 Android 14 或以上版本。</string>
     <string name="settings_http_password_autofill_gecko_summary">僅限 GeckoView：點選登入欄位後，Candy 可能開啟預設的 Android 密碼管理器。HTTP 網站不會自動填充或儲存密碼。</string>
     <string name="settings_http_password_autofill_system_webview_summary">Android System WebView:沒有支援. 它的公共API無法在 HTTP 網站上啟用密碼管理器選擇. 切換到 GeckoView 或使用 HTTPS.</string>
     <string name="settings_http_password_autofill_warning">HTTP 會在沒有傳輸加密的情況下傳送使用者名稱和密碼。能截獲連線的人都可以讀取這些資訊。</string>

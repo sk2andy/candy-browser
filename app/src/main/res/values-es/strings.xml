@@ -491,6 +491,7 @@
     <string name="external_app_prompt_confirm">Abrir</string>
     <string name="external_app_prompt_fallback_destination">este enlace</string>
     <string name="settings_http_password_autofill_title">Gestor de contraseñas en sitios HTTP</string>
+    <string name="settings_http_password_autofill_android_summary">GeckoView: La selección del gestor de contraseñas en sitios HTTP requiere Android 14 o una versión posterior.</string>
     <string name="settings_http_password_autofill_gecko_summary">Solo GeckoView: Después de tocar un campo de inicio de sesión, Candy puede abrir el gestor de contraseñas predeterminado de Android. Sin rellenado ni guardado automático en HTTP.</string>
     <string name="settings_http_password_autofill_system_webview_summary">Android System WebView: No compatible. Su API pública no puede activar la selección del gestor de contraseñas en sitios HTTP. Cambia a GeckoView o usa HTTPS.</string>
     <string name="settings_http_password_autofill_warning">HTTP envía nombres de usuario y contraseñas sin cifrado de transporte. Cualquiera que intercepte la conexión puede leerlos.</string>

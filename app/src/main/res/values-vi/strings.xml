@@ -500,6 +500,7 @@
     <string name="external_app_prompt_confirm">Mở</string>
     <string name="external_app_prompt_fallback_destination">liên kết này</string>
     <string name="settings_http_password_autofill_title">Quản lý mật khẩu trên các trang web HTTP</string>
+    <string name="settings_http_password_autofill_android_summary">GeckoView: Việc chọn trình quản lý mật khẩu trên trang HTTP yêu cầu Android 14 trở lên.</string>
     <string name="settings_http_password_autofill_gecko_summary">GeckoView chỉ: Sau khi bạn nhấn vào trường đăng nhập, Candy có thể mở trình quản lý mật khẩu mặc định Android của bạn. Không tự động lấp đầy hoặc tiết kiệm trên HTTP.</string>
     <string name="settings_http_password_autofill_system_webview_summary">Android System WebView: Không được hỗ trợ. API công khai của nó không thể cho phép lựa chọn quản lý mật khẩu trên các trang web HTTP. Chuyển sang GeckoView hoặc sử dụng HTTPS.</string>
     <string name="settings_http_password_autofill_warning">HTTP gửi tên người dùng và mật khẩu mà không mã hóa khi truyền. Bất kỳ ai chặn được kết nối đều có thể đọc chúng.</string>

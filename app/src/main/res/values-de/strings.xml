@@ -544,6 +544,7 @@
     <string name="external_app_prompt_confirm">Öffnen</string>
     <string name="external_app_prompt_fallback_destination">diesen Link</string>
     <string name="settings_http_password_autofill_title">Passwortmanager auf HTTP-Seiten</string>
+    <string name="settings_http_password_autofill_android_summary">GeckoView: Die Passwortmanager-Auswahl auf HTTP-Seiten benötigt Android 14 oder neuer.</string>
     <string name="settings_http_password_autofill_gecko_summary">Nur GeckoView: Nach Tippen auf ein Anmeldefeld darf Candy deinen Standard-Passwortmanager öffnen. Kein automatisches Ausfüllen oder Speichern auf HTTP.</string>
     <string name="settings_http_password_autofill_system_webview_summary">Android System WebView: Nicht unterstützt. Dessen öffentliche API kann die Passwortmanager-Auswahl auf HTTP-Seiten nicht freischalten. Wechsle zu GeckoView oder HTTPS.</string>
     <string name="settings_http_password_autofill_warning">HTTP überträgt Benutzernamen und Passwörter ohne Transportverschlüsselung. Wer die Verbindung abhören kann, kann sie lesen.</string>

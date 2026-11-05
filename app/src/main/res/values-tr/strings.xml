@@ -508,6 +508,7 @@
     <string name="external_app_prompt_confirm">Açık .</string>
     <string name="external_app_prompt_fallback_destination">Bu bağlantı.</string>
     <string name="settings_http_password_autofill_title">HTTP sitelerindeki şifreler yöneticisi</string>
+    <string name="settings_http_password_autofill_android_summary">GeckoView: HTTP sitelerinde şifre yöneticisi seçimi Android 14 veya daha yeni bir sürüm gerektirir.</string>
     <string name="settings_http_password_autofill_gecko_summary">Yalnızca GeckoView: Giriş alanına dokunduktan sonra Candy, varsayılan Android parola yöneticisini açabilir. HTTP üzerinde otomatik doldurma veya kaydetme yapılmaz.</string>
     <string name="settings_http_password_autofill_system_webview_summary">Android System WebView: Desteklenmiyor. Onun kamu API\'si HTTP sitelerinde parola yöneticisi seçimini etkinleştiremez. GeckoView\'e geçin veya HTTPS kullanın.</string>
     <string name="settings_http_password_autofill_warning">HTTP, kullanıcı adlarını ve parolaları aktarım şifrelemesi olmadan gönderir. Bağlantıyı ele geçirebilen herkes bunları okuyabilir.</string>

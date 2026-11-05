@@ -515,6 +515,7 @@
     <string name="external_app_prompt_confirm">Deschide</string>
     <string name="external_app_prompt_fallback_destination">acest link</string>
     <string name="settings_http_password_autofill_title">Administrator de parole pe site-uri HTTP</string>
+    <string name="settings_http_password_autofill_android_summary">GeckoView: Selectarea administratorului de parole pe site-uri HTTP necesită Android 14 sau o versiune mai recentă.</string>
     <string name="settings_http_password_autofill_gecko_summary">GeckoView numai: După ce apeși un câmp de conectare, Candy poți deschide managerul de parole implicit Android. Fără umplere sau economisire automată HTTP.</string>
     <string name="settings_http_password_autofill_system_webview_summary">Android System WebView: neacceptat. API-ul public nu permite alegerea unui manager de parole pe site-uri HTTP. Comutați la GeckoView sau folosiți HTTPS.</string>
     <string name="settings_http_password_autofill_warning">HTTP trimite numele de utilizator și parolele fără criptarea transmisiei. Oricine poate intercepta conexiunea le poate citi.</string>

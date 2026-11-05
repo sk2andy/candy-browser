@@ -801,6 +801,7 @@ internal fun SettingsScreen(
                     settings = developerSettings,
                     isHttpPasswordAutofillEnabled = isHttpPasswordAutofillEnabled,
                     isHttpPasswordAutofillSupported = isHttpPasswordAutofillSupported,
+                    isGeckoEngine = browserEngineKind == AndroidBrowserEngineKind.GeckoView,
                     isInputDiagnosticsEnabled = isInputDiagnosticsEnabled,
                     isGeckoLoggingSupported = isGeckoLoggingSupported,
                     geckoLoggingStatus = geckoLoggingStatus,

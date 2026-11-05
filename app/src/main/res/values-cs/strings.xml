@@ -521,6 +521,7 @@
     <string name="external_app_prompt_confirm">Otevřít</string>
     <string name="external_app_prompt_fallback_destination">tento odkaz</string>
     <string name="settings_http_password_autofill_title">Správce hesel na HTTP webech</string>
+    <string name="settings_http_password_autofill_android_summary">GeckoView: Výběr správce hesel na stránkách HTTP vyžaduje Android 14 nebo novější.</string>
     <string name="settings_http_password_autofill_gecko_summary">Pouze GeckoView: Po klepnutí na přihlašovací pole může Candy otevřít výchozí správce hesel Androidu. Bez automatického vyplňování či ukládání na HTTP.</string>
     <string name="settings_http_password_autofill_system_webview_summary">Android System WebView: Nepodporováno. Jeho veřejné API neumožňuje výběr správce hesel na HTTP webech. Přepněte na GeckoView nebo použijte HTTPS.</string>
     <string name="settings_http_password_autofill_warning">HTTP odesílá uživatelská jména a hesla bez šifrování přenosu. Kdokoli schopný zachytit spojení je může přečíst.</string>

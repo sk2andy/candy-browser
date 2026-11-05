@@ -10,6 +10,18 @@ import org.junit.Test
 
 class SettingsSearchCatalogTest {
     @Test
+    fun `unsupported Gecko HTTP password selection explains Android version`() {
+        val definitions = settingsSearchDefinitions(
+            SettingsSearchAvailability(isDeveloperOptionsUnlocked = true, isGeckoEngine = true),
+        ).associateBy { it.id }
+
+        assertEquals(
+            R.string.settings_http_password_autofill_android_summary,
+            definitions.getValue("settings_http_password_autofill_title").descriptionRes,
+        )
+    }
+
+    @Test
     fun `offline speech controls open their model settings page`() {
         val entries = settingsSearchDefinitions(SettingsSearchAvailability()).associateBy { it.id }
         listOf(

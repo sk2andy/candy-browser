@@ -522,6 +522,7 @@
     <string name="external_app_prompt_confirm">Odpri</string>
     <string name="external_app_prompt_fallback_destination">ta povezava</string>
     <string name="settings_http_password_autofill_title">Upravljavec gesel na HTTP spletnih mestih</string>
+    <string name="settings_http_password_autofill_android_summary">GeckoView: Izbira upravitelja gesel na straneh HTTP zahteva Android 14 ali novejšo različico.</string>
     <string name="settings_http_password_autofill_gecko_summary">GeckoView samo: Ko pritisnete polje za prijavo, Candy lahko odprete privzeto Android upravljanje gesel. Brez samodejnega polnjenja ali varčevanja na HTTP.</string>
     <string name="settings_http_password_autofill_system_webview_summary">Android System WebView: ni podprto. Javni API ne omogoča izbire upravljalnika gesel na spletnih straneh HTTP. Preklopite na GeckoView ali uporabite HTTPS.</string>
     <string name="settings_http_password_autofill_warning">HTTP pošilja uporabniška imena in gesla brez šifriranja prenosa. Prebere jih lahko vsak, ki prestreže povezavo.</string>

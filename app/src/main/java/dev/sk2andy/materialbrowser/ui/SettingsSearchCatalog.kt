@@ -869,10 +869,11 @@ internal fun settingsSearchDefinitions(
                 setting(
                     id = "settings_http_password_autofill_title",
                     titleRes = R.string.settings_http_password_autofill_title,
-                    descriptionRes = if (availability.isHttpPasswordAutofillSupported) {
-                        R.string.settings_http_password_autofill_gecko_summary
-                    } else {
-                        R.string.settings_http_password_autofill_system_webview_summary
+                    descriptionRes = when {
+                        availability.isHttpPasswordAutofillSupported ->
+                            R.string.settings_http_password_autofill_gecko_summary
+                        availability.isGeckoEngine -> R.string.settings_http_password_autofill_android_summary
+                        else -> R.string.settings_http_password_autofill_system_webview_summary
                     },
                 )
                 setting(

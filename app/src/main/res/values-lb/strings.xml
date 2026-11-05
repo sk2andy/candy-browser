@@ -508,6 +508,7 @@
     <string name="external_app_prompt_confirm">Opgemaach</string>
     <string name="external_app_prompt_fallback_destination">dëse Link</string>
     <string name="settings_http_password_autofill_title">Passwuertmanager op HTTP Site</string>
+    <string name="settings_http_password_autofill_android_summary">GeckoView: D’Auswiel vum Passwuertmanager op HTTP-Säiten erfuerdert Android 14 oder méi nei.</string>
     <string name="settings_http_password_autofill_gecko_summary">Nëmme GeckoView: No engem Tipp op en Umeldungsfeld kann Candy den Android-Standard-Passwuertmanager opmaachen. Keng automatesch Ausfëllung oder Späicherung iwwer HTTP.</string>
     <string name="settings_http_password_autofill_system_webview_summary">Android System WebView: Net ënnerstëtzt. Seng ëffentlech API kann d\'Selektioun vum Passwuertmanager op HTTP Site net aktivéieren. Gitt op GeckoView oder benotzt HTTPS.</string>
     <string name="settings_http_password_autofill_warning">HTTP schéckt Benotzernimm a Passwierder ouni Transportverschlësselung. Jiddereen, deen d’Verbindung ofhuele kann, kann se liesen.</string>

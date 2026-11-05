@@ -508,6 +508,7 @@
     <string name="external_app_prompt_confirm">Άνοιγμα</string>
     <string name="external_app_prompt_fallback_destination">αυτός ο σύνδεσμος</string>
     <string name="settings_http_password_autofill_title">Διαχειριστής κωδικού πρόσβασης σε HTTP τοποθεσίες</string>
+    <string name="settings_http_password_autofill_android_summary">GeckoView: Η επιλογή διαχειριστή κωδικών πρόσβασης σε ιστοτόπους HTTP απαιτεί Android 14 ή νεότερη έκδοση.</string>
     <string name="settings_http_password_autofill_gecko_summary">Μόνο GeckoView: Αφού πατήσετε πεδίο σύνδεσης, το Candy μπορεί να ανοίξει τον προεπιλεγμένο διαχειριστή κωδικών Android. Χωρίς αυτόματη συμπλήρωση ή αποθήκευση σε HTTP.</string>
     <string name="settings_http_password_autofill_system_webview_summary">Android System WebView: Μη υποστηριζόμενη. Το κοινό του API δεν μπορεί να επιτρέψει την επιλογή κωδικού πρόσβασης στις τοποθεσίες HTTP. Μετάβαση σε GeckoView ή χρήση HTTPS.</string>
     <string name="settings_http_password_autofill_warning">Το HTTP στέλνει ονόματα χρήστη και κωδικούς χωρίς κρυπτογράφηση μεταφοράς. Όποιος μπορεί να υποκλέψει τη σύνδεση μπορεί να τα διαβάσει.</string>

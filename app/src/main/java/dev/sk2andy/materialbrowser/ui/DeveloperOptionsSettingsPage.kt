@@ -84,6 +84,7 @@ internal fun DeveloperOptionsSettingsPage(
     settings: DeveloperSettings,
     isHttpPasswordAutofillEnabled: Boolean = false,
     isHttpPasswordAutofillSupported: Boolean = false,
+    isGeckoEngine: Boolean = false,
     isInputDiagnosticsEnabled: Boolean = false,
     isGeckoLoggingSupported: Boolean = false,
     geckoLoggingStatus: GeckoLoggingStatus = GeckoLoggingStatus.Disabled,
@@ -113,10 +114,11 @@ internal fun DeveloperOptionsSettingsPage(
             SettingsSwitch(
                 title = stringResource(R.string.settings_http_password_autofill_title),
                 subtitle = stringResource(
-                    if (isHttpPasswordAutofillSupported) {
-                        R.string.settings_http_password_autofill_gecko_summary
-                    } else {
-                        R.string.settings_http_password_autofill_system_webview_summary
+                    when {
+                        isHttpPasswordAutofillSupported ->
+                            R.string.settings_http_password_autofill_gecko_summary
+                        isGeckoEngine -> R.string.settings_http_password_autofill_android_summary
+                        else -> R.string.settings_http_password_autofill_system_webview_summary
                     },
                 ),
                 checked = isHttpPasswordAutofillSupported && isHttpPasswordAutofillEnabled,

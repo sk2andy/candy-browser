@@ -508,6 +508,7 @@
     <string name="external_app_prompt_confirm">Hap</string>
     <string name="external_app_prompt_fallback_destination">ky lidhje</string>
     <string name="settings_http_password_autofill_title">Menaxheri i fjalëkalimeve në faqet HTTP</string>
+    <string name="settings_http_password_autofill_android_summary">GeckoView: Përzgjedhja e menaxherit të fjalëkalimeve në sajte HTTP kërkon Android 14 ose më të ri.</string>
     <string name="settings_http_password_autofill_gecko_summary">GeckoView vetëm: Pasi të prekni një fushë hyrjeje, Candy mund të hapni menaxherin tuaj të parakohshëm Android të fjalëkalimeve. Nuk ka mbushje ose kursim automatik në HTTP.</string>
     <string name="settings_http_password_autofill_system_webview_summary">Android System WebView: nuk mbështetet. API-ja publike nuk mundëson zgjedhjen e menaxherit të fjalëkalimeve në sajtet HTTP. Kalo te GeckoView ose përdor HTTPS.</string>
     <string name="settings_http_password_autofill_warning">HTTP dërgon emrat e përdoruesve dhe fjalëkalimet pa shifrim të transmetimit. Kushdo që mund të përgjojë lidhjen mund t’i lexojë.</string>

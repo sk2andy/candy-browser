@@ -500,6 +500,7 @@
     <string name="external_app_prompt_confirm">開く</string>
     <string name="external_app_prompt_fallback_destination">このリンク</string>
     <string name="settings_http_password_autofill_title">HTTP サイトでのパスワード管理者</string>
+    <string name="settings_http_password_autofill_android_summary">GeckoView: HTTP サイトでパスワードマネージャーを選択するには、Android 14 以降が必要です。</string>
     <string name="settings_http_password_autofill_gecko_summary">GeckoViewのみ:ログインフィールドをタップした後, Candy はデフォルト Android パスワードマネージャを開くことができます. 自動充填や貯蔵が禁止されている HTTP.</string>
     <string name="settings_http_password_autofill_system_webview_summary">Android System WebView: サポートされていません. その公開 API は HTTP サイトでパスワード管理者の選択を有効にすることはできません. GeckoView に切り替えるか,または HTTPS を使用する.</string>
     <string name="settings_http_password_autofill_warning">HTTP はユーザー名とパスワードを暗号化せずに送信します。接続を傍受できる人はそれらを読めます。</string>

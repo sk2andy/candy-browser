@@ -3,6 +3,7 @@ package dev.sk2andy.materialbrowser.browser.credentials
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
+import android.os.Build
 import android.os.CancellationSignal
 import androidx.appcompat.app.AlertDialog
 import androidx.credentials.CreatePasswordRequest
@@ -18,7 +19,7 @@ import androidx.credentials.exceptions.GetCredentialException
 import java.util.concurrent.atomic.AtomicBoolean
 
 /** Android system-UI implementation. It intentionally owns no credential database. */
-internal class AndroidCredentialPromptHost private constructor(
+internal class AndroidCredentialPromptHost internal constructor(
     private val activity: Activity,
     private val credentialManager: CredentialManager,
 ) : CredentialPromptHost {
@@ -29,6 +30,11 @@ internal class AndroidCredentialPromptHost private constructor(
         prompt: CredentialLoginSavePrompt,
         onComplete: (Boolean) -> Unit,
     ) {
+        // Android 13 and older cannot bind Credential Manager requests to the website origin.
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            onComplete(false)
+            return
+        }
         val completion = begin(fallback = false, onComplete = onComplete) ?: return
         val cancellationSignal = CancellationSignal().also(completion::attach)
         val request = runCatching {
@@ -62,6 +68,10 @@ internal class AndroidCredentialPromptHost private constructor(
         prompt: CredentialLoginSelectPrompt,
         onComplete: (CredentialLogin?) -> Unit,
     ) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            onComplete(null)
+            return
+        }
         val completion = begin<CredentialLogin?>(fallback = null, onComplete = onComplete) ?: return
         val cancellationSignal = CancellationSignal().also(completion::attach)
         val request = runCatching {

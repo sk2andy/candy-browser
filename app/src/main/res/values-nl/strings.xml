@@ -508,6 +508,7 @@
     <string name="external_app_prompt_confirm">Openen</string>
     <string name="external_app_prompt_fallback_destination">deze link</string>
     <string name="settings_http_password_autofill_title">Wachtwoordbeheerder op HTTP sites</string>
+    <string name="settings_http_password_autofill_android_summary">GeckoView: Voor het kiezen van een wachtwoordbeheerder op HTTP-sites is Android 14 of hoger vereist.</string>
     <string name="settings_http_password_autofill_gecko_summary">Alleen GeckoView: Nadat je een inlogveld aantikt, kan Candy je standaard Android-wachtwoordbeheerder openen. Geen automatisch invullen of opslaan op HTTP.</string>
     <string name="settings_http_password_autofill_system_webview_summary">Android System WebView: niet ondersteund. De publieke API kan de selectie van password-manager op HTTP sites niet inschakelen. Overschakelen naar GeckoView of gebruik HTTPS.</string>
     <string name="settings_http_password_autofill_warning">HTTP verstuurt gebruikersnamen en wachtwoorden zonder transportversleuteling. Iedereen die de verbinding kan onderscheppen, kan ze lezen.</string>

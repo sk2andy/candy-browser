@@ -524,6 +524,7 @@
     <string name="external_app_prompt_confirm">Открыть</string>
     <string name="external_app_prompt_fallback_destination">этой ссылки</string>
     <string name="settings_http_password_autofill_title">Менеджер паролей на сайтах HTTP</string>
+    <string name="settings_http_password_autofill_android_summary">GeckoView: Для выбора менеджера паролей на сайтах HTTP требуется Android 14 или новее.</string>
     <string name="settings_http_password_autofill_gecko_summary">Только GeckoView: после нажатия на поле входа Candy может открыть менеджер паролей Android по умолчанию. Автозаполнение и сохранение на HTTP не выполняются.</string>
     <string name="settings_http_password_autofill_system_webview_summary">Android System WebView: не поддерживается. Его публичный API не позволяет включить выбор менеджера паролей на сайтах HTTP. Переключитесь на GeckoView или используйте HTTPS.</string>
     <string name="settings_http_password_autofill_warning">HTTP передаёт имена пользователей и пароли без шифрования соединения. Любой, кто может перехватить соединение, сможет их прочитать.</string>
