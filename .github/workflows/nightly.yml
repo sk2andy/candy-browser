@@ -64,10 +64,10 @@ jobs:
         with:
           packages: platform-tools
 
-      - name: Install Android SDK platform 37.1
+      - name: Install Android SDK platform 37.2
         if: steps.metadata.outputs.build == 'true'
         shell: bash
-        run: sdkmanager "platforms;android-37.1"
+        run: sdkmanager "platforms;android-37.2"
 
       - name: Restore release keystore
         if: steps.metadata.outputs.build == 'true'

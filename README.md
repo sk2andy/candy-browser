@@ -463,7 +463,7 @@ setup in the [Obtainium table](#obtainium).
 
 ## Build from source
 
-Requirements: Android SDK 37.1 and JDK 17. Point `JAVA_HOME` to your JDK 17 installation.
+Requirements: Android SDK 37.2 and JDK 17. Point `JAVA_HOME` to your JDK 17 installation.
 
 ```bash
 ./gradlew testFullDebugUnitTest lintFullDebug assembleFullDebug

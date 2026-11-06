@@ -237,7 +237,7 @@ Camera and microphone permissions remain separate and continue through Candy's p
 
 ## Gecko crash helper startup
 
-The resolved GeckoView `157.0.20260924084938` AAR always starts the crash-helper service.
+The previously tested GeckoView `157.0.20260924084938` AAR always starts the crash-helper service.
 `crashHandler(null)` and `MOZ_CRASHREPORTER_DISABLE` do not disable it. The native Android
 `CrashReporter::OOPInit` deliberately bypasses the reporting-enabled check and always connects
 to the helper. Skipping Java startup and returning invalid pipe descriptors crashes in native
@@ -647,11 +647,13 @@ implements them.
   disabled in private browsing, and is hidden from the Firefox extension manager. Regular first
   navigation waits for its bounded initialization gate so cold-start `document-start` scripts are
   not missed.
-- GeckoView `157.0.20260924084938` is pinned with Android SDK 37.1, AGP 9.4.0 and Gradle 9.6.0.
+- GeckoView `159.0.20261102144711` is pinned with Android SDK 37.2, AGP 9.4.0 and Gradle 9.6.0.
   `minSdk` remains 31 and `targetSdk` remains 36. Gecko upgrades stay coordinated toolchain changes,
   not floating dependency bumps.
   The [155 to 157 upgrade audit](../audits/geckoview-157-upgrade.md) records API compatibility,
   transitive dependency changes, upstream fixes and device regression evidence.
+  The [159 eMudhra audit](../audits/geckoview-159-emudhra.md) records bundled revocation evidence
+  and the scope of the emulator check.
 - Browser commands clear Gecko data through a typed runtime seam. **Clear cache & reload** uses only
   `StorageController.ClearFlags.ALL_CACHES`; **Clear cookies & reload** uses only `COOKIES` and is
   deliberately labeled as affecting all Candy browser profiles because GeckoView 155 exposes no

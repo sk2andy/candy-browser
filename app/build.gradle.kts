@@ -225,7 +225,7 @@ android {
     namespace = "dev.sk2andy.materialbrowser"
     ndkVersion = "27.2.12479018"
     compileSdk = 37
-    compileSdkMinor = 1
+    compileSdkMinor = 2
 
     defaultConfig {
         applicationId = "dev.sk2andy.materialbrowser"
@@ -722,7 +722,7 @@ listOf("release", "nightly").forEach { buildType ->
     }
 }
 
-val geckoViewDependency = "org.mozilla.geckoview:geckoview:157.0.20260924084938"
+val geckoViewDependency = "org.mozilla.geckoview:geckoview:159.0.20261102144711"
 
 dependencies {
     implementation(project(":shared"))

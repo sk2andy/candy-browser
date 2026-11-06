@@ -35,9 +35,9 @@ jobs:
         with:
           packages: platform-tools
 
-      - name: Install Android SDK platform 37.1
+      - name: Install Android SDK platform 37.2
         shell: bash
-        run: sdkmanager "platforms;android-37.1"
+        run: sdkmanager "platforms;android-37.2"
 
       - name: Build full debug app
         shell: bash

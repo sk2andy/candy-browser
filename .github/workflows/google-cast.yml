@@ -47,7 +47,7 @@ jobs:
           sdkmanager \
             "emulator" \
             "platform-tools" \
-            "platforms;android-37.1" \
+            "platforms;android-37.2" \
             "system-images;android-35;google_apis;x86_64"
           printf 'no\n' | avdmanager create avd \
             --force \

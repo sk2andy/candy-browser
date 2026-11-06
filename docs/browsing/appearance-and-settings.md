@@ -321,8 +321,8 @@ Frosted keeps three persisted controls together in its surface group. They remai
   private decisions therefore remain session-private. This path does not inject JavaScript into the
   page. Mozilla fixed the synchronous audible `play()` permission race in Gecko 154
   ([bug 2049064](https://bugzilla.mozilla.org/show_bug.cgi?id=2049064)). The named immediate-playback
-  device regression is enabled and passes on GeckoView 157. Candy compiles the pinned GeckoView 157
-  against Android SDK 37.1 with AGP 9.4.0; see the [upgrade audit](../audits/geckoview-157-upgrade.md).
+  device regression was enabled and passed on GeckoView 157 with Android SDK 37.1 and AGP 9.4.0;
+  see the [upgrade audit](../audits/geckoview-157-upgrade.md).
 
 ## Address loading styles
 
