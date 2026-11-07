@@ -467,6 +467,7 @@
     <string name="tab_lifetime_never">Aldrig</string>
     <string name="tab_lifetime_immediately">När Candy kommer in i bakgrunden</string>
     <string name="tab_lifetime_when_app_closes">När Candy stängs</string>
+    <string name="tab_lifetime_thirty_minutes">Efter 30 minuter</string>
     <plurals name="tab_lifetime_hours">
         <item quantity="one">Efter %1$d timme</item>
         <item quantity="other">Efter %1$d timmar</item>

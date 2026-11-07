@@ -448,6 +448,7 @@
     <string name="tab_lifetime_never">Jamais</string>
     <string name="tab_lifetime_immediately">Quand Candy passe en arrière-plan</string>
     <string name="tab_lifetime_when_app_closes">À la fermeture de Candy</string>
+    <string name="tab_lifetime_thirty_minutes">Après 30 minutes</string>
     <plurals name="tab_lifetime_hours">
         <item quantity="one">Après %1$d heure</item>
         <item quantity="many">Après %1$d heures</item>

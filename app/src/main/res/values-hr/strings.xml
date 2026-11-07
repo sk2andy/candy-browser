@@ -472,6 +472,7 @@
     <string name="tab_lifetime_never">Nikad.</string>
     <string name="tab_lifetime_immediately">Kada se Candy unosi u pozadinu</string>
     <string name="tab_lifetime_when_app_closes">Kada se Candy zatvara</string>
+    <string name="tab_lifetime_thirty_minutes">Nakon 30 minuta</string>
     <plurals name="tab_lifetime_hours">
         <item quantity="one">Nakon %1$d h</item>
         <item quantity="few">Nakon %1$d h</item>

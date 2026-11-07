@@ -461,6 +461,7 @@
     <string name="tab_lifetime_never">決して</string>
     <string name="tab_lifetime_immediately">Candy がバックグラウンドに入るとき</string>
     <string name="tab_lifetime_when_app_closes">Candy が閉じるとき</string>
+    <string name="tab_lifetime_thirty_minutes">30分後</string>
     <plurals name="tab_lifetime_hours">
         <item quantity="other">%1$d 時間後</item>
     </plurals>

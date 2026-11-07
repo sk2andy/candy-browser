@@ -476,6 +476,7 @@
     <string name="tab_lifetime_never">Nikdy</string>
     <string name="tab_lifetime_immediately">Když Candy přejde na pozadí</string>
     <string name="tab_lifetime_when_app_closes">Když se Candy zavře</string>
+    <string name="tab_lifetime_thirty_minutes">Po 30 minutách</string>
     <plurals name="tab_lifetime_hours">
         <item quantity="one">Po %1$d hodině</item>
         <item quantity="few">Po %1$d hodinách</item>

@@ -1136,8 +1136,10 @@ class BrowserSessionStoreInstrumentedTest {
     @Test
     fun inactiveTabLifetimeRoundTripsAndUnknownValueFallsBackToNever() {
         val store = BrowserSessionStore(context)
-        store.saveInactiveTabLifetime(InactiveTabLifetime.WhenAppCloses)
-        assertEquals(InactiveTabLifetime.WhenAppCloses, store.loadInactiveTabLifetime())
+        InactiveTabLifetime.entries.forEach { lifetime ->
+            store.saveInactiveTabLifetime(lifetime)
+            assertEquals(lifetime, BrowserSessionStore(context).loadInactiveTabLifetime())
+        }
 
         preferences.edit().putString("inactive_tab_lifetime", "unknown").commit()
         assertEquals(InactiveTabLifetime.Never, store.loadInactiveTabLifetime())

@@ -114,6 +114,44 @@ class TabRetentionRulesTest {
         )
     }
 
+    @Test
+    fun `short lifetimes preserve expiry boundaries and protected tabs`() {
+        mapOf(
+            "30_minutes" to 1_800_000L,
+            "1_hour" to 3_600_000L,
+            "2_hours" to 7_200_000L,
+        ).forEach { (wireValue, duration) ->
+            val lifetime = InactiveTabLifetime.fromWireValue(wireValue)
+            val cutoff = now - duration
+            val tabs = listOf(
+                tab("selected", cutoff - 1),
+                tab("expired", cutoff - 1),
+                tab("private", cutoff - 1).copy(isIncognito = true),
+                tab("boundary", cutoff),
+                tab("recent", cutoff + 1),
+                tab("pinned", cutoff - 1).copy(isPinned = true),
+                tab("unknown", 0L),
+            )
+            assertEquals(
+                wireValue,
+                setOf("expired", "private"),
+                TabRetentionRules.expiredTabIds(tabs, "selected", lifetime, now),
+            )
+            assertTrue(TabRetentionRules.expiredTabIds(tabs.take(1), "selected", lifetime, now).isEmpty())
+            assertTrue(TabRetentionRules.tabIdsToCloseOnBackground(tabs, lifetime).isEmpty())
+            assertTrue(TabRetentionRules.tabIdsToCloseOnTaskRemoval(tabs, lifetime).isEmpty())
+            assertEquals(
+                setOf("older"),
+                TabRetentionRules.expiredTabIds(
+                    listOf(tab("older", cutoff - 2), tab("freshest", cutoff - 1)),
+                    "missing",
+                    lifetime,
+                    now,
+                ),
+            )
+        }
+    }
+
     private fun expired(lifetime: InactiveTabLifetime, vararg tabs: BrowserTab): Set<String> =
         TabRetentionRules.expiredTabIds(
             tabs = listOf(tab("selected", now)) + tabs,

@@ -472,6 +472,7 @@
     <string name="tab_lifetime_never">Niciodată.</string>
     <string name="tab_lifetime_immediately">Când Candy intră în fundal</string>
     <string name="tab_lifetime_when_app_closes">Când Candy se închide</string>
+    <string name="tab_lifetime_thirty_minutes">După 30 de minute</string>
     <plurals name="tab_lifetime_hours">
         <item quantity="one">După %1$d h</item>
         <item quantity="few">După %1$d h</item>

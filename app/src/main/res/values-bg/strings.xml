@@ -467,6 +467,7 @@
     <string name="tab_lifetime_never">Никога.</string>
     <string name="tab_lifetime_immediately">Когато Candy се въвежда на заден план</string>
     <string name="tab_lifetime_when_app_closes">Когато Candy се затваря</string>
+    <string name="tab_lifetime_thirty_minutes">След 30 минути</string>
     <plurals name="tab_lifetime_hours">
         <item quantity="one">След %1$d ч</item>
         <item quantity="other">След %1$d ч</item>

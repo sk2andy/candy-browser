@@ -477,6 +477,7 @@
     <string name="tab_lifetime_never">Nikoli.</string>
     <string name="tab_lifetime_immediately">Ko se Candy vpiše v ozadje</string>
     <string name="tab_lifetime_when_app_closes">Ko se Candy zapre</string>
+    <string name="tab_lifetime_thirty_minutes">Po 30 minutah</string>
     <plurals name="tab_lifetime_hours">
         <item quantity="one">Po %1$d h</item>
         <item quantity="two">Po %1$d h</item>

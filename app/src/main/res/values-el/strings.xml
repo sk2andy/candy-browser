@@ -467,6 +467,7 @@
     <string name="tab_lifetime_never">Ποτέ.</string>
     <string name="tab_lifetime_immediately">Όταν Candy εισέρχεται στο παρασκήνιο</string>
     <string name="tab_lifetime_when_app_closes">Όταν Candy κλείνει</string>
+    <string name="tab_lifetime_thirty_minutes">Μετά από 30 λεπτά</string>
     <plurals name="tab_lifetime_hours">
         <item quantity="one">Μετά από %1$d ώρα</item>
         <item quantity="other">Μετά από %1$d ώρες</item>

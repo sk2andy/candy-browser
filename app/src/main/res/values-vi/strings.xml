@@ -461,6 +461,7 @@
     <string name="tab_lifetime_never">Không bao giờ.</string>
     <string name="tab_lifetime_immediately">Khi Candy nhập nền</string>
     <string name="tab_lifetime_when_app_closes">Khi Candy đóng</string>
+    <string name="tab_lifetime_thirty_minutes">Sau 30 phút</string>
     <plurals name="tab_lifetime_hours">
         <item quantity="other">Sau %1$d giờ</item>
     </plurals>

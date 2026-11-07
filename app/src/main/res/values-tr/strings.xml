@@ -467,6 +467,7 @@
     <string name="tab_lifetime_never">Asla .</string>
     <string name="tab_lifetime_immediately">Candy arka planda girdiğinde</string>
     <string name="tab_lifetime_when_app_closes">Candy kapanırken</string>
+    <string name="tab_lifetime_thirty_minutes">30 dakika sonra</string>
     <plurals name="tab_lifetime_hours">
         <item quantity="one">%1$d saat sonra</item>
         <item quantity="other">%1$d saat sonra</item>

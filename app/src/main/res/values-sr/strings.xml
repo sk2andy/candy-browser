@@ -472,6 +472,7 @@
     <string name="tab_lifetime_never">Никада.</string>
     <string name="tab_lifetime_immediately">Када Candy улази у позадину</string>
     <string name="tab_lifetime_when_app_closes">Када се Candy затвара</string>
+    <string name="tab_lifetime_thirty_minutes">После 30 минута</string>
     <plurals name="tab_lifetime_hours">
         <item quantity="one">После %1$d ч</item>
         <item quantity="few">После %1$d ч</item>

@@ -467,6 +467,7 @@
     <string name="tab_lifetime_never">Nooit</string>
     <string name="tab_lifetime_immediately">Wanneer Candy de achtergrond binnengaat</string>
     <string name="tab_lifetime_when_app_closes">Wanneer Candy sluit</string>
+    <string name="tab_lifetime_thirty_minutes">Na 30 minuten</string>
     <plurals name="tab_lifetime_hours">
         <item quantity="one">Na %1$d uur</item>
         <item quantity="other">Na %1$d uur</item>

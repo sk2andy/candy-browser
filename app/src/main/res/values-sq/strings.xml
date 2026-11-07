@@ -467,6 +467,7 @@
     <string name="tab_lifetime_never">Asnjëherë.</string>
     <string name="tab_lifetime_immediately">Kur Candy futet në sfond</string>
     <string name="tab_lifetime_when_app_closes">Kur Candy mbyllet</string>
+    <string name="tab_lifetime_thirty_minutes">Pas 30 minutash</string>
     <plurals name="tab_lifetime_hours">
         <item quantity="one">Pas %1$d orësh</item>
         <item quantity="other">Pas %1$d orësh</item>

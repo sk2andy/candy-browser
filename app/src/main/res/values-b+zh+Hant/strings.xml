@@ -461,6 +461,7 @@
     <string name="tab_lifetime_never">我從來沒有</string>
     <string name="tab_lifetime_immediately">當 Candy 進入背景時</string>
     <string name="tab_lifetime_when_app_closes">當 Candy 關閉時</string>
+    <string name="tab_lifetime_thirty_minutes">30 分鐘後</string>
     <plurals name="tab_lifetime_hours">
         <item quantity="other">%1$d 小時後</item>
     </plurals>

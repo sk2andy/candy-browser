@@ -461,6 +461,7 @@
     <string name="tab_lifetime_never">절대</string>
     <string name="tab_lifetime_immediately">Candy가 배경으로 들어가면</string>
     <string name="tab_lifetime_when_app_closes">Candy가 닫을 때</string>
+    <string name="tab_lifetime_thirty_minutes">30분 후</string>
     <plurals name="tab_lifetime_hours">
         <item quantity="other">%1$d시간 후</item>
     </plurals>

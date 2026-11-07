@@ -479,6 +479,7 @@
     <string name="tab_lifetime_never">Никогда</string>
     <string name="tab_lifetime_immediately">При переходе Candy в фоновый режим</string>
     <string name="tab_lifetime_when_app_closes">При закрытии Candy</string>
+    <string name="tab_lifetime_thirty_minutes">Через 30 минут</string>
     <plurals name="tab_lifetime_hours">
         <item quantity="one">Через %1$d час</item>
         <item quantity="few">Через %1$d часа</item>

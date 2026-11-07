@@ -467,6 +467,7 @@
     <string name="tab_lifetime_never">Ni</string>
     <string name="tab_lifetime_immediately">Wann Candy am Hannergrond gesat gëtt</string>
     <string name="tab_lifetime_when_app_closes">Wann Candy schléisst</string>
+    <string name="tab_lifetime_thirty_minutes">No 30 Minutten</string>
     <plurals name="tab_lifetime_hours">
         <item quantity="one">No %1$d Stonn</item>
         <item quantity="other">No %1$d Stonnen</item>
