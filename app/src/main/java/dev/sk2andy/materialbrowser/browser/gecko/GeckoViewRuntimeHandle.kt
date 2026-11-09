@@ -1812,7 +1812,7 @@ private class GeckoViewBrowserSession(
             override fun onRequestCertificate(
                 session: GeckoSession,
                 prompt: GeckoSession.PromptDelegate.CertificateRequest,
-            ) = GeckoResult.fromValue(prompt.dismiss())
+            ) = GeckoResult.fromValue(prompt.confirm(null))
 
             override fun onLoginSave(
                 session: GeckoSession,
