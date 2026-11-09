@@ -1613,4 +1613,14 @@
     <string name="form_drafts_restore_failed">No matching empty field found. Saved text stays available until it expires.</string>
     <string name="form_drafts_settings_summary">Keep unsent multiline text encrypted on this device for 24 hours. Private drafts stay in memory until the tab closes. Sensitive fields are excluded. Turning this off deletes all drafts.</string>
     <string name="form_drafts_settings_title">Rescue form drafts</string>
+    <string name="settings_home_pages_title" tools:ignore="MissingTranslation">Home and new tabs</string>
+    <string name="settings_home_pages_summary" tools:ignore="MissingTranslation">Choose separate website addresses or the internal start page</string>
+    <string name="settings_home_pages_help" tools:ignore="MissingTranslation">Set each destination independently. Leave a field empty to keep Candy’s internal start page. New private tabs always use the internal start page.</string>
+    <string name="settings_home_button_url" tools:ignore="MissingTranslation">Home button URL</string>
+    <string name="settings_new_tab_url" tools:ignore="MissingTranslation">New tab URL</string>
+    <string name="settings_home_pages_copy" tools:ignore="MissingTranslation">Copy Home URL to new tabs</string>
+    <string name="settings_home_pages_reset" tools:ignore="MissingTranslation">Use internal start page for both</string>
+    <string name="settings_home_pages_internal" tools:ignore="MissingTranslation">Internal start page</string>
+    <string name="settings_home_pages_empty" tools:ignore="MissingTranslation">Empty = internal start page</string>
+    <string name="settings_home_pages_invalid" tools:ignore="MissingTranslation">Enter a valid HTTP or HTTPS website address.</string>
 </resources>

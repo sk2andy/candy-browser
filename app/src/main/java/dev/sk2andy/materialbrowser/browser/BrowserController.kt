@@ -900,6 +900,9 @@ class BrowserController(
         private set
     internal var favoriteAnimationSpeed by mutableStateOf(FavoriteAnimationSpeed.Default)
         private set
+    var homePageSettings by mutableStateOf(HomePageSettings())
+        private set
+
     var isOpenHomeOnStartupEnabled by mutableStateOf(false)
         private set
     var isScrollBarEnabled by mutableStateOf(false)
@@ -2854,6 +2857,7 @@ class BrowserController(
         isHttpPasswordAutofillEnabled = store.loadHttpPasswordAutofillEnabled()
         isFavoriteLaunchAnimationEnabled = store.loadFavoriteLaunchAnimationEnabled()
         favoriteAnimationSpeed = store.loadFavoriteAnimationSpeed()
+        homePageSettings = store.loadHomePageSettings()
         isOpenHomeOnStartupEnabled = store.loadOpenHomeOnStartupEnabled()
         isScrollBarEnabled = store.loadScrollBarEnabled()
         inlineMediaPlayerMode = store.loadInlineMediaPlayerMode()
@@ -5995,6 +5999,26 @@ class BrowserController(
             }
         }
     }
+
+    fun updateHomePageSettings(settings: HomePageSettings) {
+        homePageSettings = HomePageRules.sanitize(settings)
+        store.saveHomePageSettings(homePageSettings)
+    }
+
+    /** Explicit Home action only; startup and recovery keep their internal-page behavior. */
+    fun openHomePage(): Boolean {
+        val url = homePageSettings.homeUrl.takeIf(String::isNotEmpty)
+            ?: return openNormalHome()
+        leaveSiteCapsule()
+        submitAddress(url)
+        return true
+    }
+
+    /** User-requested empty tabs only; links, popups and engine bootstrap keep createTab. */
+    fun createUserTab(isIncognito: Boolean = selectedTab.isIncognito): String = createTab(
+        initialUrl = HomePageRules.newTabUrl(homePageSettings, isIncognito),
+        isIncognito = isIncognito,
+    )
 
     fun openNormalHome(): Boolean {
         leaveSiteCapsule()

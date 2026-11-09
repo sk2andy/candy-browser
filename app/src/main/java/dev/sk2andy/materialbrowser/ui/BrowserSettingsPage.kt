@@ -31,6 +31,7 @@ import dev.sk2andy.materialbrowser.browser.BrowserProfile
 import dev.sk2andy.materialbrowser.browser.ExternalAppLinkHandling
 import dev.sk2andy.materialbrowser.browser.FavoriteAnimationSpeed
 import dev.sk2andy.materialbrowser.browser.PageTranslationProvider
+import dev.sk2andy.materialbrowser.browser.HomePageSettings
 import dev.sk2andy.materialbrowser.browser.StartupAddressFocusMode
 import dev.sk2andy.materialbrowser.shared.ui.settings.TranslationProviderSettings
 import dev.sk2andy.materialbrowser.shared.ui.settings.TranslationProviderSettingsStrings
@@ -73,6 +74,8 @@ internal fun BrowserSettingsPage(
     isFavoriteLaunchAnimationEnabled: Boolean = true,
     favoriteAnimationSpeed: FavoriteAnimationSpeed = FavoriteAnimationSpeed.Default,
     isOpenHomeOnStartupEnabled: Boolean = false,
+    homePageSettings: HomePageSettings = HomePageSettings(),
+    onHomePageSettingsChanged: (HomePageSettings) -> Unit = {},
     isScrollBarEnabled: Boolean,
     isDefaultBrowser: Boolean,
     onBrowserEngineKindChanged: (AndroidBrowserEngineKind) -> Unit = {},
@@ -194,6 +197,8 @@ internal fun BrowserSettingsPage(
                     onCheckedChange = onOpenHomeOnStartupEnabledChanged,
                     modifier = Modifier.testTag(BrowserSettingsTestTags.OpenHomeOnStartup),
                 )
+                SettingsPreferenceDivider()
+                HomePageSettingsSection(homePageSettings, onHomePageSettingsChanged)
             }
             Spacer(Modifier.height(18.dp))
         }

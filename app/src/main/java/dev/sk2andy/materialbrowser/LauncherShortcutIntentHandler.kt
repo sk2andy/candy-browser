@@ -3,6 +3,8 @@ package dev.sk2andy.materialbrowser
 import android.content.Context
 import android.content.Intent
 import android.widget.Toast
+import dev.sk2andy.materialbrowser.browser.BLANK_URL
+import dev.sk2andy.materialbrowser.browser.HomePageRules
 import dev.sk2andy.materialbrowser.browser.BrowserController
 import dev.sk2andy.materialbrowser.browser.MAX_TABS
 import dev.sk2andy.materialbrowser.browser.integration.LauncherShortcutPublisher
@@ -128,7 +130,8 @@ internal class LauncherShortcutIntentHandler(
                     onComplete(false)
                 } else if (!targetHasTab) {
                     browserController.leaveSiteCapsule()
-                    onAddressEditorRequested()
+                    val url = HomePageRules.newTabUrl(browserController.homePageSettings, false)
+                    if (url == BLANK_URL) onAddressEditorRequested() else browserController.submitAddress(url)
                     onComplete(true)
                 } else {
                     browserController.leaveSiteCapsule()
@@ -148,9 +151,9 @@ internal class LauncherShortcutIntentHandler(
 
     private fun createTab(isIncognito: Boolean): Boolean {
         val previousTabId = browserController.selectedTabId
-        val createdTabId = browserController.createTab(isIncognito = isIncognito)
+        val createdTabId = browserController.createUserTab(isIncognito = isIncognito)
         if (createdTabId == previousTabId) return false
-        onAddressEditorRequested()
+        if (browserController.selectedTab.url == BLANK_URL) onAddressEditorRequested()
         return true
     }
 }

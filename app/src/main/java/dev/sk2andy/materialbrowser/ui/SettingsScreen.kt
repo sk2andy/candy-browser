@@ -32,6 +32,7 @@ import dev.sk2andy.materialbrowser.browser.PageTranslationProvider
 import dev.sk2andy.materialbrowser.browser.PrivacySignalSettings
 import dev.sk2andy.materialbrowser.browser.SearchEngine
 import dev.sk2andy.materialbrowser.browser.SearxngSettings
+import dev.sk2andy.materialbrowser.browser.HomePageSettings
 import dev.sk2andy.materialbrowser.browser.StartupAddressFocusMode
 import dev.sk2andy.materialbrowser.browser.StatusBarScrollRules
 import dev.sk2andy.materialbrowser.browser.WebRtcProtectionMode
@@ -128,6 +129,8 @@ internal fun SettingsScreen(
     isFavoriteLaunchAnimationEnabled: Boolean = true,
     favoriteAnimationSpeed: FavoriteAnimationSpeed = FavoriteAnimationSpeed.Default,
     isOpenHomeOnStartupEnabled: Boolean = false,
+    homePageSettings: HomePageSettings = HomePageSettings(),
+    onHomePageSettingsChanged: (HomePageSettings) -> Unit = {},
     isScrollBarEnabled: Boolean,
     isVideoAutoplayBlocked: Boolean,
     isVideoAutoplayBlockingSupported: Boolean,
@@ -627,6 +630,8 @@ internal fun SettingsScreen(
                     isFavoriteLaunchAnimationEnabled = isFavoriteLaunchAnimationEnabled,
                     favoriteAnimationSpeed = favoriteAnimationSpeed,
                     isOpenHomeOnStartupEnabled = isOpenHomeOnStartupEnabled,
+                    homePageSettings = homePageSettings,
+                    onHomePageSettingsChanged = onHomePageSettingsChanged,
                     isScrollBarEnabled = isScrollBarEnabled,
                     isDefaultBrowser = isDefaultBrowser,
                     onBrowserEngineKindChanged = onBrowserEngineKindChanged,

@@ -835,6 +835,8 @@ internal fun BrowserScreen(
     }
     LaunchedEffect(hardwareTabChangeRequestId) {
         if (hardwareTabChangeRequestId > 0) {
+            closeTabOverview()
+            settingsVisible = false
             addressEditorOpenGeneration++
             addressEditorVisible = false
             highlightedSuggestionIndex = -1
@@ -844,7 +846,7 @@ internal fun BrowserScreen(
     }
     fun createTabAndConfirm(isIncognito: Boolean, emitHaptic: Boolean): Boolean {
         val previousTabId = controller.selectedTabId
-        val createdTabId = controller.createTab(isIncognito = isIncognito)
+        val createdTabId = controller.createUserTab(isIncognito = isIncognito)
         if (createdTabId == previousTabId) return false
         if (emitHaptic) rootView.performConfirmHaptic()
         return true
@@ -859,7 +861,7 @@ internal fun BrowserScreen(
                 createTabAndConfirm(isIncognito = isIncognito, emitHaptic = true)
             ) {
                 addressValue = TextFieldValue()
-                addressEditorVisible = true
+                addressEditorVisible = controller.selectedTab.url == BLANK_URL
                 highlightedSuggestionIndex = -1
                 addressFocusNonce++
             }
@@ -1136,7 +1138,7 @@ internal fun BrowserScreen(
                 -> {
                     addressValue = TextFieldValue()
                     highlightedSuggestionIndex = -1
-                    addressEditorVisible = true
+                    addressEditorVisible = controller.selectedTab.url == BLANK_URL
                 }
                 BrowserCommandKind.OpenSettings -> {
                     addressEditorVisible = false

@@ -254,3 +254,22 @@ minimum query length and only after explicit provider selection.
 | Activity | Theme tertiary icon tint and existing batched pulse indicate permission/blocking activity |
 | Accessibility | Connection status, blocked count and permission activity remain in the content description; 48 dp click target opens Privacy X-Ray |
 | Details | Blocked counts remain available inside Privacy X-Ray |
+
+## Custom Home and new-tab pages
+
+Android Browser settings → Startup → Home and new tabs stores two independent HTTP(S) URLs.
+An empty field selects Candy's internal page; both fields default to empty. The editor validates
+website URLs (no credentials, scripts, local file/content URIs or oversized values), saves both
+atomically, and supports copying Home to the new-tab field or resetting the draft. Cancel does
+not save. Invalid persisted values independently fall back to the internal page.
+
+The explicit Home action navigates the current tab to its configured URL. The default Home
+behavior still selects/reuses a regular internal tab. User-requested normal tabs load the
+new-tab URL without forcing the address editor open. Private new tabs always remain internal
+and focus input as before. Explicit links, extension tabs, engine bootstrap, recovery, and
+startup internal-home presentation do not inherit the new-tab URL. Startup behavior remains
+controlled by its existing separate options.
+
+Ownership: `HomePageSettings`/`HomePageRules`, `BrowserSessionStore`, controller `openHomePage`
+and `createUserTab`, and `HomePageSettingsSection`. Coverage: `HomePageRulesTest`, browser
+`HomePageSettingsInstrumentedTest`, and UI `HomePageSettingsInstrumentedTest`.

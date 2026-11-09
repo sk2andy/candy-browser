@@ -38,6 +38,8 @@ import dev.sk2andy.materialbrowser.browser.SearchEngine
 import dev.sk2andy.materialbrowser.browser.SearchShortcut
 import dev.sk2andy.materialbrowser.browser.SearchShortcutRules
 import dev.sk2andy.materialbrowser.browser.StatusBarScrollRules
+import dev.sk2andy.materialbrowser.browser.HomePageSettings
+import dev.sk2andy.materialbrowser.browser.HomePageRules
 import dev.sk2andy.materialbrowser.browser.StartupAddressFocusMode
 import dev.sk2andy.materialbrowser.browser.SearxngRules
 import dev.sk2andy.materialbrowser.browser.SearxngSettings
@@ -1173,6 +1175,21 @@ class BrowserSessionStore internal constructor(
 
     fun saveFavoriteAnimationSpeed(speed: FavoriteAnimationSpeed) {
         preferences.edit().putString(KEY_FAVORITE_ANIMATION_SPEED, speed.wireValue).apply()
+    }
+
+    fun loadHomePageSettings(): HomePageSettings = HomePageRules.sanitize(
+        HomePageSettings(
+            homeUrl = preferences.getString("home_page_url", "").orEmpty(),
+            newTabUrl = preferences.getString("new_tab_page_url", "").orEmpty(),
+        ),
+    )
+
+    fun saveHomePageSettings(settings: HomePageSettings) {
+        val sanitized = HomePageRules.sanitize(settings)
+        preferences.edit()
+            .putString("home_page_url", sanitized.homeUrl)
+            .putString("new_tab_page_url", sanitized.newTabUrl)
+            .apply()
     }
 
     fun loadOpenHomeOnStartupEnabled(): Boolean =

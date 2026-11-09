@@ -1595,4 +1595,14 @@
     <string name="form_drafts_restore_failed">Kein passendes leeres Feld gefunden. Gespeicherter Text bleibt bis zum Ablauf verfügbar.</string>
     <string name="form_drafts_settings_summary">Nicht gesendeten mehrzeiligen Text für 24 Stunden verschlüsselt auf diesem Gerät behalten. Private Entwürfe bleiben bis zum Schließen des Tabs nur im Arbeitsspeicher. Sensible Felder sind ausgeschlossen. Ausschalten löscht alle Entwürfe.</string>
     <string name="form_drafts_settings_title">Formularentwürfe retten</string>
+    <string name="settings_home_pages_title">Startseite und neue Tabs</string>
+    <string name="settings_home_pages_summary">Separate Webadressen oder die interne Startseite wählen</string>
+    <string name="settings_home_pages_help">Beide Ziele sind unabhängig. Ein leeres Feld behält Candys interne Startseite bei. Neue private Tabs verwenden immer die interne Startseite.</string>
+    <string name="settings_home_button_url">URL für den Home-Button</string>
+    <string name="settings_new_tab_url">URL für neue Tabs</string>
+    <string name="settings_home_pages_copy">Home-URL für neue Tabs übernehmen</string>
+    <string name="settings_home_pages_reset">Für beide die interne Startseite verwenden</string>
+    <string name="settings_home_pages_internal">Interne Startseite</string>
+    <string name="settings_home_pages_empty">Leer = interne Startseite</string>
+    <string name="settings_home_pages_invalid">Eine gültige HTTP- oder HTTPS-Webadresse eingeben.</string>
 </resources>

@@ -1854,9 +1854,13 @@ open class MainActivity : AppCompatActivity() {
             BrowserHardwareInputAction.NewTab -> {
                 if (externalPreview != null) browserController.dismissExternalLinkPreview()
                 val previousTabId = browserController.selectedTabId
-                browserController.createTab()
+                browserController.createUserTab()
                 if (browserController.selectedTabId != previousTabId) {
-                    launcherAddressEditorRequestId++
+                    if (browserController.selectedTab.url == BLANK_URL) {
+                        launcherAddressEditorRequestId++
+                    } else {
+                        hardwareTabChangeRequestId++
+                    }
                 }
                 true
             }

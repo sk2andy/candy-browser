@@ -250,6 +250,8 @@ internal fun BrowserSettingsOverlay(
                 controller.isFavoriteLaunchAnimationEnabled,
             favoriteAnimationSpeed = controller.favoriteAnimationSpeed,
             isOpenHomeOnStartupEnabled = controller.isOpenHomeOnStartupEnabled,
+            homePageSettings = controller.homePageSettings,
+            onHomePageSettingsChanged = controller::updateHomePageSettings,
             isScrollBarEnabled = controller.isScrollBarEnabled,
             isVideoAutoplayBlocked = controller.isVideoAutoplayBlocked,
             isVideoAutoplayBlockingSupported = controller.isVideoAutoplayBlockingSupported,
