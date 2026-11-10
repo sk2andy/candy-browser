@@ -366,9 +366,12 @@
   this mobile viewport support.
 - Keep private always-block-popup domains memory-only; persist regular domains per profile only.
 - Keep `CREDENTIAL_MANAGER_QUERY_CANDIDATE_CREDENTIALS` and `CREDENTIAL_MANAGER_SET_ORIGIN`
-  declared for GeckoView's passkey lookup, origin-bound WebAuthn, and Candy's password Credential
-  Manager bridge. GeckoView 155 uses Android's framework Credential Manager for passkeys on API 34+
-  when `android.software.credentials` exists. Regular HTTPS Gecko views expose
+  declared for GeckoView's credential integration and Candy's password Credential Manager bridge.
+  Until Candy receives privileged-browser approval, Gecko hides `PublicKeyCredential` at document start
+  and System WebView uses `WEB_AUTHENTICATION_SUPPORT_NONE`. Secure pages can detect that passkeys
+  are unavailable and offer another sign-in method. Gecko may inject into newly created empty
+  `about:blank` frames after their first script; direct WebAuthn calls also remain possible.
+  Password Autofill and FedCM integration remain enabled. Regular HTTPS Gecko views expose
   native virtual Autofill nodes; private views do not. Android 13 and older use native Autofill
   instead of Candy's password Credential Manager save/select calls, because those calls cannot bind
   the website origin on those Android versions. FedCM prompts are unaffected. Developer options provide a default-off
@@ -382,7 +385,7 @@
   Login save/select and FedCM callbacks carry a tab, profile, session, origin and navigation identity
   and deny stale, private or cross-origin work.
   `MainActivity` binds Gecko's process-owned `GeckoRuntime.ActivityDelegate` to a lifecycle-scoped
-  Activity Result launcher so WebAuthn can open its passkey provider and return the result. A successful
+  Activity Result launcher, retained for re-enabling WebAuthn after approval. A successful
   provider result may carry no `Intent` payload; Candy buffers it until the same Activity has resumed
   and the initiating tab, engine session and navigation generation are still current. While the provider
   owns the foreground, immediate background-retention policy protects that initiating tab. Destroying

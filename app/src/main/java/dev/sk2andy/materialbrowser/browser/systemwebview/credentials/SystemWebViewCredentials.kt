@@ -1,6 +1,5 @@
 package dev.sk2andy.materialbrowser.browser.systemwebview.credentials
 
-import android.annotation.SuppressLint
 import android.view.View
 import android.webkit.WebView
 import androidx.annotation.MainThread
@@ -8,7 +7,7 @@ import androidx.webkit.WebSettingsCompat
 import androidx.webkit.WebViewFeature
 
 /**
- * Enables system-owned credentials for a browser WebView without injecting JavaScript or
+ * Enables system Autofill for a browser WebView without injecting JavaScript or
  * handling credential material in the app.
  *
  * Controller hooks:
@@ -20,27 +19,20 @@ import androidx.webkit.WebViewFeature
  * cancel legitimate password-manager UI.
  */
 object SystemWebViewCredentials {
-    /**
-     * Configures Android Autofill/password managers and WebAuthn/passkeys.
-     *
-     * Passkey support depends on the installed WebView provider, not only the OS version. An old
-     * provider therefore leaves WebAuthn at its safe default instead of throwing during startup.
-     */
+    /** Configures Android Autofill while WebAuthn is unavailable to Candy's package. */
     @MainThread
-    fun configure(webView: WebView): WebViewCredentialSupport {
+    fun configure(webView: WebView) {
         enableSystemAutofill(webView)
-
-        val webAuthentication = when (CredentialFeaturePolicy.webAuthenticationMode(
-            featureSupported = isWebAuthenticationSupported(),
-        )) {
-            WebAuthenticationMode.NONE -> WebAuthenticationSupport.UNAVAILABLE
-            WebAuthenticationMode.BROWSER -> enableBrowserWebAuthentication(webView)
+        try {
+            if (WebViewFeature.isFeatureSupported(WebViewFeature.WEB_AUTHENTICATION)) {
+                WebSettingsCompat.setWebAuthenticationSupport(
+                    webView.settings,
+                    WebSettingsCompat.WEB_AUTHENTICATION_SUPPORT_NONE,
+                )
+            }
+        } catch (_: RuntimeException) {
+            // An older or changing provider keeps its default WebAuthn mode.
         }
-
-        return WebViewCredentialSupport(
-            systemAutofillReady = true,
-            webAuthentication = webAuthentication,
-        )
     }
 
     /** Reasserts Autofill eligibility after a retained WebView moves between tab containers. */
@@ -54,53 +46,4 @@ object SystemWebViewCredentials {
         // WebView itself: sites' autocomplete attributes describe username/password fields.
         webView.importantForAutofill = View.IMPORTANT_FOR_AUTOFILL_YES
     }
-
-    @SuppressLint("WrongConstant")
-    private fun isWebAuthenticationSupported(): Boolean = try {
-        WebViewFeature.isFeatureSupported(WebViewFeature.WEB_AUTHENTICATION)
-    } catch (_: RuntimeException) {
-        false
-    }
-
-    private fun enableBrowserWebAuthentication(webView: WebView): WebAuthenticationSupport = try {
-        WebSettingsCompat.setWebAuthenticationSupport(
-            webView.settings,
-            WebSettingsCompat.WEB_AUTHENTICATION_SUPPORT_FOR_BROWSER,
-        )
-        val appliedSupport = WebSettingsCompat.getWebAuthenticationSupport(webView.settings)
-        CredentialFeaturePolicy.configuredSupport(appliedSupport)
-    } catch (_: RuntimeException) {
-        // Provider could change between feature detection and settings access. Keep default mode.
-        WebAuthenticationSupport.CONFIGURATION_FAILED
-    }
 }
-
-data class WebViewCredentialSupport(
-    /** Platform is ready; actual fill/save availability still depends on user's Autofill service. */
-    val systemAutofillReady: Boolean,
-    val webAuthentication: WebAuthenticationSupport,
-)
-
-enum class WebAuthenticationSupport {
-    ENABLED_FOR_BROWSER,
-    UNAVAILABLE,
-    CONFIGURATION_FAILED,
-}
-
-internal enum class WebAuthenticationMode {
-    NONE,
-    BROWSER,
-}
-
-internal object CredentialFeaturePolicy {
-    fun webAuthenticationMode(featureSupported: Boolean): WebAuthenticationMode =
-        if (featureSupported) WebAuthenticationMode.BROWSER else WebAuthenticationMode.NONE
-
-    fun configuredSupport(appliedSupport: Int): WebAuthenticationSupport =
-        if (appliedSupport == WebSettingsCompat.WEB_AUTHENTICATION_SUPPORT_FOR_BROWSER) {
-            WebAuthenticationSupport.ENABLED_FOR_BROWSER
-        } else {
-            WebAuthenticationSupport.CONFIGURATION_FAILED
-        }
-}
-

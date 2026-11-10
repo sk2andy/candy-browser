@@ -1,0 +1,1 @@
+delete window.wrappedJSObject.PublicKeyCredential;

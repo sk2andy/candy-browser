@@ -386,7 +386,8 @@ and [native Android IPC connector](https://github.com/mozilla-firefox/firefox/bl
   lifecycle exit or session replacement denies the pending request. File results accept only bounded
   readable `content://` URIs. Private permission decisions remain memory-only, and authentication
   credentials are neither stored nor logged.
-- Gecko WebAuthn launches Android's passkey provider through the resumed `MainActivity`. Candy accepts
+- Pending privileged-browser approval, Gecko hides WebAuthn from page feature detection; System WebView
+  disables it. Gecko retains its passkey provider integration through the resumed `MainActivity`. Candy accepts
   `RESULT_OK` even when the provider returns no `Intent`, but completes Gecko's pending result only
   after the host resumes with the initiating tab, Gecko session and navigation generation unchanged.
   The source tab is exempt from immediate background eviction for that round trip; a stale or destroyed
