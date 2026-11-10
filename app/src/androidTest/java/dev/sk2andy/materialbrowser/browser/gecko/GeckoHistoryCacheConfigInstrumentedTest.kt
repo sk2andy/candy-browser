@@ -7,6 +7,7 @@ import java.io.File
 import java.util.UUID
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -25,10 +26,14 @@ class GeckoHistoryCacheConfigInstrumentedTest {
             assertEquals(setOf("prefs"), configuration.keys().asSequence().toSet())
             val prefs = configuration.getJSONObject("prefs")
             assertEquals(
-                setOf("browser.sessionhistory.contentViewerTimeout"),
+                setOf(
+                    "browser.sessionhistory.contentViewerTimeout",
+                    "browser.download.open_pdf_attachments_inline",
+                ),
                 prefs.keys().asSequence().toSet(),
             )
             assertEquals(200, prefs.getInt("browser.sessionhistory.contentViewerTimeout"))
+            assertFalse(prefs.getBoolean("browser.download.open_pdf_attachments_inline"))
             instrumentation.runOnMainSync {
                 val settings = GeckoRuntimeSettingsFactory.create(
                     contentBlocking = ContentBlocking.Settings.Builder().build(),

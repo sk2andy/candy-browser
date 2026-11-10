@@ -12,10 +12,12 @@ internal object GeckoHistoryCacheConfig {
         val file = File(directory, FILE_NAME)
         val configuration = JSONObject().put(
             "prefs",
-            JSONObject().put(
-                "browser.sessionhistory.contentViewerTimeout",
-                GeckoHistoryCacheRules.contentViewerTimeoutSeconds(settings),
-            ),
+            JSONObject()
+                .put(
+                    "browser.sessionhistory.contentViewerTimeout",
+                    GeckoHistoryCacheRules.contentViewerTimeoutSeconds(settings),
+                )
+                .put("browser.download.open_pdf_attachments_inline", false),
         )
         val saved = AtomicFile(file).writeSafely { output ->
             output.write(configuration.toString().toByteArray(Charsets.UTF_8))
