@@ -120,6 +120,7 @@ are recorded in [`../audits/dark-appearance-and-address-tab-handoff.md`](../audi
 | Bottom control obstruction and remembered-edge automatic parking | `AddressBarAutoDockRulesTest`, `TextInputOcclusionScriptTest`, `scripts/text_input_occlusion.test.mjs`, `GeckoPageControlOcclusionInstrumentedTest`, `AddressBarDockPersistenceInstrumentedTest`, focused controller/System WebView instrumented tests |
 | Restored launcher tab and initial Gecko viewport | `StartupPresentationRulesTest`, `BrowserInitialNavigationRulesTest`, `MainActivityRestoredTabInstrumentedTest`, `BrowserControllerInitialViewportInstrumentedTest` |
 | WebView runtime, Basic authentication and Link Peek | `browser/*InstrumentedTest`, `BrowserControllerHttpAuthInstrumentedTest`, `ui/HttpAuthPromptDialogInstrumentedTest`, `ui/LinkPeekOverlayInstrumentedTest`, `LinkPeekSwipeInstrumentedTest`, `LinkPeekSwipeRulesTest`, shared `LinkPeekSwipeActionTest` |
+| Gecko attachment PDF download and inline PDF viewer | `GeckoPdfAttachmentInstrumentedTest`, `GeckoHistoryCacheConfigInstrumentedTest` |
 | System WebView native OAuth popups, POST, close, Blob downloads and login compatibility | `SystemWebViewPopupNavigationInstrumentedTest`, `SystemWebViewBlobDownloadInstrumentedTest`, `FederatedLoginRulesTest` |
 | Held OS Back over page links and canceled gesture recovery | `GeckoContentGestureRulesTest`, `GeckoBackGestureLinkPeekInstrumentedTest` |
 | Payment Request and checkout popup routing | `SystemWebViewBrowserEngineInstrumentedTest`, `BrowserControllerGeckoViewBindingInstrumentedTest` |
