@@ -10,7 +10,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -27,6 +27,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -39,6 +40,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
@@ -166,10 +168,12 @@ internal fun BrowserMenuBottomSheet(
                 val cornerRadius = browserChromeSurfaceTokens().cornerRadius
                 val expandedWidth = if (maxWidth > maxHeight) maxWidth.coerceAtMost(640.dp) else maxWidth
                 var availableBounds by remember { mutableStateOf<Rect?>(null) }
+                var measuredSheetHeightPx by remember { mutableIntStateOf(0) }
                 val collapsedWidth = openingAnchor?.let { with(density) { it.width.toDp() } }
                     ?.coerceIn(0.dp, expandedWidth) ?: (expandedWidth - 32.dp).coerceAtLeast(0.dp)
                 val horizontalInset = (expandedWidth - collapsedWidth) / 2 * (1f - presentedProgress)
-                val sheetHeightPx = with(density) { sheetHeight.toPx() }
+                val sheetHeightPx = measuredSheetHeightPx.takeIf { it > 0 }?.toFloat()
+                    ?: with(density) { sheetHeight.toPx() }
                 val targetTop = availableBounds?.let { it.bottom - sheetHeightPx } ?: 0f
                 val collapsedOffsetPx = BrowserMenuBottomSheetMotionRules.translationY(
                     progress = 0f,
@@ -193,7 +197,8 @@ internal fun BrowserMenuBottomSheet(
                 Box(
                     modifier = Modifier
                         .width(expandedWidth - horizontalInset * 2)
-                        .height(sheetHeight)
+                        .heightIn(max = sheetHeight)
+                        .onSizeChanged { measuredSheetHeightPx = it.height }
                         .draggable(
                             state = rememberDraggableState { delta ->
                                 if (dragging && currentExpanded) {
@@ -271,6 +276,7 @@ internal fun BrowserMenuBottomSheet(
                         handleDescription = stringResource(R.string.browser_menu_dismiss),
                         modifier = Modifier.navigationBarsPadding(),
                         compactHeight = compactHeight,
+                        wrapContentHeight = true,
                         surfaceAlpha = surfaceAlpha,
                         addressBarHorizontalPadding = 16.dp * presentedProgress,
                         addressBar = {

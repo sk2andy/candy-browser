@@ -141,6 +141,82 @@ class BrowserMenuBottomSheetInstrumentedTest {
     }
 
     @Test
+    fun emptySwipeMenuWrapsItsContentAndSeparatesTabs() {
+        showMenu(
+            contentLayout = BrowserMenuBottomSheetContentLayout.SwipePages,
+            menuLayout = emptySectionLayout(emptyPageActions = true, emptyPageControls = true).copy(
+                bottomSheetContentLayout = BrowserMenuBottomSheetContentLayout.SwipePages,
+            ),
+        )
+        openMenu()
+        val menu = composeRule.onNodeWithTag(BrowserMainMenuTestTags.Menu)
+            .fetchSemanticsNode().boundsInRoot
+        val scrim = composeRule.onNodeWithTag(BrowserMenuBottomSheetTestTags.Scrim)
+            .fetchSemanticsNode().boundsInRoot
+        assertTrue("empty menu should not fill the screen", menu.height < scrim.height * 0.7f)
+
+        val actions = composeRule.onNodeWithTag(BrowserMenuBottomSheetTestTags.pageTab(0))
+            .fetchSemanticsNode().boundsInRoot
+        val controls = composeRule.onNodeWithTag(BrowserMenuBottomSheetTestTags.pageTab(1))
+            .fetchSemanticsNode().boundsInRoot
+        val density = composeRule.activity.resources.displayMetrics.density
+        assertTrue("tabs need visible separation", controls.left - actions.right >= 4f * density - 1f)
+    }
+
+    @Test
+    fun emptyScrollMenuWrapsItsContent() {
+        showMenu(menuLayout = emptySectionLayout(emptyPageActions = true, emptyPageControls = true))
+        openMenu()
+        val menu = composeRule.onNodeWithTag(BrowserMainMenuTestTags.Menu)
+            .fetchSemanticsNode().boundsInRoot
+        val scrim = composeRule.onNodeWithTag(BrowserMenuBottomSheetTestTags.Scrim)
+            .fetchSemanticsNode().boundsInRoot
+        assertTrue("empty menu should not fill the screen", menu.height < scrim.height * 0.7f)
+    }
+
+    @Test
+    fun pageActionButtonsHaveVisibleSeparation() {
+        showMenu(contentLayout = BrowserMenuBottomSheetContentLayout.SwipePages)
+        openMenu()
+        val duplicate = composeRule.onNodeWithTag(BrowserMainMenuTestTags.DuplicateTab)
+            .assertIsDisplayed().fetchSemanticsNode().boundsInRoot
+        val translate = composeRule.onNodeWithTag(BrowserMainMenuTestTags.Translate)
+            .assertIsDisplayed().fetchSemanticsNode().boundsInRoot
+        val density = composeRule.activity.resources.displayMetrics.density
+        assertTrue("page actions need visible separation", translate.top - duplicate.bottom >= 4f * density - 1f)
+    }
+
+    @Test
+    fun swipeBetweenShortAndTallPagesKeepsContentAndFooterReachable() {
+        showMenu(
+            contentLayout = BrowserMenuBottomSheetContentLayout.SwipePages,
+            menuLayout = emptySectionLayout(emptyPageActions = true).copy(
+                bottomSheetContentLayout = BrowserMenuBottomSheetContentLayout.SwipePages,
+            ),
+        )
+        openMenu()
+        composeRule.onNodeWithText(composeRule.activity.getString(R.string.browser_menu_empty_section_message))
+            .assertIsDisplayed()
+        val shortHeight = composeRule.onNodeWithTag(BrowserMainMenuTestTags.Menu)
+            .fetchSemanticsNode().boundsInRoot.height
+
+        composeRule.onNodeWithText(composeRule.activity.getString(R.string.browser_menu_page_controls))
+            .performClick()
+        composeRule.onNodeWithTag(BrowserMainMenuTestTags.ForceSafeArea)
+            .performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithTag(BrowserMainMenuTestTags.Pin).assertIsDisplayed()
+        val tallHeight = composeRule.onNodeWithTag(BrowserMainMenuTestTags.Menu)
+            .fetchSemanticsNode().boundsInRoot.height
+        assertTrue("menu grows for the taller page", tallHeight > shortHeight)
+
+        composeRule.onNodeWithText(composeRule.activity.getString(R.string.browser_menu_page_actions))
+            .performClick()
+        composeRule.onNodeWithText(composeRule.activity.getString(R.string.browser_menu_empty_section_message))
+            .assertIsDisplayed()
+        composeRule.onNodeWithTag(BrowserMainMenuTestTags.Pin).assertIsDisplayed()
+    }
+
+    @Test
     fun nonEmptyMenuSectionsRemainUnchanged() {
         showMenu()
         openMenu()

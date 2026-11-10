@@ -75,6 +75,7 @@ fun BrowserMenuBottomSheetContent(
     modifier: Modifier = Modifier,
     handleModifier: Modifier = Modifier,
     compactHeight: Boolean = false,
+    wrapContentHeight: Boolean = false,
     surfaceAlpha: Float = 1f,
     addressBarHorizontalPadding: Dp = 16.dp,
     toolbarEntries: List<BrowserMenuEntry?> = BrowserMenuBottomSheetToolbarRules.DefaultEntries,
@@ -100,7 +101,7 @@ fun BrowserMenuBottomSheetContent(
             pagerState.scrollToPage(0)
         }
     }
-    Column(modifier = modifier.fillMaxSize()) {
+    Column(modifier = modifier.then(if (wrapContentHeight) Modifier.fillMaxWidth() else Modifier.fillMaxSize())) {
         Box(
             modifier = fadingContent
                 .then(handleModifier)
@@ -193,11 +194,15 @@ fun BrowserMenuBottomSheetContent(
             }
         }
         if (contentLayout == BrowserMenuBottomSheetContentLayout.SwipePages) {
-            Row(fadingContent.fillMaxWidth().padding(horizontal = 16.dp)) {
+            Row(
+                modifier = fadingContent.fillMaxWidth().padding(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(if (wrapContentHeight) 8.dp else 0.dp),
+            ) {
                 listOf(pageActionsTitle, pageControlsTitle).forEachIndexed { index, title ->
                     Surface(
                         modifier = Modifier
                             .weight(1f)
+                            .testTag(BrowserMenuBottomSheetTestTags.pageTab(index))
                             .selectable(
                             selected = pagerState.currentPage == index,
                             role = Role.Tab,
@@ -224,14 +229,14 @@ fun BrowserMenuBottomSheetContent(
                 state = pagerState,
                 modifier = Modifier
                     .then(fadingContent)
-                    .weight(1f)
+                    .weight(1f, fill = !wrapContentHeight)
                     .fillMaxWidth()
                     .testTag(BrowserMenuBottomSheetTestTags.Pager),
                 verticalAlignment = Alignment.Top,
             ) { page ->
                 Column(
                     Modifier
-                        .fillMaxSize()
+                        .then(if (wrapContentHeight) Modifier.fillMaxWidth() else Modifier.fillMaxSize())
                         .verticalScroll(rememberScrollState())
                         .padding(horizontal = 16.dp, vertical = 12.dp)
                         .testTag(
@@ -264,7 +269,7 @@ fun BrowserMenuBottomSheetContent(
             Column(
                 Modifier
                     .then(fadingContent)
-                    .weight(1f)
+                    .weight(1f, fill = !wrapContentHeight)
                     .fillMaxWidth()
                     .verticalScroll(scrollState)
                     .padding(horizontal = 16.dp, vertical = 8.dp)
@@ -511,6 +516,8 @@ private fun SheetControlGrid(
 }
 
 object BrowserMenuBottomSheetTestTags {
+    fun pageTab(index: Int): String = "browser_menu_sheet_page_tab_$index"
+
     const val AddressBar = "browser_menu_sheet_address_bar"
     const val Handle = "browser_menu_sheet_handle"
     const val Shortcuts = "browser_menu_sheet_shortcuts"

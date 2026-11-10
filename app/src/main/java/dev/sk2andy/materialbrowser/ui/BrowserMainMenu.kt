@@ -199,6 +199,7 @@ private class AndroidBrowserMainMenuEffects(
         rowMinHeight = 48.dp,
         rowLabelFontSize = 16.sp,
         rowSupportingTextFontSize = 12.sp,
+        groupItemSpacing = 6.dp,
         useExpressiveToggleButtons = true,
     )
 
