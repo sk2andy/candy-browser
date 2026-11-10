@@ -100,7 +100,8 @@ session binding are all acknowledged. Initialization, policy, and bootstrap bind
 15-second bound. A timeout, asset failure, or post-initialization native-port disconnect emits a
 failed navigation with a Candy Privacy error instead of loading without protection. A restart caused
 by initially applying the private permission may reconnect within the same bounded initialization
-window. Session binding uses two acknowledgements: native first authenticates the exact extension,
+window. A gate failure reports the error without starting another navigation. Session binding uses
+two acknowledgements: native first authenticates the exact extension,
 session and token generation and returns a primitive response; only after the extension page receives
 that response does its background port confirm the binding. Candy posts the real page navigation only
 after this confirmation. Navigating synchronously from the message delegate can tear down Gecko's
