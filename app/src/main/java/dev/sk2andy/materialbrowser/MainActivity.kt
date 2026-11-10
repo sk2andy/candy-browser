@@ -1835,7 +1835,6 @@ open class MainActivity : AppCompatActivity() {
             StartupPresentationRules.shouldOpenHomePage(
                 isLauncherLaunch = intent.action == Intent.ACTION_MAIN,
                 isOpenHomeOnStartupEnabled = browserController.isOpenHomeOnStartupEnabled,
-                startupAddressFocusMode = browserController.startupAddressFocusMode,
             )
         ) {
             browserController.openNormalHome()

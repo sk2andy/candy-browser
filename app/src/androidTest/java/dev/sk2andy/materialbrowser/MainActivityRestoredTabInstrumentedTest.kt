@@ -15,6 +15,7 @@ import dev.sk2andy.materialbrowser.browser.AndroidBrowserEngineKind
 import dev.sk2andy.materialbrowser.browser.BrowserTab
 import dev.sk2andy.materialbrowser.browser.EdgeToEdgeSiteFixtureServer
 import dev.sk2andy.materialbrowser.browser.StartupAddressFocusMode
+import dev.sk2andy.materialbrowser.browser.isFreshBlankTab
 import dev.sk2andy.materialbrowser.data.BrowserSessionStore
 import dev.sk2andy.materialbrowser.data.GestureOnboardingStore
 import dev.sk2andy.materialbrowser.data.ReleaseNotesStore
@@ -55,18 +56,54 @@ class MainActivityRestoredTabInstrumentedTest {
     }
 
     @Test
-    fun neverOpeningStartupKeyboardPreservesLastTabEvenWhenHomeOnStartupWasEnabled() {
-        BrowserSessionStore(context).saveOpenHomeOnStartupEnabled(true)
-        verifyRestoredLauncherTab()
+    fun startupHomeOpensWithoutKeyboardOnSystemWebView() {
+        verifyStartupHomeWithoutKeyboard(AndroidBrowserEngineKind.SystemWebView)
     }
 
     @Test
-    fun startupAnimationStillRevealsLastPageWhenStartupKeyboardIsDisabled() {
+    fun startupHomeOpensWithoutKeyboardAfterStartupAnimation() {
+        BrowserSessionStore(context).saveStartupAnimationEnabled(true)
+        verifyStartupHomeWithoutKeyboard(AndroidBrowserEngineKind.GeckoView)
+    }
+
+    private fun verifyStartupHomeWithoutKeyboard(engine: AndroidBrowserEngineKind) {
+        val tab = BrowserTab(
+            id = "last-open-tab-${UUID.randomUUID()}",
+            url = "https://example.com/",
+            title = "Previous title",
+            lastAccessedAt = System.currentTimeMillis(),
+        )
         BrowserSessionStore(context).apply {
-            saveStartupAnimationEnabled(true)
+            assertTrue(saveAndroidBrowserEngineKind(engine))
             saveOpenHomeOnStartupEnabled(true)
+            assertTrue(saveTabsImmediately(listOf(tab), tab.id))
         }
-        verifyRestoredLauncherTab()
+        val intent = Intent(context, MainActivity::class.java)
+            .setAction(Intent.ACTION_MAIN)
+            .addCategory(Intent.CATEGORY_LAUNCHER)
+        ActivityScenario.launch<MainActivity>(intent).use { scenario ->
+            SystemClock.sleep(2_000L)
+            scenario.onActivity { activity ->
+                val controller = activity.browserControllerForTesting()
+                assertTrue(controller.selectedTab.isFreshBlankTab)
+                assertTrue(controller.activeTabs.any { it.id == tab.id })
+                assertFalse(
+                    ViewCompat.getRootWindowInsets(activity.window.decorView)
+                        ?.isVisible(WindowInsetsCompat.Type.ime()) == true,
+                )
+                controller.selectTab(tab.id)
+                instrumentation.callActivityOnNewIntent(activity, intent)
+            }
+            scenario.onActivity { activity ->
+                val controller = activity.browserControllerForTesting()
+                assertTrue(controller.selectedTab.isFreshBlankTab)
+                assertTrue(controller.activeTabs.any { it.id == tab.id })
+                assertFalse(
+                    ViewCompat.getRootWindowInsets(activity.window.decorView)
+                        ?.isVisible(WindowInsetsCompat.Type.ime()) == true,
+                )
+            }
+        }
     }
 
     private fun verifyRestoredLauncherTab() {
