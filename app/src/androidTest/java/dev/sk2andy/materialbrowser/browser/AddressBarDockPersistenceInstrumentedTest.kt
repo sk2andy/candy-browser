@@ -12,8 +12,12 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import androidx.test.uiautomator.By
+import androidx.test.uiautomator.UiDevice
+import androidx.test.uiautomator.Until
 import dev.sk2andy.materialbrowser.BuildConfig
 import dev.sk2andy.materialbrowser.MainActivity
+import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.data.AddressBarDockEdge
 import dev.sk2andy.materialbrowser.data.AddressBarDockPlacement
 import dev.sk2andy.materialbrowser.data.BrowserSessionStore
@@ -22,6 +26,7 @@ import dev.sk2andy.materialbrowser.data.ReleaseNotesStore
 import java.io.File
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -53,6 +58,145 @@ class AddressBarDockPersistenceInstrumentedTest {
     @Test
     fun systemWebViewRestoresAutoParkedPillWhenScrolledAwayFromEditor() =
         assertRestoredAfterScroll(AndroidBrowserEngineKind.SystemWebView)
+
+    @Test
+    fun geckoAutoParkingKeepsBottomSendButtonClickable() =
+        assertBottomSendButtonClickable(AndroidBrowserEngineKind.GeckoView)
+
+    @Test
+    fun systemWebViewAutoParkingKeepsBottomSendButtonClickable() =
+        assertBottomSendButtonClickable(AndroidBrowserEngineKind.SystemWebView)
+
+    @Test
+    fun manuallyParkedAddressBarKeepsItsChosenPosition() {
+        EdgeToEdgeSiteFixtureServer { _ -> bottomSendButtonHtml() }.use { server ->
+            GestureOnboardingStore(context).markCompleted()
+            ReleaseNotesStore(context).markHandled(BuildConfig.VERSION_CODE.toLong())
+            store.saveAndroidBrowserEngineKind(AndroidBrowserEngineKind.GeckoView)
+            store.saveStartupAnimationEnabled(false)
+            store.saveOpenHomeOnStartupEnabled(false)
+            store.saveExternalLinkPreviewEnabled(false)
+            store.saveAddressBarDockingEnabled(true)
+            store.saveAddressBarDockPlacement(AddressBarDockPlacement.Default)
+            val tab = BrowserTab(
+                id = "manually-parked",
+                url = server.fixtureUrl("/send"),
+                lastAccessedAt = System.currentTimeMillis(),
+            )
+            assertTrue(store.saveTabsImmediately(listOf(tab), tab.id))
+            ActivityScenario.launch<MainActivity>(mainIntent()).use { scenario ->
+                await(scenario, "Editor page loads") { it.selectedTab.title == "Ready send" }
+                SystemClock.sleep(2_500L)
+                scenario.onActivity { activity ->
+                    val controller = activity.browserControllerForTesting()
+                    assertEquals(AddressBarDockPlacement.Default, controller.addressBarDockPlacement)
+                    assertFalse(controller.isAddressBarAutomaticallyParked)
+                    assertEquals(0f, controller.autoParkedAddressBarOffsetFraction)
+                    assertEquals(AddressBarDockPlacement.Default, store.loadLastAddressBarDockPlacement())
+                }
+            }
+        }
+    }
+
+    @Test
+    fun geckoUpwardScrollKeepsPillParkedWhileEditorStillOverlaps() {
+        EdgeToEdgeSiteFixtureServer { _ -> chatHtml() }.use { server ->
+            GestureOnboardingStore(context).markCompleted()
+            ReleaseNotesStore(context).markHandled(BuildConfig.VERSION_CODE.toLong())
+            store.saveAndroidBrowserEngineKind(AndroidBrowserEngineKind.GeckoView)
+            store.saveStartupAnimationEnabled(false)
+            store.saveOpenHomeOnStartupEnabled(false)
+            store.saveExternalLinkPreviewEnabled(false)
+            store.saveAddressBarDockingEnabled(true)
+            val tab = BrowserTab(
+                id = "fixed-editor",
+                url = server.fixtureUrl("/chat"),
+                lastAccessedAt = System.currentTimeMillis(),
+            )
+            assertTrue(store.saveTabsImmediately(listOf(tab), tab.id))
+            ActivityScenario.launch<MainActivity>(mainIntent()).use { scenario ->
+                await(scenario, "Editor must auto-park pill") {
+                    it.selectedTab.title == "Ready chat" && it.isAddressBarDocked
+                }
+                scenario.onActivity {
+                    assertTrue(it.browserControllerForTesting().scrollSelectedBrowserEngineToVerticalOffset(500))
+                }
+                await(scenario, "Renderer scrolls down") {
+                    (it.selectedBrowserEngineScrollMetrics()?.offsetPx ?: 0) > 100
+                }
+                scenario.onActivity {
+                    assertTrue(it.browserControllerForTesting().scrollSelectedBrowserEngineToVerticalOffset(0))
+                }
+                val deadline = SystemClock.elapsedRealtime() + 2_500L
+                do {
+                    scenario.onActivity { assertTrue(it.browserControllerForTesting().isAddressBarDocked) }
+                    SystemClock.sleep(100L)
+                } while (SystemClock.elapsedRealtime() < deadline)
+            }
+        }
+    }
+
+    private fun assertBottomSendButtonClickable(engine: AndroidBrowserEngineKind) {
+        EdgeToEdgeSiteFixtureServer { _ -> bottomSendButtonHtml() }.use { server ->
+            GestureOnboardingStore(context).markCompleted()
+            ReleaseNotesStore(context).markHandled(BuildConfig.VERSION_CODE.toLong())
+            store.saveAndroidBrowserEngineKind(engine)
+            store.saveStartupAnimationEnabled(false)
+            store.saveOpenHomeOnStartupEnabled(false)
+            store.saveExternalLinkPreviewEnabled(false)
+            store.saveAddressBarDockingEnabled(true)
+            val tab = BrowserTab(
+                id = "bottom-send",
+                url = server.fixtureUrl("/send"),
+                lastAccessedAt = System.currentTimeMillis(),
+            )
+            assertTrue(store.saveTabsImmediately(listOf(tab), tab.id))
+            ActivityScenario.launch<MainActivity>(mainIntent()).use { scenario ->
+                await(scenario, "Editor page loads and parks") {
+                    it.selectedTab.title == "Ready send" && it.isAddressBarDocked
+                }
+                var x = 0f
+                var y = 0f
+                scenario.onActivity { activity ->
+                    val view = requireNotNull(
+                        activity.browserControllerForTesting().selectedBrowserEngineViewForTesting(),
+                    )
+                    val location = IntArray(2)
+                    view.getLocationOnScreen(location)
+                    val density = view.resources.displayMetrics.density
+                    x = location[0] + view.width - 38f * density
+                    y = location[1] + view.height - 42f * density
+                }
+                val restore = requireNotNull(
+                    UiDevice.getInstance(instrumentation).wait(
+                        Until.findObject(By.desc(context.getString(R.string.cd_restore_address_bar))),
+                        10_000L,
+                    ),
+                )
+                val deadline = SystemClock.elapsedRealtime() + 10_000L
+                while (
+                    restore.visibleBounds.contains(x.toInt(), y.toInt()) &&
+                    SystemClock.elapsedRealtime() < deadline
+                ) {
+                    SystemClock.sleep(100L)
+                }
+                assertFalse(
+                    "Parked handle must not cover the send button",
+                    restore.visibleBounds.contains(x.toInt(), y.toInt()),
+                )
+                val downTime = SystemClock.uptimeMillis()
+                for (action in listOf(MotionEvent.ACTION_DOWN, MotionEvent.ACTION_UP)) {
+                    val event = MotionEvent.obtain(downTime, SystemClock.uptimeMillis(), action, x, y, 0)
+                    try {
+                        assertTrue(instrumentation.uiAutomation.injectInputEvent(event, true))
+                    } finally {
+                        event.recycle()
+                    }
+                }
+                await(scenario, "Bottom send button receives the tap") { it.selectedTab.title == "Sent" }
+            }
+        }
+    }
 
     private fun assertRestoredAfterScroll(engine: AndroidBrowserEngineKind) {
         EdgeToEdgeSiteFixtureServer { _ -> scrollingEditorHtml() }.use { server ->
@@ -266,6 +410,16 @@ class AddressBarDockPersistenceInstrumentedTest {
         textarea{position:fixed;bottom:0;left:5%;width:90%;height:180px;box-sizing:border-box}</style>
         <main>Chat editor obstruction regression fixture</main>
         <textarea aria-label="Ask anything" placeholder="Ask anything"></textarea>
+    """.trimIndent()
+
+    private fun bottomSendButtonHtml() = """
+        <!doctype html><meta name="viewport" content="width=device-width,initial-scale=1">
+        <title>Ready send</title>
+        <style>body{margin:0}main{height:200vh}textarea{position:fixed;bottom:0;
+        left:0;width:100%;height:80px;box-sizing:border-box}
+        button{position:fixed;right:12px;bottom:18px;width:52px;height:48px}</style>
+        <main>Chat</main><textarea aria-label="Message"></textarea>
+        <button onclick="document.title='Sent'">Send</button>
     """.trimIndent()
 
     private fun scrollingEditorHtml() = """

@@ -1685,7 +1685,13 @@ class BrowserController(
     private var destroyed = false
     private var previewContentBottomInWindowPx: Int? = null
     private var addressBarViewportRect: BrowserViewportRect? = null
-    private var autoParkedAddressBar: Pair<String, BrowserViewportRect>? = null
+    private var autoParkedAddressBar: Pair<String, BrowserViewportRect>? by mutableStateOf(null)
+    val isAddressBarAutomaticallyParked: Boolean
+        get() = autoParkedAddressBar?.first == selectedTabId
+    var autoParkedAddressBarOffsetFraction by mutableStateOf(0f)
+        private set
+    private var autoParkedAddressBarRect: BrowserViewportRect? = null
+    private var pendingAutoParkedAddressBarProbe: Runnable? = null
     private var autoParkRestoreProbePending = false
     private var selectedBrowserBackdropBlurRegion: BrowserBackdropBlurRegion? = null
     private var pendingAddressBarAutoDockProbe: Runnable? = null
@@ -10758,8 +10764,11 @@ class BrowserController(
     ) {
         val normalized = placement?.normalized()
         if (normalized != null && !isAddressBarDockingEnabled) return
-        if (addressBarDockPlacement == normalized) return
-        autoParkedAddressBar = null
+        if (addressBarDockPlacement == normalized) {
+            if (manualRestoration && normalized != null) clearAutoParkedAddressBar()
+            return
+        }
+        clearAutoParkedAddressBar()
         autoParkRestoreProbePending = false
         cancelAddressBarAutoDockProbe()
         if (normalized == null && isAddressBarDockingEnabled && manualRestoration) {
@@ -11397,6 +11406,63 @@ class BrowserController(
     fun clearAddressBarBoundsInViewport() {
         addressBarViewportRect = null
         cancelAddressBarAutoDockProbe()
+    }
+
+    fun setAutoParkedAddressBarBoundsInViewport(
+        leftPx: Float,
+        topPx: Float,
+        rightPx: Float,
+        bottomPx: Float,
+        viewportWidthPx: Float,
+        viewportHeightPx: Float,
+    ) {
+        val rect = AddressBarAutoDockRules.viewportRect(
+            leftPx, topPx, rightPx, bottomPx, viewportWidthPx, viewportHeightPx,
+        )
+        if (autoParkedAddressBarRect == rect) return
+        autoParkedAddressBarRect = rect
+        scheduleAutoParkedAddressBarProbe(350L)
+    }
+
+    fun clearAutoParkedAddressBarBounds() {
+        autoParkedAddressBarRect = null
+        pendingAutoParkedAddressBarProbe?.let(mainHandler::removeCallbacks)
+        pendingAutoParkedAddressBarProbe = null
+    }
+
+    private fun clearAutoParkedAddressBar() {
+        clearAutoParkedAddressBarBounds()
+        autoParkedAddressBar = null
+        autoParkedAddressBarOffsetFraction = 0f
+    }
+
+    private fun scheduleAutoParkedAddressBarProbe(delayMillis: Long) {
+        pendingAutoParkedAddressBarProbe?.let(mainHandler::removeCallbacks)
+        if (!isAddressBarAutomaticallyParked || autoParkedAddressBarRect == null) return
+        val probe = Runnable {
+            pendingAutoParkedAddressBarProbe = null
+            val parked = autoParkedAddressBar ?: return@Runnable
+            val rect = autoParkedAddressBarRect ?: return@Runnable
+            val session = browserEngineSessions[parked.first] ?: return@Runnable
+            if (!isAddressBarAutomaticallyParked || !isAddressBarAutoDockBrowserVisible()) return@Runnable
+            session.probeTextInputOcclusion(rect, TextInputOcclusionProbeMode.AllEditors) { result ->
+                if (
+                    autoParkedAddressBar !== parked ||
+                    autoParkedAddressBarRect != rect ||
+                    browserEngineSessions[parked.first] !== session ||
+                    !isAddressBarAutomaticallyParked ||
+                    !isAddressBarAutoDockBrowserVisible()
+                ) return@probeTextInputOcclusion
+                if (result == TextInputOcclusionProbeResult.Occluded) {
+                    val available = 1f - (addressBarDockPlacement?.verticalFraction ?: 0f)
+                    autoParkedAddressBarOffsetFraction = (
+                        autoParkedAddressBarOffsetFraction + rect.bottomFraction - rect.topFraction
+                    ).coerceAtMost(available)
+                }
+            }
+        }
+        pendingAutoParkedAddressBarProbe = probe
+        mainHandler.postDelayed(probe, delayMillis)
     }
 
     fun previewTopInsetPx(tabId: String): Int = if (
@@ -12078,6 +12144,8 @@ class BrowserController(
         formDrafts.detach()
         stopInlineVideoGestureHaptic()
         cancelAddressBarAutoDockProbe()
+        pendingAutoParkedAddressBarProbe?.let(mainHandler::removeCallbacks)
+        pendingAutoParkedAddressBarProbe = null
         contentActions.dismiss()
         if (externalLinkPreviewState == null) {
             captureVisiblePreview(selectedTabId, acceptAfterDeparture = true)
@@ -12180,6 +12248,7 @@ class BrowserController(
         }
         if (isActiveProfileLocked) retryActiveProfileAuthentication()
         scheduleSelectedAddressBarAutoDockProbe()
+        scheduleAutoParkedAddressBarProbe(350L)
     }
 
     fun onStart() {
@@ -14741,7 +14810,7 @@ class BrowserController(
         when (event.type) {
             BrowserEngineEventType.NavigationStarted -> {
                 if (autoParkedAddressBar?.first == event.tabId) {
-                    autoParkedAddressBar = null
+                    clearAutoParkedAddressBar()
                     autoParkRestoreProbePending = false
                 }
                 stoppedBrowserEngineNavigations.remove(event.tabId)
@@ -15550,6 +15619,7 @@ class BrowserController(
         )
         browserChromeScrollStates[tabId] = update.state
         if (update.compact == false) restoreAutoParkedAddressBar(tabId)
+        if (isAddressBarAutomaticallyParked) scheduleAutoParkedAddressBarProbe(350L)
         if (isAddressBarSwipeModeEnabled) return
         update.compact?.let { compact ->
             if (bottomBarCompactStates[tabId] != compact) {

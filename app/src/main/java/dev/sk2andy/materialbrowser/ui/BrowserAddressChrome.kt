@@ -225,6 +225,16 @@ internal fun BoxScope.BrowserAddressChrome(
     )
     val effectiveAddressBarDockPlacement = controller.addressBarDockPlacement
         .takeIf { addressBarDockingAvailable && !linkPeekAddressBarExpanded }
+        ?.let { placement ->
+            if (controller.isAddressBarAutomaticallyParked) {
+                placement.copy(
+                    verticalFraction = (placement.verticalFraction +
+                        controller.autoParkedAddressBarOffsetFraction).coerceAtMost(1f),
+                )
+            } else {
+                placement
+            }
+        }
     val addressBarLongPressAction = controller.addressBarLongPressAction
     val hasHttpPage = BrowserUriPolicy.normalizeHttpUrl(selectedTab.url) != null
     val addressBarLongPressEnabled = AddressBarLongPressActionRules.isAvailable(
@@ -282,8 +292,39 @@ internal fun BoxScope.BrowserAddressChrome(
             controller.clearAddressBarBoundsInViewport()
         }
     }
+    val autoParkedGeometryAvailable = controller.isAddressBarAutomaticallyParked &&
+        effectiveAddressBarDockPlacement != null &&
+        !addressEditorVisible &&
+        !settingsVisible &&
+        !tabOverviewOpening &&
+        !tabOverviewVisible &&
+        !linkPeekAddressBarExpanded &&
+        commandFeedback == null
+    LaunchedEffect(
+        autoParkedGeometryAvailable,
+        addressBarBoundsInRoot,
+        browserWidthPx,
+        visibleViewportHeightPx,
+    ) {
+        val bounds = addressBarBoundsInRoot
+        if (autoParkedGeometryAvailable && bounds != null) {
+            controller.setAutoParkedAddressBarBoundsInViewport(
+                leftPx = bounds.left,
+                topPx = bounds.top,
+                rightPx = bounds.right,
+                bottomPx = bounds.bottom,
+                viewportWidthPx = browserWidthPx,
+                viewportHeightPx = visibleViewportHeightPx.toFloat(),
+            )
+        } else {
+            controller.clearAutoParkedAddressBarBounds()
+        }
+    }
     DisposableEffect(controller) {
-        onDispose(controller::clearAddressBarBoundsInViewport)
+        onDispose {
+            controller.clearAddressBarBoundsInViewport()
+            controller.clearAutoParkedAddressBarBounds()
+        }
     }
     BrowserBottomBar(
         onOpenMenuSettings = onOpenMenuSettings,
