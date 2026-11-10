@@ -36,11 +36,19 @@ object BrowserTabOverviewLayoutRules {
         val safeWidth = viewportWidth.takeIf { it.isFinite() && it > 0f } ?: 0f
         val safeHeight = viewportHeight.takeIf { it.isFinite() && it > 0f } ?: 0f
         if (safeWidth <= safeHeight) {
+            val width = (safeWidth * PORTRAIT_HERO_WIDTH_FRACTION)
+                .coerceIn(PORTRAIT_HERO_MIN_WIDTH, PORTRAIT_HERO_MAX_WIDTH)
+                .coerceAtMost(safeWidth)
             return BrowserTabHeroCardLayout(
-                width = (safeWidth * PORTRAIT_HERO_WIDTH_FRACTION)
-                    .coerceIn(PORTRAIT_HERO_MIN_WIDTH, PORTRAIT_HERO_MAX_WIDTH)
-                    .coerceAtMost(safeWidth),
-                aspectRatio = PORTRAIT_HERO_ASPECT_RATIO,
+                width = width,
+                aspectRatio = if (safeWidth >= WIDE_PORTRAIT_WIDTH) {
+                    maxOf(
+                        PORTRAIT_HERO_ASPECT_RATIO,
+                        width / (safeHeight * WIDE_PORTRAIT_HEIGHT_FRACTION),
+                    )
+                } else {
+                    PORTRAIT_HERO_ASPECT_RATIO
+                },
             )
         }
 
@@ -125,6 +133,8 @@ object BrowserTabOverviewLayoutRules {
     private const val PORTRAIT_HERO_MIN_WIDTH = 244f
     private const val PORTRAIT_HERO_MAX_WIDTH = 360f
     private const val PORTRAIT_HERO_ASPECT_RATIO = 0.45f
+    private const val WIDE_PORTRAIT_WIDTH = 600f
+    private const val WIDE_PORTRAIT_HEIGHT_FRACTION = 0.7f
     private const val LANDSCAPE_HERO_WIDTH_FRACTION = 0.68f
     private const val LANDSCAPE_HERO_HEIGHT_FRACTION = 0.66f
     private const val LANDSCAPE_HERO_MIN_WIDTH = 360f

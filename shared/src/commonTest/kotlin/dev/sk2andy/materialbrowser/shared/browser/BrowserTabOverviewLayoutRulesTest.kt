@@ -17,6 +17,17 @@ class BrowserTabOverviewLayoutRulesTest {
     }
 
     @Test
+    fun `wide portrait hero leaves room for controls`() {
+        val layout = BrowserTabOverviewLayoutRules.heroCard(
+            viewportWidth = 673f,
+            viewportHeight = 841f,
+        )
+
+        assertEquals(360f, layout.width)
+        assertEquals(841f * 0.7f, layout.width / layout.aspectRatio, 0.001f)
+    }
+
+    @Test
     fun `landscape hero keeps neighbors and respects height`() {
         val tablet = BrowserTabOverviewLayoutRules.heroCard(
             viewportWidth = 1_067f,

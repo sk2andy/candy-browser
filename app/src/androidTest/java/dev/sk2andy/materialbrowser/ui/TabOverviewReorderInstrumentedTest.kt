@@ -42,6 +42,7 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import org.junit.Assume.assumeTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -761,6 +762,35 @@ class TabOverviewReorderInstrumentedTest {
         assertEquals(expectedLayout.aspectRatio, cardBounds.width / cardBounds.height, 0.001f)
         assertTrue(cardBounds.top >= rootBounds.top)
         assertTrue(cardBounds.bottom <= rootBounds.bottom)
+    }
+
+    @Test
+    fun widePortraitHeroLeavesRoomForOverviewControls() {
+        val density = composeRule.activity.resources.displayMetrics.density
+        val display = composeRule.activity.resources.displayMetrics
+        assumeTrue(display.widthPixels / density >= 600f)
+        assumeTrue(display.widthPixels < display.heightPixels)
+        lateinit var browserController: BrowserController
+        lateinit var tabId: String
+        composeRule.runOnIdle {
+            clearSession()
+            browserController = BrowserController(composeRule.activity)
+            controller = browserController
+            tabId = browserController.selectedTabId
+            browserController.updateTabOverviewMode(TabOverviewMode.Hero)
+        }
+        setOverviewContent(browserController)
+        composeRule.waitForIdle()
+
+        val root = composeRule.onRoot().fetchSemanticsNode().boundsInRoot
+        val card = composeRule.onNodeWithTag(SnoozeTestTags.overviewTab(tabId))
+            .fetchSemanticsNode().boundsInRoot
+        assertTrue(
+            "Coverflow card should leave room for overview controls: ${card.height} / ${root.height}",
+            card.height <= root.height * 0.72f,
+        )
+        composeRule.onNodeWithTag(TabOverviewChromeTestTags.NewTab).assertIsDisplayed()
+        composeRule.onNodeWithTag(TabOverviewChromeTestTags.More).assertIsDisplayed()
     }
 
     @Test
