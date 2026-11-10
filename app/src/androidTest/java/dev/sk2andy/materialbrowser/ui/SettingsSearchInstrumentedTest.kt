@@ -1,6 +1,8 @@
 package dev.sk2andy.materialbrowser.ui
 
 import android.content.Context
+import androidx.activity.BackEventCompat
+import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
@@ -9,6 +11,7 @@ import androidx.compose.ui.test.assertHeightIsEqualTo
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotFocused
+import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isDisplayed
@@ -177,6 +180,43 @@ class SettingsSearchInstrumentedTest {
         result.assertDoesNotExist()
         composeRule.onNodeWithText(context.getString(R.string.settings_section_browser))
             .assertIsDisplayed()
+    }
+
+    @Test
+    fun predictiveBackFadesSearchAndCanCancelOrClear() {
+        openSettings()
+        val query = "candy-no-such-setting-253"
+        search(query)
+        val empty = composeRule.onNodeWithTag(SettingsSearchTestTags.Empty)
+        val before = empty.captureToImage().toPixelMap()
+        val dispatcher = composeRule.activity.onBackPressedDispatcher
+        fun gesture() {
+            composeRule.runOnIdle {
+                dispatcher.dispatchOnBackStarted(BackEventCompat(0f, 500f, 0f, BackEventCompat.EDGE_LEFT))
+                dispatcher.dispatchOnBackProgressed(BackEventCompat(100f, 500f, 0.7f, BackEventCompat.EDGE_LEFT))
+            }
+            composeRule.mainClock.advanceTimeByFrame()
+            composeRule.waitForIdle()
+        }
+        gesture()
+        val preview = empty.captureToImage().toPixelMap()
+        fun changedPixels(other: androidx.compose.ui.graphics.PixelMap): Int =
+            (0 until before.width).sumOf { x ->
+                (0 until before.height).count { y -> before[x, y] != other[x, y] }
+            }
+        val previewChanges = changedPixels(preview)
+        assertTrue("Search feedback should visibly fade", previewChanges > 20)
+        composeRule.runOnIdle { dispatcher.dispatchOnBackCancelled() }
+        advanceRoute()
+        assertQuery(query)
+        empty.assertIsDisplayed()
+        assertTrue("Cancelling Back should restore the feedback", changedPixels(empty.captureToImage().toPixelMap()) < previewChanges)
+        gesture()
+        composeRule.runOnIdle { dispatcher.onBackPressed() }
+        advanceRoute()
+        advanceRoute()
+        empty.assertDoesNotExist()
+        assertQuery("")
     }
 
     @Test

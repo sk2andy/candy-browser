@@ -23,6 +23,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.testTag
@@ -43,6 +44,7 @@ internal object SettingsSearchTestTags {
 @Composable
 internal fun ColumnScope.SettingsSearchField(
     query: String,
+    backProgress: Float = 0f,
     entries: List<SettingsSearchEntry>,
     onQueryChanged: (String) -> Unit,
     onResultSelected: (SettingsSearchEntry) -> Unit,
@@ -89,14 +91,16 @@ internal fun ColumnScope.SettingsSearchField(
     if (results.isEmpty()) {
         Text(
             stringResource(R.string.settings_search_empty),
-            modifier = Modifier.testTag(SettingsSearchTestTags.Empty),
+            modifier = Modifier.testTag(SettingsSearchTestTags.Empty)
+                .graphicsLayer { alpha = 1f - backProgress.coerceIn(0f, 1f) },
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             style = MaterialTheme.typography.bodyLarge,
         )
         return
     }
     Surface(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth()
+            .graphicsLayer { alpha = 1f - backProgress.coerceIn(0f, 1f) },
         shape = MaterialTheme.shapes.large,
         color = browserChromeColor(MaterialTheme.colorScheme.surfaceContainerLow),
     ) {

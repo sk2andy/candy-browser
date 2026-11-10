@@ -1,6 +1,5 @@
 package dev.sk2andy.materialbrowser.ui
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -271,9 +270,12 @@ internal fun SettingsScreen(
     LaunchedEffect(destination) {
         if (searchTarget?.destination != destination) searchTarget = null
     }
-    BackHandler(enabled = backEnabled && destination == SettingsDestination.Home && searchQuery.isNotEmpty()) {
-        clearSearch()
-    }
+    val searchBackState = rememberNativeScreenBackState()
+    NativeScreenBackHandler(
+        state = searchBackState,
+        enabled = backEnabled && destination == SettingsDestination.Home && searchQuery.isNotEmpty(),
+        onBack = clearSearch,
+    )
     val searchEntries = settingsSearchEntries(
         SettingsSearchAvailability(
             isLinkPeekEnabled = linkLongPressAction == LinkLongPressAction.LinkPeek,
@@ -313,6 +315,7 @@ internal fun SettingsScreen(
         ) {
             when (currentDestination) {
                 SettingsDestination.Home -> SettingsHomePage(
+                    searchBackProgress = searchBackState.progress.value,
                     downloadSummary = downloadSettings.displayName(externalDownloadManagers),
                     onDestinationChanged = onDestinationChanged,
                     onDismiss = {

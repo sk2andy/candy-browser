@@ -1,7 +1,10 @@
 package dev.sk2andy.materialbrowser.ui
 
 import android.graphics.Bitmap
+import androidx.activity.BackEventCompat
 import androidx.activity.ComponentActivity
+import androidx.activity.OnBackPressedDispatcher
+import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.semantics.SemanticsActions
@@ -14,7 +17,10 @@ import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeUp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.filters.SdkSuppress
 import dev.sk2andy.materialbrowser.browser.sitewidget.SiteWidgetCrop
 import dev.sk2andy.materialbrowser.browser.sitewidget.SiteWidgetFormat
 import java.util.concurrent.atomic.AtomicReference
@@ -28,6 +34,47 @@ import org.junit.runner.RunWith
 class SiteWidgetCropEditorInstrumentedTest {
     @get:Rule
     val composeRule = createAndroidComposeRule<ComponentActivity>()
+
+    @Test
+    @SdkSuppress(minSdkVersion = 34)
+    fun predictiveBackShrinksEditorAndCancellationKeepsItOpen() {
+        val bitmap = Bitmap.createBitmap(400, 800, Bitmap.Config.ARGB_8888)
+        var dismissals = 0
+        lateinit var dispatcher: OnBackPressedDispatcher
+        composeRule.setContent {
+            MaterialTheme {
+                Dialog(
+                    onDismissRequest = { dismissals++ },
+                    properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
+                ) {
+                    dispatcher = checkNotNull(LocalOnBackPressedDispatcherOwner.current).onBackPressedDispatcher
+                    SiteWidgetCropEditor(
+                        bitmap = bitmap.asImageBitmap(),
+                        onSubmit = { _, _, _ -> },
+                        onDismiss = { dismissals++ },
+                    )
+                }
+            }
+        }
+        val editor = composeRule.onNodeWithTag(SiteWidgetCropEditorTestTags.Screen)
+        val restingWidth = editor.fetchSemanticsNode().boundsInRoot.width
+        fun gesture() {
+            composeRule.runOnIdle {
+                dispatcher.dispatchOnBackStarted(BackEventCompat(0f, 500f, 0f, BackEventCompat.EDGE_LEFT))
+                dispatcher.dispatchOnBackProgressed(BackEventCompat(100f, 500f, 0.6f, BackEventCompat.EDGE_LEFT))
+            }
+            composeRule.waitForIdle()
+        }
+        gesture()
+        assertTrue(editor.fetchSemanticsNode().boundsInRoot.width < restingWidth)
+        composeRule.runOnIdle { dispatcher.dispatchOnBackCancelled() }
+        composeRule.waitForIdle()
+        assertEquals(0, dismissals)
+        gesture()
+        composeRule.runOnIdle { dispatcher.onBackPressed() }
+        composeRule.waitForIdle()
+        assertEquals(1, dismissals)
+    }
 
     @Test
     fun rowAndColumnSlidersSubmitMatchingCrop() {

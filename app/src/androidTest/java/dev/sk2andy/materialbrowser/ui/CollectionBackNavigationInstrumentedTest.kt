@@ -10,6 +10,7 @@ import androidx.compose.ui.test.performClick
 import androidx.test.filters.SdkSuppress
 import dev.sk2andy.materialbrowser.browser.BrowserProfile
 import dev.sk2andy.materialbrowser.browser.ReleaseNotesMarkdownRules
+import dev.sk2andy.materialbrowser.constellations.ConstellationSnapshot
 import dev.sk2andy.materialbrowser.data.FavoriteFolder
 import dev.sk2andy.materialbrowser.data.FavoriteLibrary
 import dev.sk2andy.materialbrowser.data.HistoryEntry
@@ -24,6 +25,16 @@ import org.junit.Test
 @SdkSuppress(minSdkVersion = 34)
 class CollectionBackNavigationInstrumentedTest {
     @get:Rule val composeRule = createAndroidComposeRule<ComponentActivity>()
+
+    @Test
+    fun constellationRootDelegatesToAndroidForCrossActivityPreview() {
+        composeRule.setContent {
+            MaterialBrowserTheme {
+                ConstellationScreen("Personal", ConstellationSnapshot("profile"), {}, {}, {}, {}, {})
+            }
+        }
+        composeRule.runOnIdle { assertFalse(dispatcher.hasEnabledCallbacks()) }
+    }
 
     @Test
     fun historyRootDelegatesToAndroidButSelectionConsumesBack() {

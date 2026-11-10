@@ -2,7 +2,6 @@
 
 package dev.sk2andy.materialbrowser.ui
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTransformGestures
@@ -111,11 +110,11 @@ internal fun SiteWidgetCropEditor(
         ) ?: crop
         format = next
     }
-    BackHandler {
-        if (!saving) onDismiss()
-    }
+    val backState = rememberNativeScreenBackState()
+    NativeScreenBackHandler(state = backState, onBack = { if (!saving) onDismiss() })
     Scaffold(
-        modifier = Modifier.testTag(SiteWidgetCropEditorTestTags.Screen),
+        modifier = Modifier.predictiveBackSurface(backState.progress.value, backState.swipeEdgeSign)
+            .testTag(SiteWidgetCropEditorTestTags.Screen),
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.site_widget_editor_title)) },

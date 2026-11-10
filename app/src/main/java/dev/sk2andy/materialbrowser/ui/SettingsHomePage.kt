@@ -35,6 +35,7 @@ internal fun SettingsHomePage(
     developerOptionsUnlocked: Boolean = false,
     onUnlockDeveloperOptions: (() -> Unit)? = null,
     searchQuery: String = "",
+    searchBackProgress: Float = 0f,
     searchEntries: List<SettingsSearchEntry> = emptyList(),
     onSearchQueryChanged: (String) -> Unit = {},
     onSearchResultSelected: (SettingsSearchEntry) -> Unit = {},
@@ -65,6 +66,7 @@ internal fun SettingsHomePage(
         searchContent = {
             SettingsSearchField(
                 query = searchQuery,
+                backProgress = searchBackProgress,
                 entries = searchEntries,
                 onQueryChanged = onSearchQueryChanged,
                 onResultSelected = onSearchResultSelected,

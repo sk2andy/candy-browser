@@ -7,12 +7,14 @@ recorded in [Settings option map](settings-option-map.md).
 
 | Surface | Behavior | Owner |
 | --- | --- | --- |
-| Settings home | Existing shrink preview reveals the browser; a nonempty settings search clears first | `BrowserScreen`, `BrowserSettingsOverlay` |
+| Settings home | Existing shrink preview reveals the browser; search results fade with the gesture and a nonempty search clears first | `BrowserScreen`, `BrowserSettingsOverlay`, `SettingsScreen` |
 | Settings subpages | Only the current page shrinks; its parent settings page fills the background throughout the gesture. Cancellation restores the page, commit returns to its parent. | `SettingsBackRouter`, shared `SettingsRouter`, `NativeScreenBackHandler`, `SettingsBackRules` |
 | Nested settings | Theme details return to Theme & interface; browser details return to Browser behavior; Link routing returns to Web pages; action editors return to Gestures; Topping catalog returns to Toppings. An active search result returns directly to the preserved Settings search. | shared `SettingsNavigationRules`, `SettingsBackRules`, `SettingsScreen` |
 | Snoozed tabs | Default shrink, followed by the existing dismissal fade; rescheduling dialogs retain Back priority | `SnoozedTabsScreen`, `NativeScreenBackHandler` |
 | History and Favorites activity roots | Idle root Back delegates to Android's cross-activity preview. A pending write alone temporarily blocks activity dismissal. History publishes committed mutation results before dismissal; selection clearing stays local. | `HistoryActivity`, `FavoritesActivity`, `HistoryScreen`, `FavoritesScreen` |
+| Constellations activity root | Delegates Back to Android so the previous activity is previewed instead of the activity window background. | `ConstellationActivity`, `ConstellationScreen` |
 | Favorites folders | The current folder follows gesture progress; cancel keeps it, commit returns one folder level without finishing the activity. | `FavoritesScreen`, `NativeScreenBackHandler` |
+| Website widget editor | The crop editor follows gesture progress; cancellation preserves the editor and commit dismisses it unless saving. | `SiteWidgetCropEditor`, `NativeScreenBackHandler` |
 | Legacy RSS source detail | Retains the source list beneath the detail, animates entry/exit, and reveals the list during predictive Back. Root Back remains Android-owned. | `RssFeedsScreen`, `NativeScreenBackHandler` |
 | Feed catalog and release notes | Catalog retains its parent collection under the gesture; release notes reveal the existing browser. Both cancel without navigation and commit once. | `FeedsScreen`, `FeedCatalogScreen`, `ReleaseNotesScreen` |
 

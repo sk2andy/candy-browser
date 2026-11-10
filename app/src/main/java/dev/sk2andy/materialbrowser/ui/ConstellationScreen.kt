@@ -100,11 +100,8 @@ internal fun ConstellationScreen(
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val backState = rememberNativeScreenBackState()
-    NativeScreenBackHandler(state = backState, onBack = onDismiss)
     Surface(
-        modifier = modifier.fillMaxSize().testTag(ConstellationTestTags.Screen)
-            .predictiveBackSurface(backState.progress.value, backState.swipeEdgeSign),
+        modifier = modifier.fillMaxSize().testTag(ConstellationTestTags.Screen),
         color = MaterialTheme.colorScheme.surface,
     ) {
         key(snapshot.profileId) {
