@@ -743,6 +743,35 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
     }
 
     @Test
+    fun upwardScrollRestoresAutoParkedAddressBarOnlyWhenControlIsClear() {
+        lateinit var session: ReentrantAttachSession
+        composeRule.runOnIdle {
+            session = startAddressBarAutoDockSession(
+                probeResults = listOf(
+                    TextInputOcclusionProbeResult.Occluded,
+                    TextInputOcclusionProbeResult.Occluded,
+                    TextInputOcclusionProbeResult.NoFocusedTextInput,
+                ),
+            )
+        }
+        composeRule.waitUntil(timeoutMillis = 5_000L) {
+            requireNotNull(controller).isAddressBarDocked
+        }
+        composeRule.runOnIdle { session.emitScroll(500) }
+        composeRule.waitForIdle()
+        composeRule.runOnIdle { session.emitScroll(400) }
+        composeRule.waitUntil(timeoutMillis = 5_000L) { session.textInputOcclusionProbeCount == 2 }
+        composeRule.runOnIdle {
+            assertTrue(requireNotNull(controller).isAddressBarDocked)
+            session.emitScroll(300)
+        }
+        composeRule.waitUntil(timeoutMillis = 5_000L) {
+            session.textInputOcclusionProbeCount == 3 &&
+                !requireNotNull(controller).isAddressBarDocked
+        }
+    }
+
+    @Test
     fun latePageControlParksAddressBarWithoutIme() {
         lateinit var session: ReentrantAttachSession
         composeRule.runOnIdle {
@@ -4959,7 +4988,15 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
             callback(accepted)
         }
 
-        override fun setScrollListener(listener: BrowserEngineScrollListener?) = Unit
+        private var scrollListener: BrowserEngineScrollListener? = null
+
+        override fun setScrollListener(listener: BrowserEngineScrollListener?) {
+            scrollListener = listener
+        }
+
+        fun emitScroll(scrollY: Int) {
+            scrollListener?.onScrollChanged(BrowserEngineScrollEvent(scrollYPx = scrollY))
+        }
 
         override fun setContentTargetListener(listener: BrowserContentTargetListener?) = Unit
 

@@ -1685,6 +1685,8 @@ class BrowserController(
     private var destroyed = false
     private var previewContentBottomInWindowPx: Int? = null
     private var addressBarViewportRect: BrowserViewportRect? = null
+    private var autoParkedAddressBar: Pair<String, BrowserViewportRect>? = null
+    private var autoParkRestoreProbePending = false
     private var selectedBrowserBackdropBlurRegion: BrowserBackdropBlurRegion? = null
     private var pendingAddressBarAutoDockProbe: Runnable? = null
     private var pendingAddressBarAutoDockTabId: String? = null
@@ -10747,11 +10749,20 @@ class BrowserController(
     }
 
     fun updateAddressBarDockPlacement(placement: AddressBarDockPlacement?) {
+        setAddressBarDockPlacement(placement, manualRestoration = true)
+    }
+
+    private fun setAddressBarDockPlacement(
+        placement: AddressBarDockPlacement?,
+        manualRestoration: Boolean,
+    ) {
         val normalized = placement?.normalized()
         if (normalized != null && !isAddressBarDockingEnabled) return
         if (addressBarDockPlacement == normalized) return
+        autoParkedAddressBar = null
+        autoParkRestoreProbePending = false
         cancelAddressBarAutoDockProbe()
-        if (normalized == null && isAddressBarDockingEnabled) {
+        if (normalized == null && isAddressBarDockingEnabled && manualRestoration) {
             manuallyUnparkedAddressBarTabIds += selectedTabId
             AppLogging.record(AppLogEvent.AddressBarManuallyUnparked)
         } else if (normalized != null) {
@@ -14729,6 +14740,10 @@ class BrowserController(
         ) return
         when (event.type) {
             BrowserEngineEventType.NavigationStarted -> {
+                if (autoParkedAddressBar?.first == event.tabId) {
+                    autoParkedAddressBar = null
+                    autoParkRestoreProbePending = false
+                }
                 stoppedBrowserEngineNavigations.remove(event.tabId)
                 recordSessionDiagnostic(BrowserSessionDiagnostics.Event.NavigationStarted, event.tabId)
                 cancelPendingMemorySessionCheck(event.tabId)
@@ -15175,6 +15190,7 @@ class BrowserController(
                 }
                 if (result == TextInputOcclusionProbeResult.Occluded) {
                     updateAddressBarDocked(true)
+                    autoParkedAddressBar = tabId to requireNotNull(viewportRect)
                     AppLogging.record(
                         if (mode == TextInputOcclusionProbeMode.FocusedTextInput) {
                             AppLogEvent.AddressBarAutoParkedForFocusedInput
@@ -15516,7 +15532,6 @@ class BrowserController(
         rendererIsCurrent: Boolean,
         event: BrowserEngineScrollEvent,
     ) {
-        if (isAddressBarSwipeModeEnabled) return
         if (
             !BrowserChromeScrollRules.accepts(
                 eventTabId = tabId,
@@ -15534,11 +15549,36 @@ class BrowserController(
             expandThresholdPx = BOTTOM_BAR_EXPAND_THRESHOLD_DP * density,
         )
         browserChromeScrollStates[tabId] = update.state
+        if (update.compact == false) restoreAutoParkedAddressBar(tabId)
+        if (isAddressBarSwipeModeEnabled) return
         update.compact?.let { compact ->
             if (bottomBarCompactStates[tabId] != compact) {
                 bottomBarCompactStates[tabId] = compact
             }
         }
+    }
+
+    private fun restoreAutoParkedAddressBar(tabId: String) {
+        val parked = autoParkedAddressBar?.takeIf { it.first == tabId } ?: return
+        if (!isAddressBarDocked || autoParkRestoreProbePending) return
+        val session = browserEngineSessions[tabId] ?: return
+        autoParkRestoreProbePending = true
+        mainHandler.postDelayed({
+            if (autoParkedAddressBar !== parked) return@postDelayed
+            session.probeTextInputOcclusion(parked.second, TextInputOcclusionProbeMode.AllEditors) { result ->
+                if (autoParkedAddressBar !== parked) return@probeTextInputOcclusion
+                autoParkRestoreProbePending = false
+                if (
+                    result != TextInputOcclusionProbeResult.Occluded &&
+                    selectedTabId == tabId &&
+                    browserEngineSessions[tabId] === session &&
+                    isAddressBarDocked &&
+                    isAddressBarAutoDockBrowserVisible()
+                ) {
+                    setAddressBarDockPlacement(null, manualRestoration = false)
+                }
+            }
+        }, 150L)
     }
 
     private fun onBrowserEngineScrollBarRefresh(

@@ -46,6 +46,48 @@ class AddressBarDockPersistenceInstrumentedTest {
     fun systemWebViewAutoParkingPreservesChosenEdgeAcrossPageAndLifecycleChanges() =
         assertRememberedPlacement(AndroidBrowserEngineKind.SystemWebView)
 
+    @Test
+    fun geckoRestoresAutoParkedPillWhenScrolledAwayFromEditor() =
+        assertRestoredAfterScroll(AndroidBrowserEngineKind.GeckoView)
+
+    @Test
+    fun systemWebViewRestoresAutoParkedPillWhenScrolledAwayFromEditor() =
+        assertRestoredAfterScroll(AndroidBrowserEngineKind.SystemWebView)
+
+    private fun assertRestoredAfterScroll(engine: AndroidBrowserEngineKind) {
+        EdgeToEdgeSiteFixtureServer { _ -> scrollingEditorHtml() }.use { server ->
+            GestureOnboardingStore(context).markCompleted()
+            ReleaseNotesStore(context).markHandled(BuildConfig.VERSION_CODE.toLong())
+            store.saveAndroidBrowserEngineKind(engine)
+            store.saveStartupAnimationEnabled(false)
+            store.saveOpenHomeOnStartupEnabled(false)
+            store.saveExternalLinkPreviewEnabled(false)
+            store.saveAddressBarDockingEnabled(true)
+            val tab = BrowserTab(
+                id = "scrolling-editor",
+                url = server.fixtureUrl("/editor"),
+                lastAccessedAt = System.currentTimeMillis(),
+            )
+            assertTrue(store.saveTabsImmediately(listOf(tab), tab.id))
+            ActivityScenario.launch<MainActivity>(mainIntent()).use { scenario ->
+                await(scenario, "Editor page loads") {
+                    it.selectedTab.title == "Scrolling editor" && !it.selectedTab.isLoading
+                }
+                await(scenario, "Editor must auto-park pill") { it.isAddressBarDocked }
+                scenario.onActivity { activity ->
+                    assertTrue(activity.browserControllerForTesting().scrollSelectedBrowserEngineToVerticalOffset(500))
+                }
+                await(scenario, "Renderer scrolls down") {
+                    (it.selectedBrowserEngineScrollMetrics()?.offsetPx ?: 0) > 100
+                }
+                scenario.onActivity { activity ->
+                    assertTrue(activity.browserControllerForTesting().scrollSelectedBrowserEngineToVerticalOffset(0))
+                }
+                await(scenario, "Upward scroll must restore pill") { !it.isAddressBarDocked }
+            }
+        }
+    }
+
     private fun assertRememberedPlacement(engine: AndroidBrowserEngineKind) {
         EdgeToEdgeSiteFixtureServer { _ -> chatHtml() }.use { server ->
             for (edge in listOf(AddressBarDockEdge.Left, AddressBarDockEdge.Right)) {
@@ -224,5 +266,20 @@ class AddressBarDockPersistenceInstrumentedTest {
         textarea{position:fixed;bottom:0;left:5%;width:90%;height:180px;box-sizing:border-box}</style>
         <main>Chat editor obstruction regression fixture</main>
         <textarea aria-label="Ask anything" placeholder="Ask anything"></textarea>
+    """.trimIndent()
+
+    private fun scrollingEditorHtml() = """
+        <!doctype html><meta name="viewport" content="width=device-width,initial-scale=1">
+        <title>Scrolling editor</title>
+        <style>body{margin:0}main{height:300vh}textarea{position:fixed;bottom:0;
+        left:5%;width:90%;height:180px;box-sizing:border-box}</style>
+        <main>Scroll to the editor</main><textarea aria-label="Message"></textarea>
+        <script>
+          let previousY = 0;
+          addEventListener('scroll', () => {
+            if (scrollY < previousY) document.querySelector('textarea').hidden = true;
+            previousY = scrollY;
+          });
+        </script>
     """.trimIndent()
 }
