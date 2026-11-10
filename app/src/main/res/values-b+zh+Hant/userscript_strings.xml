@@ -88,4 +88,20 @@
     <string name="topping_catalog_install_description">安裝和啟用 %1$s</string>
     <string name="topping_catalog_enable_description">啟用 %1$s</string>
     <string name="topping_catalog_disable_description">禁用 %1$s</string>
+    <string name="greasy_fork_install_title">安裝 Greasy Fork 指令碼？（實驗性）</string>
+    <string name="greasy_fork_loading">正在載入指令碼…</string>
+    <string name="greasy_fork_private_blocked">無法從私人分頁安裝指令碼。請在一般分頁中開啟 Greasy Fork 以進行安裝。</string>
+    <string name="greasy_fork_installed">指令碼已安裝並啟用為 Topping。</string>
+    <string name="greasy_fork_patterns">執行於：\n%1$s</string>
+    <string name="greasy_fork_excludes">排除：\n%1$s</string>
+    <string name="greasy_fork_grants">要求的 API：%1$s</string>
+    <string name="greasy_fork_dependencies">額外程式碼或資源的載入來源：\n%1$s</string>
+    <string name="greasy_fork_none">無</string>
+    <string name="greasy_fork_engine_scope">指令碼可在一般分頁的兩種瀏覽器引擎中執行，絕不會在私人分頁中執行。Gecko 可能需要重新啟動 Candy。</string>
+    <string name="greasy_fork_view_source">檢視原始碼</string>
+    <string name="greasy_fork_install">安裝並啟用</string>
+    <string name="greasy_fork_saving">正在安裝…</string>
+    <string name="greasy_fork_error_network">Candy 無法下載此指令碼。請檢查網路連線後再試一次。</string>
+    <string name="greasy_fork_error_invalid">此指令碼的中繼資料或網址模式無效或不受支援。</string>
+    <string name="greasy_fork_error_dependency">無法下載或驗證指令碼相依項目。</string>
 </resources>

@@ -88,4 +88,20 @@
     <string name="topping_catalog_install_description">Cài đặt và kích hoạt %1$s</string>
     <string name="topping_catalog_enable_description">Cho phép %1$s</string>
     <string name="topping_catalog_disable_description">Khóa %1$s</string>
+    <string name="greasy_fork_install_title">Cài đặt tập lệnh Greasy Fork? (thử nghiệm)</string>
+    <string name="greasy_fork_loading">Đang tải tập lệnh…</string>
+    <string name="greasy_fork_private_blocked">Không thể cài đặt tập lệnh từ thẻ riêng tư. Hãy mở Greasy Fork trong thẻ thông thường để cài đặt.</string>
+    <string name="greasy_fork_installed">Tập lệnh đã được cài đặt và bật dưới dạng Topping.</string>
+    <string name="greasy_fork_patterns">Chạy trên:\n%1$s</string>
+    <string name="greasy_fork_excludes">Loại trừ:\n%1$s</string>
+    <string name="greasy_fork_grants">API được yêu cầu: %1$s</string>
+    <string name="greasy_fork_dependencies">Mã hoặc tài nguyên bổ sung được tải từ:\n%1$s</string>
+    <string name="greasy_fork_none">không có</string>
+    <string name="greasy_fork_engine_scope">Tập lệnh có thể chạy trên cả hai công cụ trình duyệt trong thẻ thông thường. Tập lệnh không bao giờ chạy trong thẻ riêng tư. Với Gecko, có thể cần khởi động lại Candy.</string>
+    <string name="greasy_fork_view_source">Xem mã nguồn</string>
+    <string name="greasy_fork_install">Cài đặt và bật</string>
+    <string name="greasy_fork_saving">Đang cài đặt…</string>
+    <string name="greasy_fork_error_network">Candy không thể tải tập lệnh. Hãy kiểm tra kết nối và thử lại.</string>
+    <string name="greasy_fork_error_invalid">Siêu dữ liệu hoặc mẫu URL của tập lệnh không hợp lệ hoặc không được hỗ trợ.</string>
+    <string name="greasy_fork_error_dependency">Không thể tải hoặc xác minh phần phụ thuộc của tập lệnh.</string>
 </resources>

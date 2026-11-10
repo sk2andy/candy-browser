@@ -3,7 +3,7 @@ set -eu
 
 # Compile standard scoped and generic CSS from EasyList/EasyPrivacy. Arc assets and code are
 # intentionally not inputs. Source revision is pinned so builds and tests remain reproducible.
-SOURCE_REVISION="f1f8fe7c4bedf834bb89a7631b9cae94f627b263"
+SOURCE_REVISION="2a7488c36b3954335f9eab4d614162a303e50904"
 SOURCE_ARCHIVE="https://github.com/easylist/easylist/archive/$SOURCE_REVISION.tar.gz"
 PROJECT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 OUTPUT_FILE="$PROJECT_DIR/app/src/main/assets/easylist_cosmetic_rules.txt"

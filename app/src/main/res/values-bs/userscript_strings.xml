@@ -91,4 +91,20 @@
     <string name="topping_catalog_install_description">Instaliranje i omogućavanje %1$s</string>
     <string name="topping_catalog_enable_description">Omogućiti %1$s</string>
     <string name="topping_catalog_disable_description">Deaktiviraj %1$s</string>
+    <string name="greasy_fork_install_title">Instalirati Greasy Fork skriptu? (eksperimentalno)</string>
+    <string name="greasy_fork_loading">Učitavanje skripte…</string>
+    <string name="greasy_fork_private_blocked">Skripte se ne mogu instalirati iz privatne kartice. Otvori Greasy Fork u običnoj kartici za instalaciju.</string>
+    <string name="greasy_fork_installed">Skripta je instalirana i uključena kao Topping.</string>
+    <string name="greasy_fork_patterns">Pokreće se na:\n%1$s</string>
+    <string name="greasy_fork_excludes">Isključeno:\n%1$s</string>
+    <string name="greasy_fork_grants">Traženi API-ji: %1$s</string>
+    <string name="greasy_fork_dependencies">Dodatni kod ili resursi učitavaju se s:\n%1$s</string>
+    <string name="greasy_fork_none">nema</string>
+    <string name="greasy_fork_engine_scope">Skripta može raditi u oba preglednička pogona u običnim karticama. Nikad ne radi u privatnim karticama. Za Gecko će možda trebati ponovo pokrenuti Candy.</string>
+    <string name="greasy_fork_view_source">Prikaži izvorni kod</string>
+    <string name="greasy_fork_install">Instaliraj i uključi</string>
+    <string name="greasy_fork_saving">Instaliranje…</string>
+    <string name="greasy_fork_error_network">Candy nije mogao preuzeti skriptu. Provjeri vezu i pokušaj ponovo.</string>
+    <string name="greasy_fork_error_invalid">Metapodaci ili URL obrasci skripte nisu valjani ili nisu podržani.</string>
+    <string name="greasy_fork_error_dependency">Zavisnost skripte nije moguće preuzeti ili provjeriti.</string>
 </resources>

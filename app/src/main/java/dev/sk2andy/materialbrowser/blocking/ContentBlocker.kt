@@ -34,6 +34,9 @@ class ContentBlocker(context: Context) {
         }
     }
     private val bundledBlockingSnapshot = BundledBlockingSnapshotProvider.get(appContext)
+    private val bareFilterScript by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
+        readAssetOrEmpty("system_webview/bare_filter.js")
+    }
     private val consentCss by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
         loadConsentCss(appContext)
     }
@@ -190,6 +193,16 @@ class ContentBlocker(context: Context) {
                 ?.matchingRules(pageUrl).orEmpty(),
         )
 
+    fun bareFilterScript(pageUrl: String?, pausedHosts: Collection<String>): String {
+        val host = CandyHostCanonicalizer.webHost(pageUrl) ?: return ""
+        if (pausedHosts.mapNotNull(CandyHostCanonicalizer::canonicalHost).any {
+                CandyHostCanonicalizer.matches(host, it)
+            }
+        ) return ""
+        if (BARE_FILTER_HOSTS.none { CandyHostCanonicalizer.matches(host, it) }) return ""
+        return bareFilterScript
+    }
+
     @VisibleForTesting
     internal fun awaitBundledBlockingForTesting() {
         bundledBlockingSnapshot.snapshot()
@@ -214,6 +227,7 @@ class ContentBlocker(context: Context) {
     }
 
     private companion object {
+        val BARE_FILTER_HOSTS = listOf("reddit.com", "m.facebook.com", "m.youtube.com")
         val HIGH_CONFIDENCE_AD_SELECTORS = listOf(
             ":is(img, iframe, embed)[src*=\"/ads_banner.\" i]",
             ":is(img, iframe, embed)[src*=\"_ads_banner.\" i]",

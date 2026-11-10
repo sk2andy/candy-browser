@@ -5,7 +5,7 @@ set -eu
 # template graph. Resource-typed block rules remain excluded because System WebView does not
 # expose a reliable request type; positive domain-scoped allows retain the existing broader
 # page-host exception semantics.
-SOURCE_REVISION="54849f55642f155a67649b46fe3b87c39607c1c5"
+SOURCE_REVISION="2a7488c36b3954335f9eab4d614162a303e50904"
 SOURCE_ARCHIVE="https://github.com/easylist/easylist/archive/$SOURCE_REVISION.tar.gz"
 PROJECT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 OUTPUT_FILE="$PROJECT_DIR/app/src/main/assets/easylist_blocked_hosts.txt"

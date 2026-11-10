@@ -90,4 +90,20 @@
     <string name="topping_catalog_install_description">Installeren en inschakelen %1$s</string>
     <string name="topping_catalog_enable_description">Inschakelen %1$s</string>
     <string name="topping_catalog_disable_description">Uitschakelen %1$s</string>
+    <string name="greasy_fork_install_title">Greasy Fork-script installeren? (experimenteel)</string>
+    <string name="greasy_fork_loading">Script laden…</string>
+    <string name="greasy_fork_private_blocked">Scripts kunnen niet vanuit een privétabblad worden geïnstalleerd. Open Greasy Fork in een normaal tabblad om te installeren.</string>
+    <string name="greasy_fork_installed">Het script is als Topping geïnstalleerd en ingeschakeld.</string>
+    <string name="greasy_fork_patterns">Wordt uitgevoerd op:\n%1$s</string>
+    <string name="greasy_fork_excludes">Uitgesloten:\n%1$s</string>
+    <string name="greasy_fork_grants">Gevraagde API’s: %1$s</string>
+    <string name="greasy_fork_dependencies">Extra code of bronnen worden geladen van:\n%1$s</string>
+    <string name="greasy_fork_none">geen</string>
+    <string name="greasy_fork_engine_scope">Het script kan in beide browserengines worden uitgevoerd in normale tabbladen. In privétabbladen wordt het nooit uitgevoerd. Voor Gecko moet Candy mogelijk opnieuw worden gestart.</string>
+    <string name="greasy_fork_view_source">Broncode bekijken</string>
+    <string name="greasy_fork_install">Installeren en inschakelen</string>
+    <string name="greasy_fork_saving">Installeren…</string>
+    <string name="greasy_fork_error_network">Candy kon het script niet downloaden. Controleer je verbinding en probeer het opnieuw.</string>
+    <string name="greasy_fork_error_invalid">De metadata of URL-patronen van dit script zijn ongeldig of worden niet ondersteund.</string>
+    <string name="greasy_fork_error_dependency">Een afhankelijkheid van het script kon niet worden gedownload of gecontroleerd.</string>
 </resources>

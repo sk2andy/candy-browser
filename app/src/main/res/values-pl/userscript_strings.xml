@@ -92,4 +92,20 @@
     <string name="topping_catalog_install_description">Zainstaluj i włącz %1$s</string>
     <string name="topping_catalog_enable_description">Włącz %1$s</string>
     <string name="topping_catalog_disable_description">Wyłącz %1$s</string>
+    <string name="greasy_fork_install_title">Zainstalować skrypt Greasy Fork? (eksperymentalny)</string>
+    <string name="greasy_fork_loading">Ładowanie skryptu…</string>
+    <string name="greasy_fork_private_blocked">Nie można instalować skryptów z karty prywatnej. Aby zainstalować skrypt, otwórz Greasy Fork na zwykłej karcie.</string>
+    <string name="greasy_fork_installed">Skrypt został zainstalowany i włączony jako Topping.</string>
+    <string name="greasy_fork_patterns">Działa na:\n%1$s</string>
+    <string name="greasy_fork_excludes">Wykluczone:\n%1$s</string>
+    <string name="greasy_fork_grants">Żądane interfejsy API: %1$s</string>
+    <string name="greasy_fork_dependencies">Dodatkowy kod lub zasoby są pobierane z:\n%1$s</string>
+    <string name="greasy_fork_none">brak</string>
+    <string name="greasy_fork_engine_scope">Skrypt może działać w obu silnikach przeglądarki na zwykłych kartach. Nigdy nie działa na kartach prywatnych. W przypadku Gecko może być konieczne ponowne uruchomienie Candy.</string>
+    <string name="greasy_fork_view_source">Pokaż kod źródłowy</string>
+    <string name="greasy_fork_install">Zainstaluj i włącz</string>
+    <string name="greasy_fork_saving">Instalowanie…</string>
+    <string name="greasy_fork_error_network">Candy nie mógł pobrać skryptu. Sprawdź połączenie i spróbuj ponownie.</string>
+    <string name="greasy_fork_error_invalid">Metadane lub wzorce URL skryptu są nieprawidłowe albo nieobsługiwane.</string>
+    <string name="greasy_fork_error_dependency">Nie można pobrać lub zweryfikować zależności skryptu.</string>
 </resources>

@@ -90,4 +90,20 @@
     <string name="topping_catalog_install_description">Installer og aktiver %1$s</string>
     <string name="topping_catalog_enable_description">Aktivér %1$s</string>
     <string name="topping_catalog_disable_description">Deaktivér %1$s</string>
+    <string name="greasy_fork_install_title">Installer Greasy Fork script? (eksperimentelt)</string>
+    <string name="greasy_fork_loading">Indlæser script...</string>
+    <string name="greasy_fork_private_blocked">Scripts kan ikke installeres fra en privat fane. Åbn Greasy Fork i en almindelig fane for at installere.</string>
+    <string name="greasy_fork_installed">Scriptet blev installeret og aktiveret som en Topping.</string>
+    <string name="greasy_fork_patterns">Kører på:\n%1$s</string>
+    <string name="greasy_fork_excludes">Ekskluderet:\n%1$s</string>
+    <string name="greasy_fork_grants">Anmodede API’er: %1$s</string>
+    <string name="greasy_fork_dependencies">Yderligere kode eller ressourcer indlæst fra:\n%1$s</string>
+    <string name="greasy_fork_none">ingen</string>
+    <string name="greasy_fork_engine_scope">Scriptet kan køre i begge browsermotorer på almindelige faner. Det kører aldrig under private faner. Gecko kan kræve genstart af Candy.</string>
+    <string name="greasy_fork_view_source">Vis kildekode</string>
+    <string name="greasy_fork_install">Installer og aktiver</string>
+    <string name="greasy_fork_saving">Installerer…</string>
+    <string name="greasy_fork_error_network">Candy kunne ikke downloade dette script. Kontroller din forbindelse, og prøv igen.</string>
+    <string name="greasy_fork_error_invalid">Dette scripts metadata- eller URL-mønstre er ugyldige eller understøttes ikke.</string>
+    <string name="greasy_fork_error_dependency">En scriptafhængighed kunne ikke downloades eller bekræftes.</string>
 </resources>

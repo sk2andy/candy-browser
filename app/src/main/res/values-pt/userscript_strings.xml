@@ -90,4 +90,20 @@
     <string name="topping_catalog_install_description">Instalar e ativar %1$s</string>
     <string name="topping_catalog_enable_description">Ativar %1$s</string>
     <string name="topping_catalog_disable_description">Desativar %1$s</string>
+    <string name="greasy_fork_install_title">Instalar script Greasy Fork? (experimental)</string>
+    <string name="greasy_fork_loading">A carregar script…</string>
+    <string name="greasy_fork_private_blocked">Scripts não podem ser instalados de uma aba privada. Abra o Greasy Fork em uma aba normal para instalar.</string>
+    <string name="greasy_fork_installed">O script foi instalado e habilitado como um Topping.</string>
+    <string name="greasy_fork_patterns">Executa em:\n%1$s</string>
+    <string name="greasy_fork_excludes">Excluído:\n%1$s</string>
+    <string name="greasy_fork_grants">APIs solicitadas: %1$s</string>
+    <string name="greasy_fork_dependencies">Código ou recursos adicionais carregados de:\n%1$s</string>
+    <string name="greasy_fork_none">nenhum</string>
+    <string name="greasy_fork_engine_scope">O script pode ser executado nos dois mecanismos do navegador em abas normais. Ele nunca é executado em abas privadas. O Gecko pode exigir que o Candy seja reiniciado.</string>
+    <string name="greasy_fork_view_source">Ver código-fonte</string>
+    <string name="greasy_fork_install">Instalar e ativar</string>
+    <string name="greasy_fork_saving">Instalando…</string>
+    <string name="greasy_fork_error_network">Candy não conseguiu transferir este script. Verifique a sua ligação e tente novamente.</string>
+    <string name="greasy_fork_error_invalid">Os metadados ou padrões de URL deste script são inválidos ou não são suportados.</string>
+    <string name="greasy_fork_error_dependency">Não foi possível transferir ou verificar uma dependência de script.</string>
 </resources>

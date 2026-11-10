@@ -91,4 +91,20 @@
     <string name="topping_catalog_install_description">Instalați și activați %1$s</string>
     <string name="topping_catalog_enable_description">Activați %1$s</string>
     <string name="topping_catalog_disable_description">Dezactivare %1$s</string>
+    <string name="greasy_fork_install_title">Instalezi scriptul Greasy Fork? (experimental)</string>
+    <string name="greasy_fork_loading">Se încarcă scriptul…</string>
+    <string name="greasy_fork_private_blocked">Scripturile nu pot fi instalate dintr-o filă privată. Deschide Greasy Fork într-o filă obișnuită pentru instalare.</string>
+    <string name="greasy_fork_installed">Scriptul a fost instalat și activat ca Topping.</string>
+    <string name="greasy_fork_patterns">Rulează pe:\n%1$s</string>
+    <string name="greasy_fork_excludes">Excluse:\n%1$s</string>
+    <string name="greasy_fork_grants">API-uri solicitate: %1$s</string>
+    <string name="greasy_fork_dependencies">Codul suplimentar sau resursele sunt încărcate de la:\n%1$s</string>
+    <string name="greasy_fork_none">niciunul</string>
+    <string name="greasy_fork_engine_scope">Scriptul poate rula în ambele motoare de browser în file obișnuite. Nu rulează niciodată în file private. Pentru Gecko poate fi necesară repornirea Candy.</string>
+    <string name="greasy_fork_view_source">Vezi codul sursă</string>
+    <string name="greasy_fork_install">Instalează și activează</string>
+    <string name="greasy_fork_saving">Se instalează…</string>
+    <string name="greasy_fork_error_network">Candy nu a putut descărca scriptul. Verifică conexiunea și încearcă din nou.</string>
+    <string name="greasy_fork_error_invalid">Metadatele sau modelele URL ale scriptului sunt nevalide sau neacceptate.</string>
+    <string name="greasy_fork_error_dependency">O dependență a scriptului nu a putut fi descărcată sau verificată.</string>
 </resources>

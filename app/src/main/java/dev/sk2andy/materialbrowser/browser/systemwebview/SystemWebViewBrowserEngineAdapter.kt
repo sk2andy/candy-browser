@@ -1918,9 +1918,10 @@ private class SystemWebViewBrowserEngineSession(
                 pausedHosts = policy.pausedHosts,
                 ),
                 contentBlocker.adProceduralDocumentStartScript(url),
+                contentBlocker.bareFilterScript(url, policy.pausedHosts),
                 contentBlocker.windowOpenDefuserScript(url),
                 candyCosmeticScript(url),
-            ).filter(String::isNotBlank).joinToString("\n")
+            ).filter(String::isNotBlank).joinToString(";\n")
             if (script.isNotBlank()) webView.evaluateJavascript(script, null)
             if (!cosmeticsReadyCallbackRegistered) {
                 cosmeticsReadyCallbackRegistered = true

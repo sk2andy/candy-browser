@@ -52,6 +52,13 @@ internal fun BrowserTransientOverlays(
     val readerUnsupportedMessage = stringResource(R.string.reader_extraction_unsupported)
     val readerEmptyMessage = stringResource(R.string.reader_extraction_empty)
     val readerInvalidMessage = stringResource(R.string.reader_extraction_invalid)
+    controller.greasyForkInstallPrompt?.takeIf { it.tabId == controller.selectedTabId }?.let { prompt ->
+        GreasyForkInstallDialog(
+            stage = prompt.stage,
+            onInstall = controller::confirmGreasyForkInstall,
+            onDismiss = controller::dismissGreasyForkInstall,
+        )
+    }
     if (clearDialogVisible) {
         AlertDialog(
             onDismissRequest = { onClearDialogDismiss() },

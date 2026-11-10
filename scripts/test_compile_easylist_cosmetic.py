@@ -24,10 +24,10 @@ class CosmeticCompilerTest(unittest.TestCase):
         text = EASYLIST_ASSET.read_text(encoding="utf-8")
 
         self.assertEqual(EASYLIST_V2_FORMAT_HEADER, text.splitlines()[0])
-        self.assertIn("# Hide rules: 30139", text)
-        self.assertIn("# Exception rules: 652", text)
-        self.assertIn("# Generic rules: 13642", text)
-        self.assertIn("# Generic hide exceptions: 154", text)
+        self.assertIn("# Hide rules: 30682", text)
+        self.assertIn("# Exception rules: 657", text)
+        self.assertIn("# Generic rules: 13637", text)
+        self.assertIn("# Generic hide exceptions: 153", text)
         self.assertLessEqual(EASYLIST_ASSET.stat().st_size, 1_250_000)
 
     def test_parses_domains_exclusions_exceptions_and_standard_has(self):

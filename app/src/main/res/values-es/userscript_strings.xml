@@ -90,4 +90,20 @@
     <string name="topping_catalog_install_description">Instalar y activar %1$s</string>
     <string name="topping_catalog_enable_description">Activar %1$s</string>
     <string name="topping_catalog_disable_description">Desactivar %1$s</string>
+    <string name="greasy_fork_install_title">¿Instalar el script Greasy Fork? (experimental)</string>
+    <string name="greasy_fork_loading">Cargando script…</string>
+    <string name="greasy_fork_private_blocked">No se pueden instalar scripts desde una pestaña privada. Abre Greasy Fork en una pestaña normal para instalarlo.</string>
+    <string name="greasy_fork_installed">El script se instaló y habilitó como Topping.</string>
+    <string name="greasy_fork_patterns">Se ejecuta en:\n%1$s</string>
+    <string name="greasy_fork_excludes">No incluye: \n%1$s</string>
+    <string name="greasy_fork_grants">API solicitadas: %1$s</string>
+    <string name="greasy_fork_dependencies">Código o recursos adicionales cargados desde:\n%1$s</string>
+    <string name="greasy_fork_none">ninguno</string>
+    <string name="greasy_fork_engine_scope">El script puede ejecutarse en ambos motores del navegador en pestañas normales. Nunca se ejecuta en pestañas privadas. Es posible que Gecko requiera reiniciar Candy.</string>
+    <string name="greasy_fork_view_source">Ver código fuente</string>
+    <string name="greasy_fork_install">Instalar y habilitar</string>
+    <string name="greasy_fork_saving">Instalando…</string>
+    <string name="greasy_fork_error_network">Candy no ha podido descargar este script. Comprueba tu conexión e inténtalo de nuevo.</string>
+    <string name="greasy_fork_error_invalid">Los metadatos o patrones de URL de este script no son válidos o no son compatibles.</string>
+    <string name="greasy_fork_error_dependency">No se ha podido descargar ni verificar una dependencia del script.</string>
 </resources>

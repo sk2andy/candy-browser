@@ -92,4 +92,20 @@
     <string name="topping_catalog_install_description">Установить и включить %1$s</string>
     <string name="topping_catalog_enable_description">Включить %1$s</string>
     <string name="topping_catalog_disable_description">Выключить %1$s</string>
+    <string name="greasy_fork_install_title">Установить скрипт Greasy Fork? (экспериментальный)</string>
+    <string name="greasy_fork_loading">Загрузка скрипта…</string>
+    <string name="greasy_fork_private_blocked">Скрипты нельзя устанавливать из приватной вкладки. Для установки откройте Greasy Fork в обычной вкладке.</string>
+    <string name="greasy_fork_installed">Скрипт установлен и включён как Topping.</string>
+    <string name="greasy_fork_patterns">Работает на:\n%1$s</string>
+    <string name="greasy_fork_excludes">Исключения:\n%1$s</string>
+    <string name="greasy_fork_grants">Запрошенные API: %1$s</string>
+    <string name="greasy_fork_dependencies">Дополнительный код или ресурсы загружаются из:\n%1$s</string>
+    <string name="greasy_fork_none">нет</string>
+    <string name="greasy_fork_engine_scope">Скрипт может работать в обоих движках браузера в обычных вкладках. В приватных вкладках он никогда не запускается. Для Gecko может потребоваться перезапуск Candy.</string>
+    <string name="greasy_fork_view_source">Посмотреть исходный код</string>
+    <string name="greasy_fork_install">Установить и включить</string>
+    <string name="greasy_fork_saving">Установка…</string>
+    <string name="greasy_fork_error_network">Candy не удалось загрузить скрипт. Проверьте подключение и повторите попытку.</string>
+    <string name="greasy_fork_error_invalid">Метаданные или шаблоны URL скрипта недопустимы либо не поддерживаются.</string>
+    <string name="greasy_fork_error_dependency">Не удалось загрузить или проверить зависимость скрипта.</string>
 </resources>

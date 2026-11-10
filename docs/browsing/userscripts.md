@@ -1,7 +1,7 @@
 # Toppings (local userscripts)
 
 Toppings are the cross-platform lightweight customization model. Android's Gecko runtime uses a
-private bundled MV3 host extension. Android has no WebView fallback.
+private bundled MV3 host extension; Android System WebView uses its isolated-world runtime.
 The iOS runtime consumes the shared metadata and URL policy, resolves dependencies during explicit
 imports and installs each script as a scoped `WKUserScript` in a named `WKContentWorld`. Android Gecko separately
 supports Mozilla-signed Firefox WebExtensions. See [`platform-engines.md`](platform-engines.md) for
@@ -18,6 +18,20 @@ none of those privileged delegates are exposed to Toppings.
 | Persistence | Atomically store validated local source, bounded per-script GM values and the last valid catalog outside browser-session state | `data/UserScriptStore.kt`, `data/UserScriptValueStore.kt`, `data/ToppingCatalogStore.kt` |
 | Runtime | Register isolated scripts in regular Gecko sessions through the bundled Candy host; iOS uses its platform WKContentWorld bridge | `browser/gecko/GeckoToppingHostRuntime.kt`, `browser/BrowserController.kt`, `iosApp/CandyIos/ToppingRuntime.swift` |
 | UI and import | Manage local Toppings and explicitly install catalog entries | `ui/UserscriptManagementScreen.kt`, `ui/ToppingCatalogScreen.kt` |
+
+## Greasy Fork installation
+
+This experimental feature labels the installation dialog accordingly. Following a Greasy Fork
+install link in a regular Android tab downloads its bounded HTTPS source
+through the existing dependency client. Candy validates the source and shows its name, URL scopes,
+grants, dependencies and source code before the user explicitly installs it. Unsupported metadata
+or APIs are rejected. The installed Topping is shared by regular profiles and both Android engines;
+private tabs cannot start an installation and never run Toppings. The existing dependency host and
+redirect restrictions apply. Scripts are not updated automatically; an identical installed source
+is re-enabled instead of duplicated. Install links are intercepted after a user gesture or from a Greasy Fork page, whose own
+installation JavaScript may delay navigation until the gesture is no longer reported.
+On first use, Greasy Fork may first display its own userscript-manager instructions; choosing its
+option to continue with an existing manager proceeds to Candy's confirmation.
 
 ## Discovery catalog
 
@@ -156,6 +170,7 @@ none of those privileged delegates are exposed to Toppings.
 | Settings semantics and actions | `UserscriptManagementScreenInstrumentedTest` |
 | Catalog schema, integrity and cache | `ToppingCatalogParserTest`, `ToppingVerifierTest`, `ToppingCatalogStoreInstrumentedTest` |
 | Discovery semantics and actions | `ToppingCatalogScreenInstrumentedTest` |
+| Greasy Fork URL, download and confirmation | `GreasyForkInstallTest`, `GreasyForkInstallDialogInstrumentedTest`, `BrowserControllerGreasyForkInstrumentedTest` |
 | WebView URL/frame guard and document-scoped bridge lifecycle | `UserScriptInjectionTest`, `UserScriptApiTest`, `UserScriptBridgeContractTest` |
 | Shared iOS metadata/grants/dependency and URL policy | `shared:ToppingRulesTest` |
 | iOS compiler and WebKit contract | `swiftc -typecheck` over `iosApp/CandyIos/*.swift`; `CandyIos` simulator build/smoke |

@@ -54,6 +54,12 @@ Candy's host-scoped consent defaults remove Reddit's current data-protection con
 temporary body scroll lock on WebKit. Gecko delegates consent handling to its installed Firefox
 extension and does not run Candy consent selectors or request rules in parallel.
 
+System WebView also adapts the nine BareFilter 2026.11.01.6 app-prompt rules for Reddit,
+mobile Facebook and mobile YouTube. They run in the top document only when ad blocking is enabled
+and the site is not paused. The Facebook text rules observe changes for at most five seconds and 20
+scans after injection, matching Candy's existing procedural-cosmetic bounds. BareFilter attribution and BSD-3-Clause
+terms are in `third_party_notices.txt`; Gecko does not load this script.
+
 Network host matching combines Candy's curated hosts, the complete supported EasyList/EasyPrivacy
 template graph, uAssets, and a deduplicated HaGeZi Pro delta. Sorted byte indexes keep the larger
 bundles off the per-request allocation path. Curated owner-family exceptions may allow a blocked

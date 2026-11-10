@@ -90,4 +90,20 @@
     <string name="topping_catalog_install_description">Installéiert an aktivéiert %1$s</string>
     <string name="topping_catalog_enable_description">Aktivéiert %1$s</string>
     <string name="topping_catalog_disable_description">Deaktivéiert %1$s</string>
+    <string name="greasy_fork_install_title">Greasy-Fork-Skript installéieren? (experimentell)</string>
+    <string name="greasy_fork_loading">Skript gëtt gelueden…</string>
+    <string name="greasy_fork_private_blocked">Skripter kënnen net aus engem privaten Tab installéiert ginn. Maach Greasy Fork an engem normale Tab op fir et ze installéieren.</string>
+    <string name="greasy_fork_installed">D’Skript gouf als Topping installéiert an aktivéiert.</string>
+    <string name="greasy_fork_patterns">Leeft op:\n%1$s</string>
+    <string name="greasy_fork_excludes">Ausgeschloss:\n%1$s</string>
+    <string name="greasy_fork_grants">Ugefrote APIen: %1$s</string>
+    <string name="greasy_fork_dependencies">Zousätzleche Code oder Ressourcë gi geluede vun:\n%1$s</string>
+    <string name="greasy_fork_none">keng</string>
+    <string name="greasy_fork_engine_scope">D’Skript kann a béide Browser-Enginnen an normalen Tabs lafen. A privaten Tabs leeft et ni. Fir Gecko muss Candy eventuell nei gestart ginn.</string>
+    <string name="greasy_fork_view_source">Quelltext weisen</string>
+    <string name="greasy_fork_install">Installéieren an aktivéieren</string>
+    <string name="greasy_fork_saving">Gëtt installéiert…</string>
+    <string name="greasy_fork_error_network">Candy konnt de Skript net eroflueden. Kontrolléier deng Verbindung a probéier nach eng Kéier.</string>
+    <string name="greasy_fork_error_invalid">D’Metadaten oder URL-Mustere vum Skript sinn ongëlteg oder ginn net ënnerstëtzt.</string>
+    <string name="greasy_fork_error_dependency">Eng Ofhängegkeet vum Skript konnt net erofgelueden oder iwwerpréift ginn.</string>
 </resources>

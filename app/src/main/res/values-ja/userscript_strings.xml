@@ -88,4 +88,20 @@
     <string name="topping_catalog_install_description">インストールと有効化 %1$s</string>
     <string name="topping_catalog_enable_description">%1$s を有効にする</string>
     <string name="topping_catalog_disable_description">%1$sを無効にする</string>
+    <string name="greasy_fork_install_title">Greasy Forkスクリプトをインストールしますか？ (実験用)</string>
+    <string name="greasy_fork_loading">スクリプトを読み込み中…</string>
+    <string name="greasy_fork_private_blocked">プライベートタブからスクリプトをインストールすることはできません。インストールするには通常のタブでGreasy Forkを開いてください。</string>
+    <string name="greasy_fork_installed">スクリプトをToppingとしてインストールし、有効にしました。</string>
+    <string name="greasy_fork_patterns">実行対象:\n%1$s</string>
+    <string name="greasy_fork_excludes">除外対象:\n%1$s</string>
+    <string name="greasy_fork_grants">要求されたAPI: %1$s</string>
+    <string name="greasy_fork_dependencies">追加のコードまたはリソースの取得元:\n%1$s</string>
+    <string name="greasy_fork_none">なし</string>
+    <string name="greasy_fork_engine_scope">スクリプトは通常のタブで両方のブラウザーエンジンで実行できます。プライベートタブでは実行されません。GeckoではCandyの再起動が必要な場合があります。</string>
+    <string name="greasy_fork_view_source">ソースを表示</string>
+    <string name="greasy_fork_install">インストールして有効にする</string>
+    <string name="greasy_fork_saving">インストール中…</string>
+    <string name="greasy_fork_error_network">Candyはスクリプトをダウンロードできませんでした。接続を確認してもう一度お試しください。</string>
+    <string name="greasy_fork_error_invalid">スクリプトのメタデータまたはURLパターンが無効か、サポートされていません。</string>
+    <string name="greasy_fork_error_dependency">スクリプトの依存関係をダウンロードまたは検証できませんでした。</string>
 </resources>

@@ -48,7 +48,7 @@ class CandyDefaultRulesAssetInstrumentedTest {
 
         val index = SortedHostIndex.from(bytes)
 
-        assertEquals(100_377, index.size)
+        assertEquals(91_070, index.size)
         assertEquals(true, "0.myikas.com" in index)
         assertEquals(true, "zzzmjfixezere.site" in index)
         assertEquals(false, "example.com" in index)
@@ -56,7 +56,7 @@ class CandyDefaultRulesAssetInstrumentedTest {
         val hagezi = SortedHostIndex.from(
             assets.open("hagezi_blocked_hosts.txt").use { it.readBytes() },
         )
-        assertEquals(166_078, hagezi.size)
+        assertEquals(178_086, hagezi.size)
         assertEquals(true, "analyticsengine.s3.amazonaws.com" in hagezi)
         assertEquals(true, "zzzwowosss.com" in hagezi)
         assertEquals(false, "example.com" in hagezi)
@@ -99,12 +99,12 @@ class CandyDefaultRulesAssetInstrumentedTest {
             EasyListCosmeticRules.EASYLIST_V2_HEADER,
         )
 
-        assertEquals(30_945, bundled.size)
-        assertEquals(30_139, bundled.hidingRules.size)
-        assertEquals(652, bundled.exceptionRules.size)
-        assertEquals(154, bundled.genericHideExceptions.size)
-        assertEquals(13_642, bundled.genericSelectors().size)
-        assertEquals(34, bundled.hidingRules.count { it.hostPattern == "www.google.*" })
+        assertEquals(31_492, bundled.size)
+        assertEquals(30_682, bundled.hidingRules.size)
+        assertEquals(657, bundled.exceptionRules.size)
+        assertEquals(153, bundled.genericHideExceptions.size)
+        assertEquals(13_637, bundled.genericSelectors().size)
+        assertEquals(35, bundled.hidingRules.count { it.hostPattern == "www.google.*" })
         assertTrue(bundled.exceptionRules.any {
             it.hostPattern == "ads.google.com" && it.selector == ".video-ads"
         })
@@ -177,13 +177,13 @@ class CandyDefaultRulesAssetInstrumentedTest {
         assertEquals(467, uAssets.exceptionRules.size)
         assertEquals(1_168, uAssets.genericHideExceptions.size)
         assertEquals(10_265, uAssets.size)
-        assertEquals(38_725, merged.hidingRules.size)
-        assertEquals(1_119, merged.exceptionRules.size)
-        assertEquals(1_322, merged.genericHideExceptions.size)
-        assertEquals(41_166, merged.size)
+        assertEquals(39_265, merged.hidingRules.size)
+        assertEquals(1_124, merged.exceptionRules.size)
+        assertEquals(1_320, merged.genericHideExceptions.size)
+        assertEquals(41_709, merged.size)
         val genericPayload = GenericCosmeticPayload.create(merged.genericSelectors())
-        assertEquals(13_864, genericPayload.selectorCount)
-        assertEquals(13_152, genericPayload.simpleSelectorCount)
+        assertEquals(13_859, genericPayload.selectorCount)
+        assertEquals(13_147, genericPayload.simpleSelectorCount)
         assertEquals(712, genericPayload.complexSelectorCount)
         assertTrue(genericPayload.encoded.length <= GenericCosmeticPayload.MAX_ENCODED_BYTES)
         assertTrue(".ad-space" in merged.genericSelectors())

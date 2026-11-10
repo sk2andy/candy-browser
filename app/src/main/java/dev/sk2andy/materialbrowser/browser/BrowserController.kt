@@ -219,6 +219,9 @@ import dev.sk2andy.materialbrowser.browser.permissions.runtimePermissions
 import dev.sk2andy.materialbrowser.browser.suggestions.SearchSuggestionProvider
 import dev.sk2andy.materialbrowser.browser.userscript.ToppingCatalogEntry
 import dev.sk2andy.materialbrowser.browser.userscript.ToppingCatalogRules
+import dev.sk2andy.materialbrowser.browser.userscript.GreasyForkInstallError
+import dev.sk2andy.materialbrowser.browser.userscript.GreasyForkInstallPrompt
+import dev.sk2andy.materialbrowser.browser.userscript.GreasyForkInstallStage
 import dev.sk2andy.materialbrowser.browser.userscript.UserScript
 import dev.sk2andy.materialbrowser.browser.userscript.UserScriptDependencyFailureReason
 import dev.sk2andy.materialbrowser.browser.userscript.UserScriptDependencyResolution
@@ -269,6 +272,8 @@ import dev.sk2andy.materialbrowser.data.InactiveTabLifetime
 import dev.sk2andy.materialbrowser.data.DownloadManagerMode
 import dev.sk2andy.materialbrowser.data.DownloadRepository
 import dev.sk2andy.materialbrowser.data.ExistingDownload
+import dev.sk2andy.materialbrowser.data.GreasyForkDownloadResult
+import dev.sk2andy.materialbrowser.data.GreasyForkInstall
 import dev.sk2andy.materialbrowser.data.SafeDownloadValues
 import dev.sk2andy.materialbrowser.data.PermissionRadarStore
 import dev.sk2andy.materialbrowser.data.PendingCandyTrailRedaction
@@ -951,6 +956,8 @@ class BrowserController(
         private set
     var pendingDownloadChoice by mutableStateOf<PendingDownloadChoice?>(null)
         private set
+    internal var greasyForkInstallPrompt by mutableStateOf<GreasyForkInstallPrompt?>(null)
+        private set
     var isDefaultBrowser by mutableStateOf(false)
         private set
     var isOnline by mutableStateOf(true)
@@ -1436,6 +1443,13 @@ class BrowserController(
     }
 
     @VisibleForTesting
+    internal fun dispatchSelectedGeckoNewSessionForTesting(request: GeckoNewSessionRequest): Boolean {
+        check(usesGeckoEngine)
+        val tabId = selectedTabId
+        return onGeckoNewSession(tabId, browserEngineSessionFor(tabId), request)
+    }
+
+    @VisibleForTesting
     internal fun installGeckoEngineSessionForTesting(session: AndroidBrowserEngineSessionPort) {
         require(tabs.any { tab -> tab.id == session.tabId })
         stoppedBrowserEngineNavigations.remove(session.tabId)
@@ -1772,6 +1786,10 @@ class BrowserController(
     private val downloadManager = BrowserDownloadManager(activity)
     private val downloadRepository = DownloadRepository(activity)
     private val externalDownloadManager = ExternalDownloadManager(activity)
+
+    @VisibleForTesting
+    internal var greasyForkDownloadForTesting:
+        ((String, (GreasyForkDownloadResult) -> Unit) -> Unit)? = null
 
     @VisibleForTesting
     internal var externalDownloadDiscoveryForTesting: ((BrowserDownloadRequest?) -> List<ExternalDownloadManagerApp>)? = null
@@ -6330,6 +6348,86 @@ class BrowserController(
                     }
                 }
             }
+        }
+    }
+
+    private fun beginGreasyForkInstall(tabId: String, url: String) {
+        val tab = tabs.firstOrNull { it.id == tabId } ?: return
+        val prompt = GreasyForkInstallPrompt(
+            tabId = tabId,
+            stage = if (tab.isIncognito) {
+                GreasyForkInstallStage.PrivateBlocked
+            } else {
+                GreasyForkInstallStage.Loading
+            },
+        )
+        greasyForkInstallPrompt = prompt
+        if (tab.isIncognito) return
+        val onDownloaded: (GreasyForkDownloadResult) -> Unit = { result ->
+            mainHandler.post {
+                if (destroyed || greasyForkInstallPrompt !== prompt) return@post
+                if (tabs.none { it.id == tabId }) {
+                    greasyForkInstallPrompt = null
+                    return@post
+                }
+                val stage = when (result) {
+                    is GreasyForkDownloadResult.Success -> GreasyForkInstallStage.Review(result.script)
+                    GreasyForkDownloadResult.InvalidUrl,
+                    GreasyForkDownloadResult.Network,
+                    -> GreasyForkInstallStage.Failed(GreasyForkInstallError.Network)
+                    GreasyForkDownloadResult.TooLarge ->
+                        GreasyForkInstallStage.Failed(GreasyForkInstallError.TooLarge)
+                    GreasyForkDownloadResult.InvalidUtf8 ->
+                        GreasyForkInstallStage.Failed(GreasyForkInstallError.InvalidUtf8)
+                    is GreasyForkDownloadResult.InvalidScript -> GreasyForkInstallStage.Failed(
+                        if (result.reason == UserScriptRejectionReason.PrivilegedGrant) {
+                            GreasyForkInstallError.UnsupportedGrant
+                        } else {
+                            GreasyForkInstallError.InvalidScript
+                        },
+                    )
+                }
+                greasyForkInstallPrompt = prompt.copy(stage = stage)
+            }
+        }
+        val testDownload = greasyForkDownloadForTesting
+        if (testDownload != null) testDownload(url, onDownloaded)
+        else userScriptRepository.downloadGreasyForkScript(url, onDownloaded)
+    }
+
+    internal fun dismissGreasyForkInstall() {
+        greasyForkInstallPrompt = null
+    }
+
+    internal fun confirmGreasyForkInstall() {
+        val prompt = greasyForkInstallPrompt ?: return
+        val review = prompt.stage as? GreasyForkInstallStage.Review ?: return
+        if (review.isSaving || selectedTabId != prompt.tabId ||
+            tabs.none { it.id == prompt.tabId && !it.isIncognito }
+        ) return
+        val saving = prompt.copy(stage = review.copy(isSaving = true))
+        greasyForkInstallPrompt = saving
+        val installed = userScripts.firstOrNull { it.source == review.script.source }
+        if (installed != null) {
+            setUserScriptEnabled(installed.id, true) { enabled ->
+                if (greasyForkInstallPrompt !== saving) return@setUserScriptEnabled
+                greasyForkInstallPrompt = saving.copy(
+                    stage = if (enabled) GreasyForkInstallStage.Installed
+                    else GreasyForkInstallStage.Failed(GreasyForkInstallError.SaveFailed),
+                )
+            }
+            return
+        }
+        saveUserScript(id = null, source = review.script.source) { outcome ->
+            if (greasyForkInstallPrompt !== saving) return@saveUserScript
+            greasyForkInstallPrompt = saving.copy(
+                stage = when (outcome) {
+                    UserScriptSaveOutcome.Saved -> GreasyForkInstallStage.Installed
+                    is UserScriptSaveOutcome.DependencyFailed ->
+                        GreasyForkInstallStage.Failed(GreasyForkInstallError.DependencyFailed)
+                    else -> GreasyForkInstallStage.Failed(GreasyForkInstallError.SaveFailed)
+                },
+            )
         }
     }
 
@@ -13056,6 +13154,15 @@ class BrowserController(
         if (handlePendingPopunderOpenerNavigation(tabId, session, request.url)) {
             return GeckoNavigationRequestDecision.Deny
         }
+        if (GreasyForkInstall.isInstallUrl(request.url) && GreasyForkInstall.shouldOffer(
+                request.url,
+                BrowserUriPolicy.normalizeHttpUrl(session.historyUrlAtOffset(0)) ?: currentUrl,
+                request.hasUserGesture,
+            )
+        ) {
+            beginGreasyForkInstall(tabId, request.url)
+            return GeckoNavigationRequestDecision.Deny
+        }
         val publisherUrl = if (
             isAutoDeAmpEnabled && request.target == BrowserEngineNavigationTarget.Current
         ) {
@@ -13232,6 +13339,16 @@ class BrowserController(
         if (destroyed || browserEngineSessions[openerTabId] !== openerSession) return false
         val extensionChrome = firefoxExtensionOptionsTabs[openerTabId]
         val opener = tabs.firstOrNull { tab -> tab.id == openerTabId } ?: return false
+        if (GreasyForkInstall.isInstallUrl(request.url) && GreasyForkInstall.shouldOffer(
+                request.url,
+                BrowserUriPolicy.normalizeHttpUrl(openerSession.historyUrlAtOffset(0))
+                    ?: pageUrls[openerTabId] ?: opener.url,
+                hasUserGesture = false,
+            )
+        ) {
+            beginGreasyForkInstall(openerTabId, request.url)
+            return false
+        }
         val extensionUrl = GeckoExtensionChromeRules.normalizeOptionsPageUrl(
             extensionChrome?.initialUrl ?: pageUrls[openerTabId] ?: opener.url,
             request.url,

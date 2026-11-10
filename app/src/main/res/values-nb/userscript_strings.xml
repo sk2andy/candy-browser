@@ -90,4 +90,20 @@
     <string name="topping_catalog_install_description">Installer og slå på %1$s</string>
     <string name="topping_catalog_enable_description">Bruk %1$s</string>
     <string name="topping_catalog_disable_description">Slå av %1$s</string>
+    <string name="greasy_fork_install_title">Installere Greasy Fork-skriptet? (eksperimentelt)</string>
+    <string name="greasy_fork_loading">Laster inn skript…</string>
+    <string name="greasy_fork_private_blocked">Skript kan ikke installeres fra en privat fane. Åpne Greasy Fork i en vanlig fane for å installere.</string>
+    <string name="greasy_fork_installed">Skriptet ble installert og aktivert som en Topping.</string>
+    <string name="greasy_fork_patterns">Kjører på:\n%1$s</string>
+    <string name="greasy_fork_excludes">Ekskludert:\n%1$s</string>
+    <string name="greasy_fork_grants">Forespurt APIs: %1$s</string>
+    <string name="greasy_fork_dependencies">Tilleggskode eller ressurser lastet inn fra:\n%1$s</string>
+    <string name="greasy_fork_none">ingen</string>
+    <string name="greasy_fork_engine_scope">Skriptet kan kjøres i begge nettlesermotorene på vanlige faner. Det kjører aldri i private faner. Gecko kan kreve at du starter Candy på nytt.</string>
+    <string name="greasy_fork_view_source">Vis kilde</string>
+    <string name="greasy_fork_install">Installer og aktiver</string>
+    <string name="greasy_fork_saving">Installerer…</string>
+    <string name="greasy_fork_error_network">Candy kunne ikke laste ned dette skriptet. Sjekk tilkoblingen din og prøv på nytt.</string>
+    <string name="greasy_fork_error_invalid">Metadataene eller URL-mønstrene for dette skriptet er ugyldige eller støttes ikke.</string>
+    <string name="greasy_fork_error_dependency">En skriptavhengighet kunne ikke lastes ned eller bekreftes.</string>
 </resources>

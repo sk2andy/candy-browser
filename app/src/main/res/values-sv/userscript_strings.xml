@@ -90,4 +90,20 @@
     <string name="topping_catalog_install_description">Installera och aktivera %1$s</string>
     <string name="topping_catalog_enable_description">Aktivera %1$s</string>
     <string name="topping_catalog_disable_description">Inaktivera %1$s</string>
+    <string name="greasy_fork_install_title">Installera Greasy Fork-skript? (experimentellt)</string>
+    <string name="greasy_fork_loading">Laddar skript…</string>
+    <string name="greasy_fork_private_blocked">Skript kan inte installeras från en privat flik. Öppna Greasy Fork i en vanlig flik för att installera.</string>
+    <string name="greasy_fork_installed">Skriptet har installerats och aktiverats som ett Topping.</string>
+    <string name="greasy_fork_patterns">Körs på:\n%1$s</string>
+    <string name="greasy_fork_excludes">Undantag:\n%1$s</string>
+    <string name="greasy_fork_grants">Begärda API:er: %1$s</string>
+    <string name="greasy_fork_dependencies">Ytterligare kod eller resurser hämtas från:\n%1$s</string>
+    <string name="greasy_fork_none">ingen</string>
+    <string name="greasy_fork_engine_scope">Skriptet kan köras i båda webbläsarmotorerna på vanliga flikar. Det körs aldrig på privata flikar. För Gecko kan Candy behöva startas om.</string>
+    <string name="greasy_fork_view_source">Visa källkod</string>
+    <string name="greasy_fork_install">Installera och aktivera</string>
+    <string name="greasy_fork_saving">Installerar…</string>
+    <string name="greasy_fork_error_network">Candy kunde inte hämta skriptet. Kontrollera anslutningen och försök igen.</string>
+    <string name="greasy_fork_error_invalid">Skriptets metadata eller URL-mönster är ogiltiga eller stöds inte.</string>
+    <string name="greasy_fork_error_dependency">Ett skriptberoende kunde inte hämtas eller verifieras.</string>
 </resources>

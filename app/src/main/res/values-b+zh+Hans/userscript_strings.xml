@@ -88,4 +88,20 @@
     <string name="topping_catalog_install_description">安装和启用 %1$s</string>
     <string name="topping_catalog_enable_description">启用 %1$s</string>
     <string name="topping_catalog_disable_description">禁用 %1$s</string>
+    <string name="greasy_fork_install_title">安装Greasy Fork脚本？（实验性）</string>
+    <string name="greasy_fork_loading">正在加载脚本…</string>
+    <string name="greasy_fork_private_blocked">无法从无痕标签页安装脚本。请在普通标签页中打开 Greasy Fork 以进行安装。</string>
+    <string name="greasy_fork_installed">脚本已作为Topping安装并启用。</string>
+    <string name="greasy_fork_patterns">运行于： \n%1$s</string>
+    <string name="greasy_fork_excludes">不包括： \n%1$s</string>
+    <string name="greasy_fork_grants">请求的 API：%1$s</string>
+    <string name="greasy_fork_dependencies">加载的其他代码或资源： \n%1$s</string>
+    <string name="greasy_fork_none">无</string>
+    <string name="greasy_fork_engine_scope">脚本可在普通标签页中的两种浏览器引擎上运行，绝不会在无痕标签页中运行。Gecko 可能需要重新启动 Candy。</string>
+    <string name="greasy_fork_view_source">查看源代码</string>
+    <string name="greasy_fork_install">安装并启用</string>
+    <string name="greasy_fork_saving">正在安装…</string>
+    <string name="greasy_fork_error_network">Candy无法下载此脚本。请检查您的网络连接，然后重试。</string>
+    <string name="greasy_fork_error_invalid">此脚本的元数据或URL模式无效或不受支持。</string>
+    <string name="greasy_fork_error_dependency">无法下载或验证脚本依赖项。</string>
 </resources>

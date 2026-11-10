@@ -38,6 +38,10 @@ internal class UserScriptRepository private constructor(context: Context) {
         executor.execute { onComplete(dependencyResolver.resolve(script)) }
     }
 
+    fun downloadGreasyForkScript(url: String, onComplete: (GreasyForkDownloadResult) -> Unit) {
+        executor.execute { onComplete(GreasyForkInstall.fetch(url)) }
+    }
+
     fun clear() {
         executor.execute(store::clear)
     }

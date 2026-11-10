@@ -90,4 +90,20 @@
     <string name="topping_catalog_install_description">Εγκατάσταση και ενεργοποίηση %1$s</string>
     <string name="topping_catalog_enable_description">Ενεργοποίηση %1$s</string>
     <string name="topping_catalog_disable_description">Απενεργοποίηση %1$s</string>
+    <string name="greasy_fork_install_title">Εγκατάσταση σεναρίου Greasy Fork; (πειραματικό)</string>
+    <string name="greasy_fork_loading">Φόρτωση σεναρίου…</string>
+    <string name="greasy_fork_private_blocked">Δεν είναι δυνατή η εγκατάσταση σεναρίων από ιδιωτική καρτέλα. Άνοιξε το Greasy Fork σε κανονική καρτέλα για εγκατάσταση.</string>
+    <string name="greasy_fork_installed">Το σενάριο εγκαταστάθηκε και ενεργοποιήθηκε ως Topping.</string>
+    <string name="greasy_fork_patterns">Εκτελείται σε:\n%1$s</string>
+    <string name="greasy_fork_excludes">Εξαιρούνται:\n%1$s</string>
+    <string name="greasy_fork_grants">Ζητούμενα API: %1$s</string>
+    <string name="greasy_fork_dependencies">Πρόσθετος κώδικας ή πόροι φορτώνονται από:\n%1$s</string>
+    <string name="greasy_fork_none">κανένα</string>
+    <string name="greasy_fork_engine_scope">Το σενάριο μπορεί να εκτελεστεί και στις δύο μηχανές του προγράμματος περιήγησης σε κανονικές καρτέλες. Δεν εκτελείται ποτέ σε ιδιωτικές καρτέλες. Για το Gecko ίσως χρειαστεί επανεκκίνηση του Candy.</string>
+    <string name="greasy_fork_view_source">Προβολή πηγαίου κώδικα</string>
+    <string name="greasy_fork_install">Εγκατάσταση και ενεργοποίηση</string>
+    <string name="greasy_fork_saving">Εγκατάσταση…</string>
+    <string name="greasy_fork_error_network">Το Candy δεν μπόρεσε να κατεβάσει το σενάριο. Έλεγξε τη σύνδεση και δοκίμασε ξανά.</string>
+    <string name="greasy_fork_error_invalid">Τα μεταδεδομένα ή τα μοτίβα URL του σεναρίου δεν είναι έγκυρα ή δεν υποστηρίζονται.</string>
+    <string name="greasy_fork_error_dependency">Δεν ήταν δυνατή η λήψη ή η επαλήθευση μιας εξάρτησης του σεναρίου.</string>
 </resources>

@@ -107,8 +107,8 @@ class EasyListHostCompilerTest(unittest.TestCase):
         blocked = [line for line in blocked_lines if line and not line.startswith("#")]
         allowed = [line for line in allowed_lines if line and not line.startswith("#")]
 
-        self.assertIn("# Generated hosts: 100377", blocked_lines)
-        self.assertIn("# Generated host pairs: 115", allowed_lines)
+        self.assertIn("# Generated hosts: 91070", blocked_lines)
+        self.assertIn("# Generated host pairs: 118", allowed_lines)
         self.assertEqual(sorted(blocked), blocked)
         self.assertEqual(len(set(blocked)), len(blocked))
         self.assertEqual(sorted(allowed), allowed)

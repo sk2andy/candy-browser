@@ -88,4 +88,20 @@
     <string name="topping_catalog_install_description">설치 및 활성화 %1$s</string>
     <string name="topping_catalog_enable_description">활성화 %1$s</string>
     <string name="topping_catalog_disable_description">비활성화 %1$s</string>
+    <string name="greasy_fork_install_title">Greasy Fork 스크립트를 설치할까요? (실험용)</string>
+    <string name="greasy_fork_loading">스크립트를 불러오는 중…</string>
+    <string name="greasy_fork_private_blocked">비공개 탭에서는 스크립트를 설치할 수 없습니다. 설치하려면 일반 탭에서 Greasy Fork를 여세요.</string>
+    <string name="greasy_fork_installed">스크립트가 Topping으로 설치되고 활성화되었습니다.</string>
+    <string name="greasy_fork_patterns">실행 사이트:\n%1$s</string>
+    <string name="greasy_fork_excludes">제외 항목:\n%1$s</string>
+    <string name="greasy_fork_grants">요청된 API: %1$s</string>
+    <string name="greasy_fork_dependencies">추가 코드 또는 리소스를 불러올 위치:\n%1$s</string>
+    <string name="greasy_fork_none">없음</string>
+    <string name="greasy_fork_engine_scope">스크립트는 일반 탭에서 두 브라우저 엔진 모두에서 실행될 수 있습니다. 비공개 탭에서는 실행되지 않습니다. Gecko에서는 Candy를 다시 시작해야 할 수 있습니다.</string>
+    <string name="greasy_fork_view_source">소스 코드 보기</string>
+    <string name="greasy_fork_install">설치 및 활성화</string>
+    <string name="greasy_fork_saving">설치 중…</string>
+    <string name="greasy_fork_error_network">Candy에서 스크립트를 다운로드하지 못했습니다. 연결을 확인하고 다시 시도하세요.</string>
+    <string name="greasy_fork_error_invalid">스크립트의 메타데이터 또는 URL 패턴이 잘못되었거나 지원되지 않습니다.</string>
+    <string name="greasy_fork_error_dependency">스크립트 종속 항목을 다운로드하거나 확인하지 못했습니다.</string>
 </resources>

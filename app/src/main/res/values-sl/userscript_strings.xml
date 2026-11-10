@@ -92,4 +92,20 @@
     <string name="topping_catalog_install_description">Namestitev in omogočanje %1$s</string>
     <string name="topping_catalog_enable_description">Omogočiti %1$s</string>
     <string name="topping_catalog_disable_description">Izključiti %1$s</string>
+    <string name="greasy_fork_install_title">Želiš namestiti skript Greasy Fork? (eksperimentalno)</string>
+    <string name="greasy_fork_loading">Nalaganje skripta…</string>
+    <string name="greasy_fork_private_blocked">Skriptov ni mogoče namestiti iz zasebnega zavihka. Za namestitev odpri Greasy Fork v običajnem zavihku.</string>
+    <string name="greasy_fork_installed">Skript je nameščen in omogočen kot Topping.</string>
+    <string name="greasy_fork_patterns">Izvaja se na:\n%1$s</string>
+    <string name="greasy_fork_excludes">Izvzeto:\n%1$s</string>
+    <string name="greasy_fork_grants">Zahtevani API-ji: %1$s</string>
+    <string name="greasy_fork_dependencies">Dodatna koda ali viri se naložijo iz:\n%1$s</string>
+    <string name="greasy_fork_none">brez</string>
+    <string name="greasy_fork_engine_scope">Skript lahko deluje v obeh pogonih brskalnika v običajnih zavihkih. V zasebnih zavihkih se nikoli ne izvaja. Za Gecko bo morda treba znova zagnati Candy.</string>
+    <string name="greasy_fork_view_source">Prikaži izvorno kodo</string>
+    <string name="greasy_fork_install">Namesti in omogoči</string>
+    <string name="greasy_fork_saving">Nameščanje…</string>
+    <string name="greasy_fork_error_network">Candy ni mogel prenesti skripta. Preveri povezavo in poskusi znova.</string>
+    <string name="greasy_fork_error_invalid">Metapodatki ali vzorci URL skripta so neveljavni ali nepodprti.</string>
+    <string name="greasy_fork_error_dependency">Odvisnosti skripta ni bilo mogoče prenesti ali preveriti.</string>
 </resources>

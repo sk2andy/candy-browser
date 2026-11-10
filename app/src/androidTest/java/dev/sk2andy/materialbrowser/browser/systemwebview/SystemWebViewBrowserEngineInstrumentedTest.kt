@@ -370,6 +370,39 @@ class SystemWebViewBrowserEngineInstrumentedTest {
     }
 
     @Test
+    fun bareFilterRunsInSystemWebView() {
+        lateinit var browserController: BrowserController
+        lateinit var webView: WebView
+        composeRule.runOnIdle {
+            val created = createControllerWithView()
+            browserController = created.first
+            webView = created.second
+            controller = browserController
+            webView.loadDataWithBaseURL(
+                "https://m.youtube.com/",
+                """<html><head><title>BareFilter probe</title></head><body>
+                    <div class="mobile-topbar-header-sign-in-button" id="app"><a aria-label="Open App"></a></div>
+                    </body></html>""",
+                "text/html",
+                "utf-8",
+                null,
+            )
+        }
+        composeRule.waitUntil(timeoutMillis = 10_000L) {
+            browserController.selectedTab.title == "BareFilter probe"
+        }
+        val result = AtomicReference<String>()
+        composeRule.waitUntil(timeoutMillis = 10_000L) {
+            composeRule.runOnIdle {
+                webView.evaluateJavascript("getComputedStyle(document.getElementById('app')).display") {
+                    result.set(it)
+                }
+            }
+            result.get() == "\"none\""
+        }
+    }
+
+    @Test
     fun translationContentProbeDistinguishesBlankGoogleShellFromVisiblePage() {
         lateinit var browserController: BrowserController
         lateinit var webView: WebView

@@ -158,7 +158,7 @@ def main() -> None:
     parser.add_argument("--exclude-file", action="append", type=Path, default=[])
     parser.add_argument("--min-source-hosts", type=int, default=210_000)
     parser.add_argument("--max-source-hosts", type=int, default=240_000)
-    parser.add_argument("--min-excluded-hosts", type=int, default=50_000)
+    parser.add_argument("--min-excluded-hosts", type=int, default=45_000)
     parser.add_argument("--max-excluded-hosts", type=int, default=80_000)
     parser.add_argument("--min-delta-hosts", type=int, default=150_000)
     parser.add_argument("--max-delta-hosts", type=int, default=180_000)
