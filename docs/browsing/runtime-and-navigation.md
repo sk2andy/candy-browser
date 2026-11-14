@@ -194,6 +194,10 @@
   when promoting it to a regular tab. Show the profile chooser only when multiple profiles exist.
   Preview loads still use the selected profile's cookies and
   DOM storage, so the feature is disposable UI rather than a private-browsing mode.
+- Link Peek and external-link previews end loading on a terminal engine state change, including
+  an unsuccessful Gecko stop without an error page. Internal bootstrap state cannot complete a web
+  preview. Link Peek's completion callback waits for loading to end even if progress reaches 100 first,
+  because custom workflows use that callback to begin Reader extraction.
 - On every cold accepted `ACTION_VIEW` or `ACTION_SEND` launch, keep native chrome interactive while
   Gecko and registrable-domain initialization complete, whether external preview is enabled or not.
   Defer unrelated Cast, media-session, and release-note work from this launch path. If Gecko preparation

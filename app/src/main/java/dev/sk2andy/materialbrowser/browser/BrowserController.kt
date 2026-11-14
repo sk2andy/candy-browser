@@ -4452,7 +4452,16 @@ class BrowserController(
                             onProgressChanged(100)
                         }
                     }
-                    BrowserEngineEventType.StateChanged,
+                    BrowserEngineEventType.StateChanged -> {
+                        if (
+                            event.isLoading == false && binding?.isLoading == true &&
+                            BrowserUriPolicy.normalizeHttpUrl(event.address.orEmpty()) != null
+                        ) {
+                            binding?.isLoading = false
+                            binding?.progress = 100
+                            onProgressChanged(100)
+                        }
+                    }
                     BrowserEngineEventType.Crashed,
                     BrowserEngineEventType.Closed,
                     -> Unit
@@ -5116,6 +5125,8 @@ class BrowserController(
             )
             BrowserEngineEventType.StateChanged -> state.copy(
                 currentUrl = safeUrl ?: state.currentUrl,
+                progress = event.progress?.takeIf { safeUrl != null } ?: state.progress,
+                isLoading = event.isLoading?.takeIf { safeUrl != null } ?: state.isLoading,
                 canGoBack = event.canGoBack,
             )
             BrowserEngineEventType.Crashed,
