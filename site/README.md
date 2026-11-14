@@ -14,6 +14,18 @@ python3 -m http.server 4173 --directory site
 Open `http://127.0.0.1:4173/`. The privacy policy is available at `/privacy/` and the imprint at
 `/imprint/`.
 
+## Mozilla sign-in return
+
+`/oauth/mozilla/` returns Mozilla's OAuth response to Candy through an explicit **Open Candy** link.
+Register `https://sk2andy.github.io/candy-browser/oauth/mozilla/` as the Android client's redirect URI.
+The fixed app destination is `dev.sk2andy.materialbrowser://oauth/callback`; Candy validates the
+OAuth state and completes the PKCE exchange. A direct visit without a response explains how to restart.
+
+The page removes the response from its browser-history entry and uses no analytics or browser
+storage. GitHub Pages receives the initial HTTPS request, including its query parameters.
+
+Run the callback checks with `node --test scripts/mozilla_oauth_callback.test.mjs`.
+
 ## Deployment
 
 `.github/workflows/pages.yml` deploys this directory after a push to `main`. Configure the repository's
