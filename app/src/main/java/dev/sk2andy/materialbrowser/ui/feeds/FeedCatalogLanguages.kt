@@ -102,7 +102,7 @@ internal fun FeedCatalogLanguageSheet(
     onApply: (List<String>) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    val locale = LocalConfiguration.current.locales[0] ?: Locale.getDefault()
+    val locale = LocalConfiguration.current.locales[0]
     val choices = remember(locale) { FeedCatalogLanguageRules.choices(locale) }
     var draft by remember(selected) { mutableStateOf(selected.toSet()) }
     var query by remember { mutableStateOf("") }

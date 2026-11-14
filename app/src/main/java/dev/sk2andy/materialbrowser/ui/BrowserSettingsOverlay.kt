@@ -31,6 +31,7 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.zIndex
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.res.stringResource
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.browser.BrowserController
 import dev.sk2andy.materialbrowser.browser.BrowserTab
@@ -79,6 +80,8 @@ internal fun BrowserSettingsOverlay(
     onOpenFirefoxExtensions: (() -> Unit)? = null,
 ) {
     val context = LocalContext.current
+    val userScriptError = stringResource(R.string.userscript_error_generic)
+    val userScriptLimitError = stringResource(R.string.userscript_error_limit, UserScriptParser.MAX_SCRIPTS)
     val configuration = LocalConfiguration.current
     val appLanguagePreferences = remember(context) { AppLanguagePreferences(context) }
     var appLanguageTag by remember(appLanguagePreferences, configuration) {
@@ -274,7 +277,7 @@ internal fun BrowserSettingsOverlay(
                     name = script.name,
                     source = script.source,
                     enabled = script.enabled,
-                    runAtLabel = context.getString(
+                    runAtLabel = stringResource(
                         when (script.runAt) {
                             UserScriptRunAt.DocumentStart ->
                                 R.string.userscript_run_at_document_start
@@ -370,7 +373,7 @@ internal fun BrowserSettingsOverlay(
                 if (controller.unlockDeveloperOptions()) {
                     Toast.makeText(
                         context,
-                        context.getString(R.string.developer_options_unlocked),
+                        R.string.developer_options_unlocked,
                         Toast.LENGTH_SHORT,
                     ).show()
                 }
@@ -384,7 +387,7 @@ internal fun BrowserSettingsOverlay(
                 controller.setUserScriptEnabled(id, enabled) { saved ->
                     onResult(
                         if (saved) null
-                        else context.getString(R.string.userscript_error_generic),
+                        else userScriptError,
                     )
                 }
             },
@@ -392,7 +395,7 @@ internal fun BrowserSettingsOverlay(
                 controller.setUserScriptFrameScope(id, scope) { saved ->
                     onResult(
                         if (saved) null
-                        else context.getString(R.string.userscript_error_generic),
+                        else userScriptError,
                     )
                 }
             },
@@ -401,15 +404,12 @@ internal fun BrowserSettingsOverlay(
                     onResult(
                         when (outcome) {
                             UserScriptSaveOutcome.Saved -> null
-                            UserScriptSaveOutcome.LimitReached -> context.getString(
-                                R.string.userscript_error_limit,
-                                UserScriptParser.MAX_SCRIPTS,
-                            )
+                            UserScriptSaveOutcome.LimitReached -> userScriptLimitError
                             UserScriptSaveOutcome.Missing,
                             UserScriptSaveOutcome.PersistenceFailed,
                             is UserScriptSaveOutcome.Rejected,
                             is UserScriptSaveOutcome.DependencyFailed,
-                            -> context.getString(R.string.userscript_error_generic)
+                            -> userScriptError
                         },
                     )
                 }
@@ -418,7 +418,7 @@ internal fun BrowserSettingsOverlay(
                 controller.deleteUserScript(id) { deleted ->
                     onResult(
                         if (deleted) null
-                        else context.getString(R.string.userscript_error_generic),
+                        else userScriptError,
                     )
                 }
             },
@@ -428,7 +428,7 @@ internal fun BrowserSettingsOverlay(
                     if (!saved) {
                         Toast.makeText(
                             context,
-                            context.getString(R.string.topping_catalog_action_error),
+                            R.string.topping_catalog_action_error,
                             Toast.LENGTH_SHORT,
                         ).show()
                     }
@@ -439,7 +439,7 @@ internal fun BrowserSettingsOverlay(
                     if (!saved) {
                         Toast.makeText(
                             context,
-                            context.getString(R.string.topping_catalog_action_error),
+                            R.string.topping_catalog_action_error,
                             Toast.LENGTH_SHORT,
                         ).show()
                     }

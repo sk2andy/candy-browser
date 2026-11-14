@@ -702,7 +702,7 @@ fun SiteCapsuleEditorScreen(
                         if (BrowserUriPolicy.normalizeHttpUrl(url) == null || name.isBlank()) {
                             Toast.makeText(
                                 context,
-                                context.getString(R.string.capsule_invalid_configuration),
+                                R.string.capsule_invalid_configuration,
                                 Toast.LENGTH_SHORT,
                             ).show()
                             return@Button
@@ -710,7 +710,7 @@ fun SiteCapsuleEditorScreen(
                         if (existing == null && !request.canCreate) {
                             Toast.makeText(
                                 context,
-                                context.getString(R.string.capsule_limit_reached),
+                                R.string.capsule_limit_reached,
                                 Toast.LENGTH_SHORT,
                             ).show()
                             return@Button

@@ -56,7 +56,7 @@ private fun SiteWidgetEditorRequest(controller: BrowserController, requestId: In
     var captureHandle by remember(requestId) { mutableStateOf<BrowserEnginePreviewCapture?>(null) }
     var started by remember(requestId) { mutableStateOf(false) }
     var saving by remember(requestId) { mutableStateOf(false) }
-    var error by remember(requestId) { mutableStateOf<String?>(null) }
+    var error by remember(requestId) { mutableStateOf<Int?>(null) }
     val isLoading = controller.selectedTab.isLoading
     val initialFormat = remember(widgetId) {
         val provider = if (widgetId == AppWidgetManager.INVALID_APPWIDGET_ID) {
@@ -80,19 +80,19 @@ private fun SiteWidgetEditorRequest(controller: BrowserController, requestId: In
         started = true
         captureHandle = controller.captureSelectedPageForSiteWidget { result ->
             capture = result
-            if (result == null) error = context.getString(R.string.site_widget_capture_failed)
+            if (result == null) error = R.string.site_widget_capture_failed
         }
     }
     LaunchedEffect(requestId) {
         delay(15_000)
-        if (!started) error = context.getString(R.string.site_widget_capture_failed)
+        if (!started) error = R.string.site_widget_capture_failed
     }
     val source = capture
     if (source == null) {
         AlertDialog(
             onDismissRequest = controller::dismissSiteWidgetEditor,
             title = { Text(stringResource(R.string.site_widget_editor_title)) },
-            text = { error?.let { Text(it) } ?: CircularProgressIndicator() },
+            text = { error?.let { Text(stringResource(it)) } ?: CircularProgressIndicator() },
             confirmButton = {
                 TextButton(onClick = controller::dismissSiteWidgetEditor) { Text(stringResource(R.string.action_back)) }
             },
@@ -111,13 +111,13 @@ private fun SiteWidgetEditorRequest(controller: BrowserController, requestId: In
             launcherCellAspectRatio = launcherCellAspectRatio,
             launcherCellAspectRatioLearned = learnedCellAspectRatio != null,
             saving = saving,
-            error = error,
+            error = error?.let { stringResource(it) },
             onDismiss = controller::dismissSiteWidgetEditor,
             onSubmit = { format, crop, interval ->
                 if (!controller.isCurrentSiteWidgetSource(source.source)) {
-                    error = context.getString(R.string.site_widget_capture_failed)
+                    error = R.string.site_widget_capture_failed
                 } else if (widgetId == AppWidgetManager.INVALID_APPWIDGET_ID && !publisher.canPin()) {
-                    error = context.getString(R.string.site_widget_pin_unavailable)
+                    error = R.string.site_widget_pin_unavailable
                 } else {
                     saving = true
                     error = null
@@ -125,12 +125,12 @@ private fun SiteWidgetEditorRequest(controller: BrowserController, requestId: In
                         try {
                             val snapshot = publisher.prepare(source, format, crop, interval)
                             if (snapshot == null) {
-                                error = context.getString(R.string.site_widget_save_failed)
+                                error = R.string.site_widget_save_failed
                                 return@launch
                             }
                             if (!controller.isCurrentSiteWidgetSource(source.source)) {
                                 publisher.discard(snapshot)
-                                error = context.getString(R.string.site_widget_capture_failed)
+                                error = R.string.site_widget_capture_failed
                                 return@launch
                             }
                             val accepted = if (widgetId != AppWidgetManager.INVALID_APPWIDGET_ID) {
@@ -150,7 +150,7 @@ private fun SiteWidgetEditorRequest(controller: BrowserController, requestId: In
                                 controller.dismissSiteWidgetEditor()
                             } else {
                                 publisher.discard(snapshot)
-                                error = context.getString(R.string.site_widget_pin_failed)
+                                error = R.string.site_widget_pin_failed
                             }
                         } finally {
                             saving = false

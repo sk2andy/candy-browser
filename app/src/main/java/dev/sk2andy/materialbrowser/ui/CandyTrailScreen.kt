@@ -6,7 +6,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import dev.sk2andy.materialbrowser.R
@@ -36,37 +36,29 @@ internal fun CandyTrailScreen(
     modifier: Modifier = Modifier,
     pageFavicons: Map<String, Bitmap> = emptyMap(),
 ) {
-    val context = LocalContext.current
+    val locale = LocalConfiguration.current.locales[0]
+    val currentNodeDescription = stringResource(R.string.cd_candy_trail_current_node)
+    val nodeDescription = stringResource(R.string.cd_candy_trail_node)
+    val nodeActionsDescription = stringResource(R.string.cd_candy_trail_node_actions)
+    val openForkStatus = stringResource(R.string.fork_status_open)
+    val closedForkStatus = stringResource(R.string.fork_status_closed)
+    val openForkDescription = stringResource(R.string.cd_candy_trail_fork_open)
+    val closedForkDescription = stringResource(R.string.cd_candy_trail_fork_closed)
+    val hiddenPages = stringResource(R.string.candy_trail_hidden_pages)
     val rootView = LocalView.current
     val strings = CandyTrailStrings(
         empty = stringResource(R.string.candy_trail_empty),
         nodeDescription = { isCurrent, title, host ->
-            context.getString(
-                if (isCurrent) {
-                    R.string.cd_candy_trail_current_node
-                } else {
-                    R.string.cd_candy_trail_node
-                },
-                title,
-                host,
-            )
+            (if (isCurrent) currentNodeDescription else nodeDescription).format(locale, title, host)
         },
         nodeActionsDescription = { title ->
-            context.getString(R.string.cd_candy_trail_node_actions, title)
+            nodeActionsDescription.format(locale, title)
         },
         forkStatus = { isOpen ->
-            context.getString(if (isOpen) R.string.fork_status_open else R.string.fork_status_closed)
+            if (isOpen) openForkStatus else closedForkStatus
         },
         forkDescription = { isOpen, title, host ->
-            context.getString(
-                if (isOpen) {
-                    R.string.cd_candy_trail_fork_open
-                } else {
-                    R.string.cd_candy_trail_fork_closed
-                },
-                title,
-                host,
-            )
+            (if (isOpen) openForkDescription else closedForkDescription).format(locale, title, host)
         },
         forkUrlOnlyDisclaimer = stringResource(R.string.fork_url_only_disclaimer),
         forkFromHere = stringResource(R.string.action_fork_from_here),
@@ -84,7 +76,7 @@ internal fun CandyTrailScreen(
         allBranches = stringResource(R.string.candy_trail_all_branches),
         collapseBranch = stringResource(R.string.candy_trail_collapse_branch),
         expandBranch = stringResource(R.string.candy_trail_expand_branch),
-        hiddenPages = { count -> context.getString(R.string.candy_trail_hidden_pages, count) },
+        hiddenPages = { count -> hiddenPages.format(locale, count) },
     )
     CandyTrailScreenContent(
         tab = tab,
