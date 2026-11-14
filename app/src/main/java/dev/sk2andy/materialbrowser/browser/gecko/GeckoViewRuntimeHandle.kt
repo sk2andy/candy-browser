@@ -3856,7 +3856,6 @@ private class GeckoViewBrowserSession(
         startedNavigationAttempts.clear()
         cookieBehavior.remove(cookieBehaviorOwner)
         session.stop()
-        updateState { current -> current.copy(isLoading = true, lastNavigationSucceeded = null) }
         updateState { current ->
             current.copy(
                 isLoading = false,

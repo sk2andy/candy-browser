@@ -467,7 +467,8 @@ and [native Android IPC connector](https://github.com/mozilla-firefox/firefox/bl
   inactivity as a complete network suspension.
 - Manual extension installation accepts only direct HTTPS URLs and delegates XPI parsing and Mozilla
   signature validation to GeckoView. The user must explicitly approve requested permissions;
-  dismissal and lifecycle failure deny access.
+  dismissal and lifecycle failure deny access. The URL field requests a URI keyboard with
+  autocorrection and automatic capitalization disabled so typed package addresses remain unchanged.
 - Android's Gecko runtime provisions two normal, deinstallable defaults through
   `WebExtensionController.install(..., INSTALLATION_METHOD_ONBOARDING)`. uBlock Origin `1.75.0`
   ships as the original Mozilla-signed AMO XPI, so a clean profile gets it without network access.

@@ -5662,6 +5662,7 @@ class BrowserController(
                         source = source,
                         grant = grant,
                         isRedirect = false,
+                        allowStoppedSourceNavigation = true,
                     )
                     return
                 }
@@ -8085,6 +8086,7 @@ class BrowserController(
         grant: ExternalNavigationGrant?,
         isRedirect: Boolean,
         nativePopupResponse: BrowserEngineBooleanResponse? = null,
+        allowStoppedSourceNavigation: Boolean = false,
     ) {
         val policyTabId = source.policyTabId()
         cancelPendingAutomaticExternalAppRequest(policyTabId)
@@ -8137,6 +8139,7 @@ class BrowserController(
                     requestGeneration = sourceRequestGeneration,
                     navigationGeneration = sourceNavigationGeneration,
                     pageUrl = sourcePageUrl,
+                    allowStoppedSourceNavigation = allowStoppedSourceNavigation,
                 )
             ) {
                 clearExternalNavigationRollback(source)
@@ -8309,10 +8312,13 @@ class BrowserController(
         requestGeneration: Long,
         navigationGeneration: Int,
         pageUrl: String?,
+        allowStoppedSourceNavigation: Boolean = false,
     ): Boolean = when (source) {
         is ExternalAppHandoffSource.Tab ->
             isExternalAppSourceCurrent(source) &&
-                browserEngineDocumentGenerations.getOrDefault(source.tabId, 0L) == documentGeneration &&
+                (browserEngineDocumentGenerations.getOrDefault(source.tabId, 0L) == documentGeneration ||
+                    (allowStoppedSourceNavigation && pageUrl != null &&
+                        currentExternalAppSourcePageUrl(source) == pageUrl)) &&
                 browserEngineNavigationRequestGenerations.getOrDefault(source.tabId, 0L) == requestGeneration
         is ExternalAppHandoffSource.Preview -> isExternalAppSourceSnapshotCurrent(
             source = source,

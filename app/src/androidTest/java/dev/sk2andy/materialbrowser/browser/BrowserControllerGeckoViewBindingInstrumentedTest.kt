@@ -3342,6 +3342,56 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
     }
 
     @Test
+    fun typedWebAddressSurvivesStoppedPageStartingDuringAppLookup() {
+        assertTypedWebAddressSurvivesStoppedPage(appAvailable = false)
+    }
+
+    @Test
+    fun typedWebAddressOpensAppAfterStoppedPageStarts() {
+        assertTypedWebAddressSurvivesStoppedPage(appAvailable = true)
+    }
+
+    private fun assertTypedWebAddressSurvivesStoppedPage(appAvailable: Boolean) {
+        val started = CountDownLatch(1)
+        val release = CountDownLatch(1)
+        val fixture = composeRule.runOnIdle {
+            createAddressAppFixture(appAvailable = appAvailable, onLookup = {
+                started.countDown()
+                check(release.await(10, TimeUnit.SECONDS)) { "Address app lookup was not released" }
+            }).also {
+                it.browser.submitAddress("https://previous.candy.test/")
+                requireNotNull(it.session).commands.clear()
+            }
+        }
+        try {
+            composeRule.runOnIdle { fixture.browser.submitAddressFromAddressBar("paypal.de") }
+            assertTrue("Address app lookup did not start", started.await(5, TimeUnit.SECONDS))
+            composeRule.runOnIdle {
+                dispatchSiteDataNavigation(
+                    browserController = fixture.browser,
+                    tabId = fixture.browser.selectedTabId,
+                    type = BrowserEngineEventType.NavigationStarted,
+                    address = "https://previous.candy.test/",
+                )
+            }
+        } finally {
+            release.countDown()
+        }
+        awaitAddressAppLookup(fixture.browser)
+        composeRule.runOnIdle {
+            val loads = requireNotNull(fixture.session).commands
+                .filter { it.type == BrowserEngineCommandType.Load }.map { it.address }
+            if (appAvailable) {
+                assertEquals("https://paypal.de/", fixture.context.lastIntent?.dataString)
+                assertTrue(loads.isEmpty())
+            } else {
+                assertNull(fixture.context.lastIntent)
+                assertEquals(listOf("https://paypal.de"), loads)
+            }
+        }
+    }
+
+    @Test
     fun typedWebAddressLookupCannotLaunchAfterNewerBrowserNavigation() {
         val started = CountDownLatch(1)
         val release = CountDownLatch(1)
@@ -3363,6 +3413,53 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
             assertNull(fixture.context.lastIntent)
             assertEquals("https://newer.candy.test/", fixture.browser.selectedTab.url)
         }
+    }
+
+    @Test
+    fun typedWebAddressLookupCannotLaunchAfterNewerEngineRequest() {
+        assertNewerEngineNavigationCancelsAddressLookup(newRequest = true)
+    }
+
+    @Test
+    fun typedWebAddressLookupCannotLaunchAfterSourcePageChanges() {
+        assertNewerEngineNavigationCancelsAddressLookup(newRequest = false)
+    }
+
+    private fun assertNewerEngineNavigationCancelsAddressLookup(newRequest: Boolean) {
+        val started = CountDownLatch(1)
+        val release = CountDownLatch(1)
+        val fixture = composeRule.runOnIdle {
+            createAddressAppFixture(onLookup = {
+                started.countDown()
+                check(release.await(10, TimeUnit.SECONDS)) { "Address app lookup was not released" }
+            }).also { it.browser.submitAddress("https://previous.candy.test/") }
+        }
+        try {
+            composeRule.runOnIdle { fixture.browser.submitAddressFromAddressBar("github.com") }
+            assertTrue("Address app lookup did not start", started.await(5, TimeUnit.SECONDS))
+            composeRule.runOnIdle {
+                dispatchSiteDataNavigation(
+                    browserController = fixture.browser,
+                    tabId = fixture.browser.selectedTabId,
+                    type = BrowserEngineEventType.NavigationStarted,
+                    address = if (newRequest) "https://previous.candy.test/" else "https://newer.candy.test/",
+                )
+                if (newRequest) {
+                    fixture.browser.dispatchSelectedGeckoNavigationRequestForTesting(
+                        GeckoMainFrameNavigationRequest(
+                            url = "https://previous.candy.test/",
+                            isRedirect = false,
+                            hasUserGesture = false,
+                            isDirectNavigation = false,
+                        ),
+                    )
+                }
+            }
+        } finally {
+            release.countDown()
+        }
+        awaitAddressAppLookup(fixture.browser)
+        composeRule.runOnIdle { assertNull(fixture.context.lastIntent) }
     }
 
     @Test
