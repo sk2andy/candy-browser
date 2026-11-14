@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feeds_manual_address">Introdu adresa fluxului</string>
+    <string name="feeds_manual_note">Adaugă o sursă preferată. Introdu site-ul sau adresa RSS/Atom și aruncă o privire înainte de abonare.</string>
+    <string name="feeds_latest_articles">Cele mai recente articole</string>
+    <string name="feeds_subscription_failed">Această sursă nu a putut fi salvată. Abonamentele tale sunt neschimbate. Încearcă din nou.</string>
+    <string name="feeds_sources_empty_title">Fă loc vocilor bune.</string>
+    <string name="feeds_sources_empty_note">Descoperă o sursă din întreaga lume sau introdu propria adresă de flux. Articolele noi vor sosi în căsuța de intrare.</string>
+</resources>

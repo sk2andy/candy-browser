@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reader_nano_enabled_title">Gemini Nano로 텍스트 준비</string>
+    <string name="reader_nano_enabled_summary">실험 기능: 일반적인 독일어·영어 약어와 숫자 읽기를 개선합니다. Nano는 음성을 생성하지 않으며 선택한 시스템 또는 오프라인 음성이 유지됩니다. 재생이 지연될 수 있습니다.</string>
+    <string name="reader_nano_system_managed">Android가 모델을 관리하고 다른 앱과 공유합니다. 끄면 Candy에서의 사용만 중지됩니다.</string>
+    <string name="reader_nano_download_summary">휴대폰이 Gemini Nano를 지원합니다. 다운로드하면 발음을 기기에서 준비합니다. 읽기 음성을 다운로드하거나 변경하지 않습니다.</string>
+    <string name="reader_nano_download">Gemini Nano 다운로드 및 사용</string>
+    <string name="reader_nano_retry_download">Gemini Nano 다운로드 다시 시도</string>
+    <string name="reader_nano_cancel_download">다운로드 취소</string>
+    <string name="reader_nano_downloading">Gemini Nano: %1$s 다운로드됨</string>
+    <string name="reader_nano_error">Gemini Nano를 준비하지 못했습니다. 이 기능 없이 계속 소리 내어 읽을 수 있습니다.</string>
+    <string name="reader_nano_unavailable">Gemini Nano를 현재 사용할 수 없습니다. 텍스트 준비 없이 계속 읽습니다.</string>
+    <string name="reader_nano_preparing">Gemini Nano로 기기에서 텍스트 준비 중…</string>
+    <string name="reader_nano_fallback">Gemini Nano 준비 없이 소리 내어 읽습니다.</string>
+    <string name="reader_nano_metrics_notice">Google은 사용 및 성능 지표를 처리합니다. 텍스트 준비는 기기에서 이루어집니다.</string>
+    <string name="reader_nano_terms">Google 약관 및 개인정보처리방침</string>
+    <string name="reader_nano_system_downloading">Android에서 Gemini Nano를 다운로드 중입니다. 상태를 확인하여 완료 여부를 확인하세요.</string>
+    <string name="reader_nano_refresh">다운로드 상태 확인</string>
+    <string name="reader_nano_adult_title">Gemini Nano는 성인용입니다</string>
+    <string name="reader_nano_adult_summary">Google은 이 기능 사용자가 18세 이상이어야 한다고 규정합니다. Gemini Nano를 켜기 전에 나이를 확인하세요. Nano 없이 읽기는 계속 사용할 수 있습니다.</string>
+    <string name="reader_nano_adult_confirm">18세 이상입니다</string>
+    <string name="reader_nano_adult_cancel">나중에</string>
+</resources>

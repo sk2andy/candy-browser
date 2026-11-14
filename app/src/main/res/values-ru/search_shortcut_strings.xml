@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_search_shortcuts_title">Поисковые сокращения</string>
+    <string name="settings_search_shortcuts_summary">Создавайте свои сокращения, например !gh для GitHub или !yt для YouTube. Введите сокращение и пробел, чтобы превратить его в метку. Поисковые подсказки продолжат работать. Backspace при пустом запросе удаляет метку.</string>
+    <string name="settings_search_shortcut_keyword">Сокращение</string>
+    <string name="settings_search_shortcut_keyword_summary">Например !gh. Используйте до 32 букв, цифр, дефисов или подчёркиваний. После ! начните с буквы или цифры.</string>
+    <string name="settings_search_shortcut_template">Шаблон поискового URL</string>
+    <string name="settings_search_shortcut_template_summary" formatted="false">Скопируйте поисковый URL сайта и замените поисковые слова на %s. Используйте ровно один %s в URL с HTTP или HTTPS.</string>
+    <string name="settings_search_shortcut_add">Добавить сокращение</string>
+    <string name="settings_search_shortcut_edit">Изменить сокращение</string>
+    <string name="settings_search_shortcut_remove">Удалить</string>
+    <string name="settings_search_shortcut_edit_description">Изменить сокращение !%1$s</string>
+    <string name="settings_search_shortcut_remove_description">Удалить сокращение !%1$s</string>
+    <string name="settings_search_shortcut_invalid" formatted="false">Выберите уникальное сокращение, не совпадающее со встроенной поисковой системой, и корректный поисковый URL ровно с одним %s.</string>
+    <string name="settings_search_shortcut_examples">Начните с сайта</string>
+    <string name="settings_search_shortcut_github">GitHub · !gh</string>
+    <string name="settings_search_shortcut_youtube">YouTube · !yt</string>
+    <string name="settings_search_shortcut_amazon">Amazon · !amazon</string>
+    <string name="search_shortcut_chip_remove">Удалить поисковое сокращение !%1$s</string>
+</resources>

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="constellations_explore">Utforska dina kopplingar</string>
+    <string name="constellations_show_list">Visa sidlista</string>
+    <string name="constellations_hide_list">Dölj sidlista</string>
+    <string name="constellations_expand_map">Utöka karta</string>
+    <string name="constellations_collapse_map">Förminska karta</string>
+    <string name="constellations_all_topics">Alla ämnen</string>
+    <string name="constellations_close_details">Stäng sidinformation</string>
+    <string name="constellations_fit_all">Visa alla</string>
+    <string name="constellations_explore_hint">Nyp för att zooma och dra för att utforska. Tryck på en sida för att se relaterade sidor. Kopplingar visar likheter mellan ämnen.</string>
+    <string name="constellations_map_description">Sidor på kartan: %1$d. Använd sidlistan för att utforska med tillgänglighetskontroller.</string>
+</resources>

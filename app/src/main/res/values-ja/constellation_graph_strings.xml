@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="constellations_explore">つながりを探索</string>
+    <string name="constellations_show_list">ページ一覧を表示</string>
+    <string name="constellations_hide_list">ページ一覧を隠す</string>
+    <string name="constellations_expand_map">マップを展開</string>
+    <string name="constellations_collapse_map">マップを折りたたむ</string>
+    <string name="constellations_all_topics">すべてのトピック</string>
+    <string name="constellations_close_details">ページの詳細を閉じる</string>
+    <string name="constellations_fit_all">すべて表示</string>
+    <string name="constellations_explore_hint">ピンチで拡大縮小、ドラッグで移動。ページをタップすると関連ページを表示します。線はトピックの類似性を示します。</string>
+    <string name="constellations_map_description">マップ上のページ：%1$d。アクセシビリティ操作にはページ一覧を使ってください。</string>
+</resources>

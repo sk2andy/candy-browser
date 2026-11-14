@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reader_pocket_cancel">Откажи</string>
+    <string name="reader_pocket_title">Офлајн глас Pocket TTS</string>
+    <string name="reader_pocket_summary">Избери го преземениот модел што одговара на јазикот на секоја статија. Исклучувањето ги задржува јазичните пакети.</string>
+    <string name="reader_pocket_download_summary">Преземи еден или повеќе јазици. Статиите и создадениот звук остануваат на уредот. Ако јазикот недостига или е несигурен, ќе треба да избереш; преземањата на јазици не започнуваат автоматски.</string>
+    <string name="reader_pocket_unknown_language">Избери преземен јазик за овој текст или користи друг глас.</string>
+    <string name="reader_pocket_unsupported_language">Откриен јазик: %1$s. Нема достапен Pocket модел за него. Користи друг глас или избери јазик ако препознавањето е погрешно.</string>
+    <string name="reader_pocket_article_language">Јазик на статијата: %1$s. Преземи го моделот или избери преземен јазик за да го поправиш препознавањето.</string>
+    <string name="reader_pocket_download_size">Преземање: %1$d MB · складирање: %2$d MB</string>
+    <string name="reader_pocket_use_language">Читај на овој јазик</string>
+    <string name="reader_pocket_remove">Отстрани јазик</string>
+    <string name="reader_pocket_downloaded">Преземено · достапно без интернет</string>
+    <string name="reader_pocket_license_summary">Pocket TTS од Kyutai. Со преземањето ја прифаќаш лиценцата на моделот и условите за наведување на авторот на гласот. Овој глас е создаден со ВИ.</string>
+    <string name="reader_pocket_license">Лиценци на моделот и гласот</string>
+</resources>

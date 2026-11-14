@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reader_voice_settings_title">Чтение вслух</string>
+    <string name="reader_voice_settings_summary">Выберите голоса Android, Supertonic или Pocket TTS для статей и выделенного текста. Локальные модели после скачивания работают офлайн.</string>
+    <string name="reader_voice_choice_title">Выбрать голос</string>
+    <string name="reader_voice_choice_summary">Выберите Supertonic, Pocket TTS со скачиваемыми языками или голос Android. Изменить выбор можно в разделе Настройки → Браузер → Чтение вслух.</string>
+    <string name="reader_voice_use_offline">Использовать Supertonic</string>
+    <string name="reader_voice_use_system">Использовать голос Android</string>
+    <string name="reader_voice_download">Скачать голосовую модель</string>
+    <string name="reader_voice_delete">Удалить голосовую модель</string>
+    <string name="reader_voice_enabled_title">Офлайн-голос Supertonic</string>
+    <string name="reader_voice_enabled_summary">При отключении Candy использует голос Android. Скачанная модель при этом сохраняется.</string>
+    <string name="reader_voice_checking">Проверка голосовой модели…</string>
+    <string name="reader_voice_working">Обновление голосовой модели…</string>
+    <string name="reader_voice_downloading">Скачивание голосовой модели: %1$d%%</string>
+    <string name="reader_voice_model_error">Не удалось скачать или обновить голосовую модель. Проверьте подключение и свободное место, затем повторите попытку.</string>
+    <string name="reader_voice_ready">Голосовая модель скачана. Можно читать офлайн.</string>
+    <string name="reader_voice_missing">Голосовая модель не скачана.</string>
+    <string name="reader_voice_model_details">Supertonic 3 · скачивание около 145 МБ · 31 язык, включая английский и немецкий. При использовании офлайн-модели текст статей остаётся на устройстве. Удаление модели возвращает голоса Android.</string>
+    <string name="reader_voice_model_terms">Скачивая или включая модель, вы принимаете её лицензию OpenRAIL-M, в том числе ограничения использования. Голос создан ИИ.</string>
+    <string name="reader_voice_playback_error">Этот голос не смог прочитать текст. Повторите попытку или смените голос.</string>
+    <string name="reader_voice_model_license">Лицензия модели: OpenRAIL-M</string>
+    <string name="reader_voice_unavailable">Чтение вслух недоступно. Проверьте голосовую модель в разделе Настройки → Браузер → Чтение вслух или настройки синтеза речи Android.</string>
+</resources>

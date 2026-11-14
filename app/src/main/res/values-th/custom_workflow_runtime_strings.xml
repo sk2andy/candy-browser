@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="workflow_run_details">รายละเอียด</string>
+    <string name="workflow_run_dismiss">ปิด</string>
+    <string name="workflow_run_done">เสร็จทุกขั้นตอนแล้ว</string>
+    <string name="workflow_run_waiting">กำลังรอ</string>
+    <string name="workflow_run_running">กำลังทำงาน…</string>
+    <string name="workflow_run_succeeded">เสร็จแล้ว</string>
+    <string name="workflow_run_failed">การทำงานล้มเหลว</string>
+    <string name="workflow_run_skipped">ไม่ได้ดำเนินการ</string>
+    <string name="workflow_run_cancelling">จะหยุดหลังการทำงานปัจจุบัน…</string>
+    <string name="workflow_run_cancelled">หยุดแล้ว เก็บขั้นตอนที่เสร็จไว้</string>
+    <string name="workflow_run_invalid">เวิร์กโฟลว์นี้ไม่ถูกต้อง</string>
+    <string name="workflow_run_unsupported">ใช้กับหน้านี้ไม่ได้</string>
+    <string name="workflow_run_private">เวิร์กโฟลว์นี้บันทึกข้อมูลจึงทำงานในโหมดส่วนตัวไม่ได้</string>
+    <string name="workflow_run_pinned">ปิดแท็บที่ปักหมุดไม่ได้</string>
+    <string name="workflow_run_changed">หน้าต้นทางเปลี่ยนไป หยุดขั้นตอนที่เหลือแล้ว</string>
+    <string name="workflow_run_empty">ไม่พบบทความที่อ่านได้</string>
+    <string name="workflow_run_save_failed">บันทึกไม่ได้ ตรวจสอบพื้นที่จัดเก็บและพื้นที่ว่างในคลัง Reader ข้อมูลนำเข้ายังเปิดอยู่</string>
+    <string name="workflow_run_timeout">การทำงานหมดเวลา หยุดขั้นตอนที่เหลือแล้ว</string>
+</resources>

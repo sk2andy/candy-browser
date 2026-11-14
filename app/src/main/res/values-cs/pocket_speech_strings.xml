@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reader_pocket_title">Offline hlas Pocket TTS</string>
+    <string name="reader_pocket_summary">Vyberte stažený model odpovídající jazyku každého článku. Vypnutí zachová jazykové balíčky.</string>
+    <string name="reader_pocket_download_summary">Stáhněte jeden nebo více jazyků. Články a vytvořený zvuk zůstávají na zařízení. Chybějící nebo nejistý jazyk vyžaduje váš výběr; stahování jazyků se nespouští automaticky.</string>
+    <string name="reader_pocket_unknown_language">Vyberte stažený jazyk pro tento text nebo použijte jiný hlas.</string>
+    <string name="reader_pocket_unsupported_language">Zjištěný jazyk: %1$s. Model Pocket pro něj není dostupný. Použijte jiný hlas nebo vyberte jazyk, pokud bylo rozpoznání chybné.</string>
+    <string name="reader_pocket_article_language">Jazyk článku: %1$s. Stáhněte jeho model nebo opravte rozpoznání výběrem staženého jazyka.</string>
+    <string name="reader_pocket_download_size">Stažení: %1$d MB · úložiště: %2$d MB</string>
+    <string name="reader_pocket_cancel">Zrušit</string>
+    <string name="reader_pocket_use_language">Číst v tomto jazyce</string>
+    <string name="reader_pocket_remove">Odebrat jazyk</string>
+    <string name="reader_pocket_downloaded">Staženo · dostupné offline</string>
+    <string name="reader_pocket_license_summary">Pocket TTS od Kyutai. Stažením přijímáte licenci modelu a podmínky uvedení autorství hlasu. Tento hlas je generován AI.</string>
+    <string name="reader_pocket_license">Licence modelu a hlasů</string>
+</resources>

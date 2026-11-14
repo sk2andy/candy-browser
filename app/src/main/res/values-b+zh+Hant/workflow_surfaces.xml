@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="workflow_surface_group">自定義工作流</string>
+    <string name="workflow_surface_manage">管理</string>
+</resources>

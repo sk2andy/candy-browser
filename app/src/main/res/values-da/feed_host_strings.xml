@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feeds_next_unread">Næste ulæste artikel</string>
+    <string name="feeds_notifications_denied">Notifikationer er deaktiveret i Android. Dit valg er gemt.</string>
+    <string name="feeds_notification_channel">Candy-feeds</string>
+    <string name="feeds_notification_count">%1$d ulæste artikler venter.</string>
+    <string name="feeds_speech_next">Næste artikel</string>
+    <string name="feeds_speech_speed">Læsehastighed: %1$s×</string>
+    <string name="feeds_speech_unavailable">Ingen stemme er tilgængelig. Tjek Androids indstillinger for tekst til tale.</string>
+</resources>

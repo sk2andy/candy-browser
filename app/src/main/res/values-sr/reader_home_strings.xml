@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reader_home_title">Reader Studio</string>
+    <string name="reader_home_back">Назад</string>
+    <string name="reader_home_progress">%1$d%% читање</string>
+    <string name="reader_home_manage_feeds">Управљај изворима</string>
+    <string name="reader_home_library_tab">Библиотека</string>
+    <string name="reader_home_feeds_tab">Извори</string>
+    <string name="reader_home_all_feeds">Сви извори</string>
+    <string name="reader_home_all_posts">Све објаве</string>
+    <string name="reader_home_unread_count">Непрочитано (%1$d)</string>
+    <string name="reader_home_article_count">Чланци: %1$d</string>
+    <string name="reader_home_newest_first">Најновије прво</string>
+    <string name="reader_home_all_available_shown">Приказани су сви доступни чланци</string>
+    <string name="reader_home_no_feeds_title">Још нема извора</string>
+    <string name="reader_home_no_feeds_message">Прати извор да овде видиш његове најновије чланке.</string>
+    <string name="reader_home_all_read_title">Све је прочитано</string>
+    <string name="reader_home_all_read_message">Нема непрочитаних чланака у овом избору.</string>
+    <string name="reader_home_no_articles_title">Још нема чланака</string>
+    <string name="reader_home_no_articles_message">Нови чланци из ових извора појавиће се овде.</string>
+    <string name="reader_home_library_empty_title">Твоја библиотека је празна</string>
+    <string name="reader_home_library_empty_message">Овде ће се појавити чланци које сачуваш за читање без интернета.</string>
+    <string name="reader_home_delete_article">Избриши сачувани чланак</string>
+    <string name="reader_home_choose_feed">Изабери извор</string>
+    <string name="reader_home_feed_count">Праћени извори: %1$d</string>
+    <string name="reader_home_source_subtitle">%1$s · %2$d непрочитаних</string>
+    <string name="reader_home_search_feeds">Претражи изворе</string>
+    <string name="reader_home_no_feed_match">Нема одговарајућих извора</string>
+</resources>

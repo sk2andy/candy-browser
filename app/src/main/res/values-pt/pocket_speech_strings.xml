@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reader_pocket_title">Voz offline Pocket TTS</string>
+    <string name="reader_pocket_summary">Escolha o modelo transferido correspondente ao idioma de cada artigo. Desativar mantém os seus pacotes de idiomas.</string>
+    <string name="reader_pocket_download_summary">Transfira um ou mais idiomas. Os artigos e o áudio gerado permanecem no dispositivo. Um idioma em falta ou incerto pede a sua escolha; nenhuma transferência de idioma começa automaticamente.</string>
+    <string name="reader_pocket_unknown_language">Escolha um idioma transferido para este texto ou use outra voz.</string>
+    <string name="reader_pocket_unsupported_language">Idioma detetado: %1$s. Não há modelo Pocket disponível. Use outra voz ou escolha um idioma se a deteção estiver incorreta.</string>
+    <string name="reader_pocket_article_language">Idioma do artigo: %1$s. Transfira o respetivo modelo ou escolha um idioma transferido para corrigir a deteção.</string>
+    <string name="reader_pocket_download_size">Transferência: %1$d MB · armazenamento: %2$d MB</string>
+    <string name="reader_pocket_cancel">Cancelar</string>
+    <string name="reader_pocket_use_language">Ler neste idioma</string>
+    <string name="reader_pocket_remove">Remover idioma</string>
+    <string name="reader_pocket_downloaded">Transferido · disponível offline</string>
+    <string name="reader_pocket_license_summary">Pocket TTS da Kyutai. A transferência implica aceitar a licença do modelo e os termos de atribuição da voz. Esta voz é gerada por IA.</string>
+    <string name="reader_pocket_license">Licenças do modelo e das vozes</string>
+</resources>

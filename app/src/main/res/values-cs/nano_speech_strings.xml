@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reader_nano_enabled_title">Připravit text pomocí Gemini Nano</string>
+    <string name="reader_nano_enabled_summary">Experimentální: zlepšuje čtení běžných německých a anglických zkratek a čísel. Nano nevytváří hlas: vybraný systémový nebo offline hlas zůstává stejný. Může zpozdit přehrávání.</string>
+    <string name="reader_nano_system_managed">Android tento model spravuje a sdílí jej s dalšími aplikacemi. Vypnutí pouze zakáže jeho použití v Candy.</string>
+    <string name="reader_nano_download_summary">Váš telefon podporuje Gemini Nano. Stáhněte jej pro místní přípravu výslovnosti. Tím se nestáhne ani nezmění hlas pro čtení.</string>
+    <string name="reader_nano_download">Stáhnout a zapnout Gemini Nano</string>
+    <string name="reader_nano_retry_download">Zkusit znovu stáhnout Gemini Nano</string>
+    <string name="reader_nano_cancel_download">Zrušit stahování</string>
+    <string name="reader_nano_downloading">Gemini Nano: staženo %1$s</string>
+    <string name="reader_nano_error">Gemini Nano se nepodařilo připravit. Ve čtení nahlas můžete pokračovat bez něj.</string>
+    <string name="reader_nano_unavailable">Gemini Nano nyní není k dispozici. Čtení nahlas pokračuje bez přípravy textu.</string>
+    <string name="reader_nano_preparing">Místní příprava textu pomocí Gemini Nano…</string>
+    <string name="reader_nano_fallback">Čtení nahlas bez přípravy pomocí Gemini Nano.</string>
+    <string name="reader_nano_metrics_notice">Google zpracovává metriky používání a výkonu. Příprava textu probíhá na vašem zařízení.</string>
+    <string name="reader_nano_terms">Podmínky a soukromí Google</string>
+    <string name="reader_nano_system_downloading">Android stahuje Gemini Nano. Zkontrolujte stav a zjistěte, zda již skončilo.</string>
+    <string name="reader_nano_refresh">Zkontrolovat stav stahování</string>
+    <string name="reader_nano_adult_title">Gemini Nano je pro dospělé</string>
+    <string name="reader_nano_adult_summary">Google pro tuto funkci vyžaduje věk alespoň 18 let. Před zapnutím Gemini Nano potvrďte svůj věk. Čtení nahlas bez Nano zůstává dostupné.</string>
+    <string name="reader_nano_adult_confirm">Je mi alespoň 18 let</string>
+    <string name="reader_nano_adult_cancel">Teď ne</string>
+</resources>

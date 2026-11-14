@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reader_nano_enabled_title">Припреми текст уз Gemini Nano</string>
+    <string name="reader_nano_enabled_summary">Експериментално: побољшава читање уобичајених немачких и енглеских скраћеница и бројева. Nano не ствара глас: изабрани системски или локални глас остаје исти. Може одложити репродукцију.</string>
+    <string name="reader_nano_system_managed">Android управља овим моделом и дели га са другим апликацијама. Искључивање онемогућава само употребу у Candy-ју.</string>
+    <string name="reader_nano_download_summary">Телефон подржава Gemini Nano. Преузми га за локалну припрему изговора. Ово не преузима нити мења глас.</string>
+    <string name="reader_nano_download">Преузми и омогући Gemini Nano</string>
+    <string name="reader_nano_retry_download">Понови преузимање Gemini Nano</string>
+    <string name="reader_nano_cancel_download">Откажи преузимање</string>
+    <string name="reader_nano_downloading">Gemini Nano: %1$s преузето</string>
+    <string name="reader_nano_error">Gemini Nano није могао да се припреми. Можеш наставити читање наглас без њега.</string>
+    <string name="reader_nano_unavailable">Gemini Nano тренутно није доступан. Читање се наставља без припреме текста.</string>
+    <string name="reader_nano_preparing">Локална припрема текста уз Gemini Nano…</string>
+    <string name="reader_nano_fallback">Читање наглас без припреме уз Gemini Nano.</string>
+    <string name="reader_nano_metrics_notice">Google обрађује податке о употреби и перформансама. Припрема текста одвија се на твом уређају.</string>
+    <string name="reader_nano_terms">Google услови и приватност</string>
+    <string name="reader_nano_system_downloading">Android преузима Gemini Nano. Провери статус да видиш да ли је завршено.</string>
+    <string name="reader_nano_refresh">Провери статус преузимања</string>
+    <string name="reader_nano_adult_title">Gemini Nano је за одрасле</string>
+    <string name="reader_nano_adult_summary">Google захтева да корисници ове функције имају најмање 18 година. Потврди узраст пре омогућавања Gemini Nano. Читање без модела Nano остаје доступно.</string>
+    <string name="reader_nano_adult_confirm">Имам најмање 18 година</string>
+    <string name="reader_nano_adult_cancel">Не сада</string>
+</resources>

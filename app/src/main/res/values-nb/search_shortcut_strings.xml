@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_search_shortcuts_title">Søkesnarveier</string>
+    <string name="settings_search_shortcuts_summary">Lag egne snarveier, som !gh for GitHub eller !yt for YouTube. Skriv en snarvei etterfulgt av mellomrom for å gjøre den til en brikke. Søkeforslag virker fortsatt. Tilbaketast i et tomt søk fjerner brikken.</string>
+    <string name="settings_search_shortcut_keyword">Snarvei</string>
+    <string name="settings_search_shortcut_keyword_summary">For eksempel !gh. Bruk opptil 32 bokstaver, tall, bindestreker eller understreker. Start med en bokstav eller et tall etter !.</string>
+    <string name="settings_search_shortcut_template">Mal for søkeadresse</string>
+    <string name="settings_search_shortcut_template_summary" formatted="false">Kopier søkeadressen til et nettsted og erstatt søkeordene med %s. Bruk nøyaktig én %s i en HTTP- eller HTTPS-adresse.</string>
+    <string name="settings_search_shortcut_add">Legg til snarvei</string>
+    <string name="settings_search_shortcut_edit">Rediger snarvei</string>
+    <string name="settings_search_shortcut_remove">Fjern</string>
+    <string name="settings_search_shortcut_edit_description">Rediger snarveien !%1$s</string>
+    <string name="settings_search_shortcut_remove_description">Fjern snarveien !%1$s</string>
+    <string name="settings_search_shortcut_invalid" formatted="false">Velg en unik snarvei som ikke samsvarer med en innebygd søkemotor, og en gyldig søkeadresse med nøyaktig én %s.</string>
+    <string name="settings_search_shortcut_examples">Start med et nettsted</string>
+    <string name="settings_search_shortcut_github">GitHub · !gh</string>
+    <string name="settings_search_shortcut_youtube">YouTube · !yt</string>
+    <string name="settings_search_shortcut_amazon">Amazon · !amazon</string>
+    <string name="search_shortcut_chip_remove">Fjern søkesnarveien !%1$s</string>
+</resources>

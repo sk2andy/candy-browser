@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="workflow_run_details">Detaljer</string>
+    <string name="workflow_run_dismiss">Avvis</string>
+    <string name="workflow_run_done">Alle trinn fullført</string>
+    <string name="workflow_run_waiting">Venter</string>
+    <string name="workflow_run_running">Kjører…</string>
+    <string name="workflow_run_succeeded">Fullført</string>
+    <string name="workflow_run_failed">Handlingen mislyktes</string>
+    <string name="workflow_run_skipped">Ikke utført</string>
+    <string name="workflow_run_cancelling">Stopper etter gjeldende operasjon…</string>
+    <string name="workflow_run_cancelled">Stoppet. Fullførte trinn beholdes.</string>
+    <string name="workflow_run_invalid">Denne arbeidsflyten er ugyldig.</string>
+    <string name="workflow_run_unsupported">Ikke tilgjengelig for denne siden.</string>
+    <string name="workflow_run_private">Denne arbeidsflyten lagrer data og kan ikke kjøres privat.</string>
+    <string name="workflow_run_pinned">Festede faner kan ikke lukkes.</string>
+    <string name="workflow_run_changed">Kildesiden ble endret. Resterende trinn ble stoppet.</string>
+    <string name="workflow_run_empty">Fant ingen lesbar artikkel.</string>
+    <string name="workflow_run_save_failed">Kunne ikke lagre. Sjekk lagring og ledig plass i leserbiblioteket. Inndataene forblir åpne.</string>
+    <string name="workflow_run_timeout">Operasjonen tok for lang tid. Resterende trinn ble stoppet.</string>
+</resources>

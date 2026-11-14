@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="browser_menu_reading_group">Читај и прикупљај</string>
+    <string name="browser_menu_workflows_group">Твоји токови рада</string>
+    <string name="browser_menu_feeds">Извори</string>
+    <string name="browser_menu_library">Библиотека</string>
+    <string name="browser_menu_discover_feeds">Откриј изворе</string>
+    <string name="browser_menu_feed_unread_count">%1$d непрочитаних</string>
+    <string name="browser_menu_section_expanded">Проширено</string>
+    <string name="browser_menu_section_collapsed">Скупљено</string>
+</resources>

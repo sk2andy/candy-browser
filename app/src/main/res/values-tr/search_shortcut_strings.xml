@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_search_shortcuts_title">Arama kısayolları</string>
+    <string name="settings_search_shortcuts_summary">GitHub için !gh, YouTube için !yt gibi kısayollar oluşturun. Ardına boşluk yazınca çipe dönüşür. Arama önerileri çalışmaya devam eder. Boş sorguda Geri tuşu çipi kaldırır.</string>
+    <string name="settings_search_shortcut_keyword">Kısayol</string>
+    <string name="settings_search_shortcut_keyword_summary">Örneğin !gh. En fazla 32 harf, rakam, kısa çizgi veya alt çizgi kullanın. ! sonrasında harf veya rakamla başlayın.</string>
+    <string name="settings_search_shortcut_template">Arama URL şablonu</string>
+    <string name="settings_search_shortcut_template_summary" formatted="false">Web sitesinin arama URL adresini kopyalayıp arama terimlerini %s ile değiştirin. HTTP veya HTTPS adresinde tam bir %s kullanın.</string>
+    <string name="settings_search_shortcut_add">Kısayol ekle</string>
+    <string name="settings_search_shortcut_edit">Kısayolu düzenle</string>
+    <string name="settings_search_shortcut_remove">Kaldır</string>
+    <string name="settings_search_shortcut_edit_description">!%1$s kısayolunu düzenle</string>
+    <string name="settings_search_shortcut_remove_description">!%1$s kısayolunu kaldır</string>
+    <string name="settings_search_shortcut_invalid" formatted="false">Yerleşik arama motorlarıyla eşleşmeyen benzersiz kısayol ve tam bir %s içeren geçerli arama URL adresi seçin.</string>
+    <string name="settings_search_shortcut_examples">Bir web sitesiyle başlayın</string>
+    <string name="settings_search_shortcut_github">GitHub · !gh</string>
+    <string name="settings_search_shortcut_youtube">YouTube · !yt</string>
+    <string name="settings_search_shortcut_amazon">Amazon · !amazon</string>
+    <string name="search_shortcut_chip_remove">!%1$s arama kısayolunu kaldır</string>
+</resources>

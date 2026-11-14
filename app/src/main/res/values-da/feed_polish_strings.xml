@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feeds_manual_address">Indtast feedadresse</string>
+    <string name="feeds_manual_note">Tag en kilde, du holder af, med. Indtast dens websted eller RSS-/Atom-adresse, og se nærmere, før du abonnerer.</string>
+    <string name="feeds_latest_articles">Seneste artikler</string>
+    <string name="feeds_subscription_failed">Kilden kunne ikke gemmes. Dine abonnementer er uændrede. Prøv igen.</string>
+    <string name="feeds_sources_empty_title">Giv plads til gode stemmer.</string>
+    <string name="feeds_sources_empty_note">Opdag en kilde fra hele verden, eller indtast din egen feedadresse. Nye artikler kommer i din indbakke.</string>
+</resources>

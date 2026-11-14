@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="workflow_run_details">Detalhes</string>
+    <string name="workflow_run_dismiss">Dispensar</string>
+    <string name="workflow_run_done">Todos os passos concluídos</string>
+    <string name="workflow_run_waiting">A aguardar</string>
+    <string name="workflow_run_running">A executar…</string>
+    <string name="workflow_run_succeeded">Concluído</string>
+    <string name="workflow_run_failed">Falha na ação</string>
+    <string name="workflow_run_skipped">Não executado</string>
+    <string name="workflow_run_cancelling">A parar após a operação atual…</string>
+    <string name="workflow_run_cancelled">Parado. Os passos concluídos são mantidos.</string>
+    <string name="workflow_run_invalid">Este fluxo é inválido.</string>
+    <string name="workflow_run_unsupported">Não disponível para esta página.</string>
+    <string name="workflow_run_private">Este fluxo guarda dados e não pode ser executado em privado.</string>
+    <string name="workflow_run_pinned">Os separadores fixados não podem ser fechados.</string>
+    <string name="workflow_run_changed">A página de origem mudou. Os passos restantes foram interrompidos.</string>
+    <string name="workflow_run_empty">Nenhum artigo legível encontrado.</string>
+    <string name="workflow_run_save_failed">Não foi possível guardar. Verifique o armazenamento e o espaço livre na biblioteca do Leitor. A entrada permanece aberta.</string>
+    <string name="workflow_run_timeout">A operação excedeu o tempo limite. Os passos restantes foram interrompidos.</string>
+</resources>

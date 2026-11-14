@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="browser_menu_reading_group">読む・集める</string>
+    <string name="browser_menu_workflows_group">自分のワークフロー</string>
+    <string name="browser_menu_feeds">フィード</string>
+    <string name="browser_menu_library">ライブラリ</string>
+    <string name="browser_menu_discover_feeds">フィードを探す</string>
+    <string name="browser_menu_feed_unread_count">%1$d 件未読</string>
+    <string name="browser_menu_section_expanded">展開済み</string>
+    <string name="browser_menu_section_collapsed">折りたたみ済み</string>
+</resources>

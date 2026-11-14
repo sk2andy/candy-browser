@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_search_shortcuts_title">搜尋快捷方式</string>
+    <string name="settings_search_shortcuts_summary">建立自己的快捷方式，如 GitHub 用 !gh、YouTube 用 !yt。輸入快捷方式再加空格即可轉為標籤。搜尋建議仍可使用。查詢為空時按退格鍵可移除標籤。</string>
+    <string name="settings_search_shortcut_keyword">快捷方式</string>
+    <string name="settings_search_shortcut_keyword_summary">例如 !gh。最多使用 32 個字母、數字、連字元或下劃線。! 後必須以字母或數字開頭。</string>
+    <string name="settings_search_shortcut_template">搜尋網址模板</string>
+    <string name="settings_search_shortcut_template_summary" formatted="false">複製網站的搜尋網址，將搜尋詞替換為 %s。HTTP 或 HTTPS 網址必須恰好包含一個 %s。</string>
+    <string name="settings_search_shortcut_add">新增快捷方式</string>
+    <string name="settings_search_shortcut_edit">編輯快捷方式</string>
+    <string name="settings_search_shortcut_remove">移除</string>
+    <string name="settings_search_shortcut_edit_description">編輯 !%1$s 快捷方式</string>
+    <string name="settings_search_shortcut_remove_description">移除 !%1$s 快捷方式</string>
+    <string name="settings_search_shortcut_invalid" formatted="false">請選擇不與內建搜尋引擎重複的唯一快捷方式，以及恰含一個 %s 的有效搜尋網址。</string>
+    <string name="settings_search_shortcut_examples">從網站開始</string>
+    <string name="settings_search_shortcut_github">GitHub · !gh</string>
+    <string name="settings_search_shortcut_youtube">YouTube · !yt</string>
+    <string name="settings_search_shortcut_amazon">Amazon · !amazon</string>
+    <string name="search_shortcut_chip_remove">移除 !%1$s 搜尋快捷方式</string>
+</resources>

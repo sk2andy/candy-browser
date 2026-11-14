@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="candy_trail_fit_all">Hiện tất cả</string>
+    <string name="candy_trail_current_page">Trang hiện tại</string>
+    <string name="candy_trail_graph_view">Đồ thị</string>
+    <string name="candy_trail_list_view">Danh sách</string>
+    <string name="candy_trail_focus_route">Tập trung lộ trình hiện tại</string>
+    <string name="candy_trail_all_branches">Hiện mọi nhánh</string>
+    <string name="candy_trail_collapse_branch">Thu gọn nhánh phụ</string>
+    <string name="candy_trail_expand_branch">Mở rộng nhánh phụ</string>
+    <string name="candy_trail_hidden_pages">Đã ẩn: %1$d</string>
+</resources>

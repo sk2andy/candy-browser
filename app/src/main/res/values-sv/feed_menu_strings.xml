@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="browser_menu_reading_group">Läs och samla</string>
+    <string name="browser_menu_workflows_group">Dina arbetsflöden</string>
+    <string name="browser_menu_feeds">Flöden</string>
+    <string name="browser_menu_library">Bibliotek</string>
+    <string name="browser_menu_discover_feeds">Upptäck flöden</string>
+    <string name="browser_menu_feed_unread_count">%1$d olästa</string>
+    <string name="browser_menu_section_expanded">Utökad</string>
+    <string name="browser_menu_section_collapsed">Hopfälld</string>
+</resources>

@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reader_home_title">Reader Studio</string>
+    <string name="reader_home_back">Înapoi</string>
+    <string name="reader_home_progress">%1$d%% citit</string>
+    <string name="reader_home_manage_feeds">Gestionează fluxurile</string>
+    <string name="reader_home_library_tab">Bibliotecă</string>
+    <string name="reader_home_feeds_tab">Fluxuri</string>
+    <string name="reader_home_all_feeds">Toate fluxurile</string>
+    <string name="reader_home_all_posts">Toate postările</string>
+    <string name="reader_home_unread_count">Necitite (%1$d)</string>
+    <string name="reader_home_article_count">Articole: %1$d</string>
+    <string name="reader_home_newest_first">Cele mai noi întâi</string>
+    <string name="reader_home_all_available_shown">Sunt afișate toate articolele disponibile</string>
+    <string name="reader_home_no_feeds_title">Încă nu există fluxuri</string>
+    <string name="reader_home_no_feeds_message">Urmărește un flux pentru a vedea aici cele mai recente articole.</string>
+    <string name="reader_home_all_read_title">Ai citit tot</string>
+    <string name="reader_home_all_read_message">Nu există articole necitite în această selecție.</string>
+    <string name="reader_home_no_articles_title">Încă nu există articole</string>
+    <string name="reader_home_no_articles_message">Articolele noi din aceste fluxuri vor apărea aici.</string>
+    <string name="reader_home_library_empty_title">Biblioteca ta este goală</string>
+    <string name="reader_home_library_empty_message">Articolele salvate pentru lectură offline vor apărea aici.</string>
+    <string name="reader_home_delete_article">Șterge articolul salvat</string>
+    <string name="reader_home_choose_feed">Alege un flux</string>
+    <string name="reader_home_feed_count">Fluxuri urmărite: %1$d</string>
+    <string name="reader_home_source_subtitle">%1$s · %2$d necitite</string>
+    <string name="reader_home_search_feeds">Caută fluxuri</string>
+    <string name="reader_home_no_feed_match">Niciun flux potrivit</string>
+</resources>

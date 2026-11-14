@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="workflow_run_details">Подробности</string>
+    <string name="workflow_run_dismiss">Затваряне</string>
+    <string name="workflow_run_done">Всички стъпки са завършени</string>
+    <string name="workflow_run_waiting">Изчакване</string>
+    <string name="workflow_run_running">Изпълнява се…</string>
+    <string name="workflow_run_succeeded">Завършено</string>
+    <string name="workflow_run_failed">Действието е неуспешно</string>
+    <string name="workflow_run_skipped">Не е изпълнено</string>
+    <string name="workflow_run_cancelling">Спиране след текущата операция…</string>
+    <string name="workflow_run_cancelled">Спряно. Завършените стъпки се запазват.</string>
+    <string name="workflow_run_invalid">Този работен процес е невалиден.</string>
+    <string name="workflow_run_unsupported">Недостъпно за тази страница.</string>
+    <string name="workflow_run_private">Този работен процес запазва данни и не може да се изпълни в поверителен режим.</string>
+    <string name="workflow_run_pinned">Закачените раздели не могат да се затварят.</string>
+    <string name="workflow_run_changed">Изходната страница е променена. Останалите стъпки са спрени.</string>
+    <string name="workflow_run_empty">Не е намерена четима статия.</string>
+    <string name="workflow_run_save_failed">Запазването е неуспешно. Проверете хранилището и свободното място в библиотеката за четене. Входната страница остава отворена.</string>
+    <string name="workflow_run_timeout">Времето за операцията изтече. Останалите стъпки са спрени.</string>
+</resources>

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="workflow_run_details">Подробности</string>
+    <string name="workflow_run_dismiss">Закрыть</string>
+    <string name="workflow_run_done">Все шаги выполнены</string>
+    <string name="workflow_run_waiting">Ожидание</string>
+    <string name="workflow_run_running">Выполняется…</string>
+    <string name="workflow_run_succeeded">Выполнено</string>
+    <string name="workflow_run_failed">Не удалось выполнить действие</string>
+    <string name="workflow_run_skipped">Не выполнено</string>
+    <string name="workflow_run_cancelling">Остановка после текущей операции…</string>
+    <string name="workflow_run_cancelled">Остановлено. Выполненные шаги сохраняются.</string>
+    <string name="workflow_run_invalid">Этот сценарий недействителен.</string>
+    <string name="workflow_run_unsupported">Недоступно для этой страницы.</string>
+    <string name="workflow_run_private">Этот сценарий сохраняет данные и не может выполняться в приватном режиме.</string>
+    <string name="workflow_run_pinned">Закреплённые вкладки нельзя закрыть.</string>
+    <string name="workflow_run_changed">Исходная страница изменилась. Остальные шаги остановлены.</string>
+    <string name="workflow_run_empty">Статья для чтения не найдена.</string>
+    <string name="workflow_run_save_failed">Не удалось сохранить. Проверьте хранилище и свободное место в библиотеке Читалки. Источник остаётся открытым.</string>
+    <string name="workflow_run_timeout">Время операции истекло. Остальные шаги остановлены.</string>
+</resources>

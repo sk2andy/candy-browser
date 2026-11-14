@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="browser_menu_reading_group">Четене и събиране</string>
+    <string name="browser_menu_workflows_group">Вашите работни процеси</string>
+    <string name="browser_menu_feeds">Емисии</string>
+    <string name="browser_menu_library">Библиотека</string>
+    <string name="browser_menu_discover_feeds">Откриване на емисии</string>
+    <string name="browser_menu_feed_unread_count">%1$d непрочетени</string>
+    <string name="browser_menu_section_expanded">Разгънато</string>
+    <string name="browser_menu_section_collapsed">Свито</string>
+</resources>

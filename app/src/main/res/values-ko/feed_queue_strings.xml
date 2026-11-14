@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feeds_player_open">듣기 대기열 열기</string>
+    <string name="feeds_player_close">듣기 대기열 닫기</string>
+    <string name="feeds_player_up_next">대기열 · %1$d</string>
+    <string name="feeds_player_import_saved">저장된 항목 추가</string>
+    <string name="feeds_player_empty">나를 위한 잠깐의 시간</string>
+    <string name="feeds_player_empty_title">다음으로 듣기 좋은 이야기.</string>
+    <string name="feeds_player_empty_hint">기사의 듣기 목록 아이콘으로 여기에 추가하세요. 북마크도 추가할 수 있습니다.</string>
+    <string name="feeds_player_preparing">준비 중</string>
+    <string name="feeds_player_listening">소리 내어 읽는 중</string>
+    <string name="feeds_player_ready">언제든 준비 완료</string>
+    <string name="feeds_player_progress">%1$d%% 읽음</string>
+    <string name="feeds_player_rate">%1$s×</string>
+    <string name="feeds_player_current">첫 번째 · %1$s</string>
+    <string name="feeds_player_move_up">위로 이동: %1$s</string>
+    <string name="feeds_player_remove">듣기 대기열에서 제거: %1$s</string>
+    <string name="feeds_player_load_failed">이 기사를 소리 내어 읽도록 준비하지 못했습니다.</string>
+    <string name="feeds_player_retry">다시 시도</string>
+    <string name="feeds_player_foreground">앱이 백그라운드에 있어도 계속 들을 수 있습니다. Android 미디어 알림에서도 재생을 제어할 수 있습니다.</string>
+</resources>

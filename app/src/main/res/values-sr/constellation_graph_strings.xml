@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="constellations_explore">Истражи своје везе</string>
+    <string name="constellations_show_list">Прикажи листу страница</string>
+    <string name="constellations_hide_list">Сакриј листу страница</string>
+    <string name="constellations_expand_map">Прошири мапу</string>
+    <string name="constellations_collapse_map">Скупи мапу</string>
+    <string name="constellations_all_topics">Све теме</string>
+    <string name="constellations_close_details">Затвори детаље странице</string>
+    <string name="constellations_fit_all">Прикажи све</string>
+    <string name="constellations_explore_hint">Споји или раздвоји прсте за зумирање и превуци за истраживање. Додирни страницу да видиш повезане странице. Везе приказују сличност тема.</string>
+    <string name="constellations_map_description">Странице на мапи: %1$d. Користи листу страница за истраживање помоћу контрола приступачности.</string>
+</resources>

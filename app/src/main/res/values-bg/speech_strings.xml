@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reader_voice_settings_title">Прочетете на глас.</string>
+    <string name="reader_voice_settings_summary">Изберете гласове на Android, Supertonic или Pocket TTS за статии и избран текст. Локалните модели работят офлайн след изтегляне.</string>
+    <string name="reader_voice_choice_title">Изберете глас</string>
+    <string name="reader_voice_choice_summary">Изберете Supertonic, Pocket TTS с езици за изтегляне или гласа на Android. Променете това в Настройки → Браузър → Четене на глас.</string>
+    <string name="reader_voice_use_offline">Използване на Supertonic</string>
+    <string name="reader_voice_use_system">Използване на гласа на Android</string>
+    <string name="reader_voice_download">Изтегляне на гласов модел</string>
+    <string name="reader_voice_delete">Изтриване на гласов модел</string>
+    <string name="reader_voice_enabled_title">Офлайн глас Supertonic</string>
+    <string name="reader_voice_enabled_summary">Когато е изключено, Candy използва гласа на Android. Изключването запазва изтегления модел.</string>
+    <string name="reader_voice_checking">Проверка на гласовия модел…</string>
+    <string name="reader_voice_working">Обновяване на гласовия модел…</string>
+    <string name="reader_voice_downloading">Изтегляне на гласов модел: %1$d%%</string>
+    <string name="reader_voice_model_error">Гласовият модел не можа да бъде изтеглен или обновен. Проверете връзката и свободното място, след което опитайте отново.</string>
+    <string name="reader_voice_ready">Гласовият модел е изтеглен. Готово за четене офлайн.</string>
+    <string name="reader_voice_missing">Гласовият модел не е изтеглен.</string>
+    <string name="reader_voice_model_details">Supertonic 3 · около 145 MB за изтегляне · 31 езика, включително английски и немски. Текстът на статията остава на устройството при използване на офлайн модела. Изтриването му връща гласовете на Android.</string>
+    <string name="reader_voice_model_terms">С изтеглянето или включването на модела приемате лиценза OpenRAIL-M, включително ограниченията за използване. Гласът е генериран от ИИ.</string>
+    <string name="reader_voice_playback_error">Този глас не можа да прочете текста. Опитайте отново или сменете гласа.</string>
+    <string name="reader_voice_model_license">Лиценз на модела: OpenRAIL-M</string>
+    <string name="reader_voice_unavailable">Четенето на глас е недостъпно. Проверете модела в Настройки → Браузър → Четене на глас или настройките на Android за синтез на реч.</string>
+</resources>

@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feed_catalog_title">发现来源</string>
+    <string name="feed_catalog_eyebrow">好奇心，无国界。</string>
+    <string name="feed_catalog_headline">你的下一个\n心仪订阅源。</string>
+    <string name="feed_catalog_intro">大事记。独立声音。找到值得关注的内容。</string>
+    <string name="feed_catalog_search_hint">主题、名称或订阅源地址</string>
+    <string name="feed_catalog_search">搜索来源</string>
+    <string name="feed_catalog_clear">清除搜索</string>
+    <string name="feed_catalog_manual">订阅源地址</string>
+    <string name="feed_catalog_topics">有意思！</string>
+    <string name="feed_catalog_technology">科技</string>
+    <string name="feed_catalog_science">科学</string>
+    <string name="feed_catalog_design">设计与文化</string>
+    <string name="feed_catalog_food">美食</string>
+    <string name="feed_catalog_travel">旅行</string>
+    <string name="feed_catalog_nature">自然</string>
+    <string name="feed_catalog_all_sources">所有来源</string>
+    <string name="feed_catalog_blogs">博客</string>
+    <string name="feed_catalog_news">新闻</string>
+    <string name="feed_catalog_all_languages">所有语言</string>
+    <plurals name="feed_catalog_languages_count">
+        <item quantity="other">%1$d 种语言</item>
+    </plurals>
+    <string name="feed_catalog_languages_title">你的阅读语言</string>
+    <string name="feed_catalog_languages_intro">选择一种、多种或整个世界。</string>
+    <string name="feed_catalog_language_search">查找语言</string>
+    <string name="feed_catalog_language_unknown">未提供语言</string>
+    <string name="feed_catalog_language_none">未找到语言。请尝试名称或语言代码。</string>
+    <string name="feed_catalog_language_apply">应用语言</string>
+    <plurals name="feed_catalog_languages_selection">
+        <item quantity="other">已选择 %1$d 种语言</item>
+    </plurals>
+    <string name="feed_catalog_world_selected">已包含整个世界</string>
+    <string name="feed_catalog_results">“%1$s”的来源</string>
+    <plurals name="feed_catalog_loaded_count">
+        <item quantity="other">此选择中有 %1$d 个来源</item>
+    </plurals>
+    <string name="feed_catalog_language_subset">语言筛选仅适用于已加载来源。加载更多以发现更多匹配内容。</string>
+    <string name="feed_catalog_preview">预览</string>
+    <string name="feed_catalog_subscribed">已订阅</string>
+    <string name="feed_catalog_loading">正在发现新声音…</string>
+    <string name="feed_catalog_loading_hint">下一个好来源也许近在眼前。</string>
+    <string name="feed_catalog_error_title">世界可以稍等片刻。</string>
+    <string name="feed_catalog_error_body">无法加载本地目录。你仍可添加订阅源地址。</string>
+    <string name="feed_catalog_retry">重试</string>
+    <string name="feed_catalog_empty_title">不太符合你的想法？</string>
+    <string name="feed_catalog_empty_body">Plenary 目录中尚无此来源。请尝试名称，或将网站或订阅源地址粘贴到搜索框。</string>
+    <string name="feed_catalog_more">加载更多来源</string>
+    <string name="feed_catalog_more_failed">无法加载更多来源。现有结果仍在。</string>
+    <string name="feed_catalog_reset">探索主题</string>
+    <string name="feed_catalog_credit">Plenary 精选来源 · CC0</string>
+    <string name="feed_catalog_privacy">私密搜索内置 Plenary 目录，离线也可使用。仅打开订阅源预览时才连接发布者。</string>
+    <string name="feed_catalog_private_title">请在普通标签页发现来源</string>
+    <string name="feed_catalog_private_body">打开普通标签页以管理来源。如需预览而不保存订阅，请将网站或订阅源地址粘贴到搜索框。</string>
+    <string name="feed_catalog_no_description">打开预览了解此来源。</string>
+    <string name="feed_catalog_close_languages">关闭阅读语言</string>
+    <string name="feed_catalog_website_unknown">原始订阅源</string>
+    <string name="feed_catalog_address_detected">检测到地址 · 打开预览</string>
+</resources>

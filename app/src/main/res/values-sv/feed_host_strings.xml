@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feeds_next_unread">Nästa olästa artikel</string>
+    <string name="feeds_notifications_denied">Aviseringar är avstängda i Android. Ditt val har sparats.</string>
+    <string name="feeds_notification_channel">Candy-flöden</string>
+    <string name="feeds_notification_count">%1$d olästa artiklar väntar.</string>
+    <string name="feeds_speech_next">Nästa artikel</string>
+    <string name="feeds_speech_speed">Läshastighet: %1$s×</string>
+    <string name="feeds_speech_unavailable">Ingen röst är tillgänglig. Kontrollera Androids inställningar för text till tal.</string>
+</resources>

@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reader_home_title">Reader Studio</string>
+    <string name="reader_home_back">Назад</string>
+    <string name="reader_home_progress">%1$d%% прочитано</string>
+    <string name="reader_home_manage_feeds">Управувај со изворите</string>
+    <string name="reader_home_library_tab">Библиотека</string>
+    <string name="reader_home_feeds_tab">Извори</string>
+    <string name="reader_home_all_feeds">Сите извори</string>
+    <string name="reader_home_all_posts">Сите објави</string>
+    <string name="reader_home_unread_count">Непрочитани (%1$d)</string>
+    <string name="reader_home_article_count">Статии: %1$d</string>
+    <string name="reader_home_newest_first">Најновите први</string>
+    <string name="reader_home_all_available_shown">Прикажани се сите достапни статии</string>
+    <string name="reader_home_no_feeds_title">Сѐ уште нема извори</string>
+    <string name="reader_home_no_feeds_message">Следи извор за да ги гледаш неговите најнови статии тука.</string>
+    <string name="reader_home_all_read_title">Сѐ е прочитано</string>
+    <string name="reader_home_all_read_message">Нема непрочитани статии во овој избор.</string>
+    <string name="reader_home_no_articles_title">Сѐ уште нема статии</string>
+    <string name="reader_home_no_articles_message">Новите статии од овие извори ќе се појават тука.</string>
+    <string name="reader_home_library_empty_title">Твојата библиотека е празна</string>
+    <string name="reader_home_library_empty_message">Статиите што ги зачувуваш за читање без интернет ќе се појават тука.</string>
+    <string name="reader_home_delete_article">Избриши зачувана статија</string>
+    <string name="reader_home_choose_feed">Избери извор</string>
+    <string name="reader_home_feed_count">Следени извори: %1$d</string>
+    <string name="reader_home_source_subtitle">%1$s · %2$d непрочитани</string>
+    <string name="reader_home_search_feeds">Пребарај извори</string>
+    <string name="reader_home_no_feed_match">Нема соодветни извори</string>
+</resources>

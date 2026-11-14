@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feeds_player_retry">Prøv igjen</string>
+    <string name="feeds_player_open">Åpne lyttekø</string>
+    <string name="feeds_player_close">Lukk lyttekø</string>
+    <string name="feeds_player_up_next">Kø · %1$d</string>
+    <string name="feeds_player_import_saved">Legg til lagrede</string>
+    <string name="feeds_player_empty">Et øyeblikk for deg</string>
+    <string name="feeds_player_empty_title">Din neste gode lytteopplevelse.</string>
+    <string name="feeds_player_empty_hint">Bruk lyttelisteikonet på en artikkel for å legge den til her. Bokmerkene dine kan også bli med.</string>
+    <string name="feeds_player_preparing">Gjør klar</string>
+    <string name="feeds_player_listening">Leser høyt nå</string>
+    <string name="feeds_player_ready">Klar når du er</string>
+    <string name="feeds_player_progress">%1$d%% lest høyt</string>
+    <string name="feeds_player_rate">%1$s×</string>
+    <string name="feeds_player_current">Først ut · %1$s</string>
+    <string name="feeds_player_move_up">Flytt opp: %1$s</string>
+    <string name="feeds_player_remove">Fjern fra lyttekøen: %1$s</string>
+    <string name="feeds_player_load_failed">Kunne ikke klargjøre denne artikkelen for høytlesing.</string>
+    <string name="feeds_player_foreground">Fortsett å lytte med appen i bakgrunnen. Avspillingskontroller er også tilgjengelige i Androids medievarsel.</string>
+</resources>

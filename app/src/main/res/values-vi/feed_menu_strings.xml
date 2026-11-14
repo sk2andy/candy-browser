@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="browser_menu_reading_group">Đọc và sưu tầm</string>
+    <string name="browser_menu_workflows_group">Quy trình của bạn</string>
+    <string name="browser_menu_feeds">Nguồn tin</string>
+    <string name="browser_menu_library">Thư viện</string>
+    <string name="browser_menu_discover_feeds">Khám phá nguồn tin</string>
+    <string name="browser_menu_feed_unread_count">%1$d chưa đọc</string>
+    <string name="browser_menu_section_expanded">Đã mở rộng</string>
+    <string name="browser_menu_section_collapsed">Đã thu gọn</string>
+</resources>

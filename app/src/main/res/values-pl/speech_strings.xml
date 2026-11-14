@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reader_voice_settings_title">Czytanie na głos</string>
+    <string name="reader_voice_settings_summary">Wybierz głosy Androida, Supertonic lub Pocket TTS dla artykułów i zaznaczonego tekstu. Modele lokalne po pobraniu działają offline.</string>
+    <string name="reader_voice_choice_title">Wybierz głos</string>
+    <string name="reader_voice_choice_summary">Wybierz Supertonic, Pocket TTS z językami do pobrania lub głos Androida. Możesz to zmienić w Ustawienia → Przeglądarka → Czytanie na głos.</string>
+    <string name="reader_voice_use_offline">Użyj Supertonic</string>
+    <string name="reader_voice_use_system">Użyj głosu Androida</string>
+    <string name="reader_voice_download">Pobierz model głosu</string>
+    <string name="reader_voice_delete">Usuń model głosu</string>
+    <string name="reader_voice_enabled_title">Głos offline Supertonic</string>
+    <string name="reader_voice_enabled_summary">Po wyłączeniu Candy używa głosu Androida. Wyłączenie zachowuje pobrany model.</string>
+    <string name="reader_voice_checking">Sprawdzanie modelu głosu…</string>
+    <string name="reader_voice_working">Aktualizowanie modelu głosu…</string>
+    <string name="reader_voice_downloading">Pobieranie modelu głosu: %1$d%%</string>
+    <string name="reader_voice_model_error">Nie udało się pobrać lub zaktualizować modelu głosu. Sprawdź połączenie i wolną pamięć, a następnie spróbuj ponownie.</string>
+    <string name="reader_voice_ready">Model głosu pobrany. Gotowy do czytania offline.</string>
+    <string name="reader_voice_missing">Model głosu nie został pobrany.</string>
+    <string name="reader_voice_model_details">Supertonic 3 · około 145 MB do pobrania · 31 języków, w tym angielski i niemiecki. Podczas korzystania z modelu offline tekst artykułu pozostaje na urządzeniu. Usunięcie modelu przywraca głosy Androida.</string>
+    <string name="reader_voice_model_terms">Pobierając lub włączając model, akceptujesz licencję OpenRAIL-M, w tym ograniczenia użytkowania. Głos jest generowany przez AI.</string>
+    <string name="reader_voice_playback_error">Ten głos nie mógł odczytać tekstu. Spróbuj ponownie lub zmień głos.</string>
+    <string name="reader_voice_model_license">Licencja modelu: OpenRAIL-M</string>
+    <string name="reader_voice_unavailable">Czytanie na głos jest niedostępne. Sprawdź model głosu w Ustawienia → Przeglądarka → Czytanie na głos lub ustawienia syntezy mowy Androida.</string>
+</resources>

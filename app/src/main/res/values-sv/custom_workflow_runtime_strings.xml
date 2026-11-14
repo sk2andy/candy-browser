@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="workflow_run_details">Detaljer</string>
+    <string name="workflow_run_dismiss">Stäng</string>
+    <string name="workflow_run_done">Alla steg slutförda</string>
+    <string name="workflow_run_waiting">Väntar</string>
+    <string name="workflow_run_running">Körs…</string>
+    <string name="workflow_run_succeeded">Slutfört</string>
+    <string name="workflow_run_failed">Åtgärden misslyckades</string>
+    <string name="workflow_run_skipped">Inte utfört</string>
+    <string name="workflow_run_cancelling">Stoppar efter aktuell åtgärd…</string>
+    <string name="workflow_run_cancelled">Stoppat. Slutförda steg behålls.</string>
+    <string name="workflow_run_invalid">Det här arbetsflödet är ogiltigt.</string>
+    <string name="workflow_run_unsupported">Inte tillgängligt för den här sidan.</string>
+    <string name="workflow_run_private">Det här arbetsflödet sparar data och kan inte köras privat.</string>
+    <string name="workflow_run_pinned">Fästa flikar kan inte stängas.</string>
+    <string name="workflow_run_changed">Källsidan ändrades. Återstående steg stoppades.</string>
+    <string name="workflow_run_empty">Ingen läsbar artikel hittades.</string>
+    <string name="workflow_run_save_failed">Kunde inte spara. Kontrollera lagring och ledigt utrymme i läsbiblioteket. Indatan förblir öppen.</string>
+    <string name="workflow_run_timeout">Åtgärden tog för lång tid. Återstående steg stoppades.</string>
+</resources>

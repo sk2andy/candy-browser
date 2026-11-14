@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="workflow_run_details">Podrobnosti</string>
+    <string name="workflow_run_dismiss">Zavřít</string>
+    <string name="workflow_run_done">Všechny kroky dokončeny</string>
+    <string name="workflow_run_waiting">Čekání</string>
+    <string name="workflow_run_running">Probíhá…</string>
+    <string name="workflow_run_succeeded">Dokončeno</string>
+    <string name="workflow_run_failed">Akce selhala</string>
+    <string name="workflow_run_skipped">Neprovedeno</string>
+    <string name="workflow_run_cancelling">Zastavování po aktuální operaci…</string>
+    <string name="workflow_run_cancelled">Zastaveno. Dokončené kroky zůstanou zachovány.</string>
+    <string name="workflow_run_invalid">Tento postup je neplatný.</string>
+    <string name="workflow_run_unsupported">Pro tuto stránku není k dispozici.</string>
+    <string name="workflow_run_private">Tento postup ukládá data a nelze jej spustit v anonymním režimu.</string>
+    <string name="workflow_run_pinned">Připnuté panely nelze zavřít.</string>
+    <string name="workflow_run_changed">Zdrojová stránka se změnila. Zbývající kroky byly zastaveny.</string>
+    <string name="workflow_run_empty">Nenalezen žádný čitelný článek.</string>
+    <string name="workflow_run_save_failed">Uložení se nezdařilo. Zkontrolujte úložiště a volné místo v knihovně Čtečky. Vstup zůstane otevřený.</string>
+    <string name="workflow_run_timeout">Vypršel čas operace. Zbývající kroky byly zastaveny.</string>
+</resources>

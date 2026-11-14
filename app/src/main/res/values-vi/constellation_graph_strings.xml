@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="constellations_explore">Khám phá kết nối</string>
+    <string name="constellations_show_list">Hiện danh sách trang</string>
+    <string name="constellations_hide_list">Ẩn danh sách trang</string>
+    <string name="constellations_expand_map">Mở rộng bản đồ</string>
+    <string name="constellations_collapse_map">Thu gọn bản đồ</string>
+    <string name="constellations_all_topics">Mọi chủ đề</string>
+    <string name="constellations_close_details">Đóng chi tiết trang</string>
+    <string name="constellations_fit_all">Hiện tất cả</string>
+    <string name="constellations_explore_hint">Chụm để thu phóng, kéo để khám phá. Chạm vào trang để xem trang liên quan. Đường nối biểu thị độ tương đồng chủ đề.</string>
+    <string name="constellations_map_description">Số trang trên bản đồ: %1$d. Dùng danh sách trang để khám phá bằng điều khiển hỗ trợ tiếp cận.</string>
+</resources>

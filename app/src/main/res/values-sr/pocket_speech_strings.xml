@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reader_pocket_cancel">Откажи</string>
+    <string name="reader_pocket_title">Pocket TTS глас без интернета</string>
+    <string name="reader_pocket_summary">Изабери преузети модел који одговара језику сваког чланка. Искључивање задржава језичке пакете.</string>
+    <string name="reader_pocket_download_summary">Преузми један или више језика. Чланци и генерисани звук остају на уређају. Ако језик недостаје или је несигуран, тражи се избор; преузимања језика не почињу аутоматски.</string>
+    <string name="reader_pocket_unknown_language">Изабери преузети језик за овај текст или користи други глас.</string>
+    <string name="reader_pocket_unsupported_language">Препознати језик: %1$s. Pocket модел није доступан за њега. Користи други глас или изабери језик ако је препознавање било нетачно.</string>
+    <string name="reader_pocket_article_language">Језик чланка: %1$s. Преузми његов модел или изабери преузети језик да исправиш препознавање.</string>
+    <string name="reader_pocket_download_size">Преузимање: %1$d MB · складиште: %2$d MB</string>
+    <string name="reader_pocket_use_language">Читај на овом језику</string>
+    <string name="reader_pocket_remove">Уклони језик</string>
+    <string name="reader_pocket_downloaded">Преузето · доступно без интернета</string>
+    <string name="reader_pocket_license_summary">Pocket TTS компаније Kyutai. Преузимањем прихваташ лиценцу модела и услове навођења аутора гласа. Овај глас је генерисан вештачком интелигенцијом.</string>
+    <string name="reader_pocket_license">Лиценце модела и гласа</string>
+</resources>

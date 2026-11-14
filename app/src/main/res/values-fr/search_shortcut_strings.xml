@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_search_shortcuts_title">Raccourcis de recherche</string>
+    <string name="settings_search_shortcuts_summary">Créez vos raccourcis, comme !gh pour GitHub ou !yt pour YouTube. Saisissez un raccourci suivi d’un espace pour le transformer en pastille. Les suggestions restent actives. La touche retour arrière sur une recherche vide retire la pastille.</string>
+    <string name="settings_search_shortcut_keyword">Raccourci</string>
+    <string name="settings_search_shortcut_keyword_summary">Par exemple !gh. Utilisez jusqu’à 32 lettres, chiffres, tirets ou traits de soulignement. Commencez par une lettre ou un chiffre après !.</string>
+    <string name="settings_search_shortcut_template">Modèle d’URL de recherche</string>
+    <string name="settings_search_shortcut_template_summary" formatted="false">Copiez l’URL de recherche d’un site et remplacez les termes recherchés par %s. Utilisez exactement un %s dans une URL HTTP ou HTTPS.</string>
+    <string name="settings_search_shortcut_add">Ajouter un raccourci</string>
+    <string name="settings_search_shortcut_edit">Modifier le raccourci</string>
+    <string name="settings_search_shortcut_remove">Supprimer</string>
+    <string name="settings_search_shortcut_edit_description">Modifier le raccourci !%1$s</string>
+    <string name="settings_search_shortcut_remove_description">Supprimer le raccourci !%1$s</string>
+    <string name="settings_search_shortcut_invalid" formatted="false">Choisissez un raccourci unique, différent des moteurs intégrés, et une URL de recherche valide contenant exactement un %s.</string>
+    <string name="settings_search_shortcut_examples">Commencer par un site</string>
+    <string name="settings_search_shortcut_github">GitHub · !gh</string>
+    <string name="settings_search_shortcut_youtube">YouTube · !yt</string>
+    <string name="settings_search_shortcut_amazon">Amazon · !amazon</string>
+    <string name="search_shortcut_chip_remove">Supprimer le raccourci de recherche !%1$s</string>
+</resources>

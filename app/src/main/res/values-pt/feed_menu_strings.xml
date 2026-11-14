@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="browser_menu_reading_group">Ler e colecionar</string>
+    <string name="browser_menu_workflows_group">Os seus fluxos de trabalho</string>
+    <string name="browser_menu_feeds">Feeds</string>
+    <string name="browser_menu_library">Biblioteca</string>
+    <string name="browser_menu_discover_feeds">Descobrir feeds</string>
+    <string name="browser_menu_feed_unread_count">%1$d não lidos</string>
+    <string name="browser_menu_section_expanded">Expandido</string>
+    <string name="browser_menu_section_collapsed">Recolhido</string>
+</resources>

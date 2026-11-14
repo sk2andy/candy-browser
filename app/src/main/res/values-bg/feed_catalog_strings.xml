@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feed_catalog_clear">Изчистване на търсенето</string>
+    <string name="feed_catalog_preview">Преглед</string>
+    <string name="feed_catalog_retry">Опитай отново</string>
+    <string name="feed_catalog_title">Откриване на източници</string>
+    <string name="feed_catalog_eyebrow">ЛЮБОПИТСТВО БЕЗ ГРАНИЦИ.</string>
+    <string name="feed_catalog_headline">Следващият ви\nлюбим канал.</string>
+    <string name="feed_catalog_intro">Големи истории. Независими гласове. Намерете нещо, което си струва да следвате.</string>
+    <string name="feed_catalog_search_hint">Тема, име или адрес на канал</string>
+    <string name="feed_catalog_search">Търсене на източници</string>
+    <string name="feed_catalog_manual">Адрес на канала</string>
+    <string name="feed_catalog_topics">О, интересно!</string>
+    <string name="feed_catalog_technology">Технологии</string>
+    <string name="feed_catalog_science">Наука</string>
+    <string name="feed_catalog_design">Дизайн и култура</string>
+    <string name="feed_catalog_food">Храна</string>
+    <string name="feed_catalog_travel">Пътувания</string>
+    <string name="feed_catalog_nature">Природа</string>
+    <string name="feed_catalog_all_sources">Всички източници</string>
+    <string name="feed_catalog_blogs">Блогове</string>
+    <string name="feed_catalog_news">Новини</string>
+    <string name="feed_catalog_all_languages">Всички езици</string>
+    <plurals name="feed_catalog_languages_count">
+        <item quantity="one">%1$d език</item>
+        <item quantity="other">%1$d езика</item>
+    </plurals>
+    <string name="feed_catalog_languages_title">Вашите езици за четене</string>
+    <string name="feed_catalog_languages_intro">Изберете един, няколко или целия свят.</string>
+    <string name="feed_catalog_language_search">Намиране на език</string>
+    <string name="feed_catalog_language_unknown">Езикът не е посочен</string>
+    <string name="feed_catalog_language_none">Не е намерен език. Опитайте името или езиковия му код.</string>
+    <string name="feed_catalog_language_apply">Прилагане на езиците</string>
+    <plurals name="feed_catalog_languages_selection">
+        <item quantity="one">%1$d избран език</item>
+        <item quantity="other">%1$d избрани езика</item>
+    </plurals>
+    <string name="feed_catalog_world_selected">Включен е целият свят</string>
+    <string name="feed_catalog_results">Източници за „%1$s“</string>
+    <plurals name="feed_catalog_loaded_count">
+        <item quantity="one">%1$d източник в този избор</item>
+        <item quantity="other">%1$d източника в този избор</item>
+    </plurals>
+    <string name="feed_catalog_language_subset">Езиците филтрират източниците, заредени досега. Заредете още за повече съвпадения.</string>
+    <string name="feed_catalog_subscribed">Абонирани</string>
+    <string name="feed_catalog_loading">Търсене на нови гласове…</string>
+    <string name="feed_catalog_loading_hint">Следващият ви добър източник може да е съвсем наблизо.</string>
+    <string name="feed_catalog_error_title">Светът може да почака малко.</string>
+    <string name="feed_catalog_error_body">Локалният каталог не можа да бъде зареден. Все още можете да добавите адрес на канал.</string>
+    <string name="feed_catalog_empty_title">Не е точно това, което търсехте?</string>
+    <string name="feed_catalog_empty_body">Този източник все още не е в каталога Plenary. Опитайте името му или поставете адреса на сайта или канала в полето за търсене.</string>
+    <string name="feed_catalog_more">Зареждане на още източници</string>
+    <string name="feed_catalog_more_failed">Не можаха да се заредят още източници. Резултатите ви са все още тук.</string>
+    <string name="feed_catalog_reset">Разглеждане на теми</string>
+    <string name="feed_catalog_credit">Подбрани източници от Plenary · CC0</string>
+    <string name="feed_catalog_privacy">Търсете поверително във включения каталог Plenary, дори офлайн. Само отварянето на преглед на канал се свързва с издателя.</string>
+    <string name="feed_catalog_private_title">Откривайте в обикновен раздел</string>
+    <string name="feed_catalog_private_body">Отворете обикновен раздел за управление на източници. За преглед без абонамент поставете адрес на сайт или канал в полето за търсене.</string>
+    <string name="feed_catalog_no_description">Отворете преглед, за да опознаете този източник.</string>
+    <string name="feed_catalog_close_languages">Затваряне на езиците за четене</string>
+    <string name="feed_catalog_website_unknown">Оригинален канал</string>
+    <string name="feed_catalog_address_detected">Открит адрес · Отваряне на преглед</string>
+</resources>

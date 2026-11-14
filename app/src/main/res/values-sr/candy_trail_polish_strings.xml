@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="candy_trail_fit_all">Прикажи све</string>
+    <string name="candy_trail_current_page">Тренутна страница</string>
+    <string name="candy_trail_graph_view">Граф</string>
+    <string name="candy_trail_list_view">Листа</string>
+    <string name="candy_trail_focus_route">Фокусирај тренутну путању</string>
+    <string name="candy_trail_all_branches">Прикажи све гране</string>
+    <string name="candy_trail_collapse_branch">Скупи бочне гране</string>
+    <string name="candy_trail_expand_branch">Прошири бочне гране</string>
+    <string name="candy_trail_hidden_pages">Скривено: %1$d</string>
+</resources>

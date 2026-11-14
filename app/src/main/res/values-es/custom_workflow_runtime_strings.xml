@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="workflow_run_details">Detalles</string>
+    <string name="workflow_run_dismiss">Cerrar</string>
+    <string name="workflow_run_done">Todos los pasos completados</string>
+    <string name="workflow_run_waiting">En espera</string>
+    <string name="workflow_run_running">En ejecución…</string>
+    <string name="workflow_run_succeeded">Completado</string>
+    <string name="workflow_run_failed">Error en la acción</string>
+    <string name="workflow_run_skipped">Sin ejecutar</string>
+    <string name="workflow_run_cancelling">Deteniendo tras la operación actual…</string>
+    <string name="workflow_run_cancelled">Detenido. Los pasos completados se conservan.</string>
+    <string name="workflow_run_invalid">Este flujo no es válido.</string>
+    <string name="workflow_run_unsupported">No disponible para esta página.</string>
+    <string name="workflow_run_private">Este flujo guarda datos y no puede ejecutarse en privado.</string>
+    <string name="workflow_run_pinned">Las pestañas fijadas no se pueden cerrar.</string>
+    <string name="workflow_run_changed">La página de origen ha cambiado. Se detuvieron los pasos restantes.</string>
+    <string name="workflow_run_empty">No se encontró ningún artículo legible.</string>
+    <string name="workflow_run_save_failed">No se pudo guardar. Revisa el almacenamiento y el espacio libre en la biblioteca de Lector. La entrada sigue abierta.</string>
+    <string name="workflow_run_timeout">La operación agotó el tiempo de espera. Se detuvieron los pasos restantes.</string>
+</resources>

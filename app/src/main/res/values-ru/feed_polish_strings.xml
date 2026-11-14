@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feeds_manual_address">Ввести адрес ленты</string>
+    <string name="feeds_manual_note">Добавьте любимый источник. Введите адрес сайта или ленты RSS/Atom и просмотрите её перед подпиской.</string>
+    <string name="feeds_latest_articles">Последние статьи</string>
+    <string name="feeds_subscription_failed">Не удалось сохранить источник. Ваши подписки не изменились. Попробуйте ещё раз.</string>
+    <string name="feeds_sources_empty_title">Дайте место интересным голосам.</string>
+    <string name="feeds_sources_empty_note">Откройте источник из любой точки мира или добавьте свой адрес ленты. Новые статьи будут приходить во входящие.</string>
+</resources>

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="candy_trail_fit_all">Alles tonen</string>
+    <string name="candy_trail_current_page">Huidige pagina</string>
+    <string name="candy_trail_graph_view">Grafiek</string>
+    <string name="candy_trail_list_view">Lijst</string>
+    <string name="candy_trail_focus_route">Huidig pad uitlichten</string>
+    <string name="candy_trail_all_branches">Alle vertakkingen tonen</string>
+    <string name="candy_trail_collapse_branch">Zijtakken inklappen</string>
+    <string name="candy_trail_expand_branch">Zijtakken uitklappen</string>
+    <string name="candy_trail_hidden_pages">Verborgen: %1$d</string>
+</resources>

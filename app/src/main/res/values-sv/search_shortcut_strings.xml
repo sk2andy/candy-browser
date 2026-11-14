@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_search_shortcuts_title">Sökgenvägar</string>
+    <string name="settings_search_shortcuts_summary">Skapa egna genvägar, som !gh för GitHub eller !yt för YouTube. Skriv en genväg följd av ett mellanslag för att göra den till en bricka. Sökförslag fungerar fortfarande. Backsteg i en tom sökning tar bort brickan.</string>
+    <string name="settings_search_shortcut_keyword">Genväg</string>
+    <string name="settings_search_shortcut_keyword_summary">Till exempel !gh. Använd högst 32 bokstäver, siffror, bindestreck eller understreck. Börja med en bokstav eller siffra efter !.</string>
+    <string name="settings_search_shortcut_template">Mall för sökadress</string>
+    <string name="settings_search_shortcut_template_summary" formatted="false">Kopiera en webbplats sökadress och ersätt sökorden med %s. Använd exakt en %s i en HTTP- eller HTTPS-adress.</string>
+    <string name="settings_search_shortcut_add">Lägg till genväg</string>
+    <string name="settings_search_shortcut_edit">Redigera genväg</string>
+    <string name="settings_search_shortcut_remove">Ta bort</string>
+    <string name="settings_search_shortcut_edit_description">Redigera genvägen !%1$s</string>
+    <string name="settings_search_shortcut_remove_description">Ta bort genvägen !%1$s</string>
+    <string name="settings_search_shortcut_invalid" formatted="false">Välj en unik genväg som inte matchar en inbyggd sökmotor och en giltig sökadress med exakt en %s.</string>
+    <string name="settings_search_shortcut_examples">Börja med en webbplats</string>
+    <string name="settings_search_shortcut_github">GitHub · !gh</string>
+    <string name="settings_search_shortcut_youtube">YouTube · !yt</string>
+    <string name="settings_search_shortcut_amazon">Amazon · !amazon</string>
+    <string name="search_shortcut_chip_remove">Ta bort sökgenvägen !%1$s</string>
+</resources>

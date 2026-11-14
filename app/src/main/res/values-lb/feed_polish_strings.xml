@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feeds_manual_address">Feedadress aginn</string>
+    <string name="feeds_manual_note">Bréng eng Quell mat, déi s du gär hues. Gëff hir Websäit oder RSS-/Atom-Adress an a kuck se dir un, éier s du abonnéiers.</string>
+    <string name="feeds_latest_articles">Neisten Artikelen</string>
+    <string name="feeds_subscription_failed">Dës Quell konnt net gespäichert ginn. Deng Abonnementer sinn onverännert. Probéier nach eng Kéier.</string>
+    <string name="feeds_sources_empty_title">Maach Plaz fir gutt Stëmmen.</string>
+    <string name="feeds_sources_empty_note">Entdeck eng Quell aus der ganzer Welt oder gëff deng eege Feedadress an. Nei Artikele kommen an deng Inbox.</string>
+</resources>

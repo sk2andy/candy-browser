@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reader_home_title">Reader Studio</string>
+    <string name="reader_home_back">Natrag</string>
+    <string name="reader_home_progress">%1$d%% čitanje</string>
+    <string name="reader_home_manage_feeds">Upravljaj izvorima</string>
+    <string name="reader_home_library_tab">Knjižnica</string>
+    <string name="reader_home_feeds_tab">Izvori</string>
+    <string name="reader_home_all_feeds">Svi izvori</string>
+    <string name="reader_home_all_posts">Sve objave</string>
+    <string name="reader_home_unread_count">Nepročitano (%1$d)</string>
+    <string name="reader_home_article_count">Članci: %1$d</string>
+    <string name="reader_home_newest_first">Najnovije prvo</string>
+    <string name="reader_home_all_available_shown">Prikazani su svi dostupni članci</string>
+    <string name="reader_home_no_feeds_title">Još nema izvora</string>
+    <string name="reader_home_no_feeds_message">Prati izvor kako bi ovdje vidio najnovije članke.</string>
+    <string name="reader_home_all_read_title">Sve je pročitano</string>
+    <string name="reader_home_all_read_message">Nema nepročitanih članaka u ovom odabiru.</string>
+    <string name="reader_home_no_articles_title">Još nema članaka</string>
+    <string name="reader_home_no_articles_message">Novi članci iz ovih izvora pojavit će se ovdje.</string>
+    <string name="reader_home_library_empty_title">Tvoja je knjižnica prazna</string>
+    <string name="reader_home_library_empty_message">Ovdje će se pojaviti članci koje spremiš za čitanje izvan mreže.</string>
+    <string name="reader_home_delete_article">Izbriši spremljeni članak</string>
+    <string name="reader_home_choose_feed">Odaberi izvor</string>
+    <string name="reader_home_feed_count">Praćeni izvori: %1$d</string>
+    <string name="reader_home_source_subtitle">%1$s · %2$d nepročitanih</string>
+    <string name="reader_home_search_feeds">Pretraži izvore</string>
+    <string name="reader_home_no_feed_match">Nema odgovarajućih izvora</string>
+</resources>

@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feed_catalog_title">Odkrywaj źródła</string>
+    <string name="feed_catalog_eyebrow">CIEKAWOŚĆ BEZ GRANIC.</string>
+    <string name="feed_catalog_headline">Twój kolejny\nulubiony kanał.</string>
+    <string name="feed_catalog_intro">Ważne historie. Niezależne głosy. Znajdź coś wartego śledzenia.</string>
+    <string name="feed_catalog_search_hint">Temat, nazwa lub adres kanału</string>
+    <string name="feed_catalog_search">Szukaj źródeł</string>
+    <string name="feed_catalog_clear">Wyczyść wyszukiwanie</string>
+    <string name="feed_catalog_manual">Adres kanału</string>
+    <string name="feed_catalog_topics">O, ciekawe!</string>
+    <string name="feed_catalog_technology">Technologia</string>
+    <string name="feed_catalog_science">Nauka</string>
+    <string name="feed_catalog_design">Design i kultura</string>
+    <string name="feed_catalog_food">Jedzenie</string>
+    <string name="feed_catalog_travel">Podróże</string>
+    <string name="feed_catalog_nature">Przyroda</string>
+    <string name="feed_catalog_all_sources">Wszystkie źródła</string>
+    <string name="feed_catalog_blogs">Blogi</string>
+    <string name="feed_catalog_news">Wiadomości</string>
+    <string name="feed_catalog_all_languages">Wszystkie języki</string>
+    <plurals name="feed_catalog_languages_count">
+        <item quantity="one">%1$d język</item>
+        <item quantity="few">%1$d języki</item>
+        <item quantity="many">%1$d języków</item>
+        <item quantity="other">%1$d języka</item>
+    </plurals>
+    <string name="feed_catalog_languages_title">Twoje języki czytania</string>
+    <string name="feed_catalog_languages_intro">Wybierz jeden, kilka lub cały świat.</string>
+    <string name="feed_catalog_language_search">Znajdź język</string>
+    <string name="feed_catalog_language_unknown">Nie podano języka</string>
+    <string name="feed_catalog_language_none">Nie znaleziono języka. Spróbuj jego nazwy lub kodu.</string>
+    <string name="feed_catalog_language_apply">Zastosuj języki</string>
+    <plurals name="feed_catalog_languages_selection">
+        <item quantity="one">Wybrano %1$d język</item>
+        <item quantity="few">Wybrano %1$d języki</item>
+        <item quantity="many">Wybrano %1$d języków</item>
+        <item quantity="other">Wybrano %1$d języka</item>
+    </plurals>
+    <string name="feed_catalog_world_selected">Uwzględniono cały świat</string>
+    <string name="feed_catalog_results">Źródła dla „%1$s”</string>
+    <plurals name="feed_catalog_loaded_count">
+        <item quantity="one">%1$d źródło w tym wyborze</item>
+        <item quantity="few">%1$d źródła w tym wyborze</item>
+        <item quantity="many">%1$d źródeł w tym wyborze</item>
+        <item quantity="other">%1$d źródła w tym wyborze</item>
+    </plurals>
+    <string name="feed_catalog_language_subset">Języki filtrują dotychczas wczytane źródła. Wczytaj więcej, aby znaleźć dalsze dopasowania.</string>
+    <string name="feed_catalog_preview">Podgląd</string>
+    <string name="feed_catalog_subscribed">Subskrybujesz</string>
+    <string name="feed_catalog_loading">Szukanie nowych głosów…</string>
+    <string name="feed_catalog_loading_hint">Twoje kolejne dobre źródło może być tuż za rogiem.</string>
+    <string name="feed_catalog_error_title">Świat może chwilę poczekać.</string>
+    <string name="feed_catalog_error_body">Nie udało się wczytać lokalnego katalogu. Nadal możesz dodać adres kanału.</string>
+    <string name="feed_catalog_retry">Spróbuj ponownie</string>
+    <string name="feed_catalog_empty_title">Nie tego szukasz?</string>
+    <string name="feed_catalog_empty_body">Tego źródła nie ma jeszcze w katalogu Plenary. Spróbuj jego nazwy lub wklej adres strony albo kanału w pole wyszukiwania.</string>
+    <string name="feed_catalog_more">Wczytaj więcej źródeł</string>
+    <string name="feed_catalog_more_failed">Nie udało się wczytać więcej źródeł. Twoje wyniki nadal tu są.</string>
+    <string name="feed_catalog_reset">Przeglądaj tematy</string>
+    <string name="feed_catalog_credit">Źródła wybrane przez Plenary · CC0</string>
+    <string name="feed_catalog_privacy">Przeszukuj dołączony katalog Plenary prywatnie, także offline. Dopiero otwarcie podglądu kanału łączy z jego wydawcą.</string>
+    <string name="feed_catalog_private_title">Odkrywaj w zwykłej karcie</string>
+    <string name="feed_catalog_private_body">Otwórz zwykłą kartę, aby zarządzać źródłami. Aby wyświetlić podgląd bez subskrypcji, wklej adres strony lub kanału w pole wyszukiwania.</string>
+    <string name="feed_catalog_no_description">Otwórz podgląd, aby poznać to źródło.</string>
+    <string name="feed_catalog_close_languages">Zamknij języki czytania</string>
+    <string name="feed_catalog_website_unknown">Oryginalny kanał</string>
+    <string name="feed_catalog_address_detected">Wykryto adres · Otwórz podgląd</string>
+</resources>

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feeds_full_article_unavailable">Articolul complet nu este disponibil</string>
+    <string name="feeds_full_article_unavailable_summary">Articolul complet al editorului nu a putut fi încărcat. Deschide pagina originală pentru a continua lectura.</string>
+</resources>

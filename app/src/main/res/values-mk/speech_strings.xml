@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reader_voice_settings_title">Прочитај на глас.</string>
+    <string name="reader_voice_settings_summary">Избери гласови на Android, Supertonic или Pocket TTS за статии и избран текст. Локалните модели работат без интернет по преземањето.</string>
+    <string name="reader_voice_choice_title">Избери глас</string>
+    <string name="reader_voice_choice_summary">Избери Supertonic, Pocket TTS со јазици за преземање или гласот на Android. Промени го ова во Поставки → Прелистувач → Читај наглас.</string>
+    <string name="reader_voice_use_offline">Користи Supertonic</string>
+    <string name="reader_voice_use_system">Користи глас на Android</string>
+    <string name="reader_voice_download">Преземи модел на глас</string>
+    <string name="reader_voice_delete">Избриши модел на глас</string>
+    <string name="reader_voice_enabled_title">Офлајн глас Supertonic</string>
+    <string name="reader_voice_enabled_summary">Кога е исклучено, Candy го користи гласот на Android. Исклучувањето го задржува преземениот модел.</string>
+    <string name="reader_voice_checking">Се проверува моделот на глас…</string>
+    <string name="reader_voice_working">Се ажурира моделот на глас…</string>
+    <string name="reader_voice_downloading">Се презема моделот на глас: %1$d%%</string>
+    <string name="reader_voice_model_error">Моделот на глас не можеше да се преземе или ажурира. Провери ги врската и слободниот простор, па обиди се повторно.</string>
+    <string name="reader_voice_ready">Моделот на глас е преземен. Подготвен за читање без интернет.</string>
+    <string name="reader_voice_missing">Моделот на глас не е преземен.</string>
+    <string name="reader_voice_model_details">Supertonic 3 · околу 145 MB за преземање · 31 јазик, вклучувајќи англиски и германски. Текстот на статијата останува на уредот при користење на офлајн моделот. Бришењето на моделот ги враќа гласовите на Android.</string>
+    <string name="reader_voice_model_terms">Со преземање или овозможување на моделот ја прифаќаш лиценцата OpenRAIL-M, вклучувајќи ги ограничувањата за употреба. Гласот е создаден со ВИ.</string>
+    <string name="reader_voice_playback_error">Овој глас не можеше да го прочита текстот. Обиди се повторно или смени го гласот.</string>
+    <string name="reader_voice_model_license">Лиценца на моделот: OpenRAIL-M</string>
+    <string name="reader_voice_unavailable">Читањето наглас не е достапно. Провери го моделот во Поставки → Прелистувач → Читај наглас или поставките на Android за претворање текст во говор.</string>
+</resources>

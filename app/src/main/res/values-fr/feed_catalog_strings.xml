@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feed_catalog_title">Découvrir des sources</string>
+    <string name="feed_catalog_eyebrow">LA CURIOSITÉ SANS FRONTIÈRES.</string>
+    <string name="feed_catalog_headline">Votre prochain\nflux préféré.</string>
+    <string name="feed_catalog_intro">De grands récits. Des voix indépendantes. Trouvez une source qui mérite votre attention.</string>
+    <string name="feed_catalog_search_hint">Sujet, nom ou adresse de flux</string>
+    <string name="feed_catalog_search">Rechercher des sources</string>
+    <string name="feed_catalog_clear">Effacer la recherche</string>
+    <string name="feed_catalog_manual">Adresse du flux</string>
+    <string name="feed_catalog_topics">Oh, intéressant !</string>
+    <string name="feed_catalog_technology">Technologie</string>
+    <string name="feed_catalog_science">Science</string>
+    <string name="feed_catalog_design">Design et culture</string>
+    <string name="feed_catalog_food">Cuisine</string>
+    <string name="feed_catalog_travel">Voyage</string>
+    <string name="feed_catalog_nature">Nature</string>
+    <string name="feed_catalog_all_sources">Toutes les sources</string>
+    <string name="feed_catalog_blogs">Blogs</string>
+    <string name="feed_catalog_news">Actualités</string>
+    <string name="feed_catalog_all_languages">Toutes les langues</string>
+    <plurals name="feed_catalog_languages_count">
+        <item quantity="one">%1$d langue</item>
+        <item quantity="other">%1$d langues</item>
+    </plurals>
+    <string name="feed_catalog_languages_title">Vos langues de lecture</string>
+    <string name="feed_catalog_languages_intro">Choisissez une langue, plusieurs ou le monde entier.</string>
+    <string name="feed_catalog_language_search">Trouver une langue</string>
+    <string name="feed_catalog_language_unknown">Langue non précisée</string>
+    <string name="feed_catalog_language_none">Aucune langue trouvée. Essayez son nom ou son code.</string>
+    <string name="feed_catalog_language_apply">Appliquer les langues</string>
+    <plurals name="feed_catalog_languages_selection">
+        <item quantity="one">%1$d langue sélectionnée</item>
+        <item quantity="other">%1$d langues sélectionnées</item>
+    </plurals>
+    <string name="feed_catalog_world_selected">Le monde entier est inclus</string>
+    <string name="feed_catalog_results">Sources pour « %1$s »</string>
+    <plurals name="feed_catalog_loaded_count">
+        <item quantity="one">%1$d source dans cette sélection</item>
+        <item quantity="other">%1$d sources dans cette sélection</item>
+    </plurals>
+    <string name="feed_catalog_language_subset">Le filtre de langues s’applique aux sources déjà chargées. Chargez-en davantage pour découvrir d’autres résultats.</string>
+    <string name="feed_catalog_preview">Aperçu</string>
+    <string name="feed_catalog_subscribed">Abonné</string>
+    <string name="feed_catalog_loading">À la recherche de nouvelles voix…</string>
+    <string name="feed_catalog_loading_hint">Votre prochaine bonne source est peut-être tout près.</string>
+    <string name="feed_catalog_error_title">Le monde peut attendre un instant.</string>
+    <string name="feed_catalog_error_body">Impossible de charger le catalogue local. Vous pouvez toujours ajouter une adresse de flux.</string>
+    <string name="feed_catalog_retry">Réessayer</string>
+    <string name="feed_catalog_empty_title">Ce n’est pas ce que vous cherchiez ?</string>
+    <string name="feed_catalog_empty_body">Cette source ne figure pas encore dans le catalogue Plenary. Essayez son nom ou collez l’adresse de son site ou de son flux dans le champ de recherche.</string>
+    <string name="feed_catalog_more">Charger plus de sources</string>
+    <string name="feed_catalog_more_failed">Impossible de charger d’autres sources. Vos résultats sont toujours là.</string>
+    <string name="feed_catalog_reset">Explorer les sujets</string>
+    <string name="feed_catalog_credit">Sources sélectionnées par Plenary · CC0</string>
+    <string name="feed_catalog_privacy">Recherchez dans le catalogue Plenary intégré en toute confidentialité, même hors connexion. Seul l’aperçu d’un flux établit une connexion avec son éditeur.</string>
+    <string name="feed_catalog_private_title">Découvrir dans un onglet normal</string>
+    <string name="feed_catalog_private_body">Ouvrez un onglet normal pour gérer les sources. Pour un aperçu sans abonnement, collez une adresse de site ou de flux dans le champ de recherche.</string>
+    <string name="feed_catalog_no_description">Ouvrez un aperçu pour découvrir cette source.</string>
+    <string name="feed_catalog_close_languages">Fermer les langues de lecture</string>
+    <string name="feed_catalog_website_unknown">Flux d’origine</string>
+    <string name="feed_catalog_address_detected">Adresse détectée · Ouvrir l’aperçu</string>
+</resources>

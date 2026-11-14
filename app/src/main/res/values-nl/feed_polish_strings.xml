@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feeds_manual_address">Feedadres invoeren</string>
+    <string name="feeds_manual_note">Neem een favoriete bron mee. Voer de website of het RSS-/Atom-feedadres in en bekijk deze voordat je je abonneert.</string>
+    <string name="feeds_latest_articles">Nieuwste artikelen</string>
+    <string name="feeds_subscription_failed">Deze bron kon niet worden opgeslagen. Je abonnementen zijn ongewijzigd. Probeer opnieuw.</string>
+    <string name="feeds_sources_empty_title">Maak ruimte voor goede stemmen.</string>
+    <string name="feeds_sources_empty_note">Ontdek een bron uit de hele wereld of voer je eigen feedadres in. Nieuwe artikelen komen in je inbox.</string>
+</resources>

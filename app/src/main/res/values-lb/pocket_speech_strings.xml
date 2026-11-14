@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reader_pocket_cancel">Ofbriechen</string>
+    <string name="reader_pocket_title">Pocket TTS-Offlinestëmm</string>
+    <string name="reader_pocket_summary">Wiel den erofgeluedene Modell, dee bei d’Sprooch vun all Artikel passt. Beim Ausschalte bleiwen deng Sproochpäck erhalen.</string>
+    <string name="reader_pocket_download_summary">Luet eng oder méi Sproochen erof. Artikelen a generéierten Audio bleiwen op dengem Apparat. Bei feelender oder onsécherer Sprooch muss du wielen; keng Sprooch gëtt automatesch erofgelueden.</string>
+    <string name="reader_pocket_unknown_language">Wiel eng erofgeluede Sprooch fir dësen Text oder benotz eng aner Stëmm.</string>
+    <string name="reader_pocket_unsupported_language">Erkannt Sprooch: %1$s. Kee Pocket-Modell dofir disponibel. Benotz eng aner Stëmm oder wiel eng Sprooch, wann d’Erkennung falsch war.</string>
+    <string name="reader_pocket_article_language">Artikelsprooch: %1$s. Luet de Modell erof oder wiel eng erofgeluede Sprooch, fir d’Erkennung ze verbesseren.</string>
+    <string name="reader_pocket_download_size">Download: %1$d MB · Späicher: %2$d MB</string>
+    <string name="reader_pocket_use_language">An dëser Sprooch liesen</string>
+    <string name="reader_pocket_remove">Sprooch ewechhuelen</string>
+    <string name="reader_pocket_downloaded">Erofgelueden · offline disponibel</string>
+    <string name="reader_pocket_license_summary">Pocket TTS vu Kyutai. Mam Eroflueden akzeptéiers du d’Modelllizenz an d’Konditioune fir d’Stëmmnennung. Dës Stëmm ass KI-generéiert.</string>
+    <string name="reader_pocket_license">Modell- a Stëmmlizenzen</string>
+</resources>

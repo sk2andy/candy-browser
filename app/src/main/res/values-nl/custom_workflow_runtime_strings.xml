@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="workflow_run_details">Details</string>
+    <string name="workflow_run_dismiss">Sluiten</string>
+    <string name="workflow_run_done">Alle stappen voltooid</string>
+    <string name="workflow_run_waiting">Wachten</string>
+    <string name="workflow_run_running">Bezig…</string>
+    <string name="workflow_run_succeeded">Voltooid</string>
+    <string name="workflow_run_failed">Actie mislukt</string>
+    <string name="workflow_run_skipped">Niet uitgevoerd</string>
+    <string name="workflow_run_cancelling">Stoppen na de huidige bewerking…</string>
+    <string name="workflow_run_cancelled">Gestopt. Voltooide stappen blijven behouden.</string>
+    <string name="workflow_run_invalid">Deze workflow is ongeldig.</string>
+    <string name="workflow_run_unsupported">Niet beschikbaar voor deze pagina.</string>
+    <string name="workflow_run_private">Deze workflow slaat gegevens op en kan niet privé worden uitgevoerd.</string>
+    <string name="workflow_run_pinned">Vastgezette tabbladen kunnen niet worden gesloten.</string>
+    <string name="workflow_run_changed">De bronpagina is gewijzigd. Resterende stappen zijn gestopt.</string>
+    <string name="workflow_run_empty">Geen leesbaar artikel gevonden.</string>
+    <string name="workflow_run_save_failed">Opslaan mislukt. Controleer opslag en vrije ruimte in de leesbibliotheek. De invoer blijft open.</string>
+    <string name="workflow_run_timeout">De bewerking duurde te lang. Resterende stappen zijn gestopt.</string>
+</resources>

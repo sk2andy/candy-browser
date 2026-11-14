@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feeds_next_unread">Następny nieprzeczytany artykuł</string>
+    <string name="feeds_notifications_denied">Powiadomienia są wyłączone w Androidzie. Twój wybór został zapisany.</string>
+    <string name="feeds_notification_channel">Kanały Candy</string>
+    <string name="feeds_notification_count">Nieprzeczytane artykuły czekają: %1$d.</string>
+    <string name="feeds_speech_next">Następny artykuł</string>
+    <string name="feeds_speech_speed">Szybkość czytania: %1$s×</string>
+    <string name="feeds_speech_unavailable">Brak dostępnego głosu. Sprawdź ustawienia syntezy mowy Androida.</string>
+</resources>

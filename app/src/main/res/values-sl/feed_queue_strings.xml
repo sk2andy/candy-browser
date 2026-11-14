@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feeds_player_retry">Poskusi znova</string>
+    <string name="feeds_player_open">Odpri čakalno vrsto za poslušanje</string>
+    <string name="feeds_player_close">Zapri čakalno vrsto za poslušanje</string>
+    <string name="feeds_player_up_next">Vrsta · %1$d</string>
+    <string name="feeds_player_import_saved">Dodaj shranjeno</string>
+    <string name="feeds_player_empty">Trenutek zate</string>
+    <string name="feeds_player_empty_title">Tvoje naslednje prijetno poslušanje.</string>
+    <string name="feeds_player_empty_hint">Uporabi ikono seznama za poslušanje na članku, da ga dodaš sem. Dodaš lahko tudi zaznamke.</string>
+    <string name="feeds_player_preparing">Pripravljanje</string>
+    <string name="feeds_player_listening">Zdaj bere na glas</string>
+    <string name="feeds_player_ready">Pripravljeno, ko si ti</string>
+    <string name="feeds_player_progress">Prebrano na glas %1$d%%</string>
+    <string name="feeds_player_rate">%1$s×</string>
+    <string name="feeds_player_current">Najprej · %1$s</string>
+    <string name="feeds_player_move_up">Premakni gor: %1$s</string>
+    <string name="feeds_player_remove">Odstrani iz čakalne vrste za poslušanje: %1$s</string>
+    <string name="feeds_player_load_failed">Tega članka ni bilo mogoče pripraviti za branje na glas.</string>
+    <string name="feeds_player_foreground">Nadaljuj poslušanje, ko je aplikacija v ozadju. Kontrolniki predvajanja so na voljo tudi v predstavnostnem obvestilu Androida.</string>
+</resources>

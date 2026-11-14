@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="constellations_explore">Eksploro lidhjet e tua</string>
+    <string name="constellations_show_list">Shfaq listën e faqeve</string>
+    <string name="constellations_hide_list">Fshih listën e faqeve</string>
+    <string name="constellations_expand_map">Zgjero hartën</string>
+    <string name="constellations_collapse_map">Palos hartën</string>
+    <string name="constellations_all_topics">Të gjitha temat</string>
+    <string name="constellations_close_details">Mbyll hollësitë e faqes</string>
+    <string name="constellations_fit_all">Shfaq të gjitha</string>
+    <string name="constellations_explore_hint">Afro ose largo gishtat për zmadhim dhe tërhiq për të eksploruar. Prek një faqe për të parë faqet e ngjashme. Lidhjet tregojnë ngjashmërinë e temave.</string>
+    <string name="constellations_map_description">Faqe në hartë: %1$d. Përdor listën e faqeve për të eksploruar me kontrollet e qasshmërisë.</string>
+</resources>

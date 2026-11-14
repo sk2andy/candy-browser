@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reader_voice_settings_title">Đọc to</string>
+    <string name="reader_voice_settings_summary">Chọn giọng Android, Supertonic hoặc Pocket TTS cho bài và văn bản đã chọn. Mô hình cục bộ dùng ngoại tuyến sau khi tải.</string>
+    <string name="reader_voice_choice_title">Chọn giọng đọc</string>
+    <string name="reader_voice_choice_summary">Chọn Supertonic, Pocket TTS có ngôn ngữ tải được hoặc giọng Android. Đổi trong Cài đặt → Trình duyệt → Đọc to.</string>
+    <string name="reader_voice_use_offline">Dùng Supertonic</string>
+    <string name="reader_voice_use_system">Dùng giọng Android</string>
+    <string name="reader_voice_download">Tải mô hình giọng nói</string>
+    <string name="reader_voice_delete">Xóa mô hình giọng nói</string>
+    <string name="reader_voice_enabled_title">Giọng ngoại tuyến Supertonic</string>
+    <string name="reader_voice_enabled_summary">Khi tắt, Candy dùng giọng Android. Mô hình đã tải vẫn được giữ.</string>
+    <string name="reader_voice_checking">Đang kiểm tra mô hình giọng nói…</string>
+    <string name="reader_voice_working">Đang cập nhật mô hình giọng nói…</string>
+    <string name="reader_voice_downloading">Đang tải mô hình giọng nói: %1$d%%</string>
+    <string name="reader_voice_model_error">Không thể tải hoặc cập nhật mô hình giọng nói. Kiểm tra kết nối và bộ nhớ trống rồi thử lại.</string>
+    <string name="reader_voice_ready">Đã tải mô hình giọng nói. Sẵn sàng đọc ngoại tuyến.</string>
+    <string name="reader_voice_missing">Chưa tải mô hình giọng nói.</string>
+    <string name="reader_voice_model_details">Supertonic 3 · tải khoảng 145 MB · 31 ngôn ngữ gồm Anh và Đức. Văn bản bài ở lại thiết bị khi dùng mô hình ngoại tuyến. Xóa mô hình sẽ chuyển về giọng Android.</string>
+    <string name="reader_voice_model_terms">Tải hoặc bật mô hình là đồng ý giấy phép OpenRAIL-M, gồm hạn chế sử dụng. Giọng này do AI tạo.</string>
+    <string name="reader_voice_playback_error">Giọng này không đọc được văn bản. Thử lại hoặc đổi giọng.</string>
+    <string name="reader_voice_model_license">Giấy phép mô hình: OpenRAIL-M</string>
+    <string name="reader_voice_unavailable">Không đọc to được. Kiểm tra mô hình trong Cài đặt → Trình duyệt → Đọc to hoặc cài đặt chuyển văn bản thành giọng nói Android.</string>
+</resources>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feeds_next_unread">Sonraki okunmamış makale</string>
+    <string name="feeds_notifications_denied">Android bildirimleri kapalı. Seçiminiz kaydedildi.</string>
+    <string name="feeds_notification_channel">Candy Akışları</string>
+    <string name="feeds_notification_count">%1$d okunmamış makale bekliyor.</string>
+    <string name="feeds_speech_next">Sonraki makale</string>
+    <string name="feeds_speech_speed">Okuma hızı: %1$s×</string>
+    <string name="feeds_speech_unavailable">Konuşma sesi yok. Android metin okuma ayarlarını kontrol edin.</string>
+</resources>

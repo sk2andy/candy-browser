@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="workflow_run_details">Szczegóły</string>
+    <string name="workflow_run_dismiss">Zamknij</string>
+    <string name="workflow_run_done">Wszystkie kroki ukończone</string>
+    <string name="workflow_run_waiting">Oczekiwanie</string>
+    <string name="workflow_run_running">Wykonywanie…</string>
+    <string name="workflow_run_succeeded">Ukończono</string>
+    <string name="workflow_run_failed">Działanie nieudane</string>
+    <string name="workflow_run_skipped">Nie wykonano</string>
+    <string name="workflow_run_cancelling">Zatrzymywanie po bieżącej operacji…</string>
+    <string name="workflow_run_cancelled">Zatrzymano. Ukończone kroki zostają zachowane.</string>
+    <string name="workflow_run_invalid">Ta sekwencja jest nieprawidłowa.</string>
+    <string name="workflow_run_unsupported">Niedostępne dla tej strony.</string>
+    <string name="workflow_run_private">Ta sekwencja zapisuje dane i nie może działać w trybie prywatnym.</string>
+    <string name="workflow_run_pinned">Nie można zamykać przypiętych kart.</string>
+    <string name="workflow_run_changed">Strona źródłowa uległa zmianie. Pozostałe kroki zatrzymano.</string>
+    <string name="workflow_run_empty">Nie znaleziono artykułu do czytania.</string>
+    <string name="workflow_run_save_failed">Nie udało się zapisać. Sprawdź pamięć i wolne miejsce w bibliotece Czytnika. Wejście pozostaje otwarte.</string>
+    <string name="workflow_run_timeout">Przekroczono limit czasu operacji. Pozostałe kroki zatrzymano.</string>
+</resources>

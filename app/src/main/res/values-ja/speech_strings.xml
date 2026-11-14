@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reader_voice_settings_title">読み上げ</string>
+    <string name="reader_voice_settings_summary">記事や選択テキストに Android 音声、Supertonic、Pocket TTS を選べます。ローカルモデルはダウンロード後オフラインで使えます。</string>
+    <string name="reader_voice_choice_title">音声を選択</string>
+    <string name="reader_voice_choice_summary">Supertonic、言語をダウンロードできる Pocket TTS、Android 音声から選べます。設定 → ブラウザ → 読み上げで変更できます。</string>
+    <string name="reader_voice_use_offline">Supertonic を使う</string>
+    <string name="reader_voice_use_system">Android 音声を使う</string>
+    <string name="reader_voice_download">音声モデルをダウンロード</string>
+    <string name="reader_voice_delete">音声モデルを削除</string>
+    <string name="reader_voice_enabled_title">Supertonic オフライン音声</string>
+    <string name="reader_voice_enabled_summary">オフの場合は Android 音声を使用します。ダウンロード済みモデルは残ります。</string>
+    <string name="reader_voice_checking">音声モデルを確認中…</string>
+    <string name="reader_voice_working">音声モデルを更新中…</string>
+    <string name="reader_voice_downloading">音声モデルをダウンロード中：%1$d%%</string>
+    <string name="reader_voice_model_error">音声モデルをダウンロード・更新できませんでした。接続と空き容量を確認して再試行してください。</string>
+    <string name="reader_voice_ready">音声モデルをダウンロード済み。オフライン読み上げの準備完了です。</string>
+    <string name="reader_voice_missing">音声モデルは未ダウンロードです。</string>
+    <string name="reader_voice_model_details">Supertonic 3 · 約 145 MB · 英語・独語を含む 31 言語。オフラインモデル使用時の記事は端末内に残ります。モデルを削除すると Android 音声に戻ります。</string>
+    <string name="reader_voice_model_terms">ダウンロードまたは有効化により、利用制限を含む OpenRAIL-M ライセンスに同意します。音声は AI 生成です。</string>
+    <string name="reader_voice_playback_error">この音声で読み上げられませんでした。再試行するか音声を変更してください。</string>
+    <string name="reader_voice_model_license">モデルライセンス：OpenRAIL-M</string>
+    <string name="reader_voice_unavailable">読み上げを利用できません。設定 → ブラウザ → 読み上げの音声モデルか、Android のテキスト読み上げ設定を確認してください。</string>
+</resources>

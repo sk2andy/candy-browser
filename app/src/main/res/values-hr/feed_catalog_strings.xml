@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feed_catalog_clear">Očisti pretraživanje</string>
+    <string name="feed_catalog_preview">Pregled</string>
+    <string name="feed_catalog_retry">Pokušaj ponovno</string>
+    <string name="feed_catalog_title">Otkrij izvore</string>
+    <string name="feed_catalog_eyebrow">ZNATIŽELJA BEZ GRANICA.</string>
+    <string name="feed_catalog_headline">Vaš sljedeći\nomiljeni kanal.</string>
+    <string name="feed_catalog_intro">Velike priče. Neovisni glasovi. Pronađite nešto vrijedno praćenja.</string>
+    <string name="feed_catalog_search_hint">Tema, naziv ili adresa kanala</string>
+    <string name="feed_catalog_search">Pretraži izvore</string>
+    <string name="feed_catalog_manual">Adresa kanala</string>
+    <string name="feed_catalog_topics">O, zanimljivo!</string>
+    <string name="feed_catalog_technology">Tehnologija</string>
+    <string name="feed_catalog_science">Znanost</string>
+    <string name="feed_catalog_design">Dizajn i kultura</string>
+    <string name="feed_catalog_food">Hrana</string>
+    <string name="feed_catalog_travel">Putovanja</string>
+    <string name="feed_catalog_nature">Priroda</string>
+    <string name="feed_catalog_all_sources">Svi izvori</string>
+    <string name="feed_catalog_blogs">Blogovi</string>
+    <string name="feed_catalog_news">Vijesti</string>
+    <string name="feed_catalog_all_languages">Svi jezici</string>
+    <plurals name="feed_catalog_languages_count">
+        <item quantity="one">%1$d jezik</item>
+        <item quantity="few">%1$d jezika</item>
+        <item quantity="other">%1$d jezika</item>
+    </plurals>
+    <string name="feed_catalog_languages_title">Vaši jezici čitanja</string>
+    <string name="feed_catalog_languages_intro">Odaberite jedan, više ili cijeli svijet.</string>
+    <string name="feed_catalog_language_search">Pronađi jezik</string>
+    <string name="feed_catalog_language_unknown">Jezik nije naveden</string>
+    <string name="feed_catalog_language_none">Jezik nije pronađen. Pokušajte naziv ili jezični kod.</string>
+    <string name="feed_catalog_language_apply">Primijeni jezike</string>
+    <plurals name="feed_catalog_languages_selection">
+        <item quantity="one">Odabran %1$d jezik</item>
+        <item quantity="few">Odabrana %1$d jezika</item>
+        <item quantity="other">Odabrano %1$d jezika</item>
+    </plurals>
+    <string name="feed_catalog_world_selected">Uključen je cijeli svijet</string>
+    <string name="feed_catalog_results">Izvori za „%1$s“</string>
+    <plurals name="feed_catalog_loaded_count">
+        <item quantity="one">%1$d izvor u ovom odabiru</item>
+        <item quantity="few">%1$d izvora u ovom odabiru</item>
+        <item quantity="other">%1$d izvora u ovom odabiru</item>
+    </plurals>
+    <string name="feed_catalog_language_subset">Jezici filtriraju dosad učitane izvore. Učitajte više za dodatna podudaranja.</string>
+    <string name="feed_catalog_subscribed">Pretplaćeni</string>
+    <string name="feed_catalog_loading">Pronalazimo nove glasove…</string>
+    <string name="feed_catalog_loading_hint">Vaš sljedeći dobar izvor možda je odmah iza ugla.</string>
+    <string name="feed_catalog_error_title">Svijet može malo pričekati.</string>
+    <string name="feed_catalog_error_body">Lokalni katalog nije učitan. I dalje možete dodati adresu kanala.</string>
+    <string name="feed_catalog_empty_title">Nije baš ono što ste zamislili?</string>
+    <string name="feed_catalog_empty_body">Ovaj izvor još nije u katalogu Plenary. Pokušajte naziv ili zalijepite adresu stranice ili kanala u polje za pretraživanje.</string>
+    <string name="feed_catalog_more">Učitaj više izvora</string>
+    <string name="feed_catalog_more_failed">Više izvora nije učitano. Vaši su rezultati još ovdje.</string>
+    <string name="feed_catalog_reset">Istraži teme</string>
+    <string name="feed_catalog_credit">Odabrani izvori iz Plenary · CC0</string>
+    <string name="feed_catalog_privacy">Privatno pretražujte priloženi katalog Plenary, čak i izvan mreže. Samo otvaranje pretpregleda kanala povezuje se s izdavačem.</string>
+    <string name="feed_catalog_private_title">Otkrivajte u običnoj kartici</string>
+    <string name="feed_catalog_private_body">Otvorite običnu karticu za upravljanje izvorima. Za pretpregled bez pretplate zalijepite adresu stranice ili kanala u polje za pretraživanje.</string>
+    <string name="feed_catalog_no_description">Otvorite pretpregled da upoznate ovaj izvor.</string>
+    <string name="feed_catalog_close_languages">Zatvori jezike čitanja</string>
+    <string name="feed_catalog_website_unknown">Izvorni kanal</string>
+    <string name="feed_catalog_address_detected">Adresa otkrivena · Otvori pretpregled</string>
+</resources>

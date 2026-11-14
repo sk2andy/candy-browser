@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="browser_menu_reading_group">Číst a sbírat</string>
+    <string name="browser_menu_workflows_group">Vaše postupy</string>
+    <string name="browser_menu_feeds">Kanály</string>
+    <string name="browser_menu_library">Knihovna</string>
+    <string name="browser_menu_discover_feeds">Objevovat kanály</string>
+    <string name="browser_menu_feed_unread_count">Nepřečtené: %1$d</string>
+    <string name="browser_menu_section_expanded">Rozbaleno</string>
+    <string name="browser_menu_section_collapsed">Sbaleno</string>
+</resources>

@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reader_home_title">Reader Studio</string>
+    <string name="reader_home_back">Nazaj</string>
+    <string name="reader_home_progress">%1$d%% prebrano</string>
+    <string name="reader_home_manage_feeds">Upravljaj vire</string>
+    <string name="reader_home_library_tab">Knjižnica</string>
+    <string name="reader_home_feeds_tab">Viri</string>
+    <string name="reader_home_all_feeds">Vsi viri</string>
+    <string name="reader_home_all_posts">Vse objave</string>
+    <string name="reader_home_unread_count">Neprebrano (%1$d)</string>
+    <string name="reader_home_article_count">Članki: %1$d</string>
+    <string name="reader_home_newest_first">Najnovejši najprej</string>
+    <string name="reader_home_all_available_shown">Prikazani so vsi razpoložljivi članki</string>
+    <string name="reader_home_no_feeds_title">Še ni virov</string>
+    <string name="reader_home_no_feeds_message">Sledi viru, da tukaj vidiš njegove najnovejše članke.</string>
+    <string name="reader_home_all_read_title">Vse je prebrano</string>
+    <string name="reader_home_all_read_message">V tem izboru ni neprebranih člankov.</string>
+    <string name="reader_home_no_articles_title">Še ni člankov</string>
+    <string name="reader_home_no_articles_message">Novi članki iz teh virov se bodo pojavili tukaj.</string>
+    <string name="reader_home_library_empty_title">Tvoja knjižnica je prazna</string>
+    <string name="reader_home_library_empty_message">Članki, ki jih shraniš za branje brez povezave, se bodo pojavili tukaj.</string>
+    <string name="reader_home_delete_article">Izbriši shranjeni članek</string>
+    <string name="reader_home_choose_feed">Izberi vir</string>
+    <string name="reader_home_feed_count">Spremljani viri: %1$d</string>
+    <string name="reader_home_source_subtitle">%1$s · %2$d neprebranih</string>
+    <string name="reader_home_search_feeds">Išči vire</string>
+    <string name="reader_home_no_feed_match">Ni ujemajočih se virov</string>
+</resources>

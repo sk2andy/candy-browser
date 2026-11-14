@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feed_catalog_title">Khám phá nguồn</string>
+    <string name="feed_catalog_eyebrow">TÒ MÒ. KHÔNG BIÊN GIỚI.</string>
+    <string name="feed_catalog_headline">Nguồn tin yêu thích\ntiếp theo của bạn.</string>
+    <string name="feed_catalog_intro">Câu chuyện lớn. Tiếng nói độc lập. Tìm điều đáng theo dõi.</string>
+    <string name="feed_catalog_search_hint">Chủ đề, tên hoặc địa chỉ nguồn tin</string>
+    <string name="feed_catalog_search">Tìm nguồn</string>
+    <string name="feed_catalog_clear">Xóa tìm kiếm</string>
+    <string name="feed_catalog_manual">Địa chỉ nguồn tin</string>
+    <string name="feed_catalog_topics">Ồ, thú vị đấy!</string>
+    <string name="feed_catalog_technology">Công nghệ</string>
+    <string name="feed_catalog_science">Khoa học</string>
+    <string name="feed_catalog_design">Thiết kế và văn hóa</string>
+    <string name="feed_catalog_food">Ẩm thực</string>
+    <string name="feed_catalog_travel">Du lịch</string>
+    <string name="feed_catalog_nature">Thiên nhiên</string>
+    <string name="feed_catalog_all_sources">Mọi nguồn</string>
+    <string name="feed_catalog_blogs">Blog</string>
+    <string name="feed_catalog_news">Tin tức</string>
+    <string name="feed_catalog_all_languages">Mọi ngôn ngữ</string>
+    <plurals name="feed_catalog_languages_count">
+        <item quantity="other">%1$d ngôn ngữ</item>
+    </plurals>
+    <string name="feed_catalog_languages_title">Ngôn ngữ bạn đọc</string>
+    <string name="feed_catalog_languages_intro">Chọn một, nhiều hoặc cả thế giới.</string>
+    <string name="feed_catalog_language_search">Tìm ngôn ngữ</string>
+    <string name="feed_catalog_language_unknown">Chưa cung cấp ngôn ngữ</string>
+    <string name="feed_catalog_language_none">Không tìm thấy ngôn ngữ. Thử tên hoặc mã ngôn ngữ.</string>
+    <string name="feed_catalog_language_apply">Áp dụng ngôn ngữ</string>
+    <plurals name="feed_catalog_languages_selection">
+        <item quantity="other">Đã chọn %1$d ngôn ngữ</item>
+    </plurals>
+    <string name="feed_catalog_world_selected">Đã bao gồm cả thế giới</string>
+    <string name="feed_catalog_results">Nguồn cho “%1$s”</string>
+    <plurals name="feed_catalog_loaded_count">
+        <item quantity="other">%1$d nguồn trong lựa chọn này</item>
+    </plurals>
+    <string name="feed_catalog_language_subset">Ngôn ngữ lọc các nguồn đã tải. Tải thêm để tìm kết quả phù hợp khác.</string>
+    <string name="feed_catalog_preview">Xem trước</string>
+    <string name="feed_catalog_subscribed">Đã đăng ký</string>
+    <string name="feed_catalog_loading">Đang tìm tiếng nói mới…</string>
+    <string name="feed_catalog_loading_hint">Nguồn hay tiếp theo có thể ở ngay gần đây.</string>
+    <string name="feed_catalog_error_title">Thế giới có thể chờ một chút.</string>
+    <string name="feed_catalog_error_body">Không thể tải danh mục cục bộ. Bạn vẫn có thể thêm địa chỉ nguồn tin.</string>
+    <string name="feed_catalog_retry">Thử lại</string>
+    <string name="feed_catalog_empty_title">Chưa đúng ý bạn?</string>
+    <string name="feed_catalog_empty_body">Nguồn này chưa có trong danh mục Plenary. Thử tên hoặc dán địa chỉ trang web hay nguồn tin vào ô tìm kiếm.</string>
+    <string name="feed_catalog_more">Tải thêm nguồn</string>
+    <string name="feed_catalog_more_failed">Không thể tải thêm nguồn. Kết quả hiện tại vẫn còn.</string>
+    <string name="feed_catalog_reset">Khám phá chủ đề</string>
+    <string name="feed_catalog_credit">Nguồn chọn lọc từ Plenary · CC0</string>
+    <string name="feed_catalog_privacy">Tìm riêng tư trong danh mục Plenary đi kèm, kể cả ngoại tuyến. Chỉ kết nối nhà xuất bản khi mở xem trước nguồn tin.</string>
+    <string name="feed_catalog_private_title">Khám phá trong thẻ thường</string>
+    <string name="feed_catalog_private_body">Mở thẻ thường để quản lý nguồn. Để xem trước mà không lưu đăng ký, dán địa chỉ trang web hoặc nguồn tin vào ô tìm kiếm.</string>
+    <string name="feed_catalog_no_description">Mở xem trước để tìm hiểu nguồn này.</string>
+    <string name="feed_catalog_close_languages">Đóng ngôn ngữ đọc</string>
+    <string name="feed_catalog_website_unknown">Nguồn tin gốc</string>
+    <string name="feed_catalog_address_detected">Đã phát hiện địa chỉ · Mở xem trước</string>
+</resources>

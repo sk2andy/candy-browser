@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feeds_player_retry">Încearcă din nou</string>
+    <string name="feeds_player_open">Deschide coada de ascultare</string>
+    <string name="feeds_player_close">Închide coada de ascultare</string>
+    <string name="feeds_player_up_next">Coadă · %1$d</string>
+    <string name="feeds_player_import_saved">Adaugă articole salvate</string>
+    <string name="feeds_player_empty">Un moment pentru tine</string>
+    <string name="feeds_player_empty_title">Următoarea ta lectură de ascultat.</string>
+    <string name="feeds_player_empty_hint">Folosește pictograma listei de ascultare de pe un articol pentru a-l adăuga aici. Poți adăuga și marcajele.</string>
+    <string name="feeds_player_preparing">Se pregătește</string>
+    <string name="feeds_player_listening">Se citește cu voce tare</string>
+    <string name="feeds_player_ready">Gata când ești și tu</string>
+    <string name="feeds_player_progress">%1$d%% citit cu voce tare</string>
+    <string name="feeds_player_rate">%1$s×</string>
+    <string name="feeds_player_current">Primul · %1$s</string>
+    <string name="feeds_player_move_up">Mută în sus: %1$s</string>
+    <string name="feeds_player_remove">Elimină din coada de ascultare: %1$s</string>
+    <string name="feeds_player_load_failed">Acest articol nu a putut fi pregătit pentru citire cu voce tare.</string>
+    <string name="feeds_player_foreground">Continuă să asculți cu aplicația în fundal. Comenzile de redare sunt disponibile și în notificarea media Android.</string>
+</resources>

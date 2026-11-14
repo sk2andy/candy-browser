@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="workflow_run_details">Podrobnosti</string>
+    <string name="workflow_run_dismiss">Zapri</string>
+    <string name="workflow_run_done">Vsi koraki dokončani</string>
+    <string name="workflow_run_waiting">Čakanje</string>
+    <string name="workflow_run_running">Se izvaja…</string>
+    <string name="workflow_run_succeeded">Dokončano</string>
+    <string name="workflow_run_failed">Dejanje ni uspelo</string>
+    <string name="workflow_run_skipped">Ni izvedeno</string>
+    <string name="workflow_run_cancelling">Ustavljanje po trenutnem opravilu…</string>
+    <string name="workflow_run_cancelled">Ustavljeno. Dokončani koraki so ohranjeni.</string>
+    <string name="workflow_run_invalid">Ta potek dela ni veljaven.</string>
+    <string name="workflow_run_unsupported">Ni na voljo za to stran.</string>
+    <string name="workflow_run_private">Ta potek dela shranjuje podatke in ga ni mogoče izvesti zasebno.</string>
+    <string name="workflow_run_pinned">Pripetih zavihkov ni mogoče zapreti.</string>
+    <string name="workflow_run_changed">Izvorna stran se je spremenila. Preostali koraki so bili ustavljeni.</string>
+    <string name="workflow_run_empty">Ni najdenega berljivega članka.</string>
+    <string name="workflow_run_save_failed">Shranjevanje ni uspelo. Preveri shrambo in prosti prostor v knjižnici bralnika. Vhod ostane odprt.</string>
+    <string name="workflow_run_timeout">Čas za opravilo je potekel. Preostali koraki so bili ustavljeni.</string>
+</resources>

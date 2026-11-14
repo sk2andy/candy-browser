@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feeds_manual_address">フィードのアドレスを入力</string>
+    <string name="feeds_manual_note">お気に入りの配信元を追加しましょう。サイトか RSS/Atom のアドレスを入力し、購読前に確認できます。</string>
+    <string name="feeds_latest_articles">最新の記事</string>
+    <string name="feeds_subscription_failed">配信元を保存できませんでした。購読は変更されていません。再試行してください。</string>
+    <string name="feeds_sources_empty_title">素敵な声に、居場所を。</string>
+    <string name="feeds_sources_empty_note">世界中の配信元を探すか、自分でフィードのアドレスを追加してください。新着記事が受信箱に届きます。</string>
+</resources>

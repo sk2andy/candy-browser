@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feeds_next_unread">Volgend ongelezen artikel</string>
+    <string name="feeds_notifications_denied">Meldingen zijn uitgeschakeld in Android. Je keuze is opgeslagen.</string>
+    <string name="feeds_notification_channel">Candy-feeds</string>
+    <string name="feeds_notification_count">Er staan %1$d ongelezen artikelen klaar.</string>
+    <string name="feeds_speech_next">Volgend artikel</string>
+    <string name="feeds_speech_speed">Leessnelheid: %1$s×</string>
+    <string name="feeds_speech_unavailable">Geen spraakstem beschikbaar. Controleer de Android-instellingen voor tekst-naar-spraak.</string>
+</resources>

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="candy_trail_fit_all">Tümünü göster</string>
+    <string name="candy_trail_current_page">Geçerli sayfa</string>
+    <string name="candy_trail_graph_view">Grafik</string>
+    <string name="candy_trail_list_view">Liste</string>
+    <string name="candy_trail_focus_route">Geçerli yola odaklan</string>
+    <string name="candy_trail_all_branches">Tüm dalları göster</string>
+    <string name="candy_trail_collapse_branch">Yan dalları daralt</string>
+    <string name="candy_trail_expand_branch">Yan dalları genişlet</string>
+    <string name="candy_trail_hidden_pages">Gizli: %1$d</string>
+</resources>

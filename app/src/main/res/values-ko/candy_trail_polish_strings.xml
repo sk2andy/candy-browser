@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="candy_trail_fit_all">모두 표시</string>
+    <string name="candy_trail_current_page">현재 페이지</string>
+    <string name="candy_trail_graph_view">그래프</string>
+    <string name="candy_trail_list_view">목록</string>
+    <string name="candy_trail_focus_route">현재 경로에 집중</string>
+    <string name="candy_trail_all_branches">모든 분기 표시</string>
+    <string name="candy_trail_collapse_branch">곁가지 접기</string>
+    <string name="candy_trail_expand_branch">곁가지 펼치기</string>
+    <string name="candy_trail_hidden_pages">숨김: %1$d</string>
+</resources>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feeds_next_unread">บทความที่ยังไม่อ่านถัดไป</string>
+    <string name="feeds_notifications_denied">ปิดการแจ้งเตือนใน Android อยู่ บันทึกการเลือกแล้ว</string>
+    <string name="feeds_notification_channel">ฟีด Candy</string>
+    <string name="feeds_notification_count">มีบทความที่ยังไม่อ่าน %1$d บทความ</string>
+    <string name="feeds_speech_next">บทความถัดไป</string>
+    <string name="feeds_speech_speed">ความเร็วการอ่าน: %1$s×</string>
+    <string name="feeds_speech_unavailable">ไม่มีเสียงพูดให้ใช้ ตรวจสอบการตั้งค่าแปลงข้อความเป็นเสียงของ Android</string>
+</resources>

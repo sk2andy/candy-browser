@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feeds_player_open">読み上げキューを開く</string>
+    <string name="feeds_player_close">読み上げキューを閉じる</string>
+    <string name="feeds_player_up_next">キュー · %1$d</string>
+    <string name="feeds_player_import_saved">保存済みから追加</string>
+    <string name="feeds_player_empty">自分だけのひととき</string>
+    <string name="feeds_player_empty_title">次の素敵な聴きものを。</string>
+    <string name="feeds_player_empty_hint">記事の読み上げリストアイコンで追加できます。ブックマークも追加できます。</string>
+    <string name="feeds_player_preparing">準備中</string>
+    <string name="feeds_player_listening">読み上げ中</string>
+    <string name="feeds_player_ready">いつでも準備完了</string>
+    <string name="feeds_player_progress">%1$d%% 読み上げ済み</string>
+    <string name="feeds_player_rate">%1$s×</string>
+    <string name="feeds_player_current">最初 · %1$s</string>
+    <string name="feeds_player_move_up">上に移動：%1$s</string>
+    <string name="feeds_player_remove">読み上げキューから削除：%1$s</string>
+    <string name="feeds_player_load_failed">この記事の読み上げを準備できませんでした。</string>
+    <string name="feeds_player_retry">再試行</string>
+    <string name="feeds_player_foreground">アプリがバックグラウンドでも聴き続けられます。Android のメディア通知からも再生を操作できます。</string>
+</resources>

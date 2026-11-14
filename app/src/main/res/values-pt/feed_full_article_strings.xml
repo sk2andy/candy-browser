@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feeds_full_article_unavailable">Artigo completo indisponível</string>
+    <string name="feeds_full_article_unavailable_summary">Não foi possível carregar o artigo completo do editor. Abra a página original para continuar a ler.</string>
+</resources>

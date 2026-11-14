@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_search_shortcuts_title">Iskalne bližnjice</string>
+    <string name="settings_search_shortcuts_summary">Ustvari svoje bližnjice, na primer !gh za GitHub ali !yt za YouTube. Vnesi bližnjico in presledek, da jo spremeniš v oznako. Predlogi iskanja še delujejo. Backspace pri prazni poizvedbi odstrani oznako.</string>
+    <string name="settings_search_shortcut_keyword">Bližnjica</string>
+    <string name="settings_search_shortcut_keyword_summary">Na primer !gh. Uporabi do 32 črk, številk, vezajev ali podčrtajev. Za ! začni s črko ali številko.</string>
+    <string name="settings_search_shortcut_template">Predloga iskalnega URL-ja</string>
+    <string name="settings_search_shortcut_template_summary" formatted="false">Kopiraj iskalni URL spletne strani in zamenjaj iskalne izraze z %s. V URL-ju HTTP ali HTTPS uporabi natanko en %s.</string>
+    <string name="settings_search_shortcut_add">Dodaj bližnjico</string>
+    <string name="settings_search_shortcut_edit">Uredi bližnjico</string>
+    <string name="settings_search_shortcut_remove">Odstrani</string>
+    <string name="settings_search_shortcut_edit_description">Uredi bližnjico !%1$s</string>
+    <string name="settings_search_shortcut_remove_description">Odstrani bližnjico !%1$s</string>
+    <string name="settings_search_shortcut_invalid" formatted="false">Izberi enolično bližnjico, ki ne ustreza vgrajenemu iskalniku, in veljaven iskalni URL z natanko enim %s.</string>
+    <string name="settings_search_shortcut_examples">Začni s spletno stranjo</string>
+    <string name="settings_search_shortcut_github">GitHub · !gh</string>
+    <string name="settings_search_shortcut_youtube">YouTube · !yt</string>
+    <string name="settings_search_shortcut_amazon">Amazon · !amazon</string>
+    <string name="search_shortcut_chip_remove">Odstrani iskalno bližnjico !%1$s</string>
+</resources>

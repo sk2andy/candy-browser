@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reader_pocket_cancel">Anulo</string>
+    <string name="reader_pocket_title">Zëri Pocket TTS jashtë linje</string>
+    <string name="reader_pocket_summary">Zgjidh modelin e shkarkuar që përputhet me gjuhën e çdo artikulli. Çaktivizimi i ruan paketat e gjuhëve.</string>
+    <string name="reader_pocket_download_summary">Shkarko një ose disa gjuhë. Artikujt dhe audioja e krijuar mbeten në pajisjen tënde. Nëse gjuha mungon ose është e pasigurt, do të të kërkohet ta zgjedhësh; shkarkimet nuk nisin automatikisht.</string>
+    <string name="reader_pocket_unknown_language">Zgjidh një gjuhë të shkarkuar për këtë tekst ose përdor një zë tjetër.</string>
+    <string name="reader_pocket_unsupported_language">Gjuha e zbuluar: %1$s. Nuk ka model Pocket për të. Përdor një zë tjetër ose zgjidh gjuhën nëse zbulimi ishte i gabuar.</string>
+    <string name="reader_pocket_article_language">Gjuha e artikullit: %1$s. Shkarko modelin ose zgjidh një gjuhë të shkarkuar për të korrigjuar zbulimin.</string>
+    <string name="reader_pocket_download_size">Shkarkimi: %1$d MB · ruajtja: %2$d MB</string>
+    <string name="reader_pocket_use_language">Lexo në këtë gjuhë</string>
+    <string name="reader_pocket_remove">Hiq gjuhën</string>
+    <string name="reader_pocket_downloaded">E shkarkuar · e disponueshme jashtë linje</string>
+    <string name="reader_pocket_license_summary">Pocket TTS nga Kyutai. Shkarkimi pranon licencën e modelit dhe kushtet e atribuimit të zërit. Ky zë krijohet nga inteligjenca artificiale.</string>
+    <string name="reader_pocket_license">Licencat e modelit dhe zërit</string>
+</resources>

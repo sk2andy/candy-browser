@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feeds_manual_address">Wpisz adres kanału</string>
+    <string name="feeds_manual_note">Dodaj ulubione źródło. Wpisz adres jego strony lub kanału RSS/Atom i sprawdź podgląd przed subskrypcją.</string>
+    <string name="feeds_latest_articles">Najnowsze artykuły</string>
+    <string name="feeds_subscription_failed">Nie udało się zapisać tego źródła. Twoje subskrypcje nie uległy zmianie. Spróbuj ponownie.</string>
+    <string name="feeds_sources_empty_title">Zrób miejsce na dobre głosy.</string>
+    <string name="feeds_sources_empty_note">Odkryj źródło z dowolnego zakątka świata lub dodaj własny adres kanału. Nowe artykuły trafią do Twojej skrzynki odbiorczej.</string>
+</resources>

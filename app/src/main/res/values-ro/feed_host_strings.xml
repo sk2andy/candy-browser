@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feeds_next_unread">Următorul articol necitit</string>
+    <string name="feeds_notifications_denied">Notificările sunt dezactivate în Android. Selecția ta este salvată.</string>
+    <string name="feeds_notification_channel">Fluxuri Candy</string>
+    <string name="feeds_notification_count">Te așteaptă %1$d articole necitite.</string>
+    <string name="feeds_speech_next">Următorul articol</string>
+    <string name="feeds_speech_speed">Viteza lecturii: %1$s×</string>
+    <string name="feeds_speech_unavailable">Nu este disponibilă nicio voce. Verifică setările Android pentru transformarea textului în vorbire.</string>
+</resources>

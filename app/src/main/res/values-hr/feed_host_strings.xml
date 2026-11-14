@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feeds_next_unread">Sljedeći nepročitani članak</string>
+    <string name="feeds_notifications_denied">Obavijesti su onemogućene u Androidu. Tvoj odabir je spremljen.</string>
+    <string name="feeds_notification_channel">Candy izvori</string>
+    <string name="feeds_notification_count">Čeka te %1$d nepročitanih članaka.</string>
+    <string name="feeds_speech_next">Sljedeći članak</string>
+    <string name="feeds_speech_speed">Brzina čitanja: %1$s×</string>
+    <string name="feeds_speech_unavailable">Nijedan glas nije dostupan. Provjeri Androidove postavke pretvaranja teksta u govor.</string>
+</resources>

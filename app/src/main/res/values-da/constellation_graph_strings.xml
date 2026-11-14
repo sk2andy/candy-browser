@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="constellations_explore">Udforsk dine forbindelser</string>
+    <string name="constellations_show_list">Vis sideliste</string>
+    <string name="constellations_hide_list">Skjul sideliste</string>
+    <string name="constellations_expand_map">Udvid kort</string>
+    <string name="constellations_collapse_map">Minimér kort</string>
+    <string name="constellations_all_topics">Alle emner</string>
+    <string name="constellations_close_details">Luk sidedetaljer</string>
+    <string name="constellations_fit_all">Vis alle</string>
+    <string name="constellations_explore_hint">Knib for at zoome, og træk for at udforske. Tryk på en side for at se relaterede sider. Forbindelser viser ligheder mellem emner.</string>
+    <string name="constellations_map_description">Sider på kortet: %1$d. Brug sidelisten til at udforske med tilgængelighedskontroller.</string>
+</resources>

@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reader_home_title">阅读工作室</string>
+    <string name="reader_home_back">返回</string>
+    <string name="reader_home_manage_feeds">管理订阅源</string>
+    <string name="reader_home_library_tab">资料库</string>
+    <string name="reader_home_feeds_tab">订阅源</string>
+    <string name="reader_home_all_feeds">所有订阅源</string>
+    <string name="reader_home_all_posts">所有文章</string>
+    <string name="reader_home_unread_count">未读（%1$d）</string>
+    <string name="reader_home_article_count">文章：%1$d</string>
+    <string name="reader_home_newest_first">最新优先</string>
+    <string name="reader_home_all_available_shown">已显示所有可用文章</string>
+    <string name="reader_home_no_feeds_title">尚无订阅源</string>
+    <string name="reader_home_no_feeds_message">关注订阅源，即可在此查看最新文章。</string>
+    <string name="reader_home_all_read_title">你已全部读完</string>
+    <string name="reader_home_all_read_message">此选择中没有未读文章。</string>
+    <string name="reader_home_no_articles_title">尚无文章</string>
+    <string name="reader_home_no_articles_message">这些订阅源的新文章将在此显示。</string>
+    <string name="reader_home_library_empty_title">资料库为空</string>
+    <string name="reader_home_library_empty_message">为离线阅读保存的文章将在此显示。</string>
+    <string name="reader_home_progress">已读 %1$d%%</string>
+    <string name="reader_home_delete_article">删除已保存文章</string>
+    <string name="reader_home_choose_feed">选择订阅源</string>
+    <string name="reader_home_feed_count">已订阅：%1$d</string>
+    <string name="reader_home_source_subtitle">%1$s · %2$d 篇未读</string>
+    <string name="reader_home_search_feeds">搜索订阅源</string>
+    <string name="reader_home_no_feed_match">没有匹配的订阅源</string>
+</resources>

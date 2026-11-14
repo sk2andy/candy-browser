@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reader_home_title">Reader Studio</string>
+    <string name="reader_home_back">Volver</string>
+    <string name="reader_home_manage_feeds">Gestionar fuentes</string>
+    <string name="reader_home_library_tab">Biblioteca</string>
+    <string name="reader_home_feeds_tab">Fuentes</string>
+    <string name="reader_home_all_feeds">Todas las fuentes</string>
+    <string name="reader_home_all_posts">Todas las publicaciones</string>
+    <string name="reader_home_unread_count">Sin leer (%1$d)</string>
+    <string name="reader_home_article_count">Artículos: %1$d</string>
+    <string name="reader_home_newest_first">Más recientes primero</string>
+    <string name="reader_home_all_available_shown">Se muestran todos los artículos disponibles</string>
+    <string name="reader_home_no_feeds_title">Aún no hay fuentes</string>
+    <string name="reader_home_no_feeds_message">Sigue una fuente para ver aquí sus últimos artículos.</string>
+    <string name="reader_home_all_read_title">Estás al día</string>
+    <string name="reader_home_all_read_message">No hay artículos sin leer en esta selección.</string>
+    <string name="reader_home_no_articles_title">Aún no hay artículos</string>
+    <string name="reader_home_no_articles_message">Los nuevos artículos de estas fuentes aparecerán aquí.</string>
+    <string name="reader_home_library_empty_title">Tu biblioteca está vacía</string>
+    <string name="reader_home_library_empty_message">Los artículos que guardes para leer sin conexión aparecerán aquí.</string>
+    <string name="reader_home_progress">%1$d%% leído</string>
+    <string name="reader_home_delete_article">Eliminar artículo guardado</string>
+    <string name="reader_home_choose_feed">Elegir fuente</string>
+    <string name="reader_home_feed_count">Fuentes suscritas: %1$d</string>
+    <string name="reader_home_source_subtitle">%1$s · %2$d sin leer</string>
+    <string name="reader_home_search_feeds">Buscar fuentes</string>
+    <string name="reader_home_no_feed_match">No hay fuentes coincidentes</string>
+</resources>

@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feed_catalog_clear">Pastro kërkimin</string>
+    <string name="feed_catalog_preview">Pamje paraprake</string>
+    <string name="feed_catalog_retry">Provo përsëri</string>
+    <string name="feed_catalog_title">Zbuloni burime</string>
+    <string name="feed_catalog_eyebrow">KURESHTJE PA KUFIJ.</string>
+    <string name="feed_catalog_headline">Burimi juaj\ni ardhshëm i parapëlqyer.</string>
+    <string name="feed_catalog_intro">Histori të mëdha. Zëra të pavarur. Gjeni diçka që ia vlen të ndiqni.</string>
+    <string name="feed_catalog_search_hint">Temë, emër ose adresë burimi</string>
+    <string name="feed_catalog_search">Kërko burime</string>
+    <string name="feed_catalog_manual">Adresa e burimit</string>
+    <string name="feed_catalog_topics">Oh, interesante!</string>
+    <string name="feed_catalog_technology">Teknologji</string>
+    <string name="feed_catalog_science">Shkencë</string>
+    <string name="feed_catalog_design">Dizajn dhe kulturë</string>
+    <string name="feed_catalog_food">Ushqim</string>
+    <string name="feed_catalog_travel">Udhëtime</string>
+    <string name="feed_catalog_nature">Natyrë</string>
+    <string name="feed_catalog_all_sources">Të gjitha burimet</string>
+    <string name="feed_catalog_blogs">Blogje</string>
+    <string name="feed_catalog_news">Lajme</string>
+    <string name="feed_catalog_all_languages">Të gjitha gjuhët</string>
+    <plurals name="feed_catalog_languages_count">
+        <item quantity="one">%1$d gjuhë</item>
+        <item quantity="other">%1$d gjuhë</item>
+    </plurals>
+    <string name="feed_catalog_languages_title">Gjuhët tuaja të leximit</string>
+    <string name="feed_catalog_languages_intro">Zgjidhni një, disa ose të gjithë botën.</string>
+    <string name="feed_catalog_language_search">Gjej një gjuhë</string>
+    <string name="feed_catalog_language_unknown">Gjuha nuk është dhënë</string>
+    <string name="feed_catalog_language_none">Nuk u gjet gjuhë. Provoni emrin ose kodin e saj.</string>
+    <string name="feed_catalog_language_apply">Zbato gjuhët</string>
+    <plurals name="feed_catalog_languages_selection">
+        <item quantity="one">%1$d gjuhë e zgjedhur</item>
+        <item quantity="other">%1$d gjuhë të zgjedhura</item>
+    </plurals>
+    <string name="feed_catalog_world_selected">Përfshihet e gjithë bota</string>
+    <string name="feed_catalog_results">Burime për “%1$s”</string>
+    <plurals name="feed_catalog_loaded_count">
+        <item quantity="one">%1$d burim në këtë përzgjedhje</item>
+        <item quantity="other">%1$d burime në këtë përzgjedhje</item>
+    </plurals>
+    <string name="feed_catalog_language_subset">Gjuhët filtrojnë burimet e ngarkuara deri tani. Ngarkoni më shumë për të gjetur përputhje të tjera.</string>
+    <string name="feed_catalog_subscribed">Të abonuar</string>
+    <string name="feed_catalog_loading">Po gjejmë zëra të rinj…</string>
+    <string name="feed_catalog_loading_hint">Burimi juaj i ardhshëm i mirë mund të jetë shumë pranë.</string>
+    <string name="feed_catalog_error_title">Bota mund të presë pak.</string>
+    <string name="feed_catalog_error_body">Katalogu lokal nuk u ngarkua. Ende mund të shtoni një adresë burimi.</string>
+    <string name="feed_catalog_empty_title">Jo tamam ajo që kishit në mendje?</string>
+    <string name="feed_catalog_empty_body">Ky burim ende nuk është në katalogun Plenary. Provoni emrin ose ngjitni adresën e faqes apo burimit në fushën e kërkimit.</string>
+    <string name="feed_catalog_more">Ngarko më shumë burime</string>
+    <string name="feed_catalog_more_failed">Nuk u ngarkuan më shumë burime. Rezultatet tuaja janë ende këtu.</string>
+    <string name="feed_catalog_reset">Eksploro tema</string>
+    <string name="feed_catalog_credit">Burime të përzgjedhura nga Plenary · CC0</string>
+    <string name="feed_catalog_privacy">Kërkoni privatisht në katalogun Plenary të përfshirë, edhe jashtë linje. Vetëm hapja e pamjes paraprake lidhet me botuesin.</string>
+    <string name="feed_catalog_private_title">Zbuloni në një skedë të zakonshme</string>
+    <string name="feed_catalog_private_body">Hapni një skedë të zakonshme për të menaxhuar burimet. Për një pamje paraprake pa abonim, ngjitni adresën e faqes ose burimit në fushën e kërkimit.</string>
+    <string name="feed_catalog_no_description">Hapni një pamje paraprake për ta njohur këtë burim.</string>
+    <string name="feed_catalog_close_languages">Mbyll gjuhët e leximit</string>
+    <string name="feed_catalog_website_unknown">Burimi origjinal</string>
+    <string name="feed_catalog_address_detected">U zbulua adresë · Hap pamjen paraprake</string>
+</resources>

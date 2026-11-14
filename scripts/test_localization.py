@@ -62,6 +62,7 @@ class LocalizationTest(unittest.TestCase):
                     target = translated.get(name)
                     self.assertIsNotNone(target)
                     self.assertEqual(source.tag, target.tag)
+                    self.assertEqual(source.get("formatted", "true"), target.get("formatted", "true"))
                     leaves = list(target) if source.tag in {"plurals", "string-array"} else [target]
                     for leaf in leaves:
                         self.assertTrue("".join(leaf.itertext()).strip(), "Empty translation")

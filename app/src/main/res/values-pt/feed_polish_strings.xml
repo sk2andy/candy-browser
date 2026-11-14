@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feeds_manual_address">Introduzir endereço do feed</string>
+    <string name="feeds_manual_note">Traga uma fonte de que gosta. Introduza o endereço do site ou feed RSS/Atom e espreite antes de subscrever.</string>
+    <string name="feeds_latest_articles">Artigos mais recentes</string>
+    <string name="feeds_subscription_failed">Não foi possível guardar esta fonte. As suas subscrições não foram alteradas. Tente novamente.</string>
+    <string name="feeds_sources_empty_title">Dê espaço a boas vozes.</string>
+    <string name="feeds_sources_empty_note">Descubra uma fonte de qualquer parte do mundo ou adicione o endereço do seu feed. Os novos artigos chegarão à caixa de entrada.</string>
+</resources>

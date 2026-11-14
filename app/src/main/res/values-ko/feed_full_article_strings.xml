@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feeds_full_article_unavailable">전체 기사를 사용할 수 없음</string>
+    <string name="feeds_full_article_unavailable_summary">게시자의 전체 기사를 불러오지 못했습니다. 원본 페이지를 열어 계속 읽으세요.</string>
+</resources>

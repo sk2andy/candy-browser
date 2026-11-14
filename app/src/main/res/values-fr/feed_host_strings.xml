@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feeds_next_unread">Article non lu suivant</string>
+    <string name="feeds_notifications_denied">Les notifications sont désactivées dans Android. Votre sélection est enregistrée.</string>
+    <string name="feeds_notification_channel">Flux Candy</string>
+    <string name="feeds_notification_count">%1$d articles non lus vous attendent.</string>
+    <string name="feeds_speech_next">Article suivant</string>
+    <string name="feeds_speech_speed">Vitesse de lecture : %1$s×</string>
+    <string name="feeds_speech_unavailable">Aucune voix disponible. Vérifiez les paramètres de synthèse vocale Android.</string>
+</resources>

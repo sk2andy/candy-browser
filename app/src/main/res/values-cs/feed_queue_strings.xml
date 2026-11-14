@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feeds_player_open">Otevřít frontu poslechu</string>
+    <string name="feeds_player_close">Zavřít frontu poslechu</string>
+    <string name="feeds_player_up_next">Fronta · %1$d</string>
+    <string name="feeds_player_import_saved">Přidat uložené</string>
+    <string name="feeds_player_empty">Chvilka pro vás</string>
+    <string name="feeds_player_empty_title">Váš příští dobrý poslech.</string>
+    <string name="feeds_player_empty_hint">Pomocí ikony seznamu poslechu u článku jej přidejte sem. Přidat můžete i své záložky.</string>
+    <string name="feeds_player_preparing">Příprava</string>
+    <string name="feeds_player_listening">Právě se čte nahlas</string>
+    <string name="feeds_player_ready">Připraveno, až budete chtít</string>
+    <string name="feeds_player_progress">Přečteno nahlas %1$d%%</string>
+    <string name="feeds_player_rate">%1$s×</string>
+    <string name="feeds_player_current">První · %1$s</string>
+    <string name="feeds_player_move_up">Posunout nahoru: %1$s</string>
+    <string name="feeds_player_remove">Odebrat z fronty poslechu: %1$s</string>
+    <string name="feeds_player_load_failed">Tento článek se nepodařilo připravit ke čtení nahlas.</string>
+    <string name="feeds_player_retry">Zkusit znovu</string>
+    <string name="feeds_player_foreground">Pokračujte v poslechu s aplikací na pozadí. Ovládání přehrávání je dostupné i v mediálním oznámení Androidu.</string>
+</resources>

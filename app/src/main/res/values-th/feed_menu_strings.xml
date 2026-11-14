@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="browser_menu_reading_group">อ่านและเก็บ</string>
+    <string name="browser_menu_workflows_group">เวิร์กโฟลว์ของคุณ</string>
+    <string name="browser_menu_feeds">ฟีด</string>
+    <string name="browser_menu_library">คลัง</string>
+    <string name="browser_menu_discover_feeds">ค้นพบฟีด</string>
+    <string name="browser_menu_feed_unread_count">ยังไม่อ่าน %1$d</string>
+    <string name="browser_menu_section_expanded">ขยายแล้ว</string>
+    <string name="browser_menu_section_collapsed">ยุบแล้ว</string>
+</resources>

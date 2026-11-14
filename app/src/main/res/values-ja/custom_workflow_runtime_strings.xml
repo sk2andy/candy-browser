@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="workflow_run_details">詳細</string>
+    <string name="workflow_run_dismiss">閉じる</string>
+    <string name="workflow_run_done">すべてのステップが完了</string>
+    <string name="workflow_run_waiting">待機中</string>
+    <string name="workflow_run_running">実行中…</string>
+    <string name="workflow_run_succeeded">完了</string>
+    <string name="workflow_run_failed">操作に失敗</string>
+    <string name="workflow_run_skipped">未実行</string>
+    <string name="workflow_run_cancelling">現在の操作後に停止します…</string>
+    <string name="workflow_run_cancelled">停止しました。完了したステップは保持されます。</string>
+    <string name="workflow_run_invalid">このワークフローは無効です。</string>
+    <string name="workflow_run_unsupported">このページでは利用できません。</string>
+    <string name="workflow_run_private">このワークフローはデータを保存するため、プライベートでは実行できません。</string>
+    <string name="workflow_run_pinned">固定タブは閉じられません。</string>
+    <string name="workflow_run_changed">元のページが変わりました。残りのステップを停止しました。</string>
+    <string name="workflow_run_empty">読める記事が見つかりません。</string>
+    <string name="workflow_run_save_failed">保存できません。ストレージと Reader ライブラリの空き容量を確認してください。入力は開いたままです。</string>
+    <string name="workflow_run_timeout">操作がタイムアウトしました。残りのステップを停止しました。</string>
+</resources>

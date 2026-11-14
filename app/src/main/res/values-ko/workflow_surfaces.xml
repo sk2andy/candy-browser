@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="workflow_surface_group">사용자 지정 워크플로</string>
+    <string name="workflow_surface_manage">관리</string>
+</resources>

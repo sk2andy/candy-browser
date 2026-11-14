@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="browser_menu_reading_group">阅读与收藏</string>
+    <string name="browser_menu_workflows_group">你的工作流</string>
+    <string name="browser_menu_feeds">订阅源</string>
+    <string name="browser_menu_library">资料库</string>
+    <string name="browser_menu_discover_feeds">发现订阅源</string>
+    <string name="browser_menu_feed_unread_count">%1$d 篇未读</string>
+    <string name="browser_menu_section_expanded">已展开</string>
+    <string name="browser_menu_section_collapsed">已收起</string>
+</resources>

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="constellations_explore">Εξερευνήστε τις συνδέσεις σας</string>
+    <string name="constellations_show_list">Εμφάνιση λίστας σελίδων</string>
+    <string name="constellations_hide_list">Απόκρυψη λίστας σελίδων</string>
+    <string name="constellations_expand_map">Ανάπτυξη χάρτη</string>
+    <string name="constellations_collapse_map">Σύμπτυξη χάρτη</string>
+    <string name="constellations_all_topics">Όλα τα θέματα</string>
+    <string name="constellations_close_details">Κλείσιμο λεπτομερειών σελίδας</string>
+    <string name="constellations_fit_all">Εμφάνιση όλων</string>
+    <string name="constellations_explore_hint">Τσιμπήστε για ζουμ και σύρετε για εξερεύνηση. Πατήστε μια σελίδα για σχετικές σελίδες. Οι συνδέσεις δείχνουν ομοιότητα θεμάτων.</string>
+    <string name="constellations_map_description">Σελίδες στον χάρτη: %1$d. Χρησιμοποιήστε τη λίστα σελίδων για εξερεύνηση με στοιχεία προσβασιμότητας.</string>
+</resources>

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reader_pocket_cancel">Anulează</string>
+    <string name="reader_pocket_title">Voce offline Pocket TTS</string>
+    <string name="reader_pocket_summary">Alege modelul descărcat care corespunde limbii fiecărui articol. Dezactivarea păstrează pachetele de limbi.</string>
+    <string name="reader_pocket_download_summary">Descarcă una sau mai multe limbi. Articolele și sunetul generat rămân pe dispozitiv. Dacă limba lipsește sau este incertă, ți se cere să alegi; descărcările de limbi nu pornesc automat.</string>
+    <string name="reader_pocket_unknown_language">Alege o limbă descărcată pentru acest text sau folosește altă voce.</string>
+    <string name="reader_pocket_unsupported_language">Limba detectată: %1$s. Nu există un model Pocket pentru ea. Folosește altă voce sau alege o limbă dacă detectarea a fost greșită.</string>
+    <string name="reader_pocket_article_language">Limba articolului: %1$s. Descarcă modelul ei sau alege o limbă descărcată pentru a corecta detectarea.</string>
+    <string name="reader_pocket_download_size">Descărcare: %1$d MB · stocare: %2$d MB</string>
+    <string name="reader_pocket_use_language">Citește în această limbă</string>
+    <string name="reader_pocket_remove">Elimină limba</string>
+    <string name="reader_pocket_downloaded">Descărcat · disponibil offline</string>
+    <string name="reader_pocket_license_summary">Pocket TTS de Kyutai. Descărcarea acceptă licența modelului și condițiile de atribuire a vocii. Această voce este generată de IA.</string>
+    <string name="reader_pocket_license">Licențe pentru model și voce</string>
+</resources>

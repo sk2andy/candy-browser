@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="constellations_explore">Razišči svoje povezave</string>
+    <string name="constellations_show_list">Pokaži seznam strani</string>
+    <string name="constellations_hide_list">Skrij seznam strani</string>
+    <string name="constellations_expand_map">Razširi zemljevid</string>
+    <string name="constellations_collapse_map">Strni zemljevid</string>
+    <string name="constellations_all_topics">Vse teme</string>
+    <string name="constellations_close_details">Zapri podrobnosti strani</string>
+    <string name="constellations_fit_all">Pokaži vse</string>
+    <string name="constellations_explore_hint">Za povečavo razmakni prsta, za raziskovanje pa povleci. Tapni stran za ogled sorodnih strani. Povezave prikazujejo podobnost tem.</string>
+    <string name="constellations_map_description">Strani na zemljevidu: %1$d. Uporabi seznam strani za raziskovanje s kontrolniki za dostopnost.</string>
+</resources>

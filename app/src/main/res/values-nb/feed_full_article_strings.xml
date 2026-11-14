@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feeds_full_article_unavailable">Hele artikkelen er utilgjengelig</string>
+    <string name="feeds_full_article_unavailable_summary">Kunne ikke laste utgiverens hele artikkel. Åpne originalsiden for å lese videre.</string>
+</resources>

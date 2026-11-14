@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="candy_trail_fit_all">Vis alle</string>
+    <string name="candy_trail_current_page">Gjeldende side</string>
+    <string name="candy_trail_graph_view">Graf</string>
+    <string name="candy_trail_list_view">Liste</string>
+    <string name="candy_trail_focus_route">Fokuser på gjeldende sti</string>
+    <string name="candy_trail_all_branches">Vis alle grener</string>
+    <string name="candy_trail_collapse_branch">Skjul sidegrener</string>
+    <string name="candy_trail_expand_branch">Utvid sidegrener</string>
+    <string name="candy_trail_hidden_pages">Skjult: %1$d</string>
+</resources>

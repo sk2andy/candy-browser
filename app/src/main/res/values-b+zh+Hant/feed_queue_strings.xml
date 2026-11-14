@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feeds_player_open">開啟收聽佇列</string>
+    <string name="feeds_player_close">關閉收聽佇列</string>
+    <string name="feeds_player_up_next">佇列 · %1$d</string>
+    <string name="feeds_player_import_saved">新增已儲存內容</string>
+    <string name="feeds_player_empty">給自己片刻</string>
+    <string name="feeds_player_empty_title">下一篇值得收聽的內容。</string>
+    <string name="feeds_player_empty_hint">使用文章的收聽列表圖示將其新增到這裡。書籤也可加入。</string>
+    <string name="feeds_player_preparing">準備中</string>
+    <string name="feeds_player_listening">正在朗讀</string>
+    <string name="feeds_player_ready">隨時就緒</string>
+    <string name="feeds_player_progress">已朗讀 %1$d%%</string>
+    <string name="feeds_player_rate">%1$s×</string>
+    <string name="feeds_player_current">首先播放 · %1$s</string>
+    <string name="feeds_player_move_up">上移：%1$s</string>
+    <string name="feeds_player_remove">從收聽佇列移除：%1$s</string>
+    <string name="feeds_player_load_failed">無法準備此文章進行朗讀。</string>
+    <string name="feeds_player_retry">重試</string>
+    <string name="feeds_player_foreground">應用在後臺時也可繼續收聽。Android 媒體通知也提供播放控制元件。</string>
+</resources>

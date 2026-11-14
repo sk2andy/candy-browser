@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reader_pocket_title">Voix Pocket TTS hors connexion</string>
+    <string name="reader_pocket_summary">Choisissez le modèle téléchargé correspondant à la langue de chaque article. La désactivation conserve vos packs de langues.</string>
+    <string name="reader_pocket_download_summary">Téléchargez une ou plusieurs langues. Les articles et l’audio généré restent sur votre appareil. Si la langue est absente ou incertaine, vous devrez la choisir ; aucun téléchargement ne démarre automatiquement.</string>
+    <string name="reader_pocket_unknown_language">Choisissez une langue téléchargée pour ce texte ou utilisez une autre voix.</string>
+    <string name="reader_pocket_unsupported_language">Langue détectée : %1$s. Aucun modèle Pocket disponible. Utilisez une autre voix ou choisissez une langue si la détection est incorrecte.</string>
+    <string name="reader_pocket_article_language">Langue de l’article : %1$s. Téléchargez son modèle ou choisissez une langue téléchargée pour corriger la détection.</string>
+    <string name="reader_pocket_download_size">Téléchargement : %1$d Mo · stockage : %2$d Mo</string>
+    <string name="reader_pocket_cancel">Annuler</string>
+    <string name="reader_pocket_use_language">Lire dans cette langue</string>
+    <string name="reader_pocket_remove">Supprimer la langue</string>
+    <string name="reader_pocket_downloaded">Téléchargé · disponible hors connexion</string>
+    <string name="reader_pocket_license_summary">Pocket TTS par Kyutai. Le téléchargement vaut acceptation de la licence du modèle et des conditions d’attribution de la voix. Cette voix est générée par IA.</string>
+    <string name="reader_pocket_license">Licences du modèle et des voix</string>
+</resources>

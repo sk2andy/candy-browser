@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feeds_player_open">Abrir cola de escucha</string>
+    <string name="feeds_player_close">Cerrar cola de escucha</string>
+    <string name="feeds_player_up_next">Cola · %1$d</string>
+    <string name="feeds_player_import_saved">Añadir guardados</string>
+    <string name="feeds_player_empty">Un momento para ti</string>
+    <string name="feeds_player_empty_title">Tu próxima buena escucha.</string>
+    <string name="feeds_player_empty_hint">Usa el icono de lista de escucha de un artículo para añadirlo aquí. Tus marcadores también pueden unirse.</string>
+    <string name="feeds_player_preparing">Preparando</string>
+    <string name="feeds_player_listening">Leyendo en voz alta</string>
+    <string name="feeds_player_ready">Listo cuando quieras</string>
+    <string name="feeds_player_progress">%1$d%% leído en voz alta</string>
+    <string name="feeds_player_rate">%1$s×</string>
+    <string name="feeds_player_current">Primero · %1$s</string>
+    <string name="feeds_player_move_up">Subir: %1$s</string>
+    <string name="feeds_player_remove">Quitar de la cola de escucha: %1$s</string>
+    <string name="feeds_player_load_failed">No se pudo preparar este artículo para leerlo en voz alta.</string>
+    <string name="feeds_player_retry">Reintentar</string>
+    <string name="feeds_player_foreground">Sigue escuchando con la aplicación en segundo plano. Los controles de reproducción también están en la notificación multimedia de Android.</string>
+</resources>

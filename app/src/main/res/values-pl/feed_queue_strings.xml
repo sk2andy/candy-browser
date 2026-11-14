@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feeds_player_open">Otwórz kolejkę słuchania</string>
+    <string name="feeds_player_close">Zamknij kolejkę słuchania</string>
+    <string name="feeds_player_up_next">Kolejka · %1$d</string>
+    <string name="feeds_player_import_saved">Dodaj zapisane</string>
+    <string name="feeds_player_empty">Chwila dla Ciebie</string>
+    <string name="feeds_player_empty_title">Twoja kolejna dobra lektura na słuch.</string>
+    <string name="feeds_player_empty_hint">Użyj ikony listy słuchania przy artykule, aby go tu dodać. Twoje zakładki też mogą dołączyć.</string>
+    <string name="feeds_player_preparing">Przygotowywanie</string>
+    <string name="feeds_player_listening">Trwa czytanie na głos</string>
+    <string name="feeds_player_ready">Gotowe, gdy zechcesz</string>
+    <string name="feeds_player_progress">Przeczytano na głos %1$d%%</string>
+    <string name="feeds_player_rate">%1$s×</string>
+    <string name="feeds_player_current">Najpierw · %1$s</string>
+    <string name="feeds_player_move_up">Przesuń w górę: %1$s</string>
+    <string name="feeds_player_remove">Usuń z kolejki słuchania: %1$s</string>
+    <string name="feeds_player_load_failed">Nie udało się przygotować tego artykułu do czytania na głos.</string>
+    <string name="feeds_player_retry">Spróbuj ponownie</string>
+    <string name="feeds_player_foreground">Słuchaj dalej z aplikacją w tle. Sterowanie odtwarzaniem jest też dostępne w powiadomieniu multimedialnym Androida.</string>
+</resources>

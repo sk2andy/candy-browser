@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feeds_manual_address">Zadat adresu kanálu</string>
+    <string name="feeds_manual_note">Přidejte oblíbený zdroj. Zadejte adresu jeho webu nebo kanálu RSS/Atom a před odběrem si jej prohlédněte.</string>
+    <string name="feeds_latest_articles">Nejnovější články</string>
+    <string name="feeds_subscription_failed">Tento zdroj se nepodařilo uložit. Vaše odběry se nezměnily. Zkuste to znovu.</string>
+    <string name="feeds_sources_empty_title">Udělejte místo dobrým hlasům.</string>
+    <string name="feeds_sources_empty_note">Objevte zdroj z celého světa nebo přidejte vlastní adresu kanálu. Nové články dorazí do doručených.</string>
+</resources>

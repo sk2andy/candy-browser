@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feeds_next_unread">下一篇未读文章</string>
+    <string name="feeds_notifications_denied">Android 已禁用通知。你的选择已保存。</string>
+    <string name="feeds_notification_channel">Candy 订阅源</string>
+    <string name="feeds_notification_count">有 %1$d 篇未读文章。</string>
+    <string name="feeds_speech_next">下一篇文章</string>
+    <string name="feeds_speech_speed">朗读速度：%1$s×</string>
+    <string name="feeds_speech_unavailable">没有可用语音。请检查 Android 文字转语音设置。</string>
+</resources>

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="browser_menu_reading_group">Lezen en verzamelen</string>
+    <string name="browser_menu_workflows_group">Je workflows</string>
+    <string name="browser_menu_feeds">Feeds</string>
+    <string name="browser_menu_library">Bibliotheek</string>
+    <string name="browser_menu_discover_feeds">Feeds ontdekken</string>
+    <string name="browser_menu_feed_unread_count">%1$d ongelezen</string>
+    <string name="browser_menu_section_expanded">Uitgeklapt</string>
+    <string name="browser_menu_section_collapsed">Ingeklapt</string>
+</resources>

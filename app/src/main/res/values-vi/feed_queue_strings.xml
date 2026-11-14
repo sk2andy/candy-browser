@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feeds_player_open">Mở hàng đợi nghe</string>
+    <string name="feeds_player_close">Đóng hàng đợi nghe</string>
+    <string name="feeds_player_up_next">Hàng đợi · %1$d</string>
+    <string name="feeds_player_import_saved">Thêm bài đã lưu</string>
+    <string name="feeds_player_empty">Khoảnh khắc cho bạn</string>
+    <string name="feeds_player_empty_title">Bài hay tiếp theo để nghe.</string>
+    <string name="feeds_player_empty_hint">Dùng biểu tượng danh sách nghe trên bài để thêm vào đây. Bạn cũng có thể thêm dấu trang.</string>
+    <string name="feeds_player_preparing">Đang chuẩn bị</string>
+    <string name="feeds_player_listening">Đang đọc to</string>
+    <string name="feeds_player_ready">Sẵn sàng khi bạn muốn</string>
+    <string name="feeds_player_progress">Đã đọc to %1$d%%</string>
+    <string name="feeds_player_rate">%1$s×</string>
+    <string name="feeds_player_current">Đầu tiên · %1$s</string>
+    <string name="feeds_player_move_up">Chuyển lên: %1$s</string>
+    <string name="feeds_player_remove">Xóa khỏi hàng đợi nghe: %1$s</string>
+    <string name="feeds_player_load_failed">Không thể chuẩn bị đọc to bài này.</string>
+    <string name="feeds_player_retry">Thử lại</string>
+    <string name="feeds_player_foreground">Tiếp tục nghe khi ứng dụng ở nền. Điều khiển phát cũng có trong thông báo đa phương tiện Android.</string>
+</resources>

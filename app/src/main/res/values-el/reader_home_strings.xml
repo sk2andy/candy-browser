@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reader_home_title">Στούντιο ανάγνωσης</string>
+    <string name="reader_home_back">Πίσω</string>
+    <string name="reader_home_manage_feeds">Διαχείριση ροών</string>
+    <string name="reader_home_library_tab">Βιβλιοθήκη</string>
+    <string name="reader_home_feeds_tab">Ροές</string>
+    <string name="reader_home_all_feeds">Όλες οι ροές</string>
+    <string name="reader_home_all_posts">Όλες οι αναρτήσεις</string>
+    <string name="reader_home_unread_count">Μη αναγνωσμένα (%1$d)</string>
+    <string name="reader_home_article_count">Άρθρα: %1$d</string>
+    <string name="reader_home_newest_first">Πρώτα τα νεότερα</string>
+    <string name="reader_home_all_available_shown">Εμφανίστηκαν όλα τα διαθέσιμα άρθρα</string>
+    <string name="reader_home_no_feeds_title">Δεν υπάρχουν ροές ακόμα</string>
+    <string name="reader_home_no_feeds_message">Ακολουθήστε μια ροή για να δείτε εδώ τα πρόσφατα άρθρα της.</string>
+    <string name="reader_home_all_read_title">Τα διαβάσατε όλα</string>
+    <string name="reader_home_all_read_message">Δεν υπάρχουν μη αναγνωσμένα άρθρα σε αυτή την επιλογή.</string>
+    <string name="reader_home_no_articles_title">Δεν υπάρχουν άρθρα ακόμα</string>
+    <string name="reader_home_no_articles_message">Τα νέα άρθρα αυτών των ροών θα εμφανίζονται εδώ.</string>
+    <string name="reader_home_library_empty_title">Η βιβλιοθήκη σας είναι κενή</string>
+    <string name="reader_home_library_empty_message">Τα άρθρα που αποθηκεύετε για ανάγνωση εκτός σύνδεσης εμφανίζονται εδώ.</string>
+    <string name="reader_home_progress">Διαβάστηκε %1$d%%</string>
+    <string name="reader_home_delete_article">Διαγραφή αποθηκευμένου άρθρου</string>
+    <string name="reader_home_choose_feed">Επιλογή ροής</string>
+    <string name="reader_home_feed_count">Ροές με εγγραφή: %1$d</string>
+    <string name="reader_home_source_subtitle">%1$s · %2$d μη αναγνωσμένα</string>
+    <string name="reader_home_search_feeds">Αναζήτηση ροών</string>
+    <string name="reader_home_no_feed_match">Δεν βρέθηκαν σχετικές ροές</string>
+</resources>

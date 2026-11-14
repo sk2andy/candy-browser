@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reader_voice_settings_title">อ่านออกเสียง</string>
+    <string name="reader_voice_settings_summary">เลือกเสียง Android, Supertonic หรือ Pocket TTS สำหรับบทความและข้อความที่เลือก โมเดลในเครื่องใช้ได้ออฟไลน์หลังดาวน์โหลด</string>
+    <string name="reader_voice_choice_title">เลือกเสียง</string>
+    <string name="reader_voice_choice_summary">เลือก Supertonic, Pocket TTS ที่ดาวน์โหลดภาษาได้ หรือเสียง Android เปลี่ยนได้ที่การตั้งค่า → เบราว์เซอร์ → อ่านออกเสียง</string>
+    <string name="reader_voice_use_offline">ใช้ Supertonic</string>
+    <string name="reader_voice_use_system">ใช้เสียง Android</string>
+    <string name="reader_voice_download">ดาวน์โหลดโมเดลเสียง</string>
+    <string name="reader_voice_delete">ลบโมเดลเสียง</string>
+    <string name="reader_voice_enabled_title">เสียงออฟไลน์ Supertonic</string>
+    <string name="reader_voice_enabled_summary">เมื่อปิด Candy ใช้เสียง Android การปิดยังเก็บโมเดลที่ดาวน์โหลดไว้</string>
+    <string name="reader_voice_checking">กำลังตรวจโมเดลเสียง…</string>
+    <string name="reader_voice_working">กำลังอัปเดตโมเดลเสียง…</string>
+    <string name="reader_voice_downloading">กำลังดาวน์โหลดโมเดลเสียง: %1$d%%</string>
+    <string name="reader_voice_model_error">ดาวน์โหลดหรืออัปเดตโมเดลเสียงไม่ได้ ตรวจการเชื่อมต่อและพื้นที่ว่างแล้วลองใหม่</string>
+    <string name="reader_voice_ready">ดาวน์โหลดโมเดลเสียงแล้ว พร้อมอ่านออฟไลน์</string>
+    <string name="reader_voice_missing">ยังไม่ได้ดาวน์โหลดโมเดลเสียง</string>
+    <string name="reader_voice_model_details">Supertonic 3 · ดาวน์โหลดประมาณ 145 MB · 31 ภาษารวมอังกฤษและเยอรมัน ข้อความบทความอยู่ในอุปกรณ์เมื่อใช้โมเดลออฟไลน์ การลบโมเดลจะกลับไปใช้เสียง Android</string>
+    <string name="reader_voice_model_terms">การดาวน์โหลดหรือเปิดใช้โมเดลถือว่ายอมรับใบอนุญาต OpenRAIL-M รวมข้อจำกัดการใช้ เสียงนี้สร้างโดย AI</string>
+    <string name="reader_voice_playback_error">เสียงนี้อ่านข้อความไม่ได้ ลองใหม่หรือเปลี่ยนเสียง</string>
+    <string name="reader_voice_model_license">ใบอนุญาตโมเดล: OpenRAIL-M</string>
+    <string name="reader_voice_unavailable">อ่านออกเสียงไม่ได้ ตรวจโมเดลเสียงใน การตั้งค่า → เบราว์เซอร์ → อ่านออกเสียง หรือการตั้งค่าแปลงข้อความเป็นเสียง Android</string>
+</resources>

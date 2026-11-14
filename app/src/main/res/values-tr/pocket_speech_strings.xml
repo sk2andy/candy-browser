@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reader_pocket_title">Pocket TTS çevrimdışı ses</string>
+    <string name="reader_pocket_summary">Her makalenin diline uygun indirilen modeli seçin. Kapatmak dil paketlerini korur.</string>
+    <string name="reader_pocket_download_summary">Bir veya birkaç dil indirin. Makaleler ve üretilen ses cihazınızda kalır. Eksik veya belirsiz dilde seçim istenir; dil indirmeleri kendiliğinden başlamaz.</string>
+    <string name="reader_pocket_unknown_language">Bu metin için indirilen dil seçin veya başka ses kullanın.</string>
+    <string name="reader_pocket_unsupported_language">Algılanan dil: %1$s. Pocket modeli yok. Başka ses kullanın veya algılama yanlışsa dil seçin.</string>
+    <string name="reader_pocket_article_language">Makale dili: %1$s. Modelini indirin veya algılamayı düzeltmek için indirilen dil seçin.</string>
+    <string name="reader_pocket_download_size">İndirme: %1$d MB · depolama: %2$d MB</string>
+    <string name="reader_pocket_cancel">İptal</string>
+    <string name="reader_pocket_use_language">Bu dilde oku</string>
+    <string name="reader_pocket_remove">Dili kaldır</string>
+    <string name="reader_pocket_downloaded">İndirildi · çevrimdışı kullanılabilir</string>
+    <string name="reader_pocket_license_summary">Kyutai tarafından Pocket TTS. İndirmek model lisansını ve ses atıf şartlarını kabul eder. Bu ses yapay zekâ üretimidir.</string>
+    <string name="reader_pocket_license">Model ve ses lisansları</string>
+</resources>

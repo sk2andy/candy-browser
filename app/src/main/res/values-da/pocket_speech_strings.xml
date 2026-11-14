@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reader_pocket_cancel">Annuller</string>
+    <string name="reader_pocket_title">Pocket TTS-offlinestemme</string>
+    <string name="reader_pocket_summary">Vælg den downloadede model, der passer til hver artikels sprog. Dine sprogpakker bevares, når du slår dette fra.</string>
+    <string name="reader_pocket_download_summary">Download et eller flere sprog. Artikler og genereret lyd bliver på enheden. Ved manglende eller usikkert sprog bliver du bedt om at vælge; ingen sprogdownloads starter automatisk.</string>
+    <string name="reader_pocket_unknown_language">Vælg et downloadet sprog til teksten, eller brug en anden stemme.</string>
+    <string name="reader_pocket_unsupported_language">Registreret sprog: %1$s. Ingen Pocket-model er tilgængelig til det. Brug en anden stemme, eller vælg et sprog, hvis registreringen var forkert.</string>
+    <string name="reader_pocket_article_language">Artiklens sprog: %1$s. Download modellen, eller vælg et downloadet sprog for at rette registreringen.</string>
+    <string name="reader_pocket_download_size">Download: %1$d MB · lager: %2$d MB</string>
+    <string name="reader_pocket_use_language">Læs på dette sprog</string>
+    <string name="reader_pocket_remove">Fjern sprog</string>
+    <string name="reader_pocket_downloaded">Downloadet · tilgængeligt offline</string>
+    <string name="reader_pocket_license_summary">Pocket TTS fra Kyutai. Ved download accepterer du modellicensen og vilkårene for kreditering af stemmen. Stemmen er AI-genereret.</string>
+    <string name="reader_pocket_license">Model- og stemmelicenser</string>
+</resources>

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reader_nano_enabled_title">Chuẩn bị văn bản bằng Gemini Nano</string>
+    <string name="reader_nano_enabled_summary">Thử nghiệm: cải thiện cách đọc từ viết tắt và số tiếng Đức, Anh thông dụng. Nano không tạo giọng nói; giọng hệ thống hoặc ngoại tuyến đã chọn không đổi. Có thể làm chậm phát.</string>
+    <string name="reader_nano_system_managed">Android quản lý mô hình này và chia sẻ với ứng dụng khác. Tắt chỉ ngừng dùng trong Candy.</string>
+    <string name="reader_nano_download_summary">Điện thoại hỗ trợ Gemini Nano. Tải để chuẩn bị phát âm cục bộ. Việc này không tải hay đổi giọng đọc.</string>
+    <string name="reader_nano_download">Tải và bật Gemini Nano</string>
+    <string name="reader_nano_retry_download">Thử tải lại Gemini Nano</string>
+    <string name="reader_nano_cancel_download">Hủy tải xuống</string>
+    <string name="reader_nano_downloading">Gemini Nano: đã tải %1$s</string>
+    <string name="reader_nano_error">Không thể chuẩn bị Gemini Nano. Bạn có thể tiếp tục đọc to mà không dùng nó.</string>
+    <string name="reader_nano_unavailable">Gemini Nano hiện không khả dụng. Tiếp tục đọc to mà không chuẩn bị văn bản.</string>
+    <string name="reader_nano_preparing">Đang chuẩn bị văn bản cục bộ bằng Gemini Nano…</string>
+    <string name="reader_nano_fallback">Đọc to mà không chuẩn bị bằng Gemini Nano.</string>
+    <string name="reader_nano_metrics_notice">Google xử lý chỉ số sử dụng và hiệu suất. Văn bản được chuẩn bị trên thiết bị.</string>
+    <string name="reader_nano_terms">Điều khoản và quyền riêng tư Google</string>
+    <string name="reader_nano_system_downloading">Android đang tải Gemini Nano. Kiểm tra trạng thái để xem đã xong chưa.</string>
+    <string name="reader_nano_refresh">Kiểm tra trạng thái tải</string>
+    <string name="reader_nano_adult_title">Gemini Nano dành cho người lớn</string>
+    <string name="reader_nano_adult_summary">Google yêu cầu người dùng tính năng này từ 18 tuổi. Xác nhận tuổi trước khi bật Gemini Nano. Vẫn có thể đọc to không dùng Nano.</string>
+    <string name="reader_nano_adult_confirm">Tôi từ 18 tuổi trở lên</string>
+    <string name="reader_nano_adult_cancel">Để sau</string>
+</resources>

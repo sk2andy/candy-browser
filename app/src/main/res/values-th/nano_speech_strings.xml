@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reader_nano_enabled_title">เตรียมข้อความด้วย Gemini Nano</string>
+    <string name="reader_nano_enabled_summary">ทดลอง: ปรับปรุงการอ่านคำย่อและตัวเลขภาษาเยอรมันและอังกฤษทั่วไป Nano ไม่สร้างเสียง ยังคงใช้เสียงระบบหรือออฟไลน์ที่เลือก อาจทำให้เริ่มเล่นช้าลง</string>
+    <string name="reader_nano_system_managed">Android จัดการโมเดลนี้และแชร์กับแอปอื่น การปิดจะปิดใช้ใน Candy เท่านั้น</string>
+    <string name="reader_nano_download_summary">โทรศัพท์รองรับ Gemini Nano ดาวน์โหลดเพื่อเตรียมการออกเสียงในเครื่อง โดยไม่ดาวน์โหลดหรือเปลี่ยนเสียงพูด</string>
+    <string name="reader_nano_download">ดาวน์โหลดและเปิดใช้ Gemini Nano</string>
+    <string name="reader_nano_retry_download">ลองดาวน์โหลด Gemini Nano อีกครั้ง</string>
+    <string name="reader_nano_cancel_download">ยกเลิกดาวน์โหลด</string>
+    <string name="reader_nano_downloading">Gemini Nano: ดาวน์โหลดแล้ว %1$s</string>
+    <string name="reader_nano_error">เตรียม Gemini Nano ไม่ได้ คุณยังอ่านออกเสียงต่อโดยไม่ใช้ได้</string>
+    <string name="reader_nano_unavailable">Gemini Nano ไม่พร้อมใช้งานขณะนี้ อ่านออกเสียงต่อโดยไม่เตรียมข้อความ</string>
+    <string name="reader_nano_preparing">กำลังเตรียมข้อความในเครื่องด้วย Gemini Nano…</string>
+    <string name="reader_nano_fallback">อ่านออกเสียงโดยไม่เตรียมด้วย Gemini Nano</string>
+    <string name="reader_nano_metrics_notice">Google ประมวลผลข้อมูลการใช้งานและประสิทธิภาพ การเตรียมข้อความเกิดบนอุปกรณ์คุณ</string>
+    <string name="reader_nano_terms">ข้อกำหนดและความเป็นส่วนตัวของ Google</string>
+    <string name="reader_nano_system_downloading">Android กำลังดาวน์โหลด Gemini Nano ตรวจสอบสถานะว่าเสร็จหรือยัง</string>
+    <string name="reader_nano_refresh">ตรวจสถานะดาวน์โหลด</string>
+    <string name="reader_nano_adult_title">Gemini Nano สำหรับผู้ใหญ่</string>
+    <string name="reader_nano_adult_summary">Google กำหนดให้ผู้ใช้ฟีเจอร์นี้อายุ 18 ปีขึ้นไป ยืนยันอายุก่อนเปิด Gemini Nano ยังอ่านออกเสียงโดยไม่ใช้ Nano ได้</string>
+    <string name="reader_nano_adult_confirm">ฉันอายุ 18 ปีขึ้นไป</string>
+    <string name="reader_nano_adult_cancel">ไว้ก่อน</string>
+</resources>

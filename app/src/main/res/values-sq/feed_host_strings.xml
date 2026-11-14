@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feeds_next_unread">Artikulli tjetër i palexuar</string>
+    <string name="feeds_notifications_denied">Njoftimet janë çaktivizuar në Android. Zgjedhja jote është ruajtur.</string>
+    <string name="feeds_notification_channel">Burimet Candy</string>
+    <string name="feeds_notification_count">%1$d artikuj të palexuar po të presin.</string>
+    <string name="feeds_speech_next">Artikulli tjetër</string>
+    <string name="feeds_speech_speed">Shpejtësia e leximit: %1$s×</string>
+    <string name="feeds_speech_unavailable">Nuk ka zë të disponueshëm. Kontrollo cilësimet e Android për kthimin e tekstit në të folur.</string>
+</resources>

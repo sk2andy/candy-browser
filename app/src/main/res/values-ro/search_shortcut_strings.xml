@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_search_shortcuts_title">Scurtături de căutare</string>
+    <string name="settings_search_shortcuts_summary">Creează scurtături proprii, ca !gh pentru GitHub sau !yt pentru YouTube. Scrie o scurtătură urmată de spațiu pentru a o transforma într-o etichetă. Sugestiile rămân active. Backspace într-o căutare goală elimină eticheta.</string>
+    <string name="settings_search_shortcut_keyword">Scurtătură</string>
+    <string name="settings_search_shortcut_keyword_summary">De exemplu !gh. Folosește până la 32 de litere, cifre, cratime sau liniuțe de subliniere. Începe cu o literă sau cifră după !.</string>
+    <string name="settings_search_shortcut_template">Șablon URL de căutare</string>
+    <string name="settings_search_shortcut_template_summary" formatted="false">Copiază URL-ul de căutare al unui site și înlocuiește termenii cu %s. Folosește exact un %s într-un URL HTTP sau HTTPS.</string>
+    <string name="settings_search_shortcut_add">Adaugă scurtătură</string>
+    <string name="settings_search_shortcut_edit">Editează scurtătura</string>
+    <string name="settings_search_shortcut_remove">Elimină</string>
+    <string name="settings_search_shortcut_edit_description">Editează scurtătura !%1$s</string>
+    <string name="settings_search_shortcut_remove_description">Elimină scurtătura !%1$s</string>
+    <string name="settings_search_shortcut_invalid" formatted="false">Alege o scurtătură unică ce nu corespunde unui motor de căutare integrat și un URL de căutare valid cu exact un %s.</string>
+    <string name="settings_search_shortcut_examples">Începe cu un site</string>
+    <string name="settings_search_shortcut_github">GitHub · !gh</string>
+    <string name="settings_search_shortcut_youtube">YouTube · !yt</string>
+    <string name="settings_search_shortcut_amazon">Amazon · !amazon</string>
+    <string name="search_shortcut_chip_remove">Elimină scurtătura de căutare !%1$s</string>
+</resources>

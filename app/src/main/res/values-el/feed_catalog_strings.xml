@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feed_catalog_title">Ανακαλύψτε πηγές</string>
+    <string name="feed_catalog_eyebrow">ΠΕΡΙΕΡΓΕΙΑ. ΧΩΡΙΣ ΣΥΝΟΡΑ.</string>
+    <string name="feed_catalog_headline">Η επόμενη\nαγαπημένη σας ροή.</string>
+    <string name="feed_catalog_intro">Μεγάλες ιστορίες. Ανεξάρτητες φωνές. Βρείτε κάτι που αξίζει να ακολουθήσετε.</string>
+    <string name="feed_catalog_search_hint">Θέμα, όνομα ή διεύθυνση ροής</string>
+    <string name="feed_catalog_search">Αναζήτηση πηγών</string>
+    <string name="feed_catalog_clear">Εκκαθάριση αναζήτησης</string>
+    <string name="feed_catalog_manual">Διεύθυνση ροής</string>
+    <string name="feed_catalog_topics">Ω, ενδιαφέρον!</string>
+    <string name="feed_catalog_technology">Τεχνολογία</string>
+    <string name="feed_catalog_science">Επιστήμη</string>
+    <string name="feed_catalog_design">Σχεδιασμός και πολιτισμός</string>
+    <string name="feed_catalog_food">Φαγητό</string>
+    <string name="feed_catalog_travel">Ταξίδια</string>
+    <string name="feed_catalog_nature">Φύση</string>
+    <string name="feed_catalog_all_sources">Όλες οι πηγές</string>
+    <string name="feed_catalog_blogs">Ιστολόγια</string>
+    <string name="feed_catalog_news">Ειδήσεις</string>
+    <string name="feed_catalog_all_languages">Όλες οι γλώσσες</string>
+    <plurals name="feed_catalog_languages_count">
+        <item quantity="one">%1$d γλώσσα</item>
+        <item quantity="other">%1$d γλώσσες</item>
+    </plurals>
+    <string name="feed_catalog_languages_title">Οι γλώσσες ανάγνωσής σας</string>
+    <string name="feed_catalog_languages_intro">Επιλέξτε μία, πολλές ή όλον τον κόσμο.</string>
+    <string name="feed_catalog_language_search">Εύρεση γλώσσας</string>
+    <string name="feed_catalog_language_unknown">Δεν ορίστηκε γλώσσα</string>
+    <string name="feed_catalog_language_none">Δεν βρέθηκε γλώσσα. Δοκιμάστε το όνομα ή τον κωδικό της.</string>
+    <string name="feed_catalog_language_apply">Εφαρμογή γλωσσών</string>
+    <plurals name="feed_catalog_languages_selection">
+        <item quantity="one">Επιλέχθηκε %1$d γλώσσα</item>
+        <item quantity="other">Επιλέχθηκαν %1$d γλώσσες</item>
+    </plurals>
+    <string name="feed_catalog_world_selected">Περιλαμβάνεται όλος ο κόσμος</string>
+    <string name="feed_catalog_results">Πηγές για «%1$s»</string>
+    <plurals name="feed_catalog_loaded_count">
+        <item quantity="one">%1$d πηγή σε αυτή την επιλογή</item>
+        <item quantity="other">%1$d πηγές σε αυτή την επιλογή</item>
+    </plurals>
+    <string name="feed_catalog_language_subset">Οι γλώσσες φιλτράρουν τις ήδη φορτωμένες πηγές. Φορτώστε περισσότερες για νέα αποτελέσματα.</string>
+    <string name="feed_catalog_preview">Προεπισκόπηση</string>
+    <string name="feed_catalog_subscribed">Έγινε εγγραφή</string>
+    <string name="feed_catalog_loading">Αναζήτηση νέων φωνών…</string>
+    <string name="feed_catalog_loading_hint">Η επόμενη καλή πηγή μπορεί να είναι πολύ κοντά.</string>
+    <string name="feed_catalog_error_title">Ο κόσμος μπορεί να περιμένει λίγο.</string>
+    <string name="feed_catalog_error_body">Ο τοπικός κατάλογος δεν φορτώθηκε. Μπορείτε να προσθέσετε διεύθυνση ροής.</string>
+    <string name="feed_catalog_retry">Δοκιμή ξανά</string>
+    <string name="feed_catalog_empty_title">Δεν βρήκατε αυτό που θέλατε;</string>
+    <string name="feed_catalog_empty_body">Αυτή η πηγή δεν υπάρχει ακόμα στον κατάλογο Plenary. Δοκιμάστε το όνομα ή επικολλήστε τη διεύθυνση ιστοτόπου ή ροής στην αναζήτηση.</string>
+    <string name="feed_catalog_more">Φόρτωση περισσότερων πηγών</string>
+    <string name="feed_catalog_more_failed">Δεν φορτώθηκαν περισσότερες πηγές. Τα αποτελέσματα παραμένουν.</string>
+    <string name="feed_catalog_reset">Εξερεύνηση θεμάτων</string>
+    <string name="feed_catalog_credit">Επιλεγμένες πηγές από Plenary · CC0</string>
+    <string name="feed_catalog_privacy">Αναζητήστε ιδιωτικά στον ενσωματωμένο κατάλογο Plenary, ακόμη και εκτός σύνδεσης. Μόνο η προεπισκόπηση συνδέεται στον εκδότη.</string>
+    <string name="feed_catalog_private_title">Ανακάλυψη σε κανονική καρτέλα</string>
+    <string name="feed_catalog_private_body">Ανοίξτε κανονική καρτέλα για διαχείριση πηγών. Για προεπισκόπηση χωρίς εγγραφή, επικολλήστε τη διεύθυνση ιστοτόπου ή ροής στην αναζήτηση.</string>
+    <string name="feed_catalog_no_description">Ανοίξτε προεπισκόπηση για να γνωρίσετε την πηγή.</string>
+    <string name="feed_catalog_close_languages">Κλείσιμο γλωσσών ανάγνωσης</string>
+    <string name="feed_catalog_website_unknown">Αρχική ροή</string>
+    <string name="feed_catalog_address_detected">Εντοπίστηκε διεύθυνση · Άνοιγμα προεπισκόπησης</string>
+</resources>

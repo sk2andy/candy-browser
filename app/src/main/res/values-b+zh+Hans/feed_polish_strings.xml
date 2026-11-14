@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feeds_manual_address">输入订阅源地址</string>
+    <string name="feeds_manual_note">带来喜爱的来源。输入网站或 RSS/Atom 订阅源地址，订阅前先看看。</string>
+    <string name="feeds_latest_articles">最新文章</string>
+    <string name="feeds_subscription_failed">无法保存此来源。订阅未变。请重试。</string>
+    <string name="feeds_sources_empty_title">为好声音留空间。</string>
+    <string name="feeds_sources_empty_note">发现世界各地的来源，或添加自己的订阅源地址。新文章会送达收件箱。</string>
+</resources>

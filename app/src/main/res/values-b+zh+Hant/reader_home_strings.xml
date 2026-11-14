@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reader_home_title">閱讀工作室</string>
+    <string name="reader_home_back">返回</string>
+    <string name="reader_home_manage_feeds">管理訂閱源</string>
+    <string name="reader_home_library_tab">資料庫</string>
+    <string name="reader_home_feeds_tab">訂閱源</string>
+    <string name="reader_home_all_feeds">所有訂閱源</string>
+    <string name="reader_home_all_posts">所有文章</string>
+    <string name="reader_home_unread_count">未讀（%1$d）</string>
+    <string name="reader_home_article_count">文章：%1$d</string>
+    <string name="reader_home_newest_first">最新優先</string>
+    <string name="reader_home_all_available_shown">已顯示所有可用文章</string>
+    <string name="reader_home_no_feeds_title">尚無訂閱源</string>
+    <string name="reader_home_no_feeds_message">關注訂閱源，即可在此檢視最新文章。</string>
+    <string name="reader_home_all_read_title">你已全部讀完</string>
+    <string name="reader_home_all_read_message">此選擇中沒有未讀文章。</string>
+    <string name="reader_home_no_articles_title">尚無文章</string>
+    <string name="reader_home_no_articles_message">這些訂閱源的新文章將在此顯示。</string>
+    <string name="reader_home_library_empty_title">資料庫為空</string>
+    <string name="reader_home_library_empty_message">為離線閱讀儲存的文章將在此顯示。</string>
+    <string name="reader_home_progress">已讀 %1$d%%</string>
+    <string name="reader_home_delete_article">刪除已儲存文章</string>
+    <string name="reader_home_choose_feed">選擇訂閱源</string>
+    <string name="reader_home_feed_count">已訂閱：%1$d</string>
+    <string name="reader_home_source_subtitle">%1$s · %2$d 篇未讀</string>
+    <string name="reader_home_search_feeds">搜尋訂閱源</string>
+    <string name="reader_home_no_feed_match">沒有匹配的訂閱源</string>
+</resources>

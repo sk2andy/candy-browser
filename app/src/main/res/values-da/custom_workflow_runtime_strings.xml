@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="workflow_run_details">Detaljer</string>
+    <string name="workflow_run_dismiss">Luk</string>
+    <string name="workflow_run_done">Alle trin fuldført</string>
+    <string name="workflow_run_waiting">Venter</string>
+    <string name="workflow_run_running">Kører…</string>
+    <string name="workflow_run_succeeded">Fuldført</string>
+    <string name="workflow_run_failed">Handlingen mislykkedes</string>
+    <string name="workflow_run_skipped">Ikke udført</string>
+    <string name="workflow_run_cancelling">Stopper efter den aktuelle handling…</string>
+    <string name="workflow_run_cancelled">Stoppet. Fuldførte trin bevares.</string>
+    <string name="workflow_run_invalid">Denne arbejdsgang er ugyldig.</string>
+    <string name="workflow_run_unsupported">Ikke tilgængelig for denne side.</string>
+    <string name="workflow_run_private">Denne arbejdsgang gemmer data og kan ikke køres privat.</string>
+    <string name="workflow_run_pinned">Fastgjorte faner kan ikke lukkes.</string>
+    <string name="workflow_run_changed">Kildesiden blev ændret. Resterende trin blev stoppet.</string>
+    <string name="workflow_run_empty">Ingen læsbar artikel fundet.</string>
+    <string name="workflow_run_save_failed">Kunne ikke gemme. Tjek lager og ledig plads i læsebiblioteket. Inputtet forbliver åbent.</string>
+    <string name="workflow_run_timeout">Handlingen tog for lang tid. Resterende trin blev stoppet.</string>
+</resources>

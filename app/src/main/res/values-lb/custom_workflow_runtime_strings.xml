@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="workflow_run_details">Detailer</string>
+    <string name="workflow_run_dismiss">Zoumaachen</string>
+    <string name="workflow_run_done">All Schrëtt ofgeschloss</string>
+    <string name="workflow_run_waiting">Waarden</string>
+    <string name="workflow_run_running">Leeft…</string>
+    <string name="workflow_run_succeeded">Ofgeschloss</string>
+    <string name="workflow_run_failed">Aktioun feelgeschloen</string>
+    <string name="workflow_run_skipped">Net ausgeféiert</string>
+    <string name="workflow_run_cancelling">Gëtt no der aktueller Operatioun gestoppt…</string>
+    <string name="workflow_run_cancelled">Gestoppt. Ofgeschlosse Schrëtt bleiwen erhalen.</string>
+    <string name="workflow_run_invalid">Dësen Aarbechtsoflaf ass ongëlteg.</string>
+    <string name="workflow_run_unsupported">Net fir dës Säit disponibel.</string>
+    <string name="workflow_run_private">Dësen Aarbechtsoflaf späichert Donnéeën a kann net privat lafen.</string>
+    <string name="workflow_run_pinned">Fixéiert Tabs kënnen net zougemaach ginn.</string>
+    <string name="workflow_run_changed">D’Quellsäit gouf geännert. Déi reschtlech Schrëtt goufe gestoppt.</string>
+    <string name="workflow_run_empty">Kee liesbaren Artikel fonnt.</string>
+    <string name="workflow_run_save_failed">Konnt net späicheren. Kontrolléier de Späicher an déi fräi Plaz an der Liesbibliothéik. D’Input bleift op.</string>
+    <string name="workflow_run_timeout">D’Operatioun huet ze laang gedauert. Déi reschtlech Schrëtt goufe gestoppt.</string>
+</resources>

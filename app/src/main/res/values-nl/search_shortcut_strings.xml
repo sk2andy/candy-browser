@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_search_shortcuts_title">Zoeksnelkoppelingen</string>
+    <string name="settings_search_shortcuts_summary">Maak eigen snelkoppelingen, zoals !gh voor GitHub of !yt voor YouTube. Typ een snelkoppeling met een spatie erachter om er een chip van te maken. Zoeksuggesties blijven werken. Backspace bij een lege zoekopdracht verwijdert de chip.</string>
+    <string name="settings_search_shortcut_keyword">Snelkoppeling</string>
+    <string name="settings_search_shortcut_keyword_summary">Bijvoorbeeld !gh. Gebruik maximaal 32 letters, cijfers, koppeltekens of onderstrepingstekens. Begin na ! met een letter of cijfer.</string>
+    <string name="settings_search_shortcut_template">Sjabloon voor zoek-URL</string>
+    <string name="settings_search_shortcut_template_summary" formatted="false">Kopieer de zoek-URL van een website en vervang de zoektermen door %s. Gebruik precies één %s in een HTTP- of HTTPS-URL.</string>
+    <string name="settings_search_shortcut_add">Snelkoppeling toevoegen</string>
+    <string name="settings_search_shortcut_edit">Snelkoppeling bewerken</string>
+    <string name="settings_search_shortcut_remove">Verwijderen</string>
+    <string name="settings_search_shortcut_edit_description">Snelkoppeling !%1$s bewerken</string>
+    <string name="settings_search_shortcut_remove_description">Snelkoppeling !%1$s verwijderen</string>
+    <string name="settings_search_shortcut_invalid" formatted="false">Kies een unieke snelkoppeling die niet overeenkomt met een ingebouwde zoekmachine en een geldige zoek-URL met precies één %s.</string>
+    <string name="settings_search_shortcut_examples">Begin met een website</string>
+    <string name="settings_search_shortcut_github">GitHub · !gh</string>
+    <string name="settings_search_shortcut_youtube">YouTube · !yt</string>
+    <string name="settings_search_shortcut_amazon">Amazon · !amazon</string>
+    <string name="search_shortcut_chip_remove">Zoeksnelkoppeling !%1$s verwijderen</string>
+</resources>

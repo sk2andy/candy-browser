@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feeds_next_unread">Další nepřečtený článek</string>
+    <string name="feeds_notifications_denied">Oznámení jsou v Androidu vypnutá. Váš výběr je uložen.</string>
+    <string name="feeds_notification_channel">Kanály Candy</string>
+    <string name="feeds_notification_count">Čekající nepřečtené články: %1$d.</string>
+    <string name="feeds_speech_next">Další článek</string>
+    <string name="feeds_speech_speed">Rychlost čtení: %1$s×</string>
+    <string name="feeds_speech_unavailable">Není dostupný žádný hlas. Zkontrolujte nastavení převodu textu na řeč v Androidu.</string>
+</resources>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feeds_next_unread">Следваща непрочетена статия</string>
+    <string name="feeds_notifications_denied">Известията са изключени в Android. Изборът ви е запазен.</string>
+    <string name="feeds_notification_channel">Емисии Candy</string>
+    <string name="feeds_notification_count">Чакат ви %1$d непрочетени статии.</string>
+    <string name="feeds_speech_next">Следваща статия</string>
+    <string name="feeds_speech_speed">Скорост на четене: %1$s×</string>
+    <string name="feeds_speech_unavailable">Няма наличен глас. Проверете настройките на Android за синтез на реч.</string>
+</resources>

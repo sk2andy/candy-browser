@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feed_catalog_clear">Zoekopdracht wissen</string>
+    <string name="feed_catalog_preview">Voorbeeld</string>
+    <string name="feed_catalog_retry">Probeer het nog eens.</string>
+    <string name="feed_catalog_title">Bronnen ontdekken</string>
+    <string name="feed_catalog_eyebrow">NIEUWSGIERIGHEID ZONDER GRENZEN.</string>
+    <string name="feed_catalog_headline">Je volgende\nfavoriete feed.</string>
+    <string name="feed_catalog_intro">Grote verhalen. Onafhankelijke stemmen. Vind iets om te volgen.</string>
+    <string name="feed_catalog_search_hint">Onderwerp, naam of feedadres</string>
+    <string name="feed_catalog_search">Bronnen zoeken</string>
+    <string name="feed_catalog_manual">Feedadres</string>
+    <string name="feed_catalog_topics">O, interessant!</string>
+    <string name="feed_catalog_technology">Technologie</string>
+    <string name="feed_catalog_science">Wetenschap</string>
+    <string name="feed_catalog_design">Ontwerp en cultuur</string>
+    <string name="feed_catalog_food">Eten</string>
+    <string name="feed_catalog_travel">Reizen</string>
+    <string name="feed_catalog_nature">Natuur</string>
+    <string name="feed_catalog_all_sources">Alle bronnen</string>
+    <string name="feed_catalog_blogs">Blogs</string>
+    <string name="feed_catalog_news">Nieuws</string>
+    <string name="feed_catalog_all_languages">Alle talen</string>
+    <plurals name="feed_catalog_languages_count">
+        <item quantity="one">%1$d taal</item>
+        <item quantity="other">%1$d talen</item>
+    </plurals>
+    <string name="feed_catalog_languages_title">Je leestalen</string>
+    <string name="feed_catalog_languages_intro">Kies één, meerdere of de hele wereld.</string>
+    <string name="feed_catalog_language_search">Een taal zoeken</string>
+    <string name="feed_catalog_language_unknown">Taal niet opgegeven</string>
+    <string name="feed_catalog_language_none">Geen taal gevonden. Probeer de naam of taalcode.</string>
+    <string name="feed_catalog_language_apply">Talen toepassen</string>
+    <plurals name="feed_catalog_languages_selection">
+        <item quantity="one">%1$d taal geselecteerd</item>
+        <item quantity="other">%1$d talen geselecteerd</item>
+    </plurals>
+    <string name="feed_catalog_world_selected">De hele wereld is inbegrepen</string>
+    <string name="feed_catalog_results">Bronnen voor ‘%1$s’</string>
+    <plurals name="feed_catalog_loaded_count">
+        <item quantity="one">%1$d bron in deze selectie</item>
+        <item quantity="other">%1$d bronnen in deze selectie</item>
+    </plurals>
+    <string name="feed_catalog_language_subset">Talen filteren de bronnen die al geladen zijn. Laad meer om meer resultaten te vinden.</string>
+    <string name="feed_catalog_subscribed">Geabonneerd</string>
+    <string name="feed_catalog_loading">Nieuwe stemmen zoeken…</string>
+    <string name="feed_catalog_loading_hint">Je volgende goede bron kan vlakbij zijn.</string>
+    <string name="feed_catalog_error_title">De wereld kan even wachten.</string>
+    <string name="feed_catalog_error_body">De lokale catalogus kon niet worden geladen. Je kunt nog steeds een feedadres toevoegen.</string>
+    <string name="feed_catalog_empty_title">Niet helemaal wat je zocht?</string>
+    <string name="feed_catalog_empty_body">Deze bron staat nog niet in de Plenary-catalogus. Probeer de naam of plak het website- of feedadres in het zoekveld.</string>
+    <string name="feed_catalog_more">Meer bronnen laden</string>
+    <string name="feed_catalog_more_failed">Meer bronnen laden mislukt. Je resultaten zijn er nog.</string>
+    <string name="feed_catalog_reset">Onderwerpen verkennen</string>
+    <string name="feed_catalog_credit">Geselecteerde bronnen van Plenary · CC0</string>
+    <string name="feed_catalog_privacy">Zoek privé in de meegeleverde Plenary-catalogus, ook offline. Alleen een feedvoorbeeld openen maakt verbinding met de uitgever.</string>
+    <string name="feed_catalog_private_title">Ontdekken in een normaal tabblad</string>
+    <string name="feed_catalog_private_body">Open een normaal tabblad om bronnen te beheren. Plak een website- of feedadres in het zoekveld voor een voorbeeld zonder abonnement.</string>
+    <string name="feed_catalog_no_description">Open een voorbeeld om deze bron te leren kennen.</string>
+    <string name="feed_catalog_close_languages">Leestalen sluiten</string>
+    <string name="feed_catalog_website_unknown">Oorspronkelijke feed</string>
+    <string name="feed_catalog_address_detected">Adres herkend · Voorbeeld openen</string>
+</resources>

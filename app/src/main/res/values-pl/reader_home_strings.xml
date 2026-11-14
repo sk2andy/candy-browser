@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reader_home_title">Reader Studio</string>
+    <string name="reader_home_back">Wstecz</string>
+    <string name="reader_home_manage_feeds">Zarządzaj kanałami</string>
+    <string name="reader_home_library_tab">Biblioteka</string>
+    <string name="reader_home_feeds_tab">Kanały</string>
+    <string name="reader_home_all_feeds">Wszystkie kanały</string>
+    <string name="reader_home_all_posts">Wszystkie wpisy</string>
+    <string name="reader_home_unread_count">Nieprzeczytane (%1$d)</string>
+    <string name="reader_home_article_count">Artykuły: %1$d</string>
+    <string name="reader_home_newest_first">Od najnowszych</string>
+    <string name="reader_home_all_available_shown">Wyświetlono wszystkie dostępne artykuły</string>
+    <string name="reader_home_no_feeds_title">Brak kanałów</string>
+    <string name="reader_home_no_feeds_message">Obserwuj kanał, aby zobaczyć tu jego najnowsze artykuły.</string>
+    <string name="reader_home_all_read_title">Wszystko przeczytane</string>
+    <string name="reader_home_all_read_message">W tym wyborze nie ma nieprzeczytanych artykułów.</string>
+    <string name="reader_home_no_articles_title">Brak artykułów</string>
+    <string name="reader_home_no_articles_message">Tutaj pojawią się nowe artykuły z tych kanałów.</string>
+    <string name="reader_home_library_empty_title">Twoja biblioteka jest pusta</string>
+    <string name="reader_home_library_empty_message">Tutaj pojawią się artykuły zapisane do czytania offline.</string>
+    <string name="reader_home_progress">Przeczytano %1$d%%</string>
+    <string name="reader_home_delete_article">Usuń zapisany artykuł</string>
+    <string name="reader_home_choose_feed">Wybierz kanał</string>
+    <string name="reader_home_feed_count">Subskrybowane kanały: %1$d</string>
+    <string name="reader_home_source_subtitle">%1$s · nieprzeczytane: %2$d</string>
+    <string name="reader_home_search_feeds">Szukaj kanałów</string>
+    <string name="reader_home_no_feed_match">Brak pasujących kanałów</string>
+</resources>

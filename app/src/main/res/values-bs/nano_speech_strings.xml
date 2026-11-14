@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reader_nano_enabled_title">Pripremi tekst uz Gemini Nano</string>
+    <string name="reader_nano_enabled_summary">Eksperimentalno: poboljšava čitanje uobičajenih njemačkih i engleskih skraćenica i brojeva. Nano ne stvara glas: odabrani sistemski ili lokalni glas ostaje isti. Može odgoditi reprodukciju.</string>
+    <string name="reader_nano_system_managed">Android upravlja ovim modelom i dijeli ga s drugim aplikacijama. Isključivanje onemogućava samo upotrebu u Candyju.</string>
+    <string name="reader_nano_download_summary">Telefon podržava Gemini Nano. Preuzmi ga za lokalnu pripremu izgovora. Ovo ne preuzima niti mijenja glas.</string>
+    <string name="reader_nano_download">Preuzmi i omogući Gemini Nano</string>
+    <string name="reader_nano_retry_download">Ponovi preuzimanje Gemini Nano</string>
+    <string name="reader_nano_cancel_download">Otkaži preuzimanje</string>
+    <string name="reader_nano_downloading">Gemini Nano: %1$s preuzeto</string>
+    <string name="reader_nano_error">Gemini Nano nije se mogao pripremiti. Možeš nastaviti čitanje naglas bez njega.</string>
+    <string name="reader_nano_unavailable">Gemini Nano trenutno nije dostupan. Čitanje se nastavlja bez pripreme teksta.</string>
+    <string name="reader_nano_preparing">Lokalna priprema teksta uz Gemini Nano…</string>
+    <string name="reader_nano_fallback">Čitanje naglas bez pripreme uz Gemini Nano.</string>
+    <string name="reader_nano_metrics_notice">Google obrađuje podatke o upotrebi i performansama. Priprema teksta odvija se na tvom uređaju.</string>
+    <string name="reader_nano_terms">Googleovi uslovi i privatnost</string>
+    <string name="reader_nano_system_downloading">Android preuzima Gemini Nano. Provjeri status da vidiš je li završeno.</string>
+    <string name="reader_nano_refresh">Provjeri status preuzimanja</string>
+    <string name="reader_nano_adult_title">Gemini Nano je za odrasle</string>
+    <string name="reader_nano_adult_summary">Google zahtijeva da korisnici ove funkcije imaju najmanje 18 godina. Potvrdi dob prije omogućavanja Gemini Nano. Čitanje bez modela Nano ostaje dostupno.</string>
+    <string name="reader_nano_adult_confirm">Imam najmanje 18 godina</string>
+    <string name="reader_nano_adult_cancel">Ne sada</string>
+</resources>

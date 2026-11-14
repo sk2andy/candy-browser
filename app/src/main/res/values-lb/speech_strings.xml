@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reader_voice_settings_title">Liest haart</string>
+    <string name="reader_voice_settings_summary">Wiel Android-Stëmmen, Supertonic oder Pocket TTS fir Artikelen a gewielten Text. Lokal Modeller funktionéieren nom Eroflueden offline.</string>
+    <string name="reader_voice_choice_title">Wiel eng Stëmm</string>
+    <string name="reader_voice_choice_summary">Wiel Supertonic, Pocket TTS mat erofluedbare Sproochen oder deng Android-Stëmm. Änner dat ënner Astellungen → Browser → Virliesen.</string>
+    <string name="reader_voice_use_offline">Supertonic benotzen</string>
+    <string name="reader_voice_use_system">Android-Stëmm benotzen</string>
+    <string name="reader_voice_download">Stëmmmodell eroflueden</string>
+    <string name="reader_voice_delete">Stëmmmodell läschen</string>
+    <string name="reader_voice_enabled_title">Supertonic-Offlinestëmm</string>
+    <string name="reader_voice_enabled_summary">Wann ausgeschalt, benotzt Candy deng Android-Stëmm. Beim Ausschalte bleift den erofgeluedene Modell erhalen.</string>
+    <string name="reader_voice_checking">Stëmmmodell gëtt iwwerpréift…</string>
+    <string name="reader_voice_working">Stëmmmodell gëtt aktualiséiert…</string>
+    <string name="reader_voice_downloading">Stëmmmodell gëtt erofgelueden: %1$d%%</string>
+    <string name="reader_voice_model_error">De Stëmmmodell konnt net erofgelueden oder aktualiséiert ginn. Kontrolléier d’Verbindung an de fräie Späicher a probéier nach eng Kéier.</string>
+    <string name="reader_voice_ready">Stëmmmodell erofgelueden. Prett fir offline virzeliesen.</string>
+    <string name="reader_voice_missing">Stëmmmodell net erofgelueden.</string>
+    <string name="reader_voice_model_details">Supertonic 3 · ongeféier 145 MB Download · 31 Sproochen, dorënner Englesch an Däitsch. Artikeltext bleift beim Benotze vum Offlinemodell op dengem Apparat. Wann s du de Modell läschs, ginn erëm Android-Stëmme benotzt.</string>
+    <string name="reader_voice_model_terms">Mam Eroflueden oder Aktivéiere vum Modell akzeptéiers du d’OpenRAIL-M-Lizenz, inklusiv hire Benotzungsbeschränkungen. D’Stëmm ass KI-generéiert.</string>
+    <string name="reader_voice_playback_error">Dës Stëmm konnt den Text net liesen. Probéier nach eng Kéier oder wiessel d’Stëmm.</string>
+    <string name="reader_voice_model_license">Modelllizenz: OpenRAIL-M</string>
+    <string name="reader_voice_unavailable">Virliesen ass net disponibel. Kontrolléier de Stëmmmodell ënner Astellungen → Browser → Virliesen oder d’Android-Astellunge fir Text-zu-Sprooch.</string>
+</resources>

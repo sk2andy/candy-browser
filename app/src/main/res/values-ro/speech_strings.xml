@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reader_voice_settings_title">Citeşte cu voce tare .</string>
+    <string name="reader_voice_settings_summary">Alege voci Android, Supertonic sau Pocket TTS pentru articole și text selectat. Modelele locale funcționează offline după descărcare.</string>
+    <string name="reader_voice_choice_title">Alege o voce</string>
+    <string name="reader_voice_choice_summary">Alege Supertonic, Pocket TTS cu limbi descărcabile sau vocea Android. Poți schimba în Setări → Browser → Citire cu voce tare.</string>
+    <string name="reader_voice_use_offline">Folosește Supertonic</string>
+    <string name="reader_voice_use_system">Folosește vocea Android</string>
+    <string name="reader_voice_download">Descarcă modelul vocal</string>
+    <string name="reader_voice_delete">Șterge modelul vocal</string>
+    <string name="reader_voice_enabled_title">Voce offline Supertonic</string>
+    <string name="reader_voice_enabled_summary">Când este dezactivat, Candy folosește vocea Android. Dezactivarea păstrează modelul descărcat.</string>
+    <string name="reader_voice_checking">Se verifică modelul vocal…</string>
+    <string name="reader_voice_working">Se actualizează modelul vocal…</string>
+    <string name="reader_voice_downloading">Se descarcă modelul vocal: %1$d%%</string>
+    <string name="reader_voice_model_error">Modelul vocal nu a putut fi descărcat sau actualizat. Verifică conexiunea și spațiul liber, apoi încearcă din nou.</string>
+    <string name="reader_voice_ready">Model vocal descărcat. Gata pentru lectură offline.</string>
+    <string name="reader_voice_missing">Modelul vocal nu este descărcat.</string>
+    <string name="reader_voice_model_details">Supertonic 3 · descărcare de circa 145 MB · 31 de limbi, inclusiv engleză și germană. Textul articolului rămâne pe dispozitiv când folosești modelul offline. Ștergerea modelului revine la vocile Android.</string>
+    <string name="reader_voice_model_terms">Prin descărcarea sau activarea modelului accepți licența OpenRAIL-M, inclusiv restricțiile de utilizare. Vocea este generată de IA.</string>
+    <string name="reader_voice_playback_error">Această voce nu a putut citi textul. Încearcă din nou sau schimbă vocea.</string>
+    <string name="reader_voice_model_license">Licența modelului: OpenRAIL-M</string>
+    <string name="reader_voice_unavailable">Citirea cu voce tare este indisponibilă. Verifică modelul în Setări → Browser → Citire cu voce tare sau setările Android pentru transformarea textului în vorbire.</string>
+</resources>

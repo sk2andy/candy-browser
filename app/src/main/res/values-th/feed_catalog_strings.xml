@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feed_catalog_title">ค้นพบแหล่งข่าว</string>
+    <string name="feed_catalog_eyebrow">ความอยากรู้ ไร้พรมแดน</string>
+    <string name="feed_catalog_headline">ฟีดโปรด\nถัดไปของคุณ</string>
+    <string name="feed_catalog_intro">เรื่องราวสำคัญ เสียงอิสระ ค้นหาสิ่งที่ควรติดตาม</string>
+    <string name="feed_catalog_search_hint">หัวข้อ ชื่อ หรือที่อยู่ฟีด</string>
+    <string name="feed_catalog_search">ค้นหาแหล่งข่าว</string>
+    <string name="feed_catalog_clear">ล้างการค้นหา</string>
+    <string name="feed_catalog_manual">ที่อยู่ฟีด</string>
+    <string name="feed_catalog_topics">น่าสนใจจัง!</string>
+    <string name="feed_catalog_technology">เทคโนโลยี</string>
+    <string name="feed_catalog_science">วิทยาศาสตร์</string>
+    <string name="feed_catalog_design">การออกแบบและวัฒนธรรม</string>
+    <string name="feed_catalog_food">อาหาร</string>
+    <string name="feed_catalog_travel">ท่องเที่ยว</string>
+    <string name="feed_catalog_nature">ธรรมชาติ</string>
+    <string name="feed_catalog_all_sources">ทุกแหล่งข่าว</string>
+    <string name="feed_catalog_blogs">บล็อก</string>
+    <string name="feed_catalog_news">ข่าว</string>
+    <string name="feed_catalog_all_languages">ทุกภาษา</string>
+    <plurals name="feed_catalog_languages_count">
+        <item quantity="other">%1$d ภาษา</item>
+    </plurals>
+    <string name="feed_catalog_languages_title">ภาษาที่คุณอ่าน</string>
+    <string name="feed_catalog_languages_intro">เลือกหนึ่งภาษา หลายภาษา หรือทั้งโลก</string>
+    <string name="feed_catalog_language_search">ค้นหาภาษา</string>
+    <string name="feed_catalog_language_unknown">ไม่ได้ระบุภาษา</string>
+    <string name="feed_catalog_language_none">ไม่พบภาษา ลองชื่อหรือรหัสภาษา</string>
+    <string name="feed_catalog_language_apply">ใช้ภาษาที่เลือก</string>
+    <plurals name="feed_catalog_languages_selection">
+        <item quantity="other">เลือก %1$d ภาษา</item>
+    </plurals>
+    <string name="feed_catalog_world_selected">รวมทั้งโลกแล้ว</string>
+    <string name="feed_catalog_results">แหล่งข่าวสำหรับ “%1$s”</string>
+    <plurals name="feed_catalog_loaded_count">
+        <item quantity="other">มี %1$d แหล่งข่าวในชุดนี้</item>
+    </plurals>
+    <string name="feed_catalog_language_subset">ภาษากรองแหล่งข่าวที่โหลดแล้ว โหลดเพิ่มเพื่อพบผลตรงกันอื่น</string>
+    <string name="feed_catalog_preview">ตัวอย่าง</string>
+    <string name="feed_catalog_subscribed">สมัครรับแล้ว</string>
+    <string name="feed_catalog_loading">กำลังค้นหาเสียงใหม่…</string>
+    <string name="feed_catalog_loading_hint">แหล่งข่าวดีถัดไปอาจอยู่ใกล้แค่นี้</string>
+    <string name="feed_catalog_error_title">โลกนี้รอได้สักครู่</string>
+    <string name="feed_catalog_error_body">โหลดแค็ตตาล็อกในเครื่องไม่ได้ คุณยังเพิ่มที่อยู่ฟีดได้</string>
+    <string name="feed_catalog_retry">ลองอีกครั้ง</string>
+    <string name="feed_catalog_empty_title">ยังไม่ตรงใจใช่ไหม</string>
+    <string name="feed_catalog_empty_body">ยังไม่มีแหล่งข่าวนี้ในแค็ตตาล็อก Plenary ลองชื่อหรือวางที่อยู่เว็บไซต์หรือฟีดในช่องค้นหา</string>
+    <string name="feed_catalog_more">โหลดแหล่งข่าวเพิ่ม</string>
+    <string name="feed_catalog_more_failed">โหลดแหล่งข่าวเพิ่มไม่ได้ ผลลัพธ์เดิมยังอยู่</string>
+    <string name="feed_catalog_reset">สำรวจหัวข้อ</string>
+    <string name="feed_catalog_credit">แหล่งข่าวคัดสรรจาก Plenary · CC0</string>
+    <string name="feed_catalog_privacy">ค้นหาแค็ตตาล็อก Plenary ที่รวมมาอย่างเป็นส่วนตัวแม้ออฟไลน์ จะเชื่อมต่อผู้เผยแพร่เมื่อเปิดตัวอย่างฟีดเท่านั้น</string>
+    <string name="feed_catalog_private_title">ค้นพบในแท็บปกติ</string>
+    <string name="feed_catalog_private_body">เปิดแท็บปกติเพื่อจัดการแหล่งข่าว หากต้องการดูตัวอย่างโดยไม่บันทึกการสมัคร ให้วางที่อยู่เว็บไซต์หรือฟีดในช่องค้นหา</string>
+    <string name="feed_catalog_no_description">เปิดตัวอย่างเพื่อรู้จักแหล่งข่าวนี้</string>
+    <string name="feed_catalog_close_languages">ปิดภาษาที่อ่าน</string>
+    <string name="feed_catalog_website_unknown">ฟีดต้นฉบับ</string>
+    <string name="feed_catalog_address_detected">พบที่อยู่ · เปิดตัวอย่าง</string>
+</resources>

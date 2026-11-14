@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feeds_manual_address">Unesi adresu izvora</string>
+    <string name="feeds_manual_note">Dodaj izvor koji voliš. Unesi njegovu mrežnu stranicu ili RSS/Atom adresu pa ga pregledaj prije pretplate.</string>
+    <string name="feeds_latest_articles">Najnoviji članci</string>
+    <string name="feeds_subscription_failed">Ovaj izvor nije moguće spremiti. Tvoje pretplate nisu promijenjene. Pokušaj ponovno.</string>
+    <string name="feeds_sources_empty_title">Napravi mjesta za dobre glasove.</string>
+    <string name="feeds_sources_empty_note">Otkrij izvor iz cijelog svijeta ili unesi vlastitu adresu izvora. Novi članci stizat će u tvoju pristiglu poštu.</string>
+</resources>

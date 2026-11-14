@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_search_shortcuts_title">Søgegenveje</string>
+    <string name="settings_search_shortcuts_summary">Opret egne genveje, såsom !gh til GitHub eller !yt til YouTube. Skriv en genvej efterfulgt af et mellemrum for at gøre den til en brik. Søgeforslag virker stadig. Tilbagetast i en tom søgning fjerner brikken.</string>
+    <string name="settings_search_shortcut_keyword">Genvej</string>
+    <string name="settings_search_shortcut_keyword_summary">For eksempel !gh. Brug højst 32 bogstaver, tal, bindestreger eller understregninger. Start med et bogstav eller tal efter !.</string>
+    <string name="settings_search_shortcut_template">Skabelon til søgeadresse</string>
+    <string name="settings_search_shortcut_template_summary" formatted="false">Kopiér et websteds søgeadresse, og erstat søgeordene med %s. Brug præcis én %s i en HTTP- eller HTTPS-adresse.</string>
+    <string name="settings_search_shortcut_add">Tilføj genvej</string>
+    <string name="settings_search_shortcut_edit">Rediger genvej</string>
+    <string name="settings_search_shortcut_remove">Fjern</string>
+    <string name="settings_search_shortcut_edit_description">Rediger genvejen !%1$s</string>
+    <string name="settings_search_shortcut_remove_description">Fjern genvejen !%1$s</string>
+    <string name="settings_search_shortcut_invalid" formatted="false">Vælg en unik genvej, der ikke matcher en indbygget søgemaskine, og en gyldig søgeadresse med præcis én %s.</string>
+    <string name="settings_search_shortcut_examples">Start med et websted</string>
+    <string name="settings_search_shortcut_github">GitHub · !gh</string>
+    <string name="settings_search_shortcut_youtube">YouTube · !yt</string>
+    <string name="settings_search_shortcut_amazon">Amazon · !amazon</string>
+    <string name="search_shortcut_chip_remove">Fjern søgegenvejen !%1$s</string>
+</resources>

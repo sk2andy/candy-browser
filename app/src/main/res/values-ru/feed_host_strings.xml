@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feeds_next_unread">Следующая непрочитанная статья</string>
+    <string name="feeds_notifications_denied">Уведомления отключены в Android. Ваш выбор сохранён.</string>
+    <string name="feeds_notification_channel">Ленты Candy</string>
+    <string name="feeds_notification_count">Вас ждут непрочитанные статьи: %1$d.</string>
+    <string name="feeds_speech_next">Следующая статья</string>
+    <string name="feeds_speech_speed">Скорость чтения: %1$s×</string>
+    <string name="feeds_speech_unavailable">Нет доступного голоса. Проверьте настройки синтеза речи Android.</string>
+</resources>

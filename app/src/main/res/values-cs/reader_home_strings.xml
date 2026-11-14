@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reader_home_title">Reader Studio</string>
+    <string name="reader_home_back">Zpět</string>
+    <string name="reader_home_manage_feeds">Spravovat kanály</string>
+    <string name="reader_home_library_tab">Knihovna</string>
+    <string name="reader_home_feeds_tab">Kanály</string>
+    <string name="reader_home_all_feeds">Všechny kanály</string>
+    <string name="reader_home_all_posts">Všechny příspěvky</string>
+    <string name="reader_home_unread_count">Nepřečtené (%1$d)</string>
+    <string name="reader_home_article_count">Články: %1$d</string>
+    <string name="reader_home_newest_first">Nejnovější první</string>
+    <string name="reader_home_all_available_shown">Zobrazeny všechny dostupné články</string>
+    <string name="reader_home_no_feeds_title">Zatím žádné kanály</string>
+    <string name="reader_home_no_feeds_message">Sledujte kanál a uvidíte zde jeho nejnovější články.</string>
+    <string name="reader_home_all_read_title">Máte vše přečteno</string>
+    <string name="reader_home_all_read_message">V tomto výběru nejsou nepřečtené články.</string>
+    <string name="reader_home_no_articles_title">Zatím žádné články</string>
+    <string name="reader_home_no_articles_message">Zde se objeví nové články z těchto kanálů.</string>
+    <string name="reader_home_library_empty_title">Vaše knihovna je prázdná</string>
+    <string name="reader_home_library_empty_message">Zde se objeví články uložené pro offline čtení.</string>
+    <string name="reader_home_progress">Přečteno %1$d%%</string>
+    <string name="reader_home_delete_article">Smazat uložený článek</string>
+    <string name="reader_home_choose_feed">Vybrat kanál</string>
+    <string name="reader_home_feed_count">Odebírané kanály: %1$d</string>
+    <string name="reader_home_source_subtitle">%1$s · nepřečtené: %2$d</string>
+    <string name="reader_home_search_feeds">Hledat kanály</string>
+    <string name="reader_home_no_feed_match">Žádné odpovídající kanály</string>
+</resources>

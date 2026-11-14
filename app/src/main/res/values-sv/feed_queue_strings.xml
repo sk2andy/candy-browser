@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feeds_player_retry">Försök igen</string>
+    <string name="feeds_player_open">Öppna lyssningskö</string>
+    <string name="feeds_player_close">Stäng lyssningskö</string>
+    <string name="feeds_player_up_next">Kö · %1$d</string>
+    <string name="feeds_player_import_saved">Lägg till sparade</string>
+    <string name="feeds_player_empty">En stund för dig</string>
+    <string name="feeds_player_empty_title">Din nästa fina lyssningsstund.</string>
+    <string name="feeds_player_empty_hint">Använd lyssningslistans ikon på en artikel för att lägga till den här. Dina bokmärken kan också vara med.</string>
+    <string name="feeds_player_preparing">Förbereder</string>
+    <string name="feeds_player_listening">Läser upp nu</string>
+    <string name="feeds_player_ready">Redo när du är</string>
+    <string name="feeds_player_progress">%1$d%% uppläst</string>
+    <string name="feeds_player_rate">%1$s×</string>
+    <string name="feeds_player_current">Först ut · %1$s</string>
+    <string name="feeds_player_move_up">Flytta upp: %1$s</string>
+    <string name="feeds_player_remove">Ta bort från lyssningskön: %1$s</string>
+    <string name="feeds_player_load_failed">Artikeln kunde inte förberedas för uppläsning.</string>
+    <string name="feeds_player_foreground">Fortsätt lyssna med appen i bakgrunden. Uppspelningskontroller finns även i Androids medieavisering.</string>
+</resources>

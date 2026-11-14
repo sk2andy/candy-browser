@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_search_shortcuts_title">Кратенки за пребарување</string>
+    <string name="settings_search_shortcuts_summary">Создај свои кратенки, како !gh за GitHub или !yt за YouTube. Внеси кратенка и празно место за да ја претвориш во ознака. Предлозите за пребарување продолжуваат да работат. Backspace при празно барање ја отстранува ознаката.</string>
+    <string name="settings_search_shortcut_keyword">Кратенка</string>
+    <string name="settings_search_shortcut_keyword_summary">На пример !gh. Користи до 32 букви, бројки, цртички или долни црти. Почни со буква или број по !.</string>
+    <string name="settings_search_shortcut_template">Шаблон за URL на пребарување</string>
+    <string name="settings_search_shortcut_template_summary" formatted="false">Копирај ја URL-адресата за пребарување на веб-страница и замени ги поимите со %s. Користи точно едно %s во HTTP или HTTPS URL.</string>
+    <string name="settings_search_shortcut_add">Додај кратенка</string>
+    <string name="settings_search_shortcut_edit">Уреди кратенка</string>
+    <string name="settings_search_shortcut_remove">Отстрани</string>
+    <string name="settings_search_shortcut_edit_description">Уреди ја кратенката !%1$s</string>
+    <string name="settings_search_shortcut_remove_description">Отстрани ја кратенката !%1$s</string>
+    <string name="settings_search_shortcut_invalid" formatted="false">Избери единствена кратенка што не се совпаѓа со вграден пребарувач и важечки URL за пребарување со точно едно %s.</string>
+    <string name="settings_search_shortcut_examples">Почни со веб-страница</string>
+    <string name="settings_search_shortcut_github">GitHub · !gh</string>
+    <string name="settings_search_shortcut_youtube">YouTube · !yt</string>
+    <string name="settings_search_shortcut_amazon">Amazon · !amazon</string>
+    <string name="search_shortcut_chip_remove">Отстрани ја кратенката за пребарување !%1$s</string>
+</resources>

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="constellations_explore">Bağlantılarını keşfet</string>
+    <string name="constellations_show_list">Sayfa listesini göster</string>
+    <string name="constellations_hide_list">Sayfa listesini gizle</string>
+    <string name="constellations_expand_map">Haritayı genişlet</string>
+    <string name="constellations_collapse_map">Haritayı daralt</string>
+    <string name="constellations_all_topics">Tüm konular</string>
+    <string name="constellations_close_details">Sayfa ayrıntılarını kapat</string>
+    <string name="constellations_fit_all">Tümünü göster</string>
+    <string name="constellations_explore_hint">Yakınlaştırmak için kıstırın, keşfetmek için sürükleyin. İlgili sayfalar için bir sayfaya dokunun. Bağlantılar konu benzerliğini gösterir.</string>
+    <string name="constellations_map_description">Haritadaki sayfalar: %1$d. Erişilebilirlik denetimleriyle keşfetmek için sayfa listesini kullanın.</string>
+</resources>

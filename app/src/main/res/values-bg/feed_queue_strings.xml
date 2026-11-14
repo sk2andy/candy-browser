@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feeds_player_retry">Опитай отново</string>
+    <string name="feeds_player_open">Отваряне на опашката за слушане</string>
+    <string name="feeds_player_close">Затваряне на опашката за слушане</string>
+    <string name="feeds_player_up_next">Опашка · %1$d</string>
+    <string name="feeds_player_import_saved">Добавяне на запазени</string>
+    <string name="feeds_player_empty">Момент за вас</string>
+    <string name="feeds_player_empty_title">Следващото ви приятно слушане.</string>
+    <string name="feeds_player_empty_hint">Използвайте иконата за списъка за слушане върху статия, за да я добавите тук. Можете да добавите и отметките си.</string>
+    <string name="feeds_player_preparing">Подготовка</string>
+    <string name="feeds_player_listening">Чете се на глас</string>
+    <string name="feeds_player_ready">Готово, когато и вие сте готови</string>
+    <string name="feeds_player_progress">Прочетени на глас %1$d%%</string>
+    <string name="feeds_player_rate">%1$s×</string>
+    <string name="feeds_player_current">Първо · %1$s</string>
+    <string name="feeds_player_move_up">Преместване нагоре: %1$s</string>
+    <string name="feeds_player_remove">Премахване от опашката за слушане: %1$s</string>
+    <string name="feeds_player_load_failed">Тази статия не можа да бъде подготвена за четене на глас.</string>
+    <string name="feeds_player_foreground">Продължете да слушате, докато приложението е на заден план. Контролите за възпроизвеждане са налични и в медийното известие на Android.</string>
+</resources>

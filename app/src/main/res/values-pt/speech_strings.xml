@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reader_voice_settings_title">Ler em voz alta</string>
+    <string name="reader_voice_settings_summary">Escolha vozes Android, Supertonic ou Pocket TTS para artigos e texto selecionado. Os modelos locais funcionam offline após a transferência.</string>
+    <string name="reader_voice_choice_title">Escolher uma voz</string>
+    <string name="reader_voice_choice_summary">Escolha Supertonic, Pocket TTS com idiomas transferíveis ou a voz Android. Pode alterar em Definições → Navegador → Ler em voz alta.</string>
+    <string name="reader_voice_use_offline">Usar Supertonic</string>
+    <string name="reader_voice_use_system">Usar voz Android</string>
+    <string name="reader_voice_download">Transferir modelo de voz</string>
+    <string name="reader_voice_delete">Eliminar modelo de voz</string>
+    <string name="reader_voice_enabled_title">Voz offline Supertonic</string>
+    <string name="reader_voice_enabled_summary">Quando desativado, o Candy usa a voz Android. Desativar mantém o modelo transferido.</string>
+    <string name="reader_voice_checking">A verificar o modelo de voz…</string>
+    <string name="reader_voice_working">A atualizar o modelo de voz…</string>
+    <string name="reader_voice_downloading">A transferir modelo de voz: %1$d%%</string>
+    <string name="reader_voice_model_error">Não foi possível transferir ou atualizar o modelo de voz. Verifique a ligação e o espaço livre e tente novamente.</string>
+    <string name="reader_voice_ready">Modelo de voz transferido. Pronto para leitura offline.</string>
+    <string name="reader_voice_missing">Modelo de voz não transferido.</string>
+    <string name="reader_voice_model_details">Supertonic 3 · transferência de cerca de 145 MB · 31 idiomas, incluindo inglês e alemão. O texto dos artigos permanece no dispositivo ao usar o modelo offline. Eliminar o modelo repõe as vozes Android.</string>
+    <string name="reader_voice_model_terms">Ao transferir ou ativar o modelo, aceita a licença OpenRAIL-M, incluindo as restrições de utilização. A voz é gerada por IA.</string>
+    <string name="reader_voice_playback_error">Esta voz não conseguiu ler o texto. Tente novamente ou mude de voz.</string>
+    <string name="reader_voice_model_license">Licença do modelo: OpenRAIL-M</string>
+    <string name="reader_voice_unavailable">A leitura em voz alta está indisponível. Verifique o modelo de voz em Definições → Navegador → Ler em voz alta, ou as definições de síntese de voz do Android.</string>
+</resources>

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feeds_player_open">Abrir fila de reprodução</string>
+    <string name="feeds_player_close">Fechar fila de reprodução</string>
+    <string name="feeds_player_up_next">Fila · %1$d</string>
+    <string name="feeds_player_import_saved">Adicionar guardados</string>
+    <string name="feeds_player_empty">Um momento para si</string>
+    <string name="feeds_player_empty_title">A sua próxima boa leitura em voz alta.</string>
+    <string name="feeds_player_empty_hint">Use o ícone da lista de reprodução num artigo para o adicionar aqui. Os seus marcadores também podem participar.</string>
+    <string name="feeds_player_preparing">A preparar</string>
+    <string name="feeds_player_listening">A ler em voz alta</string>
+    <string name="feeds_player_ready">Pronto quando quiser</string>
+    <string name="feeds_player_progress">%1$d%% lido em voz alta</string>
+    <string name="feeds_player_rate">%1$s×</string>
+    <string name="feeds_player_current">Primeiro · %1$s</string>
+    <string name="feeds_player_move_up">Mover para cima: %1$s</string>
+    <string name="feeds_player_remove">Remover da fila de reprodução: %1$s</string>
+    <string name="feeds_player_load_failed">Não foi possível preparar este artigo para leitura em voz alta.</string>
+    <string name="feeds_player_retry">Tentar novamente</string>
+    <string name="feeds_player_foreground">Continue a ouvir com a aplicação em segundo plano. Os controlos de reprodução também estão disponíveis na notificação multimédia do Android.</string>
+</resources>

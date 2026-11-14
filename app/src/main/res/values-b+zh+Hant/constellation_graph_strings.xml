@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="constellations_explore">探索你的關聯</string>
+    <string name="constellations_show_list">顯示頁面列表</string>
+    <string name="constellations_hide_list">隱藏頁面列表</string>
+    <string name="constellations_expand_map">展開地圖</string>
+    <string name="constellations_collapse_map">收起地圖</string>
+    <string name="constellations_all_topics">所有主題</string>
+    <string name="constellations_close_details">關閉頁面詳情</string>
+    <string name="constellations_fit_all">顯示全部</string>
+    <string name="constellations_explore_hint">雙指縮放，拖動探索。點按頁面檢視相關頁面。連線表示主題相似度。</string>
+    <string name="constellations_map_description">地圖上的頁面：%1$d。使用頁面列表透過無障礙控制元件探索。</string>
+</resources>

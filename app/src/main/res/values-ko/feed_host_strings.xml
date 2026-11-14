@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feeds_next_unread">다음 읽지 않은 기사</string>
+    <string name="feeds_notifications_denied">Android 알림이 꺼져 있습니다. 선택은 저장되었습니다.</string>
+    <string name="feeds_notification_channel">Candy 피드</string>
+    <string name="feeds_notification_count">읽지 않은 기사 %1$d개가 있습니다.</string>
+    <string name="feeds_speech_next">다음 기사</string>
+    <string name="feeds_speech_speed">읽기 속도: %1$s×</string>
+    <string name="feeds_speech_unavailable">사용 가능한 음성이 없습니다. Android 텍스트 음성 변환 설정을 확인하세요.</string>
+</resources>

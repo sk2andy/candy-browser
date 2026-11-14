@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feeds_full_article_unavailable">Không có toàn văn bài viết</string>
+    <string name="feeds_full_article_unavailable_summary">Không thể tải toàn văn từ nhà xuất bản. Mở trang gốc để đọc tiếp.</string>
+</resources>

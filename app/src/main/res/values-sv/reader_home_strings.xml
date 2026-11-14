@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reader_home_title">Reader Studio</string>
+    <string name="reader_home_back">Tillbaka</string>
+    <string name="reader_home_progress">%1$d%% läs</string>
+    <string name="reader_home_manage_feeds">Hantera flöden</string>
+    <string name="reader_home_library_tab">Bibliotek</string>
+    <string name="reader_home_feeds_tab">Flöden</string>
+    <string name="reader_home_all_feeds">Alla flöden</string>
+    <string name="reader_home_all_posts">Alla inlägg</string>
+    <string name="reader_home_unread_count">Olästa (%1$d)</string>
+    <string name="reader_home_article_count">Artiklar: %1$d</string>
+    <string name="reader_home_newest_first">Nyaste först</string>
+    <string name="reader_home_all_available_shown">Alla tillgängliga artiklar visas</string>
+    <string name="reader_home_no_feeds_title">Inga flöden ännu</string>
+    <string name="reader_home_no_feeds_message">Följ ett flöde för att se dess senaste artiklar här.</string>
+    <string name="reader_home_all_read_title">Du har läst allt</string>
+    <string name="reader_home_all_read_message">Det finns inga olästa artiklar i det här urvalet.</string>
+    <string name="reader_home_no_articles_title">Inga artiklar ännu</string>
+    <string name="reader_home_no_articles_message">Nya artiklar från dessa flöden visas här.</string>
+    <string name="reader_home_library_empty_title">Ditt bibliotek är tomt</string>
+    <string name="reader_home_library_empty_message">Artiklar du sparar för läsning offline visas här.</string>
+    <string name="reader_home_delete_article">Ta bort sparad artikel</string>
+    <string name="reader_home_choose_feed">Välj ett flöde</string>
+    <string name="reader_home_feed_count">Prenumererade flöden: %1$d</string>
+    <string name="reader_home_source_subtitle">%1$s · %2$d olästa</string>
+    <string name="reader_home_search_feeds">Sök flöden</string>
+    <string name="reader_home_no_feed_match">Inga matchande flöden</string>
+</resources>

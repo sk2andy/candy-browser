@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="workflow_run_details">Λεπτομέρειες</string>
+    <string name="workflow_run_dismiss">Κλείσιμο</string>
+    <string name="workflow_run_done">Ολοκληρώθηκαν όλα τα βήματα</string>
+    <string name="workflow_run_waiting">Αναμονή</string>
+    <string name="workflow_run_running">Εκτελείται…</string>
+    <string name="workflow_run_succeeded">Ολοκληρώθηκε</string>
+    <string name="workflow_run_failed">Η ενέργεια απέτυχε</string>
+    <string name="workflow_run_skipped">Δεν εκτελέστηκε</string>
+    <string name="workflow_run_cancelling">Διακοπή μετά την τρέχουσα λειτουργία…</string>
+    <string name="workflow_run_cancelled">Διακόπηκε. Τα ολοκληρωμένα βήματα διατηρούνται.</string>
+    <string name="workflow_run_invalid">Αυτή η ροή εργασίας δεν είναι έγκυρη.</string>
+    <string name="workflow_run_unsupported">Δεν είναι διαθέσιμο για αυτή τη σελίδα.</string>
+    <string name="workflow_run_private">Αυτή η ροή αποθηκεύει δεδομένα και δεν εκτελείται ιδιωτικά.</string>
+    <string name="workflow_run_pinned">Οι καρφιτσωμένες καρτέλες δεν κλείνουν.</string>
+    <string name="workflow_run_changed">Η αρχική σελίδα άλλαξε. Τα υπόλοιπα βήματα διακόπηκαν.</string>
+    <string name="workflow_run_empty">Δεν βρέθηκε αναγνώσιμο άρθρο.</string>
+    <string name="workflow_run_save_failed">Δεν αποθηκεύτηκε. Ελέγξτε τον χώρο αποθήκευσης και τη βιβλιοθήκη Reader. Η είσοδος παραμένει ανοιχτή.</string>
+    <string name="workflow_run_timeout">Η λειτουργία έληξε. Τα υπόλοιπα βήματα διακόπηκαν.</string>
+</resources>

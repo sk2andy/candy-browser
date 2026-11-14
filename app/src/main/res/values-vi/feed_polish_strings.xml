@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feeds_manual_address">Nhập địa chỉ nguồn tin</string>
+    <string name="feeds_manual_note">Mang nguồn bạn thích đến đây. Nhập địa chỉ trang web hoặc RSS/Atom rồi xem trước khi đăng ký.</string>
+    <string name="feeds_latest_articles">Bài mới nhất</string>
+    <string name="feeds_subscription_failed">Không thể lưu nguồn này. Đăng ký không thay đổi. Hãy thử lại.</string>
+    <string name="feeds_sources_empty_title">Dành chỗ cho tiếng nói hay.</string>
+    <string name="feeds_sources_empty_note">Khám phá nguồn khắp thế giới hoặc thêm địa chỉ nguồn của bạn. Bài mới sẽ đến hộp thư.</string>
+</resources>

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reader_pocket_title">Giọng ngoại tuyến Pocket TTS</string>
+    <string name="reader_pocket_summary">Chọn mô hình đã tải khớp ngôn ngữ từng bài. Tắt vẫn giữ gói ngôn ngữ.</string>
+    <string name="reader_pocket_download_summary">Tải một hoặc nhiều ngôn ngữ. Bài và âm thanh tạo ra ở lại thiết bị. Ngôn ngữ thiếu hoặc không chắc sẽ yêu cầu chọn; không tự tải ngôn ngữ.</string>
+    <string name="reader_pocket_unknown_language">Chọn ngôn ngữ đã tải cho văn bản này hoặc dùng giọng khác.</string>
+    <string name="reader_pocket_unsupported_language">Ngôn ngữ phát hiện: %1$s. Không có mô hình Pocket. Dùng giọng khác hoặc chọn ngôn ngữ nếu phát hiện sai.</string>
+    <string name="reader_pocket_article_language">Ngôn ngữ bài: %1$s. Tải mô hình hoặc chọn ngôn ngữ đã tải để sửa nhận diện.</string>
+    <string name="reader_pocket_download_size">Tải: %1$d MB · lưu trữ: %2$d MB</string>
+    <string name="reader_pocket_cancel">Hủy</string>
+    <string name="reader_pocket_use_language">Đọc bằng ngôn ngữ này</string>
+    <string name="reader_pocket_remove">Xóa ngôn ngữ</string>
+    <string name="reader_pocket_downloaded">Đã tải · dùng ngoại tuyến</string>
+    <string name="reader_pocket_license_summary">Pocket TTS của Kyutai. Tải xuống là chấp nhận giấy phép mô hình và điều khoản ghi nguồn giọng nói. Giọng này do AI tạo.</string>
+    <string name="reader_pocket_license">Giấy phép mô hình và giọng</string>
+</resources>

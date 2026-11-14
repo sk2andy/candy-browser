@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reader_voice_settings_title">Sesli oku</string>
+    <string name="reader_voice_settings_summary">Makaleler ve seçili metin için Android sesi, Supertonic veya Pocket TTS seçin. Yerel modeller indirildikten sonra çevrimdışı çalışır.</string>
+    <string name="reader_voice_choice_title">Ses seç</string>
+    <string name="reader_voice_choice_summary">Supertonic, indirilebilir dilli Pocket TTS veya Android sesini seçin. Ayarlar → Tarayıcı → Sesli oku bölümünde değiştirebilirsiniz.</string>
+    <string name="reader_voice_use_offline">Supertonic kullan</string>
+    <string name="reader_voice_use_system">Android sesini kullan</string>
+    <string name="reader_voice_download">Ses modelini indir</string>
+    <string name="reader_voice_delete">Ses modelini sil</string>
+    <string name="reader_voice_enabled_title">Supertonic çevrimdışı ses</string>
+    <string name="reader_voice_enabled_summary">Kapalıyken Candy Android sesini kullanır. Kapatmak indirilen modeli korur.</string>
+    <string name="reader_voice_checking">Ses modeli kontrol ediliyor…</string>
+    <string name="reader_voice_working">Ses modeli güncelleniyor…</string>
+    <string name="reader_voice_downloading">Ses modeli indiriliyor: %1$d%%</string>
+    <string name="reader_voice_model_error">Ses modeli indirilemedi veya güncellenemedi. Bağlantıyı ve boş alanı kontrol edip yeniden deneyin.</string>
+    <string name="reader_voice_ready">Ses modeli indirildi. Çevrimdışı okumaya hazır.</string>
+    <string name="reader_voice_missing">Ses modeli indirilmedi.</string>
+    <string name="reader_voice_model_details">Supertonic 3 · yaklaşık 145 MB indirme · İngilizce ve Almanca dahil 31 dil. Çevrimdışı modelde makale metni cihazda kalır. Modeli silmek Android seslerine döndürür.</string>
+    <string name="reader_voice_model_terms">Modeli indirmek veya etkinleştirmek, kullanım kısıtlamaları dahil OpenRAIL-M lisansını kabul eder. Ses yapay zekâ üretimidir.</string>
+    <string name="reader_voice_playback_error">Bu ses metni okuyamadı. Yeniden deneyin veya sesi değiştirin.</string>
+    <string name="reader_voice_model_license">Model lisansı: OpenRAIL-M</string>
+    <string name="reader_voice_unavailable">Sesli okuma kullanılamıyor. Ayarlar → Tarayıcı → Sesli oku bölümündeki modeli veya Android metin okuma ayarlarını kontrol edin.</string>
+</resources>

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feeds_full_article_unavailable">Celý článek není dostupný</string>
+    <string name="feeds_full_article_unavailable_summary">Celý článek vydavatele se nepodařilo načíst. Pro pokračování ve čtení otevřete původní stránku.</string>
+</resources>

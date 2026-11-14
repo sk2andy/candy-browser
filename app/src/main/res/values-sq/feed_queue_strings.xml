@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feeds_player_retry">Provo përsëri</string>
+    <string name="feeds_player_open">Hap radhën e dëgjimit</string>
+    <string name="feeds_player_close">Mbyll radhën e dëgjimit</string>
+    <string name="feeds_player_up_next">Radha · %1$d</string>
+    <string name="feeds_player_import_saved">Shto të ruajturat</string>
+    <string name="feeds_player_empty">Një çast për ty</string>
+    <string name="feeds_player_empty_title">Dëgjimi yt i radhës.</string>
+    <string name="feeds_player_empty_hint">Përdor ikonën e listës së dëgjimit te një artikull për ta shtuar këtu. Mund të shtosh edhe faqeshënuesit.</string>
+    <string name="feeds_player_preparing">Duke u përgatitur</string>
+    <string name="feeds_player_listening">Po lexohet me zë</string>
+    <string name="feeds_player_ready">Gati kur të jesh ti</string>
+    <string name="feeds_player_progress">%1$d%% e lexuar me zë</string>
+    <string name="feeds_player_rate">%1$s×</string>
+    <string name="feeds_player_current">I pari · %1$s</string>
+    <string name="feeds_player_move_up">Zhvendos lart: %1$s</string>
+    <string name="feeds_player_remove">Hiq nga radha e dëgjimit: %1$s</string>
+    <string name="feeds_player_load_failed">Ky artikull nuk mund të përgatitej për lexim me zë.</string>
+    <string name="feeds_player_foreground">Vazhdo dëgjimin me aplikacionin në sfond. Kontrollet e riprodhimit gjenden edhe në njoftimin mediatik të Android.</string>
+</resources>

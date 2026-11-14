@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feeds_manual_address">Въведете адрес на емисия</string>
+    <string name="feeds_manual_note">Добавете любим източник. Въведете уебсайта му или адреса на RSS/Atom емисията и я прегледайте, преди да се абонирате.</string>
+    <string name="feeds_latest_articles">Най-нови статии</string>
+    <string name="feeds_subscription_failed">Този източник не можа да бъде запазен. Абонаментите ви не са променени. Опитайте отново.</string>
+    <string name="feeds_sources_empty_title">Направете място за добри гласове.</string>
+    <string name="feeds_sources_empty_note">Открийте източник от целия свят или въведете собствен адрес на емисия. Новите статии ще пристигат във входящата ви кутия.</string>
+</resources>

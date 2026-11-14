@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feeds_full_article_unavailable">Cijeli članak nije dostupan</string>
+    <string name="feeds_full_article_unavailable_summary">Cijeli članak izdavača nije moguće učitati. Otvori izvornu stranicu za nastavak čitanja.</string>
+</resources>

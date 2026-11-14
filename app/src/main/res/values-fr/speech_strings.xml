@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reader_voice_settings_title">Lecture à voix haute</string>
+    <string name="reader_voice_settings_summary">Choisissez les voix Android, Supertonic ou Pocket TTS pour les articles et le texte sélectionné. Les modèles locaux fonctionnent hors connexion après téléchargement.</string>
+    <string name="reader_voice_choice_title">Choisir une voix</string>
+    <string name="reader_voice_choice_summary">Choisissez Supertonic, Pocket TTS avec ses langues téléchargeables ou votre voix Android. Modifiable dans Paramètres → Navigateur → Lecture à voix haute.</string>
+    <string name="reader_voice_use_offline">Utiliser Supertonic</string>
+    <string name="reader_voice_use_system">Utiliser la voix Android</string>
+    <string name="reader_voice_download">Télécharger le modèle vocal</string>
+    <string name="reader_voice_delete">Supprimer le modèle vocal</string>
+    <string name="reader_voice_enabled_title">Voix Supertonic hors connexion</string>
+    <string name="reader_voice_enabled_summary">Si désactivé, Candy utilise votre voix Android. La désactivation conserve le modèle téléchargé.</string>
+    <string name="reader_voice_checking">Vérification du modèle vocal…</string>
+    <string name="reader_voice_working">Mise à jour du modèle vocal…</string>
+    <string name="reader_voice_downloading">Téléchargement du modèle vocal : %1$d%%</string>
+    <string name="reader_voice_model_error">Impossible de télécharger ou de mettre à jour le modèle vocal. Vérifiez votre connexion et l’espace libre, puis réessayez.</string>
+    <string name="reader_voice_ready">Modèle vocal téléchargé. Prêt pour la lecture hors connexion.</string>
+    <string name="reader_voice_missing">Modèle vocal non téléchargé.</string>
+    <string name="reader_voice_model_details">Supertonic 3 · téléchargement d’environ 145 Mo · 31 langues dont l’anglais et l’allemand. Le texte des articles reste sur votre appareil avec le modèle hors connexion. Supprimer le modèle rétablit les voix Android.</string>
+    <string name="reader_voice_model_terms">En téléchargeant ou en activant le modèle, vous acceptez sa licence OpenRAIL-M et ses restrictions d’utilisation. La voix est générée par IA.</string>
+    <string name="reader_voice_playback_error">Cette voix n’a pas pu lire le texte. Réessayez ou changez de voix.</string>
+    <string name="reader_voice_model_license">Licence du modèle : OpenRAIL-M</string>
+    <string name="reader_voice_unavailable">La lecture à voix haute est indisponible. Vérifiez le modèle vocal dans Paramètres → Navigateur → Lecture à voix haute, ou les paramètres de synthèse vocale Android.</string>
+</resources>

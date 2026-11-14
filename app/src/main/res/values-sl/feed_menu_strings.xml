@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="browser_menu_reading_group">Beri in zbiraj</string>
+    <string name="browser_menu_workflows_group">Tvoji poteki dela</string>
+    <string name="browser_menu_feeds">Viri</string>
+    <string name="browser_menu_library">Knjižnica</string>
+    <string name="browser_menu_discover_feeds">Odkrij vire</string>
+    <string name="browser_menu_feed_unread_count">%1$d neprebranih</string>
+    <string name="browser_menu_section_expanded">Razširjeno</string>
+    <string name="browser_menu_section_collapsed">Strnjeno</string>
+</resources>

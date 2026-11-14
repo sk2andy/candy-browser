@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feeds_manual_address">Εισαγωγή διεύθυνσης ροής</string>
+    <string name="feeds_manual_note">Προσθέστε μια αγαπημένη πηγή. Εισαγάγετε διεύθυνση ιστοτόπου ή RSS/Atom και δείτε τη πριν εγγραφείτε.</string>
+    <string name="feeds_latest_articles">Πρόσφατα άρθρα</string>
+    <string name="feeds_subscription_failed">Η πηγή δεν αποθηκεύτηκε. Οι συνδρομές σας δεν άλλαξαν. Δοκιμάστε ξανά.</string>
+    <string name="feeds_sources_empty_title">Κάντε χώρο για καλές φωνές.</string>
+    <string name="feeds_sources_empty_note">Ανακαλύψτε πηγές από όλον τον κόσμο ή προσθέστε τη δική σας διεύθυνση ροής. Τα νέα άρθρα φτάνουν στα εισερχόμενα.</string>
+</resources>

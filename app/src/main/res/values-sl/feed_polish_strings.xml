@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feeds_manual_address">Vnesi naslov vira</string>
+    <string name="feeds_manual_note">Dodaj priljubljen vir. Vnesi njegovo spletno stran ali naslov RSS/Atom in si ga oglej pred naročilom.</string>
+    <string name="feeds_latest_articles">Najnovejši članki</string>
+    <string name="feeds_subscription_failed">Tega vira ni bilo mogoče shraniti. Tvoje naročnine so nespremenjene. Poskusi znova.</string>
+    <string name="feeds_sources_empty_title">Naredi prostor dobrim glasovom.</string>
+    <string name="feeds_sources_empty_note">Odkrij vir z vsega sveta ali vnesi svoj naslov vira. Novi članki bodo prispeli v tvoj nabiralnik.</string>
+</resources>

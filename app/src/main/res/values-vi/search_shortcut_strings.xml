@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_search_shortcuts_title">Lối tắt tìm kiếm</string>
+    <string name="settings_search_shortcuts_summary">Tạo lối tắt như !gh cho GitHub, !yt cho YouTube. Gõ lối tắt rồi dấu cách để tạo chip. Gợi ý tìm kiếm vẫn hoạt động. Nhấn Backspace khi truy vấn trống để bỏ chip.</string>
+    <string name="settings_search_shortcut_keyword">Lối tắt</string>
+    <string name="settings_search_shortcut_keyword_summary">Ví dụ !gh. Dùng tối đa 32 chữ cái, chữ số, dấu gạch ngang hoặc gạch dưới. Sau ! phải bắt đầu bằng chữ hoặc số.</string>
+    <string name="settings_search_shortcut_template">Mẫu URL tìm kiếm</string>
+    <string name="settings_search_shortcut_template_summary" formatted="false">Sao chép URL tìm kiếm của trang web rồi thay từ khóa bằng %s. Dùng đúng một %s trong URL HTTP hoặc HTTPS.</string>
+    <string name="settings_search_shortcut_add">Thêm lối tắt</string>
+    <string name="settings_search_shortcut_edit">Sửa lối tắt</string>
+    <string name="settings_search_shortcut_remove">Xóa</string>
+    <string name="settings_search_shortcut_edit_description">Sửa lối tắt !%1$s</string>
+    <string name="settings_search_shortcut_remove_description">Xóa lối tắt !%1$s</string>
+    <string name="settings_search_shortcut_invalid" formatted="false">Chọn lối tắt duy nhất không trùng công cụ tìm kiếm tích hợp và URL tìm kiếm hợp lệ chứa đúng một %s.</string>
+    <string name="settings_search_shortcut_examples">Bắt đầu với trang web</string>
+    <string name="settings_search_shortcut_github">GitHub · !gh</string>
+    <string name="settings_search_shortcut_youtube">YouTube · !yt</string>
+    <string name="settings_search_shortcut_amazon">Amazon · !amazon</string>
+    <string name="search_shortcut_chip_remove">Xóa lối tắt tìm kiếm !%1$s</string>
+</resources>

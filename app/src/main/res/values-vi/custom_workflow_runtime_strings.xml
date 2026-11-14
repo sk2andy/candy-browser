@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="workflow_run_details">Chi tiết</string>
+    <string name="workflow_run_dismiss">Đóng</string>
+    <string name="workflow_run_done">Đã xong mọi bước</string>
+    <string name="workflow_run_waiting">Đang chờ</string>
+    <string name="workflow_run_running">Đang chạy…</string>
+    <string name="workflow_run_succeeded">Đã hoàn tất</string>
+    <string name="workflow_run_failed">Thao tác thất bại</string>
+    <string name="workflow_run_skipped">Chưa thực hiện</string>
+    <string name="workflow_run_cancelling">Sẽ dừng sau thao tác hiện tại…</string>
+    <string name="workflow_run_cancelled">Đã dừng. Giữ nguyên các bước đã xong.</string>
+    <string name="workflow_run_invalid">Quy trình này không hợp lệ.</string>
+    <string name="workflow_run_unsupported">Không dùng được trên trang này.</string>
+    <string name="workflow_run_private">Quy trình này lưu dữ liệu nên không thể chạy riêng tư.</string>
+    <string name="workflow_run_pinned">Không thể đóng thẻ đã ghim.</string>
+    <string name="workflow_run_changed">Trang nguồn đã thay đổi. Đã dừng các bước còn lại.</string>
+    <string name="workflow_run_empty">Không tìm thấy bài có thể đọc.</string>
+    <string name="workflow_run_save_failed">Không thể lưu. Kiểm tra bộ nhớ và dung lượng trống trong thư viện Reader. Nội dung đầu vào vẫn mở.</string>
+    <string name="workflow_run_timeout">Thao tác hết thời gian. Đã dừng các bước còn lại.</string>
+</resources>

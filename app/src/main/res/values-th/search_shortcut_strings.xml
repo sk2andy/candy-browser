@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_search_shortcuts_title">ทางลัดการค้นหา</string>
+    <string name="settings_search_shortcuts_summary">สร้างทางลัดเอง เช่น !gh สำหรับ GitHub หรือ !yt สำหรับ YouTube พิมพ์ทางลัดตามด้วยช่องว่างเพื่อเป็นชิป คำแนะนำค้นหายังใช้ได้ กด Backspace เมื่อคำค้นว่างเพื่อลบชิป</string>
+    <string name="settings_search_shortcut_keyword">ทางลัด</string>
+    <string name="settings_search_shortcut_keyword_summary">เช่น !gh ใช้ตัวอักษร ตัวเลข ยัติภังค์ หรือขีดล่างไม่เกิน 32 ตัว เริ่มด้วยตัวอักษรหรือตัวเลขหลัง !</string>
+    <string name="settings_search_shortcut_template">แม่แบบ URL ค้นหา</string>
+    <string name="settings_search_shortcut_template_summary" formatted="false">คัดลอก URL ค้นหาของเว็บไซต์แล้วแทนคำค้นด้วย %s ใช้ %s เพียงหนึ่งตัวใน URL แบบ HTTP หรือ HTTPS</string>
+    <string name="settings_search_shortcut_add">เพิ่มทางลัด</string>
+    <string name="settings_search_shortcut_edit">แก้ไขทางลัด</string>
+    <string name="settings_search_shortcut_remove">นำออก</string>
+    <string name="settings_search_shortcut_edit_description">แก้ไขทางลัด !%1$s</string>
+    <string name="settings_search_shortcut_remove_description">นำทางลัด !%1$s ออก</string>
+    <string name="settings_search_shortcut_invalid" formatted="false">เลือกทางลัดไม่ซ้ำและไม่ตรงกับเครื่องมือค้นหาที่มีมา พร้อม URL ค้นหาที่ถูกต้องซึ่งมี %s หนึ่งตัว</string>
+    <string name="settings_search_shortcut_examples">เริ่มจากเว็บไซต์</string>
+    <string name="settings_search_shortcut_github">GitHub · !gh</string>
+    <string name="settings_search_shortcut_youtube">YouTube · !yt</string>
+    <string name="settings_search_shortcut_amazon">Amazon · !amazon</string>
+    <string name="search_shortcut_chip_remove">นำทางลัดค้นหา !%1$s ออก</string>
+</resources>

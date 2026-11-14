@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_search_shortcuts_title">검색 바로가기</string>
+    <string name="settings_search_shortcuts_summary">GitHub의 !gh, YouTube의 !yt처럼 바로가기를 만드세요. 바로가기 뒤에 공백을 입력하면 칩이 됩니다. 검색 제안은 계속 작동합니다. 빈 검색에서 백스페이스를 누르면 칩이 제거됩니다.</string>
+    <string name="settings_search_shortcut_keyword">바로가기</string>
+    <string name="settings_search_shortcut_keyword_summary">예: !gh. 문자, 숫자, 하이픈, 밑줄을 최대 32자 사용하세요. ! 뒤에는 문자나 숫자로 시작하세요.</string>
+    <string name="settings_search_shortcut_template">검색 URL 템플릿</string>
+    <string name="settings_search_shortcut_template_summary" formatted="false">웹사이트의 검색 URL을 복사하고 검색어를 %s로 바꾸세요. HTTP 또는 HTTPS URL에 %s를 정확히 하나 사용하세요.</string>
+    <string name="settings_search_shortcut_add">바로가기 추가</string>
+    <string name="settings_search_shortcut_edit">바로가기 편집</string>
+    <string name="settings_search_shortcut_remove">제거</string>
+    <string name="settings_search_shortcut_edit_description">!%1$s 바로가기 편집</string>
+    <string name="settings_search_shortcut_remove_description">!%1$s 바로가기 제거</string>
+    <string name="settings_search_shortcut_invalid" formatted="false">내장 검색 엔진과 겹치지 않는 고유한 바로가기와 %s가 정확히 하나인 유효한 검색 URL을 선택하세요.</string>
+    <string name="settings_search_shortcut_examples">웹사이트로 시작</string>
+    <string name="settings_search_shortcut_github">GitHub · !gh</string>
+    <string name="settings_search_shortcut_youtube">YouTube · !yt</string>
+    <string name="settings_search_shortcut_amazon">Amazon · !amazon</string>
+    <string name="search_shortcut_chip_remove">!%1$s 검색 바로가기 제거</string>
+</resources>

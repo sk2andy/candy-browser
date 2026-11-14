@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reader_voice_settings_title">Preberi na glas.</string>
+    <string name="reader_voice_settings_summary">Izberi glasove Android, Supertonic ali Pocket TTS za članke in izbrano besedilo. Lokalni modeli po prenosu delujejo brez povezave.</string>
+    <string name="reader_voice_choice_title">Izberi glas</string>
+    <string name="reader_voice_choice_summary">Izberi Supertonic, Pocket TTS s prenosljivimi jeziki ali glas Android. To spremeniš v Nastavitve → Brskalnik → Branje na glas.</string>
+    <string name="reader_voice_use_offline">Uporabi Supertonic</string>
+    <string name="reader_voice_use_system">Uporabi glas Android</string>
+    <string name="reader_voice_download">Prenesi glasovni model</string>
+    <string name="reader_voice_delete">Izbriši glasovni model</string>
+    <string name="reader_voice_enabled_title">Glas Supertonic brez povezave</string>
+    <string name="reader_voice_enabled_summary">Ko je izklopljeno, Candy uporablja glas Android. Izklop ohrani preneseni model.</string>
+    <string name="reader_voice_checking">Preverjanje glasovnega modela…</string>
+    <string name="reader_voice_working">Posodabljanje glasovnega modela…</string>
+    <string name="reader_voice_downloading">Prenos glasovnega modela: %1$d%%</string>
+    <string name="reader_voice_model_error">Glasovnega modela ni bilo mogoče prenesti ali posodobiti. Preveri povezavo in prosti prostor ter poskusi znova.</string>
+    <string name="reader_voice_ready">Glasovni model prenesen. Pripravljen za branje brez povezave.</string>
+    <string name="reader_voice_missing">Glasovni model ni prenesen.</string>
+    <string name="reader_voice_model_details">Supertonic 3 · prenos približno 145 MB · 31 jezikov, vključno z angleščino in nemščino. Besedilo članka ostane v napravi pri uporabi modela brez povezave. Brisanje modela preklopi nazaj na glasove Android.</string>
+    <string name="reader_voice_model_terms">S prenosom ali omogočanjem modela sprejmeš licenco OpenRAIL-M, vključno z omejitvami uporabe. Glas je ustvarjen z umetno inteligenco.</string>
+    <string name="reader_voice_playback_error">Ta glas ni mogel prebrati besedila. Poskusi znova ali zamenjaj glas.</string>
+    <string name="reader_voice_model_license">Licenca modela: OpenRAIL-M</string>
+    <string name="reader_voice_unavailable">Branje na glas ni na voljo. Preveri model v Nastavitve → Brskalnik → Branje na glas ali nastavitve Androida za pretvarjanje besedila v govor.</string>
+</resources>

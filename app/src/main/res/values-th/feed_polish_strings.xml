@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feeds_manual_address">กรอกที่อยู่ฟีด</string>
+    <string name="feeds_manual_note">นำแหล่งข่าวที่ชอบมา กรอกที่อยู่เว็บไซต์หรือฟีด RSS/Atom แล้วดูตัวอย่างก่อนสมัคร</string>
+    <string name="feeds_latest_articles">บทความล่าสุด</string>
+    <string name="feeds_subscription_failed">บันทึกแหล่งข่าวนี้ไม่ได้ การสมัครไม่เปลี่ยนแปลง โปรดลองอีกครั้ง</string>
+    <string name="feeds_sources_empty_title">เปิดพื้นที่ให้เสียงดี ๆ</string>
+    <string name="feeds_sources_empty_note">ค้นพบแหล่งข่าวทั่วโลกหรือเพิ่มที่อยู่ฟีดเอง บทความใหม่จะเข้ากล่องขาเข้า</string>
+</resources>

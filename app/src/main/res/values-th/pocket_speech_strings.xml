@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reader_pocket_title">เสียงออฟไลน์ Pocket TTS</string>
+    <string name="reader_pocket_summary">เลือกโมเดลที่ดาวน์โหลดตรงกับภาษาแต่ละบทความ การปิดยังเก็บชุดภาษาไว้</string>
+    <string name="reader_pocket_download_summary">ดาวน์โหลดหนึ่งภาษาหรือมากกว่า บทความและเสียงที่สร้างอยู่ในอุปกรณ์ หากภาษาขาดหรือไม่แน่ชัดจะให้เลือก ไม่มีการดาวน์โหลดภาษาอัตโนมัติ</string>
+    <string name="reader_pocket_unknown_language">เลือกภาษาที่ดาวน์โหลดสำหรับข้อความนี้ หรือใช้เสียงอื่น</string>
+    <string name="reader_pocket_unsupported_language">ภาษาที่ตรวจพบ: %1$s ไม่มีโมเดล Pocket ใช้เสียงอื่นหรือเลือกภาษาหากตรวจผิด</string>
+    <string name="reader_pocket_article_language">ภาษาบทความ: %1$s ดาวน์โหลดโมเดลหรือเลือกภาษาที่ดาวน์โหลดเพื่อแก้การตรวจจับ</string>
+    <string name="reader_pocket_download_size">ดาวน์โหลด: %1$d MB · พื้นที่เก็บ: %2$d MB</string>
+    <string name="reader_pocket_cancel">ยกเลิก</string>
+    <string name="reader_pocket_use_language">อ่านด้วยภาษานี้</string>
+    <string name="reader_pocket_remove">นำภาษาออก</string>
+    <string name="reader_pocket_downloaded">ดาวน์โหลดแล้ว · ใช้ได้ออฟไลน์</string>
+    <string name="reader_pocket_license_summary">Pocket TTS โดย Kyutai การดาวน์โหลดถือว่ายอมรับใบอนุญาตโมเดลและข้อกำหนดการระบุที่มาเสียง เสียงนี้สร้างโดย AI</string>
+    <string name="reader_pocket_license">ใบอนุญาตโมเดลและเสียง</string>
+</resources>

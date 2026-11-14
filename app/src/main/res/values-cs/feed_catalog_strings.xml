@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feed_catalog_title">Objevujte zdroje</string>
+    <string name="feed_catalog_eyebrow">ZVĚDAVOST BEZ HRANIC.</string>
+    <string name="feed_catalog_headline">Váš příští\noblíbený kanál.</string>
+    <string name="feed_catalog_intro">Velké příběhy. Nezávislé hlasy. Najděte něco, co stojí za sledování.</string>
+    <string name="feed_catalog_search_hint">Téma, název nebo adresa kanálu</string>
+    <string name="feed_catalog_search">Hledat zdroje</string>
+    <string name="feed_catalog_clear">Vymazat hledání</string>
+    <string name="feed_catalog_manual">Adresa kanálu</string>
+    <string name="feed_catalog_topics">Jé, zajímavé!</string>
+    <string name="feed_catalog_technology">Technologie</string>
+    <string name="feed_catalog_science">Věda</string>
+    <string name="feed_catalog_design">Design a kultura</string>
+    <string name="feed_catalog_food">Jídlo</string>
+    <string name="feed_catalog_travel">Cestování</string>
+    <string name="feed_catalog_nature">Příroda</string>
+    <string name="feed_catalog_all_sources">Všechny zdroje</string>
+    <string name="feed_catalog_blogs">Blogy</string>
+    <string name="feed_catalog_news">Zprávy</string>
+    <string name="feed_catalog_all_languages">Všechny jazyky</string>
+    <plurals name="feed_catalog_languages_count">
+        <item quantity="one">%1$d jazyk</item>
+        <item quantity="few">%1$d jazyky</item>
+        <item quantity="many">%1$d jazyka</item>
+        <item quantity="other">%1$d jazyků</item>
+    </plurals>
+    <string name="feed_catalog_languages_title">Vaše jazyky pro čtení</string>
+    <string name="feed_catalog_languages_intro">Vyberte jeden, několik nebo celý svět.</string>
+    <string name="feed_catalog_language_search">Najít jazyk</string>
+    <string name="feed_catalog_language_unknown">Jazyk neuveden</string>
+    <string name="feed_catalog_language_none">Jazyk nenalezen. Zkuste jeho název nebo kód.</string>
+    <string name="feed_catalog_language_apply">Použít jazyky</string>
+    <plurals name="feed_catalog_languages_selection">
+        <item quantity="one">Vybrán %1$d jazyk</item>
+        <item quantity="few">Vybrány %1$d jazyky</item>
+        <item quantity="many">Vybráno %1$d jazyka</item>
+        <item quantity="other">Vybráno %1$d jazyků</item>
+    </plurals>
+    <string name="feed_catalog_world_selected">Zahrnut celý svět</string>
+    <string name="feed_catalog_results">Zdroje pro „%1$s“</string>
+    <plurals name="feed_catalog_loaded_count">
+        <item quantity="one">%1$d zdroj v tomto výběru</item>
+        <item quantity="few">%1$d zdroje v tomto výběru</item>
+        <item quantity="many">%1$d zdroje v tomto výběru</item>
+        <item quantity="other">%1$d zdrojů v tomto výběru</item>
+    </plurals>
+    <string name="feed_catalog_language_subset">Jazyky filtrují dosud načtené zdroje. Načtěte další a objevte více shod.</string>
+    <string name="feed_catalog_preview">Náhled</string>
+    <string name="feed_catalog_subscribed">Odebíráno</string>
+    <string name="feed_catalog_loading">Hledání nových hlasů…</string>
+    <string name="feed_catalog_loading_hint">Váš příští dobrý zdroj může být hned za rohem.</string>
+    <string name="feed_catalog_error_title">Svět chvíli počká.</string>
+    <string name="feed_catalog_error_body">Místní katalog se nepodařilo načíst. Stále můžete přidat adresu kanálu.</string>
+    <string name="feed_catalog_retry">Zkusit znovu</string>
+    <string name="feed_catalog_empty_title">Není to to, co jste hledali?</string>
+    <string name="feed_catalog_empty_body">Tento zdroj zatím není v katalogu Plenary. Zkuste jeho název nebo vložte adresu webu či kanálu do vyhledávacího pole.</string>
+    <string name="feed_catalog_more">Načíst další zdroje</string>
+    <string name="feed_catalog_more_failed">Další zdroje se nepodařilo načíst. Vaše výsledky tu stále jsou.</string>
+    <string name="feed_catalog_reset">Procházet témata</string>
+    <string name="feed_catalog_credit">Vybrané zdroje z Plenary · CC0</string>
+    <string name="feed_catalog_privacy">Prohledávejte přibalený katalog Plenary soukromě, i offline. Teprve otevření náhledu kanálu se připojí k jeho vydavateli.</string>
+    <string name="feed_catalog_private_title">Objevujte v běžném panelu</string>
+    <string name="feed_catalog_private_body">Otevřete běžný panel a spravujte zdroje. Pro náhled bez uložení odběru vložte adresu webu nebo kanálu do vyhledávacího pole.</string>
+    <string name="feed_catalog_no_description">Otevřete náhled a poznejte tento zdroj.</string>
+    <string name="feed_catalog_close_languages">Zavřít jazyky pro čtení</string>
+    <string name="feed_catalog_website_unknown">Původní kanál</string>
+    <string name="feed_catalog_address_detected">Zjištěna adresa · Otevřít náhled</string>
+</resources>

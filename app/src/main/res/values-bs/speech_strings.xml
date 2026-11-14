@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reader_voice_settings_title">Čitaj naglas.</string>
+    <string name="reader_voice_settings_summary">Odaberi Android glasove, Supertonic ili Pocket TTS za članke i odabrani tekst. Lokalni modeli rade bez interneta nakon preuzimanja.</string>
+    <string name="reader_voice_choice_title">Odaberi glas</string>
+    <string name="reader_voice_choice_summary">Odaberi Supertonic, Pocket TTS s jezicima za preuzimanje ili Android glas. Promijeni to u Postavke → Preglednik → Čitaj naglas.</string>
+    <string name="reader_voice_use_offline">Koristi Supertonic</string>
+    <string name="reader_voice_use_system">Koristi Android glas</string>
+    <string name="reader_voice_download">Preuzmi model glasa</string>
+    <string name="reader_voice_delete">Izbriši model glasa</string>
+    <string name="reader_voice_enabled_title">Supertonic glas bez interneta</string>
+    <string name="reader_voice_enabled_summary">Kada je isključeno, Candy koristi Android glas. Isključivanje zadržava preuzeti model.</string>
+    <string name="reader_voice_checking">Provjera modela glasa…</string>
+    <string name="reader_voice_working">Ažuriranje modela glasa…</string>
+    <string name="reader_voice_downloading">Preuzimanje modela glasa: %1$d%%</string>
+    <string name="reader_voice_model_error">Model glasa nije se mogao preuzeti ili ažurirati. Provjeri vezu i slobodan prostor pa pokušaj ponovo.</string>
+    <string name="reader_voice_ready">Model glasa preuzet. Spreman za čitanje bez interneta.</string>
+    <string name="reader_voice_missing">Model glasa nije preuzet.</string>
+    <string name="reader_voice_model_details">Supertonic 3 · približno 145 MB za preuzimanje · 31 jezik, uključujući engleski i njemački. Tekst članka ostaje na uređaju pri korištenju lokalnog modela. Brisanje modela vraća Android glasove.</string>
+    <string name="reader_voice_model_terms">Preuzimanjem ili omogućavanjem modela prihvataš licencu OpenRAIL-M, uključujući ograničenja upotrebe. Glas je generisan umjetnom inteligencijom.</string>
+    <string name="reader_voice_playback_error">Ovaj glas nije mogao pročitati tekst. Pokušaj ponovo ili promijeni glas.</string>
+    <string name="reader_voice_model_license">Licenca modela: OpenRAIL-M</string>
+    <string name="reader_voice_unavailable">Čitanje naglas nije dostupno. Provjeri model u Postavke → Preglednik → Čitaj naglas ili Android postavke pretvaranja teksta u govor.</string>
+</resources>

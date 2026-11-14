@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reader_nano_enabled_title">Preparar texto com Gemini Nano</string>
+    <string name="reader_nano_enabled_summary">Experimental: melhora a leitura de abreviaturas e números comuns em alemão e inglês. O Nano não gera voz: a voz do sistema ou offline escolhida mantém-se. Pode atrasar a reprodução.</string>
+    <string name="reader_nano_system_managed">O Android gere este modelo e partilha-o com outras aplicações. Desativar apenas impede a sua utilização no Candy.</string>
+    <string name="reader_nano_download_summary">O seu telefone suporta Gemini Nano. Transfira-o para preparar a pronúncia localmente. Isto não transfere nem altera a voz de leitura.</string>
+    <string name="reader_nano_download">Transferir e ativar Gemini Nano</string>
+    <string name="reader_nano_retry_download">Tentar transferir Gemini Nano novamente</string>
+    <string name="reader_nano_cancel_download">Cancelar transferência</string>
+    <string name="reader_nano_downloading">Gemini Nano: %1$s transferidos</string>
+    <string name="reader_nano_error">Não foi possível preparar o Gemini Nano. Pode continuar a leitura em voz alta sem ele.</string>
+    <string name="reader_nano_unavailable">O Gemini Nano está indisponível de momento. A leitura em voz alta continua sem preparação do texto.</string>
+    <string name="reader_nano_preparing">A preparar texto localmente com Gemini Nano…</string>
+    <string name="reader_nano_fallback">A ler em voz alta sem preparação do Gemini Nano.</string>
+    <string name="reader_nano_metrics_notice">A Google processa métricas de utilização e desempenho. A preparação do texto ocorre no seu dispositivo.</string>
+    <string name="reader_nano_terms">Termos e privacidade da Google</string>
+    <string name="reader_nano_system_downloading">O Android está a transferir o Gemini Nano. Consulte o estado para saber se terminou.</string>
+    <string name="reader_nano_refresh">Verificar estado da transferência</string>
+    <string name="reader_nano_adult_title">O Gemini Nano é para adultos</string>
+    <string name="reader_nano_adult_summary">A Google exige que os utilizadores desta funcionalidade tenham pelo menos 18 anos. Confirme a idade antes de ativar o Gemini Nano. A leitura em voz alta sem Nano continua disponível.</string>
+    <string name="reader_nano_adult_confirm">Tenho 18 anos ou mais</string>
+    <string name="reader_nano_adult_cancel">Agora não</string>
+</resources>

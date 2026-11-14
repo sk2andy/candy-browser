@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reader_nano_enabled_title">Metni Gemini Nano ile hazırla</string>
+    <string name="reader_nano_enabled_summary">Deneysel: yaygın Almanca ve İngilizce kısaltmaların ve sayıların okunmasını iyileştirir. Nano ses üretmez; seçili sistem veya çevrimdışı sesiniz değişmez. Oynatma gecikebilir.</string>
+    <string name="reader_nano_system_managed">Android bu modeli yönetir ve diğer uygulamalarla paylaşır. Kapatmak yalnızca Candy içindeki kullanımını durdurur.</string>
+    <string name="reader_nano_download_summary">Telefonunuz Gemini Nano destekliyor. Telaffuzu yerel hazırlamak için indirin. Bu, konuşma sesini indirmez veya değiştirmez.</string>
+    <string name="reader_nano_download">Gemini Nano indir ve etkinleştir</string>
+    <string name="reader_nano_retry_download">Gemini Nano indirmesini yeniden dene</string>
+    <string name="reader_nano_cancel_download">İndirmeyi iptal et</string>
+    <string name="reader_nano_downloading">Gemini Nano: %1$s indirildi</string>
+    <string name="reader_nano_error">Gemini Nano hazırlanamadı. Onsuz sesli okumaya devam edebilirsiniz.</string>
+    <string name="reader_nano_unavailable">Gemini Nano şu anda kullanılamıyor. Metin hazırlığı olmadan sesli okumaya devam edilir.</string>
+    <string name="reader_nano_preparing">Metin Gemini Nano ile yerel hazırlanıyor…</string>
+    <string name="reader_nano_fallback">Gemini Nano hazırlığı olmadan sesli okunuyor.</string>
+    <string name="reader_nano_metrics_notice">Google kullanım ve performans ölçümlerini işler. Metin hazırlığı cihazınızda yapılır.</string>
+    <string name="reader_nano_terms">Google şartları ve gizlilik</string>
+    <string name="reader_nano_system_downloading">Android Gemini Nano indiriyor. Tamamlanıp tamamlanmadığını durumdan kontrol edin.</string>
+    <string name="reader_nano_refresh">İndirme durumunu kontrol et</string>
+    <string name="reader_nano_adult_title">Gemini Nano yetişkinler içindir</string>
+    <string name="reader_nano_adult_summary">Google bu özelliği kullananların en az 18 yaşında olmasını ister. Gemini Nano etkinleştirmeden yaşınızı onaylayın. Nano olmadan sesli okuma kullanılabilir.</string>
+    <string name="reader_nano_adult_confirm">18 yaşında veya daha büyüğüm</string>
+    <string name="reader_nano_adult_cancel">Şimdi değil</string>
+</resources>

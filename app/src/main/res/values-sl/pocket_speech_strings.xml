@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reader_pocket_cancel">Prekliči</string>
+    <string name="reader_pocket_title">Glas Pocket TTS brez povezave</string>
+    <string name="reader_pocket_summary">Izberi preneseni model, ki ustreza jeziku vsakega članka. Izklop ohrani jezikovne pakete.</string>
+    <string name="reader_pocket_download_summary">Prenesi enega ali več jezikov. Članki in ustvarjeni zvok ostanejo v napravi. Pri manjkajočem ali negotovem jeziku moraš izbrati; prenosi jezikov se ne začnejo samodejno.</string>
+    <string name="reader_pocket_unknown_language">Izberi preneseni jezik za to besedilo ali uporabi drug glas.</string>
+    <string name="reader_pocket_unsupported_language">Zaznani jezik: %1$s. Model Pocket zanj ni na voljo. Uporabi drug glas ali izberi jezik, če je bila zaznava napačna.</string>
+    <string name="reader_pocket_article_language">Jezik članka: %1$s. Prenesi njegov model ali izberi preneseni jezik, da popraviš zaznavo.</string>
+    <string name="reader_pocket_download_size">Prenos: %1$d MB · shramba: %2$d MB</string>
+    <string name="reader_pocket_use_language">Beri v tem jeziku</string>
+    <string name="reader_pocket_remove">Odstrani jezik</string>
+    <string name="reader_pocket_downloaded">Preneseno · na voljo brez povezave</string>
+    <string name="reader_pocket_license_summary">Pocket TTS podjetja Kyutai. S prenosom sprejmeš licenco modela in pogoje navedbe avtorja glasu. Ta glas je ustvarjen z umetno inteligenco.</string>
+    <string name="reader_pocket_license">Licence modela in glasu</string>
+</resources>

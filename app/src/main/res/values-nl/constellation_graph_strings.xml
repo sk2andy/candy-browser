@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="constellations_explore">Verken je verbindingen</string>
+    <string name="constellations_show_list">Paginalijst tonen</string>
+    <string name="constellations_hide_list">Paginalijst verbergen</string>
+    <string name="constellations_expand_map">Kaart uitvouwen</string>
+    <string name="constellations_collapse_map">Kaart invouwen</string>
+    <string name="constellations_all_topics">Alle onderwerpen</string>
+    <string name="constellations_close_details">Paginadetails sluiten</string>
+    <string name="constellations_fit_all">Alles tonen</string>
+    <string name="constellations_explore_hint">Knijp om te zoomen en sleep om te verkennen. Tik op een pagina om verwante pagina’s te zien. Verbindingen tonen overeenkomstige onderwerpen.</string>
+    <string name="constellations_map_description">Pagina’s op de kaart: %1$d. Gebruik de paginalijst om met toegankelijkheidsbediening te verkennen.</string>
+</resources>

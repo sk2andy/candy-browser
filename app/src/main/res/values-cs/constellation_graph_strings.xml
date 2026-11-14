@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="constellations_explore">Prozkoumejte svá propojení</string>
+    <string name="constellations_show_list">Zobrazit seznam stránek</string>
+    <string name="constellations_hide_list">Skrýt seznam stránek</string>
+    <string name="constellations_expand_map">Rozbalit mapu</string>
+    <string name="constellations_collapse_map">Sbalit mapu</string>
+    <string name="constellations_all_topics">Všechna témata</string>
+    <string name="constellations_close_details">Zavřít podrobnosti stránky</string>
+    <string name="constellations_fit_all">Zobrazit vše</string>
+    <string name="constellations_explore_hint">Přiblížení měňte sevřením či roztažením prstů a prozkoumávejte tažením. Klepnutím na stránku zobrazíte související stránky. Spojení ukazují tematickou podobnost.</string>
+    <string name="constellations_map_description">Stránky na mapě: %1$d. Pro procházení s ovládáním usnadnění použijte seznam stránek.</string>
+</resources>

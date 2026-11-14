@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feeds_player_retry">Probéiert nach eng Kéier</string>
+    <string name="feeds_player_open">Lauschterlëscht opmaachen</string>
+    <string name="feeds_player_close">Lauschterlëscht zoumaachen</string>
+    <string name="feeds_player_up_next">Lëscht · %1$d</string>
+    <string name="feeds_player_import_saved">Gespäichert derbäisetzen</string>
+    <string name="feeds_player_empty">E Moment fir dech</string>
+    <string name="feeds_player_empty_title">Däin nächste gudde Lauschtermoment.</string>
+    <string name="feeds_player_empty_hint">Benotz d’Lauschterlëscht-Symbol op engem Artikel, fir en hei derbäizesetzen. Deng Lieszeeche kënnen och mat dobäi sinn.</string>
+    <string name="feeds_player_preparing">Gëtt virbereet</string>
+    <string name="feeds_player_listening">Gëtt elo virgelies</string>
+    <string name="feeds_player_ready">Prett, wann s du et bass</string>
+    <string name="feeds_player_progress">%1$d%% virgelies</string>
+    <string name="feeds_player_rate">%1$s×</string>
+    <string name="feeds_player_current">Als éischt · %1$s</string>
+    <string name="feeds_player_move_up">No uewe réckelen: %1$s</string>
+    <string name="feeds_player_remove">Aus der Lauschterlëscht ewechhuelen: %1$s</string>
+    <string name="feeds_player_load_failed">Dësen Artikel konnt net fir d’Virliese virbereet ginn.</string>
+    <string name="feeds_player_foreground">Lauschter weider mat der App am Hannergrond. Ofspillkontrolle sinn och an der Android-Mediennotifikatioun disponibel.</string>
+</resources>

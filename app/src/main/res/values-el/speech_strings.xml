@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reader_voice_settings_title">Εκφώνηση</string>
+    <string name="reader_voice_settings_summary">Επιλέξτε φωνές Android, Supertonic ή Pocket TTS για άρθρα και επιλεγμένο κείμενο. Τα τοπικά μοντέλα λειτουργούν εκτός σύνδεσης μετά τη λήψη.</string>
+    <string name="reader_voice_choice_title">Επιλογή φωνής</string>
+    <string name="reader_voice_choice_summary">Επιλέξτε Supertonic, Pocket TTS με λήψη γλωσσών ή φωνή Android. Αλλάξτε το στις Ρυθμίσεις → Περιηγητής → Εκφώνηση.</string>
+    <string name="reader_voice_use_offline">Χρήση Supertonic</string>
+    <string name="reader_voice_use_system">Χρήση φωνής Android</string>
+    <string name="reader_voice_download">Λήψη μοντέλου φωνής</string>
+    <string name="reader_voice_delete">Διαγραφή μοντέλου φωνής</string>
+    <string name="reader_voice_enabled_title">Φωνή εκτός σύνδεσης Supertonic</string>
+    <string name="reader_voice_enabled_summary">Όταν είναι ανενεργό, το Candy χρησιμοποιεί φωνή Android. Το ληφθέν μοντέλο διατηρείται.</string>
+    <string name="reader_voice_checking">Έλεγχος μοντέλου φωνής…</string>
+    <string name="reader_voice_working">Ενημέρωση μοντέλου φωνής…</string>
+    <string name="reader_voice_downloading">Λήψη μοντέλου φωνής: %1$d%%</string>
+    <string name="reader_voice_model_error">Δεν έγινε λήψη ή ενημέρωση μοντέλου φωνής. Ελέγξτε τη σύνδεση και τον ελεύθερο χώρο και δοκιμάστε ξανά.</string>
+    <string name="reader_voice_ready">Το μοντέλο φωνής λήφθηκε. Έτοιμο για ανάγνωση εκτός σύνδεσης.</string>
+    <string name="reader_voice_missing">Το μοντέλο φωνής δεν έχει ληφθεί.</string>
+    <string name="reader_voice_model_details">Supertonic 3 · λήψη περίπου 145 MB · 31 γλώσσες, μαζί με αγγλικά και γερμανικά. Στο μοντέλο εκτός σύνδεσης το κείμενο μένει στη συσκευή. Η διαγραφή επαναφέρει τις φωνές Android.</string>
+    <string name="reader_voice_model_terms">Η λήψη ή ενεργοποίηση αποδέχεται την άδεια OpenRAIL-M, μαζί με περιορισμούς χρήσης. Η φωνή παράγεται από τεχνητή νοημοσύνη.</string>
+    <string name="reader_voice_playback_error">Αυτή η φωνή δεν διάβασε το κείμενο. Δοκιμάστε ξανά ή αλλάξτε φωνή.</string>
+    <string name="reader_voice_model_license">Άδεια μοντέλου: OpenRAIL-M</string>
+    <string name="reader_voice_unavailable">Η εκφώνηση δεν είναι διαθέσιμη. Ελέγξτε το μοντέλο στις Ρυθμίσεις → Περιηγητής → Εκφώνηση ή τις ρυθμίσεις μετατροπής κειμένου σε ομιλία Android.</string>
+</resources>

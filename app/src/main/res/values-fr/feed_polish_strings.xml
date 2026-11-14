@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feeds_manual_address">Saisir une adresse de flux</string>
+    <string name="feeds_manual_note">Ajoutez une source que vous aimez. Saisissez l’adresse de son site ou de son flux RSS/Atom, puis consultez l’aperçu avant de vous abonner.</string>
+    <string name="feeds_latest_articles">Derniers articles</string>
+    <string name="feeds_subscription_failed">Impossible d’enregistrer cette source. Vos abonnements sont inchangés. Réessayez.</string>
+    <string name="feeds_sources_empty_title">Faites de la place aux bonnes voix.</string>
+    <string name="feeds_sources_empty_note">Découvrez une source du monde entier ou ajoutez votre propre adresse de flux. Les nouveaux articles arriveront dans votre boîte de réception.</string>
+</resources>

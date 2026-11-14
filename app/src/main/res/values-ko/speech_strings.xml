@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reader_voice_settings_title">소리 내어 읽기</string>
+    <string name="reader_voice_settings_summary">기사와 선택한 텍스트에 Android 음성, Supertonic 또는 Pocket TTS를 선택하세요. 로컬 모델은 다운로드 후 오프라인으로 작동합니다.</string>
+    <string name="reader_voice_choice_title">음성 선택</string>
+    <string name="reader_voice_choice_summary">Supertonic, 언어 다운로드가 가능한 Pocket TTS 또는 Android 음성을 선택하세요. 설정 → 브라우저 → 소리 내어 읽기에서 변경할 수 있습니다.</string>
+    <string name="reader_voice_use_offline">Supertonic 사용</string>
+    <string name="reader_voice_use_system">Android 음성 사용</string>
+    <string name="reader_voice_download">음성 모델 다운로드</string>
+    <string name="reader_voice_delete">음성 모델 삭제</string>
+    <string name="reader_voice_enabled_title">Supertonic 오프라인 음성</string>
+    <string name="reader_voice_enabled_summary">끄면 Candy가 Android 음성을 사용합니다. 다운로드된 모델은 유지됩니다.</string>
+    <string name="reader_voice_checking">음성 모델 확인 중…</string>
+    <string name="reader_voice_working">음성 모델 업데이트 중…</string>
+    <string name="reader_voice_downloading">음성 모델 다운로드 중: %1$d%%</string>
+    <string name="reader_voice_model_error">음성 모델을 다운로드하거나 업데이트하지 못했습니다. 연결과 여유 공간을 확인하고 다시 시도하세요.</string>
+    <string name="reader_voice_ready">음성 모델이 다운로드되었습니다. 오프라인 읽기 준비가 완료되었습니다.</string>
+    <string name="reader_voice_missing">음성 모델이 다운로드되지 않았습니다.</string>
+    <string name="reader_voice_model_details">Supertonic 3 · 약 145 MB 다운로드 · 영어와 독일어를 포함한 31개 언어. 오프라인 모델 사용 시 기사 텍스트는 기기에 유지됩니다. 모델 삭제 시 Android 음성으로 돌아갑니다.</string>
+    <string name="reader_voice_model_terms">모델을 다운로드하거나 사용하면 사용 제한을 포함한 OpenRAIL-M 라이선스에 동의합니다. AI 생성 음성입니다.</string>
+    <string name="reader_voice_playback_error">이 음성으로 텍스트를 읽지 못했습니다. 다시 시도하거나 음성을 바꾸세요.</string>
+    <string name="reader_voice_model_license">모델 라이선스: OpenRAIL-M</string>
+    <string name="reader_voice_unavailable">소리 내어 읽기를 사용할 수 없습니다. 설정 → 브라우저 → 소리 내어 읽기의 모델이나 Android 텍스트 음성 변환 설정을 확인하세요.</string>
+</resources>

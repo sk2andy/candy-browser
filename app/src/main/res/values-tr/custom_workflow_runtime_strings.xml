@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="workflow_run_details">Ayrıntılar</string>
+    <string name="workflow_run_dismiss">Kapat</string>
+    <string name="workflow_run_done">Tüm adımlar tamamlandı</string>
+    <string name="workflow_run_waiting">Bekleniyor</string>
+    <string name="workflow_run_running">Çalışıyor…</string>
+    <string name="workflow_run_succeeded">Tamamlandı</string>
+    <string name="workflow_run_failed">Eylem başarısız</string>
+    <string name="workflow_run_skipped">Yürütülmedi</string>
+    <string name="workflow_run_cancelling">Geçerli işlemden sonra durduruluyor…</string>
+    <string name="workflow_run_cancelled">Durduruldu. Tamamlanan adımlar korunur.</string>
+    <string name="workflow_run_invalid">Bu iş akışı geçersiz.</string>
+    <string name="workflow_run_unsupported">Bu sayfada kullanılamaz.</string>
+    <string name="workflow_run_private">Bu iş akışı veri kaydeder ve gizli modda çalışamaz.</string>
+    <string name="workflow_run_pinned">Sabitlenmiş sekmeler kapatılamaz.</string>
+    <string name="workflow_run_changed">Kaynak sayfa değişti. Kalan adımlar durduruldu.</string>
+    <string name="workflow_run_empty">Okunabilir makale bulunamadı.</string>
+    <string name="workflow_run_save_failed">Kaydedilemedi. Depolamayı ve Reader kitaplığındaki boş alanı kontrol edin. Girdi açık kalır.</string>
+    <string name="workflow_run_timeout">İşlem zaman aşımına uğradı. Kalan adımlar durduruldu.</string>
+</resources>

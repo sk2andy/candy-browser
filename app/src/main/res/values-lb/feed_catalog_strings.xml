@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feed_catalog_clear">Sich läschen</string>
+    <string name="feed_catalog_preview">Virschau</string>
+    <string name="feed_catalog_retry">Probéiert nach eng Kéier</string>
+    <string name="feed_catalog_title">Quellen entdecken</string>
+    <string name="feed_catalog_eyebrow">VIRWËTZ OUNI GRENZEN.</string>
+    <string name="feed_catalog_headline">Däin nächste\nLiiblingsfeed.</string>
+    <string name="feed_catalog_intro">Grouss Geschichten. Onofhängeg Stëmmen. Fann eppes, dat derwäert ass ze verfollegen.</string>
+    <string name="feed_catalog_search_hint">Thema, Numm oder Feedadress</string>
+    <string name="feed_catalog_search">Quellen sichen</string>
+    <string name="feed_catalog_manual">Feedadress</string>
+    <string name="feed_catalog_topics">Oh, interessant!</string>
+    <string name="feed_catalog_technology">Technologie</string>
+    <string name="feed_catalog_science">Wëssenschaft</string>
+    <string name="feed_catalog_design">Design a Kultur</string>
+    <string name="feed_catalog_food">Iessen</string>
+    <string name="feed_catalog_travel">Reesen</string>
+    <string name="feed_catalog_nature">Natur</string>
+    <string name="feed_catalog_all_sources">All Quellen</string>
+    <string name="feed_catalog_blogs">Bloggen</string>
+    <string name="feed_catalog_news">Neiegkeeten</string>
+    <string name="feed_catalog_all_languages">All Sproochen</string>
+    <plurals name="feed_catalog_languages_count">
+        <item quantity="one">%1$d Sprooch</item>
+        <item quantity="other">%1$d Sproochen</item>
+    </plurals>
+    <string name="feed_catalog_languages_title">Deng Liessproochen</string>
+    <string name="feed_catalog_languages_intro">Wiel eng, méi oder déi ganz Welt.</string>
+    <string name="feed_catalog_language_search">Eng Sprooch fannen</string>
+    <string name="feed_catalog_language_unknown">Sprooch net uginn</string>
+    <string name="feed_catalog_language_none">Keng Sprooch fonnt. Probéier hiren Numm oder Sproochcode.</string>
+    <string name="feed_catalog_language_apply">Sproochen uwenden</string>
+    <plurals name="feed_catalog_languages_selection">
+        <item quantity="one">%1$d Sprooch ausgewielt</item>
+        <item quantity="other">%1$d Sproochen ausgewielt</item>
+    </plurals>
+    <string name="feed_catalog_world_selected">Déi ganz Welt ass abegraff</string>
+    <string name="feed_catalog_results">Quelle fir „%1$s“</string>
+    <plurals name="feed_catalog_loaded_count">
+        <item quantity="one">%1$d Quell an dëser Auswiel</item>
+        <item quantity="other">%1$d Quellen an dëser Auswiel</item>
+    </plurals>
+    <string name="feed_catalog_language_subset">Sprooche filteren déi bis elo geluede Quellen. Lued méi fir weider Treffer ze fannen.</string>
+    <string name="feed_catalog_subscribed">Abonnéiert</string>
+    <string name="feed_catalog_loading">Nei Stëmme sichen…</string>
+    <string name="feed_catalog_loading_hint">Deng nächst gutt Quell kéint direkt ëm den Eck sinn.</string>
+    <string name="feed_catalog_error_title">D’Welt kann e Moment waarden.</string>
+    <string name="feed_catalog_error_body">De lokale Katalog konnt net geluede ginn. Du kanns nach ëmmer eng Feedadress dobäisetzen.</string>
+    <string name="feed_catalog_empty_title">Net ganz dat, wat s du am Kapp has?</string>
+    <string name="feed_catalog_empty_body">Dës Quell ass nach net am Plenary-Katalog. Probéier hiren Numm oder pech hir Websäit- oder Feedadress an d’Sichfeld.</string>
+    <string name="feed_catalog_more">Méi Quelle lueden</string>
+    <string name="feed_catalog_more_failed">Méi Quelle konnten net geluede ginn. Deng Resultater sinn nach do.</string>
+    <string name="feed_catalog_reset">Themen entdecken</string>
+    <string name="feed_catalog_credit">Ausgewielte Quelle vu Plenary · CC0</string>
+    <string name="feed_catalog_privacy">Sich privat am matgeliwwerte Plenary-Katalog, och offline. Nëmmen d’Opmaache vun enger Feedvirschau verbënnt mam Editeur.</string>
+    <string name="feed_catalog_private_title">An engem normalen Tab entdecken</string>
+    <string name="feed_catalog_private_body">Maach en normalen Tab op fir Quellen ze geréieren. Fir eng Virschau ouni Abonnement pechs du eng Websäit- oder Feedadress an d’Sichfeld.</string>
+    <string name="feed_catalog_no_description">Maach eng Virschau op fir dës Quell kennenzeléieren.</string>
+    <string name="feed_catalog_close_languages">Liessproochen zoumaachen</string>
+    <string name="feed_catalog_website_unknown">Originalfeed</string>
+    <string name="feed_catalog_address_detected">Adress erkannt · Virschau opmaachen</string>
+</resources>

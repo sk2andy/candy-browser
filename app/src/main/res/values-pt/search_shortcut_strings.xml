@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_search_shortcuts_title">Atalhos de pesquisa</string>
+    <string name="settings_search_shortcuts_summary">Crie os seus atalhos, como !gh para GitHub ou !yt para YouTube. Escreva um atalho seguido de um espaço para o transformar numa etiqueta. As sugestões continuam a funcionar. Retroceder numa pesquisa vazia remove a etiqueta.</string>
+    <string name="settings_search_shortcut_keyword">Atalho</string>
+    <string name="settings_search_shortcut_keyword_summary">Por exemplo !gh. Use até 32 letras, números, hífenes ou sublinhados. Comece com uma letra ou número após !.</string>
+    <string name="settings_search_shortcut_template">Modelo de URL de pesquisa</string>
+    <string name="settings_search_shortcut_template_summary" formatted="false">Copie o URL de pesquisa de um site e substitua os termos por %s. Use exatamente um %s num URL HTTP ou HTTPS.</string>
+    <string name="settings_search_shortcut_add">Adicionar atalho</string>
+    <string name="settings_search_shortcut_edit">Editar atalho</string>
+    <string name="settings_search_shortcut_remove">Remover</string>
+    <string name="settings_search_shortcut_edit_description">Editar atalho !%1$s</string>
+    <string name="settings_search_shortcut_remove_description">Remover atalho !%1$s</string>
+    <string name="settings_search_shortcut_invalid" formatted="false">Escolha um atalho único que não coincida com um motor de pesquisa integrado e um URL de pesquisa válido com exatamente um %s.</string>
+    <string name="settings_search_shortcut_examples">Começar por um site</string>
+    <string name="settings_search_shortcut_github">GitHub · !gh</string>
+    <string name="settings_search_shortcut_youtube">YouTube · !yt</string>
+    <string name="settings_search_shortcut_amazon">Amazon · !amazon</string>
+    <string name="search_shortcut_chip_remove">Remover atalho de pesquisa !%1$s</string>
+</resources>

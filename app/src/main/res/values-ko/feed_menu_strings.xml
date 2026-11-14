@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="browser_menu_reading_group">읽기 및 수집</string>
+    <string name="browser_menu_workflows_group">내 워크플로</string>
+    <string name="browser_menu_feeds">피드</string>
+    <string name="browser_menu_library">라이브러리</string>
+    <string name="browser_menu_discover_feeds">피드 찾기</string>
+    <string name="browser_menu_feed_unread_count">읽지 않음 %1$d개</string>
+    <string name="browser_menu_section_expanded">펼쳐짐</string>
+    <string name="browser_menu_section_collapsed">접힘</string>
+</resources>

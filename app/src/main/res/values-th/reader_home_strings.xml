@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reader_home_title">สตูดิโอการอ่าน</string>
+    <string name="reader_home_back">ย้อนกลับ</string>
+    <string name="reader_home_manage_feeds">จัดการฟีด</string>
+    <string name="reader_home_library_tab">คลัง</string>
+    <string name="reader_home_feeds_tab">ฟีด</string>
+    <string name="reader_home_all_feeds">ทุกฟีด</string>
+    <string name="reader_home_all_posts">ทุกบทความ</string>
+    <string name="reader_home_unread_count">ยังไม่อ่าน (%1$d)</string>
+    <string name="reader_home_article_count">บทความ: %1$d</string>
+    <string name="reader_home_newest_first">ใหม่ที่สุดก่อน</string>
+    <string name="reader_home_all_available_shown">แสดงบทความทั้งหมดแล้ว</string>
+    <string name="reader_home_no_feeds_title">ยังไม่มีฟีด</string>
+    <string name="reader_home_no_feeds_message">ติดตามฟีดเพื่อดูบทความล่าสุดที่นี่</string>
+    <string name="reader_home_all_read_title">อ่านครบแล้ว</string>
+    <string name="reader_home_all_read_message">ไม่มีบทความที่ยังไม่อ่านในชุดนี้</string>
+    <string name="reader_home_no_articles_title">ยังไม่มีบทความ</string>
+    <string name="reader_home_no_articles_message">บทความใหม่จากฟีดเหล่านี้จะปรากฏที่นี่</string>
+    <string name="reader_home_library_empty_title">คลังว่างอยู่</string>
+    <string name="reader_home_library_empty_message">บทความที่บันทึกไว้อ่านออฟไลน์จะปรากฏที่นี่</string>
+    <string name="reader_home_progress">อ่านแล้ว %1$d%%</string>
+    <string name="reader_home_delete_article">ลบบทความที่บันทึก</string>
+    <string name="reader_home_choose_feed">เลือกฟีด</string>
+    <string name="reader_home_feed_count">ฟีดที่สมัครรับ: %1$d</string>
+    <string name="reader_home_source_subtitle">%1$s · ยังไม่อ่าน %2$d</string>
+    <string name="reader_home_search_feeds">ค้นหาฟีด</string>
+    <string name="reader_home_no_feed_match">ไม่มีฟีดที่ตรงกัน</string>
+</resources>

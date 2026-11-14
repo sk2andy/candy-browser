@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="candy_trail_fit_all">Pokaži vse</string>
+    <string name="candy_trail_current_page">Trenutna stran</string>
+    <string name="candy_trail_graph_view">Graf</string>
+    <string name="candy_trail_list_view">Seznam</string>
+    <string name="candy_trail_focus_route">Osredotoči se na trenutno pot</string>
+    <string name="candy_trail_all_branches">Pokaži vse veje</string>
+    <string name="candy_trail_collapse_branch">Strni stranske veje</string>
+    <string name="candy_trail_expand_branch">Razširi stranske veje</string>
+    <string name="candy_trail_hidden_pages">Skrito: %1$d</string>
+</resources>

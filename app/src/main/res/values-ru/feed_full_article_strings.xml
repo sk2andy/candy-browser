@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feeds_full_article_unavailable">Полная статья недоступна</string>
+    <string name="feeds_full_article_unavailable_summary">Не удалось загрузить полную статью издателя. Откройте исходную страницу, чтобы продолжить чтение.</string>
+</resources>

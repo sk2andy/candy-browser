@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reader_pocket_title">Pocket TTS 오프라인 음성</string>
+    <string name="reader_pocket_summary">기사 언어에 맞는 다운로드된 모델을 선택하세요. 꺼도 언어 팩은 유지됩니다.</string>
+    <string name="reader_pocket_download_summary">하나 이상의 언어를 다운로드하세요. 기사와 생성된 오디오는 기기에 유지됩니다. 언어가 없거나 불확실하면 선택을 요청하며 자동 다운로드하지 않습니다.</string>
+    <string name="reader_pocket_unknown_language">이 텍스트의 다운로드된 언어를 선택하거나 다른 음성을 사용하세요.</string>
+    <string name="reader_pocket_unsupported_language">감지 언어: %1$s. Pocket 모델이 없습니다. 다른 음성을 사용하거나 감지가 잘못됐다면 언어를 선택하세요.</string>
+    <string name="reader_pocket_article_language">기사 언어: %1$s. 모델을 다운로드하거나 다운로드된 언어를 선택해 감지를 수정하세요.</string>
+    <string name="reader_pocket_download_size">다운로드: %1$d MB · 저장 공간: %2$d MB</string>
+    <string name="reader_pocket_cancel">취소</string>
+    <string name="reader_pocket_use_language">이 언어로 읽기</string>
+    <string name="reader_pocket_remove">언어 제거</string>
+    <string name="reader_pocket_downloaded">다운로드됨 · 오프라인 사용 가능</string>
+    <string name="reader_pocket_license_summary">Kyutai의 Pocket TTS. 다운로드하면 모델 라이선스와 음성 출처 표시 조건에 동의합니다. AI 생성 음성입니다.</string>
+    <string name="reader_pocket_license">모델 및 음성 라이선스</string>
+</resources>

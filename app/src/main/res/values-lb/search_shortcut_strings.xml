@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_search_shortcuts_title">Sichofkierzungen</string>
+    <string name="settings_search_shortcuts_summary">Erstell eegen Ofkierzunge wéi !gh fir GitHub oder !yt fir YouTube. Tipp eng Ofkierzung mat engem Espace duerno, fir eng Mark draus ze maachen. Sichvirschléi funktionéiere weider. D’Récktast bei enger eideler Sich hëlt d’Mark ewech.</string>
+    <string name="settings_search_shortcut_keyword">Ofkierzung</string>
+    <string name="settings_search_shortcut_keyword_summary">Zum Beispill !gh. Benotz bis zu 32 Buschtawen, Zuelen, Bindestrécher oder Ënnerstrécher. Fänk no ! mat engem Buschtaf oder enger Zuel un.</string>
+    <string name="settings_search_shortcut_template">Sich-URL-Virlag</string>
+    <string name="settings_search_shortcut_template_summary" formatted="false">Kopéier d’Sich-URL vun enger Websäit an ersetz d’Sichbegrëffer duerch %s. Benotz genee eng %s an enger HTTP- oder HTTPS-URL.</string>
+    <string name="settings_search_shortcut_add">Ofkierzung derbäisetzen</string>
+    <string name="settings_search_shortcut_edit">Ofkierzung änneren</string>
+    <string name="settings_search_shortcut_remove">Ewechhuelen</string>
+    <string name="settings_search_shortcut_edit_description">Ofkierzung !%1$s änneren</string>
+    <string name="settings_search_shortcut_remove_description">Ofkierzung !%1$s ewechhuelen</string>
+    <string name="settings_search_shortcut_invalid" formatted="false">Wiel eng eenzegaarteg Ofkierzung, déi kenger agebauter Sichmaschinn entsprécht, an eng gëlteg Sich-URL mat genee enger %s.</string>
+    <string name="settings_search_shortcut_examples">Mat enger Websäit ufänken</string>
+    <string name="settings_search_shortcut_github">GitHub · !gh</string>
+    <string name="settings_search_shortcut_youtube">YouTube · !yt</string>
+    <string name="settings_search_shortcut_amazon">Amazon · !amazon</string>
+    <string name="search_shortcut_chip_remove">Sichofkierzung !%1$s ewechhuelen</string>
+</resources>

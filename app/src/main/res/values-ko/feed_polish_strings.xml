@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feeds_manual_address">피드 주소 입력</string>
+    <string name="feeds_manual_note">좋아하는 소스를 가져오세요. 웹사이트 또는 RSS/Atom 피드 주소를 입력하고 구독 전에 살펴보세요.</string>
+    <string name="feeds_latest_articles">최신 기사</string>
+    <string name="feeds_subscription_failed">소스를 저장하지 못했습니다. 구독은 변경되지 않았습니다. 다시 시도하세요.</string>
+    <string name="feeds_sources_empty_title">좋은 목소리를 위한 공간.</string>
+    <string name="feeds_sources_empty_note">전 세계 소스를 발견하거나 피드 주소를 직접 추가하세요. 새 기사가 받은편지함에 도착합니다.</string>
+</resources>

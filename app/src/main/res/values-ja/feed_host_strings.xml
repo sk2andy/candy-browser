@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feeds_next_unread">次の未読記事</string>
+    <string name="feeds_notifications_denied">Android の通知が無効です。選択は保存されました。</string>
+    <string name="feeds_notification_channel">Candy フィード</string>
+    <string name="feeds_notification_count">未読記事が %1$d 件あります。</string>
+    <string name="feeds_speech_next">次の記事</string>
+    <string name="feeds_speech_speed">読み上げ速度：%1$s×</string>
+    <string name="feeds_speech_unavailable">利用できる音声がありません。Android のテキスト読み上げ設定を確認してください。</string>
+</resources>

@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reader_home_title">Phòng đọc</string>
+    <string name="reader_home_back">Quay lại</string>
+    <string name="reader_home_manage_feeds">Quản lý nguồn tin</string>
+    <string name="reader_home_library_tab">Thư viện</string>
+    <string name="reader_home_feeds_tab">Nguồn tin</string>
+    <string name="reader_home_all_feeds">Mọi nguồn tin</string>
+    <string name="reader_home_all_posts">Mọi bài viết</string>
+    <string name="reader_home_unread_count">Chưa đọc (%1$d)</string>
+    <string name="reader_home_article_count">Bài viết: %1$d</string>
+    <string name="reader_home_newest_first">Mới nhất trước</string>
+    <string name="reader_home_all_available_shown">Đã hiện mọi bài có sẵn</string>
+    <string name="reader_home_no_feeds_title">Chưa có nguồn tin</string>
+    <string name="reader_home_no_feeds_message">Theo dõi nguồn tin để xem bài mới tại đây.</string>
+    <string name="reader_home_all_read_title">Bạn đã đọc hết</string>
+    <string name="reader_home_all_read_message">Không có bài chưa đọc trong lựa chọn này.</string>
+    <string name="reader_home_no_articles_title">Chưa có bài</string>
+    <string name="reader_home_no_articles_message">Bài mới từ các nguồn này sẽ xuất hiện ở đây.</string>
+    <string name="reader_home_library_empty_title">Thư viện trống</string>
+    <string name="reader_home_library_empty_message">Bài đã lưu để đọc ngoại tuyến sẽ xuất hiện tại đây.</string>
+    <string name="reader_home_progress">Đã đọc %1$d%%</string>
+    <string name="reader_home_delete_article">Xóa bài đã lưu</string>
+    <string name="reader_home_choose_feed">Chọn nguồn tin</string>
+    <string name="reader_home_feed_count">Nguồn đã đăng ký: %1$d</string>
+    <string name="reader_home_source_subtitle">%1$s · %2$d chưa đọc</string>
+    <string name="reader_home_search_feeds">Tìm nguồn tin</string>
+    <string name="reader_home_no_feed_match">Không có nguồn phù hợp</string>
+</resources>

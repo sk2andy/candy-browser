@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_search_shortcuts_title">Shkurtoret e kërkimit</string>
+    <string name="settings_search_shortcuts_summary">Krijo shkurtoret e tua, si !gh për GitHub ose !yt për YouTube. Shkruaj një shkurtore dhe një hapësirë për ta kthyer në etiketë. Sugjerimet vazhdojnë të punojnë. Backspace në një kërkim bosh e heq etiketën.</string>
+    <string name="settings_search_shortcut_keyword">Shkurtore</string>
+    <string name="settings_search_shortcut_keyword_summary">Për shembull !gh. Përdor deri në 32 shkronja, numra, viza ose nënviza. Fillo me shkronjë ose numër pas !.</string>
+    <string name="settings_search_shortcut_template">Modeli i URL-së së kërkimit</string>
+    <string name="settings_search_shortcut_template_summary" formatted="false">Kopjo URL-në e kërkimit të një faqeje dhe zëvendëso termat me %s. Përdor saktësisht një %s në një URL HTTP ose HTTPS.</string>
+    <string name="settings_search_shortcut_add">Shto shkurtore</string>
+    <string name="settings_search_shortcut_edit">Ndrysho shkurtoren</string>
+    <string name="settings_search_shortcut_remove">Hiq</string>
+    <string name="settings_search_shortcut_edit_description">Ndrysho shkurtoren !%1$s</string>
+    <string name="settings_search_shortcut_remove_description">Hiq shkurtoren !%1$s</string>
+    <string name="settings_search_shortcut_invalid" formatted="false">Zgjidh një shkurtore unike që nuk përputhet me një motor kërkimi të integruar dhe një URL kërkimi të vlefshme me saktësisht një %s.</string>
+    <string name="settings_search_shortcut_examples">Fillo me një faqe interneti</string>
+    <string name="settings_search_shortcut_github">GitHub · !gh</string>
+    <string name="settings_search_shortcut_youtube">YouTube · !yt</string>
+    <string name="settings_search_shortcut_amazon">Amazon · !amazon</string>
+    <string name="search_shortcut_chip_remove">Hiq shkurtoren e kërkimit !%1$s</string>
+</resources>

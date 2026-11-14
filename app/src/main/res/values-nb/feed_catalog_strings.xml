@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feed_catalog_clear">Tøm søk</string>
+    <string name="feed_catalog_preview">Forhåndsvisning</string>
+    <string name="feed_catalog_retry">Prøv igjen</string>
+    <string name="feed_catalog_title">Oppdag kilder</string>
+    <string name="feed_catalog_eyebrow">NYSGJERRIGHET UTEN GRENSER.</string>
+    <string name="feed_catalog_headline">Din neste\nfavorittkanal.</string>
+    <string name="feed_catalog_intro">Store historier. Uavhengige stemmer. Finn noe verdt å følge.</string>
+    <string name="feed_catalog_search_hint">Emne, navn eller kanaladresse</string>
+    <string name="feed_catalog_search">Søk etter kilder</string>
+    <string name="feed_catalog_manual">Kanaladresse</string>
+    <string name="feed_catalog_topics">Å, interessant!</string>
+    <string name="feed_catalog_technology">Teknologi</string>
+    <string name="feed_catalog_science">Vitenskap</string>
+    <string name="feed_catalog_design">Design og kultur</string>
+    <string name="feed_catalog_food">Mat</string>
+    <string name="feed_catalog_travel">Reise</string>
+    <string name="feed_catalog_nature">Natur</string>
+    <string name="feed_catalog_all_sources">Alle kilder</string>
+    <string name="feed_catalog_blogs">Blogger</string>
+    <string name="feed_catalog_news">Nyheter</string>
+    <string name="feed_catalog_all_languages">Alle språk</string>
+    <plurals name="feed_catalog_languages_count">
+        <item quantity="one">%1$d språk</item>
+        <item quantity="other">%1$d språk</item>
+    </plurals>
+    <string name="feed_catalog_languages_title">Dine lesespråk</string>
+    <string name="feed_catalog_languages_intro">Velg ett, flere eller hele verden.</string>
+    <string name="feed_catalog_language_search">Finn et språk</string>
+    <string name="feed_catalog_language_unknown">Språk ikke oppgitt</string>
+    <string name="feed_catalog_language_none">Fant ikke språk. Prøv navnet eller språkkoden.</string>
+    <string name="feed_catalog_language_apply">Bruk språkvalg</string>
+    <plurals name="feed_catalog_languages_selection">
+        <item quantity="one">%1$d språk valgt</item>
+        <item quantity="other">%1$d språk valgt</item>
+    </plurals>
+    <string name="feed_catalog_world_selected">Hele verden er inkludert</string>
+    <string name="feed_catalog_results">Kilder for «%1$s»</string>
+    <plurals name="feed_catalog_loaded_count">
+        <item quantity="one">%1$d kilde i utvalget</item>
+        <item quantity="other">%1$d kilder i utvalget</item>
+    </plurals>
+    <string name="feed_catalog_language_subset">Språk filtrerer kildene som er lastet så langt. Last flere for å finne flere treff.</string>
+    <string name="feed_catalog_subscribed">Abonnert</string>
+    <string name="feed_catalog_loading">Finner nye stemmer…</string>
+    <string name="feed_catalog_loading_hint">Din neste gode kilde kan være rett rundt hjørnet.</string>
+    <string name="feed_catalog_error_title">Verden kan vente litt.</string>
+    <string name="feed_catalog_error_body">Kunne ikke laste den lokale katalogen. Du kan fortsatt legge til en kanaladresse.</string>
+    <string name="feed_catalog_empty_title">Ikke helt det du tenkte på?</string>
+    <string name="feed_catalog_empty_body">Denne kilden er ikke i Plenary-katalogen ennå. Prøv navnet eller lim inn nettstedets eller kanalens adresse i søkefeltet.</string>
+    <string name="feed_catalog_more">Last flere kilder</string>
+    <string name="feed_catalog_more_failed">Kunne ikke laste flere kilder. Resultatene dine er fortsatt her.</string>
+    <string name="feed_catalog_reset">Utforsk emner</string>
+    <string name="feed_catalog_credit">Utvalgte kilder fra Plenary · CC0</string>
+    <string name="feed_catalog_privacy">Søk privat i den medfølgende Plenary-katalogen, også uten nett. Bare åpning av kanalforhåndsvisning kobler til utgiveren.</string>
+    <string name="feed_catalog_private_title">Oppdag i en vanlig fane</string>
+    <string name="feed_catalog_private_body">Åpne en vanlig fane for å behandle kilder. For forhåndsvisning uten abonnement limer du inn en nettsteds- eller kanaladresse i søkefeltet.</string>
+    <string name="feed_catalog_no_description">Åpne en forhåndsvisning for å bli kjent med kilden.</string>
+    <string name="feed_catalog_close_languages">Lukk lesespråk</string>
+    <string name="feed_catalog_website_unknown">Opprinnelig kanal</string>
+    <string name="feed_catalog_address_detected">Adresse oppdaget · Åpne forhåndsvisning</string>
+</resources>

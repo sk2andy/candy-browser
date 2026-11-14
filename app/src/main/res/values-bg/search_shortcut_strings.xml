@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_search_shortcuts_title">Преки пътища за търсене</string>
+    <string name="settings_search_shortcuts_summary">Създайте собствени преки пътища, като !gh за GitHub или !yt за YouTube. Въведете пряк път и интервал, за да го превърнете в етикет. Предложенията за търсене продължават да работят. Backspace при празна заявка премахва етикета.</string>
+    <string name="settings_search_shortcut_keyword">Пряк път</string>
+    <string name="settings_search_shortcut_keyword_summary">Например !gh. Използвайте до 32 букви, цифри, тирета или долни черти. Започнете с буква или цифра след !.</string>
+    <string name="settings_search_shortcut_template">Шаблон за адрес на търсене</string>
+    <string name="settings_search_shortcut_template_summary" formatted="false">Копирайте адреса за търсене на уебсайт и заменете думите за търсене с %s. Използвайте точно един %s в HTTP или HTTPS адрес.</string>
+    <string name="settings_search_shortcut_add">Добавяне на пряк път</string>
+    <string name="settings_search_shortcut_edit">Редактиране на пряк път</string>
+    <string name="settings_search_shortcut_remove">Премахване</string>
+    <string name="settings_search_shortcut_edit_description">Редактиране на прекия път !%1$s</string>
+    <string name="settings_search_shortcut_remove_description">Премахване на прекия път !%1$s</string>
+    <string name="settings_search_shortcut_invalid" formatted="false">Изберете уникален пряк път, който не съвпада с вградена търсачка, и валиден адрес за търсене с точно един %s.</string>
+    <string name="settings_search_shortcut_examples">Започнете с уебсайт</string>
+    <string name="settings_search_shortcut_github">GitHub · !gh</string>
+    <string name="settings_search_shortcut_youtube">YouTube · !yt</string>
+    <string name="settings_search_shortcut_amazon">Amazon · !amazon</string>
+    <string name="search_shortcut_chip_remove">Премахване на прекия път за търсене !%1$s</string>
+</resources>

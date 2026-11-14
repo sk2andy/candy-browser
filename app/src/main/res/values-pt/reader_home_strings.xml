@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reader_home_title">Reader Studio</string>
+    <string name="reader_home_back">Voltar</string>
+    <string name="reader_home_manage_feeds">Gerir feeds</string>
+    <string name="reader_home_library_tab">Biblioteca</string>
+    <string name="reader_home_feeds_tab">Feeds</string>
+    <string name="reader_home_all_feeds">Todos os feeds</string>
+    <string name="reader_home_all_posts">Todas as publicações</string>
+    <string name="reader_home_unread_count">Não lidos (%1$d)</string>
+    <string name="reader_home_article_count">Artigos: %1$d</string>
+    <string name="reader_home_newest_first">Mais recentes primeiro</string>
+    <string name="reader_home_all_available_shown">Todos os artigos disponíveis apresentados</string>
+    <string name="reader_home_no_feeds_title">Ainda não há feeds</string>
+    <string name="reader_home_no_feeds_message">Siga um feed para ver aqui os artigos mais recentes.</string>
+    <string name="reader_home_all_read_title">Está tudo em dia</string>
+    <string name="reader_home_all_read_message">Não há artigos não lidos nesta seleção.</string>
+    <string name="reader_home_no_articles_title">Ainda não há artigos</string>
+    <string name="reader_home_no_articles_message">Os novos artigos destes feeds aparecerão aqui.</string>
+    <string name="reader_home_library_empty_title">A sua biblioteca está vazia</string>
+    <string name="reader_home_library_empty_message">Os artigos que guardar para leitura offline aparecerão aqui.</string>
+    <string name="reader_home_progress">%1$d%% lido</string>
+    <string name="reader_home_delete_article">Eliminar artigo guardado</string>
+    <string name="reader_home_choose_feed">Escolher um feed</string>
+    <string name="reader_home_feed_count">Feeds subscritos: %1$d</string>
+    <string name="reader_home_source_subtitle">%1$s · %2$d não lidos</string>
+    <string name="reader_home_search_feeds">Pesquisar feeds</string>
+    <string name="reader_home_no_feed_match">Nenhum feed correspondente</string>
+</resources>

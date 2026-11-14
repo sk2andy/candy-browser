@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_search_shortcuts_title">Συντομεύσεις αναζήτησης</string>
+    <string name="settings_search_shortcuts_summary">Δημιουργήστε συντομεύσεις όπως !gh για GitHub ή !yt για YouTube. Πληκτρολογήστε τη συντόμευση και κενό για να γίνει πλακίδιο. Οι προτάσεις λειτουργούν κανονικά. Το Backspace σε κενή αναζήτηση αφαιρεί το πλακίδιο.</string>
+    <string name="settings_search_shortcut_keyword">Συντόμευση</string>
+    <string name="settings_search_shortcut_keyword_summary">Για παράδειγμα !gh. Έως 32 γράμματα, αριθμοί, παύλες ή κάτω παύλες. Μετά το ! ξεκινήστε με γράμμα ή αριθμό.</string>
+    <string name="settings_search_shortcut_template">Πρότυπο URL αναζήτησης</string>
+    <string name="settings_search_shortcut_template_summary" formatted="false">Αντιγράψτε το URL αναζήτησης και αντικαταστήστε τους όρους με %s. Χρησιμοποιήστε ακριβώς ένα %s σε URL HTTP ή HTTPS.</string>
+    <string name="settings_search_shortcut_add">Προσθήκη συντόμευσης</string>
+    <string name="settings_search_shortcut_edit">Επεξεργασία συντόμευσης</string>
+    <string name="settings_search_shortcut_remove">Αφαίρεση</string>
+    <string name="settings_search_shortcut_edit_description">Επεξεργασία συντόμευσης !%1$s</string>
+    <string name="settings_search_shortcut_remove_description">Αφαίρεση συντόμευσης !%1$s</string>
+    <string name="settings_search_shortcut_invalid" formatted="false">Επιλέξτε μοναδική συντόμευση που δεν συμπίπτει με ενσωματωμένη μηχανή και έγκυρο URL με ακριβώς ένα %s.</string>
+    <string name="settings_search_shortcut_examples">Ξεκινήστε με έναν ιστότοπο</string>
+    <string name="settings_search_shortcut_github">GitHub · !gh</string>
+    <string name="settings_search_shortcut_youtube">YouTube · !yt</string>
+    <string name="settings_search_shortcut_amazon">Amazon · !amazon</string>
+    <string name="search_shortcut_chip_remove">Αφαίρεση συντόμευσης αναζήτησης !%1$s</string>
+</resources>

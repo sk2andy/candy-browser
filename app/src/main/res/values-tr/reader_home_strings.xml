@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reader_home_title">Okuma Stüdyosu</string>
+    <string name="reader_home_back">Geri</string>
+    <string name="reader_home_manage_feeds">Akışları yönet</string>
+    <string name="reader_home_library_tab">Kitaplık</string>
+    <string name="reader_home_feeds_tab">Akışlar</string>
+    <string name="reader_home_all_feeds">Tüm akışlar</string>
+    <string name="reader_home_all_posts">Tüm gönderiler</string>
+    <string name="reader_home_unread_count">Okunmamış (%1$d)</string>
+    <string name="reader_home_article_count">Makaleler: %1$d</string>
+    <string name="reader_home_newest_first">Önce en yeniler</string>
+    <string name="reader_home_all_available_shown">Tüm makaleler gösterildi</string>
+    <string name="reader_home_no_feeds_title">Henüz akış yok</string>
+    <string name="reader_home_no_feeds_message">Son makaleleri burada görmek için bir akışı takip edin.</string>
+    <string name="reader_home_all_read_title">Hepsini okudunuz</string>
+    <string name="reader_home_all_read_message">Bu seçimde okunmamış makale yok.</string>
+    <string name="reader_home_no_articles_title">Henüz makale yok</string>
+    <string name="reader_home_no_articles_message">Bu akışların yeni makaleleri burada görünür.</string>
+    <string name="reader_home_library_empty_title">Kitaplığınız boş</string>
+    <string name="reader_home_library_empty_message">Çevrimdışı okumak için kaydettiğiniz makaleler burada görünür.</string>
+    <string name="reader_home_progress">%1$d%% okundu</string>
+    <string name="reader_home_delete_article">Kayıtlı makaleyi sil</string>
+    <string name="reader_home_choose_feed">Akış seç</string>
+    <string name="reader_home_feed_count">Abone olunan akışlar: %1$d</string>
+    <string name="reader_home_source_subtitle">%1$s · %2$d okunmamış</string>
+    <string name="reader_home_search_feeds">Akış ara</string>
+    <string name="reader_home_no_feed_match">Eşleşen akış yok</string>
+</resources>

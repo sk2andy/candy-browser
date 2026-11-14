@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="workflow_run_details">Детали</string>
+    <string name="workflow_run_dismiss">Затвори</string>
+    <string name="workflow_run_done">Сите чекори се завршени</string>
+    <string name="workflow_run_waiting">Чекање</string>
+    <string name="workflow_run_running">Се извршува…</string>
+    <string name="workflow_run_succeeded">Завршено</string>
+    <string name="workflow_run_failed">Дејството не успеа</string>
+    <string name="workflow_run_skipped">Не е извршено</string>
+    <string name="workflow_run_cancelling">Запира по тековната операција…</string>
+    <string name="workflow_run_cancelled">Запрено. Завршените чекори се зачувани.</string>
+    <string name="workflow_run_invalid">Овој работен тек е неважечки.</string>
+    <string name="workflow_run_unsupported">Не е достапно за оваа страница.</string>
+    <string name="workflow_run_private">Овој работен тек зачувува податоци и не може да се изврши приватно.</string>
+    <string name="workflow_run_pinned">Прикачените јазичиња не може да се затворат.</string>
+    <string name="workflow_run_changed">Изворната страница е променета. Преостанатите чекори се запрени.</string>
+    <string name="workflow_run_empty">Не е пронајдена читлива статија.</string>
+    <string name="workflow_run_save_failed">Зачувувањето не успеа. Провери ги складиштето и слободниот простор во библиотеката на читачот. Влезот останува отворен.</string>
+    <string name="workflow_run_timeout">Времето за операцијата истече. Преостанатите чекори се запрени.</string>
+</resources>

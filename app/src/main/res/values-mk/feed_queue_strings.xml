@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feeds_player_retry">Обиди се повторно</string>
+    <string name="feeds_player_open">Отвори редица за слушање</string>
+    <string name="feeds_player_close">Затвори редица за слушање</string>
+    <string name="feeds_player_up_next">Редица · %1$d</string>
+    <string name="feeds_player_import_saved">Додај зачувани</string>
+    <string name="feeds_player_empty">Момент за тебе</string>
+    <string name="feeds_player_empty_title">Твоето следно добро слушање.</string>
+    <string name="feeds_player_empty_hint">Користи ја иконата за списокот за слушање на статијата за да ја додадеш тука. Може да ги додадеш и обележувачите.</string>
+    <string name="feeds_player_preparing">Се подготвува</string>
+    <string name="feeds_player_listening">Сега чита наглас</string>
+    <string name="feeds_player_ready">Подготвено кога си и ти</string>
+    <string name="feeds_player_progress">Прочитано наглас %1$d%%</string>
+    <string name="feeds_player_rate">%1$s×</string>
+    <string name="feeds_player_current">Прво · %1$s</string>
+    <string name="feeds_player_move_up">Помести нагоре: %1$s</string>
+    <string name="feeds_player_remove">Отстрани од редицата за слушање: %1$s</string>
+    <string name="feeds_player_load_failed">Оваа статија не можеше да се подготви за читање наглас.</string>
+    <string name="feeds_player_foreground">Продолжи да слушаш додека апликацијата е во заднина. Контролите за репродукција се достапни и во медиумското известување на Android.</string>
+</resources>

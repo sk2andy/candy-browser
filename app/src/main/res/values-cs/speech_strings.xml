@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reader_voice_settings_title">Čtení nahlas</string>
+    <string name="reader_voice_settings_summary">Vyberte hlasy Androidu, Supertonic nebo Pocket TTS pro články a vybraný text. Místní modely po stažení fungují offline.</string>
+    <string name="reader_voice_choice_title">Vybrat hlas</string>
+    <string name="reader_voice_choice_summary">Vyberte Supertonic, Pocket TTS s jazyky ke stažení nebo hlas Androidu. Změnit to můžete v Nastavení → Prohlížeč → Čtení nahlas.</string>
+    <string name="reader_voice_use_offline">Použít Supertonic</string>
+    <string name="reader_voice_use_system">Použít hlas Androidu</string>
+    <string name="reader_voice_download">Stáhnout hlasový model</string>
+    <string name="reader_voice_delete">Smazat hlasový model</string>
+    <string name="reader_voice_enabled_title">Offline hlas Supertonic</string>
+    <string name="reader_voice_enabled_summary">Při vypnutí Candy používá hlas Androidu. Vypnutí zachová stažený model.</string>
+    <string name="reader_voice_checking">Kontrola hlasového modelu…</string>
+    <string name="reader_voice_working">Aktualizace hlasového modelu…</string>
+    <string name="reader_voice_downloading">Stahování hlasového modelu: %1$d%%</string>
+    <string name="reader_voice_model_error">Hlasový model se nepodařilo stáhnout nebo aktualizovat. Zkontrolujte připojení a volné místo a zkuste to znovu.</string>
+    <string name="reader_voice_ready">Hlasový model stažen. Připraven na offline čtení.</string>
+    <string name="reader_voice_missing">Hlasový model není stažen.</string>
+    <string name="reader_voice_model_details">Supertonic 3 · ke stažení přibližně 145 MB · 31 jazyků včetně angličtiny a němčiny. Při použití offline modelu zůstává text článku na zařízení. Smazání modelu přepne zpět na hlasy Androidu.</string>
+    <string name="reader_voice_model_terms">Stažením nebo zapnutím modelu souhlasíte s licencí OpenRAIL-M včetně omezení použití. Hlas je generován AI.</string>
+    <string name="reader_voice_playback_error">Tento hlas nedokázal přečíst text. Zkuste to znovu nebo změňte hlas.</string>
+    <string name="reader_voice_model_license">Licence modelu: OpenRAIL-M</string>
+    <string name="reader_voice_unavailable">Čtení nahlas není k dispozici. Zkontrolujte hlasový model v Nastavení → Prohlížeč → Čtení nahlas nebo nastavení převodu textu na řeč v Androidu.</string>
+</resources>

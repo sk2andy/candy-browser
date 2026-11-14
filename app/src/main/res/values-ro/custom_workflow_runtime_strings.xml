@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="workflow_run_details">Detalii</string>
+    <string name="workflow_run_dismiss">Închide</string>
+    <string name="workflow_run_done">Toți pașii au fost finalizați</string>
+    <string name="workflow_run_waiting">În așteptare</string>
+    <string name="workflow_run_running">Se execută…</string>
+    <string name="workflow_run_succeeded">Finalizat</string>
+    <string name="workflow_run_failed">Acțiunea a eșuat</string>
+    <string name="workflow_run_skipped">Neexecutat</string>
+    <string name="workflow_run_cancelling">Se oprește după operația curentă…</string>
+    <string name="workflow_run_cancelled">Oprit. Pașii finalizați sunt păstrați.</string>
+    <string name="workflow_run_invalid">Acest flux de lucru nu este valid.</string>
+    <string name="workflow_run_unsupported">Indisponibil pentru această pagină.</string>
+    <string name="workflow_run_private">Acest flux de lucru salvează date și nu poate rula în mod privat.</string>
+    <string name="workflow_run_pinned">Filele fixate nu pot fi închise.</string>
+    <string name="workflow_run_changed">Pagina sursă s-a schimbat. Pașii rămași au fost opriți.</string>
+    <string name="workflow_run_empty">Nu a fost găsit niciun articol lizibil.</string>
+    <string name="workflow_run_save_failed">Salvarea a eșuat. Verifică stocarea și spațiul liber din biblioteca cititorului. Intrarea rămâne deschisă.</string>
+    <string name="workflow_run_timeout">Operația a expirat. Pașii rămași au fost opriți.</string>
+</resources>

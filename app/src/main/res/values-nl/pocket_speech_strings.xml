@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reader_pocket_cancel">Annuleren</string>
+    <string name="reader_pocket_title">Pocket TTS-offlinestem</string>
+    <string name="reader_pocket_summary">Kies het gedownloade model dat bij de taal van elk artikel past. Uitschakelen behoudt je taalpakketten.</string>
+    <string name="reader_pocket_download_summary">Download een of meer talen. Artikelen en gegenereerde audio blijven op je apparaat. Bij een ontbrekende of onzekere taal moet je kiezen; taaldownloads starten nooit automatisch.</string>
+    <string name="reader_pocket_unknown_language">Kies een gedownloade taal voor deze tekst of gebruik een andere stem.</string>
+    <string name="reader_pocket_unsupported_language">Gedetecteerde taal: %1$s. Hiervoor is geen Pocket-model beschikbaar. Gebruik een andere stem of kies een taal als de detectie onjuist was.</string>
+    <string name="reader_pocket_article_language">Artikeltaal: %1$s. Download het model of kies een gedownloade taal om de detectie te corrigeren.</string>
+    <string name="reader_pocket_download_size">Download: %1$d MB · opslag: %2$d MB</string>
+    <string name="reader_pocket_use_language">In deze taal lezen</string>
+    <string name="reader_pocket_remove">Taal verwijderen</string>
+    <string name="reader_pocket_downloaded">Gedownload · offline beschikbaar</string>
+    <string name="reader_pocket_license_summary">Pocket TTS van Kyutai. Door te downloaden accepteer je de modellicentie en voorwaarden voor stemvermelding. Deze stem is door AI gegenereerd.</string>
+    <string name="reader_pocket_license">Model- en stemlicenties</string>
+</resources>

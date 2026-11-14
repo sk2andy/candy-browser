@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="browser_menu_reading_group">Les og samle</string>
+    <string name="browser_menu_workflows_group">Arbeidsflytene dine</string>
+    <string name="browser_menu_feeds">Feeder</string>
+    <string name="browser_menu_library">Bibliotek</string>
+    <string name="browser_menu_discover_feeds">Oppdag feeder</string>
+    <string name="browser_menu_feed_unread_count">%1$d uleste</string>
+    <string name="browser_menu_section_expanded">Utvidet</string>
+    <string name="browser_menu_section_collapsed">Skjult</string>
+</resources>

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="constellations_explore">Explorează conexiunile tale</string>
+    <string name="constellations_show_list">Afișează lista de pagini</string>
+    <string name="constellations_hide_list">Ascunde lista de pagini</string>
+    <string name="constellations_expand_map">Extinde harta</string>
+    <string name="constellations_collapse_map">Restrânge harta</string>
+    <string name="constellations_all_topics">Toate subiectele</string>
+    <string name="constellations_close_details">Închide detaliile paginii</string>
+    <string name="constellations_fit_all">Afișează tot</string>
+    <string name="constellations_explore_hint">Apropie sau depărtează degetele pentru zoom și trage pentru a explora. Atinge o pagină pentru a vedea pagini înrudite. Conexiunile arată asemănarea subiectelor.</string>
+    <string name="constellations_map_description">Pagini pe hartă: %1$d. Folosește lista de pagini pentru a explora cu comenzile de accesibilitate.</string>
+</resources>

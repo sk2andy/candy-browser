@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reader_nano_enabled_title">Gemini Nano でテキストを準備</string>
+    <string name="reader_nano_enabled_summary">試験機能：一般的な独語・英語の略語や数字の読み方を改善します。Nano は音声を生成せず、選択したシステム音声やオフライン音声は変わりません。再生が遅れる場合があります。</string>
+    <string name="reader_nano_system_managed">このモデルは Android が管理し、他のアプリと共有します。オフにすると Candy での使用のみ停止します。</string>
+    <string name="reader_nano_download_summary">この端末は Gemini Nano 対応です。ダウンロードすると端末内で発音を準備します。音声のダウンロードや変更は行いません。</string>
+    <string name="reader_nano_download">Gemini Nano をダウンロードして有効化</string>
+    <string name="reader_nano_retry_download">Gemini Nano のダウンロードを再試行</string>
+    <string name="reader_nano_cancel_download">ダウンロードをキャンセル</string>
+    <string name="reader_nano_downloading">Gemini Nano：%1$s ダウンロード済み</string>
+    <string name="reader_nano_error">Gemini Nano を準備できませんでした。使用せずに読み上げを続けられます。</string>
+    <string name="reader_nano_unavailable">Gemini Nano は現在利用できません。テキストの事前処理なしで読み上げを続けます。</string>
+    <string name="reader_nano_preparing">Gemini Nano で端末内のテキストを準備中…</string>
+    <string name="reader_nano_fallback">Gemini Nano の事前処理なしで読み上げます。</string>
+    <string name="reader_nano_metrics_notice">Google は使用状況と性能の指標を処理します。テキストの準備は端末内で行います。</string>
+    <string name="reader_nano_terms">Google の利用規約とプライバシー</string>
+    <string name="reader_nano_system_downloading">Android が Gemini Nano をダウンロード中です。状態を確認して完了したか調べてください。</string>
+    <string name="reader_nano_refresh">ダウンロード状況を確認</string>
+    <string name="reader_nano_adult_title">Gemini Nano は成人向けです</string>
+    <string name="reader_nano_adult_summary">Google はこの機能の利用者を 18 歳以上としています。有効化前に年齢を確認してください。Nano なしの読み上げも利用できます。</string>
+    <string name="reader_nano_adult_confirm">18 歳以上です</string>
+    <string name="reader_nano_adult_cancel">今はしない</string>
+</resources>

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feeds_player_open">Dinleme kuyruğunu aç</string>
+    <string name="feeds_player_close">Dinleme kuyruğunu kapat</string>
+    <string name="feeds_player_up_next">Kuyruk · %1$d</string>
+    <string name="feeds_player_import_saved">Kaydedilenleri ekle</string>
+    <string name="feeds_player_empty">Kendinize bir an</string>
+    <string name="feeds_player_empty_title">Bir sonraki iyi dinletiniz.</string>
+    <string name="feeds_player_empty_hint">Eklemek için makaledeki dinleme listesi simgesini kullanın. Yer imlerinizi de ekleyebilirsiniz.</string>
+    <string name="feeds_player_preparing">Hazırlanıyor</string>
+    <string name="feeds_player_listening">Şimdi sesli okunuyor</string>
+    <string name="feeds_player_ready">Hazır olduğunuzda başlayın</string>
+    <string name="feeds_player_progress">%1$d%% sesli okundu</string>
+    <string name="feeds_player_rate">%1$s×</string>
+    <string name="feeds_player_current">İlk sırada · %1$s</string>
+    <string name="feeds_player_move_up">Yukarı taşı: %1$s</string>
+    <string name="feeds_player_remove">Dinleme kuyruğundan kaldır: %1$s</string>
+    <string name="feeds_player_load_failed">Bu makale sesli okuma için hazırlanamadı.</string>
+    <string name="feeds_player_retry">Yeniden dene</string>
+    <string name="feeds_player_foreground">Uygulama arka plandayken dinlemeye devam edin. Oynatma denetimleri Android medya bildiriminde de bulunur.</string>
+</resources>

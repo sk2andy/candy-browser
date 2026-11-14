@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feed_catalog_title">Descobrir fontes</string>
+    <string name="feed_catalog_eyebrow">CURIOSIDADE SEM FRONTEIRAS.</string>
+    <string name="feed_catalog_headline">O seu próximo\nfeed favorito.</string>
+    <string name="feed_catalog_intro">Grandes histórias. Vozes independentes. Descubra algo que vale a pena seguir.</string>
+    <string name="feed_catalog_search_hint">Tema, nome ou endereço de feed</string>
+    <string name="feed_catalog_search">Pesquisar fontes</string>
+    <string name="feed_catalog_clear">Limpar pesquisa</string>
+    <string name="feed_catalog_manual">Endereço do feed</string>
+    <string name="feed_catalog_topics">Que interessante!</string>
+    <string name="feed_catalog_technology">Tecnologia</string>
+    <string name="feed_catalog_science">Ciência</string>
+    <string name="feed_catalog_design">Design e cultura</string>
+    <string name="feed_catalog_food">Gastronomia</string>
+    <string name="feed_catalog_travel">Viagens</string>
+    <string name="feed_catalog_nature">Natureza</string>
+    <string name="feed_catalog_all_sources">Todas as fontes</string>
+    <string name="feed_catalog_blogs">Blogues</string>
+    <string name="feed_catalog_news">Notícias</string>
+    <string name="feed_catalog_all_languages">Todos os idiomas</string>
+    <plurals name="feed_catalog_languages_count">
+        <item quantity="one">%1$d idioma</item>
+        <item quantity="other">%1$d idiomas</item>
+    </plurals>
+    <string name="feed_catalog_languages_title">Os seus idiomas de leitura</string>
+    <string name="feed_catalog_languages_intro">Escolha um, vários ou o mundo inteiro.</string>
+    <string name="feed_catalog_language_search">Encontrar um idioma</string>
+    <string name="feed_catalog_language_unknown">Idioma não indicado</string>
+    <string name="feed_catalog_language_none">Nenhum idioma encontrado. Tente o nome ou o código do idioma.</string>
+    <string name="feed_catalog_language_apply">Aplicar idiomas</string>
+    <plurals name="feed_catalog_languages_selection">
+        <item quantity="one">%1$d idioma selecionado</item>
+        <item quantity="other">%1$d idiomas selecionados</item>
+    </plurals>
+    <string name="feed_catalog_world_selected">O mundo inteiro está incluído</string>
+    <string name="feed_catalog_results">Fontes para «%1$s»</string>
+    <plurals name="feed_catalog_loaded_count">
+        <item quantity="one">%1$d fonte nesta seleção</item>
+        <item quantity="other">%1$d fontes nesta seleção</item>
+    </plurals>
+    <string name="feed_catalog_language_subset">Os idiomas filtram as fontes já carregadas. Carregue mais para descobrir outros resultados.</string>
+    <string name="feed_catalog_preview">Pré-visualizar</string>
+    <string name="feed_catalog_subscribed">Subscrito</string>
+    <string name="feed_catalog_loading">A procurar novas vozes…</string>
+    <string name="feed_catalog_loading_hint">A sua próxima boa fonte pode estar mesmo ao virar da esquina.</string>
+    <string name="feed_catalog_error_title">O mundo pode esperar um momento.</string>
+    <string name="feed_catalog_error_body">Não foi possível carregar o catálogo local. Ainda pode adicionar um endereço de feed.</string>
+    <string name="feed_catalog_retry">Tentar novamente</string>
+    <string name="feed_catalog_empty_title">Não era bem isto que procurava?</string>
+    <string name="feed_catalog_empty_body">Esta fonte ainda não está no catálogo Plenary. Tente o nome ou cole o endereço do site ou feed no campo de pesquisa.</string>
+    <string name="feed_catalog_more">Carregar mais fontes</string>
+    <string name="feed_catalog_more_failed">Não foi possível carregar mais fontes. Os seus resultados continuam aqui.</string>
+    <string name="feed_catalog_reset">Explorar temas</string>
+    <string name="feed_catalog_credit">Fontes selecionadas do Plenary · CC0</string>
+    <string name="feed_catalog_privacy">Pesquise em privado no catálogo Plenary incluído, mesmo offline. Só a abertura da pré-visualização de um feed estabelece ligação ao editor.</string>
+    <string name="feed_catalog_private_title">Descobrir num separador normal</string>
+    <string name="feed_catalog_private_body">Abra um separador normal para gerir fontes. Para pré-visualizar sem guardar uma subscrição, cole um endereço de site ou feed no campo de pesquisa.</string>
+    <string name="feed_catalog_no_description">Abra uma pré-visualização para conhecer esta fonte.</string>
+    <string name="feed_catalog_close_languages">Fechar idiomas de leitura</string>
+    <string name="feed_catalog_website_unknown">Feed original</string>
+    <string name="feed_catalog_address_detected">Endereço detetado · Abrir pré-visualização</string>
+</resources>

@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reader_home_title">Reader Studio</string>
+    <string name="reader_home_back">Tilbage</string>
+    <string name="reader_home_progress">%1$d%% læses</string>
+    <string name="reader_home_manage_feeds">Administrer feeds</string>
+    <string name="reader_home_library_tab">Bibliotek</string>
+    <string name="reader_home_feeds_tab">Feeds</string>
+    <string name="reader_home_all_feeds">Alle feeds</string>
+    <string name="reader_home_all_posts">Alle indlæg</string>
+    <string name="reader_home_unread_count">Ulæste (%1$d)</string>
+    <string name="reader_home_article_count">Artikler: %1$d</string>
+    <string name="reader_home_newest_first">Nyeste først</string>
+    <string name="reader_home_all_available_shown">Alle tilgængelige artikler vises</string>
+    <string name="reader_home_no_feeds_title">Ingen feeds endnu</string>
+    <string name="reader_home_no_feeds_message">Følg et feed for at se dets seneste artikler her.</string>
+    <string name="reader_home_all_read_title">Du har læst det hele</string>
+    <string name="reader_home_all_read_message">Der er ingen ulæste artikler i dette udvalg.</string>
+    <string name="reader_home_no_articles_title">Ingen artikler endnu</string>
+    <string name="reader_home_no_articles_message">Nye artikler fra disse feeds vises her.</string>
+    <string name="reader_home_library_empty_title">Dit bibliotek er tomt</string>
+    <string name="reader_home_library_empty_message">Artikler, du gemmer til offlinelæsning, vises her.</string>
+    <string name="reader_home_delete_article">Slet gemt artikel</string>
+    <string name="reader_home_choose_feed">Vælg et feed</string>
+    <string name="reader_home_feed_count">Abonnerede feeds: %1$d</string>
+    <string name="reader_home_source_subtitle">%1$s · %2$d ulæste</string>
+    <string name="reader_home_search_feeds">Søg i feeds</string>
+    <string name="reader_home_no_feed_match">Ingen matchende feeds</string>
+</resources>

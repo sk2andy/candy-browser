@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reader_home_title">리더 스튜디오</string>
+    <string name="reader_home_back">뒤로</string>
+    <string name="reader_home_manage_feeds">피드 관리</string>
+    <string name="reader_home_library_tab">라이브러리</string>
+    <string name="reader_home_feeds_tab">피드</string>
+    <string name="reader_home_all_feeds">모든 피드</string>
+    <string name="reader_home_all_posts">모든 게시물</string>
+    <string name="reader_home_unread_count">읽지 않음(%1$d)</string>
+    <string name="reader_home_article_count">기사: %1$d</string>
+    <string name="reader_home_newest_first">최신순</string>
+    <string name="reader_home_all_available_shown">사용 가능한 기사 모두 표시됨</string>
+    <string name="reader_home_no_feeds_title">아직 피드 없음</string>
+    <string name="reader_home_no_feeds_message">피드를 구독하면 최신 기사가 여기에 표시됩니다.</string>
+    <string name="reader_home_all_read_title">모두 읽었습니다</string>
+    <string name="reader_home_all_read_message">이 선택에 읽지 않은 기사가 없습니다.</string>
+    <string name="reader_home_no_articles_title">아직 기사 없음</string>
+    <string name="reader_home_no_articles_message">이 피드의 새 기사가 여기에 표시됩니다.</string>
+    <string name="reader_home_library_empty_title">라이브러리가 비어 있음</string>
+    <string name="reader_home_library_empty_message">오프라인 읽기용으로 저장한 기사가 여기에 표시됩니다.</string>
+    <string name="reader_home_progress">%1$d%% 읽음</string>
+    <string name="reader_home_delete_article">저장된 기사 삭제</string>
+    <string name="reader_home_choose_feed">피드 선택</string>
+    <string name="reader_home_feed_count">구독 피드: %1$d</string>
+    <string name="reader_home_source_subtitle">%1$s · 읽지 않음 %2$d개</string>
+    <string name="reader_home_search_feeds">피드 검색</string>
+    <string name="reader_home_no_feed_match">일치하는 피드 없음</string>
+</resources>

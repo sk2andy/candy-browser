@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="constellations_explore">Odkrywaj swoje połączenia</string>
+    <string name="constellations_show_list">Pokaż listę stron</string>
+    <string name="constellations_hide_list">Ukryj listę stron</string>
+    <string name="constellations_expand_map">Rozwiń mapę</string>
+    <string name="constellations_collapse_map">Zwiń mapę</string>
+    <string name="constellations_all_topics">Wszystkie tematy</string>
+    <string name="constellations_close_details">Zamknij szczegóły strony</string>
+    <string name="constellations_fit_all">Pokaż wszystko</string>
+    <string name="constellations_explore_hint">Zbliżaj i rozsuwaj palce, aby zmieniać powiększenie, i przeciągaj, aby przeglądać. Dotknij strony, aby zobaczyć powiązane strony. Połączenia pokazują podobieństwo tematów.</string>
+    <string name="constellations_map_description">Strony na mapie: %1$d. Użyj listy stron, aby przeglądać za pomocą funkcji ułatwień dostępu.</string>
+</resources>

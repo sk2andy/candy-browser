@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="workflow_run_details">详情</string>
+    <string name="workflow_run_dismiss">关闭</string>
+    <string name="workflow_run_done">所有步骤已完成</string>
+    <string name="workflow_run_waiting">等待中</string>
+    <string name="workflow_run_running">运行中…</string>
+    <string name="workflow_run_succeeded">已完成</string>
+    <string name="workflow_run_failed">操作失败</string>
+    <string name="workflow_run_skipped">未执行</string>
+    <string name="workflow_run_cancelling">当前操作完成后停止…</string>
+    <string name="workflow_run_cancelled">已停止。已完成的步骤会保留。</string>
+    <string name="workflow_run_invalid">此工作流无效。</string>
+    <string name="workflow_run_unsupported">此页面不可用。</string>
+    <string name="workflow_run_private">此工作流会保存数据，无法在隐私模式下运行。</string>
+    <string name="workflow_run_pinned">无法关闭固定标签页。</string>
+    <string name="workflow_run_changed">源页面已变化。剩余步骤已停止。</string>
+    <string name="workflow_run_empty">未找到可读文章。</string>
+    <string name="workflow_run_save_failed">无法保存。请检查存储空间及 Reader 资料库可用空间。输入内容保持打开。</string>
+    <string name="workflow_run_timeout">操作超时。剩余步骤已停止。</string>
+</resources>

@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feed_catalog_title">Открывайте источники</string>
+    <string name="feed_catalog_eyebrow">ЛЮБОПЫТСТВО БЕЗ ГРАНИЦ.</string>
+    <string name="feed_catalog_headline">Ваша следующая\nлюбимая лента.</string>
+    <string name="feed_catalog_intro">Важные истории. Независимые голоса. Найдите то, за чем стоит следить.</string>
+    <string name="feed_catalog_search_hint">Тема, название или адрес ленты</string>
+    <string name="feed_catalog_search">Поиск источников</string>
+    <string name="feed_catalog_clear">Очистить поиск</string>
+    <string name="feed_catalog_manual">Адрес ленты</string>
+    <string name="feed_catalog_topics">О, интересно!</string>
+    <string name="feed_catalog_technology">Технологии</string>
+    <string name="feed_catalog_science">Наука</string>
+    <string name="feed_catalog_design">Дизайн и культура</string>
+    <string name="feed_catalog_food">Еда</string>
+    <string name="feed_catalog_travel">Путешествия</string>
+    <string name="feed_catalog_nature">Природа</string>
+    <string name="feed_catalog_all_sources">Все источники</string>
+    <string name="feed_catalog_blogs">Блоги</string>
+    <string name="feed_catalog_news">Новости</string>
+    <string name="feed_catalog_all_languages">Все языки</string>
+    <plurals name="feed_catalog_languages_count">
+        <item quantity="one">%1$d язык</item>
+        <item quantity="few">%1$d языка</item>
+        <item quantity="many">%1$d языков</item>
+        <item quantity="other">%1$d языка</item>
+    </plurals>
+    <string name="feed_catalog_languages_title">Языки для чтения</string>
+    <string name="feed_catalog_languages_intro">Выберите один, несколько или весь мир.</string>
+    <string name="feed_catalog_language_search">Найти язык</string>
+    <string name="feed_catalog_language_unknown">Язык не указан</string>
+    <string name="feed_catalog_language_none">Язык не найден. Попробуйте название или код языка.</string>
+    <string name="feed_catalog_language_apply">Применить языки</string>
+    <plurals name="feed_catalog_languages_selection">
+        <item quantity="one">Выбран %1$d язык</item>
+        <item quantity="few">Выбрано %1$d языка</item>
+        <item quantity="many">Выбрано %1$d языков</item>
+        <item quantity="other">Выбрано %1$d языка</item>
+    </plurals>
+    <string name="feed_catalog_world_selected">Включён весь мир</string>
+    <string name="feed_catalog_results">Источники по запросу «%1$s»</string>
+    <plurals name="feed_catalog_loaded_count">
+        <item quantity="one">%1$d источник в этой подборке</item>
+        <item quantity="few">%1$d источника в этой подборке</item>
+        <item quantity="many">%1$d источников в этой подборке</item>
+        <item quantity="other">%1$d источника в этой подборке</item>
+    </plurals>
+    <string name="feed_catalog_language_subset">Языки фильтруют уже загруженные источники. Загрузите ещё, чтобы найти больше совпадений.</string>
+    <string name="feed_catalog_preview">Предпросмотр</string>
+    <string name="feed_catalog_subscribed">Вы подписаны</string>
+    <string name="feed_catalog_loading">Ищем новые голоса…</string>
+    <string name="feed_catalog_loading_hint">Ваш следующий хороший источник может быть совсем рядом.</string>
+    <string name="feed_catalog_error_title">Мир может немного подождать.</string>
+    <string name="feed_catalog_error_body">Не удалось загрузить локальный каталог. Вы всё ещё можете добавить адрес ленты.</string>
+    <string name="feed_catalog_retry">Попробовать ещё раз</string>
+    <string name="feed_catalog_empty_title">Не совсем то, что вы искали?</string>
+    <string name="feed_catalog_empty_body">Этого источника пока нет в каталоге Plenary. Попробуйте его название или вставьте адрес сайта либо ленты в поле поиска.</string>
+    <string name="feed_catalog_more">Загрузить ещё источники</string>
+    <string name="feed_catalog_more_failed">Не удалось загрузить другие источники. Ваши результаты остались на месте.</string>
+    <string name="feed_catalog_reset">Исследовать темы</string>
+    <string name="feed_catalog_credit">Источники из подборки Plenary · CC0</string>
+    <string name="feed_catalog_privacy">Ищите в прилагаемом каталоге Plenary приватно, даже офлайн. Соединение с издателем происходит только при открытии предпросмотра ленты.</string>
+    <string name="feed_catalog_private_title">Открывайте в обычной вкладке</string>
+    <string name="feed_catalog_private_body">Откройте обычную вкладку для управления источниками. Чтобы посмотреть ленту без подписки, вставьте адрес сайта или ленты в поле поиска.</string>
+    <string name="feed_catalog_no_description">Откройте предпросмотр, чтобы познакомиться с источником.</string>
+    <string name="feed_catalog_close_languages">Закрыть языки для чтения</string>
+    <string name="feed_catalog_website_unknown">Исходная лента</string>
+    <string name="feed_catalog_address_detected">Обнаружен адрес · Открыть предпросмотр</string>
+</resources>

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="browser_menu_reading_group">Lexo dhe mblidh</string>
+    <string name="browser_menu_workflows_group">Rrjedhat e tua të punës</string>
+    <string name="browser_menu_feeds">Burimet</string>
+    <string name="browser_menu_library">Biblioteka</string>
+    <string name="browser_menu_discover_feeds">Zbulo burime</string>
+    <string name="browser_menu_feed_unread_count">%1$d të palexuara</string>
+    <string name="browser_menu_section_expanded">E zgjeruar</string>
+    <string name="browser_menu_section_collapsed">E palosur</string>
+</resources>

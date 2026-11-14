@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feeds_full_article_unavailable">Цео чланак није доступан</string>
+    <string name="feeds_full_article_unavailable_summary">Цео чланак издавача није могао да се учита. Отвори изворну страницу за наставак читања.</string>
+</resources>

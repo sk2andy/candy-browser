@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feeds_next_unread">Neste uleste artikkel</string>
+    <string name="feeds_notifications_denied">Varsler er slått av i Android. Valget ditt er lagret.</string>
+    <string name="feeds_notification_channel">Candy-feeder</string>
+    <string name="feeds_notification_count">%1$d uleste artikler venter.</string>
+    <string name="feeds_speech_next">Neste artikkel</string>
+    <string name="feeds_speech_speed">Lesehastighet: %1$s×</string>
+    <string name="feeds_speech_unavailable">Ingen talestemme er tilgjengelig. Sjekk Android-innstillingene for tekst til tale.</string>
+</resources>

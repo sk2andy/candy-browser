@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reader_voice_settings_title">Читај гласно</string>
+    <string name="reader_voice_settings_summary">Изабери Android гласове, Supertonic или Pocket TTS за чланке и изабрани текст. Локални модели раде без интернета након преузимања.</string>
+    <string name="reader_voice_choice_title">Изабери глас</string>
+    <string name="reader_voice_choice_summary">Изабери Supertonic, Pocket TTS са језицима за преузимање или Android глас. Промени то у Подешавања → Прегледач → Читај наглас.</string>
+    <string name="reader_voice_use_offline">Користи Supertonic</string>
+    <string name="reader_voice_use_system">Користи Android глас</string>
+    <string name="reader_voice_download">Преузми модел гласа</string>
+    <string name="reader_voice_delete">Избриши модел гласа</string>
+    <string name="reader_voice_enabled_title">Supertonic глас без интернета</string>
+    <string name="reader_voice_enabled_summary">Када је искључено, Candy користи Android глас. Искључивање задржава преузети модел.</string>
+    <string name="reader_voice_checking">Провера модела гласа…</string>
+    <string name="reader_voice_working">Ажурирање модела гласа…</string>
+    <string name="reader_voice_downloading">Преузимање модела гласа: %1$d%%</string>
+    <string name="reader_voice_model_error">Модел гласа није могао да се преузме или ажурира. Провери везу и слободан простор па покушај поново.</string>
+    <string name="reader_voice_ready">Модел гласа преузет. Спреман за читање без интернета.</string>
+    <string name="reader_voice_missing">Модел гласа није преузет.</string>
+    <string name="reader_voice_model_details">Supertonic 3 · приближно 145 MB за преузимање · 31 језик, укључујући енглески и немачки. Текст чланка остаје на уређају при коришћењу локалног модела. Брисање модела враћа Android гласове.</string>
+    <string name="reader_voice_model_terms">Преузимањем или омогућавањем модела прихваташ лиценцу OpenRAIL-M, укључујући ограничења употребе. Глас је генерисан вештачком интелигенцијом.</string>
+    <string name="reader_voice_playback_error">Овај глас није могао да прочита текст. Покушај поново или промени глас.</string>
+    <string name="reader_voice_model_license">Лиценца модела: OpenRAIL-M</string>
+    <string name="reader_voice_unavailable">Читање наглас није доступно. Провери модел у Подешавања → Прегледач → Читај наглас или Android подешавања претварања текста у говор.</string>
+</resources>

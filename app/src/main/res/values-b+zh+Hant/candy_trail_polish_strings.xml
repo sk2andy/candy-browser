@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="candy_trail_fit_all">顯示全部</string>
+    <string name="candy_trail_current_page">當前頁面</string>
+    <string name="candy_trail_graph_view">圖譜</string>
+    <string name="candy_trail_list_view">列表</string>
+    <string name="candy_trail_focus_route">聚焦當前路徑</string>
+    <string name="candy_trail_all_branches">顯示所有分支</string>
+    <string name="candy_trail_collapse_branch">收起側分支</string>
+    <string name="candy_trail_expand_branch">展開側分支</string>
+    <string name="candy_trail_hidden_pages">已隱藏：%1$d</string>
+</resources>

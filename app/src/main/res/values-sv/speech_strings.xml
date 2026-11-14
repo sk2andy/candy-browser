@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reader_voice_settings_title">Läs högt</string>
+    <string name="reader_voice_settings_summary">Välj Android-röster, Supertonic eller Pocket TTS för artiklar och markerad text. Lokala modeller fungerar offline efter nedladdning.</string>
+    <string name="reader_voice_choice_title">Välj en röst</string>
+    <string name="reader_voice_choice_summary">Välj Supertonic, Pocket TTS med nedladdningsbara språk eller din Android-röst. Du kan ändra detta under Inställningar → Webbläsare → Läs upp.</string>
+    <string name="reader_voice_use_offline">Använd Supertonic</string>
+    <string name="reader_voice_use_system">Använd Android-röst</string>
+    <string name="reader_voice_download">Ladda ned röstmodell</string>
+    <string name="reader_voice_delete">Ta bort röstmodell</string>
+    <string name="reader_voice_enabled_title">Supertonic-röst offline</string>
+    <string name="reader_voice_enabled_summary">När detta är av använder Candy Android-rösten. Den nedladdade modellen behålls när du stänger av.</string>
+    <string name="reader_voice_checking">Kontrollerar röstmodellen…</string>
+    <string name="reader_voice_working">Uppdaterar röstmodellen…</string>
+    <string name="reader_voice_downloading">Laddar ned röstmodell: %1$d%%</string>
+    <string name="reader_voice_model_error">Röstmodellen kunde inte laddas ned eller uppdateras. Kontrollera anslutningen och ledigt lagringsutrymme och försök igen.</string>
+    <string name="reader_voice_ready">Röstmodellen har laddats ned. Redo för uppläsning offline.</string>
+    <string name="reader_voice_missing">Röstmodellen har inte laddats ned.</string>
+    <string name="reader_voice_model_details">Supertonic 3 · cirka 145 MB nedladdning · 31 språk, inklusive engelska och tyska. Artikeltexten stannar på enheten när du använder offlinemodellen. Om du tar bort modellen återgår appen till Android-röster.</string>
+    <string name="reader_voice_model_terms">Genom att ladda ned eller aktivera modellen godtar du OpenRAIL-M-licensen, inklusive dess användningsbegränsningar. Rösten är AI-genererad.</string>
+    <string name="reader_voice_playback_error">Den här rösten kunde inte läsa texten. Försök igen eller byt röst.</string>
+    <string name="reader_voice_model_license">Modelllicens: OpenRAIL-M</string>
+    <string name="reader_voice_unavailable">Uppläsning är inte tillgänglig. Kontrollera röstmodellen under Inställningar → Webbläsare → Läs upp eller Androids inställningar för text till tal.</string>
+</resources>

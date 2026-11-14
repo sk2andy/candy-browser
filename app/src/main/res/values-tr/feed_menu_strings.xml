@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="browser_menu_reading_group">Oku ve biriktir</string>
+    <string name="browser_menu_workflows_group">İş akışlarınız</string>
+    <string name="browser_menu_feeds">Akışlar</string>
+    <string name="browser_menu_library">Kitaplık</string>
+    <string name="browser_menu_discover_feeds">Akışları keşfet</string>
+    <string name="browser_menu_feed_unread_count">%1$d okunmamış</string>
+    <string name="browser_menu_section_expanded">Genişletildi</string>
+    <string name="browser_menu_section_collapsed">Daraltıldı</string>
+</resources>

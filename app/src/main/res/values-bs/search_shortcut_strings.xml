@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_search_shortcuts_title">Prečice za pretragu</string>
+    <string name="settings_search_shortcuts_summary">Napravi svoje prečice, poput !gh za GitHub ili !yt za YouTube. Upiši prečicu pa razmak da je pretvoriš u oznaku. Prijedlozi pretrage i dalje rade. Backspace u praznom upitu uklanja oznaku.</string>
+    <string name="settings_search_shortcut_keyword">Prečica</string>
+    <string name="settings_search_shortcut_keyword_summary">Naprimjer !gh. Koristi do 32 slova, broja, crtice ili donje crte. Nakon ! počni slovom ili brojem.</string>
+    <string name="settings_search_shortcut_template">Predložak URL-a pretrage</string>
+    <string name="settings_search_shortcut_template_summary" formatted="false">Kopiraj URL pretrage web-stranice i zamijeni pojmove sa %s. Koristi tačno jedan %s u HTTP ili HTTPS URL-u.</string>
+    <string name="settings_search_shortcut_add">Dodaj prečicu</string>
+    <string name="settings_search_shortcut_edit">Uredi prečicu</string>
+    <string name="settings_search_shortcut_remove">Ukloni</string>
+    <string name="settings_search_shortcut_edit_description">Uredi prečicu !%1$s</string>
+    <string name="settings_search_shortcut_remove_description">Ukloni prečicu !%1$s</string>
+    <string name="settings_search_shortcut_invalid" formatted="false">Odaberi jedinstvenu prečicu koja ne odgovara ugrađenom pretraživaču i važeći URL pretrage s tačno jednim %s.</string>
+    <string name="settings_search_shortcut_examples">Počni od web-stranice</string>
+    <string name="settings_search_shortcut_github">GitHub · !gh</string>
+    <string name="settings_search_shortcut_youtube">YouTube · !yt</string>
+    <string name="settings_search_shortcut_amazon">Amazon · !amazon</string>
+    <string name="search_shortcut_chip_remove">Ukloni prečicu za pretragu !%1$s</string>
+</resources>

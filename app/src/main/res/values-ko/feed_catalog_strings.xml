@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feed_catalog_title">소스 발견</string>
+    <string name="feed_catalog_eyebrow">호기심에는 국경이 없다.</string>
+    <string name="feed_catalog_headline">다음으로 좋아할\n피드를 만나세요.</string>
+    <string name="feed_catalog_intro">주요 이야기와 독립적인 목소리. 구독할 만한 소스를 찾아보세요.</string>
+    <string name="feed_catalog_search_hint">주제, 이름 또는 피드 주소</string>
+    <string name="feed_catalog_search">소스 검색</string>
+    <string name="feed_catalog_clear">검색 지우기</string>
+    <string name="feed_catalog_manual">피드 주소</string>
+    <string name="feed_catalog_topics">오, 흥미롭네요!</string>
+    <string name="feed_catalog_technology">기술</string>
+    <string name="feed_catalog_science">과학</string>
+    <string name="feed_catalog_design">디자인 및 문화</string>
+    <string name="feed_catalog_food">음식</string>
+    <string name="feed_catalog_travel">여행</string>
+    <string name="feed_catalog_nature">자연</string>
+    <string name="feed_catalog_all_sources">모든 소스</string>
+    <string name="feed_catalog_blogs">블로그</string>
+    <string name="feed_catalog_news">뉴스</string>
+    <string name="feed_catalog_all_languages">모든 언어</string>
+    <plurals name="feed_catalog_languages_count">
+        <item quantity="other">언어 %1$d개</item>
+    </plurals>
+    <string name="feed_catalog_languages_title">읽는 언어</string>
+    <string name="feed_catalog_languages_intro">하나, 여러 개 또는 전 세계를 선택하세요.</string>
+    <string name="feed_catalog_language_search">언어 찾기</string>
+    <string name="feed_catalog_language_unknown">언어 정보 없음</string>
+    <string name="feed_catalog_language_none">언어를 찾지 못했습니다. 이름이나 언어 코드를 입력하세요.</string>
+    <string name="feed_catalog_language_apply">언어 적용</string>
+    <plurals name="feed_catalog_languages_selection">
+        <item quantity="other">언어 %1$d개 선택됨</item>
+    </plurals>
+    <string name="feed_catalog_world_selected">전 세계 포함</string>
+    <string name="feed_catalog_results">“%1$s” 소스</string>
+    <plurals name="feed_catalog_loaded_count">
+        <item quantity="other">이 선택의 소스 %1$d개</item>
+    </plurals>
+    <string name="feed_catalog_language_subset">언어 필터는 지금까지 불러온 소스에 적용됩니다. 더 불러와 다른 일치 항목을 찾아보세요.</string>
+    <string name="feed_catalog_preview">미리보기</string>
+    <string name="feed_catalog_subscribed">구독 중</string>
+    <string name="feed_catalog_loading">새로운 목소리 찾는 중…</string>
+    <string name="feed_catalog_loading_hint">다음 좋은 소스가 가까이에 있을지도 몰라요.</string>
+    <string name="feed_catalog_error_title">세상은 잠시 기다릴 수 있어요.</string>
+    <string name="feed_catalog_error_body">로컬 목록을 불러오지 못했습니다. 피드 주소는 계속 추가할 수 있습니다.</string>
+    <string name="feed_catalog_retry">다시 시도</string>
+    <string name="feed_catalog_empty_title">찾던 내용이 아닌가요?</string>
+    <string name="feed_catalog_empty_body">Plenary 목록에 아직 이 소스가 없습니다. 이름을 검색하거나 웹사이트 또는 피드 주소를 검색창에 붙여넣으세요.</string>
+    <string name="feed_catalog_more">소스 더 불러오기</string>
+    <string name="feed_catalog_more_failed">추가 소스를 불러오지 못했습니다. 기존 결과는 유지됩니다.</string>
+    <string name="feed_catalog_reset">주제 탐색</string>
+    <string name="feed_catalog_credit">Plenary 선정 소스 · CC0</string>
+    <string name="feed_catalog_privacy">내장 Plenary 목록을 오프라인에서도 비공개로 검색합니다. 피드 미리보기를 열 때만 게시자에게 연결합니다.</string>
+    <string name="feed_catalog_private_title">일반 탭에서 발견하기</string>
+    <string name="feed_catalog_private_body">소스를 관리하려면 일반 탭을 여세요. 구독을 저장하지 않고 미리 보려면 웹사이트나 피드 주소를 검색창에 붙여넣으세요.</string>
+    <string name="feed_catalog_no_description">미리보기를 열어 이 소스를 알아보세요.</string>
+    <string name="feed_catalog_close_languages">읽는 언어 닫기</string>
+    <string name="feed_catalog_website_unknown">원본 피드</string>
+    <string name="feed_catalog_address_detected">주소 감지됨 · 미리보기 열기</string>
+</resources>

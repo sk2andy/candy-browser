@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reader_voice_settings_title">朗讀</string>
+    <string name="reader_voice_settings_summary">為文章和所選文字選擇 Android 語音、Supertonic 或 Pocket TTS。本地模型下載後可離線使用。</string>
+    <string name="reader_voice_choice_title">選擇語音</string>
+    <string name="reader_voice_choice_summary">選擇 Supertonic、可下載語言的 Pocket TTS 或 Android 語音。可在設定 → 瀏覽器 → 朗讀中更改。</string>
+    <string name="reader_voice_use_offline">使用 Supertonic</string>
+    <string name="reader_voice_use_system">使用 Android 語音</string>
+    <string name="reader_voice_download">下載語音模型</string>
+    <string name="reader_voice_delete">刪除語音模型</string>
+    <string name="reader_voice_enabled_title">Supertonic 離線語音</string>
+    <string name="reader_voice_enabled_summary">關閉時 Candy 使用 Android 語音。關閉會保留已下載模型。</string>
+    <string name="reader_voice_checking">正在檢查語音模型…</string>
+    <string name="reader_voice_working">正在更新語音模型…</string>
+    <string name="reader_voice_downloading">正在下載語音模型：%1$d%%</string>
+    <string name="reader_voice_model_error">無法下載或更新語音模型。檢查網路連線和可用儲存空間後重試。</string>
+    <string name="reader_voice_ready">語音模型已下載。可進行離線朗讀。</string>
+    <string name="reader_voice_missing">尚未下載語音模型。</string>
+    <string name="reader_voice_model_details">Supertonic 3 · 下載約 145 MB · 包含英語和德語在內的 31 種語言。使用離線模型時文章文字留在裝置上。刪除模型會切回 Android 語音。</string>
+    <string name="reader_voice_model_terms">下載或啟用模型即表示同意其 OpenRAIL-M 許可及使用限制。此語音由 AI 生成。</string>
+    <string name="reader_voice_playback_error">此語音無法朗讀文字。請重試或切換語音。</string>
+    <string name="reader_voice_model_license">模型許可：OpenRAIL-M</string>
+    <string name="reader_voice_unavailable">朗讀不可用。請檢查設定 → 瀏覽器 → 朗讀中的語音模型，或 Android 文字轉語音設定。</string>
+</resources>

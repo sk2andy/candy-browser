@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reader_voice_settings_title">Les høyt</string>
+    <string name="reader_voice_settings_summary">Velg Android-stemmer, Supertonic eller Pocket TTS for artikler og valgt tekst. Lokale modeller virker uten nett etter nedlasting.</string>
+    <string name="reader_voice_choice_title">Velg en stemme</string>
+    <string name="reader_voice_choice_summary">Velg Supertonic, Pocket TTS med nedlastbare språk eller Android-stemmen. Du kan endre dette under Innstillinger → Nettleser → Les høyt.</string>
+    <string name="reader_voice_use_offline">Bruk Supertonic</string>
+    <string name="reader_voice_use_system">Bruk Android-stemme</string>
+    <string name="reader_voice_download">Last ned stemmemodell</string>
+    <string name="reader_voice_delete">Slett stemmemodell</string>
+    <string name="reader_voice_enabled_title">Supertonic-stemme uten nett</string>
+    <string name="reader_voice_enabled_summary">Når dette er av, bruker Candy Android-stemmen. Den nedlastede modellen beholdes når du slår av.</string>
+    <string name="reader_voice_checking">Sjekker stemmemodellen…</string>
+    <string name="reader_voice_working">Oppdaterer stemmemodellen…</string>
+    <string name="reader_voice_downloading">Laster ned stemmemodell: %1$d%%</string>
+    <string name="reader_voice_model_error">Kunne ikke laste ned eller oppdatere stemmemodellen. Sjekk tilkoblingen og ledig lagringsplass, og prøv igjen.</string>
+    <string name="reader_voice_ready">Stemmemodell lastet ned. Klar for høytlesing uten nett.</string>
+    <string name="reader_voice_missing">Stemmemodell ikke lastet ned.</string>
+    <string name="reader_voice_model_details">Supertonic 3 · omtrent 145 MB nedlasting · 31 språk, inkludert engelsk og tysk. Artikkelteksten blir på enheten når du bruker den frakoblede modellen. Sletting av modellen bytter tilbake til Android-stemmer.</string>
+    <string name="reader_voice_model_terms">Ved å laste ned eller aktivere modellen godtar du OpenRAIL-M-lisensen, inkludert bruksbegrensningene. Stemmen er KI-generert.</string>
+    <string name="reader_voice_playback_error">Denne stemmen kunne ikke lese teksten. Prøv igjen eller bytt stemme.</string>
+    <string name="reader_voice_model_license">Modellisens: OpenRAIL-M</string>
+    <string name="reader_voice_unavailable">Høytlesing er utilgjengelig. Sjekk stemmemodellen under Innstillinger → Nettleser → Les høyt, eller Android-innstillingene for tekst til tale.</string>
+</resources>

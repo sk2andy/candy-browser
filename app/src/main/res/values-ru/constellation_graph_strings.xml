@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="constellations_explore">Исследуйте свои связи</string>
+    <string name="constellations_show_list">Показать список страниц</string>
+    <string name="constellations_hide_list">Скрыть список страниц</string>
+    <string name="constellations_expand_map">Развернуть карту</string>
+    <string name="constellations_collapse_map">Свернуть карту</string>
+    <string name="constellations_all_topics">Все темы</string>
+    <string name="constellations_close_details">Закрыть сведения о странице</string>
+    <string name="constellations_fit_all">Показать всё</string>
+    <string name="constellations_explore_hint">Сводите или разводите пальцы для изменения масштаба и перетаскивайте для просмотра. Нажмите на страницу, чтобы увидеть связанные страницы. Связи показывают сходство тем.</string>
+    <string name="constellations_map_description">Страниц на карте: %1$d. Для навигации с помощью специальных возможностей используйте список страниц.</string>
+</resources>

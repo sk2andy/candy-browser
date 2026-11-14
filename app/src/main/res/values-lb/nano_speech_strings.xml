@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reader_nano_enabled_title">Text mat Gemini Nano virbereeden</string>
+    <string name="reader_nano_enabled_summary">Experimentell: verbessert d’Aussprooch vun üblechen däitschen an engleschen Ofkierzungen an Zuelen. Nano generéiert keng Stëmm: deng gewielte System- oder Offlinestëmm bleift d’selwecht. Kann d’Ofspille verzögeren.</string>
+    <string name="reader_nano_system_managed">Android geréiert dëse Modell an deelt e mat aneren Apps. Ausschalte deaktivéiert nëmme seng Benotzung a Candy.</string>
+    <string name="reader_nano_download_summary">Däin Telefon ënnerstëtzt Gemini Nano. Luet et erof, fir d’Aussprooch lokal virzebereeden. Dëst luet keng Stëmm erof a verännert se net.</string>
+    <string name="reader_nano_download">Gemini Nano eroflueden an aktivéieren</string>
+    <string name="reader_nano_retry_download">Gemini Nano nach eng Kéier eroflueden</string>
+    <string name="reader_nano_cancel_download">Download ofbriechen</string>
+    <string name="reader_nano_downloading">Gemini Nano: %1$s erofgelueden</string>
+    <string name="reader_nano_error">Gemini Nano konnt net virbereet ginn. Du kanns ouni Nano weider virliesen.</string>
+    <string name="reader_nano_unavailable">Gemini Nano ass momentan net disponibel. Virliese geet ouni Textvirbereedung weider.</string>
+    <string name="reader_nano_preparing">Text gëtt lokal mat Gemini Nano virbereet…</string>
+    <string name="reader_nano_fallback">Virliesen ouni Gemini Nano-Virbereedung.</string>
+    <string name="reader_nano_metrics_notice">Google verschafft Benotzungs- a Leeschtungsdaten. D’Textvirbereedung geschitt op dengem Apparat.</string>
+    <string name="reader_nano_terms">Google-Konditiounen an Dateschutz</string>
+    <string name="reader_nano_system_downloading">Android luet Gemini Nano erof. Kontrolléier de Status, fir ze gesinn, ob et fäerdeg ass.</string>
+    <string name="reader_nano_refresh">Downloadstatus kontrolléieren</string>
+    <string name="reader_nano_adult_title">Gemini Nano ass fir Erwuessener</string>
+    <string name="reader_nano_adult_summary">Google verlaangt, datt d’Benotzer vun dëser Funktioun op d’mannst 18 Joer al sinn. Bestäteg däin Alter, éier s du Gemini Nano aktivéiers. Virliesen ouni Nano bleift disponibel.</string>
+    <string name="reader_nano_adult_confirm">Ech sinn 18 Joer oder méi al</string>
+    <string name="reader_nano_adult_cancel">Net elo</string>
+</resources>

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feeds_player_open">Открыть очередь прослушивания</string>
+    <string name="feeds_player_close">Закрыть очередь прослушивания</string>
+    <string name="feeds_player_up_next">Очередь · %1$d</string>
+    <string name="feeds_player_import_saved">Добавить сохранённые</string>
+    <string name="feeds_player_empty">Мгновение для вас</string>
+    <string name="feeds_player_empty_title">Ваша следующая интересная история.</string>
+    <string name="feeds_player_empty_hint">Нажмите значок списка прослушивания у статьи, чтобы добавить её сюда. Можно добавить и ваши закладки.</string>
+    <string name="feeds_player_preparing">Подготовка</string>
+    <string name="feeds_player_listening">Сейчас читается вслух</string>
+    <string name="feeds_player_ready">Готово, когда захотите</string>
+    <string name="feeds_player_progress">Прочитано вслух %1$d%%</string>
+    <string name="feeds_player_rate">%1$s×</string>
+    <string name="feeds_player_current">Сначала · %1$s</string>
+    <string name="feeds_player_move_up">Поднять: %1$s</string>
+    <string name="feeds_player_remove">Убрать из очереди прослушивания: %1$s</string>
+    <string name="feeds_player_load_failed">Не удалось подготовить эту статью для чтения вслух.</string>
+    <string name="feeds_player_retry">Попробовать ещё раз</string>
+    <string name="feeds_player_foreground">Продолжайте слушать, пока приложение в фоне. Управление воспроизведением также доступно в медиауведомлении Android.</string>
+</resources>

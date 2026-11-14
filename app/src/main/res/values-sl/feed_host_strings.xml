@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feeds_next_unread">Naslednji neprebrani članek</string>
+    <string name="feeds_notifications_denied">Obvestila so v Androidu izklopljena. Tvoja izbira je shranjena.</string>
+    <string name="feeds_notification_channel">Viri Candy</string>
+    <string name="feeds_notification_count">Čaka te %1$d neprebranih člankov.</string>
+    <string name="feeds_speech_next">Naslednji članek</string>
+    <string name="feeds_speech_speed">Hitrost branja: %1$s×</string>
+    <string name="feeds_speech_unavailable">Glas ni na voljo. Preveri nastavitve Androida za pretvarjanje besedila v govor.</string>
+</resources>

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="workflow_run_details">Pojedinosti</string>
+    <string name="workflow_run_dismiss">Zatvori</string>
+    <string name="workflow_run_done">Svi koraci dovršeni</string>
+    <string name="workflow_run_waiting">Čekanje</string>
+    <string name="workflow_run_running">Izvršavanje…</string>
+    <string name="workflow_run_succeeded">Dovršeno</string>
+    <string name="workflow_run_failed">Radnja nije uspjela</string>
+    <string name="workflow_run_skipped">Nije izvršeno</string>
+    <string name="workflow_run_cancelling">Zaustavljanje nakon trenutačne radnje…</string>
+    <string name="workflow_run_cancelled">Zaustavljeno. Dovršeni koraci su sačuvani.</string>
+    <string name="workflow_run_invalid">Ovaj tijek rada nije valjan.</string>
+    <string name="workflow_run_unsupported">Nije dostupno za ovu stranicu.</string>
+    <string name="workflow_run_private">Ovaj tijek rada sprema podatke i ne može se izvršiti privatno.</string>
+    <string name="workflow_run_pinned">Prikvačene kartice nije moguće zatvoriti.</string>
+    <string name="workflow_run_changed">Izvorna stranica je promijenjena. Preostali koraci su zaustavljeni.</string>
+    <string name="workflow_run_empty">Nije pronađen čitljiv članak.</string>
+    <string name="workflow_run_save_failed">Spremanje nije uspjelo. Provjeri pohranu i slobodan prostor u knjižnici čitača. Ulaz ostaje otvoren.</string>
+    <string name="workflow_run_timeout">Vrijeme za radnju je isteklo. Preostali koraci su zaustavljeni.</string>
+</resources>

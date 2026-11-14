@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reader_voice_settings_title">Lees hardop</string>
+    <string name="reader_voice_settings_summary">Kies Android-stemmen, Supertonic of Pocket TTS voor artikelen en geselecteerde tekst. Lokale modellen werken na het downloaden offline.</string>
+    <string name="reader_voice_choice_title">Kies een stem</string>
+    <string name="reader_voice_choice_summary">Kies Supertonic, Pocket TTS met downloadbare talen of je Android-stem. Wijzig dit via Instellingen → Browser → Voorlezen.</string>
+    <string name="reader_voice_use_offline">Supertonic gebruiken</string>
+    <string name="reader_voice_use_system">Android-stem gebruiken</string>
+    <string name="reader_voice_download">Stemmodel downloaden</string>
+    <string name="reader_voice_delete">Stemmodel verwijderen</string>
+    <string name="reader_voice_enabled_title">Supertonic-offlinestem</string>
+    <string name="reader_voice_enabled_summary">Wanneer dit uitstaat gebruikt Candy je Android-stem. Uitschakelen behoudt het gedownloade model.</string>
+    <string name="reader_voice_checking">Stemmodel controleren…</string>
+    <string name="reader_voice_working">Stemmodel bijwerken…</string>
+    <string name="reader_voice_downloading">Stemmodel downloaden: %1$d%%</string>
+    <string name="reader_voice_model_error">Het stemmodel kon niet worden gedownload of bijgewerkt. Controleer je verbinding en vrije opslagruimte en probeer opnieuw.</string>
+    <string name="reader_voice_ready">Stemmodel gedownload. Klaar voor offline voorlezen.</string>
+    <string name="reader_voice_missing">Stemmodel niet gedownload.</string>
+    <string name="reader_voice_model_details">Supertonic 3 · download van circa 145 MB · 31 talen, waaronder Engels en Duits. Artikeltekst blijft op je apparaat bij gebruik van het offlinemodel. Het model verwijderen schakelt terug naar Android-stemmen.</string>
+    <string name="reader_voice_model_terms">Door het model te downloaden of in te schakelen ga je akkoord met de OpenRAIL-M-licentie, inclusief de gebruiksbeperkingen. De stem is door AI gegenereerd.</string>
+    <string name="reader_voice_playback_error">Deze stem kon de tekst niet lezen. Probeer opnieuw of wissel van stem.</string>
+    <string name="reader_voice_model_license">Modellicentie: OpenRAIL-M</string>
+    <string name="reader_voice_unavailable">Voorlezen is niet beschikbaar. Controleer het stemmodel via Instellingen → Browser → Voorlezen of je Android-instellingen voor tekst-naar-spraak.</string>
+</resources>

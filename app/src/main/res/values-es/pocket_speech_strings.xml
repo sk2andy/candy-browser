@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reader_pocket_title">Voz sin conexión Pocket TTS</string>
+    <string name="reader_pocket_summary">Elige el modelo descargado que corresponda al idioma de cada artículo. Desactivarlo conserva tus paquetes de idiomas.</string>
+    <string name="reader_pocket_download_summary">Descarga uno o varios idiomas. Los artículos y el audio generado permanecen en tu dispositivo. Si el idioma falta o es incierto, se te pedirá elegirlo; no se inicia ninguna descarga automáticamente.</string>
+    <string name="reader_pocket_unknown_language">Elige un idioma descargado para este texto o usa otra voz.</string>
+    <string name="reader_pocket_unsupported_language">Idioma detectado: %1$s. No hay un modelo Pocket disponible. Usa otra voz o elige un idioma si la detección fue incorrecta.</string>
+    <string name="reader_pocket_article_language">Idioma del artículo: %1$s. Descarga su modelo o elige un idioma descargado para corregir la detección.</string>
+    <string name="reader_pocket_download_size">Descarga: %1$d MB · almacenamiento: %2$d MB</string>
+    <string name="reader_pocket_cancel">Cancelar</string>
+    <string name="reader_pocket_use_language">Leer en este idioma</string>
+    <string name="reader_pocket_remove">Eliminar idioma</string>
+    <string name="reader_pocket_downloaded">Descargado · disponible sin conexión</string>
+    <string name="reader_pocket_license_summary">Pocket TTS de Kyutai. Al descargarlo aceptas la licencia del modelo y los términos de atribución de voz. Esta voz está generada por IA.</string>
+    <string name="reader_pocket_license">Licencias del modelo y de las voces</string>
+</resources>

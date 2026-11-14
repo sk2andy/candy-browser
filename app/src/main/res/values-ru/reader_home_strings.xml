@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reader_home_title">Reader Studio</string>
+    <string name="reader_home_back">Назад</string>
+    <string name="reader_home_manage_feeds">Управление лентами</string>
+    <string name="reader_home_library_tab">Библиотека</string>
+    <string name="reader_home_feeds_tab">Ленты</string>
+    <string name="reader_home_all_feeds">Все ленты</string>
+    <string name="reader_home_all_posts">Все публикации</string>
+    <string name="reader_home_unread_count">Непрочитанные (%1$d)</string>
+    <string name="reader_home_article_count">Статей: %1$d</string>
+    <string name="reader_home_newest_first">Сначала новые</string>
+    <string name="reader_home_all_available_shown">Показаны все доступные статьи</string>
+    <string name="reader_home_no_feeds_title">Пока нет лент</string>
+    <string name="reader_home_no_feeds_message">Подпишитесь на ленту, чтобы видеть здесь её последние статьи.</string>
+    <string name="reader_home_all_read_title">Вы всё прочитали</string>
+    <string name="reader_home_all_read_message">В этой подборке нет непрочитанных статей.</string>
+    <string name="reader_home_no_articles_title">Пока нет статей</string>
+    <string name="reader_home_no_articles_message">Здесь появятся новые статьи из этих лент.</string>
+    <string name="reader_home_library_empty_title">Ваша библиотека пуста</string>
+    <string name="reader_home_library_empty_message">Здесь появятся статьи, сохранённые для чтения офлайн.</string>
+    <string name="reader_home_progress">Прочитано %1$d%%</string>
+    <string name="reader_home_delete_article">Удалить сохранённую статью</string>
+    <string name="reader_home_choose_feed">Выбрать ленту</string>
+    <string name="reader_home_feed_count">Подписок на ленты: %1$d</string>
+    <string name="reader_home_source_subtitle">%1$s · непрочитанных: %2$d</string>
+    <string name="reader_home_search_feeds">Поиск лент</string>
+    <string name="reader_home_no_feed_match">Нет подходящих лент</string>
+</resources>

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feeds_player_open">เปิดคิวฟัง</string>
+    <string name="feeds_player_close">ปิดคิวฟัง</string>
+    <string name="feeds_player_up_next">คิว · %1$d</string>
+    <string name="feeds_player_import_saved">เพิ่มรายการที่บันทึก</string>
+    <string name="feeds_player_empty">ช่วงเวลาสำหรับคุณ</string>
+    <string name="feeds_player_empty_title">เรื่องน่าฟังถัดไปของคุณ</string>
+    <string name="feeds_player_empty_hint">ใช้ไอคอนรายการฟังบนบทความเพื่อเพิ่มที่นี่ เพิ่มบุ๊กมาร์กได้ด้วย</string>
+    <string name="feeds_player_preparing">กำลังเตรียม</string>
+    <string name="feeds_player_listening">กำลังอ่านออกเสียง</string>
+    <string name="feeds_player_ready">พร้อมเมื่อคุณพร้อม</string>
+    <string name="feeds_player_progress">อ่านออกเสียงแล้ว %1$d%%</string>
+    <string name="feeds_player_rate">%1$s×</string>
+    <string name="feeds_player_current">ลำดับแรก · %1$s</string>
+    <string name="feeds_player_move_up">เลื่อนขึ้น: %1$s</string>
+    <string name="feeds_player_remove">นำออกจากคิวฟัง: %1$s</string>
+    <string name="feeds_player_load_failed">เตรียมบทความนี้สำหรับอ่านออกเสียงไม่ได้</string>
+    <string name="feeds_player_retry">ลองอีกครั้ง</string>
+    <string name="feeds_player_foreground">ฟังต่อได้เมื่อแอปอยู่เบื้องหลัง มีตัวควบคุมการเล่นในการแจ้งเตือนสื่อของ Android ด้วย</string>
+</resources>

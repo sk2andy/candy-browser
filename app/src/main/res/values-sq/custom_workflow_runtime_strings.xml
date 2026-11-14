@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="workflow_run_details">Hollësi</string>
+    <string name="workflow_run_dismiss">Mbyll</string>
+    <string name="workflow_run_done">Të gjithë hapat përfunduan</string>
+    <string name="workflow_run_waiting">Në pritje</string>
+    <string name="workflow_run_running">Duke u ekzekutuar…</string>
+    <string name="workflow_run_succeeded">Përfundoi</string>
+    <string name="workflow_run_failed">Veprimi dështoi</string>
+    <string name="workflow_run_skipped">Nuk u ekzekutua</string>
+    <string name="workflow_run_cancelling">Po ndalon pas veprimit aktual…</string>
+    <string name="workflow_run_cancelled">U ndal. Hapat e përfunduar ruhen.</string>
+    <string name="workflow_run_invalid">Kjo rrjedhë pune është e pavlefshme.</string>
+    <string name="workflow_run_unsupported">Nuk është e disponueshme për këtë faqe.</string>
+    <string name="workflow_run_private">Kjo rrjedhë pune ruan të dhëna dhe nuk mund të ekzekutohet privatisht.</string>
+    <string name="workflow_run_pinned">Skedat e fiksuara nuk mund të mbyllen.</string>
+    <string name="workflow_run_changed">Faqja burimore ndryshoi. Hapat e mbetur u ndalën.</string>
+    <string name="workflow_run_empty">Nuk u gjet artikull i lexueshëm.</string>
+    <string name="workflow_run_save_failed">Ruajtja dështoi. Kontrollo hapësirën e lirë në bibliotekën e lexuesit. Hyrja mbetet e hapur.</string>
+    <string name="workflow_run_timeout">Veprimi tejkaloi kohën. Hapat e mbetur u ndalën.</string>
+</resources>

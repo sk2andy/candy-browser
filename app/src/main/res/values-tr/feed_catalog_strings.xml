@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feed_catalog_title">Kaynakları keşfet</string>
+    <string name="feed_catalog_eyebrow">MERAK. SINIR TANIMAZ.</string>
+    <string name="feed_catalog_headline">Bir sonraki\nfavori akışınız.</string>
+    <string name="feed_catalog_intro">Büyük hikâyeler. Bağımsız sesler. Takibe değer bir şey bulun.</string>
+    <string name="feed_catalog_search_hint">Konu, ad veya akış adresi</string>
+    <string name="feed_catalog_search">Kaynak ara</string>
+    <string name="feed_catalog_clear">Aramayı temizle</string>
+    <string name="feed_catalog_manual">Akış adresi</string>
+    <string name="feed_catalog_topics">İlginçmiş!</string>
+    <string name="feed_catalog_technology">Teknoloji</string>
+    <string name="feed_catalog_science">Bilim</string>
+    <string name="feed_catalog_design">Tasarım ve kültür</string>
+    <string name="feed_catalog_food">Yemek</string>
+    <string name="feed_catalog_travel">Seyahat</string>
+    <string name="feed_catalog_nature">Doğa</string>
+    <string name="feed_catalog_all_sources">Tüm kaynaklar</string>
+    <string name="feed_catalog_blogs">Bloglar</string>
+    <string name="feed_catalog_news">Haberler</string>
+    <string name="feed_catalog_all_languages">Tüm diller</string>
+    <plurals name="feed_catalog_languages_count">
+        <item quantity="one">%1$d dil</item>
+        <item quantity="other">%1$d dil</item>
+    </plurals>
+    <string name="feed_catalog_languages_title">Okuma dilleriniz</string>
+    <string name="feed_catalog_languages_intro">Birini, birkaçını veya tüm dünyayı seçin.</string>
+    <string name="feed_catalog_language_search">Dil bul</string>
+    <string name="feed_catalog_language_unknown">Dil belirtilmemiş</string>
+    <string name="feed_catalog_language_none">Dil bulunamadı. Adını veya dil kodunu deneyin.</string>
+    <string name="feed_catalog_language_apply">Dilleri uygula</string>
+    <plurals name="feed_catalog_languages_selection">
+        <item quantity="one">%1$d dil seçildi</item>
+        <item quantity="other">%1$d dil seçildi</item>
+    </plurals>
+    <string name="feed_catalog_world_selected">Tüm dünya dahil</string>
+    <string name="feed_catalog_results">“%1$s” için kaynaklar</string>
+    <plurals name="feed_catalog_loaded_count">
+        <item quantity="one">Bu seçimde %1$d kaynak</item>
+        <item quantity="other">Bu seçimde %1$d kaynak</item>
+    </plurals>
+    <string name="feed_catalog_language_subset">Diller şimdiye kadar yüklenen kaynakları süzer. Daha fazla eşleşme için yenilerini yükleyin.</string>
+    <string name="feed_catalog_preview">Önizleme</string>
+    <string name="feed_catalog_subscribed">Abone olundu</string>
+    <string name="feed_catalog_loading">Yeni sesler bulunuyor…</string>
+    <string name="feed_catalog_loading_hint">Bir sonraki iyi kaynağınız çok yakında olabilir.</string>
+    <string name="feed_catalog_error_title">Dünya biraz bekleyebilir.</string>
+    <string name="feed_catalog_error_body">Yerel katalog yüklenemedi. Yine de akış adresi ekleyebilirsiniz.</string>
+    <string name="feed_catalog_retry">Yeniden dene</string>
+    <string name="feed_catalog_empty_title">Aklınızdaki bu değil miydi?</string>
+    <string name="feed_catalog_empty_body">Bu kaynak Plenary kataloğunda henüz yok. Adını deneyin veya web sitesi ya da akış adresini arama alanına yapıştırın.</string>
+    <string name="feed_catalog_more">Daha fazla kaynak yükle</string>
+    <string name="feed_catalog_more_failed">Daha fazla kaynak yüklenemedi. Sonuçlarınız duruyor.</string>
+    <string name="feed_catalog_reset">Konuları keşfet</string>
+    <string name="feed_catalog_credit">Plenary tarafından seçilen kaynaklar · CC0</string>
+    <string name="feed_catalog_privacy">Dahili Plenary kataloğunu çevrimdışıyken bile gizlice arayın. Yalnızca akış önizlemesini açmak yayıncıya bağlanır.</string>
+    <string name="feed_catalog_private_title">Normal sekmede keşfet</string>
+    <string name="feed_catalog_private_body">Kaynakları yönetmek için normal sekme açın. Abonelik kaydetmeden önizlemek için web sitesi veya akış adresini arama alanına yapıştırın.</string>
+    <string name="feed_catalog_no_description">Bu kaynağı tanımak için önizlemeyi açın.</string>
+    <string name="feed_catalog_close_languages">Okuma dillerini kapat</string>
+    <string name="feed_catalog_website_unknown">Asıl akış</string>
+    <string name="feed_catalog_address_detected">Adres algılandı · Önizlemeyi aç</string>
+</resources>

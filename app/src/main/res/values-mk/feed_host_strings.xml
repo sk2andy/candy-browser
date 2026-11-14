@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feeds_next_unread">Следна непрочитана статија</string>
+    <string name="feeds_notifications_denied">Известувањата се исклучени во Android. Твојот избор е зачуван.</string>
+    <string name="feeds_notification_channel">Извори Candy</string>
+    <string name="feeds_notification_count">Те чекаат %1$d непрочитани статии.</string>
+    <string name="feeds_speech_next">Следна статија</string>
+    <string name="feeds_speech_speed">Брзина на читање: %1$s×</string>
+    <string name="feeds_speech_unavailable">Нема достапен глас. Провери ги поставките на Android за претворање текст во говор.</string>
+</resources>

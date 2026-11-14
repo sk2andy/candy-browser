@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reader_home_title">リーダースタジオ</string>
+    <string name="reader_home_back">戻る</string>
+    <string name="reader_home_manage_feeds">フィードを管理</string>
+    <string name="reader_home_library_tab">ライブラリ</string>
+    <string name="reader_home_feeds_tab">フィード</string>
+    <string name="reader_home_all_feeds">すべてのフィード</string>
+    <string name="reader_home_all_posts">すべての記事</string>
+    <string name="reader_home_unread_count">未読（%1$d）</string>
+    <string name="reader_home_article_count">記事：%1$d</string>
+    <string name="reader_home_newest_first">新しい順</string>
+    <string name="reader_home_all_available_shown">すべての記事を表示済み</string>
+    <string name="reader_home_no_feeds_title">フィードがありません</string>
+    <string name="reader_home_no_feeds_message">フィードをフォローすると新着記事がここに表示されます。</string>
+    <string name="reader_home_all_read_title">すべて読み終えました</string>
+    <string name="reader_home_all_read_message">この選択に未読記事はありません。</string>
+    <string name="reader_home_no_articles_title">記事がありません</string>
+    <string name="reader_home_no_articles_message">これらのフィードの新着記事がここに表示されます。</string>
+    <string name="reader_home_library_empty_title">ライブラリは空です</string>
+    <string name="reader_home_library_empty_message">オフライン用に保存した記事がここに表示されます。</string>
+    <string name="reader_home_progress">%1$d%% 読了</string>
+    <string name="reader_home_delete_article">保存した記事を削除</string>
+    <string name="reader_home_choose_feed">フィードを選択</string>
+    <string name="reader_home_feed_count">購読フィード：%1$d</string>
+    <string name="reader_home_source_subtitle">%1$s · %2$d 件未読</string>
+    <string name="reader_home_search_feeds">フィードを検索</string>
+    <string name="reader_home_no_feed_match">該当するフィードがありません</string>
+</resources>

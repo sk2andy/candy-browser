@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feeds_manual_address">Внеси адреса на извор</string>
+    <string name="feeds_manual_note">Додај извор што го сакаш. Внеси ја неговата веб-страница или RSS/Atom адреса и погледни го пред да се претплатиш.</string>
+    <string name="feeds_latest_articles">Најнови статии</string>
+    <string name="feeds_subscription_failed">Овој извор не можеше да се зачува. Твоите претплати не се променети. Обиди се повторно.</string>
+    <string name="feeds_sources_empty_title">Направи место за добри гласови.</string>
+    <string name="feeds_sources_empty_note">Откриј извор од целиот свет или внеси сопствена адреса на извор. Новите статии ќе пристигнуваат во твоето сандаче.</string>
+</resources>

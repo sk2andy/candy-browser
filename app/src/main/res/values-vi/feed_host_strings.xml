@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feeds_next_unread">Bài chưa đọc tiếp theo</string>
+    <string name="feeds_notifications_denied">Thông báo bị tắt trong Android. Đã lưu lựa chọn.</string>
+    <string name="feeds_notification_channel">Nguồn tin Candy</string>
+    <string name="feeds_notification_count">Có %1$d bài chưa đọc đang chờ.</string>
+    <string name="feeds_speech_next">Bài tiếp theo</string>
+    <string name="feeds_speech_speed">Tốc độ đọc: %1$s×</string>
+    <string name="feeds_speech_unavailable">Không có giọng đọc. Kiểm tra cài đặt chuyển văn bản thành giọng nói của Android.</string>
+</resources>

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="constellations_explore">Explorar tus conexiones</string>
+    <string name="constellations_show_list">Mostrar lista de páginas</string>
+    <string name="constellations_hide_list">Ocultar lista de páginas</string>
+    <string name="constellations_expand_map">Ampliar mapa</string>
+    <string name="constellations_collapse_map">Reducir mapa</string>
+    <string name="constellations_all_topics">Todos los temas</string>
+    <string name="constellations_close_details">Cerrar detalles de la página</string>
+    <string name="constellations_fit_all">Mostrar todo</string>
+    <string name="constellations_explore_hint">Pellizca para ampliar y arrastra para explorar. Toca una página para ver páginas relacionadas. Las conexiones muestran similitud temática.</string>
+    <string name="constellations_map_description">Páginas en el mapa: %1$d. Usa la lista de páginas para explorar con controles de accesibilidad.</string>
+</resources>

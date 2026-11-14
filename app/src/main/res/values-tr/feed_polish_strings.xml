@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feeds_manual_address">Akış adresini gir</string>
+    <string name="feeds_manual_note">Sevdiğiniz bir kaynağı getirin. Web sitesi veya RSS/Atom akış adresini girip abone olmadan inceleyin.</string>
+    <string name="feeds_latest_articles">Son makaleler</string>
+    <string name="feeds_subscription_failed">Kaynak kaydedilemedi. Abonelikleriniz değişmedi. Yeniden deneyin.</string>
+    <string name="feeds_sources_empty_title">İyi seslere yer açın.</string>
+    <string name="feeds_sources_empty_note">Dünyadan kaynaklar keşfedin veya kendi akış adresinizi ekleyin. Yeni makaleler gelen kutunuza gelir.</string>
+</resources>

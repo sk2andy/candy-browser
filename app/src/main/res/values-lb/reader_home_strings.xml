@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reader_home_title">Reader Studio</string>
+    <string name="reader_home_back">Zréck</string>
+    <string name="reader_home_progress">%1$d%% gelies</string>
+    <string name="reader_home_manage_feeds">Feeds verwalten</string>
+    <string name="reader_home_library_tab">Bibliothéik</string>
+    <string name="reader_home_feeds_tab">Feeds</string>
+    <string name="reader_home_all_feeds">All Feeds</string>
+    <string name="reader_home_all_posts">All Bäiträg</string>
+    <string name="reader_home_unread_count">Ongelies (%1$d)</string>
+    <string name="reader_home_article_count">Artikelen: %1$d</string>
+    <string name="reader_home_newest_first">Neist fir d’éischt</string>
+    <string name="reader_home_all_available_shown">All disponibel Artikele gi gewisen</string>
+    <string name="reader_home_no_feeds_title">Nach keng Feeds</string>
+    <string name="reader_home_no_feeds_message">Abonnéier e Feed, fir seng neisten Artikelen hei ze gesinn.</string>
+    <string name="reader_home_all_read_title">Du hues alles gelies</string>
+    <string name="reader_home_all_read_message">Et gi keng ongeliesen Artikelen an dëser Auswiel.</string>
+    <string name="reader_home_no_articles_title">Nach keng Artikelen</string>
+    <string name="reader_home_no_articles_message">Nei Artikelen aus dëse Feeds erschéngen hei.</string>
+    <string name="reader_home_library_empty_title">Deng Bibliothéik ass eidel</string>
+    <string name="reader_home_library_empty_message">Artikelen, déi s du fir offline ze liese späichers, erschéngen hei.</string>
+    <string name="reader_home_delete_article">Gespäicherten Artikel läschen</string>
+    <string name="reader_home_choose_feed">Wiel e Feed</string>
+    <string name="reader_home_feed_count">Abonnéiert Feeds: %1$d</string>
+    <string name="reader_home_source_subtitle">%1$s · %2$d ongelies</string>
+    <string name="reader_home_search_feeds">Feeds sichen</string>
+    <string name="reader_home_no_feed_match">Keng passend Feeds</string>
+</resources>

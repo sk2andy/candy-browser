@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reader_home_title">Reader Studio</string>
+    <string name="reader_home_back">Назад</string>
+    <string name="reader_home_progress">%1$d%% четене</string>
+    <string name="reader_home_manage_feeds">Управление на емисии</string>
+    <string name="reader_home_library_tab">Библиотека</string>
+    <string name="reader_home_feeds_tab">Емисии</string>
+    <string name="reader_home_all_feeds">Всички емисии</string>
+    <string name="reader_home_all_posts">Всички публикации</string>
+    <string name="reader_home_unread_count">Непрочетени (%1$d)</string>
+    <string name="reader_home_article_count">Статии: %1$d</string>
+    <string name="reader_home_newest_first">Първо най-новите</string>
+    <string name="reader_home_all_available_shown">Показани са всички налични статии</string>
+    <string name="reader_home_no_feeds_title">Все още няма емисии</string>
+    <string name="reader_home_no_feeds_message">Последвайте емисия, за да виждате най-новите ѝ статии тук.</string>
+    <string name="reader_home_all_read_title">Всичко е прочетено</string>
+    <string name="reader_home_all_read_message">Няма непрочетени статии в този избор.</string>
+    <string name="reader_home_no_articles_title">Все още няма статии</string>
+    <string name="reader_home_no_articles_message">Новите статии от тези емисии ще се показват тук.</string>
+    <string name="reader_home_library_empty_title">Библиотеката ви е празна</string>
+    <string name="reader_home_library_empty_message">Статиите, които запазвате за четене офлайн, ще се показват тук.</string>
+    <string name="reader_home_delete_article">Изтриване на запазена статия</string>
+    <string name="reader_home_choose_feed">Избор на емисия</string>
+    <string name="reader_home_feed_count">Следвани емисии: %1$d</string>
+    <string name="reader_home_source_subtitle">%1$s · %2$d непрочетени</string>
+    <string name="reader_home_search_feeds">Търсене в емисии</string>
+    <string name="reader_home_no_feed_match">Няма съответстващи емисии</string>
+</resources>

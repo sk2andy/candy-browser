@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="workflow_run_details">Détails</string>
+    <string name="workflow_run_dismiss">Fermer</string>
+    <string name="workflow_run_done">Toutes les étapes sont terminées</string>
+    <string name="workflow_run_waiting">En attente</string>
+    <string name="workflow_run_running">En cours…</string>
+    <string name="workflow_run_succeeded">Terminé</string>
+    <string name="workflow_run_failed">Échec de l’action</string>
+    <string name="workflow_run_skipped">Non exécuté</string>
+    <string name="workflow_run_cancelling">Arrêt après l’opération en cours…</string>
+    <string name="workflow_run_cancelled">Arrêté. Les étapes terminées sont conservées.</string>
+    <string name="workflow_run_invalid">Ce flux n’est pas valide.</string>
+    <string name="workflow_run_unsupported">Indisponible pour cette page.</string>
+    <string name="workflow_run_private">Ce flux enregistre des données et ne peut pas s’exécuter en privé.</string>
+    <string name="workflow_run_pinned">Les onglets épinglés ne peuvent pas être fermés.</string>
+    <string name="workflow_run_changed">La page source a changé. Les étapes restantes ont été arrêtées.</string>
+    <string name="workflow_run_empty">Aucun article lisible trouvé.</string>
+    <string name="workflow_run_save_failed">Impossible d’enregistrer. Vérifiez le stockage et l’espace libre dans la bibliothèque Reader. L’entrée reste ouverte.</string>
+    <string name="workflow_run_timeout">Le délai de l’opération est dépassé. Les étapes restantes ont été arrêtées.</string>
+</resources>

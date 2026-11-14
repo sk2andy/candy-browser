@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reader_pocket_title">Φωνή εκτός σύνδεσης Pocket TTS</string>
+    <string name="reader_pocket_summary">Επιλέξτε το ληφθέν μοντέλο που ταιριάζει στη γλώσσα κάθε άρθρου. Η απενεργοποίηση διατηρεί τα πακέτα γλωσσών.</string>
+    <string name="reader_pocket_download_summary">Κατεβάστε μία ή περισσότερες γλώσσες. Άρθρα και παραγόμενος ήχος μένουν στη συσκευή. Αν λείπει ή δεν είναι βέβαιη η γλώσσα, ζητείται επιλογή· δεν αρχίζει αυτόματη λήψη.</string>
+    <string name="reader_pocket_unknown_language">Επιλέξτε ληφθείσα γλώσσα για το κείμενο ή χρησιμοποιήστε άλλη φωνή.</string>
+    <string name="reader_pocket_unsupported_language">Εντοπισμένη γλώσσα: %1$s. Δεν υπάρχει μοντέλο Pocket. Χρησιμοποιήστε άλλη φωνή ή επιλέξτε γλώσσα αν ο εντοπισμός ήταν λάθος.</string>
+    <string name="reader_pocket_article_language">Γλώσσα άρθρου: %1$s. Κατεβάστε το μοντέλο της ή επιλέξτε ληφθείσα γλώσσα για διόρθωση εντοπισμού.</string>
+    <string name="reader_pocket_download_size">Λήψη: %1$d MB · αποθήκευση: %2$d MB</string>
+    <string name="reader_pocket_cancel">Ακύρωση</string>
+    <string name="reader_pocket_use_language">Ανάγνωση σε αυτή τη γλώσσα</string>
+    <string name="reader_pocket_remove">Αφαίρεση γλώσσας</string>
+    <string name="reader_pocket_downloaded">Λήφθηκε · διαθέσιμο εκτός σύνδεσης</string>
+    <string name="reader_pocket_license_summary">Pocket TTS από Kyutai. Η λήψη αποδέχεται την άδεια μοντέλου και τους όρους αναφοράς φωνής. Η φωνή παράγεται από τεχνητή νοημοσύνη.</string>
+    <string name="reader_pocket_license">Άδειες μοντέλου και φωνής</string>
+</resources>

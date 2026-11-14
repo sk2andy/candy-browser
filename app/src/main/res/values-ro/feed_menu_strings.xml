@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="browser_menu_reading_group">Citește și adună</string>
+    <string name="browser_menu_workflows_group">Fluxurile tale de lucru</string>
+    <string name="browser_menu_feeds">Fluxuri</string>
+    <string name="browser_menu_library">Bibliotecă</string>
+    <string name="browser_menu_discover_feeds">Descoperă fluxuri</string>
+    <string name="browser_menu_feed_unread_count">%1$d necitite</string>
+    <string name="browser_menu_section_expanded">Extins</string>
+    <string name="browser_menu_section_collapsed">Restrâns</string>
+</resources>

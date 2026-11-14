@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feeds_player_open">Άνοιγμα ουράς ακρόασης</string>
+    <string name="feeds_player_close">Κλείσιμο ουράς ακρόασης</string>
+    <string name="feeds_player_up_next">Ουρά · %1$d</string>
+    <string name="feeds_player_import_saved">Προσθήκη αποθηκευμένων</string>
+    <string name="feeds_player_empty">Μια στιγμή για εσάς</string>
+    <string name="feeds_player_empty_title">Η επόμενη καλή σας ακρόαση.</string>
+    <string name="feeds_player_empty_hint">Χρησιμοποιήστε το εικονίδιο λίστας ακρόασης στο άρθρο για προσθήκη. Προσθέστε και σελιδοδείκτες.</string>
+    <string name="feeds_player_preparing">Προετοιμασία</string>
+    <string name="feeds_player_listening">Γίνεται εκφώνηση</string>
+    <string name="feeds_player_ready">Έτοιμο όταν είστε κι εσείς</string>
+    <string name="feeds_player_progress">Εκφωνήθηκε %1$d%%</string>
+    <string name="feeds_player_rate">%1$s×</string>
+    <string name="feeds_player_current">Πρώτο · %1$s</string>
+    <string name="feeds_player_move_up">Μετακίνηση πάνω: %1$s</string>
+    <string name="feeds_player_remove">Αφαίρεση από την ουρά ακρόασης: %1$s</string>
+    <string name="feeds_player_load_failed">Το άρθρο δεν προετοιμάστηκε για εκφώνηση.</string>
+    <string name="feeds_player_retry">Δοκιμή ξανά</string>
+    <string name="feeds_player_foreground">Συνεχίστε την ακρόαση με την εφαρμογή στο παρασκήνιο. Υπάρχουν χειριστήρια και στην ειδοποίηση πολυμέσων Android.</string>
+</resources>

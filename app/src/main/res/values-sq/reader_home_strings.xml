@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reader_home_title">Reader Studio</string>
+    <string name="reader_home_back">Prapa</string>
+    <string name="reader_home_progress">%1$d%% lexuar</string>
+    <string name="reader_home_manage_feeds">Menaxho burimet</string>
+    <string name="reader_home_library_tab">Biblioteka</string>
+    <string name="reader_home_feeds_tab">Burimet</string>
+    <string name="reader_home_all_feeds">Të gjitha burimet</string>
+    <string name="reader_home_all_posts">Të gjitha postimet</string>
+    <string name="reader_home_unread_count">Të palexuara (%1$d)</string>
+    <string name="reader_home_article_count">Artikuj: %1$d</string>
+    <string name="reader_home_newest_first">Më të rejat fillimisht</string>
+    <string name="reader_home_all_available_shown">Po shfaqen të gjithë artikujt e disponueshëm</string>
+    <string name="reader_home_no_feeds_title">Ende pa burime</string>
+    <string name="reader_home_no_feeds_message">Ndiq një burim për të parë këtu artikujt e tij më të fundit.</string>
+    <string name="reader_home_all_read_title">I ke lexuar të gjitha</string>
+    <string name="reader_home_all_read_message">Nuk ka artikuj të palexuar në këtë përzgjedhje.</string>
+    <string name="reader_home_no_articles_title">Ende pa artikuj</string>
+    <string name="reader_home_no_articles_message">Artikujt e rinj nga këto burime do të shfaqen këtu.</string>
+    <string name="reader_home_library_empty_title">Biblioteka jote është bosh</string>
+    <string name="reader_home_library_empty_message">Artikujt që ruan për lexim jashtë linje do të shfaqen këtu.</string>
+    <string name="reader_home_delete_article">Fshi artikullin e ruajtur</string>
+    <string name="reader_home_choose_feed">Zgjidh një burim</string>
+    <string name="reader_home_feed_count">Burime të ndjekura: %1$d</string>
+    <string name="reader_home_source_subtitle">%1$s · %2$d të palexuara</string>
+    <string name="reader_home_search_feeds">Kërko burime</string>
+    <string name="reader_home_no_feed_match">Nuk ka burime që përputhen</string>
+</resources>

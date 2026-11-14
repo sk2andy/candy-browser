@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reader_pocket_title">Офлайн-голос Pocket TTS</string>
+    <string name="reader_pocket_summary">Выберите скачанную модель для языка каждой статьи. При отключении языковые пакеты сохраняются.</string>
+    <string name="reader_pocket_download_summary">Скачайте один или несколько языков. Статьи и созданное аудио остаются на устройстве. Если язык не определён или определён неуверенно, вам предложат выбрать его; скачивание языков не начинается автоматически.</string>
+    <string name="reader_pocket_unknown_language">Выберите скачанный язык для этого текста или используйте другой голос.</string>
+    <string name="reader_pocket_unsupported_language">Определён язык: %1$s. Для него нет модели Pocket. Используйте другой голос или выберите язык, если определение ошибочно.</string>
+    <string name="reader_pocket_article_language">Язык статьи: %1$s. Скачайте его модель или выберите скачанный язык, чтобы исправить определение.</string>
+    <string name="reader_pocket_download_size">Скачивание: %1$d МБ · на диске: %2$d МБ</string>
+    <string name="reader_pocket_cancel">Отмена</string>
+    <string name="reader_pocket_use_language">Читать на этом языке</string>
+    <string name="reader_pocket_remove">Удалить язык</string>
+    <string name="reader_pocket_downloaded">Скачано · доступно офлайн</string>
+    <string name="reader_pocket_license_summary">Pocket TTS от Kyutai. Скачивая модель, вы принимаете её лицензию и условия указания авторства голоса. Этот голос создан ИИ.</string>
+    <string name="reader_pocket_license">Лицензии модели и голосов</string>
+</resources>

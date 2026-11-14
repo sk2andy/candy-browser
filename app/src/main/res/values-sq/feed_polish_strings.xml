@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feeds_manual_address">Shkruaj adresën e burimit</string>
+    <string name="feeds_manual_note">Sill një burim që të pëlqen. Shkruaj faqen e tij ose adresën RSS/Atom dhe shikoje para se ta ndjekësh.</string>
+    <string name="feeds_latest_articles">Artikujt më të fundit</string>
+    <string name="feeds_subscription_failed">Ky burim nuk mund të ruhej. Abonimet e tua nuk ndryshuan. Provo përsëri.</string>
+    <string name="feeds_sources_empty_title">Bëj vend për zëra të mirë.</string>
+    <string name="feeds_sources_empty_note">Zbulo një burim nga e gjithë bota ose shkruaj adresën tënde. Artikujt e rinj do të mbërrijnë në kutinë hyrëse.</string>
+</resources>

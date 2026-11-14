@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feeds_player_open">Ouvrir la file d’écoute</string>
+    <string name="feeds_player_close">Fermer la file d’écoute</string>
+    <string name="feeds_player_up_next">File · %1$d</string>
+    <string name="feeds_player_import_saved">Ajouter les articles enregistrés</string>
+    <string name="feeds_player_empty">Un moment pour vous</string>
+    <string name="feeds_player_empty_title">Votre prochaine belle écoute.</string>
+    <string name="feeds_player_empty_hint">Utilisez l’icône de liste d’écoute d’un article pour l’ajouter ici. Vos favoris peuvent aussi vous rejoindre.</string>
+    <string name="feeds_player_preparing">Préparation</string>
+    <string name="feeds_player_listening">Lecture à voix haute en cours</string>
+    <string name="feeds_player_ready">Prêt quand vous l’êtes</string>
+    <string name="feeds_player_progress">%1$d%% lu à voix haute</string>
+    <string name="feeds_player_rate">%1$s×</string>
+    <string name="feeds_player_current">À suivre · %1$s</string>
+    <string name="feeds_player_move_up">Monter : %1$s</string>
+    <string name="feeds_player_remove">Retirer de la file d’écoute : %1$s</string>
+    <string name="feeds_player_load_failed">Impossible de préparer cet article pour la lecture à voix haute.</string>
+    <string name="feeds_player_retry">Réessayer</string>
+    <string name="feeds_player_foreground">Continuez l’écoute avec l’application en arrière-plan. Les commandes de lecture sont aussi disponibles dans la notification multimédia Android.</string>
+</resources>

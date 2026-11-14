@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="candy_trail_fit_all">すべて表示</string>
+    <string name="candy_trail_current_page">現在のページ</string>
+    <string name="candy_trail_graph_view">グラフ</string>
+    <string name="candy_trail_list_view">リスト</string>
+    <string name="candy_trail_focus_route">現在の経路に集中</string>
+    <string name="candy_trail_all_branches">すべての分岐を表示</string>
+    <string name="candy_trail_collapse_branch">側枝を折りたたむ</string>
+    <string name="candy_trail_expand_branch">側枝を展開</string>
+    <string name="candy_trail_hidden_pages">非表示：%1$d</string>
+</resources>

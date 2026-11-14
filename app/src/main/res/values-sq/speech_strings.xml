@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reader_voice_settings_title">Lexoni me zë të lartë</string>
+    <string name="reader_voice_settings_summary">Zgjidh zëra Android, Supertonic ose Pocket TTS për artikujt dhe tekstin e zgjedhur. Modelet lokale punojnë jashtë linje pas shkarkimit.</string>
+    <string name="reader_voice_choice_title">Zgjidh një zë</string>
+    <string name="reader_voice_choice_summary">Zgjidh Supertonic, Pocket TTS me gjuhë të shkarkueshme ose zërin Android. Ndryshoje te Cilësimet → Shfletuesi → Lexo me zë.</string>
+    <string name="reader_voice_use_offline">Përdor Supertonic</string>
+    <string name="reader_voice_use_system">Përdor zërin Android</string>
+    <string name="reader_voice_download">Shkarko modelin e zërit</string>
+    <string name="reader_voice_delete">Fshi modelin e zërit</string>
+    <string name="reader_voice_enabled_title">Zëri Supertonic jashtë linje</string>
+    <string name="reader_voice_enabled_summary">Kur çaktivizohet, Candy përdor zërin Android. Çaktivizimi e mban modelin e shkarkuar.</string>
+    <string name="reader_voice_checking">Duke kontrolluar modelin e zërit…</string>
+    <string name="reader_voice_working">Duke përditësuar modelin e zërit…</string>
+    <string name="reader_voice_downloading">Duke shkarkuar modelin e zërit: %1$d%%</string>
+    <string name="reader_voice_model_error">Modeli i zërit nuk mund të shkarkohej ose përditësohej. Kontrollo lidhjen dhe hapësirën e lirë, pastaj provo përsëri.</string>
+    <string name="reader_voice_ready">Modeli i zërit u shkarkua. Gati për lexim jashtë linje.</string>
+    <string name="reader_voice_missing">Modeli i zërit nuk është shkarkuar.</string>
+    <string name="reader_voice_model_details">Supertonic 3 · shkarkim rreth 145 MB · 31 gjuhë, përfshirë anglishten dhe gjermanishten. Teksti i artikullit mbetet në pajisje kur përdor modelin jashtë linje. Fshirja e modelit rikthen zërat Android.</string>
+    <string name="reader_voice_model_terms">Duke shkarkuar ose aktivizuar modelin, pranon licencën OpenRAIL-M, përfshirë kufizimet e përdorimit. Zëri krijohet nga inteligjenca artificiale.</string>
+    <string name="reader_voice_playback_error">Ky zë nuk mund ta lexonte tekstin. Provo përsëri ose ndërro zërin.</string>
+    <string name="reader_voice_model_license">Licenca e modelit: OpenRAIL-M</string>
+    <string name="reader_voice_unavailable">Leximi me zë nuk është i disponueshëm. Kontrollo modelin te Cilësimet → Shfletuesi → Lexo me zë ose cilësimet Android për kthimin e tekstit në të folur.</string>
+</resources>

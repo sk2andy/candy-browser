@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_search_shortcuts_title">検索ショートカット</string>
+    <string name="settings_search_shortcuts_summary">GitHub の !gh や YouTube の !yt などを作成できます。入力後に空白を入れるとチップになります。検索候補も使えます。空の検索でバックスペースを押すとチップを削除します。</string>
+    <string name="settings_search_shortcut_keyword">ショートカット</string>
+    <string name="settings_search_shortcut_keyword_summary">例：!gh。英数字、ハイフン、アンダースコアで 32 文字以内。! の後は英字か数字で始めてください。</string>
+    <string name="settings_search_shortcut_template">検索 URL テンプレート</string>
+    <string name="settings_search_shortcut_template_summary" formatted="false">サイトの検索 URL をコピーし、検索語を %s に置き換えてください。HTTP または HTTPS URL に %s を 1 つだけ使用します。</string>
+    <string name="settings_search_shortcut_add">ショートカットを追加</string>
+    <string name="settings_search_shortcut_edit">ショートカットを編集</string>
+    <string name="settings_search_shortcut_remove">削除</string>
+    <string name="settings_search_shortcut_edit_description">!%1$s ショートカットを編集</string>
+    <string name="settings_search_shortcut_remove_description">!%1$s ショートカットを削除</string>
+    <string name="settings_search_shortcut_invalid" formatted="false">内蔵検索エンジンと重複しない固有のショートカットと、%s を 1 つだけ含む有効な検索 URL を指定してください。</string>
+    <string name="settings_search_shortcut_examples">サイトから始める</string>
+    <string name="settings_search_shortcut_github">GitHub · !gh</string>
+    <string name="settings_search_shortcut_youtube">YouTube · !yt</string>
+    <string name="settings_search_shortcut_amazon">Amazon · !amazon</string>
+    <string name="search_shortcut_chip_remove">!%1$s 検索ショートカットを削除</string>
+</resources>

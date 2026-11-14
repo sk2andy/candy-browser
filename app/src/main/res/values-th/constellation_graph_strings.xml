@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="constellations_explore">สำรวจความเชื่อมโยง</string>
+    <string name="constellations_show_list">แสดงรายการหน้า</string>
+    <string name="constellations_hide_list">ซ่อนรายการหน้า</string>
+    <string name="constellations_expand_map">ขยายแผนที่</string>
+    <string name="constellations_collapse_map">ยุบแผนที่</string>
+    <string name="constellations_all_topics">ทุกหัวข้อ</string>
+    <string name="constellations_close_details">ปิดรายละเอียดหน้า</string>
+    <string name="constellations_fit_all">แสดงทั้งหมด</string>
+    <string name="constellations_explore_hint">บีบเพื่อซูมและลากเพื่อสำรวจ แตะหน้าเพื่อดูหน้าที่เกี่ยวข้อง เส้นเชื่อมแสดงความคล้ายกันของหัวข้อ</string>
+    <string name="constellations_map_description">หน้าในแผนที่: %1$d ใช้รายการหน้าเพื่อสำรวจด้วยตัวควบคุมการช่วยเหลือพิเศษ</string>
+</resources>

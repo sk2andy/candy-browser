@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feeds_manual_address">Ange flödesadress</string>
+    <string name="feeds_manual_note">Ta med en källa du gillar. Ange dess webbplats eller RSS-/Atom-adress och ta en titt innan du prenumererar.</string>
+    <string name="feeds_latest_articles">Senaste artiklarna</string>
+    <string name="feeds_subscription_failed">Källan kunde inte sparas. Dina prenumerationer är oförändrade. Försök igen.</string>
+    <string name="feeds_sources_empty_title">Gör plats för bra röster.</string>
+    <string name="feeds_sources_empty_note">Upptäck en källa från hela världen eller ange en egen flödesadress. Nya artiklar kommer till din inkorg.</string>
+</resources>

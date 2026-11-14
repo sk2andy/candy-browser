@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_search_shortcuts_title">Skróty wyszukiwania</string>
+    <string name="settings_search_shortcuts_summary">Twórz własne skróty, np. !gh dla GitHub lub !yt dla YouTube. Wpisz skrót i spację, aby zmienić go w etykietę. Podpowiedzi wyszukiwania nadal działają. Backspace przy pustym zapytaniu usuwa etykietę.</string>
+    <string name="settings_search_shortcut_keyword">Skrót</string>
+    <string name="settings_search_shortcut_keyword_summary">Na przykład !gh. Użyj do 32 liter, cyfr, łączników lub podkreśleń. Po ! zacznij od litery lub cyfry.</string>
+    <string name="settings_search_shortcut_template">Szablon adresu wyszukiwania</string>
+    <string name="settings_search_shortcut_template_summary" formatted="false">Skopiuj adres wyszukiwania ze strony i zastąp szukane słowa przez %s. Użyj dokładnie jednego %s w adresie HTTP lub HTTPS.</string>
+    <string name="settings_search_shortcut_add">Dodaj skrót</string>
+    <string name="settings_search_shortcut_edit">Edytuj skrót</string>
+    <string name="settings_search_shortcut_remove">Usuń</string>
+    <string name="settings_search_shortcut_edit_description">Edytuj skrót !%1$s</string>
+    <string name="settings_search_shortcut_remove_description">Usuń skrót !%1$s</string>
+    <string name="settings_search_shortcut_invalid" formatted="false">Wybierz unikalny skrót, który nie pokrywa się z wbudowaną wyszukiwarką, i prawidłowy adres wyszukiwania z dokładnie jednym %s.</string>
+    <string name="settings_search_shortcut_examples">Zacznij od strony</string>
+    <string name="settings_search_shortcut_github">GitHub · !gh</string>
+    <string name="settings_search_shortcut_youtube">YouTube · !yt</string>
+    <string name="settings_search_shortcut_amazon">Amazon · !amazon</string>
+    <string name="search_shortcut_chip_remove">Usuń skrót wyszukiwania !%1$s</string>
+</resources>

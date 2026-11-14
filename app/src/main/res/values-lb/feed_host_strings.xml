@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feeds_next_unread">Nächsten ongeliesenen Artikel</string>
+    <string name="feeds_notifications_denied">Notifikatioune sinn an Android ausgeschalt. Deng Auswiel ass gespäichert.</string>
+    <string name="feeds_notification_channel">Candy-Feeds</string>
+    <string name="feeds_notification_count">%1$d ongeliesen Artikele waarden.</string>
+    <string name="feeds_speech_next">Nächsten Artikel</string>
+    <string name="feeds_speech_speed">Liesvitesse: %1$s×</string>
+    <string name="feeds_speech_unavailable">Keng Stëmm disponibel. Kuck d’Android-Astellunge fir Text-zu-Sprooch no.</string>
+</resources>

@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reader_home_title">Reader Studio</string>
+    <string name="reader_home_back">Retour</string>
+    <string name="reader_home_manage_feeds">Gérer les flux</string>
+    <string name="reader_home_library_tab">Bibliothèque</string>
+    <string name="reader_home_feeds_tab">Flux</string>
+    <string name="reader_home_all_feeds">Tous les flux</string>
+    <string name="reader_home_all_posts">Tous les articles</string>
+    <string name="reader_home_unread_count">Non lus (%1$d)</string>
+    <string name="reader_home_article_count">Articles : %1$d</string>
+    <string name="reader_home_newest_first">Plus récents d’abord</string>
+    <string name="reader_home_all_available_shown">Tous les articles disponibles sont affichés</string>
+    <string name="reader_home_no_feeds_title">Aucun flux pour le moment</string>
+    <string name="reader_home_no_feeds_message">Suivez un flux pour voir ses derniers articles ici.</string>
+    <string name="reader_home_all_read_title">Vous avez tout lu</string>
+    <string name="reader_home_all_read_message">Aucun article non lu dans cette sélection.</string>
+    <string name="reader_home_no_articles_title">Aucun article pour le moment</string>
+    <string name="reader_home_no_articles_message">Les nouveaux articles de ces flux apparaîtront ici.</string>
+    <string name="reader_home_library_empty_title">Votre bibliothèque est vide</string>
+    <string name="reader_home_library_empty_message">Les articles enregistrés pour une lecture hors connexion apparaîtront ici.</string>
+    <string name="reader_home_progress">%1$d%% lu</string>
+    <string name="reader_home_delete_article">Supprimer l’article enregistré</string>
+    <string name="reader_home_choose_feed">Choisir un flux</string>
+    <string name="reader_home_feed_count">Flux suivis : %1$d</string>
+    <string name="reader_home_source_subtitle">%1$s · %2$d non lus</string>
+    <string name="reader_home_search_feeds">Rechercher des flux</string>
+    <string name="reader_home_no_feed_match">Aucun flux correspondant</string>
+</resources>

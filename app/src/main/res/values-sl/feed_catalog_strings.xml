@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feed_catalog_clear">Počisti iskanje</string>
+    <string name="feed_catalog_preview">Predogled</string>
+    <string name="feed_catalog_retry">Poskusi znova</string>
+    <string name="feed_catalog_title">Odkrij vire</string>
+    <string name="feed_catalog_eyebrow">RADOVEDNOST BREZ MEJA.</string>
+    <string name="feed_catalog_headline">Vaš naslednji\nnajljubši vir.</string>
+    <string name="feed_catalog_intro">Velike zgodbe. Neodvisni glasovi. Poiščite nekaj, čemur je vredno slediti.</string>
+    <string name="feed_catalog_search_hint">Tema, ime ali naslov vira</string>
+    <string name="feed_catalog_search">Išči vire</string>
+    <string name="feed_catalog_manual">Naslov vira</string>
+    <string name="feed_catalog_topics">O, zanimivo!</string>
+    <string name="feed_catalog_technology">Tehnologija</string>
+    <string name="feed_catalog_science">Znanost</string>
+    <string name="feed_catalog_design">Oblikovanje in kultura</string>
+    <string name="feed_catalog_food">Hrana</string>
+    <string name="feed_catalog_travel">Potovanja</string>
+    <string name="feed_catalog_nature">Narava</string>
+    <string name="feed_catalog_all_sources">Vsi viri</string>
+    <string name="feed_catalog_blogs">Spletni dnevniki</string>
+    <string name="feed_catalog_news">Novice</string>
+    <string name="feed_catalog_all_languages">Vsi jeziki</string>
+    <plurals name="feed_catalog_languages_count">
+        <item quantity="one">%1$d jezik</item>
+        <item quantity="two">%1$d jezika</item>
+        <item quantity="few">%1$d jeziki</item>
+        <item quantity="other">%1$d jezikov</item>
+    </plurals>
+    <string name="feed_catalog_languages_title">Vaši jeziki branja</string>
+    <string name="feed_catalog_languages_intro">Izberite enega, več ali ves svet.</string>
+    <string name="feed_catalog_language_search">Poišči jezik</string>
+    <string name="feed_catalog_language_unknown">Jezik ni naveden</string>
+    <string name="feed_catalog_language_none">Jezika ni mogoče najti. Poskusite ime ali jezikovno kodo.</string>
+    <string name="feed_catalog_language_apply">Uporabi jezike</string>
+    <plurals name="feed_catalog_languages_selection">
+        <item quantity="one">Izbran %1$d jezik</item>
+        <item quantity="two">Izbrana %1$d jezika</item>
+        <item quantity="few">Izbrani %1$d jeziki</item>
+        <item quantity="other">Izbranih %1$d jezikov</item>
+    </plurals>
+    <string name="feed_catalog_world_selected">Vključen je ves svet</string>
+    <string name="feed_catalog_results">Viri za »%1$s«</string>
+    <plurals name="feed_catalog_loaded_count">
+        <item quantity="one">%1$d vir v tem izboru</item>
+        <item quantity="two">%1$d vira v tem izboru</item>
+        <item quantity="few">%1$d viri v tem izboru</item>
+        <item quantity="other">%1$d virov v tem izboru</item>
+    </plurals>
+    <string name="feed_catalog_language_subset">Jeziki filtrirajo doslej naložene vire. Naložite več za dodatna ujemanja.</string>
+    <string name="feed_catalog_subscribed">Naročeni</string>
+    <string name="feed_catalog_loading">Iščemo nove glasove…</string>
+    <string name="feed_catalog_loading_hint">Vaš naslednji dober vir je morda tik za vogalom.</string>
+    <string name="feed_catalog_error_title">Svet lahko malo počaka.</string>
+    <string name="feed_catalog_error_body">Lokalnega kataloga ni bilo mogoče naložiti. Še vedno lahko dodate naslov vira.</string>
+    <string name="feed_catalog_empty_title">Ni čisto to, kar ste imeli v mislih?</string>
+    <string name="feed_catalog_empty_body">Tega vira še ni v katalogu Plenary. Poskusite njegovo ime ali v iskalno polje prilepite naslov spletne strani ali vira.</string>
+    <string name="feed_catalog_more">Naloži več virov</string>
+    <string name="feed_catalog_more_failed">Dodatnih virov ni bilo mogoče naložiti. Vaši rezultati so še tukaj.</string>
+    <string name="feed_catalog_reset">Razišči teme</string>
+    <string name="feed_catalog_credit">Izbrani viri iz Plenary · CC0</string>
+    <string name="feed_catalog_privacy">Zasebno iščite po priloženem katalogu Plenary, tudi brez povezave. Le odprtje predogleda vira vzpostavi povezavo z izdajateljem.</string>
+    <string name="feed_catalog_private_title">Odkrivajte v običajnem zavihku</string>
+    <string name="feed_catalog_private_body">Za upravljanje virov odprite običajen zavihek. Za predogled brez naročnine v iskalno polje prilepite naslov spletne strani ali vira.</string>
+    <string name="feed_catalog_no_description">Odprite predogled, da spoznate ta vir.</string>
+    <string name="feed_catalog_close_languages">Zapri jezike branja</string>
+    <string name="feed_catalog_website_unknown">Izvirni vir</string>
+    <string name="feed_catalog_address_detected">Zaznan naslov · Odpri predogled</string>
+</resources>

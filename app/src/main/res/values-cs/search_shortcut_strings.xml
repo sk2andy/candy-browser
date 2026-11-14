@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_search_shortcuts_title">Zkratky vyhledávání</string>
+    <string name="settings_search_shortcuts_summary">Vytvořte vlastní zkratky, například !gh pro GitHub nebo !yt pro YouTube. Napište zkratku a mezeru a změní se na štítek. Našeptávání vyhledávání dále funguje. Backspace u prázdného dotazu štítek odstraní.</string>
+    <string name="settings_search_shortcut_keyword">Zkratka</string>
+    <string name="settings_search_shortcut_keyword_summary">Například !gh. Použijte nejvýše 32 písmen, číslic, pomlček nebo podtržítek. Za ! začněte písmenem nebo číslicí.</string>
+    <string name="settings_search_shortcut_template">Šablona URL vyhledávání</string>
+    <string name="settings_search_shortcut_template_summary" formatted="false">Zkopírujte URL vyhledávání webu a nahraďte hledané výrazy za %s. V URL HTTP nebo HTTPS použijte právě jedno %s.</string>
+    <string name="settings_search_shortcut_add">Přidat zkratku</string>
+    <string name="settings_search_shortcut_edit">Upravit zkratku</string>
+    <string name="settings_search_shortcut_remove">Odebrat</string>
+    <string name="settings_search_shortcut_edit_description">Upravit zkratku !%1$s</string>
+    <string name="settings_search_shortcut_remove_description">Odebrat zkratku !%1$s</string>
+    <string name="settings_search_shortcut_invalid" formatted="false">Vyberte jedinečnou zkratku odlišnou od vestavěných vyhledávačů a platnou URL vyhledávání s právě jedním %s.</string>
+    <string name="settings_search_shortcut_examples">Začít webem</string>
+    <string name="settings_search_shortcut_github">GitHub · !gh</string>
+    <string name="settings_search_shortcut_youtube">YouTube · !yt</string>
+    <string name="settings_search_shortcut_amazon">Amazon · !amazon</string>
+    <string name="search_shortcut_chip_remove">Odebrat zkratku vyhledávání !%1$s</string>
+</resources>

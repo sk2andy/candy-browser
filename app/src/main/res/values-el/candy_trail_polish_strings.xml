@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="candy_trail_fit_all">Εμφάνιση όλων</string>
+    <string name="candy_trail_current_page">Τρέχουσα σελίδα</string>
+    <string name="candy_trail_graph_view">Γράφημα</string>
+    <string name="candy_trail_list_view">Λίστα</string>
+    <string name="candy_trail_focus_route">Εστίαση στην τρέχουσα διαδρομή</string>
+    <string name="candy_trail_all_branches">Εμφάνιση όλων των κλάδων</string>
+    <string name="candy_trail_collapse_branch">Σύμπτυξη πλευρικών κλάδων</string>
+    <string name="candy_trail_expand_branch">Ανάπτυξη πλευρικών κλάδων</string>
+    <string name="candy_trail_hidden_pages">Κρυφές: %1$d</string>
+</resources>

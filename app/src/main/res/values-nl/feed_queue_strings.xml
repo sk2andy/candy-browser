@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feeds_player_retry">Probeer het nog eens.</string>
+    <string name="feeds_player_open">Luisterwachtrij openen</string>
+    <string name="feeds_player_close">Luisterwachtrij sluiten</string>
+    <string name="feeds_player_up_next">Wachtrij · %1$d</string>
+    <string name="feeds_player_import_saved">Opgeslagen toevoegen</string>
+    <string name="feeds_player_empty">Een moment voor jezelf</string>
+    <string name="feeds_player_empty_title">Je volgende fijne luistermoment.</string>
+    <string name="feeds_player_empty_hint">Gebruik het luisterlijstpictogram bij een artikel om het hier toe te voegen. Je bladwijzers kunnen ook mee.</string>
+    <string name="feeds_player_preparing">Voorbereiden</string>
+    <string name="feeds_player_listening">Wordt nu voorgelezen</string>
+    <string name="feeds_player_ready">Klaar wanneer jij dat bent</string>
+    <string name="feeds_player_progress">%1$d%% voorgelezen</string>
+    <string name="feeds_player_rate">%1$s×</string>
+    <string name="feeds_player_current">Als eerste · %1$s</string>
+    <string name="feeds_player_move_up">Omhoog: %1$s</string>
+    <string name="feeds_player_remove">Uit luisterwachtrij verwijderen: %1$s</string>
+    <string name="feeds_player_load_failed">Dit artikel kon niet worden voorbereid voor voorlezen.</string>
+    <string name="feeds_player_foreground">Blijf luisteren met de app op de achtergrond. Afspeelbediening is ook beschikbaar in de mediamelding van Android.</string>
+</resources>

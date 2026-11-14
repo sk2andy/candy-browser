@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feeds_full_article_unavailable">Volledig artikel niet beschikbaar</string>
+    <string name="feeds_full_article_unavailable_summary">Het volledige artikel van de uitgever kon niet worden geladen. Open de oorspronkelijke pagina om verder te lezen.</string>
+</resources>

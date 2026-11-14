@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="feed_catalog_title">配信元を探す</string>
+    <string name="feed_catalog_eyebrow">好奇心に、国境なし。</string>
+    <string name="feed_catalog_headline">次のお気に入り\nフィードを。</string>
+    <string name="feed_catalog_intro">大きな物語。独立した声。フォローしたくなる配信元を。</string>
+    <string name="feed_catalog_search_hint">トピック、名前、フィードのアドレス</string>
+    <string name="feed_catalog_search">配信元を検索</string>
+    <string name="feed_catalog_clear">検索をクリア</string>
+    <string name="feed_catalog_manual">フィードのアドレス</string>
+    <string name="feed_catalog_topics">おっ、面白そう！</string>
+    <string name="feed_catalog_technology">テクノロジー</string>
+    <string name="feed_catalog_science">科学</string>
+    <string name="feed_catalog_design">デザインと文化</string>
+    <string name="feed_catalog_food">食べ物</string>
+    <string name="feed_catalog_travel">旅行</string>
+    <string name="feed_catalog_nature">自然</string>
+    <string name="feed_catalog_all_sources">すべての配信元</string>
+    <string name="feed_catalog_blogs">ブログ</string>
+    <string name="feed_catalog_news">ニュース</string>
+    <string name="feed_catalog_all_languages">すべての言語</string>
+    <plurals name="feed_catalog_languages_count">
+        <item quantity="other">%1$d 言語</item>
+    </plurals>
+    <string name="feed_catalog_languages_title">読む言語</string>
+    <string name="feed_catalog_languages_intro">ひとつでも、いくつでも、世界中でも。</string>
+    <string name="feed_catalog_language_search">言語を検索</string>
+    <string name="feed_catalog_language_unknown">言語の指定なし</string>
+    <string name="feed_catalog_language_none">言語が見つかりません。名前や言語コードを試してください。</string>
+    <string name="feed_catalog_language_apply">言語を適用</string>
+    <plurals name="feed_catalog_languages_selection">
+        <item quantity="other">%1$d 言語を選択中</item>
+    </plurals>
+    <string name="feed_catalog_world_selected">世界中が対象です</string>
+    <string name="feed_catalog_results">「%1$s」の配信元</string>
+    <plurals name="feed_catalog_loaded_count">
+        <item quantity="other">この選択に %1$d 件の配信元</item>
+    </plurals>
+    <string name="feed_catalog_language_subset">言語フィルターは読み込み済みの配信元が対象です。さらに読み込むと候補が増えます。</string>
+    <string name="feed_catalog_preview">プレビュー</string>
+    <string name="feed_catalog_subscribed">購読済み</string>
+    <string name="feed_catalog_loading">新しい声を探しています…</string>
+    <string name="feed_catalog_loading_hint">次の素敵な配信元は、すぐそこかもしれません。</string>
+    <string name="feed_catalog_error_title">世界は少し待ってくれます。</string>
+    <string name="feed_catalog_error_body">ローカルカタログを読み込めませんでした。フィードのアドレスは追加できます。</string>
+    <string name="feed_catalog_retry">再試行</string>
+    <string name="feed_catalog_empty_title">お探しのものと違いましたか？</string>
+    <string name="feed_catalog_empty_body">Plenary カタログにこの配信元はまだありません。名前で検索するか、サイトやフィードのアドレスを検索欄に貼り付けてください。</string>
+    <string name="feed_catalog_more">配信元をさらに読み込む</string>
+    <string name="feed_catalog_more_failed">追加の配信元を読み込めませんでした。結果は残っています。</string>
+    <string name="feed_catalog_reset">トピックを探索</string>
+    <string name="feed_catalog_credit">Plenary が厳選した配信元 · CC0</string>
+    <string name="feed_catalog_privacy">内蔵の Plenary カタログをオフラインでも非公開で検索できます。フィードのプレビューを開くときだけ配信元に接続します。</string>
+    <string name="feed_catalog_private_title">通常タブで配信元を探す</string>
+    <string name="feed_catalog_private_body">配信元の管理には通常タブを開いてください。購読せずにプレビューするには、サイトやフィードのアドレスを検索欄に貼り付けます。</string>
+    <string name="feed_catalog_no_description">プレビューを開いて配信元を確認。</string>
+    <string name="feed_catalog_close_languages">読む言語を閉じる</string>
+    <string name="feed_catalog_website_unknown">元のフィード</string>
+    <string name="feed_catalog_address_detected">アドレスを検出 · プレビューを開く</string>
+</resources>

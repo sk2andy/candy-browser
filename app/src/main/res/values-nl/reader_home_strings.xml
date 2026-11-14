@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reader_home_title">Reader Studio</string>
+    <string name="reader_home_back">Terug</string>
+    <string name="reader_home_progress">%1$d%% lezen</string>
+    <string name="reader_home_manage_feeds">Feeds beheren</string>
+    <string name="reader_home_library_tab">Bibliotheek</string>
+    <string name="reader_home_feeds_tab">Feeds</string>
+    <string name="reader_home_all_feeds">Alle feeds</string>
+    <string name="reader_home_all_posts">Alle berichten</string>
+    <string name="reader_home_unread_count">Ongelezen (%1$d)</string>
+    <string name="reader_home_article_count">Artikelen: %1$d</string>
+    <string name="reader_home_newest_first">Nieuwste eerst</string>
+    <string name="reader_home_all_available_shown">Alle beschikbare artikelen worden getoond</string>
+    <string name="reader_home_no_feeds_title">Nog geen feeds</string>
+    <string name="reader_home_no_feeds_message">Volg een feed om hier de nieuwste artikelen te zien.</string>
+    <string name="reader_home_all_read_title">Je bent helemaal bij</string>
+    <string name="reader_home_all_read_message">Er zijn geen ongelezen artikelen in deze selectie.</string>
+    <string name="reader_home_no_articles_title">Nog geen artikelen</string>
+    <string name="reader_home_no_articles_message">Nieuwe artikelen uit deze feeds verschijnen hier.</string>
+    <string name="reader_home_library_empty_title">Je bibliotheek is leeg</string>
+    <string name="reader_home_library_empty_message">Artikelen die je voor offline lezen opslaat, verschijnen hier.</string>
+    <string name="reader_home_delete_article">Opgeslagen artikel verwijderen</string>
+    <string name="reader_home_choose_feed">Kies een feed</string>
+    <string name="reader_home_feed_count">Gevolgde feeds: %1$d</string>
+    <string name="reader_home_source_subtitle">%1$s · %2$d ongelezen</string>
+    <string name="reader_home_search_feeds">Feeds zoeken</string>
+    <string name="reader_home_no_feed_match">Geen overeenkomende feeds</string>
+</resources>
