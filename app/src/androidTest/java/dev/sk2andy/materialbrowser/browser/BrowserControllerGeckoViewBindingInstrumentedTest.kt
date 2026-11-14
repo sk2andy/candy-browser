@@ -32,6 +32,9 @@ import dev.sk2andy.materialbrowser.browser.gecko.GeckoPrivacyBindingHandshake
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoPrivacyBindingHandshakeRules
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoPrivacyEvent
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoPrivacyPolicy
+import dev.sk2andy.materialbrowser.browser.gecko.GeckoViewInsetHost
+import dev.sk2andy.materialbrowser.browser.gecko.GeckoViewInsetLayout
+import dev.sk2andy.materialbrowser.browser.gecko.GeckoViewInsets
 import dev.sk2andy.materialbrowser.browser.integration.ExternalAppLauncher
 import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineCommand
 import dev.sk2andy.materialbrowser.shared.browser.BrowserEngineCommands
@@ -71,6 +74,7 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
 
     private var controller: BrowserController? = null
     private var originalEngineKind: AndroidBrowserEngineKind? = null
+    private var originalFullImmersiveModeEnabled: Boolean? = null
     private var originalProfiles: Pair<List<BrowserProfile>, String>? = null
     private var originalProfilesEnabled: Boolean? = null
     private var originalHistory: List<HistoryEntry>? = null
@@ -1317,6 +1321,87 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
     }
 
     @Test
+    fun immersiveModeClearsSafeAreaWithUnchangedCutoutAndPreservesKeyboardInset() {
+        composeRule.runOnIdle {
+            val activity = composeRule.activity
+            val store = BrowserSessionStore(activity)
+            originalEngineKind = store.loadAndroidBrowserEngineKind()
+            originalFullImmersiveModeEnabled = store.loadFullImmersiveModeEnabled()
+            store.saveFullImmersiveModeEnabled(false)
+            if (!BuildConfig.SYSTEM_WEBVIEW_ONLY) {
+                assertTrue(store.saveAndroidBrowserEngineKind(AndroidBrowserEngineKind.GeckoView))
+            }
+            val browserController = BrowserController(activity)
+            controller = browserController
+            val originalDeveloperSettings = browserController.developerSettings
+            try {
+                browserController.updateDeveloperSettings(DeveloperSettings())
+                val session = ReentrantAttachSession(
+                    tabId = browserController.selectedTabId,
+                    onFirstAttach = {},
+                )
+                browserController.installGeckoEngineSessionForTesting(session)
+                val host = FrameLayout(activity)
+                activity.addContentView(host, matchParentLayoutParams())
+                browserController.attachSelectedBrowserEngineView(host)
+                browserController.dispatchGeckoEngineEventForTesting(
+                    BrowserEngineEvent(
+                        tabId = session.tabId,
+                        type = BrowserEngineEventType.NavigationStarted,
+                        address = "https://immersive.test/",
+                        title = null,
+                        canGoBack = false,
+                        canGoForward = false,
+                        failureDescription = null,
+                    ),
+                )
+                browserController.onWindowInsetsChanged(
+                    WindowInsetsCompat.Builder()
+                        .setInsets(WindowInsetsCompat.Type.displayCutout(), Insets.of(12, 96, 16, 24))
+                        .setInsets(WindowInsetsCompat.Type.ime(), Insets.of(0, 0, 0, 600))
+                        .setVisible(WindowInsetsCompat.Type.ime(), true)
+                        .build(),
+                )
+                assertEquals(96, session.privacyPolicies.last().cssSafeAreaTopInsetPx)
+                session.commands.clear()
+                val keyboardBottom = if (browserController.usesGeckoEngine) 600 else 0
+
+                browserController.updateFullImmersiveModeEnabled(true)
+
+                assertEquals(0, session.privacyPolicies.last().cssSafeAreaTopInsetPx)
+                assertEquals(GeckoViewInsets.Zero, session.insetLayouts.last().rendererSafeAreaOverride)
+                assertEquals(
+                    GeckoViewInsets(0, 0, 0, keyboardBottom),
+                    session.insetLayouts.last().margins,
+                )
+
+                browserController.updateFullImmersiveModeEnabled(false)
+
+                assertEquals(96, session.privacyPolicies.last().cssSafeAreaTopInsetPx)
+                browserController.updateDeveloperSettings(DeveloperSettings(forceSafeAreaFallback = true))
+                assertEquals(96, browserController.previewTopInsetPx(session.tabId))
+                assertEquals(96, session.insetLayouts.last().margins.top)
+
+                browserController.updateFullImmersiveModeEnabled(true)
+
+                assertEquals(0, browserController.previewTopInsetPx(session.tabId))
+                assertEquals(
+                    GeckoViewInsets(0, 0, 0, keyboardBottom),
+                    session.insetLayouts.last().margins,
+                )
+
+                browserController.updateFullImmersiveModeEnabled(false)
+
+                assertEquals(96, browserController.previewTopInsetPx(session.tabId))
+                assertEquals(96, session.insetLayouts.last().margins.top)
+                assertTrue(session.commands.isEmpty())
+            } finally {
+                browserController.updateDeveloperSettings(originalDeveloperSettings)
+            }
+        }
+    }
+
+    @Test
     fun developerSafeAreaFallbackForcesNativePreviewInset() {
         composeRule.runOnIdle {
             val browserController = BrowserController(composeRule.activity)
@@ -1355,6 +1440,7 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
                     store.saveProfiles(profiles, activeProfileId)
                 }
                 originalProfilesEnabled?.let(store::saveProfilesEnabled)
+                originalFullImmersiveModeEnabled?.let(store::saveFullImmersiveModeEnabled)
                 originalHistoryRecordingMode?.let { mode ->
                     assertTrue(store.saveHistoryRecordingMode(mode))
                 }
@@ -4951,6 +5037,7 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
         val siteDataUrls = mutableListOf<String>()
         private var siteDataCompletion: ((Boolean) -> Unit)? = null
         val privacyPolicies = mutableListOf<GeckoPrivacyPolicy>()
+        val insetLayouts = mutableListOf<GeckoViewInsetLayout>()
         val activeStates = mutableListOf<Boolean>()
         val inlineVideoPresentationRequests = mutableListOf<Pair<GeckoInlineVideoIdentity?, Boolean>>()
         var deferPolicyReadyCallbacks = false
@@ -4996,7 +5083,11 @@ class BrowserControllerGeckoViewBindingInstrumentedTest {
         override fun createView(context: Context): View {
             check(createdView == null) { "Gecko session already has a bound View" }
             createCount++
-            return object : View(context) {
+            return object : View(context), GeckoViewInsetHost {
+                override fun updateInsets(layout: GeckoViewInsetLayout, windowInsets: WindowInsetsCompat) {
+                    insetLayouts += layout
+                }
+
                 override fun onAttachedToWindow() {
                     super.onAttachedToWindow()
                     if (attachDispatched) return

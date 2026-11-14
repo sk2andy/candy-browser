@@ -5473,7 +5473,9 @@ class BrowserController(
             insets
         }
         val safeArea = effectiveInsets.getInsets(SAFE_AREA_INSET_TYPES).toGeckoViewInsets().let {
-            if (tabId != null && isActiveFirefoxExtensionOptionsPage(tabId)) {
+            if (isFullImmersiveModeEnabled) {
+                GeckoViewInsets.Zero
+            } else if (tabId != null && isActiveFirefoxExtensionOptionsPage(tabId)) {
                 it.copy(top = 0)
             } else {
                 it
@@ -10890,6 +10892,8 @@ class BrowserController(
         isFullImmersiveModeEnabled = enabled
         store.saveFullImmersiveModeEnabled(enabled)
         onFullImmersiveModeChanged(enabled)
+        refreshGeckoContentTopInsetPolicies()
+        lastWindowInsets?.let(::dispatchWindowInsetsToAttachedEngineViews)
     }
 
     fun updateAddressBarSwipeModeEnabled(enabled: Boolean) {
@@ -11479,7 +11483,7 @@ class BrowserController(
     ) {
         0
     } else {
-        lastWindowInsets?.getInsets(SAFE_AREA_INSET_TYPES)?.top?.coerceAtLeast(0) ?: 0
+        currentSafeAreaTopInsetPx()
     }
 
     fun updateBlockerSettings(settings: BlockerSettings) {
@@ -14536,11 +14540,11 @@ class BrowserController(
             currentSafeAreaTopInsetPx()
         }
 
-    private fun currentSafeAreaTopInsetPx(): Int = lastWindowInsets
-        ?.getInsets(SAFE_AREA_INSET_TYPES)
-        ?.top
-        ?.coerceAtLeast(0)
-        ?: 0
+    private fun currentSafeAreaTopInsetPx(): Int = if (isFullImmersiveModeEnabled) {
+        0
+    } else {
+        lastWindowInsets?.getInsets(SAFE_AREA_INSET_TYPES)?.top?.coerceAtLeast(0) ?: 0
+    }
 
     private fun usesNativeSafeArea(tabId: String): Boolean =
         isSafeAreaForced(tabId) || isActiveFirefoxExtensionOptionsPage(tabId)
