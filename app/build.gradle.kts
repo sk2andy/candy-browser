@@ -722,7 +722,7 @@ listOf("release", "nightly").forEach { buildType ->
     }
 }
 
-val geckoViewDependency = "org.mozilla.geckoview:geckoview:159.0.20261102144711"
+val geckoViewDependency = "org.mozilla.geckoview:geckoview:160.0.20261104181552"
 
 dependencies {
     implementation(project(":shared"))
@@ -742,8 +742,8 @@ dependencies {
     implementation("androidx.fragment:fragment-ktx:1.8.5")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
     implementation("androidx.lifecycle:lifecycle-process:2.8.7")
-    // GeckoView resolves Media3 core at 1.11.0; keep the system-session API on that same version.
-    implementation("androidx.media3:media3-session:1.11.0")
+    // GeckoView resolves Media3 core at 1.11.1; keep the system-session API on that same version.
+    implementation("androidx.media3:media3-session:1.11.1")
     implementation("androidx.swiperefreshlayout:swiperefreshlayout:1.2.0")
     implementation("androidx.webkit:webkit:1.16.0")
     implementation("androidx.work:work-runtime-ktx:2.11.2")
