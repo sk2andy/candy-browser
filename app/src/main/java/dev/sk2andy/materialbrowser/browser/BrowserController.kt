@@ -7432,11 +7432,8 @@ class BrowserController(
         formDrafts.deleteProfile(profileId)
         if (closedTabUndoOffer?.tab?.profileId == profileId) dismissClosedTabUndo()
         val remainingLocalProfiles = localProfiles.filterNot { it.id == profileId }
-        val fallbackProfile = if (profileId == activeProfileId) {
-            remainingLocalProfiles.first()
-        } else {
-            localProfiles.first { it.id == activeProfileId }
-        }
+        val fallbackProfile = remainingLocalProfiles.firstOrNull { it.id == activeProfileId }
+            ?: remainingLocalProfiles.first()
         val removedProfileTrailTabIds = (
             tabs.asSequence() + snoozedTabs.asSequence().map { snoozed -> snoozed.tab }
         )

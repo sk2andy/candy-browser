@@ -18,7 +18,7 @@ import { extensionApi } from "../platform/webextension.js";
 import { ApiError, CandySyncApiClient, type DiscoveryResponse } from "../protocol/api-client.js";
 import { CandySyncRealtimeClient, type RealtimeChangeFrame } from "../realtime/realtime-client.js";
 import {
-  clearSessionSecrets, loadSessionSecrets, saveSessionSecrets, loadSettings, loadTabDeltaOutbox, loadTabMutationState,
+  clearSessionSecrets, loadSessionSecrets, saveSessionSecrets, loadSettings, loadTabDeltaOutbox, loadTabIdentities, loadTabMutationState,
   saveSettings, saveSettingsAndTabDeltaOutbox, saveStatus, saveTabDeltaOutbox, saveTabMutationState,
 } from "../storage/stores.js";
 
@@ -422,7 +422,19 @@ async function handleLocalMutations(mutations: readonly TabMutationDraft[]): Pro
   if (applyingRemoteChange || mutations.length === 0) return;
   const settings = await loadSettings();
   const secrets = await unlockedSecrets(settings);
-  if (!settings || !secrets || !settings.selection.tabs) return;
+  if (!settings || !settings.selection.tabs) return;
+  if (!secrets) {
+    if (settings.protocolVersion === 2 && settings.v2Initialized && !settings.v2ReconciliationPending) {
+      // Tab adapters already added opens and removed closes from the identity map.
+      const openedIds = new Set(mutations.flatMap((mutation) => mutation.type === "open" ? [mutation.tab.candyId] : []));
+      const previousIds = Object.values(await loadTabIdentities()).filter((id) => !openedIds.has(id));
+      const closedIds = mutations.flatMap((mutation) => mutation.type === "close" ? [mutation.candyId] : []);
+      await saveSettings({
+        ...settings, v2DisabledTabIds: [...new Set([...previousIds, ...closedIds])], v2ReconciliationPending: true,
+      });
+    }
+    return;
+  }
   if (settings.protocolVersion !== 2) {
     localTabsDirty = true;
     void synchronizeTabs();
@@ -516,6 +528,11 @@ export function startBackground(): void {
           if (!secrets || secrets.deviceId !== latest.deviceId || secrets.workspaceId !== latest.workspaceId ||
               typeof secrets.workspaceKey !== "string" || typeof secrets.devicePrivateKeyPkcs8 !== "string" || typeof secrets.deviceToken !== "string") {
             throw new Error("Invalid unlocked device identity.");
+          }
+          if (latest.protocolVersion === 2 && latest.v2Initialized && latest.selection.tabs && !latest.v2ReconciliationPending) {
+            await saveSettings({
+              ...latest, v2DisabledTabIds: Object.values(await loadTabIdentities()), v2ReconciliationPending: true,
+            });
           }
           await saveSessionSecrets(secrets as VaultSecrets);
           await configureIdleDetection();

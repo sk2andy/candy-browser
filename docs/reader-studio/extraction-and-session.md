@@ -4,7 +4,7 @@
 
 | Stage | Source | Boundary |
 | --- | --- | --- |
-| DOM selection | `ReaderExtractionScript` / Candy's internal Gecko content script | Clone `article`, `main`, or body; remove active/non-article elements |
+| DOM selection | `ReaderExtractionScript` / Candy's internal Gecko content script | Clone `article`, `main`, or body; filter hidden elements using original computed styles, remove active/non-article elements, and emit nested text once in reading order |
 | Engine result decode | `ReaderExtractionParser` | Decode WebView-quoted or Gecko raw JSON; bound size and shape; map malformed results to typed failure |
 | Sanitization | `ReaderExtractionContract` | Accept only HTTP(S) source/links; normalize text; cap blocks, chars and links |
 | Session | `ReaderStudioSessionRules` | Bind extraction to selected tab and request ID; reject stale results |

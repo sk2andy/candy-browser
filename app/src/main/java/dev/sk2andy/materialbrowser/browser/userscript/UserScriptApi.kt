@@ -438,7 +438,7 @@ internal object UserScriptApi {
                     (url, options = {}) => {
                         const resolvedUrl = new URL(String(url), location.href).href;
                         const active = typeof options === "boolean"
-                            ? options
+                            ? !options
                             : options && options.active === true;
                         __candyBridge.postMessage(JSON.stringify({
                             type: "open-tab",

@@ -67,7 +67,7 @@ option to continue with an existing manager proceeds to Candy's confirmation.
 | `@grant GM_addStyle` or `GM.addStyle` | Adds a style element to the matching document |
 | Value grants | `GM_getValue`/`GM.getValue`, `GM_setValue`/`GM.setValue`, `GM_deleteValue`/`GM.deleteValue` and `GM_listValues`/`GM.listValues` enable bounded persistent JSON values isolated by script ID; legacy synchronous and `GM.*` Promise forms are available |
 | Menu grants | `GM_registerMenuCommand`/`GM.registerMenuCommand` and unregister variants add document-bound actions to the browser menu; callbacks remain inside the script's isolated world |
-| `GM_openInTab` / `GM.openInTab` | Opens a validated HTTP(S) URL in a regular foreground or background tab; private sources and non-web schemes are rejected |
+| `GM_openInTab` / `GM.openInTab` | Opens a validated HTTP(S) URL in a regular foreground or background tab; Boolean `true` means background, Boolean `false` foreground, and object `active` controls focus directly; private sources and non-web schemes are rejected |
 | `@require` | HTTPS JavaScript is fetched only during explicit import, install or update, bounded, optionally checked with a `#sha256=<hex>` fragment, stored locally and executed in metadata order before the main source |
 | `@resource` | Bounded HTTPS binary data is bundled locally; `GM_getResourceText`/`GM.getResourceText` and `GM_getResourceURL`/`GM.getResourceUrl` expose it without page-load network access |
 | `@updateURL`, `@downloadURL` | Accepted as inert metadata; Candy never updates scripts implicitly |

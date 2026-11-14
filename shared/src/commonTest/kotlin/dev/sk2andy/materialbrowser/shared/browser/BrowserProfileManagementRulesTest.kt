@@ -141,14 +141,16 @@ class BrowserProfileManagementRulesTest {
     }
 
     @Test
-    fun moveCannotExceedTabLimitWhenSourceNeedsReplacement() {
-        val tabs = listOf(tab("source")) + List(BrowserSessionPersistenceRules.MAX_TABS - 1) {
+    fun moveBeyondOneThousandTabsCreatesSourceReplacement() {
+        val tabs = listOf(tab("source")) + List(999) {
             tab("target-$it", "work")
         }
         val controller = controller(tabs)
-        val before = controller.state
-        assertTrue(BrowserProfileManagementRules.moveTargets(before, "source").isEmpty())
-        assertEquals(before, controller.moveTabToProfile("source", "work"))
+        assertEquals(listOf(work), BrowserProfileManagementRules.moveTargets(controller.state, "source"))
+        val moved = controller.moveTabToProfile("source", "work")
+        assertEquals(1_001, moved.tabs.size)
+        assertEquals("work", moved.tabs.single { it.id == "source" }.profileId)
+        assertEquals("candy", moved.tabs.single { it.id == moved.selectedTabId }.profileId)
     }
 
     @Test

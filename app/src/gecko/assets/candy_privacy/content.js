@@ -3058,24 +3058,43 @@ function extractCandyReaderPayload() {
   })();
   const source = document.querySelector("article") || document.querySelector("main") || document.body;
   if (!source) return { error: "missing-root", hasVisibleContent, visibleText };
+  const isHidden = node => {
+    const style = getComputedStyle(node);
+    return node.matches('[hidden],[aria-hidden="true"]') || style.display === "none" ||
+      style.visibility === "hidden" || style.visibility === "collapse" ||
+      style.opacity === "0" || style.contentVisibility === "hidden";
+  };
   const root = source.cloneNode(true);
+  const originals = [source, ...source.querySelectorAll("*")];
+  const copies = [root, ...root.querySelectorAll("*")];
+  originals.forEach((node, index) => {
+    if (!isHidden(node)) return;
+    copies[index].replaceChildren();
+    copies[index].remove();
+  });
+  for (let ancestor = source.parentElement; ancestor; ancestor = ancestor.parentElement) {
+    if (isHidden(ancestor)) {
+      root.replaceChildren();
+      break;
+    }
+  }
   root.querySelectorAll("script,style,noscript,template,iframe,object,embed,canvas,svg,form,input,button,nav,aside,footer,video,audio").forEach((node) => node.remove());
   const clean = (value, maxLength) => (value || "").replace(/[\u0000-\u001f\u007f]+/g, " ")
     .replace(/\s+/g, " ").trim().slice(0, maxLength);
   const blocks = [];
   let totalChars = 0;
   let totalLinks = 0;
-  root.querySelectorAll("h1,h2,h3,h4,h5,h6,p,blockquote,li").forEach((node) => {
+  const appendBlock = ({ node, text: rawText, anchors }) => {
     if (blocks.length >= 600 || totalChars >= 500000) return;
     const text = clean(
-      node.innerText || node.textContent,
+      rawText,
       Math.min(12000, 500000 - totalChars),
     );
     if (!text || text.length < 2) return;
     const tag = node.tagName.toLowerCase();
     const kind = tag.startsWith("h") ? "heading" : tag === "blockquote" ? "quote" :
       tag === "li" ? "listitem" : "paragraph";
-    const links = Array.from(node.querySelectorAll("a[href]"))
+    const links = Array.from(anchors)
       .slice(0, Math.min(40, 500 - totalLinks)).map((anchor) => ({
         label: clean(anchor.innerText || anchor.textContent, 300),
         url: (anchor.href || "").slice(0, 2048),
@@ -3088,7 +3107,27 @@ function extractCandyReaderPayload() {
     });
     totalChars += text.length;
     totalLinks += links.length;
-  });
+  };
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT);
+  let textNode;
+  let run;
+  while ((textNode = walker.nextNode())) {
+    if (textNode.nodeType === 1 && textNode.tagName !== "BR") continue;
+    const node = textNode.parentElement.closest("h1,h2,h3,h4,h5,h6,p,blockquote,li");
+    if (!node) continue;
+    if (run?.node !== node) {
+      if (run) appendBlock(run);
+      if (blocks.length >= 600 || totalChars >= 500000) {
+        run = null;
+        break;
+      }
+      run = { node, text: "", anchors: new Set() };
+    }
+    run.text += textNode.nodeType === 3 ? textNode.textContent : " ";
+    const anchor = textNode.parentElement.closest("a[href]");
+    if (anchor) run.anchors.add(anchor);
+  }
+  if (run) appendBlock(run);
   return {
     title: clean(document.querySelector('meta[property="og:title"]')?.content, 500) ||
       clean(document.title, 500),

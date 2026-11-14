@@ -4,7 +4,7 @@ object SyncOutboxRules {
     fun enqueue(pending: List<SyncPendingMutation>, mutation: SyncPendingMutation): List<SyncPendingMutation> {
         val replaceIndex = pending.indexOfLast { existing -> existing.isSupersededBy(mutation) }
         val retained = pending.filterNot { existing -> existing.isDiscardedBy(mutation) }
-        if (replaceIndex < 0) return retained + mutation
+        if (replaceIndex < 0 || mutation is SyncPendingMutation.Reorder) return retained + mutation
         val insertionIndex = pending.take(replaceIndex).count { existing -> !existing.isDiscardedBy(mutation) }
         return retained.toMutableList().also { values -> values.add(insertionIndex.coerceAtMost(values.size), mutation) }
     }

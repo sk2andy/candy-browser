@@ -75,7 +75,7 @@ class BrowserSessionPersistenceRulesTest {
     }
 
     @Test
-    fun `empty active profile fallback stays inside session tab bound`() {
+    fun `empty active profile fallback preserves every existing tab`() {
         val restored = assertNotNull(BrowserSessionPersistenceRules.restore(
             snapshot = BrowserSessionSnapshot(
                 tabs = List(1_000) { tab("tab-${it + 1}") },
@@ -83,11 +83,29 @@ class BrowserSessionPersistenceRulesTest {
             ),
             profiles = listOf(DEFAULT_BROWSER_PROFILE, BrowserProfile("work", "💼")),
         ))
-        assertEquals(1_000, restored.tabs.size)
+        assertEquals(1_001, restored.tabs.size)
         assertEquals("work", restored.tabs.last().profileId)
         assertEquals("", restored.tabs.last().address)
         assertEquals(restored.tabs.last().id, restored.selectedTabId)
-        assertEquals(1_000, restored.tabs.map { it.id }.distinct().size)
+        assertEquals(1_001, restored.tabs.map { it.id }.distinct().size)
+    }
+
+    @Test
+    fun `newest regular tab survives restart beyond one thousand tabs`() {
+        val controller = BrowserSessionController()
+        repeat(1_000) { controller.dispatchTabs(BrowserTabsIntent.NewTab, null) }
+        val newestId = controller.state.selectedTabId
+        controller.attach(object : BrowserEngineSessionPort {
+            override val tabId = newestId
+            override fun execute(command: BrowserEngineCommand) = Unit
+        })
+        controller.navigateSelected("https://example.com/newest")
+
+        val restarted = BrowserSessionController()
+        assertTrue(restarted.restoreSession(controller.persistenceSnapshot()))
+        assertEquals(1_001, restarted.state.tabs.size)
+        assertEquals(newestId, restarted.state.selectedTabId)
+        assertEquals("https://example.com/newest", restarted.state.tabs.single { it.id == newestId }.address)
     }
 
     @Test

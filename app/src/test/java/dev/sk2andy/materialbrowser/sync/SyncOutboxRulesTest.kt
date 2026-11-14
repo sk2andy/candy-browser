@@ -41,6 +41,36 @@ class SyncOutboxRulesTest {
         )
     }
 
+    @Test
+    fun `latest reorder follows intervening open and replays requested order`() {
+        val a = SyncTab("a", 0, 0, null, true, false, "A", "https://example.com/a")
+        val b = SyncTab("b", 0, 1, null, false, false, "B", "https://example.com/b")
+        val c = SyncTab("c", 0, 2, null, false, false, "C", "https://example.com/c")
+        val profile = SyncProfile(
+            "target", "Desktop", SyncDeviceIconDescriptor("computer", 0), 1,
+            listOf(a, b), "2026-11-14T00:00:00Z",
+        )
+        val first = SyncPendingMutation.Reorder("first", "target", listOf("b", "a"))
+        val open = SyncPendingMutation.Open("open", "target", c)
+        val latest = SyncPendingMutation.Reorder("latest", "target", listOf("c", "b", "a"))
+
+        val queued = SyncOutboxRules.enqueue(listOf(first, open), latest)
+        assertEquals(listOf(open, latest), queued)
+        val replayed = queued.fold(profile) { current, mutation ->
+            (SyncTabRules.apply(current, mutation) as SyncMutationResult.Applied).profile
+        }
+        assertEquals(listOf("c", "b", "a"), replayed.tabs.map { it.candyId })
+    }
+
+    @Test
+    fun `latest reorder follows intervening close`() {
+        val first = SyncPendingMutation.Reorder("first", "target", listOf("b", "a"))
+        val close = SyncPendingMutation.Close("close", "target", "b")
+        val latest = SyncPendingMutation.Reorder("latest", "target", listOf("a"))
+
+        assertEquals(listOf(close, latest), SyncOutboxRules.enqueue(listOf(first, close), latest))
+    }
+
     private fun navigate(id: String, tabId: String, url: String) = SyncPendingMutation.Navigate(
         mutationId = id,
         targetDeviceId = "target",

@@ -48,6 +48,45 @@ class FeedParserTest {
         assertEquals("First paragraph Second", preview.articles.single().content)
     }
 
+    @Test
+    fun `atom literal text preserves angle brackets and encoded entities`() {
+        for (type in listOf("", " type=\"text\"")) {
+            val preview = FeedParser.parse(
+                """
+                    <feed xmlns="http://www.w3.org/2005/Atom"><title$type>Generic &lt;T&gt;</title>
+                    <entry><title$type>Use &lt;video&gt; &amp;amp;</title><link href="https://example.org/1"/>
+                    <summary$type>x &lt; 5 and y &gt; 3</summary>
+                    <content$type>Literal &lt;b&gt;content&lt;/b&gt;</content></entry></feed>
+                """.trimIndent(),
+                "https://example.org/feed",
+            )
+            assertEquals("Generic <T>", preview.title)
+            val article = preview.articles.single()
+            assertEquals("Use <video> &amp;", article.title)
+            assertEquals("x < 5 and y > 3", article.summary)
+            assertEquals("Literal <b>content</b>", article.content)
+        }
+    }
+
+    @Test
+    fun `atom html removes markup while xhtml keeps literal text`() {
+        val preview = FeedParser.parse(
+            """
+                <feed xmlns="http://www.w3.org/2005/Atom"><title type="html">&lt;b&gt;News&lt;/b&gt;</title>
+                <entry><title type="html">&lt;i&gt;Entry&lt;/i&gt;</title><link href="https://example.org/1"/>
+                <summary type="html">&lt;p&gt;x &amp;lt; 5&lt;/p&gt;&lt;script&gt;secret()&lt;/script&gt;</summary>
+                <content type="xhtml"><div xmlns="http://www.w3.org/1999/xhtml"><p>Use &lt;video&gt;</p><p>x &lt; 5 and y &gt; 3 &amp;amp;</p></div></content>
+                </entry></feed>
+            """.trimIndent(),
+            "https://example.org/feed",
+        )
+        assertEquals("News", preview.title)
+        val article = preview.articles.single()
+        assertEquals("Entry", article.title)
+        assertEquals("x < 5", article.summary)
+        assertEquals("Use <video> x < 5 and y > 3 &amp;", article.content)
+    }
+
     @Test(expected = IllegalArgumentException::class)
     fun `rejects external entities`() {
         FeedParser.parse(

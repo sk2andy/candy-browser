@@ -88,6 +88,10 @@ and the persistent copy; switching away from Never removes the persistent copy. 
 operations serialize lock/unlock and policy changes with synchronization; an already-running
 operation finishes before lock acknowledgement, then realtime delivery closes.
 
+V2 unlock reconciles the current normal-tab snapshot before pulling remote changes. A pending
+identity baseline preserves tabs closed while locked; opens, URL/title updates, pin state and order
+use the same reconciliation path as re-enabling tab sync. Private and excluded URLs stay out.
+
 Browser packages require HTTPS for remote endpoints and grant HTTP host access only for localhost.
 The protocol client retains the server-advertised `allowHttp` guard for development integration,
 but the Options Page blocks remote HTTP before requesting permissions or sending credentials.

@@ -8,7 +8,7 @@
 | Deletion | Profile deletion invalidates cache, cancels jobs/notifications and schedules serialized file cleanup |
 | Network | HTTP(S) only, no browser cookies/authentication, checked redirects, finite timeouts and a 2 MiB response bound |
 | XML | RSS 2, RSS/RDF and Atom; DTD/entity declarations rejected, external entities disabled; bounded node count/depth/item count |
-| Content | Feed HTML becomes inert text. Reader mode optionally fetches inert article/main HTML and applies Reader sanitization; feed text remains fallback |
+| Content | Feed HTML becomes inert text. Atom text/default and XHTML preserve literal angle brackets after XML decoding; HTML constructs strip markup. Reader mode optionally fetches inert article/main HTML and applies Reader sanitization; feed text remains fallback |
 | Catalog | Explicit international source search through RSS Amplifier; no lookup on opening or typing. Only source records, original feed URLs, and inert metadata; no article-search results or automatic subscription. See [catalog boundaries](catalog.md) |
 | Discovery | Fetch current HTTP(S) page, collect RSS/Atom alternate links, choose a candidate then preview before subscribing; manual URL remains available |
 | Identity | Existing normalized HTTP URL rules, SHA-256 identity; duplicate article URLs retain all subscribed source IDs |

@@ -95,7 +95,7 @@ object FeedParser {
         val channelBase =
             if (channel === root) rootBase
             else resolve(rootBase, channel.attributes["xml:base"].orEmpty()).ifBlank { rootBase }
-        val title = plain(channel.value("title")).take(500).ifBlank { URI(url).host.orEmpty() }
+        val title = text(channel.child("title"), atom).take(500).ifBlank { URI(url).host.orEmpty() }
         val siteUrl =
             if (atom) atomLink(channel, channelBase)
             else resolve(channelBase, channel.value("link"))
@@ -127,14 +127,14 @@ object FeedParser {
                                     .orEmpty()
                             }
                     if (articleUrl.isBlank()) return@mapNotNull null
-                    val summary = plain(node.value(if (atom) "summary" else "description"))
-                    val body = plain(node.value(if (atom) "content" else "encoded"))
+                    val summary = text(node.child(if (atom) "summary" else "description"), atom)
+                    val body = text(node.child(if (atom) "content" else "encoded"), atom)
                     val content = body.ifBlank { summary }
                     FeedArticle(
                         id = FeedRules.identity(articleUrl),
                         sourceIds = setOf(sourceId),
                         url = articleUrl,
-                        title = plain(node.value("title")).take(1_000).ifBlank { articleUrl },
+                        title = text(node.child("title"), atom).take(1_000).ifBlank { articleUrl },
                         author =
                             plain(
                                     node.child("author")?.value("name").orEmpty().ifBlank {
@@ -186,6 +186,18 @@ object FeedParser {
             .distinctBy { it.url }
             .take(32)
             .toList()
+
+    private fun text(node: FeedXmlNode?, atom: Boolean): String {
+        val value = node?.text?.toString().orEmpty()
+        return if (
+            atom && node?.attributes?.get("type").orEmpty().lowercase() in
+                setOf("", "text", "text/plain", "xhtml", "application/xhtml+xml")
+        ) {
+            value.replace(Regex("\\s+"), " ").trim()
+        } else {
+            plain(value)
+        }
+    }
 
     internal fun plain(value: String): String =
         entities(

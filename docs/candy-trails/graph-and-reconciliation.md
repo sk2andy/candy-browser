@@ -17,6 +17,7 @@
 | Normalize/retain | `CandyTrailRules` | Repair missing/cyclic parents; retain bounded graph and protected ancestry |
 | History redaction | `CandyTrailRules` | Remove profile/time-matched nodes, reconnect children to the nearest retained ancestor and discard forks whose origin was removed |
 | Reconcile | [`CandyTrailHistoryReconciler.kt`](../../shared/src/commonMain/kotlin/dev/sk2andy/materialbrowser/browser/CandyTrailHistoryReconciler.kt) | Bind WebView, Gecko or WKWebView back/forward/reload to existing nodes when identity is known |
+| iOS Forward traversal | `BrowserViewModel.perform` | Pass the next history binding's node ID into reconciliation, reactivating the existing Trail node instead of creating another visit |
 | Gecko history | `browser/gecko/GeckoCandyTrailHistory.kt` | Convert GeckoView's immutable history list/current index into the same reconciler input; only history events may change graph topology |
 | Title refinement | `CandyTrailHistoryReconciler.refineCurrentTitle` | Accept a late engine title only when its URL already matches the current node, preventing location/history callback races from rewriting ancestry |
 | Fork | [`CandyTrailFork.kt`](../../shared/src/commonMain/kotlin/dev/sk2andy/materialbrowser/browser/CandyTrailFork.kt) | Origin/destination differ but share profile and privacy mode |

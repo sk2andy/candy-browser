@@ -77,18 +77,16 @@ class BrowserSnoozeControllerTest {
     }
 
     @Test
-    fun `capacity pressure leaves due tab pending until room exists`() {
+    fun `due tab restores beyond one thousand open tabs`() {
         val controller = BrowserSessionController()
         val pending = stored("snoozed", 200)
         assertTrue(controller.restoreSession(BrowserSessionSnapshot(
             tabs = List(1_000) { BrowserTabState("tab-$it", "", "") },
             selectedTabId = "tab-0", activeProfileId = "candy", snoozedTabs = listOf(pending),
         )))
-        assertTrue(controller.restoreDueSnoozedTabs(200).isEmpty())
-        assertEquals(1, controller.state.snoozedTabs.size)
-        controller.dispatchTabs(BrowserTabsIntent.CloseTab, "tab-999")
         assertEquals(listOf("snoozed"), controller.restoreDueSnoozedTabs(200))
-        assertEquals(1_000, controller.state.tabs.size)
+        assertTrue(controller.state.snoozedTabs.isEmpty())
+        assertEquals(1_001, controller.state.tabs.size)
     }
 
     @Test

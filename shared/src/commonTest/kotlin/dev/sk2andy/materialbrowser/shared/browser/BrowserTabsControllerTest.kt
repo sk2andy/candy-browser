@@ -351,7 +351,7 @@ class BrowserTabsControllerTest {
     }
 
     @Test
-    fun `private creation at tab capacity does not switch remote profile or allocate tab`() {
+    fun `private creation beyond one thousand tabs switches to eligible local profile`() {
         val remote = BrowserProfile("remote", "💻", syncedDeviceId = "desktop")
         val controller = BrowserTabsController(BrowserTabsState(
             tabs = List(1_000) { BrowserTabState("tab-$it", "", "", profileId = remote.id) },
@@ -359,9 +359,11 @@ class BrowserTabsControllerTest {
             profiles = listOf(BrowserProfile(DEFAULT_PROFILE_ID, "🍬"), remote),
             activeProfileId = remote.id,
         ))
-        val before = controller.state
+        val state = controller.newPrivateTab()
 
-        assertEquals(before, controller.newPrivateTab())
+        assertEquals(1_001, state.tabs.size)
+        assertEquals(DEFAULT_PROFILE_ID, state.activeProfileId)
+        assertTrue(state.tabs.single { it.id == state.selectedTabId }.isPrivate)
     }
 
     @Test

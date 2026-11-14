@@ -24,6 +24,7 @@
 
 | State | Storage | Rule |
 | --- | --- | --- |
+| Shared/iOS sessions | `BrowserSessionPersistenceRules` | Regular and snoozed tab records share Android's unlimited tab-count model; restoring an empty active profile adds its blank replacement without dropping another profile's tabs. Private and synced runtime tabs remain excluded. |
 | Tabs and selection | [`BrowserSessionStore.kt`](../../app/src/main/java/dev/sk2andy/materialbrowser/data/BrowserSessionStore.kt) | Exclude incognito and live federated-login popup tabs; fall back to most recently accessed persistent tab. A synchronous pending-close marker lets a fresh task finish `WhenAppCloses` cleanup after process death, while restored tasks keep their tabs. |
 | Profile wallpapers | `BrowserSessionStore`, `ProfileWallpaperStore` | Persist separate bounded crop/zoom metadata and Candy-owned, size-bounded image files for the new-tab and tab-switcher slots. Keep the active new-tab image in memory and load the switcher image only while its overview is used. |
 | Biometric profile protection | `BrowserSessionStore`, `ProfileProtectionSession`, `BrowserController` | Persist only each local profile's bounded lock policy. Successful unlock state and monotonic background timing remain process-memory only. Full app background uses `ProcessLifecycleOwner`, so internal Candy activities and configuration changes do not consume cooldown. Every new process starts protected profiles locked. No separate private-tab policy is added; synced profiles never receive this policy. |
@@ -171,7 +172,7 @@ Pixel. Resident-session and Gecko-process counts remain different measurements.
 - Compute tab/profile mutations through existing rules before touching Gecko sessions or stores.
 - Preserve stable tab IDs across normal restore; reset transient load/error/progress state when reconstructing.
 - Apply persistence policy before encoding. Never rely on callers to pre-filter private tabs.
-- Keep selection valid after deletion, retention, profile moves and snooze restore.
+- Keep selection valid after deletion, retention, profile moves and snooze restore. Deleting an inactive local profile while viewing a synced profile uses a remaining local owner for moved tabs and capsules and preserves the remote selection.
 - When automatic sorting is enabled, derive visible order from `lastAccessedAt`; keep pins grouped
   first and reject manual reorder mutations.
 - Keep stack grouping separate from the flat tab order. Creating or extending a stack must keep all

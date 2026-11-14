@@ -70,12 +70,9 @@ enum CandyContentBlockerCompiler {
         let canonicalHosts = Array(Set(hostInputs.compactMap(canonicalHost))).sorted()
         let hostChunks = canonicalHosts.chunked(size: networkHostChunkSize)
 
-        let easyCosmetic = try parseCosmetic(
-            resourceText(name: "easylist_cosmetic_rules", extension: "txt", bundle: bundle),
-            pausedDomains: paused
-        )
-        let uAssetsCosmetic = try parseCosmetic(
-            resourceText(name: "uassets_cosmetic_rules", extension: "txt", bundle: bundle),
+        let filterCosmetic = try parseCosmetic(
+            resourceText(name: "easylist_cosmetic_rules", extension: "txt", bundle: bundle) + "\n" +
+                resourceText(name: "uassets_cosmetic_rules", extension: "txt", bundle: bundle),
             pausedDomains: paused
         )
         let candyCosmetic = try parseCandyCosmetic(
@@ -87,11 +84,11 @@ enum CandyContentBlockerCompiler {
                 resourceText(name: "cookie_banner_overrides", extension: "css", bundle: bundle),
             pausedDomains: paused
         )
-        let cosmeticRules = easyCosmetic.rules + uAssetsCosmetic.rules + candyCosmetic.rules +
+        let cosmeticRules = filterCosmetic.rules + candyCosmetic.rules +
             cookieCosmetic.rules
-        let sourceCosmeticCount = easyCosmetic.sourceCount + uAssetsCosmetic.sourceCount +
+        let sourceCosmeticCount = filterCosmetic.sourceCount +
             candyCosmetic.sourceCount + cookieCosmetic.sourceCount
-        let skippedCosmeticCount = easyCosmetic.skippedCount + uAssetsCosmetic.skippedCount +
+        let skippedCosmeticCount = filterCosmetic.skippedCount +
             candyCosmetic.skippedCount + cookieCosmetic.skippedCount
 
         var compilations = try hostChunks.enumerated().map { part, hosts in
@@ -418,7 +415,7 @@ enum CandyContentBlockerCompiler {
         let fingerprint = pausedDomains.joined(separator: "|").utf8.reduce(UInt64(1_469_598_103_934_665_603)) {
             ($0 ^ UInt64($1)) &* 1_099_511_628_211
         }
-        return "candy.ios.\(prefix).v2.\(String(fingerprint, radix: 16))"
+        return "candy.ios.\(prefix).v3.\(String(fingerprint, radix: 16))"
     }
 }
 

@@ -337,6 +337,13 @@ final class BrowserViewModel: NSObject, ObservableObject {
         } else if action == .back {
             sessionController.executeSelected(command: BrowserEngineCommands.shared.back())
         } else if action == .forward {
+            if let binding = candyTrailHistoryBindings[selectedTabId] {
+                let targetIndex = Int(binding.currentIndex) + 1
+                if binding.entries.indices.contains(targetIndex),
+                   let nodeId = binding.entries[targetIndex].nodeId {
+                    pendingCandyTrailTargets[selectedTabId] = nodeId
+                }
+            }
             sessionController.executeSelected(command: BrowserEngineCommands.shared.forward())
         } else if action == .stop {
             sessionController.executeSelected(command: BrowserEngineCommands.shared.stop())

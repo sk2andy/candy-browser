@@ -14,7 +14,7 @@
 
 | Surface | Tests |
 | --- | --- |
-| Extraction contract/parser | `ReaderExtractionContractTest`, `ReaderExtractionParserInstrumentedTest` |
+| Extraction contract/parser | `ReaderExtractionContractTest`, `ReaderExtractionParserInstrumentedTest`, `ReaderExtractionScriptInstrumentedTest` |
 | Session, library, speech rules | `reader/*RulesTest` |
 | Offline speech choice, lifecycle, model integrity and inference | `ReaderSpeechControllerInstrumentedTest`, `OfflineSpeechModelFilesInstrumentedTest`, opt-in `OfflineSpeechEngineInstrumentedTest` |
 | Voice choice and model settings | `ReaderSpeechOptionsInstrumentedTest`, `PocketSpeechOptionsInstrumentedTest` |

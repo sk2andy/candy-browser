@@ -227,7 +227,8 @@ disjunction. It splits network assets into lists with at most 45,000 host rules 
 into 15,000-rule lists. WebKit forbids combining `if-domain` and `unless-domain`: unrelated cosmetic
 exceptions are removed from already scoped rules, while an overlapping allow/pause exception drops
 that scoped hide rule fail-open. Scoped allow rules are repeated because `ignore-previous-rules` is
-local to one list. Compiled v2 lists are reused from `WKContentRuleListStore`; first external
+local to one list. EasyList and uAssets cosmetic records resolve exceptions together before splitting
+into lists. Compiled v3 lists are reused from `WKContentRuleListStore`; first external
 navigation waits until every list is active. Shared session attachment marks a restored nonblank tab
 as loading before issuing that deferred command, so the native loading chrome remains visible while
 WebKit activates its content rule lists.
@@ -264,7 +265,7 @@ xcrun simctl --set "$DEVICE_SET" launch "$DEVICE_ID" \
   dev.sk2andy.candy.ios.scaffold
 ```
 
-The standalone native gate has thirteen executables: eight existing platform contracts plus regular-browser
+The standalone native gate has fourteen executables: nine platform contracts plus regular-browser
 storage (19 assertions), Reader text storage (10 assertions), temporary download files (12 assertions),
 viewport inset rules and local-profile restore routing (9 assertions). Shared behavior is exercised by common
 Kotlin tests; native storage tests cover only atomic I/O, bounds, ordering, corruption and failures.
@@ -290,6 +291,7 @@ The explicit build settings keep the simulator architecture consistent with the 
 | Snapshot stale-result acceptance | `BrowserTabSnapshotRules.swift`, `BrowserTabSnapshotRulesTests.swift` |
 | Overview mode preferences | `BrowserTabOverviewMode.swift`, `BrowserTabOverviewModeTests.swift` |
 | Bounded page extraction | `BrowserPageExtractionRules.swift`, `BrowserPageExtractionRulesTests.swift` |
+| Cross-list cosmetic exceptions | `WebKitBlocking.swift`, `WebKitBlockingTests.swift` |
 | Topping values and frames | `ToppingValueRules.swift` / `ToppingFrameRules.swift` and matching tests |
 | Translation provider | `BrowserTranslationProviderPreference.swift`, matching tests |
 | Glass accessibility/motion | `LiquidGlassPresentationRules.swift`, matching tests |
@@ -310,6 +312,8 @@ xcrun swiftc iosApp/CandyIos/BrowserTabOverviewMode.swift iosApp/Tests/BrowserTa
 /tmp/candy-ios-overview-mode-tests
 xcrun swiftc iosApp/CandyIos/BrowserPageExtractionRules.swift iosApp/Tests/BrowserPageExtractionRulesTests.swift -o /tmp/candy-ios-page-extraction-tests
 /tmp/candy-ios-page-extraction-tests
+xcrun swiftc iosApp/CandyIos/WebKitBlocking.swift iosApp/Tests/WebKitBlockingTests.swift -o /tmp/candy-ios-webkit-blocking-tests
+/tmp/candy-ios-webkit-blocking-tests
 xcrun swiftc iosApp/CandyIos/ToppingValueRules.swift iosApp/Tests/ToppingValueRulesTests.swift -o /tmp/candy-ios-topping-value-tests
 /tmp/candy-ios-topping-value-tests
 xcrun swiftc iosApp/CandyIos/ToppingFrameRules.swift iosApp/Tests/ToppingFrameRulesTests.swift -o /tmp/candy-ios-topping-frame-tests

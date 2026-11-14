@@ -304,7 +304,7 @@ enum ToppingInstaller {
                 (url, options = {}) => {
                   const resolved = new URL(String(url), location.href);
                   if (!/^https?:$/.test(resolved.protocol)) throw new TypeError('Only HTTP(S) URLs are allowed');
-                  const active = typeof options === 'boolean' ? options : options && options.active === true;
+                  const active = typeof options === 'boolean' ? !options : options && options.active === true;
                   void __candyPost({type:'open-tab', url:resolved.href, active});
                   return Object.freeze({close: () => {}});
                 }

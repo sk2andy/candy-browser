@@ -16,7 +16,7 @@ data class BrowserSessionSnapshot(
 
 object BrowserSessionPersistenceRules {
     const val CURRENT_VERSION = 1
-    const val MAX_TABS = 1_000
+    const val MAX_TABS = dev.sk2andy.materialbrowser.browser.MAX_TABS
     private const val MAX_ID_LENGTH = 256
     private const val MAX_TITLE_LENGTH = 4_096
 
