@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <meta name="robots" content="noindex, nofollow">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; base-uri 'none'; form-action 'none'">
+  <meta name="theme-color" content="#fff8fa">
+  <title>Return to Candy — Mozilla Sync</title>
+  <link rel="icon" type="image/png" href="../../assets/candy-icon.png">
+  <link rel="stylesheet" href="../../styles.css">
+  <link rel="stylesheet" href="./callback.css">
+  <script type="module" src="./callback.mjs"></script>
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="../../" aria-label="Candy Browser home">
+      <img src="../../assets/candy-icon.png" width="44" height="44" alt="">
+      <span>Candy Browser</span>
+    </a>
+  </header>
+  <main class="callback-card">
+    <p class="eyebrow">Mozilla Sync</p>
+    <h1 id="callback-title">Return to Candy</h1>
+    <p id="callback-message" role="status">Checking the sign-in response…</p>
+    <a id="open-candy" class="button primary" hidden>Open Candy</a>
+    <p id="callback-help" class="callback-help">Start Mozilla Sync from Settings → Sync in Candy Browser on your Android device.</p>
+    <noscript><p>JavaScript is needed to return your sign-in response to Candy. Enable it, then start sign-in again from Candy.</p></noscript>
+    <p class="callback-privacy">This page passes the sign-in response to the Candy app. It does not use analytics or save your sign-in details.</p>
+  </main>
+</body>
+</html>

@@ -1,0 +1,6 @@
+.callback-card { width: min(600px, calc(100% - 40px)); margin-block: clamp(32px, 10vh, 100px); padding: clamp(24px, 6vw, 48px); border-radius: 32px; background: var(--md-sys-color-surface-container-low); }
+.callback-card h1 { margin-bottom: 20px; font-size: clamp(2.4rem, 8vw, 3.8rem); }
+.callback-card .button { margin-block: 12px; }
+.callback-card [hidden] { display: none; }
+.callback-help { color: var(--muted); }
+.callback-privacy { margin-top: 32px; padding-top: 20px; border-top: 1px solid var(--line); color: var(--muted); font-size: .875rem; }
