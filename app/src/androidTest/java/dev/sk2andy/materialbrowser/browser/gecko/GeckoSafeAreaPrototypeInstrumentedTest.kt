@@ -625,6 +625,46 @@ class GeckoSafeAreaPrototypeInstrumentedTest {
     }
 
     @Test
+    fun expandedSidebarDivMovesBelowStatusBar() {
+        val title = AtomicReference<String?>(null)
+        val policy = GeckoPrivacyPolicy.Disabled.copy(cssSafeAreaTopInsetPx = NATIVE_TOP_PX)
+        EdgeToEdgeSiteFixtureServer { _ -> EXPANDED_SIDEBAR_HTML }.use { server ->
+            ActivityScenario.launch(GeckoScrollTestActivity::class.java).use { scenario ->
+                lateinit var session: GeckoBrowserSession
+                lateinit var view: View
+                scenario.onActivity { activity ->
+                    WindowCompat.setDecorFitsSystemWindows(activity.window, false)
+                    session = GeckoRuntimeOwner.getOrCreate(activity).createSession(
+                        profileId = "safe-area-expanded-sidebar-${UUID.randomUUID()}",
+                        isPrivate = false,
+                        privacyPolicy = policy,
+                    )
+                    session.bindExtensionTab("safe-area-expanded-sidebar-${UUID.randomUUID()}", 1)
+                    session.setStateListener { state -> title.set(state.title) }
+                    view = session.createView(activity)
+                    activity.setContentView(view)
+                    session.setActive(true)
+                    assertTrue(session.loadUrl(server.fixtureUrl("/site-matrix/expanded-sidebar")))
+                }
+                try {
+                    awaitReport(title) { it.getBoolean("loaded") }
+                    scenario.onActivity { updateNativeTop(view) }
+                    val report = awaitReport(title) { it.getInt("stage") == 2 }
+                    assertEquals(report.getDouble("env"), report.getDouble("openTop"), 0.5)
+                    assertEquals(0.0, report.getDouble("closedTop"), 0.5)
+                    assertEquals(0.0, report.getDouble("bottom"), 0.5)
+                } finally {
+                    scenario.onActivity {
+                        session.releaseView(view)
+                        session.setActive(false)
+                        session.close()
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
     fun initialAndAutomaticFullViewportModalsStayBelowStatusBar() {
         val title = AtomicReference<String?>(null)
         val policy = GeckoPrivacyPolicy.Disabled.copy(cssSafeAreaTopInsetPx = NATIVE_TOP_PX)
@@ -1221,6 +1261,37 @@ class GeckoSafeAreaPrototypeInstrumentedTest {
     private companion object {
         const val NATIVE_TOP_PX = 137
         const val REPORT_PREFIX = "Candy prototype: "
+        val EXPANDED_SIDEBAR_HTML = """
+            <!doctype html><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+            <style>
+              html,body { margin:0; } body { padding-top:env(safe-area-inset-top); }
+              #probe { position:absolute; visibility:hidden; padding-top:env(safe-area-inset-top); }
+              .sidebar { position:fixed; inset:0; width:70%; box-sizing:border-box; padding-top:16px;
+                transition:transform .1s; background:white; }
+              .sidebar[data-expanded=false] { transform:translateX(-100%); visibility:hidden; }
+            </style>
+            <body><main>Page content</main><div id="probe"></div>
+              <div class="sidebar" data-expanded="false"><button>Account</button></div>
+            <script>
+              const panel = document.querySelector('.sidebar');
+              let stage = 0, openTop = -1, closedTop = -1, start = 0;
+              setInterval(() => {
+                const env = parseFloat(getComputedStyle(document.getElementById('probe')).paddingTop);
+                const style = getComputedStyle(panel);
+                const top = parseFloat(style.top);
+                if (stage === 0 && env > 0 && document.readyState === 'complete') {
+                  if (!start) start = performance.now();
+                  if (performance.now() - start > 1000) { panel.dataset.expanded = 'true'; stage = 1; }
+                } else if (stage === 1 && Math.abs(top - env) < .5) {
+                  openTop = top; panel.dataset.expanded = 'false'; stage = 2;
+                } else if (stage === 2 && Math.abs(top) < .5) { closedTop = top; stage = 3; }
+                document.title = '${REPORT_PREFIX}' + JSON.stringify({
+                  loaded:document.readyState === 'complete', stage:stage === 3 ? 2 : stage === 2 ? 1 : stage,
+                  env, openTop, closedTop, bottom:parseFloat(style.bottom),
+                });
+              }, 50);
+            </script>
+        """.trimIndent()
         fun ancestorSideMenuHtml(cover: Boolean): String = """
             <!doctype html><meta name="viewport" content="width=device-width,initial-scale=1${if (cover) ",viewport-fit=cover" else ""}">
             <style>

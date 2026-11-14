@@ -3500,6 +3500,28 @@ test('side menu opens through ancestor class and keeps its full-bleed background
   assert.equal(f.computed(f.drawer).paddingTop, '0px');
 });
 
+test('expanded sidebar div clears the status bar and restores its top when closed', () => {
+  for (const cover of [false, true]) {
+    const f = sideDrawerFixture({ tag: 'div', cover });
+    f.drawer.classes = ['sidebar'];
+    f.drawer.setAttribute('data-expanded', 'false');
+    f.drawer.computed.bottom = '0px';
+    f.start();
+    f.place(true);
+    f.drawer.setAttribute('data-expanded', 'true');
+    f.dispatchMutations([{ type: 'attributes', target: f.drawer, attributeName: 'data-expanded', oldValue: 'false' }]);
+    f.settle('transform');
+    f.flush();
+    assert.equal(f.computed(f.drawer).top, '32px');
+    assert.equal(f.computed(f.drawer).bottom, '0px');
+    f.place(false);
+    f.drawer.setAttribute('data-expanded', 'false');
+    f.dispatchMutations([{ type: 'attributes', target: f.drawer, attributeName: 'data-expanded', oldValue: 'true' }]);
+    f.flush();
+    assert.equal(f.computed(f.drawer).top, '0px');
+  }
+});
+
 test('delayed side menu transition rechecks once after it enters the viewport', () => {
   const f = sideDrawerFixture();
   f.start();

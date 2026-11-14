@@ -1428,7 +1428,12 @@
 
   function isSideDrawer(element) {
     return element?.localName === "aside" || element?.localName === "nav" ||
-      element?.getAttribute?.("role") === "navigation";
+      element?.getAttribute?.("role") === "navigation" || isExpandedSidebar(element);
+  }
+
+  function isExpandedSidebar(element) {
+    return element?.hasAttribute?.("data-expanded") &&
+      /(?:^|\s)sidebar(?:\s|$)/.test(element.getAttribute("class") || "");
   }
 
   function forgetSideDrawer(element) {
@@ -1484,16 +1489,21 @@
           const position = parent === control ? controlStyle.position : getComputedStyle(parent).position;
           if (position === "absolute" || position === "fixed") break;
         }
-        if (parent === element) return `${Math.max(padding, inset - rect.top)}px`;
+        if (parent === element) return isExpandedSidebar(element)
+          ? { name: "top", value: `${top + inset}px` }
+          : { name: "padding-top", value: `${Math.max(padding, inset - rect.top)}px` };
       }
       return null;
     });
     const state = sideDrawers.get(element);
     if (protection) {
-      applyRule(element, "padding-top", protection, true);
-      state.protected = true;
+      if (state.protected && state.protected !== protection.name) {
+        rules.get(element)?.rule.style.removeProperty(state.protected);
+      }
+      applyRule(element, protection.name, protection.value, true);
+      state.protected = protection.name;
     } else if (state?.protected) {
-      rules.get(element)?.rule.style.removeProperty("padding-top");
+      rules.get(element)?.rule.style.removeProperty(state.protected);
       state.protected = false;
     }
   }
@@ -1506,7 +1516,7 @@
 
   function queueSideDrawerMutations(records) {
     for (const record of records.slice(0, 32)) {
-      if (record.type !== "attributes" || !["class", "style", "hidden", "aria-hidden"].includes(record.attributeName) ||
+      if (record.type !== "attributes" || !["class", "style", "hidden", "aria-hidden", "data-expanded"].includes(record.attributeName) ||
           record.oldValue === record.target.getAttribute(record.attributeName)) continue;
       const affected = Array.from(sideDrawers.keys()).filter((element) =>
         record.target === element || record.target.contains(element) || element.contains(record.target));
@@ -2325,7 +2335,7 @@
     observer = new MutationObserver(mutations);
     observer.observe(document.documentElement, { childList: true, subtree: true,
       characterData: true, attributes: true, attributeOldValue: true,
-      attributeFilter: ["class", "style", "hidden", "aria-hidden", "role", "aria-modal", "href", "rel", "media", "disabled", "content"] });
+      attributeFilter: ["class", "style", "hidden", "aria-hidden", "data-expanded", "role", "aria-modal", "href", "rel", "media", "disabled", "content"] });
   }
 
   function updateScrollListeners() {
