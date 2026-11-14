@@ -178,6 +178,8 @@ internal interface AndroidBrowserEngineSessionPort :
 
     fun setDownloadResponseListener(listener: GeckoDownloadResponseListener?) = Unit
 
+    fun hasActiveDownload(): Boolean = false
+
     fun startContextDownload(
         request: GeckoContextDownloadRequest,
         listener: GeckoDownloadTransferListener,
@@ -685,6 +687,8 @@ internal class GeckoBrowserEngineSessionAdapter(
     override fun setDownloadResponseListener(listener: GeckoDownloadResponseListener?) {
         session.setDownloadResponseListener(if (closed) null else listener)
     }
+
+    override fun hasActiveDownload(): Boolean = !closed && session.hasActiveDownload()
 
     override fun startContextDownload(
         request: GeckoContextDownloadRequest,

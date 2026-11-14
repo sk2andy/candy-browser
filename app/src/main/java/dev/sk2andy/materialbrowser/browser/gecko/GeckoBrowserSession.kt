@@ -257,6 +257,8 @@ internal interface GeckoBrowserSession {
 
     fun setDownloadResponseListener(listener: GeckoDownloadResponseListener?) = Unit
 
+    fun hasActiveDownload(): Boolean = false
+
     /** Fetches through Gecko so authenticated/profile/private request state stays engine-owned. */
     fun startContextDownload(
         request: GeckoContextDownloadRequest,

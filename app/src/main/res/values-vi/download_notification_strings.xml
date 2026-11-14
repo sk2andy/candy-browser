@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="download_notification_failed">Tải xuống thất bại</string>
+    <string name="download_notification_pending">Đang chuẩn bị tải xuống</string>
+</resources>

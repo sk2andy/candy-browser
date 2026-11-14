@@ -30,12 +30,13 @@ internal object DownloadRuntimeRegistry {
         pause: (() -> Boolean)? = null,
         resume: (() -> Boolean)? = null,
         isPrivate: Boolean = false,
+        status: DownloadStatus = DownloadStatus.Running,
     ) {
         entries[id] = DownloadEntry(
             id = mediaStoreId?.let(DownloadEntryIds::encodeMediaStoreId) ?: encodeRuntimeId(id),
             name = name,
             source = source,
-            status = DownloadStatus.Running,
+            status = status,
             bytes = 0L,
             total = total,
             lastModified = startedAt,

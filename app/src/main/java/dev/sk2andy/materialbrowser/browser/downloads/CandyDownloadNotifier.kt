@@ -8,10 +8,11 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.Handler
+import android.os.Looper
 import android.text.format.Formatter
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
-import androidx.core.graphics.drawable.IconCompat
 import dev.sk2andy.materialbrowser.DownloadsActivity
 import dev.sk2andy.materialbrowser.R
 import dev.sk2andy.materialbrowser.hasNotificationPermission
@@ -24,6 +25,7 @@ import java.util.concurrent.ConcurrentHashMap
 internal class CandyDownloadNotifier(
     context: Context,
     private val canNotifyOverride: (() -> Boolean)? = null,
+    private val groupWithForegroundService: Boolean = false,
 ) {
     private val appContext = context.applicationContext
     private val manager = appContext.getSystemService(NotificationManager::class.java)
@@ -49,7 +51,10 @@ internal class CandyDownloadNotifier(
 
     fun progress(transferId: Int) {
         val entry = DownloadRuntimeRegistry.entryForTransfer(transferId) ?: return
-        active(transferId, entry)
+        synchronized(notificationLock) {
+            if (DownloadRuntimeRegistry.entryForTransfer(transferId)?.status != DownloadStatus.Running) return
+            active(transferId, entry, priority = false)
+        }
     }
 
     fun paused(transferId: Int) {
@@ -87,8 +92,22 @@ internal class CandyDownloadNotifier(
         )
     }
 
+    fun failed(transferId: Int) {
+        val entry = DownloadRuntimeRegistry.entryForTransfer(transferId) ?: return
+        post(
+            transferId,
+            baseBuilder(entry.name)
+                .setContentText(appContext.getString(R.string.download_notification_failed))
+                .setCategory(NotificationCompat.CATEGORY_ERROR)
+                .setContentIntent(openDownloadsIntent(transferId))
+                .setAutoCancel(true)
+                .build(),
+        )
+    }
+
     fun cancel(transferId: Int) {
         synchronized(notificationLock) {
+            notificationQueue.remove(notificationId(transferId))
             pendingNotifications.remove(notificationId(transferId))
             manager.cancel(notificationId(transferId))
         }
@@ -110,11 +129,9 @@ internal class CandyDownloadNotifier(
                 pendingNotifications.clear()
                 return
             }
-            pendingNotifications.entries.toList().forEach { (id, notification) ->
-                if (runCatching { manager.notify(id, notification) }.isSuccess) {
-                    pendingNotifications.remove(id, notification)
-                }
-            }
+            val pending = pendingNotifications.toMap()
+            pendingNotifications.clear()
+            pending.forEach { (id, notification) -> enqueue(id, notification, priority = true) }
         }
     }
 
@@ -124,6 +141,9 @@ internal class CandyDownloadNotifier(
                 .mapTo(mutableSetOf(), ::notificationId)
             pendingNotifications.entries.removeAll { (id, notification) ->
                 notification.flags and Notification.FLAG_ONGOING_EVENT != 0 && id !in expectedIds
+            }
+            notificationQueue.removeIf { id, update ->
+                update.notification.flags and Notification.FLAG_ONGOING_EVENT != 0 && id !in expectedIds
             }
             manager.activeNotifications
                 .filter { active ->
@@ -135,9 +155,9 @@ internal class CandyDownloadNotifier(
         }
     }
 
-    internal fun active(transferId: Int, entry: DownloadEntry) {
+    internal fun active(transferId: Int, entry: DownloadEntry, priority: Boolean = true) {
         if (!entry.status.isActive) return
-        val progress = progressPercent(entry.bytes, entry.total)
+        val progress = if (entry.status == DownloadStatus.Pending) null else progressPercent(entry.bytes, entry.total)
         val running = entry.status == DownloadStatus.Running
         val progressStyle = NotificationCompat.ProgressStyle()
             .setStyledByProgress(true)
@@ -146,11 +166,7 @@ internal class CandyDownloadNotifier(
                 NotificationCompat.ProgressStyle.Segment(PROGRESS_MAX).setColor(accentColor),
             )
         if (progress != null) {
-            progressStyle
-                .setProgress(progress)
-                .setProgressTrackerIcon(
-                    IconCompat.createWithResource(appContext, R.drawable.ic_reader_download),
-                )
+            progressStyle.setProgress(progress)
         }
         val builder = baseBuilder(entry.name)
             .setContentText(statusText(entry, progress))
@@ -160,6 +176,7 @@ internal class CandyDownloadNotifier(
             .setAutoCancel(false)
             .setRequestPromotedOngoing(running)
             .setShortCriticalText(progress?.takeIf { running }?.let { "$it%" })
+            .setGroup(GECKO_GROUP.takeIf { groupWithForegroundService && entry.status != DownloadStatus.Paused })
             .setStyle(progressStyle)
         if (progress == null) {
             builder.setProgress(0, 0, true)
@@ -181,7 +198,7 @@ internal class CandyDownloadNotifier(
                 controlIntent(transferId, ACTION_CANCEL),
             )
         }
-        post(transferId, builder.build())
+        post(transferId, builder.build(), priority)
     }
 
     private fun baseBuilder(fileName: String): NotificationCompat.Builder {
@@ -200,6 +217,7 @@ internal class CandyDownloadNotifier(
         val received = Formatter.formatShortFileSize(appContext, entry.bytes.coerceAtLeast(0L))
         val total = entry.total.takeIf { it > 0L }?.let { Formatter.formatShortFileSize(appContext, it) }
         return when {
+            entry.status == DownloadStatus.Pending -> appContext.getString(R.string.download_notification_pending)
             entry.status == DownloadStatus.Paused && total != null -> appContext.getString(
                 R.string.download_notification_paused,
                 received,
@@ -236,7 +254,7 @@ internal class CandyDownloadNotifier(
         PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
     )
 
-    private fun post(transferId: Int, notification: Notification) {
+    private fun post(transferId: Int, notification: Notification, priority: Boolean = true) {
         val id = notificationId(transferId)
         synchronized(notificationLock) {
             if (!canNotify()) {
@@ -247,11 +265,22 @@ internal class CandyDownloadNotifier(
                 }
                 return
             }
-            if (runCatching { manager.notify(id, notification) }.isSuccess) {
-                pendingNotifications.remove(id)
-            } else if (permissionRequestPending) {
-                pendingNotifications[id] = notification
-            }
+            enqueue(id, notification, priority)
+        }
+    }
+
+    private fun enqueue(id: Int, notification: Notification, priority: Boolean) {
+        notificationQueue.enqueue(id, QueuedNotification(this, id, notification), priority)
+    }
+
+    private fun deliver(id: Int, notification: Notification) {
+        if (!canNotify()) {
+            if (permissionRequestPending) pendingNotifications[id] = notification
+            else pendingNotifications.remove(id)
+        } else if (runCatching { manager.notify(id, notification) }.isSuccess) {
+            pendingNotifications.remove(id)
+        } else if (permissionRequestPending) {
+            pendingNotifications[id] = notification
         }
     }
 
@@ -262,12 +291,27 @@ internal class CandyDownloadNotifier(
 
     internal companion object {
         const val CHANNEL_ID = "candy_downloads"
+        const val GECKO_GROUP = "candy_gecko_downloads"
         const val ACTION_CANCEL = "dev.sk2andy.materialbrowser.action.CANCEL_DOWNLOAD"
         const val ACTION_TOGGLE_PAUSE = "dev.sk2andy.materialbrowser.action.TOGGLE_DOWNLOAD_PAUSE"
         const val EXTRA_TRANSFER_ID = "download_transfer_id"
         private const val PROGRESS_MAX = 100
         private const val NOTIFICATION_ID_NAMESPACE = 0x40000000
         private val notificationLock = Any()
+        private data class QueuedNotification(
+            val notifier: CandyDownloadNotifier,
+            val id: Int,
+            val notification: Notification,
+        )
+        private val notificationQueue by lazy {
+            val handler = Handler(Looper.getMainLooper())
+            DownloadNotificationQueue<QueuedNotification>(
+                lock = notificationLock,
+                now = android.os.SystemClock::elapsedRealtime,
+                schedule = { delay, action -> handler.postDelayed(action, delay) },
+                send = { update -> update.notifier.deliver(update.id, update.notification) },
+            )
+        }
         private val pendingNotifications = ConcurrentHashMap<Int, Notification>()
         private var permissionRequestPending = false
 

@@ -525,6 +525,40 @@ class BrowserControllerBackgroundMemoryInstrumentedTest {
     }
 
     @Test
+    fun backgroundKeepsDownloadingTabUntilTransferEnds() {
+        lateinit var downloading: MemorySession
+        lateinit var selected: MemorySession
+        composeRule.runOnIdle {
+            val browserController = requireNotNull(controller)
+            downloading = installSelectedSession().apply { activeDownload = true }
+            selected = createSelectedSession()
+            browserController.onAppBackgrounded()
+            browserController.trimBackgroundMemoryForTesting()
+            assertEquals(setOf(downloading.tabId, selected.tabId), browserController.residentTabIdsForTesting())
+            assertEquals(0, downloading.inputCheckCount)
+
+            downloading.activeDownload = false
+            browserController.trimBackgroundMemoryForTesting()
+        }
+        composeRule.runOnIdle {
+            assertEquals(setOf(selected.tabId), requireNotNull(controller).residentTabIdsForTesting())
+            assertEquals(listOf(BrowserEngineCommandType.Close), downloading.commands.map { it.type })
+        }
+    }
+
+    @Test
+    fun explicitTabCloseStillClosesDownloadingSession() {
+        composeRule.runOnIdle {
+            val browserController = requireNotNull(controller)
+            val downloading = installSelectedSession().apply { activeDownload = true }
+            createSelectedSession()
+            browserController.closeTab(downloading.tabId)
+            assertEquals(listOf(BrowserEngineCommandType.Close), downloading.commands.map { it.type })
+            assertFalse(downloading.tabId in browserController.residentTabIdsForTesting())
+        }
+    }
+
+    @Test
     fun backgroundKeepsPrivateTabsAndConfirmedOrUnknownInputState() {
         lateinit var form: MemorySession
         lateinit var unknown: MemorySession
@@ -1229,6 +1263,9 @@ class BrowserControllerBackgroundMemoryInstrumentedTest {
         private val deferFormCheck: Boolean = false,
         private val userInput: Boolean? = formData,
     ) : AndroidBrowserEngineSessionPort {
+        var activeDownload = false
+        override fun hasActiveDownload(): Boolean = activeDownload
+
         val commands = mutableListOf<BrowserEngineCommand>()
         val mediaCommands = mutableListOf<GeckoMediaCommand>()
         val activeStates = mutableListOf<Boolean>()

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="download_notification_failed">Nedlastingen mislyktes</string>
+    <string name="download_notification_pending">Forbereder nedlasting</string>
+</resources>

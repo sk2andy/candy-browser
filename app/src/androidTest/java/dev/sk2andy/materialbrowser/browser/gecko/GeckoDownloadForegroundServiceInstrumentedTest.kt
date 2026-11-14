@@ -1,6 +1,9 @@
 package dev.sk2andy.materialbrowser.browser.gecko
 
+import android.Manifest
 import android.app.ActivityManager
+import android.app.Notification
+import android.app.NotificationManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.ContextWrapper
@@ -8,6 +11,8 @@ import android.content.Intent
 import android.os.SystemClock
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
+import dev.sk2andy.materialbrowser.browser.downloads.CandyDownloadNotifier
 import java.util.concurrent.atomic.AtomicBoolean
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -24,8 +29,16 @@ class GeckoDownloadForegroundServiceInstrumentedTest {
         val second = -302
         val failed = AtomicBoolean(false)
         try {
+            InstrumentationRegistry.getInstrumentation().uiAutomation.grantRuntimePermission(
+                context.packageName,
+                Manifest.permission.POST_NOTIFICATIONS,
+            )
             assertTrue(GeckoDownloadForegroundService.begin(context, first) { failed.set(true) })
             assertTrue("service did not enter foreground", waitForService(foreground = true))
+            val summary = context.getSystemService(NotificationManager::class.java).activeNotifications
+                .first { it.notification.group == CandyDownloadNotifier.GECKO_GROUP }
+                .notification
+            assertTrue(summary.flags and Notification.FLAG_GROUP_SUMMARY != 0)
             assertTrue(GeckoDownloadForegroundService.begin(context, second) { failed.set(true) })
             GeckoDownloadForegroundService.end(first)
             assertTrue("service stopped while another transfer was active", serviceIsForeground())

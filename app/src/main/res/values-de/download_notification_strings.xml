@@ -1,0 +1,4 @@
+<resources>
+    <string name="download_notification_failed">Download fehlgeschlagen</string>
+    <string name="download_notification_pending">Download wird vorbereitet</string>
+</resources>

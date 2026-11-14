@@ -472,7 +472,11 @@ internal class SystemWebViewBlobDownloadTransfer(
                 cancelled = reason == GeckoDownloadFailure.Cancelled,
                 updatedAt = System.currentTimeMillis(),
             )
-            notifier.cancel(operation.id)
+            if (reason == GeckoDownloadFailure.Cancelled) {
+                notifier.cancel(operation.id)
+            } else {
+                notifier.failed(operation.id)
+            }
         }
         dispatch { operation.listener.onFailed(reason) }
     }

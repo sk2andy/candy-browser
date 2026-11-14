@@ -1,6 +1,7 @@
 package dev.sk2andy.materialbrowser.browser.downloads
 
 import android.Manifest
+import android.app.ActivityManager
 import android.app.Notification
 import android.app.NotificationManager
 import android.content.Context
@@ -13,6 +14,7 @@ import androidx.core.app.NotificationCompat
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import dev.sk2andy.materialbrowser.R
+import dev.sk2andy.materialbrowser.browser.gecko.GeckoDownloadForegroundService
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoDownloadTransferStart
 import dev.sk2andy.materialbrowser.data.DownloadEntry
 import dev.sk2andy.materialbrowser.data.DownloadRuntimeRegistry
@@ -45,7 +47,7 @@ class CandyDownloadNotifierInstrumentedTest {
     fun activeDownloadPostsExpressiveProgressAndWorkingControls() {
         val context = notificationContext()
         val manager = context.getSystemService(NotificationManager::class.java)
-        val notifier = CandyDownloadNotifier(context)
+        val notifier = CandyDownloadNotifier(context, groupWithForegroundService = true)
         val transferId = DownloadRuntimeRegistry.nextTransferId()
         val notificationId = CandyDownloadNotifier.notificationId(transferId)
         val cancelled = AtomicBoolean(false)
@@ -93,8 +95,13 @@ class CandyDownloadNotifierInstrumentedTest {
             DownloadRuntimeRegistry.progress(transferId, bytes = 100L, total = 200L, updatedAt = 15L)
             notifier.progress(start.id)
 
-            val running = awaitNotification(manager, notificationId)
+            val running = awaitNotification(manager, notificationId) {
+                it.extras.getString(Notification.EXTRA_TITLE) == start.fileName &&
+                    it.extras.getInt(Notification.EXTRA_PROGRESS) == 50
+            }
             assertEquals(CandyDownloadNotifier.CHANNEL_ID, running.channelId)
+            assertEquals(CandyDownloadNotifier.GECKO_GROUP, running.group)
+            assertEquals(0, running.flags and Notification.FLAG_GROUP_SUMMARY)
             assertEquals("expressive-download.bin", running.extras.getString(Notification.EXTRA_TITLE))
             assertEquals(100, running.extras.getInt(Notification.EXTRA_PROGRESS_MAX))
             assertEquals(50, running.extras.getInt(Notification.EXTRA_PROGRESS))
@@ -106,6 +113,8 @@ class CandyDownloadNotifierInstrumentedTest {
                     Notification.ProgressStyle::class.java.name,
                     running.extras.getString(Notification.EXTRA_TEMPLATE),
                 )
+                val style = Notification.Builder.recoverBuilder(context, running).style as Notification.ProgressStyle
+                assertNull(style.progressTrackerIcon)
                 if (Build.VERSION.SDK_INT_FULL >= Build.VERSION_CODES_FULL.BAKLAVA_1) {
                     assertTrue(running.hasPromotableCharacteristics())
                 }
@@ -123,7 +132,8 @@ class CandyDownloadNotifierInstrumentedTest {
             requireNotNull(running.actions).first().actionIntent.send()
             awaitStatus(transferId, DownloadStatus.Paused)
             val paused = awaitNotification(manager, notificationId) { notification ->
-                notification.actions?.firstOrNull()?.title == context.getString(R.string.downloads_resume)
+                notification.extras.getString(Notification.EXTRA_TITLE) == start.fileName &&
+                    notification.actions?.firstOrNull()?.title == context.getString(R.string.downloads_resume)
             }
             assertEquals(
                 context.getString(
@@ -135,14 +145,17 @@ class CandyDownloadNotifierInstrumentedTest {
             )
             assertFalse(NotificationCompat.isRequestPromotedOngoing(paused))
             assertNull(NotificationCompat.getShortCriticalText(paused))
+            assertNull(paused.group)
 
             requireNotNull(paused.actions).first().actionIntent.send()
             awaitStatus(transferId, DownloadStatus.Running)
             val resumed = awaitNotification(manager, notificationId) { notification ->
-                notification.actions?.firstOrNull()?.title == context.getString(R.string.downloads_pause)
+                notification.extras.getString(Notification.EXTRA_TITLE) == start.fileName &&
+                    notification.actions?.firstOrNull()?.title == context.getString(R.string.downloads_pause)
             }
             assertTrue(NotificationCompat.isRequestPromotedOngoing(resumed))
             assertEquals("50%", NotificationCompat.getShortCriticalText(resumed))
+            assertEquals(CandyDownloadNotifier.GECKO_GROUP, resumed.group)
 
             requireNotNull(resumed.actions).last().actionIntent.send()
             awaitCondition { cancelled.get() }
@@ -150,6 +163,51 @@ class CandyDownloadNotifierInstrumentedTest {
         } finally {
             DownloadRuntimeRegistry.completed(transferId)
             notifier.cancel(transferId)
+        }
+    }
+
+    @Test
+    fun pausedNotificationSurvivesForegroundServiceEnding() {
+        val context = notificationContext()
+        val manager = context.getSystemService(NotificationManager::class.java)
+        val notifier = CandyDownloadNotifier(context, groupWithForegroundService = true)
+        val id = DownloadRuntimeRegistry.nextTransferId()
+        val notificationId = CandyDownloadNotifier.notificationId(id)
+        DownloadRuntimeRegistry.started(
+            id = id,
+            name = "paused-foreground.bin",
+            source = "",
+            mime = "application/octet-stream",
+            total = 100L,
+            startedAt = 0L,
+            cancel = {},
+            pause = {
+                DownloadRuntimeRegistry.paused(id, true, 1L)
+                notifier.paused(id)
+                GeckoDownloadForegroundService.end(id)
+                true
+            },
+            resume = { true },
+        )
+        try {
+            assertTrue(GeckoDownloadForegroundService.begin(context, id) {})
+            awaitCondition { serviceIsForeground(context) }
+            notifier.started(id)
+            awaitNotification(manager, notificationId) {
+                it.extras.getString(Notification.EXTRA_TITLE) == "paused-foreground.bin" &&
+                    it.actions?.firstOrNull()?.title == context.getString(R.string.downloads_pause)
+            }
+            assertTrue(DownloadRuntimeRegistry.togglePauseTransfer(id))
+            awaitCondition { !serviceIsForeground(context) }
+            val paused = awaitNotification(manager, notificationId) {
+                it.extras.getString(Notification.EXTRA_TITLE) == "paused-foreground.bin" &&
+                    it.actions?.firstOrNull()?.title == context.getString(R.string.downloads_resume)
+            }
+            assertNull(paused.group)
+        } finally {
+            GeckoDownloadForegroundService.end(id)
+            DownloadRuntimeRegistry.completed(id)
+            notifier.cancel(id)
         }
     }
 
@@ -174,7 +232,11 @@ class CandyDownloadNotifierInstrumentedTest {
 
         try {
             notifier.active(transferId, entry)
-            val running = awaitNotification(manager, notificationId)
+            val running = awaitNotification(manager, notificationId) {
+                it.extras.getString(Notification.EXTRA_TITLE) == entry.name &&
+                    NotificationCompat.isRequestPromotedOngoing(it) &&
+                    it.extras.getBoolean(Notification.EXTRA_PROGRESS_INDETERMINATE)
+            }
             assertTrue(NotificationCompat.isRequestPromotedOngoing(running))
             assertNull(NotificationCompat.getShortCriticalText(running))
             assertTrue(running.extras.getBoolean(Notification.EXTRA_PROGRESS_INDETERMINATE))
@@ -192,7 +254,8 @@ class CandyDownloadNotifierInstrumentedTest {
                 uri = Uri.parse("content://media/external/downloads/91004"),
             )
             val completed = awaitNotification(manager, notificationId) { notification ->
-                notification.extras.getString(Notification.EXTRA_TEXT) ==
+                notification.extras.getString(Notification.EXTRA_TITLE) == entry.name &&
+                    notification.extras.getString(Notification.EXTRA_TEXT) ==
                     context.getString(R.string.download_notification_complete)
             }
             assertFalse(NotificationCompat.isRequestPromotedOngoing(completed))
@@ -200,6 +263,73 @@ class CandyDownloadNotifierInstrumentedTest {
             assertEquals(0, completed.flags and Notification.FLAG_ONGOING_EVENT)
         } finally {
             notifier.cancel(transferId)
+        }
+    }
+
+    @Test
+    fun pendingDownloadShowsPreparingWithoutPercentage() {
+        val context = notificationContext()
+        val manager = context.getSystemService(NotificationManager::class.java)
+        val notifier = CandyDownloadNotifier(context, groupWithForegroundService = true)
+        val id = DownloadRuntimeRegistry.nextTransferId()
+        val notificationId = CandyDownloadNotifier.notificationId(id)
+        val entry = DownloadEntry(
+            id = -91_005L,
+            name = "preparing.bin",
+            source = "",
+            status = DownloadStatus.Pending,
+            bytes = 0L,
+            total = 100L,
+            lastModified = 0L,
+            mime = "application/octet-stream",
+        )
+        try {
+            notifier.active(id, entry)
+            val pending = awaitNotification(manager, notificationId) {
+                it.extras.getString(Notification.EXTRA_TITLE) == entry.name &&
+                    it.extras.getString(Notification.EXTRA_TEXT) == context.getString(R.string.download_notification_pending)
+            }
+            assertEquals(context.getString(R.string.download_notification_pending), pending.extras.getString(Notification.EXTRA_TEXT))
+            assertEquals(CandyDownloadNotifier.GECKO_GROUP, pending.group)
+            assertTrue(pending.extras.getBoolean(Notification.EXTRA_PROGRESS_INDETERMINATE))
+            assertNull(NotificationCompat.getShortCriticalText(pending))
+        } finally {
+            notifier.cancel(id)
+        }
+    }
+
+    @Test
+    fun failureReplacesProgressWithDismissibleDownloadLink() {
+        val context = notificationContext()
+        val manager = context.getSystemService(NotificationManager::class.java)
+        val notifier = CandyDownloadNotifier(context)
+        val id = DownloadRuntimeRegistry.nextTransferId()
+        val notificationId = CandyDownloadNotifier.notificationId(id)
+        DownloadRuntimeRegistry.started(
+            id = id,
+            name = "failed.bin",
+            source = "https://example.com/failed.bin",
+            mime = "application/octet-stream",
+            total = 100L,
+            startedAt = 0L,
+        )
+        try {
+            notifier.started(id)
+            DownloadRuntimeRegistry.failed(id, cancelled = false, updatedAt = 1L)
+            notifier.failed(id)
+            val failed = awaitNotification(manager, notificationId) {
+                it.extras.getString(Notification.EXTRA_TITLE) == "failed.bin" &&
+                    it.extras.getString(Notification.EXTRA_TEXT) == context.getString(R.string.download_notification_failed)
+            }
+            assertEquals("failed.bin", failed.extras.getString(Notification.EXTRA_TITLE))
+            assertEquals(Notification.CATEGORY_ERROR, failed.category)
+            assertEquals(0, failed.flags and Notification.FLAG_ONGOING_EVENT)
+            assertTrue(failed.flags and Notification.FLAG_AUTO_CANCEL != 0)
+            assertNotNull(failed.contentIntent)
+            assertTrue(failed.actions.isNullOrEmpty())
+        } finally {
+            DownloadRuntimeRegistry.completed(id)
+            notifier.cancel(id)
         }
     }
 
@@ -246,7 +376,8 @@ class CandyDownloadNotifierInstrumentedTest {
             notifier.onPermissionResult(granted = true)
 
             val completed = awaitNotification(manager, notificationId) { notification ->
-                notification.extras.getString(Notification.EXTRA_TEXT) ==
+                notification.extras.getString(Notification.EXTRA_TITLE) == start.fileName &&
+                    notification.extras.getString(Notification.EXTRA_TEXT) ==
                     context.getString(R.string.download_notification_complete)
             }
             assertEquals(0, completed.flags and Notification.FLAG_ONGOING_EVENT)
@@ -290,7 +421,10 @@ class CandyDownloadNotifierInstrumentedTest {
 
         try {
             notifier.active(transferId, entry)
-            awaitNotification(manager, notificationId)
+            awaitNotification(manager, notificationId) {
+                it.extras.getString(Notification.EXTRA_TITLE) == start.fileName &&
+                    (it.flags and Notification.FLAG_ONGOING_EVENT != 0)
+            }
             notifier.reconcileOrphanedActiveNotifications()
             awaitCondition {
                 manager.activeNotifications.none { active -> active.id == notificationId }
@@ -307,6 +441,11 @@ class CandyDownloadNotifierInstrumentedTest {
     private fun awaitStatus(transferId: Int, status: DownloadStatus) {
         awaitCondition { DownloadRuntimeRegistry.entryForTransfer(transferId)?.status == status }
     }
+
+    @Suppress("DEPRECATION")
+    private fun serviceIsForeground(context: Context): Boolean = context.getSystemService(ActivityManager::class.java)
+        .getRunningServices(Int.MAX_VALUE)
+        .any { it.service.className == GeckoDownloadForegroundService::class.java.name && it.foreground }
 
     private fun notificationContext(): Context {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
@@ -342,7 +481,7 @@ class CandyDownloadNotifierInstrumentedTest {
     }
 
     private fun awaitCondition(predicate: () -> Boolean) {
-        val deadline = SystemClock.uptimeMillis() + 2_000L
+        val deadline = SystemClock.uptimeMillis() + 5_000L
         while (!predicate() && SystemClock.uptimeMillis() < deadline) {
             SystemClock.sleep(25L)
         }

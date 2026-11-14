@@ -13,6 +13,7 @@ import android.os.Looper
 import androidx.core.app.NotificationCompat
 import dev.sk2andy.materialbrowser.DownloadsActivity
 import dev.sk2andy.materialbrowser.R
+import dev.sk2andy.materialbrowser.browser.downloads.CandyDownloadNotifier
 
 /** Keeps the process in the foreground only while Gecko owns active download streams. */
 internal class GeckoDownloadForegroundService : Service() {
@@ -39,6 +40,8 @@ internal class GeckoDownloadForegroundService : Service() {
                 .setContentTitle(getString(R.string.download_notification_channel_name))
                 .setContentText(getString(R.string.download_notification_description))
                 .setContentIntent(openDownloads)
+                .setGroup(CandyDownloadNotifier.GECKO_GROUP)
+                .setGroupSummary(true)
                 .setOngoing(true)
                 .setLocalOnly(true)
                 .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)

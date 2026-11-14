@@ -12,6 +12,7 @@ import dev.sk2andy.materialbrowser.browser.actions.ExternalDownloadProtocol
 import dev.sk2andy.materialbrowser.browser.actions.WebContentTarget
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoDownloadCancellation
 import dev.sk2andy.materialbrowser.browser.gecko.GeckoExternalDownloadResponse
+import dev.sk2andy.materialbrowser.browser.gecko.GeckoMainFrameNavigationRequest
 import dev.sk2andy.materialbrowser.data.BrowserDownloadSettings
 import dev.sk2andy.materialbrowser.data.BrowserSessionStore
 import dev.sk2andy.materialbrowser.data.DownloadManagerMode
@@ -382,6 +383,47 @@ class BrowserControllerDownloadRoutingInstrumentedTest {
     }
 
     @Test
+    fun previewRoutesNonApkDownloadAfterUserNavigationAndRedirect() {
+        activityRule.scenario.onActivity { activity ->
+            val browser = BrowserController(activity).also {
+                controller = it
+                it.downloadDuplicateLookupForTesting = { null }
+            }
+            browser.onStart()
+            browser.updateDownloadSettings(BrowserDownloadSettings(managerMode = DownloadManagerMode.BuiltIn))
+            preparePreview(browser)
+            browser.dispatchExternalPreviewNavigationRequestForTesting(
+                previewNavigation("https://example.com/download", hasUserGesture = true),
+            )
+            browser.dispatchExternalPreviewNavigationRequestForTesting(
+                previewNavigation("https://example.com/report.pdf", isRedirect = true),
+            )
+
+            browser.dispatchExternalPreviewDownloadResponseForTesting(response())
+
+            assertEquals(1, started)
+            assertEquals(0, discarded)
+        }
+    }
+
+    @Test
+    fun previewRejectsDownloadWithoutMatchingUserNavigation() {
+        activityRule.scenario.onActivity { activity ->
+            val browser = BrowserController(activity).also { controller = it }
+            browser.onStart()
+            preparePreview(browser)
+            browser.dispatchExternalPreviewNavigationRequestForTesting(
+                previewNavigation("https://example.com/other.pdf", hasUserGesture = true),
+            )
+
+            browser.dispatchExternalPreviewDownloadResponseForTesting(response())
+
+            assertEquals(0, started)
+            assertEquals(1, discarded)
+        }
+    }
+
+    @Test
     fun dismissedExternalPreviewReleasesDeferredResponse() {
         activityRule.scenario.onActivity { activity ->
             val browser = BrowserController(activity).also { browser ->
@@ -509,6 +551,17 @@ class BrowserControllerDownloadRoutingInstrumentedTest {
         canGoBack = false,
         canGoForward = false,
         failureDescription = null,
+    )
+
+    private fun previewNavigation(
+        url: String,
+        hasUserGesture: Boolean = false,
+        isRedirect: Boolean = false,
+    ) = GeckoMainFrameNavigationRequest(
+        url = url,
+        isRedirect = isRedirect,
+        hasUserGesture = hasUserGesture,
+        isDirectNavigation = false,
     )
 
     private fun response(url: String = "https://example.com/report.pdf") = GeckoExternalDownloadResponse(
