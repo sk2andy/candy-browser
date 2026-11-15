@@ -19,6 +19,17 @@ Apache License 2.0 components
 
 License and terms links for current component groups are shown in Settings > About & legal.
 
+Mozilla Sync
+------------
+
+Mozilla Android Components 160.0 and Application Services 160.0 libraries are redistributed unmodified.
+The bundled Firefox Accounts WebChannel and native message handling are adapted from Android
+Components under MPL-2.0; modified source is in Candy's Gecko assets and data/sync packages.
+Source: https://github.com/mozilla-firefox/firefox/tree/FIREFOX_160_0_RELEASE/mobile/android/android-components
+Source and bundled dependency notices: https://github.com/mozilla/application-services/tree/v160.0
+Their Glean SDK dependency is available at https://github.com/mozilla/glean
+Mozilla Public License 2.0: https://www.mozilla.org/en-US/MPL/2.0/
+
 Google SDK terms
 ----------------
 

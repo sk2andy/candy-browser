@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mozilla_sync_title">Đồng bộ Mozilla</string>
+    <string name="candy_sync_provider_title">Đồng bộ Candy</string>
+    <string name="mozilla_sync_summary">Kết nối tài khoản Mozilla để chia sẻ thẻ thường của hồ sơ này với Firefox và Zen. Thiết bị khác hiện trong bộ chuyển hồ sơ.</string>
+    <string name="mozilla_sync_parallel_summary">Bạn cũng có thể kết nối hồ sơ cục bộ này với Candy Sync. Cả hai dịch vụ nhận thẻ thường. Thẻ riêng tư ở lại thiết bị.</string>
+    <string name="mozilla_sync_unavailable">Không có trong bản dựng này</string>
+    <string name="mozilla_sync_unavailable_summary">Bản Candy này chưa bật đăng nhập Mozilla. Candy Sync vẫn dùng được.</string>
+    <string name="mozilla_sync_signed_out">Chưa kết nối</string>
+    <string name="mozilla_sync_connecting">Đang kết nối…</string>
+    <string name="mozilla_sync_connected">Đã kết nối</string>
+    <string name="mozilla_sync_error">Kết nối thất bại. Thử lại hoặc kết nối lại.</string>
+    <string name="mozilla_sync_sign_in">Đăng nhập bằng Mozilla</string>
+    <string name="mozilla_sync_disconnect">Ngắt kết nối</string>
+    <string name="mozilla_sync_device_summary">Thẻ từ thiết bị này mở dưới dạng bản sao trong hồ sơ Candy liên kết. Thay đổi trong Candy không sửa thẻ gốc.</string>
+    <string name="mozilla_sync_open_tab">Mở trong Candy</string>
+    <string name="mozilla_sync_send_tab">Gửi thẻ hiện tại đến thiết bị này</string>
+    <string name="mozilla_sync_send_success">Đã gửi thẻ. Thiết bị sẽ nhận khi kết nối.</string>
+    <string name="mozilla_sync_send_failed">Không thể gửi thẻ. Hãy thử lại.</string>
+    <string name="mozilla_sync_no_tabs">Thiết bị này chưa có thẻ được chia sẻ.</string>
+</resources>

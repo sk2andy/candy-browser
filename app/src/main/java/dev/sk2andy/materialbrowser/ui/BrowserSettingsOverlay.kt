@@ -292,6 +292,12 @@ internal fun BrowserSettingsOverlay(
             toppingCatalogState = toppingCatalogState,
             syncState = controller.syncState,
             syncIconCatalog = controller.syncIconCatalog,
+            mozillaSyncState = controller.mozillaSyncState,
+            onConnectMozillaSync = { profileId, deviceName ->
+                if (controller.connectMozillaSync(profileId, deviceName)) onDismiss()
+            },
+            onRefreshMozillaSync = controller::refreshMozillaSync,
+            onDisconnectMozillaSync = controller::disconnectMozillaSync,
             onDestinationChanged = onDestinationChanged,
             onBrowserEngineKindChanged = controller::updateBrowserEngineKind,
             onAppearanceSettingsChanged = controller::updateAppearanceSettings,

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mozilla_sync_title">Συγχρονισμός Mozilla</string>
+    <string name="candy_sync_provider_title">Συγχρονισμός Candy</string>
+    <string name="mozilla_sync_summary">Συνδέστε τον λογαριασμό Mozilla για κοινή χρήση κανονικών καρτελών με Firefox και Zen. Οι άλλες συσκευές εμφανίζονται στην εναλλαγή προφίλ.</string>
+    <string name="mozilla_sync_parallel_summary">Μπορείτε επίσης να συνδέσετε το τοπικό προφίλ στο Candy Sync. Και οι δύο υπηρεσίες λαμβάνουν κανονικές καρτέλες. Οι ιδιωτικές μένουν στη συσκευή.</string>
+    <string name="mozilla_sync_unavailable">Μη διαθέσιμο σε αυτή την έκδοση</string>
+    <string name="mozilla_sync_unavailable_summary">Η σύνδεση Mozilla δεν είναι ακόμα ενεργή σε αυτή την έκδοση Candy. Το Candy Sync παραμένει διαθέσιμο.</string>
+    <string name="mozilla_sync_signed_out">Δεν συνδέθηκε</string>
+    <string name="mozilla_sync_connecting">Γίνεται σύνδεση…</string>
+    <string name="mozilla_sync_connected">Συνδέθηκε</string>
+    <string name="mozilla_sync_error">Η σύνδεση απέτυχε. Δοκιμάστε ξανά ή επανασυνδεθείτε.</string>
+    <string name="mozilla_sync_sign_in">Σύνδεση με Mozilla</string>
+    <string name="mozilla_sync_disconnect">Αποσύνδεση</string>
+    <string name="mozilla_sync_device_summary">Οι καρτέλες αυτής της συσκευής ανοίγουν ως αντίγραφα στο συνδεδεμένο προφίλ Candy. Οι αλλαγές στο Candy δεν επηρεάζουν τις αρχικές καρτέλες.</string>
+    <string name="mozilla_sync_open_tab">Άνοιγμα στο Candy</string>
+    <string name="mozilla_sync_send_tab">Αποστολή τρέχουσας καρτέλας σε αυτή τη συσκευή</string>
+    <string name="mozilla_sync_send_success">Η καρτέλα στάλθηκε. Η συσκευή θα τη λάβει όταν συνδεθεί.</string>
+    <string name="mozilla_sync_send_failed">Η καρτέλα δεν στάλθηκε. Δοκιμάστε ξανά.</string>
+    <string name="mozilla_sync_no_tabs">Δεν υπάρχουν ακόμα κοινόχρηστες καρτέλες από αυτή τη συσκευή.</string>
+</resources>

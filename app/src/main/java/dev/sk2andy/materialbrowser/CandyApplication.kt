@@ -5,6 +5,7 @@ import dev.sk2andy.materialbrowser.browser.guest.GuestBubbleGate
 import dev.sk2andy.materialbrowser.browser.systemwebview.GuestBubbleWebView
 import dev.sk2andy.materialbrowser.browser.guest.GuestBubbleRules
 import dev.sk2andy.materialbrowser.data.AppLogging
+import dev.sk2andy.materialbrowser.data.sync.MozillaSyncRepository
 import dev.sk2andy.materialbrowser.browser.integration.devicesearch.DeviceSearchIndexer
 
 class CandyApplication : Application() {
@@ -16,6 +17,7 @@ class CandyApplication : Application() {
         GuestBubbleGate.install(this)
         if (getProcessName() == packageName) {
             AppLogging.initialize(this)
+            MozillaSyncRepository.install(this)
             DeviceSearchIndexer.install(this)
         }
     }

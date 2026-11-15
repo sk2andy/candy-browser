@@ -920,6 +920,20 @@ private class GeckoViewBrowserSession(
     private val storageController = runtime.storageController
     private val mainHandler = Handler(Looper.getMainLooper())
 
+    private var mozillaAccountWebChannel: GeckoMozillaAccountWebChannel? = null
+
+    override fun bindMozillaAccountWebChannel(
+        handler: (String) -> String?,
+        onReady: (Boolean) -> Unit,
+    ): AutoCloseable? {
+        if (closed || isPrivate) return null
+        mozillaAccountWebChannel?.close()
+        return GeckoMozillaAccountWebChannel(session, handler).also {
+            mozillaAccountWebChannel = it
+            it.install(extensionController, onReady)
+        }
+    }
+
     override val supportsSiteDataDeletion: Boolean get() = !closed
 
     override fun clearSiteData(url: String, onComplete: (Boolean) -> Unit) {
@@ -3550,6 +3564,8 @@ private class GeckoViewBrowserSession(
         trackingPermissions.remove(trackingPermissionOwner)
         toppingBinding.close()
         toppingBinding = GeckoToppingSessionBinding.None
+        mozillaAccountWebChannel?.close()
+        mozillaAccountWebChannel = null
         privacyBinding.close()
         // Native Gecko objects can outlive close; release their Candy ownership here.
         // ContentDelegate also clears Gecko's process-hang handler through the public API.

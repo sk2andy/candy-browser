@@ -5,6 +5,7 @@ import dev.sk2andy.materialbrowser.browser.BrowserTab
 import dev.sk2andy.materialbrowser.browser.DEFAULT_BROWSER_PROFILE
 import dev.sk2andy.materialbrowser.browser.ProfileLockTrigger
 import dev.sk2andy.materialbrowser.browser.ProfileProtection
+import dev.sk2andy.materialbrowser.browser.SyncProvider
 import dev.sk2andy.materialbrowser.data.SnoozedTab
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -89,6 +90,18 @@ class BrowserProfileManagementRulesTest {
         for (id in listOf("remote", "linked", "locked", "missing")) {
             assertEquals(before, controller.deleteProfile(id))
         }
+    }
+
+    @Test
+    fun mozillaProfilesAreNotMoveTargetsAndBoundLocalProfilesCannotBeDeleted() {
+        val firefox = BrowserProfile("mozilla:desktop", "🦊", syncedDeviceId = "desktop", syncProvider = SyncProvider.Mozilla)
+        val linked = work.copy(linkedMozillaDeviceId = "local")
+        val controller = controller(listOf(tab("regular")), profiles = listOf(DEFAULT_BROWSER_PROFILE, linked, firefox))
+        val state = controller.state
+
+        assertFalse(BrowserProfileManagementRules.canDeleteProfile(state, "work"))
+        assertTrue(BrowserProfileManagementRules.moveTargets(state, "regular").none { it.id == firefox.id })
+        assertEquals(state, controller.moveTabToProfile("regular", firefox.id))
     }
 
     @Test

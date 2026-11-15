@@ -5,6 +5,9 @@
         <exclude domain="sharedpref" path="app_logging_capture.xml" />
         <exclude domain="sharedpref" path="device_search.xml" />
         <exclude domain="sharedpref" path="reader_speech_preparation.xml" />
+        <exclude domain="sharedpref" path="fxaStateAC_kp_post_m.xml" />
+        <exclude domain="sharedpref" path="fxaStatePrefAC.xml" />
+        <exclude domain="sharedpref" path="mozilla_sync.xml" />
         <include domain="file" path="candy_filter_rules.json" />
         <include domain="file" path="candy_filter_rules.json.bak" />
         <include domain="file" path="user_scripts.json" />
@@ -21,6 +24,12 @@
         <exclude domain="sharedpref" path="app_logging_capture.xml" />
         <exclude domain="sharedpref" path="device_search.xml" />
         <exclude domain="sharedpref" path="reader_speech_preparation.xml" />
+        <exclude domain="sharedpref" path="fxaStateAC_kp_post_m.xml" />
+        <exclude domain="sharedpref" path="fxaStatePrefAC.xml" />
+        <exclude domain="sharedpref" path="mozilla_sync.xml" />
+        <exclude domain="file" path="tabs.sqlite" />
+        <exclude domain="file" path="tabs.sqlite-wal" />
+        <exclude domain="file" path="tabs.sqlite-shm" />
         <include domain="file" path="." />
         <include domain="database" path="." />
     </device-transfer>

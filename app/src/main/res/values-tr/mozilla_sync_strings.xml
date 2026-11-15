@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mozilla_sync_title">Mozilla Eşitleme</string>
+    <string name="candy_sync_provider_title">Candy Eşitleme</string>
+    <string name="mozilla_sync_summary">Bu profilin normal sekmelerini Firefox ve Zen ile paylaşmak için Mozilla hesabınızı bağlayın. Diğer cihazlar profil seçicide görünür.</string>
+    <string name="mozilla_sync_parallel_summary">Bu yerel profili Candy Sync hizmetine de bağlayabilirsiniz. İki hizmet de normal sekmeleri alır. Gizli sekmeler bu cihazda kalır.</string>
+    <string name="mozilla_sync_unavailable">Bu derlemede kullanılamaz</string>
+    <string name="mozilla_sync_unavailable_summary">Bu Candy derlemesinde Mozilla girişi henüz etkin değil. Candy Sync kullanılabilir.</string>
+    <string name="mozilla_sync_signed_out">Bağlı değil</string>
+    <string name="mozilla_sync_connecting">Bağlanıyor…</string>
+    <string name="mozilla_sync_connected">Bağlandı</string>
+    <string name="mozilla_sync_error">Bağlantı başarısız. Yeniden deneyin veya tekrar bağlanın.</string>
+    <string name="mozilla_sync_sign_in">Mozilla ile giriş yap</string>
+    <string name="mozilla_sync_disconnect">Bağlantıyı kes</string>
+    <string name="mozilla_sync_device_summary">Bu cihazın sekmeleri bağlı Candy profilinde kopya olarak açılır. Candy içindeki değişiklikler asıl sekmeleri değiştirmez.</string>
+    <string name="mozilla_sync_open_tab">Candy içinde aç</string>
+    <string name="mozilla_sync_send_tab">Geçerli sekmeyi bu cihaza gönder</string>
+    <string name="mozilla_sync_send_success">Sekme gönderildi. Cihaz bağlandığında alacak.</string>
+    <string name="mozilla_sync_send_failed">Sekme gönderilemedi. Yeniden deneyin.</string>
+    <string name="mozilla_sync_no_tabs">Bu cihazdan henüz paylaşılan sekme yok.</string>
+</resources>

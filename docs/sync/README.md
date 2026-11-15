@@ -7,6 +7,11 @@ snapshots. Protocol v2 adds encrypted, workspace-scoped tab mutations with durab
 WebSocket delivery. On Android, the current device binds to an existing local profile instead of
 creating a duplicate self profile.
 
+Android also offers native Mozilla Sync as an independent alternative. Each connection binds one
+local profile; both providers can publish the same profile. Mozilla devices appear in the profile
+switcher with a read-only tab sheet and actions to open a local copy or send a tab. Mozilla does not
+offer Candy's remote editing operations. See the [provider comparison](app-integration.md#mozilla-sync-on-android).
+
 ## Documentation
 
 | Need | Document |
@@ -31,6 +36,9 @@ creating a duplicate self profile.
 | Protocol v2 encrypted tab deltas and authenticated realtime delivery | Implemented |
 | Shared freely selectable 54-icon catalog | Implemented |
 | Private/internal/local-file exclusion | Implemented |
+| Native Mozilla account, device tabs, open locally, and outgoing Send Tab on Android | Implemented with Firefox Android public client / native WebChannel; authenticated compatibility remains to be verified |
+| Parallel Candy and Mozilla bindings | Implemented on Android |
+| Zen Spaces, native Mozilla bookmarks/passwords/history | Not implemented |
 | Bookmark and tab-group merge | Not implemented |
 | Candy-hosted service | Not part of the self-hosted scope |
 | iOS client | Deferred |

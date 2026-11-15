@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mozilla_sync_title">Mozilla Sync</string>
+    <string name="candy_sync_provider_title">Candy Sync</string>
+    <string name="mozilla_sync_summary">Подключите аккаунт Mozilla, чтобы делиться обычными вкладками этого профиля с Firefox и Zen. Другие устройства появятся в переключателе профилей.</string>
+    <string name="mozilla_sync_parallel_summary">Этот локальный профиль также можно подключить к Candy Sync. Оба сервиса получат его обычные вкладки. Приватные вкладки останутся на этом устройстве.</string>
+    <string name="mozilla_sync_unavailable">Недоступно в этой сборке</string>
+    <string name="mozilla_sync_unavailable_summary">Вход через Mozilla пока не включён в этой сборке Candy. Candy Sync остаётся доступным.</string>
+    <string name="mozilla_sync_signed_out">Не подключено</string>
+    <string name="mozilla_sync_connecting">Подключение…</string>
+    <string name="mozilla_sync_connected">Подключено</string>
+    <string name="mozilla_sync_error">Не удалось подключиться. Повторите попытку или подключитесь заново.</string>
+    <string name="mozilla_sync_sign_in">Войти через Mozilla</string>
+    <string name="mozilla_sync_disconnect">Отключить</string>
+    <string name="mozilla_sync_device_summary">Вкладки с этого устройства открываются как копии в связанном профиле Candy. Изменения в Candy не меняют исходные вкладки.</string>
+    <string name="mozilla_sync_open_tab">Открыть в Candy</string>
+    <string name="mozilla_sync_send_tab">Отправить текущую вкладку на это устройство</string>
+    <string name="mozilla_sync_send_success">Вкладка отправлена. Устройство получит её при подключении.</string>
+    <string name="mozilla_sync_send_failed">Не удалось отправить вкладку. Попробуйте ещё раз.</string>
+    <string name="mozilla_sync_no_tabs">С этого устройства пока нет общих вкладок.</string>
+</resources>

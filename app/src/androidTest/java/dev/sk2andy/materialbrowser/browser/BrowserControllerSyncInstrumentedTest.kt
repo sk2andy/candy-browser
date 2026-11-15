@@ -32,9 +32,14 @@ import dev.sk2andy.materialbrowser.sync.SyncProfile
 import dev.sk2andy.materialbrowser.sync.SyncRepositoryState
 import dev.sk2andy.materialbrowser.sync.SyncStatus
 import dev.sk2andy.materialbrowser.sync.SyncTab
+import dev.sk2andy.materialbrowser.sync.MozillaSyncDevice
+import dev.sk2andy.materialbrowser.sync.MozillaSyncRules
+import dev.sk2andy.materialbrowser.sync.MozillaSyncState
+import dev.sk2andy.materialbrowser.sync.MozillaSyncTab
 import java.util.concurrent.CopyOnWriteArrayList
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -51,6 +56,74 @@ class BrowserControllerSyncInstrumentedTest {
     private var engineHost: FrameLayout? = null
     private var engineSession: RecordingGeckoSession? = null
 
+    @Test
+    fun mozillaDeviceSelectionKeepsBothProvidersAndOpensLocalCopy() {
+        createController()
+        applyState(syncState(remoteUrl = URL_A))
+        val remoteTab = MozillaSyncTab("Mozilla page", URL_REMOTE, 42)
+        val mozillaState = MozillaSyncState(
+            localProfileId = DEFAULT_PROFILE_ID,
+            currentDeviceId = "local-mozilla",
+            devices = listOf(MozillaSyncDevice("firefox", "Firefox", listOf(remoteTab))),
+        )
+        activityRule.scenario.onActivity { _ ->
+            val browserController = requireNotNull(controller)
+            browserController.applyMozillaSyncStateForTesting(mozillaState)
+            val profileId = MozillaSyncRules.profileId("firefox")
+            val originalTab = browserController.selectedTabForTesting()
+            val originalCount = browserController.tabs.size
+            assertTrue(browserController.selectProfile(profileId))
+            assertEquals("firefox", browserController.viewedMozillaDeviceId)
+            assertEquals(originalTab.id, browserController.selectedTabForTesting().id)
+            assertEquals(originalCount, browserController.tabs.size)
+            assertFalse(browserController.moveTabToProfile(originalTab.id, profileId))
+            assertTrue(browserController.compatibleMoveTargetProfiles(originalTab.id).none { it.id == profileId })
+            browserController.applySyncRepositoryStateForTesting(syncState(remoteUrl = URL_A))
+            assertTrue(browserController.profiles.any { it.id == profileId })
+            assertTrue(browserController.profiles.any { it.id == SyncedProfileRuntimeRules.profileId(DESKTOP_ID) })
+            assertTrue(browserController.openMozillaTab(remoteTab))
+        }
+        instrumentation.waitForIdleSync()
+        activityRule.scenario.onActivity { _ ->
+            val browserController = requireNotNull(controller)
+            assertEquals(DEFAULT_PROFILE_ID, browserController.activeProfileId)
+            assertEquals(URL_REMOTE, browserController.selectedTabForTesting().url)
+            assertEquals(null, browserController.viewedMozillaDeviceId)
+        }
+    }
+
+    @Test
+    fun mozillaAuthenticationTabIsNotPersistedOrPublishedToCandy() {
+        createController()
+        applyState(syncState())
+        mutations.clear()
+        var authTabId: String? = null
+        activityRule.scenario.onActivity { _ ->
+            val browserController = requireNotNull(controller)
+            browserController.openMozillaAuthTabForTesting(URL_A)
+            authTabId = browserController.selectedTabForTesting().id
+        }
+        val deadline = SystemClock.elapsedRealtime() + 15_000L
+        var navigated = false
+        while (!navigated && SystemClock.elapsedRealtime() < deadline) {
+            activityRule.scenario.onActivity { _ ->
+                navigated = requireNotNull(controller).selectedTabForTesting().url == URL_A
+            }
+            if (!navigated) SystemClock.sleep(50)
+        }
+        assertTrue("OAuth tab navigated after WebChannel installation", navigated)
+        activityRule.scenario.onActivity { activity ->
+            val browserController = requireNotNull(controller)
+            val authTab = browserController.selectedTabForTesting()
+            assertEquals(authTabId, authTab.id)
+            assertEquals(URL_A, authTab.url)
+            assertEquals(null, authTab.syncCandyId)
+            assertTrue(BrowserSessionStore(activity).loadTabs().first.none { it.id == authTab.id })
+            assertFalse(browserController.canSendSelectedTabToMozilla)
+            assertTrue(mutations.isEmpty())
+        }
+    }
+
     @After
     fun tearDown() {
         activityRule.scenario.onActivity { activity ->
@@ -64,6 +137,19 @@ class BrowserControllerSyncInstrumentedTest {
             clearState(activity)
         }
         mutations.clear()
+    }
+
+    @Test
+    fun systemWebViewDoesNotStartMozillaAuthentication() {
+        createController(AndroidBrowserEngineKind.SystemWebView)
+        activityRule.scenario.onActivity { _ ->
+            val browserController = requireNotNull(controller)
+            val previousTab = browserController.selectedTabForTesting()
+            val count = browserController.tabs.size
+            assertFalse(browserController.connectMozillaSync(DEFAULT_PROFILE_ID, "Candy"))
+            assertEquals(count, browserController.tabs.size)
+            assertEquals(previousTab.id, browserController.selectedTabForTesting().id)
+        }
     }
 
     @Test
@@ -299,9 +385,10 @@ class BrowserControllerSyncInstrumentedTest {
         assertTrue(mutations.isEmpty())
     }
 
-    private fun createController() {
+    private fun createController(engineKind: AndroidBrowserEngineKind = AndroidBrowserEngineKind.GeckoView) {
         activityRule.scenario.onActivity { activity ->
             clearState(activity)
+            BrowserSessionStore(activity).saveAndroidBrowserEngineKind(engineKind)
             controller = BrowserController(activity).also { browserController ->
                 browserController.syncMutationObserverForTesting = mutations::add
                 browserController.onStart()

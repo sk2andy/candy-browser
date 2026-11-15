@@ -2341,6 +2341,18 @@ internal fun BrowserScreen(
             pendingLinkSnooze = PendingLinkSnooze(url, title, sourceTabId)
         },
     )
+    controller.mozillaSyncState.devices.firstOrNull { it.id == controller.viewedMozillaDeviceId }?.let { device ->
+        MozillaDeviceSheet(
+            device = device,
+            canSendCurrentTab = controller.canSendSelectedTabToMozilla,
+            onOpen = { tab ->
+                if (controller.openMozillaTab(tab)) closeTabOverview()
+            },
+            onSend = { onComplete -> controller.sendSelectedTabToMozillaDevice(device.id, onComplete) },
+            onRefresh = controller::refreshMozillaSync,
+            onDismiss = controller::dismissMozillaDevice,
+        )
+    }
     FirefoxExtensionChrome(controller)
 }
 

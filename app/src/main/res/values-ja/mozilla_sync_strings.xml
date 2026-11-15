@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mozilla_sync_title">Mozilla 同期</string>
+    <string name="candy_sync_provider_title">Candy 同期</string>
+    <string name="mozilla_sync_summary">Mozilla アカウントを接続すると、このプロファイルの通常タブを Firefox や Zen と共有できます。他の端末はプロファイル切替に表示されます。</string>
+    <string name="mozilla_sync_parallel_summary">このローカルプロファイルは Candy Sync にも接続できます。両サービスに通常タブを送ります。プライベートタブは端末内に残ります。</string>
+    <string name="mozilla_sync_unavailable">このビルドでは利用不可</string>
+    <string name="mozilla_sync_unavailable_summary">この Candy ビルドでは Mozilla ログインが未対応です。Candy Sync は利用できます。</string>
+    <string name="mozilla_sync_signed_out">未接続</string>
+    <string name="mozilla_sync_connecting">接続中…</string>
+    <string name="mozilla_sync_connected">接続済み</string>
+    <string name="mozilla_sync_error">接続に失敗しました。再試行するか再接続してください。</string>
+    <string name="mozilla_sync_sign_in">Mozilla でログイン</string>
+    <string name="mozilla_sync_disconnect">接続解除</string>
+    <string name="mozilla_sync_device_summary">この端末のタブは、リンクした Candy プロファイルでコピーとして開きます。Candy での変更は元のタブに影響しません。</string>
+    <string name="mozilla_sync_open_tab">Candy で開く</string>
+    <string name="mozilla_sync_send_tab">現在のタブをこの端末に送信</string>
+    <string name="mozilla_sync_send_success">タブを送信しました。端末が接続すると受信します。</string>
+    <string name="mozilla_sync_send_failed">タブを送信できませんでした。再試行してください。</string>
+    <string name="mozilla_sync_no_tabs">この端末の共有タブはまだありません。</string>
+</resources>

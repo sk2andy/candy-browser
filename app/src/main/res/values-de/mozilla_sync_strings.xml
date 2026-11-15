@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mozilla_sync_title">Mozilla Sync</string>
+    <string name="candy_sync_provider_title">Candy Sync</string>
+    <string name="mozilla_sync_summary">Verbinde dein Mozilla-Konto, um die normalen Tabs dieses Profils mit Firefox und Zen zu teilen. Andere Geräte erscheinen in der Profilauswahl.</string>
+    <string name="mozilla_sync_parallel_summary">Du kannst dieses lokale Profil auch mit Candy Sync verbinden. Beide Dienste erhalten seine normalen Tabs. Private Tabs bleiben auf diesem Gerät.</string>
+    <string name="mozilla_sync_unavailable">In dieser Version nicht verfügbar</string>
+    <string name="mozilla_sync_unavailable_summary">Die Mozilla-Anmeldung ist für diese Candy-Version noch nicht freigeschaltet. Candy Sync bleibt verfügbar.</string>
+    <string name="mozilla_sync_signed_out">Nicht verbunden</string>
+    <string name="mozilla_sync_connecting">Verbindung wird hergestellt…</string>
+    <string name="mozilla_sync_connected">Verbunden</string>
+    <string name="mozilla_sync_error">Verbindung fehlgeschlagen. Versuche es erneut oder verbinde das Konto neu.</string>
+    <string name="mozilla_sync_sign_in">Mit Mozilla anmelden</string>
+    <string name="mozilla_sync_disconnect">Verbindung trennen</string>
+    <string name="mozilla_sync_device_summary">Tabs dieses Geräts öffnen sich als Kopien im verknüpften Candy-Profil. Änderungen in Candy bearbeiten die ursprünglichen Tabs nicht.</string>
+    <string name="mozilla_sync_open_tab">In Candy öffnen</string>
+    <string name="mozilla_sync_send_tab">Aktuellen Tab an dieses Gerät senden</string>
+    <string name="mozilla_sync_send_success">Tab gesendet. Das Gerät empfängt ihn, sobald es verbunden ist.</string>
+    <string name="mozilla_sync_send_failed">Tab konnte nicht gesendet werden. Versuche es erneut.</string>
+    <string name="mozilla_sync_no_tabs">Noch keine geteilten Tabs von diesem Gerät.</string>
+</resources>

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="mozilla_sync_connecting">Verbinden...</string>
+    <string name="mozilla_sync_open_tab">Openen in Candy</string>
+
+    <string name="mozilla_sync_title">Mozilla Sync</string>
+    <string name="candy_sync_provider_title">Candy Sync</string>
+    <string name="mozilla_sync_summary">Koppel je Mozilla-account om de gewone tabbladen van dit profiel met Firefox en Zen te delen. Andere apparaten verschijnen in de profielkiezer.</string>
+    <string name="mozilla_sync_parallel_summary">Je kunt dit lokale profiel ook aan Candy Sync koppelen. Beide diensten ontvangen de gewone tabbladen. Privétabbladen blijven op dit apparaat.</string>
+    <string name="mozilla_sync_unavailable">Niet beschikbaar in deze versie</string>
+    <string name="mozilla_sync_unavailable_summary">Aanmelden bij Mozilla is voor deze Candy-versie nog niet ingeschakeld. Candy Sync blijft beschikbaar.</string>
+    <string name="mozilla_sync_signed_out">Niet verbonden</string>
+    <string name="mozilla_sync_connected">Verbonden</string>
+    <string name="mozilla_sync_error">Verbinding mislukt. Probeer opnieuw of maak opnieuw verbinding.</string>
+    <string name="mozilla_sync_sign_in">Aanmelden met Mozilla</string>
+    <string name="mozilla_sync_disconnect">Verbinding verbreken</string>
+    <string name="mozilla_sync_device_summary">Tabbladen van dit apparaat worden als kopieën in je gekoppelde Candy-profiel geopend. Wijzigingen in Candy veranderen de oorspronkelijke tabbladen niet.</string>
+    <string name="mozilla_sync_send_tab">Huidig tabblad naar dit apparaat sturen</string>
+    <string name="mozilla_sync_send_success">Tabblad verstuurd. Het apparaat ontvangt het zodra het verbinding maakt.</string>
+    <string name="mozilla_sync_send_failed">Het tabblad kon niet worden verstuurd. Probeer opnieuw.</string>
+    <string name="mozilla_sync_no_tabs">Nog geen gedeelde tabbladen van dit apparaat.</string>
+</resources>

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="mozilla_sync_connecting">Verbindung ...</string>
+    <string name="mozilla_sync_open_tab">Opzemaachen an Candy</string>
+
+    <string name="mozilla_sync_title">Mozilla Sync</string>
+    <string name="candy_sync_provider_title">Candy Sync</string>
+    <string name="mozilla_sync_summary">Verbann däi Mozilla-Kont, fir déi normal Tabs vun dësem Profil mat Firefox an Zen ze deelen. Aner Apparater erschéngen an der Profilauswiel.</string>
+    <string name="mozilla_sync_parallel_summary">Du kanns dëse lokale Profil och mat Candy Sync verbannen. Béid Servicer kréien déi normal Tabs. Privat Tabs bleiwen op dësem Apparat.</string>
+    <string name="mozilla_sync_unavailable">Net an dëser Versioun disponibel</string>
+    <string name="mozilla_sync_unavailable_summary">D’Mozilla-Umeldung ass fir dës Candy-Versioun nach net aktivéiert. Candy Sync bleift disponibel.</string>
+    <string name="mozilla_sync_signed_out">Net verbonnen</string>
+    <string name="mozilla_sync_connected">Verbonnen</string>
+    <string name="mozilla_sync_error">Verbindung feelgeschloen. Probéier nach eng Kéier oder verbann dech nei.</string>
+    <string name="mozilla_sync_sign_in">Mat Mozilla umellen</string>
+    <string name="mozilla_sync_disconnect">Verbindung trennen</string>
+    <string name="mozilla_sync_device_summary">Tabs vun dësem Apparat ginn als Kopien an dengem verbonne Candy-Profil opgemaach. Ännerungen a Candy änneren d’Original-Tabs net.</string>
+    <string name="mozilla_sync_send_tab">Aktuellen Tab un dësen Apparat schécken</string>
+    <string name="mozilla_sync_send_success">Tab geschéckt. Den Apparat kritt en, wann e sech verbënnt.</string>
+    <string name="mozilla_sync_send_failed">Den Tab konnt net geschéckt ginn. Probéier nach eng Kéier.</string>
+    <string name="mozilla_sync_no_tabs">Nach keng gedeelt Tabs vun dësem Apparat.</string>
+</resources>

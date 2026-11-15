@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mozilla_sync_title">Mozilla Sync</string>
+    <string name="candy_sync_provider_title">Candy Sync</string>
+    <string name="mozilla_sync_summary">Connectez votre compte Mozilla pour partager les onglets normaux de ce profil avec Firefox et Zen. Les autres appareils apparaissent dans le sélecteur de profils.</string>
+    <string name="mozilla_sync_parallel_summary">Vous pouvez aussi connecter ce profil local à Candy Sync. Les deux services reçoivent ses onglets normaux. Les onglets privés restent sur cet appareil.</string>
+    <string name="mozilla_sync_unavailable">Indisponible dans cette version</string>
+    <string name="mozilla_sync_unavailable_summary">La connexion Mozilla n’est pas encore activée dans cette version de Candy. Candy Sync reste disponible.</string>
+    <string name="mozilla_sync_signed_out">Non connecté</string>
+    <string name="mozilla_sync_connecting">Connexion en cours…</string>
+    <string name="mozilla_sync_connected">Connecté</string>
+    <string name="mozilla_sync_error">Échec de la connexion. Réessayez ou reconnectez-vous.</string>
+    <string name="mozilla_sync_sign_in">Se connecter avec Mozilla</string>
+    <string name="mozilla_sync_disconnect">Déconnecter</string>
+    <string name="mozilla_sync_device_summary">Les onglets de cet appareil s’ouvrent comme copies dans votre profil Candy associé. Les modifications dans Candy ne changent pas les onglets d’origine.</string>
+    <string name="mozilla_sync_open_tab">Ouvrir dans Candy</string>
+    <string name="mozilla_sync_send_tab">Envoyer l’onglet actuel à cet appareil</string>
+    <string name="mozilla_sync_send_success">Onglet envoyé. L’appareil le recevra à sa prochaine connexion.</string>
+    <string name="mozilla_sync_send_failed">Impossible d’envoyer l’onglet. Réessayez.</string>
+    <string name="mozilla_sync_no_tabs">Aucun onglet partagé depuis cet appareil.</string>
+</resources>

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mozilla_sync_title">Mozilla 同步</string>
+    <string name="candy_sync_provider_title">Candy 同步</string>
+    <string name="mozilla_sync_summary">連線 Mozilla 賬號，與 Firefox 和 Zen 共享此配置的普通標籤頁。其他裝置會顯示在配置切換器中。</string>
+    <string name="mozilla_sync_parallel_summary">此本地配置也可連線 Candy Sync。兩個服務都會接收普通標籤頁。隱私標籤頁只留在此裝置。</string>
+    <string name="mozilla_sync_unavailable">此構建不可用</string>
+    <string name="mozilla_sync_unavailable_summary">此 Candy 構建尚未啟用 Mozilla 登入。Candy Sync 仍可使用。</string>
+    <string name="mozilla_sync_signed_out">未連線</string>
+    <string name="mozilla_sync_connecting">連線中…</string>
+    <string name="mozilla_sync_connected">已連線</string>
+    <string name="mozilla_sync_error">連線失敗。請重試或重新連線。</string>
+    <string name="mozilla_sync_sign_in">使用 Mozilla 登入</string>
+    <string name="mozilla_sync_disconnect">斷開連線</string>
+    <string name="mozilla_sync_device_summary">此裝置的標籤頁會以副本形式在關聯 Candy 配置中開啟。Candy 中的更改不會修改原標籤頁。</string>
+    <string name="mozilla_sync_open_tab">在 Candy 開啟</string>
+    <string name="mozilla_sync_send_tab">將當前標籤頁傳送到此裝置</string>
+    <string name="mozilla_sync_send_success">標籤頁已傳送。裝置連線時將接收。</string>
+    <string name="mozilla_sync_send_failed">無法傳送標籤頁。請重試。</string>
+    <string name="mozilla_sync_no_tabs">此裝置尚無共享標籤頁。</string>
+</resources>

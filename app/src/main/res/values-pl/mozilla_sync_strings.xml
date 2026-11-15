@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mozilla_sync_title">Mozilla Sync</string>
+    <string name="candy_sync_provider_title">Candy Sync</string>
+    <string name="mozilla_sync_summary">Połącz konto Mozilla, aby udostępniać zwykłe karty tego profilu w Firefox i Zen. Inne urządzenia pojawią się w przełączniku profili.</string>
+    <string name="mozilla_sync_parallel_summary">Możesz też połączyć ten lokalny profil z Candy Sync. Obie usługi otrzymają jego zwykłe karty. Karty prywatne pozostają na tym urządzeniu.</string>
+    <string name="mozilla_sync_unavailable">Niedostępne w tej wersji</string>
+    <string name="mozilla_sync_unavailable_summary">Logowanie Mozilla nie jest jeszcze włączone w tej wersji Candy. Candy Sync nadal jest dostępne.</string>
+    <string name="mozilla_sync_signed_out">Niepołączono</string>
+    <string name="mozilla_sync_connecting">Łączenie…</string>
+    <string name="mozilla_sync_connected">Połączono</string>
+    <string name="mozilla_sync_error">Połączenie nieudane. Spróbuj ponownie lub połącz od nowa.</string>
+    <string name="mozilla_sync_sign_in">Zaloguj się przez Mozilla</string>
+    <string name="mozilla_sync_disconnect">Rozłącz</string>
+    <string name="mozilla_sync_device_summary">Karty z tego urządzenia otwierają się jako kopie w powiązanym profilu Candy. Zmiany w Candy nie modyfikują oryginalnych kart.</string>
+    <string name="mozilla_sync_open_tab">Otwórz w Candy</string>
+    <string name="mozilla_sync_send_tab">Wyślij bieżącą kartę na to urządzenie</string>
+    <string name="mozilla_sync_send_success">Karta wysłana. Urządzenie odbierze ją po połączeniu.</string>
+    <string name="mozilla_sync_send_failed">Nie udało się wysłać karty. Spróbuj ponownie.</string>
+    <string name="mozilla_sync_no_tabs">Brak udostępnionych kart z tego urządzenia.</string>
+</resources>

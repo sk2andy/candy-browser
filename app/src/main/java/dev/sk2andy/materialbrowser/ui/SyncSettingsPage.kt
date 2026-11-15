@@ -13,13 +13,16 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Button
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.Tab
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -50,6 +53,7 @@ import dev.sk2andy.materialbrowser.sync.SyncDeviceIconCatalog
 import dev.sk2andy.materialbrowser.sync.SyncEnrollmentOutcome
 import dev.sk2andy.materialbrowser.sync.SyncRepositoryState
 import dev.sk2andy.materialbrowser.sync.SyncStatus
+import dev.sk2andy.materialbrowser.sync.MozillaSyncState
 
 private val SYNC_ACCENT_HUES = listOf(0, 36, 72, 108, 144, 180, 216, 252, 288, 312)
 private const val SYNC_ACCENT_COLORS_PER_ROW = 5
@@ -93,6 +97,7 @@ internal object SyncSettingsTestTags {
     fun accentColor(hue: Int): String = "sync_settings_accent_color:$hue"
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun SyncSettingsPage(
     state: SyncRepositoryState,
@@ -104,8 +109,13 @@ internal fun SyncSettingsPage(
     onRefresh: () -> Unit,
     onOpenDocumentation: (String) -> Unit = {},
     onShareExtensionLink: (String) -> Unit = {},
+    mozillaState: MozillaSyncState = MozillaSyncState(),
+    onConnectMozilla: (String, String) -> Unit = { _, _ -> },
+    onRefreshMozilla: () -> Unit = {},
+    onDisconnectMozilla: () -> Unit = {},
     onBack: () -> Unit,
 ) {
+    var selectedProvider by rememberSaveable { mutableStateOf(0) }
     val configured = state.settings
     var endpoint by rememberSaveable(configured?.endpoint) {
         mutableStateOf(configured?.endpoint.orEmpty())
@@ -146,6 +156,28 @@ internal fun SyncSettingsPage(
         title = stringResource(R.string.sync_settings_title),
         onBack = onBack,
     ) {
+        PrimaryTabRow(selectedTabIndex = selectedProvider) {
+            listOf(R.string.candy_sync_provider_title, R.string.mozilla_sync_title).forEachIndexed { index, title ->
+                Tab(
+                    selected = selectedProvider == index,
+                    onClick = { selectedProvider = index },
+                    text = { Text(stringResource(title)) },
+                    modifier = Modifier.testTag("sync_provider_$index"),
+                )
+            }
+        }
+        SettingsPageSpacer()
+        if (selectedProvider == 1) {
+            MozillaSyncSettings(
+                state = mozillaState,
+                localProfiles = localProfiles,
+                activeProfileId = activeProfileId,
+                onConnect = onConnectMozilla,
+                onRefresh = onRefreshMozilla,
+                onDisconnect = onDisconnectMozilla,
+            )
+            return@SettingsPage
+        }
         SyncSetupGuide(onOpenDocumentation)
         SettingsPageSpacer()
         SyncExtensionStores(onOpenDocumentation, onShareExtensionLink)

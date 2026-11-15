@@ -14,7 +14,11 @@ data class BrowserProfile(
     val linkedSyncDeviceId: String? = null,
     val newTabWallpaper: ProfileWallpaper? = null,
     val tabSwitcherWallpaper: ProfileWallpaper? = null,
+    val syncProvider: SyncProvider = SyncProvider.Candy,
+    val linkedMozillaDeviceId: String? = null,
 )
+
+enum class SyncProvider { Candy, Mozilla }
 
 data class ProfileProtection(
     val lockTrigger: ProfileLockTrigger,
@@ -67,7 +71,7 @@ val BrowserProfile.isSynced: Boolean
     get() = syncedDeviceId != null
 
 val BrowserProfile.isSyncLinked: Boolean
-    get() = syncedDeviceId != null || linkedSyncDeviceId != null
+    get() = syncedDeviceId != null || linkedSyncDeviceId != null || linkedMozillaDeviceId != null
 
 const val DEFAULT_PROFILE_ID = "candy"
 const val DEFAULT_PROFILE_EMOJI = "🍬"

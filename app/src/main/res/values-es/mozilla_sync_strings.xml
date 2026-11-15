@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="mozilla_sync_title">Mozilla Sync</string>
+    <string name="candy_sync_provider_title">Candy Sync</string>
+    <string name="mozilla_sync_summary">Conecta tu cuenta de Mozilla para compartir las pestañas normales de este perfil con Firefox y Zen. Los demás dispositivos aparecen en el selector de perfiles.</string>
+    <string name="mozilla_sync_parallel_summary">También puedes conectar este perfil local a Candy Sync. Ambos servicios reciben sus pestañas normales. Las pestañas privadas permanecen en este dispositivo.</string>
+    <string name="mozilla_sync_unavailable">No disponible en esta versión</string>
+    <string name="mozilla_sync_unavailable_summary">El inicio de sesión de Mozilla aún no está habilitado en esta versión de Candy. Candy Sync sigue disponible.</string>
+    <string name="mozilla_sync_signed_out">Sin conectar</string>
+    <string name="mozilla_sync_connecting">Conectando…</string>
+    <string name="mozilla_sync_connected">Conectado</string>
+    <string name="mozilla_sync_error">Error de conexión. Reintenta o vuelve a conectarte.</string>
+    <string name="mozilla_sync_sign_in">Iniciar sesión con Mozilla</string>
+    <string name="mozilla_sync_disconnect">Desconectar</string>
+    <string name="mozilla_sync_device_summary">Las pestañas de este dispositivo se abren como copias en tu perfil de Candy vinculado. Los cambios en Candy no modifican las pestañas originales.</string>
+    <string name="mozilla_sync_open_tab">Abrir en Candy</string>
+    <string name="mozilla_sync_send_tab">Enviar pestaña actual a este dispositivo</string>
+    <string name="mozilla_sync_send_success">Pestaña enviada. El dispositivo la recibirá cuando se conecte.</string>
+    <string name="mozilla_sync_send_failed">No se pudo enviar la pestaña. Inténtalo de nuevo.</string>
+    <string name="mozilla_sync_no_tabs">Aún no hay pestañas compartidas de este dispositivo.</string>
+</resources>

@@ -22,7 +22,7 @@ object SyncedProfileRuntimeRules {
     fun profileId(deviceId: String): String = "$PROFILE_PREFIX$deviceId"
 
     fun deviceId(profile: BrowserProfile?): String? = profile
-        ?.takeIf(BrowserProfile::isSynced)
+        ?.takeIf { it.isSynced && it.syncProvider == SyncProvider.Candy }
         ?.syncedDeviceId
 
     fun runtimeProfile(
