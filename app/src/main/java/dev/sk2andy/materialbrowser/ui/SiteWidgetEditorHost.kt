@@ -17,6 +17,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.window.Dialog
@@ -45,6 +46,7 @@ internal fun SiteWidgetEditorHost(controller: BrowserController) {
 @Composable
 private fun SiteWidgetEditorRequest(controller: BrowserController, requestId: Int, widgetId: Int) {
     val context = LocalContext.current
+    val resources = remember(context, LocalConfiguration.current) { context.resources }
     val publisher = remember(context) { SiteWidgetPublisher(context) }
     val sizingStore = remember(context) { SiteWidgetGridSizingStore(context) }
     val learnedCellAspectRatio = remember(context) {
@@ -80,12 +82,12 @@ private fun SiteWidgetEditorRequest(controller: BrowserController, requestId: In
         started = true
         captureHandle = controller.captureSelectedPageForSiteWidget { result ->
             capture = result
-            if (result == null) error = context.getString(R.string.site_widget_capture_failed)
+            if (result == null) error = resources.getString(R.string.site_widget_capture_failed)
         }
     }
     LaunchedEffect(requestId) {
         delay(15_000)
-        if (!started) error = context.getString(R.string.site_widget_capture_failed)
+        if (!started) error = resources.getString(R.string.site_widget_capture_failed)
     }
     val source = capture
     if (source == null) {
@@ -115,9 +117,9 @@ private fun SiteWidgetEditorRequest(controller: BrowserController, requestId: In
             onDismiss = controller::dismissSiteWidgetEditor,
             onSubmit = { format, crop, interval ->
                 if (!controller.isCurrentSiteWidgetSource(source.source)) {
-                    error = context.getString(R.string.site_widget_capture_failed)
+                    error = resources.getString(R.string.site_widget_capture_failed)
                 } else if (widgetId == AppWidgetManager.INVALID_APPWIDGET_ID && !publisher.canPin()) {
-                    error = context.getString(R.string.site_widget_pin_unavailable)
+                    error = resources.getString(R.string.site_widget_pin_unavailable)
                 } else {
                     saving = true
                     error = null
@@ -125,12 +127,12 @@ private fun SiteWidgetEditorRequest(controller: BrowserController, requestId: In
                         try {
                             val snapshot = publisher.prepare(source, format, crop, interval)
                             if (snapshot == null) {
-                                error = context.getString(R.string.site_widget_save_failed)
+                                error = resources.getString(R.string.site_widget_save_failed)
                                 return@launch
                             }
                             if (!controller.isCurrentSiteWidgetSource(source.source)) {
                                 publisher.discard(snapshot)
-                                error = context.getString(R.string.site_widget_capture_failed)
+                                error = resources.getString(R.string.site_widget_capture_failed)
                                 return@launch
                             }
                             val accepted = if (widgetId != AppWidgetManager.INVALID_APPWIDGET_ID) {
@@ -150,7 +152,7 @@ private fun SiteWidgetEditorRequest(controller: BrowserController, requestId: In
                                 controller.dismissSiteWidgetEditor()
                             } else {
                                 publisher.discard(snapshot)
-                                error = context.getString(R.string.site_widget_pin_failed)
+                                error = resources.getString(R.string.site_widget_pin_failed)
                             }
                         } finally {
                             saving = false

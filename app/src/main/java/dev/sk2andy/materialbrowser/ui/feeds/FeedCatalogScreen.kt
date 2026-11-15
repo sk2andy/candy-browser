@@ -72,7 +72,6 @@ import dev.sk2andy.materialbrowser.feeds.FeedRules
 import dev.sk2andy.materialbrowser.ui.NativeScreenBackHandler
 import dev.sk2andy.materialbrowser.ui.predictiveBackSurface
 import dev.sk2andy.materialbrowser.ui.rememberNativeScreenBackState
-import java.util.Locale
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -92,7 +91,7 @@ internal fun FeedCatalogScreen(
     val scope = rememberCoroutineScope()
     val focus = LocalFocusManager.current
     val keyboard = LocalSoftwareKeyboardController.current
-    val locale = LocalConfiguration.current.locales[0] ?: Locale.getDefault()
+    val locale = LocalConfiguration.current.locales[0]
     val inputState =
         if (repository.isPrivate) remember(repository) { mutableStateOf("") }
         else rememberSaveable(repository) { mutableStateOf("") }

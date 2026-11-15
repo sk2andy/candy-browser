@@ -4,8 +4,10 @@ import android.graphics.Bitmap
 import android.view.HapticFeedbackConstants
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
@@ -37,11 +39,12 @@ internal fun CandyTrailScreen(
     pageFavicons: Map<String, Bitmap> = emptyMap(),
 ) {
     val context = LocalContext.current
+    val resources = remember(context, LocalConfiguration.current) { context.resources }
     val rootView = LocalView.current
     val strings = CandyTrailStrings(
         empty = stringResource(R.string.candy_trail_empty),
         nodeDescription = { isCurrent, title, host ->
-            context.getString(
+            resources.getString(
                 if (isCurrent) {
                     R.string.cd_candy_trail_current_node
                 } else {
@@ -52,13 +55,13 @@ internal fun CandyTrailScreen(
             )
         },
         nodeActionsDescription = { title ->
-            context.getString(R.string.cd_candy_trail_node_actions, title)
+            resources.getString(R.string.cd_candy_trail_node_actions, title)
         },
         forkStatus = { isOpen ->
-            context.getString(if (isOpen) R.string.fork_status_open else R.string.fork_status_closed)
+            resources.getString(if (isOpen) R.string.fork_status_open else R.string.fork_status_closed)
         },
         forkDescription = { isOpen, title, host ->
-            context.getString(
+            resources.getString(
                 if (isOpen) {
                     R.string.cd_candy_trail_fork_open
                 } else {
@@ -84,7 +87,7 @@ internal fun CandyTrailScreen(
         allBranches = stringResource(R.string.candy_trail_all_branches),
         collapseBranch = stringResource(R.string.candy_trail_collapse_branch),
         expandBranch = stringResource(R.string.candy_trail_expand_branch),
-        hiddenPages = { count -> context.getString(R.string.candy_trail_hidden_pages, count) },
+        hiddenPages = { count -> resources.getString(R.string.candy_trail_hidden_pages, count) },
     )
     CandyTrailScreenContent(
         tab = tab,

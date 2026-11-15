@@ -231,6 +231,7 @@ private fun ExternalLinkPreviewChrome(
     onCommitted: (String) -> Unit,
 ) {
     val context = LocalContext.current
+    val resources = remember(context, LocalConfiguration.current) { context.resources }
     ExternalLinkPreviewBar(
         state = state,
         profiles = profiles,
@@ -259,7 +260,7 @@ private fun ExternalLinkPreviewChrome(
         onCopyLink = {
             context.getSystemService(ClipboardManager::class.java).setPrimaryClip(
                 ClipData.newPlainText(
-                    context.getString(R.string.external_link_preview_copy_label),
+                    resources.getString(R.string.external_link_preview_copy_label),
                     state.currentUrl,
                 ),
             )
